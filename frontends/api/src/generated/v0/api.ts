@@ -583,6 +583,7 @@ export type CourseResourceResourceTypeEnum =
  * Generated Open Badges credential metadata for a learning resource.
  */
 export interface CredentialMetadata {
+  resource_readable_id: string
   /**
    * The Open Badges 3.0 description, 1-2 sentences
    */
@@ -591,6 +592,15 @@ export interface CredentialMetadata {
    * Open Badges 3.0 criteria, one skill-focused bullet per item, for rendering into the criteria narrative
    */
   criteria?: Array<string>
+}
+/**
+ * Request body for the credential metadata endpoint
+ */
+export interface CredentialMetadataRequestRequest {
+  /**
+   * The readable id of the learning resource to generate metadata for
+   */
+  resource_readable_id: string
 }
 /**
  * * `` - ---- * `Doctorate` - Doctorate * `Master\'s or professional degree` - Master\'s or professional degree * `Bachelor\'s degree` - Bachelor\'s degree * `Associate degree` - Associate degree * `Secondary/high school` - Secondary/high school * `Junior secondary/junior high/middle school` - Junior secondary/junior high/middle school * `No formal education` - No formal education * `Other education` - Other education
@@ -3492,19 +3502,19 @@ export const CredentialMetadataApiAxiosParamCreator = function (
     /**
      * Generate Open Badges credential metadata for a learning resource.  Limited to MITx Online courses.
      * @summary Generate credential metadata
-     * @param {string} resource_readable_id The readable id of the learning resource to generate metadata for
+     * @param {CredentialMetadataRequestRequest} CredentialMetadataRequestRequest
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
-    credentialMetadataRetrieve: async (
-      resource_readable_id: string,
+    credentialMetadataCreate: async (
+      CredentialMetadataRequestRequest: CredentialMetadataRequestRequest,
       options: RawAxiosRequestConfig = {},
     ): Promise<RequestArgs> => {
-      // verify required parameter 'resource_readable_id' is not null or undefined
+      // verify required parameter 'CredentialMetadataRequestRequest' is not null or undefined
       assertParamExists(
-        "credentialMetadataRetrieve",
-        "resource_readable_id",
-        resource_readable_id,
+        "credentialMetadataCreate",
+        "CredentialMetadataRequestRequest",
+        CredentialMetadataRequestRequest,
       )
       const localVarPath = `/api/v0/credential_metadata/`
       // use dummy base URL string because the URL constructor only accepts absolute URLs.
@@ -3515,17 +3525,14 @@ export const CredentialMetadataApiAxiosParamCreator = function (
       }
 
       const localVarRequestOptions = {
-        method: "GET",
+        method: "POST",
         ...baseOptions,
         ...options,
       }
       const localVarHeaderParameter = {} as any
       const localVarQueryParameter = {} as any
 
-      if (resource_readable_id !== undefined) {
-        localVarQueryParameter["resource_readable_id"] = resource_readable_id
-      }
-
+      localVarHeaderParameter["Content-Type"] = "application/json"
       localVarHeaderParameter["Accept"] = "application/json"
 
       setSearchParams(localVarUrlObj, localVarQueryParameter)
@@ -3536,6 +3543,11 @@ export const CredentialMetadataApiAxiosParamCreator = function (
         ...headersFromBaseOptions,
         ...options.headers,
       }
+      localVarRequestOptions.data = serializeDataIfNeeded(
+        CredentialMetadataRequestRequest,
+        localVarRequestOptions,
+        configuration,
+      )
 
       return {
         url: toPathString(localVarUrlObj),
@@ -3557,12 +3569,12 @@ export const CredentialMetadataApiFp = function (
     /**
      * Generate Open Badges credential metadata for a learning resource.  Limited to MITx Online courses.
      * @summary Generate credential metadata
-     * @param {string} resource_readable_id The readable id of the learning resource to generate metadata for
+     * @param {CredentialMetadataRequestRequest} CredentialMetadataRequestRequest
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
-    async credentialMetadataRetrieve(
-      resource_readable_id: string,
+    async credentialMetadataCreate(
+      CredentialMetadataRequestRequest: CredentialMetadataRequestRequest,
       options?: RawAxiosRequestConfig,
     ): Promise<
       (
@@ -3571,15 +3583,15 @@ export const CredentialMetadataApiFp = function (
       ) => AxiosPromise<CredentialMetadata>
     > {
       const localVarAxiosArgs =
-        await localVarAxiosParamCreator.credentialMetadataRetrieve(
-          resource_readable_id,
+        await localVarAxiosParamCreator.credentialMetadataCreate(
+          CredentialMetadataRequestRequest,
           options,
         )
       const localVarOperationServerIndex = configuration?.serverIndex ?? 0
       const localVarOperationServerBasePath =
-        operationServerMap[
-          "CredentialMetadataApi.credentialMetadataRetrieve"
-        ]?.[localVarOperationServerIndex]?.url
+        operationServerMap["CredentialMetadataApi.credentialMetadataCreate"]?.[
+          localVarOperationServerIndex
+        ]?.url
       return (axios, basePath) =>
         createRequestFunction(
           localVarAxiosArgs,
@@ -3604,17 +3616,17 @@ export const CredentialMetadataApiFactory = function (
     /**
      * Generate Open Badges credential metadata for a learning resource.  Limited to MITx Online courses.
      * @summary Generate credential metadata
-     * @param {CredentialMetadataApiCredentialMetadataRetrieveRequest} requestParameters Request parameters.
+     * @param {CredentialMetadataApiCredentialMetadataCreateRequest} requestParameters Request parameters.
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
      */
-    credentialMetadataRetrieve(
-      requestParameters: CredentialMetadataApiCredentialMetadataRetrieveRequest,
+    credentialMetadataCreate(
+      requestParameters: CredentialMetadataApiCredentialMetadataCreateRequest,
       options?: RawAxiosRequestConfig,
     ): AxiosPromise<CredentialMetadata> {
       return localVarFp
-        .credentialMetadataRetrieve(
-          requestParameters.resource_readable_id,
+        .credentialMetadataCreate(
+          requestParameters.CredentialMetadataRequestRequest,
           options,
         )
         .then((request) => request(axios, basePath))
@@ -3623,13 +3635,10 @@ export const CredentialMetadataApiFactory = function (
 }
 
 /**
- * Request parameters for credentialMetadataRetrieve operation in CredentialMetadataApi.
+ * Request parameters for credentialMetadataCreate operation in CredentialMetadataApi.
  */
-export interface CredentialMetadataApiCredentialMetadataRetrieveRequest {
-  /**
-   * The readable id of the learning resource to generate metadata for
-   */
-  readonly resource_readable_id: string
+export interface CredentialMetadataApiCredentialMetadataCreateRequest {
+  readonly CredentialMetadataRequestRequest: CredentialMetadataRequestRequest
 }
 
 /**
@@ -3639,17 +3648,17 @@ export class CredentialMetadataApi extends BaseAPI {
   /**
    * Generate Open Badges credential metadata for a learning resource.  Limited to MITx Online courses.
    * @summary Generate credential metadata
-   * @param {CredentialMetadataApiCredentialMetadataRetrieveRequest} requestParameters Request parameters.
+   * @param {CredentialMetadataApiCredentialMetadataCreateRequest} requestParameters Request parameters.
    * @param {*} [options] Override http request option.
    * @throws {RequiredError}
    */
-  public credentialMetadataRetrieve(
-    requestParameters: CredentialMetadataApiCredentialMetadataRetrieveRequest,
+  public credentialMetadataCreate(
+    requestParameters: CredentialMetadataApiCredentialMetadataCreateRequest,
     options?: RawAxiosRequestConfig,
   ) {
     return CredentialMetadataApiFp(this.configuration)
-      .credentialMetadataRetrieve(
-        requestParameters.resource_readable_id,
+      .credentialMetadataCreate(
+        requestParameters.CredentialMetadataRequestRequest,
         options,
       )
       .then((request) => request(this.axios, this.basePath))

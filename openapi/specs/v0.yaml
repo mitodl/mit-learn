@@ -161,24 +161,27 @@ paths:
         '429':
           description: Rate limit exceeded
   /api/v0/credential_metadata/:
-    get:
-      operationId: credential_metadata_retrieve
+    post:
+      operationId: credential_metadata_create
       description: |-
         Generate Open Badges credential metadata for a learning resource.
 
         Limited to MITx Online courses.
       summary: Generate credential metadata
-      parameters:
-      - in: query
-        name: resource_readable_id
-        schema:
-          type: string
-          minLength: 1
-        description: The readable id of the learning resource to generate metadata
-          for
-        required: true
       tags:
       - credential_metadata
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CredentialMetadataRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CredentialMetadataRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CredentialMetadataRequestRequest'
+        required: true
       responses:
         '200':
           content:
@@ -2391,6 +2394,8 @@ components:
       type: object
       description: Generated Open Badges credential metadata for a learning resource.
       properties:
+        resource_readable_id:
+          type: string
         description:
           type: string
           description: The Open Badges 3.0 description, 1-2 sentences
@@ -2400,6 +2405,19 @@ components:
             type: string
           description: Open Badges 3.0 criteria, one skill-focused bullet per item,
             for rendering into the criteria narrative
+      required:
+      - resource_readable_id
+    CredentialMetadataRequestRequest:
+      type: object
+      description: Request body for the credential metadata endpoint
+      properties:
+        resource_readable_id:
+          type: string
+          minLength: 1
+          description: The readable id of the learning resource to generate metadata
+            for
+      required:
+      - resource_readable_id
     CurrentEducationEnum:
       enum:
       - Doctorate

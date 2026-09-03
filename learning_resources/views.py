@@ -1770,8 +1770,8 @@ def problem_set_file_output(problem_set_file):
 
 
 @extend_schema_view(
-    get=extend_schema(
-        parameters=[CredentialMetadataRequestSerializer()],
+    post=extend_schema(
+        request=CredentialMetadataRequestSerializer(),
         responses=CredentialMetadataSerializer(),
     ),
 )
@@ -1784,14 +1784,19 @@ class CredentialMetadataView(AsyncAPIView):
 
     permission_classes = (permissions.IsAdminOrCourseAuthor,)
 
+    # POST, not GET: each call spends money on frontier model requests and
+    # writes generation-log rows, so it is neither safe nor idempotent. As a
+    # GET it would be exposed to prefetching, proxy retries and CSRF -- session
+    # auth enforces no CSRF check on GET, so following a crafted link while
+    # logged in would be enough to run a generation.
     @extend_schema(summary="Generate credential metadata")
-    async def get(self, request):
+    async def post(self, request):
         # Imported here, not at module scope: credentials pulls in litellm and
         # langchain, and the URLconf imports this module at boot. See
         # main/boot_imports_test.py.
         from learning_resources.credentials import generate_credential_metadata
 
-        request_data = CredentialMetadataRequestSerializer(data=request.GET)
+        request_data = CredentialMetadataRequestSerializer(data=request.data)
         if not request_data.is_valid():
             return Response(request_data.errors, status=400)
 

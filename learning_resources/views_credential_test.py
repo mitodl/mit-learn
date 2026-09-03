@@ -31,16 +31,21 @@ def resource():
     )
 
 
-def credential_url(readable_id=None):
-    """Return the endpoint url, optionally scoped to a resource"""
-    url = reverse("lr:v0:credential_metadata")
-    return f"{url}?resource_readable_id={readable_id}" if readable_id else url
+def credential_url():
+    """Return the endpoint url"""
+    return reverse("lr:v0:credential_metadata")
+
+
+def generate(client, readable_id=None):
+    """Post a generation request, optionally scoped to a resource"""
+    body = {"resource_readable_id": readable_id} if readable_id else {}
+    return client.post(credential_url(), body)
 
 
 @pytest.mark.django_db(transaction=True)
 def test_credential_metadata_anonymous(client, resource, mock_generate):
     """An anonymous request generates nothing"""
-    assert client.get(credential_url(resource.readable_id)).status_code == 403
+    assert generate(client, resource.readable_id).status_code == 403
     mock_generate.assert_not_called()
 
 
@@ -50,7 +55,7 @@ def test_credential_metadata_non_author(
 ):
     """A logged-in user who is not a course author generates nothing"""
     client.force_login(django_user_model.objects.create())
-    assert client.get(credential_url(resource.readable_id)).status_code == 403
+    assert generate(client, resource.readable_id).status_code == 403
     mock_generate.assert_not_called()
 
 
@@ -68,7 +73,7 @@ def test_credential_metadata_generates(
         group.user_set.add(user)
     client.force_login(user)
 
-    response = client.get(credential_url(resource.readable_id))
+    response = generate(client, resource.readable_id)
 
     assert response.status_code == 200
     assert response.json() == {
@@ -86,7 +91,7 @@ def test_credential_metadata_requires_a_resource(
     """The resource readable id is required"""
     client.force_login(django_user_model.objects.create(is_staff=True))
 
-    response = client.get(credential_url())
+    response = generate(client)
 
     assert response.status_code == 400
     assert "resource_readable_id" in response.json()
@@ -98,7 +103,7 @@ def test_credential_metadata_unknown_resource(client, django_user_model, mock_ge
     """An unknown readable id is a 404, not an empty draft"""
     client.force_login(django_user_model.objects.create(is_staff=True))
 
-    response = client.get(credential_url("no-such-course"))
+    response = generate(client, "no-such-course")
 
     assert response.status_code == 404
     mock_generate.assert_not_called()
@@ -128,7 +133,7 @@ def test_credential_metadata_rejects_unsupported_resources(
     )
     client.force_login(django_user_model.objects.create(is_staff=True))
 
-    response = client.get(credential_url(unsupported.readable_id))
+    response = generate(client, unsupported.readable_id)
 
     assert response.status_code == 400
     assert unsupported.readable_id in str(response.json())
@@ -146,10 +151,27 @@ def test_credential_metadata_omits_fields_it_could_not_generate(
     )
     client.force_login(django_user_model.objects.create(is_staff=True))
 
-    response = client.get(credential_url(resource.readable_id))
+    response = generate(client, resource.readable_id)
 
     assert response.status_code == 200
     assert response.json() == {
         "resource_readable_id": resource.readable_id,
         "description": "Only this one worked.",
     }
+
+
+@pytest.mark.django_db(transaction=True)
+def test_credential_metadata_rejects_get(client, django_user_model, mock_generate):
+    """
+    Generation is not reachable by GET.
+
+    It spends money per call and writes a generation log, so it must not be
+    triggerable by a prefetch, a proxy retry, or a crafted link followed by a
+    logged-in author -- none of which a CSRF check on GET would stop.
+    """
+    client.force_login(django_user_model.objects.create(is_staff=True))
+
+    response = client.get(credential_url(), {"resource_readable_id": "a-course"})
+
+    assert response.status_code == 405
+    mock_generate.assert_not_called()
