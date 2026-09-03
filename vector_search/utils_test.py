@@ -3604,6 +3604,8 @@ def test_resource_embedding_checksum_is_process_stable():
             )
         )
         assert render["checksum"] == baseline["checksum"]
+
+
 @pytest.mark.django_db(transaction=True)
 def test_async_content_file_chunks_for_resource(mocker):
     """Chunks come back highest scoring first, tagged with their point id"""
