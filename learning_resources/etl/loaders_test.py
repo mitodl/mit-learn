@@ -2407,6 +2407,23 @@ def test_load_podcast_episode(
         mock_upsert_tasks.deindex_learning_resource.assert_not_called()
 
 
+def test_load_podcast_no_episodes(mock_upsert_tasks, podcast_platform):
+    """A podcast whose feed has no episodes is not loaded, and unpublished if it exists"""
+    podcast = PodcastFactory.create().learning_resource
+    assert podcast.resources.filter(published=True).exists()
+    result = load_podcast(
+        {"readable_id": podcast.readable_id, "published": True, "episodes": iter([])}
+    )
+    assert result is None
+    podcast.refresh_from_db()
+    assert podcast.published is False
+    assert not podcast.resources.filter(published=True).exists()
+    mock_upsert_tasks.deindex_learning_resource_immutable_signature.assert_called_with(
+        podcast.id, podcast.resource_type
+    )
+    mock_upsert_tasks.batch_deindex_resources.assert_called_once()
+
+
 @pytest.mark.parametrize("podcast_exists", [True, False])
 @pytest.mark.parametrize("is_published", [True, False])
 def test_load_podcast(
@@ -2799,6 +2816,45 @@ def test_load_playlist_create_videos_false(
         assert result.video_playlist.parent_learning_resource == parent_course
     else:
         assert result is None
+        mock_update_index.assert_not_called()
+
+
+@pytest.mark.parametrize("playlist_exists", [True, False])
+def test_load_playlist_create_videos_false_empty_playlist(
+    mocker, playlist_exists, mock_get_similar_topics_qdrant
+):
+    """A playlist with no videos should be unpublished, not published empty"""
+    mock_update_index = mocker.patch(
+        "learning_resources.etl.loaders.update_index",
+    )
+
+    channel = VideoChannelFactory.create()
+    if playlist_exists:
+        playlist = VideoPlaylistFactory.create(channel=channel).learning_resource
+        assert playlist.published
+    else:
+        playlist = VideoPlaylistFactory.build().learning_resource
+
+    props = {
+        "playlist_id": playlist.readable_id,
+        "title": playlist.title,
+        "published": True,
+        "url": f"https://youtube.com/playlist?list={playlist.readable_id}",
+        "videos": [],
+        "create_videos": False,
+    }
+
+    result = load_playlist(channel, props)
+
+    assert result is None
+    if playlist_exists:
+        playlist.refresh_from_db()
+        assert not playlist.published
+        mock_update_index.assert_called_once_with(playlist, newly_created=False)
+    else:
+        assert not LearningResource.objects.filter(
+            readable_id=playlist.readable_id
+        ).exists()
         mock_update_index.assert_not_called()
 
 
