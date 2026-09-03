@@ -993,8 +993,8 @@ CONTENT_SUMMARIZER_FLASHCARD_PROMPT = get_string(
 # Credential metadata generation (learning_resources/credentials.py). The
 # prompts, models and the content retrieval query are admin-editable rows of
 # CredentialMetadataConfiguration; what is left is how much it retrieves.
-CREDENTIAL_METADATA_RETRIEVAL_LIMIT = get_int(
-    name="CREDENTIAL_METADATA_RETRIEVAL_LIMIT", default=50
+CREDENTIAL_METADATA_CONTENT_CHUNK_LIMIT = get_int(
+    name="CREDENTIAL_METADATA_CONTENT_CHUNK_LIMIT", default=50
 )
 # Chunks shorter than this are dropped: near-empty OLX stub blocks are common
 # (`prerequisites` at 4 characters median) and only crowd out real content.

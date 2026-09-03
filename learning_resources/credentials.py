@@ -79,7 +79,7 @@ class CredentialContext(NamedTuple):
     and the content-file chunks retrieved for it.
 
     Retrieval is what bounds the size of all this:
-    CREDENTIAL_METADATA_RETRIEVAL_LIMIT caps how many chunks can be included,
+    CREDENTIAL_METADATA_CONTENT_CHUNK_LIMIT caps how many chunks can be included,
     and every chunk is a bounded embedding chunk.
     """
 
@@ -254,7 +254,7 @@ async def _retrieve_chunks(
         chunks = await async_content_file_chunks_for_resource(
             resource.readable_id,
             query,
-            limit=settings.CREDENTIAL_METADATA_RETRIEVAL_LIMIT,
+            limit=settings.CREDENTIAL_METADATA_CONTENT_CHUNK_LIMIT,
         )
     except Exception:
         logger.exception(

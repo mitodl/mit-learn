@@ -90,7 +90,7 @@ def chunk(content, **kwargs):
 @pytest.fixture(autouse=True)
 def credential_settings(settings):
     """Point retrieval at a fixed query and leave it enabled"""
-    settings.CREDENTIAL_METADATA_RETRIEVAL_LIMIT = 10
+    settings.CREDENTIAL_METADATA_CONTENT_CHUNK_LIMIT = 10
     settings.CREDENTIAL_METADATA_MIN_CHUNK_CHARS = 20
     return settings
 
