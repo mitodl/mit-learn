@@ -1,6 +1,14 @@
 Release Notes
 =============
 
+Version 0.78.6
+--------------
+
+- Update dependency @faker-js/faker to v10.5.0 [SECURITY] (#3896)
+- Globally Enable Hybrid Search (#3895)
+- Don't publish youtube playlists or podcasts that have no videos/episodes (#3882)
+- Bump openapi-generator v7.2.0 -> v7.25.0 and regenerate the client (#3870)
+
 Version 0.78.5
 --------------
 
