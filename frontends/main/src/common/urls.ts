@@ -358,13 +358,15 @@ export const LINKEDIN_ADD_TO_PROFILE_BASE_URL =
 export const COURSE_PAGE_VIEW = "/courses/[readableId]"
 export const coursePageView = (readableId: string) =>
   generatePath(COURSE_PAGE_VIEW, { readableId })
-// Each page-view builder appends a mandatory slug segment when a title is given
-// (the slug, or the literal "resource" when blank). With an undefined title it
-// emits the bare path, which still resolves and 307-redirects to canonical.
-// `title` is required-but-undefinable so a call site can't silently omit it —
-// passing undefined (e.g. a title still in flight) is a visible opt-in to the
-// redirecting bare form. Id and slug are separate segments; the slug is
-// cosmetic and ignored on lookup.
+// The resource page paths below take an already-derived slug rather than a
+// title: callers read it from the resource's `learn_url`, so the backend decides
+// how a URL is spelled — including emitting the literal "resource" when a title
+// yields no slug. `slug` is required-but-undefinable so a call site can't
+// silently omit it; passing undefined emits the bare path, which still resolves
+// and 307-redirects to canonical. `generateVideoPlaylistPath` returns that bare
+// form unconditionally, for the call sites that have no resource to read a slug
+// from. Id and slug are separate segments; the slug is cosmetic and ignored on
+// lookup.
 export const VIDEO_PLAYLIST_PAGE_VIEW = "/video-playlist/[id]"
 /** Bare playlist path; the page 307s to the slugged canonical. */
 export const generateVideoPlaylistPath = (id: string) =>
