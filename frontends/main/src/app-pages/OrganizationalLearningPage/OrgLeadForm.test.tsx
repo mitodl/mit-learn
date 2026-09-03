@@ -255,7 +255,7 @@ describe("OrgLeadForm", () => {
 
     await submitForm()
 
-    expect(await screen.findByRole("alert")).toBeInTheDocument()
+    expect(await screen.findByRole("alert")).toHaveTextContent(copy.submitError)
     expect(screen.queryByText(copy.success.title)).not.toBeInTheDocument()
   })
 

@@ -250,11 +250,7 @@ const OrgLeadForm: React.FC<{ className?: string }> = ({ className }) => {
     },
   ]
 
-  const submissionError = hubspotFormSubmit.isError
-    ? hubspotFormSubmit.error instanceof Error
-      ? hubspotFormSubmit.error.message
-      : "Failed to submit the form. Please try again."
-    : null
+  const submissionError = hubspotFormSubmit.isError ? copy.submitError : null
 
   if (isConfirmed) {
     return (

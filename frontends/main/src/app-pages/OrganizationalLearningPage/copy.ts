@@ -356,4 +356,6 @@ export const getInTouch = {
     "The contact form is unavailable right now. Please try again later.",
   loading: "Loading the form…",
   submitting: "Submitting your request…",
+  submitError:
+    "Something went wrong submitting your request. Please try again.",
 }
