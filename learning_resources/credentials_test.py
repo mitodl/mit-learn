@@ -249,7 +249,7 @@ def test_build_credential_context_uses_every_source(resource, mock_retrieval):
             "### Course content: Syllabus\n\nA syllabus chunk long enough to be kept.",
         )
     ]
-    mock_retrieval.assert_called_once_with(resource.readable_id, "syllabus", limit=10)
+    mock_retrieval.assert_called_once_with(resource, "syllabus", limit=10)
 
 
 @pytest.mark.django_db(transaction=True)
@@ -420,7 +420,7 @@ def test_retrieval_query_comes_from_the_admin(
     asyncio.run(generate_credential_metadata(resource))
 
     mock_retrieval.assert_called_once_with(
-        resource.readable_id, "grading rubric and assessments", limit=10
+        resource, "grading rubric and assessments", limit=10
     )
 
 

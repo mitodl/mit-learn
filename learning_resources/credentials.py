@@ -252,7 +252,7 @@ async def _retrieve_chunks(
     """
     try:
         chunks = await async_content_file_chunks_for_resource(
-            resource.readable_id,
+            resource,
             query,
             limit=settings.CREDENTIAL_METADATA_CONTENT_CHUNK_LIMIT,
         )

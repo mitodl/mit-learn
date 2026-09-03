@@ -26,6 +26,7 @@ from learning_resources.constants import (
     CONTENT_FILE_LARGE_FIELDS,
     GROUP_CONTENT_FILE_CONTENT_VIEWERS,
     LearningResourceType,
+    PlatformType,
 )
 from learning_resources.factories import (
     ContentFileFactory,
@@ -3630,9 +3631,7 @@ def test_async_content_file_chunks_for_resource(mocker):
     mocker.patch("vector_search.utils.async_qdrant_client", return_value=mock_client)
 
     chunks = asyncio.run(
-        async_content_file_chunks_for_resource(
-            resource.readable_id, "syllabus", limit=5
-        )
+        async_content_file_chunks_for_resource(resource, "syllabus", limit=5)
     )
 
     assert [chunk["chunk_content"] for chunk in chunks] == ["first", "second"]
@@ -3668,15 +3667,52 @@ def test_async_content_file_chunks_for_resource_test_mode(mocker):
     mock_client.query_points = mocker.AsyncMock(return_value=mocker.Mock(points=[]))
     mocker.patch("vector_search.utils.async_qdrant_client", return_value=mock_client)
 
-    asyncio.run(
-        async_content_file_chunks_for_resource(resource.readable_id, "syllabus")
-    )
+    asyncio.run(async_content_file_chunks_for_resource(resource, "syllabus"))
 
     call_kwargs = mock_client.query_points.mock_calls[0].kwargs
     assert call_kwargs["query_filter"].must == [
         models.FieldCondition(
             key="run_readable_id",
             match=models.MatchAny(any=[resource.best_run.run_id, resource.readable_id]),
+        )
+    ]
+
+
+@pytest.mark.django_db(transaction=True)
+def test_async_content_file_chunks_for_resource_duplicate_readable_id(mocker):
+    """The best run comes from the resource passed in, not another platform's"""
+    readable_id = "course-v1:MITx+6.002x"
+    other = LearningResourceFactory.create(
+        is_course=True,
+        readable_id=readable_id,
+        platform=LearningResourcePlatformFactory.create(code=PlatformType.edx.name),
+    )
+    other.runs.all().delete()
+    LearningResourceRunFactory.create(
+        learning_resource=other, run_id="EDX_RUN", published=True
+    )
+    resource = LearningResourceFactory.create(
+        is_course=True,
+        readable_id=readable_id,
+        platform=LearningResourcePlatformFactory.create(
+            code=PlatformType.mitxonline.name
+        ),
+    )
+    resource.runs.all().delete()
+    LearningResourceRunFactory.create(
+        learning_resource=resource, run_id="MITXONLINE_RUN", published=True
+    )
+    mock_client = mocker.AsyncMock()
+    mock_client.query_points = mocker.AsyncMock(return_value=mocker.Mock(points=[]))
+    mocker.patch("vector_search.utils.async_qdrant_client", return_value=mock_client)
+
+    asyncio.run(async_content_file_chunks_for_resource(resource, "syllabus"))
+
+    call_kwargs = mock_client.query_points.mock_calls[0].kwargs
+    assert call_kwargs["query_filter"].must == [
+        models.FieldCondition(
+            key="run_readable_id",
+            match=models.MatchAny(any=["MITXONLINE_RUN", readable_id]),
         )
     ]
 
@@ -3691,10 +3727,7 @@ def test_async_content_file_chunks_for_resource_no_published_run(mocker):
     mocker.patch("vector_search.utils.async_qdrant_client", return_value=mock_client)
 
     assert (
-        asyncio.run(
-            async_content_file_chunks_for_resource(resource.readable_id, "syllabus")
-        )
-        == []
+        asyncio.run(async_content_file_chunks_for_resource(resource, "syllabus")) == []
     )
     call_kwargs = mock_client.query_points.mock_calls[0].kwargs
     assert call_kwargs["query_filter"].must == [
