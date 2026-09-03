@@ -28,10 +28,7 @@ import {
 import { isInEnum } from "@/common/utils"
 import { notFound } from "next/navigation"
 import { getQueryClient } from "@/app/getQueryClient"
-import {
-  HYBRID_SEARCH_DEFAULT,
-  getHybridSearchOverride,
-} from "@/common/hybridSearch"
+import { isHybridSearchEnabled } from "@/common/hybridSearch"
 import {
   toUnfacetedVectorSearchParams,
   toVectorSearchParams,
@@ -129,11 +126,11 @@ const Page: React.FC<AppPageProps<"/c/[channelType]/[name]">> = async ({
     page: Number(search.page ?? 1),
   })
 
-  // Server components cannot read PostHog flags, so prefetch what the flag's
-  // default resolves to. If the `disable-hybrid-search` kill switch has rolled
-  // search back to OpenSearch, the client refetches on hydration.
-  const isHybridSearch =
-    getHybridSearchOverride(urlParams) ?? HYBRID_SEARCH_DEFAULT
+  // Server components cannot read PostHog flags, so this resolves the URL
+  // override and the env kill switch only. Setting
+  // NEXT_PUBLIC_DISABLE_HYBRID_SEARCH alongside the PostHog flag is what keeps
+  // this prefetch on the same endpoint the client will query.
+  const isHybridSearch = isHybridSearchEnabled(urlParams)
   const hasSearchTerm =
     typeof searchRequest.q === "string" && searchRequest.q.trim() !== ""
 

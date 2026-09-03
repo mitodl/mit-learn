@@ -1171,6 +1171,10 @@ test("Count changes are announced to screen readers", async () => {
 })
 
 describe("Hybrid search feature flag", () => {
+  afterEach(() => {
+    delete process.env.NEXT_PUBLIC_DISABLE_HYBRID_SEARCH
+  })
+
   const searchCalledWith = (base: string) =>
     makeRequest.mock.calls.some(
       ([args]) => args.method === "get" && args.url.startsWith(base),
@@ -1233,6 +1237,34 @@ describe("Hybrid search feature flag", () => {
       expect(searchCalledWith(unexpected)).toBe(false)
     },
   )
+
+  test("Falls back to OpenSearch when the env kill switch is set", async () => {
+    // The env half of the switch exists so server prefetching agrees with the
+    // client; it must disable hybrid search here too, flag or no flag.
+    process.env.NEXT_PUBLIC_DISABLE_HYBRID_SEARCH = "true"
+    mockFeatureFlags({})
+    setMockApiResponses({ search: { count: 10 } })
+    renderWithProviders(<SearchPage />, { url: "?q=woof" })
+
+    await waitFor(() => {
+      expect(searchCalledWith(urls.search.resources())).toBe(true)
+    })
+    expect(searchCalledWith(urls.search.vectorResources())).toBe(false)
+  })
+
+  test("vector_search=true overrides the env kill switch", async () => {
+    process.env.NEXT_PUBLIC_DISABLE_HYBRID_SEARCH = "true"
+    mockFeatureFlags({})
+    setMockApiResponses({ search: { count: 10 } })
+    renderWithProviders(<SearchPage />, {
+      url: "?q=woof&vector_search=true",
+    })
+
+    await waitFor(() => {
+      expect(searchCalledWith(urls.search.vectorResources())).toBe(true)
+    })
+    expect(searchCalledWith(urls.search.resources())).toBe(false)
+  })
 
   test("Admin toggle writes vector_search=false so it can override the default", async () => {
     mockFeatureFlags({})

@@ -6,27 +6,25 @@ import { useAppSearchParams } from "@/common/useAppSearchParams"
 import {
   HYBRID_SEARCH_DEFAULT,
   getHybridSearchOverride,
+  isHybridSearchDisabledByEnv,
 } from "@/common/hybridSearch"
 
 /**
  * Whether search should use the hybrid (vector + keyword) endpoint rather than
- * OpenSearch.
+ * OpenSearch. Hybrid search is the default; see @/common/hybridSearch for the
+ * two halves of the kill switch that roll it back.
  *
- * Hybrid search is the default. `disable-hybrid-search` is a kill switch:
- * enable that PostHog flag to roll the whole site back to OpenSearch. The flag
- * is deliberately inverted so that every "no" answer PostHog can give—flag
- * absent, flag disabled, flags not loaded yet—leaves the default in place.
- * That also means no OpenSearch flash on first paint.
- *
- * A `vector_search=true|false` URL param overrides the flag, which keeps the
- * admin toggle on the search page usable for side-by-side comparison.
+ * The PostHog flag is deliberately inverted so that every "no" answer PostHog
+ * can give—flag absent, flag disabled, flags not loaded yet—leaves the default
+ * in place. That also means no OpenSearch flash on first paint.
  */
 const useHybridSearchEnabled = (): boolean => {
   const searchParams = useAppSearchParams()
+  const flagDisabled = useFeatureFlagEnabled(FeatureFlags.DisableHybridSearch)
   const override = getHybridSearchOverride(searchParams)
-  const hybridDisabled = useFeatureFlagEnabled(FeatureFlags.DisableHybridSearch)
   if (override !== null) return override
-  if (hybridDisabled) return false
+  // Either half of the kill switch is enough to roll back.
+  if (flagDisabled || isHybridSearchDisabledByEnv()) return false
   return HYBRID_SEARCH_DEFAULT
 }
 

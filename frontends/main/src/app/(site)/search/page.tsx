@@ -22,10 +22,7 @@ import {
 import validateRequestParams from "@/page-components/SearchDisplay/validateRequestParams"
 import { LearningResourcesSearchApiLearningResourcesSearchRetrieveRequest as LRSearchRequest } from "api"
 import { getQueryClient } from "@/app/getQueryClient"
-import {
-  HYBRID_SEARCH_DEFAULT,
-  getHybridSearchOverride,
-} from "@/common/hybridSearch"
+import { isHybridSearchEnabled } from "@/common/hybridSearch"
 
 export async function generateMetadata({
   searchParams,
@@ -63,11 +60,11 @@ const Page: React.FC<AppPageProps<"/search">> = async ({ searchParams }) => {
   })
 
   const queryClient = getQueryClient()
-  // Server components cannot read PostHog flags, so prefetch what the flag's
-  // default resolves to. If the `disable-hybrid-search` kill switch has rolled
-  // search back to OpenSearch, the client refetches on hydration.
-  const isHybridSearch =
-    getHybridSearchOverride(urlParams) ?? HYBRID_SEARCH_DEFAULT
+  // Server components cannot read PostHog flags, so this resolves the URL
+  // override and the env kill switch only. Setting
+  // NEXT_PUBLIC_DISABLE_HYBRID_SEARCH alongside the PostHog flag is what keeps
+  // this prefetch on the same endpoint the client will query.
+  const isHybridSearch = isHybridSearchEnabled(urlParams)
   const hasSearchTerm = typeof params.q === "string" && params.q.trim() !== ""
 
   if (isHybridSearch) {
