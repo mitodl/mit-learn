@@ -13,11 +13,9 @@ import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
  * `flagsLoaded` matters: without it the page would 404 for a beat before
  * PostHog answers, even for users who should see it.
  */
-const OrganizationalLearningFlagGate = ({
-  children,
-}: {
+const OrganizationalLearningFlagGate: React.FC<{
   children: React.ReactNode
-}) => {
+}> = ({ children }) => {
   const enabled = useFeatureFlagEnabled(FeatureFlags.OrganizationalLearning)
   const flagsLoaded = useFeatureFlagsLoaded()
 

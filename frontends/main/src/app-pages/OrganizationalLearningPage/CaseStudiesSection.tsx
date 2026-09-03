@@ -247,7 +247,7 @@ type CaseStudyPanelProps = {
   isSlide: boolean
 }
 
-const CaseStudyPanel = ({ study, isSlide }: CaseStudyPanelProps) => {
+const CaseStudyPanel: React.FC<CaseStudyPanelProps> = ({ study, isSlide }) => {
   const slideProps = isSlide
     ? {
         role: "group",
@@ -327,7 +327,10 @@ type CaseStudyCarouselProps = {
  * settle event, so the counter and the announcement land with the slide rather
  * than ahead of it.
  */
-const CaseStudyCarousel = ({ items, label }: CaseStudyCarouselProps) => {
+const CaseStudyCarousel: React.FC<CaseStudyCarouselProps> = ({
+  items,
+  label,
+}) => {
   const [arrows, setArrows] = useState<HTMLDivElement | null>(null)
   const [index, setIndex] = useState(0)
   const [announcement, setAnnouncement] = useState("")
@@ -389,7 +392,7 @@ const CaseStudyCarousel = ({ items, label }: CaseStudyCarouselProps) => {
   )
 }
 
-const CaseStudiesSection = () => (
+const CaseStudiesSection: React.FC = () => (
   <Band aria-labelledby="case-studies-heading">
     <Inner>
       <CenteredHeader>

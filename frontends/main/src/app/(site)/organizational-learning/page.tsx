@@ -15,7 +15,7 @@ export const metadata: Metadata = standardizeMetadata({
     "MIT learning programs for businesses, government, and higher education institutions. Talk with our team about a solution for your organization.",
 })
 
-const Page = () => (
+const Page: React.FC = () => (
   <OrganizationalLearningFlagGate>
     <OrganizationalLearningPage />
   </OrganizationalLearningFlagGate>
