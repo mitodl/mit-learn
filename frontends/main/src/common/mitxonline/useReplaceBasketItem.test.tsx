@@ -15,12 +15,18 @@ const wrapper = ({ children }: { children: React.ReactNode }) => {
   )
 }
 
+const BASKET = { id: 7 }
+
 const reset = jest.fn()
+// react-query hands the mutation's result to a per-call onSuccess; the redirect
+// reads the basket id off it, so the mock has to pass it through too.
 const mutate = jest.fn(
-  (_productId: number, opts?: { onSuccess?: () => void }) =>
-    opts?.onSuccess?.(),
+  (
+    _productId: number,
+    opts?: { onSuccess?: (basket: typeof BASKET) => void },
+  ) => opts?.onSuccess?.(BASKET),
 )
-const mutateAsync = jest.fn().mockResolvedValue({ id: 7 })
+const mutateAsync = jest.fn().mockResolvedValue(BASKET)
 const clearMutate = jest.fn(
   (_vars: undefined, opts?: { onSuccess?: () => void }) => opts?.onSuccess?.(),
 )
@@ -72,7 +78,30 @@ describe("useReplaceBasketItem", () => {
       42,
       expect.objectContaining({ onSuccess: expect.any(Function) }),
     )
-    expect(assign).toHaveBeenCalledWith(mitxonlineLegacyUrl("/cart/"))
+    expect(assign).toHaveBeenCalledWith(
+      mitxonlineLegacyUrl(
+        `/switch-session/?next=/cart/&basket_id=${BASKET.id}`,
+      ),
+    )
+  })
+
+  test("routes checkout through MITxOnline's session-reset endpoint", async () => {
+    // Pins the cross-app contract rather than mirroring the implementation's
+    // string: MITxOnline's /switch-session discards a stale gateway session
+    // before the cart renders (hq#12763), and `next` is what it forwards to.
+    const assign = jest.mocked(window.location.assign)
+    const { result } = renderHook(() => useReplaceBasketItem(), { wrapper })
+
+    await act(async () => {
+      await result.current.mutateAsync(42)
+    })
+
+    const target = new URL(assign.mock.calls[0][0] as string)
+    expect(target.pathname).toBe("/switch-session/")
+    expect(target.searchParams.get("next")).toBe("/cart/")
+    expect(target.searchParams.get("ecom-service")).toBe("true")
+    // MITxOnline compares this against the basket its own session owns.
+    expect(target.searchParams.get("basket_id")).toBe(String(BASKET.id))
   })
 
   test("redirects after the async mutateAsync path succeeds", async () => {
@@ -86,7 +115,11 @@ describe("useReplaceBasketItem", () => {
     expect(reset).toHaveBeenCalled()
     expect(clearMutateAsync).toHaveBeenCalled()
     expect(mutateAsync).toHaveBeenCalledWith(42)
-    expect(assign).toHaveBeenCalledWith(mitxonlineLegacyUrl("/cart/"))
+    expect(assign).toHaveBeenCalledWith(
+      mitxonlineLegacyUrl(
+        `/switch-session/?next=/cart/&basket_id=${BASKET.id}`,
+      ),
+    )
   })
 
   test("does not add or redirect when the sync clear never succeeds", async () => {
