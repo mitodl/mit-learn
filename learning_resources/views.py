@@ -1784,11 +1784,6 @@ class CredentialMetadataView(AsyncAPIView):
 
     permission_classes = (permissions.IsAdminOrCourseAuthor,)
 
-    # POST, not GET: each call spends money on frontier model requests and
-    # writes generation-log rows, so it is neither safe nor idempotent. As a
-    # GET it would be exposed to prefetching, proxy retries and CSRF -- session
-    # auth enforces no CSRF check on GET, so following a crafted link while
-    # logged in would be enough to run a generation.
     @extend_schema(summary="Generate credential metadata")
     async def post(self, request):
         # Imported here, not at module scope: credentials pulls in litellm and
