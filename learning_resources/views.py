@@ -1796,21 +1796,26 @@ class CredentialMetadataView(AsyncAPIView):
             return Response(request_data.errors, status=400)
 
         readable_id = request_data.data["resource_readable_id"]
+
         resource = await db_sync_to_async(
-            lambda: LearningResource.objects.filter(readable_id=readable_id).first()
+            lambda: LearningResource.objects.filter(
+                readable_id=readable_id,
+                platform=PlatformType.mitxonline.name,
+                resource_type=LearningResourceType.course.name,
+                etl_source=ETLSource.mitxonline.name,
+            ).first()
         )()
         if not resource:
-            msg = f"No learning resource with readable_id {readable_id}"
-            raise NotFound(msg)
-        if (
-            resource.resource_type != LearningResourceType.course.name
-            or resource.etl_source != ETLSource.mitxonline.name
-        ):
+            exists = await db_sync_to_async(
+                LearningResource.objects.filter(readable_id=readable_id).exists
+            )()
+            if not exists:
+                msg = f"No learning resource with readable_id {readable_id}"
+                raise NotFound(msg)
             msg = (
                 f"Credential metadata is only generated for"
                 f" {ETLSource.mitxonline.name} courses;"
-                f" {readable_id} is a {resource.etl_source}"
-                f" {resource.resource_type}"
+                f" {readable_id} is not one"
             )
             raise ValidationError(msg)
 

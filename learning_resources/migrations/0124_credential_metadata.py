@@ -24,10 +24,7 @@ DEFAULT_CONFIGURATIONS = [
             " bullet points that demonstrate what the learner did to complete"
             " the course."
         ),
-        "retrieval_query": (
-            "course learning outcomes, skills gained, assessment and grading"
-            " criteria, syllabus"
-        ),
+        "retrieval_query": ("learning goals"),
     },
 ]
 

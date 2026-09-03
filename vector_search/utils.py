@@ -1605,6 +1605,28 @@ def best_run_ids_for_resources(readable_ids):
     return run_ids
 
 
+def best_run_id_for_resource(readable_id):
+    """
+    Resolve the single run_id a one-resource content-file query should be
+    restricted to.
+
+    Unlike best_run_ids_for_resources, a test_mode resource gets its best run
+    too rather than all of its published runs: the same content file is indexed
+    once per run, so widening the filter only spends the retrieval limit on
+    duplicate chunks.
+
+    Args:
+        readable_id (str): the resource readable_id
+
+    Returns:
+        str | None: the best run's run_id, or None if the resource has no
+            published run (or does not exist)
+    """
+    resource = LearningResource.objects.filter(readable_id=readable_id).first()
+    best_run = resource.best_run if resource else None
+    return best_run.run_id if best_run else None
+
+
 async def async_content_file_chunks_for_resource(
     readable_id: str, query_string: str, limit: int = 50
 ):
@@ -1616,9 +1638,10 @@ async def async_content_file_chunks_for_resource(
     hybrid arm, no facet counts, no database round trip to hydrate hits, since
     the chunk text is already in the Qdrant payload.
 
-    Like the view, the query is restricted to each resource's best run (all
-    published runs for a test_mode resource) so a multi-run course does not
-    return the same chunk once per run. Resource readable_ids are included in
+    Like the view, the query is restricted to the resource's best run so a
+    multi-run course does not return the same chunk once per run -- here for
+    a test_mode resource as well, since a retrieval limit spent on duplicates
+    is a limit not spent on content. The resource readable_id is included in
     the run filter to match the run-less course-metadata point.
 
     Args:
@@ -1634,9 +1657,9 @@ async def async_content_file_chunks_for_resource(
     encoder_dense = dense_encoder()
     encoder_dense.cache = True
 
-    run_ids = await db_sync_to_async(best_run_ids_for_resources)([readable_id])
+    run_id = await db_sync_to_async(best_run_id_for_resource)(readable_id)
     search_filter = qdrant_query_conditions(
-        {"run_readable_id": [*run_ids, readable_id]},
+        {"run_readable_id": [run_id, readable_id] if run_id else [readable_id]},
         collection_name=CONTENT_FILES_COLLECTION_NAME,
     )
     dense_query = await db_sync_to_async(encoder_dense.embed_query)(query_string)

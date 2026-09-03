@@ -4,9 +4,16 @@ import pytest
 from django.contrib.auth.models import Group
 from django.urls import reverse
 
-from learning_resources.constants import GROUP_COURSE_AUTHORS, LearningResourceType
+from learning_resources.constants import (
+    GROUP_COURSE_AUTHORS,
+    LearningResourceType,
+    PlatformType,
+)
 from learning_resources.etl.constants import ETLSource
-from learning_resources.factories import LearningResourceFactory
+from learning_resources.factories import (
+    LearningResourceFactory,
+    LearningResourcePlatformFactory,
+)
 
 GENERATED = {
     "description": "A course about modelling fluid flow.",
@@ -23,12 +30,22 @@ def mock_generate(mocker):
     )
 
 
+def mitxonline_course(readable_id=None):
+    """Create an MITx Online course, the only kind the endpoint generates for"""
+    return LearningResourceFactory.create(
+        is_course=True,
+        etl_source=ETLSource.mitxonline.name,
+        platform=LearningResourcePlatformFactory.create(
+            code=PlatformType.mitxonline.name
+        ),
+        **({"readable_id": readable_id} if readable_id else {}),
+    )
+
+
 @pytest.fixture
 def resource():
     """Return an MITx Online course, the only kind the endpoint generates for"""
-    return LearningResourceFactory.create(
-        is_course=True, etl_source=ETLSource.mitxonline.name
-    )
+    return mitxonline_course()
 
 
 def credential_url():
@@ -175,3 +192,30 @@ def test_credential_metadata_rejects_get(client, django_user_model, mock_generat
 
     assert response.status_code == 405
     mock_generate.assert_not_called()
+
+
+@pytest.mark.django_db(transaction=True)
+def test_credential_metadata_resolves_the_mitxonline_course(
+    client, django_user_model, mock_generate
+):
+    """
+    A readable id shared with another platform resolves to the MITx Online row.
+
+    readable_id is unique only per (platform, resource_type), so the lookup has
+    to pin the whole key. The edX row is created first, so a lookup that took
+    whichever row came back first would pick it.
+    """
+    readable_id = "course-v1:MITx+18.01"
+    LearningResourceFactory.create(
+        is_course=True,
+        readable_id=readable_id,
+        etl_source=ETLSource.mit_edx.name,
+        platform=LearningResourcePlatformFactory.create(code=PlatformType.edx.name),
+    )
+    expected = mitxonline_course(readable_id)
+    client.force_login(django_user_model.objects.create(is_staff=True))
+
+    response = generate(client, readable_id)
+
+    assert response.status_code == 200
+    assert mock_generate.call_args.args[0] == expected

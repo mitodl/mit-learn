@@ -3654,6 +3654,34 @@ def test_async_content_file_chunks_for_resource(mocker):
 
 
 @pytest.mark.django_db(transaction=True)
+def test_async_content_file_chunks_for_resource_test_mode(mocker):
+    """A test_mode resource is restricted to its best run, not every run"""
+    resource = LearningResourceFactory.create(is_course=True, test_mode=True)
+    resource.runs.all().delete()
+    LearningResourceRunFactory.create(
+        learning_resource=resource, run_id="RUN_A", published=True
+    )
+    LearningResourceRunFactory.create(
+        learning_resource=resource, run_id="RUN_B", published=True
+    )
+    mock_client = mocker.AsyncMock()
+    mock_client.query_points = mocker.AsyncMock(return_value=mocker.Mock(points=[]))
+    mocker.patch("vector_search.utils.async_qdrant_client", return_value=mock_client)
+
+    asyncio.run(
+        async_content_file_chunks_for_resource(resource.readable_id, "syllabus")
+    )
+
+    call_kwargs = mock_client.query_points.mock_calls[0].kwargs
+    assert call_kwargs["query_filter"].must == [
+        models.FieldCondition(
+            key="run_readable_id",
+            match=models.MatchAny(any=[resource.best_run.run_id, resource.readable_id]),
+        )
+    ]
+
+
+@pytest.mark.django_db(transaction=True)
 def test_async_content_file_chunks_for_resource_no_published_run(mocker):
     """With no published run the filter falls back to the resource itself"""
     resource = LearningResourceFactory.create(is_course=True)
