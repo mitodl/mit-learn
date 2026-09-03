@@ -2018,11 +2018,6 @@ class CredentialMetadataRequestSerializer(serializers.Serializer):
 class CredentialMetadataSerializer(serializers.Serializer):
     """
     Generated Open Badges credential metadata for a learning resource.
-
-    Every field is a draft for a human to review and edit: nothing here is
-    saved on the resource, and asking again returns a different draft. A field
-    whose generation failed is absent rather than empty, so a caller does not
-    overwrite a good value with a blank one.
     """
 
     resource_readable_id = serializers.CharField(read_only=True)
