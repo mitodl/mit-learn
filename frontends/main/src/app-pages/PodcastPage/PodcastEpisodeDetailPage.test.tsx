@@ -1,6 +1,7 @@
 import React from "react"
 import { factories, setMockResponse, urls } from "api/test-utils"
 import { kebabCase } from "lodash"
+import { podcastEpisodePath } from "@/common/urls"
 import { ResourceTypeEnum } from "api/v1"
 import type { LearningResource, PodcastEpisodeResource } from "api/v1"
 import { renderWithProviders, screen, user, waitFor } from "@/test-utils"
@@ -25,13 +26,32 @@ const makeItemsResponse = (episodes: LearningResource[]) => ({
   })),
 })
 
+const ORIGIN = "http://test.learn.odl.local:8062"
+
+/**
+ * The podcast an episode's canonical URL is scoped to, deliberately not the one
+ * these tests view it under: an episode in several podcasts is viewable from any
+ * of them, so rows must keep the viewed podcast as context and borrow only the
+ * slug from `learn_url`.
+ */
+const CANONICAL_PARENT_ID = 987654
+
 const makePodcastEpisode = (
   overrides: Partial<LearningResource> = {},
-): PodcastEpisodeResource =>
-  factories.learningResources.resource({
+): PodcastEpisodeResource => {
+  const episode = factories.learningResources.resource({
     resource_type: ResourceTypeEnum.PodcastEpisode,
     ...overrides,
   }) as PodcastEpisodeResource
+  return {
+    ...episode,
+    // Dedicated-page shape. The row hrefs read their slug from here, so the
+    // factory's drawer-shaped default would render a "/search" slug.
+    learn_url: `${ORIGIN}/podcast/${CANONICAL_PARENT_ID}/podcast_episode/${
+      episode.id
+    }/${kebabCase(episode.title)}`,
+  }
+}
 
 /**
  * The episode page reads the series URL from the embedded parent's `learn_url`,
@@ -184,6 +204,24 @@ describe("PodcastEpisodeDetailPage", () => {
 
     await screen.findByText(moreEpisodes[0].title!)
     expect(screen.getByText(moreEpisodes[1].title!)).toBeInTheDocument()
+
+    // Each row keeps the podcast being viewed as the context segment and takes
+    // only the slug from learn_url, whose canonical parent is a different
+    // podcast. A drawer-shaped learn_url would render a "/search" slug here.
+    for (const more of moreEpisodes) {
+      const link = screen.getByRole("link", {
+        name: new RegExp(more.title!, "i"),
+      })
+      expect(link).toHaveAttribute(
+        "href",
+        podcastEpisodePath(
+          String(more.id),
+          String(podcast.id),
+          kebabCase(more.title),
+        ),
+      )
+      expect(link.getAttribute("href")).not.toContain("search")
+    }
   })
 
   test("play button is present and enabled when episode has an audio URL", async () => {
