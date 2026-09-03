@@ -22,6 +22,10 @@ import {
 import validateRequestParams from "@/page-components/SearchDisplay/validateRequestParams"
 import { LearningResourcesSearchApiLearningResourcesSearchRetrieveRequest as LRSearchRequest } from "api"
 import { getQueryClient } from "@/app/getQueryClient"
+import {
+  HYBRID_SEARCH_DEFAULT,
+  getHybridSearchOverride,
+} from "@/common/hybridSearch"
 
 export async function generateMetadata({
   searchParams,
@@ -59,10 +63,14 @@ const Page: React.FC<AppPageProps<"/search">> = async ({ searchParams }) => {
   })
 
   const queryClient = getQueryClient()
-  const isVectorSearch = urlParams.get("vector_search") === "true"
+  // Server components cannot read PostHog flags, so prefetch what the flag's
+  // default resolves to. If the `disable-hybrid-search` kill switch has rolled
+  // search back to OpenSearch, the client refetches on hydration.
+  const isHybridSearch =
+    getHybridSearchOverride(urlParams) ?? HYBRID_SEARCH_DEFAULT
   const hasSearchTerm = typeof params.q === "string" && params.q.trim() !== ""
 
-  if (isVectorSearch) {
+  if (isHybridSearch) {
     await Promise.all([
       queryClient.prefetchQuery(offerorQueries.list({})),
       queryClient.prefetchQuery(

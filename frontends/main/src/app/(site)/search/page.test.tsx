@@ -30,10 +30,30 @@ beforeEach(() => {
   })
 })
 
-test("prefetches OpenSearch results by default", async () => {
+test("prefetches vector results by default", async () => {
   await Page({
     params: Promise.resolve({}),
     searchParams: Promise.resolve({ q: "test" }),
+  })
+
+  expect(
+    makeRequest.mock.calls.some(([args]) =>
+      args.url.startsWith(urls.search.vectorResources()),
+    ),
+  ).toBe(true)
+  expect(
+    makeRequest.mock.calls.some(([args]) =>
+      args.url.startsWith(urls.search.resources()),
+    ),
+  ).toBe(false)
+})
+
+test("prefetches OpenSearch results when vector_search is disabled", async () => {
+  // Server components cannot read PostHog flags, so `vector_search=false` is
+  // the only way to prefetch the OpenSearch fallback.
+  await Page({
+    params: Promise.resolve({}),
+    searchParams: Promise.resolve({ q: "test", vector_search: "false" }),
   })
 
   expect(

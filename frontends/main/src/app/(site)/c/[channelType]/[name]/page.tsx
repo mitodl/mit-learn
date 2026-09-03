@@ -28,6 +28,14 @@ import {
 import { isInEnum } from "@/common/utils"
 import { notFound } from "next/navigation"
 import { getQueryClient } from "@/app/getQueryClient"
+import {
+  HYBRID_SEARCH_DEFAULT,
+  getHybridSearchOverride,
+} from "@/common/hybridSearch"
+import {
+  toUnfacetedVectorSearchParams,
+  toVectorSearchParams,
+} from "@/page-components/SearchDisplay/vectorSearchParams"
 
 export async function generateMetadata({
   searchParams,
@@ -121,9 +129,27 @@ const Page: React.FC<AppPageProps<"/c/[channelType]/[name]">> = async ({
     page: Number(search.page ?? 1),
   })
 
-  await queryClient.prefetchQuery(
-    learningResourceQueries.search(searchRequest as LRSearchRequest),
-  )
+  // Server components cannot read PostHog flags, so prefetch what the flag's
+  // default resolves to. If the `disable-hybrid-search` kill switch has rolled
+  // search back to OpenSearch, the client refetches on hydration.
+  const isHybridSearch =
+    getHybridSearchOverride(urlParams) ?? HYBRID_SEARCH_DEFAULT
+  const hasSearchTerm =
+    typeof searchRequest.q === "string" && searchRequest.q.trim() !== ""
+
+  if (isHybridSearch) {
+    await queryClient.prefetchQuery(
+      learningResourceQueries.vectorSearch(
+        hasSearchTerm
+          ? toUnfacetedVectorSearchParams(searchRequest, constantSearchParams)
+          : toVectorSearchParams(searchRequest),
+      ),
+    )
+  } else {
+    await queryClient.prefetchQuery(
+      learningResourceQueries.search(searchRequest as LRSearchRequest),
+    )
+  }
 
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>
