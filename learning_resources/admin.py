@@ -311,6 +311,9 @@ class CredentialMetadataGenerationLogAdmin(admin.ModelAdmin):
     def has_change_permission(self, request, obj=None):  # noqa: ARG002
         return False
 
+    def has_delete_permission(self, request, obj=None):  # noqa: ARG002
+        return False
+
 
 admin.site.register(models.LearningResourceTopic, LearningResourceTopicAdmin)
 admin.site.register(models.LearningResourceInstructor, LearningResourceInstructorAdmin)
