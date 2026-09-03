@@ -2,9 +2,10 @@
 Base utility views. Handles errors and feature list views.
 """
 
-from django.http import JsonResponse
 import asyncio
 from functools import wraps
+
+from django.http import JsonResponse
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework.viewsets import ViewSet
