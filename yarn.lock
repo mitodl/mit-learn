@@ -2469,7 +2469,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@faker-js/faker@npm:^10.0.0, @faker-js/faker@npm:^10.5.0":
+"@faker-js/faker@npm:^10.5.0":
   version: 10.6.0
   resolution: "@faker-js/faker@npm:10.6.0"
   checksum: 10/f45220ceae76133d831dee8c8f5c8566767bfd857b7f872b5ec58866b68da889dabe96e805a598e095a6c58eae250363a7f335aa0afc513cb2ad5fe69e2a967f
@@ -13704,7 +13704,7 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "frontends@workspace:frontends"
   dependencies:
-    "@faker-js/faker": "npm:^10.0.0"
+    "@faker-js/faker": "npm:^10.5.0"
     "@jest/environment": "npm:^29.7.0"
     "@next/eslint-plugin-next": "npm:^16.2.7"
     "@swc/core": "npm:^1.11.29"
