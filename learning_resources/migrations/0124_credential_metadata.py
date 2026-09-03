@@ -20,7 +20,7 @@ DEFAULT_CONFIGURATIONS = [
     {
         "field": constants.CredentialMetadataField.criteria.name,
         "prompt": (
-            "Generate an Open Badges 3.0 criteria field with skills focused"
+            "Generate an Open Badges 3.0 criteria field with skill-focused"
             " bullet points that demonstrate what the learner did to complete"
             " the course."
         ),
