@@ -2389,38 +2389,17 @@ components:
       - course
     CredentialMetadata:
       type: object
-      description: |-
-        Generated Open Badges credential metadata for a learning resource.
-
-        Every field is a draft for a human to review and edit: nothing here is
-        saved on the resource, and asking again returns a different draft. A field
-        whose generation failed is absent rather than empty, so a caller does not
-        overwrite a good value with a blank one.
+      description: Generated Open Badges credential metadata for a learning resource.
       properties:
-        resource_readable_id:
-          type: string
-          readOnly: true
         description:
           type: string
-          readOnly: true
           description: The Open Badges 3.0 description, 1-2 sentences
         criteria:
-          type: string
-          readOnly: true
-          description: The Open Badges 3.0 criteria narrative, rendered as a markdown
-            bullet list from criteria_skills
-        criteria_skills:
           type: array
           items:
             type: string
-          readOnly: true
-          description: The discrete skills the criteria narrative was rendered from,
-            one per bullet
-      required:
-      - criteria
-      - criteria_skills
-      - description
-      - resource_readable_id
+          description: Open Badges 3.0 criteria, one skill-focused bullet per item,
+            for rendering into the criteria narrative
     CurrentEducationEnum:
       enum:
       - Doctorate

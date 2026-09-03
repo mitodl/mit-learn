@@ -580,22 +580,17 @@ export type CourseResourceResourceTypeEnum =
   (typeof CourseResourceResourceTypeEnum)[keyof typeof CourseResourceResourceTypeEnum]
 
 /**
- * Generated Open Badges credential metadata for a learning resource.  Every field is a draft for a human to review and edit: nothing here is saved on the resource, and asking again returns a different draft. A field whose generation failed is absent rather than empty, so a caller does not overwrite a good value with a blank one.
+ * Generated Open Badges credential metadata for a learning resource.
  */
 export interface CredentialMetadata {
-  resource_readable_id: string
   /**
    * The Open Badges 3.0 description, 1-2 sentences
    */
-  description: string
+  description?: string
   /**
-   * The Open Badges 3.0 criteria narrative, rendered as a markdown bullet list from criteria_skills
+   * Open Badges 3.0 criteria, one skill-focused bullet per item, for rendering into the criteria narrative
    */
-  criteria: string
-  /**
-   * The discrete skills the criteria narrative was rendered from, one per bullet
-   */
-  criteria_skills: Array<string>
+  criteria?: Array<string>
 }
 /**
  * * `` - ---- * `Doctorate` - Doctorate * `Master\'s or professional degree` - Master\'s or professional degree * `Bachelor\'s degree` - Bachelor\'s degree * `Associate degree` - Associate degree * `Secondary/high school` - Secondary/high school * `Junior secondary/junior high/middle school` - Junior secondary/junior high/middle school * `No formal education` - No formal education * `Other education` - Other education

@@ -2020,15 +2020,12 @@ class CredentialMetadataSerializer(serializers.Serializer):
     Generated Open Badges credential metadata for a learning resource.
     """
 
-    resource_readable_id = serializers.CharField(read_only=True)
     description = serializers.CharField(
-        read_only=True,
         required=False,
         help_text="The Open Badges 3.0 description, 1-2 sentences",
     )
     criteria = serializers.ListField(
         child=serializers.CharField(),
-        read_only=True,
         required=False,
         help_text=(
             "Open Badges 3.0 criteria, one skill-focused bullet per item, for"
