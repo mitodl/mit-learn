@@ -199,10 +199,10 @@ const OrgLeadForm: React.FC<{ className?: string }> = ({ className }) => {
   const isConfirmed = hubspotFormSubmit.isSuccess && audience === "organization"
 
   /**
-   * Submitting unmounts the form, and with it whatever had focus, so focus has
-   * to be placed deliberately or it falls to `document.body`. The confirmation
-   * is also what announces the outcome: a screen reader reads the container it
-   * is moved into, which is why there is no live region duplicating this copy.
+   * Submitting unmounts the form along with whatever had focus, which would
+   * leave focus on `document.body`, so it is placed here instead. Moving it
+   * also announces the outcome — a screen reader reads the container focus
+   * lands in — which is why no live region repeats this copy.
    */
   React.useEffect(() => {
     if (isConfirmed) {

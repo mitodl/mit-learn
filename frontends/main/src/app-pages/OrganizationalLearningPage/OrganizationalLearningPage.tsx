@@ -12,10 +12,7 @@ import FaqSection from "./FaqSection"
 import GetInTouchSection from "./GetInTouchSection"
 
 /**
- * The "For Organizations" B2B landing page.
- *
- * Sections are siblings in this directory and composed here in order, following
- * the HomePage / ProductPages pattern rather than the single-file approach
+ * The "For Organizations" B2B landing page. Sections are siblings in this directory.
  *
  */
 const OrganizationalLearningPage: React.FC = () => (
@@ -27,7 +24,6 @@ const OrganizationalLearningPage: React.FC = () => (
     <ContinuumSection />
     <ClientLogosSection />
     <CaseStudiesSection />
-    {/* Testimonials omitted — pending approved attributable quotes. */}
     <FaqSection />
     <GetInTouchSection />
   </>
