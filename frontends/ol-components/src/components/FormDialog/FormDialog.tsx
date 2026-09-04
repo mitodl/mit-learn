@@ -66,6 +66,7 @@ interface FormDialogProps {
   disabled?: boolean
   TransitionProps?: DialogProps["TransitionProps"]
   "aria-describedby"?: string
+  additionalLabelledBy?: DialogProps["additionalLabelledBy"]
 }
 
 /**
@@ -95,6 +96,7 @@ const FormDialog: React.FC<FormDialogProps> = ({
   disabled = false,
   TransitionProps,
   "aria-describedby": ariaDescribedBy,
+  additionalLabelledBy,
 }) => {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const handleSubmit: React.FormEventHandler<HTMLFormElement> = useCallback(
@@ -143,6 +145,7 @@ const FormDialog: React.FC<FormDialogProps> = ({
       disabled={isSubmitting || disabled}
       TransitionProps={TransitionProps}
       aria-describedby={ariaDescribedBy}
+      additionalLabelledBy={additionalLabelledBy}
     >
       <FormContent>{children}</FormContent>
     </Dialog>

@@ -36,11 +36,10 @@ import { SiblingRunsPanel, SiblingRunsToggle } from "./SiblingRunsAccordion"
 import { EnrollmentStatusIcon } from "./EnrollmentStatus"
 import { mitxUserQueries } from "api/mitxonline-hooks/user"
 import { useQuery } from "@tanstack/react-query"
-import { coursePageView, receiptByRunView } from "@/common/urls"
-import NiceModal from "@ebay/nice-modal-react"
-import { EmailSettingsDialog, UnenrollDialog } from "./DashboardDialogs"
-import { getReceiptMenuItem } from "./receiptMenuItem"
+import { coursePageView } from "@/common/urls"
+import { getRunMenuItems } from "./runMenuItems"
 import { useOrderIdForRun } from "@/common/mitxonline/useOrderIdForResource"
+import type { SimpleMenuItem } from "ol-components"
 import {
   CourseRunEnrollmentV3,
   V3UserProgramEnrollment,
@@ -446,7 +445,7 @@ export const EnrolledCourseCard = ({
   ) : (
     ctaButton
   )
-  const menuItems = []
+  const menuItems: SimpleMenuItem[] = []
   const readableId = run?.course.readable_id
   const detailsUrl = readableId ? coursePageView(readableId) : undefined
 
@@ -459,33 +458,7 @@ export const EnrolledCourseCard = ({
     })
   }
 
-  menuItems.push(
-    {
-      className: "dashboard-card-menu-item",
-      key: "email-settings",
-      label: "Email Settings",
-      onClick: () => {
-        NiceModal.show(EmailSettingsDialog, {
-          title,
-          enrollment,
-        })
-      },
-    },
-    {
-      className: "dashboard-card-menu-item",
-      key: "unenroll",
-      label: "Unenroll",
-      onClick: () => {
-        NiceModal.show(UnenrollDialog, { title, enrollment })
-      },
-    },
-  )
-
-  const receiptMenuItem = getReceiptMenuItem(
-    receiptResolution,
-    receiptByRunView(run.id),
-  )
-  if (receiptMenuItem) menuItems.push(receiptMenuItem)
+  menuItems.push(...getRunMenuItems({ enrollment, title, receiptResolution }))
 
   const contextMenu = (
     <SimpleMenu

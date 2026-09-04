@@ -1,5 +1,5 @@
 import React from "react"
-import { Collapse, Stack, styled, Typography } from "ol-components"
+import { Collapse, SimpleMenu, Stack, styled, Typography } from "ol-components"
 import {
   DashboardType,
   EnrollmentStatus,
@@ -8,16 +8,20 @@ import {
 import {
   RiArrowDownSLine,
   RiArrowRightSLine,
+  RiMore2Line,
   RiSubtractLine,
   RiTimeLine,
 } from "@remixicon/react"
-import { formatDate } from "ol-utilities"
-import { getRunTimeState } from "./courseDateUtils"
+import { formatRunIdentifier, getRunTimeState } from "./courseDateUtils"
 import type { RunTimeState } from "./courseDateUtils"
-import { VisuallyHidden } from "@mitodl/smoot-design"
+import { ActionButton, VisuallyHidden } from "@mitodl/smoot-design"
 import { EnrollmentStatusIcon } from "./EnrollmentStatus"
 import NextLink from "next/link"
 import { CourseRunEnrollmentV3 } from "@mitodl/mitxonline-api-axios/v2"
+import { useOrderIdForRun } from "@/common/mitxonline/useOrderIdForResource"
+import { getRunMenuItems } from "./runMenuItems"
+import { useFeatureFlagEnabled } from "posthog-js/react"
+import { FeatureFlags } from "@/common/feature_flags"
 
 const UpcomingRunIcon = styled(RiTimeLine)(({ theme }) => ({
   width: "16px",
@@ -115,16 +119,6 @@ const RunsListWrapper = styled.div(({ theme }) => ({
   },
 }))
 
-const formatRunDateRange = (
-  startDate?: string | null,
-  endDate?: string | null,
-): string => {
-  const parts: string[] = []
-  if (startDate) parts.push(formatDate(startDate, "MMM D, YYYY"))
-  if (endDate) parts.push(formatDate(endDate, "MMM D, YYYY"))
-  return parts.join(" – ")
-}
-
 /**
  * Every state gets words, not just "In Progress". The run icons are
  * `aria-hidden`, so anything conveyed only by an icon is silent to a screen
@@ -181,8 +175,14 @@ type RunListRowProps = {
   /** Bold lead-in, e.g. "Current run:" or "Upcoming:". Omitted for plain past runs. */
   labelPrefix?: string
   labelValue: string
-  coursewareUrl?: string | null
-  ariaLabel: string
+  /**
+   * The row's full run label, e.g. "Upcoming: Jan 5, 2026". Both of the row's
+   * controls take their accessible name from it: "View content" and the menu
+   * trigger repeat on every row, so the run is the only thing telling them
+   * apart.
+   */
+  runLabel: string
+  enrollment: CourseRunEnrollmentV3
   isFirst: boolean
 }
 
@@ -190,44 +190,90 @@ const RunListRow: React.FC<RunListRowProps> = ({
   icon,
   labelPrefix,
   labelValue,
-  coursewareUrl,
-  ariaLabel,
+  runLabel,
+  enrollment,
   isFirst,
-}) => (
-  <RunRow isFirst={isFirst}>
-    <Stack direction="row" gap="8px" alignItems="center" flex={1} minWidth={0}>
-      {icon}
+}) => {
+  const coursewareUrl = enrollment.run?.courseware_url
+  /**
+   * Resolved per row so each run's Receipt item reflects that run's own order.
+   * Every row shares the one `orders/history` query, so N rows still cost a
+   * single request and the per-row work is a client-side lookup.
+   */
+  const receiptResolution = useOrderIdForRun(enrollment.run.id)
+  const perRunMenusEnabled = useFeatureFlagEnabled(
+    FeatureFlags.MultipleRunContextMenus,
+  )
+  const menuItems = getRunMenuItems({
+    enrollment,
+    title: enrollment.run.course.title,
+    receiptResolution,
+  })
+  return (
+    <RunRow isFirst={isFirst}>
       <Stack
         direction="row"
-        gap="4px"
+        gap="8px"
         alignItems="center"
         flex={1}
         minWidth={0}
       >
-        {labelPrefix && (
-          <RunLabelPrefix variant="subtitle3" color="darkGray2" noWrap>
-            {labelPrefix}
-          </RunLabelPrefix>
-        )}
-        <RunLabelValue
-          variant={labelPrefix ? "body3" : "subtitle3"}
-          color={labelPrefix ? "silverGrayDark" : "darkGray2"}
-          noWrap
+        {icon}
+        <Stack
+          direction="row"
+          gap="4px"
+          alignItems="center"
+          flex={1}
+          minWidth={0}
         >
-          {labelValue}
-        </RunLabelValue>
+          {labelPrefix && (
+            <RunLabelPrefix variant="subtitle3" color="darkGray2" noWrap>
+              {labelPrefix}
+            </RunLabelPrefix>
+          )}
+          <RunLabelValue
+            variant={labelPrefix ? "body3" : "subtitle3"}
+            color={labelPrefix ? "silverGrayDark" : "darkGray2"}
+            noWrap
+          >
+            {labelValue}
+          </RunLabelValue>
+        </Stack>
       </Stack>
-    </Stack>
-    {coursewareUrl && (
       <Stack direction="row" gap="4px" alignItems="center" flexShrink={0}>
-        <ViewContentLink href={coursewareUrl} aria-label={ariaLabel}>
-          View content
-        </ViewContentLink>
-        <ViewContentArrow />
+        {coursewareUrl && (
+          <>
+            <ViewContentLink
+              href={coursewareUrl}
+              aria-label={`View content for ${runLabel}`}
+            >
+              View content
+            </ViewContentLink>
+            <ViewContentArrow aria-hidden="true" />
+          </>
+        )}
+        {perRunMenusEnabled && (
+          <SimpleMenu
+            items={menuItems}
+            // Every row's menu is otherwise just "menu" to a screen reader.
+            menuOverrideProps={{
+              MenuListProps: { "aria-label": `Options for ${runLabel}` },
+            }}
+            trigger={
+              <ActionButton
+                size="small"
+                variant="text"
+                aria-label={`More options for ${runLabel}`}
+              >
+                <RiMore2Line aria-hidden="true" />
+              </ActionButton>
+            }
+          />
+        )}
       </Stack>
-    )}
-  </RunRow>
-)
+    </RunRow>
+  )
+}
 
 type SiblingRunsPanelProps = {
   /** The currently displayed enrollment (shown above the sibling list). */
@@ -261,13 +307,11 @@ const SiblingRunsPanel: React.FC<SiblingRunsPanelProps> = ({
     currentRun?.end_date,
   )
   const currentStatusLabel = getRunStatusLabel(currentStatus, currentTimeState)
-  const currentDateRange = formatRunDateRange(
-    currentRun?.start_date,
-    currentRun?.end_date,
-  )
+  const currentRunIdentifier = formatRunIdentifier(currentRun)
   const currentLabelValue = currentStatusLabel
-    ? `${currentDateRange} (${currentStatusLabel})`
-    : currentDateRange
+    ? `${currentRunIdentifier} (${currentStatusLabel})`
+    : currentRunIdentifier
+  const currentRunLabel = `Current run: ${currentLabelValue}`
 
   return (
     <Collapse
@@ -295,26 +339,35 @@ const SiblingRunsPanel: React.FC<SiblingRunsPanelProps> = ({
             }
             labelPrefix="Current run:"
             labelValue={currentLabelValue}
-            coursewareUrl={currentRun?.courseware_url}
-            ariaLabel={`View content for Current run: ${currentLabelValue}`}
+            runLabel={currentRunLabel}
+            enrollment={enrollment}
           />
           {siblingEnrollments.map((e) => {
             const startDate = e.run?.start_date
             const endDate = e.run?.end_date
-            const timeState = getRunTimeState(startDate, endDate)
-            const isUpcoming = timeState === "upcoming"
-            const isExpired = timeState === "ended"
-            const dateRange = formatRunDateRange(startDate, endDate)
-            const fullLabel = isUpcoming
-              ? `Upcoming: ${dateRange}`
-              : isExpired
-                ? `${dateRange} (Ended)`
-                : dateRange
             const runEnrollmentStatus = getDashboardEnrollmentStatus({
               type: DashboardType.CourseRunEnrollment,
               data: e,
             })
-            const coursewareUrl = e.run?.courseware_url
+            /**
+             * Status outranks the calendar, as it does in getRunStatusLabel
+             * for the current run. A completed run has necessarily ended, so
+             * checking the dates first meant "Ended" always won and a passed
+             * run could never show as completed.
+             */
+            const isCompleted =
+              runEnrollmentStatus === EnrollmentStatus.Completed
+            const timeState = getRunTimeState(startDate, endDate)
+            const isUpcoming = !isCompleted && timeState === "upcoming"
+            const isExpired = !isCompleted && timeState === "ended"
+            const runIdentifier = formatRunIdentifier(e.run)
+            const fullLabel = isCompleted
+              ? `${runIdentifier} (Completed)`
+              : isUpcoming
+                ? `Upcoming: ${runIdentifier}`
+                : isExpired
+                  ? `${runIdentifier} (Ended)`
+                  : runIdentifier
             return (
               <RunListRow
                 key={e.id}
@@ -336,9 +389,9 @@ const SiblingRunsPanel: React.FC<SiblingRunsPanelProps> = ({
                   )
                 }
                 labelPrefix={isUpcoming ? "Upcoming:" : undefined}
-                labelValue={dateRange}
-                coursewareUrl={coursewareUrl}
-                ariaLabel={`View content for ${fullLabel}`}
+                labelValue={runIdentifier}
+                runLabel={fullLabel}
+                enrollment={e}
               />
             )
           })}

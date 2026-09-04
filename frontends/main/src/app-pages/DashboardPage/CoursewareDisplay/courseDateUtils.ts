@@ -1,4 +1,9 @@
-import { calendarDaysUntil, formatCalendarDays, isInPast } from "ol-utilities"
+import {
+  calendarDaysUntil,
+  formatCalendarDays,
+  formatDate,
+  isInPast,
+} from "ol-utilities"
 
 export type RunTimeState = "upcoming" | "underway" | "ended"
 
@@ -15,6 +20,47 @@ export const getRunTimeState = (
   if (startDate && isInPast(startDate) === false) return "upcoming"
   if (endDate && isInPast(endDate) === true) return "ended"
   return "underway"
+}
+
+/**
+ * A run's date range. Returns "" when the run has neither date; prefer
+ * `formatRunIdentifier` for anything a learner reads, since that case is not
+ * rare enough to leave the run nameless.
+ */
+export const formatRunDateRange = (
+  startDate?: string | null,
+  endDate?: string | null,
+): string => {
+  const parts: string[] = []
+  if (startDate) parts.push(formatDate(startDate, "MMM D, YYYY"))
+  if (endDate) parts.push(formatDate(endDate, "MMM D, YYYY"))
+  return parts.join(" – ")
+}
+
+/**
+ * How a run is named to the learner, on the sibling-runs rows and in the
+ * unenroll / email settings dialogs. Shared so a dialog names the run the same
+ * way the row the learner opened it from does — the whole point of showing it
+ * is letting them spot the wrong run, which fails if the two spell it
+ * differently.
+ *
+ * The date range where there is one, otherwise the run tag. A run with neither
+ * date is a normal state here, not a defect: `getRunTimeState` counts one as
+ * underway and `pickBestEnrollmentFromGroup` will happily display it. Falling
+ * back to dates alone left those rows and dialogs with an empty name, so two
+ * undated runs of the same course were indistinguishable — visually and to a
+ * screen reader.
+ */
+export const formatRunIdentifier = (
+  run?: {
+    start_date?: string | null
+    end_date?: string | null
+    run_tag?: string | null
+  } | null,
+): string => {
+  const dateRange = formatRunDateRange(run?.start_date, run?.end_date)
+  if (dateRange) return dateRange
+  return run?.run_tag ? `Run ${run.run_tag}` : "Undated run"
 }
 
 export const getCourseDateText = (
