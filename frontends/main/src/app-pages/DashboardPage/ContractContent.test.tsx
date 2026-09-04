@@ -25,7 +25,7 @@ import { faker } from "@faker-js/faker/locale/en"
 import invariant from "tiny-invariant"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import { FeatureFlags } from "@/common/feature_flags"
-import { contractAdminView } from "@/common/urls"
+import { contractAdminView, contractAnalyticsView } from "@/common/urls"
 
 // Verified cards look up their order; default to none, tests override.
 beforeEach(() => {
@@ -1427,7 +1427,7 @@ describe("ContractContent", () => {
     await screen.findByRole("heading", { name: "Contract not found" })
   })
 
-  test("does not render the Manage button when the feature flag is off", async () => {
+  test("does not render the Manage seats button when the feature flag is off", async () => {
     mockedUseFeatureFlagEnabled.mockImplementation(() => false)
     const { orgX } = setupProgramsAndCourses()
 
@@ -1447,11 +1447,14 @@ describe("ContractContent", () => {
 
     await screen.findByRole("heading", { name: orgX.name })
     expect(
-      screen.queryByRole("link", { name: "Manage" }),
+      screen.queryByRole("link", { name: "Manage seats" }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("link", { name: "View analytics" }),
     ).not.toBeInTheDocument()
   })
 
-  test("does not render the Manage button when flag is on but user is not a manager for this org", async () => {
+  test("does not render the Manage seats button when flag is on but user is not a manager for this org", async () => {
     mockedUseFeatureFlagEnabled.mockImplementation(
       (flag) => flag === FeatureFlags.B2BContractManagerDashboard,
     )
@@ -1475,11 +1478,11 @@ describe("ContractContent", () => {
 
     await screen.findByRole("heading", { name: orgX.name })
     expect(
-      screen.queryByRole("link", { name: "Manage" }),
+      screen.queryByRole("link", { name: "Manage seats" }),
     ).not.toBeInTheDocument()
   })
 
-  test("renders the Manage button with correct href when flag is on and user is a manager", async () => {
+  test("renders the Manage seats button with correct href when flag is on and user is a manager", async () => {
     mockedUseFeatureFlagEnabled.mockImplementation(
       (flag) => flag === FeatureFlags.B2BContractManagerDashboard,
     )
@@ -1498,11 +1501,44 @@ describe("ContractContent", () => {
       />,
     )
 
-    const manageButton = await screen.findByRole("link", { name: "Manage" })
+    const manageButton = await screen.findByRole("link", {
+      name: "Manage seats",
+    })
     expect(manageButton).toHaveAttribute(
       "href",
       contractAdminView(orgX.slug, orgX.contracts[0].slug),
     )
+  })
+
+  test("renders the View analytics button with correct href when the analytics flag is on and user is a manager", async () => {
+    mockedUseFeatureFlagEnabled.mockImplementation(
+      (flag) => flag === FeatureFlags.B2BAnalyticsDashboard,
+    )
+    const { orgX } = setupProgramsAndCourses()
+
+    setMockResponse.get(managerOrganizationsUrl, {
+      count: 1,
+      next: null,
+      previous: null,
+      results: [orgX],
+    })
+    renderWithProviders(
+      <ContractContent
+        orgSlug={orgX.slug}
+        contractSlug={orgX.contracts[0].slug}
+      />,
+    )
+
+    const analyticsLink = await screen.findByRole("link", {
+      name: "View analytics",
+    })
+    expect(analyticsLink).toHaveAttribute(
+      "href",
+      contractAnalyticsView(orgX.slug, orgX.contracts[0].slug),
+    )
+    expect(
+      screen.queryByRole("link", { name: "Manage seats" }),
+    ).not.toBeInTheDocument()
   })
 
   test("sanitizes HTML content in welcome_message_extra", async () => {

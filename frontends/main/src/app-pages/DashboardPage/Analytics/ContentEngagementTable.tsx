@@ -85,11 +85,41 @@ const CourseId = styled.span(({ theme }) => ({
   display: "block",
 }))
 
-/** The secondary figure in an activity cell: the raw total under its rate. */
+/**
+ * The secondary figure in an activity cell: the raw total under its rate. It
+ * needs its own overflow handling — being a nested block inside `TableCell`,
+ * it does not inherit that cell's `overflow`/`text-overflow`, so without this
+ * a detail line too long for its column hard-clips mid-word instead of
+ * ellipsizing.
+ */
 const Detail = styled.span(({ theme }) => ({
   ...theme.typography.body3,
   color: theme.custom.colors.silverGrayDark,
   display: "block",
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  whiteSpace: "nowrap",
+  maxWidth: "100%",
+}))
+
+/**
+ * Wide enough that every column keeps the room it needs for a rate plus its
+ * detail line (e.g. "25 learners, 1,000 attempted"). Below `md` the table
+ * reflows into stacked label/value rows instead (see `B2BTable`), so the
+ * scroll container is only needed at and above that breakpoint.
+ */
+const TableScroll = styled.div(({ theme }) => ({
+  overflowX: "auto",
+  [theme.breakpoints.down("md")]: {
+    overflowX: "visible",
+  },
+}))
+
+const TableGrid = styled.div(({ theme }) => ({
+  minWidth: "1100px",
+  [theme.breakpoints.down("md")]: {
+    minWidth: "0",
+  },
 }))
 
 /**
@@ -176,137 +206,141 @@ const ContentEngagementTable: React.FC<{
 
   return (
     <TableCard>
-      <div role="table" aria-label="Content engagement">
-        <div role="rowgroup">
-          <TableHeaderRow role="row">
-            <TableHeaderCell role="columnheader" $flex={COLUMN_FLEX.course}>
-              Course
-            </TableHeaderCell>
-            <TableHeaderCell
-              role="columnheader"
-              $flex={COLUMN_FLEX.enrolled}
-              $numeric
-            >
-              Enrolled
-            </TableHeaderCell>
-            <TableHeaderCell
-              role="columnheader"
-              $flex={COLUMN_FLEX.engaged}
-              $numeric
-            >
-              Engaged
-            </TableHeaderCell>
-            <TableHeaderCell
-              role="columnheader"
-              $flex={COLUMN_FLEX.videos}
-              $numeric
-            >
-              Videos per engaged learner
-            </TableHeaderCell>
-            <TableHeaderCell
-              role="columnheader"
-              $flex={COLUMN_FLEX.problems}
-              $numeric
-            >
-              Problems per engaged learner
-            </TableHeaderCell>
-            <TableHeaderCell
-              role="columnheader"
-              $flex={COLUMN_FLEX.chatbot}
-              $numeric
-            >
-              Chatbot adoption
-            </TableHeaderCell>
-            <TableHeaderCell
-              role="columnheader"
-              $flex={COLUMN_FLEX.certificates}
-              $numeric
-            >
-              Certificates
-            </TableHeaderCell>
-          </TableHeaderRow>
-        </div>
-        <div role="rowgroup">
-          {rows.map((row) => (
-            <TableRow role="row" key={row.courserun_readable_id}>
-              <TableCell role="cell" $flex={COLUMN_FLEX.course} $primary>
-                <span>
-                  <CourseTitle>{row.courserun_title}</CourseTitle>
-                  <CourseId>{row.courserun_readable_id}</CourseId>
-                </span>
-              </TableCell>
-              <StackedCell role="cell" $flex={COLUMN_FLEX.enrolled} $numeric>
-                <MobileLabel>Enrolled</MobileLabel>
-                {formatCount(row.total_enrolled_learners)}
-              </StackedCell>
-              <StackedCell role="cell" $flex={COLUMN_FLEX.engaged} $numeric>
-                <MobileLabel>Engaged</MobileLabel>
-                <span>
-                  <SuppressibleValue value={row.engaged_learners} />
-                  <Detail>
-                    <SuppressibleValue
-                      value={row.engagement_rate_pct}
-                      format={formatPercent}
-                    />{" "}
-                    of enrolled
-                  </Detail>
-                </span>
-              </StackedCell>
-              <StackedCell role="cell" $flex={COLUMN_FLEX.videos} $numeric>
-                <MobileLabel>Videos per engaged learner</MobileLabel>
-                <span>
-                  <SuppressibleValue
-                    value={row.avg_videos_per_engaged_learner}
-                    format={formatAverage}
-                  />
-                  <Detail>
-                    <SuppressibleValue value={row.video_watchers} /> learners,{" "}
-                    <SuppressibleValue value={row.total_videos_watched} />{" "}
-                    watched
-                  </Detail>
-                </span>
-              </StackedCell>
-              <StackedCell role="cell" $flex={COLUMN_FLEX.problems} $numeric>
-                <MobileLabel>Problems per engaged learner</MobileLabel>
-                <span>
-                  <SuppressibleValue
-                    value={row.avg_problems_per_engaged_learner}
-                    format={formatAverage}
-                  />
-                  <Detail>
-                    <SuppressibleValue value={row.problem_attempters} />{" "}
-                    learners,{" "}
-                    <SuppressibleValue value={row.total_problems_attempted} />{" "}
-                    attempted
-                  </Detail>
-                </span>
-              </StackedCell>
-              <StackedCell role="cell" $flex={COLUMN_FLEX.chatbot} $numeric>
-                <MobileLabel>Chatbot adoption</MobileLabel>
-                <span>
-                  <SuppressibleValue
-                    value={row.chatbot_adoption_pct}
-                    format={formatPercent}
-                  />
-                  <Detail>
-                    <SuppressibleValue value={row.chatbot_users} /> learners,{" "}
-                    <SuppressibleValue value={row.total_chatbot_interactions} />{" "}
-                    interactions
-                  </Detail>
-                </span>
-              </StackedCell>
-              <StackedCell
-                role="cell"
+      <TableScroll>
+        <TableGrid role="table" aria-label="Content engagement">
+          <div role="rowgroup">
+            <TableHeaderRow role="row">
+              <TableHeaderCell role="columnheader" $flex={COLUMN_FLEX.course}>
+                Course
+              </TableHeaderCell>
+              <TableHeaderCell
+                role="columnheader"
+                $flex={COLUMN_FLEX.enrolled}
+                $numeric
+              >
+                Enrolled
+              </TableHeaderCell>
+              <TableHeaderCell
+                role="columnheader"
+                $flex={COLUMN_FLEX.engaged}
+                $numeric
+              >
+                Engaged
+              </TableHeaderCell>
+              <TableHeaderCell
+                role="columnheader"
+                $flex={COLUMN_FLEX.videos}
+                $numeric
+              >
+                Videos per engaged learner
+              </TableHeaderCell>
+              <TableHeaderCell
+                role="columnheader"
+                $flex={COLUMN_FLEX.problems}
+                $numeric
+              >
+                Problems per engaged learner
+              </TableHeaderCell>
+              <TableHeaderCell
+                role="columnheader"
+                $flex={COLUMN_FLEX.chatbot}
+                $numeric
+              >
+                Chatbot adoption
+              </TableHeaderCell>
+              <TableHeaderCell
+                role="columnheader"
                 $flex={COLUMN_FLEX.certificates}
                 $numeric
               >
-                <MobileLabel>Certificates</MobileLabel>
-                <SuppressibleValue value={row.certificates_earned} />
-              </StackedCell>
-            </TableRow>
-          ))}
-        </div>
-      </div>
+                Certificates
+              </TableHeaderCell>
+            </TableHeaderRow>
+          </div>
+          <div role="rowgroup">
+            {rows.map((row) => (
+              <TableRow role="row" key={row.courserun_readable_id}>
+                <TableCell role="cell" $flex={COLUMN_FLEX.course} $primary>
+                  <span>
+                    <CourseTitle>{row.courserun_title}</CourseTitle>
+                    <CourseId>{row.courserun_readable_id}</CourseId>
+                  </span>
+                </TableCell>
+                <StackedCell role="cell" $flex={COLUMN_FLEX.enrolled} $numeric>
+                  <MobileLabel>Enrolled</MobileLabel>
+                  {formatCount(row.total_enrolled_learners)}
+                </StackedCell>
+                <StackedCell role="cell" $flex={COLUMN_FLEX.engaged} $numeric>
+                  <MobileLabel>Engaged</MobileLabel>
+                  <span>
+                    <SuppressibleValue value={row.engaged_learners} />
+                    <Detail>
+                      <SuppressibleValue
+                        value={row.engagement_rate_pct}
+                        format={formatPercent}
+                      />{" "}
+                      of enrolled
+                    </Detail>
+                  </span>
+                </StackedCell>
+                <StackedCell role="cell" $flex={COLUMN_FLEX.videos} $numeric>
+                  <MobileLabel>Videos per engaged learner</MobileLabel>
+                  <span>
+                    <SuppressibleValue
+                      value={row.avg_videos_per_engaged_learner}
+                      format={formatAverage}
+                    />
+                    <Detail>
+                      <SuppressibleValue value={row.video_watchers} /> learners,{" "}
+                      <SuppressibleValue value={row.total_videos_watched} />{" "}
+                      watched
+                    </Detail>
+                  </span>
+                </StackedCell>
+                <StackedCell role="cell" $flex={COLUMN_FLEX.problems} $numeric>
+                  <MobileLabel>Problems per engaged learner</MobileLabel>
+                  <span>
+                    <SuppressibleValue
+                      value={row.avg_problems_per_engaged_learner}
+                      format={formatAverage}
+                    />
+                    <Detail>
+                      <SuppressibleValue value={row.problem_attempters} />{" "}
+                      learners,{" "}
+                      <SuppressibleValue value={row.total_problems_attempted} />{" "}
+                      attempted
+                    </Detail>
+                  </span>
+                </StackedCell>
+                <StackedCell role="cell" $flex={COLUMN_FLEX.chatbot} $numeric>
+                  <MobileLabel>Chatbot adoption</MobileLabel>
+                  <span>
+                    <SuppressibleValue
+                      value={row.chatbot_adoption_pct}
+                      format={formatPercent}
+                    />
+                    <Detail>
+                      <SuppressibleValue value={row.chatbot_users} /> learners,{" "}
+                      <SuppressibleValue
+                        value={row.total_chatbot_interactions}
+                      />{" "}
+                      interactions
+                    </Detail>
+                  </span>
+                </StackedCell>
+                <StackedCell
+                  role="cell"
+                  $flex={COLUMN_FLEX.certificates}
+                  $numeric
+                >
+                  <MobileLabel>Certificates</MobileLabel>
+                  <SuppressibleValue value={row.certificates_earned} />
+                </StackedCell>
+              </TableRow>
+            ))}
+          </div>
+        </TableGrid>
+      </TableScroll>
       {hasSuppressed ? (
         <TableFooter>
           <TableFootnote>{SUPPRESSED_EXPLANATION}</TableFootnote>

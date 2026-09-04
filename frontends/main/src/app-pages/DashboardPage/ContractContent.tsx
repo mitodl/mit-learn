@@ -28,7 +28,7 @@ import { useFeatureFlagEnabled } from "posthog-js/react"
 import { ErrorContent } from "../ErrorPage/ErrorPageTemplate"
 import { matchOrganizationBySlug, stripOrgPrefix } from "@/common/utils"
 import { FeatureFlags } from "@/common/feature_flags"
-import { contractAdminView } from "@/common/urls"
+import { contractAdminView, contractAnalyticsView } from "@/common/urls"
 import { ResourceType, getKey } from "./CoursewareDisplay/helpers"
 import type { DashboardCourseEntry } from "./CoursewareDisplay/model/dashboardViewModel"
 import { useContractDashboardData } from "./CoursewareDisplay/hooks/useContractDashboardData"
@@ -370,8 +370,11 @@ const ContractHeaderSection = styled.div(({ theme }) => ({
   },
 }))
 
-const ManageButtonWrapper = styled.div(({ theme }) => ({
+const HeaderActions = styled.div(({ theme }) => ({
+  display: "flex",
+  gap: "12px",
   [theme.breakpoints.down("sm")]: {
+    flexDirection: "column",
     width: "100%",
     padding: "0 16px 16px",
     "> a": {
@@ -401,9 +404,12 @@ const ContractContentInternal: React.FC<ContractContentInternalProps> = ({
   const managerDashboardFlag = useFeatureFlagEnabled(
     FeatureFlags.B2BContractManagerDashboard,
   )
+  const analyticsEnabled = useFeatureFlagEnabled(
+    FeatureFlags.B2BAnalyticsDashboard,
+  )
   const { data: managerOrgs } = useQuery({
     ...managerOrganizationQueries.managerOrganizationsList(),
-    enabled: managerDashboardFlag === true,
+    enabled: managerDashboardFlag === true || analyticsEnabled === true,
   })
   const isManager =
     managerOrgs?.some(matchOrganizationBySlug(stripOrgPrefix(org.slug))) ??
@@ -448,18 +454,32 @@ const ContractContentInternal: React.FC<ContractContentInternalProps> = ({
       <Stack>
         <ContractHeaderSection>
           <ContractHeader org={org} contract={contract} />
-          {managerDashboardFlag && isManager && (
-            <ManageButtonWrapper>
-              <ButtonLink
-                size="small"
-                href={contractAdminView(
-                  stripOrgPrefix(org.slug),
-                  contract.slug,
-                )}
-              >
-                Manage
-              </ButtonLink>
-            </ManageButtonWrapper>
+          {isManager && (managerDashboardFlag || analyticsEnabled) && (
+            <HeaderActions>
+              {analyticsEnabled && (
+                <ButtonLink
+                  size="small"
+                  variant="bordered"
+                  href={contractAnalyticsView(
+                    stripOrgPrefix(org.slug),
+                    contract.slug,
+                  )}
+                >
+                  View analytics
+                </ButtonLink>
+              )}
+              {managerDashboardFlag && (
+                <ButtonLink
+                  size="small"
+                  href={contractAdminView(
+                    stripOrgPrefix(org.slug),
+                    contract.slug,
+                  )}
+                >
+                  Manage seats
+                </ButtonLink>
+              )}
+            </HeaderActions>
           )}
         </ContractHeaderSection>
         {variantOptions.length > 1 && (

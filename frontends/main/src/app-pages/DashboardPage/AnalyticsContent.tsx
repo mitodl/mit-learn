@@ -25,7 +25,6 @@ import type {
   EnrollmentCompletionFunnel,
   MonthlyEngagementTrend,
   OrgAnalyticsResponse,
-  ProgramFunnel,
 } from "api/analytics-hooks/organizations"
 import { isAnalyticsConfigured } from "api/runtime"
 import { matchOrganizationBySlug } from "@/common/utils"
@@ -39,7 +38,6 @@ import ContentEngagementTable from "./Analytics/ContentEngagementTable"
 import ContractKpiCards from "./Analytics/ContractKpiCards"
 import CoursePerformanceTable from "./Analytics/CoursePerformanceTable"
 import EngagementTrendChart from "./Analytics/EngagementTrendChart"
-import ProgramFunnelChart from "./Analytics/ProgramFunnelChart"
 import SectionHeader from "./Analytics/SectionHeader"
 import SectionTruncation from "./Analytics/SectionTruncation"
 
@@ -141,7 +139,7 @@ const PAGE_SIZE = 200
  */
 const MAX_PAGE_SIZE = 1000
 
-type SectionKey = "utilization" | "trend" | "courses" | "programs" | "content"
+type SectionKey = "utilization" | "trend" | "courses" | "content"
 
 /**
  * Note there is no 401/403 branch for the analytics queries themselves. The
@@ -170,7 +168,6 @@ type SectionQueries = {
   utilization: SectionQuery<ContractUtilization>
   trend: SectionQuery<MonthlyEngagementTrend>
   courses: SectionQuery<EnrollmentCompletionFunnel>
-  programs: SectionQuery<ProgramFunnel>
   content: SectionQuery<ContentEngagementDepth>
 }
 
@@ -285,7 +282,6 @@ const AnalyticsContentInternal: React.FC<AnalyticsContentInternalProps> = ({
     utilization: PAGE_SIZE,
     trend: PAGE_SIZE,
     courses: PAGE_SIZE,
-    programs: PAGE_SIZE,
     content: PAGE_SIZE,
   })
 
@@ -327,9 +323,6 @@ const AnalyticsContentInternal: React.FC<AnalyticsContentInternalProps> = ({
           courses: eraseKey<EnrollmentCompletionFunnel>((page) =>
             analyticsContractQueries.enrollmentFunnel(orgId, contractId, page),
           ),
-          programs: eraseKey<ProgramFunnel>((page) =>
-            analyticsContractQueries.programFunnel(orgId, contractId, page),
-          ),
           content: eraseContractContentRow((page) =>
             analyticsContractQueries.contentEngagement(orgId, contractId, page),
           ),
@@ -343,9 +336,6 @@ const AnalyticsContentInternal: React.FC<AnalyticsContentInternalProps> = ({
           ),
           courses: eraseKey<EnrollmentCompletionFunnel>((page) =>
             analyticsOrganizationQueries.enrollmentFunnel(orgId, page),
-          ),
-          programs: eraseKey<ProgramFunnel>((page) =>
-            analyticsOrganizationQueries.programFunnel(orgId, page),
           ),
           content: eraseKey<ContentEngagementDepth>((page) =>
             analyticsOrganizationQueries.contentEngagement(orgId, page),
@@ -365,11 +355,6 @@ const AnalyticsContentInternal: React.FC<AnalyticsContentInternalProps> = ({
   })
   const courses = useQuery({
     ...scoped.courses({ limit: limits.courses }),
-    enabled: analyticsAvailable,
-    placeholderData: keepPreviousData,
-  })
-  const programs = useQuery({
-    ...scoped.programs({ limit: limits.programs }),
     enabled: analyticsAvailable,
     placeholderData: keepPreviousData,
   })
@@ -494,7 +479,7 @@ const AnalyticsContentInternal: React.FC<AnalyticsContentInternalProps> = ({
     )
   }
 
-  const failed = [utilization, trend, courses, programs, content].some(
+  const failed = [utilization, trend, courses, content].some(
     (query) => query.isError,
   )
 
@@ -527,22 +512,6 @@ const AnalyticsContentInternal: React.FC<AnalyticsContentInternalProps> = ({
 
       <Section>
         <SectionHeader
-          title="Monthly engagement"
-          description="Distinct learners active, newly enrolled, and certified each month."
-          asOf={trend.data?.as_of}
-          isLoading={trend.isPending}
-          isError={trend.isError}
-        />
-        <EngagementTrendChart
-          rows={trend.data?.data}
-          isLoading={trend.isPending}
-          isError={trend.isError}
-        />
-        {truncation(trend, "trend")}
-      </Section>
-
-      <Section>
-        <SectionHeader
           title="Course performance"
           description="Enrollment, activity and completion for each course run."
           asOf={courses.data?.as_of}
@@ -559,22 +528,6 @@ const AnalyticsContentInternal: React.FC<AnalyticsContentInternalProps> = ({
 
       <Section>
         <SectionHeader
-          title="Program funnel"
-          description="How far learners progress through each program."
-          asOf={programs.data?.as_of}
-          isLoading={programs.isPending}
-          isError={programs.isError}
-        />
-        <ProgramFunnelChart
-          rows={programs.data?.data}
-          isLoading={programs.isPending}
-          isError={programs.isError}
-        />
-        {truncation(programs, "programs")}
-      </Section>
-
-      <Section>
-        <SectionHeader
           title="Content engagement"
           description="How deeply learners engage with videos, problems and the chatbot in each course run."
           asOf={content.data?.as_of}
@@ -587,6 +540,22 @@ const AnalyticsContentInternal: React.FC<AnalyticsContentInternalProps> = ({
           isError={content.isError}
         />
         {truncation(content, "content")}
+      </Section>
+
+      <Section>
+        <SectionHeader
+          title="Monthly engagement"
+          description="Distinct learners active, newly enrolled, and certified each month."
+          asOf={trend.data?.as_of}
+          isLoading={trend.isPending}
+          isError={trend.isError}
+        />
+        <EngagementTrendChart
+          rows={trend.data?.data}
+          isLoading={trend.isPending}
+          isError={trend.isError}
+        />
+        {truncation(trend, "trend")}
       </Section>
     </Stack>
   )
