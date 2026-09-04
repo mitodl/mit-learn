@@ -19,7 +19,7 @@ const Band = styled(Section)(({ theme }) => ({
 const Inner = styled(SectionInner)({
   display: "flex",
   flexDirection: "column",
-  gap: "40px",
+  gap: "56px",
 })
 
 const CenteredHeader = styled(SectionHeader)({

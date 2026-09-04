@@ -63,8 +63,6 @@ describe("OrganizationalLearningPage", () => {
 
   test("omits the Clients content that is not approved to ship", () => {
     renderWithProviders(<OrganizationalLearningPage />)
-    // The case study ships anonymized: no named client, and no attributed
-    // testimonials until those quotes are cleared.
     expect(screen.queryByText(/SUCCESS STORIES/i)).not.toBeInTheDocument()
     expect(
       screen.queryByText(/International Monetary Fund/i),
