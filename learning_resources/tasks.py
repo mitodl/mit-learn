@@ -231,7 +231,7 @@ def _content_file_resource_ids(etl_source: str, learning_resource_ids):
     )
 
 
-@app.task(acks_late=True)
+@app.task(acks_late=True, reject_on_worker_lost=True)
 def unpublish_staff_only_files(ids: list[int], etl_source: str, keys: list[str]):
     """Unpublish staff-only content files for a chunk of courses"""
     return unpublish_staff_only_content_files(etl_source, ids, keys)
