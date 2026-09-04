@@ -279,10 +279,11 @@ def transform(extracted_podcasts):
                 "published": True,
                 "url": config_data.get("website", None),
                 "topics": topics,
-                "episodes": (
+                # list, not generator: a bad <item> must fail inside this try
+                "episodes": [
                     transform_episode(episode_rss, offered_by, topics, image)
                     for episode_rss in rss_data.find_all("item")
-                ),
+                ],
                 "podcast": {
                     "apple_podcasts_url": apple_podcasts_url,
                     "google_podcasts_url": google_podcasts_url,
@@ -290,7 +291,7 @@ def transform(extracted_podcasts):
                 },
                 "availability": Availability.anytime.name,
             }
-        except AttributeError:
+        except Exception:
             log.exception("Error parsing podcast data from %s", config_data["rss_url"])
             continue
 
