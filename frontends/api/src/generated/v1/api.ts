@@ -2528,6 +2528,12 @@ export interface PodcastEpisodeParent {
   id: number
   title: string
   readable_id: string
+  /**
+   * Where this podcast lives within Learn
+   * @type {string}
+   * @memberof PodcastEpisodeParent
+   */
+  learn_url: string
 }
 /**
  * Serializer for PodcastEpisode

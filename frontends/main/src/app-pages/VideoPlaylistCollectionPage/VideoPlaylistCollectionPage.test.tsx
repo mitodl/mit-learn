@@ -1,5 +1,6 @@
 import React from "react"
 import { setMockResponse, urls, factories } from "api/test-utils"
+import { kebabCase } from "lodash"
 import { renderWithProviders, screen } from "@/test-utils"
 import VideoPage from "./VideoPlaylistCollectionPage"
 import { ResourceTypeEnum } from "api/v1"
@@ -21,11 +22,20 @@ const makeSeriesPlaylist = () =>
     offered_by: { code: "ocw", name: "OCW", channel_url: null },
   })
 
-const makeVideo = (overrides = {}) =>
-  factories.learningResources.resource({
+/**
+ * The page reads the slug from `learn_url`, so mirror the backend's slug here
+ * rather than leaving the factory's drawer-shaped default.
+ */
+const makeVideo = (overrides: { title?: string } = {}) => {
+  const video = factories.learningResources.resource({
     resource_type: ResourceTypeEnum.Video,
     ...overrides,
   })
+  return {
+    ...video,
+    learn_url: `http://test.learn.odl.local:8062/video/${video.id}/${kebabCase(video.title)}`,
+  }
+}
 
 const VIDEOS_PAGE_SIZE = 10
 

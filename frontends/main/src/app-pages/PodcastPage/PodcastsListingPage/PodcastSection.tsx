@@ -7,7 +7,7 @@ import { RiArrowRightLine, RiArrowRightSLine } from "@remixicon/react"
 import DOMPurify from "isomorphic-dompurify"
 import { formatDate } from "ol-utilities"
 import type { LearningResource } from "api/v1"
-import { SEARCH_PODCASTS, podcastPageView } from "@/common/urls"
+import { SEARCH_PODCASTS, learnUrlPath } from "@/common/urls"
 import { stripAnchorTags } from "@/common/utils"
 import {
   Section,
@@ -318,7 +318,7 @@ const PodcastSection: React.FC<PodcastSectionProps> = ({
                   return (
                     <FeaturedPodcastCard
                       key={item.id}
-                      href={podcastPageView(String(item.id), item.title)}
+                      href={learnUrlPath(item.learn_url)}
                     >
                       <FeaturedPodcastHeader>
                         {item.image?.url && (
@@ -394,7 +394,7 @@ const PodcastSection: React.FC<PodcastSectionProps> = ({
               return (
                 <MorePodcastRow
                   key={item.id}
-                  href={podcastPageView(String(item.id), item.title)}
+                  href={learnUrlPath(item.learn_url)}
                 >
                   <MorePodcastLeft>
                     <MorePodcastTitle

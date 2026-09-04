@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query"
 import { learningResourceQueries } from "api/hooks/learningResources"
 import type { VideoResource } from "api/v1"
 import { VideoResourceResourceTypeEnum } from "api/v1"
-import { videoDetailPageView } from "@/common/urls"
+import { learnUrlSlug, videoDetailPath } from "@/common/urls"
 
 export type SeriesNavigation = {
   videoItems: VideoResource[]
@@ -44,7 +44,7 @@ export function useSeriesNavigation(
   const videoPosition = currentIndex >= 0 ? currentIndex + 1 : null
 
   const getVideoHref = (v: VideoResource) =>
-    videoDetailPageView(v.id, playlistId ?? undefined, v.title)
+    videoDetailPath(v.id, playlistId ?? undefined, learnUrlSlug(v.learn_url))
 
   return {
     videoItems,

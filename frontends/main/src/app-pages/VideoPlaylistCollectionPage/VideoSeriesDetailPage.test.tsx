@@ -1,5 +1,6 @@
 import React from "react"
 import { setMockResponse, urls, factories } from "api/test-utils"
+import { kebabCase } from "lodash"
 import { renderWithProviders, screen, user } from "@/test-utils"
 import VideoSeriesDetailPage from "./VideoSeriesDetailPage"
 import { ResourceTypeEnum } from "api/v1"
@@ -26,16 +27,32 @@ jest.mock("@/page-components/VideoPlayer/VideoJsPlayer", () => ({
 
 // ── Factories ────────────────────────────────────────────────────────────────
 
-const makeVideo = (overrides: Partial<VideoResource> = {}): VideoResource =>
-  factories.learningResources.video({
+/**
+ * These pages read the slug from `learn_url`, so mirror the backend's slug here
+ * rather than leaving the factory's drawer-shaped default.
+ */
+const makeVideo = (overrides: Partial<VideoResource> = {}): VideoResource => {
+  const video = factories.learningResources.video({
     resource_type: ResourceTypeEnum.Video,
     ...overrides,
   }) as VideoResource
+  return {
+    ...video,
+    learn_url: `http://test.learn.odl.local:8062/video/${video.id}/${kebabCase(video.title)}`,
+  }
+}
 
 const makePlaylist = (
   overrides: Partial<VideoPlaylistResource> = {},
-): VideoPlaylistResource =>
-  factories.learningResources.videoPlaylist(overrides) as VideoPlaylistResource
+): VideoPlaylistResource => {
+  const playlist = factories.learningResources.videoPlaylist(
+    overrides,
+  ) as VideoPlaylistResource
+  return {
+    ...playlist,
+    learn_url: `http://test.learn.odl.local:8062/video-playlist/${playlist.id}/${kebabCase(playlist.title)}`,
+  }
+}
 
 // ── API helpers ───────────────────────────────────────────────────────────────
 
@@ -291,7 +308,7 @@ describe("VideoSeriesDetailPage", () => {
       ).not.toBeInTheDocument()
     })
 
-    test("share URL uses the slugged canonical form with playlist param", async () => {
+    test("share URL is the video's own URL, not the playlist context", async () => {
       const playlist = makePlaylist({ id: 99 })
       const current = makeVideo({ id: 720, title: "Intro to Machine Learning" })
       const next = makeVideo({ title: "Next Lecture" })
@@ -308,9 +325,9 @@ describe("VideoSeriesDetailPage", () => {
           name: /share intro to machine learning/i,
         }),
       )
-      expect(screen.getByRole("textbox")).toHaveValue(
-        "http://test.learn.odl.local:8062/video/720/intro-to-machine-learning?playlist=99",
-      )
+      // One canonical URL per video: sharing from playlist 99 still hands out
+      // the URL that owns the content.
+      expect(screen.getByRole("textbox")).toHaveValue(current.learn_url)
     })
 
     test("clicking the share button opens the dialog", async () => {

@@ -12,7 +12,7 @@ import {
 } from "api/hooks/learningResources"
 import { formatDurationHuman } from "ol-utilities"
 import { isOcwPlaylist } from "@/common/utils"
-import { videoDetailPageView } from "@/common/urls"
+import { learnUrlSlug, videoDetailPath } from "@/common/urls"
 import type { VideoResource, VideoPlaylistResource } from "api/v1"
 import { ResourceTypeEnum, VideoResourceResourceTypeEnum } from "api/v1"
 import { EpisodeItem } from "./SeriesVideoList"
@@ -65,7 +65,7 @@ const VideoPlaylistCollectionPage: React.FC<
   VideoPlaylistCollectionPageProps
 > = ({ playlistId }) => {
   const getVideoHref = (resource: VideoResource) =>
-    videoDetailPageView(resource.id, playlistId, resource.title)
+    videoDetailPath(resource.id, playlistId, learnUrlSlug(resource.learn_url))
 
   const {
     data: playlist,

@@ -7,18 +7,15 @@ import { useLearningResourcesDetail } from "api/hooks/learningResources"
 import type { VideoResource, VideoPlaylistResource } from "api/v1"
 import { formatDurationClockTime } from "ol-utilities"
 import { useSeriesNavigation } from "./useSeriesNavigation"
-import { videoDetailPageView, videoPlaylistPageView } from "@/common/urls"
+import { generateVideoPlaylistPath, learnUrlPath } from "@/common/urls"
 import SeriesNavBar from "./SeriesNavBar"
 import UpNextSection from "./UpNextSection"
 import * as Styled from "./VideoSeriesDetailPage.styled"
-import { env } from "@/env"
 import { buildVideoStructuredData } from "./videoStructuredData"
 import VideoResourcePlayer from "@/page-components/VideoPlayer/VideoResourcePlayer"
 import type { VideoPlayerHandle } from "@/page-components/VideoPlayer/VideoResourcePlayer"
 
 import VideoShareButton from "./VideoShareButton"
-
-const NEXT_PUBLIC_ORIGIN = env("NEXT_PUBLIC_ORIGIN")
 
 const StyledVideoResourcePlayer = styled(VideoResourcePlayer)(({ theme }) => ({
   borderBottom: `3px solid ${theme.custom.colors.darkGray2}`,
@@ -122,10 +119,7 @@ const VideoSeriesDetailPage: React.FC<VideoSeriesDetailPageProps> = ({
               ...(playlist && playlistId
                 ? [
                     {
-                      href: videoPlaylistPageView(
-                        String(playlist.id),
-                        playlist.title,
-                      ),
+                      href: learnUrlPath(playlist.learn_url),
                       label: playlistLabel,
                     },
                   ]
@@ -139,10 +133,11 @@ const VideoSeriesDetailPage: React.FC<VideoSeriesDetailPageProps> = ({
       {/* Series navigation bar */}
       {playlistId && (
         <SeriesNavBar
-          playlistHref={videoPlaylistPageView(
-            String(playlistId),
-            playlist?.title,
-          )}
+          playlistHref={
+            playlist
+              ? learnUrlPath(playlist.learn_url)
+              : generateVideoPlaylistPath(String(playlistId))
+          }
           playlistLabel={playlistLabel}
           videoId={videoId}
           isLoading={isLoading}
@@ -179,7 +174,7 @@ const VideoSeriesDetailPage: React.FC<VideoSeriesDetailPageProps> = ({
               <VideoShareButton
                 video={video}
                 title={video?.title ?? ""}
-                pageUrl={`${NEXT_PUBLIC_ORIGIN}${videoDetailPageView(video.id, playlistId ?? undefined, video.title)}`}
+                pageUrl={video.learn_url}
                 playerRef={playerRef}
               />
             )}

@@ -1,7 +1,7 @@
 import React from "react"
 import { factories } from "api/test-utils"
 import type { LearningResource } from "api/v1"
-import { SEARCH_PODCASTS, podcastPageView } from "@/common/urls"
+import { SEARCH_PODCASTS, learnUrlPath } from "@/common/urls"
 import { renderWithProviders, screen } from "@/test-utils"
 import PodcastSection from "./PodcastSection"
 
@@ -13,6 +13,8 @@ const makeSeries = (overrides = {}): LearningResource =>
     last_modified: "2024-05-03T00:00:00Z",
     offered_by: { name: "OCW", code: "ocw" },
     podcast: { id: 1, episode_count: 12 },
+    // The backend names the podcast's page; the factory default is a drawer URL.
+    learn_url: "http://test.learn.odl.local:8062/podcast/1/chalk-radio",
     ...overrides,
   }) as unknown as LearningResource
 
@@ -67,7 +69,7 @@ describe("PodcastSection", () => {
     expect(screen.getByText(/Updated May 3/)).toBeInTheDocument()
     expect(screen.getByRole("link", { name: /Chalk Radio/ })).toHaveAttribute(
       "href",
-      podcastPageView("1", "Chalk Radio"),
+      learnUrlPath(series.learn_url),
     )
   })
 

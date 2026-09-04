@@ -3,14 +3,15 @@ import Image from "next/image"
 import { Skeleton } from "ol-components"
 import { formatDurationClockTime } from "ol-utilities"
 import type { VideoResource } from "api/v1"
-import { videoDetailPageView, videoPlaylistPageView } from "@/common/urls"
+import { learnUrlSlug, videoDetailPath } from "@/common/urls"
 import * as Styled from "./VideoDetailPage.styled"
 
 type MoreFromPlaylistProps = {
   playlistId: number
   /** Display name of the playlist, used in headings and labels. */
   playlistLabel: string
-  playlistTitle?: string
+  /** The playlist's own page, for the "see all" link. */
+  playlistHref: string
   /** Sibling videos to list, already filtered and capped by the caller. */
   videos: VideoResource[]
   /** Total videos in the playlist, used to decide whether to link to the rest. */
@@ -34,7 +35,11 @@ const MoreFromPlaylistItem: React.FC<{
 
   return (
     <Styled.MoreFromItem
-      href={videoDetailPageView(video.id, playlistId, video.title)}
+      href={videoDetailPath(
+        video.id,
+        playlistId,
+        learnUrlSlug(video.learn_url),
+      )}
       aria-label={`Open video ${video.title}`}
     >
       <Styled.ThumbnailWrapper>
@@ -75,7 +80,7 @@ const MoreFromPlaylistItem: React.FC<{
 const MoreFromPlaylist: React.FC<MoreFromPlaylistProps> = ({
   playlistId,
   playlistLabel,
-  playlistTitle,
+  playlistHref,
   videos,
   totalVideos,
   isLoading,
@@ -121,7 +126,7 @@ const MoreFromPlaylist: React.FC<MoreFromPlaylistProps> = ({
       </Styled.MoreFromList>
       {hasMore && (
         <Styled.SeeAllLink
-          href={videoPlaylistPageView(String(playlistId), playlistTitle)}
+          href={playlistHref}
           aria-label={`View all videos in ${playlistLabel}`}
         >
           View all in {playlistLabel} →

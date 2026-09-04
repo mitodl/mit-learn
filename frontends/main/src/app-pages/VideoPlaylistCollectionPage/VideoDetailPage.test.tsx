@@ -1,6 +1,8 @@
 import React from "react"
 import user from "@testing-library/user-event"
 import { setMockResponse, urls, factories } from "api/test-utils"
+import { kebabCase } from "lodash"
+import { videoDetailPath } from "@/common/urls"
 import { renderWithProviders, screen } from "@/test-utils"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
@@ -34,11 +36,32 @@ jest.mock("@/page-components/VideoPlayer/VideoJsPlayer", () => ({
 
 // ── Factories ────────────────────────────────────────────────────────────────
 
-const makeVideo = (overrides: Partial<VideoResource> = {}): VideoResource =>
-  factories.learningResources.video({
+const ORIGIN = "http://test.learn.odl.local:8062"
+
+/**
+ * The playlist a video's canonical URL is scoped to, deliberately not the one
+ * these tests browse: a video in several playlists is viewable in any of them,
+ * so rows keep the browsed playlist and borrow only the slug from `learn_url`.
+ */
+const CANONICAL_PLAYLIST_ID = 987654
+
+const makeVideo = (overrides: Partial<VideoResource> = {}): VideoResource => {
+  const video = factories.learningResources.video({
     resource_type: ResourceTypeEnum.Video,
     ...overrides,
   }) as VideoResource
+  return {
+    ...video,
+    // Dedicated-page shape. The "more from this playlist" rows read their slug
+    // from here, so the factory's drawer-shaped default would render "/search".
+    // An explicit override still wins.
+    learn_url:
+      overrides.learn_url ??
+      `${ORIGIN}/video/${video.id}/${kebabCase(
+        video.title,
+      )}?playlist=${CANONICAL_PLAYLIST_ID}`,
+  }
+}
 
 // ── API helpers ───────────────────────────────────────────────────────────────
 
@@ -103,6 +126,28 @@ describe("VideoDetailPage", () => {
     mockedUseFeatureFlagsLoaded.mockReturnValue(true)
   })
 
+  test("'more from this playlist' rows keep the browsed playlist and take only the backend slug", async () => {
+    // Each row's learn_url is scoped to CANONICAL_PLAYLIST_ID; the href must
+    // stay on the playlist being browsed and borrow only the slug.
+    const current = makeVideo({ title: "Current Video" })
+    const sibling = makeVideo({ title: "Sibling Video" })
+    renderPage({
+      video: current,
+      playlistId: 99,
+      playlistItems: [current, sibling],
+    })
+
+    const row = await screen.findByRole("link", {
+      name: `Open video ${sibling.title}`,
+    })
+    expect(row).toHaveAttribute(
+      "href",
+      videoDetailPath(sibling.id, 99, kebabCase(sibling.title)),
+    )
+    // Guards the drawer-shaped-learn_url bug, which would yield "/search".
+    expect(row.getAttribute("href")).not.toContain("search")
+  })
+
   test("renders the video title once data is loaded", async () => {
     const video = makeVideo({ title: "Introduction to Machine Learning" })
     renderPage({ video })
@@ -114,27 +159,23 @@ describe("VideoDetailPage", () => {
 
   // Share URL is the slugged canonical form, and carries the playlist only
   // when present (no `?playlist=null` when the video is viewed without one).
-  test.each([
-    {
-      playlistId: 99,
-      expected:
-        "http://test.learn.odl.local:8062/video/720/intro-to-machine-learning?playlist=99",
-    },
-    {
-      playlistId: null,
-      expected:
-        "http://test.learn.odl.local:8062/video/720/intro-to-machine-learning",
-    },
-  ])(
-    "Share link is the slugged canonical URL (playlistId=$playlistId)",
-    async ({ playlistId, expected }) => {
-      const video = makeVideo({ id: 720, title: "Intro to Machine Learning" })
+  test.each([{ playlistId: 99 }, { playlistId: null }])(
+    "Share link is the video's own URL, whichever playlist is viewed (playlistId=$playlistId)",
+    async ({ playlistId }) => {
+      // One canonical URL per video, so sharing from a non-canonical playlist
+      // still hands out the URL that owns the content.
+      const video = makeVideo({
+        id: 720,
+        title: "Intro to Machine Learning",
+        learn_url:
+          "http://test.learn.odl.local:8062/video/720/intro-to-machine-learning?playlist=55",
+      })
       renderPage({ video, playlistId })
 
       await screen.findByRole("heading", { name: video.title })
       await user.click(screen.getByRole("button", { name: /share/i }))
 
-      expect(screen.getByRole("textbox")).toHaveValue(expected)
+      expect(screen.getByRole("textbox")).toHaveValue(video.learn_url)
     },
   )
 
