@@ -6,7 +6,7 @@ LABEL maintainer="ODL DevOps <mitx-devops@mit.edu>"
 
 # App-specific apt extras; common-core packages are in mitodl/ol-python-base:3.12.
 # BuildKit cache mounts keep downloaded packages out of the final image layer.
-# chromium/chromium-driver come from trixie (152.0.7977.75-1~deb13u1). They
+# chromium/chromium-driver come from trixie. They
 # used to need a Debian sid source because trixie lagged; it no longer does,
 # and pulling from sid dragged in a glibc upgrade that conflicts with the
 # hardened base image.
