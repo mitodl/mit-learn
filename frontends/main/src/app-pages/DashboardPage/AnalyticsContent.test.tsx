@@ -79,14 +79,12 @@ const setAnalyticsResponses = ({
   utilization = [analyticsFactories.contractUtilization()],
   trend = [analyticsFactories.monthlyEngagementTrend()],
   courses = [analyticsFactories.enrollmentCompletionFunnel()],
-  programs = [analyticsFactories.programFunnel()],
   content = [analyticsFactories.contentEngagementDepth()],
   page = { limit: 200 },
 }: {
   utilization?: ReturnType<typeof analyticsFactories.contractUtilization>[]
   trend?: ReturnType<typeof analyticsFactories.monthlyEngagementTrend>[]
   courses?: ReturnType<typeof analyticsFactories.enrollmentCompletionFunnel>[]
-  programs?: ReturnType<typeof analyticsFactories.programFunnel>[]
   content?: ReturnType<typeof analyticsFactories.contentEngagementDepth>[]
   page?: { limit: number }
 } = {}) => {
@@ -101,10 +99,6 @@ const setAnalyticsResponses = ({
   setMockResponse.get(
     analyticsUrls.organizations.enrollmentFunnel(ORG_UUID, page),
     analyticsFactories.envelope(courses, { as_of: AS_OF }),
-  )
-  setMockResponse.get(
-    analyticsUrls.organizations.programFunnel(ORG_UUID, page),
-    analyticsFactories.envelope(programs, { as_of: AS_OF }),
   )
   setMockResponse.get(
     analyticsUrls.organizations.contentEngagement(ORG_UUID, page),
@@ -171,10 +165,6 @@ describe("AnalyticsContent", () => {
       )
       setMockResponse.get(
         analyticsUrls.organizations.enrollmentFunnel(ORG_UUID, page),
-        ...forbidden,
-      )
-      setMockResponse.get(
-        analyticsUrls.organizations.programFunnel(ORG_UUID, page),
         ...forbidden,
       )
       setMockResponse.get(
@@ -250,15 +240,12 @@ describe("AnalyticsContent", () => {
         screen.getByRole("heading", { name: "Course performance" }),
       ).toBeInTheDocument()
       expect(
-        screen.getByRole("heading", { name: "Program funnel" }),
-      ).toBeInTheDocument()
-      expect(
         screen.getByRole("heading", { name: "Content engagement" }),
       ).toBeInTheDocument()
 
       // One "Data as of" per section — freshness is per materialized view.
       const asOfLabels = await screen.findAllByText(/Data as of/)
-      expect(asOfLabels).toHaveLength(5)
+      expect(asOfLabels).toHaveLength(4)
     })
 
     test("renders the KPI figures from contract utilization", async () => {
@@ -318,34 +305,6 @@ describe("AnalyticsContent", () => {
       expect(
         screen.getAllByText(/Withheld: too few learners/).length,
       ).toBeGreaterThan(0)
-    })
-
-    test("renders the program funnel's table view alongside the chart", async () => {
-      const org = orgWithUuid()
-      setManagerOrgs([org])
-      setAnalyticsResponses({
-        programs: [
-          analyticsFactories.programFunnel({
-            program_title: "Widget Engineering",
-            total_courses: 6,
-            enrolled_in_contract_courses: 50,
-            enrolled_via_program: 30,
-            program_course_completers: 12,
-          }),
-        ],
-      })
-
-      renderWithProviders(
-        <AnalyticsContent orgSlug={org.slug.replace(/^org-/, "")} />,
-      )
-
-      await screen.findByText("Widget Engineering")
-      // Scoped to this table: the monthly engagement section renders its own
-      // table of counts, which can legitimately carry the same numbers.
-      const table = screen.getByRole("table", { name: "Program funnel" })
-      expect(within(table).getByText("50")).toBeInTheDocument()
-      expect(within(table).getByText("30")).toBeInTheDocument()
-      expect(within(table).getByText("12")).toBeInTheDocument()
     })
 
     /**
@@ -476,10 +435,6 @@ describe("AnalyticsContent", () => {
         analyticsFactories.envelope([], { as_of: null }),
       )
       setMockResponse.get(
-        analyticsUrls.organizations.programFunnel(ORG_UUID, page),
-        analyticsFactories.envelope([], { as_of: null }),
-      )
-      setMockResponse.get(
         analyticsUrls.organizations.contentEngagement(ORG_UUID, page),
         analyticsFactories.envelope([], { as_of: null }),
       )
@@ -490,7 +445,7 @@ describe("AnalyticsContent", () => {
 
       expect(
         (await screen.findAllByText("Data not yet refreshed")).length,
-      ).toBe(5)
+      ).toBe(4)
       expect(screen.queryByText(/Data as of/)).not.toBeInTheDocument()
     })
 
@@ -499,7 +454,6 @@ describe("AnalyticsContent", () => {
       setManagerOrgs([org])
       setAnalyticsResponses({
         courses: [],
-        programs: [],
         trend: [],
         content: [],
       })
@@ -509,9 +463,6 @@ describe("AnalyticsContent", () => {
       )
 
       await screen.findByText("No course enrollments recorded yet.")
-      expect(
-        screen.getByText("No program enrollments recorded yet."),
-      ).toBeInTheDocument()
       expect(
         screen.getByText("No content engagement recorded yet."),
       ).toBeInTheDocument()
@@ -550,7 +501,7 @@ describe("AnalyticsContent", () => {
         screen.queryByText("Data not yet refreshed"),
       ).not.toBeInTheDocument()
       // The sections that did load keep their own freshness stamp.
-      expect(screen.getAllByText(/Data as of/)).toHaveLength(4)
+      expect(screen.getAllByText(/Data as of/)).toHaveLength(3)
       expect(
         screen.getByText(/Some analytics could not be loaded/),
       ).toBeInTheDocument()
@@ -786,12 +737,6 @@ describe("AnalyticsContent, contract-scoped", () => {
       ),
     )
     setMockResponse.get(
-      analyticsUrls.contracts.programFunnel(ORG_UUID, contractId, page),
-      analyticsFactories.envelope([analyticsFactories.programFunnel()], {
-        as_of: AS_OF,
-      }),
-    )
-    setMockResponse.get(
       analyticsUrls.contracts.contentEngagement(ORG_UUID, contractId, page),
       analyticsFactories.envelope(
         [analyticsFactories.contractContentEngagementDepth()],
@@ -897,12 +842,6 @@ describe("AnalyticsContent, contract-scoped", () => {
       ),
     )
     setMockResponse.get(
-      analyticsUrls.contracts.programFunnel(ORG_UUID, contractId, page),
-      analyticsFactories.envelope([analyticsFactories.programFunnel()], {
-        as_of: AS_OF,
-      }),
-    )
-    setMockResponse.get(
       analyticsUrls.contracts.contentEngagement(ORG_UUID, contractId, page),
       analyticsFactories.envelope(
         [analyticsFactories.contractContentEngagementDepth()],
@@ -949,12 +888,6 @@ describe("AnalyticsContent, contract-scoped", () => {
         [analyticsFactories.enrollmentCompletionFunnel()],
         { as_of: AS_OF },
       ),
-    )
-    setMockResponse.get(
-      analyticsUrls.contracts.programFunnel(ORG_UUID, contractId, page),
-      analyticsFactories.envelope([analyticsFactories.programFunnel()], {
-        as_of: AS_OF,
-      }),
     )
     setMockResponse.get(
       analyticsUrls.contracts.contentEngagement(ORG_UUID, contractId, page),
