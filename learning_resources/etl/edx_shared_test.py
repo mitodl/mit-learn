@@ -1758,3 +1758,35 @@ def test_unpublish_staff_only_content_files_nothing_hidden(
 
     assert unpublish_staff_only_content_files(source, [course.id], [key]) == 0
     mock_os_deindex.assert_not_called()
+
+
+def test_unpublish_staff_only_content_files_rerun_redeindexes(
+    mock_course_archive_bucket, mocker, tmp_path
+):
+    """A re-run with already-unpublished hidden files still queues the deindex tasks"""
+    mocker.patch(
+        "learning_resources.etl.edx_shared.get_bucket_by_name",
+        return_value=mock_course_archive_bucket.bucket,
+    )
+    mock_os_deindex = mocker.patch(
+        "learning_resources_search.tasks.deindex_run_content_files.delay"
+    )
+    mock_qdrant_remove = mocker.patch(
+        "vector_search.tasks.remove_unpublished_run_content_files.delay"
+    )
+    source = ETLSource.mitxonline.name
+    course = LearningResourceFactory.create(
+        etl_source=source, is_course=True, published=True, create_runs=False
+    )
+    run = LearningResourceRunFactory.create(learning_resource=course, published=True)
+    key = f"{get_s3_prefix_for_source(source)}/{run.run_id}/foo.tar.gz"
+    mock_course_archive_bucket.bucket.put_object(
+        Key=key, Body=_staff_only_archive(tmp_path).read_bytes()
+    )
+    ContentFileFactory.create(
+        run=run, key=get_edx_module_id("course/html/h_staff.xml", run), published=False
+    )
+
+    assert unpublish_staff_only_content_files(source, [course.id], [key]) == 0
+    mock_os_deindex.assert_called_once_with(run.id, unpublished_only=True)
+    mock_qdrant_remove.assert_called_once_with(run.id)
