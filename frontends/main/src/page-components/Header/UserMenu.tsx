@@ -1,7 +1,6 @@
 "use client"
 
 import React, { useState } from "react"
-import { usePathname } from "next/navigation"
 import { SimpleMenu, styled, theme } from "ol-components"
 import type { MenuOverrideProps, SimpleMenuItem } from "ol-components"
 import { ActionButtonLink, ButtonLink } from "@mitodl/smoot-design"
@@ -12,7 +11,6 @@ import {
   RiArrowDownSLine,
 } from "@remixicon/react"
 import { useUserMe, User } from "api/hooks/user"
-import MITLogoLink from "@/components/MITLogoLink/MITLogoLink"
 import { websiteContentCreateView } from "@/common/urls"
 
 const FlexContainer = styled.div({
@@ -105,27 +103,6 @@ const UserMenuChevron: React.FC<{ open: boolean }> = ({ open }) => {
   return open ? <RiArrowUpSLine /> : <RiArrowDownSLine />
 }
 
-const StyledMITLogoLink = styled(MITLogoLink)(({ theme }) => ({
-  img: {
-    width: "64px",
-    height: "32px",
-    marginLeft: "16px",
-    [theme.breakpoints.down("md")]: {
-      width: "48px",
-      height: "24px",
-      marginLeft: "0",
-    },
-  },
-}))
-
-const DashboardLink = styled(ButtonLink)(({ theme }) => ({
-  fontSize: theme.typography.body3.fontSize,
-  marginRight: "24px",
-  [theme.breakpoints.down("md")]: {
-    display: "none",
-  },
-}))
-
 type DeviceType = "mobile" | "desktop"
 type UserMenuProps = {
   variant?: DeviceType
@@ -133,7 +110,6 @@ type UserMenuProps = {
 
 const UserMenu: React.FC<UserMenuProps> = ({ variant }) => {
   const [visible, setVisible] = useState(false)
-  const pathname = usePathname()
   const loginUrl = urls.auth({
     next: {
       pathname: urls.DASHBOARD_HOME,
@@ -223,12 +199,6 @@ const UserMenu: React.FC<UserMenuProps> = ({ variant }) => {
             </UserMenuContainer>
           }
         />
-        {!pathname.startsWith("/dashboard") ? (
-          <DashboardLink variant="tertiary" href={"/dashboard"}>
-            Dashboard
-          </DashboardLink>
-        ) : null}
-        <StyledMITLogoLink logo="mit_white" />
       </>
     )
   } else {
@@ -244,7 +214,6 @@ const UserMenu: React.FC<UserMenuProps> = ({ variant }) => {
             >
               Log In
             </DesktopLoginButton>
-            <StyledMITLogoLink logo="mit_white" />
           </FlexContainer>
         ) : (
           ""
@@ -260,7 +229,6 @@ const UserMenu: React.FC<UserMenuProps> = ({ variant }) => {
             >
               <UserIcon data-testid="UserIcon" />
             </MobileLoginButton>
-            <StyledMITLogoLink logo="mit_white" />
           </FlexContainer>
         ) : (
           ""
