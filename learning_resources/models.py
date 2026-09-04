@@ -1667,3 +1667,105 @@ class ContentSummarizerConfiguration(TimestampedModel):
         default=list,
     )
     is_active = models.BooleanField(default=True)
+
+
+class CredentialMetadataConfiguration(TimestampedModel):
+    """
+    Admin-editable prompt and model for one credential metadata field.
+
+    One row per field, so the credential program can retune each prompt (and
+    pick a different model for it) without a deploy. Mirrors
+    ContentSummarizerConfiguration.
+    """
+
+    field = models.CharField(
+        max_length=32,
+        unique=True,
+        choices=constants.CredentialMetadataField.as_tuple(),
+        help_text="The metadata field this row configures.",
+    )
+    llm_model = models.CharField(
+        max_length=128, verbose_name="LLM Model", help_text="Add any OpenAI LLM model."
+    )
+    prompt = models.TextField(help_text="Appended to the assembled course context.")
+    temperature = models.FloatField(default=0.0)
+    # Read only from a field generated out of course content -- criteria today.
+    # Retrieval happens once per request and is shared, so the first such field
+    # supplies the query.
+    retrieval_query = models.TextField(
+        blank=True,
+        default="",
+        help_text=(
+            "Vector search query for course content."
+            " Blank generates from the marketing page and metadata alone."
+        ),
+    )
+    is_active = models.BooleanField(default=True)
+
+    def __str__(self):
+        return f"CredentialMetadataConfiguration for {self.field}"
+
+
+class CredentialMetadataGenerationLog(TimestampedModel):
+    """
+    Append-only record of one credential metadata generation.
+
+    Written on every call and never read on the request path: the API does not
+    cache, so this table is the only record of what was generated, from what
+    context, by which prompt and model.
+    """
+
+    learning_resource = models.ForeignKey(
+        LearningResource,
+        on_delete=models.CASCADE,
+        related_name="credential_metadata_generation_logs",
+    )
+    field = models.CharField(
+        max_length=32, choices=constants.CredentialMetadataField.as_tuple()
+    )
+
+    response = models.JSONField(
+        null=True,
+        blank=True,
+        help_text="The structured response, or null on failure.",
+    )
+    error = models.TextField(
+        blank=True, default="", help_text="The error message, if generation failed."
+    )
+
+    # Snapshots rather than a foreign key to the configuration: prompts and
+    # models are admin-editable, and a response stored against a mutable
+    # prompt is uninterpretable after that prompt is retuned.
+    prompt_text = models.TextField()
+    llm_model = models.CharField(max_length=128)
+    temperature = models.FloatField(null=True, blank=True)
+
+    # Stored in full rather than hashed: retrieval is not reproducible, since
+    # chunks change as content is re-indexed, so a hash would tell us two runs
+    # differed without recovering what either saw. Roughly 64KB a row at a 16k
+    # budget, so defer() it in list queries.
+    context_text = models.TextField(
+        blank=True,
+        default="",
+        help_text="The full context sent to the model.",
+    )
+    context_tokens = models.PositiveIntegerField(default=0)
+    retrieved_point_ids = ArrayField(
+        models.CharField(max_length=64), default=list, blank=True
+    )
+
+    latency_ms = models.PositiveIntegerField(null=True, blank=True)
+    generated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL
+    )
+
+    class Meta:
+        indexes = [
+            models.Index(fields=["learning_resource", "field", "-created_on"]),
+        ]
+
+    def __str__(self):
+        return (
+            f"{self.field} generation for"
+            f" {self.learning_resource.readable_id} at {self.created_on}"
+        )

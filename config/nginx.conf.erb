@@ -43,20 +43,32 @@ http {
         listen <%= ENV["PORT"] %> default_server;
         server_name _;
 
+        # Inherited by every proxying location below, so the credential
+        # location differs from the default one in nothing but its timeout.
+        proxy_set_header Host $http_host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $http_x_forwarded_proto;
+        proxy_set_header X-Forwarded-Port $http_x_forwarded_port;
+        proxy_set_header X-Forwarded-Host $http_x_forwarded_host;
+        proxy_redirect off;
+        client_max_body_size 25M;
+
         location = /.well-known/dnt-policy.txt {
             return 204;
         }
 
-        location / {
-            proxy_set_header Host $http_host;
-            proxy_set_header X-Real-IP $remote_addr;
-            proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-            proxy_set_header X-Forwarded-Proto $http_x_forwarded_proto;
-            proxy_set_header X-Forwarded-Port $http_x_forwarded_port;
-            proxy_set_header X-Forwarded-Host $http_x_forwarded_host;
+        # Credential metadata generation runs a frontier model per field and
+        # takes tens of seconds, well past nginx's 60s default. Scoped to this
+        # one path: a raised ceiling on `location /` would hold connections
+        # open three times as long for all traffic during a backend problem.
+        location = /api/v0/credential_metadata/ {
             proxy_pass http://<%= ENV["NGINX_BACKEND"] || "127.0.0.1:8061" %>;
-            proxy_redirect off;
-            client_max_body_size 25M;
+            proxy_read_timeout <%= ENV["NGINX_CREDENTIAL_READ_TIMEOUT"] || 180 %>s;
+        }
+
+        location / {
+            proxy_pass http://<%= ENV["NGINX_BACKEND"] || "127.0.0.1:8061" %>;
         }
     }
 }

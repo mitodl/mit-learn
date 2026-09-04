@@ -2004,3 +2004,37 @@ class LearningResourceSummarySerializer(serializers.ModelSerializer):
             "canonical_parent_ids",
             "learn_url",
         )
+
+
+class CredentialMetadataRequestSerializer(serializers.Serializer):
+    """Request body for the credential metadata endpoint"""
+
+    resource_readable_id = serializers.CharField(
+        required=True,
+        help_text="The readable id of the learning resource to generate metadata for",
+    )
+
+
+class CredentialMetadataSerializer(serializers.Serializer):
+    """
+    Generated Open Badges credential metadata for a learning resource.
+    """
+
+    resource_readable_id = serializers.CharField()
+    # The generated fields are `required=False` so that a field which failed to
+    # generate is omitted from the response rather than serialized as blank.
+    # None of these are `read_only`: drf-spectacular marks every read-only
+    # field as required in the response schema, which would tell clients the
+    # generated ones are always present.
+    description = serializers.CharField(
+        required=False,
+        help_text="The Open Badges 3.0 description, 1-2 sentences",
+    )
+    criteria = serializers.ListField(
+        child=serializers.CharField(),
+        required=False,
+        help_text=(
+            "Open Badges 3.0 criteria, one skill-focused bullet per item, for"
+            " rendering into the criteria narrative"
+        ),
+    )

@@ -580,6 +580,29 @@ export type CourseResourceResourceTypeEnum =
   (typeof CourseResourceResourceTypeEnum)[keyof typeof CourseResourceResourceTypeEnum]
 
 /**
+ * Generated Open Badges credential metadata for a learning resource.
+ */
+export interface CredentialMetadata {
+  resource_readable_id: string
+  /**
+   * The Open Badges 3.0 description, 1-2 sentences
+   */
+  description?: string
+  /**
+   * Open Badges 3.0 criteria, one skill-focused bullet per item, for rendering into the criteria narrative
+   */
+  criteria?: Array<string>
+}
+/**
+ * Request body for the credential metadata endpoint
+ */
+export interface CredentialMetadataRequestRequest {
+  /**
+   * The readable id of the learning resource to generate metadata for
+   */
+  resource_readable_id: string
+}
+/**
  * * `` - ---- * `Doctorate` - Doctorate * `Master\'s or professional degree` - Master\'s or professional degree * `Bachelor\'s degree` - Bachelor\'s degree * `Associate degree` - Associate degree * `Secondary/high school` - Secondary/high school * `Junior secondary/junior high/middle school` - Junior secondary/junior high/middle school * `No formal education` - No formal education * `Other education` - Other education
  */
 
@@ -3465,6 +3488,179 @@ export class ContentFeedbackApi extends BaseAPI {
   ) {
     return ContentFeedbackApiFp(this.configuration)
       .contentFeedbackCreate(requestParameters.ContentFeedbackRequest, options)
+      .then((request) => request(this.axios, this.basePath))
+  }
+}
+
+/**
+ * CredentialMetadataApi - axios parameter creator
+ */
+export const CredentialMetadataApiAxiosParamCreator = function (
+  configuration?: Configuration,
+) {
+  return {
+    /**
+     * Generate Open Badges credential metadata for a learning resource.  Limited to MITx Online courses.
+     * @summary Generate credential metadata
+     * @param {CredentialMetadataRequestRequest} CredentialMetadataRequestRequest
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    credentialMetadataCreate: async (
+      CredentialMetadataRequestRequest: CredentialMetadataRequestRequest,
+      options: RawAxiosRequestConfig = {},
+    ): Promise<RequestArgs> => {
+      // verify required parameter 'CredentialMetadataRequestRequest' is not null or undefined
+      assertParamExists(
+        "credentialMetadataCreate",
+        "CredentialMetadataRequestRequest",
+        CredentialMetadataRequestRequest,
+      )
+      const localVarPath = `/api/v0/credential_metadata/`
+      // use dummy base URL string because the URL constructor only accepts absolute URLs.
+      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL)
+      let baseOptions
+      if (configuration) {
+        baseOptions = configuration.baseOptions
+      }
+
+      const localVarRequestOptions = {
+        method: "POST",
+        ...baseOptions,
+        ...options,
+      }
+      const localVarHeaderParameter = {} as any
+      const localVarQueryParameter = {} as any
+
+      localVarHeaderParameter["Content-Type"] = "application/json"
+      localVarHeaderParameter["Accept"] = "application/json"
+
+      setSearchParams(localVarUrlObj, localVarQueryParameter)
+      let headersFromBaseOptions =
+        baseOptions && baseOptions.headers ? baseOptions.headers : {}
+      localVarRequestOptions.headers = {
+        ...localVarHeaderParameter,
+        ...headersFromBaseOptions,
+        ...options.headers,
+      }
+      localVarRequestOptions.data = serializeDataIfNeeded(
+        CredentialMetadataRequestRequest,
+        localVarRequestOptions,
+        configuration,
+      )
+
+      return {
+        url: toPathString(localVarUrlObj),
+        options: localVarRequestOptions,
+      }
+    },
+  }
+}
+
+/**
+ * CredentialMetadataApi - functional programming interface
+ */
+export const CredentialMetadataApiFp = function (
+  configuration?: Configuration,
+) {
+  const localVarAxiosParamCreator =
+    CredentialMetadataApiAxiosParamCreator(configuration)
+  return {
+    /**
+     * Generate Open Badges credential metadata for a learning resource.  Limited to MITx Online courses.
+     * @summary Generate credential metadata
+     * @param {CredentialMetadataRequestRequest} CredentialMetadataRequestRequest
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    async credentialMetadataCreate(
+      CredentialMetadataRequestRequest: CredentialMetadataRequestRequest,
+      options?: RawAxiosRequestConfig,
+    ): Promise<
+      (
+        axios?: AxiosInstance,
+        basePath?: string,
+      ) => AxiosPromise<CredentialMetadata>
+    > {
+      const localVarAxiosArgs =
+        await localVarAxiosParamCreator.credentialMetadataCreate(
+          CredentialMetadataRequestRequest,
+          options,
+        )
+      const localVarOperationServerIndex = configuration?.serverIndex ?? 0
+      const localVarOperationServerBasePath =
+        operationServerMap["CredentialMetadataApi.credentialMetadataCreate"]?.[
+          localVarOperationServerIndex
+        ]?.url
+      return (axios, basePath) =>
+        createRequestFunction(
+          localVarAxiosArgs,
+          globalAxios,
+          BASE_PATH,
+          configuration,
+        )(axios, localVarOperationServerBasePath || basePath)
+    },
+  }
+}
+
+/**
+ * CredentialMetadataApi - factory interface
+ */
+export const CredentialMetadataApiFactory = function (
+  configuration?: Configuration,
+  basePath?: string,
+  axios?: AxiosInstance,
+) {
+  const localVarFp = CredentialMetadataApiFp(configuration)
+  return {
+    /**
+     * Generate Open Badges credential metadata for a learning resource.  Limited to MITx Online courses.
+     * @summary Generate credential metadata
+     * @param {CredentialMetadataApiCredentialMetadataCreateRequest} requestParameters Request parameters.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    credentialMetadataCreate(
+      requestParameters: CredentialMetadataApiCredentialMetadataCreateRequest,
+      options?: RawAxiosRequestConfig,
+    ): AxiosPromise<CredentialMetadata> {
+      return localVarFp
+        .credentialMetadataCreate(
+          requestParameters.CredentialMetadataRequestRequest,
+          options,
+        )
+        .then((request) => request(axios, basePath))
+    },
+  }
+}
+
+/**
+ * Request parameters for credentialMetadataCreate operation in CredentialMetadataApi.
+ */
+export interface CredentialMetadataApiCredentialMetadataCreateRequest {
+  readonly CredentialMetadataRequestRequest: CredentialMetadataRequestRequest
+}
+
+/**
+ * CredentialMetadataApi - object-oriented interface
+ */
+export class CredentialMetadataApi extends BaseAPI {
+  /**
+   * Generate Open Badges credential metadata for a learning resource.  Limited to MITx Online courses.
+   * @summary Generate credential metadata
+   * @param {CredentialMetadataApiCredentialMetadataCreateRequest} requestParameters Request parameters.
+   * @param {*} [options] Override http request option.
+   * @throws {RequiredError}
+   */
+  public credentialMetadataCreate(
+    requestParameters: CredentialMetadataApiCredentialMetadataCreateRequest,
+    options?: RawAxiosRequestConfig,
+  ) {
+    return CredentialMetadataApiFp(this.configuration)
+      .credentialMetadataCreate(
+        requestParameters.CredentialMetadataRequestRequest,
+        options,
+      )
       .then((request) => request(this.axios, this.basePath))
   }
 }

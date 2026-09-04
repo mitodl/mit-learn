@@ -22,6 +22,7 @@ from grpc._channel import _InactiveRpcError
 from requests.exceptions import RequestException
 from rest_framework import serializers, views, viewsets
 from rest_framework.decorators import action
+from rest_framework.exceptions import NotFound, ValidationError
 from rest_framework.filters import OrderingFilter
 from rest_framework.generics import get_object_or_404
 from rest_framework.permissions import IsAuthenticated
@@ -39,6 +40,7 @@ from learning_resources.constants import (
     PlatformType,
     PrivacyLevel,
 )
+from learning_resources.etl.constants import ETLSource
 from learning_resources.etl.podcast import generate_aggregate_podcast_rss
 from learning_resources.exceptions import WebhookException
 from learning_resources.filters import (
@@ -70,6 +72,8 @@ from learning_resources.permissions import (
 from learning_resources.serializers import (
     ContentFileSerializer,
     CourseResourceSerializer,
+    CredentialMetadataRequestSerializer,
+    CredentialMetadataSerializer,
     LearningPathRelationshipCreateSerializer,
     LearningPathRelationshipSerializer,
     LearningPathResourceSerializer,
@@ -117,7 +121,9 @@ from main.utils import (
     call_fastly_purge_api,
     chunks,
     clear_views_cache,
+    db_sync_to_async,
 )
+from main.views import AsyncAPIView
 from vector_search.serializers import LearningResourcesSearchFiltersSerializer
 
 
@@ -1761,3 +1767,61 @@ def problem_set_file_output(problem_set_file):
         "content": problem_set_file.content,
         "file_extension": problem_set_file.file_extension,
     }
+
+
+@extend_schema_view(
+    post=extend_schema(
+        request=CredentialMetadataRequestSerializer(),
+        responses=CredentialMetadataSerializer(),
+    ),
+)
+class CredentialMetadataView(AsyncAPIView):
+    """
+    Generate Open Badges credential metadata for a learning resource.
+
+    Limited to MITx Online courses.
+    """
+
+    permission_classes = (permissions.IsAdminOrCourseAuthor,)
+
+    @extend_schema(summary="Generate credential metadata")
+    async def post(self, request):
+        # Imported here, not at module scope: credentials pulls in litellm and
+        # langchain, and the URLconf imports this module at boot. See
+        # main/boot_imports_test.py.
+        from learning_resources.credentials import generate_credential_metadata
+
+        request_data = CredentialMetadataRequestSerializer(data=request.data)
+        if not request_data.is_valid():
+            return Response(request_data.errors, status=400)
+
+        readable_id = request_data.data["resource_readable_id"]
+
+        resource = await db_sync_to_async(
+            lambda: LearningResource.objects.filter(
+                readable_id=readable_id,
+                platform=PlatformType.mitxonline.name,
+                resource_type=LearningResourceType.course.name,
+                etl_source=ETLSource.mitxonline.name,
+            ).first()
+        )()
+        if not resource:
+            exists = await db_sync_to_async(
+                LearningResource.objects.filter(readable_id=readable_id).exists
+            )()
+            if not exists:
+                msg = f"No learning resource with readable_id {readable_id}"
+                raise NotFound(msg)
+            msg = (
+                f"Credential metadata is only generated for"
+                f" {ETLSource.mitxonline.name} courses;"
+                f" {readable_id} is not one"
+            )
+            raise ValidationError(msg)
+
+        metadata = await generate_credential_metadata(resource, user=request.user)
+        return Response(
+            CredentialMetadataSerializer(
+                {"resource_readable_id": readable_id, **metadata}
+            ).data
+        )

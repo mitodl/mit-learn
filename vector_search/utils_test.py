@@ -26,6 +26,7 @@ from learning_resources.constants import (
     CONTENT_FILE_LARGE_FIELDS,
     GROUP_CONTENT_FILE_CONTENT_VIEWERS,
     LearningResourceType,
+    PlatformType,
 )
 from learning_resources.factories import (
     ContentFileFactory,
@@ -84,6 +85,7 @@ from vector_search.utils import (
     _resource_payload_hits,
     _resource_vector_hits,
     _set_payload,
+    async_content_file_chunks_for_resource,
     async_qdrant_aggregations,
     check_missing_content_file_ids,
     completeness_penalty_expression,
@@ -3603,3 +3605,134 @@ def test_resource_embedding_checksum_is_process_stable():
             )
         )
         assert render["checksum"] == baseline["checksum"]
+
+
+@pytest.mark.django_db(transaction=True)
+def test_async_content_file_chunks_for_resource(mocker):
+    """Chunks come back highest scoring first, tagged with their point id"""
+    resource = LearningResourceFactory.create(is_course=True)
+    mock_client = mocker.AsyncMock()
+    mock_client.query_points = mocker.AsyncMock(
+        return_value=mocker.Mock(
+            points=[
+                PointStruct(
+                    id="00000000000000000000000000000001",
+                    payload={"chunk_content": "first", "key": "a.html"},
+                    vector={},
+                ),
+                PointStruct(
+                    id="00000000000000000000000000000002",
+                    payload={"chunk_content": "second", "key": "b.html"},
+                    vector={},
+                ),
+            ]
+        )
+    )
+    mocker.patch("vector_search.utils.async_qdrant_client", return_value=mock_client)
+
+    chunks = asyncio.run(
+        async_content_file_chunks_for_resource(resource, "syllabus", limit=5)
+    )
+
+    assert [chunk["chunk_content"] for chunk in chunks] == ["first", "second"]
+    assert [chunk["point_id"] for chunk in chunks] == [
+        "00000000000000000000000000000001",
+        "00000000000000000000000000000002",
+    ]
+    call_kwargs = mock_client.query_points.mock_calls[0].kwargs
+    assert call_kwargs["collection_name"] == CONTENT_FILES_COLLECTION_NAME
+    assert call_kwargs["limit"] == 5
+    # Restricted to the resource's best run, plus the resource readable_id
+    # itself, which is what the run-less course metadata point carries.
+    assert call_kwargs["query_filter"].must == [
+        models.FieldCondition(
+            key="run_readable_id",
+            match=models.MatchAny(any=[resource.best_run.run_id, resource.readable_id]),
+        )
+    ]
+
+
+@pytest.mark.django_db(transaction=True)
+def test_async_content_file_chunks_for_resource_test_mode(mocker):
+    """A test_mode resource is restricted to its best run, not every run"""
+    resource = LearningResourceFactory.create(is_course=True, test_mode=True)
+    resource.runs.all().delete()
+    LearningResourceRunFactory.create(
+        learning_resource=resource, run_id="RUN_A", published=True
+    )
+    LearningResourceRunFactory.create(
+        learning_resource=resource, run_id="RUN_B", published=True
+    )
+    mock_client = mocker.AsyncMock()
+    mock_client.query_points = mocker.AsyncMock(return_value=mocker.Mock(points=[]))
+    mocker.patch("vector_search.utils.async_qdrant_client", return_value=mock_client)
+
+    asyncio.run(async_content_file_chunks_for_resource(resource, "syllabus"))
+
+    call_kwargs = mock_client.query_points.mock_calls[0].kwargs
+    assert call_kwargs["query_filter"].must == [
+        models.FieldCondition(
+            key="run_readable_id",
+            match=models.MatchAny(any=[resource.best_run.run_id, resource.readable_id]),
+        )
+    ]
+
+
+@pytest.mark.django_db(transaction=True)
+def test_async_content_file_chunks_for_resource_duplicate_readable_id(mocker):
+    """The best run comes from the resource passed in, not another platform's"""
+    readable_id = "course-v1:MITx+6.002x"
+    other = LearningResourceFactory.create(
+        is_course=True,
+        readable_id=readable_id,
+        platform=LearningResourcePlatformFactory.create(code=PlatformType.edx.name),
+    )
+    other.runs.all().delete()
+    LearningResourceRunFactory.create(
+        learning_resource=other, run_id="EDX_RUN", published=True
+    )
+    resource = LearningResourceFactory.create(
+        is_course=True,
+        readable_id=readable_id,
+        platform=LearningResourcePlatformFactory.create(
+            code=PlatformType.mitxonline.name
+        ),
+    )
+    resource.runs.all().delete()
+    LearningResourceRunFactory.create(
+        learning_resource=resource, run_id="MITXONLINE_RUN", published=True
+    )
+    mock_client = mocker.AsyncMock()
+    mock_client.query_points = mocker.AsyncMock(return_value=mocker.Mock(points=[]))
+    mocker.patch("vector_search.utils.async_qdrant_client", return_value=mock_client)
+
+    asyncio.run(async_content_file_chunks_for_resource(resource, "syllabus"))
+
+    call_kwargs = mock_client.query_points.mock_calls[0].kwargs
+    assert call_kwargs["query_filter"].must == [
+        models.FieldCondition(
+            key="run_readable_id",
+            match=models.MatchAny(any=["MITXONLINE_RUN", readable_id]),
+        )
+    ]
+
+
+@pytest.mark.django_db(transaction=True)
+def test_async_content_file_chunks_for_resource_no_published_run(mocker):
+    """With no published run the filter falls back to the resource itself"""
+    resource = LearningResourceFactory.create(is_course=True)
+    resource.runs.update(published=False)
+    mock_client = mocker.AsyncMock()
+    mock_client.query_points = mocker.AsyncMock(return_value=mocker.Mock(points=[]))
+    mocker.patch("vector_search.utils.async_qdrant_client", return_value=mock_client)
+
+    assert (
+        asyncio.run(async_content_file_chunks_for_resource(resource, "syllabus")) == []
+    )
+    call_kwargs = mock_client.query_points.mock_calls[0].kwargs
+    assert call_kwargs["query_filter"].must == [
+        models.FieldCondition(
+            key="run_readable_id",
+            match=models.MatchAny(any=[resource.readable_id]),
+        )
+    ]

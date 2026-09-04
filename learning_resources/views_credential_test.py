@@ -1,0 +1,221 @@
+"""Tests for the credential metadata API"""
+
+import pytest
+from django.contrib.auth.models import Group
+from django.urls import reverse
+
+from learning_resources.constants import (
+    GROUP_COURSE_AUTHORS,
+    LearningResourceType,
+    PlatformType,
+)
+from learning_resources.etl.constants import ETLSource
+from learning_resources.factories import (
+    LearningResourceFactory,
+    LearningResourcePlatformFactory,
+)
+
+GENERATED = {
+    "description": "A course about modelling fluid flow.",
+    "criteria": ["Applied conservation laws"],
+}
+
+
+@pytest.fixture
+def mock_generate(mocker):
+    """Mock credential metadata generation"""
+    return mocker.patch(
+        "learning_resources.credentials.generate_credential_metadata",
+        return_value=GENERATED,
+    )
+
+
+def mitxonline_course(readable_id=None):
+    """Create an MITx Online course, the only kind the endpoint generates for"""
+    return LearningResourceFactory.create(
+        is_course=True,
+        etl_source=ETLSource.mitxonline.name,
+        platform=LearningResourcePlatformFactory.create(
+            code=PlatformType.mitxonline.name
+        ),
+        **({"readable_id": readable_id} if readable_id else {}),
+    )
+
+
+@pytest.fixture
+def resource():
+    """Return an MITx Online course, the only kind the endpoint generates for"""
+    return mitxonline_course()
+
+
+def credential_url():
+    """Return the endpoint url"""
+    return reverse("lr:v0:credential_metadata")
+
+
+def generate(client, readable_id=None):
+    """Post a generation request, optionally scoped to a resource"""
+    body = {"resource_readable_id": readable_id} if readable_id else {}
+    return client.post(credential_url(), body)
+
+
+@pytest.mark.django_db(transaction=True)
+def test_credential_metadata_anonymous(client, resource, mock_generate):
+    """An anonymous request generates nothing"""
+    assert generate(client, resource.readable_id).status_code == 403
+    mock_generate.assert_not_called()
+
+
+@pytest.mark.django_db(transaction=True)
+def test_credential_metadata_non_author(
+    client, django_user_model, resource, mock_generate
+):
+    """A logged-in user who is not a course author generates nothing"""
+    client.force_login(django_user_model.objects.create())
+    assert generate(client, resource.readable_id).status_code == 403
+    mock_generate.assert_not_called()
+
+
+@pytest.mark.django_db(transaction=True)
+@pytest.mark.parametrize("user_role", ["staff", "course_author"])
+def test_credential_metadata_generates(
+    client, django_user_model, resource, mock_generate, user_role
+):
+    """Staff and course authors get a draft for every field"""
+    if user_role == "staff":
+        user = django_user_model.objects.create(is_staff=True)
+    else:
+        user = django_user_model.objects.create()
+        group, _ = Group.objects.get_or_create(name=GROUP_COURSE_AUTHORS)
+        group.user_set.add(user)
+    client.force_login(user)
+
+    response = generate(client, resource.readable_id)
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "resource_readable_id": resource.readable_id,
+        **GENERATED,
+    }
+    assert mock_generate.call_args.args[0] == resource
+    assert mock_generate.call_args.kwargs["user"] == user
+
+
+@pytest.mark.django_db(transaction=True)
+def test_credential_metadata_requires_a_resource(
+    client, django_user_model, mock_generate
+):
+    """The resource readable id is required"""
+    client.force_login(django_user_model.objects.create(is_staff=True))
+
+    response = generate(client)
+
+    assert response.status_code == 400
+    assert "resource_readable_id" in response.json()
+    mock_generate.assert_not_called()
+
+
+@pytest.mark.django_db(transaction=True)
+def test_credential_metadata_unknown_resource(client, django_user_model, mock_generate):
+    """An unknown readable id is a 404, not an empty draft"""
+    client.force_login(django_user_model.objects.create(is_staff=True))
+
+    response = generate(client, "no-such-course")
+
+    assert response.status_code == 404
+    mock_generate.assert_not_called()
+
+
+@pytest.mark.django_db(transaction=True)
+@pytest.mark.parametrize(
+    ("resource_type", "etl_source"),
+    [
+        (LearningResourceType.program.name, ETLSource.mitxonline.name),
+        (LearningResourceType.course.name, ETLSource.xpro.name),
+        (LearningResourceType.video.name, ETLSource.youtube.name),
+    ],
+)
+def test_credential_metadata_rejects_unsupported_resources(
+    client, django_user_model, mock_generate, resource_type, etl_source
+):
+    """
+    Only MITx Online courses are generated for.
+
+    The prompts were validated against those; a program page is a different
+    kind of document and another platform's content is differently shaped, so
+    the endpoint says so instead of returning an unreviewed draft.
+    """
+    unsupported = LearningResourceFactory.create(
+        resource_type=resource_type, etl_source=etl_source
+    )
+    client.force_login(django_user_model.objects.create(is_staff=True))
+
+    response = generate(client, unsupported.readable_id)
+
+    assert response.status_code == 400
+    assert unsupported.readable_id in str(response.json())
+    mock_generate.assert_not_called()
+
+
+@pytest.mark.django_db(transaction=True)
+def test_credential_metadata_omits_fields_it_could_not_generate(
+    client, django_user_model, resource, mocker
+):
+    """A field that failed to generate is absent, not blank"""
+    mocker.patch(
+        "learning_resources.credentials.generate_credential_metadata",
+        return_value={"description": "Only this one worked."},
+    )
+    client.force_login(django_user_model.objects.create(is_staff=True))
+
+    response = generate(client, resource.readable_id)
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "resource_readable_id": resource.readable_id,
+        "description": "Only this one worked.",
+    }
+
+
+@pytest.mark.django_db(transaction=True)
+def test_credential_metadata_rejects_get(client, django_user_model, mock_generate):
+    """
+    Generation is not reachable by GET.
+
+    It spends money per call and writes a generation log, so it must not be
+    triggerable by a prefetch, a proxy retry, or a crafted link followed by a
+    logged-in author -- none of which a CSRF check on GET would stop.
+    """
+    client.force_login(django_user_model.objects.create(is_staff=True))
+
+    response = client.get(credential_url(), {"resource_readable_id": "a-course"})
+
+    assert response.status_code == 405
+    mock_generate.assert_not_called()
+
+
+@pytest.mark.django_db(transaction=True)
+def test_credential_metadata_resolves_the_mitxonline_course(
+    client, django_user_model, mock_generate
+):
+    """
+    A readable id shared with another platform resolves to the MITx Online row.
+
+    readable_id is unique only per (platform, resource_type), so the lookup has
+    to pin the whole key. The edX row is created first, so a lookup that took
+    whichever row came back first would pick it.
+    """
+    readable_id = "course-v1:MITx+18.01"
+    LearningResourceFactory.create(
+        is_course=True,
+        readable_id=readable_id,
+        etl_source=ETLSource.mit_edx.name,
+        platform=LearningResourcePlatformFactory.create(code=PlatformType.edx.name),
+    )
+    expected = mitxonline_course(readable_id)
+    client.force_login(django_user_model.objects.create(is_staff=True))
+
+    response = generate(client, readable_id)
+
+    assert response.status_code == 200
+    assert mock_generate.call_args.args[0] == expected
