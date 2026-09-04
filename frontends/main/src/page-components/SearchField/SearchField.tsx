@@ -26,16 +26,19 @@ const SearchField: React.FC<SearchFieldProps> = ({
     event,
     { isEnter } = {},
   ) => {
-    const query = event.target.value
+    const searchTerm = event.target.value
     onSubmit(event)
     setPage?.(1)
     if (env("NEXT_PUBLIC_POSTHOG_API_KEY")) {
       // onSubmit starts a router navigation that has not committed yet, so the
       // $current_url posthog attaches still holds the previous query. Send the
       // submitted string rather than letting the term be inferred from the URL.
-      posthog.capture(PostHogEvents.SearchUpdate, { query, isEnter })
+      posthog.capture(PostHogEvents.SearchUpdate, {
+        search_term: searchTerm,
+        isEnter,
+      })
     }
-    trackSiteSearch(query)
+    trackSiteSearch(searchTerm)
   }
 
   return <SearchInput onSubmit={handleSubmit} {...others} />

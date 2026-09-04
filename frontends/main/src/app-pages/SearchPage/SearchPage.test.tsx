@@ -1372,7 +1372,7 @@ describe("Search analytics events", () => {
 
     expect(mockCapture).toHaveBeenCalledExactlyOnceWith(
       PostHogEvents.SearchUpdate,
-      { query: "policy", isEnter: true },
+      { search_term: "policy", isEnter: true },
     )
   })
 

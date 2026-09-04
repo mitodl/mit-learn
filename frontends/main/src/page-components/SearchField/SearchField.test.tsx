@@ -61,7 +61,7 @@ test.each([
   expect(onSubmit).toHaveBeenCalledTimes(1)
   expect(mockCapture).toHaveBeenCalledExactlyOnceWith(
     PostHogEvents.SearchUpdate,
-    { query: "policy", isEnter },
+    { search_term: "policy", isEnter },
   )
 })
 
