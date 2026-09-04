@@ -9,6 +9,7 @@ from opensearch_dsl import response
 from learning_resources.constants import OCW_CONTENT_CATEGORY_OPEN_TEXTBOOKS
 from learning_resources.factories import LearningResourceFactory
 from learning_resources_search.api import (
+    SORT_TIEBREAKERS,
     Search,
     construct_search,
     execute_learn_search,
@@ -35,6 +36,15 @@ from learning_resources_search.constants import (
 )
 from learning_resources_search.factories import PercolateQueryFactory
 from learning_resources_search.models import PercolateQuery
+
+# api.SORT_TIEBREAKERS, as the query body serializes them
+SERIALIZED_SORT_TIEBREAKERS = [
+    "featured_rank",
+    "is_learning_material",
+    "is_incomplete_or_stale",
+    {"created_on": {"order": "desc"}},
+    "id",
+]
 
 
 def os_topic(topic_name) -> Mock:
@@ -152,8 +162,31 @@ def test_relevant_indexes(endpoint, resourse_types, aggregations, result):
     ],
 )
 def test_generate_sort_clause(sort_param, departments, result):
+    """The requested sort leads, followed by the tiebreakers"""
     params = {"sortby": sort_param, "department": departments}
-    assert generate_sort_clause(params) == result
+    assert generate_sort_clause(params) == [
+        result,
+        *(sort for sort in SORT_TIEBREAKERS if sort != result),
+    ]
+
+
+@pytest.mark.parametrize(
+    ("sortby", "duplicated"),
+    [("new", "-created_on"), ("featured", "featured_rank"), ("id", "id")],
+)
+def test_generate_sort_clause_no_duplicate_tiebreaker(sortby, duplicated):
+    """A sort the tiebreakers repeat is not sorted on twice"""
+    clauses = generate_sort_clause({"sortby": sortby})
+
+    assert clauses[0] == duplicated
+    assert clauses.count(duplicated) == 1
+    assert clauses[1:] == [sort for sort in SORT_TIEBREAKERS if sort != duplicated]
+
+
+def test_generate_sort_clause_content_files():
+    """Content file documents have none of the fields the tiebreakers sort on"""
+    params = {"sortby": "id", "endpoint": CONTENT_FILE_TYPE}
+    assert generate_sort_clause(params) == ["id"]
 
 
 @pytest.mark.parametrize(
@@ -2375,7 +2408,7 @@ def test_execute_learn_search_for_learning_resource_query(settings, opensearch):
                 ]
             }
         },
-        "sort": [{"readable_id": {"order": "desc"}}],
+        "sort": [{"readable_id": {"order": "desc"}}, *SERIALIZED_SORT_TIEBREAKERS],
         "from": 1,
         "size": 1,
         "aggs": {
@@ -3035,7 +3068,7 @@ def test_execute_learn_search_with_script_score(
                 ]
             }
         },
-        "sort": [{"readable_id": {"order": "desc"}}],
+        "sort": [{"readable_id": {"order": "desc"}}, *SERIALIZED_SORT_TIEBREAKERS],
         "from": 1,
         "size": 1,
         "aggs": {
@@ -3180,7 +3213,7 @@ def test_execute_learn_search_with_hybrid_search(mocker, settings, opensearch):
                 ]
             }
         },
-        "sort": [{"readable_id": {"order": "desc"}}],
+        "sort": [{"readable_id": {"order": "desc"}}, *SERIALIZED_SORT_TIEBREAKERS],
         "from": 1,
         "size": 1,
         "query": {
@@ -4050,7 +4083,7 @@ def test_execute_learn_search_with_min_score(mocker, settings, opensearch):
                 ]
             }
         },
-        "sort": [{"readable_id": {"order": "desc"}}],
+        "sort": [{"readable_id": {"order": "desc"}}, *SERIALIZED_SORT_TIEBREAKERS],
         "from": 1,
         "size": 1,
         "aggs": {
@@ -4432,8 +4465,16 @@ def test_document_percolation(opensearch, mocker):
 @pytest.mark.parametrize(
     ("sortby", "q", "result"),
     [
-        ("-views", None, [{"views": {"order": "desc"}}]),
-        ("-views", "text", [{"views": {"order": "desc"}}]),
+        (
+            "-views",
+            None,
+            [{"views": {"order": "desc"}}, *SERIALIZED_SORT_TIEBREAKERS],
+        ),
+        (
+            "-views",
+            "text",
+            [{"views": {"order": "desc"}}, *SERIALIZED_SORT_TIEBREAKERS],
+        ),
         (
             None,
             None,

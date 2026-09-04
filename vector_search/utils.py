@@ -42,10 +42,13 @@ from learning_resources_search.serializers import (
 )
 from main.utils import checksum_for_content, chunks
 from vector_search.constants import (
+    COLLECTION_INDEX_MAP,
     COLLECTION_PARAM_MAP,
     COMPLETENESS_PAYLOAD_KEY,
     CONTENT_FILES_COLLECTION_NAME,
     COURSE_NUMBER_INDEXING_ONLY_FIELDS,
+    NULLABLE_ORDER_BY_KEYS,
+    ORDER_BY_MISSING_DATETIME,
     QDRANT_CONTENT_FILE_INDEXES,
     QDRANT_CONTENT_FILE_PARAM_MAP,
     QDRANT_LEARNING_RESOURCE_INDEXES,
@@ -1938,6 +1941,43 @@ def score_formula_query(collection_name: str) -> models.FormulaQuery | None:
     return models.FormulaQuery(
         formula=models.SumExpression(sum=["$score", *boost_expressions, *penalties]),
         defaults=defaults,
+    )
+
+
+def order_by_query(
+    order_by: models.OrderBy, collection_name: str
+) -> models.OrderByQuery | models.FormulaQuery:
+    """
+    Build the query that orders a prefetch's hits by a payload key.
+
+    A plain OrderByQuery, unless the key is one a point can have no value for
+    (see NULLABLE_ORDER_BY_KEYS), which order_by would drop rather than order
+    last. Those are expressed as a rescoring formula instead: the score becomes
+    the datetime itself -- negated to sort ascending, since a higher score ranks
+    first either way -- and `defaults` gives a point missing the key a value
+    beyond every real date, so it lands at the end with the rest of them.
+
+    Scores are 32-bit, so dates within a couple of minutes of each other can
+    order as equals. Start dates are hours apart at the very least, and the
+    alternative is dropping most of the collection.
+    """
+    schema = COLLECTION_INDEX_MAP.get(collection_name, {}).get(order_by.key)
+    if (
+        order_by.key not in NULLABLE_ORDER_BY_KEYS
+        # A nullable key of any other type would need its own sentinel value.
+        or schema != models.PayloadSchemaType.DATETIME
+    ):
+        return models.OrderByQuery(order_by=order_by)
+    datetime_value = models.DatetimeKeyExpression(datetime_key=order_by.key)
+    return models.FormulaQuery(
+        formula=datetime_value
+        if order_by.direction == models.Direction.DESC
+        else models.NegExpression(neg=datetime_value),
+        defaults={
+            order_by.key: ORDER_BY_MISSING_DATETIME[
+                order_by.direction or models.Direction.ASC
+            ]
+        },
     )
 
 

@@ -66,6 +66,15 @@ DEFAULT_SORT = [
     "-created_on",
 ]
 
+# Appended after an explicitly requested sort. OpenSearch parks documents that
+# are missing the sort field at the end of the results, whatever the direction,
+# so every sort has a tail of documents it cannot order -- an "upcoming" sort has
+# a large one, since only resources with a future run carry next_start_date. The
+# tail keeps the ordering the search page falls back on when it has no other
+# signal, rather than arbitrary index order, and `id` makes the ordering total so
+# paging through it cannot repeat or skip a result.
+SORT_TIEBREAKERS = [*DEFAULT_SORT, "id"]
+
 HYBRID_SEARCH_KNN_K_VALUE = 5
 
 
@@ -112,13 +121,14 @@ def relevant_indexes(resource_types, aggregations, endpoint, use_hybrid_search):
 
 def generate_sort_clause(search_params):
     """
-    Return sort clause for the query
+    Return the sort clauses for the query
 
     Args:
-        sort (dict): the search params
+        search_params (dict): the search params
     Returns:
-        dict or String: either a dictionary with the sort clause for
-            nested sort params or just sort parameter
+        list: the sort clauses, most significant first. The requested sort -- a
+            dictionary for nested sort params, otherwise just the sort field --
+            followed by the tiebreakers that make the ordering total.
     """
 
     sort = (
@@ -159,10 +169,21 @@ def generate_sort_clause(search_params):
                 }
             else:
                 sort_filter = {"filter": {"term": {f"{path}.primary": True}}}
-        return {field: {"order": direction, "nested": {"path": path, **sort_filter}}}
-
+        primary = {field: {"order": direction, "nested": {"path": path, **sort_filter}}}
     else:
-        return sort
+        primary = sort
+
+    if search_params.get("endpoint") == CONTENT_FILE_TYPE:
+        # Content file documents carry none of the resource-level fields the
+        # tiebreakers sort on.
+        return [primary]
+
+    # A sort is its own tiebreaker: "new" and "featured" sort on a field the
+    # tiebreakers repeat.
+    return [
+        primary,
+        *(tiebreaker for tiebreaker in SORT_TIEBREAKERS if tiebreaker != primary),
+    ]
 
 
 def wrap_text_clause(
@@ -839,8 +860,7 @@ def construct_search(search_params):  # noqa: C901, PLR0912
         search = search.extra(size=search_params.get("limit"))
 
     if search_params.get("sortby"):
-        sort = generate_sort_clause(search_params)
-        search = search.sort(sort)
+        search = search.sort(*generate_sort_clause(search_params))
     elif not search_params.get("q"):
         search = search.sort(*DEFAULT_SORT)
 

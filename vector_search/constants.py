@@ -226,6 +226,35 @@ COLLECTION_PARAM_MAP = {
     CONTENT_FILES_COLLECTION_NAME: QDRANT_CONTENT_FILE_PARAM_MAP,
 }
 
+COLLECTION_INDEX_MAP = {
+    RESOURCES_COLLECTION_NAME: QDRANT_LEARNING_RESOURCE_INDEXES,
+    TOPICS_COLLECTION_NAME: QDRANT_TOPIC_INDEXES,
+    CONTENT_FILES_COLLECTION_NAME: QDRANT_CONTENT_FILE_INDEXES,
+}
+
+# Sort keys a point can legitimately have no value for. Qdrant's order_by walks
+# the payload index, so a point whose value is null -- or which lacks the key
+# altogether -- is left out of the results entirely rather than ordered last:
+# next_start_date is null for every learning material, none of which has runs,
+# and for every course with no upcoming run, which together are the large
+# majority of the collection. Ordering by one of these keys takes the paths that
+# put those points last instead of dropping them. Everything else keeps the plain
+# order_by: views and created_on are on every resource payload, and their exact
+# index ordering is worth more than covering a case that cannot happen.
+NULLABLE_ORDER_BY_KEYS = frozenset({"next_start_date"})
+
+# The value a missing datetime is ordered by, which has to fall outside the range
+# real dates occupy so those points land at the end of the results either way.
+ORDER_BY_MISSING_DATETIME = {
+    models.Direction.ASC: "9999-01-01T00:00:00Z",
+    models.Direction.DESC: "0001-01-01T00:00:00Z",
+}
+
+# Points with no value for the sort key have nothing to order them by, so they
+# are ordered by recency instead -- where the tie-broken tail of the equivalent
+# OpenSearch sort also ends up. On every resource payload, and indexed.
+ORDER_BY_MISSING_TAIL_KEY = "created_on"
+
 # Maximum value of offset + limit accepted by paginated vector search
 MAX_RESULT_WINDOW = 1000
 
