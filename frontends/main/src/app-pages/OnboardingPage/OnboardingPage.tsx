@@ -142,7 +142,7 @@ const GridStyle = (
       columns: columns,
       maxWidth: maxWidth,
     },
-    gridItemProps: { xs: 3 },
+    gridItemProps: { size: 3 },
   }
 }
 
