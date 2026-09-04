@@ -99,6 +99,7 @@ import type {
   PercolateQuerySubscriptionRequestRequest,
   PlatformsListParams,
   PodcastEpisodeResource,
+  PodcastEpisodeTranscript,
   PodcastEpisodesListParams,
   PodcastResource,
   PodcastsItemsListParams,
@@ -108,6 +109,7 @@ import type {
   ProgramsListParams,
   SchoolsListParams,
   TopicsListParams,
+  UnsubscribeCreate200,
   UserList,
   UserListRelationship,
   UserListRelationshipRequest,
@@ -2419,6 +2421,55 @@ PercolateQuerySerializer: The percolate query
   }
 
   /**
+ * Fetch one episode's transcript.
+
+Served separately from the episode payload because the text runs tens
+of kilobytes; `podcast_episode.has_transcript` says whether there is
+anything here to fetch.
+
+Args:
+id (integer): The id of the podcast episode
+
+Returns:
+The episode id and its transcript text
+ * @summary Get a podcast episode transcript
+ */
+  podcastEpisodesTranscriptRetrieve(
+    id: number,
+    requestParameters?: Params,
+  ): {
+    response: Response
+    data: PodcastEpisodeTranscript
+    operationId: string
+  } {
+    const k6url = new URL(
+      this.cleanBaseUrl + `/api/v1/podcast_episodes/${id}/transcript/`,
+    )
+    const mergedRequestParameters = this._mergeRequestParameters(
+      requestParameters || {},
+      this.commonRequestParameters,
+    )
+    const response = http.request(
+      "GET",
+      k6url.toString(),
+      undefined,
+      mergedRequestParameters,
+    )
+    let data
+
+    try {
+      data = response.json()
+    } catch {
+      data = response.body
+    }
+    return {
+      response,
+      data,
+      operationId: "podcast_episodes_transcript_retrieve",
+    }
+  }
+
+  /**
    * Get a paginated list of podcasts
    * @summary List
    */
@@ -2830,6 +2881,43 @@ PercolateQuerySerializer: The percolate query
       response,
       data,
       operationId: "topics_retrieve",
+    }
+  }
+
+  /**
+   * Handle email unsubscribe requests via signed token.
+   * @summary One-click unsubscribe (RFC 8058)
+   */
+  unsubscribeCreate(
+    token: string,
+    requestParameters?: Params,
+  ): {
+    response: Response
+    data: UnsubscribeCreate200
+    operationId: string
+  } {
+    const k6url = new URL(this.cleanBaseUrl + `/api/v1/unsubscribe/${token}/`)
+    const mergedRequestParameters = this._mergeRequestParameters(
+      requestParameters || {},
+      this.commonRequestParameters,
+    )
+    const response = http.request(
+      "POST",
+      k6url.toString(),
+      undefined,
+      mergedRequestParameters,
+    )
+    let data
+
+    try {
+      data = response.json()
+    } catch {
+      data = response.body
+    }
+    return {
+      response,
+      data,
+      operationId: "unsubscribe_create",
     }
   }
 

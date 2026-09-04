@@ -3569,9 +3569,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@mitodl/course-search-utils@npm:^3.8.0":
-  version: 3.8.0
-  resolution: "@mitodl/course-search-utils@npm:3.8.0"
+"@mitodl/course-search-utils@npm:^3.8.1":
+  version: 3.8.1
+  resolution: "@mitodl/course-search-utils@npm:3.8.1"
   dependencies:
     "@mitodl/mit-learn-api-axios": "npm:^2026.8.19"
     "@remixicon/react": "npm:^4.2.0"
@@ -3591,7 +3591,7 @@ __metadata:
       optional: true
     react-router:
       optional: true
-  checksum: 10/6c4db32e04f38690cef129e536a446039e2557c1ef40362a103cf86b93fcd8e6c1075ac2da095b3dcf85a85aa6588cd04368b4acbd60cef6f7e4c5928211ece4
+  checksum: 10/575305d77cc7bb214b15076ac71dc6ba5a4fafe5724f155358b2c6046733d78cc241d517c8b8022f8afe15d354d5a2a572c970598e68b218f46bbd6841a9fed1
   languageName: node
   linkType: hard
 
@@ -16907,7 +16907,7 @@ __metadata:
     "@floating-ui/react": "npm:^0.27.16"
     "@happy-dom/jest-environment": "npm:^20.1.0"
     "@mitodl/arithmix": "npm:^0.2.5"
-    "@mitodl/course-search-utils": "npm:^3.8.0"
+    "@mitodl/course-search-utils": "npm:^3.8.1"
     "@mitodl/hacksnack": "npm:^0.1.2"
     "@mitodl/mitxonline-api-axios": "npm:2026.8.31-1"
     "@mitodl/smoot-design": "npm:6.34.0"
