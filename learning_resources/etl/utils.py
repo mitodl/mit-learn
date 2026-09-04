@@ -336,24 +336,19 @@ def _hidden_block_files(root: Path, tag: str, url_name: str, element) -> set[Pat
 
 def _parse_olx_block(root: Path, tag: str, url_name: str):
     """Parse <tag>/<url_name>.xml, returning None if missing or malformed"""
-    block_xml = root / tag / f"{url_name}.xml"
-    if not block_xml.exists():
-        return None
     try:
-        return ElementTree.parse(block_xml).getroot()
-    except ElementTree.ParseError:
+        return ElementTree.parse(root / tag / f"{url_name}.xml").getroot()
+    except (FileNotFoundError, ElementTree.ParseError):
         return None
 
 
-def staff_only_olx_paths(olx_path: str) -> set[Path]:
+def staff_only_olx_paths(olx_path: str | Path) -> set[Path]:
     """
     Return the files under visible_to_staff_only="true" subtrees of an OLX
     course tree, including transcripts of hidden videos. Empty when olx_path
     is not an OLX export (no course.xml).
     """
     root = Path(olx_path)
-    if not (root / "course.xml").exists():
-        return set()
     course = _parse_olx_block(root, "", "course")
     if course is None or not course.get("url_name"):
         return set()

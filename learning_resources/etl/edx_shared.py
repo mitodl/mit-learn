@@ -403,12 +403,12 @@ def unpublish_staff_only_content_files(
             except CalledProcessError:
                 log.exception("Error extracting %s, skipping", key)
                 continue
-            olx_paths = [p for p in Path(tempdir).iterdir() if p.is_dir()]
-            if not olx_paths:
+            olx_path = next((p for p in Path(tempdir).iterdir() if p.is_dir()), None)
+            if olx_path is None:
                 continue
             hidden_keys = {
                 get_edx_module_id(str(path), run)
-                for path in staff_only_olx_paths(str(olx_paths[0]))
+                for path in staff_only_olx_paths(olx_path)
             }
         if not hidden_keys:
             continue
