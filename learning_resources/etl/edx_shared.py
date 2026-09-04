@@ -413,14 +413,15 @@ def unpublish_staff_only_content_files(
         if not hidden_keys:
             continue
         # scoped to this run: keys embed the run_id, but never rely on that alone
-        unpublished = ContentFile.objects.filter(
-            run=run, key__in=hidden_keys, published=True
-        ).update(published=False)
+        hidden_files = ContentFile.objects.filter(run=run, key__in=hidden_keys)
+        unpublished = hidden_files.filter(published=True).update(published=False)
+        total += unpublished
         log.info(
             "Unpublished %d staff-only content files for %s", unpublished, run.run_id
         )
-        if unpublished:
-            total += unpublished
+        # dispatched whenever hidden rows exist, not only when this call flipped
+        # them, so a re-run after a failed deindex task cleans up the indexes
+        if hidden_files.exists():
             search_tasks.deindex_run_content_files.delay(run.id, unpublished_only=True)
             vector_tasks.remove_unpublished_run_content_files.delay(run.id)
     return total
