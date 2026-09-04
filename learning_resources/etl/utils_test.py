@@ -300,6 +300,91 @@ def test_documents_from_olx():
     assert formula2do[1]["mime_type"].endswith("/xml")
 
 
+def _write_olx(root, rel, text):
+    path = root / rel
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(text)
+
+
+def test_documents_from_olx_skips_staff_only_subtrees(tmp_path):
+    """Files under visible_to_staff_only subtrees (and their transcripts) are skipped"""
+    olx = tmp_path / "course"
+    _write_olx(olx, "course.xml", '<course url_name="run" org="MITx" course="1"/>')
+    _write_olx(
+        olx,
+        "course/run.xml",
+        '<course><chapter url_name="ch_ok"/><chapter url_name="ch_staff"/></course>',
+    )
+    _write_olx(
+        olx, "chapter/ch_ok.xml", '<chapter><sequential url_name="seq_ok"/></chapter>'
+    )
+    _write_olx(
+        olx,
+        "sequential/seq_ok.xml",
+        '<sequential><vertical url_name="v_ok"/><vertical url_name="v_staff"/></sequential>',
+    )
+    _write_olx(olx, "vertical/v_ok.xml", '<vertical><html url_name="h_ok"/></vertical>')
+    _write_olx(olx, "html/h_ok.xml", '<html filename="h_ok"/>')
+    _write_olx(olx, "html/h_ok.html", "<p>visible</p>")
+    _write_olx(
+        olx,
+        "vertical/v_staff.xml",
+        '<vertical visible_to_staff_only="true"><problem url_name="p_staff"/></vertical>',
+    )
+    _write_olx(olx, "problem/p_staff.xml", "<problem/>")
+    _write_olx(
+        olx,
+        "chapter/ch_staff.xml",
+        '<chapter visible_to_staff_only="true"><sequential url_name="seq_staff"/></chapter>',
+    )
+    _write_olx(
+        olx,
+        "sequential/seq_staff.xml",
+        '<sequential><vertical url_name="v_hidden"/></sequential>',
+    )
+    _write_olx(
+        olx,
+        "vertical/v_hidden.xml",
+        '<vertical><html url_name="h_hidden"/><video url_name="vid_hidden"/></vertical>',
+    )
+    _write_olx(olx, "html/h_hidden.xml", '<html filename="h_hidden_file"/>')
+    _write_olx(olx, "html/h_hidden_file.html", "<p>hidden</p>")
+    _write_olx(
+        olx,
+        "video/vid_hidden.xml",
+        '<video url_name="vid_hidden"><transcript language="en" src="hidden.srt"/></video>',
+    )
+    _write_olx(olx, "static/hidden.srt", "1\n00:00:00,000 --> 00:00:01,000\nhidden\n")
+    _write_olx(olx, "static/visible.srt", "1\n00:00:00,000 --> 00:00:01,000\nvisible\n")
+    _write_olx(olx, "tabs/syllabus.html", "<p>tab</p>")
+
+    prefix = "/".join(str(olx).split("/")[3:]) + "/"
+    paths = sorted(
+        meta["source_path"].removeprefix(prefix)
+        for _, meta in utils.documents_from_olx(str(olx))
+    )
+    assert paths == [
+        "chapter/ch_ok.xml",
+        "course.xml",
+        "course/run.xml",
+        "html/h_ok.html",
+        "html/h_ok.xml",
+        "sequential/seq_ok.xml",
+        "static/visible.srt",
+        "tabs/syllabus.html",
+        "vertical/v_ok.xml",
+    ]
+
+
+def test_documents_from_olx_without_course_xml_yields_everything(tmp_path):
+    """Non-OLX trees (canvas, tutor problem sets) are not filtered"""
+    olx = tmp_path / "course"
+    _write_olx(olx, "chapter/a.xml", '<chapter visible_to_staff_only="true"/>')
+    _write_olx(olx, "web_resources/b.html", "<p>b</p>")
+    paths = [meta["source_path"] for _, meta in utils.documents_from_olx(str(olx))]
+    assert len(paths) == 2
+
+
 @pytest.mark.parametrize(
     ("etl_source", "expected_setting"),
     [

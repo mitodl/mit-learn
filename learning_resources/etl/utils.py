@@ -320,11 +320,65 @@ def parse_dates(date_string, hour=12):
     return None
 
 
+def _hidden_block_files(root: Path, tag: str, url_name: str, element) -> set[Path]:
+    """Files belonging to one hidden block: its own files, html body, transcripts"""
+    files = set(root.glob(f"{tag}/{url_name}.*"))
+    if tag == "html" and element.get("filename"):
+        files.update(root.glob(f"html/{element.get('filename')}.*"))
+    if tag == "video":
+        files.update(
+            root / "static" / transcript.get("src")
+            for transcript in element.iter("transcript")
+            if transcript.get("src")
+        )
+    return files
+
+
+def _parse_olx_block(root: Path, tag: str, url_name: str):
+    """Parse <tag>/<url_name>.xml, returning None if missing or malformed"""
+    try:
+        return ElementTree.parse(root / tag / f"{url_name}.xml").getroot()
+    except (FileNotFoundError, ElementTree.ParseError):
+        return None
+
+
+def staff_only_olx_paths(olx_path: str | Path) -> set[Path]:
+    """
+    Return the files under visible_to_staff_only="true" subtrees of an OLX
+    course tree, including transcripts of hidden videos. Empty when olx_path
+    is not an OLX export (no course.xml).
+    """
+    root = Path(olx_path)
+    course = _parse_olx_block(root, "", "course")
+    if course is None or not course.get("url_name"):
+        return set()
+    hidden: set[Path] = set()
+    seen: set[tuple[str, str]] = set()
+    stack = [("course", course.get("url_name"), False)]
+    while stack:
+        tag, url_name, staff_only = stack.pop()
+        if (tag, url_name) in seen:
+            continue
+        seen.add((tag, url_name))
+        element = _parse_olx_block(root, tag, url_name)
+        if element is None:
+            continue
+        staff_only = staff_only or element.get("visible_to_staff_only") == "true"
+        if staff_only:
+            hidden.update(_hidden_block_files(root, tag, url_name, element))
+        stack.extend(
+            (child.tag, child.get("url_name"), staff_only)
+            for child in element
+            if child.get("url_name")
+        )
+    return hidden
+
+
 def documents_from_olx(
     olx_path: str, valid_file_types: list[str] = VALID_TEXT_FILE_TYPES
 ) -> Generator[tuple, None, None]:
     """
-    Extract text from OLX directory
+    Extract text from OLX directory, skipping staff-only content
 
     Args:
         olx_path (str): The path to the directory with the OLX data
@@ -332,11 +386,14 @@ def documents_from_olx(
     Yields:
         tuple: A list of (bytes of content, metadata)
     """
+    staff_only = staff_only_olx_paths(olx_path)
     for root, _, files in os.walk(olx_path):
         path = "/".join(root.split("/")[3:])
         for filename in files:
             extension_lower = Path(filename).suffix.lower()
 
+            if Path(root, filename) in staff_only:
+                continue
             if extension_lower in valid_file_types and "draft" not in root:
                 with Path.open(Path(root, filename), "rb") as f:
                     filebytes = f.read()

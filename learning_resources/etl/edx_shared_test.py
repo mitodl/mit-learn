@@ -4,6 +4,7 @@ import shutil
 import tarfile
 from datetime import datetime
 from pathlib import Path
+from types import SimpleNamespace
 from zoneinfo import ZoneInfo
 
 import pytest
@@ -17,6 +18,7 @@ from learning_resources.etl.edx_shared import (
     normalize_run_id,
     process_course_archive,
     sync_edx_course_files,
+    unpublish_staff_only_content_files,
 )
 from learning_resources.etl.utils import get_edx_module_id, get_s3_prefix_for_source
 from learning_resources.factories import (
@@ -1647,3 +1649,132 @@ def test_process_course_archive_all_failures_not_marked_empty(mocker, tmp_path):
     run.refresh_from_db()
     assert run.archive_key is None
     assert run.checksum is None
+
+
+def _staff_only_archive(tmp_path) -> Path:
+    """Build a tar.gz OLX export with one visible and one staff-only chapter"""
+    olx = tmp_path / "course"
+    files = {
+        "course.xml": '<course url_name="run" org="MITx" course="1"/>',
+        "course/run.xml": '<course><chapter url_name="ok"/><chapter url_name="staff"/></course>',
+        "chapter/ok.xml": '<chapter><sequential url_name="seq_ok"/></chapter>',
+        "sequential/seq_ok.xml": '<sequential><vertical url_name="v_ok"/></sequential>',
+        "vertical/v_ok.xml": '<vertical><html url_name="h_ok"/></vertical>',
+        "html/h_ok.xml": '<html filename="h_ok"/>',
+        "html/h_ok.html": "<p>ok</p>",
+        "chapter/staff.xml": (
+            '<chapter visible_to_staff_only="true"><sequential url_name="seq_staff"/></chapter>'
+        ),
+        "sequential/seq_staff.xml": '<sequential><vertical url_name="v_staff"/></sequential>',
+        "vertical/v_staff.xml": '<vertical><html url_name="h_staff"/></vertical>',
+        "html/h_staff.xml": '<html filename="h_staff"/>',
+        "html/h_staff.html": "<p>staff</p>",
+    }
+    for rel, text in files.items():
+        (olx / rel).parent.mkdir(parents=True, exist_ok=True)
+        (olx / rel).write_text(text)
+    tarpath = tmp_path / "course.tar.gz"
+    with tarfile.open(tarpath, "w:gz") as tar:
+        tar.add(olx, arcname="course")
+    return tarpath
+
+
+@pytest.fixture
+def staff_only_run(mock_course_archive_bucket, mocker, tmp_path):
+    """Create a mitxonline run whose mock-bucket archive has a staff-only chapter"""
+    mocker.patch(
+        "learning_resources.etl.edx_shared.get_bucket_by_name",
+        return_value=mock_course_archive_bucket.bucket,
+    )
+    source = ETLSource.mitxonline.name
+    course = LearningResourceFactory.create(
+        etl_source=source, is_course=True, published=True, create_runs=False
+    )
+    run = LearningResourceRunFactory.create(learning_resource=course, published=True)
+    key = f"{get_s3_prefix_for_source(source)}/{run.run_id}/foo.tar.gz"
+    mock_course_archive_bucket.bucket.put_object(
+        Key=key, Body=_staff_only_archive(tmp_path).read_bytes()
+    )
+    return SimpleNamespace(source=source, course=course, run=run, key=key)
+
+
+@pytest.fixture
+def mock_deindex_tasks(mocker):
+    """Mock the OpenSearch and Qdrant deindex task dispatchers"""
+    return SimpleNamespace(
+        opensearch=mocker.patch(
+            "learning_resources_search.tasks.deindex_run_content_files.delay"
+        ),
+        qdrant=mocker.patch(
+            "vector_search.tasks.remove_unpublished_run_content_files.delay"
+        ),
+    )
+
+
+def test_unpublish_staff_only_content_files(staff_only_run, mock_deindex_tasks):
+    """Only the matching run's staff-only content files are unpublished and deindexed"""
+    run = staff_only_run.run
+    other_run = LearningResourceRunFactory.create(
+        learning_resource=staff_only_run.course, published=True
+    )
+    run_keys = {
+        name: get_edx_module_id(f"course/{name}", run)
+        for name in ("html/h_ok.xml", "html/h_staff.xml")
+    }
+    for cf_key in run_keys.values():
+        ContentFileFactory.create(run=run, key=cf_key, published=True)
+    # same key strings on another run must not be touched
+    for cf_key in run_keys.values():
+        ContentFileFactory.create(run=other_run, key=cf_key, published=True)
+
+    unpublished = unpublish_staff_only_content_files(
+        staff_only_run.source, [staff_only_run.course.id], [staff_only_run.key]
+    )
+
+    assert unpublished == 1
+    assert not ContentFile.objects.filter(
+        run=run, key=run_keys["html/h_staff.xml"], published=True
+    ).exists()
+    assert ContentFile.objects.filter(
+        run=run, key=run_keys["html/h_ok.xml"], published=True
+    ).exists()
+    assert ContentFile.objects.filter(run=other_run, published=True).count() == 2
+    mock_deindex_tasks.opensearch.assert_called_once_with(run.id, unpublished_only=True)
+    mock_deindex_tasks.qdrant.assert_called_once_with(run.id)
+
+
+def test_unpublish_staff_only_content_files_nothing_hidden(
+    staff_only_run, mock_deindex_tasks
+):
+    """No deindex tasks are queued when a run has no staff-only content files"""
+    run = staff_only_run.run
+    ContentFileFactory.create(
+        run=run, key=get_edx_module_id("course/html/h_ok.xml", run), published=True
+    )
+
+    assert (
+        unpublish_staff_only_content_files(
+            staff_only_run.source, [staff_only_run.course.id], [staff_only_run.key]
+        )
+        == 0
+    )
+    mock_deindex_tasks.opensearch.assert_not_called()
+
+
+def test_unpublish_staff_only_content_files_rerun_redeindexes(
+    staff_only_run, mock_deindex_tasks
+):
+    """A re-run with already-unpublished hidden files still queues the deindex tasks"""
+    run = staff_only_run.run
+    ContentFileFactory.create(
+        run=run, key=get_edx_module_id("course/html/h_staff.xml", run), published=False
+    )
+
+    assert (
+        unpublish_staff_only_content_files(
+            staff_only_run.source, [staff_only_run.course.id], [staff_only_run.key]
+        )
+        == 0
+    )
+    mock_deindex_tasks.opensearch.assert_called_once_with(run.id, unpublished_only=True)
+    mock_deindex_tasks.qdrant.assert_called_once_with(run.id)
