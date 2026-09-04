@@ -77,6 +77,15 @@ const ConfiguredPostHogProvider: React.FC<{ children: React.ReactNode }> = ({
       posthog.init(POSTHOG_API_KEY, {
         api_host: POSTHOG_API_HOST,
         ui_host: POSTHOG_UI_HOST,
+        /**
+         * Pins the posthog-js default set to a known date. Without it,
+         * capture_pageview resolves to `true` (hard page loads only) rather
+         * than "history_change", so App Router navigations produce no
+         * $pageview. At posthog-js 1.297.2 this date changes nothing else:
+         * the other two defaults it gates (rageclick, session_recording) both
+         * flip on 2025-11-30.
+         */
+        defaults: "2025-05-24",
         // Scope the posthog cookie to this site's exact domain. Posthog
         // defaults this to true, which sets the cookie on the root domain
         // (e.g. mit.edu), sharing it with every other site there.

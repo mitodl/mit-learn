@@ -1351,6 +1351,87 @@ test("changing a facet resets unsubmitted text", async () => {
   })
 })
 
+describe("Search analytics events", () => {
+  beforeEach(() => {
+    process.env.NEXT_PUBLIC_POSTHOG_API_KEY = "test-key"
+    mockCapture.mockClear()
+  })
+  afterEach(() => {
+    delete process.env.NEXT_PUBLIC_POSTHOG_API_KEY
+  })
+
+  test("Submitting a search captures the submitted term, not the one in the URL", async () => {
+    setMockApiResponses({})
+    renderWithProviders(<SearchPage />, { url: "?q=design" })
+
+    const input = await screen.findByRole("textbox", { name: "Search for" })
+    await waitFor(() => expect(input).toHaveValue("design"))
+    await user.clear(input)
+    await user.paste("policy")
+    await user.type(input, "{Enter}")
+
+    expect(mockCapture).toHaveBeenCalledExactlyOnceWith(
+      PostHogEvents.SearchUpdate,
+      { query: "policy", isEnter: true },
+    )
+  })
+
+  test("Toggling a facet captures the filter event, not the keyword search event", async () => {
+    setMockApiResponses({
+      search: {
+        count: 700,
+        metadata: {
+          aggregations: { topic: [{ key: "Physics", doc_count: 100 }] },
+          suggestions: [],
+        },
+      },
+    })
+    renderWithProviders(<SearchPage />)
+
+    const physics = await screen.findByRole("checkbox", { name: "Physics 100" })
+    await user.click(physics)
+
+    expect(mockCapture).toHaveBeenCalledExactlyOnceWith(
+      PostHogEvents.SearchFilterUpdate,
+      { control: "topic" },
+    )
+  })
+
+  test("Changing sort captures the filter event naming the control", async () => {
+    setMockApiResponses({ search: { count: 137 } })
+    renderWithProviders(<SearchPage />)
+
+    const sortDropdown = (await screen.findAllByText("Sort by: Best Match"))[0]
+    await user.click(sortDropdown)
+    await user.click(await screen.findByRole("option", { name: /Popular/i }))
+
+    expect(mockCapture).toHaveBeenCalledExactlyOnceWith(
+      PostHogEvents.SearchFilterUpdate,
+      { control: "sortby" },
+    )
+  })
+
+  test("Clear all captures the filter event", async () => {
+    setMockApiResponses({
+      search: {
+        count: 700,
+        metadata: {
+          aggregations: { level: [{ key: "graduate", doc_count: 100 }] },
+          suggestions: [],
+        },
+      },
+    })
+    renderWithProviders(<SearchPage />, { url: "?level=graduate" })
+
+    await user.click(await screen.findByRole("button", { name: /clear all/i }))
+
+    expect(mockCapture).toHaveBeenCalledExactlyOnceWith(
+      PostHogEvents.SearchFilterUpdate,
+      { control: "clear_all" },
+    )
+  })
+})
+
 describe("UniversalAIBanner", () => {
   beforeEach(() => {
     mockFeatureFlags({ [FeatureFlags.UniversalAISearchBanner]: false })
