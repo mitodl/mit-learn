@@ -1,5 +1,6 @@
 import Link from "next/link"
-import { Typography, styled, theme } from "ol-components"
+import { Typography, styled, theme, type TypographyProps } from "ol-components"
+import { richTextDescription } from "./shared.styled"
 import { ButtonLink } from "@mitodl/smoot-design"
 import VideoContainer from "./VideoContainer"
 export { SkipLinksNav, StyledBreadcrumbs, VideoTitle } from "./shared.styled"
@@ -263,8 +264,18 @@ export const StyledDuration = styled.div(({ theme }) => ({
   color: theme.custom.colors.silverGrayDark,
 }))
 
-export const DescriptionText = styled(Typography)(({ theme }) => ({
+/*
+ * This page has its own DescriptionText - it is not the one in
+ * VideoDetailPage.styled - so it needs the same two things: the component
+ * generic, because a sanitized OVS description contains block elements that are
+ * invalid inside Typography's element for this variant (<p>), and the shared
+ * rich-text rules so lists and links are styled.
+ */
+export const DescriptionText = styled(Typography)<
+  Pick<TypographyProps, "component">
+>(({ theme }) => ({
   ...theme.typography.body2,
+  ...richTextDescription,
   color: theme.custom.colors.darkGray2,
   marginBottom: "16px",
   lineHeight: "22px",

@@ -17,6 +17,7 @@ import { formatDurationClockTime } from "ol-utilities"
 import { videoDetailPageView, videoPlaylistPageView } from "@/common/urls"
 import { buildVideoStructuredData } from "./videoStructuredData"
 import type { VideoPlayerHandle } from "@/page-components/VideoPlayer/VideoResourcePlayer"
+import { addExternalLinkTargets } from "@/common/utils"
 import * as Styled from "./VideoDetailPage.styled"
 
 const NEXT_PUBLIC_ORIGIN = env("NEXT_PUBLIC_ORIGIN")
@@ -215,8 +216,11 @@ const VideoDetailPage: React.FC<VideoDetailPageProps> = ({
 
           {!isLoading && video?.description && (
             <Styled.DescriptionText
+              component="div"
               id="video-description"
-              dangerouslySetInnerHTML={{ __html: video.description }}
+              dangerouslySetInnerHTML={{
+                __html: addExternalLinkTargets(video.description),
+              }}
             />
           )}
 

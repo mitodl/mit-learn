@@ -15,6 +15,7 @@ import { env } from "@/env"
 import { buildVideoStructuredData } from "./videoStructuredData"
 import VideoResourcePlayer from "@/page-components/VideoPlayer/VideoResourcePlayer"
 import type { VideoPlayerHandle } from "@/page-components/VideoPlayer/VideoResourcePlayer"
+import { addExternalLinkTargets } from "@/common/utils"
 
 import VideoShareButton from "./VideoShareButton"
 
@@ -202,9 +203,12 @@ const VideoSeriesDetailPage: React.FC<VideoSeriesDetailPageProps> = ({
           {/* Description */}
           {!isLoading && video?.description && (
             <Styled.DescriptionText
+              component="div"
               id="video-description"
               style={nextVideo ? {} : { paddingTop: "40px" }}
-              dangerouslySetInnerHTML={{ __html: video.description }}
+              dangerouslySetInnerHTML={{
+                __html: addExternalLinkTargets(video.description),
+              }}
             />
           )}
 
