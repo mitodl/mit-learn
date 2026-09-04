@@ -1,128 +1,21 @@
 "use client"
 
-import React, { useState } from "react"
-import { usePathname } from "next/navigation"
-import { SimpleMenu, styled, theme } from "ol-components"
-import type { MenuOverrideProps, SimpleMenuItem } from "ol-components"
-import { ActionButtonLink, ButtonLink } from "@mitodl/smoot-design"
+import React from "react"
+import { UserMenu as SharedUserMenu } from "@mitodl/smoot-design"
+import type { UserMenuItem } from "@mitodl/smoot-design"
+import { styled } from "ol-components"
 import * as urls from "@/common/urls"
-import {
-  RiAccountCircleFill,
-  RiArrowUpSLine,
-  RiArrowDownSLine,
-} from "@remixicon/react"
-import { useUserMe, User } from "api/hooks/user"
-import MITLogoLink from "@/components/MITLogoLink/MITLogoLink"
-import { websiteContentCreateView } from "@/common/urls"
+import { useUserMe } from "api/hooks/user"
 
-const FlexContainer = styled.div({
-  display: "flex",
-  alignItems: "center",
-})
-
-const UserMenuContainer = styled.button(({ theme }) => ({
-  display: "flex",
-  alignItems: "center",
-  cursor: "pointer",
-  background: "none",
-  color: theme.custom.colors.white,
-  height: "40px",
-  border: `1px solid ${theme.custom.colors.silverGrayDark}`,
-  borderRadius: "4px",
-  padding: "2px 8px",
-  gap: "8px",
-  font: "inherit",
+/**
+ * Placement only; the menu's appearance is smoot-design's. The same class
+ * lands on the logged-in trigger and on either login button, all of which
+ * take the same margins.
+ */
+const StyledUserMenu = styled(SharedUserMenu)(({ theme }) => ({
   margin: "0 16px",
-  opacity: 0.75,
-  "&:hover": {
-    opacity: 1,
-  },
   [theme.breakpoints.down("md")]: {
-    border: "none",
-    opacity: 1,
-    gap: "2px",
-    padding: "4px 0",
-    margin: "0px 24px",
-  },
-}))
-
-const LoginButtonContainer = styled(FlexContainer)(({ theme }) => ({
-  "&:hover": {
-    textDecoration: "none",
-  },
-  [theme.breakpoints.down("md")]: {
-    padding: "0",
-    ".login-button-desktop": {
-      display: "none",
-    },
-    ".login-button-mobile": {
-      display: "flex",
-    },
-  },
-  [theme.breakpoints.up("md")]: {
-    ".login-button-desktop": {
-      display: "flex",
-    },
-    ".login-button-mobile": {
-      display: "none",
-    },
-  },
-}))
-
-const DesktopLoginButton = styled(ButtonLink)({
-  height: "40px",
-  padding: "18px 12px",
-  margin: "0 16px",
-})
-
-const MobileLoginButton = styled(ActionButtonLink)({
-  width: "24px",
-  height: "24px",
-  margin: "0 24px",
-})
-
-const UserIcon = styled(RiAccountCircleFill)(({ theme }) => ({
-  color: theme.custom.colors.white,
-}))
-
-type UserMenuItem = SimpleMenuItem & {
-  allow: boolean
-}
-
-const UserNameContainer = styled.span(({ theme }) => ({
-  color: theme.custom.colors.white,
-  [theme.breakpoints.down("md")]: {
-    display: "none",
-  },
-  ...theme.typography.body2,
-}))
-
-const UserName: React.FC<{ user: User | undefined }> = ({ user }) => {
-  return <UserNameContainer>{user?.profile?.name ?? ""}</UserNameContainer>
-}
-
-const UserMenuChevron: React.FC<{ open: boolean }> = ({ open }) => {
-  return open ? <RiArrowUpSLine /> : <RiArrowDownSLine />
-}
-
-const StyledMITLogoLink = styled(MITLogoLink)(({ theme }) => ({
-  img: {
-    width: "64px",
-    height: "32px",
-    marginLeft: "16px",
-    [theme.breakpoints.down("md")]: {
-      width: "48px",
-      height: "24px",
-      marginLeft: "0",
-    },
-  },
-}))
-
-const DashboardLink = styled(ButtonLink)(({ theme }) => ({
-  fontSize: theme.typography.body3.fontSize,
-  marginRight: "24px",
-  [theme.breakpoints.down("md")]: {
-    display: "none",
+    margin: "0 24px",
   },
 }))
 
@@ -131,22 +24,18 @@ type UserMenuProps = {
   variant?: DeviceType
 }
 
+/**
+ * Learn's binding for the UserMenu shared with OCW: supplies auth state, the
+ * app's URLs, and header placement. Everything the two headers should agree on
+ * lives in smoot-design.
+ */
 const UserMenu: React.FC<UserMenuProps> = ({ variant }) => {
-  const [visible, setVisible] = useState(false)
-  const pathname = usePathname()
-  const loginUrl = urls.auth({
-    next: {
-      pathname: urls.DASHBOARD_HOME,
-      searchParams: null,
-    },
-  })
-
   const { isLoading, data: user } = useUserMe()
   if (isLoading) {
     return null
   }
 
-  const items: UserMenuItem[] = [
+  const items: (UserMenuItem & { allow: boolean })[] = [
     {
       label: "Dashboard",
       key: "dashboard",
@@ -163,13 +52,13 @@ const UserMenu: React.FC<UserMenuProps> = ({ variant }) => {
       label: "Article",
       key: "articles",
       allow: !!user?.is_article_editor,
-      href: websiteContentCreateView("article"),
+      href: urls.websiteContentCreateView("article"),
     },
     {
       label: "News",
       key: "news",
       allow: !!user?.is_article_editor,
-      href: websiteContentCreateView("news"),
+      href: urls.websiteContentCreateView("news"),
     },
     {
       label: "Log Out",
@@ -180,94 +69,21 @@ const UserMenu: React.FC<UserMenuProps> = ({ variant }) => {
     },
   ]
 
-  const menuOverrideProps: MenuOverrideProps = {
-    anchorOrigin: { horizontal: "left", vertical: "bottom" },
-    transformOrigin: { horizontal: "left", vertical: "top" },
-    slotProps: {
-      paper: {
-        sx: {
-          borderRadius: "0px 0px 5px 5px",
-          backgroundColor: theme.custom.colors.darkGray1,
-          padding: "0 16px",
-          ".MuiMenu-list": {
-            padding: "8px 0",
-            ".MuiMenuItem-root": {
-              backgroundColor: theme.custom.colors.darkGray1,
-              color: theme.custom.colors.white,
-              padding: "8px 0",
-              "&:hover": {
-                textDecoration: "underline",
-              },
-            },
-          },
-          ...theme.typography.body2,
+  return (
+    <StyledUserMenu
+      user={user?.is_authenticated ? { name: user.profile?.name } : undefined}
+      items={items
+        .filter(({ allow }) => allow)
+        .map(({ allow, ...item }) => item)}
+      loginUrl={urls.auth({
+        next: {
+          pathname: urls.DASHBOARD_HOME,
+          searchParams: null,
         },
-      },
-    },
-  }
-
-  if (user?.is_authenticated) {
-    return (
-      <>
-        <SimpleMenu
-          menuOverrideProps={menuOverrideProps}
-          onVisibilityChange={setVisible}
-          items={items
-            .filter(({ allow }) => allow)
-            .map(({ allow, ...item }) => item)}
-          trigger={
-            <UserMenuContainer aria-label="User Menu">
-              <UserIcon data-testid="UserIcon" />
-              <UserName user={user} />
-              {user?.is_authenticated ? <UserMenuChevron open={visible} /> : ""}
-            </UserMenuContainer>
-          }
-        />
-        {!pathname.startsWith("/dashboard") ? (
-          <DashboardLink variant="tertiary" href={"/dashboard"}>
-            Dashboard
-          </DashboardLink>
-        ) : null}
-        <StyledMITLogoLink logo="mit_white" />
-      </>
-    )
-  } else {
-    return (
-      <LoginButtonContainer data-testid="login-button-container">
-        {variant === "desktop" ? (
-          <FlexContainer className="login-button-desktop">
-            <DesktopLoginButton
-              data-testid="login-button-desktop"
-              size="small"
-              variant="tertiary"
-              href={loginUrl}
-            >
-              Log In
-            </DesktopLoginButton>
-            <StyledMITLogoLink logo="mit_white" />
-          </FlexContainer>
-        ) : (
-          ""
-        )}
-        {variant === "mobile" ? (
-          <FlexContainer className="login-button-mobile">
-            <MobileLoginButton
-              data-testid="login-button-mobile"
-              edge="circular"
-              variant="text"
-              href={loginUrl}
-              aria-label="Log in"
-            >
-              <UserIcon data-testid="UserIcon" />
-            </MobileLoginButton>
-            <StyledMITLogoLink logo="mit_white" />
-          </FlexContainer>
-        ) : (
-          ""
-        )}
-      </LoginButtonContainer>
-    )
-  }
+      })}
+      variant={variant}
+    />
+  )
 }
 
 export default UserMenu

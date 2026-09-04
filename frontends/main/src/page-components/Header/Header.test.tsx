@@ -49,7 +49,7 @@ describe("UserMenu", () => {
   }
 
   test.each([{}, { profile: null }, { profile: {} }])(
-    "Trigger button shows UserIcon for authenticated users w/o initials",
+    "Trigger button shows icons only for authenticated users w/o a name",
     async (userSettings) => {
       setMockResponse.get(urls.userMe.get(), {
         is_authenticated: true,
@@ -59,7 +59,9 @@ describe("UserMenu", () => {
       renderWithProviders(<Header />)
 
       const trigger = await screen.findByRole("button", { name: "User Menu" })
-      within(trigger).getByTestId("UserIcon")
+      expect(trigger.textContent).toBe("")
+      // The account icon and the chevron, which is all there is without a name.
+      expect(trigger.querySelectorAll("svg.remixicon")).toHaveLength(2)
     },
   )
 
@@ -89,8 +91,17 @@ describe("UserMenu", () => {
     renderWithProviders(<Header />, {
       url: initialUrl,
     })
-    const desktopLoginButton = await screen.findByTestId("login-button-desktop")
-    const mobileLoginButton = await screen.findByTestId("login-button-mobile")
+    /**
+     * The desktop button is labelled by its visible text and the mobile one by
+     * its aria-label, which differ only in case. Role queries are exact, so
+     * this is enough to tell them apart.
+     */
+    const desktopLoginButton = await screen.findByRole("link", {
+      name: "Log In",
+    })
+    const mobileLoginButton = await screen.findByRole("link", {
+      name: "Log in",
+    })
     invariant(desktopLoginButton instanceof HTMLAnchorElement)
     invariant(mobileLoginButton instanceof HTMLAnchorElement)
     expect(desktopLoginButton.href).toBe(expectedUrl)
@@ -100,6 +111,25 @@ describe("UserMenu", () => {
     await expectWindowNavigation(() => user.click(desktopLoginButton))
     await expectWindowNavigation(() => user.click(mobileLoginButton))
   })
+
+  test.each([
+    { url: "/foo/bar", expectDashboardLink: true },
+    { url: "/dashboard/my-lists", expectDashboardLink: false },
+  ])(
+    "Dashboard button is shown off the dashboard only (url=$url)",
+    async ({ url, expectDashboardLink }) => {
+      setMockResponse.get(urls.userMe.get(), { is_authenticated: true })
+      renderWithProviders(<Header />, { url })
+
+      await screen.findByRole("button", { name: "User Menu" })
+      const link = screen.queryByRole("link", { name: "Dashboard" })
+      if (expectDashboardLink) {
+        expect(link).toHaveAttribute("href", urlConstants.DASHBOARD_HOME)
+      } else {
+        expect(link).toBe(null)
+      }
+    },
+  )
 
   test("Authenticated users see the Log Out link", async () => {
     const isAuthenticated = true
