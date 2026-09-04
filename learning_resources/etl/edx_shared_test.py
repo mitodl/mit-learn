@@ -4,6 +4,7 @@ import shutil
 import tarfile
 from datetime import datetime
 from pathlib import Path
+from types import SimpleNamespace
 from zoneinfo import ZoneInfo
 
 import pytest
@@ -1678,47 +1679,57 @@ def _staff_only_archive(tmp_path) -> Path:
     return tarpath
 
 
-def test_unpublish_staff_only_content_files(
-    mock_course_archive_bucket, mocker, tmp_path
-):
-    """Only the matching run's staff-only content files are unpublished and deindexed"""
+@pytest.fixture
+def staff_only_run(mock_course_archive_bucket, mocker, tmp_path):
+    """Create a mitxonline run whose mock-bucket archive has a staff-only chapter"""
     mocker.patch(
         "learning_resources.etl.edx_shared.get_bucket_by_name",
         return_value=mock_course_archive_bucket.bucket,
-    )
-    mock_os_deindex = mocker.patch(
-        "learning_resources_search.tasks.deindex_run_content_files.delay"
-    )
-    mock_qdrant_remove = mocker.patch(
-        "vector_search.tasks.remove_unpublished_run_content_files.delay"
     )
     source = ETLSource.mitxonline.name
     course = LearningResourceFactory.create(
         etl_source=source, is_course=True, published=True, create_runs=False
     )
     run = LearningResourceRunFactory.create(learning_resource=course, published=True)
-    other_run = LearningResourceRunFactory.create(
-        learning_resource=course, published=True
-    )
     key = f"{get_s3_prefix_for_source(source)}/{run.run_id}/foo.tar.gz"
     mock_course_archive_bucket.bucket.put_object(
         Key=key, Body=_staff_only_archive(tmp_path).read_bytes()
     )
+    return SimpleNamespace(source=source, course=course, run=run, key=key)
 
-    def keys_for(run):
-        return {
-            name: get_edx_module_id(f"course/{name}", run)
-            for name in ("html/h_ok.xml", "html/h_staff.xml")
-        }
 
-    run_keys = keys_for(run)
+@pytest.fixture
+def mock_deindex_tasks(mocker):
+    """Mock the OpenSearch and Qdrant deindex task dispatchers"""
+    return SimpleNamespace(
+        opensearch=mocker.patch(
+            "learning_resources_search.tasks.deindex_run_content_files.delay"
+        ),
+        qdrant=mocker.patch(
+            "vector_search.tasks.remove_unpublished_run_content_files.delay"
+        ),
+    )
+
+
+def test_unpublish_staff_only_content_files(staff_only_run, mock_deindex_tasks):
+    """Only the matching run's staff-only content files are unpublished and deindexed"""
+    run = staff_only_run.run
+    other_run = LearningResourceRunFactory.create(
+        learning_resource=staff_only_run.course, published=True
+    )
+    run_keys = {
+        name: get_edx_module_id(f"course/{name}", run)
+        for name in ("html/h_ok.xml", "html/h_staff.xml")
+    }
     for cf_key in run_keys.values():
         ContentFileFactory.create(run=run, key=cf_key, published=True)
     # same key strings on another run must not be touched
     for cf_key in run_keys.values():
         ContentFileFactory.create(run=other_run, key=cf_key, published=True)
 
-    unpublished = unpublish_staff_only_content_files(source, [course.id], [key])
+    unpublished = unpublish_staff_only_content_files(
+        staff_only_run.source, [staff_only_run.course.id], [staff_only_run.key]
+    )
 
     assert unpublished == 1
     assert not ContentFile.objects.filter(
@@ -1728,65 +1739,42 @@ def test_unpublish_staff_only_content_files(
         run=run, key=run_keys["html/h_ok.xml"], published=True
     ).exists()
     assert ContentFile.objects.filter(run=other_run, published=True).count() == 2
-    mock_os_deindex.assert_called_once_with(run.id, unpublished_only=True)
-    mock_qdrant_remove.assert_called_once_with(run.id)
+    mock_deindex_tasks.opensearch.assert_called_once_with(run.id, unpublished_only=True)
+    mock_deindex_tasks.qdrant.assert_called_once_with(run.id)
 
 
 def test_unpublish_staff_only_content_files_nothing_hidden(
-    mock_course_archive_bucket, mocker, tmp_path
+    staff_only_run, mock_deindex_tasks
 ):
     """No deindex tasks are queued when a run has no staff-only content files"""
-    mocker.patch(
-        "learning_resources.etl.edx_shared.get_bucket_by_name",
-        return_value=mock_course_archive_bucket.bucket,
-    )
-    mock_os_deindex = mocker.patch(
-        "learning_resources_search.tasks.deindex_run_content_files.delay"
-    )
-    source = ETLSource.mitxonline.name
-    course = LearningResourceFactory.create(
-        etl_source=source, is_course=True, published=True, create_runs=False
-    )
-    run = LearningResourceRunFactory.create(learning_resource=course, published=True)
-    key = f"{get_s3_prefix_for_source(source)}/{run.run_id}/foo.tar.gz"
-    mock_course_archive_bucket.bucket.put_object(
-        Key=key, Body=_staff_only_archive(tmp_path).read_bytes()
-    )
+    run = staff_only_run.run
     ContentFileFactory.create(
         run=run, key=get_edx_module_id("course/html/h_ok.xml", run), published=True
     )
 
-    assert unpublish_staff_only_content_files(source, [course.id], [key]) == 0
-    mock_os_deindex.assert_not_called()
+    assert (
+        unpublish_staff_only_content_files(
+            staff_only_run.source, [staff_only_run.course.id], [staff_only_run.key]
+        )
+        == 0
+    )
+    mock_deindex_tasks.opensearch.assert_not_called()
 
 
 def test_unpublish_staff_only_content_files_rerun_redeindexes(
-    mock_course_archive_bucket, mocker, tmp_path
+    staff_only_run, mock_deindex_tasks
 ):
     """A re-run with already-unpublished hidden files still queues the deindex tasks"""
-    mocker.patch(
-        "learning_resources.etl.edx_shared.get_bucket_by_name",
-        return_value=mock_course_archive_bucket.bucket,
-    )
-    mock_os_deindex = mocker.patch(
-        "learning_resources_search.tasks.deindex_run_content_files.delay"
-    )
-    mock_qdrant_remove = mocker.patch(
-        "vector_search.tasks.remove_unpublished_run_content_files.delay"
-    )
-    source = ETLSource.mitxonline.name
-    course = LearningResourceFactory.create(
-        etl_source=source, is_course=True, published=True, create_runs=False
-    )
-    run = LearningResourceRunFactory.create(learning_resource=course, published=True)
-    key = f"{get_s3_prefix_for_source(source)}/{run.run_id}/foo.tar.gz"
-    mock_course_archive_bucket.bucket.put_object(
-        Key=key, Body=_staff_only_archive(tmp_path).read_bytes()
-    )
+    run = staff_only_run.run
     ContentFileFactory.create(
         run=run, key=get_edx_module_id("course/html/h_staff.xml", run), published=False
     )
 
-    assert unpublish_staff_only_content_files(source, [course.id], [key]) == 0
-    mock_os_deindex.assert_called_once_with(run.id, unpublished_only=True)
-    mock_qdrant_remove.assert_called_once_with(run.id)
+    assert (
+        unpublish_staff_only_content_files(
+            staff_only_run.source, [staff_only_run.course.id], [staff_only_run.key]
+        )
+        == 0
+    )
+    mock_deindex_tasks.opensearch.assert_called_once_with(run.id, unpublished_only=True)
+    mock_deindex_tasks.qdrant.assert_called_once_with(run.id)
