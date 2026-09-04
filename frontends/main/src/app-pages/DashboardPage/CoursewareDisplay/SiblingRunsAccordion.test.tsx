@@ -38,6 +38,20 @@ const makeEnrollment = (
   mitxonline.factories.enrollment.courseEnrollment({ run: runOverrides })
 
 /**
+ * A run with neither date, which `getRunTimeState` counts as underway. The
+ * factory's default certificate would make it read as completed instead, which
+ * is a different label path.
+ */
+const makeUndatedEnrollment = (
+  runOverrides: Record<string, unknown> = {},
+): ReturnType<typeof makeEnrollment> =>
+  mitxonline.factories.enrollment.courseEnrollment({
+    certificate: null,
+    grades: [],
+    run: { start_date: null, end_date: null, ...runOverrides },
+  })
+
+/**
  * SiblingRunsToggle and SiblingRunsPanel are rendered in
  * different parts of the card DOM (the toggle in the header, the panel
  * below it) but share a single `expanded` state lifted to their parent.
@@ -388,6 +402,60 @@ describe("SiblingRunsToggle + SiblingRunsPanel", () => {
     expect(screen.queryByText(/^Upcoming:/)).not.toBeInTheDocument()
   })
 
+  /**
+   * An undated run is a normal state, not a defect: `getRunTimeState` counts
+   * one as underway, so the dashboard will happily display and list it. With
+   * only the date range to go on, such a row rendered blank and both of its
+   * controls were named "View content for " / "More options for ".
+   */
+  test("an undated sibling run is named by its run tag", async () => {
+    const sibling = makeUndatedEnrollment({
+      run_tag: "3T2026",
+      courseware_url: faker.internet.url(),
+    })
+    renderWithProviders(
+      <SiblingRunsAccordionHarness
+        enrollment={makeEnrollment()}
+        siblingEnrollments={[sibling]}
+      />,
+    )
+    await expandAccordion()
+
+    expect(await screen.findByText("Run 3T2026")).toBeInTheDocument()
+    expect(
+      screen.getByRole("link", { name: "View content for Run 3T2026" }),
+    ).toBeInTheDocument()
+  })
+
+  test("two undated sibling runs stay distinguishable", async () => {
+    const siblings = [
+      makeUndatedEnrollment({
+        run_tag: "1T2026",
+        courseware_url: faker.internet.url(),
+      }),
+      makeUndatedEnrollment({
+        run_tag: "2T2026",
+        courseware_url: faker.internet.url(),
+      }),
+    ]
+    renderWithProviders(
+      <SiblingRunsAccordionHarness
+        enrollment={makeEnrollment()}
+        siblingEnrollments={siblings}
+      />,
+    )
+    await expandAccordion()
+
+    const linkA = await screen.findByRole("link", {
+      name: "View content for Run 1T2026",
+    })
+    const linkB = screen.getByRole("link", {
+      name: "View content for Run 2T2026",
+    })
+    expect(linkA).toHaveAttribute("href", siblings[0].run.courseware_url)
+    expect(linkB).toHaveAttribute("href", siblings[1].run.courseware_url)
+  })
+
   test("renders the correct number of sibling rows", async () => {
     const siblings = Array.from({ length: 4 }, () =>
       makeEnrollment({ courseware_url: faker.internet.url() }),
@@ -584,6 +652,35 @@ describe("per-run context menus", () => {
         url: mitxonline.urls.enrollment.courseEnrollment(enrollment.id),
       }),
     )
+  })
+
+  test("an undated sibling row names its run by tag, in the menu and the dialog", async () => {
+    const sibling = makeUndatedEnrollment({ run_tag: "3T2026" })
+    renderWithProviders(
+      <SiblingRunsAccordionHarness
+        enrollment={makeEnrollment()}
+        siblingEnrollments={[sibling]}
+      />,
+    )
+    await expandAccordion()
+
+    const trigger = await screen.findByRole("button", {
+      name: "More options for Run 3T2026",
+    })
+    await user.click(trigger)
+    expect(await screen.findByRole("menu")).toHaveAttribute(
+      "aria-label",
+      "Options for Run 3T2026",
+    )
+
+    await user.click(await screen.findByRole("menuitem", { name: "Unenroll" }))
+    // The dialog is what the learner confirms against, so it has to name the
+    // run too — otherwise an undated run is the one case the confirmation
+    // cannot be checked.
+    const dialog = await screen.findByRole("dialog", {
+      name: /Course run: Run 3T2026/,
+    })
+    expect(within(dialog).getByText("Run 3T2026")).toBeInTheDocument()
   })
 
   test("Receipt shows only on the row whose run has an order", async () => {

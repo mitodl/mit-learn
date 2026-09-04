@@ -10,7 +10,7 @@ import {
 import { HomeEnrollmentsDisplay } from "./HomeEnrollmentsDisplay"
 import { CoursewareCard } from "./CoursewareCard"
 import { setupEnrollments, setupOrderHistory } from "./test-utils"
-import { formatRunDateRange } from "./courseDateUtils"
+import { formatRunIdentifier } from "./courseDateUtils"
 import * as mitxonline from "api/mitxonline-test-utils"
 import { makeRequest } from "api/test-utils"
 import { useFeatureFlagEnabled } from "posthog-js/react"
@@ -222,12 +222,7 @@ describe("DashboardDialogs", () => {
     // and part of the dialog's name because that is all a screen reader
     // announces on open.
     await screen.findByRole("dialog", {
-      name: new RegExp(
-        `Course run: ${formatRunDateRange(
-          enrollment.run.start_date,
-          enrollment.run.end_date,
-        )}`,
-      ),
+      name: new RegExp(`Course run: ${formatRunIdentifier(enrollment.run)}`),
     })
 
     const confirmButton = await screen.findByRole("button", {

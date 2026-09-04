@@ -12,7 +12,7 @@ import {
   RiSubtractLine,
   RiTimeLine,
 } from "@remixicon/react"
-import { formatRunDateRange, getRunTimeState } from "./courseDateUtils"
+import { formatRunIdentifier, getRunTimeState } from "./courseDateUtils"
 import type { RunTimeState } from "./courseDateUtils"
 import { ActionButton, VisuallyHidden } from "@mitodl/smoot-design"
 import { EnrollmentStatusIcon } from "./EnrollmentStatus"
@@ -307,13 +307,10 @@ const SiblingRunsPanel: React.FC<SiblingRunsPanelProps> = ({
     currentRun?.end_date,
   )
   const currentStatusLabel = getRunStatusLabel(currentStatus, currentTimeState)
-  const currentDateRange = formatRunDateRange(
-    currentRun?.start_date,
-    currentRun?.end_date,
-  )
+  const currentRunIdentifier = formatRunIdentifier(currentRun)
   const currentLabelValue = currentStatusLabel
-    ? `${currentDateRange} (${currentStatusLabel})`
-    : currentDateRange
+    ? `${currentRunIdentifier} (${currentStatusLabel})`
+    : currentRunIdentifier
   const currentRunLabel = `Current run: ${currentLabelValue}`
 
   return (
@@ -363,14 +360,14 @@ const SiblingRunsPanel: React.FC<SiblingRunsPanelProps> = ({
             const timeState = getRunTimeState(startDate, endDate)
             const isUpcoming = !isCompleted && timeState === "upcoming"
             const isExpired = !isCompleted && timeState === "ended"
-            const dateRange = formatRunDateRange(startDate, endDate)
+            const runIdentifier = formatRunIdentifier(e.run)
             const fullLabel = isCompleted
-              ? `${dateRange} (Completed)`
+              ? `${runIdentifier} (Completed)`
               : isUpcoming
-                ? `Upcoming: ${dateRange}`
+                ? `Upcoming: ${runIdentifier}`
                 : isExpired
-                  ? `${dateRange} (Ended)`
-                  : dateRange
+                  ? `${runIdentifier} (Ended)`
+                  : runIdentifier
             return (
               <RunListRow
                 key={e.id}
@@ -392,7 +389,7 @@ const SiblingRunsPanel: React.FC<SiblingRunsPanelProps> = ({
                   )
                 }
                 labelPrefix={isUpcoming ? "Upcoming:" : undefined}
-                labelValue={dateRange}
+                labelValue={runIdentifier}
                 runLabel={fullLabel}
                 enrollment={e}
               />

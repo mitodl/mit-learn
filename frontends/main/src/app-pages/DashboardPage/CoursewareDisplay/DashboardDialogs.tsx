@@ -22,7 +22,7 @@ import {
   trackCourseUnenrolled,
   trackProgramUnenrolled,
 } from "@/common/analytics/gtm"
-import { formatRunDateRange } from "./courseDateUtils"
+import { formatRunIdentifier } from "./courseDateUtils"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import { FeatureFlags } from "@/common/feature_flags"
 
@@ -38,15 +38,12 @@ const BoldText = styled.span(({ theme }) => ({
  *
  * Behind the same flag as the per-run row menus, so turning the flag off
  * restores the previous dialogs exactly rather than leaving new copy behind.
- * Null for a run with no dates, rather than an empty label.
+ * Null only for that case: `formatRunIdentifier` names a run with no dates by
+ * its tag, so every run gets confirmed by something.
  */
-const useRunDateRange = (enrollment: CourseRunEnrollmentV3): string | null => {
+const useRunIdentifier = (enrollment: CourseRunEnrollmentV3): string | null => {
   const enabled = useFeatureFlagEnabled(FeatureFlags.MultipleRunContextMenus)
-  const dateRange = formatRunDateRange(
-    enrollment.run?.start_date,
-    enrollment.run?.end_date,
-  )
-  return enabled && dateRange ? dateRange : null
+  return enabled ? formatRunIdentifier(enrollment.run) : null
 }
 
 /**
@@ -58,12 +55,12 @@ const useRunDateRange = (enrollment: CourseRunEnrollmentV3): string | null => {
  * `aria-describedby`. So this line has to join the name to be spoken at all,
  * while the heading itself stays short.
  */
-const RunLabel: React.FC<{ id: string; dateRange: string }> = ({
+const RunLabel: React.FC<{ id: string; runIdentifier: string }> = ({
   id,
-  dateRange,
+  runIdentifier,
 }) => (
   <Typography id={id} variant="body1">
-    Course run: <BoldText>{dateRange}</BoldText>
+    Course run: <BoldText>{runIdentifier}</BoldText>
   </Typography>
 )
 
@@ -76,7 +73,7 @@ const EmailSettingsDialogInner: React.FC<DashboardDialogProps> = ({
   enrollment,
 }) => {
   const modal = NiceModal.useModal()
-  const runDateRange = useRunDateRange(enrollment)
+  const runIdentifier = useRunIdentifier(enrollment)
   const runLabelId = React.useId()
   const formik = useFormik({
     enableReinitialize: true,
@@ -104,7 +101,7 @@ const EmailSettingsDialogInner: React.FC<DashboardDialogProps> = ({
     <FormDialog
       title="Email Settings"
       fullWidth
-      additionalLabelledBy={runDateRange ? runLabelId : undefined}
+      additionalLabelledBy={runIdentifier ? runLabelId : undefined}
       onReset={formik.resetForm}
       onSubmit={formik.handleSubmit}
       {...muiDialogV5(modal)}
@@ -137,7 +134,9 @@ const EmailSettingsDialogInner: React.FC<DashboardDialogProps> = ({
         <Typography variant="body1">
           Update your email preferences for <BoldText>{title}.</BoldText>
         </Typography>
-        {runDateRange && <RunLabel id={runLabelId} dateRange={runDateRange} />}
+        {runIdentifier && (
+          <RunLabel id={runLabelId} runIdentifier={runIdentifier} />
+        )}
         <Alert severity="warning">
           Unchecking the box will prevent you from receiving important course
           updates and emails.
@@ -164,7 +163,7 @@ const UnenrollDialogInner: React.FC<DashboardDialogProps> = ({
   enrollment,
 }) => {
   const modal = NiceModal.useModal()
-  const runDateRange = useRunDateRange(enrollment)
+  const runIdentifier = useRunIdentifier(enrollment)
   const runLabelId = React.useId()
   // Renders its own inline error below (destroyEnrollment.isError), so suppress
   // the global error toast.
@@ -187,7 +186,7 @@ const UnenrollDialogInner: React.FC<DashboardDialogProps> = ({
     <FormDialog
       title={`Unenroll from ${title}`}
       fullWidth
-      additionalLabelledBy={runDateRange ? runLabelId : undefined}
+      additionalLabelledBy={runIdentifier ? runLabelId : undefined}
       onReset={formik.resetForm}
       onSubmit={formik.handleSubmit}
       {...muiDialogV5(modal)}
@@ -220,7 +219,9 @@ const UnenrollDialogInner: React.FC<DashboardDialogProps> = ({
         <Typography variant="body1">
           Are you sure you want to unenroll from {title}?
         </Typography>
-        {runDateRange && <RunLabel id={runLabelId} dateRange={runDateRange} />}
+        {runIdentifier && (
+          <RunLabel id={runLabelId} runIdentifier={runIdentifier} />
+        )}
         {destroyEnrollment.isError && (
           <Alert severity="error">
             There was a problem unenrolling you from this course. Please try
