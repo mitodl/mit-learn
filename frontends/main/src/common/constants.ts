@@ -31,6 +31,10 @@ export const PostHogEvents = {
   VideoShortsOpened: "video_shorts_opened",
   VideoShortViewed: "video_short_viewed",
   VideoShortsClosed: "video_shorts_closed",
+  ClickedNavForOrganizations: "clicked_nav_for_organizations",
+  OrgLearningCtaClicked: "org_learning_cta_clicked",
+  OrgLearningAudienceSelected: "org_learning_audience_selected",
+  OrgLearningFormSubmitted: "org_learning_form_submitted",
 } as const
 
 export const DigitalCredentialsFAQLink =

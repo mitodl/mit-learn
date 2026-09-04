@@ -4,10 +4,6 @@ import { styled } from "ol-components"
 import { RiMenuLine } from "@remixicon/react"
 import React from "react"
 
-const MenuIcon = styled(RiMenuLine)(({ theme }) => ({
-  color: theme.custom.colors.darkGray1,
-}))
-
 const MenuButtonText = styled.div(({ theme }) => ({
   alignSelf: "center",
   paddingLeft: "16px",
@@ -23,39 +19,58 @@ const MenuButtonInner = styled.div({
   alignItems: "flex-start",
 })
 
-const StyledMenuButton = styled.button(({ theme }) => ({
-  padding: "8px 16px",
-  background: "transparent",
-  "&:hover:not(:disabled)": {
+const StyledMenuButton = styled.button<{ active?: boolean }>(
+  ({ theme, active }) => ({
+    padding: "8px 16px",
     background: "transparent",
-  },
-  touchAction: "none",
-  textAlign: "center",
-  display: "inline-flex",
-  justifyContent: "center",
-  alignItems: "center",
-  color: theme.custom.colors.white,
-  transition: `background ${theme.transitions.duration.short}ms`,
-  cursor: "pointer",
-  borderStyle: "none",
-  svg: {
-    color: theme.custom.colors.white,
-  },
-  [theme.breakpoints.down("md")]: {
-    padding: "4px 0",
-  },
-}))
+    "&:hover:not(:disabled)": {
+      background: "transparent",
+    },
+    touchAction: "none",
+    textAlign: "center",
+    display: "inline-flex",
+    justifyContent: "center",
+    alignItems: "center",
+    color: active
+      ? theme.custom.colors.white
+      : theme.custom.colors.silverGrayLight,
+    transition: `color ${theme.transitions.duration.short}ms`,
+    cursor: "pointer",
+    borderStyle: "none",
+    svg: {
+      color: active
+        ? theme.custom.colors.white
+        : theme.custom.colors.silverGray,
+      transition: `color ${theme.transitions.duration.short}ms`,
+    },
+    "&:hover": {
+      color: theme.custom.colors.white,
+      svg: { color: theme.custom.colors.white },
+    },
+    [theme.breakpoints.down("md")]: {
+      padding: "4px 0",
+    },
+  }),
+)
 
 interface MenuButtonProps {
   text?: string
   onClick: React.MouseEventHandler<HTMLButtonElement> | undefined
+  active?: boolean
+  "aria-label"?: string
 }
 
 const MenuButton = React.forwardRef<HTMLButtonElement, MenuButtonProps>(
-  ({ onClick, text }, ref) => (
-    <StyledMenuButton ref={ref} onClick={onClick}>
+  ({ onClick, text, active, "aria-label": ariaLabel }, ref) => (
+    <StyledMenuButton
+      ref={ref}
+      onClick={onClick}
+      active={active}
+      aria-expanded={active}
+      aria-label={text ? undefined : ariaLabel}
+    >
       <MenuButtonInner>
-        <MenuIcon />
+        <RiMenuLine aria-hidden />
         {text ? <MenuButtonText>{text}</MenuButtonText> : ""}
       </MenuButtonInner>
     </StyledMenuButton>
