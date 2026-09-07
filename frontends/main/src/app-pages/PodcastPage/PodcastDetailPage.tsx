@@ -11,7 +11,7 @@ import {
 import { ResourceTypeEnum } from "api/v1"
 import type { LearningResource } from "api/v1"
 import { formatDate } from "ol-utilities"
-import { HOME, learnUrlSlug, podcastEpisodePath } from "@/common/urls"
+import { HOME, podcastEpisodePath } from "@/common/urls"
 import { addExternalLinkTargets } from "@/common/utils"
 import PodcastContainer from "./PodcastContainer"
 import PodcastBreadcrumbs from "./PodcastBreadcrumbs"
@@ -409,7 +409,7 @@ export const PodcastDetailPage: React.FC<PodcastDetailPageProps> = ({
                       href={podcastEpisodePath(
                         String(episode.id),
                         String(id),
-                        learnUrlSlug(episode.learn_url),
+                        episode.url_slug,
                       )}
                       onPlayClick={handlePlayClick}
                       onPauseClick={pause}

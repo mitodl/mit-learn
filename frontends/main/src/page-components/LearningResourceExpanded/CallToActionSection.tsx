@@ -317,13 +317,16 @@ const getResourceUrl = (
     ocwProductPages?: boolean
   },
 ) => {
-  // `learn_url` addresses these under their canonical parent, which is the
-  // parent these branches were already choosing. The membership guards stay:
-  // a video outside any playlist, or an episode with no podcast, still falls
-  // through to the source URL below rather than to a Learn page.
-  if (resource.resource_type === ResourceTypeEnum.VideoPlaylist) {
+  if (
+    resource.resource_type === ResourceTypeEnum.VideoPlaylist ||
+    resource.resource_type === ResourceTypeEnum.Podcast
+  ) {
     return resource.learn_url
   }
+
+  // A video outside every playlist does have a Learn page, but a context-free
+  // one. The fallthrough below reaches the OCW product page, which frames the
+  // video in its course.
   if (resource.resource_type === ResourceTypeEnum.Video) {
     const [firstPlaylist] = videoPlaylistIds(resource)
     if (firstPlaylist !== undefined) {
@@ -331,9 +334,9 @@ const getResourceUrl = (
     }
   }
 
-  if (resource.resource_type === ResourceTypeEnum.Podcast) {
-    return resource.learn_url
-  }
+  // An episode with no parent podcast has no page of its own, so its
+  // `learn_url` is the drawer this button sits in. The fallthrough sends those
+  // to the source rather than linking the drawer to itself.
   if (resource.resource_type === ResourceTypeEnum.PodcastEpisode) {
     const [parentPodcastId] = parentPodcastIds(resource)
     if (parentPodcastId !== undefined) {

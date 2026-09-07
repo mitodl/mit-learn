@@ -13,7 +13,7 @@ import {
 import type { VideoResource, VideoPlaylistResource } from "api/v1"
 import { VideoResourceResourceTypeEnum } from "api/v1"
 import { formatDurationClockTime } from "ol-utilities"
-import { generateVideoPlaylistPath, learnUrlPath } from "@/common/urls"
+import { absoluteUrl, videoDetailPath, videoPlaylistPath } from "@/common/urls"
 import { buildVideoStructuredData } from "./videoStructuredData"
 import type { VideoPlayerHandle } from "@/page-components/VideoPlayer/VideoResourcePlayer"
 import * as Styled from "./VideoDetailPage.styled"
@@ -141,7 +141,7 @@ const VideoDetailPage: React.FC<VideoDetailPageProps> = ({
               ...(playlist
                 ? [
                     {
-                      href: learnUrlPath(playlist.learn_url),
+                      href: playlist.learn_url,
                       label: playlistLabel,
                     },
                   ]
@@ -157,7 +157,7 @@ const VideoDetailPage: React.FC<VideoDetailPageProps> = ({
           {isLoading ? (
             <Skeleton width={120} height={18} style={{ marginBottom: 8 }} />
           ) : playlist ? (
-            <Styled.CategoryLabel href={learnUrlPath(playlist.learn_url)}>
+            <Styled.CategoryLabel href={playlist.learn_url}>
               {playlistLabel}
             </Styled.CategoryLabel>
           ) : null}
@@ -189,7 +189,16 @@ const VideoDetailPage: React.FC<VideoDetailPageProps> = ({
               <VideoShareButton
                 video={video}
                 title={video.title ?? "video"}
-                pageUrl={video.learn_url}
+                // Shares the page in front of the user, playlist included: a
+                // video in several playlists is viewable in any of them, and a
+                // recommendation is usually about the series it was found in.
+                pageUrl={absoluteUrl(
+                  videoDetailPath(
+                    video.id,
+                    playlistId ?? undefined,
+                    video.url_slug,
+                  ),
+                )}
                 playerRef={playerRef}
               />
             )}
@@ -226,8 +235,8 @@ const VideoDetailPage: React.FC<VideoDetailPageProps> = ({
                 playlistLabel={playlistLabel}
                 playlistHref={
                   playlist
-                    ? learnUrlPath(playlist.learn_url)
-                    : generateVideoPlaylistPath(String(playlistId))
+                    ? playlist.learn_url
+                    : videoPlaylistPath(playlistId, undefined)
                 }
                 videos={otherVideos}
                 totalVideos={totalPlaylistVideos}

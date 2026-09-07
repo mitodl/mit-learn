@@ -358,28 +358,37 @@ export const LINKEDIN_ADD_TO_PROFILE_BASE_URL =
 export const COURSE_PAGE_VIEW = "/courses/[readableId]"
 export const coursePageView = (readableId: string) =>
   generatePath(COURSE_PAGE_VIEW, { readableId })
-// The resource page paths below take an already-derived slug rather than a
-// title: callers read it from the resource's `learn_url`, so the backend decides
-// how a URL is spelled — including emitting the literal "resource" when a title
-// yields no slug. `slug` is required-but-undefinable so a call site can't
-// silently omit it; passing undefined emits the bare path, which still resolves
-// and 307-redirects to canonical. `generateVideoPlaylistPath` returns that bare
-// form unconditionally, for the call sites that have no resource to read a slug
-// from. Id and slug are separate segments; the slug is cosmetic and ignored on
-// lookup.
+// The resource page builders below take the resource's `url_slug`. `slug` is
+// required-but-undefinable so a call site can't silently omit it; passing
+// undefined emits the bare path, which resolves and 307-redirects to the
+// slugged canonical.
 export const VIDEO_PLAYLIST_PAGE_VIEW = "/video-playlist/[id]"
-/** Bare playlist path; the page 307s to the slugged canonical. */
-export const generateVideoPlaylistPath = (id: string) =>
-  generatePath(VIDEO_PLAYLIST_PAGE_VIEW, { id })
+export const videoPlaylistPath = (
+  id: number | string,
+  slug: string | undefined,
+) => {
+  const base = generatePath(VIDEO_PLAYLIST_PAGE_VIEW, { id: String(id) })
+  return slug === undefined ? base : `${base}/${slug}`
+}
 export const PODCASTS_PAGE_VIEW = "/podcasts"
 
 export const PODCAST_PAGE_VIEW = "/podcast/[podcastId]"
+export const podcastPath = (
+  podcastId: number | string,
+  slug: string | undefined,
+) => {
+  const base = generatePath(PODCAST_PAGE_VIEW, {
+    podcastId: String(podcastId),
+  })
+  return slug === undefined ? base : `${base}/${slug}`
+}
+
 export const PODCAST_EPISODE_PAGE_VIEW =
   "/podcast/[podcastId]/podcast_episode/[episodeId]"
 /**
- * An episode's path from an already-known slug. The episode pages read the slug
- * from the resource's `learn_url` but resolve the parent podcast against the
- * request, since an episode in several podcasts is viewable under any of them.
+ * An episode's path. The parent podcast is the caller's to choose: an episode in
+ * several podcasts is viewable under any of them, so a page passes the podcast
+ * it is being viewed under rather than the canonical one.
  */
 export const podcastEpisodePath = (
   id: string,
@@ -395,9 +404,9 @@ export const podcastEpisodePath = (
 
 export const VIDEO_DETAIL_PAGE_VIEW = "/video/[videoId]"
 /**
- * A video's path from an already-known slug. The video pages read the slug from
- * the resource's `learn_url` but resolve `?playlist` against the request, since
- * a video in several playlists is legitimately viewable in any of them.
+ * A video's path. `?playlist` is the caller's to choose: a video in several
+ * playlists is viewable in any of them, so a page passes the playlist it is
+ * being viewed in rather than the canonical one.
  */
 export const videoDetailPath = (
   videoId: number,
@@ -414,28 +423,6 @@ export const videoDetailPath = (
   }
   return base
 }
-
-/**
- * The path and query of a resource's `learn_url`.
- *
- * `learn_url` is absolute; redirect targets and the [slug] pages' canonical
- * comparisons are same-origin paths. Parsing rather than string-slicing keeps
- * the readable-id characters that are legal unescaped in a path — an MITx
- * Online id such as `course-v1:MITxT+14.100x` survives intact.
- */
-export const learnUrlPath = (learnUrl: string): string => {
-  const { pathname, search } = new URL(learnUrl)
-  return `${pathname}${search}`
-}
-
-/**
- * The slug segment of a dedicated-page `learn_url`, i.e. its final path
- * segment. Used where a page owns part of the URL the backend does not — a
- * video's `?playlist`, which is resolved against the incoming request rather
- * than fixed to the canonical parent.
- */
-export const learnUrlSlug = (learnUrl: string): string =>
-  new URL(learnUrl).pathname.split("/").filter(Boolean).at(-1) ?? ""
 
 /**
  * Append a request's incoming search params to a canonical URL so redirects

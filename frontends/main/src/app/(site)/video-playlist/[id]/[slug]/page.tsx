@@ -10,7 +10,7 @@ import { getQueryClient } from "@/app/getQueryClient"
 import VideoPlaylistCollectionPage from "@/app-pages/VideoPlaylistCollectionPage/VideoPlaylistCollectionPage"
 import { notFound, redirect } from "next/navigation"
 import { parseResourceId } from "@/common/slugs"
-import { carrySearchParams, learnUrlPath } from "@/common/urls"
+import { carrySearchParams, videoPlaylistPath } from "@/common/urls"
 
 type Props = AppPageProps<"/video-playlist/[id]/[slug]">
 
@@ -63,7 +63,7 @@ const Page: React.FC<Props> = async ({ params, searchParams }) => {
     videoPlaylistQueries.detail(playlistId),
   )
 
-  const canonical = learnUrlPath(playlist.learn_url)
+  const canonical = videoPlaylistPath(playlistId, playlist.url_slug)
   if (`/video-playlist/${id}/${slug}` !== canonical) {
     redirect(carrySearchParams(canonical, await searchParams))
   }

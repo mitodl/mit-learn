@@ -1,7 +1,6 @@
 import React from "react"
 import { factories, setMockResponse, urls } from "api/test-utils"
-import { kebabCase } from "lodash"
-import { podcastEpisodePath } from "@/common/urls"
+import { absoluteUrl, podcastEpisodePath } from "@/common/urls"
 import { ResourceTypeEnum } from "api/v1"
 import type { LearningResource, PodcastEpisodeResource } from "api/v1"
 import { renderWithProviders, screen, user, waitFor } from "@/test-utils"
@@ -26,51 +25,21 @@ const makeItemsResponse = (episodes: LearningResource[]) => ({
   })),
 })
 
-const ORIGIN = "http://test.learn.odl.local:8062"
-
-/**
- * The podcast an episode's canonical URL is scoped to, deliberately not the one
- * these tests view it under: an episode in several podcasts is viewable from any
- * of them, so rows must keep the viewed podcast as context and borrow only the
- * slug from `learn_url`.
- */
-const CANONICAL_PARENT_ID = 987654
-
 const makePodcastEpisode = (
   overrides: Partial<LearningResource> = {},
-): PodcastEpisodeResource => {
-  const episode = factories.learningResources.resource({
+): PodcastEpisodeResource =>
+  factories.learningResources.resource({
     resource_type: ResourceTypeEnum.PodcastEpisode,
     ...overrides,
   }) as PodcastEpisodeResource
-  return {
-    ...episode,
-    // Dedicated-page shape. The row hrefs read their slug from here, so the
-    // factory's drawer-shaped default would render a "/search" slug.
-    learn_url: `${ORIGIN}/podcast/${CANONICAL_PARENT_ID}/podcast_episode/${
-      episode.id
-    }/${kebabCase(episode.title)}`,
-  }
-}
 
-/**
- * The episode page reads the series URL from the embedded parent's `learn_url`,
- * so give the podcast its own page rather than the factory's drawer default.
- */
 const makePodcast = (
   overrides: Partial<LearningResource> = {},
-): LearningResource => {
-  const podcast = factories.learningResources.resource({
+): LearningResource =>
+  factories.learningResources.resource({
     resource_type: ResourceTypeEnum.Podcast,
     ...overrides,
   })
-  return {
-    ...podcast,
-    learn_url: `http://test.learn.odl.local:8062/podcast/${podcast.id}/${kebabCase(
-      podcast.title,
-    )}`,
-  }
-}
 
 type SetupOptions = {
   episodeOverrides?: Partial<LearningResource>
@@ -206,21 +175,15 @@ describe("PodcastEpisodeDetailPage", () => {
     expect(screen.getByText(moreEpisodes[1].title!)).toBeInTheDocument()
 
     // Each row keeps the podcast being viewed as the context segment and takes
-    // only the slug from learn_url, whose canonical parent is a different
-    // podcast. A drawer-shaped learn_url would render a "/search" slug here.
+    // only the slug from the episode.
     for (const more of moreEpisodes) {
       const link = screen.getByRole("link", {
         name: new RegExp(more.title!, "i"),
       })
       expect(link).toHaveAttribute(
         "href",
-        podcastEpisodePath(
-          String(more.id),
-          String(podcast.id),
-          kebabCase(more.title),
-        ),
+        podcastEpisodePath(String(more.id), String(podcast.id), more.url_slug),
       )
-      expect(link.getAttribute("href")).not.toContain("search")
     }
   })
 
@@ -368,7 +331,63 @@ describe("PodcastEpisodeDetailPage", () => {
     expect(internalLink).not.toHaveAttribute("target")
   })
 
-  test("names the URL's podcast (not the first parent) for a multi-parent episode", async () => {
+  test("Share link keeps the podcast the episode is viewed under", async () => {
+    // Sharing hands out the page in front of the user, parent podcast included,
+    // even when that is not the canonical parent: the recommendation is usually
+    // about the series it was found in.
+    const episode = makePodcastEpisode()
+    const canonical = makePodcast({ title: "Canonical Podcast" })
+    const viewed = makePodcast({ title: "Viewed Podcast" })
+    episode.podcast_episode.podcasts = [canonical.id, viewed.id]
+    episode.podcast_episode.parent_podcasts = [
+      {
+        id: canonical.id,
+        title: canonical.title!,
+        readable_id: canonical.readable_id,
+        learn_url: canonical.learn_url,
+      },
+      {
+        id: viewed.id,
+        title: viewed.title!,
+        readable_id: viewed.readable_id,
+        learn_url: viewed.learn_url,
+      },
+    ]
+
+    setMockResponse.get(
+      urls.learningResources.details({ id: episode.id }),
+      episode,
+    )
+    setMockResponse.get(
+      urls.learningResources.details({ id: viewed.id }),
+      viewed,
+    )
+    setMockResponse.get(
+      `${urls.learningResources.items({ id: viewed.id })}?limit=${EPISODES_PAGE_SIZE}`,
+      makeItemsResponse([episode]),
+    )
+
+    renderWithProviders(
+      <PodcastEpisodeDetailPage
+        episodeId={String(episode.id)}
+        podcastId={String(viewed.id)}
+      />,
+    )
+
+    await user.click(await screen.findByRole("button", { name: /share/i }))
+
+    expect(screen.getByRole("textbox")).toHaveValue(
+      absoluteUrl(
+        podcastEpisodePath(
+          String(episode.id),
+          String(viewed.id),
+          episode.url_slug,
+        ),
+      ),
+    )
+  })
+
+  test("shows the viewed podcast but publishes the canonical one", async () => {
     const episode = makePodcastEpisode()
     episode.podcast_episode.audio_url = "https://example.com/ep.mp3"
     // The resource factory leaves last_modified unset, and the JSON-LD is
@@ -417,24 +436,22 @@ describe("PodcastEpisodeDetailPage", () => {
       await screen.findByRole("button", { name: /play episode/i }),
     )
 
-    // The header/breadcrumb and the player bar must agree on Podcast B.
+    // The header/breadcrumb and the player bar follow the route: Podcast B.
     expect(screen.getByTestId("player-podcast-name")).toHaveTextContent(
       "Podcast B",
     )
 
-    // So must the JSON-LD: partOfSeries takes its url from the podcast in the
-    // current route, so taking the name from parent_podcasts[0] instead would
-    // publish Podcast A's name against Podcast B's url.
+    // The JSON-LD does not. It is read by crawlers, so both its url and its
+    // series name the canonical parent — A — and never the route's.
     const jsonLd = JSON.parse(
       document.querySelector('script[type="application/ld+json"]')!.innerHTML,
     )
-    expect(jsonLd.partOfSeries).toEqual(
-      expect.objectContaining({
-        "@type": "PodcastSeries",
-        name: "Podcast B",
-        url: expect.stringContaining(`/podcast/${podcastB.id}/`),
-      }),
-    )
+    expect(jsonLd.url).toBe(episode.learn_url)
+    expect(jsonLd.partOfSeries).toEqual({
+      "@type": "PodcastSeries",
+      name: "Podcast A",
+      url: podcastA.learn_url,
+    })
   })
 
   test("escapes every < in the JSON-LD, not just </", async () => {

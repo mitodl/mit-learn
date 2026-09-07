@@ -1,6 +1,6 @@
 import React from "react"
 import { setMockResponse, urls, factories } from "api/test-utils"
-import { kebabCase } from "lodash"
+import { absoluteUrl, videoDetailPath } from "@/common/urls"
 import { renderWithProviders, screen, user } from "@/test-utils"
 import VideoSeriesDetailPage from "./VideoSeriesDetailPage"
 import { ResourceTypeEnum } from "api/v1"
@@ -27,32 +27,16 @@ jest.mock("@/page-components/VideoPlayer/VideoJsPlayer", () => ({
 
 // ── Factories ────────────────────────────────────────────────────────────────
 
-/**
- * These pages read the slug from `learn_url`, so mirror the backend's slug here
- * rather than leaving the factory's drawer-shaped default.
- */
-const makeVideo = (overrides: Partial<VideoResource> = {}): VideoResource => {
-  const video = factories.learningResources.video({
+const makeVideo = (overrides: Partial<VideoResource> = {}): VideoResource =>
+  factories.learningResources.video({
     resource_type: ResourceTypeEnum.Video,
     ...overrides,
   }) as VideoResource
-  return {
-    ...video,
-    learn_url: `http://test.learn.odl.local:8062/video/${video.id}/${kebabCase(video.title)}`,
-  }
-}
 
 const makePlaylist = (
   overrides: Partial<VideoPlaylistResource> = {},
-): VideoPlaylistResource => {
-  const playlist = factories.learningResources.videoPlaylist(
-    overrides,
-  ) as VideoPlaylistResource
-  return {
-    ...playlist,
-    learn_url: `http://test.learn.odl.local:8062/video-playlist/${playlist.id}/${kebabCase(playlist.title)}`,
-  }
-}
+): VideoPlaylistResource =>
+  factories.learningResources.videoPlaylist(overrides) as VideoPlaylistResource
 
 // ── API helpers ───────────────────────────────────────────────────────────────
 
@@ -147,10 +131,7 @@ describe("VideoSeriesDetailPage", () => {
         name: "Neural Networks Series",
       })
       expect(playlistLinks.length).toBeGreaterThanOrEqual(1)
-      expect(playlistLinks[0]).toHaveAttribute(
-        "href",
-        `/video-playlist/${playlist.id}/neural-networks-series`,
-      )
+      expect(playlistLinks[0]).toHaveAttribute("href", playlist.learn_url)
     })
 
     test("does not include a playlist breadcrumb when no playlistId", async () => {
@@ -223,7 +204,7 @@ describe("VideoSeriesDetailPage", () => {
       })
       expect(prevLink).toHaveAttribute(
         "href",
-        `/video/${prev.id}/part-1?playlist=${playlist.id}`,
+        videoDetailPath(prev.id, playlist.id, prev.url_slug),
       )
     })
 
@@ -243,7 +224,7 @@ describe("VideoSeriesDetailPage", () => {
       })
       expect(nextLink).toHaveAttribute(
         "href",
-        `/video/${next.id}/part-2?playlist=${playlist.id}`,
+        videoDetailPath(next.id, playlist.id, next.url_slug),
       )
     })
 
@@ -308,7 +289,7 @@ describe("VideoSeriesDetailPage", () => {
       ).not.toBeInTheDocument()
     })
 
-    test("share URL is the video's own URL, not the playlist context", async () => {
+    test("share URL keeps the playlist the video is watched in", async () => {
       const playlist = makePlaylist({ id: 99 })
       const current = makeVideo({ id: 720, title: "Intro to Machine Learning" })
       const next = makeVideo({ title: "Next Lecture" })
@@ -325,9 +306,11 @@ describe("VideoSeriesDetailPage", () => {
           name: /share intro to machine learning/i,
         }),
       )
-      // One canonical URL per video: sharing from playlist 99 still hands out
-      // the URL that owns the content.
-      expect(screen.getByRole("textbox")).toHaveValue(current.learn_url)
+      // Sharing hands out the page in front of the user, playlist included,
+      // even when that is not the canonical playlist.
+      expect(screen.getByRole("textbox")).toHaveValue(
+        absoluteUrl(videoDetailPath(current.id, playlist.id, current.url_slug)),
+      )
     })
 
     test("clicking the share button opens the dialog", async () => {

@@ -1,14 +1,14 @@
 import {
   videoDetailPath,
   podcastEpisodePath,
+  podcastPath,
   resourceDrawerSearch,
 } from "@/common/urls"
 import { extractResourceId } from "./LearningResourcePaste"
 
-// The paste handler must recover the resource id from the *canonical* URLs our
-// paths emit — including the cosmetic slug segment. Building
-// inputs from the real constructors (rather than hand-written strings) keeps
-// this contract pinned if the URL shape ever changes.
+// The paste handler must recover the resource id from the URLs our path
+// builders emit, cosmetic slug segment included. Every input here comes from a
+// real builder, so a change to a URL shape reaches this test on its own.
 describe("extractResourceId", () => {
   test("recovers the video id from a canonical video URL", () => {
     const url = videoDetailPath(135366, 128974, "intro-to-machine-learning")
@@ -21,14 +21,14 @@ describe("extractResourceId", () => {
   })
 
   test("recovers the podcast id from a canonical podcast URL", () => {
-    const url = "/podcast/136068/beyond-biology"
+    const url = podcastPath(136068, "beyond-biology")
     expect(extractResourceId(url)).toBe(136068)
   })
 
   test("recovers the id from a bare (no-slug) canonical URL", () => {
-    // Builders emit the bare path when title is undefined; the id sits at the
-    // end of the string, exercising the `$` arm of the `(?:[/?#]|$)` boundary.
-    const url = "/podcast/136068"
+    // The id sits at the end of the string, exercising the `$` arm of the
+    // `(?:[/?#]|$)` boundary.
+    const url = podcastPath(136068, undefined)
     expect(extractResourceId(url)).toBe(136068)
   })
 

@@ -3,7 +3,7 @@ import Image from "next/image"
 import { Skeleton } from "ol-components"
 import { formatDurationClockTime } from "ol-utilities"
 import type { VideoResource } from "api/v1"
-import { learnUrlSlug, videoDetailPath } from "@/common/urls"
+import { videoDetailPath } from "@/common/urls"
 import * as Styled from "./VideoDetailPage.styled"
 
 type MoreFromPlaylistProps = {
@@ -35,11 +35,7 @@ const MoreFromPlaylistItem: React.FC<{
 
   return (
     <Styled.MoreFromItem
-      href={videoDetailPath(
-        video.id,
-        playlistId,
-        learnUrlSlug(video.learn_url),
-      )}
+      href={videoDetailPath(video.id, playlistId, video.url_slug)}
       aria-label={`Open video ${video.title}`}
     >
       <Styled.ThumbnailWrapper>

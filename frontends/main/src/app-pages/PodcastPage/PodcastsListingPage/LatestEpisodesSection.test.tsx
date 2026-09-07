@@ -1,26 +1,17 @@
 import React from "react"
+import { faker } from "@faker-js/faker/locale/en"
 import { factories } from "api/test-utils"
 import type { LearningResource } from "api/v1"
-import { kebabCase } from "lodash"
 import { SEARCH_PODCAST_EPISODES, podcastEpisodePath } from "@/common/urls"
 import { renderWithProviders, screen, user } from "@/test-utils"
 import LatestEpisodesSection from "./LatestEpisodesSection"
 
-const ORIGIN = "http://test.learn.odl.local:8062"
-
 /** The podcast the rows are scoped to, taken from the episode's `podcasts[0]`. */
-const CONTEXT_PODCAST_ID = 1
-
-/**
- * The podcast an episode's canonical URL is scoped to, deliberately not the one
- * the rows use: an episode in several podcasts is viewable from any of them, so
- * a row keeps its own context and borrows only the slug from `learn_url`.
- */
-const CANONICAL_PARENT_ID = 987654
+const CONTEXT_PODCAST_ID = faker.number.int({ min: 1, max: 1e6 })
 
 const makeEpisodes = (count: number): LearningResource[] =>
-  Array.from({ length: count }, (_, i) => {
-    const episode = factories.learningResources.podcastEpisode({
+  Array.from({ length: count }, (_, i) =>
+    factories.learningResources.podcastEpisode({
       title: `Episode ${i + 1}`,
       podcast_episode: {
         id: i + 1,
@@ -29,16 +20,8 @@ const makeEpisodes = (count: number): LearningResource[] =>
         audio_url: "https://example.com/audio.mp3",
         episode_link: "https://example.com/link",
       },
-    })
-    return {
-      ...episode,
-      // Dedicated-page shape. The row hrefs read their slug from here, so the
-      // factory's drawer-shaped default would render a "/search" slug.
-      learn_url: `${ORIGIN}/podcast/${CANONICAL_PARENT_ID}/podcast_episode/${
-        episode.id
-      }/${kebabCase(episode.title)}`,
-    }
-  }) as unknown as LearningResource[]
+    }),
+  ) as unknown as LearningResource[]
 
 describe("LatestEpisodesSection", () => {
   it("renders the section header", () => {
@@ -58,8 +41,6 @@ describe("LatestEpisodesSection", () => {
   })
 
   it("keeps each episode's podcast context and takes only the backend slug", () => {
-    // learn_url is scoped to CANONICAL_PARENT_ID; the row must stay on the
-    // episode's own context podcast and borrow only the slug.
     const episodes = makeEpisodes(2)
     renderWithProviders(
       <LatestEpisodesSection
@@ -83,11 +64,9 @@ describe("LatestEpisodesSection", () => {
         podcastEpisodePath(
           String(episode.id),
           String(CONTEXT_PODCAST_ID),
-          kebabCase(episode.title),
+          episode.url_slug,
         ),
       )
-      // Guards the drawer-shaped-learn_url bug, which would yield "/search".
-      expect(rows[i].getAttribute("href")).not.toContain("search")
     })
   })
 

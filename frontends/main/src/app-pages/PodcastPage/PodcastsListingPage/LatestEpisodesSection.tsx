@@ -2,11 +2,7 @@ import React from "react"
 import { Link, Skeleton, styled } from "ol-components"
 import { ButtonLink } from "@mitodl/smoot-design"
 import type { LearningResource, PodcastEpisodeResource } from "api/v1"
-import {
-  SEARCH_PODCAST_EPISODES,
-  learnUrlSlug,
-  podcastEpisodePath,
-} from "@/common/urls"
+import { SEARCH_PODCAST_EPISODES, podcastEpisodePath } from "@/common/urls"
 import {
   Section,
   SectionHeader,
@@ -137,7 +133,7 @@ const LatestEpisodesSection: React.FC<LatestEpisodesSectionProps> = ({
                     ? podcastEpisodePath(
                         String(episode.id),
                         String(parentPodcastId),
-                        learnUrlSlug(episode.learn_url),
+                        episode.url_slug,
                       )
                     : SEARCH_PODCAST_EPISODES
                 }

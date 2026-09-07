@@ -7,7 +7,7 @@ import { useLearningResourcesDetail } from "api/hooks/learningResources"
 import type { VideoResource, VideoPlaylistResource } from "api/v1"
 import { formatDurationClockTime } from "ol-utilities"
 import { useSeriesNavigation } from "./useSeriesNavigation"
-import { generateVideoPlaylistPath, learnUrlPath } from "@/common/urls"
+import { absoluteUrl, videoDetailPath, videoPlaylistPath } from "@/common/urls"
 import SeriesNavBar from "./SeriesNavBar"
 import UpNextSection from "./UpNextSection"
 import * as Styled from "./VideoSeriesDetailPage.styled"
@@ -119,7 +119,7 @@ const VideoSeriesDetailPage: React.FC<VideoSeriesDetailPageProps> = ({
               ...(playlist && playlistId
                 ? [
                     {
-                      href: learnUrlPath(playlist.learn_url),
+                      href: playlist.learn_url,
                       label: playlistLabel,
                     },
                   ]
@@ -135,8 +135,8 @@ const VideoSeriesDetailPage: React.FC<VideoSeriesDetailPageProps> = ({
         <SeriesNavBar
           playlistHref={
             playlist
-              ? learnUrlPath(playlist.learn_url)
-              : generateVideoPlaylistPath(String(playlistId))
+              ? playlist.learn_url
+              : videoPlaylistPath(playlistId, undefined)
           }
           playlistLabel={playlistLabel}
           videoId={videoId}
@@ -174,7 +174,16 @@ const VideoSeriesDetailPage: React.FC<VideoSeriesDetailPageProps> = ({
               <VideoShareButton
                 video={video}
                 title={video?.title ?? ""}
-                pageUrl={video.learn_url}
+                // Shares the page in front of the user, playlist included: a
+                // video in several playlists is viewable in any of them, and a
+                // recommendation is usually about the series it was found in.
+                pageUrl={absoluteUrl(
+                  videoDetailPath(
+                    video.id,
+                    playlistId ?? undefined,
+                    video.url_slug,
+                  ),
+                )}
                 playerRef={playerRef}
               />
             )}

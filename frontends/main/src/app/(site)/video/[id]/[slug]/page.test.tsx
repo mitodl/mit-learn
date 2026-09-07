@@ -33,8 +33,9 @@ const mockVideo = (playlists: string[], slug = "beyond-biology") => {
   const id = 777
   const video = factories.learningResources.video({
     id,
-    // The backend names the slug, always under the canonical playlist; the page
-    // resolves ?playlist against the request.
+    url_slug: slug,
+    // learn_url is always scoped to the canonical playlist; the page resolves
+    // ?playlist against the request instead.
     learn_url: `http://test.learn.odl.local:8062/video/${id}/${slug}?playlist=${playlists[0]}`,
     title: "Beyond Biology",
     playlists,

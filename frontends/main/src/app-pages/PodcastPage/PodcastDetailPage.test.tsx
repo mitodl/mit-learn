@@ -3,11 +3,8 @@ import { factories, setMockResponse, urls } from "api/test-utils"
 import { ResourceTypeEnum } from "api/v1"
 import type { LearningResource, PodcastEpisodeResource } from "api/v1"
 import { renderWithProviders, screen, user } from "@/test-utils"
-import { kebabCase } from "lodash"
 import { podcastEpisodePath } from "@/common/urls"
 import { PodcastDetailPage } from "./PodcastDetailPage"
-
-const ORIGIN = "http://test.learn.odl.local:8062"
 
 jest.mock(
   "@/page-components/LearningResourceDrawer/LearningResourceDrawer",
@@ -62,10 +59,6 @@ const setupApis = ({
 
   // Episodes of this podcast reference it as their parent, as they would in
   // production. The player resolves its "podcast name" from this summary.
-  //
-  // Each episode also gets a dedicated-page `learn_url`, since the row hrefs
-  // read their slug from it. Leaving the factory's drawer-shaped default would
-  // make `learnUrlSlug` yield "search" and render a malformed link.
   const linkParent = (episodes: LearningResource[]) =>
     episodes.forEach((episode) => {
       if (episode.resource_type === ResourceTypeEnum.PodcastEpisode) {
@@ -78,9 +71,6 @@ const setupApis = ({
             learn_url: podcast.learn_url,
           },
         ]
-        episode.learn_url = `${ORIGIN}/podcast/${podcast.id}/podcast_episode/${
-          episode.id
-        }/${kebabCase(episode.title)}`
       }
     })
   linkParent(episodesPage1)
@@ -111,15 +101,13 @@ const setupApis = ({
 
 describe("PodcastDetailPage", () => {
   test("episode rows keep this podcast as context and take only the backend slug", async () => {
-    // The episode's canonical learn_url is scoped to a *different* parent — an
-    // episode in several podcasts is viewable under any of them. The row href
-    // must therefore keep the podcast being viewed and borrow only the slug,
-    // not adopt learn_url's parent wholesale.
+    // The episode's canonical parent is a *different* podcast — an episode in
+    // several podcasts is viewable under any of them. The row href must keep the
+    // podcast being viewed and borrow only the slug.
     const episodes = makePodcastEpisodes(1)
     const { podcast } = setupApis({ episodesPage1: episodes })
     const episode = episodes[0]
-    const otherParentId = podcast.id + 1
-    episode.learn_url = `${ORIGIN}/podcast/${otherParentId}/podcast_episode/${episode.id}/canonical-slug`
+    episode.podcast_episode!.podcasts = [podcast.id + 1, podcast.id]
 
     renderWithProviders(<PodcastDetailPage podcastId={String(podcast.id)} />)
 
@@ -129,12 +117,9 @@ describe("PodcastDetailPage", () => {
       podcastEpisodePath(
         String(episode.id),
         String(podcast.id),
-        "canonical-slug",
+        episode.url_slug,
       ),
     )
-    // Guards the drawer-shaped-learn_url bug: a "/search" slug would render
-    // /podcast/<id>/podcast_episode/<id>/search and go unnoticed.
-    expect(title.closest("a")?.getAttribute("href")).not.toContain("search")
   })
 
   test("renders initial episode list", async () => {
@@ -147,14 +132,12 @@ describe("PodcastDetailPage", () => {
     for (const episode of episodes) {
       const title = screen.getByText(episode.title!)
       expect(title).toBeInTheDocument()
-      // Also pins the row href, so a drawer-shaped learn_url in the fixture
-      // cannot quietly render /podcast/<id>/podcast_episode/<id>/search.
       expect(title.closest("a")).toHaveAttribute(
         "href",
         podcastEpisodePath(
           String(episode.id),
           String(podcast.id),
-          kebabCase(episode.title),
+          episode.url_slug,
         ),
       )
     }

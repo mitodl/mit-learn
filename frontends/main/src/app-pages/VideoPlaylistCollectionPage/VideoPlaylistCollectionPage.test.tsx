@@ -1,6 +1,6 @@
 import React from "react"
 import { setMockResponse, urls, factories } from "api/test-utils"
-import { kebabCase } from "lodash"
+import { videoDetailPath } from "@/common/urls"
 import { renderWithProviders, screen } from "@/test-utils"
 import VideoPage from "./VideoPlaylistCollectionPage"
 import { ResourceTypeEnum } from "api/v1"
@@ -22,20 +22,11 @@ const makeSeriesPlaylist = () =>
     offered_by: { code: "ocw", name: "OCW", channel_url: null },
   })
 
-/**
- * The page reads the slug from `learn_url`, so mirror the backend's slug here
- * rather than leaving the factory's drawer-shaped default.
- */
-const makeVideo = (overrides: { title?: string } = {}) => {
-  const video = factories.learningResources.resource({
+const makeVideo = (overrides: { title?: string } = {}) =>
+  factories.learningResources.resource({
     resource_type: ResourceTypeEnum.Video,
     ...overrides,
   })
-  return {
-    ...video,
-    learn_url: `http://test.learn.odl.local:8062/video/${video.id}/${kebabCase(video.title)}`,
-  }
-}
 
 const VIDEOS_PAGE_SIZE = 10
 
@@ -222,7 +213,7 @@ describe("VideoPage", () => {
       const titleEl = await screen.findByText(collection.title)
       expect(titleEl.closest("a")).toHaveAttribute(
         "href",
-        `/video/${collection.id}/collection-video?playlist=${playlist.id}`,
+        videoDetailPath(collection.id, playlist.id, collection.url_slug),
       )
     })
 
@@ -240,7 +231,7 @@ describe("VideoPage", () => {
       const titleEls = await screen.findAllByText(featured.title)
       expect(titleEls[0].closest("a")).toHaveAttribute(
         "href",
-        `/video/${featured.id}/quantum-computing-and-the-future?playlist=${playlist.id}`,
+        videoDetailPath(featured.id, playlist.id, featured.url_slug),
       )
     })
   })
@@ -314,13 +305,13 @@ describe("VideoPage", () => {
       const ep1Title = await screen.findByText(ep1.title)
       expect(ep1Title.closest("a")).toHaveAttribute(
         "href",
-        `/video/${ep1.id}/episode-alpha?playlist=${playlist.id}`,
+        videoDetailPath(ep1.id, playlist.id, ep1.url_slug),
       )
 
       const ep2Title = screen.getByText(ep2.title)
       expect(ep2Title.closest("a")).toHaveAttribute(
         "href",
-        `/video/${ep2.id}/episode-beta?playlist=${playlist.id}`,
+        videoDetailPath(ep2.id, playlist.id, ep2.url_slug),
       )
     })
   })
