@@ -2224,6 +2224,13 @@ components:
           type: string
           description: Where this resource lives within Learn
           readOnly: true
+        url_slug:
+          type: string
+          description: 'Slug derived from the title, for use in this resource''s URL.
+            It is cosmetic: lookups ignore it, and it changes whenever the title does.
+            Titles that yield no ASCII slug get the literal "resource", so this is
+            never blank.'
+          readOnly: true
         resource_type:
           allOf:
           - $ref: '#/components/schemas/CourseResourceResourceTypeEnum'
@@ -2355,6 +2362,7 @@ components:
       - resource_type_group
       - runs
       - title
+      - url_slug
       - views
     CourseResourceResourceTypeEnum:
       type: string
@@ -2736,6 +2744,13 @@ components:
           type: string
           description: Where this resource lives within Learn
           readOnly: true
+        url_slug:
+          type: string
+          description: 'Slug derived from the title, for use in this resource''s URL.
+            It is cosmetic: lookups ignore it, and it changes whenever the title does.
+            Titles that yield no ASCII slug get the literal "resource", so this is
+            never blank.'
+          readOnly: true
         resource_type:
           allOf:
           - $ref: '#/components/schemas/DocumentResourceResourceTypeEnum'
@@ -2871,6 +2886,7 @@ components:
       - resource_type_group
       - runs
       - title
+      - url_slug
       - views
     DocumentResourceResourceTypeEnum:
       type: string
@@ -3253,6 +3269,13 @@ components:
           type: string
           description: Where this resource lives within Learn
           readOnly: true
+        url_slug:
+          type: string
+          description: 'Slug derived from the title, for use in this resource''s URL.
+            It is cosmetic: lookups ignore it, and it changes whenever the title does.
+            Titles that yield no ASCII slug get the literal "resource", so this is
+            never blank.'
+          readOnly: true
         resource_type:
           allOf:
           - $ref: '#/components/schemas/LearningPathResourceResourceTypeEnum'
@@ -3385,6 +3408,7 @@ components:
       - resource_type_group
       - runs
       - title
+      - url_slug
       - views
     LearningPathResourceResourceTypeEnum:
       type: string
@@ -4616,6 +4640,13 @@ components:
           type: string
           description: Where this resource lives within Learn
           readOnly: true
+        url_slug:
+          type: string
+          description: 'Slug derived from the title, for use in this resource''s URL.
+            It is cosmetic: lookups ignore it, and it changes whenever the title does.
+            Titles that yield no ASCII slug get the literal "resource", so this is
+            never blank.'
+          readOnly: true
         resource_type:
           allOf:
           - $ref: '#/components/schemas/PodcastEpisodeResourceResourceTypeEnum'
@@ -4747,6 +4778,7 @@ components:
       - resource_type_group
       - runs
       - title
+      - url_slug
       - views
     PodcastEpisodeResourceResourceTypeEnum:
       type: string
@@ -4916,6 +4948,13 @@ components:
           type: string
           description: Where this resource lives within Learn
           readOnly: true
+        url_slug:
+          type: string
+          description: 'Slug derived from the title, for use in this resource''s URL.
+            It is cosmetic: lookups ignore it, and it changes whenever the title does.
+            Titles that yield no ASCII slug get the literal "resource", so this is
+            never blank.'
+          readOnly: true
         resource_type:
           allOf:
           - $ref: '#/components/schemas/PodcastResourceResourceTypeEnum'
@@ -5047,6 +5086,7 @@ components:
       - resource_type_group
       - runs
       - title
+      - url_slug
       - views
     PodcastResourceResourceTypeEnum:
       type: string
@@ -5499,6 +5539,13 @@ components:
           type: string
           description: Where this resource lives within Learn
           readOnly: true
+        url_slug:
+          type: string
+          description: 'Slug derived from the title, for use in this resource''s URL.
+            It is cosmetic: lookups ignore it, and it changes whenever the title does.
+            Titles that yield no ASCII slug get the literal "resource", so this is
+            never blank.'
+          readOnly: true
         resource_type:
           allOf:
           - $ref: '#/components/schemas/ProgramResourceResourceTypeEnum'
@@ -5630,6 +5677,7 @@ components:
       - resource_type_group
       - runs
       - title
+      - url_slug
       - views
     ProgramResourceResourceTypeEnum:
       type: string
@@ -6304,6 +6352,13 @@ components:
           type: string
           description: Where this resource lives within Learn
           readOnly: true
+        url_slug:
+          type: string
+          description: 'Slug derived from the title, for use in this resource''s URL.
+            It is cosmetic: lookups ignore it, and it changes whenever the title does.
+            Titles that yield no ASCII slug get the literal "resource", so this is
+            never blank.'
+          readOnly: true
         resource_type:
           allOf:
           - $ref: '#/components/schemas/VideoPlaylistResourceResourceTypeEnum'
@@ -6434,6 +6489,7 @@ components:
       - resource_type_group
       - runs
       - title
+      - url_slug
       - video_playlist
       - views
     VideoPlaylistResourceResourceTypeEnum:
@@ -6604,6 +6660,13 @@ components:
           type: string
           description: Where this resource lives within Learn
           readOnly: true
+        url_slug:
+          type: string
+          description: 'Slug derived from the title, for use in this resource''s URL.
+            It is cosmetic: lookups ignore it, and it changes whenever the title does.
+            Titles that yield no ASCII slug get the literal "resource", so this is
+            never blank.'
+          readOnly: true
         resource_type:
           allOf:
           - $ref: '#/components/schemas/VideoResourceResourceTypeEnum'
@@ -6751,6 +6814,7 @@ components:
       - resource_type_group
       - runs
       - title
+      - url_slug
       - video
       - views
     VideoResourceResourceTypeEnum:
