@@ -149,7 +149,7 @@ describe("CallToActionSection", () => {
         resource: () =>
           factories.learningResources.video({
             resource_category: "Video",
-            playlists: [faker.number.int({ min: 1, max: 1e6 })],
+            playlists: [String(faker.number.int({ min: 1, max: 1e6 }))],
           }),
         cta: "Watch Video",
       },
