@@ -1306,7 +1306,7 @@ def load_podcast_episode(episode_data: dict) -> LearningResource:
     return learning_resource
 
 
-def load_podcast(podcast_data: dict) -> LearningResource:
+def load_podcast(podcast_data: dict) -> LearningResource | None:
     """
     Load a single podcast
 
@@ -1316,11 +1316,33 @@ def load_podcast(podcast_data: dict) -> LearningResource:
         config (PodcastLoaderConfig):
             configuration for this loader
     Returns:
-        LearningResource:
-            the updated or created podcast resource
+        LearningResource | None:
+            the updated or created podcast resource, or None if the feed
+            has no episodes (an existing podcast and its episodes get unpublished)
     """
     readable_id = podcast_data.pop("readable_id")
-    episodes_data = podcast_data.pop("episodes", [])
+    episodes_data = list(podcast_data.pop("episodes", []))
+    if not episodes_data:
+        existing_resource = LearningResource.objects.filter(
+            readable_id=readable_id,
+            resource_type=LearningResourceType.podcast.name,
+            platform__code=PlatformType.podcast.name,
+            published=True,
+        ).first()
+        if existing_resource:
+            existing_resource.published = False
+            existing_resource.save()
+            update_index(existing_resource, newly_created=False)
+            episode_ids = list(
+                existing_resource.children.filter(
+                    relation_type=LearningResourceRelationTypes.PODCAST_EPISODES.value
+                ).values_list("child__id", flat=True)
+            )
+            LearningResource.objects.filter(id__in=episode_ids).update(published=False)
+            bulk_resources_unpublished_actions(
+                episode_ids, LearningResourceType.podcast_episode.name
+            )
+        return None
     topics_data = podcast_data.pop("topics", [])
     offered_by_data = podcast_data.pop("offered_by", None)
     image_data = podcast_data.pop("image", {})
@@ -1402,7 +1424,8 @@ def load_podcasts(
         except ExtractException:
             log.exception("Error with extracted podcast: podcast_id=%s", readable_id)
         else:
-            podcast_resources.append(podcast_resource)
+            if podcast_resource:
+                podcast_resources.append(podcast_resource)
 
     if not tracked_ids:
         msg = "No podcasts to track, refusing to unpublish every podcast"
@@ -1783,7 +1806,8 @@ def load_playlist(
 
     Returns:
         LearningResource | None: the created or updated playlist resource,
-            or None if create_videos is False and not all videos could be matched
+            or None if create_videos is False and the playlist has no videos
+            or not enough videos could be matched
     """
 
     playlist_id = playlist_data.pop("playlist_id")
@@ -1800,10 +1824,11 @@ def load_playlist(
     else:
         video_resources = load_videos_from_content_files(videos_data)
 
-        if video_resources is None:
+        if not video_resources:
             existing_resource = LearningResource.objects.filter(
                 readable_id=playlist_id,
                 resource_type=LearningResourceType.video_playlist.name,
+                platform__code=playlist_data.get("platform", PlatformType.youtube.name),
                 published=True,
             ).first()
             if existing_resource:

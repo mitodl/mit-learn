@@ -545,6 +545,12 @@ export interface SearchDisplayProps {
   ) => LearningResourcesSearchResponse | undefined
   hidePagination?: boolean
   adminOptionsSlot?: React.ReactNode
+  /**
+   * True when this instance queries the vector (hybrid) endpoint rather than
+   * OpenSearch. Set by HybridSearchDisplay; the admin panel uses it to hide
+   * the OpenSearch-only relevance controls, which the vector endpoint ignores.
+   */
+  hybridSearchActive?: boolean
 }
 
 const SearchDisplay: React.FC<SearchDisplayProps> = ({
@@ -567,12 +573,15 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
   getDisplayData,
   hidePagination = false,
   adminOptionsSlot,
+  hybridSearchActive = false,
 }) => {
   const searchParams = useAppSearchParams()
   const [expandAdminOptions, setExpandAdminOptions] = useState(false)
 
+  // The admin params endpoint supplies defaults for the OpenSearch-only
+  // controls, so there is nothing to fetch while hybrid search is active.
   const { data: adminParams, isLoading: isAdminParamsLoading } =
-    useAdminSearchParams(expandAdminOptions)
+    useAdminSearchParams(expandAdminOptions && !hybridSearchActive)
 
   const scrollHook = useRef<HTMLDivElement>(null)
   const activeTab =
@@ -771,143 +780,159 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
             {expandAdminOptions ? <RiArrowUpSLine /> : <RiArrowDownSLine />}
           </i>
         </button>
-        {expandAdminOptions && adminParams && !isAdminParamsLoading ? (
+        {expandAdminOptions ? (
           <div>
-            <AdminTitleContainer>
-              Resource Score Staleness Penalty
-            </AdminTitleContainer>
-            <SliderInput
-              currentValue={
-                searchParams.get("yearly_decay_percent")
-                  ? Number(searchParams.get("yearly_decay_percent"))
-                  : adminParams.yearly_decay_percent
-              }
-              setSearchParams={setSearchParams}
-              urlParam="yearly_decay_percent"
-              min={0}
-              max={10}
-              step={0.2}
-            />
-            <ExplanationContainer>
-              Relevance score penalty percent per year for resources without
-              upcoming runs. Only affects results if there is a search term.
-            </ExplanationContainer>
-            <div>
-              <AdminTitleContainer>Search Mode</AdminTitleContainer>
-              <SearchModeDropdownContainer>
-                {searchModeDropdown}
-              </SearchModeDropdownContainer>
-              <ExplanationContainer>
-                OpenSearch search multi-match query type.
+            {adminOptionsSlot}
+            {hybridSearchActive ? (
+              <ExplanationContainer data-testid="opensearch-only-notice">
+                The relevance controls (staleness penalty, search mode, slop,
+                minimum score, incompleteness penalty, content file weight and
+                OCW files) apply to the OpenSearch endpoint only. Hybrid search
+                is active, so they are hidden here rather than shown with no
+                effect. Switch back to OpenSearch with vector_search=false to
+                tune them.
               </ExplanationContainer>
-            </div>
-            {(!searchParams.get("search_mode") &&
-              adminParams.search_mode === "phrase") ||
-            searchParams.get("search_mode") === "phrase" ? (
-              <div>
-                <AdminTitleContainer>Slop</AdminTitleContainer>
-
+            ) : adminParams && !isAdminParamsLoading ? (
+              <>
+                <AdminTitleContainer>
+                  Resource Score Staleness Penalty
+                </AdminTitleContainer>
                 <SliderInput
                   currentValue={
-                    searchParams.get("slop")
-                      ? Number(searchParams.get("slop"))
-                      : adminParams.slop
+                    searchParams.get("yearly_decay_percent")
+                      ? Number(searchParams.get("yearly_decay_percent"))
+                      : adminParams.yearly_decay_percent
                   }
                   setSearchParams={setSearchParams}
-                  urlParam="slop"
+                  urlParam="yearly_decay_percent"
+                  min={0}
+                  max={10}
+                  step={0.2}
+                />
+                <ExplanationContainer>
+                  Relevance score penalty percent per year for resources without
+                  upcoming runs. Only affects results if there is a search term.
+                </ExplanationContainer>
+                <div>
+                  <AdminTitleContainer>Search Mode</AdminTitleContainer>
+                  <SearchModeDropdownContainer>
+                    {searchModeDropdown}
+                  </SearchModeDropdownContainer>
+                  <ExplanationContainer>
+                    OpenSearch search multi-match query type.
+                  </ExplanationContainer>
+                </div>
+                {(!searchParams.get("search_mode") &&
+                  adminParams.search_mode === "phrase") ||
+                searchParams.get("search_mode") === "phrase" ? (
+                  <div>
+                    <AdminTitleContainer>Slop</AdminTitleContainer>
+
+                    <SliderInput
+                      currentValue={
+                        searchParams.get("slop")
+                          ? Number(searchParams.get("slop"))
+                          : adminParams.slop
+                      }
+                      setSearchParams={setSearchParams}
+                      urlParam="slop"
+                      min={0}
+                      max={20}
+                      step={1}
+                    />
+                    <ExplanationContainer>
+                      The number of words permitted between search terms for
+                      multi-word searches. Only used if search mode is set to
+                      "phrase".
+                    </ExplanationContainer>
+                  </div>
+                ) : null}
+                <AdminTitleContainer>Minimum Score Cutoff</AdminTitleContainer>
+                <SliderInput
+                  currentValue={
+                    searchParams.get("min_score")
+                      ? Number(searchParams.get("min_score"))
+                      : adminParams.min_score
+                  }
+                  setSearchParams={setSearchParams}
+                  urlParam="min_score"
                   min={0}
                   max={20}
+                  step={0.5}
+                />
+                <ExplanationContainer>
+                  Minimum relevance score for a search result to be displayed.
+                  Only affects results if there is a search term.
+                </ExplanationContainer>
+                <AdminTitleContainer>
+                  Maximum Incompleteness Penalty
+                </AdminTitleContainer>
+                <SliderInput
+                  currentValue={
+                    searchParams.get("max_incompleteness_penalty")
+                      ? Number(searchParams.get("max_incompleteness_penalty"))
+                      : adminParams.max_incompleteness_penalty
+                  }
+                  setSearchParams={setSearchParams}
+                  urlParam="max_incompleteness_penalty"
+                  min={0}
+                  max={100}
                   step={1}
                 />
                 <ExplanationContainer>
-                  The number of words permitted between search terms for
-                  multi-word searches. Only used if search mode is set to
-                  "phrase".
+                  Maximum score penalty for incomplete OCW courses in percent.
+                  An OCW course with completeness = 0 will have this score
+                  penalty. Partially complete courses have a linear penalty
+                  proportional to the degree of incompleteness. Only affects
+                  results if there is a search term.
                 </ExplanationContainer>
-              </div>
-            ) : null}
-            <AdminTitleContainer>Minimum Score Cutoff</AdminTitleContainer>
-            <SliderInput
-              currentValue={
-                searchParams.get("min_score")
-                  ? Number(searchParams.get("min_score"))
-                  : adminParams.min_score
-              }
-              setSearchParams={setSearchParams}
-              urlParam="min_score"
-              min={0}
-              max={20}
-              step={0.5}
-            />
-            <ExplanationContainer>
-              Minimum relevance score for a search result to be displayed. Only
-              affects results if there is a search term.
-            </ExplanationContainer>
-            <AdminTitleContainer>
-              Maximum Incompleteness Penalty
-            </AdminTitleContainer>
-            <SliderInput
-              currentValue={
-                searchParams.get("max_incompleteness_penalty")
-                  ? Number(searchParams.get("max_incompleteness_penalty"))
-                  : adminParams.max_incompleteness_penalty
-              }
-              setSearchParams={setSearchParams}
-              urlParam="max_incompleteness_penalty"
-              min={0}
-              max={100}
-              step={1}
-            />
-            <ExplanationContainer>
-              Maximum score penalty for incomplete OCW courses in percent. An
-              OCW course with completeness = 0 will have this score penalty.
-              Partially complete courses have a linear penalty proportional to
-              the degree of incompleteness. Only affects results if there is a
-              search term.
-            </ExplanationContainer>
-            <AdminTitleContainer>
-              Content File Score Weight Adjustment
-            </AdminTitleContainer>
-            <SliderInput
-              currentValue={
-                searchParams.get("content_file_score_weight")
-                  ? Number(searchParams.get("content_file_score_weight"))
-                  : adminParams.content_file_score_weight
-              }
-              setSearchParams={setSearchParams}
-              urlParam="content_file_score_weight"
-              min={0}
-              max={1}
-              step={0.1}
-            />
-            <ExplanationContainer>
-              Score weight adjustment for content file matches. 1 means no
-              adjustment. 0 means content file matches are not counted in the
-              score. Only affects the results if there is a search term.
-            </ExplanationContainer>
-            {adminOptionsSlot}
-            <AdminTitleContainer>Show OCW Files</AdminTitleContainer>
-            <Checkbox
-              checked={
-                searchParams.get("show_ocw_files")
-                  ? searchParams.get("show_ocw_files") === "true"
-                  : (adminParams?.show_ocw_files ?? false)
-              }
-              onChange={(e) =>
-                setSearchParams((prev) => {
-                  const next = new URLSearchParams(prev)
-                  if (e.target.checked) {
-                    next.set("show_ocw_files", "true")
-                  } else {
-                    next.delete("show_ocw_files")
+                <AdminTitleContainer>
+                  Content File Score Weight Adjustment
+                </AdminTitleContainer>
+                <SliderInput
+                  currentValue={
+                    searchParams.get("content_file_score_weight")
+                      ? Number(searchParams.get("content_file_score_weight"))
+                      : adminParams.content_file_score_weight
                   }
-                  return next
-                })
-              }
-            />
-            <ExplanationContainer>
-              Toggle to include or exclude OCW files in the search results.
-            </ExplanationContainer>
+                  setSearchParams={setSearchParams}
+                  urlParam="content_file_score_weight"
+                  min={0}
+                  max={1}
+                  step={0.1}
+                />
+                <ExplanationContainer>
+                  Score weight adjustment for content file matches. 1 means no
+                  adjustment. 0 means content file matches are not counted in
+                  the score. Only affects the results if there is a search term.
+                </ExplanationContainer>
+                <AdminTitleContainer>Show OCW Files</AdminTitleContainer>
+                <Checkbox
+                  // smoot-design's Checkbox renders a bare input unless given
+                  // `label`; it does not forward aria-label.
+                  label="Show OCW files"
+                  checked={
+                    searchParams.get("show_ocw_files")
+                      ? searchParams.get("show_ocw_files") === "true"
+                      : (adminParams?.show_ocw_files ?? false)
+                  }
+                  onChange={(e) =>
+                    setSearchParams((prev) => {
+                      const next = new URLSearchParams(prev)
+                      if (e.target.checked) {
+                        next.set("show_ocw_files", "true")
+                      } else {
+                        next.delete("show_ocw_files")
+                      }
+                      return next
+                    })
+                  }
+                />
+                <ExplanationContainer>
+                  Toggle to include or exclude OCW files in the search results.
+                </ExplanationContainer>
+              </>
+            ) : null}
           </div>
         ) : null}
       </div>

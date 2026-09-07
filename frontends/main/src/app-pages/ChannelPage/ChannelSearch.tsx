@@ -11,6 +11,7 @@ import { Container, styled } from "ol-components"
 import { VisuallyHidden } from "@mitodl/smoot-design"
 import { SearchField } from "@/page-components/SearchField/SearchField"
 import { getFacets } from "./searchRequests"
+import { useHybridSearchEnabled } from "@/common/useHybridSearchEnabled"
 import { keyBy } from "lodash"
 
 const SearchInputContainer = styled(Container)(({ theme }) => ({
@@ -114,8 +115,10 @@ const ChannelSearch: React.FC<ChannelSearchProps> = ({
   useEffect(() => {
     setCurrentText(params.q ?? "")
   }, [params, setCurrentText])
-  const ChannelSearchDisplay =
-    channelType === ChannelTypeEnum.Topic ? HybridSearchDisplay : SearchDisplay
+  const isHybridSearch = useHybridSearchEnabled()
+  const ChannelSearchDisplay = isHybridSearch
+    ? HybridSearchDisplay
+    : SearchDisplay
   return (
     <section>
       <VisuallyHidden as="h2">Search within {channelTitle}</VisuallyHidden>

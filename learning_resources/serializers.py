@@ -31,9 +31,11 @@ from learning_resources.constants import (
     Pace,
 )
 from learning_resources.utils import (
+    BLANK_SLUG_PATH_SEGMENT,
     build_resource_summary_dict,
     json_to_markdown,
     learn_url_for_resource,
+    path_slug,
 )
 from main.serializers import COMMON_IGNORED_FIELDS, WriteableSerializerMethodField
 
@@ -1290,6 +1292,18 @@ class LearningResourceBaseSerializer(serializers.ModelSerializer, WriteableTopic
     learn_url = serializers.SerializerMethodField(
         help_text="Where this resource lives within Learn"
     )
+    url_slug = serializers.SerializerMethodField(
+        help_text=(
+            "Slug derived from the title, for use in this resource's URL. It is "
+            "cosmetic: lookups ignore it, and it changes whenever the title "
+            "does. Titles that yield no ASCII slug get the literal "
+            f'"{BLANK_SLUG_PATH_SEGMENT}", so this is never blank.'
+        )
+    )
+
+    def get_url_slug(self, instance) -> str:
+        """Return the slug segment of the resource's URL."""
+        return path_slug(instance.title)
 
     def get_learn_url(self, instance) -> str:
         """
@@ -1370,6 +1384,7 @@ class LearningResourceBaseSerializer(serializers.ModelSerializer, WriteableTopic
             "offered_by",
             "readable_id",
             "learn_url",
+            "url_slug",
         ]
         exclude = [
             "resource_tags",

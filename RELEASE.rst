@@ -1,6 +1,29 @@
 Release Notes
 =============
 
+Version 0.78.6
+--------------
+
+- Update dependency @faker-js/faker to v10.5.0 [SECURITY] (#3896)
+- Globally Enable Hybrid Search (#3895)
+- Don't publish youtube playlists or podcasts that have no videos/episodes (#3882)
+- Bump openapi-generator v7.2.0 -> v7.25.0 and regenerate the client (#3870)
+
+Version 0.78.5
+--------------
+
+- fix(docker): force non-interactive conffile resolution for the sid chromium install (#3888)
+- Trust X-Forwarded-Proto from the API gateway (#3876)
+- fix: Make unenrolled module titles keyboard-focusable (#3871)
+- Take the canonical page URL from learn_url (#3863)
+- Bound Renovate to the service versions we actually run (#3865)
+- Add refunds to the receipt page (#3823)
+- vector search: add course metadata to context (#3852)
+- Revert "Pin chromium to 149.0.7827.196 to avoid broken 150 headless build (#3584)" (#3878)
+- Move the shared media players into page-components (#3875)
+- vector search: embedding call request hedging (#3853)
+- Update dependency youtube-transcript-api to >=1.2.4,<1.3 (#3861)
+
 Version 0.78.2 (Released September 01, 2026)
 --------------
 

@@ -82,6 +82,36 @@ test("hydrates hidden multiple checkbox default from camelCase defaultValues", a
   })
 })
 
+test("drops null entries from multiple checkbox defaultValues", async () => {
+  const onValuesChange = jest.fn()
+
+  const form = {
+    id: "test-form",
+    field_groups: [
+      {
+        fields: [
+          {
+            name: "product",
+            label: "Product",
+            field_type: "multiple_checkboxes",
+            hidden: true,
+            defaultValues: [null, "Universal AI", null],
+            options: [{ label: "Universal AI", value: "Universal AI" }],
+          },
+        ],
+      },
+    ],
+  }
+
+  renderWithTheme(<HubspotForm form={form} onValuesChange={onValuesChange} />)
+
+  await waitFor(() => {
+    expect(onValuesChange).toHaveBeenLastCalledWith(
+      expect.objectContaining({ product: ["Universal AI"] }),
+    )
+  })
+})
+
 test("submits hidden multiple checkbox default from camelCase defaultValues", async () => {
   const onSubmit = jest.fn((values, event) => {
     event.preventDefault()

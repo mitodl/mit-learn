@@ -28,6 +28,11 @@ import {
 import { isInEnum } from "@/common/utils"
 import { notFound } from "next/navigation"
 import { getQueryClient } from "@/app/getQueryClient"
+import { isHybridSearchEnabled } from "@/common/hybridSearch"
+import {
+  toUnfacetedVectorSearchParams,
+  toVectorSearchParams,
+} from "@/page-components/SearchDisplay/vectorSearchParams"
 
 export async function generateMetadata({
   searchParams,
@@ -121,9 +126,27 @@ const Page: React.FC<AppPageProps<"/c/[channelType]/[name]">> = async ({
     page: Number(search.page ?? 1),
   })
 
-  await queryClient.prefetchQuery(
-    learningResourceQueries.search(searchRequest as LRSearchRequest),
-  )
+  // Server components cannot read PostHog flags, so this resolves the URL
+  // override and the env kill switch only. Setting
+  // NEXT_PUBLIC_DISABLE_HYBRID_SEARCH alongside the PostHog flag is what keeps
+  // this prefetch on the same endpoint the client will query.
+  const isHybridSearch = isHybridSearchEnabled(urlParams)
+  const hasSearchTerm =
+    typeof searchRequest.q === "string" && searchRequest.q.trim() !== ""
+
+  if (isHybridSearch) {
+    await queryClient.prefetchQuery(
+      learningResourceQueries.vectorSearch(
+        hasSearchTerm
+          ? toUnfacetedVectorSearchParams(searchRequest, constantSearchParams)
+          : toVectorSearchParams(searchRequest),
+      ),
+    )
+  } else {
+    await queryClient.prefetchQuery(
+      learningResourceQueries.search(searchRequest as LRSearchRequest),
+    )
+  }
 
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>

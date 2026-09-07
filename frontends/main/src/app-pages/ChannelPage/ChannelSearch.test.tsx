@@ -15,6 +15,31 @@ import invariant from "tiny-invariant"
 import type { Channel } from "api/v0"
 import { ChannelTypeEnum } from "api/v0"
 import ChannelPage from "./ChannelPage"
+import { useFeatureFlagEnabled } from "posthog-js/react"
+import { FeatureFlags } from "@/common/feature_flags"
+
+jest.mock("posthog-js/react", () => ({
+  ...jest.requireActual("posthog-js/react"),
+  useFeatureFlagEnabled: jest.fn(),
+}))
+
+const mockedUseFeatureFlagEnabled = jest.mocked(useFeatureFlagEnabled)
+
+/**
+ * Mock the named flags, leaving every other flag `undefined`—PostHog's value
+ * for "not loaded / not set".
+ */
+const mockFeatureFlags = (flags: Partial<Record<FeatureFlags, boolean>>) => {
+  mockedUseFeatureFlagEnabled.mockImplementation(
+    (flag) => flags[flag as FeatureFlags],
+  )
+}
+
+// jest clears calls between tests but not implementations, so reset flags to
+// "not set" so a kill-switch test cannot leak into the next test.
+beforeEach(() => {
+  mockFeatureFlags({})
+})
 
 const setMockApiResponses = ({
   search,
@@ -179,6 +204,63 @@ describe("ChannelSearch", () => {
 
     const apiSearchParams = getLastApiSearchParams()
     expect(apiSearchParams.get("hybrid_search")).toBe("true")
+  })
+
+  test.each([
+    ChannelTypeEnum.Topic,
+    ChannelTypeEnum.Department,
+    ChannelTypeEnum.Unit,
+    ChannelTypeEnum.Pathway,
+  ])("%s channel pages load hybrid search by default", async (channelType) => {
+    mockFeatureFlags({})
+    const { channel } = setMockApiResponses({
+      channelPatch: { channel_type: channelType },
+    })
+
+    renderWithProviders(<ChannelPage />, {
+      url: `/c/${channel.channel_type}/${channel.name}`,
+    })
+
+    await waitFor(() => {
+      expect(makeRequest).toHaveBeenCalledWith(
+        expect.objectContaining({
+          method: "get",
+          url: expect.stringContaining(urls.search.vectorResources()),
+        }),
+      )
+    })
+    expect(makeRequest).not.toHaveBeenCalledWith(
+      expect.objectContaining({
+        method: "get",
+        url: expect.stringContaining(urls.search.resources()),
+      }),
+    )
+  })
+
+  test("Channel pages fall back to OpenSearch when disable-hybrid-search is enabled", async () => {
+    mockFeatureFlags({ [FeatureFlags.DisableHybridSearch]: true })
+    const { channel } = setMockApiResponses({
+      channelPatch: { channel_type: ChannelTypeEnum.Topic },
+    })
+
+    renderWithProviders(<ChannelPage />, {
+      url: `/c/${channel.channel_type}/${channel.name}`,
+    })
+
+    await waitFor(() => {
+      expect(makeRequest).toHaveBeenCalledWith(
+        expect.objectContaining({
+          method: "get",
+          url: expect.stringContaining(urls.search.resources()),
+        }),
+      )
+    })
+    expect(makeRequest).not.toHaveBeenCalledWith(
+      expect.objectContaining({
+        method: "get",
+        url: expect.stringContaining(urls.search.vectorResources()),
+      }),
+    )
   })
 
   test("Topic channel page with search term preserves constant search parameters in API request", async () => {

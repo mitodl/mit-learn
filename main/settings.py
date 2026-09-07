@@ -36,7 +36,7 @@ from main.settings_course_etl import *  # noqa: F403
 from main.settings_pluggy import *  # noqa: F403
 from openapi.settings_spectacular import open_spectacular_settings
 
-VERSION = "0.78.2"
+VERSION = "0.78.6"
 
 log = logging.getLogger()
 
@@ -82,6 +82,8 @@ ALLOWED_REDIRECT_HOSTS = get_list_of_str(
 AUTH_USER_MODEL = "users.User"
 
 SECURE_SSL_REDIRECT = get_bool("MITOL_SECURE_SSL_REDIRECT", True)  # noqa: FBT003
+if get_bool("MITOL_SECURE_PROXY_SSL_HEADER", True):  # noqa: FBT003
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 SECURE_REDIRECT_EXEMPT = [
     "^health/startup/$",
     "^health/liveness/$",
