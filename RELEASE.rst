@@ -1,6 +1,20 @@
 Release Notes
 =============
 
+Version 0.79.0
+--------------
+
+- Skip a podcast feed with an unparseable episode instead of aborting the run (#3892)
+- Update actions/setup-node action to v7 (#3898)
+- Run yarn zip conversion single-threaded to avoid Renovate OOM (#3904)
+- fix(docker): install chromium from trixie instead of Debian sid (#3905)
+- Migrate off the legacy MUI Grid API (prerequisite for #2770) (#3867)
+- Rename department 21M from Music and Theater Arts to Music (#3669)
+- Update actions/upload-pages-artifact action to v5 (#3899)
+- Update astral-sh/setup-uv action to v10 (#3900)
+- Update codecov/codecov-action action to v7 (#3901)
+- Update SimenB/github-actions-cpu-cores action to v3 (#3902)
+
 Version 0.78.6
 --------------
 
