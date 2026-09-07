@@ -656,8 +656,6 @@ const podcastEpisode: LearningResourceFactory<PodcastEpisodeResource> = (
             id: parentPodcastId,
             title: faker.lorem.words(3),
             readable_id: faker.string.uuid(),
-            // The episode page names its series in a breadcrumb and in JSON-LD,
-            // so the embedded parent carries the podcast's own page.
             learn_url: `${TEST_APP_ORIGIN}/podcast/${parentPodcastId}/podcast`,
           },
         ],

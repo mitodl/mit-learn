@@ -261,8 +261,6 @@ def test_serialize_podcast_episode_playlists_to_json():
             "id": podcast.learning_resource.id,
             "title": podcast.learning_resource.title,
             "readable_id": podcast.learning_resource.readable_id,
-            # The episode page names its series in a breadcrumb and in JSON-LD,
-            # so the embedded parent carries the podcast's own page.
             "learn_url": learn_url_for_resource(podcast.learning_resource, []),
         }
     ]
