@@ -100,6 +100,9 @@ const Detail = styled.span(({ theme }) => ({
   textOverflow: "ellipsis",
   whiteSpace: "nowrap",
   maxWidth: "100%",
+  [theme.breakpoints.down("md")]: {
+    whiteSpace: "normal",
+  },
 }))
 
 /**
