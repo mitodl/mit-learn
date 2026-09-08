@@ -47,11 +47,14 @@ describe("SessionSelect", () => {
 
   test("collapses the redundant start-year for a same-year range", async () => {
     // is_upgradable: true so the option label is just the date range (a
-    // non-upgradable run appends "(no certificate available)").
+    // non-upgradable run appends "(no certificate available)"); is_self_paced:
+    // false so it doesn't also pick up "— Start Anytime" once start_date is in
+    // the past (the factory's default is_self_paced is random per run).
     const run = makeRun({
       start_date: "2026-09-08",
       end_date: "2026-12-16",
       is_upgradable: true,
+      is_self_paced: false,
     })
     renderWithProviders(
       <SessionSelect
@@ -155,6 +158,7 @@ describe("SessionSelect", () => {
     const soon = makeRun({
       start_date: "2026-09-08",
       end_date: "2026-12-16",
+      is_self_paced: false,
       is_upgradable: true,
     })
     const later = makeRun({
