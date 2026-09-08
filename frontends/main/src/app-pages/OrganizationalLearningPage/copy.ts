@@ -194,7 +194,7 @@ export const continuum = {
 }
 
 export const clientLogos = {
-  eyebrow: "TRUSTED BY LEADING ORGANIZATIONS",
+  eyebrow: "TRUSTED BY LEADING ORGANIZATIONS ACROSS INDUSTRY",
   logos: [
     {
       name: "BAE Systems",
@@ -238,7 +238,7 @@ export const clientLogos = {
 export const caseStudies = {
   eyebrow: "CASE STUDIES",
   title: "See how organizations turn learning into impact",
-  body: "Discover how organizations have applied MIT learning programs to achieve their goals and create lasting impact",
+  body: "Discover how organizations have applied MIT Open Learning programs to achieve their goals and create lasting impact",
   navLabel: "Case studies",
   items: [
     {
