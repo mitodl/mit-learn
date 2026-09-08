@@ -77,6 +77,13 @@ type DialogProps = {
   scroll?: MuiDialogProps["scroll"]
   TransitionProps?: NonNullable<MuiDialogProps["slotProps"]>["transition"]
   "aria-describedby"?: string
+  /**
+   * Id of an element whose text joins the title in the dialog's accessible
+   * name. Use when something in the content identifies what the dialog acts on
+   * and must be announced: screen readers read a dialog's name on open, but not
+   * its contents, so content-only detail is otherwise never spoken.
+   */
+  additionalLabelledBy?: string
   role?: MuiDialogProps["role"]
 }
 
@@ -108,10 +115,14 @@ const Dialog: React.FC<DialogProps> = ({
   scroll,
   TransitionProps,
   "aria-describedby": ariaDescribedBy,
+  additionalLabelledBy,
   role,
 }) => {
   const [confirming, setConfirming] = useState(isSubmitting)
   const titleId = useId()
+  const labelledBy = additionalLabelledBy
+    ? `${titleId} ${additionalLabelledBy}`
+    : titleId
 
   const handleConfirm = useCallback(async () => {
     try {
@@ -136,7 +147,7 @@ const Dialog: React.FC<DialogProps> = ({
         paper: PaperProps,
         transition: TransitionProps,
       }}
-      aria-labelledby={titleId}
+      aria-labelledby={labelledBy}
       aria-describedby={ariaDescribedBy}
       role={role}
       transitionDuration={process.env.NODE_ENV === "test" ? 0 : undefined}
