@@ -348,30 +348,34 @@ def staff_only_olx_paths(olx_path: str | Path) -> set[Path]:
     """
     Return the files under visible_to_staff_only="true" subtrees of an OLX
     course tree, including transcripts of hidden videos. Empty when olx_path
-    is not an OLX export (no course.xml).
+    is not an OLX export (no course.xml). Blocks may be pointers to
+    <tag>/<url_name>.xml or hold their children inline; both are walked.
     """
     root = Path(olx_path)
     course = _parse_olx_block(root, "", "course")
-    if course is None or not course.get("url_name"):
+    if course is None:
         return set()
     hidden: set[Path] = set()
     seen: set[tuple[str, str]] = set()
-    stack = [("course", course.get("url_name"), False)]
+    stack = [(course, "course", course.get("url_name"), False)]
     while stack:
-        tag, url_name, staff_only = stack.pop()
-        if (tag, url_name) in seen:
-            continue
-        seen.add((tag, url_name))
-        element = _parse_olx_block(root, tag, url_name)
+        pointer, tag, url_name, staff_only = stack.pop()
+        if url_name:
+            if (tag, url_name) in seen:
+                continue
+            seen.add((tag, url_name))
+        # pointer file wins when present; otherwise the element is the block itself
+        element = _parse_olx_block(root, tag, url_name) if url_name else None
         if element is None:
-            continue
-        staff_only = staff_only or element.get("visible_to_staff_only") == "true"
-        if staff_only:
+            element = pointer
+        staff_only = staff_only or "true" in (
+            pointer.get("visible_to_staff_only"),
+            element.get("visible_to_staff_only"),
+        )
+        if staff_only and url_name:
             hidden.update(_hidden_block_files(root, tag, url_name, element))
         stack.extend(
-            (child.tag, child.get("url_name"), staff_only)
-            for child in element
-            if child.get("url_name")
+            (child, child.tag, child.get("url_name"), staff_only) for child in element
         )
     return hidden
 

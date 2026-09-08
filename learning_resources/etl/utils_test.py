@@ -371,6 +371,38 @@ def test_documents_from_olx_skips_staff_only_subtrees(tmp_path):
     ]
 
 
+def test_documents_from_olx_skips_staff_only_inline_structure(tmp_path):
+    """Structure held inline in course.xml (no pointer files) is still filtered"""
+    olx = tmp_path / "course"
+    _write_olx(
+        olx,
+        "course.xml",
+        '<course org="MITx" course="1">'
+        '<chapter display_name="ok"><vertical><html url_name="h_ok"/></vertical></chapter>'
+        '<chapter visible_to_staff_only="true"><vertical>'
+        '<html url_name="h_staff"/><video url_name="vid_staff"/>'
+        "</vertical></chapter>"
+        "</course>",
+    )
+    _write_olx(olx, "html/h_ok.xml", '<html filename="h_ok"/>')
+    _write_olx(olx, "html/h_ok.html", "<p>visible</p>")
+    _write_olx(olx, "html/h_staff.xml", '<html filename="h_staff"/>')
+    _write_olx(olx, "html/h_staff.html", "<p>hidden</p>")
+    _write_olx(
+        olx,
+        "video/vid_staff.xml",
+        '<video url_name="vid_staff"><transcript language="en" src="hidden.srt"/></video>',
+    )
+    _write_olx(olx, "static/hidden.srt", "1\n00:00:00,000 --> 00:00:01,000\nhidden\n")
+
+    prefix = "/".join(str(olx).split("/")[3:]) + "/"
+    paths = sorted(
+        meta["source_path"].removeprefix(prefix)
+        for _, meta in utils.documents_from_olx(str(olx))
+    )
+    assert paths == ["course.xml", "html/h_ok.html", "html/h_ok.xml"]
+
+
 @pytest.mark.parametrize("bad_file", ["course.xml", "chapter/a.xml"])
 def test_documents_from_olx_malformed_block_fails_closed(tmp_path, bad_file):
     """A malformed block raises rather than ingesting files with unchecked visibility"""
