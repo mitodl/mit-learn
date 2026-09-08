@@ -377,19 +377,23 @@ const CaseStudyCarousel: React.FC<CaseStudyCarouselProps> = ({
         {announcement}
       </VisuallyHidden>
 
-      <Track
-        arrowsContainer={arrows}
-        prevLabel="Previous case study"
-        nextLabel="Next case study"
-        mobileBleed="none"
-        onSettle={handleSettle}
-      >
-        {items.map((study) => (
-          <Slide key={study.org}>
-            <CaseStudyPanel study={study} isSlide={isCarousel} />
-          </Slide>
-        ))}
-      </Track>
+      {isCarousel ? (
+        <Track
+          arrowsContainer={arrows}
+          prevLabel="Previous case study"
+          nextLabel="Next case study"
+          mobileBleed="none"
+          onSettle={handleSettle}
+        >
+          {items.map((study) => (
+            <Slide key={study.org}>
+              <CaseStudyPanel study={study} isSlide />
+            </Slide>
+          ))}
+        </Track>
+      ) : (
+        <CaseStudyPanel study={items[0]} isSlide={false} />
+      )}
     </Carousel>
   )
 }
