@@ -233,15 +233,17 @@ describe("AnalyticsContent", () => {
       )
 
       await screen.findByRole("heading", { name: "Contract utilization" })
-      expect(
-        screen.getByRole("heading", { name: "Monthly engagement" }),
-      ).toBeInTheDocument()
-      expect(
-        screen.getByRole("heading", { name: "Course performance" }),
-      ).toBeInTheDocument()
-      expect(
-        screen.getByRole("heading", { name: "Content engagement" }),
-      ).toBeInTheDocument()
+
+      // Section order is part of the contract here, not just presence.
+      const sectionHeadings = screen
+        .getAllByRole("heading", { level: 2 })
+        .map((heading) => heading.textContent)
+      expect(sectionHeadings).toEqual([
+        "Contract utilization",
+        "Course performance",
+        "Content engagement",
+        "Monthly engagement",
+      ])
 
       // One "Data as of" per section — freshness is per materialized view.
       const asOfLabels = await screen.findAllByText(/Data as of/)

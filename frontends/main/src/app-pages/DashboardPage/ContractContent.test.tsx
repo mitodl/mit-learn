@@ -1541,6 +1541,43 @@ describe("ContractContent", () => {
     ).not.toBeInTheDocument()
   })
 
+  test("renders both the Manage seats and View analytics buttons when both flags are on and user is a manager", async () => {
+    mockedUseFeatureFlagEnabled.mockImplementation(
+      (flag) =>
+        flag === FeatureFlags.B2BContractManagerDashboard ||
+        flag === FeatureFlags.B2BAnalyticsDashboard,
+    )
+    const { orgX } = setupProgramsAndCourses()
+
+    setMockResponse.get(managerOrganizationsUrl, {
+      count: 1,
+      next: null,
+      previous: null,
+      results: [orgX],
+    })
+    renderWithProviders(
+      <ContractContent
+        orgSlug={orgX.slug}
+        contractSlug={orgX.contracts[0].slug}
+      />,
+    )
+
+    const manageButton = await screen.findByRole("link", {
+      name: "Manage seats",
+    })
+    const analyticsLink = await screen.findByRole("link", {
+      name: "View analytics",
+    })
+    expect(manageButton).toHaveAttribute(
+      "href",
+      contractAdminView(orgX.slug, orgX.contracts[0].slug),
+    )
+    expect(analyticsLink).toHaveAttribute(
+      "href",
+      contractAnalyticsView(orgX.slug, orgX.contracts[0].slug),
+    )
+  })
+
   test("sanitizes HTML content in welcome_message_extra", async () => {
     const { orgX } = setupProgramsAndCourses()
 
