@@ -21,9 +21,9 @@ const OrganizationalLearningPage: React.FC = () => (
     <FeaturedProgramSection />
     <OfferingsSection />
     <DeliveryFormatsSection />
-    <ContinuumSection />
-    <ClientLogosSection />
     <CaseStudiesSection />
+    <ClientLogosSection />
+    <ContinuumSection />
     <FaqSection />
     <GetInTouchSection />
   </>
