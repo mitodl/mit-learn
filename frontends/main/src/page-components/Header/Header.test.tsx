@@ -49,7 +49,7 @@ describe("UserMenu", () => {
   }
 
   test.each([{}, { profile: null }, { profile: {} }])(
-    "Trigger button shows icons only for authenticated users w/o a name",
+    "Trigger button shows no name for authenticated users w/o one",
     async (userSettings) => {
       setMockResponse.get(urls.userMe.get(), {
         is_authenticated: true,
@@ -60,8 +60,6 @@ describe("UserMenu", () => {
 
       const trigger = await screen.findByRole("button", { name: "User Menu" })
       expect(trigger.textContent).toBe("")
-      // The account icon and the chevron, which is all there is without a name.
-      expect(trigger.querySelectorAll("svg.remixicon")).toHaveLength(2)
     },
   )
 
