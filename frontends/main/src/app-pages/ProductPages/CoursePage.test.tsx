@@ -576,6 +576,56 @@ describe("CoursePage", () => {
           ),
         ).toBeInTheDocument()
       })
+
+      test("header enrollment failure shows the server's 400 detail", async () => {
+        const run = mitxFactories.courses.courseRun({
+          is_enrollable: true,
+          is_upgradable: false,
+          is_archived: false,
+          enrollment_modes: [freeMode],
+          products: [],
+        })
+        const course = makeCourse({ next_run_id: run.id, courseruns: [run] })
+        const page = makePage({ course_details: course })
+        setupApis({ course, page })
+
+        setMockResponse.get(
+          learnUrls.userMe.get(),
+          learnFactories.user.user({ is_authenticated: true }),
+        )
+        setMockResponse.get(mitxUrls.enrollment.enrollmentsListV3(), [])
+        setMockResponse.post(
+          mitxUrls.enrollment.enrollmentsListV1(),
+          {
+            detail:
+              "Unable to complete enrollment. Please contact support. Error code: CS_700",
+          },
+          { code: 400 },
+        )
+
+        renderWithProviders(<CoursePage readableId={course.readable_id} />)
+
+        const banner = await screen.findByTestId("banner-container")
+        const startBtn = await within(banner).findByRole("button", {
+          name: "Start Learning",
+        })
+        await act(async () => {
+          startBtn.click()
+        })
+
+        expect(
+          await within(banner).findByText(
+            "Unable to complete enrollment. Please contact support. Error code: CS_700",
+          ),
+        ).toBeInTheDocument()
+        // The generic copy is superseded, and the InfoBox's own alert — a
+        // separate hook instance — never fired at all.
+        expect(
+          screen.queryByText(
+            "There was a problem processing your enrollment. Please try again.",
+          ),
+        ).toBeNull()
+      })
     })
   })
 

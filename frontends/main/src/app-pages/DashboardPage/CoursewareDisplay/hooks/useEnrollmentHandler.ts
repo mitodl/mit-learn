@@ -14,23 +14,33 @@ import { getCourseEnrollmentAction } from "@/common/mitxonline"
 import { useComplianceGate } from "@/common/mitxonline/useComplianceGate"
 import CourseEnrollmentDialog from "@/page-components/EnrollmentDialogs/CourseEnrollmentDialog"
 import { trackCourseEnrolled } from "@/common/analytics/gtm"
+import { badRequestDetailOr } from "api/mutation-errors"
 
 const ENROLL_COURSE_ERROR =
   "Something went wrong enrolling you in this course. Please try again."
 const ENROLL_PROGRAM_ERROR =
   "Something went wrong enrolling you in this program. Please try again."
 
+// Prefer the server's own 400 explanation over the static copy. The bare
+// `badRequestDetailOr()` has no fallback of its own, so a non-400 falls through
+// to the global handler's generic message rather than restating it here.
+const COURSE_ENROLL_META = Object.freeze({
+  getErrorMessage: badRequestDetailOr(ENROLL_COURSE_ERROR),
+})
+const PROGRAM_ENROLL_META = Object.freeze({
+  getErrorMessage: badRequestDetailOr(ENROLL_PROGRAM_ERROR),
+})
+const CHECKOUT_META = Object.freeze({ getErrorMessage: badRequestDetailOr() })
+
 export const useEnrollmentHandler = () => {
   const createB2bEnrollment = useCreateB2bEnrollment({
-    meta: { errorMessage: ENROLL_COURSE_ERROR },
+    meta: COURSE_ENROLL_META,
   })
-  const createEnrollment = useCreateEnrollment({
-    meta: { errorMessage: ENROLL_COURSE_ERROR },
-  })
+  const createEnrollment = useCreateEnrollment({ meta: COURSE_ENROLL_META })
   const createVerifiedProgramEnrollment = useCreateVerifiedProgramEnrollment({
-    meta: { errorMessage: ENROLL_PROGRAM_ERROR },
+    meta: PROGRAM_ENROLL_META,
   })
-  const replaceBasketItem = useReplaceBasketItem()
+  const replaceBasketItem = useReplaceBasketItem({ meta: CHECKOUT_META })
   const { ensureCompliance } = useComplianceGate()
 
   const enroll = React.useCallback(

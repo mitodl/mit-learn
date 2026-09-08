@@ -386,6 +386,39 @@ describe("CourseEnrollArea — click smoke tests", () => {
       )
     })
   })
+
+  test("paid click surfaces the basket's 400 detail in the InfoBox alert", async () => {
+    setupAuth()
+    const product = makeProduct()
+    const run = makeRun({
+      is_enrollable: true,
+      is_upgradable: true,
+      is_archived: false,
+      enrollment_modes: [makeMode({ requires_payment: true })],
+      products: [product],
+    })
+    const course = makeCourse({ next_run_id: run.id, courseruns: [run] })
+
+    // Clear succeeds, add fails: proves the add error is the one surfaced.
+    setMockResponse.delete(mitxUrls.baskets.clear(), undefined)
+    setMockResponse.post(
+      mitxUrls.baskets.createFromProduct(product.id),
+      { detail: "That product is no longer available." },
+      { code: 400 },
+    )
+
+    renderWithProviders(<CourseEnrollArea course={course} selectedRun={run} />)
+
+    const enrollBtn = await screen.findByRole("button", { name: "Enroll" })
+    await act(async () => {
+      enrollBtn.click()
+    })
+
+    expect(
+      await screen.findByText("That product is no longer available."),
+    ).toBeInTheDocument()
+    expect(window.location.assign).not.toHaveBeenCalled()
+  })
   // Free-click behavior (audit POST + dashboard redirect) is fully covered by
   // useCourseEnrollment.test.tsx "free action -> audit POST + redirect" test.
 })
