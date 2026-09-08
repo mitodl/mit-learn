@@ -10,12 +10,16 @@ const Band = styled(Section)(({ theme }) => ({
   backgroundColor: theme.custom.colors.white,
 }))
 
-const Inner = styled(SectionInner)({
+const Inner = styled(SectionInner)(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
   alignItems: "center",
   gap: "40px",
-})
+  padding: "40px 24px 96px",
+  [theme.breakpoints.down("md")]: {
+    padding: "16px 24px 32px",
+  },
+}))
 
 const Heading = styled.h2(({ theme }) => ({
   ...theme.typography.subtitle2,
