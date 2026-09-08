@@ -340,7 +340,7 @@ def _parse_olx_block(root: Path, tag: str, url_name: str):
     """
     try:
         return ElementTree.parse(root / tag / f"{url_name}.xml").getroot()
-    except FileNotFoundError:
+    except (FileNotFoundError, NotADirectoryError):
         return None
 
 
