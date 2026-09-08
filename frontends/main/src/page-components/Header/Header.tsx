@@ -10,7 +10,8 @@ import {
   HEADER_HEIGHT,
   HEADER_HEIGHT_MD,
 } from "ol-components"
-import { ActionButtonLink } from "@mitodl/smoot-design"
+import { usePathname } from "next/navigation"
+import { ActionButtonLink, ButtonLink } from "@mitodl/smoot-design"
 import { RiSearch2Line, RiGlobalLine } from "@remixicon/react"
 import { useToggle } from "ol-utilities"
 import MITLogoLink from "@/components/MITLogoLink/MITLogoLink"
@@ -18,7 +19,7 @@ import UserMenu from "./UserMenu"
 import { MenuButton } from "./MenuButton"
 import HeaderNavLink from "./HeaderNavLink"
 import { buildNavData } from "./navData"
-import { SEARCH, ORGANIZATIONAL_LEARNING } from "@/common/urls"
+import { SEARCH, ORGANIZATIONAL_LEARNING, DASHBOARD_HOME } from "@/common/urls"
 import { useUserMe } from "api/hooks/user"
 import { usePostHog, useFeatureFlagEnabled } from "posthog-js/react"
 import { PostHogEvents } from "@/common/constants"
@@ -69,13 +70,38 @@ const StyledToolbar = styled(Toolbar)({
   flex: 1,
 })
 
-const StyledMITLogoLink = styled(MITLogoLink)(({ theme }) => ({
+const StyledLearnLogoLink = styled(MITLogoLink)(({ theme }) => ({
   img: {
     height: "24px",
     width: "auto",
     [theme.breakpoints.down("md")]: {
       height: "16px",
     },
+  },
+}))
+
+/**
+ * The MIT logo at the right end of the header. Sits beside the user menu
+ * rather than inside it; smoot-design's UserMenu owns the menu alone.
+ */
+const StyledMITLogoLink = styled(MITLogoLink)(({ theme }) => ({
+  img: {
+    width: "64px",
+    height: "32px",
+    marginLeft: "16px",
+    [theme.breakpoints.down("md")]: {
+      width: "48px",
+      height: "24px",
+      marginLeft: "0",
+    },
+  },
+}))
+
+const DashboardLink = styled(ButtonLink)(({ theme }) => ({
+  fontSize: theme.typography.body3.fontSize,
+  marginRight: "24px",
+  [theme.breakpoints.down("md")]: {
+    display: "none",
   },
 }))
 
@@ -137,20 +163,29 @@ const LoggedOutView: FunctionComponent = () => {
       <DesktopOnly>
         <SearchButton />
         <UserMenu variant="desktop" />
+        <StyledMITLogoLink logo="mit_white" />
       </DesktopOnly>
       <MobileOnly>
         <SearchButton />
         <UserMenu variant="mobile" />
+        <StyledMITLogoLink logo="mit_white" />
       </MobileOnly>
     </FlexContainer>
   )
 }
 
 const LoggedInView: FunctionComponent = () => {
+  const pathname = usePathname()
   return (
     <FlexContainer>
       <SearchButton />
       <UserMenu />
+      {!pathname.startsWith(DASHBOARD_HOME) ? (
+        <DashboardLink variant="tertiary" href={DASHBOARD_HOME}>
+          Dashboard
+        </DashboardLink>
+      ) : null}
+      <StyledMITLogoLink logo="mit_white" />
     </FlexContainer>
   )
 }
@@ -205,7 +240,7 @@ const Header: FunctionComponent = () => {
       <Bar position="fixed">
         <StyledToolbar variant="dense">
           <DesktopOnly>
-            <StyledMITLogoLink logo="learn" />
+            <StyledLearnLogoLink logo="learn" />
             <LeftSpacer />
             <MenuButton
               ref={desktopTrigger}
@@ -235,7 +270,7 @@ const Header: FunctionComponent = () => {
               aria-label="Explore MIT"
             />
             <LeftSpacer />
-            <StyledMITLogoLink logo="learn" />
+            <StyledLearnLogoLink logo="learn" />
           </MobileOnly>
           <Spacer />
           <UserView />
