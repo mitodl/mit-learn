@@ -242,6 +242,26 @@ OIDC_LOGOUT_URL = get_string(
     f"{MITOL_API_BASE_URL.rstrip('/')}/logout/oidc",
 )
 
+# Open edX's logout page, which fans a logout out to every application listed in
+# its IDA_LOGOUT_URI_LIST -- MITx Online, studio and Learn itself.  Learn's
+# logout frames this rather than redirecting to it, so the user never leaves
+# learn.mit.edu (hq#12763).  Unset disables the fan-out and logout falls back to
+# clearing Learn's own session only.
+OPENEDX_LOGOUT_URL = get_string("OPENEDX_LOGOUT_URL", None)
+
+# How long Learn's logout interstitial waits for Open edX's page (and the
+# per-application iframes inside it) before giving up and finishing the logout
+# anyway.  A blocked or slow sibling must not strand the user mid-logout.
+LOGOUT_INTERSTITIAL_TIMEOUT_MS = get_int("LOGOUT_INTERSTITIAL_TIMEOUT_MS", 5000)
+
+# Marks the leg of a logout that is returning from Keycloak.  The gateway's
+# post_logout_redirect_uri points back at Learn's own /logout, so without a
+# marker the view cannot tell a returning browser from a fresh logout request and
+# the two bounce off each other forever.  The cookie's value is the `next` URL,
+# which the fixed post_logout_redirect_uri has no way to carry.
+LOGOUT_RETURN_COOKIE_NAME = get_string("LOGOUT_RETURN_COOKIE_NAME", "logout-next")
+LOGOUT_RETURN_COOKIE_TTL = get_int("LOGOUT_RETURN_COOKIE_TTL", 60)
+
 MITOL_TOS_URL = get_string(
     "MITOL_TOS_URL", urljoin(APP_BASE_URL, "/terms-and-conditions/")
 )
