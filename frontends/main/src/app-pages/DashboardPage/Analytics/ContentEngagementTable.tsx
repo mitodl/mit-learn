@@ -86,11 +86,7 @@ const CourseId = styled.span(({ theme }) => ({
 }))
 
 /**
- * The secondary figure in an activity cell: the raw total under its rate. It
- * needs its own overflow handling — being a nested block inside `TableCell`,
- * it does not inherit that cell's `overflow`/`text-overflow`, so without this
- * a detail line too long for its column hard-clips mid-word instead of
- * ellipsizing.
+ * The secondary figure in an activity cell: the raw total under its rate.
  */
 const Detail = styled.span(({ theme }) => ({
   ...theme.typography.body3,
@@ -105,12 +101,6 @@ const Detail = styled.span(({ theme }) => ({
   },
 }))
 
-/**
- * Wide enough that every column keeps the room it needs for a rate plus its
- * detail line (e.g. "25 learners, 1,000 attempted"). Below `md` the table
- * reflows into stacked label/value rows instead (see `B2BTable`), so the
- * scroll container is only needed at and above that breakpoint.
- */
 const TableScroll = styled.div(({ theme }) => ({
   overflowX: "auto",
   [theme.breakpoints.down("md")]: {
