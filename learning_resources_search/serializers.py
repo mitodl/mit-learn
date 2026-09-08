@@ -35,6 +35,7 @@ from learning_resources.serializers import (
     LearningResourceSerializer,
     ResourceTypeGroupChoiceField,
 )
+from learning_resources.utils import path_slug
 from learning_resources_search.api import gen_content_file_id
 from learning_resources_search.constants import (
     CONTENT_FILE_TYPE,
@@ -666,6 +667,22 @@ class PercolateQuerySerializer(serializers.ModelSerializer):
         exclude = (*COMMON_IGNORED_FIELDS, "users")
 
 
+def _with_derived_fields(source: dict | None) -> dict | None:
+    """
+    Supply `url_slug` for a document indexed before the field existed.
+
+    Search results are the indexed document verbatim, so a field added to the
+    resource serializer is absent from every document until that document is
+    reindexed -- while the response schema already declares it required. A slug
+    is a pure function of the title, so it is cheaper to derive one here than to
+    couple the deploy to a reindex. `learn_url` gets no such treatment: it needs
+    the parent ids, platform and readable_id, which the document does not carry.
+    """
+    if source is None or "url_slug" in source:
+        return source
+    return {**source, "url_slug": path_slug(source.get("title") or "")}
+
+
 class LearningResourcesSearchResponseSerializer(SearchResponseSerializer):
     """
     SearchResponseSerializer with OpenAPI annotations for Learning Resources
@@ -675,7 +692,7 @@ class LearningResourcesSearchResponseSerializer(SearchResponseSerializer):
     @extend_schema_field(LearningResourceSerializer(many=True))
     def get_results(self, instance):
         hits = instance.get("hits", {}).get("hits", [])
-        return (hit.get("_source") for hit in hits)
+        return (_with_derived_fields(hit.get("_source")) for hit in hits)
 
 
 class ContentFileSearchResponseSerializer(SearchResponseSerializer):
