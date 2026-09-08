@@ -43,9 +43,9 @@ describe("OrganizationalLearningPage", () => {
       featuredProgram.title,
       offerings.title,
       deliveryFormats.title,
-      continuum.title,
-      clientLogos.eyebrow,
       caseStudies.title,
+      clientLogos.eyebrow,
+      continuum.title,
       faq.title,
       getInTouch.title,
     ]
@@ -80,9 +80,6 @@ describe("OrganizationalLearningPage", () => {
       { level: 3, name: offerings.flexibleSolutions.title },
       { level: 2, name: deliveryFormats.title },
       ...deliveryFormats.items.map((item) => ({ level: 3, name: item.title })),
-      { level: 2, name: continuum.title },
-      ...continuum.steps.map((step) => ({ level: 3, name: step.title })),
-      { level: 2, name: clientLogos.eyebrow },
       { level: 2, name: caseStudies.title },
       // Every study shares the carousel track, so all of their headings are in
       // the DOM regardless of which slide is on screen.
@@ -90,6 +87,9 @@ describe("OrganizationalLearningPage", () => {
         { level: 3, name: study.org },
         ...study.pillars.map((pillar) => ({ level: 4, name: pillar.title })),
       ]),
+      { level: 2, name: clientLogos.eyebrow },
+      { level: 2, name: continuum.title },
+      ...continuum.steps.map((step) => ({ level: 3, name: step.title })),
       { level: 2, name: faq.title },
       // MUI renders each AccordionSummary inside an h3, which is the
       // recommended shape for an FAQ: every question is a heading.
