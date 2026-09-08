@@ -19,6 +19,7 @@ from learning_resources_search.serializers import (
     ContentFileSerializer,
     SearchResponseMetadata,
     SearchResponseSerializer,
+    with_derived_resource_fields,
 )
 from vector_search.constants import (
     MAX_RESULT_WINDOW,
@@ -251,7 +252,11 @@ class LearningResourcesVectorSearchResponseSerializer(SearchResponseSerializer):
 
     @extend_schema_field(LearningResourceSerializer(many=True))
     def get_results(self, instance):
-        return instance.get("hits", [])
+        # With VECTOR_SEARCH_RESOURCES_FROM_PAYLOAD a hit is the stored Qdrant
+        # payload, so it can predate a field the schema requires. Hits hydrated
+        # from the database already carry every field, and the call is a no-op
+        # for those.
+        return [with_derived_resource_fields(hit) for hit in instance.get("hits", [])]
 
     def get_count(self, instance) -> int:
         return instance.get("total", {}).get("value", 0)

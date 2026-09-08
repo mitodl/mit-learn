@@ -667,16 +667,20 @@ class PercolateQuerySerializer(serializers.ModelSerializer):
         exclude = (*COMMON_IGNORED_FIELDS, "users")
 
 
-def _with_derived_fields(source: dict | None) -> dict | None:
+def with_derived_resource_fields(source: dict | None) -> dict | None:
     """
-    Supply `url_slug` for a document indexed before the field existed.
+    Supply `url_slug` for a stored resource document that lacks it.
 
-    Search results are the indexed document verbatim, so a field added to the
-    resource serializer is absent from every document until that document is
-    reindexed -- while the response schema already declares it required. A slug
-    is a pure function of the title, so it is cheaper to derive one here than to
-    couple the deploy to a reindex. `learn_url` gets no such treatment: it needs
-    the parent ids, platform and readable_id, which the document does not carry.
+    Both OpenSearch and Qdrant serve resources as the indexing serializer wrote
+    them, so a field added to the resource serializer is absent from every
+    stored document until that document is reindexed -- while the response
+    schema already declares it required. A slug is a pure function of the title,
+    which every document carries, so deriving one here beats coupling a deploy
+    to a reindex. A reindexed document keeps its own value.
+
+    `learn_url` gets no such treatment, and could not: it needs the parent ids,
+    platform, readable_id and resource_category, none of which a stored document
+    carries.
     """
     if source is None or "url_slug" in source:
         return source
@@ -692,7 +696,7 @@ class LearningResourcesSearchResponseSerializer(SearchResponseSerializer):
     @extend_schema_field(LearningResourceSerializer(many=True))
     def get_results(self, instance):
         hits = instance.get("hits", {}).get("hits", [])
-        return (_with_derived_fields(hit.get("_source")) for hit in hits)
+        return (with_derived_resource_fields(hit.get("_source")) for hit in hits)
 
 
 class ContentFileSearchResponseSerializer(SearchResponseSerializer):
