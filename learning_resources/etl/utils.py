@@ -584,7 +584,7 @@ def pdf_is_valid(pdf_path: Path) -> bool:
         if len(reader.pages) > 0:
             reader.pages[0].extract_text()
             return True
-    except Exception:  # noqa: BLE001
+    except Exception:
         # warning, not exception: the caller raises InvalidPDFError and
         # process_olx_path emits the single Sentry event for this file
         log.warning("PDF validation error for %s", pdf_path, exc_info=True)
