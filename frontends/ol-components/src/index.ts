@@ -53,8 +53,6 @@ export type { DividerProps } from "@mui/material/Divider"
 export { default as Drawer } from "@mui/material/Drawer"
 export type { DrawerProps } from "@mui/material/Drawer"
 
-export { default as Grid } from "@mui/material/Grid"
-export type { GridProps } from "@mui/material/Grid"
 export { default as Grid2 } from "@mui/material/Grid2"
 export type { Grid2Props } from "@mui/material/Grid2"
 

@@ -36,6 +36,24 @@ from learning_resources_search.constants import (
 from learning_resources_search.factories import PercolateQueryFactory
 from learning_resources_search.models import PercolateQuery
 
+# api.SORT_TIEBREAKERS, as generate_sort_clause returns them
+SORT_TIEBREAKER_CLAUSES = [
+    "featured_rank",
+    "is_learning_material",
+    "is_incomplete_or_stale",
+    "-created_on",
+    "id",
+]
+
+# api.SORT_TIEBREAKERS, as the query body serializes them
+SERIALIZED_SORT_TIEBREAKERS = [
+    "featured_rank",
+    "is_learning_material",
+    "is_incomplete_or_stale",
+    {"created_on": {"order": "desc"}},
+    "id",
+]
+
 
 def os_topic(topic_name) -> Mock:
     """
@@ -90,70 +108,128 @@ def test_relevant_indexes(endpoint, resourse_types, aggregations, result):
 
 
 @pytest.mark.parametrize(
-    ("sort_param", "departments", "result"),
+    ("sort_param", "departments", "expected"),
     [
-        ("id", None, "id"),
-        ("-id", ["7"], "-id"),
+        ("-id", ["7"], ["-id", *SORT_TIEBREAKER_CLAUSES]),
         (
             "start_date",
             ["5"],
-            {"runs.start_date": {"order": "asc", "nested": {"path": "runs"}}},
+            [
+                {"runs.start_date": {"order": "asc", "nested": {"path": "runs"}}},
+                *SORT_TIEBREAKER_CLAUSES,
+            ],
         ),
         (
             "-start_date",
             None,
-            {"runs.start_date": {"order": "desc", "nested": {"path": "runs"}}},
+            [
+                {"runs.start_date": {"order": "desc", "nested": {"path": "runs"}}},
+                *SORT_TIEBREAKER_CLAUSES,
+            ],
         ),
         (
             "mitcoursenumber",
             None,
-            {
-                "course.course_numbers.sort_coursenum": {
-                    "order": "asc",
-                    "nested": {
-                        "path": "course.course_numbers",
-                        "filter": {"term": {"course.course_numbers.primary": True}},
-                    },
-                }
-            },
+            [
+                {
+                    "course.course_numbers.sort_coursenum": {
+                        "order": "asc",
+                        "nested": {
+                            "path": "course.course_numbers",
+                            "filter": {"term": {"course.course_numbers.primary": True}},
+                        },
+                    }
+                },
+                *SORT_TIEBREAKER_CLAUSES,
+            ],
         ),
         (
             "mitcoursenumber",
             ["7", "5"],
-            {
-                "course.course_numbers.sort_coursenum": {
-                    "order": "asc",
-                    "nested": {
-                        "path": "course.course_numbers",
-                        "filter": {
-                            "bool": {
-                                "should": [
-                                    {
-                                        "term": {
-                                            "course.course_numbers.department.department_id": (
-                                                "7"
-                                            )
-                                        }
-                                    },
-                                    {
-                                        "term": {
-                                            "course.course_numbers.department.department_id": (
-                                                "5"
-                                            )
-                                        }
-                                    },
-                                ]
-                            }
+            [
+                {
+                    "course.course_numbers.sort_coursenum": {
+                        "order": "asc",
+                        "nested": {
+                            "path": "course.course_numbers",
+                            "filter": {
+                                "bool": {
+                                    "should": [
+                                        {
+                                            "term": {
+                                                "course.course_numbers.department.department_id": (
+                                                    "7"
+                                                )
+                                            }
+                                        },
+                                        {
+                                            "term": {
+                                                "course.course_numbers.department.department_id": (
+                                                    "5"
+                                                )
+                                            }
+                                        },
+                                    ]
+                                }
+                            },
                         },
-                    },
-                }
-            },
+                    }
+                },
+                *SORT_TIEBREAKER_CLAUSES,
+            ],
         ),
     ],
 )
-def test_generate_sort_clause(sort_param, departments, result):
+def test_generate_sort_clause(sort_param, departments, expected):
+    """The requested sort leads, followed by the tiebreakers"""
     params = {"sortby": sort_param, "department": departments}
-    assert generate_sort_clause(params) == result
+    assert generate_sort_clause(params) == expected
+
+
+@pytest.mark.parametrize(
+    ("sortby", "expected"),
+    [
+        (
+            "new",
+            [
+                "-created_on",
+                "featured_rank",
+                "is_learning_material",
+                "is_incomplete_or_stale",
+                "id",
+            ],
+        ),
+        (
+            "featured",
+            [
+                "featured_rank",
+                "is_learning_material",
+                "is_incomplete_or_stale",
+                "-created_on",
+                "id",
+            ],
+        ),
+        (
+            "id",
+            [
+                "id",
+                "featured_rank",
+                "is_learning_material",
+                "is_incomplete_or_stale",
+                "-created_on",
+            ],
+        ),
+    ],
+)
+def test_generate_sort_clause_no_duplicate_tiebreaker(sortby, expected):
+    """A sort the tiebreakers repeat is not sorted on twice"""
+    assert generate_sort_clause({"sortby": sortby}) == expected
+
+
+def test_generate_sort_clause_content_files():
+    """Content file documents have none of the fields the tiebreakers sort on"""
+    params = {"sortby": "id", "endpoint": CONTENT_FILE_TYPE}
+    assert generate_sort_clause(params) == ["id"]
 
 
 @pytest.mark.parametrize(
@@ -2375,7 +2451,7 @@ def test_execute_learn_search_for_learning_resource_query(settings, opensearch):
                 ]
             }
         },
-        "sort": [{"readable_id": {"order": "desc"}}],
+        "sort": [{"readable_id": {"order": "desc"}}, *SERIALIZED_SORT_TIEBREAKERS],
         "from": 1,
         "size": 1,
         "aggs": {
@@ -3035,7 +3111,7 @@ def test_execute_learn_search_with_script_score(
                 ]
             }
         },
-        "sort": [{"readable_id": {"order": "desc"}}],
+        "sort": [{"readable_id": {"order": "desc"}}, *SERIALIZED_SORT_TIEBREAKERS],
         "from": 1,
         "size": 1,
         "aggs": {
@@ -3180,7 +3256,7 @@ def test_execute_learn_search_with_hybrid_search(mocker, settings, opensearch):
                 ]
             }
         },
-        "sort": [{"readable_id": {"order": "desc"}}],
+        "sort": [{"readable_id": {"order": "desc"}}, *SERIALIZED_SORT_TIEBREAKERS],
         "from": 1,
         "size": 1,
         "query": {
@@ -4050,7 +4126,7 @@ def test_execute_learn_search_with_min_score(mocker, settings, opensearch):
                 ]
             }
         },
-        "sort": [{"readable_id": {"order": "desc"}}],
+        "sort": [{"readable_id": {"order": "desc"}}, *SERIALIZED_SORT_TIEBREAKERS],
         "from": 1,
         "size": 1,
         "aggs": {
@@ -4432,8 +4508,16 @@ def test_document_percolation(opensearch, mocker):
 @pytest.mark.parametrize(
     ("sortby", "q", "result"),
     [
-        ("-views", None, [{"views": {"order": "desc"}}]),
-        ("-views", "text", [{"views": {"order": "desc"}}]),
+        (
+            "-views",
+            None,
+            [{"views": {"order": "desc"}}, *SERIALIZED_SORT_TIEBREAKERS],
+        ),
+        (
+            "-views",
+            "text",
+            [{"views": {"order": "desc"}}, *SERIALIZED_SORT_TIEBREAKERS],
+        ),
         (
             None,
             None,

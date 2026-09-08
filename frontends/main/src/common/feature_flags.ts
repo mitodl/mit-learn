@@ -20,6 +20,7 @@ export enum FeatureFlags {
   SelfServiceRefunds = "self-service-refunds",
   DisableHybridSearch = "disable-hybrid-search",
   OrganizationalLearning = "organizational-learning",
+  MultipleRunContextMenus = "multiple-run-context-menus",
 }
 
 /**

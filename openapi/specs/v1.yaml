@@ -735,7 +735,7 @@ paths:
           * `21G` - Global Languages
           * `21H` - History
           * `21L` - Literature
-          * `21M` - Music and Theater Arts
+          * `21M` - Music
           * `21T` - Theater Arts
           * `22` - Nuclear Science and Engineering
           * `24` - Linguistics and Philosophy
@@ -1388,7 +1388,7 @@ paths:
           * `21G` - Global Languages
           * `21H` - History
           * `21L` - Literature
-          * `21M` - Music and Theater Arts
+          * `21M` - Music
           * `21T` - Theater Arts
           * `22` - Nuclear Science and Engineering
           * `24` - Linguistics and Philosophy
@@ -1991,7 +1991,7 @@ paths:
           * `21G` - Global Languages
           * `21H` - History
           * `21L` - Literature
-          * `21M` - Music and Theater Arts
+          * `21M` - Music
           * `21T` - Theater Arts
           * `22` - Nuclear Science and Engineering
           * `24` - Linguistics and Philosophy
@@ -2418,7 +2418,7 @@ paths:
           * `21G` - Global Languages
           * `21H` - History
           * `21L` - Literature
-          * `21M` - Music and Theater Arts
+          * `21M` - Music
           * `21T` - Theater Arts
           * `22` - Nuclear Science and Engineering
           * `24` - Linguistics and Philosophy
@@ -2836,7 +2836,7 @@ paths:
               * `21G` - Global Languages
               * `21H` - History
               * `21L` - Literature
-              * `21M` - Music and Theater Arts
+              * `21M` - Music
               * `21T` - Theater Arts
               * `22` - Nuclear Science and Engineering
               * `24` - Linguistics and Philosophy
@@ -2861,15 +2861,14 @@ paths:
           Sciences\n* `14` - Economics\n* `15` - Management\n* `16` - Aeronautics
           and Astronautics\n* `17` - Political Science\n* `18` - Mathematics\n* `20`
           - Biological Engineering\n* `21A` - Anthropology\n* `21G` - Global Languages\n*
-          `21H` - History\n* `21L` - Literature\n* `21M` - Music and Theater Arts\n*
-          `21T` - Theater Arts\n* `22` - Nuclear Science and Engineering\n* `24` -
-          Linguistics and Philosophy\n* `CC` - Concourse\n* `CMS-W` - Comparative
-          Media Studies/Writing\n* `EC` - Edgerton Center\n* `ES` - Experimental Study
-          Group\n* `ESD` - Engineering Systems Division\n* `HST` - Medical Engineering
-          and Science\n* `IDS` - Data, Systems, and Society\n* `MAS` - Media Arts
-          and Sciences\n* `PE` - Athletics, Physical Education and Recreation\n* `SP`
-          - Special Programs\n* `STS` - Science, Technology, and Society\n* `WGS`
-          - Women's and Gender Studies"
+          `21H` - History\n* `21L` - Literature\n* `21M` - Music\n* `21T` - Theater
+          Arts\n* `22` - Nuclear Science and Engineering\n* `24` - Linguistics and
+          Philosophy\n* `CC` - Concourse\n* `CMS-W` - Comparative Media Studies/Writing\n*
+          `EC` - Edgerton Center\n* `ES` - Experimental Study Group\n* `ESD` - Engineering
+          Systems Division\n* `HST` - Medical Engineering and Science\n* `IDS` - Data,
+          Systems, and Society\n* `MAS` - Media Arts and Sciences\n* `PE` - Athletics,
+          Physical Education and Recreation\n* `SP` - Special Programs\n* `STS` -
+          Science, Technology, and Society\n* `WGS` - Women's and Gender Studies"
       - in: query
         name: free
         schema:
@@ -3208,7 +3207,7 @@ paths:
               * `21G` - Global Languages
               * `21H` - History
               * `21L` - Literature
-              * `21M` - Music and Theater Arts
+              * `21M` - Music
               * `21T` - Theater Arts
               * `22` - Nuclear Science and Engineering
               * `24` - Linguistics and Philosophy
@@ -3233,15 +3232,14 @@ paths:
           Sciences\n* `14` - Economics\n* `15` - Management\n* `16` - Aeronautics
           and Astronautics\n* `17` - Political Science\n* `18` - Mathematics\n* `20`
           - Biological Engineering\n* `21A` - Anthropology\n* `21G` - Global Languages\n*
-          `21H` - History\n* `21L` - Literature\n* `21M` - Music and Theater Arts\n*
-          `21T` - Theater Arts\n* `22` - Nuclear Science and Engineering\n* `24` -
-          Linguistics and Philosophy\n* `CC` - Concourse\n* `CMS-W` - Comparative
-          Media Studies/Writing\n* `EC` - Edgerton Center\n* `ES` - Experimental Study
-          Group\n* `ESD` - Engineering Systems Division\n* `HST` - Medical Engineering
-          and Science\n* `IDS` - Data, Systems, and Society\n* `MAS` - Media Arts
-          and Sciences\n* `PE` - Athletics, Physical Education and Recreation\n* `SP`
-          - Special Programs\n* `STS` - Science, Technology, and Society\n* `WGS`
-          - Women's and Gender Studies"
+          `21H` - History\n* `21L` - Literature\n* `21M` - Music\n* `21T` - Theater
+          Arts\n* `22` - Nuclear Science and Engineering\n* `24` - Linguistics and
+          Philosophy\n* `CC` - Concourse\n* `CMS-W` - Comparative Media Studies/Writing\n*
+          `EC` - Edgerton Center\n* `ES` - Experimental Study Group\n* `ESD` - Engineering
+          Systems Division\n* `HST` - Medical Engineering and Science\n* `IDS` - Data,
+          Systems, and Society\n* `MAS` - Media Arts and Sciences\n* `PE` - Athletics,
+          Physical Education and Recreation\n* `SP` - Special Programs\n* `STS` -
+          Science, Technology, and Society\n* `WGS` - Women's and Gender Studies"
       - in: query
         name: free
         schema:
@@ -3915,7 +3913,7 @@ paths:
           * `21G` - Global Languages
           * `21H` - History
           * `21L` - Literature
-          * `21M` - Music and Theater Arts
+          * `21M` - Music
           * `21T` - Theater Arts
           * `22` - Nuclear Science and Engineering
           * `24` - Linguistics and Philosophy
@@ -4352,7 +4350,7 @@ paths:
               * `21G` - Global Languages
               * `21H` - History
               * `21L` - Literature
-              * `21M` - Music and Theater Arts
+              * `21M` - Music
               * `21T` - Theater Arts
               * `22` - Nuclear Science and Engineering
               * `24` - Linguistics and Philosophy
@@ -4377,15 +4375,14 @@ paths:
           Sciences\n* `14` - Economics\n* `15` - Management\n* `16` - Aeronautics
           and Astronautics\n* `17` - Political Science\n* `18` - Mathematics\n* `20`
           - Biological Engineering\n* `21A` - Anthropology\n* `21G` - Global Languages\n*
-          `21H` - History\n* `21L` - Literature\n* `21M` - Music and Theater Arts\n*
-          `21T` - Theater Arts\n* `22` - Nuclear Science and Engineering\n* `24` -
-          Linguistics and Philosophy\n* `CC` - Concourse\n* `CMS-W` - Comparative
-          Media Studies/Writing\n* `EC` - Edgerton Center\n* `ES` - Experimental Study
-          Group\n* `ESD` - Engineering Systems Division\n* `HST` - Medical Engineering
-          and Science\n* `IDS` - Data, Systems, and Society\n* `MAS` - Media Arts
-          and Sciences\n* `PE` - Athletics, Physical Education and Recreation\n* `SP`
-          - Special Programs\n* `STS` - Science, Technology, and Society\n* `WGS`
-          - Women's and Gender Studies"
+          `21H` - History\n* `21L` - Literature\n* `21M` - Music\n* `21T` - Theater
+          Arts\n* `22` - Nuclear Science and Engineering\n* `24` - Linguistics and
+          Philosophy\n* `CC` - Concourse\n* `CMS-W` - Comparative Media Studies/Writing\n*
+          `EC` - Edgerton Center\n* `ES` - Experimental Study Group\n* `ESD` - Engineering
+          Systems Division\n* `HST` - Medical Engineering and Science\n* `IDS` - Data,
+          Systems, and Society\n* `MAS` - Media Arts and Sciences\n* `PE` - Athletics,
+          Physical Education and Recreation\n* `SP` - Special Programs\n* `STS` -
+          Science, Technology, and Society\n* `WGS` - Women's and Gender Studies"
       - in: query
         name: dev_mode
         schema:
@@ -4884,7 +4881,7 @@ paths:
               * `21G` - Global Languages
               * `21H` - History
               * `21L` - Literature
-              * `21M` - Music and Theater Arts
+              * `21M` - Music
               * `21T` - Theater Arts
               * `22` - Nuclear Science and Engineering
               * `24` - Linguistics and Philosophy
@@ -4909,15 +4906,14 @@ paths:
           Sciences\n* `14` - Economics\n* `15` - Management\n* `16` - Aeronautics
           and Astronautics\n* `17` - Political Science\n* `18` - Mathematics\n* `20`
           - Biological Engineering\n* `21A` - Anthropology\n* `21G` - Global Languages\n*
-          `21H` - History\n* `21L` - Literature\n* `21M` - Music and Theater Arts\n*
-          `21T` - Theater Arts\n* `22` - Nuclear Science and Engineering\n* `24` -
-          Linguistics and Philosophy\n* `CC` - Concourse\n* `CMS-W` - Comparative
-          Media Studies/Writing\n* `EC` - Edgerton Center\n* `ES` - Experimental Study
-          Group\n* `ESD` - Engineering Systems Division\n* `HST` - Medical Engineering
-          and Science\n* `IDS` - Data, Systems, and Society\n* `MAS` - Media Arts
-          and Sciences\n* `PE` - Athletics, Physical Education and Recreation\n* `SP`
-          - Special Programs\n* `STS` - Science, Technology, and Society\n* `WGS`
-          - Women's and Gender Studies"
+          `21H` - History\n* `21L` - Literature\n* `21M` - Music\n* `21T` - Theater
+          Arts\n* `22` - Nuclear Science and Engineering\n* `24` - Linguistics and
+          Philosophy\n* `CC` - Concourse\n* `CMS-W` - Comparative Media Studies/Writing\n*
+          `EC` - Edgerton Center\n* `ES` - Experimental Study Group\n* `ESD` - Engineering
+          Systems Division\n* `HST` - Medical Engineering and Science\n* `IDS` - Data,
+          Systems, and Society\n* `MAS` - Media Arts and Sciences\n* `PE` - Athletics,
+          Physical Education and Recreation\n* `SP` - Special Programs\n* `STS` -
+          Science, Technology, and Society\n* `WGS` - Women's and Gender Studies"
       - in: query
         name: dev_mode
         schema:
@@ -5441,7 +5437,7 @@ paths:
               * `21G` - Global Languages
               * `21H` - History
               * `21L` - Literature
-              * `21M` - Music and Theater Arts
+              * `21M` - Music
               * `21T` - Theater Arts
               * `22` - Nuclear Science and Engineering
               * `24` - Linguistics and Philosophy
@@ -5466,15 +5462,14 @@ paths:
           Sciences\n* `14` - Economics\n* `15` - Management\n* `16` - Aeronautics
           and Astronautics\n* `17` - Political Science\n* `18` - Mathematics\n* `20`
           - Biological Engineering\n* `21A` - Anthropology\n* `21G` - Global Languages\n*
-          `21H` - History\n* `21L` - Literature\n* `21M` - Music and Theater Arts\n*
-          `21T` - Theater Arts\n* `22` - Nuclear Science and Engineering\n* `24` -
-          Linguistics and Philosophy\n* `CC` - Concourse\n* `CMS-W` - Comparative
-          Media Studies/Writing\n* `EC` - Edgerton Center\n* `ES` - Experimental Study
-          Group\n* `ESD` - Engineering Systems Division\n* `HST` - Medical Engineering
-          and Science\n* `IDS` - Data, Systems, and Society\n* `MAS` - Media Arts
-          and Sciences\n* `PE` - Athletics, Physical Education and Recreation\n* `SP`
-          - Special Programs\n* `STS` - Science, Technology, and Society\n* `WGS`
-          - Women's and Gender Studies"
+          `21H` - History\n* `21L` - Literature\n* `21M` - Music\n* `21T` - Theater
+          Arts\n* `22` - Nuclear Science and Engineering\n* `24` - Linguistics and
+          Philosophy\n* `CC` - Concourse\n* `CMS-W` - Comparative Media Studies/Writing\n*
+          `EC` - Edgerton Center\n* `ES` - Experimental Study Group\n* `ESD` - Engineering
+          Systems Division\n* `HST` - Medical Engineering and Science\n* `IDS` - Data,
+          Systems, and Society\n* `MAS` - Media Arts and Sciences\n* `PE` - Athletics,
+          Physical Education and Recreation\n* `SP` - Special Programs\n* `STS` -
+          Science, Technology, and Society\n* `WGS` - Women's and Gender Studies"
       - in: query
         name: dev_mode
         schema:
@@ -5989,7 +5984,7 @@ paths:
               * `21G` - Global Languages
               * `21H` - History
               * `21L` - Literature
-              * `21M` - Music and Theater Arts
+              * `21M` - Music
               * `21T` - Theater Arts
               * `22` - Nuclear Science and Engineering
               * `24` - Linguistics and Philosophy
@@ -6014,15 +6009,14 @@ paths:
           Sciences\n* `14` - Economics\n* `15` - Management\n* `16` - Aeronautics
           and Astronautics\n* `17` - Political Science\n* `18` - Mathematics\n* `20`
           - Biological Engineering\n* `21A` - Anthropology\n* `21G` - Global Languages\n*
-          `21H` - History\n* `21L` - Literature\n* `21M` - Music and Theater Arts\n*
-          `21T` - Theater Arts\n* `22` - Nuclear Science and Engineering\n* `24` -
-          Linguistics and Philosophy\n* `CC` - Concourse\n* `CMS-W` - Comparative
-          Media Studies/Writing\n* `EC` - Edgerton Center\n* `ES` - Experimental Study
-          Group\n* `ESD` - Engineering Systems Division\n* `HST` - Medical Engineering
-          and Science\n* `IDS` - Data, Systems, and Society\n* `MAS` - Media Arts
-          and Sciences\n* `PE` - Athletics, Physical Education and Recreation\n* `SP`
-          - Special Programs\n* `STS` - Science, Technology, and Society\n* `WGS`
-          - Women's and Gender Studies"
+          `21H` - History\n* `21L` - Literature\n* `21M` - Music\n* `21T` - Theater
+          Arts\n* `22` - Nuclear Science and Engineering\n* `24` - Linguistics and
+          Philosophy\n* `CC` - Concourse\n* `CMS-W` - Comparative Media Studies/Writing\n*
+          `EC` - Edgerton Center\n* `ES` - Experimental Study Group\n* `ESD` - Engineering
+          Systems Division\n* `HST` - Medical Engineering and Science\n* `IDS` - Data,
+          Systems, and Society\n* `MAS` - Media Arts and Sciences\n* `PE` - Athletics,
+          Physical Education and Recreation\n* `SP` - Special Programs\n* `STS` -
+          Science, Technology, and Society\n* `WGS` - Women's and Gender Studies"
       - in: query
         name: dev_mode
         schema:
@@ -6515,7 +6509,7 @@ paths:
           * `21G` - Global Languages
           * `21H` - History
           * `21L` - Literature
-          * `21M` - Music and Theater Arts
+          * `21M` - Music
           * `21T` - Theater Arts
           * `22` - Nuclear Science and Engineering
           * `24` - Linguistics and Philosophy
@@ -7282,7 +7276,7 @@ paths:
           * `21G` - Global Languages
           * `21H` - History
           * `21L` - Literature
-          * `21M` - Music and Theater Arts
+          * `21M` - Music
           * `21T` - Theater Arts
           * `22` - Nuclear Science and Engineering
           * `24` - Linguistics and Philosophy
@@ -7740,7 +7734,7 @@ paths:
           * `21G` - Global Languages
           * `21H` - History
           * `21L` - Literature
-          * `21M` - Music and Theater Arts
+          * `21M` - Music
           * `21T` - Theater Arts
           * `22` - Nuclear Science and Engineering
           * `24` - Linguistics and Philosophy
@@ -8254,7 +8248,7 @@ paths:
           * `21G` - Global Languages
           * `21H` - History
           * `21L` - Literature
-          * `21M` - Music and Theater Arts
+          * `21M` - Music
           * `21T` - Theater Arts
           * `22` - Nuclear Science and Engineering
           * `24` - Linguistics and Philosophy
@@ -9144,7 +9138,7 @@ paths:
           * `21G` - Global Languages
           * `21H` - History
           * `21L` - Literature
-          * `21M` - Music and Theater Arts
+          * `21M` - Music
           * `21T` - Theater Arts
           * `22` - Nuclear Science and Engineering
           * `24` - Linguistics and Philosophy
@@ -9637,7 +9631,7 @@ paths:
           * `21G` - Global Languages
           * `21H` - History
           * `21L` - Literature
-          * `21M` - Music and Theater Arts
+          * `21M` - Music
           * `21T` - Theater Arts
           * `22` - Nuclear Science and Engineering
           * `24` - Linguistics and Philosophy
@@ -11071,7 +11065,7 @@ components:
         * `21G` - Global Languages
         * `21H` - History
         * `21L` - Literature
-        * `21M` - Music and Theater Arts
+        * `21M` - Music
         * `21T` - Theater Arts
         * `22` - Nuclear Science and Engineering
         * `24` - Linguistics and Philosophy
@@ -11110,7 +11104,7 @@ components:
       - Global Languages
       - History
       - Literature
-      - Music and Theater Arts
+      - Music
       - Theater Arts
       - Nuclear Science and Engineering
       - Linguistics and Philosophy
@@ -14817,15 +14811,14 @@ components:
             - Management\n* `16` - Aeronautics and Astronautics\n* `17` - Political
             Science\n* `18` - Mathematics\n* `20` - Biological Engineering\n* `21A`
             - Anthropology\n* `21G` - Global Languages\n* `21H` - History\n* `21L`
-            - Literature\n* `21M` - Music and Theater Arts\n* `21T` - Theater Arts\n*
-            `22` - Nuclear Science and Engineering\n* `24` - Linguistics and Philosophy\n*
-            `CC` - Concourse\n* `CMS-W` - Comparative Media Studies/Writing\n* `EC`
-            - Edgerton Center\n* `ES` - Experimental Study Group\n* `ESD` - Engineering
-            Systems Division\n* `HST` - Medical Engineering and Science\n* `IDS` -
-            Data, Systems, and Society\n* `MAS` - Media Arts and Sciences\n* `PE`
-            - Athletics, Physical Education and Recreation\n* `SP` - Special Programs\n*
-            `STS` - Science, Technology, and Society\n* `WGS` - Women's and Gender
-            Studies"
+            - Literature\n* `21M` - Music\n* `21T` - Theater Arts\n* `22` - Nuclear
+            Science and Engineering\n* `24` - Linguistics and Philosophy\n* `CC` -
+            Concourse\n* `CMS-W` - Comparative Media Studies/Writing\n* `EC` - Edgerton
+            Center\n* `ES` - Experimental Study Group\n* `ESD` - Engineering Systems
+            Division\n* `HST` - Medical Engineering and Science\n* `IDS` - Data, Systems,
+            and Society\n* `MAS` - Media Arts and Sciences\n* `PE` - Athletics, Physical
+            Education and Recreation\n* `SP` - Special Programs\n* `STS` - Science,
+            Technology, and Society\n* `WGS` - Women's and Gender Studies"
         level:
           type: array
           items:

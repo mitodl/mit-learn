@@ -6,7 +6,7 @@ import type { SelectFieldProps } from "./SelectField"
 import { MenuItem } from "../MenuItem/MenuItem"
 
 import Stack from "@mui/material/Stack"
-import Grid from "@mui/material/Grid"
+import Grid from "@mui/material/Grid2"
 import { fn } from "storybook/test"
 
 const SIZES = ["small", "medium", "large"] satisfies SelectFieldProps["size"][]
@@ -88,10 +88,8 @@ export const States: Story = {
       <Grid container spacing={2} alignItems="top" maxWidth="400px">
         {STATES.map(({ label, extraProps }) => (
           <>
-            <Grid item xs={4}>
-              {label}
-            </Grid>
-            <Grid item xs={8}>
+            <Grid size={4}>{label}</Grid>
+            <Grid size={8}>
               <SelectField {...props} {...extraProps}>
                 {ITEMS.map((item) => (
                   <MenuItem

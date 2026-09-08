@@ -135,7 +135,7 @@ const ProfileContent: React.FC = () => {
                 xs: 3,
               },
             }}
-            gridItemProps={{ xs: 3 }}
+            gridItemProps={{ size: 3 }}
           />
           <CheckboxChoiceField
             name="goals"

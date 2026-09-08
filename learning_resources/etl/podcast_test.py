@@ -240,6 +240,42 @@ def test_transform_with_error(mocker, mock_github_client):
     assert results[0]["url"] == "http://website.url/podcast"
 
 
+@pytest.mark.parametrize(
+    "break_item",
+    [
+        lambda item: item.pubDate.decompose(),
+        lambda item: item.pubDate.string.replace_with("not a date"),
+        lambda item: item.enclosure.decompose(),
+        lambda item: item.append(bs("<image/>", "xml").image),
+    ],
+    ids=["no-pubdate", "bad-pubdate", "no-enclosure", "image-without-href"],
+)
+def test_transform_skips_feed_with_bad_episode(mocker, break_item):
+    """A feed with one unparseable item is logged and skipped; later feeds still load"""
+    bad_feed = bs(rss_content(), "xml")
+    break_item(bad_feed.find("item"))
+    mock_log = mocker.patch("learning_resources.etl.podcast.log.exception")
+
+    results = list(
+        transform(
+            [
+                (bad_feed, {"rss_url": "http://website.url/bad/rss.xml"}),
+                (
+                    bs(rss_content(), "xml"),
+                    {"rss_url": "http://website.url/podcast/rss.xml"},
+                ),
+            ]
+        )
+    )
+
+    mock_log.assert_called_once_with(
+        "Error parsing podcast data from %s", "http://website.url/bad/rss.xml"
+    )
+    assert [p["podcast"]["rss_url"] for p in results] == [
+        "http://website.url/podcast/rss.xml"
+    ]
+
+
 @pytest.mark.parametrize("exception_cls", [RequestsConnectionError, HTTPError, Timeout])
 def test_extract_request_error(mocker, mock_github_client, exception_cls):
     """Test extract logs and skips a feed that can't be fetched"""
