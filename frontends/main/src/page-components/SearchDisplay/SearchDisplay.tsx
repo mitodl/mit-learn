@@ -701,10 +701,11 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
   }
 
   const setSearchParams = (
+    name: string,
     value: URLSearchParams | ((prev: URLSearchParams) => URLSearchParams),
   ) => {
     actuallySetSearchParams(value)
-    captureFilterEvent("search_params")
+    captureFilterEvent(name)
   }
 
   const toggleParamValue = (
@@ -752,7 +753,7 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
         size="small"
         value={searchParams.get("search_mode") || adminParams?.search_mode}
         onChange={(e) =>
-          setSearchParams((prev) => {
+          setSearchParams("search_mode", (prev) => {
             const next = new URLSearchParams(prev)
             next.set("search_mode", e.target.value as string)
             if (e.target.value !== "phrase") {
@@ -918,7 +919,7 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
                       : (adminParams?.show_ocw_files ?? false)
                   }
                   onChange={(e) =>
-                    setSearchParams((prev) => {
+                    setSearchParams("show_ocw_files", (prev) => {
                       const next = new URLSearchParams(prev)
                       if (e.target.checked) {
                         next.set("show_ocw_files", "true")
