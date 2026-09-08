@@ -8,6 +8,7 @@ from types import SimpleNamespace
 from zoneinfo import ZoneInfo
 
 import pytest
+from defusedxml import ElementTree
 
 from learning_resources.constants import PlatformType
 from learning_resources.etl.constants import ETLSource
@@ -1758,6 +1759,30 @@ def test_unpublish_staff_only_content_files_nothing_hidden(
         )
         == 0
     )
+    mock_deindex_tasks.opensearch.assert_not_called()
+
+
+def test_unpublish_staff_only_content_files_malformed_archive(
+    staff_only_run, mock_deindex_tasks, mocker
+):
+    """A malformed archive is skipped without touching its content files"""
+    mocker.patch(
+        "learning_resources.etl.edx_shared.staff_only_olx_paths",
+        side_effect=ElementTree.ParseError("bad"),
+    )
+    ContentFileFactory.create(
+        run=staff_only_run.run,
+        key=get_edx_module_id("course/html/h_staff.xml", staff_only_run.run),
+        published=True,
+    )
+
+    assert (
+        unpublish_staff_only_content_files(
+            staff_only_run.source, [staff_only_run.course.id], [staff_only_run.key]
+        )
+        == 0
+    )
+    assert ContentFile.objects.filter(run=staff_only_run.run, published=True).exists()
     mock_deindex_tasks.opensearch.assert_not_called()
 
 

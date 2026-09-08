@@ -7,6 +7,7 @@ from subprocess import CalledProcessError, check_call
 from tarfile import ReadError
 from tempfile import TemporaryDirectory
 
+from defusedxml import ElementTree
 from django.conf import settings
 from django.core.cache import caches
 from django.db.models import Prefetch, Q
@@ -406,10 +407,12 @@ def unpublish_staff_only_content_files(
             olx_path = next((p for p in Path(tempdir).iterdir() if p.is_dir()), None)
             if olx_path is None:
                 continue
-            hidden_keys = {
-                get_edx_module_id(str(path), run)
-                for path in staff_only_olx_paths(olx_path)
-            }
+            try:
+                hidden_paths = staff_only_olx_paths(olx_path)
+            except ElementTree.ParseError:
+                log.exception("Malformed OLX in %s, skipping", key)
+                continue
+            hidden_keys = {get_edx_module_id(str(path), run) for path in hidden_paths}
         if not hidden_keys:
             continue
         # scoped to this run: keys embed the run_id, but never rely on that alone

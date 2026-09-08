@@ -334,10 +334,13 @@ def _hidden_block_files(root: Path, tag: str, url_name: str, element) -> set[Pat
 
 
 def _parse_olx_block(root: Path, tag: str, url_name: str):
-    """Parse <tag>/<url_name>.xml, returning None if missing or malformed"""
+    """
+    Parse <tag>/<url_name>.xml, returning None if missing. Malformed XML raises
+    so a course is never ingested with unverified staff-only status.
+    """
     try:
         return ElementTree.parse(root / tag / f"{url_name}.xml").getroot()
-    except (FileNotFoundError, ElementTree.ParseError):
+    except FileNotFoundError:
         return None
 
 

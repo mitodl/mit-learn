@@ -8,6 +8,7 @@ from tempfile import TemporaryDirectory
 
 import pypdf
 import pytest
+from defusedxml import ElementTree
 
 from learning_resources.constants import (
     CONTENT_TYPE_FILE,
@@ -368,6 +369,18 @@ def test_documents_from_olx_skips_staff_only_subtrees(tmp_path):
         "tabs/syllabus.html",
         "vertical/v_ok.xml",
     ]
+
+
+@pytest.mark.parametrize("bad_file", ["course.xml", "chapter/a.xml"])
+def test_documents_from_olx_malformed_block_fails_closed(tmp_path, bad_file):
+    """A malformed block raises rather than ingesting files with unchecked visibility"""
+    olx = tmp_path / "course"
+    _write_olx(olx, "course.xml", '<course url_name="run"/>')
+    _write_olx(olx, "course/run.xml", '<course><chapter url_name="a"/></course>')
+    _write_olx(olx, "chapter/a.xml", '<chapter visible_to_staff_only="true"/>')
+    _write_olx(olx, bad_file, "<broken")
+    with pytest.raises(ElementTree.ParseError):
+        list(utils.documents_from_olx(str(olx)))
 
 
 def test_documents_from_olx_without_course_xml_yields_everything(tmp_path):
