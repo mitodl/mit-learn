@@ -31,6 +31,7 @@ import { useReplaceBasketItem } from "@/common/mitxonline/useReplaceBasketItem"
 import { useComplianceGate } from "@/common/mitxonline/useComplianceGate"
 import { useCreateVerifiedProgramEnrollment } from "api/mitxonline-hooks/enrollment"
 import { SILENCE_ERROR_TOAST } from "api/mutation-meta"
+import { badRequestDetail } from "api/mutation-errors"
 import { isInPast, calendarDaysUntil, NoSSR } from "ol-utilities"
 import { SiblingRunsPanel, SiblingRunsToggle } from "./SiblingRunsAccordion"
 import { EnrollmentStatusIcon } from "./EnrollmentStatus"
@@ -140,9 +141,10 @@ const UpgradeBanner: React.FC<
         if (coursewareUrl) {
           window.location.href = coursewareUrl
         }
-      } catch {
+      } catch (error) {
         onUpgradeFailure?.(
-          "There was a problem upgrading your enrollment. Please try again.",
+          badRequestDetail(error) ??
+            "There was a problem upgrading your enrollment. Please try again.",
         )
       }
       return
@@ -152,9 +154,10 @@ const UpgradeBanner: React.FC<
 
     try {
       await replaceBasketItem.mutateAsync(productId)
-    } catch {
+    } catch (error) {
       onUpgradeFailure?.(
-        "There was a problem adding the certificate to your cart.",
+        badRequestDetail(error) ??
+          "There was a problem adding the certificate to your cart.",
       )
     }
   }
