@@ -46,7 +46,7 @@ const ProgramEnrollArea: React.FC<ProgramEnrollAreaProps> = ({
   // three here, together, is what keeps them from drifting apart.
   const credit = appliedSavings?.kind === "credit"
 
-  const { state, offering, isStatusLoading, isPending, isError } =
+  const { state, offering, isStatusLoading, isPending, error } =
     useProgramEnrollment(program, {
       tracking: { placement: "infobox" },
       displayAsCourse,
@@ -65,7 +65,7 @@ const ProgramEnrollArea: React.FC<ProgramEnrollAreaProps> = ({
       state={state}
       isStatusLoading={isStatusLoading}
       isPending={isPending}
-      isError={isError}
+      error={error}
       price={price}
       compactPrice={showsRange}
       priceBlock={priceBlock}
