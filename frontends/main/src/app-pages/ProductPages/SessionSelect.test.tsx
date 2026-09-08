@@ -73,6 +73,7 @@ describe("SessionSelect", () => {
     const run = makeRun({
       start_date: "2026-12-08",
       end_date: "2027-02-12",
+      is_self_paced: false,
       is_upgradable: true,
     })
     renderWithProviders(
@@ -164,6 +165,7 @@ describe("SessionSelect", () => {
     const later = makeRun({
       start_date: "2027-01-10",
       end_date: "2027-04-01",
+      is_self_paced: false,
       is_upgradable: true,
     })
     // Pass them out of order to prove the component sorts.
