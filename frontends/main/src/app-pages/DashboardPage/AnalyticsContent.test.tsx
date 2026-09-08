@@ -13,6 +13,7 @@ import type { OrganizationPage } from "@mitodl/mitxonline-api-axios/v2"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import { allowConsoleErrors } from "ol-test-utilities"
 import { ForbiddenError } from "@/common/errors"
+import { FeatureFlags } from "@/common/feature_flags"
 import { contractAdminView, organizationAnalyticsView } from "@/common/urls"
 import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
 import AnalyticsContent from "./AnalyticsContent"
@@ -911,5 +912,57 @@ describe("AnalyticsContent, contract-scoped", () => {
       "href",
       contractAdminView(orgSlug, second.slug),
     )
+  })
+
+  test("hides the Manage seats button when the manager-dashboard flag is off", async () => {
+    // The button links to ContractAdminPage, which throws ForbiddenError
+    // without this flag — surfacing the button here without it would send a
+    // manager to a dead end.
+    mockedUseFeatureFlagEnabled.mockImplementation(
+      (flag) => flag === FeatureFlags.B2BAnalyticsDashboard,
+    )
+    const contract = factories.contracts.contract()
+    const org = orgWithUuid({ contracts: [contract] })
+    setManagerOrgs([org])
+
+    const contractId = String(contract.id)
+    const page = { limit: 200 }
+    setMockResponse.get(
+      analyticsUrls.contracts.contractUtilization(ORG_UUID, contractId, page),
+      analyticsFactories.envelope([analyticsFactories.contractUtilization()], {
+        as_of: AS_OF,
+      }),
+    )
+    setMockResponse.get(
+      analyticsUrls.contracts.engagementTrend(ORG_UUID, contractId, page),
+      analyticsFactories.envelope(
+        [analyticsFactories.contractMonthlyEngagementTrend()],
+        { as_of: AS_OF },
+      ),
+    )
+    setMockResponse.get(
+      analyticsUrls.contracts.enrollmentFunnel(ORG_UUID, contractId, page),
+      analyticsFactories.envelope(
+        [analyticsFactories.enrollmentCompletionFunnel()],
+        { as_of: AS_OF },
+      ),
+    )
+    setMockResponse.get(
+      analyticsUrls.contracts.contentEngagement(ORG_UUID, contractId, page),
+      analyticsFactories.envelope(
+        [analyticsFactories.contractContentEngagementDepth()],
+        { as_of: AS_OF },
+      ),
+    )
+
+    const orgSlug = org.slug.replace(/^org-/, "")
+    renderWithProviders(
+      <AnalyticsContent orgSlug={orgSlug} contractSlug={contract.slug} />,
+    )
+
+    await screen.findByText(`Analytics · ${contract.name}`)
+    expect(
+      screen.queryByRole("link", { name: "Manage seats" }),
+    ).not.toBeInTheDocument()
   })
 })
