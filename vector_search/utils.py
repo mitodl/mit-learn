@@ -1960,6 +1960,12 @@ def order_by_query(
     Scores are 32-bit, so dates within a couple of minutes of each other can
     order as equals. Start dates are hours apart at the very least, and the
     alternative is dropping most of the collection.
+
+    Every valueless point ties at the sentinel score, so this tail comes back in
+    point-id order, where the scroll path's equivalent tail (see
+    QdrantView._scroll_missing_order_by_key) is ordered by created_on
+    descending. The same request can therefore order its tail differently
+    depending on whether a query string sends it down the formula path.
     """
     schema = COLLECTION_INDEX_MAP.get(collection_name, {}).get(order_by.key)
     if (

@@ -9,7 +9,6 @@ from opensearch_dsl import response
 from learning_resources.constants import OCW_CONTENT_CATEGORY_OPEN_TEXTBOOKS
 from learning_resources.factories import LearningResourceFactory
 from learning_resources_search.api import (
-    SORT_TIEBREAKERS,
     Search,
     construct_search,
     execute_learn_search,
@@ -36,6 +35,15 @@ from learning_resources_search.constants import (
 )
 from learning_resources_search.factories import PercolateQueryFactory
 from learning_resources_search.models import PercolateQuery
+
+# api.SORT_TIEBREAKERS, as generate_sort_clause returns them
+SORT_TIEBREAKER_CLAUSES = [
+    "featured_rank",
+    "is_learning_material",
+    "is_incomplete_or_stale",
+    "-created_on",
+    "id",
+]
 
 # api.SORT_TIEBREAKERS, as the query body serializes them
 SERIALIZED_SORT_TIEBREAKERS = [
@@ -100,87 +108,122 @@ def test_relevant_indexes(endpoint, resourse_types, aggregations, result):
 
 
 @pytest.mark.parametrize(
-    ("sort_param", "departments", "result"),
+    ("sort_param", "departments", "expected"),
     [
-        ("id", None, "id"),
-        ("-id", ["7"], "-id"),
+        ("-id", ["7"], ["-id", *SORT_TIEBREAKER_CLAUSES]),
         (
             "start_date",
             ["5"],
-            {"runs.start_date": {"order": "asc", "nested": {"path": "runs"}}},
+            [
+                {"runs.start_date": {"order": "asc", "nested": {"path": "runs"}}},
+                *SORT_TIEBREAKER_CLAUSES,
+            ],
         ),
         (
             "-start_date",
             None,
-            {"runs.start_date": {"order": "desc", "nested": {"path": "runs"}}},
+            [
+                {"runs.start_date": {"order": "desc", "nested": {"path": "runs"}}},
+                *SORT_TIEBREAKER_CLAUSES,
+            ],
         ),
         (
             "mitcoursenumber",
             None,
-            {
-                "course.course_numbers.sort_coursenum": {
-                    "order": "asc",
-                    "nested": {
-                        "path": "course.course_numbers",
-                        "filter": {"term": {"course.course_numbers.primary": True}},
-                    },
-                }
-            },
+            [
+                {
+                    "course.course_numbers.sort_coursenum": {
+                        "order": "asc",
+                        "nested": {
+                            "path": "course.course_numbers",
+                            "filter": {"term": {"course.course_numbers.primary": True}},
+                        },
+                    }
+                },
+                *SORT_TIEBREAKER_CLAUSES,
+            ],
         ),
         (
             "mitcoursenumber",
             ["7", "5"],
-            {
-                "course.course_numbers.sort_coursenum": {
-                    "order": "asc",
-                    "nested": {
-                        "path": "course.course_numbers",
-                        "filter": {
-                            "bool": {
-                                "should": [
-                                    {
-                                        "term": {
-                                            "course.course_numbers.department.department_id": (
-                                                "7"
-                                            )
-                                        }
-                                    },
-                                    {
-                                        "term": {
-                                            "course.course_numbers.department.department_id": (
-                                                "5"
-                                            )
-                                        }
-                                    },
-                                ]
-                            }
+            [
+                {
+                    "course.course_numbers.sort_coursenum": {
+                        "order": "asc",
+                        "nested": {
+                            "path": "course.course_numbers",
+                            "filter": {
+                                "bool": {
+                                    "should": [
+                                        {
+                                            "term": {
+                                                "course.course_numbers.department.department_id": (
+                                                    "7"
+                                                )
+                                            }
+                                        },
+                                        {
+                                            "term": {
+                                                "course.course_numbers.department.department_id": (
+                                                    "5"
+                                                )
+                                            }
+                                        },
+                                    ]
+                                }
+                            },
                         },
-                    },
-                }
-            },
+                    }
+                },
+                *SORT_TIEBREAKER_CLAUSES,
+            ],
         ),
     ],
 )
-def test_generate_sort_clause(sort_param, departments, result):
+def test_generate_sort_clause(sort_param, departments, expected):
     """The requested sort leads, followed by the tiebreakers"""
     params = {"sortby": sort_param, "department": departments}
-    assert generate_sort_clause(params) == [
-        result,
-        *(sort for sort in SORT_TIEBREAKERS if sort != result),
-    ]
+    assert generate_sort_clause(params) == expected
 
 
 @pytest.mark.parametrize(
-    ("sortby", "duplicated"),
-    [("new", "-created_on"), ("featured", "featured_rank"), ("id", "id")],
+    ("sortby", "expected"),
+    [
+        (
+            "new",
+            [
+                "-created_on",
+                "featured_rank",
+                "is_learning_material",
+                "is_incomplete_or_stale",
+                "id",
+            ],
+        ),
+        (
+            "featured",
+            [
+                "featured_rank",
+                "is_learning_material",
+                "is_incomplete_or_stale",
+                "-created_on",
+                "id",
+            ],
+        ),
+        (
+            "id",
+            [
+                "id",
+                "featured_rank",
+                "is_learning_material",
+                "is_incomplete_or_stale",
+                "-created_on",
+            ],
+        ),
+    ],
 )
-def test_generate_sort_clause_no_duplicate_tiebreaker(sortby, duplicated):
+def test_generate_sort_clause_no_duplicate_tiebreaker(sortby, expected):
     """A sort the tiebreakers repeat is not sorted on twice"""
-    clauses = generate_sort_clause({"sortby": sortby})
-
-    assert clauses[0] == duplicated
-    assert clauses.count(duplicated) == 1
-    assert clauses[1:] == [sort for sort in SORT_TIEBREAKERS if sort != duplicated]
+    assert generate_sort_clause({"sortby": sortby}) == expected
 
 
 def test_generate_sort_clause_content_files():

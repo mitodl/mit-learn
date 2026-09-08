@@ -553,6 +553,40 @@ def test_vector_search_nullable_sortby_keeps_results(mocker, client, hybrid_sear
     assert list(query.defaults) == ["next_start_date"]
 
 
+def _scroll_page_mock(mocker, dated, undated):
+    """
+    Build an async client whose ordered scroll returns `dated` points and
+    whose is_empty scroll returns `undated`, each labelled by readable_id.
+    """
+    mock_qdrant = mocker.patch(
+        "qdrant_client.AsyncQdrantClient", return_value=mocker.AsyncMock()
+    )()
+    mock_qdrant.scroll = mocker.AsyncMock(
+        side_effect=[
+            (
+                [
+                    mocker.MagicMock(payload={"readable_id": f"dated-{index}"})
+                    for index in range(dated)
+                ],
+                None,
+            ),
+            (
+                [
+                    mocker.MagicMock(payload={"readable_id": f"undated-{index}"})
+                    for index in range(undated)
+                ],
+                None,
+            ),
+        ]
+    )
+    mock_qdrant.count = mocker.AsyncMock(return_value=CountResult(count=10))
+    mocker.patch(
+        "vector_search.views.async_qdrant_client",
+        return_value=mock_qdrant,
+    )
+    return mock_qdrant
+
+
 @pytest.mark.parametrize(
     ("sortby", "expected_scrolls"),
     [
@@ -565,22 +599,10 @@ def test_vector_search_nullable_sortby_keeps_results(mocker, client, hybrid_sear
 )
 def test_vector_search_nullable_sortby_scroll(mocker, client, sortby, expected_scrolls):
     """An ordered scroll is topped up with the points it cannot order"""
-    mock_qdrant = mocker.patch(
-        "qdrant_client.AsyncQdrantClient", return_value=mocker.AsyncMock()
-    )()
-    ordered_points = [mocker.MagicMock(payload={"readable_id": "dated"})]
-    missing_points = [mocker.MagicMock(payload={"readable_id": "undated"})]
-    mock_qdrant.scroll = mocker.AsyncMock(
-        side_effect=[(ordered_points, None), (missing_points, None)]
-    )
-    mock_qdrant.count = mocker.AsyncMock(return_value=CountResult(count=10))
-    mocker.patch(
-        "vector_search.views.async_qdrant_client",
-        return_value=mock_qdrant,
-    )
+    mock_qdrant = _scroll_page_mock(mocker, dated=1, undated=1)
 
     view = QdrantView()
-    asyncio.run(
+    results = asyncio.run(
         view.async_vector_search(
             "", {"sortby": sortby}, order_by=sortby, limit=20, offset=0
         )
@@ -588,8 +610,10 @@ def test_vector_search_nullable_sortby_scroll(mocker, client, sortby, expected_s
 
     assert len(mock_qdrant.scroll.mock_calls) == expected_scrolls
     if expected_scrolls == 1:
+        assert [hit["readable_id"] for hit in results["hits"]] == ["dated-0"]
         return
 
+    assert [hit["readable_id"] for hit in results["hits"]] == ["dated-0", "undated-0"]
     call_kwargs = mock_qdrant.scroll.mock_calls[1].kwargs
     # only the rest of the requested window is left to fill
     assert call_kwargs["limit"] == 19
@@ -600,6 +624,37 @@ def test_vector_search_nullable_sortby_scroll(mocker, client, sortby, expected_s
         models.IsEmptyCondition(is_empty=models.PayloadField(key="next_start_date"))
         in call_kwargs["scroll_filter"].must
     )
+
+
+@pytest.mark.parametrize(
+    ("offset", "limit", "expected"),
+    [
+        # wholly inside the ordered points
+        (0, 2, ["dated-0", "dated-1"]),
+        # straddling the join, so the slice has to count the appended tail
+        (2, 2, ["dated-2", "undated-0"]),
+        # wholly inside the tail
+        (4, 2, ["undated-1", "undated-2"]),
+    ],
+)
+def test_vector_search_nullable_sortby_scroll_pages(
+    mocker, client, offset, limit, expected
+):
+    """The topped-up scroll is sliced as one ordered set, tail included"""
+    _scroll_page_mock(mocker, dated=3, undated=3)
+
+    view = QdrantView()
+    results = asyncio.run(
+        view.async_vector_search(
+            "",
+            {"sortby": "next_start_date"},
+            order_by="next_start_date",
+            limit=limit,
+            offset=offset,
+        )
+    )
+
+    assert [hit["readable_id"] for hit in results["hits"]] == expected
 
 
 def test_vector_search_sortby_pagination(mocker, client):

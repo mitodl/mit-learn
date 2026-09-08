@@ -17,7 +17,7 @@ from django.contrib.auth.models import Group
 from django.urls import reverse
 from freezegun import freeze_time
 from langchain_core.documents import Document
-from qdrant_client import models
+from qdrant_client import QdrantClient, models
 from qdrant_client.http.models.models import CountResult
 from qdrant_client.models import PointStruct
 
@@ -3491,6 +3491,52 @@ def test_order_by_query_nullable_key_orders_by_formula(direction):
         assert query.formula == models.NegExpression(
             neg=models.DatetimeKeyExpression(datetime_key="next_start_date")
         )
+
+
+@pytest.mark.parametrize("direction", [models.Direction.ASC, models.Direction.DESC])
+def test_order_by_query_nullable_key_orders_missing_last(direction):
+    """
+    Run the formula for real: whichever direction is asked for, the point with
+    no date lands last rather than first or nowhere.
+
+    The in-memory client raises on a payload holding an explicit
+    `"next_start_date": None`, so only the missing-key case is covered here.
+    Real Qdrant orders a null value and an absent key the same way.
+    """
+    dated_first = "2026-01-01T00:00:00Z"
+    dated_second = "2027-01-01T00:00:00Z"
+    vector = [0.1, 0.2]
+    client = QdrantClient(":memory:")
+    client.create_collection(
+        "test",
+        vectors_config=models.VectorParams(
+            size=len(vector), distance=models.Distance.COSINE
+        ),
+    )
+    # No payload index: the local client ignores them, and the formula reads the
+    # payload value directly rather than walking an index the way order_by does.
+    client.upsert(
+        "test",
+        [
+            PointStruct(id=0, vector=vector, payload={"next_start_date": dated_first}),
+            PointStruct(id=1, vector=vector, payload={"next_start_date": dated_second}),
+            PointStruct(id=2, vector=vector, payload={}),
+        ],
+    )
+
+    points = client.query_points(
+        "test",
+        prefetch=[models.Prefetch(query=vector, limit=10)],
+        query=order_by_query(
+            models.OrderBy(key="next_start_date", direction=direction),
+            RESOURCES_COLLECTION_NAME,
+        ),
+        limit=10,
+    ).points
+
+    assert [point.id for point in points] == (
+        [0, 1, 2] if direction == models.Direction.ASC else [1, 0, 2]
+    )
 
 
 @pytest.mark.parametrize("key", ["views", "created_on"])
