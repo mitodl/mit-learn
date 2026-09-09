@@ -396,8 +396,8 @@ export const podcastEpisodePath = (
   slug: string | undefined,
 ) => {
   const base = generatePath(PODCAST_EPISODE_PAGE_VIEW, {
-    podcastId: podcastId, // bare context id
-    episodeId: String(id),
+    podcastId, // bare context id
+    episodeId: id,
   })
   return slug === undefined ? base : `${base}/${slug}`
 }
