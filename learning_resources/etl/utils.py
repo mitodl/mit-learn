@@ -17,7 +17,6 @@ from decimal import Decimal
 from hashlib import md5
 from io import BytesIO
 from pathlib import Path
-from subprocess import check_call
 from tempfile import TemporaryDirectory
 
 import boto3
@@ -883,7 +882,8 @@ def transform_content_files(
     basedir = course_tarpath.name.split(".")[0]
     failed_source_paths = []
     with TemporaryDirectory(prefix=basedir) as inner_tempdir:
-        check_call(["tar", "xf", course_tarpath], cwd=inner_tempdir)  # noqa: S603,S607
+        with tarfile.open(course_tarpath) as tar:
+            tar.extractall(inner_tempdir, filter="data")
         olx_path = glob.glob(inner_tempdir + "/*")[0]  # noqa: PTH207
         yield from process_olx_path(
             olx_path, run, overwrite=overwrite, failed_source_paths=failed_source_paths
