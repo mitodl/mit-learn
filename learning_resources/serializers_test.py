@@ -40,7 +40,6 @@ from learning_resources.models import (
     LearningResource,
     LearningResourceRelationship,
 )
-
 from learning_resources.utils import learn_url_for_resource, path_slug
 from main.test_utils import assert_json_equal, drf_datetime
 from main.utils import frontend_absolute_url
