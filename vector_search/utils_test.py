@@ -17,7 +17,7 @@ from django.contrib.auth.models import Group
 from django.urls import reverse
 from freezegun import freeze_time
 from langchain_core.documents import Document
-from qdrant_client import models
+from qdrant_client import QdrantClient, models
 from qdrant_client.http.models.models import CountResult
 from qdrant_client.models import PointStruct
 
@@ -49,6 +49,7 @@ from main.utils import checksum_for_content
 from vector_search.constants import (
     COMPLETENESS_PAYLOAD_KEY,
     CONTENT_FILES_COLLECTION_NAME,
+    ORDER_BY_MISSING_DATETIME,
     QDRANT_CONTENT_FILE_INDEXES,
     QDRANT_CONTENT_FILE_PARAM_MAP,
     QDRANT_LEARNING_RESOURCE_INDEXES,
@@ -93,6 +94,7 @@ from vector_search.utils import (
     embed_learning_resources,
     embed_topics,
     filter_existing_qdrant_points,
+    order_by_query,
     qdrant_query_conditions,
     remove_qdrant_records,
     resource_embedding_checksum,
@@ -3465,6 +3467,95 @@ def test_check_missing_content_file_ids_skips_unimportant_block_types(mocker):
     mock_present.assert_not_called()
     mock_client.count.assert_not_called()
     mock_log.assert_not_called()
+
+
+@pytest.mark.parametrize("direction", [models.Direction.ASC, models.Direction.DESC])
+def test_order_by_query_nullable_key_orders_by_formula(direction):
+    """
+    A key a point can have no value for is ordered by a formula, so those points
+    are ordered last instead of dropped from the results by order_by
+    """
+    query = order_by_query(
+        models.OrderBy(key="next_start_date", direction=direction),
+        RESOURCES_COLLECTION_NAME,
+    )
+
+    assert isinstance(query, models.FormulaQuery)
+    assert query.defaults == {"next_start_date": ORDER_BY_MISSING_DATETIME[direction]}
+    if direction == models.Direction.DESC:
+        # a higher score ranks first, so descending is the score's own direction
+        assert query.formula == models.DatetimeKeyExpression(
+            datetime_key="next_start_date"
+        )
+    else:
+        assert query.formula == models.NegExpression(
+            neg=models.DatetimeKeyExpression(datetime_key="next_start_date")
+        )
+
+
+@pytest.mark.parametrize("direction", [models.Direction.ASC, models.Direction.DESC])
+def test_order_by_query_nullable_key_orders_missing_last(direction):
+    """
+    Run the formula for real: whichever direction is asked for, the point with
+    no date lands last rather than first or nowhere.
+
+    The in-memory client raises on a payload holding an explicit
+    `"next_start_date": None`, so only the missing-key case is covered here.
+    Real Qdrant orders a null value and an absent key the same way.
+    """
+    dated_first = "2026-01-01T00:00:00Z"
+    dated_second = "2027-01-01T00:00:00Z"
+    vector = [0.1, 0.2]
+    client = QdrantClient(":memory:")
+    client.create_collection(
+        "test",
+        vectors_config=models.VectorParams(
+            size=len(vector), distance=models.Distance.COSINE
+        ),
+    )
+    # No payload index: the local client ignores them, and the formula reads the
+    # payload value directly rather than walking an index the way order_by does.
+    client.upsert(
+        "test",
+        [
+            PointStruct(id=0, vector=vector, payload={"next_start_date": dated_first}),
+            PointStruct(id=1, vector=vector, payload={"next_start_date": dated_second}),
+            PointStruct(id=2, vector=vector, payload={}),
+        ],
+    )
+
+    points = client.query_points(
+        "test",
+        prefetch=[models.Prefetch(query=vector, limit=10)],
+        query=order_by_query(
+            models.OrderBy(key="next_start_date", direction=direction),
+            RESOURCES_COLLECTION_NAME,
+        ),
+        limit=10,
+    ).points
+
+    assert [point.id for point in points] == (
+        [0, 1, 2] if direction == models.Direction.ASC else [1, 0, 2]
+    )
+
+
+@pytest.mark.parametrize("key", ["views", "created_on"])
+def test_order_by_query_keeps_order_by_for_keys_always_present(key):
+    """Keys on every payload keep the exact ordering order_by gives them"""
+    order_by = models.OrderBy(key=key, direction=models.Direction.DESC)
+
+    assert order_by_query(order_by, RESOURCES_COLLECTION_NAME) == models.OrderByQuery(
+        order_by=order_by
+    )
+
+
+def test_order_by_query_keeps_order_by_for_other_collections():
+    """Only the resources collection carries next_start_date"""
+    order_by = models.OrderBy(key="next_start_date", direction=models.Direction.ASC)
+
+    assert order_by_query(
+        order_by, CONTENT_FILES_COLLECTION_NAME
+    ) == models.OrderByQuery(order_by=order_by)
 
 
 # Rendered in a subprocess by test_resource_embedding_checksum_is_process_stable.

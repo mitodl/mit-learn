@@ -28,6 +28,8 @@ type SimpleMenuItem = SimpleMenuItemOnClick | SimpleMenuItemHref
 type TriggerElement = React.ReactElement<{
   onClick?: (e: React.MouseEvent) => void
   ref?: React.Ref<HTMLElement>
+  "aria-haspopup"?: string
+  "aria-expanded"?: boolean
 }>
 
 type SimpleMenuProps = {
@@ -72,6 +74,13 @@ const SimpleMenu: React.FC<SimpleMenuProps> = ({
         _trigger.props.onClick?.(e)
       },
       ref: setEl,
+      /**
+       * Without these the trigger announces as a plain button: nothing says it
+       * opens a menu, and nothing changes when it does. Set here rather than at
+       * each call site because `open` lives in this component.
+       */
+      "aria-haspopup": "menu",
+      "aria-expanded": open,
     })
   }, [_trigger, setOpen, open])
 

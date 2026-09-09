@@ -21,6 +21,8 @@ from vector_search.constants import (
     COLLECTION_PARAM_MAP,
     CONTENT_FILES_COLLECTION_NAME,
     CONTENT_FILES_RETRIEVE_PAYLOAD,
+    NULLABLE_ORDER_BY_KEYS,
+    ORDER_BY_MISSING_TAIL_KEY,
     QDRANT_RESOURCE_PARAM_MAP,
     RESOURCES_COLLECTION_NAME,
 )
@@ -41,6 +43,7 @@ from vector_search.utils import (
     check_missing_content_file_ids,
     db_sync_to_async,
     dense_encoder,
+    order_by_query,
     qdrant_query_conditions,
     resources_payload_selector,
     score_formula_query,
@@ -218,8 +221,8 @@ class QdrantView(APIView):
                     query=models.FusionQuery(fusion=models.Fusion.RRF),
                     limit=prefetch_limit,
                 )
-                search_params["query"] = models.OrderByQuery(
-                    order_by=self._format_order_by(order_by)
+                search_params["query"] = order_by_query(
+                    self._format_order_by(order_by), search_collection
                 )
             else:
                 search_params["prefetch"] = prefetch_params
@@ -235,8 +238,8 @@ class QdrantView(APIView):
                     using=encoder_dense.model_short_name(),
                     limit=prefetch_limit,
                 )
-                search_params["query"] = models.OrderByQuery(
-                    order_by=self._format_order_by(order_by)
+                search_params["query"] = order_by_query(
+                    self._format_order_by(order_by), search_collection
                 )
             elif formula_query:
                 # Nest: dense vector prefetch → formula rescore. The score
@@ -279,6 +282,30 @@ class QdrantView(APIView):
             search_result.append(models.PointStruct(**response_row))
         return search_result
 
+    async def _scroll_missing_order_by_key(self, client, scroll_kwargs, key, limit):
+        """
+        Scroll the points an ordered scroll leaves out: those with no value for
+        the sort key, ordered by recency.
+        """
+        search_filter = scroll_kwargs.get("scroll_filter")
+        missing_filter = models.Filter(
+            must=[
+                *([search_filter] if search_filter else []),
+                models.IsEmptyCondition(is_empty=models.PayloadField(key=key)),
+            ]
+        )
+        page_points, _ = await client.scroll(
+            **{
+                **scroll_kwargs,
+                "scroll_filter": missing_filter,
+                "order_by": models.OrderBy(
+                    key=ORDER_BY_MISSING_TAIL_KEY, direction=models.Direction.DESC
+                ),
+            },
+            limit=limit,
+        )
+        return page_points
+
     async def _execute_scroll_search(  # noqa: PLR0913
         self,
         client,
@@ -304,12 +331,28 @@ class QdrantView(APIView):
             # Qdrant disables pagination (next_page_offset) when order_by
             # is used.  Fetch offset+limit results in one call and slice
             # on the client side.
-            scroll_kwargs["order_by"] = self._format_order_by(order_by)
+            formatted_order_by = self._format_order_by(order_by)
+            scroll_kwargs["order_by"] = formatted_order_by
+            window = offset + limit
             scroll_res = await client.scroll(
                 **scroll_kwargs,
-                limit=offset + limit,
+                limit=window,
             )
             page_points, _ = scroll_res
+            if (
+                formatted_order_by.key in NULLABLE_ORDER_BY_KEYS
+                and len(page_points) < window
+            ):
+                # An ordered scroll only walks the payload index, so the
+                # points with no value for the key are missing from it rather
+                # than ordered last. Fetch and append them, so the result set
+                # stays whole however deep the paging goes.
+                page_points += await self._scroll_missing_order_by_key(
+                    client,
+                    scroll_kwargs,
+                    formatted_order_by.key,
+                    window - len(page_points),
+                )
             return page_points[offset : offset + limit]
 
         # Standard pagination loop for non-ordered scrolls
