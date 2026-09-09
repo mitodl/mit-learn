@@ -85,12 +85,14 @@ export const UnenrolledCourseCard = ({
       b2bProgramId:
         ancestorContext?.parentProgramReadableIds?.[0] ??
         ancestorContext?.programEnrollment?.program.readable_id,
+      startDate: courseRun?.start_date,
     })
   }, [
     course,
     ancestorContext,
     readableId,
     coursewareUrl,
+    courseRun?.start_date,
     isContractPageResource,
     enrollment,
   ])

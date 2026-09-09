@@ -332,6 +332,24 @@ describe.each([
     { trigger: "title-link" as const },
   ]
 
+  /**
+   * Learners may enrol before a run opens, so both cases share one timing
+   * shape: the no-redirect assertion is only meaningful because its started
+   * counterpart observes a redirect after the same await.
+   */
+  const START_DATE_CASES = [
+    {
+      case: "redirects to courseware when the run has started",
+      startDate: moment().subtract(7, "days").toISOString(),
+      expectRedirect: true,
+    },
+    {
+      case: "does not redirect when the run has not started",
+      startDate: moment().add(30, "days").toISOString(),
+      expectRedirect: false,
+    },
+  ]
+
   test.each(ENROLLMENT_TRIGGERS)(
     "B2B enrollment for complete profile bypasses just-in-time dialog ($trigger)",
     async ({ trigger }) => {
@@ -411,6 +429,55 @@ describe.each([
       expect(makeRequest).not.toHaveBeenCalledWith(
         expect.objectContaining({ method: "post" }),
       )
+    },
+  )
+
+  test.each(START_DATE_CASES)(
+    "B2B enrollment $case",
+    async ({ startDate, expectRedirect }) => {
+      const userData = mitxUser({
+        legal_address: { country: "US" },
+        user_profile: { year_of_birth: 1988 },
+      })
+      const b2bContractId = faker.number.int()
+      const coursewareUrl = faker.internet.url()
+      const run = mitxonline.factories.courses.courseRun({
+        b2b_contract: b2bContractId,
+        is_enrollable: true,
+        start_date: startDate,
+        end_date: moment(startDate).add(60, "days").toISOString(),
+        courseware_url: coursewareUrl,
+      })
+      const course = mitxOnlineCourse({
+        courseruns: [run],
+        next_run_id: run.id,
+      })
+      const { enrollmentUrl } = setupEnrollmentApis({
+        user: userData,
+        course,
+        run,
+      })
+      const hrefBefore = window.location.href
+
+      renderWithProviders(
+        <UnenrolledCourseCard course={course} contractId={b2bContractId} />,
+      )
+
+      await user.click(within(getCard()).getByTestId("courseware-button"))
+
+      await waitFor(() => {
+        expect(makeRequest).toHaveBeenCalledWith(
+          expect.objectContaining({ method: "post", url: enrollmentUrl }),
+        )
+      })
+
+      if (expectRedirect) {
+        await waitFor(() => {
+          expect(window.location.href).toBe(coursewareUrl)
+        })
+      } else {
+        expect(window.location.href).toBe(hrefBefore)
+      }
     },
   )
 
@@ -570,6 +637,51 @@ describe.each([
       },
     )
 
+    test.each(START_DATE_CASES)(
+      "Free single-run enrollment $case",
+      async ({ startDate, expectRedirect }) => {
+        setMockResponse.get(mitxonline.urls.userMe.get(), mitxUser())
+
+        const coursewareUrl = faker.internet.url()
+        const run = mitxonline.factories.courses.courseRun({
+          b2b_contract: null,
+          is_enrollable: true,
+          start_date: startDate,
+          end_date: moment(startDate).add(60, "days").toISOString(),
+          courseware_url: coursewareUrl,
+          enrollment_modes: [
+            mitxonline.factories.courses.enrollmentMode({
+              requires_payment: false,
+            }),
+          ],
+        })
+        const course = mitxOnlineCourse({
+          courseruns: [run],
+          next_run_id: run.id,
+        })
+
+        setMockResponse.post(mitxonline.urls.enrollment.enrollmentsListV1(), {})
+        setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV3(), [])
+        const hrefBefore = window.location.href
+
+        renderWithProviders(<UnenrolledCourseCard course={course} />)
+
+        await user.click(within(getCard()).getByTestId("courseware-button"))
+
+        await waitFor(() => {
+          expect(trackCourseEnrolled).toHaveBeenCalledWith(course.title)
+        })
+
+        if (expectRedirect) {
+          await waitFor(() => {
+            expect(window.location.href).toBe(coursewareUrl)
+          })
+        } else {
+          expect(window.location.href).toBe(hrefBefore)
+        }
+      },
+    )
+
     test.each(ENROLLMENT_TRIGGERS)(
       "Clicking $trigger bypasses dialog for paid-only single-run enrollment",
       async ({ trigger }) => {
@@ -634,6 +746,7 @@ describe.each([
         const run = mitxonline.factories.courses.courseRun({
           b2b_contract: null,
           is_enrollable: true,
+          start_date: moment().subtract(7, "days").toISOString(),
           courseware_url: faker.internet.url(),
         })
         const course = mitxOnlineCourse({
@@ -684,6 +797,60 @@ describe.each([
         expect(
           screen.queryByRole("dialog", { name: "Just a Few More Details" }),
         ).not.toBeInTheDocument()
+      },
+    )
+
+    test.each(START_DATE_CASES)(
+      "Verified program enrollment $case",
+      async ({ startDate, expectRedirect }) => {
+        setMockResponse.get(mitxonline.urls.userMe.get(), mitxUser())
+
+        const coursewareUrl = faker.internet.url()
+        const run = mitxonline.factories.courses.courseRun({
+          b2b_contract: null,
+          is_enrollable: true,
+          start_date: startDate,
+          end_date: moment(startDate).add(60, "days").toISOString(),
+          courseware_url: coursewareUrl,
+        })
+        const course = mitxOnlineCourse({
+          courseruns: [run],
+          next_run_id: run.id,
+        })
+        const programEnrollment =
+          mitxonline.factories.enrollment.programEnrollmentV3({
+            enrollment_mode: "verified",
+          })
+        const programEnrollmentEndpoint =
+          mitxonline.urls.verifiedProgramEnrollments.create(run.courseware_id)
+        setMockResponse.post(programEnrollmentEndpoint, {})
+        const hrefBefore = window.location.href
+
+        renderWithProviders(
+          <UnenrolledCourseCard
+            course={course}
+            ancestorContext={{ programEnrollment }}
+          />,
+        )
+
+        await user.click(within(getCard()).getByTestId("courseware-button"))
+
+        await waitFor(() => {
+          expect(makeRequest).toHaveBeenCalledWith(
+            expect.objectContaining({
+              method: "post",
+              url: programEnrollmentEndpoint,
+            }),
+          )
+        })
+
+        if (expectRedirect) {
+          await waitFor(() => {
+            expect(window.location.href).toBe(coursewareUrl)
+          })
+        } else {
+          expect(window.location.href).toBe(hrefBefore)
+        }
       },
     )
 

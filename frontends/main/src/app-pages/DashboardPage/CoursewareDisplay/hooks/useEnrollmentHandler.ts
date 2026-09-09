@@ -14,6 +14,18 @@ import { getCourseEnrollmentAction } from "@/common/mitxonline"
 import { useComplianceGate } from "@/common/mitxonline/useComplianceGate"
 import CourseEnrollmentDialog from "@/page-components/EnrollmentDialogs/CourseEnrollmentDialog"
 import { trackCourseEnrolled } from "@/common/analytics/gtm"
+import { getRunTimeState } from "../courseDateUtils"
+
+/**
+ * Enrolling before a run starts is allowed, but its courseware isn't open yet,
+ * so a successful enrollment must not send the learner there. Mirrors the
+ * enrolled card's disabled Continue button, which is the state they land back
+ * on once the enrollment queries invalidate.
+ */
+const goToCourseware = (url: string, startDate?: string | null) => {
+  if (getRunTimeState(startDate) === "upcoming") return
+  window.location.href = url
+}
 
 const ENROLL_COURSE_ERROR =
   "Something went wrong enrolling you in this course. Please try again."
@@ -44,6 +56,7 @@ export const useEnrollmentHandler = () => {
       programCoursewareId,
       programReadableIds,
       b2bProgramId,
+      startDate,
     }: {
       course: CourseWithCourseRunsSerializerV2
       readableId?: string
@@ -54,6 +67,7 @@ export const useEnrollmentHandler = () => {
       programCoursewareId?: string
       programReadableIds?: string[]
       b2bProgramId?: string
+      startDate?: string | null
     }) => {
       if (isB2B) {
         if (!readableId) {
@@ -90,7 +104,7 @@ export const useEnrollmentHandler = () => {
           },
           {
             onSuccess: () => {
-              window.location.href = destinationUrl
+              goToCourseware(destinationUrl, startDate)
             },
           },
         )
@@ -125,7 +139,7 @@ export const useEnrollmentHandler = () => {
           { courserun_id: readableId, request_body: requestBody },
           {
             onSuccess: () => {
-              window.location.href = verifiedDestination ?? href
+              goToCourseware(verifiedDestination ?? href, startDate)
             },
           },
         )
@@ -144,7 +158,7 @@ export const useEnrollmentHandler = () => {
                   enrollmentAction.run.courseware_url ??
                   href
                 if (destination) {
-                  window.location.href = destination
+                  goToCourseware(destination, enrollmentAction.run.start_date)
                 }
               },
             },
@@ -158,7 +172,7 @@ export const useEnrollmentHandler = () => {
         }
 
         const onCourseEnroll = (run: CourseRunV2) => {
-          window.location.href = run.courseware_url!
+          goToCourseware(run.courseware_url!, run.start_date)
         }
         NiceModal.show(CourseEnrollmentDialog, { course, onCourseEnroll })
       }
