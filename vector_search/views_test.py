@@ -521,6 +521,142 @@ def test_vector_search_sortby_parameter(  # noqa: PLR0913
                 assert call_kwargs["order_by"].direction == models.Direction.ASC
 
 
+@pytest.mark.parametrize("hybrid_search", [True, False])
+def test_vector_search_nullable_sortby_keeps_results(mocker, client, hybrid_search):
+    """
+    Ordering by next_start_date goes through a formula: Qdrant's order_by would
+    drop every resource without an upcoming run -- every learning material, and
+    most courses -- instead of ordering them last.
+    """
+    mock_qdrant = mocker.patch(
+        "qdrant_client.AsyncQdrantClient", return_value=mocker.AsyncMock()
+    )()
+    mock_qdrant.query_points = mocker.AsyncMock()
+    mock_qdrant.count = mocker.AsyncMock(return_value=CountResult(count=10))
+    mocker.patch(
+        "vector_search.views.async_qdrant_client",
+        return_value=mock_qdrant,
+    )
+
+    view = QdrantView()
+    asyncio.run(
+        view.async_vector_search(
+            "test",
+            {"q": "test", "sortby": "next_start_date"},
+            order_by="next_start_date",
+            hybrid_search=hybrid_search,
+        )
+    )
+
+    query = mock_qdrant.query_points.mock_calls[0].kwargs["query"]
+    assert isinstance(query, models.FormulaQuery)
+    assert list(query.defaults) == ["next_start_date"]
+
+
+def _scroll_page_mock(mocker, dated, undated):
+    """
+    Build an async client whose ordered scroll returns `dated` points and
+    whose is_empty scroll returns `undated`, each labelled by readable_id.
+    """
+    mock_qdrant = mocker.patch(
+        "qdrant_client.AsyncQdrantClient", return_value=mocker.AsyncMock()
+    )()
+    mock_qdrant.scroll = mocker.AsyncMock(
+        side_effect=[
+            (
+                [
+                    mocker.MagicMock(payload={"readable_id": f"dated-{index}"})
+                    for index in range(dated)
+                ],
+                None,
+            ),
+            (
+                [
+                    mocker.MagicMock(payload={"readable_id": f"undated-{index}"})
+                    for index in range(undated)
+                ],
+                None,
+            ),
+        ]
+    )
+    mock_qdrant.count = mocker.AsyncMock(return_value=CountResult(count=10))
+    mocker.patch(
+        "vector_search.views.async_qdrant_client",
+        return_value=mock_qdrant,
+    )
+    return mock_qdrant
+
+
+@pytest.mark.parametrize(
+    ("sortby", "expected_scrolls"),
+    [
+        # nothing to rank an unqueried scroll by, so the points order_by leaves
+        # out are appended in a second scroll
+        ("next_start_date", 2),
+        # on every payload -- order_by leaves nothing out
+        ("-created_on", 1),
+    ],
+)
+def test_vector_search_nullable_sortby_scroll(mocker, client, sortby, expected_scrolls):
+    """An ordered scroll is topped up with the points it cannot order"""
+    mock_qdrant = _scroll_page_mock(mocker, dated=1, undated=1)
+
+    view = QdrantView()
+    results = asyncio.run(
+        view.async_vector_search(
+            "", {"sortby": sortby}, order_by=sortby, limit=20, offset=0
+        )
+    )
+
+    assert len(mock_qdrant.scroll.mock_calls) == expected_scrolls
+    if expected_scrolls == 1:
+        assert [hit["readable_id"] for hit in results["hits"]] == ["dated-0"]
+        return
+
+    assert [hit["readable_id"] for hit in results["hits"]] == ["dated-0", "undated-0"]
+    call_kwargs = mock_qdrant.scroll.mock_calls[1].kwargs
+    # only the rest of the requested window is left to fill
+    assert call_kwargs["limit"] == 19
+    assert call_kwargs["order_by"] == models.OrderBy(
+        key="created_on", direction=models.Direction.DESC
+    )
+    assert (
+        models.IsEmptyCondition(is_empty=models.PayloadField(key="next_start_date"))
+        in call_kwargs["scroll_filter"].must
+    )
+
+
+@pytest.mark.parametrize(
+    ("offset", "limit", "expected"),
+    [
+        # wholly inside the ordered points
+        (0, 2, ["dated-0", "dated-1"]),
+        # straddling the join, so the slice has to count the appended tail
+        (2, 2, ["dated-2", "undated-0"]),
+        # wholly inside the tail
+        (4, 2, ["undated-1", "undated-2"]),
+    ],
+)
+def test_vector_search_nullable_sortby_scroll_pages(
+    mocker, client, offset, limit, expected
+):
+    """The topped-up scroll is sliced as one ordered set, tail included"""
+    _scroll_page_mock(mocker, dated=3, undated=3)
+
+    view = QdrantView()
+    results = asyncio.run(
+        view.async_vector_search(
+            "",
+            {"sortby": "next_start_date"},
+            order_by="next_start_date",
+            limit=limit,
+            offset=offset,
+        )
+    )
+
+    assert [hit["readable_id"] for hit in results["hits"]] == expected
+
+
 def test_vector_search_sortby_pagination(mocker, client):
     """Test that sortby with offset uses client-side slicing instead of Qdrant offset.
 

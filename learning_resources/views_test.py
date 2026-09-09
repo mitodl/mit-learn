@@ -1772,6 +1772,91 @@ def test_summary_learn_url_falls_back_to_the_drawer(client):
     assert _summary_by_id(client)[course.id]["learn_url"] == detail["learn_url"]
 
 
+def test_url_slug_is_the_slug_segment_of_a_video_learn_url(client):
+    """
+    Consumers build page paths from `url_slug` instead of parsing `learn_url`,
+    so the two have to agree on how a title is spelled.
+    """
+    video = VideoFactory.create(
+        learning_resource__title="Lecture 1: Intro to Widgets"
+    ).learning_resource
+    playlist = VideoPlaylistFactory.create().learning_resource
+    _relate(
+        playlist,
+        video,
+        LearningResourceRelationTypes.PLAYLIST_VIDEOS.value,
+        position=0,
+    )
+
+    detail = client.get(
+        reverse("lr:v1:learning_resources_api-detail", args=[video.id])
+    ).data
+
+    assert detail["url_slug"] == "lecture-1-intro-to-widgets"
+    assert detail["learn_url"] == frontend_absolute_url(
+        f"/video/{video.id}/{detail['url_slug']}?playlist={playlist.id}"
+    )
+
+
+def test_url_slug_is_the_slug_segment_of_an_episode_learn_url(client):
+    """An episode's slug is its own, not the parent podcast's."""
+    episode = PodcastEpisodeFactory.create(
+        learning_resource__title="Episode 2: Widgets Revisited"
+    ).learning_resource
+    podcast = PodcastFactory.create(
+        episodes=[], learning_resource__title="The Widget Hour"
+    ).learning_resource
+    _relate(
+        podcast,
+        episode,
+        LearningResourceRelationTypes.PODCAST_EPISODES.value,
+        position=0,
+    )
+
+    detail = client.get(
+        reverse("lr:v1:learning_resources_api-detail", args=[episode.id])
+    ).data
+
+    assert detail["url_slug"] == "episode-2-widgets-revisited"
+    assert detail["learn_url"] == frontend_absolute_url(
+        f"/podcast/{podcast.id}/podcast_episode/{episode.id}/{detail['url_slug']}"
+    )
+
+
+def test_url_slug_falls_back_when_a_title_yields_no_slug(client):
+    """A title with no ASCII still needs a URL segment, so it gets a literal one."""
+    video = VideoFactory.create(
+        learning_resource__title="日本語のビデオ"
+    ).learning_resource
+
+    detail = client.get(
+        reverse("lr:v1:learning_resources_api-detail", args=[video.id])
+    ).data
+
+    assert detail["url_slug"] == "resource"
+    assert detail["learn_url"] == frontend_absolute_url(f"/video/{video.id}/resource")
+
+
+def test_url_slug_is_present_for_a_resource_with_no_page_of_its_own(client):
+    """
+    Never blank and never absent, so consumers need no fallback and no branch on
+    resource type. A drawer-only resource carries the slug its drawer URL uses.
+    """
+    course = CourseFactory.create(
+        platform=PlatformType.ocw.name,
+        learning_resource__title="Intro to Widgets",
+    ).learning_resource
+
+    detail = client.get(
+        reverse("lr:v1:learning_resources_api-detail", args=[course.id])
+    ).data
+
+    assert detail["url_slug"] == "intro-to-widgets"
+    assert detail["learn_url"] == frontend_absolute_url(
+        f"/search?resource={course.id}&resource_title=intro-to-widgets"
+    )
+
+
 def test_summary_count_omits_the_parent_ids_annotation(
     django_assert_num_queries, client
 ):

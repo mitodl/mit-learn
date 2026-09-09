@@ -80,7 +80,7 @@ async function login(page: Page, context: Context) {
 
   console.log(`Login > using '${credential.email}'`)
 
-  const loginButton = page.getByTestId("login-button-desktop")
+  const loginButton = page.getByRole("link", { name: "Log In", exact: true })
   await loginButton.first().click()
 
   let loggedIn = false
