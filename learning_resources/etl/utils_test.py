@@ -2,8 +2,8 @@
 
 import datetime
 import pathlib
+import tarfile
 from decimal import Decimal
-from subprocess import check_call
 from tempfile import TemporaryDirectory
 
 import pypdf
@@ -40,18 +40,12 @@ def get_olx_test_docs():
     """Get a list of edx docs from a sample archive file"""
     script_dir = pathlib.Path(__file__).parent.absolute().parent.parent
     with TemporaryDirectory() as temp:
-        check_call(  # noqa: S603
-            [  # noqa: S607
-                "tar",
-                "xf",
-                pathlib.Path(script_dir, "test_json", "exported_courses_12345.tar.gz"),
-            ],
-            cwd=temp,
-        )
-        check_call(
-            ["tar", "xf", "content-devops-0001.tar.gz"],  # noqa: S607
-            cwd=temp,
-        )
+        with tarfile.open(
+            pathlib.Path(script_dir, "test_json", "exported_courses_12345.tar.gz")
+        ) as tar:
+            tar.extractall(temp, filter="data")
+        with tarfile.open(pathlib.Path(temp, "content-devops-0001.tar.gz")) as tar:
+            tar.extractall(temp, filter="data")
 
         olx_path = pathlib.Path(temp, "content-devops-0001")
         return list(utils.documents_from_olx(str(olx_path)))
