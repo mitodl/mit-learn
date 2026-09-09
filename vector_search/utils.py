@@ -1303,9 +1303,10 @@ def _resource_payload_hits(search_result):
     """
     Build resource hits from the Qdrant payloads themselves.
 
-    The payload is the resource as the indexing serializer wrote it, so it
-    already carries every field the API response needs -- no database
-    hydration required. Dedupes on platform:readable_id and preserves the
+    The payload is the resource as the indexing serializer wrote it, so no
+    database hydration is required -- but a payload written before a field was
+    added carries no such key until it is reindexed, which the response
+    serializer makes up for. Dedupes on platform:readable_id and preserves the
     Qdrant ranking, the same way the hydrated path does.
     """
     hits = []
