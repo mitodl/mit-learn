@@ -57,10 +57,6 @@ export const offeringBoxCount = (
   }
 }
 
-/**
- * Enrollment-failure copy for the InfoBox and header enroll areas, used when
- * the server sent no usable 400 `detail` to show instead. Shared so the two
- * surfaces can't drift.
- */
+/** Fallback enrollment-failure copy, shared by the InfoBox and header areas. */
 export const ENROLL_FAILURE_MESSAGE =
   "There was a problem processing your enrollment. Please try again."

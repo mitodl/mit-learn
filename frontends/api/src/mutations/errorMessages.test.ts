@@ -2,10 +2,7 @@ import { AxiosError } from "axios"
 import type { AxiosResponse } from "axios"
 import { badRequestDetail, badRequestDetailOr } from "./errorMessages"
 
-/**
- * Shaped like the errors `setMockResponse` throws, so these cases match what
- * component tests actually produce.
- */
+/** Shaped like the errors `setMockResponse` throws. */
 const apiError = (status: number, data: unknown) =>
   new AxiosError("Mock Error", String(status), undefined, undefined, {
     data,
@@ -102,8 +99,7 @@ describe("badRequestDetailOr", () => {
   })
 
   test("with no fallback, yields an empty string so callers fall through", () => {
-    // A blank message fails the global handler's isMessage check, which is how
-    // a mutation opts into detail-reading without restating the generic copy.
+    // A blank message fails the global handler's isMessage check.
     const getMessage = badRequestDetailOr()
     expect(getMessage(apiError(500, { detail: "Boom" }))).toBe("")
     expect(getMessage(apiError(400, { detail: "Server copy." }))).toBe(

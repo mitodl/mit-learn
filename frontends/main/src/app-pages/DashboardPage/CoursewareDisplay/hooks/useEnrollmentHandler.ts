@@ -22,8 +22,7 @@ const ENROLL_PROGRAM_ERROR =
   "Something went wrong enrolling you in this program. Please try again."
 
 // Prefer the server's own 400 explanation over the static copy. The bare
-// `badRequestDetailOr()` has no fallback of its own, so a non-400 falls through
-// to the global handler's generic message rather than restating it here.
+// `badRequestDetailOr()` falls through to the global handler's generic message.
 const COURSE_ENROLL_META = Object.freeze({
   getErrorMessage: badRequestDetailOr(ENROLL_COURSE_ERROR),
 })
