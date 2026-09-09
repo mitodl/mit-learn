@@ -24,7 +24,11 @@ jest.mock("@/common/analytics/gtm", () => ({
 
 const mitxOnlineCourse = mitxonline.factories.courses.course
 
-const mitxUser = mitxonline.factories.user.user
+// The factory randomises is_staff, and staff bypass the start-date gate on the
+// post-enrollment redirect, so pin it off here. Tests about staff pass it
+// explicitly.
+const mitxUser: typeof mitxonline.factories.user.user = (overrides = {}) =>
+  mitxonline.factories.user.user({ is_staff: false, ...overrides })
 
 const setupUserApis = (overrides?: Parameters<typeof mitxUser>[0]) => {
   const userData = mitxonline.factories.user.user({
@@ -301,6 +305,8 @@ describe.each([
     user: ReturnType<typeof mitxUser>
     course: ReturnType<typeof mitxOnlineCourse>
     run?: ReturnType<typeof mitxonline.factories.courses.courseRun>
+    /** Defer the POST to control when the mutation settles. */
+    enrollResponse?: unknown
   }) => {
     setMockResponse.get(mitxonline.urls.userMe.get(), opts.user)
     setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV3(), [])
@@ -308,10 +314,13 @@ describe.each([
     const runId =
       opts.run?.courseware_id ?? opts.course.readable_id ?? undefined
     const enrollmentUrl = mitxonline.urls.b2b.courseEnrollment(runId)
-    setMockResponse.post(enrollmentUrl, {
-      result: "b2b-enroll-success",
-      order: 1,
-    })
+    setMockResponse.post(
+      enrollmentUrl,
+      opts.enrollResponse ?? {
+        result: "b2b-enroll-success",
+        order: 1,
+      },
+    )
 
     const countries = [
       { code: "US", name: "United States" },
@@ -333,10 +342,37 @@ describe.each([
   ]
 
   /**
-   * Learners may enrol before a run opens, so both cases share one timing
-   * shape: the no-redirect assertion is only meaningful because its started
-   * counterpart observes a redirect after the same await.
+   * A response the test resolves by hand. The B2B and verified-program
+   * redirects fire in `onSuccess` and leave no other trace, so an assertion
+   * placed after the POST was merely *issued* can run before the redirect
+   * would have happened, passing whether or not the guard is there. Holding
+   * the response open lets `enrollAndSettle` observe the pending state, then
+   * release it and wait for pending to clear, which cannot happen until
+   * `onSuccess` has run.
    */
+  const deferredResponse = <T,>() => {
+    let resolve!: (value: T) => void
+    const promise = new Promise<T>((res) => {
+      resolve = res
+    })
+    return { promise, resolve }
+  }
+
+  const enrollAndSettle = async (
+    card: HTMLElement,
+    release: () => void,
+  ): Promise<void> => {
+    const button = within(card).getByTestId("courseware-button")
+    await user.click(button)
+    await waitFor(() => {
+      expect(button).toHaveAttribute("aria-busy", "true")
+    })
+    release()
+    await waitFor(() => {
+      expect(button).toHaveAttribute("aria-busy", "false")
+    })
+  }
+
   const START_DATE_CASES = [
     {
       case: "redirects to courseware when the run has started",
@@ -432,6 +468,44 @@ describe.each([
     },
   )
 
+  test("B2B enrollment redirects staff to courseware even before the run starts", async () => {
+    const userData = mitxUser({
+      is_staff: true,
+      legal_address: { country: "US" },
+      user_profile: { year_of_birth: 1988 },
+    })
+    const b2bContractId = faker.number.int()
+    const coursewareUrl = faker.internet.url()
+    const run = mitxonline.factories.courses.courseRun({
+      b2b_contract: b2bContractId,
+      is_enrollable: true,
+      start_date: moment().add(30, "days").toISOString(),
+      courseware_url: coursewareUrl,
+    })
+    const course = mitxOnlineCourse({ courseruns: [run], next_run_id: run.id })
+    const { enrollmentUrl } = setupEnrollmentApis({
+      user: userData,
+      course,
+      run,
+    })
+
+    renderWithProviders(
+      <UnenrolledCourseCard course={course} contractId={b2bContractId} />,
+    )
+
+    await user.click(within(getCard()).getByTestId("courseware-button"))
+
+    await waitFor(() => {
+      expect(makeRequest).toHaveBeenCalledWith(
+        expect.objectContaining({ method: "post", url: enrollmentUrl }),
+      )
+    })
+    // Staff keep pre-start courseware access, so the redirect still fires.
+    await waitFor(() => {
+      expect(window.location.href).toBe(coursewareUrl)
+    })
+  })
+
   test.each(START_DATE_CASES)(
     "B2B enrollment $case",
     async ({ startDate, expectRedirect }) => {
@@ -452,10 +526,12 @@ describe.each([
         courseruns: [run],
         next_run_id: run.id,
       })
+      const enroll = deferredResponse<unknown>()
       const { enrollmentUrl } = setupEnrollmentApis({
         user: userData,
         course,
         run,
+        enrollResponse: enroll.promise,
       })
       const hrefBefore = window.location.href
 
@@ -463,21 +539,16 @@ describe.each([
         <UnenrolledCourseCard course={course} contractId={b2bContractId} />,
       )
 
-      await user.click(within(getCard()).getByTestId("courseware-button"))
+      await enrollAndSettle(getCard(), () =>
+        enroll.resolve({ result: "b2b-enroll-success", order: 1 }),
+      )
 
-      await waitFor(() => {
-        expect(makeRequest).toHaveBeenCalledWith(
-          expect.objectContaining({ method: "post", url: enrollmentUrl }),
-        )
-      })
-
-      if (expectRedirect) {
-        await waitFor(() => {
-          expect(window.location.href).toBe(coursewareUrl)
-        })
-      } else {
-        expect(window.location.href).toBe(hrefBefore)
-      }
+      expect(makeRequest).toHaveBeenCalledWith(
+        expect.objectContaining({ method: "post", url: enrollmentUrl }),
+      )
+      expect(window.location.href).toBe(
+        expectRedirect ? coursewareUrl : hrefBefore,
+      )
     },
   )
 
@@ -549,6 +620,62 @@ describe.each([
   // ---------------------------------------------------------------------------
 
   describe("B2C (non-B2B) Enrollment", () => {
+    // The dialog is the fourth redirect path: it takes the start date from the
+    // run the learner picked there, not the one the card was displaying.
+    test.each(START_DATE_CASES)(
+      "CourseEnrollmentDialog submission $case",
+      async ({ startDate, expectRedirect }) => {
+        setMockResponse.get(mitxonline.urls.userMe.get(), mitxUser())
+
+        const coursewareUrl = faker.internet.url()
+        // Both modes, so the card opens the dialog instead of enrolling
+        // directly. One run, so the dialog preselects it.
+        const run = mitxonline.factories.courses.courseRun({
+          b2b_contract: null,
+          is_enrollable: true,
+          start_date: startDate,
+          end_date: moment(startDate).add(60, "days").toISOString(),
+          courseware_url: coursewareUrl,
+          enrollment_modes: [
+            mitxonline.factories.courses.enrollmentMode({
+              requires_payment: false,
+            }),
+            mitxonline.factories.courses.enrollmentMode({
+              requires_payment: true,
+            }),
+          ],
+        })
+        const course = mitxOnlineCourse({
+          courseruns: [run],
+          next_run_id: run.id,
+        })
+        setMockResponse.post(mitxonline.urls.enrollment.enrollmentsListV1(), {})
+        setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV3(), [])
+        const hrefBefore = window.location.href
+
+        renderWithProviders(<UnenrolledCourseCard course={course} />)
+
+        await user.click(within(getCard()).getByTestId("courseware-button"))
+        const dialog = await screen.findByRole("dialog", {
+          name: course.title,
+        })
+        await user.click(
+          within(dialog).getByRole("button", {
+            name: /Enroll for Free without a certificate/,
+          }),
+        )
+
+        // trackCourseEnrolled fires inside the same onSuccess that calls the
+        // redirect, so this is the mutation-settled signal for this path.
+        await waitFor(() => {
+          expect(trackCourseEnrolled).toHaveBeenCalledWith(course.title)
+        })
+        expect(window.location.href).toBe(
+          expectRedirect ? coursewareUrl : hrefBefore,
+        )
+      },
+    )
+
     test.each(ENROLLMENT_TRIGGERS)(
       "Clicking $trigger opens CourseEnrollmentDialog for both-mode enrollment",
       async ({ trigger }) => {
@@ -823,7 +950,8 @@ describe.each([
           })
         const programEnrollmentEndpoint =
           mitxonline.urls.verifiedProgramEnrollments.create(run.courseware_id)
-        setMockResponse.post(programEnrollmentEndpoint, {})
+        const enroll = deferredResponse<unknown>()
+        setMockResponse.post(programEnrollmentEndpoint, enroll.promise)
         const hrefBefore = window.location.href
 
         renderWithProviders(
@@ -833,24 +961,17 @@ describe.each([
           />,
         )
 
-        await user.click(within(getCard()).getByTestId("courseware-button"))
+        await enrollAndSettle(getCard(), () => enroll.resolve({}))
 
-        await waitFor(() => {
-          expect(makeRequest).toHaveBeenCalledWith(
-            expect.objectContaining({
-              method: "post",
-              url: programEnrollmentEndpoint,
-            }),
-          )
-        })
-
-        if (expectRedirect) {
-          await waitFor(() => {
-            expect(window.location.href).toBe(coursewareUrl)
-          })
-        } else {
-          expect(window.location.href).toBe(hrefBefore)
-        }
+        expect(makeRequest).toHaveBeenCalledWith(
+          expect.objectContaining({
+            method: "post",
+            url: programEnrollmentEndpoint,
+          }),
+        )
+        expect(window.location.href).toBe(
+          expectRedirect ? coursewareUrl : hrefBefore,
+        )
       },
     )
 

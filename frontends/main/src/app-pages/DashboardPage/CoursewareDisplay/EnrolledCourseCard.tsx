@@ -24,7 +24,7 @@ import {
   getDashboardEnrollmentStatus,
   pickCertificateEnrollment,
 } from "./model/dashboardViewModel"
-import { getCourseDateText } from "./courseDateUtils"
+import { canOpenCourseware, getCourseDateText } from "./courseDateUtils"
 import { isVerifiedEnrollmentMode } from "@/common/mitxonline"
 import { RiArrowUpCircleLine, RiAwardLine, RiMore2Line } from "@remixicon/react"
 import { useReplaceBasketItem } from "@/common/mitxonline/useReplaceBasketItem"
@@ -287,7 +287,7 @@ export const EnrolledCourseCard = ({
   const enrollmentMode = enrollment?.enrollment_mode
   const offerUpgrade = !enrollment?.b2b_contract_id
   const startDate = run?.start_date
-  const hasStarted = startDate ? isInPast(startDate) : true
+  const coursewareOpen = canOpenCourseware(startDate, { isStaff })
   const endDate = run?.end_date
   const hasEnded = endDate ? isInPast(endDate) : false
   const hasCourseDateText = getCourseDateText(startDate, endDate) !== null
@@ -335,7 +335,7 @@ export const EnrolledCourseCard = ({
       productId={run?.upgrade_product_id}
       isVerifiedProgramEnrollment={isVerifiedProgramEnrollment}
       readableId={run?.courseware_id}
-      coursewareUrl={coursewareUrl ?? undefined}
+      coursewareUrl={coursewareOpen ? (coursewareUrl ?? undefined) : undefined}
       programReadableIds={ancestorContext?.parentProgramReadableIds}
       programCoursewareId={
         ancestorContext?.programEnrollment?.program.readable_id
@@ -364,7 +364,7 @@ export const EnrolledCourseCard = ({
     ) : null
   const titleSection = (
     <Stack gap="6px">
-      {coursewareUrl ? (
+      {coursewareUrl && coursewareOpen ? (
         <TitleHeading as={headingLevel}>
           <EnrolledTitleLink
             size="medium"
@@ -381,13 +381,8 @@ export const EnrolledCourseCard = ({
       {endDateAndUpgradeSection}
     </Stack>
   )
-  // Determine if button should be disabled
-  // Staff can access courseware even before the course has started
   const courseHasEnded = run?.end_date ? isInPast(run.end_date) : false
-  const isDisabled = Boolean(
-    !coursewareUrl || // Enrolled but no action available
-      (!!startDate && !hasStarted && !isStaff), // Enrolled but course hasn't started yet
-  )
+  const isDisabled = Boolean(!coursewareUrl || !coursewareOpen)
   const isCompleted =
     enrollmentStatus === EnrollmentStatus.Completed || courseHasEnded
   const buttonText = isCompleted ? "View" : "Continue"

@@ -12,7 +12,11 @@ import {
   RiSubtractLine,
   RiTimeLine,
 } from "@remixicon/react"
-import { formatRunIdentifier, getRunTimeState } from "./courseDateUtils"
+import {
+  canOpenCourseware,
+  formatRunIdentifier,
+  getRunTimeState,
+} from "./courseDateUtils"
 import type { RunTimeState } from "./courseDateUtils"
 import { ActionButton, VisuallyHidden } from "@mitodl/smoot-design"
 import { EnrollmentStatusIcon } from "./EnrollmentStatus"
@@ -22,6 +26,8 @@ import { useOrderIdForRun } from "@/common/mitxonline/useOrderIdForResource"
 import { getRunMenuItems } from "./runMenuItems"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import { FeatureFlags } from "@/common/feature_flags"
+import { useQuery } from "@tanstack/react-query"
+import { mitxUserQueries } from "api/mitxonline-hooks/user"
 
 const UpcomingRunIcon = styled(RiTimeLine)(({ theme }) => ({
   width: "16px",
@@ -194,11 +200,15 @@ const RunListRow: React.FC<RunListRowProps> = ({
   enrollment,
   isFirst,
 }) => {
+  const mitxOnlineUser = useQuery(mitxUserQueries.me())
   const coursewareUrl = enrollment.run?.courseware_url
+  const coursewareOpen = canOpenCourseware(enrollment.run?.start_date, {
+    isStaff: mitxOnlineUser.data?.is_staff,
+  })
   /**
    * Resolved per row so each run's Receipt item reflects that run's own order.
    * Every row shares the one `orders/history` query, so N rows still cost a
-   * single request and the per-row work is a client-side lookup.
+   * single request and the per-run work is a client-side lookup.
    */
   const receiptResolution = useOrderIdForRun(enrollment.run.id)
   const perRunMenusEnabled = useFeatureFlagEnabled(
@@ -241,7 +251,7 @@ const RunListRow: React.FC<RunListRowProps> = ({
         </Stack>
       </Stack>
       <Stack direction="row" gap="4px" alignItems="center" flexShrink={0}>
-        {coursewareUrl && (
+        {coursewareUrl && coursewareOpen && (
           <>
             <ViewContentLink
               href={coursewareUrl}

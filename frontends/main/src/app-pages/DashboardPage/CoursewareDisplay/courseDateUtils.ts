@@ -23,6 +23,20 @@ export const getRunTimeState = (
 }
 
 /**
+ * Whether this run's courseware can be opened yet. Staff keep access before a
+ * run starts so they can preview it; everyone else waits for the start date.
+ *
+ * Every route into a run's courseware goes through this: the enrolled card's
+ * button and title link, the sibling-run rows, the upgrade redirect, and the
+ * post-enrollment redirect. They have to agree, or one surface offers a door
+ * the others have already locked.
+ */
+export const canOpenCourseware = (
+  startDate?: string | null,
+  { isStaff = false }: { isStaff?: boolean } = {},
+): boolean => isStaff || getRunTimeState(startDate) !== "upcoming"
+
+/**
  * A run's date range. Returns "" when the run has neither date; prefer
  * `formatRunIdentifier` for anything a learner reads, since that case is not
  * rare enough to leave the run nameless.
