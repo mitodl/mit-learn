@@ -13,8 +13,6 @@ const makeSeries = (overrides = {}): LearningResource =>
     last_modified: "2024-05-03T00:00:00Z",
     offered_by: { name: "OCW", code: "ocw" },
     podcast: { id: 1, episode_count: 12 },
-    // The backend names the podcast's page; the factory default is a drawer URL.
-    learn_url: "http://test.learn.odl.local:8062/podcast/1/chalk-radio",
     ...overrides,
   }) as unknown as LearningResource
 
