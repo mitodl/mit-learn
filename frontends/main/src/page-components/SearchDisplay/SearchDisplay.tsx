@@ -53,6 +53,7 @@ import type {
   FacetManifest,
 } from "@mitodl/course-search-utils"
 import { useAppSearchParams } from "@/common/useAppSearchParams"
+import { PostHogEvents } from "@/common/constants"
 import { ResourceTypeGroupTabs } from "./ResourceTypeGroupTabs"
 import ProfessionalToggle from "./ProfessionalToggle"
 import { trackFilterCourseCatalog } from "@/common/analytics/gtm"
@@ -691,27 +692,28 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
     setMobileDrawerOpen(newOpen)
   }
 
-  const captureSearchEvent = () => {
+  const captureFilterEvent = (control: string) => {
     if (NEXT_PUBLIC_POSTHOG_API_KEY) {
-      posthog.capture("search_update")
+      posthog.capture(PostHogEvents.SearchFilterUpdate, { control })
     }
   }
 
-  const setParamValue = (value: string, prev: string | string[]) => {
-    actuallySetParamValue(value, prev)
-    captureSearchEvent()
+  const setParamValue = (name: string, rawValue: string | string[]) => {
+    actuallySetParamValue(name, rawValue)
+    captureFilterEvent(name)
   }
 
   const clearAllFacets = () => {
     actuallyClearAllFacets()
-    captureSearchEvent()
+    captureFilterEvent("clear_all")
   }
 
   const setSearchParams = (
+    name: string,
     value: URLSearchParams | ((prev: URLSearchParams) => URLSearchParams),
   ) => {
     actuallySetSearchParams(value)
-    captureSearchEvent()
+    captureFilterEvent(name)
   }
 
   const toggleParamValue = (
@@ -720,7 +722,7 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
     checked: boolean,
   ) => {
     actuallyToggleParamValue(name, rawValue, checked)
-    captureSearchEvent()
+    captureFilterEvent(name)
     if (checked)
       trackFilterCourseCatalog({ filterName: name, filterValue: rawValue })
   }
@@ -767,7 +769,7 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
         size="small"
         value={searchParams.get("search_mode") || adminParams?.search_mode}
         onChange={(e) =>
-          setSearchParams((prev) => {
+          setSearchParams("search_mode", (prev) => {
             const next = new URLSearchParams(prev)
             next.set("search_mode", e.target.value as string)
             if (e.target.value !== "phrase") {
@@ -933,7 +935,7 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
                       : (adminParams?.show_ocw_files ?? false)
                   }
                   onChange={(e) =>
-                    setSearchParams((prev) => {
+                    setSearchParams("show_ocw_files", (prev) => {
                       const next = new URLSearchParams(prev)
                       if (e.target.checked) {
                         next.set("show_ocw_files", "true")
