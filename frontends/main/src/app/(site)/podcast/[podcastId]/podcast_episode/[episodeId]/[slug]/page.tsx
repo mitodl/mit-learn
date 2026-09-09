@@ -86,9 +86,7 @@ const Page: React.FC<Props> = async (props) => {
     String(canonicalPodcastId),
     episode.url_slug,
   )
-  if (
-    `/podcast/${podcastId}/podcast_episode/${episodeId}/${slug}` !== canonical
-  ) {
+  if (podcastEpisodePath(episodeId, podcastId, slug) !== canonical) {
     redirect(carrySearchParams(canonical, await props.searchParams))
   }
 

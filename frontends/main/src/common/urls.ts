@@ -409,8 +409,8 @@ export const VIDEO_DETAIL_PAGE_VIEW = "/video/[videoId]"
  * being viewed in rather than the canonical one.
  */
 export const videoDetailPath = (
-  videoId: number,
-  playlistId: number | undefined,
+  videoId: number | string,
+  playlistId: number | string | undefined,
   slug: string | undefined,
 ) => {
   const path = generatePath(VIDEO_DETAIL_PAGE_VIEW, {

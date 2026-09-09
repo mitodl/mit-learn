@@ -60,7 +60,7 @@ const Page: React.FC<Props> = async (props) => {
   // The backend names the slug; redirect if we're not on the canonical form
   // (stale or uppercase slug, or a non-normalized id segment).
   const canonical = podcastPath(id, resource.url_slug)
-  if (`/podcast/${podcastId}/${slug}` !== canonical) {
+  if (podcastPath(podcastId, slug) !== canonical) {
     redirect(carrySearchParams(canonical, await props.searchParams))
   }
 

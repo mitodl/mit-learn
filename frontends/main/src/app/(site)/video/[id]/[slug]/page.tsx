@@ -77,14 +77,11 @@ const Page: React.FC<Props> = async ({ params, searchParams }) => {
     playlistId ?? undefined,
     video.url_slug,
   )
-  const incomingBase = `/video/${id}/${slug}`
   // A repeated ?playlist (array) resolves as no-playlist but is never the
   // canonical form, so it always redirects (which strips it).
   const incoming = Array.isArray(rawPlaylist)
     ? null
-    : typeof rawPlaylist === "string"
-      ? `${incomingBase}?playlist=${rawPlaylist}`
-      : incomingBase
+    : videoDetailPath(id, rawPlaylist, slug)
   if (incoming !== canonical) {
     redirect(carrySearchParams(canonical, resolvedSearchParams, ["playlist"]))
   }

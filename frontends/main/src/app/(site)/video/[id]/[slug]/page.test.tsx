@@ -91,6 +91,22 @@ test("generateMetadata canonical is the same URL in every playlist context", asy
   )
 })
 
+test("redirects a non-normalized ?playlist to its canonical spelling", async () => {
+  // Both sides of the compare come from videoDetailPath, so the incoming value
+  // has to survive verbatim: "007" resolves to playlist 7, whose canonical form
+  // is ?playlist=7.
+  const video = mockVideo(["7", "66"])
+  await expect(
+    Page({
+      params: Promise.resolve({ id: String(video.id), slug: "beyond-biology" }),
+      searchParams: Promise.resolve({ playlist: "007" }),
+    }),
+  ).rejects.toThrow("NEXT_REDIRECT")
+  expect(mockRedirect).toHaveBeenCalledWith(
+    `/video/${video.id}/beyond-biology?playlist=7`,
+  )
+})
+
 test("notFound for a resource that is not a video", async () => {
   const course = factories.learningResources.course()
   setMockResponse.get(urls.learningResources.details({ id: course.id }), course)

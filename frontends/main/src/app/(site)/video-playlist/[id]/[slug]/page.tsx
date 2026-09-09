@@ -64,7 +64,7 @@ const Page: React.FC<Props> = async ({ params, searchParams }) => {
   )
 
   const canonical = videoPlaylistPath(playlistId, playlist.url_slug)
-  if (`/video-playlist/${id}/${slug}` !== canonical) {
+  if (videoPlaylistPath(id, slug) !== canonical) {
     redirect(carrySearchParams(canonical, await searchParams))
   }
 
