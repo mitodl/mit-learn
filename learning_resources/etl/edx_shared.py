@@ -1,10 +1,9 @@
 """Shared functions for EdX sites"""
 
 import logging
+import tarfile
 from itertools import chain
 from pathlib import Path
-from subprocess import CalledProcessError, check_call
-from tarfile import ReadError
 from tempfile import TemporaryDirectory
 
 from defusedxml import ElementTree
@@ -142,7 +141,7 @@ def process_course_archive(
         bucket.download_file(key, course_tarpath)
         try:
             checksum = calc_checksum(course_tarpath)
-        except ReadError:
+        except tarfile.ReadError:
             log.exception("Error reading tar file %s, skipping", course_tarpath)
             return True
         if run.checksum == checksum and not overwrite:
@@ -400,8 +399,9 @@ def unpublish_staff_only_content_files(
             tarpath = Path(tempdir, key.rsplit("/", maxsplit=1)[-1])
             bucket.download_file(key, tarpath)
             try:
-                check_call(["tar", "xf", tarpath], cwd=tempdir)  # noqa: S603,S607
-            except CalledProcessError:
+                with tarfile.open(tarpath) as tar:
+                    tar.extractall(tempdir, filter="data")
+            except tarfile.ReadError:
                 log.exception("Error extracting %s, skipping", key)
                 continue
             olx_path = next((p for p in Path(tempdir).iterdir() if p.is_dir()), None)
