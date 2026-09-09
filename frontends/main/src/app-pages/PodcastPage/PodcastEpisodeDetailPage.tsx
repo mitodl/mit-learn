@@ -13,7 +13,7 @@ import { useQuery } from "@tanstack/react-query"
 import { ResourceTypeEnum } from "api/v1"
 import type { PodcastEpisodeResource } from "api/v1"
 import { formatDate } from "ol-utilities"
-import { HOME, podcastEpisodePath } from "@/common/urls"
+import { HOME, absoluteUrl, podcastEpisodePath } from "@/common/urls"
 import { addExternalLinkTargets } from "@/common/utils"
 import { EpisodeItem } from "./PodcastsListingPage/EpisodeItem"
 import PodcastContainer from "./PodcastContainer"
@@ -37,9 +37,6 @@ import PodcastShareButton from "./PodcastShareButton"
 import EpisodeContentTabs from "./EpisodeContentTabs"
 import type { TranscriptState } from "./EpisodeContentTabs"
 import { buildPodcastEpisodeStructuredData } from "./podcastEpisodeStructuredData"
-import { env } from "@/env"
-
-const NEXT_PUBLIC_ORIGIN = env("NEXT_PUBLIC_ORIGIN")
 
 /* ── Layout ── */
 
@@ -267,11 +264,9 @@ export const PodcastEpisodeDetailPage: React.FC<
   // usually about the series it was found in.
   const sharePageUrl =
     episode && podcastId
-      ? `${NEXT_PUBLIC_ORIGIN}${podcastEpisodePath(
-          String(episode.id),
-          podcastId,
-          episode.url_slug,
-        )}`
+      ? absoluteUrl(
+          podcastEpisodePath(String(episode.id), podcastId, episode.url_slug),
+        )
       : ""
 
   // Episode descriptions are sanitized on the backend with nh3 during ETL
