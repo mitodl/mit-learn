@@ -618,8 +618,7 @@ describe("CoursePage", () => {
             "Unable to complete enrollment. Please contact support. Error code: CS_700",
           ),
         ).toBeInTheDocument()
-        // The generic copy is superseded, and the InfoBox's own alert — a
-        // separate hook instance — never fired at all.
+        // The InfoBox's alert is a separate hook instance and never fires.
         expect(
           screen.queryByText(
             "There was a problem processing your enrollment. Please try again.",
