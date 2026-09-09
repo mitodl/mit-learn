@@ -678,9 +678,9 @@ def with_derived_resource_fields(source: dict | None) -> dict | None:
     which every document carries, so deriving one here beats coupling a deploy
     to a reindex. A reindexed document keeps its own value.
 
-    `learn_url` gets no such treatment, and could not: it needs the parent ids,
-    platform, readable_id and resource_category, none of which a stored document
-    carries.
+    `url_slug` is the only field that needs this. Everything else the response
+    schema requires is already in the stored documents, `learn_url` included --
+    the index was rebuilt when that field was added.
     """
     if source is None or "url_slug" in source:
         return source
