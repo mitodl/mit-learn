@@ -1,6 +1,16 @@
 Release Notes
 =============
 
+Version 0.79.1
+--------------
+
+- Fix PostHog search-term tracking (#3908)
+- fix: flaky SessionSelect test tied to today's date (#3916)
+- Return a resource's URL slug as a top-level API field (#3913)
+- Use the shared smoot-design UserMenu in Learn's header (#3907)
+- Add per-run context menus to the sibling runs accordion (#3894)
+- fix "sort by upcoming" for learning materials in search (#3886)
+
 Version 0.79.0
 --------------
 
