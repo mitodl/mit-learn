@@ -239,6 +239,39 @@ class LearningResourcesVectorSearchRequestSerializer(
         ),
         default=0.0,
     )
+    program_boost = serializers.FloatField(
+        required=False,
+        allow_null=True,
+        default=None,
+        min_value=0,
+        help_text=(
+            "Score added to a program before ranking, scaled down as relevance "
+            "drops. 0 disables the boost. Defaults to the server's configured "
+            "amount when omitted."
+        ),
+    )
+    staleness_penalty = serializers.FloatField(
+        required=False,
+        allow_null=True,
+        default=None,
+        min_value=0,
+        help_text=(
+            "Score subtracted from a resource at or beyond the staleness "
+            "horizon, ramped linearly by age. 0 disables the penalty. Defaults "
+            "to the server's configured weight when omitted."
+        ),
+    )
+    completeness_penalty = serializers.FloatField(
+        required=False,
+        allow_null=True,
+        default=None,
+        min_value=0,
+        help_text=(
+            "Score subtracted from a resource with completeness 0, scaled "
+            "linearly by incompleteness. 0 disables the penalty. Defaults to "
+            "the server's configured weight when omitted."
+        ),
+    )
 
     def validate(self, attrs):
         return _validate_result_window(attrs)

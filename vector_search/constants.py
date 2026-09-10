@@ -280,8 +280,16 @@ QDRANT_OPTIMIZER_FLUSH_INTERVAL_XLARGE = 30
 QDRANT_OPTIMIZER_INDEXING_THRESHOLD_RATIO = 0.8
 
 
+# Name of the boost entry whose amount the `program_boost` search parameter
+# overrides.
+PROGRAM_SCORE_BOOST_NAME = "program"
+
 VECTOR_SEARCH_SCORE_BOOST = {
     RESOURCES_COLLECTION_NAME: [
-        {"boost": 0.15, "params": {"resource_type_group": ["program"]}}
+        {
+            "name": PROGRAM_SCORE_BOOST_NAME,
+            "boost": 0.15,
+            "params": {"resource_type_group": ["program"]},
+        }
     ],
 }

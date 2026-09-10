@@ -968,6 +968,16 @@ paths:
           Credential\n* `professional` - Professional Certificate\n* `completion`
           - Certificate of Completion\n* `none` - No Certificate"
       - in: query
+        name: completeness_penalty
+        schema:
+          type: number
+          format: double
+          minimum: 0
+          nullable: true
+        description: Score subtracted from a resource with completeness 0, scaled
+          linearly by incompleteness. 0 disables the penalty. Defaults to the server's
+          configured weight when omitted.
+      - in: query
         name: course_feature
         schema:
           type: array
@@ -1241,6 +1251,16 @@ paths:
           type: boolean
           nullable: true
       - in: query
+        name: program_boost
+        schema:
+          type: number
+          format: double
+          minimum: 0
+          nullable: true
+        description: Score added to a program before ranking, scaled down as relevance
+          drops. 0 disables the boost. Defaults to the server's configured amount
+          when omitted.
+      - in: query
         name: published
         schema:
           type: boolean
@@ -1341,6 +1361,16 @@ paths:
           * `-next_start_date` - -next_start_date
           * `-views` - -views
           * `-created_on` - -created_on
+      - in: query
+        name: staleness_penalty
+        schema:
+          type: number
+          format: double
+          minimum: 0
+          nullable: true
+        description: Score subtracted from a resource at or beyond the staleness horizon,
+          ramped linearly by age. 0 disables the penalty. Defaults to the server's
+          configured weight when omitted.
       - in: query
         name: title__isnull
         schema:
