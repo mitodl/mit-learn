@@ -14,7 +14,11 @@ import {
   SectionHeader,
 } from "./SectionLayout"
 import { caseStudies as copy } from "./copy"
-import type { CaseStudyItem } from "./copy"
+import type {
+  CaseStudyItem,
+  CaseStudyPillarItem,
+  CaseStudyQuotePillar,
+} from "./copy"
 
 const Band = styled(Section)(({ theme }) => ({
   backgroundColor: theme.custom.colors.white,
@@ -96,28 +100,18 @@ const Masthead = styled.div(({ theme }) => ({
   },
 }))
 
-const LogoFrame = styled.div(({ theme }) => ({
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
+const Logo = styled(Image)(({ theme }) => ({
   flexShrink: 0,
   boxSizing: "border-box",
   width: "200px",
   height: "200px",
-  padding: "24px",
-  borderRadius: "8px",
-  border: `1px solid ${theme.custom.colors.lightGray2}`,
-  backgroundColor: theme.custom.colors.white,
-  img: {
-    maxWidth: "100%",
-    maxHeight: "100%",
-    width: "auto",
-    height: "auto",
-  },
+  objectFit: "contain",
+  borderRadius: "16px",
+  boxShadow: "0px 1px 6px 0px rgba(3, 21, 45, 0.05)",
   [theme.breakpoints.down("md")]: {
     width: "144px",
     height: "144px",
-    padding: "16px",
+    borderRadius: "12px",
   },
 }))
 
@@ -150,12 +144,15 @@ const Tagline = styled.p(({ theme }) => ({
   margin: 0,
 }))
 
+const STATS_COLUMNS = 3
+
 const Stats = styled.dl(({ theme }) => ({
-  display: "flex",
-  flexWrap: "wrap",
+  display: "grid",
+  gridTemplateColumns: `repeat(${STATS_COLUMNS}, 1fr)`,
   gap: "24px 48px",
   margin: 0,
   [theme.breakpoints.down("sm")]: {
+    gridTemplateColumns: "1fr",
     gap: "16px",
   },
 }))
@@ -164,12 +161,12 @@ const Stat = styled.div(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
   gap: "8px",
-  "&:not(:first-of-type)": {
+  [`&:not(:nth-of-type(${STATS_COLUMNS}n + 1))`]: {
     paddingLeft: "48px",
     borderLeft: `1px solid ${theme.custom.colors.lightGray2}`,
   },
   [theme.breakpoints.down("sm")]: {
-    "&:not(:first-of-type)": {
+    [`&:not(:nth-of-type(${STATS_COLUMNS}n + 1))`]: {
       paddingLeft: 0,
       borderLeft: "none",
     },
@@ -241,7 +238,50 @@ const PillarBullets = styled.ul(({ theme }) => ({
   gap: "4px",
   margin: 0,
   paddingLeft: "21px",
+  listStyleType: "disc",
 }))
+
+const QuoteMark = styled.span(({ theme }) => ({
+  ...theme.typography.h2,
+  color: theme.custom.colors.red,
+  lineHeight: 1,
+}))
+
+const QuoteText = styled.p(({ theme }) => ({
+  ...theme.typography.body1,
+  color: theme.custom.colors.darkGray2,
+  margin: 0,
+  marginTop: "-16px",
+}))
+
+const QuoteAttribution = styled.div({
+  display: "flex",
+  flexDirection: "column",
+  marginTop: "auto",
+})
+
+const QuoteName = styled.p(({ theme }) => ({
+  ...theme.typography.h5,
+  color: theme.custom.colors.darkGray2,
+  margin: 0,
+}))
+
+const QuoteRole = styled.p(({ theme }) => ({
+  ...theme.typography.body3,
+  color: theme.custom.colors.silverGrayDark,
+  margin: 0,
+}))
+
+const Footnote = styled.p(({ theme }) => ({
+  ...theme.typography.subtitle2,
+  color: theme.custom.colors.darkGray2,
+  margin: 0,
+  textAlign: "center",
+}))
+
+const isQuotePillar = (
+  pillar: CaseStudyPillarItem,
+): pillar is CaseStudyQuotePillar => "quote" in pillar
 
 type CaseStudyPanelProps = {
   study: CaseStudyItem
@@ -262,14 +302,12 @@ const CaseStudyPanel: React.FC<CaseStudyPanelProps> = ({ study, isSlide }) => {
     <Card {...slideProps}>
       <Masthead>
         {study.logo ? (
-          <LogoFrame>
-            <Image
-              src={study.logo.src}
-              alt=""
-              width={study.logo.width}
-              height={study.logo.height}
-            />
-          </LogoFrame>
+          <Logo
+            src={study.logo.src}
+            alt=""
+            width={study.logo.width}
+            height={study.logo.height}
+          />
         ) : null}
         <MastheadText>
           <TitleBlock>
@@ -291,18 +329,32 @@ const CaseStudyPanel: React.FC<CaseStudyPanelProps> = ({ study, isSlide }) => {
       <Divider />
 
       <Pillars>
-        {study.pillars.map((pillar) => (
-          <Pillar key={pillar.title}>
-            <PillarTitle>{pillar.title}</PillarTitle>
-            <PillarBody>{pillar.body}</PillarBody>
-            <PillarBullets>
-              {pillar.bullets.map((bullet) => (
-                <li key={bullet}>{bullet}</li>
-              ))}
-            </PillarBullets>
-          </Pillar>
-        ))}
+        {study.pillars.map((pillar) =>
+          isQuotePillar(pillar) ? (
+            <Pillar key={pillar.title}>
+              <PillarTitle>{pillar.title}</PillarTitle>
+              <QuoteMark aria-hidden>“</QuoteMark>
+              <QuoteText>{pillar.quote}</QuoteText>
+              <QuoteAttribution>
+                <QuoteName>{pillar.name}</QuoteName>
+                <QuoteRole>{pillar.role}</QuoteRole>
+              </QuoteAttribution>
+            </Pillar>
+          ) : (
+            <Pillar key={pillar.title}>
+              <PillarTitle>{pillar.title}</PillarTitle>
+              <PillarBody>{pillar.body}</PillarBody>
+              <PillarBullets>
+                {pillar.bullets.map((bullet) => (
+                  <li key={bullet}>{bullet}</li>
+                ))}
+              </PillarBullets>
+            </Pillar>
+          ),
+        )}
       </Pillars>
+
+      <Footnote>{study.footnote}</Footnote>
     </Card>
   )
 }

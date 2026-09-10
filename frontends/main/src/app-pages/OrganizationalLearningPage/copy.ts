@@ -28,11 +28,18 @@ export type ClientLogoItem = {
   height: number
 }
 export type CaseStudyStat = { value: string; label: string }
-export type CaseStudyPillar = {
+export type CaseStudyInfoPillar = {
   title: string
   body: string
   bullets: string[]
 }
+export type CaseStudyQuotePillar = {
+  title: string
+  quote: string
+  name: string
+  role: string
+}
+export type CaseStudyPillarItem = CaseStudyInfoPillar | CaseStudyQuotePillar
 export type CaseStudyItem = {
   eyebrow: string
   org: string
@@ -40,7 +47,8 @@ export type CaseStudyItem = {
   /** Omitted while a study is anonymized; the panel then drops the logo frame. */
   logo?: { src: string; width: number; height: number }
   stats: CaseStudyStat[]
-  pillars: CaseStudyPillar[]
+  pillars: CaseStudyPillarItem[]
+  footnote: string
 }
 
 export const hero = {
@@ -243,47 +251,59 @@ export const caseStudies = {
   items: [
     {
       eyebrow: "INSTITUTIONAL SOLUTIONS",
-      org: "Global financial services firm",
-      tagline: "A custom learning solution built with MIT Learn",
+      org: "Namibia University of Science and Technology (NUST)",
+      tagline:
+        "A pilot of MIT Open Learning’s Universal AI Program for over 1,000 students in Namibia",
+      logo: {
+        src: "/images/organizational_learning/nust-logo.png",
+        width: 586,
+        height: 603,
+      },
       stats: [
-        { value: "50+", label: "Program participants" },
-        { value: "30+", label: "Countries represented" },
-        { value: "CEUs", label: "Awarded for completion" },
+        {
+          value: "1,100 current students",
+          label: "Pilot program participants",
+        },
+        { value: "2,600+", label: "Module Enrollments" },
+        { value: "960", label: "Certificates Awarded" },
       ],
       pillars: [
         {
-          title: "Organizational solution evaluation",
-          body: "Customer needs assessment and alignment to goals.",
+          title: "Program impact",
+          quote:
+            "You cannot go into industry if you don't know how to use AI. That is why the Universal AI program mattered — people needed to introduce themselves to what AI is.",
+          name: "Helena Imene",
+          role: "Instructional Designer & Pilot Lead",
+        },
+        {
+          title: "Scalable AI training",
+          body: "Access to the entire Universal AI program, including 16 foundational modules and multiple industry-specific modules.",
           bullets: [
-            "Stakeholder interviews",
-            "Learning priorities",
-            "Success metrics",
+            "Asynchronous virtual instruction",
+            "Assessments and activities",
+            "Access to the AskTIM AI tutor",
+            "Module-level certificates",
           ],
         },
         {
-          title: "Blended learning program",
-          body: "Curated content with live sessions and self-paced learning.",
-          bullets: ["Courses & programs", "Workshops & seminars", "Webinars"],
+          title: "Flexible curriculum for faculty",
+          quote:
+            "It has given me insight on how to incorporate AI and entrepreneurship in the content I am already teaching, and further how students can leverage AI in their potential business.",
+          name: "Salmie Sakarias",
+          role: "Lecturer, Business & Entrepreneurship",
         },
         {
-          title: "Technical implementation",
-          body: "Setup, integration and support to launch seamlessly.",
+          title: "Client success and support",
+          body: "Engagement reporting and hands-on guidance from MIT staff members.",
           bullets: [
-            "Platform integration",
-            "User provisioning",
-            "Onboarding & support",
-          ],
-        },
-        {
-          title: "Ongoing support & reporting",
-          body: "Engagement analytics and continuous improvement.",
-          bullets: [
-            "Usage & impact reports",
-            "Feedback & iteration",
-            "Dedicated support",
+            "Usage & engagement reports",
+            "Dashboards for administrators",
+            "Advice to improve engagement and completion",
           ],
         },
       ],
+      footnote:
+        "Designed to address mission critical needs, delivered with world-renowned quality and impact at scale.",
     },
   ] satisfies CaseStudyItem[],
 }
@@ -293,30 +313,32 @@ export const faq = {
   title: "Answers before you talk to our team.",
   items: [
     {
-      question: "Do we need to know exactly what type of solution we need?",
-      answer: "Answer pending from the content handoff.",
+      question:
+        "Do we need to know exactly what program or course we need before starting a conversation with you?",
+      answer:
+        "No. MIT Open Learning can meet your team where they’re at and assist in educating you on available options. We often work with groups that are still developing their training plans, and can bring in internal instructional designers to help find the right combination of programs for your needs.",
     },
     {
-      question: "How are the lectures by MIT faculty and experts structured?",
-      answer: "Answer pending from the content handoff.",
-    },
-    {
-      question: "How do guided exercises support learning?",
-      answer: "Answer pending from the content handoff.",
+      question:
+        "How are lectures by MIT faculty and experts structured and delivered?",
+      answer:
+        "All programs are designed with a delivery mode in mind and delivered by MIT experts. Some options are designed to be asynchronous and flexible to match the learner’s personal schedule, others are designed to be fully synchronous to encourage discussion and collaboration. We will work with you to find the right combination of formats and structures to meet your training goals.",
     },
     {
       question:
         "What is the AI-powered AskTIM feature and how does it support learners?",
-      answer: "Answer pending from the content handoff.",
+      answer:
+        "AskTIM is MIT Open Learning’s agentic teaching assistant. Each learner’s instance of AskTIM is unique to their progress in the course and demonstrated proficiency, offering accelerated or remedial material where necessary and supporting socratic dialogue with students to enrich understanding. The feature is designed as a tutor, and will not give answers to learners that would ever do the work on their behalf, and instead is meant to help learners reason through their own responses.",
     },
     {
-      question: "How is learning assessed throughout the modules?",
-      answer: "Answer pending from the content handoff.",
+      question: "What kind of support is available for administrators?",
+      answer:
+        "We provide additional support for administrators by assigning dedicated Customer Success Managers for most of our corporate and university relationships. We also provide reports and dashboards to help administrators understand learner progress and inform strategies for improving engagement over time. Programs also include technical support and can be seamlessly integrated with most Learning Management Systems or single sign-on (SSO) systems to improve the learner experience.",
     },
     {
-      question:
-        "What kind of support is available for administrators and instructors?",
-      answer: "Answer pending from the content handoff.",
+      question: "Can I enroll just myself in a course or program?",
+      answer:
+        "Yes. Solo learners can enroll themselves in all public MIT Open Learning programs. Public programs can be found on learn.mit.edu. If there is interest in enrolling a team or entire organization, please complete our contact form below.",
     },
   ] satisfies FaqItem[],
 }

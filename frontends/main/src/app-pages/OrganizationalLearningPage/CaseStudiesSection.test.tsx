@@ -2,7 +2,28 @@ import React from "react"
 import { act, renderWithProviders, screen, user } from "@/test-utils"
 import CaseStudiesSection, { CaseStudyCarousel } from "./CaseStudiesSection"
 import { caseStudies } from "./copy"
-import type { CaseStudyItem } from "./copy"
+import type {
+  CaseStudyInfoPillar,
+  CaseStudyItem,
+  CaseStudyPillarItem,
+  CaseStudyQuotePillar,
+} from "./copy"
+
+/**
+ * `satisfies CaseStudyItem[]` in copy.ts contextually types each pillar
+ * literal against the whole `CaseStudyInfoPillar | CaseStudyQuotePillar`
+ * union, which makes a bare `"quote" in pillar` check widen the shared
+ * fields to `string | undefined` instead of narrowing. A type predicate
+ * sidesteps that and narrows cleanly.
+ */
+const isQuotePillar = (
+  pillar: CaseStudyPillarItem,
+): pillar is CaseStudyQuotePillar => "quote" in pillar
+
+/** Same reasoning as `isQuotePillar` — needed here too, since falling through past its early `return` doesn't re-narrow `pillar` on its own. */
+const isInfoPillar = (
+  pillar: CaseStudyPillarItem,
+): pillar is CaseStudyInfoPillar => "bullets" in pillar
 
 /**
  * Embla derives slide positions from real element widths via
@@ -58,6 +79,7 @@ const makeStudy = (org: string): CaseStudyItem => ({
       bullets: ["First step", "Second step"],
     },
   ],
+  footnote: `${org} footnote`,
 })
 
 const THREE_STUDIES = ["Study A", "Study B", "Study C"].map(makeStudy)
@@ -95,6 +117,7 @@ describe("CaseStudiesSection", () => {
 
     expect(screen.getByRole("heading", { name: study.org })).toBeInTheDocument()
     expect(screen.getByText(study.tagline)).toBeInTheDocument()
+    expect(screen.getByText(study.footnote)).toBeInTheDocument()
 
     study.stats.forEach((stat) => {
       expect(screen.getByText(stat.value)).toBeInTheDocument()
@@ -104,20 +127,26 @@ describe("CaseStudiesSection", () => {
       expect(
         screen.getByRole("heading", { name: pillar.title }),
       ).toBeInTheDocument()
-      pillar.bullets.forEach((bullet) => {
-        expect(screen.getByText(bullet)).toBeInTheDocument()
-      })
+      if (isQuotePillar(pillar)) {
+        expect(screen.getByText(pillar.quote)).toBeInTheDocument()
+        expect(screen.getByText(pillar.name)).toBeInTheDocument()
+        expect(screen.getByText(pillar.role)).toBeInTheDocument()
+        return
+      }
+      if (isInfoPillar(pillar)) {
+        pillar.bullets.forEach((bullet) => {
+          expect(screen.getByText(bullet)).toBeInTheDocument()
+        })
+      }
     })
   })
 
-  test("ships anonymized: a descriptor rather than a named client, and no logo", () => {
+  test("never reintroduces the old placeholder client name", () => {
     renderWithProviders(<CaseStudiesSection />)
 
     expect(
       screen.queryByText(/International Monetary Fund/i),
     ).not.toBeInTheDocument()
-    const items: CaseStudyItem[] = caseStudies.items
-    expect(items.every((study) => !study.logo)).toBe(true)
   })
 
   test("omits the logo frame for a study with no logo", () => {
