@@ -1373,6 +1373,193 @@ test("changing a facet resets unsubmitted text", async () => {
   })
 })
 
+describe("Search analytics events", () => {
+  beforeEach(() => {
+    process.env.NEXT_PUBLIC_POSTHOG_API_KEY = "test-key"
+    mockCapture.mockClear()
+  })
+  afterEach(() => {
+    delete process.env.NEXT_PUBLIC_POSTHOG_API_KEY
+  })
+
+  test("Submitting a search captures the submitted term, not the one in the URL", async () => {
+    setMockApiResponses({})
+    renderWithProviders(<SearchPage />, { url: "?q=design" })
+
+    const input = await screen.findByRole("textbox", { name: "Search for" })
+    await waitFor(() => expect(input).toHaveValue("design"))
+    await user.clear(input)
+    await user.paste("policy")
+    await user.type(input, "{Enter}")
+
+    expect(mockCapture).toHaveBeenCalledExactlyOnceWith(
+      PostHogEvents.SearchUpdate,
+      { search_term: "policy", isEnter: true },
+    )
+  })
+
+  test("Toggling a facet captures the filter event, not the keyword search event", async () => {
+    setMockApiResponses({
+      search: {
+        count: 700,
+        metadata: {
+          aggregations: { topic: [{ key: "Physics", doc_count: 100 }] },
+          suggestions: [],
+        },
+      },
+    })
+    renderWithProviders(<SearchPage />)
+
+    const physics = await screen.findByRole("checkbox", { name: "Physics 100" })
+    await user.click(physics)
+
+    expect(mockCapture).toHaveBeenCalledExactlyOnceWith(
+      PostHogEvents.SearchFilterUpdate,
+      { control: "topic" },
+    )
+  })
+
+  test("Changing sort captures the filter event naming the control", async () => {
+    setMockApiResponses({ search: { count: 137 } })
+    renderWithProviders(<SearchPage />)
+
+    const sortDropdown = (await screen.findAllByText("Sort by: Best Match"))[0]
+    await user.click(sortDropdown)
+    await user.click(await screen.findByRole("option", { name: /Popular/i }))
+
+    expect(mockCapture).toHaveBeenCalledExactlyOnceWith(
+      PostHogEvents.SearchFilterUpdate,
+      { control: "sortby" },
+    )
+  })
+
+  test("Clear all captures the filter event", async () => {
+    setMockApiResponses({
+      search: {
+        count: 700,
+        metadata: {
+          aggregations: { level: [{ key: "graduate", doc_count: 100 }] },
+          suggestions: [],
+        },
+      },
+    })
+    renderWithProviders(<SearchPage />, { url: "?level=graduate" })
+
+    await user.click(await screen.findByRole("button", { name: /clear all/i }))
+
+    expect(mockCapture).toHaveBeenCalledExactlyOnceWith(
+      PostHogEvents.SearchFilterUpdate,
+      { control: "clear_all" },
+    )
+  })
+
+  test("Switching resource type tabs captures the filter event naming the control", async () => {
+    setMockApiResponses({
+      search: {
+        count: 700,
+        metadata: {
+          aggregations: {
+            resource_type_group: [
+              { key: "course", doc_count: 100 },
+              { key: "learning_material", doc_count: 200 },
+            ],
+          },
+          suggestions: [],
+        },
+      },
+    })
+    renderWithProviders(<SearchPage />)
+
+    const tabCourses = await screen.findByRole("tab", { name: /Courses/ })
+    await user.click(tabCourses)
+
+    expect(mockCapture).toHaveBeenCalledExactlyOnceWith(
+      PostHogEvents.SearchFilterUpdate,
+      { control: "resource_type_group" },
+    )
+  })
+
+  test("Toggling Show OCW Files captures the filter event naming the control", async () => {
+    mockFeatureFlags({ [FeatureFlags.DisableHybridSearch]: true })
+    setMockApiResponses({
+      search: {
+        count: 10,
+        metadata: {
+          aggregations: {
+            resource_type_group: [{ key: "course", doc_count: 10 }],
+          },
+          suggestions: [],
+        },
+      },
+    })
+    setMockResponse.get(urls.userMe.get(), {
+      is_learning_path_editor: true,
+      is_authenticated: true,
+    })
+    setMockResponse.get(urls.adminSearchParams.get(), {
+      search_mode: "phrase",
+      slop: 6,
+      yearly_decay_percent: 2.5,
+      min_score: 0,
+      max_incompleteness_penalty: 90,
+      content_file_score_weight: 1,
+    })
+
+    renderWithProviders(<SearchPage />)
+    await user.click(await screen.findByText("Admin Options"))
+
+    const checkbox = await screen.findByRole("checkbox", {
+      name: "Show OCW files",
+    })
+    await user.click(checkbox)
+
+    expect(mockCapture).toHaveBeenCalledExactlyOnceWith(
+      PostHogEvents.SearchFilterUpdate,
+      { control: "show_ocw_files" },
+    )
+  })
+
+  test("Moving an admin relevance slider captures the filter event naming the control", async () => {
+    mockFeatureFlags({ [FeatureFlags.DisableHybridSearch]: true })
+    setMockApiResponses({
+      search: {
+        count: 700,
+        metadata: {
+          aggregations: {
+            resource_type_group: [{ key: "course", doc_count: 100 }],
+          },
+          suggestions: [],
+        },
+      },
+    })
+    setMockResponse.get(urls.userMe.get(), {
+      is_learning_path_editor: true,
+      is_authenticated: true,
+    })
+    setMockResponse.get(urls.adminSearchParams.get(), {
+      search_mode: "phrase",
+      slop: 6,
+      yearly_decay_percent: 2.5,
+      min_score: 0,
+      max_incompleteness_penalty: 90,
+      content_file_score_weight: 1,
+    })
+
+    renderWithProviders(<SearchPage />)
+    await user.click(await screen.findByText("Admin Options"))
+
+    const slider = await screen.findByTestId("min_score-slider")
+    const input = within(slider).getByRole("slider")
+    await act(async () => input.focus())
+    await user.keyboard("{ArrowRight}")
+
+    expect(mockCapture).toHaveBeenCalledExactlyOnceWith(
+      PostHogEvents.SearchFilterUpdate,
+      { control: "min_score" },
+    )
+  })
+})
+
 describe("UniversalAIBanner", () => {
   beforeEach(() => {
     mockFeatureFlags({ [FeatureFlags.UniversalAISearchBanner]: false })
