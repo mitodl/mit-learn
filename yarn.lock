@@ -2524,7 +2524,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@faker-js/faker@npm:10.6.0, @faker-js/faker@npm:^10.5.0":
+"@faker-js/faker@npm:10.6.0":
   version: 10.6.0
   resolution: "@faker-js/faker@npm:10.6.0"
   checksum: 10/f45220ceae76133d831dee8c8f5c8566767bfd857b7f872b5ec58866b68da889dabe96e805a598e095a6c58eae250363a7f335aa0afc513cb2ad5fe69e2a967f
@@ -7491,26 +7491,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@testing-library/react@npm:16.3.0, @testing-library/react@npm:^16.3.0":
-  version: 16.3.0
-  resolution: "@testing-library/react@npm:16.3.0"
-  dependencies:
-    "@babel/runtime": "npm:^7.12.5"
-  peerDependencies:
-    "@testing-library/dom": ^10.0.0
-    "@types/react": ^18.0.0 || ^19.0.0
-    "@types/react-dom": ^18.0.0 || ^19.0.0
-    react: ^18.0.0 || ^19.0.0
-    react-dom: ^18.0.0 || ^19.0.0
-  peerDependenciesMeta:
-    "@types/react":
-      optional: true
-    "@types/react-dom":
-      optional: true
-  checksum: 10/0ee9e31dd0d2396a924682d0e61a4ecc6bfab8eaff23dbf8a72c3c2ce22c116fa578148baeb4de75b968ef99d22e6e6aa0a00dba40286f71184918bb6bb5b06a
-  languageName: node
-  linkType: hard
-
 "@testing-library/react@npm:16.3.3":
   version: 16.3.3
   resolution: "@testing-library/react@npm:16.3.3"
@@ -8293,7 +8273,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/jest@npm:*, @types/jest@npm:29.5.13":
+"@types/jest@npm:*":
   version: 29.5.13
   resolution: "@types/jest@npm:29.5.13"
   dependencies:
@@ -14131,10 +14111,10 @@ __metadata:
     "@next/eslint-plugin-next": "npm:16.2.7"
     "@swc/core": "npm:1.12.6"
     "@swc/jest": "npm:0.2.38"
-    "@testing-library/jest-dom": "npm:6.5.0"
-    "@testing-library/react": "npm:16.3.0"
-    "@testing-library/user-event": "npm:14.5.2"
-    "@types/jest": "npm:29.5.13"
+    "@testing-library/jest-dom": "npm:6.9.1"
+    "@testing-library/react": "npm:16.3.3"
+    "@testing-library/user-event": "npm:14.6.7"
+    "@types/jest": "npm:29.5.14"
     "@types/jest-when": "npm:3.5.5"
     "@types/react-google-recaptcha": "npm:2.1.9"
     "@typescript-eslint/eslint-plugin": "npm:8.12.2"
@@ -17409,7 +17389,7 @@ __metadata:
     jest-extended: "npm:7.0.0"
     jest-next-dynamic-ts: "npm:0.1.1"
     jsdom: "npm:^27"
-    lodash: "npm:^4.17.21"
+    lodash: "npm:4.18.1"
     lodash.throttle: "npm:^4.1.1"
     moment: "npm:^2.30.1"
     next: "npm:^16.2.7"
@@ -17429,7 +17409,7 @@ __metadata:
     slick-carousel: "npm:^1.8.1"
     tiny-invariant: "npm:^1.3.3"
     ts-jest: "npm:29.4.12"
-    typescript: "npm:5.9.3"
+    typescript: "npm:5.6.3"
     video.js: "npm:^8.23.7"
     videojs-youtube: "npm:^3.0.1"
     yup: "npm:^1.4.0"
@@ -18531,16 +18511,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"next-router-mock@npm:^1.0.2":
-  version: 1.0.2
-  resolution: "next-router-mock@npm:1.0.2"
-  peerDependencies:
-    next: ">=10.0.0"
-    react: ">=17.0.0"
-  checksum: 10/a4f3a66efb51d7a43487ee2814a1e3d7d2135afd5913a587c71921e18e0519c54a240b9873a757b3e8eacb1805435f2dfac04b644ca0407cdef80f823cb4baee
-  languageName: node
-  linkType: hard
-
 "next@npm:^16.2.7":
   version: 16.2.7
   resolution: "next@npm:16.2.7"
@@ -19017,7 +18987,7 @@ __metadata:
     sass-embedded: "npm:1.104.0"
     storybook: "npm:10.6.0"
     tiny-invariant: "npm:^1.3.3"
-    typescript: "npm:5.9.3"
+    typescript: "npm:5.6.3"
     wheel-indicator: "npm:^1.3.0"
   peerDependencies:
     "@mitodl/smoot-design": 6.36.0
@@ -19029,14 +18999,14 @@ __metadata:
   version: 0.0.0-use.local
   resolution: "ol-test-utilities@workspace:frontends/ol-test-utilities"
   dependencies:
-    "@faker-js/faker": "npm:^10.5.0"
-    "@testing-library/react": "npm:^16.3.0"
+    "@faker-js/faker": "npm:10.6.0"
+    "@testing-library/react": "npm:16.3.3"
     "@types/lodash": "npm:4.17.25"
     "@types/react": "npm:^19.2.7"
     dom-accessibility-api: "npm:^0.7.0"
-    lodash: "npm:^4.17.21"
+    lodash: "npm:4.18.1"
     moment-timezone: "npm:^0.6.0"
-    next-router-mock: "npm:^1.0.2"
+    next-router-mock: "npm:1.0.5"
     tiny-invariant: "npm:^1.3.3"
   peerDependencies:
     react: ^19.2.1
@@ -19052,11 +19022,11 @@ __metadata:
     "@testing-library/user-event": "npm:14.6.7"
     api: "workspace:*"
     currency-symbol-map: "npm:^5.1.0"
-    lodash: "npm:^4.17.21"
+    lodash: "npm:4.18.1"
     moment: "npm:^2.30.1"
     ol-test-utilities: "npm:0.0.0"
     qs: "npm:^6.11.0"
-    tiny-invariant: "npm:1.3.3"
+    tiny-invariant: "npm:^1.3.3"
   peerDependencies:
     next: ^16.2.7
     react: ^19.2.1
@@ -23309,7 +23279,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"tiny-invariant@npm:1.3.3, tiny-invariant@npm:^1.3.1, tiny-invariant@npm:^1.3.3":
+"tiny-invariant@npm:^1.3.1, tiny-invariant@npm:^1.3.3":
   version: 1.3.3
   resolution: "tiny-invariant@npm:1.3.3"
   checksum: 10/5e185c8cc2266967984ce3b352a4e57cb89dad5a8abb0dea21468a6ecaa67cd5bb47a3b7a85d08041008644af4f667fb8b6575ba38ba5fb00b3b5068306e59fe
@@ -23854,16 +23824,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"typescript@npm:5.9.3":
-  version: 5.9.3
-  resolution: "typescript@npm:5.9.3"
-  bin:
-    tsc: bin/tsc
-    tsserver: bin/tsserver
-  checksum: 10/c089d9d3da2729fd4ac517f9b0e0485914c4b3c26f80dc0cffcb5de1719a17951e92425d55db59515c1a7ddab65808466debb864d0d56dcf43f27007d0709594
-  languageName: node
-  linkType: hard
-
 "typescript@patch:typescript@npm%3A5.6.3#optional!builtin<compat/typescript>, typescript@patch:typescript@npm%3A^5.6.3#optional!builtin<compat/typescript>":
   version: 5.6.3
   resolution: "typescript@patch:typescript@npm%3A5.6.3#optional!builtin<compat/typescript>::version=5.6.3&hash=8c6c40"
@@ -23871,16 +23831,6 @@ __metadata:
     tsc: bin/tsc
     tsserver: bin/tsserver
   checksum: 10/00504c01ee42d470c23495426af07512e25e6546bce7e24572e72a9ca2e6b2e9bea63de4286c3cfea644874da1467dcfca23f4f98f7caf20f8b03c0213bb6837
-  languageName: node
-  linkType: hard
-
-"typescript@patch:typescript@npm%3A5.9.3#optional!builtin<compat/typescript>":
-  version: 5.9.3
-  resolution: "typescript@patch:typescript@npm%3A5.9.3#optional!builtin<compat/typescript>::version=5.9.3&hash=5786d5"
-  bin:
-    tsc: bin/tsc
-    tsserver: bin/tsserver
-  checksum: 10/696e1b017bc2635f4e0c94eb4435357701008e2f272f553d06e35b494b8ddc60aa221145e286c28ace0c89ee32827a28c2040e3a69bdc108b1a5dc8fb40b72e3
   languageName: node
   linkType: hard
 
