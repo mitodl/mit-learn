@@ -6,6 +6,7 @@
  */
 import React from "react"
 import { screen } from "@testing-library/react"
+import userEvent from "@testing-library/user-event"
 import { setMockResponse, factories, urls } from "api/test-utils"
 import type { JSONContent } from "@tiptap/react"
 import { ArticleEditor } from "./ArticleEditor"
@@ -30,14 +31,23 @@ const content: JSONContent = {
   ],
 }
 
-const renderArticleEditor = () => {
+const renderArticleEditor = ({
+  readOnly = false,
+  isPublished = false,
+}: { readOnly?: boolean; isPublished?: boolean } = {}) => {
   const user = factories.user.user({
     is_authenticated: true,
     is_article_editor: true,
   })
   setMockResponse.get(urls.userMe.get(), user)
-  const article = factories.websiteContent.websiteContent({ content })
-  renderWithProviders(<ArticleEditor article={article} />, { user })
+  const article = factories.websiteContent.websiteContent({
+    content,
+    is_published: isPublished,
+  })
+  renderWithProviders(<ArticleEditor article={article} readOnly={readOnly} />, {
+    user,
+  })
+  return article
 }
 
 describe("ArticleEditor", () => {
@@ -52,5 +62,47 @@ describe("ArticleEditor", () => {
     renderArticleEditor()
 
     await screen.findByText("Articles")
+  })
+})
+
+describe("ArticleEditor article controls", () => {
+  test("the draft control bar carries the article actions and status", async () => {
+    renderArticleEditor()
+
+    await screen.findByRole("button", { name: "Settings" })
+    await screen.findByRole("button", { name: "Save as Draft" })
+    await screen.findByRole("button", { name: "Publish" })
+    expect(await screen.findByText(/Article status:/)).toHaveTextContent(
+      "Article status: Draft",
+    )
+  })
+
+  test("a published article offers Draft, Edit, Settings and Unpublish", async () => {
+    renderArticleEditor({ readOnly: true, isPublished: true })
+
+    await screen.findByRole("link", { name: "Draft" })
+    await screen.findByRole("link", { name: "Edit" })
+    await screen.findByRole("button", { name: "Settings" })
+    await screen.findByRole("button", { name: "Unpublish Article" })
+    expect(await screen.findByText(/Article status:/)).toHaveTextContent(
+      "Article status: Published",
+    )
+  })
+
+  test("Settings opens the article settings drawer", async () => {
+    setMockResponse.get(
+      urls.topics.list({ limit: 200 }),
+      factories.learningResources.topics({ count: 2 }),
+    )
+    renderArticleEditor()
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Settings" }),
+    )
+
+    await screen.findByRole("heading", { name: "Article Settings" })
+    await screen.findByRole("heading", { name: "Select Topics" })
+    await screen.findByRole("heading", { name: "SEO Settings" })
+    await screen.findByRole("button", { name: "Save Settings" })
   })
 })

@@ -5,7 +5,7 @@
  * elements not supported by JSDOM, the default environment in Jest.
  */
 import React from "react"
-import { screen, waitFor, fireEvent } from "@testing-library/react"
+import { screen, waitFor, fireEvent, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { setMockResponse, factories, urls, makeRequest } from "api/test-utils"
 import { NewsEditor } from "./NewsEditor"
@@ -428,7 +428,7 @@ describe("NewsEditor - Content Editing and Saving", () => {
       )
 
       const saveDraftButton = await screen.findByRole("button", {
-        name: "Save As Draft",
+        name: "Save as Draft",
       })
 
       expect(saveDraftButton).not.toBeDisabled()
@@ -1593,7 +1593,11 @@ describe("NewsEditor - Byline publish date", () => {
       created_on: "2020-01-01T12:00:00Z",
     })
 
-    await screen.findByText(expected)
+    // "Draft" now also appears in the control bar (the drafts link and the
+    // status readout), so scope this to the byline under test.
+    const byline = document.querySelector(".byline-info-bar")
+    expect(byline).not.toBeNull()
+    await within(byline as HTMLElement).findByText(expected)
     // The byline must never surface the created_on date.
     expect(screen.queryByText("Jan 1, 2020")).not.toBeInTheDocument()
   })
@@ -1669,6 +1673,74 @@ describe("NewsEditor - Delete draft", () => {
     await screen.findByTestId("editor")
     expect(
       screen.queryByRole("button", { name: "Delete" }),
+    ).not.toBeInTheDocument()
+  })
+})
+
+describe("NewsEditor - shared content controls", () => {
+  beforeEach(() => {
+    jest.clearAllMocks()
+  })
+
+  /**
+   * The control bar and settings drawer are drawn from the /articles design but
+   * shared by every content type, so their copy must name the type being
+   * edited. These lock the substitution in: news must never say "Article".
+   */
+  test("the news control bar names news in its status readout", async () => {
+    const user = factories.user.user({
+      is_authenticated: true,
+      is_article_editor: true,
+    })
+    setMockResponse.get(urls.userMe.get(), user)
+
+    const newsItem = factories.websiteContent.websiteContent({
+      id: 401,
+      title: "Draft news",
+      content_type: "news",
+      is_published: false,
+    })
+    setMockResponse.get(urls.websiteContent.details(newsItem.id), newsItem)
+
+    renderWithProviders(<NewsEditor newsItem={newsItem} />, { user })
+    await screen.findByTestId("editor")
+
+    await screen.findByRole("button", { name: "Settings" })
+    expect(await screen.findByText(/status:/)).toHaveTextContent(
+      "News status: Draft",
+    )
+    expect(screen.queryByText(/Article status:/)).not.toBeInTheDocument()
+  })
+
+  test("the settings drawer is titled for news", async () => {
+    const user = factories.user.user({
+      is_authenticated: true,
+      is_article_editor: true,
+    })
+    setMockResponse.get(urls.userMe.get(), user)
+    setMockResponse.get(
+      urls.topics.list({ limit: 200 }),
+      factories.learningResources.topics({ count: 2 }),
+    )
+
+    const newsItem = factories.websiteContent.websiteContent({
+      id: 402,
+      title: "Draft news",
+      content_type: "news",
+      is_published: false,
+    })
+    setMockResponse.get(urls.websiteContent.details(newsItem.id), newsItem)
+
+    renderWithProviders(<NewsEditor newsItem={newsItem} />, { user })
+    await screen.findByTestId("editor")
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Settings" }),
+    )
+
+    await screen.findByRole("heading", { name: "News Settings" })
+    expect(
+      screen.queryByRole("heading", { name: "Article Settings" }),
     ).not.toBeInTheDocument()
   })
 })
