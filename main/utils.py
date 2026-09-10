@@ -13,9 +13,11 @@ from urllib.parse import urljoin
 
 import markdown2
 import requests
+from asgiref.sync import sync_to_async
 from bs4 import BeautifulSoup
 from django.conf import settings
 from django.core.cache import caches
+from django.db import close_old_connections
 from django.http import HttpResponse
 from django.views.decorators.cache import cache_page
 from nh3 import nh3
@@ -377,6 +379,19 @@ def normalize_to_start_of_day(dt):
         datetime.datetime: the normalized datetime
     """  # noqa: D401
     return dt.replace(hour=0, minute=0, second=0, microsecond=0)
+
+
+def db_sync_to_async(func):
+    """Offload sync DB work to the thread pool, with per-call connection cleanup."""
+
+    def wrapper(*args, **kwargs):
+        close_old_connections()
+        try:
+            return func(*args, **kwargs)
+        finally:
+            close_old_connections()
+
+    return sync_to_async(wrapper, thread_sensitive=False)
 
 
 def chunks(iterable, *, chunk_size=20):

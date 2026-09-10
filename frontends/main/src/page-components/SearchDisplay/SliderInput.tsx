@@ -3,7 +3,10 @@ import { Slider } from "ol-components"
 
 const SliderInput: React.FC<{
   currentValue: number
-  setSearchParams: (fn: (prev: URLSearchParams) => URLSearchParams) => void
+  setSearchParams: (
+    name: string,
+    fn: (prev: URLSearchParams) => URLSearchParams,
+  ) => void
   urlParam: string
   min: number
   max: number
@@ -16,7 +19,7 @@ const SliderInput: React.FC<{
     event: Event | React.SyntheticEvent,
     newValue: number | number[],
   ) => {
-    setSearchParams((prev) => {
+    setSearchParams(urlParam, (prev) => {
       const next = new URLSearchParams(prev)
       next.set(urlParam, newValue.toString())
       return next

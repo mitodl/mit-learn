@@ -8,7 +8,6 @@ from textwrap import dedent
 
 from asgiref.sync import sync_to_async
 from django.conf import settings
-from django.db import close_old_connections
 from django.db.models import Prefetch, Q
 from qdrant_client import AsyncQdrantClient, QdrantClient, models
 
@@ -40,12 +39,13 @@ from learning_resources_search.serializers import (
     serialize_bulk_content_files,
     serialize_bulk_learning_resources,
 )
-from main.utils import checksum_for_content, chunks
+from main.utils import checksum_for_content, chunks, db_sync_to_async
 from vector_search.constants import (
     COLLECTION_INDEX_MAP,
     COLLECTION_PARAM_MAP,
     COMPLETENESS_PAYLOAD_KEY,
     CONTENT_FILES_COLLECTION_NAME,
+    CONTENT_FILES_RETRIEVE_PAYLOAD,
     COURSE_NUMBER_INDEXING_ONLY_FIELDS,
     NULLABLE_ORDER_BY_KEYS,
     ORDER_BY_MISSING_DATETIME,
@@ -1303,9 +1303,10 @@ def _resource_payload_hits(search_result):
     """
     Build resource hits from the Qdrant payloads themselves.
 
-    The payload is the resource as the indexing serializer wrote it, so it
-    already carries every field the API response needs -- no database
-    hydration required. Dedupes on platform:readable_id and preserves the
+    The payload is the resource as the indexing serializer wrote it, so no
+    database hydration is required -- but a payload written before a field was
+    added carries no such key until it is reindexed, which the response
+    serializer makes up for. Dedupes on platform:readable_id and preserves the
     Qdrant ranking, the same way the hydrated path does.
     """
     hits = []
@@ -1605,6 +1606,64 @@ def best_run_ids_for_resources(readable_ids):
         elif resource.best_run:
             run_ids.append(resource.best_run.run_id)
     return run_ids
+
+
+def best_run_id_for_resource(resource_id):
+    """
+    Resolve the single run_id a one-resource content-file query should be
+    restricted to.
+
+    Args:
+        resource_id (int): the resource primary key
+
+    Returns:
+        str | None: the best run's run_id, or None if the resource has no
+            published run (or does not exist)
+    """
+    resource = LearningResource.objects.filter(id=resource_id).first()
+    best_run = resource.best_run if resource else None
+    return best_run.run_id if best_run else None
+
+
+async def async_content_file_chunks_for_resource(
+    resource: LearningResource, query_string: str, limit: int = 50
+):
+    """
+    Dense vector search over one resource's content-file chunks.
+
+    Args:
+        resource (LearningResource): the resolved resource to retrieve chunks
+            for
+        query_string (str): the retrieval query
+        limit (int): maximum number of chunks to return
+
+    Returns:
+        list[dict]: chunk payloads, highest scoring first, each with the
+            Qdrant point id added as "point_id"
+    """
+    client = async_qdrant_client()
+    encoder_dense = dense_encoder()
+    encoder_dense.cache = True
+
+    readable_id = resource.readable_id
+    run_id = await db_sync_to_async(best_run_id_for_resource)(resource.id)
+    search_filter = qdrant_query_conditions(
+        {"run_readable_id": [run_id, readable_id] if run_id else [readable_id]},
+        collection_name=CONTENT_FILES_COLLECTION_NAME,
+    )
+    dense_query = await db_sync_to_async(encoder_dense.embed_query)(query_string)
+    result = await client.query_points(
+        collection_name=CONTENT_FILES_COLLECTION_NAME,
+        query=dense_query,
+        using=encoder_dense.model_short_name(),
+        query_filter=search_filter,
+        with_vectors=False,
+        with_payload=CONTENT_FILES_RETRIEVE_PAYLOAD,
+        limit=limit,
+    )
+    return [
+        {**(point.payload or {}), "point_id": str(point.id)} for point in result.points
+    ]
 
 
 def qdrant_query_conditions(params, collection_name=RESOURCES_COLLECTION_NAME):
@@ -1985,16 +2044,3 @@ def order_by_query(
             ]
         },
     )
-
-
-def db_sync_to_async(func):
-    """Offload sync DB work to the thread pool, with per-call connection cleanup."""
-
-    def wrapper(*args, **kwargs):
-        close_old_connections()
-        try:
-            return func(*args, **kwargs)
-        finally:
-            close_old_connections()
-
-    return sync_to_async(wrapper, thread_sensitive=False)

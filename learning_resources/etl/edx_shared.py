@@ -1,11 +1,12 @@
 """Shared functions for EdX sites"""
 
 import logging
+import tarfile
 from itertools import chain
 from pathlib import Path
-from tarfile import ReadError
 from tempfile import TemporaryDirectory
 
+from defusedxml import ElementTree
 from django.conf import settings
 from django.core.cache import caches
 from django.db.models import Prefetch, Q
@@ -15,10 +16,12 @@ from learning_resources.etl.loaders import load_content_files
 from learning_resources.etl.utils import (
     calc_checksum,
     get_bucket_by_name,
+    get_edx_module_id,
     get_s3_prefix_for_source,
+    staff_only_olx_paths,
     transform_content_files,
 )
-from learning_resources.models import LearningResourceRun
+from learning_resources.models import ContentFile, LearningResourceRun
 
 log = logging.getLogger(__name__)
 
@@ -138,7 +141,7 @@ def process_course_archive(
         bucket.download_file(key, course_tarpath)
         try:
             checksum = calc_checksum(course_tarpath)
-        except ReadError:
+        except tarfile.ReadError:
             log.exception("Error reading tar file %s, skipping", course_tarpath)
             return True
         if run.checksum == checksum and not overwrite:
@@ -364,3 +367,64 @@ def sync_edx_course_files(
         skipped,
         processed,
     )
+
+
+def unpublish_staff_only_content_files(
+    etl_source: str, ids: list[int], keys: list[str]
+) -> int:
+    """
+    Unpublish (and deindex) content files under staff-only OLX subtrees for the
+    runs matching the given archive keys, without re-extracting anything.
+
+    Args:
+        etl_source(str): The edx ETL source
+        ids(list of int): list of course ids to process
+        keys(list[str]): list of S3 archive keys to search through
+
+    Returns:
+        int: number of content files unpublished
+    """
+    from learning_resources_search import tasks as search_tasks
+    from vector_search import tasks as vector_tasks
+
+    bucket = get_bucket_by_name(settings.COURSE_ARCHIVE_BUCKET_NAME)
+    run_lookup = build_run_lookup(etl_source, ids)
+    total = 0
+    for key in keys:
+        matching_runs = run_lookup.get(extract_run_id_from_key(etl_source, key))
+        if not matching_runs:
+            continue
+        run = matching_runs[0]
+        with TemporaryDirectory() as tempdir:
+            tarpath = Path(tempdir, key.rsplit("/", maxsplit=1)[-1])
+            bucket.download_file(key, tarpath)
+            try:
+                with tarfile.open(tarpath) as tar:
+                    tar.extractall(tempdir, filter="data")
+            except tarfile.ReadError:
+                log.exception("Error extracting %s, skipping", key)
+                continue
+            olx_path = next((p for p in Path(tempdir).iterdir() if p.is_dir()), None)
+            if olx_path is None:
+                continue
+            try:
+                hidden_paths = staff_only_olx_paths(olx_path)
+            except ElementTree.ParseError:
+                log.exception("Malformed OLX in %s, skipping", key)
+                continue
+            hidden_keys = {get_edx_module_id(str(path), run) for path in hidden_paths}
+        if not hidden_keys:
+            continue
+        # scoped to this run: keys embed the run_id, but never rely on that alone
+        hidden_files = ContentFile.objects.filter(run=run, key__in=hidden_keys)
+        unpublished = hidden_files.filter(published=True).update(published=False)
+        total += unpublished
+        log.info(
+            "Unpublished %d staff-only content files for %s", unpublished, run.run_id
+        )
+        # dispatched whenever hidden rows exist, not only when this call flipped
+        # them, so a re-run after a failed deindex task cleans up the indexes
+        if hidden_files.exists():
+            search_tasks.deindex_run_content_files.delay(run.id, unpublished_only=True)
+            vector_tasks.remove_unpublished_run_content_files.delay(run.id)
+    return total

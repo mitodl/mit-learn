@@ -160,6 +160,35 @@ paths:
           description: Invalid feedback submission
         '429':
           description: Rate limit exceeded
+  /api/v0/credential_metadata/:
+    post:
+      operationId: credential_metadata_create
+      description: |-
+        Generate Open Badges credential metadata for a learning resource.
+
+        Limited to MITx Online courses.
+      summary: Generate credential metadata
+      tags:
+      - credential_metadata
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CredentialMetadataRequestRequest'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/CredentialMetadataRequestRequest'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/CredentialMetadataRequestRequest'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CredentialMetadata'
+          description: ''
   /api/v0/learning_resources_search_admin_params/:
     get:
       operationId: learning_resources_search_admin_params_retrieve
@@ -2224,6 +2253,13 @@ components:
           type: string
           description: Where this resource lives within Learn
           readOnly: true
+        url_slug:
+          type: string
+          description: 'Slug derived from the title, for use in this resource''s URL.
+            It is cosmetic: lookups ignore it, and it changes whenever the title does.
+            Titles that yield no ASCII slug get the literal "resource", so this is
+            never blank.'
+          readOnly: true
         resource_type:
           allOf:
           - $ref: '#/components/schemas/CourseResourceResourceTypeEnum'
@@ -2355,11 +2391,55 @@ components:
       - resource_type_group
       - runs
       - title
+      - url_slug
       - views
     CourseResourceResourceTypeEnum:
       type: string
       enum:
       - course
+    CredentialMetadata:
+      type: object
+      description: Generated Open Badges credential metadata for a learning resource.
+      properties:
+        resource_readable_id:
+          type: string
+        description:
+          type: string
+          description: The Open Badges 3.0 description, 1-2 sentences
+        criteria:
+          type: array
+          items:
+            type: string
+          description: Open Badges 3.0 criteria, one skill-focused bullet per item,
+            for rendering into the criteria narrative
+        errors:
+          allOf:
+          - $ref: '#/components/schemas/CredentialMetadataErrors'
+          description: One entry per requested field that is missing above, saying
+            why. Absent when every configured field was generated.
+      required:
+      - resource_readable_id
+    CredentialMetadataErrors:
+      type: object
+      description: Why a requested Open Badges field is missing from the response.
+      properties:
+        description:
+          type: string
+          description: Why no description was generated
+        criteria:
+          type: string
+          description: Why no criteria were generated
+    CredentialMetadataRequestRequest:
+      type: object
+      description: Request body for the credential metadata endpoint
+      properties:
+        resource_readable_id:
+          type: string
+          minLength: 1
+          description: The readable id of the learning resource to generate metadata
+            for
+      required:
+      - resource_readable_id
     CurrentEducationEnum:
       enum:
       - Doctorate
@@ -2736,6 +2816,13 @@ components:
           type: string
           description: Where this resource lives within Learn
           readOnly: true
+        url_slug:
+          type: string
+          description: 'Slug derived from the title, for use in this resource''s URL.
+            It is cosmetic: lookups ignore it, and it changes whenever the title does.
+            Titles that yield no ASCII slug get the literal "resource", so this is
+            never blank.'
+          readOnly: true
         resource_type:
           allOf:
           - $ref: '#/components/schemas/DocumentResourceResourceTypeEnum'
@@ -2871,6 +2958,7 @@ components:
       - resource_type_group
       - runs
       - title
+      - url_slug
       - views
     DocumentResourceResourceTypeEnum:
       type: string
@@ -3253,6 +3341,13 @@ components:
           type: string
           description: Where this resource lives within Learn
           readOnly: true
+        url_slug:
+          type: string
+          description: 'Slug derived from the title, for use in this resource''s URL.
+            It is cosmetic: lookups ignore it, and it changes whenever the title does.
+            Titles that yield no ASCII slug get the literal "resource", so this is
+            never blank.'
+          readOnly: true
         resource_type:
           allOf:
           - $ref: '#/components/schemas/LearningPathResourceResourceTypeEnum'
@@ -3385,6 +3480,7 @@ components:
       - resource_type_group
       - runs
       - title
+      - url_slug
       - views
     LearningPathResourceResourceTypeEnum:
       type: string
@@ -4616,6 +4712,13 @@ components:
           type: string
           description: Where this resource lives within Learn
           readOnly: true
+        url_slug:
+          type: string
+          description: 'Slug derived from the title, for use in this resource''s URL.
+            It is cosmetic: lookups ignore it, and it changes whenever the title does.
+            Titles that yield no ASCII slug get the literal "resource", so this is
+            never blank.'
+          readOnly: true
         resource_type:
           allOf:
           - $ref: '#/components/schemas/PodcastEpisodeResourceResourceTypeEnum'
@@ -4747,6 +4850,7 @@ components:
       - resource_type_group
       - runs
       - title
+      - url_slug
       - views
     PodcastEpisodeResourceResourceTypeEnum:
       type: string
@@ -4916,6 +5020,13 @@ components:
           type: string
           description: Where this resource lives within Learn
           readOnly: true
+        url_slug:
+          type: string
+          description: 'Slug derived from the title, for use in this resource''s URL.
+            It is cosmetic: lookups ignore it, and it changes whenever the title does.
+            Titles that yield no ASCII slug get the literal "resource", so this is
+            never blank.'
+          readOnly: true
         resource_type:
           allOf:
           - $ref: '#/components/schemas/PodcastResourceResourceTypeEnum'
@@ -5047,6 +5158,7 @@ components:
       - resource_type_group
       - runs
       - title
+      - url_slug
       - views
     PodcastResourceResourceTypeEnum:
       type: string
@@ -5499,6 +5611,13 @@ components:
           type: string
           description: Where this resource lives within Learn
           readOnly: true
+        url_slug:
+          type: string
+          description: 'Slug derived from the title, for use in this resource''s URL.
+            It is cosmetic: lookups ignore it, and it changes whenever the title does.
+            Titles that yield no ASCII slug get the literal "resource", so this is
+            never blank.'
+          readOnly: true
         resource_type:
           allOf:
           - $ref: '#/components/schemas/ProgramResourceResourceTypeEnum'
@@ -5630,6 +5749,7 @@ components:
       - resource_type_group
       - runs
       - title
+      - url_slug
       - views
     ProgramResourceResourceTypeEnum:
       type: string
@@ -6304,6 +6424,13 @@ components:
           type: string
           description: Where this resource lives within Learn
           readOnly: true
+        url_slug:
+          type: string
+          description: 'Slug derived from the title, for use in this resource''s URL.
+            It is cosmetic: lookups ignore it, and it changes whenever the title does.
+            Titles that yield no ASCII slug get the literal "resource", so this is
+            never blank.'
+          readOnly: true
         resource_type:
           allOf:
           - $ref: '#/components/schemas/VideoPlaylistResourceResourceTypeEnum'
@@ -6434,6 +6561,7 @@ components:
       - resource_type_group
       - runs
       - title
+      - url_slug
       - video_playlist
       - views
     VideoPlaylistResourceResourceTypeEnum:
@@ -6604,6 +6732,13 @@ components:
           type: string
           description: Where this resource lives within Learn
           readOnly: true
+        url_slug:
+          type: string
+          description: 'Slug derived from the title, for use in this resource''s URL.
+            It is cosmetic: lookups ignore it, and it changes whenever the title does.
+            Titles that yield no ASCII slug get the literal "resource", so this is
+            never blank.'
+          readOnly: true
         resource_type:
           allOf:
           - $ref: '#/components/schemas/VideoResourceResourceTypeEnum'
@@ -6751,6 +6886,7 @@ components:
       - resource_type_group
       - runs
       - title
+      - url_slug
       - video
       - views
     VideoResourceResourceTypeEnum:

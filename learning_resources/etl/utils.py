@@ -17,7 +17,6 @@ from decimal import Decimal
 from hashlib import md5
 from io import BytesIO
 from pathlib import Path
-from subprocess import check_call
 from tempfile import TemporaryDirectory
 
 import boto3
@@ -320,11 +319,72 @@ def parse_dates(date_string, hour=12):
     return None
 
 
+def _hidden_block_files(root: Path, tag: str, url_name: str, element) -> set[Path]:
+    """Files belonging to one hidden block: its own files, html body, transcripts"""
+    files = set(root.glob(f"{tag}/{url_name}.*"))
+    if tag == "html" and element.get("filename"):
+        files.update(root.glob(f"html/{element.get('filename')}.*"))
+    if tag == "video":
+        files.update(
+            root / "static" / transcript.get("src")
+            for transcript in element.iter("transcript")
+            if transcript.get("src")
+        )
+    return files
+
+
+def _parse_olx_block(root: Path, tag: str, url_name: str):
+    """
+    Parse <tag>/<url_name>.xml, returning None if missing. Malformed XML raises
+    so a course is never ingested with unverified staff-only status.
+    """
+    try:
+        return ElementTree.parse(root / tag / f"{url_name}.xml").getroot()
+    except (FileNotFoundError, NotADirectoryError):
+        return None
+
+
+def staff_only_olx_paths(olx_path: str | Path) -> set[Path]:
+    """
+    Return the files under visible_to_staff_only="true" subtrees of an OLX
+    course tree, including transcripts of hidden videos. Empty when olx_path
+    is not an OLX export (no course.xml). Blocks may be pointers to
+    <tag>/<url_name>.xml or hold their children inline; both are walked.
+    """
+    root = Path(olx_path)
+    course = _parse_olx_block(root, "", "course")
+    if course is None:
+        return set()
+    hidden: set[Path] = set()
+    seen: set[tuple[str, str]] = set()
+    stack = [(course, "course", course.get("url_name"), False)]
+    while stack:
+        pointer, tag, url_name, staff_only = stack.pop()
+        if url_name:
+            if (tag, url_name) in seen:
+                continue
+            seen.add((tag, url_name))
+        # pointer file wins when present; otherwise the element is the block itself
+        element = _parse_olx_block(root, tag, url_name) if url_name else None
+        if element is None:
+            element = pointer
+        staff_only = staff_only or "true" in (
+            pointer.get("visible_to_staff_only"),
+            element.get("visible_to_staff_only"),
+        )
+        if staff_only and url_name:
+            hidden.update(_hidden_block_files(root, tag, url_name, element))
+        stack.extend(
+            (child, child.tag, child.get("url_name"), staff_only) for child in element
+        )
+    return hidden
+
+
 def documents_from_olx(
     olx_path: str, valid_file_types: list[str] = VALID_TEXT_FILE_TYPES
 ) -> Generator[tuple, None, None]:
     """
-    Extract text from OLX directory
+    Extract text from OLX directory, skipping staff-only content
 
     Args:
         olx_path (str): The path to the directory with the OLX data
@@ -332,11 +392,14 @@ def documents_from_olx(
     Yields:
         tuple: A list of (bytes of content, metadata)
     """
+    staff_only = staff_only_olx_paths(olx_path)
     for root, _, files in os.walk(olx_path):
         path = "/".join(root.split("/")[3:])
         for filename in files:
             extension_lower = Path(filename).suffix.lower()
 
+            if Path(root, filename) in staff_only:
+                continue
             if extension_lower in valid_file_types and "draft" not in root:
                 with Path.open(Path(root, filename), "rb") as f:
                     filebytes = f.read()
@@ -883,7 +946,8 @@ def transform_content_files(
     basedir = course_tarpath.name.split(".")[0]
     failed_source_paths = []
     with TemporaryDirectory(prefix=basedir) as inner_tempdir:
-        check_call(["tar", "xf", course_tarpath], cwd=inner_tempdir)  # noqa: S603,S607
+        with tarfile.open(course_tarpath) as tar:
+            tar.extractall(inner_tempdir, filter="data")
         olx_path = glob.glob(inner_tempdir + "/*")[0]  # noqa: PTH207
         yield from process_olx_path(
             olx_path, run, overwrite=overwrite, failed_source_paths=failed_source_paths
