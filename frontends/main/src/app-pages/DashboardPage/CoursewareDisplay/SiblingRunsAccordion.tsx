@@ -208,7 +208,7 @@ const RunListRow: React.FC<RunListRowProps> = ({
   /**
    * Resolved per row so each run's Receipt item reflects that run's own order.
    * Every row shares the one `orders/history` query, so N rows still cost a
-   * single request and the per-run work is a client-side lookup.
+   * single request and the per-row work is a client-side lookup.
    */
   const receiptResolution = useOrderIdForRun(enrollment.run.id)
   const perRunMenusEnabled = useFeatureFlagEnabled(

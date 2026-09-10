@@ -9,7 +9,7 @@ import { makeBrowserQueryClient } from "@/app/getQueryClient"
 import { Toaster } from "@/page-components/Toaster/Toaster"
 import {
   getToastSnapshot,
-  dismissErrorToast,
+  dismissToast,
 } from "@/page-components/Toaster/toastStore"
 import { act, render, waitFor } from "@testing-library/react"
 import { factories, setMockResponse } from "api/test-utils"
@@ -200,8 +200,16 @@ const ignoreError = (errorMessage: string, timeoutMs?: number) => {
 const expectErrorToast = async (message: string | RegExp) => {
   // The toast fires from `MutationCache.onError`, outside React — wait for it.
   await waitFor(() => expect(getToastSnapshot()).not.toBeNull())
+  expect(getToastSnapshot()?.severity).toBe("error")
   expect(getToastSnapshot()?.message).toMatch(message)
-  act(() => dismissErrorToast())
+  act(() => dismissToast())
+}
+
+const expectSuccessToast = async (message: string | RegExp) => {
+  await waitFor(() => expect(getToastSnapshot()).not.toBeNull())
+  expect(getToastSnapshot()?.severity).toBe("success")
+  expect(getToastSnapshot()?.message).toMatch(message)
+  act(() => dismissToast())
 }
 
 const getMetaContent = ({
@@ -331,6 +339,7 @@ export {
   expectLastProps,
   expectWindowNavigation,
   expectErrorToast,
+  expectSuccessToast,
   ignoreError,
   getMetas,
   assertPartialMetas,

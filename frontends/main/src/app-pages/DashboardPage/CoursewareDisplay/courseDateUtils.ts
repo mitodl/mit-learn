@@ -23,13 +23,10 @@ export const getRunTimeState = (
 }
 
 /**
- * Whether this run's courseware can be opened yet. Staff keep access before a
- * run starts so they can preview it; everyone else waits for the start date.
+ * Whether this run's courseware can be opened yet; staff may preview early.
  *
- * Every route into a run's courseware goes through this: the enrolled card's
- * button and title link, the sibling-run rows, the upgrade redirect, and the
- * post-enrollment redirect. They have to agree, or one surface offers a door
- * the others have already locked.
+ * Shared by every route in (card button, card title, sibling-run rows, upgrade
+ * and post-enrollment redirects) so they cannot disagree.
  */
 export const canOpenCourseware = (
   startDate?: string | null,

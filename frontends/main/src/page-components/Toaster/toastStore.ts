@@ -1,35 +1,45 @@
 /**
- * A tiny module-level store for the app's error toast.
+ * A tiny module-level store for the app's global toast.
  *
  * The global `MutationCache.onError` (in `getQueryClient`) fires *outside* React,
  * so it can't call a hook or context setter. It calls `showErrorToast` here; the
  * `<Toaster>` component subscribes via `useSyncExternalStore` and renders it.
  *
+ * Success toasts share the store so an action can confirm itself in place,
+ * without navigating to a page that has its own alert slot.
+ *
  * Deliberately free of React/MUI imports so `getQueryClient` (which also runs
  * during SSR) can import `showErrorToast` without pulling UI into that module.
  */
 
-export type ErrorToast = { message: string }
+export type ToastSeverity = "error" | "success"
 
-let current: ErrorToast | null = null
+export type Toast = { message: string; severity: ToastSeverity }
+
+let current: Toast | null = null
 const listeners = new Set<() => void>()
 
 const emit = () => {
   listeners.forEach((listener) => listener())
 }
 
-/** Show (or replace) the single error toast. */
-export const showErrorToast = (message: string): void => {
+const show = (message: string, severity: ToastSeverity): void => {
   // `current` is a module-level singleton; writing it on the server would leak
-  // across concurrent SSR requests. The `MutationCache.onError` that calls this
-  // is wired only on the browser client — this guard enforces that invariant.
+  // across concurrent SSR requests. Callers are browser-only; this enforces it.
   if (typeof window === "undefined") return
-  current = { message }
+  current = { message, severity }
   emit()
 }
 
+/** Show (or replace) the single toast, as an error. */
+export const showErrorToast = (message: string): void => show(message, "error")
+
+/** Show (or replace) the single toast, as a success. */
+export const showSuccessToast = (message: string): void =>
+  show(message, "success")
+
 /** Dismiss the current toast, if any. */
-export const dismissErrorToast = (): void => {
+export const dismissToast = (): void => {
   if (!current) return
   current = null
   emit()
@@ -42,4 +52,4 @@ export const subscribeToToast = (listener: () => void): (() => void) => {
   }
 }
 
-export const getToastSnapshot = (): ErrorToast | null => current
+export const getToastSnapshot = (): Toast | null => current

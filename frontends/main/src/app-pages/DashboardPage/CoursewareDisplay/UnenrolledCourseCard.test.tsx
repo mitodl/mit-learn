@@ -1,6 +1,7 @@
 import React from "react"
 import {
   expectErrorToast,
+  expectSuccessToast,
   renderWithProviders,
   screen,
   setMockResponse,
@@ -24,9 +25,8 @@ jest.mock("@/common/analytics/gtm", () => ({
 
 const mitxOnlineCourse = mitxonline.factories.courses.course
 
-// The factory randomises is_staff, and staff bypass the start-date gate on the
-// post-enrollment redirect, so pin it off here. Tests about staff pass it
-// explicitly.
+// The factory randomises is_staff, and staff bypass the start-date gate, which
+// would make these tests flaky. Staff tests pass it explicitly.
 const mitxUser: typeof mitxonline.factories.user.user = (overrides = {}) =>
   mitxonline.factories.user.user({ is_staff: false, ...overrides })
 
@@ -342,13 +342,10 @@ describe.each([
   ]
 
   /**
-   * A response the test resolves by hand. The B2B and verified-program
-   * redirects fire in `onSuccess` and leave no other trace, so an assertion
-   * placed after the POST was merely *issued* can run before the redirect
-   * would have happened, passing whether or not the guard is there. Holding
-   * the response open lets `enrollAndSettle` observe the pending state, then
-   * release it and wait for pending to clear, which cannot happen until
-   * `onSuccess` has run.
+   * A response the test resolves by hand, giving `enrollAndSettle` a settle
+   * point to wait on. The B2B and verified redirects fire in `onSuccess` and
+   * leave no other trace, so asserting once the POST is merely issued can run
+   * before the redirect would have, and pass either way.
    */
   const deferredResponse = <T,>() => {
     let resolve!: (value: T) => void
@@ -356,6 +353,20 @@ describe.each([
       resolve = res
     })
     return { promise, resolve }
+  }
+
+  /**
+   * The toast is the only feedback when there's no redirect, so assert the
+   * page stayed put as well as the message.
+   */
+  const expectInPlaceSuccess = async (
+    location: ReturnType<typeof renderWithProviders>["location"],
+    pathnameBefore: string,
+    title: string,
+  ) => {
+    await expectSuccessToast(`You've been enrolled in "${title}".`)
+    expect(location.current.pathname).toBe(pathnameBefore)
+    expect(location.current.search).toBe("")
   }
 
   const enrollAndSettle = async (
@@ -533,11 +544,11 @@ describe.each([
         run,
         enrollResponse: enroll.promise,
       })
-      const hrefBefore = window.location.href
 
-      renderWithProviders(
+      const { location } = renderWithProviders(
         <UnenrolledCourseCard course={course} contractId={b2bContractId} />,
       )
+      const pathnameBefore = location.current.pathname
 
       await enrollAndSettle(getCard(), () =>
         enroll.resolve({ result: "b2b-enroll-success", order: 1 }),
@@ -546,9 +557,11 @@ describe.each([
       expect(makeRequest).toHaveBeenCalledWith(
         expect.objectContaining({ method: "post", url: enrollmentUrl }),
       )
-      expect(window.location.href).toBe(
-        expectRedirect ? coursewareUrl : hrefBefore,
-      )
+      if (expectRedirect) {
+        expect(window.location.href).toBe(coursewareUrl)
+      } else {
+        await expectInPlaceSuccess(location, pathnameBefore, course.title)
+      }
     },
   )
 
@@ -620,16 +633,15 @@ describe.each([
   // ---------------------------------------------------------------------------
 
   describe("B2C (non-B2B) Enrollment", () => {
-    // The dialog is the fourth redirect path: it takes the start date from the
-    // run the learner picked there, not the one the card was displaying.
+    // The dialog is its own redirect path: the start date comes from the run
+    // picked there, not the one the card displayed.
     test.each(START_DATE_CASES)(
       "CourseEnrollmentDialog submission $case",
       async ({ startDate, expectRedirect }) => {
         setMockResponse.get(mitxonline.urls.userMe.get(), mitxUser())
 
         const coursewareUrl = faker.internet.url()
-        // Both modes, so the card opens the dialog instead of enrolling
-        // directly. One run, so the dialog preselects it.
+        // Both modes opens the dialog; a single run makes it preselect.
         const run = mitxonline.factories.courses.courseRun({
           b2b_contract: null,
           is_enrollable: true,
@@ -651,9 +663,11 @@ describe.each([
         })
         setMockResponse.post(mitxonline.urls.enrollment.enrollmentsListV1(), {})
         setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV3(), [])
-        const hrefBefore = window.location.href
 
-        renderWithProviders(<UnenrolledCourseCard course={course} />)
+        const { location } = renderWithProviders(
+          <UnenrolledCourseCard course={course} />,
+        )
+        const pathnameBefore = location.current.pathname
 
         await user.click(within(getCard()).getByTestId("courseware-button"))
         const dialog = await screen.findByRole("dialog", {
@@ -665,14 +679,15 @@ describe.each([
           }),
         )
 
-        // trackCourseEnrolled fires inside the same onSuccess that calls the
-        // redirect, so this is the mutation-settled signal for this path.
+        // Fires inside the same onSuccess that decides where to go.
         await waitFor(() => {
           expect(trackCourseEnrolled).toHaveBeenCalledWith(course.title)
         })
-        expect(window.location.href).toBe(
-          expectRedirect ? coursewareUrl : hrefBefore,
-        )
+        if (expectRedirect) {
+          expect(window.location.href).toBe(coursewareUrl)
+        } else {
+          await expectInPlaceSuccess(location, pathnameBefore, course.title)
+        }
       },
     )
 
@@ -789,9 +804,11 @@ describe.each([
 
         setMockResponse.post(mitxonline.urls.enrollment.enrollmentsListV1(), {})
         setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV3(), [])
-        const hrefBefore = window.location.href
 
-        renderWithProviders(<UnenrolledCourseCard course={course} />)
+        const { location } = renderWithProviders(
+          <UnenrolledCourseCard course={course} />,
+        )
+        const pathnameBefore = location.current.pathname
 
         await user.click(within(getCard()).getByTestId("courseware-button"))
 
@@ -804,7 +821,7 @@ describe.each([
             expect(window.location.href).toBe(coursewareUrl)
           })
         } else {
-          expect(window.location.href).toBe(hrefBefore)
+          await expectInPlaceSuccess(location, pathnameBefore, course.title)
         }
       },
     )
@@ -952,14 +969,14 @@ describe.each([
           mitxonline.urls.verifiedProgramEnrollments.create(run.courseware_id)
         const enroll = deferredResponse<unknown>()
         setMockResponse.post(programEnrollmentEndpoint, enroll.promise)
-        const hrefBefore = window.location.href
 
-        renderWithProviders(
+        const { location } = renderWithProviders(
           <UnenrolledCourseCard
             course={course}
             ancestorContext={{ programEnrollment }}
           />,
         )
+        const pathnameBefore = location.current.pathname
 
         await enrollAndSettle(getCard(), () => enroll.resolve({}))
 
@@ -969,9 +986,11 @@ describe.each([
             url: programEnrollmentEndpoint,
           }),
         )
-        expect(window.location.href).toBe(
-          expectRedirect ? coursewareUrl : hrefBefore,
-        )
+        if (expectRedirect) {
+          expect(window.location.href).toBe(coursewareUrl)
+        } else {
+          await expectInPlaceSuccess(location, pathnameBefore, course.title)
+        }
       },
     )
 

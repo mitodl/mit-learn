@@ -9,7 +9,7 @@ import {
 } from "api/test-utils/mockAxios"
 import preloadAll from "jest-next-dynamic-ts"
 import {
-  dismissErrorToast,
+  dismissToast,
   getToastSnapshot,
 } from "@/page-components/Toaster/toastStore"
 
@@ -74,10 +74,10 @@ beforeEach(() => {
   // document.head.innerHTML = ""
   document.querySelector("title")?.remove()
 
-  // The error-toast store is module-level global state; a toast fired by one
-  // test would otherwise persist into the next. (The afterEach below usually
-  // clears it, but a toast can land asynchronously after that check runs.)
-  dismissErrorToast()
+  // The toast store is module-level global state, so a toast fired by one test
+  // would leak into the next. (The afterEach usually clears it, but a toast can
+  // land asynchronously after that check runs.)
+  dismissToast()
 
   assertMockAdapterInstalled()
 })
@@ -87,8 +87,9 @@ afterEach(() => {
   // opts out. A toast left showing at the end of a test means the test drove a
   // failure without deciding which error surface the user should see.
   const toast = getToastSnapshot()
-  if (toast) {
-    dismissErrorToast()
+  // Only errors are policed; a success toast is not a missed error surface.
+  if (toast?.severity === "error") {
+    dismissToast()
     throw new Error(
       [
         `A mutation failure fired the global error toast ("${toast.message}") and the test did not acknowledge it.`,
@@ -97,6 +98,7 @@ afterEach(() => {
       ].join("\n"),
     )
   }
+  dismissToast()
 })
 
 window.scrollTo = jest.fn()

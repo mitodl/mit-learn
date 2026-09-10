@@ -15,23 +15,9 @@ import { useComplianceGate } from "@/common/mitxonline/useComplianceGate"
 import CourseEnrollmentDialog from "@/page-components/EnrollmentDialogs/CourseEnrollmentDialog"
 import { trackCourseEnrolled } from "@/common/analytics/gtm"
 import { canOpenCourseware } from "../courseDateUtils"
+import { showSuccessToast } from "@/page-components/Toaster/toastStore"
 import { mitxUserQueries } from "api/mitxonline-hooks/user"
 import { useQuery } from "@tanstack/react-query"
-
-/**
- * Enrolling before a run starts is allowed, but its courseware isn't open yet,
- * so a successful enrollment must not send the learner there. Shares
- * `canOpenCourseware` with the enrolled card, so the learner lands back on a
- * card whose button agrees with what just happened.
- */
-const goToCourseware = (
-  url: string,
-  startDate?: string | null,
-  isStaff?: boolean,
-) => {
-  if (!canOpenCourseware(startDate, { isStaff })) return
-  window.location.href = url
-}
 
 const ENROLL_COURSE_ERROR =
   "Something went wrong enrolling you in this course. Please try again."
@@ -77,6 +63,21 @@ export const useEnrollmentHandler = () => {
       b2bProgramId?: string
       startDate?: string | null
     }) => {
+      /**
+       * Enrolling early is allowed, so only redirect once the courseware is
+       * open. When it isn't, the enrollment would be silent, and a toast
+       * confirms it without moving the learner off the page they were on.
+       */
+      const finishEnrollment = (url: string, runStartDate?: string | null) => {
+        if (canOpenCourseware(runStartDate, { isStaff })) {
+          window.location.href = url
+          return
+        }
+        showSuccessToast(
+          `You've been enrolled in "${course.title}". It has been added to My Learning.`,
+        )
+      }
+
       if (isB2B) {
         if (!readableId) {
           console.warn("Cannot enroll in B2B course: missing required data", {
@@ -112,7 +113,7 @@ export const useEnrollmentHandler = () => {
           },
           {
             onSuccess: () => {
-              goToCourseware(destinationUrl, startDate, isStaff)
+              finishEnrollment(destinationUrl, startDate)
             },
           },
         )
@@ -147,7 +148,7 @@ export const useEnrollmentHandler = () => {
           { courserun_id: readableId, request_body: requestBody },
           {
             onSuccess: () => {
-              goToCourseware(verifiedDestination ?? href, startDate, isStaff)
+              finishEnrollment(verifiedDestination ?? href, startDate)
             },
           },
         )
@@ -166,11 +167,7 @@ export const useEnrollmentHandler = () => {
                   enrollmentAction.run.courseware_url ??
                   href
                 if (destination) {
-                  goToCourseware(
-                    destination,
-                    enrollmentAction.run.start_date,
-                    isStaff,
-                  )
+                  finishEnrollment(destination, enrollmentAction.run.start_date)
                 }
               },
             },
@@ -184,7 +181,7 @@ export const useEnrollmentHandler = () => {
         }
 
         const onCourseEnroll = (run: CourseRunV2) => {
-          goToCourseware(run.courseware_url!, run.start_date, isStaff)
+          finishEnrollment(run.courseware_url!, run.start_date)
         }
         NiceModal.show(CourseEnrollmentDialog, { course, onCourseEnroll })
       }
