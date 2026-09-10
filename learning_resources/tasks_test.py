@@ -1551,3 +1551,40 @@ def test_get_podcast_transcripts(mocker):
     mock_etl_podcast.get_podcast_transcripts.assert_called_once_with(
         mock_etl_podcast.get_podcast_episodes_for_transcripts_job.return_value
     )
+
+
+@mock_aws
+def test_unpublish_all_staff_only_files(
+    settings, mocker, mocked_celery, mock_course_archive_bucket
+):
+    """unpublish_all_staff_only_files fans out one task per chunk of course ids"""
+    mock_task = mocker.patch("learning_resources.tasks.unpublish_staff_only_files.si")
+    mocker.patch("learning_resources.tasks.load_course_blocklist", return_value=[])
+    mocker.patch(
+        "learning_resources.tasks.get_most_recent_course_archives",
+        return_value=["foo.tar.gz"],
+    )
+    setup_s3(settings)
+    etl_source = ETLSource.mitxonline.name
+    courses = factories.CourseFactory.create_batch(
+        3, etl_source=etl_source, platform=PlatformType.mitxonline.name
+    )
+    with pytest.raises(mocked_celery.replace_exception_class):
+        tasks.unpublish_all_staff_only_files.delay(
+            etl_source=etl_source, chunk_size=2, learning_resource_ids=None
+        )
+    assert mock_task.call_count == 2
+    called_ids = sorted(
+        rid for call in mock_task.call_args_list for rid in call.args[0]
+    )
+    assert called_ids == sorted(c.learning_resource_id for c in courses)
+    mock_task.assert_any_call(ANY, etl_source, ["foo.tar.gz"])
+
+
+def test_unpublish_staff_only_files_task(mocker):
+    """unpublish_staff_only_files task delegates to edx_shared"""
+    mock_fn = mocker.patch(
+        "learning_resources.tasks.unpublish_staff_only_content_files", return_value=3
+    )
+    assert tasks.unpublish_staff_only_files([1, 2], "mitxonline", ["k"]) == 3
+    mock_fn.assert_called_once_with("mitxonline", [1, 2], ["k"])
