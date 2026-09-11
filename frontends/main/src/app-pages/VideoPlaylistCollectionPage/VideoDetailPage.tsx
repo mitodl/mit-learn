@@ -1,6 +1,5 @@
 "use client"
 
-import { env } from "@/env"
 import React, { useEffect, useRef } from "react"
 import { Skeleton, SkipLink } from "ol-components"
 import VideoContainer from "./VideoContainer"
@@ -14,12 +13,11 @@ import {
 import type { VideoResource, VideoPlaylistResource } from "api/v1"
 import { VideoResourceResourceTypeEnum } from "api/v1"
 import { formatDurationClockTime } from "ol-utilities"
-import { videoDetailPageView, videoPlaylistPageView } from "@/common/urls"
+import { absoluteUrl, videoDetailPath, videoPlaylistPath } from "@/common/urls"
 import { buildVideoStructuredData } from "./videoStructuredData"
 import type { VideoPlayerHandle } from "@/page-components/VideoPlayer/VideoResourcePlayer"
+import { addExternalLinkTargets } from "@/common/utils"
 import * as Styled from "./VideoDetailPage.styled"
-
-const NEXT_PUBLIC_ORIGIN = env("NEXT_PUBLIC_ORIGIN")
 
 /** How many sibling videos the "More from" list shows at most. */
 const MORE_FROM_LIMIT = 5
@@ -144,10 +142,7 @@ const VideoDetailPage: React.FC<VideoDetailPageProps> = ({
               ...(playlist
                 ? [
                     {
-                      href: videoPlaylistPageView(
-                        String(playlist.id),
-                        playlist.title,
-                      ),
+                      href: playlist.learn_url,
                       label: playlistLabel,
                     },
                   ]
@@ -163,9 +158,7 @@ const VideoDetailPage: React.FC<VideoDetailPageProps> = ({
           {isLoading ? (
             <Skeleton width={120} height={18} style={{ marginBottom: 8 }} />
           ) : playlist ? (
-            <Styled.CategoryLabel
-              href={videoPlaylistPageView(String(playlist.id), playlist.title)}
-            >
+            <Styled.CategoryLabel href={playlist.learn_url}>
               {playlistLabel}
             </Styled.CategoryLabel>
           ) : null}
@@ -197,7 +190,16 @@ const VideoDetailPage: React.FC<VideoDetailPageProps> = ({
               <VideoShareButton
                 video={video}
                 title={video.title ?? "video"}
-                pageUrl={`${NEXT_PUBLIC_ORIGIN}${videoDetailPageView(video.id, playlistId ?? undefined, video.title)}`}
+                // Shares the page in front of the user, playlist included: a
+                // video in several playlists is viewable in any of them, and a
+                // recommendation is usually about the series it was found in.
+                pageUrl={absoluteUrl(
+                  videoDetailPath(
+                    video.id,
+                    playlistId ?? undefined,
+                    video.url_slug,
+                  ),
+                )}
                 playerRef={playerRef}
               />
             )}
@@ -215,8 +217,11 @@ const VideoDetailPage: React.FC<VideoDetailPageProps> = ({
 
           {!isLoading && video?.description && (
             <Styled.DescriptionText
+              component="div"
               id="video-description"
-              dangerouslySetInnerHTML={{ __html: video.description }}
+              dangerouslySetInnerHTML={{
+                __html: addExternalLinkTargets(video.description),
+              }}
             />
           )}
 
@@ -232,7 +237,11 @@ const VideoDetailPage: React.FC<VideoDetailPageProps> = ({
               <MoreFromPlaylist
                 playlistId={playlistId}
                 playlistLabel={playlistLabel}
-                playlistTitle={playlist?.title}
+                playlistHref={
+                  playlist
+                    ? playlist.learn_url
+                    : videoPlaylistPath(playlistId, undefined)
+                }
                 videos={otherVideos}
                 totalVideos={totalPlaylistVideos}
                 isLoading={itemsLoading}

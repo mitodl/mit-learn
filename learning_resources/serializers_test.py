@@ -40,7 +40,7 @@ from learning_resources.models import (
     LearningResource,
     LearningResourceRelationship,
 )
-from learning_resources.utils import path_slug
+from learning_resources.utils import learn_url_for_resource, path_slug
 from main.test_utils import assert_json_equal, drf_datetime
 from main.utils import frontend_absolute_url
 
@@ -261,6 +261,7 @@ def test_serialize_podcast_episode_playlists_to_json():
             "id": podcast.learning_resource.id,
             "title": podcast.learning_resource.title,
             "readable_id": podcast.learning_resource.readable_id,
+            "learn_url": learn_url_for_resource(podcast.learning_resource, []),
         }
     ]
 

@@ -7,18 +7,16 @@ import { useLearningResourcesDetail } from "api/hooks/learningResources"
 import type { VideoResource, VideoPlaylistResource } from "api/v1"
 import { formatDurationClockTime } from "ol-utilities"
 import { useSeriesNavigation } from "./useSeriesNavigation"
-import { videoDetailPageView, videoPlaylistPageView } from "@/common/urls"
+import { absoluteUrl, videoDetailPath, videoPlaylistPath } from "@/common/urls"
 import SeriesNavBar from "./SeriesNavBar"
 import UpNextSection from "./UpNextSection"
 import * as Styled from "./VideoSeriesDetailPage.styled"
-import { env } from "@/env"
 import { buildVideoStructuredData } from "./videoStructuredData"
 import VideoResourcePlayer from "@/page-components/VideoPlayer/VideoResourcePlayer"
 import type { VideoPlayerHandle } from "@/page-components/VideoPlayer/VideoResourcePlayer"
+import { addExternalLinkTargets } from "@/common/utils"
 
 import VideoShareButton from "./VideoShareButton"
-
-const NEXT_PUBLIC_ORIGIN = env("NEXT_PUBLIC_ORIGIN")
 
 const StyledVideoResourcePlayer = styled(VideoResourcePlayer)(({ theme }) => ({
   borderBottom: `3px solid ${theme.custom.colors.darkGray2}`,
@@ -122,10 +120,7 @@ const VideoSeriesDetailPage: React.FC<VideoSeriesDetailPageProps> = ({
               ...(playlist && playlistId
                 ? [
                     {
-                      href: videoPlaylistPageView(
-                        String(playlist.id),
-                        playlist.title,
-                      ),
+                      href: playlist.learn_url,
                       label: playlistLabel,
                     },
                   ]
@@ -139,10 +134,11 @@ const VideoSeriesDetailPage: React.FC<VideoSeriesDetailPageProps> = ({
       {/* Series navigation bar */}
       {playlistId && (
         <SeriesNavBar
-          playlistHref={videoPlaylistPageView(
-            String(playlistId),
-            playlist?.title,
-          )}
+          playlistHref={
+            playlist
+              ? playlist.learn_url
+              : videoPlaylistPath(playlistId, undefined)
+          }
           playlistLabel={playlistLabel}
           videoId={videoId}
           isLoading={isLoading}
@@ -179,7 +175,16 @@ const VideoSeriesDetailPage: React.FC<VideoSeriesDetailPageProps> = ({
               <VideoShareButton
                 video={video}
                 title={video?.title ?? ""}
-                pageUrl={`${NEXT_PUBLIC_ORIGIN}${videoDetailPageView(video.id, playlistId ?? undefined, video.title)}`}
+                // Shares the page in front of the user, playlist included: a
+                // video in several playlists is viewable in any of them, and a
+                // recommendation is usually about the series it was found in.
+                pageUrl={absoluteUrl(
+                  videoDetailPath(
+                    video.id,
+                    playlistId ?? undefined,
+                    video.url_slug,
+                  ),
+                )}
                 playerRef={playerRef}
               />
             )}
@@ -202,9 +207,12 @@ const VideoSeriesDetailPage: React.FC<VideoSeriesDetailPageProps> = ({
           {/* Description */}
           {!isLoading && video?.description && (
             <Styled.DescriptionText
+              component="div"
               id="video-description"
               style={nextVideo ? {} : { paddingTop: "40px" }}
-              dangerouslySetInnerHTML={{ __html: video.description }}
+              dangerouslySetInnerHTML={{
+                __html: addExternalLinkTargets(video.description),
+              }}
             />
           )}
 

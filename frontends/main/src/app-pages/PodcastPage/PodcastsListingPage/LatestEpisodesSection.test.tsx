@@ -1,9 +1,13 @@
 import React from "react"
+import { faker } from "@faker-js/faker/locale/en"
 import { factories } from "api/test-utils"
 import type { LearningResource } from "api/v1"
-import { SEARCH_PODCAST_EPISODES } from "@/common/urls"
+import { SEARCH_PODCAST_EPISODES, podcastEpisodePath } from "@/common/urls"
 import { renderWithProviders, screen, user } from "@/test-utils"
 import LatestEpisodesSection from "./LatestEpisodesSection"
+
+/** The podcast the rows are scoped to, taken from the episode's `podcasts[0]`. */
+const CONTEXT_PODCAST_ID = faker.number.int({ min: 1, max: 1e6 })
 
 const makeEpisodes = (count: number): LearningResource[] =>
   Array.from({ length: count }, (_, i) =>
@@ -11,7 +15,7 @@ const makeEpisodes = (count: number): LearningResource[] =>
       title: `Episode ${i + 1}`,
       podcast_episode: {
         id: i + 1,
-        podcasts: [1],
+        podcasts: [CONTEXT_PODCAST_ID],
         duration: "PT1M",
         audio_url: "https://example.com/audio.mp3",
         episode_link: "https://example.com/link",
@@ -34,6 +38,36 @@ describe("LatestEpisodesSection", () => {
     )
     expect(screen.getByText("Latest Episodes")).toBeInTheDocument()
     expect(screen.getByText("All episodes")).toBeInTheDocument()
+  })
+
+  it("keeps each episode's podcast context and takes only the backend slug", () => {
+    const episodes = makeEpisodes(2)
+    renderWithProviders(
+      <LatestEpisodesSection
+        episodes={episodes}
+        isMobile={false}
+        isAudioPlaying={false}
+        onPlayClick={jest.fn()}
+        onPauseClick={jest.fn()}
+        hasMoreEpisodes={false}
+        isPlayable={() => true}
+      />,
+    )
+
+    // Each row is an anchor given role="listitem", so query by that role.
+    const rows = screen.getAllByRole("listitem")
+    expect(rows).toHaveLength(episodes.length)
+    episodes.forEach((episode, i) => {
+      expect(rows[i]).toHaveTextContent(episode.title!)
+      expect(rows[i]).toHaveAttribute(
+        "href",
+        podcastEpisodePath(
+          String(episode.id),
+          String(CONTEXT_PODCAST_ID),
+          episode.url_slug,
+        ),
+      )
+    })
   })
 
   it("renders all provided episodes", () => {

@@ -458,6 +458,19 @@ class PodcastEpisodeParentSerializer(serializers.Serializer):
     id = serializers.IntegerField(source="parent_id")
     title = serializers.CharField(source="parent.title")
     readable_id = serializers.CharField(source="parent.readable_id")
+    learn_url = serializers.SerializerMethodField(
+        help_text="Where this podcast lives within Learn"
+    )
+
+    def get_learn_url(self, instance) -> str:
+        """
+        Return the parent podcast's own page on Learn.
+
+        A podcast has no URL-forming parent of its own, hence the empty parent
+        list. `parent` is select_related by the `_podcasts` prefetch, so this
+        costs no extra query.
+        """
+        return learn_url_for_resource(instance.parent, [])
 
 
 class PodcastEpisodeSerializer(serializers.ModelSerializer):
@@ -2019,3 +2032,60 @@ class LearningResourceSummarySerializer(serializers.ModelSerializer):
             "canonical_parent_ids",
             "learn_url",
         )
+
+
+class CredentialMetadataRequestSerializer(serializers.Serializer):
+    """Request body for the credential metadata endpoint"""
+
+    resource_readable_id = serializers.CharField(
+        required=True,
+        help_text="The readable id of the learning resource to generate metadata for",
+    )
+
+
+class CredentialMetadataErrorsSerializer(serializers.Serializer):
+    """
+    Why a requested Open Badges field is missing from the response.
+    """
+
+    description = serializers.CharField(
+        required=False, help_text="Why no description was generated"
+    )
+    criteria = serializers.CharField(
+        required=False, help_text="Why no criteria were generated"
+    )
+
+
+class CredentialMetadataSerializer(serializers.Serializer):
+    """
+    Generated Open Badges credential metadata for a learning resource.
+    """
+
+    resource_readable_id = serializers.CharField()
+    # The generated fields are `required=False` so that a field which failed to
+    # generate is omitted from the response rather than serialized as blank.
+    # None of these are `read_only`: drf-spectacular marks every read-only
+    # field as required in the response schema, which would tell clients the
+    # generated ones are always present.
+    description = serializers.CharField(
+        required=False,
+        help_text="The Open Badges 3.0 description, 1-2 sentences",
+    )
+    criteria = serializers.ListField(
+        child=serializers.CharField(),
+        required=False,
+        help_text=(
+            "Open Badges 3.0 criteria, one skill-focused bullet per item, for"
+            " rendering into the criteria narrative"
+        ),
+    )
+    # Present only when a field is missing, so that an empty response can be
+    # told apart from one whose generation failed. Absent means every
+    # configured field generated.
+    errors = CredentialMetadataErrorsSerializer(
+        required=False,
+        help_text=(
+            "One entry per requested field that is missing above, saying why."
+            " Absent when every configured field was generated."
+        ),
+    )
