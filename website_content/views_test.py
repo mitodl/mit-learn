@@ -292,3 +292,40 @@ def test_list_query_count_is_constant(client, django_assert_num_queries, limit):
     # The most recently published item has no user; a nullable FK still has to
     # serialize, which a select_related() join preserves and an inner join wouldn't.
     assert results[0]["user"] is None
+
+
+@pytest.mark.parametrize(
+    "case",
+    [
+        # each case is was_published, then now_published, then whether the
+        # unpublish actions should fire
+        (True, False, True),  # the unpublish transition
+        (True, True, False),  # still published
+        (False, False, False),  # draft edit, never published
+        (False, True, False),  # publishing
+    ],
+)
+def test_update_triggers_unpublish_actions_only_on_the_transition(
+    staff_client,
+    user,
+    mocker,
+    django_capture_on_commit_callbacks,
+    case,
+):
+    """
+    Tearing down the news feed entry must key off the published->unpublished
+    transition, which the saved instance alone cannot reveal.
+    """
+    was_published, now_published, expect_unpublish_actions = case
+    mocker.patch("website_content.views.clear_views_cache")
+    mock_unpublish = mocker.patch("website_content.views.content_unpublished_actions")
+    content = _make_content(user, is_published=was_published)
+    url = reverse(
+        "website_content:v1:website_content-detail", kwargs={"pk": content.id}
+    )
+
+    with django_capture_on_commit_callbacks(execute=True):
+        resp = staff_client.patch(url, {"is_published": now_published}, format="json")
+
+    assert resp.status_code == 200
+    assert mock_unpublish.called is expect_unpublish_actions

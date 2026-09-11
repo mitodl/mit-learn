@@ -162,3 +162,58 @@ def test_content_published_actions_logs_execution(mocker, user, caplog):
     assert "Triggering website_content_published plugins" in caplog.text
     assert f"id={content.id}" in caplog.text
     assert f"title={content.title}" in caplog.text
+
+
+@pytest.mark.django_db
+def test_content_unpublished_actions_triggers_hook(mocker, user):
+    """content_unpublished_actions triggers the unpublish hook for unpublished items"""
+    from website_content.api import content_unpublished_actions
+    from website_content.models import WebsiteContent
+
+    content = WebsiteContent.objects.create(
+        title="Unpublished Article",
+        content={"type": "doc", "content": []},
+        is_published=False,
+        user=user,
+        content_type="news",
+    )
+
+    mock_pm = mocker.MagicMock()
+    mock_hook = mocker.MagicMock()
+    mock_pm.hook = mock_hook
+    mocker.patch("website_content.api.get_plugin_manager", return_value=mock_pm)
+
+    content_unpublished_actions(content=content)
+
+    mock_hook.website_content_unpublished.assert_called_once_with(content=content)
+
+
+@pytest.mark.django_db
+def test_content_unpublished_actions_skips_published(mocker, user, caplog):
+    """A still-published item must not have its feed entry torn down"""
+    from website_content.api import content_unpublished_actions
+    from website_content.models import WebsiteContent
+
+    mocker.patch("website_content.tasks.fastly_purge_relative_url")
+    mocker.patch("website_content.tasks.fastly_purge_website_content_list.delay")
+
+    content = WebsiteContent.objects.create(
+        title="Still Published",
+        content={"type": "doc", "content": []},
+        is_published=True,
+        user=user,
+        content_type="news",
+    )
+
+    mock_pm = mocker.MagicMock()
+    mock_hook = mocker.MagicMock()
+    mock_pm.hook = mock_hook
+    mocker.patch("website_content.api.get_plugin_manager", return_value=mock_pm)
+
+    content_unpublished_actions(content=content)
+
+    mock_hook.website_content_unpublished.assert_not_called()
+    assert (
+        f"WebsiteContent {content.id} is still published, "
+        "skipping unpublish plugin actions" in caplog.text
+    )

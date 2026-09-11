@@ -47,3 +47,41 @@ class WebsiteContentNewsPlugin:
             sync_website_content_to_news.delay(content_id)
 
         transaction.on_commit(trigger_async_sync)
+
+    @hookimpl
+    def website_content_unpublished(self, content):
+        """
+        Remove an unpublished news content item from the news_events feed.
+
+        Args:
+            content (WebsiteContent): The content item that was unpublished
+        """
+        from website_content.constants import WebsiteContentType
+
+        if content.content_type != WebsiteContentType.news.name:
+            log.info(
+                "WebsiteContentNewsPlugin: Skipping non-news content: id=%s, type=%s",
+                content.id,
+                content.content_type,
+            )
+            return
+
+        log.info(
+            "WebsiteContentNewsPlugin: Removing from news feed: id=%s, title=%s",
+            content.id,
+            content.title,
+        )
+
+        content_id = content.id
+
+        def trigger_async_delete():
+            """Trigger the async Celery task after the transaction commits"""
+            from news_events.tasks import delete_website_content_from_news
+
+            log.info(
+                "Scheduling async removal of content %s from news feed...", content_id
+            )
+            delete_website_content_from_news.delay(content_id)
+
+        # on_commit, so the feed is only torn down once the unpublish is durable.
+        transaction.on_commit(trigger_async_delete)

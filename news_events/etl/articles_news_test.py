@@ -633,3 +633,39 @@ def test_sync_single_article_wrong_content_type(mocker):
     articles_news.sync_single_website_content_news_to_news(MockArticle())
 
     mock_load_feed_item.assert_not_called()
+
+
+def test_website_content_feed_guid():
+    """The guid convention is stable: the sync and the delete must agree on it"""
+    assert articles_news.website_content_feed_guid(7) == "article-7"
+
+
+@pytest.mark.django_db
+def test_delete_website_content_news_from_news_removes_the_item():
+    """Deleting by guid removes the feed item and reports one FeedItem gone"""
+    from news_events.constants import FeedType
+    from news_events.models import FeedItem, FeedSource
+
+    source = FeedSource.objects.create(
+        title="MIT Learn Articles",
+        url="/news",
+        feed_type=FeedType.news.name,
+    )
+    FeedItem.objects.create(
+        guid=articles_news.website_content_feed_guid(42),
+        source=source,
+        title="Doomed",
+        url="/news/doomed",
+    )
+
+    deleted = articles_news.delete_website_content_news_from_news(42)
+
+    # One FeedItem, not the cascade total.
+    assert deleted == 1
+    assert not FeedItem.objects.filter(guid="article-42").exists()
+
+
+@pytest.mark.django_db
+def test_delete_website_content_news_from_news_is_a_noop_when_absent():
+    """Content that never had a feed entry (a draft, or a non-news type)"""
+    assert articles_news.delete_website_content_news_from_news(999) == 0
