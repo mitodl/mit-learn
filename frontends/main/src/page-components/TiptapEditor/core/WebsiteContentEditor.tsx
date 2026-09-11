@@ -5,7 +5,7 @@ import styled from "@emotion/styled"
 import { EditorContext, JSONContent, useEditor } from "@tiptap/react"
 import type { Extension, Node, Mark } from "@tiptap/core"
 import { getSchema } from "@tiptap/core"
-import type { WebsiteContent, WebsiteContentContentTypeEnum } from "api/v1"
+import { WebsiteContentContentTypeEnum, type WebsiteContent } from "api/v1"
 import {
   LoadingSpinner,
   Typography,
@@ -17,8 +17,14 @@ import { useUserHasPermission, Permission } from "api/hooks/user"
 import { useQueryClient, type QueryClient } from "@tanstack/react-query"
 import dynamic from "next/dynamic"
 import { useRouter } from "next-nprogress-bar"
-import { RiDeleteBinLine } from "@remixicon/react"
+import {
+  RiDeleteBinLine,
+  RiEditLine,
+  RiEqualizerLine,
+  RiSave3Line,
+} from "@remixicon/react"
 import { showDeleteWebsiteContentDialog } from "@/page-components/WebsiteContentDialogs/DeleteWebsiteContentDialog"
+import { ArticleSettingsDrawer } from "@/page-components/ArticleSettings/ArticleSettingsDrawer"
 
 import { Toolbar } from "../vendor/components/tiptap-ui-primitive/toolbar"
 import { TiptapEditor, MainToolbarContent, TipTapViewer } from "../TiptapEditor"
@@ -30,6 +36,7 @@ import { WebsiteContentProvider } from "../WebsiteContentContext"
 import { extractLearningResourceIds, contentsMatch } from "../extensions/utils"
 import { LearningResourceProvider } from "../extensions/node/LearningResource/LearningResourceDataProvider"
 import { websiteContentDraftsView, websiteContentEditView } from "@/common/urls"
+import { CONTENT_TYPE_LABELS } from "@/common/website_content"
 
 const LearningResourceDrawer = dynamic(
   () =>
@@ -70,6 +77,36 @@ const StyledAlert = styled(Alert)({
     margin: "10px 0",
   },
 })
+
+/**
+ * Publish is green rather than the primary red: red is reserved for the
+ * destructive Unpublish action in the same bar. Keeps primary's white label
+ * and Shadow/04dp.
+ */
+const PublishButton = styled(Button)(({ theme }) => ({
+  backgroundColor: theme.custom.colors.darkGreen,
+  ":hover:not(:disabled)": {
+    backgroundColor: theme.custom.colors.green,
+  },
+}))
+
+const StatusText = styled(Typography)(({ theme }) => ({
+  paddingLeft: "4px",
+  color: theme.custom.colors.silverGrayDark,
+  whiteSpace: "nowrap",
+}))
+
+const StyledStatusContainer = styled.div({
+  display: "flex",
+  alignItems: "center",
+  gap: "16px",
+  marginRight: "16px",
+})
+
+/* The value is darker than its label, but not bolder. */
+const StatusValue = styled.span(({ theme }) => ({
+  color: theme.custom.colors.darkGray2,
+}))
 
 export type UploadHandler = (
   file: File,
@@ -196,6 +233,7 @@ const WebsiteContentEditor = ({
   bannerViewer,
 }: WebsiteContentEditorProps) => {
   const [isPublishing, setIsPublishing] = useState(false)
+  const [settingsOpen, setSettingsOpen] = useState(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
   const [resetAttempted, setResetAttempted] = useState(false)
   const [content, setContent] = useState<JSONContent>(
@@ -379,25 +417,85 @@ const WebsiteContentEditor = ({
   const editIdOrSlug = contentItem?.is_published
     ? (contentItem?.slug ?? contentItem.id)
     : contentItem?.id
+  /**
+   * The designs are drawn for /articles, but this chrome is shared by every
+   * content type this editor serves. The type's display label is substituted
+   * into the copy so news reads "News status:" rather than "Article status:".
+   */
+  const contentLabel = CONTENT_TYPE_LABELS[contentType]
+
+  const statusSlot = (
+    <StatusText variant="body2">
+      {contentLabel} status:{" "}
+      <StatusValue>
+        {contentItem?.is_published ? "Published" : "Draft"}
+      </StatusValue>
+    </StatusText>
+  )
+
+  /**
+   * "medium" reproduces the design's button box exactly: 40px tall, 14px medium
+   * label, 20px icon, 8px gap, and 12px/16px horizontal padding (smoot-design
+   * pulls the icon side in by 4px).
+   */
+  const buttonSize = "medium"
+
+  const settingsButton = (
+    <Button
+      variant="bordered"
+      size={buttonSize}
+      startIcon={<RiEqualizerLine />}
+      onClick={() => setSettingsOpen(true)}
+    >
+      Settings
+    </Button>
+  )
+
+  /**
+   * Published view: navigation and settings sit left, the publish-state action
+   * and status sit right (the Spacer splits them).
+   */
   const readOnlyToolbarSlot = (
     <>
-      <Spacer />
       <ButtonLink
-        variant="secondary"
+        variant="bordered"
         href={websiteContentDraftsView(contentType)}
-        size="small"
+        size={buttonSize}
+        startIcon={<RiSave3Line />}
       >
-        Drafts
+        Draft
       </ButtonLink>
       {editIdOrSlug !== undefined ? (
         <ButtonLink
-          variant="primary"
+          variant="bordered"
           href={websiteContentEditView(contentType, editIdOrSlug)}
-          size="small"
+          size={buttonSize}
+          startIcon={<RiEditLine />}
         >
           Edit
         </ButtonLink>
       ) : null}
+      {settingsButton}
+      <Spacer />
+      {contentItem?.is_published ? (
+        <Button
+          variant="primary"
+          size={buttonSize}
+          disabled={isPending || !title}
+          onClick={() => {
+            setIsPublishing(false)
+            handleSave(false)
+          }}
+          endIcon={
+            isPending ? (
+              <LoadingSpinner size={14} color="inherit" loading />
+            ) : null
+          }
+        >
+          Unpublish {contentLabel}
+        </Button>
+      ) : null}
+      {statusSlot}
     </>
   )
 
@@ -408,68 +506,83 @@ const WebsiteContentEditor = ({
           <EditorContext.Provider value={{ editor }}>
             {isArticleEditor ? (
               readOnly ? (
-                <StyledToolbar>{readOnlyToolbarSlot}</StyledToolbar>
+                <StyledStatusContainer>
+                  <StyledToolbar>{readOnlyToolbarSlot}</StyledToolbar>
+                </StyledStatusContainer>
               ) : (
                 <StyledToolbar>
                   <MainToolbarContent editor={editor} />
-                  {contentItem && !contentItem.is_published ? (
-                    <Button
-                      variant="text"
-                      size="small"
-                      disabled={isPending}
-                      startIcon={<RiDeleteBinLine />}
-                      onClick={() =>
-                        showDeleteWebsiteContentDialog(contentItem, () =>
-                          router.push(websiteContentDraftsView(contentType)),
-                        )
-                      }
-                    >
-                      Delete
-                    </Button>
-                  ) : null}
-                  {/* Separates the destructive action from the save actions to
-                      reduce misclicks. */}
+                  {/* Splits the formatting controls from the content actions,
+                      which are grouped to the right. */}
                   <Spacer />
-                  {!contentItem?.is_published ? (
-                    <Button
-                      variant="secondary"
-                      disabled={isPending || !touched || !title}
+                  <StyledStatusContainer>
+                    {contentItem && !contentItem.is_published ? (
+                      <Button
+                        variant="bordered"
+                        size={buttonSize}
+                        disabled={isPending}
+                        startIcon={<RiDeleteBinLine />}
+                        onClick={() =>
+                          showDeleteWebsiteContentDialog(contentItem, () =>
+                            router.push(websiteContentDraftsView(contentType)),
+                          )
+                        }
+                      >
+                        Delete
+                      </Button>
+                    ) : null}
+                    {settingsButton}
+                    {!contentItem?.is_published ? (
+                      <Button
+                        variant="bordered"
+                        disabled={isPending || !touched || !title}
+                        onClick={() => {
+                          setIsPublishing(false)
+                          handleSave(false)
+                        }}
+                        size={buttonSize}
+                        startIcon={<RiEditLine />}
+                        endIcon={
+                          isPending && !isPublishing ? (
+                            <LoadingSpinner size={14} color="inherit" loading />
+                          ) : null
+                        }
+                      >
+                        Save as Draft
+                      </Button>
+                    ) : null}
+                    <PublishButton
+                      variant="primary"
+                      disabled={
+                        isPending ||
+                        !title ||
+                        (!touched && contentItem?.is_published)
+                      }
                       onClick={() => {
-                        setIsPublishing(false)
-                        handleSave(false)
+                        setIsPublishing(true)
+                        handleSave(true)
                       }}
-                      size="small"
+                      size={buttonSize}
                       endIcon={
-                        isPending && !isPublishing ? (
+                        isPending && isPublishing ? (
                           <LoadingSpinner size={14} color="inherit" loading />
                         ) : null
                       }
                     >
-                      Save As Draft
-                    </Button>
-                  ) : null}
-                  <Button
-                    variant="primary"
-                    disabled={
-                      isPending ||
-                      !title ||
-                      (!touched && contentItem?.is_published)
-                    }
-                    onClick={() => {
-                      setIsPublishing(true)
-                      handleSave(true)
-                    }}
-                    size="small"
-                    endIcon={
-                      isPending && isPublishing ? (
-                        <LoadingSpinner size={14} color="inherit" loading />
-                      ) : null
-                    }
-                  >
-                    Publish
-                  </Button>
+                      Publish
+                    </PublishButton>
+                    {statusSlot}
+                  </StyledStatusContainer>
                 </StyledToolbar>
               )
+            ) : null}
+
+            {isArticleEditor ? (
+              <ArticleSettingsDrawer
+                open={settingsOpen}
+                onClose={() => setSettingsOpen(false)}
+                contentLabel={contentLabel}
+              />
             ) : null}
 
             {error ? (

@@ -5,7 +5,8 @@
  * contenteditable elements not supported by JSDOM, the default Jest environment.
  */
 import React from "react"
-import { screen } from "@testing-library/react"
+import { screen, within } from "@testing-library/react"
+import userEvent from "@testing-library/user-event"
 import { setMockResponse, factories, urls } from "api/test-utils"
 import type { JSONContent } from "@tiptap/react"
 import { ArticleEditor } from "./ArticleEditor"
@@ -30,14 +31,23 @@ const content: JSONContent = {
   ],
 }
 
-const renderArticleEditor = () => {
+const renderArticleEditor = ({
+  readOnly = false,
+  isPublished = false,
+}: { readOnly?: boolean; isPublished?: boolean } = {}) => {
   const user = factories.user.user({
     is_authenticated: true,
     is_article_editor: true,
   })
   setMockResponse.get(urls.userMe.get(), user)
-  const article = factories.websiteContent.websiteContent({ content })
-  renderWithProviders(<ArticleEditor article={article} />, { user })
+  const article = factories.websiteContent.websiteContent({
+    content,
+    is_published: isPublished,
+  })
+  renderWithProviders(<ArticleEditor article={article} readOnly={readOnly} />, {
+    user,
+  })
+  return article
 }
 
 describe("ArticleEditor", () => {
@@ -52,5 +62,145 @@ describe("ArticleEditor", () => {
     renderArticleEditor()
 
     await screen.findByText("Articles")
+  })
+})
+
+describe("ArticleEditor article controls", () => {
+  test("the draft control bar carries the article actions and status", async () => {
+    renderArticleEditor()
+
+    await screen.findByRole("button", { name: "Settings" })
+    await screen.findByRole("button", { name: "Save as Draft" })
+    await screen.findByRole("button", { name: "Publish" })
+    expect(await screen.findByText(/Article status:/)).toHaveTextContent(
+      "Article status: Draft",
+    )
+  })
+
+  test("a published article offers Draft, Edit, Settings and Unpublish", async () => {
+    renderArticleEditor({ readOnly: true, isPublished: true })
+
+    await screen.findByRole("link", { name: "Draft" })
+    await screen.findByRole("link", { name: "Edit" })
+    await screen.findByRole("button", { name: "Settings" })
+    await screen.findByRole("button", { name: "Unpublish Article" })
+    expect(await screen.findByText(/Article status:/)).toHaveTextContent(
+      "Article status: Published",
+    )
+  })
+
+  test("Settings opens the article settings drawer", async () => {
+    setMockResponse.get(
+      urls.topics.list({ is_toplevel: true, limit: 100 }),
+      factories.learningResources.topics({ count: 2 }),
+    )
+    renderArticleEditor()
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Settings" }),
+    )
+
+    await screen.findByRole("heading", { name: "Article Settings" })
+    await screen.findByRole("heading", { name: "Select Topics" })
+    await screen.findByRole("heading", { name: "SEO Settings" })
+    await screen.findByRole("button", { name: "Save Settings" })
+  })
+
+  test("the topic dropdowns populate from the topics API", async () => {
+    const mainTopics = factories.learningResources.topics({ count: 2 })
+    const [firstTopic] = mainTopics.results
+    const subtopics = factories.learningResources.topics({ count: 1 })
+    subtopics.results[0].parent = firstTopic.id
+
+    // Top-level topics and a given parent's children are separate requests,
+    // so a subtopic resolves even when its parent is absent from the other.
+    setMockResponse.get(
+      urls.topics.list({ is_toplevel: true, limit: 100 }),
+      mainTopics,
+    )
+    setMockResponse.get(
+      urls.topics.list({ parent_topic_id: [firstTopic.id], limit: 100 }),
+      subtopics,
+    )
+
+    renderArticleEditor()
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Settings" }),
+    )
+
+    // Pick the main topic, which is what triggers the subtopic request.
+    await userEvent.click(await screen.findByLabelText("Topic"))
+    await userEvent.click(
+      await screen.findByRole("option", { name: firstTopic.name }),
+    )
+
+    await userEvent.click(await screen.findByLabelText("Subtopic"))
+    await screen.findByRole("option", { name: subtopics.results[0].name })
+  })
+
+  test("added subtopics group under one topic name and can be removed", async () => {
+    const mainTopics = factories.learningResources.topics({ count: 1 })
+    const [topic] = mainTopics.results
+    const subtopics = factories.learningResources.topics({ count: 2 })
+    subtopics.results.forEach((s) => {
+      s.parent = topic.id
+    })
+    const [subA, subB] = subtopics.results
+
+    setMockResponse.get(
+      urls.topics.list({ is_toplevel: true, limit: 100 }),
+      mainTopics,
+    )
+    setMockResponse.get(
+      urls.topics.list({ parent_topic_id: [topic.id], limit: 100 }),
+      subtopics,
+    )
+
+    renderArticleEditor()
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Settings" }),
+    )
+
+    await userEvent.click(await screen.findByLabelText("Topic"))
+    await userEvent.click(
+      await screen.findByRole("option", { name: topic.name }),
+    )
+
+    // Add both subtopics under the same topic.
+    for (const sub of [subA, subB]) {
+      await userEvent.click(await screen.findByLabelText("Subtopic"))
+      await userEvent.click(
+        await screen.findByRole("option", { name: sub.name }),
+      )
+      await userEvent.click(screen.getByRole("button", { name: "Add" }))
+    }
+
+    // Scoped to the list: the Topic select also still displays the name.
+    const selected = screen.getByRole("list", { name: "Selected topics" })
+    // The topic name labels the group once, not once per subtopic.
+    expect(within(selected).getAllByText(topic.name)).toHaveLength(1)
+    const removeA = await screen.findByRole("button", {
+      name: `Remove ${subA.name} from ${topic.name}`,
+    })
+    await screen.findByRole("button", {
+      name: `Remove ${subB.name} from ${topic.name}`,
+    })
+
+    await userEvent.click(removeA)
+
+    expect(
+      screen.queryByRole("button", {
+        name: `Remove ${subA.name} from ${topic.name}`,
+      }),
+    ).not.toBeInTheDocument()
+    // Removing one leaves the other, and the group label with it.
+    await screen.findByRole("button", {
+      name: `Remove ${subB.name} from ${topic.name}`,
+    })
+    expect(
+      within(
+        screen.getByRole("list", { name: "Selected topics" }),
+      ).getAllByText(topic.name),
+    ).toHaveLength(1)
   })
 })
