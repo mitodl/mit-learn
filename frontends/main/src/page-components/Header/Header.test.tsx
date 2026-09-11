@@ -37,6 +37,25 @@ describe("Header", () => {
   })
 })
 
+describe("Drawer trigger", () => {
+  test("exposes expanded state and an accessible name on both breakpoints", async () => {
+    setMockResponse.get(urls.userMe.get(), { is_authenticated: false })
+    renderWithProviders(<Header />)
+
+    const triggers = screen.getAllByRole("button", { name: "Explore MIT" })
+    expect(triggers).toHaveLength(2)
+    triggers.forEach((trigger) => {
+      expect(trigger).toHaveAttribute("aria-expanded", "false")
+    })
+
+    await user.click(triggers[0])
+
+    triggers.forEach((trigger) => {
+      expect(trigger).toHaveAttribute("aria-expanded", "true")
+    })
+  })
+})
+
 describe("UserMenu", () => {
   /**
    * Opens the user menu and returns the HTML element for the menu (contains
