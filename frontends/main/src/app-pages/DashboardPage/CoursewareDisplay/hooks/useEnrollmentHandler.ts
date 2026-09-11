@@ -15,7 +15,6 @@ import { useComplianceGate } from "@/common/mitxonline/useComplianceGate"
 import CourseEnrollmentDialog from "@/page-components/EnrollmentDialogs/CourseEnrollmentDialog"
 import { trackCourseEnrolled } from "@/common/analytics/gtm"
 import { canOpenCourseware } from "../courseDateUtils"
-import { showSuccessToast } from "@/page-components/Toaster/toastStore"
 import { mitxUserQueries } from "api/mitxonline-hooks/user"
 import { useQuery } from "@tanstack/react-query"
 
@@ -65,17 +64,12 @@ export const useEnrollmentHandler = () => {
     }) => {
       /**
        * Enrolling early is allowed, so only redirect once the courseware is
-       * open. When it isn't, the enrollment would be silent, and a toast
-       * confirms it without moving the learner off the page they were on.
+       * open. Otherwise the learner stays put and the card they clicked
+       * re-renders as enrolled, showing when the run starts.
        */
       const finishEnrollment = (url: string, runStartDate?: string | null) => {
-        if (canOpenCourseware(runStartDate, { isStaff })) {
-          window.location.href = url
-          return
-        }
-        showSuccessToast(
-          `You've been enrolled in "${course.title}". It has been added to My Learning.`,
-        )
+        if (!canOpenCourseware(runStartDate, { isStaff })) return
+        window.location.href = url
       }
 
       if (isB2B) {

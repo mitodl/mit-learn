@@ -1,4 +1,8 @@
-import { showErrorToast, dismissToast, subscribeToToast } from "./toastStore"
+import {
+  showErrorToast,
+  dismissErrorToast,
+  subscribeToToast,
+} from "./toastStore"
 
 // The store's other behaviors (show, replace, dismiss) are covered at the
 // render level in Toaster.test.tsx; only unsubscription has no render-level
@@ -11,5 +15,5 @@ test("an unsubscribed listener is not notified", () => {
   showErrorToast("ignored")
 
   expect(listener).not.toHaveBeenCalled()
-  dismissToast()
+  dismissErrorToast()
 })

@@ -1,7 +1,6 @@
 import React from "react"
 import {
   expectErrorToast,
-  expectSuccessToast,
   renderWithProviders,
   screen,
   setMockResponse,
@@ -356,15 +355,15 @@ describe.each([
   }
 
   /**
-   * The toast is the only feedback when there's no redirect, so assert the
-   * page stayed put as well as the message.
+   * Checks both kinds of leaving: the hard `window.location` redirect this
+   * guards, and a router navigation, so neither can creep back in.
    */
-  const expectInPlaceSuccess = async (
+  const expectStayedPut = (
     location: ReturnType<typeof renderWithProviders>["location"],
     pathnameBefore: string,
-    title: string,
+    hrefBefore: string,
   ) => {
-    await expectSuccessToast(`You've been enrolled in "${title}".`)
+    expect(window.location.href).toBe(hrefBefore)
     expect(location.current.pathname).toBe(pathnameBefore)
     expect(location.current.search).toBe("")
   }
@@ -549,6 +548,7 @@ describe.each([
         <UnenrolledCourseCard course={course} contractId={b2bContractId} />,
       )
       const pathnameBefore = location.current.pathname
+      const hrefBefore = window.location.href
 
       await enrollAndSettle(getCard(), () =>
         enroll.resolve({ result: "b2b-enroll-success", order: 1 }),
@@ -560,7 +560,7 @@ describe.each([
       if (expectRedirect) {
         expect(window.location.href).toBe(coursewareUrl)
       } else {
-        await expectInPlaceSuccess(location, pathnameBefore, course.title)
+        expectStayedPut(location, pathnameBefore, hrefBefore)
       }
     },
   )
@@ -668,6 +668,7 @@ describe.each([
           <UnenrolledCourseCard course={course} />,
         )
         const pathnameBefore = location.current.pathname
+        const hrefBefore = window.location.href
 
         await user.click(within(getCard()).getByTestId("courseware-button"))
         const dialog = await screen.findByRole("dialog", {
@@ -686,7 +687,7 @@ describe.each([
         if (expectRedirect) {
           expect(window.location.href).toBe(coursewareUrl)
         } else {
-          await expectInPlaceSuccess(location, pathnameBefore, course.title)
+          expectStayedPut(location, pathnameBefore, hrefBefore)
         }
       },
     )
@@ -809,6 +810,7 @@ describe.each([
           <UnenrolledCourseCard course={course} />,
         )
         const pathnameBefore = location.current.pathname
+        const hrefBefore = window.location.href
 
         await user.click(within(getCard()).getByTestId("courseware-button"))
 
@@ -821,7 +823,7 @@ describe.each([
             expect(window.location.href).toBe(coursewareUrl)
           })
         } else {
-          await expectInPlaceSuccess(location, pathnameBefore, course.title)
+          expectStayedPut(location, pathnameBefore, hrefBefore)
         }
       },
     )
@@ -977,6 +979,7 @@ describe.each([
           />,
         )
         const pathnameBefore = location.current.pathname
+        const hrefBefore = window.location.href
 
         await enrollAndSettle(getCard(), () => enroll.resolve({}))
 
@@ -989,7 +992,7 @@ describe.each([
         if (expectRedirect) {
           expect(window.location.href).toBe(coursewareUrl)
         } else {
-          await expectInPlaceSuccess(location, pathnameBefore, course.title)
+          expectStayedPut(location, pathnameBefore, hrefBefore)
         }
       },
     )
