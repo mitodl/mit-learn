@@ -1,8 +1,15 @@
 import React, { useState } from "react"
 import Image from "next/image"
 import Link from "next/link"
-import { Typography, styled, theme, Skeleton } from "ol-components"
+import {
+  Typography,
+  styled,
+  theme,
+  Skeleton,
+  type TypographyProps,
+} from "ol-components"
 import { formatDurationClockTime } from "ol-utilities"
+import { stripAnchorTags } from "@/common/utils"
 import type { VideoResource } from "api/v1"
 import {
   DurationBadge,
@@ -88,15 +95,30 @@ const CardMetaGroup = styled.div({
   gap: "3px",
 })
 
-const CardMetaValue = styled(Typography)(({ theme }) => ({
-  ...theme.typography.body2,
-  color: theme.custom.colors.silverGrayDark,
-  lineHeight: "22px",
-  overflow: "hidden",
-  display: "-webkit-box",
-  WebkitLineClamp: 2,
-  WebkitBoxOrient: "vertical",
-}))
+/*
+ * The Pick<TypographyProps, "component"> generic is what allows
+ * component="div" at the call site. A sanitized OVS description contains block elements (<p>, <ul>), which are invalid inside Typography's default element for these variants (<p>).
+ */
+const CardMetaValue = styled(Typography)<Pick<TypographyProps, "component">>(
+  ({ theme }) => ({
+    /* Clamped preview: description markup is flattened so a list cannot blow the
+     box out. Anchors are stripped in the component (the row is itself a link). */
+    "p, ul, ol, li": {
+      display: "inline",
+      margin: 0,
+      padding: 0,
+      listStyle: "none",
+    },
+    "p + p::before, li + li::before": { content: '" "' },
+    ...theme.typography.body2,
+    color: theme.custom.colors.silverGrayDark,
+    lineHeight: "22px",
+    overflow: "hidden",
+    display: "-webkit-box",
+    WebkitLineClamp: 2,
+    WebkitBoxOrient: "vertical",
+  }),
+)
 
 type VideoCardProps = {
   resource: VideoResource
@@ -135,7 +157,12 @@ const VideoCard: React.FC<VideoCardProps> = ({ resource, href }) => {
         </CardTitleRow>
         <CardMetaRow>
           <CardMetaGroup>
-            <CardMetaValue dangerouslySetInnerHTML={{ __html: description }} />
+            {/* The whole card is a link, so anchors from the description
+                have to go - a nested <a> splits the card's own link. */}
+            <CardMetaValue
+              component="div"
+              dangerouslySetInnerHTML={{ __html: stripAnchorTags(description) }}
+            />
           </CardMetaGroup>
         </CardMetaRow>
       </CardContent>

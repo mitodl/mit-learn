@@ -16,6 +16,7 @@ import { formatDurationClockTime } from "ol-utilities"
 import { absoluteUrl, videoDetailPath, videoPlaylistPath } from "@/common/urls"
 import { buildVideoStructuredData } from "./videoStructuredData"
 import type { VideoPlayerHandle } from "@/page-components/VideoPlayer/VideoResourcePlayer"
+import { addExternalLinkTargets } from "@/common/utils"
 import * as Styled from "./VideoDetailPage.styled"
 
 /** How many sibling videos the "More from" list shows at most. */
@@ -216,8 +217,11 @@ const VideoDetailPage: React.FC<VideoDetailPageProps> = ({
 
           {!isLoading && video?.description && (
             <Styled.DescriptionText
+              component="div"
               id="video-description"
-              dangerouslySetInnerHTML={{ __html: video.description }}
+              dangerouslySetInnerHTML={{
+                __html: addExternalLinkTargets(video.description),
+              }}
             />
           )}
 
