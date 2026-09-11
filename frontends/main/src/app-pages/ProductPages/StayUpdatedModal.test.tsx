@@ -344,4 +344,62 @@ describe("StayUpdatedModal", () => {
       screen.getByRole("button", { name: "Notify Me" }),
     ).toBeInTheDocument()
   })
+
+  it("shows a friendly message for the reCAPTCHA-enabled error code", async () => {
+    setMockResponse.get(
+      urls.hubspot.details({ form_id: STAY_UPDATED_FORM_ID }),
+      factories.hubspot.form({
+        id: STAY_UPDATED_FORM_ID,
+        name: "Stay Updated",
+      }),
+    )
+    setMockResponse.post(
+      urls.hubspot.submit(STAY_UPDATED_FORM_ID),
+      {
+        detail: "The form has reCAPTCHA enabled and cannot be submitted.",
+        code: "FORM_HAS_RECAPTCHA_ENABLED",
+      },
+      { code: 400 },
+    )
+
+    renderWithProviders(null)
+    showModal()
+
+    await screen.findByRole("dialog", { name: "Stay Updated" })
+    await user.click(screen.getByRole("button", { name: "Notify Me" }))
+
+    const alert = await screen.findByRole("alert")
+    expect(alert).toHaveTextContent(/couldn't submit your request/i)
+    // Raw HubSpot text is never shown to users.
+    expect(alert).not.toHaveTextContent(/reCAPTCHA/i)
+  })
+
+  it("shows a generic message for an unknown code and never the raw detail", async () => {
+    setMockResponse.get(
+      urls.hubspot.details({ form_id: STAY_UPDATED_FORM_ID }),
+      factories.hubspot.form({
+        id: STAY_UPDATED_FORM_ID,
+        name: "Stay Updated",
+      }),
+    )
+    setMockResponse.post(
+      urls.hubspot.submit(STAY_UPDATED_FORM_ID),
+      {
+        detail: "Form with guid 'abc-123' can't be found",
+        code: "UNKNOWN_ERROR",
+      },
+      { code: 400 },
+    )
+
+    renderWithProviders(null)
+    showModal()
+
+    await screen.findByRole("dialog", { name: "Stay Updated" })
+    await user.click(screen.getByRole("button", { name: "Notify Me" }))
+
+    const alert = await screen.findByRole("alert")
+    expect(alert).toHaveTextContent("Failed to submit form. Please try again.")
+    // Raw HubSpot text is never shown to users.
+    expect(alert).not.toHaveTextContent(/guid/i)
+  })
 })

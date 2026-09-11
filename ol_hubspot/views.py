@@ -1,5 +1,7 @@
 """HubSpot proxy views."""
 
+import json
+import logging
 from urllib.parse import parse_qs, unquote, urlencode, urlparse
 
 from django.conf import settings
@@ -15,6 +17,8 @@ from rest_framework.response import Response
 from main.permissions import IsSuperuserPermission
 from ol_hubspot.api import get_form, list_forms, submit_form, verify_recaptcha
 from ol_hubspot.schema import serializer_for_hubspot_model
+
+log = logging.getLogger(__name__)
 
 hubspot_forms_list_response_schema = serializer_for_hubspot_model(
     "CollectionResponseFormDefinitionBaseForwardPaging"
@@ -159,6 +163,49 @@ def _missing_token_response() -> Response:
     return Response({}, status=status.HTTP_503_SERVICE_UNAVAILABLE)
 
 
+def _parse_hubspot_error_body(exc: ApiException) -> dict:
+    """Return HubSpot's JSON error body, if present.
+
+    Our api.py raises with it in `reason`; the SDK raises with it in `body`
+    (leaving the HTTP phrase in `reason`), so check both.
+    """
+    for raw in (exc.reason, exc.body):
+        if not raw:
+            continue
+        try:
+            parsed = json.loads(raw)
+        except (TypeError, ValueError):
+            continue
+        if isinstance(parsed, dict):
+            return parsed
+    return {}
+
+
+def _hubspot_error_response(
+    exc: ApiException, *, operation: str, form_id: str | None = None
+) -> Response:
+    """Log the real HubSpot error and surface its type/message to the caller."""
+    error_body = _parse_hubspot_error_body(exc)
+    error_type = error_body.get("errorType")
+    message = error_body.get("message")
+    correlation_id = error_body.get("correlationId")
+    status_code = exc.status if isinstance(exc.status, int) else 502
+    log.error(
+        "HubSpot %s failed: status=%s errorType=%s correlationId=%s "
+        "form_id=%s message=%s",
+        operation,
+        status_code,
+        error_type,
+        correlation_id,
+        form_id,
+        message,
+    )
+    return Response(
+        {"detail": message or "HubSpot request failed", "code": error_type},
+        status=status_code,
+    )
+
+
 def _enrich_submit_request_data(request) -> dict:
     """Inject server-side context into the raw submission data before validation."""
     data = dict(request.data)
@@ -227,8 +274,7 @@ def hubspot_forms_list_view(request):
         )
         return Response(_normalize_forms_paging(request, _to_dict(result)))
     except ApiException as exc:
-        status_code = exc.status if isinstance(exc.status, int) else 502
-        return Response({"detail": "HubSpot request failed"}, status=status_code)
+        return _hubspot_error_response(exc, operation="forms list")
 
 
 @extend_schema(
@@ -258,8 +304,7 @@ def hubspot_form_detail_view(request, form_id: str):
         )
         return Response(_to_dict(result))
     except ApiException as exc:
-        status_code = exc.status if isinstance(exc.status, int) else 502
-        return Response({"detail": "HubSpot request failed"}, status=status_code)
+        return _hubspot_error_response(exc, operation="form detail", form_id=form_id)
 
 
 @extend_schema(
@@ -303,5 +348,4 @@ def hubspot_form_submit_view(request, form_id: str):
             status=status.HTTP_200_OK,
         )
     except ApiException as exc:
-        status_code = exc.status if isinstance(exc.status, int) else 502
-        return Response({"detail": "HubSpot request failed"}, status=status_code)
+        return _hubspot_error_response(exc, operation="form submit", form_id=form_id)
