@@ -84,3 +84,32 @@ def content_published_actions(*, content):
     pm = get_plugin_manager()
     hook = pm.hook
     hook.website_content_published(content=content)
+
+
+def content_unpublished_actions(*, content):
+    """
+    Trigger plugins when a content item is unpublished.
+
+    The counterpart to `content_published_actions`: publishing syncs a news item
+    into the news feed, so unpublishing has to take it back out. Guarded on the
+    flag so a caller cannot accidentally tear down a still-published item.
+
+    Args:
+        content (WebsiteContent): The content item that was unpublished
+    """
+    if content.is_published:
+        log.info(
+            "WebsiteContent %s is still published, skipping unpublish plugin actions",
+            content.id,
+        )
+        return
+
+    log.info(
+        "Triggering website_content_unpublished plugins for content: id=%s, title=%s",
+        content.id,
+        content.title,
+    )
+
+    pm = get_plugin_manager()
+    hook = pm.hook
+    hook.website_content_unpublished(content=content)

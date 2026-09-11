@@ -19,7 +19,11 @@ from rest_framework.views import APIView
 from learning_resources.permissions import is_admin_user
 from main.constants import VALID_HTTP_METHODS
 from main.utils import cache_page_per_user, clear_views_cache
-from website_content.api import content_published_actions, purge_content_on_save
+from website_content.api import (
+    content_published_actions,
+    content_unpublished_actions,
+    purge_content_on_save,
+)
 from website_content.filters import WebsiteContentFilter
 from website_content.models import WebsiteContent
 from website_content.permissions import (
@@ -92,10 +96,15 @@ class WebsiteContentViewSet(viewsets.ModelViewSet):
         content_published_actions(content=content)
 
     def perform_update(self, serializer):
+        # Read the stored flag before saving: the plugins need to know this was
+        # an unpublish, which the saved instance alone cannot tell us.
+        was_published = serializer.instance.is_published
         content = serializer.save()
         transaction.on_commit(clear_views_cache)
         purge_content_on_save(content)
         content_published_actions(content=content)
+        if was_published and not content.is_published:
+            content_unpublished_actions(content=content)
 
     def perform_destroy(self, instance):
         # Only drafts may be deleted. Published content is out of scope and
