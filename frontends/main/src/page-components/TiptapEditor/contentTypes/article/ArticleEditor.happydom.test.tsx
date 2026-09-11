@@ -5,7 +5,7 @@
  * contenteditable elements not supported by JSDOM, the default Jest environment.
  */
 import React from "react"
-import { screen } from "@testing-library/react"
+import { screen, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { setMockResponse, factories, urls } from "api/test-utils"
 import type { JSONContent } from "@tiptap/react"
@@ -136,5 +136,71 @@ describe("ArticleEditor article controls", () => {
 
     await userEvent.click(await screen.findByLabelText("Subtopic"))
     await screen.findByRole("option", { name: subtopics.results[0].name })
+  })
+
+  test("added subtopics group under one topic name and can be removed", async () => {
+    const mainTopics = factories.learningResources.topics({ count: 1 })
+    const [topic] = mainTopics.results
+    const subtopics = factories.learningResources.topics({ count: 2 })
+    subtopics.results.forEach((s) => {
+      s.parent = topic.id
+    })
+    const [subA, subB] = subtopics.results
+
+    setMockResponse.get(
+      urls.topics.list({ is_toplevel: true, limit: 100 }),
+      mainTopics,
+    )
+    setMockResponse.get(
+      urls.topics.list({ parent_topic_id: [topic.id], limit: 100 }),
+      subtopics,
+    )
+
+    renderArticleEditor()
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Settings" }),
+    )
+
+    await userEvent.click(await screen.findByLabelText("Topic"))
+    await userEvent.click(
+      await screen.findByRole("option", { name: topic.name }),
+    )
+
+    // Add both subtopics under the same topic.
+    for (const sub of [subA, subB]) {
+      await userEvent.click(await screen.findByLabelText("Subtopic"))
+      await userEvent.click(
+        await screen.findByRole("option", { name: sub.name }),
+      )
+      await userEvent.click(screen.getByRole("button", { name: "Add" }))
+    }
+
+    // Scoped to the list: the Topic select also still displays the name.
+    const selected = screen.getByRole("list", { name: "Selected topics" })
+    // The topic name labels the group once, not once per subtopic.
+    expect(within(selected).getAllByText(topic.name)).toHaveLength(1)
+    const removeA = await screen.findByRole("button", {
+      name: `Remove ${subA.name} from ${topic.name}`,
+    })
+    await screen.findByRole("button", {
+      name: `Remove ${subB.name} from ${topic.name}`,
+    })
+
+    await userEvent.click(removeA)
+
+    expect(
+      screen.queryByRole("button", {
+        name: `Remove ${subA.name} from ${topic.name}`,
+      }),
+    ).not.toBeInTheDocument()
+    // Removing one leaves the other, and the group label with it.
+    await screen.findByRole("button", {
+      name: `Remove ${subB.name} from ${topic.name}`,
+    })
+    expect(
+      within(
+        screen.getByRole("list", { name: "Selected topics" }),
+      ).getAllByText(topic.name),
+    ).toHaveLength(1)
   })
 })

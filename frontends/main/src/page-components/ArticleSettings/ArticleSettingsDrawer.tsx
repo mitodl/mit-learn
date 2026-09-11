@@ -9,7 +9,7 @@ import {
   type SimpleSelectOption,
 } from "ol-components"
 import { ActionButton, Button, TextField } from "@mitodl/smoot-design"
-import { RiCloseLargeLine } from "@remixicon/react"
+import { RiCloseLargeLine, RiCloseLine } from "@remixicon/react"
 import { useLearningResourceTopics } from "api/hooks/learningResources"
 
 /**
@@ -95,24 +95,64 @@ const GrowingSelect = styled(SimpleSelectField)({
   minWidth: 0,
 })
 
+/**
+ * Selections group under their parent: the topic's name is plain text, and each
+ * of its chosen subtopics follows as a removable pill.
+ */
 const SelectedTopics = styled.ul({
   display: "flex",
-  flexWrap: "wrap",
-  gap: "8px",
+  flexDirection: "column",
+  gap: "16px",
   margin: 0,
   padding: 0,
   listStyle: "none",
 })
 
-const SelectedTopic = styled.li(({ theme }) => ({
+const SelectedTopicGroup = styled.li({
+  display: "flex",
+  flexWrap: "wrap",
+  alignItems: "center",
+  gap: "16px",
+})
+
+const SelectedTopicName = styled.span(({ theme }) => ({
+  color: theme.custom.colors.darkGray2,
+  whiteSpace: "nowrap",
+  ...theme.typography.subtitle3,
+}))
+
+const SubtopicChip = styled.span(({ theme }) => ({
+  display: "inline-flex",
+  alignItems: "center",
+  gap: "8px",
+  height: "32px",
+  padding: "0 8px 0 12px",
+  /* Fully rounded, unlike the 4px controls above it. */
+  borderRadius: "24px",
+  backgroundColor: theme.custom.colors.white,
+  border: `1px solid ${theme.custom.colors.silverGrayLight}`,
+  color: theme.custom.colors.silverGrayDark,
+  whiteSpace: "nowrap",
+  ...theme.typography.subtitle3,
+}))
+
+/* 16px icon in a 16px box, per the design -- not the button default of 1em. */
+const ChipRemoveButton = styled.button(({ theme }) => ({
   display: "flex",
   alignItems: "center",
-  gap: "4px",
-  padding: "4px 4px 4px 12px",
-  borderRadius: "4px",
-  backgroundColor: theme.custom.colors.lightGray2,
-  color: theme.custom.colors.darkGray2,
-  ...theme.typography.body3,
+  justifyContent: "center",
+  padding: 0,
+  border: "none",
+  background: "none",
+  cursor: "pointer",
+  color: "inherit",
+  svg: {
+    width: "16px",
+    height: "16px",
+  },
+  ":hover": {
+    color: theme.custom.colors.darkGray2,
+  },
 }))
 
 const FooterCta = styled.div({
@@ -123,16 +163,26 @@ const FooterCta = styled.div({
   marginTop: "auto",
 })
 
+/**
+ * One chosen topic, optionally narrowed to a subtopic. Kept as a pair rather
+ * than a flat id list because the design groups subtopics under their parent,
+ * which a flat list could not reconstruct once the parent stops being
+ * selectable.
+ */
+export interface ArticleTopicSelection {
+  topicId: number
+  subtopicId: number | null
+}
+
 /** Settings the drawer collects. Mirrors the fields in the design. */
 export interface ArticleSettingsValues {
-  /** Topic ids, innermost selection per row (subtopic when one was chosen). */
-  topicIds: number[]
+  topics: ArticleTopicSelection[]
   seoTitle: string
   seoDescription: string
 }
 
 const EMPTY_SETTINGS: ArticleSettingsValues = {
-  topicIds: [],
+  topics: [],
   seoTitle: "",
   seoDescription: "",
 }
@@ -166,7 +216,7 @@ const ArticleSettingsDrawer = ({
 }: ArticleSettingsDrawerProps) => {
   const [topicId, setTopicId] = useState("")
   const [subtopicId, setSubtopicId] = useState("")
-  const [topicIds, setTopicIds] = useState<number[]>([])
+  const [selections, setSelections] = useState<ArticleTopicSelection[]>([])
   const [seoTitle, setSeoTitle] = useState("")
   const [seoDescription, setSeoDescription] = useState("")
 
@@ -196,7 +246,7 @@ const ArticleSettingsDrawer = ({
   useEffect(() => {
     if (!open) return
     const values = { ...EMPTY_SETTINGS, ...initialValues }
-    setTopicIds(values.topicIds)
+    setSelections(values.topics)
     setSeoTitle(values.seoTitle)
     setSeoDescription(values.seoDescription)
     setTopicId("")
@@ -267,16 +317,48 @@ const ArticleSettingsDrawer = ({
     })
   }, [mainTopics, subtopics])
 
-  // The subtopic is the more specific choice, so it wins when both are set.
-  const pendingTopicId = Number(subtopicId || topicId)
-  const canAdd = !!pendingTopicId && !topicIds.includes(pendingTopicId)
+  const pendingTopic = Number(topicId) || null
+  const pendingSubtopic = Number(subtopicId) || null
+  const alreadyAdded = selections.some(
+    (s) => s.topicId === pendingTopic && s.subtopicId === pendingSubtopic,
+  )
+  const canAdd = !!pendingTopic && !alreadyAdded
 
   const handleAdd = () => {
-    if (!canAdd) return
-    setTopicIds((current) => [...current, pendingTopicId])
-    setTopicId("")
+    if (!canAdd || !pendingTopic) return
+    setSelections((current) => [
+      ...current,
+      { topicId: pendingTopic, subtopicId: pendingSubtopic },
+    ])
+    // Keep the topic selected: adding several subtopics under one topic is the
+    // common case, and re-picking the parent each time would be tedious.
     setSubtopicId("")
   }
+
+  const handleRemove = (selection: ArticleTopicSelection) =>
+    setSelections((current) =>
+      current.filter(
+        (s) =>
+          !(
+            s.topicId === selection.topicId &&
+            s.subtopicId === selection.subtopicId
+          ),
+      ),
+    )
+
+  /**
+   * Group by parent, preserving the order topics were first added, so the list
+   * does not reshuffle as subtopics are added under an existing topic.
+   */
+  const groupedSelections = useMemo(() => {
+    const groups = new Map<number, ArticleTopicSelection[]>()
+    for (const selection of selections) {
+      const group = groups.get(selection.topicId)
+      if (group) group.push(selection)
+      else groups.set(selection.topicId, [selection])
+    }
+    return [...groups.entries()]
+  }, [selections])
 
   return (
     <Drawer anchor="right" open={open} onClose={onClose}>
@@ -334,25 +416,46 @@ const ArticleSettingsDrawer = ({
                 Add
               </Button>
             </TopicRow>
-            {topicIds.length > 0 ? (
-              <SelectedTopics>
-                {topicIds.map((id) => (
-                  <SelectedTopic key={id}>
-                    {topicNames.get(id) ?? `Topic ${id}`}
-                    <ActionButton
-                      variant="text"
-                      size="small"
-                      onClick={() =>
-                        setTopicIds((current) =>
-                          current.filter((current_) => current_ !== id),
+            {groupedSelections.length > 0 ? (
+              <SelectedTopics aria-label="Selected topics">
+                {groupedSelections.map(([groupTopicId, group]) => {
+                  const topicName =
+                    topicNames.get(groupTopicId) ?? `Topic ${groupTopicId}`
+                  return (
+                    <SelectedTopicGroup key={groupTopicId}>
+                      <SelectedTopicName>{topicName}</SelectedTopicName>
+                      {group.map((selection) => {
+                        /* A topic added without a subtopic has no pill of its
+                           own; its name alone represents it. */
+                        if (selection.subtopicId === null) return null
+                        const subtopicName =
+                          topicNames.get(selection.subtopicId) ??
+                          `Subtopic ${selection.subtopicId}`
+                        return (
+                          <SubtopicChip key={selection.subtopicId}>
+                            {subtopicName}
+                            <ChipRemoveButton
+                              type="button"
+                              onClick={() => handleRemove(selection)}
+                              aria-label={`Remove ${subtopicName} from ${topicName}`}
+                            >
+                              <RiCloseLine aria-hidden />
+                            </ChipRemoveButton>
+                          </SubtopicChip>
                         )
-                      }
-                      aria-label={`Remove ${topicNames.get(id) ?? "topic"}`}
-                    >
-                      <RiCloseLargeLine />
-                    </ActionButton>
-                  </SelectedTopic>
-                ))}
+                      })}
+                      {group.every((s) => s.subtopicId === null) ? (
+                        <ChipRemoveButton
+                          type="button"
+                          onClick={() => handleRemove(group[0])}
+                          aria-label={`Remove ${topicName}`}
+                        >
+                          <RiCloseLine aria-hidden />
+                        </ChipRemoveButton>
+                      ) : null}
+                    </SelectedTopicGroup>
+                  )
+                })}
               </SelectedTopics>
             ) : null}
           </TopicsSection>
@@ -394,7 +497,7 @@ const ArticleSettingsDrawer = ({
             <Button
               variant="primary"
               onClick={() => {
-                onSave?.({ topicIds, seoTitle, seoDescription })
+                onSave?.({ topics: selections, seoTitle, seoDescription })
                 onClose()
               }}
             >
