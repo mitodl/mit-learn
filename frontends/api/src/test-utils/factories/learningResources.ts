@@ -301,11 +301,9 @@ const learningResourceCourseNumber: Factory<CourseNumber> = (
 const TEST_APP_ORIGIN = "http://test.learn.odl.local:8062"
 
 /**
- * Default `learn_url`: the drawer, which is the one location every resource
- * has. Deliberately not resource-type aware — the dedicated-page shapes need a
- * title slug, and duplicating the frontend's slugify into this workspace is
- * exactly the drift that the backend's `learn_url` exists to remove. A test
- * that cares about a dedicated page should override this.
+ * Default `learn_url`: the drawer, the one location every resource has.
+ * Deliberately not resource-type aware — a test that cares about a dedicated
+ * page overrides it.
  */
 const drawerLearnUrl = (id: number) =>
   `${TEST_APP_ORIGIN}/search?resource=${id}`
@@ -351,6 +349,7 @@ const _learningResourceShared = (
     resource_category: faker.lorem.word(),
     url: faker.internet.url(),
     learn_url: drawerLearnUrl(id),
+    url_slug: faker.lorem.slug(),
   }
 }
 
@@ -656,6 +655,7 @@ const podcastEpisode: LearningResourceFactory<PodcastEpisodeResource> = (
             id: parentPodcastId,
             title: faker.lorem.words(3),
             readable_id: faker.string.uuid(),
+            learn_url: `${TEST_APP_ORIGIN}/podcast/${parentPodcastId}/podcast`,
           },
         ],
         duration: faker.helpers.arrayElement(["PT1H13M44S", "PT2H30M", "PT1M"]),

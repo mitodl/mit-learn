@@ -3,7 +3,7 @@
 import React, { useCallback, useMemo } from "react"
 import {
   SimpleMenu,
-  Grid,
+  Grid2 as Grid,
   LoadingSpinner,
   BannerPage,
   Container,
@@ -19,8 +19,6 @@ import { RiPencilFill, RiMore2Line, RiDeleteBinLine } from "@remixicon/react"
 
 import type { LearningPathResource } from "api"
 import { useLearningPathsList } from "api/hooks/learningPaths"
-
-import { GridColumn, GridContainer } from "@/components/GridLayout/GridLayout"
 
 import { manageListDialogs } from "@/page-components/ManageListDialogs/ManageListDialogs"
 import * as urls from "@/common/urls"
@@ -85,51 +83,40 @@ const LearningPathListingPage: React.FC = () => {
       className="learningpaths-page"
     >
       <Container maxWidth="md" style={{ paddingBottom: 100 }}>
-        <GridContainer>
-          <GridColumn variant="single-full">
-            <ListHeaderGrid container justifyContent="space-between">
-              <Grid item>
-                <Typography variant="h3" component="h1">
-                  Learning Paths
-                </Typography>
-              </Grid>
-              <Grid
-                item
-                justifyContent="flex-end"
-                alignItems="center"
-                display="flex"
-              >
-                {canEdit ? (
-                  <Button variant="primary" onClick={handleCreate}>
-                    Create new list
-                  </Button>
-                ) : null}
-              </Grid>
-            </ListHeaderGrid>
-            <section>
-              <LoadingSpinner loading={listingQuery.isLoading} />
-              {listingQuery.data && (
-                <PlainList itemSpacing={3}>
-                  {listingQuery.data.results?.map((resource) => {
-                    return (
-                      <li key={resource.id}>
-                        <LearningResourceListCard
-                          resource={resource}
-                          href={urls.learningPathsView(resource.id)}
-                          editMenu={
-                            canEdit ? (
-                              <EditListMenu resource={resource} />
-                            ) : null
-                          }
-                        />
-                      </li>
-                    )
-                  })}
-                </PlainList>
-              )}
-            </section>
-          </GridColumn>
-        </GridContainer>
+        <ListHeaderGrid container justifyContent="space-between">
+          <Grid>
+            <Typography variant="h3" component="h1">
+              Learning Paths
+            </Typography>
+          </Grid>
+          <Grid justifyContent="flex-end" alignItems="center" display="flex">
+            {canEdit ? (
+              <Button variant="primary" onClick={handleCreate}>
+                Create new list
+              </Button>
+            ) : null}
+          </Grid>
+        </ListHeaderGrid>
+        <section>
+          <LoadingSpinner loading={listingQuery.isLoading} />
+          {listingQuery.data && (
+            <PlainList itemSpacing={3}>
+              {listingQuery.data.results?.map((resource) => {
+                return (
+                  <li key={resource.id}>
+                    <LearningResourceListCard
+                      resource={resource}
+                      href={urls.learningPathsView(resource.id)}
+                      editMenu={
+                        canEdit ? <EditListMenu resource={resource} /> : null
+                      }
+                    />
+                  </li>
+                )
+              })}
+            </PlainList>
+          )}
+        </section>
       </Container>
     </BannerPage>
   )

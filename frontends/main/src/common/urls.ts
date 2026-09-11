@@ -160,19 +160,6 @@ export const RESOURCE_DRAWER_PARAMS = {
   syllabusOnly: "syllabus_only",
 } as const
 
-/**
- * Path slug segment from a title: the slug, or the literal "resource" when the
- * slug is blank (the canonical path's slug segment is mandatory — see the
- * readable-URLs spec, mitodl/hq#11210). The slug is cosmetic and ignored on
- * lookup.
- *
- * INVARIANT: canonical paths must round-trip Next's URL decoding
- * byte-identically — keep the slug charset to [a-z0-9-] and ids numeric, or
- * the [slug] pages' incoming-vs-canonical string compares could redirect a
- * URL to a spelling of itself and loop.
- */
-const pathSlug = (title: string): string => slugify(title) || "resource"
-
 /** Prefix a same-origin path with the public origin (for canonical tags). */
 export const absoluteUrl = (path: string): string =>
   `${requiredEnv("NEXT_PUBLIC_ORIGIN")}${path}`
@@ -371,57 +358,72 @@ export const LINKEDIN_ADD_TO_PROFILE_BASE_URL =
 export const COURSE_PAGE_VIEW = "/courses/[readableId]"
 export const coursePageView = (readableId: string) =>
   generatePath(COURSE_PAGE_VIEW, { readableId })
-// Each page-view builder appends a mandatory slug segment when a title is given
-// (the slug, or the literal "resource" when blank). With an undefined title it
-// emits the bare path, which still resolves and 307-redirects to canonical.
-// `title` is required-but-undefinable so a call site can't silently omit it —
-// passing undefined (e.g. a title still in flight) is a visible opt-in to the
-// redirecting bare form. Id and slug are separate segments; the slug is
-// cosmetic and ignored on lookup.
+// The resource page builders below take the resource's `url_slug`. `slug` is
+// required-but-undefinable so a call site can't silently omit it; passing
+// undefined emits the bare path, which resolves and 307-redirects to the
+// slugged canonical.
 export const VIDEO_PLAYLIST_PAGE_VIEW = "/video-playlist/[id]"
-export const videoPlaylistPageView = (
-  id: string,
-  title: string | undefined,
+export const videoPlaylistPath = (
+  id: number | string,
+  slug: string | undefined,
 ) => {
-  const base = generatePath(VIDEO_PLAYLIST_PAGE_VIEW, { id })
-  return title === undefined ? base : `${base}/${pathSlug(title)}`
+  const base = generatePath(VIDEO_PLAYLIST_PAGE_VIEW, { id: String(id) })
+  return slug === undefined ? base : `${base}/${slug}`
 }
 export const PODCASTS_PAGE_VIEW = "/podcasts"
 
 export const PODCAST_PAGE_VIEW = "/podcast/[podcastId]"
-export const podcastPageView = (id: string, title: string | undefined) => {
-  const base = generatePath(PODCAST_PAGE_VIEW, { podcastId: id })
-  return title === undefined ? base : `${base}/${pathSlug(title)}`
+export const podcastPath = (
+  podcastId: number | string,
+  slug: string | undefined,
+) => {
+  const base = generatePath(PODCAST_PAGE_VIEW, {
+    podcastId: String(podcastId),
+  })
+  return slug === undefined ? base : `${base}/${slug}`
 }
+
 export const PODCAST_EPISODE_PAGE_VIEW =
   "/podcast/[podcastId]/podcast_episode/[episodeId]"
-export const podcastEpisodePageView = (
+/**
+ * An episode's path. The parent podcast is the caller's to choose: an episode in
+ * several podcasts is viewable under any of them, so a page passes the podcast
+ * it is being viewed under rather than the canonical one.
+ */
+export const podcastEpisodePath = (
   id: string,
   podcastId: string,
-  title: string | undefined,
+  slug: string | undefined,
 ) => {
   const base = generatePath(PODCAST_EPISODE_PAGE_VIEW, {
-    podcastId: String(podcastId), // bare context id
-    episodeId: String(id),
+    podcastId, // bare context id
+    episodeId: id,
   })
-  return title === undefined ? base : `${base}/${pathSlug(title)}`
+  return slug === undefined ? base : `${base}/${slug}`
 }
+
 export const VIDEO_DETAIL_PAGE_VIEW = "/video/[videoId]"
-export const videoDetailPageView = (
-  videoId: number,
-  playlistId: number | undefined,
-  title: string | undefined,
+/**
+ * A video's path. `?playlist` is the caller's to choose: a video in several
+ * playlists is viewable in any of them, so a page passes the playlist it is
+ * being viewed in rather than the canonical one.
+ */
+export const videoDetailPath = (
+  videoId: number | string,
+  playlistId: number | string | undefined,
+  slug: string | undefined,
 ) => {
   const path = generatePath(VIDEO_DETAIL_PAGE_VIEW, {
     videoId: String(videoId),
   })
-  const base = title === undefined ? path : `${path}/${pathSlug(title)}`
+  const base = slug === undefined ? path : `${path}/${slug}`
   if (playlistId !== undefined) {
     const params = new URLSearchParams({ playlist: String(playlistId) })
     return `${base}?${params.toString()}`
   }
   return base
 }
+
 /**
  * Append a request's incoming search params to a canonical URL so redirects
  * preserve tracking params (e.g. utm_*). Params the canonical already sets

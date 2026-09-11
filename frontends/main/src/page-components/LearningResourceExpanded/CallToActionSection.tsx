@@ -43,10 +43,6 @@ import {
   FACEBOOK_SHARE_BASE_URL,
   TWITTER_SHARE_BASE_URL,
   LINKEDIN_SHARE_BASE_URL,
-  videoDetailPageView,
-  videoPlaylistPageView,
-  podcastPageView,
-  podcastEpisodePageView,
   ocwLearnPageView,
 } from "@/common/urls"
 import { parentPodcastIds, videoPlaylistIds } from "@/common/slugs"
@@ -321,27 +317,30 @@ const getResourceUrl = (
     ocwProductPages?: boolean
   },
 ) => {
-  if (resource.resource_type === ResourceTypeEnum.VideoPlaylist) {
-    return videoPlaylistPageView(resource.id.toString(), resource.title)
+  if (
+    resource.resource_type === ResourceTypeEnum.VideoPlaylist ||
+    resource.resource_type === ResourceTypeEnum.Podcast
+  ) {
+    return resource.learn_url
   }
+
+  // A video outside every playlist does have a Learn page, but a context-free
+  // one. The fallthrough below reaches the OCW product page, which frames the
+  // video in its course.
   if (resource.resource_type === ResourceTypeEnum.Video) {
     const [firstPlaylist] = videoPlaylistIds(resource)
     if (firstPlaylist !== undefined) {
-      return videoDetailPageView(resource.id, firstPlaylist, resource.title)
+      return resource.learn_url
     }
   }
 
-  if (resource.resource_type === ResourceTypeEnum.Podcast) {
-    return podcastPageView(resource.id.toString(), resource.title)
-  }
+  // An episode with no parent podcast has no page of its own, so its
+  // `learn_url` is the drawer this button sits in. The fallthrough sends those
+  // to the source rather than linking the drawer to itself.
   if (resource.resource_type === ResourceTypeEnum.PodcastEpisode) {
     const [parentPodcastId] = parentPodcastIds(resource)
     if (parentPodcastId !== undefined) {
-      return podcastEpisodePageView(
-        resource.id.toString(),
-        String(parentPodcastId),
-        resource.title,
-      )
+      return resource.learn_url
     }
   }
 

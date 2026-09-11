@@ -26,10 +26,15 @@ const pageProps = (
   searchParams: Promise.resolve(searchParams),
 })
 
-test("bare podcast id redirects to the slugged canonical", async () => {
-  const podcast = factories.learningResources.podcast({
+const podcastWithPage = (id: number, slug: string) =>
+  factories.learningResources.podcast({
+    id,
     title: "Beyond Biology",
+    url_slug: slug,
   })
+
+test("bare podcast id redirects to the slugged canonical", async () => {
+  const podcast = podcastWithPage(3109228027655524, "beyond-biology")
   setMockResponse.get(
     urls.learningResources.details({ id: podcast.id }),
     podcast,
@@ -43,9 +48,7 @@ test("bare podcast id redirects to the slugged canonical", async () => {
 })
 
 test("redirect carries incoming query params (e.g. utm)", async () => {
-  const podcast = factories.learningResources.podcast({
-    title: "Beyond Biology",
-  })
+  const podcast = podcastWithPage(6347606532587373, "beyond-biology")
   setMockResponse.get(
     urls.learningResources.details({ id: podcast.id }),
     podcast,

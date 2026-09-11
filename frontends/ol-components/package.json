@@ -46,7 +46,7 @@
   },
   "devDependencies": {
     "@chromatic-com/storybook": "^5.0.0",
-    "@faker-js/faker": "^10.0.0",
+    "@faker-js/faker": "^10.5.0",
     "@storybook/addon-docs": "^10.0.0",
     "@storybook/addon-links": "^10.0.0",
     "@storybook/addon-onboarding": "^10.0.0",
@@ -67,7 +67,7 @@
     "typescript": "^5.5.4"
   },
   "peerDependencies": {
-    "@mitodl/smoot-design": "6.34.0",
+    "@mitodl/smoot-design": "6.36.0",
     "next": "^16.2.7"
   }
 }

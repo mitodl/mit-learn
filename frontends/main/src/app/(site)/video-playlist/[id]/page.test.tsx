@@ -15,8 +15,11 @@ beforeEach(() => {
 })
 
 test("bare /video-playlist/{id} redirects to the slugged canonical", async () => {
+  const id = 4242
   const playlist = factories.learningResources.videoPlaylist({
+    id,
     title: "Great Talks",
+    url_slug: "great-talks",
   })
   setMockResponse.get(
     urls.videoPlaylists.details({ id: playlist.id }),

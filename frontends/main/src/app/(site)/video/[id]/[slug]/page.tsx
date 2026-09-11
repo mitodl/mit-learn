@@ -19,17 +19,12 @@ import {
   resolveVideoPlaylist,
   videoPlaylistIds,
 } from "@/common/slugs"
-import {
-  absoluteUrl,
-  carrySearchParams,
-  videoDetailPageView,
-} from "@/common/urls"
+import { carrySearchParams, videoDetailPath } from "@/common/urls"
 
 type Props = AppPageProps<"/video/[id]/[slug]">
 
 export const generateMetadata = async (props: Props) => {
   const { id } = await props.params
-  const searchParams = await props.searchParams
   const videoId = parseResourceId(id)
   if (videoId === null) {
     notFound()
@@ -43,20 +38,13 @@ export const generateMetadata = async (props: Props) => {
     if (resource.resource_type !== ResourceTypeEnum.Video) {
       throw new MetadataNotFound()
     }
-    const playlistId = resolveVideoPlaylist(
-      videoPlaylistIds(resource),
-      searchParams?.playlist,
-    )
     return standardizeMetadata({
       title: resource.title,
       description: resource.description ?? undefined,
       image: resource.image?.url,
       imageAlt: resource.image?.alt ?? undefined,
-      alternates: {
-        canonical: absoluteUrl(
-          videoDetailPageView(videoId, playlistId ?? undefined, resource.title),
-        ),
-      },
+      // One canonical per video, whichever playlist it is being viewed in.
+      alternates: { canonical: resource.learn_url },
     })
   })
 }
@@ -80,22 +68,20 @@ const Page: React.FC<Props> = async ({ params, searchParams }) => {
   const rawPlaylist = resolvedSearchParams?.playlist
   const playlistId = resolveVideoPlaylist(videoPlaylistIds(video), rawPlaylist)
 
-  // Canonical (slug + resolved playlist) is whatever the builder emits; redirect
-  // if we're not on it, carrying incoming params except `playlist` (the builder
-  // owns it — re-forwarding a rejected value would redirect again).
-  const canonical = videoDetailPageView(
+  // The backend names the slug; the playlist is resolved against the request,
+  // since a video in several playlists is legitimately viewable in any of them.
+  // Redirect if we're not on that form, carrying incoming params except
+  // `playlist` — re-forwarding a rejected value would redirect again.
+  const canonical = videoDetailPath(
     videoId,
     playlistId ?? undefined,
-    video.title,
+    video.url_slug,
   )
-  const incomingBase = `/video/${id}/${slug}`
   // A repeated ?playlist (array) resolves as no-playlist but is never the
   // canonical form, so it always redirects (which strips it).
   const incoming = Array.isArray(rawPlaylist)
     ? null
-    : typeof rawPlaylist === "string"
-      ? `${incomingBase}?playlist=${rawPlaylist}`
-      : incomingBase
+    : videoDetailPath(id, rawPlaylist, slug)
   if (incoming !== canonical) {
     redirect(carrySearchParams(canonical, resolvedSearchParams, ["playlist"]))
   }

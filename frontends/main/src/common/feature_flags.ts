@@ -18,6 +18,8 @@ export enum FeatureFlags {
   Hacksnack = "hacksnack",
   AccountManagement = "account-management",
   SelfServiceRefunds = "self-service-refunds",
+  DisableHybridSearch = "disable-hybrid-search",
+  MultipleRunContextMenus = "multiple-run-context-menus",
 }
 
 /**

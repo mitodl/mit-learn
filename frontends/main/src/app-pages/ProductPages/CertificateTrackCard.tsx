@@ -92,7 +92,7 @@ const CertificateTrackCard: React.FC<CertificateTrackCardProps> = ({
       </FeatureRow>
       <FeatureRow>
         <FeatureIcon aria-hidden="true" />
-        <span>MIT certificate on completion</span>
+        <span>MIT Open Learning certificate of completion</span>
       </FeatureRow>
     </TrackCard>
   )

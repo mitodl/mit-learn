@@ -49,6 +49,9 @@ const schema = yup.object().shape({
   NEXT_PUBLIC_MITOL_AXIOS_WITH_CREDENTIALS: yup
     .string()
     .oneOf(["true", "false"]),
+  // Server-readable half of the hybrid search kill switch; see
+  // src/common/hybridSearch.ts. Unset means hybrid search, the default.
+  NEXT_PUBLIC_DISABLE_HYBRID_SEARCH: yup.string().oneOf(["true", "false"]),
   NEXT_PUBLIC_POSTHOG_API_KEY: yup.string(),
   NEXT_PUBLIC_POSTHOG_FEATURE_PREFIX: yup.string(),
   NEXT_PUBLIC_POSTHOG_API_HOST: yup.string(),

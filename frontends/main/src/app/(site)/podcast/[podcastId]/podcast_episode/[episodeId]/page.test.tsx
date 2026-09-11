@@ -15,8 +15,11 @@ beforeEach(() => {
 })
 
 test("bare episode URL redirects to the slugged canonical with corrected parent", async () => {
+  const id = 555
   const episode = factories.learningResources.podcastEpisode({
+    id,
     title: "Episode One",
+    url_slug: "episode-one",
     podcast_episode: { podcasts: [10] },
   })
   setMockResponse.get(

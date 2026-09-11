@@ -275,7 +275,7 @@ DEPARTMENTS = {
     "21G": "Global Languages",
     "21H": "History",
     "21L": "Literature",
-    "21M": "Music and Theater Arts",
+    "21M": "Music",
     "21T": "Theater Arts",
     "22": "Nuclear Science and Engineering",
     "24": "Linguistics and Philosophy",
@@ -407,3 +407,11 @@ CURRENCY_USD = "USD"
 
 GROUP_CONTENT_FILE_CONTENT_VIEWERS = "content_file_viewers"
 GROUP_TUTOR_PROBLEM_VIEWERS = "tutor_problem_viewers"
+GROUP_COURSE_AUTHORS = "course_authors"
+
+
+class CredentialMetadataField(ExtendedEnum):
+    """The Open Badges fields the credential metadata API generates"""
+
+    description = "Description"
+    criteria = "Criteria"

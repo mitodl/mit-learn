@@ -94,11 +94,14 @@ const normalizeField = (
     return null
   }
 
+  // The schema declares the items of these arrays nullable, and a null matches no
+  // option value, so it can never be a default.
+  const defaultValues = (field.defaultValues ?? field.default_values)?.filter(
+    (value): value is string => value !== null,
+  )
+
   const rawDefaultValue =
-    field.defaultValues ??
-    field.default_values ??
-    field.defaultValue ??
-    field.default_value
+    defaultValues ?? field.defaultValue ?? field.default_value
 
   const normalizedDefaultValue =
     rawDefaultValue === null

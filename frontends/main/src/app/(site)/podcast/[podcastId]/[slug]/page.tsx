@@ -12,7 +12,7 @@ import {
 import { learningResourceQueries } from "api/hooks/learningResources"
 import { notFound, redirect } from "next/navigation"
 import { parseResourceId } from "@/common/slugs"
-import { absoluteUrl, carrySearchParams, podcastPageView } from "@/common/urls"
+import { carrySearchParams, podcastPath } from "@/common/urls"
 
 type Props = AppPageProps<"/podcast/[podcastId]/[slug]">
 
@@ -37,7 +37,7 @@ export const generateMetadata = async (props: Props) => {
       image: resource.image?.url,
       imageAlt: resource.image?.alt ?? undefined,
       alternates: {
-        canonical: absoluteUrl(podcastPageView(String(id), resource.title)),
+        canonical: resource.learn_url,
       },
     })
   })
@@ -57,10 +57,10 @@ const Page: React.FC<Props> = async (props) => {
     notFound()
   }
 
-  // Canonical form is whatever the builder emits; redirect if we're not on it
-  // (stale/uppercase slug, or a non-normalized id segment).
-  const canonical = podcastPageView(String(id), resource.title)
-  if (`/podcast/${podcastId}/${slug}` !== canonical) {
+  // The backend names the slug; redirect if we're not on the canonical form
+  // (stale or uppercase slug, or a non-normalized id segment).
+  const canonical = podcastPath(id, resource.url_slug)
+  if (podcastPath(podcastId, slug) !== canonical) {
     redirect(carrySearchParams(canonical, await props.searchParams))
   }
 

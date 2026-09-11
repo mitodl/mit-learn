@@ -30,7 +30,52 @@ beforeEach(() => {
   })
 })
 
-test("prefetches OpenSearch results by default", async () => {
+afterEach(() => {
+  delete process.env.NEXT_PUBLIC_DISABLE_HYBRID_SEARCH
+})
+
+test("prefetches vector results by default", async () => {
+  await Page({
+    params: Promise.resolve({}),
+    searchParams: Promise.resolve({ q: "test" }),
+  })
+
+  expect(
+    makeRequest.mock.calls.some(([args]) =>
+      args.url.startsWith(urls.search.vectorResources()),
+    ),
+  ).toBe(true)
+  expect(
+    makeRequest.mock.calls.some(([args]) =>
+      args.url.startsWith(urls.search.resources()),
+    ),
+  ).toBe(false)
+})
+
+test("prefetches OpenSearch results when vector_search is disabled", async () => {
+  await Page({
+    params: Promise.resolve({}),
+    searchParams: Promise.resolve({ q: "test", vector_search: "false" }),
+  })
+
+  expect(
+    makeRequest.mock.calls.some(([args]) =>
+      args.url.startsWith(urls.search.resources()),
+    ),
+  ).toBe(true)
+  expect(
+    makeRequest.mock.calls.some(([args]) =>
+      args.url.startsWith(urls.search.vectorResources()),
+    ),
+  ).toBe(false)
+})
+
+test("prefetches OpenSearch results when the env kill switch is set", async () => {
+  // Server components cannot read PostHog flags. Without this env var the
+  // prefetch would fetch a hybrid query that the client discards and refetches
+  // from OpenSearch on hydration.
+  process.env.NEXT_PUBLIC_DISABLE_HYBRID_SEARCH = "true"
+
   await Page({
     params: Promise.resolve({}),
     searchParams: Promise.resolve({ q: "test" }),
@@ -44,6 +89,26 @@ test("prefetches OpenSearch results by default", async () => {
   expect(
     makeRequest.mock.calls.some(([args]) =>
       args.url.startsWith(urls.search.vectorResources()),
+    ),
+  ).toBe(false)
+})
+
+test("vector_search=true overrides the env kill switch", async () => {
+  process.env.NEXT_PUBLIC_DISABLE_HYBRID_SEARCH = "true"
+
+  await Page({
+    params: Promise.resolve({}),
+    searchParams: Promise.resolve({ q: "test", vector_search: "true" }),
+  })
+
+  expect(
+    makeRequest.mock.calls.some(([args]) =>
+      args.url.startsWith(urls.search.vectorResources()),
+    ),
+  ).toBe(true)
+  expect(
+    makeRequest.mock.calls.some(([args]) =>
+      args.url.startsWith(urls.search.resources()),
     ),
   ).toBe(false)
 })

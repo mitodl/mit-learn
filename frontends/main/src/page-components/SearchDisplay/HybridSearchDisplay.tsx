@@ -128,6 +128,13 @@ const getVectorClientAggregations = (
 }
 
 type HybridSearchDisplayProps = SearchDisplayProps & {
+  /**
+   * Minimum similarity score, forwarded to the vector endpoint as
+   * `score_cutoff`. This is the only relevance knob the vector endpoint
+   * honors; the OpenSearch-only admin controls (min_score, yearly_decay_percent,
+   * search_mode, slop, max_incompleteness_penalty, content_file_score_weight,
+   * show_ocw_files) are not forwarded, so SearchDisplay hides them here.
+   */
   cutoffScore?: number
 }
 
@@ -218,6 +225,7 @@ const HybridSearchDisplay: React.FC<HybridSearchDisplayProps> = ({
       getQueryOptions={getQueryOptions}
       getDisplayData={getDisplayData}
       hidePagination={isVectorQuerySearch}
+      hybridSearchActive
     />
   )
 }

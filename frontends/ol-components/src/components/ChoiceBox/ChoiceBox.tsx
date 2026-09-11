@@ -1,6 +1,6 @@
 import React from "react"
 import styled from "@emotion/styled"
-import { type GridProps } from "@mui/material/Grid"
+import { type Grid2Props } from "@mui/material/Grid2"
 import { Checkbox } from "@mitodl/smoot-design"
 import { Radio } from "../Radio/Radio"
 
@@ -110,7 +110,7 @@ interface ChoiceBoxChoice {
   description?: string
 }
 
-type FieldGridProps = Omit<GridProps, "container" | "item">
+type FieldGridProps = Omit<Grid2Props, "container">
 
 interface ChoiceBoxGridProps {
   gridProps?: FieldGridProps

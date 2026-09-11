@@ -23,6 +23,7 @@ import {
 import { act } from "@testing-library/react"
 import { useFeatureFlagEnabled, usePostHog } from "posthog-js/react"
 import { PostHogEvents } from "@/common/constants"
+import { FeatureFlags } from "@/common/feature_flags"
 
 jest.mock("posthog-js/react", () => ({
   ...jest.requireActual("posthog-js/react"),
@@ -31,6 +32,26 @@ jest.mock("posthog-js/react", () => ({
 }))
 
 const mockedUseFeatureFlagEnabled = jest.mocked(useFeatureFlagEnabled)
+
+/**
+ * Mock the named flags, leaving every other flag `undefined`—PostHog's value
+ * for "not loaded / not set". Set flags by name rather than with a blanket
+ * `mockReturnValue`: several unrelated features read flags on this page, and
+ * the `disable-hybrid-search` kill switch in particular changes which search
+ * endpoint
+ * is called.
+ */
+const mockFeatureFlags = (flags: Partial<Record<FeatureFlags, boolean>>) => {
+  mockedUseFeatureFlagEnabled.mockImplementation(
+    (flag) => flags[flag as FeatureFlags],
+  )
+}
+
+// jest clears calls between tests but not implementations, so reset flags to
+// "not set" so a kill-switch test cannot leak into the next test.
+beforeEach(() => {
+  mockFeatureFlags({})
+})
 const mockCapture = jest.fn()
 jest.mocked(usePostHog).mockReturnValue(
   // @ts-expect-error Not mocking all of posthog
@@ -125,15 +146,21 @@ describe("SearchPage", () => {
     }
   })
 
+  // Hybrid search is the default, so these OpenSearch request-shape cases pin
+  // `vector_search=false`. They cover the endpoint the
+  // `disable-hybrid-search` kill switch falls back to.
   test.each([
-    { url: "?topic=physics", expected: { topic: "physics" } },
     {
-      url: "?resource_type=course",
+      url: "?vector_search=false&topic=physics",
+      expected: { topic: "physics" },
+    },
+    {
+      url: "?vector_search=false&resource_type=course",
       expected: { resource_type: "course" },
     },
-    { url: "?q=woof", expected: { q: "woof" } },
+    { url: "?vector_search=false&q=woof", expected: { q: "woof" } },
   ])(
-    "Makes API call with correct facets and aggregations",
+    "Makes OpenSearch API call with correct facets and aggregations",
     async ({ url, expected }) => {
       setMockApiResponses({
         search: {
@@ -183,7 +210,9 @@ describe("SearchPage", () => {
         },
       },
     })
-    renderWithProviders(<SearchPage />, { url: "?level=graduate" })
+    renderWithProviders(<SearchPage />, {
+      url: "?vector_search=false&level=graduate",
+    })
 
     await waitFor(() => {
       expect(makeRequest.mock.calls.length > 0).toBe(true)
@@ -400,6 +429,9 @@ describe("SearchPage", () => {
   })
 
   test("admin users can set staleness and score cutoff sliders", async () => {
+    // The relevance controls below are OpenSearch-only, so they only render
+    // when hybrid search is off.
+    mockFeatureFlags({ [FeatureFlags.DisableHybridSearch]: true })
     setMockApiResponses({
       search: {
         count: 700,
@@ -446,6 +478,153 @@ describe("SearchPage", () => {
     })
   })
 
+  test("admin users can toggle Show OCW Files", async () => {
+    // The relevance controls below are OpenSearch-only, so they only render
+    // when hybrid search is off.
+    mockFeatureFlags({ [FeatureFlags.DisableHybridSearch]: true })
+    setMockApiResponses({
+      search: {
+        count: 10,
+        metadata: {
+          aggregations: {
+            resource_type_group: [{ key: "course", doc_count: 10 }],
+          },
+          suggestions: [],
+        },
+      },
+    })
+    setMockResponse.get(urls.userMe.get(), {
+      is_learning_path_editor: true,
+      is_authenticated: true,
+    })
+    setMockResponse.get(urls.adminSearchParams.get(), {
+      search_mode: "phrase",
+      slop: 6,
+      yearly_decay_percent: 2.5,
+      min_score: 0,
+      max_incompleteness_penalty: 90,
+      content_file_score_weight: 1,
+    })
+
+    const { location } = renderWithProviders(<SearchPage />)
+    await user.click(await screen.findByText("Admin Options"))
+
+    const checkbox = await screen.findByRole("checkbox", {
+      name: "Show OCW files",
+    })
+    expect(checkbox).not.toBeChecked()
+
+    await user.click(checkbox)
+
+    expect(
+      new URLSearchParams(location.current.search).get("show_ocw_files"),
+    ).toBe("true")
+  })
+
+  const OPENSEARCH_ONLY_SLIDERS = [
+    "yearly_decay_percent",
+    "min_score",
+    "max_incompleteness_penalty",
+    "content_file_score_weight",
+  ]
+
+  test("OpenSearch-only admin controls are hidden while hybrid search is on", async () => {
+    // Hybrid search is the default; the vector endpoint ignores these params,
+    // so showing the controls would let admins change them to no effect.
+    mockFeatureFlags({})
+    setMockApiResponses({
+      search: {
+        count: 10,
+        metadata: {
+          aggregations: {
+            resource_type_group: [{ key: "course", doc_count: 10 }],
+          },
+          suggestions: [],
+        },
+      },
+    })
+    setMockResponse.get(urls.userMe.get(), {
+      is_learning_path_editor: true,
+      is_authenticated: true,
+    })
+    setMockResponse.get(urls.adminSearchParams.get(), {
+      search_mode: "phrase",
+      slop: 6,
+      yearly_decay_percent: 2.5,
+      min_score: 0,
+      max_incompleteness_penalty: 90,
+      content_file_score_weight: 1,
+    })
+
+    renderWithProviders(<SearchPage />)
+    await user.click(await screen.findByText("Admin Options"))
+
+    // The hybrid toggle itself stays, so admins can switch to OpenSearch.
+    expect(
+      await screen.findByRole("checkbox", { name: "Use hybrid search" }),
+    ).toBeChecked()
+    await screen.findByTestId("opensearch-only-notice")
+
+    OPENSEARCH_ONLY_SLIDERS.forEach((param) => {
+      expect(screen.queryByTestId(`${param}-slider`)).toBeNull()
+    })
+    expect(screen.queryByText("Search Mode")).toBeNull()
+    expect(screen.queryByText("Slop")).toBeNull()
+    expect(screen.queryByText("Show OCW Files")).toBeNull()
+
+    // Nothing to configure means nothing to fetch defaults for.
+    expect(makeRequest).not.toHaveBeenCalledWith(
+      expect.objectContaining({
+        method: "get",
+        url: urls.adminSearchParams.get(),
+      }),
+    )
+  })
+
+  test("Turning hybrid search off restores the OpenSearch-only controls", async () => {
+    mockFeatureFlags({})
+    setMockApiResponses({
+      search: {
+        count: 10,
+        metadata: {
+          aggregations: {
+            resource_type_group: [{ key: "course", doc_count: 10 }],
+          },
+          suggestions: [],
+        },
+      },
+    })
+    setMockResponse.get(urls.userMe.get(), {
+      is_learning_path_editor: true,
+      is_authenticated: true,
+    })
+    setMockResponse.get(urls.adminSearchParams.get(), {
+      search_mode: "phrase",
+      slop: 6,
+      yearly_decay_percent: 2.5,
+      min_score: 0,
+      max_incompleteness_penalty: 90,
+      content_file_score_weight: 1,
+    })
+
+    renderWithProviders(<SearchPage />, { url: "?vector_search=false" })
+    await user.click(await screen.findByText("Admin Options"))
+
+    for (const param of OPENSEARCH_ONLY_SLIDERS) {
+      await screen.findByTestId(`${param}-slider`)
+    }
+    screen.getByText("Show OCW Files")
+    expect(screen.queryByTestId("opensearch-only-notice")).toBeNull()
+    // Counterpart to the "hidden" test above: the same matcher does record a
+    // hit once the OpenSearch controls render, so that assertion is not vacuous.
+    expect(makeRequest).toHaveBeenCalledWith(
+      expect.objectContaining({
+        method: "get",
+        url: urls.adminSearchParams.get(),
+      }),
+    )
+  })
+
   test("Search time indicator is visible to admins and hidden from non-admins", async () => {
     setMockApiResponses({
       search: {
@@ -486,6 +665,9 @@ describe("SearchPage", () => {
 })
 
 test("admin users can set the search mode and slop", async () => {
+  // The relevance controls below are OpenSearch-only, so they only render when
+  // hybrid search is off.
+  mockFeatureFlags({ [FeatureFlags.DisableHybridSearch]: true })
   setMockApiResponses({
     search: {
       count: 700,
@@ -842,6 +1024,28 @@ test("Set sort", async () => {
   expect(popularitySelect).toHaveAttribute("aria-selected", "true")
 })
 
+test("Upcoming sort is unavailable on the learning materials tab", async () => {
+  // Learning materials have no runs, so none of them has a next start date
+  setMockApiResponses({ search: { count: 137 } })
+
+  const { location } = renderWithProviders(<SearchPage />, {
+    url: "?sortby=upcoming",
+  })
+
+  await user.click(
+    await screen.findByRole("tab", { name: /Learning Material/ }),
+  )
+
+  expect(location.current.search).toBe("?resource_type_group=learning_material")
+
+  const sortDropdowns = await screen.findAllByText("Sort by: Best Match")
+  await user.click(sortDropdowns[0])
+
+  expect(
+    await screen.findByRole("option", { name: "Upcoming" }),
+  ).toHaveAttribute("aria-disabled", "true")
+})
+
 test("The professional toggle updates the professional setting", async () => {
   setMockApiResponses({ search: { count: 137 } })
   const { location } = renderWithProviders(<SearchPage />)
@@ -952,8 +1156,9 @@ test("Count changes are announced to screen readers", async () => {
 
   const nextResponse = new ControlledPromise()
   const nextData = { ...DEFAULT_SEARCH_RESPONSE, count: 456 }
+  // Hybrid search is the default, so submitting a query hits the vector endpoint.
   setMockResponse.get(
-    expect.stringContaining(urls.search.resources()),
+    expect.stringContaining(urls.search.vectorResources()),
     nextResponse,
   )
 
@@ -984,6 +1189,145 @@ test("Count changes are announced to screen readers", async () => {
 
   await waitFor(() => {
     expect(count).toHaveTextContent("456 results")
+  })
+})
+
+describe("Hybrid search feature flag", () => {
+  afterEach(() => {
+    delete process.env.NEXT_PUBLIC_DISABLE_HYBRID_SEARCH
+  })
+
+  const searchCalledWith = (base: string) =>
+    makeRequest.mock.calls.some(
+      ([args]) => args.method === "get" && args.url.startsWith(base),
+    )
+
+  test("Uses hybrid search when the kill switch is unset", async () => {
+    // An unset flag is how PostHog reports "not loaded yet", "no such flag" and
+    // "flag disabled" alike, so it must leave the hybrid default in place.
+    mockFeatureFlags({})
+    setMockApiResponses({ search: { count: 10 } })
+    renderWithProviders(<SearchPage />, { url: "?q=woof" })
+
+    await waitFor(() => {
+      expect(searchCalledWith(urls.search.vectorResources())).toBe(true)
+    })
+    expect(searchCalledWith(urls.search.resources())).toBe(false)
+  })
+
+  test("Uses hybrid search when the kill switch is explicitly off", async () => {
+    mockFeatureFlags({ [FeatureFlags.DisableHybridSearch]: false })
+    setMockApiResponses({ search: { count: 10 } })
+    renderWithProviders(<SearchPage />, { url: "?q=woof" })
+
+    await waitFor(() => {
+      expect(searchCalledWith(urls.search.vectorResources())).toBe(true)
+    })
+    expect(searchCalledWith(urls.search.resources())).toBe(false)
+  })
+
+  test("Falls back to OpenSearch when the kill switch is enabled", async () => {
+    mockFeatureFlags({ [FeatureFlags.DisableHybridSearch]: true })
+    setMockApiResponses({ search: { count: 10 } })
+    renderWithProviders(<SearchPage />, { url: "?q=woof" })
+
+    await waitFor(() => {
+      expect(searchCalledWith(urls.search.resources())).toBe(true)
+    })
+    expect(searchCalledWith(urls.search.vectorResources())).toBe(false)
+  })
+
+  test.each([
+    { url: "?q=woof&vector_search=true", hybrid: true },
+    { url: "?q=woof&vector_search=false", hybrid: false },
+  ])(
+    "vector_search=$url overrides an enabled kill switch",
+    async ({ url, hybrid }) => {
+      mockFeatureFlags({ [FeatureFlags.DisableHybridSearch]: true })
+      setMockApiResponses({ search: { count: 10 } })
+      renderWithProviders(<SearchPage />, { url })
+
+      const expected = hybrid
+        ? urls.search.vectorResources()
+        : urls.search.resources()
+      const unexpected = hybrid
+        ? urls.search.resources()
+        : urls.search.vectorResources()
+      await waitFor(() => {
+        expect(searchCalledWith(expected)).toBe(true)
+      })
+      expect(searchCalledWith(unexpected)).toBe(false)
+    },
+  )
+
+  test("Falls back to OpenSearch when the env kill switch is set", async () => {
+    // The env half of the switch exists so server prefetching agrees with the
+    // client; it must disable hybrid search here too, flag or no flag.
+    process.env.NEXT_PUBLIC_DISABLE_HYBRID_SEARCH = "true"
+    mockFeatureFlags({})
+    setMockApiResponses({ search: { count: 10 } })
+    renderWithProviders(<SearchPage />, { url: "?q=woof" })
+
+    await waitFor(() => {
+      expect(searchCalledWith(urls.search.resources())).toBe(true)
+    })
+    expect(searchCalledWith(urls.search.vectorResources())).toBe(false)
+  })
+
+  test("vector_search=true overrides the env kill switch", async () => {
+    process.env.NEXT_PUBLIC_DISABLE_HYBRID_SEARCH = "true"
+    mockFeatureFlags({})
+    setMockApiResponses({ search: { count: 10 } })
+    renderWithProviders(<SearchPage />, {
+      url: "?q=woof&vector_search=true",
+    })
+
+    await waitFor(() => {
+      expect(searchCalledWith(urls.search.vectorResources())).toBe(true)
+    })
+    expect(searchCalledWith(urls.search.resources())).toBe(false)
+  })
+
+  test("Admin toggle writes vector_search=false so it can override the default", async () => {
+    mockFeatureFlags({})
+    setMockApiResponses({
+      search: {
+        count: 10,
+        metadata: {
+          aggregations: {
+            resource_type_group: [{ key: "course", doc_count: 10 }],
+          },
+          suggestions: [],
+        },
+      },
+    })
+    setMockResponse.get(urls.userMe.get(), {
+      is_learning_path_editor: true,
+      is_authenticated: true,
+    })
+    setMockResponse.get(urls.adminSearchParams.get(), {
+      search_mode: "phrase",
+      slop: 6,
+      yearly_decay_percent: 2.5,
+      min_score: 0,
+      max_incompleteness_penalty: 90,
+      content_file_score_weight: 1,
+    })
+
+    const { location } = renderWithProviders(<SearchPage />)
+    await user.click(await screen.findByText("Admin Options"))
+
+    const checkbox = await screen.findByRole("checkbox", {
+      name: "Use hybrid search",
+    })
+    // Checked by default now that hybrid search is the default.
+    expect(checkbox).toBeChecked()
+
+    await user.click(checkbox)
+
+    // Unchecking must set the param explicitly; clearing it would fall back to
+    // the default and leave the box checked.
+    expect(location.current.search).toBe("?vector_search=false")
   })
 })
 
@@ -1029,9 +1373,196 @@ test("changing a facet resets unsubmitted text", async () => {
   })
 })
 
+describe("Search analytics events", () => {
+  beforeEach(() => {
+    process.env.NEXT_PUBLIC_POSTHOG_API_KEY = "test-key"
+    mockCapture.mockClear()
+  })
+  afterEach(() => {
+    delete process.env.NEXT_PUBLIC_POSTHOG_API_KEY
+  })
+
+  test("Submitting a search captures the submitted term, not the one in the URL", async () => {
+    setMockApiResponses({})
+    renderWithProviders(<SearchPage />, { url: "?q=design" })
+
+    const input = await screen.findByRole("textbox", { name: "Search for" })
+    await waitFor(() => expect(input).toHaveValue("design"))
+    await user.clear(input)
+    await user.paste("policy")
+    await user.type(input, "{Enter}")
+
+    expect(mockCapture).toHaveBeenCalledExactlyOnceWith(
+      PostHogEvents.SearchUpdate,
+      { search_term: "policy", isEnter: true },
+    )
+  })
+
+  test("Toggling a facet captures the filter event, not the keyword search event", async () => {
+    setMockApiResponses({
+      search: {
+        count: 700,
+        metadata: {
+          aggregations: { topic: [{ key: "Physics", doc_count: 100 }] },
+          suggestions: [],
+        },
+      },
+    })
+    renderWithProviders(<SearchPage />)
+
+    const physics = await screen.findByRole("checkbox", { name: "Physics 100" })
+    await user.click(physics)
+
+    expect(mockCapture).toHaveBeenCalledExactlyOnceWith(
+      PostHogEvents.SearchFilterUpdate,
+      { control: "topic" },
+    )
+  })
+
+  test("Changing sort captures the filter event naming the control", async () => {
+    setMockApiResponses({ search: { count: 137 } })
+    renderWithProviders(<SearchPage />)
+
+    const sortDropdown = (await screen.findAllByText("Sort by: Best Match"))[0]
+    await user.click(sortDropdown)
+    await user.click(await screen.findByRole("option", { name: /Popular/i }))
+
+    expect(mockCapture).toHaveBeenCalledExactlyOnceWith(
+      PostHogEvents.SearchFilterUpdate,
+      { control: "sortby" },
+    )
+  })
+
+  test("Clear all captures the filter event", async () => {
+    setMockApiResponses({
+      search: {
+        count: 700,
+        metadata: {
+          aggregations: { level: [{ key: "graduate", doc_count: 100 }] },
+          suggestions: [],
+        },
+      },
+    })
+    renderWithProviders(<SearchPage />, { url: "?level=graduate" })
+
+    await user.click(await screen.findByRole("button", { name: /clear all/i }))
+
+    expect(mockCapture).toHaveBeenCalledExactlyOnceWith(
+      PostHogEvents.SearchFilterUpdate,
+      { control: "clear_all" },
+    )
+  })
+
+  test("Switching resource type tabs captures the filter event naming the control", async () => {
+    setMockApiResponses({
+      search: {
+        count: 700,
+        metadata: {
+          aggregations: {
+            resource_type_group: [
+              { key: "course", doc_count: 100 },
+              { key: "learning_material", doc_count: 200 },
+            ],
+          },
+          suggestions: [],
+        },
+      },
+    })
+    renderWithProviders(<SearchPage />)
+
+    const tabCourses = await screen.findByRole("tab", { name: /Courses/ })
+    await user.click(tabCourses)
+
+    expect(mockCapture).toHaveBeenCalledExactlyOnceWith(
+      PostHogEvents.SearchFilterUpdate,
+      { control: "resource_type_group" },
+    )
+  })
+
+  test("Toggling Show OCW Files captures the filter event naming the control", async () => {
+    mockFeatureFlags({ [FeatureFlags.DisableHybridSearch]: true })
+    setMockApiResponses({
+      search: {
+        count: 10,
+        metadata: {
+          aggregations: {
+            resource_type_group: [{ key: "course", doc_count: 10 }],
+          },
+          suggestions: [],
+        },
+      },
+    })
+    setMockResponse.get(urls.userMe.get(), {
+      is_learning_path_editor: true,
+      is_authenticated: true,
+    })
+    setMockResponse.get(urls.adminSearchParams.get(), {
+      search_mode: "phrase",
+      slop: 6,
+      yearly_decay_percent: 2.5,
+      min_score: 0,
+      max_incompleteness_penalty: 90,
+      content_file_score_weight: 1,
+    })
+
+    renderWithProviders(<SearchPage />)
+    await user.click(await screen.findByText("Admin Options"))
+
+    const checkbox = await screen.findByRole("checkbox", {
+      name: "Show OCW files",
+    })
+    await user.click(checkbox)
+
+    expect(mockCapture).toHaveBeenCalledExactlyOnceWith(
+      PostHogEvents.SearchFilterUpdate,
+      { control: "show_ocw_files" },
+    )
+  })
+
+  test("Moving an admin relevance slider captures the filter event naming the control", async () => {
+    mockFeatureFlags({ [FeatureFlags.DisableHybridSearch]: true })
+    setMockApiResponses({
+      search: {
+        count: 700,
+        metadata: {
+          aggregations: {
+            resource_type_group: [{ key: "course", doc_count: 100 }],
+          },
+          suggestions: [],
+        },
+      },
+    })
+    setMockResponse.get(urls.userMe.get(), {
+      is_learning_path_editor: true,
+      is_authenticated: true,
+    })
+    setMockResponse.get(urls.adminSearchParams.get(), {
+      search_mode: "phrase",
+      slop: 6,
+      yearly_decay_percent: 2.5,
+      min_score: 0,
+      max_incompleteness_penalty: 90,
+      content_file_score_weight: 1,
+    })
+
+    renderWithProviders(<SearchPage />)
+    await user.click(await screen.findByText("Admin Options"))
+
+    const slider = await screen.findByTestId("min_score-slider")
+    const input = within(slider).getByRole("slider")
+    await act(async () => input.focus())
+    await user.keyboard("{ArrowRight}")
+
+    expect(mockCapture).toHaveBeenCalledExactlyOnceWith(
+      PostHogEvents.SearchFilterUpdate,
+      { control: "min_score" },
+    )
+  })
+})
+
 describe("UniversalAIBanner", () => {
   beforeEach(() => {
-    mockedUseFeatureFlagEnabled.mockReturnValue(false)
+    mockFeatureFlags({ [FeatureFlags.UniversalAISearchBanner]: false })
   })
 
   afterEach(() => {
@@ -1039,7 +1570,7 @@ describe("UniversalAIBanner", () => {
   })
 
   test("shows banner for blank search when feature flag is enabled", async () => {
-    mockedUseFeatureFlagEnabled.mockReturnValue(true)
+    mockFeatureFlags({ [FeatureFlags.UniversalAISearchBanner]: true })
     setMockApiResponses({ search: { count: 10 } })
     renderWithProviders(<SearchPage />)
 
@@ -1058,7 +1589,7 @@ describe("UniversalAIBanner", () => {
   ])(
     "shows banner for search term '%s' matching regex when feature flag is enabled",
     async (searchTerm) => {
-      mockedUseFeatureFlagEnabled.mockReturnValue(true)
+      mockFeatureFlags({ [FeatureFlags.UniversalAISearchBanner]: true })
       setMockApiResponses({ search: { count: 10 } })
       renderWithProviders(<SearchPage />, {
         url: `?q=${encodeURIComponent(searchTerm)}`,
@@ -1072,7 +1603,7 @@ describe("UniversalAIBanner", () => {
   test.each(["biology", "history", "cooking", "random search"])(
     "does not show banner for search term '%s' not matching regex",
     async (searchTerm) => {
-      mockedUseFeatureFlagEnabled.mockReturnValue(true)
+      mockFeatureFlags({ [FeatureFlags.UniversalAISearchBanner]: true })
       setMockApiResponses({ search: { count: 10 } })
       renderWithProviders(<SearchPage />, {
         url: `?q=${encodeURIComponent(searchTerm)}`,
@@ -1086,7 +1617,7 @@ describe("UniversalAIBanner", () => {
   )
 
   test("does not show banner when feature flag is disabled", async () => {
-    mockedUseFeatureFlagEnabled.mockReturnValue(false)
+    mockFeatureFlags({ [FeatureFlags.UniversalAISearchBanner]: false })
     setMockApiResponses({ search: { count: 10 } })
     renderWithProviders(<SearchPage />)
 
@@ -1330,7 +1861,7 @@ describe("UniversalAIBanner", () => {
 
   test("clicking Learn More fires cta_clicked with label and readableId", async () => {
     allowConsoleErrors()
-    mockedUseFeatureFlagEnabled.mockReturnValue(true)
+    mockFeatureFlags({ [FeatureFlags.UniversalAISearchBanner]: true })
     mockCapture.mockClear()
     process.env.NEXT_PUBLIC_POSTHOG_API_KEY = "test-key"
     setMockApiResponses({ search: { count: 10 } })

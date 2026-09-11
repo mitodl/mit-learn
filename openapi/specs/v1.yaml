@@ -735,7 +735,7 @@ paths:
           * `21G` - Global Languages
           * `21H` - History
           * `21L` - Literature
-          * `21M` - Music and Theater Arts
+          * `21M` - Music
           * `21T` - Theater Arts
           * `22` - Nuclear Science and Engineering
           * `24` - Linguistics and Philosophy
@@ -1388,7 +1388,7 @@ paths:
           * `21G` - Global Languages
           * `21H` - History
           * `21L` - Literature
-          * `21M` - Music and Theater Arts
+          * `21M` - Music
           * `21T` - Theater Arts
           * `22` - Nuclear Science and Engineering
           * `24` - Linguistics and Philosophy
@@ -1991,7 +1991,7 @@ paths:
           * `21G` - Global Languages
           * `21H` - History
           * `21L` - Literature
-          * `21M` - Music and Theater Arts
+          * `21M` - Music
           * `21T` - Theater Arts
           * `22` - Nuclear Science and Engineering
           * `24` - Linguistics and Philosophy
@@ -2418,7 +2418,7 @@ paths:
           * `21G` - Global Languages
           * `21H` - History
           * `21L` - Literature
-          * `21M` - Music and Theater Arts
+          * `21M` - Music
           * `21T` - Theater Arts
           * `22` - Nuclear Science and Engineering
           * `24` - Linguistics and Philosophy
@@ -2836,7 +2836,7 @@ paths:
               * `21G` - Global Languages
               * `21H` - History
               * `21L` - Literature
-              * `21M` - Music and Theater Arts
+              * `21M` - Music
               * `21T` - Theater Arts
               * `22` - Nuclear Science and Engineering
               * `24` - Linguistics and Philosophy
@@ -2861,15 +2861,14 @@ paths:
           Sciences\n* `14` - Economics\n* `15` - Management\n* `16` - Aeronautics
           and Astronautics\n* `17` - Political Science\n* `18` - Mathematics\n* `20`
           - Biological Engineering\n* `21A` - Anthropology\n* `21G` - Global Languages\n*
-          `21H` - History\n* `21L` - Literature\n* `21M` - Music and Theater Arts\n*
-          `21T` - Theater Arts\n* `22` - Nuclear Science and Engineering\n* `24` -
-          Linguistics and Philosophy\n* `CC` - Concourse\n* `CMS-W` - Comparative
-          Media Studies/Writing\n* `EC` - Edgerton Center\n* `ES` - Experimental Study
-          Group\n* `ESD` - Engineering Systems Division\n* `HST` - Medical Engineering
-          and Science\n* `IDS` - Data, Systems, and Society\n* `MAS` - Media Arts
-          and Sciences\n* `PE` - Athletics, Physical Education and Recreation\n* `SP`
-          - Special Programs\n* `STS` - Science, Technology, and Society\n* `WGS`
-          - Women's and Gender Studies"
+          `21H` - History\n* `21L` - Literature\n* `21M` - Music\n* `21T` - Theater
+          Arts\n* `22` - Nuclear Science and Engineering\n* `24` - Linguistics and
+          Philosophy\n* `CC` - Concourse\n* `CMS-W` - Comparative Media Studies/Writing\n*
+          `EC` - Edgerton Center\n* `ES` - Experimental Study Group\n* `ESD` - Engineering
+          Systems Division\n* `HST` - Medical Engineering and Science\n* `IDS` - Data,
+          Systems, and Society\n* `MAS` - Media Arts and Sciences\n* `PE` - Athletics,
+          Physical Education and Recreation\n* `SP` - Special Programs\n* `STS` -
+          Science, Technology, and Society\n* `WGS` - Women's and Gender Studies"
       - in: query
         name: free
         schema:
@@ -3208,7 +3207,7 @@ paths:
               * `21G` - Global Languages
               * `21H` - History
               * `21L` - Literature
-              * `21M` - Music and Theater Arts
+              * `21M` - Music
               * `21T` - Theater Arts
               * `22` - Nuclear Science and Engineering
               * `24` - Linguistics and Philosophy
@@ -3233,15 +3232,14 @@ paths:
           Sciences\n* `14` - Economics\n* `15` - Management\n* `16` - Aeronautics
           and Astronautics\n* `17` - Political Science\n* `18` - Mathematics\n* `20`
           - Biological Engineering\n* `21A` - Anthropology\n* `21G` - Global Languages\n*
-          `21H` - History\n* `21L` - Literature\n* `21M` - Music and Theater Arts\n*
-          `21T` - Theater Arts\n* `22` - Nuclear Science and Engineering\n* `24` -
-          Linguistics and Philosophy\n* `CC` - Concourse\n* `CMS-W` - Comparative
-          Media Studies/Writing\n* `EC` - Edgerton Center\n* `ES` - Experimental Study
-          Group\n* `ESD` - Engineering Systems Division\n* `HST` - Medical Engineering
-          and Science\n* `IDS` - Data, Systems, and Society\n* `MAS` - Media Arts
-          and Sciences\n* `PE` - Athletics, Physical Education and Recreation\n* `SP`
-          - Special Programs\n* `STS` - Science, Technology, and Society\n* `WGS`
-          - Women's and Gender Studies"
+          `21H` - History\n* `21L` - Literature\n* `21M` - Music\n* `21T` - Theater
+          Arts\n* `22` - Nuclear Science and Engineering\n* `24` - Linguistics and
+          Philosophy\n* `CC` - Concourse\n* `CMS-W` - Comparative Media Studies/Writing\n*
+          `EC` - Edgerton Center\n* `ES` - Experimental Study Group\n* `ESD` - Engineering
+          Systems Division\n* `HST` - Medical Engineering and Science\n* `IDS` - Data,
+          Systems, and Society\n* `MAS` - Media Arts and Sciences\n* `PE` - Athletics,
+          Physical Education and Recreation\n* `SP` - Special Programs\n* `STS` -
+          Science, Technology, and Society\n* `WGS` - Women's and Gender Studies"
       - in: query
         name: free
         schema:
@@ -3915,7 +3913,7 @@ paths:
           * `21G` - Global Languages
           * `21H` - History
           * `21L` - Literature
-          * `21M` - Music and Theater Arts
+          * `21M` - Music
           * `21T` - Theater Arts
           * `22` - Nuclear Science and Engineering
           * `24` - Linguistics and Philosophy
@@ -4352,7 +4350,7 @@ paths:
               * `21G` - Global Languages
               * `21H` - History
               * `21L` - Literature
-              * `21M` - Music and Theater Arts
+              * `21M` - Music
               * `21T` - Theater Arts
               * `22` - Nuclear Science and Engineering
               * `24` - Linguistics and Philosophy
@@ -4377,15 +4375,14 @@ paths:
           Sciences\n* `14` - Economics\n* `15` - Management\n* `16` - Aeronautics
           and Astronautics\n* `17` - Political Science\n* `18` - Mathematics\n* `20`
           - Biological Engineering\n* `21A` - Anthropology\n* `21G` - Global Languages\n*
-          `21H` - History\n* `21L` - Literature\n* `21M` - Music and Theater Arts\n*
-          `21T` - Theater Arts\n* `22` - Nuclear Science and Engineering\n* `24` -
-          Linguistics and Philosophy\n* `CC` - Concourse\n* `CMS-W` - Comparative
-          Media Studies/Writing\n* `EC` - Edgerton Center\n* `ES` - Experimental Study
-          Group\n* `ESD` - Engineering Systems Division\n* `HST` - Medical Engineering
-          and Science\n* `IDS` - Data, Systems, and Society\n* `MAS` - Media Arts
-          and Sciences\n* `PE` - Athletics, Physical Education and Recreation\n* `SP`
-          - Special Programs\n* `STS` - Science, Technology, and Society\n* `WGS`
-          - Women's and Gender Studies"
+          `21H` - History\n* `21L` - Literature\n* `21M` - Music\n* `21T` - Theater
+          Arts\n* `22` - Nuclear Science and Engineering\n* `24` - Linguistics and
+          Philosophy\n* `CC` - Concourse\n* `CMS-W` - Comparative Media Studies/Writing\n*
+          `EC` - Edgerton Center\n* `ES` - Experimental Study Group\n* `ESD` - Engineering
+          Systems Division\n* `HST` - Medical Engineering and Science\n* `IDS` - Data,
+          Systems, and Society\n* `MAS` - Media Arts and Sciences\n* `PE` - Athletics,
+          Physical Education and Recreation\n* `SP` - Special Programs\n* `STS` -
+          Science, Technology, and Society\n* `WGS` - Women's and Gender Studies"
       - in: query
         name: dev_mode
         schema:
@@ -4884,7 +4881,7 @@ paths:
               * `21G` - Global Languages
               * `21H` - History
               * `21L` - Literature
-              * `21M` - Music and Theater Arts
+              * `21M` - Music
               * `21T` - Theater Arts
               * `22` - Nuclear Science and Engineering
               * `24` - Linguistics and Philosophy
@@ -4909,15 +4906,14 @@ paths:
           Sciences\n* `14` - Economics\n* `15` - Management\n* `16` - Aeronautics
           and Astronautics\n* `17` - Political Science\n* `18` - Mathematics\n* `20`
           - Biological Engineering\n* `21A` - Anthropology\n* `21G` - Global Languages\n*
-          `21H` - History\n* `21L` - Literature\n* `21M` - Music and Theater Arts\n*
-          `21T` - Theater Arts\n* `22` - Nuclear Science and Engineering\n* `24` -
-          Linguistics and Philosophy\n* `CC` - Concourse\n* `CMS-W` - Comparative
-          Media Studies/Writing\n* `EC` - Edgerton Center\n* `ES` - Experimental Study
-          Group\n* `ESD` - Engineering Systems Division\n* `HST` - Medical Engineering
-          and Science\n* `IDS` - Data, Systems, and Society\n* `MAS` - Media Arts
-          and Sciences\n* `PE` - Athletics, Physical Education and Recreation\n* `SP`
-          - Special Programs\n* `STS` - Science, Technology, and Society\n* `WGS`
-          - Women's and Gender Studies"
+          `21H` - History\n* `21L` - Literature\n* `21M` - Music\n* `21T` - Theater
+          Arts\n* `22` - Nuclear Science and Engineering\n* `24` - Linguistics and
+          Philosophy\n* `CC` - Concourse\n* `CMS-W` - Comparative Media Studies/Writing\n*
+          `EC` - Edgerton Center\n* `ES` - Experimental Study Group\n* `ESD` - Engineering
+          Systems Division\n* `HST` - Medical Engineering and Science\n* `IDS` - Data,
+          Systems, and Society\n* `MAS` - Media Arts and Sciences\n* `PE` - Athletics,
+          Physical Education and Recreation\n* `SP` - Special Programs\n* `STS` -
+          Science, Technology, and Society\n* `WGS` - Women's and Gender Studies"
       - in: query
         name: dev_mode
         schema:
@@ -5441,7 +5437,7 @@ paths:
               * `21G` - Global Languages
               * `21H` - History
               * `21L` - Literature
-              * `21M` - Music and Theater Arts
+              * `21M` - Music
               * `21T` - Theater Arts
               * `22` - Nuclear Science and Engineering
               * `24` - Linguistics and Philosophy
@@ -5466,15 +5462,14 @@ paths:
           Sciences\n* `14` - Economics\n* `15` - Management\n* `16` - Aeronautics
           and Astronautics\n* `17` - Political Science\n* `18` - Mathematics\n* `20`
           - Biological Engineering\n* `21A` - Anthropology\n* `21G` - Global Languages\n*
-          `21H` - History\n* `21L` - Literature\n* `21M` - Music and Theater Arts\n*
-          `21T` - Theater Arts\n* `22` - Nuclear Science and Engineering\n* `24` -
-          Linguistics and Philosophy\n* `CC` - Concourse\n* `CMS-W` - Comparative
-          Media Studies/Writing\n* `EC` - Edgerton Center\n* `ES` - Experimental Study
-          Group\n* `ESD` - Engineering Systems Division\n* `HST` - Medical Engineering
-          and Science\n* `IDS` - Data, Systems, and Society\n* `MAS` - Media Arts
-          and Sciences\n* `PE` - Athletics, Physical Education and Recreation\n* `SP`
-          - Special Programs\n* `STS` - Science, Technology, and Society\n* `WGS`
-          - Women's and Gender Studies"
+          `21H` - History\n* `21L` - Literature\n* `21M` - Music\n* `21T` - Theater
+          Arts\n* `22` - Nuclear Science and Engineering\n* `24` - Linguistics and
+          Philosophy\n* `CC` - Concourse\n* `CMS-W` - Comparative Media Studies/Writing\n*
+          `EC` - Edgerton Center\n* `ES` - Experimental Study Group\n* `ESD` - Engineering
+          Systems Division\n* `HST` - Medical Engineering and Science\n* `IDS` - Data,
+          Systems, and Society\n* `MAS` - Media Arts and Sciences\n* `PE` - Athletics,
+          Physical Education and Recreation\n* `SP` - Special Programs\n* `STS` -
+          Science, Technology, and Society\n* `WGS` - Women's and Gender Studies"
       - in: query
         name: dev_mode
         schema:
@@ -5989,7 +5984,7 @@ paths:
               * `21G` - Global Languages
               * `21H` - History
               * `21L` - Literature
-              * `21M` - Music and Theater Arts
+              * `21M` - Music
               * `21T` - Theater Arts
               * `22` - Nuclear Science and Engineering
               * `24` - Linguistics and Philosophy
@@ -6014,15 +6009,14 @@ paths:
           Sciences\n* `14` - Economics\n* `15` - Management\n* `16` - Aeronautics
           and Astronautics\n* `17` - Political Science\n* `18` - Mathematics\n* `20`
           - Biological Engineering\n* `21A` - Anthropology\n* `21G` - Global Languages\n*
-          `21H` - History\n* `21L` - Literature\n* `21M` - Music and Theater Arts\n*
-          `21T` - Theater Arts\n* `22` - Nuclear Science and Engineering\n* `24` -
-          Linguistics and Philosophy\n* `CC` - Concourse\n* `CMS-W` - Comparative
-          Media Studies/Writing\n* `EC` - Edgerton Center\n* `ES` - Experimental Study
-          Group\n* `ESD` - Engineering Systems Division\n* `HST` - Medical Engineering
-          and Science\n* `IDS` - Data, Systems, and Society\n* `MAS` - Media Arts
-          and Sciences\n* `PE` - Athletics, Physical Education and Recreation\n* `SP`
-          - Special Programs\n* `STS` - Science, Technology, and Society\n* `WGS`
-          - Women's and Gender Studies"
+          `21H` - History\n* `21L` - Literature\n* `21M` - Music\n* `21T` - Theater
+          Arts\n* `22` - Nuclear Science and Engineering\n* `24` - Linguistics and
+          Philosophy\n* `CC` - Concourse\n* `CMS-W` - Comparative Media Studies/Writing\n*
+          `EC` - Edgerton Center\n* `ES` - Experimental Study Group\n* `ESD` - Engineering
+          Systems Division\n* `HST` - Medical Engineering and Science\n* `IDS` - Data,
+          Systems, and Society\n* `MAS` - Media Arts and Sciences\n* `PE` - Athletics,
+          Physical Education and Recreation\n* `SP` - Special Programs\n* `STS` -
+          Science, Technology, and Society\n* `WGS` - Women's and Gender Studies"
       - in: query
         name: dev_mode
         schema:
@@ -6515,7 +6509,7 @@ paths:
           * `21G` - Global Languages
           * `21H` - History
           * `21L` - Literature
-          * `21M` - Music and Theater Arts
+          * `21M` - Music
           * `21T` - Theater Arts
           * `22` - Nuclear Science and Engineering
           * `24` - Linguistics and Philosophy
@@ -7282,7 +7276,7 @@ paths:
           * `21G` - Global Languages
           * `21H` - History
           * `21L` - Literature
-          * `21M` - Music and Theater Arts
+          * `21M` - Music
           * `21T` - Theater Arts
           * `22` - Nuclear Science and Engineering
           * `24` - Linguistics and Philosophy
@@ -7740,7 +7734,7 @@ paths:
           * `21G` - Global Languages
           * `21H` - History
           * `21L` - Literature
-          * `21M` - Music and Theater Arts
+          * `21M` - Music
           * `21T` - Theater Arts
           * `22` - Nuclear Science and Engineering
           * `24` - Linguistics and Philosophy
@@ -8254,7 +8248,7 @@ paths:
           * `21G` - Global Languages
           * `21H` - History
           * `21L` - Literature
-          * `21M` - Music and Theater Arts
+          * `21M` - Music
           * `21T` - Theater Arts
           * `22` - Nuclear Science and Engineering
           * `24` - Linguistics and Philosophy
@@ -9144,7 +9138,7 @@ paths:
           * `21G` - Global Languages
           * `21H` - History
           * `21L` - Literature
-          * `21M` - Music and Theater Arts
+          * `21M` - Music
           * `21T` - Theater Arts
           * `22` - Nuclear Science and Engineering
           * `24` - Linguistics and Philosophy
@@ -9637,7 +9631,7 @@ paths:
           * `21G` - Global Languages
           * `21H` - History
           * `21L` - Literature
-          * `21M` - Music and Theater Arts
+          * `21M` - Music
           * `21T` - Theater Arts
           * `22` - Nuclear Science and Engineering
           * `24` - Linguistics and Philosophy
@@ -10759,6 +10753,13 @@ components:
           type: string
           description: Where this resource lives within Learn
           readOnly: true
+        url_slug:
+          type: string
+          description: 'Slug derived from the title, for use in this resource''s URL.
+            It is cosmetic: lookups ignore it, and it changes whenever the title does.
+            Titles that yield no ASCII slug get the literal "resource", so this is
+            never blank.'
+          readOnly: true
         resource_type:
           allOf:
           - $ref: '#/components/schemas/CourseResourceResourceTypeEnum'
@@ -10890,6 +10891,7 @@ components:
       - resource_type_group
       - runs
       - title
+      - url_slug
       - views
     CourseResourceRequest:
       type: object
@@ -11071,7 +11073,7 @@ components:
         * `21G` - Global Languages
         * `21H` - History
         * `21L` - Literature
-        * `21M` - Music and Theater Arts
+        * `21M` - Music
         * `21T` - Theater Arts
         * `22` - Nuclear Science and Engineering
         * `24` - Linguistics and Philosophy
@@ -11110,7 +11112,7 @@ components:
       - Global Languages
       - History
       - Literature
-      - Music and Theater Arts
+      - Music
       - Theater Arts
       - Nuclear Science and Engineering
       - Linguistics and Philosophy
@@ -11290,6 +11292,13 @@ components:
           type: string
           description: Where this resource lives within Learn
           readOnly: true
+        url_slug:
+          type: string
+          description: 'Slug derived from the title, for use in this resource''s URL.
+            It is cosmetic: lookups ignore it, and it changes whenever the title does.
+            Titles that yield no ASCII slug get the literal "resource", so this is
+            never blank.'
+          readOnly: true
         resource_type:
           allOf:
           - $ref: '#/components/schemas/DocumentResourceResourceTypeEnum'
@@ -11425,6 +11434,7 @@ components:
       - resource_type_group
       - runs
       - title
+      - url_slug
       - views
     DocumentResourceRequest:
       type: object
@@ -12371,6 +12381,13 @@ components:
           type: string
           description: Where this resource lives within Learn
           readOnly: true
+        url_slug:
+          type: string
+          description: 'Slug derived from the title, for use in this resource''s URL.
+            It is cosmetic: lookups ignore it, and it changes whenever the title does.
+            Titles that yield no ASCII slug get the literal "resource", so this is
+            never blank.'
+          readOnly: true
         resource_type:
           allOf:
           - $ref: '#/components/schemas/LearningPathResourceResourceTypeEnum'
@@ -12503,6 +12520,7 @@ components:
       - resource_type_group
       - runs
       - title
+      - url_slug
       - views
     LearningPathResourceRequest:
       type: object
@@ -14817,15 +14835,14 @@ components:
             - Management\n* `16` - Aeronautics and Astronautics\n* `17` - Political
             Science\n* `18` - Mathematics\n* `20` - Biological Engineering\n* `21A`
             - Anthropology\n* `21G` - Global Languages\n* `21H` - History\n* `21L`
-            - Literature\n* `21M` - Music and Theater Arts\n* `21T` - Theater Arts\n*
-            `22` - Nuclear Science and Engineering\n* `24` - Linguistics and Philosophy\n*
-            `CC` - Concourse\n* `CMS-W` - Comparative Media Studies/Writing\n* `EC`
-            - Edgerton Center\n* `ES` - Experimental Study Group\n* `ESD` - Engineering
-            Systems Division\n* `HST` - Medical Engineering and Science\n* `IDS` -
-            Data, Systems, and Society\n* `MAS` - Media Arts and Sciences\n* `PE`
-            - Athletics, Physical Education and Recreation\n* `SP` - Special Programs\n*
-            `STS` - Science, Technology, and Society\n* `WGS` - Women's and Gender
-            Studies"
+            - Literature\n* `21M` - Music\n* `21T` - Theater Arts\n* `22` - Nuclear
+            Science and Engineering\n* `24` - Linguistics and Philosophy\n* `CC` -
+            Concourse\n* `CMS-W` - Comparative Media Studies/Writing\n* `EC` - Edgerton
+            Center\n* `ES` - Experimental Study Group\n* `ESD` - Engineering Systems
+            Division\n* `HST` - Medical Engineering and Science\n* `IDS` - Data, Systems,
+            and Society\n* `MAS` - Media Arts and Sciences\n* `PE` - Athletics, Physical
+            Education and Recreation\n* `SP` - Special Programs\n* `STS` - Science,
+            Technology, and Society\n* `WGS` - Women's and Gender Studies"
         level:
           type: array
           items:
@@ -15099,8 +15116,13 @@ components:
           type: string
         readable_id:
           type: string
+        learn_url:
+          type: string
+          description: Where this podcast lives within Learn
+          readOnly: true
       required:
       - id
+      - learn_url
       - readable_id
       - title
     PodcastEpisodeRequest:
@@ -15288,6 +15310,13 @@ components:
           type: string
           description: Where this resource lives within Learn
           readOnly: true
+        url_slug:
+          type: string
+          description: 'Slug derived from the title, for use in this resource''s URL.
+            It is cosmetic: lookups ignore it, and it changes whenever the title does.
+            Titles that yield no ASCII slug get the literal "resource", so this is
+            never blank.'
+          readOnly: true
         resource_type:
           allOf:
           - $ref: '#/components/schemas/PodcastEpisodeResourceResourceTypeEnum'
@@ -15419,6 +15448,7 @@ components:
       - resource_type_group
       - runs
       - title
+      - url_slug
       - views
     PodcastEpisodeResourceRequest:
       type: object
@@ -15724,6 +15754,13 @@ components:
           type: string
           description: Where this resource lives within Learn
           readOnly: true
+        url_slug:
+          type: string
+          description: 'Slug derived from the title, for use in this resource''s URL.
+            It is cosmetic: lookups ignore it, and it changes whenever the title does.
+            Titles that yield no ASCII slug get the literal "resource", so this is
+            never blank.'
+          readOnly: true
         resource_type:
           allOf:
           - $ref: '#/components/schemas/PodcastResourceResourceTypeEnum'
@@ -15855,6 +15892,7 @@ components:
       - resource_type_group
       - runs
       - title
+      - url_slug
       - views
     PodcastResourceRequest:
       type: object
@@ -16287,6 +16325,13 @@ components:
           type: string
           description: Where this resource lives within Learn
           readOnly: true
+        url_slug:
+          type: string
+          description: 'Slug derived from the title, for use in this resource''s URL.
+            It is cosmetic: lookups ignore it, and it changes whenever the title does.
+            Titles that yield no ASCII slug get the literal "resource", so this is
+            never blank.'
+          readOnly: true
         resource_type:
           allOf:
           - $ref: '#/components/schemas/ProgramResourceResourceTypeEnum'
@@ -16418,6 +16463,7 @@ components:
       - resource_type_group
       - runs
       - title
+      - url_slug
       - views
     ProgramResourceRequest:
       type: object
@@ -17120,6 +17166,13 @@ components:
           type: string
           description: Where this resource lives within Learn
           readOnly: true
+        url_slug:
+          type: string
+          description: 'Slug derived from the title, for use in this resource''s URL.
+            It is cosmetic: lookups ignore it, and it changes whenever the title does.
+            Titles that yield no ASCII slug get the literal "resource", so this is
+            never blank.'
+          readOnly: true
         resource_type:
           allOf:
           - $ref: '#/components/schemas/VideoPlaylistResourceResourceTypeEnum'
@@ -17250,6 +17303,7 @@ components:
       - resource_type_group
       - runs
       - title
+      - url_slug
       - video_playlist
       - views
     VideoPlaylistResourceRequest:
@@ -17525,6 +17579,13 @@ components:
           type: string
           description: Where this resource lives within Learn
           readOnly: true
+        url_slug:
+          type: string
+          description: 'Slug derived from the title, for use in this resource''s URL.
+            It is cosmetic: lookups ignore it, and it changes whenever the title does.
+            Titles that yield no ASCII slug get the literal "resource", so this is
+            never blank.'
+          readOnly: true
         resource_type:
           allOf:
           - $ref: '#/components/schemas/VideoResourceResourceTypeEnum'
@@ -17672,6 +17733,7 @@ components:
       - resource_type_group
       - runs
       - title
+      - url_slug
       - video
       - views
     VideoResourceRequest:

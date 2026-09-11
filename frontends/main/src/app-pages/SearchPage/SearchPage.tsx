@@ -22,6 +22,7 @@ import { defaultFacetNames, getExtraFacetNames } from "./searchRequests"
 import getFacetManifest from "@/page-components/SearchDisplay/getFacetManifest"
 import dynamic from "next/dynamic"
 import { useUserMe } from "api/hooks/user"
+import { useHybridSearchEnabled } from "@/common/useHybridSearchEnabled"
 
 const LearningResourceDrawer = dynamic(
   () =>
@@ -123,7 +124,7 @@ const SearchPage: React.FC = () => {
     searchParams.get("resource_type_group"),
     extraFacetNames,
   )
-  const isVectorSearch = searchParams.get("vector_search") === "true"
+  const isHybridSearch = useHybridSearchEnabled()
   const [fetchTime, setFetchTime] = useState<number | null>(null)
   const { data: user } = useUserMe()
 
@@ -131,22 +132,23 @@ const SearchPage: React.FC = () => {
     <>
       <AdminTitleContainer>Vector Hybrid Search</AdminTitleContainer>
       <Checkbox
-        aria-label="Vector Hybrid Search"
-        checked={isVectorSearch}
+        // smoot-design's Checkbox renders a bare input unless given `label`;
+        // it does not forward aria-label.
+        label="Use hybrid search"
+        checked={isHybridSearch}
         onChange={(e) =>
           setSearchParams((prev) => {
             const next = new URLSearchParams(prev)
-            if (e.target.checked) {
-              next.set("vector_search", "true")
-            } else {
-              next.delete("vector_search")
-            }
+            // Set explicitly either way: hybrid search is the default, so
+            // unchecking has to override the flag rather than clear the param.
+            next.set("vector_search", e.target.checked ? "true" : "false")
             return next
           })
         }
       />
       <ExplanationContainer>
-        Toggle to use the vector hybrid search endpoint.
+        Hybrid search is the default. Uncheck to compare against the OpenSearch
+        endpoint.
       </ExplanationContainer>
     </>
   )
@@ -239,7 +241,7 @@ const SearchPage: React.FC = () => {
           </SearchFieldWrapper>
         </SearchFieldContainer>
       </Header>
-      {isVectorSearch ? (
+      {isHybridSearch ? (
         <HybridSearchDisplay
           onFetchTimeChange={setFetchTime}
           filterHeadingEl="h2"

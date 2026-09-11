@@ -12,7 +12,6 @@ import { renderWithProviders } from "@/test-utils"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import { kebabCase } from "lodash"
 import { faker } from "@faker-js/faker/locale/en"
-import { podcastEpisodePageView } from "@/common/urls"
 import { parentPodcastIds } from "@/common/slugs"
 
 jest.mock("posthog-js/react")
@@ -177,14 +176,10 @@ describe("Learning Resource Expanded", () => {
       const [parentPodcastId] = parentPodcastIds(
         resource as Parameters<typeof parentPodcastIds>[0],
       )
+      // With a parent podcast the CTA points at the episode's own page, which
+      // the backend names; without one it falls through to the source URL.
       const expectedHref =
-        parentPodcastId !== undefined
-          ? podcastEpisodePageView(
-              String(resource.id),
-              String(parentPodcastId),
-              resource.title,
-            )
-          : resource.url
+        parentPodcastId !== undefined ? resource.learn_url : resource.url
       expect(link.href).toContain(expectedHref || "")
     },
   )
