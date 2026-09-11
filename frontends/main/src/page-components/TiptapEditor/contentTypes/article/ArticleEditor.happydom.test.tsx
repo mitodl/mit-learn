@@ -91,7 +91,7 @@ describe("ArticleEditor article controls", () => {
 
   test("Settings opens the article settings drawer", async () => {
     setMockResponse.get(
-      urls.topics.list({ limit: 200 }),
+      urls.topics.list({ is_toplevel: true, limit: 100 }),
       factories.learningResources.topics({ count: 2 }),
     )
     renderArticleEditor()
@@ -104,5 +104,37 @@ describe("ArticleEditor article controls", () => {
     await screen.findByRole("heading", { name: "Select Topics" })
     await screen.findByRole("heading", { name: "SEO Settings" })
     await screen.findByRole("button", { name: "Save Settings" })
+  })
+
+  test("the topic dropdowns populate from the topics API", async () => {
+    const mainTopics = factories.learningResources.topics({ count: 2 })
+    const [firstTopic] = mainTopics.results
+    const subtopics = factories.learningResources.topics({ count: 1 })
+    subtopics.results[0].parent = firstTopic.id
+
+    // Top-level topics and a given parent's children are separate requests,
+    // so a subtopic resolves even when its parent is absent from the other.
+    setMockResponse.get(
+      urls.topics.list({ is_toplevel: true, limit: 100 }),
+      mainTopics,
+    )
+    setMockResponse.get(
+      urls.topics.list({ parent_topic_id: [firstTopic.id], limit: 100 }),
+      subtopics,
+    )
+
+    renderArticleEditor()
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Settings" }),
+    )
+
+    // Pick the main topic, which is what triggers the subtopic request.
+    await userEvent.click(await screen.findByLabelText("Topic"))
+    await userEvent.click(
+      await screen.findByRole("option", { name: firstTopic.name }),
+    )
+
+    await userEvent.click(await screen.findByLabelText("Subtopic"))
+    await screen.findByRole("option", { name: subtopics.results[0].name })
   })
 })

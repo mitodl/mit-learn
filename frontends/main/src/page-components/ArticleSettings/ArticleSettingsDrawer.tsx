@@ -171,14 +171,25 @@ const ArticleSettingsDrawer = ({
   const [seoDescription, setSeoDescription] = useState("")
 
   /**
-   * One request for the whole tree: the subtopic list is derived from it, so
-   * fetching only top-level topics would need a second call per selection.
+   * Two narrow queries using the endpoint's own filters rather than one broad
+   * fetch filtered client-side. `parent_topic_id` matters beyond tidiness: a
+   * subtopic is reachable even when its parent is absent from the response,
+   * which `/api/v1/topics/` does whenever the parent's topic channel is
+   * unpublished (the endpoint drops any topic with a null `channel_url`).
+   * React Query caches each parent's children, so re-picking is free.
    */
-  const { data: topics } = useLearningResourceTopics(
-    { limit: 200 },
-    { enabled: open },
+  const { data: topicsData, isLoading: topicsLoading } =
+    useLearningResourceTopics(
+      { is_toplevel: true, limit: 100 },
+      { enabled: open },
+    )
+  const { data: subtopicsData } = useLearningResourceTopics(
+    { parent_topic_id: [Number(topicId)], limit: 100 },
+    { enabled: open && !!topicId },
   )
-  const allTopics = useMemo(() => topics?.results ?? [], [topics])
+
+  const mainTopics = useMemo(() => topicsData?.results ?? [], [topicsData])
+  const subtopics = useMemo(() => subtopicsData?.results ?? [], [subtopicsData])
 
   // Reset to the caller's values each time the drawer opens, so a cancelled
   // edit does not leak into the next open.
@@ -197,28 +208,64 @@ const ArticleSettingsDrawer = ({
 
   const topicOptions = useMemo<SimpleSelectOption[]>(
     () => [
-      { value: "", label: "Select main topic", disabled: true },
-      ...allTopics
-        .filter((topic) => !topic.parent)
-        .map((topic) => ({ value: String(topic.id), label: topic.name })),
+      {
+        value: "",
+        label: topicsLoading
+          ? "Loading topics…"
+          : mainTopics.length
+            ? "Select main topic"
+            : "No topics available",
+        disabled: true,
+      },
+      ...mainTopics.map((topic) => ({
+        value: String(topic.id),
+        label: topic.name,
+      })),
     ],
-    [allTopics],
+    [mainTopics, topicsLoading],
   )
 
   const subtopicOptions = useMemo<SimpleSelectOption[]>(
     () => [
-      { value: "", label: "Select subtopic", disabled: true },
-      ...allTopics
-        .filter((topic) => topic.parent === Number(topicId))
-        .map((topic) => ({ value: String(topic.id), label: topic.name })),
+      {
+        value: "",
+        label: !topicId
+          ? "Select a topic first"
+          : subtopics.length
+            ? "Select subtopic"
+            : "No subtopics",
+        disabled: true,
+      },
+      ...subtopics.map((topic) => ({
+        value: String(topic.id),
+        label: topic.name,
+      })),
     ],
-    [allTopics, topicId],
+    [subtopics, topicId],
   )
 
-  const topicNames = useMemo(
-    () => new Map(allTopics.map((topic) => [topic.id, topic.name])),
-    [allTopics],
-  )
+  /**
+   * Names accumulate as lists load rather than being derived from the current
+   * ones, so an added chip keeps its label after the subtopic list it came
+   * from has been replaced by a different parent's children.
+   */
+  const [topicNames, setTopicNames] = useState<Map<number, string>>(new Map())
+  useEffect(() => {
+    const loaded = [...mainTopics, ...subtopics]
+    if (!loaded.length) return
+    setTopicNames((current) => {
+      const next = new Map(current)
+      let changed = false
+      for (const topic of loaded) {
+        if (next.get(topic.id) !== topic.name) {
+          next.set(topic.id, topic.name)
+          changed = true
+        }
+      }
+      // Same reference when nothing is new, so this cannot loop.
+      return changed ? next : current
+    })
+  }, [mainTopics, subtopics])
 
   // The subtopic is the more specific choice, so it wins when both are set.
   const pendingTopicId = Number(subtopicId || topicId)
