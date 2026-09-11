@@ -13,8 +13,10 @@ import type { OrganizationPage } from "@mitodl/mitxonline-api-axios/v2"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import { allowConsoleErrors } from "ol-test-utilities"
 import { ForbiddenError } from "@/common/errors"
+import { FeatureFlags } from "@/common/feature_flags"
 import { contractAdminView, organizationAnalyticsView } from "@/common/urls"
 import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
+import { SUPPRESSED_LEGEND } from "./Analytics/format"
 import AnalyticsContent from "./AnalyticsContent"
 
 jest.mock("next/image", () => ({
@@ -30,16 +32,12 @@ jest.mock("next/image", () => ({
  * measured layout, which jsdom does not do — exercising them here would assert
  * on nothing useful. What this file covers is the page's own behaviour: access,
  * availability, freshness and suppression. The numbers those charts draw are
- * also rendered as text (KPI cards, the course table, the funnel's table view),
- * so they are still asserted on below.
+ * also rendered as text (KPI cards, the course and content tables, the trend
+ * chart's table view), so they are still asserted on below.
  */
 jest.mock("@mui/x-charts/LineChart", () => ({
   __esModule: true,
   LineChart: () => <div data-testid="line-chart" />,
-}))
-jest.mock("@mui/x-charts/BarChart", () => ({
-  __esModule: true,
-  BarChart: () => <div data-testid="bar-chart" />,
 }))
 
 jest.mock("posthog-js/react", () => ({
@@ -79,14 +77,12 @@ const setAnalyticsResponses = ({
   utilization = [analyticsFactories.contractUtilization()],
   trend = [analyticsFactories.monthlyEngagementTrend()],
   courses = [analyticsFactories.enrollmentCompletionFunnel()],
-  programs = [analyticsFactories.programFunnel()],
   content = [analyticsFactories.contentEngagementDepth()],
   page = { limit: 200 },
 }: {
   utilization?: ReturnType<typeof analyticsFactories.contractUtilization>[]
   trend?: ReturnType<typeof analyticsFactories.monthlyEngagementTrend>[]
   courses?: ReturnType<typeof analyticsFactories.enrollmentCompletionFunnel>[]
-  programs?: ReturnType<typeof analyticsFactories.programFunnel>[]
   content?: ReturnType<typeof analyticsFactories.contentEngagementDepth>[]
   page?: { limit: number }
 } = {}) => {
@@ -103,12 +99,46 @@ const setAnalyticsResponses = ({
     analyticsFactories.envelope(courses, { as_of: AS_OF }),
   )
   setMockResponse.get(
-    analyticsUrls.organizations.programFunnel(ORG_UUID, page),
-    analyticsFactories.envelope(programs, { as_of: AS_OF }),
-  )
-  setMockResponse.get(
     analyticsUrls.organizations.contentEngagement(ORG_UUID, page),
     analyticsFactories.envelope(content, { as_of: AS_OF }),
+  )
+}
+
+/**
+ * The contract-scoped twin of `setAnalyticsResponses`. Mocks only the
+ * contract-nested URLs, never the org-scoped ones, so a test that renders a
+ * contract route still fails if the page falls back to org-wide numbers.
+ */
+const setContractAnalyticsResponses = (
+  contractId: string,
+  page = { limit: 200 },
+) => {
+  setMockResponse.get(
+    analyticsUrls.contracts.contractUtilization(ORG_UUID, contractId, page),
+    analyticsFactories.envelope([analyticsFactories.contractUtilization()], {
+      as_of: AS_OF,
+    }),
+  )
+  setMockResponse.get(
+    analyticsUrls.contracts.engagementTrend(ORG_UUID, contractId, page),
+    analyticsFactories.envelope(
+      [analyticsFactories.contractMonthlyEngagementTrend()],
+      { as_of: AS_OF },
+    ),
+  )
+  setMockResponse.get(
+    analyticsUrls.contracts.enrollmentFunnel(ORG_UUID, contractId, page),
+    analyticsFactories.envelope(
+      [analyticsFactories.enrollmentCompletionFunnel()],
+      { as_of: AS_OF },
+    ),
+  )
+  setMockResponse.get(
+    analyticsUrls.contracts.contentEngagement(ORG_UUID, contractId, page),
+    analyticsFactories.envelope(
+      [analyticsFactories.contractContentEngagementDepth()],
+      { as_of: AS_OF },
+    ),
   )
 }
 
@@ -171,10 +201,6 @@ describe("AnalyticsContent", () => {
       )
       setMockResponse.get(
         analyticsUrls.organizations.enrollmentFunnel(ORG_UUID, page),
-        ...forbidden,
-      )
-      setMockResponse.get(
-        analyticsUrls.organizations.programFunnel(ORG_UUID, page),
         ...forbidden,
       )
       setMockResponse.get(
@@ -243,22 +269,21 @@ describe("AnalyticsContent", () => {
       )
 
       await screen.findByRole("heading", { name: "Contract utilization" })
-      expect(
-        screen.getByRole("heading", { name: "Monthly engagement" }),
-      ).toBeInTheDocument()
-      expect(
-        screen.getByRole("heading", { name: "Course performance" }),
-      ).toBeInTheDocument()
-      expect(
-        screen.getByRole("heading", { name: "Program funnel" }),
-      ).toBeInTheDocument()
-      expect(
-        screen.getByRole("heading", { name: "Content engagement" }),
-      ).toBeInTheDocument()
+
+      // Section order is part of the contract here, not just presence.
+      const sectionHeadings = screen
+        .getAllByRole("heading", { level: 2 })
+        .map((heading) => heading.textContent)
+      expect(sectionHeadings).toEqual([
+        "Contract utilization",
+        "Course performance",
+        "Content engagement",
+        "Monthly engagement",
+      ])
 
       // One "Data as of" per section — freshness is per materialized view.
       const asOfLabels = await screen.findAllByText(/Data as of/)
-      expect(asOfLabels).toHaveLength(5)
+      expect(asOfLabels).toHaveLength(4)
     })
 
     test("renders the KPI figures from contract utilization", async () => {
@@ -315,37 +340,9 @@ describe("AnalyticsContent", () => {
       expect(
         screen.getAllByLabelText(/Withheld: too few learners/).length,
       ).toBeGreaterThan(0)
-      expect(
-        screen.getAllByText(/Withheld: too few learners/).length,
-      ).toBeGreaterThan(0)
-    })
-
-    test("renders the program funnel's table view alongside the chart", async () => {
-      const org = orgWithUuid()
-      setManagerOrgs([org])
-      setAnalyticsResponses({
-        programs: [
-          analyticsFactories.programFunnel({
-            program_title: "Widget Engineering",
-            total_courses: 6,
-            enrolled_in_contract_courses: 50,
-            enrolled_via_program: 30,
-            program_course_completers: 12,
-          }),
-        ],
-      })
-
-      renderWithProviders(
-        <AnalyticsContent orgSlug={org.slug.replace(/^org-/, "")} />,
-      )
-
-      await screen.findByText("Widget Engineering")
-      // Scoped to this table: the monthly engagement section renders its own
-      // table of counts, which can legitimately carry the same numbers.
-      const table = screen.getByRole("table", { name: "Program funnel" })
-      expect(within(table).getByText("50")).toBeInTheDocument()
-      expect(within(table).getByText("30")).toBeInTheDocument()
-      expect(within(table).getByText("12")).toBeInTheDocument()
+      // Once for the page, not once per section: three sections printing the
+      // same notice put two or three identical copies on one screen.
+      expect(screen.getAllByText(SUPPRESSED_LEGEND)).toHaveLength(1)
     })
 
     /**
@@ -401,6 +398,33 @@ describe("AnalyticsContent", () => {
         within(table).getByText("14 learners, 60 interactions"),
       ).toBeInTheDocument()
       expect(within(table).getByText("16")).toBeInTheDocument()
+    })
+
+    /**
+     * The content engagement table is wider than the dashboard's content
+     * column at every desktop width, so its last columns start off-screen and
+     * nothing inside it is focusable. Without a tab stop on the scroll
+     * container there is no keyboard route to them at all.
+     */
+    test("gives the horizontally scrolling table a keyboard route to its hidden columns", async () => {
+      const org = orgWithUuid()
+      setManagerOrgs([org])
+      setAnalyticsResponses()
+
+      renderWithProviders(
+        <AnalyticsContent orgSlug={org.slug.replace(/^org-/, "")} />,
+      )
+
+      const region = await screen.findByRole("region", {
+        name: "Content engagement, scrollable table",
+      })
+      expect(region).toHaveAttribute("tabindex", "0")
+      expect(
+        within(region).getByRole("table", { name: "Content engagement" }),
+      ).toBeInTheDocument()
+
+      region.focus()
+      expect(region).toHaveFocus()
     })
 
     /**
@@ -476,10 +500,6 @@ describe("AnalyticsContent", () => {
         analyticsFactories.envelope([], { as_of: null }),
       )
       setMockResponse.get(
-        analyticsUrls.organizations.programFunnel(ORG_UUID, page),
-        analyticsFactories.envelope([], { as_of: null }),
-      )
-      setMockResponse.get(
         analyticsUrls.organizations.contentEngagement(ORG_UUID, page),
         analyticsFactories.envelope([], { as_of: null }),
       )
@@ -490,7 +510,7 @@ describe("AnalyticsContent", () => {
 
       expect(
         (await screen.findAllByText("Data not yet refreshed")).length,
-      ).toBe(5)
+      ).toBe(4)
       expect(screen.queryByText(/Data as of/)).not.toBeInTheDocument()
     })
 
@@ -499,7 +519,6 @@ describe("AnalyticsContent", () => {
       setManagerOrgs([org])
       setAnalyticsResponses({
         courses: [],
-        programs: [],
         trend: [],
         content: [],
       })
@@ -509,9 +528,6 @@ describe("AnalyticsContent", () => {
       )
 
       await screen.findByText("No course enrollments recorded yet.")
-      expect(
-        screen.getByText("No program enrollments recorded yet."),
-      ).toBeInTheDocument()
       expect(
         screen.getByText("No content engagement recorded yet."),
       ).toBeInTheDocument()
@@ -550,7 +566,7 @@ describe("AnalyticsContent", () => {
         screen.queryByText("Data not yet refreshed"),
       ).not.toBeInTheDocument()
       // The sections that did load keep their own freshness stamp.
-      expect(screen.getAllByText(/Data as of/)).toHaveLength(4)
+      expect(screen.getAllByText(/Data as of/)).toHaveLength(3)
       expect(
         screen.getByText(/Some analytics could not be loaded/),
       ).toBeInTheDocument()
@@ -765,39 +781,7 @@ describe("AnalyticsContent, contract-scoped", () => {
     // Only the contract-nested URLs are mocked. An org-scoped request would
     // find no mock and fail the render, which is the assertion: this route must
     // not silently fall back to org-wide numbers for a contract-scoped page.
-    setMockResponse.get(
-      analyticsUrls.contracts.contractUtilization(ORG_UUID, contractId, page),
-      analyticsFactories.envelope([analyticsFactories.contractUtilization()], {
-        as_of: AS_OF,
-      }),
-    )
-    setMockResponse.get(
-      analyticsUrls.contracts.engagementTrend(ORG_UUID, contractId, page),
-      analyticsFactories.envelope(
-        [analyticsFactories.contractMonthlyEngagementTrend()],
-        { as_of: AS_OF },
-      ),
-    )
-    setMockResponse.get(
-      analyticsUrls.contracts.enrollmentFunnel(ORG_UUID, contractId, page),
-      analyticsFactories.envelope(
-        [analyticsFactories.enrollmentCompletionFunnel()],
-        { as_of: AS_OF },
-      ),
-    )
-    setMockResponse.get(
-      analyticsUrls.contracts.programFunnel(ORG_UUID, contractId, page),
-      analyticsFactories.envelope([analyticsFactories.programFunnel()], {
-        as_of: AS_OF,
-      }),
-    )
-    setMockResponse.get(
-      analyticsUrls.contracts.contentEngagement(ORG_UUID, contractId, page),
-      analyticsFactories.envelope(
-        [analyticsFactories.contractContentEngagementDepth()],
-        { as_of: AS_OF },
-      ),
-    )
+    setContractAnalyticsResponses(contractId)
 
     renderWithProviders(
       <AnalyticsContent
@@ -874,41 +858,7 @@ describe("AnalyticsContent, contract-scoped", () => {
     const org = orgWithUuid({ contracts: [contract] })
     setManagerOrgs([org])
 
-    const contractId = String(contract.id)
-    const page = { limit: 200 }
-    setMockResponse.get(
-      analyticsUrls.contracts.contractUtilization(ORG_UUID, contractId, page),
-      analyticsFactories.envelope([analyticsFactories.contractUtilization()], {
-        as_of: AS_OF,
-      }),
-    )
-    setMockResponse.get(
-      analyticsUrls.contracts.engagementTrend(ORG_UUID, contractId, page),
-      analyticsFactories.envelope(
-        [analyticsFactories.contractMonthlyEngagementTrend()],
-        { as_of: AS_OF },
-      ),
-    )
-    setMockResponse.get(
-      analyticsUrls.contracts.enrollmentFunnel(ORG_UUID, contractId, page),
-      analyticsFactories.envelope(
-        [analyticsFactories.enrollmentCompletionFunnel()],
-        { as_of: AS_OF },
-      ),
-    )
-    setMockResponse.get(
-      analyticsUrls.contracts.programFunnel(ORG_UUID, contractId, page),
-      analyticsFactories.envelope([analyticsFactories.programFunnel()], {
-        as_of: AS_OF,
-      }),
-    )
-    setMockResponse.get(
-      analyticsUrls.contracts.contentEngagement(ORG_UUID, contractId, page),
-      analyticsFactories.envelope(
-        [analyticsFactories.contractContentEngagementDepth()],
-        { as_of: AS_OF },
-      ),
-    )
+    setContractAnalyticsResponses(String(contract.id))
 
     renderWithProviders(
       <AnalyticsContent
@@ -928,41 +878,7 @@ describe("AnalyticsContent, contract-scoped", () => {
     const org = orgWithUuid({ contracts: [first, second] })
     setManagerOrgs([org])
 
-    const contractId = String(second.id)
-    const page = { limit: 200 }
-    setMockResponse.get(
-      analyticsUrls.contracts.contractUtilization(ORG_UUID, contractId, page),
-      analyticsFactories.envelope([analyticsFactories.contractUtilization()], {
-        as_of: AS_OF,
-      }),
-    )
-    setMockResponse.get(
-      analyticsUrls.contracts.engagementTrend(ORG_UUID, contractId, page),
-      analyticsFactories.envelope(
-        [analyticsFactories.contractMonthlyEngagementTrend()],
-        { as_of: AS_OF },
-      ),
-    )
-    setMockResponse.get(
-      analyticsUrls.contracts.enrollmentFunnel(ORG_UUID, contractId, page),
-      analyticsFactories.envelope(
-        [analyticsFactories.enrollmentCompletionFunnel()],
-        { as_of: AS_OF },
-      ),
-    )
-    setMockResponse.get(
-      analyticsUrls.contracts.programFunnel(ORG_UUID, contractId, page),
-      analyticsFactories.envelope([analyticsFactories.programFunnel()], {
-        as_of: AS_OF,
-      }),
-    )
-    setMockResponse.get(
-      analyticsUrls.contracts.contentEngagement(ORG_UUID, contractId, page),
-      analyticsFactories.envelope(
-        [analyticsFactories.contractContentEngagementDepth()],
-        { as_of: AS_OF },
-      ),
-    )
+    setContractAnalyticsResponses(String(second.id))
 
     const orgSlug = org.slug.replace(/^org-/, "")
     renderWithProviders(
@@ -976,5 +892,29 @@ describe("AnalyticsContent, contract-scoped", () => {
       "href",
       contractAdminView(orgSlug, second.slug),
     )
+  })
+
+  test("hides the Manage seats button when the manager-dashboard flag is off", async () => {
+    // The button links to ContractAdminPage, which throws ForbiddenError
+    // without this flag — surfacing the button here without it would send a
+    // manager to a dead end.
+    mockedUseFeatureFlagEnabled.mockImplementation(
+      (flag) => flag === FeatureFlags.B2BAnalyticsDashboard,
+    )
+    const contract = factories.contracts.contract()
+    const org = orgWithUuid({ contracts: [contract] })
+    setManagerOrgs([org])
+
+    setContractAnalyticsResponses(String(contract.id))
+
+    const orgSlug = org.slug.replace(/^org-/, "")
+    renderWithProviders(
+      <AnalyticsContent orgSlug={orgSlug} contractSlug={contract.slug} />,
+    )
+
+    await screen.findByText(`Analytics · ${contract.name}`)
+    expect(
+      screen.queryByRole("link", { name: "Manage seats" }),
+    ).not.toBeInTheDocument()
   })
 })

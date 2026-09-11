@@ -35,8 +35,6 @@ const organizations = {
     orgResource(organizationId, "enrollment-funnel", params),
   engagementTrend: (organizationId: string, params?: AnalyticsPageParams) =>
     orgResource(organizationId, "engagement-trend", params),
-  programFunnel: (organizationId: string, params?: AnalyticsPageParams) =>
-    orgResource(organizationId, "program-funnel", params),
   contentEngagement: (organizationId: string, params?: AnalyticsPageParams) =>
     orgResource(organizationId, "content-engagement", params),
 }
@@ -64,11 +62,6 @@ const contracts = {
     contractId: string,
     params?: AnalyticsPageParams,
   ) => contractResource(organizationId, contractId, "engagement-trend", params),
-  programFunnel: (
-    organizationId: string,
-    contractId: string,
-    params?: AnalyticsPageParams,
-  ) => contractResource(organizationId, contractId, "program-funnel", params),
   contentEngagement: (
     organizationId: string,
     contractId: string,

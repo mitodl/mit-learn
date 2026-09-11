@@ -67,20 +67,6 @@ const analyticsOrganizationQueries = {
           .then((res) => res.data),
     }),
 
-  programFunnel: (orgId: string, page?: AnalyticsPageParams) =>
-    queryOptions({
-      queryKey: analyticsOrganizationKeys.resource(
-        orgId,
-        "program-funnel",
-        page,
-      ),
-      staleTime: ANALYTICS_STALE_TIME,
-      queryFn: async ({ signal }) =>
-        analyticsOrganizationsApi
-          .programFunnel(orgId, page, signal)
-          .then((res) => res.data),
-    }),
-
   contentEngagement: (orgId: string, page?: AnalyticsPageParams) =>
     queryOptions({
       queryKey: analyticsOrganizationKeys.resource(
@@ -178,25 +164,6 @@ const analyticsContractQueries = {
       queryFn: async ({ signal }) =>
         analyticsContractsApi
           .engagementTrend(orgId, contractId, page, signal)
-          .then((res) => res.data),
-    }),
-
-  programFunnel: (
-    orgId: string,
-    contractId: string,
-    page?: AnalyticsPageParams,
-  ) =>
-    queryOptions({
-      queryKey: analyticsContractKeys.resource(
-        orgId,
-        contractId,
-        "program-funnel",
-        page,
-      ),
-      staleTime: ANALYTICS_STALE_TIME,
-      queryFn: async ({ signal }) =>
-        analyticsContractsApi
-          .programFunnel(orgId, contractId, page, signal)
           .then((res) => res.data),
     }),
 

@@ -35,6 +35,7 @@ import {
 } from "@/common/urls"
 import dynamic from "next/dynamic"
 import { MitxOnlineUser, mitxUserQueries } from "api/mitxonline-hooks/user"
+import { GRID_GAP, SIDEBAR_WIDTH } from "./layoutMetrics"
 import { useUserMe } from "api/hooks/user"
 import { useQuery } from "@tanstack/react-query"
 
@@ -84,8 +85,8 @@ const PageContainer = styled(Container)({
 const DashboardGrid = styled.div(({ theme }) => ({
   display: "grid",
   width: "100%",
-  gridTemplateColumns: "300px minmax(0, 1fr)",
-  gap: "48px",
+  gridTemplateColumns: `${SIDEBAR_WIDTH}px minmax(0, 1fr)`,
+  gap: `${GRID_GAP}px`,
   [theme.breakpoints.down("md")]: {
     gridTemplateColumns: "minmax(0, 1fr)",
     gap: "24px",
@@ -105,7 +106,7 @@ const ProfileSidebar = styled(Card)({
   display: "flex",
   flexDirection: "column",
   alignItems: "flex-start",
-  width: "300px",
+  width: `${SIDEBAR_WIDTH}px`,
   boxShadow: "-4px 4px 0px 0px #A31F34",
   transform: "translateX(4px)", // keep solid shadow from bleeding into page margins
 })
@@ -177,7 +178,7 @@ const TabContainer = styled.div(({ theme }) => ({
   textAlign: "left",
   padding: "16px 20px",
   gap: "8px",
-  width: "300px",
+  width: `${SIDEBAR_WIDTH}px`,
   borderBottom: `1px solid ${theme.custom.colors.lightGray1}`,
   "&:hover": {
     ".user-menu-link-icon, .user-menu-link-text": {

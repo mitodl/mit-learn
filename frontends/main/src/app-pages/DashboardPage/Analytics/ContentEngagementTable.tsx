@@ -2,25 +2,26 @@
 
 import React from "react"
 import { Skeleton, styled } from "ol-components"
+import type { Theme } from "ol-components"
 import type { ContentEngagementDepth } from "api/analytics-hooks/organizations"
 import {
+  CellText,
   EmptyTableMessage,
   MobileLabel,
   TableCard,
   TableCell,
-  TableFooter,
-  TableFootnote,
   TableHeaderCell,
   TableHeaderRow,
   TableRow,
+  tableCardInnerWidth,
 } from "@/components/B2BTable/B2BTable"
 import {
   formatAverage,
   formatCount,
   formatPercent,
-  SUPPRESSED_EXPLANATION,
   SuppressibleValue,
 } from "./format"
+import { dashboardContentWidth } from "../layoutMetrics"
 import SectionError from "./SectionError"
 
 /**
@@ -73,30 +74,80 @@ import SectionError from "./SectionError"
  *    overstate the figure on any run where engagement is weak.
  */
 
-const CourseTitle = styled.span(({ theme }) => ({
+/**
+ * Every line of text in this table wraps (see `CellText`). Truncating is not an
+ * option here: the columns take fixed shares of `TableGrid`'s floor, which
+ * leaves an activity column under 100px, while a detail line like
+ * "96 learners, 9,134 attempted" needs closer to 200px — so an ellipsis would
+ * cut the second figure of every paired cell on every row, at every width.
+ */
+const CourseTitle = styled(CellText)(({ theme }) => ({
   ...theme.typography.subtitle2,
   color: theme.custom.colors.darkGray2,
-  display: "block",
 }))
 
-const CourseId = styled.span(({ theme }) => ({
+/** `overflow-wrap` because a readable id has no spaces to break on. */
+const CourseId = styled(CellText)(({ theme }) => ({
   ...theme.typography.body3,
   color: theme.custom.colors.silverGrayDark,
-  display: "block",
+  overflowWrap: "anywhere",
 }))
 
 /** The secondary figure in an activity cell: the raw total under its rate. */
-const Detail = styled.span(({ theme }) => ({
+const Detail = styled(CellText)(({ theme }) => ({
   ...theme.typography.body3,
   color: theme.custom.colors.silverGrayDark,
-  display: "block",
 }))
 
 /**
- * Every cell here carries two lines of value, which the shared cell's mobile
+ * The scroll container for the grid below, and the reason it carries a tab stop
+ * and a name: a row with nothing suppressed contains no focusable element at
+ * all, so without them a keyboard-only user would have no route to a column the
+ * grid's floor pushes out of view. (A suppressed figure is focusable — see
+ * `SuppressedMark` — but only rows that happen to have one, and tabbing to a
+ * withheld value is not a way to read the ones beside it.)
+ *
+ * Focusable unconditionally rather than only when it overflows. Whether it
+ * overflows is a question about layout, which means measurement, and a tab stop
+ * that appears and disappears as the window resizes is worse than one extra
+ * stop at the widths where nothing is hidden.
+ */
+const TableScroll = styled.div(({ theme }) => ({
+  overflowX: "auto",
+  [theme.breakpoints.down("md")]: {
+    overflowX: "visible",
+  },
+}))
+
+/**
+ * The floor below which seven columns scroll instead of squeezing, derived
+ * rather than chosen: it is exactly the width `TableCard` leaves a child when
+ * the dashboard's content column is at its own ceiling.
+ *
+ * That derivation is the whole point. The content column tops out a little
+ * under 900px however wide the screen is — 1920px included — and the card
+ * spends 50 of those on its padding and border, so a floor picked for the
+ * columns' comfort would buy nothing but permanent horizontal scrolling. Taking
+ * the ceiling itself means the table scrolls only while the window is narrower
+ * than `lg`, and a maximised desktop reads every column in full. The cost is
+ * that the two "per engaged learner" headers wrap to three lines and rows grow
+ * by ~18px.
+ *
+ * Below `md` the rows stack (see `StackedCell`), so the floor lifts: a phone
+ * gets label/value pairs, not an 834px grid three screens wide.
+ */
+const TableGrid = styled.div(({ theme }) => ({
+  minWidth: `${tableCardInnerWidth(dashboardContentWidth(theme))}px`,
+  [theme.breakpoints.down("md")]: {
+    minWidth: "0",
+  },
+}))
+
+/**
+ * Every cell here carries two lines of value, which the shared cell's stacked
  * layout is not built for: it sets the label beside the value, and a label as
  * long as "Problems per engaged learner" leaves so little room that
- * "96 learners, 9,134 attempted" breaks across four lines. Below `md` the
+ * "96 learners, 9,134 attempted" breaks across four lines. Once stacked, the
  * label therefore sits above its value rather than beside it, giving the pair
  * the full width of the row. Applied to every labelled cell in the table, not
  * only the two-line ones, so the column of labels stays straight.
@@ -108,6 +159,41 @@ const StackedCell = styled(TableCell)(({ theme }) => ({
     gap: "2px",
   },
 }))
+
+/**
+ * The course column stays put while the rest of the row scrolls, which it does
+ * whenever the window leaves the grid less than its floor. Without this,
+ * scrolling the right-hand columns into view costs the reader the only thing
+ * that said which course run the numbers belong to.
+ *
+ * Opaque on purpose, header and body alike: a sticky cell paints over the
+ * columns passing behind it, and a transparent one would let them show through.
+ *
+ * `align-self` is what makes that mask whole. Both rows centre their cells, so
+ * a sticky cell is only as tall as its own text — one line of "Course" against
+ * a three-line header leaves a gap above and below through which the scrolled
+ * header's first and last lines reappear, its middle line alone hidden. The
+ * cell therefore stretches to the row and centres its own text inside.
+ */
+const stickyColumn = (theme: Theme) => ({
+  [theme.breakpoints.up("md")]: {
+    position: "sticky" as const,
+    left: 0,
+    zIndex: 1,
+    alignSelf: "stretch" as const,
+    display: "flex",
+    alignItems: "center",
+    backgroundColor: theme.custom.colors.white,
+    borderRight: `1px solid ${theme.custom.colors.lightGray2}`,
+    paddingRight: "8px",
+  },
+})
+
+const CourseHeaderCell = styled(TableHeaderCell)(({ theme }) =>
+  stickyColumn(theme),
+)
+
+const CourseCell = styled(TableCell)(({ theme }) => stickyColumn(theme))
 
 const COLUMN_FLEX = {
   course: 2.6,
@@ -157,161 +243,147 @@ const ContentEngagementTable: React.FC<{
     )
   }
 
-  const hasSuppressed = rows.some((row) =>
-    [
-      row.engaged_learners,
-      row.engagement_rate_pct,
-      row.total_videos_watched,
-      row.video_watchers,
-      row.avg_videos_per_engaged_learner,
-      row.total_problems_attempted,
-      row.problem_attempters,
-      row.avg_problems_per_engaged_learner,
-      row.total_chatbot_interactions,
-      row.chatbot_users,
-      row.chatbot_adoption_pct,
-      row.certificates_earned,
-    ].some((value) => value === null),
-  )
-
   return (
     <TableCard>
-      <div role="table" aria-label="Content engagement">
-        <div role="rowgroup">
-          <TableHeaderRow role="row">
-            <TableHeaderCell role="columnheader" $flex={COLUMN_FLEX.course}>
-              Course
-            </TableHeaderCell>
-            <TableHeaderCell
-              role="columnheader"
-              $flex={COLUMN_FLEX.enrolled}
-              $numeric
-            >
-              Enrolled
-            </TableHeaderCell>
-            <TableHeaderCell
-              role="columnheader"
-              $flex={COLUMN_FLEX.engaged}
-              $numeric
-            >
-              Engaged
-            </TableHeaderCell>
-            <TableHeaderCell
-              role="columnheader"
-              $flex={COLUMN_FLEX.videos}
-              $numeric
-            >
-              Videos per engaged learner
-            </TableHeaderCell>
-            <TableHeaderCell
-              role="columnheader"
-              $flex={COLUMN_FLEX.problems}
-              $numeric
-            >
-              Problems per engaged learner
-            </TableHeaderCell>
-            <TableHeaderCell
-              role="columnheader"
-              $flex={COLUMN_FLEX.chatbot}
-              $numeric
-            >
-              Chatbot adoption
-            </TableHeaderCell>
-            <TableHeaderCell
-              role="columnheader"
-              $flex={COLUMN_FLEX.certificates}
-              $numeric
-            >
-              Certificates
-            </TableHeaderCell>
-          </TableHeaderRow>
-        </div>
-        <div role="rowgroup">
-          {rows.map((row) => (
-            <TableRow role="row" key={row.courserun_readable_id}>
-              <TableCell role="cell" $flex={COLUMN_FLEX.course} $primary>
-                <span>
-                  <CourseTitle>{row.courserun_title}</CourseTitle>
-                  <CourseId>{row.courserun_readable_id}</CourseId>
-                </span>
-              </TableCell>
-              <StackedCell role="cell" $flex={COLUMN_FLEX.enrolled} $numeric>
-                <MobileLabel>Enrolled</MobileLabel>
-                {formatCount(row.total_enrolled_learners)}
-              </StackedCell>
-              <StackedCell role="cell" $flex={COLUMN_FLEX.engaged} $numeric>
-                <MobileLabel>Engaged</MobileLabel>
-                <span>
-                  <SuppressibleValue value={row.engaged_learners} />
-                  <Detail>
-                    <SuppressibleValue
-                      value={row.engagement_rate_pct}
-                      format={formatPercent}
-                    />{" "}
-                    of enrolled
-                  </Detail>
-                </span>
-              </StackedCell>
-              <StackedCell role="cell" $flex={COLUMN_FLEX.videos} $numeric>
-                <MobileLabel>Videos per engaged learner</MobileLabel>
-                <span>
-                  <SuppressibleValue
-                    value={row.avg_videos_per_engaged_learner}
-                    format={formatAverage}
-                  />
-                  <Detail>
-                    <SuppressibleValue value={row.video_watchers} /> learners,{" "}
-                    <SuppressibleValue value={row.total_videos_watched} />{" "}
-                    watched
-                  </Detail>
-                </span>
-              </StackedCell>
-              <StackedCell role="cell" $flex={COLUMN_FLEX.problems} $numeric>
-                <MobileLabel>Problems per engaged learner</MobileLabel>
-                <span>
-                  <SuppressibleValue
-                    value={row.avg_problems_per_engaged_learner}
-                    format={formatAverage}
-                  />
-                  <Detail>
-                    <SuppressibleValue value={row.problem_attempters} />{" "}
-                    learners,{" "}
-                    <SuppressibleValue value={row.total_problems_attempted} />{" "}
-                    attempted
-                  </Detail>
-                </span>
-              </StackedCell>
-              <StackedCell role="cell" $flex={COLUMN_FLEX.chatbot} $numeric>
-                <MobileLabel>Chatbot adoption</MobileLabel>
-                <span>
-                  <SuppressibleValue
-                    value={row.chatbot_adoption_pct}
-                    format={formatPercent}
-                  />
-                  <Detail>
-                    <SuppressibleValue value={row.chatbot_users} /> learners,{" "}
-                    <SuppressibleValue value={row.total_chatbot_interactions} />{" "}
-                    interactions
-                  </Detail>
-                </span>
-              </StackedCell>
-              <StackedCell
-                role="cell"
+      <TableScroll
+        role="region"
+        aria-label="Content engagement, scrollable table"
+        tabIndex={0}
+      >
+        <TableGrid role="table" aria-label="Content engagement">
+          <div role="rowgroup">
+            <TableHeaderRow role="row">
+              <CourseHeaderCell role="columnheader" $flex={COLUMN_FLEX.course}>
+                Course
+              </CourseHeaderCell>
+              <TableHeaderCell
+                role="columnheader"
+                $flex={COLUMN_FLEX.enrolled}
+                $numeric
+              >
+                Enrolled
+              </TableHeaderCell>
+              <TableHeaderCell
+                role="columnheader"
+                $flex={COLUMN_FLEX.engaged}
+                $numeric
+              >
+                Engaged
+              </TableHeaderCell>
+              <TableHeaderCell
+                role="columnheader"
+                $flex={COLUMN_FLEX.videos}
+                $numeric
+              >
+                Videos per engaged learner
+              </TableHeaderCell>
+              <TableHeaderCell
+                role="columnheader"
+                $flex={COLUMN_FLEX.problems}
+                $numeric
+              >
+                Problems per engaged learner
+              </TableHeaderCell>
+              <TableHeaderCell
+                role="columnheader"
+                $flex={COLUMN_FLEX.chatbot}
+                $numeric
+              >
+                Chatbot adoption
+              </TableHeaderCell>
+              <TableHeaderCell
+                role="columnheader"
                 $flex={COLUMN_FLEX.certificates}
                 $numeric
               >
-                <MobileLabel>Certificates</MobileLabel>
-                <SuppressibleValue value={row.certificates_earned} />
-              </StackedCell>
-            </TableRow>
-          ))}
-        </div>
-      </div>
-      {hasSuppressed ? (
-        <TableFooter>
-          <TableFootnote>{SUPPRESSED_EXPLANATION}</TableFootnote>
-        </TableFooter>
-      ) : null}
+                Certificates
+              </TableHeaderCell>
+            </TableHeaderRow>
+          </div>
+          <div role="rowgroup">
+            {rows.map((row) => (
+              <TableRow role="row" key={row.courserun_readable_id}>
+                <CourseCell role="cell" $flex={COLUMN_FLEX.course} $primary>
+                  <span>
+                    <CourseTitle>{row.courserun_title}</CourseTitle>
+                    <CourseId>{row.courserun_readable_id}</CourseId>
+                  </span>
+                </CourseCell>
+                <StackedCell role="cell" $flex={COLUMN_FLEX.enrolled} $numeric>
+                  <MobileLabel>Enrolled</MobileLabel>
+                  {formatCount(row.total_enrolled_learners)}
+                </StackedCell>
+                <StackedCell role="cell" $flex={COLUMN_FLEX.engaged} $numeric>
+                  <MobileLabel>Engaged</MobileLabel>
+                  <span>
+                    <SuppressibleValue value={row.engaged_learners} />
+                    <Detail>
+                      <SuppressibleValue
+                        value={row.engagement_rate_pct}
+                        format={formatPercent}
+                      />{" "}
+                      of enrolled
+                    </Detail>
+                  </span>
+                </StackedCell>
+                <StackedCell role="cell" $flex={COLUMN_FLEX.videos} $numeric>
+                  <MobileLabel>Videos per engaged learner</MobileLabel>
+                  <span>
+                    <SuppressibleValue
+                      value={row.avg_videos_per_engaged_learner}
+                      format={formatAverage}
+                    />
+                    <Detail>
+                      <SuppressibleValue value={row.video_watchers} /> learners,{" "}
+                      <SuppressibleValue value={row.total_videos_watched} />{" "}
+                      watched
+                    </Detail>
+                  </span>
+                </StackedCell>
+                <StackedCell role="cell" $flex={COLUMN_FLEX.problems} $numeric>
+                  <MobileLabel>Problems per engaged learner</MobileLabel>
+                  <span>
+                    <SuppressibleValue
+                      value={row.avg_problems_per_engaged_learner}
+                      format={formatAverage}
+                    />
+                    <Detail>
+                      <SuppressibleValue value={row.problem_attempters} />{" "}
+                      learners,{" "}
+                      <SuppressibleValue value={row.total_problems_attempted} />{" "}
+                      attempted
+                    </Detail>
+                  </span>
+                </StackedCell>
+                <StackedCell role="cell" $flex={COLUMN_FLEX.chatbot} $numeric>
+                  <MobileLabel>Chatbot adoption</MobileLabel>
+                  <span>
+                    <SuppressibleValue
+                      value={row.chatbot_adoption_pct}
+                      format={formatPercent}
+                    />
+                    <Detail>
+                      <SuppressibleValue value={row.chatbot_users} /> learners,{" "}
+                      <SuppressibleValue
+                        value={row.total_chatbot_interactions}
+                      />{" "}
+                      interactions
+                    </Detail>
+                  </span>
+                </StackedCell>
+                <StackedCell
+                  role="cell"
+                  $flex={COLUMN_FLEX.certificates}
+                  $numeric
+                >
+                  <MobileLabel>Certificates</MobileLabel>
+                  <SuppressibleValue value={row.certificates_earned} />
+                </StackedCell>
+              </TableRow>
+            ))}
+          </div>
+        </TableGrid>
+      </TableScroll>
     </TableCard>
   )
 }
