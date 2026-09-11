@@ -57,6 +57,29 @@ class ContentFileAdmin(admin.ModelAdmin):
     model = models.ContentFile
 
 
+class TutorProblemFileAdmin(admin.ModelAdmin):
+    """TutorProblemFile Admin"""
+
+    model = models.TutorProblemFile
+    list_display = (
+        "problem_title",
+        "file_name",
+        "type",
+        "file_extension",
+        "run",
+        "updated_on",
+    )
+    list_select_related = ("run",)
+    list_filter = ("type", "file_extension")
+    search_fields = ("problem_title", "file_name", "source_path", "run__run_id")
+    autocomplete_fields = ("run",)
+    show_full_result_count = False
+
+    def get_queryset(self, request):
+        # content can run to megabytes a row and the list page never shows it
+        return super().get_queryset(request).defer("content")
+
+
 class LearningResourceOfferorAdmin(admin.ModelAdmin):
     """Offeror Admin"""
 
@@ -327,6 +350,7 @@ admin.site.register(models.LearningResourceContentTag, LearningResourceContentTa
 admin.site.register(models.UserList, UserListAdmin)
 admin.site.register(models.VideoChannel, VideoChannelAdmin)
 admin.site.register(models.ContentFile, ContentFileAdmin)
+admin.site.register(models.TutorProblemFile, TutorProblemFileAdmin)
 admin.site.register(
     models.ContentSummarizerConfiguration, ContentSummarizerConfigurationAdmin
 )
