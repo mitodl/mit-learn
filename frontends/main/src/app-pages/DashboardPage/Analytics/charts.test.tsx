@@ -4,8 +4,7 @@ import { ThemeProvider, useTheme } from "ol-components"
 import type { Theme } from "ol-components"
 import { factories } from "api/analytics-test-utils"
 import EngagementTrendChart from "./EngagementTrendChart"
-import ProgramFunnelChart from "./ProgramFunnelChart"
-import { CATEGORICAL, chartInk, FUNNEL_STAGES } from "./chartPalette"
+import { CATEGORICAL, chartInk } from "./chartPalette"
 
 /**
  * Captures the live theme so the ink assertions below compare against the
@@ -79,16 +78,6 @@ describe.each([
       />
     ),
     "Monthly engagement",
-  ],
-  [
-    "ProgramFunnelChart",
-    () => (
-      <ProgramFunnelChart
-        rows={[factories.programFunnel()]}
-        isLoading={false}
-      />
-    ),
-    "Program funnel",
   ],
 ])("%s accessibility", (_name, renderChart, tableLabel) => {
   test("hides the chart from assistive tech but keeps its table", () => {
@@ -209,7 +198,8 @@ describe("EngagementTrendChart", () => {
 
   /**
    * A gap in a line reads as "no data" — only the table can say a month was
-   * withheld and why.
+   * withheld. What "withheld" means comes from the marker's own tooltip and
+   * label, plus the page-level legend in `AnalyticsContent`.
    */
   test("explains suppressed months in the table instead of leaving a bare gap", () => {
     renderWithTheme(
@@ -227,7 +217,6 @@ describe("EngagementTrendChart", () => {
     expect(
       screen.getAllByLabelText(/Withheld: too few learners/).length,
     ).toBeGreaterThan(0)
-    expect(screen.getByText(/Withheld: too few learners/)).toBeInTheDocument()
   })
 
   test("says the data could not be loaded rather than showing an empty state", () => {
@@ -243,84 +232,5 @@ describe("EngagementTrendChart", () => {
     expect(
       screen.queryByText("No monthly activity recorded yet."),
     ).not.toBeInTheDocument()
-  })
-})
-
-describe("ProgramFunnelChart", () => {
-  const programs = [
-    factories.programFunnel({
-      program_title: "Widget Engineering",
-      enrolled_in_contract_courses: 50,
-      enrolled_via_program: 30,
-      program_course_completers: 12,
-    }),
-  ]
-
-  /**
-   * Asserted via the legend swatches rather than the bars themselves: bar
-   * geometry is derived from measured width, and jsdom reports zero, so no
-   * `.MuiBarElement-root` is ever emitted here. The legend marks carry the same
-   * per-series color, which is what this is actually checking.
-   */
-  test("assigns the ordinal ramp to the funnel stages in order", () => {
-    const { container } = renderWithTheme(
-      <ProgramFunnelChart rows={programs} isLoading={false} />,
-    )
-
-    // See the note on the line-chart palette test: paint attributes are not
-    // reachable through a Testing Library query.
-    // eslint-disable-next-line testing-library/no-container
-    const swatches = container.querySelectorAll(".MuiChartsLabelMark-fill")
-    expect(swatches).toHaveLength(FUNNEL_STAGES.length)
-    expect(
-      Array.from(swatches).map((swatch) => swatch.getAttribute("fill")),
-    ).toEqual([...FUNNEL_STAGES])
-  })
-
-  test("labels every funnel stage so identity is never carried by color alone", () => {
-    renderWithTheme(<ProgramFunnelChart rows={programs} isLoading={false} />)
-
-    expect(
-      screen.getByText("Enrolled in contract courses", {
-        selector: ".MuiChartsLabel-root",
-      }),
-    ).toBeInTheDocument()
-    expect(
-      screen.getByText("Enrolled via program", {
-        selector: ".MuiChartsLabel-root",
-      }),
-    ).toBeInTheDocument()
-    expect(
-      screen.getByText("Completed program courses", {
-        selector: ".MuiChartsLabel-root",
-      }),
-    ).toBeInTheDocument()
-  })
-
-  test("pairs the chart with a table of the same numbers", () => {
-    renderWithTheme(<ProgramFunnelChart rows={programs} isLoading={false} />)
-
-    const table = screen.getByRole("table", { name: "Program funnel" })
-    expect(table).toBeInTheDocument()
-    expect(screen.getByText("50")).toBeInTheDocument()
-    expect(screen.getByText("30")).toBeInTheDocument()
-    expect(screen.getByText("12")).toBeInTheDocument()
-  })
-
-  test("explains suppressed stages in the table instead of omitting them silently", () => {
-    renderWithTheme(
-      <ProgramFunnelChart
-        rows={[
-          factories.programFunnel({
-            program_course_completers: null,
-          }),
-        ]}
-        isLoading={false}
-      />,
-    )
-
-    expect(
-      screen.getAllByLabelText(/Withheld: too few learners/).length,
-    ).toBeGreaterThan(0)
   })
 })

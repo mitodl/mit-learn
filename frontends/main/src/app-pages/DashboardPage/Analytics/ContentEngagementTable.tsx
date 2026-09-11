@@ -2,14 +2,14 @@
 
 import React from "react"
 import { Skeleton, styled } from "ol-components"
+import type { Theme } from "ol-components"
 import type { ContentEngagementDepth } from "api/analytics-hooks/organizations"
 import {
+  CellText,
   EmptyTableMessage,
   MobileLabel,
   TableCard,
   TableCell,
-  TableFooter,
-  TableFootnote,
   TableHeaderCell,
   TableHeaderRow,
   TableRow,
@@ -18,7 +18,6 @@ import {
   formatAverage,
   formatCount,
   formatPercent,
-  SUPPRESSED_EXPLANATION,
   SuppressibleValue,
 } from "./format"
 import SectionError from "./SectionError"
@@ -73,34 +72,42 @@ import SectionError from "./SectionError"
  *    overstate the figure on any run where engagement is weak.
  */
 
-const CourseTitle = styled.span(({ theme }) => ({
+/**
+ * Every line of text in this table wraps (see `CellText`). Truncating is not an
+ * option here: the columns take fixed shares of `TableGrid`'s floor, which
+ * leaves an activity column under 100px, while a detail line like
+ * "96 learners, 9,134 attempted" needs closer to 200px — so an ellipsis would
+ * cut the second figure of every paired cell on every row, at every width.
+ */
+const CourseTitle = styled(CellText)(({ theme }) => ({
   ...theme.typography.subtitle2,
   color: theme.custom.colors.darkGray2,
-  display: "block",
 }))
 
-const CourseId = styled.span(({ theme }) => ({
+/** `overflow-wrap` because a readable id has no spaces to break on. */
+const CourseId = styled(CellText)(({ theme }) => ({
   ...theme.typography.body3,
   color: theme.custom.colors.silverGrayDark,
-  display: "block",
+  overflowWrap: "anywhere",
+}))
+
+/** The secondary figure in an activity cell: the raw total under its rate. */
+const Detail = styled(CellText)(({ theme }) => ({
+  ...theme.typography.body3,
+  color: theme.custom.colors.silverGrayDark,
 }))
 
 /**
- * The secondary figure in an activity cell: the raw total under its rate.
+ * The scroll container for the grid below, and the reason it carries a tab stop
+ * and a name: nothing inside the table is focusable, so without them a
+ * keyboard-only user would have no route to any column the grid's floor pushes
+ * out of view.
+ *
+ * Focusable unconditionally rather than only when it overflows. Whether it
+ * overflows is a question about layout, which means measurement, and a tab stop
+ * that appears and disappears as the window resizes is worse than one extra
+ * stop at the widths where nothing is hidden.
  */
-const Detail = styled.span(({ theme }) => ({
-  ...theme.typography.body3,
-  color: theme.custom.colors.silverGrayDark,
-  display: "block",
-  overflow: "hidden",
-  textOverflow: "ellipsis",
-  whiteSpace: "nowrap",
-  maxWidth: "100%",
-  [theme.breakpoints.down("md")]: {
-    whiteSpace: "normal",
-  },
-}))
-
 const TableScroll = styled.div(({ theme }) => ({
   overflowX: "auto",
   [theme.breakpoints.down("md")]: {
@@ -108,18 +115,32 @@ const TableScroll = styled.div(({ theme }) => ({
   },
 }))
 
+/**
+ * The floor at which seven columns stay legible, and no wider.
+ *
+ * It is deliberately not the width the columns would *like*: the dashboard's
+ * content column is a 1200px container less the 300px sidebar and its gap, so
+ * it tops out at 874px however wide the screen is — 1920px included. A grid
+ * sized for comfort therefore buys nothing but permanent horizontal scrolling.
+ * At 840px every column renders in full; the two "per engaged learner" headers
+ * wrap to three lines and rows grow by ~18px, which is the whole cost of never
+ * scrolling on a normal desktop.
+ *
+ * Below `md` the rows stack (see `StackedCell`), so the floor lifts: a phone
+ * gets label/value pairs, not an 840px grid three screens wide.
+ */
 const TableGrid = styled.div(({ theme }) => ({
-  minWidth: "1100px",
+  minWidth: "840px",
   [theme.breakpoints.down("md")]: {
     minWidth: "0",
   },
 }))
 
 /**
- * Every cell here carries two lines of value, which the shared cell's mobile
+ * Every cell here carries two lines of value, which the shared cell's stacked
  * layout is not built for: it sets the label beside the value, and a label as
  * long as "Problems per engaged learner" leaves so little room that
- * "96 learners, 9,134 attempted" breaks across four lines. Below `md` the
+ * "96 learners, 9,134 attempted" breaks across four lines. Once stacked, the
  * label therefore sits above its value rather than beside it, giving the pair
  * the full width of the row. Applied to every labelled cell in the table, not
  * only the two-line ones, so the column of labels stays straight.
@@ -131,6 +152,41 @@ const StackedCell = styled(TableCell)(({ theme }) => ({
     gap: "2px",
   },
 }))
+
+/**
+ * The course column stays put while the rest of the row scrolls, which it does
+ * whenever the window leaves the grid less than its 840px floor. Without this,
+ * scrolling the right-hand columns into view costs the reader the only thing
+ * that said which course run the numbers belong to.
+ *
+ * Opaque on purpose, header and body alike: a sticky cell paints over the
+ * columns passing behind it, and a transparent one would let them show through.
+ *
+ * `align-self` is what makes that mask whole. Both rows centre their cells, so
+ * a sticky cell is only as tall as its own text — one line of "Course" against
+ * a three-line header leaves a gap above and below through which the scrolled
+ * header's first and last lines reappear, its middle line alone hidden. The
+ * cell therefore stretches to the row and centres its own text inside.
+ */
+const stickyColumn = (theme: Theme) => ({
+  [theme.breakpoints.up("md")]: {
+    position: "sticky" as const,
+    left: 0,
+    zIndex: 1,
+    alignSelf: "stretch" as const,
+    display: "flex",
+    alignItems: "center",
+    backgroundColor: theme.custom.colors.white,
+    borderRight: `1px solid ${theme.custom.colors.lightGray2}`,
+    paddingRight: "8px",
+  },
+})
+
+const CourseHeaderCell = styled(TableHeaderCell)(({ theme }) =>
+  stickyColumn(theme),
+)
+
+const CourseCell = styled(TableCell)(({ theme }) => stickyColumn(theme))
 
 const COLUMN_FLEX = {
   course: 2.6,
@@ -180,32 +236,19 @@ const ContentEngagementTable: React.FC<{
     )
   }
 
-  const hasSuppressed = rows.some((row) =>
-    [
-      row.engaged_learners,
-      row.engagement_rate_pct,
-      row.total_videos_watched,
-      row.video_watchers,
-      row.avg_videos_per_engaged_learner,
-      row.total_problems_attempted,
-      row.problem_attempters,
-      row.avg_problems_per_engaged_learner,
-      row.total_chatbot_interactions,
-      row.chatbot_users,
-      row.chatbot_adoption_pct,
-      row.certificates_earned,
-    ].some((value) => value === null),
-  )
-
   return (
     <TableCard>
-      <TableScroll>
+      <TableScroll
+        role="region"
+        aria-label="Content engagement, scrollable table"
+        tabIndex={0}
+      >
         <TableGrid role="table" aria-label="Content engagement">
           <div role="rowgroup">
             <TableHeaderRow role="row">
-              <TableHeaderCell role="columnheader" $flex={COLUMN_FLEX.course}>
+              <CourseHeaderCell role="columnheader" $flex={COLUMN_FLEX.course}>
                 Course
-              </TableHeaderCell>
+              </CourseHeaderCell>
               <TableHeaderCell
                 role="columnheader"
                 $flex={COLUMN_FLEX.enrolled}
@@ -253,12 +296,12 @@ const ContentEngagementTable: React.FC<{
           <div role="rowgroup">
             {rows.map((row) => (
               <TableRow role="row" key={row.courserun_readable_id}>
-                <TableCell role="cell" $flex={COLUMN_FLEX.course} $primary>
+                <CourseCell role="cell" $flex={COLUMN_FLEX.course} $primary>
                   <span>
                     <CourseTitle>{row.courserun_title}</CourseTitle>
                     <CourseId>{row.courserun_readable_id}</CourseId>
                   </span>
-                </TableCell>
+                </CourseCell>
                 <StackedCell role="cell" $flex={COLUMN_FLEX.enrolled} $numeric>
                   <MobileLabel>Enrolled</MobileLabel>
                   {formatCount(row.total_enrolled_learners)}
@@ -334,11 +377,6 @@ const ContentEngagementTable: React.FC<{
           </div>
         </TableGrid>
       </TableScroll>
-      {hasSuppressed ? (
-        <TableFooter>
-          <TableFootnote>{SUPPRESSED_EXPLANATION}</TableFootnote>
-        </TableFooter>
-      ) : null}
     </TableCard>
   )
 }

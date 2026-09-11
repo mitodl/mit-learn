@@ -114,6 +114,18 @@ const TableCell = styled("div", {
   }),
 )
 
+/**
+ * A block line of text inside a `TableCell`. Wraps, which takes an explicit
+ * `white-space`: the cell sets `nowrap` on desktop and `white-space` inherits,
+ * while its own `overflow: hidden` clips a nested block mid-character with no
+ * ellipsis. Anything that can outgrow its column — a course title, a readable
+ * id, a secondary figure under a rate — goes in one of these.
+ */
+const CellText = styled.span({
+  display: "block",
+  whiteSpace: "normal",
+})
+
 const TableFooter = styled.div({
   display: "flex",
   justifyContent: "space-between",
@@ -137,6 +149,7 @@ const EmptyTableMessage = styled(Typography)(({ theme }) => ({
 const STUB = "—"
 
 export {
+  CellText,
   EmptyTableMessage,
   MobileLabel,
   STUB,

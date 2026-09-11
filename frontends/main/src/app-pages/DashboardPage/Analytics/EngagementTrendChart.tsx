@@ -8,8 +8,6 @@ import {
   EmptyTableMessage,
   MobileLabel,
   TableCell,
-  TableFooter,
-  TableFootnote,
   TableHeaderCell,
   TableHeaderRow,
   TableRow,
@@ -19,7 +17,6 @@ import {
   formatCount,
   formatYearMonth,
   formatYearMonthShort,
-  SUPPRESSED_EXPLANATION,
   SuppressibleValue,
 } from "./format"
 import SectionError from "./SectionError"
@@ -144,9 +141,6 @@ const EngagementTrendChart: React.FC<{
     a.activity_year_and_month.localeCompare(b.activity_year_and_month),
   )
   const labels = months.map((row) => row.activity_year_and_month)
-  const hasSuppressed = months.some(
-    (row) => row.new_enrollments === null || row.certificates_earned === null,
-  )
 
   return (
     <ChartCard>
@@ -247,11 +241,6 @@ const EngagementTrendChart: React.FC<{
             ))}
           </div>
         </div>
-        {hasSuppressed ? (
-          <TableFooter>
-            <TableFootnote>{SUPPRESSED_EXPLANATION}</TableFootnote>
-          </TableFooter>
-        ) : null}
       </TableWrapper>
     </ChartCard>
   )

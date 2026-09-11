@@ -4,22 +4,16 @@ import React from "react"
 import { Skeleton, styled, Typography } from "ol-components"
 import type { EnrollmentCompletionFunnel } from "api/analytics-hooks/organizations"
 import {
+  CellText,
   EmptyTableMessage,
   MobileLabel,
   TableCard,
   TableCell,
-  TableFooter,
-  TableFootnote,
   TableHeaderCell,
   TableHeaderRow,
   TableRow,
 } from "@/components/B2BTable/B2BTable"
-import {
-  formatCount,
-  formatPercent,
-  SUPPRESSED_EXPLANATION,
-  SuppressibleValue,
-} from "./format"
+import { formatCount, formatPercent, SuppressibleValue } from "./format"
 import SectionError from "./SectionError"
 
 /**
@@ -30,16 +24,16 @@ import SectionError from "./SectionError"
  * each row becomes a stack of label/value pairs.
  */
 
-const CourseTitle = styled.span(({ theme }) => ({
+const CourseTitle = styled(CellText)(({ theme }) => ({
   ...theme.typography.subtitle2,
   color: theme.custom.colors.darkGray2,
-  display: "block",
 }))
 
-const CourseId = styled.span(({ theme }) => ({
+/** `overflow-wrap` because a readable id has no spaces to break on. */
+const CourseId = styled(CellText)(({ theme }) => ({
   ...theme.typography.body3,
   color: theme.custom.colors.silverGrayDark,
-  display: "block",
+  overflowWrap: "anywhere",
 }))
 
 const ContractLabel = styled(Typography)(({ theme }) => ({
@@ -108,12 +102,6 @@ const CoursePerformanceTable: React.FC<{
     }
   })
   const showContractLabels = contracts.size > 1
-  const hasSuppressed = rows.some(
-    (row) =>
-      row.active_learners === null ||
-      row.certified_learners === null ||
-      row.passing_learners === null,
-  )
 
   return (
     <TableCard>
@@ -219,11 +207,6 @@ const CoursePerformanceTable: React.FC<{
           ))}
         </div>
       </div>
-      {hasSuppressed ? (
-        <TableFooter>
-          <TableFootnote>{SUPPRESSED_EXPLANATION}</TableFootnote>
-        </TableFooter>
-      ) : null}
     </TableCard>
   )
 }

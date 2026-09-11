@@ -38,6 +38,7 @@ import ContentEngagementTable from "./Analytics/ContentEngagementTable"
 import ContractKpiCards from "./Analytics/ContractKpiCards"
 import CoursePerformanceTable from "./Analytics/CoursePerformanceTable"
 import EngagementTrendChart from "./Analytics/EngagementTrendChart"
+import { SUPPRESSED_EXPLANATION } from "./Analytics/format"
 import SectionHeader from "./Analytics/SectionHeader"
 import SectionTruncation from "./Analytics/SectionTruncation"
 
@@ -119,6 +120,26 @@ const Notice = styled(Typography)(({ theme }) => ({
   border: `1px solid ${theme.custom.colors.lightGray2}`,
   borderRadius: "8px",
   padding: "24px",
+})) as typeof Typography
+
+/**
+ * What an em dash in place of a figure means, said once for the page.
+ *
+ * Each section used to print this itself, which put two or three identical
+ * notices on one screen — and the further down the page one fell, the less it
+ * read as belonging to any particular row. A legend above the sections says
+ * the same thing without competing with the data; what ties the explanation
+ * to a specific figure is the tooltip and accessible label every suppressed
+ * value already carries.
+ *
+ * Rendered unconditionally, as a legend rather than a claim about this org's
+ * numbers. Deciding whether anything is actually suppressed means knowing
+ * which columns each of the four views nulls under the floor, and those lists
+ * belong with the sections that read them, not here.
+ */
+const SuppressionLegend = styled(Typography)(({ theme }) => ({
+  ...theme.typography.body3,
+  color: theme.custom.colors.silverGrayDark,
 })) as typeof Typography
 
 /**
@@ -496,6 +517,8 @@ const AnalyticsContentInternal: React.FC<AnalyticsContentInternalProps> = ({
           incomplete.
         </Notice>
       ) : null}
+
+      <SuppressionLegend>{`— ${SUPPRESSED_EXPLANATION}`}</SuppressionLegend>
 
       <Section>
         <SectionHeader

@@ -14,7 +14,10 @@ import { styled, Tooltip } from "ol-components"
  * formatter silently turns `null` into `0`.
  */
 
-/** Copy used by both the tooltip and the per-section footnote, so they agree. */
+/**
+ * Copy used by both the suppressed value's tooltip and the dashboard's
+ * page-level legend, so the two agree.
+ */
 const SUPPRESSED_EXPLANATION =
   "Withheld: too few learners in this group to report without identifying them."
 
