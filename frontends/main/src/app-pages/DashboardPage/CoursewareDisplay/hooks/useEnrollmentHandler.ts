@@ -14,6 +14,9 @@ import { getCourseEnrollmentAction } from "@/common/mitxonline"
 import { useComplianceGate } from "@/common/mitxonline/useComplianceGate"
 import CourseEnrollmentDialog from "@/page-components/EnrollmentDialogs/CourseEnrollmentDialog"
 import { trackCourseEnrolled } from "@/common/analytics/gtm"
+import { canOpenCourseware } from "../courseDateUtils"
+import { mitxUserQueries } from "api/mitxonline-hooks/user"
+import { useQuery } from "@tanstack/react-query"
 
 const ENROLL_COURSE_ERROR =
   "Something went wrong enrolling you in this course. Please try again."
@@ -32,6 +35,8 @@ export const useEnrollmentHandler = () => {
   })
   const replaceBasketItem = useReplaceBasketItem()
   const { ensureCompliance } = useComplianceGate()
+  const mitxOnlineUser = useQuery(mitxUserQueries.me())
+  const isStaff = mitxOnlineUser.data?.is_staff
 
   const enroll = React.useCallback(
     async ({
@@ -44,6 +49,7 @@ export const useEnrollmentHandler = () => {
       programCoursewareId,
       programReadableIds,
       b2bProgramId,
+      startDate,
     }: {
       course: CourseWithCourseRunsSerializerV2
       readableId?: string
@@ -54,7 +60,18 @@ export const useEnrollmentHandler = () => {
       programCoursewareId?: string
       programReadableIds?: string[]
       b2bProgramId?: string
+      startDate?: string | null
     }) => {
+      /**
+       * Enrolling early is allowed, so only redirect once the courseware is
+       * open. Otherwise the learner stays put and the card they clicked
+       * re-renders as enrolled, showing when the run starts.
+       */
+      const finishEnrollment = (url: string, runStartDate?: string | null) => {
+        if (!canOpenCourseware(runStartDate, { isStaff })) return
+        window.location.href = url
+      }
+
       if (isB2B) {
         if (!readableId) {
           console.warn("Cannot enroll in B2B course: missing required data", {
@@ -90,7 +107,7 @@ export const useEnrollmentHandler = () => {
           },
           {
             onSuccess: () => {
-              window.location.href = destinationUrl
+              finishEnrollment(destinationUrl, startDate)
             },
           },
         )
@@ -125,7 +142,7 @@ export const useEnrollmentHandler = () => {
           { courserun_id: readableId, request_body: requestBody },
           {
             onSuccess: () => {
-              window.location.href = verifiedDestination ?? href
+              finishEnrollment(verifiedDestination ?? href, startDate)
             },
           },
         )
@@ -144,7 +161,7 @@ export const useEnrollmentHandler = () => {
                   enrollmentAction.run.courseware_url ??
                   href
                 if (destination) {
-                  window.location.href = destination
+                  finishEnrollment(destination, enrollmentAction.run.start_date)
                 }
               },
             },
@@ -158,7 +175,7 @@ export const useEnrollmentHandler = () => {
         }
 
         const onCourseEnroll = (run: CourseRunV2) => {
-          window.location.href = run.courseware_url!
+          finishEnrollment(run.courseware_url!, run.start_date)
         }
         NiceModal.show(CourseEnrollmentDialog, { course, onCourseEnroll })
       }
@@ -169,6 +186,7 @@ export const useEnrollmentHandler = () => {
       createEnrollment,
       createVerifiedProgramEnrollment,
       replaceBasketItem,
+      isStaff,
     ],
   )
 
