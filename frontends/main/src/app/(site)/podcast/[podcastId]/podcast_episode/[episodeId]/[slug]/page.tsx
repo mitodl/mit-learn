@@ -19,11 +19,7 @@ import {
   parseResourceId,
   resolveEpisodeParent,
 } from "@/common/slugs"
-import {
-  carrySearchParams,
-  learnUrlSlug,
-  podcastEpisodePath,
-} from "@/common/urls"
+import { carrySearchParams, podcastEpisodePath } from "@/common/urls"
 
 type Props =
   AppPageProps<"/podcast/[podcastId]/podcast_episode/[episodeId]/[slug]">
@@ -88,11 +84,9 @@ const Page: React.FC<Props> = async (props) => {
   const canonical = podcastEpisodePath(
     String(epId),
     String(canonicalPodcastId),
-    learnUrlSlug(episode.learn_url),
+    episode.url_slug,
   )
-  if (
-    `/podcast/${podcastId}/podcast_episode/${episodeId}/${slug}` !== canonical
-  ) {
+  if (podcastEpisodePath(episodeId, podcastId, slug) !== canonical) {
     redirect(carrySearchParams(canonical, await props.searchParams))
   }
 

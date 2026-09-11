@@ -1007,7 +1007,7 @@ def build_program_children_content_bulk(program_resources):
 SLUG_MAX_LENGTH = 60
 
 # Path segments are mandatory, so a title that slugifies to nothing still needs
-# a segment. Matches the frontend's `pathSlug`.
+# a segment.
 BLANK_SLUG_PATH_SEGMENT = "resource"
 
 # Characters that are legal, unescaped, in a path segment: ! $ & ' ( ) * + , ; = : @ ~
@@ -1026,6 +1026,11 @@ def slugify_title(title: str) -> str:
     "" when the title yields no ascii letters, which callers handle per surface:
     path segments substitute BLANK_SLUG_PATH_SEGMENT, the drawer omits its
     `resource_title` param.
+
+    The output charset is [a-z0-9-], and the frontend's `[slug]` pages depend on
+    that: they compare a path built from this slug against Next's
+    already-decoded route params, so a slug carrying a percent-encodable
+    character would redirect to a different spelling of itself and loop.
 
     NOT interchangeable with django.utils.text.slugify, which deletes
     punctuation instead of converting it to "-", applies no length limit, and

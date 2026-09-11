@@ -1,6 +1,7 @@
 import React from "react"
 import user from "@testing-library/user-event"
 import { setMockResponse, urls, factories } from "api/test-utils"
+import { absoluteUrl, videoDetailPath } from "@/common/urls"
 import { renderWithProviders, screen } from "@/test-utils"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
@@ -103,6 +104,24 @@ describe("VideoDetailPage", () => {
     mockedUseFeatureFlagsLoaded.mockReturnValue(true)
   })
 
+  test("'more from this playlist' rows keep the browsed playlist and take only the backend slug", async () => {
+    const current = makeVideo({ title: "Current Video" })
+    const sibling = makeVideo({ title: "Sibling Video" })
+    renderPage({
+      video: current,
+      playlistId: 99,
+      playlistItems: [current, sibling],
+    })
+
+    const row = await screen.findByRole("link", {
+      name: `Open video ${sibling.title}`,
+    })
+    expect(row).toHaveAttribute(
+      "href",
+      videoDetailPath(sibling.id, 99, sibling.url_slug),
+    )
+  })
+
   test("renders the video title once data is loaded", async () => {
     const video = makeVideo({ title: "Introduction to Machine Learning" })
     renderPage({ video })
@@ -112,29 +131,23 @@ describe("VideoDetailPage", () => {
     })
   })
 
-  // Share URL is the slugged canonical form, and carries the playlist only
-  // when present (no `?playlist=null` when the video is viewed without one).
-  test.each([
-    {
-      playlistId: 99,
-      expected:
-        "http://test.learn.odl.local:8062/video/720/intro-to-machine-learning?playlist=99",
-    },
-    {
-      playlistId: null,
-      expected:
-        "http://test.learn.odl.local:8062/video/720/intro-to-machine-learning",
-    },
-  ])(
-    "Share link is the slugged canonical URL (playlistId=$playlistId)",
-    async ({ playlistId, expected }) => {
-      const video = makeVideo({ id: 720, title: "Intro to Machine Learning" })
+  // Sharing keeps the playlist the video is being watched in, even when that
+  // is not the canonical one: the recommendation is usually about the series.
+  // A video watched outside any playlist gets the bare form, not `playlist=null`.
+  test.each([{ playlistId: 99 }, { playlistId: null }])(
+    "Share link keeps the browsed playlist (playlistId=$playlistId)",
+    async ({ playlistId }) => {
+      const video = makeVideo({ title: "Intro to Machine Learning" })
       renderPage({ video, playlistId })
 
       await screen.findByRole("heading", { name: video.title })
       await user.click(screen.getByRole("button", { name: /share/i }))
 
-      expect(screen.getByRole("textbox")).toHaveValue(expected)
+      expect(screen.getByRole("textbox")).toHaveValue(
+        absoluteUrl(
+          videoDetailPath(video.id, playlistId ?? undefined, video.url_slug),
+        ),
+      )
     },
   )
 

@@ -1,5 +1,6 @@
+import { faker } from "@faker-js/faker/locale/en"
 import { factories } from "api/test-utils"
-import type { PodcastEpisodeResource } from "api/v1"
+import type { PodcastEpisodeParent, PodcastEpisodeResource } from "api/v1"
 import { buildPodcastEpisodeStructuredData } from "./podcastEpisodeStructuredData"
 
 const makeEpisode = (
@@ -12,24 +13,29 @@ const makeEpisode = (
     podcast_episode: podcastEpisode,
   })
 
+const makeParent = (): PodcastEpisodeParent => {
+  const id = faker.number.int({ min: 1, max: 1e6 })
+  const slug = faker.lorem.slug()
+  return {
+    id,
+    title: faker.lorem.words(3),
+    readable_id: faker.lorem.slug(),
+    learn_url: `http://test.learn.odl.local:8062/podcast/${id}/${slug}`,
+  }
+}
+
 test("omits the payload entirely without a last_modified date", () => {
   const episode = factories.learningResources.podcastEpisode({
     last_modified: null,
   })
-  expect(
-    buildPodcastEpisodeStructuredData(episode, { series: null }),
-  ).toBeNull()
-  expect(
-    buildPodcastEpisodeStructuredData(undefined, { series: null }),
-  ).toBeNull()
+  expect(buildPodcastEpisodeStructuredData(episode)).toBeNull()
+  expect(buildPodcastEpisodeStructuredData(undefined)).toBeNull()
 })
 
 test.each(["PT17M16S", "PT0S", "PT1H13M44S", "P1D", "P1Y2M3DT4H5M6.7S"])(
   "keeps the valid ISO-8601 duration %s",
   (duration) => {
-    const built = buildPodcastEpisodeStructuredData(makeEpisode({ duration }), {
-      series: null,
-    })
+    const built = buildPodcastEpisodeStructuredData(makeEpisode({ duration }))
     expect(built).toHaveProperty("duration", duration)
   },
 )
@@ -39,27 +45,29 @@ test.each(["PT17M16S", "PT0S", "PT1H13M44S", "P1D", "P1Y2M3DT4H5M6.7S"])(
 test.each(["P", "PT", "P1DT", "17 minutes", "1:13:44", ""])(
   "drops the invalid duration %p rather than publishing it",
   (duration) => {
-    const built = buildPodcastEpisodeStructuredData(makeEpisode({ duration }), {
-      series: null,
-    })
+    const built = buildPodcastEpisodeStructuredData(makeEpisode({ duration }))
     expect(built).not.toHaveProperty("duration")
   },
 )
 
-test("names the series it is given, not one it picks itself", () => {
-  const episode = makeEpisode({
-    parent_podcasts: [
-      { id: 1, title: "Podcast A", readable_id: "a" },
-      { id: 2, title: "Podcast B", readable_id: "b" },
-    ],
-  })
-  const built = buildPodcastEpisodeStructuredData(episode, {
-    series: { id: 2, title: "Podcast B", readable_id: "b" },
-    seriesUrl: "https://learn.mit.edu/podcast/2/podcast-b",
-  })
+test("names the canonical series, not a later parent", () => {
+  const canonical = makeParent()
+  const other = makeParent()
+  const episode = makeEpisode({ parent_podcasts: [canonical, other] })
+
+  const built = buildPodcastEpisodeStructuredData(episode)
+
+  expect(built).toHaveProperty("url", episode.learn_url)
   expect(built).toHaveProperty("partOfSeries", {
     "@type": "PodcastSeries",
-    name: "Podcast B",
-    url: "https://learn.mit.edu/podcast/2/podcast-b",
+    name: canonical.title,
+    url: canonical.learn_url,
   })
+})
+
+test("omits partOfSeries for an episode with no parent podcast", () => {
+  const built = buildPodcastEpisodeStructuredData(
+    makeEpisode({ parent_podcasts: [] }),
+  )
+  expect(built).not.toHaveProperty("partOfSeries")
 })

@@ -19,7 +19,7 @@ import {
   resolveVideoPlaylist,
   videoPlaylistIds,
 } from "@/common/slugs"
-import { carrySearchParams, learnUrlSlug, videoDetailPath } from "@/common/urls"
+import { carrySearchParams, videoDetailPath } from "@/common/urls"
 
 type Props = AppPageProps<"/video/[id]/[slug]">
 
@@ -75,16 +75,13 @@ const Page: React.FC<Props> = async ({ params, searchParams }) => {
   const canonical = videoDetailPath(
     videoId,
     playlistId ?? undefined,
-    learnUrlSlug(video.learn_url),
+    video.url_slug,
   )
-  const incomingBase = `/video/${id}/${slug}`
   // A repeated ?playlist (array) resolves as no-playlist but is never the
   // canonical form, so it always redirects (which strips it).
   const incoming = Array.isArray(rawPlaylist)
     ? null
-    : typeof rawPlaylist === "string"
-      ? `${incomingBase}?playlist=${rawPlaylist}`
-      : incomingBase
+    : videoDetailPath(id, rawPlaylist, slug)
   if (incoming !== canonical) {
     redirect(carrySearchParams(canonical, resolvedSearchParams, ["playlist"]))
   }

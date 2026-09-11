@@ -7,23 +7,13 @@ import type { PodcastEpisodeParent, PodcastEpisodeResource } from "api/v1"
 const ISO_8601_DURATION_RE =
   /^P(?!$)(?:\d+Y)?(?:\d+M)?(?:\d+W)?(?:\d+D)?(?:T(?!$)(?:\d+H)?(?:\d+M)?(?:\d+(?:\.\d+)?S)?)?$/
 
-type BuildOptions = {
-  /** Absolute canonical url of the episode page */
-  url?: string
-  /**
-   * The parent podcast series the episode is being viewed under, as resolved
-   * by `getEpisodeParentPodcast`. Required rather than picked from
-   * `parent_podcasts[0]` here: an episode can belong to several series, and
-   * choosing one independently of the caller would pair that series' name with
-   * `seriesUrl`, which the caller builds from the parent in the current url.
-   */
-  series: PodcastEpisodeParent | null
-  /** Absolute canonical url of the parent podcast page */
-  seriesUrl?: string
-}
-
 /**
  * Builds a schema.org PodcastEpisode structured-data payload.
+ *
+ * Every URL here is canonical, taken from the episode rather than from the page
+ * rendering it. An episode in several podcasts is viewable under any of them, so
+ * a page that passed in its own parent would pair one series' name with another
+ * series' `url`. `parent_podcasts[0]` is the parent `learn_url` was built from.
  *
  * The transcript text itself is deliberately not included. `schema.org`'s
  * `transcript` property has a `domainIncludes` of `AudioObject` and
@@ -38,11 +28,11 @@ type BuildOptions = {
  */
 export function buildPodcastEpisodeStructuredData(
   episode: PodcastEpisodeResource | undefined,
-  { url, series, seriesUrl }: BuildOptions,
 ): Record<string, unknown> | null {
   if (!episode || !episode.last_modified) return null
 
   const details = episode.podcast_episode
+  const series: PodcastEpisodeParent | undefined = details?.parent_podcasts?.[0]
 
   const durationIso =
     details?.duration && ISO_8601_DURATION_RE.test(details.duration)
@@ -54,7 +44,7 @@ export function buildPodcastEpisodeStructuredData(
     "@type": "PodcastEpisode",
     name: episode.title,
     ...(episode.description ? { description: episode.description } : {}),
-    ...(url ? { url } : {}),
+    url: episode.learn_url,
     datePublished: episode.last_modified,
     ...(episode.image?.url ? { image: episode.image.url } : {}),
     ...(durationIso ? { duration: durationIso } : {}),
@@ -71,7 +61,7 @@ export function buildPodcastEpisodeStructuredData(
           partOfSeries: {
             "@type": "PodcastSeries",
             name: series.title,
-            ...(seriesUrl ? { url: seriesUrl } : {}),
+            url: series.learn_url,
           },
         }
       : {}),
