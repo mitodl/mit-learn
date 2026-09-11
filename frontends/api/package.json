@@ -17,6 +17,7 @@
     "./test-utils": "./src/test-utils/index.ts",
     "./mitxonline-hooks/*": "./src/mitxonline/hooks/*/index.ts",
     "./mutation-meta": "./src/mutations/mutationMeta.ts",
+    "./mutation-errors": "./src/mutations/errorMessages.ts",
     "./mitxonline-test-utils": "./src/mitxonline/test-utils/index.ts",
     "./analytics-hooks/*": "./src/analytics/hooks/*/index.ts",
     "./analytics-types": "./src/analytics/types.ts",

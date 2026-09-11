@@ -25,6 +25,11 @@ const clearMutate = jest.fn(
   (_vars: undefined, opts?: { onSuccess?: () => void }) => opts?.onSuccess?.(),
 )
 const clearMutateAsync = jest.fn().mockResolvedValue(undefined)
+// Mutable so a test can put one or both legs into an errored state.
+const basketErrors: { add: unknown; clear: unknown } = {
+  add: null,
+  clear: null,
+}
 
 jest.mock("api/mitxonline-hooks/baskets", () => ({
   useAddToBasket: () => ({
@@ -32,13 +37,17 @@ jest.mock("api/mitxonline-hooks/baskets", () => ({
     mutateAsync,
     reset,
     isPending: false,
-    isError: false,
+    get error() {
+      return basketErrors.add
+    },
   }),
   useClearBasket: () => ({
     mutate: clearMutate,
     mutateAsync: clearMutateAsync,
     isPending: false,
-    isError: false,
+    get error() {
+      return basketErrors.clear
+    },
   }),
 }))
 
@@ -47,6 +56,8 @@ describe("useReplaceBasketItem", () => {
 
   beforeEach(() => {
     jest.clearAllMocks()
+    basketErrors.add = null
+    basketErrors.clear = null
     // The compliance gate reads the MITx Online user before touching the
     // basket. A complete profile (the factory default) lets it through.
     setMockResponse.get(
@@ -118,5 +129,28 @@ describe("useReplaceBasketItem", () => {
 
     expect(mutateAsync).not.toHaveBeenCalled()
     expect(assign).not.toHaveBeenCalled()
+  })
+
+  test("surfaces the clear error when only that leg failed", () => {
+    const clearError = new Error("clear failed")
+    basketErrors.clear = clearError
+    const { result } = renderHook(() => useReplaceBasketItem(), { wrapper })
+
+    expect(result.current.error).toBe(clearError)
+  })
+
+  test("prefers the add-to-basket error, which carries the specific detail", () => {
+    const addError = new Error("add failed")
+    basketErrors.add = addError
+    basketErrors.clear = new Error("clear failed")
+    const { result } = renderHook(() => useReplaceBasketItem(), { wrapper })
+
+    expect(result.current.error).toBe(addError)
+  })
+
+  test("has no error when neither leg failed", () => {
+    const { result } = renderHook(() => useReplaceBasketItem(), { wrapper })
+
+    expect(result.current.error).toBeNull()
   })
 })

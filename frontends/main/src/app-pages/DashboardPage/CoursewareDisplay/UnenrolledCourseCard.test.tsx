@@ -867,6 +867,38 @@ describe("UnenrolledCourseCard enrollment error toast", () => {
     )
   })
 
+  test("A 400 detail supersedes the course-specific toast copy", async () => {
+    setupUserApis()
+    const run = mitxonline.factories.courses.courseRun({
+      b2b_contract: null,
+      is_enrollable: true,
+      enrollment_modes: [
+        mitxonline.factories.courses.enrollmentMode({
+          requires_payment: false,
+        }),
+      ],
+    })
+    const course = mitxOnlineCourse({ courseruns: [run], next_run_id: run.id })
+
+    setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV3(), [])
+    setMockResponse.post(
+      mitxonline.urls.enrollment.enrollmentsListV1(),
+      {
+        detail:
+          "Unable to complete enrollment. Please contact support. Error code: CS_700",
+      },
+      { code: 400 },
+    )
+
+    renderWithProviders(<UnenrolledCourseCard course={course} />)
+
+    await user.click(within(getCard()).getByTestId("courseware-button"))
+
+    await expectErrorToast(
+      "Unable to complete enrollment. Please contact support. Error code: CS_700",
+    )
+  })
+
   test("Failed verified program enrollment surfaces a program-specific error toast", async () => {
     setupUserApis()
     const run = mitxonline.factories.courses.courseRun({

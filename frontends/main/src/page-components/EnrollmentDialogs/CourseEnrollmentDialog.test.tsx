@@ -218,6 +218,34 @@ describe("CourseEnrollmentDialog", () => {
       )
     })
 
+    test("Shows the server's 400 detail when the basket add is rejected", async () => {
+      const run = upgradeableRun({
+        products: [makeProduct({ price: "149.00" })],
+      })
+      const product = run.products[0]
+      invariant(product, "Upgradeable run must have a product")
+      const course = makeCourse({ courseruns: [run] })
+
+      renderWithProviders(<div />)
+      await openDialog(course)
+
+      setMockResponse.delete(mitxUrls.baskets.clear(), undefined)
+      setMockResponse.post(
+        mitxUrls.baskets.createFromProduct(product.id),
+        { detail: "That product is no longer available." },
+        { code: 400 },
+      )
+
+      const upgradeButton = await screen.findByRole("button", {
+        name: /Add to Cart.*to get a Certificate/i,
+      })
+      await user.click(upgradeButton)
+
+      expect(await screen.findByRole("alert")).toHaveTextContent(
+        "That product is no longer available.",
+      )
+    })
+
     test("When free-only run is chosen, upsell is shown but disabled", async () => {
       const freeOnlyRun = makeCourseRun({
         is_enrollable: true,
@@ -492,6 +520,57 @@ describe("CourseEnrollmentDialog", () => {
       await user.click(enrollButton)
 
       // Check for error alert - the mutation error should be displayed
+      expect(await screen.findByRole("alert")).toHaveTextContent(
+        /There was a problem enrolling you in this course. Please try again later./i,
+      )
+    })
+
+    test("Shows the server's 400 detail when enrollment is rejected", async () => {
+      const run = enrollableRun()
+      const course = makeCourse({ courseruns: [run] })
+
+      renderWithProviders(<div />)
+      await openDialog(course)
+
+      const enrollButton = screen.getByRole("button", {
+        name: /Enroll for Free without a certificate/i,
+      })
+
+      setMockResponse.post(
+        mitxUrls.enrollment.enrollmentsListV1(),
+        {
+          detail:
+            "Unable to complete enrollment. Please contact support. Error code: CS_700",
+        },
+        { code: 400 },
+      )
+
+      await user.click(enrollButton)
+
+      expect(await screen.findByRole("alert")).toHaveTextContent(
+        "Unable to complete enrollment. Please contact support. Error code: CS_700",
+      )
+    })
+
+    test("Keeps the generic copy when a 400 carries no detail", async () => {
+      const run = enrollableRun()
+      const course = makeCourse({ courseruns: [run] })
+
+      renderWithProviders(<div />)
+      await openDialog(course)
+
+      const enrollButton = screen.getByRole("button", {
+        name: /Enroll for Free without a certificate/i,
+      })
+
+      setMockResponse.post(
+        mitxUrls.enrollment.enrollmentsListV1(),
+        { run_id: ["This field is required."] },
+        { code: 400 },
+      )
+
+      await user.click(enrollButton)
+
       expect(await screen.findByRole("alert")).toHaveTextContent(
         /There was a problem enrolling you in this course. Please try again later./i,
       )
