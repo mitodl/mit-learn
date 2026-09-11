@@ -48,12 +48,6 @@ describe("analyticsOrganizationQueries", () => {
       response: factories.envelope([factories.monthlyEngagementTrend()]),
     },
     {
-      name: "programFunnel",
-      query: () => erase(analyticsOrganizationQueries.programFunnel(ORG_UUID)),
-      url: urls.organizations.programFunnel(ORG_UUID),
-      response: factories.envelope([factories.programFunnel()]),
-    },
-    {
       name: "contentEngagement",
       query: () =>
         erase(analyticsOrganizationQueries.contentEngagement(ORG_UUID)),
@@ -147,13 +141,6 @@ describe("analyticsContractQueries", () => {
       response: factories.envelope([
         factories.contractMonthlyEngagementTrend(),
       ]),
-    },
-    {
-      name: "programFunnel",
-      query: () =>
-        erase(analyticsContractQueries.programFunnel(ORG_UUID, CONTRACT_ID)),
-      url: urls.contracts.programFunnel(ORG_UUID, CONTRACT_ID),
-      response: factories.envelope([factories.programFunnel()]),
     },
     {
       name: "contentEngagement",

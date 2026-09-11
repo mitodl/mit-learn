@@ -15,11 +15,23 @@ import { styled, Tooltip } from "ol-components"
  */
 
 /**
- * Copy used by both the suppressed value's tooltip and the dashboard's
- * page-level legend, so the two agree.
+ * Copy for a suppressed value's own tooltip and accessible label, where "this
+ * group" is the figure the reader is pointing at.
  */
 const SUPPRESSED_EXPLANATION =
   "Withheld: too few learners in this group to report without identifying them."
+
+/**
+ * The page-level form of the same fact, kept beside it so the two cannot drift.
+ *
+ * Worded as a definition of the marker rather than a claim about the figures on
+ * screen: the dashboard prints this whether or not anything was suppressed (see
+ * `SuppressionLegend` in `AnalyticsContent`), so "too few learners in this
+ * group" would be asserting something about a group that may not exist. It also
+ * names the em dash, which most screen readers do not announce at all.
+ */
+const SUPPRESSED_LEGEND =
+  "An em dash (—) means a figure was withheld: too few learners in that group to report it without identifying them."
 
 /** Thousands-separated integer. */
 const formatCount = (value: number): string => value.toLocaleString("en-US")
@@ -133,5 +145,6 @@ export {
   formatYearMonthShort,
   Suppressed,
   SUPPRESSED_EXPLANATION,
+  SUPPRESSED_LEGEND,
   SuppressibleValue,
 }

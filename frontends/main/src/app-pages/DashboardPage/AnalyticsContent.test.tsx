@@ -16,6 +16,7 @@ import { ForbiddenError } from "@/common/errors"
 import { FeatureFlags } from "@/common/feature_flags"
 import { contractAdminView, organizationAnalyticsView } from "@/common/urls"
 import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
+import { SUPPRESSED_LEGEND } from "./Analytics/format"
 import AnalyticsContent from "./AnalyticsContent"
 
 jest.mock("next/image", () => ({
@@ -341,7 +342,7 @@ describe("AnalyticsContent", () => {
       ).toBeGreaterThan(0)
       // Once for the page, not once per section: three sections printing the
       // same notice put two or three identical copies on one screen.
-      expect(screen.getAllByText(/Withheld: too few learners/)).toHaveLength(1)
+      expect(screen.getAllByText(SUPPRESSED_LEGEND)).toHaveLength(1)
     })
 
     /**

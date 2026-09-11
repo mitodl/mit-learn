@@ -19,15 +19,28 @@ import { styled, Typography } from "ol-components"
  * rather than repeating numbers.
  */
 
+const TABLE_CARD_PADDING = 24
+const TABLE_CARD_BORDER = 1
+
 const TableCard = styled.div(({ theme }) => ({
   backgroundColor: theme.custom.colors.white,
-  border: `1px solid ${theme.custom.colors.lightGray2}`,
+  border: `${TABLE_CARD_BORDER}px solid ${theme.custom.colors.lightGray2}`,
   borderRadius: "8px",
-  padding: "24px",
+  padding: `${TABLE_CARD_PADDING}px`,
   [theme.breakpoints.down("md")]: {
     padding: "16px",
   },
 }))
+
+/**
+ * The width a `TableCard` of `outer` px leaves its children. Both the padding
+ * and the border sit inside that box, so a child sizing itself in absolute
+ * pixels — a wide grid picking the floor below which it scrolls, say — has this
+ * much to work with and not `outer`. Desktop values only: the `md` padding is
+ * narrower, and by then such a grid has stopped being a grid.
+ */
+const tableCardInnerWidth = (outer: number) =>
+  outer - 2 * (TABLE_CARD_PADDING + TABLE_CARD_BORDER)
 
 const TableHeaderRow = styled.div(({ theme }) => ({
   display: "flex",
@@ -154,6 +167,7 @@ export {
   MobileLabel,
   STUB,
   TableCard,
+  tableCardInnerWidth,
   TableCell,
   TableFooter,
   TableFootnote,

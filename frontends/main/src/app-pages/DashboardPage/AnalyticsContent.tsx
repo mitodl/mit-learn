@@ -38,7 +38,7 @@ import ContentEngagementTable from "./Analytics/ContentEngagementTable"
 import ContractKpiCards from "./Analytics/ContractKpiCards"
 import CoursePerformanceTable from "./Analytics/CoursePerformanceTable"
 import EngagementTrendChart from "./Analytics/EngagementTrendChart"
-import { SUPPRESSED_EXPLANATION } from "./Analytics/format"
+import { SUPPRESSED_LEGEND } from "./Analytics/format"
 import SectionHeader from "./Analytics/SectionHeader"
 import SectionTruncation from "./Analytics/SectionTruncation"
 
@@ -132,10 +132,13 @@ const Notice = styled(Typography)(({ theme }) => ({
  * to a specific figure is the tooltip and accessible label every suppressed
  * value already carries.
  *
- * Rendered unconditionally, as a legend rather than a claim about this org's
- * numbers. Deciding whether anything is actually suppressed means knowing
- * which columns each of the four views nulls under the floor, and those lists
- * belong with the sections that read them, not here.
+ * Rendered unconditionally, which is why the copy is `SUPPRESSED_LEGEND` and
+ * not the tooltip's `SUPPRESSED_EXPLANATION`: it defines the marker instead of
+ * claiming anything about the figures below it, so it stays true on a page
+ * where nothing was suppressed, every section came back empty, or every
+ * section failed. Gating it instead would mean knowing which columns each of
+ * the four views nulls under the floor, and those lists belong with the
+ * sections that read them, not here.
  */
 const SuppressionLegend = styled(Typography)(({ theme }) => ({
   ...theme.typography.body3,
@@ -518,7 +521,7 @@ const AnalyticsContentInternal: React.FC<AnalyticsContentInternalProps> = ({
         </Notice>
       ) : null}
 
-      <SuppressionLegend>{`— ${SUPPRESSED_EXPLANATION}`}</SuppressionLegend>
+      <SuppressionLegend>{SUPPRESSED_LEGEND}</SuppressionLegend>
 
       <Section>
         <SectionHeader

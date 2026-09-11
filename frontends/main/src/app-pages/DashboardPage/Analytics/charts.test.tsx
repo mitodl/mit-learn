@@ -172,7 +172,7 @@ describe("EngagementTrendChart", () => {
 
   /**
    * The SVG is unreadable to a screen reader, so the monthly numbers have to
-   * exist as text too — the same pairing `ProgramFunnelChart` uses.
+   * exist as text too.
    */
   test("pairs the chart with a table of the same numbers", () => {
     renderWithTheme(

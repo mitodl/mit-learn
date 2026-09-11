@@ -13,6 +13,7 @@ import {
   TableHeaderCell,
   TableHeaderRow,
   TableRow,
+  tableCardInnerWidth,
 } from "@/components/B2BTable/B2BTable"
 import {
   formatAverage,
@@ -20,6 +21,7 @@ import {
   formatPercent,
   SuppressibleValue,
 } from "./format"
+import { dashboardContentWidth } from "../layoutMetrics"
 import SectionError from "./SectionError"
 
 /**
@@ -99,9 +101,11 @@ const Detail = styled(CellText)(({ theme }) => ({
 
 /**
  * The scroll container for the grid below, and the reason it carries a tab stop
- * and a name: nothing inside the table is focusable, so without them a
- * keyboard-only user would have no route to any column the grid's floor pushes
- * out of view.
+ * and a name: a row with nothing suppressed contains no focusable element at
+ * all, so without them a keyboard-only user would have no route to a column the
+ * grid's floor pushes out of view. (A suppressed figure is focusable — see
+ * `SuppressedMark` — but only rows that happen to have one, and tabbing to a
+ * withheld value is not a way to read the ones beside it.)
  *
  * Focusable unconditionally rather than only when it overflows. Whether it
  * overflows is a question about layout, which means measurement, and a tab stop
@@ -116,21 +120,24 @@ const TableScroll = styled.div(({ theme }) => ({
 }))
 
 /**
- * The floor at which seven columns stay legible, and no wider.
+ * The floor below which seven columns scroll instead of squeezing, derived
+ * rather than chosen: it is exactly the width `TableCard` leaves a child when
+ * the dashboard's content column is at its own ceiling.
  *
- * It is deliberately not the width the columns would *like*: the dashboard's
- * content column is a 1200px container less the 300px sidebar and its gap, so
- * it tops out at 874px however wide the screen is — 1920px included. A grid
- * sized for comfort therefore buys nothing but permanent horizontal scrolling.
- * At 840px every column renders in full; the two "per engaged learner" headers
- * wrap to three lines and rows grow by ~18px, which is the whole cost of never
- * scrolling on a normal desktop.
+ * That derivation is the whole point. The content column tops out a little
+ * under 900px however wide the screen is — 1920px included — and the card
+ * spends 50 of those on its padding and border, so a floor picked for the
+ * columns' comfort would buy nothing but permanent horizontal scrolling. Taking
+ * the ceiling itself means the table scrolls only while the window is narrower
+ * than `lg`, and a maximised desktop reads every column in full. The cost is
+ * that the two "per engaged learner" headers wrap to three lines and rows grow
+ * by ~18px.
  *
  * Below `md` the rows stack (see `StackedCell`), so the floor lifts: a phone
- * gets label/value pairs, not an 840px grid three screens wide.
+ * gets label/value pairs, not an 834px grid three screens wide.
  */
 const TableGrid = styled.div(({ theme }) => ({
-  minWidth: "840px",
+  minWidth: `${tableCardInnerWidth(dashboardContentWidth(theme))}px`,
   [theme.breakpoints.down("md")]: {
     minWidth: "0",
   },
@@ -155,7 +162,7 @@ const StackedCell = styled(TableCell)(({ theme }) => ({
 
 /**
  * The course column stays put while the rest of the row scrolls, which it does
- * whenever the window leaves the grid less than its 840px floor. Without this,
+ * whenever the window leaves the grid less than its floor. Without this,
  * scrolling the right-hand columns into view costs the reader the only thing
  * that said which course run the numbers belong to.
  *

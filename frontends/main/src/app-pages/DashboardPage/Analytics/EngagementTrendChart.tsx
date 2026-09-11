@@ -47,8 +47,7 @@ import SectionError from "./SectionError"
  * The `<LineChart>` is an SVG of plotted geometry: a screen reader gets nothing
  * readable out of it, and a suppressed month is drawn as a gap that reads
  * identically to "no data". The table below carries the same monthly numbers as
- * text, where a suppressed value can say so in words. Same pairing, and same
- * reasoning, as `ProgramFunnelChart`.
+ * text, where a suppressed value can say so in words.
  */
 
 const ChartCard = styled.div(({ theme }) => ({

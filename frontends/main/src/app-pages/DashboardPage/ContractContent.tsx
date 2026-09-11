@@ -370,9 +370,23 @@ const ContractHeaderSection = styled.div(({ theme }) => ({
   },
 }))
 
+/**
+ * Two buttons where there used to be one, which is why `flex-shrink` and
+ * `white-space` are set rather than left to default. `ContractHeaderSection`
+ * only stacks below `sm`, but the dashboard grid stays single-column until
+ * `md`, so between those two breakpoints these buttons share a row with the
+ * org logo, the org name and the contract name. Left shrinkable, flexbox takes
+ * them down toward min-content and breaks the labels across lines
+ * ("View / analytics"); pinned, the header text reflows instead, which it can
+ * afford to do.
+ */
 const HeaderActions = styled.div(({ theme }) => ({
   display: "flex",
   gap: "12px",
+  flexShrink: 0,
+  "> a": {
+    whiteSpace: "nowrap",
+  },
   [theme.breakpoints.down("sm")]: {
     flexDirection: "column",
     width: "100%",
