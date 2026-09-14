@@ -338,6 +338,12 @@ def hubspot_form_submit_view(request, form_id: str):
                 remote_ip=payload.get("ip_address"),
             )
         ):
+            log.warning(
+                "HubSpot form submit rejected: reCAPTCHA verification failed "
+                "form_id=%s ip=%s",
+                form_id,
+                payload.get("ip_address"),
+            )
             return Response(
                 {"recaptcha_token": ["reCAPTCHA verification failed."]},
                 status=status.HTTP_400_BAD_REQUEST,

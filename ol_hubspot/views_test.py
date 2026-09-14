@@ -402,6 +402,58 @@ def test_submit_form_rejects_failed_recaptcha(client, settings, mocker):
     submit_stub.assert_not_called()
 
 
+def test_submit_form_logs_failed_recaptcha(client, settings, mocker, caplog):
+    """Submit endpoint logs a warning when reCAPTCHA verification fails."""
+    import logging
+
+    settings.MITOL_HUBSPOT_API_PRIVATE_TOKEN = _mock_hubspot_secret()
+    settings.RECAPTCHA_SECRET_KEY = _mock_recaptcha_secret()
+    client.force_login(UserFactory.create())
+    submit_url = reverse(
+        "ol_hubspot:v1:hubspot-forms-submit", kwargs={"form_id": "form-123"}
+    )
+    payload = {
+        "fields": [{"name": "email", "value": "test@example.com"}],
+        "recaptcha_token": "captcha-token",
+    }
+    mocker.patch("ol_hubspot.views._extract_client_ip", return_value="1.2.3.4")
+    mocker.patch("ol_hubspot.views.verify_recaptcha", return_value=False)
+
+    with caplog.at_level(logging.WARNING, logger="ol_hubspot.views"):
+        response = client.post(submit_url, payload, format="json")
+
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert "reCAPTCHA" in caplog.text
+    assert "form-123" in caplog.text
+
+
+def test_submit_form_bad_token_me_lookup_returns_structured_error(
+    client, settings, mocker, caplog
+):
+    """A failed /me lookup (bad token) surfaces a structured error, not a 500."""
+    import logging
+
+    settings.MITOL_HUBSPOT_API_PRIVATE_TOKEN = _mock_hubspot_secret()
+    settings.RECAPTCHA_SECRET_KEY = ""
+    client.force_login(UserFactory.create())
+    submit_url = reverse(
+        "ol_hubspot:v1:hubspot-forms-submit", kwargs={"form_id": "form-abc"}
+    )
+    payload = {"fields": [{"name": "email", "value": "test@example.com"}]}
+    hubspot_class = mocker.patch("ol_hubspot.api.HubSpot", autospec=True)
+    me_response = mocker.Mock()
+    me_response.status_code = 401
+    me_response.text = '{"message":"auth failed","errorType":"UNAUTHORIZED"}'
+    hubspot_class.return_value.api_request.return_value = me_response
+
+    with caplog.at_level(logging.ERROR, logger="ol_hubspot.views"):
+        response = client.post(submit_url, payload, format="json")
+
+    assert response.status_code == 401
+    assert response.json()["code"] == "UNAUTHORIZED"
+    assert "UNAUTHORIZED" in caplog.text
+
+
 def test_submit_form_rejects_missing_token_when_secret_configured(
     client, settings, mocker
 ):
