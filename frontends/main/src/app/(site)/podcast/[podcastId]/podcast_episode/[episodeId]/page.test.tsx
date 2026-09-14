@@ -19,9 +19,8 @@ test("bare episode URL redirects to the slugged canonical with corrected parent"
   const episode = factories.learningResources.podcastEpisode({
     id,
     title: "Episode One",
+    url_slug: "episode-one",
     podcast_episode: { podcasts: [10] },
-    // The backend names the slug; the factory default is a drawer URL.
-    learn_url: `http://test.learn.odl.local:8062/podcast/10/podcast_episode/${id}/episode-one`,
   })
   setMockResponse.get(
     urls.learningResources.details({ id: episode.id }),

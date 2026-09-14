@@ -4,6 +4,7 @@ import {
   screen,
   setMockResponse,
   user,
+  waitFor,
   within,
 } from "@/test-utils"
 import * as mitxonline from "api/mitxonline-test-utils"
@@ -29,6 +30,12 @@ beforeEach(() => {
   // Each row resolves its own Receipt item from the order history; default to
   // none, tests override.
   setupOrderHistory()
+  // Rows read is_staff to decide whether pre-start courseware is reachable.
+  // The factory randomises it, so pin it off; the staff test overrides.
+  setMockResponse.get(
+    mitxonline.urls.userMe.get(),
+    mitxonline.factories.user.user({ is_staff: false }),
+  )
   setPerRunMenus(true)
 })
 
@@ -357,6 +364,53 @@ describe("SiblingRunsToggle + SiblingRunsPanel", () => {
       screen.queryByRole("link", { name: /View content/ }),
     ).not.toBeInTheDocument()
   })
+
+  // A run that hasn't started cannot be completed, so drop the factory's
+  // default certificate; completion outranks the dates for the row label.
+  const makeUpcomingEnrollment = () =>
+    mitxonline.factories.enrollment.courseEnrollment({
+      certificate: null,
+      grades: [],
+      run: {
+        start_date: moment().add(30, "days").toISOString(),
+        end_date: moment().add(90, "days").toISOString(),
+        courseware_url: faker.internet.url(),
+      },
+    })
+
+  test.each([
+    { isStaff: false, expectLink: false },
+    { isStaff: true, expectLink: true },
+  ])(
+    "upcoming sibling run offers 'View content' only to staff (isStaff=$isStaff)",
+    async ({ isStaff, expectLink }) => {
+      setMockResponse.get(
+        mitxonline.urls.userMe.get(),
+        mitxonline.factories.user.user({ is_staff: isStaff }),
+      )
+      renderWithProviders(
+        <SiblingRunsAccordionHarness
+          enrollment={makeEnrollment()}
+          siblingEnrollments={[makeUpcomingEnrollment()]}
+        />,
+      )
+      await expandAccordion()
+      expect(await screen.findByText(/^Upcoming:/)).toBeInTheDocument()
+
+      const link = screen.queryByRole("link", {
+        name: /View content for Upcoming/,
+      })
+      if (expectLink) {
+        await waitFor(() => {
+          expect(
+            screen.getByRole("link", { name: /View content for Upcoming/ }),
+          ).toBeInTheDocument()
+        })
+      } else {
+        expect(link).not.toBeInTheDocument()
+      }
+    },
+  )
 
   test("upcoming sibling run label starts with 'Upcoming:'", async () => {
     // A run that hasn't started cannot be completed, so drop the factory's

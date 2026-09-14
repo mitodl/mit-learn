@@ -12,7 +12,7 @@ import {
 import { learningResourceQueries } from "api/hooks/learningResources"
 import { notFound, redirect } from "next/navigation"
 import { parseResourceId } from "@/common/slugs"
-import { carrySearchParams, learnUrlPath } from "@/common/urls"
+import { carrySearchParams, podcastPath } from "@/common/urls"
 
 type Props = AppPageProps<"/podcast/[podcastId]/[slug]">
 
@@ -57,10 +57,10 @@ const Page: React.FC<Props> = async (props) => {
     notFound()
   }
 
-  // The backend names the canonical URL; redirect if we're not on it (stale or
-  // uppercase slug, or a non-normalized id segment).
-  const canonical = learnUrlPath(resource.learn_url)
-  if (`/podcast/${podcastId}/${slug}` !== canonical) {
+  // The backend names the slug; redirect if we're not on the canonical form
+  // (stale or uppercase slug, or a non-normalized id segment).
+  const canonical = podcastPath(id, resource.url_slug)
+  if (podcastPath(podcastId, slug) !== canonical) {
     redirect(carrySearchParams(canonical, await props.searchParams))
   }
 

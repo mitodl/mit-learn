@@ -1,7 +1,9 @@
 import React from "react"
 import { screen, fireEvent } from "@testing-library/react"
 import { renderWithProviders } from "@/test-utils"
+import { faker } from "@faker-js/faker/locale/en"
 import { factories } from "api/test-utils"
+import type { LearningResource } from "api"
 import { DEFAULT_RESOURCE_IMG } from "ol-utilities"
 import { getByImageSrc } from "ol-test-utilities"
 import { PlatformEnum, ResourceTypeEnum } from "api"
@@ -121,6 +123,89 @@ describe("CallToActionSection", () => {
         expect(link).toBeInTheDocument()
       },
     )
+  })
+
+  describe("resources whose canonical home is on Learn", () => {
+    const render = (resource: LearningResource) =>
+      renderWithProviders(
+        <CallToActionSection
+          imgConfig={IMG_CONFIG}
+          resource={resource}
+          shareUrl="https://learn.mit.edu/test"
+        />,
+      )
+
+    it.each([
+      {
+        label: "a video playlist",
+        resource: () =>
+          factories.learningResources.videoPlaylist({
+            resource_category: "Video Playlist",
+          }),
+        cta: "Learn More",
+      },
+      {
+        label: "a video in a playlist",
+        resource: () =>
+          factories.learningResources.video({
+            resource_category: "Video",
+            playlists: [String(faker.number.int({ min: 1, max: 1e6 }))],
+          }),
+        cta: "Watch Video",
+      },
+      {
+        label: "a podcast",
+        resource: () =>
+          factories.learningResources.podcast({
+            resource_category: "Podcast",
+          }),
+        cta: "Listen to Podcast",
+      },
+      {
+        label: "an episode with a parent podcast",
+        resource: () =>
+          factories.learningResources.podcastEpisode({
+            resource_category: "Podcast Episode",
+            podcast_episode: {
+              podcasts: [faker.number.int({ min: 1, max: 1e6 })],
+            },
+          }),
+        cta: "Listen to Podcast",
+      },
+    ])("sends $label to its learn_url", ({ resource: make, cta }) => {
+      const resource = make() as LearningResource
+      render(resource)
+      expect(screen.getByRole("link", { name: cta })).toHaveAttribute(
+        "href",
+        resource.learn_url,
+      )
+    })
+
+    it("sends an episode with no parent podcast to the source instead", () => {
+      // Its learn_url is this very drawer, so linking there would be circular.
+      const episode = factories.learningResources.podcastEpisode({
+        resource_category: "Podcast Episode",
+        url: "https://example.com/episode.mp3",
+        podcast_episode: { podcasts: [] },
+      }) as LearningResource
+      render(episode)
+      expect(
+        screen.getByRole("link", { name: "Listen to Podcast" }),
+      ).toHaveAttribute("href", expect.stringContaining("example.com/episode"))
+    })
+
+    it("sends a video outside every playlist to the source instead", () => {
+      const video = factories.learningResources.video({
+        resource_category: "Video",
+        url: "https://youtube.com/watch?v=abc",
+        playlists: [],
+      }) as LearningResource
+      render(video)
+      expect(screen.getByRole("link", { name: "Watch Video" })).toHaveAttribute(
+        "href",
+        expect.stringContaining("youtube.com/watch"),
+      )
+    })
   })
 
   describe("UTM parameters", () => {

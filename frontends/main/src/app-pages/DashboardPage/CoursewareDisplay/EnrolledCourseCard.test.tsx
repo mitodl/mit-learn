@@ -98,6 +98,55 @@ describe.each([
     },
   )
 
+  test.each([
+    { runDates: currentRunDates, expectLink: true, case: "started" },
+    { runDates: futureRunDates, expectLink: false, case: "not started" },
+  ])(
+    "Title links to courseware only once the run has started ($case)",
+    async ({ runDates, expectLink }) => {
+      setupUserApis()
+      const coursewareUrl = faker.internet.url()
+      const enrollment = mitxonline.factories.enrollment.courseEnrollment({
+        grades: [],
+        certificate: null,
+        run: { ...runDates, courseware_url: coursewareUrl },
+      })
+      renderWithProviders(<EnrolledCourseCard enrollment={enrollment} />)
+      const card = getCard()
+      const title = enrollment.run.course.title
+
+      if (expectLink) {
+        expect(within(card).getByRole("link", { name: title })).toHaveAttribute(
+          "href",
+          coursewareUrl,
+        )
+      } else {
+        // The heading still names the course, it just isn't a way in.
+        await waitFor(() => {
+          expect(
+            within(card).queryByRole("link", { name: title }),
+          ).not.toBeInTheDocument()
+        })
+        expect(within(card).getByText(title)).toBeInTheDocument()
+      }
+    },
+  )
+
+  test("Title links to courseware for staff before the run starts", async () => {
+    setupUserApis({ is_staff: true })
+    const coursewareUrl = faker.internet.url()
+    const enrollment = mitxonline.factories.enrollment.courseEnrollment({
+      grades: [],
+      certificate: null,
+      run: { ...futureRunDates, courseware_url: coursewareUrl },
+    })
+    renderWithProviders(<EnrolledCourseCard enrollment={enrollment} />)
+    const link = await within(getCard()).findByRole("link", {
+      name: enrollment.run.course.title,
+    })
+    expect(link).toHaveAttribute("href", coursewareUrl)
+  })
+
   test("Courseware button is a navigable link for staff even when course has not started", async () => {
     setupUserApis({ is_staff: true })
     const coursewareUrl = faker.internet.url()

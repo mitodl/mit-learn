@@ -38,9 +38,10 @@ const mockEpisode = (
   const episode = factories.learningResources.podcastEpisode({
     id,
     title: "Episode One",
+    url_slug: slug,
     podcast_episode: { podcasts: parentIds, has_transcript: hasTranscript },
-    // The backend names the slug, always under the canonical parent; the page
-    // resolves the parent segment against the request.
+    // learn_url is always scoped to the canonical parent; the page resolves the
+    // parent segment against the request instead.
     learn_url: `http://test.learn.odl.local:8062/podcast/${parentIds[0]}/podcast_episode/${id}/${slug}`,
   })
   setMockResponse.get(

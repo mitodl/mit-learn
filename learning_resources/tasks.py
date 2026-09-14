@@ -29,6 +29,7 @@ from learning_resources.etl.edx_shared import (
     get_most_recent_course_archives,
     sync_edx_archive,
     sync_edx_course_files,
+    unpublish_staff_only_content_files,
 )
 from learning_resources.etl.loaders import (
     load_learning_materials,
@@ -197,25 +198,8 @@ def get_content_tasks(
     if chunk_size is None:
         chunk_size = settings.LEARNING_COURSE_ITERATOR_CHUNK_SIZE
 
-    blocklisted_ids = load_course_blocklist()
     archive_keys = get_most_recent_course_archives(etl_source)
-
-    if learning_resource_ids:
-        learning_resources = (
-            LearningResource.objects.filter(
-                id__in=learning_resource_ids, etl_source=etl_source
-            )
-            .order_by("-id")
-            .values_list("id", flat=True)
-        )
-    else:
-        learning_resources = (
-            LearningResource.objects.filter(Q(published=True) | Q(test_mode=True))
-            .filter(course__isnull=False, etl_source=etl_source)
-            .exclude(readable_id__in=blocklisted_ids)
-            .order_by("-id")
-            .values_list("id", flat=True)
-        )
+    learning_resources = _content_file_resource_ids(etl_source, learning_resource_ids)
 
     return celery.group(
         [
@@ -225,6 +209,52 @@ def get_content_tasks(
                 chunk_size=chunk_size,
             )
         ]
+    )
+
+
+def _content_file_resource_ids(etl_source: str, learning_resource_ids):
+    """Course ids whose archives should be processed for an edX source"""
+    if learning_resource_ids:
+        return (
+            LearningResource.objects.filter(
+                id__in=learning_resource_ids, etl_source=etl_source
+            )
+            .order_by("-id")
+            .values_list("id", flat=True)
+        )
+    return (
+        LearningResource.objects.filter(Q(published=True) | Q(test_mode=True))
+        .filter(course__isnull=False, etl_source=etl_source)
+        .exclude(readable_id__in=load_course_blocklist())
+        .order_by("-id")
+        .values_list("id", flat=True)
+    )
+
+
+@app.task(acks_late=True, reject_on_worker_lost=True)
+def unpublish_staff_only_files(ids: list[int], etl_source: str, keys: list[str]):
+    """Unpublish staff-only content files for a chunk of courses"""
+    return unpublish_staff_only_content_files(etl_source, ids, keys)
+
+
+@app.task(bind=True)
+def unpublish_all_staff_only_files(
+    self, *, etl_source, chunk_size=None, learning_resource_ids=None
+):
+    """Fan out unpublish_staff_only_files over an edX source's current archives"""
+    if chunk_size is None:
+        chunk_size = settings.LEARNING_COURSE_ITERATOR_CHUNK_SIZE
+    archive_keys = get_most_recent_course_archives(etl_source)
+    return self.replace(
+        celery.group(
+            [
+                unpublish_staff_only_files.si(ids, etl_source, archive_keys)
+                for ids in chunks(
+                    _content_file_resource_ids(etl_source, learning_resource_ids),
+                    chunk_size=chunk_size,
+                )
+            ]
+        )
     )
 
 

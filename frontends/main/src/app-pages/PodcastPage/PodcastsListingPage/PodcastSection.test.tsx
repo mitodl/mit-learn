@@ -1,7 +1,7 @@
 import React from "react"
 import { factories } from "api/test-utils"
 import type { LearningResource } from "api/v1"
-import { SEARCH_PODCASTS, podcastPageView } from "@/common/urls"
+import { SEARCH_PODCASTS } from "@/common/urls"
 import { renderWithProviders, screen } from "@/test-utils"
 import PodcastSection from "./PodcastSection"
 
@@ -67,7 +67,7 @@ describe("PodcastSection", () => {
     expect(screen.getByText(/Updated May 3/)).toBeInTheDocument()
     expect(screen.getByRole("link", { name: /Chalk Radio/ })).toHaveAttribute(
       "href",
-      podcastPageView("1", "Chalk Radio"),
+      series.learn_url,
     )
   })
 

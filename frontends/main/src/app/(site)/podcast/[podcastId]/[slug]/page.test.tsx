@@ -27,15 +27,12 @@ beforeEach(() => {
 
 const ORIGIN = "http://test.learn.odl.local:8062"
 
-/**
- * The backend names the canonical URL, so a test asserting on it must say what
- * the backend returned. `slug` is the segment learn_url carries.
- */
 const mockPodcast = (slug = "beyond-biology") => {
   const id = 1234
   const podcast = factories.learningResources.podcast({
     id,
     title: "Beyond Biology",
+    url_slug: slug,
     learn_url: `${ORIGIN}/podcast/${id}/${slug}`,
   })
   setMockResponse.get(
