@@ -13,7 +13,6 @@ import {
   TableHeaderCell,
   TableHeaderRow,
   TableRow,
-  tableCardInnerWidth,
 } from "@/components/B2BTable/B2BTable"
 import {
   formatAverage,
@@ -21,7 +20,6 @@ import {
   formatPercent,
   SuppressibleValue,
 } from "./format"
-import { dashboardContentWidth } from "../layoutMetrics"
 import SectionError from "./SectionError"
 
 /**
@@ -76,10 +74,9 @@ import SectionError from "./SectionError"
 
 /**
  * Every line of text in this table wraps (see `CellText`). Truncating is not an
- * option here: the columns take fixed shares of `TableGrid`'s floor, which
- * leaves an activity column under 100px, while a detail line like
- * "96 learners, 9,134 attempted" needs closer to 200px — so an ellipsis would
- * cut the second figure of every paired cell on every row, at every width.
+ * option here: an activity column can be as narrow as `VALUE_MIN_WIDTH`, while
+ * a detail line like "96 learners, 9,134 attempted" needs closer to 200px — so
+ * an ellipsis would cut the second figure of every paired cell on every row.
  */
 const CourseTitle = styled(CellText)(({ theme }) => ({
   ...theme.typography.subtitle2,
@@ -103,7 +100,7 @@ const Detail = styled(CellText)(({ theme }) => ({
  * The scroll container for the grid below, and the reason it carries a tab stop
  * and a name: a row with nothing suppressed contains no focusable element at
  * all, so without them a keyboard-only user would have no route to a column the
- * grid's floor pushes out of view. (A suppressed figure is focusable — see
+ * columns' minimum widths push out of view. (A suppressed figure is focusable — see
  * `SuppressedMark` — but only rows that happen to have one, and tabbing to a
  * withheld value is not a way to read the ones beside it.)
  *
@@ -120,26 +117,23 @@ const TableScroll = styled.div(({ theme }) => ({
 }))
 
 /**
- * The floor below which seven columns scroll instead of squeezing, derived
- * rather than chosen: it is exactly the width `TableCard` leaves a child when
- * the dashboard's content column is at its own ceiling.
+ * The narrowest a column may get on desktop. Once the seven minimums plus the
+ * row gaps exceed the card, the row overflows into `TableScroll` and scrolls
+ * rather than squeezing the figures further; above that width the columns
+ * share the extra space by `COLUMN_FLEX` as usual.
  *
- * That derivation is the whole point. The content column tops out a little
- * under 900px however wide the screen is — 1920px included — and the card
- * spends 50 of those on its padding and border, so a floor picked for the
- * columns' comfort would buy nothing but permanent horizontal scrolling. Taking
- * the ceiling itself means the table scrolls only while the window is narrower
- * than `lg`, and a maximised desktop reads every column in full. The cost is
- * that the two "per engaged learner" headers wrap to three lines and rows grow
- * by ~18px.
+ * Chosen so the table just fits the dashboard's content column on a maximised
+ * desktop and only scrolls on narrower windows. The cost at the minimum is
+ * that the two "per engaged learner" headers wrap to three lines.
  *
- * Below `md` the rows stack (see `StackedCell`), so the floor lifts: a phone
- * gets label/value pairs, not an 834px grid three screens wide.
+ * Below `md` the rows stack (see `StackedCell`) and these do not apply.
  */
-const TableGrid = styled.div(({ theme }) => ({
-  minWidth: `${tableCardInnerWidth(dashboardContentWidth(theme))}px`,
-  [theme.breakpoints.down("md")]: {
-    minWidth: "0",
+const COURSE_MIN_WIDTH = 180
+const VALUE_MIN_WIDTH = 92
+
+const ValueHeaderCell = styled(TableHeaderCell)(({ theme }) => ({
+  [theme.breakpoints.up("md")]: {
+    minWidth: `${VALUE_MIN_WIDTH}px`,
   },
 }))
 
@@ -153,6 +147,9 @@ const TableGrid = styled.div(({ theme }) => ({
  * only the two-line ones, so the column of labels stays straight.
  */
 const StackedCell = styled(TableCell)(({ theme }) => ({
+  [theme.breakpoints.up("md")]: {
+    minWidth: `${VALUE_MIN_WIDTH}px`,
+  },
   [theme.breakpoints.down("md")]: {
     flexDirection: "column",
     alignItems: "flex-start",
@@ -162,7 +159,7 @@ const StackedCell = styled(TableCell)(({ theme }) => ({
 
 /**
  * The course column stays put while the rest of the row scrolls, which it does
- * whenever the window leaves the grid less than its floor. Without this,
+ * whenever the window cannot fit every column at its minimum. Without this,
  * scrolling the right-hand columns into view costs the reader the only thing
  * that said which course run the numbers belong to.
  *
@@ -177,6 +174,7 @@ const StackedCell = styled(TableCell)(({ theme }) => ({
  */
 const stickyColumn = (theme: Theme) => ({
   [theme.breakpoints.up("md")]: {
+    minWidth: `${COURSE_MIN_WIDTH}px`,
     position: "sticky" as const,
     left: 0,
     zIndex: 1,
@@ -250,54 +248,54 @@ const ContentEngagementTable: React.FC<{
         aria-label="Content engagement, scrollable table"
         tabIndex={0}
       >
-        <TableGrid role="table" aria-label="Content engagement">
+        <div role="table" aria-label="Content engagement">
           <div role="rowgroup">
             <TableHeaderRow role="row">
               <CourseHeaderCell role="columnheader" $flex={COLUMN_FLEX.course}>
                 Course
               </CourseHeaderCell>
-              <TableHeaderCell
+              <ValueHeaderCell
                 role="columnheader"
                 $flex={COLUMN_FLEX.enrolled}
                 $numeric
               >
                 Enrolled
-              </TableHeaderCell>
-              <TableHeaderCell
+              </ValueHeaderCell>
+              <ValueHeaderCell
                 role="columnheader"
                 $flex={COLUMN_FLEX.engaged}
                 $numeric
               >
                 Engaged
-              </TableHeaderCell>
-              <TableHeaderCell
+              </ValueHeaderCell>
+              <ValueHeaderCell
                 role="columnheader"
                 $flex={COLUMN_FLEX.videos}
                 $numeric
               >
                 Videos per engaged learner
-              </TableHeaderCell>
-              <TableHeaderCell
+              </ValueHeaderCell>
+              <ValueHeaderCell
                 role="columnheader"
                 $flex={COLUMN_FLEX.problems}
                 $numeric
               >
                 Problems per engaged learner
-              </TableHeaderCell>
-              <TableHeaderCell
+              </ValueHeaderCell>
+              <ValueHeaderCell
                 role="columnheader"
                 $flex={COLUMN_FLEX.chatbot}
                 $numeric
               >
                 Chatbot adoption
-              </TableHeaderCell>
-              <TableHeaderCell
+              </ValueHeaderCell>
+              <ValueHeaderCell
                 role="columnheader"
                 $flex={COLUMN_FLEX.certificates}
                 $numeric
               >
                 Certificates
-              </TableHeaderCell>
+              </ValueHeaderCell>
             </TableHeaderRow>
           </div>
           <div role="rowgroup">
@@ -382,7 +380,7 @@ const ContentEngagementTable: React.FC<{
               </TableRow>
             ))}
           </div>
-        </TableGrid>
+        </div>
       </TableScroll>
     </TableCard>
   )
