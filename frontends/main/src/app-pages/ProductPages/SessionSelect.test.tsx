@@ -46,16 +46,12 @@ describe("SessionSelect", () => {
   })
 
   test("collapses the redundant start-year for a same-year range", async () => {
-    // is_upgradable + is_self_paced pinned so the option label is just the
-    // date range: a non-upgradable run appends "(no certificate available)",
-    // and a self-paced run whose start date has passed appends
-    // "— Start Anytime". Both flags are random in the factory, and a date
-    // written as "future" does not stay one.
+    // is_upgradable: true so the option label is just the date range (a
+    // non-upgradable run appends "(no certificate available)").
     const run = makeRun({
       start_date: "2026-09-08",
       end_date: "2026-12-16",
       is_upgradable: true,
-      is_self_paced: false,
     })
     renderWithProviders(
       <SessionSelect
@@ -75,7 +71,6 @@ describe("SessionSelect", () => {
       start_date: "2026-12-08",
       end_date: "2027-02-12",
       is_upgradable: true,
-      is_self_paced: false,
     })
     renderWithProviders(
       <SessionSelect
@@ -160,13 +155,11 @@ describe("SessionSelect", () => {
     const soon = makeRun({
       start_date: "2026-09-08",
       end_date: "2026-12-16",
-      is_self_paced: false,
       is_upgradable: true,
     })
     const later = makeRun({
       start_date: "2027-01-10",
       end_date: "2027-04-01",
-      is_self_paced: false,
       is_upgradable: true,
     })
     // Pass them out of order to prove the component sorts.
