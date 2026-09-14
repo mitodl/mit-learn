@@ -63,10 +63,9 @@ def delete_website_content_from_news(self, content_id: int):
     Remove a website content item's entry from the news feed.
 
     The counterpart to `sync_website_content_to_news`, run when an item is
-    unpublished. Unlike the sync it does not load the WebsiteContent: the
-    deletion is keyed on the feed guid, so it still cleans up after content
-    that has since been removed, and it is a safe no-op when there is nothing
-    to delete.
+    unpublished. The deletion is keyed on the feed guid rather than on a loaded
+    WebsiteContent, so it still cleans up after content that has since been
+    removed, and is a safe no-op when there is nothing to delete.
 
     Args:
         content_id (int): The ID of the WebsiteContent item to remove
@@ -78,8 +77,21 @@ def delete_website_content_from_news(self, content_id: int):
     import logging
 
     from news_events.etl.articles_news import delete_website_content_news_from_news
+    from website_content.models import WebsiteContent
 
     logger = logging.getLogger(__name__)
+
+    # Queued work can run late. If the item was republished in the meantime, a
+    # stale delete would strip the feed entry the republish just (re)created, so
+    # bail out -- the mirror of the sync task only loading a published row.
+    # `objects` hides soft-deleted rows, so a row that is gone or soft-deleted
+    # still falls through and gets cleaned up.
+    if WebsiteContent.objects.filter(id=content_id, is_published=True).exists():
+        logger.info(
+            "WebsiteContent %s is published again, skipping news feed removal",
+            content_id,
+        )
+        return
 
     try:
         deleted = delete_website_content_news_from_news(content_id)
