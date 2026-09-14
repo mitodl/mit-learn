@@ -1,6 +1,18 @@
 Release Notes
 =============
 
+Version 0.80.2
+--------------
+
+- Only offer a run's courseware once it has started (#3925)
+- chore: refresh drf-lint baseline for ORM003-ORM006 (#3928)
+- fix(sentry): set max_request_body_size to small and scrub Postgres DETAIL rows (#3915)
+- Sanitize and render rich-text descriptions from OVS (#3879)
+- Build internal resource links from learn_url (#3885)
+- Update dependency sharp to v0.35.4 [SECURITY] (#3917)
+- Skip staff-only OLX content when ingesting edX course archives (#3909)
+- Update certificate description in Product Page CertificateTrackCard (#3924)
+
 Version 0.80.1
 --------------
 
