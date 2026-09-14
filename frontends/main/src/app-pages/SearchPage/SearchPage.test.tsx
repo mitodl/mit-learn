@@ -525,12 +525,13 @@ describe("SearchPage", () => {
     ).toBe("true")
   })
 
+  // url param -> the slider's visible title, which is also its accessible name
   const VECTOR_SLIDERS = [
-    "score_cutoff",
-    "program_boost",
-    "staleness_penalty",
-    "staleness_horizon_years",
-    "completeness_penalty",
+    ["score_cutoff", "Minimum Score Cutoff"],
+    ["program_boost", "Program Score Boost"],
+    ["staleness_penalty", "Resource Score Staleness Penalty"],
+    ["staleness_horizon_years", "Staleness Horizon (years)"],
+    ["completeness_penalty", "Incompleteness Penalty"],
   ]
 
   const OPENSEARCH_ONLY_SLIDERS = [
@@ -577,12 +578,14 @@ describe("SearchPage", () => {
     expect(screen.queryByText("Slop")).toBeNull()
     expect(screen.queryByText("Show OCW Files")).toBeNull()
 
-    // The vector controls take their place, starting at the server defaults.
-    for (const param of VECTOR_SLIDERS) {
-      await screen.findByTestId(`${param}-slider`)
+    // The vector controls take their place, each named after its title so a
+    // screen reader can tell the stacked sliders apart, and each starting at
+    // the server default.
+    for (const [, label] of VECTOR_SLIDERS) {
+      await screen.findByRole("slider", { name: label })
     }
     expect(
-      within(screen.getByTestId("program_boost-slider")).getByRole("slider"),
+      screen.getByRole("slider", { name: "Program Score Boost" }),
     ).toHaveAttribute("aria-valuenow", String(ADMIN_PARAMS.program_boost))
   })
 
@@ -653,7 +656,7 @@ describe("SearchPage", () => {
     })
 
     const apiSearchParams = getLastVectorApiSearchParams()
-    for (const param of VECTOR_SLIDERS) {
+    for (const [param] of VECTOR_SLIDERS) {
       expect(apiSearchParams.has(param)).toBe(false)
     }
   })

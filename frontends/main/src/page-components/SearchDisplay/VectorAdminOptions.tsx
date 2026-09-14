@@ -123,6 +123,7 @@ const VectorAdminOptions: React.FC<{
               }
               setSearchParams={setSearchParams}
               urlParam={urlParam}
+              label={label}
               min={min}
               max={max}
               step={step}

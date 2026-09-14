@@ -8,10 +8,17 @@ const SliderInput: React.FC<{
     fn: (prev: URLSearchParams) => URLSearchParams,
   ) => void
   urlParam: string
+  /**
+   * Accessible name for the slider. Required: the visible title sits in a
+   * sibling element the slider is not associated with, so without this a
+   * screen reader announces nothing but "slider" -- and the admin panel stacks
+   * several of them.
+   */
+  label: string
   min: number
   max: number
   step: number
-}> = ({ currentValue, setSearchParams, urlParam, min, max, step }) => {
+}> = ({ currentValue, setSearchParams, urlParam, label, min, max, step }) => {
   const [sliderDisplayValue, setSliderDisplayValue] =
     React.useState<number>(currentValue)
 
@@ -30,6 +37,7 @@ const SliderInput: React.FC<{
     <div>
       <Slider
         data-testid={`${urlParam}-slider`}
+        aria-label={label}
         value={sliderDisplayValue || 0}
         onChange={(event: Event, newValue: number | number[]) => {
           setSliderDisplayValue(newValue as number)

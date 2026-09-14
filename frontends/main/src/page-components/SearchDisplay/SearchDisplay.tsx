@@ -821,6 +821,7 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
                   }
                   setSearchParams={setSearchParams}
                   urlParam="yearly_decay_percent"
+                  label="Resource Score Staleness Penalty"
                   min={0}
                   max={10}
                   step={0.2}
@@ -852,6 +853,7 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
                       }
                       setSearchParams={setSearchParams}
                       urlParam="slop"
+                      label="Slop"
                       min={0}
                       max={20}
                       step={1}
@@ -872,6 +874,7 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
                   }
                   setSearchParams={setSearchParams}
                   urlParam="min_score"
+                  label="Minimum Score Cutoff"
                   min={0}
                   max={20}
                   step={0.5}
@@ -891,6 +894,7 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
                   }
                   setSearchParams={setSearchParams}
                   urlParam="max_incompleteness_penalty"
+                  label="Maximum Incompleteness Penalty"
                   min={0}
                   max={100}
                   step={1}
@@ -913,6 +917,7 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
                   }
                   setSearchParams={setSearchParams}
                   urlParam="content_file_score_weight"
+                  label="Content File Score Weight Adjustment"
                   min={0}
                   max={1}
                   step={0.1}
