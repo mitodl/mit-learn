@@ -1,7 +1,7 @@
 import * as React from "react"
 import { useAdminSearchParams } from "api/hooks/adminSearchParams"
 import { useAppSearchParams } from "@/common/useAppSearchParams"
-import { AdminTitleContainer, ExplanationContainer } from "./SearchDisplay"
+import { AdminTitleContainer, ExplanationContainer } from "./adminStyles"
 import SliderInput from "./SliderInput"
 import type { VectorScoreTuningParam } from "./vectorSearchParams"
 
@@ -91,9 +91,15 @@ type VectorAdminDefaults = Record<VectorScoreTuningParam, number>
  * panel while hybrid search is active. Each slider writes its URL param, which
  * HybridSearchDisplay forwards to the search request; the starting value is
  * the server's configured default.
+ *
+ * `setSearchParams` takes the control name first, like the OpenSearch sliders
+ * do -- SearchDisplay's wrapper reports it to PostHog.
  */
 const VectorAdminOptions: React.FC<{
-  setSearchParams: (fn: (prev: URLSearchParams) => URLSearchParams) => void
+  setSearchParams: (
+    name: string,
+    fn: (prev: URLSearchParams) => URLSearchParams,
+  ) => void
 }> = ({ setSearchParams }) => {
   const searchParams = useAppSearchParams()
   const { data, isLoading } = useAdminSearchParams(true)

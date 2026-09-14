@@ -8,7 +8,6 @@ import type { LearningResourcesVectorSearchResponse } from "api/v0"
 import { useAppSearchParams } from "@/common/useAppSearchParams"
 import getSearchParams from "./getSearchParams"
 import SearchDisplay, { SearchDisplayProps } from "./SearchDisplay"
-import VectorAdminOptions from "./VectorAdminOptions"
 import {
   VECTOR_CLIENT_FILTER_FACETS,
   getVectorScoreTuning,
@@ -141,7 +140,7 @@ const HybridSearchDisplay: React.FC<SearchDisplayProps> = ({
   const searchParams = useAppSearchParams()
   /**
    * The relevance knobs the vector endpoint honors, set by the admin panel's
-   * VectorAdminOptions. The OpenSearch-only admin controls (min_score,
+   * VectorAdminOptions (rendered by SearchDisplay). The OpenSearch-only admin controls (min_score,
    * yearly_decay_percent, search_mode, slop, max_incompleteness_penalty,
    * content_file_score_weight, show_ocw_files) are not forwarded, so
    * SearchDisplay hides them here.
@@ -225,12 +224,6 @@ const HybridSearchDisplay: React.FC<SearchDisplayProps> = ({
   return (
     <SearchDisplay
       {...props}
-      adminOptionsSlot={
-        <>
-          {props.adminOptionsSlot}
-          <VectorAdminOptions setSearchParams={setSearchParams} />
-        </>
-      }
       setSearchParams={setSearchParams}
       getQueryOptions={getQueryOptions}
       getDisplayData={getDisplayData}
