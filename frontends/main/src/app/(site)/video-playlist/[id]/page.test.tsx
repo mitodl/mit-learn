@@ -19,8 +19,7 @@ test("bare /video-playlist/{id} redirects to the slugged canonical", async () =>
   const playlist = factories.learningResources.videoPlaylist({
     id,
     title: "Great Talks",
-    // The backend names the canonical URL; the factory default is a drawer URL.
-    learn_url: `http://test.learn.odl.local:8062/video-playlist/${id}/great-talks`,
+    url_slug: "great-talks",
   })
   setMockResponse.get(
     urls.videoPlaylists.details({ id: playlist.id }),

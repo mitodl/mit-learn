@@ -13,7 +13,7 @@ import { useQuery } from "@tanstack/react-query"
 import { ResourceTypeEnum } from "api/v1"
 import type { PodcastEpisodeResource } from "api/v1"
 import { formatDate } from "ol-utilities"
-import { HOME, podcastPageView, podcastEpisodePageView } from "@/common/urls"
+import { HOME, absoluteUrl, podcastEpisodePath } from "@/common/urls"
 import { addExternalLinkTargets } from "@/common/utils"
 import { EpisodeItem } from "./PodcastsListingPage/EpisodeItem"
 import PodcastContainer from "./PodcastContainer"
@@ -37,9 +37,6 @@ import PodcastShareButton from "./PodcastShareButton"
 import EpisodeContentTabs from "./EpisodeContentTabs"
 import type { TranscriptState } from "./EpisodeContentTabs"
 import { buildPodcastEpisodeStructuredData } from "./podcastEpisodeStructuredData"
-import { env } from "@/env"
-
-const NEXT_PUBLIC_ORIGIN = env("NEXT_PUBLIC_ORIGIN")
 
 /* ── Layout ── */
 
@@ -259,13 +256,17 @@ export const PodcastEpisodeDetailPage: React.FC<
     toggle(episode, Number(podcastId))
   }
 
-  const podcastHref = podcastId
-    ? podcastPageView(podcastId, parentPodcast?.title)
-    : "/"
+  // A podcast has a single page, so its `learn_url` is that page.
+  const podcastHref = parentPodcast?.learn_url ?? "/"
 
+  // Shares the page in front of the user, parent podcast included: an episode
+  // in several podcasts is viewable under any of them, and a recommendation is
+  // usually about the series it was found in.
   const sharePageUrl =
     episode && podcastId
-      ? `${NEXT_PUBLIC_ORIGIN}${podcastEpisodePageView(String(episode.id), podcastId, episode.title)}`
+      ? absoluteUrl(
+          podcastEpisodePath(String(episode.id), podcastId, episode.url_slug),
+        )
       : ""
 
   // Episode descriptions are sanitized on the backend with nh3 during ETL
@@ -285,15 +286,7 @@ export const PodcastEpisodeDetailPage: React.FC<
   // tag so crawlers can read it without executing any additional JS.
   // See: https://schema.org/PodcastEpisode
   const structuredData = !episodeLoading
-    ? buildPodcastEpisodeStructuredData(episode as PodcastEpisodeResource, {
-        url: sharePageUrl || undefined,
-        // The same parent the breadcrumb and podcastHref use, so partOfSeries'
-        // name and url always describe one series.
-        series: parentPodcast,
-        seriesUrl: podcastId
-          ? `${NEXT_PUBLIC_ORIGIN}${podcastHref}`
-          : undefined,
-      })
+    ? buildPodcastEpisodeStructuredData(episode as PodcastEpisodeResource)
     : null
 
   return (
@@ -398,10 +391,10 @@ export const PodcastEpisodeDetailPage: React.FC<
                   episode={episode}
                   href={
                     podcastId
-                      ? podcastEpisodePageView(
+                      ? podcastEpisodePath(
                           String(episode.id),
                           podcastId,
-                          episode.title,
+                          episode.url_slug,
                         )
                       : ""
                   }

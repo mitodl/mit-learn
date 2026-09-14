@@ -31,7 +31,7 @@ describe("CertificateTrackCard", () => {
     ).toBeInTheDocument()
     expect(screen.getByText("Graded assignments & exams")).toBeInTheDocument()
     expect(
-      screen.getByText("MIT certificate on completion"),
+      screen.getByText("MIT Open Learning certificate of completion"),
     ).toBeInTheDocument()
   })
 

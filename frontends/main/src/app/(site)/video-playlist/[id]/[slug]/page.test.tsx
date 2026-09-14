@@ -26,12 +26,12 @@ beforeEach(() => {
   })
 })
 
-/** The backend names the canonical URL; `slug` is the segment it carries. */
 const mockPlaylist = (slug = "great-talks") => {
   const id = 4242
   const playlist = factories.learningResources.videoPlaylist({
     id,
     title: "Great Talks",
+    url_slug: slug,
     learn_url: `http://test.learn.odl.local:8062/video-playlist/${id}/${slug}`,
   })
   // Playlist detail is a different endpoint from learningResources.details.

@@ -137,7 +137,14 @@ v0_router.register(
     r"tutor/problems", views.CourseRunProblemsViewSet, basename="tutorproblem_api"
 )
 
-v0_urls = v0_router.urls
+v0_urls = [
+    path(
+        "credential_metadata/",
+        views.CredentialMetadataView.as_view(),
+        name="credential_metadata",
+    ),
+    *v0_router.urls,
+]
 
 app_name = "lr"
 urlpatterns = [

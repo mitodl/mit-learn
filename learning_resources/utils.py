@@ -780,13 +780,35 @@ def json_to_markdown(obj, indent=0):
     return markdown
 
 
+# tiktoken has no encoding for non-OpenAI models, and the LLM model is
+# admin-configurable, so fall back to OpenAI's current encoding rather than
+# raising. Token counts are then approximate, which is fine for the only thing
+# they are used for: keeping a prompt inside a context window.
+FALLBACK_ENCODING_NAME = "o200k_base"
+
+
+def token_encoding(model: str = "gpt-4o"):
+    """Return the tiktoken encoding for a model, or a default one."""
+    import tiktoken
+
+    try:
+        return tiktoken.encoding_for_model(model)
+    except KeyError:
+        return tiktoken.get_encoding(
+            settings.LITELLM_TOKEN_ENCODING_NAME or FALLBACK_ENCODING_NAME
+        )
+
+
+def count_tokens(text: str, model: str = "gpt-4o") -> int:
+    """Count the tokens in text for a given model."""
+    return len(token_encoding(model).encode(text))
+
+
 def truncate_to_tokens(text: str, max_tokens: int, model: str = "gpt-4o") -> str:
     """
     Truncate text to a maximum number of tokens for a given model.
     """
-    import tiktoken
-
-    encoding = tiktoken.encoding_for_model(model)
+    encoding = token_encoding(model)
     tokens = encoding.encode(text)
     if len(tokens) <= max_tokens:
         return text
@@ -985,7 +1007,7 @@ def build_program_children_content_bulk(program_resources):
 SLUG_MAX_LENGTH = 60
 
 # Path segments are mandatory, so a title that slugifies to nothing still needs
-# a segment. Matches the frontend's `pathSlug`.
+# a segment.
 BLANK_SLUG_PATH_SEGMENT = "resource"
 
 # Characters that are legal, unescaped, in a path segment: ! $ & ' ( ) * + , ; = : @ ~
@@ -1004,6 +1026,11 @@ def slugify_title(title: str) -> str:
     "" when the title yields no ascii letters, which callers handle per surface:
     path segments substitute BLANK_SLUG_PATH_SEGMENT, the drawer omits its
     `resource_title` param.
+
+    The output charset is [a-z0-9-], and the frontend's `[slug]` pages depend on
+    that: they compare a path built from this slug against Next's
+    already-decoded route params, so a slug carrying a percent-encodable
+    character would redirect to a different spelling of itself and loop.
 
     NOT interchangeable with django.utils.text.slugify, which deletes
     punctuation instead of converting it to "-", applies no length limit, and

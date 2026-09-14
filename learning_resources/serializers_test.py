@@ -40,6 +40,7 @@ from learning_resources.models import (
     LearningResource,
     LearningResourceRelationship,
 )
+from learning_resources.utils import learn_url_for_resource, path_slug
 from main.test_utils import assert_json_equal, drf_datetime
 from main.utils import frontend_absolute_url
 
@@ -260,6 +261,7 @@ def test_serialize_podcast_episode_playlists_to_json():
             "id": podcast.learning_resource.id,
             "title": podcast.learning_resource.title,
             "readable_id": podcast.learning_resource.readable_id,
+            "learn_url": learn_url_for_resource(podcast.learning_resource, []),
         }
     ]
 
@@ -343,6 +345,7 @@ def test_learning_resource_serializer(  # noqa: PLR0913
     assert result == {
         "id": resource.id,
         "title": resource.title,
+        "url_slug": path_slug(resource.title),
         "created_on": resource.created_on.isoformat().replace("+00:00", "Z"),
         "description": resource.description,
         "full_description": resource.full_description,

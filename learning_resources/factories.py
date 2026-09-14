@@ -954,3 +954,33 @@ class ContentSummarizerConfigurationFactory(DjangoModelFactory):
     class Meta:
         model = models.ContentSummarizerConfiguration
         django_get_or_create = ("platform", "llm_model")
+
+
+class CredentialMetadataConfigurationFactory(DjangoModelFactory):
+    """Factory for CredentialMetadataConfiguration"""
+
+    field = FuzzyChoice([field.name for field in constants.CredentialMetadataField])
+    llm_model = "gpt-4o-mini"
+    prompt = factory.Faker("sentence")
+    temperature = 0.0
+
+    class Meta:
+        model = models.CredentialMetadataConfiguration
+        django_get_or_create = ("field",)
+
+
+class CredentialMetadataGenerationLogFactory(DjangoModelFactory):
+    """Factory for CredentialMetadataGenerationLog"""
+
+    learning_resource = factory.SubFactory(LearningResourceFactory, is_course=True)
+    field = FuzzyChoice([field.name for field in constants.CredentialMetadataField])
+    response = factory.Dict({"description": factory.Faker("sentence")})
+    prompt_text = factory.Faker("sentence")
+    llm_model = "gpt-4o-mini"
+    temperature = 0.0
+    context_text = factory.Faker("paragraph")
+    context_tokens = 100
+    generated_by = factory.SubFactory(UserFactory)
+
+    class Meta:
+        model = models.CredentialMetadataGenerationLog

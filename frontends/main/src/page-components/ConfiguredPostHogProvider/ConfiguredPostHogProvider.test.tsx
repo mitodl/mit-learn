@@ -1,21 +1,31 @@
 import React from "react"
 
 import { waitFor } from "@testing-library/react"
-import { PosthogIdentifier } from "./ConfiguredPostHogProvider"
+import ConfiguredPostHogProvider, {
+  PosthogIdentifier,
+} from "./ConfiguredPostHogProvider"
 import { renderWithProviders } from "@/test-utils"
 
 // mock stuff
 import { setMockResponse, urls, factories } from "api/test-utils"
 import type { User } from "api/hooks/user"
 import { usePostHog } from "posthog-js/react"
+import posthogClient from "posthog-js"
 import type { PostHog } from "posthog-js"
+
+jest.mock("posthog-js", () => ({
+  __esModule: true,
+  default: { init: jest.fn() },
+}))
 
 jest.mock("posthog-js/react", () => {
   return {
     __esModule: true,
     usePostHog: jest.fn(),
+    PostHogProvider: ({ children }: { children: React.ReactNode }) => children,
   }
 })
+const mockInit = jest.mocked(posthogClient.init)
 const mockUsePostHog = jest.mocked(usePostHog)
 const posthog: Pick<PostHog, "identify" | "reset" | "get_property"> = {
   identify: jest.fn(),
@@ -73,5 +83,44 @@ describe("PosthogIdentifier", () => {
     })
     expect(mockPosthog.identify).not.toHaveBeenCalled()
     expect(mockPosthog.reset).not.toHaveBeenCalled()
+  })
+})
+
+describe("ConfiguredPostHogProvider", () => {
+  beforeEach(() => {
+    mockInit.mockClear()
+    process.env.NEXT_PUBLIC_POSTHOG_API_KEY = "test-key"
+  })
+  afterEach(() => {
+    delete process.env.NEXT_PUBLIC_POSTHOG_API_KEY
+  })
+
+  /**
+   * posthog-js resolves `capture_pageview` from `defaults`: without a date it
+   * is `true`, which only captures hard page loads. App Router navigations
+   * need the "history_change" behavior that this date opts into.
+   */
+  test("Initializes posthog with a pinned defaults date", async () => {
+    setMockResponse.get(urls.userMe.get(), factories.user.user({}))
+    renderWithProviders(
+      <ConfiguredPostHogProvider>{null}</ConfiguredPostHogProvider>,
+    )
+
+    await waitFor(() => {
+      expect(mockInit).toHaveBeenCalledExactlyOnceWith(
+        "test-key",
+        expect.objectContaining({ defaults: "2025-05-24" }),
+      )
+    })
+  })
+
+  test("Does not initialize posthog without an api key", () => {
+    delete process.env.NEXT_PUBLIC_POSTHOG_API_KEY
+    setMockResponse.get(urls.userMe.get(), factories.user.user({}))
+    renderWithProviders(
+      <ConfiguredPostHogProvider>{null}</ConfiguredPostHogProvider>,
+    )
+
+    expect(mockInit).not.toHaveBeenCalled()
   })
 })

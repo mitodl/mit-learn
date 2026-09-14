@@ -47,6 +47,13 @@ const NavSectionHeader = styled.div<{ hasButton: boolean }>(
   ],
 )
 
+const NavSectionDivider = styled.hr(({ theme }) => ({
+  border: "none",
+  borderTop: `1px solid ${theme.custom.colors.lightGray2}`,
+  margin: "0 0 4px",
+  width: "100%",
+}))
+
 const NavItemsContainer = styled.div(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
@@ -117,7 +124,8 @@ export interface NavData {
 }
 
 interface NavSection {
-  title: string
+  title?: string
+  divider?: boolean
   items: NavItem[]
 }
 
@@ -195,21 +203,27 @@ const NavDrawer = ({
         }}
       />
     ))
+    // The close button lives in the first section's header, so a section
+    // without a title must not be first.
+    const showHeader = Boolean(section.title) || i === 0
     return (
-      <NavSection key={section.title}>
-        <NavSectionHeader hasButton={i === 0}>
-          {section.title}
-          {i === 0 && (
-            <CloseButton
-              aria-label="Close Navigation"
-              onClick={onClose}
-              variant="text"
-              size="small"
-            >
-              <RiCloseLargeLine aria-hidden />
-            </CloseButton>
-          )}
-        </NavSectionHeader>
+      <NavSection key={section.title || `section-${i}`}>
+        {section.divider ? <NavSectionDivider /> : null}
+        {showHeader ? (
+          <NavSectionHeader hasButton={i === 0}>
+            {section.title}
+            {i === 0 && (
+              <CloseButton
+                aria-label="Close Navigation"
+                onClick={onClose}
+                variant="text"
+                size="small"
+              >
+                <RiCloseLargeLine aria-hidden />
+              </CloseButton>
+            )}
+          </NavSectionHeader>
+        ) : null}
         <NavItemsContainer>{navItemElements}</NavItemsContainer>
       </NavSection>
     )

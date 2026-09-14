@@ -712,6 +712,36 @@ def test_truncate_to_tokens_util(mocker):
     assert len(mock_encoding.encode(truncated)) <= max_tokens
 
 
+def test_token_encoding_falls_back_for_unknown_models(mocker, settings):
+    """A model tiktoken does not know falls back rather than raising"""
+    settings.LITELLM_TOKEN_ENCODING_NAME = None
+    get_encoding = mocker.patch("tiktoken.get_encoding")
+    mocker.patch("tiktoken.encoding_for_model", side_effect=KeyError("unknown"))
+
+    assert utils.token_encoding("some-frontier-model") == get_encoding.return_value
+    get_encoding.assert_called_once_with(utils.FALLBACK_ENCODING_NAME)
+
+
+def test_count_tokens(mocker):
+    """count_tokens counts what truncate_to_tokens truncates to"""
+
+    class MockEncoding:
+        def encode(self, text):
+            return list(text)
+
+        def decode(self, tokens):
+            return "".join(tokens)
+
+    mocker.patch("tiktoken.encoding_for_model", return_value=MockEncoding())
+
+    text = "Learning outcomes for this course " * 20
+    max_tokens = 25
+    truncated = truncate_to_tokens(text, max_tokens, "gpt-4o")
+
+    assert utils.count_tokens(text, "gpt-4o") > max_tokens
+    assert utils.count_tokens(truncated, "gpt-4o") == max_tokens
+
+
 def test_build_program_children_content_no_children():
     """Programs with no children should return empty string"""
     program_lr = ProgramFactory.create(courses=[]).learning_resource

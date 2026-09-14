@@ -9,7 +9,6 @@ import type {
   EnrollmentCompletionFunnel,
   MonthlyEngagementTrend,
   OrgAnalyticsResponse,
-  ProgramFunnel,
 } from "./types"
 
 /**
@@ -77,18 +76,6 @@ const analyticsOrganizationsApi = {
     getOrgResource<MonthlyEngagementTrend>(
       organizationId,
       "engagement-trend",
-      page,
-      signal,
-    ),
-
-  programFunnel: (
-    organizationId: string,
-    page?: AnalyticsPageParams,
-    signal?: AbortSignal,
-  ) =>
-    getOrgResource<ProgramFunnel>(
-      organizationId,
-      "program-funnel",
       page,
       signal,
     ),
@@ -180,20 +167,6 @@ const analyticsContractsApi = {
       organizationId,
       contractId,
       "engagement-trend",
-      page,
-      signal,
-    ),
-
-  programFunnel: (
-    organizationId: string,
-    contractId: string,
-    page?: AnalyticsPageParams,
-    signal?: AbortSignal,
-  ) =>
-    getContractResource<ProgramFunnel>(
-      organizationId,
-      contractId,
-      "program-funnel",
       page,
       signal,
     ),

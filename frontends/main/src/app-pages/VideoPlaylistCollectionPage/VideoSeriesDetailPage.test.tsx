@@ -1,5 +1,6 @@
 import React from "react"
 import { setMockResponse, urls, factories } from "api/test-utils"
+import { absoluteUrl, videoDetailPath } from "@/common/urls"
 import { renderWithProviders, screen, user } from "@/test-utils"
 import VideoSeriesDetailPage from "./VideoSeriesDetailPage"
 import { ResourceTypeEnum } from "api/v1"
@@ -130,10 +131,7 @@ describe("VideoSeriesDetailPage", () => {
         name: "Neural Networks Series",
       })
       expect(playlistLinks.length).toBeGreaterThanOrEqual(1)
-      expect(playlistLinks[0]).toHaveAttribute(
-        "href",
-        `/video-playlist/${playlist.id}/neural-networks-series`,
-      )
+      expect(playlistLinks[0]).toHaveAttribute("href", playlist.learn_url)
     })
 
     test("does not include a playlist breadcrumb when no playlistId", async () => {
@@ -206,7 +204,7 @@ describe("VideoSeriesDetailPage", () => {
       })
       expect(prevLink).toHaveAttribute(
         "href",
-        `/video/${prev.id}/part-1?playlist=${playlist.id}`,
+        videoDetailPath(prev.id, playlist.id, prev.url_slug),
       )
     })
 
@@ -226,7 +224,7 @@ describe("VideoSeriesDetailPage", () => {
       })
       expect(nextLink).toHaveAttribute(
         "href",
-        `/video/${next.id}/part-2?playlist=${playlist.id}`,
+        videoDetailPath(next.id, playlist.id, next.url_slug),
       )
     })
 
@@ -291,7 +289,7 @@ describe("VideoSeriesDetailPage", () => {
       ).not.toBeInTheDocument()
     })
 
-    test("share URL uses the slugged canonical form with playlist param", async () => {
+    test("share URL keeps the playlist the video is watched in", async () => {
       const playlist = makePlaylist({ id: 99 })
       const current = makeVideo({ id: 720, title: "Intro to Machine Learning" })
       const next = makeVideo({ title: "Next Lecture" })
@@ -308,8 +306,10 @@ describe("VideoSeriesDetailPage", () => {
           name: /share intro to machine learning/i,
         }),
       )
+      // Sharing hands out the page in front of the user, playlist included,
+      // even when that is not the canonical playlist.
       expect(screen.getByRole("textbox")).toHaveValue(
-        "http://test.learn.odl.local:8062/video/720/intro-to-machine-learning?playlist=99",
+        absoluteUrl(videoDetailPath(current.id, playlist.id, current.url_slug)),
       )
     })
 

@@ -35,6 +35,7 @@ from learning_resources.serializers import (
     LearningResourceSerializer,
     ResourceTypeGroupChoiceField,
 )
+from learning_resources.utils import path_slug
 from learning_resources_search.api import gen_content_file_id
 from learning_resources_search.constants import (
     CONTENT_FILE_TYPE,
@@ -666,6 +667,26 @@ class PercolateQuerySerializer(serializers.ModelSerializer):
         exclude = (*COMMON_IGNORED_FIELDS, "users")
 
 
+def with_derived_resource_fields(source: dict | None) -> dict | None:
+    """
+    Supply `url_slug` for a stored resource document that lacks it.
+
+    Both OpenSearch and Qdrant serve resources as the indexing serializer wrote
+    them, so a field added to the resource serializer is absent from every
+    stored document until that document is reindexed -- while the response
+    schema already declares it required. A slug is a pure function of the title,
+    which every document carries, so deriving one here beats coupling a deploy
+    to a reindex. A reindexed document keeps its own value.
+
+    `url_slug` is the only field that needs this. Everything else the response
+    schema requires is already in the stored documents, `learn_url` included --
+    the index was rebuilt when that field was added.
+    """
+    if source is None or "url_slug" in source:
+        return source
+    return {**source, "url_slug": path_slug(source.get("title") or "")}
+
+
 class LearningResourcesSearchResponseSerializer(SearchResponseSerializer):
     """
     SearchResponseSerializer with OpenAPI annotations for Learning Resources
@@ -675,7 +696,7 @@ class LearningResourcesSearchResponseSerializer(SearchResponseSerializer):
     @extend_schema_field(LearningResourceSerializer(many=True))
     def get_results(self, instance):
         hits = instance.get("hits", {}).get("hits", [])
-        return (hit.get("_source") for hit in hits)
+        return (with_derived_resource_fields(hit.get("_source")) for hit in hits)
 
 
 class ContentFileSearchResponseSerializer(SearchResponseSerializer):

@@ -14,5 +14,4 @@ export type {
   EnrollmentCompletionFunnel,
   MonthlyEngagementTrend,
   OrgAnalyticsResponse,
-  ProgramFunnel,
 } from "../../types"

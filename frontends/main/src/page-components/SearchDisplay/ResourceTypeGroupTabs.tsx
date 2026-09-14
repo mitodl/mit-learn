@@ -69,7 +69,10 @@ const ResourceTypeGroupTabContext: React.FC<{
 type ResourceTypeGroupTabsProps = {
   aggregations?: Aggregations
   tabs: TabConfig[]
-  setSearchParams: (fn: (prev: URLSearchParams) => URLSearchParams) => void
+  setSearchParams: (
+    name: string,
+    fn: (prev: URLSearchParams) => URLSearchParams,
+  ) => void
   onTabChange?: () => void
   className?: string
 }
@@ -93,7 +96,7 @@ const ResourceTypeGroupTabList: React.FC<ResourceTypeGroupTabsProps> = ({
       className={className}
       onChange={(_e, value) => {
         const tab = tabs.find((t) => t.name === value)
-        setSearchParams((prev) => {
+        setSearchParams("resource_type_group", (prev) => {
           const next = new URLSearchParams(prev)
           if (prev.get("resource_type_group") === "learning_material") {
             next.delete("resource_category")

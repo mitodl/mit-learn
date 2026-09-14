@@ -3,6 +3,7 @@ import { factories, setMockResponse, urls } from "api/test-utils"
 import { ResourceTypeEnum } from "api/v1"
 import type { LearningResource, PodcastEpisodeResource } from "api/v1"
 import { renderWithProviders, screen, user } from "@/test-utils"
+import { podcastEpisodePath } from "@/common/urls"
 import { PodcastDetailPage } from "./PodcastDetailPage"
 
 jest.mock(
@@ -67,6 +68,7 @@ const setupApis = ({
             id: podcast.id,
             title: podcast.title!,
             readable_id: podcast.readable_id,
+            learn_url: podcast.learn_url,
           },
         ]
       }
@@ -98,6 +100,28 @@ const setupApis = ({
 }
 
 describe("PodcastDetailPage", () => {
+  test("episode rows keep this podcast as context and take only the backend slug", async () => {
+    // The episode's canonical parent is a *different* podcast — an episode in
+    // several podcasts is viewable under any of them. The row href must keep the
+    // podcast being viewed and borrow only the slug.
+    const episodes = makePodcastEpisodes(1)
+    const { podcast } = setupApis({ episodesPage1: episodes })
+    const episode = episodes[0]
+    episode.podcast_episode!.podcasts = [podcast.id + 1, podcast.id]
+
+    renderWithProviders(<PodcastDetailPage podcastId={String(podcast.id)} />)
+
+    const title = await screen.findByText(episode.title!)
+    expect(title.closest("a")).toHaveAttribute(
+      "href",
+      podcastEpisodePath(
+        String(episode.id),
+        String(podcast.id),
+        episode.url_slug,
+      ),
+    )
+  })
+
   test("renders initial episode list", async () => {
     const episodes = makePodcastEpisodes(3)
     const { podcast } = setupApis({ episodesPage1: episodes })
@@ -106,7 +130,16 @@ describe("PodcastDetailPage", () => {
 
     await screen.findByText(episodes[0].title!)
     for (const episode of episodes) {
-      expect(screen.getByText(episode.title!)).toBeInTheDocument()
+      const title = screen.getByText(episode.title!)
+      expect(title).toBeInTheDocument()
+      expect(title.closest("a")).toHaveAttribute(
+        "href",
+        podcastEpisodePath(
+          String(episode.id),
+          String(podcast.id),
+          episode.url_slug,
+        ),
+      )
     }
   })
 

@@ -1,5 +1,6 @@
 export const PostHogEvents = {
   SearchUpdate: "search_update",
+  SearchFilterUpdate: "search_filter_update",
   CallToActionClicked: "cta_clicked",
   EnrollCtaClicked: "enroll_cta_clicked",
   CourseCardClicked: "course_card_clicked",
@@ -31,6 +32,10 @@ export const PostHogEvents = {
   VideoShortsOpened: "video_shorts_opened",
   VideoShortViewed: "video_short_viewed",
   VideoShortsClosed: "video_shorts_closed",
+  ClickedNavForOrganizations: "clicked_nav_for_organizations",
+  OrgLearningCtaClicked: "org_learning_cta_clicked",
+  OrgLearningAudienceSelected: "org_learning_audience_selected",
+  OrgLearningFormSubmitted: "org_learning_form_submitted",
 } as const
 
 export const DigitalCredentialsFAQLink =

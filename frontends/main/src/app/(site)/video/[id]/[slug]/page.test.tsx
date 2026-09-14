@@ -33,8 +33,9 @@ const mockVideo = (playlists: string[], slug = "beyond-biology") => {
   const id = 777
   const video = factories.learningResources.video({
     id,
-    // The backend names the slug, always under the canonical playlist; the page
-    // resolves ?playlist against the request.
+    url_slug: slug,
+    // learn_url is always scoped to the canonical playlist; the page resolves
+    // ?playlist against the request instead.
     learn_url: `http://test.learn.odl.local:8062/video/${id}/${slug}?playlist=${playlists[0]}`,
     title: "Beyond Biology",
     playlists,
@@ -87,6 +88,22 @@ test("generateMetadata canonical is the same URL in every playlist context", asy
   expect(meta.alternates?.canonical).toBe(video.learn_url)
   expect(meta.alternates?.canonical).toMatch(
     new RegExp(`/video/${video.id}/beyond-biology\\?playlist=55$`),
+  )
+})
+
+test("redirects a non-normalized ?playlist to its canonical spelling", async () => {
+  // Both sides of the compare come from videoDetailPath, so the incoming value
+  // has to survive verbatim: "007" resolves to playlist 7, whose canonical form
+  // is ?playlist=7.
+  const video = mockVideo(["7", "66"])
+  await expect(
+    Page({
+      params: Promise.resolve({ id: String(video.id), slug: "beyond-biology" }),
+      searchParams: Promise.resolve({ playlist: "007" }),
+    }),
+  ).rejects.toThrow("NEXT_REDIRECT")
+  expect(mockRedirect).toHaveBeenCalledWith(
+    `/video/${video.id}/beyond-biology?playlist=7`,
   )
 })
 
