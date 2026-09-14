@@ -25,7 +25,6 @@ import type {
   EnrollmentCompletionFunnel,
   MonthlyEngagementTrend,
   OrgAnalyticsResponse,
-  ProgramFunnel,
 } from "api/analytics-hooks/organizations"
 import { isAnalyticsConfigured } from "api/runtime"
 import { matchOrganizationBySlug } from "@/common/utils"
@@ -39,7 +38,7 @@ import ContentEngagementTable from "./Analytics/ContentEngagementTable"
 import ContractKpiCards from "./Analytics/ContractKpiCards"
 import CoursePerformanceTable from "./Analytics/CoursePerformanceTable"
 import EngagementTrendChart from "./Analytics/EngagementTrendChart"
-import ProgramFunnelChart from "./Analytics/ProgramFunnelChart"
+import { SUPPRESSED_LEGEND } from "./Analytics/format"
 import SectionHeader from "./Analytics/SectionHeader"
 import SectionTruncation from "./Analytics/SectionTruncation"
 
@@ -124,6 +123,29 @@ const Notice = styled(Typography)(({ theme }) => ({
 })) as typeof Typography
 
 /**
+ * What an em dash in place of a figure means, said once for the page.
+ *
+ * Each section used to print this itself, which put two or three identical
+ * notices on one screen — and the further down the page one fell, the less it
+ * read as belonging to any particular row. A legend above the sections says
+ * the same thing without competing with the data; what ties the explanation
+ * to a specific figure is the tooltip and accessible label every suppressed
+ * value already carries.
+ *
+ * Rendered unconditionally, which is why the copy is `SUPPRESSED_LEGEND` and
+ * not the tooltip's `SUPPRESSED_EXPLANATION`: it defines the marker instead of
+ * claiming anything about the figures below it, so it stays true on a page
+ * where nothing was suppressed, every section came back empty, or every
+ * section failed. Gating it instead would mean knowing which columns each of
+ * the four views nulls under the floor, and those lists belong with the
+ * sections that read them, not here.
+ */
+const SuppressionLegend = styled(Typography)(({ theme }) => ({
+  ...theme.typography.body3,
+  color: theme.custom.colors.silverGrayDark,
+})) as typeof Typography
+
+/**
  * These views are small per org (contracts, programs, a couple of years of
  * months), but the API caps every list endpoint, so ask for a page big enough
  * that no org is truncated at the default.
@@ -141,7 +163,7 @@ const PAGE_SIZE = 200
  */
 const MAX_PAGE_SIZE = 1000
 
-type SectionKey = "utilization" | "trend" | "courses" | "programs" | "content"
+type SectionKey = "utilization" | "trend" | "courses" | "content"
 
 /**
  * Note there is no 401/403 branch for the analytics queries themselves. The
@@ -170,7 +192,6 @@ type SectionQueries = {
   utilization: SectionQuery<ContractUtilization>
   trend: SectionQuery<MonthlyEngagementTrend>
   courses: SectionQuery<EnrollmentCompletionFunnel>
-  programs: SectionQuery<ProgramFunnel>
   content: SectionQuery<ContentEngagementDepth>
 }
 
@@ -246,6 +267,9 @@ const AnalyticsContentInternal: React.FC<AnalyticsContentInternalProps> = ({
   orgSlug,
   contractSlug,
 }) => {
+  const managerDashboardFlag = useFeatureFlagEnabled(
+    FeatureFlags.B2BContractManagerDashboard,
+  )
   const {
     data: managerOrgs,
     isLoading: isLoadingOrgs,
@@ -285,7 +309,6 @@ const AnalyticsContentInternal: React.FC<AnalyticsContentInternalProps> = ({
     utilization: PAGE_SIZE,
     trend: PAGE_SIZE,
     courses: PAGE_SIZE,
-    programs: PAGE_SIZE,
     content: PAGE_SIZE,
   })
 
@@ -327,9 +350,6 @@ const AnalyticsContentInternal: React.FC<AnalyticsContentInternalProps> = ({
           courses: eraseKey<EnrollmentCompletionFunnel>((page) =>
             analyticsContractQueries.enrollmentFunnel(orgId, contractId, page),
           ),
-          programs: eraseKey<ProgramFunnel>((page) =>
-            analyticsContractQueries.programFunnel(orgId, contractId, page),
-          ),
           content: eraseContractContentRow((page) =>
             analyticsContractQueries.contentEngagement(orgId, contractId, page),
           ),
@@ -343,9 +363,6 @@ const AnalyticsContentInternal: React.FC<AnalyticsContentInternalProps> = ({
           ),
           courses: eraseKey<EnrollmentCompletionFunnel>((page) =>
             analyticsOrganizationQueries.enrollmentFunnel(orgId, page),
-          ),
-          programs: eraseKey<ProgramFunnel>((page) =>
-            analyticsOrganizationQueries.programFunnel(orgId, page),
           ),
           content: eraseKey<ContentEngagementDepth>((page) =>
             analyticsOrganizationQueries.contentEngagement(orgId, page),
@@ -365,11 +382,6 @@ const AnalyticsContentInternal: React.FC<AnalyticsContentInternalProps> = ({
   })
   const courses = useQuery({
     ...scoped.courses({ limit: limits.courses }),
-    enabled: analyticsAvailable,
-    placeholderData: keepPreviousData,
-  })
-  const programs = useQuery({
-    ...scoped.programs({ limit: limits.programs }),
     enabled: analyticsAvailable,
     placeholderData: keepPreviousData,
   })
@@ -457,7 +469,7 @@ const AnalyticsContentInternal: React.FC<AnalyticsContentInternalProps> = ({
           </PageSubtitle>
         </div>
       </OrgDetailsContainer>
-      {manageSeatsSlug ? (
+      {manageSeatsSlug && managerDashboardFlag ? (
         <ButtonLink
           size="small"
           variant="bordered"
@@ -494,7 +506,7 @@ const AnalyticsContentInternal: React.FC<AnalyticsContentInternalProps> = ({
     )
   }
 
-  const failed = [utilization, trend, courses, programs, content].some(
+  const failed = [utilization, trend, courses, content].some(
     (query) => query.isError,
   )
 
@@ -508,6 +520,8 @@ const AnalyticsContentInternal: React.FC<AnalyticsContentInternalProps> = ({
           incomplete.
         </Notice>
       ) : null}
+
+      <SuppressionLegend>{SUPPRESSED_LEGEND}</SuppressionLegend>
 
       <Section>
         <SectionHeader
@@ -523,22 +537,6 @@ const AnalyticsContentInternal: React.FC<AnalyticsContentInternalProps> = ({
           isError={utilization.isError}
         />
         {truncation(utilization, "utilization")}
-      </Section>
-
-      <Section>
-        <SectionHeader
-          title="Monthly engagement"
-          description="Distinct learners active, newly enrolled, and certified each month."
-          asOf={trend.data?.as_of}
-          isLoading={trend.isPending}
-          isError={trend.isError}
-        />
-        <EngagementTrendChart
-          rows={trend.data?.data}
-          isLoading={trend.isPending}
-          isError={trend.isError}
-        />
-        {truncation(trend, "trend")}
       </Section>
 
       <Section>
@@ -559,22 +557,6 @@ const AnalyticsContentInternal: React.FC<AnalyticsContentInternalProps> = ({
 
       <Section>
         <SectionHeader
-          title="Program funnel"
-          description="How far learners progress through each program."
-          asOf={programs.data?.as_of}
-          isLoading={programs.isPending}
-          isError={programs.isError}
-        />
-        <ProgramFunnelChart
-          rows={programs.data?.data}
-          isLoading={programs.isPending}
-          isError={programs.isError}
-        />
-        {truncation(programs, "programs")}
-      </Section>
-
-      <Section>
-        <SectionHeader
           title="Content engagement"
           description="How deeply learners engage with videos, problems and the chatbot in each course run."
           asOf={content.data?.as_of}
@@ -587,6 +569,22 @@ const AnalyticsContentInternal: React.FC<AnalyticsContentInternalProps> = ({
           isError={content.isError}
         />
         {truncation(content, "content")}
+      </Section>
+
+      <Section>
+        <SectionHeader
+          title="Monthly engagement"
+          description="Distinct learners active, newly enrolled, and certified each month."
+          asOf={trend.data?.as_of}
+          isLoading={trend.isPending}
+          isError={trend.isError}
+        />
+        <EngagementTrendChart
+          rows={trend.data?.data}
+          isLoading={trend.isPending}
+          isError={trend.isError}
+        />
+        {truncation(trend, "trend")}
       </Section>
     </Stack>
   )

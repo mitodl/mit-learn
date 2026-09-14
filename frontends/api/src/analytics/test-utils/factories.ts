@@ -7,7 +7,6 @@ import type {
   EnrollmentCompletionFunnel,
   MonthlyEngagementTrend,
   OrgAnalyticsResponse,
-  ProgramFunnel,
 } from "../types"
 
 /**
@@ -106,31 +105,6 @@ const monthlyEngagementTrend = (
   ...overrides,
 })
 
-const programFunnel = (
-  overrides: Partial<ProgramFunnel> = {},
-): ProgramFunnel => ({
-  organization_key: faker.string.alphanumeric(6).toUpperCase(),
-  organization_name: faker.company.name(),
-  contract_pk: faker.string.hexadecimal({
-    length: 32,
-    casing: "lower",
-    prefix: "",
-  }),
-  contract_id: String(faker.number.int({ min: 1, max: 10000 })),
-  b2b_contract_name: `${faker.company.name()} Contract`,
-  program_pk: faker.string.hexadecimal({
-    length: 32,
-    casing: "lower",
-    prefix: "",
-  }),
-  program_title: `${faker.commerce.department()} Program`,
-  total_courses: 6,
-  enrolled_in_contract_courses: 50,
-  enrolled_via_program: 30,
-  program_course_completers: 12,
-  ...overrides,
-})
-
 const contentEngagementDepth = (
   overrides: Partial<ContentEngagementDepth> = {},
 ): ContentEngagementDepth => ({
@@ -192,5 +166,4 @@ export {
   envelope,
   monthlyEngagementTrend,
   organizationId,
-  programFunnel,
 }

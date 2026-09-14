@@ -95,21 +95,6 @@ export type MonthlyEngagementTrend = {
   chatbot_users: number | null
 }
 
-/** `mv_b2b_program_funnel` — grain: org x contract x program. */
-export type ProgramFunnel = {
-  organization_key: string
-  organization_name: string
-  contract_pk: string
-  contract_id: string
-  b2b_contract_name: string
-  program_pk: string
-  program_title: string
-  total_courses: number
-  enrolled_in_contract_courses: number
-  enrolled_via_program: number | null
-  program_course_completers: number | null
-}
-
 /**
  * `mv_b2b_content_engagement_depth` — grain: org x course run, all-time.
  *

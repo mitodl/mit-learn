@@ -39,17 +39,6 @@ const CATEGORICAL = [
 ] as const
 
 /**
- * Ordinal ramp for funnel stages — one hue, light to dark, so the reader sees
- * the progression in the color itself. Stage order is the meaning here, which
- * is why this is a ramp and not three categorical hues.
- */
-const FUNNEL_STAGES = [
-  "#7FA4EA", // lightest — widest stage
-  "#1966FF",
-  "#002896", // darkest — narrowest stage
-] as const
-
-/**
  * Non-data ink. Grid and axis lines stay recessive so the marks carry the
  * chart; labels wear text tokens rather than the series color.
  *
@@ -68,4 +57,4 @@ const chartInk = (theme: Theme) => ({
   surface: theme.custom.colors.white,
 })
 
-export { CATEGORICAL, chartInk, FUNNEL_STAGES }
+export { CATEGORICAL, chartInk }
