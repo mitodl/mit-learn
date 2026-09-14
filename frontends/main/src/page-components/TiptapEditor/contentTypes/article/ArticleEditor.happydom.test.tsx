@@ -71,7 +71,7 @@ describe("ArticleEditor article controls", () => {
 
     await screen.findByRole("button", { name: "Settings" })
     await screen.findByRole("button", { name: "Save as Draft" })
-    await screen.findByRole("button", { name: "Publish" })
+    await screen.findByRole("button", { name: "Publish Article" })
     expect(await screen.findByText(/Article status:/)).toHaveTextContent(
       "Article status: Draft",
     )
@@ -214,7 +214,7 @@ describe("ArticleEditor publish confirmation", () => {
     })
 
     await userEvent.click(
-      await screen.findByRole("button", { name: "Publish" }),
+      await screen.findByRole("button", { name: "Publish Article" }),
     )
 
     // Nothing is saved until the dialog is confirmed.
@@ -244,7 +244,7 @@ describe("ArticleEditor publish confirmation", () => {
     renderArticleEditor()
 
     await userEvent.click(
-      await screen.findByRole("button", { name: "Publish" }),
+      await screen.findByRole("button", { name: "Publish Article" }),
     )
     await screen.findByRole("heading", { name: "Publish article" })
     await userEvent.click(screen.getByRole("button", { name: "Cancel" }))
@@ -301,7 +301,7 @@ describe("ArticleEditor publish confirmation", () => {
     await userEvent.type(heading, " edited")
 
     await userEvent.click(
-      await screen.findByRole("button", { name: "Publish" }),
+      await screen.findByRole("button", { name: "Publish Article" }),
     )
 
     expect(
@@ -380,5 +380,23 @@ describe("ArticleEditor publish confirmation errors", () => {
         screen.queryByRole("heading", { name: "Unpublish article" }),
       ).not.toBeInTheDocument()
     })
+  })
+})
+
+describe("ArticleEditor edit-mode control bar layout", () => {
+  test("stacks the actions above the formatting controls", async () => {
+    renderArticleEditor()
+
+    const publish = await screen.findByRole("button", {
+      name: "Publish Article",
+    })
+    const undo = screen.getByRole("button", { name: "Undo" })
+    const bar = screen.getByRole("toolbar")
+
+    // Two rows, in this order: the actions, then the formatting controls.
+    expect(bar.children).toHaveLength(2)
+    const [actionRow, formattingRow] = Array.from(bar.children)
+    expect(actionRow).toContainElement(publish)
+    expect(formattingRow).toContainElement(undo)
   })
 })

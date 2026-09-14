@@ -558,7 +558,7 @@ describe("NewsEditor - Content Editing and Saving", () => {
       })
 
       const publishButton = await screen.findByRole("button", {
-        name: "Publish",
+        name: "Publish News",
       })
 
       expect(publishButton).not.toBeDisabled()

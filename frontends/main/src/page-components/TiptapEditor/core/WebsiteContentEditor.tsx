@@ -50,11 +50,28 @@ const LearningResourceDrawer = dynamic(
 
 const TOOLBAR_HEIGHT = 43
 
+/* The pieces the stacked edit-mode bar is built from, per the design. */
+const TOOLBAR_PADDING_Y = 12
+const TOOLBAR_ROW_GAP = 24
+const ACTION_ROW_HEIGHT = 40 /* buttonSize="medium" */
+const FORMATTING_ROW_HEIGHT = 32 /* .tiptap-button is 2rem */
+
+/**
+ * The bar is fixed, so the content below has to be offset by its height.
+ * Derived from the values above rather than measured, which is safe because
+ * neither row wraps -- the toolbar scrolls horizontally instead.
+ */
+const STACKED_TOOLBAR_HEIGHT =
+  TOOLBAR_PADDING_Y * 2 +
+  ACTION_ROW_HEIGHT +
+  TOOLBAR_ROW_GAP +
+  FORMATTING_ROW_HEIGHT
+
 const ViewContainer = styled.div<{
-  toolbarVisible: boolean
-}>(({ toolbarVisible, theme }) => ({
+  toolbarHeight: number
+}>(({ toolbarHeight, theme }) => ({
   width: "100vw",
-  marginTop: toolbarVisible ? TOOLBAR_HEIGHT : 0,
+  marginTop: toolbarHeight,
   backgroundColor: theme.custom.colors.white,
 }))
 
@@ -67,6 +84,42 @@ const StyledToolbar = styled(Toolbar)(({ theme }) => ({
     },
   },
 }))
+
+/**
+ * Edit mode stacks the actions above the formatting controls as a centred
+ * column, per the design.
+ */
+const StackedToolbar = styled(StyledToolbar)({
+  "&&": {
+    flexDirection: "column",
+    alignItems: "center",
+    gap: `${TOOLBAR_ROW_GAP}px`,
+    padding: `${TOOLBAR_PADDING_Y}px 40px`,
+  },
+})
+
+/* Nowrap so the bar keeps its derived height; it scrolls instead. */
+const ActionRow = styled.div({
+  display: "flex",
+  alignItems: "center",
+  gap: "16px",
+  flexWrap: "nowrap",
+})
+
+/**
+ * A real box for the formatting controls. `MainToolbarContent` wraps them in a
+ * `display: contents` div, so without this they would become flex items of the
+ * column above and stack one group per row. It also restores the 0.25rem gap
+ * they used to get from the bar's own flex layout, and the leading/trailing
+ * Spacers inside then centre them.
+ */
+const FormattingRow = styled.div({
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  gap: "0.25rem",
+  width: "100%",
+})
 
 const StyledAlert = styled(Alert)(({ theme }) => ({
   margin: "20px auto",
@@ -519,7 +572,16 @@ const WebsiteContentEditor = ({
   )
 
   return (
-    <ViewContainer toolbarVisible={!!isArticleEditor} className={className}>
+    <ViewContainer
+      toolbarHeight={
+        isArticleEditor
+          ? readOnly
+            ? TOOLBAR_HEIGHT
+            : STACKED_TOOLBAR_HEIGHT
+          : 0
+      }
+      className={className}
+    >
       <WebsiteContentProvider value={{ contentItem }}>
         <LearningResourceProvider resourceIds={resourceIds}>
           <EditorContext.Provider value={{ editor }}>
@@ -529,12 +591,10 @@ const WebsiteContentEditor = ({
                   <StyledToolbar>{readOnlyToolbarSlot}</StyledToolbar>
                 </StyledStatusContainer>
               ) : (
-                <StyledToolbar>
-                  <MainToolbarContent editor={editor} />
-                  {/* Splits the formatting controls from the content actions,
-                      which are grouped to the right. */}
-                  <Spacer />
-                  <StyledStatusContainer>
+                <StackedToolbar>
+                  {/* The design puts the actions above the formatting
+                      controls, both rows centred. */}
+                  <ActionRow>
                     {contentItem && !contentItem.is_published ? (
                       <Button
                         variant="bordered"
@@ -603,11 +663,14 @@ const WebsiteContentEditor = ({
                         ) : null
                       }
                     >
-                      Publish
+                      Publish {contentLabel}
                     </PublishButton>
                     {statusSlot}
-                  </StyledStatusContainer>
-                </StyledToolbar>
+                  </ActionRow>
+                  <FormattingRow>
+                    <MainToolbarContent editor={editor} />
+                  </FormattingRow>
+                </StackedToolbar>
               )
             ) : null}
 
