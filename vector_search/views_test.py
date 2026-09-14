@@ -1099,6 +1099,7 @@ def test_vector_search_score_tuning_parameters(mocker, client, settings, hybrid_
             "hybrid_search": hybrid_search,
             "program_boost": 0.4,
             "staleness_penalty": 0.2,
+            "staleness_horizon_years": 5,
             "completeness_penalty": 0.1,
         },
     )
@@ -1113,6 +1114,10 @@ def test_vector_search_score_tuning_parameters(mocker, client, settings, hybrid_
         assert boost.mult[0] == 0.4
         assert completeness.neg.mult[0] == 0.1
         assert staleness.neg.mult[0] == 0.2
+        decay = staleness.neg.mult[1].sum[1].neg.lin_decay
+        # half the horizon at the default midpoint -- see
+        # staleness_penalty_expression
+        assert decay.scale == 5 * SECONDS_PER_YEAR / 2
 
 
 @pytest.mark.parametrize("hybrid_search", [True, False])
@@ -1156,7 +1161,12 @@ def test_vector_search_score_tuning_parameters_disable_scoring(
 
 @pytest.mark.parametrize(
     "param",
-    ["program_boost", "staleness_penalty", "completeness_penalty"],
+    [
+        "program_boost",
+        "staleness_penalty",
+        "staleness_horizon_years",
+        "completeness_penalty",
+    ],
 )
 def test_vector_search_score_tuning_parameters_reject_negatives(
     client, mock_qdrant, param

@@ -96,6 +96,24 @@ const setMockApiResponses = ({
   setMockResponse.get(urls.learningPaths.membershipList(), [])
 }
 
+/**
+ * Admin search defaults, as the endpoint returns them: the OpenSearch
+ * controls plus the vector score formula weights.
+ */
+const ADMIN_PARAMS = {
+  search_mode: "phrase",
+  slop: 6,
+  yearly_decay_percent: 2.5,
+  min_score: 0,
+  max_incompleteness_penalty: 90,
+  content_file_score_weight: 1,
+  score_cutoff: 0.05,
+  program_boost: 0.15,
+  staleness_penalty: 0.05,
+  staleness_horizon_years: 20,
+  completeness_penalty: 0.05,
+}
+
 const getLastApiSearchParams = () => {
   const call = makeRequest.mock.calls.find(([args]) => {
     if (args.method !== "get") return false
@@ -456,14 +474,7 @@ describe("SearchPage", () => {
       is_authenticated: true,
     })
 
-    setMockResponse.get(urls.adminSearchParams.get(), {
-      search_mode: "phrase",
-      slop: 6,
-      yearly_decay_percent: 2.5,
-      min_score: 0,
-      max_incompleteness_penalty: 90,
-      content_file_score_weight: 1,
-    })
+    setMockResponse.get(urls.adminSearchParams.get(), ADMIN_PARAMS)
 
     renderWithProviders(<SearchPage />)
     await waitFor(() => {
@@ -497,14 +508,7 @@ describe("SearchPage", () => {
       is_learning_path_editor: true,
       is_authenticated: true,
     })
-    setMockResponse.get(urls.adminSearchParams.get(), {
-      search_mode: "phrase",
-      slop: 6,
-      yearly_decay_percent: 2.5,
-      min_score: 0,
-      max_incompleteness_penalty: 90,
-      content_file_score_weight: 1,
-    })
+    setMockResponse.get(urls.adminSearchParams.get(), ADMIN_PARAMS)
 
     const { location } = renderWithProviders(<SearchPage />)
     await user.click(await screen.findByText("Admin Options"))
@@ -520,6 +524,14 @@ describe("SearchPage", () => {
       new URLSearchParams(location.current.search).get("show_ocw_files"),
     ).toBe("true")
   })
+
+  const VECTOR_SLIDERS = [
+    "score_cutoff",
+    "program_boost",
+    "staleness_penalty",
+    "staleness_horizon_years",
+    "completeness_penalty",
+  ]
 
   const OPENSEARCH_ONLY_SLIDERS = [
     "yearly_decay_percent",
@@ -547,14 +559,7 @@ describe("SearchPage", () => {
       is_learning_path_editor: true,
       is_authenticated: true,
     })
-    setMockResponse.get(urls.adminSearchParams.get(), {
-      search_mode: "phrase",
-      slop: 6,
-      yearly_decay_percent: 2.5,
-      min_score: 0,
-      max_incompleteness_penalty: 90,
-      content_file_score_weight: 1,
-    })
+    setMockResponse.get(urls.adminSearchParams.get(), ADMIN_PARAMS)
 
     renderWithProviders(<SearchPage />)
     await user.click(await screen.findByText("Admin Options"))
@@ -572,13 +577,85 @@ describe("SearchPage", () => {
     expect(screen.queryByText("Slop")).toBeNull()
     expect(screen.queryByText("Show OCW Files")).toBeNull()
 
-    // Nothing to configure means nothing to fetch defaults for.
-    expect(makeRequest).not.toHaveBeenCalledWith(
-      expect.objectContaining({
-        method: "get",
-        url: urls.adminSearchParams.get(),
-      }),
-    )
+    // The vector controls take their place, starting at the server defaults.
+    for (const param of VECTOR_SLIDERS) {
+      await screen.findByTestId(`${param}-slider`)
+    }
+    expect(
+      within(screen.getByTestId("program_boost-slider")).getByRole("slider"),
+    ).toHaveAttribute("aria-valuenow", String(ADMIN_PARAMS.program_boost))
+  })
+
+  test("Vector score tuning params are forwarded to the vector endpoint", async () => {
+    mockFeatureFlags({})
+    setMockApiResponses({
+      search: {
+        count: 10,
+        metadata: {
+          aggregations: {
+            resource_type_group: [{ key: "course", doc_count: 10 }],
+          },
+          suggestions: [],
+        },
+      },
+    })
+    setMockResponse.get(urls.userMe.get(), {
+      is_learning_path_editor: true,
+      is_authenticated: true,
+    })
+    setMockResponse.get(urls.adminSearchParams.get(), ADMIN_PARAMS)
+
+    renderWithProviders(<SearchPage />, {
+      url: "?q=test&program_boost=0.4&staleness_penalty=0.2&staleness_horizon_years=5&completeness_penalty=0.1&score_cutoff=0.3",
+    })
+
+    await waitFor(() => {
+      expect(
+        makeRequest.mock.calls.find(([args]) =>
+          args.url.includes(urls.search.vectorResources()),
+        ),
+      ).toBeDefined()
+    })
+
+    const apiSearchParams = getLastVectorApiSearchParams()
+    expect(apiSearchParams.get("program_boost")).toBe("0.4")
+    expect(apiSearchParams.get("staleness_penalty")).toBe("0.2")
+    expect(apiSearchParams.get("staleness_horizon_years")).toBe("5")
+    expect(apiSearchParams.get("completeness_penalty")).toBe("0.1")
+    expect(apiSearchParams.get("score_cutoff")).toBe("0.3")
+  })
+
+  test("Untouched vector score tuning params are left out of the request", async () => {
+    // An absent param means "use the server default", which is not the same
+    // as sending 0.
+    mockFeatureFlags({})
+    setMockApiResponses({
+      search: {
+        count: 10,
+        metadata: {
+          aggregations: {
+            resource_type_group: [{ key: "course", doc_count: 10 }],
+          },
+          suggestions: [],
+        },
+      },
+    })
+    setMockResponse.get(urls.adminSearchParams.get(), ADMIN_PARAMS)
+
+    renderWithProviders(<SearchPage />, { url: "?q=test" })
+
+    await waitFor(() => {
+      expect(
+        makeRequest.mock.calls.find(([args]) =>
+          args.url.includes(urls.search.vectorResources()),
+        ),
+      ).toBeDefined()
+    })
+
+    const apiSearchParams = getLastVectorApiSearchParams()
+    for (const param of VECTOR_SLIDERS) {
+      expect(apiSearchParams.has(param)).toBe(false)
+    }
   })
 
   test("Turning hybrid search off restores the OpenSearch-only controls", async () => {
@@ -598,14 +675,7 @@ describe("SearchPage", () => {
       is_learning_path_editor: true,
       is_authenticated: true,
     })
-    setMockResponse.get(urls.adminSearchParams.get(), {
-      search_mode: "phrase",
-      slop: 6,
-      yearly_decay_percent: 2.5,
-      min_score: 0,
-      max_incompleteness_penalty: 90,
-      content_file_score_weight: 1,
-    })
+    setMockResponse.get(urls.adminSearchParams.get(), ADMIN_PARAMS)
 
     renderWithProviders(<SearchPage />, { url: "?vector_search=false" })
     await user.click(await screen.findByText("Admin Options"))
@@ -691,14 +761,7 @@ test("admin users can set the search mode and slop", async () => {
     is_learning_path_editor: true,
     is_authenticated: true,
   })
-  setMockResponse.get(urls.adminSearchParams.get(), {
-    search_mode: "phrase",
-    slop: 6,
-    yearly_decay_percent: 2.5,
-    min_score: 0,
-    max_incompleteness_penalty: 90,
-    content_file_score_weight: 1,
-  })
+  setMockResponse.get(urls.adminSearchParams.get(), ADMIN_PARAMS)
 
   const { location } = renderWithProviders(<SearchPage />)
   await waitFor(() => {
@@ -1305,14 +1368,7 @@ describe("Hybrid search feature flag", () => {
       is_learning_path_editor: true,
       is_authenticated: true,
     })
-    setMockResponse.get(urls.adminSearchParams.get(), {
-      search_mode: "phrase",
-      slop: 6,
-      yearly_decay_percent: 2.5,
-      min_score: 0,
-      max_incompleteness_penalty: 90,
-      content_file_score_weight: 1,
-    })
+    setMockResponse.get(urls.adminSearchParams.get(), ADMIN_PARAMS)
 
     const { location } = renderWithProviders(<SearchPage />)
     await user.click(await screen.findByText("Admin Options"))

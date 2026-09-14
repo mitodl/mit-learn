@@ -1870,6 +1870,7 @@ def staleness_penalty_expression(
     collection_name: str,
     now: datetime,
     weight: float | None = None,
+    horizon_years: float | None = None,
 ) -> models.NegExpression | None:
     """
     Build the staleness penalty term: -weight * (1 - decay), where decay ramps
@@ -1878,15 +1879,17 @@ def staleness_penalty_expression(
 
     Additive rather than the multiplicative decay OpenSearch applies -- see
     VECTOR_SEARCH_STALENESS_PENALTY_WEIGHT. None when the penalty is disabled or
-    the collection has no resource age. `weight` overrides the setting when it
-    is not None.
+    the collection has no resource age. `weight` and `horizon_years` override
+    their settings when they are not None.
     """
     if collection_name != RESOURCES_COLLECTION_NAME:
         return None
     if weight is None:
         weight = settings.VECTOR_SEARCH_STALENESS_PENALTY_WEIGHT
     weight = max(weight or 0, 0)
-    horizon_years = settings.VECTOR_SEARCH_STALENESS_HORIZON_YEARS or 0
+    if horizon_years is None:
+        horizon_years = settings.VECTOR_SEARCH_STALENESS_HORIZON_YEARS
+    horizon_years = horizon_years or 0
     if not weight or horizon_years <= 0:
         return None
     return models.NegExpression(
@@ -1929,6 +1932,7 @@ def staleness_penalty_expression(
 SCORE_FORMULA_OVERRIDE_PARAMS = (
     "program_boost",
     "staleness_penalty",
+    "staleness_horizon_years",
     "completeness_penalty",
 )
 
@@ -1947,6 +1951,7 @@ def score_formula_query(
     *,
     program_boost: float | None = None,
     staleness_penalty: float | None = None,
+    staleness_horizon_years: float | None = None,
     completeness_penalty: float | None = None,
 ) -> models.FormulaQuery | None:
     """
@@ -1976,7 +1981,10 @@ def score_formula_query(
         defaults[COMPLETENESS_PAYLOAD_KEY] = 1.0
 
     staleness_expression = staleness_penalty_expression(
-        collection_name, now, weight=staleness_penalty
+        collection_name,
+        now,
+        weight=staleness_penalty,
+        horizon_years=staleness_horizon_years,
     )
     if staleness_expression is not None:
         penalties.append(staleness_expression)

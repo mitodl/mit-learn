@@ -6788,6 +6788,7 @@ export const VectorLearningResourcesSearchApiAxiosParamCreator = function (
      * @param {Array<VectorLearningResourcesSearchRetrieveResourceTypeGroupEnum>} [resource_type_group] The category of learning resource               * &#x60;course&#x60; - Course * &#x60;program&#x60; - Program * &#x60;learning_material&#x60; - Learning Material
      * @param {number} [score_cutoff] The minimum score a result must have to be returned. Defaults to 0.0 when omitted, but the server clamps the effective cutoff to the minimum allowed for the selected search mode (dense or hybrid).
      * @param {VectorLearningResourcesSearchRetrieveSortbyEnum} [sortby] if the parameter starts with \&#39;-\&#39; the sort is in descending order  * &#x60;next_start_date&#x60; - next_start_date * &#x60;views&#x60; - views * &#x60;created_on&#x60; - created_on * &#x60;-next_start_date&#x60; - -next_start_date * &#x60;-views&#x60; - -views * &#x60;-created_on&#x60; - -created_on
+     * @param {number | null} [staleness_horizon_years] Age in years at which a resource takes the full staleness penalty, with the penalty ramping linearly up to it. 0 disables the penalty. Defaults to the server\&#39;s configured horizon when omitted.
      * @param {number | null} [staleness_penalty] Score subtracted from a resource at or beyond the staleness horizon, ramped linearly by age. 0 disables the penalty. Defaults to the server\&#39;s configured weight when omitted.
      * @param {boolean | null} [title__isnull] Filter to learning resources where title is null/not null
      * @param {Array<string>} [topic] The topic name. To see a list of options go to api/v1/topics/
@@ -6821,6 +6822,7 @@ export const VectorLearningResourcesSearchApiAxiosParamCreator = function (
       resource_type_group?: Array<VectorLearningResourcesSearchRetrieveResourceTypeGroupEnum>,
       score_cutoff?: number,
       sortby?: VectorLearningResourcesSearchRetrieveSortbyEnum,
+      staleness_horizon_years?: number | null,
       staleness_penalty?: number | null,
       title__isnull?: boolean | null,
       topic?: Array<string>,
@@ -6943,6 +6945,11 @@ export const VectorLearningResourcesSearchApiAxiosParamCreator = function (
         localVarQueryParameter["sortby"] = sortby
       }
 
+      if (staleness_horizon_years !== undefined) {
+        localVarQueryParameter["staleness_horizon_years"] =
+          staleness_horizon_years
+      }
+
       if (staleness_penalty !== undefined) {
         localVarQueryParameter["staleness_penalty"] = staleness_penalty
       }
@@ -7015,6 +7022,7 @@ export const VectorLearningResourcesSearchApiFp = function (
      * @param {Array<VectorLearningResourcesSearchRetrieveResourceTypeGroupEnum>} [resource_type_group] The category of learning resource               * &#x60;course&#x60; - Course * &#x60;program&#x60; - Program * &#x60;learning_material&#x60; - Learning Material
      * @param {number} [score_cutoff] The minimum score a result must have to be returned. Defaults to 0.0 when omitted, but the server clamps the effective cutoff to the minimum allowed for the selected search mode (dense or hybrid).
      * @param {VectorLearningResourcesSearchRetrieveSortbyEnum} [sortby] if the parameter starts with \&#39;-\&#39; the sort is in descending order  * &#x60;next_start_date&#x60; - next_start_date * &#x60;views&#x60; - views * &#x60;created_on&#x60; - created_on * &#x60;-next_start_date&#x60; - -next_start_date * &#x60;-views&#x60; - -views * &#x60;-created_on&#x60; - -created_on
+     * @param {number | null} [staleness_horizon_years] Age in years at which a resource takes the full staleness penalty, with the penalty ramping linearly up to it. 0 disables the penalty. Defaults to the server\&#39;s configured horizon when omitted.
      * @param {number | null} [staleness_penalty] Score subtracted from a resource at or beyond the staleness horizon, ramped linearly by age. 0 disables the penalty. Defaults to the server\&#39;s configured weight when omitted.
      * @param {boolean | null} [title__isnull] Filter to learning resources where title is null/not null
      * @param {Array<string>} [topic] The topic name. To see a list of options go to api/v1/topics/
@@ -7048,6 +7056,7 @@ export const VectorLearningResourcesSearchApiFp = function (
       resource_type_group?: Array<VectorLearningResourcesSearchRetrieveResourceTypeGroupEnum>,
       score_cutoff?: number,
       sortby?: VectorLearningResourcesSearchRetrieveSortbyEnum,
+      staleness_horizon_years?: number | null,
       staleness_penalty?: number | null,
       title__isnull?: boolean | null,
       topic?: Array<string>,
@@ -7086,6 +7095,7 @@ export const VectorLearningResourcesSearchApiFp = function (
           resource_type_group,
           score_cutoff,
           sortby,
+          staleness_horizon_years,
           staleness_penalty,
           title__isnull,
           topic,
@@ -7156,6 +7166,7 @@ export const VectorLearningResourcesSearchApiFactory = function (
           requestParameters.resource_type_group,
           requestParameters.score_cutoff,
           requestParameters.sortby,
+          requestParameters.staleness_horizon_years,
           requestParameters.staleness_penalty,
           requestParameters.title__isnull,
           requestParameters.topic,
@@ -7288,6 +7299,11 @@ export interface VectorLearningResourcesSearchApiVectorLearningResourcesSearchRe
   readonly sortby?: VectorLearningResourcesSearchRetrieveSortbyEnum
 
   /**
+   * Age in years at which a resource takes the full staleness penalty, with the penalty ramping linearly up to it. 0 disables the penalty. Defaults to the server\&#39;s configured horizon when omitted.
+   */
+  readonly staleness_horizon_years?: number | null
+
+  /**
    * Score subtracted from a resource at or beyond the staleness horizon, ramped linearly by age. 0 disables the penalty. Defaults to the server\&#39;s configured weight when omitted.
    */
   readonly staleness_penalty?: number | null
@@ -7350,6 +7366,7 @@ export class VectorLearningResourcesSearchApi extends BaseAPI {
         requestParameters.resource_type_group,
         requestParameters.score_cutoff,
         requestParameters.sortby,
+        requestParameters.staleness_horizon_years,
         requestParameters.staleness_penalty,
         requestParameters.title__isnull,
         requestParameters.topic,

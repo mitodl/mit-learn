@@ -1362,6 +1362,16 @@ paths:
           * `-views` - -views
           * `-created_on` - -created_on
       - in: query
+        name: staleness_horizon_years
+        schema:
+          type: number
+          format: double
+          minimum: 0
+          nullable: true
+        description: Age in years at which a resource takes the full staleness penalty,
+          with the penalty ramping linearly up to it. 0 disables the penalty. Defaults
+          to the server's configured horizon when omitted.
+      - in: query
         name: staleness_penalty
         schema:
           type: number

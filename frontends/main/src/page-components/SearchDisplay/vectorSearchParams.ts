@@ -1,6 +1,42 @@
 import type { Facets, BooleanFacets } from "@mitodl/course-search-utils"
 import type { VectorLearningResourcesSearchApiVectorLearningResourcesSearchRetrieveRequest as VectorSearchRequest } from "api/v0"
+import type { RegisteredSearchParams } from "@/common/searchParams"
 import getSearchParams from "./getSearchParams"
+
+/**
+ * Relevance knobs the vector endpoint accepts, each overriding a server
+ * default for the request. Omitting one keeps the configured default, so an
+ * absent URL param must stay absent from the request rather than becoming 0.
+ */
+export const VECTOR_SCORE_TUNING_PARAMS = [
+  "score_cutoff",
+  "program_boost",
+  "staleness_penalty",
+  "staleness_horizon_years",
+  "completeness_penalty",
+] as const
+
+export type VectorScoreTuningParam = (typeof VECTOR_SCORE_TUNING_PARAMS)[number]
+
+export type VectorScoreTuning = Partial<Record<VectorScoreTuningParam, number>>
+
+/**
+ * Read the score tuning knobs out of the URL, dropping any that are absent or
+ * not numeric.
+ */
+export const getVectorScoreTuning = (
+  searchParams: RegisteredSearchParams,
+): VectorScoreTuning =>
+  Object.fromEntries(
+    VECTOR_SCORE_TUNING_PARAMS.flatMap((param) => {
+      const raw = searchParams.get(param)
+      if (raw === null || raw.trim() === "") {
+        return []
+      }
+      const value = Number(raw)
+      return Number.isFinite(value) ? [[param, value]] : []
+    }),
+  )
 
 const mapVectorSortby = (
   sortby?: string,
@@ -29,7 +65,7 @@ const mapVectorSortby = (
  */
 export const toVectorSearchParams = (
   params: ReturnType<typeof getSearchParams> & { sortby?: string },
-  cutoffScore?: number,
+  scoreTuning: VectorScoreTuning = {},
 ): VectorSearchRequest => ({
   aggregations: params.aggregations as VectorSearchRequest["aggregations"],
   certification: params.certification,
@@ -52,10 +88,10 @@ export const toVectorSearchParams = (
   resource_type: params.resource_type as VectorSearchRequest["resource_type"],
   resource_type_group:
     params.resource_type_group as VectorSearchRequest["resource_type_group"],
-  score_cutoff: cutoffScore,
   sortby: mapVectorSortby(params.sortby),
   topic: params.topic,
   hybrid_search: true,
+  ...scoreTuning,
 })
 
 export const VECTOR_CLIENT_FILTER_FACETS = [
@@ -79,13 +115,13 @@ type VectorClientFilterFacet = (typeof VECTOR_CLIENT_FILTER_FACETS)[number]
 export const toUnfacetedVectorSearchParams = (
   params: ReturnType<typeof getSearchParams> & { sortby?: string },
   constantSearchParams: Facets & BooleanFacets = {},
-  cutoffScore?: number,
+  scoreTuning: VectorScoreTuning = {},
 ): VectorSearchRequest => {
   const {
     offset: _offset,
     limit: _limit,
     ...vectorParams
-  } = toVectorSearchParams(params, cutoffScore)
+  } = toVectorSearchParams(params, scoreTuning)
 
   return Object.fromEntries(
     Object.entries(vectorParams).filter(

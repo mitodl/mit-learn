@@ -261,6 +261,18 @@ class LearningResourcesVectorSearchRequestSerializer(
             "to the server's configured weight when omitted."
         ),
     )
+    staleness_horizon_years = serializers.FloatField(
+        required=False,
+        allow_null=True,
+        default=None,
+        min_value=0,
+        help_text=(
+            "Age in years at which a resource takes the full staleness "
+            "penalty, with the penalty ramping linearly up to it. 0 disables "
+            "the penalty. Defaults to the server's configured horizon when "
+            "omitted."
+        ),
+    )
     completeness_penalty = serializers.FloatField(
         required=False,
         allow_null=True,

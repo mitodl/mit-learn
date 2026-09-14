@@ -3864,5 +3864,54 @@ def test_score_formula_overrides():
     ) == {
         "program_boost": 0.4,
         "staleness_penalty": 0.2,
+        "staleness_horizon_years": None,
         "completeness_penalty": None,
     }
+
+
+def test_staleness_penalty_expression_horizon_override(settings):
+    """An explicit horizon overrides the setting's ramp length."""
+    settings.VECTOR_SEARCH_STALENESS_PENALTY_WEIGHT = 0.05
+    settings.VECTOR_SEARCH_STALENESS_HORIZON_YEARS = 20
+
+    expression = staleness_penalty_expression(
+        RESOURCES_COLLECTION_NAME, datetime.now(tz=UTC), horizon_years=5
+    )
+
+    decay = expression.neg.mult[1].sum[1].neg.lin_decay
+    # half the horizon at the default midpoint -- see staleness_penalty_expression
+    assert decay.scale == 5 * SECONDS_PER_YEAR / 2
+
+
+@pytest.mark.parametrize("horizon_years", [0, -1])
+def test_staleness_penalty_expression_horizon_override_disables(
+    settings, horizon_years
+):
+    """A horizon of 0 or negative has no ramp to penalize along."""
+    settings.VECTOR_SEARCH_STALENESS_PENALTY_WEIGHT = 0.05
+    settings.VECTOR_SEARCH_STALENESS_HORIZON_YEARS = 20
+
+    assert (
+        staleness_penalty_expression(
+            RESOURCES_COLLECTION_NAME,
+            datetime.now(tz=UTC),
+            horizon_years=horizon_years,
+        )
+        is None
+    )
+
+
+def test_score_formula_query_applies_horizon_override(mocker, settings):
+    """The horizon override reaches the formula's decay params."""
+    settings.VECTOR_SEARCH_STALENESS_PENALTY_WEIGHT = 0.05
+    settings.VECTOR_SEARCH_STALENESS_HORIZON_YEARS = 20
+    settings.VECTOR_SEARCH_INCOMPLETENESS_PENALTY_WEIGHT = 0
+    mocker.patch("vector_search.utils.VECTOR_SEARCH_SCORE_BOOST", {})
+
+    formula_query = score_formula_query(
+        RESOURCES_COLLECTION_NAME, staleness_horizon_years=5
+    )
+
+    _, staleness = formula_query.formula.sum
+    decay = staleness.neg.mult[1].sum[1].neg.lin_decay
+    assert decay.scale == 5 * SECONDS_PER_YEAR / 2

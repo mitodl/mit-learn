@@ -801,12 +801,12 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
             {adminOptionsSlot}
             {hybridSearchActive ? (
               <ExplanationContainer data-testid="opensearch-only-notice">
-                The relevance controls (staleness penalty, search mode, slop,
-                minimum score, incompleteness penalty, content file weight and
-                OCW files) apply to the OpenSearch endpoint only. Hybrid search
-                is active, so they are hidden here rather than shown with no
-                effect. Switch back to OpenSearch with vector_search=false to
-                tune them.
+                The controls above tune hybrid search. The remaining relevance
+                controls (search mode, slop, content file weight and OCW files,
+                plus the percent-based staleness, minimum score and
+                incompleteness settings) apply to the OpenSearch endpoint only,
+                so they are hidden here rather than shown with no effect. Switch
+                back to OpenSearch with vector_search=false to tune them.
               </ExplanationContainer>
             ) : adminParams && !isAdminParamsLoading ? (
               <>

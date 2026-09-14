@@ -293,3 +293,17 @@ VECTOR_SEARCH_SCORE_BOOST = {
         }
     ],
 }
+
+
+def default_score_boost(
+    name: str, collection_name: str = RESOURCES_COLLECTION_NAME
+) -> float:
+    """Configure the boost amount for a named entry"""
+    return next(
+        (
+            entry.get("boost", 0)
+            for entry in VECTOR_SEARCH_SCORE_BOOST.get(collection_name, [])
+            if entry.get("name") == name
+        ),
+        0,
+    )
