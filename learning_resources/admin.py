@@ -66,7 +66,7 @@ class TutorProblemFileAdmin(admin.ModelAdmin):
         "file_name",
         "type",
         "file_extension",
-        "run",
+        "run__run_id",
         "updated_on",
     )
     list_select_related = ("run",)
