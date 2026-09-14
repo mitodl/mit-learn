@@ -13,6 +13,18 @@ import type { WebsiteContent } from "api/v1"
 import type { JSONContent } from "@tiptap/react"
 import { renderWithProviders } from "@/test-utils"
 
+/**
+ * Publishing now asks for confirmation, so a draft -> published save takes a
+ * second click. Only the transition is confirmed: re-saving an already
+ * published item still saves straight away, so this is only needed where the
+ * item starts out as a draft.
+ */
+const confirmPublish = async () => {
+  await userEvent.click(
+    await screen.findByRole("button", { name: /^Yes, Publish/ }),
+  )
+}
+
 jest.mock("posthog-js/react", () => ({
   useFeatureFlagEnabled: () => true,
   usePostHog: () => ({}),
@@ -140,6 +152,7 @@ describe("NewsEditor - Content Editing and Saving", () => {
       )
 
       await userEvent.click(updateButton)
+      await confirmPublish()
 
       expect(makeRequest).toHaveBeenCalledWith({
         method: "patch",
@@ -249,6 +262,7 @@ describe("NewsEditor - Content Editing and Saving", () => {
       )
 
       await userEvent.click(updateButton)
+      await confirmPublish()
 
       expect(makeRequest).toHaveBeenCalledWith({
         method: "patch",
@@ -550,6 +564,7 @@ describe("NewsEditor - Content Editing and Saving", () => {
       expect(publishButton).not.toBeDisabled()
 
       fireEvent.click(publishButton!)
+      await confirmPublish()
 
       await waitFor(
         () => {

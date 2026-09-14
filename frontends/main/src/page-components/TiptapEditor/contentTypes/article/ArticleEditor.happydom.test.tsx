@@ -5,9 +5,9 @@
  * contenteditable elements not supported by JSDOM, the default Jest environment.
  */
 import React from "react"
-import { screen, within } from "@testing-library/react"
+import { screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
-import { setMockResponse, factories, urls } from "api/test-utils"
+import { setMockResponse, factories, urls, makeRequest } from "api/test-utils"
 import type { JSONContent } from "@tiptap/react"
 import { ArticleEditor } from "./ArticleEditor"
 import { renderWithProviders } from "@/test-utils"
@@ -47,7 +47,7 @@ const renderArticleEditor = ({
   renderWithProviders(<ArticleEditor article={article} readOnly={readOnly} />, {
     user,
   })
-  return article
+  return { article }
 }
 
 describe("ArticleEditor", () => {
@@ -202,5 +202,110 @@ describe("ArticleEditor article controls", () => {
         screen.getByRole("list", { name: "Selected topics" }),
       ).getAllByText(topic.name),
     ).toHaveLength(1)
+  })
+})
+
+describe("ArticleEditor publish confirmation", () => {
+  test("publishing a draft asks for confirmation first", async () => {
+    const { article } = renderArticleEditor()
+    setMockResponse.patch(urls.websiteContent.details(article.id), {
+      ...article,
+      is_published: true,
+    })
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Publish" }),
+    )
+
+    // Nothing is saved until the dialog is confirmed.
+    await screen.findByRole("heading", { name: "Publish article" })
+    await screen.findByText(
+      "Publishing this article will make it publicly available. You can unpublish it again at any time.",
+    )
+    expect(makeRequest).not.toHaveBeenCalledWith(
+      expect.objectContaining({ method: "patch" }),
+    )
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "Yes, Publish article" }),
+    )
+
+    await waitFor(() => {
+      expect(makeRequest).toHaveBeenCalledWith(
+        expect.objectContaining({
+          method: "patch",
+          body: expect.objectContaining({ is_published: true }),
+        }),
+      )
+    })
+  })
+
+  test("cancelling the publish dialog saves nothing", async () => {
+    renderArticleEditor()
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Publish" }),
+    )
+    await screen.findByRole("heading", { name: "Publish article" })
+    await userEvent.click(screen.getByRole("button", { name: "Cancel" }))
+
+    expect(makeRequest).not.toHaveBeenCalledWith(
+      expect.objectContaining({ method: "patch" }),
+    )
+  })
+
+  test("unpublishing a published article asks for confirmation first", async () => {
+    const { article } = renderArticleEditor({
+      readOnly: true,
+      isPublished: true,
+    })
+    setMockResponse.patch(urls.websiteContent.details(article.id), {
+      ...article,
+      is_published: false,
+    })
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Unpublish Article" }),
+    )
+
+    await screen.findByRole("heading", { name: "Unpublish article" })
+    await screen.findByText(
+      "Unpublishing this article will remove it from public view. You can publish it again at any time.",
+    )
+    expect(makeRequest).not.toHaveBeenCalledWith(
+      expect.objectContaining({ method: "patch" }),
+    )
+
+    await userEvent.click(
+      screen.getByRole("button", { name: "Yes, Unpublish article" }),
+    )
+
+    await waitFor(() => {
+      expect(makeRequest).toHaveBeenCalledWith(
+        expect.objectContaining({
+          method: "patch",
+          body: expect.objectContaining({ is_published: false }),
+        }),
+      )
+    })
+  })
+
+  test("re-saving an already published article does not ask", async () => {
+    // The dialog confirms the transition to public, not every save, so editing
+    // a live article and pressing Publish must save straight away.
+    const { article } = renderArticleEditor({ isPublished: true })
+    setMockResponse.patch(urls.websiteContent.details(article.id), article)
+
+    const heading = await screen.findByRole("heading", { level: 1 })
+    await userEvent.click(heading)
+    await userEvent.type(heading, " edited")
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Publish" }),
+    )
+
+    expect(
+      screen.queryByRole("heading", { name: "Publish article" }),
+    ).not.toBeInTheDocument()
   })
 })

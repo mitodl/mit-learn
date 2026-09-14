@@ -24,6 +24,10 @@ import {
   RiSave3Line,
 } from "@remixicon/react"
 import { showDeleteWebsiteContentDialog } from "@/page-components/WebsiteContentDialogs/DeleteWebsiteContentDialog"
+import {
+  showPublishWebsiteContentDialog,
+  showUnpublishWebsiteContentDialog,
+} from "@/page-components/WebsiteContentDialogs/PublishWebsiteContentDialog"
 import { ArticleSettingsDrawer } from "@/page-components/ArticleSettings/ArticleSettingsDrawer"
 
 import { Toolbar } from "../vendor/components/tiptap-ui-primitive/toolbar"
@@ -482,10 +486,12 @@ const WebsiteContentEditor = ({
           variant="primary"
           size={buttonSize}
           disabled={isPending || !title}
-          onClick={() => {
-            setIsPublishing(false)
-            handleSave(false)
-          }}
+          onClick={() =>
+            showUnpublishWebsiteContentDialog(contentLabel, () => {
+              setIsPublishing(false)
+              handleSave(false)
+            })
+          }
           endIcon={
             isPending ? (
               <LoadingSpinner size={14} color="inherit" loading />
@@ -559,8 +565,21 @@ const WebsiteContentEditor = ({
                         (!touched && contentItem?.is_published)
                       }
                       onClick={() => {
-                        setIsPublishing(true)
-                        handleSave(true)
+                        const publish = () => {
+                          setIsPublishing(true)
+                          handleSave(true)
+                        }
+                        /**
+                         * Confirm the transition to public, not every save. On
+                         * an item that is already published this button pushes
+                         * edits live, where "will make it publicly available"
+                         * would be both wrong and a prompt on every save.
+                         */
+                        if (contentItem?.is_published) {
+                          publish()
+                        } else {
+                          showPublishWebsiteContentDialog(contentLabel, publish)
+                        }
                       }}
                       size={buttonSize}
                       endIcon={
