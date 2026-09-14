@@ -15,6 +15,7 @@ from langchain_litellm import ChatLiteLLM
 from typing_extensions import TypedDict
 
 from learning_resources.constants import CredentialMetadataField
+from learning_resources.credentials_store import save_credential_metadata
 from learning_resources.etl.constants import MARKETING_PAGE_FILE_TYPE
 from learning_resources.models import (
     ContentFile,
@@ -468,3 +469,28 @@ async def generate_credential_metadata(
         else:
             errors[config.field] = f"The model returned no {config.field}."
     return CredentialMetadata(fields=fields, errors=errors)
+
+
+async def generate_and_save_credential_metadata(
+    resource: LearningResource, user=None
+) -> CredentialMetadata:
+    """
+    Generate a resource's credential metadata and store what was generated.
+
+    The storing half is separate from `generate_credential_metadata` so that
+    the endpoint's regenerate path and the daily sweep share one function,
+    while a caller that only wants a draft -- and the existing tests -- keep a
+    generator that writes nothing.
+
+    Args:
+        resource (LearningResource): the resource to generate metadata for
+        user (User): the user the generation is logged against
+
+    Returns:
+        CredentialMetadata: exactly what `generate_credential_metadata`
+            returned. Nothing is stored when it generated nothing, so a failed
+            run leaves the previous values in force.
+    """
+    generated = await generate_credential_metadata(resource, user=user)
+    await db_sync_to_async(save_credential_metadata)(resource, generated.fields)
+    return generated

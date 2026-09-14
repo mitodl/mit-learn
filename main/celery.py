@@ -40,4 +40,14 @@ app.conf.task_routes = {
     "learning_resources.tasks.ingest_edx_run_archive": {"queue": "edx_content"},
     "learning_resources.tasks.ingest_canvas_course": {"queue": "edx_content"},
     "learning_resources.tasks.sync_canvas_courses": {"queue": "edx_content"},
+    # Routed onto an existing queue rather than a new one: a new queue needs
+    # matching -Q changes in docker-compose.apps.yml and ol-infrastructure, or
+    # the tasks sit in Redis unconsumed. Not `default`, where a multi-minute
+    # task would block a slot shared with subscription emails.
+    "learning_resources.tasks.generate_all_credential_metadata": {
+        "queue": "edx_content"
+    },
+    "learning_resources.tasks.generate_credential_metadata_for_resources": {
+        "queue": "edx_content"
+    },
 }

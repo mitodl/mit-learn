@@ -14,7 +14,7 @@ from django.db import OperationalError
 from django.db.models import Q
 from django.utils import timezone
 
-from learning_resources.constants import LearningResourceType
+from learning_resources.constants import LearningResourceType, PlatformType
 from learning_resources.etl import loaders, ovs, pipelines, podcast, youtube
 from learning_resources.etl.canvas import (
     sync_canvas_archive,
@@ -59,7 +59,7 @@ from learning_resources_search.exceptions import RetryError
 from main.celery import app
 from main.constants import ISOFORMAT
 from main.decorators import cooldown_task
-from main.utils import chunks, now_in_utc
+from main.utils import chunks, now_in_utc, run_on_worker_loop
 
 log = logging.getLogger(__name__)
 
@@ -1041,3 +1041,115 @@ def cleanup_deleted_content_files():
         error = "cleanup_deleted_content_files threw an error"
         log.exception(error)
         return error
+
+
+def credential_metadata_resource_ids(*, overwrite: bool = False):
+    """
+    Resource ids the credential metadata sweep should generate for.
+
+    All four of published/test_mode, resource_type, etl_source and platform
+    are pinned because the endpoint's resolver pins them: readable_id is
+    unique only per (platform, resource_type), so a looser queryset would
+    generate metadata for a row the API will never serve.
+
+    Args:
+        overwrite (bool): include resources that already have metadata
+
+    Returns:
+        QuerySet: the matching resource ids, newest first
+    """
+    resources = (
+        LearningResource.objects.filter(Q(published=True) | Q(test_mode=True))
+        .filter(
+            resource_type=LearningResourceType.course.name,
+            etl_source=ETLSource.mitxonline.name,
+            platform=PlatformType.mitxonline.name,
+        )
+        .exclude(readable_id__in=load_course_blocklist())
+    )
+    if not overwrite:
+        # Incomplete, not merely absent: a run where one field failed wrote
+        # the other, and `credential_metadata__isnull=True` alone would leave
+        # that resource half-generated forever.
+        resources = resources.filter(
+            Q(credential_metadata__isnull=True)
+            | Q(credential_metadata__description="")
+            | Q(credential_metadata__criteria=[])
+        )
+    return resources.order_by("-id").values_list("id", flat=True)
+
+
+# Deliberately without acks_late/reject_on_worker_lost, unlike the file-sync
+# leaves above: those are idempotent, this one spends money per attempt, so a
+# lost worker should drop the chunk rather than pay for it twice.
+@app.task
+def generate_credential_metadata_for_resources(resource_ids: list[int]) -> int:
+    """
+    Generate and store credential metadata for a chunk of resources.
+
+    Args:
+        resource_ids (list of int): the resources to generate for
+
+    Returns:
+        int: how many resources had metadata stored
+    """
+    # Imported inside the task body, not at module scope: credentials pulls in
+    # litellm and langchain, and views.py imports this module at boot, which
+    # puts it on the URLconf boot path. See main/boot_imports_test.py.
+    from learning_resources.credentials import generate_and_save_credential_metadata
+
+    generated = 0
+    for resource in LearningResource.objects.filter(id__in=resource_ids):
+        try:
+            # One shared event loop per process, not asyncio.run per resource:
+            # the Qdrant client is cached and bound to the loop it was built
+            # on, and its failure here is silent -- see run_on_worker_loop.
+            metadata = run_on_worker_loop(
+                generate_and_save_credential_metadata(resource)
+            )
+        except Exception:
+            # One bad course must not fail the chunk and lose the successes
+            # before it.
+            log.exception(
+                "Credential metadata generation failed for %s", resource.readable_id
+            )
+            continue
+        if metadata.fields:
+            generated += 1
+        if metadata.errors:
+            log.warning(
+                "Credential metadata for %s is missing %s",
+                resource.readable_id,
+                ", ".join(sorted(metadata.errors)),
+            )
+    return generated
+
+
+@app.task(bind=True)
+def generate_all_credential_metadata(
+    self, *, chunk_size=None, overwrite=False
+) -> celery.group | None:
+    """
+    Fan out credential metadata generation over MITx Online courses.
+
+    Args:
+        chunk_size (int): resources per task. Defaults to
+            CREDENTIAL_METADATA_CHUNK_SIZE.
+        overwrite (bool): regenerate resources that already have metadata
+
+    Returns:
+        celery.group | None: the replacement group, or None when nothing
+            needs generating -- which is the normal case for the daily
+            non-overwriting sweep once the catalogue has been filled.
+    """
+    if chunk_size is None:
+        chunk_size = settings.CREDENTIAL_METADATA_CHUNK_SIZE
+    resource_ids = credential_metadata_resource_ids(overwrite=overwrite)
+    tasks = [
+        generate_credential_metadata_for_resources.si(ids)
+        for ids in chunks(resource_ids, chunk_size=chunk_size)
+    ]
+    if not tasks:
+        log.info("No resources need credential metadata generation")
+        return None
+    return self.replace(celery.group(tasks))

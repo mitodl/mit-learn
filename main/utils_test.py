@@ -41,6 +41,7 @@ from main.utils import (
     normalize_to_start_of_day,
     now_in_utc,
     prefetched_iterator,
+    run_on_worker_loop,
     write_to_file,
 )
 
@@ -692,3 +693,46 @@ def test_call_fastly_purge_api_soft_header(mocker, settings, soft):
 
     headers = mock_request.call_args.kwargs["headers"]
     assert headers.get("Fastly-Soft-Purge") == ("1" if soft else None)
+
+
+def test_run_on_worker_loop_returns_the_result():
+    """A coroutine's return value comes back to the sync caller"""
+
+    async def coro():
+        return "done"
+
+    assert run_on_worker_loop(coro()) == "done"
+
+
+def test_run_on_worker_loop_propagates_an_exception():
+    """A failing coroutine raises in the caller rather than being swallowed"""
+
+    async def coro():
+        msg = "nope"
+        raise ValueError(msg)
+
+    with pytest.raises(ValueError, match="nope"):
+        run_on_worker_loop(coro())
+
+
+def test_run_on_worker_loop_reuses_one_loop():
+    """
+    Every call in a process runs on the same loop.
+
+    This is the whole point of the helper. asyncio.run (and async_to_sync)
+    create a loop per call and close it on return, while the Qdrant and
+    OpenSearch clients the credential metadata sweep reaches are @cache'd and
+    bind to the loop alive when they were built -- so call two would drive a
+    cached grpc channel onto a closed loop. Content retrieval is best-effort
+    by design, so that failure is silent: the run succeeds from marketing
+    copy alone.
+    """
+
+    async def which_loop():
+        return asyncio.get_running_loop()
+
+    first = run_on_worker_loop(which_loop())
+    second = run_on_worker_loop(which_loop())
+
+    assert first is second
+    assert not first.is_closed()

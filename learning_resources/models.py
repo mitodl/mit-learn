@@ -1770,3 +1770,41 @@ class CredentialMetadataGenerationLog(TimestampedModel):
             f"{self.field} generation for"
             f" {self.learning_resource.readable_id} at {self.created_on}"
         )
+
+
+class CredentialMetadata(TimestampedModel):
+    """
+    The credential metadata currently in force for a learning resource.
+
+    Pre-populated by a daily sweep so that a credential can be issued without
+    waiting on (or paying for) a generation, and replaced whenever the API is
+    asked to regenerate. Distinct from CredentialMetadataGenerationLog, which
+    is the append-only history of every attempt: this is the one current value.
+
+    A row exists only once something has actually been generated. An empty row
+    is never written, so absence means "not generated yet" rather than
+    "generated nothing" -- see credentials_store.save_credential_metadata.
+    """
+
+    learning_resource = models.OneToOneField(
+        LearningResource,
+        on_delete=models.CASCADE,
+        related_name="credential_metadata",
+    )
+    description = models.TextField(
+        blank=True,
+        default="",
+        help_text="The Open Badges 3.0 description, 1-2 sentences.",
+    )
+    # TextField, not the CharField(max_length=N) that every other ArrayField in
+    # this module wraps: nothing on the generation path truncates a bullet, and
+    # a varchar(N)[] would raise DataError mid-sweep on an unusually long one.
+    criteria = ArrayField(
+        models.TextField(),
+        default=list,
+        blank=True,
+        help_text="Open Badges 3.0 criteria, one skill per bullet.",
+    )
+
+    def __str__(self):
+        return f"Credential metadata for {self.learning_resource.readable_id}"

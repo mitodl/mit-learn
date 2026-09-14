@@ -315,6 +315,19 @@ class CredentialMetadataGenerationLogAdmin(admin.ModelAdmin):
         return False
 
 
+class CredentialMetadataAdmin(admin.ModelAdmin):
+    """CredentialMetadata Admin"""
+
+    model = models.CredentialMetadata
+    list_display = ("learning_resource", "description", "created_on", "updated_on")
+    search_fields = ("learning_resource__readable_id", "learning_resource__title")
+    # Editable, unlike the generation log: this is the value a credential is
+    # issued from, so an author must be able to correct a bad generation
+    # without waiting for a re-run.
+    readonly_fields = ("created_on", "updated_on")
+    raw_id_fields = ("learning_resource",)
+
+
 admin.site.register(models.LearningResourceTopic, LearningResourceTopicAdmin)
 admin.site.register(models.LearningResourceInstructor, LearningResourceInstructorAdmin)
 admin.site.register(models.LearningResource, LearningResourceAdmin)
@@ -336,3 +349,4 @@ admin.site.register(
 admin.site.register(
     models.CredentialMetadataGenerationLog, CredentialMetadataGenerationLogAdmin
 )
+admin.site.register(models.CredentialMetadata, CredentialMetadataAdmin)

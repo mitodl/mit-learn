@@ -16,6 +16,7 @@ from learning_resources.credentials import (
     _get_llm,
     _prepare_marketing_page,
     build_credential_context,
+    generate_and_save_credential_metadata,
     generate_credential_metadata,
 )
 from learning_resources.etl.constants import MARKETING_PAGE_FILE_TYPE
@@ -25,10 +26,12 @@ from learning_resources.factories import (
     LearningResourceFactory,
 )
 from learning_resources.models import (
+    CredentialMetadata,
     CredentialMetadataConfiguration,
     CredentialMetadataGenerationLog,
 )
 from main.factories import UserFactory
+from main.utils import run_on_worker_loop
 
 # Shaped like a real scraped program page: the program's own instructors come
 # before every child course's content, and the site footer trails the last
@@ -637,3 +640,58 @@ def test_generate_credential_metadata_truncates_a_long_error(
     # The record keeps what the response cannot carry.
     log = CredentialMetadataGenerationLog.objects.get(learning_resource=resource)
     assert detail in log.error
+
+
+@pytest.mark.django_db(transaction=True)
+def test_generate_and_save_credential_metadata(
+    resource, configurations, mock_llm, mock_retrieval
+):
+    """The generated fields are stored as well as returned"""
+    generated = run_on_worker_loop(generate_and_save_credential_metadata(resource))
+
+    stored = CredentialMetadata.objects.get(learning_resource=resource)
+    assert stored.description == generated.fields["description"]
+    assert stored.criteria == generated.fields["criteria"]
+
+
+@pytest.mark.django_db(transaction=True)
+def test_generate_and_save_stores_nothing_when_nothing_generated(
+    resource, no_configurations, mock_llm, mock_retrieval
+):
+    """A run with nothing to generate leaves no row behind"""
+    generated = run_on_worker_loop(generate_and_save_credential_metadata(resource))
+
+    assert generated.fields == {}
+    assert not CredentialMetadata.objects.filter(learning_resource=resource).exists()
+
+
+@pytest.mark.django_db(transaction=True)
+def test_generate_and_save_over_several_resources_in_one_process(
+    resource, configurations, mock_llm, mock_retrieval
+):
+    """
+    A sweep generates with full context for every resource, not just the first.
+
+    This is the regression test for the sync-to-async bridge. The clients
+    retrieval reaches are @cache'd and bound to the event loop that was alive
+    when they were built, so a loop per resource (asyncio.run, async_to_sync)
+    leaves resource two driving a cached channel onto a closed loop.
+    `_retrieve_chunks` swallows that by design and the configurations still
+    produce criteria -- from marketing copy with no course content in it. So
+    the assertion that matters is that retrieval ran once per resource: a
+    count of one here means every resource after the first was generated
+    blind.
+    """
+    second = LearningResourceFactory.create(is_course=True)
+    ContentFileFactory.create(
+        learning_resource=second,
+        file_type=MARKETING_PAGE_FILE_TYPE,
+        content=MARKETING_PAGE,
+        published=True,
+    )
+
+    for each in (resource, second):
+        run_on_worker_loop(generate_and_save_credential_metadata(each))
+
+    assert mock_retrieval.call_count == 2
+    assert CredentialMetadata.objects.count() == 2

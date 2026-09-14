@@ -1,9 +1,11 @@
 """main utilities"""
 
+import asyncio
 import datetime
 import json
 import logging
 import os
+import threading
 from collections.abc import Callable
 from enum import Flag, auto
 from functools import wraps
@@ -392,6 +394,53 @@ def db_sync_to_async(func):
             close_old_connections()
 
     return sync_to_async(wrapper, thread_sensitive=False)
+
+
+_worker_loop = None
+_worker_loop_lock = threading.Lock()
+_worker_loop_pid = None
+
+
+def run_on_worker_loop(coro):
+    """
+    Run a coroutine on this process's long-lived event loop.
+
+    Not `asyncio.run` (nor `async_to_sync`, which has the same defect): both
+    create a loop per call and close it on return, and the clients these
+    coroutines reach are `@cache`d and bind to whichever loop was alive when
+    they were built. The second call in a process would then drive a cached
+    grpc channel onto a closed loop -- and because content retrieval is
+    best-effort by design, that failure is silent: the generation succeeds
+    from marketing copy alone. One loop per process instead, so every call
+    sees the loop its cached clients were built on.
+
+    The loop is created lazily rather than at import, so that a prefork Celery
+    child builds its own instead of inheriting the parent's -- an inherited
+    loop shares its epoll fd with every sibling and is unusable. It is never
+    closed: the process outliving it is the point, and
+    CELERY_WORKER_MAX_MEMORY_PER_CHILD recycles the child, dropping the loop
+    and the clients bound to it together.
+
+    Args:
+        coro (Coroutine): the coroutine to run
+
+    Returns:
+        Any: whatever the coroutine returns
+    """
+    global _worker_loop, _worker_loop_pid  # noqa: PLW0603
+
+    pid = os.getpid()
+    with _worker_loop_lock:
+        # The pid check covers the fork itself: a child that inherited a
+        # parent's loop object must not use it.
+        if _worker_loop is None or _worker_loop_pid != pid:
+            _worker_loop = asyncio.new_event_loop()
+            _worker_loop_pid = pid
+        # Run inside the lock: one loop cannot be re-entered, so a second
+        # caller in this process has to wait rather than race. Celery's
+        # prefork worker runs one task per child at a time, so nothing
+        # contends in practice.
+        return _worker_loop.run_until_complete(coro)
 
 
 def chunks(iterable, *, chunk_size=20):
