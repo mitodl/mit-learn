@@ -217,3 +217,64 @@ def test_content_unpublished_actions_skips_published(mocker, user, caplog):
         f"WebsiteContent {content.id} is still published, "
         "skipping unpublish plugin actions" in caplog.text
     )
+
+
+@pytest.mark.parametrize(
+    ("slug", "expect_purge"),
+    [
+        ("test-article", True),
+        ("", False),
+    ],
+)
+def test_purge_content_on_unpublish(mocker, slug, expect_purge):
+    """
+    Unpublishing has to clear the CDN: the page is no longer public and the
+    listing no longer includes the item. Unpublishing keeps the slug, so the
+    page URL is still resolvable — without one there is nothing cached to purge.
+    """
+    from website_content.api import purge_content_on_unpublish
+
+    mock_purge_api = mocker.patch("website_content.tasks.call_fastly_purge_api")
+    mock_purge_api.return_value = {"status": "ok", "id": "abc"}
+    mocker.patch("website_content.tasks.fastly_purge_website_content_list.delay")
+
+    content = WebsiteContentFactory.build(
+        is_published=False,
+        slug=slug or None,
+        content_type=WebsiteContentType.news.name,
+    )
+
+    purge_content_on_unpublish(content)
+
+    assert mock_purge_api.called is expect_purge
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    ("content_type", "expected_listing"),
+    [
+        (WebsiteContentType.news.name, "/news"),
+        (WebsiteContentType.article.name, "/articles"),
+    ],
+)
+def test_purge_content_on_unpublish_listing_url(mocker, content_type, expected_listing):
+    """The listing purge has to name the unpublished item's own listing page"""
+    from website_content.api import purge_content_on_unpublish
+
+    mocker.patch("website_content.tasks.call_fastly_purge_api").return_value = {
+        "status": "ok",
+        "id": "abc",
+    }
+    mock_purge_list = mocker.patch(
+        "website_content.tasks.fastly_purge_website_content_list.delay"
+    )
+
+    content = WebsiteContentFactory.build(
+        is_published=False,
+        slug="test-article",
+        content_type=content_type,
+    )
+
+    purge_content_on_unpublish(content)
+
+    mock_purge_list.assert_called_once_with(expected_listing)

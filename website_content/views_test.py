@@ -319,6 +319,9 @@ def test_update_triggers_unpublish_actions_only_on_the_transition(
     was_published, now_published, expect_unpublish_actions = case
     mocker.patch("website_content.views.clear_views_cache")
     mock_unpublish = mocker.patch("website_content.views.content_unpublished_actions")
+    # purge_content_on_save skips unpublished content, so the unpublish
+    # transition owns clearing the CDN for the page and its listing.
+    mock_purge = mocker.patch("website_content.views.purge_content_on_unpublish")
     content = _make_content(user, is_published=was_published)
     url = reverse(
         "website_content:v1:website_content-detail", kwargs={"pk": content.id}
@@ -329,3 +332,4 @@ def test_update_triggers_unpublish_actions_only_on_the_transition(
 
     assert resp.status_code == 200
     assert mock_unpublish.called is expect_unpublish_actions
+    assert mock_purge.called is expect_unpublish_actions

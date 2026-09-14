@@ -23,6 +23,7 @@ from website_content.api import (
     content_published_actions,
     content_unpublished_actions,
     purge_content_on_save,
+    purge_content_on_unpublish,
 )
 from website_content.filters import WebsiteContentFilter
 from website_content.models import WebsiteContent
@@ -104,6 +105,9 @@ class WebsiteContentViewSet(viewsets.ModelViewSet):
         purge_content_on_save(content)
         content_published_actions(content=content)
         if was_published and not content.is_published:
+            # purge_content_on_save above skips unpublished content, so the
+            # now-private page and the listing still need clearing.
+            purge_content_on_unpublish(content)
             content_unpublished_actions(content=content)
 
     def perform_destroy(self, instance):
