@@ -29,7 +29,8 @@ const generatePath = (
 export const HOME = "/"
 
 export const ONBOARDING = "/onboarding"
-
+export const ORGANIZATIONAL_LEARNING = "/organizational-learning"
+export const ORGANIZATIONAL_LEARNING_FORM_ID = "get-in-touch"
 export const LEARNINGPATH_LISTING = "/learningpaths"
 export const LEARNINGPATH_VIEW = "/learningpaths/[id]"
 export const learningPathsView = (id: number) =>
