@@ -346,6 +346,15 @@ describe("ArticleEditor publish confirmation errors", () => {
     expect(
       screen.getByRole("heading", { name: "Unpublish article" }),
     ).toBeInTheDocument()
+
+    /**
+     * The failure is reported inside the dialog. MUI marks the rest of the page
+     * aria-hidden while a modal is open, so the editor's page-level alert is
+     * announced to nobody here however it is stacked -- role="alert" only
+     * resolves because this one lives inside the dialog.
+     */
+    const dialog = screen.getByRole("dialog")
+    within(dialog).getByRole("alert")
   })
 
   test("a successful unpublish closes the confirmation", async () => {

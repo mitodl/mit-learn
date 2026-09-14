@@ -68,7 +68,7 @@ const StyledToolbar = styled(Toolbar)(({ theme }) => ({
   },
 }))
 
-const StyledAlert = styled(Alert)({
+const StyledAlert = styled(Alert)(({ theme }) => ({
   margin: "20px auto",
   maxWidth: "1000px",
   position: "fixed",
@@ -76,11 +76,18 @@ const StyledAlert = styled(Alert)({
   left: "50%",
   width: "690px",
   transform: "translateX(-50%)",
-  zIndex: 1,
+  /**
+   * Above the modal layer: a save can fail from the publish/unpublish
+   * confirmation, which stays open so the user can retry, and at a lower
+   * z-index this alert rendered behind it — the failure was invisible. The
+   * settings drawer (1200) would hide it too. `snackbar` is the layer for a
+   * notification that has to be legible over those.
+   */
+  zIndex: theme.zIndex.snackbar,
   "p:not(:first-child)": {
     margin: "10px 0",
   },
-})
+}))
 
 /**
  * Publish is green rather than the primary red: red is reserved for the

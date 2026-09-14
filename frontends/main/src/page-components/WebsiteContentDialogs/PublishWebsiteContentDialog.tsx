@@ -1,7 +1,8 @@
-import React from "react"
+import React, { useCallback, useState } from "react"
 import styled from "@emotion/styled"
 import NiceModal, { muiDialogV5 } from "@ebay/nice-modal-react"
-import { Dialog } from "ol-components"
+import { Dialog, Typography } from "ol-components"
+import { Alert } from "@mitodl/smoot-design"
 
 /**
  * Confirmation for publishing or unpublishing a content item.
@@ -29,6 +30,11 @@ const ConfirmDialog = styled(Dialog)({
   },
 })
 
+/* Separated from the copy above it; the footer supplies the gap below. */
+const ErrorAlert = styled(Alert)({
+  marginTop: "16px",
+})
+
 const CONTENT_CSS = {
   /* The design leaves 40px between the copy and the buttons, not Dialog's 28. */
   marginBottom: "40px",
@@ -51,6 +57,30 @@ const PublishWebsiteContentDialog = NiceModal.create(
     const modal = NiceModal.useModal()
     // The design writes the noun in sentence case ("Publish article").
     const noun = contentLabel.toLowerCase()
+    const [error, setError] = useState<string | null>(null)
+
+    /**
+     * The failure is reported inside the dialog rather than by the editor's
+     * page-level alert. While a modal is open MUI marks the rest of the page
+     * `aria-hidden`, so an alert behind it is announced to nobody however it is
+     * stacked; in here it is both visible and in the dialog's a11y subtree.
+     *
+     * Rethrown so Dialog skips its onClose and the dialog stays open to retry
+     * from. Dialog swallows it from there.
+     */
+    const handleConfirm = useCallback(async () => {
+      setError(null)
+      try {
+        await onConfirm()
+      } catch (e) {
+        setError(
+          e instanceof Error && e.message
+            ? e.message
+            : `Could not ${publish ? "publish" : "unpublish"} this ${noun}. Please try again.`,
+        )
+        throw e
+      }
+    }, [onConfirm, publish, noun])
 
     return (
       <ConfirmDialog
@@ -58,18 +88,24 @@ const PublishWebsiteContentDialog = NiceModal.create(
         // Closing is Dialog's job: it awaits onConfirm then calls the onClose
         // that muiDialogV5 wires to modal.hide(). See the longer note in
         // DeleteWebsiteContentDialog.
-        onConfirm={onConfirm}
+        onConfirm={handleConfirm}
         title={publish ? `Publish ${noun}` : `Unpublish ${noun}`}
         confirmText={
           publish ? `Yes, Publish ${noun}` : `Yes, Unpublish ${noun}`
         }
-        message={
-          publish
-            ? `Publishing this ${noun} will make it publicly available. You can unpublish it again at any time.`
-            : `Unpublishing this ${noun} will remove it from public view. You can publish it again at any time.`
-        }
         contentCss={CONTENT_CSS}
-      />
+      >
+        <Typography variant="body1">
+          {publish
+            ? `Publishing this ${noun} will make it publicly available. You can unpublish it again at any time.`
+            : `Unpublishing this ${noun} will remove it from public view. You can publish it again at any time.`}
+        </Typography>
+        {error ? (
+          <ErrorAlert severity="error" closable onClose={() => setError(null)}>
+            {error}
+          </ErrorAlert>
+        ) : null}
+      </ConfirmDialog>
     )
   },
 )
