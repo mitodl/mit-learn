@@ -309,3 +309,67 @@ describe("ArticleEditor publish confirmation", () => {
     ).not.toBeInTheDocument()
   })
 })
+
+describe("ArticleEditor publish confirmation errors", () => {
+  /**
+   * Dialog closes only once `onConfirm` resolves, so the confirmation callback
+   * has to hand back the save's promise. With the callback form of `mutate`
+   * the callback returned void, the dialog closed immediately, and a failed
+   * save was dismissed as though it had worked.
+   */
+  test("a failed unpublish leaves the confirmation open", async () => {
+    const { article } = renderArticleEditor({
+      readOnly: true,
+      isPublished: true,
+    })
+    setMockResponse.patch(
+      urls.websiteContent.details(article.id),
+      { detail: "boom" },
+      { code: 500 },
+    )
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Unpublish Article" }),
+    )
+    await screen.findByRole("heading", { name: "Unpublish article" })
+    await userEvent.click(
+      screen.getByRole("button", { name: "Yes, Unpublish article" }),
+    )
+
+    // The request was attempted...
+    await waitFor(() => {
+      expect(makeRequest).toHaveBeenCalledWith(
+        expect.objectContaining({ method: "patch" }),
+      )
+    })
+    // ...and because it failed, the dialog is still there to retry from.
+    expect(
+      screen.getByRole("heading", { name: "Unpublish article" }),
+    ).toBeInTheDocument()
+  })
+
+  test("a successful unpublish closes the confirmation", async () => {
+    const { article } = renderArticleEditor({
+      readOnly: true,
+      isPublished: true,
+    })
+    setMockResponse.patch(urls.websiteContent.details(article.id), {
+      ...article,
+      is_published: false,
+    })
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Unpublish Article" }),
+    )
+    await screen.findByRole("heading", { name: "Unpublish article" })
+    await userEvent.click(
+      screen.getByRole("button", { name: "Yes, Unpublish article" }),
+    )
+
+    await waitFor(() => {
+      expect(
+        screen.queryByRole("heading", { name: "Unpublish article" }),
+      ).not.toBeInTheDocument()
+    })
+  })
+})

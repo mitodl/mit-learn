@@ -155,21 +155,19 @@ export interface SavePayload {
  *   const create = useSpecializedContentCreate()    // future hook
  *   const update = useSpecializedContentPartialUpdate()
  *   <WebsiteContentEditor saveMutations={{ create, update }} ... />
+ *
+ * `mutateAsync` rather than the callback form of `mutate`: callers need a
+ * promise that settles with the request, so a confirmation dialog can stay
+ * open until the save actually succeeds, and stay open if it fails.
  */
 export interface SaveMutations {
   create: {
-    mutate: (
-      data: SavePayload,
-      options: { onSuccess?: (result: WebsiteContent) => void },
-    ) => void
+    mutateAsync: (data: SavePayload) => Promise<WebsiteContent>
     isPending: boolean
     error: Error | null | unknown
   }
   update: {
-    mutate: (
-      data: SavePayload & { id: number },
-      options: { onSuccess?: (result: WebsiteContent) => void },
-    ) => void
+    mutateAsync: (data: SavePayload & { id: number }) => Promise<WebsiteContent>
     isPending: boolean
     error: Error | null | unknown
   }
@@ -301,31 +299,39 @@ const WebsiteContentEditor = ({
     enabled: isArticleEditor,
   })
 
-  const handleSave = (publish: boolean) => {
+  /**
+   * Returns a promise that settles with the save, so a confirmation dialog can
+   * await it: it must not close until the request has actually succeeded, and
+   * must stay open if it fails. Rejects on failure — see `saveQuietly` for the
+   * buttons that save without a dialog.
+   */
+  const handleSave = async (publish: boolean) => {
     if (!title) return
     const extraFields = extractExtraFields?.(content) ?? {}
-    if (contentItem) {
-      updateMutation.mutate(
-        {
+    const saved = contentItem
+      ? await updateMutation.mutateAsync({
           id: contentItem.id,
           title: title.trim(),
           content,
           is_published: publish,
           ...extraFields,
-        },
-        { onSuccess: onSave },
-      )
-    } else {
-      createMutation.mutate(
-        {
+        })
+      : await createMutation.mutateAsync({
           title: title.trim(),
           content,
           is_published: publish,
           ...extraFields,
-        },
-        { onSuccess: onSave },
-      )
-    }
+        })
+    onSave?.(saved)
+  }
+
+  /**
+   * For the buttons that save with no dialog awaiting the result. The failure
+   * is already surfaced by the `saveError` alert below, so the rejection is
+   * swallowed here rather than left unhandled.
+   */
+  const saveQuietly = (publish: boolean) => {
+    handleSave(publish).catch(() => undefined)
   }
 
   const editor = useEditor({
@@ -489,7 +495,7 @@ const WebsiteContentEditor = ({
           onClick={() =>
             showUnpublishWebsiteContentDialog(contentLabel, () => {
               setIsPublishing(false)
-              handleSave(false)
+              return handleSave(false)
             })
           }
           endIcon={
@@ -544,7 +550,7 @@ const WebsiteContentEditor = ({
                         disabled={isPending || !touched || !title}
                         onClick={() => {
                           setIsPublishing(false)
-                          handleSave(false)
+                          saveQuietly(false)
                         }}
                         size={buttonSize}
                         startIcon={<RiEditLine />}
@@ -567,7 +573,7 @@ const WebsiteContentEditor = ({
                       onClick={() => {
                         const publish = () => {
                           setIsPublishing(true)
-                          handleSave(true)
+                          return handleSave(true)
                         }
                         /**
                          * Confirm the transition to public, not every save. On
@@ -576,7 +582,9 @@ const WebsiteContentEditor = ({
                          * would be both wrong and a prompt on every save.
                          */
                         if (contentItem?.is_published) {
-                          publish()
+                          // Nothing awaits this path, so do not leave the
+                          // rejection unhandled; the alert below shows it.
+                          publish().catch(() => undefined)
                         } else {
                           showPublishWebsiteContentDialog(contentLabel, publish)
                         }
