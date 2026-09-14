@@ -319,17 +319,35 @@ const ArticleSettingsDrawer = ({
 
   const pendingTopic = Number(topicId) || null
   const pendingSubtopic = Number(subtopicId) || null
-  const alreadyAdded = selections.some(
-    (s) => s.topicId === pendingTopic && s.subtopicId === pendingSubtopic,
-  )
+
+  /**
+   * A topic is represented either by a bare entry or by its subtopics, never
+   * both. Naming a subtopic already implies its parent, and only subtopics get
+   * a chip, so a bare entry alongside one would be invisible yet still ride
+   * along into the saved payload.
+   *
+   * So a bare topic is refused once that topic has subtopics, and adding a
+   * subtopic below supersedes the topic's bare entry.
+   */
+  const pendingGroup = selections.filter((s) => s.topicId === pendingTopic)
+  const alreadyAdded = pendingSubtopic
+    ? pendingGroup.some((s) => s.subtopicId === pendingSubtopic)
+    : pendingGroup.length > 0
   const canAdd = !!pendingTopic && !alreadyAdded
 
   const handleAdd = () => {
     if (!canAdd || !pendingTopic) return
-    setSelections((current) => [
-      ...current,
-      { topicId: pendingTopic, subtopicId: pendingSubtopic },
-    ])
+    const entry = { topicId: pendingTopic, subtopicId: pendingSubtopic }
+    setSelections((current) => {
+      const bareIndex = current.findIndex(
+        (s) => s.topicId === pendingTopic && s.subtopicId === null,
+      )
+      if (bareIndex === -1) return [...current, entry]
+      // Substituted in place so the group keeps its position in the list.
+      const next = [...current]
+      next.splice(bareIndex, 1, entry)
+      return next
+    })
     // Keep the topic selected: adding several subtopics under one topic is the
     // common case, and re-picking the parent each time would be tedious.
     setSubtopicId("")
