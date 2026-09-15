@@ -1734,7 +1734,7 @@ describe("NewsEditor - shared content controls", () => {
     })
     setMockResponse.get(urls.userMe.get(), user)
     setMockResponse.get(
-      urls.topics.list({ is_toplevel: true, limit: 100 }),
+      urls.topics.list({ limit: 1000 }),
       factories.learningResources.topics({ count: 2 }),
     )
 
