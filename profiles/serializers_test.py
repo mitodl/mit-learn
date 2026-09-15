@@ -171,6 +171,22 @@ def test_update_profile_skips_keycloak_sync_when_unchanged(mocker, user):
     sync_mock.assert_not_called()
 
 
+def test_update_profile_skips_keycloak_sync_for_null_email_optin(mocker, user):
+    """A null email_optin means no preference expressed, so don't push an opt-out"""
+    sync_mock = mocker.patch("profiles.serializers.sync_email_optin_to_keycloak")
+    profile = user.profile
+    profile.email_optin = True
+    profile.save(update_fields=["email_optin"])
+
+    serializer = ProfileSerializer(
+        instance=profile, data={"email_optin": None}, partial=True
+    )
+    serializer.is_valid(raise_exception=True)
+    serializer.save()
+
+    sync_mock.assert_not_called()
+
+
 def test_update_profile_email_optin_sync_failure_prevents_save(mocker, user):
     """Test that a Keycloak sync failure is translated into a ValidationError and rolls back the profile update"""
     mocker.patch(

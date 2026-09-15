@@ -341,6 +341,29 @@ def test_patch_onboarding_fields(  # noqa: PLR0913
     assert getattr(logged_in_profile, field) == after
 
 
+def test_patch_profile_round_trip_with_null_email_optin(client, logged_in_profile):
+    """
+    Onboarding PATCHes back the whole profile it just fetched, so a stored null
+    email_optin has to be accepted rather than rejected as a null value.
+    """
+    logged_in_profile.email_optin = None
+    logged_in_profile.save()
+
+    url = reverse(
+        "profile:v0:profile_api-detail",
+        kwargs={"user__username": logged_in_profile.user.username},
+    )
+
+    fetched = client.get(url).json()
+    assert fetched["email_optin"] is None
+
+    resp = client.patch(url, data={**fetched, "topic_interests": []})
+
+    assert resp.status_code == status.HTTP_200_OK, resp.json()
+    logged_in_profile.refresh_from_db()
+    assert logged_in_profile.email_optin is None
+
+
 def test_initialized_avatar(client, user):
     """
     Test that a PNG avatar image is returned for a user

@@ -1420,7 +1420,7 @@ export interface PatchedProfileRequest {
   image?: string | null
   image_small?: string | null
   image_medium?: string | null
-  email_optin?: boolean
+  email_optin?: boolean | null
   toc_optin?: boolean
   bio?: string | null
   headline?: string | null
@@ -1803,7 +1803,7 @@ export interface Profile {
    * Custom getter for medium profile image
    */
   profile_image_medium: string
-  email_optin?: boolean
+  email_optin?: boolean | null
   bio?: string | null
   headline?: string | null
   /**
@@ -1866,7 +1866,7 @@ export interface ProfileRequest {
   image?: string | null
   image_small?: string | null
   image_medium?: string | null
-  email_optin?: boolean
+  email_optin?: boolean | null
   toc_optin?: boolean
   bio?: string | null
   headline?: string | null

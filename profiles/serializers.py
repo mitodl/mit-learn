@@ -89,7 +89,7 @@ class ProfileSerializer(serializers.ModelSerializer):
     """Serializer for Profile"""
 
     name = serializers.SerializerMethodField(read_only=True)
-    email_optin = serializers.BooleanField(required=False)
+    email_optin = serializers.BooleanField(required=False, allow_null=True)
     toc_optin = serializers.BooleanField(write_only=True, required=False)
     username = serializers.SerializerMethodField(read_only=True)
     profile_image_medium = serializers.SerializerMethodField(read_only=True)
@@ -160,8 +160,10 @@ class ProfileSerializer(serializers.ModelSerializer):
                 # the new interests
                 instance.__dict__.pop("annotated_topic_interests", None)
 
+            # A null means no preference was expressed, so leave Keycloak alone
+            # rather than pushing the falsey coercion as an opt-out.
             email_optin_changed = (
-                "email_optin" in validated_data
+                validated_data.get("email_optin") is not None
                 and validated_data["email_optin"] != instance.email_optin
             )
 
