@@ -37,7 +37,8 @@ export type UseCourseEnrollment = {
   scenario: CourseScenario
   isStatusLoading: boolean
   isPending: boolean
-  isError: boolean
+  /** The failed enroll *action*'s error, or null. Drives the alert copy. */
+  error: unknown
 }
 
 type UseCourseEnrollmentOptions = {
@@ -62,7 +63,7 @@ export const useCourseEnrollment = (
     useCourseEnrolledRunIds(course)
 
   // This area renders its own inline enrollment-failure alert (see
-  // EnrollOfferingBoxes `isError`), so suppress the global error toast.
+  // EnrollOfferingBoxes `error`), so suppress the global error toast.
   const replaceBasketItem = useReplaceBasketItem({ meta: SILENCE_ERROR_TOAST })
   const createEnrollment = useCreateEnrollment({ meta: SILENCE_ERROR_TOAST })
   const router = useRouter()
@@ -85,7 +86,7 @@ export const useCourseEnrollment = (
   // failure to load the user's enrolled-run list is not an action failure, so
   // it degrades silently (user is treated as not-enrolled) rather than showing
   // a misleading "problem processing your enrollment" message.
-  const isError = replaceBasketItem.isError || createEnrollment.isError
+  const error = replaceBasketItem.error ?? createEnrollment.error
 
   const makeOnClick =
     (kind: EnrollActionKind, label: string): EnrollAction["onClick"] =>
@@ -135,7 +136,7 @@ export const useCourseEnrollment = (
       scenario,
       isStatusLoading,
       isPending,
-      isError,
+      error,
     }
   }
 
@@ -172,6 +173,6 @@ export const useCourseEnrollment = (
     scenario,
     isStatusLoading,
     isPending,
-    isError,
+    error,
   }
 }

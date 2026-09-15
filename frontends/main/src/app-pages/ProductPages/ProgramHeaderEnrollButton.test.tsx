@@ -188,4 +188,66 @@ describe("ProgramHeaderEnrollButton", () => {
       ),
     ).toBeInTheDocument()
   })
+
+  test("shows the server's 400 detail in place of the generic copy", async () => {
+    setupAuth()
+    const program = makeProgram({
+      enrollment_modes: [makeMode({ requires_payment: false })],
+    })
+    setMockResponse.post(
+      mitxUrls.programEnrollments.enrollmentsListV3(),
+      {
+        detail:
+          "Unable to complete enrollment. Please contact support. Error code: CS_700",
+      },
+      { code: 400 },
+    )
+
+    renderWithProviders(<ProgramHeaderEnrollButton program={program} />)
+
+    const startBtn = await screen.findByRole("button", {
+      name: "Start Learning",
+    })
+    await act(async () => {
+      startBtn.click()
+    })
+
+    expect(
+      await screen.findByText(
+        "Unable to complete enrollment. Please contact support. Error code: CS_700",
+      ),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByText(
+        "There was a problem processing your enrollment. Please try again.",
+      ),
+    ).toBeNull()
+  })
+
+  test("falls back to the generic copy when a 400 carries no detail", async () => {
+    setupAuth()
+    const program = makeProgram({
+      enrollment_modes: [makeMode({ requires_payment: false })],
+    })
+    setMockResponse.post(
+      mitxUrls.programEnrollments.enrollmentsListV3(),
+      { program_id: ["This field is required."] },
+      { code: 400 },
+    )
+
+    renderWithProviders(<ProgramHeaderEnrollButton program={program} />)
+
+    const startBtn = await screen.findByRole("button", {
+      name: "Start Learning",
+    })
+    await act(async () => {
+      startBtn.click()
+    })
+
+    expect(
+      await screen.findByText(
+        "There was a problem processing your enrollment. Please try again.",
+      ),
+    ).toBeInTheDocument()
+  })
 })

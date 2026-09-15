@@ -56,3 +56,7 @@ export const offeringBoxCount = (
       return 1
   }
 }
+
+/** Fallback enrollment-failure copy, shared by the InfoBox and header areas. */
+export const ENROLL_FAILURE_MESSAGE =
+  "There was a problem processing your enrollment. Please try again."

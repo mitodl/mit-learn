@@ -17,7 +17,7 @@ const ProgramEnrollArea: React.FC<ProgramEnrollAreaProps> = ({
 }) => {
   const [anchor, setAnchor] = React.useState<null | HTMLButtonElement>(null)
 
-  const { state, offering, isStatusLoading, isPending, isError } =
+  const { state, offering, isStatusLoading, isPending, error } =
     useProgramEnrollment(program, {
       tracking: { placement: "infobox" },
       displayAsCourse,
@@ -38,7 +38,7 @@ const ProgramEnrollArea: React.FC<ProgramEnrollAreaProps> = ({
       state={state}
       isStatusLoading={isStatusLoading}
       isPending={isPending}
-      isError={isError}
+      error={error}
       price={price}
       compactPrice={isRange}
       priceBlock={priceBlock}
