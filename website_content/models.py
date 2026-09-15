@@ -84,6 +84,19 @@ class WebsiteContent(TimestampedModel, SafeDeleteModel):
         default=WebsiteContentType.news.name,
     )
     cover_image = models.URLField(max_length=2083, blank=True, default="")
+    # The editor's own topic selections, which outlive publication: a draft has
+    # no LearningResource to hold them, and unpublishing removes the one it had.
+    #
+    # Only the leaves the editor picked are stored. When this content is
+    # projected into a LearningResource, `load_topics` calls
+    # `add_parent_topics_to_learning_resource`, which walks up and adds every
+    # ancestor -- so persisting parents here as well would be redundant, and
+    # would make a bare parent selection indistinguishable from an implied one.
+    topics = models.ManyToManyField(
+        "learning_resources.LearningResourceTopic",
+        blank=True,
+        related_name="website_content",
+    )
 
     class Meta:
         """Meta options for WebsiteContent"""
