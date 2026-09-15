@@ -1,6 +1,5 @@
 import React from "react"
 import type { V2ProgramDetail } from "@mitodl/mitxonline-api-axios/v2"
-import { toPriceRange } from "@/common/mitxonline"
 import { useProgramEnrollment } from "./useProgramEnrollment"
 import { useProgramCertificatePrice } from "./useProgramCertificatePrice"
 import ProgramSavingsBlock from "./ProgramSavingsBlock"
@@ -17,20 +16,30 @@ const ProgramEnrollArea: React.FC<ProgramEnrollAreaProps> = ({
 }) => {
   const [anchor, setAnchor] = React.useState<null | HTMLButtonElement>(null)
 
+  const { price, showsRange, savings, financialAid, breakdown } =
+    useProgramCertificatePrice(program)
+
+  // A credit is earned by buying one of the program's own courses and is worded
+  // throughout as an upgrade to the full program, which a page presenting that
+  // program as a single course cannot say. Every other discount — financial aid
+  // above all — applies just as much here as on the program page, and shows.
+  const appliedSavings =
+    displayAsCourse && breakdown?.kind === "credit" ? null : breakdown
+
   const { state, offering, isStatusLoading, isPending, isError } =
     useProgramEnrollment(program, {
       tracking: { placement: "infobox" },
       displayAsCourse,
+      // Only the credit relabels the action; aid leaves the offering's own
+      // wording alone.
+      upgradeLabel: appliedSavings?.kind === "credit",
       onRequireSignup: setAnchor,
     })
 
-  const { price, savings, financialAid } = useProgramCertificatePrice(program)
   // Savings framing is full-program-page presentation only; program-as-course
   // shows the plain price even when a list price is set.
   const priceBlock =
     !displayAsCourse && savings ? <ProgramSavingsBlock {...savings} /> : null
-  // Same predicate the hook formats on, so the sizing tracks the display.
-  const isRange = toPriceRange(program) !== null
 
   return (
     <EnrollOfferingBoxes
@@ -40,9 +49,10 @@ const ProgramEnrollArea: React.FC<ProgramEnrollAreaProps> = ({
       isPending={isPending}
       isError={isError}
       price={price}
-      compactPrice={isRange}
+      compactPrice={showsRange}
       priceBlock={priceBlock}
       financialAid={financialAid}
+      breakdown={appliedSavings}
       productNoun={displayAsCourse ? "course" : "program"}
       anchor={anchor}
       onAnchorClose={() => setAnchor(null)}
