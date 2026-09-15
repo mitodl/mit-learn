@@ -134,7 +134,6 @@ def test_get_profile(logged_in, user, user_client):
         "headline": profile.headline,
         "username": profile.user.username,
         "placename": profile.location.get("value", ""),
-        "user_websites": [],
         "topic_interests": LearningResourceTopicSerializer(
             profile.topic_interests, many=True
         ).data,

@@ -25,21 +25,3 @@ class HasEditPermission(permissions.BasePermission):
             return True
 
         return is_owner_or_privileged_user(obj.user, request)
-
-
-class HasSiteEditPermission(permissions.BasePermission):
-    """
-    Permission class indicating the requesting user created a given UserWebsite or
-    is a superuser/staff user.
-    """
-
-    def has_object_permission(
-        self,
-        request,
-        view,  # noqa: ARG002
-        obj,
-    ):  # pylint: disable=missing-docstring
-        if request.method in permissions.SAFE_METHODS:
-            return True
-
-        return is_owner_or_privileged_user(obj.profile.user, request)

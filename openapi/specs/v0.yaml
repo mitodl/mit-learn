@@ -1399,47 +1399,6 @@ paths:
               schema:
                 $ref: '#/components/schemas/LearningResourcesVectorSearchResponse'
           description: ''
-  /api/v0/websites/:
-    post:
-      operationId: websites_create
-      description: View for user websites
-      tags:
-      - websites
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/UserWebsiteRequest'
-          application/x-www-form-urlencoded:
-            schema:
-              $ref: '#/components/schemas/UserWebsiteRequest'
-          multipart/form-data:
-            schema:
-              $ref: '#/components/schemas/UserWebsiteRequest'
-        required: true
-      responses:
-        '201':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/UserWebsite'
-          description: ''
-  /api/v0/websites/{id}/:
-    delete:
-      operationId: websites_destroy
-      description: View for user websites
-      parameters:
-      - in: path
-        name: id
-        schema:
-          type: integer
-        description: A unique integer value identifying this user website.
-        required: true
-      tags:
-      - websites
-      responses:
-        '204':
-          description: No response body
   /api/v0/widget_lists/{id}/:
     get:
       operationId: widget_lists_retrieve
@@ -5818,23 +5777,6 @@ components:
       required:
       - problem_set
       - solution_set
-    SiteTypeEnum:
-      enum:
-      - facebook
-      - linkedin
-      - personal
-      - twitter
-      type: string
-      description: |-
-        * `facebook` - facebook
-        * `linkedin` - linkedin
-        * `personal` - personal
-        * `twitter` - twitter
-      x-enum-descriptions:
-      - facebook
-      - linkedin
-      - personal
-      - twitter
     SubChannel:
       type: object
       description: Serializer for SubChannels
@@ -6140,41 +6082,6 @@ components:
           minLength: 1
       required:
       - email
-    UserWebsite:
-      type: object
-      description: Serializer for UserWebsite
-      properties:
-        id:
-          type: integer
-          readOnly: true
-        profile:
-          type: integer
-        url:
-          type: string
-          maxLength: 200
-        site_type:
-          allOf:
-          - $ref: '#/components/schemas/SiteTypeEnum'
-          readOnly: true
-          default: personal
-      required:
-      - id
-      - profile
-      - site_type
-      - url
-    UserWebsiteRequest:
-      type: object
-      description: Serializer for UserWebsite
-      properties:
-        profile:
-          type: integer
-        url:
-          type: string
-          minLength: 1
-          maxLength: 200
-      required:
-      - profile
-      - url
     Video:
       type: object
       description: Serializer for the Video model
