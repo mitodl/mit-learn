@@ -385,11 +385,10 @@ const ProductPageTemplate: React.FC<ProductPageTemplateProps> = ({
                       })}
                     >
                       <EnrollButton>{enrollmentAction}</EnrollButton>
-                      {shouldShowStayUpdatedButton ? (
+                      {shouldShowStayUpdatedButton && formQuery.isSuccess ? (
                         <StayUpdatedButton
                           size="large"
                           variant="secondary"
-                          disabled={formQuery.isError}
                           onClick={handleStayUpdatedClick}
                         >
                           Stay Updated

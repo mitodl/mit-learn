@@ -45,6 +45,30 @@ const DialogSuccessCheck = styled(Image)({
 
 const PRODUCT_OF_INTEREST_FIELD_NAME = "product_of_interest"
 
+const DEFAULT_SUBMISSION_ERROR = "Failed to submit form. Please try again."
+
+// Friendly copy for known backend error codes. HubSpot's raw text (returned as
+// `detail` for logs/Sentry) is never rendered; unknown codes fall through to the
+// generic message below so internal text can't leak to users.
+const SUBMISSION_ERROR_MESSAGES_BY_CODE: Record<string, string> = {
+  FORM_HAS_RECAPTCHA_ENABLED:
+    "We couldn't submit your request right now. Please try again later or contact us if the problem continues.",
+}
+
+const getSubmissionErrorMessage = (error: unknown): string => {
+  const responseData =
+    error && typeof error === "object" && "response" in error
+      ? (error as { response?: { data?: unknown } }).response?.data
+      : undefined
+  if (responseData && typeof responseData === "object") {
+    const { code } = responseData as { code?: string }
+    if (code && SUBMISSION_ERROR_MESSAGES_BY_CODE[code]) {
+      return SUBMISSION_ERROR_MESSAGES_BY_CODE[code]
+    }
+  }
+  return DEFAULT_SUBMISSION_ERROR
+}
+
 type StayUpdatedDialogProps = {
   productReadableId?: string
   hubspotFormId?: string
@@ -106,9 +130,7 @@ const StayUpdatedDialogInner: React.FC<StayUpdatedDialogProps> = ({
   }
 
   const submissionError = hubspotFormSubmit.isError
-    ? hubspotFormSubmit.error instanceof Error
-      ? hubspotFormSubmit.error.message
-      : "Failed to submit form. Please try again."
+    ? getSubmissionErrorMessage(hubspotFormSubmit.error)
     : null
   const doneButton = (
     <DialogActions>

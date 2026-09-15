@@ -82,6 +82,10 @@ const useHubspotFormDetail = (
   return useQuery({
     ...hubspotQueries.detail(params ?? { form_id: "" }),
     enabled: Boolean(params?.form_id && opts?.enabled !== false),
+    // A misconfigured form id in the CMS makes HubSpot return a 4xx. The button
+    // is optional UI, so handle that locally (hide it) instead of letting the
+    // global error boundary replace the whole product page.
+    throwOnError: false,
   })
 }
 

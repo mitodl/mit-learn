@@ -402,6 +402,58 @@ def test_submit_form_rejects_failed_recaptcha(client, settings, mocker):
     submit_stub.assert_not_called()
 
 
+def test_submit_form_logs_failed_recaptcha(client, settings, mocker, caplog):
+    """Submit endpoint logs a warning when reCAPTCHA verification fails."""
+    import logging
+
+    settings.MITOL_HUBSPOT_API_PRIVATE_TOKEN = _mock_hubspot_secret()
+    settings.RECAPTCHA_SECRET_KEY = _mock_recaptcha_secret()
+    client.force_login(UserFactory.create())
+    submit_url = reverse(
+        "ol_hubspot:v1:hubspot-forms-submit", kwargs={"form_id": "form-123"}
+    )
+    payload = {
+        "fields": [{"name": "email", "value": "test@example.com"}],
+        "recaptcha_token": "captcha-token",
+    }
+    mocker.patch("ol_hubspot.views._extract_client_ip", return_value="1.2.3.4")
+    mocker.patch("ol_hubspot.views.verify_recaptcha", return_value=False)
+
+    with caplog.at_level(logging.WARNING, logger="ol_hubspot.views"):
+        response = client.post(submit_url, payload, format="json")
+
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert "reCAPTCHA" in caplog.text
+    assert "form-123" in caplog.text
+
+
+def test_submit_form_bad_token_me_lookup_returns_structured_error(
+    client, settings, mocker, caplog
+):
+    """A failed /me lookup (bad token) surfaces a structured error, not a 500."""
+    import logging
+
+    settings.MITOL_HUBSPOT_API_PRIVATE_TOKEN = _mock_hubspot_secret()
+    settings.RECAPTCHA_SECRET_KEY = ""
+    client.force_login(UserFactory.create())
+    submit_url = reverse(
+        "ol_hubspot:v1:hubspot-forms-submit", kwargs={"form_id": "form-abc"}
+    )
+    payload = {"fields": [{"name": "email", "value": "test@example.com"}]}
+    hubspot_class = mocker.patch("ol_hubspot.api.HubSpot", autospec=True)
+    me_response = mocker.Mock()
+    me_response.status_code = 401
+    me_response.text = '{"message":"auth failed","errorType":"UNAUTHORIZED"}'
+    hubspot_class.return_value.api_request.return_value = me_response
+
+    with caplog.at_level(logging.ERROR, logger="ol_hubspot.views"):
+        response = client.post(submit_url, payload, format="json")
+
+    assert response.status_code == 401
+    assert response.json()["code"] == "UNAUTHORIZED"
+    assert "UNAUTHORIZED" in caplog.text
+
+
 def test_submit_form_rejects_missing_token_when_secret_configured(
     client, settings, mocker
 ):
@@ -531,7 +583,9 @@ def test_submit_form_allows_anonymous_user(client, settings, mocker):
 
 
 def test_submit_form_hubspot_failure(client, settings, mocker):
-    """Submit endpoint passes through HubSpot API failures."""
+    """Submit endpoint surfaces the HubSpot error type and message."""
+    import json
+
     from hubspot.marketing.forms.exceptions import ApiException
 
     mock_secret = _mock_hubspot_secret()
@@ -542,10 +596,98 @@ def test_submit_form_hubspot_failure(client, settings, mocker):
         "ol_hubspot:v1:hubspot-forms-submit", kwargs={"form_id": "form-123"}
     )
     payload = {"fields": [{"name": "email", "value": "test@example.com"}]}
+    hubspot_body = {
+        "status": "error",
+        "message": "The form has reCAPTCHA enabled and cannot be submitted.",
+        "errorType": "FORM_HAS_RECAPTCHA_ENABLED",
+        "correlationId": "corr-123",
+    }
     submit_stub = mocker.patch("ol_hubspot.views.submit_form")
-    submit_stub.side_effect = ApiException(status=400)
+    submit_stub.side_effect = ApiException(status=400, reason=json.dumps(hubspot_body))
 
     response = client.post(submit_url, payload, format="json")
 
     assert response.status_code == status.HTTP_400_BAD_REQUEST
-    assert response.json() == {"detail": "HubSpot request failed"}
+    assert response.json() == {
+        "detail": "The form has reCAPTCHA enabled and cannot be submitted.",
+        "code": "FORM_HAS_RECAPTCHA_ENABLED",
+    }
+
+
+def test_submit_form_hubspot_failure_logs_details(client, settings, mocker, caplog):
+    """Submit endpoint logs the full HubSpot error context for debugging."""
+    import json
+    import logging
+
+    from hubspot.marketing.forms.exceptions import ApiException
+
+    settings.MITOL_HUBSPOT_API_PRIVATE_TOKEN = _mock_hubspot_secret()
+    settings.RECAPTCHA_SECRET_KEY = ""
+    client.force_login(UserFactory.create())
+    submit_url = reverse(
+        "ol_hubspot:v1:hubspot-forms-submit", kwargs={"form_id": "form-abc"}
+    )
+    payload = {"fields": [{"name": "email", "value": "test@example.com"}]}
+    hubspot_body = {
+        "message": "reCAPTCHA required",
+        "errorType": "FORM_HAS_RECAPTCHA_ENABLED",
+        "correlationId": "corr-xyz",
+    }
+    submit_stub = mocker.patch("ol_hubspot.views.submit_form")
+    submit_stub.side_effect = ApiException(status=400, reason=json.dumps(hubspot_body))
+
+    with caplog.at_level(logging.ERROR, logger="ol_hubspot.views"):
+        client.post(submit_url, payload, format="json")
+
+    log_text = caplog.text
+    assert "FORM_HAS_RECAPTCHA_ENABLED" in log_text
+    assert "corr-xyz" in log_text
+    assert "form-abc" in log_text
+
+
+def test_submit_form_hubspot_failure_without_body(client, settings, mocker):
+    """Submit endpoint falls back to a generic message when body is unparseable."""
+    from hubspot.marketing.forms.exceptions import ApiException
+
+    settings.MITOL_HUBSPOT_API_PRIVATE_TOKEN = _mock_hubspot_secret()
+    settings.RECAPTCHA_SECRET_KEY = ""
+    client.force_login(UserFactory.create())
+    submit_url = reverse(
+        "ol_hubspot:v1:hubspot-forms-submit", kwargs={"form_id": "form-123"}
+    )
+    payload = {"fields": [{"name": "email", "value": "test@example.com"}]}
+    submit_stub = mocker.patch("ol_hubspot.views.submit_form")
+    submit_stub.side_effect = ApiException(status=502)
+
+    response = client.post(submit_url, payload, format="json")
+
+    assert response.status_code == status.HTTP_502_BAD_GATEWAY
+    assert response.json() == {"detail": "HubSpot request failed", "code": None}
+
+
+def test_list_forms_hubspot_failure_reads_error_body(client, settings, mocker):
+    """List errors parse HubSpot's JSON body even when the SDK puts it in exc.body."""
+    import json
+
+    from hubspot.marketing.forms.exceptions import ApiException
+
+    settings.MITOL_HUBSPOT_API_PRIVATE_TOKEN = _mock_hubspot_secret()
+    client.force_login(UserFactory.create(is_superuser=True))
+    list_url = reverse("ol_hubspot:v1:hubspot-forms-list")
+    hubspot_body = {
+        "message": "The form is invalid.",
+        "errorType": "INVALID_FORM",
+        "correlationId": "corr-body",
+    }
+    exc = ApiException(status=400, reason="Bad Request")
+    exc.body = json.dumps(hubspot_body)
+    list_stub = mocker.patch("ol_hubspot.views.list_forms")
+    list_stub.side_effect = exc
+
+    response = client.get(list_url)
+
+    assert response.status_code == status.HTTP_400_BAD_REQUEST
+    assert response.json() == {
+        "detail": "The form is invalid.",
+        "code": "INVALID_FORM",
+    }
