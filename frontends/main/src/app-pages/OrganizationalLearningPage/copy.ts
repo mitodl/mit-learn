@@ -61,7 +61,10 @@ export const hero = {
   stats: [
     { value: "700+", label: ["Organizational", "partnerships"] },
     { value: "150+", label: ["MIT faculty", "& experts involved"] },
-    { value: "CEUs", label: ["Certificates", "& continuing ed. units"] },
+    {
+      value: "500+",
+      label: ["Unique courses and programs"],
+    },
   ] satisfies StatItem[],
 }
 
