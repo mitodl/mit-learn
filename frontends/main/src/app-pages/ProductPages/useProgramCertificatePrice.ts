@@ -52,12 +52,9 @@ const toNumericPrice = (value: unknown): number | null => {
  * Price facts for a program's Certificate Track card: the price to display,
  * savings-vs-separate-purchase data when applicable, and financial aid info.
  *
- * A financial aid discount is never reflected in `price` or `savings` — not even
- * for a user whose flexible price is already approved. It is surfaced as text
- * via `financialAid.applied` ("applied at checkout"), because the discount is
- * applied later, in checkout. This differs from the pre-redesign
- * `ProgramPriceRow`, which reduced the displayed price for an approved
- * flexible price — that behavior is intentionally dropped here.
+ * A financial aid discount is never reflected in `price` or `savings`, not even
+ * for a learner whose aid is already approved. The discount is applied later, in
+ * checkout, so it is surfaced here as text via `financialAid.applied`.
  */
 export const useProgramCertificatePrice = (
   program: V2ProgramDetail,
@@ -69,8 +66,8 @@ export const useProgramCertificatePrice = (
   const financialAidUrl = program.page?.financial_assistance_form_url
   const hasFinancialAid = !!(financialAidUrl && product)
 
-  const userFlexiblePrice = useQuery({
-    ...productQueries.userFlexiblePriceDetail({ productId: product?.id ?? 0 }),
+  const userPricing = useQuery({
+    ...productQueries.userPricingDetail({ productId: product?.id ?? 0 }),
     enabled:
       (enrollmentType === "paid" || enrollmentType === "both") &&
       isAuthenticated &&
@@ -80,11 +77,11 @@ export const useProgramCertificatePrice = (
   const financialAid = hasFinancialAid
     ? {
         href: mitxonlineLegacyUrl(financialAidUrl!),
-        applied: !!userFlexiblePrice.data?.product_flexible_price?.id,
+        applied: !!userPricing.data?.product_flexible_price?.id,
         // isLoading, not isPending: a disabled query stays pending forever, and
         // this one is disabled for anonymous visitors, who are never approved
         // and so have nothing to wait for.
-        pending: userFlexiblePrice.isLoading,
+        pending: userPricing.isLoading,
       }
     : null
 

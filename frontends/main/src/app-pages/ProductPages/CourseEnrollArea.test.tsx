@@ -36,7 +36,7 @@ const makeCourse = mitxFactories.courses.course
 const makeRun = mitxFactories.courses.courseRun
 const makeMode = mitxFactories.courses.enrollmentMode
 const makeProduct = mitxFactories.courses.product
-const makeFlexiblePrice = mitxFactories.products.flexiblePrice
+const makeUserPricing = mitxFactories.products.userPricing
 const makeDiscount = mitxFactories.products.discount
 const makeUser = factories.user.user
 
@@ -396,20 +396,21 @@ describe("CourseEnrollArea — financial assistance link", () => {
   test.each([
     {
       name: "available, when aid not yet applied",
-      flexiblePrice: () => makeFlexiblePrice({ product_flexible_price: null }),
+      userPricing: () => makeUserPricing(),
       linkText: "Apply for financial aid",
     },
     {
       name: "approved (applied at checkout), when aid is approved",
-      // The factory already defaults product_flexible_price to a discount with a
-      // real id, which is the only field the "approved" state keys off
+      // An approved learner is one with any product_flexible_price; its id is
+      // the only field the "approved" state keys off
       // (useCourseCertificatePrice: !!product_flexible_price?.id).
-      flexiblePrice: () => makeFlexiblePrice(),
+      userPricing: () =>
+        makeUserPricing({ product_flexible_price: makeDiscount() }),
       linkText: "Financial aid approved (visible at checkout)",
     },
   ])(
     "paidOnly course with financial_assistance_form_url shows link — $name",
-    async ({ flexiblePrice, linkText }) => {
+    async ({ userPricing, linkText }) => {
       setupAuth()
       const product = makeProduct()
       const run = makeRun({
@@ -426,8 +427,8 @@ describe("CourseEnrollArea — financial assistance link", () => {
       })
 
       setMockResponse.get(
-        mitxUrls.products.userFlexiblePriceDetail(product.id),
-        flexiblePrice(),
+        mitxUrls.products.userPricingDetail(product.id),
+        userPricing(),
       )
 
       renderWithProviders(
@@ -455,7 +456,7 @@ describe("CourseEnrollArea — financial assistance link", () => {
     // A real $25-off discount: if the course path (wrongly) applied it, the
     // display would read $75 instead of the full $100. Only the amount and type
     // are under test; the factory fills the rest.
-    const flexiblePrice = makeFlexiblePrice({
+    const userPricing = makeUserPricing({
       product_flexible_price: makeDiscount({
         discount_type: "dollars-off",
         amount: "25.00",
@@ -475,8 +476,8 @@ describe("CourseEnrollArea — financial assistance link", () => {
     })
 
     setMockResponse.get(
-      mitxUrls.products.userFlexiblePriceDetail(product.id),
-      flexiblePrice,
+      mitxUrls.products.userPricingDetail(product.id),
+      userPricing,
     )
 
     renderWithProviders(
@@ -534,8 +535,8 @@ describe("CourseEnrollArea — advertised price range", () => {
       page: { financial_assistance_form_url: "/financial-aid/" },
     })
     setMockResponse.get(
-      mitxUrls.products.userFlexiblePriceDetail(product.id),
-      makeFlexiblePrice({
+      mitxUrls.products.userPricingDetail(product.id),
+      makeUserPricing({
         product_flexible_price: makeDiscount({
           discount_type: "dollars-off",
           amount: "750.00",

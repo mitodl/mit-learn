@@ -143,8 +143,8 @@ const certificates = {
 }
 
 const products = {
-  userFlexiblePriceDetail: (productId: number) =>
-    `${getApiBaseUrl()}/api/v0/products/${productId}/user_flexible_price/`,
+  userPricingDetail: (productId: number) =>
+    `${getApiBaseUrl()}/api/v0/products/${productId}/user_pricing/`,
 }
 
 const baskets = {
