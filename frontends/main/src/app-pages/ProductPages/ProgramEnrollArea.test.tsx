@@ -14,6 +14,7 @@ import {
 import { mitxonlineLegacyUrl } from "@/common/mitxonline"
 import { programView } from "@/common/urls"
 import ProgramEnrollArea from "./ProgramEnrollArea"
+import { setupUserPricing } from "./test-utils/userPricing"
 
 jest.mock("next-nprogress-bar", () => ({
   useRouter: () => ({ push: jest.fn() }),
@@ -28,7 +29,16 @@ jest.mock("@/common/analytics/gtm", () => ({
   trackProgramEnrolled: jest.fn(),
 }))
 
-const makeProgram = mitxFactories.programs.program
+/**
+ * A program, with a list-price quote registered for each of its products. The
+ * certificate card quotes every signed-in learner, so a program built without
+ * one fails any test that renders it authenticated.
+ */
+const makeProgram: typeof mitxFactories.programs.program = (overrides) => {
+  const program = mitxFactories.programs.program(overrides)
+  setupUserPricing(program)
+  return program
+}
 const makeMode = mitxFactories.courses.enrollmentMode
 const makeProduct = mitxFactories.courses.product
 const makeUserPricing = mitxFactories.products.userPricing
