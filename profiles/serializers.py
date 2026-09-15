@@ -3,7 +3,6 @@ Serializers for profile REST APIs
 """
 
 import logging
-import re
 
 import ulid
 from django.contrib.auth import get_user_model
@@ -19,15 +18,12 @@ from authentication import api as auth_api
 from learning_resources.models import LearningResourceTopic
 from learning_resources.permissions import is_admin_user, is_learning_path_editor
 from learning_resources.serializers import LearningResourceTopicSerializer
-from profiles.api import get_site_type_from_url, sync_email_optin_to_keycloak
+from profiles.api import sync_email_optin_to_keycloak
 from profiles.models import (
-    PERSONAL_SITE_TYPE,
     PROFILE_PROPS,
-    SOCIAL_SITE_NAME_MAP,
     Profile,
     ProgramCertificate,
     ProgramLetter,
-    UserWebsite,
 )
 from profiles.utils import (
     IMAGE_MEDIUM,
@@ -93,7 +89,7 @@ class ProfileSerializer(serializers.ModelSerializer):
     """Serializer for Profile"""
 
     name = serializers.SerializerMethodField(read_only=True)
-    email_optin = serializers.BooleanField(required=False)
+    email_optin = serializers.BooleanField(required=False, allow_null=True)
     toc_optin = serializers.BooleanField(write_only=True, required=False)
     username = serializers.SerializerMethodField(read_only=True)
     profile_image_medium = serializers.SerializerMethodField(read_only=True)
@@ -164,8 +160,10 @@ class ProfileSerializer(serializers.ModelSerializer):
                 # the new interests
                 instance.__dict__.pop("annotated_topic_interests", None)
 
+            # A null means no preference was expressed, so leave Keycloak alone
+            # rather than pushing the falsey coercion as an opt-out.
             email_optin_changed = (
-                "email_optin" in validated_data
+                validated_data.get("email_optin") is not None
                 and validated_data["email_optin"] != instance.email_optin
             )
 
@@ -193,18 +191,6 @@ class ProfileSerializer(serializers.ModelSerializer):
             update_image = "image_file" in validated_data
             instance.save(update_image=update_image)
             return instance
-
-    def to_representation(self, instance):
-        """
-        Overridden serialization method. Adds serialized UserWebsites if an option in the context indicates that
-        it should be included.
-        """  # noqa: E501
-        data = super().to_representation(instance)
-        if self.context.get("include_user_websites"):
-            data["user_websites"] = UserWebsiteSerializer(
-                instance.userwebsite_set.all(), many=True
-            ).data
-        return data
 
     class Meta:
         model = Profile
@@ -243,95 +229,6 @@ class ProfileSerializer(serializers.ModelSerializer):
             "preference_search_filters",
         )
         extra_kwargs = {"location": {"write_only": True}}
-
-
-class UserWebsiteSerializer(serializers.ModelSerializer):
-    """Serializer for UserWebsite"""
-
-    def validate_url(self, value):
-        """
-        Validator for url. Prepends http protocol to the url if the protocol wasn't already included in the value.
-        """  # noqa: D401, E501
-        url = "" if not value else value.lower()
-        if not re.search(r"^http[s]?://", url):
-            return "{}{}".format("http://", url)
-        return url
-
-    def to_internal_value(self, data):
-        """
-        Overridden deserialization method. Changes the default behavior in the following ways:
-        1) Gets the profile id from a given username.
-        2) Calculates the site_type from the url value and adds it to the internal value.
-        """  # noqa: E501
-        internal_value = super().to_internal_value(
-            {
-                **data,
-                "profile": (
-                    Profile.objects.filter(user__username=data.get("username"))
-                    .values_list("id", flat=True)
-                    .first()
-                ),
-            }
-        )
-        internal_value["site_type"] = get_site_type_from_url(
-            internal_value.get("url", "")
-        )
-        return internal_value
-
-    def run_validators(self, value):
-        """
-        Overridden validation method. Changes the default behavior in the following ways:
-        1) If the user submitted a URL to save as a specific site type (personal/social),
-            ensure that the URL entered matches that submitted site type.
-        2) If the data provided violates the uniqueness of the site type for the given user, coerce
-            the error to a "url" field validation error instead of a non-field error.
-        """  # noqa: E501
-        submitted_site_type = self.initial_data.get("submitted_site_type")
-        calculated_site_type = value.get("site_type")
-        if submitted_site_type and calculated_site_type:
-            # The URL is for a personal site, but was submitted as a social site
-            if (
-                calculated_site_type == PERSONAL_SITE_TYPE
-                and submitted_site_type != calculated_site_type
-            ):
-                msg = "Please provide a URL for one of these social sites: {}".format(
-                    ", ".join(SOCIAL_SITE_NAME_MAP.values())
-                )
-                raise ValidationError({"url": [msg]})
-            # The URL is for a social site, but was submitted as a personal site
-            elif (
-                calculated_site_type in SOCIAL_SITE_NAME_MAP
-                and submitted_site_type == PERSONAL_SITE_TYPE
-            ):
-                raise ValidationError(
-                    {
-                        "url": [
-                            "A social site URL was provided. Please provide a URL for a personal website."  # noqa: E501
-                        ]
-                    }
-                )
-        try:
-            return super().run_validators(value)
-        except ValidationError as e:
-            if e.get_codes() == ["unique"]:
-                raise ValidationError(  # noqa: B904
-                    {"url": ["A website of this type has already been saved."]},
-                    code="unique",
-                )
-
-    def to_representation(self, instance):
-        """
-        Overridden serialization method. Excludes 'profile' from the serialized data as it isn't relevant as a
-        serialized field (we only need to deserialize that value).
-        """  # noqa: E501
-        data = super().to_representation(instance)
-        data.pop("profile")
-        return data
-
-    class Meta:
-        model = UserWebsite
-        fields = ("id", "profile", "url", "site_type")
-        read_only_fields = ("id", "site_type")
 
 
 class UserSerializer(serializers.ModelSerializer):

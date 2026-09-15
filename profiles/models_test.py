@@ -5,11 +5,6 @@ from django.core.files.uploadedfile import UploadedFile
 from django.db import connection
 
 from profiles.factories import ProgramCertificateFactory, ProgramLetterFactory
-from profiles.models import (
-    PERSONAL_SITE_TYPE,
-    SITE_TYPE_OPTIONS,
-    SOCIAL_SITE_NAME_MAP,
-)
 
 
 @pytest.mark.parametrize("update_image", [True, False])
@@ -45,15 +40,6 @@ def test_null_image(user):
     assert not profile.image_file
     assert not profile.image_medium_file
     assert not profile.image_small_file
-
-
-def test_social_site_name_map():
-    """
-    Test that all social sites are represented with a human-friendly name
-    """
-    social_site_type_options = set(SITE_TYPE_OPTIONS)
-    social_site_type_options.remove(PERSONAL_SITE_TYPE)
-    assert social_site_type_options == set(SOCIAL_SITE_NAME_MAP.keys())
 
 
 @pytest.mark.django_db

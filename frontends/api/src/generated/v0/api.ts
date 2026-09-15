@@ -1420,7 +1420,7 @@ export interface PatchedProfileRequest {
   image?: string | null
   image_small?: string | null
   image_medium?: string | null
-  email_optin?: boolean
+  email_optin?: boolean | null
   toc_optin?: boolean
   bio?: string | null
   headline?: string | null
@@ -1803,7 +1803,7 @@ export interface Profile {
    * Custom getter for medium profile image
    */
   profile_image_medium: string
-  email_optin?: boolean
+  email_optin?: boolean | null
   bio?: string | null
   headline?: string | null
   /**
@@ -1866,7 +1866,7 @@ export interface ProfileRequest {
   image?: string | null
   image_small?: string | null
   image_medium?: string | null
-  email_optin?: boolean
+  email_optin?: boolean | null
   toc_optin?: boolean
   bio?: string | null
   headline?: string | null
@@ -2140,38 +2140,6 @@ export interface RetrieveProblemResponse {
   solution_set: string
 }
 /**
- * * `facebook` - facebook * `linkedin` - linkedin * `personal` - personal * `twitter` - twitter
- */
-
-export const SiteTypeEnumDescriptions = {
-  facebook: "facebook",
-  linkedin: "linkedin",
-  personal: "personal",
-  twitter: "twitter",
-} as const
-
-export const SiteTypeEnum = {
-  /**
-   * facebook
-   */
-  Facebook: "facebook",
-  /**
-   * linkedin
-   */
-  Linkedin: "linkedin",
-  /**
-   * personal
-   */
-  Personal: "personal",
-  /**
-   * twitter
-   */
-  Twitter: "twitter",
-} as const
-
-export type SiteTypeEnum = (typeof SiteTypeEnum)[keyof typeof SiteTypeEnum]
-
-/**
  * Serializer for SubChannels
  */
 export interface SubChannel {
@@ -2363,23 +2331,6 @@ export interface User {
 export interface UserRequest {
   profile?: ProfileRequest
   email: string
-}
-/**
- * Serializer for UserWebsite
- */
-export interface UserWebsite {
-  id: number
-  profile: number
-  url: string
-  site_type: SiteTypeEnum
-}
-
-/**
- * Serializer for UserWebsite
- */
-export interface UserWebsiteRequest {
-  profile: number
-  url: string
 }
 /**
  * Serializer for the Video model
@@ -7721,275 +7672,6 @@ export const VectorLearningResourcesSearchRetrieveSortbyEnum = {
 } as const
 export type VectorLearningResourcesSearchRetrieveSortbyEnum =
   (typeof VectorLearningResourcesSearchRetrieveSortbyEnum)[keyof typeof VectorLearningResourcesSearchRetrieveSortbyEnum]
-
-/**
- * WebsitesApi - axios parameter creator
- */
-export const WebsitesApiAxiosParamCreator = function (
-  configuration?: Configuration,
-) {
-  return {
-    /**
-     * View for user websites
-     * @param {UserWebsiteRequest} UserWebsiteRequest
-     * @param {*} [options] Override http request option.
-     * @throws {RequiredError}
-     */
-    websitesCreate: async (
-      UserWebsiteRequest: UserWebsiteRequest,
-      options: RawAxiosRequestConfig = {},
-    ): Promise<RequestArgs> => {
-      // verify required parameter 'UserWebsiteRequest' is not null or undefined
-      assertParamExists(
-        "websitesCreate",
-        "UserWebsiteRequest",
-        UserWebsiteRequest,
-      )
-      const localVarPath = `/api/v0/websites/`
-      // use dummy base URL string because the URL constructor only accepts absolute URLs.
-      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL)
-      let baseOptions
-      if (configuration) {
-        baseOptions = configuration.baseOptions
-      }
-
-      const localVarRequestOptions = {
-        method: "POST",
-        ...baseOptions,
-        ...options,
-      }
-      const localVarHeaderParameter = {} as any
-      const localVarQueryParameter = {} as any
-
-      localVarHeaderParameter["Content-Type"] = "application/json"
-      localVarHeaderParameter["Accept"] = "application/json"
-
-      setSearchParams(localVarUrlObj, localVarQueryParameter)
-      let headersFromBaseOptions =
-        baseOptions && baseOptions.headers ? baseOptions.headers : {}
-      localVarRequestOptions.headers = {
-        ...localVarHeaderParameter,
-        ...headersFromBaseOptions,
-        ...options.headers,
-      }
-      localVarRequestOptions.data = serializeDataIfNeeded(
-        UserWebsiteRequest,
-        localVarRequestOptions,
-        configuration,
-      )
-
-      return {
-        url: toPathString(localVarUrlObj),
-        options: localVarRequestOptions,
-      }
-    },
-    /**
-     * View for user websites
-     * @param {number} id A unique integer value identifying this user website.
-     * @param {*} [options] Override http request option.
-     * @throws {RequiredError}
-     */
-    websitesDestroy: async (
-      id: number,
-      options: RawAxiosRequestConfig = {},
-    ): Promise<RequestArgs> => {
-      // verify required parameter 'id' is not null or undefined
-      assertParamExists("websitesDestroy", "id", id)
-      const localVarPath = `/api/v0/websites/{id}/`.replace(
-        "{id}",
-        encodeURIComponent(String(id)),
-      )
-      // use dummy base URL string because the URL constructor only accepts absolute URLs.
-      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL)
-      let baseOptions
-      if (configuration) {
-        baseOptions = configuration.baseOptions
-      }
-
-      const localVarRequestOptions = {
-        method: "DELETE",
-        ...baseOptions,
-        ...options,
-      }
-      const localVarHeaderParameter = {} as any
-      const localVarQueryParameter = {} as any
-
-      setSearchParams(localVarUrlObj, localVarQueryParameter)
-      let headersFromBaseOptions =
-        baseOptions && baseOptions.headers ? baseOptions.headers : {}
-      localVarRequestOptions.headers = {
-        ...localVarHeaderParameter,
-        ...headersFromBaseOptions,
-        ...options.headers,
-      }
-
-      return {
-        url: toPathString(localVarUrlObj),
-        options: localVarRequestOptions,
-      }
-    },
-  }
-}
-
-/**
- * WebsitesApi - functional programming interface
- */
-export const WebsitesApiFp = function (configuration?: Configuration) {
-  const localVarAxiosParamCreator = WebsitesApiAxiosParamCreator(configuration)
-  return {
-    /**
-     * View for user websites
-     * @param {UserWebsiteRequest} UserWebsiteRequest
-     * @param {*} [options] Override http request option.
-     * @throws {RequiredError}
-     */
-    async websitesCreate(
-      UserWebsiteRequest: UserWebsiteRequest,
-      options?: RawAxiosRequestConfig,
-    ): Promise<
-      (axios?: AxiosInstance, basePath?: string) => AxiosPromise<UserWebsite>
-    > {
-      const localVarAxiosArgs = await localVarAxiosParamCreator.websitesCreate(
-        UserWebsiteRequest,
-        options,
-      )
-      const localVarOperationServerIndex = configuration?.serverIndex ?? 0
-      const localVarOperationServerBasePath =
-        operationServerMap["WebsitesApi.websitesCreate"]?.[
-          localVarOperationServerIndex
-        ]?.url
-      return (axios, basePath) =>
-        createRequestFunction(
-          localVarAxiosArgs,
-          globalAxios,
-          BASE_PATH,
-          configuration,
-        )(axios, localVarOperationServerBasePath || basePath)
-    },
-    /**
-     * View for user websites
-     * @param {number} id A unique integer value identifying this user website.
-     * @param {*} [options] Override http request option.
-     * @throws {RequiredError}
-     */
-    async websitesDestroy(
-      id: number,
-      options?: RawAxiosRequestConfig,
-    ): Promise<
-      (axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>
-    > {
-      const localVarAxiosArgs = await localVarAxiosParamCreator.websitesDestroy(
-        id,
-        options,
-      )
-      const localVarOperationServerIndex = configuration?.serverIndex ?? 0
-      const localVarOperationServerBasePath =
-        operationServerMap["WebsitesApi.websitesDestroy"]?.[
-          localVarOperationServerIndex
-        ]?.url
-      return (axios, basePath) =>
-        createRequestFunction(
-          localVarAxiosArgs,
-          globalAxios,
-          BASE_PATH,
-          configuration,
-        )(axios, localVarOperationServerBasePath || basePath)
-    },
-  }
-}
-
-/**
- * WebsitesApi - factory interface
- */
-export const WebsitesApiFactory = function (
-  configuration?: Configuration,
-  basePath?: string,
-  axios?: AxiosInstance,
-) {
-  const localVarFp = WebsitesApiFp(configuration)
-  return {
-    /**
-     * View for user websites
-     * @param {WebsitesApiWebsitesCreateRequest} requestParameters Request parameters.
-     * @param {*} [options] Override http request option.
-     * @throws {RequiredError}
-     */
-    websitesCreate(
-      requestParameters: WebsitesApiWebsitesCreateRequest,
-      options?: RawAxiosRequestConfig,
-    ): AxiosPromise<UserWebsite> {
-      return localVarFp
-        .websitesCreate(requestParameters.UserWebsiteRequest, options)
-        .then((request) => request(axios, basePath))
-    },
-    /**
-     * View for user websites
-     * @param {WebsitesApiWebsitesDestroyRequest} requestParameters Request parameters.
-     * @param {*} [options] Override http request option.
-     * @throws {RequiredError}
-     */
-    websitesDestroy(
-      requestParameters: WebsitesApiWebsitesDestroyRequest,
-      options?: RawAxiosRequestConfig,
-    ): AxiosPromise<void> {
-      return localVarFp
-        .websitesDestroy(requestParameters.id, options)
-        .then((request) => request(axios, basePath))
-    },
-  }
-}
-
-/**
- * Request parameters for websitesCreate operation in WebsitesApi.
- */
-export interface WebsitesApiWebsitesCreateRequest {
-  readonly UserWebsiteRequest: UserWebsiteRequest
-}
-
-/**
- * Request parameters for websitesDestroy operation in WebsitesApi.
- */
-export interface WebsitesApiWebsitesDestroyRequest {
-  /**
-   * A unique integer value identifying this user website.
-   */
-  readonly id: number
-}
-
-/**
- * WebsitesApi - object-oriented interface
- */
-export class WebsitesApi extends BaseAPI {
-  /**
-   * View for user websites
-   * @param {WebsitesApiWebsitesCreateRequest} requestParameters Request parameters.
-   * @param {*} [options] Override http request option.
-   * @throws {RequiredError}
-   */
-  public websitesCreate(
-    requestParameters: WebsitesApiWebsitesCreateRequest,
-    options?: RawAxiosRequestConfig,
-  ) {
-    return WebsitesApiFp(this.configuration)
-      .websitesCreate(requestParameters.UserWebsiteRequest, options)
-      .then((request) => request(this.axios, this.basePath))
-  }
-
-  /**
-   * View for user websites
-   * @param {WebsitesApiWebsitesDestroyRequest} requestParameters Request parameters.
-   * @param {*} [options] Override http request option.
-   * @throws {RequiredError}
-   */
-  public websitesDestroy(
-    requestParameters: WebsitesApiWebsitesDestroyRequest,
-    options?: RawAxiosRequestConfig,
-  ) {
-    return WebsitesApiFp(this.configuration)
-      .websitesDestroy(requestParameters.id, options)
-      .then((request) => request(this.axios, this.basePath))
-  }
-}
 
 /**
  * WidgetListsApi - axios parameter creator
