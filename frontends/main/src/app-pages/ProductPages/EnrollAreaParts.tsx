@@ -1,12 +1,73 @@
 import React from "react"
-import { LoadingSpinner } from "ol-components"
+import { LoadingSpinner, linkStyles } from "ol-components"
 import { Button, styled, type ButtonProps } from "@mitodl/smoot-design"
 import { type EnrollAction } from "./enrollTypes"
 
-export const ChooseYourPath = styled.div(({ theme }) => ({
+/** The heading over an offering box, whatever that box turns out to be. */
+export const OfferingHeading = styled.div(({ theme }) => ({
   ...theme.typography.subtitle2,
   fontWeight: theme.typography.fontWeightBold,
   color: theme.custom.colors.darkGray2,
+}))
+
+/**
+ * A heading above an offering box, with the financial-aid indicator to its
+ * right. The two wrap onto separate lines where they do not share one: the
+ * tablet grid gives this row a ~268px cell against the ~346px of the desktop
+ * sidebar, and "Continue with full program" beside "Apply for financial aid"
+ * only just fits at the wider size.
+ */
+export const HeadingRow = styled.div({
+  display: "flex",
+  flexWrap: "wrap",
+  alignItems: "baseline",
+  columnGap: "8px",
+  rowGap: "4px",
+  // Holds the aside at the right edge on a line of its own, where
+  // `justify-content: space-between` would left-align it.
+  "> [data-heading-aside]": { marginLeft: "auto" },
+})
+
+/**
+ * The line beneath a heading, naming why the price below it is reduced. Takes a
+ * line of its own whatever else in the row wrapped.
+ */
+export const HeadingNote = styled.div(({ theme }) => ({
+  ...theme.typography.body3,
+  color: theme.custom.colors.darkGray2,
+  flexBasis: "100%",
+}))
+
+/**
+ * `linkStyles`' small "red" link is the body3 scale these rows want, and its red
+ * is the call-to-action colour for the unapproved state. The approved state
+ * keeps that scale and swaps only the colour, which Link has no variant for:
+ * green marks it as a resolved state rather than something to act on, so it also
+ * drops the resting underline and takes one on hover instead — it stays a link
+ * to the application record, but users have no reason to follow it.
+ */
+export const FinancialAidLink = styled.a<{ $approved?: boolean }>(
+  linkStyles({ size: "small", color: "red" }),
+  ({ $approved, theme }) =>
+    $approved
+      ? {
+          color: theme.custom.colors.green,
+          ":hover": {
+            color: theme.custom.colors.green,
+            textDecoration: "underline",
+          },
+        }
+      : { textDecoration: "underline" },
+)
+
+/**
+ * Holds the aid link's row while the approval lookup is in flight, so resolving
+ * it does not shift the card it sits in. Sized by the link's own line box, which
+ * `linkStyles`' small scale resolves to body3.
+ */
+export const FinancialAidPlaceholder = styled.span(({ theme }) => ({
+  display: "block",
+  height: theme.typography.body3.lineHeight,
 }))
 
 const ButtonWrapper = styled.span<{ $fullWidth?: boolean }>(
