@@ -485,6 +485,22 @@ class ProgramLetterTemplateFieldSerializer(serializers.Serializer):
     program_letter_signatories = serializers.ListField(child=serializers.JSONField())
 
 
+class ProgramLetterCertificateSerializer(serializers.ModelSerializer):
+    """
+    The certificate fields the public program letter view needs.
+
+    ProgramLetterViewSet is unauthenticated -- anyone holding a letter's uuid
+    can read it -- so this exposes only what the letter itself already states:
+    who earned it and which program. The learner's email, postal address, date
+    of birth, gender and platform usernames stay behind the authenticated
+    certificate list, which uses ProgramCertificateSerializer.
+    """
+
+    class Meta:
+        model = ProgramCertificate
+        fields = ["user_full_name", "program_title"]
+
+
 class ProgramLetterSerializer(serializers.ModelSerializer):
     """
     Serializer for Program Letters
@@ -494,13 +510,7 @@ class ProgramLetterSerializer(serializers.ModelSerializer):
 
     template_fields = serializers.SerializerMethodField()
 
-    certificate = ProgramCertificateSerializer()
-
-    def to_representation(self, instance):
-        """Attach the letter the nested certificate serializer needs."""
-        # The view 404s a letter whose certificate is missing, so this is safe.
-        instance.certificate.user_letter = instance
-        return super().to_representation(instance)
+    certificate = ProgramLetterCertificateSerializer()
 
     @extend_schema_field(ProgramLetterTemplateFieldSerializer())
     def get_template_fields(self, instance) -> dict:

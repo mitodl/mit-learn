@@ -87,6 +87,26 @@ const setupOrderHistory = ({
   return { orderId }
 }
 
+/**
+ * Mock the program certificates a program card fetches to decide whether to show
+ * a "Program Letter" item. Only requested when the `program-letters` flag is on,
+ * so this is required in any suite that renders a program card with feature
+ * flags mocked true. Defaults to no certificates (no letter link); pass
+ * `mitxonlineProgramIds` to give those programs one.
+ */
+const setupProgramCertificates = ({
+  mitxonlineProgramIds = [],
+}: { mitxonlineProgramIds?: number[] } = {}) => {
+  setMockResponse.get(
+    u.urls.programCertificates.list(),
+    mitxonlineProgramIds.map((id) =>
+      u.factories.programCertificates.programCertificate({
+        mitxonline_program_id: id,
+      }),
+    ),
+  )
+}
+
 const dashboardCourse: PartialFactory<CourseWithCourseRunsSerializerV2> = (
   ...overrides
 ) => {
@@ -626,6 +646,7 @@ export {
   dashboardCourse,
   dashboardProgram,
   setupOrderHistory,
+  setupProgramCertificates,
   setupEnrollments,
   setupProgramsAndCourses,
   setupOrgAndUser,

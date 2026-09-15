@@ -506,6 +506,46 @@ def test_program_letter_api_view(mocker, client, rf, user, is_anonymous, setting
     )
 
 
+def test_program_letter_api_view_omits_certificate_pii(mocker, client, user, settings):
+    """
+    The unauthenticated letter endpoint exposes only the name and program the
+    letter itself states -- not the learner's contact or demographic details.
+
+    Anyone holding the letter's uuid can read this response, so a field added
+    to ProgramCertificate must not reach it by default.
+    """
+    settings.DATABASE_ROUTERS = []
+    mocker.patch(
+        "profiles.serializers.fetch_program_letter_template_data",
+        return_value={
+            "id": 4,
+            "meta": {},
+            "program_letter_footer": "",
+            "program_letter_logo": {},
+            "title": "Supply Chain Management",
+            "program_id": 1,
+            "program_letter_footer_text": "",
+            "program_letter_header_text": "",
+            "program_letter_text": "<p>Congratulations</p>",
+            "program_letter_signatories": [],
+        },
+    )
+    cert = ProgramCertificateFactory(
+        user_email=user.email,
+        micromasters_program_id=1,
+        user_street_address="77 Massachusetts Ave",
+        user_year_of_birth="1970",
+    )
+    program_letter = ProgramLetterFactory(user=user, certificate=cert)
+
+    response = client.get(
+        reverse("profile:v1:program_letters_api-detail", args=[program_letter.id])
+    )
+
+    assert response.status_code == 200
+    assert set(response.json()["certificate"]) == {"user_full_name", "program_title"}
+
+
 @pytest.mark.parametrize("certificate_id", [None, "no-such-record-hash"])
 def test_program_letter_api_view_without_certificate(
     client, settings, user, certificate_id

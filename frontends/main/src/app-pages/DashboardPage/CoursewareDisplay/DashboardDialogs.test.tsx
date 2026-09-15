@@ -9,7 +9,11 @@ import {
 } from "@/test-utils"
 import { HomeEnrollmentsDisplay } from "./HomeEnrollmentsDisplay"
 import { CoursewareCard } from "./CoursewareCard"
-import { setupEnrollments, setupOrderHistory } from "./test-utils"
+import {
+  setupEnrollments,
+  setupOrderHistory,
+  setupProgramCertificates,
+} from "./test-utils"
 import { formatRunIdentifier } from "./courseDateUtils"
 import * as mitxonline from "api/mitxonline-test-utils"
 import { makeRequest } from "api/test-utils"
@@ -24,6 +28,7 @@ import {
 // Verified cards look up their order; default to none, tests override.
 beforeEach(() => {
   setupOrderHistory()
+  setupProgramCertificates()
 })
 
 jest.mock("posthog-js/react")

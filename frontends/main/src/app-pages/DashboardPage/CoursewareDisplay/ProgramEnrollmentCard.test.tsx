@@ -1,11 +1,20 @@
 import React from "react"
 import { renderWithProviders, screen, user, within } from "@/test-utils"
 import * as mitxonline from "api/mitxonline-test-utils"
+import { makeRequest, setMockResponse, urls } from "api/test-utils"
+import { programCertificates as programCertificateFactory } from "api/test-utils/factories"
 import { mitxonlineLegacyUrl } from "@/common/mitxonline"
 import { receiptView } from "@/common/urls"
 import { DisplayModeEnum } from "@mitodl/mitxonline-api-axios/v2"
+import { useFeatureFlagEnabled } from "posthog-js/react"
 import { ProgramEnrollmentCard } from "./ProgramEnrollmentCard"
 import { setupOrderHistory } from "./test-utils"
+
+jest.mock("posthog-js/react")
+
+const mockedUseFeatureFlagEnabled = jest
+  .mocked(useFeatureFlagEnabled)
+  .mockImplementation(() => false)
 
 // Verified cards look up their order; default to none, tests override.
 beforeEach(() => {
@@ -301,6 +310,82 @@ describe.each([
     expect(
       screen.queryByRole("menuitem", { name: "Receipt" }),
     ).not.toBeInTheDocument()
+  })
+})
+
+describe("ProgramEnrollmentCard program letter", () => {
+  const PROGRAM_ID = 77
+  const SHARE_URL = "https://learn.mit.edu/program_letter/some-uuid/view"
+
+  const setup = ({
+    flagEnabled,
+    mitxonlineProgramId,
+  }: {
+    flagEnabled: boolean
+    mitxonlineProgramId: number | null
+  }) => {
+    mockedUseFeatureFlagEnabled.mockReturnValue(flagEnabled)
+    setMockResponse.get(urls.programCertificates.list(), [
+      programCertificateFactory.programCertificate({
+        mitxonline_program_id: mitxonlineProgramId,
+        program_letter_share_url: SHARE_URL,
+      }),
+    ])
+    const programEnrollment =
+      mitxonline.factories.enrollment.programEnrollmentV3({
+        program: mitxonline.factories.programs.simpleProgram({
+          id: PROGRAM_ID,
+        }),
+      })
+    renderWithProviders(
+      <ProgramEnrollmentCard programEnrollment={programEnrollment} />,
+    )
+  }
+
+  const openMenu = async () => {
+    await user.click(
+      within(screen.getByTestId("enrollment-card-desktop")).getByRole(
+        "button",
+        {
+          name: "More options",
+        },
+      ),
+    )
+    // Program Record is unconditional, so its presence means the menu is open
+    // and a missing Program Letter is a real absence rather than a slow render.
+    await screen.findByRole("menuitem", { name: "Program Record" })
+  }
+
+  test("links to the letter's share url when the learner has a matching certificate", async () => {
+    setup({ flagEnabled: true, mitxonlineProgramId: PROGRAM_ID })
+    await openMenu()
+
+    expect(
+      await screen.findByRole("menuitem", { name: "Program Letter" }),
+    ).toHaveAttribute("href", SHARE_URL)
+  })
+
+  test("is hidden when no certificate matches this program", async () => {
+    setup({ flagEnabled: true, mitxonlineProgramId: PROGRAM_ID + 1 })
+    await openMenu()
+
+    expect(
+      screen.queryByRole("menuitem", { name: "Program Letter" }),
+    ).not.toBeInTheDocument()
+  })
+
+  test("is hidden, and no certificates are requested, when the flag is off", async () => {
+    // Requesting the list mints a shareable uuid for every letter the learner
+    // does not have yet, so it must not happen behind a disabled flag.
+    setup({ flagEnabled: false, mitxonlineProgramId: PROGRAM_ID })
+    await openMenu()
+
+    expect(
+      screen.queryByRole("menuitem", { name: "Program Letter" }),
+    ).not.toBeInTheDocument()
+    expect(makeRequest).not.toHaveBeenCalledWith(
+      expect.objectContaining({ url: urls.programCertificates.list() }),
+    )
   })
 })
 
