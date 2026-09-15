@@ -162,3 +162,119 @@ def test_content_published_actions_logs_execution(mocker, user, caplog):
     assert "Triggering website_content_published plugins" in caplog.text
     assert f"id={content.id}" in caplog.text
     assert f"title={content.title}" in caplog.text
+
+
+@pytest.mark.django_db
+def test_content_unpublished_actions_triggers_hook(mocker, user):
+    """content_unpublished_actions triggers the unpublish hook for unpublished items"""
+    from website_content.api import content_unpublished_actions
+    from website_content.models import WebsiteContent
+
+    content = WebsiteContent.objects.create(
+        title="Unpublished Article",
+        content={"type": "doc", "content": []},
+        is_published=False,
+        user=user,
+        content_type="news",
+    )
+
+    mock_pm = mocker.MagicMock()
+    mock_hook = mocker.MagicMock()
+    mock_pm.hook = mock_hook
+    mocker.patch("website_content.api.get_plugin_manager", return_value=mock_pm)
+
+    content_unpublished_actions(content=content)
+
+    mock_hook.website_content_unpublished.assert_called_once_with(content=content)
+
+
+@pytest.mark.django_db
+def test_content_unpublished_actions_skips_published(mocker, user, caplog):
+    """A still-published item must not have its feed entry torn down"""
+    from website_content.api import content_unpublished_actions
+    from website_content.models import WebsiteContent
+
+    mocker.patch("website_content.tasks.fastly_purge_relative_url")
+    mocker.patch("website_content.tasks.fastly_purge_website_content_list.delay")
+
+    content = WebsiteContent.objects.create(
+        title="Still Published",
+        content={"type": "doc", "content": []},
+        is_published=True,
+        user=user,
+        content_type="news",
+    )
+
+    mock_pm = mocker.MagicMock()
+    mock_hook = mocker.MagicMock()
+    mock_pm.hook = mock_hook
+    mocker.patch("website_content.api.get_plugin_manager", return_value=mock_pm)
+
+    content_unpublished_actions(content=content)
+
+    mock_hook.website_content_unpublished.assert_not_called()
+    assert (
+        f"WebsiteContent {content.id} is still published, "
+        "skipping unpublish plugin actions" in caplog.text
+    )
+
+
+@pytest.mark.parametrize(
+    ("slug", "expect_purge"),
+    [
+        ("test-article", True),
+        ("", False),
+    ],
+)
+def test_purge_content_on_unpublish(mocker, slug, expect_purge):
+    """
+    Unpublishing has to clear the CDN: the page is no longer public and the
+    listing no longer includes the item. Unpublishing keeps the slug, so the
+    page URL is still resolvable — without one there is nothing cached to purge.
+    """
+    from website_content.api import purge_content_on_unpublish
+
+    mock_purge_api = mocker.patch("website_content.tasks.call_fastly_purge_api")
+    mock_purge_api.return_value = {"status": "ok", "id": "abc"}
+    mocker.patch("website_content.tasks.fastly_purge_website_content_list.delay")
+
+    content = WebsiteContentFactory.build(
+        is_published=False,
+        slug=slug or None,
+        content_type=WebsiteContentType.news.name,
+    )
+
+    purge_content_on_unpublish(content)
+
+    assert mock_purge_api.called is expect_purge
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    ("content_type", "expected_listing"),
+    [
+        (WebsiteContentType.news.name, "/news"),
+        (WebsiteContentType.article.name, "/articles"),
+    ],
+)
+def test_purge_content_on_unpublish_listing_url(mocker, content_type, expected_listing):
+    """The listing purge has to name the unpublished item's own listing page"""
+    from website_content.api import purge_content_on_unpublish
+
+    mocker.patch("website_content.tasks.call_fastly_purge_api").return_value = {
+        "status": "ok",
+        "id": "abc",
+    }
+    mock_purge_list = mocker.patch(
+        "website_content.tasks.fastly_purge_website_content_list.delay"
+    )
+
+    content = WebsiteContentFactory.build(
+        is_published=False,
+        slug="test-article",
+        content_type=content_type,
+    )
+
+    purge_content_on_unpublish(content)
+
+    mock_purge_list.assert_called_once_with(expected_listing)

@@ -138,3 +138,85 @@ def test_sync_article_to_news_sync_failure(mocker, user):
         tasks.sync_website_content_to_news(content.id)
 
     mock_sync.assert_called_once_with(content)
+
+
+def _news_content(user, *, is_published):
+    from website_content.models import WebsiteContent
+
+    return WebsiteContent.objects.create(
+        title="Test Article",
+        content={"type": "doc", "content": []},
+        is_published=is_published,
+        user=user,
+        content_type="news",
+    )
+
+
+@pytest.mark.django_db
+def test_delete_website_content_from_news_removes_the_entry(mocker, user):
+    """The ordinary case: the item is unpublished, so its entry goes"""
+    content = _news_content(user, is_published=False)
+    mock_delete = mocker.patch(
+        "news_events.etl.articles_news.delete_website_content_news_from_news",
+        autospec=True,
+        return_value=1,
+    )
+
+    tasks.delete_website_content_from_news(content.id)
+
+    mock_delete.assert_called_once_with(content.id)
+
+
+@pytest.mark.django_db
+def test_delete_website_content_from_news_skips_republished(mocker, user, caplog):
+    """
+    A queued delete can run after the item was republished. Deleting then would
+    strip the entry the republish just recreated, so the task must stand down.
+    """
+    content = _news_content(user, is_published=True)
+    mock_delete = mocker.patch(
+        "news_events.etl.articles_news.delete_website_content_news_from_news",
+        autospec=True,
+    )
+
+    tasks.delete_website_content_from_news(content.id)
+
+    mock_delete.assert_not_called()
+    assert (
+        f"WebsiteContent {content.id} is published again, skipping news feed removal"
+        in caplog.text
+    )
+
+
+@pytest.mark.django_db
+def test_delete_website_content_from_news_deletes_when_row_is_gone(mocker):
+    """Content hard-deleted since the task was queued still gets cleaned up"""
+    mock_delete = mocker.patch(
+        "news_events.etl.articles_news.delete_website_content_news_from_news",
+        autospec=True,
+        return_value=1,
+    )
+
+    tasks.delete_website_content_from_news(99999)
+
+    mock_delete.assert_called_once_with(99999)
+
+
+@pytest.mark.django_db
+def test_delete_website_content_from_news_deletes_when_soft_deleted(mocker, user):
+    """
+    A soft-deleted row must not keep its feed entry alive. It is hidden by the
+    default manager even though `is_published` is still True on the row, which
+    is exactly why the guard queries through `objects`.
+    """
+    content = _news_content(user, is_published=True)
+    content.delete()  # SOFT_DELETE: the row survives, hidden from `objects`
+    mock_delete = mocker.patch(
+        "news_events.etl.articles_news.delete_website_content_news_from_news",
+        autospec=True,
+        return_value=1,
+    )
+
+    tasks.delete_website_content_from_news(content.id)
+
+    mock_delete.assert_called_once_with(content.id)

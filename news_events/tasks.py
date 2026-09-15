@@ -58,6 +58,64 @@ def get_articles_news():
     autoretry_for=(Exception,),
     retry_kwargs={"max_retries": 3, "countdown": 5},
 )
+def delete_website_content_from_news(self, content_id: int):
+    """
+    Remove a website content item's entry from the news feed.
+
+    The counterpart to `sync_website_content_to_news`, run when an item is
+    unpublished. The deletion is keyed on the feed guid rather than on a loaded
+    WebsiteContent, so it still cleans up after content that has since been
+    removed, and is a safe no-op when there is nothing to delete.
+
+    Args:
+        content_id (int): The ID of the WebsiteContent item to remove
+
+    Retry policy:
+        - Retries up to 3 times on any exception
+        - 5 second delay between retries
+    """
+    import logging
+
+    from news_events.etl.articles_news import delete_website_content_news_from_news
+    from website_content.models import WebsiteContent
+
+    logger = logging.getLogger(__name__)
+
+    # Queued work can run late. If the item was republished in the meantime, a
+    # stale delete would strip the feed entry the republish just (re)created, so
+    # bail out -- the mirror of the sync task only loading a published row.
+    # `objects` hides soft-deleted rows, so a row that is gone or soft-deleted
+    # still falls through and gets cleaned up.
+    if WebsiteContent.objects.filter(id=content_id, is_published=True).exists():
+        logger.info(
+            "WebsiteContent %s is published again, skipping news feed removal",
+            content_id,
+        )
+        return
+
+    try:
+        deleted = delete_website_content_news_from_news(content_id)
+    except Exception:
+        logger.exception(
+            "Failed to remove content %s from news feed (retry %s/%s)",
+            content_id,
+            self.request.retries,
+            self.max_retries,
+        )
+        raise
+    else:
+        logger.info(
+            "Removed %s news feed item(s) for content %s",
+            deleted,
+            content_id,
+        )
+
+
+@app.task(
+    bind=True,
+    autoretry_for=(Exception,),
+    retry_kwargs={"max_retries": 3, "countdown": 5},
+)
 def sync_website_content_to_news(self, content_id: int):
     """
     Sync a single website content news item to the news feed.

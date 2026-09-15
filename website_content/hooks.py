@@ -20,6 +20,10 @@ class WebsiteContentHooks:
     def website_content_published(self, content):
         """Trigger actions after a content item is published or updated"""
 
+    @hookspec
+    def website_content_unpublished(self, content):
+        """Trigger actions after a content item is unpublished"""
+
 
 def get_plugin_manager():
     """Return the plugin manager for website_content hooks"""

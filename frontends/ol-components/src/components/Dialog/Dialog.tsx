@@ -131,6 +131,14 @@ const Dialog: React.FC<DialogProps> = ({
         await onConfirm()
       }
       onClose()
+    } catch {
+      /**
+       * A rejected onConfirm means the action failed, so skip onClose and
+       * leave the dialog open to retry from. Swallowed rather than re-thrown:
+       * nothing can catch it (React drops the promise this click handler
+       * returns, making it an unhandled rejection), and reporting the failure
+       * belongs to the caller, which owns the request.
+       */
     } finally {
       setConfirming(false)
     }
