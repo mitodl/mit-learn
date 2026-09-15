@@ -1,6 +1,13 @@
 Release Notes
 =============
 
+Version 0.80.3
+--------------
+
+- feat(website-content): unpublished the article and remove the news feed entry on unpublish (#3927)
+- feat: Add B2B organizational learning landing page (#3846)
+- feat: Improve B2B analytics dashboard navigation and layout (#3906)
+
 Version 0.80.2
 --------------
 
