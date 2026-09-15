@@ -16,6 +16,7 @@ import {
 } from "@/app-pages/SearchPage/searchRequests"
 import getSearchParams from "@/page-components/SearchDisplay/getSearchParams"
 import {
+  getVectorScoreTuning,
   toUnfacetedVectorSearchParams,
   toVectorSearchParams,
 } from "@/page-components/SearchDisplay/vectorSearchParams"
@@ -68,13 +69,16 @@ const Page: React.FC<AppPageProps<"/search">> = async ({ searchParams }) => {
   const hasSearchTerm = typeof params.q === "string" && params.q.trim() !== ""
 
   if (isHybridSearch) {
+    // The admin score tuning params are part of the request, so the prefetch
+    // must include them or the client would refetch on hydration.
+    const scoreTuning = getVectorScoreTuning(urlParams)
     await Promise.all([
       queryClient.prefetchQuery(offerorQueries.list({})),
       queryClient.prefetchQuery(
         learningResourceQueries.vectorSearch(
           hasSearchTerm
-            ? toUnfacetedVectorSearchParams(params)
-            : toVectorSearchParams(params),
+            ? toUnfacetedVectorSearchParams(params, {}, scoreTuning)
+            : toVectorSearchParams(params, scoreTuning),
         ),
       ),
     ])

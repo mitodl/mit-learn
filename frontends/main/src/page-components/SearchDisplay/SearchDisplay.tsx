@@ -58,6 +58,8 @@ import { ResourceTypeGroupTabs } from "./ResourceTypeGroupTabs"
 import ProfessionalToggle from "./ProfessionalToggle"
 import { trackFilterCourseCatalog } from "@/common/analytics/gtm"
 import SliderInput from "./SliderInput"
+import VectorAdminOptions from "./VectorAdminOptions"
+import { AdminTitleContainer, ExplanationContainer } from "./adminStyles"
 
 import type { TabConfig } from "./ResourceTypeGroupTabs"
 
@@ -443,14 +445,6 @@ const MobileFacetsTitleContainer = styled.div`
   }
 `
 
-export const ExplanationContainer = styled.div`
-  ${({ theme }) => css({ ...theme.typography.body3 })}
-  color: ${({ theme }) => theme.custom.colors.silverGrayDark};
-`
-export const AdminTitleContainer = styled.div`
-  ${({ theme }) => css({ ...theme.typography.subtitle3 })}
-  margin-top: 20px;
-`
 const NoneFound = styled.div(({ theme }) => ({
   backgroundColor: theme.custom.colors.white,
   borderRadius: "8px",
@@ -802,14 +796,18 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
           <div>
             {adminOptionsSlot}
             {hybridSearchActive ? (
-              <ExplanationContainer data-testid="opensearch-only-notice">
-                The relevance controls (staleness penalty, search mode, slop,
-                minimum score, incompleteness penalty, content file weight and
-                OCW files) apply to the OpenSearch endpoint only. Hybrid search
-                is active, so they are hidden here rather than shown with no
-                effect. Switch back to OpenSearch with vector_search=false to
-                tune them.
-              </ExplanationContainer>
+              <>
+                <VectorAdminOptions setSearchParams={setSearchParams} />
+                <ExplanationContainer data-testid="opensearch-only-notice">
+                  The controls above tune hybrid search. The remaining relevance
+                  controls (search mode, slop, content file weight and OCW
+                  files, plus the percent-based staleness, minimum score and
+                  incompleteness settings) apply to the OpenSearch endpoint
+                  only, so they are hidden here rather than shown with no
+                  effect. Switch back to OpenSearch with vector_search=false to
+                  tune them.
+                </ExplanationContainer>
+              </>
             ) : adminParams && !isAdminParamsLoading ? (
               <>
                 <AdminTitleContainer>
@@ -823,6 +821,7 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
                   }
                   setSearchParams={setSearchParams}
                   urlParam="yearly_decay_percent"
+                  label="Resource Score Staleness Penalty"
                   min={0}
                   max={10}
                   step={0.2}
@@ -854,6 +853,7 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
                       }
                       setSearchParams={setSearchParams}
                       urlParam="slop"
+                      label="Slop"
                       min={0}
                       max={20}
                       step={1}
@@ -874,6 +874,7 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
                   }
                   setSearchParams={setSearchParams}
                   urlParam="min_score"
+                  label="Minimum Score Cutoff"
                   min={0}
                   max={20}
                   step={0.5}
@@ -893,6 +894,7 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
                   }
                   setSearchParams={setSearchParams}
                   urlParam="max_incompleteness_penalty"
+                  label="Maximum Incompleteness Penalty"
                   min={0}
                   max={100}
                   step={1}
@@ -915,6 +917,7 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
                   }
                   setSearchParams={setSearchParams}
                   urlParam="content_file_score_weight"
+                  label="Content File Score Weight Adjustment"
                   min={0}
                   max={1}
                   step={0.1}

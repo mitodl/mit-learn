@@ -5,10 +5,12 @@ import {
 } from "api/hooks/learningResources"
 import type { LearningResource } from "api"
 import type { LearningResourcesVectorSearchResponse } from "api/v0"
+import { useAppSearchParams } from "@/common/useAppSearchParams"
 import getSearchParams from "./getSearchParams"
 import SearchDisplay, { SearchDisplayProps } from "./SearchDisplay"
 import {
   VECTOR_CLIENT_FILTER_FACETS,
+  getVectorScoreTuning,
   toUnfacetedVectorSearchParams,
   toVectorSearchParams,
 } from "./vectorSearchParams"
@@ -127,25 +129,26 @@ const getVectorClientAggregations = (
   )
 }
 
-type HybridSearchDisplayProps = SearchDisplayProps & {
-  /**
-   * Minimum similarity score, forwarded to the vector endpoint as
-   * `score_cutoff`. This is the only relevance knob the vector endpoint
-   * honors; the OpenSearch-only admin controls (min_score, yearly_decay_percent,
-   * search_mode, slop, max_incompleteness_penalty, content_file_score_weight,
-   * show_ocw_files) are not forwarded, so SearchDisplay hides them here.
-   */
-  cutoffScore?: number
-}
-
-const HybridSearchDisplay: React.FC<HybridSearchDisplayProps> = ({
-  cutoffScore,
+const HybridSearchDisplay: React.FC<SearchDisplayProps> = ({
   setSearchParams,
   ...props
 }) => {
   const isVectorQuerySearch =
     typeof props.requestParams.q === "string" &&
     props.requestParams.q.trim() !== ""
+
+  const searchParams = useAppSearchParams()
+  /**
+   * The relevance knobs the vector endpoint honors, set by the admin panel's
+   * VectorAdminOptions (rendered by SearchDisplay). The OpenSearch-only admin controls (min_score,
+   * yearly_decay_percent, search_mode, slop, max_incompleteness_penalty,
+   * content_file_score_weight, show_ocw_files) are not forwarded, so
+   * SearchDisplay hides them here.
+   */
+  const scoreTuning = useMemo(
+    () => getVectorScoreTuning(searchParams),
+    [searchParams],
+  )
 
   const offerorsQuery = useOfferorsList()
   const displayOfferorCodes = useMemo(
@@ -165,12 +168,12 @@ const HybridSearchDisplay: React.FC<HybridSearchDisplayProps> = ({
           ? toUnfacetedVectorSearchParams(
               params,
               props.constantSearchParams,
-              cutoffScore,
+              scoreTuning,
             )
-          : toVectorSearchParams(params, cutoffScore),
+          : toVectorSearchParams(params, scoreTuning),
       )
     },
-    [cutoffScore, props.constantSearchParams],
+    [scoreTuning, props.constantSearchParams],
   )
 
   const getDisplayData = useMemo(

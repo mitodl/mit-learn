@@ -44,6 +44,7 @@ from vector_search.utils import (
     order_by_query,
     qdrant_query_conditions,
     resources_payload_selector,
+    score_formula_overrides,
     score_formula_query,
     sparse_encoder,
 )
@@ -111,6 +112,7 @@ class QdrantView(AsyncAPIView):
         encoder_sparse,
         hybrid_search,
         score_cutoff: float | None,
+        score_overrides: dict | None = None,
     ):
         search_params = {
             "collection_name": search_collection,
@@ -137,7 +139,9 @@ class QdrantView(AsyncAPIView):
 
         # Boosts and the completeness penalty, or None when neither applies to
         # this collection.
-        formula_query = score_formula_query(search_collection)
+        formula_query = score_formula_query(
+            search_collection, **(score_overrides or {})
+        )
 
         if hybrid_search:
             sparse_query, dense_query = await asyncio.gather(
@@ -388,6 +392,7 @@ class QdrantView(AsyncAPIView):
                 encoder_sparse,
                 hybrid_search,
                 score_cutoff,
+                score_formula_overrides(params),
             )
 
             if "group_by" in params:
