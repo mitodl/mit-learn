@@ -1853,7 +1853,29 @@ def retrieve_points_matching_params(
 
 def custom_score_formula(collection_name: str) -> list[models.MultExpression]:
     """
-    Boost scores based on params defined in VECTOR_SEARCH_SCORE_BOOST
+    Build the boost terms from VECTOR_SEARCH_SCORE_BOOST, to be added to the
+    score.
+
+    Each term is `boost * condition * $score` -- a *proportion* of the point's
+    own score rather than a fixed number of score units, so that summing it into
+    the formula multiplies a matching point's score by (1 + boost). See
+    VECTOR_SEARCH_SCORE_BOOST for why the boost is relative.
+
+    Being proportional makes the boost order-preserving within its own band: a
+    point can only overtake another it was already within (1 + boost) of, so a
+    boost can break near-ties but cannot reorder points that relevance had
+    clearly separated. A fixed boost has no such bound -- one large enough to
+    move a weak match past the rest of the pool moves a strong match by exactly
+    as much, which is what let programs take the head of every result page.
+
+    It also needs no normalization against the score's scale. The fixed boost
+    this replaces was damped by a gaussian over $score to fake that scaling,
+    which misfired in both directions: the decay was two-sided, so the *most*
+    relevant matches got the *least* boost (a program scoring 0.8 kept 0.2% of
+    the nominal amount, one scoring 0.43 kept 96%), and it was centred on a
+    similarity score, so on the sparse arm of hybrid search -- where $score is a
+    BM25-style term score, not a bounded similarity -- it fell to a millionth of
+    the amount by a score of 1 and the boost silently did not apply at all.
     """
     score_params = VECTOR_SEARCH_SCORE_BOOST.get(collection_name)
     score_expressions = []
@@ -1866,21 +1888,9 @@ def custom_score_formula(collection_name: str) -> list[models.MultExpression]:
             if conditions is None:
                 continue
             score_expressions.append(
-                models.MultExpression(
-                    mult=[
-                        amount,
-                        conditions,
-                        # add a decay based on score to normalize
-                        models.GaussDecayExpression(
-                            gauss_decay=models.DecayParamsExpression(
-                                x="$score",  # decay over the relevance score itself
-                                target=0.4,  # full boost at this target
-                                scale=0.2,
-                                midpoint=0.2,
-                            )
-                        ),
-                    ]
-                )
+                # A condition evaluates to 1 for a matching point and 0 for
+                # every other, so non-matching points add nothing.
+                models.MultExpression(mult=[amount, conditions, "$score"])
             )
     return score_expressions
 

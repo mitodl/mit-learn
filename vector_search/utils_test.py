@@ -1,6 +1,7 @@
 import asyncio
 import difflib
 import json
+import math
 import os
 import random
 import subprocess
@@ -2974,8 +2975,8 @@ def test_custom_score_formula_empty(mocker):
 
 def test_custom_score_formula_with_boosts(mocker):
     """
-    custom_score_formula must boost scores based on VECTOR_SEARCH_SCORE_BOOST
-    and append a GaussDecayExpression at the end.
+    custom_score_formula must boost scores based on VECTOR_SEARCH_SCORE_BOOST,
+    as a proportion of each matching point's own score.
     """
 
     mock_boosts = {
@@ -2988,7 +2989,6 @@ def test_custom_score_formula_with_boosts(mocker):
 
     results = custom_score_formula(RESOURCES_COLLECTION_NAME)
 
-    # We expect 3 expressions: 2 MultExpressions and 1 GaussDecayExpression
     assert len(results) == 2
 
     # Check first boost expression
@@ -3018,9 +3018,10 @@ def test_custom_score_formula_with_boosts(mocker):
         for c in filter_2.must
     )
 
-    # Check GaussDecayExpression decay expression at the end
-    assert isinstance(results[0].mult[2], models.GaussDecayExpression)
-    assert isinstance(results[1].mult[2], models.GaussDecayExpression)
+    # Each boost multiplies the score it is boosting rather than adding a fixed
+    # amount to it
+    assert results[0].mult[2] == "$score"
+    assert results[1].mult[2] == "$score"
 
 
 def test_custom_score_formula_defaults(mocker):
@@ -3041,7 +3042,144 @@ def test_custom_score_formula_defaults(mocker):
     assert results[0].mult[0] == 0
     assert isinstance(results[0].mult[1], models.Filter)
 
-    assert isinstance(results[0].mult[2], models.GaussDecayExpression)
+    assert results[0].mult[2] == "$score"
+
+
+# Payloads for the two sides of the program boost, for the formula evaluator
+# below. Only the keys the boost's conditions look at need to be present.
+PROGRAM_PAYLOAD = {"resource_type_group": "program"}
+COURSE_PAYLOAD = {"resource_type_group": "course"}
+
+
+def _formula_condition_matches(condition, payload):
+    value = payload.get(condition.key)
+    match = condition.match
+    if isinstance(match, models.MatchAny):
+        return value in match.any
+    return value == match.value
+
+
+def _formula_filter_matches(query_filter, payload):
+    return all(
+        _formula_condition_matches(condition, payload)
+        for condition in query_filter.must or []
+    ) and not any(
+        _formula_condition_matches(condition, payload)
+        for condition in query_filter.must_not or []
+    )
+
+
+def _score_with_formula(formula_query, score, payload):
+    """
+    Evaluate a FormulaQuery the way Qdrant would, over the subset of expressions
+    score_formula_query builds, so that ranking can be asserted on the
+    arithmetic the formula produces rather than on its shape.
+
+    Gaussian decay is handled as well, though the formula no longer builds one,
+    so that the ranking assertions below fail on the ranking itself -- not on an
+    unevaluatable expression -- if a score-damped boost is reintroduced.
+    """
+
+    def evaluate(expression):  # noqa: PLR0911
+        if isinstance(expression, str):
+            return score if expression == "$score" else payload[expression]
+        if isinstance(expression, (int, float)):
+            return float(expression)
+        if isinstance(expression, models.SumExpression):
+            return sum(evaluate(part) for part in expression.sum)
+        if isinstance(expression, models.MultExpression):
+            return math.prod(evaluate(part) for part in expression.mult)
+        if isinstance(expression, models.NegExpression):
+            return -evaluate(expression.neg)
+        if isinstance(expression, models.GaussDecayExpression):
+            decay = expression.gauss_decay
+            return math.exp(
+                math.log(decay.midpoint)
+                * ((evaluate(decay.x) - decay.target) / decay.scale) ** 2
+            )
+        if isinstance(expression, models.Filter):
+            # A condition scores 1 for a matching point and 0 for every other
+            return 1.0 if _formula_filter_matches(expression, payload) else 0.0
+        msg = f"formula evaluator does not handle {expression!r}"
+        raise AssertionError(msg)
+
+    return evaluate(formula_query.formula)
+
+
+@pytest.fixture
+def boost_only_formula(settings):
+    """
+    Return the score formula as shipped -- the real VECTOR_SEARCH_SCORE_BOOST,
+    so these tests hold against the configured weight -- with both penalties
+    disabled so that only the boost moves a score.
+    """
+    settings.VECTOR_SEARCH_INCOMPLETENESS_PENALTY_WEIGHT = 0
+    settings.VECTOR_SEARCH_STALENESS_PENALTY_WEIGHT = 0
+    return score_formula_query(RESOURCES_COLLECTION_NAME)
+
+
+def test_program_boost_term_is_proportional_to_score(boost_only_formula):
+    """
+    The boost term must be `amount * condition * $score`: proportional to the
+    score, with nothing damping it by a function of the score itself.
+    """
+    score, boost = boost_only_formula.formula.sum
+
+    assert score == "$score"
+    amount, conditions, boosted_score = boost.mult
+    assert amount > 0
+    assert isinstance(conditions, models.Filter)
+    assert boosted_score == "$score"
+
+
+def test_program_boost_does_not_outrank_a_more_relevant_course(boost_only_formula):
+    """
+    The regression this boost was reworked for: a program the query matched only
+    weakly must not take the head of the page from a course it matched well.
+
+    The scores are the bands observed for q="dance classes from MIT" on
+    production -- programs around 0.43, the topically correct dance courses
+    around 0.51 -- where the fixed boost put every program first.
+    """
+    program = _score_with_formula(boost_only_formula, 0.43, PROGRAM_PAYLOAD)
+    course = _score_with_formula(boost_only_formula, 0.51, COURSE_PAYLOAD)
+
+    assert program < course
+
+
+def test_program_boost_still_breaks_near_ties(boost_only_formula):
+    """
+    The boost must keep doing its job, though: a program that matched the query
+    as well as a course should still come first.
+    """
+    program = _score_with_formula(boost_only_formula, 0.505, PROGRAM_PAYLOAD)
+    course = _score_with_formula(boost_only_formula, 0.51, COURSE_PAYLOAD)
+
+    assert program > course
+
+
+@pytest.mark.parametrize("score", [0.05, 0.3, 0.8, 12.0])
+def test_program_boost_is_the_same_proportion_at_every_score(boost_only_formula, score):
+    """
+    The boost scales with the score instead of decaying around a target score.
+
+    The gaussian it replaces was two-sided, so the *most* relevant programs got
+    almost none of it, and it was centred on a similarity score, so on the
+    BM25-scaled sparse arm of hybrid search (the 12.0 case) it collapsed to zero
+    and the boost did not apply at all.
+    """
+    reference = 0.43
+    reference_ratio = (
+        _score_with_formula(boost_only_formula, reference, PROGRAM_PAYLOAD) / reference
+    )
+    ratio = _score_with_formula(boost_only_formula, score, PROGRAM_PAYLOAD) / score
+
+    assert ratio > 1
+    assert ratio == pytest.approx(reference_ratio)
+    # and nothing at all happens to a point the boost does not match
+    assert _score_with_formula(
+        boost_only_formula, score, COURSE_PAYLOAD
+    ) == pytest.approx(score)
 
 
 def test_completeness_penalty_expression(settings):
