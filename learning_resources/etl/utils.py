@@ -2,6 +2,7 @@
 
 import base64
 import glob
+import html
 import json
 import logging
 import math
@@ -18,6 +19,7 @@ from hashlib import md5
 from io import BytesIO
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from urllib.parse import unquote
 
 import boto3
 import pypdfium2 as pdfium
@@ -380,11 +382,179 @@ def staff_only_olx_paths(olx_path: str | Path) -> set[Path]:
     return hidden
 
 
+REFERENCE_SCAN_EXTENSIONS = frozenset({".xml", ".html", ".htm", ".json", ".txt", ".md"})
+
+# Asset manifests list every file in the export and updates.items.json is mostly
+# an archive of deleted announcements. None of them describes current course
+# content, and treating them as references keeps every stale asset alive.
+NON_CONTENT_OLX_FILES = (
+    "policies/assets.json",
+    "assets/assets.xml",
+    "info/updates.items.json",
+)
+COURSE_UPDATES_FILE = "info/updates.items.json"
+
+# A legacy transcript is named for its video's id rather than for anything the
+# course text contains, so the id is the only link back to the block using it.
+VIDEO_ID_ATTRIBUTES = ("sub", "youtube", "youtube_id_1_0")
+LEGACY_TRANSCRIPT_RE = re.compile(
+    r"^(?:[a-z]{2}(?:[-_][a-z]{2})?_)?subs_(.+)\.srt\.sjson$", re.IGNORECASE
+)
+
+
+def normalize_asset_ref(text: str) -> str:
+    """Collapse the spellings a filename takes on disk vs. in a reference"""
+    return re.sub(r"[\s_]", "", unquote(html.unescape(text)).lower())
+
+
+def _olx_reference_sources(root: Path, skip: set[Path]) -> list[Path]:
+    """Files whose text may legitimately refer to a static asset"""
+    sources = []
+    for path in root.rglob("*"):
+        if not path.is_file() or path.suffix.lower() not in REFERENCE_SCAN_EXTENSIONS:
+            continue
+        relative = path.relative_to(root)
+        if (
+            relative.parts[0] == "static"
+            or relative.as_posix() in NON_CONTENT_OLX_FILES
+            or path in skip
+            or any("draft" in part for part in relative.parts[:-1])
+        ):
+            continue
+        sources.append(path)
+    return sources
+
+
+def _live_course_updates(root: Path) -> str:
+    """
+    Text of the announcements the course team has not deleted. The whole file is
+    excluded as a reference source because edX keeps deleted announcements in
+    the export, but a live one still counts.
+    """
+    try:
+        items = json.loads((root / COURSE_UPDATES_FILE).read_text(errors="ignore"))
+    except (OSError, ValueError):
+        return ""
+    return "\n".join(
+        item.get("content") or ""
+        for item in items
+        if isinstance(item, dict) and item.get("status") != "deleted"
+    )
+
+
+def _olx_video_ids(sources: list[Path]) -> set[str] | None:
+    """
+    Video ids declared anywhere in the course, or None if any source could not
+    be parsed. None means "ids unknown", and callers keep every legacy
+    transcript rather than drop one whose video they failed to read.
+    """
+    ids = set()
+    for path in sources:
+        if path.suffix.lower() != ".xml":
+            continue
+        try:
+            element = ElementTree.parse(path).getroot()
+        except ElementTree.ParseError:
+            log.warning("Malformed XML in %s, keeping all legacy transcripts", path)
+            return None
+        # iter() finds <video> whether it has its own file or sits inline
+        for video in element.iter("video"):
+            for attribute in VIDEO_ID_ATTRIBUTES:
+                # youtube is "<speed>:<id>", the others are bare ids
+                value = (video.get(attribute) or "").split(":")[-1]
+                if value:
+                    ids.add(normalize_asset_ref(value))
+    return ids
+
+
+def static_olx_references(root: Path, skip: set[Path]) -> dict[Path, str | None]:
+    """
+    Map every file under static/ to the source file that refers to it, or None
+    when nothing in the course does.
+
+    Matching is on the filename rather than on a "/static/" prefix, because
+    courses also link assets as "asset-v1:...+type@asset+block/<name>", and it
+    is a substring test rather than a parse so that an unanticipated spelling
+    keeps a file rather than dropping it.
+
+    Args:
+        root (Path): the root of the OLX tree
+        skip (set[Path]): files that must not count as references, i.e. the
+            staff-only set, so an asset only an answer key mentions is unreferenced
+
+    Returns:
+        dict of Path to str or None: static file -> relative path of its referrer
+    """
+    static_dir = root / "static"
+    if not static_dir.is_dir():
+        return {}
+    sources = _olx_reference_sources(root, skip)
+    texts = [
+        (
+            path.relative_to(root).as_posix(),
+            normalize_asset_ref(path.read_text(errors="ignore")),
+        )
+        for path in sources
+    ]
+    updates = normalize_asset_ref(_live_course_updates(root))
+    if updates:
+        texts.append((COURSE_UPDATES_FILE, updates))
+    blob = "\n".join(text for _, text in texts)
+    video_ids = _olx_video_ids(sources)
+
+    references = {}
+    for path in sorted(static_dir.rglob("*")):
+        if not path.is_file():
+            continue
+        name = normalize_asset_ref(path.name)
+        if name in blob:
+            references[path] = next(
+                (source for source, text in texts if name in text), None
+            )
+            continue
+        legacy = LEGACY_TRANSCRIPT_RE.match(path.name)
+        if legacy and (
+            video_ids is None or normalize_asset_ref(legacy.group(1)) in video_ids
+        ):
+            references[path] = "video block id"
+            continue
+        references[path] = None
+    return references
+
+
+def excluded_olx_paths(olx_path: str | Path) -> set[Path]:
+    """
+    Files an OLX export contains that the course itself does not use: staff-only
+    subtrees, the asset manifests and announcement archive, and anything under
+    static/ that nothing refers to. See hq#13350.
+
+    Args:
+        olx_path (str or Path): The path to the directory with the OLX data
+
+    Returns:
+        set of Path: files that should not be ingested
+    """
+    root = Path(olx_path)
+    excluded = staff_only_olx_paths(root)
+    if not (root / "course.xml").is_file():
+        # not an OLX export; Canvas archives reach here via process_olx_path
+        return excluded
+    excluded.update(
+        root / name for name in NON_CONTENT_OLX_FILES if (root / name).is_file()
+    )
+    excluded.update(
+        path
+        for path, referrer in static_olx_references(root, excluded).items()
+        if referrer is None
+    )
+    return excluded
+
+
 def documents_from_olx(
     olx_path: str, valid_file_types: list[str] = VALID_TEXT_FILE_TYPES
 ) -> Generator[tuple, None, None]:
     """
-    Extract text from OLX directory, skipping staff-only content
+    Extract text from OLX directory, skipping content the course does not use
 
     Args:
         olx_path (str): The path to the directory with the OLX data
@@ -392,13 +562,13 @@ def documents_from_olx(
     Yields:
         tuple: A list of (bytes of content, metadata)
     """
-    staff_only = staff_only_olx_paths(olx_path)
+    excluded = excluded_olx_paths(olx_path)
     for root, _, files in os.walk(olx_path):
         path = "/".join(root.split("/")[3:])
         for filename in files:
             extension_lower = Path(filename).suffix.lower()
 
-            if Path(root, filename) in staff_only:
+            if Path(root, filename) in excluded:
                 continue
             if extension_lower in valid_file_types and "draft" not in root:
                 with Path.open(Path(root, filename), "rb") as f:
