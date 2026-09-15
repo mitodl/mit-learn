@@ -36,21 +36,25 @@ export const useCourseCertificatePrice = (
   const hasFinancialAid = !!(financialAidUrl && product)
   const canPurchase = selectedRun ? canPurchaseRun(selectedRun) : false
 
-  // The flexible-price lookup is user-scoped; never fire it for anonymous
-  // visitors.
-  const userFlexiblePrice = useQuery({
-    ...productQueries.userFlexiblePriceDetail({ productId: product?.id ?? 0 }),
+  // The pricing lookup is user-scoped and the endpoint rejects anonymous
+  // requests; never fire it for a visitor who is not signed in.
+  const userPricing = useQuery({
+    ...productQueries.userPricingDetail({ productId: product?.id ?? 0 }),
     enabled: isAuthenticated && canPurchase && hasFinancialAid,
+    // The browser query client throws 400/401/403 into the route's error
+    // boundary, which would replace the whole course page over a stale
+    // mitxonline session. A quote we cannot get just leaves the card as it is.
+    throwOnError: false,
   })
 
   const financialAid = hasFinancialAid
     ? {
         href: mitxonlineLegacyUrl(financialAidUrl),
-        applied: !!userFlexiblePrice.data?.product_flexible_price?.id,
+        applied: !!userPricing.data?.product_flexible_price?.id,
         // isLoading, not isPending: a disabled query stays pending forever, and
         // this one is disabled for anonymous visitors, who are never approved
         // and so have nothing to wait for.
-        pending: userFlexiblePrice.isLoading,
+        pending: userPricing.isLoading,
       }
     : null
 

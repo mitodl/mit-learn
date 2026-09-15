@@ -3,21 +3,32 @@ import { productsApi } from "../../clients"
 
 const productsKeys = {
   root: ["mitxonline", "products"],
-  userFlexiblePrice: (opts: { productId: number }) => [
+  userPricing: (opts: { productId: number }) => [
     ...productsKeys.root,
     "product",
     opts,
-    "flexibleDetail",
+    "userPricing",
   ],
 }
 
 const productQueries = {
-  userFlexiblePriceDetail: (opts: { productId: number }) =>
+  /**
+   * What checkout charges this user for this product, plus the discount that
+   * gets them there.
+   *
+   * Rejects anonymous requests. A caller a visitor can reach — a public product
+   * page — gates on authentication to avoid firing a request certain to fail.
+   * Behind an authenticated route that gate buys nothing: a disabled query and
+   * a 401 under `throwOnError: false` both leave `data` undefined, so the
+   * caller falls back to the list price either way. What every caller does owe
+   * is that fallback.
+   */
+  userPricingDetail: (opts: { productId: number }) =>
     queryOptions({
-      queryKey: productsKeys.userFlexiblePrice(opts),
+      queryKey: productsKeys.userPricing(opts),
       queryFn: () =>
         productsApi
-          .productsUserFlexiblePriceRetrieve({ id: opts.productId })
+          .productsUserPricingRetrieve({ id: opts.productId })
           .then((r) => r.data),
     }),
 }

@@ -31,7 +31,7 @@ jest.mock("@/common/analytics/gtm", () => ({
 const makeProgram = mitxFactories.programs.program
 const makeMode = mitxFactories.courses.enrollmentMode
 const makeProduct = mitxFactories.courses.product
-const makeFlexiblePrice = mitxFactories.products.flexiblePrice
+const makeUserPricing = mitxFactories.products.userPricing
 const makeProgramEnrollment = mitxFactories.enrollment.programEnrollmentV3
 const makeUser = factories.user.user
 
@@ -229,8 +229,8 @@ describe("ProgramEnrollArea — financial assistance link", () => {
       },
     })
     setMockResponse.get(
-      mitxUrls.products.userFlexiblePriceDetail(product.id),
-      makeFlexiblePrice({ product_flexible_price: null }),
+      mitxUrls.products.userPricingDetail(product.id),
+      makeUserPricing(),
     )
 
     renderWithProviders(<ProgramEnrollArea program={program} />)

@@ -82,8 +82,8 @@ describe("InfoBoxProgramAsCourse — financial assistance", () => {
       },
     })
     setMockResponse.get(
-      mitxUrls.products.userFlexiblePriceDetail(product.id),
-      mitxFactories.products.flexiblePrice({ product_flexible_price: null }),
+      mitxUrls.products.userPricingDetail(product.id),
+      mitxFactories.products.userPricing(),
     )
 
     renderWithProviders(<InfoBoxProgramAsCourse program={program} />)

@@ -15,7 +15,7 @@ import { useProgramCertificatePrice } from "./useProgramCertificatePrice"
 
 const programs = factories.programs
 const courses = factories.courses
-const makeFlexiblePrice = factories.products.flexiblePrice
+const makeUserPricing = factories.products.userPricing
 const makeDiscount = factories.products.discount
 const makeUser = apiFactories.user.user
 
@@ -169,8 +169,8 @@ describe("useProgramCertificatePrice", () => {
         makeUser({ is_authenticated: true }),
       )
       setMockResponse.get(
-        urls.products.userFlexiblePriceDetail(product.id),
-        makeFlexiblePrice({ product_flexible_price: null }),
+        urls.products.userPricingDetail(product.id),
+        makeUserPricing(),
       )
 
       const { result } = renderHook(() => useProgramCertificatePrice(program), {
@@ -180,7 +180,7 @@ describe("useProgramCertificatePrice", () => {
       await waitFor(() =>
         expect(makeRequest).toHaveBeenCalledWith(
           expect.objectContaining({
-            url: urls.products.userFlexiblePriceDetail(product.id),
+            url: urls.products.userPricingDetail(product.id),
           }),
         ),
       )
@@ -205,8 +205,8 @@ describe("useProgramCertificatePrice", () => {
         makeUser({ is_authenticated: true }),
       )
       setMockResponse.get(
-        urls.products.userFlexiblePriceDetail(product.id),
-        makeFlexiblePrice({
+        urls.products.userPricingDetail(product.id),
+        makeUserPricing({
           product_flexible_price: makeDiscount({
             amount: "700",
             discount_type: "dollars-off",
@@ -237,7 +237,7 @@ describe("useProgramCertificatePrice", () => {
         apiUrls.userMe.get(),
         makeUser({ is_authenticated: true }),
       )
-      // No mock for userFlexiblePriceDetail — it must NOT be requested
+      // No mock for userPricingDetail — it must NOT be requested
 
       const { result } = renderHook(() => useProgramCertificatePrice(program), {
         wrapper,
@@ -250,7 +250,7 @@ describe("useProgramCertificatePrice", () => {
       )
       expect(makeRequest).not.toHaveBeenCalledWith(
         expect.objectContaining({
-          url: urls.products.userFlexiblePriceDetail(product.id),
+          url: urls.products.userPricingDetail(product.id),
         }),
       )
     })
