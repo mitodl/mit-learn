@@ -55,7 +55,7 @@ export const hero = {
   title:
     "Transform your organization with MIT Open Learning’s technical expertise",
   body: "We work with businesses, schools, and government agencies to educate diverse workforces on the most impactful technologies of the moment. Connect with our team to learn how our portfolio of MIT Open Learning courses and programs can be matched to your organization’s training goals.",
-  ctaLabel: "Get in Touch",
+  ctaLabel: "Talk with our team",
   image: "/images/uai_landing/uai-landing-hero-2.jpg",
   imageAlt: "",
   stats: [
