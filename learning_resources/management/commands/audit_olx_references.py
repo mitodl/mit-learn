@@ -1,12 +1,11 @@
 """Report what excluded_olx_paths would drop from an extracted OLX course tree"""
 
-from collections import Counter
 from pathlib import Path
 
 from django.core.management import BaseCommand
 
 from learning_resources.constants import VALID_TEXT_FILE_TYPES
-from learning_resources.etl.utils import staff_only_olx_paths, static_olx_references
+from learning_resources.etl.utils import excluded_olx_paths
 
 TRANSCRIPT_EXTENSIONS = (".srt", ".sjson", ".vtt")
 
@@ -18,9 +17,12 @@ class Command(BaseCommand):
 
         docker compose run --rm -v /path/to/extracted:/archives web \\
             ./manage.py audit_olx_references /archives/<course>
+
+    The excluded total is what unpublish_excluded_files would unpublish for a
+    run whose content files are fully ingested.
     """
 
-    help = "Report the static files an OLX course tree does not reference"
+    help = "Report the files an OLX course tree contains but does not use"
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -28,34 +30,35 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):  # noqa: ARG002
-        """Print per-archive drop counts split by file class"""
+        """Print per-archive exclusion counts split by location and file class"""
         for olx_path in options["olx_paths"]:
             root = Path(olx_path)
-            references = {
-                path: referrer
-                for path, referrer in static_olx_references(
-                    root, staff_only_olx_paths(root)
-                ).items()
-                if path.suffix.lower() in VALID_TEXT_FILE_TYPES
+            ingestable = {
+                path
+                for path in root.rglob("*")
+                if path.is_file()
+                and path.suffix.lower() in VALID_TEXT_FILE_TYPES
+                and not any(
+                    "draft" in part for part in path.relative_to(root).parts[:-1]
+                )
             }
-            dropped = [
-                path for path, referrer in references.items() if referrer is None
-            ]
-            transcripts = [
-                path for path in dropped if path.suffix.lower() in TRANSCRIPT_EXTENSIONS
-            ]
-            documents = [path for path in dropped if path not in set(transcripts)]
-            percent = 100 * len(dropped) / len(references) if references else 0
-            types = ", ".join(
-                f"{extension}:{count}"
-                for extension, count in Counter(
-                    path.suffix.lower() for path in documents
-                ).most_common(4)
-            )
+            excluded = excluded_olx_paths(root) & ingestable
+            static = {
+                path for path in excluded if path.relative_to(root).parts[0] == "static"
+            }
+            transcripts = {
+                path for path in static if path.suffix.lower() in TRANSCRIPT_EXTENSIONS
+            }
+            percent = 100 * len(excluded) / len(ingestable) if ingestable else 0
             self.stdout.write(f"\n=== {root}")
-            self.stdout.write(f"  ingestable static files : {len(references)}")
+            self.stdout.write(f"  ingestable files      : {len(ingestable)}")
             self.stdout.write(
-                f"  dropped                 : {len(dropped)} ({percent:.0f}%)"
+                f"  excluded              : {len(excluded)} ({percent:.0f}%)"
             )
-            self.stdout.write(f"    transcripts           : {len(transcripts)}")
-            self.stdout.write(f"    documents             : {len(documents)}  {types}")
+            self.stdout.write(f"    under static/       : {len(static)}")
+            self.stdout.write(f"      transcripts       : {len(transcripts)}")
+            self.stdout.write(f"      documents         : {len(static - transcripts)}")
+            self.stdout.write(
+                f"    elsewhere           : {len(excluded - static)}"
+                "  (staff-only blocks, manifests, announcements)"
+            )
