@@ -19,12 +19,9 @@ const SliderInput: React.FC<{
   max: number
   step: number
   /**
-   * Renders the value, for a control whose stored value is not what an admin
-   * needs to read -- a fraction shown as the multiplier it works out to, say.
-   * Drives the accessible value as well as the visible label: the stored
-   * number is the one that means nothing on its own, so announcing it would
-   * leave a screen reader worse off than the label it replaces. Defaults to
-   * the raw value.
+   * Renders the value where the stored one is not what an admin needs to read
+   * -- a fraction shown as its multiplier, say. Drives the accessible value
+   * too, since the raw number is the one that means nothing on its own.
    */
   formatValue?: (value: number) => string
 }> = ({

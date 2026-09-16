@@ -17,19 +17,16 @@ type VectorControl = {
 
 /**
  * A boost is a fraction of a result's own score, so read it out as the
- * multiplier it works out to: 0.1 is what an admin sets, but 1.1x is what it
- * does to a result, and the factor is the whole reason the boost cannot
- * outrank relevance.
+ * multiplier it works out to: an admin sets 0.1, a result gets 1.1x.
  */
 const asMultiplier = (value: number) => `${(1 + value).toFixed(2)}x`
 
 /**
  * Score formula weights the vector endpoint accepts, in the order they are
  * applied: the cutoff, then the boost and the penalties that rescore what
- * survives it. The cutoff and the penalties are in score units -- similarity
- * scores are bounded and sit in a narrow band, unlike the unbounded OpenSearch
- * scores the percent based controls tune. The boost is relative instead, a
- * proportion of the score it is boosting.
+ * survives it. The cutoff is in score units, unlike the percents the
+ * OpenSearch controls tune; the boost and the penalties are fractions of the
+ * score they adjust.
  */
 const VECTOR_CONTROLS: VectorControl[] = [
   {
@@ -45,10 +42,9 @@ const VECTOR_CONTROLS: VectorControl[] = [
   },
   {
     urlParam: "program_boost",
-    // Deliberately narrower and finer than the other controls: the stored
-    // value is a fraction, so the old 0-1 range topped out at doubling a
-    // program's score, and 0.05 steps were too coarse to sit either side of
-    // the factor where a boosted program starts passing better matches.
+    // Narrower and finer than the other controls: as a fraction, 0-1 tops out
+    // at doubling a program's score, and 0.05 steps are too coarse to straddle
+    // the factor where a boost starts outranking relevance.
     label: "Program Score Multiplier",
     min: 0,
     max: 0.5,
