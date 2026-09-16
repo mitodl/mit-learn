@@ -34,7 +34,7 @@ const content: JSONContent = {
 const renderArticleEditor = ({
   readOnly = false,
   isPublished = false,
-  topics,
+  topics = [],
 }: {
   readOnly?: boolean
   isPublished?: boolean
@@ -48,7 +48,7 @@ const renderArticleEditor = ({
   const article = factories.websiteContent.websiteContent({
     content,
     is_published: isPublished,
-    ...(topics ? { topics } : {}),
+    topics,
   })
   renderWithProviders(<ArticleEditor article={article} readOnly={readOnly} />, {
     user,
