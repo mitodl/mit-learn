@@ -1043,9 +1043,12 @@ def cleanup_deleted_content_files():
         return error
 
 
-def credential_metadata_resource_ids(*, overwrite: bool = False):
+def credential_metadata_resources(*, overwrite: bool = False):
     """
-    Resource ids the credential metadata sweep should generate for.
+    Resources the credential metadata sweep should generate for.
+
+    The one definition of "needs generating": the sweep fans out over it, and
+    each resource's own task re-applies it before spending anything.
 
     All four of published/test_mode, resource_type, etl_source and platform
     are pinned because the endpoint's resolver pins them: readable_id is
@@ -1056,7 +1059,7 @@ def credential_metadata_resource_ids(*, overwrite: bool = False):
         overwrite (bool): include resources that already have metadata
 
     Returns:
-        QuerySet: the matching resource ids, newest first
+        QuerySet: the matching resources
     """
     resources = (
         LearningResource.objects.filter(Q(published=True) | Q(test_mode=True))
@@ -1076,14 +1079,33 @@ def credential_metadata_resource_ids(*, overwrite: bool = False):
             | Q(credential_metadata__description="")
             | Q(credential_metadata__criteria=[])
         )
-    return resources.order_by("-id").values_list("id", flat=True)
+    return resources
+
+
+def credential_metadata_resource_ids(*, overwrite: bool = False):
+    """
+    Return the ids of the resources the sweep should generate for, newest first.
+
+    Args:
+        overwrite (bool): include resources that already have metadata
+
+    Returns:
+        QuerySet: the matching resource ids, newest first
+    """
+    return (
+        credential_metadata_resources(overwrite=overwrite)
+        .order_by("-id")
+        .values_list("id", flat=True)
+    )
 
 
 # Deliberately without acks_late/reject_on_worker_lost, unlike the file-sync
 # leaves above: those are idempotent, this one spends money per attempt, so a
 # lost worker should drop the resource rather than pay for it twice.
 @app.task
-def generate_credential_metadata_for_resource(resource_id: int) -> bool:
+def generate_credential_metadata_for_resource(
+    resource_id: int, *, overwrite: bool = False
+) -> bool:
     """
     Generate and store credential metadata for one resource.
 
@@ -1100,6 +1122,8 @@ def generate_credential_metadata_for_resource(resource_id: int) -> bool:
 
     Args:
         resource_id (int): the resource to generate for
+        overwrite (bool): regenerate even if the resource already has
+            complete metadata
 
     Returns:
         bool: whether anything was stored
@@ -1109,11 +1133,16 @@ def generate_credential_metadata_for_resource(resource_id: int) -> bool:
     # puts it on the URLconf boot path. See main/boot_imports_test.py.
     from learning_resources.credentials import generate_and_save_credential_metadata
 
-    resource = LearningResource.objects.filter(id=resource_id).first()
+    resource = (
+        credential_metadata_resources(overwrite=overwrite)
+        .filter(id=resource_id)
+        .first()
+    )
     if not resource:
-        # Unpublished or deleted between the sweep's queryset and this task.
-        log.warning(
-            "No learning resource %s to generate credential metadata for", resource_id
+        log.info(
+            "Skipping credential metadata for resource %s:"
+            " it no longer needs generating",
+            resource_id,
         )
         return False
 
@@ -1151,7 +1180,7 @@ def generate_all_credential_metadata(*, overwrite=False) -> int:
             daily non-overwriting sweep once the catalogue has been filled.
     """
     generation_tasks = [
-        generate_credential_metadata_for_resource.si(resource_id)
+        generate_credential_metadata_for_resource.si(resource_id, overwrite=overwrite)
         for resource_id in credential_metadata_resource_ids(overwrite=overwrite)
     ]
     if not generation_tasks:

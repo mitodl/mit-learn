@@ -1632,7 +1632,9 @@ def mock_generate_and_save(mocker):
     )
 
 
-def test_generate_credential_metadata_for_resource(mock_generate_and_save):
+def test_generate_credential_metadata_for_resource(
+    mock_blocklist, mock_generate_and_save
+):
     """The resource is generated for, and the store reports it stored something"""
     resource = credential_metadata_course()
 
@@ -1640,7 +1642,9 @@ def test_generate_credential_metadata_for_resource(mock_generate_and_save):
     assert mock_generate_and_save.call_count == 1
 
 
-def test_generate_credential_metadata_for_resource_raises(mock_generate_and_save):
+def test_generate_credential_metadata_for_resource_raises(
+    mock_blocklist, mock_generate_and_save
+):
     """
     A failing resource fails its own task rather than being swallowed.
 
@@ -1656,7 +1660,7 @@ def test_generate_credential_metadata_for_resource_raises(mock_generate_and_save
 
 
 def test_generate_credential_metadata_for_resource_reports_nothing_stored(
-    mock_generate_and_save,
+    mock_blocklist, mock_generate_and_save
 ):
     """A generation that produced nothing reports False"""
     resource = credential_metadata_course()
@@ -1668,19 +1672,100 @@ def test_generate_credential_metadata_for_resource_reports_nothing_stored(
 
 
 def test_generate_credential_metadata_for_a_vanished_resource(
-    mocker, mock_generate_and_save
+    mock_blocklist, mock_generate_and_save
 ):
     """
-    A resource deleted between the sweep and its task is a warning, not a crash.
+    A resource deleted between the sweep and its task is skipped, not a crash.
 
     The fan-out is a snapshot of ids, and nothing holds a lock over the hours
     a full sweep takes.
     """
-    mock_log = mocker.patch("learning_resources.tasks.log")
-
     assert tasks.generate_credential_metadata_for_resource(-1) is False
     mock_generate_and_save.assert_not_called()
-    assert mock_log.warning.call_count == 1
+
+
+def test_generate_credential_metadata_rechecks_an_unpublished_resource(
+    mock_blocklist, mock_generate_and_save
+):
+    """
+    A resource unpublished after the fan-out is not generated for.
+
+    Hours can pass between the sweep's queryset and this task being picked
+    up, and a course out of scope by then is pure spend.
+    """
+    resource = credential_metadata_course()
+    resource.published = False
+    resource.save()
+
+    assert tasks.generate_credential_metadata_for_resource(resource.id) is False
+    mock_generate_and_save.assert_not_called()
+
+
+def test_generate_credential_metadata_rechecks_a_blocklisted_resource(
+    mocker, mock_generate_and_save
+):
+    """A resource blocklisted after the fan-out is not generated for"""
+    resource = credential_metadata_course()
+    mocker.patch(
+        "learning_resources.tasks.load_course_blocklist",
+        return_value=[resource.readable_id],
+    )
+
+    assert tasks.generate_credential_metadata_for_resource(resource.id) is False
+    mock_generate_and_save.assert_not_called()
+
+
+def test_generate_credential_metadata_skips_a_duplicate_task(
+    mock_blocklist, mock_generate_and_save
+):
+    """
+    A redelivered or duplicated task does not pay for the same resource twice.
+
+    The first delivery's row now satisfies the sweep's own predicate, so the
+    second finds nothing to do -- which is why the recheck uses that
+    predicate rather than a bare existence check.
+    """
+    resource = credential_metadata_course()
+    CredentialMetadataFactory.create(
+        learning_resource=resource, description="A course", criteria=["Did a thing"]
+    )
+
+    assert tasks.generate_credential_metadata_for_resource(resource.id) is False
+    mock_generate_and_save.assert_not_called()
+
+
+def test_generate_credential_metadata_retries_a_partial_row(
+    mock_blocklist, mock_generate_and_save
+):
+    """A half-generated resource is still generated for on recheck"""
+    resource = credential_metadata_course()
+    CredentialMetadataFactory.create(
+        learning_resource=resource, description="A course", criteria=[]
+    )
+
+    assert tasks.generate_credential_metadata_for_resource(resource.id) is True
+    assert mock_generate_and_save.call_count == 1
+
+
+def test_generate_credential_metadata_overwrite_ignores_a_complete_row(
+    mock_blocklist, mock_generate_and_save
+):
+    """
+    overwrite=True regenerates a resource that already has complete metadata.
+
+    The recheck still applies -- an unpublished or blocklisted resource is
+    skipped either way -- but a complete row stops being a reason to skip.
+    """
+    resource = credential_metadata_course()
+    CredentialMetadataFactory.create(
+        learning_resource=resource, description="A course", criteria=["Did a thing"]
+    )
+
+    assert (
+        tasks.generate_credential_metadata_for_resource(resource.id, overwrite=True)
+        is True
+    )
+    assert mock_generate_and_save.call_count == 1
 
 
 def test_credential_metadata_resource_ids_skips_complete_rows(mock_blocklist):
@@ -1765,6 +1850,28 @@ def test_generate_all_credential_metadata(mocked_celery, mock_blocklist):
     assert queued == len(resources)
     signatures = mocked_celery.group.call_args.args[0]
     assert [signature.args[0] for signature in signatures] == expected_ids
+    # Passed through so each task re-applies the mode the sweep ran in.
+    assert {signature.kwargs["overwrite"] for signature in signatures} == {False}
+
+
+@pytest.mark.parametrize("overwrite", [True, False])
+def test_generate_all_credential_metadata_passes_overwrite(
+    mocked_celery, mock_blocklist, overwrite
+):
+    """Each per-resource task is told which mode the sweep ran in"""
+    resource = credential_metadata_course()
+    CredentialMetadataFactory.create(
+        learning_resource=resource, description="A course", criteria=["Did a thing"]
+    )
+
+    tasks.generate_all_credential_metadata.delay(overwrite=overwrite).get()
+
+    if not overwrite:
+        # the complete row takes it out of scope entirely
+        mocked_celery.group.assert_not_called()
+        return
+    signatures = mocked_celery.group.call_args.args[0]
+    assert [signature.kwargs["overwrite"] for signature in signatures] == [True]
 
 
 def test_generate_all_credential_metadata_does_not_wait(mocked_celery, mock_blocklist):
