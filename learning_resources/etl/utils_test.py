@@ -387,6 +387,39 @@ def test_documents_from_olx_skips_staff_only_subtrees(tmp_path):
     ]
 
 
+def test_documents_from_olx_keeps_transcripts_a_visible_video_shares(tmp_path):
+    """A hidden copy of a video must not take the live copy's transcripts with it"""
+    olx = tmp_path / "course"
+    _write_olx(olx, "course.xml", '<course url_name="run" org="MITx" course="1"/>')
+    _write_olx(
+        olx,
+        "course/run.xml",
+        '<course><vertical url_name="v_ok"/>'
+        '<vertical url_name="v_staff" visible_to_staff_only="true"/></course>',
+    )
+    _write_olx(
+        olx, "vertical/v_ok.xml", '<vertical><video url_name="vid_ok"/></vertical>'
+    )
+    _write_olx(
+        olx, "vertical/v_staff.xml", '<vertical><video url_name="vid_old"/></vertical>'
+    )
+    shared = '<transcript language="en" src="shared.srt"/>'
+    _write_olx(olx, "video/vid_ok.xml", f'<video url_name="vid_ok">{shared}</video>')
+    _write_olx(
+        olx,
+        "video/vid_old.xml",
+        f'<video url_name="vid_old">{shared}'
+        '<transcript language="es" src="hidden_only.srt"/></video>',
+    )
+    _write_olx(olx, "static/shared.srt", "1\n00:00:00,000 --> 00:00:01,000\nshared\n")
+    _write_olx(olx, "static/hidden_only.srt", "1\n00:00:00,000 --> 00:00:01,000\nold\n")
+
+    excluded = utils.excluded_olx_paths(olx)
+    assert olx / "static/shared.srt" not in excluded
+    assert olx / "static/hidden_only.srt" in excluded
+    assert olx / "video/vid_old.xml" in excluded
+
+
 def test_documents_from_olx_skips_staff_only_inline_structure(tmp_path):
     """Structure held inline in course.xml (no pointer files) is still filtered"""
     olx = tmp_path / "course"
