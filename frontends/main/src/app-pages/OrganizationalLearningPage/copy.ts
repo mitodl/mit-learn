@@ -212,12 +212,6 @@ export const clientLogos = {
       height: 23,
     },
     {
-      name: "Boeing",
-      src: "/images/organizational_learning/client-logos/boeing.png",
-      width: 160,
-      height: 60,
-    },
-    {
       name: "Ford",
       src: "/images/organizational_learning/client-logos/ford.png",
       width: 160,

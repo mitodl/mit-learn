@@ -267,8 +267,8 @@ const QuoteAttribution = styled.div({
 
 const QuotePhoto = styled(Image)({
   flexShrink: 0,
-  width: "40px",
-  height: "40px",
+  width: "48px",
+  height: "48px",
   borderRadius: "50%",
   objectFit: "cover",
 })
@@ -279,13 +279,13 @@ const QuoteAttributionText = styled.div({
 })
 
 const QuoteName = styled.p(({ theme }) => ({
-  ...theme.typography.subtitle2,
+  ...theme.typography.subtitle1,
   color: theme.custom.colors.darkGray2,
   margin: 0,
 }))
 
 const QuoteRole = styled.p(({ theme }) => ({
-  ...theme.typography.body3,
+  ...theme.typography.body2,
   color: theme.custom.colors.silverGrayDark,
   margin: 0,
 }))
