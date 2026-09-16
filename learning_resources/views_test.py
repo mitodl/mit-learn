@@ -2090,19 +2090,47 @@ def test_course_run_problems_slash_run_id_detail_forbidden(client):
     assert resp.status_code == 403
 
 
-def test_course_run_problems_slash_run_id_append_slash(client):
+@pytest.mark.parametrize(
+    "prefix", ["/api/v0/tutor/problems/", "/api/v0/tutor/problems//"]
+)
+def test_course_run_problems_slash_run_id_as_learn_ai_calls_it(client, prefix):
     """
-    learn-ai builds the list URL without a trailing slash, so the request only
-    reaches the route via APPEND_SLASH. requests follows the redirect.
+    Reproduce learn-ai's own URL: PROBLEM_SET_URL ends in "/" and the caller
+    adds another, so the real request has a doubled slash and no trailing one.
+    The extra slash must not end up inside the captured run id -- that misses
+    the lookup and returns an empty list instead of the titles.
     """
     run = _canvas_run(CANVAS_SLASH_RUN_ID)
     TutorProblemFileFactory.create(
         run=run, problem_title="Problem Set 1", type="problem"
     )
 
-    followed = client.get(f"/api/v0/tutor/problems/{CANVAS_SLASH_RUN_ID}", follow=True)
+    followed = client.get(f"{prefix}{CANVAS_SLASH_RUN_ID}", follow=True)
     assert followed.status_code == 200
     assert followed.json() == {"problem_set_titles": ["Problem Set 1"]}
+
+
+def test_course_run_problems_doubled_slash_detail(client, django_user_model):
+    """The detail route tolerates the same doubled slash."""
+    run = _canvas_run(CANVAS_SLASH_RUN_ID)
+    TutorProblemFileFactory.create(
+        run=run,
+        problem_title="Problem Set 1",
+        type="problem",
+        content="problem content",
+        file_name="problem.txt",
+        file_extension=".txt",
+    )
+    client.force_login(
+        django_user_model.objects.create_superuser(
+            "dblslash", "dblslash@example.com", "pass"
+        )
+    )
+
+    resp = client.get(f"/api/v0/tutor/problems//{CANVAS_SLASH_RUN_ID}/Problem Set 1/")
+
+    assert resp.status_code == 200
+    assert [f["file_name"] for f in resp.json()["problem_set_files"]] == ["problem.txt"]
 
 
 def test_resource_items_only_shows_published_runs(client, user):

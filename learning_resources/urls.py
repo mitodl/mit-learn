@@ -145,12 +145,15 @@ v0_urls = [
         name="credential_metadata",
     ),
     # Canvas run ids contain "/"; the "+canvas" suffix delimits them from the
-    # problem title. permission_classes are declared via @action, which only
-    # the router applies, so they are repeated here. Delete these along with
-    # openapi.hooks.preprocess_exclude_canvas_slash_routes once the run id
-    # moves to a query parameter. See mitodl/hq#13384.
+    # problem title. "problems/+" absorbs the extra slash learn-ai emits
+    # (PROBLEM_SET_URL already ends in one) and the leading [^/] keeps it out
+    # of the captured id -- otherwise the lookup misses and returns an empty
+    # list rather than 404ing. permission_classes are declared via @action,
+    # which only the router applies, so they are repeated here. Delete these
+    # along with openapi.hooks.preprocess_exclude_canvas_slash_routes once the
+    # run id moves to a query parameter. See mitodl/hq#13384.
     re_path(
-        r"^tutor/problems/(?P<run_readable_id>.+\+canvas)/(?P<problem_title>[^/]+)/$",
+        r"^tutor/problems/+(?P<run_readable_id>[^/].*\+canvas)/(?P<problem_title>[^/]+)/$",
         views.CourseRunProblemsViewSet.as_view(
             {"get": "retrieve_problem"},
             permission_classes=[permissions.IsAdminOrTutorProblemViewer],
@@ -158,7 +161,7 @@ v0_urls = [
         name="tutorproblem_api-retrieve-problem",
     ),
     re_path(
-        r"^tutor/problems/(?P<run_readable_id>.+\+canvas)/$",
+        r"^tutor/problems/+(?P<run_readable_id>[^/].*\+canvas)/$",
         views.CourseRunProblemsViewSet.as_view(
             {"get": "list_problems"},
             permission_classes=[AnonymousAccessReadonlyPermission],
