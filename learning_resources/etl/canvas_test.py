@@ -10,7 +10,12 @@ import pytest
 from defusedxml import ElementTree
 from freezegun import freeze_time
 
-from learning_resources.constants import LearningResourceType, PlatformType
+from learning_resources.constants import (
+    TUTOR_PROBLEM_TYPE,
+    TUTOR_SOLUTION_TYPE,
+    LearningResourceType,
+    PlatformType,
+)
 from learning_resources.etl.canvas import (
     run_for_canvas_archive,
     sync_canvas_archive,
@@ -779,6 +784,45 @@ def test_transform_canvas_problem_files_non_pdf_does_not_call_pdf_to_markdown(
         else "existing content"
     )
     assert results[0]["problem_title"] == "problemset2"
+
+
+@pytest.mark.django_db
+def test_transform_canvas_problem_files_ingests_py_files(tmp_path, mocker, settings):
+    """
+    Python problem and solution files in the tutorbot folder should be ingested
+    as tutor problem files, classified by filename.
+    """
+    settings.CANVAS_TUTORBOT_FOLDER = "tutorbot/"
+    problem_code = "def problem():\n    pass\n"
+    solution_code = "def solution():\n    return 42\n"
+    zip_path = make_canvas_zip(
+        tmp_path,
+        files=[
+            ("tutorbot/problemset1/pset1.py", problem_code),
+            ("tutorbot/problemset1/pset1_solution.py", solution_code),
+        ],
+    )
+
+    mocker.patch(
+        "learning_resources.etl.utils.extract_text_metadata",
+        side_effect=lambda data, **_: {"content": data.decode("utf-8")},
+    )
+
+    run = LearningResourceRunFactory.create()
+
+    results = {
+        result["file_name"]: result
+        for result in transform_canvas_problem_files(zip_path, run, overwrite=True)
+    }
+
+    assert set(results) == {"pset1.py", "pset1_solution.py"}
+    assert results["pset1.py"]["type"] == TUTOR_PROBLEM_TYPE
+    assert results["pset1_solution.py"]["type"] == TUTOR_SOLUTION_TYPE
+    assert results["pset1.py"]["content"] == problem_code.strip()
+    assert results["pset1_solution.py"]["content"] == solution_code.strip()
+    for result in results.values():
+        assert result["problem_title"] == "problemset1"
+        assert result["file_extension"] == ".py"
 
 
 @pytest.mark.django_db

@@ -21,15 +21,14 @@ from main.permissions import (
     IsStaffPermission,
 )
 from profiles.api import ensure_profile
-from profiles.models import Profile, ProgramCertificate, ProgramLetter, UserWebsite
-from profiles.permissions import HasEditPermission, HasSiteEditPermission
+from profiles.models import Profile, ProgramCertificate, ProgramLetter
+from profiles.permissions import HasEditPermission
 from profiles.serializers import (
     CurrentUserSerializer,
     ProfileSerializer,
     ProgramCertificateSerializer,
     ProgramLetterSerializer,
     UserSerializer,
-    UserWebsiteSerializer,
 )
 from profiles.utils import (
     DEFAULT_PROFILE_IMAGE,
@@ -40,7 +39,6 @@ from profiles.utils import (
 def profiles_for_serialization() -> QuerySet[Profile]:
     """Profiles with the relations ProfileSerializer reads."""
     return Profile.objects.prefetch_related(
-        "userwebsite_set",
         Prefetch(
             "topic_interests",
             queryset=LearningResourceTopic.objects.for_serialization(),
@@ -99,20 +97,6 @@ class ProfileViewSet(
             )
         else:
             return super().get_object()
-
-    def get_serializer_context(self):
-        """Get the serializer context"""
-        return {"include_user_websites": True}
-
-
-class UserWebsiteViewSet(
-    mixins.CreateModelMixin, mixins.DestroyModelMixin, viewsets.GenericViewSet
-):
-    """View for user websites"""
-
-    permission_classes = (IsAuthenticated, HasSiteEditPermission)
-    serializer_class = UserWebsiteSerializer
-    queryset = UserWebsite.objects.select_related("profile__user")
 
 
 class ProgramLetterViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):

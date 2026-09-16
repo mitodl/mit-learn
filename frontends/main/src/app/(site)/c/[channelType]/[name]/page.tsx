@@ -30,6 +30,7 @@ import { notFound } from "next/navigation"
 import { getQueryClient } from "@/app/getQueryClient"
 import { isHybridSearchEnabled } from "@/common/hybridSearch"
 import {
+  getVectorScoreTuning,
   toUnfacetedVectorSearchParams,
   toVectorSearchParams,
 } from "@/page-components/SearchDisplay/vectorSearchParams"
@@ -135,11 +136,18 @@ const Page: React.FC<AppPageProps<"/c/[channelType]/[name]">> = async ({
     typeof searchRequest.q === "string" && searchRequest.q.trim() !== ""
 
   if (isHybridSearch) {
+    // The admin score tuning params are part of the request, so the prefetch
+    // must include them or the client would refetch on hydration.
+    const scoreTuning = getVectorScoreTuning(urlParams)
     await queryClient.prefetchQuery(
       learningResourceQueries.vectorSearch(
         hasSearchTerm
-          ? toUnfacetedVectorSearchParams(searchRequest, constantSearchParams)
-          : toVectorSearchParams(searchRequest),
+          ? toUnfacetedVectorSearchParams(
+              searchRequest,
+              constantSearchParams,
+              scoreTuning,
+            )
+          : toVectorSearchParams(searchRequest, scoreTuning),
       ),
     )
   } else {

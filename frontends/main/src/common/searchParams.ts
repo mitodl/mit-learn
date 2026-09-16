@@ -79,6 +79,13 @@ const SERVER_KEYED_PARAMS = [
   "sortby",
   "topic",
   "yearly_decay_percent",
+  // Vector search admin params -- VECTOR_SCORE_TUNING_PARAMS in
+  // page-components/SearchDisplay/vectorSearchParams.ts. Sorted.
+  "completeness_penalty",
+  "program_boost",
+  "score_cutoff",
+  "staleness_horizon_years",
+  "staleness_penalty",
   // Application params.
   "resource",
   "page",

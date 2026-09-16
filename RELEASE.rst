@@ -1,6 +1,16 @@
 Release Notes
 =============
 
+Version 0.80.5
+--------------
+
+- fix: copy update for cta button (#3939)
+- Ingest .py canvas tutor problem files, add TutorProblemFile admin (#3930)
+- fix: copy update to hero section (#3936)
+- feat(website-content): unpublished the article and remove the news feed entry on unpublish (#3927)
+- feat: Add B2B organizational learning landing page (#3846)
+- feat: Improve B2B analytics dashboard navigation and layout (#3906)
+
 Version 0.80.2
 --------------
 
