@@ -107,7 +107,7 @@ export const featuredProgram = {
 export const offerings = {
   eyebrow: "FOR YOUR ORGANIZATION",
   title: "Learning Solutions for Every Role and Responsibility",
-  body: "Flexible learning options designed around your goals, “whether you're adopting AI, strengthening technical capabilities, or building leadership skills.",
+  body: "Flexible learning options designed around your goals, whether you're adopting AI, strengthening technical capabilities, or building leadership skills.",
   cards: [
     {
       title: "Programs for Aspiring AI Specialists",
