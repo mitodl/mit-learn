@@ -25,7 +25,10 @@ const CourseEnrollArea: React.FC<CourseEnrollAreaProps> = ({
       onRequireSignup: setAnchor,
     })
 
-  const { price, financialAid } = useCourseCertificatePrice(course, selectedRun)
+  const { price, financialAid, breakdown } = useCourseCertificatePrice(
+    course,
+    selectedRun,
+  )
   // Same predicate the hook formats on, so the sizing tracks the display.
   const isRange = toPriceRange(course) !== null
 
@@ -45,6 +48,7 @@ const CourseEnrollArea: React.FC<CourseEnrollAreaProps> = ({
       price={price}
       compactPrice={isRange}
       financialAid={financialAid}
+      breakdown={breakdown}
       productNoun="course"
       certificateDeadlineNote={certificateDeadlineNote}
       anchor={anchor}
