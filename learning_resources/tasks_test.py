@@ -1632,54 +1632,55 @@ def mock_generate_and_save(mocker):
     )
 
 
-def test_generate_credential_metadata_for_resources(mock_generate_and_save):
-    """Every resource in the chunk is generated for, and the count returned"""
-    resources = [credential_metadata_course() for _ in range(3)]
+def test_generate_credential_metadata_for_resource(mock_generate_and_save):
+    """The resource is generated for, and the store reports it stored something"""
+    resource = credential_metadata_course()
 
-    generated = tasks.generate_credential_metadata_for_resources(
-        [resource.id for resource in resources]
-    )
-
-    assert generated == 3
-    assert mock_generate_and_save.call_count == 3
+    assert tasks.generate_credential_metadata_for_resource(resource.id) is True
+    assert mock_generate_and_save.call_count == 1
 
 
-def test_generate_credential_metadata_survives_one_bad_resource(
-    mocker, mock_generate_and_save
-):
+def test_generate_credential_metadata_for_resource_raises(mock_generate_and_save):
     """
-    A resource that raises is logged and skipped, not fatal to its chunk.
+    A failing resource fails its own task rather than being swallowed.
 
-    Each resource costs a frontier-model call, so failing the chunk would
-    throw away every success before the failure and pay for them again.
+    With a task per resource there is nothing to protect: celery marks this
+    one failed, where a chunked version had to swallow the error to keep the
+    successes beside it. A visibly failed task is the point.
     """
-    resources = [credential_metadata_course() for _ in range(3)]
-    generated = CredentialMetadata(fields={"description": "A course"}, errors={})
-    mock_generate_and_save.side_effect = [
-        generated,
-        ValueError("the provider refused"),
-        generated,
-    ]
-    mock_log = mocker.patch("learning_resources.tasks.log")
+    resource = credential_metadata_course()
+    mock_generate_and_save.side_effect = ValueError("the provider refused")
 
-    stored = tasks.generate_credential_metadata_for_resources(
-        [resource.id for resource in resources]
-    )
-
-    assert stored == 2
-    assert mock_log.exception.call_count == 1
+    with pytest.raises(ValueError, match="the provider refused"):
+        tasks.generate_credential_metadata_for_resource(resource.id)
 
 
-def test_generate_credential_metadata_counts_only_what_was_stored(
+def test_generate_credential_metadata_for_resource_reports_nothing_stored(
     mock_generate_and_save,
 ):
-    """A resource whose generation produced nothing is not counted"""
-    credential_metadata_course()
+    """A generation that produced nothing reports False"""
+    resource = credential_metadata_course()
     mock_generate_and_save.return_value = CredentialMetadata(
         fields={}, errors={"description": "litellm.APIConnectionError"}
     )
 
-    assert tasks.generate_credential_metadata_for_resources([]) == 0
+    assert tasks.generate_credential_metadata_for_resource(resource.id) is False
+
+
+def test_generate_credential_metadata_for_a_vanished_resource(
+    mocker, mock_generate_and_save
+):
+    """
+    A resource deleted between the sweep and its task is a warning, not a crash.
+
+    The fan-out is a snapshot of ids, and nothing holds a lock over the hours
+    a full sweep takes.
+    """
+    mock_log = mocker.patch("learning_resources.tasks.log")
+
+    assert tasks.generate_credential_metadata_for_resource(-1) is False
+    mock_generate_and_save.assert_not_called()
+    assert mock_log.warning.call_count == 1
 
 
 def test_credential_metadata_resource_ids_skips_complete_rows(mock_blocklist):
@@ -1754,34 +1755,46 @@ def test_credential_metadata_resource_ids_respects_the_blocklist(mocker):
     assert list(tasks.credential_metadata_resource_ids()) == [wanted.id]
 
 
-def test_generate_all_credential_metadata(mocked_celery, mock_blocklist, settings):
-    """The sweep fans out one task per chunk of resources"""
-    settings.CREDENTIAL_METADATA_CHUNK_SIZE = 2
+def test_generate_all_credential_metadata(mocked_celery, mock_blocklist):
+    """The sweep queues one task per resource and returns the count"""
     resources = [credential_metadata_course() for _ in range(3)]
     expected_ids = sorted((resource.id for resource in resources), reverse=True)
 
-    with pytest.raises(mocked_celery.replace_exception_class):
-        tasks.generate_all_credential_metadata.delay()
+    queued = tasks.generate_all_credential_metadata.delay().get()
 
+    assert queued == len(resources)
     signatures = mocked_celery.group.call_args.args[0]
-    assert [signature.args[0] for signature in signatures] == [
-        expected_ids[:2],
-        expected_ids[2:],
-    ]
+    assert [signature.args[0] for signature in signatures] == expected_ids
+
+
+def test_generate_all_credential_metadata_does_not_wait(mocked_celery, mock_blocklist):
+    """
+    The sweep publishes the group and returns rather than becoming it.
+
+    `self.replace` would make this task's result the whole group's, so any
+    caller -- and CELERY_RESULT_EXPIRES' worth of result keys -- would hang on
+    hours of per-resource LLM calls to learn what each resource's own task
+    already logs.
+    """
+    credential_metadata_course()
+
+    tasks.generate_all_credential_metadata.delay().get()
+
+    mocked_celery.group.return_value.apply_async.assert_called_once_with()
+    mocked_celery.replace.assert_not_called()
 
 
 def test_generate_all_credential_metadata_with_nothing_to_do(
     mocked_celery, mock_blocklist
 ):
     """
-    An empty sweep returns None rather than replacing itself.
+    An empty sweep queues nothing.
 
-    `self.replace` on an empty group raises, and in the non-overwriting steady
-    state an empty group is the normal case -- so this fires on day two, not
-    in some edge case.
+    In the non-overwriting steady state an empty set is the normal case, so
+    this is the day-two path, not an edge case.
     """
-    assert tasks.generate_all_credential_metadata.delay().get() is None
-    mocked_celery.replace.assert_not_called()
+    assert tasks.generate_all_credential_metadata.delay().get() == 0
+    mocked_celery.group.assert_not_called()
 
 
 def test_credential_metadata_task_paths_resolve():
@@ -1797,11 +1810,11 @@ def test_credential_metadata_task_paths_resolve():
         == "learning_resources.tasks.generate_all_credential_metadata"
     )
     assert (
-        tasks.generate_credential_metadata_for_resources.name
-        == "learning_resources.tasks.generate_credential_metadata_for_resources"
+        tasks.generate_credential_metadata_for_resource.name
+        == "learning_resources.tasks.generate_credential_metadata_for_resource"
     )
     for name in (
         tasks.generate_all_credential_metadata.name,
-        tasks.generate_credential_metadata_for_resources.name,
+        tasks.generate_credential_metadata_for_resource.name,
     ):
         assert app.conf.task_routes[name] == {"queue": "edx_content"}

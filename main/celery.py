@@ -47,7 +47,7 @@ app.conf.task_routes = {
     "learning_resources.tasks.generate_all_credential_metadata": {
         "queue": "edx_content"
     },
-    "learning_resources.tasks.generate_credential_metadata_for_resources": {
+    "learning_resources.tasks.generate_credential_metadata_for_resource": {
         "queue": "edx_content"
     },
 }

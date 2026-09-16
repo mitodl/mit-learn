@@ -1017,15 +1017,6 @@ CREDENTIAL_METADATA_MIN_CHUNK_CHARS = get_int(
 CREDENTIAL_METADATA_LLM_TIMEOUT = get_int(
     name="CREDENTIAL_METADATA_LLM_TIMEOUT", default=120
 )
-# How many resources one sweep task generates for. Its own knob rather than
-# LEARNING_COURSE_ITERATOR_CHUNK_SIZE (20), which sizes edX file ingest: this
-# one is an LLM spend dial, and the two should not move together. At ~50s per
-# resource a chunk of 20 runs ~17 minutes, close enough to Redis's default
-# 3600s visibility_timeout to risk a redelivered chunk being regenerated at
-# full cost.
-CREDENTIAL_METADATA_CHUNK_SIZE = get_int(
-    name="CREDENTIAL_METADATA_CHUNK_SIZE", default=5
-)
 
 # OpenTelemetry configuration (consumed by mitol-django-observability).
 # Telemetry turns on when any of OTEL_EXPORTER_OTLP_TRACES_ENDPOINT,

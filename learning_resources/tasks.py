@@ -1081,75 +1081,85 @@ def credential_metadata_resource_ids(*, overwrite: bool = False):
 
 # Deliberately without acks_late/reject_on_worker_lost, unlike the file-sync
 # leaves above: those are idempotent, this one spends money per attempt, so a
-# lost worker should drop the chunk rather than pay for it twice.
+# lost worker should drop the resource rather than pay for it twice.
 @app.task
-def generate_credential_metadata_for_resources(resource_ids: list[int]) -> int:
+def generate_credential_metadata_for_resource(resource_id: int) -> bool:
     """
-    Generate and store credential metadata for a chunk of resources.
+    Generate and store credential metadata for one resource.
+
+    One resource per task, not a chunk: each costs ~50s and a frontier-model
+    call, so this is the unit worth retrying, reporting and reasoning about
+    on its own. It also keeps a task well under Redis's default 3600s
+    visibility_timeout, where a chunk that overran would be redelivered and
+    regenerated at full cost.
+
+    A failure is left to raise. With a task per resource there is nothing to
+    protect: celery marks this one failed and the rest of the sweep's group
+    carries on, where a chunked version had to swallow the error to avoid
+    losing the successes beside it.
 
     Args:
-        resource_ids (list of int): the resources to generate for
+        resource_id (int): the resource to generate for
 
     Returns:
-        int: how many resources had metadata stored
+        bool: whether anything was stored
     """
     # Imported inside the task body, not at module scope: credentials pulls in
     # litellm and langchain, and views.py imports this module at boot, which
     # puts it on the URLconf boot path. See main/boot_imports_test.py.
     from learning_resources.credentials import generate_and_save_credential_metadata
 
-    generated = 0
-    for resource in LearningResource.objects.filter(id__in=resource_ids):
-        try:
-            # One shared event loop per process, not asyncio.run per resource:
-            # the Qdrant client is cached and bound to the loop it was built
-            # on, and its failure here is silent -- see run_on_worker_loop.
-            metadata = run_on_worker_loop(
-                generate_and_save_credential_metadata(resource)
-            )
-        except Exception:
-            # One bad course must not fail the chunk and lose the successes
-            # before it.
-            log.exception(
-                "Credential metadata generation failed for %s", resource.readable_id
-            )
-            continue
-        if metadata.fields:
-            generated += 1
-        if metadata.errors:
-            log.warning(
-                "Credential metadata for %s is missing %s",
-                resource.readable_id,
-                ", ".join(sorted(metadata.errors)),
-            )
-    return generated
+    resource = LearningResource.objects.filter(id=resource_id).first()
+    if not resource:
+        # Unpublished or deleted between the sweep's queryset and this task.
+        log.warning(
+            "No learning resource %s to generate credential metadata for", resource_id
+        )
+        return False
+
+    # The process's own event loop, not asyncio.run: the Qdrant client is
+    # cached per process and bound to the loop it was built on, so a loop per
+    # call leaves every task after the first in a prefork child retrieving
+    # nothing -- silently, because retrieval is best-effort. A task per
+    # resource does not change that: the cache outlives the task.
+    metadata = run_on_worker_loop(generate_and_save_credential_metadata(resource))
+    if metadata.errors:
+        log.warning(
+            "Credential metadata for %s is missing %s",
+            resource.readable_id,
+            ", ".join(sorted(metadata.errors)),
+        )
+    return bool(metadata.fields)
 
 
-@app.task(bind=True)
-def generate_all_credential_metadata(
-    self, *, chunk_size=None, overwrite=False
-) -> celery.group | None:
+@app.task
+def generate_all_credential_metadata(*, overwrite=False) -> int:
     """
-    Fan out credential metadata generation over MITx Online courses.
+    Queue credential metadata generation for every MITx Online course.
+
+    Publishes the work and returns, rather than `self.replace`-ing into the
+    group: a full sweep is hours of per-resource LLM calls, and a parent whose
+    result is the group's keeps a caller (and CELERY_RESULT_EXPIRES' worth of
+    result keys) waiting on all of it to learn something each resource's own
+    task already reports. Progress belongs in the celery logs.
 
     Args:
-        chunk_size (int): resources per task. Defaults to
-            CREDENTIAL_METADATA_CHUNK_SIZE.
         overwrite (bool): regenerate resources that already have metadata
 
     Returns:
-        celery.group | None: the replacement group, or None when nothing
-            needs generating -- which is the normal case for the daily
-            non-overwriting sweep once the catalogue has been filled.
+        int: how many resources were queued. Zero is the normal case for the
+            daily non-overwriting sweep once the catalogue has been filled.
     """
-    if chunk_size is None:
-        chunk_size = settings.CREDENTIAL_METADATA_CHUNK_SIZE
-    resource_ids = credential_metadata_resource_ids(overwrite=overwrite)
-    tasks = [
-        generate_credential_metadata_for_resources.si(ids)
-        for ids in chunks(resource_ids, chunk_size=chunk_size)
+    generation_tasks = [
+        generate_credential_metadata_for_resource.si(resource_id)
+        for resource_id in credential_metadata_resource_ids(overwrite=overwrite)
     ]
-    if not tasks:
+    if not generation_tasks:
         log.info("No resources need credential metadata generation")
-        return None
-    return self.replace(celery.group(tasks))
+        return 0
+    celery.group(generation_tasks).apply_async()
+    log.info(
+        "Queued credential metadata generation for %d resource(s)",
+        len(generation_tasks),
+    )
+    return len(generation_tasks)
