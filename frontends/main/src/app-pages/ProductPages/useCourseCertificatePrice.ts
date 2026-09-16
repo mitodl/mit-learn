@@ -10,21 +10,24 @@ import {
   mitxonlineLegacyUrl,
   formatResourcePrice,
 } from "@/common/mitxonline"
-import type { FinancialAid } from "./enrollTypes"
+import type { AppliedSavings, FinancialAid } from "./enrollTypes"
+import { toAppliedSavings } from "./appliedSavings"
 
 type CourseCertificatePriceResult = {
   price: string | null
   financialAid: FinancialAid | null
+  /** Present only when the quote takes something off; see AppliedSavings. */
+  breakdown: AppliedSavings | null
 }
 
 /**
- * Returns the price and financial aid info for a course's Certificate Track
- * card. The displayed price is the course's advertised range when it has one,
- * otherwise the run product's full price. A financial aid discount is never
- * reflected in it — not even for a user whose flexible price is already
- * approved — because the discount is applied later, in checkout; it is surfaced
- * as a text note instead. `applied` reports whether the user has an approved
- * flexible price.
+ * Price facts for a course's Certificate Track card: the price to display, the
+ * discount checkout would apply, and financial aid info.
+ *
+ * `price` is the advertised range when the course has one, else the run
+ * product's full price — never the learner's quoted price. A learner whose
+ * quote takes something off is shown `breakdown` in place of that card
+ * entirely, so the two never appear together.
  */
 export const useCourseCertificatePrice = (
   course: CourseWithCourseRunsSerializerV2,
@@ -38,9 +41,13 @@ export const useCourseCertificatePrice = (
 
   // The pricing lookup is user-scoped and the endpoint rejects anonymous
   // requests; never fire it for a visitor who is not signed in.
+  //
+  // Any purchasable course can carry a discount, whether or not it offers
+  // financial assistance, so the guard is the product rather than the CMS aid
+  // form: a learner can hold an automatic or user-tied discount either way.
   const userPricing = useQuery({
     ...productQueries.userPricingDetail({ productId: product?.id ?? 0 }),
-    enabled: isAuthenticated && canPurchase && hasFinancialAid,
+    enabled: isAuthenticated && canPurchase && !!product?.price,
     // The browser query client throws 400/401/403 into the route's error
     // boundary, which would replace the whole course page over a stale
     // mitxonline session. A quote we cannot get just leaves the card as it is.
@@ -64,5 +71,6 @@ export const useCourseCertificatePrice = (
   return {
     price: formatResourcePrice(course, product?.price || null),
     financialAid,
+    breakdown: toAppliedSavings(userPricing.data),
   }
 }

@@ -13,6 +13,11 @@ import {
   factories as mitxFactories,
   urls as mitxUrls,
 } from "api/mitxonline-test-utils"
+import { makeCourse, setupRunPricing } from "./test-utils/userPricing"
+import {
+  DiscountTypeEnum,
+  PaymentTypeEnum,
+} from "@mitodl/mitxonline-api-axios/v2"
 import { mitxonlineLegacyUrl } from "@/common/mitxonline"
 import CourseEnrollArea from "./CourseEnrollArea"
 import { getSelectedRun } from "./courseRun"
@@ -32,7 +37,6 @@ jest.mock("@/common/analytics/gtm", () => ({
   trackBeginCheckout: jest.fn(),
 }))
 
-const makeCourse = mitxFactories.courses.course
 const makeRun = mitxFactories.courses.courseRun
 const makeMode = mitxFactories.courses.enrollmentMode
 const makeProduct = mitxFactories.courses.product
@@ -144,6 +148,67 @@ describe("CourseEnrollArea — paidOnly scenario", () => {
       "data-size",
       "large",
     )
+  })
+})
+
+describe("CourseEnrollArea — applied savings", () => {
+  const aidRun = () =>
+    makeRun({
+      is_enrollable: true,
+      is_upgradable: true,
+      is_archived: false,
+      enrollment_modes: [makeMode({ requires_payment: true })],
+      products: [makeProduct({ price: "899" })],
+    })
+
+  test("an aid quote replaces the Certificate Track card, priced as a course", async () => {
+    setupAuth()
+    const run = aidRun()
+    const course = makeCourse({ next_run_id: run.id, courseruns: [run] })
+    setupRunPricing(run, {
+      user_price: "399",
+      discount: mitxFactories.products.userPricingDiscount({
+        amount_off: "500",
+        // The factory defaults to paid-amount-off, which reads as a credit —
+        // a course product can never be quoted one.
+        discount_type: DiscountTypeEnum.DollarsOff,
+        payment_type: PaymentTypeEnum.FinancialAssistance,
+        // Only a credit names a source; the factory defaults one alongside
+        // paid-amount-off.
+        source: null,
+      }),
+    })
+
+    renderWithProviders(
+      <CourseEnrollArea course={course} selectedRun={getSelectedRun(course)} />,
+    )
+
+    // The action keeps the offering's own wording: only a credit upgrades you
+    // to a full program, and a course has none.
+    await screen.findByRole("button", { name: "Enroll" })
+    const certCell = document.querySelector("[data-card='cert']") as HTMLElement
+    within(certCell).getByText("Course price")
+    within(certCell).getByText("$899")
+    within(certCell).getByText("$399")
+    within(certCell).getByText("Financial aid")
+    expect(
+      screen.queryByRole("heading", { name: "Certificate Track" }),
+    ).toBeNull()
+    expect(screen.queryByText("Program price")).toBeNull()
+  })
+
+  test("a list-price quote leaves the ordinary card alone", async () => {
+    setupAuth()
+    const run = aidRun()
+    const course = makeCourse({ next_run_id: run.id, courseruns: [run] })
+
+    renderWithProviders(
+      <CourseEnrollArea course={course} selectedRun={getSelectedRun(course)} />,
+    )
+
+    await screen.findByRole("button", { name: "Enroll" })
+    screen.getByRole("heading", { name: "Certificate Track" })
+    expect(screen.queryByText("Course price")).toBeNull()
   })
 })
 
