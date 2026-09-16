@@ -251,16 +251,22 @@ def unpublish_all_excluded_files(
     if chunk_size is None:
         chunk_size = settings.LEARNING_COURSE_ITERATOR_CHUNK_SIZE
     archive_keys = get_most_recent_course_archives(etl_source)
+    # a run with no content files has none to unpublish, and skipping it saves
+    # downloading and extracting its archive to find that out. Not applied to
+    # the ingestion fan-out, where a course with no content files yet is
+    # exactly the one that needs its archive read.
+    resource_ids = (
+        _content_file_resource_ids(etl_source, learning_resource_ids)
+        .filter(runs__content_files__isnull=False)
+        .distinct()
+    )
     return self.replace(
         celery.group(
             [
                 unpublish_excluded_files.si(
                     ids, etl_source, archive_keys, dry_run=dry_run
                 )
-                for ids in chunks(
-                    _content_file_resource_ids(etl_source, learning_resource_ids),
-                    chunk_size=chunk_size,
-                )
+                for ids in chunks(resource_ids, chunk_size=chunk_size)
             ]
         )
     )
