@@ -1,11 +1,13 @@
 import React from "react"
 import { styled, ActionButton, VisuallyHidden } from "@mitodl/smoot-design"
-import { Popover, Typography } from "ol-components"
+import { Popover } from "ol-components"
 import { RiInformation2Line } from "@remixicon/react"
 import { CardSurface } from "./TrackCard"
 import type { AppliedSavings } from "./enrollTypes"
 
 const INFO_LABEL = "Applied savings"
+/** The `(i)` button's name; the row beside it already reads INFO_LABEL. */
+const INFO_BUTTON_LABEL = "About applied savings"
 
 const INFO_BODY: Record<AppliedSavings["kind"], string | null> = {
   credit:
@@ -96,9 +98,10 @@ const InfoPopover = styled(Popover)({
   maxWidth: "100vw",
 })
 
-const InfoBody = styled(Typography)(({ theme }) => ({
+const InfoBody = styled.p(({ theme }) => ({
   ...theme.typography.body2,
   color: theme.custom.colors.darkGray2,
+  margin: 0,
 }))
 
 /**
@@ -116,17 +119,20 @@ const InfoPopoverButton: React.FC<{ body: string }> = ({ body }) => {
       <ActionButton
         size="small"
         variant="text"
-        aria-label={INFO_LABEL}
+        aria-label={INFO_BUTTON_LABEL}
+        aria-haspopup="dialog"
+        aria-expanded={!!anchor}
         onClick={(event) => setAnchor(event.currentTarget)}
       >
         <RiInformation2Line aria-hidden="true" />
       </ActionButton>
       <InfoPopover
+        aria-label={INFO_LABEL}
         anchorEl={anchor}
         open={!!anchor}
         onClose={() => setAnchor(null)}
       >
-        <InfoBody variant="body2">{body}</InfoBody>
+        <InfoBody>{body}</InfoBody>
       </InfoPopover>
     </InfoButtonContainer>
   )

@@ -33,9 +33,9 @@ type UseProgramEnrollmentOptions = {
   /** Program-as-course product pages use different button copy. */
   displayAsCourse?: boolean
   /**
-   * Label the paid action as an upgrade. For a learner shown a price breakdown,
-   * whose quote already takes a prior purchase or an aid tier off the program
-   * price. Off by default, so the page-header CTA keeps the offering's label.
+   * Label the paid action "Upgrade to Full Program". For a learner holding a
+   * purchase credit, and for nothing else: financial aid keeps the offering's
+   * own wording. Off by default, so the page-header CTA keeps that wording too.
    */
   upgradeLabel?: boolean
   /** Behavioral: called when an unauthenticated user clicks an enroll action. */
