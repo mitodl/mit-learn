@@ -127,15 +127,15 @@ export const offerings = {
     {
       title: "Programs for Leaders",
       tagline:
-        "Build leaders who drive transformation through technical understanding and proven leadership frameworks",
-      body: "Asynchronous programs or synchronous sessions meant to develop technical understanding and inform organizational strategy",
+        "Build leaders who drive transformation through technical understanding",
+      body: "Asynchronous or synchronous sessions to inform organizational strategy",
       bestForLabel: "Best for:",
       bestFor: ["Executives", "Leaders", "Directors", "Managers"],
     },
   ] satisfies OfferingCardItem[],
   flexibleSolutions: {
     title: "Flexible Solutions",
-    body: "MIT Open Learning will work with you to craft the right engagement for any team, skill-level, and timeline.",
+    body: "MIT Open Learning will work with you to craft the right engagement based on the specifics of your team.",
     pills: [
       "Program design considerations:",
       "Learner profile",
