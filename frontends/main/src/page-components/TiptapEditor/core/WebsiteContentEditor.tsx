@@ -40,7 +40,7 @@ import { Spacer } from "../vendor/components/tiptap-ui-primitive/spacer"
 import { handleImageUpload } from "../vendor/lib/tiptap-utils"
 import { useSchema } from "../useSchema"
 import { WebsiteContentProvider } from "../WebsiteContentContext"
-import { extractLearningResourceIds, contentsMatch } from "../extensions/utils"
+import { extractLearningResourceIds } from "../extensions/utils"
 import { LearningResourceProvider } from "../extensions/node/LearningResource/LearningResourceDataProvider"
 import { websiteContentDraftsView, websiteContentEditView } from "@/common/urls"
 import { CONTENT_TYPE_LABELS } from "@/common/website_content"
@@ -461,23 +461,16 @@ const WebsiteContentEditor = ({
     extensions,
   })
 
-  // Sync incoming content changes (e.g., after a refetch)
-  useEffect(() => {
-    if (!contentItem || !editor) return
-
-    if (contentItem.content) {
-      const currentContent = editor.getJSON()
-      if (!contentsMatch(contentItem.content, currentContent)) {
-        setContent(contentItem.content)
-        setTouched(true)
-        editor.commands.setContent(contentItem.content)
-      }
-    }
-
-    if (contentItem.title !== undefined) {
-      setTitle(contentItem.title)
-    }
-  }, [contentItem, editor])
+  // NOTE: the editor deliberately does *not* write `contentItem` back over its
+  // own state when the prop changes. Once the author has typed, the prop is
+  // only the last version the server knows, so syncing it in would discard
+  // their unsaved work -- a mutation elsewhere on the page (saving the settings
+  // drawer, say) invalidates the detail query, and the refetch would land on
+  // top of a half-written document.
+  //
+  // Resetting for a genuinely different item is the caller's job, done
+  // declaratively with a `key` on the editor keyed by content id. That also
+  // re-seeds state this never touched, such as `topics`.
 
   // Keep title in sync with the h1 heading inside the editor
   useEffect(() => {

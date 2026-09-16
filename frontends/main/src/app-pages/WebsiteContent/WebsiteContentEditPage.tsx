@@ -77,7 +77,16 @@ const WebsiteContentEditPage = ({
   return (
     <RestrictedRoute requires={Permission.ArticleEditor}>
       <PageContainer>
+        {/*
+          Keyed by id so a genuinely different item gets a fresh editor, while
+          a refetch of the *same* item leaves unsaved edits alone. The editor
+          does not sync `contentItem` into its own state, so this is what
+          resets it -- including fields like `topics`.
+
+          Id rather than slug: a draft has no slug.
+        */}
         <Editor
+          key={article.id}
           contentItem={article}
           onSave={(saved) => {
             if (saved.is_published) {

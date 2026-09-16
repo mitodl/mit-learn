@@ -79,9 +79,26 @@ describe("NewsViewer", () => {
     })
     setMockResponse.get(urls.userMe.get(), user)
     const authorName = `${user.first_name} ${user.last_name}`
+    // Spelled out rather than taken from the factory default, which is a bare
+    // paragraph the news schema rejects -- the byline the assertion looks for
+    // only exists if the document actually has a byline node.
     const newsItem = factories.websiteContent.websiteContent({
       user,
       author_name: authorName,
+      content: {
+        type: "doc",
+        content: [
+          {
+            type: "banner",
+            content: [
+              { type: "heading", attrs: { level: 1 }, content: [] },
+              { type: "paragraph", content: [] },
+            ],
+          },
+          { type: "byline" },
+          { type: "paragraph", content: [] },
+        ],
+      },
     })
 
     renderWithProviders(<NewsEditor newsItem={newsItem} readOnly />)
