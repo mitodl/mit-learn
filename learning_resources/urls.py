@@ -4,8 +4,9 @@ from django.urls import include, path, re_path
 from rest_framework.routers import SimpleRouter
 from rest_framework_nested.routers import NestedSimpleRouter
 
-from learning_resources import views
+from learning_resources import permissions, views
 from learning_resources.views import WebhookOCWView
+from main.permissions import AnonymousAccessReadonlyPermission
 
 router = SimpleRouter()
 
@@ -142,6 +143,29 @@ v0_urls = [
         "credential_metadata/",
         views.CredentialMetadataView.as_view(),
         name="credential_metadata",
+    ),
+    # Canvas run ids may contain "/", which the router's single-segment
+    # patterns cannot match. The "+canvas" suffix delimits the run id, so a
+    # greedy match stays unambiguous against the trailing problem title.
+    # These precede the router so they win for Canvas ids; everything else
+    # falls through unchanged. permission_classes must be passed explicitly:
+    # the viewset's are declared via @action, which only the router applies.
+    # See mitodl/hq#13384.
+    re_path(
+        r"^tutor/problems/(?P<run_readable_id>.+\+canvas)/(?P<problem_title>[^/]+)/$",
+        views.CourseRunProblemsViewSet.as_view(
+            {"get": "retrieve_problem"},
+            permission_classes=[permissions.IsAdminOrTutorProblemViewer],
+        ),
+        name="tutorproblem_api-retrieve-problem",
+    ),
+    re_path(
+        r"^tutor/problems/(?P<run_readable_id>.+\+canvas)/$",
+        views.CourseRunProblemsViewSet.as_view(
+            {"get": "list_problems"},
+            permission_classes=[AnonymousAccessReadonlyPermission],
+        ),
+        name="tutorproblem_api-list-problems",
     ),
     *v0_router.urls,
 ]

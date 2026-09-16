@@ -70,3 +70,15 @@ def postprocess_x_enum_descriptions(result, generator, request, public):  # noqa
             ]
 
     return result
+
+
+def preprocess_exclude_canvas_slash_routes(endpoints, **kwargs):  # noqa: ARG001
+    """
+    Drop the Canvas slash-tolerant tutor routes from the schema.
+
+    They serve the same actions as the documented routes and render to the
+    same path template, so drf-spectacular cannot tell the two apart and
+    collapses them onto one another. Their regex is the only thing that
+    differs. See mitodl/hq#13384.
+    """
+    return [endpoint for endpoint in endpoints if "+canvas" not in endpoint[1]]
