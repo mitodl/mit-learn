@@ -1557,7 +1557,7 @@ def test_get_podcast_transcripts(mocker):
 def test_unpublish_all_excluded_files(
     settings, mocker, mocked_celery, mock_course_archive_bucket
 ):
-    """unpublish_all_excluded_files fans out one task per chunk of course ids"""
+    """Only courses whose runs have content files are fanned out"""
     mock_task = mocker.patch("learning_resources.tasks.unpublish_excluded_files.si")
     mocker.patch("learning_resources.tasks.load_course_blocklist", return_value=[])
     mocker.patch(
@@ -1569,15 +1569,23 @@ def test_unpublish_all_excluded_files(
     courses = factories.CourseFactory.create_batch(
         3, etl_source=etl_source, platform=PlatformType.mitxonline.name
     )
+    # the third course has no content files, so its archive is never downloaded
+    with_files = courses[:2]
+    for course in with_files:
+        factories.ContentFileFactory.create(
+            run=factories.LearningResourceRunFactory.create(
+                learning_resource=course.learning_resource
+            )
+        )
     with pytest.raises(mocked_celery.replace_exception_class):
         tasks.unpublish_all_excluded_files.delay(
             etl_source=etl_source, chunk_size=2, learning_resource_ids=None
         )
-    assert mock_task.call_count == 2
+    assert mock_task.call_count == 1
     called_ids = sorted(
         rid for call in mock_task.call_args_list for rid in call.args[0]
     )
-    assert called_ids == sorted(c.learning_resource_id for c in courses)
+    assert called_ids == sorted(c.learning_resource_id for c in with_files)
     mock_task.assert_any_call(ANY, etl_source, ["foo.tar.gz"], dry_run=False)
 
 
