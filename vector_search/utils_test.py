@@ -52,6 +52,7 @@ from vector_search.constants import (
     COMPLETENESS_PAYLOAD_KEY,
     CONTENT_FILES_COLLECTION_NAME,
     ORDER_BY_MISSING_DATETIME,
+    PROGRAM_SCORE_BOOST_NAME,
     QDRANT_CONTENT_FILE_INDEXES,
     QDRANT_CONTENT_FILE_PARAM_MAP,
     QDRANT_LEARNING_RESOURCE_INDEXES,
@@ -102,6 +103,7 @@ from vector_search.utils import (
     remove_qdrant_records,
     resource_embedding_checksum,
     resources_payload_selector,
+    score_formula_overrides,
     score_formula_query,
     should_generate_content_embeddings,
     should_generate_resource_embeddings,
@@ -3887,6 +3889,225 @@ def test_resource_embedding_checksum_is_process_stable():
             )
         )
         assert render["checksum"] == baseline["checksum"]
+
+
+def test_custom_score_formula_boost_override(mocker):
+    """A boost override replaces the configured amount for that entry only."""
+    mock_boosts = {
+        RESOURCES_COLLECTION_NAME: [
+            {
+                "name": PROGRAM_SCORE_BOOST_NAME,
+                "boost": 0.15,
+                "params": {"resource_type_group": ["program"]},
+            },
+            {"name": "free", "boost": 0.2, "params": {"free": True}},
+        ]
+    }
+    mocker.patch("vector_search.utils.VECTOR_SEARCH_SCORE_BOOST", mock_boosts)
+
+    program, free = custom_score_formula(
+        RESOURCES_COLLECTION_NAME,
+        boost_overrides={PROGRAM_SCORE_BOOST_NAME: 0.5},
+    )
+
+    assert program.mult[0] == 0.5
+    assert free.mult[0] == 0.2
+
+
+@pytest.mark.parametrize("override", [0, 0.5])
+def test_custom_score_formula_boost_override_zero(mocker, override):
+    """An override of 0 zeroes the boost rather than falling back to config."""
+    mocker.patch(
+        "vector_search.utils.VECTOR_SEARCH_SCORE_BOOST",
+        {
+            RESOURCES_COLLECTION_NAME: [
+                {
+                    "name": PROGRAM_SCORE_BOOST_NAME,
+                    "boost": 0.15,
+                    "params": {"resource_type_group": ["program"]},
+                }
+            ]
+        },
+    )
+
+    boosts = custom_score_formula(
+        RESOURCES_COLLECTION_NAME,
+        boost_overrides={PROGRAM_SCORE_BOOST_NAME: override},
+    )
+
+    assert boosts[0].mult[0] == override
+
+
+def test_custom_score_formula_unnamed_boost_not_overridden(mocker):
+    """An entry with no name keeps its configured amount."""
+    mocker.patch(
+        "vector_search.utils.VECTOR_SEARCH_SCORE_BOOST",
+        {RESOURCES_COLLECTION_NAME: [{"boost": 0.15, "params": {"free": True}}]},
+    )
+
+    boosts = custom_score_formula(
+        RESOURCES_COLLECTION_NAME,
+        boost_overrides={PROGRAM_SCORE_BOOST_NAME: 0.5, None: 0.9},
+    )
+
+    assert boosts[0].mult[0] == 0.15
+
+
+def test_completeness_penalty_expression_weight_override(settings):
+    """An explicit weight overrides the setting."""
+    settings.VECTOR_SEARCH_INCOMPLETENESS_PENALTY_WEIGHT = 0.05
+
+    expression = completeness_penalty_expression(RESOURCES_COLLECTION_NAME, weight=0.2)
+
+    assert expression.neg.mult[0] == 0.2
+
+
+@pytest.mark.parametrize("weight", [0, -1])
+def test_completeness_penalty_expression_override_disables(settings, weight):
+    """A weight of 0 or negative disables an otherwise configured penalty."""
+    settings.VECTOR_SEARCH_INCOMPLETENESS_PENALTY_WEIGHT = 0.05
+
+    assert (
+        completeness_penalty_expression(RESOURCES_COLLECTION_NAME, weight=weight)
+        is None
+    )
+
+
+def test_staleness_penalty_expression_weight_override(settings):
+    """An explicit weight overrides the setting."""
+    settings.VECTOR_SEARCH_STALENESS_PENALTY_WEIGHT = 0.05
+    settings.VECTOR_SEARCH_STALENESS_HORIZON_YEARS = 20
+
+    expression = staleness_penalty_expression(
+        RESOURCES_COLLECTION_NAME, datetime.now(tz=UTC), weight=0.2
+    )
+
+    assert expression.neg.mult[0] == 0.2
+
+
+@pytest.mark.parametrize("weight", [0, -1])
+def test_staleness_penalty_expression_override_disables(settings, weight):
+    """A weight of 0 or negative disables an otherwise configured penalty."""
+    settings.VECTOR_SEARCH_STALENESS_PENALTY_WEIGHT = 0.05
+
+    assert (
+        staleness_penalty_expression(
+            RESOURCES_COLLECTION_NAME, datetime.now(tz=UTC), weight=weight
+        )
+        is None
+    )
+
+
+def test_score_formula_query_applies_overrides(mocker, settings):
+    """Every weight in the formula can be overridden per request."""
+    settings.VECTOR_SEARCH_INCOMPLETENESS_PENALTY_WEIGHT = 0.05
+    settings.VECTOR_SEARCH_STALENESS_PENALTY_WEIGHT = 0.05
+    settings.VECTOR_SEARCH_STALENESS_HORIZON_YEARS = 20
+    mocker.patch(
+        "vector_search.utils.VECTOR_SEARCH_SCORE_BOOST",
+        {
+            RESOURCES_COLLECTION_NAME: [
+                {
+                    "name": PROGRAM_SCORE_BOOST_NAME,
+                    "boost": 0.15,
+                    "params": {"resource_type_group": ["program"]},
+                }
+            ]
+        },
+    )
+
+    formula_query = score_formula_query(
+        RESOURCES_COLLECTION_NAME,
+        program_boost=0.4,
+        completeness_penalty=0.1,
+        staleness_penalty=0.2,
+    )
+
+    score, boost, completeness, staleness = formula_query.formula.sum
+    assert score == "$score"
+    assert boost.mult[0] == 0.4
+    assert completeness.neg.mult[0] == 0.1
+    assert staleness.neg.mult[0] == 0.2
+
+
+def test_score_formula_query_overrides_can_disable_penalties(mocker, settings):
+    """Zeroed penalties drop out of the formula, defaults included."""
+    settings.VECTOR_SEARCH_INCOMPLETENESS_PENALTY_WEIGHT = 0.05
+    settings.VECTOR_SEARCH_STALENESS_PENALTY_WEIGHT = 0.05
+    mocker.patch("vector_search.utils.VECTOR_SEARCH_SCORE_BOOST", {})
+
+    formula_query = score_formula_query(
+        RESOURCES_COLLECTION_NAME,
+        completeness_penalty=0,
+        staleness_penalty=0,
+    )
+
+    assert formula_query is None
+
+
+def test_score_formula_overrides():
+    """Only the score formula weights are pulled out of the request params."""
+    assert score_formula_overrides(
+        {
+            "q": "test",
+            "program_boost": 0.4,
+            "staleness_penalty": 0.2,
+            "score_cutoff": 0.1,
+        }
+    ) == {
+        "program_boost": 0.4,
+        "staleness_penalty": 0.2,
+        "staleness_horizon_years": None,
+        "completeness_penalty": None,
+    }
+
+
+def test_staleness_penalty_expression_horizon_override(settings):
+    """An explicit horizon overrides the setting's ramp length."""
+    settings.VECTOR_SEARCH_STALENESS_PENALTY_WEIGHT = 0.05
+    settings.VECTOR_SEARCH_STALENESS_HORIZON_YEARS = 20
+
+    expression = staleness_penalty_expression(
+        RESOURCES_COLLECTION_NAME, datetime.now(tz=UTC), horizon_years=5
+    )
+
+    decay = expression.neg.mult[1].sum[1].neg.lin_decay
+    # half the horizon at the default midpoint -- see staleness_penalty_expression
+    assert decay.scale == 5 * SECONDS_PER_YEAR / 2
+
+
+@pytest.mark.parametrize("horizon_years", [0, -1])
+def test_staleness_penalty_expression_horizon_override_disables(
+    settings, horizon_years
+):
+    """A horizon of 0 or negative has no ramp to penalize along."""
+    settings.VECTOR_SEARCH_STALENESS_PENALTY_WEIGHT = 0.05
+    settings.VECTOR_SEARCH_STALENESS_HORIZON_YEARS = 20
+
+    assert (
+        staleness_penalty_expression(
+            RESOURCES_COLLECTION_NAME,
+            datetime.now(tz=UTC),
+            horizon_years=horizon_years,
+        )
+        is None
+    )
+
+
+def test_score_formula_query_applies_horizon_override(mocker, settings):
+    """The horizon override reaches the formula's decay params."""
+    settings.VECTOR_SEARCH_STALENESS_PENALTY_WEIGHT = 0.05
+    settings.VECTOR_SEARCH_STALENESS_HORIZON_YEARS = 20
+    settings.VECTOR_SEARCH_INCOMPLETENESS_PENALTY_WEIGHT = 0
+    mocker.patch("vector_search.utils.VECTOR_SEARCH_SCORE_BOOST", {})
+
+    formula_query = score_formula_query(
+        RESOURCES_COLLECTION_NAME, staleness_horizon_years=5
+    )
+
+    _, staleness = formula_query.formula.sum
+    decay = staleness.neg.mult[1].sum[1].neg.lin_decay
+    assert decay.scale == 5 * SECONDS_PER_YEAR / 2
 
 
 @pytest.mark.django_db(transaction=True)

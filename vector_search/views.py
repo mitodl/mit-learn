@@ -44,6 +44,7 @@ from vector_search.utils import (
     order_by_query,
     qdrant_query_conditions,
     resources_payload_selector,
+    score_formula_overrides,
     score_formula_query,
     sparse_encoder,
 )
@@ -141,6 +142,7 @@ class QdrantView(AsyncAPIView):
         encoder_sparse,
         hybrid_search,
         score_cutoff: float | None,
+        score_overrides: dict | None = None,
     ):
         search_params = {
             "collection_name": search_collection,
@@ -167,7 +169,9 @@ class QdrantView(AsyncAPIView):
 
         # Boosts and the completeness penalty, or None when neither applies to
         # this collection.
-        formula_query = score_formula_query(search_collection)
+        formula_query = score_formula_query(
+            search_collection, **(score_overrides or {})
+        )
 
         if hybrid_search:
             sparse_query, dense_query = await asyncio.gather(
@@ -183,10 +187,15 @@ class QdrantView(AsyncAPIView):
             # The sparse arm scores on a BM25 scale, where the penalties' fixed
             # score amounts are not a demotion -- see score_formula_query. It
             # gets the boosts, which are proportional, and neither penalty; the
-            # dense arm gets both.
+            # dense arm gets both. The request's overrides go to both arms, so
+            # that a program_boost override reaches the boost on each of them.
             dense_formula_query = formula_query or identity_formula_query
             sparse_formula_query = (
-                score_formula_query(search_collection, include_penalties=False)
+                score_formula_query(
+                    search_collection,
+                    **(score_overrides or {}),
+                    include_penalties=False,
+                )
                 or identity_formula_query
             )
             prefetch_params = [
@@ -427,6 +436,7 @@ class QdrantView(AsyncAPIView):
                 encoder_sparse,
                 hybrid_search,
                 score_cutoff,
+                score_formula_overrides(params),
             )
 
             if "group_by" in params:

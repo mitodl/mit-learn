@@ -280,12 +280,35 @@ QDRANT_OPTIMIZER_FLUSH_INTERVAL_XLARGE = 30
 QDRANT_OPTIMIZER_INDEXING_THRESHOLD_RATIO = 0.8
 
 
+# Name of the boost entry whose amount the `program_boost` search parameter
+# overrides.
+PROGRAM_SCORE_BOOST_NAME = "program"
+
 # Score boosts applied by the rescoring formula (see custom_score_formula).
 # "boost" is a *fraction of the point's own score*, not a number of score units:
-# an entry of 0.1 multiplies a matching point's score by 1.1. Deliberately
-# relative rather than absolute -- custom_score_formula has the reasoning.
+# an entry of 0.1 multiplies a matching point's score by 1.1, and so does a
+# `program_boost` of 0.1 on a request. Deliberately relative rather than
+# absolute -- custom_score_formula has the reasoning.
 VECTOR_SEARCH_SCORE_BOOST = {
     RESOURCES_COLLECTION_NAME: [
-        {"boost": 0.1, "params": {"resource_type_group": ["program"]}}
+        {
+            "name": PROGRAM_SCORE_BOOST_NAME,
+            "boost": 0.1,
+            "params": {"resource_type_group": ["program"]},
+        }
     ],
 }
+
+
+def default_score_boost(
+    name: str, collection_name: str = RESOURCES_COLLECTION_NAME
+) -> float:
+    """Configure the boost amount for a named entry"""
+    return next(
+        (
+            entry.get("boost", 0)
+            for entry in VECTOR_SEARCH_SCORE_BOOST.get(collection_name, [])
+            if entry.get("name") == name
+        ),
+        0,
+    )

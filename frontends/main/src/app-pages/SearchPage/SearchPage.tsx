@@ -9,10 +9,11 @@ import type {
 import { useSetSearchParams } from "@mitodl/course-search-utils/next"
 import { useAppSearchParams } from "@/common/useAppSearchParams"
 import { useResourceSearchParams } from "@mitodl/course-search-utils"
-import SearchDisplay, {
+import SearchDisplay from "@/page-components/SearchDisplay/SearchDisplay"
+import {
   AdminTitleContainer,
   ExplanationContainer,
-} from "@/page-components/SearchDisplay/SearchDisplay"
+} from "@/page-components/SearchDisplay/adminStyles"
 import HybridSearchDisplay from "@/page-components/SearchDisplay/HybridSearchDisplay"
 import { styled, Container, theme, Typography } from "ol-components"
 import { Checkbox, VisuallyHidden } from "@mitodl/smoot-design"

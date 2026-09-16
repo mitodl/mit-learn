@@ -49,6 +49,7 @@ from vector_search.constants import (
     COURSE_NUMBER_INDEXING_ONLY_FIELDS,
     NULLABLE_ORDER_BY_KEYS,
     ORDER_BY_MISSING_DATETIME,
+    PROGRAM_SCORE_BOOST_NAME,
     QDRANT_CONTENT_FILE_INDEXES,
     QDRANT_CONTENT_FILE_PARAM_MAP,
     QDRANT_LEARNING_RESOURCE_INDEXES,
@@ -1852,7 +1853,9 @@ def retrieve_points_matching_params(
             break
 
 
-def custom_score_formula(collection_name: str) -> list[models.MultExpression]:
+def custom_score_formula(
+    collection_name: str, boost_overrides: dict[str, float] | None = None
+) -> list[models.MultExpression]:
     """
     Build the boost terms from VECTOR_SEARCH_SCORE_BOOST, to be added to the
     score.
@@ -1861,6 +1864,10 @@ def custom_score_formula(collection_name: str) -> list[models.MultExpression]:
     own score rather than a fixed number of score units, so that summing it into
     the formula multiplies a matching point's score by (1 + boost). See
     VECTOR_SEARCH_SCORE_BOOST for why the boost is relative.
+
+    boost_overrides maps a boost entry's "name" to an amount that replaces its
+    configured "boost", so a request can tune a boost without a deploy. An
+    override is a fraction on the same terms as the configured amount.
 
     Being proportional makes the boost order-preserving within its own band: a
     point can only overtake another it was already within (1 + boost) of, so a
@@ -1882,7 +1889,9 @@ def custom_score_formula(collection_name: str) -> list[models.MultExpression]:
     score_expressions = []
     if score_params:
         for score_param in score_params:
-            amount = score_param.get("boost", 0)
+            name = score_param.get("name")
+            override = (boost_overrides or {}).get(name) if name else None
+            amount = override if override is not None else score_param.get("boost", 0)
             conditions = qdrant_query_conditions(
                 score_param.get("params"), collection_name=collection_name
             )
@@ -1898,6 +1907,7 @@ def custom_score_formula(collection_name: str) -> list[models.MultExpression]:
 
 def completeness_penalty_expression(
     collection_name: str,
+    weight: float | None = None,
 ) -> models.NegExpression | None:
     """
     Build the incompleteness penalty term: -weight * (1 - completeness), to be
@@ -1905,11 +1915,14 @@ def completeness_penalty_expression(
 
     Deliberately additive rather than the multiplicative form OpenSearch uses --
     see VECTOR_SEARCH_INCOMPLETENESS_PENALTY_WEIGHT. None when the penalty is
-    disabled or the collection has no completeness.
+    disabled or the collection has no completeness. `weight` overrides the
+    setting when it is not None.
     """
     if collection_name != RESOURCES_COLLECTION_NAME:
         return None
-    weight = max(settings.VECTOR_SEARCH_INCOMPLETENESS_PENALTY_WEIGHT or 0, 0)
+    if weight is None:
+        weight = settings.VECTOR_SEARCH_INCOMPLETENESS_PENALTY_WEIGHT
+    weight = max(weight or 0, 0)
     if not weight:
         return None
     return models.NegExpression(
@@ -1927,6 +1940,8 @@ def completeness_penalty_expression(
 def staleness_penalty_expression(
     collection_name: str,
     now: datetime,
+    weight: float | None = None,
+    horizon_years: float | None = None,
 ) -> models.NegExpression | None:
     """
     Build the staleness penalty term: -weight * (1 - decay), where decay ramps
@@ -1935,12 +1950,17 @@ def staleness_penalty_expression(
 
     Additive rather than the multiplicative decay OpenSearch applies -- see
     VECTOR_SEARCH_STALENESS_PENALTY_WEIGHT. None when the penalty is disabled or
-    the collection has no resource age.
+    the collection has no resource age. `weight` and `horizon_years` override
+    their settings when they are not None.
     """
     if collection_name != RESOURCES_COLLECTION_NAME:
         return None
-    weight = max(settings.VECTOR_SEARCH_STALENESS_PENALTY_WEIGHT or 0, 0)
-    horizon_years = settings.VECTOR_SEARCH_STALENESS_HORIZON_YEARS or 0
+    if weight is None:
+        weight = settings.VECTOR_SEARCH_STALENESS_PENALTY_WEIGHT
+    weight = max(weight or 0, 0)
+    if horizon_years is None:
+        horizon_years = settings.VECTOR_SEARCH_STALENESS_HORIZON_YEARS
+    horizon_years = horizon_years or 0
     if not weight or horizon_years <= 0:
         return None
     return models.NegExpression(
@@ -1979,8 +1999,32 @@ def staleness_penalty_expression(
     )
 
 
-def score_formula_query(
-    collection_name: str, *, include_penalties: bool = True
+# Search parameters that override a score formula weight for a single request.
+SCORE_FORMULA_OVERRIDE_PARAMS = (
+    "program_boost",
+    "staleness_penalty",
+    "staleness_horizon_years",
+    "completeness_penalty",
+)
+
+
+def score_formula_overrides(params: dict) -> dict[str, float | None]:
+    """
+    Pull the per-request score formula weight overrides out of request params,
+    as keyword arguments for score_formula_query. A parameter the request left
+    out is None, which keeps that weight at its setting.
+    """
+    return {key: params.get(key) for key in SCORE_FORMULA_OVERRIDE_PARAMS}
+
+
+def score_formula_query(  # noqa: PLR0913
+    collection_name: str,
+    *,
+    program_boost: float | None = None,
+    staleness_penalty: float | None = None,
+    staleness_horizon_years: float | None = None,
+    completeness_penalty: float | None = None,
+    include_penalties: bool = True,
 ) -> models.FormulaQuery | None:
     """
     Build a collection's rescoring formula: the score, plus the
@@ -1988,36 +2032,48 @@ def score_formula_query(
     penalties. None when none of them apply, so callers can skip rescoring
     entirely.
 
-    `include_penalties=False` leaves the penalties out, for a query arm whose
-    $score is not on the scale they were calibrated against. The penalties
-    subtract a fixed number of score units, chosen against the narrow band that
-    bounded similarity scores occupy (see
+    Each weight falls back to its setting when passed None, so a request can
+    override any of them individually (see score_formula_overrides).
+
+    `include_penalties=False` leaves the penalties out entirely -- overrides and
+    all -- for a query arm whose $score is not on the scale they were calibrated
+    against. The penalties subtract a fixed number of score units, chosen
+    against the narrow band that bounded similarity scores occupy (see
     VECTOR_SEARCH_INCOMPLETENESS_PENALTY_WEIGHT), so they mean nothing on an
     unbounded BM25 score -- 0.05 off a score of 8 is not a demotion. The boosts
     are proportional and so apply unchanged on any scale.
     """
     now = datetime.now(tz=UTC)
-    boost_expressions = custom_score_formula(collection_name)
+    boost_expressions = custom_score_formula(
+        collection_name, boost_overrides={PROGRAM_SCORE_BOOST_NAME: program_boost}
+    )
     penalties = []
     # Payload values to fall back on, so that a point missing one -- indexed
     # before the key existed, or a resource type that never carries it -- is
     # penalized for neither.
     defaults = {}
 
-    completeness_penalty = (
-        completeness_penalty_expression(collection_name) if include_penalties else None
-    )
-    if completeness_penalty is not None:
-        penalties.append(completeness_penalty)
-        defaults[COMPLETENESS_PAYLOAD_KEY] = 1.0
-
-    staleness_penalty = (
-        staleness_penalty_expression(collection_name, now)
+    completeness_expression = (
+        completeness_penalty_expression(collection_name, weight=completeness_penalty)
         if include_penalties
         else None
     )
-    if staleness_penalty is not None:
-        penalties.append(staleness_penalty)
+    if completeness_expression is not None:
+        penalties.append(completeness_expression)
+        defaults[COMPLETENESS_PAYLOAD_KEY] = 1.0
+
+    staleness_expression = (
+        staleness_penalty_expression(
+            collection_name,
+            now,
+            weight=staleness_penalty,
+            horizon_years=staleness_horizon_years,
+        )
+        if include_penalties
+        else None
+    )
+    if staleness_expression is not None:
+        penalties.append(staleness_expression)
         # A null resource_age_date means an upcoming run, which is not stale, and
         # scores as if it were published right now.
         defaults[RESOURCE_AGE_DATE_PAYLOAD_KEY] = now.isoformat()

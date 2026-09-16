@@ -1242,6 +1242,114 @@ def test_relative_score_floor_disabled_by_a_zero_ratio(settings):
     assert _relative_score_floor(points, hybrid_search_enabled=False) == points
 
 
+@pytest.mark.parametrize("hybrid_search", [True, False])
+def test_vector_search_score_tuning_parameters(mocker, client, settings, hybrid_search):
+    """The score formula weights are overridable per request."""
+    settings.VECTOR_SEARCH_INCOMPLETENESS_PENALTY_WEIGHT = 0.05
+    settings.VECTOR_SEARCH_STALENESS_PENALTY_WEIGHT = 0.05
+
+    mock_qdrant = mocker.patch(
+        "qdrant_client.AsyncQdrantClient", return_value=mocker.AsyncMock()
+    )()
+    mock_result = mocker.MagicMock()
+    mock_result.points = []
+    mock_qdrant.query_points = mocker.AsyncMock(return_value=mock_result)
+    mock_qdrant.scroll = mocker.AsyncMock(return_value=([], None))
+    mocker.patch("vector_search.views.async_qdrant_client", return_value=mock_qdrant)
+
+    client.get(
+        reverse("vector_search:v0:vector_learning_resources_search"),
+        data={
+            "q": "test",
+            "hybrid_search": hybrid_search,
+            "program_boost": 0.4,
+            "staleness_penalty": 0.2,
+            "staleness_horizon_years": 5,
+            "completeness_penalty": 0.1,
+        },
+    )
+
+    formula_queries = _formula_queries(
+        mock_qdrant.query_points.mock_calls[0].kwargs, hybrid_search
+    )
+
+    boost, completeness, staleness = formula_queries["dense"].formula.sum[1:]
+    assert boost.mult[0] == 0.4
+    assert completeness.neg.mult[0] == 0.1
+    assert staleness.neg.mult[0] == 0.2
+    decay = staleness.neg.mult[1].sum[1].neg.lin_decay
+    # half the horizon at the default midpoint -- see
+    # staleness_penalty_expression
+    assert decay.scale == 5 * SECONDS_PER_YEAR / 2
+
+    if hybrid_search:
+        # The sparse arm takes the boost override as well -- the boost applies
+        # to both arms -- and neither penalty. See score_formula_query.
+        [sparse_boost] = formula_queries["sparse"].formula.sum[1:]
+        assert sparse_boost.mult[0] == 0.4
+
+
+@pytest.mark.parametrize("hybrid_search", [True, False])
+def test_vector_search_score_tuning_parameters_disable_scoring(
+    mocker, client, settings, hybrid_search
+):
+    """Zeroing every weight leaves the raw similarity scores alone."""
+    settings.VECTOR_SEARCH_INCOMPLETENESS_PENALTY_WEIGHT = 0.05
+    settings.VECTOR_SEARCH_STALENESS_PENALTY_WEIGHT = 0.05
+
+    mock_qdrant = mocker.patch(
+        "qdrant_client.AsyncQdrantClient", return_value=mocker.AsyncMock()
+    )()
+    mock_result = mocker.MagicMock()
+    mock_result.points = []
+    mock_qdrant.query_points = mocker.AsyncMock(return_value=mock_result)
+    mock_qdrant.scroll = mocker.AsyncMock(return_value=([], None))
+    mocker.patch("vector_search.views.async_qdrant_client", return_value=mock_qdrant)
+
+    client.get(
+        reverse("vector_search:v0:vector_learning_resources_search"),
+        data={
+            "q": "test",
+            "hybrid_search": hybrid_search,
+            "program_boost": 0,
+            "staleness_penalty": 0,
+            "completeness_penalty": 0,
+        },
+    )
+
+    call_kwargs = mock_qdrant.query_points.mock_calls[0].kwargs
+    if hybrid_search:
+        # The zeroed program boost is still a term, but contributes nothing
+        for prefetch in call_kwargs["prefetch"]:
+            assert prefetch.query.formula.sum[1].mult[0] == 0
+            assert not prefetch.query.defaults
+    else:
+        assert call_kwargs["query"].formula.sum[1].mult[0] == 0
+        assert not call_kwargs["query"].defaults
+
+
+@pytest.mark.parametrize(
+    "param",
+    [
+        "program_boost",
+        "staleness_penalty",
+        "staleness_horizon_years",
+        "completeness_penalty",
+    ],
+)
+def test_vector_search_score_tuning_parameters_reject_negatives(
+    client, mock_qdrant, param
+):
+    """The weights are magnitudes -- a negative one is a bad request."""
+    response = client.get(
+        reverse("vector_search:v0:vector_learning_resources_search"),
+        data={"q": "test", param: -1},
+    )
+
+    assert response.status_code == 400
+    assert param in response.json()
+
+
 def test_dense_vector_search_without_formula_queries_vectors_directly(
     mocker, client, settings
 ):

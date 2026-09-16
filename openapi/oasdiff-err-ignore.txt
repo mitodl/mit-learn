@@ -10,3 +10,23 @@
 #
 # Example:
 #   2026-08-24 GET /api/v1/foo/ removed the success response with the status '200'
+
+# Removing the unused UserWebsite API -- nothing consumed these endpoints and
+# production held no rows. https://github.com/mitodl/mit-learn/pull/3941
+2026-09-15 POST /api/v0/websites/ api path removed without deprecation
+2026-09-15 DELETE /api/v0/websites/{id}/ api path removed without deprecation
+
+# `email_optin` was always nullable at runtime -- the column is
+# BooleanField(null=True) with no default, so a user who never set a
+# preference has always serialized as null. The spec claimed otherwise; these
+# entries cover correcting it, not a change in behavior.
+# https://github.com/mitodl/hq/issues/13373
+2026-09-15 GET /api/v0/profiles/{user__username}/ the response property `email_optin` became nullable for the status `200`
+2026-09-15 PATCH /api/v0/profiles/{user__username}/ the response property `email_optin` became nullable for the status `200`
+2026-09-15 PUT /api/v0/profiles/{user__username}/ the response property `email_optin` became nullable for the status `200`
+2026-09-15 GET /api/v0/users/ the response property `items/profile/email_optin` became nullable for the status `200`
+2026-09-15 POST /api/v0/users/ the response property `profile/email_optin` became nullable for the status `201`
+2026-09-15 GET /api/v0/users/me/ the response property `profile/email_optin` became nullable for the status `200`
+2026-09-15 GET /api/v0/users/{username}/ the response property `profile/email_optin` became nullable for the status `200`
+2026-09-15 PATCH /api/v0/users/{username}/ the response property `profile/email_optin` became nullable for the status `200`
+2026-09-15 PUT /api/v0/users/{username}/ the response property `profile/email_optin` became nullable for the status `200`

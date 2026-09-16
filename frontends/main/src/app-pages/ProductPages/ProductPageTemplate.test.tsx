@@ -120,26 +120,23 @@ describe("ProductPageTemplate stay-updated trigger", () => {
     })
   })
 
-  it("shows the button and opens the modal when a hubspot form id is set even if the form is not yet fetched", () => {
+  it("hides the trigger button while the form detail is still loading", () => {
+    // Avoids a flash of the button on pages with a bad/misconfigured form id:
+    // the button must not appear until the form is confirmed to exist.
     mockedUseHubspotFormDetail.mockReturnValue({
       data: undefined,
       isError: false,
+      isSuccess: false,
     } as ReturnType<typeof useHubspotFormDetail>)
 
     renderProductPageTemplate({ hubspotFormId: STAY_UPDATED_FORM_ID })
 
-    const button = screen.getByRole("button", { name: "Stay Updated" })
-    expect(button).toBeInTheDocument()
-    expect(button).toBeEnabled()
-
-    button.click()
-    expect(mockedNiceModalShow).toHaveBeenCalledWith(StayUpdatedModal, {
-      productReadableId: DEFAULT_RESOURCE.readable_id,
-      hubspotFormId: STAY_UPDATED_FORM_ID,
-    })
+    expect(
+      screen.queryByRole("button", { name: "Stay Updated" }),
+    ).not.toBeInTheDocument()
   })
 
-  it("disables the trigger button when form fetch errors", () => {
+  it("hides the trigger button when form fetch errors", () => {
     mockedUseHubspotFormDetail.mockReturnValue({
       data: undefined,
       isError: true,
@@ -147,9 +144,9 @@ describe("ProductPageTemplate stay-updated trigger", () => {
 
     renderProductPageTemplate({ hubspotFormId: STAY_UPDATED_FORM_ID })
 
-    const button = screen.getByRole("button", { name: "Stay Updated" })
-    expect(button).toBeInTheDocument()
-    expect(button).toBeDisabled()
+    expect(
+      screen.queryByRole("button", { name: "Stay Updated" }),
+    ).not.toBeInTheDocument()
   })
 
   it("attaches click handler when form id is set and form data exists", () => {
@@ -159,6 +156,7 @@ describe("ProductPageTemplate stay-updated trigger", () => {
         name: "Stay Updated",
       }),
       isError: false,
+      isSuccess: true,
     } as unknown as ReturnType<typeof useHubspotFormDetail>)
 
     renderProductPageTemplate({ hubspotFormId: STAY_UPDATED_FORM_ID })
@@ -177,9 +175,10 @@ describe("ProductPageTemplate stay-updated trigger", () => {
   it("threads the per-product hubspotFormId to the form lookup and the modal", () => {
     const PRODUCT_FORM_ID = "product-specific-form"
     mockedUseHubspotFormDetail.mockReturnValue({
-      data: undefined,
+      data: factories.hubspot.form({ id: PRODUCT_FORM_ID }),
       isError: false,
-    } as ReturnType<typeof useHubspotFormDetail>)
+      isSuccess: true,
+    } as unknown as ReturnType<typeof useHubspotFormDetail>)
 
     renderProductPageTemplate({ hubspotFormId: PRODUCT_FORM_ID })
 
@@ -200,9 +199,10 @@ describe("ProductPageTemplate stay-updated trigger", () => {
     beforeEach(() => {
       process.env.NEXT_PUBLIC_POSTHOG_API_KEY = "test-key"
       mockedUseHubspotFormDetail.mockReturnValue({
-        data: undefined,
+        data: factories.hubspot.form({ id: STAY_UPDATED_FORM_ID }),
         isError: false,
-      } as ReturnType<typeof useHubspotFormDetail>)
+        isSuccess: true,
+      } as unknown as ReturnType<typeof useHubspotFormDetail>)
     })
 
     afterEach(() => {
