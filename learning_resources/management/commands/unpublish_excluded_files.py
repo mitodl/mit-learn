@@ -97,7 +97,7 @@ class Command(BaseCommand):
             self.stdout.write(
                 f"{source} summary: {_sum(rows, 'excluded')} out of "
                 f"{_sum(rows, 'total')} content files excluded across "
-                f"{len(rows)} runs, {verb} {_sum(rows, 'unpublished')}"
+                f"{len(rows)} run(s), {verb} {_sum(rows, 'unpublished')}"
             )
             report.extend({"etl_source": source, **row} for row in rows)
 
