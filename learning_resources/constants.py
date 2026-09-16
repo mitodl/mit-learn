@@ -39,6 +39,10 @@ class LearningResourceType(ExtendedEnum):
     document = "Document"
 
 
+# Prefix for the readable_id of a LearningResource mirroring a WebsiteContent
+# item, so editorial content is distinguishable from ETL'd documents.
+WEBSITE_CONTENT_READABLE_ID_PREFIX = "website_content:"
+
 LEARNING_MATERIAL_RESOURCE_TYPE_GROUP = "learning_material"
 RESOURCE_TYPE_GROUP_VALUES = [
     LearningResourceType.course.name,

@@ -9,6 +9,7 @@ import pytest
 from decorator import contextmanager
 from django.utils import timezone
 from moto import mock_aws
+from safedelete.config import HARD_DELETE
 
 from learning_resources import factories, models, tasks
 from learning_resources.conftest import OCW_TEST_PREFIX, setup_s3, setup_s3_ocw
@@ -1588,3 +1589,43 @@ def test_unpublish_staff_only_files_task(mocker):
     )
     assert tasks.unpublish_staff_only_files([1, 2], "mitxonline", ["k"]) == 3
     mock_fn.assert_called_once_with("mitxonline", [1, 2], ["k"])
+
+
+@pytest.mark.parametrize(
+    ("is_published", "exists", "expect_sync"),
+    [
+        (True, True, True),
+        # Unpublished or deleted between the hook firing and the task running.
+        (False, True, False),
+        (True, False, False),
+    ],
+)
+def test_sync_website_content_learning_resource_guards(
+    mocker, is_published, exists, expect_sync
+):
+    """The task re-reads the item, since it may have changed since it was queued."""
+    from website_content.factories import WebsiteContentFactory
+
+    content = WebsiteContentFactory.create(is_published=is_published)
+    content_id = content.id
+    if not exists:
+        content.delete(force_policy=HARD_DELETE)
+
+    mock_sync = mocker.patch(
+        "learning_resources.tasks.sync_website_content_to_learning_resource"
+    )
+
+    tasks.sync_website_content_learning_resource.delay(content_id)
+
+    assert mock_sync.called is expect_sync
+
+
+def test_unpublish_website_content_learning_resource_task(mocker):
+    """The removal task works from the id, so a deleted item still leaves the index."""
+    mock_unpublish = mocker.patch(
+        "learning_resources.tasks.unpublish_website_content_learning_resource"
+    )
+
+    tasks.unpublish_website_content_learning_resource_task.delay(1234)
+
+    mock_unpublish.assert_called_once_with(1234)

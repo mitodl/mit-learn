@@ -14,6 +14,10 @@ from django.db import OperationalError
 from django.db.models import Q
 from django.utils import timezone
 
+from learning_resources.api import (
+    sync_website_content_to_learning_resource,
+    unpublish_website_content_learning_resource,
+)
 from learning_resources.constants import LearningResourceType
 from learning_resources.etl import loaders, ovs, pipelines, podcast, youtube
 from learning_resources.etl.canvas import (
@@ -1041,3 +1045,35 @@ def cleanup_deleted_content_files():
         error = "cleanup_deleted_content_files threw an error"
         log.exception(error)
         return error
+
+
+@app.task(acks_late=True, reject_on_worker_lost=True)
+def sync_website_content_learning_resource(content_id: int) -> None:
+    """
+    Mirror a published WebsiteContent item into a LearningResource.
+
+    Args:
+        content_id (int): id of the content item that was published or updated
+    """
+    from website_content.models import WebsiteContent
+
+    content = WebsiteContent.objects.filter(id=content_id).first()
+    if content is None or not content.is_published:
+        # Unpublished or deleted between the hook firing and this running.
+        log.info("Skipping learning resource sync for website content %s", content_id)
+        return
+    sync_website_content_to_learning_resource(content)
+
+
+@app.task(acks_late=True, reject_on_worker_lost=True)
+def unpublish_website_content_learning_resource_task(content_id: int) -> None:
+    """
+    Take an unpublished WebsiteContent item's LearningResource out of search.
+
+    Takes an id rather than the instance because the content may since have
+    been deleted -- the resource still has to come out of the index.
+
+    Args:
+        content_id (int): id of the content item that was unpublished
+    """
+    unpublish_website_content_learning_resource(content_id)
