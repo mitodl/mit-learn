@@ -12,14 +12,24 @@ type VectorControl = {
   max: number
   step: number
   explanation: string
+  formatValue?: (value: number) => string
 }
+
+/**
+ * A boost is a fraction of a result's own score, so read it out as the
+ * multiplier it works out to: 0.1 is what an admin sets, but 1.1x is what it
+ * does to a result, and the factor is the whole reason the boost cannot
+ * outrank relevance.
+ */
+const asMultiplier = (value: number) => `${(1 + value).toFixed(2)}x`
 
 /**
  * Score formula weights the vector endpoint accepts, in the order they are
  * applied: the cutoff, then the boost and the penalties that rescore what
- * survives it. Ranges are in score units -- similarity scores are bounded and
- * sit in a narrow band, unlike the unbounded OpenSearch scores the percent
- * based controls tune.
+ * survives it. The cutoff and the penalties are in score units -- similarity
+ * scores are bounded and sit in a narrow band, unlike the unbounded OpenSearch
+ * scores the percent based controls tune. The boost is relative instead, a
+ * proportion of the score it is boosting.
  */
 const VECTOR_CONTROLS: VectorControl[] = [
   {
@@ -35,14 +45,19 @@ const VECTOR_CONTROLS: VectorControl[] = [
   },
   {
     urlParam: "program_boost",
-    label: "Program Score Boost",
+    // Deliberately narrower and finer than the other controls: the stored
+    // value is a fraction, so the old 0-1 range topped out at doubling a
+    // program's score, and 0.05 steps were too coarse to sit either side of
+    // the factor where a boosted program starts passing better matches.
+    label: "Program Score Multiplier",
     min: 0,
-    max: 1,
-    step: 0.05,
+    max: 0.5,
+    step: 0.01,
+    formatValue: asMultiplier,
     explanation:
-      "Score added to a program before ranking, scaled down as relevance " +
-      "drops so a weak match is not boosted over a strong one. 0 disables " +
-      "the boost.",
+      "Multiplies a program's own score before ranking, so a program can " +
+      "only overtake a result it was already within this factor of. 1.00x " +
+      "leaves programs unboosted.",
   },
   {
     urlParam: "staleness_penalty",
@@ -112,7 +127,7 @@ const VectorAdminOptions: React.FC<{
   return (
     <div data-testid="vector-admin-options">
       {VECTOR_CONTROLS.map(
-        ({ urlParam, label, min, max, step, explanation }) => (
+        ({ urlParam, label, min, max, step, explanation, formatValue }) => (
           <div key={urlParam}>
             <AdminTitleContainer>{label}</AdminTitleContainer>
             <SliderInput
@@ -127,6 +142,7 @@ const VectorAdminOptions: React.FC<{
               min={min}
               max={max}
               step={step}
+              formatValue={formatValue}
             />
             <ExplanationContainer>{explanation}</ExplanationContainer>
           </div>

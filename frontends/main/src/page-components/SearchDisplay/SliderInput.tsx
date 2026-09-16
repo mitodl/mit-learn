@@ -18,7 +18,25 @@ const SliderInput: React.FC<{
   min: number
   max: number
   step: number
-}> = ({ currentValue, setSearchParams, urlParam, label, min, max, step }) => {
+  /**
+   * Renders the value, for a control whose stored value is not what an admin
+   * needs to read -- a fraction shown as the multiplier it works out to, say.
+   * Drives the accessible value as well as the visible label: the stored
+   * number is the one that means nothing on its own, so announcing it would
+   * leave a screen reader worse off than the label it replaces. Defaults to
+   * the raw value.
+   */
+  formatValue?: (value: number) => string
+}> = ({
+  currentValue,
+  setSearchParams,
+  urlParam,
+  label,
+  min,
+  max,
+  step,
+  formatValue,
+}) => {
   const [sliderDisplayValue, setSliderDisplayValue] =
     React.useState<number>(currentValue)
 
@@ -44,6 +62,8 @@ const SliderInput: React.FC<{
         }}
         onChangeCommitted={handleChange}
         valueLabelDisplay="auto"
+        valueLabelFormat={formatValue}
+        getAriaValueText={formatValue}
         min={min}
         max={max}
         step={step}

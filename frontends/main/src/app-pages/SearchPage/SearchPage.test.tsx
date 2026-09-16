@@ -108,7 +108,7 @@ const ADMIN_PARAMS = {
   max_incompleteness_penalty: 90,
   content_file_score_weight: 1,
   score_cutoff: 0.05,
-  program_boost: 0.15,
+  program_boost: 0.1,
   staleness_penalty: 0.05,
   staleness_horizon_years: 20,
   completeness_penalty: 0.05,
@@ -528,7 +528,7 @@ describe("SearchPage", () => {
   // url param -> the slider's visible title, which is also its accessible name
   const VECTOR_SLIDERS = [
     ["score_cutoff", "Minimum Score Cutoff"],
-    ["program_boost", "Program Score Boost"],
+    ["program_boost", "Program Score Multiplier"],
     ["staleness_penalty", "Resource Score Staleness Penalty"],
     ["staleness_horizon_years", "Staleness Horizon (years)"],
     ["completeness_penalty", "Incompleteness Penalty"],
@@ -585,8 +585,45 @@ describe("SearchPage", () => {
       await screen.findByRole("slider", { name: label })
     }
     expect(
-      screen.getByRole("slider", { name: "Program Score Boost" }),
+      screen.getByRole("slider", { name: "Program Score Multiplier" }),
     ).toHaveAttribute("aria-valuenow", String(ADMIN_PARAMS.program_boost))
+  })
+
+  test("The program boost reads out as the multiplier it works out to", async () => {
+    // The stored value is a fraction of a result's own score, which tells an
+    // admin nothing on its own -- 0.1 has to read as 1.10x.
+    mockFeatureFlags({})
+    setMockApiResponses({
+      search: {
+        count: 10,
+        metadata: {
+          aggregations: {
+            resource_type_group: [{ key: "course", doc_count: 10 }],
+          },
+          suggestions: [],
+        },
+      },
+    })
+    setMockResponse.get(urls.userMe.get(), {
+      is_learning_path_editor: true,
+      is_authenticated: true,
+    })
+    setMockResponse.get(urls.adminSearchParams.get(), ADMIN_PARAMS)
+
+    renderWithProviders(<SearchPage />, { url: "?q=test&program_boost=0.25" })
+    await user.click(await screen.findByText("Admin Options"))
+
+    const slider = await screen.findByRole("slider", {
+      name: "Program Score Multiplier",
+    })
+    expect(slider).toHaveAttribute("aria-valuenow", "0.25")
+    // announced as well as displayed -- 0.25 on its own means nothing
+    expect(slider).toHaveAttribute("aria-valuetext", "1.25x")
+
+    // the penalties stay in score units, so they are left unformatted
+    expect(
+      await screen.findByRole("slider", { name: "Incompleteness Penalty" }),
+    ).not.toHaveAttribute("aria-valuetext")
   })
 
   test("Vector score tuning params are forwarded to the vector endpoint", async () => {
