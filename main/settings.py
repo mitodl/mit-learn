@@ -866,66 +866,55 @@ VECTOR_HYBRID_SEARCH_PREFETCH_MAX_LIMIT = get_int(
 )
 
 
-# Absolute score floors for vector search. These are only a backstop for a
-# query that matched nothing at all -- the primary gate is the query-relative
-# cutoff below (see _relative_score_floor). They were the primary gate, and an
-# absolute floor cannot be one: how high a query's scores reach depends on the
-# phrasing rather than on how good the matches are, so the size of the candidate
-# set swung by ~50x across rewordings of the same question -- 200 hits for
-# "dance classes from MIT", four for "dance classes", none at all for "dance",
-# which never got a single hit over the floor.
+# Absolute score floors, now only a backstop for a query that matched nothing
+# -- the primary gate is the relative cutoff below. As the primary gate these
+# sized the candidate set by how high a query's scores happened to reach, which
+# swung ~50x across rewordings of the same question.
 DENSE_VECTOR_SEARCH_MIN_SCORE = get_float(
     name="DENSE_VECTOR_SEARCH_MIN_SCORE", default=0.15
 )
 
-# Reciprocal Rank Fusion scores by rank, not similarity: 1/(2 + rank) summed
-# over the arms a hit appears in, so 1.0 at best and ~0.004 at the end of a
-# 500-candidate prefetch. This backstop only drops hits that placed near the
-# tail of every arm.
+# RRF scores by rank, not similarity: 1/(2 + rank) per arm a hit appears in,
+# so 1.0 at best and ~0.004 at the tail of a 500-candidate prefetch.
 HYBRID_VECTOR_SEARCH_MIN_SCORE = get_float(
     name="HYBRID_VECTOR_SEARCH_MIN_SCORE", default=0.01
 )
 
-# Keep hits scoring at least this fraction of the query's own best hit, so that
-# the candidate set is sized by how far relevance falls off within a query
-# rather than by where that query's scores happen to sit. PROVISIONAL: both
-# ratios want the before/after sweep over real query logs that an absolute floor
-# never got, which is why they are env-settable.
+# Keep hits scoring at least this fraction of the query's own best hit, so the
+# candidate set is sized by how fast relevance falls off within the query.
+# PROVISIONAL: both ratios want a sweep over real query logs.
 DENSE_VECTOR_SEARCH_MIN_SCORE_RATIO = get_float(
     name="DENSE_VECTOR_SEARCH_MIN_SCORE_RATIO", default=0.8
 )
 
-# Against RRF's rank-derived scores this is close to the absolute floor it
-# replaces -- 0.1 of a 1.0 best hit is roughly the top 18 fused ranks -- but it
-# adapts when no single hit tops both arms and the best fused score is lower.
+# On RRF's rank-derived scores this is close to the absolute floor it replaces
+# (~the top 18 fused ranks), but adapts when the best fused score is below 1.0.
 HYBRID_VECTOR_SEARCH_MIN_SCORE_RATIO = get_float(
     name="HYBRID_VECTOR_SEARCH_MIN_SCORE_RATIO", default=0.1
 )
 
-# Hits the relative cutoff may never trim below, so that a query whose best hit
-# stands well clear of the rest still returns a usable page instead of just that
-# hit. 0 disables the exemption.
+# Hits the relative cutoff may never trim below, so a query with one standout
+# hit still returns a usable page. 0 disables the exemption.
 VECTOR_SEARCH_MIN_CANDIDATES = get_int(name="VECTOR_SEARCH_MIN_CANDIDATES", default=10)
 
 # hard limit for special cases where we need to return all results without pagination
 VECTOR_SEARCH_PAGE_MAX_LIMIT = get_int("VECTOR_SEARCH_PAGE_MAX_LIMIT", 200)
 
-# Score subtracted from a completeness = 0 resource in vector search, scaled
-# linearly by incompleteness. 0 disables the penalty.
+# Fraction of its own score a completeness = 0 resource gives up in vector
+# search, scaled linearly by incompleteness. 0 disables the penalty.
 #
-# In *score units*, not the percent DEFAULT_SEARCH_MAX_INCOMPLETENESS_PENALTY
-# uses on the OpenSearch side. The OpenSearch penalty is multiplicative, which
-# works there because BM25 is unbounded and an exact match scores multiples of a
-# topical one. Similarity scores are bounded and sit in a narrow band (~0.55-0.75
-# across a whole result page), so scaling them by completeness makes completeness
-# the primary sort key and buries exact matches on incomplete courses. Subtracting
-# a fixed budget demotes them without erasing the relevance signal.
+# A bounded fraction of the score, not a multiplication *by* completeness --
+# that would make completeness the primary sort key. Fixed score units are
+# what it replaces: 0.05 is a fifth of the spread across a result page, so the
+# two penalties together outweighed relevance.
 VECTOR_SEARCH_INCOMPLETENESS_PENALTY_WEIGHT = get_float(
     name="VECTOR_SEARCH_INCOMPLETENESS_PENALTY_WEIGHT", default=0.05
 )
 
-# Score subtracted from a resource that is VECTOR_SEARCH_STALENESS_HORIZON_YEARS
-# or more old in vector search, ramped linearly by age. 0 disables the penalty.
+# Fraction of its own score a resource gives up once it is
+# VECTOR_SEARCH_STALENESS_HORIZON_YEARS or more old in vector search, ramped
+# linearly by age. Resources with an upcoming run are exempt. 0 disables the
+# penalty.
 VECTOR_SEARCH_STALENESS_PENALTY_WEIGHT = get_float(
     name="VECTOR_SEARCH_STALENESS_PENALTY_WEIGHT", default=0.05
 )

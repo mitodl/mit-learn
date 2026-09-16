@@ -79,15 +79,13 @@ def _relative_score_floor(points, hybrid_search_enabled):
     if not ratio or not ranked:
         return points
     best_score = ranked[0].score
-    # A fraction of a negative best score is greater than the score it came
-    # from, so the test below would trim the best hit itself. The penalties can
-    # put a whole result set under zero; leave those sets alone rather than
-    # inverting the comparison for them.
+    # A fraction of a negative best score is above it, which would trim the
+    # best hit. The penalties can put a whole result set under zero.
     if best_score <= 0:
         return points
     floor = best_score * ratio
     exempt = max(settings.VECTOR_SEARCH_MIN_CANDIDATES or 0, 1)
-    # Scores descend, so this keeps a prefix either way.
+    # Scores descend, so this keeps a prefix
     return [
         point
         for rank, point in enumerate(ranked)
@@ -184,11 +182,9 @@ class QdrantView(AsyncAPIView):
             identity_formula_query = models.FormulaQuery(
                 formula=models.SumExpression(sum=["$score"])
             )
-            # The sparse arm scores on a BM25 scale, where the penalties' fixed
-            # score amounts are not a demotion -- see score_formula_query. It
-            # gets the boosts, which are proportional, and neither penalty; the
-            # dense arm gets both. The request's overrides go to both arms, so
-            # that a program_boost override reaches the boost on each of them.
+            # The sparse arm gets the boosts only -- the penalties' weights
+            # are not on its scale (see score_formula_query). Overrides go to
+            # both arms so a program_boost override reaches each.
             dense_formula_query = formula_query or identity_formula_query
             sparse_formula_query = (
                 score_formula_query(

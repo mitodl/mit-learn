@@ -990,11 +990,26 @@ def _penalty(formula_query):
     return formula_query.formula.sum[-1]
 
 
+def _penalty_weight(expression):
+    """Return the weight a penalty term multiplies by."""
+    return expression.neg.mult[0]
+
+
+def _penalty_decay(expression):
+    """
+    Return the decay inside a penalty's age ramp. Located by type, so
+    assertions ignore what else the product carries.
+    """
+    [ramp] = [
+        factor
+        for factor in expression.neg.mult
+        if isinstance(factor, models.SumExpression)
+    ]
+    return ramp.sum[1].neg
+
+
 def _formula_queries(call_kwargs, hybrid_search):
-    """
-    Return the score formulas a query_points call rescores with, keyed by the
-    vector arm each one rescores.
-    """
+    """Return the score formulas a query_points call rescores with, by arm."""
     if hybrid_search:
         # One rescored prefetch per vector arm, fused afterwards
         assert isinstance(call_kwargs["query"], models.FusionQuery)
@@ -1017,10 +1032,7 @@ def _formula_queries(call_kwargs, hybrid_search):
 def test_vector_search_applies_completeness_penalty(
     mocker, client, settings, hybrid_search
 ):
-    """
-    Both search modes must rescore resources with the completeness penalty --
-    on the dense arm, the only one whose scores it is calibrated for.
-    """
+    """Both modes apply the completeness penalty, on the dense arm only."""
     settings.VECTOR_SEARCH_INCOMPLETENESS_PENALTY_WEIGHT = 0.05
     settings.VECTOR_SEARCH_STALENESS_PENALTY_WEIGHT = 0
 
@@ -1052,10 +1064,7 @@ def test_vector_search_applies_completeness_penalty(
 def test_vector_search_applies_staleness_penalty(
     mocker, client, settings, hybrid_search
 ):
-    """
-    Both search modes must rescore resources with the staleness penalty -- on
-    the dense arm, the only one whose scores it is calibrated for.
-    """
+    """Both modes apply the staleness penalty, on the dense arm only."""
     settings.VECTOR_SEARCH_INCOMPLETENESS_PENALTY_WEIGHT = 0
     settings.VECTOR_SEARCH_STALENESS_PENALTY_WEIGHT = 0.05
 
@@ -1082,9 +1091,9 @@ def test_vector_search_applies_staleness_penalty(
     # resources with no age date -- those with an upcoming run -- are scored
     # as if published at query time, so they take no penalty
     assert list(dense_formula_query.defaults) == [RESOURCE_AGE_DATE_PAYLOAD_KEY]
-    weight, staleness = _penalty(dense_formula_query).neg.mult
-    assert weight == settings.VECTOR_SEARCH_STALENESS_PENALTY_WEIGHT
-    decay = staleness.sum[1].neg.lin_decay
+    staleness = _penalty(dense_formula_query)
+    assert _penalty_weight(staleness) == settings.VECTOR_SEARCH_STALENESS_PENALTY_WEIGHT
+    decay = _penalty_decay(staleness).lin_decay
     assert decay.x.datetime_key == RESOURCE_AGE_DATE_PAYLOAD_KEY
     # half the horizon at the default midpoint -- see
     # staleness_penalty_expression, which cannot use a midpoint of 0
@@ -1096,10 +1105,8 @@ def test_vector_search_applies_staleness_penalty(
 
 def test_hybrid_vector_search_penalizes_only_the_dense_arm(mocker, client, settings):
     """
-    The penalties subtract fixed score amounts calibrated for the dense arm's
-    bounded similarity scores, so they are left off the sparse arm, whose BM25
-    scores they would not meaningfully move. The boosts are proportional, so
-    they go on both arms.
+    The penalties' weights are set against the dense arm's bounded scores, so
+    they are left off the BM25-scored sparse arm. The boosts go on both.
     """
     settings.VECTOR_SEARCH_INCOMPLETENESS_PENALTY_WEIGHT = 0.05
     settings.VECTOR_SEARCH_STALENESS_PENALTY_WEIGHT = 0.05
@@ -1138,7 +1145,7 @@ def test_hybrid_vector_search_penalizes_only_the_dense_arm(mocker, client, setti
 
 
 def _scored(*scores):
-    """Score-ordered stand-ins for Qdrant's ScoredPoints."""
+    """Score-ordered stand-ins for Qdrant ScoredPoints."""
     return [models.ScoredPoint(id=i, version=0, score=s) for i, s in enumerate(scores)]
 
 
@@ -1165,10 +1172,8 @@ def test_relative_score_floor_trims_to_the_best_hit(settings):
 @pytest.mark.parametrize("scale", [0.02, 1, 50])
 def test_relative_score_floor_keeps_the_same_count_at_any_scale(settings, scale):
     """
-    The point of a relative floor: how many hits survive depends on how fast
-    relevance falls off within the query, not on where that query's scores
-    happen to sit. An absolute floor sized the candidate set by the latter,
-    which is why rewording a query changed the count ~50x.
+    How many hits survive depends on how fast relevance falls off within the
+    query, not where its scores sit -- the ~50x swing an absolute floor gave.
     """
     settings.DENSE_VECTOR_SEARCH_MIN_SCORE_RATIO = 0.8
     shape = [1.0, 0.95, 0.9, 0.85, 0.7, 0.4]
@@ -1184,9 +1189,8 @@ def test_relative_score_floor_keeps_the_same_count_at_any_scale(settings, scale)
 @pytest.mark.parametrize("ratio", [0.1, 0.8, 0.99, 1.0])
 def test_relative_score_floor_never_empties_a_result_set(settings, ratio):
     """
-    A query that matched anything must not come back empty: the best hit always
-    clears a floor derived from itself. This is the "dance" direction, where a
-    one-word query cleared the absolute floor with nothing at all.
+    The best hit always clears a floor derived from itself, so a query that
+    matched anything cannot come back empty -- the q="dance" direction.
     """
     settings.DENSE_VECTOR_SEARCH_MIN_SCORE_RATIO = ratio
 
@@ -1197,10 +1201,7 @@ def test_relative_score_floor_never_empties_a_result_set(settings, ratio):
 
 
 def test_relative_score_floor_keeps_a_minimum_of_candidates(settings):
-    """
-    A query whose best hit stands well clear of everything else still returns a
-    usable page rather than that hit alone.
-    """
+    """A query with one standout hit still returns a usable page."""
     settings.DENSE_VECTOR_SEARCH_MIN_SCORE_RATIO = 0.8
     settings.VECTOR_SEARCH_MIN_CANDIDATES = 3
 
@@ -1224,10 +1225,7 @@ def test_relative_score_floor_uses_the_ratio_for_the_search_mode(settings):
 
 @pytest.mark.usefixtures("_no_min_candidates")
 def test_relative_score_floor_leaves_negative_scores_alone(settings):
-    """
-    A fraction of a negative best score is above it, which would trim the best
-    hit. The penalties can put a whole result set under zero.
-    """
+    """A fraction of a negative best score is above it, trimming the best hit."""
     settings.DENSE_VECTOR_SEARCH_MIN_SCORE_RATIO = 0.8
     points = _scored(-0.01, -0.02, -0.5)
 
@@ -1275,16 +1273,15 @@ def test_vector_search_score_tuning_parameters(mocker, client, settings, hybrid_
 
     boost, completeness, staleness = formula_queries["dense"].formula.sum[1:]
     assert boost.mult[0] == 0.4
-    assert completeness.neg.mult[0] == 0.1
-    assert staleness.neg.mult[0] == 0.2
-    decay = staleness.neg.mult[1].sum[1].neg.lin_decay
+    assert _penalty_weight(completeness) == 0.1
+    assert _penalty_weight(staleness) == 0.2
+    decay = _penalty_decay(staleness).lin_decay
     # half the horizon at the default midpoint -- see
     # staleness_penalty_expression
     assert decay.scale == 5 * SECONDS_PER_YEAR / 2
 
     if hybrid_search:
-        # The sparse arm takes the boost override as well -- the boost applies
-        # to both arms -- and neither penalty. See score_formula_query.
+        # the boost applies to both arms; neither penalty does
         [sparse_boost] = formula_queries["sparse"].formula.sum[1:]
         assert sparse_boost.mult[0] == 0.4
 

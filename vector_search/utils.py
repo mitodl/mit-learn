@@ -2,7 +2,7 @@ import asyncio
 import gc
 import logging
 import uuid
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from functools import cache
 from textwrap import dedent
 
@@ -47,6 +47,7 @@ from vector_search.constants import (
     CONTENT_FILES_COLLECTION_NAME,
     CONTENT_FILES_RETRIEVE_PAYLOAD,
     COURSE_NUMBER_INDEXING_ONLY_FIELDS,
+    NEXT_START_DATE_PAYLOAD_KEY,
     NULLABLE_ORDER_BY_KEYS,
     ORDER_BY_MISSING_DATETIME,
     PROGRAM_SCORE_BOOST_NAME,
@@ -275,6 +276,10 @@ def create_qdrant_collection(collection_name, force_recreate):
             sparse_vectors_config={
                 encoder_sparse.model_short_name(): models.SparseVectorParams(
                     index=models.SparseIndexParams(on_disk=True),
+                    # Without IDF a corpus-wide term ("class") outweighs the one
+                    # that identifies the topic. Only new collections get it
+                    # here; an existing one takes update_collection alone, no
+                    # reindex. The live ones were switched over by hand.
                     modifier=models.Modifier.IDF,
                 )
             },
@@ -1860,30 +1865,14 @@ def custom_score_formula(
     Build the boost terms from VECTOR_SEARCH_SCORE_BOOST, to be added to the
     score.
 
-    Each term is `boost * condition * $score` -- a *proportion* of the point's
-    own score rather than a fixed number of score units, so that summing it into
-    the formula multiplies a matching point's score by (1 + boost). See
-    VECTOR_SEARCH_SCORE_BOOST for why the boost is relative.
+    Each term is `boost * condition * $score`, so summing it in multiplies a
+    matching point's score by (1 + boost). Proportional rather than a fixed
+    number of score units: a point can then only overtake one it was already
+    within (1 + boost) of, and the same weight works on either arm's score
+    scale.
 
-    boost_overrides maps a boost entry's "name" to an amount that replaces its
-    configured "boost", so a request can tune a boost without a deploy. An
-    override is a fraction on the same terms as the configured amount.
-
-    Being proportional makes the boost order-preserving within its own band: a
-    point can only overtake another it was already within (1 + boost) of, so a
-    boost can break near-ties but cannot reorder points that relevance had
-    clearly separated. A fixed boost has no such bound -- one large enough to
-    move a weak match past the rest of the pool moves a strong match by exactly
-    as much, which is what let programs take the head of every result page.
-
-    It also needs no normalization against the score's scale. The fixed boost
-    this replaces was damped by a gaussian over $score to fake that scaling,
-    which misfired in both directions: the decay was two-sided, so the *most*
-    relevant matches got the *least* boost (a program scoring 0.8 kept 0.2% of
-    the nominal amount, one scoring 0.43 kept 96%), and it was centred on a
-    similarity score, so on the sparse arm of hybrid search -- where $score is a
-    BM25-style term score, not a bounded similarity -- it fell to a millionth of
-    the amount by a score of 1 and the boost silently did not apply at all.
+    boost_overrides maps a boost entry's "name" to a replacement amount, on the
+    same terms, so a request can tune a boost without a deploy.
     """
     score_params = VECTOR_SEARCH_SCORE_BOOST.get(collection_name)
     score_expressions = []
@@ -1898,8 +1887,7 @@ def custom_score_formula(
             if conditions is None:
                 continue
             score_expressions.append(
-                # A condition evaluates to 1 for a matching point and 0 for
-                # every other, so non-matching points add nothing.
+                # A condition is 1 for a matching point, 0 for every other
                 models.MultExpression(mult=[amount, conditions, "$score"])
             )
     return score_expressions
@@ -1910,13 +1898,14 @@ def completeness_penalty_expression(
     weight: float | None = None,
 ) -> models.NegExpression | None:
     """
-    Build the incompleteness penalty term: -weight * (1 - completeness), to be
-    added to the score.
+    Build the incompleteness penalty term: -weight * (1 - completeness) *
+    $score, to be added to the score.
 
-    Deliberately additive rather than the multiplicative form OpenSearch uses --
-    see VECTOR_SEARCH_INCOMPLETENESS_PENALTY_WEIGHT. None when the penalty is
-    disabled or the collection has no completeness. `weight` overrides the
-    setting when it is not None.
+    Proportional for the same reason the boost is (see custom_score_formula):
+    it can cost a resource at most `weight` of its own score.
+
+    None when the penalty is disabled or the collection has no completeness.
+    `weight` overrides the setting when it is not None.
     """
     if collection_name != RESOURCES_COLLECTION_NAME:
         return None
@@ -1932,6 +1921,7 @@ def completeness_penalty_expression(
                 models.SumExpression(
                     sum=[1, models.NegExpression(neg=COMPLETENESS_PAYLOAD_KEY)]
                 ),
+                "$score",
             ]
         )
     )
@@ -1944,14 +1934,18 @@ def staleness_penalty_expression(
     horizon_years: float | None = None,
 ) -> models.NegExpression | None:
     """
-    Build the staleness penalty term: -weight * (1 - decay), where decay ramps
-    linearly from 1 at `now` down to 0 at VECTOR_SEARCH_STALENESS_HORIZON_YEARS
-    and stays there, so the penalty grows with age and saturates at the weight.
+    Build the staleness penalty term: -weight * (1 - decay) * $score, where
+    decay ramps linearly from 1 at `now` to 0 at
+    VECTOR_SEARCH_STALENESS_HORIZON_YEARS, so the penalty saturates at `weight`
+    of the resource's own score. Proportional for the reason given in
+    completeness_penalty_expression.
 
-    Additive rather than the multiplicative decay OpenSearch applies -- see
-    VECTOR_SEARCH_STALENESS_PENALTY_WEIGHT. None when the penalty is disabled or
-    the collection has no resource age. `weight` and `horizon_years` override
-    their settings when they are not None.
+    Applied only where NEXT_START_DATE is absent. An upcoming run is what
+    exempts a resource, not a missing age date -- see
+    RESOURCE_AGE_DATE_PAYLOAD_KEY for why those are not the same thing.
+
+    None when the penalty is disabled or the collection has no resource age.
+    `weight` and `horizon_years` override their settings when they are not None.
     """
     if collection_name != RESOURCES_COLLECTION_NAME:
         return None
@@ -1967,6 +1961,16 @@ def staleness_penalty_expression(
         neg=models.MultExpression(
             mult=[
                 weight,
+                # 1 with no upcoming run, 0 with one
+                models.Filter(
+                    must=[
+                        models.IsEmptyCondition(
+                            is_empty=models.PayloadField(
+                                key=NEXT_START_DATE_PAYLOAD_KEY
+                            )
+                        )
+                    ]
+                ),
                 models.SumExpression(
                     sum=[
                         1,
@@ -1994,6 +1998,7 @@ def staleness_penalty_expression(
                         ),
                     ]
                 ),
+                "$score",
             ]
         )
     )
@@ -2035,13 +2040,10 @@ def score_formula_query(  # noqa: PLR0913
     Each weight falls back to its setting when passed None, so a request can
     override any of them individually (see score_formula_overrides).
 
-    `include_penalties=False` leaves the penalties out entirely -- overrides and
-    all -- for a query arm whose $score is not on the scale they were calibrated
-    against. The penalties subtract a fixed number of score units, chosen
-    against the narrow band that bounded similarity scores occupy (see
-    VECTOR_SEARCH_INCOMPLETENESS_PENALTY_WEIGHT), so they mean nothing on an
-    unbounded BM25 score -- 0.05 off a score of 8 is not a demotion. The boosts
-    are proportional and so apply unchanged on any scale.
+    `include_penalties=False` drops the penalties, overrides and all, for an
+    arm whose $score is not on the scale their weights were set against -- the
+    sparse arm's BM25 scores. The boosts are proportional and need no such
+    exclusion.
     """
     now = datetime.now(tz=UTC)
     boost_expressions = custom_score_formula(
@@ -2074,9 +2076,16 @@ def score_formula_query(  # noqa: PLR0913
     )
     if staleness_expression is not None:
         penalties.append(staleness_expression)
-        # A null resource_age_date means an upcoming run, which is not stale, and
-        # scores as if it were published right now.
-        defaults[RESOURCE_AGE_DATE_PAYLOAD_KEY] = now.isoformat()
+        # Aged from the horizon, so an undated resource takes the full
+        # penalty. Defaulting to `now` read "undatable" as "brand new".
+        horizon_years = (
+            staleness_horizon_years
+            if staleness_horizon_years is not None
+            else settings.VECTOR_SEARCH_STALENESS_HORIZON_YEARS
+        )
+        defaults[RESOURCE_AGE_DATE_PAYLOAD_KEY] = (
+            now - timedelta(seconds=(horizon_years or 0) * SECONDS_PER_YEAR)
+        ).isoformat()
 
     if not boost_expressions and not penalties:
         return None
