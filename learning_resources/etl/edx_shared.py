@@ -370,13 +370,8 @@ def sync_edx_course_files(
 
 
 def unpublish_excluded_content_files(
-    etl_source: str,
-    ids: list[int],
-    keys: list[str],
-    *,
-    dry_run: bool = False,
-    report: bool = False,
-) -> tuple[int, list[dict]]:
+    etl_source: str, ids: list[int], keys: list[str], *, dry_run: bool = False
+) -> int:
     """
     Unpublish (and deindex) content files the course does not use — staff-only
     subtrees, asset manifests and unreferenced static files — for the runs
@@ -387,11 +382,9 @@ def unpublish_excluded_content_files(
         ids(list of int): list of course ids to process
         keys(list[str]): list of S3 archive keys to search through
         dry_run(bool): count the rows but leave them published and deindex nothing
-        report(bool): return a row per excluded file for the caller to write out
 
     Returns:
-        tuple of (int, list of dict): number of content files unpublished (or
-            that would be, under dry_run), and the report rows when requested
+        int: number of content files unpublished, or that would be under dry_run
     """
     from learning_resources_search import tasks as search_tasks
     from vector_search import tasks as vector_tasks
@@ -399,7 +392,6 @@ def unpublish_excluded_content_files(
     bucket = get_bucket_by_name(settings.COURSE_ARCHIVE_BUCKET_NAME)
     run_lookup = build_run_lookup(etl_source, ids)
     total = 0
-    rows = []
     for key in keys:
         matching_runs = run_lookup.get(extract_run_id_from_key(etl_source, key))
         if not matching_runs:
@@ -423,25 +415,12 @@ def unpublish_excluded_content_files(
                 log.exception("Malformed OLX in %s, skipping", key)
                 continue
             excluded_keys = {
-                get_edx_module_id(str(path), run): str(path.relative_to(olx_path))
-                for path in excluded_paths
+                get_edx_module_id(str(path), run) for path in excluded_paths
             }
         if not excluded_keys:
             continue
         # scoped to this run: keys embed the run_id, but never rely on that alone
         excluded_files = ContentFile.objects.filter(run=run, key__in=excluded_keys)
-        if report:
-            rows.extend(
-                {
-                    "run_id": run.run_id,
-                    "key": content_key,
-                    "source_path": excluded_keys.get(content_key, ""),
-                    "published": published,
-                }
-                for content_key, published in excluded_files.values_list(
-                    "key", "published"
-                )
-            )
         if dry_run:
             total += excluded_files.filter(published=True).count()
             continue
@@ -455,4 +434,4 @@ def unpublish_excluded_content_files(
         if excluded_files.exists():
             search_tasks.deindex_run_content_files.delay(run.id, unpublished_only=True)
             vector_tasks.remove_unpublished_run_content_files.delay(run.id)
-    return total, rows
+    return total

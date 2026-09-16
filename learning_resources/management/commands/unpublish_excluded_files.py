@@ -1,9 +1,6 @@
 """Unpublish edX content files that the course itself does not use"""
 
-import csv
-from pathlib import Path
-
-from django.core.management import BaseCommand, CommandError
+from django.core.management import BaseCommand
 
 from learning_resources.etl.constants import ETLSource
 from learning_resources.tasks import unpublish_all_excluded_files
@@ -16,7 +13,6 @@ EDX_SOURCES = [
     ETLSource.xpro.name,
     ETLSource.oll.name,
 ]
-REPORT_FIELDS = ("etl_source", "run_id", "key", "source_path", "published")
 
 
 class Command(BaseCommand):
@@ -56,16 +52,6 @@ class Command(BaseCommand):
             action="store_true",
             help="Report what would be unpublished without changing anything",
         )
-        parser.add_argument(
-            "--report",
-            dest="report",
-            required=False,
-            help=(
-                "Write a CSV of every excluded content file to this path. "
-                "Requires --resource-ids, since the rows travel back through "
-                "the celery result backend"
-            ),
-        )
 
     def handle(self, *args, **options):  # noqa: ARG002
         """Run the unpublish tasks"""
@@ -74,35 +60,17 @@ class Command(BaseCommand):
             if options["learning_resource_ids"]
             else None
         )
-        report_path = options["report"]
-        if report_path and not resource_ids:
-            msg = "--report requires --resource-ids"
-            raise CommandError(msg)
-
         start = now_in_utc()
-        rows = []
         for source in options["sources"] or EDX_SOURCES:
             task = unpublish_all_excluded_files.delay(
                 etl_source=source,
                 chunk_size=options["chunk_size"],
                 learning_resource_ids=resource_ids,
                 dry_run=options["dry_run"],
-                report=bool(report_path),
             )
             self.stdout.write(f"Started task {task} for {source}, waiting...")
-            total = 0
-            for count, source_rows in task.get() or []:
-                total += count or 0
-                rows.extend({"etl_source": source, **row} for row in source_rows or [])
+            total = sum(count or 0 for count in task.get() or [])
             verb = "would unpublish" if options["dry_run"] else "unpublished"
             self.stdout.write(f"{source}: {verb} {total} content files")
-
-        if report_path:
-            with Path(report_path).open("w", newline="") as report_file:
-                writer = csv.DictWriter(report_file, fieldnames=REPORT_FIELDS)
-                writer.writeheader()
-                writer.writerows(rows)
-            self.stdout.write(f"Wrote {len(rows)} rows to {report_path}")
-
         total_seconds = (now_in_utc() - start).total_seconds()
         self.stdout.write(f"Finished in {total_seconds} seconds")
