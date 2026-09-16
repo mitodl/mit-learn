@@ -1,5 +1,9 @@
 """Unpublish edX content files that the course itself does not use"""
 
+import csv
+from operator import itemgetter
+from pathlib import Path
+
 from django.core.management import BaseCommand
 
 from learning_resources.etl.constants import ETLSource
@@ -13,6 +17,13 @@ EDX_SOURCES = [
     ETLSource.xpro.name,
     ETLSource.oll.name,
 ]
+
+
+REPORT_FIELDS = ("etl_source", "run_id", "excluded", "unpublished", "total")
+
+
+def _sum(rows, field):
+    return sum(row[field] for row in rows)
 
 
 class Command(BaseCommand):
@@ -52,6 +63,12 @@ class Command(BaseCommand):
             action="store_true",
             help="Report what would be unpublished without changing anything",
         )
+        parser.add_argument(
+            "--report",
+            dest="report",
+            required=False,
+            help="Also write the per-run counts as CSV to this path",
+        )
 
     def handle(self, *args, **options):  # noqa: ARG002
         """Run the unpublish tasks"""
@@ -61,6 +78,7 @@ class Command(BaseCommand):
             else None
         )
         start = now_in_utc()
+        report = []
         for source in options["sources"] or EDX_SOURCES:
             task = unpublish_all_excluded_files.delay(
                 etl_source=source,
@@ -69,8 +87,26 @@ class Command(BaseCommand):
                 dry_run=options["dry_run"],
             )
             self.stdout.write(f"Started task {task} for {source}, waiting...")
-            total = sum(count or 0 for count in task.get() or [])
+            rows = [row for chunk in task.get() or [] for row in chunk or []]
+            for row in sorted(rows, key=itemgetter("run_id")):
+                self.stdout.write(
+                    f"{source} run {row['run_id']}: {row['excluded']} out of "
+                    f"{row['total']} content files excluded"
+                )
             verb = "would unpublish" if options["dry_run"] else "unpublished"
-            self.stdout.write(f"{source}: {verb} {total} content files")
+            self.stdout.write(
+                f"{source} summary: {_sum(rows, 'excluded')} out of "
+                f"{_sum(rows, 'total')} content files excluded across "
+                f"{len(rows)} runs, {verb} {_sum(rows, 'unpublished')}"
+            )
+            report.extend({"etl_source": source, **row} for row in rows)
+
+        if options["report"]:
+            with Path(options["report"]).open("w", newline="") as report_file:
+                writer = csv.DictWriter(report_file, fieldnames=REPORT_FIELDS)
+                writer.writeheader()
+                writer.writerows(sorted(report, key=itemgetter("etl_source", "run_id")))
+            self.stdout.write(f"Wrote {len(report)} rows to {options['report']}")
+
         total_seconds = (now_in_utc() - start).total_seconds()
         self.stdout.write(f"Finished in {total_seconds} seconds")

@@ -1585,7 +1585,9 @@ def test_unpublish_excluded_files_task(mocker):
     """unpublish_excluded_files task delegates to edx_shared"""
     mock_fn = mocker.patch(
         "learning_resources.tasks.unpublish_excluded_content_files",
-        return_value=3,
+        return_value=[{"run_id": "r", "excluded": 3, "unpublished": 3, "total": 9}],
     )
-    assert tasks.unpublish_excluded_files([1, 2], "mitxonline", ["k"]) == 3
+    assert tasks.unpublish_excluded_files([1, 2], "mitxonline", ["k"]) == [
+        {"run_id": "r", "excluded": 3, "unpublished": 3, "total": 9}
+    ]
     mock_fn.assert_called_once_with("mitxonline", [1, 2], ["k"], dry_run=False)
