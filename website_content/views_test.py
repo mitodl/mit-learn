@@ -356,9 +356,10 @@ def test_create_with_topics(staff_client):
     )
 
     assert resp.status_code == 201
-    # Serializing topics on a *write* response is the part that breaks if
-    # `topics` is ever added to the serializer's required_prefetches, since
-    # UpdateModelMixin clears the prefetch cache before this renders.
+    # `topics` is in the serializer's required_prefetches, and a write leaves
+    # nothing prefetched on its own -- a created instance has no prefetch cache
+    # at all. The response can serialize them because `perform_create` hands
+    # the serializer a freshly prefetched instance; without that this is a 500.
     assert sorted(resp.json()["topics"]) == expected
     content = WebsiteContent.objects.get(id=resp.json()["id"])
     assert sorted(content.topics.values_list("id", flat=True)) == expected
