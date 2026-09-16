@@ -48,7 +48,7 @@ const CourseHeaderEnrollButton: React.FC<{
 }> = ({ course, selectedRun }) => {
   const [anchor, setAnchor] = React.useState<null | HTMLButtonElement>(null)
 
-  const { state, isStatusLoading, isPending, isError } = useCourseEnrollment(
+  const { state, isStatusLoading, isPending, error } = useCourseEnrollment(
     course,
     selectedRun,
     {
@@ -62,7 +62,7 @@ const CourseHeaderEnrollButton: React.FC<{
       state={state}
       isStatusLoading={isStatusLoading}
       isPending={isPending}
-      isError={isError}
+      error={error}
       anchor={anchor}
       onAnchorClose={() => setAnchor(null)}
     />
