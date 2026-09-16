@@ -237,28 +237,15 @@ def _content_file_resource_ids(etl_source: str, learning_resource_ids):
 
 @app.task(acks_late=True, reject_on_worker_lost=True)
 def unpublish_excluded_files(
-    ids: list[int],
-    etl_source: str,
-    keys: list[str],
-    *,
-    dry_run: bool = False,
-    report: bool = False,
+    ids: list[int], etl_source: str, keys: list[str], *, dry_run: bool = False
 ):
     """Unpublish unused content files for a chunk of courses"""
-    return unpublish_excluded_content_files(
-        etl_source, ids, keys, dry_run=dry_run, report=report
-    )
+    return unpublish_excluded_content_files(etl_source, ids, keys, dry_run=dry_run)
 
 
 @app.task(bind=True)
-def unpublish_all_excluded_files(  # noqa: PLR0913
-    self,
-    *,
-    etl_source,
-    chunk_size=None,
-    learning_resource_ids=None,
-    dry_run=False,
-    report=False,
+def unpublish_all_excluded_files(
+    self, *, etl_source, chunk_size=None, learning_resource_ids=None, dry_run=False
 ):
     """Fan out unpublish_excluded_files over an edX source's current archives"""
     if chunk_size is None:
@@ -268,7 +255,7 @@ def unpublish_all_excluded_files(  # noqa: PLR0913
         celery.group(
             [
                 unpublish_excluded_files.si(
-                    ids, etl_source, archive_keys, dry_run=dry_run, report=report
+                    ids, etl_source, archive_keys, dry_run=dry_run
                 )
                 for ids in chunks(
                     _content_file_resource_ids(etl_source, learning_resource_ids),

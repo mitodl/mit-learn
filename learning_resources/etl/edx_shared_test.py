@@ -1730,7 +1730,7 @@ def test_unpublish_excluded_content_files(staff_only_run, mock_deindex_tasks):
     for cf_key in run_keys.values():
         ContentFileFactory.create(run=other_run, key=cf_key, published=True)
 
-    unpublished, _ = unpublish_excluded_content_files(
+    unpublished = unpublish_excluded_content_files(
         staff_only_run.source, [staff_only_run.course.id], [staff_only_run.key]
     )
 
@@ -1755,9 +1755,12 @@ def test_unpublish_excluded_content_files_nothing_hidden(
         run=run, key=get_edx_module_id("course/html/h_ok.xml", run), published=True
     )
 
-    assert unpublish_excluded_content_files(
-        staff_only_run.source, [staff_only_run.course.id], [staff_only_run.key]
-    ) == (0, [])
+    assert (
+        unpublish_excluded_content_files(
+            staff_only_run.source, [staff_only_run.course.id], [staff_only_run.key]
+        )
+        == 0
+    )
     mock_deindex_tasks.opensearch.assert_not_called()
 
 
@@ -1775,9 +1778,12 @@ def test_unpublish_excluded_content_files_malformed_archive(
         published=True,
     )
 
-    assert unpublish_excluded_content_files(
-        staff_only_run.source, [staff_only_run.course.id], [staff_only_run.key]
-    ) == (0, [])
+    assert (
+        unpublish_excluded_content_files(
+            staff_only_run.source, [staff_only_run.course.id], [staff_only_run.key]
+        )
+        == 0
+    )
     assert ContentFile.objects.filter(run=staff_only_run.run, published=True).exists()
     mock_deindex_tasks.opensearch.assert_not_called()
 
@@ -1791,9 +1797,12 @@ def test_unpublish_excluded_content_files_rerun_redeindexes(
         run=run, key=get_edx_module_id("course/html/h_staff.xml", run), published=False
     )
 
-    assert unpublish_excluded_content_files(
-        staff_only_run.source, [staff_only_run.course.id], [staff_only_run.key]
-    ) == (0, [])
+    assert (
+        unpublish_excluded_content_files(
+            staff_only_run.source, [staff_only_run.course.id], [staff_only_run.key]
+        )
+        == 0
+    )
     mock_deindex_tasks.opensearch.assert_called_once_with(run.id, unpublished_only=True)
     mock_deindex_tasks.qdrant.assert_called_once_with(run.id)
 
@@ -1806,7 +1815,7 @@ def test_unpublish_excluded_content_files_drops_unreferenced_static(
     stale_key = get_edx_module_id("course/static/stale_syllabus.pdf", run)
     ContentFileFactory.create(run=run, key=stale_key, published=True)
 
-    unpublished, _ = unpublish_excluded_content_files(
+    unpublished = unpublish_excluded_content_files(
         staff_only_run.source, [staff_only_run.course.id], [staff_only_run.key]
     )
 
@@ -1825,7 +1834,7 @@ def test_unpublish_excluded_content_files_dry_run(staff_only_run, mock_deindex_t
         published=True,
     )
 
-    unpublished, _ = unpublish_excluded_content_files(
+    unpublished = unpublish_excluded_content_files(
         staff_only_run.source,
         [staff_only_run.course.id],
         [staff_only_run.key],
@@ -1836,40 +1845,3 @@ def test_unpublish_excluded_content_files_dry_run(staff_only_run, mock_deindex_t
     assert ContentFile.objects.filter(run=run, published=True).count() == 1
     mock_deindex_tasks.opensearch.assert_not_called()
     mock_deindex_tasks.qdrant.assert_not_called()
-
-
-def test_unpublish_excluded_content_files_report_rows(
-    staff_only_run, mock_deindex_tasks
-):
-    """Report rows name the run, key and source path of every excluded file"""
-    run = staff_only_run.run
-    stale_key = get_edx_module_id("course/static/stale_syllabus.pdf", run)
-    ContentFileFactory.create(run=run, key=stale_key, published=True)
-
-    _, rows = unpublish_excluded_content_files(
-        staff_only_run.source,
-        [staff_only_run.course.id],
-        [staff_only_run.key],
-        dry_run=True,
-        report=True,
-    )
-
-    assert [row["key"] for row in rows] == [stale_key]
-    assert rows[0]["run_id"] == run.run_id
-    assert rows[0]["source_path"] == "static/stale_syllabus.pdf"
-    assert rows[0]["published"] is True
-
-
-def test_unpublish_excluded_content_files_no_report_by_default(
-    staff_only_run, mock_deindex_tasks
-):
-    """Rows are only collected when asked for, since they cross the result backend"""
-    ContentFileFactory.create(
-        run=staff_only_run.run,
-        key=get_edx_module_id("course/static/stale_syllabus.pdf", staff_only_run.run),
-        published=True,
-    )
-    _, rows = unpublish_excluded_content_files(
-        staff_only_run.source, [staff_only_run.course.id], [staff_only_run.key]
-    )
-    assert rows == []

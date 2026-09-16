@@ -404,7 +404,6 @@ NON_CONTENT_OLX_FILES = (
     "assets/assets.xml",
     "info/updates.items.json",
 )
-COURSE_UPDATES_FILE = "info/updates.items.json"
 
 # A legacy transcript is named for its video's id rather than for anything the
 # course text contains, so the id is the only link back to the block using it.
@@ -444,7 +443,9 @@ def _live_course_updates(root: Path) -> str:
     the export, but a live one still counts.
     """
     try:
-        items = json.loads((root / COURSE_UPDATES_FILE).read_text(errors="ignore"))
+        items = json.loads(
+            (root / "info/updates.items.json").read_text(errors="ignore")
+        )
     except (OSError, ValueError):
         return ""
     return "\n".join(
@@ -481,10 +482,10 @@ def _olx_video_ids(sources: list[Path]) -> set[str] | None:
     return ids
 
 
-def static_olx_references(root: Path, skip: set[Path]) -> dict[Path, str | None]:
+def static_olx_references(root: Path, skip: set[Path]) -> tuple[set[Path], set[Path]]:
     """
-    Map every file under static/ to the source file that refers to it, or None
-    when nothing in the course does.
+    Split the files under static/ into the ones the course refers to and the
+    ones nothing in it does.
 
     Matching is on the filename rather than on a "/static/" prefix, because
     courses also link assets as "asset-v1:...+type@asset+block/<name>", and it
@@ -497,43 +498,30 @@ def static_olx_references(root: Path, skip: set[Path]) -> dict[Path, str | None]
             staff-only set, so an asset only an answer key mentions is unreferenced
 
     Returns:
-        dict of Path to str or None: static file -> relative path of its referrer
+        tuple of (set of Path, set of Path): referenced and unreferenced static files
     """
     static_dir = root / "static"
     if not static_dir.is_dir():
-        return {}
+        return set(), set()
     sources = _olx_reference_sources(root, skip)
-    texts = [
-        (
-            path.relative_to(root).as_posix(),
-            normalize_asset_ref(path.read_text(errors="ignore")),
-        )
-        for path in sources
-    ]
-    updates = normalize_asset_ref(_live_course_updates(root))
-    if updates:
-        texts.append((COURSE_UPDATES_FILE, updates))
-    blob = "\n".join(text for _, text in texts)
+    blob = "\n".join(
+        [normalize_asset_ref(path.read_text(errors="ignore")) for path in sources]
+        + [normalize_asset_ref(_live_course_updates(root))]
+    )
     video_ids = _olx_video_ids(sources)
 
-    references = {}
+    referenced, unreferenced = set(), set()
     for path in sorted(static_dir.rglob("*")):
         if not path.is_file():
             continue
-        name = normalize_asset_ref(path.name)
-        if name in blob:
-            references[path] = next(
-                (source for source, text in texts if name in text), None
-            )
-            continue
-        legacy = LEGACY_TRANSCRIPT_RE.match(path.name)
-        if legacy and (
-            video_ids is None or normalize_asset_ref(legacy.group(1)) in video_ids
+        if normalize_asset_ref(path.name) in blob or (
+            (legacy := LEGACY_TRANSCRIPT_RE.match(path.name))
+            and (video_ids is None or normalize_asset_ref(legacy.group(1)) in video_ids)
         ):
-            references[path] = "video block id"
-            continue
-        references[path] = None
-    return references
+            referenced.add(path)
+        else:
+            unreferenced.add(path)
+    return referenced, unreferenced
 
 
 def excluded_olx_paths(olx_path: str | Path) -> set[Path]:
@@ -556,14 +544,12 @@ def excluded_olx_paths(olx_path: str | Path) -> set[Path]:
     excluded.update(
         root / name for name in NON_CONTENT_OLX_FILES if (root / name).is_file()
     )
-    references = static_olx_references(root, excluded)
-    excluded.update(path for path, referrer in references.items() if referrer is None)
+    referenced, unreferenced = static_olx_references(root, excluded)
+    excluded.update(unreferenced)
     # A hidden video's transcripts are in the staff-only set, but the same file is
     # often also the transcript of the visible copy of that video, so put back
     # anything a visible block still links.
-    excluded.difference_update(
-        path for path, referrer in references.items() if referrer is not None
-    )
+    excluded.difference_update(referenced)
     return excluded
 
 
