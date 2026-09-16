@@ -472,10 +472,12 @@ def _olx_video_ids(sources: list[Path]) -> set[str] | None:
         # iter() finds <video> whether it has its own file or sits inline
         for video in element.iter("video"):
             for attribute in VIDEO_ID_ATTRIBUTES:
-                # youtube is "<speed>:<id>", the others are bare ids
-                value = (video.get(attribute) or "").split(":")[-1]
-                if value:
-                    ids.add(normalize_asset_ref(value))
+                # youtube is a comma-separated "<speed>:<id>" list, the others
+                # are bare ids
+                for entry in (video.get(attribute) or "").split(","):
+                    value = entry.split(":")[-1].strip()
+                    if value:
+                        ids.add(normalize_asset_ref(value))
     return ids
 
 

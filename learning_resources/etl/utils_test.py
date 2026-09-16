@@ -632,6 +632,7 @@ def test_documents_from_olx_drafts_do_not_keep_assets(tmp_path):
         "<video url_name='vid' sub='AbC123'/>",
         '<video url_name="vid" sub = "AbC123"/>',
         '<video url_name="vid" youtube="1.00:AbC123"/>',
+        '<video url_name="vid" youtube="0.75:Fast,1.00:AbC123,1.50:Slow"/>',
         '<video url_name="vid" youtube_id_1_0="AbC123"/>',
     ],
 )

@@ -18,8 +18,9 @@ class Command(BaseCommand):
         docker compose run --rm -v /path/to/extracted:/archives web \\
             ./manage.py audit_olx_references /archives/<course>
 
-    The excluded total is what unpublish_excluded_files would unpublish for a
-    run whose content files are fully ingested.
+    The excluded total counts archive paths, so it is an upper bound on what
+    unpublish_excluded_files would unpublish rather than a row count: several
+    paths can collapse onto one ContentFile key.
     """
 
     help = "Report the files an OLX course tree contains but does not use"
