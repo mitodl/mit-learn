@@ -357,15 +357,12 @@ def staff_only_olx_paths(olx_path: str | Path) -> set[Path]:
     course = _parse_olx_block(root, "", "course")
     if course is None:
         return set()
-    hidden: set[Path] = set()
-    seen: set[tuple[str, str]] = set()
+    hidden: dict[tuple[str, str], set[Path]] = {}
+    visible: set[tuple[str, str]] = set()
+    seen: set[tuple[str, str, bool]] = set()
     stack = [(course, "course", course.get("url_name"), False)]
     while stack:
         pointer, tag, url_name, staff_only = stack.pop()
-        if url_name:
-            if (tag, url_name) in seen:
-                continue
-            seen.add((tag, url_name))
         # pointer file wins when present; otherwise the element is the block itself
         element = _parse_olx_block(root, tag, url_name) if url_name else None
         if element is None:
@@ -374,12 +371,27 @@ def staff_only_olx_paths(olx_path: str | Path) -> set[Path]:
             pointer.get("visible_to_staff_only"),
             element.get("visible_to_staff_only"),
         )
-        if staff_only and url_name:
-            hidden.update(_hidden_block_files(root, tag, url_name, element))
+        if url_name:
+            if (tag, url_name, staff_only) in seen:
+                continue
+            seen.add((tag, url_name, staff_only))
+            # a block can hang under two parents; seeing it anywhere a learner
+            # can reach makes it visible, whichever path the walk took first
+            if staff_only:
+                hidden[tag, url_name] = _hidden_block_files(
+                    root, tag, url_name, element
+                )
+            else:
+                visible.add((tag, url_name))
         stack.extend(
             (child, child.tag, child.get("url_name"), staff_only) for child in element
         )
-    return hidden
+    return {
+        path
+        for block, files in hidden.items()
+        if block not in visible
+        for path in files
+    }
 
 
 REFERENCE_SCAN_EXTENSIONS = frozenset({".xml", ".html", ".htm", ".json", ".txt", ".md"})
