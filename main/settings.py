@@ -866,15 +866,46 @@ VECTOR_HYBRID_SEARCH_PREFETCH_MAX_LIMIT = get_int(
 )
 
 
-# the minimum similarity score for dense only search
+# Absolute score floors for vector search. These are only a backstop for a
+# query that matched nothing at all -- the primary gate is the query-relative
+# cutoff below (see _relative_score_floor). They were the primary gate, and an
+# absolute floor cannot be one: how high a query's scores reach depends on the
+# phrasing rather than on how good the matches are, so the size of the candidate
+# set swung by ~50x across rewordings of the same question -- 200 hits for
+# "dance classes from MIT", four for "dance classes", none at all for "dance",
+# which never got a single hit over the floor.
 DENSE_VECTOR_SEARCH_MIN_SCORE = get_float(
-    name="DENSE_VECTOR_SEARCH_MIN_SCORE", default=0.3
+    name="DENSE_VECTOR_SEARCH_MIN_SCORE", default=0.15
 )
 
-# the minimum similarity score for hybrid search (Reciprocal Rank Fusion)
+# Reciprocal Rank Fusion scores by rank, not similarity: 1/(2 + rank) summed
+# over the arms a hit appears in, so 1.0 at best and ~0.004 at the end of a
+# 500-candidate prefetch. This backstop only drops hits that placed near the
+# tail of every arm.
 HYBRID_VECTOR_SEARCH_MIN_SCORE = get_float(
-    name="HYBRID_VECTOR_SEARCH_MIN_SCORE", default=0.1
+    name="HYBRID_VECTOR_SEARCH_MIN_SCORE", default=0.01
 )
+
+# Keep hits scoring at least this fraction of the query's own best hit, so that
+# the candidate set is sized by how far relevance falls off within a query
+# rather than by where that query's scores happen to sit. PROVISIONAL: both
+# ratios want the before/after sweep over real query logs that an absolute floor
+# never got, which is why they are env-settable.
+DENSE_VECTOR_SEARCH_MIN_SCORE_RATIO = get_float(
+    name="DENSE_VECTOR_SEARCH_MIN_SCORE_RATIO", default=0.8
+)
+
+# Against RRF's rank-derived scores this is close to the absolute floor it
+# replaces -- 0.1 of a 1.0 best hit is roughly the top 18 fused ranks -- but it
+# adapts when no single hit tops both arms and the best fused score is lower.
+HYBRID_VECTOR_SEARCH_MIN_SCORE_RATIO = get_float(
+    name="HYBRID_VECTOR_SEARCH_MIN_SCORE_RATIO", default=0.1
+)
+
+# Hits the relative cutoff may never trim below, so that a query whose best hit
+# stands well clear of the rest still returns a usable page instead of just that
+# hit. 0 disables the exemption.
+VECTOR_SEARCH_MIN_CANDIDATES = get_int(name="VECTOR_SEARCH_MIN_CANDIDATES", default=10)
 
 # hard limit for special cases where we need to return all results without pagination
 VECTOR_SEARCH_PAGE_MAX_LIMIT = get_int("VECTOR_SEARCH_PAGE_MAX_LIMIT", 200)

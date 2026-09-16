@@ -283,7 +283,7 @@ QDRANT_OPTIMIZER_INDEXING_THRESHOLD_RATIO = 0.8
 # Score boosts applied by the rescoring formula (see custom_score_formula).
 # "boost" is a *fraction of the point's own score*, not a number of score units:
 # an entry of 0.1 multiplies a matching point's score by 1.1. Deliberately
-# relative rather than absolute
+# relative rather than absolute -- custom_score_formula has the reasoning.
 VECTOR_SEARCH_SCORE_BOOST = {
     RESOURCES_COLLECTION_NAME: [
         {"boost": 0.1, "params": {"resource_type_group": ["program"]}}

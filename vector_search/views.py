@@ -64,6 +64,36 @@ def _normalize_score_cutoff(value, hybrid_search_enabled):
     return max(value, min_score_cutoff)
 
 
+def _relative_score_floor(points, hybrid_search_enabled):
+    """
+    Trim a score-ordered result set to the hits that scored close enough to the
+    query's own best hit.
+    """
+    ratio = (
+        settings.HYBRID_VECTOR_SEARCH_MIN_SCORE_RATIO
+        if hybrid_search_enabled
+        else settings.DENSE_VECTOR_SEARCH_MIN_SCORE_RATIO
+    )
+    ranked = list(points)
+    if not ratio or not ranked:
+        return points
+    best_score = ranked[0].score
+    # A fraction of a negative best score is greater than the score it came
+    # from, so the test below would trim the best hit itself. The penalties can
+    # put a whole result set under zero; leave those sets alone rather than
+    # inverting the comparison for them.
+    if best_score <= 0:
+        return points
+    floor = best_score * ratio
+    exempt = max(settings.VECTOR_SEARCH_MIN_CANDIDATES or 0, 1)
+    # Scores descend, so this keeps a prefix either way.
+    return [
+        point
+        for rank, point in enumerate(ranked)
+        if rank < exempt or point.score >= floor
+    ]
+
+
 def _sort_key(x, field):
     descending = isinstance(field, str) and field.startswith("-")
     field_name = field[1:] if descending else field
@@ -147,12 +177,21 @@ class QdrantView(AsyncAPIView):
             # Each arm is rescored before fusion, so the formula shapes the
             # ranks RRF sees. With nothing to apply it is an identity rescore,
             # which keeps the prefetch nesting the same either way.
-            custom_formula_query = formula_query or models.FormulaQuery(
+            identity_formula_query = models.FormulaQuery(
                 formula=models.SumExpression(sum=["$score"])
+            )
+            # The sparse arm scores on a BM25 scale, where the penalties' fixed
+            # score amounts are not a demotion -- see score_formula_query. It
+            # gets the boosts, which are proportional, and neither penalty; the
+            # dense arm gets both.
+            dense_formula_query = formula_query or identity_formula_query
+            sparse_formula_query = (
+                score_formula_query(search_collection, include_penalties=False)
+                or identity_formula_query
             )
             prefetch_params = [
                 models.Prefetch(
-                    query=custom_formula_query,
+                    query=sparse_formula_query,
                     limit=prefetch_limit,
                     prefetch=[
                         models.Prefetch(
@@ -164,7 +203,7 @@ class QdrantView(AsyncAPIView):
                     ],
                 ),
                 models.Prefetch(
-                    query=custom_formula_query,
+                    query=dense_formula_query,
                     limit=prefetch_limit,
                     prefetch=[
                         models.Prefetch(
@@ -405,6 +444,8 @@ class QdrantView(AsyncAPIView):
                 search_params["offset"] = offset
                 result_obj = await client.query_points(**search_params)
                 search_result = result_obj.points
+            if "group_by" not in params and offset == 0:
+                search_result = _relative_score_floor(search_result, hybrid_search)
         else:
             # No query string — use scroll API
             search_result = await self._execute_scroll_search(

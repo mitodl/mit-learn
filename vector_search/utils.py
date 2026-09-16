@@ -274,6 +274,7 @@ def create_qdrant_collection(collection_name, force_recreate):
             sparse_vectors_config={
                 encoder_sparse.model_short_name(): models.SparseVectorParams(
                     index=models.SparseIndexParams(on_disk=True),
+                    modifier=models.Modifier.IDF,
                 )
             },
             replication_factor=2,
@@ -1978,12 +1979,22 @@ def staleness_penalty_expression(
     )
 
 
-def score_formula_query(collection_name: str) -> models.FormulaQuery | None:
+def score_formula_query(
+    collection_name: str, *, include_penalties: bool = True
+) -> models.FormulaQuery | None:
     """
     Build a collection's rescoring formula: the score, plus the
     VECTOR_SEARCH_SCORE_BOOST boosts, minus the incompleteness and staleness
     penalties. None when none of them apply, so callers can skip rescoring
     entirely.
+
+    `include_penalties=False` leaves the penalties out, for a query arm whose
+    $score is not on the scale they were calibrated against. The penalties
+    subtract a fixed number of score units, chosen against the narrow band that
+    bounded similarity scores occupy (see
+    VECTOR_SEARCH_INCOMPLETENESS_PENALTY_WEIGHT), so they mean nothing on an
+    unbounded BM25 score -- 0.05 off a score of 8 is not a demotion. The boosts
+    are proportional and so apply unchanged on any scale.
     """
     now = datetime.now(tz=UTC)
     boost_expressions = custom_score_formula(collection_name)
@@ -1993,12 +2004,18 @@ def score_formula_query(collection_name: str) -> models.FormulaQuery | None:
     # penalized for neither.
     defaults = {}
 
-    completeness_penalty = completeness_penalty_expression(collection_name)
+    completeness_penalty = (
+        completeness_penalty_expression(collection_name) if include_penalties else None
+    )
     if completeness_penalty is not None:
         penalties.append(completeness_penalty)
         defaults[COMPLETENESS_PAYLOAD_KEY] = 1.0
 
-    staleness_penalty = staleness_penalty_expression(collection_name, now)
+    staleness_penalty = (
+        staleness_penalty_expression(collection_name, now)
+        if include_penalties
+        else None
+    )
     if staleness_penalty is not None:
         penalties.append(staleness_penalty)
         # A null resource_age_date means an upcoming run, which is not stale, and

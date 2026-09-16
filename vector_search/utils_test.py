@@ -486,6 +486,59 @@ def test_skip_creating_qdrand_collections(mocker):
     )
 
 
+def test_create_qdrant_collections_enables_sparse_idf(mocker):
+    """New collections weight their sparse terms by document frequency."""
+    mock_qdrant = mocker.patch("qdrant_client.QdrantClient")
+    mocker.patch("vector_search.utils.qdrant_client", return_value=mock_qdrant)
+    mock_qdrant.collection_exists.return_value = False
+
+    create_qdrant_collections(force_recreate=False)
+
+    for call in mock_qdrant.recreate_collection.mock_calls:
+        sparse_vectors_config = call.kwargs.get("sparse_vectors_config")
+        if sparse_vectors_config is None:
+            continue
+        assert sparse_vectors_config
+        for params in sparse_vectors_config.values():
+            assert params.modifier == models.Modifier.IDF
+            # and the index config it is set alongside is unchanged
+            assert params.index.on_disk is True
+
+
+def test_score_formula_query_without_penalties(mocker, settings):
+    """
+    An arm whose scores are not on the penalties' scale rescores with the
+    boosts alone -- and needs none of the payload defaults, which exist only
+    for the penalties.
+    """
+    settings.VECTOR_SEARCH_INCOMPLETENESS_PENALTY_WEIGHT = 0.05
+    settings.VECTOR_SEARCH_STALENESS_PENALTY_WEIGHT = 0.05
+    mocker.patch(
+        "vector_search.utils.VECTOR_SEARCH_SCORE_BOOST",
+        {RESOURCES_COLLECTION_NAME: [{"boost": 0.1, "params": {"free": True}}]},
+    )
+
+    formula_query = score_formula_query(
+        RESOURCES_COLLECTION_NAME, include_penalties=False
+    )
+
+    score, boost = formula_query.formula.sum
+    assert score == "$score"
+    assert isinstance(boost, models.MultExpression)
+    assert not formula_query.defaults
+
+
+def test_score_formula_query_without_penalties_or_boosts(mocker, settings):
+    """With the boosts gone too there is nothing left to rescore."""
+    settings.VECTOR_SEARCH_INCOMPLETENESS_PENALTY_WEIGHT = 0.05
+    settings.VECTOR_SEARCH_STALENESS_PENALTY_WEIGHT = 0.05
+    mocker.patch("vector_search.utils.VECTOR_SEARCH_SCORE_BOOST", {})
+
+    assert (
+        score_formula_query(RESOURCES_COLLECTION_NAME, include_penalties=False) is None
+    )
+
+
 def test_qdrant_query_conditions(mocker):
     """
     Test query filter mapping to qdrant conditions

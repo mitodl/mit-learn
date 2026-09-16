@@ -25,8 +25,8 @@ from vector_search.constants import (
     SECONDS_PER_YEAR,
 )
 from vector_search.encoders.utils import dense_encoder, sparse_encoder
-from vector_search.utils import score_formula_query
-from vector_search.views import QdrantView
+from vector_search.utils import custom_score_formula, score_formula_query
+from vector_search.views import QdrantView, _relative_score_floor
 
 
 @pytest.fixture
@@ -895,11 +895,11 @@ def test_vector_search_sortby_with_score_cutoff_manually_sorted(mocker, client):
     )()
 
     mock_result = mocker.MagicMock()
-    mock_point_1 = mocker.MagicMock()
+    mock_point_1 = mocker.MagicMock(score=0.6)
     mock_point_1.payload = {"readable_id": "course-1", "views": 100}
-    mock_point_2 = mocker.MagicMock()
+    mock_point_2 = mocker.MagicMock(score=0.55)
     mock_point_2.payload = {"readable_id": "course-2", "views": 50}
-    mock_point_3 = mocker.MagicMock()
+    mock_point_3 = mocker.MagicMock(score=0.5)
     mock_point_3.payload = {"readable_id": "course-3", "views": 200}
 
     mock_result.points = [mock_point_1, mock_point_2, mock_point_3]
@@ -991,20 +991,36 @@ def _penalty(formula_query):
 
 
 def _formula_queries(call_kwargs, hybrid_search):
-    """Return the score formulas a query_points call rescores with."""
+    """
+    Return the score formulas a query_points call rescores with, keyed by the
+    vector arm each one rescores.
+    """
     if hybrid_search:
         # One rescored prefetch per vector arm, fused afterwards
         assert isinstance(call_kwargs["query"], models.FusionQuery)
-        return [prefetch.query for prefetch in call_kwargs["prefetch"]]
+        arms = {}
+        for prefetch in call_kwargs["prefetch"]:
+            [vector_prefetch] = prefetch.prefetch
+            arm = (
+                "dense"
+                if vector_prefetch.using == dense_encoder().model_short_name()
+                else "sparse"
+            )
+            arms[arm] = prefetch.query
+        assert sorted(arms) == ["dense", "sparse"]
+        return arms
     assert call_kwargs["prefetch"].using == dense_encoder().model_short_name()
-    return [call_kwargs["query"]]
+    return {"dense": call_kwargs["query"]}
 
 
 @pytest.mark.parametrize("hybrid_search", [True, False])
 def test_vector_search_applies_completeness_penalty(
     mocker, client, settings, hybrid_search
 ):
-    """Both search modes must rescore resources with the completeness penalty."""
+    """
+    Both search modes must rescore resources with the completeness penalty --
+    on the dense arm, the only one whose scores it is calibrated for.
+    """
     settings.VECTOR_SEARCH_INCOMPLETENESS_PENALTY_WEIGHT = 0.05
     settings.VECTOR_SEARCH_STALENESS_PENALTY_WEIGHT = 0
 
@@ -1026,18 +1042,20 @@ def test_vector_search_applies_completeness_penalty(
     expected_penalty = _penalty(score_formula_query(RESOURCES_COLLECTION_NAME))
     formula_queries = _formula_queries(call_kwargs, hybrid_search)
 
-    assert formula_queries
-    for formula_query in formula_queries:
-        assert isinstance(formula_query, models.FormulaQuery)
-        assert formula_query.defaults == {COMPLETENESS_PAYLOAD_KEY: 1.0}
-        assert _penalty(formula_query) == expected_penalty
+    dense_formula_query = formula_queries["dense"]
+    assert isinstance(dense_formula_query, models.FormulaQuery)
+    assert dense_formula_query.defaults == {COMPLETENESS_PAYLOAD_KEY: 1.0}
+    assert _penalty(dense_formula_query) == expected_penalty
 
 
 @pytest.mark.parametrize("hybrid_search", [True, False])
 def test_vector_search_applies_staleness_penalty(
     mocker, client, settings, hybrid_search
 ):
-    """Both search modes must rescore resources with the staleness penalty."""
+    """
+    Both search modes must rescore resources with the staleness penalty -- on
+    the dense arm, the only one whose scores it is calibrated for.
+    """
     settings.VECTOR_SEARCH_INCOMPLETENESS_PENALTY_WEIGHT = 0
     settings.VECTOR_SEARCH_STALENESS_PENALTY_WEIGHT = 0.05
 
@@ -1059,22 +1077,169 @@ def test_vector_search_applies_staleness_penalty(
         mock_qdrant.query_points.mock_calls[0].kwargs, hybrid_search
     )
 
-    assert formula_queries
-    for formula_query in formula_queries:
-        assert isinstance(formula_query, models.FormulaQuery)
-        # resources with no age date -- those with an upcoming run -- are scored
-        # as if published at query time, so they take no penalty
-        assert list(formula_query.defaults) == [RESOURCE_AGE_DATE_PAYLOAD_KEY]
-        weight, staleness = _penalty(formula_query).neg.mult
-        assert weight == settings.VECTOR_SEARCH_STALENESS_PENALTY_WEIGHT
-        decay = staleness.sum[1].neg.lin_decay
-        assert decay.x.datetime_key == RESOURCE_AGE_DATE_PAYLOAD_KEY
-        # half the horizon at the default midpoint -- see
-        # staleness_penalty_expression, which cannot use a midpoint of 0
-        assert decay.scale == (
-            settings.VECTOR_SEARCH_STALENESS_HORIZON_YEARS * SECONDS_PER_YEAR / 2
-        )
-        assert decay.midpoint == 0.5
+    dense_formula_query = formula_queries["dense"]
+    assert isinstance(dense_formula_query, models.FormulaQuery)
+    # resources with no age date -- those with an upcoming run -- are scored
+    # as if published at query time, so they take no penalty
+    assert list(dense_formula_query.defaults) == [RESOURCE_AGE_DATE_PAYLOAD_KEY]
+    weight, staleness = _penalty(dense_formula_query).neg.mult
+    assert weight == settings.VECTOR_SEARCH_STALENESS_PENALTY_WEIGHT
+    decay = staleness.sum[1].neg.lin_decay
+    assert decay.x.datetime_key == RESOURCE_AGE_DATE_PAYLOAD_KEY
+    # half the horizon at the default midpoint -- see
+    # staleness_penalty_expression, which cannot use a midpoint of 0
+    assert decay.scale == (
+        settings.VECTOR_SEARCH_STALENESS_HORIZON_YEARS * SECONDS_PER_YEAR / 2
+    )
+    assert decay.midpoint == 0.5
+
+
+def test_hybrid_vector_search_penalizes_only_the_dense_arm(mocker, client, settings):
+    """
+    The penalties subtract fixed score amounts calibrated for the dense arm's
+    bounded similarity scores, so they are left off the sparse arm, whose BM25
+    scores they would not meaningfully move. The boosts are proportional, so
+    they go on both arms.
+    """
+    settings.VECTOR_SEARCH_INCOMPLETENESS_PENALTY_WEIGHT = 0.05
+    settings.VECTOR_SEARCH_STALENESS_PENALTY_WEIGHT = 0.05
+
+    mock_qdrant = mocker.patch(
+        "qdrant_client.AsyncQdrantClient", return_value=mocker.AsyncMock()
+    )()
+    mock_result = mocker.MagicMock()
+    mock_result.points = []
+    mock_qdrant.query_points = mocker.AsyncMock(return_value=mock_result)
+    mock_qdrant.scroll = mocker.AsyncMock(return_value=([], None))
+    mocker.patch("vector_search.views.async_qdrant_client", return_value=mock_qdrant)
+
+    client.get(
+        reverse("vector_search:v0:vector_learning_resources_search"),
+        data={"q": "test", "hybrid_search": True},
+    )
+
+    formula_queries = _formula_queries(
+        mock_qdrant.query_points.mock_calls[0].kwargs, hybrid_search=True
+    )
+    boosts = custom_score_formula(RESOURCES_COLLECTION_NAME)
+    assert boosts
+
+    sparse_formula_query = formula_queries["sparse"]
+    assert sparse_formula_query.formula.sum == ["$score", *boosts]
+    # no payload defaults either, since only the penalties need them
+    assert not sparse_formula_query.defaults
+
+    dense_formula_query = formula_queries["dense"]
+    dense_terms = dense_formula_query.formula.sum
+    assert dense_terms[: 1 + len(boosts)] == ["$score", *boosts]
+    penalties = dense_terms[1 + len(boosts) :]
+    assert len(penalties) == 2
+    assert all(isinstance(penalty, models.NegExpression) for penalty in penalties)
+
+
+def _scored(*scores):
+    """Score-ordered stand-ins for Qdrant's ScoredPoints."""
+    return [models.ScoredPoint(id=i, version=0, score=s) for i, s in enumerate(scores)]
+
+
+@pytest.fixture
+def _no_min_candidates(settings):
+    """Turn off the minimum-candidates exemption, to test the ratio alone."""
+    settings.VECTOR_SEARCH_MIN_CANDIDATES = 0
+
+
+@pytest.mark.usefixtures("_no_min_candidates")
+def test_relative_score_floor_trims_to_the_best_hit(settings):
+    """Hits far below the query's best hit are dropped."""
+    settings.DENSE_VECTOR_SEARCH_MIN_SCORE_RATIO = 0.8
+
+    kept = _relative_score_floor(
+        _scored(0.51, 0.48, 0.43, 0.2), hybrid_search_enabled=False
+    )
+
+    # 0.8 * 0.51 = 0.408
+    assert [point.score for point in kept] == [0.51, 0.48, 0.43]
+
+
+@pytest.mark.usefixtures("_no_min_candidates")
+@pytest.mark.parametrize("scale", [0.02, 1, 50])
+def test_relative_score_floor_keeps_the_same_count_at_any_scale(settings, scale):
+    """
+    The point of a relative floor: how many hits survive depends on how fast
+    relevance falls off within the query, not on where that query's scores
+    happen to sit. An absolute floor sized the candidate set by the latter,
+    which is why rewording a query changed the count ~50x.
+    """
+    settings.DENSE_VECTOR_SEARCH_MIN_SCORE_RATIO = 0.8
+    shape = [1.0, 0.95, 0.9, 0.85, 0.7, 0.4]
+
+    kept = _relative_score_floor(
+        _scored(*[score * scale for score in shape]), hybrid_search_enabled=False
+    )
+
+    assert len(kept) == 4
+
+
+@pytest.mark.usefixtures("_no_min_candidates")
+@pytest.mark.parametrize("ratio", [0.1, 0.8, 0.99, 1.0])
+def test_relative_score_floor_never_empties_a_result_set(settings, ratio):
+    """
+    A query that matched anything must not come back empty: the best hit always
+    clears a floor derived from itself. This is the "dance" direction, where a
+    one-word query cleared the absolute floor with nothing at all.
+    """
+    settings.DENSE_VECTOR_SEARCH_MIN_SCORE_RATIO = ratio
+
+    kept = _relative_score_floor(_scored(0.28, 0.27, 0.05), hybrid_search_enabled=False)
+
+    assert kept
+    assert kept[0].score == 0.28
+
+
+def test_relative_score_floor_keeps_a_minimum_of_candidates(settings):
+    """
+    A query whose best hit stands well clear of everything else still returns a
+    usable page rather than that hit alone.
+    """
+    settings.DENSE_VECTOR_SEARCH_MIN_SCORE_RATIO = 0.8
+    settings.VECTOR_SEARCH_MIN_CANDIDATES = 3
+
+    kept = _relative_score_floor(
+        _scored(0.9, 0.3, 0.29, 0.28), hybrid_search_enabled=False
+    )
+
+    assert [point.score for point in kept] == [0.9, 0.3, 0.29]
+
+
+@pytest.mark.usefixtures("_no_min_candidates")
+def test_relative_score_floor_uses_the_ratio_for_the_search_mode(settings):
+    """Fused scores are on their own scale and get their own ratio."""
+    settings.DENSE_VECTOR_SEARCH_MIN_SCORE_RATIO = 0.8
+    settings.HYBRID_VECTOR_SEARCH_MIN_SCORE_RATIO = 0.1
+    points = _scored(1.0, 0.5, 0.2, 0.05)
+
+    assert len(_relative_score_floor(points, hybrid_search_enabled=False)) == 1
+    assert len(_relative_score_floor(points, hybrid_search_enabled=True)) == 3
+
+
+@pytest.mark.usefixtures("_no_min_candidates")
+def test_relative_score_floor_leaves_negative_scores_alone(settings):
+    """
+    A fraction of a negative best score is above it, which would trim the best
+    hit. The penalties can put a whole result set under zero.
+    """
+    settings.DENSE_VECTOR_SEARCH_MIN_SCORE_RATIO = 0.8
+    points = _scored(-0.01, -0.02, -0.5)
+
+    assert _relative_score_floor(points, hybrid_search_enabled=False) == points
+
+
+def test_relative_score_floor_disabled_by_a_zero_ratio(settings):
+    """A ratio of 0 leaves the result set as retrieved."""
+    settings.DENSE_VECTOR_SEARCH_MIN_SCORE_RATIO = 0
+    points = _scored(0.9, 0.1, 0.01)
+
+    assert _relative_score_floor(points, hybrid_search_enabled=False) == points
 
 
 def test_dense_vector_search_without_formula_queries_vectors_directly(
@@ -1170,10 +1335,11 @@ def test_build_search_params_sort_with_cutoff_score(
         if sortby and hybrid_search:
             assert isinstance(search_params["query"], models.FusionQuery)
 
-        assert search_params["score_threshold"] == (
+        assert search_params["score_threshold"] == max(
+            min_score,
             settings.HYBRID_VECTOR_SEARCH_MIN_SCORE
             if hybrid_search
-            else settings.DENSE_VECTOR_SEARCH_MIN_SCORE
+            else settings.DENSE_VECTOR_SEARCH_MIN_SCORE,
         )
 
     if sortby and min_score is None:
@@ -1459,7 +1625,7 @@ def test_content_file_vector_search_skips_probe_when_results_present(
 ):
     """Probe is skipped when the search returns at least one hit."""
     # A single point with the minimum payload needed by _content_file_vector_hits.
-    mock_point = mocker.MagicMock()
+    mock_point = mocker.MagicMock(score=0.6)
     mock_point.payload = {
         "run_readable_id": "run-present",
         "key": "present.pdf",
@@ -1674,7 +1840,7 @@ def test_vector_search_returns_payload_is_not_hydrated(mocker, client):
         "qdrant_client.AsyncQdrantClient", return_value=mocker.AsyncMock()
     )()
     mock_result = mocker.MagicMock()
-    point = mocker.MagicMock()
+    point = mocker.MagicMock(score=0.6)
     point.payload = payload
     mock_result.points = [point]
     mock_qdrant.query_points = mocker.AsyncMock(return_value=mock_result)
@@ -1705,7 +1871,7 @@ def test_vector_search_kill_switch_hydrates_from_database(mocker, client, settin
         "qdrant_client.AsyncQdrantClient", return_value=mocker.AsyncMock()
     )()
     mock_result = mocker.MagicMock()
-    point = mocker.MagicMock()
+    point = mocker.MagicMock(score=0.6)
     point.payload = {
         "readable_id": resource.readable_id,
         "platform": {"code": resource.platform.code},
