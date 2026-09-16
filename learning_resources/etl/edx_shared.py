@@ -371,7 +371,7 @@ def sync_edx_course_files(
 
 def unpublish_excluded_content_files(
     etl_source: str, ids: list[int], keys: list[str], *, dry_run: bool = False
-) -> int:
+) -> list[dict]:
     """
     Unpublish (and deindex) content files the course does not use — staff-only
     subtrees, asset manifests and unreferenced static files — for the runs
@@ -384,14 +384,18 @@ def unpublish_excluded_content_files(
         dry_run(bool): count the rows but leave them published and deindex nothing
 
     Returns:
-        int: number of content files unpublished, or that would be under dry_run
+        list of dict: a row per run whose archive excludes content files it has,
+            counting the excluded rows, the ones this call unpublished (or would
+            have, under dry_run) and the run's content files in total. Counts,
+            not paths, so the payload stays small enough to cross the celery
+            result backend for every run at once.
     """
     from learning_resources_search import tasks as search_tasks
     from vector_search import tasks as vector_tasks
 
     bucket = get_bucket_by_name(settings.COURSE_ARCHIVE_BUCKET_NAME)
     run_lookup = build_run_lookup(etl_source, ids)
-    total = 0
+    rows = []
     for key in keys:
         matching_runs = run_lookup.get(extract_run_id_from_key(etl_source, key))
         if not matching_runs:
@@ -421,17 +425,27 @@ def unpublish_excluded_content_files(
             continue
         # scoped to this run: keys embed the run_id, but never rely on that alone
         excluded_files = ContentFile.objects.filter(run=run, key__in=excluded_keys)
-        if dry_run:
-            total += excluded_files.filter(published=True).count()
+        excluded = excluded_files.count()
+        if not excluded:
             continue
-        unpublished = excluded_files.filter(published=True).update(published=False)
-        total += unpublished
-        log.info(
-            "Unpublished %d excluded content files for %s", unpublished, run.run_id
-        )
-        # dispatched whenever excluded rows exist, not only when this call flipped
-        # them, so a re-run after a failed deindex task cleans up the indexes
-        if excluded_files.exists():
+        if dry_run:
+            unpublished = excluded_files.filter(published=True).count()
+        else:
+            unpublished = excluded_files.filter(published=True).update(published=False)
+            log.info(
+                "Unpublished %d excluded content files for %s", unpublished, run.run_id
+            )
+            # dispatched whenever excluded rows exist, not only when this call
+            # flipped them, so a re-run after a failed deindex task cleans up
+            # the indexes
             search_tasks.deindex_run_content_files.delay(run.id, unpublished_only=True)
             vector_tasks.remove_unpublished_run_content_files.delay(run.id)
-    return total
+        rows.append(
+            {
+                "run_id": run.run_id,
+                "excluded": excluded,
+                "unpublished": unpublished,
+                "total": ContentFile.objects.filter(run=run).count(),
+            }
+        )
+    return rows
