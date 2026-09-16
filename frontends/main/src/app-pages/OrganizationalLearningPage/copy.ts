@@ -17,7 +17,6 @@ export type OfferingCardItem = {
 }
 export type ContinuumStepItem = {
   eyebrow: string
-  title: string
   body: string
 }
 export type FaqItem = { question: string; answer: string }
@@ -53,14 +52,14 @@ export type CaseStudyItem = {
 
 export const hero = {
   title:
-    "Transform your organization with MIT Open Learning’s technical expertise",
+    "Transform your organization with scalable education from MIT Open Learning",
   body: "We work with businesses, schools, and government agencies to educate diverse workforces on the most impactful technologies of the moment. Connect with our team to learn how our portfolio of MIT Open Learning courses and programs can be matched to your organization’s training goals.",
   ctaLabel: "Talk with our team",
   image: "/images/uai_landing/uai-landing-hero-2.jpg",
   imageAlt: "",
   stats: [
-    { value: "700+", label: ["Organizational", "partnerships"] },
-    { value: "150+", label: ["MIT faculty", "& experts involved"] },
+    { value: "700+", label: ["Corporate", "and University Clients"] },
+    { value: "150+", label: ["MIT Faculty", "& Expert Contributors"] },
     {
       value: "500+",
       label: ["Unique courses and programs"],
@@ -77,7 +76,7 @@ export const featuredProgram = {
     "Self-paced program",
     "MIT faculty & experts",
     "Stackable modules",
-    "AI tutor support",
+    "AI Tutor",
     "Translation available",
   ],
   curriculum: {
@@ -108,7 +107,7 @@ export const featuredProgram = {
 export const offerings = {
   eyebrow: "FOR YOUR ORGANIZATION",
   title: "Learning Solutions for Every Role and Responsibility",
-  body: "Flexible learning options designed around your goals, whether you're building leadership skills, adopting AI, or strengthening technical capabilities.",
+  body: "Flexible learning options designed around your goals, “whether you're adopting AI, strengthening technical capabilities, or building leadership skills.",
   cards: [
     {
       title: "Programs for Aspiring AI Specialists",
@@ -135,14 +134,15 @@ export const offerings = {
   ] satisfies OfferingCardItem[],
   flexibleSolutions: {
     title: "Flexible Solutions",
-    body: "From short executive briefings to in-depth learning programs designed to fit your organization’s needs, priorities, and scale.",
+    body: "MIT Open Learning will work with you to craft the right engagement for any team, skill-level, and timeline.",
     pills: [
-      "Audience",
+      "Program design considerations:",
+      "Learner profile",
       "Technical depth",
       "Course duration",
       "Delivery format",
       "Goals",
-      "Group size",
+      "Participant count",
     ],
   },
   ctaLabel: "Talk with our team",
@@ -188,17 +188,14 @@ export const continuum = {
   steps: [
     {
       eyebrow: "01 . FOUNDATIONAL LITERACY",
-      title: "Build understanding",
       body: "Develop a knowledge of the core principles behind specific, impactful technologies.",
     },
     {
       eyebrow: "02 . TECHNICAL FLUENCY",
-      title: "Explore applications",
       body: "Deepen proficiency through practical application in ways that generate real, measurable impact.",
     },
     {
-      eyebrow: "03 . SPECIALIZATION AND INNOVATION",
-      title: "Drive transformation",
+      eyebrow: "03 . SPECIALIZATION",
       body: "Employ expertise for impact at-scale.",
     },
   ] satisfies ContinuumStepItem[],
@@ -249,7 +246,7 @@ export const clientLogos = {
 export const caseStudies = {
   eyebrow: "CASE STUDIES",
   title: "See how organizations turn learning into impact",
-  body: "Discover how organizations have applied MIT Open Learning programs to achieve their goals and create lasting impact",
+  body: "“Discover how organizations have combined MIT Open Learning programs to achieve their training and upskilling goals",
   navLabel: "Case studies",
   items: [
     {
@@ -264,20 +261,13 @@ export const caseStudies = {
       },
       stats: [
         {
-          value: "1,100 current students",
-          label: "Pilot program participants",
+          value: "1,100 students",
+          label: "Pilot participants",
         },
         { value: "2,600+", label: "Module Enrollments" },
         { value: "960", label: "Certificates Awarded" },
       ],
       pillars: [
-        {
-          title: "Program impact",
-          quote:
-            "You cannot go into industry if you don't know how to use AI. That is why the Universal AI program mattered — people needed to introduce themselves to what AI is.",
-          name: "Helena Imene",
-          role: "Instructional Designer & Pilot Lead",
-        },
         {
           title: "Scalable AI training",
           body: "Access to the entire Universal AI program, including 16 foundational modules and multiple industry-specific modules.",
@@ -289,11 +279,11 @@ export const caseStudies = {
           ],
         },
         {
-          title: "Flexible curriculum for faculty",
+          title: "Program impact",
           quote:
-            "It has given me insight on how to incorporate AI and entrepreneurship in the content I am already teaching, and further how students can leverage AI in their potential business.",
-          name: "Salmie Sakarias",
-          role: "Lecturer, Business & Entrepreneurship",
+            "You cannot go into industry if you don't know how to use AI. That is why the Universal AI program mattered — people needed to introduce themselves to what AI is.",
+          name: "Helena Imene",
+          role: "Instructional Designer & Pilot Lead",
         },
         {
           title: "Client success and support",
@@ -304,9 +294,16 @@ export const caseStudies = {
             "Advice to improve engagement and completion",
           ],
         },
+        {
+          title: "Flexible curriculum for faculty",
+          quote:
+            "It has given me insight on how to incorporate AI and entrepreneurship in the content I am already teaching, and further how students can leverage AI in their potential business.",
+          name: "Salmie Sakarias",
+          role: "Lecturer, Business & Entrepreneurship",
+        },
       ],
       footnote:
-        "Designed to address mission critical needs, delivered with world-renowned quality and impact at scale.",
+        "Aligned with organizational needs, delivered with world-renowned quality.",
     },
   ] satisfies CaseStudyItem[],
 }

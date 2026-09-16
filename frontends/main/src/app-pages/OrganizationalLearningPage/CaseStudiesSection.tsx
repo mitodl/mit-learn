@@ -2,7 +2,7 @@
 
 import React, { useCallback, useRef, useState } from "react"
 import Image from "next/image"
-import { styled } from "ol-components"
+import { styled, pxToRem } from "ol-components"
 import { CarouselV2 } from "ol-components/CarouselV2"
 import { VisuallyHidden } from "@mitodl/smoot-design"
 import {
@@ -242,13 +242,17 @@ const PillarBullets = styled.ul(({ theme }) => ({
 }))
 
 const QuoteMark = styled.span(({ theme }) => ({
-  ...theme.typography.h2,
+  ...theme.typography.h1,
+  display: "block",
   color: theme.custom.colors.red,
-  lineHeight: 1,
+  height: "40px",
+  overflow: "hidden",
+  marginTop: "-16px",
 }))
 
 const QuoteText = styled.p(({ theme }) => ({
-  ...theme.typography.body1,
+  ...theme.typography.body2,
+  lineHeight: pxToRem(22),
   color: theme.custom.colors.darkGray2,
   margin: 0,
   marginTop: "-16px",
@@ -261,7 +265,7 @@ const QuoteAttribution = styled.div({
 })
 
 const QuoteName = styled.p(({ theme }) => ({
-  ...theme.typography.h5,
+  ...theme.typography.subtitle2,
   color: theme.custom.colors.darkGray2,
   margin: 0,
 }))
