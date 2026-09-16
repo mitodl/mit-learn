@@ -197,10 +197,21 @@ describe("CourseEnrollArea — applied savings", () => {
     expect(screen.queryByText("Program price")).toBeNull()
   })
 
-  test("a list-price quote leaves the ordinary card alone", async () => {
+  test("a quote that takes nothing off leaves the ordinary card alone", async () => {
     setupAuth()
     const run = aidRun()
     const course = makeCourse({ next_run_id: run.id, courseruns: [run] })
+    // The backend reports a discount only when it beats list price, so this
+    // shape should not reach us; if it does, a "− $0" breakdown is the wrong
+    // answer. The guard is shared, so this pins it for the program page too.
+    setupRunPricing(run, {
+      user_price: "899",
+      discount: mitxFactories.products.userPricingDiscount({
+        amount_off: "0",
+        discount_type: DiscountTypeEnum.DollarsOff,
+        source: null,
+      }),
+    })
 
     renderWithProviders(
       <CourseEnrollArea course={course} selectedRun={getSelectedRun(course)} />,
@@ -465,13 +476,12 @@ describe("CourseEnrollArea — financial assistance link", () => {
       linkText: "Apply for financial aid",
     },
     {
-      name: "approved (applied at checkout), when aid is approved",
-      // An approved learner is one with any product_flexible_price; its id is
-      // the only field the "approved" state keys off
-      // (useCourseCertificatePrice: !!product_flexible_price?.id).
+      name: "approved, when aid is approved",
+      // An approved learner is one with any product_flexible_price
+      // (useCertificatePricing: !!product_flexible_price).
       userPricing: () =>
         makeUserPricing({ product_flexible_price: makeDiscount() }),
-      linkText: "Financial aid approved (visible at checkout)",
+      linkText: "Financial aid approved",
     },
   ])(
     "paidOnly course with financial_assistance_form_url shows link — $name",
@@ -550,9 +560,7 @@ describe("CourseEnrollArea — financial assistance link", () => {
     )
 
     // Approved aid is surfaced as the text note, applied at checkout
-    await screen.findByRole("link", {
-      name: "Financial aid approved (visible at checkout)",
-    })
+    await screen.findByRole("link", { name: "Financial aid approved" })
     // Full price shows; the flexible-price discount is not applied to the display
     expect(screen.getByText("$100")).toBeInTheDocument()
     expect(screen.queryByText("$75")).not.toBeInTheDocument()
@@ -586,9 +594,10 @@ describe("CourseEnrollArea — advertised price range", () => {
     expect(screen.getByText("$250 – $1,000")).toBeInTheDocument()
   })
 
-  test("an approved flexible price does not collapse the range to one number", async () => {
-    // The range is what anyone might pay; the user's own price is only settled at
-    // checkout, so approval does not narrow the display.
+  test("an approved flexible price collapses the range to the run's price", async () => {
+    // The range advertises the aid floor. A learner already quoted against it
+    // has nothing left to be advertised, so they see the single price, as on a
+    // program page.
     setupAuth()
     const product = makeProduct({ price: "1000" })
     const run = makePaidRun(product)
@@ -613,9 +622,8 @@ describe("CourseEnrollArea — advertised price range", () => {
       <CourseEnrollArea course={course} selectedRun={getSelectedRun(course)} />,
     )
 
-    await screen.findByRole("link", {
-      name: "Financial aid approved (visible at checkout)",
-    })
-    expect(screen.getByText("$250 – $1,000")).toBeInTheDocument()
+    await screen.findByRole("link", { name: "Financial aid approved" })
+    expect(screen.getByText("$1,000")).toBeInTheDocument()
+    expect(screen.queryByText("$250 – $1,000")).toBeNull()
   })
 })

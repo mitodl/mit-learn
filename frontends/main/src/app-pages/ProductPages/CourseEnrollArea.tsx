@@ -3,9 +3,9 @@ import type {
   CourseRunV2,
   CourseWithCourseRunsSerializerV2,
 } from "@mitodl/mitxonline-api-axios/v2"
-import { toPriceRange } from "@/common/mitxonline"
+import { canPurchaseRun } from "@/common/mitxonline"
 import { useCourseEnrollment } from "./useCourseEnrollment"
-import { useCourseCertificatePrice } from "./useCourseCertificatePrice"
+import { useCertificatePricing } from "./useCertificatePricing"
 import EnrollOfferingBoxes from "./EnrollOfferingBoxes"
 
 type CourseEnrollAreaProps = {
@@ -25,12 +25,11 @@ const CourseEnrollArea: React.FC<CourseEnrollAreaProps> = ({
       onRequireSignup: setAnchor,
     })
 
-  const { price, financialAid, breakdown } = useCourseCertificatePrice(
+  const { price, showsRange, financialAid, breakdown } = useCertificatePricing(
     course,
-    selectedRun,
+    selectedRun?.products?.[0],
+    { purchasable: selectedRun ? canPurchaseRun(selectedRun) : false },
   )
-  // Same predicate the hook formats on, so the sizing tracks the display.
-  const isRange = toPriceRange(course) !== null
 
   // Show the in-card "Certificate deadline passed" note in both degraded
   // states (deadlinePassed and archived), but only when the run actually
@@ -46,7 +45,7 @@ const CourseEnrollArea: React.FC<CourseEnrollAreaProps> = ({
       isPending={isPending}
       isError={isError}
       price={price}
-      compactPrice={isRange}
+      compactPrice={showsRange}
       financialAid={financialAid}
       breakdown={breakdown}
       productNoun="course"

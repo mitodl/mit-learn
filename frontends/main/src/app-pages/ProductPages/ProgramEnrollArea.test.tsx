@@ -340,10 +340,36 @@ describe("ProgramEnrollArea — applied savings", () => {
     // offering's own words.
     await screen.findByRole("button", { name: "Enroll in Program" })
     expect(screen.queryByText("Continue with full program")).toBeNull()
-    const aid = screen.getByRole("link", { name: "Financial aid applied" })
-    expect(aid.parentElement).toHaveTextContent("Financial aid applied")
-    expect(aid.parentElement).not.toHaveTextContent(/is applied to/)
+    screen.getByRole("link", { name: "Financial aid approved" })
+    expect(
+      screen.queryByText(/is applied to the full program price/),
+    ).toBeNull()
     screen.getByText("Program price")
+  })
+
+  test("(i) paid-only with nothing for the heading row renders no row above the box", async () => {
+    setupAuth()
+    const program = makeProgram({
+      enrollment_modes: [makeMode({ requires_payment: true })],
+      products: [makeProduct({ price: "899" })],
+    })
+    // A sale: no heading, no note, and no aid form for the indicator.
+    setupUserPricing(program, {
+      user_price: "849",
+      discount: makeUserPricingDiscount({
+        amount_off: "50",
+        discount_type: DiscountTypeEnum.DollarsOff,
+        source: null,
+      }),
+    })
+
+    renderWithProviders(<ProgramEnrollArea program={program} />)
+
+    await screen.findByRole("button", { name: "Enroll in Program" })
+    // An empty row would still be a flex item and open the cell's gap above
+    // the box, so the box has to be the cell's first child.
+    const certCell = document.querySelector("[data-card='cert']") as HTMLElement
+    expect(certCell.firstElementChild).toHaveTextContent("Program price")
   })
 
   test("(i) displayAsCourse keeps an aid breakdown, priced as a course", async () => {
@@ -396,7 +422,7 @@ describe("ProgramEnrollArea — applied savings", () => {
 
   test.each([
     { approved: false, indicator: "Apply for financial aid" },
-    { approved: true, indicator: "Financial aid applied" },
+    { approved: true, indicator: "Financial aid approved" },
   ])(
     "(j) the aid indicator moves onto the heading row, reading $indicator",
     async ({ approved, indicator }) => {

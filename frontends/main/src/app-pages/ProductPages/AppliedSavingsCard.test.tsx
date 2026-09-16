@@ -15,8 +15,10 @@ const breakdown = (
   ...overrides,
 })
 
+const INFO_BUTTON = { name: "About applied savings" }
+
 describe("AppliedSavingsCard", () => {
-  test("the three rows pair each label with its amount, and the deduction reads as a subtraction", () => {
+  test("the three rows pair each label with its amount, and a discount with no rule behind it has nothing to explain", () => {
     const savings = breakdown()
 
     renderWithProviders(
@@ -36,6 +38,7 @@ describe("AppliedSavingsCard", () => {
       `minus − ${savings.amountOff}`,
       savings.todaysPrice,
     ])
+    expect(screen.queryByRole("button", INFO_BUTTON)).toBeNull()
   })
 
   test("a purchase credit names the course and explains the rule", async () => {
@@ -49,8 +52,10 @@ describe("AppliedSavingsCard", () => {
     )
 
     expect(screen.getByText(savings.sourceTitle!)).toBeVisible()
-    await user.click(screen.getByRole("button", { name: "Applied savings" }))
-    expect(await screen.findByRole("dialog")).toHaveTextContent(
+    await user.click(screen.getByRole("button", INFO_BUTTON))
+    expect(
+      await screen.findByRole("dialog", { name: "Applied savings" }),
+    ).toHaveTextContent(
       "One previous purchase from this program can be credited toward the full program's price.",
     )
   })
@@ -64,17 +69,9 @@ describe("AppliedSavingsCard", () => {
     )
 
     expect(screen.getByText("Financial aid")).toBeVisible()
-    await user.click(screen.getByRole("button", { name: "Applied savings" }))
-    expect(await screen.findByRole("dialog")).toHaveTextContent(
-      "Based on your approved financial aid.",
-    )
-  })
-
-  test("any other discount shows the amount with nothing to explain", () => {
-    renderWithProviders(
-      <AppliedSavingsCard breakdown={breakdown()} productNoun="program" />,
-    )
-
-    expect(screen.queryByRole("button", { name: "Applied savings" })).toBeNull()
+    await user.click(screen.getByRole("button", INFO_BUTTON))
+    expect(
+      await screen.findByRole("dialog", { name: "Applied savings" }),
+    ).toHaveTextContent("Based on your approved financial aid.")
   })
 })

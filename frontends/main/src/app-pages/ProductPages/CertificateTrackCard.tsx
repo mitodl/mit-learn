@@ -1,6 +1,6 @@
 import React from "react"
 import type { FinancialAid } from "./enrollTypes"
-import { FinancialAidLink, FinancialAidPlaceholder } from "./EnrollAreaParts"
+import { FinancialAidIndicator } from "./EnrollAreaParts"
 import TrackCard, {
   FeatureRow,
   FeatureIcon,
@@ -36,18 +36,7 @@ const CertificateTrackCard: React.FC<CertificateTrackCardProps> = ({
       priceBlock={priceBlock}
       headerAside={
         financialAid ? (
-          financialAid.pending ? (
-            <FinancialAidPlaceholder />
-          ) : (
-            <FinancialAidLink
-              href={financialAid.href}
-              $approved={financialAid.applied}
-            >
-              {financialAid.applied
-                ? "Financial aid approved (visible at checkout)"
-                : "Apply for financial aid"}
-            </FinancialAidLink>
-          )
+          <FinancialAidIndicator financialAid={financialAid} />
         ) : null
       }
       action={action}
