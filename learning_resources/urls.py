@@ -144,13 +144,11 @@ v0_urls = [
         views.CredentialMetadataView.as_view(),
         name="credential_metadata",
     ),
-    # Canvas run ids may contain "/", which the router's single-segment
-    # patterns cannot match. The "+canvas" suffix delimits the run id, so a
-    # greedy match stays unambiguous against the trailing problem title.
-    # These precede the router so they win for Canvas ids; everything else
-    # falls through unchanged. permission_classes must be passed explicitly:
-    # the viewset's are declared via @action, which only the router applies.
-    # See mitodl/hq#13384.
+    # Canvas run ids contain "/"; the "+canvas" suffix delimits them from the
+    # problem title. permission_classes are declared via @action, which only
+    # the router applies, so they are repeated here. Delete these along with
+    # openapi.hooks.preprocess_exclude_canvas_slash_routes once the run id
+    # moves to a query parameter. See mitodl/hq#13384.
     re_path(
         r"^tutor/problems/(?P<run_readable_id>.+\+canvas)/(?P<problem_title>[^/]+)/$",
         views.CourseRunProblemsViewSet.as_view(

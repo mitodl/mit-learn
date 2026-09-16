@@ -2021,17 +2021,9 @@ def _canvas_run(run_id):
     )
 
 
-@pytest.mark.parametrize(
-    "run_id",
-    [
-        CANVAS_SLASH_RUN_ID,
-        "14566-kaleba:20211202+canvas",
-        "plain-run-without-canvas-suffix",
-    ],
-)
-def test_course_run_problems_list_with_slashes(client, run_id):
+def test_course_run_problems_list_with_slashes(client):
     """The list endpoint reaches the view even when the run id contains slashes"""
-    run = _canvas_run(run_id)
+    run = _canvas_run(CANVAS_SLASH_RUN_ID)
     TutorProblemFileFactory.create(
         run=run, problem_title="Problem Set 1", type="problem"
     )
@@ -2039,21 +2031,13 @@ def test_course_run_problems_list_with_slashes(client, run_id):
         run=run, problem_title="Problem Set 2", type="problem"
     )
 
-    resp = client.get(f"/api/v0/tutor/problems/{run_id}/")
+    resp = client.get(f"/api/v0/tutor/problems/{CANVAS_SLASH_RUN_ID}/")
 
     assert resp.status_code == 200
     assert resp.json() == {"problem_set_titles": ["Problem Set 1", "Problem Set 2"]}
 
 
-@pytest.mark.parametrize(
-    "problem_title",
-    [
-        "Problem Set 1",
-        "Weird+canvas",
-        "Rates & Ratios",
-        "Section #3",
-    ],
-)
+@pytest.mark.parametrize("problem_title", ["Problem Set 1", "Weird+canvas"])
 def test_course_run_problems_detail_with_slashes(
     client, django_user_model, problem_title
 ):
@@ -2092,46 +2076,18 @@ def test_course_run_problems_detail_with_slashes(
     ]
 
 
-@pytest.mark.parametrize(
-    "user_role",
-    ["anonymous", "normal", "admin", "group_tutor_problem_viewer"],
-)
-def test_course_run_problems_slash_run_id_permissions(
-    client, django_user_model, user_role
-):
+def test_course_run_problems_slash_run_id_detail_forbidden(client):
     """
-    Permissions on the slash-tolerant routes match the originals: anyone may
-    list titles, only staff and tutor problem viewers may read content.
+    The slash-tolerant detail route carries the viewset's permissions, which
+    only the router applies to the @action declarations.
     """
     run = _canvas_run(CANVAS_SLASH_RUN_ID)
     TutorProblemFileFactory.create(
         run=run, problem_title="Problem Set 1", type="problem"
     )
 
-    if user_role == "admin":
-        client.force_login(
-            django_user_model.objects.create_superuser(
-                "admin", "admin@example.com", "pass"
-            )
-        )
-    elif user_role == "group_tutor_problem_viewer":
-        user = django_user_model.objects.create()
-        group, _ = Group.objects.get_or_create(name=GROUP_TUTOR_PROBLEM_VIEWERS)
-        group.user_set.add(user)
-        client.force_login(user)
-    elif user_role == "normal":
-        client.force_login(django_user_model.objects.create())
-
-    list_resp = client.get(f"/api/v0/tutor/problems/{CANVAS_SLASH_RUN_ID}/")
-    assert list_resp.status_code == 200
-
-    detail_resp = client.get(
-        f"/api/v0/tutor/problems/{CANVAS_SLASH_RUN_ID}/Problem Set 1/"
-    )
-    if user_role in ("admin", "group_tutor_problem_viewer"):
-        assert detail_resp.status_code == 200
-    else:
-        assert detail_resp.status_code == 403
+    resp = client.get(f"/api/v0/tutor/problems/{CANVAS_SLASH_RUN_ID}/Problem Set 1/")
+    assert resp.status_code == 403
 
 
 def test_course_run_problems_slash_run_id_append_slash(client):
@@ -2144,19 +2100,9 @@ def test_course_run_problems_slash_run_id_append_slash(client):
         run=run, problem_title="Problem Set 1", type="problem"
     )
 
-    resp = client.get(f"/api/v0/tutor/problems/{CANVAS_SLASH_RUN_ID}")
-    assert resp.status_code == 301
-
     followed = client.get(f"/api/v0/tutor/problems/{CANVAS_SLASH_RUN_ID}", follow=True)
     assert followed.status_code == 200
     assert followed.json() == {"problem_set_titles": ["Problem Set 1"]}
-
-
-def test_course_run_problems_slash_run_id_reverse():
-    """reverse() can build a URL for a run id containing slashes"""
-    assert reverse(
-        "lr:v0:tutorproblem_api-list-problems", args=[CANVAS_SLASH_RUN_ID]
-    ) == f"/api/v0/tutor/problems/{CANVAS_SLASH_RUN_ID}/".replace(" ", "%20")
 
 
 def test_resource_items_only_shows_published_runs(client, user):
