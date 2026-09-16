@@ -260,8 +260,22 @@ const QuoteText = styled.p(({ theme }) => ({
 
 const QuoteAttribution = styled.div({
   display: "flex",
-  flexDirection: "column",
+  alignItems: "center",
+  gap: "12px",
   marginTop: "auto",
+})
+
+const QuotePhoto = styled(Image)({
+  flexShrink: 0,
+  width: "40px",
+  height: "40px",
+  borderRadius: "50%",
+  objectFit: "cover",
+})
+
+const QuoteAttributionText = styled.div({
+  display: "flex",
+  flexDirection: "column",
 })
 
 const QuoteName = styled.p(({ theme }) => ({
@@ -340,8 +354,18 @@ const CaseStudyPanel: React.FC<CaseStudyPanelProps> = ({ study, isSlide }) => {
               <QuoteMark aria-hidden>“</QuoteMark>
               <QuoteText>{pillar.quote}</QuoteText>
               <QuoteAttribution>
-                <QuoteName>{pillar.name}</QuoteName>
-                <QuoteRole>{pillar.role}</QuoteRole>
+                {pillar.photo ? (
+                  <QuotePhoto
+                    src={pillar.photo.src}
+                    alt=""
+                    width={pillar.photo.width}
+                    height={pillar.photo.height}
+                  />
+                ) : null}
+                <QuoteAttributionText>
+                  <QuoteName>{pillar.name}</QuoteName>
+                  <QuoteRole>{pillar.role}</QuoteRole>
+                </QuoteAttributionText>
               </QuoteAttribution>
             </Pillar>
           ) : (

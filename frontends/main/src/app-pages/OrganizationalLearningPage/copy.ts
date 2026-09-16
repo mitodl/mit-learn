@@ -37,6 +37,7 @@ export type CaseStudyQuotePillar = {
   quote: string
   name: string
   role: string
+  photo?: { src: string; width: number; height: number }
 }
 export type CaseStudyPillarItem = CaseStudyInfoPillar | CaseStudyQuotePillar
 export type CaseStudyItem = {
@@ -284,6 +285,11 @@ export const caseStudies = {
             "You cannot go into industry if you don't know how to use AI. That is why the Universal AI program mattered — people needed to introduce themselves to what AI is.",
           name: "Helena Imene",
           role: "Instructional Designer & Pilot Lead",
+          photo: {
+            src: "/images/organizational_learning/headshots/helena-imene.jpg",
+            width: 300,
+            height: 300,
+          },
         },
         {
           title: "Client success and support",
@@ -300,6 +306,11 @@ export const caseStudies = {
             "It has given me insight on how to incorporate AI and entrepreneurship in the content I am already teaching, and further how students can leverage AI in their potential business.",
           name: "Salmie Sakarias",
           role: "Lecturer, Business & Entrepreneurship",
+          photo: {
+            src: "/images/organizational_learning/headshots/salmie-sakarias.jpeg",
+            width: 420,
+            height: 420,
+          },
         },
       ],
       footnote:
