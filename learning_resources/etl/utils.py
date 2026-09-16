@@ -542,10 +542,13 @@ def excluded_olx_paths(olx_path: str | Path) -> set[Path]:
     excluded.update(
         root / name for name in NON_CONTENT_OLX_FILES if (root / name).is_file()
     )
-    excluded.update(
-        path
-        for path, referrer in static_olx_references(root, excluded).items()
-        if referrer is None
+    references = static_olx_references(root, excluded)
+    excluded.update(path for path, referrer in references.items() if referrer is None)
+    # A hidden video's transcripts are in the staff-only set, but the same file is
+    # often also the transcript of the visible copy of that video, so put back
+    # anything a visible block still links.
+    excluded.difference_update(
+        path for path, referrer in references.items() if referrer is not None
     )
     return excluded
 
