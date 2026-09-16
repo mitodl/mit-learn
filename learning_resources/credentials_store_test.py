@@ -2,15 +2,23 @@
 
 import pytest
 
+from learning_resources.constants import CredentialMetadataField
 from learning_resources.credentials_store import (
+    active_credential_metadata_fields,
+    incomplete_credential_metadata_query,
     save_credential_metadata,
     stored_credential_metadata,
 )
 from learning_resources.factories import (
+    CredentialMetadataConfigurationFactory,
     CredentialMetadataFactory,
     LearningResourceFactory,
 )
-from learning_resources.models import CredentialMetadata
+from learning_resources.models import (
+    CredentialMetadata,
+    CredentialMetadataConfiguration,
+    LearningResource,
+)
 
 pytestmark = pytest.mark.django_db
 
@@ -99,3 +107,101 @@ def test_save_credential_metadata_ignores_an_unknown_field(resource):
 
     assert saved.description == "A course."
     assert not hasattr(saved, "alignment")
+
+
+@pytest.fixture
+def configurations():
+    """
+    One active configuration per credential metadata field.
+
+    Created here rather than relying on migration 0124's seed, which a
+    transactional test elsewhere deletes without restoring.
+    """
+    CredentialMetadataConfiguration.objects.all().delete()
+    return [
+        CredentialMetadataConfigurationFactory.create(field=field.name)
+        for field in CredentialMetadataField
+    ]
+
+
+def test_active_credential_metadata_fields(configurations):
+    """Every active configuration's field is reported"""
+    assert active_credential_metadata_fields() == sorted(
+        field.name for field in CredentialMetadataField
+    )
+
+
+def test_active_credential_metadata_fields_skips_inactive(configurations):
+    """A field whose configuration is switched off is not reported"""
+    CredentialMetadataConfiguration.objects.filter(
+        field=CredentialMetadataField.criteria.name
+    ).update(is_active=False)
+
+    assert active_credential_metadata_fields() == [
+        CredentialMetadataField.description.name
+    ]
+
+
+def test_active_credential_metadata_fields_with_none_active(configurations):
+    """No active configuration means a generation would produce nothing"""
+    CredentialMetadataConfiguration.objects.update(is_active=False)
+
+    assert active_credential_metadata_fields() == []
+
+
+def test_active_credential_metadata_fields_skips_a_field_with_no_column(
+    configurations,
+):
+    """
+    A configured field with nowhere to store it is not reported.
+
+    Same whitelist as the writer: adding a CredentialMetadataField member
+    without a migration must not produce a filter on a column that does not
+    exist.
+    """
+    CredentialMetadataConfiguration.objects.filter(
+        field=CredentialMetadataField.criteria.name
+    ).update(field="alignment")
+
+    assert active_credential_metadata_fields() == [
+        CredentialMetadataField.description.name
+    ]
+
+
+@pytest.mark.parametrize(
+    ("stored", "fields", "expected"),
+    [
+        (None, ["description", "criteria"], True),
+        (
+            {"description": "A course", "criteria": ["Did a thing"]},
+            ["description", "criteria"],
+            False,
+        ),
+        (
+            {"description": "A course", "criteria": []},
+            ["description", "criteria"],
+            True,
+        ),
+        ({"description": "A course", "criteria": []}, ["description"], False),
+        ({"description": "A course", "criteria": []}, ["criteria"], True),
+        ({"description": "", "criteria": ["Did a thing"]}, ["description"], True),
+        ({"description": "", "criteria": ["Did a thing"]}, ["criteria"], False),
+    ],
+)
+def test_incomplete_credential_metadata_query(resource, stored, fields, expected):
+    """
+    The filter matches a resource missing any of the fields asked for.
+
+    `stored` is None for a resource with no metadata row at all, which always
+    matches: nothing has been generated for it.
+    """
+    if stored is not None:
+        CredentialMetadataFactory.create(learning_resource=resource, **stored)
+
+    matches = (
+        LearningResource.objects.filter(incomplete_credential_metadata_query(fields))
+        .filter(id=resource.id)
+        .exists()
+    )
+
+    assert matches is expected

@@ -9,9 +9,74 @@ can afford to pull the generation stack onto the boot path -- see
 
 import logging
 
-from learning_resources.models import CredentialMetadata, LearningResource
+from django.db.models import Q
+
+from learning_resources.models import (
+    CredentialMetadata,
+    CredentialMetadataConfiguration,
+    LearningResource,
+)
 
 logger = logging.getLogger(__name__)
+
+
+def storable_credential_metadata_fields() -> set[str]:
+    """
+    Return the CredentialMetadata columns a generated field can be written to.
+
+    Returns:
+        set of str: the model's own field names
+    """
+    return {field.name for field in CredentialMetadata._meta.concrete_fields}  # noqa: SLF001
+
+
+def active_credential_metadata_fields() -> list[str]:
+    """
+    Return the stored fields a generation would currently produce.
+
+    Generation runs only is_active configurations, and a field with none is
+    left out of both the generated fields and the errors -- nothing was asked
+    of it, so there is nothing to explain. Its column therefore keeps its
+    default however many times the resource is generated for. Anything
+    deciding whether a resource still needs generating has to ask what is
+    configured, not what the model has columns for: a predicate that always
+    demanded every column would requeue every affected course on every sweep,
+    paying to regenerate the fields that are still active each time.
+
+    Returns:
+        list of str: the active configurations' fields that have a column to
+            store them in, sorted. Empty means a generation would produce
+            nothing at all.
+    """
+    configured = (
+        CredentialMetadataConfiguration.objects.filter(is_active=True)
+        .values_list("field", flat=True)
+        .distinct()
+    )
+    storable = storable_credential_metadata_fields()
+    return sorted(field for field in configured if field in storable)
+
+
+def incomplete_credential_metadata_query(fields: list[str]) -> Q:
+    """
+    Return a LearningResource filter for metadata missing any of `fields`.
+
+    "Missing" is per field and taken from the column's own default, so adding
+    a field needs no case here.
+
+    Args:
+        fields (list of str): the stored fields that must be present, from
+            active_credential_metadata_fields()
+
+    Returns:
+        Q: matches a resource with no metadata row at all, or one whose row
+            still holds the default for one of `fields`
+    """
+    query = Q(credential_metadata__isnull=True)
+    for field in fields:
+        empty = CredentialMetadata._meta.get_field(field).get_default()  # noqa: SLF001
+        query |= Q(**{f"credential_metadata__{field}": empty})
+    return query
 
 
 def stored_credential_metadata(
@@ -56,7 +121,7 @@ def save_credential_metadata(
             later sweep, so one provider outage would permanently poison the
             resources it hit.
     """
-    storable = {field.name for field in CredentialMetadata._meta.concrete_fields}  # noqa: SLF001
+    storable = storable_credential_metadata_fields()
     unknown = set(fields) - storable
     if unknown:
         logger.warning(

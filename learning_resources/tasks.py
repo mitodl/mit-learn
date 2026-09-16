@@ -15,6 +15,10 @@ from django.db.models import Q
 from django.utils import timezone
 
 from learning_resources.constants import LearningResourceType, PlatformType
+from learning_resources.credentials_store import (
+    active_credential_metadata_fields,
+    incomplete_credential_metadata_query,
+)
 from learning_resources.etl import loaders, ovs, pipelines, podcast, youtube
 from learning_resources.etl.canvas import (
     sync_canvas_archive,
@@ -1059,8 +1063,18 @@ def credential_metadata_resources(*, overwrite: bool = False):
         overwrite (bool): include resources that already have metadata
 
     Returns:
-        QuerySet: the matching resources
+        QuerySet: the matching resources, empty when no configuration is
+            active
     """
+    active_fields = active_credential_metadata_fields()
+    if not active_fields:
+        # Nothing is configured to generate, so nothing needs generating.
+        # Without this the sweep queues a task per course that each pay
+        # nothing and store nothing. Mirrors generate_credential_metadata's
+        # own guard on the same table.
+        log.warning("No active CredentialMetadataConfiguration; nothing to generate")
+        return LearningResource.objects.none()
+
     resources = (
         LearningResource.objects.filter(Q(published=True) | Q(test_mode=True))
         .filter(
@@ -1074,10 +1088,13 @@ def credential_metadata_resources(*, overwrite: bool = False):
         # Incomplete, not merely absent: a run where one field failed wrote
         # the other, and `credential_metadata__isnull=True` alone would leave
         # that resource half-generated forever.
+        #
+        # Incomplete against the *active* configurations, not every column: a
+        # field whose configuration is off is never generated, so demanding
+        # its column would requeue the resource on every sweep and pay to
+        # regenerate the fields that are still active, forever.
         resources = resources.filter(
-            Q(credential_metadata__isnull=True)
-            | Q(credential_metadata__description="")
-            | Q(credential_metadata__criteria=[])
+            incomplete_credential_metadata_query(active_fields)
         )
     return resources
 
