@@ -21,7 +21,7 @@ import {
 } from "@/common/urls"
 import { faker } from "@faker-js/faker/locale/en"
 import invariant from "tiny-invariant"
-import { OrganizationPage, ContractPage } from "@mitodl/mitxonline-api-axios/v2"
+import { OrganizationPage } from "@mitodl/mitxonline-api-axios/v2"
 
 jest.mock("posthog-js/react")
 
@@ -29,12 +29,10 @@ describe("DashboardLayout", () => {
   type SetupOptions = {
     initialUrl?: string
     organizations?: OrganizationPage[]
-    contracts?: ContractPage[]
   }
   const setup = ({
     initialUrl = DASHBOARD_HOME,
     organizations = [],
-    contracts = [],
   }: SetupOptions = {}) => {
     const user = factories.user.user()
     const mitxOnlineUser = mitxOnlineFactories.user.user({
@@ -43,7 +41,6 @@ describe("DashboardLayout", () => {
 
     setMockResponse.get(urls.userMe.get(), user)
     setMockResponse.get(mitxOnlineUrls.userMe.get(), mitxOnlineUser)
-    setMockResponse.get(mitxOnlineUrls.contracts.contractsList(), contracts)
 
     renderWithProviders(
       <DashboardLayout>
@@ -73,7 +70,7 @@ describe("DashboardLayout", () => {
       }),
     ]
     const contracts = [contract]
-    setup({ organizations, contracts })
+    setup({ organizations })
     const expectedUrls = [
       DASHBOARD_HOME,
       ...organizations.map((org, index) =>
