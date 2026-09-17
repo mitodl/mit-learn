@@ -2198,6 +2198,7 @@ export interface PatchedWebsiteContentRequest {
   content_type?: WebsiteContentContentTypeEnum
   is_published?: boolean
   slug?: PatchedWebsiteContentRequestSlug
+  topics?: Array<number>
 }
 
 /**
@@ -3786,6 +3787,7 @@ export interface WebsiteContent {
   is_published?: boolean
   slug?: PatchedWebsiteContentRequestSlug
   cover_image: WebsiteContentCoverImage
+  topics?: Array<number>
 }
 
 /**
@@ -3826,6 +3828,7 @@ export interface WebsiteContentRequest {
   content_type?: WebsiteContentContentTypeEnum
   is_published?: boolean
   slug?: PatchedWebsiteContentRequestSlug
+  topics?: Array<number>
 }
 
 /**

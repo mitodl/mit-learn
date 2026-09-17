@@ -3,6 +3,7 @@
 import pytest
 from rest_framework.reverse import reverse
 
+from learning_resources.factories import LearningResourceTopicFactory
 from main.factories import UserFactory
 from website_content.models import WebsiteContent
 
@@ -285,7 +286,9 @@ def test_list_query_count_is_constant(client, django_assert_num_queries, limit):
         )
 
     url = reverse("website_content:v1:website_content-list")
-    with django_assert_num_queries(2):
+    # Count, page, and one more for the topics prefetch -- all independent of
+    # the page size, which is what this is guarding.
+    with django_assert_num_queries(3):
         results = client.get(url, {"limit": limit}).json()["results"]
 
     assert len(results) == min(limit, 6)
@@ -333,3 +336,104 @@ def test_update_triggers_unpublish_actions_only_on_the_transition(
     assert resp.status_code == 200
     assert mock_unpublish.called is expect_unpublish_actions
     assert mock_purge.called is expect_unpublish_actions
+
+
+def test_create_with_topics(staff_client):
+    """Topics sent on create are persisted and echoed back."""
+    topics = LearningResourceTopicFactory.create_batch(2)
+    expected = sorted(topic.id for topic in topics)
+    url = reverse("website_content:v1:website_content-list")
+
+    resp = staff_client.post(
+        url,
+        {
+            "content": {},
+            "title": "Topical",
+            "content_type": "news",
+            "topics": expected,
+        },
+        format="json",
+    )
+
+    assert resp.status_code == 201
+    # `topics` is in the serializer's required_prefetches, and a write leaves
+    # nothing prefetched on its own -- a created instance has no prefetch cache
+    # at all. The response can serialize them because `perform_create` hands
+    # the serializer a freshly prefetched instance; without that this is a 500.
+    assert sorted(resp.json()["topics"]) == expected
+    content = WebsiteContent.objects.get(id=resp.json()["id"])
+    assert sorted(content.topics.values_list("id", flat=True)) == expected
+
+
+def test_patch_replaces_topics(staff_client, user):
+    """PATCHing topics replaces the selection rather than adding to it."""
+    old_topic, new_topic = LearningResourceTopicFactory.create_batch(2)
+    content = _make_content(user, is_published=False)
+    content.topics.set([old_topic])
+    url = reverse(
+        "website_content:v1:website_content-detail", kwargs={"pk": content.id}
+    )
+
+    resp = staff_client.patch(url, {"topics": [new_topic.id]}, format="json")
+
+    assert resp.status_code == 200
+    assert resp.json()["topics"] == [new_topic.id]
+    assert list(content.topics.values_list("id", flat=True)) == [new_topic.id]
+
+
+def test_patch_without_topics_leaves_them_alone(staff_client, user):
+    """
+    The field is optional, so an unrelated PATCH -- which is what the drawer
+    sends when the editor only renames -- must not wipe existing selections.
+    """
+    topic = LearningResourceTopicFactory.create()
+    content = _make_content(user, is_published=False)
+    content.topics.set([topic])
+    url = reverse(
+        "website_content:v1:website_content-detail", kwargs={"pk": content.id}
+    )
+
+    resp = staff_client.patch(url, {"title": "Renamed"}, format="json")
+
+    assert resp.status_code == 200
+    assert list(content.topics.values_list("id", flat=True)) == [topic.id]
+
+
+@pytest.mark.parametrize("bad_topics", [[-1], ["not-a-number"], "news"])
+def test_create_with_invalid_topics_rejected(staff_client, bad_topics):
+    """
+    Resolving all the ids in one query must still reject the payloads the
+    per-id lookup would have: a missing topic, a non-numeric id, and a bare
+    string where a list belongs.
+    """
+    url = reverse("website_content:v1:website_content-list")
+
+    resp = staff_client.post(
+        url,
+        {
+            "content": {},
+            "title": "Topical",
+            "content_type": "news",
+            "topics": bad_topics,
+        },
+        format="json",
+    )
+
+    assert resp.status_code == 400
+    assert "topics" in resp.json()
+
+
+def test_retrieve_returns_topics(client, user):
+    """Topics are readable by anonymous users on published content."""
+    topic = LearningResourceTopicFactory.create()
+    content = _make_content(user, is_published=True)
+    content.topics.set([topic])
+
+    url = reverse(
+        "website_content:v1:website_content-detail-by-id-or-slug",
+        kwargs={"identifier": str(content.id)},
+    )
+    resp = client.get(url)
+
+    assert resp.status_code == 200
+    assert resp.json()["topics"] == [topic.id]

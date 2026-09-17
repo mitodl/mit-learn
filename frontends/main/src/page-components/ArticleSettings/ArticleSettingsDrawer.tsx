@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useEffect, useMemo, useState } from "react"
+import React, { useCallback, useEffect, useMemo, useState } from "react"
 import styled from "@emotion/styled"
 import {
   Drawer,
@@ -17,12 +17,12 @@ import { useLearningResourceTopics } from "api/hooks/learningResources"
  * website content type -- the heading takes the type's label so news reads
  * "News Settings".
  *
- * Topic options come from the live topics API, but the values the drawer
- * collects are **not persisted yet**: WebsiteContent has no `topics`,
- * `seo_title` or `seo_description` field, so there is nothing to PATCH them
- * onto. The drawer therefore owns its values locally and hands them to
- * `onSave`; wiring that to a mutation is a one-line change once those fields
- * exist. See the note on `onSave` below.
+ * Topic options come from the live topics API, and the topics the editor picks
+ * are handed to `onSave` as the ids `WebsiteContent.topics` stores.
+ *
+ * The SEO values are still local-only: WebsiteContent has no `seo_title` or
+ * `seo_description` field, so there is nothing to PATCH them onto. They ride
+ * along in `onSave` so the caller can persist them once those fields exist.
  */
 
 /** Drawer width from the design; narrows to the viewport on small screens. */
@@ -163,20 +163,19 @@ const FooterCta = styled.div({
   marginTop: "auto",
 })
 
-/**
- * One chosen topic, optionally narrowed to a subtopic. Kept as a pair rather
- * than a flat id list because the design groups subtopics under their parent,
- * which a flat list could not reconstruct once the parent stops being
- * selectable.
- */
-export interface ArticleTopicSelection {
-  topicId: number
-  subtopicId: number | null
-}
-
 /** Settings the drawer collects. Mirrors the fields in the design. */
 export interface ArticleSettingsValues {
-  topics: ArticleTopicSelection[]
+  /**
+   * The leaf of each selection -- a subtopic where one was picked, otherwise
+   * the topic itself. This is exactly what `WebsiteContent.topics` holds: a
+   * subtopic already implies its parent, and the ancestor chain is added
+   * downstream when the content becomes a LearningResource, so sending parents
+   * as well would be redundant.
+   *
+   * The design still groups subtopics under their parent, which is derived
+   * from each topic's own `parent` rather than stored alongside the id.
+   */
+  topics: number[]
   seoTitle: string
   seoDescription: string
 }
@@ -200,9 +199,9 @@ export interface ArticleSettingsDrawerProps {
   /**
    * Called with the collected settings when "Save Settings" is pressed.
    *
-   * Deliberately a callback rather than a mutation: the backend fields do not
-   * exist yet, so there is no endpoint to call. When they land, the caller
-   * passes a handler that PATCHes them and this component does not change.
+   * Deliberately a callback rather than a mutation of its own: whether the
+   * topics can be PATCHed straight away depends on whether the content has
+   * been saved yet, which only the caller knows.
    */
   onSave?: (values: ArticleSettingsValues) => void
 }
@@ -216,37 +215,52 @@ const ArticleSettingsDrawer = ({
 }: ArticleSettingsDrawerProps) => {
   const [topicId, setTopicId] = useState("")
   const [subtopicId, setSubtopicId] = useState("")
-  const [selections, setSelections] = useState<ArticleTopicSelection[]>([])
+  const [selectedIds, setSelectedIds] = useState<number[]>([])
   const [seoTitle, setSeoTitle] = useState("")
   const [seoDescription, setSeoDescription] = useState("")
 
   /**
-   * Two narrow queries using the endpoint's own filters rather than one broad
-   * fetch filtered client-side. `parent_topic_id` matters beyond tidiness: a
-   * subtopic is reachable even when its parent is absent from the response,
-   * which `/api/v1/topics/` does whenever the parent's topic channel is
-   * unpublished (the endpoint drops any topic with a null `channel_url`).
-   * React Query caches each parent's children, so re-picking is free.
+   * One fetch of every topic rather than a query per select.
+   *
+   * Reading saved values back is what forces it: a stored id has to be
+   * resolved to a topic to know whether it is a topic or somebody's subtopic,
+   * and `/api/v1/topics/` has no id filter to ask about just those. The whole
+   * set is small -- ~110 rows against the endpoint's own 1000 limit, which its
+   * pagination class exists to allow -- so one cached response serves both
+   * selects and the saved-value lookup.
+   *
+   * Filtering client-side loses nothing the narrower queries had: the endpoint
+   * drops any topic with a null `channel_url` (an unpublished topic channel)
+   * before its filters run, so `is_toplevel` and `parent_topic_id` were
+   * working from this same visible set.
    */
   const { data: topicsData, isLoading: topicsLoading } =
-    useLearningResourceTopics(
-      { is_toplevel: true, limit: 100 },
-      { enabled: open },
-    )
-  const { data: subtopicsData } = useLearningResourceTopics(
-    { parent_topic_id: [Number(topicId)], limit: 100 },
-    { enabled: open && !!topicId },
+    useLearningResourceTopics({ limit: 1000 }, { enabled: open })
+
+  const allTopics = useMemo(() => topicsData?.results ?? [], [topicsData])
+
+  const topicsById = useMemo(
+    () => new Map(allTopics.map((topic) => [topic.id, topic])),
+    [allTopics],
   )
 
-  const mainTopics = useMemo(() => topicsData?.results ?? [], [topicsData])
-  const subtopics = useMemo(() => subtopicsData?.results ?? [], [subtopicsData])
+  const mainTopics = useMemo(
+    () => allTopics.filter((topic) => !topic.parent),
+    [allTopics],
+  )
+
+  const subtopics = useMemo(
+    () => allTopics.filter((topic) => topic.parent === Number(topicId)),
+    [allTopics, topicId],
+  )
 
   // Reset to the caller's values each time the drawer opens, so a cancelled
-  // edit does not leak into the next open.
+  // edit does not leak into the next open. Selections are held as the ids the
+  // API takes, so this does not have to wait for the topic list to arrive.
   useEffect(() => {
     if (!open) return
     const values = { ...EMPTY_SETTINGS, ...initialValues }
-    setSelections(values.topics)
+    setSelectedIds(values.topics)
     setSeoTitle(values.seoTitle)
     setSeoDescription(values.seoDescription)
     setTopicId("")
@@ -294,31 +308,19 @@ const ArticleSettingsDrawer = ({
     [subtopics, topicId],
   )
 
-  /**
-   * Names accumulate as lists load rather than being derived from the current
-   * ones, so an added chip keeps its label after the subtopic list it came
-   * from has been replaced by a different parent's children.
-   */
-  const [topicNames, setTopicNames] = useState<Map<number, string>>(new Map())
-  useEffect(() => {
-    const loaded = [...mainTopics, ...subtopics]
-    if (!loaded.length) return
-    setTopicNames((current) => {
-      const next = new Map(current)
-      let changed = false
-      for (const topic of loaded) {
-        if (next.get(topic.id) !== topic.name) {
-          next.set(topic.id, topic.name)
-          changed = true
-        }
-      }
-      // Same reference when nothing is new, so this cannot loop.
-      return changed ? next : current
-    })
-  }, [mainTopics, subtopics])
-
   const pendingTopic = Number(topicId) || null
   const pendingSubtopic = Number(subtopicId) || null
+
+  /**
+   * The heading a selected id sits under: its parent when it is a subtopic,
+   * otherwise itself. An id whose topic is missing from the response -- the
+   * endpoint drops topics whose channel is unpublished, so a selection can
+   * outlive its own visibility -- stands on its own rather than disappearing.
+   */
+  const groupIdFor = useCallback(
+    (id: number) => topicsById.get(id)?.parent ?? id,
+    [topicsById],
+  )
 
   /**
    * A topic is represented either by a bare entry or by its subtopics, never
@@ -329,23 +331,23 @@ const ArticleSettingsDrawer = ({
    * So a bare topic is refused once that topic has subtopics, and adding a
    * subtopic below supersedes the topic's bare entry.
    */
-  const pendingGroup = selections.filter((s) => s.topicId === pendingTopic)
+  const pendingGroup = selectedIds.filter(
+    (id) => groupIdFor(id) === pendingTopic,
+  )
   const alreadyAdded = pendingSubtopic
-    ? pendingGroup.some((s) => s.subtopicId === pendingSubtopic)
+    ? selectedIds.includes(pendingSubtopic)
     : pendingGroup.length > 0
   const canAdd = !!pendingTopic && !alreadyAdded
 
   const handleAdd = () => {
     if (!canAdd || !pendingTopic) return
-    const entry = { topicId: pendingTopic, subtopicId: pendingSubtopic }
-    setSelections((current) => {
-      const bareIndex = current.findIndex(
-        (s) => s.topicId === pendingTopic && s.subtopicId === null,
-      )
-      if (bareIndex === -1) return [...current, entry]
+    const added = pendingSubtopic ?? pendingTopic
+    setSelectedIds((current) => {
+      const bareIndex = current.indexOf(pendingTopic)
+      if (bareIndex === -1) return [...current, added]
       // Substituted in place so the group keeps its position in the list.
       const next = [...current]
-      next.splice(bareIndex, 1, entry)
+      next.splice(bareIndex, 1, added)
       return next
     })
     // Keep the topic selected: adding several subtopics under one topic is the
@@ -353,30 +355,23 @@ const ArticleSettingsDrawer = ({
     setSubtopicId("")
   }
 
-  const handleRemove = (selection: ArticleTopicSelection) =>
-    setSelections((current) =>
-      current.filter(
-        (s) =>
-          !(
-            s.topicId === selection.topicId &&
-            s.subtopicId === selection.subtopicId
-          ),
-      ),
-    )
+  const handleRemove = (id: number) =>
+    setSelectedIds((current) => current.filter((selected) => selected !== id))
 
   /**
    * Group by parent, preserving the order topics were first added, so the list
    * does not reshuffle as subtopics are added under an existing topic.
    */
   const groupedSelections = useMemo(() => {
-    const groups = new Map<number, ArticleTopicSelection[]>()
-    for (const selection of selections) {
-      const group = groups.get(selection.topicId)
-      if (group) group.push(selection)
-      else groups.set(selection.topicId, [selection])
+    const groups = new Map<number, number[]>()
+    for (const id of selectedIds) {
+      const groupId = groupIdFor(id)
+      const group = groups.get(groupId)
+      if (group) group.push(id)
+      else groups.set(groupId, [id])
     }
     return [...groups.entries()]
-  }, [selections])
+  }, [selectedIds, groupIdFor])
 
   return (
     <Drawer anchor="right" open={open} onClose={onClose}>
@@ -438,23 +433,23 @@ const ArticleSettingsDrawer = ({
               <SelectedTopics aria-label="Selected topics">
                 {groupedSelections.map(([groupTopicId, group]) => {
                   const topicName =
-                    topicNames.get(groupTopicId) ?? `Topic ${groupTopicId}`
+                    topicsById.get(groupTopicId)?.name ??
+                    `Topic ${groupTopicId}`
                   return (
                     <SelectedTopicGroup key={groupTopicId}>
                       <SelectedTopicName>{topicName}</SelectedTopicName>
-                      {group.map((selection) => {
+                      {group.map((id) => {
                         /* A topic added without a subtopic has no pill of its
                            own; its name alone represents it. */
-                        if (selection.subtopicId === null) return null
+                        if (id === groupTopicId) return null
                         const subtopicName =
-                          topicNames.get(selection.subtopicId) ??
-                          `Subtopic ${selection.subtopicId}`
+                          topicsById.get(id)?.name ?? `Subtopic ${id}`
                         return (
-                          <SubtopicChip key={selection.subtopicId}>
+                          <SubtopicChip key={id}>
                             {subtopicName}
                             <ChipRemoveButton
                               type="button"
-                              onClick={() => handleRemove(selection)}
+                              onClick={() => handleRemove(id)}
                               aria-label={`Remove ${subtopicName} from ${topicName}`}
                             >
                               <RiCloseLine aria-hidden />
@@ -462,10 +457,10 @@ const ArticleSettingsDrawer = ({
                           </SubtopicChip>
                         )
                       })}
-                      {group.every((s) => s.subtopicId === null) ? (
+                      {group.every((id) => id === groupTopicId) ? (
                         <ChipRemoveButton
                           type="button"
-                          onClick={() => handleRemove(group[0])}
+                          onClick={() => handleRemove(groupTopicId)}
                           aria-label={`Remove ${topicName}`}
                         >
                           <RiCloseLine aria-hidden />
@@ -515,7 +510,7 @@ const ArticleSettingsDrawer = ({
             <Button
               variant="primary"
               onClick={() => {
-                onSave?.({ topics: selections, seoTitle, seoDescription })
+                onSave?.({ topics: selectedIds, seoTitle, seoDescription })
                 onClose()
               }}
             >

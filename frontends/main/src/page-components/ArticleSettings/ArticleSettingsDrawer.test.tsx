@@ -5,7 +5,12 @@ import { setMockResponse, factories, urls } from "api/test-utils"
 import { ArticleSettingsDrawer } from "./ArticleSettingsDrawer"
 import { renderWithProviders } from "@/test-utils"
 
-const setup = () => {
+/**
+ * One top-level topic with two subtopics under it. The drawer fetches every
+ * topic once and splits them by `parent`, so both selects and the saved-value
+ * lookup are served from this single response.
+ */
+const mockTopics = () => {
   const mainTopics = factories.learningResources.topics({ count: 1 })
   const [topic] = mainTopics.results
   const subtopics = factories.learningResources.topics({ count: 2 })
@@ -14,21 +19,31 @@ const setup = () => {
   })
   const [subA, subB] = subtopics.results
 
-  setMockResponse.get(
-    urls.topics.list({ is_toplevel: true, limit: 100 }),
-    mainTopics,
-  )
-  setMockResponse.get(
-    urls.topics.list({ parent_topic_id: [topic.id], limit: 100 }),
-    subtopics,
-  )
+  const all = [...mainTopics.results, ...subtopics.results]
+  setMockResponse.get(urls.topics.list({ limit: 1000 }), {
+    count: all.length,
+    next: null,
+    previous: null,
+    results: all,
+  })
 
+  return { topic, subA, subB }
+}
+
+const renderDrawer = (topics?: number[]) => {
   const onSave = jest.fn()
   renderWithProviders(
-    <ArticleSettingsDrawer open onClose={jest.fn()} onSave={onSave} />,
+    <ArticleSettingsDrawer
+      open
+      onClose={jest.fn()}
+      onSave={onSave}
+      initialValues={topics ? { topics } : undefined}
+    />,
   )
-  return { topic, subA, subB, onSave }
+  return { onSave }
 }
+
+const setup = () => ({ ...mockTopics(), ...renderDrawer() })
 
 const pickTopic = async (name: string) => {
   await userEvent.click(await screen.findByLabelText("Topic"))
@@ -42,6 +57,9 @@ const pickSubtopic = async (name: string) => {
 
 const add = async () =>
   userEvent.click(screen.getByRole("button", { name: "Add" }))
+
+const save = async () =>
+  userEvent.click(screen.getByRole("button", { name: "Save Settings" }))
 
 describe("ArticleSettingsDrawer topic selection", () => {
   /**
@@ -59,12 +77,10 @@ describe("ArticleSettingsDrawer topic selection", () => {
     await pickSubtopic(subA.name)
     await add()
 
-    await userEvent.click(screen.getByRole("button", { name: "Save Settings" }))
+    await save()
 
     expect(onSave).toHaveBeenCalledTimes(1)
-    expect(onSave.mock.calls[0][0].topics).toEqual([
-      { topicId: topic.id, subtopicId: subA.id },
-    ])
+    expect(onSave.mock.calls[0][0].topics).toEqual([subA.id])
   })
 
   test("a bare topic cannot be re-added once it has a subtopic", async () => {
@@ -88,12 +104,9 @@ describe("ArticleSettingsDrawer topic selection", () => {
     await pickSubtopic(subB.name)
     await add()
 
-    await userEvent.click(screen.getByRole("button", { name: "Save Settings" }))
+    await save()
 
-    expect(onSave.mock.calls[0][0].topics).toEqual([
-      { topicId: topic.id, subtopicId: subA.id },
-      { topicId: topic.id, subtopicId: subB.id },
-    ])
+    expect(onSave.mock.calls[0][0].topics).toEqual([subA.id, subB.id])
   })
 
   test("a topic added with no subtopic is still removable", async () => {
@@ -113,7 +126,43 @@ describe("ArticleSettingsDrawer topic selection", () => {
       screen.queryByRole("list", { name: "Selected topics" }),
     ).not.toBeInTheDocument()
 
-    await userEvent.click(screen.getByRole("button", { name: "Save Settings" }))
+    await save()
     expect(onSave.mock.calls[0][0].topics).toEqual([])
+  })
+})
+
+/**
+ * Only the leaf of each selection is saved -- the id the API stores -- so the
+ * grouping the design calls for has to be rebuilt from each topic's own
+ * `parent` when the drawer reopens.
+ */
+describe("ArticleSettingsDrawer saved values", () => {
+  test("a saved subtopic reopens as a chip under its parent", async () => {
+    const { topic, subA } = mockTopics()
+    renderDrawer([subA.id])
+
+    // Awaiting the composed label proves both ends of the grouping resolved:
+    // the chip's own name and the parent it was filed under.
+    await screen.findByRole("button", {
+      name: `Remove ${subA.name} from ${topic.name}`,
+    })
+    const selected = screen.getByRole("list", { name: "Selected topics" })
+    within(selected).getByText(topic.name)
+  })
+
+  test("a saved top-level topic reopens as a bare entry", async () => {
+    const { topic } = mockTopics()
+    renderDrawer([topic.id])
+
+    await screen.findByRole("button", { name: `Remove ${topic.name}` })
+  })
+
+  test("saved ids are handed back unchanged when nothing is edited", async () => {
+    const { subA } = mockTopics()
+    const { onSave } = renderDrawer([subA.id])
+
+    await save()
+
+    expect(onSave.mock.calls[0][0].topics).toEqual([subA.id])
   })
 })

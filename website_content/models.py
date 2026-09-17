@@ -84,6 +84,21 @@ class WebsiteContent(TimestampedModel, SafeDeleteModel):
         default=WebsiteContentType.news.name,
     )
     cover_image = models.URLField(max_length=2083, blank=True, default="")
+    # Where the content editor's topic selections live. Nothing else derives
+    # them: `learning_resources` holds no reference to WebsiteContent, so this
+    # content is not projected into a LearningResource today.
+    #
+    # Only the leaves the editor picked are stored. A subtopic already implies
+    # its parent, so recording the parent alongside its own subtopic would be
+    # redundant, and would leave a deliberately bare parent indistinguishable
+    # from an implied one. Should these later feed topic search or filtering,
+    # walking the ancestor chain belongs wherever that happens -- `load_topics`
+    # does it for ETL-loaded resources -- rather than being duplicated here.
+    topics = models.ManyToManyField(
+        "learning_resources.LearningResourceTopic",
+        blank=True,
+        related_name="website_content",
+    )
 
     class Meta:
         """Meta options for WebsiteContent"""
