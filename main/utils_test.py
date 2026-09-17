@@ -721,7 +721,7 @@ def test_run_on_worker_loop_reuses_one_loop():
     Every call in a process runs on the same loop.
 
     This is the whole point of the helper. asyncio.run (and async_to_sync)
-    create a loop per call and close it on return, while the Qdrant and
+    create a loop per call and close it on return, while the Qdrant clients
     bind to the loop alive when they were built. Call two would drive a
     cached gRPC channel onto a closed loop, so retrieval fails and generation
     is skipped rather than producing metadata. The helper keeps subsequent
