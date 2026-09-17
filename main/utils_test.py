@@ -722,11 +722,10 @@ def test_run_on_worker_loop_reuses_one_loop():
 
     This is the whole point of the helper. asyncio.run (and async_to_sync)
     create a loop per call and close it on return, while the Qdrant and
-    OpenSearch clients the credential metadata sweep reaches are @cache'd and
-    bind to the loop alive when they were built -- so call two would drive a
-    cached grpc channel onto a closed loop. Content retrieval is best-effort
-    by design, so that failure is silent: the run succeeds from marketing
-    copy alone.
+    bind to the loop alive when they were built. Call two would drive a
+    cached gRPC channel onto a closed loop, so retrieval fails and generation
+    is skipped rather than producing metadata. The helper keeps subsequent
+    calls on the original live loop.
     """
 
     async def which_loop():
