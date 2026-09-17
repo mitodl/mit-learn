@@ -22,6 +22,16 @@ from learning_resources.constants import WEBSITE_CONTENT_READABLE_ID_PREFIX
 TABLE = "learning_resources_learningresource"
 INDEX_NAME = "learningresource_website_content_uniq"
 
+# `_` is a single-character wildcard in LIKE, so the raw prefix would also
+# match `websiteXcontent:1` and index rows this has no business constraining.
+# Django escapes the same characters for `__startswith`, so escaping here is
+# also what keeps the index identical to the model-state condition below.
+LIKE_PREFIX = (
+    WEBSITE_CONTENT_READABLE_ID_PREFIX.replace("\\", r"\\")
+    .replace("_", r"\_")
+    .replace("%", r"\%")
+)
+
 
 def build_index(apps, schema_editor):
     """Build the partial unique index without locking the table"""
@@ -37,7 +47,7 @@ def build_index(apps, schema_editor):
             # Single %: nothing is passed as a query parameter, so psycopg does
             # no interpolation here and a doubled one would reach Postgres
             # verbatim.
-            f" WHERE readable_id LIKE '{WEBSITE_CONTENT_READABLE_ID_PREFIX}%'"
+            f" WHERE readable_id LIKE '{LIKE_PREFIX}%'"
         )
 
 

@@ -197,3 +197,23 @@ def test_a_second_resource_for_the_same_content_is_rejected():
         ).count()
         == 1
     )
+
+
+def test_the_unique_index_does_not_catch_lookalike_ids():
+    """
+    `_` is a single-character wildcard in LIKE, so an unescaped prefix would
+    index ids such as `websiteXcontent:1` too and reject duplicates of rows
+    this has no business constraining.
+    """
+    shared = {
+        "platform": None,
+        "readable_id": "websiteXcontent:1",
+        "resource_type": LearningResourceType.article.name,
+        "resource_category": LearningResourceType.article.value,
+        "published": True,
+    }
+    LearningResource.objects.create(title="one", **shared)
+    # Raises IntegrityError if the index predicate is not escaped.
+    LearningResource.objects.create(title="two", **shared)
+
+    assert LearningResource.objects.filter(readable_id="websiteXcontent:1").count() == 2

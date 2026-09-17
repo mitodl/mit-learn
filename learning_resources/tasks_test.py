@@ -1629,3 +1629,29 @@ def test_unpublish_website_content_learning_resource_task(mocker):
     tasks.unpublish_website_content_learning_resource_task.delay(1234)
 
     mock_unpublish.assert_called_once_with(1234)
+
+
+@pytest.mark.parametrize(
+    ("is_published", "expect_removal"),
+    [(False, True), (True, False)],
+)
+def test_unpublish_website_content_task_skips_a_republished_item(
+    mocker, is_published, expect_removal
+):
+    """
+    A queued removal can run after the item was republished.
+
+    Removing then would unpublish the resource the republish just restored, so
+    the task re-reads the row and bails out -- the mirror of the sync task only
+    acting on a published one.
+    """
+    from website_content.factories import WebsiteContentFactory
+
+    content = WebsiteContentFactory.create(is_published=is_published)
+    mock_unpublish = mocker.patch(
+        "learning_resources.tasks.unpublish_website_content_learning_resource"
+    )
+
+    tasks.unpublish_website_content_learning_resource_task.delay(content.id)
+
+    assert mock_unpublish.called is expect_removal

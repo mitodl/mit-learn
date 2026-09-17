@@ -1076,4 +1076,18 @@ def unpublish_website_content_learning_resource_task(content_id: int) -> None:
     Args:
         content_id (int): id of the content item that was unpublished
     """
+    from website_content.models import WebsiteContent
+
+    # Queued work can run late. If the item was republished in the meantime, a
+    # stale removal would unpublish the resource the republish just restored,
+    # so bail out -- the mirror of the sync task only acting on a published
+    # row. `objects` hides soft-deleted rows, so a row that is gone or
+    # soft-deleted still falls through and gets cleaned up.
+    if WebsiteContent.objects.filter(id=content_id, is_published=True).exists():
+        log.info(
+            "WebsiteContent %s is published again, skipping learning resource removal",
+            content_id,
+        )
+        return
+
     unpublish_website_content_learning_resource(content_id)
