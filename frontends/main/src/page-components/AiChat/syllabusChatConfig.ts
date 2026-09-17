@@ -21,6 +21,7 @@ type SyllabusChatParams = {
   collection_name: string
   message: string
   course_id: string
+  platform?: string
   related_courses?: string[]
 }
 
@@ -32,6 +33,14 @@ export const getSyllabusEntryScreenTitle = (
 ): string =>
   `What do you want to know about this ${resource.resource_category.toLocaleLowerCase()}?`
 
+/**
+ * A readable_id alone does not identify a resource: the same course can be
+ * published on more than one platform (e.g. mitxonline and xpro) with the same
+ * readable_id but different content. Platform code + readable_id is the unique
+ * key, so send the platform code along to keep the chat's content file search
+ * scoped to the course the user is actually looking at. learn-ai passes it
+ * through as the `platform` filter on the contentfile search.
+ */
 export const buildSyllabusChatRequestBody = (
   resource: LearningResource,
   messages: { content: string }[],
@@ -40,6 +49,9 @@ export const buildSyllabusChatRequestBody = (
     collection_name: "content_files",
     message: messages[messages.length - 1].content,
     course_id: resource.readable_id,
+  }
+  if (resource.platform?.code) {
+    params.platform = resource.platform.code
   }
   if (Array.isArray(resource.children)) {
     params.related_courses = resource.children.map(
@@ -61,13 +73,23 @@ export const getSyllabusChatRequestOpts = (
   transformBody: (messages) => buildSyllabusChatRequestBody(resource, messages),
 })
 
+/**
+ * Key for the chat session. Keyed by platform code as well as readable_id so
+ * that same-readable_id courses on different platforms do not share a
+ * conversation.
+ */
+export const getSyllabusChatId = (resource: LearningResource): string =>
+  resource.platform?.code
+    ? `${resource.platform.code}-${resource.readable_id}`
+    : resource.readable_id
+
 export const getSyllabusChatProps = (
   resource: LearningResource,
 ): Pick<
   AiChatProps,
   "chatId" | "entryScreenTitle" | "conversationStarters" | "requestOpts"
 > => ({
-  chatId: resource.readable_id,
+  chatId: getSyllabusChatId(resource),
   entryScreenTitle: getSyllabusEntryScreenTitle(resource),
   conversationStarters: SYLLABUS_STARTERS[resource.resource_type_group],
   requestOpts: getSyllabusChatRequestOpts(resource),

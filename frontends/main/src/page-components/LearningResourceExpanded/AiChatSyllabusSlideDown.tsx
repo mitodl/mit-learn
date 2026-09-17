@@ -7,7 +7,10 @@ import { LearningResource } from "api"
 import { AiChat } from "@mitodl/smoot-design/ai"
 import { usePostHog } from "posthog-js/react"
 import { PostHogEvents } from "@/common/constants"
-import { getSyllabusChatProps } from "@/page-components/AiChat/syllabusChatConfig"
+import {
+  getSyllabusChatId,
+  getSyllabusChatProps,
+} from "@/page-components/AiChat/syllabusChatConfig"
 
 export enum ChatTransitionState {
   Closed = "Closed",
@@ -197,7 +200,7 @@ const AiChatSyllabusSlideDown = ({
       ref={ref}
     >
       <StyledAiChat
-        key={resource.readable_id}
+        key={getSyllabusChatId(resource)}
         {...getSyllabusChatProps(resource)}
         topPosition={contentTopPosition}
         scrollElement={scrollElement}
