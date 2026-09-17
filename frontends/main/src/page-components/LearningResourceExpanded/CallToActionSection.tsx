@@ -270,8 +270,11 @@ const getCallToActionText = (resource: LearningResource): string => {
     [ResourceTypeEnum.Podcast]: listenToPodcast,
     [ResourceTypeEnum.PodcastEpisode]: listenToPodcast,
     [ResourceTypeEnum.Document]: learnMore,
+    [ResourceTypeEnum.Article]: viewArticle,
   }
 
+  // Kept alongside the map entry above: `resource_category` is what OCW-style
+  // course material sets to "Article", independently of the resource type.
   if (resource?.resource_category === "Article") {
     return viewArticle
   }
