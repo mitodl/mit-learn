@@ -2046,3 +2046,18 @@ def test_credential_metadata_tasks_are_unrouted():
     ):
         assert name not in app.conf.task_routes
     assert app.conf.task_default_queue == "default"
+
+
+def test_credential_metadata_leaf_task_is_acknowledged_late():
+    """
+    The per-resource task survives a lost or recycled worker.
+
+    Early acking would tell the broker the task is done before the LLM call
+    returns, so a worker recycled mid-generation would leave that course
+    ungenerated until the next daily sweep. The eligibility recheck makes the
+    redelivery safe rather than a second frontier-model call.
+    """
+    task = tasks.generate_credential_metadata_for_resource
+
+    assert task.acks_late is True
+    assert task.reject_on_worker_lost is True

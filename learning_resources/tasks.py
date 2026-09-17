@@ -1096,13 +1096,12 @@ def credential_metadata_resource_ids(*, overwrite: bool = False):
     )
 
 
-@app.task
+@app.task(acks_late=True, reject_on_worker_lost=True)
 def generate_credential_metadata_for_resource(
     resource_id: int, *, overwrite: bool = False
 ) -> bool:
     """
     Generate and store credential metadata for one resource.
-
 
     Args:
         resource_id (int): the resource to generate for
