@@ -1,6 +1,12 @@
 Release Notes
 =============
 
+Version 0.80.8
+--------------
+
+- Match Canvas run ids containing slashes in tutor problem routes (#3951)
+- build: bump @mitodl/mitxonline-api-axios to 2026.9.16 (#3952)
+
 Version 0.80.7
 --------------
 
