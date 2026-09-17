@@ -677,11 +677,10 @@ def test_generate_and_save_over_several_resources_in_one_process(
     retrieval reaches are @cache'd and bound to the event loop that was alive
     when they were built, so a loop per resource (asyncio.run, async_to_sync)
     leaves resource two driving a cached channel onto a closed loop.
-    `_retrieve_chunks` swallows that by design and the configurations still
-    produce criteria -- from marketing copy with no course content in it. So
-    the assertion that matters is that retrieval ran once per resource: a
-    count of one here means every resource after the first was generated
-    blind.
+    `_retrieve_chunks` catches that exception, after which generation is
+    skipped because required course content is missing. The assertions that
+    retrieval ran once per resource and that both rows were stored therefore
+    prove every resource used the live loop.
     """
     second = LearningResourceFactory.create(is_course=True)
     ContentFileFactory.create(
