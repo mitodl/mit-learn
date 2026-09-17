@@ -2,6 +2,7 @@
 
 import asyncio
 import json
+import logging
 
 import pytest
 
@@ -736,6 +737,55 @@ def test_generation_stops_without_course_content(
     assert "missing its course content" in generated.errors["criteria"]
     assert mock_llm.prompts == {}
     assert "Not generating credential metadata" in caplog.text
+
+
+@pytest.mark.django_db(transaction=True)
+def test_missing_context_is_a_warning_without_a_traceback(
+    configurations, mock_llm, mock_retrieval, caplog
+):
+    """
+    An incomplete course logs one warning, not an ERROR traceback.
+
+    A course whose marketing page has not been scraped yet is an ordinary
+    state of the catalogue, and during a Qdrant outage the daily sweep would
+    otherwise print two contradictory tracebacks per affected course -- the
+    retrieval failure's, and one for a decision that has no traceback of its
+    own.
+    """
+    resource = LearningResourceFactory.create(is_course=True)
+
+    with caplog.at_level(logging.DEBUG, logger="learning_resources.credentials"):
+        asyncio.run(generate_credential_metadata(resource))
+
+    records = [
+        record
+        for record in caplog.records
+        if "Not generating credential metadata" in record.message
+    ]
+    assert len(records) == 1
+    assert records[0].levelno == logging.WARNING
+    assert records[0].exc_info is None
+
+
+@pytest.mark.django_db(transaction=True)
+def test_retrieval_failure_says_generation_is_skipped(
+    resource, configurations, mock_llm, mocker, caplog
+):
+    """
+    The retrieval failure log says what now actually happens.
+
+    It used to promise generation from the metadata and marketing page alone,
+    which contradicted the abort logged right after it.
+    """
+    mocker.patch(
+        "learning_resources.credentials.async_content_file_chunks_for_resource",
+        side_effect=ConnectionError("qdrant is down"),
+    )
+
+    asyncio.run(generate_credential_metadata(resource))
+
+    assert "skipping generation" in caplog.text
+    assert "marketing page alone" not in caplog.text
 
 
 @pytest.mark.django_db(transaction=True)

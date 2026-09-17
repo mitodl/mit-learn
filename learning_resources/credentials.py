@@ -17,7 +17,6 @@ from typing_extensions import TypedDict
 from learning_resources.constants import CredentialMetadataField
 from learning_resources.credentials_store import save_credential_metadata
 from learning_resources.etl.constants import MARKETING_PAGE_FILE_TYPE
-from learning_resources.exceptions import CredentialMetadataContextError
 from learning_resources.models import (
     ContentFile,
     CredentialMetadataConfiguration,
@@ -288,8 +287,7 @@ async def _retrieve_chunks(
         )
     except Exception:
         logger.exception(
-            "Content file retrieval failed for %s; generating from metadata"
-            " and marketing page alone",
+            "Content file retrieval failed for %s; skipping generation",
             resource.readable_id,
         )
         return []
@@ -326,16 +324,18 @@ async def build_credential_context(
     )
 
 
-def _require_complete_context(context: CredentialContext, *, retrieved: bool) -> None:
+def _missing_context_sources(
+    context: CredentialContext, *, retrieved: bool
+) -> list[str]:
     """
-    Raise unless every source the configurations ask for is present.
+    Return the sources the configurations ask for that the context lacks.
 
     Generating without them is worse than not generating: the output reads
     like any other result, but a description written from the resource's own
     metadata alone, or criteria with none of the course's content behind them,
-    is not something to issue a credential from. An error leaves the resource
-    with no stored metadata, so the daily sweep picks it up again once its
-    marketing page is scraped or its content indexed.
+    is not something to issue a credential from. Returning empty-handed
+    leaves the resource with no stored metadata, so the daily sweep picks it
+    up again once its marketing page is scraped or its content indexed.
 
     Args:
         context (CredentialContext): the assembled sources
@@ -344,17 +344,16 @@ def _require_complete_context(context: CredentialContext, *, retrieved: bool) ->
             generation from the marketing page alone, so empty chunks are not
             a missing source -- nothing was asked for.
 
-    Raises:
-        CredentialMetadataContextError: naming every missing source
+    Returns:
+        list of str: the missing sources, named for a log line and an error
+            message. Empty means the context is complete.
     """
     missing = []
     if not context.marketing_page:
         missing.append("marketing page")
     if retrieved and not context.chunks:
         missing.append("course content")
-    if missing:
-        msg = f"missing its {' and '.join(missing)}"
-        raise CredentialMetadataContextError(msg)
+    return missing
 
 
 def _get_llm(config: CredentialMetadataConfiguration) -> ChatLiteLLM:
@@ -477,13 +476,15 @@ async def generate_credential_metadata(
 
     query = retrieval_query(configs)
     context = await build_credential_context(resource, query)
-    try:
-        _require_complete_context(context, retrieved=bool(query))
-    except CredentialMetadataContextError as error:
-        logger.exception(
-            "Not generating credential metadata for %s", resource.readable_id
+    missing = _missing_context_sources(context, retrieved=bool(query))
+    if missing:
+        sources = " and ".join(missing)
+        logger.warning(
+            "Not generating credential metadata for %s: missing its %s",
+            resource.readable_id,
+            sources,
         )
-        detail = f"Nothing was generated: the course is {error}."
+        detail = f"Nothing was generated: the course is missing its {sources}."
         return CredentialMetadata(
             fields={}, errors={config.field: detail for config in configs}
         )
@@ -492,11 +493,6 @@ async def generate_credential_metadata(
         *[_generate_field(resource, config, context, user=user) for config in configs]
     )
 
-    # Each response schema keys its value by the field name, so no field needs
-    # a case of its own here. An empty value is left out entirely, like a
-    # failure: a caller prepopulating a form must not overwrite a good value
-    # with a blank one -- and every field left out says why, so that a caller
-    # can tell a failed generation from one that produced nothing.
     fields, errors = {}, {}
     for config, outcome in zip(configs, outcomes):
         value = (outcome.response or {}).get(config.field)
