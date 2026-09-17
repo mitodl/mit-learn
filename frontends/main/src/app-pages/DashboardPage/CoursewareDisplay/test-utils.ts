@@ -217,8 +217,6 @@ const setupProgramsAndCourses = () => {
   const mitxOnlineUser = factories.user.user({ b2b_organizations: [orgX] })
   setMockResponse.get(u.urls.userMe.get(), user)
   setMockResponse.get(urls.userMe.get(), mitxOnlineUser)
-  setMockResponse.get(urls.organization.organizationList(""), orgX)
-  setMockResponse.get(urls.organization.organizationList(orgX.slug), orgX)
 
   const programCollection = makeProgramCollection({
     title: "Program Collection",
@@ -350,20 +348,15 @@ function setupOrgDashboardMocks(
   courses: CourseWithCourseRunsSerializerV2[],
   contracts: ContractPage[],
 ) {
-  // Basic user and org setup
+  // Basic user setup
   setMockResponse.get(u.urls.userMe.get(), user)
   setMockResponse.get(mitxonline.urls.userMe.get(), mitxOnlineUser)
-  setMockResponse.get(
-    mitxonline.urls.organization.organizationList(org.slug),
-    org,
-  )
 
   // Empty defaults
   setMockResponse.get(
     mitxonline.urls.programEnrollments.enrollmentsListV3(),
     [],
   )
-  setMockResponse.get(mitxonline.urls.contracts.contractsList(), contracts)
   setMockResponse.get(
     mitxonline.urls.programCollections.programCollectionsList(),
     { results: [] },

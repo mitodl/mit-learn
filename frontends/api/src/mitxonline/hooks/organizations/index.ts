@@ -8,11 +8,7 @@ import {
   B2bApiB2bManagerOrganizationsContractsCodesRevokeDestroyRequest,
   B2bApiB2bManagerOrganizationsContractsCodesSendTestEmailCreateRequest,
 } from "@mitodl/mitxonline-api-axios/v2"
-import {
-  organizationQueries,
-  managerOrganizationQueries,
-  managerOrganizationKeys,
-} from "./queries"
+import { managerOrganizationQueries, managerOrganizationKeys } from "./queries"
 import type { MutationHookOptions } from "../../../mutations/mutationMeta"
 
 const useB2BAttachMutation = (
@@ -142,7 +138,6 @@ const useSendTestEmail = ({ meta }: MutationHookOptions = {}) =>
   })
 
 export {
-  organizationQueries,
   managerOrganizationQueries,
   useB2BAttachMutation,
   useBulkAssignSeats,
