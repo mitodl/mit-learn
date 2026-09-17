@@ -1147,7 +1147,7 @@ def generate_credential_metadata_for_resource(
 @app.task
 def generate_all_credential_metadata(*, overwrite=False) -> int:
     """
-    Queue credential metadata generation for  MITx Online courses.
+    Queue credential metadata generation for MITx Online courses.
 
     Args:
         overwrite (bool): regenerate resources that already have metadata
