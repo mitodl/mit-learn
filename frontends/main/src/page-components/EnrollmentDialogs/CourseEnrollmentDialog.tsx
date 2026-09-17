@@ -32,7 +32,11 @@ import { useComplianceGate } from "@/common/mitxonline/useComplianceGate"
 import { useRouter } from "next-nprogress-bar"
 import { useQuery } from "@tanstack/react-query"
 import { productQueries } from "api/mitxonline-hooks/products"
-import { trackCourseEnrolled, trackAddToCart } from "@/common/analytics/gtm"
+import {
+  trackCourseEnrolled,
+  trackAddToCart,
+  trackBeginCheckout,
+} from "@/common/analytics/gtm"
 
 interface CourseEnrollmentDialogProps {
   course: CourseWithCourseRunsSerializerV2
@@ -280,6 +284,7 @@ const CertificateUpsell: React.FC<{
               courseName: course?.title,
               coursePrice: product.price ? parseFloat(product.price) : 0,
             })
+            trackBeginCheckout(course?.title)
             replaceBasketItem.mutate(product.id)
           }}
         />
