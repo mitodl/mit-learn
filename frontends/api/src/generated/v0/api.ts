@@ -41,6 +41,98 @@ import {
 } from "./base"
 
 /**
+ * Serializer for article resources: editorial content authored in MIT Learn.  No `content_files`, unlike a document -- an article\'s body is flattened into `description` when the resource is mirrored from the website content, so there is nothing attached to serialize.
+ */
+export interface ArticleResource {
+  id: number
+  topics?: Array<LearningResourceTopic>
+  position: number | null
+  offered_by: LearningResourceOfferor | null
+  platform: LearningResourcePlatform | null
+  course_feature: Array<string> | null
+  departments: Array<LearningResourceDepartment> | null
+  certification: boolean
+  certification_type: CourseResourceCertificationType
+  prices: Array<string>
+  resource_prices: Array<LearningResourcePrice>
+  runs: Array<LearningResourceRun> | null
+  image: LearningResourceImage | null
+  views: number
+  delivery: Array<CourseResourceDeliveryInner>
+  /**
+   * Return true if the resource is free/has a free option
+   */
+  free: boolean
+  /**
+   * The resource type group for UI grouping.  For courses/programs, this is derived from resource_category (which may differ from resource_type). For all other types, returns \"learning_material\".  * `course` - Course * `program` - Program * `learning_material` - Learning Material
+   */
+  resource_type_group: ResourceTypeGroupEnum
+  format: Array<CourseResourceFormatInner>
+  pace: Array<CourseResourcePaceInner>
+  children: LearningResourceRelationshipChildField | null
+  /**
+   * Return the best run id for the resource, if it has runs
+   */
+  best_run_id: number | null
+  /**
+   * Where this resource lives within Learn
+   */
+  learn_url: string
+  /**
+   * Slug derived from the title, for use in this resource\'s URL. It is cosmetic: lookups ignore it, and it changes whenever the title does. Titles that yield no ASCII slug get the literal \"resource\", so this is never blank.
+   */
+  url_slug: string
+  resource_type: ArticleResourceResourceTypeEnum
+  readable_id: string
+  title: string
+  description?: string | null
+  full_description?: string | null
+  last_modified?: string | null
+  published?: boolean
+  languages?: Array<string> | null
+  url?: string | null
+  /**
+   * The display category for this resource.
+   */
+  resource_category: string
+  ocw_topics?: Array<string>
+  professional: boolean
+  next_start_date?: string | null
+  availability?: ArticleResourceAvailabilityEnum | null
+  completeness?: number
+  license_cc?: boolean
+  test_mode?: boolean
+  continuing_ed_credits?: string | null
+  location?: string
+  duration?: string
+  min_weeks?: number | null
+  max_weeks?: number | null
+  time_commitment?: string
+  min_weekly_hours?: number | null
+  max_weekly_hours?: number | null
+  require_summaries: boolean
+}
+
+export const ArticleResourceAvailabilityEnum = {
+  Dated: "dated",
+  Anytime: "anytime",
+} as const
+
+export type ArticleResourceAvailabilityEnum =
+  (typeof ArticleResourceAvailabilityEnum)[keyof typeof ArticleResourceAvailabilityEnum]
+
+export const ArticleResourceResourceTypeEnumDescriptions = {
+  article: "",
+} as const
+
+export const ArticleResourceResourceTypeEnum = {
+  Article: "article",
+} as const
+
+export type ArticleResourceResourceTypeEnum =
+  (typeof ArticleResourceResourceTypeEnum)[keyof typeof ArticleResourceResourceTypeEnum]
+
+/**
  * Serializer for attestations.
  */
 export interface Attestation {
@@ -1125,6 +1217,7 @@ export type LearningPathResourceResourceTypeEnum =
  * @type LearningResource
  */
 export type LearningResource =
+  | ({ resource_type: "article" } & ArticleResource)
   | ({ resource_type: "course" } & CourseResource)
   | ({ resource_type: "document" } & DocumentResource)
   | ({ resource_type: "learning_path" } & LearningPathResource)
@@ -6984,7 +7077,7 @@ export const VectorLearningResourcesSearchApiAxiosParamCreator = function (
      * @param {string} [q] The search text
      * @param {string} [readable_id] The readable id of the resource
      * @param {Array<string>} [resource_category] The resource category for the resource
-     * @param {Array<VectorLearningResourcesSearchRetrieveResourceTypeEnum>} [resource_type] The type of learning resource               * &#x60;course&#x60; - course * &#x60;program&#x60; - program * &#x60;learning_path&#x60; - learning path * &#x60;podcast&#x60; - podcast * &#x60;podcast_episode&#x60; - podcast episode * &#x60;video&#x60; - video * &#x60;video_playlist&#x60; - video playlist * &#x60;document&#x60; - document
+     * @param {Array<VectorLearningResourcesSearchRetrieveResourceTypeEnum>} [resource_type] The type of learning resource               * &#x60;course&#x60; - course * &#x60;program&#x60; - program * &#x60;learning_path&#x60; - learning path * &#x60;podcast&#x60; - podcast * &#x60;podcast_episode&#x60; - podcast episode * &#x60;video&#x60; - video * &#x60;video_playlist&#x60; - video playlist * &#x60;document&#x60; - document * &#x60;article&#x60; - article
      * @param {Array<VectorLearningResourcesSearchRetrieveResourceTypeGroupEnum>} [resource_type_group] The category of learning resource               * &#x60;course&#x60; - Course * &#x60;program&#x60; - Program * &#x60;learning_material&#x60; - Learning Material
      * @param {number} [score_cutoff] The minimum score a result must have to be returned. Defaults to 0.0 when omitted, but the server clamps the effective cutoff to the minimum allowed for the selected search mode (dense or hybrid).
      * @param {VectorLearningResourcesSearchRetrieveSortbyEnum} [sortby] if the parameter starts with \&#39;-\&#39; the sort is in descending order  * &#x60;next_start_date&#x60; - next_start_date * &#x60;views&#x60; - views * &#x60;created_on&#x60; - created_on * &#x60;-next_start_date&#x60; - -next_start_date * &#x60;-views&#x60; - -views * &#x60;-created_on&#x60; - -created_on
@@ -7218,7 +7311,7 @@ export const VectorLearningResourcesSearchApiFp = function (
      * @param {string} [q] The search text
      * @param {string} [readable_id] The readable id of the resource
      * @param {Array<string>} [resource_category] The resource category for the resource
-     * @param {Array<VectorLearningResourcesSearchRetrieveResourceTypeEnum>} [resource_type] The type of learning resource               * &#x60;course&#x60; - course * &#x60;program&#x60; - program * &#x60;learning_path&#x60; - learning path * &#x60;podcast&#x60; - podcast * &#x60;podcast_episode&#x60; - podcast episode * &#x60;video&#x60; - video * &#x60;video_playlist&#x60; - video playlist * &#x60;document&#x60; - document
+     * @param {Array<VectorLearningResourcesSearchRetrieveResourceTypeEnum>} [resource_type] The type of learning resource               * &#x60;course&#x60; - course * &#x60;program&#x60; - program * &#x60;learning_path&#x60; - learning path * &#x60;podcast&#x60; - podcast * &#x60;podcast_episode&#x60; - podcast episode * &#x60;video&#x60; - video * &#x60;video_playlist&#x60; - video playlist * &#x60;document&#x60; - document * &#x60;article&#x60; - article
      * @param {Array<VectorLearningResourcesSearchRetrieveResourceTypeGroupEnum>} [resource_type_group] The category of learning resource               * &#x60;course&#x60; - Course * &#x60;program&#x60; - Program * &#x60;learning_material&#x60; - Learning Material
      * @param {number} [score_cutoff] The minimum score a result must have to be returned. Defaults to 0.0 when omitted, but the server clamps the effective cutoff to the minimum allowed for the selected search mode (dense or hybrid).
      * @param {VectorLearningResourcesSearchRetrieveSortbyEnum} [sortby] if the parameter starts with \&#39;-\&#39; the sort is in descending order  * &#x60;next_start_date&#x60; - next_start_date * &#x60;views&#x60; - views * &#x60;created_on&#x60; - created_on * &#x60;-next_start_date&#x60; - -next_start_date * &#x60;-views&#x60; - -views * &#x60;-created_on&#x60; - -created_on
@@ -7479,7 +7572,7 @@ export interface VectorLearningResourcesSearchApiVectorLearningResourcesSearchRe
   readonly resource_category?: Array<string>
 
   /**
-   * The type of learning resource               * &#x60;course&#x60; - course * &#x60;program&#x60; - program * &#x60;learning_path&#x60; - learning path * &#x60;podcast&#x60; - podcast * &#x60;podcast_episode&#x60; - podcast episode * &#x60;video&#x60; - video * &#x60;video_playlist&#x60; - video playlist * &#x60;document&#x60; - document
+   * The type of learning resource               * &#x60;course&#x60; - course * &#x60;program&#x60; - program * &#x60;learning_path&#x60; - learning path * &#x60;podcast&#x60; - podcast * &#x60;podcast_episode&#x60; - podcast episode * &#x60;video&#x60; - video * &#x60;video_playlist&#x60; - video playlist * &#x60;document&#x60; - document * &#x60;article&#x60; - article
    */
   readonly resource_type?: Array<VectorLearningResourcesSearchRetrieveResourceTypeEnum>
 
@@ -7717,6 +7810,7 @@ export const VectorLearningResourcesSearchRetrieveResourceTypeEnum = {
   Video: "video",
   VideoPlaylist: "video_playlist",
   Document: "document",
+  Article: "article",
 } as const
 export type VectorLearningResourcesSearchRetrieveResourceTypeEnum =
   (typeof VectorLearningResourcesSearchRetrieveResourceTypeEnum)[keyof typeof VectorLearningResourcesSearchRetrieveResourceTypeEnum]

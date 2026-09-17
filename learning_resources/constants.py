@@ -37,6 +37,11 @@ class LearningResourceType(ExtendedEnum):
     video = "Video"
     video_playlist = "Video Playlist"
     document = "Document"
+    # Editorial content authored in MIT Learn itself (WebsiteContent), as
+    # opposed to a document ingested from an external source. 0105 previously
+    # folded `article` into `document`; it is reinstated here because that
+    # content is now mirrored into resources and has to be distinguishable.
+    article = "Article"
 
 
 # Prefix for the readable_id of a LearningResource mirroring a WebsiteContent

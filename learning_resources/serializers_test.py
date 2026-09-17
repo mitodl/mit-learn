@@ -508,10 +508,14 @@ def test_learning_resource_serializer_many_matches_individual(rf, user):
     queryset = LearningResource.objects.for_serialization().filter(
         pk__in=[resource.pk for resource in resources]
     )
-    # every mapped resource_type except document is covered here
+    # every mapped resource_type except document and article is covered here;
+    # the factory has no trait for either
     assert {resource.resource_type for resource in queryset} == set(
         serializers.LearningResourceSerializer.serializer_cls_mapping
-    ) - {LearningResourceType.document.name}
+    ) - {
+        LearningResourceType.document.name,
+        LearningResourceType.article.name,
+    }
 
     results = serializers.LearningResourceSerializer(
         queryset, many=True, context=context

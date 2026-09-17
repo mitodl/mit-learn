@@ -91,14 +91,14 @@ def sync_website_content_to_learning_resource(content) -> LearningResource:
     url = content.get_url()
     resource, _ = LearningResource.objects.update_or_create(
         readable_id=website_content_readable_id(content.id),
-        resource_type=LearningResourceType.document.name,
+        resource_type=LearningResourceType.article.name,
         defaults={
             "title": content.title,
             "description": extract_text_from_content(content.content),
             "published": True,
             "url": urljoin(settings.APP_BASE_URL, url) if url else None,
             "last_modified": content.updated_on,
-            "resource_category": LearningResourceType.document.value,
+            "resource_category": LearningResourceType.article.value,
         },
     )
     resource.topics.set(content.topics.all())
@@ -122,7 +122,7 @@ def unpublish_website_content_learning_resource(content_id: int) -> None:
     """
     resource = LearningResource.objects.filter(
         readable_id=website_content_readable_id(content_id),
-        resource_type=LearningResourceType.document.name,
+        resource_type=LearningResourceType.article.name,
     ).first()
     if resource is None:
         # Nothing was ever published for this item -- a draft has no resource.
