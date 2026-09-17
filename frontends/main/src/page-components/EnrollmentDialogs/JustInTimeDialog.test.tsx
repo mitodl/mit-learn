@@ -16,7 +16,13 @@ import type { User as MitxUser } from "@mitodl/mitxonline-api-axios/v2"
 import type { PartialDeep } from "type-fest"
 import NiceModal from "@ebay/nice-modal-react"
 import { getDescriptionFor } from "ol-test-utilities"
+import * as Sentry from "@sentry/nextjs"
 import { JustInTimeDialog } from "./JustInTimeDialog"
+
+jest.mock("@sentry/nextjs", () => ({
+  captureMessage: jest.fn(),
+  captureException: jest.fn(),
+}))
 
 const COUNTRIES = [
   {
@@ -403,6 +409,36 @@ describe("JustInTimeDialog", () => {
       )
       // The entered values survive so the user can retry without retyping.
       expect(textbox(dialog, "First Name")).toHaveValue("Ada")
+    }, 10000)
+
+    test("reports which fields the server rejected, never what was typed in them", async () => {
+      setup()
+      setMockResponse.patch(
+        mitxUrls.userMe.get(),
+        { errors: { legal_address: { city: ["This value is too long."] } } },
+        { code: 400 },
+      )
+      const dialog = await openDialog()
+      await user.type(textbox(dialog, "First Name"), "Ada")
+      await user.type(textbox(dialog, "Last Name"), "Lovelace")
+      await user.type(textbox(dialog, "Address"), "1 Main St")
+      await user.type(textbox(dialog, "City"), "London")
+      await chooseOption(combobox(dialog, "Country"), "United Kingdom")
+      await chooseOption(combobox(dialog, "Year of Birth"), "1988")
+
+      await user.click(within(dialog).getByRole("button", { name: "Submit" }))
+
+      await waitFor(() => expect(Sentry.captureMessage).toHaveBeenCalled())
+      const [, options] = jest.mocked(Sentry.captureMessage).mock.calls[0]
+      expect(options).toMatchObject({
+        tags: { status: "400" },
+        extra: { paths: ["errors.legal_address.city"] },
+      })
+      // The form holds a legal name and home address, so only keys may leave
+      // the browser.
+      expect(JSON.stringify(options)).not.toMatch(
+        /Ada|Lovelace|1 Main St|London|too long/,
+      )
     }, 10000)
 
     test("cancelling saves nothing", async () => {

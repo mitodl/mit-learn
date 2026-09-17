@@ -1,6 +1,14 @@
 Release Notes
 =============
 
+Version 0.80.6
+--------------
+
+- feat: report JIT compliance dialog save failures to Sentry (#3945)
+- Surface and log HubSpot form submission errors instead of failing silently (#3919)
+- Admin controls for vector search (#3933)
+- Remove the unused UserWebsite model and API (#3941)
+
 Version 0.80.5
 --------------
 
