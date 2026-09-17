@@ -450,7 +450,7 @@ class QdrantView(AsyncAPIView):
                 search_params["offset"] = offset
                 result_obj = await client.query_points(**search_params)
                 search_result = result_obj.points
-            if "group_by" not in params and offset == 0:
+            if "group_by" not in params and score_cutoff is not None:
                 search_result = _relative_score_floor(search_result, hybrid_search)
         else:
             # No query string — use scroll API

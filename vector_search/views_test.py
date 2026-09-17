@@ -1223,7 +1223,6 @@ def test_relative_score_floor_uses_the_ratio_for_the_search_mode(settings):
     assert len(_relative_score_floor(points, hybrid_search_enabled=True)) == 3
 
 
-@pytest.mark.usefixtures("_no_min_candidates")
 def test_relative_score_floor_leaves_negative_scores_alone(settings):
     """A fraction of a negative best score is above it, trimming the best hit."""
     settings.DENSE_VECTOR_SEARCH_MIN_SCORE_RATIO = 0.8
@@ -1238,6 +1237,54 @@ def test_relative_score_floor_disabled_by_a_zero_ratio(settings):
     points = _scored(0.9, 0.1, 0.01)
 
     assert _relative_score_floor(points, hybrid_search_enabled=False) == points
+
+
+@pytest.mark.usefixtures("_no_min_candidates")
+def test_async_vector_search_relative_score_floor_scoping(mocker, settings):
+    """
+    Verify relative_score_floor applies to unpaginated resource search
+    (with score_cutoff) but does not apply to paginated searches (score_cutoff=None).
+    """
+    settings.DENSE_VECTOR_SEARCH_MIN_SCORE_RATIO = 0.8
+
+    mock_qdrant = mocker.patch(
+        "vector_search.views.async_qdrant_client", return_value=mocker.AsyncMock()
+    )()
+    points = _scored(1.0, 0.9, 0.5, 0.2)
+    mock_result = mocker.MagicMock()
+    mock_result.points = points
+    mock_qdrant.query_points = mocker.AsyncMock(return_value=mock_result)
+    mock_qdrant.count = mocker.AsyncMock(
+        return_value=mocker.MagicMock(count=len(points))
+    )
+
+    mocker.patch(
+        "vector_search.views._resource_payload_hits", side_effect=lambda pts: pts
+    )
+    mocker.patch(
+        "vector_search.views._content_file_vector_hits", side_effect=lambda pts: pts
+    )
+
+    view = QdrantView()
+
+    res_resource = asyncio.run(
+        view.async_vector_search(
+            "query", params={}, score_cutoff=0.0, hybrid_search=False
+        )
+    )
+    assert [p.score for p in res_resource["hits"]] == [1.0, 0.9]
+
+    res_paginated = asyncio.run(
+        view.async_vector_search(
+            "query",
+            params={},
+            offset=0,
+            limit=10,
+            score_cutoff=None,
+            hybrid_search=False,
+        )
+    )
+    assert [p.score for p in res_paginated["hits"]] == [1.0, 0.9, 0.5, 0.2]
 
 
 @pytest.mark.parametrize("hybrid_search", [True, False])
