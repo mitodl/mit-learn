@@ -1,6 +1,11 @@
 Release Notes
 =============
 
+Version 0.80.7
+--------------
+
+- feat(website-content): persist the settings drawer's topic selections (#3935)
+
 Version 0.80.6
 --------------
 
