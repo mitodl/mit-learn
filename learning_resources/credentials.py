@@ -517,11 +517,6 @@ async def generate_and_save_credential_metadata(
     """
     Generate a resource's credential metadata and store what was generated.
 
-    The storing half is separate from `generate_credential_metadata` so that
-    the endpoint's regenerate path and the daily sweep share one function,
-    while a caller that only wants a draft -- and the existing tests -- keep a
-    generator that writes nothing.
-
     Args:
         resource (LearningResource): the resource to generate metadata for
         user (User): the user the generation is logged against

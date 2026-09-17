@@ -1781,9 +1781,6 @@ class CredentialMetadata(TimestampedModel):
     asked to regenerate. Distinct from CredentialMetadataGenerationLog, which
     is the append-only history of every attempt: this is the one current value.
 
-    A row exists only once something has actually been generated. An empty row
-    is never written, so absence means "not generated yet" rather than
-    "generated nothing" -- see credentials_store.save_credential_metadata.
     """
 
     learning_resource = models.OneToOneField(

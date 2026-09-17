@@ -1774,8 +1774,6 @@ async def credential_metadata_resource(readable_id: str) -> LearningResource:
     """
     Resolve the MITx Online course a credential metadata request names.
 
-    All four fields are pinned because readable_id is unique only per
-    (platform, resource_type): another platform can carry the same one.
 
     Args:
         readable_id (str): the readable id the request asked for
@@ -1845,8 +1843,7 @@ class CredentialMetadataView(AsyncAPIView):
 
     @extend_schema(summary="Get stored credential metadata")
     async def get(self, request):
-        # No credentials import here, deliberately: a GET serves what the
-        # daily sweep already generated, and must not be able to spend money.
+
         readable_id = request.query_params.get("resource_readable_id")
         if not readable_id:
             msg = "resource_readable_id is required"
@@ -1855,9 +1852,6 @@ class CredentialMetadataView(AsyncAPIView):
         resource = await credential_metadata_resource(readable_id)
         stored = await db_sync_to_async(stored_credential_metadata)(resource)
         if not stored:
-            # A row is only written once something was generated, so absence
-            # means not-yet-generated -- worded to be distinguishable from the
-            # NotFound raised for an unknown readable_id.
             msg = f"No credential metadata has been generated for {readable_id}"
             raise NotFound(msg)
 
@@ -1865,8 +1859,6 @@ class CredentialMetadataView(AsyncAPIView):
             CredentialMetadataSerializer(
                 {
                     "resource_readable_id": readable_id,
-                    # Omitted rather than blank when half the row is missing,
-                    # matching the generate path's omit-empties rule.
                     **(
                         {"description": stored.description}
                         if stored.description
@@ -1879,9 +1871,6 @@ class CredentialMetadataView(AsyncAPIView):
 
     @extend_schema(summary="Generate credential metadata")
     async def post(self, request):
-        # Imported here, not at module scope: credentials pulls in litellm and
-        # langchain, and the URLconf imports this module at boot. See
-        # main/boot_imports_test.py.
         from learning_resources.credentials import (
             generate_and_save_credential_metadata,
         )
@@ -1901,8 +1890,6 @@ class CredentialMetadataView(AsyncAPIView):
                 {
                     "resource_readable_id": readable_id,
                     **generated.fields,
-                    # Omitted entirely when nothing failed, rather than sent as
-                    # an empty object: a caller checks for the key.
                     **({"errors": generated.errors} if generated.errors else {}),
                 }
             ).data

@@ -1051,14 +1051,6 @@ def credential_metadata_resources(*, overwrite: bool = False):
     """
     Resources the credential metadata sweep should generate for.
 
-    The one definition of "needs generating": the sweep fans out over it, and
-    each resource's own task re-applies it before spending anything.
-
-    All four of published/test_mode, resource_type, etl_source and platform
-    are pinned because the endpoint's resolver pins them: readable_id is
-    unique only per (platform, resource_type), so a looser queryset would
-    generate metadata for a row the API will never serve.
-
     Args:
         overwrite (bool): include resources that already have metadata
 
@@ -1068,10 +1060,6 @@ def credential_metadata_resources(*, overwrite: bool = False):
     """
     active_fields = active_credential_metadata_fields()
     if not active_fields:
-        # Nothing is configured to generate, so nothing needs generating.
-        # Without this the sweep queues a task per course that each pay
-        # nothing and store nothing. Mirrors generate_credential_metadata's
-        # own guard on the same table.
         log.warning("No active CredentialMetadataConfiguration; nothing to generate")
         return LearningResource.objects.none()
 
@@ -1085,14 +1073,6 @@ def credential_metadata_resources(*, overwrite: bool = False):
         .exclude(readable_id__in=load_course_blocklist())
     )
     if not overwrite:
-        # Incomplete, not merely absent: a run where one field failed wrote
-        # the other, and `credential_metadata__isnull=True` alone would leave
-        # that resource half-generated forever.
-        #
-        # Incomplete against the *active* configurations, not every column: a
-        # field whose configuration is off is never generated, so demanding
-        # its column would requeue the resource on every sweep and pay to
-        # regenerate the fields that are still active, forever.
         resources = resources.filter(
             incomplete_credential_metadata_query(active_fields)
         )
@@ -1116,9 +1096,6 @@ def credential_metadata_resource_ids(*, overwrite: bool = False):
     )
 
 
-# Deliberately without acks_late/reject_on_worker_lost, unlike the file-sync
-# leaves above: those are idempotent, this one spends money per attempt, so a
-# lost worker should drop the resource rather than pay for it twice.
 @app.task
 def generate_credential_metadata_for_resource(
     resource_id: int, *, overwrite: bool = False
@@ -1126,16 +1103,6 @@ def generate_credential_metadata_for_resource(
     """
     Generate and store credential metadata for one resource.
 
-    One resource per task, not a chunk: each costs ~50s and a frontier-model
-    call, so this is the unit worth retrying, reporting and reasoning about
-    on its own. It also keeps a task well under Redis's default 3600s
-    visibility_timeout, where a chunk that overran would be redelivered and
-    regenerated at full cost.
-
-    A failure is left to raise. With a task per resource there is nothing to
-    protect: celery marks this one failed and the rest of the sweep's group
-    carries on, where a chunked version had to swallow the error to avoid
-    losing the successes beside it.
 
     Args:
         resource_id (int): the resource to generate for
@@ -1181,13 +1148,7 @@ def generate_credential_metadata_for_resource(
 @app.task
 def generate_all_credential_metadata(*, overwrite=False) -> int:
     """
-    Queue credential metadata generation for every MITx Online course.
-
-    Publishes the work and returns, rather than `self.replace`-ing into the
-    group: a full sweep is hours of per-resource LLM calls, and a parent whose
-    result is the group's keeps a caller (and CELERY_RESULT_EXPIRES' worth of
-    result keys) waiting on all of it to learn something each resource's own
-    task already reports. Progress belongs in the celery logs.
+    Queue credential metadata generation for  MITx Online courses.
 
     Args:
         overwrite (bool): regenerate resources that already have metadata

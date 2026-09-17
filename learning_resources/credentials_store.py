@@ -1,10 +1,5 @@
 """
 Read and write the credential metadata currently in force for a resource.
-
-Kept apart from `credentials`, which imports litellm and langchain: the
-endpoint's GET handler and `tasks` both need the stored values, and neither
-can afford to pull the generation stack onto the boot path -- see
-`main/boot_imports_test.py`.
 """
 
 import logging
@@ -92,9 +87,6 @@ def stored_credential_metadata(
         CredentialMetadata | None: the stored row, or None when nothing has
             been generated for the resource yet
     """
-    # A filter rather than `resource.credential_metadata`: the reverse
-    # one-to-one descriptor raises RelatedObjectDoesNotExist when absent, and
-    # "nothing generated yet" is an ordinary answer here, not an error.
     return CredentialMetadata.objects.filter(learning_resource=resource).first()
 
 

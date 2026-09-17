@@ -85,10 +85,6 @@ def test_save_credential_metadata_writes_nothing_when_empty(resource, fields):
     """
     A generation that produced nothing stores nothing.
 
-    An empty row would read as "generated nothing" rather than "not generated
-    yet": the next non-overwriting sweep would skip the resource forever, and
-    a GET would answer 200 with no fields instead of 404. One provider outage
-    would otherwise permanently poison every resource it hit.
     """
     assert save_credential_metadata(resource, fields) is None
     assert not CredentialMetadata.objects.filter(learning_resource=resource).exists()

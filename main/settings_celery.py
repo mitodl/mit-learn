@@ -229,8 +229,6 @@ CELERY_BEAT_SCHEDULE = (
         "generate-credential-metadata-every-1-days": {
             "task": "learning_resources.tasks.generate_all_credential_metadata",
             "schedule": crontab(minute=0, hour=11),  # 7:00am EDT / 6:00am EST
-            # Fills gaps only. An overwriting sweep regenerates the whole
-            # catalogue at full LLM cost every day, so that stays manual.
             "kwargs": {"overwrite": False},
         },
     }
