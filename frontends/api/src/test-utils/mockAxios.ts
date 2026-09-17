@@ -78,6 +78,10 @@ const mockAdapter: AxiosAdapter = async (config) => {
     baseURL: config.baseURL,
     url: config.url,
     params: config.params,
+    // Forwarded so a client that customizes array serialization is mocked at
+    // the URL it really requests. Without it every array param would resolve
+    // here as axios's default `key[]=a&key[]=b`, whatever the client sent.
+    paramsSerializer: config.paramsSerializer,
   })
   const method = (config.method ?? "get").toLowerCase() as Method
   // OpenAPI Generator pre-serializes request bodies; deserialize so tests can

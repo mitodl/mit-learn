@@ -14,7 +14,11 @@ import { useFeatureFlagEnabled } from "posthog-js/react"
 import { allowConsoleErrors } from "ol-test-utilities"
 import { ForbiddenError } from "@/common/errors"
 import { FeatureFlags } from "@/common/feature_flags"
-import { contractAdminView, organizationAnalyticsView } from "@/common/urls"
+import {
+  contractAdminView,
+  contractLearnersView,
+  organizationAnalyticsView,
+} from "@/common/urls"
 import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
 import { SUPPRESSED_LEGEND } from "./Analytics/format"
 import AnalyticsContent from "./AnalyticsContent"
@@ -892,6 +896,44 @@ describe("AnalyticsContent, contract-scoped", () => {
       "href",
       contractAdminView(orgSlug, second.slug),
     )
+  })
+
+  test("'Learner analytics' targets the contract being viewed", async () => {
+    const [first, second] = [
+      factories.contracts.contract(),
+      factories.contracts.contract(),
+    ]
+    const org = orgWithUuid({ contracts: [first, second] })
+    setManagerOrgs([org])
+
+    setContractAnalyticsResponses(String(second.id))
+
+    const orgSlug = org.slug.replace(/^org-/, "")
+    renderWithProviders(
+      <AnalyticsContent orgSlug={orgSlug} contractSlug={second.slug} />,
+    )
+
+    const link = await screen.findByRole("link", { name: "Learner analytics" })
+    expect(link).toHaveAttribute(
+      "href",
+      contractLearnersView(orgSlug, second.slug),
+    )
+  })
+
+  test("hides 'Learner analytics' on the org-wide aggregate page", async () => {
+    // learner-progress is contract-scoped only, so there is nowhere for this
+    // button to point without a contract in view.
+    const org = orgWithUuid()
+    setManagerOrgs([org])
+    setAnalyticsResponses()
+    const orgSlug = org.slug.replace(/^org-/, "")
+
+    renderWithProviders(<AnalyticsContent orgSlug={orgSlug} />)
+
+    await screen.findByText("Analytics")
+    expect(
+      screen.queryByRole("link", { name: "Learner analytics" }),
+    ).not.toBeInTheDocument()
   })
 
   test("hides the Manage seats button when the manager-dashboard flag is off", async () => {

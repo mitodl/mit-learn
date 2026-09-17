@@ -161,11 +161,43 @@ const EmptyTableMessage = styled(Typography)(({ theme }) => ({
 /** Placeholder for a value the API did not return. */
 const STUB = "—"
 
+const TableBody = styled("div", {
+  shouldForwardProp: (prop) => prop !== "$stale",
+})<{ $stale: boolean }>(({ $stale }) => ({
+  opacity: $stale ? 0.5 : 1,
+  transition: $stale ? "opacity 150ms ease 150ms" : "none",
+}))
+
+const AriaDisabledButtonWrapper = styled.div(({ theme }) => ({
+  "> button[aria-disabled='true']": {
+    cursor: "default",
+    backgroundColor: theme.custom.colors.lightGray2,
+    border: `1px solid ${theme.custom.colors.lightGray2}`,
+    color: theme.custom.colors.silverGrayDark,
+    ":hover": {
+      backgroundColor: theme.custom.colors.lightGray2,
+      color: theme.custom.colors.silverGrayDark,
+    },
+  },
+}))
+
+const csvCell = (value: string | null | undefined): string => {
+  const text = value ?? ""
+  return /[",\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text
+}
+
+const buildCsvRow = (values: (string | null | undefined)[]): string =>
+  values.map(csvCell).join(",")
+
 export {
+  AriaDisabledButtonWrapper,
+  buildCsvRow,
   CellText,
+  csvCell,
   EmptyTableMessage,
   MobileLabel,
   STUB,
+  TableBody,
   TableCard,
   tableCardInnerWidth,
   TableCell,

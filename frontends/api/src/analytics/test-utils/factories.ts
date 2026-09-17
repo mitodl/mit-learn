@@ -5,6 +5,8 @@ import type {
   ContractMonthlyEngagementTrend,
   ContractUtilization,
   EnrollmentCompletionFunnel,
+  LearnerProgress,
+  LearnerProgressResponse,
   MonthlyEngagementTrend,
   OrgAnalyticsResponse,
 } from "../types"
@@ -157,6 +159,67 @@ const contractContentEngagementDepth = (
   ...overrides,
 })
 
+/**
+ * Defaults to a learner who HAS consented, so a test that cares about consent
+ * opts in with `outcomesShared: false` rather than every other test opting out.
+ * `last_active_on` defaults to null because the API hardcodes it so today.
+ */
+const learnerProgress = (
+  overrides: Partial<LearnerProgress> = {},
+): LearnerProgress => ({
+  learner_id: faker.string.uuid(),
+  email: faker.internet.email(),
+  full_name: faker.person.fullName(),
+  courserun_readable_id: `course-v1:MITxT+${faker.string.alphanumeric(6)}+2T2026`,
+  courserun_title: faker.company.catchPhrase(),
+  courserun_start_on: "2026-02-01T00:00:00Z",
+  courserun_end_on: "2026-08-01T00:00:00Z",
+  enrolled_on: "2026-02-15T00:00:00Z",
+  enrollment_is_active: true,
+  enrollment_mode: "verified",
+  outcomes_shared: true,
+  completion_status: "in_progress",
+  is_passing: false,
+  grade: 0.42,
+  letter_grade: null,
+  certificate_issued_on: null,
+  certificate_is_revoked: null,
+  last_active_on: null,
+  ...overrides,
+})
+
+/**
+ * A learner who has not consented. The API nulls every outcome field server
+ * side, so this factory does too — a fixture that left them populated would
+ * let a component pass its test while rendering data the API never sends.
+ */
+const withheldLearnerProgress = (
+  overrides: Partial<LearnerProgress> = {},
+): LearnerProgress =>
+  learnerProgress({
+    outcomes_shared: false,
+    completion_status: null,
+    is_passing: null,
+    grade: null,
+    letter_grade: null,
+    certificate_issued_on: null,
+    certificate_is_revoked: null,
+    last_active_on: null,
+    ...overrides,
+  })
+
+const learnerProgressEnvelope = (
+  data: LearnerProgress[],
+  overrides: Partial<LearnerProgressResponse> = {},
+): LearnerProgressResponse => ({
+  organization_id: organizationId(),
+  as_of: "2026-07-01T04:00:00Z",
+  total_count: data.length,
+  outcomes_withheld_count: data.filter((row) => !row.outcomes_shared).length,
+  data,
+  ...overrides,
+})
+
 export {
   contentEngagementDepth,
   contractContentEngagementDepth,
@@ -164,6 +227,9 @@ export {
   contractUtilization,
   enrollmentCompletionFunnel,
   envelope,
+  learnerProgress,
+  learnerProgressEnvelope,
   monthlyEngagementTrend,
   organizationId,
+  withheldLearnerProgress,
 }
