@@ -409,9 +409,8 @@ def run_on_worker_loop(coro):
     create a loop per call and close it on return, and the clients these
     coroutines reach are `@cache`d and bind to whichever loop was alive when
     they were built. The second call in a process would then drive a cached
-    grpc channel onto a closed loop -- and because content retrieval is
-    best-effort by design, that failure is silent: the generation succeeds
-    from marketing copy alone. One loop per process instead, so every call
+    gRPC channel onto a closed loop, causing content retrieval and credential
+    generation to be skipped. One loop per process instead, so every call
     sees the loop its cached clients were built on.
 
     The loop is created lazily rather than at import, so that a prefork Celery
