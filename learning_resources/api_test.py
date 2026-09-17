@@ -2,6 +2,7 @@
 
 import pytest
 from django.conf import settings
+from django.db import IntegrityError, transaction
 
 from learning_resources.api import (
     sync_website_content_to_learning_resource,
@@ -165,3 +166,34 @@ def test_republishing_restores_the_same_resource():
 
     assert restored.id == original.id
     assert restored.published is True
+
+
+def test_a_second_resource_for_the_same_content_is_rejected():
+    """
+    Two concurrent syncs of one item must not each insert a row.
+
+    `unique_together` spans `platform`, which these rows leave NULL, and
+    Postgres treats NULLs in a unique index as distinct -- so it rejects
+    nothing here. Only the partial index on the readable_id prefix does, and
+    without it every later sync for the item would fail with
+    MultipleObjectsReturned.
+    """
+    content = _published_content()
+    sync_website_content_to_learning_resource(content)
+
+    with pytest.raises(IntegrityError), transaction.atomic():
+        LearningResource.objects.create(
+            platform=None,
+            readable_id=website_content_readable_id(content.id),
+            resource_type=LearningResourceType.document.name,
+            title="duplicate",
+            resource_category=LearningResourceType.document.value,
+            published=True,
+        )
+
+    assert (
+        LearningResource.objects.filter(
+            readable_id=website_content_readable_id(content.id)
+        ).count()
+        == 1
+    )
