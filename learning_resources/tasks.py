@@ -1111,9 +1111,7 @@ def generate_credential_metadata_for_resource(
     Returns:
         bool: whether anything was stored
     """
-    # Imported inside the task body, not at module scope: credentials pulls in
-    # litellm and langchain, and views.py imports this module at boot, which
-    # puts it on the URLconf boot path. See main/boot_imports_test.py.
+
     from learning_resources.credentials import generate_and_save_credential_metadata
 
     resource = (
@@ -1129,11 +1127,6 @@ def generate_credential_metadata_for_resource(
         )
         return False
 
-    # The process's own event loop, not asyncio.run: the Qdrant client is
-    # cached per process and bound to the loop it was built on, so a loop per
-    # call leaves every task after the first in a prefork child retrieving
-    # nothing -- silently, because retrieval is best-effort. A task per
-    # resource does not change that: the cache outlives the task.
     metadata = run_on_worker_loop(generate_and_save_credential_metadata(resource))
     if metadata.errors:
         log.warning(
