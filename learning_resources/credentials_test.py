@@ -695,3 +695,120 @@ def test_generate_and_save_over_several_resources_in_one_process(
 
     assert mock_retrieval.call_count == 2
     assert CredentialMetadata.objects.count() == 2
+
+
+@pytest.mark.django_db(transaction=True)
+def test_generation_stops_without_a_marketing_page(
+    configurations, mock_llm, mock_retrieval, caplog
+):
+    """
+    A resource with no marketing page is not generated for.
+
+    Its metadata alone would still produce plausible-looking output, which is
+    the problem: there is no way to tell it apart from a result with the
+    course behind it.
+    """
+    resource = LearningResourceFactory.create(is_course=True)
+
+    generated = asyncio.run(generate_credential_metadata(resource))
+
+    assert generated.fields == {}
+    assert set(generated.errors) == {field.name for field in CredentialMetadataField}
+    assert "missing its marketing page" in generated.errors["description"]
+    # No LLM call: an incomplete course costs nothing.
+    assert mock_llm.prompts == {}
+    assert "Not generating credential metadata" in caplog.text
+
+
+@pytest.mark.django_db(transaction=True)
+def test_generation_stops_without_course_content(
+    resource, configurations, mock_llm, mocker, caplog
+):
+    """A resource with nothing indexed is not generated for"""
+    mocker.patch(
+        "learning_resources.credentials.async_content_file_chunks_for_resource",
+        return_value=[],
+    )
+
+    generated = asyncio.run(generate_credential_metadata(resource))
+
+    assert generated.fields == {}
+    assert "missing its course content" in generated.errors["criteria"]
+    assert mock_llm.prompts == {}
+    assert "Not generating credential metadata" in caplog.text
+
+
+@pytest.mark.django_db(transaction=True)
+def test_generation_stops_when_retrieval_fails(
+    resource, configurations, mock_llm, mocker
+):
+    """
+    A Qdrant failure stops generation rather than degrading it.
+
+    This is the case that used to succeed quietly, and is what made a broken
+    event loop in the sweep invisible: criteria generated from marketing copy
+    with none of the course's content read the same as criteria with it.
+    """
+    mocker.patch(
+        "learning_resources.credentials.async_content_file_chunks_for_resource",
+        side_effect=ConnectionError("qdrant is down"),
+    )
+
+    generated = asyncio.run(generate_credential_metadata(resource))
+
+    assert generated.fields == {}
+    assert "missing its course content" in generated.errors["criteria"]
+    assert mock_llm.prompts == {}
+
+
+@pytest.mark.django_db(transaction=True)
+def test_generation_names_every_missing_source(
+    configurations, mock_llm, mocker, caplog
+):
+    """Both missing sources are named, so one fix does not hide the other"""
+    resource = LearningResourceFactory.create(is_course=True)
+    mocker.patch(
+        "learning_resources.credentials.async_content_file_chunks_for_resource",
+        return_value=[],
+    )
+
+    generated = asyncio.run(generate_credential_metadata(resource))
+
+    assert (
+        "missing its marketing page and course content"
+        in generated.errors["description"]
+    )
+
+
+@pytest.mark.django_db(transaction=True)
+def test_generation_without_retrieval_needs_no_content(
+    resource, no_configurations, mock_llm, mock_retrieval
+):
+    """
+    A blank retrieval_query still generates from the marketing page alone.
+
+    Empty chunks are only a missing source when content was actually asked
+    for: a configuration with no query has said the marketing page is enough,
+    and demanding content would block that setup entirely.
+    """
+    CredentialMetadataConfigurationFactory.create(
+        field=CredentialMetadataField.criteria.name, retrieval_query=""
+    )
+
+    generated = asyncio.run(generate_credential_metadata(resource))
+
+    mock_retrieval.assert_not_called()
+    assert generated.fields["criteria"]
+    assert generated.errors == {}
+
+
+@pytest.mark.django_db(transaction=True)
+def test_generate_and_save_stores_nothing_for_an_incomplete_course(
+    configurations, mock_llm, mock_retrieval
+):
+    """An incomplete course is left with no stored metadata, so it is retried"""
+    resource = LearningResourceFactory.create(is_course=True)
+
+    run_on_worker_loop(generate_and_save_credential_metadata(resource))
+
+    assert not CredentialMetadata.objects.filter(learning_resource=resource).exists()

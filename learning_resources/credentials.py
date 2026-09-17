@@ -17,6 +17,7 @@ from typing_extensions import TypedDict
 from learning_resources.constants import CredentialMetadataField
 from learning_resources.credentials_store import save_credential_metadata
 from learning_resources.etl.constants import MARKETING_PAGE_FILE_TYPE
+from learning_resources.exceptions import CredentialMetadataContextError
 from learning_resources.models import (
     ContentFile,
     CredentialMetadataConfiguration,
@@ -278,10 +279,6 @@ async def _retrieve_chunks(
 ) -> list[tuple[str, str]]:
     """
     Retrieve the resource's most relevant content-file chunks.
-
-    Retrieval is best-effort: metadata plus the marketing page is a viable
-    degraded context, so a Qdrant outage returns a thinner draft rather than an
-    error.
     """
     try:
         chunks = await async_content_file_chunks_for_resource(
@@ -327,6 +324,37 @@ async def build_credential_context(
         marketing_page=_prepare_marketing_page(marketing_page),
         chunks=chunks,
     )
+
+
+def _require_complete_context(context: CredentialContext, *, retrieved: bool) -> None:
+    """
+    Raise unless every source the configurations ask for is present.
+
+    Generating without them is worse than not generating: the output reads
+    like any other result, but a description written from the resource's own
+    metadata alone, or criteria with none of the course's content behind them,
+    is not something to issue a credential from. An error leaves the resource
+    with no stored metadata, so the daily sweep picks it up again once its
+    marketing page is scraped or its content indexed.
+
+    Args:
+        context (CredentialContext): the assembled sources
+        retrieved (bool): whether content retrieval was attempted. A
+            configuration with a blank retrieval_query is asking for
+            generation from the marketing page alone, so empty chunks are not
+            a missing source -- nothing was asked for.
+
+    Raises:
+        CredentialMetadataContextError: naming every missing source
+    """
+    missing = []
+    if not context.marketing_page:
+        missing.append("marketing page")
+    if retrieved and not context.chunks:
+        missing.append("course content")
+    if missing:
+        msg = f"missing its {' and '.join(missing)}"
+        raise CredentialMetadataContextError(msg)
 
 
 def _get_llm(config: CredentialMetadataConfiguration) -> ChatLiteLLM:
@@ -447,7 +475,19 @@ async def generate_credential_metadata(
         )
         return CredentialMetadata(fields={}, errors={})
 
-    context = await build_credential_context(resource, retrieval_query(configs))
+    query = retrieval_query(configs)
+    context = await build_credential_context(resource, query)
+    try:
+        _require_complete_context(context, retrieved=bool(query))
+    except CredentialMetadataContextError as error:
+        logger.exception(
+            "Not generating credential metadata for %s", resource.readable_id
+        )
+        detail = f"Nothing was generated: the course is {error}."
+        return CredentialMetadata(
+            fields={}, errors={config.field: detail for config in configs}
+        )
+
     outcomes = await asyncio.gather(
         *[_generate_field(resource, config, context, user=user) for config in configs]
     )

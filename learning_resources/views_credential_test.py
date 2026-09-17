@@ -11,8 +11,9 @@ from learning_resources.constants import (
     PlatformType,
 )
 from learning_resources.credentials import RESPONSE_SCHEMAS, CredentialMetadata
-from learning_resources.etl.constants import ETLSource
+from learning_resources.etl.constants import MARKETING_PAGE_FILE_TYPE, ETLSource
 from learning_resources.factories import (
+    ContentFileFactory,
     CredentialMetadataConfigurationFactory,
     CredentialMetadataFactory,
     LearningResourceFactory,
@@ -88,9 +89,24 @@ def test_credential_metadata(client, django_user_model, resource, mocker):
         ainvoke=mocker.AsyncMock(return_value=canned[schema])
     )
     mocker.patch("learning_resources.credentials._get_llm", return_value=llm)
+
+    ContentFileFactory.create(
+        learning_resource=resource,
+        file_type=MARKETING_PAGE_FILE_TYPE,
+        content="## About this course\n\nLearn to model fluid flow.",
+        published=True,
+    )
     mocker.patch(
         "learning_resources.credentials.async_content_file_chunks_for_resource",
-        return_value=[],
+        return_value=[
+            {
+                "point_id": "point-1",
+                "chunk_content": "A syllabus chunk long enough to be kept.",
+                "title": "Syllabus",
+                "file_extension": ".html",
+                "file_type": "text",
+            }
+        ],
     )
     user = django_user_model.objects.create(is_staff=True)
     client.force_login(user)
