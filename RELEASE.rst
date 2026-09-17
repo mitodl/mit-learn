@@ -1,6 +1,11 @@
 Release Notes
 =============
 
+Version 0.80.9
+--------------
+
+- refactor: drop unused queries for the B2B organization/contract page endpoints (#3948)
+
 Version 0.80.8
 --------------
 
