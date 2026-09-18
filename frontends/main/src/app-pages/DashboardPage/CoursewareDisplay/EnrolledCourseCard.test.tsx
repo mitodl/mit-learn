@@ -536,7 +536,9 @@ describe.each([
     expect(makeRequest).toHaveBeenCalledWith(
       expect.objectContaining({ method: "post", url: basketUrl }),
     )
-    expect(assign).toHaveBeenCalledWith(mitxonlineLegacyUrl("/cart/"))
+    expect(assign).toHaveBeenCalledWith(
+      mitxonlineLegacyUrl("/switch-session/?next=/cart/&basket_id=1"),
+    )
   })
 
   test("Calls onUpgradeError when basket API fails", async () => {
@@ -742,7 +744,9 @@ describe.each([
     expect(makeRequest).toHaveBeenCalledWith(
       expect.objectContaining({ method: "post", url: basketUrl }),
     )
-    expect(assign).toHaveBeenCalledWith(mitxonlineLegacyUrl("/cart/"))
+    expect(assign).toHaveBeenCalledWith(
+      mitxonlineLegacyUrl("/switch-session/?next=/cart/&basket_id=1"),
+    )
   })
 
   // ---------------------------------------------------------------------------

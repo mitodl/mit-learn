@@ -7,9 +7,13 @@ from authentication.views import (
     AccountActionStartView,
     CustomLoginView,
     CustomLogoutView,
+    LogoutCompleteView,
 )
 
 urlpatterns = [
+    # Ahead of the ^logout pattern below, which is a prefix match and would
+    # otherwise swallow this.
+    path("logout/complete", LogoutCompleteView.as_view(), name="logout-complete"),
     re_path(r"^logout", CustomLogoutView.as_view(), name="logout"),
     re_path(r"^login", CustomLoginView.as_view(), name="login"),
     path(

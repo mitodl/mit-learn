@@ -2,6 +2,7 @@
 
 import json
 from base64 import b64encode
+from http import HTTPStatus
 from typing import NamedTuple
 from unittest.mock import MagicMock
 from urllib.parse import parse_qs, quote, urljoin, urlparse
@@ -56,7 +57,14 @@ def test_get_redirect_url(mocker, param_names, expected_redirect, settings):
     ],
 )
 def test_logout(mocker, client, user, test_params, settings):
-    """User should be properly redirected and logged out"""
+    """Logout always hands off to the gateway, carrying `next` in a cookie.
+
+    The APISIX header used to decide whether Keycloak was contacted at all,
+    which let a lapsed Learn gateway session leave the SSO session -- and every
+    sibling application's view of who is logged in -- running (hq#12763).  It no
+    longer gates anything; `next` rides across the hop in a cookie instead,
+    since post_logout_redirect_uri is fixed configuration.
+    """
     has_apisix_header, next_url = test_params
     header_str = b64encode(
         json.dumps(
@@ -74,10 +82,10 @@ def test_logout(mocker, client, user, test_params, settings):
         follow=False,
         HTTP_X_USERINFO=header_str if has_apisix_header else None,
     )
-    if has_apisix_header:
-        assert response.url == settings.OIDC_LOGOUT_URL
-    else:
-        assert response.url == (next_url if next_url else "/app")
+    assert response.url == settings.OIDC_LOGOUT_URL
+    assert response.cookies[settings.LOGOUT_RETURN_COOKIE_NAME].value == (
+        next_url if next_url else "/app"
+    )
     mock_logout.assert_called_once()
 
 
@@ -129,15 +137,82 @@ def test_next_logout(mocker, client, user, test_params, settings):
 @pytest.mark.parametrize("is_authenticated", [True, False])
 @pytest.mark.parametrize("has_next", [True, False])
 def test_custom_logout_view(mocker, client, user, is_authenticated, has_next, settings):  # noqa: PLR0913
-    """Test logout redirect"""
+    """`next` is honoured on the leg returning from Keycloak, not before it."""
     settings.ALLOWED_REDIRECT_HOSTS = ["ocw.mit.edu"]
     next_url = "https://ocw.mit.edu" if has_next else ""
     mock_request = mocker.MagicMock(user=user, META={})
     if is_authenticated:
         mock_request.user = user
         client.force_login(user)
+
     resp = client.get(f"/logout/?next={next_url}", request=mock_request)
+
+    # Outbound leg: to the gateway, stashing where to land afterwards.
+    assert resp.url == settings.OIDC_LOGOUT_URL
+    stashed = resp.cookies[settings.LOGOUT_RETURN_COOKIE_NAME].value
+    assert stashed == (next_url if has_next else "/app")
+
+    # Return leg: Keycloak sends the browser back to this same view, which now
+    # sees the marker cookie and delivers the user instead of looping.
+    client.cookies[settings.LOGOUT_RETURN_COOKIE_NAME] = stashed
+    resp = client.get("/logout/")
     assert resp.url == (next_url if has_next else "/app")
+
+
+def test_custom_logout_view_does_not_loop_back_to_the_gateway(client, settings):
+    """The return leg must not bounce to the gateway again.
+
+    post_logout_redirect_uri points at this same view, so without the marker
+    cookie the two would redirect to each other indefinitely.
+    """
+    client.cookies[settings.LOGOUT_RETURN_COOKIE_NAME] = "/app"
+
+    resp = client.get("/logout/")
+
+    assert resp.url == "/app"
+    assert resp.url != settings.OIDC_LOGOUT_URL
+    # Marker cleared, so a later logout starts a fresh round trip.
+    assert resp.cookies[settings.LOGOUT_RETURN_COOKIE_NAME].value == ""
+
+
+def test_custom_logout_view_rejects_offsite_stashed_next(client, settings):
+    """A tampered marker cookie cannot turn logout into an open redirect."""
+    settings.ALLOWED_REDIRECT_HOSTS = ["ocw.mit.edu"]
+    client.cookies[settings.LOGOUT_RETURN_COOKIE_NAME] = "https://evil.example/x"
+
+    resp = client.get("/logout/")
+
+    assert resp.url == "/app"
+
+
+def test_custom_logout_view_renders_interstitial_when_openedx_configured(
+    client, settings
+):
+    """With Open edX configured, logout renders the fan-out interstitial."""
+    settings.OPENEDX_LOGOUT_URL = "https://lms.example.edu/logout"
+
+    resp = client.get("/logout/")
+
+    assert resp.status_code == HTTPStatus.OK
+    content = resp.content.decode()
+    assert "lms.example.edu/logout" in content
+    # The interstitial is what eventually sends the browser to the gateway.
+    assert settings.OIDC_LOGOUT_URL in content
+    # Open edX has to be allowed to frame this view for the reverse direction
+    # (a logout started on MITx Online) to reach Learn at all.
+    assert resp["Content-Security-Policy"] == (
+        "frame-ancestors 'self' https://lms.example.edu"
+    )
+    assert "X-Frame-Options" not in resp
+
+
+def test_custom_logout_view_skips_interstitial_when_framed(client, settings):
+    """Open edX frames Learn's logout; that leg must not frame Open edX back."""
+    settings.OPENEDX_LOGOUT_URL = "https://lms.example.edu/logout"
+
+    resp = client.get("/logout/?no_redirect=1")
+
+    assert resp.url == settings.OIDC_LOGOUT_URL
 
 
 @pytest.mark.parametrize(
