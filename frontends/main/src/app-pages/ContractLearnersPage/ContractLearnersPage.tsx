@@ -250,6 +250,14 @@ const ConsentNotice = styled(Typography)(({ theme }) => ({
   color: theme.custom.colors.silverGrayDark,
 })) as typeof Typography
 
+const ErrorRow = styled.div({
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  flexWrap: "wrap",
+  gap: "16px",
+})
+
 // --- Disabled: placeholder-data footnote ----------------------------------
 //
 // Unused while nothing fabricated renders on screen — see its JSX comment
@@ -484,6 +492,28 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
   const isStale = rowsQuery.isPlaceholderData || rowsQuery.isFetching
   const isBusy = rowsQuery.isLoading || isStale
 
+  /**
+   * Only 400/401/403 responses throw to an error boundary (see
+   * `makeBrowserQueryClient`); a 5xx or network failure just settles into
+   * `isError` with `data` left undefined. Without this check, that failure
+   * reads as "no learners" and the count tiles below spin forever, since
+   * their skeletons key off `data` being null rather than off load state.
+   */
+  const hasLoadError =
+    rowsQuery.isError ||
+    totalQuery.isError ||
+    notStartedQuery.isError ||
+    inProgressQuery.isError ||
+    completedQuery.isError
+
+  const retryFailedQueries = () => {
+    rowsQuery.refetch()
+    totalQuery.refetch()
+    notStartedQuery.refetch()
+    inProgressQuery.refetch()
+    completedQuery.refetch()
+  }
+
   // --- Disabled: row/bulk selection ---------------------------------------
   //
   // Only consumer is "Send reminder" — see the file header comment. Restore
@@ -711,6 +741,19 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
           <Typography variant="body1">
             Learner analytics is not available in this environment.
           </Typography>
+        ) : hasLoadError ? (
+          <Alert severity="error">
+            <ErrorRow>
+              <span>Something went wrong loading learner data.</span>
+              <Button
+                size="small"
+                variant="bordered"
+                onClick={retryFailedQueries}
+              >
+                Try again
+              </Button>
+            </ErrorRow>
+          </Alert>
         ) : (
           <>
             <StatsRow>

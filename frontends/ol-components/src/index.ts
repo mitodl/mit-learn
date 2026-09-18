@@ -98,7 +98,7 @@ export { default as Avatar } from "@mui/material/Avatar"
  * system's styling. This one exists for the cases that component's props do
  * not cover: it takes no `aria-label`/`id`, so it cannot name a checkbox that
  * has no visible label, and it has no `indeterminate` for a partial
- * select-all. Reach for smoot-design's first.
+ * select-all.
  */
 export { default as MuiCheckbox } from "@mui/material/Checkbox"
 export type { CheckboxProps as MuiCheckboxProps } from "@mui/material/Checkbox"

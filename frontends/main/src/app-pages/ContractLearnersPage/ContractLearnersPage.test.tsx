@@ -321,6 +321,63 @@ describe("ContractLearnersPage", () => {
     await screen.findByText(/3 of these 10 enrollments/)
   })
 
+  test("shows an error state instead of a false empty result when a query fails", async () => {
+    const { org, contract, orgSlug } = setup()
+    const contractId = String(contract.id)
+    setMockResponse.get(
+      mitxUrls.organization.managerOrganizationsList(),
+      paginate([org]),
+    )
+    const base = { limit: 1, include_inactive: true }
+    setMockResponse.get(
+      analyticsUrls.contracts.learnerProgress(ORG_UUID, contractId, base),
+      analyticsFactories.learnerProgressEnvelope([], { total_count: 5 }),
+    )
+    // The not-started count query 500s; the rest succeed. A single failed
+    // query among the five should still surface a combined error rather than
+    // a false empty state or a tile that spins forever.
+    setMockResponse.get(
+      analyticsUrls.contracts.learnerProgress(ORG_UUID, contractId, {
+        ...base,
+        completion_status: ["not_started"],
+      }),
+      "Internal Server Error",
+      { code: 500 },
+    )
+    setMockResponse.get(
+      analyticsUrls.contracts.learnerProgress(ORG_UUID, contractId, {
+        ...base,
+        completion_status: ["in_progress"],
+      }),
+      analyticsFactories.learnerProgressEnvelope([], { total_count: 0 }),
+    )
+    setMockResponse.get(
+      analyticsUrls.contracts.learnerProgress(ORG_UUID, contractId, {
+        ...base,
+        completion_status: ["passed", "certified"],
+      }),
+      analyticsFactories.learnerProgressEnvelope([], { total_count: 0 }),
+    )
+    mockList(
+      contractId,
+      [analyticsFactories.learnerProgress()],
+      {},
+      { total_count: 5 },
+    )
+    mockFunnel(contractId)
+
+    renderWithProviders(
+      <ContractLearnersPage orgSlug={orgSlug} contractSlug={contract.slug} />,
+    )
+
+    await screen.findByText("Something went wrong loading learner data.")
+    expect(
+      screen.getByRole("button", { name: "Try again" }),
+    ).toBeInTheDocument()
+    expect(screen.queryByText("No learners found.")).not.toBeInTheDocument()
+    expect(screen.queryByRole("group", { name: "Enrollments" })).toBeNull()
+  })
+
   /**
    * Disabled: module filter — see ContractLearnersPage.tsx's file header
    * comment. `test.skip` rather than deleting, so these stay real,
