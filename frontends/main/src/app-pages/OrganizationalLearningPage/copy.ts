@@ -368,6 +368,11 @@ export const getInTouch = {
     individualLabel: "Myself",
     individualDescription: "I want to learn on my own",
   },
+  note: {
+    label: "Note:",
+    text: "This form is intended for group enrollment interest. For individual learning opportunities, please visit ",
+    linkLabel: "learn.mit.edu",
+  },
 
   individual: {
     title: "Looking to learn on your own?",
