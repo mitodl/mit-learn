@@ -2735,11 +2735,11 @@ def test_load_playlist_removed_videos_unpublished(
     ocw_video.refresh_from_db()
     assert ocw_video.published is False
 
-    # bulk_resources_unpublished_actions called only with the youtube video
-    mock_bulk_unpublish.assert_called_once_with(
-        [youtube_video.id, ocw_video.id],
-        LearningResourceType.video.name,
-    )
+    # the loader's queryset has no ORDER BY, so row order is arbitrary
+    mock_bulk_unpublish.assert_called_once()
+    unpublished_ids, resource_type = mock_bulk_unpublish.call_args[0]
+    assert sorted(unpublished_ids) == sorted([youtube_video.id, ocw_video.id])
+    assert resource_type == LearningResourceType.video.name
 
 
 @pytest.mark.parametrize("all_videos_exist", [True, False])
