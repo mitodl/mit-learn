@@ -78,7 +78,7 @@ export const getSyllabusChatRequestOpts = (
  * that same-readable_id courses on different platforms do not share a
  * conversation.
  */
-export const getSyllabusChatId = (resource: LearningResource): string =>
+const getSyllabusChatId = (resource: LearningResource): string =>
   resource.platform?.code
     ? `${resource.platform.code}-${resource.readable_id}`
     : resource.readable_id

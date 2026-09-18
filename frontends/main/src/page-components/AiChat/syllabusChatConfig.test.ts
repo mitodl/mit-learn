@@ -6,7 +6,6 @@ import {
 } from "api"
 import {
   buildSyllabusChatRequestBody,
-  getSyllabusChatId,
   getSyllabusChatProps,
   SYLLABUS_STARTERS,
 } from "./syllabusChatConfig"
@@ -79,17 +78,32 @@ describe("syllabusChatConfig", () => {
     { platform: { code: "xpro" }, expected: "xpro-course-v1:MITx+TEST" },
     { platform: null, expected: "course-v1:MITx+TEST" },
   ])(
-    "getSyllabusChatId distinguishes same-readable_id courses by platform",
+    "chatId distinguishes same-readable_id courses by platform",
     ({ platform, expected }) => {
       const resource = factories.learningResources.course({
         readable_id: "course-v1:MITx+TEST",
         platform,
       })
 
-      expect(getSyllabusChatId(resource)).toBe(expected)
       expect(getSyllabusChatProps(resource).chatId).toBe(expected)
     },
   )
+
+  test("getSyllabusChatProps posts the platform-scoped body", () => {
+    const resource = factories.learningResources.course({
+      readable_id: "course-v1:MITx+TEST",
+      platform: { code: "mitxonline" },
+    })
+
+    const { transformBody } = getSyllabusChatProps(resource).requestOpts!
+
+    expect(transformBody!([{ id: "1", role: "user", content: "hi" }])).toEqual({
+      collection_name: "content_files",
+      message: "hi",
+      course_id: "course-v1:MITx+TEST",
+      platform: "mitxonline",
+    })
+  })
 
   test("getSyllabusChatProps uses course starters", () => {
     const resource = factories.learningResources.course()
