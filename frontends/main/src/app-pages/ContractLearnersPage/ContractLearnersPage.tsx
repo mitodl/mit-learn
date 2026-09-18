@@ -368,10 +368,10 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
     data: managerOrgs,
     isLoading: isLoadingOrgs,
     error: orgsError,
-} = useQuery({
-  ...managerOrganizationQueries.managerOrganizationsList(),
-  throwOnError: false,
-})
+  } = useQuery({
+    ...managerOrganizationQueries.managerOrganizationsList(),
+    throwOnError: false,
+  })
 
   const org = managerOrgs?.find(matchOrganizationBySlug(orgSlug))
   const contract = org?.contracts.find((item) => item.slug === contractSlug)

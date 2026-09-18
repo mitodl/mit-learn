@@ -30,9 +30,19 @@ const DISPLAY_STATUS_LABEL: Record<DisplayStatus, string> = {
 }
 
 /**
- * The API exposes no "does this course issue certificates" field. The enrollment
- * track is the available proxy: audit enrollments never certify, so a passing
- * audit learner has completed as far as they can go.
+ * A proxy, not the real signal: the API exposes no "does this course issue
+ * certificates" field, so enrollment track stands in for it. Audit never
+ * certifies, so that half is sound, but verified is not the same as "this
+ * course certifies" — a verified learner enrolled in a course with no
+ * certificate track still reads `true` here, and "Certificate" once they
+ * pass, when it should read "Completed".
+ *
+ * Fixing this needs the real signal (MITx Online's `Course.certificate_page`)
+ * to flow through `ol-data-platform` into `ol-analytics-api` and land on this
+ * response — see mitxonline#3958 and ol-analytics-api#58. Per the team's
+ * source-of-truth rule, mit-learn must not call MITx Online directly to work
+ * around this in the meantime: ol-analytics-api stays the only place this
+ * frontend reads analytics data from.
  */
 const canEarnCertificate = (row: LearnerProgress): boolean =>
   row.enrollment_mode?.toLowerCase() === "verified"
