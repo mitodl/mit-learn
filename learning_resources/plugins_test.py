@@ -48,7 +48,7 @@ def test_website_content_hooks_defer_to_a_task_on_commit(mocker, hook, task_name
     """
     from website_content.factories import WebsiteContentFactory
 
-    content = WebsiteContentFactory.create(is_published=True)
+    content = WebsiteContentFactory.create(is_published=True, content_type="article")
     mock_on_commit = mocker.patch("learning_resources.plugins.transaction.on_commit")
     mock_task = mocker.patch(f"learning_resources.tasks.{task_name}.delay")
 
@@ -61,3 +61,25 @@ def test_website_content_hooks_defer_to_a_task_on_commit(mocker, hook, task_name
     mock_on_commit.call_args[0][0]()
 
     mock_task.assert_called_once_with(content.id)
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    "hook", ["website_content_published", "website_content_unpublished"]
+)
+def test_website_content_hooks_skip_news(mocker, hook):
+    """
+    News is never mirrored into a learning resource.
+
+    It has the news feed, which `WebsiteContentNewsPlugin` syncs it into, and
+    is not meant to turn up as a learning resource -- so neither hook should
+    queue anything for it.
+    """
+    from website_content.factories import WebsiteContentFactory
+
+    content = WebsiteContentFactory.create(is_published=True, content_type="news")
+    mock_on_commit = mocker.patch("learning_resources.plugins.transaction.on_commit")
+
+    getattr(WebsiteContentLearningResourcePlugin(), hook)(content)
+
+    assert mock_on_commit.called is False

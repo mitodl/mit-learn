@@ -84,10 +84,12 @@ class WebsiteContent(TimestampedModel, SafeDeleteModel):
         default=WebsiteContentType.news.name,
     )
     cover_image = models.URLField(max_length=2083, blank=True, default="")
-    # Where the content editor's topic selections live, and the source of the
-    # topics on the LearningResource that publishing mirrors this into -- see
+    # Where the content editor's topic selections live, for every content type
+    # the settings drawer can tag. For an article they are also the source of
+    # the topics on the LearningResource that publishing mirrors it into -- see
     # `learning_resources.api.sync_website_content_to_learning_resource`, which
-    # is what makes the content findable by topic in search.
+    # is what makes an article findable by topic in search. News is not
+    # mirrored, so its selections are stored but nothing searches on them yet.
     #
     # Only the leaves the editor picked are stored. A subtopic already implies
     # its parent, so recording the parent alongside its own subtopic would be

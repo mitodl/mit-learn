@@ -1050,16 +1050,25 @@ def cleanup_deleted_content_files():
 @app.task(acks_late=True, reject_on_worker_lost=True)
 def sync_website_content_learning_resource(content_id: int) -> None:
     """
-    Mirror a published WebsiteContent item into a LearningResource.
+    Mirror a published article into a LearningResource.
+
+    Articles only: news has the news feed instead. Re-checked here rather than
+    trusting the caller, so a direct call -- a backfill, say -- cannot mirror
+    something the plugin would have skipped.
 
     Args:
         content_id (int): id of the content item that was published or updated
     """
+    from website_content.constants import WebsiteContentType
     from website_content.models import WebsiteContent
 
     content = WebsiteContent.objects.filter(id=content_id).first()
-    if content is None or not content.is_published:
+    if (
+        content is None
         # Unpublished or deleted between the hook firing and this running.
+        or not content.is_published
+        or content.content_type != WebsiteContentType.article.name
+    ):
         log.info("Skipping learning resource sync for website content %s", content_id)
         return
     sync_website_content_to_learning_resource(content)

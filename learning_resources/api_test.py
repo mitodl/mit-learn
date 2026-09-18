@@ -12,6 +12,7 @@ from learning_resources.api import (
 from learning_resources.constants import LearningResourceType
 from learning_resources.factories import LearningResourceTopicFactory
 from learning_resources.models import LearningResource
+from website_content.constants import WebsiteContentType
 from website_content.factories import WebsiteContentFactory
 
 pytestmark = [pytest.mark.django_db]
@@ -30,6 +31,8 @@ def mock_unpublished(mocker):
 
 
 def _published_content(**kwargs):
+    """Articles are the only type that gets mirrored, so default to one."""
+    kwargs.setdefault("content_type", WebsiteContentType.article.name)
     return WebsiteContentFactory.create(is_published=True, **kwargs)
 
 

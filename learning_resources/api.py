@@ -71,7 +71,11 @@ def website_content_readable_id(content_id: int) -> str:
 
 def sync_website_content_to_learning_resource(content) -> LearningResource:
     """
-    Upsert the LearningResource mirroring a published WebsiteContent item.
+    Upsert the LearningResource mirroring a published article.
+
+    Callers are responsible for only handing this articles -- the plugin and
+    the task that reach it both check the content type. News is not mirrored:
+    it has the news feed instead.
 
     Editorial content carries no external platform or offeror, and it is not
     ETL'd, so those are left unset -- `etl_source` in particular must stay

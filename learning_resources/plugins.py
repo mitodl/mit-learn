@@ -30,14 +30,33 @@ class FavoritesListPlugin:
 
 class WebsiteContentLearningResourcePlugin:
     """
-    Mirrors published website content into LearningResources.
+    Mirrors published articles into LearningResources.
 
-    That is what makes editorial articles and news reachable from search and
-    filterable by topic: `WebsiteContent.topics` alone is invisible to search,
-    which only ever queries LearningResources.
+    That is what makes them reachable from search and filterable by topic:
+    `WebsiteContent.topics` alone is invisible to search, which only ever
+    queries LearningResources.
+
+    Articles only. News is deliberately excluded -- it has the news feed, which
+    `WebsiteContentNewsPlugin` syncs it into, and is not meant to turn up as a
+    learning resource.
     """
 
     hookimpl = apps.get_app_config("website_content").hookimpl
+
+    @staticmethod
+    def _is_article(content) -> bool:
+        """Whether this content is the type that gets mirrored at all"""
+        from website_content.constants import WebsiteContentType
+
+        if content.content_type != WebsiteContentType.article.name:
+            log.info(
+                "WebsiteContentLearningResourcePlugin: skipping non-article"
+                " content: id=%s, type=%s",
+                content.id,
+                content.content_type,
+            )
+            return False
+        return True
 
     @hookimpl
     def website_content_published(self, content):
@@ -47,6 +66,8 @@ class WebsiteContentLearningResourcePlugin:
         Args:
             content (WebsiteContent): the item that was published or updated
         """
+        if not self._is_article(content):
+            return
         log.info("Scheduling learning resource sync for website content %s", content.id)
         content_id = content.id
 
@@ -68,6 +89,8 @@ class WebsiteContentLearningResourcePlugin:
         Args:
             content (WebsiteContent): the item that was unpublished
         """
+        if not self._is_article(content):
+            return
         log.info(
             "Scheduling learning resource removal for website content %s", content.id
         )

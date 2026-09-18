@@ -1592,21 +1592,25 @@ def test_unpublish_staff_only_files_task(mocker):
 
 
 @pytest.mark.parametrize(
-    ("is_published", "exists", "expect_sync"),
+    ("content_type", "is_published", "exists", "expect_sync"),
     [
-        (True, True, True),
+        ("article", True, True, True),
         # Unpublished or deleted between the hook firing and the task running.
-        (False, True, False),
-        (True, False, False),
+        ("article", False, True, False),
+        ("article", True, False, False),
+        # News is never mirrored -- it has the news feed instead.
+        ("news", True, True, False),
     ],
 )
 def test_sync_website_content_learning_resource_guards(
-    mocker, is_published, exists, expect_sync
+    mocker, content_type, is_published, exists, expect_sync
 ):
     """The task re-reads the item, since it may have changed since it was queued."""
     from website_content.factories import WebsiteContentFactory
 
-    content = WebsiteContentFactory.create(is_published=is_published)
+    content = WebsiteContentFactory.create(
+        is_published=is_published, content_type=content_type
+    )
     content_id = content.id
     if not exists:
         content.delete(force_policy=HARD_DELETE)
