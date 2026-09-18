@@ -10,5 +10,6 @@ MITOL_LEARNING_RESOURCES_PLUGINS = get_string(
 )
 MITOL_WEBSITE_CONTENT_PLUGINS = get_string(
     "MITOL_WEBSITE_CONTENT_PLUGINS",
-    "news_events.plugins.WebsiteContentNewsPlugin",
+    "news_events.plugins.WebsiteContentNewsPlugin,"
+    "learning_resources.plugins.WebsiteContentLearningResourcePlugin",
 )
