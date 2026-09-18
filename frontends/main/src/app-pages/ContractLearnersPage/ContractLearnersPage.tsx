@@ -47,6 +47,7 @@ import { contractAnalyticsView } from "@/common/urls"
 import { ErrorContent } from "../ErrorPage/ErrorPageTemplate"
 import { LearnerRow } from "./LearnerRow"
 import { COLUMN_FLEX } from "./columns"
+import { DISPLAY_STATUS_LABEL, getDisplayStatus } from "./statusDisplay"
 
 /**
  * The B2B learner directory: one row per learner per course run under a
@@ -567,7 +568,7 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
   // -------------------------------------------------------------------------
 
   const handleExport = useCallback(async () => {
-    if (isExporting || !orgUuid || !contractId) return
+    if (isExporting || !canQuery || !orgUuid || !contractId) return
     setIsExporting(true)
     try {
       const all: LearnerProgress[] = []
@@ -612,9 +613,7 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
           row.email,
           row.courserun_title,
           row.courserun_readable_id,
-          row.outcomes_shared
-            ? (row.completion_status ?? "")
-            : "No consent given",
+          DISPLAY_STATUS_LABEL[getDisplayStatus(row)],
           row.enrolled_on,
           // progress ? String(progress.percent) : "",
           // progress ? String(progress.lessonsCompleted) : "",
@@ -643,7 +642,7 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
     } finally {
       setIsExporting(false)
     }
-  }, [isExporting, orgUuid, contractId, contractSlug, queryClient])
+  }, [isExporting, canQuery, orgUuid, contractId, contractSlug, queryClient])
 
   // Announce the result count once a filter or search settles, but not on
   // first load and not mid-flight.
@@ -728,7 +727,7 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
           <ExportWrapper>
             <Button
               variant="bordered"
-              aria-disabled={isExporting}
+              aria-disabled={isExporting || !canQuery}
               aria-busy={isExporting}
               onClick={handleExport}
             >

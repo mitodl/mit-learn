@@ -1,5 +1,6 @@
 import React from "react"
 import { renderWithProviders, screen, user, within } from "@/test-utils"
+import { waitFor } from "@testing-library/react"
 import { setMockResponse } from "api/test-utils"
 import {
   factories as mitxFactories,
@@ -181,6 +182,40 @@ describe("ContractLearnersPage", () => {
     await screen.findByText("Contract not found")
   })
 
+  test("disables Export and skips the request when the org has no analytics org ID", async () => {
+    const contract = mitxFactories.contracts.contract()
+    const org = mitxFactories.organizations.organization({
+      contracts: [contract],
+      sso_organization_id: null,
+    })
+    const orgSlug = org.slug.replace(/^org-/, "")
+    setMockResponse.get(
+      mitxUrls.organization.managerOrganizationsList(),
+      paginate([org]),
+    )
+
+    renderWithProviders(
+      <ContractLearnersPage orgSlug={orgSlug} contractSlug={contract.slug} />,
+    )
+
+    await screen.findByText(
+      "Learner analytics is not available in this environment.",
+    )
+    const exportButton = screen.getByRole("button", {
+      name: "Export learners",
+    })
+    expect(exportButton).toHaveAttribute("aria-disabled", "true")
+
+    // No analytics endpoint is mocked here. If the click handler ignored
+    // `canQuery` the way it ignored it before this fix, it would still call
+    // `fetchQuery`, hit the unmocked endpoint, and surface a misleading
+    // generic failure instead of silently no-opping.
+    await user.click(exportButton)
+    expect(
+      screen.queryByText("Could not export learners. Please try again."),
+    ).not.toBeInTheDocument()
+  })
+
   test("renders the stat tiles from their own count queries", async () => {
     const { org, contract, orgSlug } = setup()
     const contractId = String(contract.id)
@@ -319,6 +354,95 @@ describe("ContractLearnersPage", () => {
     )
 
     await screen.findByText(/3 of these 10 enrollments/)
+  })
+
+  describe("CSV export", () => {
+    const mockAnchorClick = jest.fn()
+    const mockCreateObjectURL = jest.fn().mockReturnValue("blob:fake-url")
+    const mockRevokeObjectURL = jest.fn()
+
+    beforeEach(() => {
+      mockAnchorClick.mockClear()
+      mockCreateObjectURL.mockClear()
+      mockRevokeObjectURL.mockClear()
+      URL.createObjectURL = mockCreateObjectURL
+      URL.revokeObjectURL = mockRevokeObjectURL
+      jest
+        .spyOn(HTMLAnchorElement.prototype, "click")
+        .mockImplementation(mockAnchorClick)
+    })
+
+    afterEach(() => {
+      jest.restoreAllMocks()
+    })
+
+    test("exports the same status label the table shows, not the raw completion_status enum", async () => {
+      const { org, contract, orgSlug } = setup()
+      const contractId = String(contract.id)
+      setMockResponse.get(
+        mitxUrls.organization.managerOrganizationsList(),
+        paginate([org]),
+      )
+      mockCounts(contractId, {
+        total: 2,
+        notStarted: 0,
+        inProgress: 0,
+        completed: 1,
+      })
+      mockList(
+        contractId,
+        [
+          analyticsFactories.learnerProgress({
+            full_name: "Certified Learner",
+          }),
+        ],
+        {},
+        { total_count: 2 },
+      )
+      mockFunnel(contractId)
+      setMockResponse.get(
+        analyticsUrls.contracts.learnerProgress(ORG_UUID, contractId, {
+          limit: 1000,
+          offset: 0,
+          include_inactive: true,
+        }),
+        analyticsFactories.learnerProgressEnvelope([
+          analyticsFactories.learnerProgress({
+            full_name: "Certified Learner",
+            completion_status: "passed",
+            enrollment_mode: "verified",
+          }),
+          analyticsFactories.withheldLearnerProgress({
+            full_name: "Private Learner",
+          }),
+        ]),
+      )
+
+      renderWithProviders(
+        <ContractLearnersPage orgSlug={orgSlug} contractSlug={contract.slug} />,
+      )
+
+      await user.click(
+        await screen.findByRole("button", { name: "Export learners" }),
+      )
+
+      await waitFor(() => {
+        expect(mockCreateObjectURL).toHaveBeenCalledWith(expect.any(Blob))
+      })
+      const blob = mockCreateObjectURL.mock.calls[0][0] as Blob
+      const csv = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onload = () => resolve(reader.result as string)
+        reader.onerror = reject
+        reader.readAsText(blob)
+      })
+
+      // A verified "passed" row reads "Certificate" on screen (statusDisplay.ts)
+      // and should export the same label, not the raw API enum.
+      expect(csv).toContain("Certificate")
+      expect(csv).not.toMatch(/,passed,/)
+      expect(csv).toContain("No consent given")
+    })
   })
 
   test("shows an error state instead of a false empty result when a query fails", async () => {
