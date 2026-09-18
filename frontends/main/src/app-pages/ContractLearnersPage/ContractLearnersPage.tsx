@@ -310,6 +310,7 @@ const PAGE_SIZE = 25
 const CSV_EXPORT_PAGE_SIZE = 1000
 const SEARCH_DEBOUNCE_MS = 300
 const ALL = "all"
+const UNAVAILABLE_MESSAGE_ID = "learner-analytics-unavailable-message"
 
 /**
  * The status dropdown's options. The progress bands the prototype also lists
@@ -706,7 +707,9 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
 
   const emptyMessage = debouncedSearch
     ? "No learners match your search."
-    : "No learners found."
+    : statusFilter !== ALL
+      ? "No learners match this filter."
+      : "No learners found."
 
   return (
     <Page>
@@ -728,6 +731,7 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
             <Button
               variant="bordered"
               aria-disabled={isExporting || !canQuery}
+              aria-describedby={canQuery ? undefined : UNAVAILABLE_MESSAGE_ID}
               aria-busy={isExporting}
               onClick={handleExport}
             >
@@ -737,7 +741,7 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
         </HeaderSection>
 
         {!canQuery ? (
-          <Typography variant="body1">
+          <Typography id={UNAVAILABLE_MESSAGE_ID} variant="body1">
             Learner analytics is not available in this environment.
           </Typography>
         ) : hasLoadError ? (

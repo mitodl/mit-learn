@@ -198,13 +198,19 @@ describe("ContractLearnersPage", () => {
       <ContractLearnersPage orgSlug={orgSlug} contractSlug={contract.slug} />,
     )
 
-    await screen.findByText(
+    const unavailableMessage = await screen.findByText(
       "Learner analytics is not available in this environment.",
     )
     const exportButton = screen.getByRole("button", {
       name: "Export learners",
     })
     expect(exportButton).toHaveAttribute("aria-disabled", "true")
+    // Ties the disabled button to the reason it's disabled, so a screen
+    // reader user tabbing to it hears why, not just that it's dimmed.
+    expect(exportButton).toHaveAttribute(
+      "aria-describedby",
+      unavailableMessage.id,
+    )
 
     // No analytics endpoint is mocked here. If the click handler ignored
     // `canQuery` the way it ignored it before this fix, it would still call
@@ -613,6 +619,45 @@ describe("ContractLearnersPage", () => {
     )
 
     await screen.findByText("Only Not Started")
+  })
+
+  test("a status filter with no matches reads as a filter, not an empty contract", async () => {
+    const { org, contract, orgSlug } = setup()
+    const contractId = String(contract.id)
+    setMockResponse.get(
+      mitxUrls.organization.managerOrganizationsList(),
+      paginate([org]),
+    )
+    mockCounts(contractId, {
+      total: 5,
+      notStarted: 0,
+      inProgress: 5,
+      completed: 0,
+    })
+    mockList(contractId, [
+      analyticsFactories.learnerProgress({ full_name: "Everyone" }),
+    ])
+    mockFunnel(contractId)
+    mockList(contractId, [], { completion_status: ["not_started"] })
+
+    renderWithProviders(
+      <ContractLearnersPage orgSlug={orgSlug} contractSlug={contract.slug} />,
+    )
+
+    await screen.findByText("Everyone")
+
+    await user.click(await screen.findByRole("combobox", { name: /status/i }))
+    await user.click(
+      within(await screen.findByRole("listbox")).getByText("Not started"),
+    )
+
+    // Not "No learners found." — that would read as if the contract has no
+    // learners at all, when really none match the selected filter. The text
+    // appears twice (the visible cell and its role="status" echo), so scope
+    // to the cell.
+    await within(await screen.findByRole("cell")).findByText(
+      "No learners match this filter.",
+    )
   })
 
   /**

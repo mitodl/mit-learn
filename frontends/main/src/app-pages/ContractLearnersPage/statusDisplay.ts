@@ -20,6 +20,7 @@ type DisplayStatus =
   | "completed"
   | "certificate"
   | "not-shared"
+  | "unknown"
 
 const DISPLAY_STATUS_LABEL: Record<DisplayStatus, string> = {
   "not-started": "Not started",
@@ -27,6 +28,7 @@ const DISPLAY_STATUS_LABEL: Record<DisplayStatus, string> = {
   completed: "Completed",
   certificate: "Certificate",
   "not-shared": "No consent given",
+  unknown: "Unknown",
 }
 
 /**
@@ -62,7 +64,12 @@ const getDisplayStatus = (row: LearnerProgress): DisplayStatus => {
     case "not_started":
       return "not-started"
     default:
-      return "not-shared"
+      // A row that consented but carries a `completion_status` outside the
+      // four known values — e.g. a value the API added after this type was
+      // written. Distinct from "not-shared": that's a consent state, this is
+      // an unrecognized one, and conflating them would misreport a consenting
+      // learner as having withheld consent.
+      return "unknown"
   }
 }
 

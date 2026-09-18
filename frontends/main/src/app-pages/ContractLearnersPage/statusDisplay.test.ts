@@ -1,4 +1,5 @@
 import { factories } from "api/analytics-test-utils"
+import type { CompletionStatus } from "api/analytics-hooks/organizations"
 import { DISPLAY_STATUS_LABEL, getDisplayStatus } from "./statusDisplay"
 
 describe("getDisplayStatus", () => {
@@ -53,6 +54,17 @@ describe("getDisplayStatus", () => {
     )
   })
 
+  test("a consenting row with an unrecognized completion_status reads Unknown, not No consent given", () => {
+    // A value outside the four known statuses — e.g. one the API added after
+    // this union was written. Consent was given, so this must not collapse
+    // into the withheld-consent state.
+    const row = factories.learnerProgress({
+      outcomes_shared: true,
+      completion_status: "some_future_status" as unknown as CompletionStatus,
+    })
+    expect(getDisplayStatus(row)).toBe("unknown")
+  })
+
   test("every display status has a label", () => {
     expect(Object.values(DISPLAY_STATUS_LABEL)).toEqual([
       "Not started",
@@ -60,6 +72,7 @@ describe("getDisplayStatus", () => {
       "Completed",
       "Certificate",
       "No consent given",
+      "Unknown",
     ])
   })
 })
