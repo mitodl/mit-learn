@@ -424,6 +424,7 @@ def test_user_subscription_check(client, user):
 def test_search_admin_params_include_vector_defaults(settings, client):
     """The admin params endpoint reports the vector score formula defaults."""
     settings.HYBRID_VECTOR_SEARCH_MIN_SCORE = 0.07
+    settings.HYBRID_VECTOR_SEARCH_MIN_SCORE_RATIO = 0.12
     settings.VECTOR_SEARCH_STALENESS_PENALTY_WEIGHT = 0.06
     settings.VECTOR_SEARCH_STALENESS_HORIZON_YEARS = 15
     settings.VECTOR_SEARCH_INCOMPLETENESS_PENALTY_WEIGHT = 0.04
@@ -433,6 +434,7 @@ def test_search_admin_params_include_vector_defaults(settings, client):
     ).json()
 
     assert response["score_cutoff"] == 0.07
+    assert response["score_cutoff_ratio"] == 0.12
     assert response["staleness_penalty"] == 0.06
     assert response["staleness_horizon_years"] == 15
     assert response["completeness_penalty"] == 0.04

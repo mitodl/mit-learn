@@ -50,10 +50,15 @@ COMPLETENESS_PAYLOAD_KEY = "completeness"
 
 # Payload key holding the date a resource is considered to have aged from -- the
 # start date of its last run, or the last modified date for learning materials.
-# Null (or absent) means nothing to penalize: resources with an upcoming run are
-# never stale. Set by the search serializer, so only the resources collection
-# carries it.
+# Set by the search serializer, so only the resources collection carries it.
+# Null does NOT mean "current": get_resource_age_date dates only learning
+# materials and courses, so every program comes through undated. Freshness is
+# read off NEXT_START_DATE instead.
 RESOURCE_AGE_DATE_PAYLOAD_KEY = "resource_age_date"
+
+# Start date of a resource's next run, when it has one. Present is what exempts
+# a resource from the staleness penalty. Indexed, so the penalty can gate on it.
+NEXT_START_DATE_PAYLOAD_KEY = "next_start_date"
 
 # Qdrant decay expressions measure the distance between datetimes in seconds, so
 # a staleness horizon in years is converted with this. 365 days, the same year
@@ -284,11 +289,16 @@ QDRANT_OPTIMIZER_INDEXING_THRESHOLD_RATIO = 0.8
 # overrides.
 PROGRAM_SCORE_BOOST_NAME = "program"
 
+# Score boosts applied by the rescoring formula (see custom_score_formula).
+# "boost" is a *fraction of the point's own score*, not a number of score units:
+# an entry of 0.1 multiplies a matching point's score by 1.1, and so does a
+# `program_boost` of 0.1 on a request. Deliberately relative rather than
+# absolute -- custom_score_formula has the reasoning.
 VECTOR_SEARCH_SCORE_BOOST = {
     RESOURCES_COLLECTION_NAME: [
         {
             "name": PROGRAM_SCORE_BOOST_NAME,
-            "boost": 0.15,
+            "boost": 0.1,
             "params": {"resource_type_group": ["program"]},
         }
     ],
