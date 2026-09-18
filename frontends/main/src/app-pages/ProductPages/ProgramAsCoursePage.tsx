@@ -11,6 +11,7 @@ import { HeadingIds, parseReqTree } from "./util"
 import type { RequirementItem } from "./util"
 import useReqTreeChildren from "./useReqTreeChildren"
 import InstructorsSection from "./InstructorsSection"
+import FaqsSection from "./FaqsSection"
 import RawHTML from "./RawHTML"
 import UnstyledRawHTML from "@/components/UnstyledRawHTML/UnstyledRawHTML"
 import AboutSection from "./AboutSection"
@@ -272,6 +273,7 @@ const ProgramAsCoursePage: React.FC<ProgramAsCoursePageProps> = ({
       {page.faculty.length ? (
         <InstructorsSection instructors={page.faculty} />
       ) : null}
+      {page.faqs.length ? <FaqsSection faqs={page.faqs} /> : null}
     </ProductPageTemplate>
   )
 }

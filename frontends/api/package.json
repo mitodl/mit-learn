@@ -36,7 +36,7 @@
   },
   "dependencies": {
     "@mitodl/mit-learn-api-axios": "2026.8.17",
-    "@mitodl/mitxonline-api-axios": "2026.9.16",
+    "@mitodl/mitxonline-api-axios": "https://github.com/mitodl/mitxonline-api-clients/raw/0d0a1bb2e89e6fbf740e77a32383633b52e2a0cd/src/typescript/mitxonline-api-axios/package.tgz",
     "@tanstack/react-query": "^5.66.0",
     "axios": "^1.12.2",
     "tiny-invariant": "^1.3.3"

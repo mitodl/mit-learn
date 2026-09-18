@@ -165,6 +165,8 @@ describe("CoursePage", () => {
         { level: 2, name: "Prerequisites" },
         { level: 2, name: "Meet your instructors" },
         { level: 3, name: page.faculty[0].instructor_name },
+        { level: 2, name: "FAQs" },
+        ...page.faqs.map((faq) => ({ level: 3, name: faq.question })),
       ])
     })
   })
