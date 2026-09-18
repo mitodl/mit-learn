@@ -1,6 +1,13 @@
 Release Notes
 =============
 
+Version 0.80.11
+---------------
+
+- Pass platform parameter to AskTim (#3956)
+- Make playlist unpublish assertion order-insensitive (#3938)
+- hybrid search - fix program boosting, add IDF modifier to sparse vectors (#3947)
+
 Version 0.80.9
 --------------
 

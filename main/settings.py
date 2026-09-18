@@ -36,7 +36,7 @@ from main.settings_course_etl import *  # noqa: F403
 from main.settings_pluggy import *  # noqa: F403
 from openapi.settings_spectacular import open_spectacular_settings
 
-VERSION = "0.80.9"
+VERSION = "0.80.11"
 
 log = logging.getLogger()
 
@@ -866,35 +866,63 @@ VECTOR_HYBRID_SEARCH_PREFETCH_MAX_LIMIT = get_int(
 )
 
 
-# the minimum similarity score for dense only search
+# Absolute score floors, now only a backstop for a query that matched nothing
+# -- the primary gate is the relative cutoff below. As the primary gate these
+# sized the candidate set by how high a query's scores happened to reach, which
+# swung ~50x across rewordings of the same question.
+#
+# Low enough that a query matching nothing real ("asdkjhqwe") comes back with a
+# page of unrelated resources where 0.3 returned none. Deliberate: embedding
+# similarity puts gibberish in the same band as a legitimate one-word query
+# (q="dance" returned nothing at 0.3), so an absolute floor cannot separate the
+# two, and returning something for "dance" is worth more than an empty page for
+# a typo.
 DENSE_VECTOR_SEARCH_MIN_SCORE = get_float(
-    name="DENSE_VECTOR_SEARCH_MIN_SCORE", default=0.3
+    name="DENSE_VECTOR_SEARCH_MIN_SCORE", default=0.15
 )
 
-# the minimum similarity score for hybrid search (Reciprocal Rank Fusion)
+# RRF scores by rank, not similarity: 1/(2 + rank) per arm a hit appears in,
+# so 1.0 at best and ~0.004 at the tail of a 500-candidate prefetch.
 HYBRID_VECTOR_SEARCH_MIN_SCORE = get_float(
-    name="HYBRID_VECTOR_SEARCH_MIN_SCORE", default=0.1
+    name="HYBRID_VECTOR_SEARCH_MIN_SCORE", default=0.01
 )
+
+# Keep hits scoring at least this fraction of the query's own best hit, so the
+# candidate set is sized by how fast relevance falls off within the query.
+# PROVISIONAL: both ratios want a sweep over real query logs, which the
+# `score_cutoff_ratio` request param allows without a deploy.
+DENSE_VECTOR_SEARCH_MIN_SCORE_RATIO = get_float(
+    name="DENSE_VECTOR_SEARCH_MIN_SCORE_RATIO", default=0.8
+)
+
+# On RRF's rank-derived scores this is close to the absolute floor it replaces
+# (~the top 18 fused ranks), but adapts when the best fused score is below 1.0.
+HYBRID_VECTOR_SEARCH_MIN_SCORE_RATIO = get_float(
+    name="HYBRID_VECTOR_SEARCH_MIN_SCORE_RATIO", default=0.1
+)
+
+# Hits the relative cutoff may never trim below, so a query with one standout
+# hit still returns a usable page. 0 disables the exemption.
+VECTOR_SEARCH_MIN_CANDIDATES = get_int(name="VECTOR_SEARCH_MIN_CANDIDATES", default=10)
 
 # hard limit for special cases where we need to return all results without pagination
 VECTOR_SEARCH_PAGE_MAX_LIMIT = get_int("VECTOR_SEARCH_PAGE_MAX_LIMIT", 200)
 
-# Score subtracted from a completeness = 0 resource in vector search, scaled
-# linearly by incompleteness. 0 disables the penalty.
+# Fraction of its own score a completeness = 0 resource gives up in vector
+# search, scaled linearly by incompleteness. 0 disables the penalty.
 #
-# In *score units*, not the percent DEFAULT_SEARCH_MAX_INCOMPLETENESS_PENALTY
-# uses on the OpenSearch side. The OpenSearch penalty is multiplicative, which
-# works there because BM25 is unbounded and an exact match scores multiples of a
-# topical one. Similarity scores are bounded and sit in a narrow band (~0.55-0.75
-# across a whole result page), so scaling them by completeness makes completeness
-# the primary sort key and buries exact matches on incomplete courses. Subtracting
-# a fixed budget demotes them without erasing the relevance signal.
+# A bounded fraction of the score, not a multiplication *by* completeness --
+# that would make completeness the primary sort key. Fixed score units are
+# what it replaces: 0.05 is a fifth of the spread across a result page, so the
+# two penalties together outweighed relevance.
 VECTOR_SEARCH_INCOMPLETENESS_PENALTY_WEIGHT = get_float(
     name="VECTOR_SEARCH_INCOMPLETENESS_PENALTY_WEIGHT", default=0.05
 )
 
-# Score subtracted from a resource that is VECTOR_SEARCH_STALENESS_HORIZON_YEARS
-# or more old in vector search, ramped linearly by age. 0 disables the penalty.
+# Fraction of its own score a resource gives up once it is
+# VECTOR_SEARCH_STALENESS_HORIZON_YEARS or more old in vector search, ramped
+# linearly by age. Resources with an upcoming run are exempt. 0 disables the
+# penalty.
 VECTOR_SEARCH_STALENESS_PENALTY_WEIGHT = get_float(
     name="VECTOR_SEARCH_STALENESS_PENALTY_WEIGHT", default=0.05
 )

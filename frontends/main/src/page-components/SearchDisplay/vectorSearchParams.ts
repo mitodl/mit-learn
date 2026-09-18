@@ -10,6 +10,7 @@ import getSearchParams from "./getSearchParams"
  */
 export const VECTOR_SCORE_TUNING_PARAMS = [
   "score_cutoff",
+  "score_cutoff_ratio",
   "program_boost",
   "staleness_penalty",
   "staleness_horizon_years",
