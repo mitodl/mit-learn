@@ -13,7 +13,7 @@ import NiceModal from "@ebay/nice-modal-react"
 import { getCourseEnrollmentAction } from "@/common/mitxonline"
 import { useComplianceGate } from "@/common/mitxonline/useComplianceGate"
 import CourseEnrollmentDialog from "@/page-components/EnrollmentDialogs/CourseEnrollmentDialog"
-import { trackCourseEnrolled } from "@/common/analytics/gtm"
+import { trackCourseEnrolled, trackBeginCheckout } from "@/common/analytics/gtm"
 import { canOpenCourseware } from "../courseDateUtils"
 import { mitxUserQueries } from "api/mitxonline-hooks/user"
 import { useQuery } from "@tanstack/react-query"
@@ -170,6 +170,7 @@ export const useEnrollmentHandler = () => {
         }
 
         if (enrollmentAction.type === "checkout") {
+          trackBeginCheckout(course.title)
           replaceBasketItem.mutate(enrollmentAction.product.id)
           return
         }
