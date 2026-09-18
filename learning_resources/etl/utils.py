@@ -11,12 +11,14 @@ import os
 import re
 import tarfile
 import uuid
+from bisect import bisect_left
 from collections import Counter
 from collections.abc import Generator
 from datetime import UTC, datetime
 from decimal import Decimal
 from hashlib import md5
 from io import BytesIO
+from itertools import accumulate
 from pathlib import Path
 from tempfile import TemporaryDirectory
 from urllib.parse import unquote
@@ -413,9 +415,51 @@ LEGACY_TRANSCRIPT_RE = re.compile(
 )
 
 
+# A reference spells an asset name with the punctuation edX rewrote into it, or
+# with none of it: a file stored as "my file.pdf" is linked as my_file.pdf and as
+# my%20file.pdf, and a file re-uploaded under a flattened asset key is linked
+# with the + and @ of that key written as underscores. So the punctuation cannot
+# be part of the comparison, but the places it sat are still where a name starts.
+NAME_BREAK = "\x00"
+SEPARATORS = re.compile(r"(?:[^\w.\-]|_)+")
+
+
 def normalize_asset_ref(text: str) -> str:
-    """Collapse the spellings a filename takes on disk vs. in a reference"""
-    return re.sub(r"[\s_]", "", unquote(html.unescape(text)).lower())
+    """Strip the punctuation of a filename that a reference may spell differently"""
+    return SEPARATORS.sub("", unquote(html.unescape(text)).lower())
+
+
+def _reference_index(texts: list[str]) -> tuple[str, list[int]]:
+    """
+    Normalize the course text the same way, and return it with the offsets where
+    a name can start, i.e. everywhere the text had punctuation but an underscore.
+    Underscores do not break a name because that is what edX writes a space or a
+    +/@ as, so they are the one thing both sides drop.
+    """
+    stripped = NAME_BREAK.join(
+        SEPARATORS.sub(
+            NAME_BREAK, unquote(html.unescape(text)).lower().replace("_", "")
+        )
+        for text in texts
+    )
+    segments = stripped.split(NAME_BREAK)
+    return "".join(segments), list(accumulate(map(len, segments), initial=0))
+
+
+def _name_starts_at(blob: str, starts: list[int], name: str) -> bool:
+    """
+    Whether the course text spells a filename where a name can start, rather than
+    only inside a longer one. Without this a reference to final_exam.srt reads as
+    a reference to exam.srt too, and pulls that file back out of the staff-only
+    set.
+    """
+    start = blob.find(name)
+    while start != -1:
+        index = bisect_left(starts, start)
+        if index < len(starts) and starts[index] == start:
+            return True
+        start = blob.find(name, start + 1)
+    return False
 
 
 def _olx_reference_sources(root: Path, skip: set[Path]) -> list[Path]:
@@ -490,7 +534,9 @@ def static_olx_references(root: Path, skip: set[Path]) -> tuple[set[Path], set[P
     Matching is on the filename rather than on a "/static/" prefix, because
     courses also link assets as "asset-v1:...+type@asset+block/<name>", and it
     is a substring test rather than a parse so that an unanticipated spelling
-    keeps a file rather than dropping it.
+    keeps a file rather than dropping it. The substring has to begin a name,
+    though: a reference to final_exam.srt is not one to exam.srt.
+    See _reference_index for how the two are normalized.
 
     Args:
         root (Path): the root of the OLX tree
@@ -504,17 +550,16 @@ def static_olx_references(root: Path, skip: set[Path]) -> tuple[set[Path], set[P
     if not static_dir.is_dir():
         return set(), set()
     sources = _olx_reference_sources(root, skip)
-    blob = "\n".join(
-        [normalize_asset_ref(path.read_text(errors="ignore")) for path in sources]
-        + [normalize_asset_ref(_live_course_updates(root))]
-    )
+    texts = [path.read_text(errors="ignore") for path in sources]
+    texts.append(_live_course_updates(root))
+    blob, starts = _reference_index(texts)
     video_ids = _olx_video_ids(sources)
 
     referenced, unreferenced = set(), set()
     for path in sorted(static_dir.rglob("*")):
         if not path.is_file():
             continue
-        if normalize_asset_ref(path.name) in blob or (
+        if _name_starts_at(blob, starts, normalize_asset_ref(path.name)) or (
             (legacy := LEGACY_TRANSCRIPT_RE.match(path.name))
             and (video_ids is None or normalize_asset_ref(legacy.group(1)) in video_ids)
         ):

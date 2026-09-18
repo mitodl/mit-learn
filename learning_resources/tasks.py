@@ -251,9 +251,10 @@ def unpublish_all_excluded_files(
     if chunk_size is None:
         chunk_size = settings.LEARNING_COURSE_ITERATOR_CHUNK_SIZE
     archive_keys = get_most_recent_course_archives(etl_source)
-    # a run with no content files has none to unpublish, and skipping it saves
-    # downloading and extracting its archive to find that out. Not applied to
-    # the ingestion fan-out, where a course with no content files yet is
+    # drops whole courses with nothing to unpublish; the runs of the ones that
+    # remain are guarded in unpublish_excluded_content_files, as a course keeps
+    # runs whose archives would otherwise be downloaded for no rows. Not applied
+    # to the ingestion fan-out, where a course with no content files yet is
     # exactly the one that needs its archive read.
     resource_ids = (
         _content_file_resource_ids(etl_source, learning_resource_ids)

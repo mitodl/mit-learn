@@ -11,6 +11,7 @@ from django.conf import settings
 from django.core.cache import caches
 from django.db.models import Prefetch, Q
 
+from learning_resources.constants import VALID_TEXT_FILE_TYPES
 from learning_resources.etl.constants import ETLSource
 from learning_resources.etl.loaders import load_content_files
 from learning_resources.etl.utils import (
@@ -401,6 +402,10 @@ def unpublish_excluded_content_files(
         if not matching_runs:
             continue
         run = matching_runs[0]
+        if not ContentFile.objects.filter(run=run).exists():
+            # a run with no content files has none to unpublish, and its archive
+            # is a download and an extract to find that out
+            continue
         with TemporaryDirectory() as tempdir:
             tarpath = Path(tempdir, key.rsplit("/", maxsplit=1)[-1])
             bucket.download_file(key, tarpath)
@@ -418,8 +423,25 @@ def unpublish_excluded_content_files(
             except ElementTree.ParseError:
                 log.exception("Malformed OLX in %s, skipping", key)
                 continue
+            ingestable = [
+                path
+                for path in olx_path.rglob("*")
+                if path.is_file()
+                and path.suffix.lower() in VALID_TEXT_FILE_TYPES
+                and not any(
+                    "draft" in part for part in path.relative_to(olx_path).parts[:-1]
+                )
+            ]
+            # get_edx_module_id writes a space as an underscore, so "foo bar.pdf"
+            # and "foo_bar.pdf" are one row; it stays if either path is ingested
             excluded_keys = {
-                get_edx_module_id(str(path), run) for path in excluded_paths
+                get_edx_module_id(str(path), run)
+                for path in ingestable
+                if path in excluded_paths
+            } - {
+                get_edx_module_id(str(path), run)
+                for path in ingestable
+                if path not in excluded_paths
             }
         if not excluded_keys:
             continue
