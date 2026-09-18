@@ -12,6 +12,19 @@ import type { JSONContent } from "@tiptap/react"
 import { WebsiteContentEditPage } from "./WebsiteContentEditPage"
 import { renderWithProviders } from "@/test-utils"
 
+/**
+ * Mounting the editor and driving a multi-step interaction through it is slow:
+ * happy-dom plus a real ProseMirror instance, then a drawer save and the
+ * refetch it triggers. On an unloaded dev machine each test here runs in about
+ * a second, but CI gives every worker a core and runs them all at once, and
+ * there the same tests land close enough to Jest's 5s default to trip it
+ * intermittently -- they timed out on main before this branch existed. The
+ * timeout is what the act(...) warnings in those runs came from, too: the test
+ * is torn down while the editor is still mounting, so its state update lands
+ * outside any act() scope.
+ */
+jest.setTimeout(20000)
+
 const SERVER_TEXT = "Paragraph as the server has it"
 
 const content: JSONContent = {
