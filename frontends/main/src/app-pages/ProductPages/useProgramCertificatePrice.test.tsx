@@ -15,7 +15,8 @@ import { useProgramCertificatePrice } from "./useProgramCertificatePrice"
 
 const programs = factories.programs
 const courses = factories.courses
-const makeFlexiblePrice = factories.products.flexiblePrice
+const makeUserPricing = factories.products.userPricing
+const makeUserPricingDiscount = factories.products.userPricingDiscount
 const makeDiscount = factories.products.discount
 const makeUser = apiFactories.user.user
 
@@ -29,7 +30,7 @@ const wrapper = ({ children }: { children: React.ReactNode }) => {
 describe("useProgramCertificatePrice", () => {
   beforeEach(() => {
     // Most cases don't exercise financial aid; default to an anonymous user
-    // so the (auth-gated) flexible-price query is simply skipped.
+    // so the (auth-gated) pricing query is simply skipped.
     setMockResponse.get(
       apiUrls.userMe.get(),
       makeUser({ is_authenticated: false }),
@@ -46,8 +47,10 @@ describe("useProgramCertificatePrice", () => {
 
     expect(result.current).toEqual({
       price: formatPrice(program.min_price, { avoidCents: true }),
+      showsRange: false,
       savings: null,
       financialAid: null,
+      breakdown: null,
     })
   })
 
@@ -64,8 +67,10 @@ describe("useProgramCertificatePrice", () => {
 
     expect(result.current).toEqual({
       price: null,
+      showsRange: false,
       savings: null,
       financialAid: null,
+      breakdown: null,
     })
   })
 
@@ -169,8 +174,8 @@ describe("useProgramCertificatePrice", () => {
         makeUser({ is_authenticated: true }),
       )
       setMockResponse.get(
-        urls.products.userFlexiblePriceDetail(product.id),
-        makeFlexiblePrice({ product_flexible_price: null }),
+        urls.products.userPricingDetail(product.id),
+        makeUserPricing(),
       )
 
       const { result } = renderHook(() => useProgramCertificatePrice(program), {
@@ -180,7 +185,7 @@ describe("useProgramCertificatePrice", () => {
       await waitFor(() =>
         expect(makeRequest).toHaveBeenCalledWith(
           expect.objectContaining({
-            url: urls.products.userFlexiblePriceDetail(product.id),
+            url: urls.products.userPricingDetail(product.id),
           }),
         ),
       )
@@ -188,6 +193,7 @@ describe("useProgramCertificatePrice", () => {
         expect(result.current.financialAid?.applied).toBe(false),
       )
       expect(result.current.price).toBe(formatPrice(800, { avoidCents: true }))
+      expect(result.current.breakdown).toBeNull()
     })
 
     test("approved flexible price -> applied: true, displayed price still the full price", async () => {
@@ -205,8 +211,8 @@ describe("useProgramCertificatePrice", () => {
         makeUser({ is_authenticated: true }),
       )
       setMockResponse.get(
-        urls.products.userFlexiblePriceDetail(product.id),
-        makeFlexiblePrice({
+        urls.products.userPricingDetail(product.id),
+        makeUserPricing({
           product_flexible_price: makeDiscount({
             amount: "700",
             discount_type: "dollars-off",
@@ -224,7 +230,7 @@ describe("useProgramCertificatePrice", () => {
       expect(result.current.price).toBe(formatPrice(800, { avoidCents: true }))
     })
 
-    test("free-only program with finaid url -> flexible-price endpoint is never requested", async () => {
+    test("free-only program with finaid url -> the quote is never requested", async () => {
       const product = courses.product({ price: "800" })
       const program = programs.program({
         enrollment_modes: [courses.enrollmentMode({ requires_payment: false })],
@@ -237,7 +243,7 @@ describe("useProgramCertificatePrice", () => {
         apiUrls.userMe.get(),
         makeUser({ is_authenticated: true }),
       )
-      // No mock for userFlexiblePriceDetail — it must NOT be requested
+      // No mock for userPricingDetail — it must NOT be requested
 
       const { result } = renderHook(() => useProgramCertificatePrice(program), {
         wrapper,
@@ -250,9 +256,157 @@ describe("useProgramCertificatePrice", () => {
       )
       expect(makeRequest).not.toHaveBeenCalledWith(
         expect.objectContaining({
-          url: urls.products.userFlexiblePriceDetail(product.id),
+          url: urls.products.userPricingDetail(product.id),
         }),
       )
+    })
+  })
+  describe("applied savings", () => {
+    /** An authenticated learner on a purchasable program, quoted as given. */
+    const setupQuote = (
+      quote: Partial<Parameters<typeof makeUserPricing>[0]>,
+      programOverrides = {},
+    ) => {
+      const product = courses.product({ price: "899" })
+      const program = programs.program({
+        enrollment_modes: [courses.enrollmentMode({ requires_payment: true })],
+        products: [product],
+        ...programOverrides,
+      })
+      setMockResponse.get(
+        apiUrls.userMe.get(),
+        makeUser({ is_authenticated: true }),
+      )
+      setMockResponse.get(
+        urls.products.userPricingDetail(product.id),
+        makeUserPricing({ id: product.id, price: "899", ...quote }),
+      )
+      return { product, program }
+    }
+
+    test("a purchase credit names the course it came from", async () => {
+      // The factory's default discount is the program-child credit.
+      const discount = makeUserPricingDiscount({ amount_off: "300" })
+      const { program } = setupQuote({ user_price: "599", discount })
+
+      const { result } = renderHook(() => useProgramCertificatePrice(program), {
+        wrapper,
+      })
+
+      await waitFor(() =>
+        expect(result.current.breakdown).toEqual({
+          fullPrice: "$899",
+          amountOff: "$300",
+          todaysPrice: "$599",
+          sourceTitle: discount.source?.title,
+          kind: "credit",
+        }),
+      )
+    })
+
+    test("the winning discount is recognized as financial aid by its payment type", async () => {
+      const discount = makeUserPricingDiscount({
+        discount_type: "dollars-off",
+        payment_type: "financial-assistance",
+        amount_off: "500",
+        source: null,
+      })
+      const { program } = setupQuote({ user_price: "399", discount })
+
+      const { result } = renderHook(() => useProgramCertificatePrice(program), {
+        wrapper,
+      })
+
+      await waitFor(() =>
+        expect(result.current.breakdown).toEqual({
+          fullPrice: "$899",
+          amountOff: "$500",
+          todaysPrice: "$399",
+          sourceTitle: null,
+          kind: "aid",
+        }),
+      )
+    })
+
+    test("a discount that is neither still shows its amount", async () => {
+      // A payment type that is not aid, so a truthiness test in place of the
+      // comparison would misreport this as the learner's aid tier.
+      const discount = makeUserPricingDiscount({
+        discount_type: "dollars-off",
+        payment_type: "sales",
+        amount_off: "50",
+        source: null,
+      })
+      const { program } = setupQuote({ user_price: "849", discount })
+
+      const { result } = renderHook(() => useProgramCertificatePrice(program), {
+        wrapper,
+      })
+
+      await waitFor(() =>
+        expect(result.current.breakdown).toEqual({
+          fullPrice: "$899",
+          amountOff: "$50",
+          todaysPrice: "$849",
+          sourceTitle: null,
+          kind: "other",
+        }),
+      )
+    })
+
+    test("a paid program with no purchasable product is not quoted", async () => {
+      setMockResponse.get(
+        apiUrls.userMe.get(),
+        makeUser({ is_authenticated: true }),
+      )
+      const program = programs.program({
+        enrollment_modes: [courses.enrollmentMode({ requires_payment: true })],
+        products: [],
+      })
+
+      renderHook(() => useProgramCertificatePrice(program), { wrapper })
+
+      // Without its own product guard the hook asks for product 0.
+      await waitFor(() => expect(makeRequest).toHaveBeenCalled())
+      expect(makeRequest).not.toHaveBeenCalledWith(
+        expect.objectContaining({
+          url: urls.products.userPricingDetail(0),
+        }),
+      )
+    })
+
+    test("a program with no financial aid form is quoted anyway", async () => {
+      const { product, program } = setupQuote({ user_price: "899" })
+
+      renderHook(() => useProgramCertificatePrice(program), { wrapper })
+
+      await waitFor(() =>
+        expect(makeRequest).toHaveBeenCalledWith(
+          expect.objectContaining({
+            url: urls.products.userPricingDetail(product.id),
+          }),
+        ),
+      )
+    })
+
+    test("approved aid with no discount drops the range but keeps the savings", async () => {
+      const flexiblePrice = makeDiscount({ discount_type: "dollars-off" })
+      const { program } = setupQuote(
+        { user_price: "899", product_flexible_price: flexiblePrice },
+        { min_price: 250, max_price: 1000, page: { list_price: "1200" } },
+      )
+
+      const { result } = renderHook(() => useProgramCertificatePrice(program), {
+        wrapper,
+      })
+
+      await waitFor(() => expect(result.current.showsRange).toBe(false))
+      expect(result.current.price).toBe("$899")
+      expect(result.current.savings).toEqual({
+        current: { min: 899, max: 899 },
+        listAmount: 1200,
+        totalCourses: getTotalRequiredCourses(program),
+      })
     })
   })
 })

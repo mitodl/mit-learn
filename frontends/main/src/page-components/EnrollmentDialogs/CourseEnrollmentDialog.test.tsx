@@ -7,12 +7,20 @@ import {
   user,
   setupLocationMock,
 } from "@/test-utils"
-import { makeRequest, setMockResponse } from "api/test-utils"
+import {
+  makeRequest,
+  setMockResponse,
+  urls as apiUrls,
+  factories as apiFactories,
+} from "api/test-utils"
 import {
   urls as mitxUrls,
   factories as mitxFactories,
 } from "api/mitxonline-test-utils"
-import type { CourseWithCourseRunsSerializerV2 } from "@mitodl/mitxonline-api-axios/v2"
+import type {
+  CourseRunV2,
+  CourseWithCourseRunsSerializerV2,
+} from "@mitodl/mitxonline-api-axios/v2"
 import NiceModal from "@ebay/nice-modal-react"
 import CourseEnrollmentDialog from "./CourseEnrollmentDialog"
 import { faker } from "@faker-js/faker/locale/en"
@@ -33,24 +41,47 @@ const freeOnlyEnrollmentModes = () => [
   mitxFactories.courses.enrollmentMode({ requires_payment: false }),
 ]
 
-const enrollableRun: typeof makeCourseRun = (overrides) =>
-  makeCourseRun({
-    is_enrollable: true,
-    enrollment_start: faker.date.past().toISOString(),
-    enrollment_end: faker.date.future().toISOString(),
-    enrollment_modes: bothEnrollmentModes(),
-    ...overrides,
+/**
+ * Registers a list-price quote for each of the run's products. The dialog
+ * quotes every purchasable product for a signed-in learner, so a run without
+ * one makes unrelated tests fail on an unmocked request. Tests that care about
+ * the quote re-register their own afterwards.
+ */
+const withQuotedProducts = (run: CourseRunV2): CourseRunV2 => {
+  run.products.forEach((product) => {
+    setMockResponse.get(
+      mitxUrls.products.userPricingDetail(product.id),
+      mitxFactories.products.userPricing({
+        id: product.id,
+        price: product.price,
+      }),
+    )
   })
+  return run
+}
+
+const enrollableRun: typeof makeCourseRun = (overrides) =>
+  withQuotedProducts(
+    makeCourseRun({
+      is_enrollable: true,
+      enrollment_start: faker.date.past().toISOString(),
+      enrollment_end: faker.date.future().toISOString(),
+      enrollment_modes: bothEnrollmentModes(),
+      ...overrides,
+    }),
+  )
 
 const upgradeableRun: typeof makeCourseRun = (overrides) =>
-  makeCourseRun({
-    is_upgradable: true,
-    is_enrollable: true,
-    is_archived: false,
-    products: [mitxFactories.courses.product()],
-    enrollment_modes: bothEnrollmentModes(),
-    ...overrides,
-  })
+  withQuotedProducts(
+    makeCourseRun({
+      is_upgradable: true,
+      is_enrollable: true,
+      is_archived: false,
+      products: [mitxFactories.courses.product()],
+      enrollment_modes: bothEnrollmentModes(),
+      ...overrides,
+    }),
+  )
 
 describe("CourseEnrollmentDialog", () => {
   const openDialog = async (course: CourseWithCourseRunsSerializerV2) => {
@@ -67,6 +98,10 @@ describe("CourseEnrollmentDialog", () => {
     // the compliance gate. The factory default has nothing missing, so it passes
     // straight through; see JustInTimeDialog tests for the blocked case.
     setMockResponse.get(mitxUrls.userMe.get(), mitxFactories.user.user())
+    setMockResponse.get(
+      apiUrls.userMe.get(),
+      apiFactories.user.user({ is_authenticated: true }),
+    )
   })
 
   describe("Course run dropdown", () => {
@@ -515,18 +550,13 @@ describe("CourseEnrollmentDialog", () => {
           page: { financial_assistance_form_url: financialAidUrl },
         })
 
-        // Mock the flexible price API response when financial aid is available
-        if (hasFinancialAid) {
-          const mockFlexiblePrice = mitxFactories.products.flexiblePrice({
+        setMockResponse.get(
+          mitxUrls.products.userPricingDetail(product.id),
+          mitxFactories.products.userPricing({
             id: product.id,
             price: product.price,
-            product_flexible_price: null,
-          })
-          setMockResponse.get(
-            mitxUrls.products.userFlexiblePriceDetail(product.id),
-            mockFlexiblePrice,
-          )
-        }
+          }),
+        )
 
         renderWithProviders(null)
         await openDialog(course)
@@ -546,26 +576,13 @@ describe("CourseEnrollmentDialog", () => {
       },
     )
 
-    test("Displays user-specific discounted price when financial aid is available", async () => {
-      const originalPrice = "100.00"
-      const discountedAmount = "50.00"
-      const product = makeProduct({ price: originalPrice })
-      const flexiblePrice = mitxFactories.products.flexiblePrice({
+    test("Displays the quoted price beside the struck original when aid is approved", async () => {
+      const product = makeProduct({ price: "100.00" })
+      const userPricing = mitxFactories.products.userPricing({
         id: product.id,
-        price: originalPrice,
-        product_flexible_price: {
-          id: faker.number.int(),
-          amount: discountedAmount,
-          discount_type: "dollars-off" as const,
-          discount_code: faker.string.alphanumeric(8),
-          redemption_type: "one-time" as const,
-          is_redeemed: false,
-          automatic: true,
-          max_redemptions: 1,
-          payment_type: null,
-          activation_date: faker.date.past().toISOString(),
-          expiration_date: faker.date.future().toISOString(),
-        },
+        price: product.price,
+        user_price: "50.00",
+        product_flexible_price: mitxFactories.products.discount(),
       })
       const financialAidUrl = `/financial-aid/${faker.string.alphanumeric(10)}`
       const run = upgradeableRun({ products: [product] })
@@ -575,20 +592,19 @@ describe("CourseEnrollmentDialog", () => {
       })
 
       setMockResponse.get(
-        mitxUrls.products.userFlexiblePriceDetail(product.id),
-        flexiblePrice,
+        mitxUrls.products.userPricingDetail(product.id),
+        userPricing,
       )
 
       renderWithProviders(null)
       await openDialog(course)
 
-      // Wait for the flexible price API to be called and prices to be displayed
-      await screen.findByText("Financial assistance applied")
+      await screen.findByText("Financial assistance approved")
       expect(screen.getByText(/\$50/)).toBeInTheDocument()
       expect(screen.getByText(/\$100/)).toBeInTheDocument()
     })
 
-    test("Does NOT call flexible price API when financial aid URL is empty", async () => {
+    test("A discount that is not financial assistance still lowers the price", async () => {
       const product = makeProduct({ price: "100.00" })
       const run = upgradeableRun({ products: [product] })
       const course = makeCourse({
@@ -596,15 +612,20 @@ describe("CourseEnrollmentDialog", () => {
         page: { financial_assistance_form_url: "" },
       })
 
-      // We're NOT setting up a mock response for the flexible price API
-      // If it's called, the test will fail
+      setMockResponse.get(
+        mitxUrls.products.userPricingDetail(product.id),
+        mitxFactories.products.userPricing({
+          id: product.id,
+          price: product.price,
+          user_price: "80.00",
+        }),
+      )
 
       renderWithProviders(null)
       await openDialog(course)
 
-      // Should show the regular price
+      expect(await screen.findByText(/\$80/)).toBeInTheDocument()
       expect(screen.getByText(/\$100/)).toBeInTheDocument()
-      // Should NOT show financial assistance link
       expect(
         screen.queryByRole("link", { name: /financial assistance/i }),
       ).toBeNull()

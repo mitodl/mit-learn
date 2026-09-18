@@ -11,6 +11,7 @@ import {
 } from "@/test-utils"
 import * as mitxonline from "api/mitxonline-test-utils"
 import { makeRequest } from "api/test-utils"
+import { setupUserPricing } from "./test-utils"
 import { faker } from "@faker-js/faker/locale/en"
 import moment from "moment"
 import { cartesianProduct } from "ol-test-utilities"
@@ -22,7 +23,18 @@ jest.mock("@/common/analytics/gtm", () => ({
   trackCourseEnrolled: jest.fn(),
 }))
 
-const mitxOnlineCourse = mitxonline.factories.courses.course
+/**
+ * A course, with a list-price quote registered for every purchasable product on
+ * its runs. The enrollment dialog's certificate upsell quotes each one, so a
+ * course without them fails any test that opens the dialog.
+ */
+const mitxOnlineCourse: typeof mitxonline.factories.courses.course = (
+  overrides,
+) => {
+  const course = mitxonline.factories.courses.course(overrides)
+  setupUserPricing(course)
+  return course
+}
 
 // The factory randomises is_staff, and staff bypass the start-date gate, which
 // would make these tests flaky. Staff tests pass it explicitly.
