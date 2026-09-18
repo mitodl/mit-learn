@@ -2,7 +2,7 @@
 
 import React from "react"
 import Image from "next/image"
-import { styled } from "ol-components"
+import { styled, pxToRem } from "ol-components"
 import CtaButton from "./CtaButton"
 import { Section, SectionInner } from "./SectionLayout"
 import { hero as copy } from "./copy"
@@ -53,6 +53,8 @@ const Copy = styled.div(({ theme }) => ({
 
 const Title = styled.h1(({ theme }) => ({
   ...theme.typography.h1,
+  fontSize: pxToRem(40),
+  lineHeight: pxToRem(48),
   color: theme.custom.colors.darkGray2,
   margin: 0,
   [theme.breakpoints.down("md")]: {
