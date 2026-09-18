@@ -644,6 +644,92 @@ def test_generate_credential_metadata_truncates_a_long_error(
 
 
 @pytest.mark.django_db(transaction=True)
+def test_generate_credential_metadata_for_a_subset_of_fields(
+    resource, configurations, mock_llm, mock_retrieval
+):
+    """
+    `fields` narrows generation to what was asked for.
+
+    A resource whose description stored but whose criteria did not is
+    regenerated for criteria alone: the description already in force is
+    neither billed for again nor replaced.
+    """
+    generated = asyncio.run(generate_credential_metadata(resource, fields=["criteria"]))
+
+    assert set(generated.fields) == {"criteria"}
+    # Nothing is owed for a field nobody asked about.
+    assert generated.errors == {}
+    assert BadgeDescription not in mock_llm.prompts
+    assert BadgeCriteria in mock_llm.prompts
+
+
+@pytest.mark.django_db(transaction=True)
+def test_generating_only_a_description_skips_retrieval(
+    resource, configurations, mock_llm, mock_retrieval
+):
+    """
+    The retrieval query comes from the narrowed configurations.
+
+    Only criteria reads course content, so a description-only run has nothing
+    to retrieve for and does not pay Qdrant for chunks no prompt will see.
+    """
+    generated = asyncio.run(
+        generate_credential_metadata(resource, fields=["description"])
+    )
+
+    assert set(generated.fields) == {"description"}
+    mock_retrieval.assert_not_called()
+
+
+@pytest.mark.django_db(transaction=True)
+def test_generate_credential_metadata_with_no_fields(
+    resource, configurations, mock_llm, mock_retrieval, caplog
+):
+    """
+    An empty `fields` generates nothing, rather than falling back to all.
+
+    The caller asked for no field in particular -- a row that filled in
+    between being queued and being run -- which is not a licence to
+    regenerate the whole of it.
+    """
+    with caplog.at_level(logging.WARNING):
+        generated = asyncio.run(generate_credential_metadata(resource, fields=[]))
+
+    assert generated == ({}, {})
+    assert mock_llm.prompts == {}
+    assert "No active CredentialMetadataConfiguration" in caplog.text
+
+
+@pytest.mark.django_db(transaction=True)
+def test_generate_and_save_credential_metadata_keeps_the_fields_not_asked_for(
+    resource, configurations, mock_llm, mock_retrieval
+):
+    """
+    A scoped regeneration leaves the stored fields it did not generate alone.
+
+    Both fields are editable in the admin, so the description on a row whose
+    criteria never generated may have been corrected by hand. Regenerating
+    the row whole would replace it on the next sweep.
+    """
+    CredentialMetadata.objects.create(
+        learning_resource=resource,
+        description="ORIGINAL REVIEWED DESCRIPTION",
+        criteria=[],
+    )
+
+    run_on_worker_loop(
+        generate_and_save_credential_metadata(resource, fields=["criteria"])
+    )
+
+    stored = CredentialMetadata.objects.get(learning_resource=resource)
+    assert stored.description == "ORIGINAL REVIEWED DESCRIPTION"
+    assert stored.criteria == [
+        "Applied conservation laws",
+        "Modelled fluid flow",
+    ]
+
+
+@pytest.mark.django_db(transaction=True)
 def test_generate_and_save_credential_metadata(
     resource, configurations, mock_llm, mock_retrieval
 ):

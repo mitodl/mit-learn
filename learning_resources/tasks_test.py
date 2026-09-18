@@ -1645,14 +1645,17 @@ def mock_generate_and_save(mocker):
     # A MagicMock, not the AsyncMock `patch` would infer for an async def:
     # the leaf builds the coroutine and hands it to the bridge, which is
     # mocked too, so a real coroutine here would only go unawaited.
-    mocker.patch(
+    generator = mocker.patch(
         "learning_resources.credentials.generate_and_save_credential_metadata",
         new=mocker.MagicMock(),
     )
-    return mocker.patch(
+    bridge = mocker.patch(
         "learning_resources.tasks.run_on_worker_loop",
         return_value=CredentialMetadata(fields={"description": "A course"}, errors={}),
     )
+
+    bridge.generator = generator
+    return bridge
 
 
 def test_generate_credential_metadata_for_resource(
@@ -1760,7 +1763,9 @@ def test_generate_credential_metadata_skips_a_duplicate_task(
 def test_generate_credential_metadata_retries_a_partial_row(
     credential_configurations, mock_blocklist, mock_generate_and_save
 ):
-    """A half-generated resource is still generated for on recheck"""
+    """
+    A half-generated resource is generated for again, but only for what it lacks.
+    """
     resource = credential_metadata_course()
     CredentialMetadataFactory.create(
         learning_resource=resource, description="A course", criteria=[]
@@ -1768,6 +1773,20 @@ def test_generate_credential_metadata_retries_a_partial_row(
 
     assert tasks.generate_credential_metadata_for_resource(resource.id) is True
     assert mock_generate_and_save.call_count == 1
+    assert mock_generate_and_save.generator.call_args.kwargs["fields"] == ["criteria"]
+
+
+def test_generate_credential_metadata_for_an_empty_row(
+    credential_configurations, mock_blocklist, mock_generate_and_save
+):
+    """A resource with nothing stored is generated for in full"""
+    resource = credential_metadata_course()
+
+    assert tasks.generate_credential_metadata_for_resource(resource.id) is True
+    assert mock_generate_and_save.generator.call_args.kwargs["fields"] == [
+        "criteria",
+        "description",
+    ]
 
 
 def test_generate_credential_metadata_overwrite_ignores_a_complete_row(
@@ -1789,6 +1808,7 @@ def test_generate_credential_metadata_overwrite_ignores_a_complete_row(
         is True
     )
     assert mock_generate_and_save.call_count == 1
+    assert mock_generate_and_save.generator.call_args.kwargs["fields"] is None
 
 
 def deactivate_credential_configuration(field):

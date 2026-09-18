@@ -52,6 +52,11 @@ def active_credential_metadata_fields() -> list[str]:
     return sorted(field for field in configured if field in storable)
 
 
+def _empty_value(field: str):
+    """Return the stored field's own default, which is what "missing" means."""
+    return CredentialMetadata._meta.get_field(field).get_default()  # noqa: SLF001
+
+
 def incomplete_credential_metadata_query(fields: list[str]) -> Q:
     """
     Return a LearningResource filter for metadata missing any of `fields`.
@@ -69,9 +74,31 @@ def incomplete_credential_metadata_query(fields: list[str]) -> Q:
     """
     query = Q(credential_metadata__isnull=True)
     for field in fields:
-        empty = CredentialMetadata._meta.get_field(field).get_default()  # noqa: SLF001
-        query |= Q(**{f"credential_metadata__{field}": empty})
+        query |= Q(**{f"credential_metadata__{field}": _empty_value(field)})
     return query
+
+
+def missing_credential_metadata_fields(
+    resource: LearningResource, fields: list[str]
+) -> list[str]:
+    """
+    Return which of `fields` the resource has no stored value for.
+
+
+    Args:
+        resource (LearningResource): the resource to look up
+        fields (list of str): the stored fields to check, from
+            active_credential_metadata_fields()
+
+    Returns:
+        list of str: the subset of `fields` still holding the column default,
+            in the order given. Every field when the resource has no metadata
+            row at all.
+    """
+    stored = stored_credential_metadata(resource)
+    if not stored:
+        return list(fields)
+    return [field for field in fields if getattr(stored, field) == _empty_value(field)]
 
 
 def stored_credential_metadata(

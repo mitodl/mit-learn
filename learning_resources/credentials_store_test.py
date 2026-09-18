@@ -6,6 +6,7 @@ from learning_resources.constants import CredentialMetadataField
 from learning_resources.credentials_store import (
     active_credential_metadata_fields,
     incomplete_credential_metadata_query,
+    missing_credential_metadata_fields,
     save_credential_metadata,
     stored_credential_metadata,
 )
@@ -201,3 +202,47 @@ def test_incomplete_credential_metadata_query(resource, stored, fields, expected
     )
 
     assert matches is expected
+
+
+@pytest.mark.parametrize(
+    ("stored", "fields", "expected"),
+    [
+        (None, ["criteria", "description"], ["criteria", "description"]),
+        (
+            {"description": "A course", "criteria": ["Did a thing"]},
+            ["criteria", "description"],
+            [],
+        ),
+        (
+            {"description": "A course", "criteria": []},
+            ["criteria", "description"],
+            ["criteria"],
+        ),
+        (
+            {"description": "", "criteria": ["Did a thing"]},
+            ["criteria", "description"],
+            ["description"],
+        ),
+        # Only what was asked for: a field with no active configuration is
+        # nobody's to generate, however empty its column is.
+        ({"description": "", "criteria": []}, ["criteria"], ["criteria"]),
+    ],
+)
+def test_missing_credential_metadata_fields(resource, stored, fields, expected):
+    """
+    Only the fields still holding their column default come back.
+
+    This is what scopes a regeneration: the fields left out are already in
+    force, and generating them again would both cost a call and replace them.
+    """
+    if stored is not None:
+        CredentialMetadataFactory.create(learning_resource=resource, **stored)
+
+    assert missing_credential_metadata_fields(resource, fields) == expected
+
+
+def test_missing_credential_metadata_fields_without_active_configurations(resource):
+    """Nothing is configured, so nothing is missing -- there is nothing to ask for"""
+    CredentialMetadataFactory.create(learning_resource=resource, description="")
+
+    assert missing_credential_metadata_fields(resource, []) == []

@@ -18,6 +18,7 @@ from learning_resources.constants import LearningResourceType, PlatformType
 from learning_resources.credentials_store import (
     active_credential_metadata_fields,
     incomplete_credential_metadata_query,
+    missing_credential_metadata_fields,
 )
 from learning_resources.etl import loaders, ovs, pipelines, podcast, youtube
 from learning_resources.etl.canvas import (
@@ -1103,6 +1104,9 @@ def generate_credential_metadata_for_resource(
     """
     Generate and store credential metadata for one resource.
 
+    Only the fields the resource is actually missing are generated, unless
+    `overwrite` asks for the row to be regenerated whole.
+
     Args:
         resource_id (int): the resource to generate for
         overwrite (bool): regenerate even if the resource already has
@@ -1127,7 +1131,16 @@ def generate_credential_metadata_for_resource(
         )
         return False
 
-    metadata = run_on_worker_loop(generate_and_save_credential_metadata(resource))
+    fields = (
+        None
+        if overwrite
+        else missing_credential_metadata_fields(
+            resource, active_credential_metadata_fields()
+        )
+    )
+    metadata = run_on_worker_loop(
+        generate_and_save_credential_metadata(resource, fields=fields)
+    )
     if metadata.errors:
         log.warning(
             "Credential metadata for %s is missing %s",

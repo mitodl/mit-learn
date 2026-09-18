@@ -444,11 +444,28 @@ async def _generate_field(
     return FieldOutcome(response=response, error=error)
 
 
+def _active_configs(fields: list[str] | None) -> list[CredentialMetadataConfiguration]:
+    """
+    Return the active configurations to generate, narrowed to `fields`.
+
+    Args:
+        fields (list of str | None): the fields to generate, or None for
+            every active configuration
+
+    Returns:
+        list of CredentialMetadataConfiguration: the configurations to run
+    """
+    configs = CredentialMetadataConfiguration.objects.filter(is_active=True)
+    if fields is not None:
+        configs = configs.filter(field__in=fields)
+    return list(configs)
+
+
 async def generate_credential_metadata(
-    resource: LearningResource, user=None
+    resource: LearningResource, user=None, fields: list[str] | None = None
 ) -> CredentialMetadata:
     """
-    Generate every configured credential metadata field for a resource.
+    Generate configured credential metadata fields for a resource.
 
     The fields share one context and are independent, so they are generated
     concurrently: run in sequence they take about as long as the sum of their
@@ -457,19 +474,22 @@ async def generate_credential_metadata(
     Args:
         resource (LearningResource): the resource to generate metadata for
         user (User): the user the generation is logged against
+        fields (list of str): the fields to generate, defaulting to every
+            active configuration. A caller filling in what a partial row is
+            missing passes that subset, so the fields already stored are
+            neither billed for a second time nor overwritten
 
     Returns:
         CredentialMetadata: the generated fields -- description (str) and
-            criteria (list[str]) -- and one error per configured field that is
+            criteria (list[str]) -- and one error per requested field that is
             missing from them. A field with no active configuration appears in
             neither: nothing was asked of it, so there is nothing to explain.
     """
-    configs = await db_sync_to_async(
-        lambda: list(CredentialMetadataConfiguration.objects.filter(is_active=True))
-    )()
+    configs = await db_sync_to_async(_active_configs)(fields)
     if not configs:
         logger.warning(
-            "No active CredentialMetadataConfiguration; nothing to generate for %s",
+            "No active CredentialMetadataConfiguration%s; nothing to generate for %s",
+            f" for {', '.join(fields)}" if fields is not None else "",
             resource.readable_id,
         )
         return CredentialMetadata(fields={}, errors={})
@@ -508,7 +528,7 @@ async def generate_credential_metadata(
 
 
 async def generate_and_save_credential_metadata(
-    resource: LearningResource, user=None
+    resource: LearningResource, user=None, fields: list[str] | None = None
 ) -> CredentialMetadata:
     """
     Generate a resource's credential metadata and store what was generated.
@@ -516,12 +536,14 @@ async def generate_and_save_credential_metadata(
     Args:
         resource (LearningResource): the resource to generate metadata for
         user (User): the user the generation is logged against
+        fields (list of str): the fields to generate, defaulting to every
+            active configuration -- see `generate_credential_metadata`
 
     Returns:
         CredentialMetadata: exactly what `generate_credential_metadata`
             returned. Nothing is stored when it generated nothing, so a failed
             run leaves the previous values in force.
     """
-    generated = await generate_credential_metadata(resource, user=user)
+    generated = await generate_credential_metadata(resource, user=user, fields=fields)
     await db_sync_to_async(save_credential_metadata)(resource, generated.fields)
     return generated
