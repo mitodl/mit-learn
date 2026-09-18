@@ -1223,6 +1223,50 @@ def test_relative_score_floor_uses_the_ratio_for_the_search_mode(settings):
     assert len(_relative_score_floor(points, hybrid_search_enabled=True)) == 3
 
 
+@pytest.mark.usefixtures("_no_min_candidates")
+def test_relative_score_floor_ratio_override(settings):
+    """A request can replace the configured ratio, so it can be swept."""
+    settings.DENSE_VECTOR_SEARCH_MIN_SCORE_RATIO = 0.8
+    points = _scored(1.0, 0.5, 0.2, 0.05)
+
+    assert len(_relative_score_floor(points, hybrid_search_enabled=False)) == 1
+    kept = _relative_score_floor(
+        points, hybrid_search_enabled=False, ratio_override=0.1
+    )
+    assert [point.score for point in kept] == [1.0, 0.5, 0.2]
+    # 0 disables the cutoff rather than falling back to the setting
+    assert (
+        _relative_score_floor(points, hybrid_search_enabled=False, ratio_override=0)
+        == points
+    )
+
+
+@pytest.mark.usefixtures("_no_min_candidates")
+def test_vector_search_score_cutoff_ratio_parameter(mocker, client, settings):
+    """The relative cutoff is overridable per request, like the weights are."""
+    settings.DENSE_VECTOR_SEARCH_MIN_SCORE_RATIO = 0.8
+
+    mock_qdrant = mocker.patch(
+        "qdrant_client.AsyncQdrantClient", return_value=mocker.AsyncMock()
+    )()
+    mock_result = mocker.MagicMock()
+    mock_result.points = _scored(1.0, 0.5, 0.2, 0.05)
+    mock_qdrant.query_points = mocker.AsyncMock(return_value=mock_result)
+    mock_qdrant.count = mocker.AsyncMock(return_value=mocker.MagicMock(count=4))
+    mocker.patch("vector_search.views.async_qdrant_client", return_value=mock_qdrant)
+    floor = mocker.patch(
+        "vector_search.views._relative_score_floor",
+        side_effect=lambda points, *_args, **_kwargs: points,
+    )
+
+    client.get(
+        reverse("vector_search:v0:vector_learning_resources_search"),
+        data={"q": "test", "hybrid_search": False, "score_cutoff_ratio": 0.1},
+    )
+
+    assert floor.mock_calls[0].kwargs["ratio_override"] == 0.1
+
+
 def test_relative_score_floor_leaves_negative_scores_alone(settings):
     """A fraction of a negative best score is above it, trimming the best hit."""
     settings.DENSE_VECTOR_SEARCH_MIN_SCORE_RATIO = 0.8
@@ -1379,6 +1423,7 @@ def test_vector_search_score_tuning_parameters_disable_scoring(
         "staleness_penalty",
         "staleness_horizon_years",
         "completeness_penalty",
+        "score_cutoff_ratio",
     ],
 )
 def test_vector_search_score_tuning_parameters_reject_negatives(

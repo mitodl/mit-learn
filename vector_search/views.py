@@ -65,15 +65,23 @@ def _normalize_score_cutoff(value, hybrid_search_enabled):
     return max(value, min_score_cutoff)
 
 
-def _relative_score_floor(points, hybrid_search_enabled):
+def _relative_score_floor(points, hybrid_search_enabled, ratio_override=None):
     """
     Trim a score-ordered result set to the hits that scored close enough to the
     query's own best hit.
+
+    `ratio_override` replaces the search mode's configured ratio when it is not
+    None, so the cutoff can be swept per request like the formula weights are
+    (see score_formula_overrides).
     """
     ratio = (
-        settings.HYBRID_VECTOR_SEARCH_MIN_SCORE_RATIO
-        if hybrid_search_enabled
-        else settings.DENSE_VECTOR_SEARCH_MIN_SCORE_RATIO
+        ratio_override
+        if ratio_override is not None
+        else (
+            settings.HYBRID_VECTOR_SEARCH_MIN_SCORE_RATIO
+            if hybrid_search_enabled
+            else settings.DENSE_VECTOR_SEARCH_MIN_SCORE_RATIO
+        )
     )
     ranked = list(points)
     if not ratio or not ranked:
@@ -451,7 +459,11 @@ class QdrantView(AsyncAPIView):
                 result_obj = await client.query_points(**search_params)
                 search_result = result_obj.points
             if "group_by" not in params and score_cutoff is not None:
-                search_result = _relative_score_floor(search_result, hybrid_search)
+                search_result = _relative_score_floor(
+                    search_result,
+                    hybrid_search,
+                    ratio_override=params.get("score_cutoff_ratio"),
+                )
         else:
             # No query string — use scroll API
             search_result = await self._execute_scroll_search(

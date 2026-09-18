@@ -870,6 +870,13 @@ VECTOR_HYBRID_SEARCH_PREFETCH_MAX_LIMIT = get_int(
 # -- the primary gate is the relative cutoff below. As the primary gate these
 # sized the candidate set by how high a query's scores happened to reach, which
 # swung ~50x across rewordings of the same question.
+#
+# Low enough that a query matching nothing real ("asdkjhqwe") comes back with a
+# page of unrelated resources where 0.3 returned none. Deliberate: embedding
+# similarity puts gibberish in the same band as a legitimate one-word query
+# (q="dance" returned nothing at 0.3), so an absolute floor cannot separate the
+# two, and returning something for "dance" is worth more than an empty page for
+# a typo.
 DENSE_VECTOR_SEARCH_MIN_SCORE = get_float(
     name="DENSE_VECTOR_SEARCH_MIN_SCORE", default=0.15
 )
@@ -882,7 +889,8 @@ HYBRID_VECTOR_SEARCH_MIN_SCORE = get_float(
 
 # Keep hits scoring at least this fraction of the query's own best hit, so the
 # candidate set is sized by how fast relevance falls off within the query.
-# PROVISIONAL: both ratios want a sweep over real query logs.
+# PROVISIONAL: both ratios want a sweep over real query logs, which the
+# `score_cutoff_ratio` request param allows without a deploy.
 DENSE_VECTOR_SEARCH_MIN_SCORE_RATIO = get_float(
     name="DENSE_VECTOR_SEARCH_MIN_SCORE_RATIO", default=0.8
 )

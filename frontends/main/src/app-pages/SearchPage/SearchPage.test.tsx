@@ -108,6 +108,7 @@ const ADMIN_PARAMS = {
   max_incompleteness_penalty: 90,
   content_file_score_weight: 1,
   score_cutoff: 0.05,
+  score_cutoff_ratio: 0.1,
   program_boost: 0.1,
   staleness_penalty: 0.05,
   staleness_horizon_years: 20,
@@ -528,6 +529,7 @@ describe("SearchPage", () => {
   // url param -> the slider's visible title, which is also its accessible name
   const VECTOR_SLIDERS = [
     ["score_cutoff", "Minimum Score Cutoff"],
+    ["score_cutoff_ratio", "Relative Score Cutoff"],
     ["program_boost", "Program Score Multiplier"],
     ["staleness_penalty", "Resource Score Staleness Penalty"],
     ["staleness_horizon_years", "Staleness Horizon (years)"],
@@ -620,10 +622,11 @@ describe("SearchPage", () => {
     // announced as well as displayed -- 0.25 on its own means nothing
     expect(slider).toHaveAttribute("aria-valuetext", "1.25x")
 
-    // the penalties stay in score units, so they are left unformatted
+    // the penalties are fractions of a result's own score too, so they read
+    // out as the share of the score they cost
     expect(
       await screen.findByRole("slider", { name: "Incompleteness Penalty" }),
-    ).not.toHaveAttribute("aria-valuetext")
+    ).toHaveAttribute("aria-valuetext", "5% of score")
   })
 
   test("Vector score tuning params are forwarded to the vector endpoint", async () => {
@@ -646,7 +649,7 @@ describe("SearchPage", () => {
     setMockResponse.get(urls.adminSearchParams.get(), ADMIN_PARAMS)
 
     renderWithProviders(<SearchPage />, {
-      url: "?q=test&program_boost=0.4&staleness_penalty=0.2&staleness_horizon_years=5&completeness_penalty=0.1&score_cutoff=0.3",
+      url: "?q=test&program_boost=0.4&staleness_penalty=0.2&staleness_horizon_years=5&completeness_penalty=0.1&score_cutoff=0.3&score_cutoff_ratio=0.5",
     })
 
     await waitFor(() => {
@@ -663,6 +666,7 @@ describe("SearchPage", () => {
     expect(apiSearchParams.get("staleness_horizon_years")).toBe("5")
     expect(apiSearchParams.get("completeness_penalty")).toBe("0.1")
     expect(apiSearchParams.get("score_cutoff")).toBe("0.3")
+    expect(apiSearchParams.get("score_cutoff_ratio")).toBe("0.5")
   })
 
   test("Untouched vector score tuning params are left out of the request", async () => {
