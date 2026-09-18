@@ -29,7 +29,7 @@ from learning_resources.etl.edx_shared import (
     get_most_recent_course_archives,
     sync_edx_archive,
     sync_edx_course_files,
-    unpublish_staff_only_content_files,
+    unpublish_excluded_content_files,
 )
 from learning_resources.etl.loaders import (
     load_learning_materials,
@@ -232,27 +232,38 @@ def _content_file_resource_ids(etl_source: str, learning_resource_ids):
 
 
 @app.task(acks_late=True, reject_on_worker_lost=True)
-def unpublish_staff_only_files(ids: list[int], etl_source: str, keys: list[str]):
-    """Unpublish staff-only content files for a chunk of courses"""
-    return unpublish_staff_only_content_files(etl_source, ids, keys)
+def unpublish_excluded_files(
+    ids: list[int], etl_source: str, keys: list[str], *, dry_run: bool = False
+):
+    """Unpublish unused content files for a chunk of courses, a row per run"""
+    return unpublish_excluded_content_files(etl_source, ids, keys, dry_run=dry_run)
 
 
 @app.task(bind=True)
-def unpublish_all_staff_only_files(
-    self, *, etl_source, chunk_size=None, learning_resource_ids=None
+def unpublish_all_excluded_files(
+    self, *, etl_source, chunk_size=None, learning_resource_ids=None, dry_run=False
 ):
-    """Fan out unpublish_staff_only_files over an edX source's current archives"""
+    """Fan out unpublish_excluded_files over an edX source's current archives"""
     if chunk_size is None:
         chunk_size = settings.LEARNING_COURSE_ITERATOR_CHUNK_SIZE
     archive_keys = get_most_recent_course_archives(etl_source)
+    # drops whole courses with nothing to unpublish; the runs of the ones that
+    # remain are guarded in unpublish_excluded_content_files, as a course keeps
+    # runs whose archives would otherwise be downloaded for no rows. Not applied
+    # to the ingestion fan-out, where a course with no content files yet is
+    # exactly the one that needs its archive read.
+    resource_ids = (
+        _content_file_resource_ids(etl_source, learning_resource_ids)
+        .filter(runs__content_files__isnull=False)
+        .distinct()
+    )
     return self.replace(
         celery.group(
             [
-                unpublish_staff_only_files.si(ids, etl_source, archive_keys)
-                for ids in chunks(
-                    _content_file_resource_ids(etl_source, learning_resource_ids),
-                    chunk_size=chunk_size,
+                unpublish_excluded_files.si(
+                    ids, etl_source, archive_keys, dry_run=dry_run
                 )
+                for ids in chunks(resource_ids, chunk_size=chunk_size)
             ]
         )
     )
