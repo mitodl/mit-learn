@@ -17,6 +17,7 @@ from rest_framework.response import Response
 from rest_framework.test import APIRequestFactory, force_authenticate
 from rest_framework.views import APIView
 
+from main import utils as main_utils
 from main.constants import (
     ALLOWED_HTML_ATTRIBUTES_WITH_LINKS,
     ALLOWED_HTML_TAGS_WITH_LINKS,
@@ -41,6 +42,7 @@ from main.utils import (
     normalize_to_start_of_day,
     now_in_utc,
     prefetched_iterator,
+    run_on_worker_loop,
     write_to_file,
 )
 
@@ -692,3 +694,111 @@ def test_call_fastly_purge_api_soft_header(mocker, settings, soft):
 
     headers = mock_request.call_args.kwargs["headers"]
     assert headers.get("Fastly-Soft-Purge") == ("1" if soft else None)
+
+
+def test_run_on_worker_loop_returns_the_result():
+    """A coroutine's return value comes back to the sync caller"""
+
+    async def coro():
+        return "done"
+
+    assert run_on_worker_loop(coro()) == "done"
+
+
+def test_run_on_worker_loop_propagates_an_exception():
+    """A failing coroutine raises in the caller rather than being swallowed"""
+
+    async def coro():
+        msg = "nope"
+        raise ValueError(msg)
+
+    with pytest.raises(ValueError, match="nope"):
+        run_on_worker_loop(coro())
+
+
+def test_run_on_worker_loop_reuses_one_loop():
+    """
+    Every call in a process runs on the same loop.
+
+    This is the whole point of the helper. asyncio.run (and async_to_sync)
+    create a loop per call and close it on return, while the Qdrant clients
+    bind to the loop alive when they were built. Call two would drive a
+    cached gRPC channel onto a closed loop, so retrieval fails and generation
+    is skipped rather than producing metadata. The helper keeps subsequent
+    calls on the original live loop.
+    """
+
+    async def which_loop():
+        return asyncio.get_running_loop()
+
+    first = run_on_worker_loop(which_loop())
+    second = run_on_worker_loop(which_loop())
+
+    assert first is second
+    assert not first.is_closed()
+
+
+@pytest.fixture
+def isolated_worker_loop(monkeypatch):
+    """
+    Give a test the worker loop's module state to itself.
+
+    The helper holds its loop in a module global and deliberately never
+    closes it -- the process outliving it is the point -- so a test that
+    drives it has to reset that state going in and close what it created
+    coming out, rather than leaking an epoll fd into the rest of the suite.
+
+    Yields:
+        list: every loop the helper created during the test
+    """
+    monkeypatch.setattr(main_utils, "_worker_loop", None)
+    monkeypatch.setattr(main_utils, "_worker_loop_pid", None)
+    created = []
+    new_event_loop = asyncio.new_event_loop
+
+    def tracked_new_event_loop():
+        loop = new_event_loop()
+        created.append(loop)
+        return loop
+
+    monkeypatch.setattr(asyncio, "new_event_loop", tracked_new_event_loop)
+    yield created
+    for loop in created:
+        loop.close()
+
+
+def test_run_on_worker_loop_does_not_reuse_an_inherited_loop(
+    mocker, isolated_worker_loop
+):
+    """
+    A forked child builds its own loop instead of running on the parent's.
+
+    This is the prefork-safety branch, and the reason the loop is created
+    lazily: a Celery prefork child inherits the parent's loop object, whose
+    epoll fd it shares with every sibling. Running on it there is the same
+    unusable-loop failure the helper exists to prevent, and just as silent,
+    since content retrieval swallows it. A pid that stands still between
+    calls cannot exercise this, so the pid moves here instead of forking.
+    """
+
+    async def which_loop():
+        return asyncio.get_running_loop()
+
+    process = {"pid": 1111}
+    # A callable rather than a side_effect list: os.getpid is shared with
+    # everything else running during the test, so an extra call must not
+    # exhaust an iterator.
+    mocker.patch("main.utils.os.getpid", side_effect=lambda: process["pid"])
+
+    parent_loop = run_on_worker_loop(which_loop())
+    process["pid"] = 2222
+    child_loop = run_on_worker_loop(which_loop())
+    child_loop_again = run_on_worker_loop(which_loop())
+
+    assert child_loop is not parent_loop
+    # The child keeps its own loop across calls, exactly as the parent did.
+    assert child_loop_again is child_loop
+    assert len(isolated_worker_loop) == 2
+    # The inherited loop is dropped, never closed: its fd belongs to the
+    # parent too, and closing it in a child would break the parent's.
+    assert not parent_loop.is_closed()

@@ -11,12 +11,15 @@ from learning_resources.constants import (
     PlatformType,
 )
 from learning_resources.credentials import RESPONSE_SCHEMAS, CredentialMetadata
-from learning_resources.etl.constants import ETLSource
+from learning_resources.etl.constants import MARKETING_PAGE_FILE_TYPE, ETLSource
 from learning_resources.factories import (
+    ContentFileFactory,
     CredentialMetadataConfigurationFactory,
+    CredentialMetadataFactory,
     LearningResourceFactory,
     LearningResourcePlatformFactory,
 )
+from learning_resources.models import CredentialMetadata as CredentialMetadataModel
 from learning_resources.models import (
     CredentialMetadataConfiguration,
     CredentialMetadataGenerationLog,
@@ -66,6 +69,11 @@ def generate(client, readable_id=None):
     return client.post(credential_url(), body)
 
 
+def fetch(client, readable_id):
+    """Get the stored metadata for a resource"""
+    return client.get(credential_url(), {"resource_readable_id": readable_id})
+
+
 @pytest.mark.django_db(transaction=True)
 def test_credential_metadata(client, django_user_model, resource, mocker):
     CredentialMetadataConfiguration.objects.all().delete()
@@ -81,9 +89,24 @@ def test_credential_metadata(client, django_user_model, resource, mocker):
         ainvoke=mocker.AsyncMock(return_value=canned[schema])
     )
     mocker.patch("learning_resources.credentials._get_llm", return_value=llm)
+
+    ContentFileFactory.create(
+        learning_resource=resource,
+        file_type=MARKETING_PAGE_FILE_TYPE,
+        content="## About this course\n\nLearn to model fluid flow.",
+        published=True,
+    )
     mocker.patch(
         "learning_resources.credentials.async_content_file_chunks_for_resource",
-        return_value=[],
+        return_value=[
+            {
+                "point_id": "point-1",
+                "chunk_content": "A syllabus chunk long enough to be kept.",
+                "title": "Syllabus",
+                "file_extension": ".html",
+                "file_type": "text",
+            }
+        ],
     )
     user = django_user_model.objects.create(is_staff=True)
     client.force_login(user)
@@ -256,20 +279,181 @@ def test_credential_metadata_omits_fields_it_could_not_generate(
 
 
 @pytest.mark.django_db(transaction=True)
-def test_credential_metadata_rejects_get(client, django_user_model, mock_generate):
+def test_credential_metadata_get_never_generates(
+    client, django_user_model, resource, mock_generate
+):
     """
-    Generation is not reachable by GET.
+    A GET serves what is stored and never generates.
 
-    It spends money per call and writes a generation log, so it must not be
-    triggerable by a prefetch, a proxy retry, or a crafted link followed by a
-    logged-in author -- none of which a CSRF check on GET would stop.
+    Generation spends money per call and writes a generation log, so it must
+    not be triggerable by a prefetch, a proxy retry, or a crafted link
+    followed by a logged-in author -- none of which a CSRF check on GET would
+    stop. GET used to answer 405 for that reason; now that it reads stored
+    values instead, the money assertion is what survives from that test.
+    """
+    CredentialMetadataFactory.create(learning_resource=resource, **GENERATED)
+    client.force_login(django_user_model.objects.create(is_staff=True))
+
+    response = fetch(client, resource.readable_id)
+
+    assert response.status_code == 200
+    mock_generate.assert_not_called()
+
+
+@pytest.mark.django_db(transaction=True)
+def test_credential_metadata_get(client, django_user_model, resource):
+    """Stored metadata is returned in the same shape the generate path uses"""
+    CredentialMetadataFactory.create(learning_resource=resource, **GENERATED)
+    client.force_login(django_user_model.objects.create(is_staff=True))
+
+    response = fetch(client, resource.readable_id)
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "resource_readable_id": resource.readable_id,
+        **GENERATED,
+    }
+
+
+@pytest.mark.django_db(transaction=True)
+def test_credential_metadata_get_partial(client, django_user_model, resource):
+    """
+    Half a stored row returns only the half that exists.
+
+    A field the generator could not produce is omitted rather than sent as a
+    blank, matching the generate path: a caller prepopulating a form must not
+    overwrite a good value with an empty one.
+    """
+    CredentialMetadataFactory.create(
+        learning_resource=resource, description="Only this one worked.", criteria=[]
+    )
+    client.force_login(django_user_model.objects.create(is_staff=True))
+
+    response = fetch(client, resource.readable_id)
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "resource_readable_id": resource.readable_id,
+        "description": "Only this one worked.",
+    }
+
+
+@pytest.mark.django_db(transaction=True)
+def test_credential_metadata_get_not_yet_generated(client, django_user_model, resource):
+    """
+    A resource with no stored metadata is a 404 that says so.
+
+    Worded differently to the unknown-readable_id 404: one means come back
+    after the sweep has run, the other means the id is wrong.
     """
     client.force_login(django_user_model.objects.create(is_staff=True))
 
-    response = client.get(credential_url(), {"resource_readable_id": "a-course"})
+    response = fetch(client, resource.readable_id)
 
-    assert response.status_code == 405
-    mock_generate.assert_not_called()
+    assert response.status_code == 404
+    assert "has been generated" in response.json()["detail"]
+
+
+@pytest.mark.django_db(transaction=True)
+def test_credential_metadata_get_unknown_resource(client, django_user_model):
+    """An unknown readable_id is a 404 about the resource, not the metadata"""
+    client.force_login(django_user_model.objects.create(is_staff=True))
+
+    response = fetch(client, "course-v1:MITx+nope")
+
+    assert response.status_code == 404
+    assert "No learning resource" in response.json()["detail"]
+
+
+@pytest.mark.django_db(transaction=True)
+def test_credential_metadata_get_non_mitxonline(client, django_user_model):
+    """A non-MITx Online resource is rejected on read as it is on generate"""
+    other = LearningResourceFactory.create(
+        is_course=True,
+        etl_source=ETLSource.mit_edx.name,
+        platform=LearningResourcePlatformFactory.create(code=PlatformType.edx.name),
+    )
+    client.force_login(django_user_model.objects.create(is_staff=True))
+
+    response = fetch(client, other.readable_id)
+
+    assert response.status_code == 400
+
+
+@pytest.mark.django_db(transaction=True)
+def test_credential_metadata_get_requires_a_readable_id(client, django_user_model):
+    """A GET with no readable_id is a 400, not a 500"""
+    client.force_login(django_user_model.objects.create(is_staff=True))
+
+    assert client.get(credential_url()).status_code == 400
+
+
+@pytest.mark.django_db(transaction=True)
+def test_credential_metadata_get_anonymous(client, resource):
+    """Stored metadata is author-only draft content"""
+    CredentialMetadataFactory.create(learning_resource=resource, **GENERATED)
+
+    assert fetch(client, resource.readable_id).status_code == 403
+
+
+@pytest.mark.django_db(transaction=True)
+def test_credential_metadata_get_resolves_the_mitxonline_course(
+    client, django_user_model
+):
+    """
+    A readable id shared with another platform reads the MITx Online row.
+
+    readable_id is unique only per (platform, resource_type), so the read has
+    to pin the whole key. The edX row is created first and given different
+    metadata, so a lookup that took whichever row came back first would serve
+    it.
+    """
+    readable_id = "course-v1:MITx+18.01"
+    edx_course = LearningResourceFactory.create(
+        is_course=True,
+        readable_id=readable_id,
+        etl_source=ETLSource.mit_edx.name,
+        platform=LearningResourcePlatformFactory.create(code=PlatformType.edx.name),
+    )
+    CredentialMetadataFactory.create(
+        learning_resource=edx_course, description="The edX one."
+    )
+    CredentialMetadataFactory.create(
+        learning_resource=mitxonline_course(readable_id), **GENERATED
+    )
+    client.force_login(django_user_model.objects.create(is_staff=True))
+
+    response = fetch(client, readable_id)
+
+    assert response.status_code == 200
+    assert response.json()["description"] == GENERATED["description"]
+
+
+@pytest.mark.django_db(transaction=True)
+def test_credential_metadata_post_stores_what_it_generated(
+    client, django_user_model, resource, mock_generate
+):
+    """
+    A generate request replaces the stored metadata a GET will serve.
+
+    The response shape is unchanged: storing is a side effect, so that the
+    endpoint's regenerate path and the daily sweep leave the same state.
+    """
+    CredentialMetadataFactory.create(
+        learning_resource=resource, description="Stale", criteria=["Stale"]
+    )
+    client.force_login(django_user_model.objects.create(is_staff=True))
+
+    response = generate(client, resource.readable_id)
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "resource_readable_id": resource.readable_id,
+        **GENERATED,
+    }
+    stored = CredentialMetadataModel.objects.get(learning_resource=resource)
+    assert stored.description == GENERATED["description"]
+    assert stored.criteria == GENERATED["criteria"]
 
 
 @pytest.mark.django_db(transaction=True)

@@ -406,6 +406,25 @@ class TestSettings(TestCase):
             assert entry["task"] == "profiles.tasks.SyncProgramCertificatesTask"
             assert entry["kwargs"] == {"full_refresh": True}
 
+    def test_credential_metadata_beat_entry(self):
+        """
+        The credential metadata sweep is scheduled, and fills gaps only.
+
+        An overwriting sweep regenerates the whole MITx Online catalogue at
+        full LLM cost every day, so `overwrite` being False here is the thing
+        worth pinning.
+        """
+        with mock.patch.dict("os.environ", REQUIRED_SETTINGS, clear=True):
+            settings_vars = self.reload_settings(module="main.settings_celery")
+            entry = settings_vars["CELERY_BEAT_SCHEDULE"][
+                "generate-credential-metadata-every-1-days"
+            ]
+            assert (
+                entry["task"]
+                == "learning_resources.tasks.generate_all_credential_metadata"
+            )
+            assert entry["kwargs"] == {"overwrite": False}
+
     def _assert_s3_storage_config(
         self,
         storages_dict,
