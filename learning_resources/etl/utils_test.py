@@ -541,10 +541,24 @@ def test_documents_from_olx_static_reference_spellings(tmp_path, reference, kept
     assert ("static/notes.pdf" in _olx_source_paths(olx)) is kept
 
 
-def test_documents_from_olx_normalizes_spaces_and_underscores(tmp_path):
-    """A file stored with spaces matches a reference written with underscores"""
+@pytest.mark.parametrize(
+    "reference",
+    [
+        '<a href="/static/Course_Syllabus_V2.pdf">s</a>',
+        '<a href="/static/Course Syllabus V2.pdf">s</a>',
+        '<a href="/static/Course%20Syllabus%20V2.pdf">s</a>',
+        # one name can mix the two spellings (15.671.1x spells its Turkish
+        # transcripts "17 Principles_Turkish.srt")
+        '<a href="/static/Course Syllabus_V2.pdf">s</a>',
+        # an unlinked mention is a weak reference, but keeping the file costs
+        # less than dropping something a learner can see
+        "<p>The syllabus is Course Syllabus V2.pdf</p>",
+    ],
+)
+def test_documents_from_olx_normalizes_spaces_and_underscores(tmp_path, reference):
+    """A file stored with spaces matches a reference however it spells them"""
     olx = _reference_olx(tmp_path, **{"Course Syllabus V2.pdf": "pdf"})
-    _write_olx(olx, "html/h.html", '<a href="/static/Course_Syllabus_V2.pdf">s</a>')
+    _write_olx(olx, "html/h.html", reference)
     assert "static/Course Syllabus V2.pdf" in _olx_source_paths(olx)
 
 
@@ -557,6 +571,64 @@ def test_documents_from_olx_skips_unreferenced_static_files(tmp_path):
     paths = _olx_source_paths(olx)
     assert "static/current.pdf" in paths
     assert "static/syllabus_2015.pdf" not in paths
+
+
+@pytest.mark.parametrize(
+    ("reference", "kept"),
+    [
+        # a name that only appears inside a longer one is not referenced
+        ('<a href="/static/final_exam.srt">exam</a>', False),
+        # a space is where a name can start, so a reference written with one is
+        # kept as a reference to the shorter name too
+        ('<a href="/static/final exam.srt">exam</a>', True),
+        # but anything a name can start after still counts
+        ('<a href="/static/exam.srt">exam</a>', True),
+        ("<p>the transcript is exam.srt</p>", True),
+        ('<a href="/asset-v1:MITx+1+run+type@asset+block/exam.srt">e</a>', True),
+    ],
+)
+def test_documents_from_olx_partial_names_are_not_references(tmp_path, reference, kept):
+    """A link to final_exam.srt is not a link to exam.srt"""
+    olx = _reference_olx(tmp_path, **{"final_exam.srt": "1", "exam.srt": "2"})
+    _write_olx(olx, "html/h.html", reference)
+    assert ("static/exam.srt" in _olx_source_paths(olx)) is kept
+
+
+def test_documents_from_olx_keeps_reuploaded_asset_keys(tmp_path):
+    """
+    A file re-uploaded under a flattened asset key is linked with the + and @ of
+    that key written as underscores (seen in 15.671.1x)
+    """
+    name = "asset-v1_MITx+15.671.1x+3T2020+type@asset+block@09_Conversation.pdf"
+    olx = _reference_olx(tmp_path, **{name: "pdf"})
+    _write_olx(
+        olx,
+        "html/h.html",
+        '<a href="/asset-v1:MITxT+15.671.1x+2T2023+type@asset+block@'
+        'asset-v1_MITx_15.671.1x_3T2020_type_asset_block_09_Conversation.pdf">c</a>',
+    )
+    assert f"static/{name}" in _olx_source_paths(olx)
+
+
+def test_documents_from_olx_partial_name_does_not_unhide_staff_transcript(tmp_path):
+    """A hidden video's transcript stays hidden when only its name's tail matches"""
+    olx = _reference_olx(tmp_path, **{"exam.srt": "hidden", "final_exam.srt": "shown"})
+    _write_olx(olx, "html/h.html", '<a href="/static/final_exam.srt">exam</a>')
+    _write_olx(
+        olx,
+        "chapter/ch.xml",
+        '<chapter><vertical url_name="v"/>'
+        '<vertical url_name="v_staff" visible_to_staff_only="true"/></chapter>',
+    )
+    _write_olx(
+        olx, "vertical/v_staff.xml", '<vertical><video url_name="vid"/></vertical>'
+    )
+    _write_olx(
+        olx,
+        "video/vid.xml",
+        '<video><transcript language="en" src="exam.srt"/></video>',
+    )
+    assert "static/exam.srt" not in _olx_source_paths(olx)
 
 
 def test_documents_from_olx_ignores_asset_manifests(tmp_path):

@@ -1660,7 +1660,9 @@ def _staff_only_archive(tmp_path) -> Path:
         "course/run.xml": '<course><chapter url_name="ok"/><chapter url_name="staff"/></course>',
         "chapter/ok.xml": '<chapter><sequential url_name="seq_ok"/></chapter>',
         "sequential/seq_ok.xml": '<sequential><vertical url_name="v_ok"/></sequential>',
-        "vertical/v_ok.xml": '<vertical><html url_name="h_ok"/></vertical>',
+        "vertical/v_ok.xml": (
+            '<vertical><html url_name="h_ok"/><video url_name="vid"/></vertical>'
+        ),
         "html/h_ok.xml": '<html filename="h_ok"/>',
         "html/h_ok.html": "<p>ok</p>",
         "chapter/staff.xml": (
@@ -1672,6 +1674,11 @@ def _staff_only_archive(tmp_path) -> Path:
         "html/h_staff.html": "<p>staff</p>",
         # nothing links this, so it is from an earlier offering
         "static/stale_syllabus.pdf": "stale",
+        # the video id keeps subs_ABC123; its space-spelled twin is a stale copy
+        # that get_edx_module_id folds onto the same content file key
+        "video/vid.xml": '<video url_name="vid" sub="ABC123"/>',
+        "static/subs_ABC123.srt.sjson": "{}",
+        "static/subs ABC123.srt.sjson": "{}",
     }
     for rel, text in files.items():
         (olx / rel).parent.mkdir(parents=True, exist_ok=True)
@@ -1823,6 +1830,42 @@ def test_unpublish_excluded_content_files_drops_unreferenced_static(
     assert not ContentFile.objects.filter(
         run=run, key=stale_key, published=True
     ).exists()
+
+
+def test_unpublish_excluded_content_files_keeps_colliding_key(
+    staff_only_run, mock_deindex_tasks
+):
+    """
+    get_edx_module_id folds "subs ABC123.srt.sjson" onto the transcript the video
+    declares, and that one row belongs to the file ingestion keeps
+    """
+    run = staff_only_run.run
+    shared_key = get_edx_module_id("course/static/subs ABC123.srt.sjson", run)
+    assert shared_key == get_edx_module_id("course/static/subs_ABC123.srt.sjson", run)
+    ContentFileFactory.create(run=run, key=shared_key, published=True)
+
+    assert (
+        unpublish_excluded_content_files(
+            staff_only_run.source, [staff_only_run.course.id], [staff_only_run.key]
+        )
+        == []
+    )
+    assert ContentFile.objects.filter(run=run, key=shared_key, published=True).exists()
+
+
+def test_unpublish_excluded_content_files_skips_runs_without_content_files(
+    staff_only_run, mock_deindex_tasks, mocker
+):
+    """A run with no content files is skipped before its archive is downloaded"""
+    excluded = mocker.patch("learning_resources.etl.edx_shared.excluded_olx_paths")
+
+    assert (
+        unpublish_excluded_content_files(
+            staff_only_run.source, [staff_only_run.course.id], [staff_only_run.key]
+        )
+        == []
+    )
+    excluded.assert_not_called()
 
 
 def test_unpublish_excluded_content_files_dry_run(staff_only_run, mock_deindex_tasks):
