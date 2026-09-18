@@ -37,12 +37,13 @@ class LearningResourceType(ExtendedEnum):
     video = "Video"
     video_playlist = "Video Playlist"
     document = "Document"
-    # Editorial content authored in MIT Learn itself (WebsiteContent), as
-    # opposed to a document ingested from an external source. 0105 previously
-    # folded `article` into `document`; it is reinstated here because that
-    # content is now mirrored into resources and has to be distinguishable.
-    article = "Article"
 
+
+# `resource_category` for editorial articles. They are `document` resources --
+# 0105 folded the `article` resource type into `document` -- distinguished by
+# this category, the same way the MIT Climate ETL models its own articles and
+# what the frontend keys its "View Article" call to action off.
+ARTICLE_RESOURCE_CATEGORY = "Article"
 
 # Prefix for the readable_id of a LearningResource mirroring a WebsiteContent
 # item, so editorial content is distinguishable from ETL'd documents.

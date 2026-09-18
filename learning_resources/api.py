@@ -6,6 +6,7 @@ from django.conf import settings
 from django.db.models import Count
 
 from learning_resources.constants import (
+    ARTICLE_RESOURCE_CATEGORY,
     WEBSITE_CONTENT_READABLE_ID_PREFIX,
     LearningResourceType,
 )
@@ -95,14 +96,18 @@ def sync_website_content_to_learning_resource(content) -> LearningResource:
     url = content.get_url()
     resource, _ = LearningResource.objects.update_or_create(
         readable_id=website_content_readable_id(content.id),
-        resource_type=LearningResourceType.article.name,
+        resource_type=LearningResourceType.document.name,
         defaults={
             "title": content.title,
             "description": extract_text_from_content(content.content),
             "published": True,
             "url": urljoin(settings.APP_BASE_URL, url) if url else None,
             "last_modified": content.updated_on,
-            "resource_category": LearningResourceType.article.value,
+            # `document` with an "Article" category, which is how the MIT
+            # Climate ETL already models its articles -- and what the frontend
+            # keys its "View Article" call to action off. `article` is not a
+            # resource type: 0105 folded it into `document`.
+            "resource_category": ARTICLE_RESOURCE_CATEGORY,
         },
     )
     resource.topics.set(content.topics.all())
@@ -126,7 +131,7 @@ def unpublish_website_content_learning_resource(content_id: int) -> None:
     """
     resource = LearningResource.objects.filter(
         readable_id=website_content_readable_id(content_id),
-        resource_type=LearningResourceType.article.name,
+        resource_type=LearningResourceType.document.name,
     ).first()
     if resource is None:
         # Nothing was ever published for this item -- a draft has no resource.

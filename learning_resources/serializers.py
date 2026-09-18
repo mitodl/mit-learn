@@ -1692,20 +1692,6 @@ class DocumentResourceSerializer(LearningResourceBaseSerializer):
         return content_files[0].description if content_files else None
 
 
-class ArticleResourceSerializer(LearningResourceBaseSerializer):
-    """
-    Serializer for article resources: editorial content authored in MIT Learn.
-
-    No `content_files`, unlike a document -- an article's body is flattened
-    into `description` when the resource is mirrored from the website content,
-    so there is nothing attached to serialize.
-    """
-
-    resource_type = LearningResourceTypeField(
-        default=constants.LearningResourceType.article.name
-    )
-
-
 class LearningResourceSerializer(serializers.Serializer):
     """Serializer for LearningResource"""
 
@@ -1720,7 +1706,6 @@ class LearningResourceSerializer(serializers.Serializer):
             VideoResourceSerializer,
             VideoPlaylistResourceSerializer,
             DocumentResourceSerializer,
-            ArticleResourceSerializer,
         )
     }
 

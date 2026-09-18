@@ -9,7 +9,10 @@ from learning_resources.api import (
     unpublish_website_content_learning_resource,
     website_content_readable_id,
 )
-from learning_resources.constants import LearningResourceType
+from learning_resources.constants import (
+    ARTICLE_RESOURCE_CATEGORY,
+    LearningResourceType,
+)
 from learning_resources.factories import LearningResourceTopicFactory
 from learning_resources.models import LearningResource
 from website_content.constants import WebsiteContentType
@@ -36,14 +39,19 @@ def _published_content(**kwargs):
     return WebsiteContentFactory.create(is_published=True, **kwargs)
 
 
-def test_sync_creates_an_article_resource(mock_upserted):
-    """A published item becomes a published article resource, and is indexed."""
+def test_sync_creates_a_document_resource_categorised_as_an_article(mock_upserted):
+    """
+    A published article becomes a published `document` resource.
+
+    `article` is not a resource type -- 0105 folded it into `document` -- so the
+    "Article" category is what distinguishes it, matching the MIT Climate ETL.
+    """
     content = _published_content(title="A Topical Article", content_type="article")
 
     resource = sync_website_content_to_learning_resource(content)
 
-    assert resource.resource_type == LearningResourceType.article.name
-    assert resource.resource_category == LearningResourceType.article.value
+    assert resource.resource_type == LearningResourceType.document.name
+    assert resource.resource_category == ARTICLE_RESOURCE_CATEGORY
     assert resource.readable_id == website_content_readable_id(content.id)
     assert resource.title == "A Topical Article"
     assert resource.published is True
@@ -188,9 +196,9 @@ def test_a_second_resource_for_the_same_content_is_rejected():
         LearningResource.objects.create(
             platform=None,
             readable_id=website_content_readable_id(content.id),
-            resource_type=LearningResourceType.article.name,
+            resource_type=LearningResourceType.document.name,
             title="duplicate",
-            resource_category=LearningResourceType.article.value,
+            resource_category=ARTICLE_RESOURCE_CATEGORY,
             published=True,
         )
 
@@ -211,8 +219,8 @@ def test_the_unique_index_does_not_catch_lookalike_ids():
     shared = {
         "platform": None,
         "readable_id": "websiteXcontent:1",
-        "resource_type": LearningResourceType.article.name,
-        "resource_category": LearningResourceType.article.value,
+        "resource_type": LearningResourceType.document.name,
+        "resource_category": ARTICLE_RESOURCE_CATEGORY,
         "published": True,
     }
     LearningResource.objects.create(title="one", **shared)

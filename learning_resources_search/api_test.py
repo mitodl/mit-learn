@@ -79,7 +79,6 @@ def os_topic(topic_name) -> Mock:
                 "testindex_video_default",
                 "testindex_video_playlist_default",
                 "testindex_document_default",
-                "testindex_article_default",
             ],
         ),
         (

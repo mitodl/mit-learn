@@ -30,39 +30,3 @@
 2026-09-15 GET /api/v0/users/{username}/ the response property `profile/email_optin` became nullable for the status `200`
 2026-09-15 PATCH /api/v0/users/{username}/ the response property `profile/email_optin` became nullable for the status `200`
 2026-09-15 PUT /api/v0/users/{username}/ the response property `profile/email_optin` became nullable for the status `200`
-
-# Reinstating the `article` resource type. Every entry below is the same
-# additive change: a new `ArticleResource` variant appears in the polymorphic
-# resource union, and `article` appears in the resource_type enum. No existing
-# variant, property or enum value is removed or reshaped, and no endpoint
-# stops returning what it returned before -- oasdiff flags it because a client
-# that switches exhaustively over the union has a case it does not know.
-#
-# The one such client we own, the Next.js frontend, is updated in the same
-# change (the Record<ResourceTypeEnum, ...> maps and the test factory).
-# https://github.com/mitodl/mit-learn/pull/3944
-2026-09-17 GET /api/v0/vector_learning_resources_search/ added `#/components/schemas/ArticleResource` to the `results/items/` response property `oneOf` list for the response status `200`
-2026-09-17 GET /api/v1/featured/ added `#/components/schemas/ArticleResource` to the `results/items/` response property `oneOf` list for the response status `200`
-2026-09-17 GET /api/v1/featured/{id}/ added `#/components/schemas/ArticleResource` to the response body `oneOf` list for the response status `200`
-2026-09-17 GET /api/v1/learning_resources/ added `#/components/schemas/ArticleResource` to the `results/items/` response property `oneOf` list for the response status `200`
-2026-09-17 GET /api/v1/learning_resources/summary/ added the new `article` enum value to the `results/items/resource_type` response property for the response status `200`
-2026-09-17 GET /api/v1/learning_resources/{id}/ added `#/components/schemas/ArticleResource` to the response body `oneOf` list for the response status `200`
-2026-09-17 PATCH /api/v1/learning_resources/{id}/learning_paths/ added `#/components/schemas/ArticleResource` to the `items/resource` response property `oneOf` list for the response status `200`
-2026-09-17 GET /api/v1/learning_resources/{id}/similar/ added `#/components/schemas/ArticleResource` to the `items/` response property `oneOf` list for the response status `200`
-2026-09-17 PATCH /api/v1/learning_resources/{id}/userlists/ added `#/components/schemas/ArticleResource` to the `items/resource` response property `oneOf` list for the response status `200`
-2026-09-17 GET /api/v1/learning_resources/{id}/vector_similar/ added `#/components/schemas/ArticleResource` to the `items/` response property `oneOf` list for the response status `200`
-2026-09-17 GET /api/v1/learning_resources/{learning_resource_id}/items/ added `#/components/schemas/ArticleResource` to the `results/items/resource` response property `oneOf` list for the response status `200`
-2026-09-17 GET /api/v1/learning_resources/{learning_resource_id}/items/{id}/ added `#/components/schemas/ArticleResource` to the `resource` response property `oneOf` list for the response status `200`
-2026-09-17 GET /api/v1/learning_resources_search/ added `#/components/schemas/ArticleResource` to the `results/items/` response property `oneOf` list for the response status `200`
-2026-09-17 GET /api/v1/learningpaths/{learning_resource_id}/items/ added `#/components/schemas/ArticleResource` to the `results/items/resource` response property `oneOf` list for the response status `200`
-2026-09-17 POST /api/v1/learningpaths/{learning_resource_id}/items/ added `#/components/schemas/ArticleResource` to the `resource` response property `oneOf` list for the response status `201`
-2026-09-17 GET /api/v1/learningpaths/{learning_resource_id}/items/{id}/ added `#/components/schemas/ArticleResource` to the `resource` response property `oneOf` list for the response status `200`
-2026-09-17 PATCH /api/v1/learningpaths/{learning_resource_id}/items/{id}/ added `#/components/schemas/ArticleResource` to the `resource` response property `oneOf` list for the response status `200`
-2026-09-17 GET /api/v1/podcasts/{learning_resource_id}/items/ added `#/components/schemas/ArticleResource` to the `results/items/resource` response property `oneOf` list for the response status `200`
-2026-09-17 GET /api/v1/podcasts/{learning_resource_id}/items/{id}/ added `#/components/schemas/ArticleResource` to the `resource` response property `oneOf` list for the response status `200`
-2026-09-17 GET /api/v1/userlists/{userlist_id}/items/ added `#/components/schemas/ArticleResource` to the `results/items/resource` response property `oneOf` list for the response status `200`
-2026-09-17 POST /api/v1/userlists/{userlist_id}/items/ added `#/components/schemas/ArticleResource` to the `resource` response property `oneOf` list for the response status `201`
-2026-09-17 GET /api/v1/userlists/{userlist_id}/items/{id}/ added `#/components/schemas/ArticleResource` to the `resource` response property `oneOf` list for the response status `200`
-2026-09-17 PATCH /api/v1/userlists/{userlist_id}/items/{id}/ added `#/components/schemas/ArticleResource` to the `resource` response property `oneOf` list for the response status `200`
-2026-09-17 GET /api/v1/video_playlists/{learning_resource_id}/items/ added `#/components/schemas/ArticleResource` to the `results/items/resource` response property `oneOf` list for the response status `200`
-2026-09-17 GET /api/v1/video_playlists/{learning_resource_id}/items/{id}/ added `#/components/schemas/ArticleResource` to the `resource` response property `oneOf` list for the response status `200`
