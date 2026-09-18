@@ -183,7 +183,10 @@ const AriaDisabledButtonWrapper = styled.div(({ theme }) => ({
 
 const csvCell = (value: string | null | undefined): string => {
   const text = value ?? ""
-  return /[",\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text
+  const safeText = /^[=+\-@\t\r\n]/.test(text) ? `'${text}` : text
+  return /[",\r\n]/.test(safeText)
+    ? `"${safeText.replace(/"/g, '""')}"`
+    : safeText
 }
 
 const buildCsvRow = (values: (string | null | undefined)[]): string =>
