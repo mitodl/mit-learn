@@ -6,7 +6,11 @@ import pytest
 from django.urls import reverse
 
 from learning_resources.constants import LearningResourceType
-from learning_resources.etl.constants import ETLSource
+from learning_resources.etl.constants import (
+    CourseLoaderConfig,
+    ETLSource,
+    ProgramLoaderConfig,
+)
 
 WEBHOOK_URL_NAME = "webhooks:v1:learning_resources_webhook"
 
@@ -94,6 +98,33 @@ def test_groups_by_source_and_type(settings, client, mocker):
     assert called_sources == {ETLSource.mitpe.name, ETLSource.oll.name}
     mock_load_programs.assert_called_once()
     assert mock_load_programs.call_args.args[0] == ETLSource.mit_edx.name
+
+
+@pytest.mark.django_db
+def test_programs_fetch_existing_child_courses(settings, client, mocker):
+    """
+    Program child courses are looked up, not upserted, matching the legacy
+    program pipelines: producers send child courses as readable_id references.
+    """
+    mocker.patch("webhooks.views.clear_views_cache")
+    mock_load_programs = mocker.patch("webhooks.views.load_programs", return_value=[])
+
+    payload = {
+        "resources": [
+            _resource(
+                "p-edx",
+                ETLSource.mit_edx.name,
+                LearningResourceType.program.name,
+                courses=[{"readable_id": "MITx+6.00.1x"}],
+            ),
+        ]
+    }
+    response = _post(client, settings, payload)
+
+    assert response.status_code == 200
+    assert mock_load_programs.call_args.kwargs["config"] == ProgramLoaderConfig(
+        courses=CourseLoaderConfig(fetch_only=True), prune=True
+    )
 
 
 @pytest.mark.django_db
