@@ -14,7 +14,11 @@ from rest_framework.parsers import JSONParser
 from rest_framework.response import Response
 
 from learning_resources.constants import LearningResourceType
-from learning_resources.etl.constants import ETLSource
+from learning_resources.etl.constants import (
+    CourseLoaderConfig,
+    ETLSource,
+    ProgramLoaderConfig,
+)
 from learning_resources.etl.loaders import (
     load_courses,
     load_documents,
@@ -232,7 +236,16 @@ def _load_resource_group(etl_source, resource_type, resources):
     if resource_type == LearningResourceType.course.name:
         return load_courses(etl_source, resources)
     if resource_type == LearningResourceType.program.name:
-        return load_programs(etl_source, resources)
+        # Child courses arrive as references to courses their own source's
+        # course delivery already loaded, so look them up rather than upsert,
+        # as the legacy program pipelines do.
+        return load_programs(
+            etl_source,
+            resources,
+            config=ProgramLoaderConfig(
+                courses=CourseLoaderConfig(fetch_only=True), prune=True
+            ),
+        )
     if resource_type == LearningResourceType.document.name:
         return load_documents(etl_source, resources)
     if resource_type == LearningResourceType.video.name:
