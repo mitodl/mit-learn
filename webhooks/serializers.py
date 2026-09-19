@@ -140,9 +140,12 @@ class LearningResourceWebhookRequestSerializer(serializers.Serializer):
     ``readable_id``, ``etl_source`` and ``resource_type`` so the handler can
     route it to the correct loader; all other keys are preserved and passed
     through to the loaders unchanged.
+
+    An empty batch is rejected: it names no (etl_source, resource_type), so no
+    loader could sync or prune anything and the request would silently no-op.
     """
 
-    resources = serializers.ListField(child=serializers.DictField(), allow_empty=True)
+    resources = serializers.ListField(child=serializers.DictField(), allow_empty=False)
 
     def validate_resources(self, resources):
         required_fields = ("readable_id", "etl_source", "resource_type")
