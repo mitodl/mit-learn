@@ -231,6 +231,19 @@ def test_missing_required_field_returns_400(settings, client, mocker):
 
 
 @pytest.mark.django_db
+def test_empty_batch_returns_400(settings, client, mocker):
+    """
+    An empty batch is rejected: it carries no (etl_source, resource_type) to
+    sync, so accepting it would report success while pruning nothing.
+    """
+    mock_clear = mocker.patch("webhooks.views.clear_views_cache")
+    response = _post(client, settings, {"resources": []})
+
+    assert response.status_code == 400
+    mock_clear.assert_not_called()
+
+
+@pytest.mark.django_db
 def test_invalid_signature_rejected(settings, client, mocker):
     """A bad signature short-circuits before any loader runs."""
     mock_load_courses = mocker.patch("webhooks.views.load_courses", return_value=[])

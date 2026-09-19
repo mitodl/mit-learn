@@ -1801,7 +1801,7 @@ export interface LearningResourceTopic {
   channel_url: string | null
 }
 /**
- * Serializer for the generic ``/api/v1/webhooks/learning_resources/`` endpoint.  Accepts a batch of pre-computed canonical LearningResource payloads pushed from the OL Data Platform (Dagster). Each resource must carry at minimum ``readable_id``, ``etl_source`` and ``resource_type`` so the handler can route it to the correct loader; all other keys are preserved and passed through to the loaders unchanged.
+ * Serializer for the generic ``/api/v1/webhooks/learning_resources/`` endpoint.  Accepts a batch of pre-computed canonical LearningResource payloads pushed from the OL Data Platform (Dagster). Each resource must carry at minimum ``readable_id``, ``etl_source`` and ``resource_type`` so the handler can route it to the correct loader; all other keys are preserved and passed through to the loaders unchanged.  An empty batch is rejected: it names no (etl_source, resource_type), so no loader could sync or prune anything and the request would silently no-op.
  */
 export interface LearningResourceWebhookRequestRequest {
   resources: Array<{ [key: string]: any }>
