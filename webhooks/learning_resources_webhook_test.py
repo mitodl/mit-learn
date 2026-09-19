@@ -101,13 +101,18 @@ def test_videos_and_podcasts_routed(settings, client, mocker):
     """Video and podcast resources reach load_videos / load_podcasts."""
     mocker.patch("webhooks.views.clear_views_cache")
     mock_load_videos = mocker.patch("webhooks.views.load_videos", return_value=[])
-    mock_load_podcasts = mocker.patch("webhooks.views.load_podcasts", return_value=[])
+    mock_load_podcasts = mocker.patch(
+        "webhooks.views.load_podcasts", autospec=True, return_value=[]
+    )
 
     payload = {
         "resources": [
             _resource("v1", ETLSource.youtube.name, LearningResourceType.video.name),
             _resource(
                 "pod1", ETLSource.podcast.name, LearningResourceType.podcast.name
+            ),
+            _resource(
+                "pod2", ETLSource.podcast.name, LearningResourceType.podcast.name
             ),
         ]
     }
@@ -117,7 +122,10 @@ def test_videos_and_podcasts_routed(settings, client, mocker):
     mock_load_videos.assert_called_once()
     assert [r["readable_id"] for r in mock_load_videos.call_args.args[0]] == ["v1"]
     mock_load_podcasts.assert_called_once()
-    assert [r["readable_id"] for r in mock_load_podcasts.call_args.args[0]] == ["pod1"]
+    podcasts_arg, tracked_ids_arg = mock_load_podcasts.call_args.args
+    assert [r["readable_id"] for r in podcasts_arg] == ["pod1", "pod2"]
+    # the batch is the authoritative podcast set, so it doubles as tracked_ids
+    assert tracked_ids_arg == ["pod1", "pod2"]
 
 
 @pytest.mark.django_db

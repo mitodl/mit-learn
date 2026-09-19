@@ -238,7 +238,11 @@ def _load_resource_group(etl_source, resource_type, resources):
     if resource_type == LearningResourceType.video.name:
         return load_videos(resources)
     if resource_type == LearningResourceType.podcast.name:
-        return load_podcasts(resources)
+        # The batch is the authoritative podcast set, so podcasts absent from
+        # it are the ones load_podcasts should stop tracking.
+        return load_podcasts(
+            resources, [resource["readable_id"] for resource in resources]
+        )
     return None
 
 
