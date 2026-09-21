@@ -3,6 +3,7 @@ import {
   urls as mitxUrls,
   factories as mitxFactories,
 } from "api/mitxonline-test-utils"
+import { makeCourse } from "./test-utils/userPricing"
 import type {
   CoursePageItem,
   CourseWithCourseRunsSerializerV2,
@@ -54,7 +55,6 @@ jest.mock("@/common/analytics/gtm", () => ({
   trackCourseProgramView: jest.fn(),
 }))
 
-const makeCourse = mitxFactories.courses.course
 const makePage = mitxFactories.pages.coursePageItem
 
 const expectRawContent = (el: HTMLElement, htmlString: string) => {
