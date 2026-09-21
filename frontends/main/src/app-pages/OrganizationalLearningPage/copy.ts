@@ -155,28 +155,28 @@ export const deliveryFormats = {
     "Our team will learn about your priorities and needs to find the right combination of learning modalities.",
   items: [
     {
-      title: "Programs",
-      body: "In-depth learning experiences to build foundational or advanced capabilities at scale.",
+      title: "Courses & Long Programs",
+      body: "Long-form digital instruction designed to build foundational or advanced-level understanding over multiple weeks or months.",
     },
     {
-      title: "Courses",
-      body: "Self-paced or instructor-led learning on key topics and skills.",
+      title: "Short Programs & Microcredentials",
+      body: "Shorter, digital introductions designed to elevate learners’ conversational abilities on complex topics in a matter of hours.",
     },
     {
-      title: "Workshops",
-      body: "Interactive, live sessions to accelerate team alignment and apply learning in the moment.",
+      title: "Workshops & Webinars",
+      body: "In-person or virtual programs on technical and leadership topics, tailored to your team’s needs, delivered live by MIT faculty and experts.",
     },
     {
-      title: "Seminars & expert briefings",
-      body: "Concise sessions with MIT subject matter experts on emerging trends.",
+      title: "Platform integration",
+      body: "Technical assistance to set up single sign-on (SSO) integrations and integrate learning management or course management systems.",
     },
     {
-      title: "Webinars",
-      body: "Live or on-demand sessions to explore timely topics and share insights with your team.",
+      title: "Reporting & engagement strategy",
+      body: "Ongoing relationship with a Client Success Manager to review engagement metrics and create strategies for maximizing learning outcomes.",
     },
     {
-      title: "Learning resources",
-      body: "Articles, videos, case studies, and tools to reinforce learning and drive action.",
+      title: "Translation",
+      body: "Potential translation of course content and platform experiences into the languages most accessible to your learners.",
     },
   ] satisfies IconBoxItem[],
   ctaLabel: "Talk with our team",
