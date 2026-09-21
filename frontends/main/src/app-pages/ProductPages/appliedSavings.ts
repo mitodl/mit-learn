@@ -21,10 +21,15 @@ const toNumericPrice = (value: unknown): number | null => {
  * either product, and the wording that differs between them belongs to the
  * views, not here.
  *
- * `kind` distinguishes the two discounts with a rule behind them. A credit can
- * only arise for a program — a `program-child-purchase` discount attaches to a
- * program's product and resolves against that program's requirement tree — so a
- * course quote reaches "aid" or "other" and never "credit".
+ * `kind` distinguishes the two discounts with a rule behind them. "credit" keys
+ * on the discount type rather than the redemption type, which holds because
+ * mitxonline's `paid_amount_off_discount_shape` CheckConstraint makes
+ * paid-amount-off imply the program-child-purchase redemption type — the
+ * constraint, not the product-link rule, is what rules out any other pairing.
+ * A course quote therefore reaches "aid" or "other" and never "credit": a
+ * paid-amount-off discount is only ever funded by resolving a program's
+ * requirement tree, and `_program_for_product` returns None for a product that
+ * does not sell a program, so no source resolves and no amount arrives.
  */
 export const toAppliedSavings = (
   quote: UserPricingProduct | undefined,
