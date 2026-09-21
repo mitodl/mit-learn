@@ -144,6 +144,19 @@ describe("EngagementTrendChart", () => {
     ).toBeInTheDocument()
   })
 
+  /**
+   * "Active learners" alone doesn't say what counts as active — the hover
+   * icon's accessible label carries the definition for keyboard and screen
+   * reader users, not just pointer hover.
+   */
+  test("explains what counts as an active learner from the column header", () => {
+    renderWithTheme(<EngagementTrendChart rows={months} isLoading={false} />)
+
+    expect(
+      screen.getByLabelText(/Learners who did anything in a course this month/),
+    ).toBeInTheDocument()
+  })
+
   test("shows an empty state rather than an empty chart", () => {
     renderWithTheme(<EngagementTrendChart rows={[]} isLoading={false} />)
     expect(
