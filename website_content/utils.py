@@ -111,3 +111,46 @@ def extract_image_from_content(content_json: dict) -> dict | None:
         return image
 
     return _traverse_for_embed_cover(content_json)
+
+
+def _traverse_for_text(node: ProseMirrorNode, parts: list[str]) -> None:
+    """Collect the text of every text node, depth first."""
+    if node.get("type") == "text":
+        text = node.get("text")
+        if text:
+            parts.append(text)
+
+    children = node.get("content", [])
+    for child in children:
+        _traverse_for_text(child, parts)
+
+    if children:
+        # A block boundary. Text nodes are joined with nothing between them --
+        # they are contiguous characters that differ only by their marks, so a
+        # separator would break words apart -- which leaves the end of one
+        # block otherwise running into the start of the next.
+        parts.append(" ")
+
+
+def extract_text_from_content(content_json: dict | None) -> str:
+    """
+    Flatten a ProseMirror/Tiptap document to plain text.
+
+    Block structure is not preserved -- this exists so the content is reachable
+    by keyword search alongside its topics, not to reconstruct the document.
+    Whitespace is collapsed to single spaces.
+
+    Args:
+        content_json: The JSON content from a WebsiteContent record.
+
+    Returns:
+        str: the document's text, space separated, or "" if there is none.
+    """
+    if not content_json:
+        return ""
+
+    parts: list[str] = []
+    _traverse_for_text(content_json, parts)
+    # split() on the joined text collapses the block separators above, along
+    # with any newlines or runs of spaces inside the text itself.
+    return " ".join("".join(parts).split())

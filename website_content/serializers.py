@@ -3,6 +3,7 @@ from drf_spectacular.utils import extend_schema_field
 from mitol.common.serializers import BaseSerializer
 from rest_framework import serializers
 
+from learning_resources.models import LearningResourceTopic
 from website_content import models
 from website_content.constants import WebsiteContentType
 from website_content.validators import clean_html
@@ -26,12 +27,52 @@ class UserSerializer(serializers.ModelSerializer):
         fields = ["first_name", "last_name"]
 
 
+class ManyPrimaryKeyRelatedField(serializers.ManyRelatedField):
+    """
+    A `many=True` related field that resolves every submitted id in one query.
+
+    DRF's own `ManyRelatedField` defers to its child field per item, and
+    `PrimaryKeyRelatedField.to_internal_value` runs a `.get()` of its own -- so
+    a payload naming N topics costs N queries, which zeal reports as an N+1.
+
+    Error codes and messages are the child's, so responses are unchanged: the
+    only difference is the number of queries it takes to produce them.
+    """
+
+    def to_internal_value(self, data):
+        if isinstance(data, str) or not hasattr(data, "__iter__"):
+            self.fail("not_a_list", input_type=type(data).__name__)
+        if not self.allow_empty and len(data) == 0:
+            self.fail("empty")
+
+        child = self.child_relation
+        # Coerced up front: `in_bulk` raises ValueError on a non-numeric pk,
+        # where the child returns a 400.
+        pks = []
+        for item in data:
+            try:
+                pks.append(int(item))
+            except (TypeError, ValueError):
+                child.fail("incorrect_type", data_type=type(item).__name__)
+
+        objects = child.get_queryset().in_bulk(pks)
+        for pk in pks:
+            if pk not in objects:
+                child.fail("does_not_exist", pk_value=pk)
+        return [objects[pk] for pk in pks]
+
+
 class WebsiteContentSerializer(BaseSerializer):
     """
     Serializer for WebsiteContent model.
     """
 
-    required_prefetches: list[str] = ["user"]
+    # Neither write path leaves `topics` prefetched on its own: a created
+    # instance has no prefetch cache, and UpdateModelMixin clears the one the
+    # fetched instance had -- correctly, since the m2m may have just changed.
+    # The viewset therefore hands write responses a freshly prefetched copy;
+    # see WebsiteContentViewSet._reloaded_for_response.
+    required_prefetches: list[str] = ["user", "topics"]
 
     created_on = serializers.DateTimeField(read_only=True, required=False)
     updated_on = serializers.DateTimeField(read_only=True, required=False)
@@ -47,6 +88,15 @@ class WebsiteContentSerializer(BaseSerializer):
     content_type = serializers.ChoiceField(
         choices=WebsiteContentType.as_tuple(),
         default=WebsiteContentType.news.name,
+        required=False,
+    )
+    # Ids, not nested objects: the editor picks topics by id and only needs to
+    # round-trip its own selections. The parent chain is added downstream when
+    # the content is projected into a LearningResource.
+    topics = ManyPrimaryKeyRelatedField(
+        child_relation=serializers.PrimaryKeyRelatedField(
+            queryset=LearningResourceTopic.objects.all(),
+        ),
         required=False,
     )
 
@@ -65,6 +115,7 @@ class WebsiteContentSerializer(BaseSerializer):
             "is_published",
             "slug",
             "cover_image",
+            "topics",
         ]
 
 

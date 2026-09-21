@@ -28,7 +28,10 @@ import {
   showPublishWebsiteContentDialog,
   showUnpublishWebsiteContentDialog,
 } from "@/page-components/WebsiteContentDialogs/PublishWebsiteContentDialog"
-import { ArticleSettingsDrawer } from "@/page-components/ArticleSettings/ArticleSettingsDrawer"
+import {
+  ArticleSettingsDrawer,
+  type ArticleSettingsValues,
+} from "@/page-components/ArticleSettings/ArticleSettingsDrawer"
 
 import { Toolbar } from "../vendor/components/tiptap-ui-primitive/toolbar"
 import { TiptapEditor, MainToolbarContent, TipTapViewer } from "../TiptapEditor"
@@ -37,7 +40,7 @@ import { Spacer } from "../vendor/components/tiptap-ui-primitive/spacer"
 import { handleImageUpload } from "../vendor/lib/tiptap-utils"
 import { useSchema } from "../useSchema"
 import { WebsiteContentProvider } from "../WebsiteContentContext"
-import { extractLearningResourceIds, contentsMatch } from "../extensions/utils"
+import { extractLearningResourceIds } from "../extensions/utils"
 import { LearningResourceProvider } from "../extensions/node/LearningResource/LearningResourceDataProvider"
 import { websiteContentDraftsView, websiteContentEditView } from "@/common/urls"
 import { CONTENT_TYPE_LABELS } from "@/common/website_content"
@@ -227,7 +230,15 @@ export interface SaveMutations {
     error: Error | null | unknown
   }
   update: {
-    mutateAsync: (data: SavePayload & { id: number }) => Promise<WebsiteContent>
+    /**
+     * Partial because the endpoint is a PATCH and the settings drawer saves
+     * `topics` on its own. Naming only what changed matters there: writing the
+     * editor's current content as a side effect of saving settings would push
+     * unsaved edits to an already-published page.
+     */
+    mutateAsync: (
+      data: Partial<SavePayload> & { id: number },
+    ) => Promise<WebsiteContent>
     isPending: boolean
     error: Error | null | unknown
   }
@@ -302,6 +313,7 @@ const WebsiteContentEditor = ({
     contentItem?.content || initialDoc,
   )
   const [title, setTitle] = useState(contentItem?.title)
+  const [topics, setTopics] = useState<number[]>(contentItem?.topics ?? [])
   const [touched, setTouched] = useState(false)
 
   const { create: createMutation, update: updateMutation } = saveMutations
@@ -374,15 +386,36 @@ const WebsiteContentEditor = ({
           title: title.trim(),
           content,
           is_published: publish,
+          topics,
           ...extraFields,
         })
       : await createMutation.mutateAsync({
           title: title.trim(),
           content,
           is_published: publish,
+          topics,
           ...extraFields,
         })
     onSave?.(saved)
+  }
+
+  /**
+   * Topics are persisted as soon as the drawer saves them, so they survive
+   * without a further save of the content -- but only once the content exists.
+   * Before the first save there is nothing to PATCH, so they are held here and
+   * ride along with the create.
+   *
+   * The failure is surfaced by the `saveError` alert below, so the rejection is
+   * swallowed rather than left unhandled -- as in `saveQuietly`.
+   */
+  const handleSettingsSave = ({
+    topics: nextTopics,
+  }: ArticleSettingsValues) => {
+    setTopics(nextTopics)
+    if (!contentItem) return
+    updateMutation
+      .mutateAsync({ id: contentItem.id, topics: nextTopics })
+      .catch(() => undefined)
   }
 
   /**
@@ -428,23 +461,16 @@ const WebsiteContentEditor = ({
     extensions,
   })
 
-  // Sync incoming content changes (e.g., after a refetch)
-  useEffect(() => {
-    if (!contentItem || !editor) return
-
-    if (contentItem.content) {
-      const currentContent = editor.getJSON()
-      if (!contentsMatch(contentItem.content, currentContent)) {
-        setContent(contentItem.content)
-        setTouched(true)
-        editor.commands.setContent(contentItem.content)
-      }
-    }
-
-    if (contentItem.title !== undefined) {
-      setTitle(contentItem.title)
-    }
-  }, [contentItem, editor])
+  // NOTE: the editor deliberately does *not* write `contentItem` back over its
+  // own state when the prop changes. Once the author has typed, the prop is
+  // only the last version the server knows, so syncing it in would discard
+  // their unsaved work -- a mutation elsewhere on the page (saving the settings
+  // drawer, say) invalidates the detail query, and the refetch would land on
+  // top of a half-written document.
+  //
+  // Resetting for a genuinely different item is the caller's job, done
+  // declaratively with a `key` on the editor keyed by content id. That also
+  // re-seeds state this never touched, such as `topics`.
 
   // Keep title in sync with the h1 heading inside the editor
   useEffect(() => {
@@ -679,6 +705,8 @@ const WebsiteContentEditor = ({
                 open={settingsOpen}
                 onClose={() => setSettingsOpen(false)}
                 contentLabel={contentLabel}
+                initialValues={{ topics }}
+                onSave={handleSettingsSave}
               />
             ) : null}
 

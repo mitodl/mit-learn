@@ -85,7 +85,6 @@ describe("ContractContent", () => {
   beforeEach(() => {
     setMockResponse.get(urls.enrollment.enrollmentsListV3(), [])
     setMockResponse.get(urls.programEnrollments.enrollmentsListV3(), [])
-    setMockResponse.get(urls.contracts.contractsList(), [])
     mockedUseFeatureFlagEnabled.mockReturnValue(undefined)
   })
 
@@ -208,9 +207,6 @@ describe("ContractContent", () => {
     }))
 
     orgX.contracts = [contract]
-    setMockResponse.get(urls.contracts.contractsList(), [contract])
-    // Need to update the orgX response to include the new contract
-    setMockResponse.get(urls.organization.organizationList(orgX.slug), orgX)
 
     // Mock API to return programs in opposite order (A first, then B)
     setMockResponse.get(urls.programs.programsList({ org_id: orgX.id }), {

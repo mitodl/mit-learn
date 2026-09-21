@@ -4,8 +4,9 @@ from django.urls import include, path, re_path
 from rest_framework.routers import SimpleRouter
 from rest_framework_nested.routers import NestedSimpleRouter
 
-from learning_resources import views
+from learning_resources import permissions, views
 from learning_resources.views import WebhookOCWView
+from main.permissions import AnonymousAccessReadonlyPermission
 
 router = SimpleRouter()
 
@@ -142,6 +143,30 @@ v0_urls = [
         "credential_metadata/",
         views.CredentialMetadataView.as_view(),
         name="credential_metadata",
+    ),
+    # Canvas run ids contain "/"; the "+canvas" suffix delimits them from the
+    # problem title. "problems/+" absorbs the extra slash learn-ai emits
+    # (PROBLEM_SET_URL already ends in one) and the leading [^/] keeps it out
+    # of the captured id -- otherwise the lookup misses and returns an empty
+    # list rather than 404ing. permission_classes are declared via @action,
+    # which only the router applies, so they are repeated here. Delete these
+    # along with openapi.hooks.preprocess_exclude_canvas_slash_routes once the
+    # run id moves to a query parameter. See mitodl/hq#13384.
+    re_path(
+        r"^tutor/problems/+(?P<run_readable_id>[^/].*\+canvas)/(?P<problem_title>[^/]+)/$",
+        views.CourseRunProblemsViewSet.as_view(
+            {"get": "retrieve_problem"},
+            permission_classes=[permissions.IsAdminOrTutorProblemViewer],
+        ),
+        name="tutorproblem_api-retrieve-problem",
+    ),
+    re_path(
+        r"^tutor/problems/+(?P<run_readable_id>[^/].*\+canvas)/$",
+        views.CourseRunProblemsViewSet.as_view(
+            {"get": "list_problems"},
+            permission_classes=[AnonymousAccessReadonlyPermission],
+        ),
+        name="tutorproblem_api-list-problems",
     ),
     *v0_router.urls,
 ]

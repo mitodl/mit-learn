@@ -34,7 +34,12 @@ const content: JSONContent = {
 const renderArticleEditor = ({
   readOnly = false,
   isPublished = false,
-}: { readOnly?: boolean; isPublished?: boolean } = {}) => {
+  topics = [],
+}: {
+  readOnly?: boolean
+  isPublished?: boolean
+  topics?: number[]
+} = {}) => {
   const user = factories.user.user({
     is_authenticated: true,
     is_article_editor: true,
@@ -43,6 +48,7 @@ const renderArticleEditor = ({
   const article = factories.websiteContent.websiteContent({
     content,
     is_published: isPublished,
+    topics,
   })
   renderWithProviders(<ArticleEditor article={article} readOnly={readOnly} />, {
     user,
@@ -91,7 +97,7 @@ describe("ArticleEditor article controls", () => {
 
   test("Settings opens the article settings drawer", async () => {
     setMockResponse.get(
-      urls.topics.list({ is_toplevel: true, limit: 100 }),
+      urls.topics.list({ limit: 1000 }),
       factories.learningResources.topics({ count: 2 }),
     )
     renderArticleEditor()
@@ -112,16 +118,13 @@ describe("ArticleEditor article controls", () => {
     const subtopics = factories.learningResources.topics({ count: 1 })
     subtopics.results[0].parent = firstTopic.id
 
-    // Top-level topics and a given parent's children are separate requests,
-    // so a subtopic resolves even when its parent is absent from the other.
-    setMockResponse.get(
-      urls.topics.list({ is_toplevel: true, limit: 100 }),
-      mainTopics,
-    )
-    setMockResponse.get(
-      urls.topics.list({ parent_topic_id: [firstTopic.id], limit: 100 }),
-      subtopics,
-    )
+    // One request for every topic; the drawer splits them by `parent` to fill
+    // the two selects.
+    setMockResponse.get(urls.topics.list({ limit: 1000 }), {
+      ...mainTopics,
+      count: 3,
+      results: [...mainTopics.results, ...subtopics.results],
+    })
 
     renderArticleEditor()
     await userEvent.click(
@@ -147,14 +150,11 @@ describe("ArticleEditor article controls", () => {
     })
     const [subA, subB] = subtopics.results
 
-    setMockResponse.get(
-      urls.topics.list({ is_toplevel: true, limit: 100 }),
-      mainTopics,
-    )
-    setMockResponse.get(
-      urls.topics.list({ parent_topic_id: [topic.id], limit: 100 }),
-      subtopics,
-    )
+    setMockResponse.get(urls.topics.list({ limit: 1000 }), {
+      ...mainTopics,
+      count: 3,
+      results: [...mainTopics.results, ...subtopics.results],
+    })
 
     renderArticleEditor()
     await userEvent.click(
@@ -202,6 +202,52 @@ describe("ArticleEditor article controls", () => {
         screen.getByRole("list", { name: "Selected topics" }),
       ).getAllByText(topic.name),
     ).toHaveLength(1)
+  })
+})
+
+describe("ArticleEditor settings", () => {
+  test("saving settings PATCHes the chosen topics and nothing else", async () => {
+    const mainTopics = factories.learningResources.topics({ count: 1 })
+    const [topic] = mainTopics.results
+    setMockResponse.get(urls.topics.list({ limit: 1000 }), mainTopics)
+
+    const { article } = renderArticleEditor()
+    setMockResponse.patch(urls.websiteContent.details(article.id), article)
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Settings" }),
+    )
+    await userEvent.click(await screen.findByLabelText("Topic"))
+    await userEvent.click(
+      await screen.findByRole("option", { name: topic.name }),
+    )
+    await userEvent.click(screen.getByRole("button", { name: "Add" }))
+    await userEvent.click(screen.getByRole("button", { name: "Save Settings" }))
+
+    // The exact body matters as much as the topics: sending the editor's
+    // current content or published state here would push unsaved edits live.
+    await waitFor(() => {
+      expect(makeRequest).toHaveBeenCalledWith(
+        expect.objectContaining({
+          method: "patch",
+          body: { topics: [topic.id] },
+        }),
+      )
+    })
+  })
+
+  test("an article's saved topics are already selected when the drawer opens", async () => {
+    const mainTopics = factories.learningResources.topics({ count: 1 })
+    const [topic] = mainTopics.results
+    setMockResponse.get(urls.topics.list({ limit: 1000 }), mainTopics)
+
+    renderArticleEditor({ topics: [topic.id] })
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Settings" }),
+    )
+
+    await screen.findByRole("button", { name: `Remove ${topic.name}` })
   })
 })
 

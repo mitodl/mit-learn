@@ -84,6 +84,7 @@ const SERVER_KEYED_PARAMS = [
   "completeness_penalty",
   "program_boost",
   "score_cutoff",
+  "score_cutoff_ratio",
   "staleness_horizon_years",
   "staleness_penalty",
   // Application params.

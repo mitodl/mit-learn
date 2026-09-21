@@ -1,5 +1,5 @@
 import { env, requiredEnv } from "@/env"
-import type { V2ProgramDisplayMode } from "@mitodl/mitxonline-api-axios/v2"
+import type { V2ProgramDisplayModeEnum } from "@mitodl/mitxonline-api-axios/v2"
 import { slugify } from "@/common/slugs"
 import { DisplayModeEnum } from "@mitodl/mitxonline-api-axios/v2"
 
@@ -472,7 +472,7 @@ export const programPageView = (program: {
    * But require it (arg is not optional, i.e., not `display_mode?`) to
    * encourage callers to pass the value.
    */
-  display_mode: V2ProgramDisplayMode | null | undefined
+  display_mode: V2ProgramDisplayModeEnum | null | undefined
 }) => {
   const pattern =
     program.display_mode === DisplayModeEnum.Course

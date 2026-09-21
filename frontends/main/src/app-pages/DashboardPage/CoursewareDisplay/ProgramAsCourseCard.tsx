@@ -10,7 +10,7 @@ import {
   CourseRunEnrollmentV3,
   CourseWithCourseRunsSerializerV2,
   DisplayModeEnum,
-  V2ProgramDisplayMode,
+  V2ProgramDisplayModeEnum,
   V3UserProgramEnrollment,
   V2ProgramRequirement,
 } from "@mitodl/mitxonline-api-axios/v2"
@@ -199,11 +199,11 @@ const getContextMenuItems = (
  * speak "Course"/"Modules"; any other program speaks "Program"/"Courses".
  */
 const getProgramTypeLabel = (
-  displayMode: V2ProgramDisplayMode | null | undefined,
+  displayMode: V2ProgramDisplayModeEnum | null | undefined,
 ) => (displayMode === DisplayModeEnum.Course ? "Course" : "Program")
 
 const getProgramChildrenLabel = (
-  displayMode: V2ProgramDisplayMode | null | undefined,
+  displayMode: V2ProgramDisplayModeEnum | null | undefined,
   count: number,
 ) => {
   const label = displayMode === DisplayModeEnum.Course ? "Module" : "Course"
@@ -218,7 +218,7 @@ interface ProgramAsCourse {
   end_date?: string | null
   courses?: number[]
   req_tree?: V2ProgramRequirement[]
-  display_mode?: V2ProgramDisplayMode | null
+  display_mode?: V2ProgramDisplayModeEnum | null
 }
 
 interface ProgramAsCourseCardProps {

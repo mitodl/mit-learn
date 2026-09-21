@@ -22,6 +22,7 @@ from django.utils import timezone
 
 from learning_resources import constants
 from learning_resources.constants import (
+    WEBSITE_CONTENT_READABLE_ID_PREFIX,
     Availability,
     CertificationType,
     Format,
@@ -755,6 +756,25 @@ class LearningResource(TimestampedModel):
 
     class Meta:
         unique_together = (("platform", "readable_id", "resource_type"),)
+        constraints = [
+            # The unique_together above spans `platform`, which resources
+            # mirrored from website content leave NULL -- and Postgres treats
+            # NULLs in a unique index as distinct, so it never rejects a
+            # duplicate of one. Two concurrent syncs of the same item would
+            # both insert, and every later sync would then fail with
+            # MultipleObjectsReturned.
+            #
+            # This partial index rejects the loser instead, which is what makes
+            # the sync's `update_or_create` safe: it catches the IntegrityError
+            # and re-reads the winner's row.
+            models.UniqueConstraint(
+                fields=["readable_id", "resource_type"],
+                condition=models.Q(
+                    readable_id__startswith=WEBSITE_CONTENT_READABLE_ID_PREFIX
+                ),
+                name="learningresource_website_content_uniq",
+            ),
+        ]
 
 
 class LearningResourceDetailQuerySet(TimestampedModelQuerySet):

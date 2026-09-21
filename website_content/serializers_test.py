@@ -5,10 +5,12 @@ from django.core.files.uploadedfile import SimpleUploadedFile
 from PIL import Image
 from rest_framework import serializers
 
+from learning_resources.factories import LearningResourceTopicFactory
 from website_content.models import WebsiteContentImageUpload
 from website_content.serializers import (
     SanitizedHtmlField,
     WebsiteContentImageUploadSerializer,
+    WebsiteContentSerializer,
 )
 
 
@@ -23,6 +25,52 @@ def test_html_sanitization():
     serializer.is_valid()
 
     assert serializer.data["html"] == "<p></p>"
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("topic_count", [1, 3])
+def test_topics_resolve_in_one_query(django_assert_num_queries, topic_count):
+    """
+    Whatever the payload names, validating `topics` costs a single query.
+
+    This is the whole reason `ManyPrimaryKeyRelatedField` exists: DRF's own
+    `many=True` defers to the child field per item, and `PrimaryKeyRelatedField`
+    runs a `.get()` each time, so N ids cost N queries -- an N+1 that zeal
+    reports. Parametrized because one id passes either way; the count is what
+    distinguishes them.
+    """
+    topics = LearningResourceTopicFactory.create_batch(topic_count)
+    serializer = WebsiteContentSerializer(
+        data={
+            "title": "Topical",
+            "content": {},
+            "content_type": "news",
+            "topics": [topic.id for topic in topics],
+        }
+    )
+
+    with django_assert_num_queries(1):
+        assert serializer.is_valid(), serializer.errors
+
+    # Order is preserved, so a caller gets back what it sent.
+    assert serializer.validated_data["topics"] == topics
+
+
+@pytest.mark.django_db
+def test_topics_reject_a_missing_id():
+    """A single query still has to notice an id that resolves to nothing."""
+    topic = LearningResourceTopicFactory.create()
+    serializer = WebsiteContentSerializer(
+        data={
+            "title": "Topical",
+            "content": {},
+            "content_type": "news",
+            "topics": [topic.id, topic.id + 1000],
+        }
+    )
+
+    assert not serializer.is_valid()
+    assert "topics" in serializer.errors
 
 
 def generate_test_image():

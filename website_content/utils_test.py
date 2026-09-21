@@ -1,6 +1,9 @@
 """Tests for website_content utilities"""
 
-from website_content.utils import extract_image_from_content
+from website_content.utils import (
+    extract_image_from_content,
+    extract_text_from_content,
+)
 
 MIT_LEARN_EMBED_URL = "https://rc.learn.mit.edu/video/123/embed"
 
@@ -162,3 +165,89 @@ class TestExtractImageFromContentMediaEmbed:
             "alt": "",
             "description": "",
         }
+
+
+class TestExtractTextFromContent:
+    """Tests for extract_text_from_content."""
+
+    def test_adjacent_text_nodes_are_not_separated(self):
+        """
+        Text nodes within a block are contiguous characters that differ only by
+        their marks, so joining them with anything would break words apart.
+        """
+        content = {
+            "type": "doc",
+            "content": [
+                {
+                    "type": "paragraph",
+                    "content": [
+                        {"type": "text", "text": "un"},
+                        {
+                            "type": "text",
+                            "text": "avoidable",
+                            "marks": [{"type": "bold"}],
+                        },
+                    ],
+                }
+            ],
+        }
+
+        assert extract_text_from_content(content) == "unavoidable"
+
+    def test_blocks_are_separated(self):
+        """Without a boundary the last word of a block runs into the next."""
+        content = {
+            "type": "doc",
+            "content": [
+                {"type": "paragraph", "content": [{"type": "text", "text": "first"}]},
+                {"type": "paragraph", "content": [{"type": "text", "text": "second"}]},
+            ],
+        }
+
+        assert extract_text_from_content(content) == "first second"
+
+    def test_whitespace_is_collapsed(self):
+        """Leading, trailing and repeated whitespace do not reach the index."""
+        content = {
+            "type": "doc",
+            "content": [
+                {
+                    "type": "paragraph",
+                    "content": [{"type": "text", "text": "  spaced \n out  "}],
+                }
+            ],
+        }
+
+        assert extract_text_from_content(content) == "spaced out"
+
+    def test_nested_blocks_are_reached(self):
+        """Text inside a banner or list still has to be found."""
+        content = {
+            "type": "doc",
+            "content": [
+                {
+                    "type": "banner",
+                    "content": [
+                        {
+                            "type": "heading",
+                            "attrs": {"level": 1},
+                            "content": [{"type": "text", "text": "Headline"}],
+                        }
+                    ],
+                },
+                {"type": "paragraph", "content": [{"type": "text", "text": "Body"}]},
+            ],
+        }
+
+        assert extract_text_from_content(content) == "Headline Body"
+
+    def test_empty_and_textless_documents(self):
+        """A document with no text at all yields an empty string, not None."""
+        assert extract_text_from_content(None) == ""
+        assert extract_text_from_content({}) == ""
+        assert (
+            extract_text_from_content(
+                {"type": "doc", "content": [{"type": "paragraph", "content": []}]}
+            )
+            == ""
+        )
