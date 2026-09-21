@@ -30,6 +30,16 @@ const productQueries = {
         productsApi
           .productsUserPricingRetrieve({ id: opts.productId })
           .then((r) => r.data),
+      // Not cacheable like the rest of the app's content. The browser client
+      // defaults staleTime to the CDN TTL, which getQueryClient justifies with
+      // "most content is stable for ~24 hours (ETL cadence)" — true of a
+      // course, false of one learner's price. A program-child-purchase credit
+      // appears the moment they buy a child course, and their aid tier can be
+      // approved between two page views. Nothing invalidates productsKeys, so
+      // without this a stale quote is served until the window elapses.
+      // baskets/queries.ts and useComplianceGate do the same for the same
+      // reason.
+      staleTime: 0,
     }),
 }
 
