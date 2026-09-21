@@ -83,15 +83,18 @@ describe("ArticleEditor article controls", () => {
     )
   })
 
-  test("a published article offers Draft, Edit, Settings and Unpublish", async () => {
+  test("a published article offers Draft, Edit and Settings", async () => {
     renderArticleEditor({ readOnly: true, isPublished: true })
 
     await screen.findByRole("link", { name: "Draft" })
     await screen.findByRole("link", { name: "Edit" })
     await screen.findByRole("button", { name: "Settings" })
-    await screen.findByRole("button", { name: "Unpublish Article" })
     expect(await screen.findByText(/Article status:/)).toHaveTextContent(
       "Article status: Published",
+    )
+    /* Unpublishing lives on the listing card's menu, not here. */
+    expect(screen.queryByRole("button", { name: "Unpublish Article" })).toBe(
+      null,
     )
   })
 
@@ -300,42 +303,6 @@ describe("ArticleEditor publish confirmation", () => {
     )
   })
 
-  test("unpublishing a published article asks for confirmation first", async () => {
-    const { article } = renderArticleEditor({
-      readOnly: true,
-      isPublished: true,
-    })
-    setMockResponse.patch(urls.websiteContent.details(article.id), {
-      ...article,
-      is_published: false,
-    })
-
-    await userEvent.click(
-      await screen.findByRole("button", { name: "Unpublish Article" }),
-    )
-
-    await screen.findByRole("heading", { name: "Unpublish article" })
-    await screen.findByText(
-      "Unpublishing this article will remove it from public view. You can publish it again at any time.",
-    )
-    expect(makeRequest).not.toHaveBeenCalledWith(
-      expect.objectContaining({ method: "patch" }),
-    )
-
-    await userEvent.click(
-      screen.getByRole("button", { name: "Yes, Unpublish article" }),
-    )
-
-    await waitFor(() => {
-      expect(makeRequest).toHaveBeenCalledWith(
-        expect.objectContaining({
-          method: "patch",
-          body: expect.objectContaining({ is_published: false }),
-        }),
-      )
-    })
-  })
-
   test("re-saving an already published article does not ask", async () => {
     // The dialog confirms the transition to public, not every save, so editing
     // a live article and pressing Publish must save straight away.
@@ -363,11 +330,8 @@ describe("ArticleEditor publish confirmation errors", () => {
    * the callback returned void, the dialog closed immediately, and a failed
    * save was dismissed as though it had worked.
    */
-  test("a failed unpublish leaves the confirmation open", async () => {
-    const { article } = renderArticleEditor({
-      readOnly: true,
-      isPublished: true,
-    })
+  test("a failed publish leaves the confirmation open", async () => {
+    const { article } = renderArticleEditor()
     setMockResponse.patch(
       urls.websiteContent.details(article.id),
       { detail: "boom" },
@@ -375,11 +339,11 @@ describe("ArticleEditor publish confirmation errors", () => {
     )
 
     await userEvent.click(
-      await screen.findByRole("button", { name: "Unpublish Article" }),
+      await screen.findByRole("button", { name: "Publish Article" }),
     )
-    await screen.findByRole("heading", { name: "Unpublish article" })
+    await screen.findByRole("heading", { name: "Publish article" })
     await userEvent.click(
-      screen.getByRole("button", { name: "Yes, Unpublish article" }),
+      screen.getByRole("button", { name: "Yes, Publish article" }),
     )
 
     // The request was attempted...
@@ -390,7 +354,7 @@ describe("ArticleEditor publish confirmation errors", () => {
     })
     // ...and because it failed, the dialog is still there to retry from.
     expect(
-      screen.getByRole("heading", { name: "Unpublish article" }),
+      screen.getByRole("heading", { name: "Publish article" }),
     ).toBeInTheDocument()
 
     /**
@@ -403,27 +367,24 @@ describe("ArticleEditor publish confirmation errors", () => {
     within(dialog).getByRole("alert")
   })
 
-  test("a successful unpublish closes the confirmation", async () => {
-    const { article } = renderArticleEditor({
-      readOnly: true,
-      isPublished: true,
-    })
+  test("a successful publish closes the confirmation", async () => {
+    const { article } = renderArticleEditor()
     setMockResponse.patch(urls.websiteContent.details(article.id), {
       ...article,
-      is_published: false,
+      is_published: true,
     })
 
     await userEvent.click(
-      await screen.findByRole("button", { name: "Unpublish Article" }),
+      await screen.findByRole("button", { name: "Publish Article" }),
     )
-    await screen.findByRole("heading", { name: "Unpublish article" })
+    await screen.findByRole("heading", { name: "Publish article" })
     await userEvent.click(
-      screen.getByRole("button", { name: "Yes, Unpublish article" }),
+      screen.getByRole("button", { name: "Yes, Publish article" }),
     )
 
     await waitFor(() => {
       expect(
-        screen.queryByRole("heading", { name: "Unpublish article" }),
+        screen.queryByRole("heading", { name: "Publish article" }),
       ).not.toBeInTheDocument()
     })
   })

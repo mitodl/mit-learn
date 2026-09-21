@@ -2453,6 +2453,32 @@ def test_resource_vector_hits_preserves_qdrant_score_order():
     assert actual_readable_ids == expected_readable_ids
 
 
+def test_resource_vector_hits_drops_unpublished_resources():
+    """
+    An unpublished resource is never a hit, whatever the index still holds.
+
+    Unpublishing deletes the point rather than rewriting it, and that delete is
+    queued -- so it can be late, can fail, or can predate a snapshot loaded
+    from elsewhere. The row is the authority.
+    """
+    kept, gone = LearningResourceFactory.create_batch(2)
+    gone.published = False
+    gone.save()
+    search_result = [
+        MagicMock(
+            payload={
+                "readable_id": r.readable_id,
+                "platform": {"code": r.platform.code} if r.platform else None,
+            }
+        )
+        for r in (kept, gone)
+    ]
+
+    result = _resource_vector_hits(search_result)
+
+    assert [r["readable_id"] for r in result] == [kept.readable_id]
+
+
 def test_resource_vector_hits_duplicate_readable_ids_different_platforms():
     """
     Ensure results with duplicate readable_ids but different platform codes

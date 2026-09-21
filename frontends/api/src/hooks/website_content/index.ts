@@ -136,6 +136,14 @@ const useWebsiteContentPartialUpdate = ({ meta }: MutationHookOptions = {}) => {
       client.invalidateQueries({
         queryKey: websiteContentKeys.websiteContentDetailRetrieve(identifier),
       })
+      /**
+       * The listings render the fields a patch can change -- title, summary
+       * and whether the item is published at all -- so they go stale too. The
+       * destroy hook already invalidates them for the same reason.
+       */
+      client.invalidateQueries({
+        queryKey: websiteContentKeys.listRoot(),
+      })
     },
   })
 }

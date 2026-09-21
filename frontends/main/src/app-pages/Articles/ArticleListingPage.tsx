@@ -19,13 +19,19 @@ import {
 } from "ol-components"
 import Link from "next/link"
 import { RiArrowLeftLine, RiArrowRightLine } from "@remixicon/react"
-import type { WebsiteContent } from "api/v1"
+import { WebsiteContentContentTypeEnum, type WebsiteContent } from "api/v1"
 import { LocalDate } from "ol-utilities"
 import { useWebsiteContentList } from "api/hooks/website_content"
 import { extractArticleContent } from "@/common/websiteContentUtils"
-import { articleView, websiteContentCreateView } from "@/common/urls"
+import { CONTENT_TYPE_LABELS } from "@/common/website_content"
+import {
+  articleView,
+  websiteContentCreateView,
+  websiteContentEditView,
+} from "@/common/urls"
 import { Permission, useUserHasPermission } from "api/hooks/user"
 import { ButtonLink } from "@mitodl/smoot-design"
+import { WebsiteContentActionsMenu } from "@/page-components/WebsiteContentActionsMenu/WebsiteContentActionsMenu"
 
 const PAGE_SIZE = 10
 const MAX_PAGE = 50
@@ -57,6 +63,7 @@ const RegularStoryTitleWrapper = styled.div`
 const StoryCard = styled.div`
   display: flex;
   flex-direction: row;
+  position: relative;
   gap: 24px;
   background: white;
   border-radius: 8px;
@@ -89,6 +96,25 @@ const StoryCard = styled.div`
       border-bottom: 1px solid ${theme.custom.colors.lightGray2};
       box-shadow: none;
     }
+  }
+`
+
+/**
+ * Holds the three-dot menu over the card's top-right corner, where the design
+ * puts it: level with the top of the image, inside the card's 16px padding.
+ *
+ * A sibling of the image's link rather than a child of it, so clicking the
+ * menu cannot navigate to the article.
+ */
+const StoryActions = styled.div`
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 1;
+
+  ${theme.breakpoints.down("sm")} {
+    top: 16px;
+    right: 0;
   }
 `
 
@@ -372,14 +398,33 @@ const BreadcrumContainer = styled(Container)(({ theme }) => ({
 const RegularStory: React.FC<{ item: WebsiteContent }> = ({ item }) => {
   const articleContent = extractArticleContent(item)
   const [imageError, setImageError] = React.useState(false)
+  /**
+   * An unpublished article has no public page to land on, so the card points
+   * at the editor instead. Only an editor ever sees one here: the listing
+   * endpoint filters unpublished items out for everyone else.
+   *
+   * By id rather than slug, which a draft may not have yet.
+   */
+  const href = item.is_published
+    ? articleView(item.slug ?? String(item.id))
+    : websiteContentEditView(WebsiteContentContentTypeEnum.Article, item.id)
   return (
     <StoryCard>
+      {/* A draft has nothing to unpublish; the menu hides itself from
+          users who cannot edit articles. */}
+      {item.is_published ? (
+        <StoryActions>
+          <WebsiteContentActionsMenu
+            contentId={item.id}
+            contentLabel={CONTENT_TYPE_LABELS.article}
+            title={item.title}
+          />
+        </StoryActions>
+      ) : null}
       <StoryContent>
         <RegularStoryTitleWrapper>
           <StoryTitle>
-            <Link href={articleView(item.slug ?? String(item.id))}>
-              {item.title}
-            </Link>
+            <Link href={href}>{item.title}</Link>
           </StoryTitle>
           {articleContent.paragraph && (
             <StorySummary
@@ -394,10 +439,7 @@ const RegularStory: React.FC<{ item: WebsiteContent }> = ({ item }) => {
         </StoryDate>
       </StoryContent>
       {articleContent?.image?.src && !imageError && (
-        <Link
-          href={articleView(item.slug ?? String(item.id))}
-          style={{ textDecoration: "none", order: 2 }}
-        >
+        <Link href={href} style={{ textDecoration: "none", order: 2 }}>
           <StoryImage>
             <Image
               src={articleContent.image.src}

@@ -3,6 +3,7 @@
 from unittest.mock import patch
 
 import pytest
+from django.db import DatabaseError
 
 from main.factories import UserFactory
 from news_events.plugins import WebsiteContentNewsPlugin
@@ -112,8 +113,51 @@ def test_website_content_published_hook_captures_content_id():
             mock_task.assert_called_once_with(content.id)
 
 
-def test_website_content_unpublished_hook_calls_delete_task():
-    """The unpublish hook schedules the feed removal task on commit"""
+def test_website_content_unpublished_hook_removes_feed_item_inline():
+    """
+    The feed entry is gone by the time the hook returns.
+
+    Nothing may be left for a worker to pick up: the listing refetches as soon
+    as the unpublish request answers, so anything deferred here is a window in
+    which the news feed still serves the unpublished story.
+    """
+    from news_events.constants import FeedType
+    from news_events.etl.articles_news import website_content_feed_guid
+    from news_events.models import FeedItem, FeedSource
+
+    user = UserFactory.create()
+    content = WebsiteContent.objects.create(
+        title="Test Article",
+        content={},
+        is_published=False,
+        user=user,
+        content_type="news",
+    )
+    source = FeedSource.objects.create(
+        title="MIT Learn Articles", url="/news", feed_type=FeedType.news.name
+    )
+    guid = website_content_feed_guid(content.id)
+    FeedItem.objects.create(
+        guid=guid, source=source, title=content.title, url="/news/test-article"
+    )
+
+    plugin = WebsiteContentNewsPlugin()
+
+    with patch("news_events.plugins.transaction.on_commit") as mock_on_commit:
+        plugin.website_content_unpublished(content)
+
+        assert not FeedItem.objects.filter(guid=guid).exists()
+        # No deferred work at all: the removal already happened.
+        assert not mock_on_commit.called
+
+
+def test_website_content_unpublished_hook_queues_task_on_db_error():
+    """
+    A transient database error hands off to the retrying task.
+
+    Racing the sync task for the same row must not fail the editor's unpublish,
+    and the feed entry still has to go eventually.
+    """
     user = UserFactory.create()
     content = WebsiteContent.objects.create(
         title="Test Article",
@@ -125,7 +169,13 @@ def test_website_content_unpublished_hook_calls_delete_task():
 
     plugin = WebsiteContentNewsPlugin()
 
-    with patch("news_events.plugins.transaction.on_commit") as mock_on_commit:
+    with (
+        patch(
+            "news_events.etl.articles_news.delete_website_content_news_from_news",
+            side_effect=DatabaseError("deadlock detected"),
+        ),
+        patch("news_events.plugins.transaction.on_commit") as mock_on_commit,
+    ):
         plugin.website_content_unpublished(content)
 
         assert mock_on_commit.call_count == 1

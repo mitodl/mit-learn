@@ -31,6 +31,10 @@ def _mock_learning_resource_sync(mocker):
     mocker.patch(
         "learning_resources.tasks.sync_website_content_learning_resource.delay"
     )
+    # The unpublish direction runs in the request rather than in the task, so
+    # the function is what has to be stubbed here; the task remains the
+    # fallback for a transient database error.
+    mocker.patch("learning_resources.api.unpublish_website_content_learning_resource")
     mocker.patch(
         "learning_resources.tasks.unpublish_website_content_learning_resource_task.delay"
     )
@@ -354,6 +358,74 @@ def test_update_triggers_unpublish_actions_only_on_the_transition(
     assert resp.status_code == 200
     assert mock_unpublish.called is expect_unpublish_actions
     assert mock_purge.called is expect_unpublish_actions
+
+
+def test_unpublish_removes_the_news_feed_entry_inline(staff_client, user):
+    """
+    The feed entry is gone by the time the unpublish request answers.
+
+    The news listing refetches the moment it returns, so an entry left for a
+    worker to remove comes straight back to the editor who just unpublished it.
+    No worker runs here and no on_commit callback is executed: the removal has
+    to have happened during the request itself.
+    """
+    from news_events.etl.articles_news import (
+        sync_single_website_content_news_to_news,
+        website_content_feed_guid,
+    )
+    from news_events.models import FeedItem
+
+    content = _make_content(user, is_published=True)
+    sync_single_website_content_news_to_news(content)
+    guid = website_content_feed_guid(content.id)
+    assert FeedItem.objects.filter(guid=guid).exists()
+    url = reverse(
+        "website_content:v1:website_content-detail", kwargs={"pk": content.id}
+    )
+
+    resp = staff_client.patch(url, {"is_published": False}, format="json")
+
+    assert resp.status_code == 200
+    assert not FeedItem.objects.filter(guid=guid).exists()
+
+
+@pytest.mark.django_db(transaction=True)
+def test_unpublish_clears_the_view_cache_after_removing_the_feed_entry(
+    staff_client, user, mocker
+):
+    """
+    The cached news listing is dropped only once the entry it contains is gone.
+
+    Cleared any earlier, a request landing in between re-caches the listing
+    that still holds the story, which then outlives the unpublish by the whole
+    cache duration. Needs a real commit: inside the usual test transaction
+    every on_commit callback is deferred to the end regardless of order.
+    """
+    from news_events.etl.articles_news import (
+        sync_single_website_content_news_to_news,
+        website_content_feed_guid,
+    )
+    from news_events.models import FeedItem
+
+    content = _make_content(user, is_published=True)
+    sync_single_website_content_news_to_news(content)
+    guid = website_content_feed_guid(content.id)
+    seen = {}
+
+    mocker.patch(
+        "website_content.views.clear_views_cache",
+        side_effect=lambda: seen.update(
+            feed_entry=FeedItem.objects.filter(guid=guid).exists()
+        ),
+    )
+    url = reverse(
+        "website_content:v1:website_content-detail", kwargs={"pk": content.id}
+    )
+
+    resp = staff_client.patch(url, {"is_published": False}, format="json")
+
+    assert resp.status_code == 200
+    assert seen == {"feed_entry": False}
 
 
 def test_create_with_topics(staff_client):

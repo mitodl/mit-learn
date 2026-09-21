@@ -1,5 +1,6 @@
 """Learning resource APIs"""
 
+import logging
 from urllib.parse import urljoin
 
 from django.conf import settings
@@ -18,6 +19,8 @@ from learning_resources.utils import (
 )
 from main.utils import chunks
 from website_content.utils import extract_text_from_content
+
+log = logging.getLogger(__name__)
 
 VIEW_COUNT_BATCH_SIZE = 1000
 
@@ -139,3 +142,36 @@ def unpublish_website_content_learning_resource(content_id: int) -> None:
     resource.published = False
     resource.save()
     resource_unpublished_actions(resource)
+    _remove_embeddings_now(resource)
+
+
+def _remove_embeddings_now(resource: LearningResource) -> None:
+    """
+    Drop the resource's Qdrant points without waiting for the worker.
+
+    `resource_unpublished_actions` queues that removal, but vector search
+    answers from the Qdrant payloads themselves -- see
+    VECTOR_SEARCH_RESOURCES_FROM_PAYLOAD -- and a payload still says
+    `published` because unpublishing deletes the point rather than rewriting
+    it. Until the queued task lands, the unpublished article is therefore still
+    a search hit.
+
+    Best effort only: the queued task is the one carrying retries, so a Qdrant
+    that cannot be reached here must not fail the unpublish.
+    """
+    if not settings.QDRANT_ENABLE_INDEXING_PLUGIN_HOOKS:
+        # Mirrors the search plugin: with the hooks off nothing indexed it.
+        return
+
+    from vector_search.tasks import remove_embeddings
+
+    try:
+        # Calling the task runs it here rather than queueing it; deleting
+        # points that are already gone is a no-op, so the queued one is free
+        # to run again afterwards.
+        remove_embeddings([resource.id], resource.resource_type)
+    except Exception:
+        log.exception(
+            "Inline embedding removal failed for resource %s, leaving it queued",
+            resource.id,
+        )

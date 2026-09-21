@@ -1354,7 +1354,12 @@ def _resource_vector_hits(search_result):
     resources_by_id = {
         f"{(r.platform.code if r.platform else '')}:{r.readable_id}": r
         for r in LearningResource.objects.for_serialization().filter(
-            readable_id__in=readable_ids
+            # Only the index is supposed to hold published resources, but
+            # unpublishing deletes the point asynchronously and a delete can
+            # be delayed, fail, or predate a snapshot loaded from elsewhere.
+            # The row is the authority, so a hit it no longer backs is dropped.
+            readable_id__in=readable_ids,
+            published=True,
         )
     }
     # Re-order to match the Qdrant ranking

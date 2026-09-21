@@ -24,10 +24,7 @@ import {
   RiSave3Line,
 } from "@remixicon/react"
 import { showDeleteWebsiteContentDialog } from "@/page-components/WebsiteContentDialogs/DeleteWebsiteContentDialog"
-import {
-  showPublishWebsiteContentDialog,
-  showUnpublishWebsiteContentDialog,
-} from "@/page-components/WebsiteContentDialogs/PublishWebsiteContentDialog"
+import { showPublishWebsiteContentDialog } from "@/page-components/WebsiteContentDialogs/PublishWebsiteContentDialog"
 import {
   ArticleSettingsDrawer,
   type ArticleSettingsValues,
@@ -548,8 +545,9 @@ const WebsiteContentEditor = ({
   )
 
   /**
-   * Published view: navigation and settings sit left, the publish-state action
-   * and status sit right (the Spacer splits them).
+   * Published view: navigation and settings sit left, the status sits right
+   * (the Spacer splits them). Unpublishing is not offered here -- it lives on
+   * the listing card's menu, next to the item it acts on.
    */
   const readOnlyToolbarSlot = (
     <>
@@ -573,26 +571,6 @@ const WebsiteContentEditor = ({
       ) : null}
       {settingsButton}
       <Spacer />
-      {contentItem?.is_published ? (
-        <Button
-          variant="primary"
-          size={buttonSize}
-          disabled={isPending || !title}
-          onClick={() =>
-            showUnpublishWebsiteContentDialog(contentLabel, () => {
-              setIsPublishing(false)
-              return handleSave(false)
-            })
-          }
-          endIcon={
-            isPending ? (
-              <LoadingSpinner size={14} color="inherit" loading />
-            ) : null
-          }
-        >
-          Unpublish {contentLabel}
-        </Button>
-      ) : null}
       {statusSlot}
     </>
   )

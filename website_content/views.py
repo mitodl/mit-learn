@@ -122,7 +122,6 @@ class WebsiteContentViewSet(viewsets.ModelViewSet):
         # an unpublish, which the saved instance alone cannot tell us.
         was_published = serializer.instance.is_published
         content = serializer.save()
-        transaction.on_commit(clear_views_cache)
         purge_content_on_save(content)
         content_published_actions(content=content)
         if was_published and not content.is_published:
@@ -130,6 +129,10 @@ class WebsiteContentViewSet(viewsets.ModelViewSet):
             # now-private page and the listing still need clearing.
             purge_content_on_unpublish(content)
             content_unpublished_actions(content=content)
+        # Last here, unlike on create: the unpublish plugins take the news feed
+        # entry out synchronously, and clearing the cache before that ran would
+        # let any request in between re-cache the listing that still has it.
+        transaction.on_commit(clear_views_cache)
         serializer.instance = self._reloaded_for_response(content)
 
     def perform_destroy(self, instance):

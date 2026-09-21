@@ -3,7 +3,7 @@
 import logging
 
 from django.apps import apps
-from django.db import transaction
+from django.db import DatabaseError, transaction
 
 from learning_resources.constants import FAVORITES_TITLE
 from learning_resources.models import UserList
@@ -91,9 +91,7 @@ class WebsiteContentLearningResourcePlugin:
         """
         if not self._is_article(content):
             return
-        log.info(
-            "Scheduling learning resource removal for website content %s", content.id
-        )
+        log.info("Removing learning resource for website content %s", content.id)
         content_id = content.id
 
         def trigger_async_unpublish():
@@ -103,4 +101,20 @@ class WebsiteContentLearningResourcePlugin:
 
             unpublish_website_content_learning_resource_task.delay(content_id)
 
-        transaction.on_commit(trigger_async_unpublish)
+        # Inline, unlike the sync side: the resource row is what the APIs read,
+        # so leaving the flag to a worker keeps serving an article the editor
+        # has already unpublished. Taking it out of the search indexes stays
+        # queued inside `resource_unpublished_actions`, as for any resource.
+        from learning_resources.api import unpublish_website_content_learning_resource
+
+        try:
+            unpublish_website_content_learning_resource(content_id)
+        except DatabaseError:
+            # Transient, e.g. losing a row lock race with the sync task, so
+            # hand off to the retrying task rather than failing the unpublish.
+            # on_commit, so a rolled back unpublish schedules nothing.
+            log.exception(
+                "Inline learning resource removal failed for content %s, queueing task",
+                content_id,
+            )
+            transaction.on_commit(trigger_async_unpublish)
