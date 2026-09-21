@@ -416,7 +416,12 @@ describe("CourseEnrollmentDialog", () => {
       expect(trackAddToCart).toHaveBeenCalledWith(
         expect.objectContaining({ courseName: course.title }),
       )
-      expect(trackBeginCheckout).toHaveBeenCalledWith(course.title)
+      expect(trackBeginCheckout).toHaveBeenCalledWith(
+        expect.objectContaining({
+          courseName: course.title,
+          value: parseFloat(product.price),
+        }),
+      )
     })
 
     test("Default behavior: redirects to the dashboard success URL with title in params after enrollment", async () => {

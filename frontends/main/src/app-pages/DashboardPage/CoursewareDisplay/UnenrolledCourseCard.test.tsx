@@ -872,7 +872,13 @@ describe.each([
           )
         })
 
-        expect(trackBeginCheckout).toHaveBeenCalledWith(course.title)
+        expect(trackBeginCheckout).toHaveBeenCalledWith(
+          expect.objectContaining({
+            courseName: course.title,
+            courseId: course.readable_id,
+            value: parseFloat(product.price),
+          }),
+        )
 
         expect(
           screen.queryByRole("dialog", { name: course.title }),

@@ -282,17 +282,48 @@ describe("trackReturnVisit", () => {
 })
 
 describe("trackBeginCheckout", () => {
-  it("pushes a begin-checkout event with course name", () => {
-    trackBeginCheckout("Data Science Fundamentals")
+  it("pushes a begin-checkout event with all fields", () => {
+    trackBeginCheckout({
+      courseName: "Data Science Fundamentals",
+      courseId: "course-v1:MITx+6.86x",
+      value: 149,
+    })
     expect(window.dataLayer).toContainEqual({
       event: "begin-checkout",
       "course-name": "Data Science Fundamentals",
+      "course-id": "course-v1:MITx+6.86x",
+      currency: "USD",
+      value: 149,
+      items: [
+        {
+          item_id: "course-v1:MITx+6.86x",
+          item_name: "Data Science Fundamentals",
+          price: 149,
+          quantity: 1,
+          currency: "USD",
+        },
+      ],
     })
   })
 
-  it("pushes a begin-checkout event without course name when null", () => {
-    trackBeginCheckout(null)
-    expect(window.dataLayer).toContainEqual({ event: "begin-checkout" })
+  it("defaults value to 0 and currency to USD when not provided", () => {
+    trackBeginCheckout({ courseName: "Data Science Fundamentals" })
+    expect(window.dataLayer).toContainEqual(
+      expect.objectContaining({
+        event: "begin-checkout",
+        currency: "USD",
+        value: 0,
+      }),
+    )
+  })
+
+  it("omits course-name and course-id when not provided", () => {
+    trackBeginCheckout({ value: 99 })
+    expect(window.dataLayer).toContainEqual(
+      expect.objectContaining({ event: "begin-checkout", value: 99 }),
+    )
+    expect(window.dataLayer![0]).not.toHaveProperty("course-name")
+    expect(window.dataLayer![0]).not.toHaveProperty("course-id")
   })
 })
 

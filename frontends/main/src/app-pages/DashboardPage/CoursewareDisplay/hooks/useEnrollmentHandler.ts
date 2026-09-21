@@ -170,7 +170,13 @@ export const useEnrollmentHandler = () => {
         }
 
         if (enrollmentAction.type === "checkout") {
-          trackBeginCheckout(course.title)
+          trackBeginCheckout({
+            courseName: course.title,
+            courseId: course.readable_id,
+            value: enrollmentAction.product.price
+              ? parseFloat(enrollmentAction.product.price)
+              : 0,
+          })
           replaceBasketItem.mutate(enrollmentAction.product.id)
           return
         }

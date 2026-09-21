@@ -284,7 +284,11 @@ const CertificateUpsell: React.FC<{
               courseName: course?.title,
               coursePrice: product.price ? parseFloat(product.price) : 0,
             })
-            trackBeginCheckout(course?.title)
+            trackBeginCheckout({
+              courseName: course?.title,
+              courseId: course?.readable_id ?? String(product.id),
+              value: product.price ? parseFloat(product.price) : 0,
+            })
             replaceBasketItem.mutate(product.id)
           }}
         />
