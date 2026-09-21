@@ -241,7 +241,7 @@ export const clientLogos = {
 export const caseStudies = {
   eyebrow: "CASE STUDIES",
   title: "See how organizations turn learning into impact",
-  body: "“Discover how organizations have combined MIT Open Learning programs to achieve their training and upskilling goals",
+  body: "Discover how organizations have combined MIT Open Learning programs to achieve their training and upskilling goals",
   navLabel: "Case studies",
   items: [
     {
