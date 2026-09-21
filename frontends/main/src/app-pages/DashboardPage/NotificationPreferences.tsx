@@ -168,6 +168,12 @@ type PreferenceRowProps = {
   config: PreferenceConfig
   nonEditable: string[]
   showEmail: boolean
+  /**
+   * A write for THIS row is in flight. The controls still show the last known
+   * server state, so a second click would recompute the same inverted value
+   * and cancel nothing — disable them until the refetch lands.
+   */
+  pending: boolean
   onChange: (update: NotificationPreferenceUpdate) => void
 }
 
@@ -177,6 +183,7 @@ const PreferenceRow: React.FC<PreferenceRowProps> = ({
   config,
   nonEditable,
   showEmail,
+  pending,
   onChange,
 }) => {
   const label = labelForType(notificationType)
@@ -185,7 +192,9 @@ const PreferenceRow: React.FC<PreferenceRowProps> = ({
   const emailLocked = nonEditable.includes("email")
 
   return (
-    <Row data-testid={`notification-row-${notificationType}`}>
+    <Row
+      data-testid={`notification-row-${notificationApp}-${notificationType}`}
+    >
       <RowText>
         <RowLabel>{label}</RowLabel>
         {description ? <RowDescription>{description}</RowDescription> : null}
@@ -195,7 +204,7 @@ const PreferenceRow: React.FC<PreferenceRowProps> = ({
           name={`web-${notificationApp}-${notificationType}`}
           label="On site"
           checked={config.web}
-          disabled={webLocked}
+          disabled={webLocked || pending}
           onChange={() =>
             onChange({
               notification_app: notificationApp,
@@ -211,7 +220,7 @@ const PreferenceRow: React.FC<PreferenceRowProps> = ({
               name={`email-${notificationApp}-${notificationType}`}
               label="Email"
               checked={config.email}
-              disabled={emailLocked}
+              disabled={emailLocked || pending}
               onChange={() =>
                 onChange({
                   notification_app: notificationApp,
@@ -232,7 +241,8 @@ const PreferenceRow: React.FC<PreferenceRowProps> = ({
               name={`cadence-${notificationApp}-${notificationType}`}
               options={CADENCE_OPTIONS}
               value={config.email_cadence}
-              disabled={!config.email || emailLocked}
+              disabled={!config.email || emailLocked || pending}
+              inputProps={{ "aria-label": `Email frequency for ${label}` }}
               renderValue={(value) => `${value}`}
               onChange={(event) =>
                 onChange({
@@ -275,9 +285,13 @@ const noticeFor = ({
   if (isPending) return "Loading your notification settings..."
   if (error) {
     const status = (error as AxiosError)?.response?.status
-    return status === 409
-      ? "Your course account is still being set up. Please check back shortly."
-      : "We could not load your notification settings. Please try again later."
+    if (status === 409) {
+      return "Your course account is still being set up. Please check back shortly."
+    }
+    if (status === 429) {
+      return "Too many requests at once. Please wait a moment and reload."
+    }
+    return "We could not load your notification settings. Please try again later."
   }
   // The LMS gates the whole feature with show_preferences.
   if (showPreferences === false) {
@@ -296,6 +310,14 @@ const NotificationPreferences: React.FC = () => {
           : "We could not save that notification setting. Please try again.",
     },
   })
+
+  /**
+   * One mutation serves every row, so `isPending` alone would freeze the whole
+   * section. `variables` names the row actually being written.
+   */
+  const inFlight = updatePreference.isPending
+    ? updatePreference.variables
+    : undefined
 
   const notice = noticeFor({
     isPending: preferences.isPending,
@@ -340,6 +362,10 @@ const NotificationPreferences: React.FC = () => {
                 config={types[type]}
                 nonEditable={lockedChannelsFor(group, type)}
                 showEmail={showEmail}
+                pending={
+                  inFlight?.notification_app === app &&
+                  inFlight?.notification_type === type
+                }
                 onChange={(update) => updatePreference.mutate(update)}
               />
             ))}

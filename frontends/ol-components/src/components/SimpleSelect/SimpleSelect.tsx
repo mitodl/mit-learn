@@ -25,6 +25,7 @@ type SimpleSelectProps = Pick<
    */
   | "MenuProps"
   | "disabled"
+  | "inputProps"
 > & {
   /**
    * The options for the dropdown
