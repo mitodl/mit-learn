@@ -15,11 +15,12 @@ import { faker } from "@faker-js/faker/locale/en"
 import moment from "moment"
 import { cartesianProduct } from "ol-test-utilities"
 import { UnenrolledCourseCard } from "./UnenrolledCourseCard"
-import { trackCourseEnrolled } from "@/common/analytics/gtm"
+import { trackCourseEnrolled, trackBeginCheckout } from "@/common/analytics/gtm"
 
 jest.mock("@/common/analytics/gtm", () => ({
   ...jest.requireActual("@/common/analytics/gtm"),
   trackCourseEnrolled: jest.fn(),
+  trackBeginCheckout: jest.fn(),
 }))
 
 const mitxOnlineCourse = mitxonline.factories.courses.course
@@ -870,6 +871,8 @@ describe.each([
             expect.objectContaining({ method: "post", url: basketUrl }),
           )
         })
+
+        expect(trackBeginCheckout).toHaveBeenCalledWith(course.title)
 
         expect(
           screen.queryByRole("dialog", { name: course.title }),
