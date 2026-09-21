@@ -105,7 +105,11 @@ export const useCourseEnrollment = (
       if (kind === "paid") {
         const product = selectedRun?.products?.[0]
         if (product) {
-          trackBeginCheckout(course.title)
+          trackBeginCheckout({
+            courseName: course.title,
+            courseId: course.readable_id,
+            value: product.price ? parseFloat(product.price) : 0,
+          })
           replaceBasketItem.mutate(product.id)
         }
       } else if (kind === "free") {
