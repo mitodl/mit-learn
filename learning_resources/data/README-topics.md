@@ -55,36 +55,40 @@ import csv
 import yaml
 from pathlib import Path
 
+
 def _process_topic(topic, offeror_code):
-	if not topic["mappings"]:
-		topic["mappings"] = {}
+    if not topic["mappings"]:
+        topic["mappings"] = {}
 
-	if not topic["mappings"] or offeror_code not in topic["mappings"]:
-		topic["mappings"][offeror_code] = []
+    if not topic["mappings"] or offeror_code not in topic["mappings"]:
+        topic["mappings"][offeror_code] = []
 
-	for csv_topic in csv_data:
-		if (topic["name"] == csv_topic[1] or topic["name"] == csv_topic[2]) and csv_topic[0] not in topic["mappings"][offeror_code]:
-			topic["mappings"][offeror_code].append(csv_topic[0].strip())
+    for csv_topic in csv_data:
+        if (
+            topic["name"] == csv_topic[1] or topic["name"] == csv_topic[2]
+        ) and csv_topic[0] not in topic["mappings"][offeror_code]:
+            topic["mappings"][offeror_code].append(csv_topic[0].strip())
 
-	if "children" in topic and topic["children"] and len(topic["children"]) > 0:
-		for child_topic in topic["children"]:
-			_process_topic(child_topic, offeror_code) if child_topic else None
+    if "children" in topic and topic["children"] and len(topic["children"]) > 0:
+        for child_topic in topic["children"]:
+            _process_topic(child_topic, offeror_code) if child_topic else None
+
 
 def process_topics(topics_file_loc, csv_loc, offeror_code, output_location):
-	with Path(topics_file_loc).open() as yaml_input_file:
-	    topic_data = yaml.safe_load(yaml_input_file.read())
+    with Path(topics_file_loc).open() as yaml_input_file:
+        topic_data = yaml.safe_load(yaml_input_file.read())
 
-	with Path(csv_loc).open() as csv_file:
-	    csv_reader = csv.reader(csv_file)
-	    csv_data = []
-	    for data in csv_reader:
-	        csv_data.append(data)
+    with Path(csv_loc).open() as csv_file:
+        csv_reader = csv.reader(csv_file)
+        csv_data = []
+        for data in csv_reader:
+            csv_data.append(data)
 
-	for topic in topic_data["topics"]:
-	    _process_topic(topic, offeror_code)
+    for topic in topic_data["topics"]:
+        _process_topic(topic, offeror_code)
 
-	with Path(output_location).open("w") as yaml_output_file:
-		yaml.dump(topic_data, yaml_output_file)
+    with Path(output_location).open("w") as yaml_output_file:
+        yaml.dump(topic_data, yaml_output_file)
 ```
 
 You can open a Django shell or a notebook and paste that in, then run `process_topics()` to process your datafile. The result of this will be written to the output location specified.
