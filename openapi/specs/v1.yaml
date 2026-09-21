@@ -14680,6 +14680,10 @@ components:
             pattern: ^[-a-zA-Z0-9_]+$
           - type: string
             maxLength: 0
+        topics:
+          type: array
+          items:
+            type: integer
     PercolateQuery:
       type: object
       description: Serializer for PercolateQuery objects
@@ -17824,6 +17828,10 @@ components:
             maxLength: 2083
           - type: string
             maxLength: 0
+        topics:
+          type: array
+          items:
+            type: integer
       required:
       - cover_image
       - created_on
@@ -17876,5 +17884,9 @@ components:
             pattern: ^[-a-zA-Z0-9_]+$
           - type: string
             maxLength: 0
+        topics:
+          type: array
+          items:
+            type: integer
       required:
       - title

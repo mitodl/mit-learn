@@ -10,6 +10,16 @@ from website_content.models import WebsiteContent
 log = logging.getLogger(__name__)
 
 
+def website_content_feed_guid(content_id: int) -> str:
+    """
+    Return the FeedItem guid for a website content item.
+
+    Single source of truth for the convention: the sync writes items under this
+    guid and the unpublish path deletes them by it, so the two must not drift.
+    """
+    return f"article-{content_id}"
+
+
 def extract_single_website_content(article: WebsiteContent) -> dict:
     """
     Extract a single published news content item from the database.
@@ -64,6 +74,32 @@ def sync_single_website_content_news_to_news(article: WebsiteContent):
         },
     )
     loaders.load_feed_item(source, item_data)
+
+
+def delete_website_content_news_from_news(content_id: int) -> int:
+    """
+    Remove a website content item's news feed entry.
+
+    The counterpart to `sync_single_website_content_news_to_news`. Deleting by
+    guid rather than by looking the content up means this still works for an
+    item that has since been hard-deleted, and it is a no-op for content that
+    never had a feed entry (a draft, or a non-news type).
+
+    Returns:
+        int: the number of feed items removed (0 or 1).
+    """
+    from news_events.models import FeedItem
+
+    guid = website_content_feed_guid(content_id)
+    # delete() returns the cascade total, which counts the item's detail row
+    # too; report the FeedItem count so the number means what it says.
+    _, per_model = FeedItem.objects.filter(guid=guid).delete()
+    deleted = per_model.get(FeedItem._meta.label, 0)  # noqa: SLF001
+    if deleted:
+        log.info("Removed news feed item %s for content %s", guid, content_id)
+    else:
+        log.info("No news feed item %s to remove for content %s", guid, content_id)
+    return deleted
 
 
 def extract() -> list[dict]:
@@ -145,7 +181,7 @@ def transform_items(articles_data: list[dict]) -> list[dict]:
         publish_date = article.get("publish_date") or article.get("created_on")
 
         entry = {
-            "guid": f"article-{article.get('id')}",
+            "guid": website_content_feed_guid(article.get("id")),
             "title": article.get("title", ""),
             "url": article_url,
             "summary": summary_text,

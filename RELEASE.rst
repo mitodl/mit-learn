@@ -1,6 +1,40 @@
 Release Notes
 =============
 
+Version 0.80.9
+--------------
+
+- refactor: drop unused queries for the B2B organization/contract page endpoints (#3948)
+
+Version 0.80.8
+--------------
+
+- Match Canvas run ids containing slashes in tutor problem routes (#3951)
+- build: bump @mitodl/mitxonline-api-axios to 2026.9.16 (#3952)
+
+Version 0.80.7
+--------------
+
+- feat(website-content): persist the settings drawer's topic selections (#3935)
+
+Version 0.80.6
+--------------
+
+- feat: report JIT compliance dialog save failures to Sentry (#3945)
+- Surface and log HubSpot form submission errors instead of failing silently (#3919)
+- Admin controls for vector search (#3933)
+- Remove the unused UserWebsite model and API (#3941)
+
+Version 0.80.5
+--------------
+
+- fix: copy update for cta button (#3939)
+- Ingest .py canvas tutor problem files, add TutorProblemFile admin (#3930)
+- fix: copy update to hero section (#3936)
+- feat(website-content): unpublished the article and remove the news feed entry on unpublish (#3927)
+- feat: Add B2B organizational learning landing page (#3846)
+- feat: Improve B2B analytics dashboard navigation and layout (#3906)
+
 Version 0.80.2
 --------------
 

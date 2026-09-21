@@ -234,11 +234,74 @@ class LearningResourcesVectorSearchRequestSerializer(
     score_cutoff = serializers.FloatField(
         required=False,
         help_text=(
-            "The minimum score a result must have to be returned. Defaults to "
-            "0.0 when omitted, but the server clamps the effective cutoff to "
-            "the minimum allowed for the selected search mode (dense or hybrid)."
+            "The minimum absolute score a result must have to be returned. "
+            "Defaults to 0.0 when omitted, but the server clamps the effective "
+            "cutoff to the minimum allowed for the selected search mode (dense "
+            "or hybrid). This is only the backstop for a query that matched "
+            "nothing; score_cutoff_ratio is what shapes a result set."
         ),
         default=0.0,
+    )
+    score_cutoff_ratio = serializers.FloatField(
+        required=False,
+        allow_null=True,
+        default=None,
+        min_value=0,
+        max_value=1,
+        help_text=(
+            "Fraction of the query's own best score a result must reach to be "
+            "returned, applied after score_cutoff so the size of a result set "
+            "follows how fast relevance falls off within the query. 0 disables "
+            "the relative cutoff. Defaults to the server's configured ratio "
+            "for the selected search mode (dense or hybrid) when omitted."
+        ),
+    )
+    program_boost = serializers.FloatField(
+        required=False,
+        allow_null=True,
+        default=None,
+        min_value=0,
+        help_text=(
+            "Fraction of its own score a program gains before ranking, so 0.1 "
+            "multiplies it by 1.1 and a program can only overtake a result it "
+            "was already within that factor of. 0 disables the boost. Defaults "
+            "to the server's configured amount when omitted."
+        ),
+    )
+    staleness_penalty = serializers.FloatField(
+        required=False,
+        allow_null=True,
+        default=None,
+        min_value=0,
+        help_text=(
+            "Fraction of its own score a resource gives up once it is at or "
+            "beyond the staleness horizon, ramped linearly by age. Resources "
+            "with an upcoming run are exempt. 0 disables the penalty. Defaults "
+            "to the server's configured weight when omitted."
+        ),
+    )
+    staleness_horizon_years = serializers.FloatField(
+        required=False,
+        allow_null=True,
+        default=None,
+        min_value=0,
+        help_text=(
+            "Age in years at which a resource takes the full staleness "
+            "penalty, with the penalty ramping linearly up to it. 0 disables "
+            "the penalty. Defaults to the server's configured horizon when "
+            "omitted."
+        ),
+    )
+    completeness_penalty = serializers.FloatField(
+        required=False,
+        allow_null=True,
+        default=None,
+        min_value=0,
+        help_text=(
+            "Fraction of its own score a resource with completeness 0 gives "
+            "up, scaled linearly by incompleteness. 0 disables the penalty. "
+            "Defaults to the server's configured weight when omitted."
+        ),
     )
 
     def validate(self, attrs):

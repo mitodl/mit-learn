@@ -1,12 +1,13 @@
 import asyncio
 import difflib
 import json
+import math
 import os
 import random
 import subprocess
 import sys
 from concurrent.futures import ThreadPoolExecutor
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from unittest.mock import MagicMock
 
@@ -50,7 +51,9 @@ from main.utils import checksum_for_content
 from vector_search.constants import (
     COMPLETENESS_PAYLOAD_KEY,
     CONTENT_FILES_COLLECTION_NAME,
+    NEXT_START_DATE_PAYLOAD_KEY,
     ORDER_BY_MISSING_DATETIME,
+    PROGRAM_SCORE_BOOST_NAME,
     QDRANT_CONTENT_FILE_INDEXES,
     QDRANT_CONTENT_FILE_PARAM_MAP,
     QDRANT_LEARNING_RESOURCE_INDEXES,
@@ -101,6 +104,7 @@ from vector_search.utils import (
     remove_qdrant_records,
     resource_embedding_checksum,
     resources_payload_selector,
+    score_formula_overrides,
     score_formula_query,
     should_generate_content_embeddings,
     should_generate_resource_embeddings,
@@ -482,6 +486,59 @@ def test_skip_creating_qdrand_collections(mocker):
     assert (
         "dummy-embedding"
         in mock_qdrant.recreate_collection.mock_calls[1].kwargs["vectors_config"]
+    )
+
+
+def test_create_qdrant_collections_enables_sparse_idf(mocker):
+    """New collections weight their sparse terms by document frequency."""
+    mock_qdrant = mocker.patch("qdrant_client.QdrantClient")
+    mocker.patch("vector_search.utils.qdrant_client", return_value=mock_qdrant)
+    mock_qdrant.collection_exists.return_value = False
+
+    create_qdrant_collections(force_recreate=False)
+
+    for call in mock_qdrant.recreate_collection.mock_calls:
+        sparse_vectors_config = call.kwargs.get("sparse_vectors_config")
+        if sparse_vectors_config is None:
+            continue
+        assert sparse_vectors_config
+        for params in sparse_vectors_config.values():
+            assert params.modifier == models.Modifier.IDF
+            # and the index config it is set alongside is unchanged
+            assert params.index.on_disk is True
+
+
+def test_score_formula_query_without_penalties(mocker, settings):
+    """
+    An arm whose scores are not on the penalties' scale rescores with the
+    boosts alone -- and needs none of the payload defaults, which exist only
+    for the penalties.
+    """
+    settings.VECTOR_SEARCH_INCOMPLETENESS_PENALTY_WEIGHT = 0.05
+    settings.VECTOR_SEARCH_STALENESS_PENALTY_WEIGHT = 0.05
+    mocker.patch(
+        "vector_search.utils.VECTOR_SEARCH_SCORE_BOOST",
+        {RESOURCES_COLLECTION_NAME: [{"boost": 0.1, "params": {"free": True}}]},
+    )
+
+    formula_query = score_formula_query(
+        RESOURCES_COLLECTION_NAME, include_penalties=False
+    )
+
+    score, boost = formula_query.formula.sum
+    assert score == "$score"
+    assert isinstance(boost, models.MultExpression)
+    assert not formula_query.defaults
+
+
+def test_score_formula_query_without_penalties_or_boosts(mocker, settings):
+    """With the boosts gone too there is nothing left to rescore."""
+    settings.VECTOR_SEARCH_INCOMPLETENESS_PENALTY_WEIGHT = 0.05
+    settings.VECTOR_SEARCH_STALENESS_PENALTY_WEIGHT = 0.05
+    mocker.patch("vector_search.utils.VECTOR_SEARCH_SCORE_BOOST", {})
+
+    assert (
+        score_formula_query(RESOURCES_COLLECTION_NAME, include_penalties=False) is None
     )
 
 
@@ -2974,8 +3031,8 @@ def test_custom_score_formula_empty(mocker):
 
 def test_custom_score_formula_with_boosts(mocker):
     """
-    custom_score_formula must boost scores based on VECTOR_SEARCH_SCORE_BOOST
-    and append a GaussDecayExpression at the end.
+    custom_score_formula must boost scores based on VECTOR_SEARCH_SCORE_BOOST,
+    as a proportion of each matching point's own score.
     """
 
     mock_boosts = {
@@ -2988,7 +3045,6 @@ def test_custom_score_formula_with_boosts(mocker):
 
     results = custom_score_formula(RESOURCES_COLLECTION_NAME)
 
-    # We expect 3 expressions: 2 MultExpressions and 1 GaussDecayExpression
     assert len(results) == 2
 
     # Check first boost expression
@@ -3018,9 +3074,9 @@ def test_custom_score_formula_with_boosts(mocker):
         for c in filter_2.must
     )
 
-    # Check GaussDecayExpression decay expression at the end
-    assert isinstance(results[0].mult[2], models.GaussDecayExpression)
-    assert isinstance(results[1].mult[2], models.GaussDecayExpression)
+    # each boost multiplies the score rather than adding a fixed amount
+    assert results[0].mult[2] == "$score"
+    assert results[1].mult[2] == "$score"
 
 
 def test_custom_score_formula_defaults(mocker):
@@ -3041,7 +3097,274 @@ def test_custom_score_formula_defaults(mocker):
     assert results[0].mult[0] == 0
     assert isinstance(results[0].mult[1], models.Filter)
 
-    assert isinstance(results[0].mult[2], models.GaussDecayExpression)
+    assert results[0].mult[2] == "$score"
+
+
+# Payloads for the two sides of the program boost, for the formula evaluator
+# below. Only the keys the boost's conditions look at need to be present.
+PROGRAM_PAYLOAD = {"resource_type_group": "program"}
+COURSE_PAYLOAD = {"resource_type_group": "course"}
+
+
+def _formula_condition_matches(condition, payload):
+    if isinstance(condition, models.IsEmptyCondition):
+        return payload.get(condition.is_empty.key) is None
+    value = payload.get(condition.key)
+    match = condition.match
+    if isinstance(match, models.MatchAny):
+        return value in match.any
+    return value == match.value
+
+
+def _formula_filter_matches(query_filter, payload):
+    return all(
+        _formula_condition_matches(condition, payload)
+        for condition in query_filter.must or []
+    ) and not any(
+        _formula_condition_matches(condition, payload)
+        for condition in query_filter.must_not or []
+    )
+
+
+def _seconds_between(a, b):
+    """Absolute distance between two datetimes, parsed from ISO strings."""
+    parse = lambda v: v if isinstance(v, datetime) else datetime.fromisoformat(v)  # noqa: E731
+    return abs((parse(a) - parse(b)).total_seconds())
+
+
+def _score_with_formula(formula_query, score, payload):  # noqa: C901
+    """
+    Evaluate a FormulaQuery the way Qdrant would, so ranking can be asserted on
+    the arithmetic rather than on the formula's shape. `defaults` fill in keys
+    the payload is missing or holds null for, as Qdrant does.
+
+    Gaussian decay is handled too, though nothing builds one now, so a
+    reintroduced score-damped boost fails on the ranking rather than on an
+    unevaluatable expression.
+    """
+    resolved = dict(payload)
+    for key, default in (formula_query.defaults or {}).items():
+        if resolved.get(key) is None:
+            resolved[key] = default
+
+    def evaluate(expression):  # noqa: PLR0911
+        if isinstance(expression, str):
+            return score if expression == "$score" else resolved[expression]
+        if isinstance(expression, (int, float)):
+            return float(expression)
+        if isinstance(expression, models.SumExpression):
+            return sum(evaluate(part) for part in expression.sum)
+        if isinstance(expression, models.MultExpression):
+            return math.prod(evaluate(part) for part in expression.mult)
+        if isinstance(expression, models.NegExpression):
+            return -evaluate(expression.neg)
+        if isinstance(expression, models.GaussDecayExpression):
+            decay = expression.gauss_decay
+            return math.exp(
+                math.log(decay.midpoint)
+                * ((evaluate(decay.x) - decay.target) / decay.scale) ** 2
+            )
+        if isinstance(expression, models.LinDecayExpression):
+            decay = expression.lin_decay
+            distance = _seconds_between(
+                resolved[decay.x.datetime_key], decay.target.datetime
+            )
+            return max(0.0, 1 - (1 - decay.midpoint) * distance / decay.scale)
+        if isinstance(expression, models.Filter):
+            # A condition scores 1 for a matching point and 0 for every other
+            return 1.0 if _formula_filter_matches(expression, resolved) else 0.0
+        msg = f"formula evaluator does not handle {expression!r}"
+        raise AssertionError(msg)
+
+    return evaluate(formula_query.formula)
+
+
+@pytest.fixture
+def boost_only_formula(settings):
+    """Return the shipped formula, penalties off, so only the boost moves."""
+    settings.VECTOR_SEARCH_INCOMPLETENESS_PENALTY_WEIGHT = 0
+    settings.VECTOR_SEARCH_STALENESS_PENALTY_WEIGHT = 0
+    return score_formula_query(RESOURCES_COLLECTION_NAME)
+
+
+def test_program_boost_term_is_proportional_to_score(boost_only_formula):
+    """The term is `amount * condition * $score`, with nothing damping it."""
+    score, boost = boost_only_formula.formula.sum
+
+    assert score == "$score"
+    amount, conditions, boosted_score = boost.mult
+    assert amount > 0
+    assert isinstance(conditions, models.Filter)
+    assert boosted_score == "$score"
+
+
+def test_program_boost_does_not_outrank_a_more_relevant_course(boost_only_formula):
+    """
+    A weakly matched program must not take the head of the page from a course
+    the query matched well. Scores are the production bands for
+    q="dance classes from MIT", where the fixed boost put programs first.
+    """
+    program = _score_with_formula(boost_only_formula, 0.43, PROGRAM_PAYLOAD)
+    course = _score_with_formula(boost_only_formula, 0.51, COURSE_PAYLOAD)
+
+    assert program < course
+
+
+def test_program_boost_still_breaks_near_ties(boost_only_formula):
+    """A program that matched as well as a course should still come first."""
+    program = _score_with_formula(boost_only_formula, 0.505, PROGRAM_PAYLOAD)
+    course = _score_with_formula(boost_only_formula, 0.51, COURSE_PAYLOAD)
+
+    assert program > course
+
+
+@pytest.mark.parametrize("score", [0.05, 0.3, 0.8, 12.0])
+def test_program_boost_is_the_same_proportion_at_every_score(boost_only_formula, score):
+    """
+    The boost scales with the score rather than decaying around a target. The
+    gaussian it replaces gave the most relevant programs almost none of it, and
+    collapsed to zero on the BM25-scaled sparse arm (the 12.0 case).
+    """
+    reference = 0.43
+    reference_ratio = (
+        _score_with_formula(boost_only_formula, reference, PROGRAM_PAYLOAD) / reference
+    )
+    ratio = _score_with_formula(boost_only_formula, score, PROGRAM_PAYLOAD) / score
+
+    assert ratio > 1
+    assert ratio == pytest.approx(reference_ratio)
+    # and nothing at all happens to a point the boost does not match
+    assert _score_with_formula(
+        boost_only_formula, score, COURSE_PAYLOAD
+    ) == pytest.approx(score)
+
+
+def _penalty_weight(expression):
+    """Return the weight a penalty term multiplies by."""
+    return expression.neg.mult[0]
+
+
+def _penalty_ramp(expression):
+    """
+    Return the `1 - x` factor scaling a penalty by incompleteness or age.
+    Located by type, so assertions ignore what else the product carries.
+    """
+    [ramp] = [
+        factor
+        for factor in expression.neg.mult
+        if isinstance(factor, models.SumExpression)
+    ]
+    return ramp
+
+
+def _penalty_decay(expression):
+    """Return the decay inside a penalty's age ramp."""
+    return _penalty_ramp(expression).sum[1].neg
+
+
+def _penalty_is_proportional(expression):
+    """Whether the penalty is a share of the score rather than a fixed amount."""
+    return "$score" in expression.neg.mult
+
+
+# Payloads taken from production rows for the two resources that swapped places
+# in the bug report: an archival OCW course that is the correct answer to
+# "dance courses from MIT", and a program that was outranking it.
+STALE_COURSE_PAYLOAD = {
+    "resource_type_group": "course",
+    "completeness": 0.08,
+    "resource_age_date": "2003-09-01T00:00:00+00:00",
+    "next_start_date": None,
+}
+UNDATED_PROGRAM_PAYLOAD = {
+    "resource_type_group": "program",
+    "completeness": 1.0,
+    # get_resource_age_date dates courses and learning materials only
+    "resource_age_date": None,
+    "next_start_date": None,
+}
+UPCOMING_PROGRAM_PAYLOAD = {**UNDATED_PROGRAM_PAYLOAD, "next_start_date": "2027-01-01"}
+
+
+@pytest.fixture
+def shipped_formula(settings):
+    """Return the score formula as shipped, with real weights."""
+    settings.VECTOR_SEARCH_INCOMPLETENESS_PENALTY_WEIGHT = 0.05
+    settings.VECTOR_SEARCH_STALENESS_PENALTY_WEIGHT = 0.05
+    settings.VECTOR_SEARCH_STALENESS_HORIZON_YEARS = 20
+    return score_formula_query(RESOURCES_COLLECTION_NAME)
+
+
+def test_penalties_cannot_outrank_relevance(shipped_formula):
+    """
+    An old, patchily complete OCW course paid a fixed ~0.1 while an undated,
+    complete program paid nothing and took the boost on top -- a bigger swing
+    than the topical gap between them. Scores are the production cosines.
+    """
+    course = _score_with_formula(shipped_formula, 0.6876, STALE_COURSE_PAYLOAD)
+    program = _score_with_formula(shipped_formula, 0.4720, UNDATED_PROGRAM_PAYLOAD)
+
+    assert course > program
+
+
+@pytest.mark.parametrize("score", [0.2, 0.5, 0.9])
+def test_penalties_cost_a_bounded_share_of_the_score(shipped_formula, score):
+    """
+    Both penalties together cost at most the sum of their weights as a fraction
+    of the score, so at the shipped weights nothing can be overtaken by a
+    resource more than ~11% below it.
+    """
+    # no content, well past the horizon, nothing coming up
+    worst_case = {
+        "resource_type_group": "course",
+        "completeness": 0.0,
+        "resource_age_date": "1990-01-01T00:00:00+00:00",
+        "next_start_date": None,
+    }
+    worst = _score_with_formula(shipped_formula, score, worst_case)
+
+    assert worst == pytest.approx(score * (1 - (0.05 + 0.05)))
+
+
+def test_staleness_penalty_exempts_a_resource_with_an_upcoming_run(shipped_formula):
+    """An upcoming run earns the exemption, not the absence of a date."""
+    undated = _score_with_formula(shipped_formula, 0.5, UNDATED_PROGRAM_PAYLOAD)
+    upcoming = _score_with_formula(shipped_formula, 0.5, UPCOMING_PROGRAM_PAYLOAD)
+
+    # both are complete programs, so only staleness separates them
+    assert upcoming == pytest.approx(0.5 * 1.1)
+    assert undated == pytest.approx(0.5 * 1.1 - 0.5 * 0.05)
+    assert undated < upcoming
+
+
+def test_undated_resource_is_not_treated_as_current(shipped_formula):
+    """
+    An undated resource takes the full penalty, same as one demonstrably past
+    the horizon. Defaulting it to `now` exempted every program in the index.
+    """
+    undated = _score_with_formula(shipped_formula, 0.5, UNDATED_PROGRAM_PAYLOAD)
+    ancient = _score_with_formula(
+        shipped_formula,
+        0.5,
+        {**UNDATED_PROGRAM_PAYLOAD, "resource_age_date": "1990-01-01T00:00:00+00:00"},
+    )
+
+    assert undated == pytest.approx(ancient)
+
+
+def test_staleness_penalty_gate_is_on_the_upcoming_run_key(settings):
+    """The gate reads next_start_date, the key the payload actually carries."""
+    settings.VECTOR_SEARCH_STALENESS_PENALTY_WEIGHT = 0.05
+    settings.VECTOR_SEARCH_STALENESS_HORIZON_YEARS = 20
+
+    expression = staleness_penalty_expression(
+        RESOURCES_COLLECTION_NAME, datetime.now(tz=UTC)
+    )
+
+    [gate] = [f for f in expression.neg.mult if isinstance(f, models.Filter)]
+    [condition] = gate.must
+    assert isinstance(condition, models.IsEmptyCondition)
+    assert condition.is_empty.key == NEXT_START_DATE_PAYLOAD_KEY
 
 
 def test_completeness_penalty_expression(settings):
@@ -3051,11 +3374,13 @@ def test_completeness_penalty_expression(settings):
     expression = completeness_penalty_expression(RESOURCES_COLLECTION_NAME)
 
     assert isinstance(expression, models.NegExpression)
-    weight, incompleteness = expression.neg.mult
-    assert weight == 0.05
+    assert _penalty_weight(expression) == 0.05
     # 1 - completeness
+    incompleteness = _penalty_ramp(expression)
     assert incompleteness.sum[0] == 1
     assert incompleteness.sum[1].neg == COMPLETENESS_PAYLOAD_KEY
+    # a share of the resource's own score, not a fixed number of score units
+    assert _penalty_is_proportional(expression)
 
 
 @pytest.mark.parametrize("weight", [0, None, -1])
@@ -3130,11 +3455,11 @@ def test_staleness_penalty_expression(settings):
     expression = staleness_penalty_expression(RESOURCES_COLLECTION_NAME, now)
 
     assert isinstance(expression, models.NegExpression)
-    weight, staleness = expression.neg.mult
-    assert weight == 0.05
+    assert _penalty_weight(expression) == 0.05
     # 1 - decay
-    assert staleness.sum[0] == 1
-    decay = staleness.sum[1].neg.lin_decay
+    assert _penalty_ramp(expression).sum[0] == 1
+    assert _penalty_is_proportional(expression)
+    decay = _penalty_decay(expression).lin_decay
     assert decay.x.datetime_key == RESOURCE_AGE_DATE_PAYLOAD_KEY
     assert decay.target.datetime == now.isoformat()
     # Qdrant rejects a midpoint of 0, so the horizon is expressed as the default
@@ -3156,8 +3481,8 @@ def test_staleness_penalty_ramps_linearly_to_the_horizon(settings, age_years):
     now = datetime(2026, 1, 1, tzinfo=UTC)
 
     expression = staleness_penalty_expression(RESOURCES_COLLECTION_NAME, now)
-    weight, staleness = expression.neg.mult
-    decay_params = staleness.sum[1].neg.lin_decay
+    weight = _penalty_weight(expression)
+    decay_params = _penalty_decay(expression).lin_decay
 
     # Qdrant's linear decay, evaluated for a resource of this age
     age_seconds = age_years * SECONDS_PER_YEAR
@@ -3206,6 +3531,7 @@ def test_score_formula_query_combines_both_penalties(mocker, settings):
     """Incompleteness and staleness both subtract from the score."""
     settings.VECTOR_SEARCH_INCOMPLETENESS_PENALTY_WEIGHT = 0.05
     settings.VECTOR_SEARCH_STALENESS_PENALTY_WEIGHT = 0.05
+    settings.VECTOR_SEARCH_STALENESS_HORIZON_YEARS = 20
     mocker.patch("vector_search.utils.VECTOR_SEARCH_SCORE_BOOST", {})
     now = datetime(2026, 1, 1, tzinfo=UTC)
 
@@ -3218,10 +3544,13 @@ def test_score_formula_query_combines_both_penalties(mocker, settings):
         RESOURCES_COLLECTION_NAME
     )
     assert staleness == staleness_penalty_expression(RESOURCES_COLLECTION_NAME, now)
-    # a resource with no age date is not stale, and scores as if published now
+    # An undated resource is aged from the horizon, so it takes the full
+    # penalty; the current ones are exempted by the upcoming-run condition.
     assert formula_query.defaults == {
         COMPLETENESS_PAYLOAD_KEY: 1.0,
-        RESOURCE_AGE_DATE_PAYLOAD_KEY: now.isoformat(),
+        RESOURCE_AGE_DATE_PAYLOAD_KEY: (
+            now - timedelta(seconds=20 * SECONDS_PER_YEAR)
+        ).isoformat(),
     }
 
 
@@ -3236,7 +3565,7 @@ def test_score_formula_query_staleness_penalty_only(mocker, settings):
     assert list(formula_query.defaults) == [RESOURCE_AGE_DATE_PAYLOAD_KEY]
     score, staleness = formula_query.formula.sum
     assert score == "$score"
-    assert isinstance(staleness.neg.mult[1].sum[1].neg, models.LinDecayExpression)
+    assert isinstance(_penalty_decay(staleness), models.LinDecayExpression)
 
 
 def test_score_formula_query_nothing_to_apply(mocker, settings):
@@ -3696,6 +4025,225 @@ def test_resource_embedding_checksum_is_process_stable():
             )
         )
         assert render["checksum"] == baseline["checksum"]
+
+
+def test_custom_score_formula_boost_override(mocker):
+    """A boost override replaces the configured amount for that entry only."""
+    mock_boosts = {
+        RESOURCES_COLLECTION_NAME: [
+            {
+                "name": PROGRAM_SCORE_BOOST_NAME,
+                "boost": 0.15,
+                "params": {"resource_type_group": ["program"]},
+            },
+            {"name": "free", "boost": 0.2, "params": {"free": True}},
+        ]
+    }
+    mocker.patch("vector_search.utils.VECTOR_SEARCH_SCORE_BOOST", mock_boosts)
+
+    program, free = custom_score_formula(
+        RESOURCES_COLLECTION_NAME,
+        boost_overrides={PROGRAM_SCORE_BOOST_NAME: 0.5},
+    )
+
+    assert program.mult[0] == 0.5
+    assert free.mult[0] == 0.2
+
+
+@pytest.mark.parametrize("override", [0, 0.5])
+def test_custom_score_formula_boost_override_zero(mocker, override):
+    """An override of 0 zeroes the boost rather than falling back to config."""
+    mocker.patch(
+        "vector_search.utils.VECTOR_SEARCH_SCORE_BOOST",
+        {
+            RESOURCES_COLLECTION_NAME: [
+                {
+                    "name": PROGRAM_SCORE_BOOST_NAME,
+                    "boost": 0.15,
+                    "params": {"resource_type_group": ["program"]},
+                }
+            ]
+        },
+    )
+
+    boosts = custom_score_formula(
+        RESOURCES_COLLECTION_NAME,
+        boost_overrides={PROGRAM_SCORE_BOOST_NAME: override},
+    )
+
+    assert boosts[0].mult[0] == override
+
+
+def test_custom_score_formula_unnamed_boost_not_overridden(mocker):
+    """An entry with no name keeps its configured amount."""
+    mocker.patch(
+        "vector_search.utils.VECTOR_SEARCH_SCORE_BOOST",
+        {RESOURCES_COLLECTION_NAME: [{"boost": 0.15, "params": {"free": True}}]},
+    )
+
+    boosts = custom_score_formula(
+        RESOURCES_COLLECTION_NAME,
+        boost_overrides={PROGRAM_SCORE_BOOST_NAME: 0.5, None: 0.9},
+    )
+
+    assert boosts[0].mult[0] == 0.15
+
+
+def test_completeness_penalty_expression_weight_override(settings):
+    """An explicit weight overrides the setting."""
+    settings.VECTOR_SEARCH_INCOMPLETENESS_PENALTY_WEIGHT = 0.05
+
+    expression = completeness_penalty_expression(RESOURCES_COLLECTION_NAME, weight=0.2)
+
+    assert _penalty_weight(expression) == 0.2
+
+
+@pytest.mark.parametrize("weight", [0, -1])
+def test_completeness_penalty_expression_override_disables(settings, weight):
+    """A weight of 0 or negative disables an otherwise configured penalty."""
+    settings.VECTOR_SEARCH_INCOMPLETENESS_PENALTY_WEIGHT = 0.05
+
+    assert (
+        completeness_penalty_expression(RESOURCES_COLLECTION_NAME, weight=weight)
+        is None
+    )
+
+
+def test_staleness_penalty_expression_weight_override(settings):
+    """An explicit weight overrides the setting."""
+    settings.VECTOR_SEARCH_STALENESS_PENALTY_WEIGHT = 0.05
+    settings.VECTOR_SEARCH_STALENESS_HORIZON_YEARS = 20
+
+    expression = staleness_penalty_expression(
+        RESOURCES_COLLECTION_NAME, datetime.now(tz=UTC), weight=0.2
+    )
+
+    assert _penalty_weight(expression) == 0.2
+
+
+@pytest.mark.parametrize("weight", [0, -1])
+def test_staleness_penalty_expression_override_disables(settings, weight):
+    """A weight of 0 or negative disables an otherwise configured penalty."""
+    settings.VECTOR_SEARCH_STALENESS_PENALTY_WEIGHT = 0.05
+
+    assert (
+        staleness_penalty_expression(
+            RESOURCES_COLLECTION_NAME, datetime.now(tz=UTC), weight=weight
+        )
+        is None
+    )
+
+
+def test_score_formula_query_applies_overrides(mocker, settings):
+    """Every weight in the formula can be overridden per request."""
+    settings.VECTOR_SEARCH_INCOMPLETENESS_PENALTY_WEIGHT = 0.05
+    settings.VECTOR_SEARCH_STALENESS_PENALTY_WEIGHT = 0.05
+    settings.VECTOR_SEARCH_STALENESS_HORIZON_YEARS = 20
+    mocker.patch(
+        "vector_search.utils.VECTOR_SEARCH_SCORE_BOOST",
+        {
+            RESOURCES_COLLECTION_NAME: [
+                {
+                    "name": PROGRAM_SCORE_BOOST_NAME,
+                    "boost": 0.15,
+                    "params": {"resource_type_group": ["program"]},
+                }
+            ]
+        },
+    )
+
+    formula_query = score_formula_query(
+        RESOURCES_COLLECTION_NAME,
+        program_boost=0.4,
+        completeness_penalty=0.1,
+        staleness_penalty=0.2,
+    )
+
+    score, boost, completeness, staleness = formula_query.formula.sum
+    assert score == "$score"
+    assert boost.mult[0] == 0.4
+    assert _penalty_weight(completeness) == 0.1
+    assert _penalty_weight(staleness) == 0.2
+
+
+def test_score_formula_query_overrides_can_disable_penalties(mocker, settings):
+    """Zeroed penalties drop out of the formula, defaults included."""
+    settings.VECTOR_SEARCH_INCOMPLETENESS_PENALTY_WEIGHT = 0.05
+    settings.VECTOR_SEARCH_STALENESS_PENALTY_WEIGHT = 0.05
+    mocker.patch("vector_search.utils.VECTOR_SEARCH_SCORE_BOOST", {})
+
+    formula_query = score_formula_query(
+        RESOURCES_COLLECTION_NAME,
+        completeness_penalty=0,
+        staleness_penalty=0,
+    )
+
+    assert formula_query is None
+
+
+def test_score_formula_overrides():
+    """Only the score formula weights are pulled out of the request params."""
+    assert score_formula_overrides(
+        {
+            "q": "test",
+            "program_boost": 0.4,
+            "staleness_penalty": 0.2,
+            "score_cutoff": 0.1,
+        }
+    ) == {
+        "program_boost": 0.4,
+        "staleness_penalty": 0.2,
+        "staleness_horizon_years": None,
+        "completeness_penalty": None,
+    }
+
+
+def test_staleness_penalty_expression_horizon_override(settings):
+    """An explicit horizon overrides the setting's ramp length."""
+    settings.VECTOR_SEARCH_STALENESS_PENALTY_WEIGHT = 0.05
+    settings.VECTOR_SEARCH_STALENESS_HORIZON_YEARS = 20
+
+    expression = staleness_penalty_expression(
+        RESOURCES_COLLECTION_NAME, datetime.now(tz=UTC), horizon_years=5
+    )
+
+    decay = _penalty_decay(expression).lin_decay
+    # half the horizon at the default midpoint -- see staleness_penalty_expression
+    assert decay.scale == 5 * SECONDS_PER_YEAR / 2
+
+
+@pytest.mark.parametrize("horizon_years", [0, -1])
+def test_staleness_penalty_expression_horizon_override_disables(
+    settings, horizon_years
+):
+    """A horizon of 0 or negative has no ramp to penalize along."""
+    settings.VECTOR_SEARCH_STALENESS_PENALTY_WEIGHT = 0.05
+    settings.VECTOR_SEARCH_STALENESS_HORIZON_YEARS = 20
+
+    assert (
+        staleness_penalty_expression(
+            RESOURCES_COLLECTION_NAME,
+            datetime.now(tz=UTC),
+            horizon_years=horizon_years,
+        )
+        is None
+    )
+
+
+def test_score_formula_query_applies_horizon_override(mocker, settings):
+    """The horizon override reaches the formula's decay params."""
+    settings.VECTOR_SEARCH_STALENESS_PENALTY_WEIGHT = 0.05
+    settings.VECTOR_SEARCH_STALENESS_HORIZON_YEARS = 20
+    settings.VECTOR_SEARCH_INCOMPLETENESS_PENALTY_WEIGHT = 0
+    mocker.patch("vector_search.utils.VECTOR_SEARCH_SCORE_BOOST", {})
+
+    formula_query = score_formula_query(
+        RESOURCES_COLLECTION_NAME, staleness_horizon_years=5
+    )
+
+    _, staleness = formula_query.formula.sum
+    decay = _penalty_decay(staleness).lin_decay
+    assert decay.scale == 5 * SECONDS_PER_YEAR / 2
 
 
 @pytest.mark.django_db(transaction=True)

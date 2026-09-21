@@ -62,7 +62,12 @@ const WebsiteContentDetail = ({
   return (
     <PageContainer>
       <LearningResourceProvider resourceIds={learningResourceIds}>
-        <Editor contentItem={contentItem} />
+        {/*
+          Keyed by id for the same reason as the edit page: the editor keeps its
+          own state rather than syncing the prop in, so moving between items
+          needs a fresh one even if this component is reused.
+        */}
+        <Editor key={contentItem.id} contentItem={contentItem} />
       </LearningResourceProvider>
     </PageContainer>
   )

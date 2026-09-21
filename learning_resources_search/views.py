@@ -33,6 +33,7 @@ from learning_resources_search.serializers import (
     PercolateQuerySubscriptionRequestSerializer,
 )
 from main.utils import cache_page_for_all_users
+from vector_search.constants import PROGRAM_SCORE_BOOST_NAME, default_score_boost
 
 log = logging.getLogger(__name__)
 
@@ -289,5 +290,21 @@ class LearningResourceSearchDefaultsView(APIView):
                 "min_score": settings.DEFAULT_SEARCH_MINIMUM_SCORE_CUTOFF,
                 "max_incompleteness_penalty": settings.DEFAULT_SEARCH_MAX_INCOMPLETENESS_PENALTY,  # noqa: E501
                 "content_file_score_weight": settings.DEFAULT_SEARCH_CONTENT_FILE_SCORE_WEIGHT,  # noqa: E501
+                # Vector search equivalents, for the admin controls the hybrid
+                # search endpoint honors. All three formula weights are
+                # fractions of a result's own score rather than the percents
+                # OpenSearch uses or the score units they replace: the boost
+                # multiplies a program's score by (1 + program_boost), and each
+                # penalty costs a result at most that fraction of its own score
+                # (see custom_score_formula). score_cutoff is only the absolute
+                # backstop; score_cutoff_ratio is the relative cutoff that
+                # shapes a result set, measured against the query's best hit
+                # (see _relative_score_floor).
+                "score_cutoff": settings.HYBRID_VECTOR_SEARCH_MIN_SCORE,
+                "score_cutoff_ratio": settings.HYBRID_VECTOR_SEARCH_MIN_SCORE_RATIO,
+                "program_boost": default_score_boost(PROGRAM_SCORE_BOOST_NAME),
+                "staleness_penalty": settings.VECTOR_SEARCH_STALENESS_PENALTY_WEIGHT,
+                "staleness_horizon_years": settings.VECTOR_SEARCH_STALENESS_HORIZON_YEARS,  # noqa: E501
+                "completeness_penalty": settings.VECTOR_SEARCH_INCOMPLETENESS_PENALTY_WEIGHT,  # noqa: E501
             }
         )

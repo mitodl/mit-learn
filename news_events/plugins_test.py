@@ -110,3 +110,49 @@ def test_website_content_published_hook_captures_content_id():
         with patch("news_events.tasks.sync_website_content_to_news.delay") as mock_task:
             callback()
             mock_task.assert_called_once_with(content.id)
+
+
+def test_website_content_unpublished_hook_calls_delete_task():
+    """The unpublish hook schedules the feed removal task on commit"""
+    user = UserFactory.create()
+    content = WebsiteContent.objects.create(
+        title="Test Article",
+        content={},
+        is_published=False,
+        user=user,
+        content_type="news",
+    )
+
+    plugin = WebsiteContentNewsPlugin()
+
+    with patch("news_events.plugins.transaction.on_commit") as mock_on_commit:
+        plugin.website_content_unpublished(content)
+
+        assert mock_on_commit.call_count == 1
+        callback = mock_on_commit.call_args[0][0]
+
+        with patch(
+            "news_events.tasks.delete_website_content_from_news.delay"
+        ) as mock_task:
+            callback()
+
+            mock_task.assert_called_once_with(content.id)
+
+
+def test_website_content_unpublished_hook_skips_non_news():
+    """Only news content has a feed entry, so other types are skipped"""
+    user = UserFactory.create()
+    content = WebsiteContent.objects.create(
+        title="Test Article",
+        content={},
+        is_published=False,
+        user=user,
+        content_type="article",
+    )
+
+    plugin = WebsiteContentNewsPlugin()
+
+    with patch("news_events.plugins.transaction.on_commit") as mock_on_commit:
+        plugin.website_content_unpublished(content)
+
+        assert not mock_on_commit.called

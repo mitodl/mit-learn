@@ -14,6 +14,8 @@ import { Alert, Button, TextField, VisuallyHidden } from "@mitodl/smoot-design"
 import { useQuery } from "@tanstack/react-query"
 import NiceModal, { muiDialogV5 } from "@ebay/nice-modal-react"
 import { useFormik } from "formik"
+import * as Sentry from "@sentry/nextjs"
+import type { AxiosError } from "axios"
 import {
   mitxUserQueries,
   useUpdateUserMutation,
@@ -51,6 +53,20 @@ const placeholderOption: SimpleSelectOption = {
  * the name, so the hidden input is skipped.
  */
 const FOCUSABLE_CONTROL = '[role="combobox"], input:not([aria-hidden="true"])'
+
+/**
+ * Dotted path to every leaf of a DRF error body, e.g.
+ * `errors.legal_address.country`. Keys only: this form holds a legal name and
+ * home address, so the messages and values must not leave the browser.
+ */
+const errorPaths = (body: unknown, prefix = ""): string[] => {
+  if (typeof body !== "object" || body === null || Array.isArray(body)) {
+    return prefix ? [prefix] : []
+  }
+  return Object.entries(body).flatMap(([key, value]) =>
+    errorPaths(value, prefix ? `${prefix}.${key}` : key),
+  )
+}
 
 /**
  * Collects the profile information MITx Online needs before an enrollment or
@@ -92,9 +108,33 @@ const JustInTimeDialogInner: React.FC = () => {
             user.data?.user_profile?.year_of_birth,
           ),
         })
-      } catch {
+      } catch (error) {
         // Keep the dialog open so the entered values survive; the error alert
         // below is driven by updateUser.isError.
+        const status = (error as AxiosError).response?.status
+        const context = {
+          // Tags, not extra: Sentry indexes these, so one issue can be faceted
+          // by status rather than needing a message per case to split them.
+          tags: {
+            status: String(status ?? "none"),
+            // An unauthenticated GET of users/me answers 200 carrying
+            // is_anonymous, so this dialog opens for users the PATCH rejects.
+            mitx_is_anonymous: String(user.data?.is_anonymous ?? "unknown"),
+          },
+          extra: { paths: errorPaths((error as AxiosError).response?.data) },
+        }
+        if (status && status < 500) {
+          // Capture 4xx here, which this codebase otherwise leaves unreported.
+          // `jitSchema` validated this payload before it went out, and the
+          // compliance gate fetched users/me moments earlier, so a rejection
+          // means something upstream disagrees with us — not a learner typo.
+          Sentry.captureMessage("JIT compliance dialog: save rejected", {
+            level: "warning",
+            ...context,
+          })
+        } else {
+          Sentry.captureException(error, context)
+        }
         return
       }
       modal.resolve(true)

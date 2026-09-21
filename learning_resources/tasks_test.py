@@ -9,6 +9,7 @@ import pytest
 from decorator import contextmanager
 from django.utils import timezone
 from moto import mock_aws
+from safedelete.config import HARD_DELETE
 
 from learning_resources import factories, models, tasks
 from learning_resources.conftest import OCW_TEST_PREFIX, setup_s3, setup_s3_ocw
@@ -1588,3 +1589,73 @@ def test_unpublish_staff_only_files_task(mocker):
     )
     assert tasks.unpublish_staff_only_files([1, 2], "mitxonline", ["k"]) == 3
     mock_fn.assert_called_once_with("mitxonline", [1, 2], ["k"])
+
+
+@pytest.mark.parametrize(
+    ("content_type", "is_published", "exists", "expect_sync"),
+    [
+        ("article", True, True, True),
+        # Unpublished or deleted between the hook firing and the task running.
+        ("article", False, True, False),
+        ("article", True, False, False),
+        # News is never mirrored -- it has the news feed instead.
+        ("news", True, True, False),
+    ],
+)
+def test_sync_website_content_learning_resource_guards(
+    mocker, content_type, is_published, exists, expect_sync
+):
+    """The task re-reads the item, since it may have changed since it was queued."""
+    from website_content.factories import WebsiteContentFactory
+
+    content = WebsiteContentFactory.create(
+        is_published=is_published, content_type=content_type
+    )
+    content_id = content.id
+    if not exists:
+        content.delete(force_policy=HARD_DELETE)
+
+    mock_sync = mocker.patch(
+        "learning_resources.tasks.sync_website_content_to_learning_resource"
+    )
+
+    tasks.sync_website_content_learning_resource.delay(content_id)
+
+    assert mock_sync.called is expect_sync
+
+
+def test_unpublish_website_content_learning_resource_task(mocker):
+    """The removal task works from the id, so a deleted item still leaves the index."""
+    mock_unpublish = mocker.patch(
+        "learning_resources.tasks.unpublish_website_content_learning_resource"
+    )
+
+    tasks.unpublish_website_content_learning_resource_task.delay(1234)
+
+    mock_unpublish.assert_called_once_with(1234)
+
+
+@pytest.mark.parametrize(
+    ("is_published", "expect_removal"),
+    [(False, True), (True, False)],
+)
+def test_unpublish_website_content_task_skips_a_republished_item(
+    mocker, is_published, expect_removal
+):
+    """
+    A queued removal can run after the item was republished.
+
+    Removing then would unpublish the resource the republish just restored, so
+    the task re-reads the row and bails out -- the mirror of the sync task only
+    acting on a published one.
+    """
+    from website_content.factories import WebsiteContentFactory
+
+    content = WebsiteContentFactory.create(is_published=is_published)
+    mock_unpublish = mocker.patch(
+        "learning_resources.tasks.unpublish_website_content_learning_resource"
+    )
+
+    tasks.unpublish_website_content_learning_resource_task.delay(content.id)
+
+    assert mock_unpublish.called is expect_removal

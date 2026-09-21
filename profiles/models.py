@@ -30,22 +30,6 @@ PROFILE_PROPS = (
     "headline",
     "bio",
 )
-FACEBOOK_DOMAIN = "facebook"
-TWITTER_DOMAIN = "twitter"
-LINKEDIN_DOMAIN = "linkedin"
-PERSONAL_SITE_TYPE = "personal"
-SITE_TYPE_OPTIONS = {
-    FACEBOOK_DOMAIN,
-    TWITTER_DOMAIN,
-    LINKEDIN_DOMAIN,
-    PERSONAL_SITE_TYPE,
-}
-SOCIAL_SITE_NAME_MAP = {
-    FACEBOOK_DOMAIN: "Facebook",
-    TWITTER_DOMAIN: "Twitter",
-    LINKEDIN_DOMAIN: "LinkedIn",
-}
-
 User = get_user_model()
 
 
@@ -211,24 +195,6 @@ class Profile(models.Model):
         Prefetch(..., to_attr="annotated_topic_interests").
         """
         return list(self.topic_interests.for_serialization())
-
-
-class UserWebsite(models.Model):
-    """A model for storing information for websites that should appear in a user's profile"""  # noqa: E501
-
-    profile = models.ForeignKey(Profile, on_delete=models.CASCADE)
-    url = models.CharField(max_length=200)
-    site_type = models.CharField(
-        max_length=15,
-        choices=zip(sorted(SITE_TYPE_OPTIONS), sorted(SITE_TYPE_OPTIONS)),
-        default=PERSONAL_SITE_TYPE,
-    )
-
-    class Meta:
-        unique_together = ("profile", "site_type")
-
-    def __str__(self):
-        return f"url: {self.url}; site_type: {self.site_type}"
 
 
 class ProgramCertificate(models.Model):

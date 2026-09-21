@@ -1420,7 +1420,7 @@ export interface PatchedProfileRequest {
   image?: string | null
   image_small?: string | null
   image_medium?: string | null
-  email_optin?: boolean
+  email_optin?: boolean | null
   toc_optin?: boolean
   bio?: string | null
   headline?: string | null
@@ -1803,7 +1803,7 @@ export interface Profile {
    * Custom getter for medium profile image
    */
   profile_image_medium: string
-  email_optin?: boolean
+  email_optin?: boolean | null
   bio?: string | null
   headline?: string | null
   /**
@@ -1866,7 +1866,7 @@ export interface ProfileRequest {
   image?: string | null
   image_small?: string | null
   image_medium?: string | null
-  email_optin?: boolean
+  email_optin?: boolean | null
   toc_optin?: boolean
   bio?: string | null
   headline?: string | null
@@ -2140,38 +2140,6 @@ export interface RetrieveProblemResponse {
   solution_set: string
 }
 /**
- * * `facebook` - facebook * `linkedin` - linkedin * `personal` - personal * `twitter` - twitter
- */
-
-export const SiteTypeEnumDescriptions = {
-  facebook: "facebook",
-  linkedin: "linkedin",
-  personal: "personal",
-  twitter: "twitter",
-} as const
-
-export const SiteTypeEnum = {
-  /**
-   * facebook
-   */
-  Facebook: "facebook",
-  /**
-   * linkedin
-   */
-  Linkedin: "linkedin",
-  /**
-   * personal
-   */
-  Personal: "personal",
-  /**
-   * twitter
-   */
-  Twitter: "twitter",
-} as const
-
-export type SiteTypeEnum = (typeof SiteTypeEnum)[keyof typeof SiteTypeEnum]
-
-/**
  * Serializer for SubChannels
  */
 export interface SubChannel {
@@ -2363,23 +2331,6 @@ export interface User {
 export interface UserRequest {
   profile?: ProfileRequest
   email: string
-}
-/**
- * Serializer for UserWebsite
- */
-export interface UserWebsite {
-  id: number
-  profile: number
-  url: string
-  site_type: SiteTypeEnum
-}
-
-/**
- * Serializer for UserWebsite
- */
-export interface UserWebsiteRequest {
-  profile: number
-  url: string
 }
 /**
  * Serializer for the Video model
@@ -7015,6 +6966,7 @@ export const VectorLearningResourcesSearchApiAxiosParamCreator = function (
      * @param {Array<VectorLearningResourcesSearchRetrieveAggregationsEnum>} [aggregations] aggregations for facet counts               * &#x60;readable_id&#x60; - Readable Id * &#x60;resource_type&#x60; - Resource Type * &#x60;certification&#x60; - Certification * &#x60;certification_type&#x60; - Certification Type * &#x60;professional&#x60; - Professional * &#x60;free&#x60; - Free * &#x60;course_feature&#x60; - Course Feature * &#x60;topic&#x60; - Topic * &#x60;ocw_topic&#x60; - Ocw Topic * &#x60;level&#x60; - Level * &#x60;department&#x60; - Department * &#x60;platform&#x60; - Platform * &#x60;offered_by&#x60; - Offered By * &#x60;delivery&#x60; - Delivery * &#x60;title&#x60; - Title * &#x60;url&#x60; - Url * &#x60;resource_type_group&#x60; - Resource Type Group * &#x60;resource_category&#x60; - Resource Category * &#x60;published&#x60; - Published * &#x60;next_start_date&#x60; - Next Start Date * &#x60;views&#x60; - Views * &#x60;created_on&#x60; - Created On
      * @param {boolean | null} [certification] True if the learning resource offers a certificate
      * @param {Array<VectorLearningResourcesSearchRetrieveCertificationTypeEnum>} [certification_type] The type of certificate               * &#x60;micromasters&#x60; - MicroMasters Credential * &#x60;professional&#x60; - Professional Certificate * &#x60;completion&#x60; - Certificate of Completion * &#x60;none&#x60; - No Certificate
+     * @param {number | null} [completeness_penalty] Fraction of its own score a resource with completeness 0 gives up, scaled linearly by incompleteness. 0 disables the penalty. Defaults to the server\&#39;s configured weight when omitted.
      * @param {Array<string>} [course_feature] The course feature. Possible options are at api/v1/course_features/
      * @param {Array<VectorLearningResourcesSearchRetrieveDeliveryEnum>} [delivery] The delivery options in which the learning resource is offered               * &#x60;online&#x60; - Online * &#x60;hybrid&#x60; - Hybrid * &#x60;in_person&#x60; - In person * &#x60;offline&#x60; - Offline
      * @param {Array<VectorLearningResourcesSearchRetrieveDepartmentEnum>} [department] The department that offers the learning resource               * &#x60;1&#x60; - Civil and Environmental Engineering * &#x60;2&#x60; - Mechanical Engineering * &#x60;3&#x60; - Materials Science and Engineering * &#x60;4&#x60; - Architecture * &#x60;5&#x60; - Chemistry * &#x60;6&#x60; - Electrical Engineering and Computer Science * &#x60;7&#x60; - Biology * &#x60;8&#x60; - Physics * &#x60;9&#x60; - Brain and Cognitive Sciences * &#x60;10&#x60; - Chemical Engineering * &#x60;11&#x60; - Urban Studies and Planning * &#x60;12&#x60; - Earth, Atmospheric, and Planetary Sciences * &#x60;14&#x60; - Economics * &#x60;15&#x60; - Management * &#x60;16&#x60; - Aeronautics and Astronautics * &#x60;17&#x60; - Political Science * &#x60;18&#x60; - Mathematics * &#x60;20&#x60; - Biological Engineering * &#x60;21A&#x60; - Anthropology * &#x60;21G&#x60; - Global Languages * &#x60;21H&#x60; - History * &#x60;21L&#x60; - Literature * &#x60;21M&#x60; - Music * &#x60;21T&#x60; - Theater Arts * &#x60;22&#x60; - Nuclear Science and Engineering * &#x60;24&#x60; - Linguistics and Philosophy * &#x60;CC&#x60; - Concourse * &#x60;CMS-W&#x60; - Comparative Media Studies/Writing * &#x60;EC&#x60; - Edgerton Center * &#x60;ES&#x60; - Experimental Study Group * &#x60;ESD&#x60; - Engineering Systems Division * &#x60;HST&#x60; - Medical Engineering and Science * &#x60;IDS&#x60; - Data, Systems, and Society * &#x60;MAS&#x60; - Media Arts and Sciences * &#x60;PE&#x60; - Athletics, Physical Education and Recreation * &#x60;SP&#x60; - Special Programs * &#x60;STS&#x60; - Science, Technology, and Society * &#x60;WGS&#x60; - Women\&#39;s and Gender Studies
@@ -7027,14 +6979,18 @@ export const VectorLearningResourcesSearchApiAxiosParamCreator = function (
      * @param {number} [offset] The initial index from which to return the results
      * @param {Array<VectorLearningResourcesSearchRetrievePlatformEnum>} [platform] The platform on which the learning resource is offered               * &#x60;edx&#x60; - edX * &#x60;ocw&#x60; - MIT OpenCourseWare * &#x60;oll&#x60; - Open Learning Library * &#x60;mitxonline&#x60; - MITx Online * &#x60;bootcamps&#x60; - Bootcamps * &#x60;xpro&#x60; - MIT xPRO * &#x60;csail&#x60; - CSAIL * &#x60;mitpe&#x60; - MIT Professional Education * &#x60;see&#x60; - MIT Sloan Executive Education * &#x60;scc&#x60; - Schwarzman College of Computing * &#x60;ctl&#x60; - Center for Transportation &amp; Logistics * &#x60;whu&#x60; - WHU * &#x60;susskind&#x60; - Susskind * &#x60;globalalumni&#x60; - Global Alumni * &#x60;simplilearn&#x60; - Simplilearn * &#x60;emeritus&#x60; - Emeritus * &#x60;podcast&#x60; - Podcast * &#x60;youtube&#x60; - YouTube * &#x60;canvas&#x60; - Canvas * &#x60;climate&#x60; - MIT Climate * &#x60;ovs&#x60; - ODL Video Service
      * @param {boolean | null} [professional]
+     * @param {number | null} [program_boost] Fraction of its own score a program gains before ranking, so 0.1 multiplies it by 1.1 and a program can only overtake a result it was already within that factor of. 0 disables the boost. Defaults to the server\&#39;s configured amount when omitted.
      * @param {boolean} [published] If the resource is published. We default to True unless passed in
      * @param {string} [q] The search text
      * @param {string} [readable_id] The readable id of the resource
      * @param {Array<string>} [resource_category] The resource category for the resource
      * @param {Array<VectorLearningResourcesSearchRetrieveResourceTypeEnum>} [resource_type] The type of learning resource               * &#x60;course&#x60; - course * &#x60;program&#x60; - program * &#x60;learning_path&#x60; - learning path * &#x60;podcast&#x60; - podcast * &#x60;podcast_episode&#x60; - podcast episode * &#x60;video&#x60; - video * &#x60;video_playlist&#x60; - video playlist * &#x60;document&#x60; - document
      * @param {Array<VectorLearningResourcesSearchRetrieveResourceTypeGroupEnum>} [resource_type_group] The category of learning resource               * &#x60;course&#x60; - Course * &#x60;program&#x60; - Program * &#x60;learning_material&#x60; - Learning Material
-     * @param {number} [score_cutoff] The minimum score a result must have to be returned. Defaults to 0.0 when omitted, but the server clamps the effective cutoff to the minimum allowed for the selected search mode (dense or hybrid).
+     * @param {number} [score_cutoff] The minimum absolute score a result must have to be returned. Defaults to 0.0 when omitted, but the server clamps the effective cutoff to the minimum allowed for the selected search mode (dense or hybrid). This is only the backstop for a query that matched nothing; score_cutoff_ratio is what shapes a result set.
+     * @param {number | null} [score_cutoff_ratio] Fraction of the query\&#39;s own best score a result must reach to be returned, applied after score_cutoff so the size of a result set follows how fast relevance falls off within the query. 0 disables the relative cutoff. Defaults to the server\&#39;s configured ratio for the selected search mode (dense or hybrid) when omitted.
      * @param {VectorLearningResourcesSearchRetrieveSortbyEnum} [sortby] if the parameter starts with \&#39;-\&#39; the sort is in descending order  * &#x60;next_start_date&#x60; - next_start_date * &#x60;views&#x60; - views * &#x60;created_on&#x60; - created_on * &#x60;-next_start_date&#x60; - -next_start_date * &#x60;-views&#x60; - -views * &#x60;-created_on&#x60; - -created_on
+     * @param {number | null} [staleness_horizon_years] Age in years at which a resource takes the full staleness penalty, with the penalty ramping linearly up to it. 0 disables the penalty. Defaults to the server\&#39;s configured horizon when omitted.
+     * @param {number | null} [staleness_penalty] Fraction of its own score a resource gives up once it is at or beyond the staleness horizon, ramped linearly by age. Resources with an upcoming run are exempt. 0 disables the penalty. Defaults to the server\&#39;s configured weight when omitted.
      * @param {boolean | null} [title__isnull] Filter to learning resources where title is null/not null
      * @param {Array<string>} [topic] The topic name. To see a list of options go to api/v1/topics/
      * @param {boolean | null} [url__isnull] Filter to learning resources where url is null/not null
@@ -7045,6 +7001,7 @@ export const VectorLearningResourcesSearchApiAxiosParamCreator = function (
       aggregations?: Array<VectorLearningResourcesSearchRetrieveAggregationsEnum>,
       certification?: boolean | null,
       certification_type?: Array<VectorLearningResourcesSearchRetrieveCertificationTypeEnum>,
+      completeness_penalty?: number | null,
       course_feature?: Array<string>,
       delivery?: Array<VectorLearningResourcesSearchRetrieveDeliveryEnum>,
       department?: Array<VectorLearningResourcesSearchRetrieveDepartmentEnum>,
@@ -7057,6 +7014,7 @@ export const VectorLearningResourcesSearchApiAxiosParamCreator = function (
       offset?: number,
       platform?: Array<VectorLearningResourcesSearchRetrievePlatformEnum>,
       professional?: boolean | null,
+      program_boost?: number | null,
       published?: boolean,
       q?: string,
       readable_id?: string,
@@ -7064,7 +7022,10 @@ export const VectorLearningResourcesSearchApiAxiosParamCreator = function (
       resource_type?: Array<VectorLearningResourcesSearchRetrieveResourceTypeEnum>,
       resource_type_group?: Array<VectorLearningResourcesSearchRetrieveResourceTypeGroupEnum>,
       score_cutoff?: number,
+      score_cutoff_ratio?: number | null,
       sortby?: VectorLearningResourcesSearchRetrieveSortbyEnum,
+      staleness_horizon_years?: number | null,
+      staleness_penalty?: number | null,
       title__isnull?: boolean | null,
       topic?: Array<string>,
       url__isnull?: boolean | null,
@@ -7096,6 +7057,10 @@ export const VectorLearningResourcesSearchApiAxiosParamCreator = function (
 
       if (certification_type) {
         localVarQueryParameter["certification_type"] = certification_type
+      }
+
+      if (completeness_penalty !== undefined) {
+        localVarQueryParameter["completeness_penalty"] = completeness_penalty
       }
 
       if (course_feature) {
@@ -7146,6 +7111,10 @@ export const VectorLearningResourcesSearchApiAxiosParamCreator = function (
         localVarQueryParameter["professional"] = professional
       }
 
+      if (program_boost !== undefined) {
+        localVarQueryParameter["program_boost"] = program_boost
+      }
+
       if (published !== undefined) {
         localVarQueryParameter["published"] = published
       }
@@ -7174,8 +7143,21 @@ export const VectorLearningResourcesSearchApiAxiosParamCreator = function (
         localVarQueryParameter["score_cutoff"] = score_cutoff
       }
 
+      if (score_cutoff_ratio !== undefined) {
+        localVarQueryParameter["score_cutoff_ratio"] = score_cutoff_ratio
+      }
+
       if (sortby !== undefined) {
         localVarQueryParameter["sortby"] = sortby
+      }
+
+      if (staleness_horizon_years !== undefined) {
+        localVarQueryParameter["staleness_horizon_years"] =
+          staleness_horizon_years
+      }
+
+      if (staleness_penalty !== undefined) {
+        localVarQueryParameter["staleness_penalty"] = staleness_penalty
       }
 
       if (title__isnull !== undefined) {
@@ -7224,6 +7206,7 @@ export const VectorLearningResourcesSearchApiFp = function (
      * @param {Array<VectorLearningResourcesSearchRetrieveAggregationsEnum>} [aggregations] aggregations for facet counts               * &#x60;readable_id&#x60; - Readable Id * &#x60;resource_type&#x60; - Resource Type * &#x60;certification&#x60; - Certification * &#x60;certification_type&#x60; - Certification Type * &#x60;professional&#x60; - Professional * &#x60;free&#x60; - Free * &#x60;course_feature&#x60; - Course Feature * &#x60;topic&#x60; - Topic * &#x60;ocw_topic&#x60; - Ocw Topic * &#x60;level&#x60; - Level * &#x60;department&#x60; - Department * &#x60;platform&#x60; - Platform * &#x60;offered_by&#x60; - Offered By * &#x60;delivery&#x60; - Delivery * &#x60;title&#x60; - Title * &#x60;url&#x60; - Url * &#x60;resource_type_group&#x60; - Resource Type Group * &#x60;resource_category&#x60; - Resource Category * &#x60;published&#x60; - Published * &#x60;next_start_date&#x60; - Next Start Date * &#x60;views&#x60; - Views * &#x60;created_on&#x60; - Created On
      * @param {boolean | null} [certification] True if the learning resource offers a certificate
      * @param {Array<VectorLearningResourcesSearchRetrieveCertificationTypeEnum>} [certification_type] The type of certificate               * &#x60;micromasters&#x60; - MicroMasters Credential * &#x60;professional&#x60; - Professional Certificate * &#x60;completion&#x60; - Certificate of Completion * &#x60;none&#x60; - No Certificate
+     * @param {number | null} [completeness_penalty] Fraction of its own score a resource with completeness 0 gives up, scaled linearly by incompleteness. 0 disables the penalty. Defaults to the server\&#39;s configured weight when omitted.
      * @param {Array<string>} [course_feature] The course feature. Possible options are at api/v1/course_features/
      * @param {Array<VectorLearningResourcesSearchRetrieveDeliveryEnum>} [delivery] The delivery options in which the learning resource is offered               * &#x60;online&#x60; - Online * &#x60;hybrid&#x60; - Hybrid * &#x60;in_person&#x60; - In person * &#x60;offline&#x60; - Offline
      * @param {Array<VectorLearningResourcesSearchRetrieveDepartmentEnum>} [department] The department that offers the learning resource               * &#x60;1&#x60; - Civil and Environmental Engineering * &#x60;2&#x60; - Mechanical Engineering * &#x60;3&#x60; - Materials Science and Engineering * &#x60;4&#x60; - Architecture * &#x60;5&#x60; - Chemistry * &#x60;6&#x60; - Electrical Engineering and Computer Science * &#x60;7&#x60; - Biology * &#x60;8&#x60; - Physics * &#x60;9&#x60; - Brain and Cognitive Sciences * &#x60;10&#x60; - Chemical Engineering * &#x60;11&#x60; - Urban Studies and Planning * &#x60;12&#x60; - Earth, Atmospheric, and Planetary Sciences * &#x60;14&#x60; - Economics * &#x60;15&#x60; - Management * &#x60;16&#x60; - Aeronautics and Astronautics * &#x60;17&#x60; - Political Science * &#x60;18&#x60; - Mathematics * &#x60;20&#x60; - Biological Engineering * &#x60;21A&#x60; - Anthropology * &#x60;21G&#x60; - Global Languages * &#x60;21H&#x60; - History * &#x60;21L&#x60; - Literature * &#x60;21M&#x60; - Music * &#x60;21T&#x60; - Theater Arts * &#x60;22&#x60; - Nuclear Science and Engineering * &#x60;24&#x60; - Linguistics and Philosophy * &#x60;CC&#x60; - Concourse * &#x60;CMS-W&#x60; - Comparative Media Studies/Writing * &#x60;EC&#x60; - Edgerton Center * &#x60;ES&#x60; - Experimental Study Group * &#x60;ESD&#x60; - Engineering Systems Division * &#x60;HST&#x60; - Medical Engineering and Science * &#x60;IDS&#x60; - Data, Systems, and Society * &#x60;MAS&#x60; - Media Arts and Sciences * &#x60;PE&#x60; - Athletics, Physical Education and Recreation * &#x60;SP&#x60; - Special Programs * &#x60;STS&#x60; - Science, Technology, and Society * &#x60;WGS&#x60; - Women\&#39;s and Gender Studies
@@ -7236,14 +7219,18 @@ export const VectorLearningResourcesSearchApiFp = function (
      * @param {number} [offset] The initial index from which to return the results
      * @param {Array<VectorLearningResourcesSearchRetrievePlatformEnum>} [platform] The platform on which the learning resource is offered               * &#x60;edx&#x60; - edX * &#x60;ocw&#x60; - MIT OpenCourseWare * &#x60;oll&#x60; - Open Learning Library * &#x60;mitxonline&#x60; - MITx Online * &#x60;bootcamps&#x60; - Bootcamps * &#x60;xpro&#x60; - MIT xPRO * &#x60;csail&#x60; - CSAIL * &#x60;mitpe&#x60; - MIT Professional Education * &#x60;see&#x60; - MIT Sloan Executive Education * &#x60;scc&#x60; - Schwarzman College of Computing * &#x60;ctl&#x60; - Center for Transportation &amp; Logistics * &#x60;whu&#x60; - WHU * &#x60;susskind&#x60; - Susskind * &#x60;globalalumni&#x60; - Global Alumni * &#x60;simplilearn&#x60; - Simplilearn * &#x60;emeritus&#x60; - Emeritus * &#x60;podcast&#x60; - Podcast * &#x60;youtube&#x60; - YouTube * &#x60;canvas&#x60; - Canvas * &#x60;climate&#x60; - MIT Climate * &#x60;ovs&#x60; - ODL Video Service
      * @param {boolean | null} [professional]
+     * @param {number | null} [program_boost] Fraction of its own score a program gains before ranking, so 0.1 multiplies it by 1.1 and a program can only overtake a result it was already within that factor of. 0 disables the boost. Defaults to the server\&#39;s configured amount when omitted.
      * @param {boolean} [published] If the resource is published. We default to True unless passed in
      * @param {string} [q] The search text
      * @param {string} [readable_id] The readable id of the resource
      * @param {Array<string>} [resource_category] The resource category for the resource
      * @param {Array<VectorLearningResourcesSearchRetrieveResourceTypeEnum>} [resource_type] The type of learning resource               * &#x60;course&#x60; - course * &#x60;program&#x60; - program * &#x60;learning_path&#x60; - learning path * &#x60;podcast&#x60; - podcast * &#x60;podcast_episode&#x60; - podcast episode * &#x60;video&#x60; - video * &#x60;video_playlist&#x60; - video playlist * &#x60;document&#x60; - document
      * @param {Array<VectorLearningResourcesSearchRetrieveResourceTypeGroupEnum>} [resource_type_group] The category of learning resource               * &#x60;course&#x60; - Course * &#x60;program&#x60; - Program * &#x60;learning_material&#x60; - Learning Material
-     * @param {number} [score_cutoff] The minimum score a result must have to be returned. Defaults to 0.0 when omitted, but the server clamps the effective cutoff to the minimum allowed for the selected search mode (dense or hybrid).
+     * @param {number} [score_cutoff] The minimum absolute score a result must have to be returned. Defaults to 0.0 when omitted, but the server clamps the effective cutoff to the minimum allowed for the selected search mode (dense or hybrid). This is only the backstop for a query that matched nothing; score_cutoff_ratio is what shapes a result set.
+     * @param {number | null} [score_cutoff_ratio] Fraction of the query\&#39;s own best score a result must reach to be returned, applied after score_cutoff so the size of a result set follows how fast relevance falls off within the query. 0 disables the relative cutoff. Defaults to the server\&#39;s configured ratio for the selected search mode (dense or hybrid) when omitted.
      * @param {VectorLearningResourcesSearchRetrieveSortbyEnum} [sortby] if the parameter starts with \&#39;-\&#39; the sort is in descending order  * &#x60;next_start_date&#x60; - next_start_date * &#x60;views&#x60; - views * &#x60;created_on&#x60; - created_on * &#x60;-next_start_date&#x60; - -next_start_date * &#x60;-views&#x60; - -views * &#x60;-created_on&#x60; - -created_on
+     * @param {number | null} [staleness_horizon_years] Age in years at which a resource takes the full staleness penalty, with the penalty ramping linearly up to it. 0 disables the penalty. Defaults to the server\&#39;s configured horizon when omitted.
+     * @param {number | null} [staleness_penalty] Fraction of its own score a resource gives up once it is at or beyond the staleness horizon, ramped linearly by age. Resources with an upcoming run are exempt. 0 disables the penalty. Defaults to the server\&#39;s configured weight when omitted.
      * @param {boolean | null} [title__isnull] Filter to learning resources where title is null/not null
      * @param {Array<string>} [topic] The topic name. To see a list of options go to api/v1/topics/
      * @param {boolean | null} [url__isnull] Filter to learning resources where url is null/not null
@@ -7254,6 +7241,7 @@ export const VectorLearningResourcesSearchApiFp = function (
       aggregations?: Array<VectorLearningResourcesSearchRetrieveAggregationsEnum>,
       certification?: boolean | null,
       certification_type?: Array<VectorLearningResourcesSearchRetrieveCertificationTypeEnum>,
+      completeness_penalty?: number | null,
       course_feature?: Array<string>,
       delivery?: Array<VectorLearningResourcesSearchRetrieveDeliveryEnum>,
       department?: Array<VectorLearningResourcesSearchRetrieveDepartmentEnum>,
@@ -7266,6 +7254,7 @@ export const VectorLearningResourcesSearchApiFp = function (
       offset?: number,
       platform?: Array<VectorLearningResourcesSearchRetrievePlatformEnum>,
       professional?: boolean | null,
+      program_boost?: number | null,
       published?: boolean,
       q?: string,
       readable_id?: string,
@@ -7273,7 +7262,10 @@ export const VectorLearningResourcesSearchApiFp = function (
       resource_type?: Array<VectorLearningResourcesSearchRetrieveResourceTypeEnum>,
       resource_type_group?: Array<VectorLearningResourcesSearchRetrieveResourceTypeGroupEnum>,
       score_cutoff?: number,
+      score_cutoff_ratio?: number | null,
       sortby?: VectorLearningResourcesSearchRetrieveSortbyEnum,
+      staleness_horizon_years?: number | null,
+      staleness_penalty?: number | null,
       title__isnull?: boolean | null,
       topic?: Array<string>,
       url__isnull?: boolean | null,
@@ -7289,6 +7281,7 @@ export const VectorLearningResourcesSearchApiFp = function (
           aggregations,
           certification,
           certification_type,
+          completeness_penalty,
           course_feature,
           delivery,
           department,
@@ -7301,6 +7294,7 @@ export const VectorLearningResourcesSearchApiFp = function (
           offset,
           platform,
           professional,
+          program_boost,
           published,
           q,
           readable_id,
@@ -7308,7 +7302,10 @@ export const VectorLearningResourcesSearchApiFp = function (
           resource_type,
           resource_type_group,
           score_cutoff,
+          score_cutoff_ratio,
           sortby,
+          staleness_horizon_years,
+          staleness_penalty,
           title__isnull,
           topic,
           url__isnull,
@@ -7356,6 +7353,7 @@ export const VectorLearningResourcesSearchApiFactory = function (
           requestParameters.aggregations,
           requestParameters.certification,
           requestParameters.certification_type,
+          requestParameters.completeness_penalty,
           requestParameters.course_feature,
           requestParameters.delivery,
           requestParameters.department,
@@ -7368,6 +7366,7 @@ export const VectorLearningResourcesSearchApiFactory = function (
           requestParameters.offset,
           requestParameters.platform,
           requestParameters.professional,
+          requestParameters.program_boost,
           requestParameters.published,
           requestParameters.q,
           requestParameters.readable_id,
@@ -7375,7 +7374,10 @@ export const VectorLearningResourcesSearchApiFactory = function (
           requestParameters.resource_type,
           requestParameters.resource_type_group,
           requestParameters.score_cutoff,
+          requestParameters.score_cutoff_ratio,
           requestParameters.sortby,
+          requestParameters.staleness_horizon_years,
+          requestParameters.staleness_penalty,
           requestParameters.title__isnull,
           requestParameters.topic,
           requestParameters.url__isnull,
@@ -7404,6 +7406,11 @@ export interface VectorLearningResourcesSearchApiVectorLearningResourcesSearchRe
    * The type of certificate               * &#x60;micromasters&#x60; - MicroMasters Credential * &#x60;professional&#x60; - Professional Certificate * &#x60;completion&#x60; - Certificate of Completion * &#x60;none&#x60; - No Certificate
    */
   readonly certification_type?: Array<VectorLearningResourcesSearchRetrieveCertificationTypeEnum>
+
+  /**
+   * Fraction of its own score a resource with completeness 0 gives up, scaled linearly by incompleteness. 0 disables the penalty. Defaults to the server\&#39;s configured weight when omitted.
+   */
+  readonly completeness_penalty?: number | null
 
   /**
    * The course feature. Possible options are at api/v1/course_features/
@@ -7457,6 +7464,11 @@ export interface VectorLearningResourcesSearchApiVectorLearningResourcesSearchRe
   readonly professional?: boolean | null
 
   /**
+   * Fraction of its own score a program gains before ranking, so 0.1 multiplies it by 1.1 and a program can only overtake a result it was already within that factor of. 0 disables the boost. Defaults to the server\&#39;s configured amount when omitted.
+   */
+  readonly program_boost?: number | null
+
+  /**
    * If the resource is published. We default to True unless passed in
    */
   readonly published?: boolean
@@ -7487,14 +7499,29 @@ export interface VectorLearningResourcesSearchApiVectorLearningResourcesSearchRe
   readonly resource_type_group?: Array<VectorLearningResourcesSearchRetrieveResourceTypeGroupEnum>
 
   /**
-   * The minimum score a result must have to be returned. Defaults to 0.0 when omitted, but the server clamps the effective cutoff to the minimum allowed for the selected search mode (dense or hybrid).
+   * The minimum absolute score a result must have to be returned. Defaults to 0.0 when omitted, but the server clamps the effective cutoff to the minimum allowed for the selected search mode (dense or hybrid). This is only the backstop for a query that matched nothing; score_cutoff_ratio is what shapes a result set.
    */
   readonly score_cutoff?: number
+
+  /**
+   * Fraction of the query\&#39;s own best score a result must reach to be returned, applied after score_cutoff so the size of a result set follows how fast relevance falls off within the query. 0 disables the relative cutoff. Defaults to the server\&#39;s configured ratio for the selected search mode (dense or hybrid) when omitted.
+   */
+  readonly score_cutoff_ratio?: number | null
 
   /**
    * if the parameter starts with \&#39;-\&#39; the sort is in descending order  * &#x60;next_start_date&#x60; - next_start_date * &#x60;views&#x60; - views * &#x60;created_on&#x60; - created_on * &#x60;-next_start_date&#x60; - -next_start_date * &#x60;-views&#x60; - -views * &#x60;-created_on&#x60; - -created_on
    */
   readonly sortby?: VectorLearningResourcesSearchRetrieveSortbyEnum
+
+  /**
+   * Age in years at which a resource takes the full staleness penalty, with the penalty ramping linearly up to it. 0 disables the penalty. Defaults to the server\&#39;s configured horizon when omitted.
+   */
+  readonly staleness_horizon_years?: number | null
+
+  /**
+   * Fraction of its own score a resource gives up once it is at or beyond the staleness horizon, ramped linearly by age. Resources with an upcoming run are exempt. 0 disables the penalty. Defaults to the server\&#39;s configured weight when omitted.
+   */
+  readonly staleness_penalty?: number | null
 
   /**
    * Filter to learning resources where title is null/not null
@@ -7532,6 +7559,7 @@ export class VectorLearningResourcesSearchApi extends BaseAPI {
         requestParameters.aggregations,
         requestParameters.certification,
         requestParameters.certification_type,
+        requestParameters.completeness_penalty,
         requestParameters.course_feature,
         requestParameters.delivery,
         requestParameters.department,
@@ -7544,6 +7572,7 @@ export class VectorLearningResourcesSearchApi extends BaseAPI {
         requestParameters.offset,
         requestParameters.platform,
         requestParameters.professional,
+        requestParameters.program_boost,
         requestParameters.published,
         requestParameters.q,
         requestParameters.readable_id,
@@ -7551,7 +7580,10 @@ export class VectorLearningResourcesSearchApi extends BaseAPI {
         requestParameters.resource_type,
         requestParameters.resource_type_group,
         requestParameters.score_cutoff,
+        requestParameters.score_cutoff_ratio,
         requestParameters.sortby,
+        requestParameters.staleness_horizon_years,
+        requestParameters.staleness_penalty,
         requestParameters.title__isnull,
         requestParameters.topic,
         requestParameters.url__isnull,
@@ -7721,275 +7753,6 @@ export const VectorLearningResourcesSearchRetrieveSortbyEnum = {
 } as const
 export type VectorLearningResourcesSearchRetrieveSortbyEnum =
   (typeof VectorLearningResourcesSearchRetrieveSortbyEnum)[keyof typeof VectorLearningResourcesSearchRetrieveSortbyEnum]
-
-/**
- * WebsitesApi - axios parameter creator
- */
-export const WebsitesApiAxiosParamCreator = function (
-  configuration?: Configuration,
-) {
-  return {
-    /**
-     * View for user websites
-     * @param {UserWebsiteRequest} UserWebsiteRequest
-     * @param {*} [options] Override http request option.
-     * @throws {RequiredError}
-     */
-    websitesCreate: async (
-      UserWebsiteRequest: UserWebsiteRequest,
-      options: RawAxiosRequestConfig = {},
-    ): Promise<RequestArgs> => {
-      // verify required parameter 'UserWebsiteRequest' is not null or undefined
-      assertParamExists(
-        "websitesCreate",
-        "UserWebsiteRequest",
-        UserWebsiteRequest,
-      )
-      const localVarPath = `/api/v0/websites/`
-      // use dummy base URL string because the URL constructor only accepts absolute URLs.
-      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL)
-      let baseOptions
-      if (configuration) {
-        baseOptions = configuration.baseOptions
-      }
-
-      const localVarRequestOptions = {
-        method: "POST",
-        ...baseOptions,
-        ...options,
-      }
-      const localVarHeaderParameter = {} as any
-      const localVarQueryParameter = {} as any
-
-      localVarHeaderParameter["Content-Type"] = "application/json"
-      localVarHeaderParameter["Accept"] = "application/json"
-
-      setSearchParams(localVarUrlObj, localVarQueryParameter)
-      let headersFromBaseOptions =
-        baseOptions && baseOptions.headers ? baseOptions.headers : {}
-      localVarRequestOptions.headers = {
-        ...localVarHeaderParameter,
-        ...headersFromBaseOptions,
-        ...options.headers,
-      }
-      localVarRequestOptions.data = serializeDataIfNeeded(
-        UserWebsiteRequest,
-        localVarRequestOptions,
-        configuration,
-      )
-
-      return {
-        url: toPathString(localVarUrlObj),
-        options: localVarRequestOptions,
-      }
-    },
-    /**
-     * View for user websites
-     * @param {number} id A unique integer value identifying this user website.
-     * @param {*} [options] Override http request option.
-     * @throws {RequiredError}
-     */
-    websitesDestroy: async (
-      id: number,
-      options: RawAxiosRequestConfig = {},
-    ): Promise<RequestArgs> => {
-      // verify required parameter 'id' is not null or undefined
-      assertParamExists("websitesDestroy", "id", id)
-      const localVarPath = `/api/v0/websites/{id}/`.replace(
-        "{id}",
-        encodeURIComponent(String(id)),
-      )
-      // use dummy base URL string because the URL constructor only accepts absolute URLs.
-      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL)
-      let baseOptions
-      if (configuration) {
-        baseOptions = configuration.baseOptions
-      }
-
-      const localVarRequestOptions = {
-        method: "DELETE",
-        ...baseOptions,
-        ...options,
-      }
-      const localVarHeaderParameter = {} as any
-      const localVarQueryParameter = {} as any
-
-      setSearchParams(localVarUrlObj, localVarQueryParameter)
-      let headersFromBaseOptions =
-        baseOptions && baseOptions.headers ? baseOptions.headers : {}
-      localVarRequestOptions.headers = {
-        ...localVarHeaderParameter,
-        ...headersFromBaseOptions,
-        ...options.headers,
-      }
-
-      return {
-        url: toPathString(localVarUrlObj),
-        options: localVarRequestOptions,
-      }
-    },
-  }
-}
-
-/**
- * WebsitesApi - functional programming interface
- */
-export const WebsitesApiFp = function (configuration?: Configuration) {
-  const localVarAxiosParamCreator = WebsitesApiAxiosParamCreator(configuration)
-  return {
-    /**
-     * View for user websites
-     * @param {UserWebsiteRequest} UserWebsiteRequest
-     * @param {*} [options] Override http request option.
-     * @throws {RequiredError}
-     */
-    async websitesCreate(
-      UserWebsiteRequest: UserWebsiteRequest,
-      options?: RawAxiosRequestConfig,
-    ): Promise<
-      (axios?: AxiosInstance, basePath?: string) => AxiosPromise<UserWebsite>
-    > {
-      const localVarAxiosArgs = await localVarAxiosParamCreator.websitesCreate(
-        UserWebsiteRequest,
-        options,
-      )
-      const localVarOperationServerIndex = configuration?.serverIndex ?? 0
-      const localVarOperationServerBasePath =
-        operationServerMap["WebsitesApi.websitesCreate"]?.[
-          localVarOperationServerIndex
-        ]?.url
-      return (axios, basePath) =>
-        createRequestFunction(
-          localVarAxiosArgs,
-          globalAxios,
-          BASE_PATH,
-          configuration,
-        )(axios, localVarOperationServerBasePath || basePath)
-    },
-    /**
-     * View for user websites
-     * @param {number} id A unique integer value identifying this user website.
-     * @param {*} [options] Override http request option.
-     * @throws {RequiredError}
-     */
-    async websitesDestroy(
-      id: number,
-      options?: RawAxiosRequestConfig,
-    ): Promise<
-      (axios?: AxiosInstance, basePath?: string) => AxiosPromise<void>
-    > {
-      const localVarAxiosArgs = await localVarAxiosParamCreator.websitesDestroy(
-        id,
-        options,
-      )
-      const localVarOperationServerIndex = configuration?.serverIndex ?? 0
-      const localVarOperationServerBasePath =
-        operationServerMap["WebsitesApi.websitesDestroy"]?.[
-          localVarOperationServerIndex
-        ]?.url
-      return (axios, basePath) =>
-        createRequestFunction(
-          localVarAxiosArgs,
-          globalAxios,
-          BASE_PATH,
-          configuration,
-        )(axios, localVarOperationServerBasePath || basePath)
-    },
-  }
-}
-
-/**
- * WebsitesApi - factory interface
- */
-export const WebsitesApiFactory = function (
-  configuration?: Configuration,
-  basePath?: string,
-  axios?: AxiosInstance,
-) {
-  const localVarFp = WebsitesApiFp(configuration)
-  return {
-    /**
-     * View for user websites
-     * @param {WebsitesApiWebsitesCreateRequest} requestParameters Request parameters.
-     * @param {*} [options] Override http request option.
-     * @throws {RequiredError}
-     */
-    websitesCreate(
-      requestParameters: WebsitesApiWebsitesCreateRequest,
-      options?: RawAxiosRequestConfig,
-    ): AxiosPromise<UserWebsite> {
-      return localVarFp
-        .websitesCreate(requestParameters.UserWebsiteRequest, options)
-        .then((request) => request(axios, basePath))
-    },
-    /**
-     * View for user websites
-     * @param {WebsitesApiWebsitesDestroyRequest} requestParameters Request parameters.
-     * @param {*} [options] Override http request option.
-     * @throws {RequiredError}
-     */
-    websitesDestroy(
-      requestParameters: WebsitesApiWebsitesDestroyRequest,
-      options?: RawAxiosRequestConfig,
-    ): AxiosPromise<void> {
-      return localVarFp
-        .websitesDestroy(requestParameters.id, options)
-        .then((request) => request(axios, basePath))
-    },
-  }
-}
-
-/**
- * Request parameters for websitesCreate operation in WebsitesApi.
- */
-export interface WebsitesApiWebsitesCreateRequest {
-  readonly UserWebsiteRequest: UserWebsiteRequest
-}
-
-/**
- * Request parameters for websitesDestroy operation in WebsitesApi.
- */
-export interface WebsitesApiWebsitesDestroyRequest {
-  /**
-   * A unique integer value identifying this user website.
-   */
-  readonly id: number
-}
-
-/**
- * WebsitesApi - object-oriented interface
- */
-export class WebsitesApi extends BaseAPI {
-  /**
-   * View for user websites
-   * @param {WebsitesApiWebsitesCreateRequest} requestParameters Request parameters.
-   * @param {*} [options] Override http request option.
-   * @throws {RequiredError}
-   */
-  public websitesCreate(
-    requestParameters: WebsitesApiWebsitesCreateRequest,
-    options?: RawAxiosRequestConfig,
-  ) {
-    return WebsitesApiFp(this.configuration)
-      .websitesCreate(requestParameters.UserWebsiteRequest, options)
-      .then((request) => request(this.axios, this.basePath))
-  }
-
-  /**
-   * View for user websites
-   * @param {WebsitesApiWebsitesDestroyRequest} requestParameters Request parameters.
-   * @param {*} [options] Override http request option.
-   * @throws {RequiredError}
-   */
-  public websitesDestroy(
-    requestParameters: WebsitesApiWebsitesDestroyRequest,
-    options?: RawAxiosRequestConfig,
-  ) {
-    return WebsitesApiFp(this.configuration)
-      .websitesDestroy(requestParameters.id, options)
-      .then((request) => request(this.axios, this.basePath))
-  }
-}
 
 /**
  * WidgetListsApi - axios parameter creator

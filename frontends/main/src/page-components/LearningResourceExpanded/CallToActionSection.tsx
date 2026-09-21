@@ -272,6 +272,8 @@ const getCallToActionText = (resource: LearningResource): string => {
     [ResourceTypeEnum.Document]: learnMore,
   }
 
+  // Articles are `document` resources distinguished by their category, so the
+  // call to action keys off that rather than the resource type.
   if (resource?.resource_category === "Article") {
     return viewArticle
   }

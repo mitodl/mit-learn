@@ -3,20 +3,14 @@
 Tests for serializers for profiles REST APIS
 """
 
-import factory
 import pytest
 from keycloak.exceptions import KeycloakError
 from rest_framework.exceptions import ValidationError
 
 from learning_resources.factories import LearningResourceTopicFactory
 from learning_resources.serializers import LearningResourceTopicSerializer
-from profiles.factories import UserWebsiteFactory
-from profiles.models import FACEBOOK_DOMAIN, PERSONAL_SITE_TYPE, Profile
-from profiles.serializers import (
-    ProfileSerializer,
-    UserSerializer,
-    UserWebsiteSerializer,
-)
+from profiles.models import Profile
+from profiles.serializers import ProfileSerializer, UserSerializer
 from profiles.utils import (
     IMAGE_MEDIUM,
     IMAGE_SMALL,
@@ -177,6 +171,22 @@ def test_update_profile_skips_keycloak_sync_when_unchanged(mocker, user):
     sync_mock.assert_not_called()
 
 
+def test_update_profile_skips_keycloak_sync_for_null_email_optin(mocker, user):
+    """A null email_optin means no preference expressed, so don't push an opt-out"""
+    sync_mock = mocker.patch("profiles.serializers.sync_email_optin_to_keycloak")
+    profile = user.profile
+    profile.email_optin = True
+    profile.save(update_fields=["email_optin"])
+
+    serializer = ProfileSerializer(
+        instance=profile, data={"email_optin": None}, partial=True
+    )
+    serializer.is_valid(raise_exception=True)
+    serializer.save()
+
+    sync_mock.assert_not_called()
+
+
 def test_update_profile_email_optin_sync_failure_prevents_save(mocker, user):
     """Test that a Keycloak sync failure is translated into a ValidationError and rolls back the profile update"""
     mocker.patch(
@@ -321,90 +331,3 @@ def test_serialize_profile_preference_search_filters(
     assert search_filters.get("delivery", None) == (
         lr_delivery if lr_delivery else None
     )
-
-
-def test_serialize_profile_websites(user):
-    """Tests that the ProfileSerializer includes UserWebsite information when an option is set via the context"""
-    profile = user.profile
-    user_websites = UserWebsiteFactory.create_batch(
-        2,
-        profile=profile,
-        site_type=factory.Iterator([PERSONAL_SITE_TYPE, FACEBOOK_DOMAIN]),
-    )
-    serialized_profile = ProfileSerializer(
-        profile, context={"include_user_websites": True}
-    ).data
-    serialized_sites = UserWebsiteSerializer(user_websites, many=True).data
-    assert len(serialized_profile["user_websites"]) == 2
-    # Check that the two lists of OrderedDicts are equivalent
-    assert sorted(
-        [list(data.items()) for data in serialized_profile["user_websites"]]
-    ) == sorted([list(data.items()) for data in serialized_sites])
-
-
-class TestUserWebsiteSerializer:
-    """UserWebsiteSerializer tests"""
-
-    def test_serialize(self):
-        """
-        Test serializing a user website
-        """
-        user_website = UserWebsiteFactory.build()
-        assert UserWebsiteSerializer(user_website).data == {
-            "id": user_website.id,
-            "url": user_website.url,
-            "site_type": user_website.site_type,
-        }
-
-    def test_deserialize(self, mocker, user):
-        """
-        Test deserializing a user website
-        """
-        url = "https://example.com"
-        site_type = "dummy"
-        patched_get_site_type = mocker.patch(
-            "profiles.serializers.get_site_type_from_url", return_value=site_type
-        )
-        user_website_data = {"username": user.username, "url": url}
-
-        serializer = UserWebsiteSerializer(data=user_website_data)
-        is_valid = serializer.is_valid(raise_exception=True)
-        assert is_valid is True
-        assert serializer.validated_data["url"] == url
-        assert serializer.validated_data["site_type"] == site_type
-        assert serializer.validated_data["profile"] == user.profile
-        patched_get_site_type.assert_called_once_with(url)
-
-    @pytest.mark.parametrize(
-        ("input_url", "exp_result_url"),
-        [("HTtPS://AbC.COM", "https://abc.com"), ("AbC.cOM", "http://abc.com")],
-    )
-    def test_user_website_url(self, mocker, user, input_url, exp_result_url):
-        """
-        Test that deserializing a user website url adds a protocol if necessary and forces lowercase.
-        """
-        site_type = "dummy"
-        mocker.patch(
-            "profiles.serializers.get_site_type_from_url", return_value=site_type
-        )
-        user_website_data = {"username": user.username, "url": input_url}
-
-        serializer = UserWebsiteSerializer(data=user_website_data)
-        is_valid = serializer.is_valid(raise_exception=True)
-        assert is_valid is True
-        assert serializer.validated_data["url"] == exp_result_url
-
-    def test_site_uniqueness(self, user):
-        """
-        Test that a user can only save one of a specific type of site
-        """
-        UserWebsiteFactory.create(
-            profile=user.profile, url="facebook.com/1", site_type=FACEBOOK_DOMAIN
-        )
-        user_website_data = {"username": user.username, "url": "facebook.com/2"}
-        serializer = UserWebsiteSerializer(data=user_website_data)
-        with pytest.raises(  # noqa: PT012
-            ValidationError, match="A website of this type has already been saved\\."
-        ):
-            serializer.is_valid(raise_exception=True)
-            serializer.save()
