@@ -476,11 +476,22 @@ describe("CourseEnrollArea — financial assistance link", () => {
       linkText: "Apply for financial aid",
     },
     {
-      name: "approved, when aid is approved",
+      name: "approved, when aid is approved and discounts the price",
       // An approved learner is one with any product_flexible_price
-      // (useCertificatePricing: !!product_flexible_price).
+      // (useCertificatePricing: !!product_flexible_price). The quote must also
+      // take something off: an approval worth nothing says nothing, which the
+      // 0%-tier test below pins.
       userPricing: () =>
-        makeUserPricing({ product_flexible_price: makeDiscount() }),
+        makeUserPricing({
+          product_flexible_price: makeDiscount(),
+          user_price: "50",
+          discount: mitxFactories.products.userPricingDiscount({
+            discount_type: DiscountTypeEnum.PercentOff,
+            payment_type: PaymentTypeEnum.FinancialAssistance,
+            amount_off: "50",
+            source: null,
+          }),
+        }),
       linkText: "Financial aid approved",
     },
   ])(
@@ -522,15 +533,18 @@ describe("CourseEnrollArea — financial assistance link", () => {
     },
   )
 
-  test("paidOnly course with approved flexible price shows the full price, not a finaid discount", async () => {
-    // Case C2: financial aid is surfaced as text ("applied at checkout"), not by
-    // discounting the displayed price — so the full price shows and the flexible
-    // price's would-be discount ($100 - $25 = $75) is never rendered.
+  test("an approval that discounts nothing says nothing, and never subtracts the tier's stored amount", async () => {
+    // mitxonline's APPROVED means it accepted the declared income, not that the
+    // income earned anything: the top tier is 0% off and the aid form tells that
+    // learner they did not qualify. So neither label is true here — "approved"
+    // claims a success they did not get, "apply" is wrong because they already
+    // did — and the row renders nothing at all.
+    //
+    // The stored amount is also never subtracted: if the course path (wrongly)
+    // applied it, the display would read $75 instead of the full $100. Only the
+    // amount and type are under test; the factory fills the rest.
     setupAuth()
     const product = makeProduct({ price: "100" })
-    // A real $25-off discount: if the course path (wrongly) applied it, the
-    // display would read $75 instead of the full $100. Only the amount and type
-    // are under test; the factory fills the rest.
     const userPricing = makeUserPricing({
       product_flexible_price: makeDiscount({
         discount_type: "dollars-off",
@@ -559,8 +573,18 @@ describe("CourseEnrollArea — financial assistance link", () => {
       <CourseEnrollArea course={course} selectedRun={getSelectedRun(course)} />,
     )
 
-    // Approved aid is surfaced as the text note, applied at checkout
-    await screen.findByRole("link", { name: "Financial aid approved" })
+    // Neither wording is true for this learner, so the row settles to nothing.
+    // "Apply" is what shows before the quote lands, so waiting for it to go is
+    // also what synchronises on the quote: the price alone cannot, since it
+    // reads $100 either side of the request.
+    await waitFor(() => {
+      expect(
+        screen.queryByRole("link", { name: "Apply for financial aid" }),
+      ).toBeNull()
+    })
+    expect(
+      screen.queryByRole("link", { name: "Financial aid approved" }),
+    ).toBeNull()
     // Full price shows; the flexible-price discount is not applied to the display
     expect(screen.getByText("$100")).toBeInTheDocument()
     expect(screen.queryByText("$75")).not.toBeInTheDocument()
@@ -622,8 +646,10 @@ describe("CourseEnrollArea — advertised price range", () => {
       <CourseEnrollArea course={course} selectedRun={getSelectedRun(course)} />,
     )
 
-    await screen.findByRole("link", { name: "Financial aid approved" })
-    expect(screen.getByText("$1,000")).toBeInTheDocument()
+    // The collapse is the quote landing, so wait on the single price itself:
+    // this learner's approval discounts nothing, so there is no aid row to
+    // synchronise on.
+    expect(await screen.findByText("$1,000")).toBeInTheDocument()
     expect(screen.queryByText("$250 – $1,000")).toBeNull()
   })
 })

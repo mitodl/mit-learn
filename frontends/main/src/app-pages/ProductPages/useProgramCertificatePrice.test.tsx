@@ -196,7 +196,7 @@ describe("useProgramCertificatePrice", () => {
       expect(result.current.breakdown).toBeNull()
     })
 
-    test("approved flexible price -> applied: true, displayed price still the full price", async () => {
+    test("approved flexible price that discounts nothing -> no indicator, displayed price still the full price", async () => {
       const product = courses.product({ price: "800" })
       const program = programs.program({
         enrollment_modes: [courses.enrollmentMode({ requires_payment: true })],
@@ -224,10 +224,55 @@ describe("useProgramCertificatePrice", () => {
         wrapper,
       })
 
+      // APPROVED means mitxonline accepted the declared income, not that the
+      // income earned anything: this learner's tier takes nothing off, and the
+      // aid form has already told them they did not qualify. Neither "approved"
+      // nor "apply" is true, so the indicator goes away rather than claiming a
+      // success that did not happen.
+      await waitFor(() => expect(result.current.financialAid).toBeNull())
+      expect(result.current.breakdown).toBeNull()
+      expect(result.current.price).toBe(formatPrice(800, { avoidCents: true }))
+    })
+
+    test("approved flexible price that wins the quote -> the indicator reports it", async () => {
+      const product = courses.product({ price: "800" })
+      const program = programs.program({
+        enrollment_modes: [courses.enrollmentMode({ requires_payment: true })],
+        products: [product],
+        page: {
+          list_price: "800",
+          financial_assistance_form_url: "/financial-aid/foo",
+        },
+      })
+      setMockResponse.get(
+        apiUrls.userMe.get(),
+        makeUser({ is_authenticated: true }),
+      )
+      setMockResponse.get(
+        urls.products.userPricingDetail(product.id),
+        makeUserPricing({
+          price: "800",
+          user_price: "400",
+          product_flexible_price: makeDiscount({
+            discount_type: "percent-off",
+          }),
+          discount: makeUserPricingDiscount({
+            discount_type: "percent-off",
+            payment_type: "financial-assistance",
+            amount_off: "400",
+            source: null,
+          }),
+        }),
+      )
+
+      const { result } = renderHook(() => useProgramCertificatePrice(program), {
+        wrapper,
+      })
+
       await waitFor(() =>
         expect(result.current.financialAid?.applied).toBe(true),
       )
-      expect(result.current.price).toBe(formatPrice(800, { avoidCents: true }))
+      expect(result.current.breakdown?.kind).toBe("aid")
     })
 
     test("free-only program with finaid url -> the quote is never requested", async () => {

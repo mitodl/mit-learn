@@ -33,6 +33,10 @@ type CertificatePricing = {
   showsRange: boolean
   /** Whether this learner has an approved flexible price, at any tier. */
   approvedForAid: boolean
+  /**
+   * The aid indicator to render, or null when there is nothing true to say —
+   * no aid on offer, or an approval that discounted nothing. See the hook.
+   */
   financialAid: FinancialAid | null
   /** Present only when the quote takes something off; see AppliedSavings. */
   breakdown: AppliedSavings | null
@@ -79,17 +83,30 @@ export const useCertificatePricing = (
   // same question as whether aid is the discount that won: a learner can be
   // approved and still lose the slot to a cheaper discount.
   const approvedForAid = !!quote?.product_flexible_price
+  const breakdown = toAppliedSavings(quote)
 
-  const financialAid = hasFinancialAid
-    ? {
-        href: mitxonlineLegacyUrl(financialAidUrl),
-        applied: approvedForAid,
-        // isLoading, not isPending: a disabled query stays pending forever, and
-        // this one is disabled for anonymous visitors, who are never approved
-        // and so have nothing to wait for.
-        pending: userPricing.isLoading,
-      }
-    : null
+  // mitxonline's APPROVED means it accepted the learner's declared income, not
+  // that the income earned them anything: the top tier discounts by 0%, and the
+  // aid form tells that learner "You did not qualify for financial assistance."
+  // Approved with nothing off is therefore the one state this row cannot word.
+  // "Approved" beside an undiscounted price claims a success they did not get,
+  // and "Apply" is wrong because they already did. So it says nothing, and the
+  // rejection stays on the aid form where they read it, rather than being
+  // repeated beside a buy button. Approved-but-outbid keeps the indicator: that
+  // learner has a real tier and a real discount, just not this one.
+  const aidHasNothingToSay = approvedForAid && !breakdown
+
+  const financialAid =
+    hasFinancialAid && !aidHasNothingToSay
+      ? {
+          href: mitxonlineLegacyUrl(financialAidUrl),
+          applied: approvedForAid,
+          // isLoading, not isPending: a disabled query stays pending forever, and
+          // this one is disabled for anonymous visitors, who are never approved
+          // and so have nothing to wait for.
+          pending: userPricing.isLoading,
+        }
+      : null
 
   const showsRange = toPriceRange(resource) !== null && !approvedForAid
 
@@ -107,7 +124,7 @@ export const useCertificatePricing = (
     showsRange,
     approvedForAid,
     financialAid,
-    breakdown: toAppliedSavings(quote),
+    breakdown,
   }
 }
 
