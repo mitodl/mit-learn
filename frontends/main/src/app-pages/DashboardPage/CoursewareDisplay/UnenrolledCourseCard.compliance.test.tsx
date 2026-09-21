@@ -12,7 +12,7 @@ import * as mitxonline from "api/mitxonline-test-utils"
 import { makeRequest } from "api/test-utils"
 import { faker } from "@faker-js/faker/locale/en"
 import { UnenrolledCourseCard } from "./UnenrolledCourseCard"
-import { setupUserPricing } from "./test-utils"
+import { setupCoursePricing } from "./test-utils"
 
 /**
  * Kept out of UnenrolledCourseCard.test.tsx deliberately. This is the only test
@@ -58,7 +58,7 @@ describe("UnenrolledCourseCard — resuming enrollment after the compliance gate
     setMockResponse.get(mitxonline.urls.userMe.get(), userData)
     setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV3(), [])
     // The dialog's certificate upsell quotes every purchasable product.
-    setupUserPricing(course)
+    setupCoursePricing(course)
     setMockResponse.get(mitxonline.urls.countries.list(), [
       { code: "GB", name: "United Kingdom", states: [] },
     ])

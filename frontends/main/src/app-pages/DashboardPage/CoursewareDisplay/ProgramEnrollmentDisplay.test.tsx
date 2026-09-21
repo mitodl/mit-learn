@@ -28,7 +28,7 @@ import {
 import { ProgramEnrollmentDisplay } from "./ProgramEnrollmentDisplay"
 import * as mitxonline from "api/mitxonline-test-utils"
 import { makeRequest } from "api/test-utils"
-import { setupOrderHistory, setupUserPricing } from "./test-utils"
+import { setupOrderHistory, setupCoursePricing } from "./test-utils"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import { faker } from "@faker-js/faker/locale/en"
 import invariant from "tiny-invariant"
@@ -1058,7 +1058,7 @@ describe("ProgramEnrollmentDisplay", () => {
       ],
     }
 
-    setupUserPricing(...courses.results)
+    setupCoursePricing(...courses.results)
     mockedUseFeatureFlagEnabled.mockReturnValue(true)
     setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV3(), []) // No enrollments
     setMockResponse.get(

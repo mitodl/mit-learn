@@ -11,7 +11,7 @@ import {
 } from "@/test-utils"
 import * as mitxonline from "api/mitxonline-test-utils"
 import { makeRequest } from "api/test-utils"
-import { setupUserPricing } from "./test-utils"
+import { setupCoursePricing } from "./test-utils"
 import { faker } from "@faker-js/faker/locale/en"
 import moment from "moment"
 import { cartesianProduct } from "ol-test-utilities"
@@ -32,7 +32,7 @@ const mitxOnlineCourse: typeof mitxonline.factories.courses.course = (
   overrides,
 ) => {
   const course = mitxonline.factories.courses.course(overrides)
-  setupUserPricing(course)
+  setupCoursePricing(course)
   return course
 }
 

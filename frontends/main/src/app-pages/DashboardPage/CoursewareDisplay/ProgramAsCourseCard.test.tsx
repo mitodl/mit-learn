@@ -9,7 +9,7 @@ import {
 } from "@/test-utils"
 import { makeRequest } from "api/test-utils"
 import * as mitxonline from "api/mitxonline-test-utils"
-import { setupOrderHistory, setupUserPricing } from "./test-utils"
+import { setupOrderHistory, setupCoursePricing } from "./test-utils"
 import { ProgramAsCourseCard } from "./ProgramAsCourseCard"
 import { waitFor } from "@testing-library/react"
 import invariant from "tiny-invariant"
@@ -488,7 +488,7 @@ describe("ProgramAsCourseCard", () => {
       courseruns: [run],
       next_run_id: run.id,
     })
-    setupUserPricing(moduleWithRun)
+    setupCoursePricing(moduleWithRun)
 
     renderWithProviders(
       <ProgramAsCourseCard

@@ -31,8 +31,13 @@ const makeContract = factories.contracts.contract
  * CourseEnrollmentDialog on an upgradable run, or the unmocked request fails
  * the test. Quotes default to list price with no discount; re-register one to
  * exercise a discount.
+ *
+ * Takes whole courses, variadically, because that is what these suites hold.
+ * ProductPages/test-utils/userPricing.ts has the per-run and per-program forms
+ * the InfoBox suites want; the names are kept distinct so the two do not read
+ * as the same helper.
  */
-const setupUserPricing = (
+const setupCoursePricing = (
   ...courses: CourseWithCourseRunsSerializerV2[]
 ): void => {
   courses.forEach((course) =>
@@ -641,7 +646,7 @@ const buildProgramScenario = (
 }
 
 export {
-  setupUserPricing,
+  setupCoursePricing,
   dashboardCourse,
   dashboardProgram,
   setupOrderHistory,
