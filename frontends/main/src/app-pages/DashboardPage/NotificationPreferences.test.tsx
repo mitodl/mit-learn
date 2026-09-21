@@ -1,6 +1,12 @@
 import React from "react"
 import NotificationPreferences from "./NotificationPreferences"
-import { renderWithProviders, screen, within, user } from "@/test-utils"
+import {
+  renderWithProviders,
+  screen,
+  within,
+  user,
+  waitFor,
+} from "@/test-utils"
 import { setMockResponse, makeRequest } from "api/test-utils"
 import { urls as mitxonlineUrls } from "api/mitxonline-test-utils"
 
@@ -63,8 +69,8 @@ const setupApi = (
   setMockResponse.put(mitxonlineUrls.notificationPreferences.put(), {})
 }
 
-const rowFor = async (notificationType: string) =>
-  await screen.findByTestId(`notification-row-${notificationType}`)
+const rowFor = async (notificationType: string, app = "discussion") =>
+  await screen.findByTestId(`notification-row-${app}-${notificationType}`)
 
 describe("NotificationPreferences", () => {
   test("renders a group heading using the display label, not the API key", async () => {
@@ -163,7 +169,11 @@ describe("NotificationPreferences", () => {
     renderWithProviders(<NotificationPreferences />)
 
     const emailOn = await rowFor("grouped_notification")
-    expect(within(emailOn).getByRole("combobox")).toBeInTheDocument()
+    expect(
+      within(emailOn).getByRole("combobox", {
+        name: "Email frequency for Activity notifications",
+      }),
+    ).toBeInTheDocument()
     expect(within(emailOn).getByRole("combobox")).not.toHaveAttribute(
       "aria-disabled",
       "true",
@@ -239,6 +249,68 @@ describe("NotificationPreferences", () => {
     expect(within(row).queryByRole("combobox")).not.toBeInTheDocument()
   })
 
+  test("a type repeated across apps gets its own row, not a duplicate id", async () => {
+    setupApi(
+      makePreferences({
+        data: {
+          discussion: {
+            enabled: true,
+            non_editable: {},
+            notification_types: {
+              grouped_notification: {
+                web: true,
+                push: false,
+                email: false,
+                email_cadence: "Daily",
+                info: "",
+              },
+            },
+          },
+          updates: {
+            enabled: true,
+            non_editable: {},
+            notification_types: {
+              grouped_notification: {
+                web: false,
+                push: false,
+                email: false,
+                email_cadence: "Weekly",
+                info: "",
+              },
+            },
+          },
+        },
+      }),
+    )
+    renderWithProviders(<NotificationPreferences />)
+
+    const discussion = await rowFor("grouped_notification", "discussion")
+    const updates = await rowFor("grouped_notification", "updates")
+    expect(within(discussion).getByLabelText("On site")).toBeChecked()
+    expect(within(updates).getByLabelText("On site")).not.toBeChecked()
+  })
+
+  test("a row's controls are inert while its own write is in flight", async () => {
+    setupApi()
+    // Never resolves: the mutation stays pending for the assertion.
+    setMockResponse.put(
+      mitxonlineUrls.notificationPreferences.put(),
+      new Promise(() => {}),
+    )
+    renderWithProviders(<NotificationPreferences />)
+
+    const row = await rowFor("grouped_notification")
+    await user.click(within(row).getByLabelText("On site"))
+
+    await waitFor(() =>
+      expect(within(row).getByLabelText("On site")).toBeDisabled(),
+    )
+    expect(within(row).getByLabelText("Email")).toBeDisabled()
+    // A different row is unaffected.
+    const other = await rowFor("new_discussion_post")
+    expect(within(other).getByLabelText("Email")).toBeEnabled()
+  })
+
   test.each([
     {
       description: "the LMS has the feature switched off",
@@ -252,6 +324,12 @@ describe("NotificationPreferences", () => {
       code: 409,
       notice:
         "Your course account is still being set up. Please check back shortly.",
+    },
+    {
+      description: "the read is throttled",
+      response: { detail: "slow down" },
+      code: 429,
+      notice: "Too many requests at once. Please wait a moment and reload.",
     },
     {
       description: "the read fails",
