@@ -111,6 +111,10 @@ const InfoBody = styled.p(({ theme }) => ({
  * Opening is bound to click, which covers pointer, touch and keyboard alike —
  * hover would leave touch users with nothing to reach it by. Click-away and
  * Escape close it, and focus returns to the icon.
+ *
+ * It opens upwards because the rows below it are the total this popover exists
+ * to explain; the default placement covers them at every width. Popper still
+ * flips it down when there is no room above.
  */
 const InfoPopoverButton: React.FC<{ body: string }> = ({ body }) => {
   const [anchor, setAnchor] = React.useState<HTMLButtonElement | null>(null)
@@ -129,6 +133,7 @@ const InfoPopoverButton: React.FC<{ body: string }> = ({ body }) => {
       <InfoPopover
         aria-label={INFO_LABEL}
         anchorEl={anchor}
+        placement="top-end"
         open={!!anchor}
         onClose={() => setAnchor(null)}
       >
