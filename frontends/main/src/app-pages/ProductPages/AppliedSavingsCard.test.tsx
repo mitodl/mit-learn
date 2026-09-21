@@ -41,6 +41,16 @@ describe("AppliedSavingsCard", () => {
     expect(screen.queryByRole("button", INFO_BUTTON)).toBeNull()
   })
 
+  test("the first row is named for the product, so a course is priced as one", () => {
+    renderWithProviders(
+      <AppliedSavingsCard breakdown={breakdown()} productNoun="course" />,
+    )
+
+    // dt carries no accessible name of its own, so read the term's text.
+    expect(screen.getAllByRole("term")[0]).toHaveTextContent("Course price")
+    expect(screen.queryByText("Program price")).toBeNull()
+  })
+
   test("a purchase credit names the course and explains the rule", async () => {
     const savings = breakdown({
       kind: "credit",
