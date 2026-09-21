@@ -15,7 +15,7 @@ import OrganizationalLearningFlagGate from "./OrganizationalLearningFlagGate"
  * server-rendered content to index in either flag state.
  */
 export const metadata: Metadata = standardizeMetadata({
-  title: "For Organizations",
+  title: "Learning Solutions for Organizations",
   description:
     "MIT learning programs for businesses, government, and higher education institutions. Talk with our team about a solution for your organization.",
   robots: { index: false },
