@@ -216,6 +216,7 @@ CSRF_TRUSTED_ORIGINS = get_list_of_str("CSRF_TRUSTED_ORIGINS", [])
 
 SESSION_COOKIE_DOMAIN = get_string("SESSION_COOKIE_DOMAIN", None)
 SESSION_COOKIE_NAME = get_string("SESSION_COOKIE_NAME", "sessionid")
+SESSION_COOKIE_SECURE = get_bool("SESSION_COOKIE_SECURE", True)  # noqa: FBT003
 
 if COOKIE_TOMBSTONES:
     tombstone_middleware = "main.middleware.cookie_tombstones.CookieTombstoneMiddleware"
