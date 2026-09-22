@@ -116,7 +116,9 @@ def test_search_index_plugin_resource_unpublished(
         assert unpublish_run_mock.call_count == resource.runs.count()
         for run in resource.runs.all():
             # Default "mock" source is non-retained -> removed from both indexes.
-            unpublish_run_mock.assert_any_call(run.id, unpublished_only=False)
+            unpublish_run_mock.assert_any_call(
+                run.id, unpublished_only=False, keep_published=False
+            )
     else:
         unpublish_run_mock.assert_not_called()
     if test_mode:
@@ -215,7 +217,7 @@ def test_search_index_plugin_resource_before_delete(
         )
         for run in resource.runs.all():
             mock_search_index_helpers.mock_remove_contentfiles_immutable_signature.assert_any_call(
-                run.id, unpublished_only=False
+                run.id, unpublished_only=False, keep_published=False
             )
     else:
         mock_search_index_helpers.mock_remove_contentfiles_immutable_signature.assert_not_called()
@@ -294,7 +296,7 @@ def test_resource_run_unpublished_non_retained_source_removes_both(
     SearchIndexPlugin().resource_run_unpublished(run)
 
     mock_search_index_helpers.mock_remove_contentfiles_immutable_signature.assert_called_once_with(
-        run.id, unpublished_only=False
+        run.id, unpublished_only=False, keep_published=False
     )
     mock_search_index_helpers.mock_remove_run_contentfiles_immutable_signature.assert_called_once_with(
         run.id

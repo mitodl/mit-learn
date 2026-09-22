@@ -18,6 +18,7 @@ from learning_resources.factories import (
     LearningResourceDepartmentFactory,
     LearningResourceFactory,
     LearningResourceOfferorFactory,
+    LearningResourceRunFactory,
     LearningResourceTopicFactory,
     ProgramFactory,
 )
@@ -38,6 +39,7 @@ from learning_resources_search.constants import (
 from learning_resources_search.exceptions import ReindexError, RetryError
 from learning_resources_search.factories import PercolateQueryFactory
 from learning_resources_search.models import PercolateQuery
+from learning_resources_search.selectors import opensearch_content_files
 from learning_resources_search.serializers import (
     serialize_content_file_for_update,
     serialize_learning_resource_for_update,
@@ -54,6 +56,7 @@ from learning_resources_search.tasks import (
     deindex_document,
     deindex_run_content_files,
     finish_reindex_job,
+    get_update_resource_files_tasks,
     index_learning_resources,
     index_run_content_files,
     run_reindex_batch,
@@ -788,7 +791,7 @@ def test_run_reindex_batch_dispatch_content_files(mocker, mocked_api):
     """
     settings.OPENSEARCH_DOCUMENT_INDEXING_CHUNK_SIZE = 2
     course = CourseFactory.create(etl_source=ETLSource.ocw.value)
-    run = course.learning_resource.runs.first()
+    run = course.learning_resource.best_run
     run_files = sorted(
         ContentFileFactory.create_batch(3, run=run), key=lambda file: file.id
     )
@@ -1097,9 +1100,7 @@ def test_start_update_index(mocker, mocked_celery, indexes, etl_source, settings
         )
 
         for course in courses:
-            ContentFileFactory.create_batch(
-                3, run=course.learning_resource.runs.first()
-            )
+            ContentFileFactory.create_batch(3, run=course.learning_resource.best_run)
 
         # A resource-level (marketing page) content file attached directly to
         # the learning resource rather than a run.
@@ -1136,7 +1137,7 @@ def test_start_update_index(mocker, mocked_celery, indexes, etl_source, settings
         program_with_files.learning_resource.etl_source = ETLSource.mitxonline.value
         program_with_files.learning_resource.save()
         program_run_file = ContentFileFactory.create(
-            run=program_with_files.learning_resource.runs.first()
+            run=program_with_files.learning_resource.best_run
         )
         program_marketing_file = ContentFileFactory.create(
             learning_resource=program_with_files.learning_resource
@@ -1259,11 +1260,9 @@ def test_start_update_index(mocker, mocked_celery, indexes, etl_source, settings
                 if course.learning_resource.etl_source == etl_source
             )
 
-            content_file_ids = (
-                course.learning_resource.runs.first()
-                .content_files.order_by("id")
-                .values_list("id", flat=True)
-            )
+            content_file_ids = course.learning_resource.best_run.content_files.order_by(
+                "id"
+            ).values_list("id", flat=True)
 
             index_content_mock.si.assert_any_call(
                 [content_file_ids[0], content_file_ids[1]],
@@ -1968,3 +1967,68 @@ def test_cache_is_cleared_after_reindex(mocker):
     )
     finish_reindex_job.delay(job.id)
     assert mocked_clear_views_cache.call_count == 1
+
+
+def _course_with_best_and_older_run(**kwargs):
+    """Create a published mitxonline course with a best run and an older published run, each with files"""
+    course = LearningResourceFactory.create(
+        is_course=True,
+        create_runs=False,
+        etl_source=ETLSource.mitxonline.value,
+        published=True,
+        **kwargs,
+    )
+    best = LearningResourceRunFactory.create(learning_resource=course, published=True)
+    older = LearningResourceRunFactory.create(
+        learning_resource=course,
+        published=True,
+        start_date=best.start_date.replace(year=2000),
+    )
+    ContentFileFactory.create_batch(2, run=best)
+    ContentFileFactory.create_batch(2, run=older)
+    ContentFileFactory.create(learning_resource=course)
+    assert course.best_run == best
+    return course, best, older
+
+
+def test_get_update_resource_files_tasks_indexes_best_run_only(mocker):
+    """update_index indexes the best run's files and the direct files, not older runs'"""
+    course, _, older = _course_with_best_and_older_run()
+    index_content_mock = mocker.patch(
+        "learning_resources_search.tasks.index_content_files", autospec=True
+    )
+    mocker.patch("learning_resources_search.tasks.deindex_content_files", autospec=True)
+
+    get_update_resource_files_tasks([], ETLSource.mitxonline.value)
+
+    indexed = {
+        cf_id for call in index_content_mock.si.call_args_list for cf_id in call.args[0]
+    }
+    assert indexed == set(opensearch_content_files(course).values_list("id", flat=True))
+    assert not indexed & set(older.content_files.values_list("id", flat=True))
+
+
+def test_run_reindex_batch_dispatch_content_files_best_run_only(mocker, mocked_api):
+    """A full rebuild dispatches the best run's files and the direct files, not older runs'"""
+    course, _, older = _course_with_best_and_older_run()
+    mocker.patch.object(run_reindex_batch, "delay")
+    job = TaskJobFactory.create(
+        task_name=REINDEX_TASK_NAME, status=TaskJob.Status.RUNNING
+    )
+    batch = TaskBatchFactory.create(
+        job=job,
+        kind=ReindexBatchKind.dispatch_content_files.value,
+        params={"learning_resource_ids": [course.id], "resource_type": COURSE_TYPE},
+    )
+
+    run_reindex_batch(batch.id)
+
+    dispatched = {
+        cf_id
+        for child in job.batches.filter(kind=ReindexBatchKind.content_files.value)
+        for cf_id in child.params["ids"]
+    }
+    assert dispatched == set(
+        opensearch_content_files(course).values_list("id", flat=True)
+    )
+    assert not dispatched & set(older.content_files.values_list("id", flat=True))

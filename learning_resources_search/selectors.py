@@ -1,0 +1,56 @@
+"""
+Which content files belong in each index.
+
+OpenSearch carries a course's best published run only (any published
+non-variant run of a test_mode course); Qdrant carries every run. Both carry
+files attached directly to the resource. Unpublishing leaves test_mode
+resources' files alone and, for QDRANT_RETAINED_SOURCES, removes them from
+OpenSearch without unpublishing the rows so they stay in Qdrant.
+"""
+
+from django.db.models import Q
+
+from learning_resources.etl.constants import QDRANT_RETAINED_SOURCES
+from learning_resources.models import ContentFile
+
+
+def opensearch_content_files(resource):
+    """Select the published content files of `resource` that belong in OpenSearch."""
+    if not (resource.published or resource.test_mode):
+        return ContentFile.objects.none()
+    if resource.test_mode:
+        runs = Q(
+            run__learning_resource_id=resource.id,
+            run__published=True,
+            run__is_variant=False,
+        )
+    else:
+        best_run = resource.best_run
+        runs = Q(run_id=best_run.id) if best_run else Q(pk__in=[])
+    return ContentFile.objects.filter(published=True).filter(
+        Q(learning_resource_id=resource.id) | runs
+    )
+
+
+def qdrant_content_files(resources):
+    """
+    Select the published content files of every run of, or attached directly
+    to, the published or test_mode resources in the `resources` queryset.
+    """
+    eligible = resources.filter(Q(published=True) | Q(test_mode=True))
+    return ContentFile.objects.filter(published=True).filter(
+        Q(run__learning_resource__in=eligible) | Q(learning_resource__in=eligible)
+    )
+
+
+def run_content_files_deindex_targets(runs):
+    """
+    Yield (run, keep_published) for each run whose content files leave
+    OpenSearch when it or its resource is unpublished. test_mode resources are
+    skipped; retained sources keep the rows published so they stay in Qdrant.
+    """
+    for run in runs:
+        resource = run.learning_resource
+        if resource.test_mode:
+            continue
+        yield run, resource.etl_source in QDRANT_RETAINED_SOURCES

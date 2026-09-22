@@ -11,7 +11,6 @@ from django.contrib.auth import get_user_model
 from opensearchpy.exceptions import ConflictError, NotFoundError
 from opensearchpy.helpers import BulkIndexError, bulk
 
-from learning_resources.etl.constants import QDRANT_RETAINED_SOURCES
 from learning_resources.models import ContentFile, LearningResourceRun
 from learning_resources_search.connection import (
     get_active_aliases,
@@ -37,6 +36,7 @@ from learning_resources_search.constants import (
     IndexestoUpdate,
 )
 from learning_resources_search.exceptions import ReindexError
+from learning_resources_search.selectors import run_content_files_deindex_targets
 from learning_resources_search.serializers import (
     serialize_bulk_learning_resources,
     serialize_bulk_learning_resources_for_deletion,
@@ -394,13 +394,12 @@ def deindex_learning_resources(ids, base_index_name):
     )
 
     if base_index_name in (COURSE_TYPE, PROGRAM_TYPE):
-        for run_id, etl_source in LearningResourceRun.objects.filter(
-            learning_resource_id__in=ids, learning_resource__test_mode=False
-        ).values_list("id", "learning_resource__etl_source"):
+        runs = LearningResourceRun.objects.filter(
+            learning_resource_id__in=ids
+        ).select_related("learning_resource")
+        for run, keep_published in run_content_files_deindex_targets(runs):
             deindex_run_content_files(
-                run_id,
-                unpublished_only=False,
-                keep_published=etl_source in QDRANT_RETAINED_SOURCES,
+                run.id, unpublished_only=False, keep_published=keep_published
             )
 
 

@@ -14,6 +14,10 @@ from learning_resources_search.constants import (
     COURSE_TYPE,
     PERCOLATE_INDEX_TYPE,
 )
+from learning_resources_search.selectors import (
+    opensearch_content_files,
+    run_content_files_deindex_targets,
+)
 from main import settings
 from main.utils import chunks
 from vector_search import tasks as vector_tasks
@@ -222,25 +226,21 @@ class SearchIndexPlugin:
             run(LearningResourceRun): The Learning Resource run that was removed
 
         """
-        resource = run.learning_resource
         if not run.content_files.exists():
             return
 
-        if resource.test_mode:
-            return
-        if resource.etl_source in QDRANT_RETAINED_SOURCES:
+        for _, keep_published in run_content_files_deindex_targets([run]):
             deindex_tasks = [
                 tasks.deindex_run_content_files.si(
-                    run.id, unpublished_only=False, keep_published=True
+                    run.id, unpublished_only=False, keep_published=keep_published
                 ),
             ]
-        else:
-            deindex_tasks = [
-                tasks.deindex_run_content_files.si(run.id, unpublished_only=False),
-            ]
-            if django_settings.QDRANT_ENABLE_INDEXING_PLUGIN_HOOKS:
+            if (
+                not keep_published
+                and django_settings.QDRANT_ENABLE_INDEXING_PLUGIN_HOOKS
+            ):
                 deindex_tasks.append(vector_tasks.remove_run_content_files.si(run.id))
-        try_with_retry_as_task(chain(*deindex_tasks))
+            try_with_retry_as_task(chain(*deindex_tasks))
 
     @hookimpl
     def resource_run_delete(self, run):
@@ -276,11 +276,7 @@ class SearchIndexPlugin:
 
         resource = run.learning_resource
         if resource.published or resource.test_mode:
-            if (
-                run.published
-                and not run.is_variant
-                and (resource.test_mode or resource.best_run == run)
-            ):
+            if opensearch_content_files(resource).filter(run=run).exists():
                 index_tasks.append(tasks.index_run_content_files.si(run.id))
 
             if django_settings.QDRANT_ENABLE_INDEXING_PLUGIN_HOOKS:

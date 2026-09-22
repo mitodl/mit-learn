@@ -50,6 +50,7 @@ from learning_resources_search.constants import (
 )
 from learning_resources_search.exceptions import ReindexError, RetryError
 from learning_resources_search.models import PercolateQuery
+from learning_resources_search.selectors import opensearch_content_files
 from learning_resources_search.serializers import (
     serialize_bulk_percolators,
     serialize_content_file_for_update,
@@ -753,14 +754,14 @@ def _dispatch_content_file_batches(batch):
     """
     resource_type = batch.params["resource_type"]
     children = []
-    for resource_id in batch.params["learning_resource_ids"]:
+    for resource in LearningResource.objects.filter(
+        id__in=batch.params["learning_resource_ids"]
+    ).order_by("id"):
+        resource_id = resource.id
+        indexable = opensearch_content_files(resource)
         for chunk, ids in enumerate(
             chunks(
-                ContentFile.objects.filter(
-                    run__learning_resource_id=resource_id,
-                    published=True,
-                    run__published=True,
-                )
+                indexable.filter(run__isnull=False)
                 .order_by("id")
                 .values_list("id", flat=True),
                 chunk_size=settings.OPENSEARCH_DOCUMENT_INDEXING_CHUNK_SIZE,
@@ -780,10 +781,7 @@ def _dispatch_content_file_batches(batch):
             )
         for chunk, ids in enumerate(
             chunks(
-                ContentFile.objects.filter(
-                    learning_resource_id=resource_id,
-                    published=True,
-                )
+                indexable.filter(run__isnull=True)
                 .order_by("id")
                 .values_list("id", flat=True),
                 chunk_size=settings.OPENSEARCH_DOCUMENT_INDEXING_CHUNK_SIZE,
@@ -1112,42 +1110,22 @@ def get_update_resource_files_tasks(blocklisted_ids, etl_source):
         index_tasks = []
 
         for learning_resource in course_update_query.order_by("id"):
-            index_tasks = (
-                index_tasks
-                + [
-                    index_content_files.si(
-                        ids,
-                        learning_resource.id,
-                        index_types=IndexestoUpdate.current_index.value,
-                    )
-                    for ids in chunks(
-                        ContentFile.objects.filter(
-                            run__learning_resource_id=learning_resource.id,
-                            published=True,
-                            run__published=True,
-                        )
-                        .order_by("id")
-                        .values_list("id", flat=True),
-                        chunk_size=settings.OPENSEARCH_DOCUMENT_INDEXING_CHUNK_SIZE,
-                    )
-                ]
-                + [
-                    index_content_files.si(
-                        ids,
-                        learning_resource.id,
-                        index_types=IndexestoUpdate.current_index.value,
-                    )
-                    for ids in chunks(
-                        ContentFile.objects.filter(
-                            learning_resource_id=learning_resource.id,
-                            published=True,
-                        )
-                        .order_by("id")
-                        .values_list("id", flat=True),
-                        chunk_size=settings.OPENSEARCH_DOCUMENT_INDEXING_CHUNK_SIZE,
-                    )
-                ]
-            )
+            indexable = opensearch_content_files(learning_resource)
+            index_tasks = index_tasks + [
+                index_content_files.si(
+                    ids,
+                    learning_resource.id,
+                    index_types=IndexestoUpdate.current_index.value,
+                )
+                for files in (
+                    indexable.filter(run__isnull=False),
+                    indexable.filter(run__isnull=True),
+                )
+                for ids in chunks(
+                    files.order_by("id").values_list("id", flat=True),
+                    chunk_size=settings.OPENSEARCH_DOCUMENT_INDEXING_CHUNK_SIZE,
+                )
+            ]
 
             index_tasks = (
                 index_tasks
