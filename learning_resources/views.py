@@ -35,6 +35,7 @@ from channels.models import Channel
 from learning_resources import permissions
 from learning_resources.constants import (
     CONTENT_FILE_LARGE_FIELDS,
+    CREDENTIAL_METADATA_RESOURCE_TYPES,
     GROUP_CONTENT_FILE_CONTENT_VIEWERS,
     LearningResourceRelationTypes,
     LearningResourceType,
@@ -1801,24 +1802,27 @@ def problem_set_file_output(problem_set_file):
 
 async def credential_metadata_resource(readable_id: str) -> LearningResource:
     """
-    Resolve the MITx Online course a credential metadata request names.
+    Resolve the MITx Online resource a credential metadata request names.
 
+    Courses and programs both, matching what the sweep generates for -- see
+    CREDENTIAL_METADATA_RESOURCE_TYPES.
 
     Args:
         readable_id (str): the readable id the request asked for
 
     Returns:
-        LearningResource: the matching MITx Online course
+        LearningResource: the matching MITx Online course or program
 
     Raises:
         NotFound: no resource anywhere has that readable_id
-        ValidationError: a resource has it, but is not an MITx Online course
+        ValidationError: a resource has it, but is not one credential
+            metadata is generated for
     """
     resource = await db_sync_to_async(
         lambda: LearningResource.objects.filter(
             readable_id=readable_id,
             platform=PlatformType.mitxonline.name,
-            resource_type=LearningResourceType.course.name,
+            resource_type__in=CREDENTIAL_METADATA_RESOURCE_TYPES,
             etl_source=ETLSource.mitxonline.name,
         ).first()
     )()
@@ -1829,9 +1833,10 @@ async def credential_metadata_resource(readable_id: str) -> LearningResource:
         if not exists:
             msg = f"No learning resource with readable_id {readable_id}"
             raise NotFound(msg)
+        types = " or ".join(CREDENTIAL_METADATA_RESOURCE_TYPES)
         msg = (
             f"Credential metadata is only generated for"
-            f" {ETLSource.mitxonline.name} courses;"
+            f" {ETLSource.mitxonline.name} {types} resources;"
             f" {readable_id} is not one"
         )
         raise ValidationError(msg)

@@ -221,20 +221,21 @@ def test_credential_metadata_unknown_resource(client, django_user_model, mock_ge
 @pytest.mark.parametrize(
     ("resource_type", "etl_source"),
     [
-        (LearningResourceType.program.name, ETLSource.mitxonline.name),
         (LearningResourceType.course.name, ETLSource.xpro.name),
         (LearningResourceType.video.name, ETLSource.youtube.name),
+        # A type with no prompts of its own, on the right source.
+        (LearningResourceType.video.name, ETLSource.mitxonline.name),
     ],
 )
 def test_credential_metadata_rejects_unsupported_resources(
     client, django_user_model, mock_generate, resource_type, etl_source
 ):
     """
-    Only MITx Online courses are generated for.
+    Only the MITx Online types with prompts of their own are generated for.
 
-    The prompts were validated against those; a program page is a different
-    kind of document and another platform's content is differently shaped, so
-    the endpoint says so instead of returning an unreviewed draft.
+    The prompts were validated against those, and another platform's content
+    is differently shaped, so the endpoint says so instead of returning an
+    unreviewed draft.
     """
     unsupported = LearningResourceFactory.create(
         resource_type=resource_type, etl_source=etl_source
@@ -344,6 +345,65 @@ def test_credential_metadata_post_with_nothing_generated_or_stored(
     assert response.json() == {
         "resource_readable_id": resource.readable_id,
         "errors": errors,
+    }
+
+
+@pytest.mark.django_db(transaction=True)
+def test_credential_metadata_generates_for_a_program(
+    client, django_user_model, mock_generate
+):
+    """
+    A program is generated for through the endpoint, like a course.
+
+    Its prompts and its evidence differ -- its courses' criteria stand in for
+    the content files a course retrieves -- but that is settled inside
+    generation, so the endpoint resolves it the same way.
+    """
+    program = mitxonline_course()
+    program.resource_type = LearningResourceType.program.name
+    program.save()
+    client.force_login(django_user_model.objects.create(is_staff=True))
+
+    response = generate(client, program.readable_id)
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "resource_readable_id": program.readable_id,
+        **GENERATED,
+    }
+    assert mock_generate.called
+
+
+@pytest.mark.django_db(transaction=True)
+def test_credential_metadata_program_reports_why_it_was_skipped(
+    client, django_user_model, mocker
+):
+    """
+    A program that could not be generated for says why, per field.
+
+    Both reasons a program is skipped -- no marketing page, or a course
+    without criteria yet -- reach the caller this way, so an author is not
+    left looking at an empty form with no explanation.
+    """
+    program = mitxonline_course()
+    program.resource_type = LearningResourceType.program.name
+    program.save()
+    detail = "Nothing was generated: the program is missing its courses' criteria."
+    mocker.patch(
+        "learning_resources.credentials.generate_credential_metadata",
+        return_value=CredentialMetadata(
+            fields={},
+            errors={field.name: detail for field in CredentialMetadataField},
+        ),
+    )
+    client.force_login(django_user_model.objects.create(is_staff=True))
+
+    response = generate(client, program.readable_id)
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "resource_readable_id": program.readable_id,
+        "errors": {field.name: detail for field in CredentialMetadataField},
     }
 
 
