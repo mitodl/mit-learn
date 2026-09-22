@@ -1437,7 +1437,7 @@ def test_process_course_archive_does_not_set_checksum_on_exception(mocker):
     )
     mocker.patch(
         "learning_resources.etl.edx_shared.transform_content_files",
-        return_value=iter([]),
+        return_value=iter([{"key": "content.txt"}]),
     )
     mocker.patch(
         "learning_resources.etl.edx_shared.load_content_files",
@@ -1959,3 +1959,29 @@ def test_process_course_archive_skips_matching_checksum_with_rows(mocker):
     mock_load.assert_not_called()
     run.refresh_from_db()
     assert run.archive_key == key
+
+
+def test_process_course_archive_clears_stale_checksum_on_empty_archive(mocker):
+    """A stale receipt on a now-empty archive becomes an empty-archive receipt"""
+    key = "mitxonline/courses/course-v1:Test+Course+R1/archive.tar.gz"
+    run = LearningResourceRunFactory.create(
+        published=True, archive_key=key, checksum="abc123"
+    )
+    bucket = mocker.MagicMock()
+    mocker.patch(
+        "learning_resources.etl.edx_shared.calc_checksum", return_value="abc123"
+    )
+    mocker.patch(
+        "learning_resources.etl.edx_shared.transform_content_files",
+        return_value=iter([]),
+    )
+    mock_load = mocker.patch("learning_resources.etl.edx_shared.load_content_files")
+
+    assert process_course_archive(bucket, key, run) is True
+    run.refresh_from_db()
+    assert run.checksum is None
+    assert run.archive_key == key
+
+    assert process_course_archive(bucket, key, run) is False
+    bucket.download_file.assert_called_once()
+    mock_load.assert_not_called()

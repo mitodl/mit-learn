@@ -169,9 +169,12 @@ def process_course_archive(
                 if failed_keys:
                     # every file failed: retry next sync, don't mark as empty
                     return True
-                # empty archive: stop re-downloading it
+                # empty archive: stop re-downloading it. Drop any checksum
+                # from an earlier ingest so a stale receipt doesn't keep
+                # forcing the download.
                 run.archive_key = key
-                run.save(update_fields=["archive_key"])
+                run.checksum = None
+                run.save(update_fields=["archive_key", "checksum"])
                 return True
             content_files_ids = load_content_files(
                 run, chain([first], content_files_data), failed_keys=failed_keys
