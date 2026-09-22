@@ -126,6 +126,10 @@ const StyledHubspotForm = styled(HubspotForm)(({ theme }) => ({
    * top of this form's 24px gap and makes the space around it uneven with
    * every other gap in the form. Cancel it so the form's own gap is the only
    * spacing mechanism.
+   *
+   * Selecting on data-testid is a quick workaround to get the styling right —
+   * ReCaptchaContainer isn't exported from ReCaptcha.tsx, so there's no
+   * component selector to target instead.
    */
   '[data-testid="recaptcha-container"]': {
     margin: 0,

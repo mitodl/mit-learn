@@ -151,8 +151,17 @@ const EMPHASIS_PHRASE = "scalable education"
 
 const HeroSection: React.FC = () => {
   const emphasisStart = copy.title.indexOf(EMPHASIS_PHRASE)
-  const titleStart = copy.title.slice(0, emphasisStart)
-  const titleEnd = copy.title.slice(emphasisStart + EMPHASIS_PHRASE.length)
+  if (emphasisStart === -1) {
+    console.warn(
+      `HeroSection: EMPHASIS_PHRASE "${EMPHASIS_PHRASE}" not found in copy.title; rendering title without emphasis.`,
+    )
+  }
+  const titleStart =
+    emphasisStart === -1 ? copy.title : copy.title.slice(0, emphasisStart)
+  const titleEnd =
+    emphasisStart === -1
+      ? ""
+      : copy.title.slice(emphasisStart + EMPHASIS_PHRASE.length)
 
   return (
     <HeroBand>
@@ -160,7 +169,7 @@ const HeroSection: React.FC = () => {
         <Copy>
           <Title>
             {titleStart}
-            <Emphasis>{EMPHASIS_PHRASE}</Emphasis>
+            {emphasisStart !== -1 && <Emphasis>{EMPHASIS_PHRASE}</Emphasis>}
             {titleEnd}
           </Title>
           <Body>{copy.body}</Body>
