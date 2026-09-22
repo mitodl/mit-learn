@@ -585,6 +585,7 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
       while (all.length < total) {
         const data = await queryClient.fetchQuery(
           analyticsContractQueries.learnerProgress(orgUuid, contractId, {
+            ...listParams,
             limit: CSV_EXPORT_PAGE_SIZE,
             offset,
           }),
@@ -649,7 +650,15 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
     } finally {
       setIsExporting(false)
     }
-  }, [isExporting, canQuery, orgUuid, contractId, contractSlug, queryClient])
+  }, [
+    isExporting,
+    canQuery,
+    orgUuid,
+    contractId,
+    contractSlug,
+    queryClient,
+    listParams,
+  ])
 
   // Announce the result count once a filter or search settles, but not on
   // first load and not mid-flight.

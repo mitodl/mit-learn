@@ -407,6 +407,7 @@ describe("ContractLearnersPage", () => {
       mockFunnel(contractId)
       setMockResponse.get(
         analyticsUrls.contracts.learnerProgress(ORG_UUID, contractId, {
+          sort: "full_name",
           limit: 1000,
           offset: 0,
         }),
@@ -445,6 +446,75 @@ describe("ContractLearnersPage", () => {
       expect(csv).toContain("Certificate")
       expect(csv).not.toMatch(/,certified,/)
       expect(csv).toContain("No consent given")
+    })
+
+    test("carries the active status filter, not just pagination", async () => {
+      const { org, contract, orgSlug } = setup()
+      const contractId = String(contract.id)
+      setMockResponse.get(
+        mitxUrls.organization.managerOrganizationsList(),
+        paginate([org]),
+      )
+      mockCounts(contractId, {
+        total: 2,
+        notStarted: 1,
+        inProgress: 1,
+        completed: 0,
+      })
+      mockList(contractId, [
+        analyticsFactories.learnerProgress({ full_name: "Everyone" }),
+      ])
+      mockFunnel(contractId)
+      mockList(
+        contractId,
+        [analyticsFactories.learnerProgress({ full_name: "Only Not Started" })],
+        { completion_status: ["not_started"] },
+      )
+      // No mock for the unfiltered `{ limit: 1000, offset: 0 }` export
+      // request: if the export ever drops the filter again, this request
+      // goes unmocked and the export fails instead of silently exporting
+      // the whole contract.
+      setMockResponse.get(
+        analyticsUrls.contracts.learnerProgress(ORG_UUID, contractId, {
+          sort: "full_name",
+          completion_status: ["not_started"],
+          limit: 1000,
+          offset: 0,
+        }),
+        analyticsFactories.learnerProgressEnvelope([
+          analyticsFactories.learnerProgress({
+            full_name: "Exported Not Started Learner",
+          }),
+        ]),
+      )
+
+      renderWithProviders(
+        <ContractLearnersPage orgSlug={orgSlug} contractSlug={contract.slug} />,
+      )
+
+      await screen.findByText("Everyone")
+      await user.click(await screen.findByRole("combobox", { name: /status/i }))
+      await user.click(
+        within(await screen.findByRole("listbox")).getByText("Not started"),
+      )
+      await screen.findByText("Only Not Started")
+
+      await user.click(
+        await screen.findByRole("button", { name: "Export learners" }),
+      )
+
+      await waitFor(() => {
+        expect(mockCreateObjectURL).toHaveBeenCalledWith(expect.any(Blob))
+      })
+      const blob = mockCreateObjectURL.mock.calls[0][0] as Blob
+      const csv = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onload = () => resolve(reader.result as string)
+        reader.onerror = reject
+        reader.readAsText(blob)
+      })
+
+      expect(csv).toContain("Exported Not Started Learner")
     })
   })
 
