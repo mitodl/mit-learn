@@ -22,6 +22,7 @@ from django.utils import timezone
 
 from learning_resources import constants
 from learning_resources.constants import (
+    WEBSITE_CONTENT_READABLE_ID_PREFIX,
     Availability,
     CertificationType,
     Format,
@@ -755,6 +756,25 @@ class LearningResource(TimestampedModel):
 
     class Meta:
         unique_together = (("platform", "readable_id", "resource_type"),)
+        constraints = [
+            # The unique_together above spans `platform`, which resources
+            # mirrored from website content leave NULL -- and Postgres treats
+            # NULLs in a unique index as distinct, so it never rejects a
+            # duplicate of one. Two concurrent syncs of the same item would
+            # both insert, and every later sync would then fail with
+            # MultipleObjectsReturned.
+            #
+            # This partial index rejects the loser instead, which is what makes
+            # the sync's `update_or_create` safe: it catches the IntegrityError
+            # and re-reads the winner's row.
+            models.UniqueConstraint(
+                fields=["readable_id", "resource_type"],
+                condition=models.Q(
+                    readable_id__startswith=WEBSITE_CONTENT_READABLE_ID_PREFIX
+                ),
+                name="learningresource_website_content_uniq",
+            ),
+        ]
 
 
 class LearningResourceDetailQuerySet(TimestampedModelQuerySet):
@@ -1770,3 +1790,38 @@ class CredentialMetadataGenerationLog(TimestampedModel):
             f"{self.field} generation for"
             f" {self.learning_resource.readable_id} at {self.created_on}"
         )
+
+
+class CredentialMetadata(TimestampedModel):
+    """
+    The credential metadata currently in force for a learning resource.
+
+    Pre-populated by a daily sweep so that a credential can be issued without
+    waiting on (or paying for) a generation, and replaced whenever the API is
+    asked to regenerate. Distinct from CredentialMetadataGenerationLog, which
+    is the append-only history of every attempt: this is the one current value.
+
+    """
+
+    learning_resource = models.OneToOneField(
+        LearningResource,
+        on_delete=models.CASCADE,
+        related_name="credential_metadata",
+    )
+    description = models.TextField(
+        blank=True,
+        default="",
+        help_text="The Open Badges 3.0 description, 1-2 sentences.",
+    )
+    # TextField, not the CharField(max_length=N) that every other ArrayField in
+    # this module wraps: nothing on the generation path truncates a bullet, and
+    # a varchar(N)[] would raise DataError mid-sweep on an unusually long one.
+    criteria = ArrayField(
+        models.TextField(),
+        default=list,
+        blank=True,
+        help_text="Open Badges 3.0 criteria, one skill per bullet.",
+    )
+
+    def __str__(self):
+        return f"Credential metadata for {self.learning_resource.readable_id}"

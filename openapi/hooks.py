@@ -70,3 +70,11 @@ def postprocess_x_enum_descriptions(result, generator, request, public):  # noqa
             ]
 
     return result
+
+
+def preprocess_exclude_canvas_slash_routes(endpoints, **kwargs):  # noqa: ARG001
+    """
+    Drop the Canvas slash-tolerant tutor routes; they render to the same path
+    template as the router's and collide. Delete with them. See mitodl/hq#13384.
+    """
+    return [endpoint for endpoint in endpoints if "+canvas" not in endpoint[1]]

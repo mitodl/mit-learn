@@ -189,6 +189,8 @@ const AiChatSyllabusSlideDown = ({
 
   if (!resource) return null
 
+  const chatProps = getSyllabusChatProps(resource)
+
   return (
     <SlideDown
       open={open}
@@ -197,8 +199,8 @@ const AiChatSyllabusSlideDown = ({
       ref={ref}
     >
       <StyledAiChat
-        key={resource.readable_id}
-        {...getSyllabusChatProps(resource)}
+        key={chatProps.chatId}
+        {...chatProps}
         topPosition={contentTopPosition}
         scrollElement={scrollElement}
       />

@@ -15,6 +15,7 @@ from langchain_litellm import ChatLiteLLM
 from typing_extensions import TypedDict
 
 from learning_resources.constants import CredentialMetadataField
+from learning_resources.credentials_store import save_credential_metadata
 from learning_resources.etl.constants import MARKETING_PAGE_FILE_TYPE
 from learning_resources.models import (
     ContentFile,
@@ -277,10 +278,6 @@ async def _retrieve_chunks(
 ) -> list[tuple[str, str]]:
     """
     Retrieve the resource's most relevant content-file chunks.
-
-    Retrieval is best-effort: metadata plus the marketing page is a viable
-    degraded context, so a Qdrant outage returns a thinner draft rather than an
-    error.
     """
     try:
         chunks = await async_content_file_chunks_for_resource(
@@ -290,8 +287,7 @@ async def _retrieve_chunks(
         )
     except Exception:
         logger.exception(
-            "Content file retrieval failed for %s; generating from metadata"
-            " and marketing page alone",
+            "Content file retrieval failed for %s; skipping generation",
             resource.readable_id,
         )
         return []
@@ -326,6 +322,38 @@ async def build_credential_context(
         marketing_page=_prepare_marketing_page(marketing_page),
         chunks=chunks,
     )
+
+
+def _missing_context_sources(
+    context: CredentialContext, *, retrieved: bool
+) -> list[str]:
+    """
+    Return the sources the configurations ask for that the context lacks.
+
+    Generating without them is worse than not generating: the output reads
+    like any other result, but a description written from the resource's own
+    metadata alone, or criteria with none of the course's content behind them,
+    is not something to issue a credential from. Returning empty-handed
+    leaves the resource with no stored metadata, so the daily sweep picks it
+    up again once its marketing page is scraped or its content indexed.
+
+    Args:
+        context (CredentialContext): the assembled sources
+        retrieved (bool): whether content retrieval was attempted. A
+            configuration with a blank retrieval_query is asking for
+            generation from the marketing page alone, so empty chunks are not
+            a missing source -- nothing was asked for.
+
+    Returns:
+        list of str: the missing sources, named for a log line and an error
+            message. Empty means the context is complete.
+    """
+    missing = []
+    if not context.marketing_page:
+        missing.append("marketing page")
+    if retrieved and not context.chunks:
+        missing.append("course content")
+    return missing
 
 
 def _get_llm(config: CredentialMetadataConfiguration) -> ChatLiteLLM:
@@ -416,11 +444,28 @@ async def _generate_field(
     return FieldOutcome(response=response, error=error)
 
 
+def _active_configs(fields: list[str] | None) -> list[CredentialMetadataConfiguration]:
+    """
+    Return the active configurations to generate, narrowed to `fields`.
+
+    Args:
+        fields (list of str | None): the fields to generate, or None for
+            every active configuration
+
+    Returns:
+        list of CredentialMetadataConfiguration: the configurations to run
+    """
+    configs = CredentialMetadataConfiguration.objects.filter(is_active=True)
+    if fields is not None:
+        configs = configs.filter(field__in=fields)
+    return list(configs)
+
+
 async def generate_credential_metadata(
-    resource: LearningResource, user=None
+    resource: LearningResource, user=None, fields: list[str] | None = None
 ) -> CredentialMetadata:
     """
-    Generate every configured credential metadata field for a resource.
+    Generate configured credential metadata fields for a resource.
 
     The fields share one context and are independent, so they are generated
     concurrently: run in sequence they take about as long as the sum of their
@@ -429,33 +474,45 @@ async def generate_credential_metadata(
     Args:
         resource (LearningResource): the resource to generate metadata for
         user (User): the user the generation is logged against
+        fields (list of str): the fields to generate, defaulting to every
+            active configuration. A caller filling in what a partial row is
+            missing passes that subset, so the fields already stored are
+            neither billed for a second time nor overwritten
 
     Returns:
         CredentialMetadata: the generated fields -- description (str) and
-            criteria (list[str]) -- and one error per configured field that is
+            criteria (list[str]) -- and one error per requested field that is
             missing from them. A field with no active configuration appears in
             neither: nothing was asked of it, so there is nothing to explain.
     """
-    configs = await db_sync_to_async(
-        lambda: list(CredentialMetadataConfiguration.objects.filter(is_active=True))
-    )()
+    configs = await db_sync_to_async(_active_configs)(fields)
     if not configs:
         logger.warning(
-            "No active CredentialMetadataConfiguration; nothing to generate for %s",
+            "No active CredentialMetadataConfiguration%s; nothing to generate for %s",
+            f" for {', '.join(fields)}" if fields is not None else "",
             resource.readable_id,
         )
         return CredentialMetadata(fields={}, errors={})
 
-    context = await build_credential_context(resource, retrieval_query(configs))
+    query = retrieval_query(configs)
+    context = await build_credential_context(resource, query)
+    missing = _missing_context_sources(context, retrieved=bool(query))
+    if missing:
+        sources = " and ".join(missing)
+        logger.warning(
+            "Not generating credential metadata for %s: missing its %s",
+            resource.readable_id,
+            sources,
+        )
+        detail = f"Nothing was generated: the course is missing its {sources}."
+        return CredentialMetadata(
+            fields={}, errors={config.field: detail for config in configs}
+        )
+
     outcomes = await asyncio.gather(
         *[_generate_field(resource, config, context, user=user) for config in configs]
     )
 
-    # Each response schema keys its value by the field name, so no field needs
-    # a case of its own here. An empty value is left out entirely, like a
-    # failure: a caller prepopulating a form must not overwrite a good value
-    # with a blank one -- and every field left out says why, so that a caller
-    # can tell a failed generation from one that produced nothing.
     fields, errors = {}, {}
     for config, outcome in zip(configs, outcomes):
         value = (outcome.response or {}).get(config.field)
@@ -468,3 +525,25 @@ async def generate_credential_metadata(
         else:
             errors[config.field] = f"The model returned no {config.field}."
     return CredentialMetadata(fields=fields, errors=errors)
+
+
+async def generate_and_save_credential_metadata(
+    resource: LearningResource, user=None, fields: list[str] | None = None
+) -> CredentialMetadata:
+    """
+    Generate a resource's credential metadata and store what was generated.
+
+    Args:
+        resource (LearningResource): the resource to generate metadata for
+        user (User): the user the generation is logged against
+        fields (list of str): the fields to generate, defaulting to every
+            active configuration -- see `generate_credential_metadata`
+
+    Returns:
+        CredentialMetadata: exactly what `generate_credential_metadata`
+            returned. Nothing is stored when it generated nothing, so a failed
+            run leaves the previous values in force.
+    """
+    generated = await generate_credential_metadata(resource, user=user, fields=fields)
+    await db_sync_to_async(save_credential_metadata)(resource, generated.fields)
+    return generated

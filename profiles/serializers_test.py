@@ -10,7 +10,11 @@ from rest_framework.exceptions import ValidationError
 from learning_resources.factories import LearningResourceTopicFactory
 from learning_resources.serializers import LearningResourceTopicSerializer
 from profiles.models import Profile
-from profiles.serializers import ProfileSerializer, UserSerializer
+from profiles.serializers import (
+    ProfileSerializer,
+    ProgramLetterTemplateFieldSerializer,
+    UserSerializer,
+)
 from profiles.utils import (
     IMAGE_MEDIUM,
     IMAGE_SMALL,
@@ -331,3 +335,76 @@ def test_serialize_profile_preference_search_filters(
     assert search_filters.get("delivery", None) == (
         lr_delivery if lr_delivery else None
     )
+
+
+LETTER_HTML_FIELDS = [
+    "program_letter_header_text",
+    "program_letter_text",
+    "program_letter_footer_text",
+]
+
+
+def serialize_letter_html(field, html):
+    """Serialize one letter template field and return its rendered value"""
+    template_data = {
+        "id": 1,
+        "meta": {},
+        "title": "Supply Chain Management",
+        "program_id": 1,
+        "program_letter_footer": {},
+        "program_letter_logo": {},
+        "program_letter_signatories": [],
+        "program_letter_header_text": "",
+        "program_letter_text": "",
+        "program_letter_footer_text": "",
+        field: html,
+    }
+    return ProgramLetterTemplateFieldSerializer(template_data).data[field]
+
+
+@pytest.mark.parametrize("field", LETTER_HTML_FIELDS)
+@pytest.mark.parametrize(
+    ("html", "unwanted"),
+    [
+        ("<p>hi</p><script>alert(1)</script>", "script"),
+        ('<img src="x" onerror="alert(1)">', "onerror"),
+        ('<p onclick="steal()">text</p>', "onclick"),
+        ('<a href="javascript:alert(1)">click</a>', "javascript:"),
+        ('<iframe src="https://evil.example"></iframe>', "iframe"),
+        ('<svg onload="alert(1)"></svg>', "onload"),
+    ],
+)
+def test_program_letter_template_text_is_sanitized(field, html, unwanted):
+    """
+    Letter text is rendered with dangerouslySetInnerHTML, so it is sanitized
+    here rather than relying on MicroMasters' Wagtail config staying as it is.
+    """
+    assert unwanted not in serialize_letter_html(field, html)
+
+
+@pytest.mark.parametrize("field", LETTER_HTML_FIELDS)
+@pytest.mark.parametrize(
+    "html",
+    [
+        # Markup live MicroMasters letters actually use.
+        "<p>Congratulations on completing the program.</p>",
+        "<p><b>MASTER OF ENGINEERING</b><br>MIT</p>",
+        "<ul><li>14.100x</li><li>14.73x</li></ul>",
+        # Headings are styled by the letter page's header/footer blocks.
+        "<h3>Congratulations</h3>",
+    ],
+)
+def test_program_letter_template_text_keeps_authored_markup(field, html):
+    """Sanitizing must not quietly drop the markup editors legitimately use"""
+    assert serialize_letter_html(field, html) == html
+
+
+@pytest.mark.parametrize("field", LETTER_HTML_FIELDS)
+def test_program_letter_template_text_keeps_links(field):
+    """
+    Live letters link out to MIT pages, so href survives -- nh3 adds rel
+    hardening rather than dropping the anchor.
+    """
+    result = serialize_letter_html(field, '<a href="https://idss.mit.edu">IDSS</a>')
+    assert 'href="https://idss.mit.edu"' in result
+    assert ">IDSS</a>" in result

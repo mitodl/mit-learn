@@ -170,6 +170,18 @@ class TestSettings(TestCase):
             settings_vars = self.reload_settings()
             assert "SECURE_PROXY_SSL_HEADER" not in settings_vars
 
+    def test_session_cookie_secure(self):
+        """SESSION_COOKIE_SECURE is on by default and can be turned off for local dev"""
+        with mock.patch.dict("os.environ", REQUIRED_SETTINGS, clear=True):
+            assert self.reload_settings()["SESSION_COOKIE_SECURE"] is True
+
+        with mock.patch.dict(
+            "os.environ",
+            {**REQUIRED_SETTINGS, "SESSION_COOKIE_SECURE": "False"},
+            clear=True,
+        ):
+            assert self.reload_settings()["SESSION_COOKIE_SECURE"] is False
+
     def test_x_forwarded_proto_makes_request_secure(self):
         """Only X-Forwarded-Proto: https marks a request as secure"""
         factory = RequestFactory()

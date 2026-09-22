@@ -18,6 +18,24 @@ def _mock_cdn_purge(mocker):
     mocker.patch("website_content.tasks.fastly_purge_website_content_list.delay")
 
 
+@pytest.fixture(autouse=True)
+def _mock_learning_resource_sync(mocker):
+    """
+    Auto-mock the learning resource sync for all tests in this module.
+
+    Publishing fires the website_content plugins, and the search indexing one
+    end of that reaches OpenSearch -- which the autouse `opensearch` fixture
+    only mocks for reads. None of the tests here are about search; the sync
+    itself is covered in `learning_resources`.
+    """
+    mocker.patch(
+        "learning_resources.tasks.sync_website_content_learning_resource.delay"
+    )
+    mocker.patch(
+        "learning_resources.tasks.unpublish_website_content_learning_resource_task.delay"
+    )
+
+
 def test_website_content_creation(staff_client, user):
     """Test website content creation."""
     url = reverse("website_content:v1:website_content-list")

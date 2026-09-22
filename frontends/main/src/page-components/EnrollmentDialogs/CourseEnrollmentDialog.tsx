@@ -20,10 +20,9 @@ import { Alert, Button, ButtonProps } from "@mitodl/smoot-design"
 import {
   canPurchaseRun,
   enrollmentAlertSuccessUrl,
+  formatPrice,
   getEnrollmentType,
   mitxonlineLegacyUrl,
-  PriceWithDiscount,
-  priceWithDiscount,
 } from "@/common/mitxonline"
 import { useCreateEnrollment } from "api/mitxonline-hooks/enrollment"
 import { SILENCE_ERROR_TOAST } from "api/mutation-meta"
@@ -186,11 +185,26 @@ const StrickenText = styled.span(({ theme }) => ({
   color: theme.custom.colors.silverGrayDark,
   ...theme.typography.body2,
 }))
+type DisplayPrice = {
+  /** What checkout charges this learner. */
+  finalPrice: string
+  /** The product's undiscounted price, struck through when the two differ. */
+  originalPrice: string
+  /**
+   * Whether the learner is approved for financial assistance -- which is not the
+   * same as aid having produced `finalPrice`. A learner approved at a tier that
+   * discounts nothing, or one whose aid a cheaper discount beat, is approved and
+   * paying a price aid did not set, so the copy this drives says "approved"
+   * rather than "applied".
+   */
+  approvedFinancialAid: boolean
+}
+
 const NumericPriceDisplay: React.FC<{
-  price: PriceWithDiscount | null
+  price: DisplayPrice | null
 }> = ({ price }) => {
   if (!price) return null
-  if (!price.isDiscounted) return price.finalPrice
+  if (price.finalPrice === price.originalPrice) return price.finalPrice
   return (
     <span>
       {price.finalPrice} <StrickenText>{price.originalPrice}</StrickenText>
@@ -211,18 +225,34 @@ const CertificateUpsell: React.FC<{
   // Renders its own inline error below (replaceBasketItem.isError), so suppress
   // the global error toast.
   const replaceBasketItem = useReplaceBasketItem({ meta: SILENCE_ERROR_TOAST })
-  const userFlexiblePrice = useQuery({
-    ...productQueries.userFlexiblePriceDetail({
+  // The quote endpoint rejects anonymous requests, which this dialog cannot
+  // produce: it is only ever opened from the dashboard, behind
+  // RestrictedRoute requires={Permission.Authenticated}.
+  //
+  // Not gated on a financial assistance form either: a learner can hold an
+  // automatic or user-tied discount on a course that offers no aid, and the
+  // quote prices those too.
+  const userPricing = useQuery({
+    ...productQueries.userPricingDetail({
       productId: product?.id ?? 0,
     }),
-    enabled: enabled && !!financialAidUrl,
+    enabled,
+    // The browser query client throws 400/401/403 into the route's error
+    // boundary, which would replace the page behind this dialog over a stale
+    // mitxonline session. A quote we cannot get falls back to the list price.
+    throwOnError: false,
   })
-  const price = enabled
-    ? priceWithDiscount({
-        product,
-        flexiblePrice: userFlexiblePrice.data,
-        avoidCents: true,
-      })
+  const price: DisplayPrice | null = enabled
+    ? {
+        // The quoted price, rather than a discount reapplied here: checkout
+        // picks one discount from everything the learner holds, and only it
+        // knows which one wins.
+        finalPrice: formatPrice(userPricing.data?.user_price ?? product.price, {
+          avoidCents: true,
+        }),
+        originalPrice: formatPrice(product.price, { avoidCents: true }),
+        approvedFinancialAid: !!userPricing.data?.product_flexible_price?.id,
+      }
     : null
   const hasFinancialAssistance = !!financialAidUrl
   const deadlineUI = courseRun?.upgrade_deadline ? (
@@ -259,7 +289,7 @@ const CertificateUpsell: React.FC<{
                 rel="noopener noreferrer"
               >
                 {price.approvedFinancialAid
-                  ? "Financial assistance applied"
+                  ? "Financial assistance approved"
                   : "Financial assistance available"}
               </UnderlinedLink>
             ) : null}

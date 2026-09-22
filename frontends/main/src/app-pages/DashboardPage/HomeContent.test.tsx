@@ -90,7 +90,6 @@ describe("HomeContent", () => {
     setMockResponse.get(urls.userMe.get(), user)
     setMockResponse.get(mitxonline.urls.userMe.get(), mitxOnlineUser)
     setMockResponse.get(urls.profileMe.get(), user.profile)
-    setMockResponse.get(mitxonline.urls.contracts.contractsList(), [])
     setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV3(), [])
 
     // Set Top Picks Response
