@@ -620,6 +620,53 @@ describe("ContractLearnersPage", () => {
     await screen.findByText("Only Not Started")
   })
 
+  test("the Completed filter matches the Completed tile, with no separate Certificate option", async () => {
+    const { org, contract, orgSlug } = setup()
+    const contractId = String(contract.id)
+    setMockResponse.get(
+      mitxUrls.organization.managerOrganizationsList(),
+      paginate([org]),
+    )
+    mockCounts(contractId, {
+      total: 3,
+      notStarted: 1,
+      inProgress: 0,
+      completed: 2,
+    })
+    mockList(contractId, [
+      analyticsFactories.learnerProgress({ full_name: "Everyone" }),
+    ])
+    mockFunnel(contractId)
+    mockList(
+      contractId,
+      [
+        analyticsFactories.learnerProgress({
+          full_name: "Passed",
+          completion_status: "passed",
+        }),
+        analyticsFactories.learnerProgress({
+          full_name: "Certified",
+          completion_status: "certified",
+        }),
+      ],
+      { completion_status: ["passed", "certified"] },
+    )
+
+    renderWithProviders(
+      <ContractLearnersPage orgSlug={orgSlug} contractSlug={contract.slug} />,
+    )
+
+    await screen.findByText("Everyone")
+
+    await user.click(await screen.findByRole("combobox", { name: /status/i }))
+    const listbox = await screen.findByRole("listbox")
+    expect(within(listbox).queryByText("Certificate")).not.toBeInTheDocument()
+    await user.click(within(listbox).getByText("Completed"))
+
+    await screen.findByText("Passed")
+    await screen.findByText("Certified")
+  })
+
   test("a status filter with no matches reads as a filter, not an empty contract", async () => {
     const { org, contract, orgSlug } = setup()
     const contractId = String(contract.id)
