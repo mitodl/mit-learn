@@ -1118,18 +1118,24 @@ def unpublish_website_content_learning_resource_task(content_id: int) -> None:
     unpublish_website_content_learning_resource(content_id)
 
 
-def credential_metadata_resources(*, overwrite: bool = False):
+CREDENTIAL_METADATA_RESOURCE_TYPES = (
+    LearningResourceType.course.name,
+    LearningResourceType.program.name,
+)
+
+
+def credential_metadata_resources(resource_type: str, *, overwrite: bool = False):
     """
-    Resources the credential metadata sweep should generate for.
+    Resources of one type the credential metadata sweep should generate for.
 
     Args:
+        resource_type (str): the LearningResourceType to select
         overwrite (bool): include resources that already have metadata
 
     Returns:
         QuerySet: the matching resources, empty when no configuration is
-            active
+            active for this type
     """
-    resource_type = LearningResourceType.course.name
     active_fields = active_credential_metadata_fields(resource_type)
     if not active_fields:
         log.warning(
@@ -1162,13 +1168,20 @@ def credential_metadata_resource_ids(*, overwrite: bool = False):
         overwrite (bool): include resources that already have metadata
 
     Returns:
-        QuerySet: the matching resource ids, newest first
+        list of int: the matching resource ids across every swept type,
+            newest first. A list rather than a QuerySet: the types are
+            selected by separate queries, and ids are all the caller needs.
     """
-    return (
-        credential_metadata_resources(overwrite=overwrite)
-        .order_by("-id")
-        .values_list("id", flat=True)
-    )
+    ids = [
+        resource_id
+        for resource_type in CREDENTIAL_METADATA_RESOURCE_TYPES
+        for resource_id in credential_metadata_resources(
+            resource_type, overwrite=overwrite
+        ).values_list("id", flat=True)
+    ]
+    # Sorted across the types rather than per query, so the newest resources
+    # are generated for first whichever type they are.
+    return sorted(ids, reverse=True)
 
 
 @app.task(acks_late=True, reject_on_worker_lost=True)
@@ -1192,10 +1205,20 @@ def generate_credential_metadata_for_resource(
 
     from learning_resources.credentials import generate_and_save_credential_metadata
 
+    # The type decides both which queryset re-checks eligibility and which
+    # prompts generation uses, and the task is handed an id, so read it back
+    # before anything else.
+    resource_type = (
+        LearningResource.objects.filter(id=resource_id)
+        .values_list("resource_type", flat=True)
+        .first()
+    )
     resource = (
-        credential_metadata_resources(overwrite=overwrite)
+        credential_metadata_resources(resource_type, overwrite=overwrite)
         .filter(id=resource_id)
         .first()
+        if resource_type in CREDENTIAL_METADATA_RESOURCE_TYPES
+        else None
     )
     if not resource:
         log.info(
@@ -1227,7 +1250,12 @@ def generate_credential_metadata_for_resource(
 @app.task
 def generate_all_credential_metadata(*, overwrite=False) -> int:
     """
-    Queue credential metadata generation for MITx Online courses.
+    Queue credential metadata generation for MITx Online resources.
+
+    Covers every type in CREDENTIAL_METADATA_RESOURCE_TYPES -- courses and
+    programs today. One task per resource whatever its type: the leaf reads
+    the type back off the resource and generates from that type's own
+    prompts, so nothing here has to fan out per type.
 
     Args:
         overwrite (bool): regenerate resources that already have metadata
