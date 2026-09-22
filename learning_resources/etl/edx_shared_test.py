@@ -1809,6 +1809,47 @@ def test_unpublish_excluded_content_files(staff_only_run, mock_deindex_tasks):
     mock_deindex_tasks.qdrant.assert_called_once_with(run.id)
 
 
+def test_unpublish_excluded_content_files_prefers_published_run(
+    mock_course_archive_bucket, mock_deindex_tasks, mocker, tmp_path
+):
+    """With a legacy unpublished twin matching the same archive, only the published run is touched"""
+    mocker.patch(
+        "learning_resources.etl.edx_shared.get_bucket_by_name",
+        return_value=mock_course_archive_bucket.bucket,
+    )
+    source = ETLSource.oll.name
+    course = LearningResourceFactory.create(
+        etl_source=source, is_course=True, published=True, create_runs=False
+    )
+    twin = LearningResourceRunFactory.create(
+        learning_resource=course,
+        run_id="course-v1:MITx+8.01.1x+3T2018",
+        published=False,
+    )
+    current = LearningResourceRunFactory.create(
+        learning_resource=course, run_id="MITx+8.01.1x+3T2018", published=True
+    )
+    key = f"{get_s3_prefix_for_source(source)}/8_01_1x_3T2018_OLL.tar.gz"
+    mock_course_archive_bucket.bucket.put_object(
+        Key=key, Body=_staff_only_archive(tmp_path).read_bytes()
+    )
+    for run in (twin, current):
+        for name in ("html/h_ok.xml", "html/h_staff.xml"):
+            ContentFileFactory.create(
+                run=run, key=get_edx_module_id(f"course/{name}", run), published=True
+            )
+
+    rows = unpublish_excluded_content_files(source, [course.id], [key])
+
+    assert [row["unpublished"] for row in rows] == [1]
+    assert ContentFile.objects.filter(run=current, published=False).count() == 1
+    assert ContentFile.objects.filter(run=twin, published=True).count() == 2
+    mock_deindex_tasks.opensearch.assert_called_once_with(
+        current.id, unpublished_only=True
+    )
+    mock_deindex_tasks.qdrant.assert_called_once_with(current.id)
+
+
 def test_unpublish_excluded_content_files_nothing_hidden(
     staff_only_run, mock_deindex_tasks
 ):
