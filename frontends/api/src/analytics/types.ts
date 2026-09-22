@@ -242,7 +242,8 @@ export type LearnerProgressParams = AnalyticsPageParams & {
   include_inactive?: boolean
   sort?: LearnerProgressSort
   descending?: boolean
-  courserun_readable_id?: string
+  // Disabled: courserun_readable_id?: string — silently dropped by the
+  // real API. See ContractLearnersPage.tsx's file header (module filter).
 }
 
 /**
