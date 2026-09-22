@@ -19,9 +19,28 @@ def _escape_html(text: str) -> str:
     return html.escape(text, quote=True)
 
 
+def _safe_str_attr(value: object, default: str = "") -> str:
+    """
+    Return value if it's a string, otherwise a safe default.
+
+    ProseMirror content is stored as unvalidated JSON, so a link mark's
+    href/target/rel can be null, a number, a list, etc. -- not just a
+    string or absent. dict.get(key, default) only covers "key absent";
+    this covers "key present but not a string" too, so a single
+    malformed article can't raise an uncaught exception and abort the
+    whole feed transform (transform_items has no per-article isolation).
+    """
+    return value if isinstance(value, str) else default
+
+
 def _is_safe_link_href(href: str) -> bool:
     """Restrict extracted links to absolute http(s) URLs."""
-    return urlparse(href).scheme in _SAFE_LINK_SCHEMES
+    try:
+        return urlparse(href).scheme in _SAFE_LINK_SCHEMES
+    except ValueError:
+        # Malformed URLs (e.g. "http://[") make urlparse raise instead of
+        # just failing to parse -- treat anything it can't handle as unsafe.
+        return False
 
 
 def website_content_feed_guid(content_id: int) -> str:
@@ -227,12 +246,14 @@ def _extract_text_from_paragraph(paragraph_node: dict) -> str:
 
     for text_node in paragraph_content:
         if isinstance(text_node, dict) and text_node.get("type") == "text":
-            text = text_node.get("text", "")
+            text = _safe_str_attr(text_node.get("text"))
             if text:
                 text = _escape_html(text)
 
                 # Check if this text has link marks
                 marks = text_node.get("marks", [])
+                if not isinstance(marks, list):
+                    marks = []
                 link_mark = None
 
                 # Find link mark if it exists
@@ -244,9 +265,13 @@ def _extract_text_from_paragraph(paragraph_node: dict) -> str:
                 # If there's a link, wrap in anchor tag
                 if link_mark:
                     attrs = link_mark.get("attrs", {})
-                    href = attrs.get("href", "")
-                    target = attrs.get("target", "_blank")
-                    rel = attrs.get("rel", "noopener noreferrer nofollow")
+                    if not isinstance(attrs, dict):
+                        attrs = {}
+                    href = _safe_str_attr(attrs.get("href"))
+                    target = _safe_str_attr(attrs.get("target"), "_blank")
+                    rel = _safe_str_attr(
+                        attrs.get("rel"), "noopener noreferrer nofollow"
+                    )
 
                     if href:
                         safe_href = href if _is_safe_link_href(href) else "#"

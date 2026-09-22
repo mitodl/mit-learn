@@ -499,6 +499,248 @@ def test_extract_summary_from_banner_rejects_javascript_scheme_links():
     assert result == '<a href="#" target="_blank" rel="noopener">Click</a>'
 
 
+def test_extract_summary_from_banner_escapes_target_and_rel_attrs():
+    """
+    target/rel must be escaped too, not just href. Uses a valid https://
+    href specifically so the scheme check doesn't neutralize the link (and
+    so this test can't pass merely because href/target/rel escaping was
+    removed entirely -- it must actually escape the hostile target/rel
+    values to pass).
+    """
+    content_json = {
+        "type": "doc",
+        "content": [
+            {
+                "type": "banner",
+                "content": [
+                    {
+                        "type": "paragraph",
+                        "content": [
+                            {
+                                "type": "text",
+                                "text": "Click here",
+                                "marks": [
+                                    {
+                                        "type": "link",
+                                        "attrs": {
+                                            "href": "https://example.com",
+                                            "target": '"><script>alert(1)</script>',
+                                            "rel": '" onmouseover="alert(2)',
+                                        },
+                                    }
+                                ],
+                            }
+                        ],
+                    }
+                ],
+            }
+        ],
+    }
+
+    result = articles_news.extract_summary_from_banner(content_json)
+
+    # The exact-match below is the real assertion: it confirms the hostile
+    # target/rel values are safely quoted inside their own attribute values
+    # rather than breaking out to add a real onmouseover attribute -- the
+    # literal word "onmouseover" legitimately still appears in the escaped
+    # text, so checking for its absence would be wrong.
+    assert "<script>" not in result
+    assert result == (
+        '<a href="https://example.com" '
+        'target="&quot;&gt;&lt;script&gt;alert(1)&lt;/script&gt;" '
+        'rel="&quot; onmouseover=&quot;alert(2)">Click here</a>'
+    )
+
+
+def test_extract_summary_from_banner_handles_malformed_url():
+    """
+    A syntactically invalid URL (urlparse raises ValueError rather than
+    just failing to parse) must not raise -- it should be treated the same
+    as any other disallowed href and replaced with the safe placeholder,
+    rather than aborting the whole feed transform for every other article.
+    """
+    content_json = {
+        "type": "doc",
+        "content": [
+            {
+                "type": "banner",
+                "content": [
+                    {
+                        "type": "paragraph",
+                        "content": [
+                            {
+                                "type": "text",
+                                "text": "Click",
+                                "marks": [
+                                    {
+                                        "type": "link",
+                                        "attrs": {"href": "http://["},
+                                    }
+                                ],
+                            }
+                        ],
+                    }
+                ],
+            }
+        ],
+    }
+
+    result = articles_news.extract_summary_from_banner(content_json)
+
+    assert (
+        result
+        == '<a href="#" target="_blank" rel="noopener noreferrer nofollow">Click</a>'
+    )
+
+
+def test_extract_summary_from_banner_handles_non_string_link_attrs():
+    """
+    ProseMirror content is unvalidated JSON, so a link mark's attrs can
+    hold null/non-string values instead of a string or being absent
+    entirely. None of these should raise (html.escape/urlparse only accept
+    strings) or abort the whole feed transform for every other article.
+    """
+    content_json = {
+        "type": "doc",
+        "content": [
+            {
+                "type": "banner",
+                "content": [
+                    {
+                        "type": "paragraph",
+                        "content": [
+                            {
+                                "type": "text",
+                                "text": "Click",
+                                "marks": [
+                                    {
+                                        "type": "link",
+                                        "attrs": {
+                                            "href": "https://mit.edu",
+                                            "target": None,
+                                            "rel": None,
+                                        },
+                                    }
+                                ],
+                            }
+                        ],
+                    }
+                ],
+            }
+        ],
+    }
+
+    result = articles_news.extract_summary_from_banner(content_json)
+
+    # Falls back to the same defaults as when target/rel are absent entirely
+    assert result == (
+        '<a href="https://mit.edu" target="_blank" '
+        'rel="noopener noreferrer nofollow">Click</a>'
+    )
+
+
+def test_extract_summary_from_banner_handles_non_string_href():
+    """A non-string href (e.g. a number) must not raise; treated as absent"""
+    content_json = {
+        "type": "doc",
+        "content": [
+            {
+                "type": "banner",
+                "content": [
+                    {
+                        "type": "paragraph",
+                        "content": [
+                            {
+                                "type": "text",
+                                "text": "Click",
+                                "marks": [{"type": "link", "attrs": {"href": 12345}}],
+                            }
+                        ],
+                    }
+                ],
+            }
+        ],
+    }
+
+    result = articles_news.extract_summary_from_banner(content_json)
+
+    assert result == "Click"
+
+
+def test_extract_summary_from_banner_handles_non_dict_link_attrs():
+    """A link mark whose attrs is not a dict must not raise"""
+    content_json = {
+        "type": "doc",
+        "content": [
+            {
+                "type": "banner",
+                "content": [
+                    {
+                        "type": "paragraph",
+                        "content": [
+                            {
+                                "type": "text",
+                                "text": "Click",
+                                "marks": [{"type": "link", "attrs": "garbage"}],
+                            }
+                        ],
+                    }
+                ],
+            }
+        ],
+    }
+
+    result = articles_news.extract_summary_from_banner(content_json)
+
+    assert result == "Click"
+
+
+def test_extract_summary_from_banner_handles_non_string_text():
+    """A text node whose text value isn't a string must not raise"""
+    content_json = {
+        "type": "doc",
+        "content": [
+            {
+                "type": "banner",
+                "content": [
+                    {
+                        "type": "paragraph",
+                        "content": [{"type": "text", "text": 12345}],
+                    }
+                ],
+            }
+        ],
+    }
+
+    result = articles_news.extract_summary_from_banner(content_json)
+
+    assert result == ""
+
+
+def test_extract_summary_from_banner_handles_non_list_marks():
+    """A text node whose marks value is not a list must not raise"""
+    content_json = {
+        "type": "doc",
+        "content": [
+            {
+                "type": "banner",
+                "content": [
+                    {
+                        "type": "paragraph",
+                        "content": [
+                            {"type": "text", "text": "Click", "marks": "garbage"}
+                        ],
+                    }
+                ],
+            }
+        ],
+    }
+
+    result = articles_news.extract_summary_from_banner(content_json)
+
+    assert result == "Click"
+
+
 def test_extract_summary_from_banner_escapes_plain_text_html():
     """
     Plain (non-linked) text containing literal HTML must be escaped, not
