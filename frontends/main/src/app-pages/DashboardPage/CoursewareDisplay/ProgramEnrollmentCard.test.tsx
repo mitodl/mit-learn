@@ -374,6 +374,32 @@ describe("ProgramEnrollmentCard program letter", () => {
     ).not.toBeInTheDocument()
   })
 
+  test("is hidden when the certificate request fails, leaving the rest of the menu intact", async () => {
+    // Deliberate: a failed lookup is indistinguishable from having no
+    // certificate, because the failed response is both the letter url and the
+    // only signal that the learner has a letter. See useProgramLetterMenuItem.
+    mockedUseFeatureFlagEnabled.mockReturnValue(true)
+    setMockResponse.get(urls.programCertificates.list(), null, { code: 500 })
+    const programEnrollment =
+      mitxonline.factories.enrollment.programEnrollmentV3({
+        program: mitxonline.factories.programs.simpleProgram({
+          id: PROGRAM_ID,
+        }),
+      })
+    renderWithProviders(
+      <ProgramEnrollmentCard programEnrollment={programEnrollment} />,
+    )
+    await openMenu()
+
+    expect(
+      screen.queryByRole("menuitem", { name: "Program Letter" }),
+    ).not.toBeInTheDocument()
+    // The card itself must survive the failure.
+    expect(
+      screen.getByRole("menuitem", { name: "Program Record" }),
+    ).toBeInTheDocument()
+  })
+
   test("is hidden, and no certificates are requested, when the flag is off", async () => {
     // Requesting the list mints a shareable uuid for every letter the learner
     // does not have yet, so it must not happen behind a disabled flag.
