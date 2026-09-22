@@ -298,8 +298,11 @@ const ErrorRow = styled.div({
 // --------------------------------------------------------------------------
 
 const PAGE_SIZE = 25
-const CSV_EXPORT_PAGE_SIZE = 1000
+/** Below the API's max_page_size rather than pinned to it — that setting is env-overridable, and this only costs one extra round trip on a large contract. */
+const CSV_EXPORT_PAGE_SIZE = 500
 const SEARCH_DEBOUNCE_MS = 300
+/** Matches the API's cap on `search`; truncated below rather than sent as-is, since a long paste would otherwise 422 and read as "Something went wrong loading learner data" — 422 isn't in the error-boundary set below. */
+const SEARCH_MAX_LENGTH = 254
 const ALL = "all"
 const UNAVAILABLE_MESSAGE_ID = "learner-analytics-unavailable-message"
 
@@ -838,7 +841,11 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
                     placeholder="Search name or email"
                     value={searchQuery}
                     size="medium"
-                    onChange={(event) => setSearchQuery(event.target.value)}
+                    onChange={(event) =>
+                      setSearchQuery(
+                        event.target.value.slice(0, SEARCH_MAX_LENGTH),
+                      )
+                    }
                     onClear={() => applyFilterChange(() => setSearchQuery(""))}
                     onSubmit={() => {}}
                   />

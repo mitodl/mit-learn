@@ -408,7 +408,7 @@ describe("ContractLearnersPage", () => {
       setMockResponse.get(
         analyticsUrls.contracts.learnerProgress(ORG_UUID, contractId, {
           sort: "full_name",
-          limit: 1000,
+          limit: 500,
           offset: 0,
         }),
         analyticsFactories.learnerProgressEnvelope([
@@ -470,7 +470,7 @@ describe("ContractLearnersPage", () => {
         [analyticsFactories.learnerProgress({ full_name: "Only Not Started" })],
         { completion_status: ["not_started"] },
       )
-      // No mock for the unfiltered `{ limit: 1000, offset: 0 }` export
+      // No mock for the unfiltered `{ limit: 500, offset: 0 }` export
       // request: if the export ever drops the filter again, this request
       // goes unmocked and the export fails instead of silently exporting
       // the whole contract.
@@ -478,7 +478,7 @@ describe("ContractLearnersPage", () => {
         analyticsUrls.contracts.learnerProgress(ORG_UUID, contractId, {
           sort: "full_name",
           completion_status: ["not_started"],
-          limit: 1000,
+          limit: 500,
           offset: 0,
         }),
         analyticsFactories.learnerProgressEnvelope([
