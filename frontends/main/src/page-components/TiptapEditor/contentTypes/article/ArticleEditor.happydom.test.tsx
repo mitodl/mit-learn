@@ -254,9 +254,18 @@ describe("ArticleEditor settings", () => {
   })
 })
 
+/**
+ * An article cannot be saved without topics, which is its own describe below.
+ * These are about the confirmation dialog, so they start from one that has
+ * them -- as an article being published in earnest would.
+ */
+const renderTopicalArticle = (
+  options: Parameters<typeof renderArticleEditor>[0] = {},
+) => renderArticleEditor({ topics: [7], ...options })
+
 describe("ArticleEditor publish confirmation", () => {
   test("publishing a draft asks for confirmation first", async () => {
-    const { article } = renderArticleEditor()
+    const { article } = renderTopicalArticle()
     setMockResponse.patch(urls.websiteContent.details(article.id), {
       ...article,
       is_published: true,
@@ -290,7 +299,7 @@ describe("ArticleEditor publish confirmation", () => {
   })
 
   test("cancelling the publish dialog saves nothing", async () => {
-    renderArticleEditor()
+    renderTopicalArticle()
 
     await userEvent.click(
       await screen.findByRole("button", { name: "Publish Article" }),
@@ -306,7 +315,7 @@ describe("ArticleEditor publish confirmation", () => {
   test("re-saving an already published article does not ask", async () => {
     // The dialog confirms the transition to public, not every save, so editing
     // a live article and pressing Publish must save straight away.
-    const { article } = renderArticleEditor({ isPublished: true })
+    const { article } = renderTopicalArticle({ isPublished: true })
     setMockResponse.patch(urls.websiteContent.details(article.id), article)
 
     const heading = await screen.findByRole("heading", { level: 1 })
@@ -331,7 +340,7 @@ describe("ArticleEditor publish confirmation errors", () => {
    * save was dismissed as though it had worked.
    */
   test("a failed publish leaves the confirmation open", async () => {
-    const { article } = renderArticleEditor()
+    const { article } = renderTopicalArticle()
     setMockResponse.patch(
       urls.websiteContent.details(article.id),
       { detail: "boom" },
@@ -368,7 +377,7 @@ describe("ArticleEditor publish confirmation errors", () => {
   })
 
   test("a successful publish closes the confirmation", async () => {
-    const { article } = renderArticleEditor()
+    const { article } = renderTopicalArticle()
     setMockResponse.patch(urls.websiteContent.details(article.id), {
       ...article,
       is_published: true,
@@ -387,6 +396,127 @@ describe("ArticleEditor publish confirmation errors", () => {
         screen.queryByRole("heading", { name: "Publish article" }),
       ).not.toBeInTheDocument()
     })
+  })
+})
+
+describe("ArticleEditor topics requirement", () => {
+  const mockTopics = () => {
+    const topics = factories.learningResources.topics({ count: 2 })
+    setMockResponse.get(urls.topics.list({ limit: 1000 }), topics)
+    return topics.results[0]
+  }
+
+  test("publishing with no topics asks for them instead", async () => {
+    mockTopics()
+    renderArticleEditor()
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Publish Article" }),
+    )
+
+    // The drawer, not the publish confirmation, and nothing saved.
+    await screen.findByRole("heading", { name: "Article Settings" })
+    expect(
+      screen.queryByRole("heading", { name: "Publish article" }),
+    ).not.toBeInTheDocument()
+    expect(makeRequest).not.toHaveBeenCalledWith(
+      expect.objectContaining({ method: "patch" }),
+    )
+    /* The section says why it opened, rather than leaving the editor to guess. */
+    await screen.findByText("Select at least one topic to save your article")
+  })
+
+  test("saving a draft with no topics asks for them instead", async () => {
+    mockTopics()
+    renderArticleEditor()
+
+    // "Save as Draft" only enables once the document is touched.
+    await userEvent.type(await screen.findByRole("heading", { level: 1 }), "!")
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Save as Draft" }),
+    )
+
+    await screen.findByRole("heading", { name: "Article Settings" })
+    expect(makeRequest).not.toHaveBeenCalledWith(
+      expect.objectContaining({ method: "patch" }),
+    )
+  })
+
+  test("the held-back publish resumes once a topic is picked", async () => {
+    const topic = mockTopics()
+    const { article } = renderArticleEditor()
+    setMockResponse.patch(urls.websiteContent.details(article.id), {
+      ...article,
+      is_published: true,
+    })
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Publish Article" }),
+    )
+    await screen.findByRole("heading", { name: "Article Settings" })
+
+    await userEvent.click(await screen.findByLabelText("Topic"))
+    await userEvent.click(
+      await screen.findByRole("option", { name: topic.name }),
+    )
+    await userEvent.click(screen.getByRole("button", { name: "Add" }))
+    await userEvent.click(screen.getByRole("button", { name: "Save Settings" }))
+
+    // Picking up where the press left off, confirmation included.
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Yes, Publish article" }),
+    )
+
+    await waitFor(() => {
+      expect(makeRequest).toHaveBeenCalledWith(
+        expect.objectContaining({
+          method: "patch",
+          body: expect.objectContaining({
+            is_published: true,
+            /* Carried by the save itself, not a separate topics PATCH. */
+            topics: [topic.id],
+          }),
+        }),
+      )
+    })
+  })
+
+  test("closing the drawer abandons the held-back publish", async () => {
+    const topic = mockTopics()
+    const { article } = renderArticleEditor()
+    setMockResponse.patch(urls.websiteContent.details(article.id), article)
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Publish Article" }),
+    )
+    await screen.findByRole("heading", { name: "Article Settings" })
+    await userEvent.click(screen.getByRole("button", { name: "Cancel" }))
+
+    // Topics saved later are just topics: the abandoned press must not fire.
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Settings" }),
+    )
+    await userEvent.click(await screen.findByLabelText("Topic"))
+    await userEvent.click(
+      await screen.findByRole("option", { name: topic.name }),
+    )
+    await userEvent.click(screen.getByRole("button", { name: "Add" }))
+    await userEvent.click(screen.getByRole("button", { name: "Save Settings" }))
+
+    await waitFor(() => {
+      expect(makeRequest).toHaveBeenCalledWith(
+        expect.objectContaining({
+          method: "patch",
+          body: { topics: [topic.id] },
+        }),
+      )
+    })
+    expect(makeRequest).not.toHaveBeenCalledWith(
+      expect.objectContaining({
+        method: "patch",
+        body: expect.objectContaining({ is_published: true }),
+      }),
+    )
   })
 })
 

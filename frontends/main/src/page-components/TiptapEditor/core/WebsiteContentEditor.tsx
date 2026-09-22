@@ -304,6 +304,11 @@ const WebsiteContentEditor = ({
 }: WebsiteContentEditorProps) => {
   const [isPublishing, setIsPublishing] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
+  /**
+   * A save held back for want of topics, remembering whether it was a publish.
+   * `handleSettingsSave` resumes it once a topic has been picked.
+   */
+  const [pendingSave, setPendingSave] = useState<boolean | null>(null)
   const [uploadError, setUploadError] = useState<string | null>(null)
   const [resetAttempted, setResetAttempted] = useState(false)
   const [content, setContent] = useState<JSONContent>(
@@ -374,8 +379,12 @@ const WebsiteContentEditor = ({
    * must stay open if it fails. Rejects on failure — see `saveQuietly` for the
    * buttons that save without a dialog.
    */
-  const handleSave = async (publish: boolean) => {
+  const handleSave = async (publish: boolean, topicsOverride?: number[]) => {
     if (!title) return
+    // Overridden when a held-back save resumes: `setTopics` has not landed yet
+    // at that point, and this carries the new selection itself rather than
+    // leaving the drawer to PATCH it separately.
+    const savedTopics = topicsOverride ?? topics
     const extraFields = extractExtraFields?.(content) ?? {}
     const saved = contentItem
       ? await updateMutation.mutateAsync({
@@ -383,14 +392,14 @@ const WebsiteContentEditor = ({
           title: title.trim(),
           content,
           is_published: publish,
-          topics,
+          topics: savedTopics,
           ...extraFields,
         })
       : await createMutation.mutateAsync({
           title: title.trim(),
           content,
           is_published: publish,
-          topics,
+          topics: savedTopics,
           ...extraFields,
         })
     onSave?.(saved)
@@ -413,6 +422,17 @@ const WebsiteContentEditor = ({
     // re-runs the publish plugins, so there is nothing to send.
     if (nextTopics === undefined) return
     setTopics(nextTopics)
+
+    // A save that was held back resumes here, carrying the new selection, so
+    // the content write persists the topics and no separate PATCH is needed.
+    if (pendingSave !== null && nextTopics.length > 0) {
+      const publish = pendingSave
+      setPendingSave(null)
+      if (publish) startPublish(nextTopics)
+      else saveQuietly(false, nextTopics)
+      return
+    }
+
     if (!contentItem) return
     updateMutation
       .mutateAsync({ id: contentItem.id, topics: nextTopics })
@@ -424,8 +444,42 @@ const WebsiteContentEditor = ({
    * is already surfaced by the `saveError` alert below, so the rejection is
    * swallowed here rather than left unhandled.
    */
-  const saveQuietly = (publish: boolean) => {
-    handleSave(publish).catch(() => undefined)
+  const saveQuietly = (publish: boolean, topicsOverride?: number[]) => {
+    handleSave(publish, topicsOverride).catch(() => undefined)
+  }
+
+  /**
+   * An article's topics are what put it on a topic page, so it is not saved
+   * without them: the press opens the settings drawer instead and is resumed
+   * once a topic is picked. News has no topics section, so nothing to require.
+   */
+  const topicsRequired = contentType === WebsiteContentContentTypeEnum.Article
+  const topicsMissing = topicsRequired && topics.length === 0
+
+  /** Hold the press back and ask for topics. */
+  const askForTopics = (publish: boolean) => {
+    setPendingSave(publish)
+    setSettingsOpen(true)
+  }
+
+  /**
+   * The publish press itself. Confirms the transition to public, but not every
+   * save: on an item that is already published this button pushes edits live,
+   * where "will make it publicly available" would be both wrong and a prompt
+   * on every save.
+   */
+  const startPublish = (topicsOverride?: number[]) => {
+    const publish = () => {
+      setIsPublishing(true)
+      return handleSave(true, topicsOverride)
+    }
+    if (contentItem?.is_published) {
+      // Nothing awaits this path, so do not leave the rejection unhandled;
+      // the alert below shows it.
+      publish().catch(() => undefined)
+    } else {
+      showPublishWebsiteContentDialog(contentLabel, publish)
+    }
   }
 
   const editor = useEditor({
@@ -625,6 +679,10 @@ const WebsiteContentEditor = ({
                         disabled={isPending || !touched || !title}
                         onClick={() => {
                           setIsPublishing(false)
+                          if (topicsMissing) {
+                            askForTopics(false)
+                            return
+                          }
                           saveQuietly(false)
                         }}
                         size={buttonSize}
@@ -646,23 +704,11 @@ const WebsiteContentEditor = ({
                         (!touched && contentItem?.is_published)
                       }
                       onClick={() => {
-                        const publish = () => {
-                          setIsPublishing(true)
-                          return handleSave(true)
+                        if (topicsMissing) {
+                          askForTopics(true)
+                          return
                         }
-                        /**
-                         * Confirm the transition to public, not every save. On
-                         * an item that is already published this button pushes
-                         * edits live, where "will make it publicly available"
-                         * would be both wrong and a prompt on every save.
-                         */
-                        if (contentItem?.is_published) {
-                          // Nothing awaits this path, so do not leave the
-                          // rejection unhandled; the alert below shows it.
-                          publish().catch(() => undefined)
-                        } else {
-                          showPublishWebsiteContentDialog(contentLabel, publish)
-                        }
+                        startPublish()
                       }}
                       size={buttonSize}
                       endIcon={
@@ -685,13 +731,19 @@ const WebsiteContentEditor = ({
             {isArticleEditor ? (
               <ArticleSettingsDrawer
                 open={settingsOpen}
-                onClose={() => setSettingsOpen(false)}
+                onClose={() => {
+                  setSettingsOpen(false)
+                  // Dropped rather than kept: a press the editor walked away
+                  // from must not fire the next time topics happen to be saved.
+                  setPendingSave(null)
+                }}
                 contentLabel={contentLabel}
                 /* Only an article becomes a LearningResource, so only there do
                    topics put the content on a topic page. */
                 showTopics={
                   contentType === WebsiteContentContentTypeEnum.Article
                 }
+                topicsRequired={topicsRequired}
                 initialValues={{ topics }}
                 onSave={handleSettingsSave}
               />

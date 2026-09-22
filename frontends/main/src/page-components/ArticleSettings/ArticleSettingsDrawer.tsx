@@ -205,6 +205,12 @@ export interface ArticleSettingsDrawerProps {
    * the content on a topic page.
    */
   showTopics?: boolean
+  /**
+   * Whether the content cannot be saved without a topic, which the section
+   * says so long as none is picked. The caller does the enforcing; this is
+   * only what tells the editor why the drawer opened on them.
+   */
+  topicsRequired?: boolean
   /** Values to open with. Re-read each time the drawer opens. */
   initialValues?: Partial<ArticleSettingsValues>
   /**
@@ -222,6 +228,7 @@ const ArticleSettingsDrawer = ({
   onClose,
   contentLabel = "Article",
   showTopics = true,
+  topicsRequired = false,
   initialValues,
   onSave,
 }: ArticleSettingsDrawerProps) => {
@@ -413,8 +420,9 @@ const ArticleSettingsDrawer = ({
                   Select Topics
                 </Typography>
                 <Typography variant="body2">
-                  Select one or more topics for your{" "}
-                  {contentLabel.toLowerCase()}
+                  {topicsRequired && selectedIds.length === 0
+                    ? `Select at least one topic to save your ${contentLabel.toLowerCase()}`
+                    : `Select one or more topics for your ${contentLabel.toLowerCase()}`}
                 </Typography>
               </SectionHeading>
               <TopicRow>
