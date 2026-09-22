@@ -56,6 +56,7 @@ from learning_resources_search.tasks import (
     deindex_document,
     deindex_run_content_files,
     finish_reindex_job,
+    get_update_program_files_tasks,
     get_update_resource_files_tasks,
     index_learning_resources,
     index_run_content_files,
@@ -2032,3 +2033,37 @@ def test_run_reindex_batch_dispatch_content_files_best_run_only(mocker, mocked_a
         opensearch_content_files(course).values_list("id", flat=True)
     )
     assert not dispatched & set(older.content_files.values_list("id", flat=True))
+
+
+def test_get_update_program_files_tasks_indexes_best_run_only(mocker):
+    """update_index indexes a program's best run files and direct files, not older runs'"""
+    program = LearningResourceFactory.create(
+        is_program=True,
+        create_runs=False,
+        etl_source=ETLSource.mitxonline.value,
+        published=True,
+    )
+    best = LearningResourceRunFactory.create(learning_resource=program, published=True)
+    older = LearningResourceRunFactory.create(
+        learning_resource=program,
+        published=True,
+        start_date=best.start_date.replace(year=2000),
+    )
+    ContentFileFactory.create_batch(2, run=best)
+    ContentFileFactory.create_batch(2, run=older)
+    ContentFileFactory.create(learning_resource=program)
+    assert program.best_run == best
+    index_content_mock = mocker.patch(
+        "learning_resources_search.tasks.index_content_files", autospec=True
+    )
+    mocker.patch("learning_resources_search.tasks.deindex_content_files", autospec=True)
+
+    get_update_program_files_tasks(ETLSource.mitxonline.value)
+
+    indexed = {
+        cf_id for call in index_content_mock.si.call_args_list for cf_id in call.args[0]
+    }
+    assert indexed == set(
+        opensearch_content_files(program).values_list("id", flat=True)
+    )
+    assert not indexed & set(older.content_files.values_list("id", flat=True))

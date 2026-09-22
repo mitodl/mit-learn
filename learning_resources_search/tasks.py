@@ -1184,44 +1184,23 @@ def get_update_program_files_tasks(etl_source):
     index_tasks = []
 
     for learning_resource in program_update_query:
-        index_tasks = (
-            index_tasks
-            + [
-                index_content_files.si(
-                    ids,
-                    learning_resource.id,
-                    index_types=IndexestoUpdate.current_index.value,
-                    resource_type=PROGRAM_TYPE,
-                )
-                for ids in chunks(
-                    ContentFile.objects.filter(
-                        run__learning_resource_id=learning_resource.id,
-                        published=True,
-                        run__published=True,
-                    )
-                    .order_by("id")
-                    .values_list("id", flat=True),
-                    chunk_size=settings.OPENSEARCH_DOCUMENT_INDEXING_CHUNK_SIZE,
-                )
-            ]
-            + [
-                index_content_files.si(
-                    ids,
-                    learning_resource.id,
-                    index_types=IndexestoUpdate.current_index.value,
-                    resource_type=PROGRAM_TYPE,
-                )
-                for ids in chunks(
-                    ContentFile.objects.filter(
-                        learning_resource_id=learning_resource.id,
-                        published=True,
-                    )
-                    .order_by("id")
-                    .values_list("id", flat=True),
-                    chunk_size=settings.OPENSEARCH_DOCUMENT_INDEXING_CHUNK_SIZE,
-                )
-            ]
-        )
+        indexable = opensearch_content_files(learning_resource)
+        index_tasks = index_tasks + [
+            index_content_files.si(
+                ids,
+                learning_resource.id,
+                index_types=IndexestoUpdate.current_index.value,
+                resource_type=PROGRAM_TYPE,
+            )
+            for files in (
+                indexable.filter(run__isnull=False),
+                indexable.filter(run__isnull=True),
+            )
+            for ids in chunks(
+                files.order_by("id").values_list("id", flat=True),
+                chunk_size=settings.OPENSEARCH_DOCUMENT_INDEXING_CHUNK_SIZE,
+            )
+        ]
 
         index_tasks = (
             index_tasks

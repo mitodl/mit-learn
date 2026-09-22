@@ -641,3 +641,25 @@ def test_content_files_loaded_always_purges_unpublished(
     purge = mock_search_index_helpers.mock_remove_unpublished_run_contentfiles_immutable_signature.return_value
     embed = mock_search_index_helpers.mock_embed_run_contentfiles_immutable_signature.return_value
     assert chained.index(purge) < chained.index(embed)
+
+
+@pytest.mark.django_db
+def test_content_files_loaded_best_run_with_only_unpublished_files_still_indexes(
+    mocker, settings
+):
+    """
+    The best run is re-indexed even when a reload left all its files unpublished,
+    so index_run_content_files clears their stale OpenSearch documents.
+    """
+    settings.QDRANT_ENABLE_INDEXING_PLUGIN_HOOKS = False
+    mocker.patch("learning_resources_search.plugins.try_with_retry_as_task")
+    index_mock = mocker.patch(
+        "learning_resources_search.plugins.tasks.index_run_content_files.si"
+    )
+    course = LearningResourceFactory.create(is_course=True, create_runs=False)
+    run = LearningResourceRunFactory.create(learning_resource=course, published=True)
+    ContentFileFactory.create(run=run, published=False)
+
+    SearchIndexPlugin().content_files_loaded(run)
+
+    index_mock.assert_called_once_with(run.id)

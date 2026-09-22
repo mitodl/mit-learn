@@ -15,7 +15,7 @@ from learning_resources_search.constants import (
     PERCOLATE_INDEX_TYPE,
 )
 from learning_resources_search.selectors import (
-    opensearch_content_files,
+    opensearch_runs,
     run_content_files_deindex_targets,
 )
 from main import settings
@@ -283,7 +283,7 @@ class SearchIndexPlugin:
 
         resource = run.learning_resource
         if resource.published or resource.test_mode:
-            if opensearch_content_files(resource).filter(run=run).exists():
+            if opensearch_runs(resource).filter(id=run.id).exists():
                 index_tasks.append(tasks.index_run_content_files.si(run.id))
 
             if django_settings.QDRANT_ENABLE_INDEXING_PLUGIN_HOOKS:
