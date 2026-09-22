@@ -159,6 +159,33 @@ def test_search_index_plugin_bulk_resources_unpublished_direct_files(
 
 
 @pytest.mark.django_db
+def test_search_index_plugin_bulk_resources_unpublished_skips_test_mode_direct_files(
+    mocker,
+):
+    """bulk_resources_unpublished leaves a test_mode resource's direct files indexed, like resource_unpublished"""
+    resource = LearningResourceFactory.create(is_course=True, published=False)
+    test_resource = LearningResourceFactory.create(
+        is_course=True, published=False, test_mode=True
+    )
+    marketing_page = ContentFileFactory.create(learning_resource=resource)
+    ContentFileFactory.create(learning_resource=test_resource)
+    mocker.patch(
+        "learning_resources_search.plugins.tasks.bulk_deindex_learning_resources.si"
+    )
+    deindex_direct_files_mock = mocker.patch(
+        "learning_resources_search.plugins.tasks.deindex_content_files.si"
+    )
+
+    SearchIndexPlugin().bulk_resources_unpublished(
+        [resource.id, test_resource.id], COURSE_TYPE
+    )
+
+    deindex_direct_files_mock.assert_called_once_with(
+        [marketing_page.id], resource.id, resource_type=COURSE_TYPE
+    )
+
+
+@pytest.mark.django_db
 @pytest.mark.parametrize("resource_type", [COURSE_TYPE, PROGRAM_TYPE])
 @pytest.mark.parametrize("test_mode", [True, False])
 def test_search_index_plugin_resource_before_delete(

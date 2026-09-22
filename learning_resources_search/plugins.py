@@ -127,7 +127,7 @@ class SearchIndexPlugin:
         """
         files_by_resource = {}
         for file_id, resource_id in ContentFile.objects.filter(
-            learning_resource_id__in=resource_ids
+            learning_resource_id__in=resource_ids, learning_resource__test_mode=False
         ).values_list("id", "learning_resource_id"):
             files_by_resource.setdefault(resource_id, []).append(file_id)
         for resource_id, file_ids in files_by_resource.items():
