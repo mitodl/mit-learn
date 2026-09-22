@@ -23,6 +23,7 @@ REQUIRED_SETTINGS = {
     "MITOL_COOKIE_DOMAIN": "od.fake.domain",
     "MITOL_APP_BASE_URL": "http:localhost:8063/",
     "UNSUBSCRIBE_SECRET_KEY": "fake_unsubscribe_secret_key",  # pragma: allowlist-secret
+    "WEBHOOK_SECRET": "fake_webhook_secret",  # pragma: allowlist-secret
 }
 
 
@@ -218,6 +219,21 @@ class TestSettings(TestCase):
                 pytest.raises(ImproperlyConfigured),
             ):
                 self.reload_settings()
+
+    def test_webhook_secret_rejects_legacy_default(self):
+        """
+        Assert that an exception is raised if WEBHOOK_SECRET is explicitly
+        set to the legacy hardcoded default, not just when it's unset
+        """
+        with (
+            mock.patch.dict(
+                "os.environ",
+                {**REQUIRED_SETTINGS, "WEBHOOK_SECRET": "please-change-this"},
+                clear=True,
+            ),
+            pytest.raises(ImproperlyConfigured),
+        ):
+            self.reload_settings()
 
     def test_server_side_cursors_disabled(self):
         """DISABLE_SERVER_SIDE_CURSORS should be true by default"""
