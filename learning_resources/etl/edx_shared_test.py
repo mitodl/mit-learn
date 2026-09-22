@@ -141,6 +141,7 @@ def test_sync_edx_course_files_matching_checksum(mocker, mock_course_archive_buc
     run.learning_resource.runs.exclude(id=run.id).first()
     run.checksum = "123"
     run.save()
+    ContentFileFactory.create(run=run)
     mocker.patch(
         "learning_resources.etl.edx_shared.calc_checksum", return_value=run.checksum
     )
@@ -1455,6 +1456,7 @@ def test_process_course_archive_skips_download_when_key_matches(mocker):
     run = LearningResourceRunFactory.create(
         published=True, archive_key=key, checksum="oldchecksum"
     )
+    ContentFileFactory.create(run=run)
     bucket = mocker.MagicMock()
     mock_load = mocker.patch("learning_resources.etl.edx_shared.load_content_files")
 
@@ -1473,6 +1475,7 @@ def test_process_course_archive_stamps_key_on_checksum_match(mocker):
     run = LearningResourceRunFactory.create(
         published=True, archive_key=None, checksum="samechecksum"
     )
+    ContentFileFactory.create(run=run)
     bucket = mocker.MagicMock()
     mocker.patch(
         "learning_resources.etl.edx_shared.calc_checksum", return_value="samechecksum"
@@ -1888,3 +1891,71 @@ def test_unpublish_excluded_content_files_dry_run(staff_only_run, mock_deindex_t
     assert ContentFile.objects.filter(run=run, published=True).count() == 1
     mock_deindex_tasks.opensearch.assert_not_called()
     mock_deindex_tasks.qdrant.assert_not_called()
+
+
+def test_process_course_archive_reloads_when_receipt_is_stale(mocker):
+    """A matching archive_key and checksum must not skip a run whose rows are gone"""
+    key = "mitxonline/courses/course-v1:Test+Course+R1/archive.tar.gz"
+    run = LearningResourceRunFactory.create(
+        published=True, archive_key=key, checksum="abc123"
+    )
+    assert not run.content_files.exists()
+    bucket = mocker.MagicMock()
+    mocker.patch(
+        "learning_resources.etl.edx_shared.calc_checksum", return_value="abc123"
+    )
+    mocker.patch(
+        "learning_resources.etl.edx_shared.transform_content_files",
+        return_value=iter([{"key": "content.txt"}]),
+    )
+    mock_load = mocker.patch(
+        "learning_resources.etl.edx_shared.load_content_files", return_value=[1]
+    )
+
+    assert process_course_archive(bucket, key, run) is True
+
+    bucket.download_file.assert_called_once()
+    mock_load.assert_called_once()
+
+
+@pytest.mark.parametrize(
+    ("checksum", "with_rows"),
+    [("abc123", True), (None, False)],
+    ids=["intact_rows", "empty_archive_receipt"],
+)
+def test_process_course_archive_skips_matching_archive_key(mocker, checksum, with_rows):
+    """A matching archive_key skips the download when rows exist or the archive was empty"""
+    key = "mitxonline/courses/course-v1:Test+Course+R1/archive.tar.gz"
+    run = LearningResourceRunFactory.create(
+        published=True, archive_key=key, checksum=checksum
+    )
+    if with_rows:
+        ContentFileFactory.create(run=run)
+    bucket = mocker.MagicMock()
+    mock_load = mocker.patch("learning_resources.etl.edx_shared.load_content_files")
+
+    assert process_course_archive(bucket, key, run) is False
+
+    bucket.download_file.assert_not_called()
+    mock_load.assert_not_called()
+
+
+def test_process_course_archive_skips_matching_checksum_with_rows(mocker):
+    """A matching checksum under a new key skips the load when rows exist"""
+    run = LearningResourceRunFactory.create(
+        published=True, archive_key="old/key.tar.gz", checksum="abc123"
+    )
+    ContentFileFactory.create(run=run)
+    bucket = mocker.MagicMock()
+    mocker.patch(
+        "learning_resources.etl.edx_shared.calc_checksum", return_value="abc123"
+    )
+    mock_load = mocker.patch("learning_resources.etl.edx_shared.load_content_files")
+    key = "mitxonline/courses/course-v1:Test+Course+R1/new.tar.gz"
+
+    assert process_course_archive(bucket, key, run) is True
+
+    bucket.download_file.assert_called_once()
+    mock_load.assert_not_called()
+    run.refresh_from_db()
+    assert run.archive_key == key
