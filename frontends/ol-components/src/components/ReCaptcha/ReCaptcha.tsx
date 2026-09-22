@@ -43,7 +43,7 @@ const ReCaptcha = ({
   }
 
   return (
-    <ReCaptchaContainer>
+    <ReCaptchaContainer data-testid="recaptcha-container">
       <div
         aria-disabled={disabled}
         style={disabled ? { opacity: 0.6, pointerEvents: "none" } : undefined}

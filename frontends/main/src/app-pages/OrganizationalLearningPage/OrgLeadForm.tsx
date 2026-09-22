@@ -121,6 +121,15 @@ const StyledHubspotForm = styled(HubspotForm)(({ theme }) => ({
       minWidth: 0,
     },
   },
+  /**
+   * ReCaptchaContainer carries its own 12px vertical margin, which stacks on
+   * top of this form's 24px gap and makes the space around it uneven with
+   * every other gap in the form. Cancel it so the form's own gap is the only
+   * spacing mechanism.
+   */
+  '[data-testid="recaptcha-container"]': {
+    margin: 0,
+  },
   [theme.breakpoints.down("md")]: {
     fieldset: {
       flexDirection: "column",

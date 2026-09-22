@@ -59,11 +59,11 @@ export const hero = {
   image: "/images/uai_landing/uai-landing-hero-2.jpg",
   imageAlt: "",
   stats: [
-    { value: "700+", label: ["Corporate", "and University Clients"] },
-    { value: "150+", label: ["MIT Faculty", "& Expert Contributors"] },
+    { value: "700+", label: ["Corporate", "& university clients"] },
+    { value: "150+", label: ["MIT faculty", "& expert contributors"] },
     {
       value: "500+",
-      label: ["Unique courses and programs"],
+      label: ["Unique courses & programs"],
     },
   ] satisfies StatItem[],
 }
@@ -71,13 +71,13 @@ export const hero = {
 export const featuredProgram = {
   eyebrow: "PROGRAM SPOTLIGHT",
   title: "Universal AI",
-  tagline: "Build AI fluency across your organization.",
+  tagline: ["Build AI fluency across your", "organization."],
   body: "A flexible, self-paced curriculum from MIT faculty and experts, combining foundational AI learning with industry-specific applications.",
   highlights: [
     "Self-paced program",
     "MIT faculty & experts",
     "Stackable modules",
-    "AI Tutor",
+    "AI tutor",
     "Translation available",
   ],
   curriculum: {
@@ -96,7 +96,7 @@ export const featuredProgram = {
         title: "EXAMPLE INDUSTRY APPLICATION MODULES",
         modules: [
           "AI + Healthcare",
-          "AI + Sustainability and Energy",
+          "AI + Sustainability & Energy",
           "AI + Finance",
         ],
       },
@@ -107,7 +107,7 @@ export const featuredProgram = {
 
 export const offerings = {
   eyebrow: "FOR YOUR ORGANIZATION",
-  title: "Learning Solutions for Every Role and Responsibility",
+  title: "Learning solutions for every role and responsibility",
   body: "Flexible learning options designed around your goals, whether you're adopting AI, strengthening technical capabilities, or building leadership skills.",
   cards: [
     {
@@ -155,15 +155,15 @@ export const deliveryFormats = {
     "Our team will learn about your priorities and needs to find the right combination of learning modalities.",
   items: [
     {
-      title: "Courses & Long Programs",
+      title: "Courses & long programs",
       body: "Long-form digital instruction designed to build foundational or advanced-level understanding over multiple weeks or months.",
     },
     {
-      title: "Short Programs & Microcredentials",
+      title: "Short programs & microcredentials",
       body: "Shorter, digital introductions designed to elevate learners’ conversational abilities on complex topics in a matter of hours.",
     },
     {
-      title: "Workshops & Webinars",
+      title: "Workshops & webinars",
       body: "In-person or virtual programs on technical and leadership topics, tailored to your team’s needs, delivered live by MIT faculty and experts.",
     },
     {
@@ -197,7 +197,7 @@ export const continuum = {
     },
     {
       eyebrow: "03 . SPECIALIZATION",
-      body: "Employ expertise for impact at-scale.",
+      body: "Employ expertise for impact at scale.",
     },
   ] satisfies ContinuumStepItem[],
 }

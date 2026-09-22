@@ -11,7 +11,7 @@ const FIGURE_RADIUS = "8px 80px 8px 50px"
 const OUTLINE_RADIUS = "8px 50px 8px 50px"
 
 const HeroBand = styled(Section)(({ theme }) => ({
-  backgroundColor: theme.custom.colors.lightGray1,
+  backgroundColor: "#EEEFF3",
   backgroundImage:
     "url('/images/organizational_learning/hero-illustration.svg')",
   backgroundSize: "210% auto",
@@ -26,15 +26,15 @@ const Inner = styled(SectionInner)(({ theme }) => ({
   display: "flex",
   alignItems: "center",
   gap: "100px",
-  padding: "144px 24px",
+  padding: "144px 0",
   [theme.breakpoints.down("lg")]: {
     flexDirection: "column",
     alignItems: "stretch",
     gap: "48px",
-    padding: "64px 24px",
+    padding: "64px 0",
   },
   [theme.breakpoints.down("md")]: {
-    padding: "32px 24px",
+    padding: "32px 0",
   },
 }))
 
@@ -63,15 +63,20 @@ const Title = styled.h1(({ theme }) => ({
 }))
 
 const Emphasis = styled.span(({ theme }) => ({
-  borderBottom: `4px solid ${theme.custom.colors.brightRed}`,
-  paddingBottom: "2px",
+  textDecorationLine: "underline",
+  textDecorationColor: theme.custom.colors.brightRed,
+  textDecorationThickness: "4px",
+  textUnderlineOffset: "0",
+  textDecorationSkipInk: "none",
   [theme.breakpoints.down("md")]: {
-    borderBottomWidth: "3px",
+    textDecorationThickness: "3px",
   },
 }))
 
 const Body = styled.p(({ theme }) => ({
   ...theme.typography.body1,
+  fontWeight: theme.typography.fontWeightRegular,
+  lineHeight: "26px",
   color: theme.custom.colors.darkGray2,
   margin: 0,
 }))
@@ -126,6 +131,7 @@ const Figure = styled.div(({ theme }) => ({
     inset: "-21px 19px 21px -21px",
     border: `1px solid ${theme.custom.colors.red}`,
     borderRadius: OUTLINE_RADIUS,
+    zIndex: 1,
   },
   [theme.breakpoints.down("lg")]: {
     minHeight: "320px",
@@ -141,17 +147,21 @@ const HeroImage = styled(Image)({
   borderRadius: FIGURE_RADIUS,
 })
 
+const EMPHASIS_PHRASE = "scalable education"
+
 const HeroSection: React.FC = () => {
-  const lastSpace = copy.title.lastIndexOf(" ")
-  const titleStart = copy.title.slice(0, lastSpace)
-  const titleEnd = copy.title.slice(lastSpace + 1)
+  const emphasisStart = copy.title.indexOf(EMPHASIS_PHRASE)
+  const titleStart = copy.title.slice(0, emphasisStart)
+  const titleEnd = copy.title.slice(emphasisStart + EMPHASIS_PHRASE.length)
 
   return (
     <HeroBand>
       <Inner>
         <Copy>
           <Title>
-            {titleStart} <Emphasis>{titleEnd}</Emphasis>
+            {titleStart}
+            <Emphasis>{EMPHASIS_PHRASE}</Emphasis>
+            {titleEnd}
           </Title>
           <Body>{copy.body}</Body>
           <Stats>

@@ -28,17 +28,18 @@ const Band = styled(Section)(({ theme }) => ({
 const Inner = styled(SectionInner)(({ theme }) => ({
   display: "flex",
   alignItems: "center",
-  gap: "48px",
+  gap: "100px",
   [theme.breakpoints.down("lg")]: {
     flexDirection: "column",
     alignItems: "stretch",
+    gap: "48px",
   },
 }))
 
 const Copy = styled.div(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
-  gap: "32px",
+  gap: "40px",
   flex: "0 0 608px",
   [theme.breakpoints.down("lg")]: {
     flex: "initial",
@@ -71,6 +72,7 @@ const Tagline = styled.p(({ theme }) => ({
 
 const Body = styled.p(({ theme }) => ({
   ...theme.typography.body1,
+  lineHeight: "26px",
   color: theme.custom.colors.silverGrayDark,
   margin: 0,
 }))
@@ -110,6 +112,7 @@ const Highlight = styled.li(({ theme }) => ({
 
 const Actions = styled.div(({ theme }) => ({
   display: "flex",
+  marginTop: "24px",
   [theme.breakpoints.down("sm")]: {
     button: { width: "100%" },
   },
@@ -131,6 +134,7 @@ const Curriculum = styled.div(({ theme }) => ({
 
 const CurriculumEyebrow = styled.p(({ theme }) => ({
   ...theme.typography.subtitle3,
+  fontWeight: theme.typography.fontWeightRegular,
   color: theme.custom.colors.silverGrayLight,
   margin: 0,
 }))
@@ -185,7 +189,14 @@ const FeaturedProgramSection: React.FC = () => (
         <Heading>
           <SectionEyebrow>{copy.eyebrow}</SectionEyebrow>
           <Title id="featured-program-heading">{copy.title}</Title>
-          <Tagline>{copy.tagline}</Tagline>
+          <Tagline>
+            {copy.tagline.map((line, index) => (
+              <React.Fragment key={line}>
+                {index > 0 ? <br /> : null}
+                {line}
+              </React.Fragment>
+            ))}
+          </Tagline>
         </Heading>
         <Body>{copy.body}</Body>
         <Highlights>

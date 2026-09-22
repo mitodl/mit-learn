@@ -15,9 +15,9 @@ const Inner = styled(SectionInner)(({ theme }) => ({
   flexDirection: "column",
   alignItems: "center",
   gap: "40px",
-  padding: "40px 24px 96px",
+  padding: "40px 0 96px",
   [theme.breakpoints.down("md")]: {
-    padding: "16px 24px 32px",
+    padding: "16px 0 32px",
   },
 }))
 

@@ -28,10 +28,10 @@ const Inner = styled(SectionInner)(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
   gap: "48px",
-  padding: "96px 24px 40px",
+  padding: "96px 0 40px",
   [theme.breakpoints.down("md")]: {
     gap: "32px",
-    padding: "32px 24px 16px",
+    padding: "32px 0 16px",
   },
 }))
 
@@ -226,6 +226,7 @@ const PillarTitle = styled.h4(({ theme }) => ({
 
 const PillarBody = styled.p(({ theme }) => ({
   ...theme.typography.body2,
+  lineHeight: pxToRem(22),
   color: theme.custom.colors.darkGray2,
   margin: 0,
 }))
