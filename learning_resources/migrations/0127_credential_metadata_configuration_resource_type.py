@@ -2,6 +2,58 @@
 
 from django.db import migrations, models
 
+from learning_resources import constants
+
+DEFAULT_CONFIGURATIONS = [
+    {
+        "field": constants.CredentialMetadataField.description.name,
+        "prompt": (
+            "Generate an Open Badges 3.0 description field with this content"
+            " in 1-2 sentences."
+        ),
+    },
+    {
+        "field": constants.CredentialMetadataField.criteria.name,
+        "prompt": (
+            "Generate an Open Badges 3.0 criteria field with skill-focused"
+            " bullet points that demonstrate what the learner did to complete"
+            " the program."
+        ),
+    },
+]
+
+DEFAULT_LLM_MODEL = "gpt-4o-mini"
+
+
+def add_program_configurations(apps, schema_editor):
+    """
+    Seed one program configuration per field.
+    """
+    Configuration = apps.get_model(
+        "learning_resources", "CredentialMetadataConfiguration"
+    )
+    program = constants.LearningResourceType.program.name
+    for configuration in DEFAULT_CONFIGURATIONS:
+        # get_or_create so a database that already has a program row migrates
+        # rather than tripping the constraint this migration adds.
+        Configuration.objects.get_or_create(
+            field=configuration["field"],
+            resource_type=program,
+            defaults={"llm_model": DEFAULT_LLM_MODEL, **configuration},
+        )
+
+
+def remove_program_configurations(apps, schema_editor):
+    """
+    Delete the seeded program configurations.
+    """
+    Configuration = apps.get_model(
+        "learning_resources", "CredentialMetadataConfiguration"
+    )
+    Configuration.objects.filter(
+        resource_type=constants.LearningResourceType.program.name
+    ).delete()
+
 
 class Migration(migrations.Migration):
     dependencies = [
@@ -13,16 +65,7 @@ class Migration(migrations.Migration):
             model_name="credentialmetadataconfiguration",
             name="resource_type",
             field=models.CharField(
-                choices=[
-                    ("course", "Course"),
-                    ("program", "Program"),
-                    ("learning_path", "Learning Path"),
-                    ("podcast", "Podcast"),
-                    ("podcast_episode", "Podcast Episode"),
-                    ("video", "Video"),
-                    ("video_playlist", "Video Playlist"),
-                    ("document", "Document"),
-                ],
+                choices=constants.LearningResourceType.as_tuple(),
                 default="course",
                 help_text="The kind of resource this row's prompt is written for.",
                 max_length=24,
@@ -43,5 +86,9 @@ class Migration(migrations.Migration):
                 fields=("field", "resource_type"),
                 name="unique_credential_metadata_configuration_field_resource_type",
             ),
+        ),
+        migrations.RunPython(
+            add_program_configurations,
+            remove_program_configurations,
         ),
     ]

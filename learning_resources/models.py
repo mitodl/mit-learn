@@ -1729,9 +1729,6 @@ class CredentialMetadataConfiguration(TimestampedModel):
     is_active = models.BooleanField(default=True)
 
     class Meta:
-        # Was `unique=True` on `field` alone, which a second resource type
-        # makes wrong: course and program each need their own prompt for the
-        # same field.
         constraints = [
             models.UniqueConstraint(
                 fields=["field", "resource_type"],
