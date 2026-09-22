@@ -203,6 +203,32 @@ def test_sync_edx_course_files_skips_unchanged_archive_keys(mocker):
     )
 
 
+def test_sync_edx_course_files_prefers_published_run(mocker):
+    """When two runs normalize to the same archive id, the published one wins"""
+    source = ETLSource.oll.name
+    course = LearningResourceFactory.create(
+        etl_source=source, published=True, create_runs=False
+    )
+    # legacy run from the retired OLL API ETL, created first so it has the lower pk
+    LearningResourceRunFactory.create(
+        learning_resource=course,
+        run_id="course-v1:MITx+8.01.1x+3T2018",
+        published=False,
+    )
+    current = LearningResourceRunFactory.create(
+        learning_resource=course, run_id="MITx+8.01.1x+3T2018", published=True
+    )
+    mocker.patch("learning_resources.etl.edx_shared.get_bucket_by_name")
+    mock_process = mocker.patch(
+        "learning_resources.etl.edx_shared.process_course_archive", return_value=True
+    )
+    key = f"{get_s3_prefix_for_source(source)}/8_01_1x_3T2018_OLL.tar.gz"
+
+    sync_edx_course_files(source, [course.id], [key])
+
+    assert mock_process.call_args[0][2] == current
+
+
 @pytest.mark.parametrize("source", [ETLSource.mitxonline.value, ETLSource.xpro.value])
 def test_sync_edx_course_files_invalid_tarfile(
     mock_course_archive_bucket, mocker, source
@@ -590,6 +616,26 @@ def test_run_for_edx_archive(etl_source, platform, archive_filename, expected_ru
 
     result = run_for_edx_archive(etl_source, archive_filename)
     assert result == run
+
+
+def test_run_for_edx_archive_prefers_published_run():
+    """A legacy unpublished twin with a lower pk must not win over the published run"""
+    from learning_resources.etl.edx_shared import run_for_edx_archive
+
+    source = ETLSource.oll.name
+    course = LearningResourceFactory.create(
+        etl_source=source, published=True, create_runs=False
+    )
+    LearningResourceRunFactory.create(
+        learning_resource=course,
+        run_id="course-v1:MITx+8.01.1x+3T2018",
+        published=False,
+    )
+    current = LearningResourceRunFactory.create(
+        learning_resource=course, run_id="MITx+8.01.1x+3T2018", published=True
+    )
+    key = f"{get_s3_prefix_for_source(source)}/8_01_1x_3T2018_OLL.tar.gz"
+    assert run_for_edx_archive(source, key) == current
 
 
 @pytest.mark.parametrize(
@@ -1173,20 +1219,27 @@ def test_build_run_lookup(source, platform):
     assert lookup[normalized][0].id == run.id
 
 
-def test_build_run_lookup_oll_strips_mitx_prefix():
-    """OLL runs are also indexed without the MITx prefix the archives omit"""
+@pytest.mark.parametrize(
+    ("run_id", "archive_stem"),
+    [
+        ("MITx+0.501x+2T2019", "0_501x_2T2019"),
+        ("OCW+6.042J+2T2019", "6_042J_2T2019"),
+        ("Varkey+INNOMITv2+2020_T1", "INNOMITv2_2020_T1"),
+    ],
+)
+def test_build_run_lookup_oll_strips_org_prefix(run_id, archive_stem):
+    """OLL runs are also indexed without the org segment the archives omit"""
     source = ETLSource.oll.name
     course = LearningResourceFactory.create(
         etl_source=source, published=True, create_runs=False
     )
     run = LearningResourceRunFactory.create(
-        learning_resource=course, run_id="MITx+0.501x+2T2019", published=True
+        learning_resource=course, run_id=run_id, published=True
     )
     lookup = build_run_lookup(source, [course.id])
-    # archive filenames like 0_501x_2T2019_OLL.tar.gz normalize without the prefix
-    assert "0.501x.2t2019" in lookup
-    assert lookup["0.501x.2t2019"][0].id == run.id
-    assert "mitx.0.501x.2t2019" in lookup
+    key = f"{get_s3_prefix_for_source(source)}/{archive_stem}_OLL.tar.gz"
+    assert lookup[extract_run_id_from_key(source, key)][0].id == run.id
+    assert normalize_run_id(source, run_id) in lookup
 
 
 def test_build_run_lookup_filters_by_ids():
