@@ -1227,6 +1227,7 @@ describe("UnenrolledCourseCard enrollment error toast", () => {
 
     await expectErrorToast(
       "Unable to complete enrollment. Please contact support. Error code: CS_700",
+      { contactSupport: true },
     )
   })
 

@@ -493,6 +493,9 @@ describe("CourseEnrollArea — click smoke tests", () => {
     expect(
       await screen.findByText("That product is no longer available."),
     ).toBeInTheDocument()
+    expect(
+      screen.getByRole("link", { name: "Contact Support" }),
+    ).toBeInTheDocument()
     expect(window.location.assign).not.toHaveBeenCalled()
   })
   // Free-click behavior (audit POST + dashboard redirect) is fully covered by
