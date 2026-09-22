@@ -27,12 +27,17 @@ import {
 import { HomeEnrollmentsDisplay } from "./HomeEnrollmentsDisplay"
 import * as mitxonline from "api/mitxonline-test-utils"
 import { useFeatureFlagEnabled } from "posthog-js/react"
-import { setupEnrollments, setupOrderHistory } from "./test-utils"
+import {
+  setupEnrollments,
+  setupOrderHistory,
+  setupProgramCertificates,
+} from "./test-utils"
 import { faker } from "@faker-js/faker/locale/en"
 
 // Verified cards look up their order; default to none, tests override.
 beforeEach(() => {
   setupOrderHistory()
+  setupProgramCertificates()
 })
 
 jest.mock("posthog-js/react")

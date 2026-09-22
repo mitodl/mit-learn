@@ -32,15 +32,8 @@ const programLetter: Factory<ProgramLetter> = (overrides = {}) => ({
     ],
   },
   certificate: {
-    record_hash: faker.string.uuid(),
-    micromasters_program_id: faker.number.int(),
-    user_email: faker.internet.email(),
     program_title: faker.lorem.words(),
-    user_first_name: faker.person.firstName(),
-    user_last_name: faker.person.lastName(),
     user_full_name: faker.person.fullName(),
-    program_letter_generate_url: new URL(faker.internet.url()).toString(),
-    program_letter_share_url: new URL(faker.internet.url()).toString(),
   },
   ...overrides,
 })
