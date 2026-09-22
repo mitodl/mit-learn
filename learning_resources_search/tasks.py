@@ -666,7 +666,10 @@ def _build_reindex_batches(job):  # noqa: C901, PLR0912
 
         for chunk, resource_ids in enumerate(
             chunks(
-                Course.objects.filter(learning_resource__published=True)
+                Course.objects.filter(
+                    Q(learning_resource__published=True)
+                    | Q(learning_resource__test_mode=True)
+                )
                 .filter(learning_resource__etl_source__in=RESOURCE_FILE_ETL_SOURCES)
                 .exclude(learning_resource__readable_id__in=blocklisted_ids)
                 .order_by("learning_resource_id")
@@ -721,9 +724,8 @@ def _build_reindex_batches(job):  # noqa: C901, PLR0912
     if PROGRAM_TYPE in indexes:
         for chunk, resource_ids in enumerate(
             chunks(
-                LearningResource.objects.filter(
-                    published=True, resource_type=PROGRAM_TYPE
-                )
+                LearningResource.objects.filter(resource_type=PROGRAM_TYPE)
+                .filter(Q(published=True) | Q(test_mode=True))
                 .order_by("id")
                 .values_list("id", flat=True),
                 chunk_size=settings.OPENSEARCH_REINDEX_DISPATCH_CHUNK_SIZE,
@@ -1095,7 +1097,8 @@ def get_update_resource_files_tasks(blocklisted_ids, etl_source):
 
     if etl_source is None or etl_source in RESOURCE_FILE_ETL_SOURCES:
         course_update_query = (
-            LearningResource.objects.filter(published=True, resource_type=COURSE_TYPE)
+            LearningResource.objects.filter(resource_type=COURSE_TYPE)
+            .filter(Q(published=True) | Q(test_mode=True))
             .exclude(readable_id__in=blocklisted_ids)
             .order_by("id")
         )
@@ -1170,9 +1173,11 @@ def get_update_program_files_tasks(etl_source):
     if etl_source is not None and etl_source not in RESOURCE_FILE_ETL_SOURCES:
         return []
 
-    program_update_query = LearningResource.objects.filter(
-        published=True, resource_type=PROGRAM_TYPE
-    ).order_by("id")
+    program_update_query = (
+        LearningResource.objects.filter(resource_type=PROGRAM_TYPE)
+        .filter(Q(published=True) | Q(test_mode=True))
+        .order_by("id")
+    )
 
     if etl_source:
         program_update_query = program_update_query.filter(etl_source=etl_source)
