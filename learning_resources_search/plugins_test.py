@@ -188,6 +188,24 @@ def test_search_index_plugin_bulk_resources_unpublished_skips_test_mode_direct_f
 
 
 @pytest.mark.django_db
+def test_search_index_plugin_resource_before_delete_test_mode_direct_files(mocker):
+    """Deleting a persisted test_mode resource still deindexes its direct content files"""
+    resource = LearningResourceFactory.create(is_course=True, test_mode=True)
+    marketing_page = ContentFileFactory.create(learning_resource=resource)
+    mocker.patch("learning_resources_search.plugins.tasks.deindex_document.si")
+    mocker.patch("learning_resources_search.plugins.tasks.deindex_run_content_files.si")
+    deindex_direct_files_mock = mocker.patch(
+        "learning_resources_search.plugins.tasks.deindex_content_files.si"
+    )
+
+    SearchIndexPlugin().resource_before_delete(resource)
+
+    deindex_direct_files_mock.assert_called_once_with(
+        [marketing_page.id], resource.id, resource_type=COURSE_TYPE
+    )
+
+
+@pytest.mark.django_db
 @pytest.mark.parametrize("resource_type", [COURSE_TYPE, PROGRAM_TYPE])
 @pytest.mark.parametrize("test_mode", [True, False])
 def test_search_index_plugin_resource_before_delete(

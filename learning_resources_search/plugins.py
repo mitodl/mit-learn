@@ -7,7 +7,7 @@ from django.apps import apps
 from django.conf import settings as django_settings
 
 from learning_resources.etl.constants import QDRANT_RETAINED_SOURCES
-from learning_resources.models import ContentFile
+from learning_resources.models import ContentFile, LearningResource
 from learning_resources_search import tasks
 from learning_resources_search.api import get_similar_topics_qdrant
 from learning_resources_search.constants import (
@@ -131,7 +131,7 @@ class SearchIndexPlugin:
         """
         files_by_resource = {}
         for file_id, resource_id in ContentFile.objects.filter(
-            learning_resource_id__in=resource_ids, learning_resource__test_mode=False
+            learning_resource_id__in=resource_ids
         ).values_list("id", "learning_resource_id"):
             files_by_resource.setdefault(resource_id, []).append(file_id)
         for resource_id, file_ids in files_by_resource.items():
@@ -193,7 +193,14 @@ class SearchIndexPlugin:
                 )
             try_with_retry_as_task(chain(*unpublished_tasks))
 
-        self._deindex_learning_resource_content_files(resource_ids, resource_type)
+        # test_mode resources keep their content files indexed, as in
+        # resource_unpublished
+        self._deindex_learning_resource_content_files(
+            LearningResource.objects.filter(
+                id__in=resource_ids, test_mode=False
+            ).values_list("id", flat=True),
+            resource_type,
+        )
 
     @hookimpl
     def resource_before_delete(self, resource):
