@@ -1129,15 +1129,19 @@ def credential_metadata_resources(*, overwrite: bool = False):
         QuerySet: the matching resources, empty when no configuration is
             active
     """
-    active_fields = active_credential_metadata_fields()
+    resource_type = LearningResourceType.course.name
+    active_fields = active_credential_metadata_fields(resource_type)
     if not active_fields:
-        log.warning("No active CredentialMetadataConfiguration; nothing to generate")
+        log.warning(
+            "No active %s CredentialMetadataConfiguration; nothing to generate",
+            resource_type,
+        )
         return LearningResource.objects.none()
 
     resources = (
         LearningResource.objects.filter(Q(published=True) | Q(test_mode=True))
         .filter(
-            resource_type=LearningResourceType.course.name,
+            resource_type=resource_type,
             etl_source=ETLSource.mitxonline.name,
             platform=PlatformType.mitxonline.name,
         )
@@ -1205,7 +1209,7 @@ def generate_credential_metadata_for_resource(
         None
         if overwrite
         else missing_credential_metadata_fields(
-            resource, active_credential_metadata_fields()
+            resource, active_credential_metadata_fields(resource.resource_type)
         )
     )
     metadata = run_on_worker_loop(

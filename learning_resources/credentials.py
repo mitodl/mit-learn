@@ -444,18 +444,23 @@ async def _generate_field(
     return FieldOutcome(response=response, error=error)
 
 
-def _active_configs(fields: list[str] | None) -> list[CredentialMetadataConfiguration]:
+def _active_configs(
+    resource_type: str, fields: list[str] | None
+) -> list[CredentialMetadataConfiguration]:
     """
-    Return the active configurations to generate, narrowed to `fields`.
+    Return the active configurations for a resource type, narrowed to `fields`.
 
     Args:
+        resource_type (str): the LearningResourceType being generated for.
         fields (list of str | None): the fields to generate, or None for
             every active configuration
 
     Returns:
         list of CredentialMetadataConfiguration: the configurations to run
     """
-    configs = CredentialMetadataConfiguration.objects.filter(is_active=True)
+    configs = CredentialMetadataConfiguration.objects.filter(
+        is_active=True, resource_type=resource_type
+    )
     if fields is not None:
         configs = configs.filter(field__in=fields)
     return list(configs)
@@ -466,6 +471,10 @@ async def generate_credential_metadata(
 ) -> CredentialMetadata:
     """
     Generate configured credential metadata fields for a resource.
+
+    The prompts used are the ones configured for the resource's own type.
+    Another type's configuration is not a fallback, so a resource whose type
+    has none generates nothing.
 
     The fields share one context and are independent, so they are generated
     concurrently: run in sequence they take about as long as the sum of their
@@ -485,10 +494,12 @@ async def generate_credential_metadata(
             missing from them. A field with no active configuration appears in
             neither: nothing was asked of it, so there is nothing to explain.
     """
-    configs = await db_sync_to_async(_active_configs)(fields)
+    configs = await db_sync_to_async(_active_configs)(resource.resource_type, fields)
     if not configs:
         logger.warning(
-            "No active CredentialMetadataConfiguration%s; nothing to generate for %s",
+            "No active %s CredentialMetadataConfiguration%s;"
+            " nothing to generate for %s",
+            resource.resource_type,
             f" for {', '.join(fields)}" if fields is not None else "",
             resource.readable_id,
         )

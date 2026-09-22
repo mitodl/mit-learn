@@ -6,7 +6,10 @@ import logging
 
 import pytest
 
-from learning_resources.constants import CredentialMetadataField
+from learning_resources.constants import (
+    CredentialMetadataField,
+    LearningResourceType,
+)
 from learning_resources.credentials import (
     FIELDS_USING_CONTENT_FILES,
     MAX_ERROR_DETAIL_CHARS,
@@ -644,6 +647,58 @@ def test_generate_credential_metadata_truncates_a_long_error(
 
 
 @pytest.mark.django_db(transaction=True)
+def test_generate_credential_metadata_uses_the_resource_types_prompts(
+    resource, no_configurations, mock_llm, mock_retrieval
+):
+    """
+    A course is generated from the course prompts, not another type's.
+
+    Prompts are configured per resource type, and the prompt is the whole of
+    what distinguishes them: pointed at a program's prompt, a course would
+    produce criteria describing a set of courses it is not.
+    """
+    CredentialMetadataConfigurationFactory.create(
+        field=CredentialMetadataField.description.name,
+        resource_type=LearningResourceType.course.name,
+        prompt="COURSE PROMPT",
+    )
+    CredentialMetadataConfigurationFactory.create(
+        field=CredentialMetadataField.description.name,
+        resource_type=LearningResourceType.program.name,
+        prompt="PROGRAM PROMPT",
+    )
+
+    asyncio.run(generate_credential_metadata(resource))
+
+    assert "COURSE PROMPT" in mock_llm.prompts[BadgeDescription]
+    assert "PROGRAM PROMPT" not in mock_llm.prompts[BadgeDescription]
+
+
+@pytest.mark.django_db(transaction=True)
+def test_generate_credential_metadata_without_a_configuration_for_the_type(
+    resource, no_configurations, mock_llm, mock_retrieval, caplog
+):
+    """
+    Another type's configuration is not a fallback.
+
+    A course with no course prompt generates nothing rather than borrowing
+    the program one -- silently issuing a credential from the wrong prompt is
+    worse than issuing none.
+    """
+    CredentialMetadataConfigurationFactory.create(
+        field=CredentialMetadataField.description.name,
+        resource_type=LearningResourceType.program.name,
+    )
+
+    with caplog.at_level(logging.WARNING):
+        generated = asyncio.run(generate_credential_metadata(resource))
+
+    assert generated == ({}, {})
+    assert mock_llm.prompts == {}
+    assert "No active course CredentialMetadataConfiguration" in caplog.text
+
+
+@pytest.mark.django_db(transaction=True)
 def test_generate_credential_metadata_for_a_subset_of_fields(
     resource, configurations, mock_llm, mock_retrieval
 ):
@@ -697,7 +752,7 @@ def test_generate_credential_metadata_with_no_fields(
 
     assert generated == ({}, {})
     assert mock_llm.prompts == {}
-    assert "No active CredentialMetadataConfiguration" in caplog.text
+    assert "No active course CredentialMetadataConfiguration" in caplog.text
 
 
 @pytest.mark.django_db(transaction=True)
