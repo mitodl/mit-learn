@@ -13,12 +13,20 @@ from safedelete.config import HARD_DELETE
 
 from learning_resources import factories, models, tasks
 from learning_resources.conftest import OCW_TEST_PREFIX, setup_s3, setup_s3_ocw
-from learning_resources.constants import LearningResourceType, PlatformType
+from learning_resources.constants import (
+    CredentialMetadataField,
+    LearningResourceType,
+    PlatformType,
+)
+from learning_resources.credentials import CredentialMetadata
 from learning_resources.etl.constants import MARKETING_PAGE_FILE_TYPE, ETLSource
 from learning_resources.etl.exceptions import ExtractException
 from learning_resources.factories import (
     ContentFileFactory,
+    CredentialMetadataConfigurationFactory,
+    CredentialMetadataFactory,
     LearningResourceFactory,
+    LearningResourcePlatformFactory,
     LearningResourceRunFactory,
 )
 from learning_resources.models import ContentFile, LearningResource
@@ -36,6 +44,7 @@ from learning_resources.tasks import (
     update_next_start_date_and_prices,
     update_ocw_learning_material_resources,
 )
+from main.celery import app
 from main.utils import now_in_utc
 
 pytestmark = pytest.mark.django_db
@@ -1670,3 +1679,487 @@ def test_unpublish_website_content_task_skips_a_republished_item(
     tasks.unpublish_website_content_learning_resource_task.delay(content.id)
 
     assert mock_unpublish.called is expect_removal
+
+
+def credential_metadata_course(**kwargs):
+    """Create a course the credential metadata sweep should pick up"""
+    return LearningResourceFactory.create(
+        **{
+            "is_course": True,
+            "published": True,
+            "etl_source": ETLSource.mitxonline.name,
+            "platform": LearningResourcePlatformFactory.create(
+                code=PlatformType.mitxonline.name
+            ),
+            **kwargs,
+        }
+    )
+
+
+@pytest.fixture
+def credential_configurations():
+    """
+    One active configuration per credential metadata field.
+
+    Created here rather than relying on migration 0124's seed: a transactional
+    test elsewhere deletes those rows without restoring them, and with
+    --reuse-db they then stay missing for every later run. Since the sweep's
+    scope is now derived from the active configurations, a test that assumed
+    the seed would pass or fail on test-suite history.
+    """
+    models.CredentialMetadataConfiguration.objects.all().delete()
+    return [
+        CredentialMetadataConfigurationFactory.create(field=field.name)
+        for field in CredentialMetadataField
+    ]
+
+
+@pytest.fixture
+def mock_generate_and_save(mocker):
+    """
+    Stand in for credential metadata generation inside the leaf task.
+
+    Two things are patched because the leaf builds a coroutine and then hands
+    it to the bridge: the generator, so no real LLM coroutine is created, and
+    `run_on_worker_loop`, whose return value is what the task reads. Its
+    `side_effect` is what a test varies to make one resource fail.
+    """
+    # A MagicMock, not the AsyncMock `patch` would infer for an async def:
+    # the leaf builds the coroutine and hands it to the bridge, which is
+    # mocked too, so a real coroutine here would only go unawaited.
+    generator = mocker.patch(
+        "learning_resources.credentials.generate_and_save_credential_metadata",
+        new=mocker.MagicMock(),
+    )
+    bridge = mocker.patch(
+        "learning_resources.tasks.run_on_worker_loop",
+        return_value=CredentialMetadata(fields={"description": "A course"}, errors={}),
+    )
+
+    bridge.generator = generator
+    return bridge
+
+
+def test_generate_credential_metadata_for_resource(
+    credential_configurations, mock_blocklist, mock_generate_and_save
+):
+    """The resource is generated for, and the store reports it stored something"""
+    resource = credential_metadata_course()
+
+    assert tasks.generate_credential_metadata_for_resource(resource.id) is True
+    assert mock_generate_and_save.call_count == 1
+
+
+def test_generate_credential_metadata_for_resource_raises(
+    credential_configurations, mock_blocklist, mock_generate_and_save
+):
+    """
+    A failing resource fails its own task rather than being swallowed.
+
+    With a task per resource there is nothing to protect: celery marks this
+    one failed, where a chunked version had to swallow the error to keep the
+    successes beside it. A visibly failed task is the point.
+    """
+    resource = credential_metadata_course()
+    mock_generate_and_save.side_effect = ValueError("the provider refused")
+
+    with pytest.raises(ValueError, match="the provider refused"):
+        tasks.generate_credential_metadata_for_resource(resource.id)
+
+
+def test_generate_credential_metadata_for_resource_reports_nothing_stored(
+    credential_configurations, mock_blocklist, mock_generate_and_save
+):
+    """A generation that produced nothing reports False"""
+    resource = credential_metadata_course()
+    mock_generate_and_save.return_value = CredentialMetadata(
+        fields={}, errors={"description": "litellm.APIConnectionError"}
+    )
+
+    assert tasks.generate_credential_metadata_for_resource(resource.id) is False
+
+
+def test_generate_credential_metadata_for_a_vanished_resource(
+    credential_configurations, mock_blocklist, mock_generate_and_save
+):
+    """
+    A resource deleted between the sweep and its task is skipped, not a crash.
+
+    The fan-out is a snapshot of ids, and nothing holds a lock over the hours
+    a full sweep takes.
+    """
+    assert tasks.generate_credential_metadata_for_resource(-1) is False
+    mock_generate_and_save.assert_not_called()
+
+
+def test_generate_credential_metadata_rechecks_an_unpublished_resource(
+    credential_configurations, mock_blocklist, mock_generate_and_save
+):
+    """
+    A resource unpublished after the fan-out is not generated for.
+
+    Hours can pass between the sweep's queryset and this task being picked
+    up, and a course out of scope by then is pure spend.
+    """
+    resource = credential_metadata_course()
+    resource.published = False
+    resource.save()
+
+    assert tasks.generate_credential_metadata_for_resource(resource.id) is False
+    mock_generate_and_save.assert_not_called()
+
+
+def test_generate_credential_metadata_rechecks_a_blocklisted_resource(
+    credential_configurations, mocker, mock_generate_and_save
+):
+    """A resource blocklisted after the fan-out is not generated for"""
+    resource = credential_metadata_course()
+    mocker.patch(
+        "learning_resources.tasks.load_course_blocklist",
+        return_value=[resource.readable_id],
+    )
+
+    assert tasks.generate_credential_metadata_for_resource(resource.id) is False
+    mock_generate_and_save.assert_not_called()
+
+
+def test_generate_credential_metadata_skips_a_duplicate_task(
+    credential_configurations, mock_blocklist, mock_generate_and_save
+):
+    """
+    A redelivered or duplicated task does not pay for the same resource twice.
+
+    The first delivery's row now satisfies the sweep's own predicate, so the
+    second finds nothing to do -- which is why the recheck uses that
+    predicate rather than a bare existence check.
+    """
+    resource = credential_metadata_course()
+    CredentialMetadataFactory.create(
+        learning_resource=resource, description="A course", criteria=["Did a thing"]
+    )
+
+    assert tasks.generate_credential_metadata_for_resource(resource.id) is False
+    mock_generate_and_save.assert_not_called()
+
+
+def test_generate_credential_metadata_retries_a_partial_row(
+    credential_configurations, mock_blocklist, mock_generate_and_save
+):
+    """
+    A half-generated resource is generated for again, but only for what it lacks.
+    """
+    resource = credential_metadata_course()
+    CredentialMetadataFactory.create(
+        learning_resource=resource, description="A course", criteria=[]
+    )
+
+    assert tasks.generate_credential_metadata_for_resource(resource.id) is True
+    assert mock_generate_and_save.call_count == 1
+    assert mock_generate_and_save.generator.call_args.kwargs["fields"] == ["criteria"]
+
+
+def test_generate_credential_metadata_for_an_empty_row(
+    credential_configurations, mock_blocklist, mock_generate_and_save
+):
+    """A resource with nothing stored is generated for in full"""
+    resource = credential_metadata_course()
+
+    assert tasks.generate_credential_metadata_for_resource(resource.id) is True
+    assert mock_generate_and_save.generator.call_args.kwargs["fields"] == [
+        "criteria",
+        "description",
+    ]
+
+
+def test_generate_credential_metadata_overwrite_ignores_a_complete_row(
+    credential_configurations, mock_blocklist, mock_generate_and_save
+):
+    """
+    overwrite=True regenerates a resource that already has complete metadata.
+
+    The recheck still applies -- an unpublished or blocklisted resource is
+    skipped either way -- but a complete row stops being a reason to skip.
+    """
+    resource = credential_metadata_course()
+    CredentialMetadataFactory.create(
+        learning_resource=resource, description="A course", criteria=["Did a thing"]
+    )
+
+    assert (
+        tasks.generate_credential_metadata_for_resource(resource.id, overwrite=True)
+        is True
+    )
+    assert mock_generate_and_save.call_count == 1
+    assert mock_generate_and_save.generator.call_args.kwargs["fields"] is None
+
+
+def deactivate_credential_configuration(field):
+    """Turn off one field's configuration, as an admin would"""
+    models.CredentialMetadataConfiguration.objects.filter(field=field).update(
+        is_active=False
+    )
+
+
+def test_credential_metadata_scope_follows_the_active_configurations(
+    credential_configurations, mock_blocklist
+):
+    """
+    A field with no active configuration is not a reason to regenerate.
+
+    Generation only runs is_active configurations and leaves an unconfigured
+    field out of both its fields and its errors, so that column keeps its
+    default forever. A predicate demanding every column would requeue the
+    resource on every sweep and pay to regenerate the still-active field each
+    time.
+    """
+    resource = credential_metadata_course()
+    CredentialMetadataFactory.create(
+        learning_resource=resource, description="A course", criteria=[]
+    )
+    assert list(tasks.credential_metadata_resource_ids()) == [resource.id]
+
+    deactivate_credential_configuration(CredentialMetadataField.criteria.name)
+
+    assert list(tasks.credential_metadata_resource_ids()) == []
+
+
+def test_credential_metadata_scope_with_no_active_configurations(
+    credential_configurations, mock_blocklist
+):
+    """
+    Nothing needs generating when nothing is configured to generate.
+
+    Otherwise the sweep fans out a task per course that each generate and
+    store nothing.
+    """
+    credential_metadata_course()
+    models.CredentialMetadataConfiguration.objects.update(is_active=False)
+
+    assert list(tasks.credential_metadata_resource_ids()) == []
+    assert list(tasks.credential_metadata_resource_ids(overwrite=True)) == []
+
+
+def test_generate_all_credential_metadata_with_no_active_configurations(
+    credential_configurations, mocked_celery, mock_blocklist
+):
+    """The sweep queues nothing when no configuration is active"""
+    credential_metadata_course()
+    models.CredentialMetadataConfiguration.objects.update(is_active=False)
+
+    assert tasks.generate_all_credential_metadata.delay().get() == 0
+    mocked_celery.group.assert_not_called()
+
+
+def test_generate_credential_metadata_rechecks_the_active_configurations(
+    credential_configurations, mock_blocklist, mock_generate_and_save
+):
+    """
+    A resource complete for the active fields is skipped, not regenerated.
+
+    The recheck shares the sweep's predicate, so turning a configuration off
+    stops the spend at the task as well as at the fan-out.
+    """
+    resource = credential_metadata_course()
+    CredentialMetadataFactory.create(
+        learning_resource=resource, description="A course", criteria=[]
+    )
+    deactivate_credential_configuration(CredentialMetadataField.criteria.name)
+
+    assert tasks.generate_credential_metadata_for_resource(resource.id) is False
+    mock_generate_and_save.assert_not_called()
+
+
+def test_credential_metadata_resource_ids_skips_complete_rows(
+    credential_configurations, mock_blocklist
+):
+    """A resource with both fields stored is not regenerated"""
+    complete = credential_metadata_course()
+    CredentialMetadataFactory.create(
+        learning_resource=complete, description="A course", criteria=["Did a thing"]
+    )
+    missing = credential_metadata_course()
+
+    assert list(tasks.credential_metadata_resource_ids()) == [missing.id]
+
+
+@pytest.mark.parametrize(
+    ("description", "criteria"),
+    [("A course", []), ("", ["Did a thing"]), ("", [])],
+)
+def test_credential_metadata_resource_ids_retries_partial_rows(
+    credential_configurations, mock_blocklist, description, criteria
+):
+    """
+    A half-generated resource is retried.
+
+    One field failing writes the other, so `credential_metadata__isnull=True`
+    alone would leave that resource permanently half-generated.
+    """
+    resource = credential_metadata_course()
+    CredentialMetadataFactory.create(
+        learning_resource=resource, description=description, criteria=criteria
+    )
+
+    assert list(tasks.credential_metadata_resource_ids()) == [resource.id]
+
+
+def test_credential_metadata_resource_ids_overwrite(
+    credential_configurations, mock_blocklist
+):
+    """Overwrite includes resources that already have complete metadata"""
+    complete = credential_metadata_course()
+    CredentialMetadataFactory.create(
+        learning_resource=complete, description="A course", criteria=["Did a thing"]
+    )
+
+    assert list(tasks.credential_metadata_resource_ids(overwrite=True)) == [complete.id]
+
+
+def test_credential_metadata_resource_ids_excludes_other_resources(
+    credential_configurations, mock_blocklist
+):
+    """
+    Only published MITx Online courses are swept.
+
+    All four of published, resource_type, etl_source and platform are pinned
+    because the endpoint's resolver pins them: generating for a row the API
+    will never serve is pure spend.
+    """
+    wanted = credential_metadata_course()
+    LearningResourceFactory.create(
+        is_course=True, published=True, etl_source=ETLSource.mit_edx.name
+    )
+    credential_metadata_course(published=False)
+    credential_metadata_course(is_course=False, is_program=True)
+
+    assert list(tasks.credential_metadata_resource_ids()) == [wanted.id]
+
+
+def test_credential_metadata_resource_ids_respects_the_blocklist(
+    credential_configurations, mocker
+):
+    """A blocklisted course is not generated for"""
+    blocked = credential_metadata_course()
+    wanted = credential_metadata_course()
+    mocker.patch(
+        "learning_resources.tasks.load_course_blocklist",
+        return_value=[blocked.readable_id],
+    )
+
+    assert list(tasks.credential_metadata_resource_ids()) == [wanted.id]
+
+
+def test_generate_all_credential_metadata(
+    credential_configurations, mocked_celery, mock_blocklist
+):
+    """The sweep queues one task per resource and returns the count"""
+    resources = [credential_metadata_course() for _ in range(3)]
+    expected_ids = sorted((resource.id for resource in resources), reverse=True)
+
+    queued = tasks.generate_all_credential_metadata.delay().get()
+
+    assert queued == len(resources)
+    signatures = mocked_celery.group.call_args.args[0]
+    assert [signature.args[0] for signature in signatures] == expected_ids
+    # Passed through so each task re-applies the mode the sweep ran in.
+    assert {signature.kwargs["overwrite"] for signature in signatures} == {False}
+
+
+@pytest.mark.parametrize("overwrite", [True, False])
+def test_generate_all_credential_metadata_passes_overwrite(
+    credential_configurations, mocked_celery, mock_blocklist, overwrite
+):
+    """Each per-resource task is told which mode the sweep ran in"""
+    resource = credential_metadata_course()
+    CredentialMetadataFactory.create(
+        learning_resource=resource, description="A course", criteria=["Did a thing"]
+    )
+
+    tasks.generate_all_credential_metadata.delay(overwrite=overwrite).get()
+
+    if not overwrite:
+        # the complete row takes it out of scope entirely
+        mocked_celery.group.assert_not_called()
+        return
+    signatures = mocked_celery.group.call_args.args[0]
+    assert [signature.kwargs["overwrite"] for signature in signatures] == [True]
+
+
+def test_generate_all_credential_metadata_does_not_wait(
+    credential_configurations, mocked_celery, mock_blocklist
+):
+    """
+    The sweep publishes the group and returns rather than becoming it.
+
+    `self.replace` would make this task's result the whole group's, so any
+    caller -- and CELERY_RESULT_EXPIRES' worth of result keys -- would hang on
+    hours of per-resource LLM calls to learn what each resource's own task
+    already logs.
+    """
+    credential_metadata_course()
+
+    tasks.generate_all_credential_metadata.delay().get()
+
+    mocked_celery.group.return_value.apply_async.assert_called_once_with()
+    mocked_celery.replace.assert_not_called()
+
+
+def test_generate_all_credential_metadata_with_nothing_to_do(
+    credential_configurations, mocked_celery, mock_blocklist
+):
+    """
+    An empty sweep queues nothing.
+
+    In the non-overwriting steady state an empty set is the normal case, so
+    this is the day-two path, not an edge case.
+    """
+    assert tasks.generate_all_credential_metadata.delay().get() == 0
+    mocked_celery.group.assert_not_called()
+
+
+def test_credential_metadata_task_paths_resolve():
+    """
+    The dotted path the beat schedule names exists.
+
+    It is a string in settings, so a rename is otherwise only caught at run
+    time, as a scheduled task that silently never runs.
+    """
+    assert (
+        tasks.generate_all_credential_metadata.name
+        == "learning_resources.tasks.generate_all_credential_metadata"
+    )
+    assert (
+        tasks.generate_credential_metadata_for_resource.name
+        == "learning_resources.tasks.generate_credential_metadata_for_resource"
+    )
+
+
+def test_credential_metadata_tasks_are_unrouted():
+    """
+    Both tasks run on the default queue.
+
+    Left out of task_routes rather than routed to "default" by name:
+    task_default_queue already is "default", so an entry there would only be a
+    second place to keep in step.
+    """
+    for name in (
+        tasks.generate_all_credential_metadata.name,
+        tasks.generate_credential_metadata_for_resource.name,
+    ):
+        assert name not in app.conf.task_routes
+    assert app.conf.task_default_queue == "default"
+
+
+def test_credential_metadata_leaf_task_is_acknowledged_late():
+    """
+    The per-resource task survives a lost or recycled worker.
+
+    Early acking would tell the broker the task is done before the LLM call
+    returns, so a worker recycled mid-generation would leave that course
+    ungenerated until the next daily sweep. The eligibility recheck makes the
+    redelivery safe rather than a second frontier-model call.
+    """
+    task = tasks.generate_credential_metadata_for_resource
+
+    assert task.acks_late is True
+    assert task.reject_on_worker_lost is True

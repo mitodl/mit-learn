@@ -1679,3 +1679,21 @@ def test_get_program_courses_includes_unpublished_test_mode_children_with_flag()
     titles = [r["title"] for r in result]
 
     assert "Test Mode Course" in titles
+
+
+def test_credential_metadata_is_not_serialized():
+    """
+    Stored credential metadata stays off the public catalogue.
+
+    It is draft, author-only content behind IsAdminOrCourseAuthor. Nothing
+    excludes it by name: LearningResourceBaseSerializer.Meta uses `exclude`,
+    and DRF skips reverse one-to-ones under it. That is implicit enough to be
+    worth pinning, since a switch to `fields` or a ModelSerializer elsewhere
+    would start leaking it silently.
+    """
+    resource = LearningResourceFactory.create(is_course=True)
+    factories.CredentialMetadataFactory.create(learning_resource=resource)
+
+    data = serializers.LearningResourceSerializer(instance=resource).data
+
+    assert "credential_metadata" not in data
