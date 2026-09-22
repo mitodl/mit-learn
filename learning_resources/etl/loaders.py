@@ -434,12 +434,17 @@ def load_run(
                     )
 
                 transaction.on_commit(enqueue_content_tasks)
-            elif previously_published is False and learning_resource_run.published:
+            elif (
+                previously_published is False
+                and learning_resource_run.published
+                and learning_resource_run.content_files.filter(published=True).exists()
+            ):
                 # Run was republished. Its content files are still present and
                 # published (retained sources keep them in Qdrant), just absent
                 # from OpenSearch. Re-index them without a full re-ingest.
                 # Runs that remain unpublished must not trip this on every
-                # sync — it re-embeds their files with overwrite=True.
+                # sync — it re-embeds their files with overwrite=True. With no
+                # published files the hook would only purge Qdrant points.
                 content_files_loaded_actions(learning_resource_run)
     return learning_resource_run
 
