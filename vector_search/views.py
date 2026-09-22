@@ -477,9 +477,10 @@ class QdrantView(AsyncAPIView):
 
         if search_collection == RESOURCES_COLLECTION_NAME:
             if settings.VECTOR_SEARCH_RESOURCES_FROM_PAYLOAD:
-                # Payloads are already the serialized resources -- no database
-                # round trip, so no thread hop either.
-                return _resource_payload_hits(search_result)
+                # Payloads are already the serialized resources, so this path
+                # skips hydration and serialization -- but it still checks the
+                # rows for publication, which needs the thread hop.
+                return await db_sync_to_async(_resource_payload_hits)(search_result)
             return await db_sync_to_async(_resource_vector_hits)(search_result)
         else:
             return await db_sync_to_async(_content_file_vector_hits)(search_result)

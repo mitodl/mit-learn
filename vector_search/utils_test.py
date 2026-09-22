@@ -2453,6 +2453,51 @@ def test_resource_vector_hits_preserves_qdrant_score_order():
     assert actual_readable_ids == expected_readable_ids
 
 
+def test_resource_payload_hits_drops_unpublished_resources():
+    """
+    The payload path checks the rows too, since it is the one in production.
+
+    A payload is not evidence of publication: unpublishing deletes the point
+    instead of rewriting it, so a stale payload still reads as published and
+    no Qdrant-side filter can catch it.
+    """
+    kept, gone = LearningResourceFactory.create_batch(2)
+    gone.published = False
+    gone.save()
+    search_result = [
+        MagicMock(
+            payload={
+                "readable_id": r.readable_id,
+                "platform": {"code": r.platform.code} if r.platform else None,
+            }
+        )
+        for r in (kept, gone)
+    ]
+
+    result = _resource_payload_hits(search_result)
+
+    assert [r["readable_id"] for r in result] == [kept.readable_id]
+
+
+def test_resource_payload_hits_keeps_a_payload_with_no_row():
+    """
+    A point with no resource here is kept: payloads are portable, so one can
+    come from another system's snapshot. Only rows that say unpublished go.
+    """
+    search_result = [
+        MagicMock(
+            payload={
+                "readable_id": "elsewhere:course:1",
+                "platform": {"code": "mitx"},
+            }
+        )
+    ]
+
+    result = _resource_payload_hits(search_result)
+
+    assert [r["readable_id"] for r in result] == ["elsewhere:course:1"]
+
+
 def test_resource_vector_hits_drops_unpublished_resources():
     """
     An unpublished resource is never a hit, whatever the index still holds.

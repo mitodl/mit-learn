@@ -2059,6 +2059,44 @@ def test_vector_search_returns_payload_is_not_hydrated(mocker, client):
 
 
 @pytest.mark.django_db(transaction=True)
+def test_vector_search_drops_a_stale_payload_for_an_unpublished_resource(
+    mocker, client
+):
+    """
+    An unpublished resource is not a result on the default path either.
+
+    Left to the index alone, a delete that is late or has failed outright keeps
+    serving the article an editor took down -- and unpublishing deletes the
+    point rather than rewriting its payload, so the payload itself still reads
+    as published. No setting override here: this is the shipped default.
+    """
+    resource = LearningResourceFactory.create(is_course=True)
+    payload = next(iter(serialize_bulk_learning_resources([resource.id])))
+    resource.published = False
+    resource.save()
+
+    mock_qdrant = mocker.patch(
+        "qdrant_client.AsyncQdrantClient", return_value=mocker.AsyncMock()
+    )()
+    mock_result = mocker.MagicMock()
+    point = mocker.MagicMock(score=0.6)
+    point.payload = payload
+    mock_result.points = [point]
+    mock_qdrant.query_points = mocker.AsyncMock(return_value=mock_result)
+    mock_qdrant.scroll = mocker.AsyncMock(return_value=([], None))
+    mock_qdrant.count = mocker.AsyncMock(return_value=CountResult(count=1))
+    mocker.patch("vector_search.views.async_qdrant_client", return_value=mock_qdrant)
+
+    response = client.get(
+        reverse("vector_search:v0:vector_learning_resources_search"),
+        data={"q": "test"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["results"] == []
+
+
+@pytest.mark.django_db(transaction=True)
 def test_vector_search_kill_switch_hydrates_from_database(mocker, client, settings):
     """Turning the setting off restores database hydration"""
     settings.VECTOR_SEARCH_RESOURCES_FROM_PAYLOAD = False
