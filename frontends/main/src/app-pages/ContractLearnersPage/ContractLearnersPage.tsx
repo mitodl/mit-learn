@@ -44,6 +44,7 @@ import { ForbiddenError, isForbiddenResponse } from "@/common/errors"
 import { FeatureFlags } from "@/common/feature_flags"
 import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
 import { contractAnalyticsView } from "@/common/urls"
+import SectionHeader from "../DashboardPage/Analytics/SectionHeader"
 import { ErrorContent } from "../ErrorPage/ErrorPageTemplate"
 import { LearnerRow } from "./LearnerRow"
 import { COLUMN_FLEX } from "./columns"
@@ -235,16 +236,6 @@ const FilterField = styled(SimpleSelectField)(({ theme }) => ({
     },
   },
 }))
-
-const SectionTitle = styled(Typography)(({ theme }) => ({
-  ...theme.typography.h5,
-  color: theme.custom.colors.black,
-})) as typeof Typography
-
-const ResultsCount = styled(Typography)(({ theme }) => ({
-  ...theme.typography.body2,
-  color: theme.custom.colors.silverGrayDark,
-})) as typeof Typography
 
 const ConsentNotice = styled(Typography)(({ theme }) => ({
   ...theme.typography.body3,
@@ -820,14 +811,18 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
 
             <ResultsSection>
               <ControlsRow>
-                <div>
-                  <SectionTitle component="h2">Learner results</SectionTitle>
-                  <ResultsCount component="p">
-                    {totalEnrollments === null
+                <SectionHeader
+                  component="h2"
+                  title="Learner results"
+                  description={
+                    totalEnrollments === null
                       ? "Loading…"
-                      : `${filteredCount} of ${totalEnrollments} enrollments`}
-                  </ResultsCount>
-                </div>
+                      : `${filteredCount} of ${totalEnrollments} enrollments`
+                  }
+                  asOf={rowsQuery.data?.as_of}
+                  isLoading={rowsQuery.isPending}
+                  isError={rowsQuery.isError}
+                />
                 <ControlsRight>
                   <StyledSearchInput
                     placeholder="Search name or email"
