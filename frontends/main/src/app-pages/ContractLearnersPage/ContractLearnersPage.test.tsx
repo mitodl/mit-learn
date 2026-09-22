@@ -242,7 +242,6 @@ describe("ContractLearnersPage", () => {
         total_count: 168,
       },
     )
-    mockFunnel(contractId)
 
     renderWithProviders(
       <ContractLearnersPage orgSlug={orgSlug} contractSlug={contract.slug} />,
@@ -284,7 +283,6 @@ describe("ContractLearnersPage", () => {
         enrollment_mode: "verified",
       }),
     ])
-    mockFunnel(contractId)
 
     renderWithProviders(
       <ContractLearnersPage orgSlug={orgSlug} contractSlug={contract.slug} />,
@@ -319,7 +317,6 @@ describe("ContractLearnersPage", () => {
       {},
       { outcomes_withheld_count: 1, total_count: 1 },
     )
-    mockFunnel(contractId)
 
     renderWithProviders(
       <ContractLearnersPage orgSlug={orgSlug} contractSlug={contract.slug} />,
@@ -352,7 +349,6 @@ describe("ContractLearnersPage", () => {
         outcomes_withheld_count: 3,
       },
     )
-    mockFunnel(contractId)
 
     renderWithProviders(
       <ContractLearnersPage orgSlug={orgSlug} contractSlug={contract.slug} />,
@@ -404,7 +400,6 @@ describe("ContractLearnersPage", () => {
         {},
         { total_count: 2 },
       )
-      mockFunnel(contractId)
       setMockResponse.get(
         analyticsUrls.contracts.learnerProgress(ORG_UUID, contractId, {
           sort: "full_name",
@@ -464,7 +459,6 @@ describe("ContractLearnersPage", () => {
       mockList(contractId, [
         analyticsFactories.learnerProgress({ full_name: "Everyone" }),
       ])
-      mockFunnel(contractId)
       mockList(
         contractId,
         [analyticsFactories.learnerProgress({ full_name: "Only Not Started" })],
@@ -561,7 +555,6 @@ describe("ContractLearnersPage", () => {
       {},
       { total_count: 5 },
     )
-    mockFunnel(contractId)
 
     renderWithProviders(
       <ContractLearnersPage orgSlug={orgSlug} contractSlug={contract.slug} />,
@@ -667,7 +660,6 @@ describe("ContractLearnersPage", () => {
     mockList(contractId, [
       analyticsFactories.learnerProgress({ full_name: "Everyone" }),
     ])
-    mockFunnel(contractId)
     mockList(
       contractId,
       [analyticsFactories.learnerProgress({ full_name: "Only Not Started" })],
@@ -704,7 +696,6 @@ describe("ContractLearnersPage", () => {
     mockList(contractId, [
       analyticsFactories.learnerProgress({ full_name: "Everyone" }),
     ])
-    mockFunnel(contractId)
     mockList(
       contractId,
       [
@@ -751,7 +742,6 @@ describe("ContractLearnersPage", () => {
     mockList(contractId, [
       analyticsFactories.learnerProgress({ full_name: "Everyone" }),
     ])
-    mockFunnel(contractId)
     mockList(contractId, [], { completion_status: ["not_started"] })
 
     renderWithProviders(
@@ -799,7 +789,6 @@ describe("ContractLearnersPage", () => {
         courserun_title: "Module 5",
       }),
     ])
-    mockFunnel(contractId)
 
     renderWithProviders(
       <ContractLearnersPage orgSlug={orgSlug} contractSlug={contract.slug} />,
@@ -831,7 +820,6 @@ describe("ContractLearnersPage", () => {
     mockList(contractId, [
       analyticsFactories.learnerProgress({ full_name: "Anton Petrov" }),
     ])
-    mockFunnel(contractId)
 
     renderWithProviders(
       <ContractLearnersPage orgSlug={orgSlug} contractSlug={contract.slug} />,
