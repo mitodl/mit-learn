@@ -1,6 +1,7 @@
+import { useQuery } from "@tanstack/react-query"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import { SimpleMenuItem } from "ol-components"
-import { useProgramCertificatesList } from "api/hooks/programCertificates"
+import { programCertificateQueries } from "api/hooks/programCertificates/queries"
 import { FeatureFlags } from "@/common/feature_flags"
 
 /**
@@ -21,7 +22,10 @@ const useProgramLetterMenuItem = (
   mitxonlineProgramId: number,
 ): SimpleMenuItem | null => {
   const flagEnabled = useFeatureFlagEnabled(FeatureFlags.ProgramLetters)
-  const { data: certificates } = useProgramCertificatesList({
+  const { data: certificates } = useQuery({
+    ...programCertificateQueries.list(),
+    // Not `!!flagEnabled`: the flag is undefined until PostHog resolves it, and
+    // only an explicit true should trigger the request.
     enabled: flagEnabled === true,
   })
 
