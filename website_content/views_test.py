@@ -1,6 +1,7 @@
 """Test for website_content views"""
 
 import pytest
+from django.db import transaction
 from rest_framework.reverse import reverse
 
 from learning_resources.factories import LearningResourceTopicFactory
@@ -387,6 +388,42 @@ def test_unpublish_removes_the_news_feed_entry_inline(staff_client, user):
 
     assert resp.status_code == 200
     assert not FeedItem.objects.filter(guid=guid).exists()
+
+
+@pytest.mark.django_db(transaction=True)
+def test_unpublish_hooks_run_outside_a_transaction(staff_client, user, mocker):
+    """
+    The unpublish hooks must not run inside a transaction.
+
+    They do two things that are only safe in autocommit: a synchronous call out
+    to Qdrant, which would otherwise hold a transaction open across network
+    I/O, and swallowing a `DatabaseError` to fall back to a queued task, which
+    inside an atomic block would poison the transaction instead -- the fallback
+    would never be queued, and the next query would raise
+    `TransactionManagementError`.
+
+    Nothing here asks for a transaction today, so this asserts the property
+    rather than trusting it: enabling `ATOMIC_REQUESTS` (or wrapping the view)
+    breaks the assumption, and this is what says so.
+    """
+    seen = {}
+
+    def record(*, content):
+        connection = transaction.get_connection()
+        seen["in_atomic_block"] = connection.in_atomic_block
+        seen["autocommit"] = connection.get_autocommit()
+
+    mocker.patch("website_content.views.content_unpublished_actions", record)
+    mocker.patch("website_content.views.clear_views_cache")
+    content = _make_content(user, is_published=True)
+    url = reverse(
+        "website_content:v1:website_content-detail", kwargs={"pk": content.id}
+    )
+
+    resp = staff_client.patch(url, {"is_published": False}, format="json")
+
+    assert resp.status_code == 200
+    assert seen == {"in_atomic_block": False, "autocommit": True}
 
 
 @pytest.mark.django_db(transaction=True)
