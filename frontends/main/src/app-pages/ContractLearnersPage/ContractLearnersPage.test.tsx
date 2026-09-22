@@ -62,7 +62,7 @@ const mockCounts = (
     completed: number
   },
 ) => {
-  const base = { limit: 1, include_inactive: true }
+  const base = { limit: 1 }
   setMockResponse.get(
     analyticsUrls.contracts.learnerProgress(ORG_UUID, contractId, base),
     analyticsFactories.learnerProgressEnvelope([], {
@@ -108,7 +108,6 @@ const mockList = (
     analyticsUrls.contracts.learnerProgress(ORG_UUID, contractId, {
       limit: PAGE_SIZE,
       offset: 0,
-      include_inactive: true,
       sort: "full_name",
       ...extraParams,
     }),
@@ -410,7 +409,6 @@ describe("ContractLearnersPage", () => {
         analyticsUrls.contracts.learnerProgress(ORG_UUID, contractId, {
           limit: 1000,
           offset: 0,
-          include_inactive: true,
         }),
         analyticsFactories.learnerProgressEnvelope([
           analyticsFactories.learnerProgress({
@@ -457,7 +455,7 @@ describe("ContractLearnersPage", () => {
       mitxUrls.organization.managerOrganizationsList(),
       paginate([org]),
     )
-    const base = { limit: 1, include_inactive: true }
+    const base = { limit: 1 }
     setMockResponse.get(
       analyticsUrls.contracts.learnerProgress(ORG_UUID, contractId, base),
       analyticsFactories.learnerProgressEnvelope([], { total_count: 5 }),

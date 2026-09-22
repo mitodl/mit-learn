@@ -409,7 +409,6 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
     () => ({
       limit: PAGE_SIZE,
       offset: (page - 1) * PAGE_SIZE,
-      include_inactive: true,
       sort: "full_name" as const,
       ...(debouncedSearch ? { search: debouncedSearch } : {}),
       ...(completionStatus ? { completion_status: completionStatus } : {}),
@@ -435,7 +434,6 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
    */
   const countParams = (status?: CompletionStatusFilter[]) => ({
     limit: 1,
-    include_inactive: true,
     ...(status ? { completion_status: status } : {}),
   })
 
@@ -597,7 +595,6 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
           analyticsContractQueries.learnerProgress(orgUuid, contractId, {
             limit: CSV_EXPORT_PAGE_SIZE,
             offset,
-            include_inactive: true,
           }),
         )
         all.push(...data.data)
