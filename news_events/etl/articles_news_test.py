@@ -415,6 +415,123 @@ def test_extract_summary_from_banner_with_multiple_links():
     )
 
 
+def test_extract_summary_from_banner_escapes_malicious_link_attrs():
+    """
+    A link href that tries to break out of the href attribute must not be
+    able to inject a new HTML attribute. Regression test for the exploit in
+    https://github.com/mitodl/hq/issues/13456: an editor-supplied href of
+    '" onmouseover="alert(document.cookie)' previously closed the href
+    attribute early and added onmouseover as a real, separate attribute.
+    """
+    content_json = {
+        "type": "doc",
+        "content": [
+            {
+                "type": "banner",
+                "content": [
+                    {
+                        "type": "paragraph",
+                        "content": [
+                            {
+                                "type": "text",
+                                "text": "Click here",
+                                "marks": [
+                                    {
+                                        "type": "link",
+                                        "attrs": {
+                                            "href": (
+                                                '" onmouseover="alert(document.cookie)'
+                                            ),
+                                            "target": "_blank",
+                                            "rel": "noopener",
+                                        },
+                                    }
+                                ],
+                            }
+                        ],
+                    }
+                ],
+            }
+        ],
+    }
+
+    result = articles_news.extract_summary_from_banner(content_json)
+
+    assert "onmouseover" not in result
+    assert result == '<a href="#" target="_blank" rel="noopener">Click here</a>'
+
+
+def test_extract_summary_from_banner_rejects_javascript_scheme_links():
+    """A javascript: href must not be emitted verbatim into the anchor tag"""
+    content_json = {
+        "type": "doc",
+        "content": [
+            {
+                "type": "banner",
+                "content": [
+                    {
+                        "type": "paragraph",
+                        "content": [
+                            {
+                                "type": "text",
+                                "text": "Click",
+                                "marks": [
+                                    {
+                                        "type": "link",
+                                        "attrs": {
+                                            "href": "javascript:alert(document.cookie)",
+                                            "target": "_blank",
+                                            "rel": "noopener",
+                                        },
+                                    }
+                                ],
+                            }
+                        ],
+                    }
+                ],
+            }
+        ],
+    }
+
+    result = articles_news.extract_summary_from_banner(content_json)
+
+    assert "javascript:" not in result
+    assert result == '<a href="#" target="_blank" rel="noopener">Click</a>'
+
+
+def test_extract_summary_from_banner_escapes_plain_text_html():
+    """
+    Plain (non-linked) text containing literal HTML must be escaped, not
+    passed through verbatim -- this text is later rendered with
+    dangerouslySetInnerHTML on the public /news page with no other
+    sanitization step.
+    """
+    content_json = {
+        "type": "doc",
+        "content": [
+            {
+                "type": "banner",
+                "content": [
+                    {
+                        "type": "paragraph",
+                        "content": [
+                            {
+                                "type": "text",
+                                "text": "<script>alert(document.cookie)</script>",
+                            }
+                        ],
+                    }
+                ],
+            }
+        ],
+    }
+
+    result = articles_news.extract_summary_from_banner(content_json)
+
+    assert "<script>" not in result
+    assert result == "&lt;script&gt;alert(document.cookie)&lt;/script&gt;"
+
+
 def test_extract_summary_from_banner_empty_content():
     """Test extracting summary from empty content"""
     result = articles_news.extract_summary_from_banner({})

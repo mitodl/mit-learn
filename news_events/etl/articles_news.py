@@ -1,6 +1,8 @@
 """ETL functions for website_content news data."""
 
+import html
 import logging
+from urllib.parse import urlparse
 
 from news_events.constants import FeedType
 from news_events.etl import loaders
@@ -8,6 +10,18 @@ from website_content.constants import WebsiteContentType
 from website_content.models import WebsiteContent
 
 log = logging.getLogger(__name__)
+
+_SAFE_LINK_SCHEMES = ("http", "https")
+
+
+def _escape_html(text: str) -> str:
+    """Escape text for safe interpolation into an HTML attribute or text node."""
+    return html.escape(text, quote=True)
+
+
+def _is_safe_link_href(href: str) -> bool:
+    """Restrict extracted links to absolute http(s) URLs."""
+    return urlparse(href).scheme in _SAFE_LINK_SCHEMES
 
 
 def website_content_feed_guid(content_id: int) -> str:
@@ -215,6 +229,8 @@ def _extract_text_from_paragraph(paragraph_node: dict) -> str:
         if isinstance(text_node, dict) and text_node.get("type") == "text":
             text = text_node.get("text", "")
             if text:
+                text = _escape_html(text)
+
                 # Check if this text has link marks
                 marks = text_node.get("marks", [])
                 link_mark = None
@@ -233,8 +249,11 @@ def _extract_text_from_paragraph(paragraph_node: dict) -> str:
                     rel = attrs.get("rel", "noopener noreferrer nofollow")
 
                     if href:
+                        safe_href = href if _is_safe_link_href(href) else "#"
                         text = (
-                            f'<a href="{href}" target="{target}" rel="{rel}">{text}</a>'
+                            f'<a href="{_escape_html(safe_href)}" '
+                            f'target="{_escape_html(target)}" '
+                            f'rel="{_escape_html(rel)}">{text}</a>'
                         )
 
                 text_parts.append(text)
