@@ -11,6 +11,7 @@ from django.contrib.auth import get_user_model
 from opensearchpy.exceptions import ConflictError, NotFoundError
 from opensearchpy.helpers import BulkIndexError, bulk
 
+from learning_resources.etl.constants import QDRANT_RETAINED_SOURCES
 from learning_resources.models import ContentFile, LearningResourceRun
 from learning_resources_search.connection import (
     get_active_aliases,
@@ -393,10 +394,14 @@ def deindex_learning_resources(ids, base_index_name):
     )
 
     if base_index_name in (COURSE_TYPE, PROGRAM_TYPE):
-        for run_id in LearningResourceRun.objects.filter(
-            learning_resource_id__in=ids
-        ).values_list("id", flat=True):
-            deindex_run_content_files(run_id, unpublished_only=False)
+        for run_id, etl_source in LearningResourceRun.objects.filter(
+            learning_resource_id__in=ids, learning_resource__test_mode=False
+        ).values_list("id", "learning_resource__etl_source"):
+            deindex_run_content_files(
+                run_id,
+                unpublished_only=False,
+                keep_published=etl_source in QDRANT_RETAINED_SOURCES,
+            )
 
 
 def deindex_percolators(ids):
