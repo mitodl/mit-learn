@@ -408,6 +408,10 @@ const WebsiteContentEditor = ({
   const handleSettingsSave = ({
     topics: nextTopics,
   }: ArticleSettingsValues) => {
+    // Absent for a type whose drawer has no topics section. Writing `[]` there
+    // would empty a selection the editor was never shown, and every PATCH
+    // re-runs the publish plugins, so there is nothing to send.
+    if (nextTopics === undefined) return
     setTopics(nextTopics)
     if (!contentItem) return
     updateMutation
@@ -683,6 +687,11 @@ const WebsiteContentEditor = ({
                 open={settingsOpen}
                 onClose={() => setSettingsOpen(false)}
                 contentLabel={contentLabel}
+                /* Only an article becomes a LearningResource, so only there do
+                   topics put the content on a topic page. */
+                showTopics={
+                  contentType === WebsiteContentContentTypeEnum.Article
+                }
                 initialValues={{ topics }}
                 onSave={handleSettingsSave}
               />

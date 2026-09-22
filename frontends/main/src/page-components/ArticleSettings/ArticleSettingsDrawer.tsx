@@ -174,8 +174,11 @@ export interface ArticleSettingsValues {
    *
    * The design still groups subtopics under their parent, which is derived
    * from each topic's own `parent` rather than stored alongside the id.
+   *
+   * Absent when `showTopics` is off: the drawer collected no selection, which
+   * is not the same as the editor having emptied one.
    */
-  topics: number[]
+  topics?: number[]
   seoTitle: string
   seoDescription: string
 }
@@ -194,6 +197,14 @@ export interface ArticleSettingsDrawerProps {
    * in the heading and the section copy.
    */
   contentLabel?: string
+  /**
+   * Whether to offer the topics section.
+   *
+   * The caller decides, since what topics reach is its business: only an
+   * article is projected into a LearningResource, so only there do they put
+   * the content on a topic page.
+   */
+  showTopics?: boolean
   /** Values to open with. Re-read each time the drawer opens. */
   initialValues?: Partial<ArticleSettingsValues>
   /**
@@ -210,6 +221,7 @@ const ArticleSettingsDrawer = ({
   open,
   onClose,
   contentLabel = "Article",
+  showTopics = true,
   initialValues,
   onSave,
 }: ArticleSettingsDrawerProps) => {
@@ -235,7 +247,7 @@ const ArticleSettingsDrawer = ({
    * working from this same visible set.
    */
   const { data: topicsData, isLoading: topicsLoading } =
-    useLearningResourceTopics({ limit: 1000 }, { enabled: open })
+    useLearningResourceTopics({ limit: 1000 }, { enabled: open && showTopics })
 
   const allTopics = useMemo(() => topicsData?.results ?? [], [topicsData])
 
@@ -260,7 +272,8 @@ const ArticleSettingsDrawer = ({
   useEffect(() => {
     if (!open) return
     const values = { ...EMPTY_SETTINGS, ...initialValues }
-    setSelectedIds(values.topics)
+    /* `topics` is optional, so a caller may pass it explicitly undefined. */
+    setSelectedIds(values.topics ?? [])
     setSeoTitle(values.seoTitle)
     setSeoDescription(values.seoDescription)
     setTopicId("")
@@ -393,85 +406,92 @@ const ArticleSettingsDrawer = ({
         </Header>
 
         <Body>
-          <TopicsSection>
-            <SectionHeading>
-              <Typography variant="h5" component="h3">
-                Select Topics
-              </Typography>
-              <Typography variant="body2">
-                Select one or more topics for your {contentLabel.toLowerCase()}
-              </Typography>
-            </SectionHeading>
-            <TopicRow>
-              <GrowingSelect
-                name="topic"
-                label="Topic"
-                fullWidth
-                options={topicOptions}
-                value={topicId}
-                onChange={(event) => {
-                  setTopicId(event.target.value as string)
-                  // The old subtopic belongs to the old parent.
-                  setSubtopicId("")
-                }}
-              />
-              <GrowingSelect
-                name="subtopic"
-                label="Subtopic"
-                fullWidth
-                options={subtopicOptions}
-                value={subtopicId}
-                onChange={(event) =>
-                  setSubtopicId(event.target.value as string)
-                }
-              />
-              <Button variant="bordered" disabled={!canAdd} onClick={handleAdd}>
-                Add
-              </Button>
-            </TopicRow>
-            {groupedSelections.length > 0 ? (
-              <SelectedTopics aria-label="Selected topics">
-                {groupedSelections.map(([groupTopicId, group]) => {
-                  const topicName =
-                    topicsById.get(groupTopicId)?.name ??
-                    `Topic ${groupTopicId}`
-                  return (
-                    <SelectedTopicGroup key={groupTopicId}>
-                      <SelectedTopicName>{topicName}</SelectedTopicName>
-                      {group.map((id) => {
-                        /* A topic added without a subtopic has no pill of its
-                           own; its name alone represents it. */
-                        if (id === groupTopicId) return null
-                        const subtopicName =
-                          topicsById.get(id)?.name ?? `Subtopic ${id}`
-                        return (
-                          <SubtopicChip key={id}>
-                            {subtopicName}
-                            <ChipRemoveButton
-                              type="button"
-                              onClick={() => handleRemove(id)}
-                              aria-label={`Remove ${subtopicName} from ${topicName}`}
-                            >
-                              <RiCloseLine aria-hidden />
-                            </ChipRemoveButton>
-                          </SubtopicChip>
-                        )
-                      })}
-                      {group.every((id) => id === groupTopicId) ? (
-                        <ChipRemoveButton
-                          type="button"
-                          onClick={() => handleRemove(groupTopicId)}
-                          aria-label={`Remove ${topicName}`}
-                        >
-                          <RiCloseLine aria-hidden />
-                        </ChipRemoveButton>
-                      ) : null}
-                    </SelectedTopicGroup>
-                  )
-                })}
-              </SelectedTopics>
-            ) : null}
-          </TopicsSection>
+          {showTopics ? (
+            <TopicsSection>
+              <SectionHeading>
+                <Typography variant="h5" component="h3">
+                  Select Topics
+                </Typography>
+                <Typography variant="body2">
+                  Select one or more topics for your{" "}
+                  {contentLabel.toLowerCase()}
+                </Typography>
+              </SectionHeading>
+              <TopicRow>
+                <GrowingSelect
+                  name="topic"
+                  label="Topic"
+                  fullWidth
+                  options={topicOptions}
+                  value={topicId}
+                  onChange={(event) => {
+                    setTopicId(event.target.value as string)
+                    // The old subtopic belongs to the old parent.
+                    setSubtopicId("")
+                  }}
+                />
+                <GrowingSelect
+                  name="subtopic"
+                  label="Subtopic"
+                  fullWidth
+                  options={subtopicOptions}
+                  value={subtopicId}
+                  onChange={(event) =>
+                    setSubtopicId(event.target.value as string)
+                  }
+                />
+                <Button
+                  variant="bordered"
+                  disabled={!canAdd}
+                  onClick={handleAdd}
+                >
+                  Add
+                </Button>
+              </TopicRow>
+              {groupedSelections.length > 0 ? (
+                <SelectedTopics aria-label="Selected topics">
+                  {groupedSelections.map(([groupTopicId, group]) => {
+                    const topicName =
+                      topicsById.get(groupTopicId)?.name ??
+                      `Topic ${groupTopicId}`
+                    return (
+                      <SelectedTopicGroup key={groupTopicId}>
+                        <SelectedTopicName>{topicName}</SelectedTopicName>
+                        {group.map((id) => {
+                          /* A topic added without a subtopic has no pill of its
+                             own; its name alone represents it. */
+                          if (id === groupTopicId) return null
+                          const subtopicName =
+                            topicsById.get(id)?.name ?? `Subtopic ${id}`
+                          return (
+                            <SubtopicChip key={id}>
+                              {subtopicName}
+                              <ChipRemoveButton
+                                type="button"
+                                onClick={() => handleRemove(id)}
+                                aria-label={`Remove ${subtopicName} from ${topicName}`}
+                              >
+                                <RiCloseLine aria-hidden />
+                              </ChipRemoveButton>
+                            </SubtopicChip>
+                          )
+                        })}
+                        {group.every((id) => id === groupTopicId) ? (
+                          <ChipRemoveButton
+                            type="button"
+                            onClick={() => handleRemove(groupTopicId)}
+                            aria-label={`Remove ${topicName}`}
+                          >
+                            <RiCloseLine aria-hidden />
+                          </ChipRemoveButton>
+                        ) : null}
+                      </SelectedTopicGroup>
+                    )
+                  })}
+                </SelectedTopics>
+              ) : null}
+            </TopicsSection>
+          ) : null}
 
           <SeoSection>
             <SectionHeading>
@@ -510,7 +530,13 @@ const ArticleSettingsDrawer = ({
             <Button
               variant="primary"
               onClick={() => {
-                onSave?.({ topics: selectedIds, seoTitle, seoDescription })
+                onSave?.({
+                  /* Undefined rather than [] with the section hidden: the
+                     editor cleared nothing, so there is nothing to write. */
+                  topics: showTopics ? selectedIds : undefined,
+                  seoTitle,
+                  seoDescription,
+                })
                 onClose()
               }}
             >

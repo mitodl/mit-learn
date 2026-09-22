@@ -1758,4 +1758,49 @@ describe("NewsEditor - shared content controls", () => {
       screen.queryByRole("heading", { name: "Article Settings" }),
     ).not.toBeInTheDocument()
   })
+
+  test("the settings drawer offers news no topics", async () => {
+    const user = factories.user.user({
+      is_authenticated: true,
+      is_article_editor: true,
+    })
+    setMockResponse.get(urls.userMe.get(), user)
+
+    const newsItem = factories.websiteContent.websiteContent({
+      id: 403,
+      title: "Draft news",
+      content_type: "news",
+      is_published: false,
+    })
+    setMockResponse.get(urls.websiteContent.details(newsItem.id), newsItem)
+
+    renderWithProviders(<NewsEditor newsItem={newsItem} />, { user })
+    await screen.findByTestId("editor")
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Settings" }),
+    )
+    await screen.findByRole("heading", { name: "News Settings" })
+
+    /* Only an article is projected into a LearningResource, so only there do
+       topics reach anything. SEO settings are still offered. */
+    expect(
+      screen.queryByRole("heading", { name: "Select Topics" }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("combobox", { name: "Topic" }),
+    ).not.toBeInTheDocument()
+    await screen.findByRole("heading", { name: "SEO Settings" })
+
+    /**
+     * No topics query either, and nothing PATCHed: writing `[]` would empty a
+     * selection the editor was never shown, and every PATCH re-runs the
+     * publish plugins. Note this test mocks no topics response at all, so a
+     * request for one would fail the suite.
+     */
+    await userEvent.click(screen.getByRole("button", { name: "Save Settings" }))
+    expect(makeRequest).not.toHaveBeenCalledWith(
+      expect.objectContaining({ method: "patch" }),
+    )
+  })
 })
