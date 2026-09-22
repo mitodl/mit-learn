@@ -8,26 +8,16 @@ describe("getDisplayStatus", () => {
     expect(getDisplayStatus(row)).toBe("certificate")
   })
 
-  test.each([
-    { mode: "verified", expected: "certificate" as const },
-    { mode: "audit", expected: "completed" as const },
-    // Case shouldn't decide a learner's status.
-    { mode: "Verified", expected: "certificate" as const },
-  ])("passed in $mode mode reads $expected", ({ mode, expected }) => {
-    const row = factories.learnerProgress({
-      completion_status: "passed",
-      enrollment_mode: mode,
-    })
-    expect(getDisplayStatus(row)).toBe(expected)
-  })
-
-  test("a null enrollment_mode cannot certify", () => {
-    const row = factories.learnerProgress({
-      completion_status: "passed",
-      enrollment_mode: null,
-    })
-    expect(getDisplayStatus(row)).toBe("completed")
-  })
+  test.each(["verified", "audit", "Verified", null])(
+    "passed reads Completed regardless of enrollment_mode (%s)",
+    (mode) => {
+      const row = factories.learnerProgress({
+        completion_status: "passed",
+        enrollment_mode: mode,
+      })
+      expect(getDisplayStatus(row)).toBe("completed")
+    },
+  )
 
   test.each([
     { status: "in_progress" as const, expected: "in-progress" as const },

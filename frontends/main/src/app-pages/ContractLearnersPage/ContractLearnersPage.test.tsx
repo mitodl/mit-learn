@@ -415,8 +415,7 @@ describe("ContractLearnersPage", () => {
         analyticsFactories.learnerProgressEnvelope([
           analyticsFactories.learnerProgress({
             full_name: "Certified Learner",
-            completion_status: "passed",
-            enrollment_mode: "verified",
+            completion_status: "certified",
           }),
           analyticsFactories.withheldLearnerProgress({
             full_name: "Private Learner",
@@ -443,10 +442,10 @@ describe("ContractLearnersPage", () => {
         reader.readAsText(blob)
       })
 
-      // A verified "passed" row reads "Certificate" on screen (statusDisplay.ts)
+      // A "certified" row reads "Certificate" on screen (statusDisplay.ts)
       // and should export the same label, not the raw API enum.
       expect(csv).toContain("Certificate")
-      expect(csv).not.toMatch(/,passed,/)
+      expect(csv).not.toMatch(/,certified,/)
       expect(csv).toContain("No consent given")
     })
   })
