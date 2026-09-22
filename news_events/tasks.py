@@ -129,7 +129,10 @@ def sync_website_content_to_news(self, content_id: int):
     """
     import logging
 
-    from news_events.etl.articles_news import sync_single_website_content_news_to_news
+    from news_events.etl.articles_news import (
+        delete_website_content_news_from_news,
+        sync_single_website_content_news_to_news,
+    )
     from website_content.models import WebsiteContent
 
     logger = logging.getLogger(__name__)
@@ -138,6 +141,19 @@ def sync_website_content_to_news(self, content_id: int):
         content = WebsiteContent.objects.get(id=content_id, is_published=True)
 
         sync_single_website_content_news_to_news(content)
+
+        # The published check above is a read, and the row can change under it:
+        # unpublishing runs in the request, so it can land between that read
+        # and this write and then have nothing queued behind it to notice --
+        # leaving the story in the feed after it was taken down. Whoever writes
+        # last reconciles, so re-read the row and undo if it has moved on.
+        if not WebsiteContent.objects.filter(id=content_id, is_published=True).exists():
+            logger.info(
+                "WebsiteContent %s was unpublished while syncing, undoing the sync",
+                content_id,
+            )
+            delete_website_content_news_from_news(content_id)
+            return
 
         logger.info(
             "Successfully synced content %s to news feed",

@@ -1073,6 +1073,18 @@ def sync_website_content_learning_resource(content_id: int) -> None:
         return
     sync_website_content_to_learning_resource(content)
 
+    # The check above is a read, and the row can change under it: unpublishing
+    # runs in the request, so it can land between that read and this write and
+    # then have nothing queued behind it to notice -- leaving a published,
+    # indexed resource for content that is no longer public. Whoever writes
+    # last reconciles, so re-read the row and undo if it has moved on.
+    if not WebsiteContent.objects.filter(id=content_id, is_published=True).exists():
+        log.info(
+            "WebsiteContent %s was unpublished while syncing, undoing the sync",
+            content_id,
+        )
+        unpublish_website_content_learning_resource(content_id)
+
 
 @app.task(acks_late=True, reject_on_worker_lost=True)
 def unpublish_website_content_learning_resource_task(content_id: int) -> None:

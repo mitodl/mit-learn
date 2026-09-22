@@ -1624,6 +1624,45 @@ def test_sync_website_content_learning_resource_guards(
     assert mock_sync.called is expect_sync
 
 
+def test_sync_website_content_undoes_itself_if_unpublished_meanwhile(mocker):
+    """
+    A sync that overtakes an unpublish reconciles against the row.
+
+    Unpublishing happens in the request, so it can land after this task has
+    read the item as published but before the task writes -- and there is
+    nothing queued behind it to notice. Left alone, the sync would restore a
+    published, indexed resource for content that is no longer public.
+    """
+    from learning_resources.api import (
+        sync_website_content_to_learning_resource,
+        website_content_readable_id,
+    )
+    from website_content.factories import WebsiteContentFactory
+    from website_content.models import WebsiteContent
+
+    # The search hand-off is covered in its own tests; this is about the row.
+    mocker.patch("learning_resources.api.resource_upserted_actions")
+    mocker.patch("learning_resources.api.resource_unpublished_actions")
+    content = WebsiteContentFactory.create(is_published=True, content_type="article")
+
+    def unpublish_then_sync(item):
+        """Stand in for the editor's unpublish, after the published check."""
+        WebsiteContent.objects.filter(id=item.id).update(is_published=False)
+        return sync_website_content_to_learning_resource(item)
+
+    mocker.patch(
+        "learning_resources.tasks.sync_website_content_to_learning_resource",
+        side_effect=unpublish_then_sync,
+    )
+
+    tasks.sync_website_content_learning_resource.delay(content.id)
+
+    resource = LearningResource.objects.get(
+        readable_id=website_content_readable_id(content.id)
+    )
+    assert resource.published is False
+
+
 def test_unpublish_website_content_learning_resource_task(mocker):
     """The removal task works from the id, so a deleted item still leaves the index."""
     mock_unpublish = mocker.patch(

@@ -153,6 +153,39 @@ def _news_content(user, *, is_published):
 
 
 @pytest.mark.django_db
+def test_sync_website_content_to_news_undoes_itself_if_unpublished_meanwhile(mocker):
+    """
+    A sync that overtakes an unpublish reconciles against the row.
+
+    Unpublishing removes the feed entry in the request, so it can land after
+    this task has read the item as published but before the task writes -- and
+    there is nothing queued behind it to notice. Left alone, the sync would put
+    the story back in the feed after it was taken down.
+    """
+    from news_events.etl import articles_news
+    from news_events.models import FeedItem
+    from website_content.factories import WebsiteContentFactory
+    from website_content.models import WebsiteContent
+
+    content = WebsiteContentFactory.create(is_published=True, content_type="news")
+    real_sync = articles_news.sync_single_website_content_news_to_news
+
+    def unpublish_then_sync(item):
+        """Stand in for the editor's unpublish, after the published check."""
+        WebsiteContent.objects.filter(id=item.id).update(is_published=False)
+        return real_sync(item)
+
+    mocker.patch(
+        "news_events.etl.articles_news.sync_single_website_content_news_to_news",
+        side_effect=unpublish_then_sync,
+    )
+
+    tasks.sync_website_content_to_news.delay(content.id)
+
+    guid = articles_news.website_content_feed_guid(content.id)
+    assert not FeedItem.objects.filter(guid=guid).exists()
+
+
 def test_delete_website_content_from_news_removes_the_entry(mocker, user):
     """The ordinary case: the item is unpublished, so its entry goes"""
     content = _news_content(user, is_published=False)
