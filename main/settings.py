@@ -147,7 +147,10 @@ INSTALLED_APPS = (
     "health_check",
 )
 
-WEBHOOK_SECRET = get_string("WEBHOOK_SECRET", "please-change-this")
+WEBHOOK_SECRET = get_string("WEBHOOK_SECRET", None)
+if not WEBHOOK_SECRET or WEBHOOK_SECRET == "please-change-this":  # noqa: S105
+    msg = "WEBHOOK_SECRET is not set to a non-default value"
+    raise ImproperlyConfigured(msg)
 
 if not get_bool("RUN_DATA_MIGRATIONS", default=False):
     MIGRATION_MODULES = {"data_fixtures": None}
