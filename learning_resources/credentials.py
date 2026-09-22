@@ -11,10 +11,15 @@ from typing import Annotated, NamedTuple
 
 import litellm
 from django.conf import settings
+from django.db.models import Q
 from langchain_litellm import ChatLiteLLM
 from typing_extensions import TypedDict
 
-from learning_resources.constants import CredentialMetadataField
+from learning_resources.constants import (
+    CredentialMetadataField,
+    LearningResourceRelationTypes,
+    LearningResourceType,
+)
 from learning_resources.credentials_store import save_credential_metadata
 from learning_resources.etl.constants import MARKETING_PAGE_FILE_TYPE
 from learning_resources.models import (
@@ -58,6 +63,12 @@ RESPONSE_SCHEMAS = {
 # Only criteria is generated from retrieved course content.
 FIELDS_USING_CONTENT_FILES = frozenset({CredentialMetadataField.criteria.name})
 
+# Content-file retrieval is for resources that have content files of their
+# own. A program's evidence is its courses' criteria, gathered below, so it
+# never retrieves -- enforced here rather than left to its configuration's
+# retrieval_query being blank, which an admin can fill in.
+RESOURCE_TYPES_USING_CONTENT_FILES = frozenset({LearningResourceType.course.name})
+
 # How much of a provider error a response carries. The untruncated text stays
 # on the CredentialMetadataGenerationLog row: a litellm error can quote an
 # entire upstream response body, which belongs in the record rather than in
@@ -83,31 +94,47 @@ EXCLUDED_CHUNK_EXTENSIONS = frozenset({".xml", ".sjson", ".json"})
 class CredentialContext(NamedTuple):
     """
     The assembled sources for one resource: its metadata, its marketing page,
-    and the content-file chunks retrieved for it.
+    and -- depending on what kind of resource it is -- the content-file chunks
+    retrieved for it, or the criteria of the courses it is made of.
 
     Retrieval is what bounds the size of all this:
     CREDENTIAL_METADATA_CONTENT_CHUNK_LIMIT caps how many chunks can be included,
-    and every chunk is a bounded embedding chunk.
+    and every chunk is a bounded embedding chunk. A program's course criteria
+    are bounded by the number of courses in it.
     """
 
     metadata: str
     marketing_page: str
     chunks: list[tuple[str, str]]
+    # A program only. Its courses' generated criteria, rendered for the
+    # prompt, and the readable_ids of any course that has none yet.
+    child_criteria: str = ""
+    courses_missing_criteria: tuple[str, ...] = ()
 
-    def assemble(self, *, include_chunks: bool = True) -> tuple[str, list[str]]:
+    def assemble(self, *, include_evidence: bool = True) -> tuple[str, list[str]]:
         """
         Render the sources into the single string sent to the model.
 
         Args:
-            include_chunks (bool): whether to append the retrieved content-file
-                chunks -- see FIELDS_USING_CONTENT_FILES
+            include_evidence (bool): whether to append what the criteria
+                prompt is written from -- retrieved content-file chunks for a
+                course, its courses' criteria for a program. Both answer
+                "what did the learner do", which is the criteria field's
+                question and no other's, so the description prompt gets
+                neither. See FIELDS_USING_CONTENT_FILES.
 
         Returns:
             tuple[str, list[str]]: the context text, and the Qdrant point ids
                 of the chunks it includes
         """
-        chunks = self.chunks if include_chunks else []
-        sections = [self.metadata, self.marketing_page, *(text for _, text in chunks)]
+        chunks = self.chunks if include_evidence else []
+        child_criteria = self.child_criteria if include_evidence else ""
+        sections = [
+            self.metadata,
+            self.marketing_page,
+            child_criteria,
+            *(text for _, text in chunks),
+        ]
         text = "\n\n".join(section for section in sections if section)
         return text, [point_id for point_id, _ in chunks]
 
@@ -294,8 +321,50 @@ async def _retrieve_chunks(
     return _usable_chunks(chunks)
 
 
+def _child_course_criteria(resource: LearningResource) -> tuple[str, tuple[str, ...]]:
+    """
+    Render a program's courses' criteria, and name the courses lacking any.
+
+    A program's criteria are claims about what completing its courses
+    demonstrates, so the courses' own generated criteria are the evidence for
+    them -- the program has no content files of its own to retrieve.
+
+    Only published courses count. An unpublished course is not generated for
+    by the sweep, so requiring its criteria would block its program forever.
+
+    Args:
+        resource (LearningResource): the program
+
+    Returns:
+        tuple[str, tuple[str, ...]]: the rendered section, empty when no
+            course has criteria yet, and the readable_ids of the courses that
+            have none. Both empty means every course has criteria.
+    """
+    courses = (
+        LearningResource.objects.filter(
+            Q(published=True) | Q(test_mode=True),
+            parents__parent=resource,
+            parents__relation_type=LearningResourceRelationTypes.PROGRAM_COURSES.value,
+        )
+        # The program's own ordering, so the prompt reads in course order.
+        .order_by("parents__position")
+        .values_list("readable_id", "title", "credential_metadata__criteria")
+    )
+
+    sections, missing = [], []
+    for readable_id, title, criteria in courses:
+        if not criteria:
+            missing.append(readable_id)
+            continue
+        bullets = "\n".join(f"- {criterion}" for criterion in criteria)
+        sections.append(f"### {title}\n\n{bullets}")
+
+    text = "## Course criteria\n\n" + "\n\n".join(sections) if sections else ""
+    return text, tuple(missing)
+
+
 async def build_credential_context(
-    resource: LearningResource, query: str = ""
+    resource: LearningResource, query: str = "", *, child_criteria: bool = False
 ) -> CredentialContext:
     """
     Assemble every source for a resource's credential metadata.
@@ -305,27 +374,37 @@ async def build_credential_context(
         query (str): the content retrieval query. Empty skips Qdrant entirely,
             so a description-only run does not pay for a retrieval nothing
             reads -- and there is no vector search to run without a query.
+        child_criteria (bool): whether to gather the criteria of the courses
+            this resource is made of. A program's criteria prompt only.
 
     Returns:
-        CredentialContext: the metadata, marketing page and retrieved chunks
+        CredentialContext: the metadata, marketing page, and whichever
+            evidence the resource's own type supplies
     """
-    sources = [
-        db_sync_to_async(_render_metadata)(resource),
-        db_sync_to_async(_marketing_page_content)(resource),
-    ]
+    # Keyed rather than positional: which sources are gathered varies by
+    # resource type, and a bare unpack silently shifts when one is skipped.
+    sources = {
+        "metadata": db_sync_to_async(_render_metadata)(resource),
+        "marketing_page": db_sync_to_async(_marketing_page_content)(resource),
+    }
     if query:
-        sources.append(_retrieve_chunks(resource, query))
-    metadata, marketing_page, *retrieved = await asyncio.gather(*sources)
-    chunks = retrieved[0] if retrieved else []
+        sources["chunks"] = _retrieve_chunks(resource, query)
+    if child_criteria:
+        sources["child_criteria"] = db_sync_to_async(_child_course_criteria)(resource)
+    gathered = dict(zip(sources, await asyncio.gather(*sources.values())))
+
+    criteria_text, missing = gathered.get("child_criteria", ("", ()))
     return CredentialContext(
-        metadata=metadata,
-        marketing_page=_prepare_marketing_page(marketing_page),
-        chunks=chunks,
+        metadata=gathered["metadata"],
+        marketing_page=_prepare_marketing_page(gathered["marketing_page"]),
+        chunks=gathered.get("chunks", []),
+        child_criteria=criteria_text,
+        courses_missing_criteria=missing,
     )
 
 
 def _missing_context_sources(
-    context: CredentialContext, *, retrieved: bool
+    context: CredentialContext, *, retrieved: bool, child_criteria: bool = False
 ) -> list[str]:
     """
     Return the sources the configurations ask for that the context lacks.
@@ -343,6 +422,11 @@ def _missing_context_sources(
             configuration with a blank retrieval_query is asking for
             generation from the marketing page alone, so empty chunks are not
             a missing source -- nothing was asked for.
+        child_criteria (bool): whether the resource's courses' criteria were
+            asked for. All of them are required, not merely some: a program's
+            criteria are claims about completing the whole of it, so leaving
+            a course out states less than the credential is for. The sweep
+            picks the program up again once the last course generates.
 
     Returns:
         list of str: the missing sources, named for a log line and an error
@@ -353,6 +437,12 @@ def _missing_context_sources(
         missing.append("marketing page")
     if retrieved and not context.chunks:
         missing.append("course content")
+    if child_criteria and (
+        context.courses_missing_criteria or not context.child_criteria
+    ):
+        # `not child_criteria` also covers a program with no courses at all,
+        # which has nothing to base criteria on either.
+        missing.append("courses' criteria")
     return missing
 
 
@@ -409,7 +499,7 @@ async def _generate_field(
         FieldOutcome: the structured response, and the error if the call failed
     """
     context_text, point_ids = context.assemble(
-        include_chunks=config.field in FIELDS_USING_CONTENT_FILES
+        include_evidence=config.field in FIELDS_USING_CONTENT_FILES
     )
     prompt = f"{context_text}\n\n{config.prompt}"
 
@@ -505,9 +595,32 @@ async def generate_credential_metadata(
         )
         return CredentialMetadata(fields={}, errors={})
 
-    query = retrieval_query(configs)
-    context = await build_credential_context(resource, query)
-    missing = _missing_context_sources(context, retrieved=bool(query))
+    # What the criteria prompt is written from depends on the resource type:
+    # a course retrieves its own content files, a program reads the criteria
+    # already generated for its courses.
+    generating_criteria = any(
+        config.field == CredentialMetadataField.criteria.name for config in configs
+    )
+    uses_content_files = resource.resource_type in RESOURCE_TYPES_USING_CONTENT_FILES
+    uses_child_criteria = (
+        generating_criteria
+        and resource.resource_type == LearningResourceType.program.name
+    )
+    query = retrieval_query(configs) if uses_content_files else ""
+
+    context = await build_credential_context(
+        resource, query, child_criteria=uses_child_criteria
+    )
+    if context.courses_missing_criteria:
+        logger.warning(
+            "%s has %d course(s) with no criteria generated yet: %s",
+            resource.readable_id,
+            len(context.courses_missing_criteria),
+            ", ".join(context.courses_missing_criteria),
+        )
+    missing = _missing_context_sources(
+        context, retrieved=bool(query), child_criteria=uses_child_criteria
+    )
     if missing:
         sources = " and ".join(missing)
         logger.warning(
@@ -515,7 +628,10 @@ async def generate_credential_metadata(
             resource.readable_id,
             sources,
         )
-        detail = f"Nothing was generated: the course is missing its {sources}."
+        detail = (
+            f"Nothing was generated: the {resource.resource_type}"
+            f" is missing its {sources}."
+        )
         return CredentialMetadata(
             fields={}, errors={config.field: detail for config in configs}
         )

@@ -18,7 +18,11 @@ from learning_resources.api import (
     sync_website_content_to_learning_resource,
     unpublish_website_content_learning_resource,
 )
-from learning_resources.constants import LearningResourceType, PlatformType
+from learning_resources.constants import (
+    CREDENTIAL_METADATA_RESOURCE_TYPES,
+    LearningResourceType,
+    PlatformType,
+)
 from learning_resources.credentials_store import (
     active_credential_metadata_fields,
     incomplete_credential_metadata_query,
@@ -1116,12 +1120,6 @@ def unpublish_website_content_learning_resource_task(content_id: int) -> None:
         return
 
     unpublish_website_content_learning_resource(content_id)
-
-
-CREDENTIAL_METADATA_RESOURCE_TYPES = (
-    LearningResourceType.course.name,
-    LearningResourceType.program.name,
-)
 
 
 def credential_metadata_resources(resource_type: str, *, overwrite: bool = False):

@@ -8,6 +8,7 @@ import pytest
 
 from learning_resources.constants import (
     CredentialMetadataField,
+    LearningResourceRelationTypes,
     LearningResourceType,
 )
 from learning_resources.credentials import (
@@ -33,6 +34,7 @@ from learning_resources.models import (
     CredentialMetadata,
     CredentialMetadataConfiguration,
     CredentialMetadataGenerationLog,
+    LearningResourceRelationship,
 )
 from main.factories import UserFactory
 from main.utils import run_on_worker_loop
@@ -177,6 +179,54 @@ def resource():
         published=True,
     )
     return resource
+
+
+@pytest.fixture
+def program_configurations(no_configurations):
+    """One active program configuration per credential metadata field"""
+    return [
+        CredentialMetadataConfigurationFactory.create(
+            field=field.name,
+            resource_type=LearningResourceType.program.name,
+            prompt=f"Generate the program {field.name}.",
+        )
+        for field in CredentialMetadataField
+    ]
+
+
+def add_course(program, criteria, *, position=0, published=True):
+    """Add a course to a program, with `criteria` already generated or not"""
+    course = LearningResourceFactory.create(is_course=True, published=published)
+    if criteria:
+        CredentialMetadata.objects.create(
+            learning_resource=course, description="A course.", criteria=criteria
+        )
+    LearningResourceRelationship.objects.create(
+        parent=program,
+        child=course,
+        position=position,
+        relation_type=LearningResourceRelationTypes.PROGRAM_COURSES.value,
+    )
+    return course
+
+
+@pytest.fixture
+def program():
+    """
+    Return a program with a marketing page and no courses yet.
+
+    `program__courses=[]` because ProgramFactory otherwise attaches one to
+    three random courses, none of which has criteria -- every program would
+    then be skipped for courses the test never asked for.
+    """
+    program = LearningResourceFactory.create(is_program=True, program__courses=[])
+    ContentFileFactory.create(
+        learning_resource=program,
+        file_type=MARKETING_PAGE_FILE_TYPE,
+        content=MARKETING_PAGE,
+        published=True,
+    )
+    return program
 
 
 def test_prepare_marketing_page_drops_instructors():
@@ -348,14 +398,14 @@ def test_assemble_includes_every_source_highest_scoring_first():
     assert point_ids == ["first", "second"]
 
 
-def test_assemble_without_chunks():
+def test_assemble_without_evidence():
     """Course information and the marketing page stand on their own"""
     context = CredentialContext(
         metadata="## Course information\n- Title: Fluids",
         marketing_page="## Marketing page\n\nAbout this course.",
         chunks=[("first", "the highest scoring chunk")],
     )
-    text, point_ids = context.assemble(include_chunks=False)
+    text, point_ids = context.assemble(include_evidence=False)
 
     assert text == (
         "## Course information\n- Title: Fluids\n\n"
@@ -782,6 +832,173 @@ def test_generate_and_save_credential_metadata_keeps_the_fields_not_asked_for(
         "Applied conservation laws",
         "Modelled fluid flow",
     ]
+
+
+@pytest.mark.django_db(transaction=True)
+def test_program_criteria_come_from_its_courses(
+    program, program_configurations, mock_llm, mock_retrieval
+):
+    """
+    A program's criteria prompt is given its courses' generated criteria.
+
+    That is the evidence for a program: it has no content files of its own,
+    and its criteria are claims about what completing its courses shows.
+    """
+    add_course(program, ["Applied conservation laws"], position=0)
+    add_course(program, ["Derived the Navier-Stokes equations"], position=1)
+
+    generated = asyncio.run(generate_credential_metadata(program))
+
+    criteria_prompt = mock_llm.prompts[BadgeCriteria]
+    assert "Applied conservation laws" in criteria_prompt
+    assert "Derived the Navier-Stokes equations" in criteria_prompt
+    # The description is what the program is, not what the learner did.
+    assert "Applied conservation laws" not in mock_llm.prompts[BadgeDescription]
+    assert generated.errors == {}
+
+
+@pytest.mark.django_db(transaction=True)
+def test_program_criteria_follow_the_programs_own_order(
+    program, program_configurations, mock_llm, mock_retrieval
+):
+    """The courses appear in the order the program lists them"""
+    add_course(program, ["Second course criterion"], position=1)
+    add_course(program, ["First course criterion"], position=0)
+
+    asyncio.run(generate_credential_metadata(program))
+
+    criteria_prompt = mock_llm.prompts[BadgeCriteria]
+    assert criteria_prompt.index("First course criterion") < criteria_prompt.index(
+        "Second course criterion"
+    )
+
+
+@pytest.mark.django_db(transaction=True)
+def test_program_does_not_retrieve_content_files(
+    program, no_configurations, mock_llm, mock_retrieval
+):
+    """
+    A program never queries Qdrant, whatever its configuration says.
+
+    Its evidence is its courses' criteria. A retrieval_query left in the
+    program row -- copied from the course one, say -- would otherwise pay for
+    chunks of a resource that has no content files of its own.
+    """
+    for field in CredentialMetadataField:
+        CredentialMetadataConfigurationFactory.create(
+            field=field.name,
+            resource_type=LearningResourceType.program.name,
+            retrieval_query="syllabus",
+        )
+    add_course(program, ["Applied conservation laws"])
+
+    asyncio.run(generate_credential_metadata(program))
+
+    mock_retrieval.assert_not_called()
+
+
+@pytest.mark.django_db(transaction=True)
+def test_program_skipped_until_every_course_has_criteria(
+    program, program_configurations, mock_llm, mock_retrieval, caplog
+):
+    """
+    A program whose courses are not all generated for yet is skipped.
+
+    Its criteria are claims about completing the whole program, so criteria
+    built from some of its courses state less than the credential is for.
+    Storing nothing leaves the sweep to pick the program up again once the
+    last course generates.
+    """
+    add_course(program, ["Applied conservation laws"])
+    pending = add_course(program, None)
+
+    with caplog.at_level(logging.WARNING):
+        generated = asyncio.run(generate_credential_metadata(program))
+
+    assert generated.fields == {}
+    assert set(generated.errors) == {field.name for field in CredentialMetadataField}
+    assert "missing its courses' criteria" in generated.errors["criteria"]
+    # No LLM call at all: the description is skipped with the criteria.
+    assert mock_llm.prompts == {}
+    # The log names the course still to be generated for.
+    assert pending.readable_id in caplog.text
+
+
+@pytest.mark.django_db(transaction=True)
+def test_program_without_a_marketing_page_is_skipped(
+    program_configurations, mock_llm, mock_retrieval, caplog
+):
+    """
+    A program with no marketing page is skipped, as a course would be.
+
+    Its courses' criteria say what the learner did but not what the program
+    is, so a description written without the page would be invention.
+    """
+    program = LearningResourceFactory.create(is_program=True, program__courses=[])
+    add_course(program, ["Applied conservation laws"])
+
+    with caplog.at_level(logging.WARNING):
+        generated = asyncio.run(generate_credential_metadata(program))
+
+    assert generated.fields == {}
+    assert "missing its marketing page" in generated.errors["criteria"]
+    assert mock_llm.prompts == {}
+    assert "Not generating credential metadata" in caplog.text
+
+
+@pytest.mark.django_db(transaction=True)
+def test_program_with_no_courses_is_skipped(
+    program, program_configurations, mock_llm, mock_retrieval
+):
+    """A program with no courses has nothing to base criteria on"""
+    generated = asyncio.run(generate_credential_metadata(program))
+
+    assert generated.fields == {}
+    assert "missing its courses' criteria" in generated.errors["criteria"]
+    assert mock_llm.prompts == {}
+
+
+@pytest.mark.django_db(transaction=True)
+def test_program_ignores_an_unpublished_course(
+    program, program_configurations, mock_llm, mock_retrieval
+):
+    """
+    An unpublished course neither contributes criteria nor blocks the program.
+
+    The sweep does not generate for unpublished resources, so requiring its
+    criteria would hold the program back for as long as it stays unpublished.
+    """
+    add_course(program, ["Applied conservation laws"])
+    add_course(program, None, published=False)
+
+    generated = asyncio.run(generate_credential_metadata(program))
+
+    assert generated.errors == {}
+    assert generated.fields["criteria"] == [
+        "Applied conservation laws",
+        "Modelled fluid flow",
+    ]
+
+
+@pytest.mark.django_db(transaction=True)
+def test_program_description_only_ignores_course_criteria(
+    program, program_configurations, mock_llm, mock_retrieval
+):
+    """
+    A description-only run is not blocked by a course without criteria.
+
+    The description is written from the program's own metadata and marketing
+    page, so a course still to be generated for has no bearing on it --
+    skipping would strand the description behind criteria it never reads.
+    """
+    add_course(program, None)
+
+    generated = asyncio.run(
+        generate_credential_metadata(program, fields=["description"])
+    )
+
+    assert set(generated.fields) == {"description"}
+    assert generated.errors == {}
 
 
 @pytest.mark.django_db(transaction=True)
