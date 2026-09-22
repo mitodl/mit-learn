@@ -218,6 +218,9 @@ describe("ProgramHeaderEnrollButton", () => {
       ),
     ).toBeInTheDocument()
     expect(
+      screen.getByRole("link", { name: "Contact Support" }),
+    ).toBeInTheDocument()
+    expect(
       screen.queryByText(
         "There was a problem processing your enrollment. Please try again.",
       ),

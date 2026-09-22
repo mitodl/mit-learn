@@ -28,11 +28,16 @@ const ENROLL_PROGRAM_ERROR =
 // `badRequestDetailOr()` falls through to the global handler's generic message.
 const COURSE_ENROLL_META = Object.freeze({
   getErrorMessage: badRequestDetailOr(ENROLL_COURSE_ERROR),
+  contactSupport: true,
 })
 const PROGRAM_ENROLL_META = Object.freeze({
   getErrorMessage: badRequestDetailOr(ENROLL_PROGRAM_ERROR),
+  contactSupport: true,
 })
-const CHECKOUT_META = Object.freeze({ getErrorMessage: badRequestDetailOr() })
+const CHECKOUT_META = Object.freeze({
+  getErrorMessage: badRequestDetailOr(),
+  contactSupport: true,
+})
 
 export const useEnrollmentHandler = () => {
   const createB2bEnrollment = useCreateB2bEnrollment({

@@ -3,6 +3,7 @@ import { act } from "@testing-library/react"
 import {
   screen,
   waitFor,
+  within,
   renderWithProviders,
   user,
   setupLocationMock,
@@ -582,9 +583,13 @@ describe("CourseEnrollmentDialog", () => {
 
       await user.click(enrollButton)
 
-      expect(await screen.findByRole("alert")).toHaveTextContent(
+      const alert = await screen.findByRole("alert")
+      expect(alert).toHaveTextContent(
         "Unable to complete enrollment. Please contact support. Error code: CS_700",
       )
+      expect(
+        within(alert).getByRole("link", { name: "Contact Support" }),
+      ).toBeInTheDocument()
     })
 
     test("Keeps the generic copy when a 400 carries no detail", async () => {

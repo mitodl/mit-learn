@@ -152,6 +152,9 @@ export const UNITS = "/units"
 
 export const CONTACT = "https://support.learn.mit.edu/"
 
+/** The support site's "submit a request" form. */
+export const SUPPORT_REQUEST = `${CONTACT}hc/en-us/requests/new`
+
 export const RECOMMENDER_QUERY_PARAM = "recommender"
 
 export const RESOURCE_DRAWER_PARAMS = {

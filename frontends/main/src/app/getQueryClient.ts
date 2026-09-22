@@ -81,7 +81,9 @@ export const handleMutationError = (
 ): void => {
   const meta = mutation.meta
   if (meta?.showErrorToast === false) return
-  showErrorToast(resolveErrorMessage(meta, error, variables))
+  showErrorToast(resolveErrorMessage(meta, error, variables), {
+    contactSupport: meta?.contactSupport === true,
+  })
 }
 
 /**

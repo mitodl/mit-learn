@@ -13,6 +13,7 @@ import {
   FinancialAidIndicator,
 } from "./EnrollAreaParts"
 import { badRequestDetail } from "api/mutation-errors"
+import ErrorMessageWithSupport from "@/components/ErrorMessageWithSupport/ErrorMessageWithSupport"
 import { ENROLL_FAILURE_MESSAGE } from "./enrollTypes"
 import type {
   AppliedSavings,
@@ -217,7 +218,9 @@ const EnrollOfferingBoxes: React.FC<EnrollOfferingBoxesProps> = ({
       {!!error && (
         <FullRowCell>
           <Alert severity="error">
-            {badRequestDetail(error) ?? ENROLL_FAILURE_MESSAGE}
+            <ErrorMessageWithSupport>
+              {badRequestDetail(error) ?? ENROLL_FAILURE_MESSAGE}
+            </ErrorMessageWithSupport>
           </Alert>
         </FullRowCell>
       )}

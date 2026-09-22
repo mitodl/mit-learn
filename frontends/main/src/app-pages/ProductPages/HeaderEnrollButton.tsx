@@ -5,6 +5,7 @@ import { SignupPopover } from "@/page-components/SignupPopover/SignupPopover"
 import { EnrollButton } from "./EnrollAreaParts"
 import EnrolledLink from "./EnrolledLink"
 import { badRequestDetail } from "api/mutation-errors"
+import ErrorMessageWithSupport from "@/components/ErrorMessageWithSupport/ErrorMessageWithSupport"
 import { ENROLL_FAILURE_MESSAGE } from "./enrollTypes"
 import type { EnrollAreaState } from "./enrollTypes"
 
@@ -85,7 +86,9 @@ const HeaderEnrollButton: React.FC<HeaderEnrollButtonProps> = ({
           {!!error && (
             <HeaderAlertSizer>
               <Alert severity="error">
-                {badRequestDetail(error) ?? ENROLL_FAILURE_MESSAGE}
+                <ErrorMessageWithSupport>
+                  {badRequestDetail(error) ?? ENROLL_FAILURE_MESSAGE}
+                </ErrorMessageWithSupport>
               </Alert>
             </HeaderAlertSizer>
           )}

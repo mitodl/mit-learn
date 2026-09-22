@@ -30,6 +30,7 @@ test("uses meta.errorMessage when provided", () => {
   fireError({ errorMessage: "Could not save your changes." })
   expect(mockShowErrorToast).toHaveBeenCalledWith(
     "Could not save your changes.",
+    { contactSupport: false },
   )
 })
 
@@ -46,7 +47,9 @@ test("meta.getErrorMessage wins over errorMessage and receives error + variables
   )
 
   expect(getErrorMessage).toHaveBeenCalledWith(error, variables)
-  expect(mockShowErrorToast).toHaveBeenCalledWith("Derived message")
+  expect(mockShowErrorToast).toHaveBeenCalledWith("Derived message", {
+    contactSupport: false,
+  })
 })
 
 test("falls back to errorMessage when getErrorMessage throws", () => {
@@ -57,12 +60,16 @@ test("falls back to errorMessage when getErrorMessage throws", () => {
     errorMessage: "Static fallback.",
   })
   // The throw must not escape onError (which would leave the failure silent).
-  expect(mockShowErrorToast).toHaveBeenCalledWith("Static fallback.")
+  expect(mockShowErrorToast).toHaveBeenCalledWith("Static fallback.", {
+    contactSupport: false,
+  })
 })
 
 test("falls back to errorMessage when getErrorMessage returns blank", () => {
   fireError({ getErrorMessage: () => "", errorMessage: "Static fallback." })
-  expect(mockShowErrorToast).toHaveBeenCalledWith("Static fallback.")
+  expect(mockShowErrorToast).toHaveBeenCalledWith("Static fallback.", {
+    contactSupport: false,
+  })
 })
 
 test("falls back to generic copy when getErrorMessage throws and there is no errorMessage", () => {
@@ -71,10 +78,21 @@ test("falls back to generic copy when getErrorMessage throws and there is no err
       throw new Error("bad derivation")
     },
   })
-  expect(mockShowErrorToast).toHaveBeenCalledWith(GENERIC_ERROR_MESSAGE)
+  expect(mockShowErrorToast).toHaveBeenCalledWith(GENERIC_ERROR_MESSAGE, {
+    contactSupport: false,
+  })
 })
 
 test("falls back to generic copy when the resolved message is empty", () => {
   fireError({ errorMessage: "   " })
-  expect(mockShowErrorToast).toHaveBeenCalledWith(GENERIC_ERROR_MESSAGE)
+  expect(mockShowErrorToast).toHaveBeenCalledWith(GENERIC_ERROR_MESSAGE, {
+    contactSupport: false,
+  })
+})
+
+test("passes meta.contactSupport through to the toast", () => {
+  fireError({ errorMessage: "Enrollment failed.", contactSupport: true })
+  expect(mockShowErrorToast).toHaveBeenCalledWith("Enrollment failed.", {
+    contactSupport: true,
+  })
 })

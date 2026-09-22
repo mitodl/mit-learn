@@ -620,6 +620,9 @@ describe("CoursePage", () => {
             "Unable to complete enrollment. Please contact support. Error code: CS_700",
           ),
         ).toBeInTheDocument()
+        expect(
+          within(banner).getByRole("link", { name: "Contact Support" }),
+        ).toBeInTheDocument()
         // The InfoBox's alert is a separate hook instance and never fires.
         expect(
           screen.queryByText(
