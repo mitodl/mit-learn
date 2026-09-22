@@ -89,7 +89,7 @@ describe("OrganizationalLearningPage", () => {
       ]),
       { level: 2, name: clientLogos.eyebrow },
       { level: 2, name: continuum.title },
-      ...continuum.steps.map((step) => ({ level: 3, name: step.title })),
+      ...continuum.steps.map((step) => ({ level: 3, name: step.eyebrow })),
       { level: 2, name: faq.title },
       // MUI renders each AccordionSummary inside an h3, which is the
       // recommended shape for an FAQ: every question is a heading.

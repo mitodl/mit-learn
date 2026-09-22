@@ -26,6 +26,36 @@ const makeGrade = factories.enrollment.grade
 const makeContract = factories.contracts.contract
 
 /**
+ * Mock the per-learner price quote the certificate upsell fetches for every
+ * purchasable product on the given courses. Required in any suite that opens
+ * CourseEnrollmentDialog on an upgradable run, or the unmocked request fails
+ * the test. Quotes default to list price with no discount; re-register one to
+ * exercise a discount.
+ *
+ * Takes whole courses, variadically, because that is what these suites hold.
+ * ProductPages/test-utils/userPricing.ts has the per-run and per-program forms
+ * the InfoBox suites want; the names are kept distinct so the two do not read
+ * as the same helper.
+ */
+const setupCoursePricing = (
+  ...courses: CourseWithCourseRunsSerializerV2[]
+): void => {
+  courses.forEach((course) =>
+    (course.courseruns ?? []).forEach((run) =>
+      (run.products ?? []).forEach((product) =>
+        setMockResponse.get(
+          urls.products.userPricingDetail(product.id),
+          factories.products.userPricing({
+            id: product.id,
+            price: product.price,
+          }),
+        ),
+      ),
+    ),
+  )
+}
+
+/**
  * Mock the order history that enrollment cards fetch to decide whether to show a
  * "Receipt" item. Required in any suite rendering an enrollment card, whatever
  * its mode — a refunded order leaves the learner auditing and still has a
@@ -636,6 +666,7 @@ const buildProgramScenario = (
 }
 
 export {
+  setupCoursePricing,
   dashboardCourse,
   dashboardProgram,
   setupOrderHistory,
