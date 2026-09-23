@@ -71,7 +71,7 @@ export const hero = {
 export const featuredProgram = {
   eyebrow: "PROGRAM SPOTLIGHT",
   title: "Universal AI",
-  tagline: ["Build AI fluency across your", "organization."],
+  tagline: "Build AI fluency across your organization.",
   body: "A flexible, self-paced curriculum from MIT faculty and experts, combining foundational AI learning with industry-specific applications.",
   highlights: [
     "Self-paced program",

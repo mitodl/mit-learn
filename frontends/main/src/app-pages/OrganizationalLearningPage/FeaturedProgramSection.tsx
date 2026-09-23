@@ -65,6 +65,7 @@ const Tagline = styled.p(({ theme }) => ({
   ...theme.typography.h3,
   color: theme.custom.colors.darkGray2,
   margin: 0,
+  textWrap: "balance",
   [theme.breakpoints.down("md")]: {
     ...theme.typography.h4,
   },
@@ -189,14 +190,7 @@ const FeaturedProgramSection: React.FC = () => (
         <Heading>
           <SectionEyebrow>{copy.eyebrow}</SectionEyebrow>
           <Title id="featured-program-heading">{copy.title}</Title>
-          <Tagline>
-            {copy.tagline.map((line, index) => (
-              <React.Fragment key={line}>
-                {index > 0 ? <br /> : null}
-                {line}
-              </React.Fragment>
-            ))}
-          </Tagline>
+          <Tagline>{copy.tagline}</Tagline>
         </Heading>
         <Body>{copy.body}</Body>
         <Highlights>
