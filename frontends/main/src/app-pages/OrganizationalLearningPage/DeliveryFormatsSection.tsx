@@ -5,10 +5,10 @@ import { styled } from "ol-components"
 import {
   RiBookOpenLine,
   RiMacbookLine,
-  RiTeamLine,
   RiPresentationLine,
+  RiCloudLine,
   RiIdCardLine,
-  RiPagesLine,
+  RiTranslate2,
 } from "@remixicon/react"
 import CtaButton from "./CtaButton"
 import {
@@ -23,10 +23,10 @@ import { deliveryFormats as copy } from "./copy"
 const FORMAT_ICONS = [
   RiBookOpenLine,
   RiMacbookLine,
-  RiTeamLine,
   RiPresentationLine,
+  RiCloudLine,
   RiIdCardLine,
-  RiPagesLine,
+  RiTranslate2,
 ]
 
 const Band = styled(Section)(({ theme }) => ({

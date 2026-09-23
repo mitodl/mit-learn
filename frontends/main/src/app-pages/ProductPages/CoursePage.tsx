@@ -12,6 +12,7 @@ import { FeatureFlags } from "@/common/feature_flags"
 import { notFound } from "next/navigation"
 import { getOutlineCoursewareId, HeadingIds } from "./util"
 import InstructorsSection from "./InstructorsSection"
+import FaqsSection from "./FaqsSection"
 import RawHTML from "./RawHTML"
 import AboutSection from "./AboutSection"
 import ProductPageTemplate from "./ProductPageTemplate"
@@ -154,6 +155,7 @@ const CoursePage: React.FC<CoursePageProps> = ({ readableId }) => {
       {page.faculty.length ? (
         <InstructorsSection instructors={page.faculty} />
       ) : null}
+      {page.faqs.length ? <FaqsSection faqs={page.faqs} /> : null}
     </ProductPageTemplate>
   )
 }

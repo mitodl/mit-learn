@@ -26,6 +26,36 @@ const makeGrade = factories.enrollment.grade
 const makeContract = factories.contracts.contract
 
 /**
+ * Mock the per-learner price quote the certificate upsell fetches for every
+ * purchasable product on the given courses. Required in any suite that opens
+ * CourseEnrollmentDialog on an upgradable run, or the unmocked request fails
+ * the test. Quotes default to list price with no discount; re-register one to
+ * exercise a discount.
+ *
+ * Takes whole courses, variadically, because that is what these suites hold.
+ * ProductPages/test-utils/userPricing.ts has the per-run and per-program forms
+ * the InfoBox suites want; the names are kept distinct so the two do not read
+ * as the same helper.
+ */
+const setupCoursePricing = (
+  ...courses: CourseWithCourseRunsSerializerV2[]
+): void => {
+  courses.forEach((course) =>
+    (course.courseruns ?? []).forEach((run) =>
+      (run.products ?? []).forEach((product) =>
+        setMockResponse.get(
+          urls.products.userPricingDetail(product.id),
+          factories.products.userPricing({
+            id: product.id,
+            price: product.price,
+          }),
+        ),
+      ),
+    ),
+  )
+}
+
+/**
  * Mock the order history that enrollment cards fetch to decide whether to show a
  * "Receipt" item. Required in any suite rendering an enrollment card, whatever
  * its mode — a refunded order leaves the learner auditing and still has a
@@ -85,6 +115,26 @@ const setupOrderHistory = ({
   )
 
   return { orderId }
+}
+
+/**
+ * Mock the program certificates a program card fetches to decide whether to show
+ * a "Program Letter" item. Only requested when the `program-letters` flag is on,
+ * so this is required in any suite that renders a program card with feature
+ * flags mocked true. Defaults to no certificates (no letter link); pass
+ * `mitxonlineProgramIds` to give those programs one.
+ */
+const setupProgramCertificates = ({
+  mitxonlineProgramIds = [],
+}: { mitxonlineProgramIds?: number[] } = {}) => {
+  setMockResponse.get(
+    u.urls.programCertificates.list(),
+    mitxonlineProgramIds.map((id) =>
+      u.factories.programCertificates.programCertificate({
+        mitxonline_program_id: id,
+      }),
+    ),
+  )
 }
 
 const dashboardCourse: PartialFactory<CourseWithCourseRunsSerializerV2> = (
@@ -616,9 +666,11 @@ const buildProgramScenario = (
 }
 
 export {
+  setupCoursePricing,
   dashboardCourse,
   dashboardProgram,
   setupOrderHistory,
+  setupProgramCertificates,
   setupEnrollments,
   setupProgramsAndCourses,
   setupOrgAndUser,

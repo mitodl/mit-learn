@@ -6,7 +6,9 @@ import { RiCheckLine } from "@remixicon/react"
  * Shared scaffold for the two enrollment "track" cards (Certificate Track and
  * Learn for Free), which differ only in surface treatment and content. Keeping
  * the structure here means both cards share the exact DOM the grid layout
- * stretches, so they can't drift apart.
+ * stretches, so they can't drift apart. `CardSurface` is that DOM without the
+ * card's header and body, for a box that sits in the same row but is not a
+ * track card.
  *
  * `fill` makes the card grow to fill a stretched grid cell and drops its action
  * to the bottom — used in the side-by-side "both" layout so the two cards match
@@ -51,6 +53,23 @@ const CardBody = styled.div<{ $variant: CardVariant; $fill?: boolean }>(
         }
       : {}),
   }),
+)
+
+/**
+ * The card's outer shape: shaded or bordered body, and the `fill` behaviour that
+ * makes it grow to a stretched grid cell with its last child pinned to the
+ * bottom. Shared so cards sitting in the same grid row cannot drift apart.
+ */
+export const CardSurface: React.FC<{
+  variant: CardVariant
+  fill?: boolean
+  children: React.ReactNode
+}> = ({ variant, fill, children }) => (
+  <CardShell $fill={fill}>
+    <CardBody $variant={variant} $fill={fill}>
+      {children}
+    </CardBody>
+  </CardShell>
 )
 
 const CardHeader = styled.div<{ $hasAside?: boolean }>(({ $hasAside }) => ({
@@ -211,30 +230,28 @@ const TrackCard: React.FC<TrackCardProps> = ({
   fill,
 }) => {
   return (
-    <CardShell $fill={fill}>
-      <CardBody $variant={variant} $fill={fill}>
-        <CardHeader $hasAside={!!headerAside}>
-          <TitleGroup>
-            <TitleRow>
-              <TrackTitle>{title}</TrackTitle>
-              {priceBlock ? null : (
-                <PriceContainer $compact={compactPrice}>{price}</PriceContainer>
-              )}
-            </TitleRow>
-            {headerAside}
-          </TitleGroup>
-          <TrackSubtitle>{subtitle}</TrackSubtitle>
-        </CardHeader>
+    <CardSurface variant={variant} fill={fill}>
+      <CardHeader $hasAside={!!headerAside}>
+        <TitleGroup>
+          <TitleRow>
+            <TrackTitle>{title}</TrackTitle>
+            {priceBlock ? null : (
+              <PriceContainer $compact={compactPrice}>{price}</PriceContainer>
+            )}
+          </TitleRow>
+          {headerAside}
+        </TitleGroup>
+        <TrackSubtitle>{subtitle}</TrackSubtitle>
+      </CardHeader>
 
-        {priceBlock ? <FullWidthPrice>{priceBlock}</FullWidthPrice> : null}
+      {priceBlock ? <FullWidthPrice>{priceBlock}</FullWidthPrice> : null}
 
-        {note}
+      {note}
 
-        <FeatureList>{children}</FeatureList>
+      <FeatureList>{children}</FeatureList>
 
-        {action}
-      </CardBody>
-    </CardShell>
+      {action}
+    </CardSurface>
   )
 }
 

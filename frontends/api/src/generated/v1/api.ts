@@ -2859,38 +2859,19 @@ export interface Program {
   program_count: number
 }
 /**
- * Serializer for Program Certificates
- */
-export interface ProgramCertificate {
-  record_hash: string
-  program_letter_generate_url: string
-  program_letter_share_url: string
-  program_title: string
-  user_full_name?: string
-  user_email: string
-  user_edxorg_id?: number | null
-  micromasters_program_id?: number | null
-  mitxonline_program_id?: number | null
-  user_edxorg_username?: string | null
-  user_gender?: string | null
-  user_address_city?: string | null
-  user_first_name?: string | null
-  user_last_name?: string | null
-  user_year_of_birth?: string | null
-  user_country?: string | null
-  user_address_postal_code?: string | null
-  user_street_address?: string | null
-  user_address_state_or_territory?: string | null
-  user_mitxonline_username?: string | null
-  program_completion_timestamp?: string | null
-}
-/**
  * Serializer for Program Letters
  */
 export interface ProgramLetter {
   id: string
   template_fields: ProgramLetterTemplateField
-  certificate: ProgramCertificate
+  certificate: ProgramLetterCertificate
+}
+/**
+ * The certificate fields the public program letter view needs.  ProgramLetterViewSet is unauthenticated -- anyone holding a letter\'s uuid can read it -- so this exposes only what the letter itself already states: who earned it and which program. The learner\'s email, postal address, date of birth, gender and platform usernames stay behind the authenticated certificate list, which uses ProgramCertificateSerializer.
+ */
+export interface ProgramLetterCertificate {
+  user_full_name?: string
+  program_title: string
 }
 /**
  * Seriializer for program letter template data which is configured in micromasters

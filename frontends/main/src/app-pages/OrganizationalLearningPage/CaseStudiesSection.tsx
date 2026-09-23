@@ -2,7 +2,7 @@
 
 import React, { useCallback, useRef, useState } from "react"
 import Image from "next/image"
-import { styled } from "ol-components"
+import { styled, pxToRem } from "ol-components"
 import { CarouselV2 } from "ol-components/CarouselV2"
 import { VisuallyHidden } from "@mitodl/smoot-design"
 import {
@@ -242,13 +242,17 @@ const PillarBullets = styled.ul(({ theme }) => ({
 }))
 
 const QuoteMark = styled.span(({ theme }) => ({
-  ...theme.typography.h2,
+  ...theme.typography.h1,
+  display: "block",
   color: theme.custom.colors.red,
-  lineHeight: 1,
+  height: "40px",
+  overflow: "hidden",
+  marginTop: "-16px",
 }))
 
 const QuoteText = styled.p(({ theme }) => ({
-  ...theme.typography.body1,
+  ...theme.typography.body2,
+  lineHeight: pxToRem(22),
   color: theme.custom.colors.darkGray2,
   margin: 0,
   marginTop: "-16px",
@@ -256,18 +260,32 @@ const QuoteText = styled.p(({ theme }) => ({
 
 const QuoteAttribution = styled.div({
   display: "flex",
-  flexDirection: "column",
+  alignItems: "center",
+  gap: "12px",
   marginTop: "auto",
 })
 
+const QuotePhoto = styled(Image)({
+  flexShrink: 0,
+  width: "48px",
+  height: "48px",
+  borderRadius: "50%",
+  objectFit: "cover",
+})
+
+const QuoteAttributionText = styled.div({
+  display: "flex",
+  flexDirection: "column",
+})
+
 const QuoteName = styled.p(({ theme }) => ({
-  ...theme.typography.h5,
+  ...theme.typography.subtitle1,
   color: theme.custom.colors.darkGray2,
   margin: 0,
 }))
 
 const QuoteRole = styled.p(({ theme }) => ({
-  ...theme.typography.body3,
+  ...theme.typography.body2,
   color: theme.custom.colors.silverGrayDark,
   margin: 0,
 }))
@@ -336,8 +354,18 @@ const CaseStudyPanel: React.FC<CaseStudyPanelProps> = ({ study, isSlide }) => {
               <QuoteMark aria-hidden>“</QuoteMark>
               <QuoteText>{pillar.quote}</QuoteText>
               <QuoteAttribution>
-                <QuoteName>{pillar.name}</QuoteName>
-                <QuoteRole>{pillar.role}</QuoteRole>
+                {pillar.photo ? (
+                  <QuotePhoto
+                    src={pillar.photo.src}
+                    alt=""
+                    width={pillar.photo.width}
+                    height={pillar.photo.height}
+                  />
+                ) : null}
+                <QuoteAttributionText>
+                  <QuoteName>{pillar.name}</QuoteName>
+                  <QuoteRole>{pillar.role}</QuoteRole>
+                </QuoteAttributionText>
               </QuoteAttribution>
             </Pillar>
           ) : (
