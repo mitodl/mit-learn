@@ -85,12 +85,13 @@ def transform_item(item: list[dict]) -> dict:
         dict: transformed news item data
 
     """
+    summary = clean_data(html.unescape(item["summary"]))
     return {
         "guid": item["id"],
         "title": html.unescape(item["title"]),
         "url": urljoin(settings.MITPE_BASE_URL, item["url"]),
-        "summary": clean_data(html.unescape(item["summary"])),
-        "content": clean_data(html.unescape(item["summary"])),
+        "summary": summary,
+        "content": summary,
         "image": transform_image(item),
         "detail": {
             "authors": parse_authors(item["author"]),

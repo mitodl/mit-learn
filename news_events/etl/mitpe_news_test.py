@@ -76,5 +76,21 @@ def test_transform_item_sanitizes_entity_encoded_script():
             "date": "2020-12-04",
         }
     )
-    assert "<script" not in item["summary"]
-    assert "<script" not in item["content"]
+    assert item["summary"] == ""
+    assert item["content"] == ""
+
+
+def test_transform_item_sanitizes_entity_encoded_img_onerror():
+    """The ticket's exact repro payload must not survive as a live onerror handler"""
+    item = transform_item(
+        {
+            "id": 1,
+            "title": "Title",
+            "url": "articles/1",
+            "summary": "&lt;img src=x onerror=alert(1)&gt;",
+            "author": "",
+            "date": "2020-12-04",
+        }
+    )
+    assert item["summary"] == ""
+    assert item["content"] == ""

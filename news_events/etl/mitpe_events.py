@@ -75,12 +75,13 @@ def transform_item(item: dict) -> dict:
     if (not start_dt or start_dt < now) and (not end_dt or end_dt < now):
         return None
 
+    summary = clean_data(html.unescape(item["summary"]))
     return {
         "guid": item["id"],
         "title": html.unescape(item["title"]),
         "url": urljoin(settings.MITPE_BASE_URL, item["url"]),
-        "summary": clean_data(html.unescape(item["summary"])),
-        "content": clean_data(html.unescape(item["summary"])),
+        "summary": summary,
+        "content": summary,
         "image": transform_image(item),
         "detail": {
             "location": [],

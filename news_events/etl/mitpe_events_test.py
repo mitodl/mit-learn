@@ -86,5 +86,23 @@ def test_transform_item_sanitizes_entity_encoded_script():
             "time_range": "9:00 AM - 5:00 PM",
         }
     )
-    assert "<script" not in item["summary"]
-    assert "<script" not in item["content"]
+    assert item["summary"] == "Great event  today."
+    assert item["content"] == "Great event  today."
+
+
+@freeze_time("2020-05-21")
+def test_transform_item_sanitizes_entity_encoded_img_onerror():
+    """The ticket's exact repro payload must not survive as a live onerror handler"""
+    item = transform_item(
+        {
+            "id": "1",
+            "title": "Title",
+            "url": "events/1",
+            "summary": "Great event &lt;img src=x onerror=alert(1)&gt; today.",
+            "start_date": "2020-06-01",
+            "end_date": "2020-06-01",
+            "time_range": "9:00 AM - 5:00 PM",
+        }
+    )
+    assert item["summary"] == "Great event  today."
+    assert item["content"] == "Great event  today."
