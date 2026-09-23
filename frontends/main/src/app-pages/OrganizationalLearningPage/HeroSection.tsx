@@ -11,7 +11,7 @@ const FIGURE_RADIUS = "8px 80px 8px 50px"
 const OUTLINE_RADIUS = "8px 50px 8px 50px"
 
 const HeroBand = styled(Section)(({ theme }) => ({
-  backgroundColor: "#EEEFF3",
+  backgroundColor: theme.custom.colors.backgroundGray,
   backgroundImage:
     "url('/images/organizational_learning/hero-illustration.svg')",
   backgroundSize: "210% auto",
@@ -74,9 +74,7 @@ const Emphasis = styled.span(({ theme }) => ({
 }))
 
 const Body = styled.p(({ theme }) => ({
-  ...theme.typography.body1,
-  fontWeight: theme.typography.fontWeightRegular,
-  lineHeight: "26px",
+  ...theme.typography.body1Loose,
   color: theme.custom.colors.darkGray2,
   margin: 0,
 }))

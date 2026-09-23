@@ -72,8 +72,7 @@ const Tagline = styled.p(({ theme }) => ({
 }))
 
 const Body = styled.p(({ theme }) => ({
-  ...theme.typography.body1,
-  lineHeight: "26px",
+  ...theme.typography.body1Loose,
   color: theme.custom.colors.silverGrayDark,
   margin: 0,
 }))

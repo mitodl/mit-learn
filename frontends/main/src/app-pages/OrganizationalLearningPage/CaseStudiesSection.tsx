@@ -2,7 +2,7 @@
 
 import React, { useCallback, useRef, useState } from "react"
 import Image from "next/image"
-import { styled, pxToRem } from "ol-components"
+import { styled } from "ol-components"
 import { CarouselV2 } from "ol-components/CarouselV2"
 import { VisuallyHidden } from "@mitodl/smoot-design"
 import {
@@ -225,8 +225,7 @@ const PillarTitle = styled.h4(({ theme }) => ({
 }))
 
 const PillarBody = styled.p(({ theme }) => ({
-  ...theme.typography.body2,
-  lineHeight: pxToRem(22),
+  ...theme.typography.body2Loose,
   color: theme.custom.colors.darkGray2,
   margin: 0,
 }))
@@ -252,8 +251,7 @@ const QuoteMark = styled.span(({ theme }) => ({
 }))
 
 const QuoteText = styled.p(({ theme }) => ({
-  ...theme.typography.body2,
-  lineHeight: pxToRem(22),
+  ...theme.typography.body2Loose,
   color: theme.custom.colors.darkGray2,
   margin: 0,
   marginTop: "-16px",
