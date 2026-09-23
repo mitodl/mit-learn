@@ -17,7 +17,8 @@ DEFAULT_CONFIGURATIONS = [
         "prompt": (
             "Generate an Open Badges 3.0 criteria field with skill-focused"
             " bullet points that demonstrate what the learner did to complete"
-            " the program."
+            " the program. Ensure that there are no duplicate criteria bullet"
+            " points. Limit to no more than 10 criteria."
         ),
     },
 ]
