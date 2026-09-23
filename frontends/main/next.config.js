@@ -78,8 +78,8 @@ const nextConfig = {
        * build time. The rules below are genuinely static and immutable.
        */
 
-      /* Images rendered with the Next.js Image component have the cache header
-       * set on them, but CSS background images do not.
+      /* Raw public images. The image optimizer also reuses this as the max-age
+       * of the optimized /_next/image responses it produces from them.
        */
       {
         source: "/images/(.*)",
@@ -105,11 +105,19 @@ const nextConfig = {
   transpilePackages: ["@mitodl/smoot-design/ai"],
 
   images: {
-    // Image optimisation is disabled: the app passes images through as-is.
-    // Production uses Fastly for image transformations. Disabling also avoids
-    // baking a per-environment flag (previously NEXT_PUBLIC_OPTIMIZE_IMAGES)
-    // into the Docker image at build time.
-    unoptimized: true,
+    // Learn aggregates resources whose images live on many third-party hosts
+    // (YouTube, SoundCloud, podcast CDNs, partner sites), so any host is
+    // allowed. We may want to restrict this to known hosts later.
+    remotePatterns: [{ hostname: "**" }],
+    // 75 is the next/image default; backgroundSrcSetCSS requests 100.
+    qualities: [75, 100],
+    // Also the Fastly TTL for optimized remote images, via Cache-Control.
+    minimumCacheTTL: 86400,
+    // Unset, Next.js lets the on-disk cache grow to half the node's free disk.
+    maximumDiskCacheSize: 500_000_000,
+    // Local dev hostnames resolve to private IPs, which Next.js otherwise
+    // refuses to fetch images from.
+    dangerouslyAllowLocalIP: IS_LOCAL_DEV,
   },
 
   experimental: {
