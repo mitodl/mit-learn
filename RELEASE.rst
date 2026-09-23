@@ -1,6 +1,13 @@
 Release Notes
 =============
 
+Version 0.80.15
+---------------
+
+- credential metadata task (#3950)
+- Skip unreferenced static files when ingesting edX course archives (#3942)
+- Mark the Django session cookie Secure by default (#3968)
+
 Version 0.80.14
 ---------------
 
