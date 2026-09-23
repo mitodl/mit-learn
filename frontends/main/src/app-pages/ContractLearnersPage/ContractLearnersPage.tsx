@@ -64,9 +64,8 @@ import { DISPLAY_STATUS_LABEL, getDisplayStatus } from "./statusDisplay"
  *
  * # What is real, and what is disabled
  *
- * The status pill, the four count tiles (Enrollments/Not started/In
- * progress/Completed), search, the status filter and CSV export are backed
- * by `learner-progress` and are real. `courserun_title` under each learner's
+ * The status pill, search, the status filter and CSV export are backed by
+ * `learner-progress` and are real. `courserun_title` under each learner's
  * name is also real — enrollment metadata, not consent-gated.
  *
  * Everything else this feature was designed to show is implemented but
@@ -83,8 +82,6 @@ import { DISPLAY_STATUS_LABEL, getDisplayStatus } from "./statusDisplay"
  *   - Progress (table cell and CSV columns alike) and Last activity: both
  *     fabricate a value with no real field behind them yet — see
  *     `placeholders.ts`'s header comment for what each is blocked on.
- *   - The "Needs attention" tile: there is no `needs_attention` field yet,
- *     so even an honest empty-dash tile has nothing behind it.
  */
 
 const Page = styled(Container)(({ theme }) => ({
@@ -141,55 +138,6 @@ const ExportWrapper = styled(AriaDisabledButtonWrapper)(({ theme }) => ({
     "> button": { width: "100%" },
   },
 }))
-
-const StatsRow = styled.div(({ theme }) => ({
-  display: "flex",
-  border: `1px solid ${theme.custom.colors.lightGray2}`,
-  borderRadius: "8px",
-  backgroundColor: theme.custom.colors.white,
-  [theme.breakpoints.down("md")]: {
-    flexDirection: "column",
-  },
-}))
-
-const StatTile = styled.div<{ $emphasis: boolean }>(({ $emphasis, theme }) => ({
-  flex: 1,
-  minWidth: 0,
-  padding: "16px 24px",
-  display: "flex",
-  flexDirection: "column",
-  gap: "4px",
-  borderLeft: `1px solid ${theme.custom.colors.lightGray2}`,
-  ":first-of-type": { borderLeft: "none" },
-  ...($emphasis && {
-    borderLeft: `3px solid ${theme.custom.colors.mitRed}`,
-  }),
-  [theme.breakpoints.down("md")]: {
-    borderLeft: "none",
-    borderTop: `1px solid ${theme.custom.colors.lightGray2}`,
-    ":first-of-type": { borderTop: "none" },
-    ...($emphasis && {
-      borderLeft: `3px solid ${theme.custom.colors.mitRed}`,
-      borderTop: `1px solid ${theme.custom.colors.lightGray2}`,
-    }),
-  },
-}))
-
-const StatLabel = styled.div<{ $emphasis: boolean }>(
-  ({ $emphasis, theme }) => ({
-    ...theme.typography.body2,
-    color: $emphasis
-      ? theme.custom.colors.mitRed
-      : theme.custom.colors.silverGrayDark,
-  }),
-)
-
-const StatValue = styled.div<{ $emphasis: boolean }>(
-  ({ $emphasis, theme }) => ({
-    ...theme.typography.h4,
-    color: $emphasis ? theme.custom.colors.mitRed : theme.custom.colors.black,
-  }),
-)
 
 const ResultsSection = styled.div({
   display: "flex",
@@ -285,16 +233,6 @@ const ErrorRow = styled.div({
 //
 // const SelectHeaderCell = styled.div({ width: "40px", flexShrink: 0 })
 // const ActionHeaderCell = styled.div({ width: "140px", flexShrink: 0 })
-// --------------------------------------------------------------------------
-
-// --- Disabled: fabricated "Needs attention" tile --------------------------
-//
-// There is no `needs_attention` field yet, so even the honest empty-dash
-// version of this tile has nothing behind it. Built and kept here for when
-// the field ships — see the file header comment.
-//
-// import { PLACEHOLDER_ATTR } from "./placeholders"
-// import { STUB } from "@/components/B2BTable/B2BTable"
 // --------------------------------------------------------------------------
 
 const PAGE_SIZE = 25
@@ -424,43 +362,14 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
 
   /**
    * One row is enough: only `total_count` is read. Unfiltered on purpose, so
-   * the tiles stay a fixed summary of the contract while the table below them
-   * narrows.
+   * the "X of Y enrollments" summary below stays a fixed total while the
+   * table narrows with search/status filters.
    */
-  const countParams = (status?: CompletionStatusFilter[]) => ({
-    limit: 1,
-    ...(status ? { completion_status: status } : {}),
-  })
-
   const totalQuery = useQuery({
     ...analyticsContractQueries.learnerProgress(
       orgUuid ?? "",
       contractId ?? "",
-      countParams(),
-    ),
-    enabled: canQuery,
-  })
-  const notStartedQuery = useQuery({
-    ...analyticsContractQueries.learnerProgress(
-      orgUuid ?? "",
-      contractId ?? "",
-      countParams(["not_started"]),
-    ),
-    enabled: canQuery,
-  })
-  const inProgressQuery = useQuery({
-    ...analyticsContractQueries.learnerProgress(
-      orgUuid ?? "",
-      contractId ?? "",
-      countParams(["in_progress"]),
-    ),
-    enabled: canQuery,
-  })
-  const completedQuery = useQuery({
-    ...analyticsContractQueries.learnerProgress(
-      orgUuid ?? "",
-      contractId ?? "",
-      countParams(["passed", "certified"]),
+      { limit: 1 },
     ),
     enabled: canQuery,
   })
@@ -508,22 +417,13 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
    * Only 400/401/403 responses throw to an error boundary (see
    * `makeBrowserQueryClient`); a 5xx or network failure just settles into
    * `isError` with `data` left undefined. Without this check, that failure
-   * reads as "no learners" and the count tiles below spin forever, since
-   * their skeletons key off `data` being null rather than off load state.
+   * reads as "no learners" instead of surfacing the error state below.
    */
-  const hasLoadError =
-    rowsQuery.isError ||
-    totalQuery.isError ||
-    notStartedQuery.isError ||
-    inProgressQuery.isError ||
-    completedQuery.isError
+  const hasLoadError = rowsQuery.isError || totalQuery.isError
 
   const retryFailedQueries = () => {
     rowsQuery.refetch()
     totalQuery.refetch()
-    notStartedQuery.refetch()
-    inProgressQuery.refetch()
-    completedQuery.refetch()
   }
 
   // --- Disabled: row/bulk selection ---------------------------------------
@@ -776,91 +676,45 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
             </ErrorRow>
           </Alert>
         ) : (
-          <>
-            <StatsRow>
-              {[
-                { label: "Enrollments", value: totalEnrollments },
-                {
-                  label: "Not started",
-                  value: notStartedQuery.data?.total_count ?? null,
-                },
-                {
-                  label: "In progress",
-                  value: inProgressQuery.data?.total_count ?? null,
-                },
-                {
-                  label: "Completed",
-                  value: completedQuery.data?.total_count ?? null,
-                },
-              ].map((tile) => (
-                <StatTile
-                  key={tile.label}
-                  $emphasis={false}
-                  role="group"
-                  aria-label={tile.label}
-                >
-                  <StatLabel $emphasis={false}>{tile.label}</StatLabel>
-                  {tile.value === null ? (
-                    <Skeleton width="48px" height="32px" />
-                  ) : (
-                    <StatValue $emphasis={false}>{tile.value}</StatValue>
-                  )}
-                </StatTile>
-              ))}
-              {/* Disabled: fabricated "Needs attention" tile — see the
-                  top-of-file "Disabled: fabricated Needs attention tile"
-                  comment for the import lines this JSX needs.
-              <StatTile $emphasis role="group" aria-label="Needs attention">
-                <StatLabel $emphasis>Needs attention</StatLabel>
-                <StatValue
-                  $emphasis
-                  {...{ [PLACEHOLDER_ATTR]: "needs-attention" }}
-                >
-                  {STUB}
-                </StatValue>
-              </StatTile>
-              */}
-            </StatsRow>
-
-            <ResultsSection>
-              <ControlsRow>
-                <SectionHeader
-                  component="h2"
-                  title="Learner results"
-                  description={
-                    totalEnrollments === null
-                      ? "Loading…"
-                      : `${filteredCount} of ${totalEnrollments} enrollments`
+          <ResultsSection>
+            <ControlsRow>
+              <SectionHeader
+                component="h2"
+                title="Learner results"
+                description={
+                  totalEnrollments === null
+                    ? "Loading…"
+                    : `${filteredCount} of ${totalEnrollments} enrollments`
+                }
+                asOf={rowsQuery.data?.as_of}
+                isLoading={rowsQuery.isPending}
+                isError={rowsQuery.isError}
+              />
+              <ControlsRight>
+                <StyledSearchInput
+                  placeholder="Search name or email"
+                  value={searchQuery}
+                  size="medium"
+                  onChange={(event) =>
+                    setSearchQuery(
+                      event.target.value.slice(0, SEARCH_MAX_LENGTH),
+                    )
                   }
-                  asOf={rowsQuery.data?.as_of}
-                  isLoading={rowsQuery.isPending}
-                  isError={rowsQuery.isError}
+                  onClear={() => applyFilterChange(() => setSearchQuery(""))}
+                  onSubmit={() => {}}
                 />
-                <ControlsRight>
-                  <StyledSearchInput
-                    placeholder="Search name or email"
-                    value={searchQuery}
-                    size="medium"
-                    onChange={(event) =>
-                      setSearchQuery(
-                        event.target.value.slice(0, SEARCH_MAX_LENGTH),
-                      )
-                    }
-                    onClear={() => applyFilterChange(() => setSearchQuery(""))}
-                    onSubmit={() => {}}
-                  />
-                  <FilterField
-                    label="Status"
-                    size="medium"
-                    value={statusFilter}
-                    options={STATUS_OPTIONS}
-                    onChange={(event) =>
-                      applyFilterChange(() =>
-                        setStatusFilter(String(event.target.value)),
-                      )
-                    }
-                  />
-                  {/* Disabled: module filter — see file header comment.
+                <FilterField
+                  label="Status"
+                  size="medium"
+                  value={statusFilter}
+                  options={STATUS_OPTIONS}
+                  onChange={(event) =>
+                    applyFilterChange(() =>
+                      setStatusFilter(String(event.target.value)),
+                    )
+                  }
+                />
+                {/* Disabled: module filter — see file header comment.
                   <FilterField
                     label="Module"
                     size="medium"
@@ -873,24 +727,24 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
                     }
                   />
                   */}
-                </ControlsRight>
-              </ControlsRow>
+              </ControlsRight>
+            </ControlsRow>
 
-              {actionResult ? (
-                <Alert
-                  severity={actionResult.severity}
-                  closable
-                  onClose={() => setActionResult(null)}
-                >
-                  {actionResult.message}
-                </Alert>
-              ) : null}
+            {actionResult ? (
+              <Alert
+                severity={actionResult.severity}
+                closable
+                onClose={() => setActionResult(null)}
+              >
+                {actionResult.message}
+              </Alert>
+            ) : null}
 
-              <VisuallyHidden aria-live="assertive" aria-atomic="true">
-                {announcement}
-              </VisuallyHidden>
+            <VisuallyHidden aria-live="assertive" aria-atomic="true">
+              {announcement}
+            </VisuallyHidden>
 
-              {/* Disabled: bulk selection bar — see file header comment.
+            {/* Disabled: bulk selection bar — see file header comment.
               <BulkBar>
                 <BulkLabel>
                   <MuiCheckbox
@@ -915,48 +769,48 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
               </BulkBar>
               */}
 
-              {withheldCount > 0 ? (
-                <ConsentNotice component="p">
-                  {withheldCount} of these {filteredCount} enrollments belong to
-                  learners who have not agreed to share their progress. Their
-                  status, grade and activity read “No consent given”.
-                </ConsentNotice>
-              ) : null}
+            {withheldCount > 0 ? (
+              <ConsentNotice component="p">
+                {withheldCount} of these {filteredCount} enrollments belong to
+                learners who have not agreed to share their progress. Their
+                status, grade and activity read “No consent given”.
+              </ConsentNotice>
+            ) : null}
 
-              <TableCard>
-                <VisuallyHidden role="status" aria-atomic="true">
-                  {rowsQuery.isLoading
-                    ? "Loading learners"
-                    : filteredCount === 0
-                      ? emptyMessage
-                      : `Showing page ${page} of ${Math.max(totalPages, 1)}`}
-                </VisuallyHidden>
-                <div
-                  role="table"
-                  aria-label="Learner progress"
-                  aria-busy={isBusy}
-                >
-                  <div role="rowgroup">
-                    <TableHeaderRow role="row">
-                      {/* Disabled: selection column header — see file header comment.
+            <TableCard>
+              <VisuallyHidden role="status" aria-atomic="true">
+                {rowsQuery.isLoading
+                  ? "Loading learners"
+                  : filteredCount === 0
+                    ? emptyMessage
+                    : `Showing page ${page} of ${Math.max(totalPages, 1)}`}
+              </VisuallyHidden>
+              <div
+                role="table"
+                aria-label="Learner progress"
+                aria-busy={isBusy}
+              >
+                <div role="rowgroup">
+                  <TableHeaderRow role="row">
+                    {/* Disabled: selection column header — see file header comment.
                       <SelectHeaderCell
                         role="columnheader"
                         aria-label="Select"
                       />
                       */}
-                      <TableHeaderCell
-                        role="columnheader"
-                        $flex={COLUMN_FLEX.learner}
-                      >
-                        Learner
-                      </TableHeaderCell>
-                      <TableHeaderCell
-                        role="columnheader"
-                        $flex={COLUMN_FLEX.status}
-                      >
-                        Status
-                      </TableHeaderCell>
-                      {/* Disabled: fabricated Progress column header — see
+                    <TableHeaderCell
+                      role="columnheader"
+                      $flex={COLUMN_FLEX.learner}
+                    >
+                      Learner
+                    </TableHeaderCell>
+                    <TableHeaderCell
+                      role="columnheader"
+                      $flex={COLUMN_FLEX.status}
+                    >
+                      Status
+                    </TableHeaderCell>
+                    {/* Disabled: fabricated Progress column header — see
                           LearnerRow.tsx's "Disabled:" comment.
                       <TableHeaderCell
                         role="columnheader"
@@ -965,7 +819,7 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
                         Progress
                       </TableHeaderCell>
                       */}
-                      {/* Disabled: fabricated Last activity column header —
+                    {/* Disabled: fabricated Last activity column header —
                           see LearnerRow.tsx's "Disabled:" comment.
                       <TableHeaderCell
                         role="columnheader"
@@ -974,70 +828,68 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
                         Last activity
                       </TableHeaderCell>
                       */}
-                      {/* Disabled: action column header — see file header comment.
+                    {/* Disabled: action column header — see file header comment.
                       <ActionHeaderCell
                         role="columnheader"
                         aria-label="Actions"
                       />
                       */}
-                    </TableHeaderRow>
-                  </div>
-                  <TableBody role="rowgroup" $stale={isStale}>
-                    {rowsQuery.isLoading ? (
-                      [1, 2, 3].map((key) => (
-                        <TableRow key={key} role="row">
-                          <div role="cell" style={{ width: "100%" }}>
-                            <Skeleton width="100%" height="48px" />
-                          </div>
-                        </TableRow>
-                      ))
-                    ) : rows.length === 0 ? (
-                      <TableRow role="row">
-                        <EmptyTableMessage
-                          component="div"
-                          role="cell"
-                          aria-colspan={2}
-                          style={{ width: "100%" }}
-                        >
-                          {emptyMessage}
-                        </EmptyTableMessage>
-                      </TableRow>
-                    ) : (
-                      rows.map((row) => (
-                        <LearnerRow key={rowIdOf(row)} row={row} />
-                      ))
-                    )}
-                  </TableBody>
+                  </TableHeaderRow>
                 </div>
-                <TableFooter>
-                  <TableFootnote component="p">
-                    {filteredCount > 0
-                      ? `Page ${page} of ${Math.max(totalPages, 1)}`
-                      : ""}
-                  </TableFootnote>
-                  {totalPages > 1 ? (
-                    <Pagination
-                      count={totalPages}
-                      page={page}
-                      shape="rounded"
-                      size="small"
-                      onChange={(_event, value) => setPage(value)}
-                    />
-                  ) : null}
-                </TableFooter>
-              </TableCard>
+                <TableBody role="rowgroup" $stale={isStale}>
+                  {rowsQuery.isLoading ? (
+                    [1, 2, 3].map((key) => (
+                      <TableRow key={key} role="row">
+                        <div role="cell" style={{ width: "100%" }}>
+                          <Skeleton width="100%" height="48px" />
+                        </div>
+                      </TableRow>
+                    ))
+                  ) : rows.length === 0 ? (
+                    <TableRow role="row">
+                      <EmptyTableMessage
+                        component="div"
+                        role="cell"
+                        aria-colspan={2}
+                        style={{ width: "100%" }}
+                      >
+                        {emptyMessage}
+                      </EmptyTableMessage>
+                    </TableRow>
+                  ) : (
+                    rows.map((row) => (
+                      <LearnerRow key={rowIdOf(row)} row={row} />
+                    ))
+                  )}
+                </TableBody>
+              </div>
+              <TableFooter>
+                <TableFootnote component="p">
+                  {filteredCount > 0
+                    ? `Page ${page} of ${Math.max(totalPages, 1)}`
+                    : ""}
+                </TableFootnote>
+                {totalPages > 1 ? (
+                  <Pagination
+                    count={totalPages}
+                    page={page}
+                    shape="rounded"
+                    size="small"
+                    onChange={(_event, value) => setPage(value)}
+                  />
+                ) : null}
+              </TableFooter>
+            </TableCard>
 
-              {/* Disabled: nothing fabricated currently renders on screen —
-                  Progress, Last activity and "Needs attention" are all
-                  commented out above — so this footnote has nothing left to
-                  disclose. Restore alongside whichever placeholder returns
-                  to view first.
+            {/* Disabled: nothing fabricated currently renders on screen —
+                  Progress and Last activity are both commented out above —
+                  so this footnote has nothing left to disclose. Restore
+                  alongside whichever placeholder returns to view first.
               <PlaceholderNotice component="p">
                 Last activity is a preview value and is not yet real data.
               </PlaceholderNotice>
               */}
-            </ResultsSection>
-          </>
+          </ResultsSection>
         )}
       </Stack>
     </Page>

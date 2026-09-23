@@ -49,52 +49,16 @@ const setup = () => {
 }
 
 /**
- * The page fires one list query plus four unfiltered count queries, and the
- * count queries differ from the list only by their params. Mocking them by
- * exact URL keeps each assertion pinned to the request it is about.
+ * The page fires one list query plus one unfiltered total-count query, used
+ * for the "X of Y enrollments" summary text. Mocking by exact URL keeps the
+ * assertion pinned to the request it is about.
  */
-const mockCounts = (
-  contractId: string,
-  counts: {
-    total: number
-    notStarted: number
-    inProgress: number
-    completed: number
-  },
-) => {
-  const base = { limit: 1 }
-  setMockResponse.get(
-    analyticsUrls.contracts.learnerProgress(ORG_UUID, contractId, base),
-    analyticsFactories.learnerProgressEnvelope([], {
-      total_count: counts.total,
-    }),
-  )
+const mockTotal = (contractId: string, total: number) => {
   setMockResponse.get(
     analyticsUrls.contracts.learnerProgress(ORG_UUID, contractId, {
-      ...base,
-      completion_status: ["not_started"],
+      limit: 1,
     }),
-    analyticsFactories.learnerProgressEnvelope([], {
-      total_count: counts.notStarted,
-    }),
-  )
-  setMockResponse.get(
-    analyticsUrls.contracts.learnerProgress(ORG_UUID, contractId, {
-      ...base,
-      completion_status: ["in_progress"],
-    }),
-    analyticsFactories.learnerProgressEnvelope([], {
-      total_count: counts.inProgress,
-    }),
-  )
-  setMockResponse.get(
-    analyticsUrls.contracts.learnerProgress(ORG_UUID, contractId, {
-      ...base,
-      completion_status: ["passed", "certified"],
-    }),
-    analyticsFactories.learnerProgressEnvelope([], {
-      total_count: counts.completed,
-    }),
+    analyticsFactories.learnerProgressEnvelope([], { total_count: total }),
   )
 }
 
@@ -221,47 +185,6 @@ describe("ContractLearnersPage", () => {
     ).not.toBeInTheDocument()
   })
 
-  test("renders the stat tiles from their own count queries", async () => {
-    const { org, contract, orgSlug } = setup()
-    const contractId = String(contract.id)
-    setMockResponse.get(
-      mitxUrls.organization.managerOrganizationsList(),
-      paginate([org]),
-    )
-    mockCounts(contractId, {
-      total: 168,
-      notStarted: 14,
-      inProgress: 125,
-      completed: 29,
-    })
-    mockList(
-      contractId,
-      [analyticsFactories.learnerProgress()],
-      {},
-      {
-        total_count: 168,
-      },
-    )
-
-    renderWithProviders(
-      <ContractLearnersPage orgSlug={orgSlug} contractSlug={contract.slug} />,
-    )
-
-    const enrollments = await screen.findByRole("group", {
-      name: "Enrollments",
-    })
-    expect(await within(enrollments).findByText("168")).toBeInTheDocument()
-
-    const notStarted = screen.getByRole("group", { name: "Not started" })
-    expect(await within(notStarted).findByText("14")).toBeInTheDocument()
-
-    const inProgress = screen.getByRole("group", { name: "In progress" })
-    expect(await within(inProgress).findByText("125")).toBeInTheDocument()
-
-    const completed = screen.getByRole("group", { name: "Completed" })
-    expect(await within(completed).findByText("29")).toBeInTheDocument()
-  })
-
   test("renders a learner row with its real status", async () => {
     const { org, contract, orgSlug } = setup()
     const contractId = String(contract.id)
@@ -269,12 +192,7 @@ describe("ContractLearnersPage", () => {
       mitxUrls.organization.managerOrganizationsList(),
       paginate([org]),
     )
-    mockCounts(contractId, {
-      total: 1,
-      notStarted: 0,
-      inProgress: 1,
-      completed: 0,
-    })
+    mockTotal(contractId, 1)
     mockList(contractId, [
       analyticsFactories.learnerProgress({
         full_name: "Anton Petrov",
@@ -301,12 +219,7 @@ describe("ContractLearnersPage", () => {
       mitxUrls.organization.managerOrganizationsList(),
       paginate([org]),
     )
-    mockCounts(contractId, {
-      total: 1,
-      notStarted: 0,
-      inProgress: 0,
-      completed: 0,
-    })
+    mockTotal(contractId, 1)
     mockList(
       contractId,
       [
@@ -334,12 +247,7 @@ describe("ContractLearnersPage", () => {
       mitxUrls.organization.managerOrganizationsList(),
       paginate([org]),
     )
-    mockCounts(contractId, {
-      total: 10,
-      notStarted: 0,
-      inProgress: 10,
-      completed: 0,
-    })
+    mockTotal(contractId, 10)
     mockList(
       contractId,
       [analyticsFactories.learnerProgress()],
@@ -384,12 +292,7 @@ describe("ContractLearnersPage", () => {
         mitxUrls.organization.managerOrganizationsList(),
         paginate([org]),
       )
-      mockCounts(contractId, {
-        total: 2,
-        notStarted: 0,
-        inProgress: 0,
-        completed: 1,
-      })
+      mockTotal(contractId, 2)
       mockList(
         contractId,
         [
@@ -450,12 +353,7 @@ describe("ContractLearnersPage", () => {
         mitxUrls.organization.managerOrganizationsList(),
         paginate([org]),
       )
-      mockCounts(contractId, {
-        total: 2,
-        notStarted: 1,
-        inProgress: 1,
-        completed: 0,
-      })
+      mockTotal(contractId, 2)
       mockList(contractId, [
         analyticsFactories.learnerProgress({ full_name: "Everyone" }),
       ])
@@ -519,35 +417,15 @@ describe("ContractLearnersPage", () => {
       mitxUrls.organization.managerOrganizationsList(),
       paginate([org]),
     )
-    const base = { limit: 1 }
-    setMockResponse.get(
-      analyticsUrls.contracts.learnerProgress(ORG_UUID, contractId, base),
-      analyticsFactories.learnerProgressEnvelope([], { total_count: 5 }),
-    )
-    // The not-started count query 500s; the rest succeed. A single failed
-    // query among the five should still surface a combined error rather than
-    // a false empty state or a tile that spins forever.
+    // The total-count query 500s while the list query succeeds. A single
+    // failed query should still surface a combined error rather than a false
+    // empty state.
     setMockResponse.get(
       analyticsUrls.contracts.learnerProgress(ORG_UUID, contractId, {
-        ...base,
-        completion_status: ["not_started"],
+        limit: 1,
       }),
       "Internal Server Error",
       { code: 500 },
-    )
-    setMockResponse.get(
-      analyticsUrls.contracts.learnerProgress(ORG_UUID, contractId, {
-        ...base,
-        completion_status: ["in_progress"],
-      }),
-      analyticsFactories.learnerProgressEnvelope([], { total_count: 0 }),
-    )
-    setMockResponse.get(
-      analyticsUrls.contracts.learnerProgress(ORG_UUID, contractId, {
-        ...base,
-        completion_status: ["passed", "certified"],
-      }),
-      analyticsFactories.learnerProgressEnvelope([], { total_count: 0 }),
     )
     mockList(
       contractId,
@@ -565,7 +443,6 @@ describe("ContractLearnersPage", () => {
       screen.getByRole("button", { name: "Try again" }),
     ).toBeInTheDocument()
     expect(screen.queryByText("No learners found.")).not.toBeInTheDocument()
-    expect(screen.queryByRole("group", { name: "Enrollments" })).toBeNull()
   })
 
   /**
@@ -581,12 +458,7 @@ describe("ContractLearnersPage", () => {
       mitxUrls.organization.managerOrganizationsList(),
       paginate([org]),
     )
-    mockCounts(contractId, {
-      total: 1,
-      notStarted: 0,
-      inProgress: 1,
-      completed: 0,
-    })
+    mockTotal(contractId, 1)
     mockList(contractId, [analyticsFactories.learnerProgress()])
     mockFunnel(contractId)
 
@@ -614,12 +486,7 @@ describe("ContractLearnersPage", () => {
       mitxUrls.organization.managerOrganizationsList(),
       paginate([org]),
     )
-    mockCounts(contractId, {
-      total: 2,
-      notStarted: 0,
-      inProgress: 2,
-      completed: 0,
-    })
+    mockTotal(contractId, 2)
     mockList(contractId, [
       analyticsFactories.learnerProgress({ full_name: "Unfiltered Learner" }),
     ])
@@ -651,12 +518,7 @@ describe("ContractLearnersPage", () => {
       mitxUrls.organization.managerOrganizationsList(),
       paginate([org]),
     )
-    mockCounts(contractId, {
-      total: 2,
-      notStarted: 1,
-      inProgress: 1,
-      completed: 0,
-    })
+    mockTotal(contractId, 2)
     mockList(contractId, [
       analyticsFactories.learnerProgress({ full_name: "Everyone" }),
     ])
@@ -680,19 +542,14 @@ describe("ContractLearnersPage", () => {
     await screen.findByText("Only Not Started")
   })
 
-  test("the Completed filter matches the Completed tile, with no separate Certificate option", async () => {
+  test("the Completed filter matches passed and certified, with no separate Certificate option", async () => {
     const { org, contract, orgSlug } = setup()
     const contractId = String(contract.id)
     setMockResponse.get(
       mitxUrls.organization.managerOrganizationsList(),
       paginate([org]),
     )
-    mockCounts(contractId, {
-      total: 3,
-      notStarted: 1,
-      inProgress: 0,
-      completed: 2,
-    })
+    mockTotal(contractId, 3)
     mockList(contractId, [
       analyticsFactories.learnerProgress({ full_name: "Everyone" }),
     ])
@@ -733,12 +590,7 @@ describe("ContractLearnersPage", () => {
       mitxUrls.organization.managerOrganizationsList(),
       paginate([org]),
     )
-    mockCounts(contractId, {
-      total: 5,
-      notStarted: 0,
-      inProgress: 5,
-      completed: 0,
-    })
+    mockTotal(contractId, 5)
     mockList(contractId, [
       analyticsFactories.learnerProgress({ full_name: "Everyone" }),
     ])
@@ -777,12 +629,7 @@ describe("ContractLearnersPage", () => {
       mitxUrls.organization.managerOrganizationsList(),
       paginate([org]),
     )
-    mockCounts(contractId, {
-      total: 1,
-      notStarted: 0,
-      inProgress: 1,
-      completed: 0,
-    })
+    mockTotal(contractId, 1)
     mockList(contractId, [
       analyticsFactories.learnerProgress({
         full_name: "Anton Petrov",
@@ -811,12 +658,7 @@ describe("ContractLearnersPage", () => {
       mitxUrls.organization.managerOrganizationsList(),
       paginate([org]),
     )
-    mockCounts(contractId, {
-      total: 1,
-      notStarted: 0,
-      inProgress: 1,
-      completed: 0,
-    })
+    mockTotal(contractId, 1)
     mockList(contractId, [
       analyticsFactories.learnerProgress({ full_name: "Anton Petrov" }),
     ])
