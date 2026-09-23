@@ -11,6 +11,7 @@ import {
   Typography,
   HEADER_HEIGHT,
   HEADER_HEIGHT_MD,
+  Container,
 } from "ol-components"
 import { ActionButton, Alert, Button, ButtonLink } from "@mitodl/smoot-design"
 import { useUserHasPermission, Permission } from "api/hooks/user"
@@ -58,6 +59,9 @@ const TOOLBAR_HEIGHT = 43
  * enough that little is at risk if the tab goes away.
  */
 const AUTOSAVE_DELAY_MS = 2000
+
+/** Matches the banner's and the body's column, which the action row follows. */
+const CONTENT_COLUMN_WIDTH = 890
 
 /* The pieces the stacked edit-mode bar is built from, per the design. */
 const TOOLBAR_PADDING_Y = 12
@@ -108,14 +112,26 @@ const StackedToolbar = styled(StyledToolbar)({
 })
 
 /* Nowrap so the bar keeps its derived height; it scrolls instead. */
-const ActionRow = styled.div({
+const ActionRow = styled.div(({ theme }) => ({
   display: "flex",
   alignItems: "center",
   gap: "16px",
   flexWrap: "nowrap",
-  /* Full width so the status can sit at one end and the actions at the other. */
+  /**
+   * The article's own column, not the bar's full width: the status then lines
+   * up with the breadcrumb and title, and the actions with the far edge of the
+   * text. Both the banner (`InnerContainer`) and the body (`TiptapEditor`'s
+   * `Container`) are this same 890px centred column, padded by 24px, so these
+   * numbers follow them and have to keep following them.
+   */
   width: "100%",
-})
+  maxWidth: `${CONTENT_COLUMN_WIDTH}px`,
+  margin: "0 auto",
+  padding: "0 24px",
+  [theme.breakpoints.down("sm")]: {
+    padding: "0 16px",
+  },
+}))
 
 /**
  * A real box for the formatting controls. `MainToolbarContent` wraps them in a
@@ -762,52 +778,62 @@ const WebsiteContentEditor = ({
                 <StackedToolbar>
                   {/* The design puts the actions above the formatting
                       controls, both rows centred. */}
-                  <ActionRow className="abc">
-                    {/* The design puts the status at the left end and the
+                  <Container>
+                    <ActionRow>
+                      {/* The design puts the status at the left end and the
                         actions at the right, the Spacer between them. */}
-                    {statusSlot}
-                    {autosaveSlot}
-                    <Spacer />
-                    {contentItem && !contentItem.is_published ? (
-                      <Button
-                        variant="bordered"
-                        size={buttonSize}
-                        disabled={isPending}
-                        startIcon={<RiDeleteBinLine />}
-                        onClick={() =>
-                          showDeleteWebsiteContentDialog(contentItem, () =>
-                            router.push(websiteContentDraftsView(contentType)),
-                          )
-                        }
-                      >
-                        Delete
-                      </Button>
-                    ) : null}
-                    <PublishButton
-                      variant="primary"
-                      disabled={
-                        isPending ||
-                        !title ||
-                        (!touched && contentItem?.is_published)
-                      }
-                      onClick={() => {
-                        if (topicsMissing) {
-                          askForTopics()
-                          return
-                        }
-                        startPublish()
-                      }}
-                      size={buttonSize}
-                      endIcon={
-                        isPending && isPublishing ? (
-                          <LoadingSpinner size={14} color="inherit" loading />
-                        ) : null
-                      }
-                    >
-                      Publish {contentLabel}
-                    </PublishButton>
-                    {settingsButton}
-                  </ActionRow>
+                      {statusSlot}
+                      {autosaveSlot}
+                      <Spacer />
+                      <StyledStatusContainer>
+                        {contentItem && !contentItem.is_published ? (
+                          <Button
+                            variant="bordered"
+                            size={buttonSize}
+                            disabled={isPending}
+                            startIcon={<RiDeleteBinLine />}
+                            onClick={() =>
+                              showDeleteWebsiteContentDialog(contentItem, () =>
+                                router.push(
+                                  websiteContentDraftsView(contentType),
+                                ),
+                              )
+                            }
+                          >
+                            Delete
+                          </Button>
+                        ) : null}
+                        <PublishButton
+                          variant="primary"
+                          disabled={
+                            isPending ||
+                            !title ||
+                            (!touched && contentItem?.is_published)
+                          }
+                          onClick={() => {
+                            if (topicsMissing) {
+                              askForTopics()
+                              return
+                            }
+                            startPublish()
+                          }}
+                          size={buttonSize}
+                          endIcon={
+                            isPending && isPublishing ? (
+                              <LoadingSpinner
+                                size={14}
+                                color="inherit"
+                                loading
+                              />
+                            ) : null
+                          }
+                        >
+                          Publish {contentLabel}
+                        </PublishButton>
+                        {settingsButton}
+                      </StyledStatusContainer>
+                    </ActionRow>
+                  </Container>
                   <FormattingRow>
                     <MainToolbarContent editor={editor} />
                   </FormattingRow>
