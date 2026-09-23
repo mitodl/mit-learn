@@ -44,10 +44,23 @@ from learning_resources.factories import (
     TutorProblemFileFactory,
 )
 from learning_resources.models import ContentFile, LearningResource
-from learning_resources_search.constants import CONTENT_FILE_TYPE
 from main.utils import now_in_utc
 
 pytestmark = pytest.mark.django_db
+
+
+@pytest.fixture
+def mock_purge_tasks(mocker):
+    """Mock the index purge tasks dispatched for stale content files"""
+    return SimpleNamespace(
+        deindex=mocker.patch(
+            "learning_resources_search.tasks.deindex_run_content_files.delay"
+        ),
+        qdrant=mocker.patch(
+            "vector_search.tasks.remove_unpublished_run_content_files.delay"
+        ),
+    )
+
 
 DEFAULT_SETTINGS_XML = b"""<?xml version="1.0" encoding="UTF-8"?>
     <course identifier="gfef28ec71f16246c57edfeef25b26a54"
@@ -477,7 +490,9 @@ def test_parse_module_meta_handles_missing_identifierref(tmp_path):
     assert len(result["unpublished"]) == 0
 
 
-def test_transform_canvas_content_files_removes_unpublished_content(mocker, tmp_path):
+def test_transform_canvas_content_files_removes_unpublished_content(
+    mock_purge_tasks, mocker, tmp_path
+):
     """
     Test that transform_canvas_content_files removes content files not marked as published.
     """
@@ -547,9 +562,6 @@ def test_transform_canvas_content_files_removes_unpublished_content(mocker, tmp_
         "learning_resources.etl.utils.extract_text_metadata",
         return_value={"content": "test"},
     )
-    bulk_unpub = mocker.patch(
-        "learning_resources.etl.canvas.bulk_resources_unpublished_actions"
-    )
 
     # Create a fake zipfile with the published file
 
@@ -559,11 +571,15 @@ def test_transform_canvas_content_files_removes_unpublished_content(mocker, tmp_
         )
     )
 
-    # Ensure unpublished content is deleted and unpublished actions called
-    bulk_unpub.assert_called_once_with([unpublished_cf.id], CONTENT_FILE_TYPE)
+    unpublished_cf.refresh_from_db()
+    assert unpublished_cf.published is False
+    mock_purge_tasks.deindex.assert_called_once_with(run.id, unpublished_only=True)
+    mock_purge_tasks.qdrant.assert_called_once_with(run.id)
 
 
-def test_transform_canvas_content_files_retains_failed_files(mocker, tmp_path):
+def test_transform_canvas_content_files_retains_failed_files(
+    mock_purge_tasks, mocker, tmp_path
+):
     """A file whose extraction raises must not be deleted; true orphans still are"""
     resource = LearningResourceFactory.create(etl_source=ETLSource.canvas.name)
     run = LearningResourceRunFactory.create(learning_resource=resource)
@@ -633,9 +649,6 @@ def test_transform_canvas_content_files_retains_failed_files(mocker, tmp_path):
         "learning_resources.etl.utils._extract_content",
         side_effect=FileNotFoundError("ocr output missing"),
     )
-    bulk_unpub = mocker.patch(
-        "learning_resources.etl.canvas.bulk_resources_unpublished_actions"
-    )
 
     list(
         transform_canvas_content_files(
@@ -643,9 +656,10 @@ def test_transform_canvas_content_files_retains_failed_files(mocker, tmp_path):
         )
     )
 
-    assert ContentFile.objects.filter(id=failing_cf.id).exists()
-    assert not ContentFile.objects.filter(id=unpublished_cf.id).exists()
-    bulk_unpub.assert_called_once_with([unpublished_cf.id], CONTENT_FILE_TYPE)
+    assert ContentFile.objects.get(id=failing_cf.id).published is True
+    assert ContentFile.objects.get(id=unpublished_cf.id).published is False
+    mock_purge_tasks.deindex.assert_called_once_with(run.id, unpublished_only=True)
+    mock_purge_tasks.qdrant.assert_called_once_with(run.id)
 
 
 @pytest.mark.parametrize("overwrite", [True, False])
@@ -826,6 +840,7 @@ def test_transform_canvas_problem_files_ingests_py_files(tmp_path, mocker, setti
 
 
 @pytest.mark.django_db
+@pytest.mark.usefixtures("mock_purge_tasks")
 def test_transform_canvas_content_files_url_assignment(mocker, tmp_path):
     """
     Test that transform_canvas_content_files assigns URLs based on url_config.
@@ -853,8 +868,6 @@ def test_transform_canvas_content_files_url_assignment(mocker, tmp_path):
     mocker.patch(
         "learning_resources.etl.canvas.get_edx_module_id", return_value="file1"
     )
-    # Patch bulk_resources_unpublished_actions to do nothing
-    mocker.patch("learning_resources.etl.canvas.bulk_resources_unpublished_actions")
     # Patch run.content_files.exclude to return a mock with delete method
     run.content_files.exclude.return_value.values_list.return_value = []
     run.content_files.exclude.return_value.delete = lambda: None
@@ -963,7 +976,9 @@ def test_is_file_published(file_meta, expected):
     assert is_file_published(file_meta) == expected
 
 
-def test_published_module_and_files_meta_content_ingestion(mocker, tmp_path):
+def test_published_module_and_files_meta_content_ingestion(
+    mock_purge_tasks, mocker, tmp_path
+):
     """
     Test published files from files_meta and module_meta are retained
     """
@@ -1039,9 +1054,6 @@ def test_published_module_and_files_meta_content_ingestion(mocker, tmp_path):
         "learning_resources.etl.utils.extract_text_metadata",
         return_value={"content": "TEXT"},
     )
-    bulk_unpub = mocker.patch(
-        "learning_resources.etl.canvas.bulk_resources_unpublished_actions"
-    )
     zip_path = make_canvas_zip(
         tmp_path,
         module_xml=module_xml,
@@ -1065,7 +1077,9 @@ def test_published_module_and_files_meta_content_ingestion(mocker, tmp_path):
     assert len(results) == 2
     assert "/file1.html" in result_paths
     assert "/file3.html" in result_paths
-    assert bulk_unpub.mock_calls[0].args[0] == [stale_contentfile.id]
+    stale_contentfile.refresh_from_db()
+    assert stale_contentfile.published is False
+    mock_purge_tasks.qdrant.assert_called_once_with(run.id)
 
 
 @pytest.mark.parametrize(
@@ -1278,6 +1292,7 @@ def test_parse_files_meta_excludes_tutorbot_folder(tmp_path, settings):
     assert result["unpublished"][0]["path"].name == "tutorfile.html"
 
 
+@pytest.mark.usefixtures("mock_purge_tasks")
 def test_embedded_files_from_html(tmp_path, mocker, sample_pdf_content):
     """
     Test that _embedded_files_from_html processes files embedded in HTML content
@@ -1342,7 +1357,6 @@ def test_embedded_files_from_html(tmp_path, mocker, sample_pdf_content):
         "learning_resources.etl.utils.extract_text_metadata",
         return_value={"content": "test"},
     )
-    mocker.patch("learning_resources.etl.canvas.bulk_resources_unpublished_actions")
 
     # Create a fake zipfile with the published file
     run = LearningResourceRunFactory.create()
@@ -1441,6 +1455,7 @@ def test_syllabus_not_ingested_when_hidden(tmp_path, mocker):
     )
 
 
+@pytest.mark.usefixtures("mock_purge_tasks")
 def test_get_url_config_assignments_and_pages(mocker, tmp_path):
     """
     Test that _get_url_config correctly maps assignments and pages to URLs using their titles.
@@ -1519,7 +1534,6 @@ def test_get_url_config_assignments_and_pages(mocker, tmp_path):
         "learning_resources.etl.utils.extract_text_metadata",
         return_value={"content": "test"},
     )
-    mocker.patch("learning_resources.etl.canvas.bulk_resources_unpublished_actions")
     results = list(
         transform_canvas_content_files(
             Path(zip_path),

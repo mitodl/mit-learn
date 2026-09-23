@@ -32,13 +32,7 @@ from learning_resources.models import (
     LearningResourcePlatform,
     LearningResourceRun,
 )
-from learning_resources.utils import (
-    bulk_resources_unpublished_actions,
-    resource_unpublished_actions,
-)
-from learning_resources_search.constants import (
-    CONTENT_FILE_TYPE,
-)
+from learning_resources.utils import resource_unpublished_actions
 from main.utils import checksum_for_content
 
 log = logging.getLogger(__name__)
@@ -202,8 +196,12 @@ def transform_canvas_content_files(
     Transform published content files from a Canvas course zipfile
 
     Files whose extraction fails are skipped and their existing records
-    are retained (not deleted/unpublished).
+    are retained. Files no longer in the archive are unpublished and purged
+    from both indexes.
     """
+    from learning_resources_search import tasks as search_tasks
+    from vector_search import tasks as vector_tasks
+
     basedir = course_zipfile.name.split(".")[0]
     zipfile_path = course_zipfile.absolute()
     published_items = get_published_items(zipfile_path, url_config)
@@ -259,12 +257,13 @@ def transform_canvas_content_files(
         published_keys.append(failed_key)
         if failed_keys is not None:
             failed_keys.append(failed_key)
-    unpublished_content = run.content_files.exclude(key__in=published_keys)
-    # remove unpublished contentfiles
-    bulk_resources_unpublished_actions(
-        list(unpublished_content.values_list("id", flat=True)), CONTENT_FILE_TYPE
+    # soft-delete: the purge tasks look the rows up, so they must outlive dispatch
+    stale_files = run.content_files.exclude(key__in=published_keys).filter(
+        published=True
     )
-    unpublished_content.delete()
+    if stale_files.update(published=False):
+        search_tasks.deindex_run_content_files.delay(run.id, unpublished_only=True)
+        vector_tasks.remove_unpublished_run_content_files.delay(run.id)
 
 
 def transform_canvas_problem_files(
