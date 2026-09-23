@@ -1306,42 +1306,18 @@ def _trim_indexing_only_list_fields(payload):
     return trimmed
 
 
-def _unpublished_readable_ids(readable_ids):
-    """
-    Return which of `readable_ids` the database says are unpublished.
-
-    Asked negatively on purpose. A point can legitimately have no row here --
-    payloads are portable and may have been loaded from another system's
-    snapshot -- so keeping only rows that say `published=True` would drop those
-    hits too. Only what the database positively reports as unpublished goes.
-    """
-    if not readable_ids:
-        return set()
-    return set(
-        LearningResource.objects.filter(readable_id__in=readable_ids)
-        .exclude(published=True)
-        .values_list("readable_id", flat=True)
-    )
-
-
 def _resource_payload_hits(search_result):
     """
     Build resource hits from the Qdrant payloads themselves.
 
     The payload is the resource as the indexing serializer wrote it, so no
-    hydration or serialization is required -- but a payload written before a
-    field was added carries no such key until it is reindexed, which the
-    response serializer makes up for. Dedupes on platform:readable_id and
-    preserves the Qdrant ranking, the same way the hydrated path does.
-
-    A payload is not evidence that the resource is still published, though:
-    unpublishing deletes the point rather than rewriting it, so a stale payload
-    still reads as published and no Qdrant-side filter can catch it. That costs
-    one indexed lookup to keep the row authoritative here as well.
+    database hydration is required -- but a payload written before a field was
+    added carries no such key until it is reindexed, which the response
+    serializer makes up for. Dedupes on platform:readable_id and preserves the
+    Qdrant ranking, the same way the hydrated path does.
     """
     hits = []
     seen = set()
-    payloads = []
     for hit in search_result:
         payload = hit.payload or {}
         readable_id = payload.get("readable_id")
@@ -1351,12 +1327,6 @@ def _resource_payload_hits(search_result):
         if key in seen:
             continue
         seen.add(key)
-        payloads.append((readable_id, payload))
-
-    unpublished = _unpublished_readable_ids([rid for rid, _ in payloads])
-    for readable_id, payload in payloads:
-        if readable_id in unpublished:
-            continue
         hits.append(_trim_indexing_only_list_fields(payload))
     return hits
 
@@ -1384,12 +1354,7 @@ def _resource_vector_hits(search_result):
     resources_by_id = {
         f"{(r.platform.code if r.platform else '')}:{r.readable_id}": r
         for r in LearningResource.objects.for_serialization().filter(
-            # Only the index is supposed to hold published resources, but
-            # unpublishing deletes the point asynchronously and a delete can
-            # be delayed, fail, or predate a snapshot loaded from elsewhere.
-            # The row is the authority, so a hit it no longer backs is dropped.
-            readable_id__in=readable_ids,
-            published=True,
+            readable_id__in=readable_ids
         )
     }
     # Re-order to match the Qdrant ranking

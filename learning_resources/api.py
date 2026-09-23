@@ -142,36 +142,30 @@ def unpublish_website_content_learning_resource(content_id: int) -> None:
     resource.published = False
     resource.save()
     resource_unpublished_actions(resource)
-    _remove_embeddings_now(resource)
 
+    # That hook queues the Qdrant removal, but vector search answers from the
+    # payloads themselves -- see VECTOR_SEARCH_RESOURCES_FROM_PAYLOAD -- and a
+    # stale payload still reads as published, because unpublishing deletes the
+    # point rather than rewriting it. So drop the points here as well, keyed on
+    # the readable_id already in hand: `remove_embeddings` would re-serialize
+    # the resource only to derive the same filter.
+    #
+    # Best effort. The queued removal is the one carrying retries, so a Qdrant
+    # that cannot be reached here must not fail the unpublish, and deleting
+    # points that are already gone is a no-op when it runs.
+    if settings.QDRANT_ENABLE_INDEXING_PLUGIN_HOOKS:
+        # Gated as the search plugin gates its own: with the hooks off,
+        # nothing indexed the points in the first place.
+        from vector_search.constants import RESOURCES_COLLECTION_NAME
+        from vector_search.utils import remove_points_matching_params
 
-def _remove_embeddings_now(resource: LearningResource) -> None:
-    """
-    Drop the resource's Qdrant points without waiting for the worker.
-
-    `resource_unpublished_actions` queues that removal, but vector search
-    answers from the Qdrant payloads themselves -- see
-    VECTOR_SEARCH_RESOURCES_FROM_PAYLOAD -- and a payload still says
-    `published` because unpublishing deletes the point rather than rewriting
-    it. Until the queued task lands, the unpublished article is therefore still
-    a search hit.
-
-    Best effort only: the queued task is the one carrying retries, so a Qdrant
-    that cannot be reached here must not fail the unpublish.
-    """
-    if not settings.QDRANT_ENABLE_INDEXING_PLUGIN_HOOKS:
-        # Mirrors the search plugin: with the hooks off nothing indexed it.
-        return
-
-    from vector_search.tasks import remove_embeddings
-
-    try:
-        # Calling the task runs it here rather than queueing it; deleting
-        # points that are already gone is a no-op, so the queued one is free
-        # to run again afterwards.
-        remove_embeddings([resource.id], resource.resource_type)
-    except Exception:
-        log.exception(
-            "Inline embedding removal failed for resource %s, leaving it queued",
-            resource.id,
-        )
+        try:
+            remove_points_matching_params(
+                {"readable_id": website_content_readable_id(content_id)},
+                collection_name=RESOURCES_COLLECTION_NAME,
+            )
+        except Exception:
+            log.exception(
+                "Inline embedding removal failed for resource %s, leaving it queued",
+                resource.id,
+            )
