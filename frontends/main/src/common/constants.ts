@@ -36,6 +36,7 @@ export const PostHogEvents = {
   OrgLearningCtaClicked: "org_learning_cta_clicked",
   OrgLearningAudienceSelected: "org_learning_audience_selected",
   OrgLearningFormSubmitted: "org_learning_form_submitted",
+  CheckoutCompleted: "checkout_completed",
 } as const
 
 export const DigitalCredentialsFAQLink =
