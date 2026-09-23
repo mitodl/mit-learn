@@ -63,6 +63,18 @@ def test_opensearch_content_files_test_mode_any_published_non_variant_run():
     }
 
 
+@pytest.mark.parametrize("published", [True, False])
+def test_opensearch_content_files_canvas_needs_published(published):
+    """test_mode alone keeps a Canvas course out of OpenSearch, but not Qdrant"""
+    course, (best, _), files = _course_with_runs(
+        etl_source=ETLSource.canvas.name, published=published, test_mode=True
+    )
+
+    expected = {files[best], files["direct"]} if published else set()
+    assert set(opensearch_content_files(course)) == expected
+    assert qdrant_content_files(LearningResource.objects.filter(id=course.id)).exists()
+
+
 def test_opensearch_content_files_unpublished_course_has_none():
     """An unpublished, non-test_mode course indexes nothing"""
     course, _, _ = _course_with_runs(published=False)
