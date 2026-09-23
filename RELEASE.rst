@@ -1,6 +1,13 @@
 Release Notes
 =============
 
+Version 0.80.16
+---------------
+
+- fix: align Organizational Learning page with Figma design QA (#3971)
+- feat: add hover explanation for Active learners, fix clipped month label in engagement chart (#3966)
+- Track begin-checkout analytics for enrollments (#3959)
+
 Version 0.80.15
 ---------------
 
