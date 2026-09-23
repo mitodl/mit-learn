@@ -6,6 +6,7 @@
  * it, rather than an edit spread across eight section components.
  */
 
+export type EmphasizedTitle = { start: string; emphasis: string; end: string }
 export type StatItem = { value: string; label: string[] }
 export type IconBoxItem = { title: string; body: string }
 export type OfferingCardItem = {
@@ -52,8 +53,11 @@ export type CaseStudyItem = {
 }
 
 export const hero = {
-  title:
-    "Transform your organization with scalable education from MIT Open Learning",
+  title: {
+    start: "Transform your organization with ",
+    emphasis: "scalable education",
+    end: " from MIT Open Learning",
+  } satisfies EmphasizedTitle,
   body: "We work with businesses, schools, and government agencies to educate diverse workforces on the most impactful technologies of the moment. Connect with our team to learn how our portfolio of MIT Open Learning courses and programs can be matched to your organization’s training goals.",
   ctaLabel: "Talk with our team",
   image: "/images/uai_landing/uai-landing-hero-2.jpg",

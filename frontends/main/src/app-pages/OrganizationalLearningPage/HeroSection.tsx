@@ -147,63 +147,46 @@ const HeroImage = styled(Image)({
   borderRadius: FIGURE_RADIUS,
 })
 
-const EMPHASIS_PHRASE = "scalable education"
-
-const HeroSection: React.FC = () => {
-  const emphasisStart = copy.title.indexOf(EMPHASIS_PHRASE)
-  if (emphasisStart === -1) {
-    console.warn(
-      `HeroSection: EMPHASIS_PHRASE "${EMPHASIS_PHRASE}" not found in copy.title; rendering title without emphasis.`,
-    )
-  }
-  const titleStart =
-    emphasisStart === -1 ? copy.title : copy.title.slice(0, emphasisStart)
-  const titleEnd =
-    emphasisStart === -1
-      ? ""
-      : copy.title.slice(emphasisStart + EMPHASIS_PHRASE.length)
-
-  return (
-    <HeroBand>
-      <Inner>
-        <Copy>
-          <Title>
-            {titleStart}
-            {emphasisStart !== -1 && <Emphasis>{EMPHASIS_PHRASE}</Emphasis>}
-            {titleEnd}
-          </Title>
-          <Body>{copy.body}</Body>
-          <Stats>
-            {copy.stats.map((stat) => (
-              <Stat key={stat.value}>
-                <StatLabel>
-                  {stat.label.map((line, index) => (
-                    <React.Fragment key={line}>
-                      {index > 0 ? <br /> : null}
-                      {line}
-                    </React.Fragment>
-                  ))}
-                </StatLabel>
-                <StatValue>{stat.value}</StatValue>
-              </Stat>
-            ))}
-          </Stats>
-          <Actions>
-            <CtaButton placement="hero">{copy.ctaLabel}</CtaButton>
-          </Actions>
-        </Copy>
-        <Figure>
-          <HeroImage
-            src={copy.image}
-            alt={copy.imageAlt}
-            fill
-            sizes="(max-width: 1280px) 100vw, 568px"
-            priority
-          />
-        </Figure>
-      </Inner>
-    </HeroBand>
-  )
-}
+const HeroSection: React.FC = () => (
+  <HeroBand>
+    <Inner>
+      <Copy>
+        <Title>
+          {copy.title.start}
+          <Emphasis>{copy.title.emphasis}</Emphasis>
+          {copy.title.end}
+        </Title>
+        <Body>{copy.body}</Body>
+        <Stats>
+          {copy.stats.map((stat) => (
+            <Stat key={stat.value}>
+              <StatLabel>
+                {stat.label.map((line, index) => (
+                  <React.Fragment key={line}>
+                    {index > 0 ? <br /> : null}
+                    {line}
+                  </React.Fragment>
+                ))}
+              </StatLabel>
+              <StatValue>{stat.value}</StatValue>
+            </Stat>
+          ))}
+        </Stats>
+        <Actions>
+          <CtaButton placement="hero">{copy.ctaLabel}</CtaButton>
+        </Actions>
+      </Copy>
+      <Figure>
+        <HeroImage
+          src={copy.image}
+          alt={copy.imageAlt}
+          fill
+          sizes="(max-width: 1280px) 100vw, 568px"
+          priority
+        />
+      </Figure>
+    </Inner>
+  </HeroBand>
+)
 
 export default HeroSection

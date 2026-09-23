@@ -23,6 +23,8 @@ jest.mock("ol-utilities", () => ({
 
 const mockScrollToElement = jest.mocked(scrollToElement)
 
+const heroTitleText = `${hero.title.start}${hero.title.emphasis}${hero.title.end}`
+
 const setupApis = () => {
   setMockResponse.get(urls.userMe.get(), {})
 }
@@ -39,7 +41,7 @@ describe("OrganizationalLearningPage", () => {
     // Asserted by heading rather than by copy string so a marketing rewrite
     // does not break the test — what matters is that no section went missing.
     const sectionHeadings = [
-      hero.title,
+      heroTitleText,
       featuredProgram.title,
       offerings.title,
       deliveryFormats.title,
@@ -73,7 +75,7 @@ describe("OrganizationalLearningPage", () => {
     renderWithProviders(<OrganizationalLearningPage />)
 
     assertHeadings([
-      { level: 1, name: hero.title },
+      { level: 1, name: heroTitleText },
       { level: 2, name: featuredProgram.title },
       { level: 2, name: offerings.title },
       ...offerings.cards.map((card) => ({ level: 3, name: card.title })),
