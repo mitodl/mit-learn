@@ -19,14 +19,14 @@ const Inner = styled(SectionInner)(({ theme }) => ({
   display: "flex",
   alignItems: "center",
   gap: "48px",
-  padding: "120px 24px",
+  padding: "120px 0",
   [theme.breakpoints.down("lg")]: {
     alignItems: "stretch",
     flexDirection: "column",
-    padding: "48px 24px",
+    padding: "48px 0",
   },
   [theme.breakpoints.down("md")]: {
-    padding: "32px 24px",
+    padding: "32px 0",
     gap: "32px",
   },
 }))
