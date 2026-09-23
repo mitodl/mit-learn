@@ -10,7 +10,7 @@ import boto3
 import celery
 from celery.exceptions import Ignore
 from django.conf import settings
-from django.db import OperationalError
+from django.db import DatabaseError, OperationalError
 from django.db.models import Q
 from django.utils import timezone
 
@@ -1083,7 +1083,18 @@ def sync_website_content_learning_resource(content_id: int) -> None:
             "WebsiteContent %s was unpublished while syncing, undoing the sync",
             content_id,
         )
-        unpublish_website_content_learning_resource(content_id)
+        try:
+            unpublish_website_content_learning_resource(content_id)
+        except DatabaseError:
+            # This task does not retry, and a failure here would leave the
+            # resource published and indexed with nothing behind it, so hand
+            # the undo to the task that does retry. Its own republish guard
+            # makes a late run safe.
+            log.exception(
+                "Undoing the sync failed for content %s, queueing the removal",
+                content_id,
+            )
+            unpublish_website_content_learning_resource_task.delay(content_id)
 
 
 @app.task(acks_late=True, reject_on_worker_lost=True)

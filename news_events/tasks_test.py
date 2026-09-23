@@ -153,6 +153,35 @@ def _news_content(user, *, is_published):
 
 
 @pytest.mark.django_db
+def test_sync_website_content_to_news_removes_an_entry_it_must_not_keep():
+    """
+    Finding the item unpublished removes any feed entry, rather than skipping.
+
+    That is what makes a retry effective: the reconciliation below runs inside
+    the task's own try, so a delete that fails there retries the whole task --
+    and the retry arrives here, with the row already unpublished. Skipping
+    would strand the entry it had just created.
+    """
+    from news_events.constants import FeedType
+    from news_events.etl.articles_news import website_content_feed_guid
+    from news_events.models import FeedItem, FeedSource
+    from website_content.factories import WebsiteContentFactory
+
+    content = WebsiteContentFactory.create(is_published=False, content_type="news")
+    source = FeedSource.objects.create(
+        title="MIT Learn Articles", url="/news", feed_type=FeedType.news.name
+    )
+    guid = website_content_feed_guid(content.id)
+    FeedItem.objects.create(
+        guid=guid, source=source, title=content.title, url="/news/stranded"
+    )
+
+    tasks.sync_website_content_to_news.delay(content.id)
+
+    assert not FeedItem.objects.filter(guid=guid).exists()
+
+
+@pytest.mark.django_db
 def test_sync_website_content_to_news_undoes_itself_if_unpublished_meanwhile(mocker):
     """
     A sync that overtakes an unpublish reconciles against the row.

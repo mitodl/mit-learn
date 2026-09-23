@@ -7,6 +7,7 @@ from unittest.mock import ANY
 
 import pytest
 from decorator import contextmanager
+from django.db import DatabaseError
 from django.utils import timezone
 from moto import mock_aws
 from safedelete.config import HARD_DELETE
@@ -1661,6 +1662,39 @@ def test_sync_website_content_undoes_itself_if_unpublished_meanwhile(mocker):
         readable_id=website_content_readable_id(content.id)
     )
     assert resource.published is False
+
+
+def test_sync_website_content_queues_the_removal_if_undoing_fails(mocker):
+    """
+    A failed undo is handed to the task that retries.
+
+    This task does not retry, so a database error while undoing would
+    otherwise leave the resource published and indexed with nothing behind it.
+    """
+    from website_content.factories import WebsiteContentFactory
+    from website_content.models import WebsiteContent
+
+    content = WebsiteContentFactory.create(is_published=True, content_type="article")
+
+    def unpublish_then_sync(item):
+        """Stand in for the editor's unpublish, after the published check."""
+        WebsiteContent.objects.filter(id=item.id).update(is_published=False)
+
+    mocker.patch(
+        "learning_resources.tasks.sync_website_content_to_learning_resource",
+        side_effect=unpublish_then_sync,
+    )
+    mocker.patch(
+        "learning_resources.tasks.unpublish_website_content_learning_resource",
+        side_effect=DatabaseError("deadlock detected"),
+    )
+    mock_task = mocker.patch(
+        "learning_resources.tasks.unpublish_website_content_learning_resource_task.delay"
+    )
+
+    tasks.sync_website_content_learning_resource.delay(content.id)
+
+    mock_task.assert_called_once_with(content.id)
 
 
 def test_unpublish_website_content_learning_resource_task(mocker):
