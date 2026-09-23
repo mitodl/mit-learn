@@ -11,7 +11,7 @@ from django.contrib.auth import get_user_model
 from opensearchpy.exceptions import ConnectionError as ESConnectionError
 from opensearchpy.exceptions import ConnectionTimeout, RequestError
 
-from learning_resources.etl.constants import RESOURCE_FILE_ETL_SOURCES, ETLSource
+from learning_resources.etl.constants import REINDEX_CONTENT_FILE_ETL_SOURCES, ETLSource
 from learning_resources.factories import (
     ContentFileFactory,
     CourseFactory,
@@ -44,6 +44,7 @@ from learning_resources_search.serializers import (
     serialize_learning_resource_for_update,
 )
 from learning_resources_search.tasks import (
+    _build_reindex_batches,
     _generate_subscription_digest_subject,
     _get_percolated_rows,
     _group_percolated_rows,
@@ -57,6 +58,7 @@ from learning_resources_search.tasks import (
     finish_reindex_job,
     get_update_program_files_tasks,
     get_update_resource_files_tasks,
+    index_content_files,
     index_learning_resources,
     index_run_content_files,
     run_reindex_batch,
@@ -1072,7 +1074,7 @@ def test_bulk_deindex_learning_resources(mocker, with_error):
         (list(LEARNING_RESOURCE_TYPES), None),
         (["course"], ETLSource.xpro.value),
         (["content_file"], ETLSource.xpro.value),
-        (["content_file"], ETLSource.oll.value),
+        (["content_file"], ETLSource.podcast.value),
     ],
 )
 def test_start_update_index(mocker, mocked_celery, indexes, etl_source, settings):  # noqa: PLR0915
@@ -1246,7 +1248,7 @@ def test_start_update_index(mocker, mocked_celery, indexes, etl_source, settings
         )
 
     if CONTENT_FILE_TYPE in indexes:
-        if etl_source in RESOURCE_FILE_ETL_SOURCES:
+        if etl_source in REINDEX_CONTENT_FILE_ETL_SOURCES:
             # 3 run-level files + 1 resource-level (marketing page) file, in
             # chunks of 2
             assert index_content_mock.si.call_count == 2
@@ -1276,6 +1278,30 @@ def test_start_update_index(mocker, mocked_celery, indexes, etl_source, settings
 
     assert mocked_celery.replace.call_count == 1
     assert mocked_celery.replace.call_args[0][1] == mocked_celery.chain.return_value
+
+
+def test_oll_content_files_reindexed(mocker):
+    """update_index and recreate_index cover OLL content files, as ingest does"""
+    mocker.patch(
+        "learning_resources_search.tasks.load_course_blocklist", return_value=[]
+    )
+    course = CourseFactory.create(etl_source=ETLSource.oll.value)
+    content_file = ContentFileFactory.create(run=course.learning_resource.runs.first())
+
+    dispatched_ids = [
+        resource_id
+        for batch in _build_reindex_batches(TaskJob(params={"indexes": [COURSE_TYPE]}))
+        if batch.kind == ReindexBatchKind.dispatch_content_files.value
+        for resource_id in batch.params["learning_resource_ids"]
+    ]
+    assert dispatched_ids == [course.learning_resource_id]
+
+    indexed_ids = [
+        task.args[0]
+        for task in get_update_resource_files_tasks([], ETLSource.oll.value)
+        if task.task == index_content_files.name
+    ]
+    assert indexed_ids == [[content_file.id]]
 
 
 def test_upsert_content_file_task(mocked_api):
