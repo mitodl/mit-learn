@@ -69,11 +69,30 @@ const TableWrapper = styled.div(({ theme }) => ({
 
 const InfoTrigger = styled.span(({ theme }) => ({
   display: "inline-flex",
+  alignItems: "center",
   verticalAlign: "middle",
   marginLeft: "4px",
   color: theme.custom.colors.silverGrayDark,
   cursor: "help",
-  "& svg": { width: "16px", height: "16px" },
+  "& svg": { width: "16px", height: "16px", marginLeft: "4px" },
+}))
+
+/**
+ * The desktop header housing the same trigger is `display: none` below `md`
+ * (`TableHeaderRow`), so this repeats it once, outside the table, in the one
+ * layout where that header is hidden — never per row, which would turn one
+ * definition into a repeated focus stop for every month.
+ */
+const MobileColumnHelp = styled.div(({ theme }) => ({
+  display: "none",
+  [theme.breakpoints.down("md")]: {
+    display: "flex",
+    flexWrap: "wrap",
+    gap: "16px",
+    marginBottom: "12px",
+    ...theme.typography.subtitle2,
+    color: theme.custom.colors.black,
+  },
 }))
 
 const CHART_HEIGHT = 320
@@ -236,6 +255,20 @@ const EngagementTrendChart: React.FC<{
         />
       </div>
       <TableWrapper>
+        <MobileColumnHelp>
+          {SERIES.filter((series) => series.description).map((series) => (
+            <Tooltip key={series.key} title={series.description}>
+              {/* eslint-disable-next-line styled-components-a11y/no-noninteractive-tabindex */}
+              <InfoTrigger
+                aria-label={`${series.label}: ${series.description}`}
+                tabIndex={0}
+              >
+                {series.label}
+                <RiInformationLine aria-hidden="true" />
+              </InfoTrigger>
+            </Tooltip>
+          ))}
+        </MobileColumnHelp>
         <div role="table" aria-label="Monthly engagement">
           <div role="rowgroup">
             <TableHeaderRow role="row">
