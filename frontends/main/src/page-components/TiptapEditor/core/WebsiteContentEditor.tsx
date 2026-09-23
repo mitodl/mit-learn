@@ -12,7 +12,7 @@ import {
   HEADER_HEIGHT,
   HEADER_HEIGHT_MD,
 } from "ol-components"
-import { Alert, Button, ButtonLink } from "@mitodl/smoot-design"
+import { ActionButton, Alert, Button, ButtonLink } from "@mitodl/smoot-design"
 import { useUserHasPermission, Permission } from "api/hooks/user"
 import { useQueryClient, type QueryClient } from "@tanstack/react-query"
 import dynamic from "next/dynamic"
@@ -113,6 +113,8 @@ const ActionRow = styled.div({
   alignItems: "center",
   gap: "16px",
   flexWrap: "nowrap",
+  /* Full width so the status can sit at one end and the actions at the other. */
+  width: "100%",
 })
 
 /**
@@ -687,15 +689,23 @@ const WebsiteContentEditor = ({
    */
   const buttonSize = "medium"
 
+  /**
+   * The icon alone, as the design has it. Named for assistive technology and
+   * for the pointer, since nothing else says what it opens.
+   *
+   * Shared with the published view's bar, so the control looks the same
+   * wherever it appears.
+   */
   const settingsButton = (
-    <Button
-      variant="bordered"
+    <ActionButton
+      variant="text"
       size={buttonSize}
-      startIcon={<RiEqualizerLine />}
+      aria-label="Settings"
+      title="Settings"
       onClick={() => setSettingsOpen(true)}
     >
-      Settings
-    </Button>
+      <RiEqualizerLine />
+    </ActionButton>
   )
 
   /**
@@ -752,7 +762,12 @@ const WebsiteContentEditor = ({
                 <StackedToolbar>
                   {/* The design puts the actions above the formatting
                       controls, both rows centred. */}
-                  <ActionRow>
+                  <ActionRow className="abc">
+                    {/* The design puts the status at the left end and the
+                        actions at the right, the Spacer between them. */}
+                    {statusSlot}
+                    {autosaveSlot}
+                    <Spacer />
                     {contentItem && !contentItem.is_published ? (
                       <Button
                         variant="bordered"
@@ -768,7 +783,6 @@ const WebsiteContentEditor = ({
                         Delete
                       </Button>
                     ) : null}
-                    {settingsButton}
                     <PublishButton
                       variant="primary"
                       disabled={
@@ -792,8 +806,7 @@ const WebsiteContentEditor = ({
                     >
                       Publish {contentLabel}
                     </PublishButton>
-                    {autosaveSlot}
-                    {statusSlot}
+                    {settingsButton}
                   </ActionRow>
                   <FormattingRow>
                     <MainToolbarContent editor={editor} />

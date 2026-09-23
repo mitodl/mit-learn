@@ -606,4 +606,32 @@ describe("ArticleEditor edit-mode control bar layout", () => {
     expect(actionRow).toContainElement(publish)
     expect(formattingRow).toContainElement(undo)
   })
+
+  test("puts the status at one end and the actions at the other", async () => {
+    renderArticleEditor()
+
+    const publish = await screen.findByRole("button", {
+      name: "Publish Article",
+    })
+    const settings = screen.getByRole("button", { name: "Settings" })
+    const status = screen.getByText(/Article status:/)
+
+    // The status leads the row; the actions follow it.
+    expect(
+      status.compareDocumentPosition(publish) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy()
+    // Settings sits immediately after Publish, as the design pairs them.
+    expect(publish.nextElementSibling).toBe(settings)
+  })
+
+  test("the settings control is the icon alone", async () => {
+    renderArticleEditor()
+
+    const settings = await screen.findByRole("button", { name: "Settings" })
+
+    /* No label of its own, so the name has to come from `aria-label`. */
+    expect(settings).toHaveTextContent("")
+    expect(settings.querySelector("svg")).toBeInTheDocument()
+  })
 })
