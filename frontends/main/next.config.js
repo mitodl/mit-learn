@@ -45,7 +45,8 @@ const nextConfig = {
   async redirects() {
     /* Never redirect /images/*, /static/* or /_next/* here. The image
      * optimizer fetches local images through the router, and a redirect breaks
-     * them (see the comment on proxy() in src/proxy.ts).
+     * them (see the comment on proxy() in src/proxy.ts). Checked by
+     * src/nextConfig.test.ts.
      */
     return [
       {
@@ -115,10 +116,16 @@ const nextConfig = {
     remotePatterns: [{ hostname: "**" }],
     // 75 is the next/image default; backgroundSrcSetCSS requests 100.
     qualities: [75, 100],
-    // Also the Fastly TTL for optimized remote images, via Cache-Control.
+    // Floor for the max-age on optimized remote images, which Fastly also uses
+    // as its TTL. A longer upstream max-age wins.
     minimumCacheTTL: 86400,
     // Unset, Next.js lets the on-disk cache grow to half the node's free disk.
     maximumDiskCacheSize: 500_000_000,
+    // Remote sources are buffered in memory up to this size before anything
+    // checks they are images, and every distinct URL reaches the pods (the
+    // CDN caches per URL). The default is 50MB; the largest real image we've
+    // seen is about 14MB.
+    maximumResponseBody: 20_000_000,
     // Local dev hostnames resolve to private IPs, which Next.js otherwise
     // refuses to fetch images from.
     dangerouslyAllowLocalIP: IS_LOCAL_DEV,
