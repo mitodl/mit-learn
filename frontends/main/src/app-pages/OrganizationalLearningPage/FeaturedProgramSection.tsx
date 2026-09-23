@@ -6,7 +6,7 @@ import {
   RiTimeLine,
   RiPresentationLine,
   RiStackLine,
-  RiMessage2Line,
+  RiPencilAiLine,
   RiEarthLine,
 } from "@remixicon/react"
 import CtaButton from "./CtaButton"
@@ -17,7 +17,7 @@ const HIGHLIGHT_ICONS = [
   RiTimeLine,
   RiPresentationLine,
   RiStackLine,
-  RiMessage2Line,
+  RiPencilAiLine,
   RiEarthLine,
 ]
 
@@ -173,7 +173,7 @@ const Modules = styled.ul({
 const Module = styled.li(({ theme }) => ({
   ...theme.typography.subtitle2,
   color: theme.custom.colors.white,
-  backgroundColor: theme.custom.colors.darkGray1,
+  backgroundColor: theme.custom.colors.darkGray2,
   borderRadius: "4px",
   padding: "12px 16px",
 }))

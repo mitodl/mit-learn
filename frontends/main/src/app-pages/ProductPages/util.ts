@@ -15,6 +15,7 @@ enum HeadingIds {
   Requirements = "requirements",
   Summary = "summary",
   Modules = "modules",
+  Faqs = "faqs",
 }
 
 type RequirementItem =

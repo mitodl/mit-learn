@@ -86,6 +86,16 @@ describe("OrgLeadForm", () => {
     expect(await screen.findByTestId("hubspot-form")).toBeInTheDocument()
   })
 
+  test("links to learn.mit.edu for individual learning opportunities", async () => {
+    setupApis()
+    renderWithProviders(<OrgLeadForm />)
+
+    expect(screen.getByText(new RegExp(copy.note.text))).toBeInTheDocument()
+    expect(
+      screen.getByRole("link", { name: copy.note.linkLabel }),
+    ).toHaveAttribute("href", "/search")
+  })
+
   test("says the form is loading rather than leaving the card empty", async () => {
     const pending = Promise.withResolvers<unknown>()
     setMockResponse.get(

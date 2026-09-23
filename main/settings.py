@@ -36,7 +36,7 @@ from main.settings_course_etl import *  # noqa: F403
 from main.settings_pluggy import *  # noqa: F403
 from openapi.settings_spectacular import open_spectacular_settings
 
-VERSION = "0.80.9"
+VERSION = "0.80.13"
 
 log = logging.getLogger()
 
@@ -216,6 +216,7 @@ CSRF_TRUSTED_ORIGINS = get_list_of_str("CSRF_TRUSTED_ORIGINS", [])
 
 SESSION_COOKIE_DOMAIN = get_string("SESSION_COOKIE_DOMAIN", None)
 SESSION_COOKIE_NAME = get_string("SESSION_COOKIE_NAME", "sessionid")
+SESSION_COOKIE_SECURE = get_bool("SESSION_COOKIE_SECURE", True)  # noqa: FBT003
 
 if COOKIE_TOMBSTONES:
     tombstone_middleware = "main.middleware.cookie_tombstones.CookieTombstoneMiddleware"

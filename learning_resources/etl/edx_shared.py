@@ -11,14 +11,15 @@ from django.conf import settings
 from django.core.cache import caches
 from django.db.models import Prefetch, Q
 
+from learning_resources.constants import VALID_TEXT_FILE_TYPES
 from learning_resources.etl.constants import ETLSource
 from learning_resources.etl.loaders import load_content_files
 from learning_resources.etl.utils import (
     calc_checksum,
+    excluded_olx_paths,
     get_bucket_by_name,
     get_edx_module_id,
     get_s3_prefix_for_source,
-    staff_only_olx_paths,
     transform_content_files,
 )
 from learning_resources.models import ContentFile, LearningResourceRun
@@ -369,32 +370,42 @@ def sync_edx_course_files(
     )
 
 
-def unpublish_staff_only_content_files(
-    etl_source: str, ids: list[int], keys: list[str]
-) -> int:
+def unpublish_excluded_content_files(
+    etl_source: str, ids: list[int], keys: list[str], *, dry_run: bool = False
+) -> list[dict]:
     """
-    Unpublish (and deindex) content files under staff-only OLX subtrees for the
-    runs matching the given archive keys, without re-extracting anything.
+    Unpublish (and deindex) content files the course does not use — staff-only
+    subtrees, asset manifests and unreferenced static files — for the runs
+    matching the given archive keys, without re-extracting anything.
 
     Args:
         etl_source(str): The edx ETL source
         ids(list of int): list of course ids to process
         keys(list[str]): list of S3 archive keys to search through
+        dry_run(bool): count the rows but leave them published and deindex nothing
 
     Returns:
-        int: number of content files unpublished
+        list of dict: a row per run whose archive excludes content files it has,
+            counting the excluded rows, the ones this call unpublished (or would
+            have, under dry_run) and the run's content files in total. Counts,
+            not paths, so the payload stays small enough to cross the celery
+            result backend for every run at once.
     """
     from learning_resources_search import tasks as search_tasks
     from vector_search import tasks as vector_tasks
 
     bucket = get_bucket_by_name(settings.COURSE_ARCHIVE_BUCKET_NAME)
     run_lookup = build_run_lookup(etl_source, ids)
-    total = 0
+    rows = []
     for key in keys:
         matching_runs = run_lookup.get(extract_run_id_from_key(etl_source, key))
         if not matching_runs:
             continue
         run = matching_runs[0]
+        if not ContentFile.objects.filter(run=run).exists():
+            # a run with no content files has none to unpublish, and its archive
+            # is a download and an extract to find that out
+            continue
         with TemporaryDirectory() as tempdir:
             tarpath = Path(tempdir, key.rsplit("/", maxsplit=1)[-1])
             bucket.download_file(key, tarpath)
@@ -408,23 +419,55 @@ def unpublish_staff_only_content_files(
             if olx_path is None:
                 continue
             try:
-                hidden_paths = staff_only_olx_paths(olx_path)
+                excluded_paths = excluded_olx_paths(olx_path)
             except ElementTree.ParseError:
                 log.exception("Malformed OLX in %s, skipping", key)
                 continue
-            hidden_keys = {get_edx_module_id(str(path), run) for path in hidden_paths}
-        if not hidden_keys:
+            ingestable = [
+                path
+                for path in olx_path.rglob("*")
+                if path.is_file()
+                and path.suffix.lower() in VALID_TEXT_FILE_TYPES
+                and not any(
+                    "draft" in part for part in path.relative_to(olx_path).parts[:-1]
+                )
+            ]
+            # get_edx_module_id writes a space as an underscore, so "foo bar.pdf"
+            # and "foo_bar.pdf" are one row; it stays if either path is ingested
+            excluded_keys = {
+                get_edx_module_id(str(path), run)
+                for path in ingestable
+                if path in excluded_paths
+            } - {
+                get_edx_module_id(str(path), run)
+                for path in ingestable
+                if path not in excluded_paths
+            }
+        if not excluded_keys:
             continue
         # scoped to this run: keys embed the run_id, but never rely on that alone
-        hidden_files = ContentFile.objects.filter(run=run, key__in=hidden_keys)
-        unpublished = hidden_files.filter(published=True).update(published=False)
-        total += unpublished
-        log.info(
-            "Unpublished %d staff-only content files for %s", unpublished, run.run_id
-        )
-        # dispatched whenever hidden rows exist, not only when this call flipped
-        # them, so a re-run after a failed deindex task cleans up the indexes
-        if hidden_files.exists():
+        excluded_files = ContentFile.objects.filter(run=run, key__in=excluded_keys)
+        excluded = excluded_files.count()
+        if not excluded:
+            continue
+        if dry_run:
+            unpublished = excluded_files.filter(published=True).count()
+        else:
+            unpublished = excluded_files.filter(published=True).update(published=False)
+            log.info(
+                "Unpublished %d excluded content files for %s", unpublished, run.run_id
+            )
+            # dispatched whenever excluded rows exist, not only when this call
+            # flipped them, so a re-run after a failed deindex task cleans up
+            # the indexes
             search_tasks.deindex_run_content_files.delay(run.id, unpublished_only=True)
             vector_tasks.remove_unpublished_run_content_files.delay(run.id)
-    return total
+        rows.append(
+            {
+                "run_id": run.run_id,
+                "excluded": excluded,
+                "unpublished": unpublished,
+                "total": ContentFile.objects.filter(run=run).count(),
+            }
+        )
+    return rows

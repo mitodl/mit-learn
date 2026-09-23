@@ -40,6 +40,7 @@ from learning_resources.constants import (
     PlatformType,
     PrivacyLevel,
 )
+from learning_resources.credentials_store import stored_credential_metadata
 from learning_resources.etl.constants import ETLSource
 from learning_resources.etl.podcast import generate_aggregate_podcast_rss
 from learning_resources.exceptions import WebhookException
@@ -50,6 +51,7 @@ from learning_resources.filters import (
 )
 from learning_resources.models import (
     ContentFile,
+    CredentialMetadata,
     LearningResource,
     LearningResourceContentTag,
     LearningResourceDepartment,
@@ -1769,7 +1771,95 @@ def problem_set_file_output(problem_set_file):
     }
 
 
+async def credential_metadata_resource(readable_id: str) -> LearningResource:
+    """
+    Resolve the MITx Online course a credential metadata request names.
+
+
+    Args:
+        readable_id (str): the readable id the request asked for
+
+    Returns:
+        LearningResource: the matching MITx Online course
+
+    Raises:
+        NotFound: no resource anywhere has that readable_id
+        ValidationError: a resource has it, but is not an MITx Online course
+    """
+    resource = await db_sync_to_async(
+        lambda: LearningResource.objects.filter(
+            readable_id=readable_id,
+            platform=PlatformType.mitxonline.name,
+            resource_type=LearningResourceType.course.name,
+            etl_source=ETLSource.mitxonline.name,
+        ).first()
+    )()
+    if not resource:
+        exists = await db_sync_to_async(
+            LearningResource.objects.filter(readable_id=readable_id).exists
+        )()
+        if not exists:
+            msg = f"No learning resource with readable_id {readable_id}"
+            raise NotFound(msg)
+        msg = (
+            f"Credential metadata is only generated for"
+            f" {ETLSource.mitxonline.name} courses;"
+            f" {readable_id} is not one"
+        )
+        raise ValidationError(msg)
+    return resource
+
+
+def _stored_credential_metadata_body(
+    readable_id: str, stored: CredentialMetadata | None
+) -> dict:
+    """
+    Shape a stored credential metadata row into a response body.
+
+    Shared by both handlers so that a read straight after a write cannot
+    disagree with itself. A generation stores only the fields it produced and
+    leaves the rest of the row in force, so answering a POST with the
+    generated fields alone reports a field as absent when it is stored and a
+    GET a moment later will return it. A form prepopulated from that response
+    shows nothing for the field until it is reloaded.
+
+    Args:
+        readable_id (str): the resource the metadata belongs to
+        stored (CredentialMetadata | None): the stored row, or None when
+            nothing has ever been generated for the resource
+
+    Returns:
+        dict: the readable id, plus each stored field that has a value. An
+            empty field is left out rather than sent empty -- the same rule
+            the store applies when deciding what to write.
+    """
+    return {
+        "resource_readable_id": readable_id,
+        **(
+            {"description": stored.description} if stored and stored.description else {}
+        ),
+        **({"criteria": stored.criteria} if stored and stored.criteria else {}),
+    }
+
+
 @extend_schema_view(
+    get=extend_schema(
+        # A parameter, not a request serializer: a serializer renders as a
+        # request body, which a GET does not have.
+        parameters=[
+            OpenApiParameter(
+                name="resource_readable_id",
+                type=str,
+                location=OpenApiParameter.QUERY,
+                required=True,
+                description=(
+                    "The readable id of the learning resource to fetch"
+                    " stored metadata for"
+                ),
+            )
+        ],
+        responses=CredentialMetadataSerializer(),
+    ),
     post=extend_schema(
         request=CredentialMetadataRequestSerializer(),
         responses=CredentialMetadataSerializer(),
@@ -1777,56 +1867,55 @@ def problem_set_file_output(problem_set_file):
 )
 class CredentialMetadataView(AsyncAPIView):
     """
-    Generate Open Badges credential metadata for a learning resource.
+    Read or generate Open Badges credential metadata for a learning resource.
 
     Limited to MITx Online courses.
     """
 
     permission_classes = (permissions.IsAdminOrCourseAuthor,)
 
+    @extend_schema(summary="Get stored credential metadata")
+    async def get(self, request):
+
+        readable_id = request.query_params.get("resource_readable_id")
+        if not readable_id:
+            msg = "resource_readable_id is required"
+            raise ValidationError(msg)
+
+        resource = await credential_metadata_resource(readable_id)
+        stored = await db_sync_to_async(stored_credential_metadata)(resource)
+        if not stored:
+            msg = f"No credential metadata has been generated for {readable_id}"
+            raise NotFound(msg)
+
+        return Response(
+            CredentialMetadataSerializer(
+                _stored_credential_metadata_body(readable_id, stored)
+            ).data
+        )
+
     @extend_schema(summary="Generate credential metadata")
     async def post(self, request):
-        # Imported here, not at module scope: credentials pulls in litellm and
-        # langchain, and the URLconf imports this module at boot. See
-        # main/boot_imports_test.py.
-        from learning_resources.credentials import generate_credential_metadata
+        from learning_resources.credentials import (
+            generate_and_save_credential_metadata,
+        )
 
         request_data = CredentialMetadataRequestSerializer(data=request.data)
         if not request_data.is_valid():
             return Response(request_data.errors, status=400)
 
         readable_id = request_data.data["resource_readable_id"]
+        resource = await credential_metadata_resource(readable_id)
 
-        resource = await db_sync_to_async(
-            lambda: LearningResource.objects.filter(
-                readable_id=readable_id,
-                platform=PlatformType.mitxonline.name,
-                resource_type=LearningResourceType.course.name,
-                etl_source=ETLSource.mitxonline.name,
-            ).first()
-        )()
-        if not resource:
-            exists = await db_sync_to_async(
-                LearningResource.objects.filter(readable_id=readable_id).exists
-            )()
-            if not exists:
-                msg = f"No learning resource with readable_id {readable_id}"
-                raise NotFound(msg)
-            msg = (
-                f"Credential metadata is only generated for"
-                f" {ETLSource.mitxonline.name} courses;"
-                f" {readable_id} is not one"
-            )
-            raise ValidationError(msg)
+        generated = await generate_and_save_credential_metadata(
+            resource, user=request.user
+        )
 
-        generated = await generate_credential_metadata(resource, user=request.user)
+        stored = await db_sync_to_async(stored_credential_metadata)(resource)
         return Response(
             CredentialMetadataSerializer(
                 {
-                    "resource_readable_id": readable_id,
-                    **generated.fields,
-                    # Omitted entirely when nothing failed, rather than sent as
-                    # an empty object: a caller checks for the key.
+                    **_stored_credential_metadata_body(readable_id, stored),
                     **({"errors": generated.errors} if generated.errors else {}),
                 }
             ).data

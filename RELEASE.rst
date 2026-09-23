@@ -1,6 +1,15 @@
 Release Notes
 =============
 
+Version 0.80.13
+---------------
+
+- fix: updated copy and small design edits (#3949)
+- feat(learning-resources): make published website content searchable by topic (#3944)
+- Pass platform parameter to AskTim (#3956)
+- Make playlist unpublish assertion order-insensitive (#3938)
+- hybrid search - fix program boosting, add IDF modifier to sparse vectors (#3947)
+
 Version 0.80.9
 --------------
 

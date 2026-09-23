@@ -88,17 +88,11 @@ const Step = styled.li<{ tone: "bare" | "light" | "dark" }>(
   }),
 )
 
-const StepEyebrow = styled.p<{ inverted: boolean }>(({ theme, inverted }) => ({
-  ...theme.typography.subtitle3,
+const StepEyebrow = styled.h3<{ inverted: boolean }>(({ theme, inverted }) => ({
+  ...theme.typography.subtitle1,
   color: inverted
     ? theme.custom.colors.silverGrayLight
     : theme.custom.colors.silverGrayDark,
-  margin: 0,
-}))
-
-const StepTitle = styled.h3<{ inverted: boolean }>(({ theme, inverted }) => ({
-  ...theme.typography.h5,
-  color: inverted ? theme.custom.colors.white : theme.custom.colors.darkGray2,
   margin: 0,
 }))
 
@@ -124,7 +118,7 @@ const ContinuumSection: React.FC = () => (
       <div>
         <Timeline aria-hidden>
           {copy.steps.map((step) => (
-            <TimelineDot key={step.title} />
+            <TimelineDot key={step.eyebrow} />
           ))}
         </Timeline>
         <Steps>
@@ -132,9 +126,8 @@ const ContinuumSection: React.FC = () => (
             const tone = TONES[index] ?? "bare"
             const inverted = tone === "dark"
             return (
-              <Step key={step.title} tone={tone}>
+              <Step key={step.eyebrow} tone={tone}>
                 <StepEyebrow inverted={inverted}>{step.eyebrow}</StepEyebrow>
-                <StepTitle inverted={inverted}>{step.title}</StepTitle>
                 <StepBody inverted={inverted}>{step.body}</StepBody>
               </Step>
             )

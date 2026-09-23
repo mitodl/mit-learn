@@ -1,7 +1,7 @@
 "use client"
 
 import React from "react"
-import { HubspotForm, styled, type HubspotFormValue } from "ol-components"
+import { HubspotForm, Link, styled, type HubspotFormValue } from "ol-components"
 import {
   Button,
   ButtonLink,
@@ -93,6 +93,16 @@ const OptionDescription = styled.span(({ theme }) => ({
   display: "block",
   marginTop: "4px",
 }))
+
+const Note = styled.p(({ theme }) => ({
+  ...theme.typography.body2,
+  color: theme.custom.colors.silverGrayDark,
+  margin: 0,
+}))
+
+const NoteLink = styled(Link)({
+  textDecoration: "underline",
+})
 
 const Divider = styled.hr(({ theme }) => ({
   border: "none",
@@ -292,6 +302,14 @@ const OrgLeadForm: React.FC<{ className?: string }> = ({ className }) => {
           </>
         }
       />
+
+      <Note>
+        <strong>{copy.note.label}</strong> {copy.note.text}
+        <NoteLink href={SEARCH} color="red">
+          {copy.note.linkLabel}
+        </NoteLink>
+        .
+      </Note>
 
       <Divider />
 

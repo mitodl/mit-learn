@@ -30,6 +30,22 @@ export type FinancialAid = {
 }
 
 /**
+ * The one discount checkout will apply for this learner, broken into rows that
+ * subtract. Every amount comes from the same quote, so they cannot disagree.
+ */
+export type AppliedSavings = {
+  /** Row 1: the product's price. The view supplies the noun that labels it. */
+  fullPrice: string
+  /** Row 2, unsigned — the view renders the sign. */
+  amountOff: string
+  /** Row 3: what checkout charges. */
+  todaysPrice: string
+  /** The credited purchase, when the discount names one. */
+  sourceTitle: string | null
+  kind: "credit" | "aid" | "other"
+}
+
+/**
  * What a product lets you enroll in right now — the ACTIONABLE offering, not
  * the raw enrollment modes (a paid path additionally requires a purchasable
  * product). Derived by courseRun.getCourseScenario (per selected run) and

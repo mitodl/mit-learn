@@ -6,6 +6,7 @@ import {
   urls as mitxUrls,
 } from "api/mitxonline-test-utils"
 import InfoBoxProgramAsCourse from "./InfoBoxProgramAsCourse"
+import { makeProgram } from "./test-utils/userPricing"
 
 jest.mock("next-nprogress-bar", () => ({
   useRouter: () => ({ push: jest.fn() }),
@@ -20,7 +21,6 @@ jest.mock("@/common/analytics/gtm", () => ({
   trackProgramEnrolled: jest.fn(),
 }))
 
-const makeProgram = mitxFactories.programs.program
 const makeBaseProgram = mitxFactories.programs.baseProgram
 const makeMode = mitxFactories.courses.enrollmentMode
 const makeProduct = mitxFactories.courses.product
@@ -82,8 +82,8 @@ describe("InfoBoxProgramAsCourse — financial assistance", () => {
       },
     })
     setMockResponse.get(
-      mitxUrls.products.userFlexiblePriceDetail(product.id),
-      mitxFactories.products.flexiblePrice({ product_flexible_price: null }),
+      mitxUrls.products.userPricingDetail(product.id),
+      mitxFactories.products.userPricing(),
     )
 
     renderWithProviders(<InfoBoxProgramAsCourse program={program} />)

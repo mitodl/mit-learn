@@ -2,6 +2,7 @@
 
 import base64
 import glob
+import html
 import json
 import logging
 import math
@@ -10,14 +11,17 @@ import os
 import re
 import tarfile
 import uuid
+from bisect import bisect_left
 from collections import Counter
 from collections.abc import Generator
 from datetime import UTC, datetime
 from decimal import Decimal
 from hashlib import md5
 from io import BytesIO
+from itertools import accumulate
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from urllib.parse import unquote
 
 import boto3
 import pypdfium2 as pdfium
@@ -355,15 +359,12 @@ def staff_only_olx_paths(olx_path: str | Path) -> set[Path]:
     course = _parse_olx_block(root, "", "course")
     if course is None:
         return set()
-    hidden: set[Path] = set()
-    seen: set[tuple[str, str]] = set()
+    hidden: dict[tuple[str, str], set[Path]] = {}
+    visible: set[tuple[str, str]] = set()
+    seen: set[tuple[str, str, bool]] = set()
     stack = [(course, "course", course.get("url_name"), False)]
     while stack:
         pointer, tag, url_name, staff_only = stack.pop()
-        if url_name:
-            if (tag, url_name) in seen:
-                continue
-            seen.add((tag, url_name))
         # pointer file wins when present; otherwise the element is the block itself
         element = _parse_olx_block(root, tag, url_name) if url_name else None
         if element is None:
@@ -372,19 +373,236 @@ def staff_only_olx_paths(olx_path: str | Path) -> set[Path]:
             pointer.get("visible_to_staff_only"),
             element.get("visible_to_staff_only"),
         )
-        if staff_only and url_name:
-            hidden.update(_hidden_block_files(root, tag, url_name, element))
+        if url_name:
+            if (tag, url_name, staff_only) in seen:
+                continue
+            seen.add((tag, url_name, staff_only))
+            # a block can hang under two parents; seeing it anywhere a learner
+            # can reach makes it visible, whichever path the walk took first
+            if staff_only:
+                hidden[tag, url_name] = _hidden_block_files(
+                    root, tag, url_name, element
+                )
+            else:
+                visible.add((tag, url_name))
         stack.extend(
             (child, child.tag, child.get("url_name"), staff_only) for child in element
         )
-    return hidden
+    return {
+        path
+        for block, files in hidden.items()
+        if block not in visible
+        for path in files
+    }
+
+
+REFERENCE_SCAN_EXTENSIONS = frozenset({".xml", ".html", ".htm", ".json", ".txt", ".md"})
+
+# Asset manifests list every file in the export and updates.items.json is mostly
+# an archive of deleted announcements. None of them describes current course
+# content, and treating them as references keeps every stale asset alive.
+NON_CONTENT_OLX_FILES = (
+    "policies/assets.json",
+    "assets/assets.xml",
+    "info/updates.items.json",
+)
+
+# A legacy transcript is named for its video's id rather than for anything the
+# course text contains, so the id is the only link back to the block using it.
+VIDEO_ID_ATTRIBUTES = ("sub", "youtube", "youtube_id_1_0")
+LEGACY_TRANSCRIPT_RE = re.compile(
+    r"^(?:[a-z]{2}(?:[-_][a-z]{2})?_)?subs_(.+)\.srt\.sjson$", re.IGNORECASE
+)
+
+
+# A reference spells an asset name with the punctuation edX rewrote into it, or
+# with none of it: a file stored as "my file.pdf" is linked as my_file.pdf and as
+# my%20file.pdf, and a file re-uploaded under a flattened asset key is linked
+# with the + and @ of that key written as underscores. So the punctuation cannot
+# be part of the comparison, but the places it sat are still where a name starts.
+NAME_BREAK = "\x00"
+SEPARATORS = re.compile(r"(?:[^\w.\-]|_)+")
+
+
+def normalize_asset_ref(text: str) -> str:
+    """Strip the punctuation of a filename that a reference may spell differently"""
+    return SEPARATORS.sub("", unquote(html.unescape(text)).lower())
+
+
+def _reference_index(texts: list[str]) -> tuple[str, list[int]]:
+    """
+    Normalize the course text the same way, and return it with the offsets where
+    a name can start, i.e. everywhere the text had punctuation but an underscore.
+    Underscores do not break a name because that is what edX writes a space or a
+    +/@ as, so they are the one thing both sides drop.
+    """
+    stripped = NAME_BREAK.join(
+        SEPARATORS.sub(
+            NAME_BREAK, unquote(html.unescape(text)).lower().replace("_", "")
+        )
+        for text in texts
+    )
+    segments = stripped.split(NAME_BREAK)
+    return "".join(segments), list(accumulate(map(len, segments), initial=0))
+
+
+def _name_starts_at(blob: str, starts: list[int], name: str) -> bool:
+    """
+    Whether the course text spells a filename where a name can start, rather than
+    only inside a longer one. Without this a reference to final_exam.srt reads as
+    a reference to exam.srt too, and pulls that file back out of the staff-only
+    set.
+    """
+    start = blob.find(name)
+    while start != -1:
+        index = bisect_left(starts, start)
+        if index < len(starts) and starts[index] == start:
+            return True
+        start = blob.find(name, start + 1)
+    return False
+
+
+def _olx_reference_sources(root: Path, skip: set[Path]) -> list[Path]:
+    """Files whose text may legitimately refer to a static asset"""
+    sources = []
+    for path in root.rglob("*"):
+        if not path.is_file() or path.suffix.lower() not in REFERENCE_SCAN_EXTENSIONS:
+            continue
+        relative = path.relative_to(root)
+        if (
+            relative.parts[0] == "static"
+            or relative.as_posix() in NON_CONTENT_OLX_FILES
+            or path in skip
+            or any("draft" in part for part in relative.parts[:-1])
+        ):
+            continue
+        sources.append(path)
+    return sources
+
+
+def _live_course_updates(root: Path) -> str:
+    """
+    Text of the announcements the course team has not deleted. The whole file is
+    excluded as a reference source because edX keeps deleted announcements in
+    the export, but a live one still counts.
+    """
+    try:
+        items = json.loads(
+            (root / "info/updates.items.json").read_text(errors="ignore")
+        )
+    except (OSError, ValueError):
+        return ""
+    return "\n".join(
+        item.get("content") or ""
+        for item in items
+        if isinstance(item, dict) and item.get("status") != "deleted"
+    )
+
+
+def _olx_video_ids(sources: list[Path]) -> set[str] | None:
+    """
+    Video ids declared anywhere in the course, or None if any source could not
+    be parsed. None means "ids unknown", and callers keep every legacy
+    transcript rather than drop one whose video they failed to read.
+    """
+    ids = set()
+    for path in sources:
+        if path.suffix.lower() != ".xml":
+            continue
+        try:
+            element = ElementTree.parse(path).getroot()
+        except ElementTree.ParseError:
+            log.warning("Malformed XML in %s, keeping all legacy transcripts", path)
+            return None
+        # iter() finds <video> whether it has its own file or sits inline
+        for video in element.iter("video"):
+            for attribute in VIDEO_ID_ATTRIBUTES:
+                # youtube is a comma-separated "<speed>:<id>" list, the others
+                # are bare ids
+                for entry in (video.get(attribute) or "").split(","):
+                    value = entry.split(":")[-1].strip()
+                    if value:
+                        ids.add(normalize_asset_ref(value))
+    return ids
+
+
+def static_olx_references(root: Path, skip: set[Path]) -> tuple[set[Path], set[Path]]:
+    """
+    Split the files under static/ into the ones the course refers to and the
+    ones nothing in it does.
+
+    Matching is on the filename rather than on a "/static/" prefix, because
+    courses also link assets as "asset-v1:...+type@asset+block/<name>", and it
+    is a substring test rather than a parse so that an unanticipated spelling
+    keeps a file rather than dropping it. The substring has to begin a name,
+    though: a reference to final_exam.srt is not one to exam.srt.
+    See _reference_index for how the two are normalized.
+
+    Args:
+        root (Path): the root of the OLX tree
+        skip (set[Path]): files that must not count as references, i.e. the
+            staff-only set, so an asset only an answer key mentions is unreferenced
+
+    Returns:
+        tuple of (set of Path, set of Path): referenced and unreferenced static files
+    """
+    static_dir = root / "static"
+    if not static_dir.is_dir():
+        return set(), set()
+    sources = _olx_reference_sources(root, skip)
+    texts = [path.read_text(errors="ignore") for path in sources]
+    texts.append(_live_course_updates(root))
+    blob, starts = _reference_index(texts)
+    video_ids = _olx_video_ids(sources)
+
+    referenced, unreferenced = set(), set()
+    for path in sorted(static_dir.rglob("*")):
+        if not path.is_file():
+            continue
+        if _name_starts_at(blob, starts, normalize_asset_ref(path.name)) or (
+            (legacy := LEGACY_TRANSCRIPT_RE.match(path.name))
+            and (video_ids is None or normalize_asset_ref(legacy.group(1)) in video_ids)
+        ):
+            referenced.add(path)
+        else:
+            unreferenced.add(path)
+    return referenced, unreferenced
+
+
+def excluded_olx_paths(olx_path: str | Path) -> set[Path]:
+    """
+    Files an OLX export contains that the course itself does not use: staff-only
+    subtrees, the asset manifests and announcement archive, and anything under
+    static/ that nothing refers to. See hq#13350.
+
+    Args:
+        olx_path (str or Path): The path to the directory with the OLX data
+
+    Returns:
+        set of Path: files that should not be ingested
+    """
+    root = Path(olx_path)
+    excluded = staff_only_olx_paths(root)
+    if not (root / "course.xml").is_file():
+        # not an OLX export; Canvas archives reach here via process_olx_path
+        return excluded
+    excluded.update(
+        root / name for name in NON_CONTENT_OLX_FILES if (root / name).is_file()
+    )
+    referenced, unreferenced = static_olx_references(root, excluded)
+    excluded.update(unreferenced)
+    # A hidden video's transcripts are in the staff-only set, but the same file is
+    # often also the transcript of the visible copy of that video, so put back
+    # anything a visible block still links.
+    excluded.difference_update(referenced)
+    return excluded
 
 
 def documents_from_olx(
     olx_path: str, valid_file_types: list[str] = VALID_TEXT_FILE_TYPES
 ) -> Generator[tuple, None, None]:
     """
-    Extract text from OLX directory, skipping staff-only content
+    Extract text from OLX directory, skipping content the course does not use
 
     Args:
         olx_path (str): The path to the directory with the OLX data
@@ -392,13 +610,13 @@ def documents_from_olx(
     Yields:
         tuple: A list of (bytes of content, metadata)
     """
-    staff_only = staff_only_olx_paths(olx_path)
+    excluded = excluded_olx_paths(olx_path)
     for root, _, files in os.walk(olx_path):
         path = "/".join(root.split("/")[3:])
         for filename in files:
             extension_lower = Path(filename).suffix.lower()
 
-            if Path(root, filename) in staff_only:
+            if Path(root, filename) in excluded:
                 continue
             if extension_lower in valid_file_types and "draft" not in root:
                 with Path.open(Path(root, filename), "rb") as f:

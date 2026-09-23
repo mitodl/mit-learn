@@ -16021,97 +16021,6 @@ components:
       required:
       - course_count
       - program_count
-    ProgramCertificate:
-      type: object
-      description: Serializer for Program Certificates
-      properties:
-        record_hash:
-          type: string
-          readOnly: true
-        program_letter_generate_url:
-          type: string
-          readOnly: true
-        program_letter_share_url:
-          type: string
-          readOnly: true
-        program_title:
-          type: string
-          maxLength: 256
-        user_full_name:
-          type: string
-          maxLength: 256
-        user_email:
-          type: string
-          maxLength: 256
-        user_edxorg_id:
-          type: integer
-          maximum: 2147483647
-          minimum: -2147483648
-          nullable: true
-        micromasters_program_id:
-          type: integer
-          maximum: 2147483647
-          minimum: -2147483648
-          nullable: true
-        mitxonline_program_id:
-          type: integer
-          maximum: 2147483647
-          minimum: -2147483648
-          nullable: true
-        user_edxorg_username:
-          type: string
-          nullable: true
-          maxLength: 256
-        user_gender:
-          type: string
-          nullable: true
-          maxLength: 256
-        user_address_city:
-          type: string
-          nullable: true
-          maxLength: 256
-        user_first_name:
-          type: string
-          nullable: true
-          maxLength: 256
-        user_last_name:
-          type: string
-          nullable: true
-          maxLength: 256
-        user_year_of_birth:
-          type: string
-          nullable: true
-          maxLength: 256
-        user_country:
-          type: string
-          nullable: true
-          maxLength: 256
-        user_address_postal_code:
-          type: string
-          nullable: true
-          maxLength: 256
-        user_street_address:
-          type: string
-          nullable: true
-          maxLength: 256
-        user_address_state_or_territory:
-          type: string
-          nullable: true
-          maxLength: 256
-        user_mitxonline_username:
-          type: string
-          nullable: true
-          maxLength: 256
-        program_completion_timestamp:
-          type: string
-          format: date-time
-          nullable: true
-      required:
-      - program_letter_generate_url
-      - program_letter_share_url
-      - program_title
-      - record_hash
-      - user_email
     ProgramLetter:
       type: object
       description: Serializer for Program Letters
@@ -16125,11 +16034,30 @@ components:
           - $ref: '#/components/schemas/ProgramLetterTemplateField'
           readOnly: true
         certificate:
-          $ref: '#/components/schemas/ProgramCertificate'
+          $ref: '#/components/schemas/ProgramLetterCertificate'
       required:
       - certificate
       - id
       - template_fields
+    ProgramLetterCertificate:
+      type: object
+      description: |-
+        The certificate fields the public program letter view needs.
+
+        ProgramLetterViewSet is unauthenticated -- anyone holding a letter's uuid
+        can read it -- so this exposes only what the letter itself already states:
+        who earned it and which program. The learner's email, postal address, date
+        of birth, gender and platform usernames stay behind the authenticated
+        certificate list, which uses ProgramCertificateSerializer.
+      properties:
+        user_full_name:
+          type: string
+          maxLength: 256
+        program_title:
+          type: string
+          maxLength: 256
+      required:
+      - program_title
     ProgramLetterTemplateField:
       type: object
       description: |-

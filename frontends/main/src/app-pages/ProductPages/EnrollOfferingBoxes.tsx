@@ -2,15 +2,22 @@ import React from "react"
 import { Alert } from "@mitodl/smoot-design"
 import { SignupPopover } from "@/page-components/SignupPopover/SignupPopover"
 import CertificateTrackCard from "./CertificateTrackCard"
+import AppliedSavingsCard from "./AppliedSavingsCard"
 import LearnForFreeCard from "./LearnForFreeCard"
 import EnrolledLink from "./EnrolledLink"
 import {
   EnrollButton,
   OfferingCell,
-  ChooseYourPath,
+  OfferingHeadingRow,
   FullRowCell,
+  FinancialAidIndicator,
 } from "./EnrollAreaParts"
-import type { EnrollAreaState, FinancialAid, Offering } from "./enrollTypes"
+import type {
+  AppliedSavings,
+  EnrollAreaState,
+  FinancialAid,
+  Offering,
+} from "./enrollTypes"
 
 type EnrollOfferingBoxesProps = {
   /** Actionable offering — drives which boxes render and the "both" layout. */
@@ -26,6 +33,15 @@ type EnrollOfferingBoxesProps = {
   /** Full-width price presentation; suppresses `price` (program savings only). */
   priceBlock?: React.ReactNode
   financialAid: FinancialAid | null
+  /** The learner's own price quote; replaces the certificate card. */
+  breakdown?: AppliedSavings | null
+  /**
+   * Heading over the paid box in the paid-only layout, which has none by
+   * default. The side-by-side layout is headed "Choose Your Path" regardless.
+   */
+  paidHeading?: string
+  /** A line beneath the heading row, naming why the paid price is reduced. */
+  paidNote?: React.ReactNode
   productNoun: "course" | "program"
   /** Course-only: show the "Certificate deadline passed" note in the free card. */
   certificateDeadlineNote?: boolean
@@ -39,7 +55,8 @@ type EnrollOfferingBoxesProps = {
  * variants: the enrolled collapse, the paid/free cards with their buttons
  * (side-by-side under "Choose Your Path" when both paths exist), the
  * enrollment-failure alert, and the signup popover. Callers own the hooks and
- * pass data; this component owns the box structure and button conventions.
+ * pass data; this component owns the box structure and button conventions, and
+ * knows nothing about why a price is what it is.
  */
 const EnrollOfferingBoxes: React.FC<EnrollOfferingBoxesProps> = ({
   offering,
@@ -51,6 +68,9 @@ const EnrollOfferingBoxes: React.FC<EnrollOfferingBoxesProps> = ({
   compactPrice,
   priceBlock,
   financialAid,
+  breakdown,
+  paidHeading,
+  paidNote,
   productNoun,
   certificateDeadlineNote,
   anchor,
@@ -75,51 +95,62 @@ const EnrollOfferingBoxes: React.FC<EnrollOfferingBoxesProps> = ({
   const options = state.options
   const paidAction = options.find((o) => o.kind === "paid")
   const freeAction = options.find((o) => o.kind === "free")
+  const sideBySide = offering === "both"
+
+  // The certificate card carries the aid indicator in its own header. The
+  // savings card that replaces it has no header, so the indicator moves up to
+  // the heading row. It cannot be pending here: a breakdown only exists once
+  // the same lookup has resolved.
+  const headingAside =
+    breakdown && financialAid ? (
+      <FinancialAidIndicator financialAid={financialAid} />
+    ) : null
 
   const renderPaidBox = () => {
     if (!paidAction) return null
-    if (offering === "both") {
-      // Button inside card. fill: match the free card's height in the
-      // side-by-side layout and bottom-align the button.
-      return (
-        <OfferingCell data-card="cert">
+    // Every layout but the ordinary paid-only card carries its button inside the
+    // box; that one alone puts it below, at the larger size a lone action takes.
+    const buttonInBox = sideBySide || !!breakdown
+    const button = (
+      <EnrollButton
+        action={paidAction}
+        size={buttonInBox ? "medium" : "large"}
+        loading={isStatusLoading}
+        pending={isPending}
+        fullWidth
+      />
+    )
+    return (
+      <OfferingCell data-card="cert">
+        {sideBySide ? null : (
+          // The side-by-side layout's heading is a grid child of its own.
+          <OfferingHeadingRow
+            label={paidHeading}
+            aside={headingAside}
+            note={paidNote}
+          />
+        )}
+        {breakdown ? (
+          <AppliedSavingsCard
+            breakdown={breakdown}
+            productNoun={productNoun}
+            fill={sideBySide}
+            action={button}
+          />
+        ) : (
           <CertificateTrackCard
             price={price}
             compactPrice={compactPrice}
             priceBlock={priceBlock}
             financialAid={financialAid}
             productNoun={productNoun}
-            fill
-            action={
-              <EnrollButton
-                action={paidAction}
-                size="medium"
-                loading={isStatusLoading}
-                pending={isPending}
-                fullWidth
-              />
-            }
+            // fill: match the free card's height in the side-by-side layout and
+            // bottom-align the button.
+            fill={sideBySide}
+            action={sideBySide ? button : undefined}
           />
-        </OfferingCell>
-      )
-    }
-    // paidOnly: card + button below, wrapped as one grid cell
-    return (
-      <OfferingCell data-card="cert">
-        <CertificateTrackCard
-          price={price}
-          compactPrice={compactPrice}
-          priceBlock={priceBlock}
-          financialAid={financialAid}
-          productNoun={productNoun}
-        />
-        <EnrollButton
-          action={paidAction}
-          size="large"
-          loading={isStatusLoading}
-          pending={isPending}
-          fullWidth
-        />
+        )}
+        {buttonInBox ? null : button}
       </OfferingCell>
     )
   }
@@ -127,7 +158,7 @@ const EnrollOfferingBoxes: React.FC<EnrollOfferingBoxesProps> = ({
   const renderFreeBox = () => {
     if (!freeAction) return null
 
-    if (offering === "both") {
+    if (sideBySide) {
       // Button inside card. Secondary (outline) only here, to distinguish it
       // from the primary Certificate Track button alongside it.
       return (
@@ -170,8 +201,13 @@ const EnrollOfferingBoxes: React.FC<EnrollOfferingBoxesProps> = ({
 
   return (
     <>
-      {offering === "both" && (
-        <ChooseYourPath data-choose-path>Choose Your Path</ChooseYourPath>
+      {sideBySide && (
+        <OfferingHeadingRow
+          data-choose-path
+          label="Choose Your Path"
+          aside={headingAside}
+          note={paidNote}
+        />
       )}
       {renderPaidBox()}
       {renderFreeBox()}

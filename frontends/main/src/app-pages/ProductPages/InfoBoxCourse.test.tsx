@@ -12,6 +12,7 @@ import {
   factories as mitxFactories,
   urls as mitxUrls,
 } from "api/mitxonline-test-utils"
+import { makeCourse } from "./test-utils/userPricing"
 import InfoBoxCourse from "./InfoBoxCourse"
 import { formatDate } from "ol-utilities"
 
@@ -30,7 +31,6 @@ jest.mock("@/common/analytics/gtm", () => ({
   trackBeginCheckout: jest.fn(),
 }))
 
-const makeCourse = mitxFactories.courses.course
 const makeRun = mitxFactories.courses.courseRun
 const makeMode = mitxFactories.courses.enrollmentMode
 const makeProduct = mitxFactories.courses.product

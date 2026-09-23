@@ -2,7 +2,6 @@
 
 import React from "react"
 import { styled } from "ol-components"
-import { RiCheckLine } from "@remixicon/react"
 import { ORGANIZATIONAL_LEARNING_FORM_ID } from "@/common/urls"
 import OrgLeadForm from "./OrgLeadForm"
 import { Section, SectionInner } from "./SectionLayout"
@@ -97,11 +96,12 @@ const Assurance = styled.li({
   gap: "12px",
 })
 
-const AssuranceIcon = styled(RiCheckLine)(({ theme }) => ({
-  color: theme.custom.colors.green,
+const AssuranceIcon = styled.span(({ theme }) => ({
   flexShrink: 0,
-  width: "24px",
-  height: "24px",
+  width: "8px",
+  height: "8px",
+  borderRadius: "50%",
+  backgroundColor: theme.custom.colors.white,
 }))
 
 const AssuranceText = styled.span(({ theme }) => ({

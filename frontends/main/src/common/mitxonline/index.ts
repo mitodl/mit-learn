@@ -4,11 +4,9 @@ import type {
   CourseRunV2,
   CourseWithCourseRunsSerializerV2,
   EnrollmentMode,
-  ProductFlexiblePrice,
   V2ProgramRequirement,
 } from "@mitodl/mitxonline-api-axios/v2"
 import {
-  DiscountTypeEnum,
   EnrollmentModeEnum,
   NodeTypeEnum,
 } from "@mitodl/mitxonline-api-axios/v2"
@@ -16,17 +14,6 @@ import {
 const NEXT_PUBLIC_MITX_ONLINE_LEGACY_BASE_URL = env(
   "NEXT_PUBLIC_MITX_ONLINE_LEGACY_BASE_URL",
 )
-
-const upgradeRunUrl = (product: ProductFlexiblePrice): string => {
-  try {
-    const url = new URL("/cart/add", NEXT_PUBLIC_MITX_ONLINE_LEGACY_BASE_URL)
-    url.searchParams.append("product_id", String(product.id))
-    return url.toString()
-  } catch (err) {
-    console.error("Error constructing upgrade URL:", err)
-    return ""
-  }
-}
 
 const canPurchaseRun = (run: CourseRunV2): boolean => {
   // Prefer to handle this on backend
@@ -37,23 +24,6 @@ const canPurchaseRun = (run: CourseRunV2): boolean => {
     run.is_upgradable &&
     Boolean(run.products?.length)
   )
-}
-
-export const getFlexiblePriceForProduct = (product: ProductFlexiblePrice) => {
-  const flexDiscountAmount = Number(product.product_flexible_price?.amount) ?? 0
-  const flexDiscountType = product.product_flexible_price?.discount_type
-  const price = Number(product.price)
-
-  switch (flexDiscountType) {
-    case DiscountTypeEnum.DollarsOff:
-      return price - flexDiscountAmount
-    case DiscountTypeEnum.PercentOff:
-      return price * (1 - flexDiscountAmount / 100)
-    case DiscountTypeEnum.FixedPrice:
-      return flexDiscountAmount
-    default:
-      return price
-  }
 }
 
 /**
@@ -130,39 +100,6 @@ const formatResourcePrice = (
   const advertised = resource.min_price ?? resource.max_price
   if (typeof advertised !== "number") return null
   return formatPrice(advertised, { avoidCents })
-}
-
-type PriceWithDiscount = {
-  isDiscounted: boolean
-  /**
-   * Indicates if the product has approved financial aid
-   * Note: May be zero discount.
-   */
-  approvedFinancialAid: boolean
-  originalPrice: string
-  finalPrice: string
-}
-const priceWithDiscount = ({
-  product,
-  flexiblePrice,
-  avoidCents = true,
-}: {
-  product: BaseProduct
-  flexiblePrice?: ProductFlexiblePrice
-  avoidCents?: boolean
-}): PriceWithDiscount => {
-  const originalPrice = formatPrice(product.price, { avoidCents })
-  const finalPrice = flexiblePrice
-    ? formatPrice(getFlexiblePriceForProduct(flexiblePrice), { avoidCents })
-    : originalPrice
-  const isDiscounted = originalPrice !== finalPrice
-
-  return {
-    isDiscounted,
-    approvedFinancialAid: !!flexiblePrice?.product_flexible_price?.id,
-    originalPrice,
-    finalPrice,
-  }
 }
 
 /**
@@ -399,9 +336,7 @@ export {
   formatPriceRange,
   formatResourcePrice,
   toPriceRange,
-  priceWithDiscount,
   canPurchaseRun,
-  upgradeRunUrl,
   mitxonlineLegacyUrl,
   getEnrollmentType,
   getCourseEnrollmentAction,
@@ -412,7 +347,6 @@ export {
 }
 export type {
   PriceRange,
-  PriceWithDiscount,
   EnrollmentType,
   CourseEnrollmentAction,
   ProgramRequirementSection,

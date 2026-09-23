@@ -464,6 +464,8 @@ For all other types, returns "learning_material".
   readonly best_run_id: number | null
   /** Where this resource lives within Learn */
   readonly learn_url: string
+  /** Slug derived from the title, for use in this resource's URL. It is cosmetic: lookups ignore it, and it changes whenever the title does. Titles that yield no ASCII slug get the literal "resource", so this is never blank. */
+  readonly url_slug: string
   resource_type: CourseResourceResourceType
   readonly course: Course
   readonly readable_id: string
@@ -750,7 +752,7 @@ export const DepartmentEnum = {
   NUMBER_24: "24",
   /** Concourse */
   CC: "CC",
-  /** Comparative Media Studies\/Writing */
+  /** Comparative Media Studies/Writing */
   "CMS-W": "CMS-W",
   /** Edgerton Center */
   EC: "EC",
@@ -770,7 +772,7 @@ export const DepartmentEnum = {
   SP: "SP",
   /** Science, Technology, and Society */
   STS: "STS",
-  /** Women\'s and Gender Studies */
+  /** Women's and Gender Studies */
   WGS: "WGS",
 } as const
 
@@ -924,6 +926,8 @@ For all other types, returns "learning_material".
   readonly best_run_id: number | null
   /** Where this resource lives within Learn */
   readonly learn_url: string
+  /** Slug derived from the title, for use in this resource's URL. It is cosmetic: lookups ignore it, and it changes whenever the title does. Titles that yield no ASCII slug get the literal "resource", so this is never blank. */
+  readonly url_slug: string
   resource_type: DocumentResourceResourceType
   /** @nullable */
   readonly content_files: readonly NestedContentFile[] | null
@@ -1694,6 +1698,8 @@ For all other types, returns "learning_material".
   readonly best_run_id: number | null
   /** Where this resource lives within Learn */
   readonly learn_url: string
+  /** Slug derived from the title, for use in this resource's URL. It is cosmetic: lookups ignore it, and it changes whenever the title does. Titles that yield no ASCII slug get the literal "resource", so this is never blank. */
+  readonly url_slug: string
   resource_type: LearningPathResourceResourceType
   /** The display category for this resource. */
   readonly resource_category: string
@@ -3271,6 +3277,7 @@ export interface PatchedWebsiteContentRequest {
   content_type?: WebsiteContentContentTypeEnum
   is_published?: boolean
   slug?: PatchedWebsiteContentRequestSlug
+  topics?: number[]
 }
 
 /**
@@ -3668,6 +3675,8 @@ export interface PodcastEpisodeParent {
   id: number
   title: string
   readable_id: string
+  /** Where this podcast lives within Learn */
+  readonly learn_url: string
 }
 
 /**
@@ -3842,6 +3851,8 @@ For all other types, returns "learning_material".
   readonly best_run_id: number | null
   /** Where this resource lives within Learn */
   readonly learn_url: string
+  /** Slug derived from the title, for use in this resource's URL. It is cosmetic: lookups ignore it, and it changes whenever the title does. Titles that yield no ASCII slug get the literal "resource", so this is never blank. */
+  readonly url_slug: string
   resource_type: PodcastEpisodeResourceResourceType
   readonly podcast_episode: PodcastEpisode
   readonly readable_id: string
@@ -4195,6 +4206,8 @@ For all other types, returns "learning_material".
   readonly best_run_id: number | null
   /** Where this resource lives within Learn */
   readonly learn_url: string
+  /** Slug derived from the title, for use in this resource's URL. It is cosmetic: lookups ignore it, and it changes whenever the title does. Titles that yield no ASCII slug get the literal "resource", so this is never blank. */
+  readonly url_slug: string
   resource_type: PodcastResourceResourceType
   readonly podcast: Podcast
   readonly readable_id: string
@@ -4386,102 +4399,28 @@ export interface Program {
 }
 
 /**
- * Serializer for Program Certificates
- */
-export interface ProgramCertificate {
-  readonly record_hash: string
-  readonly program_letter_generate_url: string
-  readonly program_letter_share_url: string
-  /** @maxLength 256 */
-  program_title: string
-  /** @maxLength 256 */
-  user_full_name?: string
-  /** @maxLength 256 */
-  user_email: string
-  /**
-   * @minimum -2147483648
-   * @maximum 2147483647
-   * @nullable
-   */
-  user_edxorg_id?: number | null
-  /**
-   * @minimum -2147483648
-   * @maximum 2147483647
-   * @nullable
-   */
-  micromasters_program_id?: number | null
-  /**
-   * @minimum -2147483648
-   * @maximum 2147483647
-   * @nullable
-   */
-  mitxonline_program_id?: number | null
-  /**
-   * @maxLength 256
-   * @nullable
-   */
-  user_edxorg_username?: string | null
-  /**
-   * @maxLength 256
-   * @nullable
-   */
-  user_gender?: string | null
-  /**
-   * @maxLength 256
-   * @nullable
-   */
-  user_address_city?: string | null
-  /**
-   * @maxLength 256
-   * @nullable
-   */
-  user_first_name?: string | null
-  /**
-   * @maxLength 256
-   * @nullable
-   */
-  user_last_name?: string | null
-  /**
-   * @maxLength 256
-   * @nullable
-   */
-  user_year_of_birth?: string | null
-  /**
-   * @maxLength 256
-   * @nullable
-   */
-  user_country?: string | null
-  /**
-   * @maxLength 256
-   * @nullable
-   */
-  user_address_postal_code?: string | null
-  /**
-   * @maxLength 256
-   * @nullable
-   */
-  user_street_address?: string | null
-  /**
-   * @maxLength 256
-   * @nullable
-   */
-  user_address_state_or_territory?: string | null
-  /**
-   * @maxLength 256
-   * @nullable
-   */
-  user_mitxonline_username?: string | null
-  /** @nullable */
-  program_completion_timestamp?: string | null
-}
-
-/**
  * Serializer for Program Letters
  */
 export interface ProgramLetter {
   readonly id: string
   readonly template_fields: ProgramLetterTemplateField
-  certificate: ProgramCertificate
+  certificate: ProgramLetterCertificate
+}
+
+/**
+ * The certificate fields the public program letter view needs.
+
+ProgramLetterViewSet is unauthenticated -- anyone holding a letter's uuid
+can read it -- so this exposes only what the letter itself already states:
+who earned it and which program. The learner's email, postal address, date
+of birth, gender and platform usernames stay behind the authenticated
+certificate list, which uses ProgramCertificateSerializer.
+ */
+export interface ProgramLetterCertificate {
+  /** @maxLength 256 */
+  user_full_name?: string
+  /** @maxLength 256 */
+  program_title: string
 }
 
 /**
@@ -4651,6 +4590,8 @@ For all other types, returns "learning_material".
   readonly best_run_id: number | null
   /** Where this resource lives within Learn */
   readonly learn_url: string
+  /** Slug derived from the title, for use in this resource's URL. It is cosmetic: lookups ignore it, and it changes whenever the title does. Titles that yield no ASCII slug get the literal "resource", so this is never blank. */
+  readonly url_slug: string
   resource_type: ProgramResourceResourceType
   readonly program: Program
   readonly readable_id: string
@@ -5354,6 +5295,8 @@ For all other types, returns "learning_material".
   readonly best_run_id: number | null
   /** Where this resource lives within Learn */
   readonly learn_url: string
+  /** Slug derived from the title, for use in this resource's URL. It is cosmetic: lookups ignore it, and it changes whenever the title does. Titles that yield no ASCII slug get the literal "resource", so this is never blank. */
+  readonly url_slug: string
   resource_type: VideoPlaylistResourceResourceType
   readonly video_playlist: VideoPlaylist
   readonly readable_id: string
@@ -5687,6 +5630,8 @@ For all other types, returns "learning_material".
   readonly best_run_id: number | null
   /** Where this resource lives within Learn */
   readonly learn_url: string
+  /** Slug derived from the title, for use in this resource's URL. It is cosmetic: lookups ignore it, and it changes whenever the title does. Titles that yield no ASCII slug get the literal "resource", so this is never blank. */
+  readonly url_slug: string
   resource_type: VideoResourceResourceType
   /** @nullable */
   readonly video: VideoResourceVideo
@@ -5887,6 +5832,7 @@ export interface WebsiteContent {
   is_published?: boolean
   slug?: WebsiteContentSlug
   readonly cover_image: WebsiteContentCoverImage
+  topics?: number[]
 }
 
 /**
@@ -5924,6 +5870,7 @@ export interface WebsiteContentRequest {
   content_type?: WebsiteContentContentTypeEnum
   is_published?: boolean
   slug?: WebsiteContentRequestSlug
+  topics?: number[]
 }
 
 export type ArticlesListParams = {
