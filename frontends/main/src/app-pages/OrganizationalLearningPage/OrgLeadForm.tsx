@@ -1,7 +1,13 @@
 "use client"
 
 import React from "react"
-import { HubspotForm, Link, styled, type HubspotFormValue } from "ol-components"
+import {
+  HubspotForm,
+  Link,
+  RECAPTCHA_MARGIN_VAR,
+  styled,
+  type HubspotFormValue,
+} from "ol-components"
 import {
   Button,
   ButtonLink,
@@ -122,18 +128,12 @@ const StyledHubspotForm = styled(HubspotForm)(({ theme }) => ({
     },
   },
   /**
-   * ReCaptchaContainer carries its own 12px vertical margin, which stacks on
-   * top of this form's 24px gap and makes the space around it uneven with
-   * every other gap in the form. Cancel it so the form's own gap is the only
-   * spacing mechanism.
-   *
-   * Selecting on data-testid is a quick workaround to get the styling right —
-   * ReCaptchaContainer isn't exported from ReCaptcha.tsx, so there's no
-   * component selector to target instead.
+   * ReCaptcha's own vertical margin stacks on top of this form's 24px gap and
+   * makes the space around it uneven with every other gap in the form.
+   * Cancel it via its margin custom property so the form's own gap is the
+   * only spacing mechanism.
    */
-  '[data-testid="recaptcha-container"]': {
-    margin: 0,
-  },
+  [RECAPTCHA_MARGIN_VAR]: 0,
   [theme.breakpoints.down("md")]: {
     fieldset: {
       flexDirection: "column",
