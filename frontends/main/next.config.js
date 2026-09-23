@@ -43,6 +43,10 @@ const nextConfig = {
     ]
   },
   async redirects() {
+    /* Never redirect /images/*, /static/* or /_next/* here. The image
+     * optimizer fetches local images through the router, and a redirect breaks
+     * them (see the comment on proxy() in src/proxy.ts).
+     */
     return [
       {
         // can be removed once fastly redirect is in place
