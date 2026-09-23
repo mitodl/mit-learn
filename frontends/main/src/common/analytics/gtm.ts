@@ -220,14 +220,37 @@ const trackReturnVisit = () => {
   pushGtmEvent("return-visit")
 }
 
+type BeginCheckoutParams = {
+  courseName?: string | null
+  courseId?: string | null
+  value?: number | null
+  currency?: string | null
+}
+
 /**
  * Fired when a user begins the paid checkout flow.
  * Maps to "Begin Checkout" in the marketing event plan.
  * More specific than trackStartEnrollment — fires only for the checkout path.
+ * Includes currency, value, and items so GA4 built-in funnel and revenue
+ * reports are populated between add_to_cart and purchase.
  */
-const trackBeginCheckout = (courseName?: string | null) => {
+const trackBeginCheckout = (params: BeginCheckoutParams) => {
+  const currency = params.currency ?? "USD"
+  const value = params.value ?? 0
   pushGtmEvent("begin-checkout", {
-    ...(courseName ? { "course-name": courseName } : {}),
+    ...(params.courseName ? { "course-name": params.courseName } : {}),
+    ...(params.courseId ? { "course-id": params.courseId } : {}),
+    currency,
+    value,
+    items: [
+      {
+        item_id: params.courseId ?? "",
+        item_name: params.courseName ?? "",
+        price: value,
+        quantity: 1,
+        currency,
+      },
+    ],
   })
 }
 
@@ -311,6 +334,7 @@ export {
 
 export type {
   AddToCartParams,
+  BeginCheckoutParams,
   CatalogFilterParams,
   CourseProgramViewParams,
   CheckoutCompletedParams,
