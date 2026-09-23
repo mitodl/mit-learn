@@ -6,6 +6,7 @@ from urllib.parse import urljoin
 
 from django.conf import settings
 
+from main.utils import clean_data
 from news_events.constants import FeedType
 from news_events.etl.utils import fetch_data_by_page, parse_date
 
@@ -88,8 +89,8 @@ def transform_item(item: list[dict]) -> dict:
         "guid": item["id"],
         "title": html.unescape(item["title"]),
         "url": urljoin(settings.MITPE_BASE_URL, item["url"]),
-        "summary": html.unescape(item["summary"]),
-        "content": html.unescape(item["summary"]),
+        "summary": clean_data(html.unescape(item["summary"])),
+        "content": clean_data(html.unescape(item["summary"])),
         "image": transform_image(item),
         "detail": {
             "authors": parse_authors(item["author"]),
