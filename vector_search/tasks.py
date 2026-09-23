@@ -29,7 +29,6 @@ from learning_resources_search.constants import (
     SEARCH_CONN_EXCEPTIONS,
 )
 from learning_resources_search.exceptions import RetryError
-from learning_resources_search.selectors import qdrant_content_files
 from learning_resources_search.serializers import (
     serialize_bulk_learning_resources,
 )
@@ -49,6 +48,7 @@ from vector_search.utils import (
     embed_learning_resources,
     embed_topics,
     filter_existing_qdrant_points_by_ids,
+    qdrant_content_files,
     remove_qdrant_records,
     vector_point_id,
     vector_point_key,

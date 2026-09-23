@@ -134,12 +134,12 @@ def process_course_archive(
         bool: False if skipped via matching archive_key, True otherwise
     """
     # A saved checksum means this archive once produced rows. If they are gone
-    # (bulk deindex then cleanup), the receipt is stale and must not skip the
+    # (bulk deindex then cleanup), the run is stale and must not skip the
     # load. An empty archive records archive_key with no checksum, so it still
     # skips.
-    stale_receipt = bool(run.checksum) and not run.content_files.exists()
+    stale_run = bool(run.checksum) and not run.content_files.exists()
 
-    if run.archive_key == key and not overwrite and not stale_receipt:
+    if run.archive_key == key and not overwrite and not stale_run:
         log.debug("Archive key unchanged for %s, skipping download", key)
         return False
     with TemporaryDirectory() as export_tempdir:
@@ -151,7 +151,7 @@ def process_course_archive(
         except tarfile.ReadError:
             log.exception("Error reading tar file %s, skipping", course_tarpath)
             return True
-        if run.checksum == checksum and not overwrite and not stale_receipt:
+        if run.checksum == checksum and not overwrite and not stale_run:
             # unchanged content under a new key: record it to skip future downloads
             run.archive_key = key
             run.save(update_fields=["archive_key"])
@@ -170,7 +170,7 @@ def process_course_archive(
                     # every file failed: retry next sync, don't mark as empty
                     return True
                 # empty archive: stop re-downloading it. Drop any checksum
-                # from an earlier ingest so a stale receipt doesn't keep
+                # from an earlier ingest so a stale run doesn't keep
                 # forcing the download.
                 run.archive_key = key
                 run.checksum = None

@@ -14,7 +14,7 @@ from learning_resources_search.constants import (
     COURSE_TYPE,
     PERCOLATE_INDEX_TYPE,
 )
-from learning_resources_search.selectors import (
+from learning_resources_search.utils import (
     opensearch_runs,
     run_content_files_deindex_targets,
 )

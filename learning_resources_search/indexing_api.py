@@ -40,10 +40,6 @@ from learning_resources_search.constants import (
     IndexestoUpdate,
 )
 from learning_resources_search.exceptions import ReindexError
-from learning_resources_search.selectors import (
-    opensearch_runs,
-    run_content_files_deindex_targets,
-)
 from learning_resources_search.serializers import (
     serialize_bulk_learning_resources,
     serialize_bulk_learning_resources_for_deletion,
@@ -51,6 +47,10 @@ from learning_resources_search.serializers import (
     serialize_bulk_percolators_for_deletion,
     serialize_content_file_for_bulk,
     serialize_content_file_for_bulk_deletion,
+)
+from learning_resources_search.utils import (
+    opensearch_runs,
+    run_content_files_deindex_targets,
 )
 from main.utils import chunks
 from vector_search.utils import dense_encoder, retrieve_points_matching_params

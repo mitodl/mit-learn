@@ -39,7 +39,6 @@ from learning_resources_search.constants import (
 from learning_resources_search.exceptions import ReindexError, RetryError
 from learning_resources_search.factories import PercolateQueryFactory
 from learning_resources_search.models import PercolateQuery
-from learning_resources_search.selectors import opensearch_content_files
 from learning_resources_search.serializers import (
     serialize_content_file_for_update,
     serialize_learning_resource_for_update,
@@ -69,6 +68,7 @@ from learning_resources_search.tasks import (
     upsert_learning_resource,
     wrap_retry_exception,
 )
+from learning_resources_search.utils import opensearch_content_files
 from main.factories import TaskBatchFactory, TaskJobFactory, UserFactory
 from main.models import TaskBatch, TaskJob
 from main.test_utils import assert_not_raises

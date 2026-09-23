@@ -1962,7 +1962,7 @@ def test_process_course_archive_skips_matching_checksum_with_rows(mocker):
 
 
 def test_process_course_archive_clears_stale_checksum_on_empty_archive(mocker):
-    """A stale receipt on a now-empty archive becomes an empty-archive receipt"""
+    """A stale run on a now-empty archive has its checksum cleared"""
     key = "mitxonline/courses/course-v1:Test+Course+R1/archive.tar.gz"
     run = LearningResourceRunFactory.create(
         published=True, archive_key=key, checksum="abc123"

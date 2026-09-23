@@ -50,13 +50,13 @@ from learning_resources_search.constants import (
 )
 from learning_resources_search.exceptions import ReindexError, RetryError
 from learning_resources_search.models import PercolateQuery
-from learning_resources_search.selectors import opensearch_content_files
 from learning_resources_search.serializers import (
     serialize_bulk_percolators,
     serialize_content_file_for_update,
     serialize_learning_resource_for_update,
     serialize_percolate_query_for_update,
 )
+from learning_resources_search.utils import opensearch_content_files
 from main.celery import app
 from main.models import TaskBatch, TaskJob
 from main.tasks import maybe_finish_task_job
