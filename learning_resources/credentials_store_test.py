@@ -2,7 +2,10 @@
 
 import pytest
 
-from learning_resources.constants import CredentialMetadataField
+from learning_resources.constants import (
+    CredentialMetadataField,
+    LearningResourceType,
+)
 from learning_resources.credentials_store import (
     active_credential_metadata_fields,
     incomplete_credential_metadata_query,
@@ -22,6 +25,8 @@ from learning_resources.models import (
 )
 
 pytestmark = pytest.mark.django_db
+
+COURSE = LearningResourceType.course.name
 
 
 @pytest.fixture
@@ -123,7 +128,7 @@ def configurations():
 
 def test_active_credential_metadata_fields(configurations):
     """Every active configuration's field is reported"""
-    assert active_credential_metadata_fields() == sorted(
+    assert active_credential_metadata_fields(COURSE) == sorted(
         field.name for field in CredentialMetadataField
     )
 
@@ -134,7 +139,7 @@ def test_active_credential_metadata_fields_skips_inactive(configurations):
         field=CredentialMetadataField.criteria.name
     ).update(is_active=False)
 
-    assert active_credential_metadata_fields() == [
+    assert active_credential_metadata_fields(COURSE) == [
         CredentialMetadataField.description.name
     ]
 
@@ -143,7 +148,7 @@ def test_active_credential_metadata_fields_with_none_active(configurations):
     """No active configuration means a generation would produce nothing"""
     CredentialMetadataConfiguration.objects.update(is_active=False)
 
-    assert active_credential_metadata_fields() == []
+    assert active_credential_metadata_fields(COURSE) == []
 
 
 def test_active_credential_metadata_fields_skips_a_field_with_no_column(
@@ -160,7 +165,7 @@ def test_active_credential_metadata_fields_skips_a_field_with_no_column(
         field=CredentialMetadataField.criteria.name
     ).update(field="alignment")
 
-    assert active_credential_metadata_fields() == [
+    assert active_credential_metadata_fields(COURSE) == [
         CredentialMetadataField.description.name
     ]
 
@@ -246,3 +251,25 @@ def test_missing_credential_metadata_fields_without_active_configurations(resour
     CredentialMetadataFactory.create(learning_resource=resource, description="")
 
     assert missing_credential_metadata_fields(resource, []) == []
+
+
+def test_active_credential_metadata_fields_ignores_another_resource_type(
+    configurations,
+):
+    """
+    A configuration written for one resource type does not answer for another.
+
+    Prompts are per resource type, so a program row is not a course row --
+    reporting it would have the course sweep requeue every course for a field
+    nothing will generate.
+    """
+    CredentialMetadataConfiguration.objects.filter(
+        field=CredentialMetadataField.criteria.name
+    ).update(resource_type=LearningResourceType.program.name)
+
+    assert active_credential_metadata_fields(COURSE) == [
+        CredentialMetadataField.description.name
+    ]
+    assert active_credential_metadata_fields(LearningResourceType.program.name) == [
+        CredentialMetadataField.criteria.name
+    ]

@@ -1696,6 +1696,11 @@ def credential_metadata_course(**kwargs):
     )
 
 
+def credential_metadata_program(**kwargs):
+    """Create a program the credential metadata sweep should pick up"""
+    return credential_metadata_course(is_course=False, is_program=True, **kwargs)
+
+
 @pytest.fixture
 def credential_configurations():
     """
@@ -1710,6 +1715,25 @@ def credential_configurations():
     models.CredentialMetadataConfiguration.objects.all().delete()
     return [
         CredentialMetadataConfigurationFactory.create(field=field.name)
+        for field in CredentialMetadataField
+    ]
+
+
+@pytest.fixture
+def program_credential_configurations(credential_configurations):
+    """
+    Program configurations, on top of the course ones.
+
+    Separate from `credential_configurations` so that the tests written when
+    only courses were swept keep selecting only courses: without a program
+    prompt there is nothing to generate for a program, which is what makes
+    them still valid.
+    """
+    return [
+        CredentialMetadataConfigurationFactory.create(
+            field=field.name,
+            resource_type=LearningResourceType.program.name,
+        )
         for field in CredentialMetadataField
     ]
 
@@ -2019,7 +2043,7 @@ def test_credential_metadata_resource_ids_excludes_other_resources(
     credential_configurations, mock_blocklist
 ):
     """
-    Only published MITx Online courses are swept.
+    Only published MITx Online resources of a swept type are selected.
 
     All four of published, resource_type, etl_source and platform are pinned
     because the endpoint's resolver pins them: generating for a row the API
@@ -2030,7 +2054,9 @@ def test_credential_metadata_resource_ids_excludes_other_resources(
         is_course=True, published=True, etl_source=ETLSource.mit_edx.name
     )
     credential_metadata_course(published=False)
-    credential_metadata_course(is_course=False, is_program=True)
+    # A type the sweep does not cover at all, unlike a program, which it does
+    # once that type has prompts of its own.
+    credential_metadata_course(is_course=False, is_video=True)
 
     assert list(tasks.credential_metadata_resource_ids()) == [wanted.id]
 
@@ -2047,6 +2073,104 @@ def test_credential_metadata_resource_ids_respects_the_blocklist(
     )
 
     assert list(tasks.credential_metadata_resource_ids()) == [wanted.id]
+
+
+def test_credential_metadata_resource_ids_includes_programs(
+    program_credential_configurations, mock_blocklist
+):
+    """
+    Programs are swept alongside courses, newest first across both.
+
+    Sorted over the combined set rather than per type, so a program added
+    today is not queued behind every course in the catalogue.
+    """
+    course = credential_metadata_course()
+    program = credential_metadata_program()
+
+    assert list(tasks.credential_metadata_resource_ids()) == sorted(
+        [course.id, program.id], reverse=True
+    )
+
+
+def test_credential_metadata_resource_ids_skips_a_type_with_no_prompts(
+    credential_configurations, mock_blocklist
+):
+    """
+    A program is not swept until it has prompts of its own.
+
+    `credential_configurations` configures courses only. Falling back to the
+    course prompts would generate a program description from a prompt asking
+    what the learner did to complete the course.
+    """
+    course = credential_metadata_course()
+    credential_metadata_program()
+
+    assert list(tasks.credential_metadata_resource_ids()) == [course.id]
+
+
+def test_credential_metadata_resource_ids_per_type_completeness(
+    program_credential_configurations, mock_blocklist
+):
+    """
+    Completeness is judged against the resource's own type.
+
+    A program whose stored row is full is done even though a course with the
+    same stored row would be too -- the fields asked of each come from that
+    type's own active configurations.
+    """
+    done = credential_metadata_program()
+    CredentialMetadataFactory.create(
+        learning_resource=done, description="A program", criteria=["Did a thing"]
+    )
+    partial = credential_metadata_program()
+    CredentialMetadataFactory.create(
+        learning_resource=partial, description="A program", criteria=[]
+    )
+
+    assert list(tasks.credential_metadata_resource_ids()) == [partial.id]
+
+
+def test_generate_credential_metadata_for_a_program(
+    program_credential_configurations, mock_blocklist, mock_generate_and_save
+):
+    """The leaf generates for a program, asking for the fields it lacks"""
+    program = credential_metadata_program()
+
+    assert tasks.generate_credential_metadata_for_resource(program.id) is True
+    assert mock_generate_and_save.generator.call_args.kwargs["fields"] == [
+        "criteria",
+        "description",
+    ]
+
+
+def test_generate_credential_metadata_for_an_unswept_type(
+    program_credential_configurations, mock_blocklist, mock_generate_and_save
+):
+    """
+    A resource of a type the sweep does not cover is skipped, not generated.
+
+    The leaf is handed an id and reads the type back, so a task queued for
+    the wrong kind of resource -- a stale queue entry, a hand-run task --
+    must not spend anything.
+    """
+    video = credential_metadata_course(is_course=False, is_video=True)
+
+    assert tasks.generate_credential_metadata_for_resource(video.id) is False
+    mock_generate_and_save.assert_not_called()
+
+
+def test_generate_all_credential_metadata_covers_both_types(
+    program_credential_configurations, mock_blocklist, mocker
+):
+    """One task per resource, whatever its type"""
+    course = credential_metadata_course()
+    program = credential_metadata_program()
+    mock_group = mocker.patch("learning_resources.tasks.celery.group")
+
+    assert tasks.generate_all_credential_metadata.delay().get() == 2
+
+    queued = {signature.args[0] for signature in mock_group.call_args.args[0]}
+    assert queued == {course.id, program.id}
 
 
 def test_generate_all_credential_metadata(

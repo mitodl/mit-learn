@@ -25,9 +25,9 @@ def storable_credential_metadata_fields() -> set[str]:
     return {field.name for field in CredentialMetadata._meta.concrete_fields}  # noqa: SLF001
 
 
-def active_credential_metadata_fields() -> list[str]:
+def active_credential_metadata_fields(resource_type: str) -> list[str]:
     """
-    Return the stored fields a generation would currently produce.
+    Return the stored fields a generation would produce for a resource type.
 
     Generation runs only is_active configurations, and a field with none is
     left out of both the generated fields and the errors -- nothing was asked
@@ -38,13 +38,19 @@ def active_credential_metadata_fields() -> list[str]:
     demanded every column would requeue every affected course on every sweep,
     paying to regenerate the fields that are still active each time.
 
+    Args:
+        resource_type (str): the LearningResourceType to look up
+            configurations for
+
     Returns:
         list of str: the active configurations' fields that have a column to
             store them in, sorted. Empty means a generation would produce
-            nothing at all.
+            nothing at all for this resource type.
     """
     configured = (
-        CredentialMetadataConfiguration.objects.filter(is_active=True)
+        CredentialMetadataConfiguration.objects.filter(
+            is_active=True, resource_type=resource_type
+        )
         .values_list("field", flat=True)
         .distinct()
     )

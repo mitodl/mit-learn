@@ -425,3 +425,12 @@ class CredentialMetadataField(ExtendedEnum):
 
     description = "Description"
     criteria = "Criteria"
+
+
+# The resource types credential metadata is generated for. Each has its own
+# prompts, keyed by CredentialMetadataConfiguration.resource_type, so adding
+# a type here without configuring it generates nothing.
+CREDENTIAL_METADATA_RESOURCE_TYPES = (
+    LearningResourceType.course.name,
+    LearningResourceType.program.name,
+)

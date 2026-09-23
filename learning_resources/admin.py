@@ -299,12 +299,13 @@ class CredentialMetadataConfigurationAdmin(admin.ModelAdmin):
     model = models.CredentialMetadataConfiguration
     list_display = (
         "field",
+        "resource_type",
         "llm_model",
         "temperature",
         "retrieval_query",
         "is_active",
     )
-    list_filter = ("is_active",)
+    list_filter = ("is_active", "resource_type")
 
 
 class CredentialMetadataGenerationLogAdmin(admin.ModelAdmin):
