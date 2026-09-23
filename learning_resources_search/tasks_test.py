@@ -1238,14 +1238,8 @@ def test_start_update_index(mocker, mocked_celery, indexes, etl_source, settings
 
         # Program content files are indexed with resource_type=PROGRAM_TYPE, for
         # both run-level and resource-level (marketing page) content files.
-        index_content_mock.si.assert_any_call(
-            [program_run_file.id],
-            program_with_files.learning_resource_id,
-            index_types=IndexestoUpdate.current_index.value,
-            resource_type=PROGRAM_TYPE,
-        )
-        index_content_mock.si.assert_any_call(
-            [program_marketing_file.id],
+        index_content_mock.si.assert_called_once_with(
+            [program_run_file.id, program_marketing_file.id],
             program_with_files.learning_resource_id,
             index_types=IndexestoUpdate.current_index.value,
             resource_type=PROGRAM_TYPE,
@@ -1253,37 +1247,27 @@ def test_start_update_index(mocker, mocked_celery, indexes, etl_source, settings
 
     if CONTENT_FILE_TYPE in indexes:
         if etl_source in RESOURCE_FILE_ETL_SOURCES:
-            # 2 run-level chunks + 1 resource-level (marketing page) chunk
-            assert index_content_mock.si.call_count == 3
+            # 3 run-level files + 1 resource-level (marketing page) file, in
+            # chunks of 2
+            assert index_content_mock.si.call_count == 2
             course = next(
                 course
                 for course in courses
                 if course.learning_resource.etl_source == etl_source
             )
-
-            content_file_ids = course.learning_resource.best_run.content_files.order_by(
-                "id"
-            ).values_list("id", flat=True)
-
-            index_content_mock.si.assert_any_call(
-                [content_file_ids[0], content_file_ids[1]],
-                course.learning_resource_id,
-                index_types=IndexestoUpdate.current_index.value,
-            )
-
-            index_content_mock.si.assert_any_call(
-                [content_file_ids[2]],
-                course.learning_resource_id,
-                index_types=IndexestoUpdate.current_index.value,
-            )
-
-            # resource-level (marketing page) content file attached directly to
-            # the learning resource
-            index_content_mock.si.assert_any_call(
-                [xpro_marketing_file.id],
-                course.learning_resource_id,
-                index_types=IndexestoUpdate.current_index.value,
-            )
+            expected_ids = [
+                *course.learning_resource.best_run.content_files.order_by(
+                    "id"
+                ).values_list("id", flat=True),
+                xpro_marketing_file.id,
+            ]
+            for ids in (expected_ids[:2], expected_ids[2:]):
+                index_content_mock.si.assert_any_call(
+                    ids,
+                    course.learning_resource_id,
+                    index_types=IndexestoUpdate.current_index.value,
+                    resource_type=COURSE_TYPE,
+                )
 
         elif etl_source:
             assert index_content_mock.si.call_count == 0
@@ -1999,6 +1983,10 @@ def test_get_update_resource_files_tasks_indexes_best_run_only(mocker):
         "learning_resources_search.tasks.index_content_files", autospec=True
     )
     mocker.patch("learning_resources_search.tasks.deindex_content_files", autospec=True)
+    deindex_runs_mock = mocker.patch(
+        "learning_resources_search.tasks.deindex_non_opensearch_run_content_files",
+        autospec=True,
+    )
 
     get_update_resource_files_tasks([], ETLSource.mitxonline.value)
 
@@ -2007,6 +1995,7 @@ def test_get_update_resource_files_tasks_indexes_best_run_only(mocker):
     }
     assert indexed == set(opensearch_content_files(course).values_list("id", flat=True))
     assert not indexed & set(older.content_files.values_list("id", flat=True))
+    deindex_runs_mock.si.assert_called_once_with(course.id, resource_type=COURSE_TYPE)
 
 
 def test_run_reindex_batch_dispatch_content_files_best_run_only(mocker, mocked_api):
@@ -2057,6 +2046,10 @@ def test_get_update_program_files_tasks_indexes_best_run_only(mocker):
         "learning_resources_search.tasks.index_content_files", autospec=True
     )
     mocker.patch("learning_resources_search.tasks.deindex_content_files", autospec=True)
+    deindex_runs_mock = mocker.patch(
+        "learning_resources_search.tasks.deindex_non_opensearch_run_content_files",
+        autospec=True,
+    )
 
     get_update_program_files_tasks(ETLSource.mitxonline.value)
 
@@ -2067,6 +2060,7 @@ def test_get_update_program_files_tasks_indexes_best_run_only(mocker):
         opensearch_content_files(program).values_list("id", flat=True)
     )
     assert not indexed & set(older.content_files.values_list("id", flat=True))
+    deindex_runs_mock.si.assert_called_once_with(program.id, resource_type=PROGRAM_TYPE)
 
 
 def test_start_recreate_index_dispatches_test_mode_course_content_files(

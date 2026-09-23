@@ -38,6 +38,7 @@ from learning_resources_search.indexing_api import (
     deindex_content_files,
     deindex_document,
     deindex_learning_resources,
+    deindex_non_opensearch_run_content_files,
     deindex_percolators,
     deindex_run_content_files,
     delete_orphaned_indexes,
@@ -1056,3 +1057,42 @@ def test_clear_featured_rank(mocked_es, mocker, clear_all_greater_than):
             "query": query,
         },
     )
+
+
+def test_deindex_non_opensearch_run_content_files(mocker, mocked_es):
+    """Docs from every run but the OpenSearch-selected one are deleted by query"""
+    course = LearningResourceFactory.create(
+        is_course=True, create_runs=False, published=True
+    )
+    best = LearningResourceRunFactory.create(learning_resource=course, published=True)
+    LearningResourceRunFactory.create(
+        learning_resource=course,
+        published=True,
+        start_date=best.start_date.replace(year=2000),
+    )
+    assert course.best_run == best
+    mocker.patch(
+        "learning_resources_search.indexing_api.get_active_aliases",
+        autospec=True,
+        return_value=mocked_es.active_aliases,
+    )
+
+    deindex_non_opensearch_run_content_files(course.id)
+
+    for alias in mocked_es.active_aliases:
+        mocked_es.conn.delete_by_query.assert_any_call(
+            index=alias,
+            body={
+                "query": {
+                    "bool": {
+                        "filter": [
+                            {"term": {"resource_id": course.id}},
+                            {"exists": {"field": "run_id"}},
+                        ],
+                        "must_not": [{"terms": {"run_id": [best.id]}}],
+                    }
+                }
+            },
+            routing=course.id,
+            conflicts="proceed",
+        )

@@ -11,7 +11,11 @@ from django.contrib.auth import get_user_model
 from opensearchpy.exceptions import ConflictError, NotFoundError
 from opensearchpy.helpers import BulkIndexError, bulk
 
-from learning_resources.models import ContentFile, LearningResourceRun
+from learning_resources.models import (
+    ContentFile,
+    LearningResource,
+    LearningResourceRun,
+)
 from learning_resources_search.connection import (
     get_active_aliases,
     get_conn,
@@ -36,7 +40,10 @@ from learning_resources_search.constants import (
     IndexestoUpdate,
 )
 from learning_resources_search.exceptions import ReindexError
-from learning_resources_search.selectors import run_content_files_deindex_targets
+from learning_resources_search.selectors import (
+    opensearch_runs,
+    run_content_files_deindex_targets,
+)
 from learning_resources_search.serializers import (
     serialize_bulk_learning_resources,
     serialize_bulk_learning_resources_for_deletion,
@@ -549,6 +556,41 @@ def deindex_run_content_files(run_id, unpublished_only, *, keep_published=False)
         index_types=IndexestoUpdate.all_indexes.value,
         routing=run.learning_resource_id,
     )
+
+
+def deindex_non_opensearch_run_content_files(
+    learning_resource_id, resource_type=COURSE_TYPE
+):
+    """
+    Delete a resource's run content file documents whose run is no longer
+    selected for OpenSearch, e.g. an old best run. Asks OpenSearch for what it
+    holds, so a best run that changed with the date alone is caught too.
+
+    Args:
+        learning_resource_id(int): Learning resource id of the content files
+        resource_type (string): The resource type of the parent learning resource
+    """
+    resource = LearningResource.objects.get(id=learning_resource_id)
+    keep_run_ids = list(opensearch_runs(resource).values_list("id", flat=True))
+    query = {
+        "query": {
+            "bool": {
+                "filter": [
+                    {"term": {"resource_id": learning_resource_id}},
+                    {"exists": {"field": "run_id"}},
+                ],
+                "must_not": [{"terms": {"run_id": keep_run_ids}}],
+            }
+        }
+    }
+    conn = get_conn()
+    for alias in get_active_aliases(conn, object_types=[resource_type]):
+        conn.delete_by_query(
+            index=alias,
+            body=query,
+            routing=learning_resource_id,
+            conflicts="proceed",
+        )
 
 
 def deindex_document(doc_id, object_type, **kwargs):
