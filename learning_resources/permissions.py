@@ -139,8 +139,10 @@ class IsAdminOrCourseAuthor(BasePermission):
     """
     Permission for endpoints only course authors and staff may reach.
 
-    Used to gate credential metadata generation, which spends a frontier-model
-    call on a large prompt per request.
+    Used to gate the credential metadata endpoint. Generating spends a
+    frontier-model call on a large prompt per request; reading the stored
+    values is cheap, but is gated the same way because it exposes unpublished
+    draft metadata that no learner-facing surface shows yet.
     """
 
     def has_permission(self, request, view):  # noqa: ARG002

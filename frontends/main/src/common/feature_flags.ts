@@ -21,6 +21,7 @@ export enum FeatureFlags {
   DisableHybridSearch = "disable-hybrid-search",
   OrganizationalLearning = "organizational-learning",
   MultipleRunContextMenus = "multiple-run-context-menus",
+  ProgramLetters = "program-letters",
 }
 
 /**

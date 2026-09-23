@@ -1,6 +1,23 @@
 Release Notes
 =============
 
+Version 0.80.14
+---------------
+
+- adding link to program letter in dashboard (#3965)
+- Update actions/deploy-pages action to v5 (#3897)
+- feat(product-pages): render CMS-managed FAQs on course and program pages (#3954)
+- feat: show a learner's own program price as an applied-savings breakdown (#3943)
+
+Version 0.80.13
+---------------
+
+- fix: updated copy and small design edits (#3949)
+- feat(learning-resources): make published website content searchable by topic (#3944)
+- Pass platform parameter to AskTim (#3956)
+- Make playlist unpublish assertion order-insensitive (#3938)
+- hybrid search - fix program boosting, add IDF modifier to sparse vectors (#3947)
+
 Version 0.80.9
 --------------
 
