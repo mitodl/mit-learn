@@ -147,13 +147,13 @@ def mock_clear_views_cache(mocker):
     return mocker.patch("website_content.views.clear_views_cache")
 
 
-def _make_content(user, *, is_published):
+def _make_content(user, *, is_published, content_type="news"):
     return WebsiteContent.objects.create(
         title="t",
         content={},
         is_published=is_published,
         user=user,
-        content_type="news",
+        content_type=content_type,
     )
 
 
@@ -388,6 +388,40 @@ def test_unpublish_removes_the_news_feed_entry_inline(staff_client, user):
 
     assert resp.status_code == 200
     assert not FeedItem.objects.filter(guid=guid).exists()
+
+
+def test_unpublish_survives_a_failing_search_hand_off(
+    staff_client, user, mocker, django_capture_on_commit_callbacks
+):
+    """
+    An unpublish is not failed by the index work behind it.
+
+    The hooks run the search and vector plugins inline, which can fail in ways
+    a database error does not cover -- an unreachable broker, for one. Raising
+    would report a failure that did not happen: the rows are already committed
+    unpublished, and a retried request fires no hooks at all, because
+    `perform_update` keys them off the published->unpublished transition.
+    """
+    mocker.patch(
+        "learning_resources.api.unpublish_website_content_learning_resource",
+        side_effect=OSError("[Errno 111] Connection refused"),
+    )
+    mock_task = mocker.patch(
+        "learning_resources.tasks.unpublish_website_content_learning_resource_task.delay"
+    )
+    content = _make_content(user, is_published=True, content_type="article")
+    url = reverse(
+        "website_content:v1:website_content-detail", kwargs={"pk": content.id}
+    )
+
+    with django_capture_on_commit_callbacks(execute=True):
+        resp = staff_client.patch(url, {"is_published": False}, format="json")
+
+    assert resp.status_code == 200
+    content.refresh_from_db()
+    assert content.is_published is False
+    # Left with the task that retries, rather than dropped.
+    mock_task.assert_called_once_with(content.id)
 
 
 @pytest.mark.django_db(transaction=True)

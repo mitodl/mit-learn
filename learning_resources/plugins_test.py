@@ -74,12 +74,25 @@ def test_website_content_unpublished_hook_runs_in_the_request(mocker):
 
 
 @pytest.mark.django_db
-def test_website_content_unpublished_hook_queues_task_on_db_error(mocker):
+@pytest.mark.parametrize(
+    "failure",
+    [
+        # Racing the sync task for the same row.
+        DatabaseError("deadlock detected"),
+        # A broker that cannot be reached escapes `try_with_retry_as_task`,
+        # whose own fallback is an unguarded `.delay()`.
+        OSError("[Errno 111] Connection refused"),
+        # Anything else the search or vector hooks raise.
+        RuntimeError("boom"),
+    ],
+)
+def test_website_content_unpublished_hook_queues_task_on_failure(mocker, failure):
     """
-    A transient database error hands off to the retrying task.
+    Any failure hands off to the retrying task rather than raising.
 
-    Racing the sync task for the same row must not fail the editor's unpublish,
-    and the resource still has to leave search eventually.
+    The editor's unpublish must not fail over the index, and a retried request
+    would not help: `perform_update` fires this hook only on the
+    published->unpublished transition, which has already committed.
     """
     from website_content.factories import WebsiteContentFactory
 
@@ -87,7 +100,7 @@ def test_website_content_unpublished_hook_queues_task_on_db_error(mocker):
     mock_on_commit = mocker.patch("learning_resources.plugins.transaction.on_commit")
     mocker.patch(
         "learning_resources.api.unpublish_website_content_learning_resource",
-        side_effect=DatabaseError("deadlock detected"),
+        side_effect=failure,
     )
     mock_task = mocker.patch(
         "learning_resources.tasks.unpublish_website_content_learning_resource_task.delay"
@@ -98,6 +111,31 @@ def test_website_content_unpublished_hook_queues_task_on_db_error(mocker):
     assert mock_on_commit.call_count == 1
     mock_on_commit.call_args[0][0]()
     mock_task.assert_called_once_with(content.id)
+
+
+@pytest.mark.django_db
+def test_website_content_unpublished_hook_survives_an_unreachable_broker(mocker):
+    """
+    Queueing needs the broker, which may be what failed in the first place.
+
+    There is nothing further to try at that point, so it is logged and the
+    indexes are left to the next reindex -- the editor's unpublish still
+    stands, since the rows it owns are already correct.
+    """
+    from website_content.factories import WebsiteContentFactory
+
+    content = WebsiteContentFactory.create(is_published=False, content_type="article")
+    mocker.patch(
+        "learning_resources.api.unpublish_website_content_learning_resource",
+        side_effect=OSError("[Errno 111] Connection refused"),
+    )
+    mocker.patch(
+        "learning_resources.tasks.unpublish_website_content_learning_resource_task.delay",
+        side_effect=OSError("[Errno 111] Connection refused"),
+    )
+
+    # Raising nothing is the assertion.
+    WebsiteContentLearningResourcePlugin().website_content_unpublished(content)
 
 
 @pytest.mark.django_db

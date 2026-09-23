@@ -3,7 +3,7 @@
 import logging
 
 from django.apps import apps
-from django.db import DatabaseError, transaction
+from django.db import transaction
 
 from learning_resources.constants import FAVORITES_TITLE
 from learning_resources.models import UserList
@@ -99,7 +99,16 @@ class WebsiteContentLearningResourcePlugin:
                 unpublish_website_content_learning_resource_task,
             )
 
-            unpublish_website_content_learning_resource_task.delay(content_id)
+            try:
+                unpublish_website_content_learning_resource_task.delay(content_id)
+            except Exception:
+                # Queueing needs the broker, which is exactly what may have
+                # sent us here. Nothing further to try: the rows are already
+                # correct and the indexes are left to the next reindex.
+                log.exception(
+                    "Could not queue the learning resource removal for content %s",
+                    content_id,
+                )
 
         # Inline, unlike the sync side: the resource row is what the APIs read,
         # so leaving the flag to a worker keeps serving an article the editor
@@ -109,10 +118,20 @@ class WebsiteContentLearningResourcePlugin:
 
         try:
             unpublish_website_content_learning_resource(content_id)
-        except DatabaseError:
-            # Transient, e.g. losing a row lock race with the sync task, so
-            # hand off to the retrying task rather than failing the unpublish.
-            # on_commit, so a rolled back unpublish schedules nothing.
+        except Exception:
+            # Any failure, not just a database one. This runs the search and
+            # vector hooks inline, which fail in other ways -- a broker that
+            # cannot be reached escapes `try_with_retry_as_task`, whose own
+            # fallback is an unguarded `.delay()`.
+            #
+            # Swallowed rather than raised because the request cannot usefully
+            # fail here: `perform_update` fires these hooks only on the
+            # published->unpublished transition, which has already committed,
+            # so a client that retries gets a 200 and no hooks at all. The
+            # rows are already correct; what is left is the index work, which
+            # the retrying task redoes in full -- including the Qdrant removal
+            # the raise skipped. on_commit, so a rolled back unpublish
+            # schedules nothing.
             log.exception(
                 "Inline learning resource removal failed for content %s, queueing task",
                 content_id,
