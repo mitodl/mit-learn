@@ -787,48 +787,28 @@ def _dispatch_content_file_batches(batch):
     for resource in LearningResource.objects.filter(
         id__in=batch.params["learning_resource_ids"]
     ).order_by("id"):
-        resource_id = resource.id
         indexable = opensearch_content_files(resource)
-        for chunk, ids in enumerate(
-            chunks(
-                indexable.filter(run__isnull=False)
-                .order_by("id")
-                .values_list("id", flat=True),
-                chunk_size=settings.OPENSEARCH_DOCUMENT_INDEXING_CHUNK_SIZE,
-            )
-        ):
-            children.append(
-                TaskBatch(
-                    job=batch.job,
-                    kind=ReindexBatchKind.content_files.value,
-                    batch_key=f"content_files:{resource_id}:run:{chunk}",
-                    params={
-                        "ids": ids,
-                        "learning_resource_id": resource_id,
-                        "resource_type": resource_type,
-                    },
+        for label, direct in (("run", False), ("direct", True)):
+            for chunk, ids in enumerate(
+                chunks(
+                    indexable.filter(run__isnull=direct)
+                    .order_by("id")
+                    .values_list("id", flat=True),
+                    chunk_size=settings.OPENSEARCH_DOCUMENT_INDEXING_CHUNK_SIZE,
                 )
-            )
-        for chunk, ids in enumerate(
-            chunks(
-                indexable.filter(run__isnull=True)
-                .order_by("id")
-                .values_list("id", flat=True),
-                chunk_size=settings.OPENSEARCH_DOCUMENT_INDEXING_CHUNK_SIZE,
-            )
-        ):
-            children.append(
-                TaskBatch(
-                    job=batch.job,
-                    kind=ReindexBatchKind.content_files.value,
-                    batch_key=f"content_files:{resource_id}:direct:{chunk}",
-                    params={
-                        "ids": ids,
-                        "learning_resource_id": resource_id,
-                        "resource_type": resource_type,
-                    },
+            ):
+                children.append(
+                    TaskBatch(
+                        job=batch.job,
+                        kind=ReindexBatchKind.content_files.value,
+                        batch_key=f"content_files:{resource.id}:{label}:{chunk}",
+                        params={
+                            "ids": ids,
+                            "learning_resource_id": resource.id,
+                            "resource_type": resource_type,
+                        },
+                    )
                 )
-            )
     TaskBatch.objects.bulk_create(children, ignore_conflicts=True)
     child_ids = batch.job.batches.filter(
         batch_key__in=[child.batch_key for child in children],

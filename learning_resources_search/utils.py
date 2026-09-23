@@ -7,7 +7,7 @@ from opensearch_dsl import Search
 from channels.models import Channel
 from learning_resources.etl.constants import QDRANT_RETAINED_SOURCES, ETLSource
 from learning_resources.hooks import get_plugin_manager
-from learning_resources.models import ContentFile, LearningResourceRun
+from learning_resources.models import ContentFile
 from learning_resources_search.constants import LEARNING_RESOURCE
 from learning_resources_search.models import PercolateQuery
 
@@ -171,11 +171,9 @@ def _opensearch_test_mode(resource):
 
 def opensearch_runs(resource):
     """Select the runs of `resource` whose content files belong in OpenSearch."""
-    if not resource.published and not _opensearch_test_mode(resource):
-        return LearningResourceRun.objects.none()
     if _opensearch_test_mode(resource):
         return resource.runs.filter(published=True, is_variant=False)
-    best_run = resource.best_run
+    best_run = resource.published and resource.best_run
     return resource.runs.filter(id=best_run.id) if best_run else resource.runs.none()
 
 
