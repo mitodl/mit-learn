@@ -106,7 +106,9 @@ const CardTitle = styled.h3(({ theme }) => ({
   ...theme.typography.h4,
   color: theme.custom.colors.darkGray2,
   margin: 0,
-  minHeight: `calc(${theme.typography.h4.lineHeight} * 2)`,
+  [theme.breakpoints.up("md")]: {
+    minHeight: `calc(${theme.typography.h4.lineHeight} * 2)`,
+  },
 }))
 
 const CardTagline = styled.p(({ theme }) => ({
