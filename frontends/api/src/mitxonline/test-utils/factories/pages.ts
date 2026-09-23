@@ -10,6 +10,7 @@ import type {
   V2Course,
   ProgramPageItem,
   FAQItem,
+  TestimonialItem,
 } from "@mitodl/mitxonline-api-axios/v2"
 import { UniqueEnforcer } from "enforce-unique"
 import { program } from "./programs"
@@ -65,6 +66,18 @@ const faqItem: Factory<FAQItem> = (override) => {
     id: uniqueFaqId.enforce(() => faker.number.int()),
     question: `${faker.lorem.sentence().replace(/\.$/, "")}?`,
     answer: makeHTMLParagraph(1),
+    ...override,
+  }
+}
+
+const uniqueTestimonialId = new UniqueEnforcer()
+const testimonialItem: Factory<TestimonialItem> = (override) => {
+  return {
+    id: uniqueTestimonialId.enforce(() => faker.number.int()),
+    quote: faker.lorem.sentences(2),
+    name: faker.person.fullName(),
+    title: faker.person.jobTitle(),
+    image_src: faker.image.avatar(),
     ...override,
   }
 }
@@ -141,6 +154,7 @@ const coursePageItem: PartialFactory<CoursePageItem> = (override) => {
     faculty_section_title: "About the Faculty",
     faq_url: faker.internet.url(),
     faqs: Array.from({ length: 3 }, () => faqItem()),
+    testimonials: Array.from({ length: 3 }, () => testimonialItem()),
     feature_image: featureImage(),
     id: uniquePageId.enforce(() => faker.number.int()),
     include_in_learn_catalog: faker.datatype.boolean(),
@@ -255,6 +269,7 @@ const programPageItem: PartialFactory<ProgramPageItem> = (override) => {
     prerequisites: makeHTMLParagraph(1),
     faq_url: faker.internet.url(),
     faqs: Array.from({ length: 3 }, () => faqItem()),
+    testimonials: Array.from({ length: 3 }, () => testimonialItem()),
     about: makeHTMLParagraph(3),
     what_you_learn: makeHTMLList(5),
     how_youll_learn: [
@@ -329,4 +344,11 @@ const programPageItem: PartialFactory<ProgramPageItem> = (override) => {
   return mergeOverrides<ProgramPageItem>(defaults, override)
 }
 
-export { coursePageItem, coursePageList, faculty, faqItem, programPageItem }
+export {
+  coursePageItem,
+  coursePageList,
+  faculty,
+  faqItem,
+  testimonialItem,
+  programPageItem,
+}
