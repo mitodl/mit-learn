@@ -19,6 +19,7 @@ import dynamic from "next/dynamic"
 import { useRouter } from "next-nprogress-bar"
 import {
   RiDeleteBinLine,
+  RiCheckLine,
   RiEditLine,
   RiEqualizerLine,
   RiSave3Line,
@@ -49,6 +50,14 @@ const LearningResourceDrawer = dynamic(
 )
 
 const TOOLBAR_HEIGHT = 43
+
+/**
+ * How long typing has to stop before a draft saves itself.
+ *
+ * Long enough that ordinary typing does not queue a request per pause, short
+ * enough that little is at risk if the tab goes away.
+ */
+const AUTOSAVE_DELAY_MS = 2000
 
 /* The pieces the stacked edit-mode bar is built from, per the design. */
 const TOOLBAR_PADDING_Y = 12
@@ -170,6 +179,19 @@ const StyledStatusContainer = styled.div({
 /* The value is darker than its label, but not bolder. */
 const StatusValue = styled.span(({ theme }) => ({
   color: theme.custom.colors.darkGray2,
+}))
+
+/* Sits beside the status, as the design's "Saving..." does beside the title. */
+const AutosaveText = styled(Typography)(({ theme }) => ({
+  display: "inline-flex",
+  alignItems: "center",
+  gap: "4px",
+  color: theme.custom.colors.silverGrayDark,
+  whiteSpace: "nowrap",
+  svg: {
+    width: "16px",
+    height: "16px",
+  },
 }))
 
 export type UploadHandler = (
@@ -317,6 +339,18 @@ const WebsiteContentEditor = ({
   const [title, setTitle] = useState(contentItem?.title)
   const [topics, setTopics] = useState<number[]>(contentItem?.topics ?? [])
   const [touched, setTouched] = useState(false)
+  /**
+   * The title and content as last written to the server, so autosave can tell
+   * an unsaved change from a re-render. Seeded with what was loaded: opening a
+   * draft and closing it must not write anything.
+   */
+  const savedRef = useRef({
+    title: contentItem?.title,
+    content: contentItem?.content ?? initialDoc,
+  })
+  const [autosaveState, setAutosaveState] = useState<
+    "idle" | "saving" | "saved"
+  >("idle")
 
   const { create: createMutation, update: updateMutation } = saveMutations
   const isPending = createMutation.isPending || updateMutation.isPending
@@ -402,6 +436,7 @@ const WebsiteContentEditor = ({
           topics: savedTopics,
           ...extraFields,
         })
+    savedRef.current = { title, content }
     onSave?.(saved)
   }
 
@@ -449,16 +484,53 @@ const WebsiteContentEditor = ({
   }
 
   /**
-   * An article's topics are what put it on a topic page, so it is not saved
-   * without them: the press opens the settings drawer instead and is resumed
-   * once a topic is picked. News has no topics section, so nothing to require.
+   * A draft writes itself; published content does not.
+   *
+   * Once something is public every save pushes edits live, so it stays an
+   * explicit act -- the author presses Publish. A draft has no such audience,
+   * and losing unsaved work to a closed tab is the worse risk, so it is
+   * written for them. This covers content that has never been saved too:
+   * that is how it comes into existence now that there is no draft button.
+   */
+  const autosaves = !contentItem?.is_published
+  const hasUnsavedChanges =
+    title !== savedRef.current.title || content !== savedRef.current.content
+
+  useEffect(() => {
+    // `isPending` in the deps is what re-arms this after an in-flight save:
+    // edits made while one was running are picked up when it settles.
+    // `touched` as well as the comparison: a new item's content starts out
+    // differing from the empty saved state, and opening the editor on it must
+    // not write anything until somebody types.
+    if (!autosaves || !touched || !hasUnsavedChanges || !title || isPending) {
+      return
+    }
+    const timer = setTimeout(() => {
+      setAutosaveState("saving")
+      handleSave(false)
+        .then(() => setAutosaveState("saved"))
+        // The alert below reports the failure; the indicator drops back to
+        // saying nothing rather than claiming a save that did not happen.
+        .catch(() => setAutosaveState("idle"))
+    }, AUTOSAVE_DELAY_MS)
+    return () => clearTimeout(timer)
+    // `handleSave` closes over the state it sends and is remade every render;
+    // the timer is rearmed on every edit regardless, which is the debounce.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [autosaves, touched, hasUnsavedChanges, title, content, isPending])
+
+  /**
+   * An article's topics are what put it on a topic page, so it is not
+   * published without them: the press opens the settings drawer instead and is
+   * resumed once a topic is picked. Drafts are exempt -- autosave cannot stop
+   * to ask -- and news has no topics section at all.
    */
   const topicsRequired = contentType === WebsiteContentContentTypeEnum.Article
   const topicsMissing = topicsRequired && topics.length === 0
 
-  /** Hold the press back and ask for topics. */
-  const askForTopics = (publish: boolean) => {
-    setPendingSave(publish)
+  /** Hold the publish back and ask for topics. */
+  const askForTopics = () => {
+    setPendingSave(true)
     setSettingsOpen(true)
   }
 
@@ -585,6 +657,30 @@ const WebsiteContentEditor = ({
   )
 
   /**
+   * What autosave is doing, in the manner of the design: "Saving..." while a
+   * write is in flight, then "Saved" until the next edit. Nothing at all
+   * before the first one, so a draft opened and left alone says nothing.
+   *
+   * `role="status"` so the change is announced without stealing focus.
+   */
+  const autosaveSlot =
+    autosaves && autosaveState !== "idle" ? (
+      <AutosaveText variant="body3" role="status">
+        {autosaveState === "saving" ? (
+          <>
+            <LoadingSpinner size={14} color="inherit" loading />
+            Saving...
+          </>
+        ) : (
+          <>
+            <RiCheckLine aria-hidden />
+            Saved
+          </>
+        )}
+      </AutosaveText>
+    ) : null
+
+  /**
    * "medium" reproduces the design's button box exactly: 40px tall, 14px medium
    * label, 20px icon, 8px gap, and 12px/16px horizontal padding (smoot-design
    * pulls the icon side in by 4px).
@@ -673,29 +769,6 @@ const WebsiteContentEditor = ({
                       </Button>
                     ) : null}
                     {settingsButton}
-                    {!contentItem?.is_published ? (
-                      <Button
-                        variant="bordered"
-                        disabled={isPending || !touched || !title}
-                        onClick={() => {
-                          setIsPublishing(false)
-                          if (topicsMissing) {
-                            askForTopics(false)
-                            return
-                          }
-                          saveQuietly(false)
-                        }}
-                        size={buttonSize}
-                        startIcon={<RiEditLine />}
-                        endIcon={
-                          isPending && !isPublishing ? (
-                            <LoadingSpinner size={14} color="inherit" loading />
-                          ) : null
-                        }
-                      >
-                        Save as Draft
-                      </Button>
-                    ) : null}
                     <PublishButton
                       variant="primary"
                       disabled={
@@ -705,7 +778,7 @@ const WebsiteContentEditor = ({
                       }
                       onClick={() => {
                         if (topicsMissing) {
-                          askForTopics(true)
+                          askForTopics()
                           return
                         }
                         startPublish()
@@ -719,6 +792,7 @@ const WebsiteContentEditor = ({
                     >
                       Publish {contentLabel}
                     </PublishButton>
+                    {autosaveSlot}
                     {statusSlot}
                   </ActionRow>
                   <FormattingRow>

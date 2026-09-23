@@ -393,8 +393,8 @@ describe("NewsEditor - Content Editing and Saving", () => {
     })
   })
 
-  describe("Save as Draft functionality", () => {
-    test("can save news as draft", async () => {
+  describe("Autosaving a draft", () => {
+    test("a news draft saves itself once typing stops", async () => {
       const initialContent: JSONContent = {
         type: "doc",
         content: [
@@ -441,23 +441,23 @@ describe("NewsEditor - Content Editing and Saving", () => {
         updatedNewsItem,
       )
 
-      const saveDraftButton = await screen.findByRole("button", {
-        name: "Save as Draft",
-      })
+      // No button to press: a draft writes itself once typing stops.
+      expect(screen.queryByRole("button", { name: "Save as Draft" })).toBe(null)
 
-      expect(saveDraftButton).not.toBeDisabled()
-
-      await userEvent.click(saveDraftButton)
-
-      expect(makeRequest).toHaveBeenCalledWith({
-        method: "patch",
-        url: urls.websiteContent.details(newsItem.id),
-        body: expect.objectContaining({
-          is_published: false,
-          author_name: "",
-        }),
-      })
-    })
+      await waitFor(
+        () => {
+          expect(makeRequest).toHaveBeenCalledWith({
+            method: "patch",
+            url: urls.websiteContent.details(newsItem.id),
+            body: expect.objectContaining({
+              is_published: false,
+              author_name: "",
+            }),
+          })
+        },
+        { timeout: 6000 },
+      )
+    }, 15000)
   })
 
   describe("Error handling during save", () => {

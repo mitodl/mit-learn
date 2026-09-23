@@ -76,11 +76,12 @@ describe("ArticleEditor article controls", () => {
     renderArticleEditor()
 
     await screen.findByRole("button", { name: "Settings" })
-    await screen.findByRole("button", { name: "Save as Draft" })
     await screen.findByRole("button", { name: "Publish Article" })
     expect(await screen.findByText(/Article status:/)).toHaveTextContent(
       "Article status: Draft",
     )
+    /* A draft writes itself now, so there is nothing to press. */
+    expect(screen.queryByRole("button", { name: "Save as Draft" })).toBe(null)
   })
 
   test("a published article offers Draft, Edit and Settings", async () => {
@@ -426,21 +427,29 @@ describe("ArticleEditor topics requirement", () => {
     await screen.findByText("Select at least one topic to save your article")
   })
 
-  test("saving a draft with no topics asks for them instead", async () => {
+  test("a draft saves itself without them, rather than asking", async () => {
     mockTopics()
-    renderArticleEditor()
+    const { article } = renderArticleEditor()
+    setMockResponse.patch(urls.websiteContent.details(article.id), article)
 
-    // "Save as Draft" only enables once the document is touched.
     await userEvent.type(await screen.findByRole("heading", { level: 1 }), "!")
-    await userEvent.click(
-      await screen.findByRole("button", { name: "Save as Draft" }),
-    )
 
-    await screen.findByRole("heading", { name: "Article Settings" })
-    expect(makeRequest).not.toHaveBeenCalledWith(
-      expect.objectContaining({ method: "patch" }),
+    // Autosave cannot stop to ask, so the requirement is the publish's alone.
+    await waitFor(
+      () => {
+        expect(makeRequest).toHaveBeenCalledWith(
+          expect.objectContaining({
+            method: "patch",
+            body: expect.objectContaining({ is_published: false }),
+          }),
+        )
+      },
+      { timeout: 6000 },
     )
-  })
+    expect(screen.queryByRole("heading", { name: "Article Settings" })).toBe(
+      null,
+    )
+  }, 15000)
 
   test("the held-back publish resumes once a topic is picked", async () => {
     const topic = mockTopics()
@@ -518,6 +527,67 @@ describe("ArticleEditor topics requirement", () => {
       }),
     )
   })
+})
+
+describe("ArticleEditor autosave", () => {
+  test("a draft saves itself once typing stops", async () => {
+    const { article } = renderArticleEditor()
+    setMockResponse.patch(urls.websiteContent.details(article.id), article)
+
+    await userEvent.type(
+      await screen.findByRole("heading", { level: 1 }),
+      " edited",
+    )
+
+    // Not on every keystroke: the write waits for the typing to stop.
+    expect(makeRequest).not.toHaveBeenCalledWith(
+      expect.objectContaining({ method: "patch" }),
+    )
+
+    await waitFor(
+      () => {
+        expect(makeRequest).toHaveBeenCalledWith(
+          expect.objectContaining({
+            method: "patch",
+            url: urls.websiteContent.details(article.id),
+            body: expect.objectContaining({ is_published: false }),
+          }),
+        )
+      },
+      { timeout: 6000 },
+    )
+  }, 15000)
+
+  test("a published article is never saved behind the author's back", async () => {
+    const { article } = renderArticleEditor({ isPublished: true, topics: [7] })
+    setMockResponse.patch(urls.websiteContent.details(article.id), article)
+
+    await userEvent.type(
+      await screen.findByRole("heading", { level: 1 }),
+      " edited",
+    )
+    await new Promise((resolve) => setTimeout(resolve, 3500))
+
+    /* Edits to something public go live only when Publish is pressed. */
+    expect(makeRequest).not.toHaveBeenCalledWith(
+      expect.objectContaining({ method: "patch" }),
+    )
+  }, 15000)
+
+  test("the control bar reports the save", async () => {
+    const { article } = renderArticleEditor()
+    setMockResponse.patch(urls.websiteContent.details(article.id), article)
+
+    // Nothing is claimed before there is anything to save.
+    expect(screen.queryByText("Saved")).toBe(null)
+
+    await userEvent.type(
+      await screen.findByRole("heading", { level: 1 }),
+      " edited",
+    )
+
+    await screen.findByText("Saved", {}, { timeout: 6000 })
+  }, 15000)
 })
 
 describe("ArticleEditor edit-mode control bar layout", () => {
