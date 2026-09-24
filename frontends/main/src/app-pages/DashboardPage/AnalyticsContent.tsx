@@ -31,7 +31,11 @@ import { matchOrganizationBySlug } from "@/common/utils"
 import { ForbiddenError } from "@/common/errors"
 import { FeatureFlags } from "@/common/feature_flags"
 import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
-import { contractAdminView, organizationAnalyticsView } from "@/common/urls"
+import {
+  contractAdminView,
+  contractLearnersView,
+  organizationAnalyticsView,
+} from "@/common/urls"
 import { ErrorContent } from "../ErrorPage/ErrorPageTemplate"
 import graduateLogo from "@/public/images/dashboard/graduate.png"
 import ContentEngagementTable from "./Analytics/ContentEngagementTable"
@@ -70,6 +74,28 @@ const HeaderSection = styled.div(({ theme }) => ({
   [theme.breakpoints.down("md")]: {
     flexDirection: "column",
     alignItems: "flex-start",
+  },
+}))
+
+const HeaderActions = styled.div(({ theme }) => ({
+  display: "flex",
+  gap: "12px",
+  flexShrink: 0,
+  flexWrap: "wrap",
+  justifyContent: "flex-end",
+  "> a": {
+    whiteSpace: "nowrap",
+  },
+  [theme.breakpoints.down("md")]: {
+    width: "100%",
+    justifyContent: "flex-start",
+  },
+  [theme.breakpoints.down("sm")]: {
+    flexDirection: "column",
+    width: "100%",
+    "> a": {
+      width: "100%",
+    },
   },
 }))
 
@@ -469,15 +495,28 @@ const AnalyticsContentInternal: React.FC<AnalyticsContentInternalProps> = ({
           </PageSubtitle>
         </div>
       </OrgDetailsContainer>
-      {manageSeatsSlug && managerDashboardFlag ? (
-        <ButtonLink
-          size="small"
-          variant="bordered"
-          href={contractAdminView(orgSlug, manageSeatsSlug)}
-        >
-          Manage seats
-        </ButtonLink>
-      ) : null}
+      {(contract || (manageSeatsSlug && managerDashboardFlag)) && (
+        <HeaderActions>
+          {contract ? (
+            <ButtonLink
+              size="small"
+              variant="bordered"
+              href={contractLearnersView(orgSlug, contract.slug)}
+            >
+              Learner analytics
+            </ButtonLink>
+          ) : null}
+          {manageSeatsSlug && managerDashboardFlag ? (
+            <ButtonLink
+              size="small"
+              variant="bordered"
+              href={contractAdminView(orgSlug, manageSeatsSlug)}
+            >
+              Manage seats
+            </ButtonLink>
+          ) : null}
+        </HeaderActions>
+      )}
     </HeaderSection>
   )
 
