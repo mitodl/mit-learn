@@ -84,6 +84,15 @@ class WebsiteContentSerializer(BaseSerializer):
         max_length=2083, allow_blank=True, default="", read_only=True
     )
     author_name = serializers.CharField(required=False, allow_blank=True, default="")
+    # Optional overrides for what search engines and link previews show. Blank
+    # rather than absent when unset, so a consumer reads "" and falls back to
+    # the title and content rather than having to handle null as well.
+    seo_title = serializers.CharField(
+        max_length=255, required=False, allow_blank=True, default=""
+    )
+    seo_description = serializers.CharField(
+        required=False, allow_blank=True, default=""
+    )
     user = UserSerializer(read_only=True)
     content_type = serializers.ChoiceField(
         choices=WebsiteContentType.as_tuple(),
@@ -116,6 +125,8 @@ class WebsiteContentSerializer(BaseSerializer):
             "slug",
             "cover_image",
             "topics",
+            "seo_title",
+            "seo_description",
         ]
 
 

@@ -172,6 +172,18 @@ const StatusValue = styled.span(({ theme }) => ({
   color: theme.custom.colors.darkGray2,
 }))
 
+/**
+ * The settings drawer's values, as a save takes them.
+ *
+ * Passed explicitly when a held-back save resumes, because React state set in
+ * the same handler has not landed by the time the save reads it.
+ */
+type SettingsOverrides = {
+  topics?: number[]
+  seoTitle?: string
+  seoDescription?: string
+}
+
 export type UploadHandler = (
   file: File,
   onProgress?: (e: { progress: number }) => void,
@@ -316,6 +328,10 @@ const WebsiteContentEditor = ({
   )
   const [title, setTitle] = useState(contentItem?.title)
   const [topics, setTopics] = useState<number[]>(contentItem?.topics ?? [])
+  const [seo, setSeo] = useState({
+    title: contentItem?.seo_title ?? "",
+    description: contentItem?.seo_description ?? "",
+  })
   const [touched, setTouched] = useState(false)
 
   const { create: createMutation, update: updateMutation } = saveMutations
@@ -379,63 +395,84 @@ const WebsiteContentEditor = ({
    * must stay open if it fails. Rejects on failure — see `saveQuietly` for the
    * buttons that save without a dialog.
    */
-  const handleSave = async (publish: boolean, topicsOverride?: number[]) => {
+  const handleSave = async (
+    publish: boolean,
+    overrides?: SettingsOverrides,
+  ) => {
     if (!title) return
-    // Overridden when a held-back save resumes: `setTopics` has not landed yet
-    // at that point, and this carries the new selection itself rather than
-    // leaving the drawer to PATCH it separately.
-    const savedTopics = topicsOverride ?? topics
     const extraFields = extractExtraFields?.(content) ?? {}
+    // The drawer's own values are passed in when a held-back save resumes:
+    // `setTopics` and `setSeo` have not landed at that point, and this carries
+    // them itself rather than leaving the drawer to PATCH them separately.
+    const settings = {
+      topics: overrides?.topics ?? topics,
+      seo_title: overrides?.seoTitle ?? seo.title,
+      seo_description: overrides?.seoDescription ?? seo.description,
+    }
     const saved = contentItem
       ? await updateMutation.mutateAsync({
           id: contentItem.id,
           title: title.trim(),
           content,
           is_published: publish,
-          topics: savedTopics,
+          ...settings,
           ...extraFields,
         })
       : await createMutation.mutateAsync({
           title: title.trim(),
           content,
           is_published: publish,
-          topics: savedTopics,
+          ...settings,
           ...extraFields,
         })
     onSave?.(saved)
   }
 
   /**
-   * Topics are persisted as soon as the drawer saves them, so they survive
-   * without a further save of the content -- but only once the content exists.
-   * Before the first save there is nothing to PATCH, so they are held here and
-   * ride along with the create.
+   * The drawer's settings are persisted as soon as it saves them, so they
+   * survive without a further save of the content -- but only once the content
+   * exists. Before the first save there is nothing to PATCH, so they are held
+   * in state and ride along with the create.
+   *
+   * Only the settings go in the patch. Sending the editor's current content or
+   * published state here would push unsaved edits live.
    *
    * The failure is surfaced by the `saveError` alert below, so the rejection is
    * swallowed rather than left unhandled -- as in `saveQuietly`.
    */
   const handleSettingsSave = ({
     topics: nextTopics,
+    seoTitle,
+    seoDescription,
   }: ArticleSettingsValues) => {
-    // Absent for a type whose drawer has no topics section. Writing `[]` there
-    // would empty a selection the editor was never shown, and every PATCH
-    // re-runs the publish plugins, so there is nothing to send.
-    if (nextTopics === undefined) return
-    setTopics(nextTopics)
+    setSeo({ title: seoTitle, description: seoDescription })
+    const overrides: SettingsOverrides = { seoTitle, seoDescription }
+    // `topics` is absent for a type whose drawer has no topics section. Left
+    // out of the patch rather than sent as `[]`, which would empty a selection
+    // the editor was never shown.
+    if (nextTopics !== undefined) {
+      setTopics(nextTopics)
+      overrides.topics = nextTopics
+    }
 
-    // A save that was held back resumes here, carrying the new selection, so
-    // the content write persists the topics and no separate PATCH is needed.
-    if (pendingSave !== null && nextTopics.length > 0) {
+    // A save held back for want of topics resumes here, carrying the drawer's
+    // values, so the content write persists them and nothing is PATCHed twice.
+    if (pendingSave !== null && nextTopics && nextTopics.length > 0) {
       const publish = pendingSave
       setPendingSave(null)
-      if (publish) startPublish(nextTopics)
-      else saveQuietly(false, nextTopics)
+      if (publish) startPublish(overrides)
+      else saveQuietly(false, overrides)
       return
     }
 
     if (!contentItem) return
     updateMutation
-      .mutateAsync({ id: contentItem.id, topics: nextTopics })
+      .mutateAsync({
+        id: contentItem.id,
+        seo_title: seoTitle,
+        seo_description: seoDescription,
+        ...(nextTopics === undefined ? {} : { topics: nextTopics }),
+      })
       .catch(() => undefined)
   }
 
@@ -444,8 +481,8 @@ const WebsiteContentEditor = ({
    * is already surfaced by the `saveError` alert below, so the rejection is
    * swallowed here rather than left unhandled.
    */
-  const saveQuietly = (publish: boolean, topicsOverride?: number[]) => {
-    handleSave(publish, topicsOverride).catch(() => undefined)
+  const saveQuietly = (publish: boolean, overrides?: SettingsOverrides) => {
+    handleSave(publish, overrides).catch(() => undefined)
   }
 
   /**
@@ -468,10 +505,10 @@ const WebsiteContentEditor = ({
    * where "will make it publicly available" would be both wrong and a prompt
    * on every save.
    */
-  const startPublish = (topicsOverride?: number[]) => {
+  const startPublish = (overrides?: SettingsOverrides) => {
     const publish = () => {
       setIsPublishing(true)
-      return handleSave(true, topicsOverride)
+      return handleSave(true, overrides)
     }
     if (contentItem?.is_published) {
       // Nothing awaits this path, so do not leave the rejection unhandled;
@@ -744,7 +781,11 @@ const WebsiteContentEditor = ({
                   contentType === WebsiteContentContentTypeEnum.Article
                 }
                 topicsRequired={topicsRequired}
-                initialValues={{ topics }}
+                initialValues={{
+                  topics,
+                  seoTitle: seo.title,
+                  seoDescription: seo.description,
+                }}
                 onSave={handleSettingsSave}
               />
             ) : null}

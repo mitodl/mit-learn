@@ -1792,15 +1792,27 @@ describe("NewsEditor - shared content controls", () => {
     ).not.toBeInTheDocument()
     await screen.findByRole("heading", { name: "SEO Settings" })
 
-    /**
-     * No topics query either, and nothing PATCHed: writing `[]` would empty a
-     * selection the editor was never shown, and every PATCH re-runs the
-     * publish plugins. Note this test mocks no topics response at all, so a
-     * request for one would fail the suite.
-     */
-    await userEvent.click(screen.getByRole("button", { name: "Save Settings" }))
-    expect(makeRequest).not.toHaveBeenCalledWith(
-      expect.objectContaining({ method: "patch" }),
+    /* No topics query either: this test mocks no topics response at all, so a
+       request for one would fail the suite. */
+    setMockResponse.patch(urls.websiteContent.details(newsItem.id), newsItem)
+    await userEvent.type(
+      await screen.findByLabelText("SEO Title"),
+      "News for search",
     )
+    await userEvent.click(screen.getByRole("button", { name: "Save Settings" }))
+
+    /**
+     * The SEO fields are saved for news as they are for an article, but no
+     * `topics` is sent: writing `[]` would empty a selection the editor was
+     * never shown.
+     */
+    await waitFor(() => {
+      expect(makeRequest).toHaveBeenCalledWith(
+        expect.objectContaining({
+          method: "patch",
+          body: { seo_title: "News for search", seo_description: "" },
+        }),
+      )
+    })
   })
 })
