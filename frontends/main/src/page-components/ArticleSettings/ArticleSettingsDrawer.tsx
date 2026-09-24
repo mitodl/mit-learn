@@ -163,6 +163,27 @@ const FooterCta = styled.div({
   marginTop: "auto",
 })
 
+/**
+ * What the topics section says about itself, which depends on which rule is
+ * speaking: one that refuses to save without a topic, one that only wants them
+ * before publishing, or neither.
+ */
+const topicsMessage = (
+  contentLabel: string,
+  empty: boolean,
+  required: boolean,
+  mayNotBeEmptied: boolean,
+) => {
+  const noun = contentLabel.toLowerCase()
+  if (empty && mayNotBeEmptied) {
+    return `A published ${noun} needs at least one topic`
+  }
+  if (empty && required) {
+    return `Select at least one topic to publish your ${noun}`
+  }
+  return `Select one or more topics for your ${noun}`
+}
+
 /** Settings the drawer collects. Mirrors the fields in the design. */
 export interface ArticleSettingsValues {
   /**
@@ -206,14 +227,21 @@ export interface ArticleSettingsDrawerProps {
    */
   showTopics?: boolean
   /**
-   * Whether the content cannot be saved without a topic.
-   *
-   * The section says so while none is picked, and saving is refused until one
-   * is: this drawer is the one place a selection can be taken away, so a
-   * caller that gates its own save buttons would otherwise still lose the
-   * topics through here.
+   * Whether the content needs a topic before it can go public. The section
+   * says so while none is picked, which is what tells an editor why the
+   * drawer opened on them when they pressed Publish.
    */
   topicsRequired?: boolean
+  /**
+   * Whether an empty selection may not be saved at all.
+   *
+   * This drawer is the one place a selection can be taken away, so a caller
+   * that gates only its own save buttons would still lose the topics through
+   * here. Separate from `topicsRequired` because the two do not coincide:
+   * content that is not public yet can be left without topics -- it is
+   * stopped at publishing -- while content already public cannot.
+   */
+  topicsMayNotBeEmptied?: boolean
   /** Values to open with. Re-read each time the drawer opens. */
   initialValues?: Partial<ArticleSettingsValues>
   /**
@@ -232,6 +260,7 @@ const ArticleSettingsDrawer = ({
   contentLabel = "Article",
   showTopics = true,
   topicsRequired = false,
+  topicsMayNotBeEmptied = false,
   initialValues,
   onSave,
 }: ArticleSettingsDrawerProps) => {
@@ -423,9 +452,12 @@ const ArticleSettingsDrawer = ({
                   Select Topics
                 </Typography>
                 <Typography variant="body2">
-                  {topicsRequired && selectedIds.length === 0
-                    ? `Select at least one topic to save your ${contentLabel.toLowerCase()}`
-                    : `Select one or more topics for your ${contentLabel.toLowerCase()}`}
+                  {topicsMessage(
+                    contentLabel,
+                    selectedIds.length === 0,
+                    topicsRequired,
+                    topicsMayNotBeEmptied,
+                  )}
                 </Typography>
               </SectionHeading>
               <TopicRow>
@@ -543,7 +575,7 @@ const ArticleSettingsDrawer = ({
               /* Refused rather than silently ignored: the editor has emptied
                  the selection on screen and has to see why it will not save. */
               disabled={
-                topicsRequired && showTopics && selectedIds.length === 0
+                topicsMayNotBeEmptied && showTopics && selectedIds.length === 0
               }
               onClick={() => {
                 onSave?.({

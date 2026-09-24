@@ -424,7 +424,7 @@ describe("ArticleEditor topics requirement", () => {
       expect.objectContaining({ method: "patch" }),
     )
     /* The section says why it opened, rather than leaving the editor to guess. */
-    await screen.findByText("Select at least one topic to save your article")
+    await screen.findByText("Select at least one topic to publish your article")
   })
 
   test("a draft saves itself without them, rather than asking", async () => {
@@ -490,7 +490,35 @@ describe("ArticleEditor topics requirement", () => {
     })
   })
 
-  test("the drawer will not save an article with its topics emptied", async () => {
+  test("a draft's topics can be cleared", async () => {
+    const topics = factories.learningResources.topics({ count: 1 })
+    const [topic] = topics.results
+    setMockResponse.get(urls.topics.list({ limit: 1000 }), topics)
+    const { article } = renderArticleEditor({ topics: [topic.id] })
+    setMockResponse.patch(urls.websiteContent.details(article.id), article)
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Settings" }),
+    )
+    await userEvent.click(
+      await screen.findByRole("button", { name: `Remove ${topic.name}` }),
+    )
+
+    /**
+     * Refused only once the content is public. A draft may sit without topics
+     * -- publishing is where they are insisted on, and autosave cannot stop to
+     * ask -- so the editor is not trapped into keeping a topic they removed.
+     */
+    await userEvent.click(screen.getByRole("button", { name: "Save Settings" }))
+
+    await waitFor(() => {
+      expect(makeRequest).toHaveBeenCalledWith(
+        expect.objectContaining({ method: "patch", body: { topics: [] } }),
+      )
+    })
+  })
+
+  test("the drawer will not save a published article with its topics emptied", async () => {
     const topics = factories.learningResources.topics({ count: 1 })
     const [topic] = topics.results
     setMockResponse.get(urls.topics.list({ limit: 1000 }), topics)
@@ -513,7 +541,7 @@ describe("ArticleEditor topics requirement", () => {
      * through here, and with them its place on a topic page.
      */
     expect(screen.getByRole("button", { name: "Save Settings" })).toBeDisabled()
-    await screen.findByText("Select at least one topic to save your article")
+    await screen.findByText("A published article needs at least one topic")
     expect(makeRequest).not.toHaveBeenCalledWith(
       expect.objectContaining({ method: "patch" }),
     )

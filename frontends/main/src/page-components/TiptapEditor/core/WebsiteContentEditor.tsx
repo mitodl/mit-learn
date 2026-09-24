@@ -843,6 +843,12 @@ const WebsiteContentEditor = ({
                   contentType === WebsiteContentContentTypeEnum.Article
                 }
                 topicsRequired={topicsRequired}
+                /* Only once it is public: a draft may be left without topics,
+                   since publishing is where they are insisted on, and autosave
+                   cannot stop to ask. */
+                topicsMayNotBeEmptied={
+                  topicsRequired && !!contentItem?.is_published
+                }
                 initialValues={{ topics }}
                 onSave={handleSettingsSave}
               />
