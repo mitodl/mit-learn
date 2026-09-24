@@ -10,7 +10,7 @@ import boto3
 import celery
 from celery.exceptions import Ignore
 from django.conf import settings
-from django.db import DatabaseError, OperationalError
+from django.db import OperationalError
 from django.db.models import Q
 from django.utils import timezone
 
@@ -1101,16 +1101,27 @@ def sync_website_content_learning_resource(content_id: int) -> None:
         )
         try:
             unpublish_website_content_learning_resource(content_id)
-        except DatabaseError:
-            # This task does not retry, and a failure here would leave the
-            # resource published and indexed with nothing behind it, so hand
-            # the undo to the task that does retry. Its own republish guard
-            # makes a late run safe.
+        except Exception:
+            # Any failure, not just a database one: the undo runs the search
+            # and vector hooks inline, which fail in other ways -- a broker
+            # that cannot be reached escapes `try_with_retry_as_task`, whose
+            # own fallback is an unguarded `.delay()`.
+            #
+            # This task does not retry, so raising would leave the resource
+            # unpublished in the database and still in the index with nothing
+            # behind it. Hand the undo to the task that does retry; its own
+            # republish guard makes a late run safe.
             log.exception(
                 "Undoing the sync failed for content %s, queueing the removal",
                 content_id,
             )
-            unpublish_website_content_learning_resource_task.delay(content_id)
+            try:
+                unpublish_website_content_learning_resource_task.delay(content_id)
+            except Exception:
+                # Queueing needs the broker, which is exactly what may have
+                # sent us here. Nothing further to try: the row is already
+                # unpublished and the indexes are left to the next reindex.
+                log.exception("Could not queue the removal for content %s", content_id)
 
 
 @app.task(acks_late=True, reject_on_worker_lost=True)
