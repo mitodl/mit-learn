@@ -11,6 +11,7 @@ from django.contrib.auth import get_user_model
 from opensearchpy.exceptions import ConflictError, NotFoundError
 from opensearchpy.helpers import BulkIndexError, bulk
 
+from learning_resources.etl.constants import QDRANT_RETAINED_SOURCES
 from learning_resources.models import (
     ContentFile,
     LearningResource,
@@ -48,10 +49,7 @@ from learning_resources_search.serializers import (
     serialize_content_file_for_bulk,
     serialize_content_file_for_bulk_deletion,
 )
-from learning_resources_search.utils import (
-    opensearch_runs,
-    run_content_files_deindex_targets,
-)
+from learning_resources_search.utils import opensearch_runs
 from main.utils import chunks
 from vector_search.utils import dense_encoder, retrieve_points_matching_params
 
@@ -401,12 +399,17 @@ def deindex_learning_resources(ids, base_index_name):
     )
 
     if base_index_name in (COURSE_TYPE, PROGRAM_TYPE):
+        # test_mode resources keep their content files indexed; retained sources
+        # keep the rows published so they stay in Qdrant
         runs = LearningResourceRun.objects.filter(
-            learning_resource_id__in=ids
+            learning_resource_id__in=ids, learning_resource__test_mode=False
         ).select_related("learning_resource")
-        for run, keep_published in run_content_files_deindex_targets(runs):
+        for run in runs:
             deindex_run_content_files(
-                run.id, unpublished_only=False, keep_published=keep_published
+                run.id,
+                unpublished_only=False,
+                keep_published=run.learning_resource.etl_source
+                in QDRANT_RETAINED_SOURCES,
             )
 
 
@@ -572,6 +575,8 @@ def deindex_non_opensearch_run_content_files(
     """
     resource = LearningResource.objects.get(id=learning_resource_id)
     keep_run_ids = list(opensearch_runs(resource).values_list("id", flat=True))
+    if not resource.runs.exclude(id__in=keep_run_ids).exists():
+        return
     query = {
         "query": {
             "bool": {

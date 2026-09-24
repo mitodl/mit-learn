@@ -18,7 +18,6 @@ from learning_resources_search.models import PercolateQuery
 from learning_resources_search.utils import (
     opensearch_content_files,
     prune_channel_subscriptions,
-    run_content_files_deindex_targets,
 )
 from main.factories import UserFactory
 
@@ -214,25 +213,3 @@ def test_opensearch_content_files_unpublished_course_has_none():
     course, _, _ = _course_with_runs(published=False)
 
     assert not opensearch_content_files(course).exists()
-
-
-@pytest.mark.django_db
-@pytest.mark.parametrize(
-    ("etl_source", "test_mode", "expected"),
-    [
-        (ETLSource.mitxonline.value, False, [True]),
-        (ETLSource.ocw.value, False, [False]),
-        (ETLSource.mitxonline.value, True, []),
-    ],
-)
-def test_run_content_files_deindex_targets(etl_source, test_mode, expected):
-    """test_mode runs are skipped; retained sources keep their files published"""
-    course = LearningResourceFactory.create(
-        is_course=True, create_runs=True, etl_source=etl_source, test_mode=test_mode
-    )
-    run = course.runs.first()
-
-    targets = list(run_content_files_deindex_targets([run]))
-
-    assert [keep for _, keep in targets] == expected
-    assert [target_run for target_run, _ in targets] == ([run] if expected else [])

@@ -14,10 +14,7 @@ from learning_resources_search.constants import (
     COURSE_TYPE,
     PERCOLATE_INDEX_TYPE,
 )
-from learning_resources_search.utils import (
-    opensearch_runs,
-    run_content_files_deindex_targets,
-)
+from learning_resources_search.utils import opensearch_runs
 from main import settings
 from main.utils import chunks
 from vector_search import tasks as vector_tasks
@@ -233,21 +230,19 @@ class SearchIndexPlugin:
             run(LearningResourceRun): The Learning Resource run that was removed
 
         """
-        if not run.content_files.exists():
+        resource = run.learning_resource
+        if not run.content_files.exists() or resource.test_mode:
             return
 
-        for _, keep_published in run_content_files_deindex_targets([run]):
-            deindex_tasks = [
-                tasks.deindex_run_content_files.si(
-                    run.id, unpublished_only=False, keep_published=keep_published
-                ),
-            ]
-            if (
-                not keep_published
-                and django_settings.QDRANT_ENABLE_INDEXING_PLUGIN_HOOKS
-            ):
-                deindex_tasks.append(vector_tasks.remove_run_content_files.si(run.id))
-            try_with_retry_as_task(chain(*deindex_tasks))
+        keep_published = resource.etl_source in QDRANT_RETAINED_SOURCES
+        deindex_tasks = [
+            tasks.deindex_run_content_files.si(
+                run.id, unpublished_only=False, keep_published=keep_published
+            ),
+        ]
+        if not keep_published and django_settings.QDRANT_ENABLE_INDEXING_PLUGIN_HOOKS:
+            deindex_tasks.append(vector_tasks.remove_run_content_files.si(run.id))
+        try_with_retry_as_task(chain(*deindex_tasks))
 
     @hookimpl
     def resource_run_delete(self, run):

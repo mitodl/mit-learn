@@ -1059,6 +1059,18 @@ def test_clear_featured_rank(mocked_es, mocker, clear_all_greater_than):
     )
 
 
+def test_deindex_non_opensearch_run_content_files_single_run(mocked_es):
+    """No query is sent when the resource has no run outside the selected ones"""
+    course = LearningResourceFactory.create(
+        is_course=True, create_runs=False, published=True
+    )
+    LearningResourceRunFactory.create(learning_resource=course, published=True)
+
+    deindex_non_opensearch_run_content_files(course.id)
+
+    mocked_es.conn.delete_by_query.assert_not_called()
+
+
 def test_deindex_non_opensearch_run_content_files(mocker, mocked_es):
     """Docs from every run but the OpenSearch-selected one are deleted by query"""
     course = LearningResourceFactory.create(

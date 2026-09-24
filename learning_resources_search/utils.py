@@ -5,7 +5,7 @@ from django.db.models import Q
 from opensearch_dsl import Search
 
 from channels.models import Channel
-from learning_resources.etl.constants import QDRANT_RETAINED_SOURCES, ETLSource
+from learning_resources.etl.constants import ETLSource
 from learning_resources.hooks import get_plugin_manager
 from learning_resources.models import ContentFile
 from learning_resources_search.constants import LEARNING_RESOURCE
@@ -184,16 +184,3 @@ def opensearch_content_files(resource):
     return ContentFile.objects.filter(published=True).filter(
         Q(learning_resource_id=resource.id) | Q(run__in=opensearch_runs(resource))
     )
-
-
-def run_content_files_deindex_targets(runs):
-    """
-    Yield (run, keep_published) for each run whose content files leave
-    OpenSearch when it or its resource is unpublished. test_mode resources are
-    skipped; retained sources keep the rows published so they stay in Qdrant.
-    """
-    for run in runs:
-        resource = run.learning_resource
-        if resource.test_mode:
-            continue
-        yield run, resource.etl_source in QDRANT_RETAINED_SOURCES
