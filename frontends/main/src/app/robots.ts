@@ -23,21 +23,92 @@ export default function robots(): MetadataRoute.Robots {
       rules: [
         {
           userAgent: "*",
-          allow: "/",
+          /**
+           * Resource drawer: every ?resource= URL canonicalizes to
+           * /search?resource=<id>&resource_title=<slug>, and the resources
+           * sitemap enumerates every resource at exactly that URL. Crawling
+           * drawer overlays anywhere else (/c/, /news, /, faceted search) is
+           * pure duplicate load, so allow only the canonical form and block
+           * resource-carrying URLs site-wide. The bare /search landing page
+           * matches no disallow and stays crawlable by default. The allow
+           * rule wins by longest-match precedence (RFC 9309); it is listed
+           * first for naive first-match parsers.
+           *
+           * NOTE: the allow rule is a literal prefix match, so it depends on
+           * `resource` being the FIRST query param in canonical drawer URLs
+           * (see resourceDrawerSearch in common/urls.ts).
+           */
+          allow: ["/search?resource="],
           disallow: [
+            // Faceted/keyword search results (any query string except the
+            // canonical drawer form above)
+            "/search?",
+            "/*?resource=",
+            "/*&resource=",
+            // Next.js router-prefetch payloads — never part of rendered or
+            // indexed content
+            "/*?_rsc=",
+            "/*&_rsc=",
+            // Account / app-only areas
             "/dashboard/",
             "/learningpaths/",
             "/onboarding/",
             "/cart/",
             "/program_letter/",
+            "/enrollmentcode/",
+            "/organization/",
+            "/website_content/drafts",
           ],
         },
-        // Meta's ad-preview crawler, not a real visitor -- driving disproportionate
-        // load against expensive, uncached SSR routes. robots.txt is advisory only
-        // (a non-compliant crawler can ignore it), so if this doesn't reduce its
-        // request volume, blocking it at the gateway/WAF layer is the follow-up.
         {
-          userAgent: "meta-externalads/1.1",
+          /**
+           * Link-preview fetchers: fetch exact shared URLs on demand (tiny
+           * volume) and must be able to see ?resource= URLs for og: cards.
+           * A named group opts them out of ALL default-group rules.
+           */
+          userAgent: [
+            "facebookexternalhit",
+            "Twitterbot",
+            "Slackbot",
+            "LinkedInBot",
+            "Discordbot",
+            "WhatsApp",
+            "TelegramBot",
+          ],
+          allow: "/",
+        },
+        {
+          /**
+           * AI-training crawlers — blocking costs no search visibility.
+           * (Google-Extended / Applebot-Extended are opt-out tokens
+           * controlling training use of Googlebot/Applebot crawl data, not
+           * separate crawlers.)
+           */
+          userAgent: [
+            "GPTBot",
+            "CCBot",
+            "meta-externalagent",
+            "Google-Extended",
+            "Applebot-Extended",
+            "Bytespider",
+            "ClaudeBot",
+            "Amazonbot",
+          ],
+          disallow: "/",
+        },
+        {
+          /**
+           * Meta's advertising/business crawler. Blocked 2026-07-21 (#3653)
+           * after it crawled ?resource=/_rsc= URL permutations at up to
+           * ~90k req/hr — the majority of all origin-reaching traffic during
+           * the incident. robots.txt is advisory only (this UA has never
+           * fetched /robots.txt here), so the gateway/WAF layer is the
+           * enforcement backstop if volume doesn't drop.
+           *
+           * NOTE: RFC 9309 user-agent tokens cannot contain "/" — matching
+           * requires the bare product token, not "meta-externalads/1.1".
+           */
+          userAgent: "meta-externalads",
           disallow: "/",
         },
       ],
