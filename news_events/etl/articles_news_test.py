@@ -593,6 +593,63 @@ def test_extract_summary_from_banner_handles_malformed_url():
     )
 
 
+@pytest.mark.parametrize(
+    ("href", "expected_href"),
+    [
+        ("https://example.com", "https://example.com"),
+        ("mailto:foo@example.com", "mailto:foo@example.com"),
+        ("tel:+16175551234", "tel:+16175551234"),
+        ("/news/foo", "/news/foo"),
+        ("/search?q=abc", "/search?q=abc"),
+        ("//evil.com", "#"),
+        ("/\\evil.com", "#"),
+        ("javascript:alert(1)", "#"),
+    ],
+)
+def test_extract_summary_from_banner_allows_mailto_tel_and_relative_links(
+    href, expected_href
+):
+    """
+    mailto:/tel: URIs and site-relative paths (e.g. "/news/foo") are links
+    editors can legitimately create via the link popover, so they must
+    render as real hrefs rather than the safe "#" placeholder. Protocol-
+    relative ("//host") and backslash ("/\\host") variants are excluded
+    since browsers treat those as other-host URLs.
+    """
+    content_json = {
+        "type": "doc",
+        "content": [
+            {
+                "type": "banner",
+                "content": [
+                    {
+                        "type": "paragraph",
+                        "content": [
+                            {
+                                "type": "text",
+                                "text": "Click",
+                                "marks": [
+                                    {
+                                        "type": "link",
+                                        "attrs": {"href": href},
+                                    }
+                                ],
+                            }
+                        ],
+                    }
+                ],
+            }
+        ],
+    }
+
+    result = articles_news.extract_summary_from_banner(content_json)
+
+    assert (
+        result == f'<a href="{expected_href}" target="_blank" '
+        'rel="noopener noreferrer nofollow">Click</a>'
+    )
+
+
 def test_extract_summary_from_banner_handles_non_string_link_attrs():
     """
     ProseMirror content is unvalidated JSON, so a link mark's attrs can

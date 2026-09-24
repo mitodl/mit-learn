@@ -11,7 +11,7 @@ from website_content.models import WebsiteContent
 
 log = logging.getLogger(__name__)
 
-_SAFE_LINK_SCHEMES = ("http", "https")
+_SAFE_LINK_SCHEMES = ("http", "https", "mailto", "tel")
 
 
 def _escape_html(text: str) -> str:
@@ -34,13 +34,19 @@ def _safe_str_attr(value: object, default: str = "") -> str:
 
 
 def _is_safe_link_href(href: str) -> bool:
-    """Restrict extracted links to absolute http(s) URLs."""
+    """Allow http(s)/mailto/tel URLs and site-relative paths."""
     try:
-        return urlparse(href).scheme in _SAFE_LINK_SCHEMES
+        parsed = urlparse(href)
     except ValueError:
         # Malformed URLs (e.g. "http://[") make urlparse raise instead of
         # just failing to parse -- treat anything it can't handle as unsafe.
         return False
+    if parsed.scheme:
+        return parsed.scheme in _SAFE_LINK_SCHEMES
+    # "//host" and "/\host" are treated as other-host URLs by browsers, so a
+    # leading "/" is only site-relative when not immediately followed by
+    # another "/" or "\".
+    return href.startswith("/") and href[1:2] not in ("/", "\\")
 
 
 def website_content_feed_guid(content_id: int) -> str:
