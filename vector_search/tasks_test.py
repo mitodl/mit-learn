@@ -1785,3 +1785,31 @@ def test_finalize_embeddings_raises_and_clears_on_failures(embed_cache):
 def test_finalize_embeddings_succeeds_when_clean(embed_cache):
     assert finalize_embeddings("run-1") is None
     assert embed_cache.get("embed_errors:run-1") is None
+
+
+def test_embed_new_content_files_includes_unpublished_runs(mocker, mocked_celery):
+    """
+    New files on an unpublished run of a published course are embedded, matching
+    the post-ingest hook: Qdrant carries every run.
+    """
+    mocker.patch("vector_search.tasks.load_course_blocklist", return_value=[])
+    course = LearningResourceFactory.create(
+        is_course=True, create_runs=False, published=True
+    )
+    run = LearningResourceRunFactory.create(learning_resource=course, published=False)
+    content_file = ContentFileFactory.create(
+        run=run, published=True, created_on=now_in_utc() - datetime.timedelta(minutes=5)
+    )
+    generate_embeddings_mock = mocker.patch(
+        "vector_search.tasks.generate_embeddings", autospec=True
+    )
+
+    with pytest.raises(mocked_celery.replace_exception_class):
+        embed_new_content_files.delay()
+
+    embedded_ids = {
+        cf_id
+        for call in generate_embeddings_mock.si.mock_calls
+        for cf_id in call.args[0]
+    }
+    assert content_file.id in embedded_ids

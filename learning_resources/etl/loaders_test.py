@@ -3693,6 +3693,25 @@ def test_course_with_unpublished_force_ingest_is_test_mode():
     assert course.published is False
 
 
+@pytest.mark.parametrize("force_ingest", [True, False])
+def test_load_course_blocklist_clears_test_mode(force_ingest):
+    """A blocklisted course leaves test_mode, even when force ingested"""
+    course = LearningResourceFactory.create(
+        is_course=True, published=False, test_mode=True
+    )
+    course_data = {
+        "readable_id": course.readable_id,
+        "platform": course.platform.code,
+        "title": "test",
+        "url": "http://test.com",
+        "force_ingest": force_ingest,
+        "runs": [{"run_id": "test-run"}],
+    }
+    course = load_course(course_data, [course.readable_id])
+    assert course.test_mode is False
+    assert course.published is False
+
+
 @pytest.mark.django_db
 def test_load_documents(mocker, climate_platform, mock_get_similar_topics_qdrant):
     documents_data = [
