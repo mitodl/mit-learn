@@ -567,7 +567,10 @@ describe("ArticleEditor topics requirement", () => {
 
     await waitFor(() => {
       expect(makeRequest).toHaveBeenCalledWith(
-        expect.objectContaining({ method: "patch", body: { topics: [] } }),
+        expect.objectContaining({
+          method: "patch",
+          body: { topics: [], seo_title: "", seo_description: "" },
+        }),
       )
     })
   })
