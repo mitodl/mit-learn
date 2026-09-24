@@ -17,15 +17,12 @@ import { ActionButton, Alert, Button, ButtonLink } from "@mitodl/smoot-design"
 import { useUserHasPermission, Permission } from "api/hooks/user"
 import { useQueryClient, type QueryClient } from "@tanstack/react-query"
 import dynamic from "next/dynamic"
-import { useRouter } from "next-nprogress-bar"
 import {
-  RiDeleteBinLine,
   RiCheckLine,
   RiEditLine,
   RiEqualizerLine,
   RiSave3Line,
 } from "@remixicon/react"
-import { showDeleteWebsiteContentDialog } from "@/page-components/WebsiteContentDialogs/DeleteWebsiteContentDialog"
 import { showPublishWebsiteContentDialog } from "@/page-components/WebsiteContentDialogs/PublishWebsiteContentDialog"
 import {
   ArticleSettingsDrawer,
@@ -379,7 +376,6 @@ const WebsiteContentEditor = ({
   uploadImageRef.current = uploadImage
 
   const queryClient = useQueryClient()
-  const router = useRouter()
   const isArticleEditor = useUserHasPermission(Permission.ArticleEditor)
 
   const uploadHandler = useCallback<UploadHandler>(
@@ -667,7 +663,7 @@ const WebsiteContentEditor = ({
 
   const statusSlot = (
     <StatusText variant="body2">
-      {contentLabel} status:{" "}
+      Status:{" "}
       <StatusValue>
         {contentItem?.is_published ? "Published" : "Draft"}
       </StatusValue>
@@ -676,27 +672,40 @@ const WebsiteContentEditor = ({
 
   /**
    * What autosave is doing, in the manner of the design: "Saving..." while a
-   * write is in flight, then "Saved" until the next edit. Nothing at all
-   * before the first one, so a draft opened and left alone says nothing.
+   * write is in flight, then "Saved" until the next edit. It says nothing
+   * until the first save, so a draft opened and left alone claims nothing.
    *
-   * `role="status"` so the change is announced without stealing focus.
+   * `role="status"` announces that without stealing focus -- but only if the
+   * region was already in the page when the text appeared. A live region
+   * mounted in the same paint as its first message is routinely dropped by
+   * screen readers, and that first message is the one that matters, so the
+   * region is mounted empty for the whole session and only its text changes.
    */
-  const autosaveSlot =
-    autosaves && autosaveState !== "idle" ? (
-      <AutosaveText variant="body3" role="status">
-        {autosaveState === "saving" ? (
-          <>
-            <LoadingSpinner size={14} color="inherit" loading />
-            Saving...
-          </>
-        ) : (
-          <>
-            <RiCheckLine aria-hidden />
-            Saved
-          </>
-        )}
-      </AutosaveText>
-    ) : null
+  const autosaveMessages: Record<typeof autosaveState, React.ReactNode> = {
+    idle: null,
+    saving: (
+      <>
+        {/* Decorative: the text beside it says the same thing, and the
+            spinner's own "Loading" label would be read out as well. */}
+        <span aria-hidden>
+          <LoadingSpinner size={14} color="inherit" loading />
+        </span>
+        Saving...
+      </>
+    ),
+    saved: (
+      <>
+        <RiCheckLine aria-hidden />
+        Saved
+      </>
+    ),
+  }
+
+  const autosaveSlot = autosaves ? (
+    <AutosaveText variant="body3" role="status">
+      {autosaveMessages[autosaveState]}
+    </AutosaveText>
+  ) : null
 
   /**
    * "medium" reproduces the design's button box exactly: 40px tall, 14px medium
@@ -786,23 +795,6 @@ const WebsiteContentEditor = ({
                       {autosaveSlot}
                       <Spacer />
                       <StyledStatusContainer>
-                        {contentItem && !contentItem.is_published ? (
-                          <Button
-                            variant="bordered"
-                            size={buttonSize}
-                            disabled={isPending}
-                            startIcon={<RiDeleteBinLine />}
-                            onClick={() =>
-                              showDeleteWebsiteContentDialog(contentItem, () =>
-                                router.push(
-                                  websiteContentDraftsView(contentType),
-                                ),
-                              )
-                            }
-                          >
-                            Delete
-                          </Button>
-                        ) : null}
                         <PublishButton
                           variant="primary"
                           disabled={
@@ -828,7 +820,7 @@ const WebsiteContentEditor = ({
                             ) : null
                           }
                         >
-                          Publish {contentLabel}
+                          Publish
                         </PublishButton>
                         {settingsButton}
                       </StyledStatusContainer>

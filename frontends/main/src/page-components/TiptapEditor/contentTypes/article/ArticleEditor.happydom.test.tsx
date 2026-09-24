@@ -76,9 +76,9 @@ describe("ArticleEditor article controls", () => {
     renderArticleEditor()
 
     await screen.findByRole("button", { name: "Settings" })
-    await screen.findByRole("button", { name: "Publish Article" })
-    expect(await screen.findByText(/Article status:/)).toHaveTextContent(
-      "Article status: Draft",
+    await screen.findByRole("button", { name: "Publish" })
+    expect(await screen.findByText(/Status:/)).toHaveTextContent(
+      "Status: Draft",
     )
     /* A draft writes itself now, so there is nothing to press. */
     expect(screen.queryByRole("button", { name: "Save as Draft" })).toBe(null)
@@ -90,8 +90,8 @@ describe("ArticleEditor article controls", () => {
     await screen.findByRole("link", { name: "Draft" })
     await screen.findByRole("link", { name: "Edit" })
     await screen.findByRole("button", { name: "Settings" })
-    expect(await screen.findByText(/Article status:/)).toHaveTextContent(
-      "Article status: Published",
+    expect(await screen.findByText(/Status:/)).toHaveTextContent(
+      "Status: Published",
     )
     /* Unpublishing lives on the listing card's menu, not here. */
     expect(screen.queryByRole("button", { name: "Unpublish Article" })).toBe(
@@ -273,7 +273,7 @@ describe("ArticleEditor publish confirmation", () => {
     })
 
     await userEvent.click(
-      await screen.findByRole("button", { name: "Publish Article" }),
+      await screen.findByRole("button", { name: "Publish" }),
     )
 
     // Nothing is saved until the dialog is confirmed.
@@ -303,7 +303,7 @@ describe("ArticleEditor publish confirmation", () => {
     renderTopicalArticle()
 
     await userEvent.click(
-      await screen.findByRole("button", { name: "Publish Article" }),
+      await screen.findByRole("button", { name: "Publish" }),
     )
     await screen.findByRole("heading", { name: "Publish article" })
     await userEvent.click(screen.getByRole("button", { name: "Cancel" }))
@@ -324,7 +324,7 @@ describe("ArticleEditor publish confirmation", () => {
     await userEvent.type(heading, " edited")
 
     await userEvent.click(
-      await screen.findByRole("button", { name: "Publish Article" }),
+      await screen.findByRole("button", { name: "Publish" }),
     )
 
     expect(
@@ -349,7 +349,7 @@ describe("ArticleEditor publish confirmation errors", () => {
     )
 
     await userEvent.click(
-      await screen.findByRole("button", { name: "Publish Article" }),
+      await screen.findByRole("button", { name: "Publish" }),
     )
     await screen.findByRole("heading", { name: "Publish article" })
     await userEvent.click(
@@ -385,7 +385,7 @@ describe("ArticleEditor publish confirmation errors", () => {
     })
 
     await userEvent.click(
-      await screen.findByRole("button", { name: "Publish Article" }),
+      await screen.findByRole("button", { name: "Publish" }),
     )
     await screen.findByRole("heading", { name: "Publish article" })
     await userEvent.click(
@@ -412,7 +412,7 @@ describe("ArticleEditor topics requirement", () => {
     renderArticleEditor()
 
     await userEvent.click(
-      await screen.findByRole("button", { name: "Publish Article" }),
+      await screen.findByRole("button", { name: "Publish" }),
     )
 
     // The drawer, not the publish confirmation, and nothing saved.
@@ -460,7 +460,7 @@ describe("ArticleEditor topics requirement", () => {
     })
 
     await userEvent.click(
-      await screen.findByRole("button", { name: "Publish Article" }),
+      await screen.findByRole("button", { name: "Publish" }),
     )
     await screen.findByRole("heading", { name: "Article Settings" })
 
@@ -496,7 +496,7 @@ describe("ArticleEditor topics requirement", () => {
     setMockResponse.patch(urls.websiteContent.details(article.id), article)
 
     await userEvent.click(
-      await screen.findByRole("button", { name: "Publish Article" }),
+      await screen.findByRole("button", { name: "Publish" }),
     )
     await screen.findByRole("heading", { name: "Article Settings" })
     await userEvent.click(screen.getByRole("button", { name: "Cancel" }))
@@ -574,6 +574,18 @@ describe("ArticleEditor autosave", () => {
     )
   }, 15000)
 
+  test("the indicator is a live region before it has anything to say", async () => {
+    renderArticleEditor()
+
+    /**
+     * Mounted empty, ahead of the first message. A live region inserted in the
+     * same paint as its content is routinely not announced at all, and the
+     * first message -- that the work is being saved -- is the one that matters.
+     */
+    const region = await screen.findByRole("status")
+    expect(region).toBeEmptyDOMElement()
+  })
+
   test("the control bar reports the save", async () => {
     const { article } = renderArticleEditor()
     setMockResponse.patch(urls.websiteContent.details(article.id), article)
@@ -595,7 +607,7 @@ describe("ArticleEditor edit-mode control bar layout", () => {
     renderArticleEditor()
 
     const publish = await screen.findByRole("button", {
-      name: "Publish Article",
+      name: "Publish",
     })
     const undo = screen.getByRole("button", { name: "Undo" })
     const bar = screen.getByRole("toolbar")
@@ -611,10 +623,10 @@ describe("ArticleEditor edit-mode control bar layout", () => {
     renderArticleEditor()
 
     const publish = await screen.findByRole("button", {
-      name: "Publish Article",
+      name: "Publish",
     })
     const settings = screen.getByRole("button", { name: "Settings" })
-    const status = screen.getByText(/Article status:/)
+    const status = screen.getByText(/Status:/)
 
     // The status leads the row; the actions follow it.
     expect(

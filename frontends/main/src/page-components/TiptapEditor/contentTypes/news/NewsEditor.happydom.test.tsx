@@ -558,7 +558,7 @@ describe("NewsEditor - Content Editing and Saving", () => {
       })
 
       const publishButton = await screen.findByRole("button", {
-        name: "Publish News",
+        name: "Publish",
       })
 
       expect(publishButton).not.toBeDisabled()
@@ -1623,7 +1623,7 @@ describe("NewsEditor - Delete draft", () => {
     jest.clearAllMocks()
   })
 
-  test("editor can delete a draft from the edit toolbar", async () => {
+  test("the edit toolbar does not offer delete", async () => {
     const user = factories.user.user({
       is_authenticated: true,
       is_article_editor: true,
@@ -1632,12 +1632,11 @@ describe("NewsEditor - Delete draft", () => {
 
     const newsItem = factories.websiteContent.websiteContent({
       id: 321,
-      title: "Draft to delete",
+      title: "Draft news",
       content_type: "news",
       is_published: false,
     })
     setMockResponse.get(urls.websiteContent.details(newsItem.id), newsItem)
-    setMockResponse.delete(urls.websiteContent.details(newsItem.id), null)
 
     renderWithProviders(
       <NewsEditor newsItem={newsItem} onSave={mockOnSave} />,
@@ -1645,50 +1644,14 @@ describe("NewsEditor - Delete draft", () => {
         user,
       },
     )
-
     await screen.findByTestId("editor")
 
-    await userEvent.click(await screen.findByRole("button", { name: "Delete" }))
-    await userEvent.click(
-      await screen.findByRole("button", { name: "Yes, delete" }),
-    )
-
-    await waitFor(() => {
-      expect(makeRequest).toHaveBeenCalledWith(
-        expect.objectContaining({
-          method: "delete",
-          url: urls.websiteContent.details(newsItem.id),
-        }),
-      )
-    })
-  })
-
-  test("delete button is not shown for published content", async () => {
-    const user = factories.user.user({
-      is_authenticated: true,
-      is_article_editor: true,
-    })
-    setMockResponse.get(urls.userMe.get(), user)
-
-    const newsItem = factories.websiteContent.websiteContent({
-      id: 322,
-      title: "Published item",
-      content_type: "news",
-      is_published: true,
-    })
-    setMockResponse.get(urls.websiteContent.details(newsItem.id), newsItem)
-
-    renderWithProviders(
-      <NewsEditor newsItem={newsItem} onSave={mockOnSave} />,
-      {
-        user,
-      },
-    )
-
-    await screen.findByTestId("editor")
-    expect(
-      screen.queryByRole("button", { name: "Delete" }),
-    ).not.toBeInTheDocument()
+    /**
+     * Deleting a draft lives on the drafts listing instead, where
+     * `WebsiteContentDraftListingPage delete` covers it. The edit bar carries
+     * the status, Publish and the settings icon, and nothing else.
+     */
+    expect(screen.queryByRole("button", { name: "Delete" })).toBe(null)
   })
 })
 
@@ -1702,7 +1665,7 @@ describe("NewsEditor - shared content controls", () => {
    * shared by every content type, so their copy must name the type being
    * edited. These lock the substitution in: news must never say "Article".
    */
-  test("the news control bar names news in its status readout", async () => {
+  test("the news control bar carries the status readout", async () => {
     const user = factories.user.user({
       is_authenticated: true,
       is_article_editor: true,
@@ -1721,10 +1684,10 @@ describe("NewsEditor - shared content controls", () => {
     await screen.findByTestId("editor")
 
     await screen.findByRole("button", { name: "Settings" })
-    expect(await screen.findByText(/status:/)).toHaveTextContent(
-      "News status: Draft",
+    /* The readout no longer names the content type, for either type. */
+    expect(await screen.findByText(/Status:/)).toHaveTextContent(
+      "Status: Draft",
     )
-    expect(screen.queryByText(/Article status:/)).not.toBeInTheDocument()
   })
 
   test("the settings drawer is titled for news", async () => {
