@@ -544,6 +544,35 @@ describe("ArticleEditor topics requirement", () => {
     })
   })
 
+  test("the drawer will not save an article with its topics emptied", async () => {
+    const topics = factories.learningResources.topics({ count: 1 })
+    const [topic] = topics.results
+    setMockResponse.get(urls.topics.list({ limit: 1000 }), topics)
+    const { article } = renderArticleEditor({
+      isPublished: true,
+      topics: [topic.id],
+    })
+    setMockResponse.patch(urls.websiteContent.details(article.id), article)
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Settings" }),
+    )
+    await userEvent.click(
+      await screen.findByRole("button", { name: `Remove ${topic.name}` }),
+    )
+
+    /**
+     * The drawer is where a selection can be taken away, so gating the save
+     * buttons is not enough on its own -- an article would lose its topics
+     * through here, and with them its place on a topic page.
+     */
+    expect(screen.getByRole("button", { name: "Save Settings" })).toBeDisabled()
+    await screen.findByText("Select at least one topic to save your article")
+    expect(makeRequest).not.toHaveBeenCalledWith(
+      expect.objectContaining({ method: "patch" }),
+    )
+  })
+
   test("closing the drawer abandons the held-back publish", async () => {
     const topic = mockTopics()
     const { article } = renderArticleEditor()
