@@ -67,7 +67,7 @@ export const hero = {
     { value: "150+", label: ["MIT faculty", "& expert contributors"] },
     {
       value: "500+",
-      label: ["Unique courses & programs"],
+      label: ["Unique courses", "& programs"],
     },
   ] satisfies StatItem[],
 }
