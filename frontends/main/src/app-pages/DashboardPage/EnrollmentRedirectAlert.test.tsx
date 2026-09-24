@@ -269,7 +269,11 @@ describe("EnrollmentRedirectAlert", () => {
 
   test("tracks checkout-completed once with order id, course name, and value from receipt", async () => {
     const receipt = mitxonline.factories.orders.order({
-      lines: [mitxonline.factories.orders.transactionLine()],
+      lines: [
+        mitxonline.factories.orders.transactionLine({
+          content_type: "courserun",
+        }),
+      ],
       total_price_paid: "199.99",
     })
 
@@ -294,6 +298,8 @@ describe("EnrollmentRedirectAlert", () => {
         orderId: 17,
         courseName: receipt.lines[0].content_title,
         value: 199.99,
+        readableId: receipt.lines[0].readable_id,
+        contentType: "courserun",
       },
     )
   })
@@ -317,7 +323,13 @@ describe("EnrollmentRedirectAlert", () => {
     })
     expect(mockedPostHogCapture).toHaveBeenCalledWith(
       PostHogEvents.CheckoutCompleted,
-      { orderId: 18, courseName: undefined, value: null },
+      {
+        orderId: 18,
+        courseName: undefined,
+        value: null,
+        readableId: undefined,
+        contentType: undefined,
+      },
     )
   })
 

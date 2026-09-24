@@ -207,10 +207,13 @@ const EnrollmentRedirectAlert: React.FC = () => {
       value,
     })
     if (env("NEXT_PUBLIC_POSTHOG_API_KEY")) {
+      const line = paidReceipt.data?.lines[0]
       posthog.capture(PostHogEvents.CheckoutCompleted, {
         orderId: request.orderId,
         courseName,
         value,
+        readableId: line?.readable_id,
+        contentType: line?.content_type,
       })
     }
   }, [request, paidReceipt.isPending, paidReceipt.data, posthog])
