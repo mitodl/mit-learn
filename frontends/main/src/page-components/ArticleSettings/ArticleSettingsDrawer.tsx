@@ -206,9 +206,12 @@ export interface ArticleSettingsDrawerProps {
    */
   showTopics?: boolean
   /**
-   * Whether the content cannot be saved without a topic, which the section
-   * says so long as none is picked. The caller does the enforcing; this is
-   * only what tells the editor why the drawer opened on them.
+   * Whether the content cannot be saved without a topic.
+   *
+   * The section says so while none is picked, and saving is refused until one
+   * is: this drawer is the one place a selection can be taken away, so a
+   * caller that gates its own save buttons would otherwise still lose the
+   * topics through here.
    */
   topicsRequired?: boolean
   /** Values to open with. Re-read each time the drawer opens. */
@@ -537,6 +540,11 @@ const ArticleSettingsDrawer = ({
             </Button>
             <Button
               variant="primary"
+              /* Refused rather than silently ignored: the editor has emptied
+                 the selection on screen and has to see why it will not save. */
+              disabled={
+                topicsRequired && showTopics && selectedIds.length === 0
+              }
               onClick={() => {
                 onSave?.({
                   /* Undefined rather than [] with the section hidden: the
