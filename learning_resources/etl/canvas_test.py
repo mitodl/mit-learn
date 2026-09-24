@@ -2649,6 +2649,35 @@ def test_sync_canvas_archive_saves_checksum_for_legitimately_empty_course(
     assert _canvas_run(readable_id).checksum
 
 
+def test_sync_canvas_archive_keeps_rows_when_export_goes_empty(
+    mock_purge_tasks, sync_mocks, tmp_path
+):
+    """
+    An export that drops to no files keeps its rows published, so the next
+    unchanged sync skips instead of treating the run as stale forever
+    """
+    key = "canvas/course_content/1/abc.imscc"
+    readable_id = sync_canvas_archive(sync_mocks.bucket, key, overwrite=False)
+    rows = ContentFileFactory.create_batch(
+        2, run=_canvas_run(readable_id), published=True
+    )
+    locked_zip = make_timed_lock_zip(
+        tmp_path, "2099-01-01T00:00:00", name="all_locked.zip"
+    )
+    sync_mocks.bucket.download_file.side_effect = lambda _key, dest: Path(
+        dest
+    ).write_bytes(locked_zip.read_bytes())
+    sync_mocks.load_content.return_value = []
+
+    sync_canvas_archive(sync_mocks.bucket, key, overwrite=False)
+    sync_canvas_archive(sync_mocks.bucket, key, overwrite=False)
+
+    assert sync_mocks.load_content.call_count == 2
+    assert all(ContentFile.objects.get(id=row.id).published for row in rows)
+    mock_purge_tasks.deindex.assert_not_called()
+    mock_purge_tasks.qdrant.assert_not_called()
+
+
 TWO_FILE_MANIFEST_XML = b"""<?xml version="1.0" encoding="UTF-8"?>
 <manifest xmlns="http://www.imsglobal.org/xsd/imsccv1p1/imscp_v1p1">
   <resources>

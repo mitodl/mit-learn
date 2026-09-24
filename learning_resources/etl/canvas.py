@@ -179,7 +179,7 @@ def run_for_canvas_archive(course_archive_path, course_folder, checksum, overwri
     run = resource.runs.first()
     resource_readable_id = run.learning_resource.readable_id
     # rows that are all unpublished were stripped by a bulk deindex, not by
-    # the export (an empty course has no rows), so reload them
+    # the export (which never unpublishes every row), so reload them
     stale_run = (
         run.content_files.exists()
         and not run.content_files.filter(published=True).exists()
@@ -203,7 +203,7 @@ def transform_canvas_content_files(
 
     Files whose extraction fails are skipped and their existing records
     are retained. Files no longer in the archive are unpublished and purged
-    from both indexes.
+    from both indexes, unless the archive has no files at all.
     """
     from learning_resources_search import tasks as search_tasks
     from vector_search import tasks as vector_tasks
@@ -263,11 +263,14 @@ def transform_canvas_content_files(
         published_keys.append(failed_key)
         if failed_keys is not None:
             failed_keys.append(failed_key)
-    # soft-delete: the purge tasks look the rows up, so they must outlive dispatch
+    # soft-delete: the purge tasks look the rows up, so they must outlive dispatch.
+    # An export with no files is more likely broken than emptied, so its rows
+    # are kept (as load_content_files does); unpublishing them all would make
+    # every later sync treat the run as stale.
     stale_files = run.content_files.exclude(key__in=published_keys).filter(
         published=True
     )
-    if stale_files.update(published=False):
+    if published_keys and stale_files.update(published=False):
         search_tasks.deindex_run_content_files.delay(run.id, unpublished_only=True)
         vector_tasks.remove_unpublished_run_content_files.delay(run.id)
 
