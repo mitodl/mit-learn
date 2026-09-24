@@ -1,6 +1,12 @@
 Release Notes
 =============
 
+Version 0.80.18
+---------------
+
+- feat(product-pages): render CMS-managed testimonials and FAQs on course and program pages (#3969)
+- Re-enable Next.js image optimization (#3983)
+
 Version 0.80.17
 ---------------
 
