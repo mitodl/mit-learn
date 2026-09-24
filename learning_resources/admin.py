@@ -2,8 +2,31 @@
 
 from django.contrib import admin
 from django.contrib.admin import TabularInline
+from django.contrib.admin.widgets import AdminTextareaWidget
+from django.contrib.postgres.fields import ArrayField
+from django.contrib.postgres.forms import SimpleArrayField
 
 from learning_resources import models
+
+
+class LineSeparatedArrayField(SimpleArrayField):
+    """
+    Edit an ArrayField as one item per line instead of one comma-separated line.
+    """
+
+    def __init__(self, base_field, **kwargs):
+        kwargs.setdefault("delimiter", "\n")
+        super().__init__(base_field, **kwargs)
+
+    def to_python(self, value):
+        """Split on lines, dropping the blank ones and any carriage returns"""
+        if isinstance(value, str):
+            # A textarea submits CRLF, and a trailing newline or a gap
+            # between entries would otherwise become an empty item.
+            value = self.delimiter.join(
+                line.strip() for line in value.splitlines() if line.strip()
+            )
+        return super().to_python(value)
 
 
 class LearningResourceInstructorAdmin(admin.ModelAdmin):
@@ -342,10 +365,25 @@ class CredentialMetadataAdmin(admin.ModelAdmin):
     """CredentialMetadata Admin"""
 
     model = models.CredentialMetadata
-    list_display = ("learning_resource", "description", "created_on", "updated_on")
+    list_display = (
+        "learning_resource",
+        "description",
+        "criteria",
+        "created_on",
+        "updated_on",
+    )
     search_fields = ("learning_resource__readable_id", "learning_resource__title")
     readonly_fields = ("created_on", "updated_on")
     raw_id_fields = ("learning_resource",)
+    # `criteria` is the only ArrayField here. Without this it renders as a
+    # one-line TextInput beside `description`'s textarea, too small to read
+    # the values it holds.
+    formfield_overrides = {
+        ArrayField: {
+            "form_class": LineSeparatedArrayField,
+            "widget": AdminTextareaWidget,
+        }
+    }
 
 
 admin.site.register(models.LearningResourceTopic, LearningResourceTopicAdmin)
