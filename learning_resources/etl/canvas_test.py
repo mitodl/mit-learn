@@ -2537,6 +2537,29 @@ def test_sync_canvas_archive_skips_unchanged_archive(sync_mocks):
     assert _canvas_run(readable_id).checksum == first_checksum
 
 
+@pytest.mark.parametrize(
+    ("published", "reloaded"),
+    [(True, False), (False, True)],
+    ids=["published_rows", "all_rows_unpublished"],
+)
+def test_sync_canvas_archive_reloads_unpublished_run(sync_mocks, published, reloaded):
+    """
+    An unchanged archive is skipped unless every row of its run is unpublished,
+    which a bulk deindex does and the export never does
+    """
+    readable_id = sync_canvas_archive(
+        sync_mocks.bucket, "canvas/course_content/1/abc.imscc", overwrite=False
+    )
+    ContentFileFactory.create_batch(
+        2, run=_canvas_run(readable_id), published=published
+    )
+
+    sync_canvas_archive(
+        sync_mocks.bucket, "canvas/course_content/1/abc.imscc", overwrite=False
+    )
+    assert sync_mocks.load_content.call_count == (2 if reloaded else 1)
+
+
 def test_sync_canvas_archive_saves_checksum_only_after_successful_load(sync_mocks):
     """
     A failed load must leave the checksum unset so the next sync retries

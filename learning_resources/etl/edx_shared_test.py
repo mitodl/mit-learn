@@ -1893,13 +1893,20 @@ def test_unpublish_excluded_content_files_dry_run(staff_only_run, mock_deindex_t
     mock_deindex_tasks.qdrant.assert_not_called()
 
 
-def test_process_course_archive_reloads_when_receipt_is_stale(mocker):
-    """A matching archive_key and checksum must not skip a run whose rows are gone"""
+@pytest.mark.parametrize(
+    "unpublished_rows", [False, True], ids=["deleted", "unpublished"]
+)
+def test_process_course_archive_reloads_when_receipt_is_stale(mocker, unpublished_rows):
+    """
+    A matching archive_key and checksum must not skip a run whose rows are
+    gone or all unpublished
+    """
     key = "mitxonline/courses/course-v1:Test+Course+R1/archive.tar.gz"
     run = LearningResourceRunFactory.create(
         published=True, archive_key=key, checksum="abc123"
     )
-    assert not run.content_files.exists()
+    if unpublished_rows:
+        ContentFileFactory.create_batch(2, run=run, published=False)
     bucket = mocker.MagicMock()
     mocker.patch(
         "learning_resources.etl.edx_shared.calc_checksum", return_value="abc123"

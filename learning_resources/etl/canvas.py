@@ -178,7 +178,13 @@ def run_for_canvas_archive(course_archive_path, course_folder, checksum, overwri
         )
     run = resource.runs.first()
     resource_readable_id = run.learning_resource.readable_id
-    if run.checksum == checksum and not overwrite:
+    # rows that are all unpublished were stripped by a bulk deindex, not by
+    # the export (an empty course has no rows), so reload them
+    stale_run = (
+        run.content_files.exists()
+        and not run.content_files.filter(published=True).exists()
+    )
+    if run.checksum == checksum and not overwrite and not stale_run:
         log.debug("Checksums match for %s, skipping load", readable_id)
         return resource_readable_id, None
     return resource_readable_id, run

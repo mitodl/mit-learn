@@ -133,11 +133,13 @@ def process_course_archive(
     Returns:
         bool: False if skipped via matching archive_key, True otherwise
     """
-    # A saved checksum means this archive once produced rows. If they are gone
-    # (bulk deindex then cleanup), the run is stale and must not skip the
-    # load. An empty archive records archive_key with no checksum, so it still
-    # skips.
-    stale_run = bool(run.checksum) and not run.content_files.exists()
+    # A saved checksum means this archive once produced published rows. If
+    # none are left (a bulk deindex unpublished them, cleanup may have deleted
+    # them since), the run is stale and must not skip the load. An empty
+    # archive records archive_key with no checksum, so it still skips.
+    stale_run = (
+        bool(run.checksum) and not run.content_files.filter(published=True).exists()
+    )
 
     if run.archive_key == key and not overwrite and not stale_run:
         log.debug("Archive key unchanged for %s, skipping download", key)
