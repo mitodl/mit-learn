@@ -229,6 +229,35 @@ def test_sync_edx_course_files_prefers_published_run(mocker):
     assert mock_process.call_args[0][2] == current
 
 
+def test_sync_edx_course_files_published_tie_picks_lowest_id(mocker):
+    """When two published runs match one archive, the lower id wins, as on the webhook path"""
+    source = ETLSource.oll.name
+    course = LearningResourceFactory.create(
+        etl_source=source, published=True, create_runs=False
+    )
+    first = LearningResourceRunFactory.create(
+        learning_resource=course, run_id="placeholder", published=True
+    )
+    LearningResourceRunFactory.create(
+        learning_resource=course,
+        run_id="course-v1:MITx+8.01.1x+3T2018",
+        published=True,
+    )
+    # changing an indexed column rewrites the row at the end of the table, so an
+    # unordered query would return `first` last
+    first.run_id = "course-v1:OCW+8.01.1x+3T2018"
+    first.save()
+    mocker.patch("learning_resources.etl.edx_shared.get_bucket_by_name")
+    mock_process = mocker.patch(
+        "learning_resources.etl.edx_shared.process_course_archive", return_value=True
+    )
+    key = f"{get_s3_prefix_for_source(source)}/8_01_1x_3T2018_OLL.tar.gz"
+
+    sync_edx_course_files(source, [course.id], [key])
+
+    assert mock_process.call_args[0][2] == first
+
+
 @pytest.mark.parametrize("source", [ETLSource.mitxonline.value, ETLSource.xpro.value])
 def test_sync_edx_course_files_invalid_tarfile(
     mock_course_archive_bucket, mocker, source
@@ -1240,6 +1269,18 @@ def test_build_run_lookup_oll_strips_org_prefix(run_id, archive_stem):
     key = f"{get_s3_prefix_for_source(source)}/{archive_stem}_OLL.tar.gz"
     assert lookup[extract_run_id_from_key(source, key)][0].id == run.id
     assert normalize_run_id(source, run_id) in lookup
+
+
+def test_build_run_lookup_oll_keeps_two_segment_run_id():
+    """A run id with no org segment is not also indexed under its last segment"""
+    source = ETLSource.oll.name
+    course = LearningResourceFactory.create(
+        etl_source=source, published=True, create_runs=False
+    )
+    LearningResourceRunFactory.create(
+        learning_resource=course, run_id="Foo+2T2019", published=True
+    )
+    assert list(build_run_lookup(source, [course.id])) == ["foo.2t2019"]
 
 
 def test_build_run_lookup_filters_by_ids():

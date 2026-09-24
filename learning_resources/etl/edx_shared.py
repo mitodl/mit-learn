@@ -103,6 +103,8 @@ def build_run_lookup(
                 to_attr="_published_runs",
             )
         )
+        # ties among published runs go to the lowest id, as in run_for_edx_archive
+        .order_by("id")
     )
     if ids:
         runs = runs.filter(learning_resource_id__in=ids)
@@ -111,7 +113,7 @@ def build_run_lookup(
     for run in runs:
         normalized = normalize_run_id(etl_source, run.run_id)
         lookup.setdefault(normalized, []).append(run)
-        if etl_source == ETLSource.oll.name and "+" in run.run_id:
+        if etl_source == ETLSource.oll.name and run.run_id.count("+") > 1:
             # OLL archive filenames omit the org segment (MITx+, OCW+, ...)
             org_less = normalize_run_id(etl_source, run.run_id.split("+", 1)[1])
             lookup.setdefault(org_less, []).append(run)
