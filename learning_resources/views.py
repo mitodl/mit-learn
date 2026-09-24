@@ -1,6 +1,7 @@
 """Views for learning_resources"""
 
 import logging
+import re
 from hmac import compare_digest
 
 import rapidjson
@@ -1288,6 +1289,14 @@ class UserListMembershipViewSet(viewsets.ReadOnlyModelViewSet):
         ).order_by("child", "parent")
 
 
+_WEBHOOK_KEY_BODY_PATTERN = re.compile(rb'("webhook_key"\s*:\s*)"(?:[^"\\]|\\.)*"')
+
+
+def _redact_webhook_key(body: bytes) -> bytes:
+    """Redact a JSON request body's webhook_key value before logging it"""
+    return _WEBHOOK_KEY_BODY_PATTERN.sub(rb'\1"[redacted]"', body)
+
+
 @method_decorator(blocked_ip_exempt, name="dispatch")
 class WebhookOCWView(views.APIView):
     """
@@ -1302,9 +1311,8 @@ class WebhookOCWView(views.APIView):
         Raise any exception with request info instead of returning response
         with error status/message
         """
-        msg = (
-            f"Error ({exc}). BODY: {self.request.body or ''}, META: {self.request.META}"
-        )
+        safe_body = _redact_webhook_key(self.request.body) or ""
+        msg = f"Error ({exc}). BODY: {safe_body}, META: {self.request.META}"
         raise WebhookException(msg) from exc
 
     @extend_schema(exclude=True)

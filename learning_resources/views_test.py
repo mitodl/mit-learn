@@ -676,6 +676,36 @@ def test_ocw_webhook_endpoint_bad_key(settings, client):
         )
 
 
+def test_ocw_webhook_endpoint_bad_key_is_redacted_from_error(settings, client):
+    """The (wrong) attempted key must not appear verbatim in the raised error"""
+    settings.OCW_WEBHOOK_KEY = "fake_key"
+    with pytest.raises(WebhookException) as exc_info:
+        client.post(
+            reverse("lr:v1:ocw-next-webhook"),
+            data={"webhook_key": "bad_key", "prefix": "prefix", "version": "live"},
+            headers={"Content-Type": "text/plain"},
+        )
+    assert "bad_key" not in str(exc_info.value)
+    assert "[redacted]" in str(exc_info.value)
+
+
+def test_ocw_webhook_endpoint_does_not_leak_secret_on_post_auth_error(settings, client):
+    """
+    A correctly-authenticated request that errors *after* the key check (e.g.
+    prefixes sent as an int, which .split(',') can't handle) must not leak the
+    real webhook_key into the resulting exception message.
+    """
+    settings.OCW_WEBHOOK_KEY = "fake_key"
+    with pytest.raises(WebhookException) as exc_info:
+        client.post(
+            reverse("lr:v1:ocw-next-webhook"),
+            data={"webhook_key": "fake_key", "prefixes": 12345, "version": "live"},
+            headers={"Content-Type": "text/plain"},
+        )
+    assert "fake_key" not in str(exc_info.value)
+    assert "[redacted]" in str(exc_info.value)
+
+
 def test_topics_list_endpoint(client, django_assert_num_queries):
     """Test topics list endpoint"""
     topics = sorted(
