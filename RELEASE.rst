@@ -1,6 +1,21 @@
 Release Notes
 =============
 
+Version 0.80.15
+---------------
+
+- credential metadata task (#3950)
+- Skip unreferenced static files when ingesting edX course archives (#3942)
+- Mark the Django session cookie Secure by default (#3968)
+
+Version 0.80.14
+---------------
+
+- adding link to program letter in dashboard (#3965)
+- Update actions/deploy-pages action to v5 (#3897)
+- feat(product-pages): render CMS-managed FAQs on course and program pages (#3954)
+- feat: show a learner's own program price as an applied-savings breakdown (#3943)
+
 Version 0.80.13
 ---------------
 

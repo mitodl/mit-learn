@@ -1,5 +1,11 @@
 import React from "react"
-import { render, screen, within } from "@testing-library/react"
+import {
+  render,
+  screen,
+  waitForElementToBeRemoved,
+  within,
+} from "@testing-library/react"
+import userEvent from "@testing-library/user-event"
 import { ThemeProvider, useTheme } from "ol-components"
 import type { Theme } from "ol-components"
 import { factories } from "api/analytics-test-utils"
@@ -142,6 +148,70 @@ describe("EngagementTrendChart", () => {
         selector: ".MuiChartsLabel-root",
       }),
     ).toBeInTheDocument()
+  })
+
+  /**
+   * "Active learners" alone doesn't say what counts as active — the hover
+   * icon's accessible label carries the definition for keyboard and screen
+   * reader users, not just pointer hover. Scoped to the table: `SERIES` with
+   * the trigger's description also drives a second, mobile-only copy of this
+   * same trigger outside the table (see the test below), so an unscoped query
+   * would match both.
+   */
+  test("explains what counts as an active learner from the column header", () => {
+    renderWithTheme(<EngagementTrendChart rows={months} isLoading={false} />)
+
+    const table = screen.getByRole("table", { name: "Monthly engagement" })
+    expect(
+      within(table).getByLabelText(
+        /Learners who did anything in a course this month/,
+      ),
+    ).toBeInTheDocument()
+  })
+
+  /**
+   * The column header carrying that trigger is hidden below the `md`
+   * breakpoint (`TableHeaderRow`), so mobile/tablet users need an equivalent
+   * — once, outside the table, not repeated for every month's row.
+   */
+  test("repeats the active-learner definition once for mobile, outside the table", () => {
+    renderWithTheme(<EngagementTrendChart rows={months} isLoading={false} />)
+
+    const table = screen.getByRole("table", { name: "Monthly engagement" })
+    const triggers = screen.getAllByLabelText(
+      /Learners who did anything in a course this month/,
+    )
+    expect(triggers).toHaveLength(2)
+    expect(triggers.some((trigger) => !table.contains(trigger))).toBe(true)
+  })
+
+  /**
+   * A static aria-label proves nothing about whether the `Tooltip` itself
+   * works — this test would still pass if `Tooltip` were deleted entirely.
+   * Driving real hover and asserting the rendered popper text catches that;
+   * keyboard focus isn't asserted here because MUI only opens on focus when
+   * `:focus-visible` matches (`isFocusVisible`), which this test environment
+   * doesn't set for a programmatic `.focus()` call — see the same caveat in
+   * ContractAdminPage.test.tsx's tooltip test.
+   */
+  test("shows the active-learner definition on hover", async () => {
+    const user = userEvent.setup()
+    renderWithTheme(<EngagementTrendChart rows={months} isLoading={false} />)
+
+    const table = screen.getByRole("table", { name: "Monthly engagement" })
+    const trigger = within(table).getByLabelText(
+      /Learners who did anything in a course this month/,
+    )
+
+    await user.hover(trigger)
+    expect(
+      await screen.findByRole("tooltip", {
+        name: /Learners who did anything in a course this month/,
+      }),
+    ).toBeInTheDocument()
+
+    await user.unhover(trigger)
+    await waitForElementToBeRemoved(() => screen.queryByRole("tooltip"))
   })
 
   test("shows an empty state rather than an empty chart", () => {

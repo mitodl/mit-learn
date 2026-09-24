@@ -1,7 +1,13 @@
 "use client"
 
 import React from "react"
-import { HubspotForm, Link, styled, type HubspotFormValue } from "ol-components"
+import {
+  HubspotForm,
+  Link,
+  RECAPTCHA_MARGIN_VAR,
+  styled,
+  type HubspotFormValue,
+} from "ol-components"
 import {
   Button,
   ButtonLink,
@@ -121,6 +127,13 @@ const StyledHubspotForm = styled(HubspotForm)(({ theme }) => ({
       minWidth: 0,
     },
   },
+  /**
+   * ReCaptcha's own vertical margin stacks on top of this form's 24px gap and
+   * makes the space around it uneven with every other gap in the form.
+   * Cancel it via its margin custom property so the form's own gap is the
+   * only spacing mechanism.
+   */
+  [RECAPTCHA_MARGIN_VAR]: 0,
   [theme.breakpoints.down("md")]: {
     fieldset: {
       flexDirection: "column",

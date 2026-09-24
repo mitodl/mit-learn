@@ -2,7 +2,7 @@
 
 import React, { useCallback, useRef, useState } from "react"
 import Image from "next/image"
-import { styled, pxToRem } from "ol-components"
+import { styled } from "ol-components"
 import { CarouselV2 } from "ol-components/CarouselV2"
 import { VisuallyHidden } from "@mitodl/smoot-design"
 import {
@@ -28,10 +28,10 @@ const Inner = styled(SectionInner)(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
   gap: "48px",
-  padding: "96px 24px 40px",
+  padding: "96px 0 40px",
   [theme.breakpoints.down("md")]: {
     gap: "32px",
-    padding: "32px 24px 16px",
+    padding: "32px 0 16px",
   },
 }))
 
@@ -225,7 +225,7 @@ const PillarTitle = styled.h4(({ theme }) => ({
 }))
 
 const PillarBody = styled.p(({ theme }) => ({
-  ...theme.typography.body2,
+  ...theme.typography.body2Loose,
   color: theme.custom.colors.darkGray2,
   margin: 0,
 }))
@@ -251,8 +251,7 @@ const QuoteMark = styled.span(({ theme }) => ({
 }))
 
 const QuoteText = styled.p(({ theme }) => ({
-  ...theme.typography.body2,
-  lineHeight: pxToRem(22),
+  ...theme.typography.body2Loose,
   color: theme.custom.colors.darkGray2,
   margin: 0,
   marginTop: "-16px",

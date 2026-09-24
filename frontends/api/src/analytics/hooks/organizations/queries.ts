@@ -1,6 +1,6 @@
 import { queryOptions } from "@tanstack/react-query"
 import { analyticsContractsApi, analyticsOrganizationsApi } from "../../clients"
-import type { AnalyticsPageParams } from "../../types"
+import type { AnalyticsPageParams, LearnerProgressParams } from "../../types"
 
 /**
  * `orgId` in every key is the Keycloak organization UUID — see
@@ -23,6 +23,9 @@ const analyticsOrganizationKeys = {
  * `as_of` in each response instead.
  */
 const ANALYTICS_STALE_TIME = 5 * 60 * 1000
+
+/** See `analyticsContractQueries.learnerProgress`. */
+const LEARNER_PROGRESS_STALE_TIME = 60 * 1000
 
 const analyticsOrganizationQueries = {
   contractUtilization: (orgId: string, page?: AnalyticsPageParams) =>
@@ -107,6 +110,20 @@ const analyticsContractKeys = {
       resource,
       page,
     ] as const,
+  /**
+   * Its own builder rather than widening `resource`, whose `page` is typed as
+   * `AnalyticsPageParams` and is relied on by the four sections above.
+   */
+  learnerProgress: (
+    orgId: string,
+    contractId: string,
+    params?: LearnerProgressParams,
+  ) =>
+    [
+      ...analyticsContractKeys.contract(orgId, contractId),
+      "learner-progress",
+      params,
+    ] as const,
 }
 
 const analyticsContractQueries = {
@@ -183,6 +200,29 @@ const analyticsContractQueries = {
       queryFn: async ({ signal }) =>
         analyticsContractsApi
           .contentEngagement(orgId, contractId, page, signal)
+          .then((res) => res.data),
+    }),
+
+  /**
+   * Shorter-lived than the sections above: this is the enrollment and consent
+   * state a manager acts on directly, not an hours-cadence rollup, so a stale
+   * page here is more costly than the extra query.
+   */
+  learnerProgress: (
+    orgId: string,
+    contractId: string,
+    params?: LearnerProgressParams,
+  ) =>
+    queryOptions({
+      queryKey: analyticsContractKeys.learnerProgress(
+        orgId,
+        contractId,
+        params,
+      ),
+      staleTime: LEARNER_PROGRESS_STALE_TIME,
+      queryFn: async ({ signal }) =>
+        analyticsContractsApi
+          .learnerProgress(orgId, contractId, params, signal)
           .then((res) => res.data),
     }),
 }
