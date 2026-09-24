@@ -471,6 +471,29 @@ def test_content_files_loaded_unpublished_run_embeds_qdrant_only(
 
 
 @pytest.mark.django_db
+def test_content_files_loaded_test_mode_canvas_purges_qdrant_only(
+    mock_search_index_helpers, settings
+):
+    """A test_mode Canvas run drops its unpublished files from Qdrant and stays out of OpenSearch"""
+    settings.QDRANT_ENABLE_INDEXING_PLUGIN_HOOKS = True
+    run = LearningResourceRunFactory.create(
+        published=True,
+        learning_resource__etl_source=ETLSource.canvas.name,
+        learning_resource__published=False,
+        learning_resource__test_mode=True,
+        learning_resource__create_runs=False,
+    )
+    ContentFileFactory.create(run=run, published=False)
+
+    SearchIndexPlugin().content_files_loaded(run)
+
+    mock_search_index_helpers.mock_remove_unpublished_run_contentfiles_immutable_signature.assert_called_once_with(
+        run.id
+    )
+    mock_search_index_helpers.mock_upsert_contentfiles_immutable_signature.assert_not_called()
+
+
+@pytest.mark.django_db
 def test_content_files_loaded_non_best_published_run_skips_opensearch(
     mock_search_index_helpers, settings
 ):
