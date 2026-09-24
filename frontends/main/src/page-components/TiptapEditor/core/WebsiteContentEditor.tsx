@@ -342,10 +342,12 @@ const WebsiteContentEditor = ({
   const [isPublishing, setIsPublishing] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
   /**
-   * A save held back for want of topics, remembering whether it was a publish.
-   * `handleSettingsSave` resumes it once a topic has been picked.
+   * Whether a publish is waiting on topics. `handleSettingsSave` resumes it
+   * once one has been picked. Only a publish is ever held back: a draft saves
+   * itself, and autosave cannot stop to ask.
    */
-  const [pendingSave, setPendingSave] = useState<boolean | null>(null)
+  const [awaitingTopicsForPublish, setAwaitingTopicsForPublish] =
+    useState(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
   const [resetAttempted, setResetAttempted] = useState(false)
   const [content, setContent] = useState<JSONContent>(
@@ -424,8 +426,8 @@ const WebsiteContentEditor = ({
   /**
    * Returns a promise that settles with the save, so a confirmation dialog can
    * await it: it must not close until the request has actually succeeded, and
-   * must stay open if it fails. Rejects on failure — see `saveQuietly` for the
-   * buttons that save without a dialog.
+   * must stay open if it fails. Rejects on failure, so every caller that is
+   * not a dialog has to handle the rejection itself.
    */
   const handleSave = async (publish: boolean, topicsOverride?: number[]) => {
     if (!title) return
@@ -461,7 +463,7 @@ const WebsiteContentEditor = ({
    * ride along with the create.
    *
    * The failure is surfaced by the `saveError` alert below, so the rejection is
-   * swallowed rather than left unhandled -- as in `saveQuietly`.
+   * swallowed rather than left unhandled.
    */
   const handleSettingsSave = ({
     topics: nextTopics,
@@ -472,13 +474,12 @@ const WebsiteContentEditor = ({
     if (nextTopics === undefined) return
     setTopics(nextTopics)
 
-    // A save that was held back resumes here, carrying the new selection, so
-    // the content write persists the topics and no separate PATCH is needed.
-    if (pendingSave !== null && nextTopics.length > 0) {
-      const publish = pendingSave
-      setPendingSave(null)
-      if (publish) startPublish(nextTopics)
-      else saveQuietly(false, nextTopics)
+    // A publish that was held back resumes here, carrying the new selection,
+    // so the content write persists the topics and no separate PATCH is
+    // needed.
+    if (awaitingTopicsForPublish && nextTopics.length > 0) {
+      setAwaitingTopicsForPublish(false)
+      startPublish(nextTopics)
       return
     }
 
@@ -486,15 +487,6 @@ const WebsiteContentEditor = ({
     updateMutation
       .mutateAsync({ id: contentItem.id, topics: nextTopics })
       .catch(() => undefined)
-  }
-
-  /**
-   * For the buttons that save with no dialog awaiting the result. The failure
-   * is already surfaced by the `saveError` alert below, so the rejection is
-   * swallowed here rather than left unhandled.
-   */
-  const saveQuietly = (publish: boolean, topicsOverride?: number[]) => {
-    handleSave(publish, topicsOverride).catch(() => undefined)
   }
 
   /**
@@ -544,7 +536,7 @@ const WebsiteContentEditor = ({
 
   /** Hold the publish back and ask for topics. */
   const askForTopics = () => {
-    setPendingSave(true)
+    setAwaitingTopicsForPublish(true)
     setSettingsOpen(true)
   }
 
@@ -842,7 +834,7 @@ const WebsiteContentEditor = ({
                   setSettingsOpen(false)
                   // Dropped rather than kept: a press the editor walked away
                   // from must not fire the next time topics happen to be saved.
-                  setPendingSave(null)
+                  setAwaitingTopicsForPublish(false)
                 }}
                 contentLabel={contentLabel}
                 /* Only an article becomes a LearningResource, so only there do
