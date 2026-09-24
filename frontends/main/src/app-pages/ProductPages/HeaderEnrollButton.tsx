@@ -4,6 +4,9 @@ import { Stack } from "ol-components"
 import { SignupPopover } from "@/page-components/SignupPopover/SignupPopover"
 import { EnrollButton } from "./EnrollAreaParts"
 import EnrolledLink from "./EnrolledLink"
+import { badRequestDetail } from "api/mutation-errors"
+import ErrorMessageWithSupport from "@/components/ErrorMessageWithSupport/ErrorMessageWithSupport"
+import { ENROLL_FAILURE_MESSAGE } from "./enrollTypes"
 import type { EnrollAreaState } from "./enrollTypes"
 
 /**
@@ -37,7 +40,8 @@ type HeaderEnrollButtonProps = {
   state: EnrollAreaState
   isStatusLoading: boolean
   isPending: boolean
-  isError: boolean
+  /** The failed enroll action's error, or null when there was none. */
+  error: unknown
   /** SignupPopover anchor owned by the caller (set via the hook's onRequireSignup). */
   anchor: HTMLButtonElement | null
   onAnchorClose: () => void
@@ -52,7 +56,7 @@ const HeaderEnrollButton: React.FC<HeaderEnrollButtonProps> = ({
   state,
   isStatusLoading,
   isPending,
-  isError,
+  error,
   anchor,
   onAnchorClose,
 }) => {
@@ -79,11 +83,12 @@ const HeaderEnrollButton: React.FC<HeaderEnrollButtonProps> = ({
           {/* This hook instance's mutations are local to the header button, so
               failures must surface here — the InfoBox alert observes its own
               separate mutation instances and never fires for header clicks. */}
-          {isError && (
+          {!!error && (
             <HeaderAlertSizer>
               <Alert severity="error">
-                There was a problem processing your enrollment. Please try
-                again.
+                <ErrorMessageWithSupport>
+                  {badRequestDetail(error) ?? ENROLL_FAILURE_MESSAGE}
+                </ErrorMessageWithSupport>
               </Alert>
             </HeaderAlertSizer>
           )}

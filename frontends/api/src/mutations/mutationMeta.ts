@@ -42,6 +42,12 @@ export type MutationErrorMeta = {
    * ```
    */
   getErrorMessage?: (error: unknown, variables: unknown) => string
+  /**
+   * Append a "Contact Support" link to the toast. For a failure the user
+   * cannot resolve themselves - enrollment, chiefly - where the message on
+   * its own is a dead end.
+   */
+  contactSupport?: boolean
 }
 
 /**

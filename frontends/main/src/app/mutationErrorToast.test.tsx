@@ -4,8 +4,10 @@ import {
   renderWithProviders,
   screen,
   user,
+  within,
   expectErrorToast,
 } from "@/test-utils"
+import * as urls from "@/common/urls"
 import { GENERIC_ERROR_MESSAGE } from "@/app/getQueryClient"
 import { SILENCE_ERROR_TOAST } from "api/mutation-meta"
 import type { MutationErrorMeta } from "api/mutation-meta"
@@ -63,4 +65,21 @@ test("a mutation with SILENCE_ERROR_TOAST shows only its inline error, no toast"
   expect(alert).toHaveTextContent("Inline failure")
   // Exactly one alert — the inline one — i.e. the global toast was suppressed.
   expect(screen.getAllByRole("alert")).toHaveLength(1)
+})
+
+test("meta.contactSupport puts a support link in the toast", async () => {
+  renderWithProviders(
+    <MutatingButton
+      meta={{ errorMessage: "Enrollment failed.", contactSupport: true }}
+    />,
+  )
+
+  await user.click(screen.getByRole("button", { name: "Submit" }))
+
+  const alert = await screen.findByRole("alert")
+  expect(alert).toHaveTextContent("Enrollment failed.")
+  expect(
+    within(alert).getByRole("link", { name: "Contact Support" }),
+  ).toHaveAttribute("href", urls.SUPPORT_REQUEST)
+  await expectErrorToast("Enrollment failed.", { contactSupport: true })
 })

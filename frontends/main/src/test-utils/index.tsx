@@ -197,10 +197,17 @@ const ignoreError = (errorMessage: string, timeoutMs?: number) => {
  * one deliberate error surface — no double alert (inline error plus toast),
  * and no silent failure.
  */
-const expectErrorToast = async (message: string | RegExp) => {
+const expectErrorToast = async (
+  message: string | RegExp,
+  /** Assert whether the toast also offers a support link. */
+  opts?: { contactSupport: boolean },
+) => {
   // The toast fires from `MutationCache.onError`, outside React — wait for it.
   await waitFor(() => expect(getToastSnapshot()).not.toBeNull())
   expect(getToastSnapshot()?.message).toMatch(message)
+  if (opts) {
+    expect(getToastSnapshot()?.contactSupport).toBe(opts.contactSupport)
+  }
   act(() => dismissErrorToast())
 }
 

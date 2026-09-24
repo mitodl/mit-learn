@@ -19,7 +19,7 @@ const CourseEnrollArea: React.FC<CourseEnrollAreaProps> = ({
 }) => {
   const [anchor, setAnchor] = React.useState<null | HTMLButtonElement>(null)
 
-  const { state, scenario, isStatusLoading, isPending, isError } =
+  const { state, scenario, isStatusLoading, isPending, error } =
     useCourseEnrollment(course, selectedRun, {
       tracking: { placement: "infobox" },
       onRequireSignup: setAnchor,
@@ -43,7 +43,7 @@ const CourseEnrollArea: React.FC<CourseEnrollAreaProps> = ({
       state={state}
       isStatusLoading={isStatusLoading}
       isPending={isPending}
-      isError={isError}
+      error={error}
       price={price}
       compactPrice={showsRange}
       financialAid={financialAid}
