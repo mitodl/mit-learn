@@ -715,15 +715,17 @@ const WebsiteContentEditor = ({
   const buttonSize = "medium"
 
   /**
-   * The icon alone, as the design has it. Named for assistive technology and
-   * for the pointer, since nothing else says what it opens.
+   * The icon alone in a button box, as the design has it -- `bordered` to
+   * match the other buttons in the bar, `ActionButton` because it carries no
+   * label. Named for assistive technology and for the pointer, since nothing
+   * on screen says what it opens.
    *
    * Shared with the published view's bar, so the control looks the same
    * wherever it appears.
    */
   const settingsButton = (
     <ActionButton
-      variant="text"
+      variant="bordered"
       size={buttonSize}
       aria-label="Settings"
       title="Settings"
