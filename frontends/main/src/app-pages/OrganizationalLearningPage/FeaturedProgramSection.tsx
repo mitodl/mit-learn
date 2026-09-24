@@ -179,7 +179,7 @@ const Module = styled.li(({ theme }) => ({
   color: theme.custom.colors.white,
   backgroundColor: theme.custom.colors.darkGray2,
   borderRadius: "4px",
-  padding: "12px 16px",
+  padding: "16px",
 }))
 
 const FeaturedProgramSection: React.FC = () => (

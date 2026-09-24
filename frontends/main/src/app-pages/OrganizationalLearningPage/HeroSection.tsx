@@ -66,7 +66,7 @@ const Emphasis = styled.span(({ theme }) => ({
   textDecorationLine: "underline",
   textDecorationColor: theme.custom.colors.brightRed,
   textDecorationThickness: "4px",
-  textUnderlineOffset: "0",
+  textUnderlineOffset: "1px",
   textDecorationSkipInk: "none",
   [theme.breakpoints.down("md")]: {
     textDecorationThickness: "3px",
