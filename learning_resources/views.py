@@ -1,7 +1,6 @@
 """Views for learning_resources"""
 
 import logging
-import re
 from hmac import compare_digest
 
 import rapidjson
@@ -1289,12 +1288,28 @@ class UserListMembershipViewSet(viewsets.ReadOnlyModelViewSet):
         ).order_by("child", "parent")
 
 
-_WEBHOOK_KEY_BODY_PATTERN = re.compile(rb'("webhook_key"\s*:\s*)"(?:[^"\\]|\\.)*"')
+def _redact_webhook_key(body: bytes) -> str:
+    """
+    Return a safe-to-log version of a JSON request body, with any
+    webhook_key value redacted.
 
-
-def _redact_webhook_key(body: bytes) -> bytes:
-    """Redact a JSON request body's webhook_key value before logging it"""
-    return _WEBHOOK_KEY_BODY_PATTERN.sub(rb'\1"[redacted]"', body)
+    Parses the body the same way the view does and redacts based on the
+    decoded member name, rather than pattern-matching the raw text -- JSON
+    allows a member name to be spelled with \\uXXXX escapes (e.g.
+    "webhook\\u005fkey" decodes to "webhook_key"), so a raw-text match on
+    the literal key would miss a real key that's merely spelled that way,
+    letting the actual secret through unredacted. A body that can't be
+    parsed as a JSON object is redacted in full instead of assumed safe.
+    """
+    try:
+        parsed = rapidjson.loads(body.decode())
+    except (ValueError, UnicodeDecodeError):
+        return "<unparseable body, redacted>"
+    if not isinstance(parsed, dict):
+        return "<non-object body, redacted>"
+    if "webhook_key" in parsed:
+        parsed["webhook_key"] = "[redacted]"
+    return rapidjson.dumps(parsed)
 
 
 @method_decorator(blocked_ip_exempt, name="dispatch")
@@ -1311,7 +1326,7 @@ class WebhookOCWView(views.APIView):
         Raise any exception with request info instead of returning response
         with error status/message
         """
-        safe_body = _redact_webhook_key(self.request.body) or ""
+        safe_body = _redact_webhook_key(self.request.body)
         msg = f"Error ({exc}). BODY: {safe_body}, META: {self.request.META}"
         raise WebhookException(msg) from exc
 
