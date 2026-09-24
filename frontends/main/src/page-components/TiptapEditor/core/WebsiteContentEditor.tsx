@@ -781,6 +781,14 @@ const WebsiteContentEditor = ({
                   contentType === WebsiteContentContentTypeEnum.Article
                 }
                 topicsRequired={topicsRequired}
+                /* Only once it is public. Content that is not published yet
+                   is stopped at its own save, and this drawer is where the
+                   missing topics get picked -- refusing to save it while the
+                   selection is empty would block the SEO fields along with
+                   them. */
+                topicsMayNotBeEmptied={
+                  topicsRequired && !!contentItem?.is_published
+                }
                 initialValues={{
                   topics,
                   seoTitle: seo.title,
