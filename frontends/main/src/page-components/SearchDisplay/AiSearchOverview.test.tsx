@@ -2,13 +2,21 @@ import React from "react"
 import { renderWithProviders, screen, user } from "@/test-utils"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import { useAiChat } from "@mitodl/smoot-design/ai"
+import type { AiChatProps } from "@mitodl/smoot-design/ai"
 import AiSearchOverview from "./AiSearchOverview"
 import type { RegisteredSearchParams } from "@/common/searchParams"
 
 jest.mock("posthog-js/react")
+const mockAiChatProvider = jest.fn()
 jest.mock("@mitodl/smoot-design/ai", () => ({
   ...jest.requireActual("@mitodl/smoot-design/ai"),
-  AiChatProvider: ({ children }: { children: React.ReactNode }) => children,
+  AiChatProvider: (props: {
+    children: React.ReactNode
+    requestOpts: AiChatProps["requestOpts"]
+  }) => {
+    mockAiChatProvider(props)
+    return props.children
+  },
   AiChatDisplay: () => <div data-testid="ai-chat-display" />,
   useAiChat: jest.fn(),
 }))
@@ -64,6 +72,23 @@ describe("AiSearchOverview", () => {
       content: expect.stringContaining(
         'if I search "machine learning". Start with "here are some courses"',
       ),
+    })
+  })
+
+  test("starts a fresh thread on the first message only", () => {
+    setupChat()
+    renderWithProviders(<AiSearchOverview searchParams={params("ml")} />)
+    const { requestOpts } = mockAiChatProvider.mock.calls[0][0]
+    const first = { id: "1", role: "user" as const, content: "first" }
+    const reply = { id: "2", role: "assistant" as const, content: "reply" }
+    const followUp = { id: "3", role: "user" as const, content: "follow-up" }
+
+    expect(requestOpts.transformBody([first])).toEqual({
+      message: "first",
+      clear_history: true,
+    })
+    expect(requestOpts.transformBody([first, reply, followUp])).toEqual({
+      message: "follow-up",
     })
   })
 

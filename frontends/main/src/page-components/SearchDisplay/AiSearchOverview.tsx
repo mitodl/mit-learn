@@ -8,6 +8,7 @@ import {
   AiChatProvider,
   useAiChat,
 } from "@mitodl/smoot-design/ai"
+import type { AiChatProps } from "@mitodl/smoot-design/ai"
 import {
   RiArrowDownLine,
   RiCloseLine,
@@ -25,8 +26,25 @@ import {
 
 const COLLAPSED_HEIGHT = 100
 
+// The drawer and card styles expect the numbered-list shape described at the
+// end of the prompt, so keep that instruction if the wording changes.
 const buildPrompt = (query: string) =>
-  `Give me courses I might find interesting if I search "${query}". Start with "here are some courses". Do not attempt to continue the conversation. Keep it brief.`
+  `Give me courses I might find interesting if I search "${query}". Start with "here are some courses". Keep it brief. Offer three to five suggestions. Attempt to continue the conversation by asking for more details or clarifying what the user is looking. Format the courses as a numbered markdown list where each item is the bolded, linked course title followed by a line break and a one-sentence description.`
+
+const getOverviewRequestOpts = (): AiChatProps["requestOpts"] => {
+  const requestOpts = getRecommendationRequestOpts()
+  return {
+    ...requestOpts,
+    // The recommendation bot keeps its thread in a cookie, so without this
+    // every search would pile onto one long conversation and the model's
+    // answers drift in tone and format. Start a fresh thread per search;
+    // follow-ups in the drawer continue it.
+    transformBody: (messages, body) => ({
+      ...(requestOpts.transformBody?.(messages, body) as object),
+      ...(messages.length === 1 && { clear_history: true }),
+    }),
+  }
+}
 
 const Container = styled.section(({ theme }) => ({
   position: "relative",
@@ -144,6 +162,16 @@ const DrawerChatDisplay = styled(AiChatDisplay)(({ theme }) => ({
     color: theme.custom.colors.darkGray2,
     p: {
       margin: "0 0 16px",
+    },
+    // Links outside the course headings (e.g. inline mentions, or a response
+    // that skips the list format) read as underlined body text, not red.
+    a: {
+      color: "inherit",
+      textDecorationThickness: "1px",
+      textUnderlineOffset: "2px",
+      "&:hover": {
+        color: theme.custom.colors.red,
+      },
     },
     // Each recommended course renders as a heading with a numbered badge,
     // followed by its description.
@@ -321,7 +349,7 @@ const AiSearchOverview: React.FC<AiSearchOverviewProps> = ({
 }) => {
   const query = searchParams.get("q")?.trim()
   const enabled = useFeatureFlagEnabled(FeatureFlags.SearchAiOverview)
-  const requestOpts = useMemo(() => getRecommendationRequestOpts(), [])
+  const requestOpts = useMemo(() => getOverviewRequestOpts(), [])
 
   if (!enabled || !query) return null
 
