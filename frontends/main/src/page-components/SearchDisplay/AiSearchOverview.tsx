@@ -23,7 +23,7 @@ import {
   getRecommendationRequestOpts,
 } from "@/page-components/AiChat/AiRecommendationBotDrawer"
 
-const COLLAPSED_HEIGHT = 120
+const COLLAPSED_HEIGHT = 100
 
 const buildPrompt = (query: string) =>
   `give me some courses i might find interesting if i search "${query}". start with "here are some courses". don't attempt to continue the conversation. keep it brief. make it interesting to someone who wants to learn more ~ lead on`
@@ -33,7 +33,7 @@ const Container = styled.section(({ theme }) => ({
   backgroundColor: theme.custom.colors.lightGray1,
   border: `1px solid ${theme.custom.colors.lightGray2}`,
   borderRadius: "8px",
-  padding: "24px 28px",
+  padding: "16px 24px 24px",
   marginBottom: "16px",
   [theme.breakpoints.down("md")]: {
     padding: "16px",
@@ -43,11 +43,12 @@ const Container = styled.section(({ theme }) => ({
 const Header = styled.div(({ theme }) => ({
   display: "flex",
   alignItems: "center",
-  gap: "10px",
+  gap: "8px",
+  minHeight: "24px",
   svg: {
     fill: theme.custom.colors.red,
-    width: "24px",
-    height: "24px",
+    width: "20px",
+    height: "20px",
   },
 }))
 
@@ -69,36 +70,35 @@ const Spinner = styled(LoadingSpinner)(({ theme }) => ({
 }))
 
 const Content = styled.div<{ collapsed: boolean }>(({ theme, collapsed }) => ({
-  ...theme.typography.body1,
+  ...theme.typography.body2,
   color: theme.custom.colors.darkGray2,
-  marginTop: "12px",
+  marginTop: "8px",
   overflow: "hidden",
   maxHeight: collapsed ? `${COLLAPSED_HEIGHT}px` : "none",
   maskImage: collapsed
     ? "linear-gradient(to bottom, black 50%, transparent 100%)"
     : "none",
   "p, ul, ol": {
-    margin: "0 0 12px",
+    margin: "0 0 16px",
   },
   ol: {
-    paddingInlineStart: "28px",
+    paddingInlineStart: "22px",
   },
   "ol > li": {
-    ...theme.typography.h5,
+    ...theme.typography.body1,
     color: theme.custom.colors.darkGray1,
     marginBottom: "12px",
   },
   // Responses put the course title and description in one paragraph,
   // separated by a line break.
   "li p": {
-    ...theme.typography.body1,
-    color: theme.custom.colors.silverGrayDark,
+    ...theme.typography.body2,
+    color: theme.custom.colors.silverGray,
   },
   "li strong": {
-    ...theme.typography.h5,
-    fontWeight: theme.typography.fontWeightRegular,
+    ...theme.typography.body1,
     display: "block",
-    marginBottom: "4px",
+    marginBottom: "10px",
     color: theme.custom.colors.darkGray1,
   },
   "li strong + br": {
@@ -120,7 +120,7 @@ const ShowMoreButton = styled(Button)(({ theme }) => ({
 
 const DrawerChatDisplay = styled(AiChatDisplay)(({ theme }) => ({
   "& .MitAiChat--chatScreenContainer": {
-    padding: "0 48px",
+    padding: "0 40px",
     [theme.breakpoints.down("md")]: {
       padding: "0 16px",
     },
@@ -132,12 +132,15 @@ const DrawerChatDisplay = styled(AiChatDisplay)(({ theme }) => ({
       fontWeight: theme.typography.fontWeightRegular,
     },
   },
+  "& .MitAiChat--messagesContainer": {
+    paddingTop: 0,
+  },
   // Hide the templated prompt that seeded the conversation.
   "& .MitAiChat--messageRow:first-of-type[data-chat-role='user']": {
     display: "none",
   },
   "& .MitAiChat--messageRowAssistant .MitAiChat--message": {
-    ...theme.typography.body1,
+    ...theme.typography.body2Loose,
     color: theme.custom.colors.darkGray2,
     p: {
       margin: "0 0 16px",
@@ -148,32 +151,31 @@ const DrawerChatDisplay = styled(AiChatDisplay)(({ theme }) => ({
       counterReset: "ai-recommendation",
       listStyle: "none",
       paddingInlineStart: 0,
-      margin: "24px 0",
+      margin: "16px 0",
     },
     "ol > li": {
       counterIncrement: "ai-recommendation",
-      margin: "0 0 24px",
+      margin: "0 0 18px",
     },
     "ol > li strong": {
-      ...theme.typography.h5,
-      fontWeight: theme.typography.fontWeightMedium,
+      ...theme.typography.subtitle1,
       display: "block",
-      marginBottom: "12px",
+      marginBottom: "8px",
       color: theme.custom.colors.darkGray2,
       "&::after": {
         content: "counter(ai-recommendation)",
-        ...theme.typography.body3,
+        ...theme.typography.body4,
         display: "inline-flex",
         alignItems: "center",
         justifyContent: "center",
-        minWidth: "20px",
-        height: "20px",
-        padding: "0 4px",
-        marginLeft: "10px",
-        verticalAlign: "middle",
+        minWidth: "16px",
+        height: "16px",
+        padding: "0 3px",
+        marginLeft: "8px",
+        verticalAlign: "text-bottom",
         boxSizing: "border-box",
-        border: `1px solid ${theme.custom.colors.silverGray}`,
-        borderRadius: "4px",
+        border: `1px solid ${theme.custom.colors.silverGrayLight}`,
+        borderRadius: "3px",
         color: theme.custom.colors.darkGray1,
       },
     },
@@ -190,13 +192,21 @@ const DrawerChatDisplay = styled(AiChatDisplay)(({ theme }) => ({
       },
     },
     "ul > li": {
-      paddingLeft: "24px",
+      paddingLeft: "20px",
+      margin: "8px 0",
       "&::before": {
         content: '"•"',
-        left: "8px",
+        left: "6px",
         color: theme.custom.colors.darkGray2,
       },
     },
+  },
+}))
+
+const DrawerCloseButton = styled(CloseButton)(({ theme }) => ({
+  right: "40px",
+  [theme.breakpoints.down("md")]: {
+    right: "16px",
   },
 }))
 
@@ -225,14 +235,14 @@ const OverviewDrawer: React.FC<{ open: boolean; onClose: () => void }> = ({
       }}
     >
       <CloseButtonContainer>
-        <CloseButton
+        <DrawerCloseButton
           onClick={onClose}
           variant="text"
           size="medium"
           aria-label="Close"
         >
           <RiCloseLine />
-        </CloseButton>
+        </DrawerCloseButton>
       </CloseButtonContainer>
       <DrawerChatDisplay
         entryScreenEnabled={false}
