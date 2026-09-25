@@ -156,6 +156,7 @@ const DrawerChatDisplay = styled(AiChatDisplay)(({ theme }) => ({
     },
     "ol > li strong": {
       ...theme.typography.h5,
+      fontWeight: theme.typography.fontWeightMedium,
       display: "block",
       marginBottom: "12px",
       color: theme.custom.colors.darkGray2,
@@ -181,6 +182,7 @@ const DrawerChatDisplay = styled(AiChatDisplay)(({ theme }) => ({
     },
     "ol > li strong a": {
       color: "inherit",
+      fontWeight: "inherit",
       textDecoration: "none",
       "&:hover": {
         color: theme.custom.colors.red,
@@ -322,4 +324,3 @@ const AiSearchOverview: React.FC<AiSearchOverviewProps> = ({
 }
 
 export default AiSearchOverview
-export { Overview } // TEMP-PREVIEW
