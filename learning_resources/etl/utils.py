@@ -1052,7 +1052,7 @@ def get_title_for_content(
     return Path(source_path).stem.replace("_", " ").replace("-", " ").title()
 
 
-def _build_result(  # noqa: PLR0913
+def _build_result(  # noqa: PLR0913, PLR0917
     olx_path, metadata: dict, key: str, run, video_srt_metadata, content_dict: dict
 ) -> dict:
     """Build the final result dictionary."""
