@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pytest
 
-from news_events.etl.mitpe_news import extract, transform
+from news_events.etl.mitpe_news import extract, transform, transform_item
 
 
 @pytest.fixture
@@ -56,9 +56,41 @@ def test_transform(mitpe_news_json_data):
         "description": items[0]["title"],
     }
     assert items[0]["summary"].startswith(
-        "Discover how Erdin Beshimov, a lecturer at MIT & Senior"
+        "Discover how Erdin Beshimov, a lecturer at MIT &amp; Senior"
     )
     assert items[0]["summary"] == items[0]["content"]
     assert items[0]["detail"]["publish_date"] == datetime(
         2020, 12, 4, 5, 0, 0, tzinfo=UTC
     )
+
+
+def test_transform_item_sanitizes_entity_encoded_script():
+    """Entity-encoded markup in the summary must not survive as live HTML"""
+    item = transform_item(
+        {
+            "id": 1,
+            "title": "Title",
+            "url": "articles/1",
+            "summary": "&lt;script&gt;alert(1)&lt;/script&gt;",
+            "author": "",
+            "date": "2020-12-04",
+        }
+    )
+    assert item["summary"] == ""
+    assert item["content"] == ""
+
+
+def test_transform_item_sanitizes_entity_encoded_img_onerror():
+    """The ticket's exact repro payload must not survive as a live onerror handler"""
+    item = transform_item(
+        {
+            "id": 1,
+            "title": "Title",
+            "url": "articles/1",
+            "summary": "&lt;img src=x onerror=alert(1)&gt;",
+            "author": "",
+            "date": "2020-12-04",
+        }
+    )
+    assert item["summary"] == ""
+    assert item["content"] == ""
