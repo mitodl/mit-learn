@@ -510,7 +510,7 @@ def offeror_delete_actions(offeror: LearningResourceOfferor):
     hook.offeror_delete(offeror=offeror)
 
 
-def _walk_topic_map(topics: list, parent: None | LearningResourceTopic = None) -> None:
+def _walk_topic_map(topics: list, parent: LearningResourceTopic | None = None) -> None:
     """
     Walk the topic map provided and create topic records accordingly.
 
