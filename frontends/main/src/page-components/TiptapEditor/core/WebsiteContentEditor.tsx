@@ -387,10 +387,18 @@ const WebsiteContentEditor = ({
    * URL and so unmounts this editor. Held until nothing is unsaved, or
    * anything typed while the create was in flight would go with it.
    *
-   * Not covered by a test: the window only exists while a create is in
-   * flight, and in happy-dom the editor's state update for an edit typed
-   * during one does not land before the response, so there is nothing unsaved
-   * left to hold for by the time this runs.
+   * A publish clears it: the response held here says `is_published: false`,
+   * so handing it over afterwards would send the editor to the draft page for
+   * an item that is now public. That was reachable -- a publish confirmed
+   * while the create was still in flight leaves this waiting on `isPending`,
+   * and it fired once the publish settled.
+   *
+   * Neither the holding nor that ordering is covered by a test. Both windows
+   * only exist while a create is in flight, and in happy-dom the editor's
+   * state updates and the mutation's pending flag do not interleave the way
+   * they do in a browser: the edit typed during a create has not reached
+   * state by the time the response lands, and forcing the other order needs a
+   * wait long enough that the suite trips over its own teardown.
    */
   const handoffRef = useRef<WebsiteContent | null>(null)
   const savedRef = useRef({
@@ -504,6 +512,10 @@ const WebsiteContentEditor = ({
      * couple of seconds, for as long as someone keeps typing.
      */
     if (publish) {
+      // Supersedes a handoff still waiting to be made. The create response it
+      // holds says `is_published: false`, so a caller acting on it afterwards
+      // would send the editor to the draft page for an item now public.
+      handoffRef.current = null
       onSave?.(saved)
     } else if (!existingId) {
       // Deferred to the effect below: handing over navigates, and anything
@@ -587,6 +599,8 @@ const WebsiteContentEditor = ({
   useEffect(() => {
     const created = handoffRef.current
     if (!created || isPending || hasUnsavedChanges) return
+    // Nor after a publish from here, whatever set the handoff.
+    if (publishedHereRef.current) return
     handoffRef.current = null
     onSave?.(created)
     // `onSave` is the caller's and stable in practice; re-running on a new

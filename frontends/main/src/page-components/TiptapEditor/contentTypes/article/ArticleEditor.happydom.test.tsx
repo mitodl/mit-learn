@@ -652,7 +652,15 @@ describe("ArticleEditor autosave", () => {
      * create has come back -- so a second autosave before that lands has to
      * update what was just created rather than create a second article.
      */
-    await userEvent.type(heading, " again")
+    /**
+     * Re-queried: the editor has re-rendered around the create and the node
+     * from before it is stale, so typing into it goes nowhere -- which made
+     * this test flaky rather than wrong.
+     */
+    await userEvent.type(screen.getByRole("heading", { level: 1 }), " again")
+    expect(screen.getByRole("heading", { level: 1 }).textContent).toContain(
+      "again",
+    )
     await waitFor(
       () => {
         expect(makeRequest).toHaveBeenCalledWith(
@@ -718,8 +726,9 @@ describe("ArticleEditor autosave", () => {
     await userEvent.type(heading, " edited")
     await screen.findByText("Saved", {}, { timeout: 6000 })
 
-    /* The next keystroke is not saved, so the bar must stop claiming it is. */
-    await userEvent.type(heading, "!")
+    /* The next keystroke is not saved, so the bar must stop claiming it is.
+       Re-queried: the node from before the save has been replaced. */
+    await userEvent.type(screen.getByRole("heading", { level: 1 }), "!")
 
     expect(screen.queryByText("Saved")).toBe(null)
   }, 15000)
