@@ -457,12 +457,19 @@ const WebsiteContentEditor = ({
 
     // A save held back for want of topics resumes here, carrying the drawer's
     // values, so the content write persists them and nothing is PATCHed twice.
-    if (pendingSave !== null && nextTopics && nextTopics.length > 0) {
+    //
+    // A draft resumes whether or not a topic was picked. It may sit without
+    // them -- only publishing insists -- and dropping the save instead would
+    // lose the edit that asked for it, silently: the drawer has closed and
+    // the press is forgotten. A publish still waits for one.
+    if (pendingSave !== null) {
       const publish = pendingSave
-      setPendingSave(null)
-      if (publish) startPublish(overrides)
-      else saveQuietly(false, overrides)
-      return
+      if (!publish || (nextTopics?.length ?? 0) > 0) {
+        setPendingSave(null)
+        if (publish) startPublish(overrides)
+        else saveQuietly(false, overrides)
+        return
+      }
     }
 
     if (!contentItem) return

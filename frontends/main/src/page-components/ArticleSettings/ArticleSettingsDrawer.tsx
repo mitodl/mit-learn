@@ -20,9 +20,9 @@ import { useLearningResourceTopics } from "api/hooks/learningResources"
  * Topic options come from the live topics API, and the topics the editor picks
  * are handed to `onSave` as the ids `WebsiteContent.topics` stores.
  *
- * The SEO values are still local-only: WebsiteContent has no `seo_title` or
- * `seo_description` field, so there is nothing to PATCH them onto. They ride
- * along in `onSave` so the caller can persist them once those fields exist.
+ * The SEO values are handed over the same way, and `WebsiteContent` now
+ * stores both -- for news as well as articles, since a link preview or a
+ * search result is the editor's to write on either.
  */
 
 /** Drawer width from the design; narrows to the viewport on small screens. */

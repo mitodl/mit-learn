@@ -575,6 +575,42 @@ describe("ArticleEditor topics requirement", () => {
     })
   })
 
+  test("a draft save held back for topics still happens without them", async () => {
+    mockTopics()
+    const { article } = renderArticleEditor()
+    setMockResponse.patch(urls.websiteContent.details(article.id), article)
+
+    // The edit that asks for the save, which must not be lost.
+    await userEvent.type(
+      await screen.findByRole("heading", { level: 1 }),
+      " edited",
+    )
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Save as Draft" }),
+    )
+    await screen.findByRole("heading", { name: "Article Settings" })
+
+    /* Saved without picking one: a draft may sit without topics. */
+    await userEvent.click(screen.getByRole("button", { name: "Save Settings" }))
+
+    /**
+     * The held-back save resumes, so the write carries the content. Only the
+     * settings going out would leave the title edit unsaved, with nothing on
+     * screen to say so -- the drawer has closed and the press is forgotten.
+     */
+    await waitFor(() => {
+      expect(makeRequest).toHaveBeenCalledWith(
+        expect.objectContaining({
+          method: "patch",
+          body: expect.objectContaining({
+            is_published: false,
+            content: expect.anything(),
+          }),
+        }),
+      )
+    })
+  }, 20000)
+
   test("the drawer will not save a published article with its topics emptied", async () => {
     const topics = factories.learningResources.topics({ count: 1 })
     const [topic] = topics.results
