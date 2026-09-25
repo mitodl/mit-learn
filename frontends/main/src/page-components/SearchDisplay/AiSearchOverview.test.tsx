@@ -62,7 +62,7 @@ describe("AiSearchOverview", () => {
     expect(append.mock.calls[0][0]).toEqual({
       role: "user",
       content: expect.stringContaining(
-        'if i search "machine learning". start with "here are some courses"',
+        'if I search "machine learning". Start with "here are some courses"',
       ),
     })
   })
