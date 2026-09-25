@@ -796,7 +796,8 @@ describe("ArticleEditor autosave", () => {
 
     const bodies = makeRequest.mock.calls
       .filter((call) => call[0]?.method === "patch")
-      .map((call) => call[0].body.is_published)
+      // `body` is deliberately `unknown` in the request harness.
+      .map((call) => (call[0].body as { is_published?: boolean }).is_published)
     expect(bodies).toEqual([false, true])
   }, 25000)
 
