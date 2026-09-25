@@ -73,6 +73,9 @@ const schema = yup.object().shape({
   NEXT_PUBLIC_LEARN_AI_RECOMMENDATION_ENDPOINT: yup.string(),
   NEXT_PUBLIC_LEARN_AI_SYLLABUS_ENDPOINT: yup.string(),
   NEXT_PUBLIC_LEARN_AI_CSRF_COOKIE_NAME: yup.string(),
+  // Prompt for the AskTIM overview on the search page; "{query}" is replaced
+  // with the search text. Falls back to a built-in default when unset.
+  NEXT_PUBLIC_SEARCH_AI_OVERVIEW_PROMPT: yup.string(),
   NEXT_PUBLIC_PODCASTS_FEATURED_LIST_LEARNINGPATH_ID: yup
     .string()
     .matches(/^\d+$/, { excludeEmptyString: true }),

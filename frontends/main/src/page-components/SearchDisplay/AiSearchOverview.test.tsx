@@ -75,6 +75,21 @@ describe("AiSearchOverview", () => {
     })
   })
 
+  test("uses the prompt from NEXT_PUBLIC_SEARCH_AI_OVERVIEW_PROMPT", () => {
+    const original = process.env.NEXT_PUBLIC_SEARCH_AI_OVERVIEW_PROMPT
+    process.env.NEXT_PUBLIC_SEARCH_AI_OVERVIEW_PROMPT =
+      'Courses about "{query}"? Again: {query}'
+    try {
+      const append = setupChat()
+      renderWithProviders(<AiSearchOverview searchParams={params("ml")} />)
+      expect(append.mock.calls[0][0].content).toBe(
+        'Courses about "ml"? Again: ml',
+      )
+    } finally {
+      process.env.NEXT_PUBLIC_SEARCH_AI_OVERVIEW_PROMPT = original
+    }
+  })
+
   test("starts a fresh thread on the first message only", () => {
     setupChat()
     renderWithProviders(<AiSearchOverview searchParams={params("ml")} />)

@@ -28,8 +28,14 @@ const COLLAPSED_HEIGHT = 100
 
 // The drawer and card styles expect the numbered-list shape described at the
 // end of the prompt, so keep that instruction if the wording changes.
+// Overridable via NEXT_PUBLIC_SEARCH_AI_OVERVIEW_PROMPT.
+const DEFAULT_PROMPT =
+  'Give me courses I might find interesting if I search "{query}". Start with "here are some courses". Keep it brief. Offer three to five suggestions. Attempt to continue the conversation by asking for more details or clarifying what the user is looking. Format the courses as a numbered markdown list where each item is the bolded, linked course title followed by a line break and a one-sentence description.'
+
 const buildPrompt = (query: string) =>
-  `Give me courses I might find interesting if I search "${query}". Start with "here are some courses". Keep it brief. Offer three to five suggestions. Attempt to continue the conversation by asking for more details or clarifying what the user is looking. Format the courses as a numbered markdown list where each item is the bolded, linked course title followed by a line break and a one-sentence description.`
+  (env("NEXT_PUBLIC_SEARCH_AI_OVERVIEW_PROMPT") || DEFAULT_PROMPT)
+    .split("{query}")
+    .join(query)
 
 const getOverviewRequestOpts = (): AiChatProps["requestOpts"] => {
   const requestOpts = getRecommendationRequestOpts()
