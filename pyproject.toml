@@ -256,7 +256,6 @@ lint.ignore = [
     "N999",
     "PIE804",
     "PLC0415",
-    "PLR0917",
     "RET505",
     "RET506",
     "RET507",
@@ -277,8 +276,8 @@ inline-quotes = "double"
 "django.contrib.auth.models.User".msg = "use get_user_model() or settings.AUTH_USER_MODEL"
 
 [tool.ruff.lint.per-file-ignores]
-"*_test.py" = ["ARG001", "E501", "S101", "PLR2004"]
-"test_*.py" = ["ARG001", "E501", "S101", "PLR2004"]
+"*_test.py" = ["ARG001", "E501", "S101", "PLR2004", "PLR0917"]
+"test_*.py" = ["ARG001", "E501", "S101", "PLR2004", "PLR0917"]
 "**/migrations/**" = ["ARG001"]
 
 [tool.bumpversion]
