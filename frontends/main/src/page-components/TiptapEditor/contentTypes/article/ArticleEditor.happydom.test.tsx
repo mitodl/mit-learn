@@ -615,6 +615,58 @@ describe("ArticleEditor autosave", () => {
     )
   }, 15000)
 
+  test("an article that has never been saved is created once, then updated", async () => {
+    const user = factories.user.user({
+      is_authenticated: true,
+      is_article_editor: true,
+    })
+    setMockResponse.get(urls.userMe.get(), user)
+    const created = factories.websiteContent.websiteContent({
+      id: 909,
+      content,
+      is_published: false,
+    })
+    setMockResponse.post(urls.websiteContent.list(), created)
+    setMockResponse.patch(urls.websiteContent.details(created.id), created)
+
+    /* No `article`: the editor starts with nothing to update. */
+    renderWithProviders(<ArticleEditor />, { user })
+
+    const heading = await screen.findByRole("heading", { level: 1 })
+    await userEvent.type(heading, " first")
+    await waitFor(
+      () => {
+        expect(makeRequest).toHaveBeenCalledWith(
+          expect.objectContaining({ method: "post" }),
+        )
+      },
+      { timeout: 6000 },
+    )
+
+    /**
+     * The caller moves the editor to the new item's URL, but only once the
+     * create has come back -- so a second autosave before that lands has to
+     * update what was just created rather than create a second article.
+     */
+    await userEvent.type(heading, " again")
+    await waitFor(
+      () => {
+        expect(makeRequest).toHaveBeenCalledWith(
+          expect.objectContaining({
+            method: "patch",
+            url: urls.websiteContent.details(created.id),
+          }),
+        )
+      },
+      { timeout: 6000 },
+    )
+
+    const posts = makeRequest.mock.calls.filter(
+      (call) => call[0]?.method === "post",
+    )
+    expect(posts).toHaveLength(1)
+  }, 20000)
+
   test("a published article is never saved behind the author's back", async () => {
     const { article } = renderArticleEditor({ isPublished: true, topics: [7] })
     setMockResponse.patch(urls.websiteContent.details(article.id), article)

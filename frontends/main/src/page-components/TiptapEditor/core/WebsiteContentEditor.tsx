@@ -361,6 +361,14 @@ const WebsiteContentEditor = ({
    * an unsaved change from a re-render. Seeded with what was loaded: opening a
    * draft and closing it must not write anything.
    */
+  /**
+   * The row this editor has created, when it started without one.
+   *
+   * Autosave repeats, and the caller moves the editor to the new item's URL
+   * only once that has happened -- so a second write before the route changes
+   * would create a second item. This is what makes it an update instead.
+   */
+  const createdIdRef = useRef<number | null>(null)
   const savedRef = useRef({
     title: contentItem?.title,
     content: contentItem?.content ?? initialDoc,
@@ -436,9 +444,10 @@ const WebsiteContentEditor = ({
     // leaving the drawer to PATCH it separately.
     const savedTopics = topicsOverride ?? topics
     const extraFields = extractExtraFields?.(content) ?? {}
-    const saved = contentItem
+    const existingId = contentItem?.id ?? createdIdRef.current
+    const saved = existingId
       ? await updateMutation.mutateAsync({
-          id: contentItem.id,
+          id: existingId,
           title: title.trim(),
           content,
           is_published: publish,
@@ -453,6 +462,7 @@ const WebsiteContentEditor = ({
           ...extraFields,
         })
     savedRef.current = { title, content }
+    createdIdRef.current = saved.id
     onSave?.(saved)
   }
 

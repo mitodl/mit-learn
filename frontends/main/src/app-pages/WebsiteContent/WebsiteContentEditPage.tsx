@@ -2,7 +2,7 @@
 
 import React from "react"
 import { useRouter } from "next-nprogress-bar"
-import { notFound } from "next/navigation"
+import { notFound, usePathname } from "next/navigation"
 import { Permission } from "api/hooks/user"
 import { useWebsiteContentDetailRetrieve } from "api/hooks/website_content"
 import RestrictedRoute from "@/components/RestrictedRoute/RestrictedRoute"
@@ -58,6 +58,7 @@ const WebsiteContentEditPage = ({
   idOrSlug,
 }: WebsiteContentEditPageProps) => {
   const { data: article, isLoading } = useWebsiteContentDetailRetrieve(idOrSlug)
+  const pathname = usePathname()
   const router = useRouter()
 
   const Editor = EDITORS[type]
@@ -92,8 +93,21 @@ const WebsiteContentEditPage = ({
             if (saved.is_published) {
               invariant(saved.slug, "Published content must have a slug")
               return router.push(viewUrl(saved.slug))
-            } else {
-              router.push(websiteContentEditView(type, saved.id))
+            }
+            /**
+             * Where a draft lives, which is usually where we already are --
+             * the exception being a URL that names the item by slug, which
+             * this canonicalises to the id once.
+             *
+             * Guarded because a draft saves itself every couple of seconds:
+             * pushing the route we are on buys nothing (this page reads its
+             * item through React Query, which the mutation already
+             * invalidates) and costs a soft navigation and a run of the
+             * progress bar each time.
+             */
+            const draftUrl = websiteContentEditView(type, saved.id)
+            if (draftUrl !== pathname) {
+              router.push(draftUrl)
             }
           }}
         />
