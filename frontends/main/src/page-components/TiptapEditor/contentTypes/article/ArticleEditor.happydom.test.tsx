@@ -671,6 +671,45 @@ describe("ArticleEditor autosave", () => {
     expect(posts).toHaveLength(1)
   }, 20000)
 
+  test("an autosave of an existing draft asks for no navigation", async () => {
+    const onSave = jest.fn()
+    const user = factories.user.user({
+      is_authenticated: true,
+      is_article_editor: true,
+    })
+    setMockResponse.get(urls.userMe.get(), user)
+    const article = factories.websiteContent.websiteContent({
+      content,
+      is_published: false,
+    })
+    setMockResponse.get(urls.websiteContent.details(article.id), article)
+    setMockResponse.patch(urls.websiteContent.details(article.id), article)
+
+    renderWithProviders(<ArticleEditor article={article} onSave={onSave} />, {
+      user,
+    })
+
+    await userEvent.type(
+      await screen.findByRole("heading", { level: 1 }),
+      " edited",
+    )
+    await waitFor(
+      () => {
+        expect(makeRequest).toHaveBeenCalledWith(
+          expect.objectContaining({ method: "patch" }),
+        )
+      },
+      { timeout: 6000 },
+    )
+
+    /**
+     * `onSave` is how the caller learns to navigate, and a draft that already
+     * exists has not moved. Left to fire, every autosave would ask the page to
+     * push the route it is already on.
+     */
+    expect(onSave).not.toHaveBeenCalled()
+  }, 15000)
+
   test("a published article is never saved behind the author's back", async () => {
     const { article } = renderArticleEditor({ isPublished: true, topics: [7] })
     setMockResponse.patch(urls.websiteContent.details(article.id), article)

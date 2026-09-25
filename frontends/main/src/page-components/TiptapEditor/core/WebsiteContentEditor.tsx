@@ -463,7 +463,18 @@ const WebsiteContentEditor = ({
         })
     savedRef.current = { title, content }
     createdIdRef.current = saved.id
-    onSave?.(saved)
+    /**
+     * `onSave` exists to move the editor to where the saved item now lives,
+     * and that is somewhere new on exactly two transitions: the save that
+     * created the item, and the one that published it.
+     *
+     * An autosave of a draft that already exists is already there, so calling
+     * it would ask the caller to navigate to the route it is on -- every
+     * couple of seconds, for as long as someone keeps typing.
+     */
+    if (!existingId || publish) {
+      onSave?.(saved)
+    }
   }
 
   /**
