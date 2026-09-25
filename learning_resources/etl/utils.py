@@ -865,7 +865,7 @@ def pdf_is_valid(pdf_path: Path) -> bool:
         if len(reader.pages) > 0:
             reader.pages[0].extract_text()
             return True
-    except Exception:  # noqa: BLE001
+    except Exception:
         # warning, not exception: the caller raises InvalidPDFError and
         # process_olx_path emits the single Sentry event for this file
         log.warning("PDF validation error for %s", pdf_path, exc_info=True)
@@ -1052,7 +1052,7 @@ def get_title_for_content(
     return Path(source_path).stem.replace("_", " ").replace("-", " ").title()
 
 
-def _build_result(  # noqa: PLR0913
+def _build_result(  # noqa: PLR0913, PLR0917
     olx_path, metadata: dict, key: str, run, video_srt_metadata, content_dict: dict
 ) -> dict:
     """Build the final result dictionary."""

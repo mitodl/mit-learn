@@ -136,7 +136,7 @@ class QdrantView(AsyncAPIView):
             sort = models.Direction.DESC
         return models.OrderBy(key=order_by_parameter, direction=sort)
 
-    async def _build_search_params(  # noqa: PLR0913
+    async def _build_search_params(  # noqa: PLR0913, PLR0917
         self,
         query_string: str,
         search_collection: str,
@@ -320,7 +320,7 @@ class QdrantView(AsyncAPIView):
         )
         return page_points
 
-    async def _execute_scroll_search(  # noqa: PLR0913
+    async def _execute_scroll_search(  # noqa: PLR0913, PLR0917
         self,
         client,
         search_collection,
@@ -391,7 +391,7 @@ class QdrantView(AsyncAPIView):
                 break
         return search_result[:limit]
 
-    async def _async_vector_hits(  # noqa: PLR0913
+    async def _async_vector_hits(  # noqa: PLR0913, PLR0917
         self,
         query_string: str,
         params: dict,
@@ -601,7 +601,7 @@ class QdrantView(AsyncAPIView):
             "aggregations": aggregations or {},
         }
 
-    async def async_vector_search(  # noqa: PLR0913
+    async def async_vector_search(  # noqa: PLR0913, PLR0917
         self,
         query_string: str,
         params: dict,
