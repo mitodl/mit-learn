@@ -1286,7 +1286,8 @@ def test_oll_content_files_reindexed(mocker):
         "learning_resources_search.tasks.load_course_blocklist", return_value=[]
     )
     course = CourseFactory.create(etl_source=ETLSource.oll.value)
-    content_file = ContentFileFactory.create(run=course.learning_resource.runs.first())
+    # rebuilds index only the best run's content files
+    content_file = ContentFileFactory.create(run=course.learning_resource.best_run)
 
     dispatched_ids = [
         resource_id
