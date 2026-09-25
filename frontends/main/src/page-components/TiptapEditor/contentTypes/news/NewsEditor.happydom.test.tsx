@@ -30,6 +30,16 @@ jest.mock("posthog-js/react", () => ({
   usePostHog: () => ({}),
 }))
 
+/**
+ * Far enough out that no draft saves itself while a test works: a background
+ * write landing mid-interaction updates the toolbar outside `act`, which
+ * failed these suites intermittently. The autosave test sets its own.
+ */
+const AUTOSAVE_OFF = 10 * 60 * 1000
+
+/** What production uses; the autosave test waits this out deliberately. */
+const AUTOSAVE_DELAY_MS = 2000
+
 const mockOnSave = jest.fn()
 
 describe("NewsEditor - Content Editing and Saving", () => {
@@ -42,6 +52,7 @@ describe("NewsEditor - Content Editing and Saving", () => {
     content: JSONContent,
     articleId = 100,
     title = "Test Article",
+    autosaveDelayMs = AUTOSAVE_OFF,
   ) => {
     const user = factories.user.user({
       is_authenticated: true,
@@ -58,7 +69,11 @@ describe("NewsEditor - Content Editing and Saving", () => {
     setMockResponse.get(urls.websiteContent.details(articleId), newsItem)
 
     renderWithProviders(
-      <NewsEditor newsItem={newsItem} onSave={mockOnSave} />,
+      <NewsEditor
+        autosaveDelayMs={autosaveDelayMs}
+        newsItem={newsItem}
+        onSave={mockOnSave}
+      />,
       {
         user,
       },
@@ -139,7 +154,8 @@ describe("NewsEditor - Content Editing and Saving", () => {
         updatedArticle,
       )
 
-      const heading = screen.getByRole("heading", { level: 1 })
+      // Awaited: under load the editor's content mounts after its container.
+      const heading = await screen.findByRole("heading", { level: 1 })
       await userEvent.click(heading)
 
       await userEvent.keyboard("{Control>}a{/Control}{Delete}")
@@ -393,8 +409,8 @@ describe("NewsEditor - Content Editing and Saving", () => {
     })
   })
 
-  describe("Save as Draft functionality", () => {
-    test("can save news as draft", async () => {
+  describe("Autosaving a draft", () => {
+    test("a news draft saves itself once typing stops", async () => {
       const initialContent: JSONContent = {
         type: "doc",
         content: [
@@ -422,7 +438,12 @@ describe("NewsEditor - Content Editing and Saving", () => {
         ],
       }
 
-      const newsItem = await setupEditor(initialContent, 208, "Title")
+      const newsItem = await setupEditor(
+        initialContent,
+        208,
+        "Title",
+        AUTOSAVE_DELAY_MS,
+      )
 
       const paragraph = screen.getByText("Content")
       await userEvent.click(paragraph)
@@ -441,23 +462,23 @@ describe("NewsEditor - Content Editing and Saving", () => {
         updatedNewsItem,
       )
 
-      const saveDraftButton = await screen.findByRole("button", {
-        name: "Save as Draft",
-      })
+      // No button to press: a draft writes itself once typing stops.
+      expect(screen.queryByRole("button", { name: "Save as Draft" })).toBe(null)
 
-      expect(saveDraftButton).not.toBeDisabled()
-
-      await userEvent.click(saveDraftButton)
-
-      expect(makeRequest).toHaveBeenCalledWith({
-        method: "patch",
-        url: urls.websiteContent.details(newsItem.id),
-        body: expect.objectContaining({
-          is_published: false,
-          author_name: "",
-        }),
-      })
-    })
+      await waitFor(
+        () => {
+          expect(makeRequest).toHaveBeenCalledWith({
+            method: "patch",
+            url: urls.websiteContent.details(newsItem.id),
+            body: expect.objectContaining({
+              is_published: false,
+              author_name: "",
+            }),
+          })
+        },
+        { timeout: 6000 },
+      )
+    }, 15000)
   })
 
   describe("Error handling during save", () => {
@@ -538,7 +559,10 @@ describe("NewsEditor - Content Editing and Saving", () => {
       })
       setMockResponse.post(urls.websiteContent.list(), createdNewsItem)
 
-      renderWithProviders(<NewsEditor onSave={mockOnSave} />, { user })
+      renderWithProviders(
+        <NewsEditor autosaveDelayMs={AUTOSAVE_OFF} onSave={mockOnSave} />,
+        { user },
+      )
 
       await screen.findByTestId("editor")
 
@@ -558,7 +582,7 @@ describe("NewsEditor - Content Editing and Saving", () => {
       })
 
       const publishButton = await screen.findByRole("button", {
-        name: "Publish News",
+        name: "Publish",
       })
 
       expect(publishButton).not.toBeDisabled()
@@ -665,7 +689,12 @@ describe("NewsEditor - Document Rendering", () => {
     setMockResponse.get(urls.websiteContent.details(articleId), newsItem)
 
     renderWithProviders(
-      <NewsEditor newsItem={newsItem} onSave={mockOnSave} readOnly />,
+      <NewsEditor
+        autosaveDelayMs={AUTOSAVE_OFF}
+        newsItem={newsItem}
+        onSave={mockOnSave}
+        readOnly
+      />,
       { user },
     )
 
@@ -680,7 +709,10 @@ describe("NewsEditor - Document Rendering", () => {
     })
     setMockResponse.get(urls.userMe.get(), user)
 
-    renderWithProviders(<NewsEditor onSave={mockOnSave} />, { user })
+    renderWithProviders(
+      <NewsEditor autosaveDelayMs={AUTOSAVE_OFF} onSave={mockOnSave} />,
+      { user },
+    )
 
     await screen.findByTestId("editor")
   })
@@ -1583,7 +1615,14 @@ describe("NewsEditor - Byline publish date", () => {
     })
     setMockResponse.get(urls.websiteContent.details(newsItem.id), newsItem)
 
-    renderWithProviders(<NewsEditor newsItem={newsItem} readOnly />, { user })
+    renderWithProviders(
+      <NewsEditor
+        autosaveDelayMs={AUTOSAVE_OFF}
+        newsItem={newsItem}
+        readOnly
+      />,
+      { user },
+    )
     await screen.findByTestId("editor")
     return newsItem
   }
@@ -1623,7 +1662,7 @@ describe("NewsEditor - Delete draft", () => {
     jest.clearAllMocks()
   })
 
-  test("editor can delete a draft from the edit toolbar", async () => {
+  test("the edit toolbar does not offer delete", async () => {
     const user = factories.user.user({
       is_authenticated: true,
       is_article_editor: true,
@@ -1632,63 +1671,30 @@ describe("NewsEditor - Delete draft", () => {
 
     const newsItem = factories.websiteContent.websiteContent({
       id: 321,
-      title: "Draft to delete",
+      title: "Draft news",
       content_type: "news",
       is_published: false,
     })
     setMockResponse.get(urls.websiteContent.details(newsItem.id), newsItem)
-    setMockResponse.delete(urls.websiteContent.details(newsItem.id), null)
 
     renderWithProviders(
-      <NewsEditor newsItem={newsItem} onSave={mockOnSave} />,
+      <NewsEditor
+        autosaveDelayMs={AUTOSAVE_OFF}
+        newsItem={newsItem}
+        onSave={mockOnSave}
+      />,
       {
         user,
       },
     )
-
     await screen.findByTestId("editor")
 
-    await userEvent.click(await screen.findByRole("button", { name: "Delete" }))
-    await userEvent.click(
-      await screen.findByRole("button", { name: "Yes, delete" }),
-    )
-
-    await waitFor(() => {
-      expect(makeRequest).toHaveBeenCalledWith(
-        expect.objectContaining({
-          method: "delete",
-          url: urls.websiteContent.details(newsItem.id),
-        }),
-      )
-    })
-  })
-
-  test("delete button is not shown for published content", async () => {
-    const user = factories.user.user({
-      is_authenticated: true,
-      is_article_editor: true,
-    })
-    setMockResponse.get(urls.userMe.get(), user)
-
-    const newsItem = factories.websiteContent.websiteContent({
-      id: 322,
-      title: "Published item",
-      content_type: "news",
-      is_published: true,
-    })
-    setMockResponse.get(urls.websiteContent.details(newsItem.id), newsItem)
-
-    renderWithProviders(
-      <NewsEditor newsItem={newsItem} onSave={mockOnSave} />,
-      {
-        user,
-      },
-    )
-
-    await screen.findByTestId("editor")
-    expect(
-      screen.queryByRole("button", { name: "Delete" }),
-    ).not.toBeInTheDocument()
+    /**
+     * Deleting a draft lives on the drafts listing instead, where
+     * `WebsiteContentDraftListingPage delete` covers it. The edit bar carries
+     * the status, Publish and the settings icon, and nothing else.
+     */
+    expect(screen.queryByRole("button", { name: "Delete" })).toBe(null)
   })
 })
 
@@ -1702,7 +1708,7 @@ describe("NewsEditor - shared content controls", () => {
    * shared by every content type, so their copy must name the type being
    * edited. These lock the substitution in: news must never say "Article".
    */
-  test("the news control bar names news in its status readout", async () => {
+  test("the news control bar carries the status readout", async () => {
     const user = factories.user.user({
       is_authenticated: true,
       is_article_editor: true,
@@ -1717,14 +1723,17 @@ describe("NewsEditor - shared content controls", () => {
     })
     setMockResponse.get(urls.websiteContent.details(newsItem.id), newsItem)
 
-    renderWithProviders(<NewsEditor newsItem={newsItem} />, { user })
+    renderWithProviders(
+      <NewsEditor autosaveDelayMs={AUTOSAVE_OFF} newsItem={newsItem} />,
+      { user },
+    )
     await screen.findByTestId("editor")
 
     await screen.findByRole("button", { name: "Settings" })
-    expect(await screen.findByText(/status:/)).toHaveTextContent(
-      "News status: Draft",
+    /* The readout no longer names the content type, for either type. */
+    expect(await screen.findByText(/Status:/)).toHaveTextContent(
+      "Status: Draft",
     )
-    expect(screen.queryByText(/Article status:/)).not.toBeInTheDocument()
   })
 
   test("the settings drawer is titled for news", async () => {
@@ -1746,7 +1755,10 @@ describe("NewsEditor - shared content controls", () => {
     })
     setMockResponse.get(urls.websiteContent.details(newsItem.id), newsItem)
 
-    renderWithProviders(<NewsEditor newsItem={newsItem} />, { user })
+    renderWithProviders(
+      <NewsEditor autosaveDelayMs={AUTOSAVE_OFF} newsItem={newsItem} />,
+      { user },
+    )
     await screen.findByTestId("editor")
 
     await userEvent.click(
@@ -1774,7 +1786,10 @@ describe("NewsEditor - shared content controls", () => {
     })
     setMockResponse.get(urls.websiteContent.details(newsItem.id), newsItem)
 
-    renderWithProviders(<NewsEditor newsItem={newsItem} />, { user })
+    renderWithProviders(
+      <NewsEditor autosaveDelayMs={AUTOSAVE_OFF} newsItem={newsItem} />,
+      { user },
+    )
     await screen.findByTestId("editor")
 
     await userEvent.click(

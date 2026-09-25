@@ -1124,7 +1124,16 @@ def sync_website_content_learning_resource(content_id: int) -> None:
                 log.exception("Could not queue the removal for content %s", content_id)
 
 
-@app.task(acks_late=True, reject_on_worker_lost=True)
+@app.task(
+    acks_late=True,
+    reject_on_worker_lost=True,
+    # Retried, unlike the sync side: this task is where the inline removal
+    # hands off when it fails, and the callers that do so describe it as the
+    # one carrying the retries. Without a policy a transient database or
+    # search error failed it once and left the resource indexed.
+    autoretry_for=(Exception,),
+    retry_kwargs={"max_retries": 3, "countdown": 5},
+)
 def unpublish_website_content_learning_resource_task(content_id: int) -> None:
     """
     Take an unpublished WebsiteContent item's LearningResource out of search.
