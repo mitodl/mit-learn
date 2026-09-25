@@ -35,10 +35,14 @@ const renderArticleEditor = ({
   readOnly = false,
   isPublished = false,
   topics = [],
+  seoTitle = "",
+  seoDescription = "",
 }: {
   readOnly?: boolean
   isPublished?: boolean
   topics?: number[]
+  seoTitle?: string
+  seoDescription?: string
 } = {}) => {
   const user = factories.user.user({
     is_authenticated: true,
@@ -49,6 +53,8 @@ const renderArticleEditor = ({
     content,
     is_published: isPublished,
     topics,
+    seo_title: seoTitle,
+    seo_description: seoDescription,
   })
   renderWithProviders(<ArticleEditor article={article} readOnly={readOnly} />, {
     user,
@@ -233,10 +239,67 @@ describe("ArticleEditor settings", () => {
       expect(makeRequest).toHaveBeenCalledWith(
         expect.objectContaining({
           method: "patch",
-          body: { topics: [topic.id] },
+          body: { topics: [topic.id], seo_title: "", seo_description: "" },
         }),
       )
     })
+  })
+
+  test("saving settings PATCHes the SEO fields", async () => {
+    setMockResponse.get(
+      urls.topics.list({ limit: 1000 }),
+      factories.learningResources.topics({ count: 1 }),
+    )
+    const { article } = renderArticleEditor()
+    setMockResponse.patch(urls.websiteContent.details(article.id), article)
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Settings" }),
+    )
+    await userEvent.type(
+      await screen.findByLabelText("SEO Title"),
+      "A better title for search",
+    )
+    await userEvent.type(
+      screen.getByLabelText("SEO Description"),
+      "What this is about.",
+    )
+    await userEvent.click(screen.getByRole("button", { name: "Save Settings" }))
+
+    await waitFor(() => {
+      expect(makeRequest).toHaveBeenCalledWith(
+        expect.objectContaining({
+          method: "patch",
+          body: {
+            topics: [],
+            seo_title: "A better title for search",
+            seo_description: "What this is about.",
+          },
+        }),
+      )
+    })
+  })
+
+  test("the drawer opens with the saved SEO values", async () => {
+    setMockResponse.get(
+      urls.topics.list({ limit: 1000 }),
+      factories.learningResources.topics({ count: 1 }),
+    )
+    renderArticleEditor({
+      seoTitle: "Stored title",
+      seoDescription: "Stored description",
+    })
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Settings" }),
+    )
+
+    expect(await screen.findByLabelText("SEO Title")).toHaveValue(
+      "Stored title",
+    )
+    expect(screen.getByLabelText("SEO Description")).toHaveValue(
+      "Stored description",
+    )
   })
 
   test("an article's saved topics are already selected when the drawer opens", async () => {
@@ -423,7 +486,7 @@ describe("ArticleEditor topics requirement", () => {
       expect.objectContaining({ method: "patch" }),
     )
     /* The section says why it opened, rather than leaving the editor to guess. */
-    await screen.findByText("Select at least one topic to save your article")
+    await screen.findByText("Select at least one topic to publish your article")
   })
 
   test("saving a draft with no topics asks for them instead", async () => {
@@ -481,7 +544,74 @@ describe("ArticleEditor topics requirement", () => {
     })
   })
 
-  test("the drawer will not save an article with its topics emptied", async () => {
+  test("a draft's topics can be cleared", async () => {
+    const topics = factories.learningResources.topics({ count: 1 })
+    const [topic] = topics.results
+    setMockResponse.get(urls.topics.list({ limit: 1000 }), topics)
+    const { article } = renderArticleEditor({ topics: [topic.id] })
+    setMockResponse.patch(urls.websiteContent.details(article.id), article)
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Settings" }),
+    )
+    await userEvent.click(
+      await screen.findByRole("button", { name: `Remove ${topic.name}` }),
+    )
+
+    /**
+     * Refused only once the content is public. A draft may sit without topics
+     * -- publishing is where they are insisted on, and autosave cannot stop to
+     * ask -- so the editor is not trapped into keeping a topic they removed.
+     */
+    await userEvent.click(screen.getByRole("button", { name: "Save Settings" }))
+
+    await waitFor(() => {
+      expect(makeRequest).toHaveBeenCalledWith(
+        expect.objectContaining({
+          method: "patch",
+          body: { topics: [], seo_title: "", seo_description: "" },
+        }),
+      )
+    })
+  })
+
+  test("a draft save held back for topics still happens without them", async () => {
+    mockTopics()
+    const { article } = renderArticleEditor()
+    setMockResponse.patch(urls.websiteContent.details(article.id), article)
+
+    // The edit that asks for the save, which must not be lost.
+    await userEvent.type(
+      await screen.findByRole("heading", { level: 1 }),
+      " edited",
+    )
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Save as Draft" }),
+    )
+    await screen.findByRole("heading", { name: "Article Settings" })
+
+    /* Saved without picking one: a draft may sit without topics. */
+    await userEvent.click(screen.getByRole("button", { name: "Save Settings" }))
+
+    /**
+     * The held-back save resumes, so the write carries the content. Only the
+     * settings going out would leave the title edit unsaved, with nothing on
+     * screen to say so -- the drawer has closed and the press is forgotten.
+     */
+    await waitFor(() => {
+      expect(makeRequest).toHaveBeenCalledWith(
+        expect.objectContaining({
+          method: "patch",
+          body: expect.objectContaining({
+            is_published: false,
+            content: expect.anything(),
+          }),
+        }),
+      )
+    })
+  }, 20000)
+
+  test("the drawer will not save a published article with its topics emptied", async () => {
     const topics = factories.learningResources.topics({ count: 1 })
     const [topic] = topics.results
     setMockResponse.get(urls.topics.list({ limit: 1000 }), topics)
@@ -504,7 +634,7 @@ describe("ArticleEditor topics requirement", () => {
      * through here, and with them its place on a topic page.
      */
     expect(screen.getByRole("button", { name: "Save Settings" })).toBeDisabled()
-    await screen.findByText("Select at least one topic to save your article")
+    await screen.findByText("A published article needs at least one topic")
     expect(makeRequest).not.toHaveBeenCalledWith(
       expect.objectContaining({ method: "patch" }),
     )
@@ -536,7 +666,7 @@ describe("ArticleEditor topics requirement", () => {
       expect(makeRequest).toHaveBeenCalledWith(
         expect.objectContaining({
           method: "patch",
-          body: { topics: [topic.id] },
+          body: { topics: [topic.id], seo_title: "", seo_description: "" },
         }),
       )
     })
