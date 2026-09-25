@@ -80,11 +80,33 @@ const Content = styled.div<{ collapsed: boolean }>(({ theme, collapsed }) => ({
   "p, ul, ol": {
     margin: "0 0 12px",
   },
+  ol: {
+    paddingInlineStart: "28px",
+  },
+  "ol > li": {
+    ...theme.typography.h5,
+    color: theme.custom.colors.darkGray1,
+    marginBottom: "12px",
+  },
+  // Responses put the course title and description in one paragraph,
+  // separated by a line break.
   "li p": {
+    ...theme.typography.body1,
     color: theme.custom.colors.silverGrayDark,
   },
+  "li strong": {
+    ...theme.typography.h5,
+    fontWeight: theme.typography.fontWeightRegular,
+    display: "block",
+    marginBottom: "4px",
+    color: theme.custom.colors.darkGray1,
+  },
+  "li strong + br": {
+    display: "none",
+  },
   a: {
-    color: theme.custom.colors.red,
+    color: "inherit",
+    textDecoration: "none",
   },
 }))
 
@@ -96,12 +118,85 @@ const ShowMoreButton = styled(Button)(({ theme }) => ({
   backgroundColor: theme.custom.colors.white,
 }))
 
-const StyledAiChatDisplay = styled(AiChatDisplay)({
+const DrawerChatDisplay = styled(AiChatDisplay)(({ theme }) => ({
+  "& .MitAiChat--chatScreenContainer": {
+    padding: "0 48px",
+    [theme.breakpoints.down("md")]: {
+      padding: "0 16px",
+    },
+  },
+  "& .MitAiChat--title": {
+    paddingRight: "72px", // clear the close button
+    p: {
+      ...theme.typography.h5,
+      fontWeight: theme.typography.fontWeightRegular,
+    },
+  },
   // Hide the templated prompt that seeded the conversation.
-  ".MitAiChat--messageRow:first-of-type[data-chat-role='user']": {
+  "& .MitAiChat--messageRow:first-of-type[data-chat-role='user']": {
     display: "none",
   },
-})
+  "& .MitAiChat--messageRowAssistant .MitAiChat--message": {
+    ...theme.typography.body1,
+    color: theme.custom.colors.darkGray2,
+    p: {
+      margin: "0 0 16px",
+    },
+    // Each recommended course renders as a heading with a numbered badge,
+    // followed by its description.
+    ol: {
+      counterReset: "ai-recommendation",
+      listStyle: "none",
+      paddingInlineStart: 0,
+      margin: "24px 0",
+    },
+    "ol > li": {
+      counterIncrement: "ai-recommendation",
+      margin: "0 0 24px",
+    },
+    "ol > li strong": {
+      ...theme.typography.h5,
+      display: "block",
+      marginBottom: "12px",
+      color: theme.custom.colors.darkGray2,
+      "&::after": {
+        content: "counter(ai-recommendation)",
+        ...theme.typography.body3,
+        display: "inline-flex",
+        alignItems: "center",
+        justifyContent: "center",
+        minWidth: "20px",
+        height: "20px",
+        padding: "0 4px",
+        marginLeft: "10px",
+        verticalAlign: "middle",
+        boxSizing: "border-box",
+        border: `1px solid ${theme.custom.colors.silverGray}`,
+        borderRadius: "4px",
+        color: theme.custom.colors.darkGray1,
+      },
+    },
+    "ol > li strong + br": {
+      display: "none",
+    },
+    "ol > li strong a": {
+      color: "inherit",
+      textDecoration: "none",
+      "&:hover": {
+        color: theme.custom.colors.red,
+        textDecoration: "underline",
+      },
+    },
+    "ul > li": {
+      paddingLeft: "24px",
+      "&::before": {
+        content: '"•"',
+        left: "8px",
+        color: theme.custom.colors.darkGray2,
+      },
+    },
+  },
+}))
 
 const OverviewDrawer: React.FC<{ open: boolean; onClose: () => void }> = ({
   open,
@@ -137,7 +232,7 @@ const OverviewDrawer: React.FC<{ open: boolean; onClose: () => void }> = ({
           <RiCloseLine />
         </CloseButton>
       </CloseButtonContainer>
-      <StyledAiChatDisplay
+      <DrawerChatDisplay
         entryScreenEnabled={false}
         askTimTitle="to recommend a course"
         scrollElement={scrollElement}
@@ -227,3 +322,4 @@ const AiSearchOverview: React.FC<AiSearchOverviewProps> = ({
 }
 
 export default AiSearchOverview
+export { Overview } // TEMP-PREVIEW
