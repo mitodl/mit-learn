@@ -26,7 +26,7 @@ import {
 const COLLAPSED_HEIGHT = 100
 
 const buildPrompt = (query: string) =>
-  `give me some courses i might find interesting if i search "${query}". start with "here are some courses". don't attempt to continue the conversation. keep it brief. make it interesting to someone who wants to learn more ~ lead on`
+  `Give me courses I might find interesting if I search "${query}". Start with "here are some courses". Do not attempt to continue the conversation. Keep it brief.`
 
 const Container = styled.section(({ theme }) => ({
   position: "relative",
