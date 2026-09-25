@@ -1,6 +1,31 @@
 Release Notes
 =============
 
+Version 0.80.17
+---------------
+
+- fix: more design QA fixes for Organizational Learning page (#3986)
+- fix(news): escape interpolated text/attrs when extracting news summaries (#3972)
+- feat: add B2B contract learner directory page (#3958)
+- fix: align Organizational Learning page with Figma design QA (#3971)
+- feat: add hover explanation for Active learners, fix clipped month label in engagement chart (#3966)
+- Track begin-checkout analytics for enrollments (#3959)
+
+Version 0.80.15
+---------------
+
+- credential metadata task (#3950)
+- Skip unreferenced static files when ingesting edX course archives (#3942)
+- Mark the Django session cookie Secure by default (#3968)
+
+Version 0.80.14
+---------------
+
+- adding link to program letter in dashboard (#3965)
+- Update actions/deploy-pages action to v5 (#3897)
+- feat(product-pages): render CMS-managed FAQs on course and program pages (#3954)
+- feat: show a learner's own program price as an applied-savings breakdown (#3943)
+
 Version 0.80.13
 ---------------
 

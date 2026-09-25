@@ -116,7 +116,9 @@ def test_search_index_plugin_resource_unpublished(
         assert unpublish_run_mock.call_count == resource.runs.count()
         for run in resource.runs.all():
             # Default "mock" source is non-retained -> removed from both indexes.
-            unpublish_run_mock.assert_any_call(run.id, unpublished_only=False)
+            unpublish_run_mock.assert_any_call(
+                run.id, unpublished_only=False, keep_published=False
+            )
     else:
         unpublish_run_mock.assert_not_called()
     if test_mode:
@@ -159,6 +161,51 @@ def test_search_index_plugin_bulk_resources_unpublished_direct_files(
 
 
 @pytest.mark.django_db
+def test_search_index_plugin_bulk_resources_unpublished_skips_test_mode_direct_files(
+    mocker,
+):
+    """bulk_resources_unpublished leaves a test_mode resource's direct files indexed, like resource_unpublished"""
+    resource = LearningResourceFactory.create(is_course=True, published=False)
+    test_resource = LearningResourceFactory.create(
+        is_course=True, published=False, test_mode=True
+    )
+    marketing_page = ContentFileFactory.create(learning_resource=resource)
+    ContentFileFactory.create(learning_resource=test_resource)
+    mocker.patch(
+        "learning_resources_search.plugins.tasks.bulk_deindex_learning_resources.si"
+    )
+    deindex_direct_files_mock = mocker.patch(
+        "learning_resources_search.plugins.tasks.deindex_content_files.si"
+    )
+
+    SearchIndexPlugin().bulk_resources_unpublished(
+        [resource.id, test_resource.id], COURSE_TYPE
+    )
+
+    deindex_direct_files_mock.assert_called_once_with(
+        [marketing_page.id], resource.id, resource_type=COURSE_TYPE
+    )
+
+
+@pytest.mark.django_db
+def test_search_index_plugin_resource_before_delete_test_mode_direct_files(mocker):
+    """Deleting a persisted test_mode resource still deindexes its direct content files"""
+    resource = LearningResourceFactory.create(is_course=True, test_mode=True)
+    marketing_page = ContentFileFactory.create(learning_resource=resource)
+    mocker.patch("learning_resources_search.plugins.tasks.deindex_document.si")
+    mocker.patch("learning_resources_search.plugins.tasks.deindex_run_content_files.si")
+    deindex_direct_files_mock = mocker.patch(
+        "learning_resources_search.plugins.tasks.deindex_content_files.si"
+    )
+
+    SearchIndexPlugin().resource_before_delete(resource)
+
+    deindex_direct_files_mock.assert_called_once_with(
+        [marketing_page.id], resource.id, resource_type=COURSE_TYPE
+    )
+
+
+@pytest.mark.django_db
 @pytest.mark.parametrize("resource_type", [COURSE_TYPE, PROGRAM_TYPE])
 @pytest.mark.parametrize("test_mode", [True, False])
 def test_search_index_plugin_resource_before_delete(
@@ -188,7 +235,7 @@ def test_search_index_plugin_resource_before_delete(
         )
         for run in resource.runs.all():
             mock_search_index_helpers.mock_remove_contentfiles_immutable_signature.assert_any_call(
-                run.id, unpublished_only=False
+                run.id, unpublished_only=False, keep_published=False
             )
     else:
         mock_search_index_helpers.mock_remove_contentfiles_immutable_signature.assert_not_called()
@@ -267,7 +314,7 @@ def test_resource_run_unpublished_non_retained_source_removes_both(
     SearchIndexPlugin().resource_run_unpublished(run)
 
     mock_search_index_helpers.mock_remove_contentfiles_immutable_signature.assert_called_once_with(
-        run.id, unpublished_only=False
+        run.id, unpublished_only=False, keep_published=False
     )
     mock_search_index_helpers.mock_remove_run_contentfiles_immutable_signature.assert_called_once_with(
         run.id
@@ -421,6 +468,29 @@ def test_content_files_loaded_unpublished_run_embeds_qdrant_only(
     # The old behavior (deindex / remove from Qdrant) no longer fires here.
     mock_search_index_helpers.mock_remove_contentfiles_immutable_signature.assert_not_called()
     mock_search_index_helpers.mock_remove_run_contentfiles_immutable_signature.assert_not_called()
+
+
+@pytest.mark.django_db
+def test_content_files_loaded_test_mode_canvas_purges_qdrant_only(
+    mock_search_index_helpers, settings
+):
+    """A test_mode Canvas run drops its unpublished files from Qdrant and stays out of OpenSearch"""
+    settings.QDRANT_ENABLE_INDEXING_PLUGIN_HOOKS = True
+    run = LearningResourceRunFactory.create(
+        published=True,
+        learning_resource__etl_source=ETLSource.canvas.name,
+        learning_resource__published=False,
+        learning_resource__test_mode=True,
+        learning_resource__create_runs=False,
+    )
+    ContentFileFactory.create(run=run, published=False)
+
+    SearchIndexPlugin().content_files_loaded(run)
+
+    mock_search_index_helpers.mock_remove_unpublished_run_contentfiles_immutable_signature.assert_called_once_with(
+        run.id
+    )
+    mock_search_index_helpers.mock_upsert_contentfiles_immutable_signature.assert_not_called()
 
 
 @pytest.mark.django_db
@@ -594,3 +664,25 @@ def test_content_files_loaded_always_purges_unpublished(
     purge = mock_search_index_helpers.mock_remove_unpublished_run_contentfiles_immutable_signature.return_value
     embed = mock_search_index_helpers.mock_embed_run_contentfiles_immutable_signature.return_value
     assert chained.index(purge) < chained.index(embed)
+
+
+@pytest.mark.django_db
+def test_content_files_loaded_best_run_with_only_unpublished_files_still_indexes(
+    mocker, settings
+):
+    """
+    The best run is re-indexed even when a reload left all its files unpublished,
+    so index_run_content_files clears their stale OpenSearch documents.
+    """
+    settings.QDRANT_ENABLE_INDEXING_PLUGIN_HOOKS = False
+    mocker.patch("learning_resources_search.plugins.try_with_retry_as_task")
+    index_mock = mocker.patch(
+        "learning_resources_search.plugins.tasks.index_run_content_files.si"
+    )
+    course = LearningResourceFactory.create(is_course=True, create_runs=False)
+    run = LearningResourceRunFactory.create(learning_resource=course, published=True)
+    ContentFileFactory.create(run=run, published=False)
+
+    SearchIndexPlugin().content_files_loaded(run)
+
+    index_mock.assert_called_once_with(run.id)

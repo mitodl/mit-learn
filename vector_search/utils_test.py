@@ -29,6 +29,7 @@ from learning_resources.constants import (
     LearningResourceType,
     PlatformType,
 )
+from learning_resources.etl.constants import ETLSource
 from learning_resources.factories import (
     ContentFileFactory,
     LearningResourceFactory,
@@ -4375,3 +4376,44 @@ def test_async_content_file_chunks_for_resource_no_published_run(mocker):
             match=models.MatchAny(any=[resource.readable_id]),
         )
     ]
+
+
+def _course_with_content_files(**kwargs):
+    """Create a course with files on published, variant and unpublished runs, plus direct and withdrawn files"""
+    course = LearningResourceFactory.create(is_course=True, create_runs=False, **kwargs)
+    runs = [
+        LearningResourceRunFactory.create(learning_resource=course, published=True),
+        LearningResourceRunFactory.create(
+            learning_resource=course, published=True, is_variant=True
+        ),
+        LearningResourceRunFactory.create(learning_resource=course, published=False),
+    ]
+    files = {ContentFileFactory.create(run=run, published=True) for run in runs}
+    files.add(ContentFileFactory.create(learning_resource=course, published=True))
+    ContentFileFactory.create(run=runs[0], published=False)
+    return course, files
+
+
+def test_qdrant_content_files_every_run():
+    """Qdrant gets published files of every run, published or not, plus direct files"""
+    course, files = _course_with_content_files()
+
+    selected = vs_utils.qdrant_content_files(
+        LearningResource.objects.filter(id=course.id)
+    )
+
+    assert set(selected) == files
+
+
+def test_qdrant_content_files_unpublished_course_has_none():
+    """Unpublished courses aren't embedded unless test_mode, which includes Canvas"""
+    course, _ = _course_with_content_files(published=False)
+    test_course, test_files = _course_with_content_files(
+        published=False, test_mode=True, etl_source=ETLSource.canvas.name
+    )
+
+    selected = vs_utils.qdrant_content_files(
+        LearningResource.objects.filter(id__in=[course.id, test_course.id])
+    )
+
+    assert set(selected) == test_files

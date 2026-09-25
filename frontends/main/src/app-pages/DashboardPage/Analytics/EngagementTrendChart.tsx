@@ -2,7 +2,8 @@
 
 import React from "react"
 import { LineChart } from "@mui/x-charts/LineChart"
-import { Skeleton, styled, useTheme } from "ol-components"
+import { RiInformationLine } from "@remixicon/react"
+import { Skeleton, styled, Tooltip, useTheme } from "ol-components"
 import type { MonthlyEngagementTrend } from "api/analytics-hooks/organizations"
 import {
   EmptyTableMessage,
@@ -66,6 +67,34 @@ const TableWrapper = styled.div(({ theme }) => ({
   borderTop: `1px solid ${theme.custom.colors.lightGray2}`,
 }))
 
+const InfoTrigger = styled.span(({ theme }) => ({
+  display: "inline-flex",
+  alignItems: "center",
+  verticalAlign: "middle",
+  marginLeft: "4px",
+  color: theme.custom.colors.silverGrayDark,
+  cursor: "help",
+  "& svg": { width: "16px", height: "16px", marginLeft: "4px" },
+}))
+
+/**
+ * The desktop header housing the same trigger is `display: none` below `md`
+ * (`TableHeaderRow`), so this repeats it once, outside the table, in the one
+ * layout where that header is hidden — never per row, which would turn one
+ * definition into a repeated focus stop for every month.
+ */
+const MobileColumnHelp = styled.div(({ theme }) => ({
+  display: "none",
+  [theme.breakpoints.down("md")]: {
+    display: "flex",
+    flexWrap: "wrap",
+    gap: "16px",
+    marginBottom: "12px",
+    ...theme.typography.subtitle2,
+    color: theme.custom.colors.black,
+  },
+}))
+
 const CHART_HEIGHT = 320
 
 const COLUMN_FLEX = {
@@ -82,24 +111,40 @@ const SERIES = [
     column: "active",
     label: "Active learners",
     color: CATEGORICAL[0],
+    /**
+     * Copied from the `monthly_active_learners` field description in
+     * ol-analytics-api's b2b_dashboard models (mitodl/ol-analytics-api#57),
+     * itself derived from the backing dbt SQL in ol-data-platform. That
+     * description lives only in the OpenAPI schema (/openapi.json, /docs) —
+     * the actual row data this component fetches never carries it, and this
+     * client is hand-written rather than generated from the schema (see
+     * the header comment in analytics/types.ts), so there is no fetch-and-
+     * parse step that could keep this in sync automatically. If the backend
+     * description changes, this string has to be updated by hand to match.
+     */
+    description:
+      "Learners who did anything in a course this month: watched a video, attempted a problem, posted in a discussion, used the chatbot, moved through course pages or earned a certificate. Enrolling alone doesn't count. If too few learners were active, the whole month is withheld to avoid identifying them.",
   },
   {
     key: "new_enrollments",
     column: "enrollments",
     label: "New enrollments",
     color: CATEGORICAL[1],
+    description: undefined,
   },
   {
     key: "certificates_earned",
     column: "certificates",
     label: "Certificates earned",
     color: CATEGORICAL[2],
+    description: undefined,
   },
 ] as const satisfies ReadonlyArray<{
   key: keyof MonthlyEngagementTrend
   column: keyof typeof COLUMN_FLEX
   label: string
   color: string
+  description?: string
 }>
 
 const EngagementTrendChart: React.FC<{
@@ -152,7 +197,16 @@ const EngagementTrendChart: React.FC<{
       <div aria-hidden>
         <LineChart
           height={CHART_HEIGHT}
-          margin={{ left: 8, right: 8, top: 8, bottom: 0 }}
+          /**
+           * `right: 20` works around a `shortenLabels` quirk in
+           * `@mui/x-charts`: for a point-scale axis, a tick's max label width
+           * is `2 * min(space to its left, space to its right)`. The last
+           * tick sits exactly at the drawing area's right edge, so that
+           * budget collapses to `2 * margin.right`. At the default 8, every
+           * month abbreviation gets ellipsized down to nothing; 20 leaves
+           * room for "Feb"/"Dec" to render in full.
+           */
+          margin={{ left: 8, right: 20, top: 8, bottom: 0 }}
           // Horizontal rules only: vertical ones would fight the marks for
           // attention without helping anyone read a monthly value.
           grid={{ horizontal: true }}
@@ -201,6 +255,20 @@ const EngagementTrendChart: React.FC<{
         />
       </div>
       <TableWrapper>
+        <MobileColumnHelp>
+          {SERIES.filter((series) => series.description).map((series) => (
+            <Tooltip key={series.key} title={series.description}>
+              {/* eslint-disable-next-line styled-components-a11y/no-noninteractive-tabindex */}
+              <InfoTrigger
+                aria-label={`${series.label}: ${series.description}`}
+                tabIndex={0}
+              >
+                {series.label}
+                <RiInformationLine aria-hidden="true" />
+              </InfoTrigger>
+            </Tooltip>
+          ))}
+        </MobileColumnHelp>
         <div role="table" aria-label="Monthly engagement">
           <div role="rowgroup">
             <TableHeaderRow role="row">
@@ -215,6 +283,14 @@ const EngagementTrendChart: React.FC<{
                   $numeric
                 >
                   {series.label}
+                  {series.description ? (
+                    <Tooltip title={series.description}>
+                      {/* eslint-disable-next-line styled-components-a11y/no-noninteractive-tabindex */}
+                      <InfoTrigger aria-label={series.description} tabIndex={0}>
+                        <RiInformationLine aria-hidden="true" />
+                      </InfoTrigger>
+                    </Tooltip>
+                  ) : null}
                 </TableHeaderCell>
               ))}
             </TableHeaderRow>

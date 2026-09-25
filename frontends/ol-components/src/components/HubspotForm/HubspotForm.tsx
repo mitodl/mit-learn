@@ -496,12 +496,24 @@ const HubspotForm = React.forwardRef<HTMLFormElement, HubspotFormProps>(
     return (
       <Form ref={ref} className={className} onSubmit={handleSubmit}>
         {isLoading ? <LoadingText>Loading form...</LoadingText> : null}
-        {resolvedForm.fieldGroups.map((group, groupIndex) => (
-          <Group key={`${group.name || "group"}-${groupIndex}`}>
-            {group.name ? <legend>{group.name}</legend> : null}
-            {group.fields
-              .filter((field) => !field.hidden)
-              .map((field) => (
+        {resolvedForm.fieldGroups.map((group, groupIndex) => {
+          const visibleFields = group.fields.filter((field) => !field.hidden)
+
+          /**
+           * A group whose fields are all hidden (e.g. a trailing HubSpot
+           * tracking/context group) would otherwise render as an empty
+           * fieldset. As a flex sibling it still claims a `gap` on both
+           * sides of itself, doubling the visible space before whatever
+           * follows it.
+           */
+          if (visibleFields.length === 0) {
+            return null
+          }
+
+          return (
+            <Group key={`${group.name || "group"}-${groupIndex}`}>
+              {group.name ? <legend>{group.name}</legend> : null}
+              {visibleFields.map((field) => (
                 <HubspotField
                   key={field.name}
                   field={field}
@@ -510,8 +522,9 @@ const HubspotForm = React.forwardRef<HTMLFormElement, HubspotFormProps>(
                   onChange={handleChange}
                 />
               ))}
-          </Group>
-        ))}
+            </Group>
+          )
+        })}
         {shouldRenderRecaptcha && (
           <ReCaptcha
             ref={recaptchaRef}

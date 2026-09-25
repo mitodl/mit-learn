@@ -444,7 +444,7 @@ def load_run(
     return learning_resource_run
 
 
-def upsert_course_or_program(  # noqa: C901
+def upsert_course_or_program(  # noqa: C901, PLR0912
     resource_data: dict,
     blocklist: list[str],
     resource_type: str,
@@ -477,6 +477,9 @@ def upsert_course_or_program(  # noqa: C901
 
     if readable_id in blocklist or not runs:
         resource_data["published"] = False
+    if readable_id in blocklist:
+        # blocklisting overrides test_mode, which would keep the content indexed
+        resource_data["test_mode"] = False
 
     if not resource_data.get("resource_category"):
         if resource_type == LearningResourceType.course.name:
@@ -600,7 +603,10 @@ def load_course(
             we set the course to "test_mode" in learn
             """
             learning_resource.require_summaries = True
-            if learning_resource.published is False:
+            if (
+                learning_resource.published is False
+                and learning_resource.readable_id not in blocklist
+            ):
                 learning_resource.test_mode = True
             learning_resource.save()
         for course_run_data in runs_data:

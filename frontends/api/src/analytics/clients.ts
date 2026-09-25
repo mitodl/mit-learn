@@ -7,6 +7,8 @@ import type {
   ContractMonthlyEngagementTrend,
   ContractUtilization,
   EnrollmentCompletionFunnel,
+  LearnerProgressParams,
+  LearnerProgressResponse,
   MonthlyEngagementTrend,
   OrgAnalyticsResponse,
 } from "./types"
@@ -183,6 +185,28 @@ const analyticsContractsApi = {
       "content-engagement",
       page,
       signal,
+    ),
+
+  /**
+   * Individual learners rather than a rollup, so it has its own envelope
+   * (`outcomes_withheld_count`) and its own filter set — hence a hand-rolled
+   * call instead of `getContractResource`.
+   *
+   * `indexes: null` makes axios repeat a bare key per array element
+   * (`completion_status=passed&completion_status=certified`) instead of its
+   * default `completion_status[]=`. FastAPI's `Query(list[...])` reads the
+   * former, and it is what `queryify` produces in test-utils/urls.ts, so the
+   * client and the test URL builders stay in lockstep.
+   */
+  learnerProgress: (
+    organizationId: string,
+    contractId: string,
+    params?: LearnerProgressParams,
+    signal?: AbortSignal,
+  ): Promise<AxiosResponse<LearnerProgressResponse>> =>
+    axiosInstance.get<LearnerProgressResponse>(
+      `${contractRoot(organizationId, contractId)}/learner-progress`,
+      { params, signal, paramsSerializer: { indexes: null } },
     ),
 }
 

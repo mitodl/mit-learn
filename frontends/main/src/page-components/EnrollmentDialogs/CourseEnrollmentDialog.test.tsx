@@ -27,6 +27,13 @@ import { faker } from "@faker-js/faker/locale/en"
 import invariant from "tiny-invariant"
 import { mitxonlineLegacyUrl } from "@/common/mitxonline"
 import * as routes from "@/common/urls"
+import { trackAddToCart, trackBeginCheckout } from "@/common/analytics/gtm"
+
+jest.mock("@/common/analytics/gtm", () => ({
+  ...jest.requireActual("@/common/analytics/gtm"),
+  trackAddToCart: jest.fn(),
+  trackBeginCheckout: jest.fn(),
+}))
 
 const makeCourseRun = mitxFactories.courses.courseRun
 const makeProduct = mitxFactories.courses.product
@@ -440,6 +447,16 @@ describe("CourseEnrollmentDialog", () => {
 
       // Verify redirect to cart page
       expect(assign).toHaveBeenCalledWith(mitxonlineLegacyUrl("/cart/"))
+
+      expect(trackAddToCart).toHaveBeenCalledWith(
+        expect.objectContaining({ courseName: course.title }),
+      )
+      expect(trackBeginCheckout).toHaveBeenCalledWith(
+        expect.objectContaining({
+          courseName: course.title,
+          value: parseFloat(product.price),
+        }),
+      )
     })
 
     test("Default behavior: redirects to the dashboard success URL with title in params after enrollment", async () => {

@@ -346,6 +346,49 @@ def test_bulk_resources_unpublished_actions(mock_plugin_manager, fixture_resourc
     )
 
 
+def test_resource_unpublished_actions_keeps_test_mode_direct_files(
+    mock_plugin_manager,
+):
+    """A test_mode resource's direct content files stay published when it is unpublished"""
+    resource = LearningResourceFactory.create(published=False, test_mode=True)
+    marketing_page = ContentFileFactory.create(
+        learning_resource=resource, published=True
+    )
+
+    utils.resource_unpublished_actions(resource)
+
+    marketing_page.refresh_from_db()
+    assert marketing_page.published is True
+    mock_plugin_manager.hook.resource_unpublished.assert_called_once_with(
+        resource=resource
+    )
+
+
+def test_bulk_resources_unpublished_actions_keeps_test_mode_direct_files(
+    mock_plugin_manager,
+):
+    """Only the non-test_mode resources' direct content files are unpublished in bulk"""
+    resource = LearningResourceFactory.create(is_course=True, published=False)
+    test_resource = LearningResourceFactory.create(
+        is_course=True, published=False, test_mode=True
+    )
+    marketing_page = ContentFileFactory.create(
+        learning_resource=resource, published=True
+    )
+    test_marketing_page = ContentFileFactory.create(
+        learning_resource=test_resource, published=True
+    )
+
+    utils.bulk_resources_unpublished_actions(
+        [resource.id, test_resource.id], resource.resource_type
+    )
+
+    marketing_page.refresh_from_db()
+    test_marketing_page.refresh_from_db()
+    assert marketing_page.published is False
+    assert test_marketing_page.published is True
+
+
 def test_resource_delete_actions(mock_plugin_manager, fixture_resource):
     """
     resource_delete_actions function should trigger plugin hook's resource_deleted function
