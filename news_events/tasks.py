@@ -129,26 +129,51 @@ def sync_website_content_to_news(self, content_id: int):
     """
     import logging
 
-    from news_events.etl.articles_news import sync_single_website_content_news_to_news
+    from news_events.etl.articles_news import (
+        delete_website_content_news_from_news,
+        sync_single_website_content_news_to_news,
+    )
     from website_content.models import WebsiteContent
 
     logger = logging.getLogger(__name__)
 
     try:
-        content = WebsiteContent.objects.get(id=content_id, is_published=True)
+        content = WebsiteContent.objects.filter(
+            id=content_id, is_published=True
+        ).first()
+        if content is None:
+            # Unpublished or gone since this was queued. Remove any entry
+            # rather than simply skipping: an earlier attempt of this task may
+            # have created one before the row changed -- including an attempt
+            # whose reconciliation below failed, which is what a retry lands
+            # here. Deleting by guid is a no-op when there is nothing to
+            # delete, so the ordinary "queued, then unpublished" case is free.
+            logger.warning(
+                "WebsiteContent %s not found or not published, removing any feed entry",
+                content_id,
+            )
+            delete_website_content_news_from_news(content_id)
+            return
 
         sync_single_website_content_news_to_news(content)
+
+        # The published check above is a read, and the row can change under it:
+        # unpublishing runs in the request, so it can land between that read
+        # and this write and then have nothing queued behind it to notice --
+        # leaving the story in the feed after it was taken down. Whoever writes
+        # last reconciles, so re-read the row and undo if it has moved on.
+        if not WebsiteContent.objects.filter(id=content_id, is_published=True).exists():
+            logger.info(
+                "WebsiteContent %s was unpublished while syncing, undoing the sync",
+                content_id,
+            )
+            delete_website_content_news_from_news(content_id)
+            return
 
         logger.info(
             "Successfully synced content %s to news feed",
             content_id,
         )
-    except WebsiteContent.DoesNotExist:
-        logger.warning(
-            "WebsiteContent %s not found or not published, skipping sync",
-            content_id,
-        )
-        return
     except Exception:
         logger.exception(
             "Failed to sync content %s to news feed (retry %s/%s)",

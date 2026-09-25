@@ -1,6 +1,6 @@
 import React from "react"
 import { NewsListingPage } from "./NewsListingPage"
-import { urls, setMockResponse } from "api/test-utils"
+import { urls, setMockResponse, makeRequest } from "api/test-utils"
 import type { NewsFeedItem } from "api/v0"
 import { newsEvents } from "api/test-utils/factories"
 import {
@@ -399,5 +399,111 @@ describe("NewsListingPage", () => {
     // Story at index 0 (main story) should still be visible in main section
     const mainStoryInstances = screen.getAllByText(news.results[0].title)
     expect(mainStoryInstances.length).toBeGreaterThan(0)
+  })
+})
+
+/**
+ * The listing renders its mobile and desktop layouts together and hides one
+ * with CSS, so each card is in the DOM twice; these take the first match.
+ *
+ * Index 0 of the feed is the featured MainStory and the rest are
+ * RegularStories -- two different cards, so `index` picks which one a test
+ * puts the synced story in.
+ */
+describe("NewsListingPage story actions", () => {
+  const CONTENT_ID = 512
+
+  /* A sibling describe, so it does not inherit the suite's own beforeEach. */
+  beforeEach(() => {
+    mockedUseFeatureFlagEnabled.mockReturnValue(true)
+    mockedUseFeatureFlagsLoaded.mockReturnValue(true)
+  })
+
+  afterEach(() => {
+    jest.clearAllMocks()
+  })
+
+  const setupWithSyncedStory = ({
+    isContentEditor = true,
+    fromWebsiteContent = true,
+    index = 1,
+  } = {}) => {
+    setMockResponse.get(urls.userMe.get(), {
+      is_authenticated: isContentEditor,
+      is_article_editor: isContentEditor,
+    })
+    const news = newsEvents.newsItems({ count: 3 })
+    const story = news.results[index] as NewsFeedItem
+    if (fromWebsiteContent) {
+      /* The guid `WebsiteContentNewsPlugin` writes for synced content. */
+      story.guid = `article-${CONTENT_ID}`
+    }
+    setMockResponse.get(expect.stringContaining(urls.newsEvents.list()), news)
+    renderWithProviders(<NewsListingPage />)
+    return story
+  }
+
+  const menuButtons = (title: string) =>
+    screen.queryAllByRole("button", { name: `More options for ${title}` })
+
+  /* Opens the story's menu and confirms the dialog it puts up. */
+  const unpublishStory = async (title: string) => {
+    setMockResponse.patch(urls.websiteContent.details(CONTENT_ID), {
+      id: CONTENT_ID,
+      is_published: false,
+    })
+
+    await waitFor(() => expect(menuButtons(title).length).toBeGreaterThan(0))
+    await user.click(menuButtons(title)[0])
+    await user.click(await screen.findByRole("menuitem", { name: "Unpublish" }))
+
+    await screen.findByRole("heading", { name: "Unpublish news" })
+    await user.click(
+      await screen.findByRole("button", { name: "Yes, Unpublish news" }),
+    )
+  }
+
+  const expectUnpublished = () =>
+    waitFor(() => {
+      expect(makeRequest).toHaveBeenCalledWith(
+        expect.objectContaining({
+          method: "patch",
+          url: urls.websiteContent.details(CONTENT_ID),
+          body: { is_published: false },
+        }),
+      )
+    })
+
+  test("an editor can unpublish a story synced from website content", async () => {
+    const story = setupWithSyncedStory()
+
+    await unpublishStory(story.title)
+
+    await expectUnpublished()
+  })
+
+  test("the featured story carries the same menu", async () => {
+    const story = setupWithSyncedStory({ index: 0 })
+
+    await unpublishStory(story.title)
+
+    await expectUnpublished()
+  })
+
+  test("an externally ingested story has no menu", async () => {
+    const story = setupWithSyncedStory({ fromWebsiteContent: false })
+
+    await screen.findAllByText(story.title)
+
+    /* No WebsiteContent behind it, so there is nothing to unpublish. */
+    expect(menuButtons(story.title)).toHaveLength(0)
+  })
+
+  test("the menu is hidden from users who cannot edit content", async () => {
+    const story = setupWithSyncedStory({ isContentEditor: false })
+
+    await screen.findAllByText(story.title)
+
+    expect(menuButtons(story.title)).toHaveLength(0)
   })
 })

@@ -7,7 +7,9 @@ from unittest.mock import ANY
 
 import pytest
 from decorator import contextmanager
+from django.db import DatabaseError
 from django.utils import timezone
+from kombu.exceptions import OperationalError as BrokerError
 from moto import mock_aws
 from safedelete.config import HARD_DELETE
 
@@ -1642,6 +1644,119 @@ def test_sync_website_content_learning_resource_guards(
     tasks.sync_website_content_learning_resource.delay(content_id)
 
     assert mock_sync.called is expect_sync
+
+
+def test_sync_website_content_undoes_itself_if_unpublished_meanwhile(mocker):
+    """
+    A sync that overtakes an unpublish reconciles against the row.
+
+    Unpublishing happens in the request, so it can land after this task has
+    read the item as published but before the task writes -- and there is
+    nothing queued behind it to notice. Left alone, the sync would restore a
+    published, indexed resource for content that is no longer public.
+    """
+    from learning_resources.api import (
+        sync_website_content_to_learning_resource,
+        website_content_readable_id,
+    )
+    from website_content.factories import WebsiteContentFactory
+    from website_content.models import WebsiteContent
+
+    # The search hand-off is covered in its own tests; this is about the row.
+    mocker.patch("learning_resources.api.resource_upserted_actions")
+    mocker.patch("learning_resources.api.resource_unpublished_actions")
+    content = WebsiteContentFactory.create(is_published=True, content_type="article")
+
+    def unpublish_then_sync(item):
+        """Stand in for the editor's unpublish, after the published check."""
+        WebsiteContent.objects.filter(id=item.id).update(is_published=False)
+        return sync_website_content_to_learning_resource(item)
+
+    mocker.patch(
+        "learning_resources.tasks.sync_website_content_to_learning_resource",
+        side_effect=unpublish_then_sync,
+    )
+
+    tasks.sync_website_content_learning_resource.delay(content.id)
+
+    resource = LearningResource.objects.get(
+        readable_id=website_content_readable_id(content.id)
+    )
+    assert resource.published is False
+
+
+def _unpublish_while_syncing(item):
+    """Stand in for the editor's unpublish, after the task's published check."""
+    from website_content.models import WebsiteContent
+
+    WebsiteContent.objects.filter(id=item.id).update(is_published=False)
+
+
+@pytest.mark.parametrize(
+    "failure",
+    [
+        # Losing a row lock race with the unpublish.
+        DatabaseError("deadlock detected"),
+        # An unreachable broker escapes `try_with_retry_as_task`, whose own
+        # fallback is an unguarded `.delay()`.
+        BrokerError("[Errno 111] Connection refused"),
+        # Anything else the search or vector hooks raise.
+        RuntimeError("boom"),
+    ],
+)
+def test_sync_website_content_queues_the_removal_if_undoing_fails(mocker, failure):
+    """
+    Any failed undo is handed to the task that retries.
+
+    This task does not retry, so raising would leave the resource unpublished
+    in the database and still in the index, with nothing behind it.
+    """
+    from website_content.factories import WebsiteContentFactory
+
+    content = WebsiteContentFactory.create(is_published=True, content_type="article")
+
+    mocker.patch(
+        "learning_resources.tasks.sync_website_content_to_learning_resource",
+        side_effect=_unpublish_while_syncing,
+    )
+    mocker.patch(
+        "learning_resources.tasks.unpublish_website_content_learning_resource",
+        side_effect=failure,
+    )
+    mock_task = mocker.patch(
+        "learning_resources.tasks.unpublish_website_content_learning_resource_task.delay"
+    )
+
+    tasks.sync_website_content_learning_resource.delay(content.id)
+
+    mock_task.assert_called_once_with(content.id)
+
+
+def test_sync_website_content_survives_an_unreachable_broker(mocker):
+    """
+    Queueing the undo needs the broker, which may be what failed in the first
+    place. There is nothing further to try, so it is logged and the indexes are
+    left to the next reindex rather than failing the sync that did work.
+    """
+    from website_content.factories import WebsiteContentFactory
+
+    content = WebsiteContentFactory.create(is_published=True, content_type="article")
+
+    mocker.patch(
+        "learning_resources.tasks.sync_website_content_to_learning_resource",
+        side_effect=_unpublish_while_syncing,
+    )
+    mocker.patch(
+        "learning_resources.tasks.unpublish_website_content_learning_resource",
+        side_effect=BrokerError("[Errno 111] Connection refused"),
+    )
+    mocker.patch(
+        "learning_resources.tasks.unpublish_website_content_learning_resource_task.delay",
+        side_effect=BrokerError("[Errno 111] Connection refused"),
+    )
+
+    # Raising nothing is the assertion.
+    tasks.sync_website_content_learning_resource.delay(content.id)
 
 
 def test_unpublish_website_content_learning_resource_task(mocker):

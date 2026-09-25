@@ -15,6 +15,7 @@ from learning_resources.constants import (
 )
 from learning_resources.factories import LearningResourceTopicFactory
 from learning_resources.models import LearningResource
+from vector_search.constants import RESOURCES_COLLECTION_NAME
 from website_content.constants import WebsiteContentType
 from website_content.factories import WebsiteContentFactory
 
@@ -31,6 +32,12 @@ def mock_upserted(mocker):
 def mock_unpublished(mocker):
     """Mock the search hand-off for the removal path."""
     return mocker.patch("learning_resources.api.resource_unpublished_actions")
+
+
+@pytest.fixture(autouse=True)
+def mock_remove_points(mocker):
+    """Mock the inline Qdrant removal; the tests about it assert on this."""
+    return mocker.patch("vector_search.utils.remove_points_matching_params")
 
 
 def _published_content(**kwargs):
@@ -156,6 +163,58 @@ def test_unpublish_marks_the_resource_unpublished(mock_unpublished):
     resource.refresh_from_db()
     assert resource.published is False
     mock_unpublished.assert_called_once_with(resource)
+
+
+def test_unpublish_removes_the_embeddings_in_the_request(settings, mock_remove_points):
+    """
+    The Qdrant points go before the response, not when a worker gets to them.
+
+    `resource_unpublished_actions` queues that removal, but vector search
+    answers from the payloads themselves, and a payload still reads as
+    published because unpublishing deletes the point rather than rewriting it.
+    Queued alone, the unpublished article stays a search hit meanwhile.
+    """
+    settings.QDRANT_ENABLE_INDEXING_PLUGIN_HOOKS = True
+    content = _published_content()
+    sync_website_content_to_learning_resource(content)
+
+    unpublish_website_content_learning_resource(content.id)
+
+    # Keyed on the readable_id rather than re-serializing the resource to
+    # derive the same filter, which is all `remove_embeddings` would add.
+    mock_remove_points.assert_called_once_with(
+        {"readable_id": website_content_readable_id(content.id)},
+        collection_name=RESOURCES_COLLECTION_NAME,
+    )
+
+
+def test_unpublish_survives_an_unreachable_qdrant(settings, mock_remove_points):
+    """
+    The queued removal is the one carrying retries, so a failure here is
+    logged and dropped: the editor's unpublish cannot fail over the index.
+    """
+    settings.QDRANT_ENABLE_INDEXING_PLUGIN_HOOKS = True
+    mock_remove_points.side_effect = ConnectionError("qdrant is unreachable")
+    content = _published_content()
+    resource = sync_website_content_to_learning_resource(content)
+
+    unpublish_website_content_learning_resource(content.id)
+
+    resource.refresh_from_db()
+    assert resource.published is False
+
+
+def test_unpublish_leaves_qdrant_alone_when_the_hooks_are_off(
+    settings, mock_remove_points
+):
+    """With the indexing hooks off, nothing wrote the points to begin with."""
+    settings.QDRANT_ENABLE_INDEXING_PLUGIN_HOOKS = False
+    content = _published_content()
+    sync_website_content_to_learning_resource(content)
+
+    unpublish_website_content_learning_resource(content.id)
+
+    assert mock_remove_points.called is False
 
 
 def test_unpublish_without_a_resource_is_a_noop(mock_unpublished):

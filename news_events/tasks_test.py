@@ -153,6 +153,68 @@ def _news_content(user, *, is_published):
 
 
 @pytest.mark.django_db
+def test_sync_website_content_to_news_removes_an_entry_it_must_not_keep():
+    """
+    Finding the item unpublished removes any feed entry, rather than skipping.
+
+    That is what makes a retry effective: the reconciliation below runs inside
+    the task's own try, so a delete that fails there retries the whole task --
+    and the retry arrives here, with the row already unpublished. Skipping
+    would strand the entry it had just created.
+    """
+    from news_events.constants import FeedType
+    from news_events.etl.articles_news import website_content_feed_guid
+    from news_events.models import FeedItem, FeedSource
+    from website_content.factories import WebsiteContentFactory
+
+    content = WebsiteContentFactory.create(is_published=False, content_type="news")
+    source = FeedSource.objects.create(
+        title="MIT Learn Articles", url="/news", feed_type=FeedType.news.name
+    )
+    guid = website_content_feed_guid(content.id)
+    FeedItem.objects.create(
+        guid=guid, source=source, title=content.title, url="/news/stranded"
+    )
+
+    tasks.sync_website_content_to_news.delay(content.id)
+
+    assert not FeedItem.objects.filter(guid=guid).exists()
+
+
+@pytest.mark.django_db
+def test_sync_website_content_to_news_undoes_itself_if_unpublished_meanwhile(mocker):
+    """
+    A sync that overtakes an unpublish reconciles against the row.
+
+    Unpublishing removes the feed entry in the request, so it can land after
+    this task has read the item as published but before the task writes -- and
+    there is nothing queued behind it to notice. Left alone, the sync would put
+    the story back in the feed after it was taken down.
+    """
+    from news_events.etl import articles_news
+    from news_events.models import FeedItem
+    from website_content.factories import WebsiteContentFactory
+    from website_content.models import WebsiteContent
+
+    content = WebsiteContentFactory.create(is_published=True, content_type="news")
+    real_sync = articles_news.sync_single_website_content_news_to_news
+
+    def unpublish_then_sync(item):
+        """Stand in for the editor's unpublish, after the published check."""
+        WebsiteContent.objects.filter(id=item.id).update(is_published=False)
+        return real_sync(item)
+
+    mocker.patch(
+        "news_events.etl.articles_news.sync_single_website_content_news_to_news",
+        side_effect=unpublish_then_sync,
+    )
+
+    tasks.sync_website_content_to_news.delay(content.id)
+
+    guid = articles_news.website_content_feed_guid(content.id)
+    assert not FeedItem.objects.filter(guid=guid).exists()
+
+
 def test_delete_website_content_from_news_removes_the_entry(mocker, user):
     """The ordinary case: the item is unpublished, so its entry goes"""
     content = _news_content(user, is_published=False)

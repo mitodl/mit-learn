@@ -1,6 +1,7 @@
 """Test for website_content views"""
 
 import pytest
+from django.db import transaction
 from rest_framework.reverse import reverse
 
 from learning_resources.factories import LearningResourceTopicFactory
@@ -31,6 +32,10 @@ def _mock_learning_resource_sync(mocker):
     mocker.patch(
         "learning_resources.tasks.sync_website_content_learning_resource.delay"
     )
+    # The unpublish direction runs in the request rather than in the task, so
+    # the function is what has to be stubbed here; the task remains the
+    # fallback for a transient database error.
+    mocker.patch("learning_resources.api.unpublish_website_content_learning_resource")
     mocker.patch(
         "learning_resources.tasks.unpublish_website_content_learning_resource_task.delay"
     )
@@ -142,13 +147,13 @@ def mock_clear_views_cache(mocker):
     return mocker.patch("website_content.views.clear_views_cache")
 
 
-def _make_content(user, *, is_published):
+def _make_content(user, *, is_published, content_type="news"):
     return WebsiteContent.objects.create(
         title="t",
         content={},
         is_published=is_published,
         user=user,
-        content_type="news",
+        content_type=content_type,
     )
 
 
@@ -354,6 +359,144 @@ def test_update_triggers_unpublish_actions_only_on_the_transition(
     assert resp.status_code == 200
     assert mock_unpublish.called is expect_unpublish_actions
     assert mock_purge.called is expect_unpublish_actions
+
+
+def test_unpublish_removes_the_news_feed_entry_inline(staff_client, user):
+    """
+    The feed entry is gone by the time the unpublish request answers.
+
+    The news listing refetches the moment it returns, so an entry left for a
+    worker to remove comes straight back to the editor who just unpublished it.
+    No worker runs here and no on_commit callback is executed: the removal has
+    to have happened during the request itself.
+    """
+    from news_events.etl.articles_news import (
+        sync_single_website_content_news_to_news,
+        website_content_feed_guid,
+    )
+    from news_events.models import FeedItem
+
+    content = _make_content(user, is_published=True)
+    sync_single_website_content_news_to_news(content)
+    guid = website_content_feed_guid(content.id)
+    assert FeedItem.objects.filter(guid=guid).exists()
+    url = reverse(
+        "website_content:v1:website_content-detail", kwargs={"pk": content.id}
+    )
+
+    resp = staff_client.patch(url, {"is_published": False}, format="json")
+
+    assert resp.status_code == 200
+    assert not FeedItem.objects.filter(guid=guid).exists()
+
+
+def test_unpublish_survives_a_failing_search_hand_off(
+    staff_client, user, mocker, django_capture_on_commit_callbacks
+):
+    """
+    An unpublish is not failed by the index work behind it.
+
+    The hooks run the search and vector plugins inline, which can fail in ways
+    a database error does not cover -- an unreachable broker, for one. Raising
+    would report a failure that did not happen: the rows are already committed
+    unpublished, and a retried request fires no hooks at all, because
+    `perform_update` keys them off the published->unpublished transition.
+    """
+    mocker.patch(
+        "learning_resources.api.unpublish_website_content_learning_resource",
+        side_effect=OSError("[Errno 111] Connection refused"),
+    )
+    mock_task = mocker.patch(
+        "learning_resources.tasks.unpublish_website_content_learning_resource_task.delay"
+    )
+    content = _make_content(user, is_published=True, content_type="article")
+    url = reverse(
+        "website_content:v1:website_content-detail", kwargs={"pk": content.id}
+    )
+
+    with django_capture_on_commit_callbacks(execute=True):
+        resp = staff_client.patch(url, {"is_published": False}, format="json")
+
+    assert resp.status_code == 200
+    content.refresh_from_db()
+    assert content.is_published is False
+    # Left with the task that retries, rather than dropped.
+    mock_task.assert_called_once_with(content.id)
+
+
+@pytest.mark.django_db(transaction=True)
+def test_unpublish_hooks_run_outside_a_transaction(staff_client, user, mocker):
+    """
+    The unpublish hooks must not run inside a transaction.
+
+    They do two things that are only safe in autocommit: a synchronous call out
+    to Qdrant, which would otherwise hold a transaction open across network
+    I/O, and swallowing a `DatabaseError` to fall back to a queued task, which
+    inside an atomic block would poison the transaction instead -- the fallback
+    would never be queued, and the next query would raise
+    `TransactionManagementError`.
+
+    Nothing here asks for a transaction today, so this asserts the property
+    rather than trusting it: enabling `ATOMIC_REQUESTS` (or wrapping the view)
+    breaks the assumption, and this is what says so.
+    """
+    seen = {}
+
+    def record(*, content):
+        connection = transaction.get_connection()
+        seen["in_atomic_block"] = connection.in_atomic_block
+        seen["autocommit"] = connection.get_autocommit()
+
+    mocker.patch("website_content.views.content_unpublished_actions", record)
+    mocker.patch("website_content.views.clear_views_cache")
+    content = _make_content(user, is_published=True)
+    url = reverse(
+        "website_content:v1:website_content-detail", kwargs={"pk": content.id}
+    )
+
+    resp = staff_client.patch(url, {"is_published": False}, format="json")
+
+    assert resp.status_code == 200
+    assert seen == {"in_atomic_block": False, "autocommit": True}
+
+
+@pytest.mark.django_db(transaction=True)
+def test_unpublish_clears_the_view_cache_after_removing_the_feed_entry(
+    staff_client, user, mocker
+):
+    """
+    The cached news listing is dropped only once the entry it contains is gone.
+
+    Cleared any earlier, a request landing in between re-caches the listing
+    that still holds the story, which then outlives the unpublish by the whole
+    cache duration. Needs a real commit: inside the usual test transaction
+    every on_commit callback is deferred to the end regardless of order.
+    """
+    from news_events.etl.articles_news import (
+        sync_single_website_content_news_to_news,
+        website_content_feed_guid,
+    )
+    from news_events.models import FeedItem
+
+    content = _make_content(user, is_published=True)
+    sync_single_website_content_news_to_news(content)
+    guid = website_content_feed_guid(content.id)
+    seen = {}
+
+    mocker.patch(
+        "website_content.views.clear_views_cache",
+        side_effect=lambda: seen.update(
+            feed_entry=FeedItem.objects.filter(guid=guid).exists()
+        ),
+    )
+    url = reverse(
+        "website_content:v1:website_content-detail", kwargs={"pk": content.id}
+    )
+
+    resp = staff_client.patch(url, {"is_published": False}, format="json")
+
+    assert resp.status_code == 200
+    assert seen == {"feed_entry": False}
 
 
 def test_create_with_topics(staff_client):

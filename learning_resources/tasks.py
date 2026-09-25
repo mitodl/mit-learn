@@ -1089,6 +1089,40 @@ def sync_website_content_learning_resource(content_id: int) -> None:
         return
     sync_website_content_to_learning_resource(content)
 
+    # The check above is a read, and the row can change under it: unpublishing
+    # runs in the request, so it can land between that read and this write and
+    # then have nothing queued behind it to notice -- leaving a published,
+    # indexed resource for content that is no longer public. Whoever writes
+    # last reconciles, so re-read the row and undo if it has moved on.
+    if not WebsiteContent.objects.filter(id=content_id, is_published=True).exists():
+        log.info(
+            "WebsiteContent %s was unpublished while syncing, undoing the sync",
+            content_id,
+        )
+        try:
+            unpublish_website_content_learning_resource(content_id)
+        except Exception:
+            # Any failure, not just a database one: the undo runs the search
+            # and vector hooks inline, which fail in other ways -- a broker
+            # that cannot be reached escapes `try_with_retry_as_task`, whose
+            # own fallback is an unguarded `.delay()`.
+            #
+            # This task does not retry, so raising would leave the resource
+            # unpublished in the database and still in the index with nothing
+            # behind it. Hand the undo to the task that does retry; its own
+            # republish guard makes a late run safe.
+            log.exception(
+                "Undoing the sync failed for content %s, queueing the removal",
+                content_id,
+            )
+            try:
+                unpublish_website_content_learning_resource_task.delay(content_id)
+            except Exception:
+                # Queueing needs the broker, which is exactly what may have
+                # sent us here. Nothing further to try: the row is already
+                # unpublished and the indexes are left to the next reindex.
+                log.exception("Could not queue the removal for content %s", content_id)
+
 
 @app.task(acks_late=True, reject_on_worker_lost=True)
 def unpublish_website_content_learning_resource_task(content_id: int) -> None:
