@@ -12,6 +12,17 @@ import type { JSONContent } from "@tiptap/react"
 import { ArticleEditor } from "./ArticleEditor"
 import { renderWithProviders } from "@/test-utils"
 
+/**
+ * Far enough out that no draft saves itself while a test works. A background
+ * write landing mid-interaction re-renders the toolbar, and the update lands
+ * outside `act` -- which failed these suites intermittently, a different test
+ * each time. The tests that are about autosave set their own delay.
+ */
+const AUTOSAVE_OFF = 10 * 60 * 1000
+
+/** What production uses; the autosave tests wait this out deliberately. */
+const AUTOSAVE_DELAY_MS = 2000
+
 const content: JSONContent = {
   type: "doc",
   content: [
@@ -35,10 +46,12 @@ const renderArticleEditor = ({
   readOnly = false,
   isPublished = false,
   topics = [],
+  autosaveDelayMs = AUTOSAVE_OFF,
 }: {
   readOnly?: boolean
   isPublished?: boolean
   topics?: number[]
+  autosaveDelayMs?: number
 } = {}) => {
   const user = factories.user.user({
     is_authenticated: true,
@@ -50,9 +63,14 @@ const renderArticleEditor = ({
     is_published: isPublished,
     topics,
   })
-  renderWithProviders(<ArticleEditor article={article} readOnly={readOnly} />, {
-    user,
-  })
+  renderWithProviders(
+    <ArticleEditor
+      article={article}
+      readOnly={readOnly}
+      autosaveDelayMs={autosaveDelayMs}
+    />,
+    { user },
+  )
   return { article }
 }
 
@@ -433,7 +451,9 @@ describe("ArticleEditor topics requirement", () => {
 
   test("a draft saves itself without them, rather than asking", async () => {
     mockTopics()
-    const { article } = renderArticleEditor()
+    const { article } = renderArticleEditor({
+      autosaveDelayMs: AUTOSAVE_DELAY_MS,
+    })
     setMockResponse.patch(urls.websiteContent.details(article.id), article)
 
     await userEvent.type(await screen.findByRole("heading", { level: 1 }), "!")
@@ -592,7 +612,9 @@ describe("ArticleEditor topics requirement", () => {
 
 describe("ArticleEditor autosave", () => {
   test("a draft saves itself once typing stops", async () => {
-    const { article } = renderArticleEditor()
+    const { article } = renderArticleEditor({
+      autosaveDelayMs: AUTOSAVE_DELAY_MS,
+    })
     setMockResponse.patch(urls.websiteContent.details(article.id), article)
 
     await userEvent.type(
@@ -634,33 +656,32 @@ describe("ArticleEditor autosave", () => {
     setMockResponse.patch(urls.websiteContent.details(created.id), created)
 
     /* No `article`: the editor starts with nothing to update. */
-    renderWithProviders(<ArticleEditor />, { user })
+    renderWithProviders(<ArticleEditor autosaveDelayMs={AUTOSAVE_DELAY_MS} />, {
+      user,
+    })
 
-    const heading = await screen.findByRole("heading", { level: 1 })
-    await userEvent.type(heading, " first")
+    await userEvent.type(
+      await screen.findByRole("heading", { level: 1 }),
+      " first",
+    )
     await waitFor(
       () => {
         expect(makeRequest).toHaveBeenCalledWith(
           expect.objectContaining({ method: "post" }),
         )
       },
-      { timeout: 6000 },
+      { timeout: 12000 },
     )
+    // Settled first: typing while the create is still open puts a background
+    // write in every synchronous gap, which updates the toolbar outside `act`.
+    await waitFor(() => expect(screen.queryByText("Saving...")).toBe(null))
 
     /**
-     * The caller moves the editor to the new item's URL, but only once the
-     * create has come back -- so a second autosave before that lands has to
-     * update what was just created rather than create a second article.
-     */
-    /**
-     * Re-queried: the editor has re-rendered around the create and the node
-     * from before it is stale, so typing into it goes nowhere -- which made
-     * this test flaky rather than wrong.
+     * The editor has created the item but still holds no `contentItem` -- the
+     * caller has not navigated here -- so without remembering what it created
+     * this second save would insert another article.
      */
     await userEvent.type(screen.getByRole("heading", { level: 1 }), " again")
-    expect(screen.getByRole("heading", { level: 1 }).textContent).toContain(
-      "again",
-    )
     await waitFor(
       () => {
         expect(makeRequest).toHaveBeenCalledWith(
@@ -670,14 +691,14 @@ describe("ArticleEditor autosave", () => {
           }),
         )
       },
-      { timeout: 6000 },
+      { timeout: 12000 },
     )
 
     const posts = makeRequest.mock.calls.filter(
       (call) => call[0]?.method === "post",
     )
     expect(posts).toHaveLength(1)
-  }, 20000)
+  }, 30000)
 
   test("an autosave of an existing draft asks for no navigation", async () => {
     const onSave = jest.fn()
@@ -693,9 +714,14 @@ describe("ArticleEditor autosave", () => {
     setMockResponse.get(urls.websiteContent.details(article.id), article)
     setMockResponse.patch(urls.websiteContent.details(article.id), article)
 
-    renderWithProviders(<ArticleEditor article={article} onSave={onSave} />, {
-      user,
-    })
+    renderWithProviders(
+      <ArticleEditor
+        article={article}
+        onSave={onSave}
+        autosaveDelayMs={AUTOSAVE_DELAY_MS}
+      />,
+      { user },
+    )
 
     await userEvent.type(
       await screen.findByRole("heading", { level: 1 }),
@@ -719,7 +745,9 @@ describe("ArticleEditor autosave", () => {
   }, 15000)
 
   test("the indicator stops saying Saved as soon as typing resumes", async () => {
-    const { article } = renderArticleEditor()
+    const { article } = renderArticleEditor({
+      autosaveDelayMs: AUTOSAVE_DELAY_MS,
+    })
     setMockResponse.patch(urls.websiteContent.details(article.id), article)
     const heading = await screen.findByRole("heading", { level: 1 })
 
@@ -734,7 +762,10 @@ describe("ArticleEditor autosave", () => {
   }, 15000)
 
   test("a publish waits for the draft save already in flight", async () => {
-    const { article } = renderArticleEditor({ topics: [7] })
+    const { article } = renderArticleEditor({
+      topics: [7],
+      autosaveDelayMs: AUTOSAVE_DELAY_MS,
+    })
     /**
      * A slow draft write, so it is genuinely still running when the publish is
      * confirmed -- which is the only way the two can interleave.
@@ -802,7 +833,11 @@ describe("ArticleEditor autosave", () => {
   }, 25000)
 
   test("a published article is never saved behind the author's back", async () => {
-    const { article } = renderArticleEditor({ isPublished: true, topics: [7] })
+    const { article } = renderArticleEditor({
+      isPublished: true,
+      topics: [7],
+      autosaveDelayMs: AUTOSAVE_DELAY_MS,
+    })
     setMockResponse.patch(urls.websiteContent.details(article.id), article)
 
     await userEvent.type(
@@ -830,7 +865,9 @@ describe("ArticleEditor autosave", () => {
   })
 
   test("the control bar reports the save", async () => {
-    const { article } = renderArticleEditor()
+    const { article } = renderArticleEditor({
+      autosaveDelayMs: AUTOSAVE_DELAY_MS,
+    })
     setMockResponse.patch(urls.websiteContent.details(article.id), article)
 
     // Nothing is claimed before there is anything to save.

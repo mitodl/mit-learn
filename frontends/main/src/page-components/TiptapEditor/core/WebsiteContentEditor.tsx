@@ -320,6 +320,16 @@ export interface WebsiteContentEditorProps {
    */
   uploadImage: MediaUpload
   onSave?: (contentItem: WebsiteContent) => void
+  /**
+   * How long typing has to stop before a draft saves itself.
+   *
+   * Only tests pass it. They set it far enough out that no save fires while
+   * they work -- a background write landing mid-interaction re-renders the
+   * toolbar and warns about updates outside `act`, which made every typing
+   * test in these suites intermittently fail -- and the ones that are about
+   * autosave set it back to something they can wait for.
+   */
+  autosaveDelayMs?: number
   readOnly?: boolean
   contentItem?: WebsiteContent
   bannerViewer?: typeof BannerViewer
@@ -334,6 +344,7 @@ const WebsiteContentEditor = ({
   saveMutations,
   uploadImage,
   onSave,
+  autosaveDelayMs = AUTOSAVE_DELAY_MS,
   readOnly,
   contentItem,
   bannerViewer,
@@ -589,12 +600,20 @@ const WebsiteContentEditor = ({
         // The alert below reports the failure; the indicator drops back to
         // saying nothing rather than claiming a save that did not happen.
         .catch(() => setAutosaveState("idle"))
-    }, AUTOSAVE_DELAY_MS)
+    }, autosaveDelayMs)
     return () => clearTimeout(timer)
     // `handleSave` closes over the state it sends and is remade every render;
     // the timer is rearmed on every edit regardless, which is the debounce.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [autosaves, touched, hasUnsavedChanges, title, content, isPending])
+  }, [
+    autosaves,
+    touched,
+    hasUnsavedChanges,
+    title,
+    content,
+    isPending,
+    autosaveDelayMs,
+  ])
 
   useEffect(() => {
     const created = handoffRef.current

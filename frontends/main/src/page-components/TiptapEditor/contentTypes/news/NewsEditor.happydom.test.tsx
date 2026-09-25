@@ -30,6 +30,16 @@ jest.mock("posthog-js/react", () => ({
   usePostHog: () => ({}),
 }))
 
+/**
+ * Far enough out that no draft saves itself while a test works: a background
+ * write landing mid-interaction updates the toolbar outside `act`, which
+ * failed these suites intermittently. The autosave test sets its own.
+ */
+const AUTOSAVE_OFF = 10 * 60 * 1000
+
+/** What production uses; the autosave test waits this out deliberately. */
+const AUTOSAVE_DELAY_MS = 2000
+
 const mockOnSave = jest.fn()
 
 describe("NewsEditor - Content Editing and Saving", () => {
@@ -42,6 +52,7 @@ describe("NewsEditor - Content Editing and Saving", () => {
     content: JSONContent,
     articleId = 100,
     title = "Test Article",
+    autosaveDelayMs = AUTOSAVE_OFF,
   ) => {
     const user = factories.user.user({
       is_authenticated: true,
@@ -58,7 +69,11 @@ describe("NewsEditor - Content Editing and Saving", () => {
     setMockResponse.get(urls.websiteContent.details(articleId), newsItem)
 
     renderWithProviders(
-      <NewsEditor newsItem={newsItem} onSave={mockOnSave} />,
+      <NewsEditor
+        autosaveDelayMs={autosaveDelayMs}
+        newsItem={newsItem}
+        onSave={mockOnSave}
+      />,
       {
         user,
       },
@@ -422,7 +437,12 @@ describe("NewsEditor - Content Editing and Saving", () => {
         ],
       }
 
-      const newsItem = await setupEditor(initialContent, 208, "Title")
+      const newsItem = await setupEditor(
+        initialContent,
+        208,
+        "Title",
+        AUTOSAVE_DELAY_MS,
+      )
 
       const paragraph = screen.getByText("Content")
       await userEvent.click(paragraph)
@@ -538,7 +558,10 @@ describe("NewsEditor - Content Editing and Saving", () => {
       })
       setMockResponse.post(urls.websiteContent.list(), createdNewsItem)
 
-      renderWithProviders(<NewsEditor onSave={mockOnSave} />, { user })
+      renderWithProviders(
+        <NewsEditor autosaveDelayMs={AUTOSAVE_OFF} onSave={mockOnSave} />,
+        { user },
+      )
 
       await screen.findByTestId("editor")
 
@@ -665,7 +688,12 @@ describe("NewsEditor - Document Rendering", () => {
     setMockResponse.get(urls.websiteContent.details(articleId), newsItem)
 
     renderWithProviders(
-      <NewsEditor newsItem={newsItem} onSave={mockOnSave} readOnly />,
+      <NewsEditor
+        autosaveDelayMs={AUTOSAVE_OFF}
+        newsItem={newsItem}
+        onSave={mockOnSave}
+        readOnly
+      />,
       { user },
     )
 
@@ -680,7 +708,10 @@ describe("NewsEditor - Document Rendering", () => {
     })
     setMockResponse.get(urls.userMe.get(), user)
 
-    renderWithProviders(<NewsEditor onSave={mockOnSave} />, { user })
+    renderWithProviders(
+      <NewsEditor autosaveDelayMs={AUTOSAVE_OFF} onSave={mockOnSave} />,
+      { user },
+    )
 
     await screen.findByTestId("editor")
   })
@@ -1583,7 +1614,14 @@ describe("NewsEditor - Byline publish date", () => {
     })
     setMockResponse.get(urls.websiteContent.details(newsItem.id), newsItem)
 
-    renderWithProviders(<NewsEditor newsItem={newsItem} readOnly />, { user })
+    renderWithProviders(
+      <NewsEditor
+        autosaveDelayMs={AUTOSAVE_OFF}
+        newsItem={newsItem}
+        readOnly
+      />,
+      { user },
+    )
     await screen.findByTestId("editor")
     return newsItem
   }
@@ -1639,7 +1677,11 @@ describe("NewsEditor - Delete draft", () => {
     setMockResponse.get(urls.websiteContent.details(newsItem.id), newsItem)
 
     renderWithProviders(
-      <NewsEditor newsItem={newsItem} onSave={mockOnSave} />,
+      <NewsEditor
+        autosaveDelayMs={AUTOSAVE_OFF}
+        newsItem={newsItem}
+        onSave={mockOnSave}
+      />,
       {
         user,
       },
@@ -1680,7 +1722,10 @@ describe("NewsEditor - shared content controls", () => {
     })
     setMockResponse.get(urls.websiteContent.details(newsItem.id), newsItem)
 
-    renderWithProviders(<NewsEditor newsItem={newsItem} />, { user })
+    renderWithProviders(
+      <NewsEditor autosaveDelayMs={AUTOSAVE_OFF} newsItem={newsItem} />,
+      { user },
+    )
     await screen.findByTestId("editor")
 
     await screen.findByRole("button", { name: "Settings" })
@@ -1709,7 +1754,10 @@ describe("NewsEditor - shared content controls", () => {
     })
     setMockResponse.get(urls.websiteContent.details(newsItem.id), newsItem)
 
-    renderWithProviders(<NewsEditor newsItem={newsItem} />, { user })
+    renderWithProviders(
+      <NewsEditor autosaveDelayMs={AUTOSAVE_OFF} newsItem={newsItem} />,
+      { user },
+    )
     await screen.findByTestId("editor")
 
     await userEvent.click(
@@ -1737,7 +1785,10 @@ describe("NewsEditor - shared content controls", () => {
     })
     setMockResponse.get(urls.websiteContent.details(newsItem.id), newsItem)
 
-    renderWithProviders(<NewsEditor newsItem={newsItem} />, { user })
+    renderWithProviders(
+      <NewsEditor autosaveDelayMs={AUTOSAVE_OFF} newsItem={newsItem} />,
+      { user },
+    )
     await screen.findByTestId("editor")
 
     await userEvent.click(

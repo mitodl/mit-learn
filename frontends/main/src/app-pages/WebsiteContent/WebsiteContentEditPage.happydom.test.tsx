@@ -47,6 +47,16 @@ beforeEach(() => {
   routerMocks.push.mockClear()
 })
 
+/**
+ * No draft saves itself while these tests work: this suite is about the
+ * drawer and the refetch, and a background write landing mid-interaction
+ * updates the toolbar outside `act`.
+ */
+const AUTOSAVE_OFF = 10 * 60 * 1000
+
+/** What production uses; the navigation test waits this out deliberately. */
+const AUTOSAVE_DELAY_MS = 2000
+
 const SERVER_TEXT = "Paragraph as the server has it"
 
 const content: JSONContent = {
@@ -78,7 +88,7 @@ const detailFetchCount = (id: number) =>
       String(call[0]?.url).includes(`/website_content/detail/${id}/`),
   ).length
 
-const setup = async (id: number) => {
+const setup = async (id: number, autosaveDelayMs = AUTOSAVE_OFF) => {
   const user = factories.user.user({
     is_authenticated: true,
     is_article_editor: true,
@@ -98,7 +108,11 @@ const setup = async (id: number) => {
   setMockResponse.get(urls.topics.list({ limit: 1000 }), topics)
 
   renderWithProviders(
-    <WebsiteContentEditPage type="article" idOrSlug={String(id)} />,
+    <WebsiteContentEditPage
+      type="article"
+      idOrSlug={String(id)}
+      autosaveDelayMs={autosaveDelayMs}
+    />,
     { user, url: websiteContentEditView("article", id) },
   )
   await screen.findByTestId("editor")
@@ -150,7 +164,7 @@ const saveTopicInDrawer = async (
  */
 describe("WebsiteContentEditPage navigation", () => {
   test("a draft save does not re-navigate to the page it is already on", async () => {
-    const { article } = await setup(4242)
+    const { article } = await setup(4242, AUTOSAVE_DELAY_MS)
     setMockResponse.patch(urls.websiteContent.details(article.id), article)
 
     /**

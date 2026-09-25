@@ -38,6 +38,7 @@ const EDITORS: Record<
     onSave?: (savedContent: WebsiteContent) => void
     readOnly?: boolean
     contentItem?: WebsiteContent
+    autosaveDelayMs?: number
   }>
 > = {
   article: ({ contentItem, ...props }) => (
@@ -51,11 +52,18 @@ const EDITORS: Record<
 interface WebsiteContentEditPageProps {
   type: string
   idOrSlug: string
+  /**
+   * Passed straight to the editor; only tests set it, to keep a background
+   * draft save from landing in the middle of their interactions. See
+   * `WebsiteContentEditor`.
+   */
+  autosaveDelayMs?: number
 }
 
 const WebsiteContentEditPage = ({
   type,
   idOrSlug,
+  autosaveDelayMs,
 }: WebsiteContentEditPageProps) => {
   const { data: article, isLoading } = useWebsiteContentDetailRetrieve(idOrSlug)
   const pathname = usePathname()
@@ -89,6 +97,7 @@ const WebsiteContentEditPage = ({
         <Editor
           key={article.id}
           contentItem={article}
+          autosaveDelayMs={autosaveDelayMs}
           onSave={(saved) => {
             if (saved.is_published) {
               invariant(saved.slug, "Published content must have a slug")
