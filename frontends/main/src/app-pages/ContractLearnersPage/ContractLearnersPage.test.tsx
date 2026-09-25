@@ -212,6 +212,67 @@ describe("ContractLearnersPage", () => {
     expect(within(row).getByText("Certificate")).toBeInTheDocument()
   })
 
+  test("a learner row shows the email alongside the name", async () => {
+    const { org, contract, orgSlug } = setup()
+    const contractId = String(contract.id)
+    setMockResponse.get(
+      mitxUrls.organization.managerOrganizationsList(),
+      paginate([org]),
+    )
+    mockTotal(contractId, 1)
+    mockList(contractId, [
+      analyticsFactories.learnerProgress({
+        full_name: "Anton Petrov",
+        email: "anton@example.com",
+        courserun_title: "Module 5",
+      }),
+    ])
+
+    renderWithProviders(
+      <ContractLearnersPage orgSlug={orgSlug} contractSlug={contract.slug} />,
+    )
+
+    const name = await screen.findByText("Anton Petrov")
+    const row = rowOf(name)
+    expect(within(row).getByText("anton@example.com")).toBeInTheDocument()
+    expect(within(row).getByText("AP")).toBeInTheDocument()
+  })
+
+  test.each([
+    { fullName: null, label: "null" },
+    { fullName: "", label: "empty" },
+    { fullName: "   ", label: "whitespace-only" },
+  ])(
+    "a learner with a $label name shows only the email and an icon avatar",
+    async ({ fullName }) => {
+      const { org, contract, orgSlug } = setup()
+      const contractId = String(contract.id)
+      setMockResponse.get(
+        mitxUrls.organization.managerOrganizationsList(),
+        paginate([org]),
+      )
+      mockTotal(contractId, 1)
+      mockList(contractId, [
+        analyticsFactories.learnerProgress({
+          full_name: fullName,
+          email: "x7k2m@example.com",
+          courserun_title: "Module 5",
+        }),
+      ])
+
+      renderWithProviders(
+        <ContractLearnersPage orgSlug={orgSlug} contractSlug={contract.slug} />,
+      )
+
+      const email = await screen.findByText("x7k2m@example.com")
+      const row = rowOf(email)
+      expect(within(row).getByText("Module 5")).toBeInTheDocument()
+      expect(within(row).queryByText("?")).not.toBeInTheDocument()
+      expect(within(row).queryByText("Unknown learner")).not.toBeInTheDocument()
+      expect(row.querySelector("[aria-hidden='true'] svg")).not.toBeNull()
+    },
+  )
+
   test("a learner who withheld consent shows No consent given", async () => {
     const { org, contract, orgSlug } = setup()
     const contractId = String(contract.id)

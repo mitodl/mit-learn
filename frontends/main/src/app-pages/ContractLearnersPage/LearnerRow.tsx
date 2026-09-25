@@ -1,6 +1,7 @@
 "use client"
 
 import React from "react"
+import { RiUserLine } from "@remixicon/react"
 import { styled, Typography } from "ol-components"
 import { initials } from "ol-utilities"
 import type { LearnerProgress } from "api/analytics-hooks/organizations"
@@ -68,8 +69,9 @@ import { COLUMN_FLEX } from "./columns"
 // --------------------------------------------------------------------------
 
 /**
- * Initials, not a photo: the analytics API returns no avatar image, and a name
- * is the only identity it carries.
+ * Initials, not a photo: the analytics API returns no avatar image. Without a
+ * name, a generic person icon — email-derived initials are wrong for addresses
+ * like `jdoe@` or `x7k2m@`.
  */
 const Avatar = styled.div(({ theme }) => ({
   display: "flex",
@@ -93,6 +95,13 @@ const LearnerCell = styled(TableCell)({
 const LearnerName = styled(Typography)(({ theme }) => ({
   ...theme.typography.subtitle2,
   color: theme.custom.colors.black,
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+})) as typeof Typography
+
+const LearnerEmail = styled(Typography)(({ theme }) => ({
+  ...theme.typography.body3,
+  color: theme.custom.colors.darkGray2,
   overflow: "hidden",
   textOverflow: "ellipsis",
 })) as typeof Typography
@@ -184,7 +193,7 @@ const LearnerRow: React.FC<LearnerRowProps> = ({ row }) => {
   const status = getDisplayStatus(row)
   const statusLabel = DISPLAY_STATUS_LABEL[status]
   const isWithheld = status === "not-shared"
-  const name = row.full_name ?? row.email ?? "Unknown learner"
+  const name = row.full_name?.trim() || null
 
   return (
     <TableRow role="row">
@@ -195,7 +204,7 @@ const LearnerRow: React.FC<LearnerRowProps> = ({ row }) => {
           checked={selected}
           onChange={() => onToggleSelect(rowId)}
           inputProps={{
-            "aria-label": `Select ${name}, ${row.courserun_title}`,
+            "aria-label": `Select ${name ?? row.email ?? "learner"}, ${row.courserun_title}`,
           }}
         />
       </SelectCell>
@@ -203,10 +212,13 @@ const LearnerRow: React.FC<LearnerRowProps> = ({ row }) => {
 
       <LearnerCell role="cell" $flex={COLUMN_FLEX.learner} $primary>
         <Avatar aria-hidden="true">
-          {row.full_name ? initials(row.full_name) : "?"}
+          {name ? initials(name) : <RiUserLine size={16} />}
         </Avatar>
         <span>
-          <LearnerName component="div">{name}</LearnerName>
+          {name && <LearnerName component="div">{name}</LearnerName>}
+          {row.email && (
+            <LearnerEmail component="div">{row.email}</LearnerEmail>
+          )}
           <CourseTitle component="div">{row.courserun_title}</CourseTitle>
         </span>
       </LearnerCell>
