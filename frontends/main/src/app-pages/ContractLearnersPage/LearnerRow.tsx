@@ -204,7 +204,7 @@ const LearnerRow: React.FC<LearnerRowProps> = ({ row }) => {
           checked={selected}
           onChange={() => onToggleSelect(rowId)}
           inputProps={{
-            "aria-label": `Select ${name ?? row.email}, ${row.courserun_title}`,
+            "aria-label": `Select ${name ?? row.email ?? "learner"}, ${row.courserun_title}`,
           }}
         />
       </SelectCell>
