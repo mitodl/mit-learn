@@ -710,6 +710,87 @@ describe("ArticleEditor autosave", () => {
     expect(onSave).not.toHaveBeenCalled()
   }, 15000)
 
+  test("the indicator stops saying Saved as soon as typing resumes", async () => {
+    const { article } = renderArticleEditor()
+    setMockResponse.patch(urls.websiteContent.details(article.id), article)
+    const heading = await screen.findByRole("heading", { level: 1 })
+
+    await userEvent.type(heading, " edited")
+    await screen.findByText("Saved", {}, { timeout: 6000 })
+
+    /* The next keystroke is not saved, so the bar must stop claiming it is. */
+    await userEvent.type(heading, "!")
+
+    expect(screen.queryByText("Saved")).toBe(null)
+  }, 15000)
+
+  test("a publish waits for the draft save already in flight", async () => {
+    const { article } = renderArticleEditor({ topics: [7] })
+    /**
+     * A slow draft write, so it is genuinely still running when the publish is
+     * confirmed -- which is the only way the two can interleave.
+     */
+    setMockResponse.patch(
+      urls.websiteContent.details(article.id),
+      new Promise((resolve) => setTimeout(() => resolve(article), 800)),
+      { requestBody: expect.objectContaining({ is_published: false }) },
+    )
+    setMockResponse.patch(
+      urls.websiteContent.details(article.id),
+      { ...article, is_published: true },
+      { requestBody: expect.objectContaining({ is_published: true }) },
+    )
+
+    await userEvent.type(
+      await screen.findByRole("heading", { level: 1 }),
+      " edited",
+    )
+    // Wait for the draft write to start, then publish while it is in flight.
+    await waitFor(
+      () => {
+        expect(makeRequest).toHaveBeenCalledWith(
+          expect.objectContaining({
+            method: "patch",
+            body: expect.objectContaining({ is_published: false }),
+          }),
+        )
+      },
+      { timeout: 6000 },
+    )
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Publish" }),
+    )
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Yes, Publish article" }),
+    )
+
+    await waitFor(
+      () => {
+        expect(makeRequest).toHaveBeenCalledWith(
+          expect.objectContaining({
+            method: "patch",
+            body: expect.objectContaining({ is_published: true }),
+          }),
+        )
+      },
+      { timeout: 8000 },
+    )
+
+    /**
+     * The publish is the last write. Unqueued it could be sent while the draft
+     * PATCH was still open, and whichever the server handled last would decide
+     * whether the item ended up public -- with the dialog reporting success
+     * either way.
+     */
+    // Settled before teardown, so nothing updates after the test ends.
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBe(null))
+
+    const bodies = makeRequest.mock.calls
+      .filter((call) => call[0]?.method === "patch")
+      .map((call) => call[0].body.is_published)
+    expect(bodies).toEqual([false, true])
+  }, 25000)
+
   test("a published article is never saved behind the author's back", async () => {
     const { article } = renderArticleEditor({ isPublished: true, topics: [7] })
     setMockResponse.patch(urls.websiteContent.details(article.id), article)

@@ -11,7 +11,6 @@ import {
   Typography,
   HEADER_HEIGHT,
   HEADER_HEIGHT_MD,
-  Container,
 } from "ol-components"
 import { ActionButton, Alert, Button, ButtonLink } from "@mitodl/smoot-design"
 import { useUserHasPermission, Permission } from "api/hooks/user"
@@ -369,6 +368,31 @@ const WebsiteContentEditor = ({
    * would create a second item. This is what makes it an update instead.
    */
   const createdIdRef = useRef<number | null>(null)
+  /**
+   * Every write goes through here, so two can never be in flight at once.
+   *
+   * A publish confirmed while a debounced draft save is still running would
+   * otherwise race it, and whichever landed last would decide whether the
+   * item ended up public -- however the dialog reported it.
+   */
+  const saveChainRef = useRef<Promise<unknown>>(Promise.resolve())
+  /**
+   * Set once a publish from this editor has succeeded. A draft write queued
+   * behind it would send `is_published: false` and take the item straight back
+   * down, since `contentItem` still says draft until the caller reloads.
+   */
+  const publishedHereRef = useRef(false)
+  /**
+   * A created item waiting to be handed to the caller, which navigates to its
+   * URL and so unmounts this editor. Held until nothing is unsaved, or
+   * anything typed while the create was in flight would go with it.
+   *
+   * Not covered by a test: the window only exists while a create is in
+   * flight, and in happy-dom the editor's state update for an edit typed
+   * during one does not land before the response, so there is nothing unsaved
+   * left to hold for by the time this runs.
+   */
+  const handoffRef = useRef<WebsiteContent | null>(null)
   const savedRef = useRef({
     title: contentItem?.title,
     content: contentItem?.content ?? initialDoc,
@@ -437,6 +461,13 @@ const WebsiteContentEditor = ({
    * must stay open if it fails. Rejects on failure, so every caller that is
    * not a dialog has to handle the rejection itself.
    */
+  /** Runs `write` after whatever is already queued, in order. */
+  const queueSave = <T,>(write: () => Promise<T>): Promise<T> => {
+    const next = saveChainRef.current.catch(() => undefined).then(write)
+    saveChainRef.current = next
+    return next
+  }
+
   const handleSave = async (publish: boolean, topicsOverride?: number[]) => {
     if (!title) return
     // Overridden when a held-back save resumes: `setTopics` has not landed yet
@@ -472,8 +503,12 @@ const WebsiteContentEditor = ({
      * it would ask the caller to navigate to the route it is on -- every
      * couple of seconds, for as long as someone keeps typing.
      */
-    if (!existingId || publish) {
+    if (publish) {
       onSave?.(saved)
+    } else if (!existingId) {
+      // Deferred to the effect below: handing over navigates, and anything
+      // typed while the create was in flight is not saved yet.
+      handoffRef.current = saved
     }
   }
 
@@ -532,9 +567,12 @@ const WebsiteContentEditor = ({
     if (!autosaves || !touched || !hasUnsavedChanges || !title || isPending) {
       return
     }
+    // A publish from this editor supersedes draft writes: `contentItem` still
+    // says draft, so this would otherwise take down what was just published.
+    if (publishedHereRef.current) return
     const timer = setTimeout(() => {
       setAutosaveState("saving")
-      handleSave(false)
+      queueSave(() => handleSave(false))
         .then(() => setAutosaveState("saved"))
         // The alert below reports the failure; the indicator drops back to
         // saying nothing rather than claiming a save that did not happen.
@@ -545,6 +583,16 @@ const WebsiteContentEditor = ({
     // the timer is rearmed on every edit regardless, which is the debounce.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [autosaves, touched, hasUnsavedChanges, title, content, isPending])
+
+  useEffect(() => {
+    const created = handoffRef.current
+    if (!created || isPending || hasUnsavedChanges) return
+    handoffRef.current = null
+    onSave?.(created)
+    // `onSave` is the caller's and stable in practice; re-running on a new
+    // identity would hand the same item over twice.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isPending, hasUnsavedChanges])
 
   /**
    * An article's topics are what put it on a topic page, so it is not
@@ -570,7 +618,14 @@ const WebsiteContentEditor = ({
   const startPublish = (topicsOverride?: number[]) => {
     const publish = () => {
       setIsPublishing(true)
-      return handleSave(true, topicsOverride)
+      // Queued, so a draft save already running settles first and this lands
+      // last -- what the dialog reports and what is stored then agree.
+      return queueSave(() => handleSave(true, topicsOverride))
+        .then((result) => {
+          publishedHereRef.current = true
+          return result
+        })
+        .finally(() => setIsPublishing(false))
     }
     if (contentItem?.is_published) {
       // Nothing awaits this path, so do not leave the rejection unhandled;
@@ -714,9 +769,18 @@ const WebsiteContentEditor = ({
     ),
   }
 
+  /**
+   * "Saved" is only true until the next keystroke. The state itself cannot say
+   * that -- it is set once, when a write returns -- so it is read together
+   * with whether anything has changed since, rather than claiming a save that
+   * no longer covers what is on screen.
+   */
+  const autosaveShown =
+    autosaveState === "saved" && hasUnsavedChanges ? "idle" : autosaveState
+
   const autosaveSlot = autosaves ? (
     <AutosaveText variant="body3" role="status">
-      {autosaveMessages[autosaveState]}
+      {autosaveMessages[autosaveShown]}
     </AutosaveText>
   ) : null
 
@@ -802,45 +866,39 @@ const WebsiteContentEditor = ({
                 <StackedToolbar>
                   {/* The design puts the actions above the formatting
                       controls, both rows centred. */}
-                  <Container>
-                    <ActionRow>
-                      {/* The design puts the status at the left end and the
-                        actions at the right, the Spacer between them. */}
-                      {statusSlot}
-                      {autosaveSlot}
-                      <Spacer />
-                      <StyledStatusContainer>
-                        <PublishButton
-                          variant="primary"
-                          disabled={
-                            isPending ||
-                            !title ||
-                            (!touched && contentItem?.is_published)
+                  <ActionRow>
+                    {/* The design puts the status at the left end and the
+                      actions at the right, the Spacer between them. */}
+                    {statusSlot}
+                    {autosaveSlot}
+                    <Spacer />
+                    <StyledStatusContainer>
+                      <PublishButton
+                        variant="primary"
+                        disabled={
+                          isPending ||
+                          !title ||
+                          (!touched && contentItem?.is_published)
+                        }
+                        onClick={() => {
+                          if (topicsMissing) {
+                            askForTopics()
+                            return
                           }
-                          onClick={() => {
-                            if (topicsMissing) {
-                              askForTopics()
-                              return
-                            }
-                            startPublish()
-                          }}
-                          size={buttonSize}
-                          endIcon={
-                            isPending && isPublishing ? (
-                              <LoadingSpinner
-                                size={14}
-                                color="inherit"
-                                loading
-                              />
-                            ) : null
-                          }
-                        >
-                          Publish
-                        </PublishButton>
-                        {settingsButton}
-                      </StyledStatusContainer>
-                    </ActionRow>
-                  </Container>
+                          startPublish()
+                        }}
+                        size={buttonSize}
+                        endIcon={
+                          isPending && isPublishing ? (
+                            <LoadingSpinner size={14} color="inherit" loading />
+                          ) : null
+                        }
+                      >
+                        Publish
+                      </PublishButton>
+                      {settingsButton}
+                    </StyledStatusContainer>
+                  </ActionRow>
                   <FormattingRow>
                     <MainToolbarContent editor={editor} />
                   </FormattingRow>
