@@ -32,13 +32,7 @@ from learning_resources.models import (
     LearningResourcePlatform,
     LearningResourceRun,
 )
-from learning_resources.utils import (
-    bulk_resources_unpublished_actions,
-    resource_unpublished_actions,
-)
-from learning_resources_search.constants import (
-    CONTENT_FILE_TYPE,
-)
+from learning_resources.utils import resource_unpublished_actions
 from main.utils import checksum_for_content
 
 log = logging.getLogger(__name__)
@@ -184,7 +178,13 @@ def run_for_canvas_archive(course_archive_path, course_folder, checksum, overwri
         )
     run = resource.runs.first()
     resource_readable_id = run.learning_resource.readable_id
-    if run.checksum == checksum and not overwrite:
+    # rows that are all unpublished were stripped by a bulk deindex, not by
+    # the export (which never unpublishes every row), so reload them
+    stale_run = (
+        run.content_files.exists()
+        and not run.content_files.filter(published=True).exists()
+    )
+    if run.checksum == checksum and not overwrite and not stale_run:
         log.debug("Checksums match for %s, skipping load", readable_id)
         return resource_readable_id, None
     return resource_readable_id, run
@@ -201,8 +201,10 @@ def transform_canvas_content_files(
     """
     Transform published content files from a Canvas course zipfile
 
-    Files whose extraction fails are skipped and their existing records
-    are retained (not deleted/unpublished).
+    Files whose extraction fails are skipped and their keys added to
+    failed_keys. Files no longer in the archive are unpublished by
+    load_content_files and purged from both indexes by its
+    content_files_loaded hook.
     """
     basedir = course_zipfile.name.split(".")[0]
     zipfile_path = course_zipfile.absolute()
@@ -247,24 +249,13 @@ def transform_canvas_content_files(
                 yield content_data
 
     # use subgenerator for yielding content data
-    published_keys = []
-    for content_data in _generate_content():
-        full_path = Path(basedir) / Path(content_data["source_path"])
-        published_keys.append(get_edx_module_id(str(full_path), run))
-        yield content_data
+    yield from _generate_content()
     # files whose extraction failed are retained, not treated as unpublished
-    for source_path in failed_source_paths:
-        full_path = Path(basedir) / Path(source_path)
-        failed_key = get_edx_module_id(str(full_path), run)
-        published_keys.append(failed_key)
-        if failed_keys is not None:
-            failed_keys.append(failed_key)
-    unpublished_content = run.content_files.exclude(key__in=published_keys)
-    # remove unpublished contentfiles
-    bulk_resources_unpublished_actions(
-        list(unpublished_content.values_list("id", flat=True)), CONTENT_FILE_TYPE
-    )
-    unpublished_content.delete()
+    if failed_keys is not None:
+        failed_keys.extend(
+            get_edx_module_id(str(Path(basedir) / Path(source_path)), run)
+            for source_path in failed_source_paths
+        )
 
 
 def transform_canvas_problem_files(

@@ -10,9 +10,11 @@ import pytest
 from anys import ANY_DICT, ANY_STR
 from opensearchpy.exceptions import ConflictError, NotFoundError
 
+from learning_resources.etl.constants import ETLSource
 from learning_resources.factories import (
     ContentFileFactory,
     CourseFactory,
+    LearningResourceFactory,
     LearningResourceRunFactory,
     ProgramFactory,
 )
@@ -36,6 +38,7 @@ from learning_resources_search.indexing_api import (
     deindex_content_files,
     deindex_document,
     deindex_learning_resources,
+    deindex_non_opensearch_run_content_files,
     deindex_percolators,
     deindex_run_content_files,
     delete_orphaned_indexes,
@@ -511,25 +514,51 @@ def test_delete_orphaned_indexes(mocker, mocked_es, delete_reindexing_tags):
         assert mocked_es.conn.indices.delete.call_count == 1
 
 
-def test_bulk_content_file_deindex_on_course_deletion(mocker):
-    """
-    OpenSearch should deindex content files on bulk  course deletion
-    """
+def test_deindex_learning_resources_skips_test_mode_content_files(mocker):
+    """Bulk deindex leaves a test_mode course's content files alone"""
     mock_deindex_run_content_files = mocker.patch(
         "learning_resources_search.indexing_api.deindex_run_content_files",
         autospec=True,
     )
     mocker.patch("learning_resources_search.indexing_api.deindex_items", autospec=True)
-
-    courses = CourseFactory.create_batch(2)
-    deindex_learning_resources(
-        [course.learning_resource_id for course in courses], COURSE_TYPE
+    course = LearningResourceFactory.create(
+        is_course=True, create_runs=True, test_mode=True, published=False
     )
-    for course in courses:
-        for run in course.learning_resource.runs.all():
-            mock_deindex_run_content_files.assert_any_call(
-                run.id, unpublished_only=False
-            )
+    content_file = ContentFileFactory.create(run=course.runs.first(), published=True)
+
+    deindex_learning_resources([course.id], COURSE_TYPE)
+
+    mock_deindex_run_content_files.assert_not_called()
+    content_file.refresh_from_db()
+    assert content_file.published is True
+
+
+@pytest.mark.parametrize(
+    ("etl_source", "stays_published"),
+    [(ETLSource.mitxonline.value, True), (ETLSource.ocw.value, False)],
+)
+def test_deindex_learning_resources_content_files_by_source(
+    mocker, etl_source, stays_published
+):
+    """
+    Bulk deindex removes content file docs from OpenSearch for every source but
+    only flips published for sources that are not retained in Qdrant.
+    """
+    mock_deindex_items = mocker.patch(
+        "learning_resources_search.indexing_api.deindex_items", autospec=True
+    )
+    course = LearningResourceFactory.create(
+        is_course=True, create_runs=True, etl_source=etl_source
+    )
+    run = course.runs.first()
+    content_files = ContentFileFactory.create_batch(2, run=run, published=True)
+
+    deindex_learning_resources([course.id], COURSE_TYPE)
+
+    for content_file in content_files:
+        content_file.refresh_from_db()
+        assert content_file.published is stays_published
+    assert mock_deindex_items.call_count == 2
 
 
 def test_deindex_run_content_files(mocker):
@@ -697,7 +726,7 @@ def test_bulk_content_file_deindex_on_program_deletion(mocker):
     for program in programs:
         for run in program.learning_resource.runs.all():
             mock_deindex_run_content_files.assert_any_call(
-                run.id, unpublished_only=False
+                run.id, unpublished_only=False, keep_published=False
             )
 
 
@@ -1028,3 +1057,54 @@ def test_clear_featured_rank(mocked_es, mocker, clear_all_greater_than):
             "query": query,
         },
     )
+
+
+def test_deindex_non_opensearch_run_content_files_single_run(mocked_es):
+    """No query is sent when the resource has no run outside the selected ones"""
+    course = LearningResourceFactory.create(
+        is_course=True, create_runs=False, published=True
+    )
+    LearningResourceRunFactory.create(learning_resource=course, published=True)
+
+    deindex_non_opensearch_run_content_files(course.id)
+
+    mocked_es.conn.delete_by_query.assert_not_called()
+
+
+def test_deindex_non_opensearch_run_content_files(mocker, mocked_es):
+    """Docs from every run but the OpenSearch-selected one are deleted by query"""
+    course = LearningResourceFactory.create(
+        is_course=True, create_runs=False, published=True
+    )
+    best = LearningResourceRunFactory.create(learning_resource=course, published=True)
+    LearningResourceRunFactory.create(
+        learning_resource=course,
+        published=True,
+        start_date=best.start_date.replace(year=2000),
+    )
+    assert course.best_run == best
+    mocker.patch(
+        "learning_resources_search.indexing_api.get_active_aliases",
+        autospec=True,
+        return_value=mocked_es.active_aliases,
+    )
+
+    deindex_non_opensearch_run_content_files(course.id)
+
+    for alias in mocked_es.active_aliases:
+        mocked_es.conn.delete_by_query.assert_any_call(
+            index=alias,
+            body={
+                "query": {
+                    "bool": {
+                        "filter": [
+                            {"term": {"resource_id": course.id}},
+                            {"exists": {"field": "run_id"}},
+                        ],
+                        "must_not": [{"terms": {"run_id": [best.id]}}],
+                    }
+                }
+            },
+            routing=course.id,
+            conflicts="proceed",
+        )

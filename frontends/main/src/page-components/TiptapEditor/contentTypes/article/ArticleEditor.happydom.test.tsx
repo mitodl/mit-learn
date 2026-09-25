@@ -97,6 +97,10 @@ describe("ArticleEditor article controls", () => {
     expect(screen.queryByRole("button", { name: "Unpublish Article" })).toBe(
       null,
     )
+    /* Unpublishing lives on the listing card's menu, not here. */
+    expect(screen.queryByRole("button", { name: "Unpublish Article" })).toBe(
+      null,
+    )
   })
 
   test("Settings opens the article settings drawer", async () => {

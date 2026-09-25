@@ -7,13 +7,14 @@ from django.apps import apps
 from django.conf import settings as django_settings
 
 from learning_resources.etl.constants import QDRANT_RETAINED_SOURCES
-from learning_resources.models import ContentFile
+from learning_resources.models import ContentFile, LearningResource
 from learning_resources_search import tasks
 from learning_resources_search.api import get_similar_topics_qdrant
 from learning_resources_search.constants import (
     COURSE_TYPE,
     PERCOLATE_INDEX_TYPE,
 )
+from learning_resources_search.utils import opensearch_runs
 from main import settings
 from main.utils import chunks
 from vector_search import tasks as vector_tasks
@@ -189,7 +190,14 @@ class SearchIndexPlugin:
                 )
             try_with_retry_as_task(chain(*unpublished_tasks))
 
-        self._deindex_learning_resource_content_files(resource_ids, resource_type)
+        # test_mode resources keep their content files indexed, as in
+        # resource_unpublished
+        self._deindex_learning_resource_content_files(
+            LearningResource.objects.filter(
+                id__in=resource_ids, test_mode=False
+            ).values_list("id", flat=True),
+            resource_type,
+        )
 
     @hookimpl
     def resource_before_delete(self, resource):
@@ -223,23 +231,17 @@ class SearchIndexPlugin:
 
         """
         resource = run.learning_resource
-        if not run.content_files.exists():
+        if not run.content_files.exists() or resource.test_mode:
             return
 
-        if resource.test_mode:
-            return
-        if resource.etl_source in QDRANT_RETAINED_SOURCES:
-            deindex_tasks = [
-                tasks.deindex_run_content_files.si(
-                    run.id, unpublished_only=False, keep_published=True
-                ),
-            ]
-        else:
-            deindex_tasks = [
-                tasks.deindex_run_content_files.si(run.id, unpublished_only=False),
-            ]
-            if django_settings.QDRANT_ENABLE_INDEXING_PLUGIN_HOOKS:
-                deindex_tasks.append(vector_tasks.remove_run_content_files.si(run.id))
+        keep_published = resource.etl_source in QDRANT_RETAINED_SOURCES
+        deindex_tasks = [
+            tasks.deindex_run_content_files.si(
+                run.id, unpublished_only=False, keep_published=keep_published
+            ),
+        ]
+        if not keep_published and django_settings.QDRANT_ENABLE_INDEXING_PLUGIN_HOOKS:
+            deindex_tasks.append(vector_tasks.remove_run_content_files.si(run.id))
         try_with_retry_as_task(chain(*deindex_tasks))
 
     @hookimpl
@@ -276,11 +278,7 @@ class SearchIndexPlugin:
 
         resource = run.learning_resource
         if resource.published or resource.test_mode:
-            if (
-                run.published
-                and not run.is_variant
-                and (resource.test_mode or resource.best_run == run)
-            ):
+            if opensearch_runs(resource).filter(id=run.id).exists():
                 index_tasks.append(tasks.index_run_content_files.si(run.id))
 
             if django_settings.QDRANT_ENABLE_INDEXING_PLUGIN_HOOKS:

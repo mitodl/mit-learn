@@ -11,7 +11,7 @@ const FIGURE_RADIUS = "8px 80px 8px 50px"
 const OUTLINE_RADIUS = "8px 50px 8px 50px"
 
 const HeroBand = styled(Section)(({ theme }) => ({
-  backgroundColor: theme.custom.colors.lightGray1,
+  backgroundColor: theme.custom.colors.backgroundGray,
   backgroundImage:
     "url('/images/organizational_learning/hero-illustration.svg')",
   backgroundSize: "210% auto",
@@ -26,15 +26,15 @@ const Inner = styled(SectionInner)(({ theme }) => ({
   display: "flex",
   alignItems: "center",
   gap: "100px",
-  padding: "144px 24px",
+  padding: "144px 0",
   [theme.breakpoints.down("lg")]: {
     flexDirection: "column",
     alignItems: "stretch",
     gap: "48px",
-    padding: "64px 24px",
+    padding: "64px 0",
   },
   [theme.breakpoints.down("md")]: {
-    padding: "32px 24px",
+    padding: "32px 0",
   },
 }))
 
@@ -63,15 +63,18 @@ const Title = styled.h1(({ theme }) => ({
 }))
 
 const Emphasis = styled.span(({ theme }) => ({
-  borderBottom: `4px solid ${theme.custom.colors.brightRed}`,
-  paddingBottom: "2px",
+  textDecorationLine: "underline",
+  textDecorationColor: theme.custom.colors.brightRed,
+  textDecorationThickness: "4px",
+  textUnderlineOffset: "1px",
+  textDecorationSkipInk: "none",
   [theme.breakpoints.down("md")]: {
-    borderBottomWidth: "3px",
+    textDecorationThickness: "3px",
   },
 }))
 
 const Body = styled.p(({ theme }) => ({
-  ...theme.typography.body1,
+  ...theme.typography.body1Loose,
   color: theme.custom.colors.darkGray2,
   margin: 0,
 }))
@@ -126,6 +129,7 @@ const Figure = styled.div(({ theme }) => ({
     inset: "-21px 19px 21px -21px",
     border: `1px solid ${theme.custom.colors.red}`,
     borderRadius: OUTLINE_RADIUS,
+    zIndex: 1,
   },
   [theme.breakpoints.down("lg")]: {
     minHeight: "320px",
@@ -141,50 +145,46 @@ const HeroImage = styled(Image)({
   borderRadius: FIGURE_RADIUS,
 })
 
-const HeroSection: React.FC = () => {
-  const lastSpace = copy.title.lastIndexOf(" ")
-  const titleStart = copy.title.slice(0, lastSpace)
-  const titleEnd = copy.title.slice(lastSpace + 1)
-
-  return (
-    <HeroBand>
-      <Inner>
-        <Copy>
-          <Title>
-            {titleStart} <Emphasis>{titleEnd}</Emphasis>
-          </Title>
-          <Body>{copy.body}</Body>
-          <Stats>
-            {copy.stats.map((stat) => (
-              <Stat key={stat.value}>
-                <StatLabel>
-                  {stat.label.map((line, index) => (
-                    <React.Fragment key={line}>
-                      {index > 0 ? <br /> : null}
-                      {line}
-                    </React.Fragment>
-                  ))}
-                </StatLabel>
-                <StatValue>{stat.value}</StatValue>
-              </Stat>
-            ))}
-          </Stats>
-          <Actions>
-            <CtaButton placement="hero">{copy.ctaLabel}</CtaButton>
-          </Actions>
-        </Copy>
-        <Figure>
-          <HeroImage
-            src={copy.image}
-            alt={copy.imageAlt}
-            fill
-            sizes="(max-width: 1280px) 100vw, 568px"
-            priority
-          />
-        </Figure>
-      </Inner>
-    </HeroBand>
-  )
-}
+const HeroSection: React.FC = () => (
+  <HeroBand>
+    <Inner>
+      <Copy>
+        <Title>
+          {copy.title.start}
+          <Emphasis>{copy.title.emphasis}</Emphasis>
+          {copy.title.end}
+        </Title>
+        <Body>{copy.body}</Body>
+        <Stats>
+          {copy.stats.map((stat) => (
+            <Stat key={stat.value}>
+              <StatLabel>
+                {stat.label.map((line, index) => (
+                  <React.Fragment key={line}>
+                    {index > 0 ? <br /> : null}
+                    {line}
+                  </React.Fragment>
+                ))}
+              </StatLabel>
+              <StatValue>{stat.value}</StatValue>
+            </Stat>
+          ))}
+        </Stats>
+        <Actions>
+          <CtaButton placement="hero">{copy.ctaLabel}</CtaButton>
+        </Actions>
+      </Copy>
+      <Figure>
+        <HeroImage
+          src={copy.image}
+          alt={copy.imageAlt}
+          fill
+          sizes="(max-width: 1280px) 100vw, 568px"
+          priority
+        />
+      </Figure>
+    </Inner>
+  </HeroBand>
+)
 
 export default HeroSection

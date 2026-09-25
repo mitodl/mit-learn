@@ -45,7 +45,6 @@ const FaqSummary = styled(AccordionSummary)(({ theme }) => ({
   ".MuiAccordionSummary-content": {
     margin: "24px 0",
   },
-  // Tighten the gap below the question once the answer is showing.
   "&.Mui-expanded .MuiAccordionSummary-content": {
     marginBottom: "16px",
   },

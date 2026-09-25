@@ -13,6 +13,7 @@ import { notFound } from "next/navigation"
 import { getOutlineCoursewareId, HeadingIds } from "./util"
 import InstructorsSection from "./InstructorsSection"
 import FaqsSection from "./FaqsSection"
+import TestimonialsSection from "./TestimonialsSection"
 import RawHTML from "./RawHTML"
 import AboutSection from "./AboutSection"
 import ProductPageTemplate from "./ProductPageTemplate"
@@ -156,6 +157,9 @@ const CoursePage: React.FC<CoursePageProps> = ({ readableId }) => {
         <InstructorsSection instructors={page.faculty} />
       ) : null}
       {page.faqs.length ? <FaqsSection faqs={page.faqs} /> : null}
+      {page.testimonials.length ? (
+        <TestimonialsSection testimonials={page.testimonials} />
+      ) : null}
     </ProductPageTemplate>
   )
 }

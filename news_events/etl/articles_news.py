@@ -1,6 +1,8 @@
 """ETL functions for website_content news data."""
 
+import html
 import logging
+from urllib.parse import urlparse
 
 from news_events.constants import FeedType
 from news_events.etl import loaders
@@ -8,6 +10,43 @@ from website_content.constants import WebsiteContentType
 from website_content.models import WebsiteContent
 
 log = logging.getLogger(__name__)
+
+_SAFE_LINK_SCHEMES = ("http", "https", "mailto", "tel")
+
+
+def _escape_html(text: str) -> str:
+    """Escape text for safe interpolation into an HTML attribute or text node."""
+    return html.escape(text, quote=True)
+
+
+def _safe_str_attr(value: object, default: str = "") -> str:
+    """
+    Return value if it's a string, otherwise a safe default.
+
+    ProseMirror content is stored as unvalidated JSON, so a link mark's
+    href/target/rel can be null, a number, a list, etc. -- not just a
+    string or absent. dict.get(key, default) only covers "key absent";
+    this covers "key present but not a string" too, so a single
+    malformed article can't raise an uncaught exception and abort the
+    whole feed transform (transform_items has no per-article isolation).
+    """
+    return value if isinstance(value, str) else default
+
+
+def _is_safe_link_href(href: str) -> bool:
+    """Allow http(s)/mailto/tel URLs and site-relative paths."""
+    try:
+        parsed = urlparse(href)
+    except ValueError:
+        # Malformed URLs (e.g. "http://[") make urlparse raise instead of
+        # just failing to parse -- treat anything it can't handle as unsafe.
+        return False
+    if parsed.scheme:
+        return parsed.scheme in _SAFE_LINK_SCHEMES
+    # "//host" and "/\host" are treated as other-host URLs by browsers, so a
+    # leading "/" is only site-relative when not immediately followed by
+    # another "/" or "\".
+    return href.startswith("/") and href[1:2] not in ("/", "\\")
 
 
 def website_content_feed_guid(content_id: int) -> str:
@@ -213,10 +252,14 @@ def _extract_text_from_paragraph(paragraph_node: dict) -> str:
 
     for text_node in paragraph_content:
         if isinstance(text_node, dict) and text_node.get("type") == "text":
-            text = text_node.get("text", "")
+            text = _safe_str_attr(text_node.get("text"))
             if text:
+                text = _escape_html(text)
+
                 # Check if this text has link marks
                 marks = text_node.get("marks", [])
+                if not isinstance(marks, list):
+                    marks = []
                 link_mark = None
 
                 # Find link mark if it exists
@@ -228,13 +271,20 @@ def _extract_text_from_paragraph(paragraph_node: dict) -> str:
                 # If there's a link, wrap in anchor tag
                 if link_mark:
                     attrs = link_mark.get("attrs", {})
-                    href = attrs.get("href", "")
-                    target = attrs.get("target", "_blank")
-                    rel = attrs.get("rel", "noopener noreferrer nofollow")
+                    if not isinstance(attrs, dict):
+                        attrs = {}
+                    href = _safe_str_attr(attrs.get("href"))
+                    target = _safe_str_attr(attrs.get("target"), "_blank")
+                    rel = _safe_str_attr(
+                        attrs.get("rel"), "noopener noreferrer nofollow"
+                    )
 
                     if href:
+                        safe_href = href if _is_safe_link_href(href) else "#"
                         text = (
-                            f'<a href="{href}" target="{target}" rel="{rel}">{text}</a>'
+                            f'<a href="{_escape_html(safe_href)}" '
+                            f'target="{_escape_html(target)}" '
+                            f'rel="{_escape_html(rel)}">{text}</a>'
                         )
 
                 text_parts.append(text)
