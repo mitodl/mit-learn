@@ -196,10 +196,17 @@ const StatusValue = styled.span(({ theme }) => ({
 }))
 
 /* Sits beside the status, as the design's "Saving..." does beside the title. */
-const AutosaveText = styled(Typography)(({ theme }) => ({
+/**
+ * A span, not a `Typography`: it holds a spinner while saving, which renders a
+ * div -- and a `<p>`, Typography's default, may not contain one. Wrapping
+ * `Typography` cannot fix that, since `styled()` drops its polymorphic
+ * `component` prop, so the typography comes from the theme instead.
+ */
+const AutosaveText = styled.span(({ theme }) => ({
   display: "inline-flex",
   alignItems: "center",
   gap: "4px",
+  ...theme.typography.body3,
   color: theme.custom.colors.silverGrayDark,
   whiteSpace: "nowrap",
   svg: {
@@ -563,9 +570,13 @@ const WebsiteContentEditor = ({
     }
 
     if (!contentItem) return
-    updateMutation
-      .mutateAsync({ id: contentItem.id, topics: nextTopics })
-      .catch(() => undefined)
+    // Queued like the others. A content write already in flight carries the
+    // topics as they were when it started, so sent alongside it this could be
+    // the older list that the server stores last -- taking the selection the
+    // editor just made back out, with nothing on screen to say so.
+    queueSave(() =>
+      updateMutation.mutateAsync({ id: contentItem.id, topics: nextTopics }),
+    ).catch(() => undefined)
   }
 
   /**
@@ -812,9 +823,7 @@ const WebsiteContentEditor = ({
     autosaveState === "saved" && hasUnsavedChanges ? "idle" : autosaveState
 
   const autosaveSlot = autosaves ? (
-    <AutosaveText variant="body3" role="status">
-      {autosaveMessages[autosaveShown]}
-    </AutosaveText>
+    <AutosaveText role="status">{autosaveMessages[autosaveShown]}</AutosaveText>
   ) : null
 
   /**

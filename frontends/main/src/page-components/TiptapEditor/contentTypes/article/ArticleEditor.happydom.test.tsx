@@ -761,6 +761,85 @@ describe("ArticleEditor autosave", () => {
     expect(screen.queryByText("Saved")).toBe(null)
   }, 15000)
 
+  test("a settings save is not overtaken by an autosave in flight", async () => {
+    const topics = factories.learningResources.topics({ count: 1 })
+    const [topic] = topics.results
+    setMockResponse.get(urls.topics.list({ limit: 1000 }), topics)
+    const { article } = renderArticleEditor({
+      autosaveDelayMs: AUTOSAVE_DELAY_MS,
+    })
+
+    let contentWriteFinished = false
+    let settingsSawContentWriteFinished: boolean | null = null
+    /**
+     * The content write carries `topics` as they were when it started, so it
+     * is slow here on purpose: still open while the drawer saves new ones.
+     */
+    setMockResponse.patch(
+      urls.websiteContent.details(article.id),
+      () =>
+        new Promise((resolve) =>
+          setTimeout(() => {
+            contentWriteFinished = true
+            resolve(article)
+          }, 3000),
+        ),
+      { requestBody: expect.objectContaining({ is_published: false }) },
+    )
+    /* The settings write, which sends topics and nothing else. */
+    setMockResponse.patch(
+      urls.websiteContent.details(article.id),
+      () => {
+        settingsSawContentWriteFinished = contentWriteFinished
+        return article
+      },
+      {
+        requestBody: expect.not.objectContaining({
+          is_published: expect.anything(),
+        }),
+      },
+    )
+
+    await userEvent.type(
+      await screen.findByRole("heading", { level: 1 }),
+      " edited",
+    )
+    await waitFor(
+      () => {
+        expect(makeRequest).toHaveBeenCalledWith(
+          expect.objectContaining({
+            method: "patch",
+            body: expect.objectContaining({ is_published: false }),
+          }),
+        )
+      },
+      { timeout: 12000 },
+    )
+
+    // Pick a topic while that write is still open.
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Settings" }),
+    )
+    await userEvent.click(await screen.findByLabelText("Topic"))
+    await userEvent.click(
+      await screen.findByRole("option", { name: topic.name }),
+    )
+    await userEvent.click(screen.getByRole("button", { name: "Add" }))
+    await userEvent.click(screen.getByRole("button", { name: "Save Settings" }))
+
+    await waitFor(
+      () => expect(settingsSawContentWriteFinished).not.toBe(null),
+      { timeout: 12000 },
+    )
+
+    /**
+     * Sent only once the content write had finished. Overlapping, the content
+     * write's older topic list could be the one the server stored last, and
+     * the editor's new selection would vanish with nothing to say so.
+     */
+    expect(settingsSawContentWriteFinished).toBe(true)
+  }, 30000)
+
   test("a publish waits for the draft save already in flight", async () => {
     const { article } = renderArticleEditor({
       topics: [7],

@@ -154,7 +154,8 @@ describe("NewsEditor - Content Editing and Saving", () => {
         updatedArticle,
       )
 
-      const heading = screen.getByRole("heading", { level: 1 })
+      // Awaited: under load the editor's content mounts after its container.
+      const heading = await screen.findByRole("heading", { level: 1 })
       await userEvent.click(heading)
 
       await userEvent.keyboard("{Control>}a{/Control}{Delete}")
