@@ -1,4 +1,4 @@
-# syntax=docker/dockerfile:1
+# syntax=docker/dockerfile:1@sha256:ecfaec9ed6d810b56388c508f4121597bfbba70d41a6dfeee4d8cad5f295fc32
 # hadolint global ignore=SC2046,DL3002,DL3008,DL3025,DL3042,DL4006
 
 FROM mitodl/ol-python-base:3.12 AS base
