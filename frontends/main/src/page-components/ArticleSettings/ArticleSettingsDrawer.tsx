@@ -11,6 +11,7 @@ import {
 import { ActionButton, Button, TextField } from "@mitodl/smoot-design"
 import { RiCloseLargeLine, RiCloseLine } from "@remixicon/react"
 import { useLearningResourceTopics } from "api/hooks/learningResources"
+import { env } from "@/env"
 
 /**
  * Content settings drawer, drawn from the /articles design but shared by every
@@ -86,11 +87,29 @@ const SeoSection = styled(Section)({
  */
 const SEO_TITLE_MAX = 255
 
-const Counter = styled.div(({ theme }) => ({
-  ...theme.typography.body3,
-  color: theme.custom.colors.silverGrayDark,
-  textAlign: "right",
-}))
+/**
+ * What MIT's SEO rules ask of the tags these fields become: a title tag of
+ * 50-60 characters, and a description of 160 -- 120 on a phone, so whatever
+ * matters goes at the front either way.
+ *
+ * Guidance, not a limit. Both numbers stand in for pixel widths that a
+ * character count only approximates, and a tag a little over is truncated by
+ * the search engine rather than rejected -- so going past these is the
+ * editor's call to make, and worth telling them about rather than preventing.
+ * `SEO_TITLE_MAX` above is the one hard stop, because that one really fails.
+ */
+const SEO_TITLE_TAG_BUDGET = 60
+const SEO_DESCRIPTION_BUDGET = 160
+
+const Counter = styled.div<{ overBudget: boolean }>(
+  ({ theme, overBudget }) => ({
+    ...theme.typography.body3,
+    color: overBudget
+      ? theme.custom.colors.mitRed
+      : theme.custom.colors.silverGrayDark,
+    textAlign: "right",
+  }),
+)
 
 const SectionHeading = styled.div({
   display: "flex",
@@ -284,6 +303,30 @@ const ArticleSettingsDrawer = ({
   const [selectedIds, setSelectedIds] = useState<number[]>([])
   const [seoTitle, setSeoTitle] = useState("")
   const [seoDescription, setSeoDescription] = useState("")
+
+  /**
+   * The budget for this field, which is not the budget for the tag: the page
+   * appends " | <site name>" to whatever is entered here -- see
+   * `standardizeMetadata` -- and the guidance is about the tag that reaches
+   * search results, so the suffix comes out of the allowance.
+   *
+   * Read here rather than at module scope, where NEXT_PUBLIC_* values are not
+   * set yet. Missing, there is no suffix to reserve for.
+   */
+  const siteName = env("NEXT_PUBLIC_SITE_NAME")
+  const titleSuffix = siteName ? ` | ${siteName}` : ""
+  const seoTitleBudget = SEO_TITLE_TAG_BUDGET - titleSuffix.length
+  /* The suffix is named because it is what makes the budget below smaller
+     than the 60 the rules quote, which would otherwise look like an error. */
+  const seoTitleHelpText = [
+    `Aim for ${seoTitleBudget} characters or fewer.`,
+    titleSuffix
+      ? `"${titleSuffix}" is appended, for a ${SEO_TITLE_TAG_BUDGET}-character title in search results.`
+      : "",
+    "Lead with the words someone would search for.",
+  ]
+    .filter(Boolean)
+    .join(" ")
 
   /**
    * One fetch of every topic rather than a query per select.
@@ -558,7 +601,9 @@ const ArticleSettingsDrawer = ({
               </Typography>
               <Typography variant="body2">
                 Add an SEO title and description to help search engines
-                understand and display your {contentLabel.toLowerCase()}.
+                understand and display your {contentLabel.toLowerCase()}. Both
+                should be unique to this page, and they are the first thing
+                someone reads in search results.
               </Typography>
             </SectionHeading>
             <div>
@@ -567,30 +612,48 @@ const ArticleSettingsDrawer = ({
                 label="SEO Title"
                 fullWidth
                 placeholder="Enter a title for search results"
-                /* The limit belongs in the description, not only in the
-                   counter: otherwise it is discoverable only by being cut off
-                   at it. */
-                helpText={`Up to ${SEO_TITLE_MAX} characters.`}
+                /* The budget belongs in the description, not only in the
+                   counter: otherwise it is discoverable only by being run
+                   past. */
+                helpText={seoTitleHelpText}
                 inputProps={{ maxLength: SEO_TITLE_MAX }}
                 value={seoTitle}
                 onChange={(event) => setSeoTitle(event.target.value)}
               />
               {/* Announced only when it settles, so it does not interrupt on
                   every keystroke. */}
-              <Counter aria-live="polite">
-                {`${seoTitle.length} / ${SEO_TITLE_MAX} characters`}
+              <Counter
+                aria-live="polite"
+                overBudget={seoTitle.length > seoTitleBudget}
+                data-over-budget={seoTitle.length > seoTitleBudget}
+              >
+                {`${seoTitle.length} / ${seoTitleBudget} characters`}
               </Counter>
             </div>
-            <TextField
-              name="seo_description"
-              label="SEO Description"
-              fullWidth
-              multiline
-              minRows={9}
-              placeholder={`Write a short description that summarizes your ${contentLabel.toLowerCase()} for search results.`}
-              value={seoDescription}
-              onChange={(event) => setSeoDescription(event.target.value)}
-            />
+            <div>
+              <TextField
+                name="seo_description"
+                label="SEO Description"
+                fullWidth
+                multiline
+                /* Sized to the budget rather than to the space: nine rows read
+                   as an invitation to write far more than will ever show. */
+                minRows={4}
+                placeholder={`Write a short description that summarizes your ${contentLabel.toLowerCase()} for search results.`}
+                helpText={`Aim for ${SEO_DESCRIPTION_BUDGET} characters or fewer. Only about 120 show on a phone, so put what matters first.`}
+                value={seoDescription}
+                onChange={(event) => setSeoDescription(event.target.value)}
+              />
+              <Counter
+                aria-live="polite"
+                overBudget={seoDescription.length > SEO_DESCRIPTION_BUDGET}
+                data-over-budget={
+                  seoDescription.length > SEO_DESCRIPTION_BUDGET
+                }
+              >
+                {`${seoDescription.length} / ${SEO_DESCRIPTION_BUDGET} characters`}
+              </Counter>
+            </div>
           </SeoSection>
 
           <FooterCta>
