@@ -23,6 +23,7 @@ export enum FeatureFlags {
   OrganizationalLearning = "organizational-learning",
   MultipleRunContextMenus = "multiple-run-context-menus",
   ProgramLetters = "program-letters",
+  B2BDataConsent = "b2b-data-consent",
 }
 
 /**
