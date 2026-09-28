@@ -137,6 +137,15 @@ const setupApis = ({
   }
 }
 
+const waitForCoursePageToSettle = async (pageTitle: string) => {
+  await screen.findByRole("heading", { name: pageTitle })
+  await waitFor(() => {
+    expect(
+      screen.queryAllByRole("button", { name: "Loading" }),
+    ).toHaveLength(0)
+  })
+}
+
 describe("CoursePage", () => {
   beforeEach(() => {
     mockedUseFeatureFlagEnabled.mockReturnValue(true)
@@ -153,6 +162,7 @@ describe("CoursePage", () => {
     invariant(page.faculty.length > 0)
     setupApis({ course, page })
     renderWithProviders(<CoursePage readableId={course.readable_id} />)
+    await waitForCoursePageToSettle(page.title)
 
     await waitFor(() => {
       assertHeadings([
@@ -179,6 +189,7 @@ describe("CoursePage", () => {
     invariant(page.about)
     setupApis({ course, page })
     renderWithProviders(<CoursePage readableId={course.readable_id} />)
+    await waitForCoursePageToSettle(page.title)
 
     const section = await screen.findByRole("region", {
       name: "About this Course",
@@ -192,6 +203,7 @@ describe("CoursePage", () => {
     invariant(page.what_you_learn)
     setupApis({ course, page })
     renderWithProviders(<CoursePage readableId={course.readable_id} />)
+    await waitForCoursePageToSettle(page.title)
 
     const section = await screen.findByRole("region", {
       name: "What you'll learn",
@@ -206,6 +218,7 @@ describe("CoursePage", () => {
     invariant(page.faculty.length > 0)
     setupApis({ course, page })
     renderWithProviders(<CoursePage readableId={course.readable_id} />)
+    await waitForCoursePageToSettle(page.title)
 
     const section = await screen.findByRole("region", {
       name: "Meet your instructors",
@@ -222,6 +235,7 @@ describe("CoursePage", () => {
     invariant(page.prerequisites)
     setupApis({ course, page })
     renderWithProviders(<CoursePage readableId={course.readable_id} />)
+    await waitForCoursePageToSettle(page.title)
 
     const section = await screen.findByRole("region", { name: "Prerequisites" })
     expectRawContent(section, page.prerequisites)
@@ -232,6 +246,7 @@ describe("CoursePage", () => {
     const page = makePage({ course_details: course })
     setupApis({ course, page })
     renderWithProviders(<CoursePage readableId={course.readable_id} />)
+    await waitForCoursePageToSettle(page.title)
 
     const section = await screen.findByRole("region", {
       name: "Course content",
@@ -248,8 +263,7 @@ describe("CoursePage", () => {
     const page = makePage({ course_details: course })
     setupApis({ course, page })
     renderWithProviders(<CoursePage readableId={course.readable_id} />)
-
-    await screen.findByRole("heading", { name: page.title })
+    await waitForCoursePageToSettle(page.title)
     expect(
       screen.queryByRole("region", {
         name: "Course content",
@@ -262,6 +276,7 @@ describe("CoursePage", () => {
     const page = makePage({ course_details: course })
     setupApis({ course, page })
     renderWithProviders(<CoursePage readableId={course.readable_id} />)
+    await waitForCoursePageToSettle(page.title)
 
     const section = await screen.findByRole("region", {
       name: "Course content",
@@ -302,6 +317,7 @@ describe("CoursePage", () => {
       },
     )
     renderWithProviders(<CoursePage readableId={course.readable_id} />)
+    await waitForCoursePageToSettle(page.title)
 
     expect(
       await screen.findByTestId("program-bundle-upsell"),
@@ -378,6 +394,7 @@ describe("CoursePage", () => {
       const page = makePage({ course_details: course })
       setupApis({ course, page })
       renderWithProviders(<CoursePage readableId={course.readable_id} />)
+      await waitForCoursePageToSettle(page.title)
 
       if (disabled) {
         // Only the header placeholder renders (the enroll area is empty), so a
@@ -413,6 +430,7 @@ describe("CoursePage", () => {
       setMockResponse.get(mitxUrls.enrollment.enrollmentsListV3(), [enrollment])
 
       renderWithProviders(<CoursePage readableId={course.readable_id} />)
+      await waitForCoursePageToSettle(page.title)
 
       expect(
         (await screen.findAllByRole("link", { name: /Enrolled/ })).length,
@@ -445,6 +463,7 @@ describe("CoursePage", () => {
       const page = makePage({ course_details: course })
       setupApis({ course, page })
       renderWithProviders(<CoursePage readableId={course.readable_id} />)
+      await waitForCoursePageToSettle(page.title)
 
       const select = await screen.findByRole("combobox", { name: /Session/i })
 
@@ -621,8 +640,7 @@ describe("CoursePage", () => {
     const { view } = renderWithProviders(
       <CoursePage readableId={course.readable_id} />,
     )
-
-    await screen.findByRole("heading", { name: page.title })
+    await waitForCoursePageToSettle(page.title)
     const imgs = Array.from(view.container.querySelectorAll("img"))
     expect(imgs.some((img) => img.src.includes("default_resource"))).toBe(true)
   })
@@ -705,8 +723,7 @@ describe("CoursePage", () => {
       )
       setupApis({ course, page })
       renderWithProviders(<CoursePage readableId={course.readable_id} />)
-
-      await screen.findByRole("heading", { name: page.title })
+      await waitForCoursePageToSettle(page.title)
       expect(
         screen.queryByRole("button", { name: "Stay Updated" }),
       ).not.toBeInTheDocument()
@@ -718,7 +735,6 @@ describe("CoursePage", () => {
     const page = makePage({ course_details: course })
     setupApis({ course, page })
     renderWithProviders(<CoursePage readableId={course.readable_id} />)
-
-    await screen.findByRole("heading", { name: page.title })
+    await waitForCoursePageToSettle(page.title)
   })
 })

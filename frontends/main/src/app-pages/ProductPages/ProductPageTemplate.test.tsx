@@ -1,7 +1,7 @@
 import React from "react"
 import { fireEvent } from "@testing-library/react"
 import { setMockResponse, urls, factories } from "api/test-utils"
-import { renderWithProviders, screen } from "@/test-utils"
+import { renderWithProviders, screen, user } from "@/test-utils"
 import ProductPageTemplate from "./ProductPageTemplate"
 import { StayUpdatedModal } from "./StayUpdatedModal"
 import { useHubspotFormDetail } from "api/hooks/hubspot"
@@ -149,7 +149,7 @@ describe("ProductPageTemplate stay-updated trigger", () => {
     ).not.toBeInTheDocument()
   })
 
-  it("attaches click handler when form id is set and form data exists", () => {
+  it("attaches click handler when form id is set and form data exists", async () => {
     mockedUseHubspotFormDetail.mockReturnValue({
       data: factories.hubspot.form({
         id: STAY_UPDATED_FORM_ID,
@@ -165,14 +165,14 @@ describe("ProductPageTemplate stay-updated trigger", () => {
     expect(button).toBeInTheDocument()
     expect(button).toBeEnabled()
 
-    button.click()
+    await user.click(button)
     expect(mockedNiceModalShow).toHaveBeenCalledWith(StayUpdatedModal, {
       productReadableId: DEFAULT_RESOURCE.readable_id,
       hubspotFormId: STAY_UPDATED_FORM_ID,
     })
   })
 
-  it("threads the per-product hubspotFormId to the form lookup and the modal", () => {
+  it("threads the per-product hubspotFormId to the form lookup and the modal", async () => {
     const PRODUCT_FORM_ID = "product-specific-form"
     mockedUseHubspotFormDetail.mockReturnValue({
       data: factories.hubspot.form({ id: PRODUCT_FORM_ID }),
@@ -188,7 +188,7 @@ describe("ProductPageTemplate stay-updated trigger", () => {
     )
 
     const button = screen.getByRole("button", { name: "Stay Updated" })
-    button.click()
+    await user.click(button)
     expect(mockedNiceModalShow).toHaveBeenCalledWith(StayUpdatedModal, {
       productReadableId: DEFAULT_RESOURCE.readable_id,
       hubspotFormId: PRODUCT_FORM_ID,
@@ -210,7 +210,7 @@ describe("ProductPageTemplate stay-updated trigger", () => {
       mockCapture.mockReset()
     })
 
-    it("fires cta_clicked with resource properties when Stay Updated is clicked", () => {
+    it("fires cta_clicked with resource properties when Stay Updated is clicked", async () => {
       const resource = {
         id: 42,
         readable_id: "program-v1:test+101",
@@ -221,7 +221,7 @@ describe("ProductPageTemplate stay-updated trigger", () => {
         resource,
       })
 
-      screen.getByRole("button", { name: "Stay Updated" }).click()
+      await user.click(screen.getByRole("button", { name: "Stay Updated" }))
 
       expect(mockCapture).toHaveBeenCalledWith(
         PostHogEvents.CallToActionClicked,
@@ -234,7 +234,7 @@ describe("ProductPageTemplate stay-updated trigger", () => {
       )
     })
 
-    it("does not fire cta_clicked when NEXT_PUBLIC_POSTHOG_API_KEY is not set", () => {
+    it("does not fire cta_clicked when NEXT_PUBLIC_POSTHOG_API_KEY is not set", async () => {
       delete process.env.NEXT_PUBLIC_POSTHOG_API_KEY
       const resource = {
         id: 42,
@@ -246,7 +246,7 @@ describe("ProductPageTemplate stay-updated trigger", () => {
         resource,
       })
 
-      screen.getByRole("button", { name: "Stay Updated" }).click()
+      await user.click(screen.getByRole("button", { name: "Stay Updated" }))
 
       expect(mockCapture).not.toHaveBeenCalled()
     })
