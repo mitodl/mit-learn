@@ -13,8 +13,15 @@ export enum FeatureFlags {
   OcwProductPages = "ocw-product-pages",
   VideoPlaylistPage = "video-playlist-page",
   B2BContractManagerDashboard = "b2b-contract-manager-dashboard",
+  B2BAnalyticsDashboard = "b2b-analytics-dashboard",
   Arithmix = "arithmix",
   Hacksnack = "hacksnack",
+  AccountManagement = "account-management",
+  SelfServiceRefunds = "self-service-refunds",
+  DisableHybridSearch = "disable-hybrid-search",
+  OrganizationalLearning = "organizational-learning",
+  MultipleRunContextMenus = "multiple-run-context-menus",
+  ProgramLetters = "program-letters",
 }
 
 /**

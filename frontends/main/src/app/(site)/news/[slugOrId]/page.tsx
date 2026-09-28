@@ -1,3 +1,4 @@
+import type { AppPageProps } from "@/common/searchParams"
 import React from "react"
 import { HydrationBoundary, dehydrate } from "@tanstack/react-query"
 import { websiteContentQueries } from "api/hooks/website_content/queries"
@@ -5,7 +6,7 @@ import { WebsiteContentDetail } from "@/app-pages/WebsiteContent/WebsiteContentD
 import { getQueryClient } from "@/app/getQueryClient"
 import { learningResourceQueries } from "api/hooks/learningResources"
 import { extractLearningResourceIds } from "@/page-components/TiptapEditor/extensions/utils"
-import { safeGenerateMetadata, standardizeMetadata } from "@/common/metadata"
+import { safeGenerateMetadata, getMetadataAsync } from "@/common/metadata"
 import {
   extractImageMetadata,
   extractWebsiteContentDescription,
@@ -13,7 +14,7 @@ import {
 import { notFound } from "next/navigation"
 
 export const generateMetadata = async (
-  props: PageProps<"/news/[slugOrId]">,
+  props: AppPageProps<"/news/[slugOrId]">,
 ) => {
   const params = await props.params
 
@@ -32,16 +33,17 @@ export const generateMetadata = async (
     const description = extractWebsiteContentDescription(content)
     const leadImage = extractImageMetadata(content)
 
-    return standardizeMetadata({
+    return getMetadataAsync({
       title: content.title,
       description,
       image: leadImage?.src,
       imageAlt: leadImage?.alt,
+      searchParams: props.searchParams,
     })
   })
 }
 
-const Page: React.FC<PageProps<"/news/[slugOrId]">> = async (props) => {
+const Page: React.FC<AppPageProps<"/news/[slugOrId]">> = async (props) => {
   const { slugOrId } = await props.params
 
   const queryClient = getQueryClient()

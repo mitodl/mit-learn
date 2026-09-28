@@ -31,7 +31,7 @@ describe("CertificateTrackCard", () => {
     ).toBeInTheDocument()
     expect(screen.getByText("Graded assignments & exams")).toBeInTheDocument()
     expect(
-      screen.getByText("MIT certificate on completion"),
+      screen.getByText("MIT Open Learning certificate of completion"),
     ).toBeInTheDocument()
   })
 
@@ -40,20 +40,20 @@ describe("CertificateTrackCard", () => {
       <CertificateTrackCard price={<span>$250</span>} productNoun="program" />,
     )
     expect(
-      screen.getByText("Access to this program & course materials"),
+      screen.getByText("Access to this program & materials"),
     ).toBeInTheDocument()
   })
 
   test.each([
     {
-      name: "available, when not applied",
+      name: "apply, when not applied",
       applied: false,
-      linkText: "Financial assistance available",
+      linkText: "Apply for financial aid",
     },
     {
-      name: "approved (applied at checkout), when applied",
+      name: "approved, when applied",
       applied: true,
-      linkText: "Financial assistance approved (applied at checkout)",
+      linkText: "Financial aid approved",
     },
   ])(
     "renders financial aid link to the form — $name",
@@ -63,7 +63,7 @@ describe("CertificateTrackCard", () => {
         <CertificateTrackCard
           price={<span>$250</span>}
           productNoun="course"
-          financialAid={{ href, applied }}
+          financialAid={{ href, applied, pending: false }}
         />,
       )
       const link = screen.getByRole("link", { name: linkText })
@@ -72,13 +72,26 @@ describe("CertificateTrackCard", () => {
     },
   )
 
+  test("reserves the row without a link while approval is still loading", () => {
+    renderWithProviders(
+      <CertificateTrackCard
+        price={<span>$250</span>}
+        productNoun="course"
+        financialAid={{
+          href: "https://example.com/financial-aid",
+          applied: false,
+          pending: true,
+        }}
+      />,
+    )
+    expect(screen.queryByRole("link", { name: /financial aid/i })).toBeNull()
+  })
+
   test("does not render a financial aid link when financialAid is not provided", () => {
     renderWithProviders(
       <CertificateTrackCard price={<span>$250</span>} productNoun="course" />,
     )
-    expect(
-      screen.queryByRole("link", { name: /Financial assistance/ }),
-    ).toBeNull()
+    expect(screen.queryByRole("link", { name: /financial aid/i })).toBeNull()
   })
 
   test("renders the action node when provided", () => {
@@ -99,5 +112,18 @@ describe("CertificateTrackCard", () => {
       <CertificateTrackCard price={<span>$250</span>} productNoun="course" />,
     )
     expect(screen.queryByRole("button")).toBeNull()
+  })
+
+  test("omits top-right price when priceBlock is provided", () => {
+    const priceNode = <span>$250</span>
+    renderWithProviders(
+      <CertificateTrackCard
+        price={priceNode}
+        priceBlock={<div data-testid="savings-block">savings</div>}
+        productNoun="program"
+      />,
+    )
+    expect(screen.queryByText("$250")).not.toBeInTheDocument()
+    expect(screen.getByTestId("savings-block")).toBeInTheDocument()
   })
 })

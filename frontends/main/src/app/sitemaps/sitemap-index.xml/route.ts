@@ -2,9 +2,6 @@ import { requiredEnv } from "@/env"
 import { NextResponse } from "next/server"
 import * as resourceSitemap from "../resources/sitemap"
 import * as channelsSitemap from "../channels/sitemap"
-import * as productsSitemap from "../products/sitemap"
-import * as videoSitemap from "../video/sitemap"
-import * as podcastSitemap from "../podcast/sitemap"
 
 export async function GET() {
   const content = await buildSitemapIndex()
@@ -20,12 +17,11 @@ async function buildSitemapIndex(): Promise<string> {
   // Read at request time so this works in the standalone Docker image where
   // NEXT_PUBLIC_ORIGIN is injected by Kubernetes, not baked at build time.
   const BASE_URL = requiredEnv("NEXT_PUBLIC_ORIGIN")
+  // The resources sitemap covers every published resource, each under the one
+  // URL `learn_url` names, so there are no per-type sitemaps to combine.
   const sitemaps = await Promise.all([
     resourceSitemap.generateSitemaps(),
     channelsSitemap.generateSitemaps(),
-    productsSitemap.generateSitemaps(),
-    videoSitemap.generateSitemaps(),
-    podcastSitemap.generateSitemaps(),
   ])
   const sitemapUrls = [
     `${BASE_URL}/sitemaps/static/sitemap.xml`,

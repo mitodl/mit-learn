@@ -8,7 +8,6 @@ from typing import TypedDict
 
 from django.conf import settings
 from django.core.exceptions import ValidationError
-from django.db.models import Q
 from drf_spectacular.plumbing import build_choice_description_list
 from drf_spectacular.utils import extend_schema_field
 from rest_framework import serializers
@@ -36,6 +35,7 @@ from learning_resources.serializers import (
     LearningResourceSerializer,
     ResourceTypeGroupChoiceField,
 )
+from learning_resources.utils import path_slug
 from learning_resources_search.api import gen_content_file_id
 from learning_resources_search.constants import (
     CONTENT_FILE_TYPE,
@@ -82,11 +82,7 @@ def get_resource_age_date(learning_resource_obj, resource_type_group):
         learning_resource_obj.resource_type == LearningResourceType.course.name
         and not learning_resource_obj.next_start_date
     ):
-        last_run = (
-            learning_resource_obj.runs.filter(Q(published=True))
-            .order_by("start_date")
-            .last()
-        )
+        last_run = learning_resource_obj.runs.public().order_by("start_date").last()
 
         if last_run:
             if (
@@ -144,6 +140,25 @@ def serialize_learning_resource_for_update(
         and hasattr(learning_resource_obj, "video")
     ):
         serialized_data["video"]["transcript"] = learning_resource_obj.video.transcript
+
+    if (
+        learning_resource_obj.resource_type == LearningResourceType.podcast_episode.name
+        and hasattr(learning_resource_obj, "podcast_episode")
+    ):
+        serialized_data["podcast_episode"]["transcript"] = (
+            learning_resource_obj.podcast_episode.transcript
+        )
+
+    if serialized_data.get("content_files"):
+        # The API serializer omits full text; re-serialize with the full
+        # serializer for nested search. Serializes content_files twice, which
+        # is acceptable in this celery-only indexing path.
+        serialized_data["content_files"] = [
+            ContentFileSerializer(content_file).data
+            for content_file in (
+                learning_resource_obj.direct_content_files_for_serialization()
+            )
+        ]
 
     if learning_resource_obj.in_featured_lists > 0:
         featured_rank = (
@@ -652,6 +667,26 @@ class PercolateQuerySerializer(serializers.ModelSerializer):
         exclude = (*COMMON_IGNORED_FIELDS, "users")
 
 
+def with_derived_resource_fields(source: dict | None) -> dict | None:
+    """
+    Supply `url_slug` for a stored resource document that lacks it.
+
+    Both OpenSearch and Qdrant serve resources as the indexing serializer wrote
+    them, so a field added to the resource serializer is absent from every
+    stored document until that document is reindexed -- while the response
+    schema already declares it required. A slug is a pure function of the title,
+    which every document carries, so deriving one here beats coupling a deploy
+    to a reindex. A reindexed document keeps its own value.
+
+    `url_slug` is the only field that needs this. Everything else the response
+    schema requires is already in the stored documents, `learn_url` included --
+    the index was rebuilt when that field was added.
+    """
+    if source is None or "url_slug" in source:
+        return source
+    return {**source, "url_slug": path_slug(source.get("title") or "")}
+
+
 class LearningResourcesSearchResponseSerializer(SearchResponseSerializer):
     """
     SearchResponseSerializer with OpenAPI annotations for Learning Resources
@@ -661,7 +696,7 @@ class LearningResourcesSearchResponseSerializer(SearchResponseSerializer):
     @extend_schema_field(LearningResourceSerializer(many=True))
     def get_results(self, instance):
         hits = instance.get("hits", {}).get("hits", [])
-        return (hit.get("_source") for hit in hits)
+        return (with_derived_resource_fields(hit.get("_source")) for hit in hits)
 
 
 class ContentFileSearchResponseSerializer(SearchResponseSerializer):

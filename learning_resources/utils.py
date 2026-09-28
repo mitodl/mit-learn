@@ -2,19 +2,21 @@
 
 import logging
 import re
+import unicodedata
 from collections import defaultdict
 from functools import cache
 from shutil import which
 from typing import TYPE_CHECKING
+from urllib.parse import quote, urlencode
 
 import html2text
 import rapidjson
 import requests
-import tiktoken
 import yaml
 from botocore.exceptions import ClientError
 from django.conf import settings
 from django.contrib.auth.models import Group
+from django.core.cache import caches
 from django.db import transaction
 from django.db.models import Prefetch, Q
 from retry import retry
@@ -25,8 +27,10 @@ from learning_resources.constants import (
     GROUP_STAFF_LISTS_EDITORS,
     LearningResourceRelationTypes,
     LearningResourceType,
+    PlatformType,
     semester_mapping,
 )
+from learning_resources.etl.constants import MARKETING_PAGE_FILE_TYPE
 from learning_resources.hooks import get_plugin_manager
 from learning_resources.models import (
     ContentFile,
@@ -39,19 +43,84 @@ from learning_resources.models import (
     LearningResourceTopicMapping,
     UserListRelationship,
 )
-from main.utils import generate_filepath
+from main.utils import frontend_absolute_url, generate_filepath
 
 log = logging.getLogger()
+
+BLOCKLIST_CACHE_TIMEOUT = 60 * 60 * 24
+
+
+# edX block types that never have content
+NO_CONTENT_BLOCK_TYPES = (
+    "discussion",
+    "openassessment",
+    "poll",
+    "survey",
+    "drag-and-drop-v2",
+    "lti_consumer",
+    "done",
+    "completion",
+    "edx_sga",
+    "recap",
+    "ubcpi",
+    "qualtricssurvey",
+)
+
+VALID_EDX_MODULE_ID_REGEX = re.compile(
+    r"(?:block-v1|asset-v1):.+\+type@"
+    rf"(?!(?:{'|'.join(map(re.escape, NO_CONTENT_BLOCK_TYPES))})\+block@)"
+    r".*\+block@.+",
+    re.IGNORECASE,
+)
+
+LOGGED_BLOCK_TYPES = ("problem", "problemset", "video", "html")
+LOGGED_TRANSCRIPT_EXTENSIONS = (".srt", ".vtt")
+
+
+def is_valid_edx_module_id(edx_module_id):
+    """
+    Return whether this id could reference indexable contentfiles.
+
+    Edge whitespace is ignored (stored ids never have any); internal
+    whitespace is preserved - Canvas run-ids contain spaces.
+    """
+    return bool(VALID_EDX_MODULE_ID_REGEX.fullmatch((edx_module_id or "").strip()))
+
+
+def filter_valid_edx_module_ids(edx_module_ids):
+    """
+    Return only ids that could reference content-bearing courseware,
+    trimmed of edge whitespace so downstream exact-match lookups hit.
+    """
+    stripped = ((eid or "").strip() for eid in edx_module_ids)
+    return [eid for eid in stripped if is_valid_edx_module_id(eid)]
+
+
+def is_loggable_missing_content_id(edx_module_id):
+    """Missing-contentfile logs are limited to block types bots depend on."""
+    edx_module_id = (edx_module_id or "").strip()
+    if not is_valid_edx_module_id(edx_module_id):
+        return False
+    id_lower = edx_module_id.lower()
+    if id_lower.startswith("asset-v1:"):
+        return id_lower.endswith(LOGGED_TRANSCRIPT_EXTENSIONS)
+    return any(f"+type@{t}+block@" in id_lower for t in LOGGED_BLOCK_TYPES)
 
 
 def log_missing_content_file(identifier, *, reason, source):
     """
     Log that a request referenced an edx_module_id with no backing ContentFile.
 
+    Only important block types (problem, video, html, .srt/.vtt transcripts) are
+    logged; everything else (and malformed ids) is silently ignored to keep the
+    Sentry signal meaningful.
+
     reason: "not_in_db" (no ContentFile row) or "not_in_index" (row exists but
     not embedded in Qdrant). LoggingIntegration forwards the error to Sentry,
     which groups by the stable message template and applies its own rate limiting.
     """
+    if not is_loggable_missing_content_id(identifier):
+        return
     log.error(
         "Missing ContentFile (%s) for edx_module_id=%s [source=%s]",
         reason,
@@ -148,29 +217,17 @@ def load_course_blocklist():
 
     """
     blocklist_url = settings.BLOCKLISTED_COURSES_URL
-    if blocklist_url is not None:
-        response = requests.get(blocklist_url, timeout=settings.REQUESTS_TIMEOUT)
-        response.raise_for_status()
-        return [str(line, "utf-8") for line in response.iter_lines()]
-    return []
-
-
-def load_course_duplicates(etl_source: str) -> list:
-    """
-    Get a list of blocklisted course ids for an ETL pipeline source
-    Args:
-        etl_source (string): the ETL source for which course duplicates are needed
-    Returns:
-        list of lists of courses which are duplicates of each other
-    """
-    duplicates_url = settings.DUPLICATE_COURSES_URL
-    if duplicates_url is not None:
-        response = requests.get(duplicates_url, timeout=settings.REQUESTS_TIMEOUT)
-        response.raise_for_status()
-        duplicates_for_all_sources = yaml.safe_load(response.text)
-        if etl_source in duplicates_for_all_sources:
-            return duplicates_for_all_sources[etl_source]
-    return []
+    if blocklist_url is None:
+        return []
+    redis_cache = caches["redis"]
+    blocklist = redis_cache.get("course_blocklist")
+    if blocklist is not None:
+        return blocklist
+    response = requests.get(blocklist_url, timeout=settings.REQUESTS_TIMEOUT)
+    response.raise_for_status()
+    blocklist = [str(line, "utf-8") for line in response.iter_lines()]
+    redis_cache.set("course_blocklist", blocklist, timeout=BLOCKLIST_CACHE_TIMEOUT)
+    return blocklist
 
 
 @retry(
@@ -317,8 +374,11 @@ def resource_upserted_actions(
 
 def resource_unpublished_actions(resource: LearningResource):
     """
-    Trigger plugins when a LearningResource is removed/unpublished
+    Unpublish a resource's direct content files (e.g. marketing pages) and
+    trigger plugins when a LearningResource is removed/unpublished
     """
+    if not resource.test_mode:
+        resource.resource_content_files.filter(published=True).update(published=False)
     pm = get_plugin_manager()
     hook = pm.hook
     hook.resource_unpublished(resource=resource)
@@ -347,8 +407,14 @@ def resource_delete_actions(resource: LearningResource):
 
 def bulk_resources_unpublished_actions(resource_ids: list[int], resource_type: str):
     """
-    Trigger plugins when a LearningResource is removed/unpublished
+    Unpublish the resources' direct content files (e.g. marketing pages) and
+    trigger plugins when LearningResources are removed/unpublished
     """
+    ContentFile.objects.filter(
+        learning_resource_id__in=resource_ids,
+        learning_resource__test_mode=False,
+        published=True,
+    ).update(published=False)
     pm = get_plugin_manager()
     hook = pm.hook
     hook.bulk_resources_unpublished(
@@ -358,7 +424,10 @@ def bulk_resources_unpublished_actions(resource_ids: list[int], resource_type: s
 
 def content_files_loaded_actions(run: LearningResourceRun):
     """
-    Trigger plugins when content files are loaded for a LearningResourceRun
+    Trigger plugins when content files are loaded for a LearningResourceRun.
+
+    Args:
+        run: the LearningResourceRun whose content files were loaded
     """
     pm = get_plugin_manager()
     hook = pm.hook
@@ -714,15 +783,44 @@ def json_to_markdown(obj, indent=0):
     return markdown
 
 
+# tiktoken has no encoding for non-OpenAI models, and the LLM model is
+# admin-configurable, so fall back to OpenAI's current encoding rather than
+# raising. Token counts are then approximate, which is fine for the only thing
+# they are used for: keeping a prompt inside a context window.
+FALLBACK_ENCODING_NAME = "o200k_base"
+
+
+def token_encoding(model: str = "gpt-4o"):
+    """Return the tiktoken encoding for a model, or a default one."""
+    import tiktoken
+
+    try:
+        return tiktoken.encoding_for_model(model)
+    except KeyError:
+        return tiktoken.get_encoding(
+            settings.LITELLM_TOKEN_ENCODING_NAME or FALLBACK_ENCODING_NAME
+        )
+
+
+def count_tokens(text: str, model: str = "gpt-4o") -> int:
+    """Count the tokens in text for a given model."""
+    return len(token_encoding(model).encode(text))
+
+
 def truncate_to_tokens(text: str, max_tokens: int, model: str = "gpt-4o") -> str:
     """
     Truncate text to a maximum number of tokens for a given model.
     """
-    encoding = tiktoken.encoding_for_model(model)
+    encoding = token_encoding(model)
     tokens = encoding.encode(text)
     if len(tokens) <= max_tokens:
         return text
     return encoding.decode(tokens[:max_tokens])
+
+
+def sanitize_llm_text(text: str) -> str:
+    """Replace characters Postgres can't store: NUL and lone surrogates."""
+    return text.replace("\x00", "").encode("utf-8", errors="replace").decode("utf-8")
 
 
 def build_resource_summary_dict(resource):
@@ -740,53 +838,104 @@ def build_resource_summary_dict(resource):
     }
 
 
-def _build_entry(resource, summaries_by_resource):
-    """Build a resource entry dict for markdown rendering."""
-    entry = build_resource_summary_dict(resource)
-    entry["summaries"] = summaries_by_resource.get(resource.id, [])
-    return entry
+# Bound the program marketing-page content assembled from child courses so it
+# stays a reasonable embedding input. A program page previously concatenated
+# every child-course content-file summary and ballooned to 23MB in prod,
+# overflowing the embedding API's per-request token limit.
+PROGRAM_CHILDREN_CONTENT_MAX_CHARS = 1_000_000
+
+PROGRAM_CHILDREN_CONTENT_MARKER = "## Program Contents"
 
 
-def _build_entries_from_relationships(relationships, summaries_by_resource):
-    """Build entry dicts from prefetched relationships, including grandchildren."""
-    entries = []
+def _course_ids_by_program(relationships, course_type):
+    """Map program id -> reachable published course ids (direct + via subprograms)."""
+    result = defaultdict(set)
     for rel in relationships:
-        entry = _build_entry(rel.child, summaries_by_resource)
-
-        if (
-            rel.child.resource_type == LearningResourceType.program.name
-            and rel.relation_type == LearningResourceRelationTypes.PROGRAM_PROGRAMS
-        ):
-            sub_entries = [
-                _build_entry(sub_rel.child, summaries_by_resource)
+        if rel.child.resource_type == course_type:
+            result[rel.parent_id].add(rel.child_id)
+        else:
+            result[rel.parent_id].update(
+                sub_rel.child_id
                 for sub_rel in getattr(rel.child, "program_children", [])
-            ]
-            if sub_entries:
-                entry["children"] = sub_entries
-
-        entries.append(entry)
-    return entries
-
-
-def _format_resource_entries(entries, heading_level=3):
-    """Recursively format resource entries as markdown sections."""
-    sections = []
-    for entry in entries:
-        prefix = "#" * heading_level
-        lines = [f"{prefix} {entry['title']}"]
-        if entry["description"]:
-            lines.append(entry["description"])
-        if entry["topics"]:
-            lines.append(f"Topics: {', '.join(entry['topics'])}")
-        if entry.get("summaries"):
-            lines.append("\n**Content summaries:**")
-            lines.extend(f"- {summary}" for summary in entry["summaries"])
-        sections.append("\n".join(lines))
-        if entry.get("children"):
-            sections.extend(
-                _format_resource_entries(entry["children"], heading_level + 1)
+                if sub_rel.child.resource_type == course_type
             )
-    return sections
+    return result
+
+
+def reachable_published_course_ids(program_ids):
+    """Map program id -> set of reachable published (or test-mode) child-course ids.
+
+    Includes courses reached directly and courses reached through child
+    programs. Read-only and id-level only (loads no content).
+    """
+    program_ids = list(program_ids)
+    if not program_ids:
+        return {}
+    program_relation_types = [
+        LearningResourceRelationTypes.PROGRAM_COURSES,
+        LearningResourceRelationTypes.PROGRAM_PROGRAMS,
+    ]
+    child_visibility = Q(child__published=True) | Q(child__test_mode=True)
+    relationships = list(
+        LearningResourceRelationship.objects.filter(
+            parent_id__in=program_ids,
+            relation_type__in=program_relation_types,
+        )
+        .filter(child_visibility)
+        .select_related("child")
+        .prefetch_related(
+            Prefetch(
+                "child__children",
+                queryset=LearningResourceRelationship.objects.filter(
+                    relation_type__in=program_relation_types,
+                )
+                .filter(child_visibility)
+                .select_related("child"),
+                to_attr="program_children",
+            ),
+        )
+    )
+    return _course_ids_by_program(relationships, LearningResourceType.course.name)
+
+
+def programs_needing_children_heal(program_ids):
+    """Return the subset of the given program ids whose marketing page lacks a
+    children section but whose children content is now available.
+
+    A program qualifies only when it has a reachable published (or test-mode)
+    child course with a non-empty marketing page, which guarantees re-scraping
+    will populate the section and prevents childless programs from being
+    re-scraped every run. Read-only and id-level only.
+    """
+    program_ids = list(program_ids)
+    if not program_ids:
+        return set()
+    candidate_ids = set(
+        ContentFile.objects.filter(
+            learning_resource_id__in=program_ids,
+            file_type=MARKETING_PAGE_FILE_TYPE,
+        )
+        .exclude(content__contains=PROGRAM_CHILDREN_CONTENT_MARKER)
+        .values_list("learning_resource_id", flat=True)
+    )
+    if not candidate_ids:
+        return set()
+    reachable = reachable_published_course_ids(candidate_ids)
+    all_course_ids = set().union(*reachable.values())
+    course_ids_with_pages = set(
+        ContentFile.objects.filter(
+            learning_resource_id__in=all_course_ids,
+            file_type=MARKETING_PAGE_FILE_TYPE,
+            published=True,
+        )
+        .exclude(content="")
+        .values_list("learning_resource_id", flat=True)
+    )
+    return {
+        program_id
+        for program_id, course_ids in reachable.items()
+        if course_ids & course_ids_with_pages
+    }
 
 
 def build_program_children_content(learning_resource):
@@ -801,8 +950,10 @@ def build_program_children_content(learning_resource):
 def build_program_children_content_bulk(program_resources):
     """Build program children markdown for many program resources in bulk.
 
-    Returns a dict keyed by learning_resource id with markdown content.
-    Non-program resources are ignored.
+    For each program, concatenates the marketing-page content of its published
+    (or test-mode) child courses, including courses reached through child
+    programs. Returns a dict keyed by learning_resource id. Non-program
+    resources are ignored.
     """
     programs = [
         resource
@@ -813,71 +964,280 @@ def build_program_children_content_bulk(program_resources):
         return {}
 
     program_ids = [program.id for program in programs]
-    program_relation_types = [
-        LearningResourceRelationTypes.PROGRAM_COURSES,
-        LearningResourceRelationTypes.PROGRAM_PROGRAMS,
-    ]
+    course_ids_by_program = reachable_published_course_ids(program_ids)
+    all_course_ids = set().union(*course_ids_by_program.values())
 
-    child_visibility = Q(child__published=True) | Q(child__test_mode=True)
-    relationships = list(
-        LearningResourceRelationship.objects.filter(
-            parent_id__in=program_ids,
-            relation_type__in=program_relation_types,
-        )
-        .filter(child_visibility)
-        .select_related("parent", "child")
-        .prefetch_related(
-            "child__topics",
-            Prefetch(
-                "child__children",
-                queryset=LearningResourceRelationship.objects.filter(
-                    relation_type__in=program_relation_types,
-                )
-                .filter(child_visibility)
-                .select_related("child")
-                .prefetch_related("child__topics"),
-                to_attr="program_children",
-            ),
-        )
-    )
-
-    child_ids = [rel.child_id for rel in relationships]
-    grandchild_ids = [
-        gc.child_id
-        for rel in relationships
-        for gc in getattr(rel.child, "program_children", [])
-    ]
-    all_ids = set(child_ids + grandchild_ids) - set(program_ids)
-
-    summaries_by_resource = {}
-    if all_ids:
-        summary_qs = (
+    # One marketing-page content file per course (published), fetched in bulk
+    marketing_by_course = {}
+    if all_course_ids:
+        marketing_qs = (
             ContentFile.objects.filter(
-                run__learning_resource_id__in=all_ids,
+                learning_resource_id__in=all_course_ids,
+                file_type=MARKETING_PAGE_FILE_TYPE,
                 published=True,
-                run__published=True,
             )
-            .exclude(summary="")
-            .values_list("run__learning_resource_id", "summary")
+            .exclude(content="")
+            .order_by("learning_resource_id", "id")
+            .values_list("learning_resource_id", "learning_resource__title", "content")
         )
-        for resource_id, summary in summary_qs:
-            summaries_by_resource.setdefault(resource_id, []).append(summary)
-
-    relationships_by_program = defaultdict(list)
-    for rel in relationships:
-        relationships_by_program[rel.parent_id].append(rel)
+        for lr_id, title, content in marketing_qs:
+            marketing_by_course.setdefault(lr_id, (title, content))
 
     content_by_program_id = {}
     for program in programs:
-        rels = relationships_by_program.get(program.id, [])
-        entries = _build_entries_from_relationships(rels, summaries_by_resource)
-
-        if not entries:
+        sections = []
+        for course_id in sorted(course_ids_by_program.get(program.id, set())):
+            page = marketing_by_course.get(course_id)
+            if page:
+                title, content = page
+                sections.append(f"### {title}\n\n{content}")
+        if not sections:
             content_by_program_id[program.id] = ""
             continue
-
-        sections = ["\n\n## Program Contents\n"]
-        sections.extend(_format_resource_entries(entries))
-        content_by_program_id[program.id] = "\n\n".join(sections)
+        body = "\n\n".join([f"\n\n{PROGRAM_CHILDREN_CONTENT_MARKER}\n", *sections])
+        content_by_program_id[program.id] = body[:PROGRAM_CHILDREN_CONTENT_MAX_CHARS]
 
     return content_by_program_id
+
+
+# --- Learn URLs -------------------------------------------------------------
+#
+# A resource's location within Learn. Ported from the frontend so the backend is
+# the single source of truth for these URLs (previously `frontends/main/src/
+# common/slugs.ts` and `common/urls.ts` derived them independently, and the
+# email digests derived them a third way).
+
+SLUG_MAX_LENGTH = 60
+
+# Path segments are mandatory, so a title that slugifies to nothing still needs
+# a segment.
+BLANK_SLUG_PATH_SEGMENT = "resource"
+
+# Characters that are legal, unescaped, in a path segment: ! $ & ' ( ) * + , ; = : @ ~
+# `quote` never escapes A-Za-z0-9_.-~ , so together these are exactly the set
+# the frontend's `encodePathSegment` leaves alone. MITx Online readable_ids
+# depend on it — `course-v1:MITxT+14.100x` must not become
+# `course-v1%3AMITxT%2B14.100x`.
+PATH_SEGMENT_SAFE_CHARS = "!$&'()*+,;=:@~"
+
+
+def slugify_title(title: str) -> str:
+    """
+    Derive a cosmetic URL slug from a resource title.
+
+    The slug is NEVER used for lookup; the numeric id is authoritative. Returns
+    "" when the title yields no ascii letters, which callers handle per surface:
+    path segments substitute BLANK_SLUG_PATH_SEGMENT, the drawer omits its
+    `resource_title` param.
+
+    The output charset is [a-z0-9-], and the frontend's `[slug]` pages depend on
+    that: they compare a path built from this slug against Next's
+    already-decoded route params, so a slug carrying a percent-encodable
+    character would redirect to a different spelling of itself and loop.
+
+    NOT interchangeable with django.utils.text.slugify, which deletes
+    punctuation instead of converting it to "-", applies no length limit, and
+    has no "no ascii letters" rule. Those diverge on ~30% of current titles.
+
+    Args:
+        title (str): the resource title
+
+    Returns:
+        str: the slug, or "" if the title yields no ascii letters
+    """
+    normalized = unicodedata.normalize("NFKD", title or "")
+    without_marks = "".join(
+        char for char in normalized if unicodedata.category(char) != "Mn"
+    )
+    slug = re.sub(r"[^a-z0-9]+", "-", without_marks.lower()).strip("-")
+
+    if len(slug) > SLUG_MAX_LENGTH:
+        slug = slug[:SLUG_MAX_LENGTH]
+        # Back off to the last separator so the slug ends on a whole word.
+        last_dash = slug.rfind("-")
+        if last_dash != -1:
+            slug = slug[:last_dash]
+        slug = slug.rstrip("-")
+
+    return slug if re.search(r"[a-z]", slug) else ""
+
+
+def path_slug(title: str) -> str:
+    """
+    Slug for use as a mandatory path segment.
+
+    Args:
+        title (str): the resource title
+
+    Returns:
+        str: the slug, or BLANK_SLUG_PATH_SEGMENT if the title yields no slug
+    """
+    return slugify_title(title) or BLANK_SLUG_PATH_SEGMENT
+
+
+def encode_path_segment(segment: str) -> str:
+    """
+    Percent-encode a path segment, leaving characters that are legal unescaped.
+
+    Args:
+        segment (str): the raw path segment
+
+    Returns:
+        str: the encoded segment
+    """
+    return quote(str(segment), safe=PATH_SEGMENT_SAFE_CHARS)
+
+
+def resource_drawer_path(resource_id: int, title: str) -> str:
+    """
+    Path opening a resource's drawer over the search page.
+
+    `resource` is authoritative; `resource_title` is cosmetic and omitted when
+    blank rather than emitted empty.
+
+    Args:
+        resource_id (int): the resource id
+        title (str): the resource title
+
+    Returns:
+        str: the drawer path
+    """
+    params = [("resource", str(resource_id))]
+    slug = slugify_title(title)
+    if slug:
+        params.append(("resource_title", slug))
+    return f"/search?{urlencode(params)}"
+
+
+def _dedicated_page_path(  # noqa: PLR0911, PLR0913
+    *,
+    resource_type: str,
+    resource_id: int,
+    title: str,
+    readable_id: str | None,
+    resource_category: str | None,
+    platform_code: str | None,
+    parent_id: int | None,
+) -> str | None:
+    """
+    Path of a resource's own page on Learn, or None if it has no such page.
+
+    Args:
+        resource_type (str): LearningResourceType name
+        resource_id (int): the resource id
+        title (str): the resource title
+        readable_id (str or None): the resource's readable id
+        resource_category (str or None): distinguishes the two program shapes
+        platform_code (str or None): LearningResourcePlatform code
+        parent_id (int or None): canonical parent, for videos and episodes
+
+    Returns:
+        str or None: the path, or None when the resource has no dedicated page
+    """
+    slug = path_slug(title)
+
+    if resource_type == LearningResourceType.video.name:
+        base = f"/video/{resource_id}/{slug}"
+        # A video with playlists redirects bare -> playlists[0], so address it
+        # by its canonical parent.
+        return f"{base}?playlist={parent_id}" if parent_id else base
+
+    if resource_type == LearningResourceType.video_playlist.name:
+        return f"/video-playlist/{resource_id}/{slug}"
+
+    if resource_type == LearningResourceType.podcast.name:
+        return f"/podcast/{resource_id}/{slug}"
+
+    if resource_type == LearningResourceType.podcast_episode.name:
+        # An episode's URL is scoped by its parent podcast; without one there is
+        # no page to link to (the page itself 404s that case).
+        if not parent_id:
+            return None
+        return f"/podcast/{parent_id}/podcast_episode/{resource_id}/{slug}"
+
+    # Course and program pages exist only for MITx Online, and only where
+    # MITx Online has published a product page. `published` already implies
+    # that: the ETL leaves a course or program unpublished when its `page_url`
+    # is absent, so anything the API serves has one.
+    if platform_code == PlatformType.mitxonline.name and readable_id:
+        encoded_id = encode_path_segment(readable_id)
+        if resource_type == LearningResourceType.course.name:
+            return f"/courses/{encoded_id}"
+        if resource_type == LearningResourceType.program.name:
+            # A program presented as a course upstream (display_mode="course",
+            # stored as resource_category) lives under /courses/p/.
+            if resource_category == LearningResourceType.course.value:
+                return f"/courses/p/{encoded_id}"
+            return f"/programs/{encoded_id}"
+
+    return None
+
+
+def learn_url(  # noqa: PLR0913
+    *,
+    resource_type: str,
+    resource_id: int,
+    title: str,
+    readable_id: str | None = None,
+    resource_category: str | None = None,
+    platform_code: str | None = None,
+    parent_id: int | None = None,
+) -> str:
+    """
+    Absolute URL of a resource's location within Learn.
+
+    The resource's own page where it has one, else the drawer over the search
+    page. Never None: the drawer is always available, so every resource has a
+    location and consumers need no fallback of their own.
+
+    Args:
+        resource_type (str): LearningResourceType name
+        resource_id (int): the resource id
+        title (str): the resource title
+        readable_id (str or None): the resource's readable id
+        resource_category (str or None): distinguishes the two program shapes
+        platform_code (str or None): LearningResourcePlatform code
+        parent_id (int or None): canonical parent, for videos and episodes
+
+    Returns:
+        str: the absolute URL
+    """
+    path = _dedicated_page_path(
+        resource_type=resource_type,
+        resource_id=resource_id,
+        title=title,
+        readable_id=readable_id,
+        resource_category=resource_category,
+        platform_code=platform_code,
+        parent_id=parent_id,
+    ) or resource_drawer_path(resource_id, title)
+    return frontend_absolute_url(path)
+
+
+def learn_url_for_resource(resource: LearningResource, parent_ids: list[int]) -> str:
+    """
+    Absolute Learn URL for a resource instance.
+
+    Attribute access only — the caller supplies `parent_ids`, because the
+    serializers reach them differently (the summary endpoint annotates
+    `canonical_parent_ids`; the detail serializers use the `podcasts` /
+    `playlists` properties). Both are ordered by RELATIONSHIP_ORDERING, so
+    either way `parent_ids[0]` is the same parent.
+
+    Args:
+        resource (LearningResource): the resource
+        parent_ids (list of int): the resource's URL-forming parent ids
+
+    Returns:
+        str: the absolute URL
+    """
+    return learn_url(
+        resource_type=resource.resource_type,
+        resource_id=resource.id,
+        title=resource.title,
+        readable_id=resource.readable_id,
+        resource_category=resource.resource_category,
+        # `code` is the platform's primary key, so this needs no join.
+        platform_code=resource.platform_id,
+        parent_id=parent_ids[0] if parent_ids else None,
+    )

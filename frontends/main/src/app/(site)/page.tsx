@@ -1,3 +1,4 @@
+import type { AppPageProps } from "@/common/searchParams"
 import React from "react"
 import type { Metadata } from "next"
 import HomePage from "@/app-pages/HomePage/HomePage"
@@ -16,7 +17,7 @@ import { getQueryClient } from "@/app/getQueryClient"
 
 export async function generateMetadata({
   searchParams,
-}: PageProps<"/">): Promise<Metadata> {
+}: AppPageProps<"/">): Promise<Metadata> {
   return safeGenerateMetadata(async () => {
     return await getMetadataAsync({
       title: "Learn with MIT",
@@ -25,7 +26,7 @@ export async function generateMetadata({
   })
 }
 
-const Page: React.FC<PageProps<"/">> = async () => {
+const Page: React.FC<AppPageProps<"/">> = async () => {
   const queryClient = getQueryClient()
 
   await Promise.all([

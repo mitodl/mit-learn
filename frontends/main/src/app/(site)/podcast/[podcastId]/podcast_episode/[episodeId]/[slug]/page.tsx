@@ -1,3 +1,4 @@
+import type { AppPageProps } from "@/common/searchParams"
 import React from "react"
 import { HydrationBoundary, dehydrate } from "@tanstack/react-query"
 import { PodcastEpisodeDetailPage } from "@/app-pages/PodcastPage/PodcastEpisodeDetailPage"
@@ -8,21 +9,20 @@ import {
   safeGenerateMetadata,
   standardizeMetadata,
 } from "@/common/metadata"
-import { learningResourceQueries } from "api/hooks/learningResources"
+import {
+  learningResourceQueries,
+  podcastEpisodeQueries,
+} from "api/hooks/learningResources"
 import { notFound, redirect } from "next/navigation"
 import {
   parentPodcastIds,
   parseResourceId,
   resolveEpisodeParent,
 } from "@/common/slugs"
-import {
-  absoluteUrl,
-  carrySearchParams,
-  podcastEpisodePageView,
-} from "@/common/urls"
+import { carrySearchParams, podcastEpisodePath } from "@/common/urls"
 
 type Props =
-  PageProps<"/podcast/[podcastId]/podcast_episode/[episodeId]/[slug]">
+  AppPageProps<"/podcast/[podcastId]/podcast_episode/[episodeId]/[slug]">
 
 export const generateMetadata = async (props: Props) => {
   const { podcastId, episodeId } = await props.params
@@ -40,25 +40,13 @@ export const generateMetadata = async (props: Props) => {
     if (resource.resource_type !== ResourceTypeEnum.PodcastEpisode) {
       throw new MetadataNotFound()
     }
-    // Best-effort: if there's no actual parent, fall back to the incoming id
-    // (the Page itself 404s that case, so this canonical is moot).
-    const canonicalPodcastId =
-      resolveEpisodeParent(parentPodcastIds(resource), incomingPodcastId) ??
-      incomingPodcastId
     return standardizeMetadata({
       title: resource.title,
       description: resource.description ?? undefined,
       image: resource.image?.url,
       imageAlt: resource.image?.alt ?? undefined,
-      alternates: {
-        canonical: absoluteUrl(
-          podcastEpisodePageView(
-            String(epId),
-            String(canonicalPodcastId),
-            resource.title,
-          ),
-        ),
-      },
+      // One canonical per episode, whichever parent podcast it is viewed under.
+      alternates: { canonical: resource.learn_url },
     })
   })
 }
@@ -89,23 +77,28 @@ const Page: React.FC<Props> = async (props) => {
     notFound()
   }
 
-  // Canonical = correct parent id + episode slug. The full-path compare also
-  // strips a stray slug from the bare podcast-id segment.
-  const canonical = podcastEpisodePageView(
+  // The backend names the slug; the parent podcast is resolved against the
+  // request, since an episode in several podcasts is viewable under any of
+  // them. The full-path compare also strips a stray slug from the bare
+  // podcast-id segment.
+  const canonical = podcastEpisodePath(
     String(epId),
     String(canonicalPodcastId),
-    episode.title,
+    episode.url_slug,
   )
-  if (
-    `/podcast/${podcastId}/podcast_episode/${episodeId}/${slug}` !== canonical
-  ) {
+  if (podcastEpisodePath(episodeId, podcastId, slug) !== canonical) {
     redirect(carrySearchParams(canonical, await props.searchParams))
   }
 
-  // Hydrate the parent podcast (breadcrumb/header read its title client-side).
-  await queryClient.fetchQueryOr404(
-    learningResourceQueries.detail(canonicalPodcastId),
-  )
+  // Prefetch the transcript so it is in the dehydrated state and therefore in
+  // the served HTML. Without this it is client-fetched only, and the transcript
+  // tab panel would be empty for crawlers no matter that both panels stay
+  // mounted. Best-effort: a failure here must not take down the page.
+  if (episode.podcast_episode?.has_transcript) {
+    await queryClient
+      .prefetchQuery(podcastEpisodeQueries.transcript(epId))
+      .catch(() => undefined)
+  }
 
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>

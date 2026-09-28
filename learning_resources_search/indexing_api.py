@@ -11,7 +11,12 @@ from django.contrib.auth import get_user_model
 from opensearchpy.exceptions import ConflictError, NotFoundError
 from opensearchpy.helpers import BulkIndexError, bulk
 
-from learning_resources.models import ContentFile, LearningResourceRun
+from learning_resources.etl.constants import QDRANT_RETAINED_SOURCES
+from learning_resources.models import (
+    ContentFile,
+    LearningResource,
+    LearningResourceRun,
+)
 from learning_resources_search.connection import (
     get_active_aliases,
     get_conn,
@@ -31,6 +36,7 @@ from learning_resources_search.constants import (
     LEARNING_RESOURCE_MAP,
     MAPPING,
     PERCOLATE_INDEX_TYPE,
+    PROGRAM_TYPE,
     SYNONYMS,
     IndexestoUpdate,
 )
@@ -43,6 +49,7 @@ from learning_resources_search.serializers import (
     serialize_content_file_for_bulk,
     serialize_content_file_for_bulk_deletion,
 )
+from learning_resources_search.utils import opensearch_runs
 from main.utils import chunks
 from vector_search.utils import dense_encoder, retrieve_points_matching_params
 
@@ -391,11 +398,19 @@ def deindex_learning_resources(ids, base_index_name):
         index_types=IndexestoUpdate.all_indexes.value,
     )
 
-    if base_index_name == COURSE_TYPE:
-        for run_id in LearningResourceRun.objects.filter(
-            learning_resource_id__in=ids
-        ).values_list("id", flat=True):
-            deindex_run_content_files(run_id, unpublished_only=False)
+    if base_index_name in (COURSE_TYPE, PROGRAM_TYPE):
+        # test_mode resources keep their content files indexed; retained sources
+        # keep the rows published so they stay in Qdrant
+        runs = LearningResourceRun.objects.filter(
+            learning_resource_id__in=ids, learning_resource__test_mode=False
+        ).select_related("learning_resource")
+        for run in runs:
+            deindex_run_content_files(
+                run.id,
+                unpublished_only=False,
+                keep_published=run.learning_resource.etl_source
+                in QDRANT_RETAINED_SOURCES,
+            )
 
 
 def deindex_percolators(ids):
@@ -430,32 +445,17 @@ def index_percolators(ids, index_types):
     )
 
 
-def index_course_content_files(learning_resource_ids, index_types):
-    """
-    Index a list of content files by course ids
-
-    Args:
-        learning_resource_ids(list of int): List of Learning Resource id's
-        index_types (string): one of the values IndexestoUpdate. Whether the default
-            index, the reindexing index or both need to be updated
-
-    """
-    for run_id in LearningResourceRun.objects.filter(
-        learning_resource_id__in=learning_resource_ids,
-    ).values_list("id", flat=True):
-        index_run_content_files(run_id, index_types)
-
-
 def index_run_content_files(run_id, index_types):
     """
     Index a list of content files by run id
 
     Args:
-        run_id(int): Course run id
+        run_id(int): Run id
         index_types (string): one of the values IndexestoUpdate. Whether the default
             index, the reindexing index or both need to be updated
     """
-    run = LearningResourceRun.objects.get(pk=run_id)
+    run = LearningResourceRun.objects.select_related("learning_resource").get(pk=run_id)
+    resource_type = run.learning_resource.resource_type
     content_file_ids = run.content_files.filter(published=True).values_list(
         "id", flat=True
     )
@@ -463,10 +463,17 @@ def index_run_content_files(run_id, index_types):
     for ids_chunk in chunks(
         content_file_ids, chunk_size=settings.OPENSEARCH_DOCUMENT_INDEXING_CHUNK_SIZE
     ):
-        index_content_files(ids_chunk, run.learning_resource.id, index_types)
+        index_content_files(
+            ids_chunk,
+            run.learning_resource.id,
+            index_types,
+            resource_type=resource_type,
+        )
 
 
-def index_content_files(content_file_ids, learning_resource_id, index_types):
+def index_content_files(
+    content_file_ids, learning_resource_id, index_types, resource_type=COURSE_TYPE
+):
     """
     Index a list of content files
 
@@ -475,6 +482,7 @@ def index_content_files(content_file_ids, learning_resource_id, index_types):
         learning_resource_id(int): Learning resource id of the content files
         index_types (string): one of the values IndexestoUpdate. Whether the default
             index, the reindexing index or both need to be updated
+        resource_type (string): The resource type of the parent learning resource
     """
 
     documents = (
@@ -486,19 +494,22 @@ def index_content_files(content_file_ids, learning_resource_id, index_types):
 
     index_items(
         documents,
-        COURSE_TYPE,
+        resource_type,
         index_types=index_types,
         routing=learning_resource_id,
     )
 
 
-def deindex_content_files(content_file_ids, learning_resource_id):
+def deindex_content_files(
+    content_file_ids, learning_resource_id, resource_type=COURSE_TYPE
+):
     """
-    Index a list of content files
+    Deindex a list of content files
 
     Args:
         content_file_ids(array of int): List of content file ids
         learning_resource_id(int): Learning resource id of the content files
+        resource_type (string): The resource type of the parent learning resource
     """
 
     documents = (
@@ -508,7 +519,7 @@ def deindex_content_files(content_file_ids, learning_resource_id):
 
     deindex_items(
         documents,
-        COURSE_TYPE,
+        resource_type,
         index_types=IndexestoUpdate.all_indexes.value,
         routing=learning_resource_id,
     )
@@ -519,13 +530,14 @@ def deindex_run_content_files(run_id, unpublished_only, *, keep_published=False)
     Deindex a list of content files by run from the index.
 
     Args:
-        run_id(int): Course run id
+        run_id(int): Run id
         unpublished_only(bool): if true only deindex files with published=False
         keep_published(bool): if true, deindex all of the run's current content
             files from OpenSearch without flipping ContentFile.published. Used to
             remove a run from OpenSearch while keeping it in Qdrant / the REST API.
     """
-    run = LearningResourceRun.objects.get(id=run_id)
+    run = LearningResourceRun.objects.select_related("learning_resource").get(id=run_id)
+    resource_type = run.learning_resource.resource_type
     if unpublished_only:
         content_files = run.content_files.filter(published=False).all()
     else:
@@ -543,10 +555,47 @@ def deindex_run_content_files(run_id, unpublished_only, *, keep_published=False)
 
     deindex_items(
         documents,
-        COURSE_TYPE,
+        resource_type,
         index_types=IndexestoUpdate.all_indexes.value,
         routing=run.learning_resource_id,
     )
+
+
+def deindex_non_opensearch_run_content_files(
+    learning_resource_id, resource_type=COURSE_TYPE
+):
+    """
+    Delete a resource's run content file documents whose run is no longer
+    selected for OpenSearch, e.g. an old best run. Asks OpenSearch for what it
+    holds, so a best run that changed with the date alone is caught too.
+
+    Args:
+        learning_resource_id(int): Learning resource id of the content files
+        resource_type (string): The resource type of the parent learning resource
+    """
+    resource = LearningResource.objects.get(id=learning_resource_id)
+    keep_run_ids = list(opensearch_runs(resource).values_list("id", flat=True))
+    if not resource.runs.exclude(id__in=keep_run_ids).exists():
+        return
+    query = {
+        "query": {
+            "bool": {
+                "filter": [
+                    {"term": {"resource_id": learning_resource_id}},
+                    {"exists": {"field": "run_id"}},
+                ],
+                "must_not": [{"terms": {"run_id": keep_run_ids}}],
+            }
+        }
+    }
+    conn = get_conn()
+    for alias in get_active_aliases(conn, object_types=[resource_type]):
+        conn.delete_by_query(
+            index=alias,
+            body=query,
+            routing=learning_resource_id,
+            conflicts="proceed",
+        )
 
 
 def deindex_document(doc_id, object_type, **kwargs):
@@ -640,6 +689,23 @@ def switch_indices(backing_index, object_type):
         )
     except NotFoundError:
         log.warning("Reindex alias not found for %s", object_type)
+
+
+def is_default_backing_index(backing_index, object_type):
+    """
+    Check whether the default alias already points at the given backing index
+
+    Args:
+        backing_index (str): The backing index to check
+        object_type (str): The object type for the index
+
+    Returns:
+        bool: True if the default alias already points at backing_index
+    """
+    conn = get_conn()
+    return conn.indices.exists_alias(
+        index=backing_index, name=get_default_alias_name(object_type)
+    )
 
 
 def delete_orphaned_indexes(obj_types, delete_reindexing_tags):

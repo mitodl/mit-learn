@@ -1,23 +1,19 @@
 import React from "react"
 import Providers from "./providers"
-import { PublicEnvScript } from "./components/PublicEnvScript"
 import { env, publicEnvObject } from "@/env"
 
 import "./GlobalStyles"
 import { Metadata } from "next"
 
 const NEXT_PUBLIC_ORIGIN = env("NEXT_PUBLIC_ORIGIN")
+const API_BASE_URL = env("NEXT_PUBLIC_MITOL_API_BASE_URL")
 
 /**
- * Site-wide metadata defaults plus an x-public-env meta tag carrying all
- * NEXT_PUBLIC_* values as JSON. NOTES:
- *  1. This delivery mechanism for NEXT_PUBLIC_* facilitates runtime env vars (not buildtime)
- *  2. Delivery via metadata works even when errors are thrown server-side,
- *     in which case React SSR is aborted and rendering falls back to a client-side render
- *  3. Available to synchronous scripts below <meta x-public-env> or async scripts
- *     above it, as long as this tag is delivered in the same HTML chunk as the async
- *     scripts above it. (In practice, this is true for metadata + HTML content
- *     down to the first suspense boundary.)
+ * Site-wide metadata defaults plus an x-public-env <meta> carrying all
+ * NEXT_PUBLIC_* values as JSON, for runtime (not buildtime) env vars — see
+ * src/env.ts. This is a secondary copy (PublicEnvInsertedHtml is primary):
+ * a metadata export still reaches the document when the root layout render
+ * itself fails, which no rendered component can guarantee.
  */
 export const metadata: Metadata = {
   metadataBase: NEXT_PUBLIC_ORIGIN ? new URL(NEXT_PUBLIC_ORIGIN) : null,
@@ -45,6 +41,48 @@ export default function RootLayout({
     <html lang="en">
       <head>
         {/*
+          Warm the connections to origins whose first request happens far too
+          late to open its own. On a production homepage load the first API
+          call is not issued until React hydrates (~1.2s in) and then waits
+          ~180ms for DNS + TCP + TLS, with every sibling API request stalled
+          behind it. p.typekit.net is worse: it is not named in this document
+          at all, so nothing can reach it until the stylesheet below has been
+          downloaded and parsed.
+
+          crossOrigin is not about the host being cross-origin. It selects
+          which connection pool to open, and pools do not mix across CORS and
+          credentials modes, so each hint has to match how its resource is
+          actually fetched — and that mode follows the resource type, not
+          whoever requested it. lbk1xay.css both @imports p.css and declares
+          the @font-face rules for af/*, yet:
+
+            use.typekit.net/lbk1xay.css   no-cors   (none - named below)
+            p.typekit.net/p.css           no-cors   no attribute
+            use.typekit.net/af/* fonts    cors      anonymous
+            api.learn.mit.edu             cors      use-credentials
+
+          So use.typekit.net needs its own entry even though the stylesheet
+          below already talks to it — the font files cannot share that
+          connection.
+
+          One caveat: when the browser blocks third-party cookies, p.css
+          lands in a partitioned pool that no crossOrigin value targets, so
+          for those users that hint contributes the DNS lookup only.
+        */}
+        {API_BASE_URL ? (
+          <link
+            rel="preconnect"
+            href={API_BASE_URL}
+            crossOrigin="use-credentials"
+          />
+        ) : null}
+        <link rel="preconnect" href="https://p.typekit.net" />
+        <link
+          rel="preconnect"
+          href="https://use.typekit.net"
+          crossOrigin="anonymous"
+        />
+        {/*
           Font files for Adobe neue haas grotesk.
           WARNING: This is linked to chudzick@mit.edu's Adobe account.
           We'd prefer a non-personal MIT account to be used.
@@ -58,8 +96,6 @@ export default function RootLayout({
           name="application-version"
           content={env("NEXT_PUBLIC_VERSION") || "unknown"}
         />
-        {/* Inject all NEXT_PUBLIC_* env vars for runtime access via env() */}
-        <PublicEnvScript />
       </head>
       <body>
         <Providers>{children}</Providers>

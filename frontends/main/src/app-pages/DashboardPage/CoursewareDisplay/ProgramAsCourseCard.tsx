@@ -1,32 +1,39 @@
 import React from "react"
-import { SimpleMenu, SimpleMenuItem, Typography, styled } from "ol-components"
+import {
+  SimpleMenu,
+  SimpleMenuItem,
+  Stack,
+  Typography,
+  styled,
+} from "ol-components"
 import {
   CourseRunEnrollmentV3,
   CourseWithCourseRunsSerializerV2,
+  DisplayModeEnum,
+  V2ProgramDisplayModeEnum,
   V3UserProgramEnrollment,
   V2ProgramRequirement,
 } from "@mitodl/mitxonline-api-axios/v2"
-import {
-  EnrollmentStatus,
-  getEnrollmentStatus,
-  getKey,
-  getProgramEnrollmentStatus,
-  ResourceType,
-  selectBestEnrollment,
-} from "./helpers"
+import { getKey, getProgramEnrollmentStatus, ResourceType } from "./helpers"
 import { ProgressBadge } from "./ProgressBadge"
 import { CoursewareCard } from "./CoursewareCard"
-import { CourseDateSummary, UpgradedBanner } from "./CardShared"
+import {
+  CardTypeText,
+  CourseDateSummary,
+  MenuButton,
+  Separator,
+  UpgradedBanner,
+} from "./CardShared"
 import {
   getCertificateLink,
   buildCourseEntry,
+  courseIsCompleted,
 } from "./model/dashboardViewModel"
 import {
   getIdsFromReqTree,
   isVerifiedEnrollmentMode,
   mitxonlineLegacyUrl,
 } from "@/common/mitxonline"
-import { ActionButton } from "@mitodl/smoot-design"
 import { RiAwardFill, RiMore2Line } from "@remixicon/react"
 import NiceModal from "@ebay/nice-modal-react"
 import { UnenrollProgramDialog } from "./DashboardDialogs"
@@ -43,23 +50,40 @@ const ProgramCardRoot = styled.div(({ theme }) => ({
   borderBottom: "none",
   backgroundColor: theme.custom.colors.white,
   boxShadow: "0 1px 3px 0 rgba(120, 147, 172, 0.20)",
-  [theme.breakpoints.down("md")]: {
+  [theme.breakpoints.down("sm")]: {
     border: "none",
-    borderBottom: `1px solid ${theme.custom.colors.lightGray2}`,
-    borderRadius: "0px",
+    borderBottom: `1px solid ${theme.custom.colors.red}`,
     boxShadow: "none",
     flexDirection: "column",
-    gap: "16px",
   },
 }))
 
-const ProgramCardHeaderOuter = styled.div({
+const ProgramHeaderDesktop = styled.div(({ theme }) => ({
+  [theme.breakpoints.down("sm")]: {
+    display: "none",
+  },
+}))
+
+const ProgramHeaderMobile = styled.div(({ theme }) => ({
+  [theme.breakpoints.up("sm")]: {
+    display: "none",
+  },
+}))
+
+const ProgramCardHeaderOuter = styled.div(({ theme }) => ({
   display: "flex",
-  padding: "16px 24px",
+  position: "relative",
+  padding: "16px 16px 16px 24px",
   alignItems: "center",
   alignSelf: "stretch",
   gap: "16px",
-})
+  [theme.breakpoints.down("sm")]: {
+    flexDirection: "column",
+    alignItems: "stretch",
+    gap: "8px",
+    padding: "16px",
+  },
+}))
 
 const ProgramCardHeaderInner = styled.div({
   display: "flex",
@@ -69,14 +93,25 @@ const ProgramCardHeaderInner = styled.div({
   flex: "1 0 0",
 })
 
-const StatusContainer = styled.div({
+const StatusContainer = styled.div(({ theme }) => ({
   display: "flex",
   alignItems: "center",
   gap: "16px",
-})
+  [theme.breakpoints.down("sm")]: {
+    width: "100%",
+    justifyContent: "space-between",
+    gap: "8px",
+  },
+}))
 
 const ProgramCardSubHeaderText = styled(Typography)(({ theme }) => ({
   color: theme.custom.colors.silverGrayDark,
+}))
+
+const ProgramCardContent = styled.div(({ theme }) => ({
+  [theme.breakpoints.down("sm")]: {
+    margin: "16px",
+  },
 }))
 
 const ProgramCardSubHeader = styled.div(({ theme }) => ({
@@ -87,13 +122,14 @@ const ProgramCardSubHeader = styled.div(({ theme }) => ({
   gap: "10px",
   borderTop: `1px solid ${theme.custom.colors.lightGray2}`,
   background: `${theme.custom.colors.lightGray1}`,
-  [theme.breakpoints.down("md")]: {
+  [theme.breakpoints.down("sm")]: {
+    borderRadius: "4px 4px 0 0",
     borderLeft: `1px solid ${theme.custom.colors.lightGray2}`,
     borderRight: `1px solid ${theme.custom.colors.lightGray2}`,
   },
 }))
 
-const ProgramCardBody = styled.div({
+const ProgramCardBody = styled.div(({ theme }) => ({
   display: "flex",
   width: "100%",
   flexDirection: "column",
@@ -101,24 +137,13 @@ const ProgramCardBody = styled.div({
   alignSelf: "stretch",
   overflow: "hidden",
   borderRadius: "0 0 8px 8px",
-})
-
-const MenuButton = styled(ActionButton)<{
-  status: EnrollmentStatus
-}>(({ theme, status }) => [
-  {
-    marginLeft: "-8px",
-    [theme.breakpoints.down("md")]: {
-      position: "absolute",
-      top: "0",
-      right: "0",
-    },
+  [theme.breakpoints.down("sm")]: {
+    borderRadius: "0 0 4px 4px",
+    borderLeft: `1px solid ${theme.custom.colors.lightGray2}`,
+    borderRight: `1px solid ${theme.custom.colors.lightGray2}`,
+    borderBottom: `1px solid ${theme.custom.colors.lightGray2}`,
   },
-  status !== EnrollmentStatus.Completed &&
-    status !== EnrollmentStatus.Enrolled && {
-      visibility: "hidden",
-    },
-])
+}))
 
 const getContextMenuItems = (
   title: string,
@@ -129,7 +154,7 @@ const getContextMenuItems = (
   const menuItems = []
   const detailsUrl = programPageView({
     readable_id: resource.readable_id,
-    display_mode: "course",
+    display_mode: resource.display_mode,
   })
 
   const courseMenuItems = []
@@ -138,7 +163,7 @@ const getContextMenuItems = (
     courseMenuItems.push({
       className: "dashboard-card-menu-item",
       key: "view-course-details",
-      label: "View Course Details",
+      label: `View ${getProgramTypeLabel(resource.display_mode)} Details`,
       href: detailsUrl,
     })
   }
@@ -168,6 +193,23 @@ const getContextMenuItems = (
   return [...menuItems, ...additionalItems]
 }
 
+/**
+ * Learner-facing wording for a program on the dashboard, driven by its
+ * display_mode: programs with `display_mode: "course"` (program-as-course)
+ * speak "Course"/"Modules"; any other program speaks "Program"/"Courses".
+ */
+const getProgramTypeLabel = (
+  displayMode: V2ProgramDisplayModeEnum | null | undefined,
+) => (displayMode === DisplayModeEnum.Course ? "Course" : "Program")
+
+const getProgramChildrenLabel = (
+  displayMode: V2ProgramDisplayModeEnum | null | undefined,
+  count: number,
+) => {
+  const label = displayMode === DisplayModeEnum.Course ? "Module" : "Course"
+  return count === 1 ? label : `${label}s`
+}
+
 interface ProgramAsCourse {
   id: number
   readable_id: string
@@ -176,6 +218,7 @@ interface ProgramAsCourse {
   end_date?: string | null
   courses?: number[]
   req_tree?: V2ProgramRequirement[]
+  display_mode?: V2ProgramDisplayModeEnum | null
 }
 
 interface ProgramAsCourseCardProps {
@@ -219,14 +262,14 @@ interface ProgramAsCourseCardProps {
 }
 
 /**
- * Renders a v3 program in the dashboard's course presentation mode.
+ * Renders a v3 program as a dashboard card with its child-course rows.
  *
- * When a program enrollment is configured with `display_mode="course"`, the
- * dashboard treats the program as a learner-facing "course" even though the
- * backing data still comes from the v3 program / program enrollment models.
- * In that presentation, the courses from the program's first requirement
- * section are shown as the course's "modules". It will only ever display
- * actual child courses of the program, never nested child programs.
+ * Wording is driven by the program's `display_mode`: programs with
+ * `display_mode="course"` present as a learner-facing "course" whose child
+ * courses are "modules"; any other program presents as a "Program" whose
+ * children are "courses". Either way the children come from the program's
+ * first requirement section, and only actual child courses are ever
+ * displayed — never nested child programs.
  *
  * This component keeps the underlying program terminology in its data inputs,
  * but translates that data into the course-and-modules UI used on the
@@ -260,21 +303,18 @@ const ProgramAsCourseCard: React.FC<ProgramAsCourseCardProps> = ({
       Boolean(course),
     )
 
+  // Counted across all of a course's enrollments rather than the one a card
+  // would display: the displayed run is the one underway, so a learner who
+  // passed an earlier run and re-enrolled would otherwise stop counting as
+  // having completed the course.
   const enrolledCount = displayedModuleCourses.filter((course) => {
-    const bestEnrollment = selectBestEnrollment(
-      course,
-      moduleEnrollmentsByCourseId[course.id] || [],
-    )
-    return getEnrollmentStatus(bestEnrollment) === EnrollmentStatus.Enrolled
+    const enrollments = moduleEnrollmentsByCourseId[course.id] || []
+    return enrollments.length > 0 && !courseIsCompleted(enrollments)
   }).length
 
-  const completedCount = displayedModuleCourses.filter((course) => {
-    const bestEnrollment = selectBestEnrollment(
-      course,
-      moduleEnrollmentsByCourseId[course.id] || [],
-    )
-    return getEnrollmentStatus(bestEnrollment) === EnrollmentStatus.Completed
-  }).length
+  const completedCount = displayedModuleCourses.filter((course) =>
+    courseIsCompleted(moduleEnrollmentsByCourseId[course.id] || []),
+  ).length
 
   const totalCount = displayedModuleCourses.length
 
@@ -284,12 +324,36 @@ const ProgramAsCourseCard: React.FC<ProgramAsCourseCardProps> = ({
     completedCount,
   )
 
-  const parentProgramIds = [
-    courseProgram.readable_id,
+  // Ordered nearest-to-furthest (ancestor last). verified_program_enrollments
+  // grants the free upgrade based on whichever given program is structurally
+  // the ancestor, so an unverified ancestor is useless and gets trimmed
+  // below - but the nearer program's id must stay even when unverified,
+  // since the backend also uses it to identify which program owns the
+  // course. See "uses verified enrollment when ancestor has verified mode"
+  // in ProgramAsCourseCard.test.tsx.
+  const programChain = [
+    {
+      readableId: courseProgram.readable_id,
+      enrollmentMode: courseProgramEnrollment?.enrollment_mode,
+    },
     ...(ancestorProgramEnrollment
-      ? [ancestorProgramEnrollment.readable_id]
+      ? [
+          {
+            readableId: ancestorProgramEnrollment.readable_id,
+            enrollmentMode: ancestorProgramEnrollment.enrollment_mode,
+          },
+        ]
       : []),
   ]
+  // Trim an unverified ancestor off the end; never trim the front.
+  const trimmedProgramChain = [...programChain]
+  while (
+    trimmedProgramChain.length > 0 &&
+    !isVerifiedEnrollmentMode(trimmedProgramChain.at(-1)?.enrollmentMode)
+  ) {
+    trimmedProgramChain.pop()
+  }
+  const parentProgramIds = trimmedProgramChain.map((p) => p.readableId)
   const useVerifiedEnrollment = [
     courseProgramEnrollment?.enrollment_mode,
     ancestorProgramEnrollment?.enrollment_mode,
@@ -326,76 +390,124 @@ const ProgramAsCourseCard: React.FC<ProgramAsCourseCardProps> = ({
     />
   )
 
+  const progressBadgeSection = (
+    <Stack direction="row" gap="8px" alignItems="center">
+      <ProgressBadge enrollmentStatus={programEnrollmentStatus} />
+      <Separator />
+      <CardTypeText>
+        {getProgramTypeLabel(courseProgram.display_mode)}
+      </CardTypeText>
+    </Stack>
+  )
+
   return (
     <ProgramCardRoot
       as={Component}
       className={className}
       data-testid="program-as-course-card"
     >
-      <ProgramCardHeaderOuter>
-        <ProgramCardHeaderInner>
-          <StatusContainer>
-            <ProgressBadge enrollmentStatus={programEnrollmentStatus} />
-            <CourseDateSummary
-              startDate={courseProgram?.start_date}
-              endDate={courseProgram?.end_date}
-            />
-          </StatusContainer>
-          <Typography variant="subtitle2" component="h3">
-            {courseProgram?.title}
-          </Typography>
-        </ProgramCardHeaderInner>
-        <>
-          {programCertificateUrl ? (
-            <ProgramCertificateButton
-              variant="bordered"
-              size="small"
-              startIcon={<RiAwardFill />}
-              href={programCertificateUrl}
-            >
-              Certificate
-            </ProgramCertificateButton>
-          ) : upgradedAndIncomplete ? (
-            <UpgradedBanner />
-          ) : null}
-          {contextMenu}
-        </>
-      </ProgramCardHeaderOuter>
-      <ProgramCardSubHeader>
-        <ProgramCardSubHeaderText variant="subtitle3">
-          {totalCount} Modules ({completedCount} of {totalCount} complete)
-        </ProgramCardSubHeaderText>
-      </ProgramCardSubHeader>
-      <ProgramCardBody>
-        {displayedModuleCourses.map((course) => {
-          const entry = buildCourseEntry(
-            course,
-            moduleEnrollmentsByCourseId[course.id] || [],
-            {
-              ancestorContext: {
-                useVerifiedEnrollment,
-                parentProgramReadableIds: parentProgramIds,
+      <ProgramHeaderDesktop data-testid="program-as-course-card-desktop-header">
+        <ProgramCardHeaderOuter>
+          <ProgramCardHeaderInner>
+            <StatusContainer>
+              {progressBadgeSection}
+              <CourseDateSummary
+                startDate={courseProgram?.start_date}
+                endDate={courseProgram?.end_date}
+              />
+            </StatusContainer>
+            <Typography variant="subtitle2" component="h3">
+              {courseProgram?.title}
+            </Typography>
+          </ProgramCardHeaderInner>
+          <Stack direction="row" gap="8px">
+            {programCertificateUrl ? (
+              <ProgramCertificateButton
+                variant="bordered"
+                size="small"
+                startIcon={<RiAwardFill />}
+                href={programCertificateUrl}
+              >
+                Certificate
+              </ProgramCertificateButton>
+            ) : upgradedAndIncomplete ? (
+              <UpgradedBanner />
+            ) : null}
+            {contextMenu}
+          </Stack>
+        </ProgramCardHeaderOuter>
+      </ProgramHeaderDesktop>
+      <ProgramHeaderMobile data-testid="program-as-course-card-mobile-header">
+        <ProgramCardHeaderOuter>
+          <ProgramCardHeaderInner>
+            <StatusContainer>
+              {progressBadgeSection}
+              <CourseDateSummary
+                startDate={courseProgram?.start_date}
+                endDate={courseProgram?.end_date}
+              />
+              <Stack direction="row" gap="8px">
+                {programCertificateUrl ? (
+                  <ProgramCertificateButton
+                    variant="bordered"
+                    size="small"
+                    startIcon={<RiAwardFill />}
+                    href={programCertificateUrl}
+                  >
+                    Certificate
+                  </ProgramCertificateButton>
+                ) : upgradedAndIncomplete ? (
+                  <UpgradedBanner />
+                ) : null}
+                {contextMenu}
+              </Stack>
+            </StatusContainer>
+            <Typography variant="subtitle2" component="h3">
+              {courseProgram?.title}
+            </Typography>
+          </ProgramCardHeaderInner>
+        </ProgramCardHeaderOuter>
+      </ProgramHeaderMobile>
+      <ProgramCardContent>
+        <ProgramCardSubHeader>
+          <ProgramCardSubHeaderText variant="subtitle3">
+            {totalCount}{" "}
+            {getProgramChildrenLabel(courseProgram.display_mode, totalCount)} (
+            {completedCount} of {totalCount} complete)
+          </ProgramCardSubHeaderText>
+        </ProgramCardSubHeader>
+        <ProgramCardBody>
+          {displayedModuleCourses.map((course) => {
+            const entry = buildCourseEntry(
+              course,
+              moduleEnrollmentsByCourseId[course.id] || [],
+              {
+                ancestorContext: {
+                  useVerifiedEnrollment,
+                  parentProgramReadableIds: parentProgramIds,
+                },
               },
-            },
-          )
-          if (!entry) return null
+            )
+            if (!entry) return null
 
-          return (
-            <CoursewareCard
-              key={getKey({
-                resourceType: ResourceType.Course,
-                id: course.id,
-                runId: entry.displayedEnrollment?.run.id,
-              })}
-              kind="course"
-              entry={entry}
-              layout="compact"
-              headingLevel="h4"
-              onUpgradeError={onUpgradeError}
-            />
-          )
-        })}
-      </ProgramCardBody>
+            return (
+              <CoursewareCard
+                key={getKey({
+                  resourceType: ResourceType.Course,
+                  id: course.id,
+                  runId: entry.displayedEnrollment?.run.id,
+                })}
+                kind="course"
+                entry={entry}
+                layout="compact"
+                headingLevel="h4"
+                isModule
+                onUpgradeError={onUpgradeError}
+              />
+            )
+          })}
+        </ProgramCardBody>
+      </ProgramCardContent>
     </ProgramCardRoot>
   )
 }

@@ -10,6 +10,7 @@ import styled from "@emotion/styled"
 import { RiDraggable } from "@remixicon/react"
 import { theme } from "../ThemeProvider/ThemeProvider"
 import { BaseContainer, ImageProps, useClickChildLink, Linkable } from "./Card"
+import type { LinkTargetProps } from "./Card"
 import { TruncateText } from "../TruncateText/TruncateText"
 import { ActionButton } from "@mitodl/smoot-design"
 import type { ActionButtonProps } from "@mitodl/smoot-design"
@@ -88,10 +89,10 @@ export const Info = styled.div`
 
 export type TitleProps = {
   children?: ReactNode
-  href?: string
   lang?: string
   role?: AriaRole
-} & AriaAttributes
+} & AriaAttributes &
+  LinkTargetProps
 
 export const Title: React.FC<TitleProps> = styled(Linkable)`
   flex-grow: 1;
@@ -113,10 +114,10 @@ export const LinkableTitle = ({
   title: TitleProps
   lineClamp?: number
 }) => {
-  const { href, role, "aria-level": ariaLevel, lang, children, ...rest } = title
+  const { role, "aria-level": ariaLevel, lang, children, ...rest } = title
 
   return (
-    <Title data-card-link={!!href} href={href} {...rest}>
+    <Title data-card-link={!!title.href} {...rest}>
       <span role={role} aria-level={ariaLevel}>
         <TruncateText lineClamp={lineClamp} lang={lang}>
           {children}

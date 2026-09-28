@@ -1,7 +1,7 @@
 import React from "react"
 import { LoadingSpinner, styled } from "ol-components"
 import { useLearningResourcesDetail } from "api/hooks/learningResources"
-import PodcastEmbedPlayer from "@/app-pages/PodcastPage/PodcastEmbedPlayer"
+import PodcastEmbedPlayer from "@/page-components/PodcastEmbedPlayer/PodcastEmbedPlayer"
 
 const LoadingShell = styled.div(({ theme }) => ({
   display: "flex",

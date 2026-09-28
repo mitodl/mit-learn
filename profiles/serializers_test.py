@@ -3,18 +3,17 @@
 Tests for serializers for profiles REST APIS
 """
 
-import factory
 import pytest
+from keycloak.exceptions import KeycloakError
 from rest_framework.exceptions import ValidationError
 
 from learning_resources.factories import LearningResourceTopicFactory
 from learning_resources.serializers import LearningResourceTopicSerializer
-from profiles.factories import UserWebsiteFactory
-from profiles.models import FACEBOOK_DOMAIN, PERSONAL_SITE_TYPE, Profile
+from profiles.models import Profile
 from profiles.serializers import (
     ProfileSerializer,
+    ProgramLetterTemplateFieldSerializer,
     UserSerializer,
-    UserWebsiteSerializer,
 )
 from profiles.utils import (
     IMAGE_MEDIUM,
@@ -37,6 +36,7 @@ def test_serialize_user(user):
     assert UserSerializer(user).data == {
         "id": user.id,
         "username": user.username,
+        "global_id": user.global_id,
         "first_name": user.first_name,
         "last_name": user.last_name,
         "is_learning_path_editor": False,
@@ -89,6 +89,7 @@ def test_serialize_create_user(db, mocker):
     assert UserSerializer(instance=user).data == {
         "id": user.id,
         "username": user.username,
+        "global_id": user.global_id,
         "first_name": user.first_name,
         "last_name": user.last_name,
         "is_learning_path_editor": False,
@@ -140,6 +141,74 @@ def test_update_user_profile(mocker, user, key, value):
                 assert getattr(profile2, prop) == value
         else:
             assert getattr(profile2, prop) == getattr(profile, prop)
+
+
+def test_update_profile_syncs_email_optin_change(mocker, user):
+    """Test that changing email_optin via ProfileSerializer syncs the new value to Keycloak"""
+    sync_mock = mocker.patch("profiles.serializers.sync_email_optin_to_keycloak")
+    profile = user.profile
+    profile.email_optin = False
+    profile.save(update_fields=["email_optin"])
+
+    serializer = ProfileSerializer(
+        instance=profile, data={"email_optin": True}, partial=True
+    )
+    serializer.is_valid(raise_exception=True)
+    serializer.save()
+
+    sync_mock.assert_called_once_with(user, email_optin=True)
+
+
+def test_update_profile_skips_keycloak_sync_when_unchanged(mocker, user):
+    """Test that resubmitting the same email_optin value doesn't call Keycloak"""
+    sync_mock = mocker.patch("profiles.serializers.sync_email_optin_to_keycloak")
+    profile = user.profile
+    profile.email_optin = True
+    profile.save(update_fields=["email_optin"])
+
+    serializer = ProfileSerializer(
+        instance=profile, data={"email_optin": True}, partial=True
+    )
+    serializer.is_valid(raise_exception=True)
+    serializer.save()
+
+    sync_mock.assert_not_called()
+
+
+def test_update_profile_skips_keycloak_sync_for_null_email_optin(mocker, user):
+    """A null email_optin means no preference expressed, so don't push an opt-out"""
+    sync_mock = mocker.patch("profiles.serializers.sync_email_optin_to_keycloak")
+    profile = user.profile
+    profile.email_optin = True
+    profile.save(update_fields=["email_optin"])
+
+    serializer = ProfileSerializer(
+        instance=profile, data={"email_optin": None}, partial=True
+    )
+    serializer.is_valid(raise_exception=True)
+    serializer.save()
+
+    sync_mock.assert_not_called()
+
+
+def test_update_profile_email_optin_sync_failure_prevents_save(mocker, user):
+    """Test that a Keycloak sync failure is translated into a ValidationError and rolls back the profile update"""
+    mocker.patch(
+        "profiles.serializers.sync_email_optin_to_keycloak",
+        side_effect=KeycloakError("boom"),
+    )
+    profile = user.profile
+    profile.email_optin = False
+    profile.save(update_fields=["email_optin"])
+
+    serializer = ProfileSerializer(
+        instance=profile, data={"email_optin": True}, partial=True
+    )
+    serializer.is_valid(raise_exception=True)
+    with pytest.raises(ValidationError):
+        serializer.save()
+
+    assert Profile.objects.get(user=user).email_optin is False
 
 
 @pytest.mark.parametrize(
@@ -268,88 +337,74 @@ def test_serialize_profile_preference_search_filters(
     )
 
 
-def test_serialize_profile_websites(user):
-    """Tests that the ProfileSerializer includes UserWebsite information when an option is set via the context"""
-    profile = user.profile
-    user_websites = UserWebsiteFactory.create_batch(
-        2,
-        profile=profile,
-        site_type=factory.Iterator([PERSONAL_SITE_TYPE, FACEBOOK_DOMAIN]),
-    )
-    serialized_profile = ProfileSerializer(
-        profile, context={"include_user_websites": True}
-    ).data
-    serialized_sites = UserWebsiteSerializer(user_websites, many=True).data
-    assert len(serialized_profile["user_websites"]) == 2
-    # Check that the two lists of OrderedDicts are equivalent
-    assert sorted(
-        [list(data.items()) for data in serialized_profile["user_websites"]]
-    ) == sorted([list(data.items()) for data in serialized_sites])
+LETTER_HTML_FIELDS = [
+    "program_letter_header_text",
+    "program_letter_text",
+    "program_letter_footer_text",
+]
 
 
-class TestUserWebsiteSerializer:
-    """UserWebsiteSerializer tests"""
+def serialize_letter_html(field, html):
+    """Serialize one letter template field and return its rendered value"""
+    template_data = {
+        "id": 1,
+        "meta": {},
+        "title": "Supply Chain Management",
+        "program_id": 1,
+        "program_letter_footer": {},
+        "program_letter_logo": {},
+        "program_letter_signatories": [],
+        "program_letter_header_text": "",
+        "program_letter_text": "",
+        "program_letter_footer_text": "",
+        field: html,
+    }
+    return ProgramLetterTemplateFieldSerializer(template_data).data[field]
 
-    def test_serialize(self):
-        """
-        Test serializing a user website
-        """
-        user_website = UserWebsiteFactory.build()
-        assert UserWebsiteSerializer(user_website).data == {
-            "id": user_website.id,
-            "url": user_website.url,
-            "site_type": user_website.site_type,
-        }
 
-    def test_deserialize(self, mocker, user):
-        """
-        Test deserializing a user website
-        """
-        url = "https://example.com"
-        site_type = "dummy"
-        patched_get_site_type = mocker.patch(
-            "profiles.serializers.get_site_type_from_url", return_value=site_type
-        )
-        user_website_data = {"username": user.username, "url": url}
+@pytest.mark.parametrize("field", LETTER_HTML_FIELDS)
+@pytest.mark.parametrize(
+    ("html", "unwanted"),
+    [
+        ("<p>hi</p><script>alert(1)</script>", "script"),
+        ('<img src="x" onerror="alert(1)">', "onerror"),
+        ('<p onclick="steal()">text</p>', "onclick"),
+        ('<a href="javascript:alert(1)">click</a>', "javascript:"),
+        ('<iframe src="https://evil.example"></iframe>', "iframe"),
+        ('<svg onload="alert(1)"></svg>', "onload"),
+    ],
+)
+def test_program_letter_template_text_is_sanitized(field, html, unwanted):
+    """
+    Letter text is rendered with dangerouslySetInnerHTML, so it is sanitized
+    here rather than relying on MicroMasters' Wagtail config staying as it is.
+    """
+    assert unwanted not in serialize_letter_html(field, html)
 
-        serializer = UserWebsiteSerializer(data=user_website_data)
-        is_valid = serializer.is_valid(raise_exception=True)
-        assert is_valid is True
-        assert serializer.validated_data["url"] == url
-        assert serializer.validated_data["site_type"] == site_type
-        assert serializer.validated_data["profile"] == user.profile
-        patched_get_site_type.assert_called_once_with(url)
 
-    @pytest.mark.parametrize(
-        ("input_url", "exp_result_url"),
-        [("HTtPS://AbC.COM", "https://abc.com"), ("AbC.cOM", "http://abc.com")],
-    )
-    def test_user_website_url(self, mocker, user, input_url, exp_result_url):
-        """
-        Test that deserializing a user website url adds a protocol if necessary and forces lowercase.
-        """
-        site_type = "dummy"
-        mocker.patch(
-            "profiles.serializers.get_site_type_from_url", return_value=site_type
-        )
-        user_website_data = {"username": user.username, "url": input_url}
+@pytest.mark.parametrize("field", LETTER_HTML_FIELDS)
+@pytest.mark.parametrize(
+    "html",
+    [
+        # Markup live MicroMasters letters actually use.
+        "<p>Congratulations on completing the program.</p>",
+        "<p><b>MASTER OF ENGINEERING</b><br>MIT</p>",
+        "<ul><li>14.100x</li><li>14.73x</li></ul>",
+        # Headings are styled by the letter page's header/footer blocks.
+        "<h3>Congratulations</h3>",
+    ],
+)
+def test_program_letter_template_text_keeps_authored_markup(field, html):
+    """Sanitizing must not quietly drop the markup editors legitimately use"""
+    assert serialize_letter_html(field, html) == html
 
-        serializer = UserWebsiteSerializer(data=user_website_data)
-        is_valid = serializer.is_valid(raise_exception=True)
-        assert is_valid is True
-        assert serializer.validated_data["url"] == exp_result_url
 
-    def test_site_uniqueness(self, user):
-        """
-        Test that a user can only save one of a specific type of site
-        """
-        UserWebsiteFactory.create(
-            profile=user.profile, url="facebook.com/1", site_type=FACEBOOK_DOMAIN
-        )
-        user_website_data = {"username": user.username, "url": "facebook.com/2"}
-        serializer = UserWebsiteSerializer(data=user_website_data)
-        with pytest.raises(  # noqa: PT012
-            ValidationError, match="A website of this type has already been saved\\."
-        ):
-            serializer.is_valid(raise_exception=True)
-            serializer.save()
+@pytest.mark.parametrize("field", LETTER_HTML_FIELDS)
+def test_program_letter_template_text_keeps_links(field):
+    """
+    Live letters link out to MIT pages, so href survives -- nh3 adds rel
+    hardening rather than dropping the anchor.
+    """
+    result = serialize_letter_html(field, '<a href="https://idss.mit.edu">IDSS</a>')
+    assert 'href="https://idss.mit.edu"' in result
+    assert ">IDSS</a>" in result

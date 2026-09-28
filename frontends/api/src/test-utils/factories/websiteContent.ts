@@ -16,6 +16,8 @@ const websiteContent: Factory<WebsiteContent> = (overrides = {}) => ({
       },
     ],
   },
+  // The API always sends this, empty or not, so fixtures should too.
+  topics: [],
   user: {
     first_name: faker.person.firstName(),
     last_name: faker.person.lastName(),

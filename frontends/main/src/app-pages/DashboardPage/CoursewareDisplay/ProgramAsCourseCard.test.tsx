@@ -9,6 +9,7 @@ import {
 } from "@/test-utils"
 import { makeRequest } from "api/test-utils"
 import * as mitxonline from "api/mitxonline-test-utils"
+import { setupOrderHistory, setupCoursePricing } from "./test-utils"
 import { ProgramAsCourseCard } from "./ProgramAsCourseCard"
 import { waitFor } from "@testing-library/react"
 import invariant from "tiny-invariant"
@@ -33,10 +34,14 @@ describe("ProgramAsCourseCard", () => {
     includeProgramEnrollment = false,
     startDate,
     endDate,
+    // Most tests here exercise the program-as-course presentation, which requires
+    // display_mode "course" — pinned because the card's labels read it.
+    displayMode = "course",
   }: {
     includeProgramEnrollment?: boolean
     startDate?: string | null
     endDate?: string | null
+    displayMode?: "course" | null
   } = {}) => {
     const moduleOne = mitxonline.factories.courses.course({
       courseruns: [mitxonline.factories.courses.courseRun()],
@@ -59,6 +64,7 @@ describe("ProgramAsCourseCard", () => {
       req_tree: reqTree.serialize(),
       start_date: startDate ?? null,
       end_date: endDate ?? null,
+      display_mode: displayMode,
     })
 
     const moduleEnrollment = mitxonline.factories.enrollment.courseEnrollment({
@@ -86,6 +92,9 @@ describe("ProgramAsCourseCard", () => {
       mitxonline.urls.userMe.get(),
       mitxonline.factories.user.user(),
     )
+    // Every enrollment card looks up order history to decide whether to offer a
+    // Receipt item, regardless of enrollment mode.
+    setupOrderHistory()
 
     return {
       courseProgram: program,
@@ -109,7 +118,7 @@ describe("ProgramAsCourseCard", () => {
       />,
     )
 
-    await screen.findByRole("heading", {
+    await screen.findAllByRole("heading", {
       name: cardData.courseProgram.title,
       level: 3,
     })
@@ -120,6 +129,229 @@ describe("ProgramAsCourseCard", () => {
     expect(
       screen.getAllByText(cardData.moduleCourses[1].title).length,
     ).toBeGreaterThan(0)
+  })
+
+  test("counts a course as complete when an earlier run was passed and the learner re-enrolled", async () => {
+    const cardData = setupCardData({ includeProgramEnrollment: true })
+    const [moduleOne] = cardData.moduleCourses
+    // enrollment_mode is pinned to audit on both: the factory picks it at
+    // random, and a verified enrollment sends the card looking for a receipt
+    // via orders/history, which is not mocked here. The count only reads grades.
+    const passedEnrollment = mitxonline.factories.enrollment.courseEnrollment({
+      run: {
+        ...moduleOne.courseruns[0],
+        course: moduleOne,
+        start_date: moment().subtract(400, "days").toISOString(),
+        end_date: moment().subtract(300, "days").toISOString(),
+      },
+      enrollment_mode: "audit",
+      grades: [mitxonline.factories.enrollment.grade({ passed: true })],
+      certificate: null,
+    })
+    const reEnrollment = mitxonline.factories.enrollment.courseEnrollment({
+      run: {
+        course: moduleOne,
+        start_date: moment().subtract(30, "days").toISOString(),
+        end_date: moment().add(30, "days").toISOString(),
+      },
+      enrollment_mode: "audit",
+      grades: [],
+      certificate: null,
+    })
+
+    renderWithProviders(
+      <ProgramAsCourseCard
+        courseProgram={cardData.courseProgram}
+        moduleCourses={cardData.moduleCourses}
+        moduleEnrollmentsByCourseId={{
+          [moduleOne.id]: [passedEnrollment, reEnrollment],
+        }}
+        courseProgramEnrollment={cardData.courseProgramEnrollment}
+      />,
+    )
+
+    // The re-enrollment is the run the card displays, but completion belongs to
+    // the course, so the passed earlier run still has to count.
+    expect(
+      await screen.findByText("2 Modules (1 of 2 complete)"),
+    ).toBeInTheDocument()
+  })
+
+  test("module rows show an enrollment status indicator instead of a 'Module' label", async () => {
+    const cardData = setupCardData({ includeProgramEnrollment: true })
+
+    renderWithProviders(
+      <ProgramAsCourseCard
+        courseProgram={cardData.courseProgram}
+        moduleCourses={cardData.moduleCourses}
+        moduleEnrollmentsByCourseId={cardData.moduleEnrollmentsByCourseId}
+        courseProgramEnrollment={cardData.courseProgramEnrollment}
+      />,
+    )
+
+    await screen.findAllByRole("heading", {
+      name: cardData.courseProgram.title,
+      level: 3,
+    })
+    // One status indicator per module row, rendered in both the desktop and
+    // mobile markup (one of the two is hidden via CSS per breakpoint), replacing the type label
+    expect(screen.getAllByTestId("enrollment-status")).toHaveLength(4)
+    expect(screen.queryByText("Module")).not.toBeInTheDocument()
+    // The outer program-as-course card still shows its own 'Course' type label
+    // next to a progress badge; only the per-module rows omit it. Rendered
+    // once per (desktop/mobile) header copy.
+    expect(screen.getAllByText("Course")).toHaveLength(2)
+  })
+
+  test("uses 'Program' labels and program details link when display_mode is not 'course'", async () => {
+    const cardData = setupCardData({ displayMode: null })
+
+    renderWithProviders(
+      <ProgramAsCourseCard
+        courseProgram={cardData.courseProgram}
+        moduleCourses={cardData.moduleCourses}
+        moduleEnrollmentsByCourseId={cardData.moduleEnrollmentsByCourseId}
+        courseProgramEnrollment={cardData.courseProgramEnrollment}
+      />,
+    )
+
+    await screen.findAllByRole("heading", {
+      name: cardData.courseProgram.title,
+      level: 3,
+    })
+    // Card type label, rendered once per (desktop/mobile) header copy.
+    expect(screen.getAllByText("Program")).toHaveLength(2)
+    expect(screen.queryByText("Course")).not.toBeInTheDocument()
+    // Children are described as courses, not modules.
+    expect(screen.getByText("2 Courses (0 of 2 complete)")).toBeInTheDocument()
+
+    const programCard = screen.getByTestId("program-as-course-card")
+    await user.click(within(programCard).getAllByLabelText("More options")[0])
+    const detailsLink = await screen.findByRole("menuitem", {
+      name: "View Program Details",
+    })
+    expect(detailsLink).toHaveAttribute(
+      "href",
+      `/programs/${cardData.courseProgram.readable_id}`,
+    )
+  })
+
+  test.each([
+    { displayMode: "course" as const, label: "Module" },
+    { displayMode: null, label: "Course" },
+  ])(
+    "singularizes the sub-header label when there is exactly 1 $label",
+    async ({ displayMode, label }) => {
+      const moduleOne = mitxonline.factories.courses.course({
+        courseruns: [mitxonline.factories.courses.courseRun()],
+      })
+      const reqTree =
+        new mitxonline.factories.requirements.RequirementTreeBuilder()
+      const modules = reqTree.addOperator({
+        operator: "all_of",
+        title: "Modules",
+      })
+      modules.addCourse({ course: moduleOne.id })
+
+      const program = mitxonline.factories.programs.program({
+        courses: [moduleOne.id],
+        req_tree: reqTree.serialize(),
+        display_mode: displayMode,
+      })
+
+      setMockResponse.get(
+        mitxonline.urls.userMe.get(),
+        mitxonline.factories.user.user(),
+      )
+
+      renderWithProviders(
+        <ProgramAsCourseCard
+          courseProgram={program}
+          moduleCourses={[moduleOne]}
+          moduleEnrollmentsByCourseId={{}}
+        />,
+      )
+
+      expect(
+        await screen.findByText(`1 ${label} (0 of 1 complete)`),
+      ).toBeInTheDocument()
+    },
+  )
+
+  test("progress badge reflects program enrollment status ('In Progress')", async () => {
+    const cardData = setupCardData({ includeProgramEnrollment: true })
+    invariant(cardData.courseProgramEnrollment)
+    const programEnrollmentWithoutCert = {
+      ...cardData.courseProgramEnrollment,
+      certificate: null,
+    }
+
+    renderWithProviders(
+      <ProgramAsCourseCard
+        courseProgram={cardData.courseProgram}
+        moduleCourses={cardData.moduleCourses}
+        moduleEnrollmentsByCourseId={cardData.moduleEnrollmentsByCourseId}
+        courseProgramEnrollment={programEnrollmentWithoutCert}
+      />,
+    )
+
+    await screen.findAllByRole("heading", {
+      name: cardData.courseProgram.title,
+      level: 3,
+    })
+    expect(screen.getAllByTestId("progress-badge")[0]).toHaveTextContent(
+      "In Progress",
+    )
+  })
+
+  test("progress badge reflects program enrollment status ('Not Started')", async () => {
+    const cardData = setupCardData()
+
+    renderWithProviders(
+      <ProgramAsCourseCard
+        courseProgram={cardData.courseProgram}
+        moduleCourses={cardData.moduleCourses}
+        moduleEnrollmentsByCourseId={{}}
+        courseProgramEnrollment={cardData.courseProgramEnrollment}
+      />,
+    )
+
+    await screen.findAllByRole("heading", {
+      name: cardData.courseProgram.title,
+      level: 3,
+    })
+    expect(screen.getAllByTestId("progress-badge")[0]).toHaveTextContent(
+      "Not Started",
+    )
+  })
+
+  test("progress badge reflects program enrollment status ('Completed')", async () => {
+    const cardData = setupCardData({ includeProgramEnrollment: true })
+    invariant(cardData.courseProgramEnrollment)
+    const programEnrollmentWithCert = {
+      ...cardData.courseProgramEnrollment,
+      certificate: {
+        uuid: "test-certificate-uuid-456",
+        link: "/certificate/test-certificate-uuid-456/",
+      },
+    }
+
+    renderWithProviders(
+      <ProgramAsCourseCard
+        courseProgram={cardData.courseProgram}
+        moduleCourses={cardData.moduleCourses}
+        moduleEnrollmentsByCourseId={cardData.moduleEnrollmentsByCourseId}
+        courseProgramEnrollment={programEnrollmentWithCert}
+      />,
+    )
+
+    await screen.findAllByRole("heading", {
+      name: cardData.courseProgram.title,
+      level: 3,
+    })
+    expect(screen.getAllByTestId("progress-badge")[0]).toHaveTextContent(
+      "Completed",
+    )
   })
 
   test("renders when user is not enrolled in the ProgramAsCourse", async () => {
@@ -134,11 +366,11 @@ describe("ProgramAsCourseCard", () => {
       />,
     )
 
-    await screen.findByRole("heading", {
+    await screen.findAllByRole("heading", {
       name: cardData.courseProgram.title,
       level: 3,
     })
-    expect(screen.getByText("Not Started")).toBeInTheDocument()
+    expect(screen.getAllByText("Not Started").length).toBeGreaterThan(0)
   })
 
   test("shows date popover content when date summary is clicked", async () => {
@@ -157,7 +389,7 @@ describe("ProgramAsCourseCard", () => {
       />,
     )
 
-    const dateSummary = await screen.findByText(/ends in \d+ days/i)
+    const [dateSummary] = await screen.findAllByText(/ends in \d+ days/i)
     await user.click(dateSummary)
 
     expect(await screen.findByText("Important Dates:")).toBeInTheDocument()
@@ -175,7 +407,7 @@ describe("ProgramAsCourseCard", () => {
       />,
     )
 
-    await screen.findByRole("heading", {
+    await screen.findAllByRole("heading", {
       name: cardData.courseProgram.title,
       level: 3,
     })
@@ -256,6 +488,7 @@ describe("ProgramAsCourseCard", () => {
       courseruns: [run],
       next_run_id: run.id,
     })
+    setupCoursePricing(moduleWithRun)
 
     renderWithProviders(
       <ProgramAsCourseCard
@@ -398,12 +631,15 @@ describe("ProgramAsCourseCard", () => {
       />,
     )
 
-    await screen.findByText(cardData.courseProgram.title)
-    const certButton = screen.getByRole("link", { name: "Certificate" })
+    await screen.findAllByText(cardData.courseProgram.title)
+    // Rendered once in the desktop header, once in the mobile header.
+    const certButtons = screen.getAllByRole("link", { name: "Certificate" })
     const expectedCertHref = `/certificate/program/${certUuid}`
-    expect(certButton).toBeInTheDocument()
-    expect(certButton).toHaveAttribute("href", expectedCertHref)
-    expect(certButton).not.toHaveAttribute("target")
+    expect(certButtons).toHaveLength(2)
+    for (const certButton of certButtons) {
+      expect(certButton).toHaveAttribute("href", expectedCertHref)
+      expect(certButton).not.toHaveAttribute("target")
+    }
   })
 
   test("does not display certificate button when program enrollment has no certificate", async () => {
@@ -423,7 +659,7 @@ describe("ProgramAsCourseCard", () => {
       />,
     )
 
-    await screen.findByText(cardData.courseProgram.title)
+    await screen.findAllByText(cardData.courseProgram.title)
     const certButton = screen.queryByRole("link", { name: "Certificate" })
     expect(certButton).not.toBeInTheDocument()
   })
@@ -446,8 +682,10 @@ describe("ProgramAsCourseCard", () => {
       />,
     )
 
-    await screen.findByText(cardData.courseProgram.title)
-    expect(screen.getByTestId("upgraded-banner")).toHaveTextContent(
+    await screen.findAllByText(cardData.courseProgram.title)
+    // Rendered once in the desktop header, once in the mobile header.
+    expect(screen.getAllByTestId("upgraded-banner")).toHaveLength(2)
+    expect(screen.getAllByTestId("upgraded-banner")[0]).toHaveTextContent(
       "Certificate track",
     )
     expect(
@@ -474,11 +712,10 @@ describe("ProgramAsCourseCard", () => {
       />,
     )
 
-    await screen.findByText(cardData.courseProgram.title)
+    await screen.findAllByText(cardData.courseProgram.title)
     expect(screen.queryByTestId("upgraded-banner")).not.toBeInTheDocument()
-    expect(
-      screen.getByRole("link", { name: "Certificate" }),
-    ).toBeInTheDocument()
+    // Rendered once in the desktop header, once in the mobile header.
+    expect(screen.getAllByRole("link", { name: "Certificate" })).toHaveLength(2)
   })
 
   test("does not show 'Certificate track' for audit program enrollment", async () => {
@@ -499,7 +736,7 @@ describe("ProgramAsCourseCard", () => {
       />,
     )
 
-    await screen.findByText(cardData.courseProgram.title)
+    await screen.findAllByText(cardData.courseProgram.title)
     expect(screen.queryByTestId("upgraded-banner")).not.toBeInTheDocument()
   })
 
@@ -515,7 +752,7 @@ describe("ProgramAsCourseCard", () => {
       />,
     )
 
-    await screen.findByText(cardData.courseProgram.title)
+    await screen.findAllByText(cardData.courseProgram.title)
     const programCard = screen.getByTestId("program-as-course-card")
     await user.click(within(programCard).getAllByLabelText("More options")[0])
 
@@ -550,7 +787,7 @@ describe("ProgramAsCourseCard", () => {
       />,
     )
 
-    await screen.findByText(cardData.courseProgram.title)
+    await screen.findAllByText(cardData.courseProgram.title)
     const programCard = screen.getByTestId("program-as-course-card")
     await user.click(within(programCard).getAllByLabelText("More options")[0])
     await user.click(await screen.findByRole("menuitem", { name: "Unenroll" }))
@@ -576,7 +813,7 @@ describe("ProgramAsCourseCard", () => {
       />,
     )
 
-    await screen.findByText(cardData.courseProgram.title)
+    await screen.findAllByText(cardData.courseProgram.title)
     const programCard = screen.getByTestId("program-as-course-card")
     await user.click(within(programCard).getAllByLabelText("More options")[0])
 

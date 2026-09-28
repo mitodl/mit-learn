@@ -10,7 +10,7 @@ export const metadata: Metadata = standardizeMetadata({
   social: false,
 })
 
-const Page: React.FC<PageProps<"/onboarding">> = () => {
+const Page: React.FC = () => {
   return (
     <RestrictedRoute requires={Permission.Authenticated}>
       <OnboardingPage />

@@ -123,10 +123,12 @@ class OVSVideoWebhookView(BaseWebhookView):
             payload = json.loads(request.body)
         except json.JSONDecodeError:
             return HttpResponseBadRequest("Invalid JSON format")
-        OVSVideoWebhookRequestSerializer(data=payload).is_valid(raise_exception=True)
+        serializer = OVSVideoWebhookRequestSerializer(data=payload)
+        serializer.is_valid(raise_exception=True)
+        data = serializer.validated_data
 
-        if payload.get("delete"):
-            video_id = payload["video_id"]
+        if data.get("delete"):
+            video_id = data["video_id"]
             resource = LearningResource.objects.filter(
                 readable_id=video_id,
                 etl_source=ETLSource.ovs.name,

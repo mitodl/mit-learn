@@ -1,5 +1,6 @@
 """Profile models"""
 
+from functools import cached_property
 from uuid import uuid4
 
 from django.conf import settings
@@ -29,22 +30,6 @@ PROFILE_PROPS = (
     "headline",
     "bio",
 )
-FACEBOOK_DOMAIN = "facebook"
-TWITTER_DOMAIN = "twitter"
-LINKEDIN_DOMAIN = "linkedin"
-PERSONAL_SITE_TYPE = "personal"
-SITE_TYPE_OPTIONS = {
-    FACEBOOK_DOMAIN,
-    TWITTER_DOMAIN,
-    LINKEDIN_DOMAIN,
-    PERSONAL_SITE_TYPE,
-}
-SOCIAL_SITE_NAME_MAP = {
-    FACEBOOK_DOMAIN: "Facebook",
-    TWITTER_DOMAIN: "Twitter",
-    LINKEDIN_DOMAIN: "LinkedIn",
-}
-
 User = get_user_model()
 
 
@@ -201,23 +186,15 @@ class Profile(models.Model):
                 self.image_medium_file = None
         super().save(*args, **kwargs)  # pylint:disable=super-with-arguments
 
+    @cached_property
+    def annotated_topic_interests(self) -> list:
+        """
+        Topic interests with channel_url annotated for serialization.
 
-class UserWebsite(models.Model):
-    """A model for storing information for websites that should appear in a user's profile"""  # noqa: E501
-
-    profile = models.ForeignKey(Profile, on_delete=models.CASCADE)
-    url = models.CharField(max_length=200)
-    site_type = models.CharField(
-        max_length=15,
-        choices=zip(sorted(SITE_TYPE_OPTIONS), sorted(SITE_TYPE_OPTIONS)),
-        default=PERSONAL_SITE_TYPE,
-    )
-
-    class Meta:
-        unique_together = ("profile", "site_type")
-
-    def __str__(self):
-        return f"url: {self.url}; site_type: {self.site_type}"
+        Fallback only: API views fill this via
+        Prefetch(..., to_attr="annotated_topic_interests").
+        """
+        return list(self.topic_interests.for_serialization())
 
 
 class ProgramCertificate(models.Model):
@@ -280,7 +257,12 @@ class ProgramCertificate(models.Model):
     program_completion_timestamp = models.DateTimeField(null=True, blank=True)
 
     class Meta:
-        managed = False
+        # Managed as of the warehouse-pull cutover (mitodl/hq#12954): Django
+        # is now the writer of this table, not Hightouch, so schema changes
+        # belong in migrations rather than in an external tool's config. The
+        # table stays in the `external` schema — other consumers still read it
+        # by that name.
+        managed = True
         db_table = '"external"."programcertificate"'
 
     def __str__(self):

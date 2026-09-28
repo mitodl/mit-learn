@@ -15,7 +15,10 @@ beforeEach(() => {
 })
 
 test("bare /video/{id} redirects to the slug + first playlist", async () => {
+  const id = 777
   const video = factories.learningResources.video({
+    id,
+    url_slug: "beyond-biology",
     title: "Beyond Biology",
     playlists: ["55", "66"],
   })

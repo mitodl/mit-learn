@@ -9,7 +9,6 @@ from toolz import compose, curry
 
 from learning_resources.etl import (
     loaders,
-    micromasters,
     mit_edx,
     mit_edx_programs,
     mitpe,
@@ -21,7 +20,6 @@ from learning_resources.etl import (
     posthog,
     sloan,
     xpro,
-    youtube,
 )
 from learning_resources.etl.constants import (
     CourseLoaderConfig,
@@ -35,17 +33,6 @@ log = logging.getLogger(__name__)
 
 load_programs = curry(loaders.load_programs)
 load_courses = curry(loaders.load_courses)
-
-micromasters_etl = compose(
-    load_programs(
-        ETLSource.micromasters.name,
-        config=ProgramLoaderConfig(
-            prune=True, courses=CourseLoaderConfig(fetch_only=True)
-        ),
-    ),
-    micromasters.transform,
-    micromasters.extract,
-)
 
 mit_edx_courses_etl = compose(
     load_courses(
@@ -113,7 +100,16 @@ xpro_courses_etl = compose(
     xpro.extract_courses,
 )
 
-podcast_etl = compose(loaders.load_podcasts, podcast.transform, podcast.extract)
+
+def podcast_etl() -> list[LearningResource]:
+    """Execute the podcast ETL pipeline"""
+    # extract fills tracked_ids as it runs, so load_podcasts must drain the
+    # generator before it reads the list - which its load loop does
+    tracked_ids = []
+    return loaders.load_podcasts(
+        podcast.transform(podcast.extract(tracked_ids=tracked_ids)),
+        tracked_ids=tracked_ids,
+    )
 
 
 def ocw_courses_etl(
@@ -148,7 +144,7 @@ def ocw_courses_etl(
             )
             if data:
                 ocw_course_data = ocw.transform_course(data)
-                course_resource = loaders.load_course(ocw_course_data, [], [])
+                course_resource = loaders.load_course(ocw_course_data, [])
                 course_run = course_resource.runs.filter(published=True).first()
 
                 if course_resource and not skip_content_files:
@@ -160,7 +156,7 @@ def ocw_courses_etl(
                         calc_completeness=True,
                     )
 
-                    if settings.CREATE_OCW_LEARNING_MATERIALS:
+                    if content_file_ids:
                         loaders.load_learning_materials(course_run, content_file_ids)
             else:
                 log.info("No course data found for %s", url_path)
@@ -173,10 +169,6 @@ def ocw_courses_etl(
         )
         raise ExtractException(message)
 
-
-youtube_etl = compose(
-    loaders.load_youtube_video_channels, youtube.transform, youtube.extract
-)
 
 ovs_etl = compose(loaders.load_ovs_playlists, ovs.transform, ovs.extract)
 

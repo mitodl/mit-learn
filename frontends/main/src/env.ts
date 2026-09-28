@@ -4,16 +4,13 @@ import type { InferType } from "yup"
 /**
  * Runtime environment variable accessor for NEXT_PUBLIC_* vars.
  *
- * Problem: webpack's DefinePlugin inlines `process.env.NEXT_PUBLIC_FOO` at
- * *build* time. When the Docker image is built in CI without per-environment
- * values, every NEXT_PUBLIC_* reference in the compiled bundle becomes an
- * empty string, even though the Kubernetes pod has the correct values set.
- *
- * Solution: `PublicEnvScript` (a Server Component in app/layout.tsx) renders
- * a synchronous inline <script> that sets `window.__ENV = { NEXT_PUBLIC_*:
- * <runtime value> }` before any JS bundle loads. This function reads from
- * that object in the browser and from process.env (dynamic bracket access,
- * not inlined by DefinePlugin) on the server.
+ * Problem: the bundler inlines `process.env.NEXT_PUBLIC_FOO` at *build* time.
+ * Our Docker image is built in CI without per-environment values, so compiled
+ * bundles cannot read them from process.env even though the Kubernetes pod has
+ * them set. Instead, the server delivers all NEXT_PUBLIC_* values as JSON in
+ * a <meta name="x-public-env"> tag; in the browser env() reads that tag
+ * (cached on window.__ENV), on the server it reads process.env (dynamic
+ * bracket access, not inlined).
  *
  * Test compatibility: jsdom sets `window` but not `window.__ENV`. The
  * `?? process.env[key]` fallback lets existing tests that mutate
@@ -45,9 +42,16 @@ type RequiredPublicEnvVar = Extract<
   `NEXT_PUBLIC_${string}`
 >
 
-// Populate window.__ENV from the x-public-env <meta> on first read. Error/
-// not-found pages are a client-rendered shell where PublicEnvScript never runs,
-// so window.__ENV is otherwise unset there. Shared by env() and fullEnv().
+// Populate window.__ENV on first read, from (in order):
+//   1. window.__ENV — cache of a previous successful read.
+//   2. An x-public-env <meta>, if the parser has reached one yet.
+//   3. Synchronous fetch of /public-env.json — last resort, for reads that
+//      happen before any <meta> has been parsed (or on documents that never
+//      carry one). At most once, and never when a <meta> was found. Skipped
+//      under jest (NODE_ENV=test) so jsdom suites fall through to the
+//      process.env fallback instead of attempting network I/O.
+// Shared by env() and fullEnv().
+let publicEnvFetchAttempted = false
 const bootstrapClientEnv = (): void => {
   if (window.__ENV) return
   const content = document
@@ -58,6 +62,20 @@ const bootstrapClientEnv = (): void => {
       window.__ENV = JSON.parse(content)
     } catch {
       /* malformed; leave unset and fall through to process.env */
+    }
+    return
+  }
+  if (process.env.NODE_ENV !== "test" && !publicEnvFetchAttempted) {
+    publicEnvFetchAttempted = true
+    try {
+      const xhr = new XMLHttpRequest()
+      xhr.open("GET", "/public-env.json", false)
+      xhr.send()
+      if (xhr.status === 200) {
+        window.__ENV = JSON.parse(xhr.responseText)
+      }
+    } catch {
+      /* leave unset; a later read may find the <meta> */
     }
   }
 }
@@ -113,8 +131,7 @@ export const requiredEnv = (key: RequiredPublicEnvVar): string => {
 }
 
 /**
- * Server-side { NEXT_PUBLIC_*: value } map from process.env. Shared by
- * PublicEnvScript and the x-public-env <meta> so the two can't drift.
+ * Server-side { NEXT_PUBLIC_*: value } map from process.env.
  */
 export const publicEnvObject = (): Record<string, string | undefined> =>
   Object.fromEntries(

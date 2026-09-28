@@ -13,7 +13,9 @@ import type {
 } from "../../generated/v1"
 import { learningPathsApi } from "../../clients"
 import { learningPathQueries, learningPathKeys } from "./queries"
+import { learningResourceKeys } from "../learningResources/queries"
 import { useUserHasPermission, Permission } from "api/hooks/user"
+import type { MutationHookOptions } from "../../mutations/mutationMeta"
 
 const useLearningPathsList = (
   params: ListRequest = {},
@@ -43,7 +45,7 @@ type LearningPathCreateRequest = Omit<
   CreateRequest["LearningPathResourceRequest"],
   "readable_id" | "resource_type"
 >
-const useLearningPathCreate = () => {
+const useLearningPathCreate = ({ meta }: MutationHookOptions = {}) => {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (params: LearningPathCreateRequest) =>
@@ -53,10 +55,11 @@ const useLearningPathCreate = () => {
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: learningPathKeys.listRoot() })
     },
+    meta,
   })
 }
 
-const useLearningPathUpdate = () => {
+const useLearningPathUpdate = ({ meta }: MutationHookOptions = {}) => {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (
@@ -71,7 +74,11 @@ const useLearningPathUpdate = () => {
       queryClient.invalidateQueries({
         queryKey: learningPathKeys.detail(vars.id),
       })
+      queryClient.invalidateQueries({
+        queryKey: learningResourceKeys.featuredRoot(),
+      })
     },
+    meta,
   })
 }
 
@@ -84,6 +91,9 @@ const useLearningPathDestroy = () => {
       queryClient.invalidateQueries({ queryKey: learningPathKeys.listRoot() })
       queryClient.invalidateQueries({
         queryKey: learningPathKeys.membershipList(),
+      })
+      queryClient.invalidateQueries({
+        queryKey: learningResourceKeys.featuredRoot(),
       })
     },
   })
@@ -108,6 +118,9 @@ const useLearningPathListItemMove = () => {
     onSettled: (_data, _err, vars) => {
       queryClient.invalidateQueries({
         queryKey: learningPathKeys.infiniteItemsRoot(vars.parent),
+      })
+      queryClient.invalidateQueries({
+        queryKey: learningResourceKeys.featuredRoot(),
       })
     },
   })

@@ -10,10 +10,17 @@ import {
 } from "@/test-utils"
 import * as mitxonline from "api/mitxonline-test-utils"
 import { mitxonlineLegacyUrl } from "@/common/mitxonline"
+import { receiptByRunView, receiptView } from "@/common/urls"
 import { makeRequest } from "api/test-utils"
 import { faker } from "@faker-js/faker/locale/en"
 import moment from "moment"
 import { EnrolledCourseCard } from "./EnrolledCourseCard"
+import { setupOrderHistory } from "./test-utils"
+
+// Verified cards look up their order; default to none, tests override.
+beforeEach(() => {
+  setupOrderHistory()
+})
 
 const EnrollmentMode = {
   Audit: "audit",
@@ -90,6 +97,55 @@ describe.each([
       }
     },
   )
+
+  test.each([
+    { runDates: currentRunDates, expectLink: true, case: "started" },
+    { runDates: futureRunDates, expectLink: false, case: "not started" },
+  ])(
+    "Title links to courseware only once the run has started ($case)",
+    async ({ runDates, expectLink }) => {
+      setupUserApis()
+      const coursewareUrl = faker.internet.url()
+      const enrollment = mitxonline.factories.enrollment.courseEnrollment({
+        grades: [],
+        certificate: null,
+        run: { ...runDates, courseware_url: coursewareUrl },
+      })
+      renderWithProviders(<EnrolledCourseCard enrollment={enrollment} />)
+      const card = getCard()
+      const title = enrollment.run.course.title
+
+      if (expectLink) {
+        expect(within(card).getByRole("link", { name: title })).toHaveAttribute(
+          "href",
+          coursewareUrl,
+        )
+      } else {
+        // The heading still names the course, it just isn't a way in.
+        await waitFor(() => {
+          expect(
+            within(card).queryByRole("link", { name: title }),
+          ).not.toBeInTheDocument()
+        })
+        expect(within(card).getByText(title)).toBeInTheDocument()
+      }
+    },
+  )
+
+  test("Title links to courseware for staff before the run starts", async () => {
+    setupUserApis({ is_staff: true })
+    const coursewareUrl = faker.internet.url()
+    const enrollment = mitxonline.factories.enrollment.courseEnrollment({
+      grades: [],
+      certificate: null,
+      run: { ...futureRunDates, courseware_url: coursewareUrl },
+    })
+    renderWithProviders(<EnrolledCourseCard enrollment={enrollment} />)
+    const link = await within(getCard()).findByRole("link", {
+      name: enrollment.run.course.title,
+    })
+    expect(link).toHaveAttribute("href", coursewareUrl)
+  })
 
   test("Courseware button is a navigable link for staff even when course has not started", async () => {
     setupUserApis({ is_staff: true })
@@ -171,6 +227,33 @@ describe.each([
     )
   })
 
+  test("shows View Certificate link when the certificate is on a sibling run", () => {
+    setupUserApis()
+    const certUuid = faker.string.uuid()
+    const certificateLink = `https://courses.example.com/certificate/${certUuid}/`
+    const displayedEnrollment =
+      mitxonline.factories.enrollment.courseEnrollment({
+        certificate: null,
+        run: currentRunDates,
+      })
+    const earlierEnrollment = mitxonline.factories.enrollment.courseEnrollment({
+      certificate: { uuid: certUuid, link: certificateLink },
+      run: pastRunDates,
+    })
+    renderWithProviders(
+      <EnrolledCourseCard
+        enrollment={displayedEnrollment}
+        siblingEnrollments={[earlierEnrollment]}
+      />,
+    )
+    expect(
+      within(getCard()).getByRole("link", { name: /View Certificate/ }),
+    ).toHaveAttribute(
+      "href",
+      `https://courses.example.com/certificate/course/${certUuid}/`,
+    )
+  })
+
   test("does not show View Certificate when certificate is absent", () => {
     setupUserApis()
     const enrollment = mitxonline.factories.enrollment.courseEnrollment({
@@ -241,77 +324,6 @@ describe.each([
     ).not.toBeInTheDocument()
     expect(
       within(getCard()).queryByText(/ended \d+ day/i),
-    ).not.toBeInTheDocument()
-  })
-
-  // ---------------------------------------------------------------------------
-  // Enrollment status indicator
-  // ---------------------------------------------------------------------------
-
-  test.each([
-    {
-      enrollmentData: {
-        grades: [],
-        certificate: null,
-        b2b_contract_id: faker.number.int(), // B2B so showNotComplete=true
-      },
-      expectedLabel: "Enrolled",
-    },
-    {
-      enrollmentData: {
-        grades: [mitxonline.factories.enrollment.grade({ passed: true })],
-        certificate: {
-          uuid: faker.string.uuid(),
-          link: faker.internet.url(),
-        },
-        b2b_contract_id: null,
-      },
-      expectedLabel: "Completed",
-    },
-    {
-      enrollmentData: {
-        grades: [mitxonline.factories.enrollment.grade({ passed: true })],
-        certificate: null,
-        b2b_contract_id: faker.number.int(), // B2B so indicator is visible
-      },
-      expectedLabel: "Completed",
-    },
-  ])(
-    "Enrollment status indicator shows '$expectedLabel'",
-    ({ enrollmentData, expectedLabel }) => {
-      setupUserApis()
-      const enrollment =
-        mitxonline.factories.enrollment.courseEnrollment(enrollmentData)
-      renderWithProviders(<EnrolledCourseCard enrollment={enrollment} />)
-      expect(
-        within(getCard()).getByTestId("enrollment-status"),
-      ).toHaveTextContent(expectedLabel)
-    },
-  )
-
-  test("showNotComplete: status indicator visible for enrolled (not completed) B2B enrollment", () => {
-    setupUserApis()
-    const enrollment = mitxonline.factories.enrollment.courseEnrollment({
-      grades: [],
-      certificate: null,
-      b2b_contract_id: faker.number.int(),
-    })
-    renderWithProviders(<EnrolledCourseCard enrollment={enrollment} />)
-    expect(
-      within(getCard()).getByTestId("enrollment-status"),
-    ).toBeInTheDocument()
-  })
-
-  test("showNotComplete: status indicator hidden for enrolled (not completed) non-B2B enrollment", () => {
-    setupUserApis()
-    const enrollment = mitxonline.factories.enrollment.courseEnrollment({
-      grades: [],
-      certificate: null,
-      b2b_contract_id: null,
-    })
-    renderWithProviders(<EnrolledCourseCard enrollment={enrollment} />)
-    expect(
-      within(getCard()).queryByTestId("enrollment-status"),
     ).not.toBeInTheDocument()
   })
 
@@ -567,6 +579,173 @@ describe.each([
   })
 
   // ---------------------------------------------------------------------------
+  // Upgrade banner — verified program enrollment (one-click, no checkout)
+  // ---------------------------------------------------------------------------
+
+  test("Shows 'Upgrade for certificate' without a price when the program enrollment is verified", () => {
+    setupUserApis()
+    const price = faker.commerce.price()
+    const enrollment = mitxonline.factories.enrollment.courseEnrollment({
+      enrollment_mode: EnrollmentMode.Audit,
+      b2b_contract_id: null,
+      certificate: null,
+      run: {
+        is_upgradable: true,
+        upgrade_deadline: faker.date.future().toISOString(),
+        upgrade_product_id: faker.number.int(),
+        upgrade_product_price: price,
+        upgrade_product_is_active: true,
+      },
+    })
+    const programEnrollment =
+      mitxonline.factories.enrollment.programEnrollmentV3({
+        enrollment_mode: "verified",
+      })
+
+    renderWithProviders(
+      <EnrolledCourseCard
+        enrollment={enrollment}
+        ancestorContext={{ programEnrollment }}
+      />,
+    )
+    const banner = within(getCard()).getByTestId("upgrade-root")
+    expect(banner).toHaveTextContent("Upgrade for certificate")
+    expect(banner).not.toHaveTextContent(`$${price}`)
+  })
+
+  test("Clicking upgrade link one-click enrolls in verified mode and redirects to courseware when program enrollment is verified", async () => {
+    setupUserApis()
+    const coursewareUrl = faker.internet.url()
+    const enrollment = mitxonline.factories.enrollment.courseEnrollment({
+      enrollment_mode: EnrollmentMode.Audit,
+      b2b_contract_id: null,
+      certificate: null,
+      run: {
+        is_upgradable: true,
+        upgrade_deadline: faker.date.future().toISOString(),
+        upgrade_product_id: faker.number.int(),
+        upgrade_product_price: faker.commerce.price(),
+        upgrade_product_is_active: true,
+        courseware_url: coursewareUrl,
+      },
+    })
+    const programEnrollment =
+      mitxonline.factories.enrollment.programEnrollmentV3({
+        enrollment_mode: "verified",
+      })
+    const programEnrollmentEndpoint =
+      mitxonline.urls.verifiedProgramEnrollments.create(
+        enrollment.run.courseware_id,
+      )
+    setMockResponse.post(programEnrollmentEndpoint, {})
+
+    renderWithProviders(
+      <EnrolledCourseCard
+        enrollment={enrollment}
+        ancestorContext={{ programEnrollment }}
+      />,
+    )
+    await user.click(
+      within(getCard()).getByRole("link", { name: "Upgrade for certificate" }),
+    )
+
+    await waitFor(() => {
+      expect(makeRequest).toHaveBeenCalledWith(
+        expect.objectContaining({
+          method: "post",
+          url: programEnrollmentEndpoint,
+        }),
+      )
+    })
+    await waitFor(() => {
+      expect(window.location.href).toBe(coursewareUrl)
+    })
+  })
+
+  test("Calls onUpgradeError when verified program enrollment API fails", async () => {
+    setupUserApis()
+    const enrollment = mitxonline.factories.enrollment.courseEnrollment({
+      enrollment_mode: EnrollmentMode.Audit,
+      b2b_contract_id: null,
+      certificate: null,
+      run: {
+        is_upgradable: true,
+        upgrade_deadline: faker.date.future().toISOString(),
+        upgrade_product_id: faker.number.int(),
+        upgrade_product_price: faker.commerce.price(),
+        upgrade_product_is_active: true,
+      },
+    })
+    const programEnrollment =
+      mitxonline.factories.enrollment.programEnrollmentV3({
+        enrollment_mode: "verified",
+      })
+    setMockResponse.post(
+      mitxonline.urls.verifiedProgramEnrollments.create(
+        enrollment.run.courseware_id,
+      ),
+      { error: "Server error" },
+      { code: 500 },
+    )
+    const onUpgradeError = jest.fn()
+
+    renderWithProviders(
+      <EnrolledCourseCard
+        enrollment={enrollment}
+        ancestorContext={{ programEnrollment }}
+        onUpgradeError={onUpgradeError}
+      />,
+    )
+    await user.click(
+      within(getCard()).getByRole("link", { name: "Upgrade for certificate" }),
+    )
+    await waitFor(() => {
+      expect(onUpgradeError).toHaveBeenCalled()
+    })
+  })
+
+  test("Falls back to checkout when the verified program enrollment has no resolvable program identifier", async () => {
+    const assign = jest.mocked(window.location.assign)
+    setupUserApis()
+    const productId = faker.number.int()
+    const price = faker.commerce.price()
+    const enrollment = mitxonline.factories.enrollment.courseEnrollment({
+      enrollment_mode: EnrollmentMode.Audit,
+      b2b_contract_id: null,
+      certificate: null,
+      run: {
+        is_upgradable: true,
+        upgrade_deadline: faker.date.future().toISOString(),
+        upgrade_product_id: productId,
+        upgrade_product_price: price,
+        upgrade_product_is_active: true,
+      },
+    })
+    const clearUrl = mitxonline.urls.baskets.clear()
+    setMockResponse.delete(clearUrl, undefined)
+    const basketUrl = mitxonline.urls.baskets.createFromProduct(productId)
+    setMockResponse.post(basketUrl, { id: 1, items: [] })
+
+    renderWithProviders(
+      <EnrolledCourseCard
+        enrollment={enrollment}
+        ancestorContext={{ useVerifiedEnrollment: true }}
+      />,
+    )
+    const banner = within(getCard()).getByTestId("upgrade-root")
+    expect(banner).toHaveTextContent(`Upgrade for certificate - $${price}`)
+
+    await user.click(
+      within(getCard()).getByRole("link", { name: /Upgrade for certificate/ }),
+    )
+
+    expect(makeRequest).toHaveBeenCalledWith(
+      expect.objectContaining({ method: "post", url: basketUrl }),
+    )
+    expect(assign).toHaveBeenCalledWith(mitxonlineLegacyUrl("/cart/"))
+  })
+
+  // ---------------------------------------------------------------------------
   // Upgraded (paid, certificate not yet earned) banner
   // ---------------------------------------------------------------------------
 
@@ -584,7 +763,7 @@ describe.each([
     )
   })
 
-  test("Does not show 'Certificate track' when verified enrollment has a certificate", () => {
+  test("Shows 'View Certificate' in place of 'Certificate track' when verified enrollment has a certificate", () => {
     setupUserApis()
     const certUuid = faker.string.uuid()
     const enrollment = mitxonline.factories.enrollment.courseEnrollment({
@@ -597,8 +776,8 @@ describe.each([
       within(getCard()).queryByTestId("upgraded-banner"),
     ).not.toBeInTheDocument()
     expect(
-      within(getCard()).getByRole("link", { name: /View Certificate/ }),
-    ).toBeInTheDocument()
+      within(getCard()).getAllByRole("link", { name: /View Certificate/ }),
+    ).toHaveLength(1)
   })
 
   test("Does not show 'Certificate track' for audit enrollment", () => {
@@ -688,12 +867,13 @@ describe.each([
       enrollment_mode: EnrollmentMode.Verified,
       grades: [mitxonline.factories.enrollment.grade({ passed: true })],
     })
+    setupOrderHistory({ runId: enrollment.run.id })
     renderWithProviders(<EnrolledCourseCard enrollment={enrollment} />)
     await user.click(
       within(getCard()).getByRole("button", { name: "More options" }),
     )
     expect(
-      screen.getByRole("menuitem", { name: "Receipt" }),
+      await screen.findByRole("menuitem", { name: "Receipt" }),
     ).toBeInTheDocument()
   })
 
@@ -713,30 +893,77 @@ describe.each([
     ).not.toBeInTheDocument()
   })
 
-  test("Receipt links to correct MITx Online URL for verified enrollment", async () => {
+  test("Receipt links to the receipt for the order that paid for the run", async () => {
     setupUserApis()
-    const runId = faker.number.int()
+    const runId = faker.number.int({ min: 1 })
+    setupOrderHistory({ runId, orderId: 87 })
     const enrollment = mitxonline.factories.enrollment.courseEnrollment({
       enrollment_mode: EnrollmentMode.Verified,
       grades: [mitxonline.factories.enrollment.grade({ passed: true })],
       run: { id: runId },
     })
-    const windowOpenSpy = jest
-      .spyOn(window, "open")
-      .mockImplementation(() => null)
 
     renderWithProviders(<EnrolledCourseCard enrollment={enrollment} />)
     await user.click(
       within(getCard()).getByRole("button", { name: "More options" }),
     )
-    await user.click(screen.getByRole("menuitem", { name: "Receipt" }))
 
-    expect(windowOpenSpy).toHaveBeenCalledWith(
-      mitxonlineLegacyUrl(`/orders/receipt/by-run/${runId}/`),
-      "_blank",
-      "noopener,noreferrer",
+    expect(
+      await screen.findByRole("menuitem", { name: "Receipt" }),
+    ).toHaveAttribute("href", receiptView(87))
+  })
+
+  // Verified does not imply a run-level order, so the item must stay hidden.
+  test("Receipt is hidden for a verified enrollment with no order behind it", async () => {
+    setupUserApis()
+    const runId = faker.number.int({ min: 1 })
+    // An order exists, but for a different run.
+    setupOrderHistory({ runId: runId + 1, orderId: 87 })
+    const enrollment = mitxonline.factories.enrollment.courseEnrollment({
+      enrollment_mode: EnrollmentMode.Verified,
+      grades: [mitxonline.factories.enrollment.grade({ passed: true })],
+      run: { id: runId },
+    })
+
+    renderWithProviders(<EnrolledCourseCard enrollment={enrollment} />)
+    await user.click(
+      within(getCard()).getByRole("button", { name: "More options" }),
     )
-    windowOpenSpy.mockRestore()
+    // Wait for a sibling item so we know the menu has rendered.
+    await screen.findByRole("menuitem", { name: "Unenroll" })
+
+    expect(
+      screen.queryByRole("menuitem", { name: "Receipt" }),
+    ).not.toBeInTheDocument()
+  })
+
+  /**
+   * An `orders/history` outage must not look the same as "you never paid for this".
+   * The item stays, pointing at the resolver route, which refetches and renders its
+   * own skeleton or 404 instead of the option silently vanishing from every card.
+   */
+  test("Receipt falls back to the resolver route when the order lookup fails", async () => {
+    setupUserApis()
+    const runId = faker.number.int({ min: 1 })
+    setMockResponse.get(
+      mitxonline.urls.orders.historyList({ limit: 100 }),
+      "Server error",
+      { code: 500 },
+    )
+    const enrollment = mitxonline.factories.enrollment.courseEnrollment({
+      enrollment_mode: EnrollmentMode.Verified,
+      grades: [mitxonline.factories.enrollment.grade({ passed: true })],
+      run: { id: runId },
+    })
+
+    renderWithProviders(<EnrolledCourseCard enrollment={enrollment} />)
+    await user.click(
+      within(getCard()).getByRole("button", { name: "More options" }),
+    )
+
+    expect(
+      await screen.findByRole("menuitem", { name: "Receipt" }),
+    ).toHaveAttribute("href", receiptByRunView(runId))
   })
 })
 
@@ -806,5 +1033,193 @@ describe("EnrolledCourseCard — multiple enrollment runs", () => {
       />,
     )
     expect(screen.getAllByText("Course runs (5)").length).toBeGreaterThan(0)
+  })
+})
+
+// The enrollment status icon only renders for compact program module rows
+// (i.e. within ProgramAsCourseCard), and even then only for non-B2B
+// enrollments. Every other card conveys progress via the ProgressBadge shown
+// next to the card type label instead.
+describe("EnrolledCourseCard enrollment status icon (module rows)", () => {
+  setupLocationMock()
+
+  const getDesktopCard = () => screen.getByTestId("enrollment-card-desktop")
+
+  test.each([
+    {
+      enrollmentData: { grades: [], certificate: null },
+      expectedLabel: "Enrolled",
+    },
+    {
+      enrollmentData: {
+        grades: [mitxonline.factories.enrollment.grade({ passed: true })],
+        certificate: {
+          uuid: faker.string.uuid(),
+          link: faker.internet.url(),
+        },
+      },
+      expectedLabel: "Completed",
+    },
+  ])(
+    "Module row shows '$expectedLabel' status icon",
+    ({ enrollmentData, expectedLabel }) => {
+      setupUserApis()
+      const enrollment = mitxonline.factories.enrollment.courseEnrollment({
+        ...enrollmentData,
+        b2b_contract_id: null,
+      })
+      renderWithProviders(
+        <EnrolledCourseCard
+          enrollment={enrollment}
+          isModule
+          layout="compact"
+        />,
+      )
+      expect(
+        within(getDesktopCard()).getByTestId("enrollment-status"),
+      ).toHaveTextContent(expectedLabel)
+    },
+  )
+
+  test("hidden for B2B module rows", () => {
+    setupUserApis()
+    const enrollment = mitxonline.factories.enrollment.courseEnrollment({
+      grades: [],
+      certificate: null,
+      b2b_contract_id: faker.number.int(),
+    })
+    renderWithProviders(
+      <EnrolledCourseCard enrollment={enrollment} isModule layout="compact" />,
+    )
+    expect(
+      within(getDesktopCard()).queryByTestId("enrollment-status"),
+    ).not.toBeInTheDocument()
+  })
+
+  test("hidden for non-module cards", () => {
+    setupUserApis()
+    const enrollment = mitxonline.factories.enrollment.courseEnrollment({
+      b2b_contract_id: null,
+    })
+    renderWithProviders(<EnrolledCourseCard enrollment={enrollment} />)
+    expect(
+      within(getDesktopCard()).queryByTestId("enrollment-status"),
+    ).not.toBeInTheDocument()
+  })
+})
+
+describe("EnrolledCourseCard card type label", () => {
+  setupLocationMock()
+
+  const getDesktopCard = () => screen.getByTestId("enrollment-card-desktop")
+
+  test("shows 'Course' for a non-B2B enrollment", () => {
+    setupUserApis()
+    const enrollment = mitxonline.factories.enrollment.courseEnrollment({
+      b2b_contract_id: null,
+    })
+    renderWithProviders(<EnrolledCourseCard enrollment={enrollment} />)
+    expect(within(getDesktopCard()).getByText("Course")).toBeInTheDocument()
+    expect(
+      within(getDesktopCard()).queryByText("Module"),
+    ).not.toBeInTheDocument()
+  })
+
+  test("shows 'Module' for a B2B enrollment", () => {
+    setupUserApis()
+    const enrollment = mitxonline.factories.enrollment.courseEnrollment({
+      b2b_contract_id: faker.number.int(),
+    })
+    renderWithProviders(<EnrolledCourseCard enrollment={enrollment} />)
+    expect(within(getDesktopCard()).getByText("Module")).toBeInTheDocument()
+    expect(
+      within(getDesktopCard()).queryByText("Course"),
+    ).not.toBeInTheDocument()
+  })
+
+  test("shows enrollment status indicator instead of 'Module' text when isModule is set (compact layout)", () => {
+    setupUserApis()
+    const enrollment = mitxonline.factories.enrollment.courseEnrollment({
+      b2b_contract_id: null,
+      grades: [],
+      certificate: null,
+    })
+    renderWithProviders(
+      <EnrolledCourseCard enrollment={enrollment} isModule layout="compact" />,
+    )
+    expect(
+      within(getDesktopCard()).getByTestId("enrollment-status"),
+    ).toBeInTheDocument()
+    expect(
+      within(getDesktopCard()).queryByText("Module"),
+    ).not.toBeInTheDocument()
+  })
+})
+
+describe("EnrolledCourseCard progress badge", () => {
+  setupLocationMock()
+
+  const getDesktopCard = () => screen.getByTestId("enrollment-card-desktop")
+
+  // The badge describes the displayed run, so every case pins the run dates it
+  // reads rather than leaving them to the factory's random values.
+  test.each([
+    {
+      case: "run underway",
+      runDates: currentRunDates,
+      enrollmentData: { grades: [], certificate: null },
+      expectedLabel: "In Progress",
+    },
+    {
+      case: "run not yet started",
+      runDates: futureRunDates,
+      enrollmentData: { grades: [], certificate: null },
+      expectedLabel: "Not Started",
+    },
+    {
+      case: "run over without a certificate",
+      runDates: pastRunDates,
+      enrollmentData: { grades: [], certificate: null },
+      expectedLabel: "Ended",
+    },
+    {
+      case: "certificate earned",
+      runDates: pastRunDates,
+      enrollmentData: {
+        grades: [mitxonline.factories.enrollment.grade({ passed: true })],
+        certificate: {
+          uuid: faker.string.uuid(),
+          link: faker.internet.url(),
+        },
+      },
+      expectedLabel: "Completed",
+    },
+  ])(
+    "shows '$expectedLabel' next to the card type label ($case)",
+    ({ runDates, enrollmentData, expectedLabel }) => {
+      setupUserApis()
+      const enrollment = mitxonline.factories.enrollment.courseEnrollment({
+        ...enrollmentData,
+        b2b_contract_id: null,
+        run: runDates,
+      })
+      renderWithProviders(<EnrolledCourseCard enrollment={enrollment} />)
+      expect(
+        within(getDesktopCard()).getByTestId("progress-badge"),
+      ).toHaveTextContent(expectedLabel)
+    },
+  )
+
+  test("hidden on compact module rows, where the status icon takes over", () => {
+    setupUserApis()
+    const enrollment = mitxonline.factories.enrollment.courseEnrollment({
+      b2b_contract_id: null,
+    })
+    renderWithProviders(
+      <EnrolledCourseCard enrollment={enrollment} isModule layout="compact" />,
+    )
+    expect(
+      within(getDesktopCard()).queryByTestId("progress-badge"),
+    ).not.toBeInTheDocument()
   })
 })

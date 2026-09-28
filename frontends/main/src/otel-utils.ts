@@ -1,8 +1,5 @@
 import { isSpanContextValid, trace } from "@opentelemetry/api"
 import type { IncomingMessage, ServerResponse } from "node:http"
-import type { ReadableSpan } from "@opentelemetry/sdk-trace-base"
-import { envDetector } from "@opentelemetry/resources"
-import type { DetectedResourceAttributes } from "@opentelemetry/resources"
 import { env } from "@/env"
 
 export type RequestLogEntry = {
@@ -31,15 +28,6 @@ export function hasOtlpEndpointConfig(env: OtelEnvSubset): boolean {
     getNonEmptyEnvValue(env.OTEL_EXPORTER_OTLP_ENDPOINT) ||
       getNonEmptyEnvValue(env.OTEL_EXPORTER_OTLP_TRACES_ENDPOINT),
   )
-}
-
-/**
- * Read OTEL_SERVICE_NAME and OTEL_RESOURCE_ATTRIBUTES from process.env using
- * the OTEL SDK's spec-compliant parser. Handles percent-decoding, length
- * checks, and merges OTEL_SERVICE_NAME into service.name.
- */
-export function detectResourceOverrides(): DetectedResourceAttributes {
-  return envDetector.detect().attributes ?? {}
 }
 
 /**
@@ -74,25 +62,5 @@ export function createRequestLogEntry({
     traceId: hasTrace && ctx ? ctx.traceId : null,
     spanId: hasTrace && ctx ? ctx.spanId : null,
     version: APP_VERSION,
-  }
-}
-
-/**
- * Copy detected resource attributes onto a span's resource. Used to work
- * around Sentry's hardcoded service.name (and friends) — see
- * https://github.com/getsentry/sentry-javascript/issues/20502.
- *
- * EnvDetector returns AttributeValue | Promise<AttributeValue> | undefined,
- * but in practice OTEL_SERVICE_NAME and OTEL_RESOURCE_ATTRIBUTES yield only
- * strings; non-strings are skipped defensively.
- */
-export function applyResourceOverrides(
-  span: ReadableSpan,
-  overrides: DetectedResourceAttributes,
-): void {
-  for (const [key, value] of Object.entries(overrides)) {
-    if (typeof value === "string") {
-      span.resource.attributes[key] = value
-    }
   }
 }

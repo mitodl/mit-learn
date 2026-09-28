@@ -1,3 +1,7 @@
+import type {
+  AppPageProps,
+  RegisteredSearchParams,
+} from "@/common/searchParams"
 import React from "react"
 import ChannelPage from "@/app-pages/ChannelPage/ChannelPage"
 import { ChannelTypeEnum } from "api/v0"
@@ -24,11 +28,17 @@ import {
 import { isInEnum } from "@/common/utils"
 import { notFound } from "next/navigation"
 import { getQueryClient } from "@/app/getQueryClient"
+import { isHybridSearchEnabled } from "@/common/hybridSearch"
+import {
+  getVectorScoreTuning,
+  toUnfacetedVectorSearchParams,
+  toVectorSearchParams,
+} from "@/page-components/SearchDisplay/vectorSearchParams"
 
 export async function generateMetadata({
   searchParams,
   params,
-}: PageProps<"/c/[channelType]/[name]">) {
+}: AppPageProps<"/c/[channelType]/[name]">) {
   const { channelType, name } = await params
 
   return safeGenerateMetadata(async () => {
@@ -46,7 +56,7 @@ export async function generateMetadata({
   })
 }
 
-const Page: React.FC<PageProps<"/c/[channelType]/[name]">> = async ({
+const Page: React.FC<AppPageProps<"/c/[channelType]/[name]">> = async ({
   params,
   searchParams,
 }) => {
@@ -91,11 +101,22 @@ const Page: React.FC<PageProps<"/c/[channelType]/[name]">> = async ({
 
   const constantSearchParams = getConstantSearchParams(channel.search_filter)
 
+  // RegisteredSearchParams keeps named reads on this copy within the
+  // cache-key whitelist; a bare URLSearchParams would accept any name.
+  const urlParams: RegisteredSearchParams = new URLSearchParams(
+    Object.entries(search).flatMap(([key, value]) =>
+      Array.isArray(value)
+        ? value.map((v) => [key, v])
+        : [[key, String(value)]],
+    ),
+  )
+
   const { facetNames } = getFacets(
     channelType,
     offerors as unknown as Record<string, LearningResourceOfferorDetail>,
     constantSearchParams,
     null,
+    urlParams,
   )
 
   const searchRequest = getSearchParams({
@@ -106,9 +127,34 @@ const Page: React.FC<PageProps<"/c/[channelType]/[name]">> = async ({
     page: Number(search.page ?? 1),
   })
 
-  await queryClient.prefetchQuery(
-    learningResourceQueries.search(searchRequest as LRSearchRequest),
-  )
+  // Server components cannot read PostHog flags, so this resolves the URL
+  // override and the env kill switch only. Setting
+  // NEXT_PUBLIC_DISABLE_HYBRID_SEARCH alongside the PostHog flag is what keeps
+  // this prefetch on the same endpoint the client will query.
+  const isHybridSearch = isHybridSearchEnabled(urlParams)
+  const hasSearchTerm =
+    typeof searchRequest.q === "string" && searchRequest.q.trim() !== ""
+
+  if (isHybridSearch) {
+    // The admin score tuning params are part of the request, so the prefetch
+    // must include them or the client would refetch on hydration.
+    const scoreTuning = getVectorScoreTuning(urlParams)
+    await queryClient.prefetchQuery(
+      learningResourceQueries.vectorSearch(
+        hasSearchTerm
+          ? toUnfacetedVectorSearchParams(
+              searchRequest,
+              constantSearchParams,
+              scoreTuning,
+            )
+          : toVectorSearchParams(searchRequest, scoreTuning),
+      ),
+    )
+  } else {
+    await queryClient.prefetchQuery(
+      learningResourceQueries.search(searchRequest as LRSearchRequest),
+    )
+  }
 
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>

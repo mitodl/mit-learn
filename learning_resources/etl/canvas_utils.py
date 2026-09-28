@@ -1,9 +1,11 @@
 import json
 import logging
+import os
 import sys
 import zipfile
 from collections import defaultdict
 from datetime import UTC
+from hashlib import md5
 from pathlib import Path
 from urllib.parse import unquote, unquote_plus
 from zoneinfo import ZoneInfo
@@ -516,6 +518,20 @@ def canvas_course_url(course_archive_path) -> str:
     return f"https://{context_info.get('canvas_domain')}/courses/{context_info.get('course_id')}/"
 
 
+def canvas_course_folder(key: str) -> str:
+    """
+    Return the folder a canvas archive sits in, which is its canvas course id.
+
+    Args:
+        key (str): the archive's S3 key
+    Returns:
+        str: the archive's course folder
+    """
+    return (
+        key.removeprefix(settings.CANVAS_COURSE_BUCKET_PREFIX).strip("/").split("/")[0]
+    )
+
+
 def _url_config_key(item):
     """
     Get the key to look up an item from the url_config dictionary
@@ -706,3 +722,40 @@ def get_published_items(zipfile_path, url_config):
             published_items[embedded_path] = embedded
 
     return published_items
+
+
+# Export-noise carriers: Canvas rewrites these on every no-op export
+# (imsmanifest.xml embeds the export timestamp and reshuffles resources;
+# course_settings/* change bytes AND size — verified across 13 prod course
+# pairs). They are excluded from the byte digest; their semantic content
+# (publish state, titles) is covered by the publish-set component below.
+# Nothing under these paths is ever ingested as a content file (IGNORE_FILES).
+CHECKSUM_EXCLUDED = ("imsmanifest.xml", "course_settings/")
+
+
+def canvas_course_checksum(course_archive_path, url_config: dict) -> str:
+    """
+    Digest of archive content + effective publish state + url metadata.
+
+    Changes when a content member's bytes change (name/size/CRC, excluding
+    the export-noise carriers), when the published set or a display title
+    changes (publish toggles, timed lock/unlock boundaries passing), or when
+    the .metadata.json url config changes — every way a course's ingested
+    content can change. Stable across Canvas's no-op scheduled exports.
+    """
+    hasher = md5()  # noqa: S324 - non-cryptographic change detection
+    with zipfile.ZipFile(course_archive_path, "r") as course_archive:
+        for info in sorted(course_archive.infolist(), key=lambda i: i.filename):
+            if info.filename.startswith(CHECKSUM_EXCLUDED):
+                continue
+            hasher.update(f"{info.filename}\0{info.file_size}\0{info.CRC}\0".encode())
+    published = get_published_items(course_archive_path, url_config)
+    # relpath: get_published_items keys are resolve()'d against the process
+    # cwd, which must not leak into the digest
+    for path, title in sorted(
+        (os.path.relpath(path), item.get("title") or "")
+        for path, item in published.items()
+    ):
+        hasher.update(f"{path}\0{title}\0".encode())
+    hasher.update(json.dumps(url_config, sort_keys=True, default=str).encode())
+    return hasher.hexdigest()

@@ -17,6 +17,7 @@ def test_save_related_creates_profile_and_favorites_if_missing(mocker, settings)
     user.scim_id = None
     user.global_id = None
     user.id = None
+    user.unsubscribe_uuid = None
     scimUser = LearnUserAdapter(user)
     scimUser.request = RequestFactory()
     scimUser.obj.request = RequestFactory()

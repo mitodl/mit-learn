@@ -1,7 +1,8 @@
 import { env } from "@/env"
 import { ChannelCounts } from "api/v0"
 import { auth } from "./urls"
-import { redirect, usePathname, useSearchParams } from "next/navigation"
+import { redirect, usePathname } from "next/navigation"
+import { useAppSearchParams } from "./useAppSearchParams"
 
 const getSearchParamMap = (urlParams: URLSearchParams) => {
   const params: Record<string, string[] | string> = {}
@@ -62,7 +63,7 @@ const getCsrfToken = () => {
  */
 const useAuthToCurrent = () => {
   const pathname = usePathname()
-  const searchParams = useSearchParams()
+  const searchParams = useAppSearchParams()
   const current = { pathname, searchParams }
   return auth({ next: current })
 }

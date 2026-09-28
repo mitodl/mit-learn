@@ -257,8 +257,10 @@ class Command(BaseCommand):
 
         sorted_options = [
             {"label": label, "value": value}
+            # sort on value as well as label so options with duplicate labels are
+            # ordered deterministically rather than by arbitrary database row order
             for value, label in sorted(
-                deduped_options.items(), key=lambda item: item[1]
+                deduped_options.items(), key=lambda item: (item[1], item[0])
             )
         ]
 

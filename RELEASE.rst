@@ -1,6 +1,490 @@
 Release Notes
 =============
 
+Version 0.80.18
+---------------
+
+- feat(product-pages): render CMS-managed testimonials and FAQs on course and program pages (#3969)
+- Re-enable Next.js image optimization (#3983)
+
+Version 0.80.17
+---------------
+
+- fix: more design QA fixes for Organizational Learning page (#3986)
+- fix(news): escape interpolated text/attrs when extracting news summaries (#3972)
+- feat: add B2B contract learner directory page (#3958)
+- fix: align Organizational Learning page with Figma design QA (#3971)
+- feat: add hover explanation for Active learners, fix clipped month label in engagement chart (#3966)
+- Track begin-checkout analytics for enrollments (#3959)
+
+Version 0.80.15
+---------------
+
+- credential metadata task (#3950)
+- Skip unreferenced static files when ingesting edX course archives (#3942)
+- Mark the Django session cookie Secure by default (#3968)
+
+Version 0.80.14
+---------------
+
+- adding link to program letter in dashboard (#3965)
+- Update actions/deploy-pages action to v5 (#3897)
+- feat(product-pages): render CMS-managed FAQs on course and program pages (#3954)
+- feat: show a learner's own program price as an applied-savings breakdown (#3943)
+
+Version 0.80.13
+---------------
+
+- fix: updated copy and small design edits (#3949)
+- feat(learning-resources): make published website content searchable by topic (#3944)
+- Pass platform parameter to AskTim (#3956)
+- Make playlist unpublish assertion order-insensitive (#3938)
+- hybrid search - fix program boosting, add IDF modifier to sparse vectors (#3947)
+
+Version 0.80.9
+--------------
+
+- refactor: drop unused queries for the B2B organization/contract page endpoints (#3948)
+
+Version 0.80.8
+--------------
+
+- Match Canvas run ids containing slashes in tutor problem routes (#3951)
+- build: bump @mitodl/mitxonline-api-axios to 2026.9.16 (#3952)
+
+Version 0.80.7
+--------------
+
+- feat(website-content): persist the settings drawer's topic selections (#3935)
+
+Version 0.80.6
+--------------
+
+- feat: report JIT compliance dialog save failures to Sentry (#3945)
+- Surface and log HubSpot form submission errors instead of failing silently (#3919)
+- Admin controls for vector search (#3933)
+- Remove the unused UserWebsite model and API (#3941)
+
+Version 0.80.5
+--------------
+
+- fix: copy update for cta button (#3939)
+- Ingest .py canvas tutor problem files, add TutorProblemFile admin (#3930)
+- fix: copy update to hero section (#3936)
+- feat(website-content): unpublished the article and remove the news feed entry on unpublish (#3927)
+- feat: Add B2B organizational learning landing page (#3846)
+- feat: Improve B2B analytics dashboard navigation and layout (#3906)
+
+Version 0.80.2
+--------------
+
+- Only offer a run's courseware once it has started (#3925)
+- chore: refresh drf-lint baseline for ORM003-ORM006 (#3928)
+- fix(sentry): set max_request_body_size to small and scrub Postgres DETAIL rows (#3915)
+- Sanitize and render rich-text descriptions from OVS (#3879)
+- Build internal resource links from learn_url (#3885)
+- Update dependency sharp to v0.35.4 [SECURITY] (#3917)
+- Skip staff-only OLX content when ingesting edX course archives (#3909)
+- Update certificate description in Product Page CertificateTrackCard (#3924)
+
+Version 0.80.1
+--------------
+
+- Extract edX course archives with tarfile instead of shelling out to tar (#3922)
+- Generate credential metadata (#3893)
+- Fix PostHog search-term tracking (#3908)
+- fix: flaky SessionSelect test tied to today's date (#3916)
+- Return a resource's URL slug as a top-level API field (#3913)
+- Use the shared smoot-design UserMenu in Learn's header (#3907)
+- Add per-run context menus to the sibling runs accordion (#3894)
+- fix "sort by upcoming" for learning materials in search (#3886)
+
+Version 0.79.0
+--------------
+
+- Skip a podcast feed with an unparseable episode instead of aborting the run (#3892)
+- Update actions/setup-node action to v7 (#3898)
+- Run yarn zip conversion single-threaded to avoid Renovate OOM (#3904)
+- fix(docker): install chromium from trixie instead of Debian sid (#3905)
+- Migrate off the legacy MUI Grid API (prerequisite for #2770) (#3867)
+- Rename department 21M from Music and Theater Arts to Music (#3669)
+- Update actions/upload-pages-artifact action to v5 (#3899)
+- Update astral-sh/setup-uv action to v10 (#3900)
+- Update codecov/codecov-action action to v7 (#3901)
+- Update SimenB/github-actions-cpu-cores action to v3 (#3902)
+
+Version 0.78.6
+--------------
+
+- Update dependency @faker-js/faker to v10.5.0 [SECURITY] (#3896)
+- Globally Enable Hybrid Search (#3895)
+- Don't publish youtube playlists or podcasts that have no videos/episodes (#3882)
+- Bump openapi-generator v7.2.0 -> v7.25.0 and regenerate the client (#3870)
+
+Version 0.78.5
+--------------
+
+- fix(docker): force non-interactive conffile resolution for the sid chromium install (#3888)
+- Trust X-Forwarded-Proto from the API gateway (#3876)
+- fix: Make unenrolled module titles keyboard-focusable (#3871)
+- Take the canonical page URL from learn_url (#3863)
+- Bound Renovate to the service versions we actually run (#3865)
+- Add refunds to the receipt page (#3823)
+- vector search: add course metadata to context (#3852)
+- Revert "Pin chromium to 149.0.7827.196 to avoid broken 150 headless build (#3584)" (#3878)
+- Move the shared media players into page-components (#3875)
+- vector search: embedding call request hedging (#3853)
+- Update dependency youtube-transcript-api to >=1.2.4,<1.3 (#3861)
+
+Version 0.78.2 (Released September 01, 2026)
+--------------
+
+- Checkout completed and account created GTM events (#3795)
+- Unify actions/checkout on v7.0.1 (#3866)
+- Clear the a11y findings eslint-plugin-styled-components-a11y 2.2 adds (#3868)
+
+Version 0.78.1 (Released September 01, 2026)
+--------------
+
+- adding initial fix (#3872)
+- Per-product Stay Updated HubSpot form id (frontend) (#3844)
+- Update dependency tiktoken to >=0.13,<0.14 (#3860)
+- feat(b2b): render the analytics dashboard scoped to a contract (#3773)
+- fix: report the real status from handle_error instead of 405 (#3791)
+- Use the green token instead of a hardcoded hex on product pages (#3847)
+- feat: show podcast episode transcripts from the podcast:transcript tag (#3821)
+- Remove remaining API endpoint N+1 queries (#3845)
+- Update dependency drf-spectacular to >=0.30,<0.31 (#3858)
+- Update dependency ruff to v0.16.3 (#3859)
+- Submit and link each resource under one URL, from learn_url (#3843)
+- Update dependency litellm to v1.96.2 (#3857)
+- Update redis Docker tag to v8.10.0 (#2706)
+- feat(cohort-1): MicroMasters/MITx Online certificate warehouse-pull sync (#3808)
+- ci: add a ci-gate job so one required check can cover the whole suite (#3825)
+- Overridable Mutation Error Toast (#3837)
+- Show Stay Updated based only on the CMS page flag (#3841)
+- staleness penalty for vector search results (#3834)
+- Update dependency Django to v5.2.17 [SECURITY] (#3849)
+- Update dependency social-auth-app-django to v5.6.0 [SECURITY] (#3850)
+
+Version 0.77.15 (Released August 27, 2026)
+---------------
+
+- Hide course-count copy for programs made of programs (#3840)
+
+Version 0.77.14 (Released August 27, 2026)
+---------------
+
+- Add learn_url, a resource's location within Learn (#3824)
+- Query param whitelist (#3828)
+- Don't let one unreachable podcast feed abort the ETL (#3836)
+- Fix flaky payment-deadline date assertions in ProductSummary tests (#3838)
+
+Version 0.77.13 (Released August 26, 2026)
+---------------
+
+- Fix ContentFile duplicates causing MultipleObjectsReturned in ingestion (#3831)
+- Add some initial docs on gtm (#3797)
+- Update dependency @mitodl/mit-learn-api-axios to v2026.8.17 (#3810)
+- Update dependency @mitodl/smoot-design to v6.33.1 (#3811)
+- fix: point LinkedIn credential link at VerifierPlus instead of raw JSON download (#3830)
+
+Version 0.77.12 (Released August 26, 2026)
+---------------
+
+- Add department 21T (Theater Arts) (#3668)
+- Preconnect to the API and Typekit origins (#3819)
+- Add a content-engagement panel to the B2B analytics dashboard (#3806)
+
+Version 0.77.11 (Released August 25, 2026)
+---------------
+
+- fix: bump version for arithmix game (#3832)
+- vector search completeness penalty (#3805)
+- feat(cohort-1): StarRocks warehouse-pull ETL machinery (#3807)
+- Update dependency llama-index-llms-openai to >=0.7.10,<0.8 (#3826)
+- Update dependency posthog to v7 (#2765)
+- Update Django to 5.2 (#3768)
+- fix: bullet lists and mailto links in About section  (#3802)
+- Revert broken Renovate merges (#3812-#3816) (#3822)
+- Update dependency tiktoken to >=0.13,<0.14 (#3816)
+- Update dependency ruff to v0.16.2 (#3815)
+- Update dependency llama-index-llms-openai to >=0.7.10,<0.8 (#3814)
+- Update dependency litellm to v1.95.0 (#3813)
+- Update dependency drf-spectacular to >=0.30,<0.31 (#3812)
+- Update apache/apisix Docker tag to v3.17.0 (#2708)
+- Drive React Query staleTime from the CDN TTL (#3804)
+- get rid of duplicate course checks (#3803)
+- feat: add a Failed filter tab to the B2B contract admin page (#3778)
+- Clear redis cache on a schedule (#3789)
+- adding fix for hiding offeror facets in hybrid search (#3786)
+- chore(deps): mitol-django-observability 2026.3.11 -> 2026.8.19 (#3796)
+
+Version 0.77.10 (Released August 24, 2026)
+---------------
+
+- version bump for the mynumber and hacksnack games (#3798)
+- always select currently running course run for card context (#3792)
+- refactor(otel): own the OpenTelemetry setup instead of patching Sentry's (#3788)
+- Display price ranges on product pages (#3794)
+- Make apisix userinfo updates togglable (#3747)
+- make canvas etl resistant to pod culling (#3779)
+- fix(otel): continue the edge trace by extracting W3C traceparent (#3787)
+- Update Terms of Service (MicroMasters bundle, AI Tutor, date) (#3767)
+- feat(settings): change email and password via Keycloak (#3726)
+
+Version 0.77.8 (Released August 19, 2026)
+--------------
+
+- Batch the PostHog view-event loader instead of querying per event (#3785)
+- feat: Collect required compliance fields before any enrollment or checkout (#3766)
+- receipt page (#3717)
+- Allow for null course ids in webhook payload (#3776)
+- make healthcheck resistant to k8 pod culling (#3760)
+
+Version 0.77.7 (Released August 18, 2026)
+--------------
+
+- Show the game sub-nav above Arithmix (#3774)
+- chore(otel): delete a dead flag and fix a setting name that was never read (#3783)
+- Page the podcast and video sitemaps off the summary endpoint (#3759)
+- docs(otel): say plainly that the OTEL sampler is a ceiling over both destinations (#3781)
+
+Version 0.77.6 (Released August 17, 2026)
+--------------
+
+- Stream PostHog parquet in batches instead of exploding it into Series (#3780)
+
+Version 0.77.5 (Released August 17, 2026)
+--------------
+
+- constrain percolation to percolate index (#3764)
+- perf(metadata): skip the jsdom sanitize for markup-free descriptions (#3772)
+- Vector search performance enhancements (#3754)
+- Update dependency sharp to v0.35.0 [SECURITY] (#3740)
+
+Version 0.77.4 (Released August 17, 2026)
+--------------
+
+- Sitemap fix, 1 of 2: Add canonical_parent_ids and resource_type to the summary endpoint (#3758)
+- Clear featured-list caches when featured learning paths are edited (#3757)
+- Order topics deterministically in serialization queryset (#3765)
+- Update dependency cryptography to v50 [SECURITY] (#3741)
+- Update opendataloader-pdf to 2.x (#3763)
+- fix: Cards only link to canonical URLs (#3745)
+- fix: bump the hacksnack game version (#3762)
+- fix: add navbar for games (#3744)
+- fix(content_feedback): prevent anonymous rate-limit bypass via spoofed X-Forwarded-For (#3751)
+- Bump cipher-base from 1.0.4 to 1.0.7 (#3755)
+- Bump protobufjs from 7.5.4 to 7.6.5 (#3731)
+- refactor youtube etl (#3739)
+- passing canvas_course_ids to scheduled celery task (#3749)
+- Bump pbkdf2 from 3.1.2 to 3.1.6 (#3732)
+- Feat: Show email delivery status on ContractAdminPage seat table (#3733)
+- Isolate per-file extraction failures in canvas and edX content syncs (#3753)
+- prevent request forgery (#3743)
+- Update @mitodl/mitxonline-api-axios to 2026.8.6 (#3734)
+
+Version 0.77.3 (Released August 13, 2026)
+--------------
+
+- fix broken images in subscription emails (#3737)
+- Fix: render podcast show descriptions as HTML instead of raw markup (#3721)
+- feat(content_feedback): allow anonymous submissions (#3738)
+- Fix Canvas archive change detection: deterministic checksum, save after load (#3728)
+- Skip unchanged edX course archives before downloading from S3 (#3722)
+- remove GITHUB_ACCESS_TOKEN (#3730)
+- Fix: HTML leaking into meta description tags (#3727)
+- Make recreate index resilient to pod culling (#3716)
+- Fix PostHog view-event ETL crash from duplicate view events (#3714)
+- Use CMS Certificate Title for program LinkedIn "Add to Profile" (#3518)
+- Harden GH Actions supply chain: add zizmor static analysis + 7-day dependency cool-down (#3712)
+
+Version 0.77.2 (Released August 10, 2026)
+--------------
+
+- Fix flaky url-matching tests with unique factory urls (#3724)
+- Add course code to learning resource embedding context (#3700)
+- Sort learning resources by denormalized view_count instead of live Count() (#3711)
+- refactor: V1 — Clean up and de-duplicate the VideoPlaylistCollectionPage folder (#3706)
+- added a fallback to populate run readable ids for contentfiles withou… (#3719)
+- Include facets from urls in channel pages (#3695)
+- mitxonline course numbers (#3703)
+
+Version 0.77.1 (Released August 05, 2026)
+--------------
+
+- serializer performance - cache/re-use child serializer (#3713)
+- feat: soft delete feature for news and articles content (#3681)
+- Add trackFilterCourseCatalog GTM event (#3707)
+- Rate-limit content_feedback submissions per user (#3705)
+- Use psycopg's C implementation; drop unused psycopg2 and django-server-status (#3701)
+
+Version 0.76.2 (Released August 03, 2026)
+--------------
+
+- fix hidden cta on product pages when the window is too short (#3704)
+- test: pin course-run end dates so session options stay unambiguous (#3697)
+- Readd dropped GTM calls (#3696)
+- feat(b2b): org analytics dashboard for the manager surface (#3679)
+- Fix flaky test:  deterministically sort  choices (#3689)
+- Defer AI library imports to reduce process startup cost (#3683)
+- add ocw topic to search (#3692)
+- Identify posthog persons by keycloak global_id, not django pk (#3693)
+- Fix oasdiff comment for large diffs (#3694)
+- fix garbled non-Latin characters in certificate PDFs (#3685)
+- fix: Show error message when a podcast episode fails to play (#3687)
+- Strip trailing slash from channel_url (#3691)
+
+Version 0.76.0 (Released July 29, 2026)
+--------------
+
+- Fix topic page pagination (#3682)
+- Followup to #3646: skip contentless files in embed pre-pass, retry Qdrant blips, purge before embed (#3684)
+- Slim learning resource API payloads and cache rendered JSON (#3675)
+- one click upgrade for courses in verified program enrollments (#3671)
+- Update dependency social-auth-app-django to v5.6.0 [SECURITY] (#3642)
+- fix: Autocomplete chip overflow on learning path form (bump smoot-design) (#3676)
+- Set Posthog Cookie on site domain, not mit.edu (#3680)
+- fix: Remove course enrollment from cache on unenroll for instant UI update (#3674)
+- feat: expose keycloak global_id on the users/me serializer (#3666)
+- Delete micromasters resources and remove ETLSource constant (#3670)
+- Skip embedding tasks and Qdrant writes for unchanged content files (#3646)
+- Fix embeddings healthcheck missing-summaries filter in _missing_summaries (#3686)
+- Add acks_late to ETL tasks killed by worker autoscaling scale-downs (#3678)
+- fix: Flaky JS test: ProgramAsCoursePage 'Enroll CTA posts program enrollment' times out on Loading button (#3672)
+- Switch cache config to use REDIS_URL as intended (#3648)
+
+Version 0.75.5 (Released July 27, 2026)
+--------------
+
+- fix: add check for stay updated button on product pages and fix the buttons alignment  (#3658)
+- fix: News pages should show publication date not creation date and hover state for featured podcasts (#3651)
+- Remove micromasters ETL (#3663)
+- Add one-click unsubscribe to emails (#3637)
+
+Version 0.75.4 (Released July 23, 2026)
+--------------
+
+- fix: News, Articles, Django admin pages don't load on production (#3657)
+
+Version 0.75.3 (Released July 23, 2026)
+--------------
+
+- facets from url (#3655)
+- Only re-embed a run's content files when it is actually republished (#3662)
+- multiple enrollment display updates (#3650)
+
+Version 0.75.2 (Released July 22, 2026)
+--------------
+
+- Add unsubscribe API (#3636)
+
+Version 0.75.1 (Released July 22, 2026)
+--------------
+
+- display programs without display_mode set on the program dashboard (#3656)
+- Sanitize LLM-generated summaries/flashcards before saving ContentFile (#3629)
+- feat: improve CSV export UX auto-dismiss success alert (#3652)
+- index content files for programs (#3621)
+- fix: block meta-externalads/1.1 crawler in robots.txt (#3653)
+- fix: emit OpenTelemetry HTTP server spans under ASGI (#3641)
+- refactor: Extract a PodcastPageShell for shared player/breadcrumb wiring  and Extract a shared audio engine from the two podcast players (#3628)
+
+Version 0.75.0 (Released July 21, 2026)
+--------------
+
+- fix: raise SCAN COUNT in clear_views_cache to cut Redis scan time + clear cache less often during website_content requests (#3634)
+- fix: preserve links in podcast episode descriptions (#3612)
+- Expire orphaned Celery event queues in Redis (#3644)
+- Preserve run.checksum when unpublishing runs during ETL prune (#3643)
+- Capitalize foreign language name clean (#3633)
+- feat: add content feedback model and submission endpoint (#3593)
+- Bound Celery result retention to reduce mitlearn Redis memory pressure (#3625)
+- fix: Align B2B admin dashboard copy across seat assignment, confirm modal, and row actions (#3630)
+- dashboard card mobile design improvements (#3626)
+- show textbooks (#3618)
+- fix: ensure earlier env vars loading to avoid blank error page (#3614)
+- Don't send non-transactional emails when opted out (#3615)
+
+Version 0.74.3 (Released July 20, 2026)
+--------------
+
+- improve vector search endpoint performance  (#3610)
+- fix: Centralize podcast duration/audio/parent logic through helpers, remove moment from pages and Consolidate duplicated podcast styled components (#3616)
+- Pin asyncapi to a non-compromised version. (#3613)
+- chore: Include sourcemaps for the nextjs server in our docker image (#3620)
+
+Version 0.74.2 (Released July 16, 2026)
+--------------
+
+- Add learning material content to embeddings context (#3607)
+- Sort dateless runs without crashing embeddings (#3605)
+- Filter out certain edx_module_ids from queries, log others if missing (#3609)
+- fix: Reconcile inconsistent parent podcast title resolution used by the podcast audio player (#3601)
+- Update dependency ruff to v0.15.16 (#3498)
+- [pre-commit.ci] pre-commit autoupdate (#3444)
+- add a "tie breaker" if all enrollments have no certificate or grade (#3599)
+
+Version 0.74.1 (Released July 14, 2026)
+--------------
+
+- fix: link styling in CMS rich text and News/Article content (#3591)
+- Cache course blocklist in Redis to avoid GitHub rate limits (#3594)
+- fix: let keyboard users skip resource carousels via a reusable skip link (#3577)
+- Program Infobox Updates (#3589)
+
+Version 0.74.0 (Released July 13, 2026)
+--------------
+
+- feat: Podcasts Listing Page (#3576)
+- Route content archive ingestion tasks to the edx_content queue (#3602)
+- Retry generate_embeddings on gRPC UNAVAILABLE with minutes-scale backoff (#3595)
+- Scrape child courses before programs and fix missing child course sections (#3580)
+- Ensure remove_qdrant_records includes platform code when deleting points from qdrant   (#3582)
+- Ignore POM micromasters programs (#3597)
+- bump smoot-design (#3600)
+- fix: Disable failing test until new release workflow takes over
+- Sync pyproject.toml version with settings.py VERSION (0.73.4) (#3604)
+- Configure bump-my-version for Concourse release pipeline (#3220)
+
+Version 0.73.6 (Released July 13, 2026)
+--------------
+
+- desktop dashboard design updates (#3578)
+- chore: Remove temporary seat-cap gate on B2B Manage button (#3587)
+- Fix: header stat counts not updating after bulk-assign or revoke on Contract Admin page #3581
+- Mitxonline ETL: switch to consuming internal courses endpoint (#3543)
+
+Version 0.73.4 (Released July 08, 2026)
+--------------
+
+- Fix embedding summarizer task when overwrite=True (#3585)
+- Pin chromium to 149.0.7827.196 to avoid broken 150 headless build (#3584)
+- Fix embeddings task oom thrashing (#3561)
+
+Version 0.73.2 (Released July 08, 2026)
+--------------
+
+- fix: handle no-max-learners contracts in B2B seat assignment UI (#3564)
+- feat: local-dev Docker targets and granian kill timeout (#3579)
+- fix: changing the positions of share feature on videos and podcasts episode (#3540)
+- Bound program marketing-page embedding input to avoid token overflow (#3562)
+- fix(vector-search): relax qdrant-client pin to allow 1.18.x patches (#3546)
+- feat: Add "Send Test Email to Me" to the seat assignment confirmation modal (#3558)
+- Upgrade django-health-check from pinned git commit to PyPI 3.24.0 (#3556)
+
+Version 0.73.1 (Released July 07, 2026)
+--------------
+
+- multiple enrollment display (#3534)
+- add upgraded banner (#3550)
+- Add posthog enrollment_cta_clicked event with enrollment-specific data (#3542)
+- Updated InfoBox for Course Product Pages (#3523)
+- hacksnack postinstall (#3555)
+- Make the Profile.email_optin field writable (#3552)
+- hacksnack game (#3489)
+
 Version 0.72.3 (Released July 01, 2026)
 --------------
 

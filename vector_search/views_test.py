@@ -14,8 +14,19 @@ from learning_resources.factories import (
     LearningResourceFactory,
     LearningResourceRunFactory,
 )
+from learning_resources_search.serializers import serialize_bulk_learning_resources
+from vector_search.constants import (
+    COMPLETENESS_PAYLOAD_KEY,
+    CONTENT_FILES_RETRIEVE_PAYLOAD,
+    RESOURCE_AGE_DATE_PAYLOAD_KEY,
+    RESOURCES_COLLECTION_NAME,
+    RESOURCES_PAYLOAD_EXCLUDE,
+    RESOURCES_RETRIEVE_PAYLOAD,
+    SECONDS_PER_YEAR,
+)
 from vector_search.encoders.utils import dense_encoder, sparse_encoder
-from vector_search.views import QdrantView
+from vector_search.utils import custom_score_formula, score_formula_query
+from vector_search.views import QdrantView, _relative_score_floor
 
 
 @pytest.fixture
@@ -158,6 +169,7 @@ def test_vector_search_filters_empty_query(mocker, client):
     )
 
 
+@pytest.mark.django_db(transaction=True)
 @pytest.mark.parametrize(
     "user_role",
     [
@@ -188,7 +200,7 @@ def test_content_file_vector_search_filters(
         "offered_by": ["ocw"],
         "platform": ["edx"],
         "key": ["testfilename.pdf"],
-        "edx_module_id": ["test_module_id"],
+        "edx_module_id": ["block-v1:MITx+6.00x+2T2020+type@problem+block@abc"],
         "course_number": ["test"],
         "content_feature_type": ["test_feature"],
         "run_readable_id": ["test_run_id"],
@@ -222,7 +234,10 @@ def test_content_file_vector_search_filters(
                     key="platform.code", match=models.MatchAny(any=["edx"])
                 ),
                 models.FieldCondition(
-                    key="edx_module_id", match=models.MatchAny(any=["test_module_id"])
+                    key="edx_module_id",
+                    match=models.MatchAny(
+                        any=["block-v1:MITx+6.00x+2T2020+type@problem+block@abc"]
+                    ),
                 ),
                 models.FieldCondition(
                     key="run_readable_id", match=models.MatchAny(any=["test_run_id"])
@@ -248,6 +263,7 @@ def test_content_file_vector_search_filters(
             )
 
 
+@pytest.mark.django_db(transaction=True)
 def test_content_file_vector_search_filters_empty_query(
     mocker, client, django_user_model
 ):
@@ -269,7 +285,7 @@ def test_content_file_vector_search_filters_empty_query(
         "offered_by": ["ocw"],
         "platform": ["edx"],
         "key": ["testfilename.pdf"],
-        "edx_module_id": ["test_module_id"],
+        "edx_module_id": ["block-v1:MITx+6.00x+2T2020+type@problem+block@abc"],
         "course_number": ["test"],
         "content_feature_type": ["test_feature"],
         "run_readable_id": ["test_run_id"],
@@ -292,7 +308,10 @@ def test_content_file_vector_search_filters_empty_query(
                 key="platform.code", match=models.MatchAny(any=["edx"])
             ),
             models.FieldCondition(
-                key="edx_module_id", match=models.MatchAny(any=["test_module_id"])
+                key="edx_module_id",
+                match=models.MatchAny(
+                    any=["block-v1:MITx+6.00x+2T2020+type@problem+block@abc"]
+                ),
             ),
             models.FieldCondition(
                 key="run_readable_id", match=models.MatchAny(any=["test_run_id"])
@@ -305,6 +324,7 @@ def test_content_file_vector_search_filters_empty_query(
     )
 
 
+@pytest.mark.django_db(transaction=True)
 def test_content_file_vector_search_filters_custom_collection(
     mocker, client, django_user_model
 ):
@@ -351,6 +371,7 @@ def test_content_file_vector_search_filters_custom_collection(
     )
 
 
+@pytest.mark.django_db(transaction=True)
 def test_content_file_vector_search_group_parameters(mocker, client, django_user_model):
     """Test content file vector search uses custom collection if specified"""
 
@@ -498,6 +519,142 @@ def test_vector_search_sortby_parameter(  # noqa: PLR0913
                 assert call_kwargs["order_by"].direction == models.Direction.DESC
             else:
                 assert call_kwargs["order_by"].direction == models.Direction.ASC
+
+
+@pytest.mark.parametrize("hybrid_search", [True, False])
+def test_vector_search_nullable_sortby_keeps_results(mocker, client, hybrid_search):
+    """
+    Ordering by next_start_date goes through a formula: Qdrant's order_by would
+    drop every resource without an upcoming run -- every learning material, and
+    most courses -- instead of ordering them last.
+    """
+    mock_qdrant = mocker.patch(
+        "qdrant_client.AsyncQdrantClient", return_value=mocker.AsyncMock()
+    )()
+    mock_qdrant.query_points = mocker.AsyncMock()
+    mock_qdrant.count = mocker.AsyncMock(return_value=CountResult(count=10))
+    mocker.patch(
+        "vector_search.views.async_qdrant_client",
+        return_value=mock_qdrant,
+    )
+
+    view = QdrantView()
+    asyncio.run(
+        view.async_vector_search(
+            "test",
+            {"q": "test", "sortby": "next_start_date"},
+            order_by="next_start_date",
+            hybrid_search=hybrid_search,
+        )
+    )
+
+    query = mock_qdrant.query_points.mock_calls[0].kwargs["query"]
+    assert isinstance(query, models.FormulaQuery)
+    assert list(query.defaults) == ["next_start_date"]
+
+
+def _scroll_page_mock(mocker, dated, undated):
+    """
+    Build an async client whose ordered scroll returns `dated` points and
+    whose is_empty scroll returns `undated`, each labelled by readable_id.
+    """
+    mock_qdrant = mocker.patch(
+        "qdrant_client.AsyncQdrantClient", return_value=mocker.AsyncMock()
+    )()
+    mock_qdrant.scroll = mocker.AsyncMock(
+        side_effect=[
+            (
+                [
+                    mocker.MagicMock(payload={"readable_id": f"dated-{index}"})
+                    for index in range(dated)
+                ],
+                None,
+            ),
+            (
+                [
+                    mocker.MagicMock(payload={"readable_id": f"undated-{index}"})
+                    for index in range(undated)
+                ],
+                None,
+            ),
+        ]
+    )
+    mock_qdrant.count = mocker.AsyncMock(return_value=CountResult(count=10))
+    mocker.patch(
+        "vector_search.views.async_qdrant_client",
+        return_value=mock_qdrant,
+    )
+    return mock_qdrant
+
+
+@pytest.mark.parametrize(
+    ("sortby", "expected_scrolls"),
+    [
+        # nothing to rank an unqueried scroll by, so the points order_by leaves
+        # out are appended in a second scroll
+        ("next_start_date", 2),
+        # on every payload -- order_by leaves nothing out
+        ("-created_on", 1),
+    ],
+)
+def test_vector_search_nullable_sortby_scroll(mocker, client, sortby, expected_scrolls):
+    """An ordered scroll is topped up with the points it cannot order"""
+    mock_qdrant = _scroll_page_mock(mocker, dated=1, undated=1)
+
+    view = QdrantView()
+    results = asyncio.run(
+        view.async_vector_search(
+            "", {"sortby": sortby}, order_by=sortby, limit=20, offset=0
+        )
+    )
+
+    assert len(mock_qdrant.scroll.mock_calls) == expected_scrolls
+    if expected_scrolls == 1:
+        assert [hit["readable_id"] for hit in results["hits"]] == ["dated-0"]
+        return
+
+    assert [hit["readable_id"] for hit in results["hits"]] == ["dated-0", "undated-0"]
+    call_kwargs = mock_qdrant.scroll.mock_calls[1].kwargs
+    # only the rest of the requested window is left to fill
+    assert call_kwargs["limit"] == 19
+    assert call_kwargs["order_by"] == models.OrderBy(
+        key="created_on", direction=models.Direction.DESC
+    )
+    assert (
+        models.IsEmptyCondition(is_empty=models.PayloadField(key="next_start_date"))
+        in call_kwargs["scroll_filter"].must
+    )
+
+
+@pytest.mark.parametrize(
+    ("offset", "limit", "expected"),
+    [
+        # wholly inside the ordered points
+        (0, 2, ["dated-0", "dated-1"]),
+        # straddling the join, so the slice has to count the appended tail
+        (2, 2, ["dated-2", "undated-0"]),
+        # wholly inside the tail
+        (4, 2, ["undated-1", "undated-2"]),
+    ],
+)
+def test_vector_search_nullable_sortby_scroll_pages(
+    mocker, client, offset, limit, expected
+):
+    """The topped-up scroll is sliced as one ordered set, tail included"""
+    _scroll_page_mock(mocker, dated=3, undated=3)
+
+    view = QdrantView()
+    results = asyncio.run(
+        view.async_vector_search(
+            "",
+            {"sortby": "next_start_date"},
+            order_by="next_start_date",
+            limit=limit,
+            offset=offset,
+        )
+    )
+
+    assert [hit["readable_id"] for hit in results["hits"]] == expected
 
 
 def test_vector_search_sortby_pagination(mocker, client):
@@ -693,6 +850,7 @@ def test_async_vector_resource_counts_aggregation_buckets():
     assert free_buckets == {"true": 2, "false": 1}
 
 
+@pytest.mark.django_db(transaction=True)
 def test_vector_search_no_score_cutoff_omits_score_threshold(
     mocker, client, django_user_model
 ):
@@ -737,12 +895,12 @@ def test_vector_search_sortby_with_score_cutoff_manually_sorted(mocker, client):
     )()
 
     mock_result = mocker.MagicMock()
-    mock_point_1 = mocker.MagicMock()
-    mock_point_1.payload = {"readable_id": "course-1"}
-    mock_point_2 = mocker.MagicMock()
-    mock_point_2.payload = {"readable_id": "course-2"}
-    mock_point_3 = mocker.MagicMock()
-    mock_point_3.payload = {"readable_id": "course-3"}
+    mock_point_1 = mocker.MagicMock(score=0.6)
+    mock_point_1.payload = {"readable_id": "course-1", "views": 100}
+    mock_point_2 = mocker.MagicMock(score=0.55)
+    mock_point_2.payload = {"readable_id": "course-2", "views": 50}
+    mock_point_3 = mocker.MagicMock(score=0.5)
+    mock_point_3.payload = {"readable_id": "course-3", "views": 200}
 
     mock_result.points = [mock_point_1, mock_point_2, mock_point_3]
     mock_qdrant.query_points = mocker.AsyncMock(return_value=mock_result)
@@ -750,16 +908,6 @@ def test_vector_search_sortby_with_score_cutoff_manually_sorted(mocker, client):
     mocker.patch(
         "vector_search.views.async_qdrant_client",
         return_value=mock_qdrant,
-    )
-
-    mock_hits = [
-        {"readable_id": "course-1", "views": 100},
-        {"readable_id": "course-2", "views": 50},
-        {"readable_id": "course-3", "views": 200},
-    ]
-    mocker.patch(
-        "vector_search.views._resource_vector_hits",
-        return_value=mock_hits,
     )
 
     # Test descending sort: sortby=-views
@@ -828,7 +976,523 @@ def test_vector_search_with_score_cutoff_enforces_min_score(
     if hybrid_search:
         assert call_kwargs["score_threshold"] == settings.HYBRID_VECTOR_SEARCH_MIN_SCORE
     else:
-        assert call_kwargs["score_threshold"] == settings.DENSE_VECTOR_SEARCH_MIN_SCORE
+        # Dense search rescores a prefetch with the score formula, so the cutoff
+        # sits on the prefetch and keeps applying to the raw similarity score.
+        assert "score_threshold" not in call_kwargs
+        assert (
+            call_kwargs["prefetch"].score_threshold
+            == settings.DENSE_VECTOR_SEARCH_MIN_SCORE
+        )
+
+
+def _penalty(formula_query):
+    """Pull the trailing penalty term out of a resource score formula."""
+    return formula_query.formula.sum[-1]
+
+
+def _penalty_weight(expression):
+    """Return the weight a penalty term multiplies by."""
+    return expression.neg.mult[0]
+
+
+def _penalty_decay(expression):
+    """
+    Return the decay inside a penalty's age ramp. Located by type, so
+    assertions ignore what else the product carries.
+    """
+    [ramp] = [
+        factor
+        for factor in expression.neg.mult
+        if isinstance(factor, models.SumExpression)
+    ]
+    return ramp.sum[1].neg
+
+
+def _formula_queries(call_kwargs, hybrid_search):
+    """Return the score formulas a query_points call rescores with, by arm."""
+    if hybrid_search:
+        # One rescored prefetch per vector arm, fused afterwards
+        assert isinstance(call_kwargs["query"], models.FusionQuery)
+        arms = {}
+        for prefetch in call_kwargs["prefetch"]:
+            [vector_prefetch] = prefetch.prefetch
+            arm = (
+                "dense"
+                if vector_prefetch.using == dense_encoder().model_short_name()
+                else "sparse"
+            )
+            arms[arm] = prefetch.query
+        assert sorted(arms) == ["dense", "sparse"]
+        return arms
+    assert call_kwargs["prefetch"].using == dense_encoder().model_short_name()
+    return {"dense": call_kwargs["query"]}
+
+
+@pytest.mark.parametrize("hybrid_search", [True, False])
+def test_vector_search_applies_completeness_penalty(
+    mocker, client, settings, hybrid_search
+):
+    """Both modes apply the completeness penalty, on the dense arm only."""
+    settings.VECTOR_SEARCH_INCOMPLETENESS_PENALTY_WEIGHT = 0.05
+    settings.VECTOR_SEARCH_STALENESS_PENALTY_WEIGHT = 0
+
+    mock_qdrant = mocker.patch(
+        "qdrant_client.AsyncQdrantClient", return_value=mocker.AsyncMock()
+    )()
+    mock_result = mocker.MagicMock()
+    mock_result.points = []
+    mock_qdrant.query_points = mocker.AsyncMock(return_value=mock_result)
+    mock_qdrant.scroll = mocker.AsyncMock(return_value=([], None))
+    mocker.patch("vector_search.views.async_qdrant_client", return_value=mock_qdrant)
+
+    client.get(
+        reverse("vector_search:v0:vector_learning_resources_search"),
+        data={"q": "test", "hybrid_search": hybrid_search},
+    )
+
+    call_kwargs = mock_qdrant.query_points.mock_calls[0].kwargs
+    expected_penalty = _penalty(score_formula_query(RESOURCES_COLLECTION_NAME))
+    formula_queries = _formula_queries(call_kwargs, hybrid_search)
+
+    dense_formula_query = formula_queries["dense"]
+    assert isinstance(dense_formula_query, models.FormulaQuery)
+    assert dense_formula_query.defaults == {COMPLETENESS_PAYLOAD_KEY: 1.0}
+    assert _penalty(dense_formula_query) == expected_penalty
+
+
+@pytest.mark.parametrize("hybrid_search", [True, False])
+def test_vector_search_applies_staleness_penalty(
+    mocker, client, settings, hybrid_search
+):
+    """Both modes apply the staleness penalty, on the dense arm only."""
+    settings.VECTOR_SEARCH_INCOMPLETENESS_PENALTY_WEIGHT = 0
+    settings.VECTOR_SEARCH_STALENESS_PENALTY_WEIGHT = 0.05
+
+    mock_qdrant = mocker.patch(
+        "qdrant_client.AsyncQdrantClient", return_value=mocker.AsyncMock()
+    )()
+    mock_result = mocker.MagicMock()
+    mock_result.points = []
+    mock_qdrant.query_points = mocker.AsyncMock(return_value=mock_result)
+    mock_qdrant.scroll = mocker.AsyncMock(return_value=([], None))
+    mocker.patch("vector_search.views.async_qdrant_client", return_value=mock_qdrant)
+
+    client.get(
+        reverse("vector_search:v0:vector_learning_resources_search"),
+        data={"q": "test", "hybrid_search": hybrid_search},
+    )
+
+    formula_queries = _formula_queries(
+        mock_qdrant.query_points.mock_calls[0].kwargs, hybrid_search
+    )
+
+    dense_formula_query = formula_queries["dense"]
+    assert isinstance(dense_formula_query, models.FormulaQuery)
+    # resources with no age date -- those with an upcoming run -- are scored
+    # as if published at query time, so they take no penalty
+    assert list(dense_formula_query.defaults) == [RESOURCE_AGE_DATE_PAYLOAD_KEY]
+    staleness = _penalty(dense_formula_query)
+    assert _penalty_weight(staleness) == settings.VECTOR_SEARCH_STALENESS_PENALTY_WEIGHT
+    decay = _penalty_decay(staleness).lin_decay
+    assert decay.x.datetime_key == RESOURCE_AGE_DATE_PAYLOAD_KEY
+    # half the horizon at the default midpoint -- see
+    # staleness_penalty_expression, which cannot use a midpoint of 0
+    assert decay.scale == (
+        settings.VECTOR_SEARCH_STALENESS_HORIZON_YEARS * SECONDS_PER_YEAR / 2
+    )
+    assert decay.midpoint == 0.5
+
+
+def test_hybrid_vector_search_penalizes_only_the_dense_arm(mocker, client, settings):
+    """
+    The penalties' weights are set against the dense arm's bounded scores, so
+    they are left off the BM25-scored sparse arm. The boosts go on both.
+    """
+    settings.VECTOR_SEARCH_INCOMPLETENESS_PENALTY_WEIGHT = 0.05
+    settings.VECTOR_SEARCH_STALENESS_PENALTY_WEIGHT = 0.05
+
+    mock_qdrant = mocker.patch(
+        "qdrant_client.AsyncQdrantClient", return_value=mocker.AsyncMock()
+    )()
+    mock_result = mocker.MagicMock()
+    mock_result.points = []
+    mock_qdrant.query_points = mocker.AsyncMock(return_value=mock_result)
+    mock_qdrant.scroll = mocker.AsyncMock(return_value=([], None))
+    mocker.patch("vector_search.views.async_qdrant_client", return_value=mock_qdrant)
+
+    client.get(
+        reverse("vector_search:v0:vector_learning_resources_search"),
+        data={"q": "test", "hybrid_search": True},
+    )
+
+    formula_queries = _formula_queries(
+        mock_qdrant.query_points.mock_calls[0].kwargs, hybrid_search=True
+    )
+    boosts = custom_score_formula(RESOURCES_COLLECTION_NAME)
+    assert boosts
+
+    sparse_formula_query = formula_queries["sparse"]
+    assert sparse_formula_query.formula.sum == ["$score", *boosts]
+    # no payload defaults either, since only the penalties need them
+    assert not sparse_formula_query.defaults
+
+    dense_formula_query = formula_queries["dense"]
+    dense_terms = dense_formula_query.formula.sum
+    assert dense_terms[: 1 + len(boosts)] == ["$score", *boosts]
+    penalties = dense_terms[1 + len(boosts) :]
+    assert len(penalties) == 2
+    assert all(isinstance(penalty, models.NegExpression) for penalty in penalties)
+
+
+def _scored(*scores):
+    """Score-ordered stand-ins for Qdrant ScoredPoints."""
+    return [models.ScoredPoint(id=i, version=0, score=s) for i, s in enumerate(scores)]
+
+
+@pytest.fixture
+def _no_min_candidates(settings):
+    """Turn off the minimum-candidates exemption, to test the ratio alone."""
+    settings.VECTOR_SEARCH_MIN_CANDIDATES = 0
+
+
+@pytest.mark.usefixtures("_no_min_candidates")
+def test_relative_score_floor_trims_to_the_best_hit(settings):
+    """Hits far below the query's best hit are dropped."""
+    settings.DENSE_VECTOR_SEARCH_MIN_SCORE_RATIO = 0.8
+
+    kept = _relative_score_floor(
+        _scored(0.51, 0.48, 0.43, 0.2), hybrid_search_enabled=False
+    )
+
+    # 0.8 * 0.51 = 0.408
+    assert [point.score for point in kept] == [0.51, 0.48, 0.43]
+
+
+@pytest.mark.usefixtures("_no_min_candidates")
+@pytest.mark.parametrize("scale", [0.02, 1, 50])
+def test_relative_score_floor_keeps_the_same_count_at_any_scale(settings, scale):
+    """
+    How many hits survive depends on how fast relevance falls off within the
+    query, not where its scores sit -- the ~50x swing an absolute floor gave.
+    """
+    settings.DENSE_VECTOR_SEARCH_MIN_SCORE_RATIO = 0.8
+    shape = [1.0, 0.95, 0.9, 0.85, 0.7, 0.4]
+
+    kept = _relative_score_floor(
+        _scored(*[score * scale for score in shape]), hybrid_search_enabled=False
+    )
+
+    assert len(kept) == 4
+
+
+@pytest.mark.usefixtures("_no_min_candidates")
+@pytest.mark.parametrize("ratio", [0.1, 0.8, 0.99, 1.0])
+def test_relative_score_floor_never_empties_a_result_set(settings, ratio):
+    """
+    The best hit always clears a floor derived from itself, so a query that
+    matched anything cannot come back empty -- the q="dance" direction.
+    """
+    settings.DENSE_VECTOR_SEARCH_MIN_SCORE_RATIO = ratio
+
+    kept = _relative_score_floor(_scored(0.28, 0.27, 0.05), hybrid_search_enabled=False)
+
+    assert kept
+    assert kept[0].score == 0.28
+
+
+def test_relative_score_floor_keeps_a_minimum_of_candidates(settings):
+    """A query with one standout hit still returns a usable page."""
+    settings.DENSE_VECTOR_SEARCH_MIN_SCORE_RATIO = 0.8
+    settings.VECTOR_SEARCH_MIN_CANDIDATES = 3
+
+    kept = _relative_score_floor(
+        _scored(0.9, 0.3, 0.29, 0.28), hybrid_search_enabled=False
+    )
+
+    assert [point.score for point in kept] == [0.9, 0.3, 0.29]
+
+
+@pytest.mark.usefixtures("_no_min_candidates")
+def test_relative_score_floor_uses_the_ratio_for_the_search_mode(settings):
+    """Fused scores are on their own scale and get their own ratio."""
+    settings.DENSE_VECTOR_SEARCH_MIN_SCORE_RATIO = 0.8
+    settings.HYBRID_VECTOR_SEARCH_MIN_SCORE_RATIO = 0.1
+    points = _scored(1.0, 0.5, 0.2, 0.05)
+
+    assert len(_relative_score_floor(points, hybrid_search_enabled=False)) == 1
+    assert len(_relative_score_floor(points, hybrid_search_enabled=True)) == 3
+
+
+@pytest.mark.usefixtures("_no_min_candidates")
+def test_relative_score_floor_ratio_override(settings):
+    """A request can replace the configured ratio, so it can be swept."""
+    settings.DENSE_VECTOR_SEARCH_MIN_SCORE_RATIO = 0.8
+    points = _scored(1.0, 0.5, 0.2, 0.05)
+
+    assert len(_relative_score_floor(points, hybrid_search_enabled=False)) == 1
+    kept = _relative_score_floor(
+        points, hybrid_search_enabled=False, ratio_override=0.1
+    )
+    assert [point.score for point in kept] == [1.0, 0.5, 0.2]
+    # 0 disables the cutoff rather than falling back to the setting
+    assert (
+        _relative_score_floor(points, hybrid_search_enabled=False, ratio_override=0)
+        == points
+    )
+
+
+@pytest.mark.usefixtures("_no_min_candidates")
+def test_vector_search_score_cutoff_ratio_parameter(mocker, client, settings):
+    """The relative cutoff is overridable per request, like the weights are."""
+    settings.DENSE_VECTOR_SEARCH_MIN_SCORE_RATIO = 0.8
+
+    mock_qdrant = mocker.patch(
+        "qdrant_client.AsyncQdrantClient", return_value=mocker.AsyncMock()
+    )()
+    mock_result = mocker.MagicMock()
+    mock_result.points = _scored(1.0, 0.5, 0.2, 0.05)
+    mock_qdrant.query_points = mocker.AsyncMock(return_value=mock_result)
+    mock_qdrant.count = mocker.AsyncMock(return_value=mocker.MagicMock(count=4))
+    mocker.patch("vector_search.views.async_qdrant_client", return_value=mock_qdrant)
+    floor = mocker.patch(
+        "vector_search.views._relative_score_floor",
+        side_effect=lambda points, *_args, **_kwargs: points,
+    )
+
+    client.get(
+        reverse("vector_search:v0:vector_learning_resources_search"),
+        data={"q": "test", "hybrid_search": False, "score_cutoff_ratio": 0.1},
+    )
+
+    assert floor.mock_calls[0].kwargs["ratio_override"] == 0.1
+
+
+def test_relative_score_floor_leaves_negative_scores_alone(settings):
+    """A fraction of a negative best score is above it, trimming the best hit."""
+    settings.DENSE_VECTOR_SEARCH_MIN_SCORE_RATIO = 0.8
+    points = _scored(-0.01, -0.02, -0.5)
+
+    assert _relative_score_floor(points, hybrid_search_enabled=False) == points
+
+
+def test_relative_score_floor_disabled_by_a_zero_ratio(settings):
+    """A ratio of 0 leaves the result set as retrieved."""
+    settings.DENSE_VECTOR_SEARCH_MIN_SCORE_RATIO = 0
+    points = _scored(0.9, 0.1, 0.01)
+
+    assert _relative_score_floor(points, hybrid_search_enabled=False) == points
+
+
+@pytest.mark.usefixtures("_no_min_candidates")
+def test_async_vector_search_relative_score_floor_scoping(mocker, settings):
+    """
+    Verify relative_score_floor applies to unpaginated resource search
+    (with score_cutoff) but does not apply to paginated searches (score_cutoff=None).
+    """
+    settings.DENSE_VECTOR_SEARCH_MIN_SCORE_RATIO = 0.8
+
+    mock_qdrant = mocker.patch(
+        "vector_search.views.async_qdrant_client", return_value=mocker.AsyncMock()
+    )()
+    points = _scored(1.0, 0.9, 0.5, 0.2)
+    mock_result = mocker.MagicMock()
+    mock_result.points = points
+    mock_qdrant.query_points = mocker.AsyncMock(return_value=mock_result)
+    mock_qdrant.count = mocker.AsyncMock(
+        return_value=mocker.MagicMock(count=len(points))
+    )
+
+    mocker.patch(
+        "vector_search.views._resource_payload_hits", side_effect=lambda pts: pts
+    )
+    mocker.patch(
+        "vector_search.views._content_file_vector_hits", side_effect=lambda pts: pts
+    )
+
+    view = QdrantView()
+
+    res_resource = asyncio.run(
+        view.async_vector_search(
+            "query", params={}, score_cutoff=0.0, hybrid_search=False
+        )
+    )
+    assert [p.score for p in res_resource["hits"]] == [1.0, 0.9]
+
+    res_paginated = asyncio.run(
+        view.async_vector_search(
+            "query",
+            params={},
+            offset=0,
+            limit=10,
+            score_cutoff=None,
+            hybrid_search=False,
+        )
+    )
+    assert [p.score for p in res_paginated["hits"]] == [1.0, 0.9, 0.5, 0.2]
+
+
+@pytest.mark.parametrize("hybrid_search", [True, False])
+def test_vector_search_score_tuning_parameters(mocker, client, settings, hybrid_search):
+    """The score formula weights are overridable per request."""
+    settings.VECTOR_SEARCH_INCOMPLETENESS_PENALTY_WEIGHT = 0.05
+    settings.VECTOR_SEARCH_STALENESS_PENALTY_WEIGHT = 0.05
+
+    mock_qdrant = mocker.patch(
+        "qdrant_client.AsyncQdrantClient", return_value=mocker.AsyncMock()
+    )()
+    mock_result = mocker.MagicMock()
+    mock_result.points = []
+    mock_qdrant.query_points = mocker.AsyncMock(return_value=mock_result)
+    mock_qdrant.scroll = mocker.AsyncMock(return_value=([], None))
+    mocker.patch("vector_search.views.async_qdrant_client", return_value=mock_qdrant)
+
+    client.get(
+        reverse("vector_search:v0:vector_learning_resources_search"),
+        data={
+            "q": "test",
+            "hybrid_search": hybrid_search,
+            "program_boost": 0.4,
+            "staleness_penalty": 0.2,
+            "staleness_horizon_years": 5,
+            "completeness_penalty": 0.1,
+        },
+    )
+
+    formula_queries = _formula_queries(
+        mock_qdrant.query_points.mock_calls[0].kwargs, hybrid_search
+    )
+
+    boost, completeness, staleness = formula_queries["dense"].formula.sum[1:]
+    assert boost.mult[0] == 0.4
+    assert _penalty_weight(completeness) == 0.1
+    assert _penalty_weight(staleness) == 0.2
+    decay = _penalty_decay(staleness).lin_decay
+    # half the horizon at the default midpoint -- see
+    # staleness_penalty_expression
+    assert decay.scale == 5 * SECONDS_PER_YEAR / 2
+
+    if hybrid_search:
+        # the boost applies to both arms; neither penalty does
+        [sparse_boost] = formula_queries["sparse"].formula.sum[1:]
+        assert sparse_boost.mult[0] == 0.4
+
+
+@pytest.mark.parametrize("hybrid_search", [True, False])
+def test_vector_search_score_tuning_parameters_disable_scoring(
+    mocker, client, settings, hybrid_search
+):
+    """Zeroing every weight leaves the raw similarity scores alone."""
+    settings.VECTOR_SEARCH_INCOMPLETENESS_PENALTY_WEIGHT = 0.05
+    settings.VECTOR_SEARCH_STALENESS_PENALTY_WEIGHT = 0.05
+
+    mock_qdrant = mocker.patch(
+        "qdrant_client.AsyncQdrantClient", return_value=mocker.AsyncMock()
+    )()
+    mock_result = mocker.MagicMock()
+    mock_result.points = []
+    mock_qdrant.query_points = mocker.AsyncMock(return_value=mock_result)
+    mock_qdrant.scroll = mocker.AsyncMock(return_value=([], None))
+    mocker.patch("vector_search.views.async_qdrant_client", return_value=mock_qdrant)
+
+    client.get(
+        reverse("vector_search:v0:vector_learning_resources_search"),
+        data={
+            "q": "test",
+            "hybrid_search": hybrid_search,
+            "program_boost": 0,
+            "staleness_penalty": 0,
+            "completeness_penalty": 0,
+        },
+    )
+
+    call_kwargs = mock_qdrant.query_points.mock_calls[0].kwargs
+    if hybrid_search:
+        # The zeroed program boost is still a term, but contributes nothing
+        for prefetch in call_kwargs["prefetch"]:
+            assert prefetch.query.formula.sum[1].mult[0] == 0
+            assert not prefetch.query.defaults
+    else:
+        assert call_kwargs["query"].formula.sum[1].mult[0] == 0
+        assert not call_kwargs["query"].defaults
+
+
+@pytest.mark.parametrize(
+    "param",
+    [
+        "program_boost",
+        "staleness_penalty",
+        "staleness_horizon_years",
+        "completeness_penalty",
+        "score_cutoff_ratio",
+    ],
+)
+def test_vector_search_score_tuning_parameters_reject_negatives(
+    client, mock_qdrant, param
+):
+    """The weights are magnitudes -- a negative one is a bad request."""
+    response = client.get(
+        reverse("vector_search:v0:vector_learning_resources_search"),
+        data={"q": "test", param: -1},
+    )
+
+    assert response.status_code == 400
+    assert param in response.json()
+
+
+def test_dense_vector_search_without_formula_queries_vectors_directly(
+    mocker, client, settings
+):
+    """With nothing to rescore, dense search skips the prefetch entirely."""
+    settings.VECTOR_SEARCH_INCOMPLETENESS_PENALTY_WEIGHT = 0
+    settings.VECTOR_SEARCH_STALENESS_PENALTY_WEIGHT = 0
+    mocker.patch("vector_search.utils.VECTOR_SEARCH_SCORE_BOOST", {})
+
+    mock_qdrant = mocker.patch(
+        "qdrant_client.AsyncQdrantClient", return_value=mocker.AsyncMock()
+    )()
+    mock_result = mocker.MagicMock()
+    mock_result.points = []
+    mock_qdrant.query_points = mocker.AsyncMock(return_value=mock_result)
+    mock_qdrant.scroll = mocker.AsyncMock(return_value=([], None))
+    mocker.patch("vector_search.views.async_qdrant_client", return_value=mock_qdrant)
+
+    client.get(
+        reverse("vector_search:v0:vector_learning_resources_search"),
+        data={"q": "test", "hybrid_search": False},
+    )
+
+    call_kwargs = mock_qdrant.query_points.mock_calls[0].kwargs
+    assert "prefetch" not in call_kwargs
+    assert call_kwargs["using"] == dense_encoder().model_short_name()
+    assert call_kwargs["score_threshold"] == settings.DENSE_VECTOR_SEARCH_MIN_SCORE
+
+
+@pytest.mark.django_db(transaction=True)
+def test_content_file_search_has_no_resource_penalties(
+    mocker, client, settings, content_file_viewer
+):
+    """Content file payloads carry neither completeness nor an age date."""
+    settings.VECTOR_SEARCH_INCOMPLETENESS_PENALTY_WEIGHT = 0.05
+    settings.VECTOR_SEARCH_STALENESS_PENALTY_WEIGHT = 0.05
+
+    mock_qdrant = mocker.patch(
+        "qdrant_client.AsyncQdrantClient", return_value=mocker.AsyncMock()
+    )()
+    mock_result = mocker.MagicMock()
+    mock_result.points = []
+    mock_qdrant.query_points = mocker.AsyncMock(return_value=mock_result)
+    mock_qdrant.scroll = mocker.AsyncMock(return_value=([], None))
+    mock_qdrant.count = mocker.AsyncMock(return_value=CountResult(count=0))
+    mocker.patch("vector_search.views.async_qdrant_client", return_value=mock_qdrant)
+
+    client.get(
+        reverse("vector_search:v0:vector_content_files_search"),
+        data={"q": "test", "hybrid_search": False},
+    )
+
+    call_kwargs = mock_qdrant.query_points.mock_calls[0].kwargs
+    assert "prefetch" not in call_kwargs
+    assert call_kwargs["using"] == dense_encoder().model_short_name()
 
 
 @pytest.mark.parametrize("query_string", ["", "test"])
@@ -868,10 +1532,11 @@ def test_build_search_params_sort_with_cutoff_score(
         if sortby and hybrid_search:
             assert isinstance(search_params["query"], models.FusionQuery)
 
-        assert search_params["score_threshold"] == (
+        assert search_params["score_threshold"] == max(
+            min_score,
             settings.HYBRID_VECTOR_SEARCH_MIN_SCORE
             if hybrid_search
-            else settings.DENSE_VECTOR_SEARCH_MIN_SCORE
+            else settings.DENSE_VECTOR_SEARCH_MIN_SCORE,
         )
 
     if sortby and min_score is None:
@@ -882,7 +1547,40 @@ def test_build_search_params_sort_with_cutoff_score(
             assert search_params["query"].order_by.direction == models.Direction.ASC
 
 
-@pytest.mark.django_db
+def test_prefetch_limit_at_least_offset_plus_limit(mocker, settings):
+    """Ensure prefetch_limit is at least offset + limit even when prefetch_max_limit is smaller."""
+    settings.VECTOR_HYBRID_SEARCH_PREFETCH_MAX_LIMIT = 500
+
+    mock_qdrant = mocker.patch(
+        "qdrant_client.AsyncQdrantClient", return_value=mocker.AsyncMock()
+    )()
+    mock_result = mocker.MagicMock()
+    mock_result.points = []
+    mock_qdrant.query_points = mocker.AsyncMock(return_value=mock_result)
+    mock_qdrant.scroll = mocker.AsyncMock(return_value=([], None))
+    mocker.patch("vector_search.views.async_qdrant_client", return_value=mock_qdrant)
+
+    view = QdrantView()
+    view_spy = mocker.spy(view, "_build_search_params")
+
+    asyncio.run(
+        view._async_vector_hits(  # noqa: SLF001
+            query_string="test",
+            params={},
+            limit=10,
+            offset=600,
+            hybrid_search=True,
+        )
+    )
+
+    assert view_spy.call_count == 1
+    # offset + limit = 610, which exceeds max cap 500, so prefetch_limit must be clamped to 610
+    # positional arg index 4 of bound _build_search_params is prefetch_limit (0: query, 1: collection, 2: filter, 3: limit, 4: prefetch_limit)
+    prefetch_limit_arg = view_spy.call_args.args[4]
+    assert prefetch_limit_arg == 610
+
+
+@pytest.mark.django_db(transaction=True)
 def test_content_file_search_restricts_resource_query_to_best_run(
     mocker, client, django_user_model
 ):
@@ -940,7 +1638,7 @@ def test_content_file_search_restricts_resource_query_to_best_run(
     assert not any(getattr(c, "key", None) == "resource_readable_id" for c in must)
 
 
-@pytest.mark.django_db
+@pytest.mark.django_db(transaction=True)
 def test_content_file_search_test_mode_not_restricted(
     mocker, client, django_user_model
 ):
@@ -1031,7 +1729,7 @@ def test_content_file_search_explicit_run_not_overridden(
     )
 
 
-@pytest.mark.django_db
+@pytest.mark.django_db(transaction=True)
 def test_content_file_search_no_best_run_metadata_only(
     mocker, client, django_user_model
 ):
@@ -1079,24 +1777,25 @@ def test_content_file_search_no_best_run_metadata_only(
     assert set(run_conditions[0].match.any) == {course.readable_id}
 
 
-@pytest.mark.django_db
+@pytest.mark.django_db(transaction=True)
 def test_content_file_vector_search_logs_missing_edx_module_id(
     mocker, client, mock_qdrant, content_file_viewer
 ):
     """Vector search for an edx_module_id with no ContentFile logs not_in_db."""
     mock_log = mocker.patch("vector_search.utils.log_missing_content_file")
+    absent_id = "block-v1:MITx+6.00x+2T2020+type@problem+block@absent"
 
     client.get(
         reverse("vector_search:v0:vector_content_files_search"),
-        data={"q": "test", "edx_module_id": ["block_absent"]},
+        data={"q": "test", "edx_module_id": [absent_id]},
     )
 
     mock_log.assert_any_call(
-        "block_absent", reason="not_in_db", source="vector_content_files_search"
+        absent_id, reason="not_in_db", source="vector_content_files_search"
     )
 
 
-@pytest.mark.django_db
+@pytest.mark.django_db(transaction=True)
 def test_content_file_vector_search_probe_failure_does_not_break_search(
     mocker, client, mock_qdrant, content_file_viewer
 ):
@@ -1108,23 +1807,26 @@ def test_content_file_vector_search_probe_failure_does_not_break_search(
 
     response = client.get(
         reverse("vector_search:v0:vector_content_files_search"),
-        data={"q": "test", "edx_module_id": ["block_absent"]},
+        data={
+            "q": "test",
+            "edx_module_id": ["block-v1:MITx+6.00x+2T2020+type@problem+block@absent"],
+        },
     )
 
     assert response.status_code == 200
 
 
-@pytest.mark.django_db
+@pytest.mark.django_db(transaction=True)
 def test_content_file_vector_search_skips_probe_when_results_present(
     mocker, client, mock_qdrant, content_file_viewer
 ):
     """Probe is skipped when the search returns at least one hit."""
     # A single point with the minimum payload needed by _content_file_vector_hits.
-    mock_point = mocker.MagicMock()
+    mock_point = mocker.MagicMock(score=0.6)
     mock_point.payload = {
         "run_readable_id": "run-present",
         "key": "present.pdf",
-        "edx_module_id": "block_present",
+        "edx_module_id": "block-v1:MITx+6.00x+2T2020+type@problem+block@present",
     }
     non_empty_result = mocker.MagicMock()
     non_empty_result.points = [mock_point]
@@ -1138,8 +1840,251 @@ def test_content_file_vector_search_skips_probe_when_results_present(
 
     response = client.get(
         reverse("vector_search:v0:vector_content_files_search"),
-        data={"q": "test", "edx_module_id": ["block_present"]},
+        data={
+            "q": "test",
+            "edx_module_id": ["block-v1:MITx+6.00x+2T2020+type@problem+block@present"],
+        },
     )
 
     assert response.status_code == 200
     mock_probe.assert_not_awaited()
+
+
+@pytest.mark.django_db(transaction=True)
+def test_content_file_vector_search_all_invalid_ids_returns_empty(
+    mocker, client, mock_qdrant, content_file_viewer
+):
+    """If every requested edx_module_id is invalid, return empty results
+    without querying Qdrant or probing for missing content.
+    """
+    mock_probe = mocker.patch(
+        "vector_search.views.check_missing_content_file_ids",
+        new=mocker.AsyncMock(),
+    )
+
+    response = client.get(
+        reverse("vector_search:v0:vector_content_files_search"),
+        data={
+            "q": "test",
+            "edx_module_id": [
+                "block-v1:X+type@discussion+block@y",
+                "block_xpro",
+            ],
+        },
+    )
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["results"] == []
+    assert data["count"] == 0
+    mock_qdrant.query_points.assert_not_called()
+    mock_probe.assert_not_awaited()
+
+
+@pytest.mark.django_db(transaction=True)
+def test_content_file_vector_search_partial_invalid_ids_searches_survivors(
+    mocker, client, mock_qdrant, content_file_viewer
+):
+    """Invalid ids are dropped from the Qdrant filter; valid ones searched."""
+    valid_id = "block-v1:MITx+6.00x+2T2020+type@problem+block@abc"
+
+    response = client.get(
+        reverse("vector_search:v0:vector_content_files_search"),
+        data={
+            "q": "test",
+            "edx_module_id": [valid_id, "block-v1:X+type@discussion+block@y"],
+        },
+    )
+
+    assert response.status_code == 200
+    must = mock_qdrant.query_points.mock_calls[0].kwargs["query_filter"].must
+    id_conditions = [c for c in must if getattr(c, "key", None) == "edx_module_id"]
+    assert len(id_conditions) == 1
+    assert list(id_conditions[0].match.any) == [valid_id]
+
+
+@pytest.mark.django_db(transaction=True)
+def test_vector_search_count_is_exact(client, mock_qdrant):
+    """The result total must be an exact count.
+
+    Qdrant's approximate count overestimates filtered collections, which made
+    the paginator advertise pages that returned no results.
+    """
+    response = client.get(
+        reverse("vector_search:v0:vector_learning_resources_search"),
+        data={
+            "topic": "Art, Design & Architecture",
+            "resource_type_group": "learning_material",
+        },
+    )
+
+    assert response.status_code == 200
+
+    mock_qdrant.count.assert_awaited()
+    assert mock_qdrant.count.await_args.kwargs["exact"] is True
+
+
+@pytest.mark.django_db(transaction=True)
+def test_content_file_vector_search_count_is_approximate(
+    client, mock_qdrant, content_file_viewer
+):
+    """Content-file totals must stay approximate.
+
+    Exact counting scales with matched points, and this collection holds
+    millions of chunks, so an exact count here would cost most of a second.
+    Nothing paginates content files, so the imprecision is invisible.
+    """
+    response = client.get(
+        reverse("vector_search:v0:vector_content_files_search"),
+        data={"q": "test"},
+    )
+
+    assert response.status_code == 200
+
+    mock_qdrant.count.assert_awaited()
+    assert mock_qdrant.count.await_args.kwargs["exact"] is False
+
+
+@pytest.mark.parametrize("from_payload", [True, False])
+def test_vector_search_payload_selector(mocker, client, settings, from_payload):
+    """
+    Resource searches request the trimmed full payload when payload hits are
+    enabled, and only the two hydration lookup fields when they are not.
+    """
+    settings.VECTOR_SEARCH_RESOURCES_FROM_PAYLOAD = from_payload
+    mock_qdrant = mocker.patch(
+        "qdrant_client.AsyncQdrantClient", return_value=mocker.AsyncMock()
+    )()
+    empty = mocker.MagicMock()
+    empty.points = []
+    mock_qdrant.query_points = mocker.AsyncMock(return_value=empty)
+    mock_qdrant.scroll = mocker.AsyncMock(return_value=([], None))
+    mock_qdrant.count = mocker.AsyncMock(return_value=CountResult(count=0))
+    mocker.patch("vector_search.views.async_qdrant_client", return_value=mock_qdrant)
+
+    client.get(
+        reverse("vector_search:v0:vector_learning_resources_search"),
+        data={"q": "test"},
+    )
+
+    with_payload = mock_qdrant.query_points.mock_calls[0].kwargs["with_payload"]
+    if from_payload:
+        assert with_payload == models.PayloadSelectorExclude(
+            exclude=RESOURCES_PAYLOAD_EXCLUDE
+        )
+    else:
+        assert with_payload == RESOURCES_RETRIEVE_PAYLOAD
+
+
+@pytest.mark.parametrize("from_payload", [True, False])
+def test_vector_search_scroll_payload_selector(mocker, client, settings, from_payload):
+    """
+    The scroll path (no query string) must use the same selector; it otherwise
+    defaults to the entire payload, transcripts included.
+    """
+    settings.VECTOR_SEARCH_RESOURCES_FROM_PAYLOAD = from_payload
+    mock_qdrant = mocker.patch(
+        "qdrant_client.AsyncQdrantClient", return_value=mocker.AsyncMock()
+    )()
+    mock_qdrant.scroll = mocker.AsyncMock(return_value=([], None))
+    mock_qdrant.count = mocker.AsyncMock(return_value=CountResult(count=0))
+    mocker.patch("vector_search.views.async_qdrant_client", return_value=mock_qdrant)
+
+    client.get(
+        reverse("vector_search:v0:vector_learning_resources_search"),
+        data={"q": ""},
+    )
+
+    with_payload = mock_qdrant.scroll.mock_calls[0].kwargs["with_payload"]
+    if from_payload:
+        assert with_payload == models.PayloadSelectorExclude(
+            exclude=RESOURCES_PAYLOAD_EXCLUDE
+        )
+    else:
+        assert with_payload == RESOURCES_RETRIEVE_PAYLOAD
+
+
+@pytest.mark.django_db(transaction=True)
+def test_content_file_vector_search_scroll_keeps_full_payload(
+    mocker, client, content_file_viewer
+):
+    """Content file search is unaffected: it still scrolls the whole payload"""
+    mock_qdrant = mocker.patch(
+        "qdrant_client.AsyncQdrantClient", return_value=mocker.AsyncMock()
+    )()
+    mock_qdrant.scroll = mocker.AsyncMock(return_value=([], None))
+    mock_qdrant.count = mocker.AsyncMock(return_value=CountResult(count=0))
+    mocker.patch("vector_search.views.async_qdrant_client", return_value=mock_qdrant)
+
+    client.get(reverse("vector_search:v0:vector_content_files_search"), data={"q": ""})
+
+    assert (
+        mock_qdrant.scroll.mock_calls[0].kwargs["with_payload"]
+        == CONTENT_FILES_RETRIEVE_PAYLOAD
+    )
+
+
+@pytest.mark.django_db(transaction=True)
+def test_vector_search_returns_payload_is_not_hydrated(mocker, client):
+    """
+    With payload hits enabled the response is built from the Qdrant payload
+    rather than re-fetched from the database.
+    """
+    resource = LearningResourceFactory.create(is_course=True)
+    payload = next(iter(serialize_bulk_learning_resources([resource.id])))
+
+    mock_qdrant = mocker.patch(
+        "qdrant_client.AsyncQdrantClient", return_value=mocker.AsyncMock()
+    )()
+    mock_result = mocker.MagicMock()
+    point = mocker.MagicMock(score=0.6)
+    point.payload = payload
+    mock_result.points = [point]
+    mock_qdrant.query_points = mocker.AsyncMock(return_value=mock_result)
+    mock_qdrant.scroll = mocker.AsyncMock(return_value=([], None))
+    mock_qdrant.count = mocker.AsyncMock(return_value=CountResult(count=1))
+    mocker.patch("vector_search.views.async_qdrant_client", return_value=mock_qdrant)
+    hydrate = mocker.patch("vector_search.views._resource_vector_hits")
+
+    response = client.get(
+        reverse("vector_search:v0:vector_learning_resources_search"),
+        data={"q": "test"},
+    )
+
+    assert response.status_code == 200
+    results = response.json()["results"]
+    assert [result["readable_id"] for result in results] == [resource.readable_id]
+    assert results[0]["title"] == resource.title
+    hydrate.assert_not_called()
+
+
+@pytest.mark.django_db(transaction=True)
+def test_vector_search_kill_switch_hydrates_from_database(mocker, client, settings):
+    """Turning the setting off restores database hydration"""
+    settings.VECTOR_SEARCH_RESOURCES_FROM_PAYLOAD = False
+    resource = LearningResourceFactory.create(is_course=True)
+
+    mock_qdrant = mocker.patch(
+        "qdrant_client.AsyncQdrantClient", return_value=mocker.AsyncMock()
+    )()
+    mock_result = mocker.MagicMock()
+    point = mocker.MagicMock(score=0.6)
+    point.payload = {
+        "readable_id": resource.readable_id,
+        "platform": {"code": resource.platform.code},
+    }
+    mock_result.points = [point]
+    mock_qdrant.query_points = mocker.AsyncMock(return_value=mock_result)
+    mock_qdrant.scroll = mocker.AsyncMock(return_value=([], None))
+    mock_qdrant.count = mocker.AsyncMock(return_value=CountResult(count=1))
+    mocker.patch("vector_search.views.async_qdrant_client", return_value=mock_qdrant)
+    payload_hits = mocker.patch("vector_search.views._resource_payload_hits")
+
+    response = client.get(
+        reverse("vector_search:v0:vector_learning_resources_search"),
+        data={"q": "test"},
+    )
+
+    assert response.status_code == 200
+    assert [result["id"] for result in response.json()["results"]] == [resource.id]
+    payload_hits.assert_not_called()

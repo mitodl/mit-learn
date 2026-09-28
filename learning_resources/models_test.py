@@ -1,6 +1,9 @@
 """Tests for learning_resources.models"""
 
+from datetime import UTC, datetime, timedelta
+
 import pytest
+from django.db import IntegrityError, transaction
 
 from channels.factories import ChannelFactory
 from learning_resources.constants import (
@@ -10,10 +13,17 @@ from learning_resources.constants import (
 from learning_resources.factories import (
     CourseFactory,
     LearningPathFactory,
+    LearningResourceFactory,
+    LearningResourceRunFactory,
+    LearningResourceTopicFactory,
     LearningResourceViewEventFactory,
     ProgramFactory,
 )
-from learning_resources.models import LearningResource
+from learning_resources.models import (
+    ContentFile,
+    CredentialMetadata,
+    LearningResource,
+)
 
 pytestmark = [pytest.mark.django_db]
 
@@ -56,6 +66,43 @@ def test_course_creation():
     assert resource.offered_by is not None
     assert resource.runs.count() == course.runs.count()
     assert len(resource.resource_prices.all()) == 0
+
+
+def test_best_run_and_published_runs_ignore_variant_runs():
+    """Variant runs should not drive displayed run data."""
+    resource = LearningResourceFactory.create(
+        resource_type=LearningResourceType.course.name
+    )
+    resource.runs.all().delete()
+    now = datetime.now(tz=UTC)
+    b2b_run = LearningResourceRunFactory.create(
+        learning_resource=resource,
+        published=True,
+        is_b2b=True,
+        is_variant=True,
+        start_date=now + timedelta(days=1),
+        end_date=now + timedelta(days=90),
+        enrollment_start=now - timedelta(days=1),
+        enrollment_end=now + timedelta(days=30),
+    )
+    public_run = LearningResourceRunFactory.create(
+        learning_resource=resource,
+        published=True,
+        is_b2b=False,
+        is_variant=False,
+        start_date=now + timedelta(days=10),
+        end_date=now + timedelta(days=100),
+        enrollment_start=now - timedelta(days=1),
+        enrollment_end=now + timedelta(days=30),
+    )
+
+    serialized_resource = LearningResource.objects.for_serialization().get(
+        id=resource.id
+    )
+
+    assert serialized_resource.best_run == public_run
+    assert serialized_resource.published_runs == [public_run]
+    assert b2b_run not in serialized_resource.published_runs
 
 
 def test_learning_resources_views_count():
@@ -118,3 +165,80 @@ def test_learning_resources_in_featured_lists_count():
         .in_featured_lists
         == 1
     )
+
+
+def test_topics_for_serialization_ordered_by_name():
+    """Topics should serialize in alphabetical order regardless of creation order"""
+    names = ["Physics", "Biology", "Chemistry"]
+    resource = LearningResourceFactory.create()
+    resource.topics.set([LearningResourceTopicFactory.create(name=n) for n in names])
+
+    prefetched = LearningResource.objects.for_serialization().get(id=resource.id)
+    assert [topic.name for topic in prefetched.topics_for_serialization()] == sorted(
+        names
+    )
+    # the plain related manager has to agree with the prefetch: serializers use both
+    assert [topic.name for topic in resource.topics.all()] == sorted(names)
+
+
+def test_content_file_run_key_unique():
+    """A second ContentFile with the same (run, key) is rejected"""
+    run = LearningResourceRunFactory.create()
+    ContentFile.objects.create(run=run, key="file.pdf")
+
+    with pytest.raises(IntegrityError), transaction.atomic():
+        ContentFile.objects.create(run=run, key="file.pdf")
+
+
+def test_content_file_null_key_unique():
+    """NULLS NOT DISTINCT: a second keyless ContentFile on the same run is rejected"""
+    run = LearningResourceRunFactory.create()
+    ContentFile.objects.create(run=run, key=None)
+
+    with pytest.raises(IntegrityError), transaction.atomic():
+        ContentFile.objects.create(run=run, key=None)
+
+
+def test_credential_metadata_round_trip():
+    """A stored description and criteria list read back unchanged"""
+    resource = LearningResourceFactory.create(is_course=True)
+    CredentialMetadata.objects.create(
+        learning_resource=resource,
+        description="A course about modelling fluid flow.",
+        criteria=["Applied conservation laws", "Modelled fluid flow"],
+    )
+
+    stored = LearningResource.objects.get(id=resource.id).credential_metadata
+    assert stored.description == "A course about modelling fluid flow."
+    assert stored.criteria == ["Applied conservation laws", "Modelled fluid flow"]
+
+
+def test_credential_metadata_long_criteria():
+    """
+    A criteria bullet longer than any varchar is stored whole.
+
+    criteria is a text[] rather than the varchar(N)[] every other ArrayField
+    in the module uses: nothing on the generation path truncates a bullet, so
+    a length limit would surface as a DataError mid-sweep.
+    """
+    resource = LearningResourceFactory.create(is_course=True)
+    bullet = "Demonstrated " + ("a very specific skill " * 500)
+
+    stored = CredentialMetadata.objects.create(
+        learning_resource=resource, criteria=[bullet]
+    )
+    stored.refresh_from_db()
+
+    assert stored.criteria == [bullet]
+
+
+def test_credential_metadata_deleted_with_its_resource():
+    """Metadata does not outlive the resource it describes"""
+    resource = LearningResourceFactory.create(is_course=True)
+    CredentialMetadata.objects.create(
+        learning_resource=resource, description="A course"
+    )
+
+    resource.delete()
+
+    assert not CredentialMetadata.objects.exists()

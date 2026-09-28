@@ -19,6 +19,7 @@ from urllib.parse import urljoin
 
 import dj_database_url
 from django.core.exceptions import ImproperlyConfigured
+from mitol.keycloak.settings.keycloak import *  # noqa: F403
 from mitol.scim.settings.scim import *  # noqa: F403
 
 from main.envs import (
@@ -35,7 +36,7 @@ from main.settings_course_etl import *  # noqa: F403
 from main.settings_pluggy import *  # noqa: F403
 from openapi.settings_spectacular import open_spectacular_settings
 
-VERSION = "0.72.3"
+VERSION = "0.80.18"
 
 log = logging.getLogger()
 
@@ -81,6 +82,8 @@ ALLOWED_REDIRECT_HOSTS = get_list_of_str(
 AUTH_USER_MODEL = "users.User"
 
 SECURE_SSL_REDIRECT = get_bool("MITOL_SECURE_SSL_REDIRECT", True)  # noqa: FBT003
+if get_bool("MITOL_SECURE_PROXY_SSL_HEADER", True):  # noqa: FBT003
+    SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
 SECURE_REDIRECT_EXEMPT = [
     "^health/startup/$",
     "^health/liveness/$",
@@ -110,7 +113,6 @@ INSTALLED_APPS = (
     "django_removals",
     "django_scim",
     "social_django",
-    "server_status",
     "rest_framework",
     "corsheaders",
     "anymail",
@@ -119,6 +121,7 @@ INSTALLED_APPS = (
     "django_json_widget",
     "django_filters",
     "drf_spectacular",
+    "safedelete",
     "mitol.observability.apps.ObservabilityConfig",
     # Put our apps after this point
     "main",
@@ -135,52 +138,19 @@ INSTALLED_APPS = (
     "oauth2_provider",
     "news_events",
     "testimonials",
+    "content_feedback",
     "data_fixtures",
     "vector_search",
     "ol_hubspot",
     "mitol.scim.apps.ScimApp",
+    "mitol.keycloak.apps.KeycloakApp",
     "health_check",
-    "health_check.cache",
-    "health_check.contrib.migrations",
-    "health_check.contrib.celery_ping",
-    "health_check.contrib.redis",
-    "health_check.contrib.db_heartbeat",
 )
 
-WEBHOOK_SECRET = get_string("WEBHOOK_SECRET", "please-change-this")
-
-HEALTH_CHECK = {
-    "SUBSETS": {
-        # The 'startup' subset includes checks that must pass before the application can
-        # start.
-        "startup": [
-            "MigrationsHealthCheck",  # Ensures database migrations are applied.
-            "CacheBackend",  # Verifies the cache backend is operational.
-            "RedisHealthCheck",  # Confirms Redis is reachable and functional.
-            "DatabaseHeartBeatCheck",  # Checks the database connection is alive.
-        ],
-        # The 'liveness' subset includes checks to determine if the application is
-        # running.
-        "liveness": ["DatabaseHeartBeatCheck"],  # Minimal check to ensure the app is
-        # alive.
-        # The 'readiness' subset includes checks to determine if the application is
-        # ready to serve requests.
-        "readiness": [
-            "CacheBackend",  # Ensures the cache is ready for use.
-            "RedisHealthCheck",  # Confirms Redis is ready for use.
-            "DatabaseHeartBeatCheck",  # Verifies the database is ready for queries.
-        ],
-        # The 'full' subset includes all available health checks for a comprehensive
-        # status report.
-        "full": [
-            "MigrationsHealthCheck",  # Ensures database migrations are applied.
-            "CacheBackend",  # Verifies the cache backend is operational.
-            "RedisHealthCheck",  # Confirms Redis is reachable and functional.
-            "DatabaseHeartBeatCheck",  # Checks the database connection is alive.
-            "CeleryPingHealthCheck",  # Verifies Celery workers are responsive.
-        ],
-    }
-}
+WEBHOOK_SECRET = get_string("WEBHOOK_SECRET", None)
+if not WEBHOOK_SECRET or WEBHOOK_SECRET == "please-change-this":  # noqa: S105
+    msg = "WEBHOOK_SECRET is not set to a non-default value"
+    raise ImproperlyConfigured(msg)
 
 if not get_bool("RUN_DATA_MIGRATIONS", default=False):
     MIGRATION_MODULES = {"data_fixtures": None}
@@ -249,6 +219,7 @@ CSRF_TRUSTED_ORIGINS = get_list_of_str("CSRF_TRUSTED_ORIGINS", [])
 
 SESSION_COOKIE_DOMAIN = get_string("SESSION_COOKIE_DOMAIN", None)
 SESSION_COOKIE_NAME = get_string("SESSION_COOKIE_NAME", "sessionid")
+SESSION_COOKIE_SECURE = get_bool("SESSION_COOKIE_SECURE", True)  # noqa: FBT003
 
 if COOKIE_TOMBSTONES:
     tombstone_middleware = "main.middleware.cookie_tombstones.CookieTombstoneMiddleware"
@@ -329,7 +300,13 @@ DATABASES = {"default": DEFAULT_DATABASE_CONFIG}
 
 DATABASE_ROUTERS = ["main.routers.ExternalSchemaRouter"]
 
-EXTERNAL_MODELS = ["programcertificate"]
+# "programcertificate" was removed from here deliberately (was
+# EXTERNAL_MODELS = ["programcertificate"]): this app is now the writer of
+# that table (profiles.tasks.SyncProgramCertificatesTask, replacing the
+# Hightouch sync per mitodl/hq#12954) rather than a read-only consumer of
+# rows Hightouch wrote. If another external-schema, write-once-elsewhere
+# model needs the same protection in the future, add it here.
+EXTERNAL_MODELS = []
 
 # Internationalization
 # https://docs.djangoproject.com/en/1.8/topics/i18n/
@@ -339,8 +316,6 @@ LANGUAGE_CODE = "en-us"
 TIME_ZONE = "UTC"
 
 USE_I18N = True
-
-USE_L10N = True
 
 USE_TZ = True
 
@@ -384,6 +359,22 @@ APISIX_USERDATA_MAP = {
 }
 DISABLE_APISIX_USER_MIDDLEWARE = get_bool(
     name="DISABLE_APISIX_USER_MIDDLEWARE",
+    default=False,
+)
+
+# Set to True to create users that we see but aren't aware of.
+# Set to False if you're managing that elsewhere (like with SCIM).
+# Named to match mitol-django-apigateway, which we intend to port to.
+MITOL_APIGATEWAY_USERINFO_CREATE = get_bool(
+    name="MITOL_APIGATEWAY_USERINFO_CREATE",
+    default=True,
+)
+
+# Set to True to update users we've seen before. If you set this to False, make
+# sure there's a backchannel way to update the user data (SCIM, etc) or user
+# info will fall out of sync with the IdP pretty quickly.
+MITOL_APIGATEWAY_USERINFO_UPDATE = get_bool(
+    name="MITOL_APIGATEWAY_USERINFO_UPDATE",
     default=False,
 )
 
@@ -530,7 +521,7 @@ CACHES = {
     },
     "redis": {
         "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": CELERY_BROKER_URL,  # noqa: F405
+        "LOCATION": REDIS_URL,  # noqa: F405
         "OPTIONS": {"CLIENT_CLASS": "django_redis.client.DefaultClient"},
     },
     # imagekit caching
@@ -580,6 +571,12 @@ OPENSEARCH_DOCUMENT_INDEXING_CHUNK_SIZE = get_int(
     "OPENSEARCH_DOCUMENT_INDEXING_CHUNK_SIZE",
     get_int("OPENSEARCH_INDEXING_CHUNK_SIZE", 100),
 )
+# learning resources per dispatch_content_files reindex batch
+OPENSEARCH_REINDEX_DISPATCH_CHUNK_SIZE = get_int(
+    "OPENSEARCH_REINDEX_DISPATCH_CHUNK_SIZE", 100
+)
+# how long finished TaskJobs (and their batches) are kept before cleanup
+TASK_JOB_RETENTION_DAYS = get_int("TASK_JOB_RETENTION_DAYS", 7)
 OPENSEARCH_MIN_QUERY_SIZE = get_int("OPENSEARCH_MIN_QUERY_SIZE", 2)
 OPENSEARCH_MAX_SUGGEST_HITS = get_int("OPENSEARCH_MAX_SUGGEST_HITS", 1)
 OPENSEARCH_MAX_SUGGEST_RESULTS = get_int("OPENSEARCH_MAX_SUGGEST_RESULTS", 1)
@@ -678,6 +675,18 @@ REST_FRAMEWORK = {
     "DEFAULT_VERSIONING_CLASS": "rest_framework.versioning.NamespaceVersioning",
     "ALLOWED_VERSIONS": ["v0", "v1"],
     "ORDERING_PARAM": "sortby",
+    # Trusted reverse-proxy hops in front of the app (APISIX + nginx). Anonymous
+    # throttles identify the client via the Nth-from-last X-Forwarded-For entry;
+    # without this DRF keys on the whole header, which a client can spoof to
+    # bypass the limit (mitodl/hq#12775). nginx appends, so only the rightmost
+    # NUM_PROXIES entries are added by our infrastructure and can be trusted.
+    "NUM_PROXIES": get_int("NUM_PROXIES", 2),
+    "DEFAULT_THROTTLE_RATES": {
+        # Rate format is "<count>/<period>" (e.g. "10/min", "30/hour"); a blank
+        # env value -> "" or None -> None -> throttle is a no-op (kill switch).
+        "content_feedback": get_string("CONTENT_FEEDBACK_THROTTLE_RATE", "10/min")
+        or None,
+    },
 }
 
 USE_X_FORWARDED_PORT = get_bool("USE_X_FORWARDED_PORT", False)  # noqa: FBT003
@@ -721,6 +730,16 @@ KEYCLOAK_BASE_URL = get_string(
 KEYCLOAK_REALM_NAME = get_string(
     name="KEYCLOAK_REALM_NAME",
     default="olapps",
+)
+# The OIDC client used to start Keycloak "application initiated actions"
+# (update email / update password) and to exchange the resulting authorization
+# code. Deliberately has no default: the account action callback URL has to be a
+# registered redirect URI on this client, so guessing a client here fails at
+# Keycloak with an opaque error. Deployed environments must set it (mitxonline
+# does the same with `ol-mitxonline-client`).
+KEYCLOAK_CLIENT_ID = get_string(
+    name="KEYCLOAK_CLIENT_ID",
+    default=None,
 )
 
 MICROMASTERS_CMS_API_URL = get_string("MICROMASTERS_CMS_API_URL", None)
@@ -817,6 +836,18 @@ QDRANT_ENCODER = get_string(
     name="QDRANT_ENCODER", default="vector_search.encoders.gensim.GensimEncoder"
 )
 
+# Max Sentry alerts the embeddings healthcheck sends per alert type per run. The
+# healthcheck reports per resource, so an environment that is simply behind on
+# embedding (e.g. RC) would otherwise burn thousands of events in one run.
+# Production should set this high (a large backlog there is a real incident, not
+# expected drift); 0 or less disables the cap entirely. The default is deliberately
+# low so an unconfigured environment can't spend the quota, and the cap sends one
+# explicit notice when it engages, so a capped run is never mistaken for a clean one.
+EMBEDDINGS_HEALTHCHECK_ALERT_CAP = get_int(
+    name="EMBEDDINGS_HEALTHCHECK_ALERT_CAP",
+    default=20,
+)
+
 QDRANT_POINT_UPLOAD_BATCH_SIZE = get_int(
     name="QDRANT_POINT_UPLOAD_BATCH_SIZE", default=1000
 )
@@ -824,6 +855,10 @@ QDRANT_POINT_UPLOAD_BATCH_SIZE = get_int(
 QDRANT_BATCH_SIZE_BYTES = get_int(
     name="QDRANT_BATCH_SIZE_BYTES", default=10 * 1024 * 1024
 )  # default 10 MB limit for batch processing
+
+QDRANT_CONTENT_FILE_SERIALIZATION_CHUNK_SIZE = get_int(
+    name="QDRANT_CONTENT_FILE_SERIALIZATION_CHUNK_SIZE", default=5
+)
 
 QDRANT_CLIENT_TIMEOUT = get_int(name="QDRANT_CLIENT_TIMEOUT", default=10)
 
@@ -835,18 +870,78 @@ VECTOR_HYBRID_SEARCH_PREFETCH_MAX_LIMIT = get_int(
 )
 
 
-# the minimum similarity score for dense only search
+# Absolute score floors, now only a backstop for a query that matched nothing
+# -- the primary gate is the relative cutoff below. As the primary gate these
+# sized the candidate set by how high a query's scores happened to reach, which
+# swung ~50x across rewordings of the same question.
+#
+# Low enough that a query matching nothing real ("asdkjhqwe") comes back with a
+# page of unrelated resources where 0.3 returned none. Deliberate: embedding
+# similarity puts gibberish in the same band as a legitimate one-word query
+# (q="dance" returned nothing at 0.3), so an absolute floor cannot separate the
+# two, and returning something for "dance" is worth more than an empty page for
+# a typo.
 DENSE_VECTOR_SEARCH_MIN_SCORE = get_float(
-    name="DENSE_VECTOR_SEARCH_MIN_SCORE", default=0.3
+    name="DENSE_VECTOR_SEARCH_MIN_SCORE", default=0.15
 )
 
-# the minimum similarity score for hybrid search (Reciprocal Rank Fusion)
+# RRF scores by rank, not similarity: 1/(2 + rank) per arm a hit appears in,
+# so 1.0 at best and ~0.004 at the tail of a 500-candidate prefetch.
 HYBRID_VECTOR_SEARCH_MIN_SCORE = get_float(
-    name="HYBRID_VECTOR_SEARCH_MIN_SCORE", default=0.1
+    name="HYBRID_VECTOR_SEARCH_MIN_SCORE", default=0.01
 )
+
+# Keep hits scoring at least this fraction of the query's own best hit, so the
+# candidate set is sized by how fast relevance falls off within the query.
+# PROVISIONAL: both ratios want a sweep over real query logs, which the
+# `score_cutoff_ratio` request param allows without a deploy.
+DENSE_VECTOR_SEARCH_MIN_SCORE_RATIO = get_float(
+    name="DENSE_VECTOR_SEARCH_MIN_SCORE_RATIO", default=0.8
+)
+
+# On RRF's rank-derived scores this is close to the absolute floor it replaces
+# (~the top 18 fused ranks), but adapts when the best fused score is below 1.0.
+HYBRID_VECTOR_SEARCH_MIN_SCORE_RATIO = get_float(
+    name="HYBRID_VECTOR_SEARCH_MIN_SCORE_RATIO", default=0.1
+)
+
+# Hits the relative cutoff may never trim below, so a query with one standout
+# hit still returns a usable page. 0 disables the exemption.
+VECTOR_SEARCH_MIN_CANDIDATES = get_int(name="VECTOR_SEARCH_MIN_CANDIDATES", default=10)
 
 # hard limit for special cases where we need to return all results without pagination
 VECTOR_SEARCH_PAGE_MAX_LIMIT = get_int("VECTOR_SEARCH_PAGE_MAX_LIMIT", 200)
+
+# Fraction of its own score a completeness = 0 resource gives up in vector
+# search, scaled linearly by incompleteness. 0 disables the penalty.
+#
+# A bounded fraction of the score, not a multiplication *by* completeness --
+# that would make completeness the primary sort key. Fixed score units are
+# what it replaces: 0.05 is a fifth of the spread across a result page, so the
+# two penalties together outweighed relevance.
+VECTOR_SEARCH_INCOMPLETENESS_PENALTY_WEIGHT = get_float(
+    name="VECTOR_SEARCH_INCOMPLETENESS_PENALTY_WEIGHT", default=0.05
+)
+
+# Fraction of its own score a resource gives up once it is
+# VECTOR_SEARCH_STALENESS_HORIZON_YEARS or more old in vector search, ramped
+# linearly by age. Resources with an upcoming run are exempt. 0 disables the
+# penalty.
+VECTOR_SEARCH_STALENESS_PENALTY_WEIGHT = get_float(
+    name="VECTOR_SEARCH_STALENESS_PENALTY_WEIGHT", default=0.05
+)
+
+# Age at which a resource takes the full VECTOR_SEARCH_STALENESS_PENALTY_WEIGHT;
+VECTOR_SEARCH_STALENESS_HORIZON_YEARS = get_float(
+    name="VECTOR_SEARCH_STALENESS_HORIZON_YEARS", default=20
+)
+
+# serve learning resource search hits from the Qdrant payload instead of
+# re-hydrating them from the database. Set to False to fall back to database
+# hydration without a deploy.
+VECTOR_SEARCH_RESOURCES_FROM_PAYLOAD = get_bool(
+    name="VECTOR_SEARCH_RESOURCES_FROM_PAYLOAD", default=True
+)
 
 # toggle to use requests (default for local) or webdriver which renders js elements
 EMBEDDINGS_EXTERNAL_FETCH_USE_WEBDRIVER = get_bool(
@@ -864,6 +959,30 @@ OPENAI_API_KEY = get_string(
     default=None,
 )
 
+# Hedged embedding requests: if the first request for a search query has not
+# come back within EMBEDDING_HEDGE_DELAY_SECONDS, send backup requests and use
+# whichever finishes first. The delay keeps the extra backend load proportional
+# to the tail rather than doubling it on every query - set it to 0 to always
+# send the backups immediately.
+EMBEDDING_REQUEST_HEDGING_ENABLED = get_bool(
+    name="EMBEDDING_REQUEST_HEDGING_ENABLED", default=True
+)
+EMBEDDING_HEDGE_COUNT = get_int(name="EMBEDDING_HEDGE_COUNT", default=2)
+EMBEDDING_HEDGE_DELAY_SECONDS = get_float(
+    name="EMBEDDING_HEDGE_DELAY_SECONDS", default=0.45
+)
+# Primary and speculative query embedding requests run in separate, bounded
+# thread pools so abandoned hedges cannot starve later primary requests. Both
+# pools reject work when full: a saturated primary pool falls back to running
+# the request inline, a saturated hedge pool skips the backups.
+EMBEDDING_QUERY_MAX_WORKERS = get_int(name="EMBEDDING_QUERY_MAX_WORKERS", default=16)
+EMBEDDING_HEDGE_MAX_WORKERS = get_int(name="EMBEDDING_HEDGE_MAX_WORKERS", default=16)
+# Explicit per-request timeout for hedged query embeddings, so a losing request
+# releases its worker instead of occupying it for the life of the connection.
+EMBEDDING_HEDGE_REQUEST_TIMEOUT_SECONDS = get_float(
+    name="EMBEDDING_HEDGE_REQUEST_TIMEOUT_SECONDS", default=10.0
+)
+
 CONTENT_FILE_EMBEDDING_CHUNK_SIZE_OVERRIDE = get_int(
     name="CONTENT_FILE_EMBEDDING_CHUNK_SIZE", default=512
 )
@@ -877,7 +996,6 @@ CONTENT_FILE_SUMMARIZER_BATCH_SIZE = get_int("CONTENT_FILE_SUMMARIZER_BATCH_SIZE
 CONTENT_SUMMARIZER_FLASHCARD_QUANTITY = get_int(
     "CONTENT_SUMMARIZER_FLASHCARD_QUANTITY", 10
 )
-
 
 CONTENT_SUMMARIZER_FLASHCARD_PROMPT = get_string(
     "CONTENT_SUMMARIZER_FLASHCARD_PROMPT",
@@ -904,12 +1022,46 @@ CONTENT_SUMMARIZER_FLASHCARD_PROMPT = get_string(
         """
     ),
 )
-# OpenTelemetry configuration
-OPENTELEMETRY_ENABLED = get_bool("OPENTELEMETRY_ENABLED", False)  # noqa: FBT003
+# Credential metadata generation (learning_resources/credentials.py). The
+# prompts, models and the content retrieval query are admin-editable rows of
+# CredentialMetadataConfiguration; what is left is how much it retrieves.
+CREDENTIAL_METADATA_CONTENT_CHUNK_LIMIT = get_int(
+    name="CREDENTIAL_METADATA_CONTENT_CHUNK_LIMIT", default=50
+)
+# Chunks shorter than this are dropped: near-empty OLX stub blocks are common
+# (`prerequisites` at 4 characters median) and only crowd out real content.
+CREDENTIAL_METADATA_MIN_CHUNK_CHARS = get_int(
+    name="CREDENTIAL_METADATA_MIN_CHUNK_CHARS", default=200
+)
+# How long one field's LLM call may take. litellm's own default is 6000
+# seconds, so without this a hung provider connection outlives every proxy in
+# front of it by a wide margin: the client gets a 504 while the request goes on
+# burning spend and holding its pending log write open.
+#
+# 120s is sized for the models production runs -- gpt-5 and Claude take 25-46s
+# per field, against 1-4s for the gpt-4o-mini the configurations are seeded
+# with -- and sits under the 180s read timeout the deployed path allows. That
+# ceiling is not configured from this repo: CI/QA/production reach Django
+# through an APISIX route defined in ol-infrastructure, where this path has a
+# `credential-metadata` route raising it from the 60s default the rest of the
+# application uses. Fields are generated concurrently, so this bounds the whole
+# run, and the remaining margin covers retrieval and the log write.
+CREDENTIAL_METADATA_LLM_TIMEOUT = get_int(
+    name="CREDENTIAL_METADATA_LLM_TIMEOUT", default=120
+)
+
+# OpenTelemetry configuration (consumed by mitol-django-observability).
+# Telemetry turns on when any of OTEL_EXPORTER_OTLP_TRACES_ENDPOINT,
+# OTEL_EXPORTER_OTLP_METRICS_ENDPOINT or OTEL_EXPORTER_OTLP_ENDPOINT is set in
+# the environment, or the OPENTELEMETRY_ENDPOINT setting below is. Per signal
+# the environment is read most-specific-first, and the setting applies only
+# when the environment supplies nothing. There is no flag to disable it.
 OPENTELEMETRY_SERVICE_NAME = get_string("OPENTELEMETRY_SERVICE_NAME", "learn")
 OPENTELEMETRY_INSECURE = get_bool("OPENTELEMETRY_INSECURE", default=True)
 OPENTELEMETRY_ENDPOINT = get_string("OPENTELEMETRY_ENDPOINT", None)
-OPENTELEMETRY_TRACES_BATCH_SIZE = get_int("OPENTELEMETRY_TRACES_BATCH_SIZE", 512)
+# Name must match what mitol.observability.telemetry looks up, or the default
+# silently applies instead.
+OPENTELEMETRY_BATCH_SIZE = get_int("OPENTELEMETRY_BATCH_SIZE", 512)
 OPENTELEMETRY_EXPORT_TIMEOUT_MS = get_int("OPENTELEMETRY_EXPORT_TIMEOUT_MS", 5000)
 CANVAS_TUTORBOT_FOLDER = get_string("CANVAS_TUTORBOT_FOLDER", "web_resources/ai/tutor/")
 
@@ -918,5 +1070,17 @@ CANVAS_TUTORBOT_FOLDER = get_string("CANVAS_TUTORBOT_FOLDER", "web_resources/ai/
 MITOL_HUBSPOT_API_PRIVATE_TOKEN = get_string("MITOL_HUBSPOT_API_PRIVATE_TOKEN", None)
 
 # Create all learning material resources for OCW courses
-# Learning material resources are behind show_ocw_files flag in search
-CREATE_OCW_LEARNING_MATERIALS = get_bool("CREATE_OCW_LEARNING_MATERIALS", default=False)
+# Extra learning material resources are behind show_ocw_files flag in search
+# If false only learning materials in OCW_VISIBLE_TAGS will be created
+CREATE_HIDDEN_OCW_LEARNING_MATERIALS = get_bool(
+    "CREATE_HIDDEN_OCW_LEARNING_MATERIALS", default=False
+)
+
+# separate secret keys for unsubscribe
+UNSUBSCRIBE_SECRET_KEY = get_string("UNSUBSCRIBE_SECRET_KEY", None)
+if not UNSUBSCRIBE_SECRET_KEY:
+    msg = "UNSUBSCRIBE_SECRET_KEY is not set"
+    raise ImproperlyConfigured(msg)
+UNSUBSCRIBE_SECRET_KEY_FALLBACKS = get_list_of_str(
+    "UNSUBSCRIBE_SECRET_KEY_FALLBACKS", []
+)

@@ -4,7 +4,7 @@
 
 export { default as styled } from "@emotion/styled"
 export { css, Global } from "@emotion/react"
-export { alpha } from "@mui/material/styles"
+export { alpha, useTheme } from "@mui/material/styles"
 
 /**
  * Re-exports from MUI.
@@ -22,6 +22,8 @@ export { default as AccordionSummary } from "@mui/material/AccordionSummary"
 export type { AccordionSummaryProps } from "@mui/material/AccordionSummary"
 export { default as AccordionDetails } from "@mui/material/AccordionDetails"
 export type { AccordionDetailsProps } from "@mui/material/AccordionDetails"
+export { default as Snackbar } from "@mui/material/Snackbar"
+export type { SnackbarProps } from "@mui/material/Snackbar"
 
 export { default as AppBar } from "@mui/material/AppBar"
 export type { AppBarProps } from "@mui/material/AppBar"
@@ -51,8 +53,6 @@ export type { DividerProps } from "@mui/material/Divider"
 export { default as Drawer } from "@mui/material/Drawer"
 export type { DrawerProps } from "@mui/material/Drawer"
 
-export { default as Grid } from "@mui/material/Grid"
-export type { GridProps } from "@mui/material/Grid"
 export { default as Grid2 } from "@mui/material/Grid2"
 export type { Grid2Props } from "@mui/material/Grid2"
 
@@ -93,6 +93,15 @@ export type { TooltipProps } from "@mui/material/Tooltip"
 export { default as Avatar } from "@mui/material/Avatar"
 
 // Mui Form Inputs
+/**
+ * Prefer `Checkbox` from `@mitodl/smoot-design`, which carries the design
+ * system's styling. This one exists for the cases that component's props do
+ * not cover: it takes no `aria-label`/`id`, so it cannot name a checkbox that
+ * has no visible label, and it has no `indeterminate` for a partial
+ * select-all.
+ */
+export { default as MuiCheckbox } from "@mui/material/Checkbox"
+export type { CheckboxProps as MuiCheckboxProps } from "@mui/material/Checkbox"
 export { default as Autocomplete } from "@mui/material/Autocomplete"
 export type { AutocompleteProps } from "@mui/material/Autocomplete"
 export { default as ToggleButton } from "@mui/material/ToggleButton"
@@ -141,6 +150,7 @@ export * from "./components/Popover/Popover"
 export * from "./components/ReCaptcha"
 export * from "./components/RoutedDrawer/RoutedDrawer"
 export * from "./components/SimpleMenu/SimpleMenu"
+export * from "./components/SkipLink/SkipLink"
 export * from "./components/SortableList/SortableList"
 export * from "./components/ThemeProvider/ThemeProvider"
 export * from "./components/TruncateText/TruncateText"

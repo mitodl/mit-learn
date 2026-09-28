@@ -1,22 +1,36 @@
 """Utils tests"""
 
+import asyncio
 import datetime
+import json
 from math import ceil
 from tempfile import NamedTemporaryFile
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from django.contrib.auth import get_user_model
+from django.core.cache import caches
 from django.http import QueryDict
+from django.utils.decorators import method_decorator
+from rest_framework.renderers import BrowsableAPIRenderer, JSONRenderer
 from rest_framework.response import Response
+from rest_framework.test import APIRequestFactory, force_authenticate
+from rest_framework.views import APIView
 
+from main import utils as main_utils
+from main.constants import (
+    ALLOWED_HTML_ATTRIBUTES_WITH_LINKS,
+    ALLOWED_HTML_TAGS_WITH_LINKS,
+)
 from main.factories import UserFactory
 from main.utils import (
     _sorted_query_string,
     cache_page_for_all_users,
     cache_page_for_anonymous_users,
+    call_fastly_purge_api,
     chunks,
     clean_data,
+    clear_views_cache,
     extract_values,
     filter_dict_keys,
     filter_dict_with_renamed_keys,
@@ -28,6 +42,7 @@ from main.utils import (
     normalize_to_start_of_day,
     now_in_utc,
     prefetched_iterator,
+    run_on_worker_loop,
     write_to_file,
 )
 
@@ -249,12 +264,38 @@ def test_clean_data(input_text, output_text):
     assert clean_data(input_text) == output_text
 
 
-def _create_mock_request(*, is_authenticated=False, path="/test/", query=""):
+def test_clean_data_preserves_allowed_links():
+    """clean_data keeps <a href> when anchors + href are explicitly allowed,
+    but still strips unsafe URL schemes.
+    """
+    html = (
+        "See <a href='https://ocw.mit.edu' title='OCW'>MIT OCW</a> "
+        "and <a href='javascript:alert(1)'>bad</a>"
+    )
+    result = clean_data(
+        html,
+        tags=ALLOWED_HTML_TAGS_WITH_LINKS,
+        attributes=ALLOWED_HTML_ATTRIBUTES_WITH_LINKS,
+    )
+    assert 'href="https://ocw.mit.edu"' in result
+    assert 'title="OCW"' in result
+    assert 'rel="noopener noreferrer"' in result
+    assert ">MIT OCW</a>" in result
+    assert "javascript:" not in result  # nh3 drops unsafe schemes
+
+
+def _create_mock_request(
+    *, is_authenticated=False, path="/test/", query="", accept="application/json"
+):
     """Create a mock request object for testing cache decorators."""
     request = MagicMock()
     request.user.is_authenticated = is_authenticated
     request.path = path
     request.GET = QueryDict(query)
+    request.headers = {"Accept": accept}
+    request.accepted_renderer = (
+        BrowsableAPIRenderer() if "text/html" in accept else JSONRenderer()
+    )
     return request
 
 
@@ -295,83 +336,174 @@ def test_sorted_query_string_multi_value():
     assert result == "a=first&topic=math&topic=science"
 
 
+@pytest.fixture
+def view_cache(settings):
+    """Enable view caching against a fresh locmem backend."""
+    settings.REDIS_VIEW_CACHE_DURATION = 60
+    settings.CACHES = {
+        **settings.CACHES,
+        "default": {
+            "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+            "LOCATION": "view-cache-tests",
+        },
+    }
+    caches["default"].clear()
+    return caches["default"]
+
+
+def _decorated_api_view(decorator=None, status=200):
+    """Build a real DRF view with a cache decorator applied to its handler."""
+    calls = {"count": 0}
+
+    class CachedView(APIView):
+        authentication_classes = ()
+        permission_classes = ()
+        versioning_class = None
+
+        @method_decorator(decorator or cache_page_for_all_users())
+        def get(self, request):  # noqa: ARG002
+            calls["count"] += 1
+            return Response({"result": "fresh", "call": calls["count"]}, status=status)
+
+    view = CachedView.as_view()
+    view.calls = calls
+    return view
+
+
+def _get(view, path="/test/", user=None):
+    """Issue a GET through the full DRF request/render cycle."""
+    request = APIRequestFactory().get(path)
+    if user is not None:
+        force_authenticate(request, user=user)
+    response = view(request)
+    return response.render() if hasattr(response, "render") else response
+
+
+def test_view_cache_end_to_end(view_cache):
+    """The second request is served from cache with identical JSON."""
+    view = _decorated_api_view()
+
+    first = _get(view)
+    second = _get(view)
+
+    assert view.calls["count"] == 1
+    assert first.content == second.content
+    assert json.loads(second.content) == {"result": "fresh", "call": 1}
+    assert second["Content-Type"] == "application/json"
+
+
+def test_cache_miss_renders_once(view_cache):
+    """A miss caches the bytes from the response's own render pass."""
+    view = _decorated_api_view()
+
+    with patch("main.utils.JSONRenderer") as mock_renderer:
+        first = _get(view)
+
+    mock_renderer.assert_not_called()
+    assert _get(view).content == first.content
+    assert view.calls["count"] == 1
+
+
+def test_anonymous_users_decorator_caches_anonymous(view_cache):
+    """Anonymous requests are cached by cache_page_for_anonymous_users."""
+    view = _decorated_api_view(cache_page_for_anonymous_users())
+
+    _get(view)
+    _get(view)
+
+    assert view.calls["count"] == 1
+
+
+def test_anonymous_users_decorator_skips_authenticated(view_cache):
+    """Authenticated requests bypass cache_page_for_anonymous_users."""
+    view = _decorated_api_view(cache_page_for_anonymous_users())
+    user = UserFactory.build()
+
+    _get(view, user=user)
+    _get(view, user=user)
+
+    assert view.calls["count"] == 2
+
+
+def test_all_users_decorator_caches_authenticated(view_cache):
+    """Authenticated requests are cached by cache_page_for_all_users."""
+    view = _decorated_api_view()
+
+    _get(view, user=UserFactory.build())
+    _get(view, user=UserFactory.build())
+
+    assert view.calls["count"] == 1
+
+
+def test_cache_timeout_zero_skips_caching(view_cache):
+    """A timeout of 0 disables caching entirely."""
+    view = _decorated_api_view(cache_page_for_all_users(0))
+
+    _get(view)
+    _get(view)
+
+    assert view.calls["count"] == 2
+
+
+def test_cache_default_timeout_resolves_at_request_time(view_cache, settings):
+    """The default timeout is read from settings per request, not at decoration."""
+    settings.REDIS_VIEW_CACHE_DURATION = 0
+    view = _decorated_api_view()
+    settings.REDIS_VIEW_CACHE_DURATION = 60
+
+    _get(view)
+    _get(view)
+
+    assert view.calls["count"] == 1
+
+
+def test_cache_default_timeout_zero_skips_caching(view_cache, settings):
+    """A default timeout of 0 disables caching entirely."""
+    settings.REDIS_VIEW_CACHE_DURATION = 0
+    view = _decorated_api_view()
+
+    _get(view)
+    _get(view)
+
+    assert view.calls["count"] == 2
+
+
+def test_cache_only_caches_200_responses(view_cache):
+    """Non-200 responses are not cached."""
+    view = _decorated_api_view(status=404)
+
+    _get(view)
+    _get(view)
+
+    assert view.calls["count"] == 2
+
+
 @patch("main.utils.caches")
-def test_cache_page_for_anonymous_users_caches_anonymous(mock_caches):
-    """Anonymous user requests are cached."""
+def test_async_cache_stores_rendered_json_bytes(mock_caches):
+    """The async decorator caches the bytes from the response's render pass."""
     mock_cache = MagicMock()
-    mock_cache.get.return_value = None
+    mock_cache.aget = AsyncMock(return_value=None)
     mock_caches.__getitem__.return_value = mock_cache
 
-    view = _create_view()
-    decorated = cache_page_for_anonymous_users(300)(view)
+    async def view(request):
+        return Response({"result": "fresh"})
 
-    request = _create_mock_request(is_authenticated=False)
-    response1 = decorated(request)
-
-    assert view.call_count["count"] == 1
-    mock_cache.set.assert_called_once()
-    assert response1.data["result"] == "fresh"
-
-
-@patch("main.utils.caches")
-def test_cache_page_for_anonymous_users_skips_authenticated(mock_caches):
-    """Authenticated user requests bypass the cache."""
-    mock_cache = MagicMock()
-    mock_caches.__getitem__.return_value = mock_cache
-
-    view = _create_view()
-    decorated = cache_page_for_anonymous_users(300)(view)
-
-    request = _create_mock_request(is_authenticated=True)
-    response1 = decorated(request)
-    response2 = decorated(request)
-
-    assert view.call_count["count"] == 2
-    mock_cache.get.assert_not_called()
-    mock_cache.set.assert_not_called()
-    assert response1.data["call"] == 1
-    assert response2.data["call"] == 2
-
-
-@patch("main.utils.caches")
-def test_cache_page_for_all_users_caches_anonymous(mock_caches):
-    """Anonymous user requests are cached with cache_page_for_all_users."""
-    mock_cache = MagicMock()
-    mock_cache.get.return_value = None
-    mock_caches.__getitem__.return_value = mock_cache
-
-    view = _create_view()
     decorated = cache_page_for_all_users(300)(view)
+    response = asyncio.run(decorated(_create_mock_request()))
 
-    request = _create_mock_request(is_authenticated=False)
-    response1 = decorated(request)
+    # complete the render pass DRF runs after the handler returns
+    response.accepted_renderer = JSONRenderer()
+    response.accepted_media_type = "application/json"
+    response.renderer_context = {}
+    response.render()
 
-    assert view.call_count["count"] == 1
-    mock_cache.set.assert_called_once()
-    assert response1.data["result"] == "fresh"
-
-
-@patch("main.utils.caches")
-def test_cache_page_for_all_users_caches_authenticated(mock_caches):
-    """Authenticated user requests are also cached with cache_page_for_all_users."""
-    mock_cache = MagicMock()
-    mock_cache.get.return_value = None
-    mock_caches.__getitem__.return_value = mock_cache
-
-    view = _create_view()
-    decorated = cache_page_for_all_users(300)(view)
-
-    request = _create_mock_request(is_authenticated=True)
-    response1 = decorated(request)
-
-    assert view.call_count["count"] == 1
-    mock_cache.set.assert_called_once()
-    assert response1.data["result"] == "fresh"
+    assert mock_cache.set.call_args.args[1] == response.content
+    assert json.loads(response.content) == {"result": "fresh"}
 
 
 @patch("main.utils.caches")
 def test_cache_returns_cached_response(mock_caches):
-    """Subsequent requests return cached data."""
+    """Subsequent requests return cached data (legacy dict entries)."""
     mock_cache = MagicMock()
     cached_data = {"result": "cached", "call": 0}
     mock_cache.get.return_value = cached_data
@@ -380,11 +512,44 @@ def test_cache_returns_cached_response(mock_caches):
     view = _create_view()
     decorated = cache_page_for_all_users(300)(view)
 
-    request = _create_mock_request()
-    response = decorated(request)
+    response = decorated(_create_mock_request())
 
     assert view.call_count["count"] == 0
     assert response.data == cached_data
+
+
+@patch("main.utils.caches")
+def test_cache_hit_returns_bytes_without_rendering(mock_caches):
+    """Cached rendered bytes are returned directly as an HttpResponse."""
+    mock_cache = MagicMock()
+    mock_cache.get.return_value = b'{"result": "cached"}'
+    mock_caches.__getitem__.return_value = mock_cache
+
+    view = _create_view()
+    decorated = cache_page_for_all_users(300)(view)
+
+    response = decorated(_create_mock_request())
+
+    assert view.call_count["count"] == 0
+    assert response.content == b'{"result": "cached"}'
+    assert response["Content-Type"] == "application/json"
+
+
+@patch("main.utils.caches")
+def test_cache_hit_html_request_gets_negotiable_response(mock_caches):
+    """Browsable API (HTML) requests get a DRF Response from cached bytes."""
+    mock_cache = MagicMock()
+    mock_cache.get.return_value = b'{"result": "cached"}'
+    mock_caches.__getitem__.return_value = mock_cache
+
+    view = _create_view()
+    decorated = cache_page_for_all_users(300)(view)
+
+    response = decorated(_create_mock_request(accept="text/html,application/xhtml+xml"))
+
+    assert view.call_count["count"] == 0
+    assert isinstance(response, Response)
+    assert response.data == {"result": "cached"}
 
 
 @patch("main.utils.caches")
@@ -397,13 +562,10 @@ def test_cache_key_consistent_for_same_url(mock_caches):
     view = _create_view()
     decorated = cache_page_for_all_users(300)(view)
 
-    request1 = _create_mock_request(path="/api/test/", query="a=1&b=2")
-    request2 = _create_mock_request(path="/api/test/", query="a=1&b=2")
-
-    decorated(request1)
+    decorated(_create_mock_request(path="/api/test/", query="a=1&b=2"))
     key1 = mock_cache.get.call_args_list[0][0][0]
 
-    decorated(request2)
+    decorated(_create_mock_request(path="/api/test/", query="a=1&b=2"))
     key2 = mock_cache.get.call_args_list[1][0][0]
 
     assert key1 == key2
@@ -419,13 +581,10 @@ def test_cache_key_consistent_with_reordered_params(mock_caches):
     view = _create_view()
     decorated = cache_page_for_all_users(300)(view)
 
-    request1 = _create_mock_request(path="/api/test/", query="b=2&a=1")
-    request2 = _create_mock_request(path="/api/test/", query="a=1&b=2")
-
-    decorated(request1)
+    decorated(_create_mock_request(path="/api/test/", query="b=2&a=1"))
     key1 = mock_cache.get.call_args_list[0][0][0]
 
-    decorated(request2)
+    decorated(_create_mock_request(path="/api/test/", query="a=1&b=2"))
     key2 = mock_cache.get.call_args_list[1][0][0]
 
     assert key1 == key2
@@ -441,96 +600,13 @@ def test_cache_key_different_for_different_paths(mock_caches):
     view = _create_view()
     decorated = cache_page_for_all_users(300)(view)
 
-    request1 = _create_mock_request(path="/api/test1/")
-    request2 = _create_mock_request(path="/api/test2/")
-
-    decorated(request1)
+    decorated(_create_mock_request(path="/api/test1/"))
     key1 = mock_cache.get.call_args_list[0][0][0]
 
-    decorated(request2)
+    decorated(_create_mock_request(path="/api/test2/"))
     key2 = mock_cache.get.call_args_list[1][0][0]
 
     assert key1 != key2
-
-
-@patch("main.utils.caches")
-def test_cache_timeout_zero_skips_caching(mock_caches):
-    """Timeout of 0 or negative skips caching entirely."""
-    mock_cache = MagicMock()
-    mock_caches.__getitem__.return_value = mock_cache
-
-    view = _create_view()
-    decorated = cache_page_for_all_users(0)(view)
-
-    request = _create_mock_request()
-    response1 = decorated(request)
-    response2 = decorated(request)
-
-    assert view.call_count["count"] == 2
-    mock_cache.get.assert_not_called()
-    mock_cache.set.assert_not_called()
-    assert response1.data["call"] == 1
-    assert response2.data["call"] == 2
-
-
-@patch("main.utils.caches")
-def test_cache_default_timeout_resolves_at_request_time(mock_caches, settings):
-    """Default timeout is read from settings when the request is handled."""
-    settings.REDIS_VIEW_CACHE_DURATION = 0
-    mock_cache = MagicMock()
-    mock_cache.get.return_value = None
-    mock_caches.__getitem__.return_value = mock_cache
-
-    view = _create_view()
-    decorated = cache_page_for_all_users()(view)
-    settings.REDIS_VIEW_CACHE_DURATION = 300
-
-    request = _create_mock_request()
-    decorated(request)
-
-    assert view.call_count["count"] == 1
-    mock_cache.set.assert_called_once()
-    assert mock_cache.set.call_args.args[2] == 300
-
-
-@patch("main.utils.caches")
-def test_cache_default_timeout_zero_skips_caching(mock_caches, settings):
-    """Default timeout of 0 skips caching when the request is handled."""
-    settings.REDIS_VIEW_CACHE_DURATION = 0
-    mock_cache = MagicMock()
-    mock_caches.__getitem__.return_value = mock_cache
-
-    view = _create_view()
-    decorated = cache_page_for_all_users()(view)
-
-    request = _create_mock_request()
-    response1 = decorated(request)
-    response2 = decorated(request)
-
-    assert view.call_count["count"] == 2
-    mock_cache.get.assert_not_called()
-    mock_cache.set.assert_not_called()
-    assert response1.data["call"] == 1
-    assert response2.data["call"] == 2
-
-
-@patch("main.utils.caches")
-def test_cache_only_caches_200_responses(mock_caches):
-    """Non-200 responses are not cached."""
-    mock_cache = MagicMock()
-    mock_cache.get.return_value = None
-    mock_caches.__getitem__.return_value = mock_cache
-
-    def error_view(request):
-        response = Response({"error": "not found"}, status=404)
-        response.status_code = 404
-        return response
-
-    decorated = cache_page_for_all_users(300)(error_view)
-    request = _create_mock_request()
-    decorated(request)
-
-    mock_cache.set.assert_not_called()
 
 
 @patch("main.utils.caches")
@@ -586,3 +662,143 @@ def test_cache_key_format(mock_caches):
     hash_part = cache_key.split(".")[-1]
     assert len(hash_part) == 32
     assert all(c in "0123456789abcdef" for c in hash_part)
+
+
+@patch("main.utils.caches")
+def test_clear_views_cache_uses_large_itersize(mock_caches):
+    """
+    delete_pattern must be called with a large itersize (SCAN COUNT).
+
+    The default of 10 means a full-keyspace scan needs ~keyspace/10 round-trips
+    against the Redis shared with the Celery broker; a 55s scan on prod. Pinning
+    itersize guards against a regression back to the slow default.
+    """
+    mock_cache = MagicMock()
+    mock_cache.delete_pattern.return_value = 3
+    mock_caches.__getitem__.return_value = mock_cache
+
+    result = clear_views_cache()
+
+    mock_cache.delete_pattern.assert_called_once_with("views.*", itersize=1000)
+    assert result == 3
+
+
+@pytest.mark.parametrize("soft", [True, False])
+def test_call_fastly_purge_api_soft_header(mocker, settings, soft):
+    """soft=True sends the Fastly-Soft-Purge: 1 header; default sends none"""
+    settings.FASTLY_API_KEY = "fake-key"
+    mock_request = mocker.patch("main.utils.requests.request")
+    mock_request.return_value.json.return_value = {"status": "ok"}
+
+    call_fastly_purge_api("/c/unit/mitx", soft=soft)
+
+    headers = mock_request.call_args.kwargs["headers"]
+    assert headers.get("Fastly-Soft-Purge") == ("1" if soft else None)
+
+
+def test_run_on_worker_loop_returns_the_result():
+    """A coroutine's return value comes back to the sync caller"""
+
+    async def coro():
+        return "done"
+
+    assert run_on_worker_loop(coro()) == "done"
+
+
+def test_run_on_worker_loop_propagates_an_exception():
+    """A failing coroutine raises in the caller rather than being swallowed"""
+
+    async def coro():
+        msg = "nope"
+        raise ValueError(msg)
+
+    with pytest.raises(ValueError, match="nope"):
+        run_on_worker_loop(coro())
+
+
+def test_run_on_worker_loop_reuses_one_loop():
+    """
+    Every call in a process runs on the same loop.
+
+    This is the whole point of the helper. asyncio.run (and async_to_sync)
+    create a loop per call and close it on return, while the Qdrant clients
+    bind to the loop alive when they were built. Call two would drive a
+    cached gRPC channel onto a closed loop, so retrieval fails and generation
+    is skipped rather than producing metadata. The helper keeps subsequent
+    calls on the original live loop.
+    """
+
+    async def which_loop():
+        return asyncio.get_running_loop()
+
+    first = run_on_worker_loop(which_loop())
+    second = run_on_worker_loop(which_loop())
+
+    assert first is second
+    assert not first.is_closed()
+
+
+@pytest.fixture
+def isolated_worker_loop(monkeypatch):
+    """
+    Give a test the worker loop's module state to itself.
+
+    The helper holds its loop in a module global and deliberately never
+    closes it -- the process outliving it is the point -- so a test that
+    drives it has to reset that state going in and close what it created
+    coming out, rather than leaking an epoll fd into the rest of the suite.
+
+    Yields:
+        list: every loop the helper created during the test
+    """
+    monkeypatch.setattr(main_utils, "_worker_loop", None)
+    monkeypatch.setattr(main_utils, "_worker_loop_pid", None)
+    created = []
+    new_event_loop = asyncio.new_event_loop
+
+    def tracked_new_event_loop():
+        loop = new_event_loop()
+        created.append(loop)
+        return loop
+
+    monkeypatch.setattr(asyncio, "new_event_loop", tracked_new_event_loop)
+    yield created
+    for loop in created:
+        loop.close()
+
+
+def test_run_on_worker_loop_does_not_reuse_an_inherited_loop(
+    mocker, isolated_worker_loop
+):
+    """
+    A forked child builds its own loop instead of running on the parent's.
+
+    This is the prefork-safety branch, and the reason the loop is created
+    lazily: a Celery prefork child inherits the parent's loop object, whose
+    epoll fd it shares with every sibling. Running on it there is the same
+    unusable-loop failure the helper exists to prevent, and just as silent,
+    since content retrieval swallows it. A pid that stands still between
+    calls cannot exercise this, so the pid moves here instead of forking.
+    """
+
+    async def which_loop():
+        return asyncio.get_running_loop()
+
+    process = {"pid": 1111}
+    # A callable rather than a side_effect list: os.getpid is shared with
+    # everything else running during the test, so an extra call must not
+    # exhaust an iterator.
+    mocker.patch("main.utils.os.getpid", side_effect=lambda: process["pid"])
+
+    parent_loop = run_on_worker_loop(which_loop())
+    process["pid"] = 2222
+    child_loop = run_on_worker_loop(which_loop())
+    child_loop_again = run_on_worker_loop(which_loop())
+
+    assert child_loop is not parent_loop
+    # The child keeps its own loop across calls, exactly as the parent did.
+    assert child_loop_again is child_loop
+    assert len(isolated_worker_loop) == 2
+    # The inherited loop is dropped, never closed: its fd belongs to the
+    # parent too, and closing it in a child would break the parent's.
+    assert not parent_loop.is_closed()

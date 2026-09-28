@@ -1,9 +1,25 @@
 import React from "react"
 import { renderWithProviders, screen, user, within } from "@/test-utils"
 import * as mitxonline from "api/mitxonline-test-utils"
+import { makeRequest, setMockResponse, urls } from "api/test-utils"
+import { programCertificates as programCertificateFactory } from "api/test-utils/factories"
 import { mitxonlineLegacyUrl } from "@/common/mitxonline"
+import { receiptView } from "@/common/urls"
 import { DisplayModeEnum } from "@mitodl/mitxonline-api-axios/v2"
+import { useFeatureFlagEnabled } from "posthog-js/react"
 import { ProgramEnrollmentCard } from "./ProgramEnrollmentCard"
+import { setupOrderHistory } from "./test-utils"
+
+jest.mock("posthog-js/react")
+
+const mockedUseFeatureFlagEnabled = jest
+  .mocked(useFeatureFlagEnabled)
+  .mockImplementation(() => false)
+
+// Verified cards look up their order; default to none, tests override.
+beforeEach(() => {
+  setupOrderHistory()
+})
 
 describe.each([
   { display: "desktop", testId: "enrollment-card-desktop" },
@@ -101,7 +117,7 @@ describe.each([
     )
   })
 
-  test("does not show 'Certificate track' when verified enrollment has a certificate", () => {
+  test("shows 'View Certificate' in place of 'Certificate track' when verified enrollment has a certificate", () => {
     const programEnrollment =
       mitxonline.factories.enrollment.programEnrollmentV3({
         enrollment_mode: "verified",
@@ -113,6 +129,9 @@ describe.each([
     expect(
       within(getCard()).queryByTestId("upgraded-banner"),
     ).not.toBeInTheDocument()
+    expect(
+      within(getCard()).getAllByRole("link", { name: /View Certificate/ }),
+    ).toHaveLength(1)
   })
 
   test("does not show 'Certificate track' for audit enrollment", () => {
@@ -224,6 +243,7 @@ describe.each([
       mitxonline.factories.enrollment.programEnrollmentV3({
         enrollment_mode: "verified",
       })
+    setupOrderHistory({ programId: programEnrollment.program.id })
     renderWithProviders(
       <ProgramEnrollmentCard programEnrollment={programEnrollment} />,
     )
@@ -231,7 +251,7 @@ describe.each([
       within(getCard()).getByRole("button", { name: "More options" }),
     )
     expect(
-      screen.getByRole("menuitem", { name: "Receipt" }),
+      await screen.findByRole("menuitem", { name: "Receipt" }),
     ).toBeInTheDocument()
   })
 
@@ -251,28 +271,177 @@ describe.each([
     ).not.toBeInTheDocument()
   })
 
-  test("Receipt links to correct MITx Online URL for verified program enrollment", async () => {
+  test("Receipt links to the receipt for the order that paid for the program", async () => {
     const program = mitxonline.factories.programs.simpleProgram({ id: 99 })
+    setupOrderHistory({ programId: 99, orderId: 23 })
     const programEnrollment =
       mitxonline.factories.enrollment.programEnrollmentV3({
         program,
         enrollment_mode: "verified",
       })
-    const windowOpenSpy = jest
-      .spyOn(window, "open")
-      .mockImplementation(() => null)
     renderWithProviders(
       <ProgramEnrollmentCard programEnrollment={programEnrollment} />,
     )
     await user.click(
       within(getCard()).getByRole("button", { name: "More options" }),
     )
-    await user.click(screen.getByRole("menuitem", { name: "Receipt" }))
-    expect(windowOpenSpy).toHaveBeenCalledWith(
-      mitxonlineLegacyUrl("/orders/receipt/by-program/99/"),
-      "_blank",
-      "noopener,noreferrer",
+    expect(
+      await screen.findByRole("menuitem", { name: "Receipt" }),
+    ).toHaveAttribute("href", receiptView(23))
+  })
+
+  test("Receipt is hidden for a verified program enrollment with no order", async () => {
+    const program = mitxonline.factories.programs.simpleProgram({ id: 99 })
+    // An order exists, but for a different program.
+    setupOrderHistory({ programId: 100, orderId: 23 })
+    const programEnrollment =
+      mitxonline.factories.enrollment.programEnrollmentV3({
+        program,
+        enrollment_mode: "verified",
+      })
+    renderWithProviders(
+      <ProgramEnrollmentCard programEnrollment={programEnrollment} />,
     )
-    windowOpenSpy.mockRestore()
+    await user.click(
+      within(getCard()).getByRole("button", { name: "More options" }),
+    )
+    await screen.findByRole("menuitem", { name: "Program Record" })
+
+    expect(
+      screen.queryByRole("menuitem", { name: "Receipt" }),
+    ).not.toBeInTheDocument()
+  })
+})
+
+describe("ProgramEnrollmentCard program letter", () => {
+  const PROGRAM_ID = 77
+  const SHARE_URL = "https://learn.mit.edu/program_letter/some-uuid/view"
+
+  const setup = ({
+    flagEnabled,
+    mitxonlineProgramId,
+  }: {
+    flagEnabled: boolean
+    mitxonlineProgramId: number | null
+  }) => {
+    mockedUseFeatureFlagEnabled.mockReturnValue(flagEnabled)
+    setMockResponse.get(urls.programCertificates.list(), [
+      programCertificateFactory.programCertificate({
+        mitxonline_program_id: mitxonlineProgramId,
+        program_letter_share_url: SHARE_URL,
+      }),
+    ])
+    const programEnrollment =
+      mitxonline.factories.enrollment.programEnrollmentV3({
+        program: mitxonline.factories.programs.simpleProgram({
+          id: PROGRAM_ID,
+        }),
+      })
+    renderWithProviders(
+      <ProgramEnrollmentCard programEnrollment={programEnrollment} />,
+    )
+  }
+
+  const openMenu = async () => {
+    await user.click(
+      within(screen.getByTestId("enrollment-card-desktop")).getByRole(
+        "button",
+        {
+          name: "More options",
+        },
+      ),
+    )
+    // Program Record is unconditional, so its presence means the menu is open
+    // and a missing Program Letter is a real absence rather than a slow render.
+    await screen.findByRole("menuitem", { name: "Program Record" })
+  }
+
+  test("links to the letter's share url when the learner has a matching certificate", async () => {
+    setup({ flagEnabled: true, mitxonlineProgramId: PROGRAM_ID })
+    await openMenu()
+
+    expect(
+      await screen.findByRole("menuitem", { name: "Program Letter" }),
+    ).toHaveAttribute("href", SHARE_URL)
+  })
+
+  test("is hidden when no certificate matches this program", async () => {
+    setup({ flagEnabled: true, mitxonlineProgramId: PROGRAM_ID + 1 })
+    await openMenu()
+
+    expect(
+      screen.queryByRole("menuitem", { name: "Program Letter" }),
+    ).not.toBeInTheDocument()
+  })
+
+  test("is hidden when the certificate request fails, leaving the rest of the menu intact", async () => {
+    // Deliberate: a failed lookup is indistinguishable from having no
+    // certificate, because the failed response is both the letter url and the
+    // only signal that the learner has a letter. See useProgramLetterMenuItem.
+    mockedUseFeatureFlagEnabled.mockReturnValue(true)
+    setMockResponse.get(urls.programCertificates.list(), null, { code: 500 })
+    const programEnrollment =
+      mitxonline.factories.enrollment.programEnrollmentV3({
+        program: mitxonline.factories.programs.simpleProgram({
+          id: PROGRAM_ID,
+        }),
+      })
+    renderWithProviders(
+      <ProgramEnrollmentCard programEnrollment={programEnrollment} />,
+    )
+    await openMenu()
+
+    expect(
+      screen.queryByRole("menuitem", { name: "Program Letter" }),
+    ).not.toBeInTheDocument()
+    // The card itself must survive the failure.
+    expect(
+      screen.getByRole("menuitem", { name: "Program Record" }),
+    ).toBeInTheDocument()
+  })
+
+  test("is hidden, and no certificates are requested, when the flag is off", async () => {
+    // Requesting the list mints a shareable uuid for every letter the learner
+    // does not have yet, so it must not happen behind a disabled flag.
+    setup({ flagEnabled: false, mitxonlineProgramId: PROGRAM_ID })
+    await openMenu()
+
+    expect(
+      screen.queryByRole("menuitem", { name: "Program Letter" }),
+    ).not.toBeInTheDocument()
+    expect(makeRequest).not.toHaveBeenCalledWith(
+      expect.objectContaining({ url: urls.programCertificates.list() }),
+    )
+  })
+})
+
+// The progress badge only renders on the desktop card.
+describe("ProgramEnrollmentCard progress badge", () => {
+  const getDesktopCard = () => screen.getByTestId("enrollment-card-desktop")
+
+  test("shows 'In Progress' next to the 'Program' type label when no certificate is present", () => {
+    const programEnrollment =
+      mitxonline.factories.enrollment.programEnrollmentV3({
+        certificate: null,
+      })
+    renderWithProviders(
+      <ProgramEnrollmentCard programEnrollment={programEnrollment} />,
+    )
+    expect(
+      within(getDesktopCard()).getByTestId("progress-badge"),
+    ).toHaveTextContent("In Progress")
+  })
+
+  test("shows 'Completed' next to the 'Program' type label when a certificate is present", () => {
+    const programEnrollment =
+      mitxonline.factories.enrollment.programEnrollmentV3({
+        certificate: { uuid: "test-uuid", link: "/certificate/test-uuid/" },
+      })
+    renderWithProviders(
+      <ProgramEnrollmentCard programEnrollment={programEnrollment} />,
+    )
+    expect(
+      within(getDesktopCard()).getByTestId("progress-badge"),
+    ).toHaveTextContent("Completed")
   })
 })

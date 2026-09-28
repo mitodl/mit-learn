@@ -20,6 +20,8 @@ from learning_resources_search.serializers import (
     LearningResourcesSearchRequestSerializer,
     LearningResourcesSearchResponseSerializer,
 )
+from main.factories import UserFactory
+from vector_search.constants import PROGRAM_SCORE_BOOST_NAME, default_score_boost
 
 FAKE_SEARCH_RESPONSE = {
     "took": 1,
@@ -321,6 +323,30 @@ def test_user_unsubscribe_to_search_by_id(client, user):
 
 @pytest.mark.django_db
 @factory.django.mute_signals(signals.post_delete, signals.post_save)
+def test_user_cannot_unsubscribe_others_subscription(client, user):
+    """Unsubscribing from another user's subscription should 404, not disclose it"""
+
+    sub_url = reverse("lr_search:v1:learning_resources_user_subscription-subscribe")
+    client.force_login(user)
+    params = {"q": "idor-test-marker-distinguishing-string"}
+    client.post(sub_url, json.dumps(params), content_type="application/json")
+    assert user.percolate_queries.count() == 1
+    subscription_id = user.percolate_queries.first().id
+
+    other_user = UserFactory.create()
+    client.force_login(other_user)
+    unsub_url = reverse(
+        "lr_search:v1:learning_resources_user_subscription-unsubscribe",
+        args=[subscription_id],
+    )
+    resp = client.delete(unsub_url)
+
+    assert resp.status_code == 404
+    assert user.percolate_queries.count() == 1
+
+
+@pytest.mark.django_db
+@factory.django.mute_signals(signals.post_delete, signals.post_save)
 def test_user_subscribed_to_search(client, user):
     """Test user subscribed get"""
     client.force_login(user)
@@ -418,3 +444,25 @@ def test_user_subscription_check(client, user):
     assert len(response) == 1
     assert response[0]["id"] == initial_query_id
     assert response[0]["original_query"] == initial_query
+
+
+def test_search_admin_params_include_vector_defaults(settings, client):
+    """The admin params endpoint reports the vector score formula defaults."""
+    settings.HYBRID_VECTOR_SEARCH_MIN_SCORE = 0.07
+    settings.HYBRID_VECTOR_SEARCH_MIN_SCORE_RATIO = 0.12
+    settings.VECTOR_SEARCH_STALENESS_PENALTY_WEIGHT = 0.06
+    settings.VECTOR_SEARCH_STALENESS_HORIZON_YEARS = 15
+    settings.VECTOR_SEARCH_INCOMPLETENESS_PENALTY_WEIGHT = 0.04
+
+    response = client.get(
+        reverse("lr_search:v0:learning_resources_search_admin_params")
+    ).json()
+
+    assert response["score_cutoff"] == 0.07
+    assert response["score_cutoff_ratio"] == 0.12
+    assert response["staleness_penalty"] == 0.06
+    assert response["staleness_horizon_years"] == 15
+    assert response["completeness_penalty"] == 0.04
+    assert response["program_boost"] == default_score_boost(PROGRAM_SCORE_BOOST_NAME)
+    # the OpenSearch defaults are still there
+    assert response["search_mode"] == settings.DEFAULT_SEARCH_MODE

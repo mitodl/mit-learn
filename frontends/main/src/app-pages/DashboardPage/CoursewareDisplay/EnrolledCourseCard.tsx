@@ -8,6 +8,7 @@ import {
   CoursewareButtonLink,
   MenuButton,
   Separator,
+  Ellipse,
   SubtitleLink,
   SubtitleLinkRoot,
   TitleHeading,
@@ -21,33 +22,55 @@ import {
   DashboardType,
   getCertificateLink,
   getDashboardEnrollmentStatus,
+  pickCertificateEnrollment,
 } from "./model/dashboardViewModel"
-import { getCourseDateText } from "./courseDateUtils"
+import { canOpenCourseware, getCourseDateText } from "./courseDateUtils"
 import { isVerifiedEnrollmentMode } from "@/common/mitxonline"
 import { RiArrowUpCircleLine, RiAwardLine, RiMore2Line } from "@remixicon/react"
 import { useReplaceBasketItem } from "@/common/mitxonline/useReplaceBasketItem"
+import { useComplianceGate } from "@/common/mitxonline/useComplianceGate"
+import { useCreateVerifiedProgramEnrollment } from "api/mitxonline-hooks/enrollment"
+import { SILENCE_ERROR_TOAST } from "api/mutation-meta"
 import { isInPast, calendarDaysUntil, NoSSR } from "ol-utilities"
-import { SiblingRunsAccordion } from "./SiblingRunsAccordion"
-import { EnrollmentStatusIndicator } from "./EnrollmentStatusIndicator"
+import { SiblingRunsPanel, SiblingRunsToggle } from "./SiblingRunsAccordion"
+import { EnrollmentStatusIcon } from "./EnrollmentStatus"
 import { mitxUserQueries } from "api/mitxonline-hooks/user"
 import { useQuery } from "@tanstack/react-query"
-import { Button, ButtonLink } from "@mitodl/smoot-design"
 import { coursePageView } from "@/common/urls"
-import NiceModal from "@ebay/nice-modal-react"
-import { EmailSettingsDialog, UnenrollDialog } from "./DashboardDialogs"
-import { getReceiptMenuItem } from "./receiptMenuItem"
-import { CourseRunEnrollmentV3 } from "@mitodl/mitxonline-api-axios/v2"
+import { getRunMenuItems } from "./runMenuItems"
+import { useOrderIdForRun } from "@/common/mitxonline/useOrderIdForResource"
+import type { SimpleMenuItem } from "ol-components"
+import {
+  CourseRunEnrollmentV3,
+  V3UserProgramEnrollment,
+} from "@mitodl/mitxonline-api-axios/v2"
+import { ProgressBadge } from "./ProgressBadge"
 
 const formatUpgradeTime = (daysFloat: number) => {
   if (daysFloat < 0) return ""
   const days = Math.floor(daysFloat)
   if (days > 1) {
-    return ` · ${days} days remaining`
+    return `${days} days remaining`
   } else if (days === 1) {
-    return ` · ${days} day remaining`
+    return `${days} day remaining`
   }
-  return " · Less than a day remaining"
+  return "Less than a day remaining"
 }
+
+const RedEllipse = styled(Ellipse)(({ theme }) => ({
+  marginLeft: "6px",
+  marginRight: "6px",
+  backgroundColor: theme.custom.colors.red,
+}))
+
+const EnrolledTitleLink = styled(TitleLink)<{
+  enrollmentstatus: EnrollmentStatus
+}>(({ enrollmentstatus, theme }) => ({
+  color:
+    enrollmentstatus === EnrollmentStatus.Completed
+      ? theme.custom.colors.silverGrayDark
+      : theme.custom.colors.black,
+}))
 
 const UpgradeBanner: React.FC<
   {
@@ -55,28 +78,84 @@ const UpgradeBanner: React.FC<
     certificateUpgradeDeadline?: string | null
     certificateUpgradePrice?: string | null
     productId?: number | null
-    onError?: (error: Error) => void
-    layout?: "default" | "compact"
+    isVerifiedProgramEnrollment?: boolean
+    readableId?: string
+    coursewareUrl?: string
+    programReadableIds?: string[]
+    programCoursewareId?: string
+    onUpgradeFailure?: (message: string) => void
   } & React.HTMLAttributes<HTMLDivElement>
 > = ({
   canUpgrade,
   certificateUpgradeDeadline,
   certificateUpgradePrice,
   productId,
-  onError,
-  layout = "default",
+  isVerifiedProgramEnrollment,
+  readableId,
+  coursewareUrl,
+  programReadableIds,
+  programCoursewareId,
+  onUpgradeFailure,
   ...others
 }) => {
-  const replaceBasketItem = useReplaceBasketItem()
+  // Upgrade failures are caught below and surfaced via onUpgradeFailure (an
+  // inline alert in the parent), so suppress the global error toast. A caught
+  // mutateAsync rejection does NOT suppress the cache-level onError, so this
+  // opt-out is what prevents a double alert. `onUpgradeFailure` is optional —
+  // a caller that omits it has no error surface of its own, so only silence
+  // the toast when the callback is actually wired.
+  const upgradeErrorMeta = onUpgradeFailure ? { meta: SILENCE_ERROR_TOAST } : {}
+  const replaceBasketItem = useReplaceBasketItem(upgradeErrorMeta)
+  const createVerifiedProgramEnrollment =
+    useCreateVerifiedProgramEnrollment(upgradeErrorMeta)
+  const { ensureCompliance } = useComplianceGate()
+
+  const programRequestBody = programReadableIds?.length
+    ? programReadableIds
+    : programCoursewareId
+      ? [programCoursewareId]
+      : []
+  // Mirrors useEnrollmentHandler's gating: without a program identifier the
+  // verified-program-enrollment endpoint can't resolve which program to
+  // credit the upgrade against, so fall back to checkout instead of calling
+  // it with an empty request_body.
+  const canOneClickUpgrade = Boolean(
+    isVerifiedProgramEnrollment && readableId && programRequestBody.length > 0,
+  )
 
   const handleUpgradeClick = async (e: React.MouseEvent<HTMLAnchorElement>) => {
     e.preventDefault()
+
+    if (canOneClickUpgrade) {
+      // Gated before the try/catch: a dismissed compliance dialog is not an
+      // upgrade failure and must not surface onUpgradeFailure's error
+      // message. The checkout fallback below is gated inside
+      // useReplaceBasketItem instead, so it isn't checked twice.
+      if (!(await ensureCompliance())) return
+      try {
+        await createVerifiedProgramEnrollment.mutateAsync({
+          courserun_id: readableId!,
+          request_body: programRequestBody,
+        })
+        if (coursewareUrl) {
+          window.location.href = coursewareUrl
+        }
+      } catch {
+        onUpgradeFailure?.(
+          "There was a problem upgrading your enrollment. Please try again.",
+        )
+      }
+      return
+    }
+
     if (!productId) return
 
     try {
       await replaceBasketItem.mutateAsync(productId)
-    } catch (error) {
-      onError?.(error as Error)
+    } catch {
+      onUpgradeFailure?.(
+        "There was a problem adding the certificate to your cart.",
+      )
     }
   }
 
@@ -89,22 +168,26 @@ const UpgradeBanner: React.FC<
     return null
   }
 
-  const formattedPrice = `$${certificateUpgradePrice}`
   const calendarDays = certificateUpgradeDeadline
     ? calendarDaysUntil(certificateUpgradeDeadline)
     : null
 
   return (
-    <SubtitleLinkRoot layout={layout} {...others}>
-      <SubtitleLink layout={layout} href="#" onClick={handleUpgradeClick}>
+    <SubtitleLinkRoot {...others}>
+      <SubtitleLink href="#" onClick={handleUpgradeClick}>
         <RiArrowUpCircleLine size="16px" />
-        {`Upgrade for certificate - ${formattedPrice}`}
+        {canOneClickUpgrade
+          ? "Upgrade for certificate"
+          : `Upgrade for certificate - $${certificateUpgradePrice}`}
       </SubtitleLink>
       {calendarDays !== null && (
-        <NoSSR>
-          {/* This uses local time. */}
-          {formatUpgradeTime(calendarDays)}
-        </NoSSR>
+        <>
+          <RedEllipse />
+          <NoSSR>
+            {/* This uses local time. */}
+            {formatUpgradeTime(calendarDays)}
+          </NoSSR>
+        </>
       )}
     </SubtitleLinkRoot>
   )
@@ -115,7 +198,7 @@ const EnrolledCardShell = styled.div(({ theme }) => ({
   borderRadius: "8px",
   overflow: "hidden",
   backgroundColor: theme.custom.colors.white,
-  [theme.breakpoints.down("md")]: {
+  [theme.breakpoints.down("sm")]: {
     display: "none",
   },
   '&[data-layout="compact"]': {
@@ -136,7 +219,7 @@ const EnrolledCardShell = styled.div(({ theme }) => ({
 }))
 
 const CardHeaderContent = styled.div({
-  padding: "16px 16px 0 16px",
+  padding: "16px",
   display: "flex",
   gap: "8px",
   alignItems: "center",
@@ -149,9 +232,15 @@ const MobileAccordionWrapper = styled.div({
 type EnrolledCourseCardProps = {
   enrollment: CourseRunEnrollmentV3
   siblingEnrollments?: CourseRunEnrollmentV3[]
+  ancestorContext?: {
+    programEnrollment?: V3UserProgramEnrollment
+    parentProgramReadableIds?: string[]
+    useVerifiedEnrollment?: boolean
+  }
   layout?: "default" | "compact"
   headingLevel?: "h2" | "h3" | "h4" | "h5" | "h6"
   onUpgradeError?: (error: string) => void
+  isModule?: boolean
   Component?: React.ElementType
   className?: string
 }
@@ -159,28 +248,46 @@ type EnrolledCourseCardProps = {
 export const EnrolledCourseCard = ({
   enrollment,
   siblingEnrollments,
+  ancestorContext,
   layout = "default",
   headingLevel,
   onUpgradeError,
+  isModule,
   Component,
   className,
 }: EnrolledCourseCardProps) => {
   const course = enrollment.run.course
   const run = enrollment.run
+  const isCompact = layout === "compact"
   const isContractPageResource = Boolean(enrollment.b2b_contract_id)
+  const cardTypeLabelText =
+    isModule || isContractPageResource ? "Module" : "Course"
+  const cardTypeLabel =
+    !isModule && !isCompact ? (
+      <CardTypeText>{cardTypeLabelText}</CardTypeText>
+    ) : null
   const mitxOnlineUser = useQuery(mitxUserQueries.me())
   const isStaff = mitxOnlineUser.data?.is_staff
-  const isCompact = layout === "compact"
+  /**
+   * Enrollment mode does not decide this: a refund returns the learner to audit,
+   * and the receipt is where they confirm it went through. Whether an order
+   * exists is the only question, and the lookup answers it.
+   *
+   * Every card shares one `orders/history` query (same cache key), so this is a
+   * single request for the whole dashboard rather than one per card.
+   */
+  const receiptResolution = useOrderIdForRun(run?.id ?? null)
   const title = isCompact ? course.title : run?.title || course.title
   const coursewareUrl = run?.courseware_url
   const certificateLink = getCertificateLink(
-    enrollment?.certificate?.link,
+    pickCertificateEnrollment([enrollment, ...(siblingEnrollments ?? [])])
+      ?.certificate?.link,
     "course",
   )
   const enrollmentMode = enrollment?.enrollment_mode
   const offerUpgrade = !enrollment?.b2b_contract_id
   const startDate = run?.start_date
-  const hasStarted = startDate ? isInPast(startDate) : true
+  const coursewareOpen = canOpenCourseware(startDate, { isStaff })
   const endDate = run?.end_date
   const hasEnded = endDate ? isInPast(endDate) : false
   const hasCourseDateText = getCourseDateText(startDate, endDate) !== null
@@ -198,17 +305,27 @@ export const EnrolledCourseCard = ({
     !!run?.upgrade_product_price &&
     !!run?.upgrade_product_id &&
     !(run?.upgrade_deadline && isInPast(run.upgrade_deadline))
+  const isVerifiedProgramEnrollment =
+    Boolean(ancestorContext?.useVerifiedEnrollment) ||
+    isVerifiedEnrollmentMode(
+      ancestorContext?.programEnrollment?.enrollment_mode,
+    )
   const enrollmentStatus = getDashboardEnrollmentStatus({
     type: DashboardType.CourseRunEnrollment,
     data: enrollment,
   })
   const upgradedAndIncomplete =
     !isContractPageResource && isVerifiedEnrollmentMode(enrollmentMode)
-  const certStatus = certificateLink ? (
-    <SubtitleLink href={certificateLink} layout={layout}>
-      <RiAwardLine size="16px" />
-      {isCompact ? "Certificate" : "View Certificate"}
-    </SubtitleLink>
+  const certButton = certificateLink ? (
+    <>
+      <SubtitleLink href={certificateLink}>
+        <RiAwardLine size="16px" />
+        {isCompact ? "Certificate" : "View Certificate"}
+      </SubtitleLink>
+    </>
+  ) : null
+  const certStatus = certButton ? (
+    certButton
   ) : showUpgradeBanner ? (
     <UpgradeBanner
       data-testid="upgrade-root"
@@ -216,12 +333,14 @@ export const EnrolledCourseCard = ({
       certificateUpgradeDeadline={run?.upgrade_deadline}
       certificateUpgradePrice={run?.upgrade_product_price}
       productId={run?.upgrade_product_id}
-      layout={layout}
-      onError={() => {
-        onUpgradeError?.(
-          "There was a problem adding the certificate to your cart.",
-        )
-      }}
+      isVerifiedProgramEnrollment={isVerifiedProgramEnrollment}
+      readableId={run?.courseware_id}
+      coursewareUrl={coursewareOpen ? (coursewareUrl ?? undefined) : undefined}
+      programReadableIds={ancestorContext?.parentProgramReadableIds}
+      programCoursewareId={
+        ancestorContext?.programEnrollment?.program.readable_id
+      }
+      onUpgradeFailure={onUpgradeError}
     />
   ) : upgradedAndIncomplete ? (
     <UpgradedBanner />
@@ -232,12 +351,12 @@ export const EnrolledCourseCard = ({
     certStatus,
   ].filter(Boolean)
 
-  const endDateAndCertSection =
+  const endDateAndUpgradeSection =
     metaSegments.length > 0 ? (
-      <Stack direction="row" alignItems="center">
+      <Stack direction="row" alignItems="center" gap="12px">
         {metaSegments.map((segment, i) => (
           <React.Fragment key={i}>
-            {i > 0 && <Separator />}
+            {i > 0 && <Ellipse />}
             {segment}
           </React.Fragment>
         ))}
@@ -245,28 +364,29 @@ export const EnrolledCourseCard = ({
     ) : null
   const titleSection = (
     <Stack gap="6px">
-      {coursewareUrl ? (
+      {coursewareUrl && coursewareOpen ? (
         <TitleHeading as={headingLevel}>
-          <TitleLink size="medium" color="black" href={coursewareUrl}>
+          <EnrolledTitleLink
+            size="medium"
+            color="black"
+            href={coursewareUrl}
+            enrollmentstatus={enrollmentStatus}
+          >
             {title}
-          </TitleLink>
+          </EnrolledTitleLink>
         </TitleHeading>
       ) : (
         <TitleText as={headingLevel}>{title}</TitleText>
       )}
-      {isCompact ? null : endDateAndCertSection}
+      {endDateAndUpgradeSection}
     </Stack>
   )
-  // Determine if button should be disabled
-  // Staff can access courseware even before the course has started
   const courseHasEnded = run?.end_date ? isInPast(run.end_date) : false
-  const isDisabled = Boolean(
-    !coursewareUrl || // Enrolled but no action available
-      (!!startDate && !hasStarted && !isStaff), // Enrolled but course hasn't started yet
-  )
+  const isDisabled = Boolean(!coursewareUrl || !coursewareOpen)
   const isCompleted =
     enrollmentStatus === EnrollmentStatus.Completed || courseHasEnded
   const buttonText = isCompleted ? "View" : "Continue"
+  const variant = isCompleted ? "secondary" : "primary"
   const compactVariant = isCompleted ? "text" : "primary"
   const ctaButton = isCompact ? (
     isDisabled ? (
@@ -291,44 +411,36 @@ export const EnrolledCourseCard = ({
       </CoursewareButtonLink>
     )
   ) : isDisabled ? (
-    <Button
+    <CoursewareButton
       size="small"
-      variant="primary"
+      variant={variant}
       disabled
       data-testid="courseware-button"
       aria-label={`${buttonText} course: ${title}`}
     >
       {buttonText}
-    </Button>
+    </CoursewareButton>
   ) : (
-    <ButtonLink
+    <CoursewareButtonLink
       size="small"
-      variant="primary"
+      variant={variant}
       href={coursewareUrl ?? ""}
       data-testid="courseware-button"
       aria-label={`${buttonText} course: ${title}`}
     >
       {buttonText}
-    </ButtonLink>
+    </CoursewareButtonLink>
   )
   const buttonSection = isCompact ? (
-    <Stack direction="row" alignItems="center">
-      {endDateAndCertSection}
-      {endDateAndCertSection && <Separator />}
+    <Stack direction="row" gap="8px" alignItems="center">
       <CoursewareActionColumn direction="row" justifyContent="center">
         {ctaButton}
       </CoursewareActionColumn>
     </Stack>
   ) : (
-    <>
-      <EnrollmentStatusIndicator
-        status={enrollmentStatus}
-        showNotComplete={Boolean(isContractPageResource)}
-      />
-      {ctaButton}
-    </>
+    ctaButton
   )
-  const menuItems = []
+  const menuItems: SimpleMenuItem[] = []
   const readableId = run?.course.readable_id
   const detailsUrl = readableId ? coursePageView(readableId) : undefined
 
@@ -341,33 +453,7 @@ export const EnrolledCourseCard = ({
     })
   }
 
-  menuItems.push(
-    {
-      className: "dashboard-card-menu-item",
-      key: "email-settings",
-      label: "Email Settings",
-      onClick: () => {
-        NiceModal.show(EmailSettingsDialog, {
-          title,
-          enrollment,
-        })
-      },
-    },
-    {
-      className: "dashboard-card-menu-item",
-      key: "unenroll",
-      label: "Unenroll",
-      onClick: () => {
-        NiceModal.show(UnenrollDialog, { title, enrollment })
-      },
-    },
-  )
-
-  const receiptMenuItem = getReceiptMenuItem(
-    enrollment?.enrollment_mode,
-    `/orders/receipt/by-run/${enrollment?.run.id}/`,
-  )
-  if (receiptMenuItem) menuItems.push(receiptMenuItem)
+  menuItems.push(...getRunMenuItems({ enrollment, title, receiptResolution }))
 
   const contextMenu = (
     <SimpleMenu
@@ -386,7 +472,29 @@ export const EnrolledCourseCard = ({
     />
   )
 
+  const progressBadgeSection =
+    isModule && isCompact ? null : (
+      <Stack direction="row" gap="4px" alignItems="center">
+        <ProgressBadge
+          enrollmentStatus={enrollmentStatus}
+          startDate={startDate}
+          endDate={endDate}
+        />
+        <Separator />
+        {cardTypeLabel}
+      </Stack>
+    )
+
   const hasMultipleRuns = (siblingEnrollments?.length ?? 0) > 0
+  const showEnrollmentStatusIcon =
+    !isContractPageResource && isModule && isCompact
+  const runCount = (siblingEnrollments?.length ?? 0) + 1
+  const [runsExpanded, setRunsExpanded] = React.useState(false)
+  const toggleRunsExpanded = () => setRunsExpanded((v) => !v)
+  const desktopRunsPanelId = `sibling-runs-panel-desktop-${enrollment.id}`
+  const mobileRunsPanelId = `sibling-runs-panel-mobile-${enrollment.id}`
+  const desktopRunsToggleId = `sibling-runs-toggle-desktop-${enrollment.id}`
+  const mobileRunsToggleId = `sibling-runs-toggle-mobile-${enrollment.id}`
 
   return (
     <>
@@ -398,18 +506,46 @@ export const EnrolledCourseCard = ({
           as={Component}
         >
           <CardHeaderContent>
-            <Stack justifyContent="start" alignItems="stretch" flex={1}>
-              <CardTypeText>Course</CardTypeText>
+            {showEnrollmentStatusIcon && (
+              <Stack>
+                <EnrollmentStatusIcon status={enrollmentStatus} />
+              </Stack>
+            )}
+            <Stack
+              gap="8px"
+              justifyContent="start"
+              alignItems="stretch"
+              flex={1}
+            >
+              {progressBadgeSection}
               {titleSection}
             </Stack>
-            <Stack direction="row" gap="8px" alignItems="center">
-              {buttonSection}
-              {contextMenu}
+            <Stack
+              direction="column"
+              alignSelf="stretch"
+              gap="8px"
+              alignItems="flex-end"
+              justifyContent="space-between"
+            >
+              <Stack direction="row" gap="8px" alignItems="center">
+                {buttonSection}
+                {contextMenu}
+              </Stack>
+              <SiblingRunsToggle
+                runCount={runCount}
+                expanded={runsExpanded}
+                onClick={toggleRunsExpanded}
+                id={desktopRunsToggleId}
+                controls={desktopRunsPanelId}
+              />
             </Stack>
           </CardHeaderContent>
-          <SiblingRunsAccordion
+          <SiblingRunsPanel
             enrollment={enrollment}
             siblingEnrollments={siblingEnrollments ?? []}
+            expanded={runsExpanded}
+            id={desktopRunsPanelId}
+            labelledBy={desktopRunsToggleId}
           />
         </EnrolledCardShell>
       ) : (
@@ -420,8 +556,13 @@ export const EnrolledCourseCard = ({
           className={className}
           layout={layout}
         >
-          <Stack justifyContent="start" alignItems="stretch" flex={1}>
-            <CardTypeText>Course</CardTypeText>
+          {showEnrollmentStatusIcon && (
+            <Stack alignSelf="start">
+              <EnrollmentStatusIcon status={enrollmentStatus} />
+            </Stack>
+          )}
+          <Stack gap="4px" justifyContent="start" alignItems="stretch" flex={1}>
+            {progressBadgeSection}
             {titleSection}
           </Stack>
           <Stack direction="row" gap="8px" alignItems="center">
@@ -437,32 +578,53 @@ export const EnrolledCourseCard = ({
         className={className}
         layout={layout}
       >
-        <Stack
-          direction="row"
-          justifyContent="space-between"
-          alignItems="stretch"
-          flex={1}
-          width="100%"
-        >
-          <Stack direction="column" gap="8px" flex={1}>
-            {titleSection}
+        <Stack direction="row" gap="8px" alignItems="flex-start" width="100%">
+          {showEnrollmentStatusIcon && (
+            <Stack alignSelf="start">
+              <EnrollmentStatusIcon status={enrollmentStatus} />
+            </Stack>
+          )}
+          <Stack direction="column" gap="8px" flex={1} minWidth={0}>
+            <Stack
+              direction="row"
+              justifyContent="space-between"
+              alignItems="stretch"
+              flex={1}
+              width="100%"
+            >
+              <Stack direction="column" gap="8px" flex={1}>
+                {titleSection}
+              </Stack>
+              {contextMenu}
+            </Stack>
+            <Stack
+              direction="row"
+              gap="8px"
+              alignItems="center"
+              justifyContent="flex-end"
+              width="100%"
+            >
+              {buttonSection}
+            </Stack>
           </Stack>
-          {contextMenu}
-        </Stack>
-        <Stack
-          direction="row"
-          gap="8px"
-          alignItems="center"
-          justifyContent="flex-end"
-          width="100%"
-        >
-          {buttonSection}
         </Stack>
         {hasMultipleRuns && (
           <MobileAccordionWrapper>
-            <SiblingRunsAccordion
+            <Stack direction="row" justifyContent="flex-end" width="100%">
+              <SiblingRunsToggle
+                runCount={runCount}
+                expanded={runsExpanded}
+                onClick={toggleRunsExpanded}
+                id={mobileRunsToggleId}
+                controls={mobileRunsPanelId}
+              />
+            </Stack>
+            <SiblingRunsPanel
               enrollment={enrollment}
               siblingEnrollments={siblingEnrollments ?? []}
+              expanded={runsExpanded}
+              id={mobileRunsPanelId}
+              labelledBy={mobileRunsToggleId}
             />
           </MobileAccordionWrapper>
         )}

@@ -5,7 +5,7 @@ import { ByLineInfoBarContent } from "./ByLineInfoBar"
 const ByLineInfoBarViewer = () => {
   const article = useWebsiteContent()
 
-  const publishedDate = article?.is_published ? article?.created_on : null
+  const publishedDate = article?.is_published ? article?.publish_date : null
   const content = article?.content
   const authorName = article?.author_name ?? null
 

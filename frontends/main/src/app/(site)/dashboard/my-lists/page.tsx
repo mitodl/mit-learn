@@ -1,7 +1,7 @@
 import React from "react"
 import UserListListingComponent from "@/page-components/UserListListing/UserListListing"
 
-const Page: React.FC<PageProps<"/dashboard/my-lists">> = () => {
+const Page: React.FC = () => {
   return <UserListListingComponent title="My Lists" />
 }
 

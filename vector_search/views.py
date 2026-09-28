@@ -1,10 +1,8 @@
 import asyncio
 import logging
 from collections import Counter
-from functools import wraps
 from itertools import chain
 
-from asgiref.sync import sync_to_async
 from django.conf import settings
 from django.utils.decorators import method_decorator
 from drf_spectacular.utils import extend_schema, extend_schema_view
@@ -13,18 +11,19 @@ from qdrant_client.http.exceptions import UnexpectedResponse
 from rest_framework.decorators import action
 from rest_framework.permissions import BasePermission
 from rest_framework.response import Response
-from rest_framework.views import APIView
 
 from authentication.decorators import blocked_ip_exempt
 from learning_resources.constants import GROUP_CONTENT_FILE_CONTENT_VIEWERS
-from main.utils import cache_page_for_anonymous_users
+from main.utils import cache_page_for_anonymous_users, db_sync_to_async
+from main.views import AsyncAPIView
 from vector_search.constants import (
     COLLECTION_PARAM_MAP,
     CONTENT_FILES_COLLECTION_NAME,
     CONTENT_FILES_RETRIEVE_PAYLOAD,
+    NULLABLE_ORDER_BY_KEYS,
+    ORDER_BY_MISSING_TAIL_KEY,
     QDRANT_RESOURCE_PARAM_MAP,
     RESOURCES_COLLECTION_NAME,
-    RESOURCES_RETRIEVE_PAYLOAD,
 )
 from vector_search.serializers import (
     ContentFileVectorSearchRequestSerializer,
@@ -35,14 +34,18 @@ from vector_search.serializers import (
 from vector_search.utils import (
     _content_file_vector_hits,
     _merge_dicts,
+    _resource_payload_hits,
     _resource_vector_hits,
     async_qdrant_aggregations,
     async_qdrant_client,
     best_run_ids_for_resources,
     check_missing_content_file_ids,
-    custom_score_formula,
     dense_encoder,
+    order_by_query,
     qdrant_query_conditions,
+    resources_payload_selector,
+    score_formula_overrides,
+    score_formula_query,
     sparse_encoder,
 )
 
@@ -60,6 +63,42 @@ def _normalize_score_cutoff(value, hybrid_search_enabled):
         else settings.DENSE_VECTOR_SEARCH_MIN_SCORE
     )
     return max(value, min_score_cutoff)
+
+
+def _relative_score_floor(points, hybrid_search_enabled, ratio_override=None):
+    """
+    Trim a score-ordered result set to the hits that scored close enough to the
+    query's own best hit.
+
+    `ratio_override` replaces the search mode's configured ratio when it is not
+    None, so the cutoff can be swept per request like the formula weights are
+    (see score_formula_overrides).
+    """
+    ratio = (
+        ratio_override
+        if ratio_override is not None
+        else (
+            settings.HYBRID_VECTOR_SEARCH_MIN_SCORE_RATIO
+            if hybrid_search_enabled
+            else settings.DENSE_VECTOR_SEARCH_MIN_SCORE_RATIO
+        )
+    )
+    ranked = list(points)
+    if not ratio or not ranked:
+        return points
+    best_score = ranked[0].score
+    # A fraction of a negative best score is above it, which would trim the
+    # best hit. The penalties can put a whole result set under zero.
+    if best_score <= 0:
+        return points
+    floor = best_score * ratio
+    exempt = max(settings.VECTOR_SEARCH_MIN_CANDIDATES or 0, 1)
+    # Scores descend, so this keeps a prefix
+    return [
+        point
+        for rank, point in enumerate(ranked)
+        if rank < exempt or point.score >= floor
+    ]
 
 
 def _sort_key(x, field):
@@ -82,49 +121,13 @@ def _sort_key(x, field):
     return (present_bucket, 1, str(value).lower())
 
 
-class QdrantView(APIView):
+class QdrantView(AsyncAPIView):
     """
-    Parent class for views that execute ES searches
+    Parent class for views that execute Qdrant searches.
+
+    Inherits `AsyncAPIView`'s async dispatch, so handlers may be coroutines and
+    must not touch the ORM directly -- wrap sync work in `db_sync_to_async`.
     """
-
-    @classmethod
-    def as_view(cls, **initkwargs):
-        view = super().as_view(**initkwargs)
-
-        @wraps(view)
-        async def async_view(*args, **kwargs):
-            return await view(*args, **kwargs)
-
-        async_view.view_is_async = True
-        return async_view
-
-    async def dispatch(self, request, *args, **kwargs):
-        self.args = args
-        self.kwargs = kwargs
-        request = self.initialize_request(request, *args, **kwargs)
-        self.request = request
-        self.headers = self.default_response_headers
-
-        try:
-            await sync_to_async(self.initial)(request, *args, **kwargs)
-
-            if request.method.lower() in self.http_method_names:
-                handler = getattr(
-                    self, request.method.lower(), self.http_method_not_allowed
-                )
-            else:
-                handler = self.http_method_not_allowed
-
-            response = handler(request, *args, **kwargs)
-
-            if asyncio.iscoroutine(response):
-                response = await response
-
-        except Exception as exc:  # noqa: BLE001
-            response = self.handle_exception(exc)
-
-        self.response = self.finalize_response(request, response, *args, **kwargs)
-        return self.response
 
     def _format_order_by(self, order_by_parameter):
         sort = models.Direction.ASC
@@ -145,12 +148,13 @@ class QdrantView(APIView):
         encoder_sparse,
         hybrid_search,
         score_cutoff: float | None,
+        score_overrides: dict | None = None,
     ):
         search_params = {
             "collection_name": search_collection,
             "query_filter": search_filter,
             "with_vectors": False,
-            "with_payload": RESOURCES_RETRIEVE_PAYLOAD
+            "with_payload": resources_payload_selector()
             if search_collection == RESOURCES_COLLECTION_NAME
             else CONTENT_FILES_RETRIEVE_PAYLOAD,
             "search_params": models.SearchParams(
@@ -169,26 +173,38 @@ class QdrantView(APIView):
         if normalized_score is not None:
             search_params["score_threshold"] = normalized_score
 
+        # Boosts and the completeness penalty, or None when neither applies to
+        # this collection.
+        formula_query = score_formula_query(
+            search_collection, **(score_overrides or {})
+        )
+
         if hybrid_search:
             sparse_query, dense_query = await asyncio.gather(
-                sync_to_async(encoder_sparse.embed, thread_sensitive=False)(
-                    query_string
-                ),
-                sync_to_async(encoder_dense.embed_query, thread_sensitive=False)(
-                    query_string
-                ),
+                db_sync_to_async(encoder_sparse.embed)(query_string),
+                db_sync_to_async(encoder_dense.embed_query)(query_string),
             )
-            custom_formula_query = models.FormulaQuery(
-                formula=models.SumExpression(
-                    sum=[
-                        "$score",
-                        *custom_score_formula(search_collection),
-                    ]
+            # Each arm is rescored before fusion, so the formula shapes the
+            # ranks RRF sees. With nothing to apply it is an identity rescore,
+            # which keeps the prefetch nesting the same either way.
+            identity_formula_query = models.FormulaQuery(
+                formula=models.SumExpression(sum=["$score"])
+            )
+            # The sparse arm gets the boosts only -- the penalties' weights
+            # are not on its scale (see score_formula_query). Overrides go to
+            # both arms so a program_boost override reaches each.
+            dense_formula_query = formula_query or identity_formula_query
+            sparse_formula_query = (
+                score_formula_query(
+                    search_collection,
+                    **(score_overrides or {}),
+                    include_penalties=False,
                 )
+                or identity_formula_query
             )
             prefetch_params = [
                 models.Prefetch(
-                    query=custom_formula_query,
+                    query=sparse_formula_query,
                     limit=prefetch_limit,
                     prefetch=[
                         models.Prefetch(
@@ -200,7 +216,7 @@ class QdrantView(APIView):
                     ],
                 ),
                 models.Prefetch(
-                    query=custom_formula_query,
+                    query=dense_formula_query,
                     limit=prefetch_limit,
                     prefetch=[
                         models.Prefetch(
@@ -219,14 +235,16 @@ class QdrantView(APIView):
                     query=models.FusionQuery(fusion=models.Fusion.RRF),
                     limit=prefetch_limit,
                 )
-                search_params["query"] = models.OrderByQuery(
-                    order_by=self._format_order_by(order_by)
+                search_params["query"] = order_by_query(
+                    self._format_order_by(order_by), search_collection
                 )
             else:
                 search_params["prefetch"] = prefetch_params
                 search_params["query"] = models.FusionQuery(fusion=models.Fusion.RRF)
         else:
-            dense_query = await sync_to_async(encoder_dense.embed_query)(query_string)
+            dense_query = await db_sync_to_async(encoder_dense.embed_query)(
+                query_string
+            )
             if order_by and "score_threshold" not in search_params:
                 # Nest: dense vector prefetch → order_by query
                 search_params["prefetch"] = models.Prefetch(
@@ -234,9 +252,23 @@ class QdrantView(APIView):
                     using=encoder_dense.model_short_name(),
                     limit=prefetch_limit,
                 )
-                search_params["query"] = models.OrderByQuery(
-                    order_by=self._format_order_by(order_by)
+                search_params["query"] = order_by_query(
+                    self._format_order_by(order_by), search_collection
                 )
+            elif formula_query:
+                # Nest: dense vector prefetch → formula rescore. The score
+                # threshold and search params move onto the prefetch so the
+                # cutoff keeps applying to the raw similarity score rather than
+                # the rescored one, and the vector search stays tuned.
+                search_params["prefetch"] = models.Prefetch(
+                    query=dense_query,
+                    using=encoder_dense.model_short_name(),
+                    limit=prefetch_limit,
+                    filter=search_filter,
+                    params=search_params["search_params"],
+                    score_threshold=search_params.pop("score_threshold", None),
+                )
+                search_params["query"] = formula_query
             else:
                 search_params["using"] = encoder_dense.model_short_name()
                 search_params["query"] = dense_query
@@ -264,6 +296,30 @@ class QdrantView(APIView):
             search_result.append(models.PointStruct(**response_row))
         return search_result
 
+    async def _scroll_missing_order_by_key(self, client, scroll_kwargs, key, limit):
+        """
+        Scroll the points an ordered scroll leaves out: those with no value for
+        the sort key, ordered by recency.
+        """
+        search_filter = scroll_kwargs.get("scroll_filter")
+        missing_filter = models.Filter(
+            must=[
+                *([search_filter] if search_filter else []),
+                models.IsEmptyCondition(is_empty=models.PayloadField(key=key)),
+            ]
+        )
+        page_points, _ = await client.scroll(
+            **{
+                **scroll_kwargs,
+                "scroll_filter": missing_filter,
+                "order_by": models.OrderBy(
+                    key=ORDER_BY_MISSING_TAIL_KEY, direction=models.Direction.DESC
+                ),
+            },
+            limit=limit,
+        )
+        return page_points
+
     async def _execute_scroll_search(  # noqa: PLR0913
         self,
         client,
@@ -278,18 +334,39 @@ class QdrantView(APIView):
             "collection_name": search_collection,
             "scroll_filter": search_filter,
             "with_vectors": False,
+            # Scroll otherwise defaults to the entire payload, transcripts and
+            # all -- ask for the same fields the query path does.
+            "with_payload": resources_payload_selector()
+            if search_collection == RESOURCES_COLLECTION_NAME
+            else CONTENT_FILES_RETRIEVE_PAYLOAD,
         }
 
         if order_by:
             # Qdrant disables pagination (next_page_offset) when order_by
             # is used.  Fetch offset+limit results in one call and slice
             # on the client side.
-            scroll_kwargs["order_by"] = self._format_order_by(order_by)
+            formatted_order_by = self._format_order_by(order_by)
+            scroll_kwargs["order_by"] = formatted_order_by
+            window = offset + limit
             scroll_res = await client.scroll(
                 **scroll_kwargs,
-                limit=offset + limit,
+                limit=window,
             )
             page_points, _ = scroll_res
+            if (
+                formatted_order_by.key in NULLABLE_ORDER_BY_KEYS
+                and len(page_points) < window
+            ):
+                # An ordered scroll only walks the payload index, so the
+                # points with no value for the key are missing from it rather
+                # than ordered last. Fetch and append them, so the result set
+                # stays whole however deep the paging goes.
+                page_points += await self._scroll_missing_order_by_key(
+                    client,
+                    scroll_kwargs,
+                    formatted_order_by.key,
+                    window - len(page_points),
+                )
             return page_points[offset : offset + limit]
 
         # Standard pagination loop for non-ordered scrolls
@@ -350,6 +427,7 @@ class QdrantView(APIView):
             )
             if prefetch_max_limit is not None:
                 prefetch_limit = min(prefetch_limit, prefetch_max_limit)
+            prefetch_limit = max(prefetch_limit, offset + limit)
 
             search_params = await self._build_search_params(
                 query_string,
@@ -362,6 +440,7 @@ class QdrantView(APIView):
                 encoder_sparse,
                 hybrid_search,
                 score_cutoff,
+                score_formula_overrides(params),
             )
 
             if "group_by" in params:
@@ -379,6 +458,12 @@ class QdrantView(APIView):
                 search_params["offset"] = offset
                 result_obj = await client.query_points(**search_params)
                 search_result = result_obj.points
+            if "group_by" not in params and score_cutoff is not None:
+                search_result = _relative_score_floor(
+                    search_result,
+                    hybrid_search,
+                    ratio_override=params.get("score_cutoff_ratio"),
+                )
         else:
             # No query string — use scroll API
             search_result = await self._execute_scroll_search(
@@ -391,9 +476,13 @@ class QdrantView(APIView):
             )
 
         if search_collection == RESOURCES_COLLECTION_NAME:
-            return await sync_to_async(_resource_vector_hits)(search_result)
+            if settings.VECTOR_SEARCH_RESOURCES_FROM_PAYLOAD:
+                # Payloads are already the serialized resources -- no database
+                # round trip, so no thread hop either.
+                return _resource_payload_hits(search_result)
+            return await db_sync_to_async(_resource_vector_hits)(search_result)
         else:
-            return await sync_to_async(_content_file_vector_hits)(search_result)
+            return await db_sync_to_async(_content_file_vector_hits)(search_result)
 
     def _extract_values(self, obj, qdrant_field):
         """
@@ -487,10 +576,18 @@ class QdrantView(APIView):
         aggregation_keys = params.get("aggregations") or []
 
         count_result, aggregations = await asyncio.gather(
+            # This total drives pagination, and Qdrant's approximate count
+            # overestimates a filtered collection -- which advertises pages
+            # that return no results. Exact counting fixes that but scales with
+            # the number of matched points (measured at ~60ms per million), so
+            # we only set exact=True for the resources collection (~1 point per
+            # resource). We do not set it for the contentfiles collection due to
+            # the number (millions) of points; its totals stay approximate,
+            # which is invisible while nothing paginates them.
             client.count(
                 collection_name=search_collection,
                 count_filter=search_filter,
-                exact=False,
+                exact=search_collection == RESOURCES_COLLECTION_NAME,
             ),
             async_qdrant_aggregations(
                 aggregation_keys,
@@ -631,7 +728,7 @@ class LearningResourcesVectorSearchView(QdrantView):
                         response, context={"request": request}
                     ).data
 
-                response_data = await sync_to_async(serialize)()
+                response_data = await db_sync_to_async(serialize)()
                 response_data["results"] = list(response_data["results"])
                 return Response(response_data)
         else:
@@ -676,7 +773,7 @@ class ContentFilesVectorSearchView(QdrantView):
         )
     )
     @extend_schema(summary="Content File Vector Search")
-    async def get(self, request):
+    async def get(self, request):  # noqa: C901, PLR0912
         request_data = ContentFileVectorSearchRequestSerializer(data=request.GET)
 
         if request_data.is_valid():
@@ -692,28 +789,38 @@ class ContentFilesVectorSearchView(QdrantView):
                 )
 
             params = dict(request_data.data)
-            resource_ids = params.get("resource_readable_id")
-            has_run_filter = "run_readable_id" in params or "edx_module_id" in params
-            if resource_ids and not has_run_filter:
-                # Restrict resource-scoped queries to each resource's best run.
-                # Replace resource_readable_id with a single run_readable_id filter
-                # (don't AND them: compound filters break Qdrant's approximate
-                # count). The resource readable_ids are included to match each
-                # resource's run-less course-metadata point.
-                best_run_ids = await sync_to_async(best_run_ids_for_resources)(
-                    resource_ids
+            if "edx_module_id" in params and not params["edx_module_id"]:
+                # Every requested edx_module_id failed validation ("sent
+                # but stripped", as opposed to "not sent"): nothing can
+                # match, so skip Qdrant and return the same shape an
+                # empty search produces.
+                response = {"hits": [], "total": {"value": 0}, "aggregations": {}}
+            else:
+                resource_ids = params.get("resource_readable_id")
+                has_run_filter = (
+                    "run_readable_id" in params or "edx_module_id" in params
                 )
-                del params["resource_readable_id"]
-                params["run_readable_id"] = best_run_ids + list(resource_ids)
+                if resource_ids and not has_run_filter:
+                    # Restrict resource-scoped queries to each resource's best run.
+                    # Replace resource_readable_id with a single run_readable_id filter
+                    # (don't AND them: compound filters break Qdrant's approximate
+                    # count). The resource readable_ids are included to match each
+                    # resource's run-less course-metadata point.
 
-            response = await self.async_vector_search(
-                query_text,
-                limit=limit,
-                offset=offset,
-                params=params,
-                search_collection=collection_name,
-                hybrid_search=hybrid_search,
-            )
+                    best_run_ids = await db_sync_to_async(best_run_ids_for_resources)(
+                        resource_ids
+                    )
+                    del params["resource_readable_id"]
+                    params["run_readable_id"] = best_run_ids + list(resource_ids)
+
+                response = await self.async_vector_search(
+                    query_text,
+                    limit=limit,
+                    offset=offset,
+                    params=params,
+                    search_collection=collection_name,
+                    hybrid_search=hybrid_search,
+                )
 
             if params.get("edx_module_id") and not response.get("hits"):
                 try:
@@ -734,7 +841,7 @@ class ContentFilesVectorSearchView(QdrantView):
                         response, context={"request": request}
                     ).data
 
-                response_data = await sync_to_async(serialize)()
+                response_data = await db_sync_to_async(serialize)()
                 response_data["results"] = list(response_data["results"])
                 return Response(response_data)
         else:

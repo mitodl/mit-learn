@@ -4,11 +4,9 @@ import type {
   CourseRunV2,
   CourseWithCourseRunsSerializerV2,
   EnrollmentMode,
-  ProductFlexiblePrice,
   V2ProgramRequirement,
 } from "@mitodl/mitxonline-api-axios/v2"
 import {
-  DiscountTypeEnum,
   EnrollmentModeEnum,
   NodeTypeEnum,
 } from "@mitodl/mitxonline-api-axios/v2"
@@ -16,17 +14,6 @@ import {
 const NEXT_PUBLIC_MITX_ONLINE_LEGACY_BASE_URL = env(
   "NEXT_PUBLIC_MITX_ONLINE_LEGACY_BASE_URL",
 )
-
-const upgradeRunUrl = (product: ProductFlexiblePrice): string => {
-  try {
-    const url = new URL("/cart/add", NEXT_PUBLIC_MITX_ONLINE_LEGACY_BASE_URL)
-    url.searchParams.append("product_id", String(product.id))
-    return url.toString()
-  } catch (err) {
-    console.error("Error constructing upgrade URL:", err)
-    return ""
-  }
-}
 
 const canPurchaseRun = (run: CourseRunV2): boolean => {
   // Prefer to handle this on backend
@@ -37,23 +24,6 @@ const canPurchaseRun = (run: CourseRunV2): boolean => {
     run.is_upgradable &&
     Boolean(run.products?.length)
   )
-}
-
-export const getFlexiblePriceForProduct = (product: ProductFlexiblePrice) => {
-  const flexDiscountAmount = Number(product.product_flexible_price?.amount) ?? 0
-  const flexDiscountType = product.product_flexible_price?.discount_type
-  const price = Number(product.price)
-
-  switch (flexDiscountType) {
-    case DiscountTypeEnum.DollarsOff:
-      return price - flexDiscountAmount
-    case DiscountTypeEnum.PercentOff:
-      return price * (1 - flexDiscountAmount / 100)
-    case DiscountTypeEnum.FixedPrice:
-      return flexDiscountAmount
-    default:
-      return price
-  }
 }
 
 /**
@@ -79,37 +49,57 @@ const formatPrice = (
   })
 }
 
-type PriceWithDiscount = {
-  isDiscounted: boolean
-  /**
-   * Indicates if the product has approved financial aid
-   * Note: May be zero discount.
-   */
-  approvedFinancialAid: boolean
-  originalPrice: string
-  finalPrice: string
+type PriceRange = {
+  min: number
+  max: number
 }
-const priceWithDiscount = ({
-  product,
-  flexiblePrice,
-  avoidCents = true,
-}: {
-  product: BaseProduct
-  flexiblePrice?: ProductFlexiblePrice
-  avoidCents?: boolean
-}): PriceWithDiscount => {
-  const originalPrice = formatPrice(product.price, { avoidCents })
-  const finalPrice = flexiblePrice
-    ? formatPrice(getFlexiblePriceForProduct(flexiblePrice), { avoidCents })
-    : originalPrice
-  const isDiscounted = originalPrice !== finalPrice
 
-  return {
-    isDiscounted,
-    approvedFinancialAid: !!flexiblePrice?.product_flexible_price?.id,
-    originalPrice,
-    finalPrice,
+/**
+ * The price range a course or program advertises, or null when it advertises a
+ * single price. `min_price`/`max_price` are CMS-authored; staff set them equal
+ * when there is one price, so a range means `min < max`.
+ */
+const toPriceRange = (resource: {
+  min_price?: number | null
+  max_price?: number | null
+}): PriceRange | null => {
+  const { min_price: min, max_price: max } = resource
+  if (typeof min !== "number" || typeof max !== "number") return null
+  return min < max ? { min, max } : null
+}
+
+/**
+ * Format a price range as `$250 – $1,000`, or as a single price when
+ * `min === max`. The en dash and its surrounding spaces match `getDisplayPrice`
+ * in ol-utilities, so a resource reads the same here as in the resource drawer.
+ */
+const formatPriceRange = (
+  { min, max }: PriceRange,
+  { avoidCents = true } = {},
+): string =>
+  min < max
+    ? `${formatPrice(min, { avoidCents })} – ${formatPrice(max, { avoidCents })}`
+    : formatPrice(min, { avoidCents })
+
+/**
+ * The price to display for a course or program: its advertised range when it has
+ * one, otherwise the price of the product you would actually buy. Falls back to
+ * the advertised price when there is no product, and returns null when neither
+ * is known.
+ */
+const formatResourcePrice = (
+  resource: { min_price?: number | null; max_price?: number | null },
+  productPrice: string | number | null | undefined,
+  { avoidCents = true } = {},
+): string | null => {
+  const range = toPriceRange(resource)
+  if (range) return formatPriceRange(range, { avoidCents })
+  if (productPrice !== null && productPrice !== undefined) {
+    return formatPrice(productPrice, { avoidCents })
   }
+  const advertised = resource.min_price ?? resource.max_price
+  if (typeof advertised !== "number") return null
+  return formatPrice(advertised, { avoidCents })
 }
 
 /**
@@ -343,9 +333,10 @@ const isVerifiedEnrollmentMode = (mode?: string | null) => {
 
 export {
   formatPrice,
-  priceWithDiscount,
+  formatPriceRange,
+  formatResourcePrice,
+  toPriceRange,
   canPurchaseRun,
-  upgradeRunUrl,
   mitxonlineLegacyUrl,
   getEnrollmentType,
   getCourseEnrollmentAction,
@@ -355,7 +346,7 @@ export {
   isVerifiedEnrollmentMode,
 }
 export type {
-  PriceWithDiscount,
+  PriceRange,
   EnrollmentType,
   CourseEnrollmentAction,
   ProgramRequirementSection,

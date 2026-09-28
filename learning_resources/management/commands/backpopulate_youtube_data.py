@@ -111,8 +111,11 @@ class Command(ConfirmDeleteMixin, BaseCommand):
             self.stdout.write(f"Started task {task} to get YouTube video data")
             self.stdout.write("Waiting on task...")
             start = now_in_utc()
-            result = task.get()
+            channel_count = task.get()
             total_seconds = (now_in_utc() - start).total_seconds()
+            # each channel fans out into its own task, and each of those into a
+            # task per playlist, so the loading continues after this returns
             self.stdout.write(
-                f"Fetched {result} YouTube channel in {total_seconds} seconds"
+                f"Queued {channel_count} YouTube channels in {total_seconds} seconds."
+                f" Follow the celery logs for the per-channel and per-playlist tasks."
             )

@@ -1,0 +1,306 @@
+import React from "react"
+import {
+  render,
+  screen,
+  waitForElementToBeRemoved,
+  within,
+} from "@testing-library/react"
+import userEvent from "@testing-library/user-event"
+import { ThemeProvider, useTheme } from "ol-components"
+import type { Theme } from "ol-components"
+import { factories } from "api/analytics-test-utils"
+import EngagementTrendChart from "./EngagementTrendChart"
+import { CATEGORICAL, chartInk } from "./chartPalette"
+
+/**
+ * Captures the live theme so the ink assertions below compare against the
+ * token, not a hex copied into this file — copying one here would reintroduce
+ * exactly the drift the theme lookup exists to prevent.
+ */
+let capturedTheme: Theme
+const ThemeProbe = () => {
+  capturedTheme = useTheme() as Theme
+  return null
+}
+
+/**
+ * Smoke coverage for the real charts (they are stubbed out in the page test).
+ * jsdom does no layout, so there is no point asserting on geometry; what these
+ * check is that the chart code runs, draws one mark per series, and paints
+ * those marks with the validated palette rather than the library's defaults.
+ */
+
+const renderWithTheme = (ui: React.ReactElement) =>
+  render(
+    <ThemeProvider>
+      <ThemeProbe />
+      {ui}
+    </ThemeProvider>,
+  )
+
+/**
+ * The two palettes above stay pinned as hexes on purpose — they are validated
+ * data colors and must not move without re-running the contrast/CVD checks.
+ * The non-data ink is the opposite case: it is the same grey chrome the tables
+ * beside these charts use, so it reads from the theme and moves when a
+ * smoot-design token is retuned. Asserted against the live token rather than a
+ * literal, since a literal here would just relocate the duplication and would
+ * still pass if the module went back to hardcoding.
+ */
+describe("chartInk", () => {
+  test("resolves non-data ink from theme tokens, not pinned hexes", () => {
+    renderWithTheme(<div />)
+    const colors = capturedTheme.custom.colors
+
+    expect(chartInk(capturedTheme)).toEqual({
+      grid: colors.lightGray2,
+      axis: colors.silverGrayLight,
+      label: colors.silverGrayDark,
+      surface: colors.white,
+    })
+  })
+})
+
+/**
+ * Both charts are paired with a table carrying the same numbers, which makes
+ * the SVG redundant for a screen reader — and worse than redundant, since
+ * traversing hundreds of series and axis nodes to reach data that is about to
+ * be presented properly is pure noise. So the chart is hidden and the table is
+ * the accessible copy.
+ *
+ * The second assertion in each case is the one that keeps this honest:
+ * `aria-hidden` on a subtree containing focusable content is itself a
+ * violation, because keyboard focus can land somewhere screen readers have been
+ * told does not exist. Neither chart renders anything focusable today; this
+ * fails if a future library version starts to.
+ */
+describe.each([
+  [
+    "EngagementTrendChart",
+    () => (
+      <EngagementTrendChart
+        rows={[factories.monthlyEngagementTrend()]}
+        isLoading={false}
+      />
+    ),
+    "Monthly engagement",
+  ],
+])("%s accessibility", (_name, renderChart, tableLabel) => {
+  test("hides the chart from assistive tech but keeps its table", () => {
+    const { container } = renderWithTheme(renderChart())
+
+    // eslint-disable-next-line testing-library/no-container
+    const svg = container.querySelector("svg")
+    expect(svg).toBeInTheDocument()
+    expect(svg?.closest("[aria-hidden='true']")).not.toBeNull()
+
+    // The table is the accessible equivalent, so it must stay exposed.
+    const table = screen.getByRole("table", { name: tableLabel })
+    expect(table.closest("[aria-hidden='true']")).toBeNull()
+  })
+
+  test("puts nothing focusable inside the hidden subtree", () => {
+    const { container } = renderWithTheme(renderChart())
+
+    // eslint-disable-next-line testing-library/no-container
+    const hidden = container.querySelector("[aria-hidden='true']")
+    const focusable = hidden?.querySelectorAll(
+      "a[href], button, input, select, textarea, [tabindex]",
+    )
+    expect(focusable).toHaveLength(0)
+  })
+})
+
+describe("EngagementTrendChart", () => {
+  const months = [
+    factories.monthlyEngagementTrend({ activity_year_and_month: "2026-01" }),
+    factories.monthlyEngagementTrend({ activity_year_and_month: "2026-02" }),
+  ]
+
+  test("renders a line per series in the categorical palette", () => {
+    const { container } = renderWithTheme(
+      <EngagementTrendChart rows={months} isLoading={false} />,
+    )
+
+    // Testing Library has no query for "which paint attribute did this SVG
+    // element get", which is exactly what this asserts, so the container query
+    // is the only way to check the palette actually reached the marks.
+    // eslint-disable-next-line testing-library/no-container
+    const lines = container.querySelectorAll(".MuiLineElement-root")
+    expect(lines).toHaveLength(CATEGORICAL.length)
+    const strokes = Array.from(lines).map((line) => line.getAttribute("stroke"))
+    expect(strokes).toEqual([...CATEGORICAL])
+  })
+
+  // Scoped to the legend: the paired table repeats every series name as a
+  // column header, which is the point of it, so an unscoped query matches twice.
+  test("labels every series so identity is never carried by color alone", () => {
+    renderWithTheme(<EngagementTrendChart rows={months} isLoading={false} />)
+
+    expect(
+      screen.getByText("Active learners", { selector: ".MuiChartsLabel-root" }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText("New enrollments", { selector: ".MuiChartsLabel-root" }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText("Certificates earned", {
+        selector: ".MuiChartsLabel-root",
+      }),
+    ).toBeInTheDocument()
+  })
+
+  /**
+   * "Active learners" alone doesn't say what counts as active — the hover
+   * icon's accessible label carries the definition for keyboard and screen
+   * reader users, not just pointer hover. Scoped to the table: `SERIES` with
+   * the trigger's description also drives a second, mobile-only copy of this
+   * same trigger outside the table (see the test below), so an unscoped query
+   * would match both.
+   */
+  test("explains what counts as an active learner from the column header", () => {
+    renderWithTheme(<EngagementTrendChart rows={months} isLoading={false} />)
+
+    const table = screen.getByRole("table", { name: "Monthly engagement" })
+    expect(
+      within(table).getByLabelText(
+        /Learners who did anything in a course this month/,
+      ),
+    ).toBeInTheDocument()
+  })
+
+  /**
+   * The column header carrying that trigger is hidden below the `md`
+   * breakpoint (`TableHeaderRow`), so mobile/tablet users need an equivalent
+   * — once, outside the table, not repeated for every month's row.
+   */
+  test("repeats the active-learner definition once for mobile, outside the table", () => {
+    renderWithTheme(<EngagementTrendChart rows={months} isLoading={false} />)
+
+    const table = screen.getByRole("table", { name: "Monthly engagement" })
+    const triggers = screen.getAllByLabelText(
+      /Learners who did anything in a course this month/,
+    )
+    expect(triggers).toHaveLength(2)
+    expect(triggers.some((trigger) => !table.contains(trigger))).toBe(true)
+  })
+
+  /**
+   * A static aria-label proves nothing about whether the `Tooltip` itself
+   * works — this test would still pass if `Tooltip` were deleted entirely.
+   * Driving real hover and asserting the rendered popper text catches that;
+   * keyboard focus isn't asserted here because MUI only opens on focus when
+   * `:focus-visible` matches (`isFocusVisible`), which this test environment
+   * doesn't set for a programmatic `.focus()` call — see the same caveat in
+   * ContractAdminPage.test.tsx's tooltip test.
+   */
+  test("shows the active-learner definition on hover", async () => {
+    const user = userEvent.setup()
+    renderWithTheme(<EngagementTrendChart rows={months} isLoading={false} />)
+
+    const table = screen.getByRole("table", { name: "Monthly engagement" })
+    const trigger = within(table).getByLabelText(
+      /Learners who did anything in a course this month/,
+    )
+
+    await user.hover(trigger)
+    expect(
+      await screen.findByRole("tooltip", {
+        name: /Learners who did anything in a course this month/,
+      }),
+    ).toBeInTheDocument()
+
+    await user.unhover(trigger)
+    await waitForElementToBeRemoved(() => screen.queryByRole("tooltip"))
+  })
+
+  test("shows an empty state rather than an empty chart", () => {
+    renderWithTheme(<EngagementTrendChart rows={[]} isLoading={false} />)
+    expect(
+      screen.getByText("No monthly activity recorded yet."),
+    ).toBeInTheDocument()
+  })
+
+  /**
+   * A month suppressed by the anonymity floor must be a gap in the line, not a
+   * dip to zero — so the null has to survive all the way into the series data.
+   */
+  test("renders a suppressed month without inventing a zero", () => {
+    const rows = [
+      factories.monthlyEngagementTrend({
+        activity_year_and_month: "2026-01",
+        new_enrollments: null,
+        certificates_earned: null,
+      }),
+      factories.monthlyEngagementTrend({ activity_year_and_month: "2026-02" }),
+    ]
+
+    expect(() =>
+      renderWithTheme(<EngagementTrendChart rows={rows} isLoading={false} />),
+    ).not.toThrow()
+  })
+
+  /**
+   * The SVG is unreadable to a screen reader, so the monthly numbers have to
+   * exist as text too.
+   */
+  test("pairs the chart with a table of the same numbers", () => {
+    renderWithTheme(
+      <EngagementTrendChart
+        rows={[
+          factories.monthlyEngagementTrend({
+            activity_year_and_month: "2026-01",
+            monthly_active_learners: 84,
+            new_enrollments: 21,
+            certificates_earned: 7,
+          }),
+        ]}
+        isLoading={false}
+      />,
+    )
+
+    const table = screen.getByRole("table", { name: "Monthly engagement" })
+    expect(within(table).getByText("Jan 2026")).toBeInTheDocument()
+    expect(within(table).getByText("84")).toBeInTheDocument()
+    expect(within(table).getByText("21")).toBeInTheDocument()
+    expect(within(table).getByText("7")).toBeInTheDocument()
+  })
+
+  /**
+   * A gap in a line reads as "no data" — only the table can say a month was
+   * withheld. What "withheld" means comes from the marker's own tooltip and
+   * label, plus the page-level legend in `AnalyticsContent`.
+   */
+  test("explains suppressed months in the table instead of leaving a bare gap", () => {
+    renderWithTheme(
+      <EngagementTrendChart
+        rows={[
+          factories.monthlyEngagementTrend({
+            activity_year_and_month: "2026-01",
+            certificates_earned: null,
+          }),
+        ]}
+        isLoading={false}
+      />,
+    )
+
+    expect(
+      screen.getAllByLabelText(/Withheld: too few learners/).length,
+    ).toBeGreaterThan(0)
+  })
+
+  test("says the data could not be loaded rather than showing an empty state", () => {
+    renderWithTheme(
+      <EngagementTrendChart rows={undefined} isLoading={false} isError />,
+    )
+
+    expect(
+      screen.getByText(
+        "This data could not be loaded. Please try again later.",
+      ),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByText("No monthly activity recorded yet."),
+    ).not.toBeInTheDocument()
+  })
+})

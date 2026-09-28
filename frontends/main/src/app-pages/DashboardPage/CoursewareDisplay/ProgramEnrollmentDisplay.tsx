@@ -1,26 +1,32 @@
 import React from "react"
-import { Skeleton, Stack, Typography, styled, theme } from "ol-components"
-import { ButtonLink } from "@mitodl/smoot-design"
+import { Link, Skeleton, Stack, Typography, styled, theme } from "ol-components"
+import { Alert, ButtonLink } from "@mitodl/smoot-design"
+import { DisplayModeEnum } from "@mitodl/mitxonline-api-axios/v2"
 import { ResourceType, getKey } from "./model/dashboardViewModel"
 import { CoursewareCard } from "./CoursewareCard"
 import NotFoundPage from "@/app-pages/ErrorPage/NotFoundPage"
 import { ProgramAsCourseCard } from "./ProgramAsCourseCard"
 import { RiAwardFill } from "@remixicon/react"
 import { useProgramDashboardData } from "./hooks/useProgramDashboardData"
+import { env } from "@/env"
 
 const CourseEntryCardStyled = styled(CoursewareCard)({
   borderRadius: "8px",
   boxShadow: "0px 1px 6px 0px rgba(3, 21, 45, 0.05)",
 })
 
-const StyledCoursewareCard = styled(CoursewareCard)({
-  borderRadius: "8px",
-  boxShadow: "0px 1px 6px 0px rgba(3, 21, 45, 0.05)",
+const AlertBanner = styled(Alert)({
+  marginBottom: "16px",
 })
+
+const SUPPORT_EMAIL = env("NEXT_PUBLIC_MITOL_SUPPORT_EMAIL") || ""
 
 export const ProgramCertificateButton = styled(ButtonLink)(({ theme }) => ({
   color: theme.custom.colors.red,
   width: "120px",
+  [theme.breakpoints.down("sm")]: {
+    width: "80px",
+  },
 }))
 
 interface ProgramEnrollmentDisplayProps {
@@ -31,6 +37,7 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
   programId,
 }) => {
   const data = useProgramDashboardData(programId)
+  const [upgradeError, setUpgradeError] = React.useState<string | null>(null)
 
   if (data.isLoading) {
     return (
@@ -53,6 +60,19 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
   }
   return (
     <Stack direction="column">
+      {upgradeError && (
+        <AlertBanner
+          severity="error"
+          closable={true}
+          onClose={() => setUpgradeError(null)}
+        >
+          {upgradeError}{" "}
+          <Link color="red" href={`mailto:${SUPPORT_EMAIL}`}>
+            Contact Support
+          </Link>{" "}
+          for assistance.
+        </AlertBanner>
+      )}
       <Stack direction="column" marginBottom="24px">
         <Stack
           direction="row"
@@ -68,12 +88,14 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
           {data.programTitle}
         </Typography>
         <Stack direction="row" justifyContent="space-between">
-          <Typography variant="body2">
+          <Typography variant="body2" data-testid="program-completion-count">
             You have completed
             <Typography component="span" variant="subtitle2">
-              {` ${data.completedCount} of ${data.totalCount} courses `}
+              {` ${data.completedCount} of ${data.totalCount}`}
             </Typography>
-            for this program.
+            {data.programDisplayMode === DisplayModeEnum.Course
+              ? " courses for this program."
+              : "."}
           </Typography>
           <Stack direction="column" alignItems="flex-end" gap="8px">
             {data.programCertificateUrl && (
@@ -129,6 +151,7 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
                       })}
                       kind="course"
                       entry={item.entry}
+                      onUpgradeError={setUpgradeError}
                     />
                   )
                 }
@@ -145,18 +168,26 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
                       moduleEnrollmentsByCourseId={data.enrollmentsByCourseId}
                       courseProgramEnrollment={item.courseProgramEnrollment}
                       ancestorProgramEnrollment={data.ancestorProgramEnrollment}
+                      onUpgradeError={setUpgradeError}
                     />
                   )
                 }
 
+                // item.kind === "program" — rendered with the same card as
+                // program-as-course; the card derives its "Program" wording
+                // from display_mode.
                 return (
-                  <StyledCoursewareCard
+                  <ProgramAsCourseCard
                     key={getKey({
                       resourceType: ResourceType.Program,
-                      id: item.enrollment.program.id,
+                      id: item.program.id,
                     })}
-                    kind="program-enrollment"
-                    programEnrollment={item.enrollment}
+                    courseProgram={item.program}
+                    moduleCourses={item.moduleCourses}
+                    moduleEnrollmentsByCourseId={data.enrollmentsByCourseId}
+                    courseProgramEnrollment={item.programEnrollment}
+                    ancestorProgramEnrollment={data.ancestorProgramEnrollment}
+                    onUpgradeError={setUpgradeError}
                   />
                 )
               })}

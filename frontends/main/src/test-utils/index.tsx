@@ -4,10 +4,16 @@ import { QueryClientProvider, QueryClient } from "@tanstack/react-query"
 import { ThemeProvider } from "ol-components"
 import { Provider as NiceModalProvider } from "@ebay/nice-modal-react"
 
+import { ComplianceGateProvider } from "@/common/mitxonline/useComplianceGate"
 import { makeBrowserQueryClient } from "@/app/getQueryClient"
-import { render } from "@testing-library/react"
+import { Toaster } from "@/page-components/Toaster/Toaster"
+import {
+  getToastSnapshot,
+  dismissErrorToast,
+} from "@/page-components/Toaster/toastStore"
+import { act, render, waitFor } from "@testing-library/react"
 import { factories, setMockResponse } from "api/test-utils"
-import type { User } from "api/hooks/user"
+import type { CurrentUser, User } from "api/hooks/user"
 import { userQueries } from "api/hooks/user"
 import {
   mockRouter,
@@ -35,13 +41,13 @@ setupRoutes()
 
 interface TestAppOptions {
   url: string
-  user: Partial<User>
+  user: Partial<CurrentUser>
 }
 
 const defaultTestAppOptions = {
   url: "/",
 }
-const defaultUser: User = factories.user.user()
+const defaultUser: CurrentUser = factories.user.user()
 
 const TestProviders: React.FC<{
   children: React.ReactNode
@@ -49,7 +55,13 @@ const TestProviders: React.FC<{
 }> = ({ children, queryClient }) => (
   <QueryClientProvider client={queryClient}>
     <ThemeProvider>
-      <NiceModalProvider>{children}</NiceModalProvider>
+      <NiceModalProvider>
+        <ComplianceGateProvider>{children}</ComplianceGateProvider>
+      </NiceModalProvider>
+      {/* Mirror the real app (see providers.tsx) so the global mutation-error
+          toast renders in tests. This makes a missing `showErrorToast: false`
+          opt-out at a site with its own inline error a visible double-alert. */}
+      <Toaster />
     </ThemeProvider>
   </QueryClientProvider>
 )
@@ -169,6 +181,27 @@ const ignoreError = (errorMessage: string, timeoutMs?: number) => {
   }
 
   return { clear }
+}
+
+/**
+ * Assert that the global mutation-error toast fired with the given message,
+ * then dismiss it.
+ *
+ * Every test ends with a check that no unacknowledged error toast is left
+ * showing (see setupJest.tsx). A test that intentionally drives a mutation
+ * failure whose error surface IS the toast acknowledges it with this; a
+ * component that renders its own inline error should instead opt out via
+ * `meta: SILENCE_ERROR_TOAST`.
+ *
+ * Together the check and this helper ensure every mutation failure has exactly
+ * one deliberate error surface — no double alert (inline error plus toast),
+ * and no silent failure.
+ */
+const expectErrorToast = async (message: string | RegExp) => {
+  // The toast fires from `MutationCache.onError`, outside React — wait for it.
+  await waitFor(() => expect(getToastSnapshot()).not.toBeNull())
+  expect(getToastSnapshot()?.message).toMatch(message)
+  act(() => dismissErrorToast())
 }
 
 const getMetaContent = ({
@@ -297,6 +330,7 @@ export {
   expectProps,
   expectLastProps,
   expectWindowNavigation,
+  expectErrorToast,
   ignoreError,
   getMetas,
   assertPartialMetas,
@@ -316,4 +350,4 @@ export {
 } from "@testing-library/react"
 export { default as user } from "@testing-library/user-event"
 
-export type { TestAppOptions, User }
+export type { TestAppOptions, CurrentUser, User }

@@ -1,4 +1,5 @@
 from django.conf import settings
+from django.db import transaction
 from django.shortcuts import get_object_or_404
 from django.utils.decorators import method_decorator
 from django_filters.rest_framework import DjangoFilterBackend
@@ -10,6 +11,7 @@ from drf_spectacular.utils import (
 )
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
+from rest_framework.exceptions import ValidationError
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -17,7 +19,12 @@ from rest_framework.views import APIView
 from learning_resources.permissions import is_admin_user
 from main.constants import VALID_HTTP_METHODS
 from main.utils import cache_page_per_user, clear_views_cache
-from website_content.api import content_published_actions, purge_content_on_save
+from website_content.api import (
+    content_published_actions,
+    content_unpublished_actions,
+    purge_content_on_save,
+    purge_content_on_unpublish,
+)
 from website_content.filters import WebsiteContentFilter
 from website_content.models import WebsiteContent
 from website_content.permissions import (
@@ -60,11 +67,18 @@ class WebsiteContentViewSet(viewsets.ModelViewSet):
     filterset_class = WebsiteContentFilter
 
     def get_queryset(self):
+        # Soft-deleted items are hidden everywhere (list, retrieve,
+        # detail-by-id-or-slug all route through get_queryset) because the
+        # default manager excludes them.
         qs = WebsiteContent.objects.all()
         if not (is_admin_user(self.request) or is_website_content_editor(self.request)):
             qs = qs.filter(is_published=True)
 
-        return qs.order_by("-publish_date", "-id")
+        return (
+            qs.select_related("user")
+            .prefetch_related("topics")
+            .order_by("-publish_date", "-id")
+        )
 
     @method_decorator(
         cache_page_per_user(
@@ -76,21 +90,61 @@ class WebsiteContentViewSet(viewsets.ModelViewSet):
     def list(self, request, *args, **kwargs):
         return super().list(request, *args, **kwargs)
 
+    def _reloaded_for_response(self, content):
+        """
+        Re-read `content` with the serializer's required prefetches populated.
+
+        The serializer requires `topics` to be prefetched, and no write leaves
+        it that way: a created instance has no prefetch cache at all, and
+        `UpdateModelMixin` clears the one the fetched instance had, since the
+        m2m may have just changed. Assigning the result to `serializer.instance`
+        is what makes the response honour the contract -- DRF clears the cache
+        on the instance *it* fetched, which is no longer the one serialized.
+
+        Writes are editor-only, so `get_queryset`'s published-only filter for
+        everyone else cannot hide the row from its own author.
+        """
+        return self.get_queryset().get(pk=content.pk)
+
+    # NOTE: clear the view cache on every mutation, published or not -- the
+    # staff listing view is cached and includes unpublished content, so a draft
+    # create/edit/delete can change a cached response too. Deferred to
+    # on_commit so it runs after the write is durable.
     def perform_create(self, serializer):
-        clear_views_cache()
         content = serializer.save(user=self.request.user)
+        transaction.on_commit(clear_views_cache)
         purge_content_on_save(content)
         content_published_actions(content=content)
+        serializer.instance = self._reloaded_for_response(content)
 
     def perform_update(self, serializer):
-        clear_views_cache()
+        # Read the stored flag before saving: the plugins need to know this was
+        # an unpublish, which the saved instance alone cannot tell us.
+        was_published = serializer.instance.is_published
         content = serializer.save()
         purge_content_on_save(content)
         content_published_actions(content=content)
+        if was_published and not content.is_published:
+            # purge_content_on_save above skips unpublished content, so the
+            # now-private page and the listing still need clearing.
+            purge_content_on_unpublish(content)
+            content_unpublished_actions(content=content)
+        # Last here, unlike on create: the unpublish plugins take the news feed
+        # entry out synchronously, and clearing the cache before that ran would
+        # let any request in between re-cache the listing that still has it.
+        transaction.on_commit(clear_views_cache)
+        serializer.instance = self._reloaded_for_response(content)
 
-    def destroy(self, request, *args, **kwargs):
-        clear_views_cache()
-        return super().destroy(request, *args, **kwargs)
+    def perform_destroy(self, instance):
+        # Only drafts may be deleted. Published content is out of scope and
+        # deleting it is rejected rather than hidden.
+        if instance.is_published:
+            msg = "Published content cannot be deleted."
+            raise ValidationError(msg)
+        # Soft delete: SOFT_DELETE policy stamps `deleted` and leaves the row
+        # in place for recovery/audit.
+        instance.delete()
+        transaction.on_commit(clear_views_cache)
 
     @extend_schema(
         summary="Retrieve by ID or slug",

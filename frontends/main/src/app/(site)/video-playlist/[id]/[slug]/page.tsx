@@ -1,3 +1,4 @@
+import type { AppPageProps } from "@/common/searchParams"
 import React from "react"
 import { HydrationBoundary, dehydrate } from "@tanstack/react-query"
 import { safeGenerateMetadata, standardizeMetadata } from "@/common/metadata"
@@ -9,13 +10,9 @@ import { getQueryClient } from "@/app/getQueryClient"
 import VideoPlaylistCollectionPage from "@/app-pages/VideoPlaylistCollectionPage/VideoPlaylistCollectionPage"
 import { notFound, redirect } from "next/navigation"
 import { parseResourceId } from "@/common/slugs"
-import {
-  absoluteUrl,
-  carrySearchParams,
-  videoPlaylistPageView,
-} from "@/common/urls"
+import { carrySearchParams, videoPlaylistPath } from "@/common/urls"
 
-type Props = PageProps<"/video-playlist/[id]/[slug]">
+type Props = AppPageProps<"/video-playlist/[id]/[slug]">
 
 export const generateMetadata = async (props: Props) => {
   const { id } = await props.params
@@ -47,9 +44,7 @@ export const generateMetadata = async (props: Props) => {
         ? firstVideoImageAlt
         : (playlist.image?.alt ?? undefined),
       alternates: {
-        canonical: absoluteUrl(
-          videoPlaylistPageView(String(playlistId), playlist.title),
-        ),
+        canonical: playlist.learn_url,
       },
     })
   })
@@ -68,8 +63,8 @@ const Page: React.FC<Props> = async ({ params, searchParams }) => {
     videoPlaylistQueries.detail(playlistId),
   )
 
-  const canonical = videoPlaylistPageView(String(playlistId), playlist.title)
-  if (`/video-playlist/${id}/${slug}` !== canonical) {
+  const canonical = videoPlaylistPath(playlistId, playlist.url_slug)
+  if (videoPlaylistPath(id, slug) !== canonical) {
     redirect(carrySearchParams(canonical, await searchParams))
   }
 

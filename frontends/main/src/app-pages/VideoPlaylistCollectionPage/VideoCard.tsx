@@ -1,10 +1,22 @@
 import React, { useState } from "react"
 import Image from "next/image"
 import Link from "next/link"
-import { Typography, styled, theme, Skeleton } from "ol-components"
+import {
+  Typography,
+  styled,
+  theme,
+  Skeleton,
+  type TypographyProps,
+} from "ol-components"
 import { formatDurationClockTime } from "ol-utilities"
-import { RiPlayCircleFill } from "@remixicon/react"
+import { stripAnchorTags } from "@/common/utils"
 import type { VideoResource } from "api/v1"
+import {
+  DurationBadge,
+  PlayOverlay,
+  PlayIcon,
+  ThumbnailWrapper,
+} from "./shared.styled"
 
 const PLACEHOLDER_IMG = "/images/mit-open-learning-logo.svg"
 
@@ -35,19 +47,6 @@ const VideoCardItem = styled(Link)({
   },
 })
 
-const ThumbnailWrapper = styled.div({
-  position: "relative",
-  flexShrink: 0,
-  width: 160,
-  aspectRatio: "16/9",
-  overflow: "hidden",
-  backgroundColor: theme.custom.colors.black,
-
-  [theme.breakpoints.down("sm")]: {
-    width: "100%",
-  },
-})
-
 const ThumbnailImage = styled(Image)(({ theme }) => ({
   objectFit: "cover",
   width: "160px",
@@ -56,30 +55,6 @@ const ThumbnailImage = styled(Image)(({ theme }) => ({
     height: "201.375px",
   },
 }))
-
-const DurationBadge = styled.span(({ theme }) => ({
-  ...theme.typography.body3,
-  position: "absolute",
-  bottom: 0,
-  right: 0,
-  backgroundColor: theme.custom.colors.darkGray2,
-  color: "#fff",
-  fontWeight: theme.typography.fontWeightMedium,
-  padding: "8px",
-  zIndex: 1,
-}))
-
-const PlayOverlay = styled.div({
-  position: "absolute",
-  inset: 0,
-  display: "flex",
-  alignItems: "center",
-  justifyContent: "center",
-  color: "#fff",
-  opacity: 0,
-  transition: "opacity 0.2s",
-  backgroundColor: "rgba(0, 0, 0, 0.18)",
-})
 
 const CardContent = styled.div({
   flex: 1,
@@ -107,11 +82,6 @@ const CardTitle = styled(Typography)(({ theme }) => ({
   },
 }))
 
-const PlayIcon = styled(RiPlayCircleFill)({
-  width: 36,
-  height: 36,
-})
-
 const CardMetaRow = styled.div({
   display: "flex",
   alignItems: "flex-start",
@@ -125,15 +95,30 @@ const CardMetaGroup = styled.div({
   gap: "3px",
 })
 
-const CardMetaValue = styled(Typography)(({ theme }) => ({
-  ...theme.typography.body2,
-  color: theme.custom.colors.silverGrayDark,
-  lineHeight: "22px",
-  overflow: "hidden",
-  display: "-webkit-box",
-  WebkitLineClamp: 2,
-  WebkitBoxOrient: "vertical",
-}))
+/*
+ * The Pick<TypographyProps, "component"> generic is what allows
+ * component="div" at the call site. A sanitized OVS description contains block elements (<p>, <ul>), which are invalid inside Typography's default element for these variants (<p>).
+ */
+const CardMetaValue = styled(Typography)<Pick<TypographyProps, "component">>(
+  ({ theme }) => ({
+    /* Clamped preview: description markup is flattened so a list cannot blow the
+     box out. Anchors are stripped in the component (the row is itself a link). */
+    "p, ul, ol, li": {
+      display: "inline",
+      margin: 0,
+      padding: 0,
+      listStyle: "none",
+    },
+    "p + p::before, li + li::before": { content: '" "' },
+    ...theme.typography.body2,
+    color: theme.custom.colors.silverGrayDark,
+    lineHeight: "22px",
+    overflow: "hidden",
+    display: "-webkit-box",
+    WebkitLineClamp: 2,
+    WebkitBoxOrient: "vertical",
+  }),
+)
 
 type VideoCardProps = {
   resource: VideoResource
@@ -172,7 +157,12 @@ const VideoCard: React.FC<VideoCardProps> = ({ resource, href }) => {
         </CardTitleRow>
         <CardMetaRow>
           <CardMetaGroup>
-            <CardMetaValue dangerouslySetInnerHTML={{ __html: description }} />
+            {/* The whole card is a link, so anchors from the description
+                have to go - a nested <a> splits the card's own link. */}
+            <CardMetaValue
+              component="div"
+              dangerouslySetInnerHTML={{ __html: stripAnchorTags(description) }}
+            />
           </CardMetaGroup>
         </CardMetaRow>
       </CardContent>

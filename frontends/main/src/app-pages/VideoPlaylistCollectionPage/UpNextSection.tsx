@@ -2,29 +2,15 @@ import React from "react"
 import { RiPlayFill } from "@remixicon/react"
 import type { VideoResource } from "api/v1"
 import * as Styled from "./VideoSeriesDetailPage.styled"
-import { styled } from "ol-components"
-import VideoShareButton from "./VideoShareButton"
-import type { VideoPlayerHandle } from "./VideoResourcePlayer"
 
-const StyledVideoShareButton = styled(VideoShareButton)({
-  height: "40px",
-  marginTop: "8px",
-  padding: "18px 16px",
-})
 type UpNextSectionProps = {
   nextVideo: VideoResource
   getVideoHref: (v: VideoResource) => string
-  currentVideo: VideoResource
-  shareUrl: string
-  playerRef?: React.RefObject<VideoPlayerHandle | null>
 }
 
 const UpNextSection: React.FC<UpNextSectionProps> = ({
   nextVideo,
   getVideoHref,
-  currentVideo,
-  shareUrl,
-  playerRef,
 }) => {
   return (
     <Styled.UpNextSection>
@@ -33,12 +19,6 @@ const UpNextSection: React.FC<UpNextSectionProps> = ({
         <Styled.UpNextTitle>{nextVideo.title}</Styled.UpNextTitle>
       </Styled.UpNextLeft>
       <Styled.UpNextRight>
-        <StyledVideoShareButton
-          video={currentVideo}
-          title={currentVideo.title ?? ""}
-          pageUrl={shareUrl}
-          playerRef={playerRef}
-        />
         <Styled.StyledButtonLink
           href={getVideoHref(nextVideo)}
           variant="primary"

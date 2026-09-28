@@ -13,8 +13,11 @@ import {
   FeaturedApi,
   MediaApi,
   VideoPlaylistsApi,
+  PodcastEpisodesApi,
   HubspotApi,
 } from "./generated/v1/api"
+
+import { UnsubscribeApi } from "@mitodl/mit-learn-api-axios/v1"
 
 import {
   ChannelsApi,
@@ -22,6 +25,7 @@ import {
   UsersApi,
   NewsEventsApi,
   ProfilesApi,
+  ProgramCertificatesApi,
   TestimonialsApi,
   LearningResourcesSearchAdminParamsApi,
   VectorLearningResourcesSearchApi,
@@ -90,6 +94,12 @@ const usersApi = new UsersApi(undefined, BASE_PATH, axiosInstance)
 
 const profilesApi = new ProfilesApi(undefined, BASE_PATH, axiosInstance)
 
+const programCertificatesApi = new ProgramCertificatesApi(
+  undefined,
+  BASE_PATH,
+  axiosInstance,
+)
+
 const schoolsApi = new SchoolsApi(undefined, BASE_PATH, axiosInstance)
 
 const newsEventsApi = new NewsEventsApi(undefined, BASE_PATH, axiosInstance)
@@ -100,11 +110,18 @@ const videoPlaylistsApi = new VideoPlaylistsApi(
   BASE_PATH,
   axiosInstance,
 )
+const podcastEpisodesApi = new PodcastEpisodesApi(
+  undefined,
+  BASE_PATH,
+  axiosInstance,
+)
 const vectorLearningResourcesSearchApi = new VectorLearningResourcesSearchApi(
   undefined,
   BASE_PATH,
   axiosInstance,
 )
+
+const unsubscribeApi = new UnsubscribeApi(undefined, BASE_PATH, axiosInstance)
 
 export {
   learningResourcesApi,
@@ -115,6 +132,7 @@ export {
   mediaApi,
   hubspotApi,
   offerorsApi,
+  programCertificatesApi,
   programLettersApi,
   learningResourcesSearchApi,
   channelsApi,
@@ -129,5 +147,7 @@ export {
   testimonialsApi,
   learningResourcesSearchAdminParamsApi,
   videoPlaylistsApi,
+  podcastEpisodesApi,
   vectorLearningResourcesSearchApi,
+  unsubscribeApi,
 }

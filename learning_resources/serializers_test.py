@@ -40,6 +40,7 @@ from learning_resources.models import (
     LearningResource,
     LearningResourceRelationship,
 )
+from learning_resources.utils import learn_url_for_resource, path_slug
 from main.test_utils import assert_json_equal, drf_datetime
 from main.utils import frontend_absolute_url
 
@@ -145,9 +146,11 @@ def test_serialize_podcast_episode_to_json():
             "podcasts": podcast_episode.learning_resource.parents.filter(
                 relation_type=LearningResourceRelationTypes.PODCAST_EPISODES.value
             ).values_list("parent__id", flat=True),
+            "parent_podcasts": [],
             "id": podcast_episode.id,
-            "rss": podcast_episode.rss,
-            "transcript": podcast_episode.transcript,
+            # transcript and rss are excluded: the transcript
+            # is served from the dedicated endpoint, gated on has_transcript.
+            "has_transcript": bool(podcast_episode.transcript),
         },
     )
 
@@ -211,8 +214,33 @@ def test_serialize_video_resource_with_content_files():
     assert len(serializer.data["content_files"]) == 1
     assert serializer.data["content_files"][0]["id"] == content_file.id
     assert serializer.data["content_files"][0]["title"] == "Video Content File"
+    # Full text fields are excluded from nested API responses
+    for field in ("content", "summary", "flashcards"):
+        assert field not in serializer.data["content_files"][0]
     # Description should fall back to content file's description when resource has none
     assert serializer.data["description"] == "Content file description"
+
+
+def test_serialize_document_resource_with_content_files():
+    """
+    Verify that DocumentResourceSerializer serializes content files without
+    the full text fields
+    """
+    document_resource = factories.LearningResourceFactory.create(
+        resource_type=LearningResourceType.document.name,
+    )
+    content_file = factories.ContentFileFactory.create(
+        run=None,
+        direct_learning_resource=document_resource,
+        title="Document Content File",
+    )
+    resource = LearningResource.objects.for_serialization().get(pk=document_resource.pk)
+    serializer = serializers.DocumentResourceSerializer(instance=resource)
+
+    assert len(serializer.data["content_files"]) == 1
+    assert serializer.data["content_files"][0]["id"] == content_file.id
+    for field in ("content", "summary", "flashcards"):
+        assert field not in serializer.data["content_files"][0]
 
 
 def test_serialize_podcast_episode_playlists_to_json():
@@ -228,6 +256,14 @@ def test_serialize_podcast_episode_playlists_to_json():
     )
     serializer = serializers.PodcastEpisodeSerializer(instance=podcast_episode)
     assert serializer.data["podcasts"] == [podcast.learning_resource.id]
+    assert serializer.data["parent_podcasts"] == [
+        {
+            "id": podcast.learning_resource.id,
+            "title": podcast.learning_resource.title,
+            "readable_id": podcast.learning_resource.readable_id,
+            "learn_url": learn_url_for_resource(podcast.learning_resource, []),
+        }
+    ]
 
 
 @pytest.mark.parametrize("has_context", [True, False])
@@ -299,9 +335,17 @@ def test_learning_resource_serializer(  # noqa: PLR0913
     else:
         resource_type_group = LEARNING_MATERIAL_RESOURCE_TYPE_GROUP
     assert result == expected
+
+    # learn_url's construction per resource type is covered exhaustively in
+    # utils_test; here only assert it is present and absolute, then drop it so
+    # the comparison below stays a check on the field set.
+    assert result["learn_url"].startswith(frontend_absolute_url("/"))
+    result = {key: value for key, value in result.items() if key != "learn_url"}
+
     assert result == {
         "id": resource.id,
         "title": resource.title,
+        "url_slug": path_slug(resource.title),
         "created_on": resource.created_on.isoformat().replace("+00:00", "Z"),
         "description": resource.description,
         "full_description": resource.full_description,
@@ -362,7 +406,7 @@ def test_learning_resource_serializer(  # noqa: PLR0913
                 "department_id": dept.department_id,
                 "name": dept.name,
                 "channel_url": frontend_absolute_url(
-                    f"/c/department/{Channel.objects.get(department_detail__department=dept).name}/",
+                    f"/c/department/{Channel.objects.get(department_detail__department=dept).name}",
                 ),
                 "school": {
                     "id": dept.school.id,
@@ -410,6 +454,76 @@ def test_learning_resource_serializer(  # noqa: PLR0913
     }
 
 
+@pytest.mark.parametrize("has_context", [True, False])
+def test_learning_resource_serializer_caches_child_serializers(rf, user, has_context):
+    """LearningResourceSerializer memoizes one child serializer per resource_type"""
+    request = rf.get("/")
+    request.user = user
+    context = {"request": request} if has_context else {}
+
+    serializer = serializers.LearningResourceSerializer(context=context)
+
+    children = {}
+    for resource_type, expected_cls in serializer.serializer_cls_mapping.items():
+        child = serializer._child_serializer(resource_type)  # noqa: SLF001
+        assert isinstance(child, expected_cls)
+        assert child.context == context
+        # repeated lookups return the very same instance, not an equal one
+        assert serializer._child_serializer(resource_type) is child  # noqa: SLF001
+        children[resource_type] = child
+
+    # each resource_type gets its own child
+    assert len({id(child) for child in children.values()}) == len(children)
+
+    # the cache is per-parent-instance, so context never leaks across serializers
+    other = serializers.LearningResourceSerializer(context={})
+    for resource_type, child in children.items():
+        assert other._child_serializer(resource_type) is not child  # noqa: SLF001
+
+
+def test_learning_resource_serializer_many_matches_individual(rf, user):
+    """
+    Serializing a mixed list with many=True (which reuses a single child
+    serializer, and therefore a single child serializer cache) produces the same
+    output as serializing each resource on its own.
+    """
+    request = rf.get("/")
+    request.user = user
+    context = {"request": request}
+
+    resources = [
+        LearningResourceFactory.create(**params)
+        for params in (
+            {"is_course": True},
+            {"is_program": True},
+            {"is_learning_path": True},
+            {"is_podcast": True},
+            {"is_podcast_episode": True},
+            {"is_video": True},
+            {"is_video_playlist": True},
+            # a second course, to exercise a cache hit within one list pass
+            {"is_course": True},
+        )
+    ]
+    queryset = LearningResource.objects.for_serialization().filter(
+        pk__in=[resource.pk for resource in resources]
+    )
+    # every mapped resource_type except document is covered here
+    assert {resource.resource_type for resource in queryset} == set(
+        serializers.LearningResourceSerializer.serializer_cls_mapping
+    ) - {LearningResourceType.document.name}
+
+    results = serializers.LearningResourceSerializer(
+        queryset, many=True, context=context
+    ).data
+    expected = [
+        serializers.LearningResourceSerializer(instance=resource, context=context).data
+        for resource in queryset
+    ]
+
+    assert_json_equal(results, expected)
+
+
 def test_serialize_run_related_models():
     """
     Verify that a serialized run contains attributes for related objects
@@ -423,6 +537,24 @@ def test_serialize_run_related_models():
     assert len(serializer.data["instructors"]) > 0
     for attr in ("first_name", "last_name", "full_name"):
         assert attr in serializer.data["instructors"][0]
+
+
+def test_serialize_resource_excludes_variant_runs():
+    """Variant runs should not be visible in resource API results."""
+    resource = LearningResourceFactory.create(
+        resource_type=LearningResourceType.course.name
+    )
+    resource.runs.all().delete()
+    public_run = LearningResourceRunFactory.create(
+        learning_resource=resource, published=True, is_b2b=False, is_variant=False
+    )
+    LearningResourceRunFactory.create(
+        learning_resource=resource, published=True, is_b2b=True, is_variant=True
+    )
+
+    serialized_resource = serializers.LearningResourceSerializer(resource).data
+
+    assert [run["id"] for run in serialized_resource["runs"]] == [public_run.id]
 
 
 @pytest.mark.parametrize(
@@ -654,7 +786,7 @@ def test_content_file_serializer(settings, expected_types, has_channels):
                 "code": content_file.run.learning_resource.offered_by.code,
                 "display_facet": True,
                 "channel_url": frontend_absolute_url(
-                    f"/c/unit/{Channel.objects.get(unit_detail__unit=content_file.run.learning_resource.offered_by).name}/"
+                    f"/c/unit/{Channel.objects.get(unit_detail__unit=content_file.run.learning_resource.offered_by).name}"
                 )
                 if has_channels
                 else None,
@@ -666,7 +798,7 @@ def test_content_file_serializer(settings, expected_types, has_channels):
                     "name": dept.name,
                     "department_id": dept.department_id,
                     "channel_url": frontend_absolute_url(
-                        f"/c/department/{Channel.objects.get(department_detail__department=dept).name}/"
+                        f"/c/department/{Channel.objects.get(department_detail__department=dept).name}"
                     )
                     if has_channels
                     else None,
@@ -689,7 +821,7 @@ def test_content_file_serializer(settings, expected_types, has_channels):
                     "icon": topic.icon,
                     "parent": topic.parent,
                     "channel_url": frontend_absolute_url(
-                        f"/c/topic/{Channel.objects.get(topic_detail__topic=topic).name}/"
+                        f"/c/topic/{Channel.objects.get(topic_detail__topic=topic).name}"
                         if has_channels
                         else None,
                     )
@@ -1104,6 +1236,105 @@ def test_metadata_display_serializer_show_start_anytime():
     assert metadata_serializer.show_start_anytime(serialized_resource) is False
 
 
+def test_runs_by_date_handles_dateless_runs():
+    """
+    runs_by_date should not crash when runs have no usable start_date (issue #12295);
+    such runs sort last, whether the value is None, missing, empty, or unparseable.
+    """
+    serialized_resource = {
+        "runs": [
+            {"id": 1, "start_date": None},
+            {"id": 2, "start_date": "2024-01-01T00:00:00Z"},
+            {"id": 3},  # start_date key missing
+            {"id": 4, "start_date": ""},  # empty string
+            {"id": 5, "start_date": "not a date"},  # unparseable
+        ]
+    }
+    serializer = serializers.LearningResourceMetadataDisplaySerializer(
+        serialized_resource
+    )
+    ordered = serializer.runs_by_date(serialized_resource)
+    assert [run["id"] for run in ordered] == [2, 1, 3, 4, 5]
+
+
+def _serialized_resource_with_bad_run_date(bad_start_date):
+    """Serialize a course with one valid run and one with a bad start_date"""
+    resource = LearningResourceFactory.create(
+        resource_type="course", availability=Availability.dated.name
+    )
+    serialized_resource = serializers.LearningResourceSerializer(resource).data
+    delivery = [
+        {
+            "code": LearningResourceDelivery.online.name,
+            "name": LearningResourceDelivery.online.value,
+        }
+    ]
+    serialized_resource["delivery"] = delivery
+    good_run = serialized_resource["runs"][0]
+    good_run.update(
+        {
+            "start_date": "2024-01-01T00:00:00Z",
+            "delivery": delivery,
+            "location": "",
+            "resource_prices": [],
+        }
+    )
+    bad_run = copy.deepcopy(good_run)
+    if bad_start_date == "missing":
+        bad_run.pop("start_date")
+    else:
+        bad_run["start_date"] = bad_start_date
+    serialized_resource["runs"] = [good_run, bad_run]
+    return serialized_resource, bad_run
+
+
+@pytest.mark.parametrize("bad_start_date", [None, "", "not a date", "missing"])
+def test_date_methods_handle_unusable_start_dates(bad_start_date):
+    """
+    dates_for_runs, total_runs_with_dates, get_starts, and render_document
+    should skip runs with unusable start_date values, not crash on them.
+    """
+    serialized_resource, _ = _serialized_resource_with_bad_run_date(bad_start_date)
+    serializer = serializers.LearningResourceMetadataDisplaySerializer(
+        serialized_resource
+    )
+    assert serializer.dates_for_runs(serialized_resource) == ["January 01, 2024"]
+    assert serializer.total_runs_with_dates(serialized_resource) == 1
+    assert serializer.get_starts(serialized_resource) == ["January 01, 2024"]
+    assert isinstance(serializer.render_document(), dict)
+
+
+@pytest.mark.parametrize("bad_start_date", [None, "", "not a date", "missing"])
+def test_date_methods_handle_all_runs_dateless(bad_start_date):
+    """Date methods should return empty values when no run has a usable date"""
+    serialized_resource, bad_run = _serialized_resource_with_bad_run_date(
+        bad_start_date
+    )
+    serialized_resource["runs"] = [bad_run]
+    serializer = serializers.LearningResourceMetadataDisplaySerializer(
+        serialized_resource
+    )
+    assert serializer.dates_for_runs(serialized_resource) == []
+    assert serializer.total_runs_with_dates(serialized_resource) == 0
+    assert serializer.get_starts(serialized_resource) is None
+    assert isinstance(serializer.render_document(), dict)
+
+
+@pytest.mark.parametrize("bad_start_date", [None, "", "not a date", "missing"])
+def test_get_runs_handles_unusable_start_dates(bad_start_date):
+    """get_runs should render an empty date for runs with unusable start_dates"""
+    serialized_resource, bad_run = _serialized_resource_with_bad_run_date(
+        bad_start_date
+    )
+    # differing location so all_runs_are_identical is False
+    bad_run["location"] = "Elsewhere"
+    serializer = serializers.LearningResourceMetadataDisplaySerializer(
+        serialized_resource
+    )
+    runs = serializer.get_runs(serialized_resource)
+    assert [run["start_date"] for run in runs] == ["January 01, 2024", ""]
+
+
 def test_total_runs_with_dates(mocker):
     """
     Test total_runs_with_dates method
@@ -1448,3 +1679,21 @@ def test_get_program_courses_includes_unpublished_test_mode_children_with_flag()
     titles = [r["title"] for r in result]
 
     assert "Test Mode Course" in titles
+
+
+def test_credential_metadata_is_not_serialized():
+    """
+    Stored credential metadata stays off the public catalogue.
+
+    It is draft, author-only content behind IsAdminOrCourseAuthor. Nothing
+    excludes it by name: LearningResourceBaseSerializer.Meta uses `exclude`,
+    and DRF skips reverse one-to-ones under it. That is implicit enough to be
+    worth pinning, since a switch to `fields` or a ModelSerializer elsewhere
+    would start leaking it silently.
+    """
+    resource = LearningResourceFactory.create(is_course=True)
+    factories.CredentialMetadataFactory.create(learning_resource=resource)
+
+    data = serializers.LearningResourceSerializer(instance=resource).data
+
+    assert "credential_metadata" not in data

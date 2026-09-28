@@ -10,6 +10,7 @@ import type {
 } from "../../generated/v1"
 import type { HubspotFormDetailResponse } from "./queries"
 import { hubspotKeys, hubspotQueries } from "./queries"
+import type { MutationHookOptions } from "../../mutations/mutationMeta"
 
 const HUBSPOT_UTK_COOKIE = "hubspotutk"
 const HUBSPOT_UTK_MAX_AGE = 34190000 // ~13 months, matching HubSpot's tracking script
@@ -81,11 +82,16 @@ const useHubspotFormDetail = (
   return useQuery({
     ...hubspotQueries.detail(params ?? { form_id: "" }),
     enabled: Boolean(params?.form_id && opts?.enabled !== false),
+    // A misconfigured form id in the CMS makes HubSpot return a 4xx. The button
+    // is optional UI, so handle that locally (hide it) instead of letting the
+    // global error boundary replace the whole product page.
+    throwOnError: false,
   })
 }
 
-const useHubspotFormSubmit = () => {
+const useHubspotFormSubmit = ({ meta }: MutationHookOptions = {}) => {
   return useMutation({
+    meta,
     mutationFn: ({
       formId,
       fields,

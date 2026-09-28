@@ -13,6 +13,18 @@ const expectRawContent = (el: HTMLElement, htmlString: string) => {
   expect(raw.innerHTML).toBe(htmlString)
 }
 
+test("About section keeps bullet markers on a top-level list", async () => {
+  const about = "<ul><li>First</li><li>Second</li></ul>"
+  const noun = faker.helpers.arrayElement(["Course", "Program"] as const)
+  renderWithProviders(<AboutSection productNoun={noun} aboutHtml={about} />)
+
+  const section = await screen.findByRole("region", {
+    name: `About this ${noun}`,
+  })
+  const list = within(section).getByRole("list")
+  expect(getComputedStyle(list).listStyleType).not.toBe("none")
+})
+
 test("About section has expected content", async () => {
   const about = `<p>${faker.lorem.paragraph()}</p>`
   const noun = faker.helpers.arrayElement(["Course", "Program"] as const)

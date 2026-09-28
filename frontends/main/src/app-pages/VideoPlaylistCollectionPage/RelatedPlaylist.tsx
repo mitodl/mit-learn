@@ -4,7 +4,6 @@ import { Skeleton, Typography, styled, theme } from "ol-components"
 import VideoContainer from "./VideoContainer"
 import type { VideoPlaylistResource } from "api/v1"
 import { formatDurationHuman } from "ol-utilities"
-import { videoPlaylistPageView } from "@/common/urls"
 
 const Section = styled.section(({ theme }) => ({
   padding: "80px 0",
@@ -140,13 +139,7 @@ const RelatedPlaylist: React.FC<RelatedCollectionsProps> = ({
                 </div>
               ))
             : collections.map((collection) => (
-                <CollectionLink
-                  href={videoPlaylistPageView(
-                    String(collection.id),
-                    collection.title,
-                  )}
-                  key={collection.id}
-                >
+                <CollectionLink href={collection.learn_url} key={collection.id}>
                   <CollectionType>
                     {collectionTypeLabel(collection)}
                   </CollectionType>

@@ -17,7 +17,7 @@ Including another URLconf
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
-from django.urls import include, re_path
+from django.urls import include, path, re_path
 from django.views.generic.base import RedirectView
 from rest_framework.routers import DefaultRouter
 
@@ -32,9 +32,9 @@ from main.views import FeaturesViewSet
 # via an alternation (|).
 POST_SLUG_PATTERN = "([^\\W]|-)+"
 
-handler400 = "main.views.handle_error"
-handler403 = "main.views.handle_error"
-handler404 = "main.views.handle_error"
+handler400 = "main.views.handle_400"
+handler403 = "main.views.handle_403"
+handler404 = "main.views.handle_404"
 
 features_router = DefaultRouter()
 features_router.register(r"_/features", FeaturesViewSet, basename="features")
@@ -43,6 +43,7 @@ urlpatterns = (
     [  # noqa: RUF005
         re_path(r"^o/", include("oauth2_provider.urls", namespace="oauth2_provider")),
         re_path(r"^admin/", admin.site.urls),
+        re_path(r"", include("users.urls", namespace="users")),
         re_path(r"", include("authentication.urls")),
         re_path(r"", include("channels.urls")),
         re_path(r"", include("profiles.urls")),
@@ -54,13 +55,14 @@ urlpatterns = (
         re_path(r"", include("learning_resources.urls")),
         re_path(r"", include("website_content.urls")),
         re_path(r"", include("testimonials.urls")),
+        re_path(r"", include("content_feedback.urls")),
         re_path(r"", include("news_events.urls")),
         re_path(r"", include("ol_hubspot.urls")),
         re_path(r"", include("mitol.scim.urls")),
         re_path(r"", include("webhooks.urls", namespace="webhooks")),
         re_path(r"", include(features_router.urls)),
         re_path(r"^app", RedirectView.as_view(url=settings.APP_BASE_URL)),
-        re_path(r"^health/", include("health_check.urls")),
+        path("", include("main.urls_healthcheck")),
     ]
     + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
     + static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)

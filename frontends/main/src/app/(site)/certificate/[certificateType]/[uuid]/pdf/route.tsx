@@ -50,6 +50,65 @@ Font.register({
   src: "https://use.typekit.net/af/305037/00000000000000007735bb39/30/l?primer=7cdcb44be4a7db8877ffa5c0007b8dd865b3bbc383831fe2ea177f62257a9191&fvd=n7&v=3",
 })
 
+/* Fallback fonts for non-Latin characters (hq#12554, hq#12475).
+ * Neue Haas Grotesk is a Latin-only typeface, and @react-pdf/renderer performs
+ * no automatic system-font fallback the way a browser does. Without these,
+ * user-supplied text with glyphs outside Neue Haas Grotesk's set — CJK names
+ * (e.g. 志云 黄) and extended-Latin letters (e.g. Turkish Ğ) — renders garbled.
+ *
+ * Noto Sans (latin-ext) covers extended-Latin; Noto Sans SC / TC cover
+ * Simplified / Traditional Chinese. They are only ever *used* for characters
+ * the brand font can't render (react-pdf falls back per-character), so branded
+ * text stays in Neue Haas Grotesk. Served from a version-pinned CDN, matching
+ * the remote-font approach already used above for the brand font.
+ *
+ * Note: this only affects the PDF/print output — the live web page is unaffected
+ * (it uses its own font stack with the browser's built-in fallback).
+ */
+const FONTSOURCE_CDN = "https://cdn.jsdelivr.net/fontsource/fonts"
+Font.register({
+  family: "Noto Sans 400",
+  src: `${FONTSOURCE_CDN}/noto-sans@5.3.0/latin-ext-400-normal.ttf`,
+})
+Font.register({
+  family: "Noto Sans 700",
+  src: `${FONTSOURCE_CDN}/noto-sans@5.3.0/latin-ext-700-normal.ttf`,
+})
+Font.register({
+  family: "Noto Sans SC 400",
+  src: `${FONTSOURCE_CDN}/noto-sans-sc@5.3.0/chinese-simplified-400-normal.ttf`,
+})
+Font.register({
+  family: "Noto Sans SC 700",
+  src: `${FONTSOURCE_CDN}/noto-sans-sc@5.3.0/chinese-simplified-700-normal.ttf`,
+})
+Font.register({
+  family: "Noto Sans TC 400",
+  src: `${FONTSOURCE_CDN}/noto-sans-tc@5.3.0/chinese-traditional-400-normal.ttf`,
+})
+Font.register({
+  family: "Noto Sans TC 700",
+  src: `${FONTSOURCE_CDN}/noto-sans-tc@5.3.0/chinese-traditional-700-normal.ttf`,
+})
+
+/* Font-family stacks: brand font first, then fallbacks for glyphs it lacks.
+ * Use these instead of the bare "Neue Haas Grotesk Text NNN" strings so every
+ * text element gets per-character fallback. Only the 400 and 700 weights are
+ * used on the certificate.
+ */
+const FONT_STACK_400 = [
+  "Neue Haas Grotesk Text 400",
+  "Noto Sans 400",
+  "Noto Sans SC 400",
+  "Noto Sans TC 400",
+]
+const FONT_STACK_700 = [
+  "Neue Haas Grotesk Text 700",
+  "Noto Sans 700",
+  "Noto Sans SC 700",
+  "Noto Sans TC 700",
+]
+
 // Disables hyphenation on word wrap
 Font.registerHyphenationCallback((word) => [word])
 
@@ -68,27 +127,27 @@ const colors = {
  */
 const typography = {
   h1: {
-    fontFamily: "Neue Haas Grotesk Text 700",
+    fontFamily: FONT_STACK_700,
     fontSize: pxToPt(52),
     lineHeight: pxToPt(60),
   },
   h2: {
-    fontFamily: "Neue Haas Grotesk Text 700",
+    fontFamily: FONT_STACK_700,
     fontSize: pxToPt(34),
     lineHeight: pxToPt(40),
   },
   h3: {
-    fontFamily: "Neue Haas Grotesk Text 700",
+    fontFamily: FONT_STACK_700,
     fontSize: pxToPt(28),
     lineHeight: pxToPt(2.4),
   },
   h4: {
-    fontFamily: "Neue Haas Grotesk Text 700",
+    fontFamily: FONT_STACK_700,
     fontSize: pxToPt(24),
     lineHeight: pxToPt(2),
   },
   body1: {
-    fontFamily: "Neue Haas Grotesk Text 400",
+    fontFamily: FONT_STACK_400,
     fontSize: pxToPt(16),
     lineHeight: pxToPt(2),
   },
@@ -171,7 +230,7 @@ const Badge = ({ programType }: { programType?: string | null }) => {
   const { fontSizePx, lineHeightPx, registeredMarkScale } =
     getCertificateBadgeTypography(programType)
   const badgeStyle = {
-    fontFamily: "Neue Haas Grotesk Text 700",
+    fontFamily: FONT_STACK_700,
     fontSize: pxToPt(fontSizePx),
     lineHeight: pxToPt(lineHeightPx),
   }
@@ -302,7 +361,7 @@ const CertificateDoc = ({
             border: `${pxToPt(4)} solid ${colors.silverGray}`,
             padding: pxToPt(24),
             backgroundColor: colors.white,
-            fontFamily: "Neue Haas Grotesk Text 400",
+            fontFamily: FONT_STACK_400,
           }}
         >
           <View
@@ -326,7 +385,7 @@ const CertificateDoc = ({
                 top: pxToPt(164),
                 left: pxToPt(46),
                 ...typography.h4,
-                fontFamily: "Neue Haas Grotesk Text 400",
+                fontFamily: FONT_STACK_400,
               }}
             >
               This is to certify that
@@ -351,7 +410,7 @@ const CertificateDoc = ({
                 color: colors.silverGrayDark,
                 ...typography.h4,
                 fontSize: pxToPt(20),
-                fontFamily: "Neue Haas Grotesk Text 400",
+                fontFamily: FONT_STACK_400,
               }}
             >
               has successfully completed all requirements of{" "}
@@ -362,7 +421,7 @@ const CertificateDoc = ({
                 top: pxToPt(396),
                 left: pxToPt(46),
                 ...typography.h2,
-                fontFamily: "Neue Haas Grotesk Text 700",
+                fontFamily: FONT_STACK_700,
                 color: colors.black,
                 width: pxToPt(1150),
               }}
@@ -377,7 +436,7 @@ const CertificateDoc = ({
                   left: pxToPt(46),
                   color: colors.silverGrayDark,
                   ...typography.h4,
-                  fontFamily: "Neue Haas Grotesk Text 400",
+                  fontFamily: FONT_STACK_400,
                 }}
               >
                 {moment(issueDate).format("MMM D, YYYY")}
@@ -391,7 +450,7 @@ const CertificateDoc = ({
                   left: pxToPt(46),
                   ...typography.h4,
                   color: colors.silverGrayDark,
-                  fontFamily: "Neue Haas Grotesk Text 400",
+                  fontFamily: FONT_STACK_400,
                 }}
               >
                 Awarded {ceus} Continuing Education Units (CEUs)

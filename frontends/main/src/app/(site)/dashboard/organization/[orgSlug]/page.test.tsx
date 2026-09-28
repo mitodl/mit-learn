@@ -21,7 +21,6 @@ useRouter.mockReturnValue({
 describe("Organization Page", () => {
   beforeEach(() => {
     mockReplace.mockClear()
-    setMockResponse.get(urls.contracts.contractsList(), [])
   })
 
   test("redirects to contract view with first contract when organization and contract exist", async () => {
@@ -47,7 +46,12 @@ describe("Organization Page", () => {
 
     // eslint-disable-next-line testing-library/no-unnecessary-act
     await act(async () => {
-      renderWithProviders(<Page params={Promise.resolve({ orgSlug })} />)
+      renderWithProviders(
+        <Page
+          params={Promise.resolve({ orgSlug })}
+          searchParams={Promise.resolve({})}
+        />,
+      )
     })
 
     await waitFor(() => {
@@ -79,7 +83,12 @@ describe("Organization Page", () => {
 
     // eslint-disable-next-line testing-library/no-unnecessary-act
     await act(async () => {
-      renderWithProviders(<Page params={Promise.resolve({ orgSlug })} />)
+      renderWithProviders(
+        <Page
+          params={Promise.resolve({ orgSlug })}
+          searchParams={Promise.resolve({})}
+        />,
+      )
     })
 
     await waitFor(() => {
@@ -94,7 +103,10 @@ describe("Organization Page", () => {
     // eslint-disable-next-line testing-library/no-unnecessary-act
     await act(async () => {
       renderWithProviders(
-        <Page params={Promise.resolve({ orgSlug: "non-existent-org" })} />,
+        <Page
+          params={Promise.resolve({ orgSlug: "non-existent-org" })}
+          searchParams={Promise.resolve({})}
+        />,
       )
     })
 
@@ -128,7 +140,12 @@ describe("Organization Page", () => {
 
     // eslint-disable-next-line testing-library/no-unnecessary-act
     await act(async () => {
-      renderWithProviders(<Page params={Promise.resolve({ orgSlug })} />)
+      renderWithProviders(
+        <Page
+          params={Promise.resolve({ orgSlug })}
+          searchParams={Promise.resolve({})}
+        />,
+      )
     })
 
     await waitFor(() => {
@@ -158,7 +175,10 @@ describe("Organization Page", () => {
     // eslint-disable-next-line testing-library/no-unnecessary-act
     await act(async () => {
       renderWithProviders(
-        <Page params={Promise.resolve({ orgSlug: "test-organization" })} />,
+        <Page
+          params={Promise.resolve({ orgSlug: "test-organization" })}
+          searchParams={Promise.resolve({})}
+        />,
       )
     })
 
@@ -191,7 +211,12 @@ describe("Organization Page", () => {
 
     // eslint-disable-next-line testing-library/no-unnecessary-act
     await act(async () => {
-      renderWithProviders(<Page params={Promise.resolve({ orgSlug })} />)
+      renderWithProviders(
+        <Page
+          params={Promise.resolve({ orgSlug })}
+          searchParams={Promise.resolve({})}
+        />,
+      )
     })
 
     await waitFor(() => {

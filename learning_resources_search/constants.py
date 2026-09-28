@@ -6,7 +6,10 @@ from enum import Enum
 from opensearchpy.exceptions import ConnectionError as ESConnectionError
 from urllib3.exceptions import TimeoutError as UrlTimeoutError
 
-from learning_resources.constants import LEARNING_RESOURCE_SORTBY_OPTIONS
+from learning_resources.constants import (
+    CONTENT_FILE_LARGE_FIELDS,
+    LEARNING_RESOURCE_SORTBY_OPTIONS,
+)
 
 ALIAS_ALL_INDICES = "all"
 COURSE_TYPE = "course"
@@ -51,6 +54,21 @@ class IndexestoUpdate(Enum):
     current_index = "current_index"
     reindexing_index = "reindexing_index"
     all_indexes = "all_indexes"
+
+
+# TaskJob.task_name for recreate_index jobs
+REINDEX_TASK_NAME = "recreate_index"
+
+
+class ReindexBatchKind(Enum):
+    """
+    Enum for the kinds of TaskBatch used by recreate_index jobs
+    """
+
+    learning_resources = "learning_resources"
+    content_files = "content_files"
+    percolate = "percolate"
+    dispatch_content_files = "dispatch_content_files"
 
 
 LEARNING_RESOURCE_TYPES = (
@@ -208,7 +226,10 @@ LEARNING_RESOURCE_MAP = {
             "channel_url": {"type": "keyword"},
         },
     },
-    "ocw_topics": {"type": "keyword"},
+    "ocw_topics": {
+        "type": "keyword",
+        "fields": {"english": {"type": "text", "analyzer": "custom_english"}},
+    },
     "offered_by": {
         "type": "nested",
         "properties": {
@@ -243,6 +264,11 @@ LEARNING_RESOURCE_MAP = {
                     "primary": {"type": "boolean"},
                 },
             }
+        }
+    },
+    "podcast_episode": {
+        "properties": {
+            "transcript": ENGLISH_TEXT_FIELD,
         }
     },
     "video": {
@@ -417,7 +443,9 @@ LEARNING_RESOURCE_QUERY_FIELDS = [
     "readable_id",
     "offered_by",
     "course_feature",
+    "ocw_topics.english",
     "video.transcript.english",
+    "podcast_episode.transcript.english",
 ]
 
 TOPICS_QUERY_FIELDS = ["topics.name"]
@@ -465,7 +493,7 @@ LEARNING_MATERIAL_MAP = {
 MAPPING = {
     COURSE_TYPE: {**LEARNING_RESOURCE_MAP, **CONTENT_FILE_MAP},
     DOCUMENT_TYPE: LEARNING_MATERIAL_MAP,
-    PROGRAM_TYPE: LEARNING_RESOURCE_MAP,
+    PROGRAM_TYPE: {**LEARNING_RESOURCE_MAP, **CONTENT_FILE_MAP},
     PODCAST_TYPE: LEARNING_RESOURCE_MAP,
     PODCAST_EPISODE_TYPE: LEARNING_RESOURCE_MAP,
     LEARNING_PATH_TYPE: LEARNING_RESOURCE_MAP,
@@ -489,11 +517,14 @@ SOURCE_EXCLUDED_FIELDS = [
     "resource_age_date",
     "featured_rank",
     "is_incomplete_or_stale",
-    "content",
-    "summary",
-    "flashcards",
+    *CONTENT_FILE_LARGE_FIELDS,
     "vector_embedding",
     "video.transcript",
+    "podcast_episode.transcript",
+    # Indexed by dynamic mapping until the serializer stopped emitting it;
+    # excluded so existing indices stop returning the raw feed XML in hits.
+    "podcast_episode.rss",
+    *[f"content_files.{field}" for field in CONTENT_FILE_LARGE_FIELDS],
 ]
 
 LEARNING_RESOURCE_SEARCH_SORTBY_OPTIONS = {

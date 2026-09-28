@@ -1,3 +1,4 @@
+import type { AppPageProps } from "@/common/searchParams"
 import { learningResourceQueries } from "api/hooks/learningResources"
 import { getQueryClient } from "@/app/getQueryClient"
 import { notFound, redirect } from "next/navigation"
@@ -7,10 +8,10 @@ import {
   resolveVideoPlaylist,
   videoPlaylistIds,
 } from "@/common/slugs"
-import { carrySearchParams, videoDetailPageView } from "@/common/urls"
+import { carrySearchParams, videoDetailPath } from "@/common/urls"
 
 /** Bare /video/{id} is never canonical → 307-redirect to slug + resolved playlist. */
-const Page = async ({ params, searchParams }: PageProps<"/video/[id]">) => {
+const Page = async ({ params, searchParams }: AppPageProps<"/video/[id]">) => {
   const { id } = await params
   const resolvedSearchParams = await searchParams
   const videoId = parseResourceId(id)
@@ -30,7 +31,7 @@ const Page = async ({ params, searchParams }: PageProps<"/video/[id]">) => {
   )
   redirect(
     carrySearchParams(
-      videoDetailPageView(videoId, playlistId ?? undefined, video.title),
+      videoDetailPath(videoId, playlistId ?? undefined, video.url_slug),
       resolvedSearchParams,
       ["playlist"],
     ),

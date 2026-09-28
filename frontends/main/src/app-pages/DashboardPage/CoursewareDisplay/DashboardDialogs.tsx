@@ -6,38 +6,63 @@ import {
   DialogActions,
   Stack,
   LoadingSpinner,
-  SimpleSelectField,
-  SimpleSelectOption,
 } from "ol-components"
 import { Button, Checkbox, Alert } from "@mitodl/smoot-design"
-import { useQuery } from "@tanstack/react-query"
 
 import NiceModal, { muiDialogV5 } from "@ebay/nice-modal-react"
 import { useFormik } from "formik"
 import {
-  useCreateB2bEnrollment,
   useDestroyEnrollment,
   useDestroyProgramEnrollment,
   useUpdateEnrollment,
 } from "api/mitxonline-hooks/enrollment"
-import {
-  mitxUserQueries,
-  useUpdateUserMutation,
-} from "api/mitxonline-hooks/user"
-import * as Yup from "yup"
+import { SILENCE_ERROR_TOAST } from "api/mutation-meta"
 import { CourseRunEnrollmentV3 } from "@mitodl/mitxonline-api-axios/v2"
 import {
   trackCourseUnenrolled,
   trackProgramUnenrolled,
 } from "@/common/analytics/gtm"
+import { formatRunIdentifier } from "./courseDateUtils"
+import { useFeatureFlagEnabled } from "posthog-js/react"
+import { FeatureFlags } from "@/common/feature_flags"
 
 const BoldText = styled.span(({ theme }) => ({
   ...theme.typography.subtitle1,
 }))
 
-const SelectPlaceholder = styled("span")(({ theme }) => ({
-  color: theme.custom.colors.silverGrayDark,
-}))
+/**
+ * The run being acted on, or null when it should not be named. A learner
+ * enrolled in several runs of one course reaches these dialogs from a specific
+ * row, and the course title alone can't tell them whether the row they clicked
+ * was the one they meant.
+ *
+ * Behind the same flag as the per-run row menus, so turning the flag off
+ * restores the previous dialogs exactly rather than leaving new copy behind.
+ * Null only for that case: `formatRunIdentifier` names a run with no dates by
+ * its tag, so every run gets confirmed by something.
+ */
+const useRunIdentifier = (enrollment: CourseRunEnrollmentV3): string | null => {
+  const enabled = useFeatureFlagEnabled(FeatureFlags.MultipleRunContextMenus)
+  return enabled ? formatRunIdentifier(enrollment.run) : null
+}
+
+/**
+ * Names the run in the dialog body, and is pulled into the dialog's accessible
+ * name via `additionalLabelledBy`.
+ *
+ * Verified with Orca: it announces a dialog's accessible name on open and
+ * nothing else — not the body copy, and not a container-level
+ * `aria-describedby`. So this line has to join the name to be spoken at all,
+ * while the heading itself stays short.
+ */
+const RunLabel: React.FC<{ id: string; runIdentifier: string }> = ({
+  id,
+  runIdentifier,
+}) => (
+  <Typography id={id} variant="body1">
+    Course run: <BoldText>{runIdentifier}</BoldText>
+  </Typography>
+)
 
 type DashboardDialogProps = {
   title: string
@@ -48,6 +73,8 @@ const EmailSettingsDialogInner: React.FC<DashboardDialogProps> = ({
   enrollment,
 }) => {
   const modal = NiceModal.useModal()
+  const runIdentifier = useRunIdentifier(enrollment)
+  const runLabelId = React.useId()
   const formik = useFormik({
     enableReinitialize: true,
     validateOnChange: false,
@@ -55,23 +82,26 @@ const EmailSettingsDialogInner: React.FC<DashboardDialogProps> = ({
     initialValues: {
       receive_emails: enrollment.edx_emails_subscription ?? true,
     },
-    onSubmit: async () => {
-      await updateEnrollment.mutateAsync({
-        id: enrollment.id,
-        PatchedUpdateCourseRunEnrollmentRequest: {
-          receive_emails: formik.values.receive_emails,
+    onSubmit: () => {
+      updateEnrollment.mutate(
+        {
+          id: enrollment.id,
+          PatchedUpdateCourseRunEnrollmentRequest: {
+            receive_emails: formik.values.receive_emails,
+          },
         },
-      })
-      if (!updateEnrollment.isError) {
-        modal.hide()
-      }
+        { onSuccess: () => modal.hide() },
+      )
     },
   })
-  const updateEnrollment = useUpdateEnrollment()
+  // Renders its own inline error below (updateEnrollment.isError), so suppress
+  // the global error toast.
+  const updateEnrollment = useUpdateEnrollment({ meta: SILENCE_ERROR_TOAST })
   return (
     <FormDialog
-      title={"Email Settings"}
+      title="Email Settings"
       fullWidth
+      additionalLabelledBy={runIdentifier ? runLabelId : undefined}
       onReset={formik.resetForm}
       onSubmit={formik.handleSubmit}
       {...muiDialogV5(modal)}
@@ -104,6 +134,9 @@ const EmailSettingsDialogInner: React.FC<DashboardDialogProps> = ({
         <Typography variant="body1">
           Update your email preferences for <BoldText>{title}.</BoldText>
         </Typography>
+        {runIdentifier && (
+          <RunLabel id={runLabelId} runIdentifier={runIdentifier} />
+        )}
         <Alert severity="warning">
           Unchecking the box will prevent you from receiving important course
           updates and emails.
@@ -130,24 +163,30 @@ const UnenrollDialogInner: React.FC<DashboardDialogProps> = ({
   enrollment,
 }) => {
   const modal = NiceModal.useModal()
-  const destroyEnrollment = useDestroyEnrollment()
+  const runIdentifier = useRunIdentifier(enrollment)
+  const runLabelId = React.useId()
+  // Renders its own inline error below (destroyEnrollment.isError), so suppress
+  // the global error toast.
+  const destroyEnrollment = useDestroyEnrollment({ meta: SILENCE_ERROR_TOAST })
   const formik = useFormik({
     enableReinitialize: true,
     validateOnChange: false,
     validateOnBlur: false,
     initialValues: {},
-    onSubmit: async () => {
-      await destroyEnrollment.mutateAsync(enrollment.id)
-      if (!destroyEnrollment.isError) {
-        trackCourseUnenrolled(title)
-        modal.hide()
-      }
+    onSubmit: () => {
+      destroyEnrollment.mutate(enrollment.id, {
+        onSuccess: () => {
+          trackCourseUnenrolled(title)
+          modal.hide()
+        },
+      })
     },
   })
   return (
     <FormDialog
       title={`Unenroll from ${title}`}
       fullWidth
+      additionalLabelledBy={runIdentifier ? runLabelId : undefined}
       onReset={formik.resetForm}
       onSubmit={formik.handleSubmit}
       {...muiDialogV5(modal)}
@@ -176,149 +215,19 @@ const UnenrollDialogInner: React.FC<DashboardDialogProps> = ({
         </DialogActions>
       }
     >
-      <Typography variant="body1">
-        Are you sure you want to unenroll from {title}?
-      </Typography>
-      {destroyEnrollment.isError && (
-        <Alert severity="error">
-          There was a problem unenrolling you from this course. Please try again
-          later.
-        </Alert>
-      )}
-    </FormDialog>
-  )
-}
-
-const jitSchema = Yup.object().shape({
-  country: Yup.string().required("Country is required"),
-  year_of_birth: Yup.string().required("Year of birth is required"),
-})
-
-const JustInTimeDialogInner: React.FC<{
-  href: string
-  readableId: string
-  programId?: string
-}> = ({ href, readableId, programId }) => {
-  const { data: countries } = useQuery(mitxUserQueries.countries())
-  const updateUser = useUpdateUserMutation()
-  const createEnrollment = useCreateB2bEnrollment()
-  const user = useQuery(mitxUserQueries.me())
-  const modal = NiceModal.useModal()
-
-  // Generate year options (minimum age 13, so current year - 13 back to 1900)
-  const currentYear = new Date().getFullYear()
-  const maxYear = currentYear - 13
-  const years = Array.from({ length: maxYear - 1900 + 1 }, (_, i) =>
-    (maxYear - i).toString(),
-  )
-
-  const yob = user?.data?.user_profile?.year_of_birth
-
-  const formik = useFormik({
-    enableReinitialize: true,
-    validateOnChange: false,
-    validateOnBlur: false,
-    initialValues: {
-      country: user?.data?.legal_address?.country || "",
-      year_of_birth: yob ? yob.toString() : "",
-    },
-    validationSchema: jitSchema,
-    onSubmit: async (values) => {
-      await updateUser.mutateAsync({
-        PatchedUserRequest: {
-          user_profile: {
-            year_of_birth: parseInt(values.year_of_birth, 10),
-          },
-          legal_address: {
-            country: values.country,
-          },
-        },
-      })
-      await createEnrollment.mutateAsync({
-        readable_id: readableId,
-        B2BEnrollRequestRequest: programId
-          ? { program_id: programId }
-          : undefined,
-      })
-      window.location.assign(href)
-      modal.hide()
-    },
-  })
-  const countryOptions: SimpleSelectOption[] = [
-    { value: "", label: "Please Select", disabled: true },
-    ...(countries?.map(({ code, name }) => ({ value: code, label: name })) ??
-      []),
-  ]
-  const yobOptions: SimpleSelectOption[] = [
-    { value: "", label: "Please Select", disabled: true },
-    ...years.map((year): SimpleSelectOption => ({ value: year, label: year })),
-  ]
-
-  return (
-    <FormDialog
-      noValidate
-      title="Just a Few More Details"
-      fullWidth
-      onReset={formik.resetForm}
-      onSubmit={formik.handleSubmit}
-      {...muiDialogV5(modal)}
-      actions={
-        <DialogActions>
-          <Button variant="secondary" onClick={modal.hide}>
-            Cancel
-          </Button>
-          <Button
-            variant="primary"
-            type="submit"
-            disabled={formik.isSubmitting}
-            endIcon={
-              formik.isSubmitting ? (
-                <LoadingSpinner color="inherit" loading={true} size={16} />
-              ) : undefined
-            }
-          >
-            Submit
-          </Button>
-        </DialogActions>
-      }
-    >
-      <Stack direction="column" gap="24px">
+      <Stack direction="column" gap="16px">
         <Typography variant="body1">
-          We need a bit more info before you can enroll.
+          Are you sure you want to unenroll from {title}?
         </Typography>
-
-        <SimpleSelectField
-          options={countryOptions}
-          name="country"
-          label="Country"
-          value={countries ? formik.values.country : ""}
-          onChange={formik.handleChange}
-          fullWidth
-          required
-          renderValue={
-            formik.values.country
-              ? undefined
-              : () => <SelectPlaceholder>Please Select</SelectPlaceholder>
-          }
-          error={!!formik.errors.country}
-          errorText={formik.errors.country}
-        />
-        <SimpleSelectField
-          options={yobOptions}
-          name="year_of_birth"
-          label="Year of Birth"
-          value={formik.values.year_of_birth}
-          onChange={formik.handleChange}
-          fullWidth
-          required
-          renderValue={
-            formik.values.year_of_birth
-              ? undefined
-              : () => <SelectPlaceholder>Please Select</SelectPlaceholder>
-          }
-          error={!!formik.errors.year_of_birth}
-          errorText={formik.errors.year_of_birth}
-        />
+        {runIdentifier && (
+          <RunLabel id={runLabelId} runIdentifier={runIdentifier} />
+        )}
+        {destroyEnrollment.isError && (
+          <Alert severity="error">
+            There was a problem unenrolling you from this course. Please try
+            again later.
+          </Alert>
+        )}
       </Stack>
     </FormDialog>
   )
@@ -326,7 +235,6 @@ const JustInTimeDialogInner: React.FC<{
 
 const EmailSettingsDialog = NiceModal.create(EmailSettingsDialogInner)
 const UnenrollDialog = NiceModal.create(UnenrollDialogInner)
-const JustInTimeDialog = NiceModal.create(JustInTimeDialogInner)
 
 type UnenrollProgramDialogProps = {
   title: string
@@ -338,16 +246,23 @@ const UnenrollProgramDialogInner: React.FC<UnenrollProgramDialogProps> = ({
   programId,
 }) => {
   const modal = NiceModal.useModal()
-  const destroyProgramEnrollment = useDestroyProgramEnrollment()
+  // Renders its own inline error below (destroyProgramEnrollment.isError), so
+  // suppress the global error toast.
+  const destroyProgramEnrollment = useDestroyProgramEnrollment({
+    meta: SILENCE_ERROR_TOAST,
+  })
   const formik = useFormik({
     enableReinitialize: true,
     validateOnChange: false,
     validateOnBlur: false,
     initialValues: {},
-    onSubmit: async () => {
-      await destroyProgramEnrollment.mutateAsync(programId)
-      trackProgramUnenrolled(title)
-      modal.hide()
+    onSubmit: () => {
+      destroyProgramEnrollment.mutate(programId, {
+        onSuccess: () => {
+          trackProgramUnenrolled(title)
+          modal.hide()
+        },
+      })
     },
   })
   return (
@@ -397,9 +312,4 @@ const UnenrollProgramDialogInner: React.FC<UnenrollProgramDialogProps> = ({
 
 const UnenrollProgramDialog = NiceModal.create(UnenrollProgramDialogInner)
 
-export {
-  EmailSettingsDialog,
-  UnenrollDialog,
-  UnenrollProgramDialog,
-  JustInTimeDialog,
-}
+export { EmailSettingsDialog, UnenrollDialog, UnenrollProgramDialog }

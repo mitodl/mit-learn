@@ -40,7 +40,6 @@ class ChannelQuerySet(TimestampedModelQuerySet):
                         "channel_type",
                         models.Value("/"),
                         "name",
-                        models.Value("/"),
                     ),
                 ),
                 default=None,
@@ -70,10 +69,21 @@ class ChannelQuerySet(TimestampedModelQuerySet):
                     "sub_channels__channel",
                     queryset=Channel.objects.annotate_channel_url(),
                 ),
+                # LearningResourceOfferor.channel_url reads
+                # channel_unit_details.first(); ordering the prefetch by pk
+                # lets that resolve from the cache and pick the same row it
+                # would have queried for.
+                Prefetch(
+                    "unit_detail__unit__channel_unit_details",
+                    queryset=ChannelUnitDetail.objects.select_related(
+                        "channel"
+                    ).order_by("pk"),
+                ),
             )
             .annotate_channel_url()
             .select_related(
                 "featured_list",
+                "unit_detail__unit",
                 "topic_detail",
                 "department_detail",
                 "unit_detail",
@@ -163,7 +173,7 @@ class Channel(TimestampedModel):
     def channel_url(self) -> str | None:
         """Return the channel url"""
         if self.published:
-            return frontend_absolute_url(f"/c/{self.channel_type}/{self.name}/")
+            return frontend_absolute_url(f"/c/{self.channel_type}/{self.name}")
         return None
 
     @property
@@ -280,7 +290,11 @@ class ChannelGroupRole(TimestampedModel):
 
     class Meta:
         unique_together = (("channel", "group", "role"),)
-        index_together = (("channel", "role"),)
+        indexes = [
+            models.Index(
+                fields=["channel", "role"], name="channelgrouprole_ch_role_idx"
+            )
+        ]
 
     def __str__(self):
         return (

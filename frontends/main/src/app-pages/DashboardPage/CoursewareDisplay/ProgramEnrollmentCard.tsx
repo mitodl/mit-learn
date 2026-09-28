@@ -1,5 +1,9 @@
 import React from "react"
-import { programPageView, programView } from "@/common/urls"
+import {
+  programPageView,
+  programView,
+  receiptByProgramView,
+} from "@/common/urls"
 import {
   DisplayModeEnum,
   V3UserProgramEnrollment,
@@ -7,7 +11,9 @@ import {
 import {
   CardRoot,
   CardTypeText,
+  CoursewareButtonLink,
   MenuButton,
+  Separator,
   SubtitleLink,
   TitleHeading,
   TitleLink,
@@ -20,12 +26,14 @@ import {
   mitxonlineLegacyUrl,
 } from "@/common/mitxonline"
 import { getCertificateLink } from "./model/dashboardViewModel"
-import { ButtonLink } from "@mitodl/smoot-design"
 import NiceModal from "@ebay/nice-modal-react"
 import { UnenrollProgramDialog } from "./DashboardDialogs"
 import { getReceiptMenuItem } from "./receiptMenuItem"
+import { useOrderIdForProgram } from "@/common/mitxonline/useOrderIdForResource"
+import { useProgramLetterMenuItem } from "./hooks/useProgramLetterMenuItem"
 import { SimpleMenu, Stack } from "ol-components"
 import { EnrollmentStatus } from "./helpers"
+import { ProgressBadge } from "./ProgressBadge"
 
 type ProgramEnrollmentCardProps = {
   programEnrollment: V3UserProgramEnrollment
@@ -53,9 +61,16 @@ export const ProgramEnrollmentCard = ({
   const upgradedAndIncomplete = isVerifiedEnrollmentMode(
     programEnrollment.enrollment_mode,
   )
+  /**
+   * Not gated on enrollment mode: a refund returns the learner to audit, and the
+   * receipt is where they confirm it went through. Shares one `orders/history`
+   * query with every other card on the dashboard.
+   */
+  const receiptResolution = useOrderIdForProgram(programId)
+  const programLetterMenuItem = useProgramLetterMenuItem(programId)
   const displayMode = program.display_mode
   const titleSection = (
-    <Stack gap="6px">
+    <Stack gap="12px">
       {titleHref ? (
         <TitleHeading>
           <TitleLink size="medium" color="black" href={titleHref}>
@@ -74,16 +89,6 @@ export const ProgramEnrollmentCard = ({
         <UpgradedBanner />
       ) : null}
     </Stack>
-  )
-  const buttonSection = (
-    <ButtonLink
-      size="small"
-      variant="primary"
-      href={programView(program.id)}
-      aria-label={`View program: ${title}`}
-    >
-      View
-    </ButtonLink>
   )
   const detailsUrl = programPageView({
     readable_id: readableId,
@@ -104,6 +109,7 @@ export const ProgramEnrollmentCard = ({
     label: "Program Record",
     href: mitxonlineLegacyUrl(`/records/${programId}/`),
   })
+  if (programLetterMenuItem) menuItems.push(programLetterMenuItem)
   if (
     program.display_mode !== DisplayModeEnum.Course &&
     !isVerifiedEnrollmentMode(programEnrollment.enrollment_mode)
@@ -121,8 +127,8 @@ export const ProgramEnrollmentCard = ({
     })
   }
   const receiptMenuItem = getReceiptMenuItem(
-    programEnrollment.enrollment_mode,
-    `/orders/receipt/by-program/${program.id}/`,
+    receiptResolution,
+    receiptByProgramView(programId),
   )
   if (receiptMenuItem) menuItems.push(receiptMenuItem)
   const contextMenu = (
@@ -141,6 +147,27 @@ export const ProgramEnrollmentCard = ({
       }
     />
   )
+  const buttonSection = (
+    <Stack direction="row" flexGrow={1} gap="8px" alignItems="center">
+      <CoursewareButtonLink
+        size="small"
+        variant="primary"
+        href={programView(program.id)}
+        aria-label={`View program: ${title}`}
+      >
+        View
+      </CoursewareButtonLink>
+      {contextMenu}
+    </Stack>
+  )
+
+  const progressBadgeSection = (
+    <Stack direction="row" gap="8px" alignItems="center">
+      <ProgressBadge enrollmentStatus={enrollmentStatus} />
+      <Separator />
+      <CardTypeText>Program</CardTypeText>
+    </Stack>
+  )
 
   return (
     <>
@@ -150,16 +177,11 @@ export const ProgramEnrollmentCard = ({
         as={Component}
         className={className}
       >
-        <Stack justifyContent="start" alignItems="stretch" flex={1}>
-          <CardTypeText>Program</CardTypeText>
+        <Stack gap="4px" justifyContent="start" alignItems="stretch" flex={1}>
+          {progressBadgeSection}
           {titleSection}
         </Stack>
-        <Stack gap="8px">
-          <Stack direction="row" gap="8px" alignItems="center">
-            {buttonSection}
-            {contextMenu}
-          </Stack>
-        </Stack>
+        <Stack gap="8px">{buttonSection}</Stack>
       </CardRoot>
 
       <CardRoot
@@ -178,7 +200,6 @@ export const ProgramEnrollmentCard = ({
           <Stack direction="column" gap="8px" flex={1}>
             {titleSection}
           </Stack>
-          {contextMenu}
         </Stack>
         <Stack
           direction="row"
@@ -186,9 +207,7 @@ export const ProgramEnrollmentCard = ({
           justifyContent="end"
           width="100%"
         >
-          <Stack direction="row" gap="8px" alignItems="center">
-            {buttonSection}
-          </Stack>
+          {buttonSection}
         </Stack>
       </CardRoot>
     </>

@@ -8,16 +8,19 @@ import { LoadingSpinner, Stack } from "ol-components"
 import {
   CardRoot,
   CardTypeText,
-  CoursewareActionColumn,
   CoursewareButton,
+  TitleHeading,
   TitleText,
+  TitleButton,
   CourseDateSummary,
+  Separator,
 } from "./CardShared"
+import { getCourseDateText } from "./courseDateUtils"
 import { EnrollmentStatus, getBestRun } from "./helpers"
 import { isVerifiedEnrollmentMode } from "@/common/mitxonline"
 import { useEnrollmentHandler } from "./hooks/useEnrollmentHandler"
-import { EnrollmentStatusIndicator } from "./EnrollmentStatusIndicator"
-import { Button } from "@mitodl/smoot-design"
+import { EnrollmentStatusIcon } from "./EnrollmentStatus"
+import { ProgressBadge } from "./ProgressBadge"
 
 type UnenrolledCourseCardProps = {
   course: CourseWithCourseRunsSerializerV2
@@ -30,6 +33,7 @@ type UnenrolledCourseCardProps = {
   }
   layout?: "default" | "compact"
   headingLevel?: "h2" | "h3" | "h4" | "h5" | "h6"
+  isModule?: boolean
   Component?: React.ElementType
   className?: string
 }
@@ -41,6 +45,7 @@ export const UnenrolledCourseCard = ({
   ancestorContext,
   layout = "default",
   headingLevel,
+  isModule,
   Component,
   className,
 }: UnenrolledCourseCardProps) => {
@@ -54,6 +59,12 @@ export const UnenrolledCourseCard = ({
   const title =
     layout === "compact" ? course.title : courseRun?.title || course.title
   const isContractPageResource = Boolean(contractId)
+  const cardTypeLabelText =
+    isModule || isContractPageResource ? "Module" : "Course"
+  const cardTypeLabel =
+    isModule && layout === "compact" ? null : (
+      <CardTypeText>{cardTypeLabelText}</CardTypeText>
+    )
   const handleEnrollmentClick = React.useCallback(() => {
     const isVerifiedProgramEnrollment =
       Boolean(ancestorContext?.useVerifiedEnrollment) ||
@@ -74,12 +85,14 @@ export const UnenrolledCourseCard = ({
       b2bProgramId:
         ancestorContext?.parentProgramReadableIds?.[0] ??
         ancestorContext?.programEnrollment?.program.readable_id,
+      startDate: courseRun?.start_date,
     })
   }, [
     course,
     ancestorContext,
     readableId,
     coursewareUrl,
+    courseRun?.start_date,
     isContractPageResource,
     enrollment,
   ])
@@ -88,29 +101,32 @@ export const UnenrolledCourseCard = ({
     handleEnrollmentClick()
   }
   const isCompact = layout === "compact"
-  const titleSection = (
-    <TitleText
-      as={headingLevel}
-      clickable={!isDisabled}
-      onClick={isDisabled ? undefined : enrollClick}
-    >
-      {title}
-    </TitleText>
+  const titleSection = isDisabled ? (
+    <TitleText as={headingLevel}>{title}</TitleText>
+  ) : (
+    <TitleHeading as={headingLevel}>
+      <TitleButton type="button" onClick={enrollClick}>
+        {title}
+      </TitleButton>
+    </TitleHeading>
   )
-  const courseDateText = (
+  const hasCourseDateText =
+    getCourseDateText(courseRun?.start_date, courseRun?.end_date) !== null
+  const courseDateText = hasCourseDateText ? (
     <Stack direction="row" gap="8px" alignItems="start">
       <CourseDateSummary
         startDate={courseRun?.start_date}
         endDate={courseRun?.end_date}
       />
     </Stack>
-  )
-  const startButton = isCompact ? (
+  ) : null
+  const startButton = (
     <CoursewareButton
       size="small"
-      variant="secondary"
+      variant={isCompact ? "secondary" : "primary"}
       data-testid="courseware-button"
       aria-label={`Start course: ${title}`}
+      aria-busy={isPending}
       onClick={isDisabled ? undefined : enrollClick}
       disabled={isDisabled}
       endIcon={
@@ -121,46 +137,19 @@ export const UnenrolledCourseCard = ({
     >
       Start
     </CoursewareButton>
-  ) : (
-    <Button
-      size="small"
-      variant="primary"
-      data-testid="courseware-button"
-      aria-label={`Start course: ${title}`}
-      onClick={isDisabled ? undefined : enrollClick}
-      disabled={isDisabled}
-      endIcon={
-        isPending ? (
-          <LoadingSpinner color="inherit" loading={isPending} size={16} />
-        ) : null
-      }
-    >
-      Start
-    </Button>
   )
-  const buttonSection = isCompact ? (
-    <Stack direction="column" gap="4px" alignItems="stretch">
-      <Stack
-        direction="row"
-        gap="8px"
-        alignItems="center"
-        data-testid="compact-meta-row"
-      >
-        {courseDateText}
-        <CoursewareActionColumn direction="row" justifyContent="end">
-          {startButton}
-        </CoursewareActionColumn>
+
+  const progressBadgeSection =
+    isModule && isCompact ? null : (
+      <Stack direction="row" gap="8px" alignItems="center">
+        <ProgressBadge enrollmentStatus={EnrollmentStatus.NotEnrolled} />
+        <Separator />
+        {cardTypeLabel}
       </Stack>
-    </Stack>
-  ) : (
-    <Stack direction="row" gap="8px" alignItems="center" justifyContent="end">
-      <EnrollmentStatusIndicator
-        status={EnrollmentStatus.NotEnrolled}
-        showNotComplete={Boolean(isContractPageResource)}
-      />
-      {startButton}
-    </Stack>
-  )
+    )
+
+  const showEnrollmentStatusIcon =
+    !isContractPageResource && isModule && isCompact
 
   return (
     <>
@@ -171,19 +160,26 @@ export const UnenrolledCourseCard = ({
         className={className}
         layout={layout}
       >
-        <Stack justifyContent="start" alignItems="stretch" gap="6px" flex={1}>
-          <CardTypeText>Course</CardTypeText>
-          {titleSection}
-          {!isCompact && courseDateText}
+        {showEnrollmentStatusIcon && (
+          <Stack alignSelf="start">
+            <EnrollmentStatusIcon status={EnrollmentStatus.NotEnrolled} />
+          </Stack>
+        )}
+        <Stack justifyContent="start" alignItems="stretch" gap="4px" flex={1}>
+          {progressBadgeSection}
+          <Stack gap="12px">
+            {titleSection}
+            {courseDateText}
+          </Stack>
         </Stack>
         <Stack
           direction="row"
           gap="8px"
-          paddingRight="32px"
+          paddingRight="40px"
           alignItems="center"
           justifyContent="end"
         >
-          {buttonSection}
+          {startButton}
         </Stack>
       </CardRoot>
 
@@ -194,26 +190,43 @@ export const UnenrolledCourseCard = ({
         className={className}
         layout={layout}
       >
-        <Stack
-          direction="row"
-          justifyContent="space-between"
-          alignItems="stretch"
-          flex={1}
-          width="100%"
-        >
-          <Stack direction="column" gap="8px" flex={1}>
-            {titleSection}
-            {!isCompact && courseDateText}
+        <Stack direction="row" gap="8px" alignItems="flex-start" width="100%">
+          {showEnrollmentStatusIcon && (
+            <Stack alignSelf="flex-start">
+              <EnrollmentStatusIcon status={EnrollmentStatus.NotEnrolled} />
+            </Stack>
+          )}
+          <Stack
+            direction="column"
+            gap="16px"
+            flex={1}
+            minWidth={0}
+            width="100%"
+          >
+            <Stack
+              direction="row"
+              justifyContent="space-between"
+              alignItems="stretch"
+              flex={1}
+              minWidth={0}
+              width="100%"
+            >
+              <Stack direction="column" gap="8px" flex={1} minWidth={0}>
+                {titleSection}
+                {!isCompact && courseDateText}
+              </Stack>
+            </Stack>
+            <Stack
+              direction="row"
+              width="100%"
+              gap="8px"
+              alignItems="center"
+              justifyContent="end"
+              minWidth={0}
+            >
+              {startButton}
+            </Stack>
           </Stack>
-        </Stack>
-        <Stack
-          direction="row"
-          width="100%"
-          gap="8px"
-          alignItems="center"
-          justifyContent="end"
-        >
-          {buttonSection}
         </Stack>
       </CardRoot>
     </>

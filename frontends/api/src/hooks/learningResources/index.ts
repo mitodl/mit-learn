@@ -27,6 +27,7 @@ import {
   platformsQueries,
   learningResourceKeys,
   videoPlaylistQueries,
+  podcastEpisodeQueries,
 } from "./queries"
 import { userlistKeys } from "../userLists/queries"
 import { learningPathKeys } from "../learningPaths/queries"
@@ -165,6 +166,9 @@ const useLearningResourceSetLearningPathRelationships = () => {
        * Additionally, the lists we've removed from the resource are not easily available.
        */
       queryClient.invalidateQueries({ queryKey: learningPathKeys.root })
+      queryClient.invalidateQueries({
+        queryKey: learningResourceKeys.featuredRoot(),
+      })
     },
   })
 }
@@ -238,5 +242,6 @@ export {
   topicQueries,
   learningResourceKeys,
   videoPlaylistQueries,
+  podcastEpisodeQueries,
   LearningResource,
 }

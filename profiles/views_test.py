@@ -39,6 +39,7 @@ def test_list_users(staff_client, staff_user):
         {
             "id": staff_user.id,
             "username": staff_user.username,
+            "global_id": staff_user.global_id,
             "first_name": staff_user.first_name,
             "last_name": staff_user.last_name,
             "is_learning_path_editor": True,
@@ -98,6 +99,7 @@ def test_get_user(staff_client, user):
     assert resp.json() == {
         "id": user.id,
         "username": user.username,
+        "global_id": user.global_id,
         "first_name": user.first_name,
         "last_name": user.last_name,
         "is_article_editor": True,
@@ -132,7 +134,6 @@ def test_get_profile(logged_in, user, user_client):
         "headline": profile.headline,
         "username": profile.user.username,
         "placename": profile.location.get("value", ""),
-        "user_websites": [],
         "topic_interests": LearningResourceTopicSerializer(
             profile.topic_interests, many=True
         ).data,
@@ -188,6 +189,7 @@ def test_patch_user(staff_client, user, email, email_optin, toc_optin):
     assert resp.json() == {
         "id": user.id,
         "username": user.username,
+        "global_id": user.global_id,
         "first_name": user.first_name,
         "last_name": user.last_name,
         "is_learning_path_editor": True,
@@ -238,7 +240,6 @@ def test_patch_profile_by_user(client, logged_in_profile):
     assert logged_in_profile.location == location_json
 
 
-@pytest.mark.skip_nplusone_check
 def test_patch_topic_interests(client, logged_in_profile):
     """Test that patching Profile.topic_interests works correctly"""
     topics = LearningResourceTopicFactory.create_batch(3)
@@ -340,6 +341,29 @@ def test_patch_onboarding_fields(  # noqa: PLR0913
     assert getattr(logged_in_profile, field) == after
 
 
+def test_patch_profile_round_trip_with_null_email_optin(client, logged_in_profile):
+    """
+    Onboarding PATCHes back the whole profile it just fetched, so a stored null
+    email_optin has to be accepted rather than rejected as a null value.
+    """
+    logged_in_profile.email_optin = None
+    logged_in_profile.save()
+
+    url = reverse(
+        "profile:v0:profile_api-detail",
+        kwargs={"user__username": logged_in_profile.user.username},
+    )
+
+    fetched = client.get(url).json()
+    assert fetched["email_optin"] is None
+
+    resp = client.patch(url, data={**fetched, "topic_interests": []})
+
+    assert resp.status_code == status.HTTP_200_OK, resp.json()
+    logged_in_profile.refresh_from_db()
+    assert logged_in_profile.email_optin is None
+
+
 def test_initialized_avatar(client, user):
     """
     Test that a PNG avatar image is returned for a user
@@ -390,20 +414,26 @@ def test_get_user_by_me(mocker, client, user, is_anonymous):
         assert resp.json() == {
             "id": None,
             "username": "",
+            "global_id": None,
+            "email": "",
             "is_learning_path_editor": False,
             "is_article_editor": False,
             "is_authenticated": False,
+            "is_sso_user": False,
         }
     else:
         assert resp.json() == {
             "id": user.id,
             "username": user.username,
+            "global_id": user.global_id,
+            "email": user.email,
             "first_name": user.first_name,
             "last_name": user.last_name,
             "is_learning_path_editor": False,
             "is_article_editor": False,
             "profile": ProfileSerializer(user.profile).data,
             "is_authenticated": True,
+            "is_sso_user": False,
         }
 
 
@@ -498,6 +528,73 @@ def test_program_letter_api_view(mocker, client, rf, user, is_anonymous, setting
     )
 
 
+def test_program_letter_api_view_omits_certificate_pii(mocker, client, user, settings):
+    """
+    The unauthenticated letter endpoint exposes only the name and program the
+    letter itself states -- not the learner's contact or demographic details.
+
+    Anyone holding the letter's uuid can read this response, so a field added
+    to ProgramCertificate must not reach it by default.
+    """
+    settings.DATABASE_ROUTERS = []
+    mocker.patch(
+        "profiles.serializers.fetch_program_letter_template_data",
+        return_value={
+            "id": 4,
+            "meta": {},
+            "program_letter_footer": "",
+            "program_letter_logo": {},
+            "title": "Supply Chain Management",
+            "program_id": 1,
+            "program_letter_footer_text": "",
+            "program_letter_header_text": "",
+            "program_letter_text": "<p>Congratulations</p>",
+            "program_letter_signatories": [],
+        },
+    )
+    cert = ProgramCertificateFactory(
+        user_email=user.email,
+        micromasters_program_id=1,
+        user_street_address="77 Massachusetts Ave",
+        user_year_of_birth="1970",
+    )
+    program_letter = ProgramLetterFactory(user=user, certificate=cert)
+
+    response = client.get(
+        reverse("profile:v1:program_letters_api-detail", args=[program_letter.id])
+    )
+
+    assert response.status_code == 200
+    assert set(response.json()["certificate"]) == {"user_full_name", "program_title"}
+
+
+@pytest.mark.parametrize("certificate_id", [None, "no-such-record-hash"])
+def test_program_letter_api_view_without_certificate(
+    client, settings, user, certificate_id
+):
+    """
+    A letter whose certificate is gone 404s instead of erroring.
+
+    ProgramCertificate is unmanaged, so certificate_id has no FK constraint and
+    can outlive the row it points at. Every field of the response derives from
+    the certificate, so there is nothing to serve without one. Nothing is mocked
+    here on purpose: MICROMASTERS_CMS_API_URL is set because the template fetch
+    dereferences the certificate too, and the view has to stop short of it.
+    """
+    settings.DATABASE_ROUTERS = []
+    settings.EXTERNAL_MODELS = []
+    settings.MICROMASTERS_CMS_API_URL = "https://micromasters.example.com/api/v0/"
+    letter = ProgramLetter.objects.create(user=user, certificate=None)
+    if certificate_id is not None:
+        ProgramLetter.objects.filter(pk=letter.pk).update(certificate_id=certificate_id)
+
+    response = client.get(
+        reverse("profile:v1:program_letters_api-detail", args=[letter.id])
+    )
+
+    assert response.status_code == 404
+
+
 @pytest.mark.parametrize("is_anonymous", [True, False])
 def test_program_letter_api_view_returns_404_for_invalid_id(
     mocker, client, user, is_anonymous
@@ -515,7 +612,6 @@ def test_program_letter_api_view_returns_404_for_invalid_id(
     assert response.status_code == 404
 
 
-@pytest.mark.skip_nplusone_check
 @pytest.mark.parametrize("is_anonymous", [True, False])
 def test_list_user_program_certificates(mocker, client, user, is_anonymous):
     """
@@ -529,16 +625,31 @@ def test_list_user_program_certificates(mocker, client, user, is_anonymous):
             3,
             user_email=user.email,
         )
+    if not is_anonymous:
+        # One cert already has a letter; the GET creates the other two and
+        # reuses this one rather than issuing a second.
+        letter = ProgramLetterFactory(user=user, certificate=certs[0])
     url = reverse("profile:v0:user_program_certificates_api-list")
     resp = client.get(url)
     if not is_anonymous:
         request = get_request_object(url)
         assert resp.status_code == 200
+        assert ProgramLetter.objects.count() == len(certs)
+        assert ProgramLetter.objects.get(certificate=certs[0]).id == letter.id
+
+        letters = {
+            item.certificate_id: item
+            for item in ProgramLetter.objects.filter(certificate__in=certs)
+        }
+        for cert in certs:
+            cert.user_letter = letters[cert.pk]
         assert (
             resp.json()
             == ProgramCertificateSerializer(
                 certs, many=True, context={"request": request}
             ).data
         )
+        share_urls = [cert["program_letter_share_url"] for cert in resp.json()]
+        assert all(share_urls), share_urls
     else:
         assert resp.status_code == 403

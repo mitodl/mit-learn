@@ -37,7 +37,7 @@ const StateWrapper = (props: RadioChoiceBoxFieldProps) => {
         },
       }}
       gridItemProps={{
-        xs: 4,
+        size: 4,
       }}
     />
   )

@@ -180,7 +180,7 @@ const ByLineInfoBar = ({
 }: ReactNodeViewProps) => {
   const article = useWebsiteContent()
 
-  const publishedDate = article?.is_published ? article?.created_on : null
+  const publishedDate = article?.is_published ? article?.publish_date : null
 
   const content = editor?.isEditable ? editor?.getJSON() : article?.content
 

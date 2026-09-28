@@ -35,12 +35,8 @@ const Wrapper = styled.div(({ theme }) => ({
   marginTop: "32px",
   padding: "24px 32px",
   backgroundColor: theme.custom.colors.white,
-  borderBottom: `1px solid ${theme.custom.colors.red}`,
-  boxShadow: "0px 4px 8px 0px rgba(19, 20, 21, 0.08)",
-  borderRadius: "8px",
-  [theme.breakpoints.down("md")]: {
-    border: `1px solid ${theme.custom.colors.lightGray2}`,
-    backgroundColor: "rgba(243, 244, 248, 0.60);", // TODO: use theme color
+  [theme.breakpoints.down("sm")]: {
+    backgroundColor: theme.custom.colors.lightGray1,
     marginTop: "16px",
     padding: "0",
   },
@@ -50,28 +46,22 @@ const AlertBanner = styled(Alert)({
   marginBottom: "16px",
 })
 
-const CoursewareCardStyled = styled(CoursewareCard)({
-  borderRadius: "8px",
-  boxShadow: "0px 1px 6px 0px rgba(3, 21, 45, 0.05)",
-})
-
 const Title = styled(Typography)<Pick<TypographyProps, "component">>(
   ({ theme }) => ({
     ...theme.typography.h5,
     marginBottom: "16px",
-    [theme.breakpoints.down("md")]: {
-      padding: "16px",
-      marginBottom: "0",
-    },
   }),
 )
 
 const EnrollmentsList = styled(PlainList)<Pick<PlainListProps, "itemSpacing">>(
   ({ theme }) => ({
-    [theme.breakpoints.down("md")]: {
+    [theme.breakpoints.down("sm")]: {
       borderTop: `1px solid ${theme.custom.colors.lightGray2}`,
       ">li+li": {
         marginTop: "0",
+      },
+      ">li+li:not(:last-of-type)": {
+        marginBottom: "16px",
       },
     },
   }),
@@ -79,7 +69,7 @@ const EnrollmentsList = styled(PlainList)<Pick<PlainListProps, "itemSpacing">>(
 
 const HiddenEnrollmentsList = styled(EnrollmentsList)({
   marginTop: "16px",
-  [theme.breakpoints.down("md")]: {
+  [theme.breakpoints.down("sm")]: {
     borderTop: "none",
     marginTop: "0",
   },
@@ -89,7 +79,7 @@ const ShowAllContainer = styled.div(({ theme }) => ({
   display: "flex",
   justifyContent: "center",
   marginTop: "24px",
-  [theme.breakpoints.down("md")]: {
+  [theme.breakpoints.down("sm")]: {
     marginBottom: "24px",
   },
 }))
@@ -178,7 +168,7 @@ const EnrollmentExpandCollapse: React.FC<EnrollmentExpandCollapseProps> = ({
         }
       }
       return (
-        <CoursewareCardStyled
+        <CoursewareCard
           key={getResourceKey(resource)}
           Component="li"
           kind="program-enrollment"
@@ -190,7 +180,7 @@ const EnrollmentExpandCollapse: React.FC<EnrollmentExpandCollapseProps> = ({
       const allCourseEnrollments =
         enrollmentsByCourseId[enrollment.run.course.id] ?? []
       return (
-        <CoursewareCardStyled
+        <CoursewareCard
           key={getResourceKey(resource)}
           Component="li"
           kind="enrollment"

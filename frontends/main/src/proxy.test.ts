@@ -11,7 +11,7 @@ describe("isPageRoute", () => {
     "/courses/course-v1:MITxT+5.601x",
     "/programs/program-v1:MITxT+18.01x",
     // Sitemaps are dynamically generated and tagged for purge-on-deploy.
-    "/sitemaps/products.xml",
+    "/sitemaps/resources/sitemap/0.xml",
     "/sitemaps/sitemap-index.xml",
   ])("treats %s as a page route", (pathname) => {
     expect(isPageRoute(pathname)).toBe(true)
@@ -122,10 +122,26 @@ describe("proxy", () => {
   const makeRequest = (pathname: string) =>
     new NextRequest(new URL(pathname, "https://learn.mit.edu"))
 
+  const S_MAXAGE_SECONDS = 7200
+  const originalEnv = process.env
+
+  beforeEach(() => {
+    process.env = {
+      ...originalEnv,
+      NEXT_PUBLIC_CACHE_S_MAXAGE_SECONDS: String(S_MAXAGE_SECONDS),
+    }
+  })
+  afterEach(() => {
+    process.env = originalEnv
+  })
+
   test("tags generic page routes with Cache-Control and html-pages Surrogate-Key", () => {
     const response = proxy(makeRequest("/about"))
     expect(response.headers.get("Surrogate-Key")).toBe("html-pages")
-    expect(response.headers.get("Cache-Control")).toContain("s-maxage=")
+    // s-maxage is in seconds, and comes from the configured CDN TTL.
+    expect(response.headers.get("Cache-Control")).toBe(
+      `s-maxage=${S_MAXAGE_SECONDS}, stale-if-error=86400, stale-while-revalidate=86400`,
+    )
   })
 
   test("appends per-item surrogate key for MITxOnline course pages", () => {
@@ -133,7 +149,6 @@ describe("proxy", () => {
     expect(response.headers.get("Surrogate-Key")).toBe(
       "html-pages mitxonline:course:course-v1:MITxT+5.601x",
     )
-    expect(response.headers.get("Cache-Control")).toContain("s-maxage=")
   })
 
   test("appends per-item surrogate key for MITxOnline program pages (/programs/)", () => {
@@ -164,5 +179,31 @@ describe("proxy", () => {
     ).not.toThrow()
     const response = proxy(makeRequest("/courses/foo%0D%0AX-Injected%3A+yes"))
     expect(response.headers.get("Surrogate-Key")).toBe("html-pages")
+  })
+
+  /**
+   * Regression: the image optimizer fetches local images by routing an
+   * internal request through proxy with no Host or X-Forwarded-Proto header.
+   * In Oct 2025 an https redirect in the old middleware.ts answered those with
+   * a 301, so every local image failed with "isn't a valid image ... received
+   * null". That redirect only ran when NODE_ENV was "production", so this
+   * test sets it.
+   */
+  describe("image optimizer's internal fetches", () => {
+    beforeEach(() => {
+      process.env = { ...process.env, NODE_ENV: "production" }
+    })
+
+    test.each([
+      "/images/hero/hero-1.png",
+      "/static/images/hero/hero-1.png",
+      "/_next/static/media/graduate.05tvlwc2-um9z.png",
+    ])("passes %s through without redirecting", (pathname) => {
+      const response = proxy(
+        new NextRequest(new URL(pathname, "http://localhost:3000")),
+      )
+      expect(response.headers.get("x-middleware-next")).toBe("1")
+      expect(response.headers.get("Location")).toBeNull()
+    })
   })
 })

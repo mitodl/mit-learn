@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useEffect, useRef, useState } from "react"
+import React, { useCallback, useEffect, useRef, useState } from "react"
 import Image from "next/image"
 import {
   keepPreviousData,
@@ -8,15 +8,18 @@ import {
   useQueryClient,
 } from "@tanstack/react-query"
 import { useFeatureFlagEnabled } from "posthog-js/react"
+import { RiErrorWarningLine } from "@remixicon/react"
 import {
   alpha,
   Chip,
   Container,
+  Link,
   Pagination,
   SearchInput,
   Skeleton,
   Stack,
   TabContext,
+  Tooltip,
   Typography,
   styled,
 } from "ol-components"
@@ -30,14 +33,28 @@ import {
 import { AssignSeatsSection } from "./AssignSeatsSection"
 import { RowActionMenu } from "./RowActionMenu"
 import {
+  EmptyTableMessage,
+  MobileLabel,
+  STUB,
+  TableCard,
+  TableCell,
+  TableFooter,
+  TableFootnote,
+  TableHeaderCell,
+  TableHeaderRow,
+  TableRow,
+} from "@/components/B2BTable/B2BTable"
+import {
   managerOrganizationQueries,
   type ManagerEnrollmentCode,
 } from "api/mitxonline-hooks/organizations"
+import type { B2bManagerOrganizationsContractsCodesListStatusEnum } from "@mitodl/mitxonline-api-axios/v2"
 import type { AxiosError } from "axios"
 import { matchOrganizationBySlug } from "@/common/utils"
 import { ForbiddenError } from "@/common/errors"
 import { FeatureFlags } from "@/common/feature_flags"
 import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
+import { contractAnalyticsView } from "@/common/urls"
 import { ErrorContent } from "../ErrorPage/ErrorPageTemplate"
 import graduateLogo from "@/public/images/dashboard/graduate.png"
 
@@ -93,6 +110,12 @@ const ContractSubtitle = styled(Typography)(({ theme }) => ({
   ...theme.typography.subtitle1,
   color: theme.custom.colors.silverGrayDark,
 })) as typeof Typography
+
+const AnalyticsLink = styled(Link)(({ theme }) => ({
+  ...theme.typography.body2,
+  display: "inline-block",
+  paddingTop: "4px",
+}))
 
 const StatsSide = styled.div(({ theme }) => ({
   display: "flex",
@@ -153,6 +176,19 @@ const SeatAssignmentsControls = styled.div(({ theme }) => ({
 }))
 
 const ExportButtonWrapper = styled.div(({ theme }) => ({
+  // smoot-design Button only styles the native `:disabled` state, but the export
+  // button uses `aria-disabled` while exporting — mirror the bordered variant's
+  // disabled appearance here.
+  "> button[aria-disabled='true']": {
+    cursor: "default",
+    backgroundColor: theme.custom.colors.lightGray2,
+    border: `1px solid ${theme.custom.colors.lightGray2}`,
+    color: theme.custom.colors.silverGrayDark,
+    ":hover": {
+      backgroundColor: theme.custom.colors.lightGray2,
+      color: theme.custom.colors.silverGrayDark,
+    },
+  },
   [theme.breakpoints.down("md")]: {
     width: "100%",
     "> button": {
@@ -172,92 +208,17 @@ const ControlsLeft = styled.div(({ theme }) => ({
   },
 }))
 
-const TableCard = styled.div(({ theme }) => ({
-  backgroundColor: theme.custom.colors.white,
-  border: `1px solid ${theme.custom.colors.lightGray2}`,
-  borderRadius: "8px",
-  padding: "24px",
-  [theme.breakpoints.down("md")]: {
-    padding: "16px",
-  },
-}))
-
-const TableHeaderRow = styled.div(({ theme }) => ({
-  display: "flex",
-  gap: "16px",
-  alignItems: "center",
-  paddingBottom: "16px",
-  borderBottom: `1px solid ${theme.custom.colors.silverGrayDark}`,
-  [theme.breakpoints.down("md")]: {
-    display: "none",
-  },
-}))
-
-const TableHeaderCell = styled("div", {
-  shouldForwardProp: (prop) => prop !== "$flex",
-})<{ $flex: number }>(({ $flex, theme }) => ({
-  flex: $flex,
-  minWidth: 0,
-  ...theme.typography.subtitle2,
-  color: theme.custom.colors.black,
-}))
-
-const TableRow = styled.div(({ theme }) => ({
-  display: "flex",
-  gap: "16px",
-  alignItems: "center",
-  padding: "14px 0",
-  borderBottom: `1px solid ${theme.custom.colors.silverGrayLight}`,
-  "&:last-child": {
-    borderBottom: "none",
-  },
-  [theme.breakpoints.down("md")]: {
-    position: "relative",
-    flexWrap: "wrap",
-    gap: "6px 0",
-    padding: "16px 40px 16px 0",
-  },
-}))
-
-const MobileLabel = styled.span(({ theme }) => ({
-  display: "none",
-  [theme.breakpoints.down("md")]: {
-    display: "inline",
-    ...theme.typography.subtitle2,
-    color: theme.custom.colors.darkGray2,
-    minWidth: "120px",
-    flexShrink: 0,
-  },
-}))
-
-const TableCell = styled("div", {
-  shouldForwardProp: (prop) => prop !== "$flex" && prop !== "$primary",
-})<{ $flex: number; $primary?: boolean }>(({ $flex, $primary, theme }) => ({
-  flex: $flex,
-  minWidth: 0,
-  ...theme.typography.body2,
-  color: theme.custom.colors.black,
-  overflow: "hidden",
-  textOverflow: "ellipsis",
-  whiteSpace: "nowrap",
-  [theme.breakpoints.down("md")]: {
-    flex: "none",
-    width: "100%",
-    display: "flex",
-    alignItems: "center",
-    gap: "8px",
-    overflow: "visible",
-    whiteSpace: "normal",
-    ...($primary && {
-      ...theme.typography.subtitle2,
-      marginBottom: "4px",
-    }),
-  },
-}))
+type DisplayStatus =
+  | "redeemed"
+  | "pending"
+  | "delivered"
+  | "opened"
+  | "clicked"
+  | "failed"
 
 const StatusBadge = styled(Chip, {
   shouldForwardProp: (prop) => prop !== "$status",
-})<{ $status: "assigned" | "redeemed" }>(({ $status, theme }) => ({
+})<{ $status: DisplayStatus }>(({ $status, theme }) => ({
   height: "20px",
   borderRadius: "4px",
   paddingRight: "8px",
@@ -269,11 +230,58 @@ const StatusBadge = styled(Chip, {
     backgroundColor: alpha(theme.custom.colors.green, 0.2),
     color: theme.custom.colors.darkGreen,
   }),
-  ...($status === "assigned" && {
+  ...($status === "failed" && {
+    backgroundColor: alpha(theme.custom.colors.red, 0.2),
+    color: theme.custom.colors.red,
+    cursor: "help",
+  }),
+  // pending/delivered/opened/clicked all read as "in progress, nothing
+  // wrong" and share the same blue treatment.
+  ...(["pending", "delivered", "opened", "clicked"].includes($status) && {
     backgroundColor: alpha(theme.custom.colors.blue, 0.2),
     color: theme.custom.colors.darkBlue,
   }),
 }))
+
+// Icon trails the text (rather than Chip's built-in leading-icon slot) so the
+// warning icon reads as "here's more detail" after the status, not as a
+// leading glyph identifying the status itself.
+const FailedLabel = styled.span({
+  display: "inline-flex",
+  alignItems: "center",
+  gap: "4px",
+})
+
+const DISPLAY_STATUS_LABEL: Record<DisplayStatus, string> = {
+  redeemed: "Redeemed",
+  pending: "Pending",
+  delivered: "Pending - Delivered",
+  opened: "Pending - Opened",
+  clicked: "Pending - Clicked",
+  failed: "Failed",
+}
+
+const FAILED_EMAIL_EXPLANATION =
+  "Delivery failed — the recipient's email address may be invalid, unreachable, or blocked by their mail server."
+
+/**
+ * `redemption_status` always wins once a seat is redeemed — email
+ * deliverability no longer matters at that point. Otherwise, the code's
+ * `email_status` drives display; a never-sent or still-`"pending"` email both
+ * collapse into "Pending" since neither indicates a problem worth surfacing.
+ */
+function getDisplayStatus(code: ManagerEnrollmentCode): DisplayStatus {
+  if (code.redemption_status === "redeemed") return "redeemed"
+  switch (code.email_status) {
+    case "delivered":
+    case "opened":
+    case "clicked":
+    case "failed":
+      return code.email_status
+    default:
+      return "pending"
+  }
+}
 
 const ActionCell = styled.div(({ theme }) => ({
   width: "40px",
@@ -287,28 +295,66 @@ const ActionCell = styled.div(({ theme }) => ({
   },
 }))
 
-const TableFooter = styled.div({
-  display: "flex",
-  justifyContent: "space-between",
-  alignItems: "center",
-  paddingTop: "16px",
-})
+type StatusFilter = "all" | "pending" | "redeemed" | "failed"
 
-const TableFootnote = styled(Typography)(({ theme }) => ({
-  ...theme.typography.body2,
-  color: theme.custom.colors.silverGrayDark,
-})) as typeof Typography
+/**
+ * Maps a tab to the API's `status` param. The UI's "Pending" is the API's
+ * "assigned", and `assigned` means "unredeemed" regardless of email status —
+ * so it is a *superset* of `failed`, and a bounced code appears under both
+ * tabs. That overlap is intentional: the backend can't express "assigned AND
+ * NOT failed", and filtering it out client-side would desync the server's
+ * `count` from the rendered rows (wrong page count, short pages). The row's
+ * status pill is what distinguishes the two.
+ */
+const STATUS_FILTER_PARAM: Record<
+  StatusFilter,
+  B2bManagerOrganizationsContractsCodesListStatusEnum | undefined
+> = {
+  all: undefined,
+  pending: "assigned",
+  redeemed: "redeemed",
+  failed: "failed",
+}
 
-const EmptyTableMessage = styled(Typography)(({ theme }) => ({
-  ...theme.typography.body2,
-  color: theme.custom.colors.silverGrayDark,
-  padding: "32px 0",
-  textAlign: "center",
-})) as typeof Typography
+/**
+ * Per-filter empty copy. A bare "No seat assignments found." on the Failed tab
+ * would be misleading — seats do exist, none of them failed.
+ */
+const EMPTY_TABLE_MESSAGE: Record<StatusFilter, string> = {
+  all: "No seat assignments found.",
+  pending: "No pending seat assignments.",
+  redeemed: "No redeemed seat assignments.",
+  failed: "No failed invitations.",
+}
 
-const STUB = "—"
+/**
+ * A query that matches nothing is its own state, distinct from every entry
+ * above: seats exist, and some may even have the active status — they just
+ * don't match what was typed. Both the per-filter copy and the generic "No
+ * seat assignments found." misstate that, so the search case gets its own
+ * string.
+ */
+const NO_SEARCH_RESULTS_MESSAGE = "No seat assignments match your search."
 
-type StatusFilter = "all" | "pending" | "redeemed"
+/**
+ * `$stale` is true whenever the rows on screen might not match the server:
+ * either `keepPreviousData` is carrying over the previous filter's or page's
+ * rows while the next request is in flight (which avoids a layout jump when
+ * paginating, but would otherwise leave, say, delivered rows sitting under
+ * the Failed tab with nothing to say they are stale), or the current
+ * filter's own cached rows are being silently revalidated in the background
+ * — e.g. a row mutation like resending an invite invalidates every tab/page/
+ * search for the contract, not just the active one. Fade the rows while
+ * either is true.
+ *
+ * The delay means a fast response never flashes the dimming, and dropping the
+ * transition on the fresh state restores full opacity immediately rather than
+ * fading back in.
+ */
+const TableBody = styled.div<{ $stale: boolean }>(({ $stale }) => ({
+  opacity: $stale ? 0.5 : 1,
+  transition: $stale ? "opacity 150ms ease 150ms" : "none",
+}))
 
 const COLUMN_FLEX = {
   assignedTo: 2,
@@ -352,11 +398,14 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
   contractSlug,
 }) => {
   const queryClient = useQueryClient()
+  const analyticsEnabled = useFeatureFlagEnabled(
+    FeatureFlags.B2BAnalyticsDashboard,
+  )
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all")
   const [searchQuery, setSearchQuery] = useState("")
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("")
   const [page, setPage] = useState(1)
-  const [searchAnnouncement, setSearchAnnouncement] = useState("")
+  const [resultsAnnouncement, setResultsAnnouncement] = useState("")
   const [rowActionResult, setRowActionResult] = useState<{
     message: string
     severity: "success" | "error"
@@ -376,8 +425,8 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
   // Mirror row-action Alert text into an assertive live region — smoot-design
   // Alert announces only its aria-describedby ("success/error message") via NVDA
   // instead of the actual children text. Must be before early returns (Rules of Hooks).
-  // Reset-then-set with a 100ms delay so the live region fires after the Alert's
-  // role="alert" has been processed by NVDA, preventing the update from being dropped.
+  // Reset-then-set with a 100ms delay so it fires after the Alert's role="alert"
+  // has been processed by NVDA rather than being dropped.
   useEffect(() => {
     if (!rowActionResult?.message) {
       setRowActionAnnouncement("")
@@ -389,6 +438,12 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
     const id = setTimeout(() => setRowActionAnnouncement(text), 100)
     return () => clearTimeout(id)
   }, [rowActionResult])
+
+  // The Alert restarts its autoHideDuration timer whenever its `onClose` prop
+  // changes identity. Passing a new inline function each render (e.g. when a
+  // keystroke in the search box re-renders this page) would keep resetting that
+  // timer so the alert never auto-dismisses — so keep a stable reference here.
+  const handleAlertClose = useCallback(() => setRowActionResult(null), [])
 
   const {
     data: managerOrgs,
@@ -416,6 +471,8 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
   const {
     data: codes,
     isLoading: isLoadingCodes,
+    isPlaceholderData: isCodesStale,
+    isFetching: isCodesFetching,
     isError: isCodesError,
     error: codesError,
   } = useQuery({
@@ -425,33 +482,51 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
       page,
       page_size: CODES_PAGE_SIZE,
       search_term: debouncedSearchQuery || undefined,
-      status:
-        statusFilter === "redeemed"
-          ? "redeemed"
-          : statusFilter === "pending"
-            ? "assigned"
-            : undefined,
+      status: STATUS_FILTER_PARAM[statusFilter],
     }),
     enabled: !!org && !!contract,
     placeholderData: keepPreviousData,
   })
 
-  // Announce the result count after the query settles following a search change.
-  // Using a ref to track the last announced query so we only fire once per change,
-  // not on every re-render while loading.
-  const announcedQueryRef = useRef("")
+  // `isCodesStale` (isPlaceholderData) only covers rows carried over from a
+  // different query key via `keepPreviousData` — it goes false as soon as
+  // React Query has a cache entry for the current key, even if that entry was
+  // invalidated (e.g. by a row mutation like resending an invite, which
+  // invalidates every tab/page/search for the contract at once) and is being
+  // silently refetched in the background. `isCodesFetching` catches that case.
+  const isCodesRevalidating = isCodesStale || isCodesFetching
+  const isCodesBusy = isLoadingCodes || isCodesRevalidating
+
+  // Announce the result count once the query settles after a change to the
+  // search term or the status filter — both replace the whole result set, and
+  // switching tabs is otherwise silent, since the table's own status region
+  // often lands on the same "page 1 of 1" text it started with.
+  //
+  // The ref keys on both inputs so we fire once per change rather than on every
+  // re-render while loading, and `isCodesBusy` holds the announcement until the
+  // data actually belongs to the new filter and any revalidation of it has
+  // resolved — otherwise a stale count could be announced immediately (from
+  // `keepPreviousData` on a key change, or from revisiting a cached-but-
+  // invalidated tab) and never corrected once the real data arrives, since the
+  // ref would already mark this filter/search combo as announced.
+  const announcedResultsRef = useRef<string | null>(null)
   useEffect(() => {
-    if (isLoadingCodes || announcedQueryRef.current === debouncedSearchQuery)
-      return
-    announcedQueryRef.current = debouncedSearchQuery
+    if (isCodesBusy) return
+    const settled = `${statusFilter}:${debouncedSearchQuery}`
+    if (announcedResultsRef.current === settled) return
+    const isFirstLoad = announcedResultsRef.current === null
+    announcedResultsRef.current = settled
+    // The initial load is not a change the user made; a count there would talk
+    // over the page announcing itself.
+    if (isFirstLoad) return
     const count = codes?.count ?? 0
-    setSearchAnnouncement("")
+    setResultsAnnouncement("")
     const id = setTimeout(
-      () => setSearchAnnouncement(`${count} result${count !== 1 ? "s" : ""}`),
+      () => setResultsAnnouncement(`${count} result${count !== 1 ? "s" : ""}`),
       0,
     )
     return () => clearTimeout(id)
-  }, [isLoadingCodes, debouncedSearchQuery, codes?.count])
+  }, [isCodesBusy, statusFilter, debouncedSearchQuery, codes?.count])
 
   if (isLoadingOrgs) {
     return (
@@ -497,8 +572,22 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
   const unassignedCount = contractDetail?.unassigned_codes
   const assignedCount = contractDetail?.assigned_codes
   const redeemedCount = contractDetail?.redeemed_codes
+  // total_codes mirrors the contract's max_learners (null/0 means no seat cap).
+  const isUnlimited = totalPurchased === null || totalPurchased === 0
+  // assigned_codes/redeemed_codes are always real numbers (never null), even on
+  // uncapped contracts, so they're a safe stand-in for "is there anything to
+  // export" — unlike total_codes, which is null/0 for every uncapped contract
+  // regardless of how many seats have actually been assigned or redeemed.
+  const hasExportableRows = (assignedCount ?? 0) + (redeemedCount ?? 0) > 0
 
   const pageResults = codes?.results ?? []
+
+  // With a search term active this is a no-matches state, not a no-such-status
+  // state — otherwise the Failed tab would claim "No failed invitations." when
+  // failed ones exist but don't match the query.
+  const emptyTableMessage = debouncedSearchQuery
+    ? NO_SEARCH_RESULTS_MESSAGE
+    : EMPTY_TABLE_MESSAGE[statusFilter]
 
   const totalCount = codes?.count ?? 0
   const totalPages = Math.ceil(totalCount / CODES_PAGE_SIZE)
@@ -513,7 +602,7 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
   }
 
   const handleExportCsv = async () => {
-    if (!totalPurchased) return
+    if (isExporting || !hasExportableRows) return
     setIsExporting(true)
     try {
       const allRows: ManagerEnrollmentCode[] = []
@@ -547,7 +636,7 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
           buildCsvRow([
             c.assigned_to,
             c.redeemed_by,
-            c.redemption_status === "redeemed" ? "Redeemed" : "Pending claim",
+            DISPLAY_STATUS_LABEL[getDisplayStatus(c)],
             formatDate(c.assigned_on),
             formatDate(c.redeemed_on),
             formatDate(c.last_sent),
@@ -598,36 +687,58 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
                 {!isLoadingContractDetail && totalPurchased !== undefined ? (
                   <>
                     {" "}
-                    · <span>{totalPurchased} seats</span>
+                    ·{" "}
+                    <span>
+                      {isUnlimited
+                        ? "Unlimited seats"
+                        : `${totalPurchased} seats`}
+                    </span>
                   </>
                 ) : null}
               </ContractSubtitle>
+              {/* Analytics is the reporting half of this dashboard, and is
+                  now scoped to this contract rather than the whole org, so it
+                  lives under this contract's URL. Behind its own flag: the
+                  analytics API is not deployed everywhere this page is. */}
+              {analyticsEnabled ? (
+                <AnalyticsLink
+                  color="red"
+                  size="small"
+                  href={contractAnalyticsView(orgSlug, contractSlug)}
+                >
+                  View analytics
+                </AnalyticsLink>
+              ) : null}
             </div>
           </OrgDetailsContainer>
           <StatsSide>
-            <StatBlock role="group" aria-label="Total purchased">
-              {isLoadingContractDetail ? (
-                <Skeleton width="48px" height="36px" />
-              ) : (
-                <StatValue>{totalPurchased}</StatValue>
-              )}
-              <StatLabel>Total purchased</StatLabel>
-            </StatBlock>
-            <StatBlock role="group" aria-label="Unassigned">
-              {isLoadingContractDetail ? (
-                <Skeleton width="48px" height="36px" />
-              ) : (
-                <StatValue>{unassignedCount}</StatValue>
-              )}
-              <StatLabel>Unassigned</StatLabel>
-            </StatBlock>
-            <StatBlock role="group" aria-label="Pending claim">
+            {(isLoadingContractDetail || !isUnlimited) && (
+              <StatBlock role="group" aria-label="Total purchased">
+                {isLoadingContractDetail ? (
+                  <Skeleton width="48px" height="36px" />
+                ) : (
+                  <StatValue>{totalPurchased}</StatValue>
+                )}
+                <StatLabel>Total purchased</StatLabel>
+              </StatBlock>
+            )}
+            {(isLoadingContractDetail || !isUnlimited) && (
+              <StatBlock role="group" aria-label="Unassigned">
+                {isLoadingContractDetail ? (
+                  <Skeleton width="48px" height="36px" />
+                ) : (
+                  <StatValue>{unassignedCount}</StatValue>
+                )}
+                <StatLabel>Unassigned</StatLabel>
+              </StatBlock>
+            )}
+            <StatBlock role="group" aria-label="Pending">
               {isLoadingContractDetail ? (
                 <Skeleton width="48px" height="36px" />
               ) : (
                 <StatValue>{assignedCount}</StatValue>
               )}
-              <StatLabel>Pending claim</StatLabel>
+              <StatLabel>Pending</StatLabel>
             </StatBlock>
             <StatBlock role="group" aria-label="Redeemed">
               {isLoadingContractDetail ? (
@@ -643,7 +754,7 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
         <AssignSeatsSection
           orgId={org.id}
           contractId={contract.id}
-          availableSeats={unassignedCount ?? 0}
+          availableSeats={unassignedCount ?? null}
           isLoadingSeats={isLoadingContractDetail}
         />
 
@@ -659,7 +770,13 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
             <Alert
               severity={rowActionResult.severity}
               closable
-              onClose={() => setRowActionResult(null)}
+              // A success message only confirms the action worked, so it
+              // auto-dismisses after 5s. Errors stay until dismissed so the
+              // user has time to read and act on them.
+              autoHideDuration={
+                rowActionResult.severity === "success" ? 5000 : undefined
+              }
+              onClose={handleAlertClose}
             >
               {rowActionResult.message}
             </Alert>
@@ -669,8 +786,9 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
               <TabContext value={statusFilter}>
                 <TabButtonList onChange={handleTabChange}>
                   <TabButton label="All" value="all" />
-                  <TabButton label="Pending claim" value="pending" />
+                  <TabButton label="Pending" value="pending" />
                   <TabButton label="Redeemed" value="redeemed" />
+                  <TabButton label="Failed" value="failed" />
                 </TabButtonList>
               </TabContext>
               <StyledSearchInput
@@ -689,9 +807,8 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
               <Button
                 variant="bordered"
                 onClick={handleExportCsv}
-                disabled={
-                  isLoadingContractDetail || !totalPurchased || isExporting
-                }
+                disabled={isLoadingContractDetail || !hasExportableRows}
+                aria-disabled={isExporting}
                 aria-busy={isExporting}
               >
                 {isExporting ? "Exporting..." : "Export CSV"}
@@ -699,10 +816,35 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
             </ExportButtonWrapper>
           </SeatAssignmentsControls>
           <VisuallyHidden aria-live="polite" aria-atomic="true">
-            {searchAnnouncement}
+            {resultsAnnouncement}
           </VisuallyHidden>
           <TableCard>
-            <div role="table" aria-label="Seat assignments">
+            {/* Mirrors the table's visible state for AT. Deliberately a sibling
+                of the table rather than a child: AT may defer live-region
+                updates while an ancestor is aria-busy, which would swallow the
+                "Loading" announcement until the load it describes is already
+                over. Staying out also leaves the rowgroup holding only rows.
+
+                The empty case has to use the same filter-aware copy as the cell
+                does — announcing the generic "no seat assignments" on the
+                Failed tab makes exactly the claim that copy exists to avoid. */}
+            <VisuallyHidden role="status" aria-atomic="true">
+              {isCodesBusy
+                ? "Loading seat assignments"
+                : pageResults.length === 0
+                  ? emptyTableMessage
+                  : `Showing page ${page} of ${totalPages}`}
+            </VisuallyHidden>
+            <div
+              role="table"
+              aria-label="Seat assignments"
+              // Marks the whole table as updating while a filter, search, or
+              // page change is in flight, including the window where the
+              // previous request's rows are still the ones on screen, and
+              // while a mutation-triggered background refetch is revalidating
+              // rows already shown for the current filter/page.
+              aria-busy={isCodesBusy}
+            >
               <div role="rowgroup">
                 <TableHeaderRow role="row">
                   <TableHeaderCell
@@ -741,17 +883,10 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
                   >
                     Last sent
                   </TableHeaderCell>
-                  <ActionCell role="columnheader" />
+                  <ActionCell role="columnheader" aria-label="Actions" />
                 </TableHeaderRow>
               </div>
-              <div role="rowgroup">
-                <VisuallyHidden aria-live="polite" aria-atomic="true">
-                  {isLoadingCodes
-                    ? "Loading seat assignments"
-                    : pageResults.length === 0
-                      ? "No seat assignments found"
-                      : `Showing page ${page} of ${totalPages}`}
-                </VisuallyHidden>
+              <TableBody role="rowgroup" $stale={isCodesRevalidating}>
                 {isLoadingCodes ? (
                   <>
                     {[1, 2, 3].map((i) => (
@@ -769,7 +904,7 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
                       aria-colspan={7}
                       style={{ flex: 1 }}
                     >
-                      No seat assignments found.
+                      {emptyTableMessage}
                     </EmptyTableMessage>
                   </TableRow>
                 ) : (
@@ -788,18 +923,38 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
                       </TableCell>
                       <TableCell role="cell" $flex={COLUMN_FLEX.status}>
                         <MobileLabel>Status</MobileLabel>
-                        <StatusBadge
-                          $status={
-                            code.redemption_status === "assigned"
-                              ? "assigned"
-                              : "redeemed"
-                          }
-                          label={
-                            code.redemption_status === "redeemed"
-                              ? "Redeemed"
-                              : "Pending claim"
-                          }
-                        />
+                        {(() => {
+                          const status = getDisplayStatus(code)
+                          const badge = (
+                            <StatusBadge
+                              $status={status}
+                              label={
+                                status === "failed" ? (
+                                  <FailedLabel>
+                                    {DISPLAY_STATUS_LABEL[status]}
+                                    <RiErrorWarningLine
+                                      aria-hidden="true"
+                                      size={14}
+                                    />
+                                  </FailedLabel>
+                                ) : (
+                                  DISPLAY_STATUS_LABEL[status]
+                                )
+                              }
+                              tabIndex={status === "failed" ? 0 : undefined}
+                            />
+                          )
+                          return status === "failed" ? (
+                            <Tooltip
+                              title={FAILED_EMAIL_EXPLANATION}
+                              describeChild
+                            >
+                              {badge}
+                            </Tooltip>
+                          ) : (
+                            badge
+                          )
+                        })()}
                       </TableCell>
                       <TableCell role="cell" $flex={COLUMN_FLEX.assignedOn}>
                         <MobileLabel>Assigned on</MobileLabel>
@@ -826,14 +981,18 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
                     </TableRow>
                   ))
                 )}
-              </div>
+              </TableBody>
             </div>
             <TableFooter>
-              <TableFootnote aria-hidden="true">
-                {totalCount === 0
-                  ? "No assignments"
-                  : `Page ${page} of ${totalPages}`}
-              </TableFootnote>
+              {/* Only page position. With a filter or search active there are
+                  no rows for a reason the body already states, and a footnote
+                  reading "No assignments" under "No failed invitations." would
+                  contradict it. */}
+              {totalCount > 0 && (
+                <TableFootnote aria-hidden="true">
+                  {`Page ${page} of ${totalPages}`}
+                </TableFootnote>
+              )}
               {totalPages > 1 && (
                 <Pagination
                   count={totalPages}

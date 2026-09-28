@@ -9,10 +9,13 @@ import {
   theme,
 } from "ol-components"
 import { Provider as NiceModalProvider } from "@ebay/nice-modal-react"
+import { ComplianceGateProvider } from "@/common/mitxonline/useComplianceGate"
 import { usePrefetchWarnings } from "api/ssr/usePrefetchWarnings"
 import { AppProgressBar as ProgressBar } from "next-nprogress-bar"
 import type { NProgressOptions } from "next-nprogress-bar"
 import { ReloadOnUserChange } from "@/page-components/ReloadOnUserChange/ReloadOnUserChange"
+import { PublicEnvInsertedHtml } from "./components/PublicEnvInsertedHtml"
+import { Toaster } from "@/page-components/Toaster/Toaster"
 
 const PROGRESS_BAR_OPTS: NProgressOptions = { showSpinner: false }
 
@@ -23,6 +26,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
 
   return (
     <>
+      <PublicEnvInsertedHtml />
       <ProgressBar
         height="3px"
         color={theme.custom.colors.brightRed}
@@ -33,7 +37,10 @@ export default function Providers({ children }: { children: React.ReactNode }) {
         <ReloadOnUserChange />
         <NextJsAppRouterCacheProvider>
           <ThemeProvider>
-            <NiceModalProvider>{children}</NiceModalProvider>
+            <NiceModalProvider>
+              <ComplianceGateProvider>{children}</ComplianceGateProvider>
+            </NiceModalProvider>
+            <Toaster />
           </ThemeProvider>
         </NextJsAppRouterCacheProvider>
       </QueryClientProvider>

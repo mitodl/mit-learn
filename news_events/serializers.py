@@ -1,5 +1,6 @@
 """Serializers for news_events"""
 
+from mitol.common.serializers import BaseSerializer
 from rest_framework import serializers
 
 from news_events import models
@@ -16,8 +17,10 @@ class FeedImageSerializer(serializers.ModelSerializer):
         exclude = COMMON_IGNORED_FIELDS
 
 
-class FeedSourceSerializer(serializers.ModelSerializer):
+class FeedSourceSerializer(BaseSerializer):
     """FeedSource serializer"""
+
+    required_prefetches: list[str] = ["image"]
 
     image = FeedImageSerializer()
 

@@ -12,9 +12,10 @@ import { urls, factories } from "api/mitxonline-test-utils"
 import {
   createCoursesWithContractRuns,
   createTestContracts,
+  setupOrderHistory,
   setupOrgAndUser,
-  setupProgramsAndCourses,
   setupOrgDashboardMocks,
+  setupProgramsAndCourses,
 } from "./CoursewareDisplay/test-utils"
 import {
   CourseWithCourseRunsSerializerV2,
@@ -24,7 +25,12 @@ import { faker } from "@faker-js/faker/locale/en"
 import invariant from "tiny-invariant"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import { FeatureFlags } from "@/common/feature_flags"
-import { contractAdminView } from "@/common/urls"
+import { contractAdminView, contractAnalyticsView } from "@/common/urls"
+
+// Verified cards look up their order; default to none, tests override.
+beforeEach(() => {
+  setupOrderHistory()
+})
 
 jest.mock("posthog-js/react", () => ({
   ...jest.requireActual("posthog-js/react"),
@@ -45,6 +51,16 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_MITX_ONLINE_BASE_URL
 const managerOrganizationsUrl = `${API_BASE_URL}/api/v0/b2b/manager/organizations/`
 
 const makeCourseEnrollment = factories.enrollment.courseEnrollment
+
+// The progress badge describes the displayed run, so any enrollment whose badge
+// is asserted has to pin the dates it reads instead of taking the factory's
+// random ones.
+const daysFromNow = (days: number) =>
+  new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString()
+const underwayRunDates = {
+  start_date: daysFromNow(-30),
+  end_date: daysFromNow(30),
+}
 const makeGrade = factories.enrollment.grade
 
 const normalizeCourseForCardAssertions = (
@@ -69,7 +85,6 @@ describe("ContractContent", () => {
   beforeEach(() => {
     setMockResponse.get(urls.enrollment.enrollmentsListV3(), [])
     setMockResponse.get(urls.programEnrollments.enrollmentsListV3(), [])
-    setMockResponse.get(urls.contracts.contractsList(), [])
     mockedUseFeatureFlagEnabled.mockReturnValue(undefined)
   })
 
@@ -192,9 +207,6 @@ describe("ContractContent", () => {
     }))
 
     orgX.contracts = [contract]
-    setMockResponse.get(urls.contracts.contractsList(), [contract])
-    // Need to update the orgX response to include the new contract
-    setMockResponse.get(urls.organization.organizationList(orgX.slug), orgX)
 
     // Mock API to return programs in opposite order (A first, then B)
     setMockResponse.get(urls.programs.programsList({ org_id: orgX.id }), {
@@ -291,6 +303,7 @@ describe("ContractContent", () => {
             id: normalizedCoursesA[1].id,
             title: normalizedCoursesA[1].title,
           },
+          ...underwayRunDates,
         },
         grades: [],
         certificate: null,
@@ -334,16 +347,14 @@ describe("ContractContent", () => {
     expect(completedCard).toBeDefined()
     expect(enrolledCard).toBeDefined()
 
-    // Check enrollment status indicators
-    const completedIndicator = within(completedCard!).getByTestId(
-      "enrollment-status",
-    )
-    const enrolledIndicator = within(enrolledCard!).getByTestId(
-      "enrollment-status",
-    )
+    // Check progress badges (the enrollment-status icon is reserved for
+    // compact program module rows; contract cards convey status via the
+    // ProgressBadge next to the card type label instead)
+    const completedBadge = within(completedCard!).getByTestId("progress-badge")
+    const enrolledBadge = within(enrolledCard!).getByTestId("progress-badge")
 
-    expect(completedIndicator).toHaveTextContent(/^Completed$/)
-    expect(enrolledIndicator).toHaveTextContent(/^Enrolled$/)
+    expect(completedBadge).toHaveTextContent(/^Completed$/)
+    expect(enrolledBadge).toHaveTextContent(/^In Progress$/)
   })
 
   test("Renders program collections", async () => {
@@ -1240,6 +1251,7 @@ describe("ContractContent", () => {
             (r) => r.b2b_contract === contractIds[0],
           )?.id,
           course: { id: courses[1].id, title: courses[1].title },
+          ...underwayRunDates,
         },
         b2b_contract_id: contracts[0].id,
         b2b_organization_id: contracts[0].organization,
@@ -1271,15 +1283,17 @@ describe("ContractContent", () => {
     ).findAllByTestId("enrollment-card-desktop")
 
     expect(cards.length).toBe(3)
-    // First card should show enrolled status
-    const cardStatus0 = within(cards[0]).getByTestId("enrollment-status")
+    // Progress badges (the enrollment-status icon is reserved for compact
+    // program module rows; contract cards convey status via the
+    // ProgressBadge next to the card type label instead)
+    const cardStatus0 = within(cards[0]).getByTestId("progress-badge")
     expect(cardStatus0).toHaveTextContent(/^Completed$/)
 
-    const cardStatus1 = within(cards[1]).getByTestId("enrollment-status")
-    expect(cardStatus1).toHaveTextContent(/^Enrolled$/)
+    const cardStatus1 = within(cards[1]).getByTestId("progress-badge")
+    expect(cardStatus1).toHaveTextContent(/^In Progress$/)
 
-    const cardStatus2 = within(cards[2]).getByTestId("enrollment-status")
-    expect(cardStatus2).toHaveTextContent(/^Not Enrolled$/)
+    const cardStatus2 = within(cards[2]).getByTestId("progress-badge")
+    expect(cardStatus2).toHaveTextContent(/^Not Started$/)
   })
 
   test("shows the not found screen if the organization is not found by orgSlug", async () => {
@@ -1409,7 +1423,7 @@ describe("ContractContent", () => {
     await screen.findByRole("heading", { name: "Contract not found" })
   })
 
-  test("does not render the Manage button when the feature flag is off", async () => {
+  test("does not render the Manage seats button when the feature flag is off", async () => {
     mockedUseFeatureFlagEnabled.mockImplementation(() => false)
     const { orgX } = setupProgramsAndCourses()
 
@@ -1429,11 +1443,14 @@ describe("ContractContent", () => {
 
     await screen.findByRole("heading", { name: orgX.name })
     expect(
-      screen.queryByRole("link", { name: "Manage" }),
+      screen.queryByRole("link", { name: "Manage seats" }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("link", { name: "View analytics" }),
     ).not.toBeInTheDocument()
   })
 
-  test("does not render the Manage button when flag is on but user is not a manager for this org", async () => {
+  test("does not render the Manage seats button when flag is on but user is not a manager for this org", async () => {
     mockedUseFeatureFlagEnabled.mockImplementation(
       (flag) => flag === FeatureFlags.B2BContractManagerDashboard,
     )
@@ -1457,11 +1474,11 @@ describe("ContractContent", () => {
 
     await screen.findByRole("heading", { name: orgX.name })
     expect(
-      screen.queryByRole("link", { name: "Manage" }),
+      screen.queryByRole("link", { name: "Manage seats" }),
     ).not.toBeInTheDocument()
   })
 
-  test("renders the Manage button with correct href when flag is on and user is a manager", async () => {
+  test("renders the Manage seats button with correct href when flag is on and user is a manager", async () => {
     mockedUseFeatureFlagEnabled.mockImplementation(
       (flag) => flag === FeatureFlags.B2BContractManagerDashboard,
     )
@@ -1473,7 +1490,6 @@ describe("ContractContent", () => {
       previous: null,
       results: [orgX],
     })
-
     renderWithProviders(
       <ContractContent
         orgSlug={orgX.slug}
@@ -1481,10 +1497,80 @@ describe("ContractContent", () => {
       />,
     )
 
-    const manageButton = await screen.findByRole("link", { name: "Manage" })
+    const manageButton = await screen.findByRole("link", {
+      name: "Manage seats",
+    })
     expect(manageButton).toHaveAttribute(
       "href",
       contractAdminView(orgX.slug, orgX.contracts[0].slug),
+    )
+  })
+
+  test("renders the View analytics button with correct href when the analytics flag is on and user is a manager", async () => {
+    mockedUseFeatureFlagEnabled.mockImplementation(
+      (flag) => flag === FeatureFlags.B2BAnalyticsDashboard,
+    )
+    const { orgX } = setupProgramsAndCourses()
+
+    setMockResponse.get(managerOrganizationsUrl, {
+      count: 1,
+      next: null,
+      previous: null,
+      results: [orgX],
+    })
+    renderWithProviders(
+      <ContractContent
+        orgSlug={orgX.slug}
+        contractSlug={orgX.contracts[0].slug}
+      />,
+    )
+
+    const analyticsLink = await screen.findByRole("link", {
+      name: "View analytics",
+    })
+    expect(analyticsLink).toHaveAttribute(
+      "href",
+      contractAnalyticsView(orgX.slug, orgX.contracts[0].slug),
+    )
+    expect(
+      screen.queryByRole("link", { name: "Manage seats" }),
+    ).not.toBeInTheDocument()
+  })
+
+  test("renders both the Manage seats and View analytics buttons when both flags are on and user is a manager", async () => {
+    mockedUseFeatureFlagEnabled.mockImplementation(
+      (flag) =>
+        flag === FeatureFlags.B2BContractManagerDashboard ||
+        flag === FeatureFlags.B2BAnalyticsDashboard,
+    )
+    const { orgX } = setupProgramsAndCourses()
+
+    setMockResponse.get(managerOrganizationsUrl, {
+      count: 1,
+      next: null,
+      previous: null,
+      results: [orgX],
+    })
+    renderWithProviders(
+      <ContractContent
+        orgSlug={orgX.slug}
+        contractSlug={orgX.contracts[0].slug}
+      />,
+    )
+
+    const manageButton = await screen.findByRole("link", {
+      name: "Manage seats",
+    })
+    const analyticsLink = await screen.findByRole("link", {
+      name: "View analytics",
+    })
+    expect(manageButton).toHaveAttribute(
+      "href",
+      contractAdminView(orgX.slug, orgX.contracts[0].slug),
+    )
+    expect(analyticsLink).toHaveAttribute(
+      "href",
+      contractAnalyticsView(orgX.slug, orgX.contracts[0].slug),
     )
   })
 

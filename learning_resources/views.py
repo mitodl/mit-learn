@@ -19,8 +19,10 @@ from drf_spectacular.utils import (
     inline_serializer,
 )
 from grpc._channel import _InactiveRpcError
+from requests.exceptions import RequestException
 from rest_framework import serializers, views, viewsets
 from rest_framework.decorators import action
+from rest_framework.exceptions import NotFound, ValidationError
 from rest_framework.filters import OrderingFilter
 from rest_framework.generics import get_object_or_404
 from rest_framework.permissions import IsAuthenticated
@@ -38,6 +40,8 @@ from learning_resources.constants import (
     PlatformType,
     PrivacyLevel,
 )
+from learning_resources.credentials_store import stored_credential_metadata
+from learning_resources.etl.constants import ETLSource
 from learning_resources.etl.podcast import generate_aggregate_podcast_rss
 from learning_resources.exceptions import WebhookException
 from learning_resources.filters import (
@@ -47,6 +51,7 @@ from learning_resources.filters import (
 )
 from learning_resources.models import (
     ContentFile,
+    CredentialMetadata,
     LearningResource,
     LearningResourceContentTag,
     LearningResourceDepartment,
@@ -69,6 +74,8 @@ from learning_resources.permissions import (
 from learning_resources.serializers import (
     ContentFileSerializer,
     CourseResourceSerializer,
+    CredentialMetadataRequestSerializer,
+    CredentialMetadataSerializer,
     LearningPathRelationshipCreateSerializer,
     LearningPathRelationshipSerializer,
     LearningPathResourceSerializer,
@@ -85,6 +92,7 @@ from learning_resources.serializers import (
     MicroLearningPathRelationshipSerializer,
     MicroUserListRelationshipSerializer,
     PodcastEpisodeResourceSerializer,
+    PodcastEpisodeTranscriptSerializer,
     PodcastResourceSerializer,
     ProgramResourceSerializer,
     SetLearningPathsRequestSerializer,
@@ -109,7 +117,15 @@ from main.permissions import (
     AnonymousAccessReadonlyPermission,
     is_admin_user,
 )
-from main.utils import cache_page_for_all_users, cache_page_for_anonymous_users, chunks
+from main.utils import (
+    cache_page_for_all_users,
+    cache_page_for_anonymous_users,
+    call_fastly_purge_api,
+    chunks,
+    clear_views_cache,
+    db_sync_to_async,
+)
+from main.views import AsyncAPIView
 from vector_search.serializers import LearningResourcesSearchFiltersSerializer
 
 
@@ -190,6 +206,20 @@ class BaseLearningResourceViewSet(viewsets.ReadOnlyModelViewSet):
     )
     def list(self, request, *args, **kwargs):
         return super().list(request, *args, **kwargs)
+
+
+class SummaryPagination(LargePagination):
+    """
+    LargePagination that keeps annotations out of the count query.
+
+    Django keeps annotations in the count of a distinct queryset, so
+    canonical_parent_ids would be evaluated once per row counted. Counting
+    distinct pks is the same number for a fraction of the work.
+    """
+
+    def get_count(self, queryset):
+        """Count distinct pks; .values() drops the annotation, .only() would not"""
+        return queryset.values(*self.count_fields).distinct().count()
 
 
 @extend_schema_view(
@@ -337,7 +367,7 @@ class LearningResourceViewSet(
         detail=False,
         methods=["GET"],
         name="Get learning resources summary",
-        pagination_class=LargePagination,
+        pagination_class=SummaryPagination,
     )
     def summary(self, request, **kwargs):  # noqa: ARG002
         """
@@ -351,7 +381,20 @@ class LearningResourceViewSet(
             # we don't use `self.get_queryset()` here because there are incomplatible
             # `select_related()` invocations and we don't need related data anyway
             LearningResource.objects.filter(published=True)
-            .only("id", "last_modified", "url", "title")
+            # a deferred field the serializer reads costs a query per row.
+            # learn_url needs readable_id and resource_category; platform's PK
+            # *is* its code, so platform_id resolves without a join.
+            .only(
+                "id",
+                "last_modified",
+                "url",
+                "title",
+                "resource_type",
+                "readable_id",
+                "resource_category",
+                "platform",
+            )
+            .with_canonical_parent_ids()
             .distinct()
             # Deterministic order so offset pagination has stable page
             # boundaries.
@@ -478,6 +521,92 @@ class PodcastEpisodeViewSet(BaseLearningResourceViewSet):
             resource_type=LearningResourceType.podcast_episode.name
         ).filter(published=True)
 
+    @extend_schema(
+        summary="Get a podcast episode transcript",
+        parameters=[
+            OpenApiParameter(name="id", type=int, location=OpenApiParameter.PATH),
+        ],
+        responses=PodcastEpisodeTranscriptSerializer(),
+    )
+    @action(
+        detail=True,
+        methods=["GET"],
+        name="Fetch the transcript for a podcast episode by id",
+        pagination_class=None,
+    )
+    @method_decorator(
+        cache_page_for_all_users(
+            settings.REDIS_VIEW_CACHE_DURATION,
+            cache="redis",
+            key_prefix="podcast_transcript",
+        )
+    )
+    def transcript(self, request, *_, **kwargs):  # noqa: ARG002
+        """
+        Fetch one episode's transcript.
+
+        Served separately from the episode payload because the text runs tens
+        of kilobytes; `podcast_episode.has_transcript` says whether there is
+        anything here to fetch.
+
+        Args:
+        id (integer): The id of the podcast episode
+
+        Returns:
+        The episode id and its transcript text
+        """
+        # self.get_object() rather than int(kwargs["id"]): DRF's
+        # get_object_or_404 turns a ValueError from a non-numeric id into a 404,
+        # where int() would raise and 500.
+        resource = self.get_object()
+        return Response(
+            PodcastEpisodeTranscriptSerializer(instance=resource.podcast_episode).data
+        )
+
+
+def clear_featured_caches(channel_names):
+    """
+    Clear the Redis featured-list cache, hard-purge channel pages from
+    Fastly, and soft-purge the homepage. Each Fastly purge is independently
+    best-effort so one failure doesn't leave the remaining pages stale.
+    """
+    clear_views_cache(key_prefix="featured_resources")
+    purges = [(f"/c/unit/{name}", False) for name in channel_names] + [("/", True)]
+    for relative_url, soft in purges:
+        try:
+            call_fastly_purge_api(relative_url, timeout=5, soft=soft)
+        except RequestException:
+            log.exception("Featured cache Fastly purge failed for %s", relative_url)
+
+
+def _clear_featured_caches_on_commit(path_resource_ids):
+    """
+    Clear the featured caches after commit if any of the given paths is a
+    unit channel's featured list; best-effort, never raises.
+
+    Runs synchronously in the request (not via Celery) so the purge is done
+    by the time the editor's save returns, regardless of worker backlog.
+    """
+    channel_names = list(
+        Channel.objects.filter(
+            featured_list_id__in=path_resource_ids,
+            channel_type=ChannelType.unit.name,
+        ).values_list("name", flat=True)
+    )
+    if not channel_names:
+        return
+
+    def _clear():
+        try:
+            clear_featured_caches(channel_names)
+        except Exception:
+            log.exception(
+                "Failed to clear featured caches for channels %s",
+                channel_names,
+            )
+
+    transaction.on_commit(_clear)
+
 
 @extend_schema_view(
     list=extend_schema(
@@ -542,6 +671,18 @@ class LearningPathViewSet(BaseLearningResourceViewSet, viewsets.ModelViewSet):
             self.get_queryset(), pk=serializer.instance.pk
         )
         return Response(serializer.data)
+
+    def perform_update(self, serializer):
+        super().perform_update(serializer)
+        _clear_featured_caches_on_commit([serializer.instance.id])
+
+    def perform_destroy(self, instance):
+        # Resolve channel names before the delete (Channel.featured_list is
+        # on_delete=SET_NULL); the atomic block defers the on_commit clear
+        # until after the delete commits.
+        with transaction.atomic():
+            _clear_featured_caches_on_commit([instance.id])
+            super().perform_destroy(instance)
 
 
 @extend_schema_view(
@@ -745,6 +886,9 @@ class LearningResourceListRelationshipViewSet(viewsets.GenericViewSet):
             relation_type=LearningResourceRelationTypes.LEARNING_PATH_ITEMS.value,
             parent__resource_type=LearningResourceType.learning_path.name,
         )
+        previous_parent_ids = list(
+            current_relationships.values_list("parent_id", flat=True)
+        )
         # Remove the resource from lists it WAS in before but is not in now
         current_relationships.exclude(parent_id__in=learning_path_ids).delete()
         current_parent_lists = current_relationships.values_list("parent_id", flat=True)
@@ -771,6 +915,7 @@ class LearningResourceListRelationshipViewSet(viewsets.GenericViewSet):
                     relation_type=LearningResourceRelationTypes.LEARNING_PATH_ITEMS.value,
                     position=last_index + 1,
                 )
+        _clear_featured_caches_on_commit({*previous_parent_ids, *learning_path_ids})
         current_relationships = LearningResourceRelationship.objects.prefetch_related(
             Prefetch(
                 "child",
@@ -845,6 +990,7 @@ class LearningPathItemsViewSet(ResourceListItemsViewSet, viewsets.ModelViewSet):
         serializer = self.get_serializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         serializer.save(parent_id=self.kwargs.get("learning_resource_id"))
+        _clear_featured_caches_on_commit([self.kwargs.get("learning_resource_id")])
 
         relationship = LearningResourceRelationship.objects.prefetch_related(
             Prefetch("child", queryset=LearningResource.objects.for_serialization())
@@ -857,7 +1003,9 @@ class LearningPathItemsViewSet(ResourceListItemsViewSet, viewsets.ModelViewSet):
         return Response(response_serializer.data, status=201, headers=headers)
 
     def update(self, request, *args, **kwargs):
-        return super().update(request, *args, **kwargs)
+        response = super().update(request, *args, **kwargs)
+        _clear_featured_caches_on_commit([self.kwargs.get("learning_resource_id")])
+        return response
 
     def perform_destroy(self, instance):
         """Delete the relationship and update the positions of the remaining items"""
@@ -868,6 +1016,7 @@ class LearningPathItemsViewSet(ResourceListItemsViewSet, viewsets.ModelViewSet):
                 position__gt=instance.position,
             ).update(position=F("position") - 1)
             instance.delete()
+            _clear_featured_caches_on_commit([instance.parent_id])
 
 
 @extend_schema_view(
@@ -1620,3 +1769,154 @@ def problem_set_file_output(problem_set_file):
         "content": problem_set_file.content,
         "file_extension": problem_set_file.file_extension,
     }
+
+
+async def credential_metadata_resource(readable_id: str) -> LearningResource:
+    """
+    Resolve the MITx Online course a credential metadata request names.
+
+
+    Args:
+        readable_id (str): the readable id the request asked for
+
+    Returns:
+        LearningResource: the matching MITx Online course
+
+    Raises:
+        NotFound: no resource anywhere has that readable_id
+        ValidationError: a resource has it, but is not an MITx Online course
+    """
+    resource = await db_sync_to_async(
+        lambda: LearningResource.objects.filter(
+            readable_id=readable_id,
+            platform=PlatformType.mitxonline.name,
+            resource_type=LearningResourceType.course.name,
+            etl_source=ETLSource.mitxonline.name,
+        ).first()
+    )()
+    if not resource:
+        exists = await db_sync_to_async(
+            LearningResource.objects.filter(readable_id=readable_id).exists
+        )()
+        if not exists:
+            msg = f"No learning resource with readable_id {readable_id}"
+            raise NotFound(msg)
+        msg = (
+            f"Credential metadata is only generated for"
+            f" {ETLSource.mitxonline.name} courses;"
+            f" {readable_id} is not one"
+        )
+        raise ValidationError(msg)
+    return resource
+
+
+def _stored_credential_metadata_body(
+    readable_id: str, stored: CredentialMetadata | None
+) -> dict:
+    """
+    Shape a stored credential metadata row into a response body.
+
+    Shared by both handlers so that a read straight after a write cannot
+    disagree with itself. A generation stores only the fields it produced and
+    leaves the rest of the row in force, so answering a POST with the
+    generated fields alone reports a field as absent when it is stored and a
+    GET a moment later will return it. A form prepopulated from that response
+    shows nothing for the field until it is reloaded.
+
+    Args:
+        readable_id (str): the resource the metadata belongs to
+        stored (CredentialMetadata | None): the stored row, or None when
+            nothing has ever been generated for the resource
+
+    Returns:
+        dict: the readable id, plus each stored field that has a value. An
+            empty field is left out rather than sent empty -- the same rule
+            the store applies when deciding what to write.
+    """
+    return {
+        "resource_readable_id": readable_id,
+        **(
+            {"description": stored.description} if stored and stored.description else {}
+        ),
+        **({"criteria": stored.criteria} if stored and stored.criteria else {}),
+    }
+
+
+@extend_schema_view(
+    get=extend_schema(
+        # A parameter, not a request serializer: a serializer renders as a
+        # request body, which a GET does not have.
+        parameters=[
+            OpenApiParameter(
+                name="resource_readable_id",
+                type=str,
+                location=OpenApiParameter.QUERY,
+                required=True,
+                description=(
+                    "The readable id of the learning resource to fetch"
+                    " stored metadata for"
+                ),
+            )
+        ],
+        responses=CredentialMetadataSerializer(),
+    ),
+    post=extend_schema(
+        request=CredentialMetadataRequestSerializer(),
+        responses=CredentialMetadataSerializer(),
+    ),
+)
+class CredentialMetadataView(AsyncAPIView):
+    """
+    Read or generate Open Badges credential metadata for a learning resource.
+
+    Limited to MITx Online courses.
+    """
+
+    permission_classes = (permissions.IsAdminOrCourseAuthor,)
+
+    @extend_schema(summary="Get stored credential metadata")
+    async def get(self, request):
+
+        readable_id = request.query_params.get("resource_readable_id")
+        if not readable_id:
+            msg = "resource_readable_id is required"
+            raise ValidationError(msg)
+
+        resource = await credential_metadata_resource(readable_id)
+        stored = await db_sync_to_async(stored_credential_metadata)(resource)
+        if not stored:
+            msg = f"No credential metadata has been generated for {readable_id}"
+            raise NotFound(msg)
+
+        return Response(
+            CredentialMetadataSerializer(
+                _stored_credential_metadata_body(readable_id, stored)
+            ).data
+        )
+
+    @extend_schema(summary="Generate credential metadata")
+    async def post(self, request):
+        from learning_resources.credentials import (
+            generate_and_save_credential_metadata,
+        )
+
+        request_data = CredentialMetadataRequestSerializer(data=request.data)
+        if not request_data.is_valid():
+            return Response(request_data.errors, status=400)
+
+        readable_id = request_data.data["resource_readable_id"]
+        resource = await credential_metadata_resource(readable_id)
+
+        generated = await generate_and_save_credential_metadata(
+            resource, user=request.user
+        )
+
+        stored = await db_sync_to_async(stored_credential_metadata)(resource)
+        return Response(
+            CredentialMetadataSerializer(
+                {
+                    **_stored_credential_metadata_body(readable_id, stored),
+                    **({"errors": generated.errors} if generated.errors else {}),
+                }
+            ).data
+        )

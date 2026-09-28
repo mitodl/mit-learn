@@ -1,5 +1,5 @@
 import { env, requiredEnv } from "@/env"
-import type { V2ProgramDisplayMode } from "@mitodl/mitxonline-api-axios/v2"
+import type { V2ProgramDisplayModeEnum } from "@mitodl/mitxonline-api-axios/v2"
 import { slugify } from "@/common/slugs"
 import { DisplayModeEnum } from "@mitodl/mitxonline-api-axios/v2"
 
@@ -29,7 +29,8 @@ const generatePath = (
 export const HOME = "/"
 
 export const ONBOARDING = "/onboarding"
-
+export const ORGANIZATIONAL_LEARNING = "/organizational-learning"
+export const ORGANIZATIONAL_LEARNING_FORM_ID = "get-in-touch"
 export const LEARNINGPATH_LISTING = "/learningpaths"
 export const LEARNINGPATH_VIEW = "/learningpaths/[id]"
 export const learningPathsView = (id: number) =>
@@ -103,9 +104,47 @@ export const CONTRACT_ADMIN_VIEW =
   "/organization/[orgSlug]/contract/[contractSlug]/admin"
 export const contractAdminView = (orgSlug: string, contractSlug: string) =>
   generatePath(CONTRACT_ADMIN_VIEW, { orgSlug, contractSlug })
+/**
+ * B2B analytics comes at two scopes. The org view aggregates every contract;
+ * the contract view narrows to one, mirroring how MITx Online's manager
+ * dashboard is addressed. Both are backed by their own materialized views.
+ */
+export const ORGANIZATION_ANALYTICS_VIEW =
+  "/dashboard/organization/[orgSlug]/analytics"
+export const organizationAnalyticsView = (orgSlug: string) =>
+  generatePath(ORGANIZATION_ANALYTICS_VIEW, { orgSlug })
+export const CONTRACT_ANALYTICS_VIEW =
+  "/dashboard/organization/[orgSlug]/contract/[contractSlug]/analytics"
+export const contractAnalyticsView = (orgSlug: string, contractSlug: string) =>
+  generatePath(CONTRACT_ANALYTICS_VIEW, { orgSlug, contractSlug })
+/**
+ * Outside `/dashboard` — and so without its sidebar — for the same reason as
+ * CONTRACT_ADMIN_VIEW: the learner table is too wide for the dashboard grid's
+ * content column, and this page reads as a console rather than a dashboard
+ * section. Contract-scoped only; the learner-progress endpoint has no org-wide
+ * form.
+ */
+export const CONTRACT_LEARNERS_VIEW =
+  "/organization/[orgSlug]/contract/[contractSlug]/learners"
+export const contractLearnersView = (orgSlug: string, contractSlug: string) =>
+  generatePath(CONTRACT_LEARNERS_VIEW, { orgSlug, contractSlug })
 export const PROGRAM_VIEW = "/dashboard/program/[id]"
 export const programView = (id: number) =>
   generatePath(PROGRAM_VIEW, { id: String(id) })
+
+export const RECEIPT_VIEW = "/receipt/[orderId]"
+export const receiptView = (orderId: number) =>
+  generatePath(RECEIPT_VIEW, { orderId: String(orderId) })
+/**
+ * Enrollments carry no order reference, so these routes resolve the order from the
+ * run/program before redirecting to `RECEIPT_VIEW`.
+ */
+export const RECEIPT_BY_RUN_VIEW = "/receipt/by-run/[runId]"
+export const receiptByRunView = (runId: number) =>
+  generatePath(RECEIPT_BY_RUN_VIEW, { runId: String(runId) })
+export const RECEIPT_BY_PROGRAM_VIEW = "/receipt/by-program/[programId]"
+export const receiptByProgramView = (programId: number) =>
+  generatePath(RECEIPT_BY_PROGRAM_VIEW, { programId: String(programId) })
 
 export const SEARCH = "/search"
 
@@ -133,22 +172,31 @@ export const RESOURCE_DRAWER_PARAMS = {
   syllabusOnly: "syllabus_only",
 } as const
 
-/**
- * Path slug segment from a title: the slug, or the literal "resource" when the
- * slug is blank (the canonical path's slug segment is mandatory — see the
- * readable-URLs spec, mitodl/hq#11210). The slug is cosmetic and ignored on
- * lookup.
- *
- * INVARIANT: canonical paths must round-trip Next's URL decoding
- * byte-identically — keep the slug charset to [a-z0-9-] and ids numeric, or
- * the [slug] pages' incoming-vs-canonical string compares could redirect a
- * URL to a spelling of itself and loop.
- */
-const pathSlug = (title: string): string => slugify(title) || "resource"
-
 /** Prefix a same-origin path with the public origin (for canonical tags). */
 export const absoluteUrl = (path: string): string =>
   `${requiredEnv("NEXT_PUBLIC_ORIGIN")}${path}`
+
+/**
+ * Point `params` at a resource's drawer: the authoritative `resource` id plus
+ * the cosmetic `resource_title` slug.
+ *
+ * A blank slug *deletes* `resource_title` rather than leaving it. Callers
+ * typically copy an existing query string, which may still carry a previous
+ * resource's slug, and pairing that with the new id would mislabel the URL.
+ */
+export const setResourceParams = (
+  params: URLSearchParams,
+  resourceId: number,
+  title: string | undefined,
+): void => {
+  params.set(RESOURCE_DRAWER_PARAMS.resource, String(resourceId))
+  const slug = title ? slugify(title) : ""
+  if (slug) {
+    params.set(RESOURCE_DRAWER_PARAMS.resource_title, slug)
+  } else {
+    params.delete(RESOURCE_DRAWER_PARAMS.resource_title)
+  }
+}
 
 /**
  * Relative drawer URL on the search page:
@@ -160,11 +208,8 @@ export const resourceDrawerSearch = (
   resourceId: number,
   title: string | undefined,
 ) => {
-  const slug = title ? slugify(title) : ""
-  const params = new URLSearchParams({
-    [RESOURCE_DRAWER_PARAMS.resource]: String(resourceId),
-  })
-  if (slug) params.set(RESOURCE_DRAWER_PARAMS.resource_title, slug)
+  const params = new URLSearchParams()
+  setResourceParams(params, resourceId, title)
   return `${SEARCH}?${params.toString()}`
 }
 
@@ -189,6 +234,18 @@ export const SEARCH_UPCOMING = querifiedSearchUrl({ sortby: "upcoming" })
 export const SEARCH_POPULAR = querifiedSearchUrl({ sortby: "-views" })
 
 export const SEARCH_FREE = querifiedSearchUrl({ free: "true" })
+
+export const SEARCH_PODCASTS = querifiedSearchUrl({
+  resource_category: "Podcast",
+  resource_type_group: "learning_material",
+  sortby: "new",
+})
+
+export const SEARCH_PODCAST_EPISODES = querifiedSearchUrl({
+  resource_category: "Podcast Episode",
+  resource_type_group: "learning_material",
+  sortby: "new",
+})
 
 const CERTIFICATION_SEARCH_PARAMS = new URLSearchParams()
 CERTIFICATION_SEARCH_PARAMS.append("certification_type", "professional")
@@ -260,6 +317,42 @@ export const auth = (opts: LoginUrlOpts) => {
   return url.toString()
 }
 
+/**
+ * Keycloak account actions the user can start from the settings page.
+ *
+ * Must stay in sync with `AccountAction` in authentication/constants.py.
+ */
+export enum AccountAction {
+  UpdateEmail = "update-email",
+  UpdatePassword = "update-password",
+}
+
+/**
+ * Outcome of an account action, reported back on the URL we're returned to.
+ *
+ * Must stay in sync with `AccountActionStatus` in authentication/constants.py.
+ */
+export enum AccountActionStatus {
+  Success = "success",
+  Cancelled = "cancelled",
+  Error = "error",
+  Unavailable = "unavailable",
+}
+
+export const ACCOUNT_ACTION_PARAM = "account_action"
+export const ACCOUNT_ACTION_STATUS_PARAM = "account_action_status"
+
+/**
+ * Returns the URL that hands the user off to Keycloak to change their email or
+ * password. Django owns the handoff — it holds the OIDC client config and
+ * validates the user is allowed to perform the action.
+ */
+export const accountAction = (action: AccountAction, next: UrlDescriptor) => {
+  const url = new URL(`${MITOL_API_BASE_URL}/account/action/start/${action}/`)
+  url.searchParams.set("next", stringifyUrlDescriptor(next))
+  return url.toString()
+}
+
 export const ECOMMERCE_CART = "/cart/" as const
 
 export const B2B_ATTACH_VIEW = "/enrollmentcode/[code]"
@@ -277,55 +370,72 @@ export const LINKEDIN_ADD_TO_PROFILE_BASE_URL =
 export const COURSE_PAGE_VIEW = "/courses/[readableId]"
 export const coursePageView = (readableId: string) =>
   generatePath(COURSE_PAGE_VIEW, { readableId })
-// Each page-view builder appends a mandatory slug segment when a title is given
-// (the slug, or the literal "resource" when blank). With an undefined title it
-// emits the bare path, which still resolves and 307-redirects to canonical.
-// `title` is required-but-undefinable so a call site can't silently omit it —
-// passing undefined (e.g. a title still in flight) is a visible opt-in to the
-// redirecting bare form. Id and slug are separate segments; the slug is
-// cosmetic and ignored on lookup.
+// The resource page builders below take the resource's `url_slug`. `slug` is
+// required-but-undefinable so a call site can't silently omit it; passing
+// undefined emits the bare path, which resolves and 307-redirects to the
+// slugged canonical.
 export const VIDEO_PLAYLIST_PAGE_VIEW = "/video-playlist/[id]"
-export const videoPlaylistPageView = (
-  id: string,
-  title: string | undefined,
+export const videoPlaylistPath = (
+  id: number | string,
+  slug: string | undefined,
 ) => {
-  const base = generatePath(VIDEO_PLAYLIST_PAGE_VIEW, { id })
-  return title === undefined ? base : `${base}/${pathSlug(title)}`
+  const base = generatePath(VIDEO_PLAYLIST_PAGE_VIEW, { id: String(id) })
+  return slug === undefined ? base : `${base}/${slug}`
 }
+export const PODCASTS_PAGE_VIEW = "/podcasts"
+
 export const PODCAST_PAGE_VIEW = "/podcast/[podcastId]"
-export const podcastPageView = (id: string, title: string | undefined) => {
-  const base = generatePath(PODCAST_PAGE_VIEW, { podcastId: id })
-  return title === undefined ? base : `${base}/${pathSlug(title)}`
+export const podcastPath = (
+  podcastId: number | string,
+  slug: string | undefined,
+) => {
+  const base = generatePath(PODCAST_PAGE_VIEW, {
+    podcastId: String(podcastId),
+  })
+  return slug === undefined ? base : `${base}/${slug}`
 }
+
 export const PODCAST_EPISODE_PAGE_VIEW =
   "/podcast/[podcastId]/podcast_episode/[episodeId]"
-export const podcastEpisodePageView = (
+/**
+ * An episode's path. The parent podcast is the caller's to choose: an episode in
+ * several podcasts is viewable under any of them, so a page passes the podcast
+ * it is being viewed under rather than the canonical one.
+ */
+export const podcastEpisodePath = (
   id: string,
   podcastId: string,
-  title: string | undefined,
+  slug: string | undefined,
 ) => {
   const base = generatePath(PODCAST_EPISODE_PAGE_VIEW, {
-    podcastId: String(podcastId), // bare context id
-    episodeId: String(id),
+    podcastId, // bare context id
+    episodeId: id,
   })
-  return title === undefined ? base : `${base}/${pathSlug(title)}`
+  return slug === undefined ? base : `${base}/${slug}`
 }
+
 export const VIDEO_DETAIL_PAGE_VIEW = "/video/[videoId]"
-export const videoDetailPageView = (
-  videoId: number,
-  playlistId: number | undefined,
-  title: string | undefined,
+/**
+ * A video's path. `?playlist` is the caller's to choose: a video in several
+ * playlists is viewable in any of them, so a page passes the playlist it is
+ * being viewed in rather than the canonical one.
+ */
+export const videoDetailPath = (
+  videoId: number | string,
+  playlistId: number | string | undefined,
+  slug: string | undefined,
 ) => {
   const path = generatePath(VIDEO_DETAIL_PAGE_VIEW, {
     videoId: String(videoId),
   })
-  const base = title === undefined ? path : `${path}/${pathSlug(title)}`
+  const base = slug === undefined ? path : `${path}/${slug}`
   if (playlistId !== undefined) {
     const params = new URLSearchParams({ playlist: String(playlistId) })
     return `${base}?${params.toString()}`
   }
   return base
 }
+
 /**
  * Append a request's incoming search params to a canonical URL so redirects
  * preserve tracking params (e.g. utm_*). Params the canonical already sets
@@ -373,7 +483,7 @@ export const programPageView = (program: {
    * But require it (arg is not optional, i.e., not `display_mode?`) to
    * encourage callers to pass the value.
    */
-  display_mode: V2ProgramDisplayMode | null | undefined
+  display_mode: V2ProgramDisplayModeEnum | null | undefined
 }) => {
   const pattern =
     program.display_mode === DisplayModeEnum.Course

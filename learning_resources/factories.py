@@ -211,7 +211,9 @@ class LearningResourceFactory(DjangoModelFactory):
     title = factory.Faker("word")
     description = factory.Faker("sentence")
     full_description = factory.Faker("text")
-    url = factory.Faker("url")
+    # Unique per resource; faker urls collide often enough to flake tests
+    # that match resources by url
+    url = factory.Sequence(lambda n: f"https://example.com/resource-{n}")
     languages = factory.List(random.choices(["en", "es"]))  # noqa: S311
     last_modified = factory.Faker("date_time", tzinfo=UTC)
     created_on = factory.Faker("date_time", tzinfo=UTC)
@@ -954,12 +956,54 @@ class ContentSummarizerConfigurationFactory(DjangoModelFactory):
         django_get_or_create = ("platform", "llm_model")
 
 
+class CredentialMetadataConfigurationFactory(DjangoModelFactory):
+    """Factory for CredentialMetadataConfiguration"""
+
+    field = FuzzyChoice([field.name for field in constants.CredentialMetadataField])
+    llm_model = "gpt-4o-mini"
+    prompt = factory.Faker("sentence")
+    temperature = 0.0
+
+    class Meta:
+        model = models.CredentialMetadataConfiguration
+        django_get_or_create = ("field",)
+
+
+class CredentialMetadataGenerationLogFactory(DjangoModelFactory):
+    """Factory for CredentialMetadataGenerationLog"""
+
+    learning_resource = factory.SubFactory(LearningResourceFactory, is_course=True)
+    field = FuzzyChoice([field.name for field in constants.CredentialMetadataField])
+    response = factory.Dict({"description": factory.Faker("sentence")})
+    prompt_text = factory.Faker("sentence")
+    llm_model = "gpt-4o-mini"
+    temperature = 0.0
+    context_text = factory.Faker("paragraph")
+    context_tokens = 100
+    generated_by = factory.SubFactory(UserFactory)
+
+    class Meta:
+        model = models.CredentialMetadataGenerationLog
+
+
+class CredentialMetadataFactory(DjangoModelFactory):
+    """Factory for CredentialMetadata"""
+
+    learning_resource = factory.SubFactory(LearningResourceFactory, is_course=True)
+    description = factory.Faker("sentence")
+    criteria = factory.List([factory.Faker("sentence"), factory.Faker("sentence")])
+
+    class Meta:
+        model = models.CredentialMetadata
+        django_get_or_create = ("learning_resource",)
+
+
 class ETLSourceOwnershipFactory(DjangoModelFactory):
     """Factory for ETLSourceOwnership"""
 
     etl_source = factory.Faker("word")
     resource_type = constants.LearningResourceType.course.name
-    mode = models.ETLSourceOwnership.Mode.PULL
+    owner = models.ETLSourceOwnership.Pipeline.LEGACY
 
     class Meta:
         model = models.ETLSourceOwnership

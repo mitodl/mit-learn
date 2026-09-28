@@ -148,6 +148,9 @@ const course: PartialFactory<CourseWithCourseRunsSerializerV2> = (
     : runs.length > 0
       ? faker.helpers.arrayElement(runs).id
       : null
+  // Almost every real course advertises a single price (min === max); an
+  // advertised range is the flexible-pricing exception, so tests opt into it.
+  const advertisedPrice = faker.number.int({ min: 50, max: 2000 })
   const defaults: CourseWithCourseRunsSerializerV2 = {
     id: uniqueCourseId.enforce(() => faker.number.int()),
     title: faker.lorem.words(3),
@@ -192,8 +195,8 @@ const course: PartialFactory<CourseWithCourseRunsSerializerV2> = (
     min_weekly_hours: `${faker.number.int({ min: 1, max: 5 })} hours`,
     max_weekly_hours: `${faker.number.int({ min: 6, max: 10 })} hours`,
     courseruns: runs,
-    min_price: faker.number.int({ min: 0, max: 1000 }),
-    max_price: faker.number.int({ min: 1000, max: 2000 }),
+    min_price: advertisedPrice,
+    max_price: advertisedPrice,
     include_in_learn_catalog: faker.datatype.boolean(),
     ingest_content_files_for_ai: faker.datatype.boolean(),
     possible_variant_sets: [],

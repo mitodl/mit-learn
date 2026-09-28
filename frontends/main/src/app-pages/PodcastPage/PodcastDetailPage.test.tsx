@@ -3,6 +3,7 @@ import { factories, setMockResponse, urls } from "api/test-utils"
 import { ResourceTypeEnum } from "api/v1"
 import type { LearningResource, PodcastEpisodeResource } from "api/v1"
 import { renderWithProviders, screen, user } from "@/test-utils"
+import { podcastEpisodePath } from "@/common/urls"
 import { PodcastDetailPage } from "./PodcastDetailPage"
 
 jest.mock(
@@ -13,18 +14,9 @@ jest.mock(
   }),
 )
 
-jest.mock("./PodcastPlayer", () => ({
-  __esModule: true,
-  PLAYER_HEIGHT: { desktop: 104, mobile: 220 },
-  default: jest.fn(
-    ({ track }: { track: { title: string; podcastName: string } }) => (
-      <div data-testid="podcast-player">
-        <span data-testid="player-track-title">{track.title}</span>
-        <span data-testid="player-podcast-name">{track.podcastName}</span>
-      </div>
-    ),
-  ),
-}))
+jest.mock("./PodcastPlayer", () =>
+  jest.requireActual("./PodcastPlayer.test-utils").mockPodcastPlayer(),
+)
 
 const EPISODES_PAGE_SIZE = 5
 
@@ -54,13 +46,35 @@ const makePodcastEpisodes = (count: number): PodcastEpisodeResource[] =>
 const setupApis = ({
   episodesPage1,
   episodesPage2,
+  podcastOverrides = {},
 }: {
   episodesPage1: LearningResource[]
   episodesPage2?: LearningResource[]
+  podcastOverrides?: Partial<LearningResource>
 }) => {
   const podcast = factories.learningResources.resource({
     resource_type: ResourceTypeEnum.Podcast,
+    ...podcastOverrides,
   })
+
+  // Episodes of this podcast reference it as their parent, as they would in
+  // production. The player resolves its "podcast name" from this summary.
+  const linkParent = (episodes: LearningResource[]) =>
+    episodes.forEach((episode) => {
+      if (episode.resource_type === ResourceTypeEnum.PodcastEpisode) {
+        episode.podcast_episode.podcasts = [podcast.id]
+        episode.podcast_episode.parent_podcasts = [
+          {
+            id: podcast.id,
+            title: podcast.title!,
+            readable_id: podcast.readable_id,
+            learn_url: podcast.learn_url,
+          },
+        ]
+      }
+    })
+  linkParent(episodesPage1)
+  if (episodesPage2) linkParent(episodesPage2)
 
   setMockResponse.get(
     urls.learningResources.details({ id: podcast.id }),
@@ -86,6 +100,28 @@ const setupApis = ({
 }
 
 describe("PodcastDetailPage", () => {
+  test("episode rows keep this podcast as context and take only the backend slug", async () => {
+    // The episode's canonical parent is a *different* podcast — an episode in
+    // several podcasts is viewable under any of them. The row href must keep the
+    // podcast being viewed and borrow only the slug.
+    const episodes = makePodcastEpisodes(1)
+    const { podcast } = setupApis({ episodesPage1: episodes })
+    const episode = episodes[0]
+    episode.podcast_episode!.podcasts = [podcast.id + 1, podcast.id]
+
+    renderWithProviders(<PodcastDetailPage podcastId={String(podcast.id)} />)
+
+    const title = await screen.findByText(episode.title!)
+    expect(title.closest("a")).toHaveAttribute(
+      "href",
+      podcastEpisodePath(
+        String(episode.id),
+        String(podcast.id),
+        episode.url_slug,
+      ),
+    )
+  })
+
   test("renders initial episode list", async () => {
     const episodes = makePodcastEpisodes(3)
     const { podcast } = setupApis({ episodesPage1: episodes })
@@ -94,7 +130,16 @@ describe("PodcastDetailPage", () => {
 
     await screen.findByText(episodes[0].title!)
     for (const episode of episodes) {
-      expect(screen.getByText(episode.title!)).toBeInTheDocument()
+      const title = screen.getByText(episode.title!)
+      expect(title).toBeInTheDocument()
+      expect(title.closest("a")).toHaveAttribute(
+        "href",
+        podcastEpisodePath(
+          String(episode.id),
+          String(podcast.id),
+          episode.url_slug,
+        ),
+      )
     }
   })
 
@@ -178,6 +223,94 @@ describe("PodcastDetailPage", () => {
     renderWithProviders(<PodcastDetailPage podcastId={String(podcast.id)} />)
 
     await screen.findByText(/no episodes found/i)
+  })
+
+  test("shows a loading skeleton while fetching", async () => {
+    const episodes = makePodcastEpisodes(2)
+    const { podcast } = setupApis({ episodesPage1: episodes })
+
+    renderWithProviders(<PodcastDetailPage podcastId={String(podcast.id)} />)
+
+    // Skeleton is visible on first paint, before the queries resolve.
+    expect(screen.getByTestId("podcast-header-skeleton")).toBeInTheDocument()
+
+    // Flush to the loaded state to avoid act() warnings.
+    await screen.findByText(episodes[0].title!)
+  })
+
+  test("renders a formatted show description", async () => {
+    const episodes = makePodcastEpisodes(1)
+    const { podcast } = setupApis({
+      episodesPage1: episodes,
+      podcastOverrides: {
+        description: "<p>Daryl Morey &amp; Jessica Gelman</p>",
+      },
+    })
+
+    renderWithProviders(<PodcastDetailPage podcastId={String(podcast.id)} />)
+
+    expect(
+      await screen.findByText("Daryl Morey & Jessica Gelman"),
+    ).toBeInTheDocument()
+  })
+
+  test("opens external links in the show description in a new tab", async () => {
+    const episodes = makePodcastEpisodes(1)
+    const { podcast } = setupApis({
+      episodesPage1: episodes,
+      podcastOverrides: {
+        // rel="noopener noreferrer" mirrors real backend output: nh3 adds it
+        // to every <a> during ETL sanitization, regardless of destination.
+        description:
+          'Relevant Resources: <a href="https://ocw.mit.edu/" rel="noopener noreferrer">OCW</a> and <a href="/search" rel="noopener noreferrer">Search</a>.',
+      },
+    })
+
+    renderWithProviders(<PodcastDetailPage podcastId={String(podcast.id)} />)
+
+    const externalLink = await screen.findByRole("link", { name: "OCW" })
+    expect(externalLink).toHaveAttribute("target", "_blank")
+
+    const internalLink = screen.getByRole("link", { name: "Search" })
+    expect(internalLink).not.toHaveAttribute("target")
+  })
+
+  test("shows an error when the podcast fails to load", async () => {
+    const podcast = factories.learningResources.resource({
+      resource_type: ResourceTypeEnum.Podcast,
+    })
+    setMockResponse.get(
+      urls.learningResources.details({ id: podcast.id }),
+      "Server error",
+      { code: 500 },
+    )
+
+    renderWithProviders(<PodcastDetailPage podcastId={String(podcast.id)} />)
+
+    expect(
+      await screen.findByText(/something went wrong loading this podcast/i),
+    ).toBeInTheDocument()
+  })
+
+  test("shows an error when the episode list fails to load", async () => {
+    const podcast = factories.learningResources.resource({
+      resource_type: ResourceTypeEnum.Podcast,
+    })
+    setMockResponse.get(
+      urls.learningResources.details({ id: podcast.id }),
+      podcast,
+    )
+    setMockResponse.get(
+      `${urls.learningResources.items({ id: podcast.id })}?limit=${EPISODES_PAGE_SIZE}`,
+      "Server error",
+      { code: 500 },
+    )
+
+    renderWithProviders(<PodcastDetailPage podcastId={String(podcast.id)} />)
+
+    expect(
+      await screen.findByText(/something went wrong loading episodes/i),
+    ).toBeInTheDocument()
   })
 
   test("disables play button for episodes without audio source", async () => {

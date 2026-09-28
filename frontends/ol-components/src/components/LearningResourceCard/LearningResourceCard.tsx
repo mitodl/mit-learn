@@ -1,11 +1,6 @@
 import React from "react"
-import {
-  RiMenuAddLine,
-  RiBookmarkLine,
-  RiBookmarkFill,
-  RiShareForwardFill,
-} from "@remixicon/react"
-import { LearningResource, ResourceTypeEnum } from "api"
+import { RiMenuAddLine, RiBookmarkLine, RiBookmarkFill } from "@remixicon/react"
+import { LearningResource } from "api"
 import {
   LocalDate,
   DEFAULT_RESOURCE_IMG,
@@ -17,6 +12,7 @@ import {
   useImageWithFallback,
 } from "ol-utilities"
 import type { Size } from "../Card/Card"
+import type { PushUrl } from "../LinkAdapter/LinkAdapter"
 import { BaseLearningResourceCard } from "../BaseLearningResourceCard/BaseLearningResourceCard"
 import type { ActionButtonInfo } from "../BaseLearningResourceCard/BaseLearningResourceCard"
 import { LearningResourceListCard } from "./LearningResourceListCard"
@@ -34,9 +30,13 @@ interface LearningResourceCardProps {
   size?: Size
   isMedia?: boolean
   href?: string
+  /**
+   * If set, a plain click pushes this URL with window.history.pushState
+   * rather than navigating to href. See LinkAdapter for the full rules.
+   */
+  pushUrl?: PushUrl
   onAddToLearningPathClick?: ResourceIdCallback | null
   onAddToUserListClick?: ResourceIdCallback | null
-  onShareClick?: ResourceIdCallback | null
   inUserList?: boolean
   inLearningPath?: boolean
   onClick?: React.MouseEventHandler
@@ -52,9 +52,9 @@ const LearningResourceCard: React.FC<LearningResourceCardProps> = ({
   size = "medium",
   isMedia = false,
   href,
+  pushUrl,
   onAddToLearningPathClick,
   onAddToUserListClick,
-  onShareClick,
   inLearningPath,
   inUserList,
   onClick,
@@ -79,6 +79,7 @@ const LearningResourceCard: React.FC<LearningResourceCardProps> = ({
           resource={resource}
           className={className}
           href={href}
+          pushUrl={pushUrl}
           onAddToLearningPathClick={onAddToLearningPathClick}
           onAddToUserListClick={onAddToUserListClick}
           inUserList={inUserList}
@@ -94,9 +95,9 @@ const LearningResourceCard: React.FC<LearningResourceCardProps> = ({
         resource={resource}
         className={className}
         href={href}
+        pushUrl={pushUrl}
         onAddToLearningPathClick={onAddToLearningPathClick}
         onAddToUserListClick={onAddToUserListClick}
-        onShareClick={onShareClick}
         inUserList={inUserList}
         inLearningPath={inLearningPath}
         onClick={onClick}
@@ -156,23 +157,13 @@ const LearningResourceCard: React.FC<LearningResourceCardProps> = ({
     })
   }
 
-  if (
-    onShareClick &&
-    resource.resource_type === ResourceTypeEnum.PodcastEpisode
-  ) {
-    actions.push({
-      onClick: (event) => onShareClick(event, resource.id),
-      "aria-label": `Share ${resource.title}`,
-      icon: <RiShareForwardFill aria-hidden />,
-    })
-  }
-
   return (
     <BaseLearningResourceCard
       className={className}
       size={size}
       isMedia={isMedia}
       href={href}
+      pushUrl={pushUrl}
       onClick={onClick}
       headingLevel={headingLevel}
       imageSrc={imageSrc}

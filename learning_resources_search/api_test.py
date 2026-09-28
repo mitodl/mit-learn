@@ -5,8 +5,8 @@ from unittest.mock import MagicMock, Mock
 import pytest
 from freezegun import freeze_time
 from opensearch_dsl import response
-from opensearch_dsl.query import Percolate
 
+from learning_resources.constants import OCW_CONTENT_CATEGORY_OPEN_TEXTBOOKS
 from learning_resources.factories import LearningResourceFactory
 from learning_resources_search.api import (
     Search,
@@ -30,10 +30,29 @@ from learning_resources_search.constants import (
     CONTENT_FILE_TYPE,
     COURSE_TYPE,
     LEARNING_RESOURCE,
+    PERCOLATE_INDEX_TYPE,
     PROGRAM_TYPE,
 )
 from learning_resources_search.factories import PercolateQueryFactory
 from learning_resources_search.models import PercolateQuery
+
+# api.SORT_TIEBREAKERS, as generate_sort_clause returns them
+SORT_TIEBREAKER_CLAUSES = [
+    "featured_rank",
+    "is_learning_material",
+    "is_incomplete_or_stale",
+    "-created_on",
+    "id",
+]
+
+# api.SORT_TIEBREAKERS, as the query body serializes them
+SERIALIZED_SORT_TIEBREAKERS = [
+    "featured_rank",
+    "is_learning_material",
+    "is_incomplete_or_stale",
+    {"created_on": {"order": "desc"}},
+    "id",
+]
 
 
 def os_topic(topic_name) -> Mock:
@@ -62,7 +81,12 @@ def os_topic(topic_name) -> Mock:
                 "testindex_document_default",
             ],
         ),
-        (CONTENT_FILE_TYPE, ["content_file"], [], ["testindex_course_default"]),
+        (
+            CONTENT_FILE_TYPE,
+            ["content_file"],
+            [],
+            ["testindex_course_default", "testindex_program_default"],
+        ),
     ],
 )
 def test_relevant_indexes(endpoint, resourse_types, aggregations, result):
@@ -84,70 +108,128 @@ def test_relevant_indexes(endpoint, resourse_types, aggregations, result):
 
 
 @pytest.mark.parametrize(
-    ("sort_param", "departments", "result"),
+    ("sort_param", "departments", "expected"),
     [
-        ("id", None, "id"),
-        ("-id", ["7"], "-id"),
+        ("-id", ["7"], ["-id", *SORT_TIEBREAKER_CLAUSES]),
         (
             "start_date",
             ["5"],
-            {"runs.start_date": {"order": "asc", "nested": {"path": "runs"}}},
+            [
+                {"runs.start_date": {"order": "asc", "nested": {"path": "runs"}}},
+                *SORT_TIEBREAKER_CLAUSES,
+            ],
         ),
         (
             "-start_date",
             None,
-            {"runs.start_date": {"order": "desc", "nested": {"path": "runs"}}},
+            [
+                {"runs.start_date": {"order": "desc", "nested": {"path": "runs"}}},
+                *SORT_TIEBREAKER_CLAUSES,
+            ],
         ),
         (
             "mitcoursenumber",
             None,
-            {
-                "course.course_numbers.sort_coursenum": {
-                    "order": "asc",
-                    "nested": {
-                        "path": "course.course_numbers",
-                        "filter": {"term": {"course.course_numbers.primary": True}},
-                    },
-                }
-            },
+            [
+                {
+                    "course.course_numbers.sort_coursenum": {
+                        "order": "asc",
+                        "nested": {
+                            "path": "course.course_numbers",
+                            "filter": {"term": {"course.course_numbers.primary": True}},
+                        },
+                    }
+                },
+                *SORT_TIEBREAKER_CLAUSES,
+            ],
         ),
         (
             "mitcoursenumber",
             ["7", "5"],
-            {
-                "course.course_numbers.sort_coursenum": {
-                    "order": "asc",
-                    "nested": {
-                        "path": "course.course_numbers",
-                        "filter": {
-                            "bool": {
-                                "should": [
-                                    {
-                                        "term": {
-                                            "course.course_numbers.department.department_id": (
-                                                "7"
-                                            )
-                                        }
-                                    },
-                                    {
-                                        "term": {
-                                            "course.course_numbers.department.department_id": (
-                                                "5"
-                                            )
-                                        }
-                                    },
-                                ]
-                            }
+            [
+                {
+                    "course.course_numbers.sort_coursenum": {
+                        "order": "asc",
+                        "nested": {
+                            "path": "course.course_numbers",
+                            "filter": {
+                                "bool": {
+                                    "should": [
+                                        {
+                                            "term": {
+                                                "course.course_numbers.department.department_id": (
+                                                    "7"
+                                                )
+                                            }
+                                        },
+                                        {
+                                            "term": {
+                                                "course.course_numbers.department.department_id": (
+                                                    "5"
+                                                )
+                                            }
+                                        },
+                                    ]
+                                }
+                            },
                         },
-                    },
-                }
-            },
+                    }
+                },
+                *SORT_TIEBREAKER_CLAUSES,
+            ],
         ),
     ],
 )
-def test_generate_sort_clause(sort_param, departments, result):
+def test_generate_sort_clause(sort_param, departments, expected):
+    """The requested sort leads, followed by the tiebreakers"""
     params = {"sortby": sort_param, "department": departments}
-    assert generate_sort_clause(params) == result
+    assert generate_sort_clause(params) == expected
+
+
+@pytest.mark.parametrize(
+    ("sortby", "expected"),
+    [
+        (
+            "new",
+            [
+                "-created_on",
+                "featured_rank",
+                "is_learning_material",
+                "is_incomplete_or_stale",
+                "id",
+            ],
+        ),
+        (
+            "featured",
+            [
+                "featured_rank",
+                "is_learning_material",
+                "is_incomplete_or_stale",
+                "-created_on",
+                "id",
+            ],
+        ),
+        (
+            "id",
+            [
+                "id",
+                "featured_rank",
+                "is_learning_material",
+                "is_incomplete_or_stale",
+                "-created_on",
+            ],
+        ),
+    ],
+)
+def test_generate_sort_clause_no_duplicate_tiebreaker(sortby, expected):
+    """A sort the tiebreakers repeat is not sorted on twice"""
+    assert generate_sort_clause({"sortby": sortby}) == expected
+
+
+def test_generate_sort_clause_content_files():
+    """Content file documents have none of the fields the tiebreakers sort on"""
+    params = {"sortby": "id", "endpoint": CONTENT_FILE_TYPE}
+    assert generate_sort_clause(params) == ["id"]
 
 
 @pytest.mark.parametrize(
@@ -207,7 +289,9 @@ def test_generate_learning_resources_text_clause(
                                                 "readable_id",
                                                 "offered_by",
                                                 "course_feature",
+                                                "ocw_topics.english",
                                                 "video.transcript.english",
+                                                "podcast_episode.transcript.english",
                                             ],
                                             **extra_params,
                                         }
@@ -356,7 +440,9 @@ def test_generate_learning_resources_text_clause(
                             "readable_id",
                             "offered_by",
                             "course_feature",
+                            "ocw_topics.english",
                             "video.transcript.english",
+                            "podcast_episode.transcript.english",
                         ],
                         **extra_params,
                     }
@@ -526,7 +612,9 @@ def test_generate_learning_resources_text_clause(
                                                 "readable_id",
                                                 "offered_by",
                                                 "course_feature",
+                                                "ocw_topics.english",
                                                 "video.transcript.english",
+                                                "podcast_episode.transcript.english",
                                             ],
                                         }
                                     },
@@ -666,7 +754,9 @@ def test_generate_learning_resources_text_clause(
                             "readable_id",
                             "offered_by",
                             "course_feature",
+                            "ocw_topics.english",
                             "video.transcript.english",
+                            "podcast_episode.transcript.english",
                         ],
                     }
                 },
@@ -848,7 +938,9 @@ def test_generate_learning_resources_text_clause_with_min_score():
                                                         "readable_id",
                                                         "offered_by",
                                                         "course_feature",
+                                                        "ocw_topics.english",
                                                         "video.transcript.english",
+                                                        "podcast_episode.transcript.english",
                                                     ],
                                                     "type": "phrase",
                                                     "slop": 2,
@@ -1029,7 +1121,9 @@ def test_generate_learning_resources_text_clause_with_min_score():
                             "readable_id",
                             "offered_by",
                             "course_feature",
+                            "ocw_topics.english",
                             "video.transcript.english",
+                            "podcast_episode.transcript.english",
                         ],
                         "type": "phrase",
                         "slop": 2,
@@ -1204,7 +1298,9 @@ def test_generate_learning_resources_text_clause_with_min_score():
                                                         "readable_id",
                                                         "offered_by",
                                                         "course_feature",
+                                                        "ocw_topics.english",
                                                         "video.transcript.english",
+                                                        "podcast_episode.transcript.english",
                                                     ],
                                                 }
                                             },
@@ -1365,7 +1461,9 @@ def test_generate_learning_resources_text_clause_with_min_score():
                             "readable_id",
                             "offered_by",
                             "course_feature",
+                            "ocw_topics.english",
                             "video.transcript.english",
+                            "podcast_episode.transcript.english",
                         ],
                     }
                 },
@@ -1989,7 +2087,9 @@ def test_execute_learn_search_for_learning_resource_query(settings, opensearch):
                                                                     "readable_id",
                                                                     "offered_by",
                                                                     "course_feature",
+                                                                    "ocw_topics.english",
                                                                     "video.transcript.english",
+                                                                    "podcast_episode.transcript.english",
                                                                 ],
                                                                 "type": "best_fields",
                                                             }
@@ -2160,7 +2260,9 @@ def test_execute_learn_search_for_learning_resource_query(settings, opensearch):
                                             "readable_id",
                                             "offered_by",
                                             "course_feature",
+                                            "ocw_topics.english",
                                             "video.transcript.english",
+                                            "podcast_episode.transcript.english",
                                         ],
                                         "type": "best_fields",
                                     }
@@ -2349,7 +2451,7 @@ def test_execute_learn_search_for_learning_resource_query(settings, opensearch):
                 ]
             }
         },
-        "sort": [{"readable_id": {"order": "desc"}}],
+        "sort": [{"readable_id": {"order": "desc"}}, *SERIALIZED_SORT_TIEBREAKERS],
         "from": 1,
         "size": 1,
         "aggs": {
@@ -2416,6 +2518,11 @@ def test_execute_learn_search_for_learning_resource_query(settings, opensearch):
                 "flashcards",
                 "vector_embedding",
                 "video.transcript",
+                "podcast_episode.transcript",
+                "podcast_episode.rss",
+                "content_files.content",
+                "content_files.summary",
+                "content_files.flashcards",
             ]
         },
     }
@@ -2482,6 +2589,11 @@ def test_execute_learn_search_for_learning_resource_query_filter_ocw_files(
                                 },
                                 {"term": {"resource_type": "course"}},
                                 {"term": {"resource_type": "video"}},
+                                {
+                                    "term": {
+                                        "resource_category": OCW_CONTENT_CATEGORY_OPEN_TEXTBOOKS
+                                    }
+                                },
                             ],
                             "minimum_should_match": 1,
                         }
@@ -2510,6 +2622,11 @@ def test_execute_learn_search_for_learning_resource_query_filter_ocw_files(
                 "flashcards",
                 "vector_embedding",
                 "video.transcript",
+                "podcast_episode.transcript",
+                "podcast_episode.rss",
+                "content_files.content",
+                "content_files.summary",
+                "content_files.flashcards",
             ]
         },
     }
@@ -2616,7 +2733,9 @@ def test_execute_learn_search_with_script_score(
                                                                             "readable_id",
                                                                             "offered_by",
                                                                             "course_feature",
+                                                                            "ocw_topics.english",
                                                                             "video.transcript.english",
+                                                                            "podcast_episode.transcript.english",
                                                                         ],
                                                                         "type": "phrase",
                                                                     }
@@ -2787,7 +2906,9 @@ def test_execute_learn_search_with_script_score(
                                                     "readable_id",
                                                     "offered_by",
                                                     "course_feature",
+                                                    "ocw_topics.english",
                                                     "video.transcript.english",
+                                                    "podcast_episode.transcript.english",
                                                 ],
                                                 "type": "phrase",
                                             }
@@ -2990,7 +3111,7 @@ def test_execute_learn_search_with_script_score(
                 ]
             }
         },
-        "sort": [{"readable_id": {"order": "desc"}}],
+        "sort": [{"readable_id": {"order": "desc"}}, *SERIALIZED_SORT_TIEBREAKERS],
         "from": 1,
         "size": 1,
         "aggs": {
@@ -3057,6 +3178,11 @@ def test_execute_learn_search_with_script_score(
                 "flashcards",
                 "vector_embedding",
                 "video.transcript",
+                "podcast_episode.transcript",
+                "podcast_episode.rss",
+                "content_files.content",
+                "content_files.summary",
+                "content_files.flashcards",
             ]
         },
     }
@@ -3130,7 +3256,7 @@ def test_execute_learn_search_with_hybrid_search(mocker, settings, opensearch):
                 ]
             }
         },
-        "sort": [{"readable_id": {"order": "desc"}}],
+        "sort": [{"readable_id": {"order": "desc"}}, *SERIALIZED_SORT_TIEBREAKERS],
         "from": 1,
         "size": 1,
         "query": {
@@ -3159,7 +3285,9 @@ def test_execute_learn_search_with_hybrid_search(mocker, settings, opensearch):
                                                                             "readable_id",
                                                                             "offered_by",
                                                                             "course_feature",
+                                                                            "ocw_topics.english",
                                                                             "video.transcript.english",
+                                                                            "podcast_episode.transcript.english",
                                                                         ],
                                                                         "type": "best_fields",
                                                                     }
@@ -3329,7 +3457,9 @@ def test_execute_learn_search_with_hybrid_search(mocker, settings, opensearch):
                                                         "readable_id",
                                                         "offered_by",
                                                         "course_feature",
+                                                        "ocw_topics.english",
                                                         "video.transcript.english",
+                                                        "podcast_episode.transcript.english",
                                                     ],
                                                     "type": "best_fields",
                                                 }
@@ -3563,6 +3693,11 @@ def test_execute_learn_search_with_hybrid_search(mocker, settings, opensearch):
                 "flashcards",
                 "vector_embedding",
                 "video.transcript",
+                "podcast_episode.transcript",
+                "podcast_episode.rss",
+                "content_files.content",
+                "content_files.summary",
+                "content_files.flashcards",
             ]
         },
     }
@@ -3624,7 +3759,9 @@ def test_execute_learn_search_with_min_score(mocker, settings, opensearch):
                                                                             "readable_id",
                                                                             "offered_by",
                                                                             "course_feature",
+                                                                            "ocw_topics.english",
                                                                             "video.transcript.english",
+                                                                            "podcast_episode.transcript.english",
                                                                         ],
                                                                         "type": "best_fields",
                                                                     }
@@ -3798,7 +3935,9 @@ def test_execute_learn_search_with_min_score(mocker, settings, opensearch):
                                             "readable_id",
                                             "offered_by",
                                             "course_feature",
+                                            "ocw_topics.english",
                                             "video.transcript.english",
+                                            "podcast_episode.transcript.english",
                                         ],
                                         "type": "best_fields",
                                     }
@@ -3987,7 +4126,7 @@ def test_execute_learn_search_with_min_score(mocker, settings, opensearch):
                 ]
             }
         },
-        "sort": [{"readable_id": {"order": "desc"}}],
+        "sort": [{"readable_id": {"order": "desc"}}, *SERIALIZED_SORT_TIEBREAKERS],
         "from": 1,
         "size": 1,
         "aggs": {
@@ -4054,6 +4193,11 @@ def test_execute_learn_search_with_min_score(mocker, settings, opensearch):
                 "flashcards",
                 "vector_embedding",
                 "video.transcript",
+                "podcast_episode.transcript",
+                "podcast_episode.rss",
+                "content_files.content",
+                "content_files.summary",
+                "content_files.flashcards",
             ]
         },
     }
@@ -4232,6 +4376,11 @@ def test_execute_learn_search_for_content_file_query(opensearch):
                 "flashcards",
                 "vector_embedding",
                 "video.transcript",
+                "podcast_episode.transcript",
+                "podcast_episode.rss",
+                "content_files.content",
+                "content_files.summary",
+                "content_files.flashcards",
             ]
         },
     }
@@ -4240,7 +4389,7 @@ def test_execute_learn_search_for_content_file_query(opensearch):
 
     opensearch.conn.search.assert_called_once_with(
         body=query,
-        index=["testindex_course_default"],
+        index=["testindex_course_default,testindex_program_default"],
         search_type="dfs_query_then_fetch",
     )
 
@@ -4326,30 +4475,28 @@ def test_document_percolation(opensearch, mocker):
             {
                 "_index": "test-index",
                 "_id": f"{query.id}",
-                "id": f"{query.id}",
+                "_source": {"id": query.id},
+                "id": query.id,
                 "_score": 12.0,
             }
         )
 
     plugin_log_handler = mocker.patch("learning_resources_search.plugins.log")
-    mocker.patch.object(Search, "execute")
+    executed_searches = []
 
-    Search.execute.return_value = response.Response(
-        Search().query(Percolate(field="query", index="test", id="test")),
-        {
-            "_shards": {"failed": 0, "successful": 10, "total": 10},
-            "hits": {
-                "hits": percolate_hits,
-                "max_score": 12.0,
-                "total": 123,
-            },
-            "timed_out": False,
-            "took": 123,
-        },
-    ).hits
+    def mock_scan(search_self, *args, **kwargs):
+        executed_searches.append(search_self)
+        for hit in percolate_hits:
+            yield response.Hit(hit)
+
+    mocker.patch.object(Search, "scan", autospec=True, side_effect=mock_scan)
 
     lr = LearningResourceFactory.create()
     percolate_matches_for_document(lr.id)
+
+    assert executed_searches[0]._index == [  # noqa: SLF001
+        get_default_alias_name(PERCOLATE_INDEX_TYPE)
+    ]
 
     plugin_log_handler.debug.assert_called_once_with(
         "document %i percolated - %s",
@@ -4361,8 +4508,16 @@ def test_document_percolation(opensearch, mocker):
 @pytest.mark.parametrize(
     ("sortby", "q", "result"),
     [
-        ("-views", None, [{"views": {"order": "desc"}}]),
-        ("-views", "text", [{"views": {"order": "desc"}}]),
+        (
+            "-views",
+            None,
+            [{"views": {"order": "desc"}}, *SERIALIZED_SORT_TIEBREAKERS],
+        ),
+        (
+            "-views",
+            "text",
+            [{"views": {"order": "desc"}}, *SERIALIZED_SORT_TIEBREAKERS],
+        ),
         (
             None,
             None,

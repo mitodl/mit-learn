@@ -357,12 +357,12 @@
             >
               {% block footer %}
 
+              {% if unsubscribe_url %}
               If you don't want to receive these emails in the future, you can
-              <a
-                href="{{ APP_BASE_URL }}/dashboard/settings/"
-                style="text-decoration: underline"
+              <a href="{{ unsubscribe_url }}" style="text-decoration: underline"
                 >unsubscribe</a
               >. <br /><br />
+              {% endif %}
 
               {% endblock %}
               {% block footer-address %}

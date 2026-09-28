@@ -3,7 +3,6 @@
 from django.db import migrations, models
 
 from learning_resources.constants import CertificationType
-from learning_resources.etl.constants import ETLSource
 
 
 def add_certification_type(apps, schema_editor):
@@ -12,10 +11,10 @@ def add_certification_type(apps, schema_editor):
         certification_type=CertificationType.professional.name
     )
     LearningResource.objects.filter(certification=True, professional=False).exclude(
-        etl_source=ETLSource.micromasters.name
+        etl_source="micromasters"
     ).update(certification_type=CertificationType.completion.name)
     LearningResource.objects.filter(
-        certification=True, etl_source=ETLSource.micromasters.name
+        certification=True, etl_source="micromasters"
     ).update(certification_type=CertificationType.micromasters.name)
 
 

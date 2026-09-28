@@ -1,7 +1,15 @@
 import React from "react"
-import { Breadcrumbs, Skeleton, Typography, styled } from "ol-components"
+import {
+  Breadcrumbs,
+  Skeleton,
+  Typography,
+  styled,
+  type TypographyProps,
+} from "ol-components"
 import type { VideoPlaylistResource } from "api/v1"
 import VideoContainer from "./VideoContainer"
+import { richTextDescription } from "./shared.styled"
+import { addExternalLinkTargets } from "@/common/utils"
 
 const BreadcrumbBar = styled.div(({ theme }) => ({
   padding: "18px 0 2px 0",
@@ -67,15 +75,22 @@ const PageTitle = styled.h1<{ isSeries?: boolean }>(({ theme, isSeries }) => ({
   },
 }))
 
-const PageDescription = styled(Typography)(({ theme }) => ({
-  color: theme.custom.colors.darkGray1,
-  ...theme.typography.body1,
-  lineHeight: "26px",
-  [theme.breakpoints.down("sm")]: {
-    ...theme.typography.body2,
-    lineHeight: "22px",
-  },
-}))
+/*
+ * The Pick<TypographyProps, "component"> generic is what allows
+ * component="div" at the call site. A sanitized OVS description contains block elements (<p>, <ul>), which are invalid inside Typography's default element for these variants (<p>).
+ */
+const PageDescription = styled(Typography)<Pick<TypographyProps, "component">>(
+  ({ theme }) => ({
+    ...richTextDescription,
+    color: theme.custom.colors.darkGray1,
+    ...theme.typography.body1,
+    lineHeight: "26px",
+    [theme.breakpoints.down("sm")]: {
+      ...theme.typography.body2,
+      lineHeight: "22px",
+    },
+  }),
+)
 
 const CollectionTitle = styled(Typography)(({ theme }) => ({
   ...theme.typography.body1,
@@ -132,7 +147,15 @@ const VideoPageHeader: React.FC<VideoPageHeaderProps> = ({
           {playlist === undefined ? (
             <Skeleton width={520} height={28} />
           ) : (
-            <PageDescription>{playlist.description}</PageDescription>
+            <PageDescription
+              component="div"
+              /* Rich text, sanitized during ETL. Rendered as markup rather
+                 than interpolated, or an author's formatting would appear to
+                 the learner as visible tags. */
+              dangerouslySetInnerHTML={{
+                __html: addExternalLinkTargets(playlist.description ?? ""),
+              }}
+            />
           )}
         </VideoContainer>
       </HeaderSection>

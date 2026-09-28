@@ -20,6 +20,12 @@ export const bootstrapApiClients = () => {
   const withCredentials =
     env("NEXT_PUBLIC_MITOL_AXIOS_WITH_CREDENTIALS") === "true"
 
+  // The analytics API is not deployed to every environment yet, so its base URL
+  // is optional: when it is absent we leave that client unconfigured and the
+  // org analytics dashboard reports itself unavailable, rather than failing
+  // startup for every environment that does not have the service.
+  const analyticsBaseUrl = env("NEXT_PUBLIC_ANALYTICS_API_BASE_URL")
+
   configureApiClients({
     learn: {
       baseUrl: learnBaseUrl,
@@ -31,5 +37,15 @@ export const bootstrapApiClients = () => {
       csrfCookieName: requiredEnv("NEXT_PUBLIC_MITX_ONLINE_CSRF_COOKIE_NAME"),
       withCredentials,
     },
+    ...(analyticsBaseUrl && {
+      analytics: {
+        baseUrl: analyticsBaseUrl,
+        // The analytics API is read-only (GET only), so there is no CSRF
+        // exchange to take part in; it shares learn's cookie name so axios
+        // still sends the header if a mutating endpoint is ever added.
+        csrfCookieName: requiredEnv("NEXT_PUBLIC_CSRF_COOKIE_NAME"),
+        withCredentials,
+      },
+    }),
   })
 }

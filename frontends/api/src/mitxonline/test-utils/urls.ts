@@ -3,6 +3,7 @@ import type {
   CoursesApiCourseVariantRunsV3Request,
   CourseCertificatesApiCourseCertificatesRetrieveRequest,
   ProgramCertificatesApiProgramCertificatesRetrieveRequest,
+  OrdersApiOrdersHistoryListRequest,
   ProgramCollectionsApiProgramCollectionsListRequest,
   ProgramsApiProgramsListV2Request,
 } from "@mitodl/mitxonline-api-axios/v2"
@@ -75,8 +76,6 @@ const pages = {
 }
 
 const organization = {
-  organizationList: (organizationSlug: string) =>
-    `${getApiBaseUrl()}/api/v0/b2b/organizations/${organizationSlug}/`,
   managerOrganizationsList: () =>
     `${getApiBaseUrl()}/api/v0/b2b/manager/organizations/`,
 }
@@ -87,7 +86,6 @@ const b2bAttach = {
 }
 
 const contracts = {
-  contractsList: () => `${getApiBaseUrl()}/api/v0/b2b/contracts/`,
   managerContractDetail: (orgId: number, contractId: number) =>
     `${getApiBaseUrl()}/api/v0/b2b/manager/organizations/${orgId}/contracts/${contractId}/`,
   managerContractCodes: (
@@ -128,6 +126,8 @@ const contracts = {
     code: string,
   ) =>
     `${getApiBaseUrl()}/api/v0/b2b/manager/organizations/${orgId}/contracts/${contractId}/codes/${code}/reassign/`,
+  managerContractSendTestEmail: (orgId: number, contractId: number) =>
+    `${getApiBaseUrl()}/api/v0/b2b/manager/organizations/${orgId}/contracts/${contractId}/codes/send_test_email/`,
 }
 
 const certificates = {
@@ -140,8 +140,8 @@ const certificates = {
 }
 
 const products = {
-  userFlexiblePriceDetail: (productId: number) =>
-    `${getApiBaseUrl()}/api/v0/products/${productId}/user_flexible_price/`,
+  userPricingDetail: (productId: number) =>
+    `${getApiBaseUrl()}/api/v0/products/${productId}/user_pricing/`,
 }
 
 const baskets = {
@@ -153,6 +153,9 @@ const baskets = {
 const orders = {
   receipt: (orderId: number) =>
     `${getApiBaseUrl()}/api/v0/orders/receipt/${orderId}/`,
+  historyList: (params?: OrdersApiOrdersHistoryListRequest) =>
+    `${getApiBaseUrl()}/api/v0/orders/history/${queryify(params)}`,
+  refundRequests: () => `${getApiBaseUrl()}/api/v0/orders/refund-requests/`,
 }
 
 const verifiedProgramEnrollments = {

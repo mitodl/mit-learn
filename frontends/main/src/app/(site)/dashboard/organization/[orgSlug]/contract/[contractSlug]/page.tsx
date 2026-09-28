@@ -1,8 +1,9 @@
+import type { AppPageProps } from "@/common/searchParams"
 import React from "react"
 import ContractContent from "@/app-pages/DashboardPage/ContractContent"
 
 const Page: React.FC<
-  PageProps<"/dashboard/organization/[orgSlug]/contract/[contractSlug]">
+  AppPageProps<"/dashboard/organization/[orgSlug]/contract/[contractSlug]">
 > = async ({ params }) => {
   const resolved = await params
   return (

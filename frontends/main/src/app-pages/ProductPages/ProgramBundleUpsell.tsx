@@ -17,15 +17,12 @@ const BundleUpsellContainer = styled.div(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
   gap: "12px",
-  [theme.breakpoints.up("md")]: {
+  // Sits flush inside the InfoBox card, below the offerings grid, at every
+  // width — a top border separates it from the grid. (It is never a standalone
+  // bordered card; that doubled the card's own border on tablet.)
+  [theme.breakpoints.up("sm")]: {
     borderTop: `1px solid ${theme.custom.colors.lightGray2}`,
     padding: "24px 32px",
-  },
-  // Tablet: standalone bordered card in the right column
-  [theme.breakpoints.between("sm", "md")]: {
-    border: `1px solid ${theme.custom.colors.lightGray2}`,
-    borderRadius: "4px",
-    padding: "24px",
   },
   [theme.breakpoints.down("sm")]: {
     borderTop: `1px solid ${theme.custom.colors.lightGray2}`,

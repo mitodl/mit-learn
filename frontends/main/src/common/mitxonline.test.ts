@@ -1,14 +1,13 @@
-import { factories, RequirementTreeBuilder } from "api/mitxonline-test-utils"
-import { DiscountTypeEnum, NodeTypeEnum } from "@mitodl/mitxonline-api-axios/v2"
+import { RequirementTreeBuilder } from "api/mitxonline-test-utils"
+import { NodeTypeEnum } from "@mitodl/mitxonline-api-axios/v2"
 import {
   formatPrice,
-  getFlexiblePriceForProduct,
+  formatPriceRange,
+  formatResourcePrice,
   getIdsFromReqTree,
   parseProgramRequirementSections,
-  priceWithDiscount,
+  toPriceRange,
 } from "@/common/mitxonline"
-
-const makeFlexiblePrice = factories.products.flexiblePrice
 
 describe("formatPrice", () => {
   test.each([
@@ -37,188 +36,63 @@ describe("formatPrice", () => {
   )
 })
 
-describe("getFlexiblePriceForProduct", () => {
-  test("Applies dollars-off discount correctly", () => {
-    const product = makeFlexiblePrice({
-      price: "100.00",
-      product_flexible_price: {
-        id: 1,
-        amount: "25.00",
-        discount_type: DiscountTypeEnum.DollarsOff,
-        discount_code: "TEST25",
-        redemption_type: "one-time",
-        is_redeemed: false,
-        automatic: true,
-        max_redemptions: 1,
-        payment_type: null,
-        activation_date: new Date().toISOString(),
-        expiration_date: new Date().toISOString(),
-      },
+describe("toPriceRange", () => {
+  test("min below max is an advertised range", () => {
+    expect(toPriceRange({ min_price: 250, max_price: 1000 })).toEqual({
+      min: 250,
+      max: 1000,
     })
-
-    const result = getFlexiblePriceForProduct(product)
-
-    expect(result).toBe(75) // $100 - $25
   })
 
-  test("Applies percent-off discount correctly", () => {
-    const product = makeFlexiblePrice({
-      price: "100.00",
-      product_flexible_price: {
-        id: 1,
-        amount: "20.00", // 20% off
-        discount_type: DiscountTypeEnum.PercentOff,
-        discount_code: "TEST20",
-        redemption_type: "one-time",
-        is_redeemed: false,
-        automatic: true,
-        max_redemptions: 1,
-        payment_type: null,
-        activation_date: new Date().toISOString(),
-        expiration_date: new Date().toISOString(),
-      },
-    })
-
-    const result = getFlexiblePriceForProduct(product)
-
-    expect(result).toBe(80) // $100 * (1 - 20/100)
-  })
-
-  test("Applies fixed-price discount correctly", () => {
-    const product = makeFlexiblePrice({
-      price: "100.00",
-      product_flexible_price: {
-        id: 1,
-        amount: "50.00", // Fixed price of $50
-        discount_type: DiscountTypeEnum.FixedPrice,
-        discount_code: "FIXED50",
-        redemption_type: "one-time",
-        is_redeemed: false,
-        automatic: true,
-        max_redemptions: 1,
-        payment_type: null,
-        activation_date: new Date().toISOString(),
-        expiration_date: new Date().toISOString(),
-      },
-    })
-
-    const result = getFlexiblePriceForProduct(product)
-
-    expect(result).toBe(50)
-  })
-
-  test("Returns original price when no discount is applied", () => {
-    const product = makeFlexiblePrice({
-      price: "100.00",
-      product_flexible_price: null,
-    })
-
-    const result = getFlexiblePriceForProduct(product)
-
-    expect(result).toBe(100)
-  })
-
-  test("Returns original price when discount type is unrecognized", () => {
-    const product = makeFlexiblePrice({
-      price: "100.00",
-      product_flexible_price: {
-        id: 1,
-        amount: "25.00",
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        discount_type: "unknown-type" as any,
-        discount_code: "UNKNOWN",
-        redemption_type: "one-time",
-        is_redeemed: false,
-        automatic: true,
-        max_redemptions: 1,
-        payment_type: null,
-        activation_date: new Date().toISOString(),
-        expiration_date: new Date().toISOString(),
-      },
-    })
-
-    const result = getFlexiblePriceForProduct(product)
-
-    expect(result).toBe(100)
+  test.each([
+    { label: "equal prices", resource: { min_price: 500, max_price: 500 } },
+    { label: "min above max", resource: { min_price: 199, max_price: 198.98 } },
+    { label: "missing min", resource: { min_price: null, max_price: 1000 } },
+    { label: "missing max", resource: { min_price: 250, max_price: null } },
+  ])("$label is not a range", ({ resource }) => {
+    expect(toPriceRange(resource)).toBeNull()
   })
 })
 
-describe("priceWithDiscount", () => {
-  test("Returns same price for original and final when no flexible price provided", () => {
-    const product = makeFlexiblePrice({
-      price: "100.00",
-      product_flexible_price: null,
-    })
-
-    const result = priceWithDiscount({ product })
-
-    expect(result.originalPrice).toBe("$100")
-    expect(result.finalPrice).toBe("$100")
-    expect(result.isDiscounted).toBe(false)
-    expect(result.approvedFinancialAid).toBe(false)
+describe("formatPriceRange", () => {
+  test("renders an en dash with surrounding spaces, matching the resource drawer", () => {
+    expect(formatPriceRange({ min: 250, max: 1000 })).toBe("$250 – $1,000")
   })
 
-  test("Returns discounted price when flexible price is provided", () => {
-    const product = makeFlexiblePrice({
-      price: "100.00",
-      product_flexible_price: null,
-    })
-
-    const flexiblePrice = makeFlexiblePrice({
-      price: "100.00",
-      product_flexible_price: {
-        id: 1,
-        amount: "30.00",
-        discount_type: DiscountTypeEnum.DollarsOff,
-        discount_code: "SAVE30",
-        redemption_type: "one-time",
-        is_redeemed: false,
-        automatic: true,
-        max_redemptions: 1,
-        payment_type: null,
-        activation_date: new Date().toISOString(),
-        expiration_date: new Date().toISOString(),
-      },
-    })
-
-    const result = priceWithDiscount({ product, flexiblePrice })
-
-    expect(result.originalPrice).toBe("$100")
-    expect(result.finalPrice).toBe("$70")
-    expect(result.isDiscounted).toBe(true)
-    expect(result.approvedFinancialAid).toBe(true)
+  test("a min equal to max renders as one price", () => {
+    expect(formatPriceRange({ min: 500, max: 500 })).toBe("$500")
   })
 
-  test("Shows no discount when flexible price results in same price", () => {
-    const product = makeFlexiblePrice({
-      price: "100.00",
-      product_flexible_price: null,
-    })
+  test("passes cents handling through to both ends", () => {
+    expect(
+      formatPriceRange({ min: 250, max: 1000 }, { avoidCents: false }),
+    ).toBe("$250.00 – $1,000.00")
+  })
+})
 
-    // Flexible price with 0% discount
-    const flexiblePrice = makeFlexiblePrice({
-      price: "100.00",
-      product_flexible_price: {
-        id: 1,
-        amount: "0.00",
-        discount_type: DiscountTypeEnum.DollarsOff,
-        discount_code: "NODISCOUNT",
-        redemption_type: "one-time",
-        is_redeemed: false,
-        automatic: true,
-        max_redemptions: 1,
-        payment_type: null,
-        activation_date: new Date().toISOString(),
-        expiration_date: new Date().toISOString(),
-      },
-    })
+describe("formatResourcePrice", () => {
+  test("prefers the advertised range over the product price", () => {
+    expect(
+      formatResourcePrice({ min_price: 250, max_price: 1000 }, "600.00"),
+    ).toBe("$250 – $1,000")
+  })
 
-    const result = priceWithDiscount({ product, flexiblePrice })
+  test("falls back to the product price when no range is advertised", () => {
+    expect(
+      formatResourcePrice({ min_price: 1000, max_price: 1000 }, "999.00"),
+    ).toBe("$999")
+  })
 
-    expect(result.originalPrice).toBe("$100")
-    expect(result.finalPrice).toBe("$100")
-    expect(result.isDiscounted).toBe(false)
-    expect(result.approvedFinancialAid).toBe(true) // Has financial aid approval, just no discount
+  test("uses the advertised price when there is no product", () => {
+    expect(formatResourcePrice({ min_price: 250, max_price: 250 }, null)).toBe(
+      "$250",
+    )
+  })
+
+  test("no advertised price and no product price -> null", () => {
+    expect(
+      formatResourcePrice({ min_price: null, max_price: null }, null),
+    ).toBeNull()
   })
 })
 

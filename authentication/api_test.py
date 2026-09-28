@@ -1,9 +1,13 @@
 """API tests"""
 
+from uuid import uuid4
+
 import pytest
 from django.contrib.auth import get_user_model
+from keycloak.exceptions import KeycloakError
 
 from authentication import api
+from authentication.constants import AccountAction, parse_account_action
 from main.factories import UserFactory
 from profiles.models import Profile
 
@@ -70,3 +74,118 @@ def test_user_created_actions(mocker, is_new):
 
     api.user_created_actions(**kwargs)
     assert user.user_lists.count() == (1 if is_new else 0)
+
+
+@pytest.fixture
+def mock_keycloak_admin(mocker):
+    """Mock the Keycloak admin client used for federated identity lookups"""
+    mocker.patch(
+        "authentication.api.keycloak_api.is_admin_client_configured",
+        return_value=True,
+    )
+    return mocker.patch("authentication.api.keycloak_api.get_admin_client").return_value
+
+
+@pytest.mark.parametrize(
+    ("social_logins", "expected"),
+    [
+        ([{"identityProvider": "touchstone"}], True),
+        ([], False),
+    ],
+)
+def test_is_sso_user(mock_keycloak_admin, social_logins, expected):
+    """Users with a federated identity in Keycloak are SSO users"""
+    user = UserFactory.create(global_id=uuid4().hex, is_sso_user=None)
+    mock_keycloak_admin.get_user_social_logins.return_value = social_logins
+
+    assert api.is_sso_user(user) is expected
+    mock_keycloak_admin.get_user_social_logins.assert_called_once_with(user.global_id)
+
+    # the answer is recorded, not just returned
+    user.refresh_from_db()
+    assert user.is_sso_user is expected
+
+
+def test_is_sso_user_only_asks_keycloak_once(mock_keycloak_admin):
+    """Once stored on the user, Keycloak isn't consulted again"""
+    user = UserFactory.create(global_id=uuid4().hex, is_sso_user=None)
+    mock_keycloak_admin.get_user_social_logins.return_value = [
+        {"identityProvider": "touchstone"}
+    ]
+
+    assert api.is_sso_user(user) is True
+    assert api.is_sso_user(user) is True
+    assert mock_keycloak_admin.get_user_social_logins.call_count == 1
+
+
+@pytest.mark.parametrize("stored", [True, False])
+def test_is_sso_user_stored_value_wins(mock_keycloak_admin, stored):
+    """
+    An explicitly set flag overrides Keycloak.
+
+    This is what lets someone keep an account after leaving the organization
+    that provided their identity: clear the flag and they can manage their own
+    email and password, whatever Keycloak still reports.
+    """
+    user = UserFactory.create(global_id=uuid4().hex, is_sso_user=stored)
+    mock_keycloak_admin.get_user_social_logins.return_value = [
+        {"identityProvider": "touchstone"}
+    ]
+
+    assert api.is_sso_user(user) is stored
+    mock_keycloak_admin.get_user_social_logins.assert_not_called()
+
+
+def test_is_sso_user_no_global_id(mock_keycloak_admin):
+    """Users who have never been through Keycloak can't be SSO users"""
+    user = UserFactory.create(global_id=None, is_sso_user=None)
+
+    assert api.is_sso_user(user) is False
+    mock_keycloak_admin.get_user_social_logins.assert_not_called()
+
+
+def test_is_sso_user_admin_client_unconfigured(mocker):
+    """Without an admin client we can't tell, so we don't block the user"""
+    mocker.patch(
+        "authentication.api.keycloak_api.is_admin_client_configured",
+        return_value=False,
+    )
+    get_admin_client = mocker.patch("authentication.api.keycloak_api.get_admin_client")
+    user = UserFactory.create(global_id=uuid4().hex, is_sso_user=None)
+
+    assert api.is_sso_user(user) is False
+    get_admin_client.assert_not_called()
+    user.refresh_from_db()
+    assert user.is_sso_user is None
+
+
+def test_is_sso_user_keycloak_error(mock_keycloak_admin):
+    """A Keycloak failure shouldn't take the settings page down with it"""
+    user = UserFactory.create(global_id=uuid4().hex, is_sso_user=None)
+    mock_keycloak_admin.get_user_social_logins.side_effect = KeycloakError("boom")
+
+    assert api.is_sso_user(user) is False
+    # left null so a later read retries rather than recording a guess
+    user.refresh_from_db()
+    assert user.is_sso_user is None
+
+
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    [
+        ("update-email", AccountAction.UPDATE_EMAIL),
+        ("update-password", AccountAction.UPDATE_PASSWORD),
+        ("delete-account", None),
+        ("", None),
+        (None, None),
+    ],
+)
+def test_parse_account_action(value, expected):
+    """
+    A raw query-string value maps to its AccountAction, or None.
+
+    Pins that a plain string is recognised: `value in AccountAction` only
+    accepts values from Python 3.12 onwards and raises TypeError before that,
+    so the callback's reporting branch depends on this.
+    """
+    assert parse_account_action(value) is expected

@@ -30,71 +30,75 @@ describe("useConsumeSearchParamsOnce", () => {
   })
 
   test("stores the parsed value and clears only the requested params", async () => {
-    useSearchParams.mockReturnValue(new URLSearchParams("foo=hello&bar=world"))
+    useSearchParams.mockReturnValue(
+      new URLSearchParams("token=hello&next=world"),
+    )
 
     const { result } = renderHook(() =>
       useConsumeSearchParamsOnce((searchParams) => ({
         value: {
-          foo: searchParams.get("foo"),
-          bar: searchParams.get("bar"),
+          token: searchParams.get("token"),
+          next: searchParams.get("next"),
         },
-        keysToRemove: ["foo", "bar"],
+        keysToRemove: ["token", "next"],
       })),
     )
 
     await waitFor(() => {
-      expect(result.current).toEqual({ foo: "hello", bar: "world" })
+      expect(result.current).toEqual({ token: "hello", next: "world" })
     })
     expect(replaceStateSpy).toHaveBeenCalledWith(null, "", "/")
   })
 
   test("allows the parser to keep missing values in the returned payload", async () => {
-    useSearchParams.mockReturnValue(new URLSearchParams("foo=yes"))
+    useSearchParams.mockReturnValue(new URLSearchParams("token=yes"))
 
     const { result } = renderHook(() =>
       useConsumeSearchParamsOnce((searchParams) => ({
         value: {
-          foo: searchParams.get("foo"),
-          bar: searchParams.get("bar"),
+          token: searchParams.get("token"),
+          next: searchParams.get("next"),
         },
-        keysToRemove: ["foo"],
+        keysToRemove: ["token"],
       })),
     )
 
     await waitFor(() => {
-      expect(result.current).toEqual({ foo: "yes", bar: null })
+      expect(result.current).toEqual({ token: "yes", next: null })
     })
   })
 
   test("preserves unrelated query params when cleaning", async () => {
-    useSearchParams.mockReturnValue(new URLSearchParams("foo=1&unrelated=keep"))
+    useSearchParams.mockReturnValue(
+      new URLSearchParams("token=1&unrelated=keep"),
+    )
 
     const { result } = renderHook(() =>
       useConsumeSearchParamsOnce((searchParams) => ({
-        value: { foo: searchParams.get("foo") },
-        keysToRemove: ["foo"],
+        value: { token: searchParams.get("token") },
+        keysToRemove: ["token"],
       })),
     )
 
     await waitFor(() => {
-      expect(result.current).toEqual({ foo: "1" })
+      expect(result.current).toEqual({ token: "1" })
     })
     expect(replaceStateSpy).toHaveBeenCalledWith(null, "", "/?unrelated=keep")
   })
 
   test("preserves hash fragment when cleaning params", async () => {
-    useSearchParams.mockReturnValue(new URLSearchParams("foo=1"))
+    useSearchParams.mockReturnValue(new URLSearchParams("token=1"))
     window.location.hash = "#section"
 
     const { result } = renderHook(() =>
       useConsumeSearchParamsOnce((searchParams) => ({
-        value: { foo: searchParams.get("foo") },
-        keysToRemove: ["foo"],
+        value: { token: searchParams.get("token") },
+        keysToRemove: ["token"],
       })),
     )
 
     await waitFor(() => {
-      expect(result.current).toEqual({ foo: "1" })
+      expect(result.current).toEqual({ token: "1" })
     })
     expect(replaceStateSpy).toHaveBeenCalledWith(null, "", "/#section")
 
@@ -102,12 +106,14 @@ describe("useConsumeSearchParamsOnce", () => {
   })
 
   test("supports cleanup-only results by allowing value to be undefined", async () => {
-    useSearchParams.mockReturnValue(new URLSearchParams("foo=1&unrelated=keep"))
+    useSearchParams.mockReturnValue(
+      new URLSearchParams("token=1&unrelated=keep"),
+    )
 
     const { result } = renderHook(() =>
       useConsumeSearchParamsOnce(() => ({
         value: undefined,
-        keysToRemove: ["foo"],
+        keysToRemove: ["token"],
       })),
     )
 
@@ -123,12 +129,12 @@ describe("useConsumeSearchParamsOnce", () => {
 
     const { result, rerender } = renderHook(() =>
       useConsumeSearchParamsOnce((searchParams) => {
-        if (!searchParams.has("foo")) {
+        if (!searchParams.has("token")) {
           return null
         }
         return {
-          value: { foo: searchParams.get("foo") },
-          keysToRemove: ["foo"],
+          value: { token: searchParams.get("token") },
+          keysToRemove: ["token"],
         }
       }),
     )
@@ -136,7 +142,7 @@ describe("useConsumeSearchParamsOnce", () => {
     expect(result.current).toBeUndefined()
 
     // Later: params appear (e.g., client-side navigation)
-    useSearchParams.mockReturnValue(new URLSearchParams("foo=late"))
+    useSearchParams.mockReturnValue(new URLSearchParams("token=late"))
     rerender()
 
     // Should still be undefined — hook only reads initial params

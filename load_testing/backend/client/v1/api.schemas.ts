@@ -114,6 +114,11 @@ export const CertificationTypeEnum = {
 } as const
 
 /**
+ * @nullable
+ */
+export type ContentFileImageSrc = string | string | null
+
+/**
  * Serializer class for course run ContentFiles
  */
 export interface ContentFile {
@@ -167,11 +172,8 @@ export interface ContentFile {
    */
   content_language?: string | null
   checksum?: string
-  /**
-   * @maxLength 200
-   * @nullable
-   */
-  image_src?: string | null
+  /** @nullable */
+  image_src?: ContentFileImageSrc
   readonly resource_id: string
   readonly resource_readable_id: string
   source_path?: string
@@ -258,8 +260,10 @@ export interface ContentFileSearchResponse {
 export interface ContentFileWebHookRequest {
   content_path?: string
   source: SourceEnum
-  course_id?: string
-  course_readable_id?: string
+  /** @nullable */
+  course_id?: string | null
+  /** @nullable */
+  course_readable_id?: string | null
 }
 
 /**
@@ -268,8 +272,10 @@ export interface ContentFileWebHookRequest {
 export interface ContentFileWebHookRequestRequest {
   content_path?: string
   source: SourceEnum
-  course_id?: string
-  course_readable_id?: string
+  /** @nullable */
+  course_id?: string | null
+  /** @nullable */
+  course_readable_id?: string | null
 }
 
 /**
@@ -456,6 +462,10 @@ For all other types, returns "learning_material".
    * @nullable
    */
   readonly best_run_id: number | null
+  /** Where this resource lives within Learn */
+  readonly learn_url: string
+  /** Slug derived from the title, for use in this resource's URL. It is cosmetic: lookups ignore it, and it changes whenever the title does. Titles that yield no ASCII slug get the literal "resource", so this is never blank. */
+  readonly url_slug: string
   resource_type: CourseResourceResourceType
   readonly course: Course
   readonly readable_id: string
@@ -666,7 +676,8 @@ export const DeliveryEnum = {
  * `21G` - Global Languages
  * `21H` - History
  * `21L` - Literature
- * `21M` - Music and Theater Arts
+ * `21M` - Music
+ * `21T` - Theater Arts
  * `22` - Nuclear Science and Engineering
  * `24` - Linguistics and Philosophy
  * `CC` - Concourse
@@ -731,15 +742,17 @@ export const DepartmentEnum = {
   "21H": "21H",
   /** Literature */
   "21L": "21L",
-  /** Music and Theater Arts */
+  /** Music */
   "21M": "21M",
+  /** Theater Arts */
+  "21T": "21T",
   /** Nuclear Science and Engineering */
   NUMBER_22: "22",
   /** Linguistics and Philosophy */
   NUMBER_24: "24",
   /** Concourse */
   CC: "CC",
-  /** Comparative Media Studies\/Writing */
+  /** Comparative Media Studies/Writing */
   "CMS-W": "CMS-W",
   /** Edgerton Center */
   EC: "EC",
@@ -759,7 +772,7 @@ export const DepartmentEnum = {
   SP: "SP",
   /** Science, Technology, and Society */
   STS: "STS",
-  /** Women\'s and Gender Studies */
+  /** Women's and Gender Studies */
   WGS: "WGS",
 } as const
 
@@ -911,9 +924,13 @@ For all other types, returns "learning_material".
    * @nullable
    */
   readonly best_run_id: number | null
+  /** Where this resource lives within Learn */
+  readonly learn_url: string
+  /** Slug derived from the title, for use in this resource's URL. It is cosmetic: lookups ignore it, and it changes whenever the title does. Titles that yield no ASCII slug get the literal "resource", so this is never blank. */
+  readonly url_slug: string
   resource_type: DocumentResourceResourceType
   /** @nullable */
-  readonly content_files: readonly ContentFile[] | null
+  readonly content_files: readonly NestedContentFile[] | null
   /** @nullable */
   readonly description: string | null
   readonly readable_id: string
@@ -1679,6 +1696,10 @@ For all other types, returns "learning_material".
    * @nullable
    */
   readonly best_run_id: number | null
+  /** Where this resource lives within Learn */
+  readonly learn_url: string
+  /** Slug derived from the title, for use in this resource's URL. It is cosmetic: lookups ignore it, and it changes whenever the title does. Titles that yield no ASCII slug get the literal "resource", so this is never blank. */
+  readonly url_slug: string
   resource_type: LearningPathResourceResourceType
   /** The display category for this resource. */
   readonly resource_category: string
@@ -2162,6 +2183,8 @@ export interface LearningResourceOfferor {
   display_facet?: boolean
 }
 
+export type LearningResourceOfferorDetailMoreInformation = string | string
+
 /**
  * Serializer for LearningResourceOfferor with all details
  */
@@ -2179,8 +2202,7 @@ export interface LearningResourceOfferorDetail {
   fee?: string[]
   certifications?: string[]
   content_types?: string[]
-  /** @maxLength 200 */
-  more_information?: string
+  more_information?: LearningResourceOfferorDetailMoreInformation
   value_prop?: string
   display_facet?: boolean
 }
@@ -2621,7 +2643,47 @@ export interface LearningResourceSummary {
    * @nullable
    */
   url?: string | null
+  /** @maxLength 256 */
+  title: string
+  resource_type: LearningResourceSummaryResourceTypeEnum
+  /** Ids of the parents that form part of this resource's URL: the parent podcasts of a podcast episode, the playlists of a video. Empty for every other resource type. Parents are not filtered by `published`, so an id here may belong to a resource this endpoint will not return. */
+  readonly canonical_parent_ids: readonly number[]
+  /** Where this resource lives within Learn */
+  readonly learn_url: string
 }
+
+/**
+ * * `course` - Course
+ * `program` - Program
+ * `learning_path` - Learning Path
+ * `podcast` - Podcast
+ * `podcast_episode` - Podcast Episode
+ * `video` - Video
+ * `video_playlist` - Video Playlist
+ * `document` - Document
+ */
+export type LearningResourceSummaryResourceTypeEnum =
+  (typeof LearningResourceSummaryResourceTypeEnum)[keyof typeof LearningResourceSummaryResourceTypeEnum]
+
+// eslint-disable-next-line @typescript-eslint/no-redeclare
+export const LearningResourceSummaryResourceTypeEnum = {
+  /** Course */
+  course: "course",
+  /** Program */
+  program: "program",
+  /** Learning Path */
+  learning_path: "learning_path",
+  /** Podcast */
+  podcast: "podcast",
+  /** Podcast Episode */
+  podcast_episode: "podcast_episode",
+  /** Video */
+  video: "video",
+  /** Video Playlist */
+  video_playlist: "video_playlist",
+  /** Document */
+  document: "document",
+} as const
 
 /**
  * Serializer for LearningResourceTopic model
@@ -2718,6 +2780,97 @@ export interface MicroUserListRelationship {
   readonly child: number
 }
 
+/**
+ * @nullable
+ */
+export type NestedContentFileImageSrc = string | string | null
+
+/**
+ * ContentFileSerializer without the large text fields (content, summary,
+flashcards), for nesting inside learning resource API responses.
+The search indexing path re-adds full content where needed.
+ */
+export interface NestedContentFile {
+  readonly id: number
+  run_id?: number
+  /** @nullable */
+  direct_learning_resource_id?: number | null
+  run_title?: string
+  run_slug?: string
+  readonly departments: readonly LearningResourceDepartment[]
+  semester?: string
+  year?: number
+  readonly topics: readonly LearningResourceTopic[]
+  /**
+   * @maxLength 1024
+   * @nullable
+   */
+  key?: string | null
+  /**
+   * @maxLength 36
+   * @nullable
+   */
+  uid?: string | null
+  /**
+   * @maxLength 1024
+   * @nullable
+   */
+  title?: string | null
+  /** @nullable */
+  description?: string | null
+  readonly require_summaries: boolean
+  /** @nullable */
+  url?: string | null
+  content_feature_type: string[]
+  content_type?: ContentFileContentTypeEnum
+  /**
+   * @maxLength 1024
+   * @nullable
+   */
+  content_title?: string | null
+  /**
+   * @maxLength 1024
+   * @nullable
+   */
+  content_author?: string | null
+  /**
+   * @maxLength 24
+   * @nullable
+   */
+  content_language?: string | null
+  checksum?: string
+  /** @nullable */
+  image_src?: NestedContentFileImageSrc
+  readonly resource_id: string
+  readonly resource_readable_id: string
+  source_path?: string
+  /** Extract the course number(s) from the associated course */
+  readonly course_number: readonly string[]
+  /**
+   * @maxLength 128
+   * @nullable
+   */
+  file_type?: string | null
+  /**
+   * @maxLength 32
+   * @nullable
+   */
+  file_extension?: string | null
+  readonly offered_by: LearningResourceOfferor
+  readonly platform: LearningResourcePlatform
+  run_readable_id?: string
+  /**
+   * @maxLength 1024
+   * @nullable
+   */
+  edx_module_id?: string | null
+  /**
+   * @maxLength 32
+   * @nullable
+   */
+  youtube_id?: string | null
+}
+
 export type NullEnum = (typeof NullEnum)[keyof typeof NullEnum]
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
@@ -2731,9 +2884,15 @@ public videos API; `key` is required) or a delete payload (`video_id` plus
 `delete: true`).
  */
 export interface OVSVideoWebhookRequestRequest {
-  /** @minLength 1 */
+  /**
+   * @minLength 1
+   * @pattern ^[A-Za-z0-9._-]{1,255}$
+   */
   key?: string
-  /** @minLength 1 */
+  /**
+   * @minLength 1
+   * @pattern ^[A-Za-z0-9._-]{1,255}$
+   */
   video_id?: string
   delete?: boolean
 }
@@ -3102,6 +3261,8 @@ export interface PatchedUserListRequest {
   privacy_level?: PrivacyLevelEnum
 }
 
+export type PatchedWebsiteContentRequestSlug = string | string
+
 /**
  * Serializer for WebsiteContent model.
  */
@@ -3115,11 +3276,8 @@ export interface PatchedWebsiteContentRequest {
   content?: unknown
   content_type?: WebsiteContentContentTypeEnum
   is_published?: boolean
-  /**
-   * @maxLength 60
-   * @pattern ^[-a-zA-Z0-9_]+$
-   */
-  slug?: string
+  slug?: PatchedWebsiteContentRequestSlug
+  topics?: number[]
 }
 
 /**
@@ -3274,7 +3432,8 @@ export interface PercolateQuerySubscriptionRequestRequest {
 * `21G` - Global Languages
 * `21H` - History
 * `21L` - Literature
-* `21M` - Music and Theater Arts
+* `21M` - Music
+* `21T` - Theater Arts
 * `22` - Nuclear Science and Engineering
 * `24` - Linguistics and Philosophy
 * `CC` - Concourse
@@ -3488,8 +3647,13 @@ export interface Podcast {
 export interface PodcastEpisode {
   readonly id: number
   /** Get the podcast id(s) the episode belongs to */
-  readonly podcasts: readonly string[]
-  transcript?: string
+  readonly podcasts: readonly number[]
+  readonly parent_podcasts: readonly PodcastEpisodeParent[]
+  /** Whether a transcript is available from the transcript endpoint.
+
+The text itself is excluded from this serializer, so this is how a
+client knows whether to fetch it. */
+  readonly has_transcript: boolean
   /** @maxLength 2048 */
   audio_url: string
   /**
@@ -3502,15 +3666,23 @@ export interface PodcastEpisode {
    * @nullable
    */
   duration?: string | null
-  /** @nullable */
-  rss?: string | null
+}
+
+/**
+ * Minimal parent-podcast summary embedded in an episode.
+ */
+export interface PodcastEpisodeParent {
+  id: number
+  title: string
+  readable_id: string
+  /** Where this podcast lives within Learn */
+  readonly learn_url: string
 }
 
 /**
  * Serializer for PodcastEpisode
  */
 export interface PodcastEpisodeRequest {
-  transcript?: string
   /**
    * @minLength 1
    * @maxLength 2048
@@ -3527,8 +3699,6 @@ export interface PodcastEpisodeRequest {
    * @nullable
    */
   duration?: string | null
-  /** @nullable */
-  rss?: string | null
 }
 
 /**
@@ -3679,6 +3849,10 @@ For all other types, returns "learning_material".
    * @nullable
    */
   readonly best_run_id: number | null
+  /** Where this resource lives within Learn */
+  readonly learn_url: string
+  /** Slug derived from the title, for use in this resource's URL. It is cosmetic: lookups ignore it, and it changes whenever the title does. Titles that yield no ASCII slug get the literal "resource", so this is never blank. */
+  readonly url_slug: string
   resource_type: PodcastEpisodeResourceResourceType
   readonly podcast_episode: PodcastEpisode
   readonly readable_id: string
@@ -3845,6 +4019,17 @@ export type PodcastEpisodeResourceResourceTypeEnum =
 export const PodcastEpisodeResourceResourceTypeEnum = {
   podcast_episode: "podcast_episode",
 } as const
+
+/**
+ * Serializer for a single podcast episode's transcript.
+
+Kept out of PodcastEpisodeSerializer so the text is only ever sent when a
+client asks for this one episode's transcript.
+ */
+export interface PodcastEpisodeTranscript {
+  readonly id: number
+  transcript?: string
+}
 
 /**
  * Serializer for Podcasts
@@ -4019,6 +4204,10 @@ For all other types, returns "learning_material".
    * @nullable
    */
   readonly best_run_id: number | null
+  /** Where this resource lives within Learn */
+  readonly learn_url: string
+  /** Slug derived from the title, for use in this resource's URL. It is cosmetic: lookups ignore it, and it changes whenever the title does. Titles that yield no ASCII slug get the literal "resource", so this is never blank. */
+  readonly url_slug: string
   resource_type: PodcastResourceResourceType
   readonly podcast: Podcast
   readonly readable_id: string
@@ -4210,102 +4399,28 @@ export interface Program {
 }
 
 /**
- * Serializer for Program Certificates
- */
-export interface ProgramCertificate {
-  readonly record_hash: string
-  readonly program_letter_generate_url: string
-  readonly program_letter_share_url: string
-  /** @maxLength 256 */
-  program_title: string
-  /** @maxLength 256 */
-  user_full_name?: string
-  /** @maxLength 256 */
-  user_email: string
-  /**
-   * @minimum -2147483648
-   * @maximum 2147483647
-   * @nullable
-   */
-  user_edxorg_id?: number | null
-  /**
-   * @minimum -2147483648
-   * @maximum 2147483647
-   * @nullable
-   */
-  micromasters_program_id?: number | null
-  /**
-   * @minimum -2147483648
-   * @maximum 2147483647
-   * @nullable
-   */
-  mitxonline_program_id?: number | null
-  /**
-   * @maxLength 256
-   * @nullable
-   */
-  user_edxorg_username?: string | null
-  /**
-   * @maxLength 256
-   * @nullable
-   */
-  user_gender?: string | null
-  /**
-   * @maxLength 256
-   * @nullable
-   */
-  user_address_city?: string | null
-  /**
-   * @maxLength 256
-   * @nullable
-   */
-  user_first_name?: string | null
-  /**
-   * @maxLength 256
-   * @nullable
-   */
-  user_last_name?: string | null
-  /**
-   * @maxLength 256
-   * @nullable
-   */
-  user_year_of_birth?: string | null
-  /**
-   * @maxLength 256
-   * @nullable
-   */
-  user_country?: string | null
-  /**
-   * @maxLength 256
-   * @nullable
-   */
-  user_address_postal_code?: string | null
-  /**
-   * @maxLength 256
-   * @nullable
-   */
-  user_street_address?: string | null
-  /**
-   * @maxLength 256
-   * @nullable
-   */
-  user_address_state_or_territory?: string | null
-  /**
-   * @maxLength 256
-   * @nullable
-   */
-  user_mitxonline_username?: string | null
-  /** @nullable */
-  program_completion_timestamp?: string | null
-}
-
-/**
  * Serializer for Program Letters
  */
 export interface ProgramLetter {
   readonly id: string
   readonly template_fields: ProgramLetterTemplateField
-  certificate: ProgramCertificate
+  certificate: ProgramLetterCertificate
+}
+
+/**
+ * The certificate fields the public program letter view needs.
+
+ProgramLetterViewSet is unauthenticated -- anyone holding a letter's uuid
+can read it -- so this exposes only what the letter itself already states:
+who earned it and which program. The learner's email, postal address, date
+of birth, gender and platform usernames stay behind the authenticated
+certificate list, which uses ProgramCertificateSerializer.
+ */
+export interface ProgramLetterCertificate {
+  /** @maxLength 256 */
+  user_full_name?: string
+  /** @maxLength 256 */
+  program_title: string
 }
 
 /**
@@ -4473,6 +4588,10 @@ For all other types, returns "learning_material".
    * @nullable
    */
   readonly best_run_id: number | null
+  /** Where this resource lives within Learn */
+  readonly learn_url: string
+  /** Slug derived from the title, for use in this resource's URL. It is cosmetic: lookups ignore it, and it changes whenever the title does. Titles that yield no ASCII slug get the literal "resource", so this is never blank. */
+  readonly url_slug: string
   resource_type: ProgramResourceResourceType
   readonly program: Program
   readonly readable_id: string
@@ -4810,8 +4929,7 @@ export const SortbyEnum = {
 } as const
 
 /**
- * * `micromasters` - micromasters
- * `mit_edx` - mit_edx
+ * * `mit_edx` - mit_edx
  * `mitpe` - mitpe
  * `mitxonline` - mitxonline
  * `oll` - oll
@@ -4828,8 +4946,6 @@ export type SourceEnum = (typeof SourceEnum)[keyof typeof SourceEnum]
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 export const SourceEnum = {
-  /** micromasters */
-  micromasters: "micromasters",
   /** mit_edx */
   mit_edx: "mit_edx",
   /** mitpe */
@@ -4950,15 +5066,25 @@ export interface UserRequest {
 }
 
 /**
+ * @nullable
+ */
+export type VideoStreamingUrl = string | string | null
+
+/**
+ * @nullable
+ */
+export type VideoCoverImageUrl = string | string | null
+
+/**
  * Serializer for the Video model
  */
 export interface Video {
   readonly id: number
   readonly caption_urls: readonly CaptionUrl[]
   /** @nullable */
-  readonly streaming_url: string | null
+  readonly streaming_url: VideoStreamingUrl
   /** @nullable */
-  readonly cover_image_url: string | null
+  readonly cover_image_url: VideoCoverImageUrl
   /** @maxLength 11 */
   duration: string
 }
@@ -5002,6 +5128,14 @@ export interface VideoPlaylist {
   /** @nullable */
   readonly channel: VideoPlaylistChannel
   video_count: number
+  /** @nullable */
+  readonly parent_learning_resource_id: number | null
+  /** @nullable */
+  readonly parent_title: string | null
+  /** @nullable */
+  readonly parent_url: string | null
+  /** Extract the course number(s) from the parent course, if any */
+  readonly parent_course_numbers: readonly string[]
 }
 
 /**
@@ -5159,6 +5293,10 @@ For all other types, returns "learning_material".
    * @nullable
    */
   readonly best_run_id: number | null
+  /** Where this resource lives within Learn */
+  readonly learn_url: string
+  /** Slug derived from the title, for use in this resource's URL. It is cosmetic: lookups ignore it, and it changes whenever the title does. Titles that yield no ASCII slug get the literal "resource", so this is never blank. */
+  readonly url_slug: string
   resource_type: VideoPlaylistResourceResourceType
   readonly video_playlist: VideoPlaylist
   readonly readable_id: string
@@ -5490,13 +5628,17 @@ For all other types, returns "learning_material".
    * @nullable
    */
   readonly best_run_id: number | null
+  /** Where this resource lives within Learn */
+  readonly learn_url: string
+  /** Slug derived from the title, for use in this resource's URL. It is cosmetic: lookups ignore it, and it changes whenever the title does. Titles that yield no ASCII slug get the literal "resource", so this is never blank. */
+  readonly url_slug: string
   resource_type: VideoResourceResourceType
   /** @nullable */
   readonly video: VideoResourceVideo
   /** Get the playlist id(s) the video belongs to */
   readonly playlists: readonly string[]
   /** @nullable */
-  readonly content_files: readonly ContentFile[] | null
+  readonly content_files: readonly NestedContentFile[] | null
   /** @nullable */
   readonly description: string | null
   readonly readable_id: string
@@ -5669,6 +5811,10 @@ export interface WebhookResponse {
   error?: string
 }
 
+export type WebsiteContentSlug = string | string
+
+export type WebsiteContentCoverImage = string | string
+
 /**
  * Serializer for WebsiteContent model.
  */
@@ -5684,11 +5830,9 @@ export interface WebsiteContent {
   readonly updated_on: string
   readonly publish_date: string
   is_published?: boolean
-  /**
-   * @maxLength 60
-   * @pattern ^[-a-zA-Z0-9_]+$
-   */
-  slug?: string
+  slug?: WebsiteContentSlug
+  readonly cover_image: WebsiteContentCoverImage
+  topics?: number[]
 }
 
 /**
@@ -5710,6 +5854,8 @@ export interface WebsiteContentImageUploadRequest {
   image_file: Blob
 }
 
+export type WebsiteContentRequestSlug = string | string
+
 /**
  * Serializer for WebsiteContent model.
  */
@@ -5723,11 +5869,8 @@ export interface WebsiteContentRequest {
   content?: unknown
   content_type?: WebsiteContentContentTypeEnum
   is_published?: boolean
-  /**
-   * @maxLength 60
-   * @pattern ^[-a-zA-Z0-9_]+$
-   */
-  slug?: string
+  slug?: WebsiteContentRequestSlug
+  topics?: number[]
 }
 
 export type ArticlesListParams = {
@@ -6127,7 +6270,8 @@ export type CoursesListParams = {
 * `21G` - Global Languages
 * `21H` - History
 * `21L` - Literature
-* `21M` - Music and Theater Arts
+* `21M` - Music
+* `21T` - Theater Arts
 * `22` - Nuclear Science and Engineering
 * `24` - Linguistics and Philosophy
 * `CC` - Concourse
@@ -6310,6 +6454,7 @@ export const CoursesListDepartmentItem = {
   "21H": "21H",
   "21L": "21L",
   "21M": "21M",
+  "21T": "21T",
   NUMBER_22: "22",
   NUMBER_24: "24",
   NUMBER_3: "3",
@@ -6602,7 +6747,8 @@ export type FeaturedListParams = {
 * `21G` - Global Languages
 * `21H` - History
 * `21L` - Literature
-* `21M` - Music and Theater Arts
+* `21M` - Music
+* `21T` - Theater Arts
 * `22` - Nuclear Science and Engineering
 * `24` - Linguistics and Philosophy
 * `CC` - Concourse
@@ -6785,6 +6931,7 @@ export const FeaturedListDepartmentItem = {
   "21H": "21H",
   "21L": "21L",
   "21M": "21M",
+  "21T": "21T",
   NUMBER_22: "22",
   NUMBER_24: "24",
   NUMBER_3: "3",
@@ -6994,7 +7141,8 @@ export type LearningResourceDisplayInfoListParams = {
 * `21G` - Global Languages
 * `21H` - History
 * `21L` - Literature
-* `21M` - Music and Theater Arts
+* `21M` - Music
+* `21T` - Theater Arts
 * `22` - Nuclear Science and Engineering
 * `24` - Linguistics and Philosophy
 * `CC` - Concourse
@@ -7177,6 +7325,7 @@ export const LearningResourceDisplayInfoListDepartmentItem = {
   "21H": "21H",
   "21L": "21L",
   "21M": "21M",
+  "21T": "21T",
   NUMBER_22: "22",
   NUMBER_24: "24",
   NUMBER_3: "3",
@@ -7351,7 +7500,8 @@ export type LearningResourcesListParams = {
 * `21G` - Global Languages
 * `21H` - History
 * `21L` - Literature
-* `21M` - Music and Theater Arts
+* `21M` - Music
+* `21T` - Theater Arts
 * `22` - Nuclear Science and Engineering
 * `24` - Linguistics and Philosophy
 * `CC` - Concourse
@@ -7534,6 +7684,7 @@ export const LearningResourcesListDepartmentItem = {
   "21H": "21H",
   "21L": "21L",
   "21M": "21M",
+  "21T": "21T",
   NUMBER_22: "22",
   NUMBER_24: "24",
   NUMBER_3: "3",
@@ -7712,7 +7863,8 @@ export type LearningResourcesSimilarListParams = {
 * `21G` - Global Languages
 * `21H` - History
 * `21L` - Literature
-* `21M` - Music and Theater Arts
+* `21M` - Music
+* `21T` - Theater Arts
 * `22` - Nuclear Science and Engineering
 * `24` - Linguistics and Philosophy
 * `CC` - Concourse
@@ -7781,6 +7933,10 @@ export type LearningResourcesSimilarListParams = {
    * @nullable
    */
   professional?: boolean | null
+  /**
+   * The resource category for the resource
+   */
+  resource_category?: string[]
   /**
  * The type of learning resource
 
@@ -7865,7 +8021,8 @@ export const LearningResourcesSimilarListDeliveryItem = {
  * `21G` - Global Languages
  * `21H` - History
  * `21L` - Literature
- * `21M` - Music and Theater Arts
+ * `21M` - Music
+ * `21T` - Theater Arts
  * `22` - Nuclear Science and Engineering
  * `24` - Linguistics and Philosophy
  * `CC` - Concourse
@@ -7909,6 +8066,7 @@ export const LearningResourcesSimilarListDepartmentItem = {
   "21H": "21H",
   "21L": "21L",
   "21M": "21M",
+  "21T": "21T",
   NUMBER_22: "22",
   NUMBER_24: "24",
   CC: "CC",
@@ -8115,7 +8273,8 @@ export type LearningResourcesVectorSimilarListParams = {
 * `21G` - Global Languages
 * `21H` - History
 * `21L` - Literature
-* `21M` - Music and Theater Arts
+* `21M` - Music
+* `21T` - Theater Arts
 * `22` - Nuclear Science and Engineering
 * `24` - Linguistics and Philosophy
 * `CC` - Concourse
@@ -8184,6 +8343,10 @@ export type LearningResourcesVectorSimilarListParams = {
    * @nullable
    */
   professional?: boolean | null
+  /**
+   * The resource category for the resource
+   */
+  resource_category?: string[]
   /**
  * The type of learning resource
 
@@ -8268,7 +8431,8 @@ export const LearningResourcesVectorSimilarListDeliveryItem = {
  * `21G` - Global Languages
  * `21H` - History
  * `21L` - Literature
- * `21M` - Music and Theater Arts
+ * `21M` - Music
+ * `21T` - Theater Arts
  * `22` - Nuclear Science and Engineering
  * `24` - Linguistics and Philosophy
  * `CC` - Concourse
@@ -8312,6 +8476,7 @@ export const LearningResourcesVectorSimilarListDepartmentItem = {
   "21H": "21H",
   "21L": "21L",
   "21M": "21M",
+  "21T": "21T",
   NUMBER_22: "22",
   NUMBER_24: "24",
   CC: "CC",
@@ -8650,7 +8815,8 @@ export type LearningResourcesSummaryListParams = {
 * `21G` - Global Languages
 * `21H` - History
 * `21L` - Literature
-* `21M` - Music and Theater Arts
+* `21M` - Music
+* `21T` - Theater Arts
 * `22` - Nuclear Science and Engineering
 * `24` - Linguistics and Philosophy
 * `CC` - Concourse
@@ -8833,6 +8999,7 @@ export const LearningResourcesSummaryListDepartmentItem = {
   "21H": "21H",
   "21L": "21L",
   "21M": "21M",
+  "21T": "21T",
   NUMBER_22: "22",
   NUMBER_24: "24",
   NUMBER_3: "3",
@@ -9022,7 +9189,8 @@ export type LearningResourcesSearchRetrieveParams = {
 * `21G` - Global Languages
 * `21H` - History
 * `21L` - Literature
-* `21M` - Music and Theater Arts
+* `21M` - Music
+* `21T` - Theater Arts
 * `22` - Nuclear Science and Engineering
 * `24` - Linguistics and Philosophy
 * `CC` - Concourse
@@ -9297,7 +9465,8 @@ export const LearningResourcesSearchRetrieveDeliveryItem = {
  * `21G` - Global Languages
  * `21H` - History
  * `21L` - Literature
- * `21M` - Music and Theater Arts
+ * `21M` - Music
+ * `21T` - Theater Arts
  * `22` - Nuclear Science and Engineering
  * `24` - Linguistics and Philosophy
  * `CC` - Concourse
@@ -9341,6 +9510,7 @@ export const LearningResourcesSearchRetrieveDepartmentItem = {
   "21H": "21H",
   "21L": "21L",
   "21M": "21M",
+  "21T": "21T",
   NUMBER_22: "22",
   NUMBER_24: "24",
   CC: "CC",
@@ -9597,7 +9767,8 @@ export type LearningResourcesUserSubscriptionListParams = {
 * `21G` - Global Languages
 * `21H` - History
 * `21L` - Literature
-* `21M` - Music and Theater Arts
+* `21M` - Music
+* `21T` - Theater Arts
 * `22` - Nuclear Science and Engineering
 * `24` - Linguistics and Philosophy
 * `CC` - Concourse
@@ -9872,7 +10043,8 @@ export const LearningResourcesUserSubscriptionListDeliveryItem = {
  * `21G` - Global Languages
  * `21H` - History
  * `21L` - Literature
- * `21M` - Music and Theater Arts
+ * `21M` - Music
+ * `21T` - Theater Arts
  * `22` - Nuclear Science and Engineering
  * `24` - Linguistics and Philosophy
  * `CC` - Concourse
@@ -9916,6 +10088,7 @@ export const LearningResourcesUserSubscriptionListDepartmentItem = {
   "21H": "21H",
   "21L": "21L",
   "21M": "21M",
+  "21T": "21T",
   NUMBER_22: "22",
   NUMBER_24: "24",
   CC: "CC",
@@ -10172,7 +10345,8 @@ export type LearningResourcesUserSubscriptionCheckListParams = {
 * `21G` - Global Languages
 * `21H` - History
 * `21L` - Literature
-* `21M` - Music and Theater Arts
+* `21M` - Music
+* `21T` - Theater Arts
 * `22` - Nuclear Science and Engineering
 * `24` - Linguistics and Philosophy
 * `CC` - Concourse
@@ -10455,7 +10629,8 @@ export const LearningResourcesUserSubscriptionCheckListDeliveryItem = {
  * `21G` - Global Languages
  * `21H` - History
  * `21L` - Literature
- * `21M` - Music and Theater Arts
+ * `21M` - Music
+ * `21T` - Theater Arts
  * `22` - Nuclear Science and Engineering
  * `24` - Linguistics and Philosophy
  * `CC` - Concourse
@@ -10499,6 +10674,7 @@ export const LearningResourcesUserSubscriptionCheckListDepartmentItem = {
   "21H": "21H",
   "21L": "21L",
   "21M": "21M",
+  "21T": "21T",
   NUMBER_22: "22",
   NUMBER_24: "24",
   CC: "CC",
@@ -10764,7 +10940,8 @@ export type LearningResourcesUserSubscriptionSubscribeCreateParams = {
 * `21G` - Global Languages
 * `21H` - History
 * `21L` - Literature
-* `21M` - Music and Theater Arts
+* `21M` - Music
+* `21T` - Theater Arts
 * `22` - Nuclear Science and Engineering
 * `24` - Linguistics and Philosophy
 * `CC` - Concourse
@@ -11049,7 +11226,8 @@ export const LearningResourcesUserSubscriptionSubscribeCreateDeliveryItem = {
  * `21G` - Global Languages
  * `21H` - History
  * `21L` - Literature
- * `21M` - Music and Theater Arts
+ * `21M` - Music
+ * `21T` - Theater Arts
  * `22` - Nuclear Science and Engineering
  * `24` - Linguistics and Philosophy
  * `CC` - Concourse
@@ -11093,6 +11271,7 @@ export const LearningResourcesUserSubscriptionSubscribeCreateDepartmentItem = {
   "21H": "21H",
   "21L": "21L",
   "21M": "21M",
+  "21T": "21T",
   NUMBER_22: "22",
   NUMBER_24: "24",
   CC: "CC",
@@ -11345,7 +11524,8 @@ export type LearningpathsListParams = {
 * `21G` - Global Languages
 * `21H` - History
 * `21L` - Literature
-* `21M` - Music and Theater Arts
+* `21M` - Music
+* `21T` - Theater Arts
 * `22` - Nuclear Science and Engineering
 * `24` - Linguistics and Philosophy
 * `CC` - Concourse
@@ -11528,6 +11708,7 @@ export const LearningpathsListDepartmentItem = {
   "21H": "21H",
   "21L": "21L",
   "21M": "21M",
+  "21T": "21T",
   NUMBER_22: "22",
   NUMBER_24: "24",
   NUMBER_3: "3",
@@ -11739,7 +11920,8 @@ export type PodcastEpisodesListParams = {
 * `21G` - Global Languages
 * `21H` - History
 * `21L` - Literature
-* `21M` - Music and Theater Arts
+* `21M` - Music
+* `21T` - Theater Arts
 * `22` - Nuclear Science and Engineering
 * `24` - Linguistics and Philosophy
 * `CC` - Concourse
@@ -11922,6 +12104,7 @@ export const PodcastEpisodesListDepartmentItem = {
   "21H": "21H",
   "21L": "21L",
   "21M": "21M",
+  "21T": "21T",
   NUMBER_22: "22",
   NUMBER_24: "24",
   NUMBER_3: "3",
@@ -12096,7 +12279,8 @@ export type PodcastsListParams = {
 * `21G` - Global Languages
 * `21H` - History
 * `21L` - Literature
-* `21M` - Music and Theater Arts
+* `21M` - Music
+* `21T` - Theater Arts
 * `22` - Nuclear Science and Engineering
 * `24` - Linguistics and Philosophy
 * `CC` - Concourse
@@ -12279,6 +12463,7 @@ export const PodcastsListDepartmentItem = {
   "21H": "21H",
   "21L": "21L",
   "21M": "21M",
+  "21T": "21T",
   NUMBER_22: "22",
   NUMBER_24: "24",
   NUMBER_3: "3",
@@ -12468,7 +12653,8 @@ export type ProgramsListParams = {
 * `21G` - Global Languages
 * `21H` - History
 * `21L` - Literature
-* `21M` - Music and Theater Arts
+* `21M` - Music
+* `21T` - Theater Arts
 * `22` - Nuclear Science and Engineering
 * `24` - Linguistics and Philosophy
 * `CC` - Concourse
@@ -12651,6 +12837,7 @@ export const ProgramsListDepartmentItem = {
   "21H": "21H",
   "21L": "21L",
   "21M": "21M",
+  "21T": "21T",
   NUMBER_22: "22",
   NUMBER_24: "24",
   NUMBER_3: "3",
@@ -12810,6 +12997,12 @@ export type TopicsListParams = {
   parent_topic_id?: number[]
 }
 
+export type UnsubscribeCreate200 = { [key: string]: unknown }
+
+export type UnsubscribeCreate400 = {
+  error?: string
+}
+
 export type MediaUpload201 = {
   url?: string
 }
@@ -12885,7 +13078,8 @@ export type VideoPlaylistsListParams = {
 * `21G` - Global Languages
 * `21H` - History
 * `21L` - Literature
-* `21M` - Music and Theater Arts
+* `21M` - Music
+* `21T` - Theater Arts
 * `22` - Nuclear Science and Engineering
 * `24` - Linguistics and Philosophy
 * `CC` - Concourse
@@ -13068,6 +13262,7 @@ export const VideoPlaylistsListDepartmentItem = {
   "21H": "21H",
   "21L": "21L",
   "21M": "21M",
+  "21T": "21T",
   NUMBER_22: "22",
   NUMBER_24: "24",
   NUMBER_3: "3",
@@ -13257,7 +13452,8 @@ export type VideosListParams = {
 * `21G` - Global Languages
 * `21H` - History
 * `21L` - Literature
-* `21M` - Music and Theater Arts
+* `21M` - Music
+* `21T` - Theater Arts
 * `22` - Nuclear Science and Engineering
 * `24` - Linguistics and Philosophy
 * `CC` - Concourse
@@ -13440,6 +13636,7 @@ export const VideosListDepartmentItem = {
   "21H": "21H",
   "21L": "21L",
   "21M": "21M",
+  "21T": "21T",
   NUMBER_22: "22",
   NUMBER_24: "24",
   NUMBER_3: "3",
@@ -13567,11 +13764,16 @@ export const VideosListSortby = {
 
 export type WebhooksContentFilesCreateParams = {
   content_path?: string
-  course_id?: string
-  course_readable_id?: string
   /**
-   * * `micromasters` - micromasters
-   * `mit_edx` - mit_edx
+   * @nullable
+   */
+  course_id?: string | null
+  /**
+   * @nullable
+   */
+  course_readable_id?: string | null
+  /**
+   * * `mit_edx` - mit_edx
    * `mitpe` - mitpe
    * `mitxonline` - mitxonline
    * `oll` - oll
@@ -13593,7 +13795,6 @@ export type WebhooksContentFilesCreateSource =
 
 // eslint-disable-next-line @typescript-eslint/no-redeclare
 export const WebhooksContentFilesCreateSource = {
-  micromasters: "micromasters",
   mit_edx: "mit_edx",
   mitpe: "mitpe",
   mitxonline: "mitxonline",

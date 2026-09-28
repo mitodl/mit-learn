@@ -45,7 +45,7 @@ const StateWrapper = (props: CheckboxChoiceBoxFieldProps) => {
         },
       }}
       gridItemProps={{
-        xs: 4,
+        size: 4,
       }}
     />
   )

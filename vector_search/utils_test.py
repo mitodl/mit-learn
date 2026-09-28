@@ -1,5 +1,13 @@
 import asyncio
+import difflib
+import json
+import math
+import os
 import random
+import subprocess
+import sys
+from concurrent.futures import ThreadPoolExecutor
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 from unittest.mock import MagicMock
 
@@ -8,13 +16,20 @@ from asgiref.sync import async_to_sync
 from django.conf import settings
 from django.contrib.auth.models import Group
 from django.urls import reverse
+from freezegun import freeze_time
 from langchain_core.documents import Document
-from qdrant_client import models
+from qdrant_client import QdrantClient, models
 from qdrant_client.http.models.models import CountResult
 from qdrant_client.models import PointStruct
 
 import vector_search.utils as vs_utils
-from learning_resources.constants import GROUP_CONTENT_FILE_CONTENT_VIEWERS
+from learning_resources.constants import (
+    CONTENT_FILE_LARGE_FIELDS,
+    GROUP_CONTENT_FILE_CONTENT_VIEWERS,
+    LearningResourceType,
+    PlatformType,
+)
+from learning_resources.etl.constants import ETLSource
 from learning_resources.factories import (
     ContentFileFactory,
     LearningResourceFactory,
@@ -23,10 +38,11 @@ from learning_resources.factories import (
     LearningResourceRunFactory,
     LearningResourceTopicFactory,
 )
-from learning_resources.models import LearningResource
+from learning_resources.models import ContentFile, LearningResource
 from learning_resources.serializers import LearningResourceMetadataDisplaySerializer
 from learning_resources_search.constants import (
     CONTENT_FILE_TYPE,
+    COURSE_TYPE,
 )
 from learning_resources_search.serializers import (
     serialize_bulk_content_files,
@@ -34,7 +50,11 @@ from learning_resources_search.serializers import (
 )
 from main.utils import checksum_for_content
 from vector_search.constants import (
+    COMPLETENESS_PAYLOAD_KEY,
     CONTENT_FILES_COLLECTION_NAME,
+    NEXT_START_DATE_PAYLOAD_KEY,
+    ORDER_BY_MISSING_DATETIME,
+    PROGRAM_SCORE_BOOST_NAME,
     QDRANT_CONTENT_FILE_INDEXES,
     QDRANT_CONTENT_FILE_PARAM_MAP,
     QDRANT_LEARNING_RESOURCE_INDEXES,
@@ -51,29 +71,45 @@ from vector_search.constants import (
     QDRANT_OPTIMIZER_THRESHOLD_MEDIUM,
     QDRANT_OPTIMIZER_THRESHOLD_SMALL,
     QDRANT_RESOURCE_PARAM_MAP,
+    RESOURCE_AGE_DATE_PAYLOAD_KEY,
+    RESOURCE_EMBEDDING_CHECKSUM_FIELD,
     RESOURCES_COLLECTION_NAME,
+    RESOURCES_PAYLOAD_EXCLUDE,
+    RESOURCES_RETRIEVE_PAYLOAD,
+    SECONDS_PER_YEAR,
 )
 from vector_search.encoders.utils import dense_encoder, sparse_encoder
 from vector_search.utils import (
     _chunk_documents,
     _chunk_markdown_documents,
+    _content_file_vector_hits,
     _embed_course_metadata_as_contentfile,
     _generate_content_file_points,
     _get_text_splitter,
     _is_markdown_content,
+    _resource_payload_hits,
     _resource_vector_hits,
     _set_payload,
+    async_content_file_chunks_for_resource,
     async_qdrant_aggregations,
     check_missing_content_file_ids,
+    completeness_penalty_expression,
     compute_optimizer_settings,
     create_qdrant_collections,
     custom_score_formula,
     embed_learning_resources,
     embed_topics,
     filter_existing_qdrant_points,
+    order_by_query,
     qdrant_query_conditions,
+    remove_qdrant_records,
+    resource_embedding_checksum,
+    resources_payload_selector,
+    score_formula_overrides,
+    score_formula_query,
     should_generate_content_embeddings,
     should_generate_resource_embeddings,
+    staleness_penalty_expression,
     update_content_file_payload,
     update_learning_resource_payload,
     update_qdrant_indexes,
@@ -221,16 +257,16 @@ def test_embed_learning_resources_no_overwrite(mocker, content_type):
             ],
         )
     else:
-        # all contentfiles exist in qdrant
-        mocker.patch(
-            "vector_search.utils.filter_existing_qdrant_points_by_ids",
-            return_value=[
-                vector_point_id(
-                    f"{doc['platform']['code']}.{doc['resource_readable_id']}.{doc['run_readable_id']}.{doc['key']}.0"
-                )
-                for doc in serialize_bulk_content_files([r.id for r in resources[0:3]])
-            ],
-        )
+        # the last 2 contentfiles already have points in qdrant; the first 3 don't
+        mock_qdrant.retrieve.return_value = [
+            mocker.MagicMock(
+                id=vector_point_id(
+                    vector_point_key(doc, chunk_number=0, document_type="content_file")
+                ),
+                payload={"checksum": doc["checksum"]},
+            )
+            for doc in serialize_bulk_content_files([r.id for r in resources[3:5]])
+        ]
     mocker.patch(
         "learning_resources.content_summarizer.ContentSummarizer.summarize_content_files_by_ids"
     )
@@ -303,6 +339,65 @@ def test_filter_existing_qdrant_points(mocker):
         == 0
     )
     assert filtered_resources.count() == 7
+
+
+@pytest.mark.parametrize(
+    ("platform_value", "expected_params"),
+    [
+        ({"code": "ocw"}, {"readable_id": "shared-readable-id", "platform": "ocw"}),
+        (None, {"readable_id": "shared-readable-id"}),
+    ],
+)
+def test_remove_qdrant_records_filters_learning_resources_by_platform(
+    mocker, platform_value, expected_params
+):
+    """Learning resource deletes should not cross platform boundaries."""
+    mocker.patch(
+        "vector_search.utils.serialize_bulk_learning_resources",
+        return_value=[
+            {"readable_id": "shared-readable-id", "platform": platform_value}
+        ],
+    )
+    mock_remove_points_matching_params = mocker.patch(
+        "vector_search.utils.remove_points_matching_params"
+    )
+
+    remove_qdrant_records([1], COURSE_TYPE)
+
+    mock_remove_points_matching_params.assert_called_once_with(
+        expected_params,
+        collection_name=RESOURCES_COLLECTION_NAME,
+    )
+
+
+def test_remove_qdrant_records_filters_content_files_by_platform(mocker):
+    """Content file deletes should include the platform in their identity filter."""
+    mocker.patch(
+        "vector_search.utils.serialize_bulk_content_files",
+        return_value=[
+            {
+                "platform": {"code": "mitxonline"},
+                "run_readable_id": "shared-run-id",
+                "resource_readable_id": "shared-readable-id",
+                "key": "documents/syllabus.pdf",
+            }
+        ],
+    )
+    mock_remove_points_matching_params = mocker.patch(
+        "vector_search.utils.remove_points_matching_params"
+    )
+
+    remove_qdrant_records([1], CONTENT_FILE_TYPE)
+
+    mock_remove_points_matching_params.assert_called_once_with(
+        {
+            "platform": "mitxonline",
+            "run_readable_id": "shared-run-id",
+            "resource_readable_id": "shared-readable-id",
+            "key": "documents/syllabus.pdf",
+        },
+        collection_name=CONTENT_FILES_COLLECTION_NAME,
+    )
 
 
 def test_force_create_qdrant_collections(mocker):
@@ -392,6 +487,59 @@ def test_skip_creating_qdrand_collections(mocker):
     assert (
         "dummy-embedding"
         in mock_qdrant.recreate_collection.mock_calls[1].kwargs["vectors_config"]
+    )
+
+
+def test_create_qdrant_collections_enables_sparse_idf(mocker):
+    """New collections weight their sparse terms by document frequency."""
+    mock_qdrant = mocker.patch("qdrant_client.QdrantClient")
+    mocker.patch("vector_search.utils.qdrant_client", return_value=mock_qdrant)
+    mock_qdrant.collection_exists.return_value = False
+
+    create_qdrant_collections(force_recreate=False)
+
+    for call in mock_qdrant.recreate_collection.mock_calls:
+        sparse_vectors_config = call.kwargs.get("sparse_vectors_config")
+        if sparse_vectors_config is None:
+            continue
+        assert sparse_vectors_config
+        for params in sparse_vectors_config.values():
+            assert params.modifier == models.Modifier.IDF
+            # and the index config it is set alongside is unchanged
+            assert params.index.on_disk is True
+
+
+def test_score_formula_query_without_penalties(mocker, settings):
+    """
+    An arm whose scores are not on the penalties' scale rescores with the
+    boosts alone -- and needs none of the payload defaults, which exist only
+    for the penalties.
+    """
+    settings.VECTOR_SEARCH_INCOMPLETENESS_PENALTY_WEIGHT = 0.05
+    settings.VECTOR_SEARCH_STALENESS_PENALTY_WEIGHT = 0.05
+    mocker.patch(
+        "vector_search.utils.VECTOR_SEARCH_SCORE_BOOST",
+        {RESOURCES_COLLECTION_NAME: [{"boost": 0.1, "params": {"free": True}}]},
+    )
+
+    formula_query = score_formula_query(
+        RESOURCES_COLLECTION_NAME, include_penalties=False
+    )
+
+    score, boost = formula_query.formula.sum
+    assert score == "$score"
+    assert isinstance(boost, models.MultExpression)
+    assert not formula_query.defaults
+
+
+def test_score_formula_query_without_penalties_or_boosts(mocker, settings):
+    """With the boosts gone too there is nothing left to rescore."""
+    settings.VECTOR_SEARCH_INCOMPLETENESS_PENALTY_WEIGHT = 0.05
+    settings.VECTOR_SEARCH_STALENESS_PENALTY_WEIGHT = 0.05
+    mocker.patch("vector_search.utils.VECTOR_SEARCH_SCORE_BOOST", {})
+
+    assert (
+        score_formula_query(RESOURCES_COLLECTION_NAME, include_penalties=False) is None
     )
 
 
@@ -513,6 +661,27 @@ def test_expected_document_chunks(mocker):
     assert len(chunked) == num_points_uploaded
 
 
+def test_embed_learning_resources_chunks_content_file_serialization(mocker, settings):
+    """
+    QDRANT_CONTENT_FILE_SERIALIZATION_CHUNK_SIZE controls how many content files are serialized at once for embedding.
+    """
+
+    settings.QDRANT_CONTENT_FILE_SERIALIZATION_CHUNK_SIZE = 2
+    mocker.patch("vector_search.utils.qdrant_client", return_value=MagicMock())
+    mocker.patch("vector_search.utils.ensure_qdrant_collections")
+    serialize_mock = mocker.patch(
+        "vector_search.utils.serialize_bulk_content_files", return_value=[]
+    )
+
+    embed_learning_resources([1, 2, 3, 4, 5], CONTENT_FILE_TYPE, overwrite=True)
+
+    assert [mock_call.args[0] for mock_call in serialize_mock.mock_calls] == [
+        [1, 2],
+        [3, 4],
+        [5],
+    ]
+
+
 def test_document_chunker_tiktoken(mocker):
     """
     Test that we use tiktoken if a token encoding is specified
@@ -522,7 +691,7 @@ def test_document_chunker_tiktoken(mocker):
     encoder = dense_encoder()
     encoder.token_encoding_name = None
     mocked_splitter = mocker.patch(
-        "vector_search.utils.RecursiveCharacterTextSplitter.from_tiktoken_encoder"
+        "langchain_text_splitters.RecursiveCharacterTextSplitter.from_tiktoken_encoder"
     )
 
     _chunk_documents(["this is a test document"], [{}])
@@ -543,11 +712,15 @@ def test_text_splitter_chunk_size_override(mocker):
     settings.CONTENT_FILE_EMBEDDING_CHUNK_SIZE_OVERRIDE = chunk_size
     settings.CONTENT_FILE_EMBEDDING_CHUNK_OVERLAP = chunk_size / 10
     encoder = dense_encoder()
-    mocked_splitter = mocker.patch("vector_search.utils.RecursiveCharacterTextSplitter")
+    mocked_splitter = mocker.patch(
+        "langchain_text_splitters.RecursiveCharacterTextSplitter"
+    )
     encoder.token_encoding_name = "cl100k_base"  # noqa: S105
     _chunk_documents(["this is a test document"], [{}])
     assert mocked_splitter.mock_calls[0].kwargs["chunk_size"] == 100
-    mocked_splitter = mocker.patch("vector_search.utils.RecursiveCharacterTextSplitter")
+    mocked_splitter = mocker.patch(
+        "langchain_text_splitters.RecursiveCharacterTextSplitter"
+    )
     settings.CONTENT_FILE_EMBEDDING_CHUNK_SIZE_OVERRIDE = None
     _chunk_documents(["this is a test document"], [{}])
     assert "chunk_size" not in mocked_splitter.mock_calls[0].kwargs
@@ -685,9 +858,6 @@ def test_generate_content_points_uses_markdown_chunking_for_marketing_pages(mock
         return_value=[Document(page_content="chunk1", metadata={"key": "k1"})],
     )
     mock_chunk = mocker.patch("vector_search.utils._chunk_documents")
-    mocker.patch(
-        "vector_search.utils.should_generate_content_embeddings", return_value=True
-    )
     mocker.patch("vector_search.utils.remove_points_matching_params")
 
     mock_dense = mocker.MagicMock()
@@ -709,7 +879,7 @@ def test_generate_content_points_uses_markdown_chunking_for_marketing_pages(mock
         "key": "k1",
     }
 
-    list(_generate_content_file_points([doc]))
+    list(_generate_content_file_points([doc], {}))
     mock_md_chunk.assert_called_once()
     mock_chunk.assert_not_called()
 
@@ -724,9 +894,6 @@ def test_generate_content_points_uses_standard_chunking_for_non_markdown(mocker)
     mock_chunk = mocker.patch(
         "vector_search.utils._chunk_documents",
         return_value=[Document(page_content="chunk1", metadata={"key": "k1"})],
-    )
-    mocker.patch(
-        "vector_search.utils.should_generate_content_embeddings", return_value=True
     )
     mocker.patch("vector_search.utils.remove_points_matching_params")
 
@@ -749,9 +916,98 @@ def test_generate_content_points_uses_standard_chunking_for_non_markdown(mocker)
         "key": "k1",
     }
 
-    list(_generate_content_file_points([doc]))
+    list(_generate_content_file_points([doc], {}))
     mock_chunk.assert_called_once()
     mock_md_chunk.assert_not_called()
+
+
+def test_generate_content_points_leaves_headroom_under_token_limit(mocker):
+    """
+    Embedding request batches must leave headroom under OpenAI's 300k
+    tokens-per-request limit, since markdown header prefixes are prepended
+    after the chunk-size split and inflate chunks past the nominal size
+    """
+    settings.CONTENT_FILE_EMBEDDING_CHUNK_SIZE_OVERRIDE = 500
+    settings.CONTENT_FILE_EMBEDDING_CHUNK_OVERLAP = 50
+
+    # 600 chunks * 500 tokens == exactly 300k if packed with no headroom
+    num_chunks = 600
+    mocker.patch(
+        "vector_search.utils._chunk_documents",
+        return_value=[
+            Document(page_content=f"chunk{i}", metadata={"key": "k1"})
+            for i in range(num_chunks)
+        ],
+    )
+    mocker.patch("vector_search.utils.remove_points_matching_params")
+
+    mock_dense = mocker.MagicMock()
+    mock_dense.embed_documents.side_effect = lambda texts: [[0.1] for _ in texts]
+    mock_dense.model_short_name.return_value = "dense"
+    mock_sparse = mocker.MagicMock()
+    mock_sparse.embed_documents.side_effect = lambda texts: [[0.2] for _ in texts]
+    mock_sparse.model_short_name.return_value = "sparse"
+    mocker.patch("vector_search.utils.dense_encoder", return_value=mock_dense)
+    mocker.patch("vector_search.utils.sparse_encoder", return_value=mock_sparse)
+
+    doc = {
+        "content": "Some plain text content",
+        "file_type": "page",
+        "file_extension": ".html",
+        "platform": {"code": "x"},
+        "resource_readable_id": "r1",
+        "run_readable_id": "run1",
+        "key": "k1",
+    }
+
+    points = list(_generate_content_file_points([doc], {}))
+
+    batch_sizes = [
+        len(call.args[0]) for call in mock_dense.embed_documents.call_args_list
+    ]
+    assert sum(batch_sizes) == num_chunks
+    assert len(points) == num_chunks
+    # nominal tokens per request must stay at least ~5% under the 300k limit
+    assert max(batch_sizes) * 500 <= 285000
+
+
+def test_generate_content_points_request_chunk_size_never_zero(mocker):
+    """
+    A misconfigured (huge) chunk-size override must not make request_chunk_size 0,
+    which would raise ValueError in the range() batching loop
+    """
+    settings.CONTENT_FILE_EMBEDDING_CHUNK_SIZE_OVERRIDE = 500000
+    settings.CONTENT_FILE_EMBEDDING_CHUNK_OVERLAP = 50
+
+    mocker.patch(
+        "vector_search.utils._chunk_documents",
+        return_value=[
+            Document(page_content=f"chunk{i}", metadata={"key": "k1"}) for i in range(3)
+        ],
+    )
+    mocker.patch("vector_search.utils.remove_points_matching_params")
+
+    mock_dense = mocker.MagicMock()
+    mock_dense.embed_documents.side_effect = lambda texts: [[0.1] for _ in texts]
+    mock_dense.model_short_name.return_value = "dense"
+    mock_sparse = mocker.MagicMock()
+    mock_sparse.embed_documents.side_effect = lambda texts: [[0.2] for _ in texts]
+    mock_sparse.model_short_name.return_value = "sparse"
+    mocker.patch("vector_search.utils.dense_encoder", return_value=mock_dense)
+    mocker.patch("vector_search.utils.sparse_encoder", return_value=mock_sparse)
+
+    doc = {
+        "content": "Some plain text content",
+        "file_type": "page",
+        "file_extension": ".html",
+        "platform": {"code": "x"},
+        "resource_readable_id": "r1",
+        "run_readable_id": "run1",
+        "key": "k1",
+    }
+
+    points = list(_generate_content_file_points([doc], {}))
+    assert len(points) == 3
 
 
 def test_course_metadata_indexed_with_learning_resources(mocker):
@@ -827,24 +1083,312 @@ def test_course_metadata_document_contents(mocker):
             assert level["name"] in course_metadata_content
 
 
-def test_should_generate_for_changed_resource(mocker):
-    """Should generate embeddings when resource content has changed"""
-    resource = LearningResourceFactory.create()
-    serialized_resources = list(serialize_bulk_learning_resources([resource.id]))
-
+def _mock_resource_point(mocker, payload):
+    """Point the resources collection retrieve at a single stored payload."""
     mock_qdrant = mocker.MagicMock()
-    fake_payload = {
-        "title": "Different title",
-        "description": serialized_resources[0]["description"],
-        "full_description": serialized_resources[0]["full_description"],
-    }
     mock_point = mocker.MagicMock()
-    # return record with different title
-    mock_point.payload = fake_payload
-    mock_qdrant.retrieve.return_value = [mock_point]
+    mock_point.payload = payload
+    mock_qdrant.retrieve.return_value = [] if payload is None else [mock_point]
     mocker.patch("vector_search.utils.qdrant_client", return_value=mock_qdrant)
-    result = should_generate_resource_embeddings(serialized_resources[0])
-    assert result is True
+    return mock_qdrant
+
+
+def test_should_generate_for_changed_resource(mocker):
+    """Should generate embeddings when the embedding context has changed"""
+    resource = LearningResourceFactory.create()
+    doc = next(iter(serialize_bulk_learning_resources([resource.id])))
+    _mock_resource_point(
+        mocker,
+        {
+            RESOURCE_EMBEDDING_CHECKSUM_FIELD: resource_embedding_checksum(
+                "the context that was actually embedded"
+            )
+        },
+    )
+
+    assert should_generate_resource_embeddings(doc, "a different context") is True
+
+
+def test_should_not_generate_for_matching_checksum(mocker):
+    """A point whose stored checksum matches what we would embed is left alone"""
+    resource = LearningResourceFactory.create()
+    doc = next(iter(serialize_bulk_learning_resources([resource.id])))
+    context = vs_utils._learning_resource_embedding_context(doc)  # noqa: SLF001
+    _mock_resource_point(
+        mocker,
+        {RESOURCE_EMBEDDING_CHECKSUM_FIELD: resource_embedding_checksum(context)},
+    )
+
+    assert should_generate_resource_embeddings(doc, context) is False
+
+
+def test_should_generate_for_resource_without_stored_checksum(mocker):
+    """
+    Points embedded before the checksum existed have no stored value, so they
+    are re-embedded once. This is what pulls the existing catalog onto the
+    metadata-document context instead of leaving it on its old vectors.
+    """
+    resource = LearningResourceFactory.create()
+    doc = next(iter(serialize_bulk_learning_resources([resource.id])))
+    context = vs_utils._learning_resource_embedding_context(doc)  # noqa: SLF001
+    _mock_resource_point(mocker, {"title": doc["title"]})
+
+    assert should_generate_resource_embeddings(doc, context) is True
+
+
+def test_should_generate_for_missing_resource_point(mocker):
+    """A resource with no point at all is always embedded"""
+    resource = LearningResourceFactory.create()
+    doc = next(iter(serialize_bulk_learning_resources([resource.id])))
+    _mock_resource_point(mocker, None)
+
+    assert should_generate_resource_embeddings(doc, "any context") is True
+
+
+def test_resource_embedding_checksum_tracks_the_version(mocker):
+    """
+    Bumping RESOURCE_EMBEDDING_VERSION changes the checksum of unchanged text,
+    so a format change that renders the same data differently still invalidates
+    every stored point.
+    """
+    before = resource_embedding_checksum("unchanged context")
+    mocker.patch("vector_search.utils.RESOURCE_EMBEDDING_VERSION", 2)
+
+    assert resource_embedding_checksum("unchanged context") != before
+
+
+@pytest.fixture
+def serialized_course():
+    """Serialize a course the way the embedding pipeline sees it."""
+    resource = LearningResourceFactory.create(resource_type=COURSE_TYPE, published=True)
+    LearningResourceRunFactory.create(learning_resource=resource, published=True)
+    return next(iter(serialize_bulk_learning_resources([resource.id])))
+
+
+def test_embedding_context_is_the_course_metadata_document(serialized_course):
+    """
+    The course metadata document -- the markdown rendering of the resource
+    drawer -- is the embedding context, so instructors, prices and dates are
+    all searchable.
+    """
+    context = vs_utils._learning_resource_embedding_context(serialized_course)  # noqa: SLF001
+
+    assert context.startswith("# Information about this course:")
+    assert serialized_course["title"] in context
+    assert serialized_course["description"] in context
+    assert serialized_course["full_description"] in context
+    assert "**Instructors**" in context
+    for run in serialized_course["runs"]:
+        for instructor in run["instructors"]:
+            assert instructor["full_name"] in context
+    for topic in serialized_course["topics"]:
+        assert topic["name"] in context
+
+
+def test_embedding_context_matches_rendered_metadata_document(serialized_course):
+    """
+    The context leads with the same document that gets embedded into the
+    content file collection.
+    """
+    metadata_document = LearningResourceMetadataDisplaySerializer(
+        serialized_course,
+        context=vs_utils._metadata_serializer_context(),  # noqa: SLF001
+    ).render_markdown()
+
+    context = vs_utils._learning_resource_embedding_context(serialized_course)  # noqa: SLF001
+
+    assert context.startswith(metadata_document)
+
+
+def test_embedding_context_is_none_when_the_document_cannot_render(
+    mocker, serialized_course
+):
+    """
+    A document the display serializer chokes on yields no context at all,
+    rather than a degraded one.
+    """
+    mocker.patch.object(
+        LearningResourceMetadataDisplaySerializer,
+        "render_markdown",
+        side_effect=KeyError("delivery"),
+    )
+
+    assert vs_utils._learning_resource_embedding_context(serialized_course) is None  # noqa: SLF001
+
+
+def test_unrenderable_resource_is_skipped_not_embedded(mocker, serialized_course):
+    """
+    A render failure leaves the existing point completely alone -- no embedding
+    from a degraded context, and no payload refresh either, since that would
+    overwrite the checksum of the vector the point still holds. The next run
+    retries and repairs it.
+    """
+    mocker.patch.object(
+        LearningResourceMetadataDisplaySerializer,
+        "render_markdown",
+        side_effect=KeyError("delivery"),
+    )
+    mock_qdrant = _mock_resource_point(mocker, None)
+
+    assert vs_utils._process_resource_embeddings([serialized_course]) is None  # noqa: SLF001
+    mock_qdrant.overwrite_payload.assert_not_called()
+
+
+def test_unchanged_resource_is_not_re_embedded_on_the_next_run(mocker):
+    """
+    The checksum the first run stores comes back through Qdrant as JSON -- the
+    serialized doc carries real datetimes and Decimals, the stored payload
+    carries strings -- and still matches, so the second run refreshes the
+    payload instead of re-embedding. Comparing rendered documents instead would
+    re-embed the whole catalog every run.
+    """
+    resource = LearningResourceFactory.create(resource_type=COURSE_TYPE, published=True)
+    LearningResourceRunFactory.create(learning_resource=resource, published=True)
+    mock_qdrant = _mock_resource_point(mocker, None)
+
+    points = list(
+        vs_utils._process_resource_embeddings(  # noqa: SLF001
+            serialize_bulk_learning_resources([resource.id])
+        )
+    )
+    assert len(points) == 1
+    stored_payload = json.loads(json.dumps(points[0].payload, default=str))
+    assert stored_payload[RESOURCE_EMBEDDING_CHECKSUM_FIELD]
+
+    stored_point = mocker.MagicMock()
+    stored_point.payload = stored_payload
+    mock_qdrant.retrieve.return_value = [stored_point]
+
+    assert (
+        vs_utils._process_resource_embeddings(  # noqa: SLF001
+            serialize_bulk_learning_resources([resource.id])
+        )
+        is None
+    )
+    # ...and the refresh writes the checksum back, rather than blanking the key
+    # and re-embedding on every subsequent run.
+    refreshed = mock_qdrant.overwrite_payload.call_args.kwargs["payload"]
+    assert (
+        refreshed[RESOURCE_EMBEDDING_CHECKSUM_FIELD]
+        == stored_payload[RESOURCE_EMBEDDING_CHECKSUM_FIELD]
+    )
+
+
+def test_embedding_context_includes_content_files(serialized_course):
+    """
+    Content file text should be folded into the embedding context for any
+    resource type, mirroring the OpenSearch query.
+    """
+    serialized_course["content_files"] = [
+        {"content": "The first content file text"},
+        {"content": None},
+        {"content": "The second content file text"},
+    ]
+
+    context = vs_utils._learning_resource_embedding_context(serialized_course)  # noqa: SLF001
+
+    assert context.endswith(
+        "\n\n## Content\nThe first content file text\n\nThe second content file text"
+    )
+
+
+def test_embedding_context_includes_serialized_content_files():
+    """Content from a real serialized document resource ends up in the context"""
+    resource = LearningResourceFactory.create(resource_type="document", published=True)
+    ContentFileFactory.create(
+        direct_learning_resource=resource, content="sentinel text", published=True
+    )
+    serialized = next(iter(serialize_bulk_learning_resources([resource.id])))
+    assert "sentinel text" in vs_utils._learning_resource_embedding_context(serialized)  # noqa: SLF001
+
+
+def test_embedding_context_without_content_files(serialized_course):
+    """Resources without content files should just use the metadata document."""
+    serialized_course["content_files"] = []
+
+    context = vs_utils._learning_resource_embedding_context(serialized_course)  # noqa: SLF001
+
+    assert "## Content" not in context
+
+
+def test_embedding_context_truncates_content(mocker, serialized_course):
+    """The combined context should be truncated to the embedding model's limit."""
+    encoder = mocker.MagicMock(
+        model_name="test-model",
+        token_encoding_name="test-encoding",  # noqa: S106
+    )
+    mocker.patch("vector_search.utils.dense_encoder", return_value=encoder)
+    truncate_mock = mocker.patch(
+        "vector_search.utils.truncate_to_model_limit",
+        side_effect=lambda text, *_args, **_kwargs: text[:10],
+    )
+    serialized_course["content_files"] = [{"content": "0123456789ABCDEF"}]
+
+    context = vs_utils._learning_resource_embedding_context(serialized_course)  # noqa: SLF001
+
+    assert context == "# Informat"
+    untruncated, model = truncate_mock.call_args.args
+    assert untruncated.endswith("## Content\n0123456789ABCDEF")
+    assert model == "test-model"
+    assert truncate_mock.call_args.kwargs == {"token_encoding_name": "test-encoding"}
+
+
+def test_embedding_context_includes_course_code(serialized_course):
+    """A resource without course numbers falls back to its readable_id."""
+    serialized_course["course_numbers"] = None
+    serialized_course["course"] = None
+    serialized_course["readable_id"] = "18.06"
+
+    context = vs_utils._learning_resource_embedding_context(serialized_course)  # noqa: SLF001
+
+    assert "**Course number:** 18.06" in context
+
+
+@pytest.mark.parametrize(
+    ("course_numbers", "expected"),
+    [
+        (
+            [{"value": "18.06"}, {"value": "18.061"}],
+            "**Course numbers:**\n\n- 18.06\n- 18.061",
+        ),
+        (["18.06", "18.061"], "**Course numbers:**\n\n- 18.06\n- 18.061"),
+        ([{"value": "18.06"}], "**Course numbers:** 18.06"),
+        (["18.06"], "**Course numbers:** 18.06"),
+    ],
+)
+def test_embedding_context_includes_course_numbers(
+    serialized_course, course_numbers, expected
+):
+    """Multiple course_numbers render as a markdown list, a single one inline."""
+    serialized_course["course_numbers"] = course_numbers
+
+    context = vs_utils._learning_resource_embedding_context(serialized_course)  # noqa: SLF001
+
+    assert expected in context
+
+
+@pytest.mark.parametrize(
+    ("description", "full_description"),
+    [
+        ("A short description", "A full description"),
+        (None, "A full description"),
+        ("A short description", None),
+        (None, None),
+    ],
+)
+def test_embedding_context_omits_missing_descriptions(
+    serialized_course, description, full_description
+):
+    """Missing description fields should be dropped rather than rendered as None."""
+    serialized_course["description"] = description
+    serialized_course["full_description"] = full_description
+
+    context = vs_utils._learning_resource_embedding_context(serialized_course)  # noqa: SLF001
+
+    for value in (description, full_description):
+        if value:
+            assert value in context
+    assert "None" not in context
 
 
 def test_should_generate_for_changed_content_file(mocker):
@@ -861,6 +1405,83 @@ def test_should_generate_for_changed_content_file(mocker):
     mocker.patch("vector_search.utils.qdrant_client", return_value=mock_qdrant)
     result = should_generate_content_embeddings(serialized_files[0])
     assert result is True
+
+
+def test_stored_content_payloads_batches_and_maps(mocker, settings):
+    """One retrieve per id-chunk; existing points map to their stored payload."""
+    settings.QDRANT_POINT_UPLOAD_BATCH_SIZE = 2
+    present = mocker.MagicMock(id="p1", payload={"checksum": "abc"})
+    no_checksum = mocker.MagicMock(id="p2", payload={})
+    mock_qdrant = mocker.MagicMock()
+    # p3 does not exist in Qdrant
+    mock_qdrant.retrieve.side_effect = [[present, no_checksum], []]
+    mocker.patch("vector_search.utils.qdrant_client", return_value=mock_qdrant)
+
+    stored = vs_utils._stored_content_payloads(  # noqa: SLF001
+        ["p1", "p2", "p3"], fields=("checksum", "title")
+    )
+
+    assert stored == {"p1": {"checksum": "abc"}, "p2": {}}
+    assert mock_qdrant.retrieve.call_count == 2  # ceil(3 ids / batch size 2)
+    for call in mock_qdrant.retrieve.call_args_list:
+        assert call.kwargs["collection_name"] == CONTENT_FILES_COLLECTION_NAME
+        assert call.kwargs["with_payload"] == ["checksum", "title"]
+
+
+@pytest.mark.parametrize(
+    ("stored_entry", "expect_regenerate"),
+    [
+        ("missing", True),  # no point in Qdrant (new file or failed prior embed)
+        (None, True),  # point exists but has no stored checksum
+        ("stale-checksum", True),  # stored checksum differs
+        ("current-checksum", False),  # matches -> payload-only update
+    ],
+)  # stored_entry is the checksum in the stored payload dict
+def test_generate_content_points_checksum_gate(mocker, stored_entry, expect_regenerate):
+    """Docs are re-embedded unless their stored Qdrant checksum matches."""
+    settings.CONTENT_FILE_EMBEDDING_CHUNK_SIZE_OVERRIDE = 500
+    settings.CONTENT_FILE_EMBEDDING_CHUNK_OVERLAP = 50
+
+    mocker.patch(
+        "vector_search.utils._chunk_documents",
+        return_value=[Document(page_content="chunk1", metadata={"key": "k1"})],
+    )
+    mocker.patch("vector_search.utils.remove_points_matching_params")
+    update_payload_mock = mocker.patch(
+        "vector_search.utils.update_content_file_payload"
+    )
+    mock_dense = mocker.MagicMock()
+    mock_dense.embed_documents.side_effect = lambda texts: [[0.1] for _ in texts]
+    mock_dense.model_short_name.return_value = "dense"
+    mock_sparse = mocker.MagicMock()
+    mock_sparse.embed_documents.side_effect = lambda texts: [[0.2] for _ in texts]
+    mock_sparse.model_short_name.return_value = "sparse"
+    mocker.patch("vector_search.utils.dense_encoder", return_value=mock_dense)
+    mocker.patch("vector_search.utils.sparse_encoder", return_value=mock_sparse)
+
+    doc = {
+        "content": "Some plain text content",
+        "file_type": "page",
+        "file_extension": ".html",
+        "platform": {"code": "x"},
+        "resource_readable_id": "r1",
+        "run_readable_id": "run1",
+        "key": "k1",
+        "checksum": "current-checksum",
+    }
+    point_id = vector_point_id(
+        vector_point_key(doc, chunk_number=0, document_type="content_file")
+    )
+    stored = {} if stored_entry == "missing" else {point_id: {"checksum": stored_entry}}
+
+    points = list(_generate_content_file_points([doc], stored))
+
+    if expect_regenerate:
+        assert len(points) == 1
+        update_payload_mock.assert_not_called()
+    else:
+        assert points == []
+        update_payload_mock.assert_called_once_with(doc)
 
 
 def test_should_not_generate_for_unchanged_content_file(mocker):
@@ -937,25 +1558,155 @@ def test_update_payload_no_points(mocker):
     mock_qdrant.set_payload.assert_not_called()
 
 
+def test_generate_content_points_runless_run_readable_id_fallback(mocker):
+    """
+    Run-less content files (e.g. scraped marketing pages) must get a
+    run_readable_id payload equal to the resource readable_id: the content-file
+    search API rewrites resource_readable_id filters into run_readable_id
+    filters, so points without the field are unreachable. Files with a real
+    run keep the run's id.
+    """
+    settings.CONTENT_FILE_EMBEDDING_CHUNK_SIZE_OVERRIDE = 500
+    settings.CONTENT_FILE_EMBEDDING_CHUNK_OVERLAP = 50
+    mocker.patch("vector_search.utils.remove_points_matching_params")
+    mock_dense = mocker.MagicMock()
+    mock_dense.embed_documents.side_effect = lambda texts: [[0.1] for _ in texts]
+    mock_dense.model_short_name.return_value = "dense"
+    mock_sparse = mocker.MagicMock()
+    mock_sparse.embed_documents.side_effect = lambda texts: [[0.2] for _ in texts]
+    mock_sparse.model_short_name.return_value = "sparse"
+    mocker.patch("vector_search.utils.dense_encoder", return_value=mock_dense)
+    mocker.patch("vector_search.utils.sparse_encoder", return_value=mock_sparse)
+
+    runless_doc = {
+        "content": "# Marketing page\n\nSome marketing content",
+        "file_type": "marketing_page",
+        "file_extension": ".md",
+        "platform": {"code": "xpro"},
+        "resource_readable_id": "program-v1:xPRO+Test",
+        "key": "https://xpro.mit.edu/programs/program-v1:xPRO+Test/",
+        "checksum": "abc",
+    }
+    run_doc = {
+        "content": "Some plain text content",
+        "file_type": "page",
+        "file_extension": ".html",
+        "platform": {"code": "x"},
+        "resource_readable_id": "r1",
+        "run_readable_id": "run1",
+        "key": "k1",
+        "checksum": "def",
+    }
+
+    points = list(_generate_content_file_points([runless_doc, run_doc], {}))
+
+    runless_payloads = [
+        point.payload for point in points if point.payload["key"] == runless_doc["key"]
+    ]
+    run_payloads = [point.payload for point in points if point.payload["key"] == "k1"]
+    assert runless_payloads
+    assert run_payloads
+    assert all(
+        payload["run_readable_id"] == "program-v1:xPRO+Test"
+        for payload in runless_payloads
+    )
+    assert all(payload["run_readable_id"] == "run1" for payload in run_payloads)
+
+
+def test_update_payload_content_file_runless_backfills_run_readable_id(mocker):
+    """
+    Payload refresh for a run-less content file writes the resource readable_id
+    into run_readable_id (healing pre-fix points without re-embedding), while
+    the point lookup keeps using the raw document so points stored without the
+    field are still found.
+    """
+    resource = LearningResourceFactory.create(is_program=True)
+    content_file = ContentFileFactory.create(
+        learning_resource=resource, content="Test content"
+    )
+    serialized = next(iter(serialize_bulk_content_files([content_file.id])))
+    assert "run_readable_id" not in serialized
+
+    mock_qdrant = mocker.MagicMock()
+    mocker.patch("vector_search.utils.qdrant_client", return_value=mock_qdrant)
+    mock_point = mocker.MagicMock()
+    mock_point.id = "test-point-id"
+    retrieve_mock = mocker.patch(
+        "vector_search.utils.retrieve_points_matching_params", return_value=[mock_point]
+    )
+
+    update_content_file_payload(serialized)
+
+    assert "run_readable_id" not in retrieve_mock.call_args[0][0]
+    payload = mock_qdrant.set_payload.call_args[1]["payload"]
+    assert payload["run_readable_id"] == resource.readable_id
+
+
+def test_content_file_vector_hits_hydrates_runless_files():
+    """
+    Search hits for run-less content files (e.g. marketing pages) are hydrated
+    with the serialized DB record, matched via the resource readable_id their
+    payloads carry in run_readable_id.
+    """
+    resource = LearningResourceFactory.create(is_program=True)
+    content_file = ContentFileFactory.create(
+        learning_resource=resource,
+        content="marketing content",
+        file_type="marketing_page",
+    )
+    run_content_file = ContentFileFactory.create(content="run file content")
+    hits = [
+        PointStruct(
+            id=1,
+            payload={
+                "run_readable_id": resource.readable_id,
+                "key": content_file.key,
+                "chunk_content": "marketing content",
+            },
+            vector=[],
+        ),
+        PointStruct(
+            id=2,
+            payload={
+                "run_readable_id": run_content_file.run.run_id,
+                "key": run_content_file.key,
+                "chunk_content": "run file content",
+            },
+            vector=[],
+        ),
+    ]
+
+    results = _content_file_vector_hits(hits)
+
+    assert results[0]["id"] == content_file.id
+    assert results[0]["resource_readable_id"] == resource.readable_id
+    assert "content" not in results[0]
+    assert results[1]["id"] == run_content_file.id
+
+
 @pytest.mark.django_db
 def test_embed_learning_resources_summarizes_only_contentfiles_with_summary(mocker):
     """
-    Test that summarize_content_files_by_ids is only called with contentfiles that have an existing summary
+    Test that embedding overwrites don't overwrite existing summaries.
     """
     mock_qdrant = mocker.patch("qdrant_client.QdrantClient")
+    mock_qdrant.retrieve.return_value = []
     mocker.patch("vector_search.utils.qdrant_client", return_value=mock_qdrant)
     mocker.patch("vector_search.utils.create_qdrant_collections")
-    mocker.patch(
-        "vector_search.utils.filter_existing_qdrant_points_by_ids", return_value=[]
-    )
     mocker.patch("vector_search.utils.remove_qdrant_records")
 
+    learning_resource = LearningResourceFactory.create(
+        resource_type="video", create_video=False, create_runs=False
+    )
     # Create ContentFiles, some with summary, some without
     contentfiles_with_summary = ContentFileFactory.create_batch(
-        2, content="abc", summary="summary text"
+        2,
+        content="abc",
+        learning_resource=learning_resource,
+        summary="summary text",
     )
     contentfiles_without_summary = ContentFileFactory.create_batch(
-        3, content="def", summary=""
+        3, content="def", learning_resource=learning_resource, summary=""
     )
     all_contentfiles = contentfiles_with_summary + contentfiles_without_summary
 
@@ -965,6 +1716,7 @@ def test_embed_learning_resources_summarizes_only_contentfiles_with_summary(mock
         d = {
             "id": cf.id,
             "resource_readable_id": getattr(cf, "resource_readable_id", "resid"),
+            "run_id": cf.id,
             "run_readable_id": getattr(cf, "run_readable_id", "runid"),
             "key": getattr(cf, "key", "key"),
             "summary": cf.summary,
@@ -985,9 +1737,143 @@ def test_embed_learning_resources_summarizes_only_contentfiles_with_summary(mock
 
     # Only contentfiles with summary should be passed
     expected_ids = [cf.id for cf in contentfiles_with_summary]
-    summarize_mock.assert_called_once_with(expected_ids, True)  # noqa: FBT003
+    summarize_mock.assert_called_once_with(expected_ids, overwrite=False)
 
 
+@pytest.mark.django_db
+def test_embed_learning_resources_overwrites_summaries_for_changed_content(mocker):
+    """Embedding overwrites regenerate summaries only when content changed."""
+    mock_qdrant = mocker.patch("qdrant_client.QdrantClient")
+    mocker.patch("vector_search.utils.qdrant_client", return_value=mock_qdrant)
+    mocker.patch("vector_search.utils.create_qdrant_collections")
+    mocker.patch("vector_search.utils.remove_qdrant_records")
+
+    learning_resource = LearningResourceFactory.create(
+        resource_type="video", create_video=False, create_runs=False
+    )
+    unchanged_content_file = ContentFileFactory.create(
+        content="unchanged content",
+        learning_resource=learning_resource,
+        summary="summary text",
+    )
+    changed_content_file = ContentFileFactory.create(
+        content="changed content",
+        learning_resource=learning_resource,
+        summary="old summary text",
+    )
+    all_contentfiles = [unchanged_content_file, changed_content_file]
+
+    serialized = [
+        {
+            "id": cf.id,
+            "resource_readable_id": "resid",
+            "run_id": cf.id,
+            "run_readable_id": "runid",
+            "key": cf.key,
+            "summary": cf.summary,
+            "content": cf.content,
+            "checksum": f"current-{cf.id}",
+        }
+        for cf in all_contentfiles
+    ]
+
+    mocker.patch(
+        "vector_search.utils.serialize_bulk_content_files", return_value=serialized
+    )
+    # The unchanged file takes the payload-only path (covered by its own tests)
+    mocker.patch("vector_search.utils.update_content_file_payload")
+    # Stored Qdrant checksum matches for the unchanged file, differs for the changed
+    mock_qdrant.retrieve.return_value = [
+        mocker.MagicMock(
+            id=vector_point_id(
+                vector_point_key(doc, chunk_number=0, document_type="content_file")
+            ),
+            payload={
+                "checksum": doc["checksum"]
+                if doc["id"] == unchanged_content_file.id
+                else "stale-checksum"
+            },
+        )
+        for doc in serialized
+    ]
+
+    summarize_mock = mocker.patch(
+        "learning_resources.content_summarizer.ContentSummarizer.summarize_content_files_by_ids"
+    )
+
+    def summarize_before_upsert(content_file_ids, *, overwrite):
+        mock_qdrant.batch_update_points.assert_not_called()
+        return [
+            f"Summarization succeeded for CONTENT_FILE_ID: {content_file_id}"
+            for content_file_id in content_file_ids
+        ]
+
+    summarize_mock.side_effect = summarize_before_upsert
+    embed_learning_resources(
+        [cf.id for cf in all_contentfiles], "content_file", overwrite=True
+    )
+
+    assert summarize_mock.mock_calls == [
+        mocker.call([unchanged_content_file.id], overwrite=False),
+        mocker.call([changed_content_file.id], overwrite=True),
+    ]
+
+
+@pytest.mark.django_db
+def test_embed_learning_resources_keeps_old_checksum_when_summary_fails(mocker):
+    """A failed changed-content summary should be retried on the next embedding run."""
+    mock_qdrant = mocker.patch("qdrant_client.QdrantClient")
+    mocker.patch("vector_search.utils.qdrant_client", return_value=mock_qdrant)
+    mocker.patch("vector_search.utils.create_qdrant_collections")
+
+    learning_resource = LearningResourceFactory.create(
+        resource_type="video", create_video=False, create_runs=False
+    )
+    content_file = ContentFileFactory.create(
+        content="changed content",
+        learning_resource=learning_resource,
+        summary="old summary text",
+    )
+    serialized = [
+        {
+            "id": content_file.id,
+            "resource_readable_id": "resid",
+            "run_id": content_file.id,
+            "run_readable_id": "runid",
+            "key": content_file.key,
+            "summary": content_file.summary,
+            "content": content_file.content,
+            "checksum": "current-checksum",
+        }
+    ]
+    mocker.patch(
+        "vector_search.utils.serialize_bulk_content_files", return_value=serialized
+    )
+    # Stored Qdrant checksum differs, so the summary must be regenerated
+    mock_qdrant.retrieve.return_value = [
+        mocker.MagicMock(
+            id=vector_point_id(
+                vector_point_key(
+                    serialized[0], chunk_number=0, document_type="content_file"
+                )
+            ),
+            payload={"checksum": "previous-checksum"},
+        )
+    ]
+    summarize_mock = mocker.patch(
+        "learning_resources.content_summarizer.ContentSummarizer.summarize_content_files_by_ids",
+        return_value=[
+            f"Summary generation failed for CONTENT_FILE_ID: {content_file.id}"
+        ],
+    )
+
+    embed_learning_resources([content_file.id], "content_file", overwrite=True)
+
+    summarize_mock.assert_called_once_with([content_file.id], overwrite=True)
+    mock_qdrant.batch_update_points.assert_not_called()
+
+
+@pytest.mark.django_db(transaction=True)
 def test_vector_search_group_by(mocker, client, django_user_model):
     """
     Test that async_vector_search with group_by parameter returns grouped results
@@ -1488,6 +2374,7 @@ def test_vector_search_hybrid(mocker, client):
 
 
 @pytest.mark.parametrize("use_group_by", [True, False])
+@pytest.mark.django_db(transaction=True)
 def test_vector_search_group_by_offset_behavior(
     mocker, client, django_user_model, use_group_by
 ):
@@ -1634,6 +2521,259 @@ def test_resource_vector_hits_duplicate_readable_ids_different_platforms():
     assert result_2[0]["platform"]["code"] == "ocw"
     assert r_xpro.id == result_2[1]["id"]
     assert result_2[1]["platform"]["code"] == "xpro"
+
+
+def test_resources_payload_selector_excludes_indexing_fields(settings):
+    """The selector should ask for the whole payload minus indexing-only keys"""
+    settings.VECTOR_SEARCH_RESOURCES_FROM_PAYLOAD = True
+    selector = resources_payload_selector()
+    assert isinstance(selector, models.PayloadSelectorExclude)
+    assert selector.exclude == RESOURCES_PAYLOAD_EXCLUDE
+
+
+def test_resources_payload_selector_kill_switch(settings):
+    """With payload hits disabled we only fetch the DB hydration lookup fields"""
+    settings.VECTOR_SEARCH_RESOURCES_FROM_PAYLOAD = False
+    assert resources_payload_selector() == RESOURCES_RETRIEVE_PAYLOAD
+
+
+def test_resource_payload_hits_preserves_order_and_dedupes():
+    """Hits come straight from the payloads, in Qdrant order, deduped by platform:id"""
+    search_result = [
+        MagicMock(
+            payload={
+                "readable_id": "course-2",
+                "platform": {"code": "ocw"},
+                "title": "Second",
+            }
+        ),
+        MagicMock(
+            payload={
+                "readable_id": "course-1",
+                "platform": {"code": "ocw"},
+                "title": "First",
+            }
+        ),
+        # same readable_id as the first hit, different platform: kept
+        MagicMock(
+            payload={
+                "readable_id": "course-2",
+                "platform": {"code": "xpro"},
+                "title": "Second on xpro",
+            }
+        ),
+        # exact duplicate of the first hit: dropped
+        MagicMock(
+            payload={
+                "readable_id": "course-2",
+                "platform": {"code": "ocw"},
+                "title": "Second",
+            }
+        ),
+        # unusable without a readable_id: dropped
+        MagicMock(payload={"platform": {"code": "ocw"}, "title": "No readable id"}),
+    ]
+
+    hits = _resource_payload_hits(search_result)
+
+    assert [(hit["readable_id"], hit["platform"]["code"]) for hit in hits] == [
+        ("course-2", "ocw"),
+        ("course-1", "ocw"),
+        ("course-2", "xpro"),
+    ]
+    assert hits[0]["title"] == "Second"
+
+
+def test_resource_payload_hits_handles_null_platform():
+    """A resource indexed without a platform should still produce a hit"""
+    hits = _resource_payload_hits(
+        [MagicMock(payload={"readable_id": "course-1", "platform": None})]
+    )
+    assert [hit["readable_id"] for hit in hits] == ["course-1"]
+
+
+def test_resource_payload_hits_trims_indexing_only_course_number_fields():
+    """
+    Qdrant payload selectors cannot descend into lists of objects, so the extra
+    course number fields the indexing serializer adds are trimmed in Python.
+    """
+    payload = {
+        "readable_id": "course-1",
+        "platform": {"code": "ocw"},
+        "course": {
+            "course_numbers": [
+                {
+                    "value": "6.006",
+                    "listing_type": "Primary",
+                    "department": {"department_id": "6"},
+                    "primary": True,
+                    "sort_coursenum": "06.006",
+                }
+            ]
+        },
+    }
+
+    hits = _resource_payload_hits([MagicMock(payload=payload)])
+
+    assert hits[0]["course"]["course_numbers"] == [
+        {
+            "value": "6.006",
+            "listing_type": "Primary",
+            "department": {"department_id": "6"},
+        }
+    ]
+    # the payload dict Qdrant handed us is not mutated
+    assert "sort_coursenum" in payload["course"]["course_numbers"][0]
+
+
+@pytest.mark.parametrize(
+    "course",
+    [None, {}, {"course_numbers": None}],
+)
+def test_resource_payload_hits_tolerates_missing_course_numbers(course):
+    """Non-course resources pass through the course number trim untouched"""
+    hits = _resource_payload_hits(
+        [MagicMock(payload={"readable_id": "video-1", "course": course})]
+    )
+    assert hits[0]["course"] == course
+
+
+def _add_direct_content_files(resource, count=2, **kwargs):
+    """
+    Attach the direct content files that video/document responses nest.
+
+    ContentFileFactory._create always fills in run or learning_resource, but the
+    model's check constraint requires a direct content file to have neither, so
+    the foreign key is moved after creation.
+    """
+    content_files = ContentFileFactory.create_batch(
+        count, learning_resource=resource, **kwargs
+    )
+    ContentFile.objects.filter(id__in=[cf.id for cf in content_files]).update(
+        learning_resource=None, direct_learning_resource=resource
+    )
+    return content_files
+
+
+def _payload_as_search_sees_it(resource_id):
+    """
+    Return the indexed payload minus what PayloadSelectorExclude strips,
+    i.e. exactly what _resource_payload_hits receives from a search.
+    """
+    payload = next(iter(serialize_bulk_learning_resources([resource_id])))
+    for excluded in RESOURCES_PAYLOAD_EXCLUDE:
+        top_level, _, nested = excluded.partition(".")
+        if nested:
+            if isinstance(payload.get(top_level), dict):
+                payload[top_level].pop(nested, None)
+        else:
+            payload.pop(top_level, None)
+    return payload
+
+
+def test_content_files_is_not_excluded_from_the_payload():
+    """
+    content_files must stay in the payload: document and video responses declare
+    it, and search cards fall back to content_files[0].image_src for the
+    thumbnail. Its large text fields are trimmed in Python instead, because a
+    Qdrant payload selector cannot descend into a list of objects.
+    """
+    assert "content_files" not in RESOURCES_PAYLOAD_EXCLUDE
+
+
+@pytest.mark.parametrize(
+    ("factory_kwargs", "has_content_files"),
+    [
+        ({"is_course": True}, False),
+        ({"is_video": True}, True),
+        ({"resource_type": LearningResourceType.document.name}, True),
+    ],
+)
+def test_resource_payload_hits_matches_hydrated_hits(factory_kwargs, has_content_files):
+    """
+    The payload path should return what the database hydration path returns,
+    modulo the fields the indexing serializer adds on top of the API shape --
+    including the nested content_files that document and video responses
+    declare.
+    """
+    resource = LearningResourceFactory.create(**factory_kwargs)
+    if has_content_files:
+        _add_direct_content_files(
+            resource, image_src="https://img.youtube.com/thumb.jpg"
+        )
+
+    payload = _payload_as_search_sees_it(resource.id)
+    hydrated = _resource_vector_hits(
+        [
+            MagicMock(
+                payload={
+                    "readable_id": resource.readable_id,
+                    "platform": {
+                        "code": resource.platform.code if resource.platform else ""
+                    },
+                }
+            )
+        ]
+    )
+    from_payload = _resource_payload_hits([MagicMock(payload=payload)])
+
+    assert len(from_payload) == 1
+    assert set(from_payload[0]) == set(hydrated[0])
+
+    if has_content_files:
+        # the nested field must carry the API's shape, not the indexing shape
+        assert from_payload[0]["content_files"]
+        assert {frozenset(cf) for cf in from_payload[0]["content_files"]} == {
+            frozenset(cf) for cf in hydrated[0]["content_files"]
+        }
+
+
+@pytest.mark.parametrize(
+    "resource_type",
+    [LearningResourceType.video.name, LearningResourceType.document.name],
+)
+def test_resource_payload_hits_keeps_content_files_thumbnail_fallback(resource_type):
+    """
+    Search cards use content_files[0].image_src as the thumbnail when the
+    resource has no image, so the payload path must keep the nested content
+    files -- minus the large text the indexing serializer re-adds.
+    """
+    payload = {
+        "readable_id": f"{resource_type}-1",
+        "platform": {"code": "youtube"},
+        "resource_type": resource_type,
+        "image": None,
+        "content_files": [
+            {
+                "id": 1,
+                "key": "lecture.pdf",
+                "title": "Lecture",
+                "image_src": "https://img.youtube.com/thumb.jpg",
+                "content": "the full extracted text, many kilobytes of it",
+                "summary": "a generated summary",
+                "flashcards": [{"question": "q", "answer": "a"}],
+            }
+        ],
+    }
+
+    hits = _resource_payload_hits([MagicMock(payload=payload)])
+    content_file = hits[0]["content_files"][0]
+
+    assert content_file["image_src"] == "https://img.youtube.com/thumb.jpg"
+    assert content_file["key"] == "lecture.pdf"
+    assert content_file["title"] == "Lecture"
+    assert set(CONTENT_FILE_LARGE_FIELDS).isdisjoint(content_file)
+    # the payload dict Qdrant handed us is not mutated
+    assert "content" in payload["content_files"][0]
+
+
+@pytest.mark.parametrize("content_files", [None, [], "not-a-list"])
+def test_resource_payload_hits_tolerates_odd_content_files(content_files):
+    """Resources without nested content files pass through untouched"""
+    hits = _resource_payload_hits(
+        [MagicMock(payload={"readable_id": "c-1", "content_files": content_files})]
+    )
+    assert hits[0]["content_files"] == content_files
 
 
 def _make_facet_hit(count=0, value="test"):
@@ -1892,8 +3032,8 @@ def test_custom_score_formula_empty(mocker):
 
 def test_custom_score_formula_with_boosts(mocker):
     """
-    custom_score_formula must boost scores based on VECTOR_SEARCH_SCORE_BOOST
-    and append a GaussDecayExpression at the end.
+    custom_score_formula must boost scores based on VECTOR_SEARCH_SCORE_BOOST,
+    as a proportion of each matching point's own score.
     """
 
     mock_boosts = {
@@ -1906,7 +3046,6 @@ def test_custom_score_formula_with_boosts(mocker):
 
     results = custom_score_formula(RESOURCES_COLLECTION_NAME)
 
-    # We expect 3 expressions: 2 MultExpressions and 1 GaussDecayExpression
     assert len(results) == 2
 
     # Check first boost expression
@@ -1936,9 +3075,9 @@ def test_custom_score_formula_with_boosts(mocker):
         for c in filter_2.must
     )
 
-    # Check GaussDecayExpression decay expression at the end
-    assert isinstance(results[0].mult[2], models.GaussDecayExpression)
-    assert isinstance(results[1].mult[2], models.GaussDecayExpression)
+    # each boost multiplies the score rather than adding a fixed amount
+    assert results[0].mult[2] == "$score"
+    assert results[1].mult[2] == "$score"
 
 
 def test_custom_score_formula_defaults(mocker):
@@ -1959,7 +3098,483 @@ def test_custom_score_formula_defaults(mocker):
     assert results[0].mult[0] == 0
     assert isinstance(results[0].mult[1], models.Filter)
 
-    assert isinstance(results[0].mult[2], models.GaussDecayExpression)
+    assert results[0].mult[2] == "$score"
+
+
+# Payloads for the two sides of the program boost, for the formula evaluator
+# below. Only the keys the boost's conditions look at need to be present.
+PROGRAM_PAYLOAD = {"resource_type_group": "program"}
+COURSE_PAYLOAD = {"resource_type_group": "course"}
+
+
+def _formula_condition_matches(condition, payload):
+    if isinstance(condition, models.IsEmptyCondition):
+        return payload.get(condition.is_empty.key) is None
+    value = payload.get(condition.key)
+    match = condition.match
+    if isinstance(match, models.MatchAny):
+        return value in match.any
+    return value == match.value
+
+
+def _formula_filter_matches(query_filter, payload):
+    return all(
+        _formula_condition_matches(condition, payload)
+        for condition in query_filter.must or []
+    ) and not any(
+        _formula_condition_matches(condition, payload)
+        for condition in query_filter.must_not or []
+    )
+
+
+def _seconds_between(a, b):
+    """Absolute distance between two datetimes, parsed from ISO strings."""
+    parse = lambda v: v if isinstance(v, datetime) else datetime.fromisoformat(v)  # noqa: E731
+    return abs((parse(a) - parse(b)).total_seconds())
+
+
+def _score_with_formula(formula_query, score, payload):  # noqa: C901
+    """
+    Evaluate a FormulaQuery the way Qdrant would, so ranking can be asserted on
+    the arithmetic rather than on the formula's shape. `defaults` fill in keys
+    the payload is missing or holds null for, as Qdrant does.
+
+    Gaussian decay is handled too, though nothing builds one now, so a
+    reintroduced score-damped boost fails on the ranking rather than on an
+    unevaluatable expression.
+    """
+    resolved = dict(payload)
+    for key, default in (formula_query.defaults or {}).items():
+        if resolved.get(key) is None:
+            resolved[key] = default
+
+    def evaluate(expression):  # noqa: PLR0911
+        if isinstance(expression, str):
+            return score if expression == "$score" else resolved[expression]
+        if isinstance(expression, (int, float)):
+            return float(expression)
+        if isinstance(expression, models.SumExpression):
+            return sum(evaluate(part) for part in expression.sum)
+        if isinstance(expression, models.MultExpression):
+            return math.prod(evaluate(part) for part in expression.mult)
+        if isinstance(expression, models.NegExpression):
+            return -evaluate(expression.neg)
+        if isinstance(expression, models.GaussDecayExpression):
+            decay = expression.gauss_decay
+            return math.exp(
+                math.log(decay.midpoint)
+                * ((evaluate(decay.x) - decay.target) / decay.scale) ** 2
+            )
+        if isinstance(expression, models.LinDecayExpression):
+            decay = expression.lin_decay
+            distance = _seconds_between(
+                resolved[decay.x.datetime_key], decay.target.datetime
+            )
+            return max(0.0, 1 - (1 - decay.midpoint) * distance / decay.scale)
+        if isinstance(expression, models.Filter):
+            # A condition scores 1 for a matching point and 0 for every other
+            return 1.0 if _formula_filter_matches(expression, resolved) else 0.0
+        msg = f"formula evaluator does not handle {expression!r}"
+        raise AssertionError(msg)
+
+    return evaluate(formula_query.formula)
+
+
+@pytest.fixture
+def boost_only_formula(settings):
+    """Return the shipped formula, penalties off, so only the boost moves."""
+    settings.VECTOR_SEARCH_INCOMPLETENESS_PENALTY_WEIGHT = 0
+    settings.VECTOR_SEARCH_STALENESS_PENALTY_WEIGHT = 0
+    return score_formula_query(RESOURCES_COLLECTION_NAME)
+
+
+def test_program_boost_term_is_proportional_to_score(boost_only_formula):
+    """The term is `amount * condition * $score`, with nothing damping it."""
+    score, boost = boost_only_formula.formula.sum
+
+    assert score == "$score"
+    amount, conditions, boosted_score = boost.mult
+    assert amount > 0
+    assert isinstance(conditions, models.Filter)
+    assert boosted_score == "$score"
+
+
+def test_program_boost_does_not_outrank_a_more_relevant_course(boost_only_formula):
+    """
+    A weakly matched program must not take the head of the page from a course
+    the query matched well. Scores are the production bands for
+    q="dance classes from MIT", where the fixed boost put programs first.
+    """
+    program = _score_with_formula(boost_only_formula, 0.43, PROGRAM_PAYLOAD)
+    course = _score_with_formula(boost_only_formula, 0.51, COURSE_PAYLOAD)
+
+    assert program < course
+
+
+def test_program_boost_still_breaks_near_ties(boost_only_formula):
+    """A program that matched as well as a course should still come first."""
+    program = _score_with_formula(boost_only_formula, 0.505, PROGRAM_PAYLOAD)
+    course = _score_with_formula(boost_only_formula, 0.51, COURSE_PAYLOAD)
+
+    assert program > course
+
+
+@pytest.mark.parametrize("score", [0.05, 0.3, 0.8, 12.0])
+def test_program_boost_is_the_same_proportion_at_every_score(boost_only_formula, score):
+    """
+    The boost scales with the score rather than decaying around a target. The
+    gaussian it replaces gave the most relevant programs almost none of it, and
+    collapsed to zero on the BM25-scaled sparse arm (the 12.0 case).
+    """
+    reference = 0.43
+    reference_ratio = (
+        _score_with_formula(boost_only_formula, reference, PROGRAM_PAYLOAD) / reference
+    )
+    ratio = _score_with_formula(boost_only_formula, score, PROGRAM_PAYLOAD) / score
+
+    assert ratio > 1
+    assert ratio == pytest.approx(reference_ratio)
+    # and nothing at all happens to a point the boost does not match
+    assert _score_with_formula(
+        boost_only_formula, score, COURSE_PAYLOAD
+    ) == pytest.approx(score)
+
+
+def _penalty_weight(expression):
+    """Return the weight a penalty term multiplies by."""
+    return expression.neg.mult[0]
+
+
+def _penalty_ramp(expression):
+    """
+    Return the `1 - x` factor scaling a penalty by incompleteness or age.
+    Located by type, so assertions ignore what else the product carries.
+    """
+    [ramp] = [
+        factor
+        for factor in expression.neg.mult
+        if isinstance(factor, models.SumExpression)
+    ]
+    return ramp
+
+
+def _penalty_decay(expression):
+    """Return the decay inside a penalty's age ramp."""
+    return _penalty_ramp(expression).sum[1].neg
+
+
+def _penalty_is_proportional(expression):
+    """Whether the penalty is a share of the score rather than a fixed amount."""
+    return "$score" in expression.neg.mult
+
+
+# Payloads taken from production rows for the two resources that swapped places
+# in the bug report: an archival OCW course that is the correct answer to
+# "dance courses from MIT", and a program that was outranking it.
+STALE_COURSE_PAYLOAD = {
+    "resource_type_group": "course",
+    "completeness": 0.08,
+    "resource_age_date": "2003-09-01T00:00:00+00:00",
+    "next_start_date": None,
+}
+UNDATED_PROGRAM_PAYLOAD = {
+    "resource_type_group": "program",
+    "completeness": 1.0,
+    # get_resource_age_date dates courses and learning materials only
+    "resource_age_date": None,
+    "next_start_date": None,
+}
+UPCOMING_PROGRAM_PAYLOAD = {**UNDATED_PROGRAM_PAYLOAD, "next_start_date": "2027-01-01"}
+
+
+@pytest.fixture
+def shipped_formula(settings):
+    """Return the score formula as shipped, with real weights."""
+    settings.VECTOR_SEARCH_INCOMPLETENESS_PENALTY_WEIGHT = 0.05
+    settings.VECTOR_SEARCH_STALENESS_PENALTY_WEIGHT = 0.05
+    settings.VECTOR_SEARCH_STALENESS_HORIZON_YEARS = 20
+    return score_formula_query(RESOURCES_COLLECTION_NAME)
+
+
+def test_penalties_cannot_outrank_relevance(shipped_formula):
+    """
+    An old, patchily complete OCW course paid a fixed ~0.1 while an undated,
+    complete program paid nothing and took the boost on top -- a bigger swing
+    than the topical gap between them. Scores are the production cosines.
+    """
+    course = _score_with_formula(shipped_formula, 0.6876, STALE_COURSE_PAYLOAD)
+    program = _score_with_formula(shipped_formula, 0.4720, UNDATED_PROGRAM_PAYLOAD)
+
+    assert course > program
+
+
+@pytest.mark.parametrize("score", [0.2, 0.5, 0.9])
+def test_penalties_cost_a_bounded_share_of_the_score(shipped_formula, score):
+    """
+    Both penalties together cost at most the sum of their weights as a fraction
+    of the score, so at the shipped weights nothing can be overtaken by a
+    resource more than ~11% below it.
+    """
+    # no content, well past the horizon, nothing coming up
+    worst_case = {
+        "resource_type_group": "course",
+        "completeness": 0.0,
+        "resource_age_date": "1990-01-01T00:00:00+00:00",
+        "next_start_date": None,
+    }
+    worst = _score_with_formula(shipped_formula, score, worst_case)
+
+    assert worst == pytest.approx(score * (1 - (0.05 + 0.05)))
+
+
+def test_staleness_penalty_exempts_a_resource_with_an_upcoming_run(shipped_formula):
+    """An upcoming run earns the exemption, not the absence of a date."""
+    undated = _score_with_formula(shipped_formula, 0.5, UNDATED_PROGRAM_PAYLOAD)
+    upcoming = _score_with_formula(shipped_formula, 0.5, UPCOMING_PROGRAM_PAYLOAD)
+
+    # both are complete programs, so only staleness separates them
+    assert upcoming == pytest.approx(0.5 * 1.1)
+    assert undated == pytest.approx(0.5 * 1.1 - 0.5 * 0.05)
+    assert undated < upcoming
+
+
+def test_undated_resource_is_not_treated_as_current(shipped_formula):
+    """
+    An undated resource takes the full penalty, same as one demonstrably past
+    the horizon. Defaulting it to `now` exempted every program in the index.
+    """
+    undated = _score_with_formula(shipped_formula, 0.5, UNDATED_PROGRAM_PAYLOAD)
+    ancient = _score_with_formula(
+        shipped_formula,
+        0.5,
+        {**UNDATED_PROGRAM_PAYLOAD, "resource_age_date": "1990-01-01T00:00:00+00:00"},
+    )
+
+    assert undated == pytest.approx(ancient)
+
+
+def test_staleness_penalty_gate_is_on_the_upcoming_run_key(settings):
+    """The gate reads next_start_date, the key the payload actually carries."""
+    settings.VECTOR_SEARCH_STALENESS_PENALTY_WEIGHT = 0.05
+    settings.VECTOR_SEARCH_STALENESS_HORIZON_YEARS = 20
+
+    expression = staleness_penalty_expression(
+        RESOURCES_COLLECTION_NAME, datetime.now(tz=UTC)
+    )
+
+    [gate] = [f for f in expression.neg.mult if isinstance(f, models.Filter)]
+    [condition] = gate.must
+    assert isinstance(condition, models.IsEmptyCondition)
+    assert condition.is_empty.key == NEXT_START_DATE_PAYLOAD_KEY
+
+
+def test_completeness_penalty_expression(settings):
+    """The penalty subtracts weight * (1 - completeness) from the score."""
+    settings.VECTOR_SEARCH_INCOMPLETENESS_PENALTY_WEIGHT = 0.05
+
+    expression = completeness_penalty_expression(RESOURCES_COLLECTION_NAME)
+
+    assert isinstance(expression, models.NegExpression)
+    assert _penalty_weight(expression) == 0.05
+    # 1 - completeness
+    incompleteness = _penalty_ramp(expression)
+    assert incompleteness.sum[0] == 1
+    assert incompleteness.sum[1].neg == COMPLETENESS_PAYLOAD_KEY
+    # a share of the resource's own score, not a fixed number of score units
+    assert _penalty_is_proportional(expression)
+
+
+@pytest.mark.parametrize("weight", [0, None, -1])
+def test_completeness_penalty_expression_disabled(settings, weight):
+    """A weight of 0, unset, or negative leaves scores alone."""
+    settings.VECTOR_SEARCH_INCOMPLETENESS_PENALTY_WEIGHT = weight
+
+    assert completeness_penalty_expression(RESOURCES_COLLECTION_NAME) is None
+
+
+def test_completeness_penalty_expression_other_collections(settings):
+    """Only resource payloads carry completeness, so only they are penalized."""
+    settings.VECTOR_SEARCH_INCOMPLETENESS_PENALTY_WEIGHT = 0.05
+
+    assert completeness_penalty_expression(CONTENT_FILES_COLLECTION_NAME) is None
+
+
+def test_score_formula_query_combines_boosts_and_penalty(mocker, settings):
+    """Boosts add to the score and the penalty subtracts from it."""
+    settings.VECTOR_SEARCH_INCOMPLETENESS_PENALTY_WEIGHT = 0.05
+    settings.VECTOR_SEARCH_STALENESS_PENALTY_WEIGHT = 0
+    mocker.patch(
+        "vector_search.utils.VECTOR_SEARCH_SCORE_BOOST",
+        {RESOURCES_COLLECTION_NAME: [{"boost": 0.15, "params": {"free": True}}]},
+    )
+
+    formula_query = score_formula_query(RESOURCES_COLLECTION_NAME)
+
+    assert formula_query.defaults == {COMPLETENESS_PAYLOAD_KEY: 1.0}
+    score, boost, penalty = formula_query.formula.sum
+    assert score == "$score"
+    assert isinstance(boost, models.MultExpression)
+    assert penalty == completeness_penalty_expression(RESOURCES_COLLECTION_NAME)
+
+
+def test_score_formula_query_penalty_only(mocker, settings):
+    """With no boosts configured the formula is the score minus the penalty."""
+    settings.VECTOR_SEARCH_INCOMPLETENESS_PENALTY_WEIGHT = 0.05
+    settings.VECTOR_SEARCH_STALENESS_PENALTY_WEIGHT = 0
+    mocker.patch("vector_search.utils.VECTOR_SEARCH_SCORE_BOOST", {})
+
+    formula_query = score_formula_query(RESOURCES_COLLECTION_NAME)
+
+    score, penalty = formula_query.formula.sum
+    assert score == "$score"
+    assert penalty == completeness_penalty_expression(RESOURCES_COLLECTION_NAME)
+
+
+def test_score_formula_query_boosts_only(mocker, settings):
+    """With the penalty disabled the formula keeps the boosts and no defaults."""
+    settings.VECTOR_SEARCH_INCOMPLETENESS_PENALTY_WEIGHT = 0
+    settings.VECTOR_SEARCH_STALENESS_PENALTY_WEIGHT = 0
+    mocker.patch(
+        "vector_search.utils.VECTOR_SEARCH_SCORE_BOOST",
+        {RESOURCES_COLLECTION_NAME: [{"boost": 0.15, "params": {"free": True}}]},
+    )
+
+    formula_query = score_formula_query(RESOURCES_COLLECTION_NAME)
+
+    assert not formula_query.defaults
+    score, boost = formula_query.formula.sum
+    assert score == "$score"
+    assert isinstance(boost, models.MultExpression)
+
+
+def test_staleness_penalty_expression(settings):
+    """The penalty decays linearly over resource_age_date, from now."""
+    settings.VECTOR_SEARCH_STALENESS_PENALTY_WEIGHT = 0.05
+    settings.VECTOR_SEARCH_STALENESS_HORIZON_YEARS = 20
+    now = datetime(2026, 1, 1, tzinfo=UTC)
+
+    expression = staleness_penalty_expression(RESOURCES_COLLECTION_NAME, now)
+
+    assert isinstance(expression, models.NegExpression)
+    assert _penalty_weight(expression) == 0.05
+    # 1 - decay
+    assert _penalty_ramp(expression).sum[0] == 1
+    assert _penalty_is_proportional(expression)
+    decay = _penalty_decay(expression).lin_decay
+    assert decay.x.datetime_key == RESOURCE_AGE_DATE_PAYLOAD_KEY
+    assert decay.target.datetime == now.isoformat()
+    # Qdrant rejects a midpoint of 0, so the horizon is expressed as the default
+    # midpoint over half the scale -- the same line, bottoming out at the horizon
+    # rather than halfway to it.
+    assert decay.scale == 20 * SECONDS_PER_YEAR / 2
+    assert decay.midpoint == 0.5
+    assert 0 < decay.midpoint < 1
+
+
+@pytest.mark.parametrize("age_years", [0, 5, 20, 40])
+def test_staleness_penalty_ramps_linearly_to_the_horizon(settings, age_years):
+    """
+    The emitted decay params subtract weight * age / horizon, saturating at the
+    weight once a resource is at least a horizon old.
+    """
+    settings.VECTOR_SEARCH_STALENESS_PENALTY_WEIGHT = 0.05
+    settings.VECTOR_SEARCH_STALENESS_HORIZON_YEARS = 20
+    now = datetime(2026, 1, 1, tzinfo=UTC)
+
+    expression = staleness_penalty_expression(RESOURCES_COLLECTION_NAME, now)
+    weight = _penalty_weight(expression)
+    decay_params = _penalty_decay(expression).lin_decay
+
+    # Qdrant's linear decay, evaluated for a resource of this age
+    age_seconds = age_years * SECONDS_PER_YEAR
+    decay = max(0, 1 - (1 - decay_params.midpoint) * age_seconds / decay_params.scale)
+    penalty = weight * (1 - decay)
+
+    assert penalty == pytest.approx(0.05 * min(age_years / 20, 1))
+
+
+@pytest.mark.parametrize("weight", [0, None, -1])
+def test_staleness_penalty_expression_disabled(settings, weight):
+    """A weight of 0, unset, or negative leaves scores alone."""
+    settings.VECTOR_SEARCH_STALENESS_PENALTY_WEIGHT = weight
+
+    assert (
+        staleness_penalty_expression(RESOURCES_COLLECTION_NAME, datetime.now(tz=UTC))
+        is None
+    )
+
+
+@pytest.mark.parametrize("horizon_years", [0, None, -1])
+def test_staleness_penalty_expression_without_horizon(settings, horizon_years):
+    """A horizon of 0, unset, or negative has no ramp to penalize along."""
+    settings.VECTOR_SEARCH_STALENESS_PENALTY_WEIGHT = 0.05
+    settings.VECTOR_SEARCH_STALENESS_HORIZON_YEARS = horizon_years
+
+    assert (
+        staleness_penalty_expression(RESOURCES_COLLECTION_NAME, datetime.now(tz=UTC))
+        is None
+    )
+
+
+def test_staleness_penalty_expression_other_collections(settings):
+    """Only resource payloads carry an age date, so only they are penalized."""
+    settings.VECTOR_SEARCH_STALENESS_PENALTY_WEIGHT = 0.05
+
+    assert (
+        staleness_penalty_expression(
+            CONTENT_FILES_COLLECTION_NAME, datetime.now(tz=UTC)
+        )
+        is None
+    )
+
+
+def test_score_formula_query_combines_both_penalties(mocker, settings):
+    """Incompleteness and staleness both subtract from the score."""
+    settings.VECTOR_SEARCH_INCOMPLETENESS_PENALTY_WEIGHT = 0.05
+    settings.VECTOR_SEARCH_STALENESS_PENALTY_WEIGHT = 0.05
+    settings.VECTOR_SEARCH_STALENESS_HORIZON_YEARS = 20
+    mocker.patch("vector_search.utils.VECTOR_SEARCH_SCORE_BOOST", {})
+    now = datetime(2026, 1, 1, tzinfo=UTC)
+
+    with freeze_time(now):
+        formula_query = score_formula_query(RESOURCES_COLLECTION_NAME)
+
+    score, completeness_penalty, staleness = formula_query.formula.sum
+    assert score == "$score"
+    assert completeness_penalty == completeness_penalty_expression(
+        RESOURCES_COLLECTION_NAME
+    )
+    assert staleness == staleness_penalty_expression(RESOURCES_COLLECTION_NAME, now)
+    # An undated resource is aged from the horizon, so it takes the full
+    # penalty; the current ones are exempted by the upcoming-run condition.
+    assert formula_query.defaults == {
+        COMPLETENESS_PAYLOAD_KEY: 1.0,
+        RESOURCE_AGE_DATE_PAYLOAD_KEY: (
+            now - timedelta(seconds=20 * SECONDS_PER_YEAR)
+        ).isoformat(),
+    }
+
+
+def test_score_formula_query_staleness_penalty_only(mocker, settings):
+    """With incompleteness disabled, only the age date needs a default."""
+    settings.VECTOR_SEARCH_INCOMPLETENESS_PENALTY_WEIGHT = 0
+    settings.VECTOR_SEARCH_STALENESS_PENALTY_WEIGHT = 0.05
+    mocker.patch("vector_search.utils.VECTOR_SEARCH_SCORE_BOOST", {})
+
+    formula_query = score_formula_query(RESOURCES_COLLECTION_NAME)
+
+    assert list(formula_query.defaults) == [RESOURCE_AGE_DATE_PAYLOAD_KEY]
+    score, staleness = formula_query.formula.sum
+    assert score == "$score"
+    assert isinstance(_penalty_decay(staleness), models.LinDecayExpression)
+
+
+def test_score_formula_query_nothing_to_apply(mocker, settings):
+    """Nothing to boost and nothing to penalize means no rescoring stage."""
+    settings.VECTOR_SEARCH_INCOMPLETENESS_PENALTY_WEIGHT = 0.05
+    mocker.patch("vector_search.utils.VECTOR_SEARCH_SCORE_BOOST", {})
+
+    assert score_formula_query(CONTENT_FILES_COLLECTION_NAME) is None
 
 
 @pytest.mark.django_db
@@ -2093,36 +3708,56 @@ def test_embed_learning_resources_uses_collection_guard(mocker):
 @pytest.mark.django_db
 def test_check_missing_content_file_ids_not_in_db(mocker):
     """An edx_module_id with no ContentFile row is logged not_in_db."""
+    absent_id = "block-v1:MITx+6.00x+2T2020+type@problem+block@absent"
     mock_log = mocker.patch("vector_search.utils.log_missing_content_file")
     mock_client = mocker.AsyncMock()
     mock_client.count = mocker.AsyncMock(return_value=CountResult(count=5))
     mocker.patch("vector_search.utils.async_qdrant_client", return_value=mock_client)
 
     async_to_sync(check_missing_content_file_ids)(
-        ["block_absent"], CONTENT_FILES_COLLECTION_NAME
+        [absent_id], CONTENT_FILES_COLLECTION_NAME
     )
 
     mock_log.assert_called_once_with(
-        "block_absent", reason="not_in_db", source="vector_content_files_search"
+        absent_id, reason="not_in_db", source="vector_content_files_search"
     )
     mock_client.count.assert_not_called()
 
 
 @pytest.mark.django_db
+def test_check_missing_content_file_ids_trims_edge_whitespace(mocker):
+    """Edge whitespace is trimmed before probing, and the trimmed id is logged."""
+    absent_id = "block-v1:MITx+6.00x+2T2020+type@problem+block@absent"
+    mock_log = mocker.patch("vector_search.utils.log_missing_content_file")
+    mock_client = mocker.AsyncMock()
+    mock_client.count = mocker.AsyncMock(return_value=CountResult(count=5))
+    mocker.patch("vector_search.utils.async_qdrant_client", return_value=mock_client)
+
+    async_to_sync(check_missing_content_file_ids)(
+        [f" {absent_id} "], CONTENT_FILES_COLLECTION_NAME
+    )
+
+    mock_log.assert_called_once_with(
+        absent_id, reason="not_in_db", source="vector_content_files_search"
+    )
+
+
+@pytest.mark.django_db
 def test_check_missing_content_file_ids_not_in_index(mocker):
     """An edx_module_id present in the DB but with zero Qdrant points -> not_in_index."""
-    ContentFileFactory.create(edx_module_id="block_present")
+    present_id = "block-v1:MITx+6.00x+2T2020+type@problem+block@present"
+    ContentFileFactory.create(edx_module_id=present_id)
     mock_log = mocker.patch("vector_search.utils.log_missing_content_file")
     mock_client = mocker.AsyncMock()
     mock_client.count = mocker.AsyncMock(return_value=CountResult(count=0))
     mocker.patch("vector_search.utils.async_qdrant_client", return_value=mock_client)
 
     async_to_sync(check_missing_content_file_ids)(
-        ["block_present"], CONTENT_FILES_COLLECTION_NAME
+        [present_id], CONTENT_FILES_COLLECTION_NAME
     )
 
     mock_log.assert_called_once_with(
-        "block_present", reason="not_in_index", source="vector_content_files_search"
+        present_id, reason="not_in_index", source="vector_content_files_search"
     )
     assert mock_client.count.call_args.kwargs["exact"] is True
 
@@ -2130,14 +3765,655 @@ def test_check_missing_content_file_ids_not_in_index(mocker):
 @pytest.mark.django_db
 def test_check_missing_content_file_ids_present_and_indexed_silent(mocker):
     """An id present in DB and present in Qdrant logs nothing."""
-    ContentFileFactory.create(edx_module_id="block_ok")
+    present_id = "block-v1:MITx+6.00x+2T2020+type@problem+block@ok"
+    ContentFileFactory.create(edx_module_id=present_id)
     mock_log = mocker.patch("vector_search.utils.log_missing_content_file")
     mock_client = mocker.AsyncMock()
     mock_client.count = mocker.AsyncMock(return_value=CountResult(count=3))
     mocker.patch("vector_search.utils.async_qdrant_client", return_value=mock_client)
 
     async_to_sync(check_missing_content_file_ids)(
-        ["block_ok"], CONTENT_FILES_COLLECTION_NAME
+        [present_id], CONTENT_FILES_COLLECTION_NAME
     )
 
     mock_log.assert_not_called()
+
+
+@pytest.mark.django_db
+def test_check_missing_content_file_ids_skips_unimportant_block_types(mocker):
+    """Unimportant block types are filtered out before any DB or Qdrant probe."""
+    mock_present = mocker.patch("vector_search.utils.present_edx_module_ids")
+    mock_log = mocker.patch("vector_search.utils.log_missing_content_file")
+    mock_client = mocker.AsyncMock()
+    mock_client.count = mocker.AsyncMock(return_value=CountResult(count=0))
+    mocker.patch("vector_search.utils.async_qdrant_client", return_value=mock_client)
+
+    async_to_sync(check_missing_content_file_ids)(
+        [
+            "block-v1:MITx+6.00x+2T2020+type@discussion+block@abc",
+            "does-not-exist",
+        ],
+        CONTENT_FILES_COLLECTION_NAME,
+    )
+
+    mock_present.assert_not_called()
+    mock_client.count.assert_not_called()
+    mock_log.assert_not_called()
+
+
+@pytest.mark.parametrize("direction", [models.Direction.ASC, models.Direction.DESC])
+def test_order_by_query_nullable_key_orders_by_formula(direction):
+    """
+    A key a point can have no value for is ordered by a formula, so those points
+    are ordered last instead of dropped from the results by order_by
+    """
+    query = order_by_query(
+        models.OrderBy(key="next_start_date", direction=direction),
+        RESOURCES_COLLECTION_NAME,
+    )
+
+    assert isinstance(query, models.FormulaQuery)
+    assert query.defaults == {"next_start_date": ORDER_BY_MISSING_DATETIME[direction]}
+    if direction == models.Direction.DESC:
+        # a higher score ranks first, so descending is the score's own direction
+        assert query.formula == models.DatetimeKeyExpression(
+            datetime_key="next_start_date"
+        )
+    else:
+        assert query.formula == models.NegExpression(
+            neg=models.DatetimeKeyExpression(datetime_key="next_start_date")
+        )
+
+
+@pytest.mark.parametrize("direction", [models.Direction.ASC, models.Direction.DESC])
+def test_order_by_query_nullable_key_orders_missing_last(direction):
+    """
+    Run the formula for real: whichever direction is asked for, the point with
+    no date lands last rather than first or nowhere.
+
+    The in-memory client raises on a payload holding an explicit
+    `"next_start_date": None`, so only the missing-key case is covered here.
+    Real Qdrant orders a null value and an absent key the same way.
+    """
+    dated_first = "2026-01-01T00:00:00Z"
+    dated_second = "2027-01-01T00:00:00Z"
+    vector = [0.1, 0.2]
+    client = QdrantClient(":memory:")
+    client.create_collection(
+        "test",
+        vectors_config=models.VectorParams(
+            size=len(vector), distance=models.Distance.COSINE
+        ),
+    )
+    # No payload index: the local client ignores them, and the formula reads the
+    # payload value directly rather than walking an index the way order_by does.
+    client.upsert(
+        "test",
+        [
+            PointStruct(id=0, vector=vector, payload={"next_start_date": dated_first}),
+            PointStruct(id=1, vector=vector, payload={"next_start_date": dated_second}),
+            PointStruct(id=2, vector=vector, payload={}),
+        ],
+    )
+
+    points = client.query_points(
+        "test",
+        prefetch=[models.Prefetch(query=vector, limit=10)],
+        query=order_by_query(
+            models.OrderBy(key="next_start_date", direction=direction),
+            RESOURCES_COLLECTION_NAME,
+        ),
+        limit=10,
+    ).points
+
+    assert [point.id for point in points] == (
+        [0, 1, 2] if direction == models.Direction.ASC else [1, 0, 2]
+    )
+
+
+@pytest.mark.parametrize("key", ["views", "created_on"])
+def test_order_by_query_keeps_order_by_for_keys_always_present(key):
+    """Keys on every payload keep the exact ordering order_by gives them"""
+    order_by = models.OrderBy(key=key, direction=models.Direction.DESC)
+
+    assert order_by_query(order_by, RESOURCES_COLLECTION_NAME) == models.OrderByQuery(
+        order_by=order_by
+    )
+
+
+def test_order_by_query_keeps_order_by_for_other_collections():
+    """Only the resources collection carries next_start_date"""
+    order_by = models.OrderBy(key="next_start_date", direction=models.Direction.ASC)
+
+    assert order_by_query(
+        order_by, CONTENT_FILES_COLLECTION_NAME
+    ) == models.OrderByQuery(order_by=order_by)
+
+
+# Rendered in a subprocess by test_resource_embedding_checksum_is_process_stable.
+# Reads a serialized resource document as JSON on stdin, writes the rendered
+# markdown and its embedding checksum as JSON on stdout. Kept free of database
+# and network access so it needs nothing but django.setup().
+_CHECKSUM_PROBE = """
+import json, os, sys
+
+os.environ.setdefault("DJANGO_SETTINGS_MODULE", "main.settings")
+import django
+
+django.setup()
+
+from learning_resources.serializers import LearningResourceMetadataDisplaySerializer
+from vector_search.utils import resource_embedding_checksum
+
+document = json.load(sys.stdin)
+markdown = LearningResourceMetadataDisplaySerializer(document).render_markdown()
+sys.stdout.write(
+    json.dumps(
+        {"checksum": resource_embedding_checksum(markdown), "markdown": markdown}
+    )
+)
+"""
+
+# Multiple runs contributing overlapping instructors, languages and levels, so
+# every field that de-duplicates through a set has more than one element to
+# order. A course (not a program) keeps get_program_courses off the database.
+_CHECKSUM_PROBE_DOCUMENT = {
+    "readable_id": "course-v1:MITxT+6.3710.5x",
+    "resource_type": LearningResourceType.course.name,
+    "title": "Probability: Multiple Random Variables",
+    "description": "Discrete and continuous random variables.",
+    "url": "https://example.edu/6.3710.5x",
+    "free": True,
+    "professional": False,
+    "certification_type": {"code": "completion", "name": "Certificate of Completion"},
+    "prices": ["0.00"],
+    "topics": [{"name": "Mathematics"}, {"name": "Data Science"}],
+    "departments": [
+        {"name": "Electrical Engineering", "school": {"name": "Engineering"}}
+    ],
+    "platform": {"name": "edX"},
+    "offered_by": {"name": "MITx"},
+    "delivery": [{"code": "online", "name": "Online"}],
+    "availability": "dated",
+    "runs": [
+        {
+            "run_id": 1,
+            "start_date": "2024-02-01T00:00:00Z",
+            "languages": ["en-us", "es-es"],
+            "level": [{"name": "Advanced"}, {"name": "Graduate"}],
+            "delivery": [{"code": "online", "name": "Online"}],
+            "resource_prices": [{"currency": "USD", "amount": "0.00"}],
+            "prices": ["0.00"],
+            "instructors": [
+                {"full_name": "Devavrat Shah"},
+                {"full_name": "John Tsitsiklis"},
+                {"full_name": "Yury Polyanskiy"},
+            ],
+        },
+        {
+            "run_id": 2,
+            "start_date": "2024-09-01T00:00:00Z",
+            "languages": ["fr-fr", "zh-cn", "en-us"],
+            "level": [{"name": "Undergraduate"}, {"name": "Advanced"}],
+            "delivery": [{"code": "online", "name": "Online"}],
+            "resource_prices": [{"currency": "USD", "amount": "0.00"}],
+            "prices": ["0.00"],
+            "instructors": [
+                {"full_name": "Patrick Jaillet"},
+                {"full_name": "Guy Bresler"},
+                {"full_name": "Devavrat Shah"},
+            ],
+        },
+    ],
+}
+
+# Enough seeds that an accidental set ordering is very unlikely to match sorted
+# order in all of them (five instructors order 120 ways).
+_CHECKSUM_PROBE_HASH_SEEDS = ("1", "2", "3", "4")
+
+
+def _render_checksum_probe(hash_seed):
+    """Render the probe document in a subprocess under the given hash seed"""
+    completed = subprocess.run(  # noqa: S603
+        [sys.executable, "-c", _CHECKSUM_PROBE],
+        input=json.dumps(_CHECKSUM_PROBE_DOCUMENT),
+        capture_output=True,
+        text=True,
+        check=False,
+        env={**os.environ, "PYTHONHASHSEED": hash_seed},
+    )
+    if completed.returncode != 0:
+        pytest.fail(
+            f"checksum probe failed under PYTHONHASHSEED={hash_seed}:\n"
+            f"{completed.stderr[-2000:]}"
+        )
+    return json.loads(completed.stdout)
+
+
+def test_resource_embedding_checksum_is_process_stable():
+    """
+    The same resource must checksum identically in every process.
+
+    resource_embedding_checksum is the resource's embedding identity: the embed
+    gate re-embeds whenever the stored checksum differs from the one computed
+    now. Anything in the rendered document ordered by a set makes that identity
+    depend on the interpreter's hash seed, so every celery pod computes a
+    different checksum for the same resource and they re-embed each other's
+    work on every scheduled run -- real spend, and invisible locally because
+    prefork workers share their parent's seed.
+
+    Rendering in subprocesses is what gives the seeds a chance to differ; a
+    single process would render identically all day with the bug present.
+    """
+    # Each probe pays for its own django.setup(); run them concurrently so the
+    # test costs one startup rather than four.
+    with ThreadPoolExecutor(max_workers=len(_CHECKSUM_PROBE_HASH_SEEDS)) as pool:
+        renders = list(pool.map(_render_checksum_probe, _CHECKSUM_PROBE_HASH_SEEDS))
+
+    baseline = renders[0]
+    for seed, render in zip(_CHECKSUM_PROBE_HASH_SEEDS[1:], renders[1:]):
+        assert render["markdown"] == baseline["markdown"], (
+            f"rendered document differs under PYTHONHASHSEED={seed}; sort the "
+            "field that changed order (see get_instructors)\n"
+            + "\n".join(
+                difflib.unified_diff(
+                    baseline["markdown"].splitlines(),
+                    render["markdown"].splitlines(),
+                    fromfile=f"seed={_CHECKSUM_PROBE_HASH_SEEDS[0]}",
+                    tofile=f"seed={seed}",
+                    lineterm="",
+                )
+            )
+        )
+        assert render["checksum"] == baseline["checksum"]
+
+
+def test_custom_score_formula_boost_override(mocker):
+    """A boost override replaces the configured amount for that entry only."""
+    mock_boosts = {
+        RESOURCES_COLLECTION_NAME: [
+            {
+                "name": PROGRAM_SCORE_BOOST_NAME,
+                "boost": 0.15,
+                "params": {"resource_type_group": ["program"]},
+            },
+            {"name": "free", "boost": 0.2, "params": {"free": True}},
+        ]
+    }
+    mocker.patch("vector_search.utils.VECTOR_SEARCH_SCORE_BOOST", mock_boosts)
+
+    program, free = custom_score_formula(
+        RESOURCES_COLLECTION_NAME,
+        boost_overrides={PROGRAM_SCORE_BOOST_NAME: 0.5},
+    )
+
+    assert program.mult[0] == 0.5
+    assert free.mult[0] == 0.2
+
+
+@pytest.mark.parametrize("override", [0, 0.5])
+def test_custom_score_formula_boost_override_zero(mocker, override):
+    """An override of 0 zeroes the boost rather than falling back to config."""
+    mocker.patch(
+        "vector_search.utils.VECTOR_SEARCH_SCORE_BOOST",
+        {
+            RESOURCES_COLLECTION_NAME: [
+                {
+                    "name": PROGRAM_SCORE_BOOST_NAME,
+                    "boost": 0.15,
+                    "params": {"resource_type_group": ["program"]},
+                }
+            ]
+        },
+    )
+
+    boosts = custom_score_formula(
+        RESOURCES_COLLECTION_NAME,
+        boost_overrides={PROGRAM_SCORE_BOOST_NAME: override},
+    )
+
+    assert boosts[0].mult[0] == override
+
+
+def test_custom_score_formula_unnamed_boost_not_overridden(mocker):
+    """An entry with no name keeps its configured amount."""
+    mocker.patch(
+        "vector_search.utils.VECTOR_SEARCH_SCORE_BOOST",
+        {RESOURCES_COLLECTION_NAME: [{"boost": 0.15, "params": {"free": True}}]},
+    )
+
+    boosts = custom_score_formula(
+        RESOURCES_COLLECTION_NAME,
+        boost_overrides={PROGRAM_SCORE_BOOST_NAME: 0.5, None: 0.9},
+    )
+
+    assert boosts[0].mult[0] == 0.15
+
+
+def test_completeness_penalty_expression_weight_override(settings):
+    """An explicit weight overrides the setting."""
+    settings.VECTOR_SEARCH_INCOMPLETENESS_PENALTY_WEIGHT = 0.05
+
+    expression = completeness_penalty_expression(RESOURCES_COLLECTION_NAME, weight=0.2)
+
+    assert _penalty_weight(expression) == 0.2
+
+
+@pytest.mark.parametrize("weight", [0, -1])
+def test_completeness_penalty_expression_override_disables(settings, weight):
+    """A weight of 0 or negative disables an otherwise configured penalty."""
+    settings.VECTOR_SEARCH_INCOMPLETENESS_PENALTY_WEIGHT = 0.05
+
+    assert (
+        completeness_penalty_expression(RESOURCES_COLLECTION_NAME, weight=weight)
+        is None
+    )
+
+
+def test_staleness_penalty_expression_weight_override(settings):
+    """An explicit weight overrides the setting."""
+    settings.VECTOR_SEARCH_STALENESS_PENALTY_WEIGHT = 0.05
+    settings.VECTOR_SEARCH_STALENESS_HORIZON_YEARS = 20
+
+    expression = staleness_penalty_expression(
+        RESOURCES_COLLECTION_NAME, datetime.now(tz=UTC), weight=0.2
+    )
+
+    assert _penalty_weight(expression) == 0.2
+
+
+@pytest.mark.parametrize("weight", [0, -1])
+def test_staleness_penalty_expression_override_disables(settings, weight):
+    """A weight of 0 or negative disables an otherwise configured penalty."""
+    settings.VECTOR_SEARCH_STALENESS_PENALTY_WEIGHT = 0.05
+
+    assert (
+        staleness_penalty_expression(
+            RESOURCES_COLLECTION_NAME, datetime.now(tz=UTC), weight=weight
+        )
+        is None
+    )
+
+
+def test_score_formula_query_applies_overrides(mocker, settings):
+    """Every weight in the formula can be overridden per request."""
+    settings.VECTOR_SEARCH_INCOMPLETENESS_PENALTY_WEIGHT = 0.05
+    settings.VECTOR_SEARCH_STALENESS_PENALTY_WEIGHT = 0.05
+    settings.VECTOR_SEARCH_STALENESS_HORIZON_YEARS = 20
+    mocker.patch(
+        "vector_search.utils.VECTOR_SEARCH_SCORE_BOOST",
+        {
+            RESOURCES_COLLECTION_NAME: [
+                {
+                    "name": PROGRAM_SCORE_BOOST_NAME,
+                    "boost": 0.15,
+                    "params": {"resource_type_group": ["program"]},
+                }
+            ]
+        },
+    )
+
+    formula_query = score_formula_query(
+        RESOURCES_COLLECTION_NAME,
+        program_boost=0.4,
+        completeness_penalty=0.1,
+        staleness_penalty=0.2,
+    )
+
+    score, boost, completeness, staleness = formula_query.formula.sum
+    assert score == "$score"
+    assert boost.mult[0] == 0.4
+    assert _penalty_weight(completeness) == 0.1
+    assert _penalty_weight(staleness) == 0.2
+
+
+def test_score_formula_query_overrides_can_disable_penalties(mocker, settings):
+    """Zeroed penalties drop out of the formula, defaults included."""
+    settings.VECTOR_SEARCH_INCOMPLETENESS_PENALTY_WEIGHT = 0.05
+    settings.VECTOR_SEARCH_STALENESS_PENALTY_WEIGHT = 0.05
+    mocker.patch("vector_search.utils.VECTOR_SEARCH_SCORE_BOOST", {})
+
+    formula_query = score_formula_query(
+        RESOURCES_COLLECTION_NAME,
+        completeness_penalty=0,
+        staleness_penalty=0,
+    )
+
+    assert formula_query is None
+
+
+def test_score_formula_overrides():
+    """Only the score formula weights are pulled out of the request params."""
+    assert score_formula_overrides(
+        {
+            "q": "test",
+            "program_boost": 0.4,
+            "staleness_penalty": 0.2,
+            "score_cutoff": 0.1,
+        }
+    ) == {
+        "program_boost": 0.4,
+        "staleness_penalty": 0.2,
+        "staleness_horizon_years": None,
+        "completeness_penalty": None,
+    }
+
+
+def test_staleness_penalty_expression_horizon_override(settings):
+    """An explicit horizon overrides the setting's ramp length."""
+    settings.VECTOR_SEARCH_STALENESS_PENALTY_WEIGHT = 0.05
+    settings.VECTOR_SEARCH_STALENESS_HORIZON_YEARS = 20
+
+    expression = staleness_penalty_expression(
+        RESOURCES_COLLECTION_NAME, datetime.now(tz=UTC), horizon_years=5
+    )
+
+    decay = _penalty_decay(expression).lin_decay
+    # half the horizon at the default midpoint -- see staleness_penalty_expression
+    assert decay.scale == 5 * SECONDS_PER_YEAR / 2
+
+
+@pytest.mark.parametrize("horizon_years", [0, -1])
+def test_staleness_penalty_expression_horizon_override_disables(
+    settings, horizon_years
+):
+    """A horizon of 0 or negative has no ramp to penalize along."""
+    settings.VECTOR_SEARCH_STALENESS_PENALTY_WEIGHT = 0.05
+    settings.VECTOR_SEARCH_STALENESS_HORIZON_YEARS = 20
+
+    assert (
+        staleness_penalty_expression(
+            RESOURCES_COLLECTION_NAME,
+            datetime.now(tz=UTC),
+            horizon_years=horizon_years,
+        )
+        is None
+    )
+
+
+def test_score_formula_query_applies_horizon_override(mocker, settings):
+    """The horizon override reaches the formula's decay params."""
+    settings.VECTOR_SEARCH_STALENESS_PENALTY_WEIGHT = 0.05
+    settings.VECTOR_SEARCH_STALENESS_HORIZON_YEARS = 20
+    settings.VECTOR_SEARCH_INCOMPLETENESS_PENALTY_WEIGHT = 0
+    mocker.patch("vector_search.utils.VECTOR_SEARCH_SCORE_BOOST", {})
+
+    formula_query = score_formula_query(
+        RESOURCES_COLLECTION_NAME, staleness_horizon_years=5
+    )
+
+    _, staleness = formula_query.formula.sum
+    decay = _penalty_decay(staleness).lin_decay
+    assert decay.scale == 5 * SECONDS_PER_YEAR / 2
+
+
+@pytest.mark.django_db(transaction=True)
+def test_async_content_file_chunks_for_resource(mocker):
+    """Chunks come back highest scoring first, tagged with their point id"""
+    resource = LearningResourceFactory.create(is_course=True)
+    mock_client = mocker.AsyncMock()
+    mock_client.query_points = mocker.AsyncMock(
+        return_value=mocker.Mock(
+            points=[
+                PointStruct(
+                    id="00000000000000000000000000000001",
+                    payload={"chunk_content": "first", "key": "a.html"},
+                    vector={},
+                ),
+                PointStruct(
+                    id="00000000000000000000000000000002",
+                    payload={"chunk_content": "second", "key": "b.html"},
+                    vector={},
+                ),
+            ]
+        )
+    )
+    mocker.patch("vector_search.utils.async_qdrant_client", return_value=mock_client)
+
+    chunks = asyncio.run(
+        async_content_file_chunks_for_resource(resource, "syllabus", limit=5)
+    )
+
+    assert [chunk["chunk_content"] for chunk in chunks] == ["first", "second"]
+    assert [chunk["point_id"] for chunk in chunks] == [
+        "00000000000000000000000000000001",
+        "00000000000000000000000000000002",
+    ]
+    call_kwargs = mock_client.query_points.mock_calls[0].kwargs
+    assert call_kwargs["collection_name"] == CONTENT_FILES_COLLECTION_NAME
+    assert call_kwargs["limit"] == 5
+    # Restricted to the resource's best run, plus the resource readable_id
+    # itself, which is what the run-less course metadata point carries.
+    assert call_kwargs["query_filter"].must == [
+        models.FieldCondition(
+            key="run_readable_id",
+            match=models.MatchAny(any=[resource.best_run.run_id, resource.readable_id]),
+        )
+    ]
+
+
+@pytest.mark.django_db(transaction=True)
+def test_async_content_file_chunks_for_resource_test_mode(mocker):
+    """A test_mode resource is restricted to its best run, not every run"""
+    resource = LearningResourceFactory.create(is_course=True, test_mode=True)
+    resource.runs.all().delete()
+    LearningResourceRunFactory.create(
+        learning_resource=resource, run_id="RUN_A", published=True
+    )
+    LearningResourceRunFactory.create(
+        learning_resource=resource, run_id="RUN_B", published=True
+    )
+    mock_client = mocker.AsyncMock()
+    mock_client.query_points = mocker.AsyncMock(return_value=mocker.Mock(points=[]))
+    mocker.patch("vector_search.utils.async_qdrant_client", return_value=mock_client)
+
+    asyncio.run(async_content_file_chunks_for_resource(resource, "syllabus"))
+
+    call_kwargs = mock_client.query_points.mock_calls[0].kwargs
+    assert call_kwargs["query_filter"].must == [
+        models.FieldCondition(
+            key="run_readable_id",
+            match=models.MatchAny(any=[resource.best_run.run_id, resource.readable_id]),
+        )
+    ]
+
+
+@pytest.mark.django_db(transaction=True)
+def test_async_content_file_chunks_for_resource_duplicate_readable_id(mocker):
+    """The best run comes from the resource passed in, not another platform's"""
+    readable_id = "course-v1:MITx+6.002x"
+    other = LearningResourceFactory.create(
+        is_course=True,
+        readable_id=readable_id,
+        platform=LearningResourcePlatformFactory.create(code=PlatformType.edx.name),
+    )
+    other.runs.all().delete()
+    LearningResourceRunFactory.create(
+        learning_resource=other, run_id="EDX_RUN", published=True
+    )
+    resource = LearningResourceFactory.create(
+        is_course=True,
+        readable_id=readable_id,
+        platform=LearningResourcePlatformFactory.create(
+            code=PlatformType.mitxonline.name
+        ),
+    )
+    resource.runs.all().delete()
+    LearningResourceRunFactory.create(
+        learning_resource=resource, run_id="MITXONLINE_RUN", published=True
+    )
+    mock_client = mocker.AsyncMock()
+    mock_client.query_points = mocker.AsyncMock(return_value=mocker.Mock(points=[]))
+    mocker.patch("vector_search.utils.async_qdrant_client", return_value=mock_client)
+
+    asyncio.run(async_content_file_chunks_for_resource(resource, "syllabus"))
+
+    call_kwargs = mock_client.query_points.mock_calls[0].kwargs
+    assert call_kwargs["query_filter"].must == [
+        models.FieldCondition(
+            key="run_readable_id",
+            match=models.MatchAny(any=["MITXONLINE_RUN", readable_id]),
+        )
+    ]
+
+
+@pytest.mark.django_db(transaction=True)
+def test_async_content_file_chunks_for_resource_no_published_run(mocker):
+    """With no published run the filter falls back to the resource itself"""
+    resource = LearningResourceFactory.create(is_course=True)
+    resource.runs.update(published=False)
+    mock_client = mocker.AsyncMock()
+    mock_client.query_points = mocker.AsyncMock(return_value=mocker.Mock(points=[]))
+    mocker.patch("vector_search.utils.async_qdrant_client", return_value=mock_client)
+
+    assert (
+        asyncio.run(async_content_file_chunks_for_resource(resource, "syllabus")) == []
+    )
+    call_kwargs = mock_client.query_points.mock_calls[0].kwargs
+    assert call_kwargs["query_filter"].must == [
+        models.FieldCondition(
+            key="run_readable_id",
+            match=models.MatchAny(any=[resource.readable_id]),
+        )
+    ]
+
+
+def _course_with_content_files(**kwargs):
+    """Create a course with files on published, variant and unpublished runs, plus direct and withdrawn files"""
+    course = LearningResourceFactory.create(is_course=True, create_runs=False, **kwargs)
+    runs = [
+        LearningResourceRunFactory.create(learning_resource=course, published=True),
+        LearningResourceRunFactory.create(
+            learning_resource=course, published=True, is_variant=True
+        ),
+        LearningResourceRunFactory.create(learning_resource=course, published=False),
+    ]
+    files = {ContentFileFactory.create(run=run, published=True) for run in runs}
+    files.add(ContentFileFactory.create(learning_resource=course, published=True))
+    ContentFileFactory.create(run=runs[0], published=False)
+    return course, files
+
+
+def test_qdrant_content_files_every_run():
+    """Qdrant gets published files of every run, published or not, plus direct files"""
+    course, files = _course_with_content_files()
+
+    selected = vs_utils.qdrant_content_files(
+        LearningResource.objects.filter(id=course.id)
+    )
+
+    assert set(selected) == files
+
+
+def test_qdrant_content_files_unpublished_course_has_none():
+    """Unpublished courses aren't embedded unless test_mode, which includes Canvas"""
+    course, _ = _course_with_content_files(published=False)
+    test_course, test_files = _course_with_content_files(
+        published=False, test_mode=True, etl_source=ETLSource.canvas.name
+    )
+
+    selected = vs_utils.qdrant_content_files(
+        LearningResource.objects.filter(id__in=[course.id, test_course.id])
+    )
+
+    assert set(selected) == test_files

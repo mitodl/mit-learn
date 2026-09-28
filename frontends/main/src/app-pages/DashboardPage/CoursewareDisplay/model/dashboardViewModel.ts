@@ -8,7 +8,7 @@
  */
 import type {
   BaseCourseRun,
-  V2ProgramDisplayMode,
+  V2ProgramDisplayModeEnum,
   ContractPage,
   CourseRunEnrollmentV3,
   CourseWithCourseRunsSerializerV2,
@@ -20,6 +20,8 @@ import type {
   V3UserProgramEnrollment,
 } from "@mitodl/mitxonline-api-axios/v2"
 import { DisplayModeEnum } from "@mitodl/mitxonline-api-axios/v2"
+import { getRunTimeState } from "../courseDateUtils"
+import type { RunTimeState } from "../courseDateUtils"
 import {
   getBestRun,
   getIdsFromReqTree,
@@ -145,18 +147,20 @@ export const filterEnrollmentsByOrganization = (
 
 /**
  * Selects the best enrollment from multiple enrollments for the same course.
- * Priority:
- * 1. Prefer enrollment with a certificate
- * 2. If tied, prefer highest grade
- * 3. Otherwise take first match
- *
- * Delegates to `pickDisplayedEnrollmentForLegacyDashboard`.
+ * See `pickBestEnrollmentFromGroup` for the selection policy.
  */
 export const selectBestEnrollment = (
   course: CourseWithCourseRunsSerializerV2,
   enrollments: CourseRunEnrollmentV3[],
 ): CourseRunEnrollmentV3 | null => {
-  return pickDisplayedEnrollmentForLegacyDashboard(course, enrollments)
+  const courseEnrollments = enrollments.filter((enrollment) =>
+    enrollmentBelongsToCourse(course, enrollment),
+  )
+  if (courseEnrollments.length === 0) {
+    return null
+  }
+
+  return pickBestEnrollmentFromGroup(courseEnrollments)
 }
 
 export const getEnrollmentStatus = (
@@ -186,6 +190,18 @@ export const getProgramEnrollmentStatus = (
   return EnrollmentStatus.NotEnrolled
 }
 
+/**
+ * Whether the learner ever passed this course, across every run they enrolled
+ * in.
+ *
+ * Completion belongs to the course, not to whichever run a card is displaying,
+ * so this must not go through `selectBestEnrollment`. That picks the run
+ * currently underway, which for a learner who passed an older run and then
+ * re-enrolled is the new, ungraded one.
+ */
+const courseIsCompleted = (enrollments: CourseRunEnrollmentV3[]): boolean =>
+  enrollments.some((e) => e.grades.some((g) => g.passed))
+
 const isLeafRequirementNodeCompleted = (
   node: V2ProgramRequirement,
   courseEnrollments: Record<number, CourseRunEnrollmentV3[]>,
@@ -195,8 +211,7 @@ const isLeafRequirementNodeCompleted = (
     node.data.node_type === "course" &&
     typeof node.data.course === "number"
   ) {
-    const enrollments = courseEnrollments[node.data.course] ?? []
-    return enrollments.some((e) => e.grades.some((g) => g.passed))
+    return courseIsCompleted(courseEnrollments[node.data.course] ?? [])
   }
   if (node.data.node_type === "program" && node.data.required_program) {
     return !!programEnrollments[node.data.required_program]?.certificate
@@ -267,10 +282,6 @@ export const getRequirementsProgress = (
 // End of absorbed helpers
 // ---------------------------------------------------------------------------
 
-const getMaxEnrollmentGrade = (enrollment: CourseRunEnrollmentV3): number => {
-  return Math.max(0, ...enrollment.grades.map((grade) => grade.grade ?? 0))
-}
-
 const enrollmentBelongsToCourse = (
   course: CourseWithCourseRunsSerializerV2,
   enrollment: CourseRunEnrollmentV3,
@@ -283,36 +294,79 @@ const enrollmentBelongsToCourse = (
 }
 
 /**
- * Legacy display policy used by dashboard cards.
- *
- * Priority:
- * 1. Prefer enrollment with a certificate
- * 2. If tied, prefer highest grade
- * 3. Otherwise take first match
+ * Sorts enrollments by their run's `start_date`, most recent first. Runs
+ * without a valid `start_date` sort last. Shared by `selectBestEnrollment`,
+ * `pickCertificateEnrollment` and `filterVariantSiblings` (so the "other
+ * runs" list a card renders is in a stable, meaningful order rather than
+ * arbitrary database order).
  */
-const pickDisplayedEnrollmentForLegacyDashboard = (
-  course: CourseWithCourseRunsSerializerV2,
+const sortEnrollmentsByStartDateDesc = (
   enrollments: CourseRunEnrollmentV3[],
-): CourseRunEnrollmentV3 | null => {
-  const courseEnrollments = enrollments.filter((enrollment) =>
-    enrollmentBelongsToCourse(course, enrollment),
-  )
-  if (courseEnrollments.length === 0) {
-    return null
-  }
-
-  return courseEnrollments.reduce((best, current) => {
-    const bestHasCert = !!best.certificate?.uuid
-    const currentHasCert = !!current.certificate?.uuid
-
-    if (currentHasCert && !bestHasCert) return current
-    if (bestHasCert && !currentHasCert) return best
-
-    const bestGrade = getMaxEnrollmentGrade(best)
-    const currentGrade = getMaxEnrollmentGrade(current)
-    return currentGrade > bestGrade ? current : best
-  }, courseEnrollments[0])
+): CourseRunEnrollmentV3[] => {
+  return [...enrollments].sort((a, b) => {
+    const aMs = a.run.start_date ? new Date(a.run.start_date).getTime() : NaN
+    const bMs = b.run.start_date ? new Date(b.run.start_date).getTime() : NaN
+    if (isNaN(aMs) && isNaN(bMs)) return 0
+    if (isNaN(aMs)) return 1
+    if (isNaN(bMs)) return -1
+    return bMs - aMs
+  })
 }
+
+/**
+ * Picks the enrollment whose run the learner is currently sitting in, from a
+ * group of enrollments that all represent the same underlying course. Used by
+ * `selectBestEnrollment` (single course) and `pickDisplayedHomeEnrollments`
+ * (one group per course+variant).
+ *
+ * Priority: the most recent run that is underway, else the most recent run
+ * that has ended, else the soonest upcoming one.
+ *
+ * Runs are classified by `getRunTimeState`, the same helper the card's badge
+ * and the sibling-runs accordion label use, so the run this picks can never be
+ * described in a way that contradicts why it was picked. That includes runs
+ * with missing or unparseable dates, which count as underway: an undated open
+ * enrollment should outrank a run that demonstrably ended.
+ *
+ * Certificates and grades deliberately play no part. A certificate earned on
+ * an older run stays visible via `pickCertificateEnrollment`, so it does not
+ * need to drag its run into the displayed slot.
+ */
+const pickBestEnrollmentFromGroup = (
+  enrollments: CourseRunEnrollmentV3[],
+): CourseRunEnrollmentV3 => {
+  const sorted = sortEnrollmentsByStartDateDesc(enrollments)
+  const byTimeState: Record<RunTimeState, CourseRunEnrollmentV3[]> = {
+    upcoming: [],
+    underway: [],
+    ended: [],
+  }
+  for (const enrollment of sorted) {
+    const timeState = getRunTimeState(
+      enrollment.run.start_date,
+      enrollment.run.end_date,
+    )
+    byTimeState[timeState].push(enrollment)
+  }
+  // `sorted` is most-recent-first, so each group's first entry is its latest
+  // run and the last upcoming entry is the one starting soonest.
+  return (
+    byTimeState.underway[0] ??
+    byTimeState.ended[0] ??
+    byTimeState.upcoming.at(-1) ??
+    sorted[0]
+  )
+}
+
+/**
+ * A certificate belongs to the course, not to whichever run a card happens to
+ * display, so cards resolve it across the learner's whole group of enrollments
+ * for that course. Most recent certificate-bearing run wins.
+ */
+const pickCertificateEnrollment = (
+  enrollments: CourseRunEnrollmentV3[],
+): CourseRunEnrollmentV3 | undefined =>
+  sortEnrollmentsByStartDateDesc(enrollments).find((e) => !!e.certificate?.uuid)
 
 const groupCourseRunEnrollmentsByCourseId = (
   enrollments: CourseRunEnrollmentV3[],
@@ -340,7 +394,7 @@ const groupProgramEnrollmentsByProgramId = (
 }
 
 const isProgramAsCourse = (program: {
-  display_mode?: V2ProgramDisplayMode | null
+  display_mode?: V2ProgramDisplayModeEnum | null
 }) => program.display_mode === DisplayModeEnum.Course
 
 const isNonContractEnrollment = (enrollment: CourseRunEnrollmentV3) =>
@@ -637,6 +691,14 @@ const getRequirementSectionTitle = (node: V2ProgramRequirement): string => {
  * `course` arm (the only arm with language / contract / enrollment complexity).
  * The other two arms are not `DashboardCourseEntry`-shaped and are intentionally
  * left as lighter structs.
+ *
+ * The two program arms split on the nested program's `display_mode` and are
+ * otherwise structurally identical (`moduleCourses` course children, optional
+ * enrollment): `program-as-course` is the program-with-`display_mode:"course"`
+ * presentation; `program` is any other nested program. Kept as separate arms
+ * (rather than merged) because their learner-facing wording and future render
+ * paths are expected to diverge — see the `getProgramTypeLabel`/
+ * `getProgramChildrenLabel` split in `ProgramAsCourseCard`.
  */
 type RequirementSectionItem =
   | { kind: "course"; entry: DashboardCourseEntry }
@@ -646,7 +708,12 @@ type RequirementSectionItem =
       moduleCourses: CourseWithCourseRunsSerializerV2[]
       courseProgramEnrollment?: V3UserProgramEnrollment
     }
-  | { kind: "program-enrollment"; enrollment: V3UserProgramEnrollment }
+  | {
+      kind: "program"
+      program: V2ProgramDetail
+      moduleCourses: CourseWithCourseRunsSerializerV2[]
+      programEnrollment?: V3UserProgramEnrollment
+    }
 
 /**
  * A fully-resolved requirement section for the program dashboard.
@@ -722,6 +789,67 @@ const buildCourseEntry = (
   }
 }
 
+type ResolveRequirementItemContext = {
+  /** Course pool for resolving course leaves at this level. */
+  coursesById: Map<number, CourseWithCourseRunsSerializerV2>
+  enrollmentsByCourseId: Record<number, CourseRunEnrollmentV3[]>
+  /** Program pool for resolving program leaves at this level. */
+  programsById: Map<number, V2ProgramDetail>
+  programEnrollmentsById: Record<number, V3UserProgramEnrollment>
+  moduleCoursesByProgramId: Record<number, CourseWithCourseRunsSerializerV2[]>
+  ancestorProgramEnrollment?: V3UserProgramEnrollment
+}
+
+/**
+ * Resolve one req_tree leaf (`{ type: "course" | "program", id }`) into a
+ * `RequirementSectionItem`, or `null` when the referenced entity is not in
+ * the context pools (callers drop nulls).
+ *
+ * Program leaves split on `display_mode`: `display_mode === "course"` →
+ * `program-as-course`, anything else → `program`. Both arms resolve their
+ * course children the same way, from `moduleCoursesByProgramId`.
+ */
+const resolveRequirementItem = (
+  resource: { type: "course" | "program"; id: number },
+  ctx: ResolveRequirementItemContext,
+): RequirementSectionItem | null => {
+  if (resource.type === "course") {
+    const course = ctx.coursesById.get(resource.id)
+    if (!course) return null
+    const entry = buildCourseEntry(
+      course,
+      ctx.enrollmentsByCourseId[course.id] ?? [],
+      {
+        ancestorContext: ctx.ancestorProgramEnrollment
+          ? { programEnrollment: ctx.ancestorProgramEnrollment }
+          : undefined,
+      },
+    )
+    if (!entry) return null
+    return { kind: "course", entry }
+  }
+
+  // resource.type === "program"
+  const program = ctx.programsById.get(resource.id)
+  if (!program) return null
+
+  if (isProgramAsCourse(program)) {
+    return {
+      kind: "program-as-course",
+      courseProgram: program,
+      moduleCourses: ctx.moduleCoursesByProgramId[program.id] ?? [],
+      courseProgramEnrollment: ctx.programEnrollmentsById[program.id],
+    }
+  }
+
+  return {
+    kind: "program",
+    program,
+    moduleCourses: ctx.moduleCoursesByProgramId[program.id] ?? [],
+    programEnrollment: ctx.programEnrollmentsById[program.id],
+  }
+}
+
 type BuildRequirementSectionsArgs = {
   /**
    * The program's `req_tree`. Assumes a flat structure: operators are never
@@ -784,8 +912,14 @@ const buildRequirementSections = ({
   completedCount: number
   totalCount: number
 } => {
-  const coursesById = new Map(programCourses.map((c) => [c.id, c]))
-  const programsById = new Map(requiredPrograms.map((p) => [p.id, p]))
+  const resolveContext: ResolveRequirementItemContext = {
+    coursesById: new Map(programCourses.map((c) => [c.id, c])),
+    enrollmentsByCourseId,
+    programsById: new Map(requiredPrograms.map((p) => [p.id, p])),
+    programEnrollmentsById,
+    moduleCoursesByProgramId: requiredProgramModuleCoursesByProgramId,
+    ancestorProgramEnrollment,
+  }
 
   const parsedSections: ProgramRequirementSection[] =
     parseProgramRequirementSections(reqTree)
@@ -793,42 +927,7 @@ const buildRequirementSections = ({
   const sections: RequirementSection[] = parsedSections
     .map((section) => {
       const items: RequirementSectionItem[] = section.items
-        .map((resource): RequirementSectionItem | null => {
-          if (resource.type === "course") {
-            const course = coursesById.get(resource.id)
-            if (!course) return null
-            const entry = buildCourseEntry(
-              course,
-              enrollmentsByCourseId[course.id] ?? [],
-              {
-                ancestorContext: ancestorProgramEnrollment
-                  ? { programEnrollment: ancestorProgramEnrollment }
-                  : undefined,
-              },
-            )
-            if (!entry) return null
-            return { kind: "course", entry }
-          }
-
-          // resource.type === "program"
-          const program = programsById.get(resource.id)
-          if (!program) return null
-
-          if (isProgramAsCourse(program)) {
-            return {
-              kind: "program-as-course",
-              courseProgram: program,
-              moduleCourses:
-                requiredProgramModuleCoursesByProgramId[program.id] ?? [],
-              courseProgramEnrollment: programEnrollmentsById[program.id],
-            }
-          }
-
-          const enrollment = programEnrollmentsById[program.id]
-          if (!enrollment) return null
-
-          return { kind: "program-enrollment", enrollment }
-        })
+        .map((resource) => resolveRequirementItem(resource, resolveContext))
         .filter((item): item is RequirementSectionItem => item !== null)
 
       const { completed, total } = getRequirementsProgress(
@@ -987,7 +1086,16 @@ const FALLBACK_NATIVE_LANGUAGE_NAMES: Record<string, string> = {
   "zh-tw": "繁體中文",
 }
 
-const nativeLanguageNameCache = new Map<string, string>()
+/**
+ * `resolved: false` marks a raw, untranslated locale code that fell through
+ * every lookup (unknown to both `Intl.DisplayNames` and the static fallback
+ * table) — as opposed to a genuine human-readable name. Callers should not
+ * apply display-name casing rules (e.g. title-casing the first word) to an
+ * unresolved code, since it isn't a name at all.
+ */
+type NativeLanguageNameResult = { label: string; resolved: boolean }
+
+const nativeLanguageNameCache = new Map<string, NativeLanguageNameResult>()
 let cachedDisplayNamesRef: typeof Intl.DisplayNames | undefined =
   Intl.DisplayNames
 
@@ -998,30 +1106,35 @@ const ensureNativeLanguageNameCacheIsFresh = (): void => {
   }
 }
 
-const getFallbackNativeLanguageName = (languageCode: string): string | null => {
+const getFallbackNativeLanguageName = (
+  languageCode: string,
+): NativeLanguageNameResult | null => {
   const exactMatch = FALLBACK_NATIVE_LANGUAGE_NAMES[languageCode]
   if (exactMatch) {
-    return exactMatch
+    return { label: exactMatch, resolved: true }
   }
   const baseLanguageSubtag = languageCode.split("-")[0]
   if (!baseLanguageSubtag) {
     return null
   }
-  return (
-    FALLBACK_NATIVE_LANGUAGE_NAMES[baseLanguageSubtag] ?? baseLanguageSubtag
-  )
+  const baseMatch = FALLBACK_NATIVE_LANGUAGE_NAMES[baseLanguageSubtag]
+  return baseMatch
+    ? { label: baseMatch, resolved: true }
+    : { label: baseLanguageSubtag, resolved: false }
 }
 
-const getNativeLanguageName = (languageCode: string): string => {
+const getNativeLanguageName = (
+  languageCode: string,
+): NativeLanguageNameResult => {
   ensureNativeLanguageNameCacheIsFresh()
   const normalizedLanguageCode = languageCode
     .trim()
     .toLowerCase()
     .replace("_", "-")
   const baseLanguageSubtag = normalizedLanguageCode.split("-")[0]
-  const cachedLabel = nativeLanguageNameCache.get(normalizedLanguageCode)
-  if (cachedLabel) {
-    return cachedLabel
+  const cachedResult = nativeLanguageNameCache.get(normalizedLanguageCode)
+  if (cachedResult) {
+    return cachedResult
   }
   let resolvedLabel: string | null = null
   try {
@@ -1047,22 +1160,38 @@ const getNativeLanguageName = (languageCode: string): string => {
   } catch {
     // Fall through to static fallback labels.
   }
-  const finalLabel =
-    resolvedLabel ??
-    getFallbackNativeLanguageName(normalizedLanguageCode) ??
-    normalizedLanguageCode
-  nativeLanguageNameCache.set(normalizedLanguageCode, finalLabel)
-  return finalLabel
+  const result: NativeLanguageNameResult = resolvedLabel
+    ? { label: resolvedLabel, resolved: true }
+    : (getFallbackNativeLanguageName(normalizedLanguageCode) ?? {
+        label: normalizedLanguageCode,
+        resolved: false,
+      })
+  nativeLanguageNameCache.set(normalizedLanguageCode, result)
+  return result
 }
 
 const buildVariantKey = (variant: SupportedVariant): string =>
   `language:${variant.language ?? ""}|industry:${variant.variant_industry ?? ""}|length:${variant.variant_length ?? ""}`
 
+/**
+ * `Intl.DisplayNames` returns language names in mid-sentence (dictionary)
+ * case, e.g. "español latinoamericano". Per CLDR's `contextTransforms` for
+ * the "languages" category (`titlecase-firstword`), UI list/menu and
+ * standalone contexts capitalize only the first word, not every word.
+ * `Intl.DisplayNames` has no option to request this directly, so it's
+ * applied here.
+ */
+const capitalizeFirstWord = (value: string): string =>
+  value ? value.charAt(0).toUpperCase() + value.slice(1) : value
+
 // Per-dimension display labels. These are the single source of truth shared by
 // both buildVariantLabel (what the picker renders) and sortVariants (the order
 // it renders in) so the sort always matches the visible text.
-const getVariantLanguageLabel = (variant: SupportedVariant): string =>
-  variant.language ? getNativeLanguageName(variant.language) : ""
+const getVariantLanguageLabel = (variant: SupportedVariant): string => {
+  if (!variant.language) return ""
+  const { label, resolved } = getNativeLanguageName(variant.language)
+  return resolved ? capitalizeFirstWord(label) : label
+}
 
 const getVariantIndustryLabel = (variant: SupportedVariant): string =>
   variant.variant_industry
@@ -1226,8 +1355,8 @@ const getCollectionFirstCoursesInDisplayOrder = (
  *
  * Groups by (courseId × language × variant_industry × variant_length) — the
  * same key used by filterVariantSiblings — then picks the single best
- * enrollment per group (certificate first, then highest grade). Siblings are
- * NOT returned here; callers retrieve them at render time via
+ * enrollment per group via `pickBestEnrollmentFromGroup`. Siblings are NOT
+ * returned here; callers retrieve them at render time via
  * filterVariantSiblings + enrollmentsByCourseId so the full sibling list is
  * always fresh.
  */
@@ -1250,30 +1379,22 @@ const pickDisplayedHomeEnrollments = (
       groups.set(key, [enrollment])
     }
   }
-  return [...groups.values()].map((group) =>
-    group.reduce((best, current) => {
-      const bestHasCert = !!best.certificate?.uuid
-      const currentHasCert = !!current.certificate?.uuid
-      if (currentHasCert && !bestHasCert) return current
-      if (bestHasCert && !currentHasCert) return best
-      return getMaxEnrollmentGrade(current) > getMaxEnrollmentGrade(best)
-        ? current
-        : best
-    }),
-  )
+  return [...groups.values()].map(pickBestEnrollmentFromGroup)
 }
 
 /**
  * Returns all enrollments in `enrollments` that share the same variant
  * (language × variant_industry × variant_length) as `currentEnrollment`,
- * excluding `currentEnrollment` itself.
+ * excluding `currentEnrollment` itself. Ordered most-recent-first (see
+ * `sortEnrollmentsByStartDateDesc`) so cards render the "other runs" list
+ * in a stable, meaningful order rather than arbitrary database order.
  */
 const filterVariantSiblings = (
   enrollments: CourseRunEnrollmentV3[],
   currentEnrollment: CourseRunEnrollmentV3,
 ): CourseRunEnrollmentV3[] => {
   const run = currentEnrollment.run
-  return enrollments.filter(
+  const siblings = enrollments.filter(
     (e) =>
       e.id !== currentEnrollment.id &&
       e.run.course.id === run.course.id &&
@@ -1281,10 +1402,10 @@ const filterVariantSiblings = (
       (e.run.variant_industry ?? "") === (run.variant_industry ?? "") &&
       (e.run.variant_length ?? "") === (run.variant_length ?? ""),
   )
+  return sortEnrollmentsByStartDateDesc(siblings)
 }
 
 export {
-  pickDisplayedEnrollmentForLegacyDashboard,
   groupCourseRunEnrollmentsByCourseId,
   groupProgramEnrollmentsByProgramId,
   resolveDisplayedRunAndEnrollment,
@@ -1310,6 +1431,8 @@ export {
   selectVariantRunForCourse,
   filterVariantSiblings,
   pickDisplayedHomeEnrollments,
+  pickCertificateEnrollment,
+  courseIsCompleted,
 }
 
 export type { RequirementSectionItem, RequirementSection }

@@ -5,11 +5,7 @@ import pytest
 from pytest_lazy_fixtures import lf
 
 from main.factories import UserFactory
-from profiles.permissions import (
-    HasEditPermission,
-    HasSiteEditPermission,
-    is_owner_or_privileged_user,
-)
+from profiles.permissions import HasEditPermission, is_owner_or_privileged_user
 
 
 @pytest.fixture
@@ -88,35 +84,3 @@ def test_can_edit_own_profile(mocker, method, user):
         HasEditPermission().has_object_permission(request, mocker.Mock(), profile)
         is True
     )
-
-
-@pytest.mark.parametrize("method", ["GET", "HEAD", "OPTIONS"])
-def test_site_edit_permission_safe(mocker, method):
-    """Test that safe methods are always allowed by HasSiteEditPermission"""
-    request = mocker.Mock(user=UserFactory.build(), method=method)
-    assert (
-        HasSiteEditPermission().has_object_permission(
-            request, view=mocker.Mock(), obj=mocker.Mock()
-        )
-        is True
-    )
-
-
-@pytest.mark.parametrize(
-    ("permission_check_ret_val", "exp_result"), [(True, True), (False, False)]
-)
-@pytest.mark.parametrize("method", ["POST", "PUT"])
-def test_site_edit_permission(mocker, method, permission_check_ret_val, exp_result):
-    """Test that HasSiteEditPermission returns True if the permission helper function returns True"""
-    request = mocker.Mock(user=mocker.Mock(), method=method)
-    patched_permission_func = mocker.patch(
-        "profiles.permissions.is_owner_or_privileged_user",
-        return_value=permission_check_ret_val,
-    )
-    assert (
-        HasSiteEditPermission().has_object_permission(
-            request, view=mocker.Mock(), obj=mocker.Mock(profile=request.user)
-        )
-        is exp_result
-    )
-    patched_permission_func.assert_called_once()

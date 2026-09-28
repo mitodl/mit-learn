@@ -7,7 +7,12 @@ import pytest
 from django.urls import reverse
 
 from channels.constants import ChannelType
-from channels.factories import ChannelFactory, ChannelListFactory, SubChannelFactory
+from channels.factories import (
+    ChannelFactory,
+    ChannelListFactory,
+    ChannelUnitDetailFactory,
+    SubChannelFactory,
+)
 from channels.models import Channel
 from channels.serializers import ChannelSerializer
 from learning_resources.factories import LearningResourceFactory
@@ -16,7 +21,6 @@ from main.factories import UserFactory
 pytestmark = pytest.mark.django_db
 
 
-@pytest.mark.skip_nplusone_check
 def test_list_channels(user_client):
     """Test that all published channels are returned."""
     ChannelFactory.create_batch(2, published=False)
@@ -31,6 +35,44 @@ def test_list_channels(user_client):
     assert len(response_channels) == 3
     for idx, channel in enumerate(channels):
         assert response_channels[idx] == ChannelSerializer(instance=channel).data
+
+
+@pytest.mark.parametrize("channel_count", [2, 6])
+def test_list_unit_channels_query_count(
+    client, django_assert_num_queries, channel_count
+):
+    """Unit channels cost the same number of queries however many are listed.
+
+    unit_detail.unit is nested by the serializer and its channel_url is a
+    cached_property, so without the prefetch each row costs two extra queries.
+    """
+    channels = ChannelFactory.create_batch(channel_count, is_unit=True)
+    # An offeror shared with later, unpublished channels: channel_url has to
+    # resolve to the same row the serializer would pick on its own, so the
+    # prefetch behind it can't be an unordered subquery.
+    for _ in range(3):
+        extra = ChannelFactory.create(
+            is_unit=True, published=False, create_unit_detail=False
+        )
+        ChannelUnitDetailFactory.create(
+            channel=extra, unit=channels[0].unit_detail.unit
+        )
+
+    url = reverse("channels:v0:channels_api-list")
+    with django_assert_num_queries(5):
+        results = client.get(url).json()["results"]
+
+    assert len(results) == channel_count
+    assert all(item["unit_detail"]["unit"]["channel_url"] for item in results)
+    # The listing must agree with serializing each instance directly.
+    for channel in channels:
+        listed = next(item for item in results if item["id"] == channel.id)
+        assert (
+            listed["unit_detail"]["unit"]["channel_url"]
+            == ChannelSerializer(instance=channel).data["unit_detail"]["unit"][
+                "channel_url"
+            ]
+        )
 
 
 def test_channel_detail_has_no_is_moderator(client):
@@ -153,7 +195,6 @@ def test_no_excess_list_queries(client, user, django_assert_num_queries, channel
                 assert channel["channel_url"] is not None
 
 
-@pytest.mark.skip_nplusone_check
 def test_channel_counts_view(client):
     """Channel counts should return per-channel resource counts."""
     url = reverse(
@@ -194,7 +235,6 @@ def enabled_view_cache(settings, request):
     }
 
 
-@pytest.mark.skip_nplusone_check
 @pytest.mark.usefixtures("enabled_view_cache")
 def test_channel_detail_cache_is_global(client):
     """Cached detail responses are shared globally across users."""
@@ -210,7 +250,6 @@ def test_channel_detail_cache_is_global(client):
     assert client.get(url).json()["title"] == "Original title"
 
 
-@pytest.mark.skip_nplusone_check
 @pytest.mark.usefixtures("enabled_view_cache")
 def test_channel_by_type_name_cache_is_global(client):
     """Cached by-type-name responses are shared globally across users."""
@@ -229,7 +268,6 @@ def test_channel_by_type_name_cache_is_global(client):
     assert client.get(url).json()["title"] == "Original title"
 
 
-@pytest.mark.skip_nplusone_check
 @pytest.mark.usefixtures("enabled_view_cache")
 @pytest.mark.parametrize("is_authenticated", [False, True])
 def test_channel_counts_view_is_cached(client, is_authenticated):

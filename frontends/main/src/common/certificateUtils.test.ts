@@ -1,9 +1,15 @@
 import {
+  CertificateType,
   getCertificateBadgeLines,
   getCertificateBadgeTypography,
   getCertificateInfo,
+  getCertificateLinkedInUrl,
   getCertificateTitle,
+  getVerifiableCredentialDownloadAPIURL,
+  getVerifiableCredentialLinkedInURL,
+  getVerifierPlusViewerURL,
 } from "./certificateUtils"
+import { factories } from "api/test-utils"
 
 describe("getCertificateInfo", () => {
   it("returns default certificate label when no program type is provided", () => {
@@ -146,5 +152,69 @@ describe("getCertificateBadgeTypography", () => {
     expect(getCertificateBadgeTypography("  MicroMasters®  ")).toEqual(
       micromastersTypography,
     )
+  })
+})
+
+describe("getCertificateLinkedInUrl", () => {
+  const pageUrl = "https://example.com/certificate/program/abc"
+
+  it("uses the CMS product name for program certificates", () => {
+    const certificate = factories.mitxonline.programCertificate()
+    certificate.certificate_page.product_name = "Universal AI"
+    certificate.program.title = "Fundamentals of Programming and ML"
+
+    const url = new URL(
+      getCertificateLinkedInUrl(CertificateType.Program, certificate, pageUrl),
+    )
+
+    expect(url.searchParams.get("name")).toBe("Universal AI")
+  })
+
+  it("falls back to the program title when product name is empty", () => {
+    const certificate = factories.mitxonline.programCertificate()
+    certificate.certificate_page.product_name = ""
+    certificate.program.title = "Fundamentals of Programming and ML"
+
+    const url = new URL(
+      getCertificateLinkedInUrl(CertificateType.Program, certificate, pageUrl),
+    )
+
+    expect(url.searchParams.get("name")).toBe(
+      "Fundamentals of Programming and ML",
+    )
+  })
+
+  it("uses the course title for course certificates", () => {
+    const certificate = factories.mitxonline.courseCertificate()
+    certificate.course_run.course.title = "Intro to Python"
+
+    const url = new URL(
+      getCertificateLinkedInUrl(CertificateType.Course, certificate, pageUrl),
+    )
+
+    expect(url.searchParams.get("name")).toBe("Intro to Python")
+  })
+})
+
+describe("getVerifierPlusViewerURL", () => {
+  it("wraps the download URL in a VerifierPlus viewer link", () => {
+    const credential = factories.mitxonline.verifiableCredential()
+    const downloadUrl = getVerifiableCredentialDownloadAPIURL(credential)
+
+    expect(getVerifierPlusViewerURL(credential)).toBe(
+      `https://verifierplus.org/#verify?vc=${encodeURIComponent(downloadUrl)}`,
+    )
+  })
+})
+
+describe("getVerifiableCredentialLinkedInURL", () => {
+  it("points certUrl at the VerifierPlus viewer, not the raw JSON download endpoint", () => {
+    const credential = factories.mitxonline.verifiableCredential()
+
+    const url = new URL(getVerifiableCredentialLinkedInURL(credential))
+    const certUrl = url.searchParams.get("certUrl")
+
+    expect(certUrl).toBe(getVerifierPlusViewerURL(credential))
+    expect(certUrl).not.toBe(getVerifiableCredentialDownloadAPIURL(credential))
   })
 })

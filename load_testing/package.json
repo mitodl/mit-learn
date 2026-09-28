@@ -8,5 +8,11 @@
   "devDependencies": {
     "@grafana/openapi-to-k6": "^0.4.1",
     "@types/k6": "^1.7.0"
+  },
+  "overrides": {
+    "@asyncapi/specs": "6.11.1"
+  },
+  "resolutions": {
+    "@asyncapi/specs": "6.11.1"
   }
 }

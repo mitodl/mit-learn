@@ -5,7 +5,7 @@ import {
   type LegacyDashboardCardAdapterOutput,
 } from "./dashboardAdapters"
 import {
-  pickDisplayedEnrollmentForLegacyDashboard,
+  selectBestEnrollment,
   type DashboardCourseEntry,
 } from "./dashboardViewModel"
 
@@ -82,10 +82,10 @@ describe("dashboardAdapters", () => {
       certificate: { uuid: "cert-3" },
     })
 
-    const displayedEnrollment = pickDisplayedEnrollmentForLegacyDashboard(
-      course,
-      [noCertificate, withCertificate],
-    )
+    const displayedEnrollment = selectBestEnrollment(course, [
+      noCertificate,
+      withCertificate,
+    ])
     const entry = makeEntry({
       course,
       enrollments: [noCertificate, withCertificate],
@@ -111,10 +111,10 @@ describe("dashboardAdapters", () => {
       grades: [factories.enrollment.grade({ grade: 0.95 })],
     })
 
-    const displayedEnrollment = pickDisplayedEnrollmentForLegacyDashboard(
-      course,
-      [lowGrade, highGrade],
-    )
+    const displayedEnrollment = selectBestEnrollment(course, [
+      lowGrade,
+      highGrade,
+    ])
     const entry = makeEntry({
       course,
       enrollments: [lowGrade, highGrade],

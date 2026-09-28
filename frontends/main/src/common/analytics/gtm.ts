@@ -201,6 +201,17 @@ const trackCatalogFilter = (params: CatalogFilterParams) => {
 }
 
 /**
+ * Fired when a user applies a filter to the course catalog.
+ * Maps to the "filter-course-catalog" GTM trigger.
+ */
+const trackFilterCourseCatalog = (params: CatalogFilterParams) => {
+  pushGtmEvent("filter-course-catalog", {
+    "filter-name": params.filterName,
+    "filter-value": params.filterValue,
+  })
+}
+
+/**
  * Fired once per session when a returning visitor (has visited before) loads the site.
  * Uses localStorage to detect return visitors across sessions.
  * Maps to "Return Visit" in the marketing event plan.
@@ -209,15 +220,68 @@ const trackReturnVisit = () => {
   pushGtmEvent("return-visit")
 }
 
+type BeginCheckoutParams = {
+  courseName?: string | null
+  courseId?: string | null
+  value?: number | null
+  currency?: string | null
+}
+
 /**
  * Fired when a user begins the paid checkout flow.
  * Maps to "Begin Checkout" in the marketing event plan.
  * More specific than trackStartEnrollment — fires only for the checkout path.
+ * Includes currency, value, and items so GA4 built-in funnel and revenue
+ * reports are populated between add_to_cart and purchase.
  */
-const trackBeginCheckout = (courseName?: string | null) => {
+const trackBeginCheckout = (params: BeginCheckoutParams) => {
+  const currency = params.currency ?? "USD"
+  const value = params.value ?? 0
   pushGtmEvent("begin-checkout", {
-    ...(courseName ? { "course-name": courseName } : {}),
+    ...(params.courseName ? { "course-name": params.courseName } : {}),
+    ...(params.courseId ? { "course-id": params.courseId } : {}),
+    currency,
+    value,
+    items: [
+      {
+        item_id: params.courseId ?? "",
+        item_name: params.courseName ?? "",
+        price: value,
+        quantity: 1,
+        currency,
+      },
+    ],
   })
+}
+
+type CheckoutCompletedParams = {
+  orderId: number
+  courseName?: string | null
+  value?: number | null
+}
+
+/**
+ * Fired when a user returns from the external checkout flow with a
+ * confirmed-fulfilled paid order. The completion counterpart to
+ * trackBeginCheckout — maps to "Checkout Completed" in the marketing event
+ * plan.
+ */
+const trackCheckoutCompleted = (params: CheckoutCompletedParams) => {
+  pushGtmEvent("checkout-completed", {
+    "order-id": params.orderId,
+    ...(params.courseName ? { "course-name": params.courseName } : {}),
+    ...(params.value !== null && params.value !== undefined
+      ? { "order-value": params.value }
+      : {}),
+  })
+}
+
+/**
+ * Fired once, the first time a newly created account reaches the onboarding
+ * flow. Maps to "Account Created" in the marketing event plan.
+ */
+const trackAccountCreated = () => {
+  pushGtmEvent("account-created")
 }
 
 /**
@@ -259,10 +323,19 @@ export {
   trackVideo50Percent,
   trackSiteSearch,
   trackCatalogFilter,
+  trackFilterCourseCatalog,
   trackReturnVisit,
   trackBeginCheckout,
+  trackCheckoutCompleted,
+  trackAccountCreated,
   trackOrganicSocialClick,
   trackViewProgramDetails,
 }
 
-export type { AddToCartParams, CatalogFilterParams, CourseProgramViewParams }
+export type {
+  AddToCartParams,
+  BeginCheckoutParams,
+  CatalogFilterParams,
+  CourseProgramViewParams,
+  CheckoutCompletedParams,
+}

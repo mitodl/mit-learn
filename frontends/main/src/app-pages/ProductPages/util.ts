@@ -2,6 +2,7 @@ import {
   NodeTypeEnum,
   type CourseWithCourseRunsSerializerV2,
   type V2Program,
+  type V2ProgramDetail,
 } from "@mitodl/mitxonline-api-axios/v2"
 
 enum HeadingIds {
@@ -14,6 +15,8 @@ enum HeadingIds {
   Requirements = "requirements",
   Summary = "summary",
   Modules = "modules",
+  Testimonials = "testimonials",
+  Faqs = "faqs",
 }
 
 type RequirementItem =
@@ -74,6 +77,11 @@ const parseReqTree = (reqTree: V2Program["req_tree"]): RequirementData[] => {
     })
 }
 
+const getTotalRequiredCourses = (program: V2ProgramDetail) => {
+  const parsedReqs = parseReqTree(program.req_tree)
+  return parsedReqs.reduce((sum, req) => sum + req.requiredCount, 0)
+}
+
 const getOutlineCoursewareId = (
   course: CourseWithCourseRunsSerializerV2,
 ): string | undefined => {
@@ -94,5 +102,10 @@ const getOutlineCoursewareId = (
 
 type ProductNoun = "Course" | "Program"
 
-export { HeadingIds, parseReqTree, getOutlineCoursewareId }
+export {
+  HeadingIds,
+  parseReqTree,
+  getTotalRequiredCourses,
+  getOutlineCoursewareId,
+}
 export type { ProductNoun, RequirementData, RequirementItem }

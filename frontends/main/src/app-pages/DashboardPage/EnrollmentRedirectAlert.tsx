@@ -3,11 +3,14 @@
 import { env } from "@/env"
 import React from "react"
 import { useQuery } from "@tanstack/react-query"
+import { usePostHog } from "posthog-js/react"
 import { Alert } from "@mitodl/smoot-design"
 import { Link, Skeleton, styled } from "ol-components"
 import { orderQueries } from "api/mitxonline-hooks/orders"
 import { mitxUserQueries } from "api/mitxonline-hooks/user"
 import { DASHBOARD_MY_LEARNING } from "@/common/urls"
+import { trackCheckoutCompleted } from "@/common/analytics/gtm"
+import { PostHogEvents } from "@/common/constants"
 import {
   ENROLLMENT_STATUS_PARAM,
   ENROLLMENT_ERROR_TYPE_PARAM,
@@ -22,6 +25,7 @@ import {
   useConsumeSearchParamsOnce,
   type ConsumedSearchParamsResult,
 } from "@/common/useConsumeSearchParamsOnce"
+import type { RegisteredSearchParams } from "@/common/searchParams"
 
 type AlertRequest =
   | { kind: "error"; errorType: string | null }
@@ -87,7 +91,7 @@ const AlertPlaceholder: React.FC<{ severity: "success" | "error" }> = ({
 )
 
 const parseAlertRequest = (
-  searchParams: URLSearchParams,
+  searchParams: RegisteredSearchParams,
 ): ConsumedSearchParamsResult<AlertRequest> | null => {
   const enrollmentStatus = searchParams.get(ENROLLMENT_STATUS_PARAM)
 
@@ -172,6 +176,7 @@ const parseAlertRequest = (
 const EnrollmentRedirectAlert: React.FC = () => {
   const request = useConsumeSearchParamsOnce(parseAlertRequest)
   const supportEmail = env("NEXT_PUBLIC_MITOL_SUPPORT_EMAIL") || ""
+  const posthog = usePostHog()
 
   const mitxOnlineUserQuery = useQuery({
     ...mitxUserQueries.me(),
@@ -181,6 +186,37 @@ const EnrollmentRedirectAlert: React.FC = () => {
     ...orderQueries.receipt(request?.kind === "paid" ? request.orderId : 0),
     enabled: request?.kind === "paid",
   })
+
+  const checkoutCompletedTracked = React.useRef(false)
+  React.useEffect(() => {
+    if (request?.kind !== "paid") return
+    if (paidReceipt.isPending) return
+    if (checkoutCompletedTracked.current) return
+    checkoutCompletedTracked.current = true
+
+    const parsedValue = paidReceipt.data
+      ? Number(paidReceipt.data.total_price_paid)
+      : NaN
+
+    const courseName = paidReceipt.data?.lines[0]?.content_title
+    const value = Number.isNaN(parsedValue) ? null : parsedValue
+
+    trackCheckoutCompleted({
+      orderId: request.orderId,
+      courseName,
+      value,
+    })
+    if (env("NEXT_PUBLIC_POSTHOG_API_KEY")) {
+      const line = paidReceipt.data?.lines[0]
+      posthog.capture(PostHogEvents.CheckoutCompleted, {
+        orderId: request.orderId,
+        courseName,
+        value,
+        readableId: line?.readable_id,
+        contentType: line?.content_type,
+      })
+    }
+  }, [request, paidReceipt.isPending, paidReceipt.data, posthog])
 
   if (request?.kind === "error") {
     const errorMessage =

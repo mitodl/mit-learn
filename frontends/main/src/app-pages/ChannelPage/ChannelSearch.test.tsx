@@ -7,18 +7,48 @@ import {
   user,
 } from "@/test-utils"
 import { setMockResponse, urls, factories, makeRequest } from "api/test-utils"
-import type { LearningResourcesSearchResponse } from "api"
+import type {
+  LearningResourcesSearchResponse,
+  PaginatedLearningResourceOfferorDetailList,
+} from "api"
 import invariant from "tiny-invariant"
 import type { Channel } from "api/v0"
 import { ChannelTypeEnum } from "api/v0"
 import ChannelPage from "./ChannelPage"
+import { useFeatureFlagEnabled } from "posthog-js/react"
+import { FeatureFlags } from "@/common/feature_flags"
+
+jest.mock("posthog-js/react", () => ({
+  ...jest.requireActual("posthog-js/react"),
+  useFeatureFlagEnabled: jest.fn(),
+}))
+
+const mockedUseFeatureFlagEnabled = jest.mocked(useFeatureFlagEnabled)
+
+/**
+ * Mock the named flags, leaving every other flag `undefined`—PostHog's value
+ * for "not loaded / not set".
+ */
+const mockFeatureFlags = (flags: Partial<Record<FeatureFlags, boolean>>) => {
+  mockedUseFeatureFlagEnabled.mockImplementation(
+    (flag) => flags[flag as FeatureFlags],
+  )
+}
+
+// jest clears calls between tests but not implementations, so reset flags to
+// "not set" so a kill-switch test cannot leak into the next test.
+beforeEach(() => {
+  mockFeatureFlags({})
+})
 
 const setMockApiResponses = ({
   search,
   channelPatch = {},
+  offerors,
 }: {
   search?: Partial<LearningResourcesSearchResponse>
   channelPatch?: Partial<Channel>
+  offerors?: PaginatedLearningResourceOfferorDetailList
 }) => {
   const channel = factories.channels.channel(channelPatch)
   const urlParams = new URLSearchParams(channelPatch?.search_filter)
@@ -58,7 +88,7 @@ const setMockApiResponses = ({
 
   setMockResponse.get(
     urls.offerors.list(),
-    factories.learningResources.offerors({ count: 5 }),
+    offerors ?? factories.learningResources.offerors({ count: 5 }),
   )
 
   setMockResponse.get(expect.stringContaining(urls.search.resources()), {
@@ -176,6 +206,63 @@ describe("ChannelSearch", () => {
     expect(apiSearchParams.get("hybrid_search")).toBe("true")
   })
 
+  test.each([
+    ChannelTypeEnum.Topic,
+    ChannelTypeEnum.Department,
+    ChannelTypeEnum.Unit,
+    ChannelTypeEnum.Pathway,
+  ])("%s channel pages load hybrid search by default", async (channelType) => {
+    mockFeatureFlags({})
+    const { channel } = setMockApiResponses({
+      channelPatch: { channel_type: channelType },
+    })
+
+    renderWithProviders(<ChannelPage />, {
+      url: `/c/${channel.channel_type}/${channel.name}`,
+    })
+
+    await waitFor(() => {
+      expect(makeRequest).toHaveBeenCalledWith(
+        expect.objectContaining({
+          method: "get",
+          url: expect.stringContaining(urls.search.vectorResources()),
+        }),
+      )
+    })
+    expect(makeRequest).not.toHaveBeenCalledWith(
+      expect.objectContaining({
+        method: "get",
+        url: expect.stringContaining(urls.search.resources()),
+      }),
+    )
+  })
+
+  test("Channel pages fall back to OpenSearch when disable-hybrid-search is enabled", async () => {
+    mockFeatureFlags({ [FeatureFlags.DisableHybridSearch]: true })
+    const { channel } = setMockApiResponses({
+      channelPatch: { channel_type: ChannelTypeEnum.Topic },
+    })
+
+    renderWithProviders(<ChannelPage />, {
+      url: `/c/${channel.channel_type}/${channel.name}`,
+    })
+
+    await waitFor(() => {
+      expect(makeRequest).toHaveBeenCalledWith(
+        expect.objectContaining({
+          method: "get",
+          url: expect.stringContaining(urls.search.resources()),
+        }),
+      )
+    })
+    expect(makeRequest).not.toHaveBeenCalledWith(
+      expect.objectContaining({
+        method: "get",
+        url: expect.stringContaining(urls.search.vectorResources()),
+      }),
+    )
+  })
+
   test("Topic channel page with search term preserves constant search parameters in API request", async () => {
     const { channel } = setMockApiResponses({
       channelPatch: {
@@ -201,6 +288,68 @@ describe("ChannelSearch", () => {
     expect(apiSearchParams.get("q")).toBe("python")
     expect(apiSearchParams.get("topic")).toBe("Economics")
   })
+
+  test("Hybrid search 'Offered By' facet only shows facets with 'display_facet' set to true", async () => {
+    const offerors = factories.learningResources.offerors({ count: 3 })
+    offerors.results[0]!.display_facet = true
+    offerors.results[1]!.display_facet = false
+    offerors.results[2]!.display_facet = false
+
+    const resources = factories.learningResources.resources({
+      count: 3,
+    }).results
+    resources.forEach((resource, i) => {
+      resource.professional = true
+      resource.offered_by = {
+        code: offerors.results[i]!.code,
+        name: offerors.results[i]!.name,
+        channel_url: null,
+      }
+    })
+
+    const { channel } = setMockApiResponses({
+      channelPatch: { channel_type: ChannelTypeEnum.Topic },
+      offerors,
+      search: {
+        count: resources.length,
+        results: resources,
+        metadata: {
+          aggregations: {
+            offered_by: offerors.results.map((o, i) => ({
+              key: o.code,
+              doc_count: 10 + i,
+            })),
+          },
+          suggestions: [],
+        },
+      },
+    })
+
+    renderWithProviders(<ChannelPage />, {
+      url: `/c/${channel.channel_type}/${channel.name}?q=python&professional=true`,
+    })
+
+    const showFacetButton = await screen.findByRole("button", {
+      name: /Offered By/i,
+    })
+    await user.click(showFacetButton)
+
+    const offeror0 = await screen.findByRole("checkbox", {
+      name: new RegExp(`^${offerors.results[0]!.name}`),
+    })
+    expect(offeror0).toBeVisible()
+    expect(
+      screen.queryByRole("checkbox", {
+        name: new RegExp(`^${offerors.results[1]!.name}`),
+      }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("checkbox", {
+        name: new RegExp(`^${offerors.results[2]!.name}`),
+      }),
+    ).not.toBeInTheDocument()
+  })
+
   test.each([
     {
       searchFilter: "offered_by=ocw",
@@ -331,6 +480,62 @@ describe("ChannelSearch", () => {
       }
     },
   )
+
+  test("Shows and aggregates a facet that is in the URL but not shown by default", async () => {
+    const { channel } = setMockApiResponses({
+      channelPatch: { channel_type: ChannelTypeEnum.Unit },
+      search: {
+        count: 700,
+        metadata: {
+          aggregations: {
+            level: [{ key: "graduate", doc_count: 100 }],
+          },
+          suggestions: [],
+        },
+      },
+    })
+
+    renderWithProviders(<ChannelPage />, {
+      url: `/c/${channel.channel_type}/${channel.name}/?level=graduate`,
+    })
+
+    await waitFor(() => {
+      expect(makeRequest.mock.calls.length > 0).toBe(true)
+    })
+
+    // "level" is not a default facet for this channel type, but it is requested
+    // as an aggregation because it is present in the URL.
+    const apiSearchParams = getLastApiSearchParams()
+    expect(apiSearchParams.getAll("aggregations")).toContain("level")
+
+    // ...and it renders as a facet.
+    const facetsContainer = screen.getByTestId("facets-container")
+    await within(facetsContainer).findByText("Level")
+  })
+
+  test("Does not duplicate a facet already shown by default as an extra URL facet", async () => {
+    const { channel } = setMockApiResponses({
+      channelPatch: { channel_type: ChannelTypeEnum.Unit },
+      search: {
+        count: 700,
+        metadata: {
+          aggregations: {
+            topic: [{ key: "physics", doc_count: 100 }],
+          },
+          suggestions: [],
+        },
+      },
+    })
+
+    // "topic" is a default facet for Unit channels and is also present in the
+    // URL; it must appear exactly once.
+    renderWithProviders(<ChannelPage />, {
+      url: `/c/${channel.channel_type}/${channel.name}/?topic=physics`,
+    })
+
+    const facetsContainer = await screen.findByTestId("facets-container")
+    expect(await within(facetsContainer).findAllByText("Topic")).toHaveLength(1)
+  })
 
   test("Submitting search text updates URL correctly", async () => {
     const resources = factories.learningResources.resources({

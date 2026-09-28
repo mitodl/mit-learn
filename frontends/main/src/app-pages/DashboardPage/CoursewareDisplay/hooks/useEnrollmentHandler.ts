@@ -3,29 +3,43 @@ import {
   CourseRunV2,
   CourseWithCourseRunsSerializerV2,
 } from "@mitodl/mitxonline-api-axios/v2"
-import { useQuery } from "@tanstack/react-query"
 import {
   useCreateB2bEnrollment,
   useCreateEnrollment,
   useCreateVerifiedProgramEnrollment,
 } from "api/mitxonline-hooks/enrollment"
-import { mitxUserQueries } from "api/mitxonline-hooks/user"
 import React from "react"
-import { JustInTimeDialog } from "../DashboardDialogs"
 import NiceModal from "@ebay/nice-modal-react"
 import { getCourseEnrollmentAction } from "@/common/mitxonline"
+import { useComplianceGate } from "@/common/mitxonline/useComplianceGate"
 import CourseEnrollmentDialog from "@/page-components/EnrollmentDialogs/CourseEnrollmentDialog"
-import { trackCourseEnrolled } from "@/common/analytics/gtm"
+import { trackCourseEnrolled, trackBeginCheckout } from "@/common/analytics/gtm"
+import { canOpenCourseware } from "../courseDateUtils"
+import { mitxUserQueries } from "api/mitxonline-hooks/user"
+import { useQuery } from "@tanstack/react-query"
+
+const ENROLL_COURSE_ERROR =
+  "Something went wrong enrolling you in this course. Please try again."
+const ENROLL_PROGRAM_ERROR =
+  "Something went wrong enrolling you in this program. Please try again."
 
 export const useEnrollmentHandler = () => {
-  const mitxOnlineUser = useQuery(mitxUserQueries.me())
-  const createB2bEnrollment = useCreateB2bEnrollment()
-  const createEnrollment = useCreateEnrollment()
-  const createVerifiedProgramEnrollment = useCreateVerifiedProgramEnrollment()
+  const createB2bEnrollment = useCreateB2bEnrollment({
+    meta: { errorMessage: ENROLL_COURSE_ERROR },
+  })
+  const createEnrollment = useCreateEnrollment({
+    meta: { errorMessage: ENROLL_COURSE_ERROR },
+  })
+  const createVerifiedProgramEnrollment = useCreateVerifiedProgramEnrollment({
+    meta: { errorMessage: ENROLL_PROGRAM_ERROR },
+  })
   const replaceBasketItem = useReplaceBasketItem()
+  const { ensureCompliance } = useComplianceGate()
+  const mitxOnlineUser = useQuery(mitxUserQueries.me())
+  const isStaff = mitxOnlineUser.data?.is_staff
 
   const enroll = React.useCallback(
-    ({
+    async ({
       course,
       readableId,
       href,
@@ -35,6 +49,7 @@ export const useEnrollmentHandler = () => {
       programCoursewareId,
       programReadableIds,
       b2bProgramId,
+      startDate,
     }: {
       course: CourseWithCourseRunsSerializerV2
       readableId?: string
@@ -45,7 +60,18 @@ export const useEnrollmentHandler = () => {
       programCoursewareId?: string
       programReadableIds?: string[]
       b2bProgramId?: string
+      startDate?: string | null
     }) => {
+      /**
+       * Enrolling early is allowed, so only redirect once the courseware is
+       * open. Otherwise the learner stays put and the card they clicked
+       * re-renders as enrolled, showing when the run starts.
+       */
+      const finishEnrollment = (url: string, runStartDate?: string | null) => {
+        if (!canOpenCourseware(runStartDate, { isStaff })) return
+        window.location.href = url
+      }
+
       if (isB2B) {
         if (!readableId) {
           console.warn("Cannot enroll in B2B course: missing required data", {
@@ -70,31 +96,21 @@ export const useEnrollmentHandler = () => {
           })
           return
         }
-        const userCountry = mitxOnlineUser.data?.legal_address?.country
-        const userYearOfBirth = mitxOnlineUser.data?.user_profile?.year_of_birth
-        const showJustInTimeDialog = !userCountry || !userYearOfBirth
+        if (!(await ensureCompliance())) return
 
-        if (showJustInTimeDialog) {
-          NiceModal.show(JustInTimeDialog, {
-            href: destinationUrl,
-            readableId,
-            programId: b2bProgramId,
-          })
-        } else {
-          createB2bEnrollment.mutate(
-            {
-              readable_id: readableId,
-              B2BEnrollRequestRequest: b2bProgramId
-                ? { program_id: b2bProgramId }
-                : undefined,
+        createB2bEnrollment.mutate(
+          {
+            readable_id: readableId,
+            B2BEnrollRequestRequest: b2bProgramId
+              ? { program_id: b2bProgramId }
+              : undefined,
+          },
+          {
+            onSuccess: () => {
+              finishEnrollment(destinationUrl, startDate)
             },
-            {
-              onSuccess: () => {
-                window.location.href = destinationUrl
-              },
-            },
-          )
-        }
+          },
+        )
       } else if (
         isVerifiedProgram &&
         readableId &&
@@ -121,11 +137,12 @@ export const useEnrollmentHandler = () => {
           : programCoursewareId
             ? [programCoursewareId]
             : []
+        if (!(await ensureCompliance())) return
         createVerifiedProgramEnrollment.mutate(
           { courserun_id: readableId, request_body: requestBody },
           {
             onSuccess: () => {
-              window.location.href = verifiedDestination ?? href
+              finishEnrollment(verifiedDestination ?? href, startDate)
             },
           },
         )
@@ -133,6 +150,7 @@ export const useEnrollmentHandler = () => {
         const enrollmentAction = getCourseEnrollmentAction(course)
 
         if (enrollmentAction.type === "audit") {
+          if (!(await ensureCompliance())) return
           createEnrollment.mutate(
             { run_id: enrollmentAction.run.id },
             {
@@ -143,7 +161,7 @@ export const useEnrollmentHandler = () => {
                   enrollmentAction.run.courseware_url ??
                   href
                 if (destination) {
-                  window.location.href = destination
+                  finishEnrollment(destination, enrollmentAction.run.start_date)
                 }
               },
             },
@@ -152,23 +170,30 @@ export const useEnrollmentHandler = () => {
         }
 
         if (enrollmentAction.type === "checkout") {
+          trackBeginCheckout({
+            courseName: course.title,
+            courseId: course.readable_id,
+            value: enrollmentAction.product.price
+              ? parseFloat(enrollmentAction.product.price)
+              : 0,
+          })
           replaceBasketItem.mutate(enrollmentAction.product.id)
           return
         }
 
         const onCourseEnroll = (run: CourseRunV2) => {
-          window.location.href = run.courseware_url!
+          finishEnrollment(run.courseware_url!, run.start_date)
         }
         NiceModal.show(CourseEnrollmentDialog, { course, onCourseEnroll })
       }
     },
     [
-      mitxOnlineUser.data?.legal_address?.country,
-      mitxOnlineUser.data?.user_profile?.year_of_birth,
+      ensureCompliance,
       createB2bEnrollment,
       createEnrollment,
       createVerifiedProgramEnrollment,
       replaceBasketItem,
+      isStaff,
     ],
   )
 
@@ -179,6 +204,5 @@ export const useEnrollmentHandler = () => {
       createEnrollment.isPending ||
       createVerifiedProgramEnrollment.isPending ||
       replaceBasketItem.isPending,
-    mitxOnlineUser: mitxOnlineUser.data,
   }
 }

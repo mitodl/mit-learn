@@ -2,7 +2,7 @@
 
 import json
 import logging
-from datetime import UTC
+from datetime import UTC, datetime
 from decimal import Decimal
 from uuid import uuid4
 
@@ -13,7 +13,6 @@ from django.db import transaction
 from django.db.models import F, Max, Prefetch, Q
 from drf_spectacular.utils import extend_schema_field, extend_schema_serializer
 from isodate import parse_duration
-from langchain_text_splitters import RecursiveJsonSplitter
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
@@ -31,7 +30,13 @@ from learning_resources.constants import (
     LevelType,
     Pace,
 )
-from learning_resources.utils import build_resource_summary_dict, json_to_markdown
+from learning_resources.utils import (
+    BLANK_SLUG_PATH_SEGMENT,
+    build_resource_summary_dict,
+    json_to_markdown,
+    learn_url_for_resource,
+    path_slug,
+)
 from main.serializers import COMMON_IGNORED_FIELDS, WriteableSerializerMethodField
 
 log = logging.getLogger(__name__)
@@ -391,7 +396,13 @@ class LearningResourceRunSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = models.LearningResourceRun
-        exclude = ["learning_resource", *COMMON_IGNORED_FIELDS]
+        exclude = [
+            "learning_resource",
+            "is_b2b",
+            "is_variant",
+            "archive_key",
+            *COMMON_IGNORED_FIELDS,
+        ]
 
 
 class ResourceListMixin(serializers.Serializer):
@@ -441,20 +452,85 @@ class LearningPathSerializer(serializers.ModelSerializer, ResourceListMixin):
         exclude = ("learning_resource", "author", *COMMON_IGNORED_FIELDS)
 
 
+class PodcastEpisodeParentSerializer(serializers.Serializer):
+    """Minimal parent-podcast summary embedded in an episode."""
+
+    id = serializers.IntegerField(source="parent_id")
+    title = serializers.CharField(source="parent.title")
+    readable_id = serializers.CharField(source="parent.readable_id")
+    learn_url = serializers.SerializerMethodField(
+        help_text="Where this podcast lives within Learn"
+    )
+
+    def get_learn_url(self, instance) -> str:
+        """
+        Return the parent podcast's own page on Learn.
+
+        A podcast has no URL-forming parent of its own, hence the empty parent
+        list. `parent` is select_related by the `_podcasts` prefetch, so this
+        costs no extra query.
+        """
+        return learn_url_for_resource(instance.parent, [])
+
+
 class PodcastEpisodeSerializer(serializers.ModelSerializer):
     """
     Serializer for PodcastEpisode
     """
 
     podcasts = serializers.SerializerMethodField()
+    parent_podcasts = serializers.SerializerMethodField()
+    has_transcript = serializers.SerializerMethodField()
 
     def get_podcasts(self, instance) -> list[int]:
         """Get the podcast id(s) the episode belongs to"""
         return [podcast.parent_id for podcast in instance.learning_resource.podcasts]
 
+    def get_has_transcript(self, instance) -> bool:
+        """
+        Whether a transcript is available from the transcript endpoint.
+
+        The text itself is excluded from this serializer, so this is how a
+        client knows whether to fetch it.
+        """
+        return bool(instance.transcript)
+
+    @extend_schema_field(PodcastEpisodeParentSerializer(many=True))
+    def get_parent_podcasts(self, instance):
+        """Get summary info for the podcast(s) the episode belongs to"""
+        return PodcastEpisodeParentSerializer(
+            instance.learning_resource.podcasts, many=True
+        ).data
+
     class Meta:
         model = models.PodcastEpisode
-        exclude = ("learning_resource", *COMMON_IGNORED_FIELDS)
+        # `transcript` and `rss` are large per-episode text blobs with no
+        # consumer in a list, nested or search payload: a page of 20 episodes
+        # would carry ~700KB of transcript. Fetch the transcript from
+        # /api/v1/podcast_episodes/{id}/transcript/ instead, gated on
+        # `has_transcript`. The search index re-adds `transcript` in
+        # learning_resources_search.serializers.
+        exclude = (
+            "learning_resource",
+            "transcript",
+            "rss",
+            *COMMON_IGNORED_FIELDS,
+        )
+
+
+class PodcastEpisodeTranscriptSerializer(serializers.ModelSerializer):
+    """
+    Serializer for a single podcast episode's transcript.
+
+    Kept out of PodcastEpisodeSerializer so the text is only ever sent when a
+    client asks for this one episode's transcript.
+    """
+
+    id = serializers.IntegerField(source="learning_resource_id", read_only=True)
+
+    class Meta:
+        model = models.PodcastEpisode
+        fields = ("id", "transcript")
 
 
 class PodcastSerializer(serializers.ModelSerializer):
@@ -688,14 +764,25 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
             and serialized_resource.get("availability") == Availability.anytime.name
         )
 
+    def _parse_run_start(self, run):
+        """Parse a run's start_date as a UTC datetime, or None if unusable"""
+        start_date = run.get("start_date")
+        parsed = dateparser.parse(start_date) if start_date else None
+        if parsed is None:
+            return None
+        return (
+            parsed.replace(tzinfo=UTC)
+            if parsed.tzinfo is None
+            else parsed.astimezone(UTC)
+        )
+
+    def _run_sort_key(self, run):
+        """Sort key for a run; dateless or unparseable runs sort last."""
+        return self._parse_run_start(run) or datetime.max.replace(tzinfo=UTC)
+
     def runs_by_date(self, serialized_resource):
         """Get runs sorted by date"""
-        return sorted(
-            serialized_resource.get("runs", []),
-            key=lambda run: dateparser.parse(
-                run["start_date"] if run.get("start_date", "") else ""
-            ),
-        )
+        return sorted(serialized_resource.get("runs", []), key=self._run_sort_key)
 
     def dates_for_runs(self, serialized_resource):
         """Get a list of sorted and formatted run dates"""
@@ -715,6 +802,7 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
 
     def format_run_date(self, run, as_taught_in):
         """Format the run date based on available data"""
+        parsed_start = self._parse_run_start(run)
         if as_taught_in:
             run_semester = run.get("semester", "")
             if run_semester:
@@ -723,18 +811,10 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
                     return f"{run_semester} {run['year']}"
                 if run.get("start_date"):
                     return f"{run_semester} {run['start_date']}"
-            if run.get("start_date"):
-                return (
-                    dateparser.parse(run["start_date"])
-                    .replace(tzinfo=UTC)
-                    .strftime("%B, %Y")
-                )
-        if run.get("start_date"):
-            return (
-                dateparser.parse(run["start_date"])
-                .replace(tzinfo=UTC)
-                .strftime("%B %d, %Y")
-            )
+            if parsed_start:
+                return parsed_start.strftime("%B, %Y")
+        if parsed_start:
+            return parsed_start.strftime("%B %d, %Y")
         return None
 
     def should_show_format(self, serialized_resource):
@@ -957,7 +1037,8 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
         for run in serialized_resource.get("runs", []):
             if run.get("level"):
                 levels.extend(lvl["name"] for lvl in run["level"])
-        return list(set(levels)) if len(levels) > 0 else None
+        # sorted for the same reason as get_instructors
+        return sorted(set(levels)) if len(levels) > 0 else None
 
     @extend_schema_field({"type": "array", "items": {"type": "string"}})
     def get_languages(self, serialized_resource):
@@ -966,7 +1047,8 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
         for run in serialized_resource.get("runs", []):
             if run.get("languages"):
                 languages.extend(run["languages"])
-        return list(set(languages)) if len(languages) > 0 else None
+        # sorted for the same reason as get_instructors
+        return sorted(set(languages)) if len(languages) > 0 else None
 
     @extend_schema_field({"type": "string"})
     def get_offered_by(self, serialized_resource):
@@ -1013,12 +1095,8 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
         if self.all_runs_are_identical(serialized_resource):
             return None
         for run in serialized_resource.get("runs", []):
-            start_date = run["start_date"]
-            formatted_date = (
-                dateparser.parse(start_date).replace(tzinfo=UTC).strftime("%B %d, %Y")
-                if start_date
-                else ""
-            )
+            parsed_start = self._parse_run_start(run)
+            formatted_date = parsed_start.strftime("%B %d, %Y") if parsed_start else ""
             location = run.get("location") or "Online"
             duration = run.get("duration")
             prices = run.get("prices", [])
@@ -1048,7 +1126,11 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
         for run in serialized_resource.get("runs", []):
             for instructor in run.get("instructors", []):
                 instructors.add(instructor["full_name"])
-        return list(instructors) if len(instructors) > 0 else None
+        # sorted, not list(): this rendering is the resource's embedding
+        # identity, and set order varies with the process hash seed, so an
+        # unsorted list gives each worker a different checksum for the same
+        # resource and re-embeds the catalog on every restart.
+        return sorted(instructors) if len(instructors) > 0 else None
 
     @extend_schema_field({"type": "string"})
     def get_certification(self, serialized_resource):
@@ -1110,10 +1192,22 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
                 rendered_data[field.help_text] = display_text
         return rendered_data
 
+    def _document_heading(self):
+        """Heading prefixed to the rendered metadata document"""
+        resource_type = self.instance.get("resource_type", "course")
+        return f"# Information about this {resource_type}:"
+
+    def render_markdown(self):
+        """Render the whole resource metadata document as markdown"""
+        return (
+            f"{self._document_heading()}\n\n{json_to_markdown(self.render_document())}"
+        )
+
     def render_chunks(self):
         """Convert resource info to markdown chunks"""
+        from langchain_text_splitters import RecursiveJsonSplitter
+
         rendered_doc = self.render_document()
-        resource_type = self.instance.get("resource_type", "course")
         """
         We cant use tiktoken for token size calculation so
         we use a rough calculation of 4*chunk_size characters:
@@ -1126,7 +1220,7 @@ class LearningResourceMetadataDisplaySerializer(serializers.Serializer):
         )
         return [
             (
-                f"# Information about this {resource_type}:\n\n"
+                f"{self._document_heading()}\n\n"
                 f"{json_to_markdown(json.loads(json_fragment))}"
             )
             for json_fragment in RecursiveJsonSplitter(
@@ -1195,6 +1289,38 @@ class LearningResourceBaseSerializer(serializers.ModelSerializer, WriteableTopic
     pace = serializers.ListField(child=PaceSerializer(), read_only=True)
     children = serializers.SerializerMethodField(allow_null=True)
     best_run_id = serializers.SerializerMethodField(allow_null=True)
+    learn_url = serializers.SerializerMethodField(
+        help_text="Where this resource lives within Learn"
+    )
+    url_slug = serializers.SerializerMethodField(
+        help_text=(
+            "Slug derived from the title, for use in this resource's URL. It is "
+            "cosmetic: lookups ignore it, and it changes whenever the title "
+            "does. Titles that yield no ASCII slug get the literal "
+            f'"{BLANK_SLUG_PATH_SEGMENT}", so this is never blank.'
+        )
+    )
+
+    def get_url_slug(self, instance) -> str:
+        """Return the slug segment of the resource's URL."""
+        return path_slug(instance.title)
+
+    def get_learn_url(self, instance) -> str:
+        """
+        Return the resource's own page on Learn where it has one, else its drawer.
+
+        Never null, so consumers need no fallback of their own.
+        """
+        if instance.resource_type == constants.LearningResourceType.video.name:
+            parent_ids = [playlist.parent_id for playlist in instance.playlists]
+        elif (
+            instance.resource_type
+            == constants.LearningResourceType.podcast_episode.name
+        ):
+            parent_ids = [podcast.parent_id for podcast in instance.podcasts]
+        else:
+            parent_ids = []
+        return learn_url_for_resource(instance, parent_ids)
 
     @extend_schema_field(LearningResourceRelationshipChildField(allow_null=True))
     def get_children(self, instance):
@@ -1257,6 +1383,8 @@ class LearningResourceBaseSerializer(serializers.ModelSerializer, WriteableTopic
             "platform",
             "offered_by",
             "readable_id",
+            "learn_url",
+            "url_slug",
         ]
         exclude = [
             "resource_tags",
@@ -1485,6 +1613,21 @@ class ContentFileSerializer(serializers.ModelSerializer):
         ]
 
 
+class NestedContentFileSerializer(ContentFileSerializer):
+    """
+    ContentFileSerializer without the large text fields (content, summary,
+    flashcards), for nesting inside learning resource API responses.
+    The search indexing path re-adds full content where needed.
+    """
+
+    class Meta(ContentFileSerializer.Meta):
+        fields = [
+            field
+            for field in ContentFileSerializer.Meta.fields
+            if field not in constants.CONTENT_FILE_LARGE_FIELDS
+        ]
+
+
 class VideoResourceSerializer(LearningResourceBaseSerializer):
     """Serializer for video resources"""
 
@@ -1499,11 +1642,11 @@ class VideoResourceSerializer(LearningResourceBaseSerializer):
     content_files = serializers.SerializerMethodField()
     description = serializers.SerializerMethodField()
 
-    @extend_schema_field(ContentFileSerializer(many=True, allow_null=True))
+    @extend_schema_field(NestedContentFileSerializer(many=True, allow_null=True))
     def get_content_files(self, instance):
         """Serialize content files with prefetch."""
         content_files = instance.direct_content_files_for_serialization()
-        return ContentFileSerializer(
+        return NestedContentFileSerializer(
             content_files,
             many=True,
             read_only=True,
@@ -1531,11 +1674,11 @@ class DocumentResourceSerializer(LearningResourceBaseSerializer):
     content_files = serializers.SerializerMethodField()
     description = serializers.SerializerMethodField()
 
-    @extend_schema_field(ContentFileSerializer(many=True, allow_null=True))
+    @extend_schema_field(NestedContentFileSerializer(many=True, allow_null=True))
     def get_content_files(self, instance):
         """Serialize content files with prefetch."""
         content_files = instance.direct_content_files_for_serialization()
-        return ContentFileSerializer(
+        return NestedContentFileSerializer(
             content_files,
             many=True,
             read_only=True,
@@ -1566,11 +1709,29 @@ class LearningResourceSerializer(serializers.Serializer):
         )
     }
 
+    def _child_serializer(self, resource_type):
+        """
+        Return a reusable serializer instance for a resource_type.
+
+        Constructing a DRF serializer deep-copies its whole field tree, so
+        building one per object makes bulk serialization (search hydration)
+        dominated by setup rather than output. Under many=True the
+        ListSerializer reuses a single child, so this cache spans the list --
+        which is how a normal many=True serializer already behaves.
+        """
+        if not hasattr(self, "_child_serializer_cache"):
+            self._child_serializer_cache = {}
+        if resource_type not in self._child_serializer_cache:
+            self._child_serializer_cache[resource_type] = self.serializer_cls_mapping[
+                resource_type
+            ](context=self.context)
+        return self._child_serializer_cache[resource_type]
+
     def to_representation(self, instance):
         """Serialize a LearningResource based on resource_type"""
-        serializer_cls = self.serializer_cls_mapping[instance.resource_type]
-
-        return serializer_cls(instance=instance, context=self.context).data
+        return self._child_serializer(instance.resource_type).to_representation(
+            instance
+        )
 
 
 class LearningResourceRelationshipSerializer(serializers.ModelSerializer):
@@ -1827,8 +1988,104 @@ class LearningResourceSummarySerializer(serializers.ModelSerializer):
     for sitemap generation and other use cases requiring minimal data transfer.
     """
 
+    canonical_parent_ids = serializers.SerializerMethodField()
+    learn_url = serializers.SerializerMethodField(
+        help_text="Where this resource lives within Learn"
+    )
+
+    @extend_schema_field(
+        {
+            "type": "array",
+            "items": {"type": "integer"},
+            "description": (
+                "Ids of the parents that form part of this resource's URL: the "
+                "parent podcasts of a podcast episode, the playlists of a video. "
+                "Empty for every other resource type. Parents are not filtered "
+                "by `published`, so an id here may belong to a resource this "
+                "endpoint will not return."
+            ),
+        }
+    )
+    def get_canonical_parent_ids(self, instance) -> list[int]:
+        """Ids of the parents that form part of this resource's URL."""
+        return instance.canonical_parent_ids
+
+    def get_learn_url(self, instance) -> str:
+        """
+        Return the resource's own page on Learn where it has one, else its drawer.
+
+        Reads the `canonical_parent_ids` annotation the summary queryset already
+        carries, so it costs no extra query.
+        """
+        return learn_url_for_resource(instance, instance.canonical_parent_ids)
+
     class Meta:
         """Meta configuration for LearningResourceSummarySerializer"""
 
         model = models.LearningResource
-        fields = ("id", "last_modified", "url", "title")
+        fields = (
+            "id",
+            "last_modified",
+            "url",
+            "title",
+            "resource_type",
+            "canonical_parent_ids",
+            "learn_url",
+        )
+
+
+class CredentialMetadataRequestSerializer(serializers.Serializer):
+    """Request body for the credential metadata endpoint"""
+
+    resource_readable_id = serializers.CharField(
+        required=True,
+        help_text="The readable id of the learning resource to generate metadata for",
+    )
+
+
+class CredentialMetadataErrorsSerializer(serializers.Serializer):
+    """
+    Why a requested Open Badges field is missing from the response.
+    """
+
+    description = serializers.CharField(
+        required=False, help_text="Why no description was generated"
+    )
+    criteria = serializers.CharField(
+        required=False, help_text="Why no criteria were generated"
+    )
+
+
+class CredentialMetadataSerializer(serializers.Serializer):
+    """
+    Generated Open Badges credential metadata for a learning resource.
+    """
+
+    resource_readable_id = serializers.CharField()
+    # The generated fields are `required=False` so that a field which failed to
+    # generate is omitted from the response rather than serialized as blank.
+    # None of these are `read_only`: drf-spectacular marks every read-only
+    # field as required in the response schema, which would tell clients the
+    # generated ones are always present.
+    description = serializers.CharField(
+        required=False,
+        help_text="The Open Badges 3.0 description, 1-2 sentences",
+    )
+    criteria = serializers.ListField(
+        child=serializers.CharField(),
+        required=False,
+        help_text=(
+            "Open Badges 3.0 criteria, one skill-focused bullet per item, for"
+            " rendering into the criteria narrative"
+        ),
+    )
+    # Present only when a field is missing, so that an empty response can be
+    # told apart from one whose generation failed. Absent means every
+    # configured field generated.
+    errors = CredentialMetadataErrorsSerializer(
+        required=False,
+        help_text=(
+            "One entry per requested field that is missing above, saying why."
+            " Absent when every configured field was generated."
+        ),
+    )

@@ -9,12 +9,30 @@ import {
 import EnrollmentRedirectAlert from "./EnrollmentRedirectAlert"
 import { DASHBOARD_MY_LEARNING } from "@/common/urls"
 import * as mitxonline from "api/mitxonline-test-utils"
+import { trackCheckoutCompleted } from "@/common/analytics/gtm"
+import { usePostHog } from "posthog-js/react"
+import type { PostHog } from "posthog-js"
+import { PostHogEvents } from "@/common/constants"
+
+jest.mock("@/common/analytics/gtm", () => ({
+  trackCheckoutCompleted: jest.fn(),
+}))
+jest.mock("posthog-js/react")
+const mockedPostHogCapture = jest.fn()
+jest.mocked(usePostHog).mockReturnValue({
+  capture: mockedPostHogCapture,
+} as unknown as PostHog)
 
 const escapeRegExp = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
 
 describe("EnrollmentRedirectAlert", () => {
   beforeEach(() => {
     jest.clearAllMocks()
+    process.env.NEXT_PUBLIC_POSTHOG_API_KEY = "test-key"
+  })
+
+  afterEach(() => {
+    delete process.env.NEXT_PUBLIC_POSTHOG_API_KEY
   })
 
   test("shows invalid-enrollment-code error alert and clears params", async () => {
@@ -247,6 +265,100 @@ describe("EnrollmentRedirectAlert", () => {
         /Your certificate track enrollment is confirmed/i,
       ),
     ).toBeInTheDocument()
+  })
+
+  test("tracks checkout-completed once with order id, course name, and value from receipt", async () => {
+    const receipt = mitxonline.factories.orders.order({
+      lines: [
+        mitxonline.factories.orders.transactionLine({
+          content_type: "courserun",
+        }),
+      ],
+      total_price_paid: "199.99",
+    })
+
+    setMockResponse.get(mitxonline.urls.orders.receipt(17), receipt)
+
+    renderWithProviders(<EnrollmentRedirectAlert />, {
+      url: "/dashboard?order_status=fulfilled&order_id=17",
+    })
+
+    await screen.findByRole("alert")
+
+    expect(trackCheckoutCompleted).toHaveBeenCalledTimes(1)
+    expect(trackCheckoutCompleted).toHaveBeenCalledWith({
+      orderId: 17,
+      courseName: receipt.lines[0].content_title,
+      value: 199.99,
+    })
+    expect(mockedPostHogCapture).toHaveBeenCalledTimes(1)
+    expect(mockedPostHogCapture).toHaveBeenCalledWith(
+      PostHogEvents.CheckoutCompleted,
+      {
+        orderId: 17,
+        courseName: receipt.lines[0].content_title,
+        value: 199.99,
+        readableId: receipt.lines[0].readable_id,
+        contentType: "courserun",
+      },
+    )
+  })
+
+  test("tracks checkout-completed with a null value when the receipt fails to load", async () => {
+    setMockResponse.get(mitxonline.urls.orders.receipt(18), "Server error", {
+      code: 500,
+    })
+
+    renderWithProviders(<EnrollmentRedirectAlert />, {
+      url: "/dashboard?order_status=fulfilled&order_id=18",
+    })
+
+    await screen.findByRole("alert")
+
+    expect(trackCheckoutCompleted).toHaveBeenCalledTimes(1)
+    expect(trackCheckoutCompleted).toHaveBeenCalledWith({
+      orderId: 18,
+      courseName: undefined,
+      value: null,
+    })
+    expect(mockedPostHogCapture).toHaveBeenCalledWith(
+      PostHogEvents.CheckoutCompleted,
+      {
+        orderId: 18,
+        courseName: undefined,
+        value: null,
+        readableId: undefined,
+        contentType: undefined,
+      },
+    )
+  })
+
+  test("does not capture PostHog checkout_completed when PostHog is not configured", async () => {
+    delete process.env.NEXT_PUBLIC_POSTHOG_API_KEY
+    setMockResponse.get(
+      mitxonline.urls.orders.receipt(19),
+      mitxonline.factories.orders.order(),
+    )
+
+    renderWithProviders(<EnrollmentRedirectAlert />, {
+      url: "/dashboard?order_status=fulfilled&order_id=19",
+    })
+
+    await screen.findByRole("alert")
+
+    expect(trackCheckoutCompleted).toHaveBeenCalledTimes(1)
+    expect(mockedPostHogCapture).not.toHaveBeenCalled()
+  })
+
+  test("does not track checkout-completed for non-paid alerts", async () => {
+    renderWithProviders(<EnrollmentRedirectAlert />, {
+      url: "/dashboard?enrollment_status=success&enrollment_title=Data+Science",
+    })
+
+    await screen.findByRole("alert")
+
+    expect(trackCheckoutCompleted).not.toHaveBeenCalled()
+    expect(mockedPostHogCapture).not.toHaveBeenCalled()
   })
 
   test.each([

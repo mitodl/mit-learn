@@ -8,7 +8,7 @@ import { styled, LoadingSpinner } from "ol-components"
 import { ActionButton } from "@mitodl/smoot-design"
 import { RiCloseLargeLine } from "@remixicon/react"
 import { useLearningResourcesDetail } from "api/hooks/learningResources"
-import PodcastEmbedPlayer from "@/app-pages/PodcastPage/PodcastEmbedPlayer"
+import PodcastEmbedPlayer from "@/page-components/PodcastEmbedPlayer/PodcastEmbedPlayer"
 
 // ─── Styled components ─────────────────────────────────────────────────────────
 

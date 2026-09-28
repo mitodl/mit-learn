@@ -1,13 +1,13 @@
 import Link from "next/link"
-import { Typography, styled, theme } from "ol-components"
+import { Typography, styled, theme, type TypographyProps } from "ol-components"
+import { richTextDescription } from "./shared.styled"
 import { ButtonLink } from "@mitodl/smoot-design"
 import VideoContainer from "./VideoContainer"
+export { SkipLinksNav, StyledBreadcrumbs, VideoTitle } from "./shared.styled"
 export {
-  SkipLinksNav,
-  SkipLink,
-  StyledBreadcrumbs,
   NoVideoMessage,
-} from "./shared.styled"
+  ScreenReaderOnly,
+} from "@/page-components/VideoPlayer/shared.styled"
 
 export const PageWrapper = styled.div({
   backgroundColor: theme.custom.colors.lightGray1,
@@ -22,6 +22,18 @@ export const BreadcrumbBar = styled.div(({ theme }) => ({
   },
 }))
 
+export const VideoShareSection = styled("div")({
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  flexWrap: "wrap",
+  gap: "8px",
+  margin: "0 0 24px",
+  [theme.breakpoints.down("sm")]: {
+    margin: "0 0 16px",
+  },
+})
+
 export const ShareRow = styled.div(({ theme }) => ({
   display: "flex",
   justifyContent: "flex-end",
@@ -35,28 +47,6 @@ export const UpNextRight = styled.div({
   alignItems: "center",
   gap: "24px",
 })
-
-export const ShareButton = styled.button(({ theme }) => ({
-  display: "flex",
-  alignItems: "center",
-  gap: "8px",
-  borderRadius: "4px",
-  padding: "14px 12px",
-  height: "32px",
-  border: `1px solid ${theme.custom.colors.silverGrayLight}`,
-  background: `${theme.custom.colors.white}`,
-  cursor: "pointer",
-  ...theme.typography.body2,
-  color: theme.custom.colors.darkGray1,
-  fontWeight: theme.typography.fontWeightMedium,
-  "&:hover": {
-    color: theme.custom.colors.red,
-  },
-  [theme.breakpoints.down("sm")]: {
-    width: "100%",
-    justifyContent: "center",
-  },
-}))
 
 // ── Series navigation bar ──
 
@@ -199,23 +189,6 @@ export const InstitutionLabel = styled.span(({ theme }) => ({
   },
 }))
 
-export const VideoTitle = styled.h1(({ theme }) => ({
-  ...theme.typography.h2,
-  fontWeight: theme.typography.fontWeightBold,
-  color: theme.custom.colors.black,
-  margin: "0 0 16px",
-  "&:focus": { outline: "none" },
-  fontSize: "44px",
-  fontStyle: "normal",
-  lineHeight: "120%",
-  letterSpacing: "-0.88px",
-  [theme.breakpoints.down("sm")]: {
-    ...theme.typography.h3,
-    margin: "0 0 8px",
-    letterSpacing: "inherit",
-  },
-}))
-
 export const SectionDivider = styled.div(({ theme }) => ({
   borderTop: `1px solid ${theme.custom.colors.lightGray2}`,
   margin: "32px 0",
@@ -289,14 +262,20 @@ export const MetaInstructorLine = styled.div(({ theme }) => ({
 export const StyledDuration = styled.div(({ theme }) => ({
   ...theme.typography.body2,
   color: theme.custom.colors.silverGrayDark,
-  margin: "0 0 40px",
-  [theme.breakpoints.down("sm")]: {
-    margin: "0 0 16px",
-  },
 }))
 
-export const DescriptionText = styled(Typography)(({ theme }) => ({
+/*
+ * This page has its own DescriptionText - it is not the one in
+ * VideoDetailPage.styled - so it needs the same two things: the component
+ * generic, because a sanitized OVS description contains block elements that are
+ * invalid inside Typography's element for this variant (<p>), and the shared
+ * rich-text rules so lists and links are styled.
+ */
+export const DescriptionText = styled(Typography)<
+  Pick<TypographyProps, "component">
+>(({ theme }) => ({
   ...theme.typography.body2,
+  ...richTextDescription,
   color: theme.custom.colors.darkGray2,
   marginBottom: "16px",
   lineHeight: "22px",
@@ -339,15 +318,3 @@ export const TopicChip = styled(Link)(({ theme }) => ({
     color: theme.custom.colors.red,
   },
 }))
-
-export const ScreenReaderOnly = styled.span({
-  position: "absolute",
-  width: 1,
-  height: 1,
-  padding: 0,
-  margin: -1,
-  overflow: "hidden",
-  clip: "rect(0, 0, 0, 0)",
-  whiteSpace: "nowrap",
-  border: 0,
-})

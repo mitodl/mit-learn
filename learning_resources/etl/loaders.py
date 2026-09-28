@@ -8,7 +8,7 @@ from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.cache import caches
 from django.db import transaction
-from django.db.models import Max, Q
+from django.db.models import Max, Q, QuerySet
 
 from learning_resources.constants import (
     CONTENT_TYPE_PAGE,
@@ -16,6 +16,7 @@ from learning_resources.constants import (
     OCW_COURSE_CONTENT_CATEGORY_MAPPING,
     OCW_INSTRUCTOR_INSIGHTS_TAG,
     OCW_PLAYLIST_VIDEO_THRESHOLD,
+    OCW_VISIBLE_TAGS,
     LearningResourceDelivery,
     LearningResourceRelationTypes,
     LearningResourceType,
@@ -32,7 +33,7 @@ from learning_resources.etl.constants import (
     ResourceNextRunConfig,
 )
 from learning_resources.etl.exceptions import ExtractException
-from learning_resources.etl.ownership import pull_write_allowed
+from learning_resources.etl.ownership import may_write
 from learning_resources.etl.utils import most_common_topics
 from learning_resources.models import (
     ContentFile,
@@ -62,7 +63,6 @@ from learning_resources.utils import (
     bulk_resources_unpublished_actions,
     content_files_loaded_actions,
     load_course_blocklist,
-    load_course_duplicates,
     resource_delete_actions,
     resource_run_unpublished_actions,
     resource_unpublished_actions,
@@ -194,9 +194,17 @@ def load_run_dependent_values(
 
 
 def load_instructors(
-    run: LearningResourceRun, instructors_data: list[dict]
+    run: LearningResourceRun, instructors_data: list[dict] | None
 ) -> list[LearningResourceInstructor]:
-    """Load the instructors for a resource run into the database"""
+    """Load the instructors for a resource run into the database.
+
+    `None` (as opposed to `[]`) means the source didn't provide instructor
+    data at all; leave whatever's already on the run alone rather than
+    clearing it — same convention as load_topics's `topics_data`.
+    """
+    if instructors_data is None:
+        return list(run.instructors.all())
+
     instructors = []
     valid_attributes = ["first_name", "last_name"]
     relations = []
@@ -228,9 +236,17 @@ def load_instructors(
 
 
 def load_prices(
-    run: LearningResourceRun, prices_data: list[dict]
+    run: LearningResourceRun, prices_data: list[dict] | None
 ) -> list[LearningResourcePrice]:
-    """Load the prices for a resource run into the database"""
+    """Load the prices for a resource run into the database.
+
+    `None` (as opposed to `[]`) means the source didn't provide price data
+    at all; leave whatever's already on the run alone rather than clearing
+    it — same convention as load_topics's `topics_data`.
+    """
+    if prices_data is None:
+        return list(run.resource_prices.all())
+
     prices = []
     for price in prices_data:
         lr_price, _ = LearningResourcePrice.objects.get_or_create(
@@ -306,6 +322,29 @@ def load_content_tags(
     )
 
 
+def _resolve_run_prices(
+    run_data: dict,
+    resource_prices: list[dict] | None,
+    status: str | None,
+    learning_resource: LearningResource,
+) -> list[dict] | None:
+    """Normalize run_data's "prices" summary field for one run.
+
+    Returns the resource_prices list to pass to load_prices, or None if no
+    price data was provided by this source (leave existing values alone).
+    """
+    if resource_prices is None:
+        return None
+
+    run_data["prices"] = sorted({price["amount"] for price in resource_prices})
+    if status == RunStatus.archived.value or learning_resource.certification is False:
+        # Archived runs or runs of resources w/out certificates should not
+        # have prices
+        run_data["prices"] = []
+        return []
+    return resource_prices
+
+
 def load_run(
     learning_resource: LearningResource, run_data: dict
 ) -> LearningResourceRun:
@@ -323,15 +362,16 @@ def load_run(
 
     image_data = run_data.pop("image", None)
     status = run_data.pop("status", None)
+    # `None` (as opposed to an omitted key, which defaults to `[]`) is the
+    # sentinel for "not provided by this source, leave existing value
+    # alone" — same convention load_topics uses for `topics_data`. Sources
+    # that don't have instructor/price data (e.g. the warehouse-pull
+    # transforms, which lack pricing entirely) pass `None` explicitly
+    # rather than `[]`, so a sync doesn't wipe data another pipeline wrote.
     instructors_data = run_data.pop("instructors", [])
-
-    resource_prices = run_data.get("prices", [])
-    run_data["prices"] = sorted({price["amount"] for price in resource_prices})
-
-    if status == RunStatus.archived.value or learning_resource.certification is False:
-        # Archived runs or runs of resources w/out certificates should not have prices
-        run_data["prices"] = []
-        resource_prices = []
+    resource_prices = _resolve_run_prices(
+        run_data, run_data.pop("prices", []), status, learning_resource
+    )
 
     if learning_resource.test_mode:
         run_data["published"] = True
@@ -395,10 +435,12 @@ def load_run(
                     )
 
                 transaction.on_commit(enqueue_content_tasks)
-            elif previously_published is False:
+            elif previously_published is False and learning_resource_run.published:
                 # Run was republished. Its content files are still present and
                 # published (retained sources keep them in Qdrant), just absent
                 # from OpenSearch. Re-index them without a full re-ingest.
+                # Runs that remain unpublished must not trip this on every
+                # sync — it re-embeds their files with overwrite=True.
                 content_files_loaded_actions(learning_resource_run)
     return learning_resource_run
 
@@ -406,7 +448,6 @@ def load_run(
 def upsert_course_or_program(  # noqa: C901, PLR0912
     resource_data: dict,
     blocklist: list[str],
-    duplicates: list[dict],
     resource_type: str,
     *,
     config: CourseLoaderConfig = None,
@@ -419,8 +460,6 @@ def upsert_course_or_program(  # noqa: C901, PLR0912
             a dict of course/program data values
         blocklist (list of str):
             list of course/program ids not to load
-        duplicates (list of dict):
-            list of duplicate course/program data
         resource_type (str):
             the type of resource to load (course or program)
         config (CourseLoaderConfig):
@@ -439,6 +478,9 @@ def upsert_course_or_program(  # noqa: C901, PLR0912
 
     if readable_id in blocklist or not runs:
         resource_data["published"] = False
+    if readable_id in blocklist:
+        # blocklisting overrides test_mode, which would keep the content indexed
+        resource_data["test_mode"] = False
 
     if not resource_data.get("resource_category"):
         if resource_type == LearningResourceType.course.name:
@@ -446,14 +488,6 @@ def upsert_course_or_program(  # noqa: C901, PLR0912
         else:
             resource_category = LearningResourceType.program.value
         resource_data["resource_category"] = resource_category
-    deduplicated_course_id = next(
-        (
-            record["course_id"]
-            for record in duplicates
-            if readable_id in record["duplicate_course_ids"]
-        ),
-        None,
-    )
     platform = LearningResourcePlatform.objects.filter(code=platform_name).first()
     if not platform:
         log.exception(
@@ -463,23 +497,12 @@ def upsert_course_or_program(  # noqa: C901, PLR0912
         )
         return None, None
 
-    if deduplicated_course_id and readable_id != deduplicated_course_id:
-        duplicate_resource = LearningResource.objects.filter(
-            platform=platform, readable_id=readable_id
-        ).first()
-        if duplicate_resource:
-            duplicate_resource.published = False
-            duplicate_resource.save()
-            resource_unpublished_actions(duplicate_resource)
-
-    resource_id = deduplicated_course_id or readable_id
-
     if config and config.fetch_only:
         # Do not upsert the course, it should already exist.
         # Just find it and return it.
         resource = (
             LearningResource.objects.filter(
-                readable_id=resource_id,
+                readable_id=readable_id,
                 platform=platform,
                 resource_type=resource_type,
             )
@@ -487,11 +510,11 @@ def upsert_course_or_program(  # noqa: C901, PLR0912
             .first()
         )
         if not resource:
-            log.warning("No published or test_mode resource found for %s", resource_id)
+            log.warning("No published or test_mode resource found for %s", readable_id)
         return resource, False
 
     if unique_field_name != READABLE_ID_FIELD:
-        resource_data[READABLE_ID_FIELD] = resource_id
+        resource_data[READABLE_ID_FIELD] = readable_id
         # Some dupes may result, so we should delete all but the
         # most recently updated resource w/matching unique value
         existing_courses = LearningResource.objects.filter(
@@ -519,7 +542,7 @@ def upsert_course_or_program(  # noqa: C901, PLR0912
             defaults=resource_data,
         )
     else:
-        unique_field_value = resource_id
+        unique_field_value = readable_id
     return LearningResource.objects.select_for_update().update_or_create(
         **{unique_field_name: unique_field_value},
         platform=platform,
@@ -531,7 +554,6 @@ def upsert_course_or_program(  # noqa: C901, PLR0912
 def load_course(
     resource_data: dict,
     blocklist: list[str],
-    duplicates: list[dict],
     *,
     config=CourseLoaderConfig(),
 ) -> LearningResource:
@@ -543,8 +565,6 @@ def load_course(
             a dict of course data values
         blocklist (list of str):
             list of course ids not to load
-        duplicates (list of dict):
-            list of duplicate course data
         config (CourseLoaderConfig):
             configuration on how to load this program
 
@@ -567,14 +587,13 @@ def load_course(
         learning_resource, created = upsert_course_or_program(
             resource_data,
             blocklist,
-            duplicates,
             LearningResourceType.course.name,
             config=config,
         )
         if config.fetch_only or not learning_resource:
             return learning_resource
 
-        Course.objects.get_or_create(
+        Course.objects.update_or_create(
             learning_resource=learning_resource, defaults=course_data
         )
 
@@ -585,7 +604,10 @@ def load_course(
             we set the course to "test_mode" in learn
             """
             learning_resource.require_summaries = True
-            if learning_resource.published is False:
+            if (
+                learning_resource.published is False
+                and learning_resource.readable_id not in blocklist
+            ):
                 learning_resource.test_mode = True
             learning_resource.save()
         for course_run_data in runs_data:
@@ -602,7 +624,6 @@ def load_course(
                 | Q(learning_resource__test_mode=True)
             ).filter(published=True):
                 run.published = False
-                run.checksum = None
                 run.save()
                 resource_run_unpublished_actions(run)
 
@@ -633,24 +654,17 @@ def load_courses(
     Returns:
         A list of course LearningResources
     """
-    if not pull_write_allowed(etl_source, LearningResourceType.course.name):
-        log.info(
-            "Skipping pull-ETL write for %s/%s: ownership is push",
-            etl_source,
-            LearningResourceType.course.name,
-        )
+    if not may_write(etl_source, LearningResourceType.course.name):
         return []
 
     blocklist = load_course_blocklist()
-    duplicates = load_course_duplicates(etl_source)
 
     courses_list = list(courses_data or [])
 
     courses = [
         course
         for course in [
-            load_course(course, blocklist, duplicates, config=config)
-            for course in courses_list
+            load_course(course, blocklist, config=config) for course in courses_list
         ]
         if course is not None
     ]
@@ -689,7 +703,6 @@ class LoadedProgramCourse(NamedTuple):
 def load_program(
     program_data: dict,
     blocklist: list[str],
-    duplicates: list[dict],
     *,
     config=ProgramLoaderConfig(),
 ) -> ProgramLoadResult:
@@ -701,8 +714,6 @@ def load_program(
             a dict of program data values
         blocklist (list of str):
             list of course ids not to load
-        duplicates (list of dict):
-            list of duplicate course data
         config (ProgramLoaderConfig):
             configuration on how to load this program
 
@@ -726,7 +737,7 @@ def load_program(
 
     with transaction.atomic():
         learning_resource, created = upsert_course_or_program(
-            program_data, [], [], LearningResourceType.program.name
+            program_data, [], LearningResourceType.program.name
         )
         if not learning_resource:
             return ProgramLoadResult(
@@ -752,7 +763,6 @@ def load_program(
                 | Q(learning_resource__test_mode=True)
             ).filter(published=True):
                 run.published = False
-                run.checksum = None
                 run.save()
 
         load_run_dependent_values(learning_resource)
@@ -764,9 +774,7 @@ def load_program(
                 continue
 
             explicit_position = course_data.pop("position", None)
-            course_resource = load_course(
-                course_data, blocklist, duplicates, config=config.courses
-            )
+            course_resource = load_course(course_data, blocklist, config=config.courses)
             if course_resource:
                 loaded_courses.append(
                     LoadedProgramCourse(
@@ -897,22 +905,16 @@ def load_programs(
     For MITx Online data, each deferred child program may map to either
     PROGRAM_PROGRAMS or PROGRAM_COURSES based on child `display_mode`.
     """
-    if not pull_write_allowed(etl_source, LearningResourceType.program.name):
-        log.info(
-            "Skipping pull-ETL write for %s/%s: ownership is push",
-            etl_source,
-            LearningResourceType.program.name,
-        )
+    if not may_write(etl_source, LearningResourceType.program.name):
         return []
 
     blocklist = load_course_blocklist()
-    duplicates = load_course_duplicates(etl_source)
 
     # Pass 1: load all programs and their course children
     results: list[ProgramLoadResult] = []
     deferred_child_programs = []
     for program_data in programs_data:
-        result = load_program(program_data, blocklist, duplicates, config=config)
+        result = load_program(program_data, blocklist, config=config)
         results.append(result)
         if result.resource and result.child_programs_data:
             deferred_child_programs.append(
@@ -953,9 +955,32 @@ def load_content_file(
     """
     try:
         content_file_tags = content_file_data.pop("content_tags", [])
-        content_file, _ = ContentFile.objects.update_or_create(
-            run=course_run, key=content_file_data.get("key"), defaults=content_file_data
-        )
+        key = content_file_data.get("key")
+        try:
+            content_file, _ = ContentFile.objects.update_or_create(
+                run=course_run, key=key, defaults=content_file_data
+            )
+        except ContentFile.MultipleObjectsReturned:
+            # Celery workers roll concurrently with the migrate job, so this
+            # can run against pre-migration duplicates for a few minutes.
+            # Collapse to the best row (keep LLM summaries), then retry.
+            # Locked so two workers collapsing the same (run, key) agree on
+            # one survivor instead of deleting each other's pick.
+            with transaction.atomic():
+                dupes = list(
+                    ContentFile.objects.select_for_update()
+                    .filter(run=course_run, key=key)
+                    .order_by("id")
+                )
+                keep = sorted(
+                    dupes, key=lambda cf: (bool(cf.summary), cf.updated_on, cf.id)
+                )[-1]
+                ContentFile.objects.filter(
+                    id__in=[cf.id for cf in dupes if cf.id != keep.id]
+                ).delete()
+                content_file, _ = ContentFile.objects.update_or_create(
+                    run=course_run, key=key, defaults=content_file_data
+                )
         load_content_tags(content_file, content_file_tags, is_content_file=True)
         return content_file.id  # noqa: TRY300
     except:  # noqa: E722
@@ -1030,6 +1055,7 @@ def load_content_files(
     content_files_data: list[dict],
     *,
     calc_completeness: bool = False,
+    failed_keys: list | None = None,
 ) -> list[int]:
     """
     Sync all content files for a course run to database and S3 if not present in DB
@@ -1038,6 +1064,9 @@ def load_content_files(
         course_run (LearningResourceRun): a course run
         content_files_data (list or generator): Details about the content files
         calc_completeness: bool: Whether to calculate the completeness score
+        failed_keys: list: caller-owned list of ContentFile keys whose
+            extraction failed, mutated in place while content_files_data is
+            consumed; those records are exempted from the stale/unpublish pass
 
     Returns:
         list of int: Ids of the ContentFile objects that were created/updated
@@ -1063,6 +1092,8 @@ def load_content_files(
         stale_published_files = ContentFile.objects.filter(
             run=course_run, published=True
         ).exclude(id__in=content_files_ids)
+        if failed_keys:
+            stale_published_files = stale_published_files.exclude(key__in=failed_keys)
         stale_direct_resource_ids = list(
             stale_published_files.filter(direct_learning_resource__isnull=False)
             .values_list("direct_learning_resource_id", flat=True)
@@ -1094,19 +1125,21 @@ def load_learning_materials(
     Create learning material objects from ocw content files
     """
     material_ids = []
+    if settings.CREATE_HIDDEN_OCW_LEARNING_MATERIALS:
+        promoted_ocw_file_types = set(OCW_COURSE_CONTENT_CATEGORY_MAPPING.keys())
+    else:
+        promoted_ocw_file_types = set(OCW_VISIBLE_TAGS)
 
-    if not settings.CREATE_OCW_LEARNING_MATERIALS:
-        return
+    content_files = (
+        ContentFile.objects.filter(id__in=content_file_ids)
+        .select_related("direct_learning_resource")
+        .prefetch_related("content_tags")
+    )
 
-    promoted_ocw_file_types = set(OCW_COURSE_CONTENT_CATEGORY_MAPPING.keys())
-
-    for content_file_id in content_file_ids:
-        content_file = ContentFile.objects.get(id=content_file_id)
-
-        learning_material_tags = (
-            set(content_file.content_tags.values_list("name", flat=True))
-            & promoted_ocw_file_types
-        )
+    for content_file in content_files:
+        learning_material_tags = {
+            tag.name for tag in content_file.content_tags.all()
+        } & promoted_ocw_file_types
         if content_file.content_type != CONTENT_TYPE_PAGE and learning_material_tags:
             material_ids.append(
                 load_learning_material(course_run, content_file, learning_material_tags)
@@ -1212,6 +1245,8 @@ def load_problem_file(
 def load_problem_files(
     course_run: LearningResourceRun,
     problem_files_data: list[dict],
+    *,
+    failed_source_paths: list | None = None,
 ) -> list[int]:
     """
     Sync all problem files for canvas course
@@ -1219,6 +1254,9 @@ def load_problem_files(
     Args:
         course_run (LearningResourceRun): a course run
         problem_files_data (list or generator): Details about the problem files
+        failed_source_paths (list): caller-owned list of source paths whose
+            extraction failed, mutated in place while problem_files_data is
+            consumed; those records are retained rather than deleted as orphans
 
     Returns:
         list of int: Ids of the TutorProblemFile objects that were created/updated
@@ -1228,11 +1266,12 @@ def load_problem_files(
         load_problem_file(course_run, problem_file)
         for problem_file in problem_files_data
     ]
-    for file in (
-        TutorProblemFile.objects.filter(run=course_run)
-        .exclude(id__in=problem_files_ids)
-        .all()
-    ):
+    deletable = TutorProblemFile.objects.filter(run=course_run).exclude(
+        id__in=problem_files_ids
+    )
+    if failed_source_paths:
+        deletable = deletable.exclude(source_path__in=failed_source_paths)
+    for file in deletable.all():
         file.delete()
 
     return problem_files_ids
@@ -1280,7 +1319,7 @@ def load_podcast_episode(episode_data: dict) -> LearningResource:
     return learning_resource
 
 
-def load_podcast(podcast_data: dict) -> LearningResource:
+def load_podcast(podcast_data: dict) -> LearningResource | None:
     """
     Load a single podcast
 
@@ -1290,11 +1329,33 @@ def load_podcast(podcast_data: dict) -> LearningResource:
         config (PodcastLoaderConfig):
             configuration for this loader
     Returns:
-        LearningResource:
-            the updated or created podcast resource
+        LearningResource | None:
+            the updated or created podcast resource, or None if the feed
+            has no episodes (an existing podcast and its episodes get unpublished)
     """
     readable_id = podcast_data.pop("readable_id")
-    episodes_data = podcast_data.pop("episodes", [])
+    episodes_data = list(podcast_data.pop("episodes", []))
+    if not episodes_data:
+        existing_resource = LearningResource.objects.filter(
+            readable_id=readable_id,
+            resource_type=LearningResourceType.podcast.name,
+            platform__code=PlatformType.podcast.name,
+            published=True,
+        ).first()
+        if existing_resource:
+            existing_resource.published = False
+            existing_resource.save()
+            update_index(existing_resource, newly_created=False)
+            episode_ids = list(
+                existing_resource.children.filter(
+                    relation_type=LearningResourceRelationTypes.PODCAST_EPISODES.value
+                ).values_list("child__id", flat=True)
+            )
+            LearningResource.objects.filter(id__in=episode_ids).update(published=False)
+            bulk_resources_unpublished_actions(
+                episode_ids, LearningResourceType.podcast_episode.name
+            )
+        return None
     topics_data = podcast_data.pop("topics", [])
     offered_by_data = podcast_data.pop("offered_by", None)
     image_data = podcast_data.pop("image", {})
@@ -1350,17 +1411,29 @@ def load_podcast(podcast_data: dict) -> LearningResource:
     return learning_resource
 
 
-def load_podcasts(podcasts_data: list[dict]) -> list[LearningResource]:
+def load_podcasts(
+    podcasts_data: list[dict], tracked_ids: list[str]
+) -> list[LearningResource]:
     """
     Load a list of podcasts
 
     Args:
         podcasts_data (iter of dict): iterable of podcast data
+        tracked_ids (list of str): readable ids of every configured feed.
+            Podcasts outside this list are the ones we no longer track; a
+            podcast in it keeps its data even if this run couldn't fetch or
+            parse its feed.
 
     Returns:
         list of LearningResources:
             list of the loaded podcast resources
     """
+    if not may_write(
+        ETLSource.podcast.name,
+        [LearningResourceType.podcast.name, LearningResourceType.podcast_episode.name],
+    ):
+        return []
+
     podcast_resources = []
 
     for podcast_data in podcasts_data:
@@ -1370,13 +1443,17 @@ def load_podcasts(podcasts_data: list[dict]) -> list[LearningResource]:
         except ExtractException:
             log.exception("Error with extracted podcast: podcast_id=%s", readable_id)
         else:
-            podcast_resources.append(podcast_resource)
+            if podcast_resource:
+                podcast_resources.append(podcast_resource)
+
+    if not tracked_ids:
+        msg = "No podcasts to track, refusing to unpublish every podcast"
+        raise ExtractException(msg)
 
     # unpublish the podcasts and episodes we're no longer tracking
-    ids = [podcast.id for podcast in podcast_resources]
     unpublished_podcasts = LearningResource.objects.filter(
         resource_type=LearningResourceType.podcast.name
-    ).exclude(id__in=ids)
+    ).exclude(readable_id__in=tracked_ids)
     unpublished_podcasts.update(published=False)
     bulk_resources_unpublished_actions(
         unpublished_podcasts.values_list("id", flat=True),
@@ -1384,7 +1461,7 @@ def load_podcasts(podcasts_data: list[dict]) -> list[LearningResource]:
     )
     unpublished_episodes = LearningResource.objects.filter(
         resource_type=LearningResourceType.podcast_episode.name
-    ).exclude(parents__parent__in=ids)
+    ).exclude(parents__parent__readable_id__in=tracked_ids)
     unpublished_episodes.update(published=False)
     bulk_resources_unpublished_actions(
         unpublished_episodes.values_list("id", flat=True),
@@ -1571,6 +1648,8 @@ def load_documents(
         list of LearningResource:
             the list of loaded documents
     """
+    if not may_write(etl_source, LearningResourceType.document.name):
+        return []
 
     document_resources = []
     for document_data in documents_data:
@@ -1688,6 +1767,12 @@ def load_ovs_playlists(playlists_data: iter) -> list[LearningResource]:
     Returns:
         list of LearningResource: the loaded playlist resources
     """
+    if not may_write(
+        ETLSource.ovs.name,
+        [LearningResourceType.video_playlist.name, LearningResourceType.video.name],
+    ):
+        return []
+
     ovs_platform = LearningResourcePlatform.objects.get(code=PlatformType.ovs.name)
 
     playlists = [load_ovs_playlist(playlist_data) for playlist_data in playlists_data]
@@ -1748,7 +1833,8 @@ def load_playlist(
 
     Returns:
         LearningResource | None: the created or updated playlist resource,
-            or None if create_videos is False and not all videos could be matched
+            or None if create_videos is False and the playlist has no videos
+            or not enough videos could be matched
     """
 
     playlist_id = playlist_data.pop("playlist_id")
@@ -1765,10 +1851,11 @@ def load_playlist(
     else:
         video_resources = load_videos_from_content_files(videos_data)
 
-        if video_resources is None:
+        if not video_resources:
             existing_resource = LearningResource.objects.filter(
                 readable_id=playlist_id,
                 resource_type=LearningResourceType.video_playlist.name,
+                platform__code=playlist_data.get("platform", PlatformType.youtube.name),
                 published=True,
             ).first()
             if existing_resource:
@@ -1884,124 +1971,56 @@ def load_videos_from_content_files(
     return videos
 
 
-def load_playlists(
-    video_channel: VideoChannel, playlists_data: iter
-) -> list[LearningResource]:
+def upsert_video_channel(video_channel_data: dict) -> VideoChannel:
     """
-    Load a list of video playlists into the database
-
-    Args:
-        video_channel (VideoChannel): the video channel instance this playlist is under
-        playlists_data (iter of dict): iterable of the video playlists
-
-    Returns:
-        list of LearningResource:
-            the created or updated LearningResources for the playlists
-    """
-    playlists = [
-        playlist
-        for playlist in (
-            load_playlist(video_channel, playlist_data)
-            for playlist_data in playlists_data
-        )
-        if playlist is not None
-    ]
-    playlist_ids = [playlist.id for playlist in playlists]
-
-    # remove playlists that no longer exist
-    playlists_to_unpublish = LearningResource.objects.filter(
-        video_playlist__channel=video_channel
-    ).exclude(id__in=playlist_ids)
-
-    playlists_to_unpublish.update(published=False)
-    bulk_resources_unpublished_actions(
-        playlists_to_unpublish.values_list("id", flat=True),
-        LearningResourceType.video_playlist.name,
-    )
-
-    return playlists
-
-
-def load_video_channel(video_channel_data: dict) -> VideoChannel:
-    """
-    Load a single video channel into the database
+    Create or update the VideoChannel row itself, without touching its playlists
 
     Arg:
         video_channel_data (dict):
-            the normalized video channel data
+            the normalized video channel data, without a "playlists" key
     Returns:
         VideoChannel: the updated or created video channel
     """
-    channel_id = video_channel_data.pop("channel_id")
-    playlists_data = video_channel_data.pop("playlists", [])
-
+    channel_data = {
+        **video_channel_data,
+        "etl_source": ETLSource.youtube.name,
+        "published": True,
+    }
+    channel_id = channel_data.pop("channel_id")
     video_channel, _ = VideoChannel.objects.select_for_update().update_or_create(
-        channel_id=channel_id, defaults=video_channel_data
+        channel_id=channel_id, defaults=channel_data
     )
-    load_playlists(video_channel, playlists_data)
-
     return video_channel
 
 
-def load_youtube_video_channels(video_channels_data: iter) -> list[VideoChannel]:
+def unpublish_orphaned_videos(playlist_ids: list[int] | None = None) -> None:
     """
-    Load a list of video channels
+    Unpublish published videos that are in no published playlist.
 
     Args:
-        video_channels_data (iter of dict): iterable of the video channels data
-
-    Returns:
-        list of VideoChannel: the loaded video channels
+        playlist_ids (list of int or None): only consider the videos of these
+            playlist resources; if None, sweep every playlist video
     """
-    video_channels = []
-    channel_ids = []
-    for video_channel_data in video_channels_data:
-        channel_id = video_channel_data["channel_id"]
-        channel_ids.append(channel_id)
-        video_channel_data["etl_source"] = ETLSource.youtube.name
-        video_channel_data["published"] = True
-        try:
-            video_channel = load_video_channel(video_channel_data)
-        except ExtractException:
-            # video_channel_data has lazily evaluated generators,
-            # one of them could raise an extraction error
-            # this is a small pollution of separation of concerns
-            # but this allows us to stream the extracted data w/ generators
-            # as opposed to having to load everything into memory,
-            # which will eventually fail
-            log.exception(
-                "Error with extracted video channel: channel_id=%s", channel_id
-            )
-        else:
-            video_channels.append(video_channel)
-
-    VideoChannel.objects.filter(etl_source=ETLSource.youtube.name).exclude(
-        channel_id__in=channel_ids
-    ).update(published=False)
-
-    # Unpublish any video playlists not included in published channels
-    orphaned_playlist_ids = (
-        VideoPlaylist.objects.exclude(channel__channel_id__in=channel_ids)
-        .filter(channel__etl_source=ETLSource.youtube.name)
-        .values_list("learning_resource__id", flat=True)
+    playlist_videos = LearningResourceRelationship.objects.filter(
+        relation_type=LearningResourceRelationTypes.PLAYLIST_VIDEOS.value
+    )
+    candidates = (
+        playlist_videos.filter(parent_id__in=playlist_ids)
+        if playlist_ids is not None
+        else playlist_videos
     )
 
-    if orphaned_playlist_ids:
-        LearningResource.objects.filter(id__in=orphaned_playlist_ids).update(
-            published=False
+    orphaned_video_ids = list(
+        LearningResource.objects.filter(
+            published=True, id__in=candidates.values("child_id")
         )
-        bulk_resources_unpublished_actions(
-            orphaned_playlist_ids, LearningResourceType.video_playlist.name
+        .exclude(
+            # a video in another, still-published playlist isn't orphaned
+            id__in=playlist_videos.filter(parent__published=True).values("child_id")
         )
-
-    # Unpublish any published videos that aren't in at least one published playlist
-    orphaned_video_ids = (
-        LearningResourceRelationship.objects.filter(
-            relation_type=LearningResourceRelationTypes.PLAYLIST_VIDEOS.value
-        )
-        .exclude(parent__published=True)
-        .values_list("child", flat=True)
+        .values_list("id", flat=True)
     )
+
     if orphaned_video_ids:
         LearningResource.objects.filter(id__in=orphaned_video_ids).update(
             published=False
@@ -2010,4 +2029,65 @@ def load_youtube_video_channels(video_channels_data: iter) -> list[VideoChannel]
             orphaned_video_ids, LearningResourceType.video.name
         )
 
-    return video_channels
+
+def unpublish_playlists(playlist_resources: QuerySet) -> None:
+    """
+    Unpublish playlist resources, and any video they leave orphaned
+
+    Args:
+        playlist_resources (QuerySet): the playlist LearningResources to unpublish
+    """
+    unpublished_ids = list(playlist_resources.values_list("id", flat=True))
+    if not unpublished_ids:
+        return
+
+    LearningResource.objects.filter(id__in=unpublished_ids).update(published=False)
+    bulk_resources_unpublished_actions(
+        unpublished_ids, LearningResourceType.video_playlist.name
+    )
+    unpublish_orphaned_videos(unpublished_ids)
+
+
+def unpublish_removed_playlists(
+    video_channel: VideoChannel, playlist_ids: list[str]
+) -> None:
+    """
+    Unpublish the channel's playlists that are no longer in its youtube listing
+
+    Args:
+        video_channel (VideoChannel): the video channel
+        playlist_ids (list of str): youtube ids of the channel's current playlists
+    """
+    unpublish_playlists(
+        LearningResource.objects.filter(video_playlist__channel=video_channel).exclude(
+            readable_id__in=playlist_ids
+        )
+    )
+
+
+def unpublish_removed_youtube_channels(channel_ids: list[str]) -> None:
+    """
+    Unpublish everything youtube no longer offers under the configured channels.
+
+    Channels that aren't in channel_ids are unpublished, along with their
+    playlists and any video left without a published playlist.
+
+    Args:
+        channel_ids (list of str): youtube ids of the configured channels
+    """
+    VideoChannel.objects.filter(etl_source=ETLSource.youtube.name).exclude(
+        channel_id__in=channel_ids
+    ).update(published=False)
+
+    # Unpublish any video playlists not included in published channels
+    unpublish_playlists(
+        LearningResource.objects.filter(
+            id__in=VideoPlaylist.objects.exclude(channel__channel_id__in=channel_ids)
+            .filter(channel__etl_source=ETLSource.youtube.name)
+            .values_list("learning_resource__id", flat=True)
+        )
+    )
+
+    # Backstop: catch videos orphaned by anything the per-playlist path missed,
+    # such as a run that died partway through or a playlist load that bailed
+    unpublish_orphaned_videos()

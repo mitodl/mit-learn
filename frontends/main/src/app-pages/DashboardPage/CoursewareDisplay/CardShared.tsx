@@ -16,17 +16,16 @@ const CardRoot = styled.div<{
     border: `1px solid ${theme.custom.colors.lightGray2}`,
     backgroundColor: theme.custom.colors.white,
     padding: "16px",
+    borderRadius: "8px",
+    boxShadow: "0 4px 8px 0 rgba(19, 20, 21, 0.08)",
     display: "flex",
     gap: "8px",
     alignItems: "center",
   },
   // Mobile styles for default layout
   layout === "default" && {
-    [theme.breakpoints.down("md")]: {
+    [theme.breakpoints.down("sm")]: {
       border: "none",
-      borderBottom: `1px solid ${theme.custom.colors.lightGray2}`,
-      borderRadius: "0px",
-      boxShadow: "none",
       flexDirection: "column",
       gap: "16px",
     },
@@ -46,88 +45,102 @@ const CardRoot = styled.div<{
       borderBottomRightRadius: "8px !important",
       borderBottom: "none",
     },
-    [theme.breakpoints.down("md")]: {
+    [theme.breakpoints.down("sm")]: {
       flexDirection: "column",
+      flexGrow: 1,
       gap: "16px",
     },
   },
   screenSize === "desktop" && {
-    [theme.breakpoints.down("md")]: {
+    [theme.breakpoints.down("sm")]: {
       display: "none",
     },
   },
   screenSize === "mobile" && {
-    [theme.breakpoints.up("md")]: {
+    [theme.breakpoints.up("sm")]: {
       display: "none",
     },
   },
 ])
 
 const CardTypeText = styled(Typography)(({ theme }) => ({
-  ...theme.typography.subtitle4,
+  ...theme.typography.body3,
   color: theme.custom.colors.silverGrayDark,
 }))
 
 const TitleHeading = styled.h3(({ theme }) => ({
   margin: 0,
-  [theme.breakpoints.down("md")]: {
+  ...theme.typography.subtitle1,
+  [theme.breakpoints.down("sm")]: {
     maxWidth: "calc(100% - 16px)",
   },
 }))
 
-const TitleLink = styled(Link)()
+const TitleLink = styled(Link)(({ theme }) => ({
+  ...theme.typography.subtitle1,
+}))
 
-const TitleText = styled.h3<{ clickable?: boolean }>(
-  ({ theme, clickable }) => ({
-    margin: 0,
-    ...theme.typography.subtitle2,
-    color: theme.custom.colors.darkGray2,
-    cursor: clickable ? "pointer" : "default",
-    [theme.breakpoints.down("md")]: {
-      maxWidth: "calc(100% - 16px)",
-    },
-  }),
-)
+const TitleText = styled.h3(({ theme }) => ({
+  margin: 0,
+  ...theme.typography.subtitle1,
+  color: theme.custom.colors.darkGray2,
+  [theme.breakpoints.down("sm")]: {
+    maxWidth: "calc(100% - 16px)",
+  },
+}))
 
-const SubtitleLinkRoot = styled.div<{ layout?: "default" | "compact" }>(
-  ({ theme, layout = "default" }) => ({
-    display: "flex",
-    alignItems: "center",
-    gap: "8px",
-    flex: 1,
-    color:
-      layout === "compact"
-        ? theme.custom.colors.silverGrayDark
-        : theme.custom.colors.darkGray2,
-    ...theme.typography.subtitle3,
-  }),
-)
+/**
+ * A title rendered as an actual button (nested inside a TitleHeading), for
+ * cards whose title click triggers an action rather than navigation. Keeps
+ * the heading itself focusable-by-heading-role for AT heading navigation
+ * while making the title text a real, keyboard-operable control.
+ */
+const TitleButton = styled.button(({ theme }) => ({
+  margin: 0,
+  padding: 0,
+  border: "none",
+  background: "none",
+  appearance: "none",
+  display: "block",
+  width: "100%",
+  textAlign: "left",
+  cursor: "pointer",
+  color: theme.custom.colors.darkGray2,
+  ...theme.typography.subtitle1,
+  [theme.breakpoints.down("sm")]: {
+    maxWidth: "calc(100% - 16px)",
+  },
+}))
 
-const SubtitleLink = styled(NextLink)<{ layout?: "default" | "compact" }>(
-  ({ theme, layout = "default" }) => ({
-    ...theme.typography.subtitle3,
-    color:
-      layout === "compact"
-        ? theme.custom.colors.silverGrayDark
-        : theme.custom.colors.mitRed,
-    display: "flex",
-    alignItems: "center",
-    gap: "4px",
-    ":hover": {
-      textDecoration: "underline",
-    },
-  }),
-)
+const SubtitleLinkRoot = styled.div(({ theme }) => ({
+  display: "flex",
+  flexWrap: "wrap",
+  alignItems: "center",
+  rowGap: "2px",
+  flex: 1,
+  minWidth: 0,
+  color: theme.custom.colors.red,
+  ...theme.typography.body3,
+}))
+
+const SubtitleLink = styled(NextLink)(({ theme }) => ({
+  ...theme.typography.body3,
+  color: theme.custom.colors.red,
+  display: "flex",
+  alignItems: "center",
+  gap: "2px",
+  ":hover": {
+    textDecoration: "underline",
+  },
+}))
 
 const MenuButton = styled(ActionButton)<{
   status: EnrollmentStatus
 }>(({ theme, status }) => [
   {
-    marginLeft: "-8px",
-    [theme.breakpoints.down("md")]: {
-      position: "absolute",
-      top: "0",
-      right: "0",
+    [theme.breakpoints.down("sm")]: {
+      borderRadius: "4px",
+      border: `1px solid ${theme.custom.colors.lightGray2}`,
     },
   },
   status !== EnrollmentStatus.Completed &&
@@ -136,22 +149,26 @@ const MenuButton = styled(ActionButton)<{
     },
 ])
 
-const COURSEWARE_BUTTON_WIDTH = "88px"
+const COURSEWARE_BUTTON_WIDTH = "80px"
 
 // Fixed-width column that keeps the courseware button (and countdown) aligned
 // in the compact (module row) layout.
 const CoursewareActionColumn = styled(Stack)({
-  width: COURSEWARE_BUTTON_WIDTH,
+  minWidth: COURSEWARE_BUTTON_WIDTH,
+  gap: "8px",
   flexShrink: 0,
 })
 
 // Compact-layout courseware buttons are fixed width and use the text variant.
 const CoursewareButton = styled(Button)(({ theme, variant }) => ({
-  width: COURSEWARE_BUTTON_WIDTH,
   minWidth: COURSEWARE_BUTTON_WIDTH,
+  gap: "8px",
   ...(variant === "text" && {
     color: theme.custom.colors.silverGrayDark,
   }),
+  [theme.breakpoints.down("sm")]: {
+    flexGrow: 1,
+  },
 }))
 
 const CoursewareButtonLink = styled(ButtonLink)(({ theme, variant }) => ({
@@ -160,6 +177,9 @@ const CoursewareButtonLink = styled(ButtonLink)(({ theme, variant }) => ({
   ...(variant === "text" && {
     color: theme.custom.colors.silverGrayDark,
   }),
+  [theme.breakpoints.down("sm")]: {
+    flexGrow: 1,
+  },
 }))
 
 const Separator = styled.span(({ theme }) => ({
@@ -170,9 +190,19 @@ const Separator = styled.span(({ theme }) => ({
   backgroundColor: theme.custom.colors.silverGrayLight,
 }))
 
+const Ellipse = styled.span(({ theme }) => ({
+  display: "inline-block",
+  width: "4px",
+  height: "4px",
+  borderRadius: "50%",
+  flexShrink: 0,
+  backgroundColor: theme.custom.colors.silverGrayLight,
+}))
+
 const DateText = styled(Typography)(({ theme }) => ({
   ...theme.typography.subtitle3,
   color: theme.custom.colors.silverGrayDark,
+  whiteSpace: "nowrap",
 }))
 
 const CourseDateText: React.FC<{
@@ -190,7 +220,8 @@ const UpgradedBannerRoot = styled.div(({ theme }) => ({
   alignItems: "center",
   gap: "4px",
   color: theme.custom.colors.silverGrayDark,
-  ...theme.typography.subtitle3,
+  whiteSpace: "nowrap",
+  ...theme.typography.body3,
 }))
 
 const UpgradedBanner: React.FC<{ className?: string }> = ({ className }) => (
@@ -212,7 +243,7 @@ const DatePopoverContent = styled.div({
 
 const DatePopoverTrigger = styled("button")<{ $upcoming: boolean }>(
   ({ theme, $upcoming }) => ({
-    ...theme.typography.body2,
+    ...theme.typography.subtitle3,
     color: $upcoming
       ? theme.custom.colors.red
       : theme.custom.colors.silverGrayDark,
@@ -325,6 +356,7 @@ export {
   TitleHeading,
   TitleLink,
   TitleText,
+  TitleButton,
   SubtitleLinkRoot,
   SubtitleLink,
   MenuButton,
@@ -332,6 +364,7 @@ export {
   CoursewareButton,
   CoursewareButtonLink,
   Separator,
+  Ellipse,
   DateText,
   CourseDateText,
   CourseDateSummary,

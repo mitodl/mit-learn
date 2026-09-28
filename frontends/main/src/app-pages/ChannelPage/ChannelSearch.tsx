@@ -3,13 +3,15 @@ import { ChannelTypeEnum } from "api/v0"
 import { useOfferorsList } from "api/hooks/learningResources"
 import { useResourceSearchParams } from "@mitodl/course-search-utils"
 import type { Facets, BooleanFacets } from "@mitodl/course-search-utils"
-import { useSearchParams } from "@mitodl/course-search-utils/next"
+import { useSetSearchParams } from "@mitodl/course-search-utils/next"
+import { useAppSearchParams } from "@/common/useAppSearchParams"
 import SearchDisplay from "@/page-components/SearchDisplay/SearchDisplay"
 import HybridSearchDisplay from "@/page-components/SearchDisplay/HybridSearchDisplay"
 import { Container, styled } from "ol-components"
 import { VisuallyHidden } from "@mitodl/smoot-design"
 import { SearchField } from "@/page-components/SearchField/SearchField"
 import { getFacets } from "./searchRequests"
+import { useHybridSearchEnabled } from "@/common/useHybridSearchEnabled"
 import { keyBy } from "lodash"
 
 const SearchInputContainer = styled(Container)(({ theme }) => ({
@@ -52,13 +54,26 @@ const ChannelSearch: React.FC<ChannelSearchProps> = ({
     return keyBy(offerorsQuery.data?.results ?? [], (o) => o.code)
   }, [offerorsQuery.data?.results])
 
-  const [searchParams, setSearchParams] = useSearchParams()
+  const searchParams = useAppSearchParams()
+  const setSearchParams = useSetSearchParams()
   const resourceTypeGroup = searchParams.get("resource_type_group")
 
   const { facetNames, facetManifest } = useMemo(
     () =>
-      getFacets(channelType, offerors, constantSearchParams, resourceTypeGroup),
-    [offerors, channelType, constantSearchParams, resourceTypeGroup],
+      getFacets(
+        channelType,
+        offerors,
+        constantSearchParams,
+        resourceTypeGroup,
+        searchParams,
+      ),
+    [
+      offerors,
+      channelType,
+      constantSearchParams,
+      resourceTypeGroup,
+      searchParams,
+    ],
   )
 
   const setPage = useCallback(
@@ -100,8 +115,10 @@ const ChannelSearch: React.FC<ChannelSearchProps> = ({
   useEffect(() => {
     setCurrentText(params.q ?? "")
   }, [params, setCurrentText])
-  const ChannelSearchDisplay =
-    channelType === ChannelTypeEnum.Topic ? HybridSearchDisplay : SearchDisplay
+  const isHybridSearch = useHybridSearchEnabled()
+  const ChannelSearchDisplay = isHybridSearch
+    ? HybridSearchDisplay
+    : SearchDisplay
   return (
     <section>
       <VisuallyHidden as="h2">Search within {channelTitle}</VisuallyHidden>

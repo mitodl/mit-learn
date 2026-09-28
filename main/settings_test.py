@@ -3,15 +3,16 @@ Validate that our settings functions work
 """
 
 import importlib
+import re
 import sys
+import tomllib
 from unittest import mock
 
 import pytest
-import semantic_version
 from django.conf import settings
 from django.core import mail
 from django.core.exceptions import ImproperlyConfigured
-from django.test import TestCase
+from django.test import RequestFactory, TestCase
 
 REQUIRED_SETTINGS = {
     "OPENSEARCH_URL": "http://localhost:9300/",
@@ -21,6 +22,8 @@ REQUIRED_SETTINGS = {
     "MITOL_COOKIE_NAME": "cookie_monster",
     "MITOL_COOKIE_DOMAIN": "od.fake.domain",
     "MITOL_APP_BASE_URL": "http:localhost:8063/",
+    "UNSUBSCRIBE_SECRET_KEY": "fake_unsubscribe_secret_key",  # pragma: allowlist-secret
+    "WEBHOOK_SECRET": "fake_webhook_secret",  # pragma: allowlist-secret
 }
 
 
@@ -148,6 +151,45 @@ class TestSettings(TestCase):
                 "sslmode": "require"
             }
 
+    def test_secure_proxy_ssl_header(self):
+        """SECURE_PROXY_SSL_HEADER is set by default and removable with the env var"""
+
+        with mock.patch.dict("os.environ", REQUIRED_SETTINGS, clear=True):
+            settings_vars = self.reload_settings()
+            assert settings_vars["SECURE_PROXY_SSL_HEADER"] == (
+                "HTTP_X_FORWARDED_PROTO",
+                "https",
+            )
+
+        # reload() doesn't remove attributes the gated-off module no longer sets
+        delattr(sys.modules["main.settings"], "SECURE_PROXY_SSL_HEADER")
+        with mock.patch.dict(
+            "os.environ",
+            {**REQUIRED_SETTINGS, "MITOL_SECURE_PROXY_SSL_HEADER": "False"},
+            clear=True,
+        ):
+            settings_vars = self.reload_settings()
+            assert "SECURE_PROXY_SSL_HEADER" not in settings_vars
+
+    def test_session_cookie_secure(self):
+        """SESSION_COOKIE_SECURE is on by default and can be turned off for local dev"""
+        with mock.patch.dict("os.environ", REQUIRED_SETTINGS, clear=True):
+            assert self.reload_settings()["SESSION_COOKIE_SECURE"] is True
+
+        with mock.patch.dict(
+            "os.environ",
+            {**REQUIRED_SETTINGS, "SESSION_COOKIE_SECURE": "False"},
+            clear=True,
+        ):
+            assert self.reload_settings()["SESSION_COOKIE_SECURE"] is False
+
+    def test_x_forwarded_proto_makes_request_secure(self):
+        """Only X-Forwarded-Proto: https marks a request as secure"""
+        factory = RequestFactory()
+        assert factory.get("/", HTTP_X_FORWARDED_PROTO="https").is_secure() is True
+        assert factory.get("/", HTTP_X_FORWARDED_PROTO="http").is_secure() is False
+        assert factory.get("/").is_secure() is False
+
     def test_opensearch_index_pr_build(self):
         """For PR builds we will use the heroku app name instead of the given OPENSEARCH_INDEX"""
         index_name = "heroku_app_name_as_index"
@@ -162,12 +204,20 @@ class TestSettings(TestCase):
             settings_vars = self.reload_settings()
             assert settings_vars["OPENSEARCH_INDEX"] == index_name
 
-    @staticmethod
-    def test_semantic_version():
-        """
-        Verify that we have a semantic compatible version.
-        """
-        semantic_version.Version(settings.VERSION)
+    @pytest.mark.skip(
+        reason="The version format does not yet match until the Concourse pipeline takes over from Doof"
+    )
+    def test_bump_my_version_format(self):
+        """Verify VERSION is in sync with pyproject.toml and matches a version format."""
+        with open("pyproject.toml", "rb") as f:  # noqa: PTH123
+            pyproject = tomllib.load(f)
+        version_pattern = pyproject["tool"]["bumpversion"]["parse"]
+        package_version = pyproject["project"]["version"]
+        assert package_version == settings.VERSION
+        semver_pattern = r"[0-9]+\.[0-9]+\.[0-9]+"
+        assert re.fullmatch(version_pattern, settings.VERSION) or re.fullmatch(
+            semver_pattern, settings.VERSION
+        ), f'VERSION "{settings.VERSION}" does not match calver or semver format'
 
     def test_required_settings(self):
         """
@@ -181,6 +231,21 @@ class TestSettings(TestCase):
                 pytest.raises(ImproperlyConfigured),
             ):
                 self.reload_settings()
+
+    def test_webhook_secret_rejects_legacy_default(self):
+        """
+        Assert that an exception is raised if WEBHOOK_SECRET is explicitly
+        set to the legacy hardcoded default, not just when it's unset
+        """
+        with (
+            mock.patch.dict(
+                "os.environ",
+                {**REQUIRED_SETTINGS, "WEBHOOK_SECRET": "please-change-this"},
+                clear=True,
+            ),
+            pytest.raises(ImproperlyConfigured),
+        ):
+            self.reload_settings()
 
     def test_server_side_cursors_disabled(self):
         """DISABLE_SERVER_SIDE_CURSORS should be true by default"""
@@ -276,6 +341,94 @@ class TestSettings(TestCase):
                 "update_next-start-date-every-1-days"
                 in settings_vars["CELERY_BEAT_SCHEDULE"]
             )
+
+    def test_celery_result_expires_default(self):
+        """Celery result expiry defaults to 1 hour"""
+        with mock.patch.dict("os.environ", REQUIRED_SETTINGS, clear=True):
+            settings_vars = self.reload_settings(module="main.settings_celery")
+            assert settings_vars["CELERY_RESULT_EXPIRES"] == 60 * 60
+
+    def test_celery_result_expires_override(self):
+        """Celery result expiry is configurable via an env var"""
+        with mock.patch.dict(
+            "os.environ",
+            {
+                **REQUIRED_SETTINGS,
+                "CELERY_RESULT_EXPIRES": "120",
+            },
+            clear=True,
+        ):
+            settings_vars = self.reload_settings(module="main.settings_celery")
+            assert settings_vars["CELERY_RESULT_EXPIRES"] == 120
+
+    def test_program_certificates_beat_entry_absent_without_starrocks_host(self):
+        """The certificate-sync beat entry isn't registered when StarRocks
+        isn't configured, so it can't fail on every tick in an environment
+        without warehouse connectivity.
+        """
+        with mock.patch.dict("os.environ", REQUIRED_SETTINGS, clear=True):
+            settings_vars = self.reload_settings(module="main.settings_celery")
+            assert (
+                "warehouse-sync-program-certificates-every-1-days"
+                not in settings_vars["CELERY_BEAT_SCHEDULE"]
+            )
+
+    def test_program_certificates_beat_entry_absent_with_only_starrocks_host(self):
+        """STARROCKS_HOST alone isn't enough — _connect_starrocks also
+        requires STARROCKS_USER, so gating on host alone would schedule a
+        task that fails every run with ImproperlyConfigured.
+        """
+        with mock.patch.dict(
+            "os.environ",
+            {**REQUIRED_SETTINGS, "STARROCKS_HOST": "starrocks.example.com"},
+            clear=True,
+        ):
+            settings_vars = self.reload_settings(module="main.settings_celery")
+            assert (
+                "warehouse-sync-program-certificates-every-1-days"
+                not in settings_vars["CELERY_BEAT_SCHEDULE"]
+            )
+
+    def test_program_certificates_beat_entry_present_with_starrocks_configured(self):
+        """The certificate-sync beat entry is registered once StarRocks is
+        fully configured (host and user), pointing at
+        profiles.tasks.SyncProgramCertificatesTask.
+        """
+        with mock.patch.dict(
+            "os.environ",
+            {
+                **REQUIRED_SETTINGS,
+                "STARROCKS_HOST": "starrocks.example.com",
+                "STARROCKS_USER": "testuser",
+            },
+            clear=True,
+        ):
+            settings_vars = self.reload_settings(module="main.settings_celery")
+            entry = settings_vars["CELERY_BEAT_SCHEDULE"][
+                "warehouse-sync-program-certificates-every-1-days"
+            ]
+            assert entry["task"] == "profiles.tasks.SyncProgramCertificatesTask"
+            assert entry["kwargs"] == {"full_refresh": True}
+
+    def test_credential_metadata_beat_entry(self):
+        """
+        The credential metadata sweep is scheduled, and fills gaps only.
+
+        An overwriting sweep regenerates the whole MITx Online catalogue at
+        full LLM cost every day, so `overwrite` being False here is the thing
+        worth pinning. No `resource_types`, so the sweep covers every type
+        credential metadata is generated for.
+        """
+        with mock.patch.dict("os.environ", REQUIRED_SETTINGS, clear=True):
+            settings_vars = self.reload_settings(module="main.settings_celery")
+            entry = settings_vars["CELERY_BEAT_SCHEDULE"][
+                "generate-credential-metadata-every-1-days"
+            ]
+            assert (
+                entry["task"]
+                == "learning_resources.tasks.generate_all_credential_metadata"
+            )
+            assert entry["kwargs"] == {"overwrite": False}
 
     def _assert_s3_storage_config(
         self,

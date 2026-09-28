@@ -1,23 +1,33 @@
 "use client"
 
-import React, { useState, useEffect, useRef } from "react"
-import Link from "next/link"
-import { Breadcrumbs, Typography, styled, useMediaQuery } from "ol-components"
-import type { Theme } from "ol-components"
-import { Button, ActionButton } from "@mitodl/smoot-design"
+import React, { useMemo } from "react"
+import { Typography, Skeleton, styled, TypographyProps } from "ol-components"
+import { Button } from "@mitodl/smoot-design"
 import { RiPlayFill, RiPauseFill } from "@remixicon/react"
-import PodcastPlayer, { PLAYER_HEIGHT } from "./PodcastPlayer"
-import type { PodcastTrack, PodcastPlayerHandle } from "./PodcastPlayer"
 import {
   useLearningResourcesDetail,
   useInfiniteLearningResourceItems,
 } from "api/hooks/learningResources"
 import { ResourceTypeEnum } from "api/v1"
 import type { LearningResource } from "api/v1"
-import moment from "moment"
 import { formatDate } from "ol-utilities"
-import { HOME, podcastEpisodePageView } from "@/common/urls"
+import { HOME, podcastEpisodePath } from "@/common/urls"
+import { addExternalLinkTargets } from "@/common/utils"
 import PodcastContainer from "./PodcastContainer"
+import PodcastBreadcrumbs from "./PodcastBreadcrumbs"
+import { usePodcastPage } from "./usePodcastPage"
+import {
+  getEpisodeAudioUrl,
+  getEpisodeDurationMinutes,
+} from "./PodcastsListingPage/helpers"
+import { EpisodeItem } from "./PodcastsListingPage/EpisodeItem"
+import { EPISODES_PAGE_SIZE } from "./PodcastsListingPage/constants"
+import {
+  PageSection,
+  EpisodeList,
+  PlayButton,
+  SectionMessage,
+} from "./PodcastsListingPage/styled"
 
 const HeaderSection = styled.div(({ theme }) => ({
   borderBottom: `1px solid ${theme.custom.colors.lightGray2}`,
@@ -57,18 +67,28 @@ const MetaLine = styled(Typography)(({ theme }) => ({
   },
 }))
 
-const Description = styled(Typography)(({ theme }) => ({
-  color: theme.custom.colors.darkGray2,
-  display: "block",
-  marginBottom: "16px",
-  ...theme.typography.body1,
-  lineHeight: "26px",
-  [theme.breakpoints.down("sm")]: {
-    marginBottom: "8px",
-    ...theme.typography.body2,
-    lineHeight: "22px",
-  },
-}))
+const Description = styled(Typography)<Pick<TypographyProps, "component">>(
+  ({ theme }) => ({
+    color: theme.custom.colors.darkGray2,
+    display: "block",
+    marginBottom: "16px",
+    ...theme.typography.body1,
+    lineHeight: "26px",
+    a: {
+      textDecoration: "underline",
+      color: theme.custom.colors.darkGray2,
+      fontWeight: theme.typography.fontWeightMedium,
+    },
+    "a:hover": {
+      textDecoration: "none",
+    },
+    [theme.breakpoints.down("sm")]: {
+      marginBottom: "8px",
+      ...theme.typography.body2,
+      lineHeight: "22px",
+    },
+  }),
+)
 
 const LatestEpisodeLine = styled(Typography)(({ theme }) => ({
   color: theme.custom.colors.silverGrayDark,
@@ -147,85 +167,11 @@ const EpisodesHeading = styled(Typography)(({ theme }) => ({
   },
 }))
 
-const EpisodeList = styled.div({
-  margin: 0,
-  padding: 0,
-  display: "grid",
-  gridTemplateColumns: "1fr",
-})
-
-const EpisodeRow = styled(Link, {
-  shouldForwardProp: (prop) => prop !== "isEpisodePage",
-})<{ isEpisodePage?: boolean }>(({ theme, isEpisodePage }) => ({
-  textDecoration: "none",
-  margin: 0,
-  display: "flex",
-  flexDirection: "row",
-  alignItems: "center",
-  justifyContent: "space-between",
-  padding: !isEpisodePage ? "28px 16px" : "28px 0px",
-  ...(isEpisodePage && {
-    "&:first-of-type": { paddingTop: 0, boxShadow: "none" },
-    // When there is only one episode (first AND last), keep only the bottom
-    // shadow — the top shadow from :first-of-type should remain removed.
-    "&:first-of-type:last-child": {
-      boxShadow: `0 1px 0 ${theme.custom.colors.lightGray2}`,
-    },
-  }),
-  boxShadow: `0 -1px 0 ${theme.custom.colors.lightGray2}`,
-  gap: "16px",
-  "&:last-child": {
-    boxShadow: `0 -1px 0 ${theme.custom.colors.lightGray2}, 0 1px 0 ${theme.custom.colors.lightGray2}`,
-  },
-  "&:hover": {
-    backgroundColor: theme.custom.colors.lightGray1,
-    cursor: "pointer",
-  },
-  "&:focus-visible": {
-    outline: `2px solid ${theme.custom.colors.red}`,
-    outlineOffset: "-2px",
-  },
-  "&:hover .episode-title, &:focus-visible .episode-title": {
-    color: theme.custom.colors.red,
-  },
-  "&:hover .play-button, &:focus-visible .play-button": {
-    color: theme.custom.colors.red,
-  },
-  [theme.breakpoints.down("sm")]: {
-    flexDirection: "column",
-    alignItems: "flex-start",
-    gap: "16px",
-    padding: "24px 16px",
-  },
-}))
-
-const EpisodeInfo = styled.div(({ theme }) => ({
-  flex: 1,
-  minWidth: 0,
-  [theme.breakpoints.down("sm")]: {
-    width: "100%",
-  },
-}))
-
-const EpisodeTitleLink = styled.span(({ theme }) => ({
-  ...theme.typography.subtitle1,
-  color: theme.custom.colors.darkGray2,
-  textDecoration: "none",
-  display: "block",
-  fontSize: "18px",
-  fontStyle: "normal",
-  fontWeight: theme.typography.fontWeightBold,
-  lineHeight: "26px",
-}))
-
-const StyledButton = styled(Button)(({ theme }) => ({
+const StyledButton = styled(PlayButton)(({ theme }) => ({
   padding: "16px 20px",
   ...theme.typography.body1,
   fontWeight: theme.typography.fontWeightMedium,
   lineHeight: "16px",
-  [theme.breakpoints.down("sm")]: {
-    width: "100%",
-  },
 }))
 
 const StyledShowMoreContainer = styled("div")({
@@ -246,148 +192,32 @@ const StyledIcon = styled(RiPlayFill)({
   height: "24px !important",
 })
 
-const BreadcrumbBar = styled.div(({ theme }) => ({
-  padding: "18px 0 2px 0",
-  borderBottom: `1px solid ${theme.custom.colors.red}`,
-  [theme.breakpoints.down("sm")]: {
-    padding: "12px 0 0px 0",
-  },
-}))
+const StyledPauseIcon = styled(RiPauseFill)({
+  width: "24px !important",
+  height: "24px !important",
+})
 
-const EpisodeRight = styled.div(({ theme }) => ({
-  display: "flex",
-  flexDirection: "row",
-  alignItems: "center",
-  gap: "28px",
-  flexShrink: 0,
-  [theme.breakpoints.down("sm")]: {
-    alignItems: "center",
-    justifyContent: "flex-end",
-    width: "100%",
-  },
-}))
+const SkeletonLine = styled(Skeleton)({
+  marginBottom: "16px",
+})
 
-const StyledDot = styled.span(({ theme }) => ({
-  display: "inline-block",
-  fontSize: "14px",
-  padding: "0 6px",
-  fontWeight: theme.typography.fontWeightBold,
-}))
+const PodcastHeaderSkeleton = () => (
+  <div data-testid="podcast-header-skeleton" aria-hidden>
+    <SkeletonLine variant="text" width="60%" height={48} />
+    <SkeletonLine variant="text" width="40%" height={22} />
+    <SkeletonLine variant="text" width="100%" height={20} />
+    <SkeletonLine variant="text" width="90%" height={20} />
+    <SkeletonLine variant="rectangular" width={200} height={48} />
+  </div>
+)
 
-const PageSection = styled.div(({ theme }) => ({
-  backgroundColor: theme.custom.colors.white,
-}))
-
-const EpisodeMeta = styled(Typography)(({ theme }) => ({
-  color: theme.custom.colors.darkGray1,
-  whiteSpace: "nowrap",
-  textAlign: "right",
-}))
-
-const PlayButton = styled(ActionButton, {
-  shouldForwardProp: (prop) => prop !== "isPlaying",
-})<{
-  isPlaying: boolean
-}>(({ theme, isPlaying }) => [
-  {
-    width: "48px",
-    height: "48px",
-    color: theme.custom.colors.darkGray2,
-    backgroundColor: theme.custom.colors.white,
-    borderColor: "currentColor",
-    "&:hover:not(:disabled)": {
-      color: theme.custom.colors.red,
-    },
-    [theme.breakpoints.down("sm")]: {
-      width: "80px",
-      height: "48px",
-      backgroundColor: theme.custom.colors.white,
-    },
-  },
-  isPlaying && {
-    color: theme.custom.colors.red,
-  },
-])
-
-/* ── Episode row component ── */
-
-export type EpisodeItemProps = {
-  episode: LearningResource
-  href: string
-  role?: string
-  onPlayClick: (episode: LearningResource) => void
-  onPauseClick?: () => void
-  isPlaying: boolean
-  isPlayable: boolean
-  isEpisodePage?: boolean
-}
-
-export const EpisodeItem: React.FC<EpisodeItemProps> = ({
-  episode,
-  href,
-  role,
-  onPlayClick,
-  onPauseClick,
-  isPlaying,
-  isPlayable,
-  isEpisodePage = false,
-}) => {
-  const podcastEpisode =
-    episode.resource_type === "podcast_episode" ? episode.podcast_episode : null
-
-  const duration = podcastEpisode?.duration
-    ? Math.round(moment.duration(podcastEpisode.duration).asMinutes())
-    : null
-
-  const date = episode.last_modified
-    ? formatDate(episode.last_modified, "MMM D")
-    : null
-
-  const metaParts = [duration ? `${duration} min` : null, date].filter(Boolean)
-
-  return (
-    <EpisodeRow href={href} role={role} isEpisodePage={isEpisodePage}>
-      <EpisodeInfo>
-        <EpisodeTitleLink className="episode-title">
-          {episode.title}
-        </EpisodeTitleLink>
-      </EpisodeInfo>
-
-      <EpisodeRight>
-        {metaParts.length > 0 && (
-          <EpisodeMeta variant="body3">
-            {metaParts.map((part, i) => (
-              <React.Fragment key={i}>
-                {i > 0 && <StyledDot>&middot;</StyledDot>}
-                {part}
-              </React.Fragment>
-            ))}
-          </EpisodeMeta>
-        )}
-        <PlayButton
-          aria-label={
-            isPlaying ? `Pause ${episode.title}` : `Play ${episode.title}`
-          }
-          onClick={(e) => {
-            e.preventDefault()
-            e.stopPropagation()
-            if (isPlaying) {
-              onPauseClick?.()
-            } else {
-              onPlayClick(episode)
-            }
-          }}
-          isPlaying={isPlaying}
-          disabled={!isPlayable}
-          variant="secondary"
-          className="play-button"
-        >
-          {isPlaying ? <RiPauseFill size={20} /> : <RiPlayFill size={20} />}
-        </PlayButton>
-      </EpisodeRight>
-    </EpisodeRow>
-  )
-}
+const EpisodesSkeleton = () => (
+  <div data-testid="podcast-episodes-skeleton" aria-hidden>
+    {Array.from({ length: EPISODES_PAGE_SIZE }, (_unused, i) => (
+      <SkeletonLine key={i} variant="text" width="55%" height={26} />
+    ))}
+  </div>
+)
 
 /* ── Page ── */
 
@@ -395,24 +225,23 @@ type PodcastDetailPageProps = {
   podcastId: string
 }
 
-const EPISODES_PAGE_SIZE = 5
-
 export const PodcastDetailPage: React.FC<PodcastDetailPageProps> = ({
   podcastId,
 }) => {
   const id = Number(podcastId)
-  const isMobile = useMediaQuery((theme: Theme) => theme.breakpoints.down("sm"))
-  const [playingEpisode, setPlayingEpisode] = useState<LearningResource | null>(
-    null,
-  )
-  const [isAudioPlaying, setIsAudioPlaying] = useState(false)
-  const playerRef = useRef<PodcastPlayerHandle>(null)
+  const { isMobile, playerBar, playingEpisode, isAudioPlaying, toggle, pause } =
+    usePodcastPage()
 
-  const { data: resource } = useLearningResourcesDetail(id)
+  const {
+    data: resource,
+    isLoading: resourceLoading,
+    isError: resourceError,
+  } = useLearningResourcesDetail(id)
 
   const {
     data: episodesData,
     isLoading: episodesLoading,
+    isError: episodesError,
     isFetchingNextPage,
     hasNextPage,
     fetchNextPage,
@@ -445,185 +274,177 @@ export const PodcastDetailPage: React.FC<PodcastDetailPageProps> = ({
   ].filter(Boolean)
 
   const latestEpisode = episodes?.[0]
-  const latestEpisodeDuration = latestEpisode?.podcast_episode?.duration
-    ? Math.round(
-        moment.duration(latestEpisode.podcast_episode.duration).asMinutes(),
-      )
+  const isLatestEpisodePlaying =
+    !!latestEpisode && playingEpisode?.id === latestEpisode.id && isAudioPlaying
+  const latestEpisodeDuration = latestEpisode
+    ? getEpisodeDurationMinutes(latestEpisode)
     : null
   const latestEpisodeDate = latestEpisode?.last_modified
     ? formatDate(latestEpisode.last_modified, "MMM D")
     : null
 
-  const getEpisodeAudioUrl = (episode: LearningResource): string | null => {
-    if (episode.resource_type !== "podcast_episode") return null
+  const handlePlayClick = (episode: LearningResource) => toggle(episode, id)
 
-    const candidateUrl =
-      episode.podcast_episode?.audio_url ??
-      episode.podcast_episode?.episode_link
-
-    return candidateUrl?.trim() ? candidateUrl : null
-  }
-
-  const handlePlayClick = (episode: LearningResource) => {
-    if (!getEpisodeAudioUrl(episode)) return
-    if (playingEpisode?.id === episode.id) {
-      playerRef.current?.resume()
-    } else {
-      setPlayingEpisode(episode)
-    }
-  }
-
-  const currentTrack: PodcastTrack | null = playingEpisode
-    ? (() => {
-        const audioUrl = getEpisodeAudioUrl(playingEpisode)
-        if (!audioUrl) return null
-
-        return {
-          audioUrl,
-          title: playingEpisode.title || "Untitled Episode",
-          podcastName: resource?.title || "Podcast",
-        }
-      })()
-    : null
-
-  // When the player is active, shrink the page layout so the footer is
-  // visible above the fixed player bar.
-  useEffect(() => {
-    const root = document.documentElement
-
-    if (currentTrack) {
-      const height = isMobile ? PLAYER_HEIGHT.mobile : PLAYER_HEIGHT.desktop
-      root.style.setProperty("--mit-player-height", `${height}px`)
-    } else {
-      root.style.removeProperty("--mit-player-height")
-    }
-
-    return () => {
-      root.style.removeProperty("--mit-player-height")
-    }
-  }, [currentTrack, isMobile])
+  // Podcast descriptions are sanitized on the backend with nh3 during ETL
+  // (only <a href/title> is allowed), so the HTML is safe to render verbatim
+  // — the same trust model as podcast episode descriptions. Rendering it
+  // directly keeps server and client output identical, avoiding a hydration
+  // mismatch; target="_blank" is added via addExternalLinkTargets so it's
+  // part of the HTML fed to dangerouslySetInnerHTML on both server and
+  // client, keeping SSR output byte-identical to the client's first render.
+  const description = useMemo(
+    () =>
+      resource?.description
+        ? addExternalLinkTargets(resource.description)
+        : null,
+    [resource?.description],
+  )
 
   return (
     <>
-      <PageSection>
+      <PageSection variant="white">
         <HeaderSection>
-          <BreadcrumbBar>
-            <PodcastContainer>
-              <Breadcrumbs
-                variant="light"
-                ancestors={[{ href: HOME, label: "Home" }]}
-                current={resource?.title}
-              />
-            </PodcastContainer>
-          </BreadcrumbBar>
+          <PodcastBreadcrumbs
+            ancestors={[{ href: HOME, label: "Home" }]}
+            current={resource?.title}
+          />
           <PodcastContainer>
             <StyledHeaderSection>
-              <HeaderContent>
-                <PodcastTitle variant="h1">
-                  {resource?.title ?? ""}
-                </PodcastTitle>
+              {resourceLoading ? (
+                <PodcastHeaderSkeleton />
+              ) : resourceError ? (
+                <SectionMessage variant="body1">
+                  Something went wrong loading this podcast. Please try again
+                  later.
+                </SectionMessage>
+              ) : !isPodcast ? (
+                <SectionMessage variant="body1">
+                  This podcast is unavailable.
+                </SectionMessage>
+              ) : (
+                <HeaderContent>
+                  <PodcastTitle variant="h1">{resource?.title}</PodcastTitle>
 
-                {resource?.image?.url && (
-                  <PodcastImage
-                    src={resource.image.url}
-                    alt={
-                      resource.image.alt ?? resource.title ?? "Podcast cover"
-                    }
-                  />
-                )}
-
-                <HeaderTextContent>
-                  {metaParts.length > 0 && (
-                    <MetaLine variant="body3">{metaParts.join(" · ")}</MetaLine>
+                  {resource?.image?.url && (
+                    <PodcastImage
+                      src={resource.image.url}
+                      alt={
+                        resource.image.alt ?? resource.title ?? "Podcast cover"
+                      }
+                    />
                   )}
 
-                  {resource?.description && (
-                    <Description variant="body2">
-                      {resource.description}
-                    </Description>
-                  )}
+                  <HeaderTextContent>
+                    {metaParts.length > 0 && (
+                      <MetaLine variant="body3">
+                        {metaParts.join(" · ")}
+                      </MetaLine>
+                    )}
 
-                  {latestEpisode && (
-                    <LatestEpisodeLine variant="body3">
-                      {"Latest episode: "}
-                      {latestEpisode.title}
-                      {latestEpisodeDuration
-                        ? ` · ${latestEpisodeDuration} min`
-                        : ""}
-                      {latestEpisodeDate ? ` · ${latestEpisodeDate}` : ""}
-                    </LatestEpisodeLine>
-                  )}
+                    {description && (
+                      <Description
+                        variant="body2"
+                        component="div"
+                        dangerouslySetInnerHTML={{
+                          __html: description,
+                        }}
+                      />
+                    )}
 
-                  {latestEpisode && (
-                    <StyledButton
-                      onClick={() => handlePlayClick(latestEpisode)}
-                      variant="primary"
-                      startIcon={<StyledIcon />}
-                      disabled={!getEpisodeAudioUrl(latestEpisode)}
-                    >
-                      Play Latest Episode
-                    </StyledButton>
-                  )}
-                </HeaderTextContent>
-              </HeaderContent>
+                    {latestEpisode && (
+                      <LatestEpisodeLine variant="body3">
+                        {"Latest episode: "}
+                        {latestEpisode.title}
+                        {latestEpisodeDuration
+                          ? ` · ${latestEpisodeDuration} min`
+                          : ""}
+                        {latestEpisodeDate ? ` · ${latestEpisodeDate}` : ""}
+                      </LatestEpisodeLine>
+                    )}
+
+                    {latestEpisode && (
+                      <StyledButton
+                        onClick={() => handlePlayClick(latestEpisode)}
+                        variant="primary"
+                        startIcon={
+                          isLatestEpisodePlaying ? (
+                            <StyledPauseIcon />
+                          ) : (
+                            <StyledIcon />
+                          )
+                        }
+                        disabled={!getEpisodeAudioUrl(latestEpisode)}
+                      >
+                        {isLatestEpisodePlaying
+                          ? "Pause Latest Episode"
+                          : "Play Latest Episode"}
+                      </StyledButton>
+                    )}
+                  </HeaderTextContent>
+                </HeaderContent>
+              )}
             </StyledHeaderSection>
           </PodcastContainer>
         </HeaderSection>
 
-        <PodcastContainer>
-          <EpisodesSection hasMoreEpisodes={!!hasNextPage}>
-            <EpisodesHeading variant="subtitle3">Episodes</EpisodesHeading>
+        {!resourceError && (resourceLoading || isPodcast) && (
+          <PodcastContainer>
+            <EpisodesSection hasMoreEpisodes={!!hasNextPage}>
+              <EpisodesHeading variant="subtitle3">Episodes</EpisodesHeading>
 
-            {episodes && episodes.length > 0 && (
-              <EpisodeList role="list">
-                {episodes.map((episode) => (
-                  <EpisodeItem
-                    role="listitem"
-                    key={episode.id}
-                    episode={episode}
-                    href={podcastEpisodePageView(
-                      String(episode.id),
-                      String(id),
-                      episode.title,
-                    )}
-                    onPlayClick={handlePlayClick}
-                    onPauseClick={() => playerRef.current?.pause()}
-                    isPlaying={
-                      playingEpisode?.id === episode.id && isAudioPlaying
-                    }
-                    isPlayable={Boolean(getEpisodeAudioUrl(episode))}
-                  />
-                ))}
-              </EpisodeList>
-            )}
-            {(hasNextPage || episodesLoading) && (
-              <StyledShowMoreContainer>
-                <StyledShowMore
-                  variant="secondary"
-                  onClick={() => fetchNextPage()}
-                  disabled={isFetchingNextPage}
-                >
-                  {isFetchingNextPage ? "Loading..." : "Load more episodes"}
-                </StyledShowMore>
-              </StyledShowMoreContainer>
-            )}
+              {resourceLoading || episodesLoading ? (
+                <EpisodesSkeleton />
+              ) : episodesError ? (
+                <SectionMessage variant="body1">
+                  Something went wrong loading episodes. Please try again later.
+                </SectionMessage>
+              ) : episodes.length > 0 ? (
+                <EpisodeList role="list">
+                  {episodes.map((episode) => (
+                    <EpisodeItem
+                      role="listitem"
+                      key={episode.id}
+                      isMobile={isMobile}
+                      episode={episode}
+                      href={podcastEpisodePath(
+                        String(episode.id),
+                        String(id),
+                        episode.url_slug,
+                      )}
+                      onPlayClick={handlePlayClick}
+                      onPauseClick={pause}
+                      isPlaying={
+                        playingEpisode?.id === episode.id && isAudioPlaying
+                      }
+                      isPlayable={Boolean(getEpisodeAudioUrl(episode))}
+                    />
+                  ))}
+                </EpisodeList>
+              ) : (
+                <SectionMessage variant="body1">
+                  No episodes found.
+                </SectionMessage>
+              )}
 
-            {!episodesLoading && episodes?.length === 0 && (
-              <Typography variant="body1" color="text.secondary">
-                No episodes found.
-              </Typography>
-            )}
-          </EpisodesSection>
-        </PodcastContainer>
+              {!resourceLoading &&
+                !episodesLoading &&
+                !episodesError &&
+                hasNextPage && (
+                  <StyledShowMoreContainer>
+                    <StyledShowMore
+                      variant="secondary"
+                      onClick={() => fetchNextPage()}
+                      disabled={isFetchingNextPage}
+                    >
+                      {isFetchingNextPage ? "Loading..." : "Load more episodes"}
+                    </StyledShowMore>
+                  </StyledShowMoreContainer>
+                )}
+            </EpisodesSection>
+          </PodcastContainer>
+        )}
       </PageSection>
-      {currentTrack && (
-        <PodcastPlayer
-          ref={playerRef}
-          track={currentTrack}
-          onClose={() => setPlayingEpisode(null)}
-          onPlayStateChange={setIsAudioPlaying}
-        />
-      )}
+      {playerBar}
     </>
   )
 }

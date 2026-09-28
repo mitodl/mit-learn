@@ -33,6 +33,9 @@ from PIL import Image
 
 log = logging.getLogger(__name__)
 
+# drop unsupported model params
+litellm.drop_params = True
+
 # --- Configuration ---
 MIN_IMAGE_DIMENSION = 32
 MIN_IMAGE_RATIO = 12

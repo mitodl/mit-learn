@@ -11,6 +11,7 @@ from opensearch_dsl import Search
 from opensearch_dsl.query import MoreLikeThis, Percolate
 from opensearchpy.exceptions import NotFoundError
 
+from learning_resources.constants import OCW_CONTENT_CATEGORY_OPEN_TEXTBOOKS
 from learning_resources.models import LearningResource
 from learning_resources.serializers import (
     LearningResourceSerializer,
@@ -34,6 +35,7 @@ from learning_resources_search.constants import (
     LEARNING_RESOURCE_QUERY_FIELDS,
     LEARNING_RESOURCE_SEARCH_SORTBY_OPTIONS,
     LEARNING_RESOURCE_TYPES,
+    PERCOLATE_INDEX_TYPE,
     PROGRAM_TYPE,
     RUN_INSTRUCTORS_QUERY_FIELDS,
     RUN_LEVEL_QUERY_FIELDS,
@@ -63,6 +65,15 @@ DEFAULT_SORT = [
     "is_incomplete_or_stale",
     "-created_on",
 ]
+
+# Appended after an explicitly requested sort. OpenSearch parks documents that
+# are missing the sort field at the end of the results, whatever the direction,
+# so every sort has a tail of documents it cannot order -- an "upcoming" sort has
+# a large one, since only resources with a future run carry next_start_date. The
+# tail keeps the ordering the search page falls back on when it has no other
+# signal, rather than arbitrary index order, and `id` makes the ordering total so
+# paging through it cannot repeat or skip a result.
+SORT_TIEBREAKERS = [*DEFAULT_SORT, "id"]
 
 HYBRID_SEARCH_KNN_K_VALUE = 5
 
@@ -95,7 +106,10 @@ def relevant_indexes(resource_types, aggregations, endpoint, use_hybrid_search):
 
     """
     if endpoint == CONTENT_FILE_TYPE:
-        return [get_default_alias_name(COURSE_TYPE)]
+        return [
+            get_default_alias_name(COURSE_TYPE),
+            get_default_alias_name(PROGRAM_TYPE),
+        ]
     elif use_hybrid_search:
         return [get_default_alias_name(HYBRID_COMBINED_INDEX)]
 
@@ -107,13 +121,14 @@ def relevant_indexes(resource_types, aggregations, endpoint, use_hybrid_search):
 
 def generate_sort_clause(search_params):
     """
-    Return sort clause for the query
+    Return the sort clauses for the query
 
     Args:
-        sort (dict): the search params
+        search_params (dict): the search params
     Returns:
-        dict or String: either a dictionary with the sort clause for
-            nested sort params or just sort parameter
+        list: the sort clauses, most significant first. The requested sort -- a
+            dictionary for nested sort params, otherwise just the sort field --
+            followed by the tiebreakers that make the ordering total.
     """
 
     sort = (
@@ -154,10 +169,21 @@ def generate_sort_clause(search_params):
                 }
             else:
                 sort_filter = {"filter": {"term": {f"{path}.primary": True}}}
-        return {field: {"order": direction, "nested": {"path": path, **sort_filter}}}
-
+        primary = {field: {"order": direction, "nested": {"path": path, **sort_filter}}}
     else:
-        return sort
+        primary = sort
+
+    if search_params.get("endpoint") == CONTENT_FILE_TYPE:
+        # Content file documents carry none of the resource-level fields the
+        # tiebreakers sort on.
+        return [primary]
+
+    # A sort is its own tiebreaker: "new" and "featured" sort on a field the
+    # tiebreakers repeat.
+    return [
+        primary,
+        *(tiebreaker for tiebreaker in SORT_TIEBREAKERS if tiebreaker != primary),
+    ]
 
 
 def wrap_text_clause(
@@ -496,6 +522,7 @@ def generate_filter_clauses(search_params):
             },
             {"term": {"resource_type": "course"}},
             {"term": {"resource_type": "video"}},
+            {"term": {"resource_category": OCW_CONTENT_CATEGORY_OPEN_TEXTBOOKS}},
         ]
         ocw_clause = {
             "bool": {
@@ -663,13 +690,13 @@ def percolate_matches_for_document(document_id):
     """
     resource = LearningResource.objects.get(id=document_id)
     index = get_default_alias_name(resource.resource_type)
-    search = Search()
+    search = Search(index=get_default_alias_name(PERCOLATE_INDEX_TYPE))
     percolate_ids = []
     try:
         results = search.query(
             Percolate(field="query", index=index, id=str(document_id))
-        ).execute()
-        percolate_ids = [result.id for result in results.hits]
+        ).scan()
+        percolate_ids = [result.id for result in results]
     except NotFoundError:
         log.info("document %s not found in index", document_id)
     percolated_queries = PercolateQuery.objects.filter(id__in=percolate_ids)
@@ -833,8 +860,7 @@ def construct_search(search_params):  # noqa: C901, PLR0912
         search = search.extra(size=search_params.get("limit"))
 
     if search_params.get("sortby"):
-        sort = generate_sort_clause(search_params)
-        search = search.sort(sort)
+        search = search.sort(*generate_sort_clause(search_params))
     elif not search_params.get("q"):
         search = search.sort(*DEFAULT_SORT)
 

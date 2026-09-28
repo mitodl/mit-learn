@@ -7,12 +7,14 @@ from django.apps import apps
 from django.conf import settings as django_settings
 
 from learning_resources.etl.constants import QDRANT_RETAINED_SOURCES
+from learning_resources.models import ContentFile, LearningResource
 from learning_resources_search import tasks
 from learning_resources_search.api import get_similar_topics_qdrant
 from learning_resources_search.constants import (
     COURSE_TYPE,
     PERCOLATE_INDEX_TYPE,
 )
+from learning_resources_search.utils import opensearch_runs
 from main import settings
 from main.utils import chunks
 from vector_search import tasks as vector_tasks
@@ -105,9 +107,42 @@ class SearchIndexPlugin:
             )
         try_with_retry_as_task(chain(*unpublished_tasks))
 
+        if not resource.test_mode:
+            self._deindex_learning_resource_content_files(
+                [resource.id], resource.resource_type
+            )
+
         if resource.resource_type == COURSE_TYPE and not resource.test_mode:
             for run in resource.runs.all():
                 self.resource_run_unpublished(run)
+
+    def _deindex_learning_resource_content_files(self, resource_ids, resource_type):
+        """
+        Deindex content files attached to resources via their
+        learning_resource FK (e.g. marketing pages) rather than to a run.
+        OpenSearch only; the files stay in Qdrant.
+
+        Args:
+            resource_ids(list of int): The parent Learning Resource ids
+            resource_type(str): The parent Learning Resource type
+        """
+        files_by_resource = {}
+        for file_id, resource_id in ContentFile.objects.filter(
+            learning_resource_id__in=resource_ids
+        ).values_list("id", "learning_resource_id"):
+            files_by_resource.setdefault(resource_id, []).append(file_id)
+        for resource_id, file_ids in files_by_resource.items():
+            for ids in chunks(
+                file_ids,
+                chunk_size=settings.OPENSEARCH_DOCUMENT_INDEXING_CHUNK_SIZE,
+            ):
+                try_with_retry_as_task(
+                    chain(
+                        tasks.deindex_content_files.si(
+                            ids, resource_id, resource_type=resource_type
+                        )
+                    )
+                )
 
     @hookimpl
     def resource_similar_topics(self, resource) -> list[dict]:
@@ -155,6 +190,15 @@ class SearchIndexPlugin:
                 )
             try_with_retry_as_task(chain(*unpublished_tasks))
 
+        # test_mode resources keep their content files indexed, as in
+        # resource_unpublished
+        self._deindex_learning_resource_content_files(
+            LearningResource.objects.filter(
+                id__in=resource_ids, test_mode=False
+            ).values_list("id", flat=True),
+            resource_type,
+        )
+
     @hookimpl
     def resource_before_delete(self, resource):
         """
@@ -187,23 +231,17 @@ class SearchIndexPlugin:
 
         """
         resource = run.learning_resource
-        if resource.test_mode:
-            return
-        if not run.content_files.exists():
+        if not run.content_files.exists() or resource.test_mode:
             return
 
-        if resource.etl_source in QDRANT_RETAINED_SOURCES:
-            deindex_tasks = [
-                tasks.deindex_run_content_files.si(
-                    run.id, unpublished_only=False, keep_published=True
-                ),
-            ]
-        else:
-            deindex_tasks = [
-                tasks.deindex_run_content_files.si(run.id, unpublished_only=False),
-            ]
-            if django_settings.QDRANT_ENABLE_INDEXING_PLUGIN_HOOKS:
-                deindex_tasks.append(vector_tasks.remove_run_content_files.si(run.id))
+        keep_published = resource.etl_source in QDRANT_RETAINED_SOURCES
+        deindex_tasks = [
+            tasks.deindex_run_content_files.si(
+                run.id, unpublished_only=False, keep_published=keep_published
+            ),
+        ]
+        if not keep_published and django_settings.QDRANT_ENABLE_INDEXING_PLUGIN_HOOKS:
+            deindex_tasks.append(vector_tasks.remove_run_content_files.si(run.id))
         try_with_retry_as_task(chain(*deindex_tasks))
 
     @hookimpl
@@ -225,12 +263,13 @@ class SearchIndexPlugin:
         """
         Upsert a created/modified run's content files.
 
-        Qdrant: embed every loaded run (all runs of a published/test_mode course)
-        and drop stale files. OpenSearch: index only the best published run, or
-        any published run of a test_mode course.
+        Qdrant: embed the run's published files (unchanged files exit via the
+        checksum gate in vector_search) and drop stale files. OpenSearch: index
+        only the best published non-B2B run, or any published non-variant run
+        of a test_mode course.
 
-         Args:
-             run(LearningResourceRun): The LearningResourceRun that was upserted
+        Args:
+            run: the LearningResourceRun that was upserted
         """
         if not run.content_files.exists():
             return
@@ -239,14 +278,17 @@ class SearchIndexPlugin:
 
         resource = run.learning_resource
         if resource.published or resource.test_mode:
-            if run.published and (resource.test_mode or resource.best_run == run):
+            if opensearch_runs(resource).filter(id=run.id).exists():
                 index_tasks.append(tasks.index_run_content_files.si(run.id))
 
             if django_settings.QDRANT_ENABLE_INDEXING_PLUGIN_HOOKS:
-                index_tasks.append(vector_tasks.embed_run_content_files.si(run.id))
+                # Purge before embedding so unpublished files' points are
+                # removed even if the embed task fails; the two tasks touch
+                # disjoint sets (published=False vs published=True files).
                 index_tasks.append(
                     vector_tasks.remove_unpublished_run_content_files.si(run.id)
                 )
+                index_tasks.append(vector_tasks.embed_run_content_files.si(run.id))
 
         if index_tasks:
             try_with_retry_as_task(chain(*index_tasks))

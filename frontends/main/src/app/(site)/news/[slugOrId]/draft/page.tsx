@@ -1,3 +1,4 @@
+import type { AppPageProps } from "@/common/searchParams"
 import React from "react"
 import { WebsiteContentDetail } from "@/app-pages/WebsiteContent/WebsiteContentDetail"
 import { standardizeMetadata } from "@/common/metadata"
@@ -10,7 +11,9 @@ export const generateMetadata = async () => {
   })
 }
 
-const Page: React.FC<PageProps<"/news/[slugOrId]/draft">> = async (props) => {
+const Page: React.FC<AppPageProps<"/news/[slugOrId]/draft">> = async (
+  props,
+) => {
   const { slugOrId } = await props.params
 
   // No prefetching for draft News - the client-side component

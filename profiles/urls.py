@@ -10,14 +10,12 @@ from profiles.views import (
     ProgramLetterViewSet,
     UserProgramCertificateViewSet,
     UserViewSet,
-    UserWebsiteViewSet,
     name_initials_avatar_view,
 )
 
 v0_router = DefaultRouter()
 v0_router.register(r"users", UserViewSet, basename="user_api")
 v0_router.register(r"profiles", ProfileViewSet, basename="profile_api")
-v0_router.register(r"websites", UserWebsiteViewSet, basename="user_websites_api")
 v0_router.register(
     r"program_certificates",
     UserProgramCertificateViewSet,

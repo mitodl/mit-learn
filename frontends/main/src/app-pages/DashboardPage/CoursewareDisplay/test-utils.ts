@@ -14,7 +14,6 @@ import {
   V2Program,
   V2ProgramDetail,
   V3UserProgramEnrollment,
-  DisplayModeEnum,
   LanguageEnum,
 } from "@mitodl/mitxonline-api-axios/v2"
 import { getIdsFromReqTree } from "@/common/mitxonline"
@@ -25,6 +24,118 @@ const makeProgramCollection = factories.programs.programCollection
 const makeCourseEnrollment = factories.enrollment.courseEnrollment
 const makeGrade = factories.enrollment.grade
 const makeContract = factories.contracts.contract
+
+/**
+ * Mock the per-learner price quote the certificate upsell fetches for every
+ * purchasable product on the given courses. Required in any suite that opens
+ * CourseEnrollmentDialog on an upgradable run, or the unmocked request fails
+ * the test. Quotes default to list price with no discount; re-register one to
+ * exercise a discount.
+ *
+ * Takes whole courses, variadically, because that is what these suites hold.
+ * ProductPages/test-utils/userPricing.ts has the per-run and per-program forms
+ * the InfoBox suites want; the names are kept distinct so the two do not read
+ * as the same helper.
+ */
+const setupCoursePricing = (
+  ...courses: CourseWithCourseRunsSerializerV2[]
+): void => {
+  courses.forEach((course) =>
+    (course.courseruns ?? []).forEach((run) =>
+      (run.products ?? []).forEach((product) =>
+        setMockResponse.get(
+          urls.products.userPricingDetail(product.id),
+          factories.products.userPricing({
+            id: product.id,
+            price: product.price,
+          }),
+        ),
+      ),
+    ),
+  )
+}
+
+/**
+ * Mock the order history that enrollment cards fetch to decide whether to show a
+ * "Receipt" item. Required in any suite rendering an enrollment card, whatever
+ * its mode — a refunded order leaves the learner auditing and still has a
+ * receipt — or the unmocked request fails the test. Defaults to an empty history
+ * (no receipt); pass `runId`/`programId` to make one resolve.
+ */
+const setupOrderHistory = ({
+  runId,
+  programId,
+  orderId = faker.number.int({ min: 1 }),
+}: {
+  runId?: number
+  programId?: number
+  orderId?: number
+} = {}) => {
+  const lines = []
+  if (runId !== undefined) {
+    lines.push(
+      factories.orders.line({
+        product: factories.orders.product({
+          purchasable_object: {
+            id: runId,
+            title: "Some Run",
+            course: { id: faker.number.int(), title: "Some Course" },
+          },
+        }),
+      }),
+    )
+  }
+  if (programId !== undefined) {
+    lines.push(
+      factories.orders.line({
+        product: factories.orders.product({
+          purchasable_object: {
+            id: programId,
+            title: "Some Program",
+            readable_id: "program-v1:MITxT+SysEng",
+          },
+        }),
+      }),
+    )
+  }
+
+  setMockResponse.get(
+    urls.orders.historyList({ limit: 100 }),
+    factories.orders.orderHistoryList(
+      lines.length > 0
+        ? [
+            factories.orders.orderHistory({
+              id: orderId,
+              state: "fulfilled",
+              lines,
+            }),
+          ]
+        : [],
+    ),
+  )
+
+  return { orderId }
+}
+
+/**
+ * Mock the program certificates a program card fetches to decide whether to show
+ * a "Program Letter" item. Only requested when the `program-letters` flag is on,
+ * so this is required in any suite that renders a program card with feature
+ * flags mocked true. Defaults to no certificates (no letter link); pass
+ * `mitxonlineProgramIds` to give those programs one.
+ */
+const setupProgramCertificates = ({
+  mitxonlineProgramIds = [],
+}: { mitxonlineProgramIds?: number[] } = {}) => {
+  setMockResponse.get(
+    u.urls.programCertificates.list(),
+    mitxonlineProgramIds.map((id) =>
+      u.factories.programCertificates.programCertificate({
+        mitxonline_program_id: id,
+      }),
+    ),
+  )
+}
 
 const dashboardCourse: PartialFactory<CourseWithCourseRunsSerializerV2> = (
   ...overrides
@@ -156,8 +267,6 @@ const setupProgramsAndCourses = () => {
   const mitxOnlineUser = factories.user.user({ b2b_organizations: [orgX] })
   setMockResponse.get(u.urls.userMe.get(), user)
   setMockResponse.get(urls.userMe.get(), mitxOnlineUser)
-  setMockResponse.get(urls.organization.organizationList(""), orgX)
-  setMockResponse.get(urls.organization.organizationList(orgX.slug), orgX)
 
   const programCollection = makeProgramCollection({
     title: "Program Collection",
@@ -289,20 +398,15 @@ function setupOrgDashboardMocks(
   courses: CourseWithCourseRunsSerializerV2[],
   contracts: ContractPage[],
 ) {
-  // Basic user and org setup
+  // Basic user setup
   setMockResponse.get(u.urls.userMe.get(), user)
   setMockResponse.get(mitxonline.urls.userMe.get(), mitxOnlineUser)
-  setMockResponse.get(
-    mitxonline.urls.organization.organizationList(org.slug),
-    org,
-  )
 
   // Empty defaults
   setMockResponse.get(
     mitxonline.urls.programEnrollments.enrollmentsListV3(),
     [],
   )
-  setMockResponse.get(mitxonline.urls.contracts.contractsList(), contracts)
   setMockResponse.get(
     mitxonline.urls.programCollections.programCollectionsList(),
     { results: [] },
@@ -533,22 +637,20 @@ const buildProgramScenario = (
       )
     }
 
-    // Query 6: required-program courses (program-as-course module courses)
-    // enabled: Boolean(enrolledInProgram && programAsCourseCourseIds.length > 0)
-    // Must mirror useProgramDashboardData.ts programAsCourseCourseIds useMemo exactly — same drift risk.
+    // Query 6: required-program courses (nested-program course children)
+    // enabled: Boolean(enrolledInProgram && requiredProgramCourseIds.length > 0)
+    // Must mirror useProgramDashboardData.ts requiredProgramCourseIds useMemo exactly — same drift risk.
     const uniqueIds = new Set<number>()
-    requiredPrograms
-      .filter((p) => p.display_mode === DisplayModeEnum.Course)
-      .forEach((p) => {
-        p.courses?.forEach((courseId) => uniqueIds.add(courseId))
-      })
-    const programAsCourseCourseIds = [...uniqueIds]
+    requiredPrograms.forEach((p) => {
+      p.courses?.forEach((courseId) => uniqueIds.add(courseId))
+    })
+    const requiredProgramCourseIds = [...uniqueIds]
 
-    if (programAsCourseCourseIds.length > 0) {
+    if (requiredProgramCourseIds.length > 0) {
       setMockResponse.get(
         urls.courses.coursesList({
-          id: programAsCourseCourseIds,
-          page_size: programAsCourseCourseIds.length || undefined,
+          id: requiredProgramCourseIds,
+          page_size: requiredProgramCourseIds.length || undefined,
         }),
         {
           count: requiredProgramCourses.length,
@@ -564,8 +666,11 @@ const buildProgramScenario = (
 }
 
 export {
+  setupCoursePricing,
   dashboardCourse,
   dashboardProgram,
+  setupOrderHistory,
+  setupProgramCertificates,
   setupEnrollments,
   setupProgramsAndCourses,
   setupOrgAndUser,

@@ -223,6 +223,10 @@ const programLetters = {
   details: (id: string) => `${getApiBaseUrl()}/api/v1/program_letters/${id}/`,
 }
 
+const programCertificates = {
+  list: () => `${getApiBaseUrl()}/api/v0/program_certificates/`,
+}
+
 const testimonials = {
   list: (params?: Paramsv0<TestimonialsApi, "testimonialsList">) =>
     `${getApiBaseUrl()}/api/v0/testimonials/${query(params)}`,
@@ -250,6 +254,10 @@ const profileMe = {
   patch: () => `${getApiBaseUrl()}/api/v0/profiles/me/`,
 }
 
+const unsubscribe = {
+  post: (token: string) => `${getApiBaseUrl()}/api/v1/unsubscribe/${token}/`,
+}
+
 const newsEvents = {
   list: (params?: NewsEventsApiNewsEventsListRequest) =>
     `${getApiBaseUrl()}/api/v0/news_events/${query(params)}`,
@@ -260,9 +268,15 @@ const videoPlaylists = {
     `${getApiBaseUrl()}/api/v1/video_playlists/${params.id}/`,
 }
 
+const podcastEpisodes = {
+  transcript: (id: number) =>
+    `${getApiBaseUrl()}/api/v1/podcast_episodes/${id}/transcript/`,
+}
+
 export {
   learningResources,
   videoPlaylists,
+  podcastEpisodes,
   topics,
   learningPaths,
   articles,
@@ -270,6 +284,7 @@ export {
   hubspot,
   search,
   userLists,
+  programCertificates,
   programLetters,
   channels,
   widgetLists,
@@ -283,4 +298,5 @@ export {
   newsEvents,
   testimonials,
   adminSearchParams,
+  unsubscribe,
 }

@@ -21,6 +21,7 @@ import {
   useRevokeCode,
 } from "api/mitxonline-hooks/organizations"
 import type { ManagerEnrollmentCode } from "api/mitxonline-hooks/organizations"
+import { SILENCE_ERROR_TOAST } from "api/mutation-meta"
 import type { AxiosError } from "axios"
 
 const ActionMenuItem = styled(MenuItem)(({ theme }) => ({
@@ -75,8 +76,8 @@ type RowActionMenuProps = {
 /**
  * Three-dot row action menu for the contract admin codes table.
  *
- * Pending (assigned) rows: Change assigned email, Resend claim email, Copy
- * claim link, Release seat.
+ * Pending (assigned) rows: Resend invitation, Copy claim link, Change
+ * assigned email, Release seat.
  *
  * Redeemed rows: button is disabled — no actions available.
  */
@@ -96,9 +97,11 @@ const RowActionMenu: React.FC<RowActionMenuProps> = ({
   const reassignDescId = useId()
   const open = Boolean(anchorEl)
 
-  const remind = useRemindCode()
-  const revoke = useRevokeCode()
-  const reassign = useReassignCode()
+  // These actions surface their outcome via the page-level result Alert (see
+  // onResult), so suppress the global error toast.
+  const remind = useRemindCode({ meta: SILENCE_ERROR_TOAST })
+  const revoke = useRevokeCode({ meta: SILENCE_ERROR_TOAST })
+  const reassign = useReassignCode({ meta: SILENCE_ERROR_TOAST })
 
   const isRedeemed = code.redemption_status === "redeemed"
   const hasAssignedEmail = Boolean(code.assigned_to?.trim())
@@ -124,9 +127,9 @@ const RowActionMenu: React.FC<RowActionMenuProps> = ({
         id: contractId,
         parent_lookup_organization: orgId,
       })
-      onResult(`Claim email resent to ${code.assigned_to}.`, "success")
+      onResult(`Invitation resent to ${code.assigned_to}.`, "success")
     } catch {
-      onResult("Could not resend the claim email. Please try again.", "error")
+      onResult("Could not resend the invitation. Please try again.", "error")
     }
   }
 
@@ -137,7 +140,10 @@ const RowActionMenu: React.FC<RowActionMenuProps> = ({
         id: contractId,
         parent_lookup_organization: orgId,
       })
-      onResult("Seat released.", "success")
+      onResult(
+        `Seat released for ${code.assigned_to?.trim() || "unassigned seat"}.`,
+        "success",
+      )
     } catch (err) {
       const status = (err as AxiosError)?.response?.status
       onResult(
@@ -240,7 +246,7 @@ const RowActionMenu: React.FC<RowActionMenuProps> = ({
   return (
     <>
       <VisuallyHidden aria-live="polite">
-        {copied ? "Link copied to clipboard" : ""}
+        {copied ? "Claim link copied." : ""}
       </VisuallyHidden>
       <ActionButton
         id={`row-action-trigger-${code.id}`}
@@ -261,27 +267,28 @@ const RowActionMenu: React.FC<RowActionMenuProps> = ({
         onClose={handleClose}
         MenuListProps={{ "aria-labelledby": `row-action-trigger-${code.id}` }}
       >
-        <ActionMenuItem onClick={openReassign}>
-          Change assigned email
-        </ActionMenuItem>
         {hasAssignedEmail ? (
           <ActionMenuItem onClick={handleResend}>
-            Resend claim email
+            Resend invitation
           </ActionMenuItem>
         ) : (
           <Tooltip title="No email is assigned to this seat yet." describeChild>
-            <ActionMenuItem disabled aria-label="Resend claim email">
-              Resend claim email
+            <ActionMenuItem disabled aria-label="Resend invitation">
+              Resend invitation
             </ActionMenuItem>
           </Tooltip>
         )}
         {copied ? (
-          <CopiedMenuItem disabled>Link copied to clipboard</CopiedMenuItem>
+          <CopiedMenuItem disabled>Claim link copied.</CopiedMenuItem>
         ) : (
           <ActionMenuItem onClick={handleCopyClaimLink}>
             Copy claim link
           </ActionMenuItem>
         )}
+        <Divider component="li" role="separator" />
+        <ActionMenuItem onClick={openReassign}>
+          Change assigned email
+        </ActionMenuItem>
         <Divider component="li" role="separator" />
         <DestructiveMenuItem onClick={openRevokeConfirm}>
           Release seat

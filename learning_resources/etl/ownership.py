@@ -1,80 +1,102 @@
 """
-Per-(etl_source, resource_type) write-ownership guard.
+Per-(etl_source, resource_type) write ownership.
 
-Batch pull-ETL loaders (load_courses, load_programs, the canvas stale-course
-sweep) implement full-sync unpublish/delete: anything not present in the
-current batch is treated as removed upstream. If a push pipeline (webhook or
-Dagster asset) also writes the same (etl_source, resource_type), each side's
-full sync treats the other side's writes as missing, causing
-unpublish/republish flapping.
+Three pipelines can load the same catalog data: the legacy Celery ETL, the
+warehouse pull (BaseWarehouseETLTask, reading OL Data Platform views), and the
+data platform's webhook push (/api/v1/webhooks/learning_resources/). The batch
+loaders they share (load_courses, load_programs, load_podcasts, ...) do a full
+sync: anything absent from the batch is unpublished. Two pipelines writing the
+same pair would each unpublish the other's rows on every run.
 
-ETLSourceOwnership records which pipeline currently owns writes for a given
-pair. A missing row defaults to "pull" so existing sources are unaffected
-until a row is explicitly created to cut a source over to push. Pull loaders
-should call `pull_write_allowed` (or the stricter `assert_pull_allowed`)
-before writing/pruning; push loaders should call `assert_push_allowed`
-before writing, so a push pipeline can't silently write into a pair that
-pull-ETL still owns and will prune on its next run.
+ETLSourceOwnership names the one pipeline allowed to write a pair. A missing row
+means legacy, so nothing changes until a row is created. Changing the row in
+Django admin is the per-source cutover (and the rollback), with no deploy.
+
+Each pipeline declares itself once, at its entry point, with ``writing_as``.
+The shared loaders then call ``may_write`` and skip a pair the current pipeline
+does not own. Code that never declares a pipeline is the legacy Celery ETL, so
+the existing tasks need no change to be guarded.
 """
 
 import logging
+from collections.abc import Iterable, Iterator
+from contextlib import contextmanager
+from contextvars import ContextVar
 
 from learning_resources.models import ETLSourceOwnership
 
 log = logging.getLogger(__name__)
 
-PULL = ETLSourceOwnership.Mode.PULL
-PUSH = ETLSourceOwnership.Mode.PUSH
+Pipeline = ETLSourceOwnership.Pipeline
+
+_current_pipeline: ContextVar[str] = ContextVar(
+    "etl_current_pipeline", default=Pipeline.LEGACY
+)
 
 
 class OwnershipError(Exception):
-    """Raised when a loader writes to an (etl_source, resource_type) it does not own."""
+    """Raised when a pipeline writes an (etl_source, resource_type) it does not own."""
 
 
-def get_ownership_mode(etl_source: str, resource_type: str) -> str:
-    """
-    Return the write-ownership mode for an (etl_source, resource_type) pair.
+@contextmanager
+def writing_as(pipeline: str) -> Iterator[None]:
+    """Declare which pipeline the loaders called inside this block are running for."""
+    token = _current_pipeline.set(Pipeline(pipeline))
+    try:
+        yield
+    finally:
+        _current_pipeline.reset(token)
 
-    Defaults to PULL when no row exists.
-    """
+
+def current_pipeline() -> str:
+    """Return the pipeline declared by the enclosing ``writing_as`` (legacy if none)."""
+    return _current_pipeline.get()
+
+
+def get_owner(etl_source: str, resource_type: str) -> str:
+    """Return the pipeline that owns an (etl_source, resource_type) pair."""
     row = ETLSourceOwnership.objects.filter(
         etl_source=etl_source, resource_type=resource_type
     ).first()
-    return row.mode if row else PULL
+    return row.owner if row else Pipeline.LEGACY
 
 
-def is_push_owned(etl_source: str, resource_type: str) -> bool:
-    """Whether an (etl_source, resource_type) pair is push-owned."""
-    return get_ownership_mode(etl_source, resource_type) == PUSH
+def may_write(etl_source: str, resource_types: str | Iterable[str]) -> bool:
+    """
+    Whether the current pipeline owns every one of ``resource_types`` for a source.
 
-
-def pull_write_allowed(etl_source: str, resource_type: str) -> bool:
-    """Whether a pull-ETL loader may write/prune this (etl_source, resource_type)."""
-    return not is_push_owned(etl_source, resource_type)
-
-
-def assert_pull_allowed(etl_source: str, resource_type: str) -> None:
-    """Hard guard for pull loaders: raise if this pair has been cut over to push."""
-    if is_push_owned(etl_source, resource_type):
-        msg = (
-            f"Refusing pull write: {etl_source}/{resource_type} is push-owned. "
-            "This source has been cut over to a push pipeline; the pull-ETL "
-            "loader must not write or prune it."
+    A batch loader that writes several types together (a podcast and its
+    episodes) needs all of them: owning only some would leave the rest to a
+    pipeline that never receives them.
+    """
+    if isinstance(resource_types, str):
+        resource_types = [resource_types]
+    pipeline = current_pipeline()
+    not_owned = {
+        resource_type: owner
+        for resource_type in resource_types
+        if (owner := get_owner(etl_source, resource_type)) != pipeline
+    }
+    if not_owned:
+        log.info(
+            "Skipping %s write for %s: owned by %s",
+            pipeline,
+            etl_source,
+            ", ".join(f"{rtype}={owner}" for rtype, owner in not_owned.items()),
         )
-        raise OwnershipError(msg)
+    return not not_owned
 
 
-def assert_push_allowed(etl_source: str, resource_type: str) -> None:
+def assert_owner(etl_source: str, resource_types: str | Iterable[str]) -> None:
     """
-    Guard for push (webhook/event) loaders: raise unless this
-    (etl_source, resource_type) has been explicitly cut over to push
-    ownership. Prevents a push loader from writing into a pair that pull-ETL
-    still owns and will prune/overwrite on its next scheduled run.
+    Raise unless the current pipeline owns every one of ``resource_types``.
+
+    For entry points that must fail rather than skip, e.g. the webhook handler,
+    where a silent skip would report success to a sender that delivered nothing.
     """
-    if not is_push_owned(etl_source, resource_type):
+    if not may_write(etl_source, resource_types):
         msg = (
-            f"Refusing push write: {etl_source}/{resource_type} is pull-owned. "
-            "Create an ETLSourceOwnership row set to push before enabling "
-            "push writes for this source."
+            f"{current_pipeline()} does not own {etl_source}/{resource_types}. "
+            "Set its ETLSourceOwnership row in Django admin to cut it over."
         )
         raise OwnershipError(msg)

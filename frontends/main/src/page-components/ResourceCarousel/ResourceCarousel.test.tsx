@@ -398,4 +398,76 @@ describe("ResourceCarousel", () => {
     )
     delete process.env.NEXT_PUBLIC_POSTHOG_API_KEY
   })
+
+  describe("Skip link", () => {
+    const skipConfig: ResourceCarouselProps["config"] = [
+      {
+        label: "Resources",
+        data: { type: "resources", params: { resource_type: ["course"] } },
+      },
+    ]
+
+    it("renders a 'Skip {title}' link so keyboard users can bypass the cards", async () => {
+      const { resources } = setupApis({ count: 4 })
+      renderWithProviders(
+        <ResourceCarousel
+          titleComponent="h2"
+          title="My Carousel"
+          config={skipConfig}
+        />,
+      )
+      // Wait for the carousel content to render.
+      await screen.findByText(resources.list.results[0].title)
+
+      expect(
+        screen.getByRole("link", { name: "Skip My Carousel" }),
+      ).toBeInTheDocument()
+    })
+
+    it("omits the skip link when there are too few cards to be worth skipping", async () => {
+      const { resources } = setupApis({ count: 3 })
+      renderWithProviders(
+        <ResourceCarousel
+          titleComponent="h2"
+          title="My Carousel"
+          config={skipConfig}
+        />,
+      )
+      // Wait for the carousel content to render.
+      await screen.findByText(resources.list.results[0].title)
+
+      expect(
+        screen.queryByRole("link", { name: "Skip My Carousel" }),
+      ).not.toBeInTheDocument()
+      expect(
+        screen.queryByRole("link", { name: "Return to My Carousel" }),
+      ).not.toBeInTheDocument()
+    })
+
+    it("moves focus past the carousel when the skip link is activated", async () => {
+      const { resources } = setupApis({ count: 4 })
+      renderWithProviders(
+        <>
+          <ResourceCarousel
+            titleComponent="h2"
+            title="My Carousel"
+            config={skipConfig}
+          />
+          <a href="#after">After carousel</a>
+        </>,
+      )
+      const firstCard = await screen.findByText(resources.list.results[0].title)
+
+      const skip = screen.getByRole("link", { name: "Skip My Carousel" })
+      await user.click(skip)
+
+      // Activating the skip link lands focus on the carousel's own "Return to
+      // {title}" link at the end of the block — a deterministic, named
+      // destination — skipping every card.
+      expect(
+        screen.getByRole("link", { name: "Return to My Carousel" }),
+      ).toHaveFocus()
+      expect(firstCard.closest("a")).not.toHaveFocus()
+    })
+  })
 })

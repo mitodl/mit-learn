@@ -6,6 +6,7 @@ import { useFeatureFlagEnabled, usePostHog } from "posthog-js/react"
 import { FeatureFlags } from "@/common/feature_flags"
 import { programPageView } from "@/common/urls"
 import { PostHogEvents } from "@/common/constants"
+import type { RegisteredSearchParams } from "@/common/searchParams"
 
 const BANNER_SEARCH_TERMS = [
   "artificial intelligence",
@@ -84,7 +85,7 @@ const BannerDescription = styled(Typography)(({ theme }) => ({
 }))
 
 interface UniversalAIBannerProps {
-  searchParams: URLSearchParams
+  searchParams: RegisteredSearchParams
 }
 
 const UniversalAIBanner: React.FC<UniversalAIBannerProps> = ({

@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query"
-import type { User } from "../../generated/v0/api"
+import type { CurrentUser, User } from "../../generated/v0/api"
 import { userQueries } from "./queries"
 
 enum Permission {
@@ -31,4 +31,4 @@ export {
   useUserHasPermission,
   Permission,
 }
-export type { User }
+export type { CurrentUser, User }

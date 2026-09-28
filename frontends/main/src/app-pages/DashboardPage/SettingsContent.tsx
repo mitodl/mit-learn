@@ -10,13 +10,18 @@ import {
   DialogActions,
   Skeleton,
 } from "ol-components"
-import { Button } from "@mitodl/smoot-design"
+import { Button, ButtonLink, Checkbox } from "@mitodl/smoot-design"
+import { useFeatureFlagEnabled } from "posthog-js/react"
 import { useUserMe } from "api/hooks/user"
+import { useProfileMeMutation, useProfileMeQuery } from "api/hooks/profile"
 import {
   useSearchSubscriptionDelete,
   useSearchSubscriptionList,
 } from "api/hooks/searchSubscription"
 import * as NiceModal from "@ebay/nice-modal-react"
+import { FeatureFlags } from "@/common/feature_flags"
+import { AccountAction, SETTINGS, accountAction } from "@/common/urls"
+import AccountActionAlert from "./AccountActionAlert"
 import { TitleText } from "./HomeContent"
 const SOURCE_LABEL_DISPLAY = {
   topic: "Topic",
@@ -118,6 +123,72 @@ const ListItemBody: React.FC<ListItemBodyProps> = ({
   )
 }
 
+const AccountActionRow = styled.div(({ theme }) => ({
+  display: "flex",
+  alignItems: "center",
+  gap: "16px",
+  marginBottom: "16px",
+  [theme.breakpoints.down("sm")]: {
+    alignItems: "flex-start",
+    flexDirection: "column",
+    gap: "8px",
+  },
+}))
+
+const AccountActionLabel = styled.span(({ theme }) => ({
+  ...theme.typography.body2,
+  color: theme.custom.colors.darkGray2,
+}))
+
+const AccountActionValue = styled.span(({ theme }) => ({
+  ...theme.typography.body2,
+  color: theme.custom.colors.silverGrayDark,
+}))
+
+type AccountManagementProps = {
+  email: string
+}
+
+/**
+ * Email and password management. Both actions hand the user off to Keycloak,
+ * which owns the credentials, and return them here with a confirmation.
+ *
+ * Hidden from SSO users, whose credentials belong to their institution.
+ */
+const AccountManagement: React.FC<AccountManagementProps> = ({ email }) => {
+  const next = { pathname: SETTINGS, searchParams: null }
+
+  return (
+    <>
+      <SubtitleTitleText>Email &amp; Password</SubtitleTitleText>
+      <AccountActionRow>
+        <AccountActionLabel>
+          <b>Email:</b> <AccountActionValue>{email}</AccountActionValue>
+        </AccountActionLabel>
+        <ButtonLink
+          variant="secondary"
+          size="small"
+          href={accountAction(AccountAction.UpdateEmail, next)}
+        >
+          Change Email
+        </ButtonLink>
+      </AccountActionRow>
+      <AccountActionRow>
+        <AccountActionLabel>
+          <b>Password</b>
+        </AccountActionLabel>
+        <ButtonLink
+          variant="secondary"
+          size="small"
+          href={accountAction(AccountAction.UpdatePassword, next)}
+        >
+          Change Password
+        </ButtonLink>
+      </AccountActionRow>
+    </>
+  )
+}
+
 type UnfollowDialogProps = {
   subscriptionIds?: number[]
   subscriptionName?: string
@@ -174,6 +245,12 @@ const UnfollowDialog = NiceModal.create(
 
 const SettingsContent: React.FC = () => {
   const { data: user } = useUserMe()
+  const { data: profile } = useProfileMeQuery()
+  const { mutateAsync: updateProfile } = useProfileMeMutation()
+
+  const accountManagementEnabled = useFeatureFlagEnabled(
+    FeatureFlags.AccountManagement,
+  )
 
   const subscriptionList = useSearchSubscriptionList({
     enabled: !!user?.is_authenticated,
@@ -183,9 +260,21 @@ const SettingsContent: React.FC = () => {
     return <Skeleton variant="text" width={128} height={32} />
   }
 
+  const showAccountManagement =
+    accountManagementEnabled && user.is_authenticated && !user.is_sso_user
+
   return (
     <div id="user-settings">
       <TitleText component="h1">Settings</TitleText>
+      <AccountActionAlert />
+      {showAccountManagement ? <AccountManagement email={user.email} /> : null}
+      <SubtitleTitleText>Email Preferences</SubtitleTitleText>
+      <Checkbox
+        name="email_optin"
+        label="Receive emails from MIT Learn"
+        checked={profile?.email_optin ?? true}
+        onChange={(e) => updateProfile({ email_optin: e.target.checked })}
+      />
       <SettingsHeader>
         <SettingsHeaderLeft>
           <SubtitleTitleText>Following</SubtitleTitleText>

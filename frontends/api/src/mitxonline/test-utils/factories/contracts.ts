@@ -52,6 +52,8 @@ const contractCode = (
     redeemed_by: isRedeemed ? faker.internet.email() : null,
     redeemed_on: isRedeemed ? faker.date.past().toISOString() : null,
     last_sent: null,
+    email_status: null,
+    email_status_event_timestamp: null,
     ...overrides,
   }
 }

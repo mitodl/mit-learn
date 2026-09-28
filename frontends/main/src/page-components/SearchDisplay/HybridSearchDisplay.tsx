@@ -1,104 +1,19 @@
 import React, { useMemo } from "react"
-import { learningResourceQueries } from "api/hooks/learningResources"
+import {
+  learningResourceQueries,
+  useOfferorsList,
+} from "api/hooks/learningResources"
 import type { LearningResource } from "api"
-import type { Facets, BooleanFacets } from "@mitodl/course-search-utils"
-import type {
-  LearningResourcesVectorSearchResponse,
-  VectorLearningResourcesSearchApiVectorLearningResourcesSearchRetrieveRequest as VectorSearchRequest,
-} from "api/v0"
+import type { LearningResourcesVectorSearchResponse } from "api/v0"
+import { useAppSearchParams } from "@/common/useAppSearchParams"
 import getSearchParams from "./getSearchParams"
 import SearchDisplay, { SearchDisplayProps } from "./SearchDisplay"
-
-const mapVectorSortby = (
-  sortby?: string,
-): VectorSearchRequest["sortby"] | undefined => {
-  switch (sortby) {
-    case "-views":
-    case "popular":
-      return "-views"
-    case "upcoming":
-      return "next_start_date"
-    case "new":
-      return "-created_on"
-    default:
-      return undefined
-  }
-}
-
-/**
- * Extracts only the fields supported by the vector search API from a broader
- * search params object, dropping admin-only params (e.g., content_file_score_weight)
- * that the vector endpoint does not accept.
- *
- * The `as` casts for enum arrays are safe because the v0 and v1 generated
- * clients define separate (but structurally identical) enum types for the same
- * string-literal values (e.g., delivery: 'online' | 'hybrid' | ...).
- */
-const toVectorSearchParams = (
-  params: ReturnType<typeof getSearchParams> & { sortby?: string },
-  cutoffScore?: number,
-): VectorSearchRequest => ({
-  aggregations: params.aggregations as VectorSearchRequest["aggregations"],
-  certification: params.certification,
-  certification_type:
-    params.certification_type as VectorSearchRequest["certification_type"],
-  course_feature: params.course_feature,
-  delivery: params.delivery as VectorSearchRequest["delivery"],
-  department: params.department as VectorSearchRequest["department"],
-  free: params.free,
-  level: params.level as VectorSearchRequest["level"],
-  limit: params.limit,
-  ocw_topic: params.ocw_topic,
-  offered_by: params.offered_by as VectorSearchRequest["offered_by"],
-  offset: params.offset,
-  platform: params.platform as VectorSearchRequest["platform"],
-  professional: params.professional,
-  q: params.q,
-  resource_category:
-    params.resource_category as VectorSearchRequest["resource_category"],
-  resource_type: params.resource_type as VectorSearchRequest["resource_type"],
-  resource_type_group:
-    params.resource_type_group as VectorSearchRequest["resource_type_group"],
-  score_cutoff: cutoffScore,
-  sortby: mapVectorSortby(params.sortby),
-  topic: params.topic,
-  hybrid_search: true,
-})
-
-const VECTOR_CLIENT_FILTER_FACETS = [
-  "resource_type",
-  "certification_type",
-  "delivery",
-  "department",
-  "topic",
-  "offered_by",
-  "free",
-  "professional",
-  "resource_category",
-  "resource_type_group",
-] as const
-
-type VectorClientFilterFacet = (typeof VECTOR_CLIENT_FILTER_FACETS)[number]
-
-const toUnfacetedVectorSearchParams = (
-  params: ReturnType<typeof getSearchParams> & { sortby?: string },
-  constantSearchParams: Facets & BooleanFacets = {},
-  cutoffScore?: number,
-): VectorSearchRequest => {
-  const {
-    offset: _offset,
-    limit: _limit,
-    ...vectorParams
-  } = toVectorSearchParams(params, cutoffScore)
-
-  return Object.fromEntries(
-    Object.entries(vectorParams).filter(
-      ([key]) =>
-        !VECTOR_CLIENT_FILTER_FACETS.includes(key as VectorClientFilterFacet) ||
-        key in constantSearchParams,
-    ),
-  ) as VectorSearchRequest
-}
+import {
+  VECTOR_CLIENT_FILTER_FACETS,
+  getVectorScoreTuning,
+  toUnfacetedVectorSearchParams,
+  toVectorSearchParams,
+} from "./vectorSearchParams"
 
 const normalizeParamValues = (value: unknown): string[] => {
   if (Array.isArray(value)) {
@@ -133,6 +48,21 @@ const getResourceFacetValues = (
       return normalizeParamValues(resource.offered_by?.code)
     case "topic":
       return normalizeParamValues(resource.topics?.map((t) => t.name))
+    case "platform":
+      return normalizeParamValues(
+        "platform" in resource ? resource.platform?.code : undefined,
+      )
+    case "level":
+      // Level is aggregated from run levels, matching the OpenSearch facet.
+      return normalizeParamValues(
+        "runs" in resource
+          ? resource.runs?.flatMap((run) => run.level.map((l) => l.code))
+          : [],
+      )
+    case "course_feature":
+      return normalizeParamValues(
+        "course_feature" in resource ? resource.course_feature : [],
+      )
     case "free":
     case "professional":
     case "resource_type":
@@ -170,6 +100,7 @@ const getVectorClientAggregations = (
   allResults: LearningResource[],
   params: ReturnType<typeof getSearchParams>,
   aggregationNames: string[],
+  displayOfferorCodes: string[],
 ) => {
   return Object.fromEntries(
     aggregationNames.map((name) => {
@@ -179,6 +110,10 @@ const getVectorClientAggregations = (
       const counts = new Map<string, number>()
       for (const resource of resultsForFacet) {
         for (const value of getResourceFacetValues(resource, name)) {
+          // only show offerors with display_facet set, matching SearchDisplay
+          if (name === "offered_by" && !displayOfferorCodes.includes(value)) {
+            continue
+          }
           counts.set(value, (counts.get(value) ?? 0) + 1)
         }
       }
@@ -194,18 +129,35 @@ const getVectorClientAggregations = (
   )
 }
 
-type HybridSearchDisplayProps = SearchDisplayProps & {
-  cutoffScore?: number
-}
-
-const HybridSearchDisplay: React.FC<HybridSearchDisplayProps> = ({
-  cutoffScore,
+const HybridSearchDisplay: React.FC<SearchDisplayProps> = ({
   setSearchParams,
   ...props
 }) => {
   const isVectorQuerySearch =
     typeof props.requestParams.q === "string" &&
     props.requestParams.q.trim() !== ""
+
+  const searchParams = useAppSearchParams()
+  /**
+   * The relevance knobs the vector endpoint honors, set by the admin panel's
+   * VectorAdminOptions (rendered by SearchDisplay). The OpenSearch-only admin controls (min_score,
+   * yearly_decay_percent, search_mode, slop, max_incompleteness_penalty,
+   * content_file_score_weight, show_ocw_files) are not forwarded, so
+   * SearchDisplay hides them here.
+   */
+  const scoreTuning = useMemo(
+    () => getVectorScoreTuning(searchParams),
+    [searchParams],
+  )
+
+  const offerorsQuery = useOfferorsList()
+  const displayOfferorCodes = useMemo(
+    () =>
+      (offerorsQuery.data?.results ?? [])
+        .filter((offeror) => offeror.code && offeror.display_facet)
+        .map((offeror) => offeror.code),
+    [offerorsQuery.data?.results],
+  )
 
   const getQueryOptions = useMemo(
     () => (params: ReturnType<typeof getSearchParams>) => {
@@ -216,12 +168,12 @@ const HybridSearchDisplay: React.FC<HybridSearchDisplayProps> = ({
           ? toUnfacetedVectorSearchParams(
               params,
               props.constantSearchParams,
-              cutoffScore,
+              scoreTuning,
             )
-          : toVectorSearchParams(params, cutoffScore),
+          : toVectorSearchParams(params, scoreTuning),
       )
     },
-    [cutoffScore, props.constantSearchParams],
+    [scoreTuning, props.constantSearchParams],
   )
 
   const getDisplayData = useMemo(
@@ -260,12 +212,13 @@ const HybridSearchDisplay: React.FC<HybridSearchDisplayProps> = ({
                   allResults,
                   params,
                   params.aggregations,
+                  displayOfferorCodes,
                 )
               : vectorData.metadata.aggregations,
           },
         }
       },
-    [],
+    [displayOfferorCodes],
   )
 
   return (
@@ -275,6 +228,7 @@ const HybridSearchDisplay: React.FC<HybridSearchDisplayProps> = ({
       getQueryOptions={getQueryOptions}
       getDisplayData={getDisplayData}
       hidePagination={isVectorQuerySearch}
+      hybridSearchActive
     />
   )
 }

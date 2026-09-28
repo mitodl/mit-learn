@@ -10,7 +10,7 @@ export const metadata: Metadata = standardizeMetadata({
   title: "Units",
 })
 
-const Page: React.FC<PageProps<"/units">> = async () => {
+const Page: React.FC = async () => {
   const queryClient = getQueryClient()
 
   await Promise.all([

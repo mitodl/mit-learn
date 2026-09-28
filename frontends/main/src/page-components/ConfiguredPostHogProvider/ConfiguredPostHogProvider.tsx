@@ -47,8 +47,17 @@ const PosthogIdentifier = () => {
   useEffect(() => {
     if (!user) return
     const anonymous = posthog.get_property("$user_state") === "anonymous"
-    if (user.is_authenticated && user.id) {
-      posthog.identify(String(user.id))
+    if (user.is_authenticated) {
+      /**
+       * Identify by the Keycloak global id rather than our Django user id.
+       * This posthog project is shared with other MIT applications, and
+       * mitxpro identifies people by its own integer user ids, so integer ids
+       * collide across applications. Users with no global id are left
+       * unidentified rather than identified by a colliding id.
+       */
+      if (user.global_id) {
+        posthog.identify(user.global_id)
+      }
     } else if (!anonymous) {
       posthog.reset()
     }
@@ -68,6 +77,19 @@ const ConfiguredPostHogProvider: React.FC<{ children: React.ReactNode }> = ({
       posthog.init(POSTHOG_API_KEY, {
         api_host: POSTHOG_API_HOST,
         ui_host: POSTHOG_UI_HOST,
+        /**
+         * Pins the posthog-js default set to a known date. Without it,
+         * capture_pageview resolves to `true` (hard page loads only) rather
+         * than "history_change", so App Router navigations produce no
+         * $pageview. At posthog-js 1.297.2 this date changes nothing else:
+         * the other two defaults it gates (rageclick, session_recording) both
+         * flip on 2025-11-30.
+         */
+        defaults: "2025-05-24",
+        // Scope the posthog cookie to this site's exact domain. Posthog
+        // defaults this to true, which sets the cookie on the root domain
+        // (e.g. mit.edu), sharing it with every other site there.
+        cross_subdomain_cookie: false,
         bootstrap: {
           featureFlags: featureFlags
             ? {

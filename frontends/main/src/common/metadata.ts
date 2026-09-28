@@ -1,9 +1,8 @@
 import { env } from "@/env"
-import {
-  canonicalResourceDrawerUrl,
-  RESOURCE_DRAWER_PARAMS,
-} from "@/common/urls"
+import { RESOURCE_DRAWER_PARAMS } from "@/common/urls"
 import { parseResourceId } from "@/common/slugs"
+import type { ServerSearchParam } from "@/common/searchParams"
+import { htmlToPlainText } from "@/common/htmlToPlainText"
 import type { AxiosError } from "axios"
 import type { Metadata } from "next"
 import * as Sentry from "@sentry/nextjs"
@@ -18,7 +17,7 @@ type MetadataAsyncProps = {
   description?: string
   image?: string
   imageAlt?: string
-  searchParams?: Promise<{ [key: string]: string | string[] | undefined }>
+  searchParams?: Promise<Partial<Record<ServerSearchParam, string | string[]>>>
   social?: boolean
 } & Metadata
 
@@ -86,10 +85,20 @@ export const getMetadataAsync = async ({
       learningResourceQueries.detail(learningResourceId),
     )
     title = data?.title
-    description = data?.description?.replace(/<\/[^>]+(>|$)/g, "") ?? ""
-    image = data?.image?.url || image
-    imageAlt = image === data?.image?.url ? imageAlt : data?.image?.alt || ""
-    alts.canonical = canonicalResourceDrawerUrl(learningResourceId, data?.title)
+    description = data?.description ?? ""
+    // Image and alt move together: taking the resource's image means taking its
+    // alt, and falling back to the caller's image means keeping the caller's.
+    if (data?.image?.url) {
+      image = data.image.url
+      imageAlt = data.image.alt || ""
+    }
+    /**
+     * Canonicalize the drawer to the resource's location on Learn: its own page
+     * where it has one, else this drawer URL itself. The backend owns the
+     * choice, so the canonical here, the card hrefs, and the sitemap cannot
+     * disagree.
+     */
+    alts.canonical = data.learn_url
   }
 
   return standardizeMetadata({
@@ -118,6 +127,7 @@ export const standardizeMetadata = ({
   ...otherMeta
 }: MetadataProps = {}): Metadata => {
   title = `${title} | ${env("NEXT_PUBLIC_SITE_NAME")}`
+  description = htmlToPlainText(description)
   const socialMetadata = social
     ? {
         openGraph: {

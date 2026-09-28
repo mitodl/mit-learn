@@ -7,6 +7,7 @@ import VideoContainer from "./VideoContainer"
 import { RiPlayFill } from "@remixicon/react"
 import { formatDurationClockTime } from "ol-utilities"
 import type { VideoResource } from "api/v1"
+import { DurationBadge } from "./shared.styled"
 
 const PLACEHOLDER_IMG = "/images/mit-open-learning-logo.svg"
 
@@ -56,6 +57,8 @@ const ImageWrapper = styled(Link, {
   }),
 }))
 
+// Distinct from the shared `PlayOverlay`: this one is always visible and scales
+// on hover (see ImageWrapper above) rather than fading a scrim in.
 const PlayOverlay = styled.div({
   position: "absolute",
   inset: 0,
@@ -75,18 +78,6 @@ const PlayCircle = styled.div({
   alignItems: "center",
   justifyContent: "center",
 })
-
-const DurationBadge = styled.span(({ theme }) => ({
-  ...theme.typography.body3,
-  position: "absolute",
-  bottom: 0,
-  right: 0,
-  backgroundColor: theme.custom.colors.darkGray2,
-  color: "#fff",
-  fontWeight: theme.typography.fontWeightMedium,
-  padding: "8px",
-  zIndex: 1,
-}))
 
 const TextSide = styled.div(({ theme }) => ({
   [theme.breakpoints.down("sm")]: {
@@ -139,8 +130,27 @@ const FeaturedTitle = styled.h2(({ theme }) => ({
   },
 }))
 
-const FeaturedDescription = styled.p(({ theme }) => ({
+/*
+ * A div, not a p: OVS descriptions are rich text, and <p>/<ul> inside a <p> is
+ * invalid markup that browsers reparent - which breaks both the two-line clamp
+ * and SSR hydration. The block tags are flattened inline for the same reason a
+ * real list would blow the clamp out. Anchors are kept: unlike the card and
+ * episode-row previews, this description is a sibling of the title link rather
+ * than inside it, so a link here is valid and clickable.
+ */
+const FeaturedDescription = styled.div(({ theme }) => ({
   ...theme.typography.body1,
+  "p, ul, ol, li": {
+    display: "inline",
+    margin: 0,
+    padding: 0,
+    listStyle: "none",
+  },
+  "p + p::before, li + li::before": { content: '" "' },
+  a: {
+    color: theme.custom.colors.red,
+    textDecoration: "underline",
+  },
   color: theme.custom.colors.darkGray1,
   margin: 0,
   overflow: "hidden",

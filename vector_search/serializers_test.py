@@ -1,8 +1,11 @@
+import pytest
+
 from vector_search.constants import MAX_RESULT_WINDOW
 from vector_search.serializers import (
     ContentFileVectorSearchRequestSerializer,
     LearningResourcesSearchFiltersSerializer,
     LearningResourcesVectorSearchRequestSerializer,
+    LearningResourcesVectorSearchResponseSerializer,
 )
 
 
@@ -96,3 +99,71 @@ def test_content_file_vector_search_result_window_validation():
     data = {"offset": MAX_RESULT_WINDOW - 10, "limit": 10}
     s = ContentFileVectorSearchRequestSerializer(data=data)
     assert s.is_valid(), s.errors
+
+
+def test_content_file_vector_search_serializer_strips_invalid_edx_module_ids():
+    """Invalid edx_module_ids are stripped; valid ones survive; absent stays absent."""
+    valid_id = "block-v1:MITx+6.00x+2T2020+type@problem+block@abc"
+
+    serializer = ContentFileVectorSearchRequestSerializer(
+        data={
+            "q": "test",
+            "edx_module_id": [
+                f"{valid_id} ",
+                "block-v1:X+type@discussion+block@y",
+                "block_xpro",
+            ],
+        }
+    )
+    assert serializer.is_valid()
+    # Valid id survives with its edge whitespace trimmed
+    assert serializer.validated_data["edx_module_id"] == [valid_id]
+
+    all_invalid = ContentFileVectorSearchRequestSerializer(
+        data={"q": "test", "edx_module_id": ["block_xpro"]}
+    )
+    assert all_invalid.is_valid()
+    assert all_invalid.validated_data["edx_module_id"] == []
+
+    not_sent = ContentFileVectorSearchRequestSerializer(data={"q": "test"})
+    assert not_sent.is_valid()
+    assert "edx_module_id" not in not_sent.validated_data
+
+
+def _vector_results(hits):
+    """Run `hits` through the response serializer as a Qdrant result set."""
+    return list(
+        LearningResourcesVectorSearchResponseSerializer(
+            {"hits": hits, "total": {"value": len(hits)}, "aggregations": {}}
+        ).data["results"]
+    )
+
+
+@pytest.mark.parametrize(
+    ("title", "expected"),
+    [
+        ("Introduction to Widgets", "introduction-to-widgets"),
+        # A title with no ASCII slug still needs a URL segment.
+        ("\u65e5\u672c\u8a9e\u306e\u30d3\u30c7\u30aa", "resource"),
+        ("", "resource"),
+        (None, "resource"),
+    ],
+)
+def test_vector_results_derive_url_slug_from_the_title(title, expected):
+    """
+    With VECTOR_SEARCH_RESOURCES_FROM_PAYLOAD a hit is the stored Qdrant
+    payload, so one written before `url_slug` existed has no such key while the
+    response schema declares the field required.
+    """
+    results = _vector_results([{"id": 1, "title": title, "resource_type": "video"}])
+
+    assert results[0]["url_slug"] == expected
+
+
+def test_vector_results_keep_an_indexed_url_slug():
+    """A reindexed payload's own value wins; the title is not re-slugified."""
+    results = _vector_results(
+        [{"id": 1, "title": "Introduction to Widgets", "url_slug": "renamed"}]
+    )
+
+    assert results[0]["url_slug"] == "renamed"

@@ -1,6 +1,8 @@
 """Tests for Podcast ETL functions"""
 
 import datetime
+import threading
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from unittest.mock import Mock
 
 import pytest
@@ -9,20 +11,25 @@ from bs4 import BeautifulSoup as bs  # noqa: N813
 from dateutil.tz import tzutc
 from django.conf import settings
 from freezegun import freeze_time
-from requests.exceptions import HTTPError
+from requests.exceptions import ConnectionError as RequestsConnectionError
+from requests.exceptions import HTTPError, Timeout
 
 from learning_resources.constants import Availability, LearningResourceType, OfferedBy
 from learning_resources.etl.constants import ETLSource
 from learning_resources.etl.podcast import (
     extract,
     generate_aggregate_podcast_rss,
+    get_podcast_episodes_for_transcripts_job,
+    get_podcast_transcripts,
     github_podcast_config_files,
     transform,
+    transform_episode,
     validate_podcast_config,
 )
 from learning_resources.factories import (
     PodcastEpisodeFactory,
 )
+from learning_resources.models import LearningResource, PodcastEpisode
 from main.utils import frontend_absolute_url
 
 pytestmark = pytest.mark.django_db
@@ -71,7 +78,7 @@ def mock_rss_request(mocker):
     """
 
     mocker.patch(
-        "learning_resources.etl.podcast.requests.get",
+        "learning_resources.etl.podcast.requests.Session.get",
         side_effect=[mocker.Mock(content=rss_content())],
     )
 
@@ -83,7 +90,7 @@ def mock_rss_request_with_bad_rss_file(mocker):
     """
 
     mocker.patch(
-        "learning_resources.etl.podcast.requests.get",
+        "learning_resources.etl.podcast.requests.Session.get",
         side_effect=[mocker.Mock(content=""), mocker.Mock(content=rss_content())],
     )
 
@@ -233,32 +240,48 @@ def test_transform_with_error(mocker, mock_github_client):
     assert results[0]["url"] == "http://website.url/podcast"
 
 
-def test_extract_connection_reset_error(mocker, mock_github_client):
-    """Test extract handles ConnectionResetError gracefully"""
-    mock_warning_log = mocker.patch("learning_resources.etl.podcast.log.warning")
-    mocker.patch(
-        "learning_resources.etl.podcast.requests.get",
-        side_effect=ConnectionResetError,
+@pytest.mark.parametrize(
+    "break_item",
+    [
+        lambda item: item.pubDate.decompose(),
+        lambda item: item.pubDate.string.replace_with("not a date"),
+        lambda item: item.enclosure.decompose(),
+        lambda item: item.append(bs("<image/>", "xml").image),
+    ],
+    ids=["no-pubdate", "bad-pubdate", "no-enclosure", "image-without-href"],
+)
+def test_transform_skips_feed_with_bad_episode(mocker, break_item):
+    """A feed with one unparseable item is logged and skipped; later feeds still load"""
+    bad_feed = bs(rss_content(), "xml")
+    break_item(bad_feed.find("item"))
+    mock_log = mocker.patch("learning_resources.etl.podcast.log.exception")
+
+    results = list(
+        transform(
+            [
+                (bad_feed, {"rss_url": "http://website.url/bad/rss.xml"}),
+                (
+                    bs(rss_content(), "xml"),
+                    {"rss_url": "http://website.url/podcast/rss.xml"},
+                ),
+            ]
+        )
     )
-    podcast_list = [mock_podcast_file()]
-    mock_github_client.return_value.get_repo.return_value.get_contents.return_value = (
-        podcast_list
+
+    mock_log.assert_called_once_with(
+        "Error parsing podcast data from %s", "http://website.url/bad/rss.xml"
     )
-
-    results = list(extract())
-
-    assert results == []
-    mock_warning_log.assert_called_once_with(
-        "Connection reset error for rss url %s", "http://website.url/podcast/rss.xml"
-    )
+    assert [p["podcast"]["rss_url"] for p in results] == [
+        "http://website.url/podcast/rss.xml"
+    ]
 
 
-@pytest.mark.parametrize("exception_cls", [ConnectionError, HTTPError])
-def test_extract_connection_error(mocker, mock_github_client, exception_cls):
-    """Test extract handles ConnectionError and HTTPError gracefully"""
+@pytest.mark.parametrize("exception_cls", [RequestsConnectionError, HTTPError, Timeout])
+def test_extract_request_error(mocker, mock_github_client, exception_cls):
+    """Test extract logs and skips a feed that can't be fetched"""
     mock_exception_log = mocker.patch("learning_resources.etl.podcast.log.exception")
     mocker.patch(
-        "learning_resources.etl.podcast.requests.get",
+        "learning_resources.etl.podcast.requests.Session.get",
         side_effect=exception_cls,
     )
     podcast_list = [mock_podcast_file()]
@@ -270,8 +293,111 @@ def test_extract_connection_error(mocker, mock_github_client, exception_cls):
 
     assert results == []
     mock_exception_log.assert_called_once_with(
-        "Invalid rss url %s", "http://website.url/podcast/rss.xml"
+        "Could not fetch rss url %s", "http://website.url/podcast/rss.xml"
     )
+
+
+def test_extract_retries_a_transient_status(
+    mock_github_client, rss_server, mocked_responses
+):
+    """A 503 should be retried rather than costing the feed"""
+    rss_url, hits = rss_server(failures=1)
+    mocked_responses.add_passthru("http://127.0.0.1")
+    mock_github_client.return_value.get_repo.return_value.get_contents.return_value = [
+        mock_podcast_file(rss_url=rss_url)
+    ]
+
+    results = list(extract())
+
+    assert len(results) == 1
+    assert results[0][0].channel.title.text == "A Podcast"
+    assert len(hits) == 2
+
+
+def test_extract_stops_after_the_retry_limit(
+    mock_github_client, rss_server, mocked_responses
+):
+    """A feed that keeps failing is attempted a bounded number of times"""
+    rss_url, hits = rss_server(failures=99)
+    mocked_responses.add_passthru("http://127.0.0.1")
+    mock_github_client.return_value.get_repo.return_value.get_contents.return_value = [
+        mock_podcast_file(rss_url=rss_url)
+    ]
+
+    assert list(extract()) == []
+    assert len(hits) == 3
+
+
+def test_extract_passes_timeout(mocker, mock_github_client):
+    """Test extract sets connect and read timeouts"""
+    mock_get = mocker.patch(
+        "learning_resources.etl.podcast.requests.Session.get",
+        return_value=mocker.Mock(content=rss_content()),
+    )
+    mock_github_client.return_value.get_repo.return_value.get_contents.return_value = [
+        mock_podcast_file()
+    ]
+
+    list(extract())
+
+    connect_timeout, read_timeout = mock_get.call_args.kwargs["timeout"]
+    assert connect_timeout > 0
+    assert read_timeout == settings.REQUESTS_TIMEOUT
+
+
+@pytest.fixture
+def rss_server():
+    """
+    Serve the test feed from a local socket, after N failed responses.
+
+    The retry adapter lives below Session.get, so the tests that patch it
+    can't see retries at all - this is the only way to exercise them.
+    """
+    servers = []
+
+    def start(*, failures):
+        hits = []
+
+        class Handler(BaseHTTPRequestHandler):
+            def do_GET(self):
+                hits.append(self.path)
+                body = b"" if len(hits) <= failures else rss_content().encode()
+                self.send_response(503 if len(hits) <= failures else 200)
+                self.send_header("Content-Length", str(len(body)))
+                self.end_headers()
+                self.wfile.write(body)
+
+            def log_message(self, *args):
+                """Keep the test output quiet"""
+
+        server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
+        threading.Thread(target=server.serve_forever, daemon=True).start()
+        servers.append(server)
+        return f"http://127.0.0.1:{server.server_port}/rss.xml", hits
+
+    yield start
+
+    for server in servers:
+        server.shutdown()
+
+
+def test_extract_unreachable_feed(mocker, mock_github_client):
+    """An unreachable feed should be tracked, and not stop the feeds after it"""
+    mocker.patch(
+        "learning_resources.etl.podcast.requests.Session.get",
+        side_effect=[RequestsConnectionError, mocker.Mock(content=rss_content())],
+    )
+    good_config = mock_podcast_file(rss_url="http://website.url/good/rss.xml")
+    mock_github_client.return_value.get_repo.return_value.get_contents.return_value = [
+        mock_podcast_file(rss_url="http://unreachable.url/rss.xml"),
+        good_config,
+    ]
+    tracked_ids = []
+
+    assert list(extract(tracked_ids=tracked_ids)) == [
+        (bs(rss_content(), "xml"), yaml.safe_load(good_config.decoded_content))
+    ]
+    assert tracked_ids == ["unreachable.url/rss.xml", "website.url/good/rss.xml"]
 
 
 @pytest.mark.django_db
@@ -326,10 +452,8 @@ def test_generate_aggregate_podcast_rss():
     assert result == bs(expected_rss, "xml").prettify()
 
 
-@pytest.mark.parametrize("github_token", [None, "token"])
-def test_github_podcast_config_files(settings, mock_github_client, github_token):
+def test_github_podcast_config_files(settings, mock_github_client):
     """Test the logic for retrieving podcast config files from github"""
-    settings.GITHUB_ACCESS_TOKEN = github_token
     mock_github_client.return_value.get_repo.return_value.get_contents.return_value = [
         mock_podcast_file(),
         mock_podcast_file(),
@@ -338,6 +462,9 @@ def test_github_podcast_config_files(settings, mock_github_client, github_token)
     results = github_podcast_config_files()
 
     assert len(results) == 2
+
+
+MISSING_RSS_URL = "Required key 'rss_url' is not present or not a url"
 
 
 @pytest.mark.parametrize(
@@ -349,9 +476,308 @@ def test_github_podcast_config_files(settings, mock_github_client, github_token)
             ["Podcast data should be a dict"],
         ),
         (None, ["podcast config data is empty"]),
+        ({"website": "http://test.edu"}, [MISSING_RSS_URL]),
+        # a bare `rss_url:` in the yaml, or a non-string scalar
+        ({"rss_url": None}, [MISSING_RSS_URL]),
+        ({"rss_url": ""}, [MISSING_RSS_URL]),
+        ({"rss_url": 123}, [MISSING_RSS_URL]),
         ({"rss_url": "http://test.edu", "website": "http://test.edu"}, []),
     ],
 )
 def test_validate_podcast_config(config, errors):
     """Test the logic for validating podcast config files"""
     assert validate_podcast_config(config) == errors
+
+
+@pytest.mark.parametrize(
+    ("rss", "expected"),
+    [
+        # Feed declared xmlns:podcast, so prettify() kept the prefix.
+        ('<item><podcast:transcript url="https://x/t.vtt"/></item>', True),
+        # Feed omitted the declaration, so lxml dropped the prefix on the way in.
+        ('<item><transcript url="https://x/t.vtt"/></item>', True),
+        # A description that merely mentions a transcript must not be selected.
+        ("<item><description>Full transcript at our site</description></item>", False),
+        ("<item><title>No tags</title></item>", False),
+        (None, False),
+    ],
+)
+def test_get_podcast_episodes_for_transcripts_job_selection(rss, expected):
+    """Only episodes whose stored feed XML opens a transcript tag are candidates"""
+    episode = PodcastEpisodeFactory.create(rss=rss, transcript="")
+    selected = get_podcast_episodes_for_transcripts_job().filter(
+        id=episode.learning_resource_id
+    )
+    assert selected.exists() is expected
+
+
+@pytest.mark.parametrize("overwrite", [True, False])
+def test_get_podcast_episodes_for_transcripts_job_overwrite(overwrite):
+    """A populated transcript is only re-fetched when overwrite is set"""
+    episode = PodcastEpisodeFactory.create(
+        rss='<item><podcast:transcript url="https://x/t.vtt"/></item>',
+        transcript="already fetched",
+    )
+    selected = get_podcast_episodes_for_transcripts_job(overwrite=overwrite).filter(
+        id=episode.learning_resource_id
+    )
+    assert selected.exists() is overwrite
+
+
+def test_get_podcast_episodes_for_transcripts_job_excludes_unpublished():
+    """Unpublished episodes are never candidates"""
+    episode = PodcastEpisodeFactory.create(
+        is_unpublished=True,
+        rss='<item><podcast:transcript url="https://x/t.vtt"/></item>',
+        transcript="",
+    )
+    assert (
+        not get_podcast_episodes_for_transcripts_job()
+        .filter(id=episode.learning_resource_id)
+        .exists()
+    )
+
+
+def test_get_podcast_transcripts_saves_and_reindexes(mocker):
+    """A fetched transcript is saved and the resource reindexed"""
+    mocker.patch(
+        "learning_resources.etl.podcast.fetch_transcript",
+        return_value="Host: the transcript.",
+    )
+    mock_update_index = mocker.patch("learning_resources.etl.podcast.update_index")
+    episode = PodcastEpisodeFactory.create(
+        rss='<item><podcast:transcript url="https://x/t.vtt" type="text/vtt"/></item>',
+        transcript="",
+    )
+
+    get_podcast_transcripts(
+        LearningResource.objects.filter(id=episode.learning_resource_id)
+    )
+
+    episode.refresh_from_db()
+    assert episode.transcript == "Host: the transcript."
+    mock_update_index.assert_called_once()
+
+
+def test_get_podcast_transcripts_skips_when_fetch_returns_nothing(mocker):
+    """A failed fetch leaves the transcript empty and does not reindex"""
+    mocker.patch("learning_resources.etl.podcast.fetch_transcript", return_value="")
+    mock_update_index = mocker.patch("learning_resources.etl.podcast.update_index")
+    episode = PodcastEpisodeFactory.create(
+        rss='<item><podcast:transcript url="https://x/t.vtt"/></item>', transcript=""
+    )
+
+    get_podcast_transcripts(
+        LearningResource.objects.filter(id=episode.learning_resource_id)
+    )
+
+    episode.refresh_from_db()
+    assert episode.transcript == ""
+    mock_update_index.assert_not_called()
+
+
+def test_get_podcast_transcripts_survives_one_bad_episode(mocker):
+    """One episode raising must not abort the batch"""
+    mocker.patch(
+        "learning_resources.etl.podcast.fetch_transcript",
+        side_effect=[ValueError("boom"), "Host: the second one."],
+    )
+    mocker.patch("learning_resources.etl.podcast.update_index")
+    rss = '<item><podcast:transcript url="https://x/t.vtt"/></item>'
+    first = PodcastEpisodeFactory.create(rss=rss, transcript="")
+    second = PodcastEpisodeFactory.create(rss=rss, transcript="")
+
+    get_podcast_transcripts(
+        LearningResource.objects.filter(
+            id__in=[first.learning_resource_id, second.learning_resource_id]
+        ).order_by("id")
+    )
+
+    first.refresh_from_db()
+    second.refresh_from_db()
+    assert first.transcript == ""
+    assert second.transcript == "Host: the second one."
+
+
+def test_transform_episode_omits_transcript(mock_github_client):
+    """
+    transform_episode must never emit a `transcript` key.
+
+    load_podcast_episode passes the podcast_episode dict to
+    update_or_create(defaults=...), so including it would blank every fetched
+    transcript on the next ETL run.
+    """
+    podcast_list = [mock_podcast_file()]
+    mock_github_client.return_value.get_repo.return_value.get_contents.return_value = (
+        podcast_list
+    )
+    item = bs(rss_content(), "xml").find("item")
+    assert (
+        "transcript" not in transform_episode(item, None, [], None)["podcast_episode"]
+    )
+
+
+def test_get_podcast_transcripts_clears_the_view_cache(mocker):
+    """
+    A saved transcript invalidates the cached transcript responses.
+
+    The endpoint caches for REDIS_VIEW_CACHE_DURATION, so an --overwrite run
+    would otherwise keep serving the superseded text for up to a day.
+    """
+    mocker.patch(
+        "learning_resources.etl.podcast.fetch_transcript",
+        return_value="Host: the transcript.",
+    )
+    mocker.patch("learning_resources.etl.podcast.update_index")
+    mock_clear = mocker.patch("learning_resources.etl.podcast.clear_views_cache")
+    episode = PodcastEpisodeFactory.create(
+        rss='<item><podcast:transcript url="https://x/t.vtt" type="text/vtt"/></item>',
+        transcript="",
+    )
+
+    get_podcast_transcripts(
+        LearningResource.objects.filter(id=episode.learning_resource_id)
+    )
+
+    mock_clear.assert_called_once_with(key_prefix="podcast_transcript")
+
+
+def test_get_podcast_transcripts_leaves_the_cache_alone_when_nothing_changed(mocker):
+    """A run that saves nothing must not evict responses that are still valid"""
+    mocker.patch("learning_resources.etl.podcast.fetch_transcript", return_value="")
+    mocker.patch("learning_resources.etl.podcast.update_index")
+    mock_clear = mocker.patch("learning_resources.etl.podcast.clear_views_cache")
+    episode = PodcastEpisodeFactory.create(
+        rss='<item><podcast:transcript url="https://x/t.vtt"/></item>', transcript=""
+    )
+
+    get_podcast_transcripts(
+        LearningResource.objects.filter(id=episode.learning_resource_id)
+    )
+
+    mock_clear.assert_not_called()
+
+
+def test_get_podcast_transcripts_does_not_clobber_concurrent_metadata(mocker):
+    """
+    A save must not revert metadata the podcast ETL wrote in the meantime.
+
+    The queryset is evaluated in full when the loop starts, but a save can land
+    much later, so an unrestricted save() would write the stale row back. The
+    podcast ETL runs 30 minutes before this job and rewrites rss, audio_url and
+    duration on every run.
+    """
+    episode = PodcastEpisodeFactory.create(
+        rss='<item><podcast:transcript url="https://x/t.vtt" type="text/vtt"/></item>',
+        transcript="",
+        duration="PT1M",
+    )
+
+    def fetch_and_race(_entries):
+        # Stands in for the podcast ETL updating the row while the transcript
+        # request is in flight.
+        PodcastEpisode.objects.filter(pk=episode.pk).update(duration="PT2M")
+        return "Host: the transcript."
+
+    mocker.patch(
+        "learning_resources.etl.podcast.fetch_transcript",
+        side_effect=fetch_and_race,
+    )
+    mocker.patch("learning_resources.etl.podcast.update_index")
+
+    get_podcast_transcripts(
+        LearningResource.objects.filter(id=episode.learning_resource_id)
+    )
+
+    episode.refresh_from_db()
+    assert episode.transcript == "Host: the transcript."
+    assert episode.duration == "PT2M"
+
+
+def test_get_podcast_transcripts_bumps_updated_on(mocker):
+    """
+    update_fields must list updated_on explicitly.
+
+    Django only bumps auto_now fields that appear in update_fields, so omitting
+    it would leave the row's timestamp stale after a real change.
+    """
+    mocker.patch(
+        "learning_resources.etl.podcast.fetch_transcript",
+        return_value="Host: the transcript.",
+    )
+    mocker.patch("learning_resources.etl.podcast.update_index")
+    episode = PodcastEpisodeFactory.create(
+        rss='<item><podcast:transcript url="https://x/t.vtt" type="text/vtt"/></item>',
+        transcript="",
+    )
+    before = episode.updated_on
+
+    get_podcast_transcripts(
+        LearningResource.objects.filter(id=episode.learning_resource_id)
+    )
+
+    episode.refresh_from_db()
+    assert episode.updated_on > before
+
+
+def test_get_podcast_transcripts_clears_the_cache_when_indexing_fails(mocker):
+    """
+    An indexing failure must not also skip cache invalidation.
+
+    The transcript is committed either way, and the default filter excludes a
+    non-empty transcript, so the row is never re-selected -- a stale cached
+    response would outlive the row it describes.
+    """
+    mocker.patch(
+        "learning_resources.etl.podcast.fetch_transcript",
+        return_value="Host: the transcript.",
+    )
+    mocker.patch(
+        "learning_resources.etl.podcast.update_index",
+        side_effect=RuntimeError("opensearch down"),
+    )
+    mock_clear = mocker.patch("learning_resources.etl.podcast.clear_views_cache")
+    episode = PodcastEpisodeFactory.create(
+        rss='<item><podcast:transcript url="https://x/t.vtt" type="text/vtt"/></item>',
+        transcript="",
+    )
+
+    get_podcast_transcripts(
+        LearningResource.objects.filter(id=episode.learning_resource_id)
+    )
+
+    episode.refresh_from_db()
+    assert episode.transcript == "Host: the transcript."
+    mock_clear.assert_called_once_with(key_prefix="podcast_transcript")
+
+
+def test_get_podcast_transcripts_indexing_failure_does_not_stop_the_batch(mocker):
+    """One episode failing to index must not skip the episodes after it"""
+    mocker.patch(
+        "learning_resources.etl.podcast.fetch_transcript",
+        return_value="Host: the transcript.",
+    )
+    mocker.patch(
+        "learning_resources.etl.podcast.update_index",
+        side_effect=[RuntimeError("opensearch down"), None],
+    )
+    mocker.patch("learning_resources.etl.podcast.clear_views_cache")
+    first = PodcastEpisodeFactory.create(
+        rss='<item><podcast:transcript url="https://x/t.vtt" type="text/vtt"/></item>',
+        transcript="",
+    )
+    second = PodcastEpisodeFactory.create(
+        rss='<item><podcast:transcript url="https://x/t.vtt" type="text/vtt"/></item>',
+        transcript="",
+    )
+
+    get_podcast_transcripts(
+        LearningResource.objects.filter(
+            id__in=[first.learning_resource_id, second.learning_resource_id]
+        ).order_by("id")
+    )
+
+    first.refresh_from_db()
+    second.refresh_from_db()
+    assert first.transcript == "Host: the transcript."
+    assert second.transcript == "Host: the transcript."

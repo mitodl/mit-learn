@@ -2,6 +2,8 @@
 Factory for Users
 """
 
+import uuid
+
 import ulid
 from django.conf import settings
 from factory import (
@@ -9,12 +11,15 @@ from factory import (
     LazyFunction,
     RelatedFactory,
     SelfAttribute,
+    Sequence,
     SubFactory,
     Trait,
 )
 from factory.django import DjangoModelFactory
 from factory.fuzzy import FuzzyText
 from social_django.models import UserSocialAuth
+
+from main.models import TaskBatch, TaskJob
 
 
 class UserFactory(DjangoModelFactory):
@@ -31,6 +36,8 @@ class UserFactory(DjangoModelFactory):
     scim_username = SelfAttribute("email")
 
     global_id = SelfAttribute("scim_external_id")
+
+    unsubscribe_uuid = LazyFunction(uuid.uuid4)
 
     class Meta:
         model = settings.AUTH_USER_MODEL
@@ -58,3 +65,25 @@ class UserSocialAuthFactory(DjangoModelFactory):
 
     class Meta:
         model = UserSocialAuth
+
+
+class TaskJobFactory(DjangoModelFactory):
+    """Factory for TaskJobs"""
+
+    task_name = FuzzyText()
+    params = LazyFunction(dict)
+
+    class Meta:
+        model = TaskJob
+
+
+class TaskBatchFactory(DjangoModelFactory):
+    """Factory for TaskBatches"""
+
+    job = SubFactory(TaskJobFactory)
+    batch_key = Sequence(lambda n: f"batch:{n}")
+    kind = FuzzyText()
+    params = LazyFunction(dict)
+
+    class Meta:
+        model = TaskBatch

@@ -2,7 +2,7 @@
 Django settings specific to learning_resources ingestion
 """
 
-from main.envs import get_bool, get_int, get_string
+from main.envs import get_bool, get_int, get_list_of_str, get_string
 
 # EDX API Credentials
 EDX_API_URL = get_string("EDX_API_URL", None)
@@ -13,9 +13,6 @@ EDX_API_CLIENT_SECRET = get_string("EDX_API_CLIENT_SECRET", None)
 EDX_COURSE_BUCKET_PREFIX = get_string(
     "EDX_COURSE_BUCKET_PREFIX", "edxorg-raw-data/edxorg/raw_data/course_xml/"
 )
-
-# Authentication for the github api
-GITHUB_ACCESS_TOKEN = get_string("GITHUB_ACCESS_TOKEN", None)
 
 # OCW settings
 OCW_LIVE_BUCKET = get_string("OCW_LIVE_BUCKET", None)
@@ -34,10 +31,7 @@ BLOCKLISTED_COURSES_URL = get_string(
     "BLOCKLISTED_COURSES_URL",
     "https://raw.githubusercontent.com/mitodl/open-resource-blocklists/master/courses.txt",
 )
-DUPLICATE_COURSES_URL = get_string("DUPLICATE_COURSES_URL", None)
 
-# Base URL for Micromasters data
-MICROMASTERS_CATALOG_API_URL = get_string("MICROMASTERS_CATALOG_API_URL", None)
 
 # Iterator chunk size for MITx and xPRO courses
 LEARNING_COURSE_ITERATOR_CHUNK_SIZE = get_int("LEARNING_COURSE_ITERATOR_CHUNK_SIZE", 20)
@@ -56,6 +50,9 @@ MITX_ONLINE_COURSE_BUCKET_PREFIX = get_string(
 MITX_ONLINE_BASE_URL = get_string("MITX_ONLINE_BASE_URL", None)
 MITX_ONLINE_PROGRAMS_API_URL = get_string("MITX_ONLINE_PROGRAMS_API_URL", None)
 MITX_ONLINE_COURSES_API_URL = get_string("MITX_ONLINE_COURSES_API_URL", None)
+# API key for the MITx Online internal-only secured endpoint. When set, it is
+# sent as an "Authorization: Api-Key <key>" header on MITx Online ETL requests.
+MITX_ONLINE_ETL_API_KEY = get_string("MITX_ONLINE_ETL_API_KEY", None)
 
 
 # Open Learning Library settings
@@ -123,6 +120,15 @@ OVS_API_BASE_URL = get_string(
     "OVS_API_BASE_URL",
     None,
 )
+# Hosts that OVS media urls (thumbnails, streaming sources, subtitles) may point
+# at. OVS payloads arrive over a webhook, so any url in them is untrusted input:
+# without an allowlist a forged payload could point our requests at an arbitrary
+# (possibly internal) host. The OVS_API_BASE_URL host is always allowed. An entry
+# beginning with a "." matches any subdomain of that domain.
+OVS_ALLOWED_MEDIA_HOSTS = get_list_of_str(
+    "OVS_ALLOWED_MEDIA_HOSTS",
+    [],
+)
 
 # course catalog podcast etl settings
 OPEN_PODCAST_DATA_BRANCH = get_string("OPEN_PODCAST_DATA_BRANCH", "master")
@@ -145,3 +151,15 @@ CONTENT_BASE_URL_OLL = get_string(
     "CONTENT_BASE_URL_OLL", "https://openlearninglibrary.mit.edu"
 )
 CONTENT_BASE_URL_EDX = get_string("CONTENT_BASE_URL_EDX", "https://courses.edx.org")
+
+# Warehouse-pull settings for Cohort 1 catalog ETL, used to query the
+# integrations schema views exposed by the OL Data Platform. WAREHOUSE_BACKEND
+# selects the connector without touching ETL task code (see
+# learning_resources.lib.warehouse). Backend-specific credentials are
+# namespaced (e.g. STARROCKS_*) so future backends (e.g. a DuckDB-based
+# local/offline mode) can sit alongside without colliding.
+WAREHOUSE_BACKEND = get_string("WAREHOUSE_BACKEND", "starrocks")
+STARROCKS_HOST = get_string("STARROCKS_HOST", None)
+STARROCKS_PORT = get_int("STARROCKS_PORT", 9030)
+STARROCKS_USER = get_string("STARROCKS_USER", None)
+STARROCKS_PASSWORD = get_string("STARROCKS_PASSWORD", None)

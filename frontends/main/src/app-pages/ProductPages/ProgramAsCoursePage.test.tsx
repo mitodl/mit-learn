@@ -27,8 +27,8 @@ import { assertHeadings } from "ol-test-utilities"
 import ProgramAsCoursePage from "./ProgramAsCoursePage"
 import { notFound } from "next/navigation"
 import {
-  useStayUpdatedEnv,
-  PROGRAM_HIDE_STAY_UPDATED_CASES,
+  STAY_UPDATED_FORM_ID,
+  withHubspotFormId,
 } from "./test-utils/stayUpdated"
 import invariant from "tiny-invariant"
 import { getIdsFromReqTree } from "@/common/mitxonline"
@@ -43,6 +43,10 @@ const makeProgramAsCourse: typeof factories.programs.program = (
     ...overrides,
   })
 const makePage = factories.pages.programPageItem
+
+// Enrollment status can be slow to resolve, so wait longer for the enroll
+// button to leave its loading state before asserting on it.
+const ENROLL_STATUS_TIMEOUT = 5000
 
 const setupApis = ({
   program,
@@ -98,9 +102,11 @@ const setupApis = ({
     learnUrls.userMe.get(),
     learnFactories.user.user({ is_authenticated: false }),
   )
+  // Clicking enroll consults the MITx Online profile through the compliance
+  // gate; the factory default has nothing missing, so it passes straight through.
+  setMockResponse.get(urls.userMe.get(), factories.user.user())
 
-  const stayUpdatedFormId =
-    process.env.NEXT_PUBLIC_STAY_UPDATED_HUBSPOT_FORM_ID?.trim()
+  const stayUpdatedFormId = page.hubspot_form_id?.trim()
   if (stayUpdatedFormId) {
     setMockResponse.get(
       learnUrls.hubspot.details({ form_id: stayUpdatedFormId }),
@@ -124,6 +130,9 @@ describe("ProgramAsCoursePage", () => {
 
     const program = makeProgramAsCourse({
       certificate_available: true,
+      enrollment_modes: [
+        factories.courses.enrollmentMode({ requires_payment: true }),
+      ],
       products: [factories.courses.product({ price: "250" })],
       req_tree: reqTree.serialize(),
     })
@@ -146,6 +155,9 @@ describe("ProgramAsCoursePage", () => {
         { level: 2, name: "Prerequisites" },
         { level: 2, name: "Meet your instructors" },
         { level: 3, name: page.faculty[0].instructor_name },
+        { level: 2, name: "FAQs" },
+        ...page.faqs.map((faq) => ({ level: 3, name: faq.question })),
+        { level: 2, name: "What learners are saying" },
       ])
     })
   })
@@ -161,7 +173,11 @@ describe("ProgramAsCoursePage", () => {
     renderWithProviders(
       <ProgramAsCoursePage readableId={program.readable_id} />,
     )
-    const buttons = await screen.findAllByRole("button", { name: /enroll/i })
+    const buttons = await screen.findAllByRole(
+      "button",
+      { name: "Start Learning" },
+      { timeout: ENROLL_STATUS_TIMEOUT },
+    )
     expect(buttons.length).toBeGreaterThanOrEqual(1)
   })
 
@@ -326,15 +342,12 @@ describe("ProgramAsCoursePage", () => {
   })
 
   describe("Stay Updated button", () => {
-    useStayUpdatedEnv()
-
-    test("Shows button when program has only the verified enrollment mode", async () => {
-      const program = makeProgramAsCourse({
-        enrollment_modes: [
-          factories.courses.enrollmentMode({ mode_slug: "verified" }),
-        ],
-      })
-      const page = makePage({ program_details: program })
+    test("Shows button when the page has a hubspot form id", async () => {
+      const program = makeProgramAsCourse()
+      const page = withHubspotFormId(
+        makePage({ program_details: program }),
+        STAY_UPDATED_FORM_ID,
+      )
       setupApis({ program, page })
       renderWithProviders(
         <ProgramAsCoursePage readableId={program.readable_id} />,
@@ -345,33 +358,15 @@ describe("ProgramAsCoursePage", () => {
       ).toBeInTheDocument()
     })
 
-    test.each(PROGRAM_HIDE_STAY_UPDATED_CASES)(
-      "Hides button when $label",
-      async ({ enrollment_modes: enrollmentModes }) => {
-        const program = makeProgramAsCourse({
-          enrollment_modes: enrollmentModes,
-        })
-        const page = makePage({ program_details: program })
-        setupApis({ program, page })
-        renderWithProviders(
-          <ProgramAsCoursePage readableId={program.readable_id} />,
-        )
-
-        await screen.findByRole("heading", { name: page.title })
-        expect(
-          screen.queryByRole("button", { name: "Stay Updated" }),
-        ).not.toBeInTheDocument()
-      },
-    )
-
-    test("Hides button when Stay Updated form ID is not configured", async () => {
-      delete process.env.NEXT_PUBLIC_STAY_UPDATED_HUBSPOT_FORM_ID
-      const program = makeProgramAsCourse({
-        enrollment_modes: [
-          factories.courses.enrollmentMode({ mode_slug: "verified" }),
-        ],
-      })
-      const page = makePage({ program_details: program })
+    test.each([
+      { label: "the form id is blank", hubspotFormId: "" },
+      { label: "the form id is null", hubspotFormId: null },
+    ])("Hides button when $label", async ({ hubspotFormId }) => {
+      const program = makeProgramAsCourse()
+      const page = withHubspotFormId(
+        makePage({ program_details: program }),
+        hubspotFormId,
+      )
       setupApis({ program, page })
       renderWithProviders(
         <ProgramAsCoursePage readableId={program.readable_id} />,
@@ -415,9 +410,11 @@ describe("ProgramAsCoursePage", () => {
       <ProgramAsCoursePage readableId={program.readable_id} />,
     )
 
-    const [enrollButton] = await screen.findAllByRole("button", {
-      name: "Enroll",
-    })
+    const [enrollButton] = await screen.findAllByRole(
+      "button",
+      { name: "Start Learning" },
+      { timeout: ENROLL_STATUS_TIMEOUT },
+    )
     await user.click(enrollButton)
 
     await waitFor(() => {
@@ -462,7 +459,6 @@ describe("ProgramAsCoursePage", () => {
 
   test("Hides certificate track pricing card for free-enrollment programs", async () => {
     const program = makeProgramAsCourse({
-      certificate_available: false,
       enrollment_modes: [
         factories.courses.enrollmentMode({ requires_payment: false }),
       ],
@@ -480,9 +476,11 @@ describe("ProgramAsCoursePage", () => {
     expect(
       screen.queryByText("Earn a verified certificate of completion"),
     ).not.toBeInTheDocument()
-    const enrollButtons = await screen.findAllByRole("button", {
-      name: /enroll/i,
-    })
+    const enrollButtons = await screen.findAllByRole(
+      "button",
+      { name: "Start Learning" },
+      { timeout: ENROLL_STATUS_TIMEOUT },
+    )
     expect(enrollButtons.length).toBeGreaterThanOrEqual(1)
   })
 

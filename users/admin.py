@@ -19,5 +19,17 @@ class UserAdmin(ContribUserAdmin):
 
     fieldsets = (
         *ContribUserAdmin.fieldsets,
+        (
+            "Identity provider",
+            {
+                "fields": ("is_sso_user",),
+                "description": (
+                    "Blank until it is first determined from Keycloak. Clear it "
+                    "to have it re-read, or set it explicitly to override — "
+                    "unsetting it lets a user manage their own email and "
+                    "password here."
+                ),
+            },
+        ),
         ("SCIM", {"fields": ("scim_id", "scim_username", "scim_external_id")}),
     )

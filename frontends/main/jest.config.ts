@@ -10,6 +10,14 @@ const config: Config.InitialOptions = {
   transformIgnorePatterns: [
     "node_modules/(?!(@faker-js|react-hotkeys-hook)).+",
   ],
+  // jest-environment-jsdom defaults these to ["browser"], but
+  // @happy-dom/jest-environment defaults to ["node", "node-addons"], under
+  // which `@sentry/nextjs` does not resolve at all. Setting it here keeps the
+  // two environments resolving packages identically; both simulate a browser.
+  testEnvironmentOptions: {
+    ...baseConfig.testEnvironmentOptions,
+    customExportConditions: ["browser"],
+  },
   moduleNameMapper: {
     ...baseConfig.moduleNameMapper,
     "^@/(.*)$": path.resolve(__dirname, "src/$1"),

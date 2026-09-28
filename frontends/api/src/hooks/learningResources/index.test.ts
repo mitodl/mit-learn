@@ -9,7 +9,10 @@ import {
   useInfiniteLearningResourceItems,
   useLearningResourcesList,
   useLearningResourceTopics,
+  useLearningResourceSetLearningPathRelationships,
 } from "./index"
+import { learningResourceKeys } from "./queries"
+import { learningPathKeys } from "../learningPaths/queries"
 import { setMockResponse, urls, makeRequest } from "../../test-utils"
 import * as factories from "../../test-utils/factories"
 import { UseQueryResult } from "@tanstack/react-query"
@@ -141,4 +144,33 @@ describe("useLearningResourceTopics", () => {
       await assertApiCalled(result, url, "GET", data)
     },
   )
+})
+
+describe("useLearningResourceSetLearningPathRelationships", () => {
+  it("invalidates learning path and featured queries", async () => {
+    const resource = factory.resource()
+    const url = urls.learningResources.setLearningPathRelationships({
+      id: resource.id,
+    })
+    setMockResponse.patch(url, resource)
+
+    const { wrapper, queryClient } = setupReactQueryTest()
+    jest.spyOn(queryClient, "invalidateQueries")
+
+    const { result } = renderHook(
+      useLearningResourceSetLearningPathRelationships,
+      {
+        wrapper,
+      },
+    )
+    result.current.mutate({ id: resource.id })
+    await waitFor(() => expect(result.current.isSuccess).toBe(true))
+
+    expect(queryClient.invalidateQueries).toHaveBeenCalledWith({
+      queryKey: learningPathKeys.root,
+    })
+    expect(queryClient.invalidateQueries).toHaveBeenCalledWith({
+      queryKey: learningResourceKeys.featuredRoot(),
+    })
+  })
 })

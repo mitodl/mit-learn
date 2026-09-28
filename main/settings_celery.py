@@ -18,8 +18,13 @@ QDRANT_EMBEDDINGS_TASK_LOOKBACK_WINDOW = EMBEDDING_SCHEDULE_MINUTES + 60
 DEV_ENV = get_bool("DEV_ENV", False)  # noqa: FBT003
 USE_CELERY = True
 REDIS_URL = get_string("REDIS_URL", get_string("REDISCLOUD_URL", None))
-CELERY_BROKER_URL = get_string("CELERY_BROKER_URL", REDIS_URL)
-CELERY_RESULT_BACKEND = get_string("CELERY_RESULT_BACKEND", REDIS_URL)
+CELERY_BROKER_URL = get_string("CELERY_BROKER_URL", None)
+CELERY_RESULT_BACKEND = get_string("CELERY_RESULT_BACKEND", None)
+# Celery's 24h default lets reindex chord fan-outs (thousands of subtask
+# result keys) accumulate; when the result backend is the broker/cache Redis
+# (the default here) that saturates memory. Keep results only long enough for
+# chord callbacks to consume them.
+CELERY_RESULT_EXPIRES = get_int("CELERY_RESULT_EXPIRES", 60 * 60)
 CELERY_BEAT_SCHEDULER = RedBeatScheduler
 redbeat_redis_url = CELERY_BROKER_URL
 CELERY_TASK_ALWAYS_EAGER = get_bool("CELERY_TASK_ALWAYS_EAGER", False)  # noqa: FBT003
@@ -48,10 +53,6 @@ CELERY_BEAT_SCHEDULE = (
             "task": "learning_resources.tasks.import_all_mit_edx_files",
             "schedule": crontab(minute=0, hour=6),
         },
-        "update-micromasters-programs-every-1-days": {
-            "task": "learning_resources.tasks.get_micromasters_data",
-            "schedule": crontab(minute=0, hour=5),  # 1:00am EST
-        },
         "update-mit-climate-articles-every-1-days": {
             "task": "learning_resources.tasks.get_mit_climate_data",
             "schedule": crontab(minute=30, hour=5),  # 1:30am EST
@@ -67,6 +68,14 @@ CELERY_BEAT_SCHEDULE = (
         "update-podcasts": {
             "task": "learning_resources.tasks.get_podcast_data",
             "schedule": crontab(minute=0, hour="6,23"),  # 2am and 7pm EST
+        },
+        # 30 minutes after each podcast run, so a new episode's transcript
+        # lands shortly after the episode itself. Same pairing as
+        # update-ovs-videos / update-ovs-transcripts. overwrite defaults to
+        # False, so only episodes still missing a transcript are fetched.
+        "update-podcast-transcripts": {
+            "task": "learning_resources.tasks.get_podcast_transcripts",
+            "schedule": crontab(minute=30, hour="6,23"),  # 2:30am and 7:30pm EST
         },
         "update-professional-ed-resources-every-1-days": {
             "task": "learning_resources.tasks.get_mitpe_data",
@@ -135,7 +144,7 @@ CELERY_BEAT_SCHEDULE = (
             "schedule": crontab(
                 minute=0, hour=5, day_of_week=0
             ),  # 12:00 PM EST on Sundays
-            "kwargs": {"overwrite": False},
+            "kwargs": {"canvas_course_ids": None, "overwrite": False},
         },
         "update_posthog_events": {
             "task": "learning_resources.tasks.get_learning_resource_views",
@@ -162,6 +171,20 @@ CELERY_BEAT_SCHEDULE = (
         "update-search-featured-ranks-1-days": {
             "task": "learning_resources_search.tasks.update_featured_rank",
             "schedule": crontab(minute=30, hour=7),  # 3:30am EST
+        },
+        "delete-old-task-jobs-every-1-days": {
+            "task": "main.tasks.delete_old_task_jobs",
+            "schedule": crontab(minute=0, hour=8),  # 4:00am EST
+        },
+        "clear-views-cache": {
+            "task": "main.tasks.clear_views_cache",
+            # This, not REDIS_VIEW_CACHE_DURATION, is the effective lifetime of
+            # a cached view response: it bounds how stale ETL and search index
+            # changes can look to users. Lengthen it for more cache hits and
+            # less rendering load, shorten it for fresher responses.
+            "schedule": get_int(
+                "CLEAR_VIEWS_CACHE_SCHEDULE_SECONDS", 60 * 60
+            ),  # default is every hour
         },
         "scrape-marketing-pages-every-1-days": {
             "task": "learning_resources.tasks.scrape_marketing_pages",
@@ -202,15 +225,54 @@ CELERY_BEAT_SCHEDULE = (
                 minute=0, hour=4
             ),  # 04:00 UTC (midnight ET during DST, 11pm ET during standard time)
         },
+        "generate-credential-metadata-every-1-days": {
+            "task": "learning_resources.tasks.generate_all_credential_metadata",
+            "schedule": crontab(minute=0, hour=11),  # 7:00am EDT / 6:00am EST
+            # Gaps only. An overwriting sweep regenerates the whole MITx
+            # Online catalogue at full LLM cost every day; the non-overwriting
+            # one queues nothing once the catalogue is filled.
+            "kwargs": {"overwrite": False},
+        },
     }
 )
+
+# MicroMasters/MITx Online program certificate sync (StarRocks-backed — see
+# learning_resources.lib.warehouse.BaseWarehouseETLTask), replacing the
+# Hightouch sync into external.programcertificate (mitodl/hq#12954).
+# Doesn't participate in the cutover-switch mechanism below: Hightouch runs
+# externally, not as an MIT Learn Celery task, so there's no legacy beat
+# entry here to retire once validated.
+if (
+    not CELERY_BEAT_DISABLED
+    and get_string("STARROCKS_HOST", None)
+    and get_string("STARROCKS_USER", None)
+):
+    CELERY_BEAT_SCHEDULE.update(
+        {
+            "warehouse-sync-program-certificates-every-1-days": {
+                "task": "profiles.tasks.SyncProgramCertificatesTask",
+                "schedule": crontab(minute=0, hour=9),  # 5:00am EDT / 4:00am EST
+                "kwargs": {"full_refresh": True},
+            },
+        }
+    )
+
+# Per-source cutover between the legacy Celery ETL, the warehouse pull and the
+# data platform's webhook push is not configured here. Every pipeline stays
+# scheduled and checks ETLSourceOwnership when it runs, so only the owner of an
+# (etl_source, resource_type) writes it. Flip the row in Django admin to cut a
+# source over or back. See learning_resources/etl/ownership.py.
 
 CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"
 CELERY_ACCEPT_CONTENT = ["json"]
 CELERY_TIMEZONE = "UTC"
-CELERY_TASK_TASK_TRACK_STARTED = True
 CELERY_TASK_SEND_SENT_EVENT = True
+# Expire orphaned per-consumer event queues so celeryev traffic does not
+# accumulate unbounded in Redis when an event consumer (Flower, `celery events`,
+# or a worker started with -E) disconnects without deregistering.
+CELERY_EVENT_QUEUE_EXPIRES = get_int("CELERY_EVENT_QUEUE_EXPIRES", 60)
+CELERY_EVENT_QUEUE_TTL = get_int("CELERY_EVENT_QUEUE_TTL", 5)
 CELERY_RATE_LIMIT = get_string("CELERY_DEFAULT_RATE_LIMIT", "600/m")
 CELERY_SEARCH_RATE_LIMIT = get_string("CELERY_SEARCH_RATE_LIMIT", CELERY_RATE_LIMIT)
 CELERY_VECTOR_SEARCH_RATE_LIMIT = get_string(

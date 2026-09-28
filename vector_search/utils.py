@@ -2,19 +2,19 @@ import asyncio
 import gc
 import logging
 import uuid
+from datetime import UTC, datetime, timedelta
 from functools import cache
+from textwrap import dedent
 
 from asgiref.sync import sync_to_async
 from django.conf import settings
 from django.db.models import Prefetch, Q
-from langchain_text_splitters import (
-    MarkdownHeaderTextSplitter,
-    RecursiveCharacterTextSplitter,
-)
 from qdrant_client import AsyncQdrantClient, QdrantClient, models
 
-from learning_resources.constants import PROGRAM_COURSE_CACHE_KEY_TEST_MODE
-from learning_resources.content_summarizer import ContentSummarizer
+from learning_resources.constants import (
+    CONTENT_FILE_LARGE_FIELDS,
+    PROGRAM_COURSE_CACHE_KEY_TEST_MODE,
+)
 from learning_resources.models import (
     ContentFile,
     LearningResource,
@@ -27,6 +27,7 @@ from learning_resources.serializers import (
     LearningResourceSerializer,
 )
 from learning_resources.utils import (
+    is_loggable_missing_content_id,
     log_missing_content_file,
     present_edx_module_ids,
 )
@@ -38,10 +39,18 @@ from learning_resources_search.serializers import (
     serialize_bulk_content_files,
     serialize_bulk_learning_resources,
 )
-from main.utils import checksum_for_content
+from main.utils import checksum_for_content, chunks, db_sync_to_async
 from vector_search.constants import (
+    COLLECTION_INDEX_MAP,
     COLLECTION_PARAM_MAP,
+    COMPLETENESS_PAYLOAD_KEY,
     CONTENT_FILES_COLLECTION_NAME,
+    CONTENT_FILES_RETRIEVE_PAYLOAD,
+    COURSE_NUMBER_INDEXING_ONLY_FIELDS,
+    NEXT_START_DATE_PAYLOAD_KEY,
+    NULLABLE_ORDER_BY_KEYS,
+    ORDER_BY_MISSING_DATETIME,
+    PROGRAM_SCORE_BOOST_NAME,
     QDRANT_CONTENT_FILE_INDEXES,
     QDRANT_CONTENT_FILE_PARAM_MAP,
     QDRANT_LEARNING_RESOURCE_INDEXES,
@@ -59,11 +68,21 @@ from vector_search.constants import (
     QDRANT_OPTIMIZER_THRESHOLD_SMALL,
     QDRANT_RESOURCE_PARAM_MAP,
     QDRANT_TOPIC_INDEXES,
+    RESOURCE_AGE_DATE_PAYLOAD_KEY,
+    RESOURCE_EMBEDDING_CHECKSUM_FIELD,
+    RESOURCE_EMBEDDING_VERSION,
     RESOURCES_COLLECTION_NAME,
+    RESOURCES_PAYLOAD_EXCLUDE,
+    RESOURCES_RETRIEVE_PAYLOAD,
+    SECONDS_PER_YEAR,
     TOPICS_COLLECTION_NAME,
     VECTOR_SEARCH_SCORE_BOOST,
 )
-from vector_search.encoders.utils import dense_encoder, sparse_encoder
+from vector_search.encoders.utils import (
+    dense_encoder,
+    sparse_encoder,
+    truncate_to_model_limit,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -257,6 +276,11 @@ def create_qdrant_collection(collection_name, force_recreate):
             sparse_vectors_config={
                 encoder_sparse.model_short_name(): models.SparseVectorParams(
                     index=models.SparseIndexParams(on_disk=True),
+                    # Without IDF a corpus-wide term ("class") outweighs the one
+                    # that identifies the topic. Only new collections get it
+                    # here; an existing one takes update_collection alone, no
+                    # reindex. The live ones were switched over by hand.
+                    modifier=models.Modifier.IDF,
                 )
             },
             replication_factor=2,
@@ -385,6 +409,8 @@ def embed_topics():
 
 @cache
 def _get_text_splitter(**kwargs):
+    from langchain_text_splitters import RecursiveCharacterTextSplitter
+
     if settings.LITELLM_TOKEN_ENCODING_NAME:
         kwargs["encoding_name"] = settings.LITELLM_TOKEN_ENCODING_NAME
         return RecursiveCharacterTextSplitter.from_tiktoken_encoder(**kwargs)
@@ -421,6 +447,8 @@ def _chunk_markdown_documents(text, metadata):
     metadata so every chunk's page_content is self-describing
     for embedding.
     """
+    from langchain_text_splitters import MarkdownHeaderTextSplitter
+
     header_splitter = MarkdownHeaderTextSplitter(
         headers_to_split_on=MARKDOWN_HEADERS_TO_SPLIT_ON,
         strip_headers=False,
@@ -460,13 +488,102 @@ def _chunk_markdown_documents(text, metadata):
     return split_docs
 
 
-def _learning_resource_embedding_context(document):
+def _metadata_serializer_context():
     """
-    Get the embedding context for a learning resource
+    Context for the metadata display serializer, including the per-batch
+    cache the program course lookups populate.
     """
-    return (
-        f"{document.get('title')} "
-        f"{document.get('description')} {document.get('full_description')}"
+    return {
+        PROGRAM_COURSE_CACHE_KEY_TEST_MODE: {},
+        "include_test_mode_children": True,
+    }
+
+
+def _resource_metadata_markdown(document, serializer_context=None):
+    """
+    Render the resource's metadata document as markdown, or None if the display
+    serializer cannot render it.
+
+    This is the same document that gets chunked into the content file
+    collection by _embed_course_metadata_as_contentfile.
+
+    A render failure skips the resource rather than substituting a degraded
+    context: whatever we embed gets checksummed and stored as if it were the
+    real thing, so a partial context would look up to date forever after. The
+    next run retries from scratch and repairs it.
+    """
+    serializer = LearningResourceMetadataDisplaySerializer(
+        document,
+        context=(
+            serializer_context
+            if serializer_context is not None
+            else _metadata_serializer_context()
+        ),
+    )
+    try:
+        return serializer.render_markdown()
+    except Exception:
+        logger.exception(
+            "Failed to render metadata document for %s",
+            document.get("readable_id"),
+        )
+        return None
+
+
+def _learning_resource_embedding_context(document, serializer_context=None):
+    """
+    Get the embedding context for a learning resource, or None if its metadata
+    document cannot be rendered (see _resource_metadata_markdown).
+
+    The resource's metadata document -- the markdown rendering of everything
+    shown in the resource drawer (title, description, instructors, prices,
+    dates, levels, ...) -- stands in for the old title/description text so
+    that vector search can match on the details the OpenSearch query exposes
+    as searchable fields.
+
+    Content from any attached content files is folded in, mirroring the
+    OpenSearch text query which matches against the content of all of a
+    resource's content files regardless of resource type. The combined
+    context is truncated to the embedding model's input limit.
+    """
+    metadata_markdown = _resource_metadata_markdown(document, serializer_context)
+    if metadata_markdown is None:
+        return None
+    parts = [metadata_markdown]
+    course_numbers = document.get("course_numbers") or (
+        document.get("course", {}).get("course_numbers")
+        if isinstance(document.get("course"), dict)
+        else None
+    )
+    if course_numbers:
+        formatted_numbers = [
+            num.get("value") if isinstance(num, dict) else str(num)
+            for num in course_numbers
+            if (num.get("value") if isinstance(num, dict) else num)
+        ]
+        if len(formatted_numbers) > 1:
+            numbers_list = "\n".join(f"- {num}" for num in formatted_numbers)
+            parts.append(f"**Course numbers:**\n\n{numbers_list}")
+        elif formatted_numbers:
+            parts.append(f"**Course numbers:** {formatted_numbers[0]}")
+    elif document.get("resource_type_group") == "course" and document.get(
+        "readable_id"
+    ):
+        parts.append(f"**Course number:** {document.get('readable_id')}")
+
+    context = dedent("\n\n".join(filter(None, parts)))
+    content = "\n\n".join(
+        content_file["content"]
+        for content_file in document.get("content_files") or []
+        if content_file.get("content")
+    )
+    if content:
+        context = f"{context}\n\n## Content\n{content}"
+    encoder = dense_encoder()
+    return truncate_to_model_limit(
+        context,
+        encoder.model_name,
+        token_encoding_name=getattr(encoder, "token_encoding_name", None),
     )
 
 
@@ -477,20 +594,56 @@ def _content_file_embedding_context(document):
     return document.get("content", "")
 
 
+def _with_run_readable_id_fallback(serialized_document):
+    """
+    Return the document with run_readable_id defaulted to the resource
+    readable_id for run-less content files (e.g. scraped marketing pages).
+
+    The content-file search API rewrites resource_readable_id filters into
+    run_readable_id filters (see ContentFilesVectorSearchView), so every point
+    payload must carry a run_readable_id to stay reachable -- course-metadata
+    points already follow this convention. Only the Qdrant payload gets the
+    fallback; point ids still derive from the raw serialized document.
+    """
+    if serialized_document.get("run_readable_id") or not serialized_document.get(
+        "resource_readable_id"
+    ):
+        return serialized_document
+    return {
+        **serialized_document,
+        "run_readable_id": serialized_document["resource_readable_id"],
+    }
+
+
 def _process_resource_embeddings(serialized_resources):
     docs = []
     metadata = []
     ids = []
     encoder_dense = dense_encoder()
     encoder_sparse = sparse_encoder()
+    serializer_context = _metadata_serializer_context()
 
     for doc in serialized_resources:
-        if not should_generate_resource_embeddings(doc):
+        embedding_context = _learning_resource_embedding_context(
+            doc, serializer_context
+        )
+        if embedding_context is None:
+            # Rendering failed and was logged. Leave the point untouched --
+            # refreshing the payload here would overwrite the checksum of the
+            # vector it still holds.
+            continue
+        # Set before the gate so both branches persist it: the skip branch
+        # overwrites the whole payload, and the value it writes is the one
+        # already stored (that is why it is skipping).
+        doc[RESOURCE_EMBEDDING_CHECKSUM_FIELD] = resource_embedding_checksum(
+            embedding_context
+        )
+        if not should_generate_resource_embeddings(doc, embedding_context):
             update_learning_resource_payload(doc)
             continue
         metadata.append(doc)
         ids.append(vector_point_id(vector_point_key(doc)))
-        docs.append(_learning_resource_embedding_context(doc))
+        docs.append(embedding_context)
     if len(docs) > 0:
         embeddings = encoder_dense.embed_documents(docs)
         sparse_embeddings = encoder_sparse.embed_documents(docs)
@@ -534,7 +687,7 @@ def update_content_file_payload(serialized_document):
 
     _set_payload(
         points,
-        serialized_document,
+        _with_run_readable_id_fallback(serialized_document),
         param_map=QDRANT_CONTENT_FILE_PARAM_MAP,
         collection_name=CONTENT_FILES_COLLECTION_NAME,
     )
@@ -568,35 +721,48 @@ def _set_payload(points, document, param_map, collection_name):
         )
 
 
-def should_generate_resource_embeddings(serialized_document):
+def resource_embedding_checksum(embedding_context):
+    """
+    Checksum the text a resource point's vector was generated from.
+
+    Stored alongside the point under RESOURCE_EMBEDDING_CHECKSUM_FIELD so the
+    embed gate can compare what was actually embedded against what we would
+    embed now. Re-rendering the stored payload cannot answer that question: the
+    display serializer pulls program children from current database rows, so a
+    changed child title renders identically on both sides and the parent's
+    vector stays stale -- and any change to the rendering itself is invisible
+    for the same reason. RESOURCE_EMBEDDING_VERSION covers the latter.
+    """
+    return checksum_for_content(f"{RESOURCE_EMBEDDING_VERSION}\n{embedding_context}")
+
+
+def should_generate_resource_embeddings(serialized_document, embedding_context):
     """
     Determine if we should generate embeddings for a learning resource
+
+    embedding_context is the rendered context the caller is about to embed --
+    rendering it is not cheap, so the caller passes the one it already has.
+
+    Points embedded before the checksum existed carry no stored value and are
+    re-embedded once, which is what pulls the existing catalog onto a new
+    context format.
     """
     client = qdrant_client()
     point_id = vector_point_id(vector_point_key(serialized_document))
     response = client.retrieve(
         collection_name=RESOURCES_COLLECTION_NAME,
         ids=[point_id],
+        with_payload=[RESOURCE_EMBEDDING_CHECKSUM_FIELD],
     )
-    if len(response) > 0:
-        resource_payload = response[0].payload
-        stored_embedding_content = _learning_resource_embedding_context(
-            resource_payload
-        )
-        current_embedding_content = _learning_resource_embedding_context(
-            serialized_document
-        )
-        if stored_embedding_content == current_embedding_content:
-            return False
-    return True
+    if not response:
+        return True
+    stored_checksum = (response[0].payload or {}).get(RESOURCE_EMBEDDING_CHECKSUM_FIELD)
+    return stored_checksum != resource_embedding_checksum(embedding_context)
 
 
-def should_generate_content_embeddings(
+def _retrieve_content_file_point(
     serialized_document: dict, point_id: str | None = None
-) -> bool:
-    """
-    Determine if we should generate embeddings for a content file
-    """
+):
     client = qdrant_client()
     if not point_id:
         # we just need metadata from the first chunk
@@ -610,10 +776,46 @@ def should_generate_content_embeddings(
         ids=[point_id],
     )
     if len(response) > 0:
-        qdrant_checksum = response[0].payload.get("checksum")
-        if qdrant_checksum == serialized_document["checksum"]:
-            return False
-    return True
+        return response[0]
+    return None
+
+
+def _stored_content_payloads(
+    point_ids: list[str], fields: tuple[str, ...] = ("checksum",)
+) -> dict[str, dict]:
+    """
+    Batch-retrieve stored payload fields for content-file points.
+
+    Returns {point_id: partial payload dict} for points that exist in Qdrant;
+    absent points are absent from the map. One lookup per batch replaces the
+    per-file retrieves for the existence filter, summary-change check, and
+    embed gate.
+    """
+    client = qdrant_client()
+    stored = {}
+    for id_batch in chunks(
+        point_ids, chunk_size=settings.QDRANT_POINT_UPLOAD_BATCH_SIZE
+    ):
+        for record in client.retrieve(
+            collection_name=CONTENT_FILES_COLLECTION_NAME,
+            ids=id_batch,
+            with_payload=list(fields),
+        ):
+            stored[record.id] = record.payload or {}
+    return stored
+
+
+def should_generate_content_embeddings(
+    serialized_document: dict, point_id: str | None = None
+) -> bool:
+    """
+    Determine if we should generate embeddings for a content file
+    """
+    point = _retrieve_content_file_point(serialized_document, point_id=point_id)
+    if not point:
+        return True
+    qdrant_checksum = (point.payload or {}).get("checksum")
+    return qdrant_checksum != serialized_document["checksum"]
 
 
 def _embed_course_metadata_as_contentfile(serialized_resources):
@@ -623,10 +825,7 @@ def _embed_course_metadata_as_contentfile(serialized_resources):
     client = qdrant_client()
     encoder_dense = dense_encoder()
     encoder_sparse = sparse_encoder()
-    serializer_context = {
-        PROGRAM_COURSE_CACHE_KEY_TEST_MODE: {},
-        "include_test_mode_children": True,
-    }
+    serializer_context = _metadata_serializer_context()
     metadata = []
     ids = []
     docs = []
@@ -637,7 +836,10 @@ def _embed_course_metadata_as_contentfile(serialized_resources):
         )
         serialized_document = serializer.render_document()
         checksum = checksum_for_content(str(serialized_document))
-        key = f"{doc['readable_id']}.course_metadata"
+        key = (
+            f"{(doc.get('platform') or {}).get('code', '')}."
+            f"{doc['readable_id']}.course_metadata"
+        )
         serialized_document["checksum"] = checksum
         serialized_document["key"] = key
         document_point_id = vector_point_id(
@@ -647,6 +849,7 @@ def _embed_course_metadata_as_contentfile(serialized_resources):
             serialized_document, document_point_id
         ):
             continue
+
         # remove existing course info docs
         remove_points_matching_params(
             {"key": key}, collection_name=CONTENT_FILES_COLLECTION_NAME
@@ -692,9 +895,13 @@ def _embed_course_metadata_as_contentfile(serialized_resources):
         client.upload_points(CONTENT_FILES_COLLECTION_NAME, points=points, wait=False)
 
 
-def _generate_content_file_points(serialized_content):
+def _generate_content_file_points(serialized_content, stored_payloads):
     """
-    Chunk and embed content file documents, yielding PointStructs
+    Chunk and embed content file documents, yielding PointStructs.
+
+    stored_payloads maps chunk-0 point ids to stored Qdrant payload fields
+    (see _stored_content_payloads); docs whose stored checksum matches get a
+    payload-only refresh instead of re-embedding.
     """
     encoder_dense = dense_encoder()
     encoder_sparse = sparse_encoder()
@@ -704,16 +911,33 @@ def _generate_content_file_points(serialized_content):
     300,000 tokens per request
     max array size: 2048
     see: https://platform.openai.com/docs/guides/rate-limits
+
+    The 0.9 factor leaves headroom: markdown header prefixes are prepended
+    after the chunk-size split, so real chunks can exceed the nominal size.
     """
-    request_chunk_size = int(
-        300000 / settings.CONTENT_FILE_EMBEDDING_CHUNK_SIZE_OVERRIDE
+    request_chunk_size = max(
+        1,
+        min(
+            2048,
+            int(300000 * 0.9 / settings.CONTENT_FILE_EMBEDDING_CHUNK_SIZE_OVERRIDE),
+        ),
     )
 
     for doc in serialized_content:
         embedding_context = _content_file_embedding_context(doc)
         if not embedding_context:
             continue
-        should_generate = should_generate_content_embeddings(doc)
+        # Point ids are content-key-derived and stable, so recompute per doc;
+        # summarization replaces the doc dicts between here and process_batch.
+        point_id = vector_point_id(
+            vector_point_key(doc, chunk_number=0, document_type="content_file")
+        )
+        # Missing point or differing/missing stored checksum -> regenerate
+        # (self-heals failed or purged points on the next load).
+        should_generate = (
+            point_id not in stored_payloads
+            or stored_payloads[point_id].get("checksum") != doc["checksum"]
+        )
         if not should_generate:
             """
             Just update the payload and continue
@@ -729,6 +953,7 @@ def _generate_content_file_points(serialized_content):
         remove_params = {
             "key": doc["key"],
             "resource_readable_id": doc["resource_readable_id"],
+            "platform": (doc.get("platform") or {}).get("code"),
         }
         if doc.get("run_readable_id"):
             remove_params["run_readable_id"] = doc["run_readable_id"]
@@ -763,16 +988,18 @@ def _generate_content_file_points(serialized_content):
                     break
                 chunk_id, split_doc = valid_chunks[relative_index]
 
-                metadata = {
-                    "resource_point_id": str(resource_vector_point_id),
-                    "chunk_number": chunk_id,
-                    "chunk_content": split_doc.page_content,
-                    **{
-                        key: split_doc.metadata[key]
-                        for key in QDRANT_CONTENT_FILE_PARAM_MAP
-                        if key in split_doc.metadata
-                    },
-                }
+                metadata = _with_run_readable_id_fallback(
+                    {
+                        "resource_point_id": str(resource_vector_point_id),
+                        "chunk_number": chunk_id,
+                        "chunk_content": split_doc.page_content,
+                        **{
+                            key: split_doc.metadata[key]
+                            for key in QDRANT_CONTENT_FILE_PARAM_MAP
+                            if key in split_doc.metadata
+                        },
+                    }
+                )
 
                 point_id = vector_point_id(
                     vector_point_key(
@@ -793,6 +1020,51 @@ def _generate_content_file_points(serialized_content):
             del dense_chunk_embeddings
             del sparse_chunk_embeddings
             gc.collect()
+
+
+def _iter_serialized_content_files(ids):
+    for id_batch in chunks(
+        ids, chunk_size=settings.QDRANT_CONTENT_FILE_SERIALIZATION_CHUNK_SIZE
+    ):
+        yield from serialize_bulk_content_files(id_batch)
+
+
+def _summarize_content_files_for_embedding(
+    docs_batch, fill_summary_content_ids, changed_summary_content_ids
+):
+    if not fill_summary_content_ids and not changed_summary_content_ids:
+        return docs_batch
+
+    from learning_resources.content_summarizer import ContentSummarizer
+
+    summarizer = ContentSummarizer()
+    if fill_summary_content_ids:
+        summarizer.summarize_content_files_by_ids(
+            fill_summary_content_ids, overwrite=False
+        )
+
+    failed_changed_ids = set()
+    if changed_summary_content_ids:
+        statuses = summarizer.summarize_content_files_by_ids(
+            changed_summary_content_ids, overwrite=True
+        )
+        failed_changed_ids = {
+            content_file_id
+            for content_file_id, status in zip(
+                changed_summary_content_ids, statuses or []
+            )
+            if "failed" in str(status).lower()
+        }
+
+    refreshed_docs = list(
+        _iter_serialized_content_files([doc["id"] for doc in docs_batch])
+    )
+    if failed_changed_ids:
+        # Keep the old Qdrant checksum so the next run retries summary generation.
+        refreshed_docs = [
+            doc for doc in refreshed_docs if doc["id"] not in failed_changed_ids
+        ]
+    return refreshed_docs
 
 
 def embed_learning_resources(ids, resource_type, overwrite):  # noqa: PLR0915, C901
@@ -832,10 +1104,7 @@ def embed_learning_resources(ids, resource_type, overwrite):  # noqa: PLR0915, C
         points = _process_resource_embeddings(serialized_resources)
         _embed_course_metadata_as_contentfile(serialized_resources)
     else:
-        serialized_resources = serialize_bulk_content_files(ids)
-
-        # populated/modified by reference in process_batch
-        summary_content_ids = []
+        serialized_resources = _iter_serialized_content_files(ids)
 
         # Batching parameters
         current_batch_docs = []
@@ -843,9 +1112,11 @@ def embed_learning_resources(ids, resource_type, overwrite):  # noqa: PLR0915, C
 
         collection_name = CONTENT_FILES_COLLECTION_NAME
 
-        def process_batch(docs_batch, summaries_list):
+        def process_batch(docs_batch):
             """Process a batch of documents"""
-            # Collect IDs for summarization
+            fill_summary_content_ids = []
+            changed_summary_content_ids = []
+
             contentfile_points = [
                 (
                     vector_point_id(
@@ -857,17 +1128,23 @@ def embed_learning_resources(ids, resource_type, overwrite):  # noqa: PLR0915, C
                 )
                 for doc in docs_batch
             ]
+            # One batched lookup serves the existence filter, the summary-change
+            # check, and the embed gate in _generate_content_file_points.
+            stored_payloads = _stored_content_payloads(
+                [point[0] for point in contentfile_points]
+            )
             if not overwrite:
-                filtered_point_ids = filter_existing_qdrant_points_by_ids(
-                    [point[0] for point in contentfile_points],
-                    collection_name=collection_name,
-                )
                 docs_batch = [
-                    point[1]
-                    for point in contentfile_points
-                    if point[0] in filtered_point_ids
+                    doc
+                    for point_id, doc in contentfile_points
+                    if point_id not in stored_payloads
                 ]
-            for resource in docs_batch:
+                contentfile_points = [
+                    point
+                    for point in contentfile_points
+                    if point[0] not in stored_payloads
+                ]
+            for point_id, resource in contentfile_points:
                 if (
                     resource.get("summary")
                     or resource.get("require_summaries")
@@ -875,9 +1152,28 @@ def embed_learning_resources(ids, resource_type, overwrite):  # noqa: PLR0915, C
                     .filter(run__id=resource.get("run_id"))
                     .exists()
                 ):
-                    summaries_list.append(resource["id"])
+                    stored_checksum = stored_payloads.get(point_id, {}).get("checksum")
+                    # A missing point or missing stored checksum must not force
+                    # an expensive summary rewrite by itself; the embed gate
+                    # still regenerates embeddings for those.
+                    if (
+                        overwrite
+                        and stored_checksum is not None
+                        and stored_checksum != resource.get("checksum")
+                    ):
+                        changed_summary_content_ids.append(resource["id"])
+                    else:
+                        fill_summary_content_ids.append(resource["id"])
 
-            points_generator_iter = _generate_content_file_points(docs_batch)
+            docs_batch = _summarize_content_files_for_embedding(
+                docs_batch,
+                fill_summary_content_ids,
+                changed_summary_content_ids,
+            )
+
+            points_generator_iter = _generate_content_file_points(
+                docs_batch, stored_payloads
+            )
             points_upload_batch = []
 
             for point in points_generator_iter:
@@ -921,21 +1217,16 @@ def embed_learning_resources(ids, resource_type, overwrite):  # noqa: PLR0915, C
             current_batch_size += len(doc.get("content", "") or "")
 
             if current_batch_size >= settings.QDRANT_BATCH_SIZE_BYTES:
-                process_batch(current_batch_docs, summary_content_ids)
+                process_batch(current_batch_docs)
                 current_batch_docs = []
                 current_batch_size = 0
                 gc.collect()
 
         # Process remaining
         if current_batch_docs:
-            process_batch(current_batch_docs, summary_content_ids)
+            process_batch(current_batch_docs)
             current_batch_docs = []
             gc.collect()
-
-        if summary_content_ids:
-            ContentSummarizer().summarize_content_files_by_ids(
-                summary_content_ids, overwrite
-            )
 
         points = None  # Handled inside the loop
     if points:
@@ -950,6 +1241,107 @@ def embed_learning_resources(ids, resource_type, overwrite):  # noqa: PLR0915, C
             ],
             wait=False,
         )
+
+
+def qdrant_content_files(resources):
+    """
+    Select the published content files of every run of, or attached directly
+    to, the published or test_mode resources in the `resources` queryset.
+    Unlike OpenSearch (see learning_resources_search.utils.opensearch_runs),
+    Qdrant carries every run, not just the best one.
+    """
+    eligible = resources.filter(Q(published=True) | Q(test_mode=True))
+    return ContentFile.objects.filter(published=True).filter(
+        Q(run__learning_resource__in=eligible) | Q(learning_resource__in=eligible)
+    )
+
+
+def resources_payload_selector():
+    """
+    Return the `with_payload` value to use for the resources collection.
+
+    When hits are served from the payload we want everything the API response
+    needs, minus the indexing-only keys. Otherwise we only need the two fields
+    the database hydration path looks resources up by.
+    """
+    if settings.VECTOR_SEARCH_RESOURCES_FROM_PAYLOAD:
+        return models.PayloadSelectorExclude(exclude=RESOURCES_PAYLOAD_EXCLUDE)
+    return RESOURCES_RETRIEVE_PAYLOAD
+
+
+def _without_keys(items, drop_keys):
+    """Drop drop_keys from every dict in a list, leaving non-dicts alone"""
+    return [
+        {key: value for key, value in item.items() if key not in drop_keys}
+        if isinstance(item, dict)
+        else item
+        for item in items
+    ]
+
+
+def _trim_indexing_only_list_fields(payload):
+    """
+    Drop indexing-only keys the Qdrant payload selector cannot reach.
+
+    Selectors descend into objects but not into lists of objects, so anything
+    the indexing serializer adds *inside* a list survives the exclude and has
+    to be removed here:
+
+    - course.course_numbers[] carries sort_coursenum and primary, which
+      SearchCourseNumberSerializer adds on top of CourseNumberSerializer.
+    - content_files[] is re-serialized with the full ContentFileSerializer for
+      nested search, so it carries the large text fields that the API's
+      NestedContentFileSerializer omits. The rest of the field must survive:
+      document and video responses declare it, and search cards use
+      content_files[0].image_src as the thumbnail fallback.
+    """
+    trimmed = payload
+
+    course = payload.get("course")
+    if isinstance(course, dict) and isinstance(course.get("course_numbers"), list):
+        trimmed = {
+            **trimmed,
+            "course": {
+                **course,
+                "course_numbers": _without_keys(
+                    course["course_numbers"], COURSE_NUMBER_INDEXING_ONLY_FIELDS
+                ),
+            },
+        }
+
+    content_files = payload.get("content_files")
+    if isinstance(content_files, list):
+        trimmed = {
+            **trimmed,
+            "content_files": _without_keys(content_files, CONTENT_FILE_LARGE_FIELDS),
+        }
+
+    return trimmed
+
+
+def _resource_payload_hits(search_result):
+    """
+    Build resource hits from the Qdrant payloads themselves.
+
+    The payload is the resource as the indexing serializer wrote it, so no
+    database hydration is required -- but a payload written before a field was
+    added carries no such key until it is reindexed, which the response
+    serializer makes up for. Dedupes on platform:readable_id and preserves the
+    Qdrant ranking, the same way the hydrated path does.
+    """
+    hits = []
+    seen = set()
+    for hit in search_result:
+        payload = hit.payload or {}
+        readable_id = payload.get("readable_id")
+        if not readable_id:
+            continue
+        key = f"{(payload.get('platform') or {}).get('code', '')}:{readable_id}"
+        if key in seen:
+            continue
+        seen.add(key)
+        hits.append(_trim_indexing_only_list_fields(payload))
+    return hits
 
 
 def _resource_vector_hits(search_result):
@@ -990,6 +1382,15 @@ async def check_missing_content_file_ids(edx_module_ids, collection_name):
     the DB but absent from the Qdrant index (not_in_index). Probes existence
     directly, independent of q/other request filters.
     """
+    # Trim edge whitespace so the exact-match DB/Qdrant probes below can't
+    # produce false misses for ids that differ only by transport junk.
+    edx_module_ids = [
+        eid
+        for eid in ((eid or "").strip() for eid in edx_module_ids)
+        if is_loggable_missing_content_id(eid)
+    ]
+    if not edx_module_ids:
+        return
     present = await sync_to_async(present_edx_module_ids)(edx_module_ids)
     for missing in set(edx_module_ids) - present:
         log_missing_content_file(
@@ -1027,15 +1428,28 @@ def _content_file_vector_hits(search_result):
     keys = [hit.payload.get("key") for hit in search_result]
 
     serialized_content_files = ContentFileSerializer(
-        ContentFile.objects.for_serialization().filter(
-            run__run_id__in=run_readable_ids, key__in=keys
+        ContentFile.objects.for_serialization()
+        .filter(key__in=keys)
+        .filter(
+            Q(run__run_id__in=run_readable_ids)
+            | Q(run__isnull=True, learning_resource__readable_id__in=run_readable_ids)
         ),
         many=True,
     ).data
     results = []
     contentfiles_dict = {}
+    # Run-less content files (e.g. marketing pages) serialize without a
+    # run_readable_id; their Qdrant payloads carry the resource readable_id
+    # in that field instead, so key them the same way here.
     [
-        contentfiles_dict.update({(cf["run_readable_id"], cf["key"]): cf})
+        contentfiles_dict.update(
+            {
+                (
+                    cf.get("run_readable_id") or cf.get("resource_readable_id"),
+                    cf["key"],
+                ): cf
+            }
+        )
         for cf in serialized_content_files
     ]
     results = []
@@ -1214,6 +1628,64 @@ def best_run_ids_for_resources(readable_ids):
     return run_ids
 
 
+def best_run_id_for_resource(resource_id):
+    """
+    Resolve the single run_id a one-resource content-file query should be
+    restricted to.
+
+    Args:
+        resource_id (int): the resource primary key
+
+    Returns:
+        str | None: the best run's run_id, or None if the resource has no
+            published run (or does not exist)
+    """
+    resource = LearningResource.objects.filter(id=resource_id).first()
+    best_run = resource.best_run if resource else None
+    return best_run.run_id if best_run else None
+
+
+async def async_content_file_chunks_for_resource(
+    resource: LearningResource, query_string: str, limit: int = 50
+):
+    """
+    Dense vector search over one resource's content-file chunks.
+
+    Args:
+        resource (LearningResource): the resolved resource to retrieve chunks
+            for
+        query_string (str): the retrieval query
+        limit (int): maximum number of chunks to return
+
+    Returns:
+        list[dict]: chunk payloads, highest scoring first, each with the
+            Qdrant point id added as "point_id"
+    """
+    client = async_qdrant_client()
+    encoder_dense = dense_encoder()
+    encoder_dense.cache = True
+
+    readable_id = resource.readable_id
+    run_id = await db_sync_to_async(best_run_id_for_resource)(resource.id)
+    search_filter = qdrant_query_conditions(
+        {"run_readable_id": [run_id, readable_id] if run_id else [readable_id]},
+        collection_name=CONTENT_FILES_COLLECTION_NAME,
+    )
+    dense_query = await db_sync_to_async(encoder_dense.embed_query)(query_string)
+    result = await client.query_points(
+        collection_name=CONTENT_FILES_COLLECTION_NAME,
+        query=dense_query,
+        using=encoder_dense.model_short_name(),
+        query_filter=search_filter,
+        with_vectors=False,
+        with_payload=CONTENT_FILES_RETRIEVE_PAYLOAD,
+        limit=limit,
+    )
+    return [
+        {**(point.payload or {}), "point_id": str(point.id)} for point in result.points
+    ]
+
+
 def qdrant_query_conditions(params, collection_name=RESOURCES_COLLECTION_NAME):
     """
     Return a list of Qdrant FieldCondition objects based on params
@@ -1276,11 +1748,15 @@ def filter_existing_qdrant_points_by_ids(
     Return only points that dont exist in qdrant
     """
     client = qdrant_client()
+    # existence check only: payloads/vectors would be fetched and discarded, and for
+    # content files the payload carries the chunked text
     response = client.retrieve(
         collection_name=collection_name,
         ids=point_ids,
+        with_payload=False,
+        with_vectors=False,
     )
-    existing = [record.id for record in response]
+    existing = {record.id for record in response}
     return [point_id for point_id in point_ids if point_id not in existing]
 
 
@@ -1323,16 +1799,20 @@ def remove_qdrant_records(ids, resource_type):
     if resource_type != CONTENT_FILE_TYPE:
         serialized_documents = serialize_bulk_learning_resources(ids)
         collection_name = RESOURCES_COLLECTION_NAME
-        lookup_keys = ["readable_id"]
+        lookup_keys = ["readable_id", "platform"]
     else:
         serialized_documents = serialize_bulk_content_files(ids)
         collection_name = CONTENT_FILES_COLLECTION_NAME
-        lookup_keys = ["run_readable_id", "resource_readable_id", "key"]
+        lookup_keys = ["platform", "run_readable_id", "resource_readable_id", "key"]
     for doc in serialized_documents:
         params = {}
         for key in lookup_keys:
             if key in doc:
-                params[key] = doc[key]
+                value = doc[key]
+                if key == "platform" and isinstance(value, dict):
+                    value = value.get("code")
+                if value is not None:
+                    params[key] = value
         if params:
             remove_points_matching_params(params, collection_name=collection_name)
 
@@ -1391,35 +1871,281 @@ def retrieve_points_matching_params(
             break
 
 
-def custom_score_formula(collection_name: str) -> list[models.MultExpression]:
+def custom_score_formula(
+    collection_name: str, boost_overrides: dict[str, float] | None = None
+) -> list[models.MultExpression]:
     """
-    Boost scores based on params defined in VECTOR_SEARCH_SCORE_BOOST
+    Build the boost terms from VECTOR_SEARCH_SCORE_BOOST, to be added to the
+    score.
+
+    Each term is `boost * condition * $score`, so summing it in multiplies a
+    matching point's score by (1 + boost). Proportional rather than a fixed
+    number of score units: a point can then only overtake one it was already
+    within (1 + boost) of, and the same weight works on either arm's score
+    scale.
+
+    boost_overrides maps a boost entry's "name" to a replacement amount, on the
+    same terms, so a request can tune a boost without a deploy.
     """
     score_params = VECTOR_SEARCH_SCORE_BOOST.get(collection_name)
     score_expressions = []
     if score_params:
         for score_param in score_params:
-            amount = score_param.get("boost", 0)
+            name = score_param.get("name")
+            override = (boost_overrides or {}).get(name) if name else None
+            amount = override if override is not None else score_param.get("boost", 0)
             conditions = qdrant_query_conditions(
                 score_param.get("params"), collection_name=collection_name
             )
             if conditions is None:
                 continue
             score_expressions.append(
-                models.MultExpression(
-                    mult=[
-                        amount,
-                        conditions,
-                        # add a decay based on score to normalize
-                        models.GaussDecayExpression(
-                            gauss_decay=models.DecayParamsExpression(
-                                x="$score",  # decay over the relevance score itself
-                                target=0.4,  # full boost at this target
-                                scale=0.2,
-                                midpoint=0.2,
+                # A condition is 1 for a matching point, 0 for every other
+                models.MultExpression(mult=[amount, conditions, "$score"])
+            )
+    return score_expressions
+
+
+def completeness_penalty_expression(
+    collection_name: str,
+    weight: float | None = None,
+) -> models.NegExpression | None:
+    """
+    Build the incompleteness penalty term: -weight * (1 - completeness) *
+    $score, to be added to the score.
+
+    Proportional for the same reason the boost is (see custom_score_formula):
+    it can cost a resource at most `weight` of its own score.
+
+    None when the penalty is disabled or the collection has no completeness.
+    `weight` overrides the setting when it is not None.
+    """
+    if collection_name != RESOURCES_COLLECTION_NAME:
+        return None
+    if weight is None:
+        weight = settings.VECTOR_SEARCH_INCOMPLETENESS_PENALTY_WEIGHT
+    weight = max(weight or 0, 0)
+    if not weight:
+        return None
+    return models.NegExpression(
+        neg=models.MultExpression(
+            mult=[
+                weight,
+                models.SumExpression(
+                    sum=[1, models.NegExpression(neg=COMPLETENESS_PAYLOAD_KEY)]
+                ),
+                "$score",
+            ]
+        )
+    )
+
+
+def staleness_penalty_expression(
+    collection_name: str,
+    now: datetime,
+    weight: float | None = None,
+    horizon_years: float | None = None,
+) -> models.NegExpression | None:
+    """
+    Build the staleness penalty term: -weight * (1 - decay) * $score, where
+    decay ramps linearly from 1 at `now` to 0 at
+    VECTOR_SEARCH_STALENESS_HORIZON_YEARS, so the penalty saturates at `weight`
+    of the resource's own score. Proportional for the reason given in
+    completeness_penalty_expression.
+
+    Applied only where NEXT_START_DATE is absent. An upcoming run is what
+    exempts a resource, not a missing age date -- see
+    RESOURCE_AGE_DATE_PAYLOAD_KEY for why those are not the same thing.
+
+    None when the penalty is disabled or the collection has no resource age.
+    `weight` and `horizon_years` override their settings when they are not None.
+    """
+    if collection_name != RESOURCES_COLLECTION_NAME:
+        return None
+    if weight is None:
+        weight = settings.VECTOR_SEARCH_STALENESS_PENALTY_WEIGHT
+    weight = max(weight or 0, 0)
+    if horizon_years is None:
+        horizon_years = settings.VECTOR_SEARCH_STALENESS_HORIZON_YEARS
+    horizon_years = horizon_years or 0
+    if not weight or horizon_years <= 0:
+        return None
+    return models.NegExpression(
+        neg=models.MultExpression(
+            mult=[
+                weight,
+                # 1 with no upcoming run, 0 with one
+                models.Filter(
+                    must=[
+                        models.IsEmptyCondition(
+                            is_empty=models.PayloadField(
+                                key=NEXT_START_DATE_PAYLOAD_KEY
+                            )
+                        )
+                    ]
+                ),
+                models.SumExpression(
+                    sum=[
+                        1,
+                        models.NegExpression(
+                            neg=models.LinDecayExpression(
+                                lin_decay=models.DecayParamsExpression(
+                                    x=models.DatetimeKeyExpression(
+                                        datetime_key=RESOURCE_AGE_DATE_PAYLOAD_KEY
+                                    ),
+                                    target=models.DatetimeExpression(
+                                        datetime=now.isoformat()
+                                    ),
+                                    # Qdrant's linear decay is
+                                    # 1 - (1 - midpoint) * age / scale, and it
+                                    # rejects a midpoint of exactly 0 (it must be
+                                    # in the open interval 0..1). Halving the
+                                    # scale at the default midpoint gives the
+                                    # same line -- 1 - age / horizon -- so decay
+                                    # still reaches 0, a full penalty, at the
+                                    # horizon rather than halfway to it.
+                                    scale=horizon_years * SECONDS_PER_YEAR / 2,
+                                    midpoint=0.5,
+                                )
                             )
                         ),
                     ]
-                )
-            )
-    return score_expressions
+                ),
+                "$score",
+            ]
+        )
+    )
+
+
+# Search parameters that override a score formula weight for a single request.
+SCORE_FORMULA_OVERRIDE_PARAMS = (
+    "program_boost",
+    "staleness_penalty",
+    "staleness_horizon_years",
+    "completeness_penalty",
+)
+
+
+def score_formula_overrides(params: dict) -> dict[str, float | None]:
+    """
+    Pull the per-request score formula weight overrides out of request params,
+    as keyword arguments for score_formula_query. A parameter the request left
+    out is None, which keeps that weight at its setting.
+    """
+    return {key: params.get(key) for key in SCORE_FORMULA_OVERRIDE_PARAMS}
+
+
+def score_formula_query(  # noqa: PLR0913
+    collection_name: str,
+    *,
+    program_boost: float | None = None,
+    staleness_penalty: float | None = None,
+    staleness_horizon_years: float | None = None,
+    completeness_penalty: float | None = None,
+    include_penalties: bool = True,
+) -> models.FormulaQuery | None:
+    """
+    Build a collection's rescoring formula: the score, plus the
+    VECTOR_SEARCH_SCORE_BOOST boosts, minus the incompleteness and staleness
+    penalties. None when none of them apply, so callers can skip rescoring
+    entirely.
+
+    Each weight falls back to its setting when passed None, so a request can
+    override any of them individually (see score_formula_overrides).
+
+    `include_penalties=False` drops the penalties, overrides and all, for an
+    arm whose $score is not on the scale their weights were set against -- the
+    sparse arm's BM25 scores. The boosts are proportional and need no such
+    exclusion.
+    """
+    now = datetime.now(tz=UTC)
+    boost_expressions = custom_score_formula(
+        collection_name, boost_overrides={PROGRAM_SCORE_BOOST_NAME: program_boost}
+    )
+    penalties = []
+    # Payload values to fall back on, so that a point missing one -- indexed
+    # before the key existed, or a resource type that never carries it -- is
+    # penalized for neither.
+    defaults = {}
+
+    completeness_expression = (
+        completeness_penalty_expression(collection_name, weight=completeness_penalty)
+        if include_penalties
+        else None
+    )
+    if completeness_expression is not None:
+        penalties.append(completeness_expression)
+        defaults[COMPLETENESS_PAYLOAD_KEY] = 1.0
+
+    staleness_expression = (
+        staleness_penalty_expression(
+            collection_name,
+            now,
+            weight=staleness_penalty,
+            horizon_years=staleness_horizon_years,
+        )
+        if include_penalties
+        else None
+    )
+    if staleness_expression is not None:
+        penalties.append(staleness_expression)
+        # Aged from the horizon, so an undated resource takes the full
+        # penalty. Defaulting to `now` read "undatable" as "brand new".
+        horizon_years = (
+            staleness_horizon_years
+            if staleness_horizon_years is not None
+            else settings.VECTOR_SEARCH_STALENESS_HORIZON_YEARS
+        )
+        defaults[RESOURCE_AGE_DATE_PAYLOAD_KEY] = (
+            now - timedelta(seconds=(horizon_years or 0) * SECONDS_PER_YEAR)
+        ).isoformat()
+
+    if not boost_expressions and not penalties:
+        return None
+    return models.FormulaQuery(
+        formula=models.SumExpression(sum=["$score", *boost_expressions, *penalties]),
+        defaults=defaults,
+    )
+
+
+def order_by_query(
+    order_by: models.OrderBy, collection_name: str
+) -> models.OrderByQuery | models.FormulaQuery:
+    """
+    Build the query that orders a prefetch's hits by a payload key.
+
+    A plain OrderByQuery, unless the key is one a point can have no value for
+    (see NULLABLE_ORDER_BY_KEYS), which order_by would drop rather than order
+    last. Those are expressed as a rescoring formula instead: the score becomes
+    the datetime itself -- negated to sort ascending, since a higher score ranks
+    first either way -- and `defaults` gives a point missing the key a value
+    beyond every real date, so it lands at the end with the rest of them.
+
+    Scores are 32-bit, so dates within a couple of minutes of each other can
+    order as equals. Start dates are hours apart at the very least, and the
+    alternative is dropping most of the collection.
+
+    Every valueless point ties at the sentinel score, so this tail comes back in
+    point-id order, where the scroll path's equivalent tail (see
+    QdrantView._scroll_missing_order_by_key) is ordered by created_on
+    descending. The same request can therefore order its tail differently
+    depending on whether a query string sends it down the formula path.
+    """
+    schema = COLLECTION_INDEX_MAP.get(collection_name, {}).get(order_by.key)
+    if (
+        order_by.key not in NULLABLE_ORDER_BY_KEYS
+        # A nullable key of any other type would need its own sentinel value.
+        or schema != models.PayloadSchemaType.DATETIME
+    ):
+        return models.OrderByQuery(order_by=order_by)
+    datetime_value = models.DatetimeKeyExpression(datetime_key=order_by.key)
+    return models.FormulaQuery(
+        formula=datetime_value
+        if order_by.direction == models.Direction.DESC
+        else models.NegExpression(neg=datetime_value),
+        defaults={
+            order_by.key: ORDER_BY_MISSING_DATETIME[
+                order_by.direction or models.Direction.ASC
+            ]
+        },
+    )

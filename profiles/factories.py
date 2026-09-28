@@ -5,7 +5,7 @@ from factory.django import DjangoModelFactory
 from factory.fuzzy import FuzzyChoice
 from faker.providers import BaseProvider
 
-from profiles.models import Profile, ProgramCertificate, ProgramLetter, UserWebsite
+from profiles.models import Profile, ProgramCertificate, ProgramLetter
 
 
 class LocationProvider(BaseProvider):
@@ -51,15 +51,6 @@ class ProfileFactory(DjangoModelFactory):
 
     class Meta:
         model = Profile
-
-
-class UserWebsiteFactory(DjangoModelFactory):
-    """Factory for UserWebsite"""
-
-    url = Faker("url")
-
-    class Meta:
-        model = UserWebsite
 
 
 class ProgramCertificateFactory(DjangoModelFactory):

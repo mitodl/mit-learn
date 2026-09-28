@@ -11,10 +11,7 @@ import {
 import LearningResourceDrawer from "./LearningResourceDrawer"
 import { urls, factories, setMockResponse } from "api/test-utils"
 import { LearningResourceExpanded } from "../LearningResourceExpanded/LearningResourceExpanded"
-import {
-  canonicalResourceDrawerUrl,
-  RESOURCE_DRAWER_PARAMS,
-} from "@/common/urls"
+import { RESOURCE_DRAWER_PARAMS } from "@/common/urls"
 import { LearningResource, ResourceTypeEnum } from "api"
 import { makeUserSettings } from "@/test-utils/factories"
 import type { User } from "api/hooks/user"
@@ -112,8 +109,8 @@ describe("LearningResourceDrawer", () => {
       await waitFor(() => {
         expectProps(LearningResourceExpanded, {
           resource,
-          // Share links use the canonical slugged drawer URL
-          shareUrl: canonicalResourceDrawerUrl(resource.id, resource.title),
+          // Share links use the resource's location on Learn
+          shareUrl: resource.learn_url,
         })
       })
       await screen.findByText(resource.title)

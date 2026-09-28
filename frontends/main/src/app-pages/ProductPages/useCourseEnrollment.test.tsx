@@ -22,10 +22,16 @@ import type {
 } from "@mitodl/mitxonline-api-axios/v2"
 import { usePostHog } from "posthog-js/react"
 import { PostHogEvents } from "@/common/constants"
-import { trackCourseEnrolled } from "@/common/analytics/gtm"
+import {
+  trackCourseEnrolled,
+  trackStartEnrollment,
+  trackBeginCheckout,
+} from "@/common/analytics/gtm"
 
 jest.mock("@/common/analytics/gtm", () => ({
   trackCourseEnrolled: jest.fn(),
+  trackStartEnrollment: jest.fn(),
+  trackBeginCheckout: jest.fn(),
 }))
 
 jest.mock("posthog-js/react", () => ({
@@ -339,6 +345,10 @@ describe("useCourseEnrollment — actions", () => {
     process.env.NEXT_PUBLIC_POSTHOG_API_KEY = "test-key"
     setMockResponse.get(urls.userMe.get(), makeUser({ is_authenticated: true }))
     setMockResponse.get(mitxUrls.enrollment.enrollmentsListV3(), [])
+    // Enrolling now consults the MITx Online profile through the compliance
+    // gate. The factory default has nothing missing, so it passes straight
+    // through; see JustInTimeDialog tests for the blocked case.
+    setMockResponse.get(mitxUrls.userMe.get(), mitxFactories.user.user())
   })
 
   afterEach(() => {
@@ -379,6 +389,15 @@ describe("useCourseEnrollment — actions", () => {
     } as React.MouseEvent<HTMLButtonElement>
 
     paidOption!.onClick!(fakeEvent)
+
+    expect(trackStartEnrollment).toHaveBeenCalledWith(course.title)
+    expect(trackBeginCheckout).toHaveBeenCalledWith(
+      expect.objectContaining({
+        courseName: course.title,
+        courseId: course.readable_id,
+        value: parseFloat(product.price),
+      }),
+    )
 
     await waitFor(() =>
       expect(makeRequest).toHaveBeenCalledWith(
@@ -421,6 +440,8 @@ describe("useCourseEnrollment — actions", () => {
     } as React.MouseEvent<HTMLButtonElement>
 
     freeOption!.onClick!(fakeEvent)
+
+    expect(trackStartEnrollment).toHaveBeenCalledWith(course.title)
 
     await waitFor(() =>
       expect(makeRequest).toHaveBeenCalledWith(

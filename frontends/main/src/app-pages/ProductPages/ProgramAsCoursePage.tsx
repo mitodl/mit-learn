@@ -9,11 +9,10 @@ import { programsQueries } from "api/mitxonline-hooks/programs"
 import { notFound } from "next/navigation"
 import { HeadingIds, parseReqTree } from "./util"
 import type { RequirementItem } from "./util"
-import {
-  getIdsFromReqTree,
-  isVerifiedEnrollmentMode,
-} from "@/common/mitxonline"
+import useReqTreeChildren from "./useReqTreeChildren"
 import InstructorsSection from "./InstructorsSection"
+import FaqsSection from "./FaqsSection"
+import TestimonialsSection from "./TestimonialsSection"
 import RawHTML from "./RawHTML"
 import UnstyledRawHTML from "@/components/UnstyledRawHTML/UnstyledRawHTML"
 import AboutSection from "./AboutSection"
@@ -22,8 +21,7 @@ import WhatYoullLearnSection from "./WhatYoullLearnSection"
 import HowYoullLearnSection from "./HowYoullLearnSection"
 import { DEFAULT_RESOURCE_IMG, pluralize } from "ol-utilities"
 import ProgramAsCourseInfoBox from "./InfoBoxProgramAsCourse"
-import ProgramEnrollmentButton from "./ProgramEnrollmentButton"
-import { coursesQueries } from "api/mitxonline-hooks/courses"
+import ProgramHeaderEnrollButton from "./ProgramHeaderEnrollButton"
 import type {
   V2ProgramDetail,
   CourseWithCourseRunsSerializerV2,
@@ -191,12 +189,6 @@ const ModulesSection: React.FC<ModulesSectionProps> = ({
   )
 }
 
-const StyledProgramEnrollmentButton = styled(ProgramEnrollmentButton)(
-  ({ theme }) => ({
-    color: theme.custom.colors.darkGray2,
-  }),
-)
-
 const PrerequisitesSection = styled.section({
   display: "flex",
   flexDirection: "column",
@@ -218,25 +210,11 @@ const ProgramAsCoursePage: React.FC<ProgramAsCoursePageProps> = ({
   const page = pages.data?.items[0]
   const program = programs.data?.results?.[0]
 
-  const { courseIds, programIds } = program
-    ? getIdsFromReqTree(program.req_tree)
-    : { courseIds: [], programIds: [] }
-
-  const courses = useQuery({
-    ...coursesQueries.coursesList({
-      id: courseIds,
-      page_size: courseIds.length,
-    }),
-    enabled: courseIds.length > 0,
-  })
-
-  const childPrograms = useQuery({
-    ...programsQueries.programsList({
-      id: programIds,
-      page_size: programIds.length,
-    }),
-    enabled: programIds.length > 0,
-  })
+  const {
+    courses,
+    programs: childPrograms,
+    isLoading: dataLoading,
+  } = useReqTreeChildren(program)
 
   const isLoading = pages.isLoading || programs.isLoading
 
@@ -249,10 +227,6 @@ const ProgramAsCoursePage: React.FC<ProgramAsCoursePageProps> = ({
 
   const imageSrc =
     page.program_details.page?.feature_image_src || DEFAULT_RESOURCE_IMG
-
-  const dataLoading =
-    (courseIds.length > 0 && !courses.isSuccess) ||
-    (programIds.length > 0 && !childPrograms.isSuccess)
 
   return (
     <ProductPageTemplate
@@ -267,28 +241,14 @@ const ProgramAsCoursePage: React.FC<ProgramAsCoursePageProps> = ({
       imageSrc={imageSrc}
       videoUrl={page.video_url}
       enrollmentAction={
-        <StyledProgramEnrollmentButton
-          program={program}
-          variant="bordered"
-          displayAsCourse
-        />
-      }
-      showStayUpdated={
-        program.enrollment_modes.length > 0 &&
-        program.enrollment_modes.every((mode) =>
-          isVerifiedEnrollmentMode(mode.mode_slug),
-        )
+        <ProgramHeaderEnrollButton program={program} displayAsCourse />
       }
       resource={{
         readable_id: program.readable_id,
         resource_type: "program",
       }}
-      infoBox={
-        <ProgramAsCourseInfoBox
-          program={program}
-          courses={courses.data?.results}
-        />
-      }
+      hubspotFormId={page.hubspot_form_id}
+      infoBox={<ProgramAsCourseInfoBox program={program} courses={courses} />}
     >
       {page.about ? (
         <AboutSection productNoun="Course" aboutHtml={page.about} />
@@ -298,8 +258,8 @@ const ProgramAsCoursePage: React.FC<ProgramAsCoursePageProps> = ({
       ) : null}
       <ModulesSection
         program={program}
-        courses={courses.data?.results}
-        childPrograms={childPrograms.data?.results}
+        courses={courses}
+        childPrograms={childPrograms}
         isLoading={dataLoading}
       />
       <HowYoullLearnSection page={page} />
@@ -313,6 +273,10 @@ const ProgramAsCoursePage: React.FC<ProgramAsCoursePageProps> = ({
       ) : null}
       {page.faculty.length ? (
         <InstructorsSection instructors={page.faculty} />
+      ) : null}
+      {page.faqs.length ? <FaqsSection faqs={page.faqs} /> : null}
+      {page.testimonials.length ? (
+        <TestimonialsSection testimonials={page.testimonials} />
       ) : null}
     </ProductPageTemplate>
   )

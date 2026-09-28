@@ -12,8 +12,11 @@ import {
   trackVideo50Percent,
   trackSiteSearch,
   trackCatalogFilter,
+  trackFilterCourseCatalog,
   trackReturnVisit,
   trackBeginCheckout,
+  trackCheckoutCompleted,
+  trackAccountCreated,
   trackOrganicSocialClick,
   trackViewProgramDetails,
 } from "./gtm"
@@ -257,6 +260,20 @@ describe("trackCatalogFilter", () => {
   })
 })
 
+describe("trackFilterCourseCatalog", () => {
+  it("pushes a filter-course-catalog event with filter name and value", () => {
+    trackFilterCourseCatalog({
+      filterName: "topic",
+      filterValue: "data science",
+    })
+    expect(window.dataLayer).toContainEqual({
+      event: "filter-course-catalog",
+      "filter-name": "topic",
+      "filter-value": "data science",
+    })
+  })
+})
+
 describe("trackReturnVisit", () => {
   it("pushes a return-visit event", () => {
     trackReturnVisit()
@@ -265,17 +282,87 @@ describe("trackReturnVisit", () => {
 })
 
 describe("trackBeginCheckout", () => {
-  it("pushes a begin-checkout event with course name", () => {
-    trackBeginCheckout("Data Science Fundamentals")
+  it("pushes a begin-checkout event with all fields", () => {
+    trackBeginCheckout({
+      courseName: "Data Science Fundamentals",
+      courseId: "course-v1:MITx+6.86x",
+      value: 149,
+    })
     expect(window.dataLayer).toContainEqual({
       event: "begin-checkout",
       "course-name": "Data Science Fundamentals",
+      "course-id": "course-v1:MITx+6.86x",
+      currency: "USD",
+      value: 149,
+      items: [
+        {
+          item_id: "course-v1:MITx+6.86x",
+          item_name: "Data Science Fundamentals",
+          price: 149,
+          quantity: 1,
+          currency: "USD",
+        },
+      ],
     })
   })
 
-  it("pushes a begin-checkout event without course name when null", () => {
-    trackBeginCheckout(null)
-    expect(window.dataLayer).toContainEqual({ event: "begin-checkout" })
+  it("defaults value to 0 and currency to USD when not provided", () => {
+    trackBeginCheckout({ courseName: "Data Science Fundamentals" })
+    expect(window.dataLayer).toContainEqual(
+      expect.objectContaining({
+        event: "begin-checkout",
+        currency: "USD",
+        value: 0,
+      }),
+    )
+  })
+
+  it("omits course-name and course-id when not provided", () => {
+    trackBeginCheckout({ value: 99 })
+    expect(window.dataLayer).toContainEqual(
+      expect.objectContaining({ event: "begin-checkout", value: 99 }),
+    )
+    expect(window.dataLayer![0]).not.toHaveProperty("course-name")
+    expect(window.dataLayer![0]).not.toHaveProperty("course-id")
+  })
+})
+
+describe("trackCheckoutCompleted", () => {
+  it("pushes a checkout-completed event with all fields", () => {
+    trackCheckoutCompleted({
+      orderId: 17,
+      courseName: "Data Science Fundamentals",
+      value: 199.99,
+    })
+    expect(window.dataLayer).toContainEqual({
+      event: "checkout-completed",
+      "order-id": 17,
+      "course-name": "Data Science Fundamentals",
+      "order-value": 199.99,
+    })
+  })
+
+  it("omits course-name and order-value when not provided", () => {
+    trackCheckoutCompleted({ orderId: 17 })
+    expect(window.dataLayer).toContainEqual({
+      event: "checkout-completed",
+      "order-id": 17,
+    })
+  })
+
+  it("omits order-value when null", () => {
+    trackCheckoutCompleted({ orderId: 17, value: null })
+    expect(window.dataLayer).toContainEqual({
+      event: "checkout-completed",
+      "order-id": 17,
+    })
+  })
+})
+
+describe("trackAccountCreated", () => {
+  it("pushes an account-created event", () => {
+    trackAccountCreated()
+    expect(window.dataLayer).toContainEqual({ event: "account-created" })
   })
 })
 

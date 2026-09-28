@@ -3,6 +3,7 @@ import {
   urls as mitxUrls,
   factories as mitxFactories,
 } from "api/mitxonline-test-utils"
+import { makeCourse } from "./test-utils/userPricing"
 import type {
   CoursePageItem,
   CourseWithCourseRunsSerializerV2,
@@ -24,7 +25,10 @@ import {
 import CoursePage from "./CoursePage"
 import { assertHeadings } from "ol-test-utilities"
 import { notFound } from "next/navigation"
-import { useStayUpdatedEnv } from "./test-utils/stayUpdated"
+import {
+  STAY_UPDATED_FORM_ID,
+  withHubspotFormId,
+} from "./test-utils/stayUpdated"
 
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import invariant from "tiny-invariant"
@@ -45,11 +49,12 @@ jest.mock("next-nprogress-bar", () => ({
 
 jest.mock("@/common/analytics/gtm", () => ({
   trackCourseEnrolled: jest.fn(),
+  trackStartEnrollment: jest.fn(),
+  trackBeginCheckout: jest.fn(),
   trackViewCoursePage: jest.fn(),
   trackCourseProgramView: jest.fn(),
 }))
 
-const makeCourse = mitxFactories.courses.course
 const makePage = mitxFactories.pages.coursePageItem
 
 const expectRawContent = (el: HTMLElement, htmlString: string) => {
@@ -116,9 +121,11 @@ const setupApis = ({
     learnUrls.userMe.get(),
     learnFactories.user.user({ is_authenticated: false }),
   )
+  // Clicking enroll consults the MITx Online profile through the compliance
+  // gate; the factory default has nothing missing, so it passes straight through.
+  setMockResponse.get(mitxUrls.userMe.get(), mitxFactories.user.user())
 
-  const stayUpdatedFormId =
-    process.env.NEXT_PUBLIC_STAY_UPDATED_HUBSPOT_FORM_ID?.trim()
+  const stayUpdatedFormId = page.hubspot_form_id?.trim()
   if (stayUpdatedFormId) {
     setMockResponse.get(
       learnUrls.hubspot.details({ form_id: stayUpdatedFormId }),
@@ -158,6 +165,9 @@ describe("CoursePage", () => {
         { level: 2, name: "Prerequisites" },
         { level: 2, name: "Meet your instructors" },
         { level: 3, name: page.faculty[0].instructor_name },
+        { level: 2, name: "FAQs" },
+        ...page.faqs.map((faq) => ({ level: 3, name: faq.question })),
+        { level: 2, name: "What learners are saying" },
       ])
     })
   })
@@ -527,6 +537,48 @@ describe("CoursePage", () => {
 
         expect(screen.getByTestId("signup-popover")).toBeInTheDocument()
       })
+
+      test("header enrollment failure shows an error alert below the header button", async () => {
+        const run = mitxFactories.courses.courseRun({
+          is_enrollable: true,
+          is_upgradable: false,
+          is_archived: false,
+          enrollment_modes: [freeMode],
+          products: [],
+        })
+        const course = makeCourse({ next_run_id: run.id, courseruns: [run] })
+        const page = makePage({ course_details: course })
+        setupApis({ course, page })
+
+        setMockResponse.get(
+          learnUrls.userMe.get(),
+          learnFactories.user.user({ is_authenticated: true }),
+        )
+        setMockResponse.get(mitxUrls.enrollment.enrollmentsListV3(), [])
+        setMockResponse.post(
+          mitxUrls.enrollment.enrollmentsListV1(),
+          undefined,
+          { code: 500 },
+        )
+
+        renderWithProviders(<CoursePage readableId={course.readable_id} />)
+
+        // Target the header instance specifically — the InfoBox renders its
+        // own "Start Learning" with its own (separate) error alert.
+        const banner = await screen.findByTestId("banner-container")
+        const startBtn = await within(banner).findByRole("button", {
+          name: "Start Learning",
+        })
+        await act(async () => {
+          startBtn.click()
+        })
+
+        expect(
+          await within(banner).findByText(
+            "There was a problem processing your enrollment. Please try again.",
+          ),
+        ).toBeInTheDocument()
+      })
     })
   })
 
@@ -628,19 +680,12 @@ describe("CoursePage", () => {
   })
 
   describe("Stay Updated button", () => {
-    useStayUpdatedEnv()
-
-    test("Shows button when all course runs have only the verified enrollment mode", async () => {
-      const verifiedMode = mitxFactories.courses.enrollmentMode({
-        mode_slug: "verified",
-      })
-      const course = makeCourse({
-        courseruns: [
-          mitxFactories.courses.courseRun({ enrollment_modes: [verifiedMode] }),
-          mitxFactories.courses.courseRun({ enrollment_modes: [verifiedMode] }),
-        ],
-      })
-      const page = makePage({ course_details: course })
+    test("Shows button when the page has a hubspot form id", async () => {
+      const course = makeCourse()
+      const page = withHubspotFormId(
+        makePage({ course_details: course }),
+        STAY_UPDATED_FORM_ID,
+      )
       setupApis({ course, page })
       renderWithProviders(<CoursePage readableId={course.readable_id} />)
 
@@ -650,65 +695,14 @@ describe("CoursePage", () => {
     })
 
     test.each([
-      {
-        label: "one run has a non-verified mode",
-        buildRuns: () => [
-          mitxFactories.courses.courseRun({
-            enrollment_modes: [
-              mitxFactories.courses.enrollmentMode({ mode_slug: "verified" }),
-            ],
-          }),
-          mitxFactories.courses.courseRun({
-            enrollment_modes: [
-              mitxFactories.courses.enrollmentMode({ mode_slug: "audit" }),
-            ],
-          }),
-        ],
-      },
-      {
-        label: "a run has mixed verified and non-verified modes",
-        buildRuns: () => [
-          mitxFactories.courses.courseRun({
-            enrollment_modes: [
-              mitxFactories.courses.enrollmentMode({ mode_slug: "verified" }),
-              mitxFactories.courses.enrollmentMode({ mode_slug: "audit" }),
-            ],
-          }),
-        ],
-      },
-      {
-        label: "a run has no enrollment modes",
-        buildRuns: () => [
-          mitxFactories.courses.courseRun({ enrollment_modes: [] }),
-        ],
-      },
-      {
-        label: "the course has no runs",
-        buildRuns: () => [],
-      },
-    ])("Hides button when $label", async ({ buildRuns }) => {
-      const course = makeCourse({ courseruns: buildRuns() })
-      const page = makePage({ course_details: course })
-      setupApis({ course, page })
-      renderWithProviders(<CoursePage readableId={course.readable_id} />)
-
-      await screen.findByRole("heading", { name: page.title })
-      expect(
-        screen.queryByRole("button", { name: "Stay Updated" }),
-      ).not.toBeInTheDocument()
-    })
-
-    test("Hides button when Stay Updated form ID is not configured", async () => {
-      delete process.env.NEXT_PUBLIC_STAY_UPDATED_HUBSPOT_FORM_ID
-      const verifiedMode = mitxFactories.courses.enrollmentMode({
-        mode_slug: "verified",
-      })
-      const course = makeCourse({
-        courseruns: [
-          mitxFactories.courses.courseRun({ enrollment_modes: [verifiedMode] }),
-        ],
-      })
-      const page = makePage({ course_details: course })
+      { label: "the form id is blank", hubspotFormId: "" },
+      { label: "the form id is null", hubspotFormId: null },
+    ])("Hides button when $label", async ({ hubspotFormId }) => {
+      const course = makeCourse()
+      const page = withHubspotFormId(
+        makePage({ course_details: course }),
+        hubspotFormId,
+      )
       setupApis({ course, page })
       renderWithProviders(<CoursePage readableId={course.readable_id} />)
 

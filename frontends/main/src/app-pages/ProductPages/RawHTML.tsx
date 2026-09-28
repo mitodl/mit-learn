@@ -12,10 +12,8 @@ const RawHTML = styled(UnstyledRawHTML)(({ theme }) => ({
     marginBottom: "0",
   },
   "& > ul": {
-    listStyleType: "none",
     marginTop: "16px",
     marginBottom: 0,
-    padding: 0,
   },
   [theme.breakpoints.down("md")]: {
     ...theme.typography.body2,

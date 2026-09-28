@@ -10,8 +10,19 @@ open_spectacular_settings = {
     "SERVE_URLCONF": "main.urls",
     "ENUM_GENERATE_CHOICE_DESCRIPTION": True,
     "COMPONENT_SPLIT_REQUEST": True,
+    "ENUM_NAME_OVERRIDES": {
+        "ContentFeedbackSentimentEnum": (
+            "content_feedback.constants.CONTENT_FEEDBACK_SENTIMENT_CHOICES"
+        ),
+        "ContentFileContentTypeEnum": (
+            "learning_resources.constants.VALID_COURSE_CONTENT_CHOICES"
+        ),
+    },
     "AUTHENTICATION_WHITELIST": [],
     "SCHEMA_PATH_PREFIX": "/api/v[0-9]",
+    "PREPROCESSING_HOOKS": [
+        "openapi.hooks.preprocess_exclude_canvas_slash_routes",
+    ],
     "POSTPROCESSING_HOOKS": [
         "drf_spectacular.hooks.postprocess_schema_enums",
         "openapi.hooks.postprocess_x_enum_descriptions",

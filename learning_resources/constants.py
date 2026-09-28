@@ -39,6 +39,16 @@ class LearningResourceType(ExtendedEnum):
     document = "Document"
 
 
+# `resource_category` for editorial articles. They are `document` resources --
+# 0105 folded the `article` resource type into `document` -- distinguished by
+# this category, the same way the MIT Climate ETL models its own articles and
+# what the frontend keys its "View Article" call to action off.
+ARTICLE_RESOURCE_CATEGORY = "Article"
+
+# Prefix for the readable_id of a LearningResource mirroring a WebsiteContent
+# item, so editorial content is distinguishable from ETL'd documents.
+WEBSITE_CONTENT_READABLE_ID_PREFIX = "website_content:"
+
 LEARNING_MATERIAL_RESOURCE_TYPE_GROUP = "learning_material"
 RESOURCE_TYPE_GROUP_VALUES = [
     LearningResourceType.course.name,
@@ -126,6 +136,17 @@ class LearningResourceRelationTypes(TextChoices):
     COURSE_LEARNING_MATERIALS = "COURSE_LEARNING_MATERIALS", "Course Learning Materials"
 
 
+# Relation types whose parent forms part of the child's URL. A resource's type
+# admits only one of them, so they can be read as a single list.
+CANONICAL_PARENT_RELATION_TYPES = (
+    LearningResourceRelationTypes.PODCAST_EPISODES.value,
+    LearningResourceRelationTypes.PLAYLIST_VIDEOS.value,
+)
+
+# Feeds Meta.ordering, so changing it needs a migration.
+RELATIONSHIP_ORDERING = ("position", "id")
+
+
 GROUP_STAFF_LISTS_EDITORS = "learning_path_editors"
 
 
@@ -156,6 +177,8 @@ OCW_COURSE_CONTENT_CATEGORY_MAPPING = {
     "Written Assignments": OCW_CONTENT_CATEGORY_PRACTICE_AND_ASSIGNMENT,
     "Open Textbooks": OCW_CONTENT_CATEGORY_OPEN_TEXTBOOKS,
 }
+
+OCW_VISIBLE_TAGS = ["Open Textbooks"]
 
 
 VALID_FILE_TYPES = [
@@ -203,7 +226,7 @@ VALID_TEXT_FILE_TYPES = [
     ".xml",
 ]
 
-VALID_TUTOR_PROBLEM_FILE_TYPES = [*VALID_TEXT_FILE_TYPES, ".csv"]
+VALID_TUTOR_PROBLEM_FILE_TYPES = [*VALID_TEXT_FILE_TYPES, ".csv", ".py"]
 
 VALID_ALL_FILE_TYPES = list(
     zip(
@@ -227,6 +250,10 @@ VALID_COURSE_CONTENT_TYPES = (
 VALID_COURSE_CONTENT_CHOICES = list(
     zip(VALID_COURSE_CONTENT_TYPES, VALID_COURSE_CONTENT_TYPES)
 )
+
+# Large text fields excluded from API responses (both nested serializers and
+# OpenSearch _source filtering) but retained in the search index for querying
+CONTENT_FILE_LARGE_FIELDS = ("content", "summary", "flashcards")
 
 TUTOR_PROBLEM_TYPE = "problem"
 TUTOR_SOLUTION_TYPE = "solution"
@@ -258,7 +285,8 @@ DEPARTMENTS = {
     "21G": "Global Languages",
     "21H": "History",
     "21L": "Literature",
-    "21M": "Music and Theater Arts",
+    "21M": "Music",
+    "21T": "Theater Arts",
     "22": "Nuclear Science and Engineering",
     "24": "Linguistics and Philosophy",
     "CC": "Concourse",
@@ -389,3 +417,11 @@ CURRENCY_USD = "USD"
 
 GROUP_CONTENT_FILE_CONTENT_VIEWERS = "content_file_viewers"
 GROUP_TUTOR_PROBLEM_VIEWERS = "tutor_problem_viewers"
+GROUP_COURSE_AUTHORS = "course_authors"
+
+
+class CredentialMetadataField(ExtendedEnum):
+    """The Open Badges fields the credential metadata API generates"""
+
+    description = "Description"
+    criteria = "Criteria"

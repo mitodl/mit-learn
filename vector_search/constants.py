@@ -5,6 +5,22 @@ RESOURCES_COLLECTION_NAME = f"{settings.QDRANT_BASE_COLLECTION_NAME}.resources"
 CONTENT_FILES_COLLECTION_NAME = f"{settings.QDRANT_BASE_COLLECTION_NAME}.content_files"
 TOPICS_COLLECTION_NAME = f"{settings.QDRANT_BASE_COLLECTION_NAME}.topics"
 
+# ContentFile columns (beyond checksum, which only covers content) compared by the
+# embed_run_content_files pre-pass to detect stale Qdrant payloads. Every entry MUST
+# be an exact serializer pass-through of a scalar/JSON ContentFile column: a field
+# the serializer transforms would never converge, flagging every file on every load
+# (test_content_file_prepass_fields_are_serializer_pass_through guards this).
+CONTENT_FILE_PREPASS_PAYLOAD_FIELDS = (
+    "title",
+    "description",
+    "url",
+    "file_type",
+    "file_extension",
+    "content_type",
+    "edx_module_id",
+    "summary",
+    "flashcards",
+)
 
 QDRANT_CONTENT_FILE_PARAM_MAP = {
     "key": "key",
@@ -26,6 +42,28 @@ QDRANT_CONTENT_FILE_PARAM_MAP = {
     "flashcards": "flashcards",
     "checksum": "checksum",
 }
+
+# Payload key holding a resource's completeness score (0-1), the same value the
+# OpenSearch script_score penalizes incomplete OCW courses by. Only the resources
+# collection carries it; content file payloads do not.
+COMPLETENESS_PAYLOAD_KEY = "completeness"
+
+# Payload key holding the date a resource is considered to have aged from -- the
+# start date of its last run, or the last modified date for learning materials.
+# Set by the search serializer, so only the resources collection carries it.
+# Null does NOT mean "current": get_resource_age_date dates only learning
+# materials and courses, so every program comes through undated. Freshness is
+# read off NEXT_START_DATE instead.
+RESOURCE_AGE_DATE_PAYLOAD_KEY = "resource_age_date"
+
+# Start date of a resource's next run, when it has one. Present is what exempts
+# a resource from the staleness penalty. Indexed, so the penalty can gate on it.
+NEXT_START_DATE_PAYLOAD_KEY = "next_start_date"
+
+# Qdrant decay expressions measure the distance between datetimes in seconds, so
+# a staleness horizon in years is converted with this. 365 days, the same year
+# length the OpenSearch decay's 365d scale uses.
+SECONDS_PER_YEAR = 365 * 24 * 60 * 60
 
 QDRANT_RESOURCE_PARAM_MAP = {
     "readable_id": "readable_id",
@@ -80,6 +118,12 @@ QDRANT_LEARNING_RESOURCE_INDEXES = {
     "next_start_date": models.PayloadSchemaType.DATETIME,
     "created_on": models.PayloadSchemaType.DATETIME,
     "views": models.PayloadSchemaType.INTEGER,
+    # Not filterable or facetable -- indexed because Qdrant rejects a scoring
+    # formula that reads an unindexed payload key (see COMPLETENESS_PAYLOAD_KEY).
+    COMPLETENESS_PAYLOAD_KEY: models.PayloadSchemaType.FLOAT,
+    # Scoring-only for the same reason: the staleness penalty decays over it, and
+    # a datetime index is what makes it readable from a formula.
+    RESOURCE_AGE_DATE_PAYLOAD_KEY: models.PayloadSchemaType.DATETIME,
 }
 
 
@@ -133,12 +177,88 @@ QDRANT_TOPIC_INDEXES = {
 CONTENT_FILES_RETRIEVE_PAYLOAD = True
 RESOURCES_RETRIEVE_PAYLOAD = ["readable_id", "platform"]
 
+# Payload key holding the checksum of the text that produced a resource point's
+# vector. The embed gate compares it against the checksum of the context
+# rendered now -- see should_generate_resource_embeddings.
+RESOURCE_EMBEDDING_CHECKSUM_FIELD = "embedding_checksum"
+
+# Folded into that checksum so that changes to the *format* of the embedding
+# context -- a serializer change that renders the same underlying data
+# differently, a new section, a reordering -- invalidate every stored checksum.
+# Bump it whenever _learning_resource_embedding_context starts producing
+# different text for unchanged data.
+RESOURCE_EMBEDDING_VERSION = 1
+
+# Payload keys dropped when resource hits are served straight from the Qdrant
+# payload (VECTOR_SEARCH_RESOURCES_FROM_PAYLOAD): what the indexing serializer
+# adds on top of the LearningResourceSerializer shape the API returns, plus
+# video.transcript and podcast_episode.transcript, which the response never
+# renders (the podcast episode page fetches its transcript from its own
+# endpoint).
+#
+# content_files is NOT excluded. Document and video responses declare it
+# (NestedContentFileSerializer), and search cards fall back to
+# content_files[0].image_src for the thumbnail when the resource has no image.
+# The indexing serializer re-serializes it with the *full* ContentFileSerializer,
+# so its large text fields are trimmed in Python instead -- see
+# _trim_indexing_only_list_fields.
+#
+# This is deliberately not a copy of SOURCE_EXCLUDED_FIELDS: vector_embedding is
+# an OpenSearch-only field (grafted on by
+# serialize_bulk_learning_resources_with_embeddings), and in Qdrant the dense
+# vector lives on the point, not in the payload.
+RESOURCES_PAYLOAD_EXCLUDE = [
+    "_id",
+    "resource_relations",
+    "is_learning_material",
+    "resource_age_date",
+    "featured_rank",
+    "is_incomplete_or_stale",
+    "video.transcript",
+    RESOURCE_EMBEDDING_CHECKSUM_FIELD,
+    "podcast_episode.transcript",
+]
+
+# Qdrant payload selectors descend into objects but not into lists of objects,
+# so the extra fields SearchCourseNumberSerializer puts on each course number
+# cannot be named in RESOURCES_PAYLOAD_EXCLUDE and are trimmed in Python.
+COURSE_NUMBER_INDEXING_ONLY_FIELDS = frozenset({"sort_coursenum", "primary"})
+
 
 COLLECTION_PARAM_MAP = {
     RESOURCES_COLLECTION_NAME: QDRANT_RESOURCE_PARAM_MAP,
     TOPICS_COLLECTION_NAME: QDRANT_TOPICS_PARAM_MAP,
     CONTENT_FILES_COLLECTION_NAME: QDRANT_CONTENT_FILE_PARAM_MAP,
 }
+
+COLLECTION_INDEX_MAP = {
+    RESOURCES_COLLECTION_NAME: QDRANT_LEARNING_RESOURCE_INDEXES,
+    TOPICS_COLLECTION_NAME: QDRANT_TOPIC_INDEXES,
+    CONTENT_FILES_COLLECTION_NAME: QDRANT_CONTENT_FILE_INDEXES,
+}
+
+# Sort keys a point can legitimately have no value for. Qdrant's order_by walks
+# the payload index, so a point whose value is null -- or which lacks the key
+# altogether -- is left out of the results entirely rather than ordered last:
+# next_start_date is null for every learning material, none of which has runs,
+# and for every course with no upcoming run, which together are the large
+# majority of the collection. Ordering by one of these keys takes the paths that
+# put those points last instead of dropping them. Everything else keeps the plain
+# order_by: views and created_on are on every resource payload, and their exact
+# index ordering is worth more than covering a case that cannot happen.
+NULLABLE_ORDER_BY_KEYS = frozenset({"next_start_date"})
+
+# The value a missing datetime is ordered by, which has to fall outside the range
+# real dates occupy so those points land at the end of the results either way.
+ORDER_BY_MISSING_DATETIME = {
+    models.Direction.ASC: "9999-01-01T00:00:00Z",
+    models.Direction.DESC: "0001-01-01T00:00:00Z",
+}
+
+# Points with no value for the sort key have nothing to order them by, so they
+# are ordered by recency instead -- where the tie-broken tail of the equivalent
+# OpenSearch sort also ends up. On every resource payload, and indexed.
+ORDER_BY_MISSING_TAIL_KEY = "created_on"
 
 # Maximum value of offset + limit accepted by paginated vector search
 MAX_RESULT_WINDOW = 1000
@@ -165,8 +285,35 @@ QDRANT_OPTIMIZER_FLUSH_INTERVAL_XLARGE = 30
 QDRANT_OPTIMIZER_INDEXING_THRESHOLD_RATIO = 0.8
 
 
+# Name of the boost entry whose amount the `program_boost` search parameter
+# overrides.
+PROGRAM_SCORE_BOOST_NAME = "program"
+
+# Score boosts applied by the rescoring formula (see custom_score_formula).
+# "boost" is a *fraction of the point's own score*, not a number of score units:
+# an entry of 0.1 multiplies a matching point's score by 1.1, and so does a
+# `program_boost` of 0.1 on a request. Deliberately relative rather than
+# absolute -- custom_score_formula has the reasoning.
 VECTOR_SEARCH_SCORE_BOOST = {
     RESOURCES_COLLECTION_NAME: [
-        {"boost": 0.15, "params": {"resource_type_group": ["program"]}}
+        {
+            "name": PROGRAM_SCORE_BOOST_NAME,
+            "boost": 0.1,
+            "params": {"resource_type_group": ["program"]},
+        }
     ],
 }
+
+
+def default_score_boost(
+    name: str, collection_name: str = RESOURCES_COLLECTION_NAME
+) -> float:
+    """Configure the boost amount for a named entry"""
+    return next(
+        (
+            entry.get("boost", 0)
+            for entry in VECTOR_SEARCH_SCORE_BOOST.get(collection_name, [])
+            if entry.get("name") == name
+        ),
+        0,
+    )

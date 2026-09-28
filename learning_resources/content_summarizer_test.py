@@ -550,3 +550,32 @@ def test_can_process_content_file(
     )
 
     assert summarizer._can_process_content_file(content_file) is expected  # noqa: SLF001
+
+
+def test_summarize_single_content_file_sanitizes_llm_output(
+    mocker, settings, processable_content_files
+):
+    """NULs and lone surrogates in LLM output are stripped before saving"""
+    settings.OPENAI_API_KEY = "test"
+    summarizer = ContentSummarizer()
+    mock_chat_llm = mocker.patch(
+        "learning_resources.content_summarizer.ChatLiteLLM", autospec=True
+    )
+    mock_instance = mock_chat_llm.return_value
+
+    mock_summary_response = mocker.MagicMock()
+    mock_summary_response.content = "summary with nul\x00 and surrogate\ud800"
+    mock_instance.invoke.return_value = mock_summary_response
+    mock_instance.with_structured_output.return_value.invoke.return_value = {
+        "flashcards": [
+            {"question": "Q\x00uestion", "answer": "An\ud800swer"},
+        ]
+    }
+
+    content_file = processable_content_files[0]
+    result = summarizer.summarize_single_content_file(content_file.id, overwrite=False)
+
+    assert result == f"Summarization succeeded for CONTENT_FILE_ID: {content_file.id}"
+    content_file.refresh_from_db()
+    assert content_file.summary == "summary with nul and surrogate?"
+    assert content_file.flashcards == [{"question": "Question", "answer": "An?swer"}]

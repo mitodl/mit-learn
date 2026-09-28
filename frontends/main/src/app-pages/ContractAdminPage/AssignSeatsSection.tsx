@@ -11,7 +11,13 @@ import {
 } from "ol-utilities"
 import Papa from "papaparse"
 import { AssignSeatsConfirmModal } from "./AssignSeatsConfirmModal"
-import { useBulkAssignSeats } from "api/mitxonline-hooks/organizations"
+import {
+  useBulkAssignSeats,
+  useSendTestEmail,
+} from "api/mitxonline-hooks/organizations"
+import { SILENCE_ERROR_TOAST } from "api/mutation-meta"
+import { mitxUserQueries } from "api/mitxonline-hooks/user"
+import { useQuery } from "@tanstack/react-query"
 import type { BulkAssignError } from "@mitodl/mitxonline-api-axios/v2"
 
 // Shared metrics — must be identical between EmailHighlightLayer and EmailTextarea
@@ -206,7 +212,8 @@ type AssignResult = {
 type AssignSeatsSectionProps = {
   orgId: number
   contractId: number
-  availableSeats: number
+  /** Null means the contract has no max_learners cap — never over capacity. */
+  availableSeats: number | null
   isLoadingSeats: boolean
 }
 
@@ -226,7 +233,11 @@ const AssignSeatsSection: React.FC<AssignSeatsSectionProps> = ({
   const [errorAnnouncement, setErrorAnnouncement] = useState("")
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const bulkAssign = useBulkAssignSeats()
+  // Both surface their outcome via inline Alerts (bulk-assign result Alert and
+  // the send-test-email alert), so suppress the global error toast.
+  const bulkAssign = useBulkAssignSeats({ meta: SILENCE_ERROR_TOAST })
+  const sendTestEmail = useSendTestEmail({ meta: SILENCE_ERROR_TOAST })
+  const { data: user } = useQuery(mitxUserQueries.me())
 
   const submitResult = useMemo(
     () => parseEmailsForSubmit(emailInput),
@@ -246,7 +257,7 @@ const AssignSeatsSection: React.FC<AssignSeatsSectionProps> = ({
   )
   const showOverlay = hasEmails
 
-  const overCapacity = validCount > availableSeats
+  const overCapacity = availableSeats !== null && validCount > availableSeats
   const ignoreWarning =
     !overCapacity && (invalidCount > 0 || duplicateCount > 0)
       ? `. ${[
@@ -267,7 +278,7 @@ const AssignSeatsSection: React.FC<AssignSeatsSectionProps> = ({
     if (duplicateCount > 0)
       parts.push(`${duplicateCount} ${pluralize("duplicate", duplicateCount)}`)
     announcement = parts.join(", ") + ignoreWarning
-    if (overCapacity) {
+    if (overCapacity && availableSeats !== null) {
       const excess = validCount - availableSeats
       const seatsClause =
         availableSeats > 1
@@ -392,6 +403,16 @@ const AssignSeatsSection: React.FC<AssignSeatsSectionProps> = ({
 
   const handleModalClose = () => setModalData(null)
 
+  const handleSendTestEmail = async () => {
+    const email = user?.email
+    if (!email) throw new Error("Logged-in user email is unavailable")
+    await sendTestEmail.mutateAsync({
+      id: contractId,
+      parent_lookup_organization: orgId,
+      SendTestEmailRequest: { email },
+    })
+  }
+
   const handleModalConfirm = async () => {
     const emails = modalData?.validEmails ?? []
     if (emails.length === 0) return
@@ -415,8 +436,8 @@ const AssignSeatsSection: React.FC<AssignSeatsSectionProps> = ({
       <div>
         <SectionTitle component="h2">Assign Seats</SectionTitle>
         <MutedText>
-          Each learner will receive an email with a link to claim their seat and
-          access the program.
+          Each learner will receive an invitation email from MIT Learn to access
+          their learning.
         </MutedText>
       </div>
       {/* Always-mounted live region — debounced so screen readers aren't spammed on every keystroke */}
@@ -564,7 +585,7 @@ const AssignSeatsSection: React.FC<AssignSeatsSectionProps> = ({
           will be ignored
         </Alert>
       )}
-      {overCapacity && (
+      {overCapacity && availableSeats !== null && (
         <Alert severity="error">
           {availableSeats > 1
             ? `You entered ${validCount} ${pluralize("email", validCount)}, but only ${availableSeats} unassigned ${pluralize("seat", availableSeats)} are available.`
@@ -612,6 +633,8 @@ const AssignSeatsSection: React.FC<AssignSeatsSectionProps> = ({
           invalidEmails={modalData.invalidEmails}
           duplicateEmails={modalData.duplicateEmails}
           skippedCount={modalData.skippedCount}
+          userEmail={user?.email}
+          onSendTestEmail={handleSendTestEmail}
         />
       )}
     </SectionCard>

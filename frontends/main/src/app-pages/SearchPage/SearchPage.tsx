@@ -2,22 +2,28 @@
 import { keyBy } from "lodash"
 
 import React, { useCallback, useMemo, useEffect, useState } from "react"
-import type { FacetManifest } from "@mitodl/course-search-utils"
-import { useSearchParams } from "@mitodl/course-search-utils/next"
+import type {
+  FacetManifest,
+  UseResourceSearchParamsProps,
+} from "@mitodl/course-search-utils"
+import { useSetSearchParams } from "@mitodl/course-search-utils/next"
+import { useAppSearchParams } from "@/common/useAppSearchParams"
 import { useResourceSearchParams } from "@mitodl/course-search-utils"
-import SearchDisplay, {
+import SearchDisplay from "@/page-components/SearchDisplay/SearchDisplay"
+import {
   AdminTitleContainer,
   ExplanationContainer,
-} from "@/page-components/SearchDisplay/SearchDisplay"
+} from "@/page-components/SearchDisplay/adminStyles"
 import HybridSearchDisplay from "@/page-components/SearchDisplay/HybridSearchDisplay"
 import { styled, Container, theme, Typography } from "ol-components"
 import { Checkbox, VisuallyHidden } from "@mitodl/smoot-design"
 import { SearchField } from "@/page-components/SearchField/SearchField"
 import { useOfferorsList } from "api/hooks/learningResources"
-import { facetNames } from "./searchRequests"
+import { defaultFacetNames, getExtraFacetNames } from "./searchRequests"
 import getFacetManifest from "@/page-components/SearchDisplay/getFacetManifest"
 import dynamic from "next/dynamic"
 import { useUserMe } from "api/hooks/user"
+import { useHybridSearchEnabled } from "@/common/useHybridSearchEnabled"
 
 const LearningResourceDrawer = dynamic(
   () =>
@@ -74,24 +80,52 @@ const StyledSearchField = styled(SearchField)({
 
 const constantSearchParams = {}
 
-const useFacetManifest = (resourceTypeGroup: string | null) => {
+const useFacetManifest = (
+  resourceTypeGroup: string | null,
+  extraFacetNames: string[],
+) => {
   const offerorsQuery = useOfferorsList()
   const offerors = useMemo(() => {
     return keyBy(offerorsQuery.data?.results ?? [], (o) => o.code)
   }, [offerorsQuery.data?.results])
   const facetManifest = useMemo(
-    () => getFacetManifest(offerors, resourceTypeGroup),
-    [offerors, resourceTypeGroup],
+    () => getFacetManifest(offerors, resourceTypeGroup, extraFacetNames),
+    [offerors, resourceTypeGroup, extraFacetNames],
   )
   return facetManifest
 }
 
 const SearchPage: React.FC = () => {
-  const [searchParams, setSearchParams] = useSearchParams()
+  const searchParams = useAppSearchParams()
+  const setSearchParams = useSetSearchParams()
+  const extraFacetNames = useMemo(
+    () => getExtraFacetNames(searchParams, defaultFacetNames) ?? [],
+    [searchParams],
+  )
+  // Facets shown by default plus any additional facets present in the URL.
+  const augmentedFacetNames = useMemo(
+    () =>
+      [
+        ...(defaultFacetNames ?? []),
+        ...extraFacetNames,
+      ] as UseResourceSearchParamsProps["facets"],
+    [extraFacetNames],
+  )
+  // The professional toggle is not aggregated, but must be treated as a facet
+  // so "Clear all filters" resets it.
+  const searchParamFacets = useMemo(
+    () =>
+      [
+        ...(augmentedFacetNames ?? []),
+        "professional",
+      ] as UseResourceSearchParamsProps["facets"],
+    [augmentedFacetNames],
+  )
   const facetManifest = useFacetManifest(
     searchParams.get("resource_type_group"),
+    extraFacetNames,
   )
-  const isVectorSearch = searchParams.get("vector_search") === "true"
+  const isHybridSearch = useHybridSearchEnabled()
   const [fetchTime, setFetchTime] = useState<number | null>(null)
   const { data: user } = useUserMe()
 
@@ -99,22 +133,23 @@ const SearchPage: React.FC = () => {
     <>
       <AdminTitleContainer>Vector Hybrid Search</AdminTitleContainer>
       <Checkbox
-        aria-label="Vector Hybrid Search"
-        checked={isVectorSearch}
+        // smoot-design's Checkbox renders a bare input unless given `label`;
+        // it does not forward aria-label.
+        label="Use hybrid search"
+        checked={isHybridSearch}
         onChange={(e) =>
           setSearchParams((prev) => {
             const next = new URLSearchParams(prev)
-            if (e.target.checked) {
-              next.set("vector_search", "true")
-            } else {
-              next.delete("vector_search")
-            }
+            // Set explicitly either way: hybrid search is the default, so
+            // unchecking has to override the flag rather than clear the param.
+            next.set("vector_search", e.target.checked ? "true" : "false")
             return next
           })
         }
       />
       <ExplanationContainer>
-        Toggle to use the vector hybrid search endpoint.
+        Hybrid search is the default. Uncheck to compare against the OpenSearch
+        endpoint.
       </ExplanationContainer>
     </>
   )
@@ -157,7 +192,7 @@ const SearchPage: React.FC = () => {
   } = useResourceSearchParams({
     searchParams,
     setSearchParams,
-    facets: facetNames,
+    facets: searchParamFacets,
     onFacetsChange,
   })
 
@@ -207,7 +242,7 @@ const SearchPage: React.FC = () => {
           </SearchFieldWrapper>
         </SearchFieldContainer>
       </Header>
-      {isVectorSearch ? (
+      {isHybridSearch ? (
         <HybridSearchDisplay
           onFetchTimeChange={setFetchTime}
           filterHeadingEl="h2"
@@ -217,7 +252,7 @@ const SearchPage: React.FC = () => {
           requestParams={params}
           setPage={setPage}
           facetManifest={facetManifest as FacetManifest}
-          facetNames={facetNames}
+          facetNames={augmentedFacetNames}
           constantSearchParams={constantSearchParams}
           hasFacets={hasFacets}
           setParamValue={setParamValue}
@@ -236,7 +271,7 @@ const SearchPage: React.FC = () => {
           requestParams={params}
           setPage={setPage}
           facetManifest={facetManifest as FacetManifest}
-          facetNames={facetNames}
+          facetNames={augmentedFacetNames}
           constantSearchParams={constantSearchParams}
           hasFacets={hasFacets}
           setParamValue={setParamValue}

@@ -154,7 +154,21 @@ def submit_form(
     account_response = client.api_request(
         {"path": "/integrations/v1/me", "method": "GET"}
     )
-    portal_id = account_response.json()["portalId"]
+    # A misconfigured/expired token makes /me return an error body with no
+    # portalId. Guard it so callers get a surfaced ApiException (logged, wrapped)
+    # instead of an uncaught KeyError -> 500.
+    if account_response.status_code >= HTTPStatus.BAD_REQUEST:
+        raise ApiException(
+            status=account_response.status_code, reason=account_response.text
+        )
+    portal_id = (account_response.json() if account_response.content else {}).get(
+        "portalId"
+    )
+    if not portal_id:
+        raise ApiException(
+            status=HTTPStatus.BAD_GATEWAY,
+            reason=account_response.text,
+        )
 
     raw_fields = payload.get("fields", [])
     fields = [

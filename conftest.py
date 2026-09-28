@@ -4,6 +4,7 @@
 from types import SimpleNamespace
 
 import pytest
+from django.core import mail
 
 from fixtures.aws import *  # noqa: F403
 from fixtures.common import *  # noqa: F403
@@ -22,6 +23,18 @@ def prevent_requests(mocker, request):
         autospec=True,
         side_effect=DoNotUseRequestException,
     )
+
+
+@pytest.fixture(autouse=True)
+def _use_locmem_notification_email_backend(settings):
+    settings.NOTIFICATION_EMAIL_BACKEND = (
+        "django.core.mail.backends.locmem.EmailBackend"
+    )
+
+
+@pytest.fixture(autouse=True)
+def _clear_mail_outbox():
+    mail.outbox = []
 
 
 @pytest.fixture(autouse=True)

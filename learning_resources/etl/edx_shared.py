@@ -1,23 +1,28 @@
 """Shared functions for EdX sites"""
 
 import logging
+import tarfile
+from itertools import chain
 from pathlib import Path
-from tarfile import ReadError
 from tempfile import TemporaryDirectory
 
+from defusedxml import ElementTree
 from django.conf import settings
 from django.core.cache import caches
 from django.db.models import Prefetch, Q
 
+from learning_resources.constants import VALID_TEXT_FILE_TYPES
 from learning_resources.etl.constants import ETLSource
 from learning_resources.etl.loaders import load_content_files
 from learning_resources.etl.utils import (
     calc_checksum,
+    excluded_olx_paths,
     get_bucket_by_name,
+    get_edx_module_id,
     get_s3_prefix_for_source,
     transform_content_files,
 )
-from learning_resources.models import LearningResourceRun
+from learning_resources.models import ContentFile, LearningResourceRun
 
 log = logging.getLogger(__name__)
 
@@ -114,9 +119,10 @@ def build_run_lookup(
 
 def process_course_archive(
     bucket, key: str, run: LearningResourceRun, *, overwrite: bool = False
-) -> None:
+) -> bool:
     """
-    Download and process a course archive from S3.
+    Download and process a course archive from S3, skipping the download
+    entirely when run.archive_key already matches the content-addressed key.
 
     Args:
         bucket: S3 bucket object
@@ -125,30 +131,65 @@ def process_course_archive(
         overwrite(bool): Whether to overwrite existing content files
 
     Returns:
-        bool: True if successfully processed, False if skipped due to matching checksum
+        bool: False if skipped via matching archive_key, True otherwise
     """
+    # A saved checksum means this archive once produced published rows. If
+    # none are left (a bulk deindex unpublished them, cleanup may have deleted
+    # them since), the run is stale and must not skip the load. An empty
+    # archive records archive_key with no checksum, so it still skips.
+    stale_run = (
+        bool(run.checksum) and not run.content_files.filter(published=True).exists()
+    )
+
+    if run.archive_key == key and not overwrite and not stale_run:
+        log.debug("Archive key unchanged for %s, skipping download", key)
+        return False
     with TemporaryDirectory() as export_tempdir:
         course_tarpath = Path(export_tempdir, key.rsplit("/", maxsplit=1)[-1])
         log.info("course tarpath for run %s is %s", run.run_id, course_tarpath)
         bucket.download_file(key, course_tarpath)
         try:
             checksum = calc_checksum(course_tarpath)
-        except ReadError:
+        except tarfile.ReadError:
             log.exception("Error reading tar file %s, skipping", course_tarpath)
-            return False
-        if run.checksum == checksum and not overwrite:
+            return True
+        if run.checksum == checksum and not overwrite and not stale_run:
+            # unchanged content under a new key: record it to skip future downloads
+            run.archive_key = key
+            run.save(update_fields=["archive_key"])
             log.info("Checksums match for %s, skipping load", key)
-            return False
+            return True
         try:
+            failed_keys = []
+            content_files_data = iter(
+                transform_content_files(
+                    course_tarpath, run, overwrite=overwrite, failed_keys=failed_keys
+                )
+            )
+            first = next(content_files_data, None)
+            if first is None:
+                if failed_keys:
+                    # every file failed: retry next sync, don't mark as empty
+                    return True
+                # empty archive: stop re-downloading it. Drop any checksum
+                # from an earlier ingest so a stale run doesn't keep
+                # forcing the download.
+                run.archive_key = key
+                run.checksum = None
+                run.save(update_fields=["archive_key", "checksum"])
+                return True
             content_files_ids = load_content_files(
-                run,
-                transform_content_files(course_tarpath, run, overwrite=overwrite),
+                run, chain([first], content_files_data), failed_keys=failed_keys
             )
             if content_files_ids:
                 run.checksum = checksum
-                run.save(update_fields=["checksum"])
+                run.archive_key = key
+                run.save(update_fields=["checksum", "archive_key"])
+            # else: files yielded but none loaded — save nothing so the next
+            # sync retries
         except:  # noqa: E722
             log.exception("Error ingesting OLX content data for %s", key)
+    return True
 
 
 def get_most_recent_course_archives(etl_source: str) -> list[str]:
@@ -315,6 +356,7 @@ def sync_edx_course_files(
     bucket = get_bucket_by_name(settings.COURSE_ARCHIVE_BUCKET_NAME)
     run_lookup = build_run_lookup(etl_source, ids)
 
+    skipped = processed = 0
     for key in keys:
         normalized_key_id = extract_run_id_from_key(etl_source, key)
         matching_runs = run_lookup.get(normalized_key_id)
@@ -327,4 +369,116 @@ def sync_edx_course_files(
             log.warning("There are %d runs for %s", len(matching_runs), key)
 
         run = matching_runs[0]
-        process_course_archive(bucket, key, run, overwrite=overwrite)
+        if process_course_archive(bucket, key, run, overwrite=overwrite):
+            processed += 1
+        else:
+            skipped += 1
+    log.info(
+        "%s content file sync: %d unchanged archives skipped, %d processed",
+        etl_source,
+        skipped,
+        processed,
+    )
+
+
+def unpublish_excluded_content_files(
+    etl_source: str, ids: list[int], keys: list[str], *, dry_run: bool = False
+) -> list[dict]:
+    """
+    Unpublish (and deindex) content files the course does not use — staff-only
+    subtrees, asset manifests and unreferenced static files — for the runs
+    matching the given archive keys, without re-extracting anything.
+
+    Args:
+        etl_source(str): The edx ETL source
+        ids(list of int): list of course ids to process
+        keys(list[str]): list of S3 archive keys to search through
+        dry_run(bool): count the rows but leave them published and deindex nothing
+
+    Returns:
+        list of dict: a row per run whose archive excludes content files it has,
+            counting the excluded rows, the ones this call unpublished (or would
+            have, under dry_run) and the run's content files in total. Counts,
+            not paths, so the payload stays small enough to cross the celery
+            result backend for every run at once.
+    """
+    from learning_resources_search import tasks as search_tasks
+    from vector_search import tasks as vector_tasks
+
+    bucket = get_bucket_by_name(settings.COURSE_ARCHIVE_BUCKET_NAME)
+    run_lookup = build_run_lookup(etl_source, ids)
+    rows = []
+    for key in keys:
+        matching_runs = run_lookup.get(extract_run_id_from_key(etl_source, key))
+        if not matching_runs:
+            continue
+        run = matching_runs[0]
+        if not ContentFile.objects.filter(run=run).exists():
+            # a run with no content files has none to unpublish, and its archive
+            # is a download and an extract to find that out
+            continue
+        with TemporaryDirectory() as tempdir:
+            tarpath = Path(tempdir, key.rsplit("/", maxsplit=1)[-1])
+            bucket.download_file(key, tarpath)
+            try:
+                with tarfile.open(tarpath) as tar:
+                    tar.extractall(tempdir, filter="data")
+            except tarfile.ReadError:
+                log.exception("Error extracting %s, skipping", key)
+                continue
+            olx_path = next((p for p in Path(tempdir).iterdir() if p.is_dir()), None)
+            if olx_path is None:
+                continue
+            try:
+                excluded_paths = excluded_olx_paths(olx_path)
+            except ElementTree.ParseError:
+                log.exception("Malformed OLX in %s, skipping", key)
+                continue
+            ingestable = [
+                path
+                for path in olx_path.rglob("*")
+                if path.is_file()
+                and path.suffix.lower() in VALID_TEXT_FILE_TYPES
+                and not any(
+                    "draft" in part for part in path.relative_to(olx_path).parts[:-1]
+                )
+            ]
+            # get_edx_module_id writes a space as an underscore, so "foo bar.pdf"
+            # and "foo_bar.pdf" are one row; it stays if either path is ingested
+            excluded_keys = {
+                get_edx_module_id(str(path), run)
+                for path in ingestable
+                if path in excluded_paths
+            } - {
+                get_edx_module_id(str(path), run)
+                for path in ingestable
+                if path not in excluded_paths
+            }
+        if not excluded_keys:
+            continue
+        # scoped to this run: keys embed the run_id, but never rely on that alone
+        excluded_files = ContentFile.objects.filter(run=run, key__in=excluded_keys)
+        excluded = excluded_files.count()
+        if not excluded:
+            continue
+        if dry_run:
+            unpublished = excluded_files.filter(published=True).count()
+        else:
+            unpublished = excluded_files.filter(published=True).update(published=False)
+            log.info(
+                "Unpublished %d excluded content files for %s", unpublished, run.run_id
+            )
+            # dispatched whenever excluded rows exist, not only when this call
+            # flipped them, so a re-run after a failed deindex task cleans up
+            # the indexes
+            search_tasks.deindex_run_content_files.delay(run.id, unpublished_only=True)
+            vector_tasks.remove_unpublished_run_content_files.delay(run.id)
+        rows.append(
+            {
+                "run_id": run.run_id,
+                "excluded": excluded,
+                "unpublished": unpublished,
+                "total": ContentFile.objects.filter(run=run).count(),
+            }
+        )
+    return rows

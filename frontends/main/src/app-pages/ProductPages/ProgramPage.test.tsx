@@ -24,11 +24,13 @@ import {
   user,
 } from "@/test-utils"
 import ProgramPage from "./ProgramPage"
+import { reqTreeChildQueries } from "./useReqTreeChildren"
+import { TestIds } from "./ProductSummary"
 import { assertHeadings, allowConsoleErrors } from "ol-test-utilities"
 import { notFound } from "next/navigation"
 import {
-  useStayUpdatedEnv,
-  PROGRAM_HIDE_STAY_UPDATED_CASES,
+  STAY_UPDATED_FORM_ID,
+  withHubspotFormId,
 } from "./test-utils/stayUpdated"
 
 import { usePostHog } from "posthog-js/react"
@@ -203,8 +205,7 @@ const setupApis = ({
     learnFactories.user.user({ is_authenticated: false }),
   )
 
-  const stayUpdatedFormId =
-    process.env.NEXT_PUBLIC_STAY_UPDATED_HUBSPOT_FORM_ID?.trim()
+  const stayUpdatedFormId = page.hubspot_form_id?.trim()
   if (stayUpdatedFormId) {
     setMockResponse.get(
       learnUrls.hubspot.details({ form_id: stayUpdatedFormId }),
@@ -227,6 +228,12 @@ describe("ProgramPage", () => {
         required: { count: 3, title: "Core Dog Courses" },
         electives: { count: 2, outOf: 4, title: "Elective Cat Courses" },
       }),
+      // Deterministic offering: the InfoBox now renders offering-card headings
+      // (e.g. "Learn for Free" / "Certificate Track") from ProgramEnrollArea,
+      // so pin a single free enrollment mode to keep this heading list stable.
+      enrollment_modes: [
+        factories.courses.enrollmentMode({ requires_payment: false }),
+      ],
     })
     const page = makePage({ program_details: program })
     invariant(page.faculty.length > 0)
@@ -239,6 +246,7 @@ describe("ProgramPage", () => {
           [
             { level: 1, name: page.title },
             { level: 2, name: "Program Information" },
+            { level: 3, name: "Learn for Free" },
             { level: 2, name: "About this Program" },
             { level: 2, name: "What you'll learn" },
             { level: 2, name: "Courses" },
@@ -248,6 +256,9 @@ describe("ProgramPage", () => {
             { level: 2, name: "Prerequisites" },
             { level: 2, name: "Meet your instructors" },
             { level: 3, name: page.faculty[0].instructor_name },
+            { level: 2, name: "FAQs" },
+            ...page.faqs.map((faq) => ({ level: 3, name: faq.question })),
+            { level: 2, name: "What learners are saying" },
           ],
           { maxLevel: 3 },
         )
@@ -439,7 +450,7 @@ describe("ProgramPage", () => {
     const reqTree = new RequirementTreeBuilder()
     const op = reqTree.addOperator({
       operator: "all_of",
-      title: "Requirements",
+      title: "Core Requirements",
     })
     op.addCourse()
     op.addProgram()
@@ -451,7 +462,8 @@ describe("ProgramPage", () => {
 
     renderWithProviders(<ProgramPage readableId={program.readable_id} />)
 
-    const section = await screen.findByRole("region", { name: "Courses" })
+    // A true program child suppresses the "Courses" framing.
+    const section = await screen.findByRole("region", { name: "Requirements" })
     const list = within(section).getByRole("list")
 
     await waitFor(() => {
@@ -475,10 +487,7 @@ describe("ProgramPage", () => {
 
   test("Links child program to /courses/p/ when display_mode is course", async () => {
     const reqTree = new RequirementTreeBuilder()
-    const op = reqTree.addOperator({
-      operator: "all_of",
-      title: "Requirements",
-    })
+    const op = reqTree.addOperator({ operator: "all_of" })
     op.addProgram()
 
     const program = makeProgram({ req_tree: reqTree.serialize() })
@@ -503,10 +512,7 @@ describe("ProgramPage", () => {
 
   test("Links child program to /programs/ when display_mode is null", async () => {
     const reqTree = new RequirementTreeBuilder()
-    const op = reqTree.addOperator({
-      operator: "all_of",
-      title: "Requirements",
-    })
+    const op = reqTree.addOperator({ operator: "all_of" })
     op.addProgram()
 
     const program = makeProgram({ req_tree: reqTree.serialize() })
@@ -514,7 +520,7 @@ describe("ProgramPage", () => {
     const { childPrograms } = setupApis({ program, page })
 
     renderWithProviders(<ProgramPage readableId={program.readable_id} />)
-    const section = await screen.findByRole("region", { name: "Courses" })
+    const section = await screen.findByRole("region", { name: "Requirements" })
 
     const link = await within(section).findByRole("link", {
       name: new RegExp(childPrograms[0].title),
@@ -523,6 +529,187 @@ describe("ProgramPage", () => {
       "href",
       `/programs/${childPrograms[0].readable_id}`,
     )
+  })
+
+  test("Hides course framing when requirements are true programs", async () => {
+    const reqTree = new RequirementTreeBuilder()
+    const tracks = reqTree.addOperator({
+      operator: "min_number_of",
+      operator_value: "1",
+      title: "Tracks",
+    })
+    tracks.addProgram()
+    tracks.addProgram()
+
+    const program = makeProgram({ req_tree: reqTree.serialize() })
+    const page = makePage({ program_details: program })
+    const { childPrograms } = setupApis({ program, page })
+
+    renderWithProviders(<ProgramPage readableId={program.readable_id} />)
+
+    const section = await screen.findByRole("region", { name: "Requirements" })
+    // Settle the child programs first; the negatives below must describe the
+    // resolved page, not a mid-load render.
+    expect(
+      await within(section).findByRole("link", {
+        name: new RegExp(childPrograms[0].title),
+      }),
+    ).toBeVisible()
+
+    expect(section).not.toHaveTextContent("To complete this program")
+    expect(screen.queryByRole("heading", { name: "Courses" })).toBe(null)
+    expect(screen.queryByTestId(TestIds.RequirementsRow)).toBe(null)
+  })
+
+  test("Suppressed case keeps one section heading above the groups", async () => {
+    const reqTree = new RequirementTreeBuilder()
+    const tracks = reqTree.addOperator({
+      operator: "min_number_of",
+      operator_value: "1",
+      title: "Tracks",
+    })
+    tracks.addProgram()
+    tracks.addProgram()
+    const capstone = reqTree.addOperator({
+      operator: "all_of",
+      title: "Capstone",
+    })
+    capstone.addProgram()
+
+    const program = makeProgram({
+      req_tree: reqTree.serialize(),
+      enrollment_modes: [
+        factories.courses.enrollmentMode({ requires_payment: false }),
+      ],
+    })
+    const page = makePage({ program_details: program })
+    setupApis({ program, page })
+    renderWithProviders(<ProgramPage readableId={program.readable_id} />)
+
+    // Both groups stay at level 3 under one level-2 section heading, so a
+    // second group never becomes a page-level peer.
+    await waitFor(() => {
+      assertHeadings(
+        [
+          { level: 1, name: page.title },
+          { level: 2, name: "Program Information" },
+          { level: 3, name: "Learn for Free" },
+          { level: 2, name: "About this Program" },
+          { level: 2, name: "What you'll learn" },
+          { level: 2, name: "Requirements" },
+          { level: 3, name: "Tracks: Complete 1 out of 2" },
+          { level: 3, name: "Capstone" },
+          { level: 2, name: "How you'll learn" },
+          { level: 2, name: "Prerequisites" },
+          { level: 2, name: "Meet your instructors" },
+          { level: 3, name: page.faculty[0].instructor_name },
+          { level: 2, name: "FAQs" },
+          ...page.faqs.map((faq) => ({ level: 3, name: faq.question })),
+          { level: 2, name: "What learners are saying" },
+        ],
+        { maxLevel: 3 },
+      )
+    })
+  })
+
+  test("Keeps course framing when child programs are displayed as courses", async () => {
+    const reqTree = new RequirementTreeBuilder()
+    const op = reqTree.addOperator({ operator: "all_of" })
+    op.addProgram()
+    op.addProgram()
+
+    const program = makeProgram({ req_tree: reqTree.serialize() })
+    const page = makePage({ program_details: program })
+    setupApis({
+      program,
+      page,
+      childProgramOverrides: { display_mode: DisplayModeEnum.Course },
+    })
+
+    renderWithProviders(<ProgramPage readableId={program.readable_id} />)
+
+    const section = await screen.findByRole("region", { name: "Courses" })
+    expect(section).toHaveTextContent(
+      "To complete this program, you must take 2 required courses.",
+    )
+    expect(
+      await screen.findByTestId(TestIds.RequirementsRow),
+    ).toHaveTextContent("2 Courses to complete program")
+  })
+
+  test("Withholds course framing until the child programs resolve", async () => {
+    const reqTree = new RequirementTreeBuilder()
+    const op = reqTree.addOperator({ operator: "all_of" })
+    op.addProgram()
+
+    const program = makeProgram({ req_tree: reqTree.serialize() })
+    const page = makePage({ program_details: program })
+    const { childPrograms } = setupApis({
+      program,
+      page,
+      childProgramOverrides: { display_mode: DisplayModeEnum.Course },
+    })
+
+    // Until this resolves, a course-like child is indistinguishable from a
+    // true program: req_tree carries ids, not display_mode.
+    const childProgramsResponse = Promise.withResolvers<{
+      results: V2ProgramDetail[]
+    }>()
+    setMockResponse.get(
+      urls.programs.programsList({
+        id: getIdsFromReqTree(program.req_tree).programIds,
+        page_size: 1,
+      }),
+      childProgramsResponse.promise,
+    )
+
+    renderWithProviders(<ProgramPage readableId={program.readable_id} />)
+
+    await screen.findByRole("region", { name: "Requirements" })
+    expect(screen.queryByRole("heading", { name: "Courses" })).toBe(null)
+    expect(screen.queryByTestId(TestIds.RequirementsRow)).toBe(null)
+
+    childProgramsResponse.resolve({ results: childPrograms })
+
+    await screen.findByRole("region", { name: "Courses" })
+    expect(await screen.findByTestId(TestIds.RequirementsRow)).toBeVisible()
+  })
+
+  test("Withholds course framing when the child programs request fails", async () => {
+    const reqTree = new RequirementTreeBuilder()
+    const op = reqTree.addOperator({ operator: "all_of" })
+    op.addProgram()
+
+    const program = makeProgram({ req_tree: reqTree.serialize() })
+    const page = makePage({ program_details: program })
+    setupApis({ program, page })
+
+    setMockResponse.get(
+      urls.programs.programsList({
+        id: getIdsFromReqTree(program.req_tree).programIds,
+        page_size: 1,
+      }),
+      { detail: "error" },
+      { code: 500 },
+    )
+
+    allowConsoleErrors()
+    const { queryClient } = renderWithProviders(
+      <ProgramPage readableId={program.readable_id} />,
+    )
+
+    await screen.findByRole("region", { name: "Requirements" })
+    // Wait on the query, not the DOM: the negatives below hold during loading
+    // too, so without this they would pass without the failure ever landing.
+    await waitFor(() => {
+      expect(
+        queryClient.getQueryState(
+          reqTreeChildQueries(program).programs.queryKey,
+        )?.status,
+      ).toBe("error")
+    })
+    expect(screen.queryByRole("heading", { name: "Courses" })).toBe(null)
+    expect(screen.queryByTestId(TestIds.RequirementsRow)).toBe(null)
   })
 
   // Interaction and active content are tested in InstructorsSection.test.tsx
@@ -543,7 +730,16 @@ describe("ProgramPage", () => {
   })
 
   test("Renders an enrollment button", async () => {
-    const program = makeProgram({ ...makeReqs() })
+    // Pin a paid-only offering: the header and infobox CTAs both read "Enroll
+    // in Program" for "paid", whereas "free"/"both" use non-matching labels
+    // ("Start Learning" / "Earn Certificate"). Without pinning this, the
+    // default random enrollment mode makes the /enroll/i assertion flaky.
+    const program = makeProgram({
+      ...makeReqs(),
+      enrollment_modes: [
+        factories.courses.enrollmentMode({ requires_payment: true }),
+      ],
+    })
     const page = makePage({ program_details: program })
     setupApis({ program, page })
     renderWithProviders(<ProgramPage readableId={program.readable_id} />)
@@ -710,16 +906,12 @@ describe("ProgramPage", () => {
   })
 
   describe("Stay Updated button", () => {
-    useStayUpdatedEnv()
-
-    test("Shows button when program has only the verified enrollment mode", async () => {
-      const program = makeProgram({
-        ...makeReqs(),
-        enrollment_modes: [
-          factories.courses.enrollmentMode({ mode_slug: "verified" }),
-        ],
-      })
-      const page = makePage({ program_details: program })
+    test("Shows button when the page has a hubspot form id", async () => {
+      const program = makeProgram({ ...makeReqs() })
+      const page = withHubspotFormId(
+        makePage({ program_details: program }),
+        STAY_UPDATED_FORM_ID,
+      )
       setupApis({ program, page })
       renderWithProviders(<ProgramPage readableId={program.readable_id} />)
 
@@ -728,33 +920,15 @@ describe("ProgramPage", () => {
       ).toBeInTheDocument()
     })
 
-    test.each(PROGRAM_HIDE_STAY_UPDATED_CASES)(
-      "Hides button when $label",
-      async ({ enrollment_modes: enrollmentModes }) => {
-        const program = makeProgram({
-          ...makeReqs(),
-          enrollment_modes: enrollmentModes,
-        })
-        const page = makePage({ program_details: program })
-        setupApis({ program, page })
-        renderWithProviders(<ProgramPage readableId={program.readable_id} />)
-
-        await screen.findByRole("heading", { name: page.title })
-        expect(
-          screen.queryByRole("button", { name: "Stay Updated" }),
-        ).not.toBeInTheDocument()
-      },
-    )
-
-    test("Hides button when Stay Updated form ID is not configured", async () => {
-      delete process.env.NEXT_PUBLIC_STAY_UPDATED_HUBSPOT_FORM_ID
-      const program = makeProgram({
-        ...makeReqs(),
-        enrollment_modes: [
-          factories.courses.enrollmentMode({ mode_slug: "verified" }),
-        ],
-      })
-      const page = makePage({ program_details: program })
+    test.each([
+      { label: "the form id is blank", hubspotFormId: "" },
+      { label: "the form id is null", hubspotFormId: null },
+    ])("Hides button when $label", async ({ hubspotFormId }) => {
+      const program = makeProgram({ ...makeReqs() })
+      const page = withHubspotFormId(
+        makePage({ program_details: program }),
+        hubspotFormId,
+      )
       setupApis({ program, page })
       renderWithProviders(<ProgramPage readableId={program.readable_id} />)
 

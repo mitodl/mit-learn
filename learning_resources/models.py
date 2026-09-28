@@ -6,6 +6,7 @@ from functools import cached_property
 from typing import TYPE_CHECKING, Optional
 
 from django.conf import settings
+from django.contrib.postgres.expressions import ArraySubquery
 from django.contrib.postgres.fields import ArrayField
 from django.db import models
 from django.db.models import (
@@ -21,6 +22,7 @@ from django.utils import timezone
 
 from learning_resources import constants
 from learning_resources.constants import (
+    WEBSITE_CONTENT_READABLE_ID_PREFIX,
     Availability,
     CertificationType,
     Format,
@@ -130,6 +132,7 @@ class LearningResourceTopic(TimestampedModel):
     class Meta:
         """Meta options for LearningResourceTopic"""
 
+        ordering = ["name"]
         constraints = [models.UniqueConstraint(Lower("name"), name="unique_lower_name")]
 
 
@@ -343,6 +346,25 @@ class LearningResourceInstructor(TimestampedModel):
 class LearningResourceQuerySet(TimestampedModelQuerySet):
     """QuerySet for LearningResource"""
 
+    def with_canonical_parent_ids(self):
+        """
+        Annotate each resource's URL-forming parent ids; `[]` if it has none.
+
+        A correlated subquery rather than an aggregate, so the outer query
+        needs no GROUP BY. It runs per row scanned rather than per row
+        returned, so deep pages pay for the rows they skip.
+        """
+        return self.annotate(
+            canonical_parent_ids=ArraySubquery(
+                LearningResourceRelationship.objects.filter(
+                    child=OuterRef("pk"),
+                    relation_type__in=constants.CANONICAL_PARENT_RELATION_TYPES,
+                )
+                .order_by(*constants.RELATIONSHIP_ORDERING)
+                .values("parent_id")
+            )
+        )
+
     def for_serialization(self):
         """Return the list of prefetches"""
         return self.prefetch_related(
@@ -365,7 +387,7 @@ class LearningResourceQuerySet(TimestampedModelQuerySet):
             "resource_tags",
             Prefetch(
                 "runs",
-                queryset=LearningResourceRun.objects.filter(published=True)
+                queryset=LearningResourceRun.objects.public()
                 .order_by("start_date", "enrollment_start", "id")
                 .for_serialization(),
                 to_attr="_published_runs",
@@ -374,14 +396,16 @@ class LearningResourceQuerySet(TimestampedModelQuerySet):
                 "parents",
                 queryset=LearningResourceRelationship.objects.filter(
                     relation_type=LearningResourceRelationTypes.PODCAST_EPISODES.value,
-                ),
+                )
+                .select_related("parent")
+                .order_by(*constants.RELATIONSHIP_ORDERING),
                 to_attr="_podcasts",
             ),
             Prefetch(
                 "parents",
                 queryset=LearningResourceRelationship.objects.filter(
                     relation_type=LearningResourceRelationTypes.PLAYLIST_VIDEOS.value,
-                ),
+                ).order_by(*constants.RELATIONSHIP_ORDERING),
                 to_attr="_playlists",
             ),
             Prefetch(
@@ -572,7 +596,8 @@ class LearningResource(TimestampedModel):
     def next_run(self) -> Optional["LearningResourceRun"]:
         """Returns the next run for the learning resource"""
         return (
-            self.runs.filter(Q(published=True) & Q(start_date__gt=timezone.now()))
+            self.runs.public()
+            .filter(start_date__gt=timezone.now())
             .order_by("start_date")
             .first()
         )
@@ -581,9 +606,13 @@ class LearningResource(TimestampedModel):
     def best_run(self) -> Optional["LearningResourceRun"]:
         """Returns the most current/upcoming enrollable run for the learning resource"""
         if hasattr(self, "_published_runs"):
-            published_runs = self._published_runs
+            published_runs = [
+                run
+                for run in self._published_runs
+                if run.published and not run.is_variant
+            ]
         else:
-            published_runs = list(self.runs.filter(published=True))
+            published_runs = list(self.runs.public())
 
         if not published_runs:
             return None
@@ -636,9 +665,13 @@ class LearningResource(TimestampedModel):
     def published_runs(self) -> list["LearningResourceRun"]:
         """Return a list of published runs for the resource"""
         if hasattr(self, "_published_runs"):
-            return self._published_runs
+            return [
+                run
+                for run in self._published_runs
+                if run.published and not run.is_variant
+            ]
         return list(
-            self.runs.filter(published=True)
+            self.runs.public()
             .order_by("start_date", "enrollment_start", "id")
             .for_serialization()
         )
@@ -723,6 +756,25 @@ class LearningResource(TimestampedModel):
 
     class Meta:
         unique_together = (("platform", "readable_id", "resource_type"),)
+        constraints = [
+            # The unique_together above spans `platform`, which resources
+            # mirrored from website content leave NULL -- and Postgres treats
+            # NULLs in a unique index as distinct, so it never rejects a
+            # duplicate of one. Two concurrent syncs of the same item would
+            # both insert, and every later sync would then fail with
+            # MultipleObjectsReturned.
+            #
+            # This partial index rejects the loser instead, which is what makes
+            # the sync's `update_or_create` safe: it catches the IntegrityError
+            # and re-reads the winner's row.
+            models.UniqueConstraint(
+                fields=["readable_id", "resource_type"],
+                condition=models.Q(
+                    readable_id__startswith=WEBSITE_CONTENT_READABLE_ID_PREFIX
+                ),
+                name="learningresource_website_content_uniq",
+            ),
+        ]
 
 
 class LearningResourceDetailQuerySet(TimestampedModelQuerySet):
@@ -764,6 +816,10 @@ class LearningResourceDetailModel(TimestampedModel):
 class LearningResourceRunQuerySet(TimestampedModelQuerySet):
     """QuerySet for LearningResourceRun"""
 
+    def public(self):
+        """Return published runs that should be visible to learners."""
+        return self.filter(published=True, is_variant=False)
+
     def for_serialization(self):
         """QuerySet for serialization"""
         return self.select_related("image").prefetch_related(
@@ -787,6 +843,8 @@ class LearningResourceRun(TimestampedModel):
     full_description = models.TextField(null=True, blank=True)  # noqa: DJ001
     last_modified = models.DateTimeField(null=True, blank=True)
     published = models.BooleanField(default=True, db_index=True)
+    is_b2b = models.BooleanField(default=False, db_index=True)
+    is_variant = models.BooleanField(default=False, db_index=True)
     languages = ArrayField(models.CharField(max_length=24), null=True, blank=True)
     url = models.URLField(null=True, max_length=2048)  # noqa: DJ001
     image = models.ForeignKey(
@@ -813,6 +871,8 @@ class LearningResourceRun(TimestampedModel):
     )
     resource_prices = models.ManyToManyField(LearningResourcePrice, blank=True)
     checksum = models.CharField(max_length=32, null=True, blank=True)  # noqa: DJ001
+    # S3 key of the last-processed course archive (content-addressed)
+    archive_key = models.CharField(max_length=512, null=True, blank=True)  # noqa: DJ001
     delivery = ArrayField(
         models.CharField(
             max_length=24, db_index=True, choices=LearningResourceDelivery.as_tuple()
@@ -1036,7 +1096,7 @@ class LearningResourceRelationshipQuerySet(TimestampedModelQuerySet):
                 relation_type=LearningResourceRelationTypes.LEARNING_PATH_ITEMS.value,
                 child__published=False,
             )
-            .order_by("position", "id")
+            .order_by(*constants.RELATIONSHIP_ORDERING)
         )
 
 
@@ -1063,7 +1123,7 @@ class LearningResourceRelationship(TimestampedModel):
     objects = LearningResourceRelationshipQuerySet.as_manager()
 
     class Meta:
-        ordering = ["position", "id"]
+        ordering = list(constants.RELATIONSHIP_ORDERING)
 
 
 class ContentFileQuerySet(TimestampedModelQuerySet):
@@ -1231,14 +1291,11 @@ class ContentFile(TimestampedModel):
         super().save(**kwargs)
 
     class Meta:
-        unique_together = (
-            ("key", "run", "learning_resource", "direct_learning_resource"),
-        )
         verbose_name = "contentfile"
         # add constraint so that atleast run or learning_resource is defined (not both)
         constraints = [
             models.CheckConstraint(
-                check=(
+                condition=(
                     models.Q(learning_resource__isnull=False, run__isnull=True)
                     | models.Q(run__isnull=False, learning_resource__isnull=True)
                     | models.Q(
@@ -1254,6 +1311,28 @@ class ContentFile(TimestampedModel):
                     "Both learning_resource and run cannot be defined at the"
                     " same time."
                 ),
+            ),
+            # One partial unique index per parent identity. A single index over
+            # all three nullable FKs would never reject anything, since Postgres
+            # treats NULLs as distinct. nulls_distinct=False so keyless rows on
+            # the same parent also collide instead of duplicating.
+            models.UniqueConstraint(
+                fields=["run", "key"],
+                condition=models.Q(run__isnull=False),
+                nulls_distinct=False,
+                name="contentfile_run_key_uniq",
+            ),
+            models.UniqueConstraint(
+                fields=["learning_resource", "key"],
+                condition=models.Q(learning_resource__isnull=False),
+                nulls_distinct=False,
+                name="contentfile_learning_resource_key_uniq",
+            ),
+            models.UniqueConstraint(
+                fields=["direct_learning_resource", "key"],
+                condition=models.Q(direct_learning_resource__isnull=False),
+                nulls_distinct=False,
+                name="contentfile_direct_learning_resource_key_uniq",
             ),
         ]
 
@@ -1551,6 +1630,25 @@ class LearningResourceViewEvent(TimestampedModel):
         editable=False,
         help_text="The date of the lrd_view event, as collected by PostHog.",
     )
+    event_uuid = models.UUIDField(
+        null=True,
+        editable=False,
+        help_text=(
+            "The PostHog event UUID. Null only for rows loaded"
+            " before this field existed."
+        ),
+    )
+
+    class Meta:
+        constraints = [
+            # Conditional so the index skips the legacy NULL rows, which would
+            # otherwise cost ~105MB of index for entries nothing ever probes.
+            models.UniqueConstraint(
+                fields=["event_uuid"],
+                condition=Q(event_uuid__isnull=False),
+                name="learning_resources_lrviewevent_event_uuid_uniq",
+            )
+        ]
 
     def __str__(self):
         """Return a string representation of the event."""
@@ -1591,25 +1689,163 @@ class ContentSummarizerConfiguration(TimestampedModel):
     is_active = models.BooleanField(default=True)
 
 
+class CredentialMetadataConfiguration(TimestampedModel):
+    """
+    Admin-editable prompt and model for one credential metadata field.
+
+    One row per field, so the credential program can retune each prompt (and
+    pick a different model for it) without a deploy. Mirrors
+    ContentSummarizerConfiguration.
+    """
+
+    field = models.CharField(
+        max_length=32,
+        unique=True,
+        choices=constants.CredentialMetadataField.as_tuple(),
+        help_text="The metadata field this row configures.",
+    )
+    llm_model = models.CharField(
+        max_length=128, verbose_name="LLM Model", help_text="Add any OpenAI LLM model."
+    )
+    prompt = models.TextField(help_text="Appended to the assembled course context.")
+    temperature = models.FloatField(default=0.0)
+    # Read only from a field generated out of course content -- criteria today.
+    # Retrieval happens once per request and is shared, so the first such field
+    # supplies the query.
+    retrieval_query = models.TextField(
+        blank=True,
+        default="",
+        help_text=(
+            "Vector search query for course content. Blank generates from the"
+            " marketing page and metadata alone. Only used for criteria,"
+            " ignored for description."
+        ),
+    )
+    is_active = models.BooleanField(default=True)
+
+    def __str__(self):
+        return f"CredentialMetadataConfiguration for {self.field}"
+
+
+class CredentialMetadataGenerationLog(TimestampedModel):
+    """
+    Append-only record of one credential metadata generation.
+
+    Written on every call and never read on the request path: the API does not
+    cache, so this table is the only record of what was generated, from what
+    context, by which prompt and model.
+    """
+
+    learning_resource = models.ForeignKey(
+        LearningResource,
+        on_delete=models.CASCADE,
+        related_name="credential_metadata_generation_logs",
+    )
+    field = models.CharField(
+        max_length=32, choices=constants.CredentialMetadataField.as_tuple()
+    )
+
+    response = models.JSONField(
+        null=True,
+        blank=True,
+        help_text="The structured response, or null on failure.",
+    )
+    error = models.TextField(
+        blank=True, default="", help_text="The error message, if generation failed."
+    )
+
+    # Snapshots rather than a foreign key to the configuration: prompts and
+    # models are admin-editable, and a response stored against a mutable
+    # prompt is uninterpretable after that prompt is retuned.
+    prompt_text = models.TextField()
+    llm_model = models.CharField(max_length=128)
+    temperature = models.FloatField(null=True, blank=True)
+
+    # Stored in full rather than hashed: retrieval is not reproducible, since
+    # chunks change as content is re-indexed, so a hash would tell us two runs
+    # differed without recovering what either saw. Roughly 64KB a row at a 16k
+    # budget, so defer() it in list queries.
+    context_text = models.TextField(
+        blank=True,
+        default="",
+        help_text="The full context sent to the model.",
+    )
+    context_tokens = models.PositiveIntegerField(default=0)
+    retrieved_point_ids = ArrayField(
+        models.CharField(max_length=64), default=list, blank=True
+    )
+
+    latency_ms = models.PositiveIntegerField(null=True, blank=True)
+    generated_by = models.ForeignKey(
+        settings.AUTH_USER_MODEL, null=True, blank=True, on_delete=models.SET_NULL
+    )
+
+    class Meta:
+        indexes = [
+            models.Index(fields=["learning_resource", "field", "-created_on"]),
+        ]
+
+    def __str__(self):
+        return (
+            f"{self.field} generation for"
+            f" {self.learning_resource.readable_id} at {self.created_on}"
+        )
+
+
+class CredentialMetadata(TimestampedModel):
+    """
+    The credential metadata currently in force for a learning resource.
+
+    Pre-populated by a daily sweep so that a credential can be issued without
+    waiting on (or paying for) a generation, and replaced whenever the API is
+    asked to regenerate. Distinct from CredentialMetadataGenerationLog, which
+    is the append-only history of every attempt: this is the one current value.
+
+    """
+
+    learning_resource = models.OneToOneField(
+        LearningResource,
+        on_delete=models.CASCADE,
+        related_name="credential_metadata",
+    )
+    description = models.TextField(
+        blank=True,
+        default="",
+        help_text="The Open Badges 3.0 description, 1-2 sentences.",
+    )
+    # TextField, not the CharField(max_length=N) that every other ArrayField in
+    # this module wraps: nothing on the generation path truncates a bullet, and
+    # a varchar(N)[] would raise DataError mid-sweep on an unusually long one.
+    criteria = ArrayField(
+        models.TextField(),
+        default=list,
+        blank=True,
+        help_text="Open Badges 3.0 criteria, one skill per bullet.",
+    )
+
+    def __str__(self):
+        return f"Credential metadata for {self.learning_resource.readable_id}"
+
+
 class ETLSourceOwnership(TimestampedModel):
     """
-    Declares which pipeline owns writes for an (etl_source, resource_type) pair.
+    Names the pipeline that owns writes for an (etl_source, resource_type) pair.
 
-    A missing row means "pull" (the historical default: Celery ETL is the
-    source of truth and its full-sync loaders may prune/unpublish anything
-    they didn't just write). Adding a "push" row hands write ownership to a
-    webhook/event pipeline (e.g. Dagster) and tells pull-ETL loaders to skip
-    writing and pruning that pair entirely, so the two writers stop treating
-    each other's rows as missing. See learning_resources/etl/ownership.py.
+    A missing row means legacy (the Celery ETL). Changing ``owner`` is the
+    per-source cutover between the legacy ETL, the warehouse pull and the data
+    platform's webhook push. See learning_resources/etl/ownership.py.
     """
 
-    class Mode(models.TextChoices):
-        PULL = "pull", "Pull (Celery ETL)"
-        PUSH = "push", "Push (webhook/event pipeline)"
+    class Pipeline(models.TextChoices):
+        LEGACY = "legacy", "Legacy (Celery ETL)"
+        WAREHOUSE = "warehouse", "Warehouse pull (StarRocks)"
+        WEBHOOK = "webhook", "Webhook push (data platform)"
 
     etl_source = models.CharField(max_length=32)
     resource_type = models.CharField(max_length=32)
-    mode = models.CharField(max_length=8, choices=Mode.choices, default=Mode.PULL)
+    owner = models.CharField(
+        max_length=16, choices=Pipeline.choices, default=Pipeline.LEGACY
+    )
 
     class Meta:
         unique_together = ("etl_source", "resource_type")
@@ -1617,4 +1853,4 @@ class ETLSourceOwnership(TimestampedModel):
         verbose_name_plural = "ETL source ownerships"
 
     def __str__(self):
-        return f"{self.etl_source}/{self.resource_type}: {self.mode}"
+        return f"{self.etl_source}/{self.resource_type}: {self.owner}"

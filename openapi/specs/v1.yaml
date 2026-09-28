@@ -688,6 +688,7 @@ paths:
             - 21H
             - 21L
             - 21M
+            - 21T
             - '22'
             - '24'
             - '3'
@@ -734,7 +735,8 @@ paths:
           * `21G` - Global Languages
           * `21H` - History
           * `21L` - Literature
-          * `21M` - Music and Theater Arts
+          * `21M` - Music
+          * `21T` - Theater Arts
           * `22` - Nuclear Science and Engineering
           * `24` - Linguistics and Philosophy
           * `CC` - Concourse
@@ -1339,6 +1341,7 @@ paths:
             - 21H
             - 21L
             - 21M
+            - 21T
             - '22'
             - '24'
             - '3'
@@ -1385,7 +1388,8 @@ paths:
           * `21G` - Global Languages
           * `21H` - History
           * `21L` - Literature
-          * `21M` - Music and Theater Arts
+          * `21M` - Music
+          * `21T` - Theater Arts
           * `22` - Nuclear Science and Engineering
           * `24` - Linguistics and Philosophy
           * `CC` - Concourse
@@ -1940,6 +1944,7 @@ paths:
             - 21H
             - 21L
             - 21M
+            - 21T
             - '22'
             - '24'
             - '3'
@@ -1986,7 +1991,8 @@ paths:
           * `21G` - Global Languages
           * `21H` - History
           * `21L` - Literature
-          * `21M` - Music and Theater Arts
+          * `21M` - Music
+          * `21T` - Theater Arts
           * `22` - Nuclear Science and Engineering
           * `24` - Linguistics and Philosophy
           * `CC` - Concourse
@@ -2365,6 +2371,7 @@ paths:
             - 21H
             - 21L
             - 21M
+            - 21T
             - '22'
             - '24'
             - '3'
@@ -2411,7 +2418,8 @@ paths:
           * `21G` - Global Languages
           * `21H` - History
           * `21L` - Literature
-          * `21M` - Music and Theater Arts
+          * `21M` - Music
+          * `21T` - Theater Arts
           * `22` - Nuclear Science and Engineering
           * `24` - Linguistics and Philosophy
           * `CC` - Concourse
@@ -2789,6 +2797,7 @@ paths:
             - 21H
             - 21L
             - 21M
+            - 21T
             - '22'
             - '24'
             - CC
@@ -2827,7 +2836,8 @@ paths:
               * `21G` - Global Languages
               * `21H` - History
               * `21L` - Literature
-              * `21M` - Music and Theater Arts
+              * `21M` - Music
+              * `21T` - Theater Arts
               * `22` - Nuclear Science and Engineering
               * `24` - Linguistics and Philosophy
               * `CC` - Concourse
@@ -2851,10 +2861,10 @@ paths:
           Sciences\n* `14` - Economics\n* `15` - Management\n* `16` - Aeronautics
           and Astronautics\n* `17` - Political Science\n* `18` - Mathematics\n* `20`
           - Biological Engineering\n* `21A` - Anthropology\n* `21G` - Global Languages\n*
-          `21H` - History\n* `21L` - Literature\n* `21M` - Music and Theater Arts\n*
-          `22` - Nuclear Science and Engineering\n* `24` - Linguistics and Philosophy\n*
-          `CC` - Concourse\n* `CMS-W` - Comparative Media Studies/Writing\n* `EC`
-          - Edgerton Center\n* `ES` - Experimental Study Group\n* `ESD` - Engineering
+          `21H` - History\n* `21L` - Literature\n* `21M` - Music\n* `21T` - Theater
+          Arts\n* `22` - Nuclear Science and Engineering\n* `24` - Linguistics and
+          Philosophy\n* `CC` - Concourse\n* `CMS-W` - Comparative Media Studies/Writing\n*
+          `EC` - Edgerton Center\n* `ES` - Experimental Study Group\n* `ESD` - Engineering
           Systems Division\n* `HST` - Medical Engineering and Science\n* `IDS` - Data,
           Systems, and Society\n* `MAS` - Media Arts and Sciences\n* `PE` - Athletics,
           Physical Education and Recreation\n* `SP` - Special Programs\n* `STS` -
@@ -3158,6 +3168,7 @@ paths:
             - 21H
             - 21L
             - 21M
+            - 21T
             - '22'
             - '24'
             - CC
@@ -3196,7 +3207,8 @@ paths:
               * `21G` - Global Languages
               * `21H` - History
               * `21L` - Literature
-              * `21M` - Music and Theater Arts
+              * `21M` - Music
+              * `21T` - Theater Arts
               * `22` - Nuclear Science and Engineering
               * `24` - Linguistics and Philosophy
               * `CC` - Concourse
@@ -3220,10 +3232,10 @@ paths:
           Sciences\n* `14` - Economics\n* `15` - Management\n* `16` - Aeronautics
           and Astronautics\n* `17` - Political Science\n* `18` - Mathematics\n* `20`
           - Biological Engineering\n* `21A` - Anthropology\n* `21G` - Global Languages\n*
-          `21H` - History\n* `21L` - Literature\n* `21M` - Music and Theater Arts\n*
-          `22` - Nuclear Science and Engineering\n* `24` - Linguistics and Philosophy\n*
-          `CC` - Concourse\n* `CMS-W` - Comparative Media Studies/Writing\n* `EC`
-          - Edgerton Center\n* `ES` - Experimental Study Group\n* `ESD` - Engineering
+          `21H` - History\n* `21L` - Literature\n* `21M` - Music\n* `21T` - Theater
+          Arts\n* `22` - Nuclear Science and Engineering\n* `24` - Linguistics and
+          Philosophy\n* `CC` - Concourse\n* `CMS-W` - Comparative Media Studies/Writing\n*
+          `EC` - Edgerton Center\n* `ES` - Experimental Study Group\n* `ESD` - Engineering
           Systems Division\n* `HST` - Medical Engineering and Science\n* `IDS` - Data,
           Systems, and Society\n* `MAS` - Media Arts and Sciences\n* `PE` - Athletics,
           Physical Education and Recreation\n* `SP` - Special Programs\n* `STS` -
@@ -3854,6 +3866,7 @@ paths:
             - 21H
             - 21L
             - 21M
+            - 21T
             - '22'
             - '24'
             - '3'
@@ -3900,7 +3913,8 @@ paths:
           * `21G` - Global Languages
           * `21H` - History
           * `21L` - Literature
-          * `21M` - Music and Theater Arts
+          * `21M` - Music
+          * `21T` - Theater Arts
           * `22` - Nuclear Science and Engineering
           * `24` - Linguistics and Philosophy
           * `CC` - Concourse
@@ -4297,6 +4311,7 @@ paths:
             - 21H
             - 21L
             - 21M
+            - 21T
             - '22'
             - '24'
             - CC
@@ -4335,7 +4350,8 @@ paths:
               * `21G` - Global Languages
               * `21H` - History
               * `21L` - Literature
-              * `21M` - Music and Theater Arts
+              * `21M` - Music
+              * `21T` - Theater Arts
               * `22` - Nuclear Science and Engineering
               * `24` - Linguistics and Philosophy
               * `CC` - Concourse
@@ -4359,10 +4375,10 @@ paths:
           Sciences\n* `14` - Economics\n* `15` - Management\n* `16` - Aeronautics
           and Astronautics\n* `17` - Political Science\n* `18` - Mathematics\n* `20`
           - Biological Engineering\n* `21A` - Anthropology\n* `21G` - Global Languages\n*
-          `21H` - History\n* `21L` - Literature\n* `21M` - Music and Theater Arts\n*
-          `22` - Nuclear Science and Engineering\n* `24` - Linguistics and Philosophy\n*
-          `CC` - Concourse\n* `CMS-W` - Comparative Media Studies/Writing\n* `EC`
-          - Edgerton Center\n* `ES` - Experimental Study Group\n* `ESD` - Engineering
+          `21H` - History\n* `21L` - Literature\n* `21M` - Music\n* `21T` - Theater
+          Arts\n* `22` - Nuclear Science and Engineering\n* `24` - Linguistics and
+          Philosophy\n* `CC` - Concourse\n* `CMS-W` - Comparative Media Studies/Writing\n*
+          `EC` - Edgerton Center\n* `ES` - Experimental Study Group\n* `ESD` - Engineering
           Systems Division\n* `HST` - Medical Engineering and Science\n* `IDS` - Data,
           Systems, and Society\n* `MAS` - Media Arts and Sciences\n* `PE` - Athletics,
           Physical Education and Recreation\n* `SP` - Special Programs\n* `STS` -
@@ -4826,6 +4842,7 @@ paths:
             - 21H
             - 21L
             - 21M
+            - 21T
             - '22'
             - '24'
             - CC
@@ -4864,7 +4881,8 @@ paths:
               * `21G` - Global Languages
               * `21H` - History
               * `21L` - Literature
-              * `21M` - Music and Theater Arts
+              * `21M` - Music
+              * `21T` - Theater Arts
               * `22` - Nuclear Science and Engineering
               * `24` - Linguistics and Philosophy
               * `CC` - Concourse
@@ -4888,10 +4906,10 @@ paths:
           Sciences\n* `14` - Economics\n* `15` - Management\n* `16` - Aeronautics
           and Astronautics\n* `17` - Political Science\n* `18` - Mathematics\n* `20`
           - Biological Engineering\n* `21A` - Anthropology\n* `21G` - Global Languages\n*
-          `21H` - History\n* `21L` - Literature\n* `21M` - Music and Theater Arts\n*
-          `22` - Nuclear Science and Engineering\n* `24` - Linguistics and Philosophy\n*
-          `CC` - Concourse\n* `CMS-W` - Comparative Media Studies/Writing\n* `EC`
-          - Edgerton Center\n* `ES` - Experimental Study Group\n* `ESD` - Engineering
+          `21H` - History\n* `21L` - Literature\n* `21M` - Music\n* `21T` - Theater
+          Arts\n* `22` - Nuclear Science and Engineering\n* `24` - Linguistics and
+          Philosophy\n* `CC` - Concourse\n* `CMS-W` - Comparative Media Studies/Writing\n*
+          `EC` - Edgerton Center\n* `ES` - Experimental Study Group\n* `ESD` - Engineering
           Systems Division\n* `HST` - Medical Engineering and Science\n* `IDS` - Data,
           Systems, and Society\n* `MAS` - Media Arts and Sciences\n* `PE` - Athletics,
           Physical Education and Recreation\n* `SP` - Special Programs\n* `STS` -
@@ -5380,6 +5398,7 @@ paths:
             - 21H
             - 21L
             - 21M
+            - 21T
             - '22'
             - '24'
             - CC
@@ -5418,7 +5437,8 @@ paths:
               * `21G` - Global Languages
               * `21H` - History
               * `21L` - Literature
-              * `21M` - Music and Theater Arts
+              * `21M` - Music
+              * `21T` - Theater Arts
               * `22` - Nuclear Science and Engineering
               * `24` - Linguistics and Philosophy
               * `CC` - Concourse
@@ -5442,10 +5462,10 @@ paths:
           Sciences\n* `14` - Economics\n* `15` - Management\n* `16` - Aeronautics
           and Astronautics\n* `17` - Political Science\n* `18` - Mathematics\n* `20`
           - Biological Engineering\n* `21A` - Anthropology\n* `21G` - Global Languages\n*
-          `21H` - History\n* `21L` - Literature\n* `21M` - Music and Theater Arts\n*
-          `22` - Nuclear Science and Engineering\n* `24` - Linguistics and Philosophy\n*
-          `CC` - Concourse\n* `CMS-W` - Comparative Media Studies/Writing\n* `EC`
-          - Edgerton Center\n* `ES` - Experimental Study Group\n* `ESD` - Engineering
+          `21H` - History\n* `21L` - Literature\n* `21M` - Music\n* `21T` - Theater
+          Arts\n* `22` - Nuclear Science and Engineering\n* `24` - Linguistics and
+          Philosophy\n* `CC` - Concourse\n* `CMS-W` - Comparative Media Studies/Writing\n*
+          `EC` - Edgerton Center\n* `ES` - Experimental Study Group\n* `ESD` - Engineering
           Systems Division\n* `HST` - Medical Engineering and Science\n* `IDS` - Data,
           Systems, and Society\n* `MAS` - Media Arts and Sciences\n* `PE` - Athletics,
           Physical Education and Recreation\n* `SP` - Special Programs\n* `STS` -
@@ -5925,6 +5945,7 @@ paths:
             - 21H
             - 21L
             - 21M
+            - 21T
             - '22'
             - '24'
             - CC
@@ -5963,7 +5984,8 @@ paths:
               * `21G` - Global Languages
               * `21H` - History
               * `21L` - Literature
-              * `21M` - Music and Theater Arts
+              * `21M` - Music
+              * `21T` - Theater Arts
               * `22` - Nuclear Science and Engineering
               * `24` - Linguistics and Philosophy
               * `CC` - Concourse
@@ -5987,10 +6009,10 @@ paths:
           Sciences\n* `14` - Economics\n* `15` - Management\n* `16` - Aeronautics
           and Astronautics\n* `17` - Political Science\n* `18` - Mathematics\n* `20`
           - Biological Engineering\n* `21A` - Anthropology\n* `21G` - Global Languages\n*
-          `21H` - History\n* `21L` - Literature\n* `21M` - Music and Theater Arts\n*
-          `22` - Nuclear Science and Engineering\n* `24` - Linguistics and Philosophy\n*
-          `CC` - Concourse\n* `CMS-W` - Comparative Media Studies/Writing\n* `EC`
-          - Edgerton Center\n* `ES` - Experimental Study Group\n* `ESD` - Engineering
+          `21H` - History\n* `21L` - Literature\n* `21M` - Music\n* `21T` - Theater
+          Arts\n* `22` - Nuclear Science and Engineering\n* `24` - Linguistics and
+          Philosophy\n* `CC` - Concourse\n* `CMS-W` - Comparative Media Studies/Writing\n*
+          `EC` - Edgerton Center\n* `ES` - Experimental Study Group\n* `ESD` - Engineering
           Systems Division\n* `HST` - Medical Engineering and Science\n* `IDS` - Data,
           Systems, and Society\n* `MAS` - Media Arts and Sciences\n* `PE` - Athletics,
           Physical Education and Recreation\n* `SP` - Special Programs\n* `STS` -
@@ -6440,6 +6462,7 @@ paths:
             - 21H
             - 21L
             - 21M
+            - 21T
             - '22'
             - '24'
             - '3'
@@ -6486,7 +6509,8 @@ paths:
           * `21G` - Global Languages
           * `21H` - History
           * `21L` - Literature
-          * `21M` - Music and Theater Arts
+          * `21M` - Music
+          * `21T` - Theater Arts
           * `22` - Nuclear Science and Engineering
           * `24` - Linguistics and Philosophy
           * `CC` - Concourse
@@ -7205,6 +7229,7 @@ paths:
             - 21H
             - 21L
             - 21M
+            - 21T
             - '22'
             - '24'
             - '3'
@@ -7251,7 +7276,8 @@ paths:
           * `21G` - Global Languages
           * `21H` - History
           * `21L` - Literature
-          * `21M` - Music and Theater Arts
+          * `21M` - Music
+          * `21T` - Theater Arts
           * `22` - Nuclear Science and Engineering
           * `24` - Linguistics and Philosophy
           * `CC` - Concourse
@@ -7535,6 +7561,37 @@ paths:
               schema:
                 $ref: '#/components/schemas/PodcastEpisodeResource'
           description: ''
+  /api/v1/podcast_episodes/{id}/transcript/:
+    get:
+      operationId: podcast_episodes_transcript_retrieve
+      description: |-
+        Fetch one episode's transcript.
+
+        Served separately from the episode payload because the text runs tens
+        of kilobytes; `podcast_episode.has_transcript` says whether there is
+        anything here to fetch.
+
+        Args:
+        id (integer): The id of the podcast episode
+
+        Returns:
+        The episode id and its transcript text
+      summary: Get a podcast episode transcript
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - podcast_episodes
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PodcastEpisodeTranscript'
+          description: ''
   /api/v1/podcasts/:
     get:
       operationId: podcasts_list
@@ -7630,6 +7687,7 @@ paths:
             - 21H
             - 21L
             - 21M
+            - 21T
             - '22'
             - '24'
             - '3'
@@ -7676,7 +7734,8 @@ paths:
           * `21G` - Global Languages
           * `21H` - History
           * `21L` - Literature
-          * `21M` - Music and Theater Arts
+          * `21M` - Music
+          * `21T` - Theater Arts
           * `22` - Nuclear Science and Engineering
           * `24` - Linguistics and Philosophy
           * `CC` - Concourse
@@ -8142,6 +8201,7 @@ paths:
             - 21H
             - 21L
             - 21M
+            - 21T
             - '22'
             - '24'
             - '3'
@@ -8188,7 +8248,8 @@ paths:
           * `21G` - Global Languages
           * `21H` - History
           * `21L` - Literature
-          * `21M` - Music and Theater Arts
+          * `21M` - Music
+          * `21T` - Theater Arts
           * `22` - Nuclear Science and Engineering
           * `24` - Linguistics and Philosophy
           * `CC` - Concourse
@@ -8591,6 +8652,37 @@ paths:
               schema:
                 $ref: '#/components/schemas/LearningResourceTopic'
           description: ''
+  /api/v1/unsubscribe/{token}/:
+    post:
+      operationId: unsubscribe_create
+      description: Handle email unsubscribe requests via signed token.
+      summary: One-click unsubscribe (RFC 8058)
+      parameters:
+      - in: path
+        name: token
+        schema:
+          type: string
+          pattern: ^[^/]+$
+        required: true
+      tags:
+      - unsubscribe
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties: {}
+          description: Successfully unsubscribed
+        '400':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+          description: Invalid or expired token
   /api/v1/upload-media/:
     post:
       operationId: media_upload
@@ -8999,6 +9091,7 @@ paths:
             - 21H
             - 21L
             - 21M
+            - 21T
             - '22'
             - '24'
             - '3'
@@ -9045,7 +9138,8 @@ paths:
           * `21G` - Global Languages
           * `21H` - History
           * `21L` - Literature
-          * `21M` - Music and Theater Arts
+          * `21M` - Music
+          * `21T` - Theater Arts
           * `22` - Nuclear Science and Engineering
           * `24` - Linguistics and Philosophy
           * `CC` - Concourse
@@ -9490,6 +9584,7 @@ paths:
             - 21H
             - 21L
             - 21M
+            - 21T
             - '22'
             - '24'
             - '3'
@@ -9536,7 +9631,8 @@ paths:
           * `21G` - Global Languages
           * `21H` - History
           * `21L` - Literature
-          * `21M` - Music and Theater Arts
+          * `21M` - Music
+          * `21T` - Theater Arts
           * `22` - Nuclear Science and Engineering
           * `24` - Linguistics and Philosophy
           * `CC` - Concourse
@@ -9833,15 +9929,16 @@ paths:
         name: course_id
         schema:
           type: string
+          nullable: true
       - in: query
         name: course_readable_id
         schema:
           type: string
+          nullable: true
       - in: query
         name: source
         schema:
           enum:
-          - micromasters
           - mit_edx
           - mitpe
           - mitxonline
@@ -9857,7 +9954,6 @@ paths:
           type: string
           minLength: 1
         description: |-
-          * `micromasters` - micromasters
           * `mit_edx` - mit_edx
           * `mitpe` - mitpe
           * `mitxonline` - mitxonline
@@ -10279,10 +10375,13 @@ components:
         checksum:
           type: string
         image_src:
-          type: string
-          format: uri
           nullable: true
-          maxLength: 200
+          oneOf:
+          - type: string
+            format: uri
+            maxLength: 200
+          - type: string
+            maxLength: 0
         resource_id:
           type: string
           readOnly: true
@@ -10416,8 +10515,10 @@ components:
           $ref: '#/components/schemas/SourceEnum'
         course_id:
           type: string
+          nullable: true
         course_readable_id:
           type: string
+          nullable: true
       required:
       - source
     ContentFileWebHookRequestRequest:
@@ -10430,8 +10531,10 @@ components:
           $ref: '#/components/schemas/SourceEnum'
         course_id:
           type: string
+          nullable: true
         course_readable_id:
           type: string
+          nullable: true
       required:
       - source
     Course:
@@ -10646,6 +10749,17 @@ components:
           nullable: true
           description: Return the best run id for the resource, if it has runs
           readOnly: true
+        learn_url:
+          type: string
+          description: Where this resource lives within Learn
+          readOnly: true
+        url_slug:
+          type: string
+          description: 'Slug derived from the title, for use in this resource''s URL.
+            It is cosmetic: lookups ignore it, and it changes whenever the title does.
+            Titles that yield no ASCII slug get the literal "resource", so this is
+            never blank.'
+          readOnly: true
         resource_type:
           allOf:
           - $ref: '#/components/schemas/CourseResourceResourceTypeEnum'
@@ -10762,6 +10876,7 @@ components:
       - free
       - id
       - image
+      - learn_url
       - offered_by
       - pace
       - platform
@@ -10776,6 +10891,7 @@ components:
       - resource_type_group
       - runs
       - title
+      - url_slug
       - views
     CourseResourceRequest:
       type: object
@@ -10918,6 +11034,7 @@ components:
       - 21H
       - 21L
       - 21M
+      - 21T
       - '22'
       - '24'
       - CC
@@ -10956,7 +11073,8 @@ components:
         * `21G` - Global Languages
         * `21H` - History
         * `21L` - Literature
-        * `21M` - Music and Theater Arts
+        * `21M` - Music
+        * `21T` - Theater Arts
         * `22` - Nuclear Science and Engineering
         * `24` - Linguistics and Philosophy
         * `CC` - Concourse
@@ -10994,7 +11112,8 @@ components:
       - Global Languages
       - History
       - Literature
-      - Music and Theater Arts
+      - Music
+      - Theater Arts
       - Nuclear Science and Engineering
       - Linguistics and Philosophy
       - Concourse
@@ -11169,6 +11288,17 @@ components:
           nullable: true
           description: Return the best run id for the resource, if it has runs
           readOnly: true
+        learn_url:
+          type: string
+          description: Where this resource lives within Learn
+          readOnly: true
+        url_slug:
+          type: string
+          description: 'Slug derived from the title, for use in this resource''s URL.
+            It is cosmetic: lookups ignore it, and it changes whenever the title does.
+            Titles that yield no ASCII slug get the literal "resource", so this is
+            never blank.'
+          readOnly: true
         resource_type:
           allOf:
           - $ref: '#/components/schemas/DocumentResourceResourceTypeEnum'
@@ -11177,7 +11307,7 @@ components:
         content_files:
           type: array
           items:
-            $ref: '#/components/schemas/ContentFile'
+            $ref: '#/components/schemas/NestedContentFile'
           nullable: true
           readOnly: true
         description:
@@ -11289,6 +11419,7 @@ components:
       - free
       - id
       - image
+      - learn_url
       - offered_by
       - pace
       - platform
@@ -11303,6 +11434,7 @@ components:
       - resource_type_group
       - runs
       - title
+      - url_slug
       - views
     DocumentResourceRequest:
       type: object
@@ -12245,6 +12377,17 @@ components:
           nullable: true
           description: Return the best run id for the resource, if it has runs
           readOnly: true
+        learn_url:
+          type: string
+          description: Where this resource lives within Learn
+          readOnly: true
+        url_slug:
+          type: string
+          description: 'Slug derived from the title, for use in this resource''s URL.
+            It is cosmetic: lookups ignore it, and it changes whenever the title does.
+            Titles that yield no ASCII slug get the literal "resource", so this is
+            never blank.'
+          readOnly: true
         resource_type:
           allOf:
           - $ref: '#/components/schemas/LearningPathResourceResourceTypeEnum'
@@ -12361,6 +12504,7 @@ components:
       - free
       - id
       - image
+      - learn_url
       - learning_path
       - offered_by
       - pace
@@ -12376,6 +12520,7 @@ components:
       - resource_type_group
       - runs
       - title
+      - url_slug
       - views
     LearningPathResourceRequest:
       type: object
@@ -12940,9 +13085,12 @@ components:
             type: string
             maxLength: 128
         more_information:
-          type: string
-          format: uri
-          maxLength: 200
+          oneOf:
+          - type: string
+            format: uri
+            maxLength: 200
+          - type: string
+            maxLength: 0
         value_prop:
           type: string
         display_facet:
@@ -13479,9 +13627,56 @@ components:
         title:
           type: string
           maxLength: 256
+        resource_type:
+          $ref: '#/components/schemas/LearningResourceSummaryResourceTypeEnum'
+        canonical_parent_ids:
+          type: array
+          items:
+            type: integer
+          description: 'Ids of the parents that form part of this resource''s URL:
+            the parent podcasts of a podcast episode, the playlists of a video. Empty
+            for every other resource type. Parents are not filtered by `published`,
+            so an id here may belong to a resource this endpoint will not return.'
+          readOnly: true
+        learn_url:
+          type: string
+          description: Where this resource lives within Learn
+          readOnly: true
       required:
+      - canonical_parent_ids
       - id
+      - learn_url
+      - resource_type
       - title
+    LearningResourceSummaryResourceTypeEnum:
+      enum:
+      - course
+      - program
+      - learning_path
+      - podcast
+      - podcast_episode
+      - video
+      - video_playlist
+      - document
+      type: string
+      description: |-
+        * `course` - Course
+        * `program` - Program
+        * `learning_path` - Learning Path
+        * `podcast` - Podcast
+        * `podcast_episode` - Podcast Episode
+        * `video` - Video
+        * `video_playlist` - Video Playlist
+        * `document` - Document
+      x-enum-descriptions:
+      - Course
+      - Program
+      - Learning Path
+      - Podcast
+      - Podcast Episode
+      - Video
+      - Video Playlist
+      - Document
     LearningResourceTopic:
       type: object
       description: Serializer for LearningResourceTopic model
@@ -13624,6 +13819,139 @@ components:
       - child
       - id
       - parent
+    NestedContentFile:
+      type: object
+      description: |-
+        ContentFileSerializer without the large text fields (content, summary,
+        flashcards), for nesting inside learning resource API responses.
+        The search indexing path re-adds full content where needed.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        run_id:
+          type: integer
+        direct_learning_resource_id:
+          type: integer
+          nullable: true
+        run_title:
+          type: string
+        run_slug:
+          type: string
+        departments:
+          type: array
+          items:
+            $ref: '#/components/schemas/LearningResourceDepartment'
+          readOnly: true
+        semester:
+          type: string
+        year:
+          type: integer
+        topics:
+          type: array
+          items:
+            $ref: '#/components/schemas/LearningResourceTopic'
+          readOnly: true
+        key:
+          type: string
+          nullable: true
+          maxLength: 1024
+        uid:
+          type: string
+          nullable: true
+          maxLength: 36
+        title:
+          type: string
+          nullable: true
+          maxLength: 1024
+        description:
+          type: string
+          nullable: true
+        require_summaries:
+          type: boolean
+          readOnly: true
+        url:
+          type: string
+          nullable: true
+        content_feature_type:
+          type: array
+          items:
+            type: string
+        content_type:
+          $ref: '#/components/schemas/ContentFileContentTypeEnum'
+        content_title:
+          type: string
+          nullable: true
+          maxLength: 1024
+        content_author:
+          type: string
+          nullable: true
+          maxLength: 1024
+        content_language:
+          type: string
+          nullable: true
+          maxLength: 24
+        checksum:
+          type: string
+        image_src:
+          nullable: true
+          oneOf:
+          - type: string
+            format: uri
+            maxLength: 200
+          - type: string
+            maxLength: 0
+        resource_id:
+          type: string
+          readOnly: true
+        resource_readable_id:
+          type: string
+          readOnly: true
+        source_path:
+          type: string
+        course_number:
+          type: array
+          items:
+            type: string
+          description: Extract the course number(s) from the associated course
+          readOnly: true
+        file_type:
+          type: string
+          nullable: true
+          maxLength: 128
+        file_extension:
+          type: string
+          nullable: true
+          maxLength: 32
+        offered_by:
+          allOf:
+          - $ref: '#/components/schemas/LearningResourceOfferor'
+          readOnly: true
+        platform:
+          allOf:
+          - $ref: '#/components/schemas/LearningResourcePlatform'
+          readOnly: true
+        run_readable_id:
+          type: string
+        edx_module_id:
+          type: string
+          nullable: true
+          maxLength: 1024
+        youtube_id:
+          type: string
+          nullable: true
+          maxLength: 32
+      required:
+      - content_feature_type
+      - course_number
+      - departments
+      - id
+      - offered_by
+      - platform
+      - require_summaries
+      - resource_id
+      - resource_readable_id
+      - topics
     NullEnum:
       enum:
       - null
@@ -13639,9 +13967,11 @@ components:
         key:
           type: string
           minLength: 1
+          pattern: ^[A-Za-z0-9._-]{1,255}$
         video_id:
           type: string
           minLength: 1
+          pattern: ^[A-Za-z0-9._-]{1,255}$
         delete:
           type: boolean
           default: false
@@ -14344,9 +14674,16 @@ components:
         is_published:
           type: boolean
         slug:
-          type: string
-          maxLength: 60
-          pattern: ^[-a-zA-Z0-9_]+$
+          oneOf:
+          - type: string
+            maxLength: 60
+            pattern: ^[-a-zA-Z0-9_]+$
+          - type: string
+            maxLength: 0
+        topics:
+          type: array
+          items:
+            type: integer
     PercolateQuery:
       type: object
       description: Serializer for PercolateQuery objects
@@ -14502,12 +14839,12 @@ components:
             - Management\n* `16` - Aeronautics and Astronautics\n* `17` - Political
             Science\n* `18` - Mathematics\n* `20` - Biological Engineering\n* `21A`
             - Anthropology\n* `21G` - Global Languages\n* `21H` - History\n* `21L`
-            - Literature\n* `21M` - Music and Theater Arts\n* `22` - Nuclear Science
-            and Engineering\n* `24` - Linguistics and Philosophy\n* `CC` - Concourse\n*
-            `CMS-W` - Comparative Media Studies/Writing\n* `EC` - Edgerton Center\n*
-            `ES` - Experimental Study Group\n* `ESD` - Engineering Systems Division\n*
-            `HST` - Medical Engineering and Science\n* `IDS` - Data, Systems, and
-            Society\n* `MAS` - Media Arts and Sciences\n* `PE` - Athletics, Physical
+            - Literature\n* `21M` - Music\n* `21T` - Theater Arts\n* `22` - Nuclear
+            Science and Engineering\n* `24` - Linguistics and Philosophy\n* `CC` -
+            Concourse\n* `CMS-W` - Comparative Media Studies/Writing\n* `EC` - Edgerton
+            Center\n* `ES` - Experimental Study Group\n* `ESD` - Engineering Systems
+            Division\n* `HST` - Medical Engineering and Science\n* `IDS` - Data, Systems,
+            and Society\n* `MAS` - Media Arts and Sciences\n* `PE` - Athletics, Physical
             Education and Recreation\n* `SP` - Special Programs\n* `STS` - Science,
             Technology, and Society\n* `WGS` - Women's and Gender Studies"
         level:
@@ -14741,8 +15078,19 @@ components:
             type: integer
           description: Get the podcast id(s) the episode belongs to
           readOnly: true
-        transcript:
-          type: string
+        parent_podcasts:
+          type: array
+          items:
+            $ref: '#/components/schemas/PodcastEpisodeParent'
+          readOnly: true
+        has_transcript:
+          type: boolean
+          description: |-
+            Whether a transcript is available from the transcript endpoint.
+
+            The text itself is excluded from this serializer, so this is how a
+            client knows whether to fetch it.
+          readOnly: true
         audio_url:
           type: string
           format: uri
@@ -14756,19 +15104,35 @@ components:
           type: string
           nullable: true
           maxLength: 10
-        rss:
-          type: string
-          nullable: true
       required:
       - audio_url
+      - has_transcript
       - id
+      - parent_podcasts
       - podcasts
+    PodcastEpisodeParent:
+      type: object
+      description: Minimal parent-podcast summary embedded in an episode.
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        readable_id:
+          type: string
+        learn_url:
+          type: string
+          description: Where this podcast lives within Learn
+          readOnly: true
+      required:
+      - id
+      - learn_url
+      - readable_id
+      - title
     PodcastEpisodeRequest:
       type: object
       description: Serializer for PodcastEpisode
       properties:
-        transcript:
-          type: string
         audio_url:
           type: string
           format: uri
@@ -14784,9 +15148,6 @@ components:
           type: string
           nullable: true
           maxLength: 10
-        rss:
-          type: string
-          nullable: true
       required:
       - audio_url
     PodcastEpisodeResource:
@@ -14949,6 +15310,17 @@ components:
           nullable: true
           description: Return the best run id for the resource, if it has runs
           readOnly: true
+        learn_url:
+          type: string
+          description: Where this resource lives within Learn
+          readOnly: true
+        url_slug:
+          type: string
+          description: 'Slug derived from the title, for use in this resource''s URL.
+            It is cosmetic: lookups ignore it, and it changes whenever the title does.
+            Titles that yield no ASCII slug get the literal "resource", so this is
+            never blank.'
+          readOnly: true
         resource_type:
           allOf:
           - $ref: '#/components/schemas/PodcastEpisodeResourceResourceTypeEnum'
@@ -15064,6 +15436,7 @@ components:
       - free
       - id
       - image
+      - learn_url
       - offered_by
       - pace
       - platform
@@ -15079,6 +15452,7 @@ components:
       - resource_type_group
       - runs
       - title
+      - url_slug
       - views
     PodcastEpisodeResourceRequest:
       type: object
@@ -15179,6 +15553,21 @@ components:
       type: string
       enum:
       - podcast_episode
+    PodcastEpisodeTranscript:
+      type: object
+      description: |-
+        Serializer for a single podcast episode's transcript.
+
+        Kept out of PodcastEpisodeSerializer so the text is only ever sent when a
+        client asks for this one episode's transcript.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        transcript:
+          type: string
+      required:
+      - id
     PodcastRequest:
       type: object
       description: Serializer for Podcasts
@@ -15365,6 +15754,17 @@ components:
           nullable: true
           description: Return the best run id for the resource, if it has runs
           readOnly: true
+        learn_url:
+          type: string
+          description: Where this resource lives within Learn
+          readOnly: true
+        url_slug:
+          type: string
+          description: 'Slug derived from the title, for use in this resource''s URL.
+            It is cosmetic: lookups ignore it, and it changes whenever the title does.
+            Titles that yield no ASCII slug get the literal "resource", so this is
+            never blank.'
+          readOnly: true
         resource_type:
           allOf:
           - $ref: '#/components/schemas/PodcastResourceResourceTypeEnum'
@@ -15480,6 +15880,7 @@ components:
       - free
       - id
       - image
+      - learn_url
       - offered_by
       - pace
       - platform
@@ -15495,6 +15896,7 @@ components:
       - resource_type_group
       - runs
       - title
+      - url_slug
       - views
     PodcastResourceRequest:
       type: object
@@ -15619,97 +16021,6 @@ components:
       required:
       - course_count
       - program_count
-    ProgramCertificate:
-      type: object
-      description: Serializer for Program Certificates
-      properties:
-        record_hash:
-          type: string
-          readOnly: true
-        program_letter_generate_url:
-          type: string
-          readOnly: true
-        program_letter_share_url:
-          type: string
-          readOnly: true
-        program_title:
-          type: string
-          maxLength: 256
-        user_full_name:
-          type: string
-          maxLength: 256
-        user_email:
-          type: string
-          maxLength: 256
-        user_edxorg_id:
-          type: integer
-          maximum: 2147483647
-          minimum: -2147483648
-          nullable: true
-        micromasters_program_id:
-          type: integer
-          maximum: 2147483647
-          minimum: -2147483648
-          nullable: true
-        mitxonline_program_id:
-          type: integer
-          maximum: 2147483647
-          minimum: -2147483648
-          nullable: true
-        user_edxorg_username:
-          type: string
-          nullable: true
-          maxLength: 256
-        user_gender:
-          type: string
-          nullable: true
-          maxLength: 256
-        user_address_city:
-          type: string
-          nullable: true
-          maxLength: 256
-        user_first_name:
-          type: string
-          nullable: true
-          maxLength: 256
-        user_last_name:
-          type: string
-          nullable: true
-          maxLength: 256
-        user_year_of_birth:
-          type: string
-          nullable: true
-          maxLength: 256
-        user_country:
-          type: string
-          nullable: true
-          maxLength: 256
-        user_address_postal_code:
-          type: string
-          nullable: true
-          maxLength: 256
-        user_street_address:
-          type: string
-          nullable: true
-          maxLength: 256
-        user_address_state_or_territory:
-          type: string
-          nullable: true
-          maxLength: 256
-        user_mitxonline_username:
-          type: string
-          nullable: true
-          maxLength: 256
-        program_completion_timestamp:
-          type: string
-          format: date-time
-          nullable: true
-      required:
-      - program_letter_generate_url
-      - program_letter_share_url
-      - program_title
-      - record_hash
-      - user_email
     ProgramLetter:
       type: object
       description: Serializer for Program Letters
@@ -15723,11 +16034,30 @@ components:
           - $ref: '#/components/schemas/ProgramLetterTemplateField'
           readOnly: true
         certificate:
-          $ref: '#/components/schemas/ProgramCertificate'
+          $ref: '#/components/schemas/ProgramLetterCertificate'
       required:
       - certificate
       - id
       - template_fields
+    ProgramLetterCertificate:
+      type: object
+      description: |-
+        The certificate fields the public program letter view needs.
+
+        ProgramLetterViewSet is unauthenticated -- anyone holding a letter's uuid
+        can read it -- so this exposes only what the letter itself already states:
+        who earned it and which program. The learner's email, postal address, date
+        of birth, gender and platform usernames stay behind the authenticated
+        certificate list, which uses ProgramCertificateSerializer.
+      properties:
+        user_full_name:
+          type: string
+          maxLength: 256
+        program_title:
+          type: string
+          maxLength: 256
+      required:
+      - program_title
     ProgramLetterTemplateField:
       type: object
       description: |-
@@ -15923,6 +16253,17 @@ components:
           nullable: true
           description: Return the best run id for the resource, if it has runs
           readOnly: true
+        learn_url:
+          type: string
+          description: Where this resource lives within Learn
+          readOnly: true
+        url_slug:
+          type: string
+          description: 'Slug derived from the title, for use in this resource''s URL.
+            It is cosmetic: lookups ignore it, and it changes whenever the title does.
+            Titles that yield no ASCII slug get the literal "resource", so this is
+            never blank.'
+          readOnly: true
         resource_type:
           allOf:
           - $ref: '#/components/schemas/ProgramResourceResourceTypeEnum'
@@ -16038,6 +16379,7 @@ components:
       - free
       - id
       - image
+      - learn_url
       - offered_by
       - pace
       - platform
@@ -16053,6 +16395,7 @@ components:
       - resource_type_group
       - runs
       - title
+      - url_slug
       - views
     ProgramResourceRequest:
       type: object
@@ -16317,7 +16660,6 @@ components:
       - Next start date ascending
     SourceEnum:
       enum:
-      - micromasters
       - mit_edx
       - mitpe
       - mitxonline
@@ -16332,7 +16674,6 @@ components:
       - ovs
       type: string
       description: |-
-        * `micromasters` - micromasters
         * `mit_edx` - mit_edx
         * `mitpe` - mitpe
         * `mitxonline` - mitxonline
@@ -16346,7 +16687,6 @@ components:
         * `canvas` - canvas
         * `ovs` - ovs
       x-enum-descriptions:
-      - micromasters
       - mit_edx
       - mitpe
       - mitxonline
@@ -16494,15 +16834,21 @@ components:
             $ref: '#/components/schemas/CaptionUrl'
           readOnly: true
         streaming_url:
-          type: string
-          format: uri
           readOnly: true
           nullable: true
+          oneOf:
+          - type: string
+            format: uri
+          - type: string
+            maxLength: 0
         cover_image_url:
-          type: string
-          format: uri
           readOnly: true
           nullable: true
+          oneOf:
+          - type: string
+            format: uri
+          - type: string
+            maxLength: 0
         duration:
           type: string
           maxLength: 11
@@ -16748,6 +17094,17 @@ components:
           nullable: true
           description: Return the best run id for the resource, if it has runs
           readOnly: true
+        learn_url:
+          type: string
+          description: Where this resource lives within Learn
+          readOnly: true
+        url_slug:
+          type: string
+          description: 'Slug derived from the title, for use in this resource''s URL.
+            It is cosmetic: lookups ignore it, and it changes whenever the title does.
+            Titles that yield no ASCII slug get the literal "resource", so this is
+            never blank.'
+          readOnly: true
         resource_type:
           allOf:
           - $ref: '#/components/schemas/VideoPlaylistResourceResourceTypeEnum'
@@ -16863,6 +17220,7 @@ components:
       - free
       - id
       - image
+      - learn_url
       - offered_by
       - pace
       - platform
@@ -16877,6 +17235,7 @@ components:
       - resource_type_group
       - runs
       - title
+      - url_slug
       - video_playlist
       - views
     VideoPlaylistResourceRequest:
@@ -17148,6 +17507,17 @@ components:
           nullable: true
           description: Return the best run id for the resource, if it has runs
           readOnly: true
+        learn_url:
+          type: string
+          description: Where this resource lives within Learn
+          readOnly: true
+        url_slug:
+          type: string
+          description: 'Slug derived from the title, for use in this resource''s URL.
+            It is cosmetic: lookups ignore it, and it changes whenever the title does.
+            Titles that yield no ASCII slug get the literal "resource", so this is
+            never blank.'
+          readOnly: true
         resource_type:
           allOf:
           - $ref: '#/components/schemas/VideoResourceResourceTypeEnum'
@@ -17167,7 +17537,7 @@ components:
         content_files:
           type: array
           items:
-            $ref: '#/components/schemas/ContentFile'
+            $ref: '#/components/schemas/NestedContentFile'
           nullable: true
           readOnly: true
         description:
@@ -17279,6 +17649,7 @@ components:
       - free
       - id
       - image
+      - learn_url
       - offered_by
       - pace
       - platform
@@ -17294,6 +17665,7 @@ components:
       - resource_type_group
       - runs
       - title
+      - url_slug
       - video
       - views
     VideoResourceRequest:
@@ -17441,15 +17813,25 @@ components:
         is_published:
           type: boolean
         slug:
-          type: string
-          maxLength: 60
-          pattern: ^[-a-zA-Z0-9_]+$
+          oneOf:
+          - type: string
+            maxLength: 60
+            pattern: ^[-a-zA-Z0-9_]+$
+          - type: string
+            maxLength: 0
         cover_image:
-          type: string
-          format: uri
           readOnly: true
-          default: ''
-          maxLength: 2083
+          oneOf:
+          - type: string
+            format: uri
+            default: ''
+            maxLength: 2083
+          - type: string
+            maxLength: 0
+        topics:
+          type: array
+          items:
+            type: integer
       required:
       - cover_image
       - created_on
@@ -17496,8 +17878,15 @@ components:
         is_published:
           type: boolean
         slug:
-          type: string
-          maxLength: 60
-          pattern: ^[-a-zA-Z0-9_]+$
+          oneOf:
+          - type: string
+            maxLength: 60
+            pattern: ^[-a-zA-Z0-9_]+$
+          - type: string
+            maxLength: 0
+        topics:
+          type: array
+          items:
+            type: integer
       required:
       - title

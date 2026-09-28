@@ -18,9 +18,12 @@ from learning_resources.constants import (
     CONTENT_TYPE_PDF,
     CONTENT_TYPE_VIDEO,
     LearningResourceRelationTypes,
+    LearningResourceType,
 )
+from learning_resources.etl.constants import MARKETING_PAGE_FILE_TYPE
 from learning_resources.etl.utils import get_content_type
 from learning_resources.factories import (
+    ContentFileFactory,
     CourseFactory,
     LearningPathFactory,
     LearningResourceFactory,
@@ -34,6 +37,7 @@ from learning_resources.models import (
     LearningResource,
     LearningResourceOfferor,
     LearningResourcePlatform,
+    LearningResourceRelationship,
     LearningResourceTopic,
     LearningResourceTopicMapping,
 )
@@ -41,6 +45,9 @@ from learning_resources.utils import (
     add_parent_topics_to_learning_resource,
     build_program_children_content,
     build_program_children_content_bulk,
+    filter_valid_edx_module_ids,
+    is_loggable_missing_content_id,
+    is_valid_edx_module_id,
     log_missing_content_file,
     strip_markdown_images,
     transfer_list_resources,
@@ -118,6 +125,20 @@ def fixture_test_instructors_data():
         return json.load(test_data)["instructors"]
 
 
+def _add_course_marketing_page(course_lr, content):
+    """Attach a published marketing-page content file to a course."""
+    from learning_resources.models import ContentFile
+
+    return ContentFile.objects.create(
+        learning_resource=course_lr,
+        file_type=MARKETING_PAGE_FILE_TYPE,
+        file_extension=".md",
+        key=f"mktg-{course_lr.id}",
+        content=content,
+        published=True,
+    )
+
+
 @pytest.fixture
 def program_with_visibility_children():
     """Program with published, unpublished, and test_mode child courses."""
@@ -135,6 +156,8 @@ def program_with_visibility_children():
         learning_resource__published=False,
         learning_resource__test_mode=True,
     ).learning_resource
+    for child in (published, unpublished, test_mode):
+        _add_course_marketing_page(child, f"Marketing copy for {child.title}.")
     program_lr = ProgramFactory.create(courses=[published]).learning_resource
     # Manually add unpublished/test_mode children since ProgramFactory
     # only creates PROGRAM_COURSES relationships for visible courses
@@ -148,9 +171,12 @@ def program_with_visibility_children():
 
 @pytest.mark.parametrize("url", [None, "http://test.me"])
 def test_load_blocklist(url, settings, mocker):
-    """Test that a list of course ids is returned if a URL is set"""
+    """Test that a list of course ids is fetched, returned, and cached on a cache miss"""
     settings.BLOCKLISTED_COURSES_URL = url
     file_content = [b"MITX_Test1_FAKE", b"MITX_Test2_Fake", b"OCW_Test_Fake"]
+    mock_caches = mocker.patch("learning_resources.utils.caches")
+    mock_cache = mock_caches.__getitem__.return_value
+    mock_cache.get.return_value = None
     mock_request = mocker.patch(
         "requests.get",
         autospec=True,
@@ -159,45 +185,31 @@ def test_load_blocklist(url, settings, mocker):
     blocklist = utils.load_course_blocklist()
     if url is None:
         mock_request.assert_not_called()
+        mock_caches.__getitem__.assert_not_called()
         assert blocklist == []
     else:
+        mock_caches.__getitem__.assert_called_with("redis")
+        mock_cache.get.assert_called_once_with("course_blocklist")
         mock_request.assert_called_once_with(url, timeout=settings.REQUESTS_TIMEOUT)
         assert blocklist == [str(id, "utf-8") for id in file_content]  # noqa: A001
+        mock_cache.set.assert_called_once_with(
+            "course_blocklist", blocklist, timeout=utils.BLOCKLIST_CACHE_TIMEOUT
+        )
 
 
-@pytest.mark.parametrize("url", [None, "http://test.me"])
-@pytest.mark.parametrize("etl_source", ["mitx", "other"])
-def test_load_course_duplicates(url, etl_source, settings, mocker):
-    """Test that a list of duplicate course id sets is returned if a URL is set"""
-    settings.DUPLICATE_COURSES_URL = url
-    file_content = """
----
-mitx:
-  - duplicate_course_ids:
-      - MITx+1
-      - MITx+2
-      - MITx+3
-    course_id: MITx+1
-"""
-
-    mock_request = mocker.patch(
-        "requests.get", autospec=True, return_value=mocker.Mock(text=file_content)
-    )
-    duplicates = utils.load_course_duplicates(etl_source)
-    if url is None:
-        mock_request.assert_not_called()
-        assert duplicates == []
-    elif etl_source == "other":
-        mock_request.assert_called_once_with(url, timeout=settings.REQUESTS_TIMEOUT)
-        assert duplicates == []
-    else:
-        mock_request.assert_called_once_with(url, timeout=settings.REQUESTS_TIMEOUT)
-        assert duplicates == [
-            {
-                "duplicate_course_ids": ["MITx+1", "MITx+2", "MITx+3"],
-                "course_id": "MITx+1",
-            }
-        ]
+@pytest.mark.parametrize("cached_ids", [[], ["MITX_Test1_FAKE"]])
+def test_load_blocklist_cached(cached_ids, settings, mocker):
+    """A cached blocklist (even an empty one) is returned without fetching from GitHub"""
+    settings.BLOCKLISTED_COURSES_URL = "http://test.me"
+    mock_caches = mocker.patch("learning_resources.utils.caches")
+    mock_cache = mock_caches.__getitem__.return_value
+    mock_cache.get.return_value = cached_ids
+    mock_request = mocker.patch("requests.get", autospec=True)
+    assert utils.load_course_blocklist() == cached_ids
+    mock_caches.__getitem__.assert_called_with("redis")
+    mock_cache.get.assert_called_once_with("course_blocklist")
+    mock_request.assert_not_called()
+    mock_cache.set.assert_not_called()
 
 
 def test_safe_load_bad_json(mocker):
@@ -301,12 +313,80 @@ def test_similar_topics_action(mock_plugin_manager, fixture_resource) -> dict:
 
 def test_resource_unpublished_actions(mock_plugin_manager, fixture_resource):
     """
-    resource_unpublished_actions function should trigger plugin hook's resource_unpublished function
+    resource_unpublished_actions function should unpublish direct content files
+    and trigger plugin hook's resource_unpublished function
     """
+    marketing_page = ContentFileFactory.create(
+        learning_resource=fixture_resource, published=True
+    )
     utils.resource_unpublished_actions(fixture_resource)
+    marketing_page.refresh_from_db()
+    assert marketing_page.published is False
     mock_plugin_manager.hook.resource_unpublished.assert_called_once_with(
         resource=fixture_resource
     )
+
+
+def test_bulk_resources_unpublished_actions(mock_plugin_manager, fixture_resource):
+    """
+    bulk_resources_unpublished_actions function should unpublish direct content
+    files and trigger plugin hook's bulk_resources_unpublished function
+    """
+    marketing_page = ContentFileFactory.create(
+        learning_resource=fixture_resource, published=True
+    )
+    utils.bulk_resources_unpublished_actions(
+        [fixture_resource.id], fixture_resource.resource_type
+    )
+    marketing_page.refresh_from_db()
+    assert marketing_page.published is False
+    mock_plugin_manager.hook.bulk_resources_unpublished.assert_called_once_with(
+        resource_ids=[fixture_resource.id],
+        resource_type=fixture_resource.resource_type,
+    )
+
+
+def test_resource_unpublished_actions_keeps_test_mode_direct_files(
+    mock_plugin_manager,
+):
+    """A test_mode resource's direct content files stay published when it is unpublished"""
+    resource = LearningResourceFactory.create(published=False, test_mode=True)
+    marketing_page = ContentFileFactory.create(
+        learning_resource=resource, published=True
+    )
+
+    utils.resource_unpublished_actions(resource)
+
+    marketing_page.refresh_from_db()
+    assert marketing_page.published is True
+    mock_plugin_manager.hook.resource_unpublished.assert_called_once_with(
+        resource=resource
+    )
+
+
+def test_bulk_resources_unpublished_actions_keeps_test_mode_direct_files(
+    mock_plugin_manager,
+):
+    """Only the non-test_mode resources' direct content files are unpublished in bulk"""
+    resource = LearningResourceFactory.create(is_course=True, published=False)
+    test_resource = LearningResourceFactory.create(
+        is_course=True, published=False, test_mode=True
+    )
+    marketing_page = ContentFileFactory.create(
+        learning_resource=resource, published=True
+    )
+    test_marketing_page = ContentFileFactory.create(
+        learning_resource=test_resource, published=True
+    )
+
+    utils.bulk_resources_unpublished_actions(
+        [resource.id, test_resource.id], resource.resource_type
+    )
+
+    marketing_page.refresh_from_db()
+    test_marketing_page.refresh_from_db()
+    assert marketing_page.published is False
+    assert test_marketing_page.published is True
 
 
 def test_resource_delete_actions(mock_plugin_manager, fixture_resource):
@@ -675,6 +755,36 @@ def test_truncate_to_tokens_util(mocker):
     assert len(mock_encoding.encode(truncated)) <= max_tokens
 
 
+def test_token_encoding_falls_back_for_unknown_models(mocker, settings):
+    """A model tiktoken does not know falls back rather than raising"""
+    settings.LITELLM_TOKEN_ENCODING_NAME = None
+    get_encoding = mocker.patch("tiktoken.get_encoding")
+    mocker.patch("tiktoken.encoding_for_model", side_effect=KeyError("unknown"))
+
+    assert utils.token_encoding("some-frontier-model") == get_encoding.return_value
+    get_encoding.assert_called_once_with(utils.FALLBACK_ENCODING_NAME)
+
+
+def test_count_tokens(mocker):
+    """count_tokens counts what truncate_to_tokens truncates to"""
+
+    class MockEncoding:
+        def encode(self, text):
+            return list(text)
+
+        def decode(self, tokens):
+            return "".join(tokens)
+
+    mocker.patch("tiktoken.encoding_for_model", return_value=MockEncoding())
+
+    text = "Learning outcomes for this course " * 20
+    max_tokens = 25
+    truncated = truncate_to_tokens(text, max_tokens, "gpt-4o")
+
+    assert utils.count_tokens(text, "gpt-4o") > max_tokens
+    assert utils.count_tokens(truncated, "gpt-4o") == max_tokens
+
+
 def test_build_program_children_content_no_children():
     """Programs with no children should return empty string"""
     program_lr = ProgramFactory.create(courses=[]).learning_resource
@@ -687,27 +797,40 @@ def test_build_program_children_content_non_program():
     assert build_program_children_content(course_lr) == ""
 
 
-def test_build_program_children_content_direct_courses():
-    """Programs with direct course children should include them"""
+def test_build_program_children_content_includes_child_course_marketing_pages():
+    """A published child course's marketing-page content is included."""
     course_lr = CourseFactory.create(
         learning_resource__title="Test Course",
-        learning_resource__description="A test course",
     ).learning_resource
+    _add_course_marketing_page(course_lr, "Marketing copy for the test course.")
     program_lr = ProgramFactory.create(courses=[course_lr]).learning_resource
 
     result = build_program_children_content(program_lr)
     assert "## Program Contents" in result
-    assert "Test Course" in result
-    assert "A test course" in result
+    assert "### Test Course" in result
+    assert "Marketing copy for the test course." in result
 
 
-def test_build_program_children_content_child_programs_with_courses():
-    """Programs with child programs should recurse to find courses"""
+def test_build_program_children_content_omits_courses_without_marketing_page():
+    """Child courses lacking a marketing-page content file contribute nothing."""
+    course_lr = CourseFactory.create(
+        learning_resource__title="No Marketing Course",
+    ).learning_resource
+    program_lr = ProgramFactory.create(courses=[course_lr]).learning_resource
+
+    assert build_program_children_content(program_lr) == ""
+
+
+def test_build_program_children_content_recurses_child_program_courses():
+    """Courses reached through a child program are included; the child program
+    itself is not emitted as a heading.
+    """
     from learning_resources.models import LearningResourceRelationship
 
     grandchild_course_lr = CourseFactory.create(
         learning_resource__title="Grandchild Course"
     ).learning_resource
+    _add_course_marketing_page(grandchild_course_lr, "Grandchild marketing copy.")
     child_program_lr = ProgramFactory.create(
         courses=[grandchild_course_lr], learning_resource__title="Child Program"
     ).learning_resource
@@ -719,31 +842,58 @@ def test_build_program_children_content_child_programs_with_courses():
     )
 
     result = build_program_children_content(parent_lr)
-    assert "Child Program" in result
-    assert "Grandchild Course" in result
+    assert "### Grandchild Course" in result
+    assert "Grandchild marketing copy." in result
+    # Child programs are traversed only to reach courses, not emitted themselves.
+    assert "Child Program" not in result
 
 
-def test_build_program_children_content_with_summaries():
-    """Child course contentfile summaries should be included"""
-    from learning_resources.models import ContentFile, LearningResourceRun
+def test_build_program_children_content_excludes_unpublished_marketing_pages():
+    """Unpublished marketing-page content files are excluded."""
+    from learning_resources.models import ContentFile
 
     course_lr = CourseFactory.create(
-        learning_resource__title="Course With Summary"
+        learning_resource__title="Course With Unpublished Page"
     ).learning_resource
-    run = LearningResourceRun.objects.create(
-        learning_resource=course_lr,
-        run_id="test-run",
-    )
     ContentFile.objects.create(
-        run=run,
-        key="transcript.txt",
-        summary="This is a summary of the course content.",
+        learning_resource=course_lr,
+        file_type=MARKETING_PAGE_FILE_TYPE,
+        file_extension=".md",
+        key=f"mktg-{course_lr.id}",
+        content="Hidden marketing copy.",
+        published=False,
     )
     program_lr = ProgramFactory.create(courses=[course_lr]).learning_resource
 
     result = build_program_children_content(program_lr)
-    assert "This is a summary of the course content." in result
-    assert "Content summaries" in result
+    assert "Hidden marketing copy." not in result
+    assert result == ""
+
+
+def test_build_program_children_content_caps_total_length():
+    """Program children content is hard-capped in total size"""
+    course_lr = CourseFactory.create().learning_resource
+    _add_course_marketing_page(course_lr, "x" * 1_500_000)
+    program_lr = ProgramFactory.create(courses=[course_lr]).learning_resource
+
+    result = build_program_children_content(program_lr)
+    assert len(result) <= 1_000_000
+
+
+def test_build_program_children_content_deterministic_order():
+    """Child course sections appear in a stable order."""
+    courses = [
+        CourseFactory.create(learning_resource__title=f"Course {i}").learning_resource
+        for i in range(3)
+    ]
+    for i, course in enumerate(courses):
+        _add_course_marketing_page(course, f"body {i}")
+    program_lr = ProgramFactory.create(courses=courses).learning_resource
+
+    result = build_program_children_content(program_lr)
+    ordered_by_id = sorted(courses, key=lambda c: c.id)
+    positions = [result.index(f"### {c.title}") for c in ordered_by_id]
+    assert positions == sorted(positions)
 
 
 def test_build_program_children_content_ignores_non_program_relations():
@@ -753,12 +903,14 @@ def test_build_program_children_content_ignores_non_program_relations():
     course_lr = CourseFactory.create(
         learning_resource__title="Real Course"
     ).learning_resource
+    _add_course_marketing_page(course_lr, "Real course copy.")
     program_lr = ProgramFactory.create(courses=[course_lr]).learning_resource
 
     # Add a non-program relation (e.g. LEARNING_PATH_ITEMS)
     unrelated_lr = CourseFactory.create(
         learning_resource__title="Unrelated Item"
     ).learning_resource
+    _add_course_marketing_page(unrelated_lr, "Unrelated copy.")
     LearningResourceRelationship.objects.create(
         parent=program_lr,
         child=unrelated_lr,
@@ -766,30 +918,8 @@ def test_build_program_children_content_ignores_non_program_relations():
     )
 
     result = build_program_children_content(program_lr)
-    assert "Real Course" in result
-    assert "Unrelated Item" not in result
-
-
-def test_build_program_children_content_two_levels():
-    """Program -> child program -> courses are all included (2 levels)"""
-    from learning_resources.models import LearningResourceRelationship
-
-    nested_course = CourseFactory.create(
-        learning_resource__title="Nested Course"
-    ).learning_resource
-    mid_lr = ProgramFactory.create(
-        courses=[nested_course], learning_resource__title="Mid Program"
-    ).learning_resource
-    top_lr = ProgramFactory.create(courses=[]).learning_resource
-    LearningResourceRelationship.objects.create(
-        parent=top_lr,
-        child=mid_lr,
-        relation_type="PROGRAM_PROGRAMS",
-    )
-
-    result = build_program_children_content(top_lr)
-    assert "Mid Program" in result
-    assert "Nested Course" in result
+    assert "Real course copy." in result
+    assert "Unrelated copy." not in result
 
 
 # --- build_program_children_content_bulk tests ---
@@ -818,8 +948,8 @@ def test_build_program_children_content_bulk_single_program():
     """Bulk function produces same output as single-resource version."""
     course_lr = CourseFactory.create(
         learning_resource__title="Bulk Test Course",
-        learning_resource__description="A description",
     ).learning_resource
+    _add_course_marketing_page(course_lr, "Bulk marketing copy.")
     program_lr = ProgramFactory.create(courses=[course_lr]).learning_resource
 
     single_result = build_program_children_content(program_lr)
@@ -835,6 +965,8 @@ def test_build_program_children_content_bulk_multiple_programs():
     course2 = CourseFactory.create(
         learning_resource__title="Course For Prog2"
     ).learning_resource
+    _add_course_marketing_page(course1, "Prog1 course copy.")
+    _add_course_marketing_page(course2, "Prog2 course copy.")
     prog1, prog2 = (
         ProgramFactory.create(courses=[course]).learning_resource
         for course in [course1, course2]
@@ -843,9 +975,9 @@ def test_build_program_children_content_bulk_multiple_programs():
     result = build_program_children_content_bulk([prog1, prog2])
     assert prog1.id in result
     assert prog2.id in result
-    assert "Course For Prog1" in result[prog1.id]
-    assert "Course For Prog2" in result[prog2.id]
-    assert "Course For Prog2" not in result[prog1.id]
+    assert "Prog1 course copy." in result[prog1.id]
+    assert "Prog2 course copy." in result[prog2.id]
+    assert "Prog2 course copy." not in result[prog1.id]
 
 
 def test_build_program_children_content_bulk_mixed_resources():
@@ -853,6 +985,7 @@ def test_build_program_children_content_bulk_mixed_resources():
     course_child = CourseFactory.create(
         learning_resource__title="Child Course"
     ).learning_resource
+    _add_course_marketing_page(course_child, "Child course copy.")
     program_lr = ProgramFactory.create(courses=[course_child]).learning_resource
     non_program = CourseFactory.create().learning_resource
 
@@ -868,6 +1001,7 @@ def test_build_program_children_content_bulk_with_grandchildren():
     grandchild = CourseFactory.create(
         learning_resource__title="Grandchild Course"
     ).learning_resource
+    _add_course_marketing_page(grandchild, "Grandchild copy.")
     child_prog = ProgramFactory.create(
         courses=[grandchild], learning_resource__title="Sub Program"
     ).learning_resource
@@ -877,8 +1011,8 @@ def test_build_program_children_content_bulk_with_grandchildren():
     )
 
     result = build_program_children_content_bulk([parent_lr])
-    assert "Sub Program" in result[parent_lr.id]
-    assert "Grandchild Course" in result[parent_lr.id]
+    assert "### Grandchild Course" in result[parent_lr.id]
+    assert "Grandchild copy." in result[parent_lr.id]
 
 
 def test_build_program_children_content_excludes_unpublished_children(
@@ -902,6 +1036,8 @@ def test_build_program_children_content_excludes_unpublished_grandchildren():
         is_unpublished=True,
         learning_resource__title="Unpublished Grandchild",
     ).learning_resource
+    _add_course_marketing_page(published_grandchild, "Published grandchild copy.")
+    _add_course_marketing_page(unpublished_grandchild, "Unpublished grandchild copy.")
     child_prog = ProgramFactory.create(
         courses=[published_grandchild], learning_resource__title="Sub Program"
     ).learning_resource
@@ -921,53 +1057,101 @@ def test_build_program_children_content_excludes_unpublished_grandchildren():
     assert "Unpublished Grandchild" not in result[parent_lr.id]
 
 
-def test_build_program_children_content_bulk_excludes_unpublished_contentfiles():
-    """Unpublished content files and files on unpublished runs are excluded."""
-    from learning_resources.models import ContentFile, LearningResourceRun
+def test_build_program_children_content_bulk_excludes_unpublished_marketing_pages():
+    """Only published marketing-page content files are included."""
+    from learning_resources.models import ContentFile
 
-    course_lr = CourseFactory.create(
-        learning_resource__title="Course With Mixed Content"
+    published_course = CourseFactory.create(
+        learning_resource__title="Published Marketing Course"
+    ).learning_resource
+    _add_course_marketing_page(published_course, "Visible marketing copy.")
+
+    unpublished_course = CourseFactory.create(
+        learning_resource__title="Unpublished Marketing Course"
+    ).learning_resource
+    ContentFile.objects.create(
+        learning_resource=unpublished_course,
+        file_type=MARKETING_PAGE_FILE_TYPE,
+        file_extension=".md",
+        key=f"mktg-{unpublished_course.id}",
+        content="Hidden marketing copy.",
+        published=False,
+    )
+
+    program_lr = ProgramFactory.create(
+        courses=[published_course, unpublished_course]
     ).learning_resource
 
-    published_run = LearningResourceRun.objects.create(
-        learning_resource=course_lr,
-        run_id="published-run",
-        published=True,
-    )
-    unpublished_run = LearningResourceRun.objects.create(
-        learning_resource=course_lr,
-        run_id="unpublished-run",
-        published=False,
-    )
-
-    # Published content file on published run — should be included
-    ContentFile.objects.create(
-        run=published_run,
-        key="visible.txt",
-        summary="Visible summary",
-        published=True,
-    )
-    # Unpublished content file on published run — should be excluded
-    ContentFile.objects.create(
-        run=published_run,
-        key="hidden.txt",
-        summary="Hidden unpublished summary",
-        published=False,
-    )
-    # Published content file on unpublished run — should be excluded
-    ContentFile.objects.create(
-        run=unpublished_run,
-        key="hidden-run.txt",
-        summary="Hidden run summary",
-        published=True,
-    )
-
-    program_lr = ProgramFactory.create(courses=[course_lr]).learning_resource
-
     result = build_program_children_content_bulk([program_lr])
-    assert "Visible summary" in result[program_lr.id]
-    assert "Hidden unpublished summary" not in result[program_lr.id]
-    assert "Hidden run summary" not in result[program_lr.id]
+    assert "Visible marketing copy." in result[program_lr.id]
+    assert "Hidden marketing copy." not in result[program_lr.id]
+
+
+@pytest.mark.django_db
+def test_reachable_published_course_ids_direct_and_subprogram():
+    """Maps a program to its direct courses and courses via child programs."""
+    direct_course = CourseFactory.create(
+        learning_resource__title="Direct"
+    ).learning_resource
+    grandchild_course = CourseFactory.create(
+        learning_resource__title="Grandchild"
+    ).learning_resource
+    child_program = ProgramFactory.create(
+        courses=[grandchild_course], learning_resource__title="Child Program"
+    ).learning_resource
+    program = ProgramFactory.create(courses=[direct_course]).learning_resource
+    LearningResourceRelationship.objects.create(
+        parent=program, child=child_program, relation_type="PROGRAM_PROGRAMS"
+    )
+
+    result = utils.reachable_published_course_ids([program.id])
+    assert result[program.id] == {direct_course.id, grandchild_course.id}
+
+
+@pytest.mark.django_db
+def test_reachable_published_course_ids_empty_input():
+    """Empty program id input maps to an empty result."""
+    assert utils.reachable_published_course_ids([]) == {}
+
+
+def _add_program_marketing_page(program_lr, content):
+    """Attach a published marketing-page content file to a program."""
+    from learning_resources.models import ContentFile
+
+    return ContentFile.objects.create(
+        learning_resource=program_lr,
+        file_type=MARKETING_PAGE_FILE_TYPE,
+        file_extension=".md",
+        key=f"mktg-{program_lr.id}",
+        content=content,
+        published=True,
+    )
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    ("child_has_page", "program_content", "expected_selected"),
+    [
+        # missing marker + an available child page → heal
+        (True, "Program page with no children yet.", True),
+        # no reachable child page → skip (termination guard)
+        (False, "Program page with no children yet.", False),
+        # marker already present → skip
+        (True, "Program page.\n\n## Program Contents\n\n### Child", False),
+    ],
+)
+def test_programs_needing_children_heal(
+    child_has_page, program_content, expected_selected
+):
+    """Heal a program only when its page lacks the marker AND a child page exists."""
+    course_lr = CourseFactory.create().learning_resource
+    if child_has_page:
+        _add_course_marketing_page(course_lr, "Child marketing copy.")
+    program_lr = ProgramFactory.create(courses=[course_lr]).learning_resource
+    _add_program_marketing_page(program_lr, program_content)
+
+    expected = {program_lr.id} if expected_selected else set()
+    assert utils.programs_needing_children_heal([program_lr.id]) == expected
 
 
 @pytest.mark.parametrize(
@@ -997,12 +1181,401 @@ def test_strip_markdown_images(input_md, expected):
 def test_log_missing_content_file_logs_error(mocker):
     """Logs an error with the reason, identifier, and source."""
     mock_log = mocker.patch("learning_resources.utils.log")
+    identifier = "block-v1:MITx+6.00x+2T2020+type@problem+block@abc"
 
-    log_missing_content_file("block_x", reason="not_in_db", source="contentfiles_api")
+    log_missing_content_file(identifier, reason="not_in_db", source="contentfiles_api")
 
     mock_log.error.assert_called_once_with(
         "Missing ContentFile (%s) for edx_module_id=%s [source=%s]",
         "not_in_db",
-        "block_x",
+        identifier,
         "contentfiles_api",
     )
+
+
+@pytest.mark.parametrize(
+    ("edx_module_id", "loggable"),
+    [
+        ("block-v1:MITx+6.00x+2T2020+type@problem+block@abc", True),
+        ("block-v1:MITxT+6.431x+3T2026+type@problemset+block@pset1", True),
+        ("block-v1:MITx+6.00x+2T2020+type@video+block@abc", True),
+        ("block-v1:MITx+6.00x+2T2020+type@html+block@abc", True),
+        # Exact-segment matching: problem-prefixed folder names other than
+        # the listed types do not alert.
+        ("block-v1:MITx+6.00x+2T2020+type@problem_sets+block@abc", False),
+        ("block-v1:MITx+6.00x+2T2020+type@problemsets+block@abc", False),
+        ("asset-v1:MITx+6.00x+2T2020+type@asset+block@transcript.srt", True),
+        ("asset-v1:MITx+6.00x+2T2020+type@asset+block@transcript.vtt", True),
+        ("asset-v1:MITx+6.00x+2T2020+type@asset+block@TRANSCRIPT.SRT", True),
+        ("asset-v1:MITx+6.00x+2T2020+type@asset+block@image.png", False),
+        ("block-v1:MITx+6.00x+2T2020+type@vertical+block@abc", False),
+        ("block-v1:MITx+6.00x+2T2020+type@discussion+block@abc", False),
+        ("block-v1:MITx+6.00x+2T2020+type@folder+block@abc", False),
+        ("does-not-exist", False),
+        ("junk+type@problem+block@abc", False),
+        ("prefix block-v1:MITx+6.00x+2T2020+type@video+block@abc", False),
+        # Widening vs. the old \S+ regex: whitespace inside a valid id no
+        # longer disqualifies it (Canvas run-ids contain spaces).
+        ("block-v1:MITx+6.00x +2T2020+type@problem+block@abc", True),
+        # Edge whitespace is trimmed before validation (transport junk,
+        # never part of a stored id).
+        ("block-v1:MITx+6.00x+2T2020+type@problem+block@abc ", True),
+        (" block-v1:MITx+6.00x+2T2020+type@problem+block@abc", True),
+        (" asset-v1:MITx+6.00x+2T2020+type@asset+block@transcript.srt ", True),
+        # Third deliberate widening: asset-v1 ids no longer require a literal
+        # type@asset segment - any valid asset-v1 id ending in .srt/.vtt logs.
+        ("asset-v1:MITx+6.00x+2T2020+type@vertical+block@foo.srt", True),
+        ("", False),
+        (None, False),
+    ],
+)
+def test_is_loggable_missing_content_id(edx_module_id, loggable):
+    """Only important block types (problem/video/html/.srt/.vtt) are loggable."""
+    assert is_loggable_missing_content_id(edx_module_id) is loggable
+
+
+@pytest.mark.parametrize(
+    ("edx_module_id", "valid"),
+    [
+        # Standard shapes produced by the ETL
+        ("block-v1:MITx+6.00x+2T2020+type@problem+block@abc", True),
+        ("block-v1:MITx+6.00x+2T2020+type@vertical+block@abc", True),
+        ("block-v1:MITx+6.00x+2T2020+type@tabs+block@abc", True),
+        ("asset-v1:MITx+6.00x+2T2020+type@asset+block@handout.pdf", True),
+        # Real prod shapes: Canvas run-ids with spaces, empty type
+        # segment, '+' inside the type name, tab in an asset filename.
+        ("block-v1:34819-FA25 18.01L+canvas+type@g085f027c+block@2-dot-11", True),
+        ("block-v1:33414-21H.363+canvas+type@+block@gfaf809b", True),
+        (
+            "block-v1:28770-15.060_FA24+canvas"
+            "+type@Discrete+Nonlinear_Optimization+block@x",
+            True,
+        ),
+        ("asset-v1:MITxT+16.00x+0T2026+type@asset+block@lec_\t.srt", True),
+        # Prefix collisions with blocklist entries are NOT blocked
+        ("block-v1:X+type@discussion_forum+block@y", True),
+        ("block-v1:X+type@polling+block@y", True),
+        # Content-bearing types resembling blocklist entries stay allowed
+        ("block-v1:X+type@word_cloud+block@y", True),
+        ("block-v1:X+type@library_content+block@y", True),
+        # Never-content block types are rejected (case-insensitive)
+        (
+            "block-v1:MITxT+18.03.2x+1T2025+type@discussion"
+            "+block@discussion_recitation13-tab3",
+            False,
+        ),
+        ("block-v1:X+type@DISCUSSION+block@y", False),
+        ("block-v1:X+type@openassessment+block@y", False),
+        ("block-v1:X+type@poll+block@y", False),
+        ("block-v1:X+type@survey+block@y", False),
+        ("block-v1:X+type@drag-and-drop-v2+block@y", False),
+        ("block-v1:X+type@lti_consumer+block@y", False),
+        ("block-v1:X+type@done+block@y", False),
+        ("block-v1:X+type@completion+block@y", False),
+        ("block-v1:X+type@edx_sga+block@y", False),
+        ("block-v1:X+type@recap+block@y", False),
+        ("block-v1:X+type@ubcpi+block@y", False),
+        ("block-v1:X+type@qualtricssurvey+block@y", False),
+        # Garbage: wrong/missing prefix or missing markers
+        ("block_xpro", False),
+        ("does-not-exist", False),
+        ("junk+type@problem+block@abc", False),
+        ("prefix block-v1:X+type@problem+block@abc", False),
+        ("block-v1:X+type@problem", False),
+        ("block-v1:", False),
+        ("", False),
+        (None, False),
+    ],
+)
+def test_is_valid_edx_module_id(edx_module_id, valid):
+    """Valid ids are well-formed opaque keys of types that can have content."""
+    assert is_valid_edx_module_id(edx_module_id) is valid
+
+
+def test_filter_valid_edx_module_ids():
+    """Only the valid ids survive, edge-trimmed, order preserved."""
+    valid_problem = "block-v1:MITx+6.00x+2T2020+type@problem+block@abc"
+    valid_vertical = "block-v1:MITx+6.00x+2T2020+type@vertical+block@abc"
+    assert filter_valid_edx_module_ids(
+        [
+            valid_problem,
+            "block-v1:X+type@discussion+block@y",
+            "block_xpro",
+            f"{valid_vertical} ",
+        ]
+    ) == [valid_problem, valid_vertical]
+
+
+def test_loggable_is_subset_of_valid():
+    """An invalid id is never loggable, whatever its type segment claims."""
+    assert not is_loggable_missing_content_id("junk+type@problem+block@abc")
+    assert not is_loggable_missing_content_id("block-v1:X+type@discussion+block@y")
+
+
+def test_log_missing_content_file_skips_unimportant_block_type(mocker):
+    """An unimportant block type is not logged at all."""
+    mock_log = mocker.patch("learning_resources.utils.log")
+
+    log_missing_content_file(
+        "block-v1:MITx+6.00x+2T2020+type@discussion+block@abc",
+        reason="not_in_db",
+        source="contentfiles_api",
+    )
+
+    mock_log.error.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        ("clean text", "clean text"),
+        ("", ""),
+        ("Résumé en français : déjà vu", "Résumé en français : déjà vu"),
+        ("nul\x00char", "nulchar"),
+        ("multi\x00ple\x00nuls", "multiplenuls"),
+        ("bad\ud800surrogate", "bad?surrogate"),
+        ("\x00\ud800", "?"),
+    ],
+)
+def test_sanitize_llm_text(text, expected):
+    """sanitize_llm_text should strip NULs and replace lone surrogates"""
+    result = utils.sanitize_llm_text(text)
+    assert result == expected
+    # The result must always be storable: strict UTF-8 encoding cannot raise
+    result.encode("utf-8")
+
+
+@pytest.mark.parametrize(
+    ("title", "expected"),
+    [
+        ("Hello World", "hello-world"),
+        # Accented latin reduces to its base letters
+        ("Café Über Ångström", "cafe-uber-angstrom"),
+        # Punctuation becomes a separator rather than being deleted, which is
+        # where django.utils.text.slugify diverges. Real prod title.
+        (
+            "Electricity and Magnetism: Maxwell’s Equations",  # noqa: RUF001
+            "electricity-and-magnetism-maxwell-s-equations",
+        ),
+        ("A/B Testing", "a-b-testing"),
+        ("under_scores_too", "under-scores-too"),
+        # Runs collapse, edges trim
+        ("  ...Hello   ---   World!!  ", "hello-world"),
+        # Truncated at 60 backing off to the last separator, no trailing dash
+        (
+            "Artificial Intelligence in Healthcare: Fundamentals and Applications",
+            "artificial-intelligence-in-healthcare-fundamentals-and",
+        ),
+        # No ascii letters -> blank. All three are real prod titles.
+        ("创业101: 你的客户是谁？", ""),  # noqa: RUF001
+        ("스타트업 기업가정신 102", ""),
+        ("123 456", ""),
+        ("", ""),
+    ],
+)
+def test_slugify_title(title, expected):
+    """slugify_title mirrors the frontend slugify, including its blank cases"""
+    assert utils.slugify_title(title) == expected
+
+
+@pytest.mark.parametrize(
+    "title",
+    [
+        "Artificial Intelligence in Healthcare: Fundamentals and Applications",
+        "Architecture and Systems Engineering: Models and Methods to Manage Complexity",
+        "a" * 200,
+    ],
+)
+def test_slugify_title_truncation(title):
+    """A truncated slug stays within the cap and never ends on a separator"""
+    slug = utils.slugify_title(title)
+    assert len(slug) <= utils.SLUG_MAX_LENGTH
+    assert not slug.endswith("-")
+
+
+@pytest.mark.parametrize(
+    ("title", "expected"),
+    [
+        ("Hello World", "hello-world"),
+        # A path segment is mandatory, so a blank slug becomes the literal
+        ("创业101: 你的客户是谁？", "resource"),  # noqa: RUF001
+        ("", "resource"),
+    ],
+)
+def test_path_slug(title, expected):
+    """path_slug substitutes a literal where the title yields no slug"""
+    assert utils.path_slug(title) == expected
+
+
+@pytest.mark.parametrize(
+    ("segment", "expected"),
+    [
+        # MITx Online readable_ids depend on ':' and '+' surviving unescaped
+        ("course-v1:MITxT+14.100x", "course-v1:MITxT+14.100x"),
+        ("program-v1:UAI+B2C.2", "program-v1:UAI+B2C.2"),
+        # Anything that would change the path shape is escaped
+        ("a/b", "a%2Fb"),
+        ("a b", "a%20b"),
+        ("a?b#c", "a%3Fb%23c"),
+    ],
+)
+def test_encode_path_segment(segment, expected):
+    """Characters legal in a path segment are left unescaped"""
+    assert utils.encode_path_segment(segment) == expected
+
+
+@pytest.mark.parametrize(
+    ("title", "expected"),
+    [
+        ("Hello World", "/search?resource=7&resource_title=hello-world"),
+        # resource_title is omitted, not emitted blank
+        ("创业101", "/search?resource=7"),
+    ],
+)
+def test_resource_drawer_path(title, expected):
+    """The drawer path carries the id, and the slug only when there is one"""
+    assert utils.resource_drawer_path(7, title) == expected
+
+
+@pytest.mark.parametrize(
+    ("kwargs", "expected_path"),
+    [
+        # Dedicated pages -----------------------------------------------------
+        (
+            {
+                "resource_type": "video",
+                "resource_id": 6385,
+                "title": "Lecture 1",
+                "parent_id": 6384,
+            },
+            "/video/6385/lecture-1?playlist=6384",
+        ),
+        # A video outside any playlist still has its own page
+        (
+            {"resource_type": "video", "resource_id": 6385, "title": "Lecture 1"},
+            "/video/6385/lecture-1",
+        ),
+        (
+            {
+                "resource_type": "video_playlist",
+                "resource_id": 6384,
+                "title": "Data Analysis",
+            },
+            "/video-playlist/6384/data-analysis",
+        ),
+        (
+            {
+                "resource_type": "podcast",
+                "resource_id": 14144,
+                "title": "Beyond Biology",
+            },
+            "/podcast/14144/beyond-biology",
+        ),
+        (
+            {
+                "resource_type": "podcast_episode",
+                "resource_id": 14145,
+                "title": "Insight to Impact",
+                "parent_id": 14144,
+            },
+            "/podcast/14144/podcast_episode/14145/insight-to-impact",
+        ),
+        # MITx Online course/program pages, keyed on readable_id
+        (
+            {
+                "resource_type": "course",
+                "resource_id": 2797,
+                "title": "Behavioral Economics",
+                "readable_id": "course-v1:MITxT+14.100x",
+                "platform_code": "mitxonline",
+            },
+            "/courses/course-v1:MITxT+14.100x",
+        ),
+        (
+            {
+                "resource_type": "program",
+                "resource_id": 2881,
+                "title": "DEDP",
+                "readable_id": "program-v1:MITx+DEDP",
+                "platform_code": "mitxonline",
+                "resource_category": "Program",
+            },
+            "/programs/program-v1:MITx+DEDP",
+        ),
+        # display_mode="course" upstream, stored as resource_category
+        (
+            {
+                "resource_type": "program",
+                "resource_id": 87435,
+                "title": "Fundamentals of Deep Learning",
+                "readable_id": "program-v1:UAI+B2C.2",
+                "platform_code": "mitxonline",
+                "resource_category": "Course",
+            },
+            "/courses/p/program-v1:UAI+B2C.2",
+        ),
+        # Drawer fallbacks ----------------------------------------------------
+        # A course on any other platform has no page of its own
+        (
+            {
+                "resource_type": "course",
+                "resource_id": 3308,
+                "title": "Infrastructure and Energy",
+                "readable_id": "11.165",
+                "platform_code": "ocw",
+            },
+            "/search?resource=3308&resource_title=infrastructure-and-energy",
+        ),
+        (
+            {
+                "resource_type": "course",
+                "resource_id": 2683,
+                "title": "Laser Fundamentals",
+                "readable_id": "course-v1:xPRO+LASERx4",
+                "platform_code": "xpro",
+            },
+            "/search?resource=2683&resource_title=laser-fundamentals",
+        ),
+        # An episode with no parent podcast has no page to address it by
+        (
+            {
+                "resource_type": "podcast_episode",
+                "resource_id": 14145,
+                "title": "Orphan Episode",
+            },
+            "/search?resource=14145&resource_title=orphan-episode",
+        ),
+        (
+            {
+                "resource_type": "document",
+                "resource_id": 99,
+                "title": "Some Document",
+            },
+            "/search?resource=99&resource_title=some-document",
+        ),
+        # MITx Online without a readable_id cannot form a product URL
+        (
+            {
+                "resource_type": "course",
+                "resource_id": 1,
+                "title": "No Readable Id",
+                "platform_code": "mitxonline",
+            },
+            "/search?resource=1&resource_title=no-readable-id",
+        ),
+    ],
+)
+def test_learn_url(settings, kwargs, expected_path):
+    """learn_url returns the dedicated page where one exists, else the drawer"""
+    settings.APP_BASE_URL = "https://learn.test/"
+    assert utils.learn_url(**kwargs) == f"https://learn.test{expected_path}"
+
+
+def test_learn_url_is_never_blank(settings):
+    """Every resource type resolves to a location, so consumers need no fallback"""
+    settings.APP_BASE_URL = "https://learn.test/"
+    for resource_type in LearningResourceType.names():
+        url = utils.learn_url(
+            resource_type=resource_type, resource_id=1, title="Some Title"
+        )
+        assert url.startswith("https://learn.test/")

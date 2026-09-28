@@ -82,6 +82,36 @@ test("hydrates hidden multiple checkbox default from camelCase defaultValues", a
   })
 })
 
+test("drops null entries from multiple checkbox defaultValues", async () => {
+  const onValuesChange = jest.fn()
+
+  const form = {
+    id: "test-form",
+    field_groups: [
+      {
+        fields: [
+          {
+            name: "product",
+            label: "Product",
+            field_type: "multiple_checkboxes",
+            hidden: true,
+            defaultValues: [null, "Universal AI", null],
+            options: [{ label: "Universal AI", value: "Universal AI" }],
+          },
+        ],
+      },
+    ],
+  }
+
+  renderWithTheme(<HubspotForm form={form} onValuesChange={onValuesChange} />)
+
+  await waitFor(() => {
+    expect(onValuesChange).toHaveBeenLastCalledWith(
+      expect.objectContaining({ product: ["Universal AI"] }),
+    )
+  })
+})
+
 test("submits hidden multiple checkbox default from camelCase defaultValues", async () => {
   const onSubmit = jest.fn((values, event) => {
     event.preventDefault()
@@ -160,6 +190,38 @@ test("treats null hidden multiple checkbox defaults as empty array", async () =>
     expect.anything(),
     null,
   )
+})
+
+test("does not render a fieldset for a group whose fields are all hidden", () => {
+  const form = {
+    id: "test-form",
+    field_groups: [
+      {
+        fields: [
+          {
+            name: "email",
+            label: "Email",
+            field_type: "email",
+            hidden: false,
+          },
+        ],
+      },
+      {
+        fields: [
+          {
+            name: "hs_context",
+            label: "Context",
+            field_type: "single_line_text",
+            hidden: true,
+          },
+        ],
+      },
+    ],
+  }
+
+  renderWithTheme(<HubspotForm form={form} />)
+
+  expect(screen.getAllByRole("group")).toHaveLength(1)
 })
 
 test("renders inline error text in an alert", () => {

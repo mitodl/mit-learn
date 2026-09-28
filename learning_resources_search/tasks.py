@@ -5,11 +5,13 @@ import itertools
 import logging
 from collections import OrderedDict
 from contextlib import contextmanager
+from http import HTTPStatus
 from itertools import groupby
 from random import random
 from urllib.parse import urlencode
 
 import celery
+import requests
 from celery.exceptions import Ignore
 from django.conf import settings
 from django.contrib.auth import get_user_model
@@ -40,8 +42,11 @@ from learning_resources_search.constants import (
     HYBRID_COMBINED_INDEX,
     LEARNING_RESOURCE_TYPES,
     PERCOLATE_INDEX_TYPE,
+    PROGRAM_TYPE,
+    REINDEX_TASK_NAME,
     SEARCH_CONN_EXCEPTIONS,
     IndexestoUpdate,
+    ReindexBatchKind,
 )
 from learning_resources_search.exceptions import ReindexError, RetryError
 from learning_resources_search.models import PercolateQuery
@@ -51,18 +56,23 @@ from learning_resources_search.serializers import (
     serialize_learning_resource_for_update,
     serialize_percolate_query_for_update,
 )
+from learning_resources_search.utils import opensearch_content_files
 from main.celery import app
+from main.models import TaskBatch, TaskJob
+from main.tasks import maybe_finish_task_job
 from main.utils import (
     chunks,
     clear_views_cache,
     frontend_absolute_url,
-    merge_strings,
     now_in_utc,
 )
 from profiles.utils import send_template_email
 
 User = get_user_model()
 log = logging.getLogger(__name__)
+
+# Timeout for the digest email's image liveness check
+IMAGE_CHECK_TIMEOUT_SECONDS = 5
 
 
 # For our tasks that attempt to partially update a document, there's a chance that
@@ -97,7 +107,6 @@ def update_featured_rank():
         featured_resources.values_list("position", flat=True).distinct().count(),
         clear_all_greater_than=True,
     )
-    clear_views_cache()
 
 
 @app.task(**PARTIAL_UPDATE_TASK_SETTINGS)
@@ -106,12 +115,23 @@ def upsert_content_file(file_id):
 
     content_file_obj = ContentFile.objects.for_serialization().get(id=file_id)
     content_file_data = serialize_content_file_for_update(content_file_obj)
+    parent_resource = (
+        content_file_obj.run.learning_resource
+        if content_file_obj.run_id
+        else content_file_obj.learning_resource
+    )
+    if parent_resource is None:
+        msg = f"ContentFile {content_file_obj.id} has no parent learning resource"
+        log.error(msg)
+        raise ValueError(msg)
+    learning_resource_id = parent_resource.id
+    resource_type = parent_resource.resource_type
     api.upsert_document(
         gen_content_file_id(content_file_obj.id),
         content_file_data,
-        COURSE_TYPE,
+        resource_type,
         retry_on_conflict=settings.INDEXING_ERROR_RETRIES,
-        routing=content_file_obj.run.learning_resource_id,
+        routing=learning_resource_id,
     )
 
 
@@ -205,6 +225,46 @@ def _group_percolated_rows(rows):
     return grouped_data
 
 
+def _image_url_is_reachable(url):
+    """
+    Check whether an image URL responds successfully.
+
+    Uses a short timeout: this runs while building a digest email, so a slow
+    or hanging image host should not hold up the send.
+    """
+    try:
+        response = requests.head(
+            url, timeout=IMAGE_CHECK_TIMEOUT_SECONDS, allow_redirects=True
+        )
+        if response.status_code in (
+            HTTPStatus.METHOD_NOT_ALLOWED,
+            HTTPStatus.NOT_IMPLEMENTED,
+        ):
+            # some servers reject HEAD; retry without downloading the body
+            response = requests.get(
+                url, timeout=IMAGE_CHECK_TIMEOUT_SECONDS, stream=True
+            )
+            response.close()
+    except requests.RequestException:
+        return False
+    return HTTPStatus.OK <= response.status_code < HTTPStatus.MULTIPLE_CHOICES
+
+
+def _validated_resource_image_url(resource):
+    """
+    Return the resource's image URL if it is reachable, otherwise the default
+    resource image. Email clients can't fall back on their own, so a dead URL
+    would render as a broken image icon.
+    """
+    if (
+        resource.image
+        and resource.image.url
+        and _image_url_is_reachable(resource.image.url)
+    ):
+        return resource.image.url
+    return frontend_absolute_url("/images/default_resource.jpg")
+
+
 def _get_percolated_rows(resources, subscription_type):
     """
     Get percolated rows for a list of learning resources and subscription type
@@ -217,6 +277,7 @@ def _get_percolated_rows(resources, subscription_type):
             source_type=subscription_type
         )
         if percolated.count() > 0:
+            resource_image_url = _validated_resource_image_url(resource)
             percolated_users = set(percolated.values_list("users", flat=True))
             all_users.update(percolated_users)
             for user in percolated_users:
@@ -236,9 +297,7 @@ def _get_percolated_rows(resources, subscription_type):
                     {
                         "resource_url": resource_url,
                         "resource_title": resource.title,
-                        "resource_image_url": resource.image.url
-                        if resource.image
-                        else frontend_absolute_url("/images/default_resource.jpg"),
+                        "resource_image_url": resource_image_url,
                         "resource_type": LearningResourceType[
                             resource.resource_type
                         ].value,
@@ -409,33 +468,6 @@ def bulk_index_percolate_queries(percolate_ids, index_types):
 
 
 @app.task(
-    autoretry_for=(RetryError,),
-    retry_backoff=True,
-    rate_limit=settings.CELERY_SEARCH_RATE_LIMIT,
-)
-def index_course_content_files(course_ids, index_types):
-    """
-    Index content files for a list of course ids
-
-    Args:
-        course_ids(list of int): List of course id's
-        index_types (string): one of the values IndexestoUpdate. Whether the default
-            index, the reindexing index or both need to be updated
-
-
-    """
-    try:
-        with wrap_retry_exception(*SEARCH_CONN_EXCEPTIONS):
-            api.index_course_content_files(course_ids, index_types=index_types)
-    except (RetryError, Ignore):
-        raise
-    except:  # noqa: E722
-        error = "index_course_content_files threw an error"
-        log.exception(error)
-        return error
-
-
-@app.task(
     acks_late=True,
     reject_on_worker_lost=True,
     autoretry_for=(RetryError,),
@@ -446,6 +478,7 @@ def index_content_files(
     content_file_ids,
     learning_resource_id,
     index_types=IndexestoUpdate.all_indexes.value,
+    resource_type=COURSE_TYPE,
 ):
     """
     Index a list of content files
@@ -455,12 +488,16 @@ def index_content_files(
         learning_resource_id(int): Learning resource id of the content files
         index_types (string): one of the values IndexestoUpdate. Whether the default
             index, the reindexing index or both need to be updated
+        resource_type (string): The resource type of the parent learning resource
 
     """
     try:
         with wrap_retry_exception(*SEARCH_CONN_EXCEPTIONS):
             api.index_content_files(
-                content_file_ids, learning_resource_id, index_types=index_types
+                content_file_ids,
+                learning_resource_id,
+                index_types=index_types,
+                resource_type=resource_type,
             )
     except (RetryError, Ignore):
         raise
@@ -477,18 +514,23 @@ def index_content_files(
     retry_backoff=True,
     rate_limit=settings.CELERY_SEARCH_RATE_LIMIT,
 )
-def deindex_content_files(content_file_ids, learning_resource_id):
+def deindex_content_files(
+    content_file_ids, learning_resource_id, resource_type=COURSE_TYPE
+):
     """
     Deindex a list of content files
 
     Args:
         content_file_ids(array of int): List of content file ids
         learning_resource_id(int): Learning resource id of the content files
+        resource_type (string): The resource type of the parent learning resource
 
     """
     try:
         with wrap_retry_exception(*SEARCH_CONN_EXCEPTIONS):
-            api.deindex_content_files(content_file_ids, learning_resource_id)
+            api.deindex_content_files(
+                content_file_ids, learning_resource_id, resource_type=resource_type
+            )
     except (RetryError, Ignore):
         raise
     except:  # noqa: E722
@@ -554,6 +596,34 @@ def deindex_run_content_files(run_id, unpublished_only, keep_published=False):  
         return error
 
 
+@app.task(
+    autoretry_for=(RetryError,),
+    retry_backoff=True,
+    rate_limit=settings.CELERY_SEARCH_RATE_LIMIT,
+)
+def deindex_non_opensearch_run_content_files(
+    learning_resource_id, resource_type=COURSE_TYPE
+):
+    """
+    Deindex a resource's content files from runs no longer selected for OpenSearch
+
+    Args:
+        learning_resource_id(int): Learning resource id of the content files
+        resource_type (string): The resource type of the parent learning resource
+    """
+    try:
+        with wrap_retry_exception(*SEARCH_CONN_EXCEPTIONS):
+            api.deindex_non_opensearch_run_content_files(
+                learning_resource_id, resource_type=resource_type
+            )
+    except (RetryError, Ignore):
+        raise
+    except:  # noqa: E722
+        error = "deindex_non_opensearch_run_content_files threw an error"
+        log.exception(error)
+        return error
+
+
 @contextmanager
 def wrap_retry_exception(*exception_classes):
     """
@@ -573,138 +643,398 @@ def wrap_retry_exception(*exception_classes):
         raise
 
 
-@app.task(bind=True)
-def start_recreate_index(self, indexes, remove_existing_reindexing_tags):
+def _build_reindex_batches(job):  # noqa: C901, PLR0912
     """
-    Wipe and recreate index and mapping, and index all items.
+    Build the TaskBatch rows for a reindex job using fast id-only queries.
+
+    Content files are not enumerated here; dispatch batches defer the slow
+    per-resource ContentFile queries to run_reindex_batch workers.
+
+    Args:
+        job (TaskJob): the reindex job
+
+    Returns:
+        list of TaskBatch: unsaved batch rows
     """
-    try:
-        if not remove_existing_reindexing_tags:
-            existing_reindexing_indexes = api.get_existing_reindexing_indexes(indexes)
+    indexes = job.params["indexes"]
+    batches = []
 
-            if existing_reindexing_indexes:
-                error = (
-                    f"Reindexing in progress. Reindexing indexes already exist: "
-                    f"{', '.join(existing_reindexing_indexes)}"
-                )
-                log.exception(error)
-                return error
-
-        api.delete_orphaned_indexes(
-            indexes, delete_reindexing_tags=remove_existing_reindexing_tags
+    def add_batch(kind, batch_key, params):
+        batches.append(
+            TaskBatch(job=job, kind=kind.value, batch_key=batch_key, params=params)
         )
 
-        new_backing_indices = {
-            obj_type: api.create_backing_index(obj_type) for obj_type in indexes
-        }
+    if PERCOLATE_INDEX_TYPE in indexes:
+        for chunk, ids in enumerate(
+            chunks(
+                PercolateQuery.objects.order_by("id").values_list("id", flat=True),
+                chunk_size=settings.OPENSEARCH_INDEXING_CHUNK_SIZE,
+            )
+        ):
+            add_batch(ReindexBatchKind.percolate, f"percolate:{chunk}", {"ids": ids})
 
-        # Do the indexing on the temp index
-        log.info("starting to index %s objects...", ", ".join(indexes))
+    if COURSE_TYPE in indexes or HYBRID_COMBINED_INDEX in indexes:
+        blocklisted_ids = load_course_blocklist()
 
-        index_tasks = []
-
-        if PERCOLATE_INDEX_TYPE in indexes:
-            index_tasks = index_tasks + [
-                bulk_index_percolate_queries.si(
-                    percolate_ids, IndexestoUpdate.reindexing_index.value
-                )
-                for percolate_ids in chunks(
-                    PercolateQuery.objects.order_by("id").values_list("id", flat=True),
-                    chunk_size=settings.OPENSEARCH_INDEXING_CHUNK_SIZE,
-                )
-            ]
-
-        if COURSE_TYPE in indexes:
-            blocklisted_ids = load_course_blocklist()
-            index_tasks = index_tasks + [
-                index_learning_resources.si(
-                    ids,
-                    COURSE_TYPE,
-                    index_types=IndexestoUpdate.reindexing_index.value,
-                )
-                for ids in chunks(
-                    Course.objects.filter(learning_resource__published=True)
-                    .exclude(learning_resource__readable_id=blocklisted_ids)
-                    .order_by("learning_resource_id")
-                    .values_list("learning_resource_id", flat=True),
-                    chunk_size=settings.OPENSEARCH_INDEXING_CHUNK_SIZE,
-                )
-            ]
-
-            for course in (
+    if COURSE_TYPE in indexes:
+        for chunk, ids in enumerate(
+            chunks(
                 Course.objects.filter(learning_resource__published=True)
-                .filter(learning_resource__etl_source__in=RESOURCE_FILE_ETL_SOURCES)
-                .exclude(learning_resource__readable_id=blocklisted_ids)
+                .exclude(learning_resource__readable_id__in=blocklisted_ids)
                 .order_by("learning_resource_id")
-            ):
-                index_tasks = index_tasks + [
-                    index_content_files.si(
-                        ids,
-                        course.learning_resource_id,
-                        index_types=IndexestoUpdate.reindexing_index.value,
-                    )
-                    for ids in chunks(
-                        ContentFile.objects.filter(
-                            run__learning_resource_id=course.learning_resource_id,
-                            published=True,
-                            run__published=True,
-                        )
-                        .order_by("id")
-                        .values_list("id", flat=True),
-                        chunk_size=settings.OPENSEARCH_DOCUMENT_INDEXING_CHUNK_SIZE,
-                    )
-                ]
+                .values_list("learning_resource_id", flat=True),
+                chunk_size=settings.OPENSEARCH_INDEXING_CHUNK_SIZE,
+            )
+        ):
+            add_batch(
+                ReindexBatchKind.learning_resources,
+                f"{COURSE_TYPE}:resources:{chunk}",
+                {"ids": ids, "index_name": COURSE_TYPE},
+            )
 
-        if HYBRID_COMBINED_INDEX in indexes:
-            blocklisted_ids = load_course_blocklist()
-
-            index_tasks = index_tasks + [
-                index_learning_resources.si(
-                    ids,
-                    HYBRID_COMBINED_INDEX,
-                    index_types=IndexestoUpdate.reindexing_index.value,
+        for chunk, resource_ids in enumerate(
+            chunks(
+                Course.objects.filter(
+                    Q(learning_resource__published=True)
+                    | Q(learning_resource__test_mode=True)
                 )
-                for ids in chunks(
+                .filter(learning_resource__etl_source__in=RESOURCE_FILE_ETL_SOURCES)
+                .exclude(learning_resource__readable_id__in=blocklisted_ids)
+                .order_by("learning_resource_id")
+                .values_list("learning_resource_id", flat=True),
+                chunk_size=settings.OPENSEARCH_REINDEX_DISPATCH_CHUNK_SIZE,
+            )
+        ):
+            add_batch(
+                ReindexBatchKind.dispatch_content_files,
+                f"dispatch:{COURSE_TYPE}:{chunk}",
+                {
+                    "learning_resource_ids": resource_ids,
+                    "resource_type": COURSE_TYPE,
+                },
+            )
+
+    if HYBRID_COMBINED_INDEX in indexes:
+        for chunk, ids in enumerate(
+            chunks(
+                LearningResource.objects.filter(published=True)
+                .exclude(readable_id__in=blocklisted_ids)
+                .order_by("id")
+                .values_list("id", flat=True),
+                chunk_size=settings.OPENSEARCH_INDEXING_CHUNK_SIZE,
+            )
+        ):
+            add_batch(
+                ReindexBatchKind.learning_resources,
+                f"{HYBRID_COMBINED_INDEX}:resources:{chunk}",
+                {"ids": ids, "index_name": HYBRID_COMBINED_INDEX},
+            )
+
+    for resource_type in set(LEARNING_RESOURCE_TYPES) - {COURSE_TYPE}:
+        if resource_type in indexes:
+            for chunk, ids in enumerate(
+                chunks(
                     LearningResource.objects.filter(
                         published=True,
+                        resource_type=resource_type,
                     )
-                    .exclude(readable_id=blocklisted_ids)
                     .order_by("id")
                     .values_list("id", flat=True),
                     chunk_size=settings.OPENSEARCH_INDEXING_CHUNK_SIZE,
                 )
-            ]
+            ):
+                add_batch(
+                    ReindexBatchKind.learning_resources,
+                    f"{resource_type}:resources:{chunk}",
+                    {"ids": ids, "index_name": resource_type},
+                )
 
-        for resource_type in set(LEARNING_RESOURCE_TYPES) - {COURSE_TYPE}:
-            if resource_type in indexes:
-                index_tasks = index_tasks + [
-                    index_learning_resources.si(
-                        ids,
-                        resource_type,
-                        index_types=IndexestoUpdate.reindexing_index.value,
+    if PROGRAM_TYPE in indexes:
+        for chunk, resource_ids in enumerate(
+            chunks(
+                LearningResource.objects.filter(resource_type=PROGRAM_TYPE)
+                .filter(Q(published=True) | Q(test_mode=True))
+                .order_by("id")
+                .values_list("id", flat=True),
+                chunk_size=settings.OPENSEARCH_REINDEX_DISPATCH_CHUNK_SIZE,
+            )
+        ):
+            add_batch(
+                ReindexBatchKind.dispatch_content_files,
+                f"dispatch:{PROGRAM_TYPE}:{chunk}",
+                {
+                    "learning_resource_ids": resource_ids,
+                    "resource_type": PROGRAM_TYPE,
+                },
+            )
+
+    return batches
+
+
+def _dispatch_content_file_batches(batch):
+    """
+    Create and enqueue the content file batches for a dispatch batch.
+
+    Child rows are created (idempotently, via the unique batch_key) before the
+    dispatch batch itself is marked complete, so the job can never appear
+    finished while content file fan-out is still pending.
+
+    Args:
+        batch (TaskBatch): a dispatch_content_files batch
+    """
+    resource_type = batch.params["resource_type"]
+    children = []
+    for resource in LearningResource.objects.filter(
+        id__in=batch.params["learning_resource_ids"]
+    ).order_by("id"):
+        indexable = opensearch_content_files(resource)
+        for label, direct in (("run", False), ("direct", True)):
+            for chunk, ids in enumerate(
+                chunks(
+                    indexable.filter(run__isnull=direct)
+                    .order_by("id")
+                    .values_list("id", flat=True),
+                    chunk_size=settings.OPENSEARCH_DOCUMENT_INDEXING_CHUNK_SIZE,
+                )
+            ):
+                children.append(
+                    TaskBatch(
+                        job=batch.job,
+                        kind=ReindexBatchKind.content_files.value,
+                        batch_key=f"content_files:{resource.id}:{label}:{chunk}",
+                        params={
+                            "ids": ids,
+                            "learning_resource_id": resource.id,
+                            "resource_type": resource_type,
+                        },
                     )
-                    for ids in chunks(
-                        LearningResource.objects.filter(
-                            published=True,
-                            resource_type=resource_type,
+                )
+    TaskBatch.objects.bulk_create(children, ignore_conflicts=True)
+    child_ids = batch.job.batches.filter(
+        batch_key__in=[child.batch_key for child in children],
+        status=TaskBatch.Status.QUEUED,
+    ).values_list("id", flat=True)
+    for child_id in child_ids:
+        run_reindex_batch.delay(child_id)
+
+
+def _execute_reindex_batch(batch):
+    """
+    Run the indexing work for a single reindex batch
+
+    Args:
+        batch (TaskBatch): the batch to execute
+    """
+    params = batch.params
+    if batch.kind == ReindexBatchKind.learning_resources.value:
+        api.index_learning_resources(
+            params["ids"],
+            params["index_name"],
+            IndexestoUpdate.reindexing_index.value,
+        )
+    elif batch.kind == ReindexBatchKind.content_files.value:
+        api.index_content_files(
+            params["ids"],
+            params["learning_resource_id"],
+            index_types=IndexestoUpdate.reindexing_index.value,
+            resource_type=params["resource_type"],
+        )
+    elif batch.kind == ReindexBatchKind.percolate.value:
+        api.index_items(
+            serialize_bulk_percolators(params["ids"]),
+            PERCOLATE_INDEX_TYPE,
+            IndexestoUpdate.reindexing_index.value,
+        )
+    elif batch.kind == ReindexBatchKind.dispatch_content_files.value:
+        _dispatch_content_file_batches(batch)
+
+
+def _maybe_finish_reindex_job(job_id):
+    """
+    Claim and enqueue finish_reindex_job if every batch of the job is done
+
+    Args:
+        job_id (int): TaskJob id
+    """
+    maybe_finish_task_job(job_id, finish_reindex_job)
+
+
+class _RunReindexBatchTask(app.Task):
+    """
+    Base task that fails the batch if run_reindex_batch gives up.
+
+    When autoretries are exhausted the task raises without having marked the
+    batch terminal, which would leave it RUNNING and hang the job. on_failure
+    fires once, on the final give-up, so we mark the batch FAILED and nudge
+    completion. (A worker killed mid-run does not trigger this — that message
+    is redelivered by acks_late instead.)
+    """
+
+    def on_failure(self, exc, task_id, args, kwargs, einfo):  # noqa: ARG002
+        batch_id = args[0] if args else kwargs.get("batch_id")
+        batch = TaskBatch.objects.filter(id=batch_id).first()
+        if batch is None:
+            return
+        TaskBatch.objects.filter(
+            id=batch_id, status__in=TaskBatch.NON_TERMINAL_STATUSES
+        ).update(
+            status=TaskBatch.Status.FAILED,
+            error=f"run_reindex_batch gave up: {exc}",
+        )
+        _maybe_finish_reindex_job(batch.job_id)
+
+
+@app.task(
+    base=_RunReindexBatchTask,
+    acks_late=True,
+    reject_on_worker_lost=True,
+    autoretry_for=(RetryError,),
+    retry_backoff=True,
+    rate_limit=settings.CELERY_SEARCH_RATE_LIMIT,
+)
+def run_reindex_batch(batch_id):
+    """
+    Execute one reindex batch and record its completion in the database
+
+    Args:
+        batch_id (int): TaskBatch id
+    """
+    batch = TaskBatch.objects.select_related("job").get(id=batch_id)
+    if (
+        batch.status not in TaskBatch.NON_TERMINAL_STATUSES
+        or batch.job.status not in TaskJob.ACTIVE_STATUSES
+    ):
+        log.info(
+            "Skipping reindex batch %s (batch status=%s, job status=%s)",
+            batch.batch_key,
+            batch.status,
+            batch.job.status,
+        )
+        # a redelivery of an already-finished batch still nudges completion, so
+        # the job can't hang if the last batch's worker was culled right after
+        # committing its status but before the finish step was enqueued
+        _maybe_finish_reindex_job(batch.job_id)
+        return
+    # mark the batch running; a redelivered message may find the batch already
+    # running, which is fine — execution is idempotent
+    TaskBatch.objects.filter(
+        id=batch_id, status__in=TaskBatch.NON_TERMINAL_STATUSES
+    ).update(status=TaskBatch.Status.RUNNING)
+    try:
+        with wrap_retry_exception(*SEARCH_CONN_EXCEPTIONS):
+            _execute_reindex_batch(batch)
+    except (RetryError, Ignore):
+        raise
+    except SystemExit as err:
+        raise RetryError(SystemExit.__name__) from err
+    except Exception as ex:
+        error = f"run_reindex_batch threw an error: {type(ex).__name__}: {ex}"
+        log.exception("Reindex batch %s failed", batch.batch_key)
+        TaskBatch.objects.filter(
+            id=batch_id, status__in=TaskBatch.NON_TERMINAL_STATUSES
+        ).update(status=TaskBatch.Status.FAILED, error=error)
+    else:
+        TaskBatch.objects.filter(
+            id=batch_id, status__in=TaskBatch.NON_TERMINAL_STATUSES
+        ).update(status=TaskBatch.Status.SUCCEEDED)
+    _maybe_finish_reindex_job(batch.job_id)
+
+
+@app.task(acks_late=True, reject_on_worker_lost=True)
+def start_recreate_index(job_id):
+    """
+    Create backing indexes for a reindex job and fan out indexing batches.
+
+    All indexing writes go only to the new (reindexing) backing indexes;
+    search keeps using the current default indexes until finish_reindex_job
+    switches the aliases after every batch has succeeded.
+
+    Args:
+        job_id (int): TaskJob id
+    """
+    job = TaskJob.objects.get(id=job_id)
+    # QUEUED: fresh job, do one-time setup. RUNNING: a redelivery (the worker
+    # died partway through the enqueue loop) — skip setup and just re-enqueue
+    # whatever batches are still waiting. Anything else is already done.
+    if job.status not in (TaskJob.Status.QUEUED, TaskJob.Status.RUNNING):
+        log.info("Reindex job %s not startable (status=%s)", job_id, job.status)
+        return
+    indexes = job.params["indexes"]
+    restart = job.params.get("restart", False)
+
+    if job.status == TaskJob.Status.QUEUED:
+        try:
+            error = None
+            if not restart:
+                existing_reindexing_indexes = api.get_existing_reindexing_indexes(
+                    indexes
+                )
+                if existing_reindexing_indexes:
+                    error = (
+                        f"Reindexing in progress. Reindexing indexes already exist: "
+                        f"{', '.join(existing_reindexing_indexes)}"
+                    )
+                else:
+                    other_active_jobs = [
+                        other_job
+                        for other_job in TaskJob.objects.filter(
+                            task_name=REINDEX_TASK_NAME,
+                            status__in=TaskJob.ACTIVE_STATUSES,
+                        ).exclude(id=job_id)
+                        if set(other_job.params.get("indexes", [])) & set(indexes)
+                    ]
+                    if other_active_jobs:
+                        error = (
+                            f"Reindexing in progress. Active reindex jobs already"
+                            f" exist: "
+                            f"{', '.join(str(other.id) for other in other_active_jobs)}"
                         )
-                        .order_by("id")
-                        .values_list("id", flat=True),
-                        chunk_size=settings.OPENSEARCH_INDEXING_CHUNK_SIZE,
-                    )
-                ]
+            if error:
+                log.error(error)
+                TaskJob.objects.filter(id=job_id).update(
+                    status=TaskJob.Status.FAILED, error=error
+                )
+                return
 
-        index_tasks = celery.group(index_tasks)
-    except:  # noqa: E722
-        error = "start_recreate_index threw an error"
-        log.exception(error)
-        return error
+            api.delete_orphaned_indexes(indexes, delete_reindexing_tags=restart)
 
-    # Use self.replace so that code waiting on this task will also wait on the indexing
-    #  and finish tasks
-    return self.replace(
-        celery.chain(index_tasks, finish_recreate_index.s(new_backing_indices))
-    )
+            job.params["backing_indexes"] = {
+                obj_type: api.create_backing_index(obj_type) for obj_type in indexes
+            }
+            job.save()
+
+            log.info("starting to index %s objects...", ", ".join(indexes))
+
+            TaskBatch.objects.bulk_create(
+                _build_reindex_batches(job), ignore_conflicts=True
+            )
+            # flip to RUNNING before enqueuing so a redelivery after this point
+            # resumes the enqueue loop rather than redoing setup
+            TaskJob.objects.filter(id=job_id, status=TaskJob.Status.QUEUED).update(
+                status=TaskJob.Status.RUNNING
+            )
+        except Exception:
+            error = "start_recreate_index threw an error"
+            log.exception(error)
+            TaskJob.objects.filter(id=job_id).update(
+                status=TaskJob.Status.FAILED, error=error
+            )
+            try:
+                api.delete_orphaned_indexes(indexes, delete_reindexing_tags=True)
+            except Exception:
+                log.exception(
+                    "Failed to clean up reindexing indexes for job %s", job_id
+                )
+            return
+
+    # (re)enqueue every batch still waiting; idempotent under redelivery, so a
+    # worker death mid-loop can't strand batches in QUEUED
+    for batch_id in job.batches.filter(status=TaskBatch.Status.QUEUED).values_list(
+        "id", flat=True
+    ):
+        run_reindex_batch.delay(batch_id)
+    # handles the edge case of a job with no batches at all
+    _maybe_finish_reindex_job(job_id)
 
 
 @app.task(
@@ -713,7 +1043,10 @@ def start_recreate_index(self, indexes, remove_existing_reindexing_tags):
     rate_limit=settings.CELERY_SEARCH_RATE_LIMIT,
 )
 def finish_update_index(results):  # noqa: ARG001
-    """Clear cached views after update index tasks complete."""
+    """
+    Clear cached views after update index tasks complete.
+    """
+    log.info("update_index has finished successfully!")
     clear_views_cache()
 
 
@@ -739,6 +1072,9 @@ def start_update_index(self, indexes, etl_source):
             index_tasks = index_tasks + get_update_resource_files_tasks(
                 blocklisted_ids, etl_source
             )
+
+        if PROGRAM_TYPE in indexes or CONTENT_FILE_TYPE in indexes:
+            index_tasks = index_tasks + get_update_program_files_tasks(etl_source)
         if PERCOLATE_INDEX_TYPE in indexes:
             index_tasks = index_tasks + get_update_percolator_tasks()
 
@@ -756,6 +1092,48 @@ def start_update_index(self, indexes, etl_source):
     return self.replace(celery.chain(index_tasks, finish_update_index.s()))
 
 
+def _update_content_files_tasks(learning_resource, resource_type):
+    """
+    Get tasks that index a resource's OpenSearch content files and deindex
+    everything else: files of runs no longer selected, and unpublished files.
+    """
+    unpublished = ContentFile.objects.filter(
+        Q(run__learning_resource_id=learning_resource.id)
+        | Q(learning_resource_id=learning_resource.id),
+        published=False,
+    )
+    return (
+        [
+            index_content_files.si(
+                ids,
+                learning_resource.id,
+                index_types=IndexestoUpdate.current_index.value,
+                resource_type=resource_type,
+            )
+            for ids in chunks(
+                opensearch_content_files(learning_resource)
+                .order_by("id")
+                .values_list("id", flat=True),
+                chunk_size=settings.OPENSEARCH_DOCUMENT_INDEXING_CHUNK_SIZE,
+            )
+        ]
+        + [
+            deindex_non_opensearch_run_content_files.si(
+                learning_resource.id, resource_type=resource_type
+            )
+        ]
+        + [
+            deindex_content_files.si(
+                ids, learning_resource.id, resource_type=resource_type
+            )
+            for ids in chunks(
+                unpublished.order_by("id").values_list("id", flat=True),
+                chunk_size=settings.OPENSEARCH_DOCUMENT_INDEXING_CHUNK_SIZE,
+            )
+        ]
+    )
+
+
 def get_update_resource_files_tasks(blocklisted_ids, etl_source):
     """
     Get list of tasks to update course files.
@@ -769,7 +1147,8 @@ def get_update_resource_files_tasks(blocklisted_ids, etl_source):
 
     if etl_source is None or etl_source in RESOURCE_FILE_ETL_SOURCES:
         course_update_query = (
-            LearningResource.objects.filter(published=True, resource_type=COURSE_TYPE)
+            LearningResource.objects.filter(resource_type=COURSE_TYPE)
+            .filter(Q(published=True) | Q(test_mode=True))
             .exclude(readable_id__in=blocklisted_ids)
             .order_by("id")
         )
@@ -781,43 +1160,43 @@ def get_update_resource_files_tasks(blocklisted_ids, etl_source):
                 etl_source__in=RESOURCE_FILE_ETL_SOURCES
             )
 
-        index_tasks = []
-
-        for learning_resource in course_update_query.order_by("id"):
-            index_tasks = index_tasks + [
-                index_content_files.si(
-                    ids,
-                    learning_resource.id,
-                    index_types=IndexestoUpdate.current_index.value,
-                )
-                for ids in chunks(
-                    ContentFile.objects.filter(
-                        run__learning_resource_id=learning_resource.id,
-                        published=True,
-                        run__published=True,
-                    )
-                    .order_by("id")
-                    .values_list("id", flat=True),
-                    chunk_size=settings.OPENSEARCH_DOCUMENT_INDEXING_CHUNK_SIZE,
-                )
-            ]
-
-            index_tasks = index_tasks + [
-                deindex_content_files.si(ids, learning_resource.id)
-                for ids in chunks(
-                    ContentFile.objects.filter(
-                        run__learning_resource_id=learning_resource.id
-                    )
-                    .filter(Q(published=False) | Q(run__published=False))
-                    .order_by("id")
-                    .values_list("id", flat=True),
-                    chunk_size=settings.OPENSEARCH_DOCUMENT_INDEXING_CHUNK_SIZE,
-                )
-            ]
-
-        return index_tasks
+        return [
+            task
+            for learning_resource in course_update_query
+            for task in _update_content_files_tasks(learning_resource, COURSE_TYPE)
+        ]
     else:
         return []
+
+
+def get_update_program_files_tasks(etl_source):
+    """
+    Get list of tasks to update program content files.
+
+    Args:
+        etl_source(str): ETL source filter for the task
+    """
+    if etl_source is not None and etl_source not in RESOURCE_FILE_ETL_SOURCES:
+        return []
+
+    program_update_query = (
+        LearningResource.objects.filter(resource_type=PROGRAM_TYPE)
+        .filter(Q(published=True) | Q(test_mode=True))
+        .order_by("id")
+    )
+
+    if etl_source:
+        program_update_query = program_update_query.filter(etl_source=etl_source)
+    else:
+        program_update_query = program_update_query.filter(
+            etl_source__in=RESOURCE_FILE_ETL_SOURCES
+        )
+
+    return [
+        task
+        for learning_resource in program_update_query
+        for task in _update_content_files_tasks(learning_resource, PROGRAM_TYPE)
+    ]
 
 
 def get_update_courses_tasks(blocklisted_ids, etl_source):
@@ -919,40 +1298,81 @@ def get_update_learning_resource_tasks(resource_type):
     ]
 
 
+class _FinishReindexJobTask(app.Task):
+    """
+    Base task that fails the job if finish_reindex_job gives up.
+
+    If the alias switch keeps erroring until autoretries are exhausted, the job
+    would otherwise hang in FINISHING. on_failure marks it FAILED so it doesn't
+    stay active forever; the old index keeps serving and an operator can re-run.
+    """
+
+    def on_failure(self, exc, task_id, args, kwargs, einfo):  # noqa: ARG002
+        job_id = args[0] if args else kwargs.get("job_id")
+        TaskJob.objects.filter(id=job_id, status=TaskJob.Status.FINISHING).update(
+            status=TaskJob.Status.FAILED,
+            error=f"finish_reindex_job gave up: {exc}",
+        )
+
+
 @app.task(
+    base=_FinishReindexJobTask,
     acks_late=True,
     reject_on_worker_lost=True,
     autoretry_for=(RetryError, SystemExit),
     retry_backoff=True,
     rate_limit=settings.CELERY_SEARCH_RATE_LIMIT,
 )
-def finish_recreate_index(results, backing_indices):
+def finish_reindex_job(job_id):
     """
-    Swap reindex backing index with default backing index
+    Swap the reindex backing indexes with the default backing indexes once
+    every batch of the job has succeeded, or clean up if any batch failed.
+
+    Safe to re-run: already-switched object types are skipped, so a redelivery
+    can never delete the newly promoted backing index.
 
     Args:
-        results (list or bool): Results saying whether the error exists
-        backing_indices (dict): The backing OpenSearch indices keyed by object type
+        job_id (int): TaskJob id
     """
-    errors = merge_strings(results)
+    job = TaskJob.objects.get(id=job_id)
+    if job.status != TaskJob.Status.FINISHING:
+        log.info("Skipping finish for reindex job %s (status=%s)", job_id, job.status)
+        return
+
+    backing_indexes = job.params.get("backing_indexes", {})
+    errors = [
+        f"{batch_key}: {error}"
+        for batch_key, error in job.batches.filter(
+            status=TaskBatch.Status.FAILED
+        ).values_list("batch_key", "error")
+    ]
     if errors:
         try:
             api.delete_orphaned_indexes(
-                list(backing_indices.keys()), delete_reindexing_tags=True
+                list(backing_indexes.keys()), delete_reindexing_tags=True
             )
         except RequestError as ex:
             raise RetryError(str(ex)) from ex
         msg = f"Errors occurred during recreate_index: {errors}"
+        TaskJob.objects.filter(id=job_id, status=TaskJob.Status.FINISHING).update(
+            status=TaskJob.Status.FAILED, error=msg
+        )
         raise ReindexError(msg)
 
     log.info(
         "Done with temporary index. Pointing default aliases to newly created backing indexes..."  # noqa: E501
     )
-    for obj_type, backing_index in backing_indices.items():
+    for obj_type, backing_index in backing_indexes.items():
         try:
+            if api.is_default_backing_index(backing_index, obj_type):
+                # already switched by a previous delivery of this task
+                continue
             api.switch_indices(backing_index, obj_type)
         except RequestError as ex:
             raise RetryError(str(ex)) from ex
+    TaskJob.objects.filter(id=job_id, status=TaskJob.Status.FINISHING).update(
+        status=TaskJob.Status.SUCCEEDED
+    )
     log.info("recreate_index has finished successfully!")
     clear_views_cache()
 
@@ -1032,7 +1452,7 @@ def attempt_send_digest_email_batch(user_template_items):
                 shortform=True,
             )
             send_template_email(
-                [user.email],
+                user,
                 subject,
                 "email/subscribed_channel_digest.html",
                 context={
@@ -1042,4 +1462,5 @@ def attempt_send_digest_email_batch(user_template_items):
                     "resource_group": group,
                     "short_subject": short_subject,
                 },
+                is_transactional=False,
             )

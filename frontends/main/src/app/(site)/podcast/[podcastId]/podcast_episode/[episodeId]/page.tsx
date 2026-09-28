@@ -1,3 +1,4 @@
+import type { AppPageProps } from "@/common/searchParams"
 import { getQueryClient } from "@/app/getQueryClient"
 import { ResourceTypeEnum } from "api"
 import { learningResourceQueries } from "api/hooks/learningResources"
@@ -7,14 +8,14 @@ import {
   parseResourceId,
   resolveEpisodeParent,
 } from "@/common/slugs"
-import { carrySearchParams, podcastEpisodePageView } from "@/common/urls"
+import { carrySearchParams, podcastEpisodePath } from "@/common/urls"
 
 /**
  * Bare /podcast/{podcastId}/podcast_episode/{episodeId} is never canonical →
  * 307-redirect to the slugged form, correcting the parent podcast id.
  */
 const Page = async (
-  props: PageProps<"/podcast/[podcastId]/podcast_episode/[episodeId]">,
+  props: AppPageProps<"/podcast/[podcastId]/podcast_episode/[episodeId]">,
 ) => {
   const { podcastId, episodeId } = await props.params
   const epId = parseResourceId(episodeId)
@@ -38,10 +39,10 @@ const Page = async (
   }
   redirect(
     carrySearchParams(
-      podcastEpisodePageView(
+      podcastEpisodePath(
         String(epId),
         String(canonicalPodcastId),
-        episode.title,
+        episode.url_slug,
       ),
       await props.searchParams,
     ),

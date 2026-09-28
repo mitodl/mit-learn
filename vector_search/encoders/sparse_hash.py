@@ -13,12 +13,23 @@ class SparseHashEncoder(BaseEncoder):
         self.model_name = model_name
         self.vectorizer = HashingVectorizer(stop_words="english")
 
-    def prune_sparse_vector(self, vec, threshold=0.1):
+    def prune_sparse_vector(self, vec, max_terms=None):
+        """
+        Drop entries that carry no lexical signal, and optionally cap the
+        number of terms retained.
+
+        Only exact zeros are dropped: with alternate_sign enabled, colliding
+        terms can cancel to 0.0 and contribute nothing to the dot product.
+        Document length is already bounded upstream by truncation to the
+        embedding model's input limit; max_terms is available as a backstop if
+        the sparse index ever needs a harder bound.
+        """
+        pairs = [(i, v) for i, v in zip(vec["indices"], vec["values"]) if v != 0]
+        if max_terms is not None and len(pairs) > max_terms:
+            pairs = sorted(pairs, key=lambda pair: (-abs(pair[1]), pair[0]))[:max_terms]
         return {
-            "indices": [
-                i for i, v in zip(vec["indices"], vec["values"]) if abs(v) > threshold
-            ],
-            "values": [v for v in vec["values"] if abs(v) > threshold],
+            "indices": [i for i, _ in pairs],
+            "values": [v for _, v in pairs],
         }
 
     def embed_documents(self, documents):

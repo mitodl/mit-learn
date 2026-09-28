@@ -192,6 +192,8 @@ def test_submit_form(mocker, settings):
     }
     hubspot_class = mocker.patch("ol_hubspot.api.HubSpot", autospec=True)
     client = hubspot_class.return_value
+    client.api_request.return_value.status_code = 200
+    client.api_request.return_value.content = b'{"portalId": 23128026}'
     client.api_request.return_value.json.return_value = {"portalId": 23128026}
     response = mocker.Mock()
     response.status_code = 200
@@ -227,6 +229,8 @@ def test_submit_form_raises_api_exception_for_error_response(mocker, settings):
     payload = {"fields": [{"name": "email", "value": "test@example.com"}]}
     hubspot_class = mocker.patch("ol_hubspot.api.HubSpot", autospec=True)
     client = hubspot_class.return_value
+    client.api_request.return_value.status_code = 200
+    client.api_request.return_value.content = b'{"portalId": 23128026}'
     client.api_request.return_value.json.return_value = {"portalId": 23128026}
     response = mocker.Mock()
     response.status_code = 400
@@ -240,6 +244,44 @@ def test_submit_form_raises_api_exception_for_error_response(mocker, settings):
     assert exc_info.value.reason == '{"message":"Bad Request"}'
 
 
+def test_submit_form_raises_api_exception_when_me_lookup_fails(mocker, settings):
+    """A failed /me lookup (e.g. bad token) raises ApiException, not KeyError."""
+    settings.MITOL_HUBSPOT_API_PRIVATE_TOKEN = uuid4().hex
+    hubspot_class = mocker.patch("ol_hubspot.api.HubSpot", autospec=True)
+    client = hubspot_class.return_value
+    me_response = mocker.Mock()
+    me_response.status_code = 401
+    me_response.text = '{"message":"authentication credentials invalid"}'
+    client.api_request.return_value = me_response
+    post = mocker.patch("ol_hubspot.api.requests.post")
+
+    with pytest.raises(ApiException) as exc_info:
+        submit_form(form_id="form-456", payload={"fields": []})
+
+    assert exc_info.value.status == 401
+    assert exc_info.value.reason == '{"message":"authentication credentials invalid"}'
+    post.assert_not_called()
+
+
+def test_submit_form_raises_api_exception_when_portal_id_missing(mocker, settings):
+    """A 200 /me response without portalId raises ApiException, not KeyError."""
+    settings.MITOL_HUBSPOT_API_PRIVATE_TOKEN = uuid4().hex
+    hubspot_class = mocker.patch("ol_hubspot.api.HubSpot", autospec=True)
+    client = hubspot_class.return_value
+    me_response = mocker.Mock()
+    me_response.status_code = 200
+    me_response.content = b"{}"
+    me_response.text = "{}"
+    me_response.json.return_value = {}
+    client.api_request.return_value = me_response
+    post = mocker.patch("ol_hubspot.api.requests.post")
+
+    with pytest.raises(ApiException):
+        submit_form(form_id="form-456", payload={"fields": []})
+
+    post.assert_not_called()
+
+
 def test_submit_form_without_page_uri_omits_context(mocker, settings):
     """Test submitting a form without page_uri sends only fields to HubSpot."""
     mock_secret = uuid4().hex
@@ -248,6 +290,8 @@ def test_submit_form_without_page_uri_omits_context(mocker, settings):
     payload = {"fields": [{"name": "email", "value": "test@example.com"}]}
     hubspot_class = mocker.patch("ol_hubspot.api.HubSpot", autospec=True)
     client = hubspot_class.return_value
+    client.api_request.return_value.status_code = 200
+    client.api_request.return_value.content = b'{"portalId": 23128026}'
     client.api_request.return_value.json.return_value = {"portalId": 23128026}
     response = mocker.Mock()
     response.status_code = 200
@@ -285,6 +329,8 @@ def test_submit_form_with_all_context_properties(mocker, settings):
     }
     hubspot_class = mocker.patch("ol_hubspot.api.HubSpot", autospec=True)
     client = hubspot_class.return_value
+    client.api_request.return_value.status_code = 200
+    client.api_request.return_value.content = b'{"portalId": 23128026}'
     client.api_request.return_value.json.return_value = {"portalId": 23128026}
     response = mocker.Mock()
     response.status_code = 200

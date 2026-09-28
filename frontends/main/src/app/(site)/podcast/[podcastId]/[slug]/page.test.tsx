@@ -25,9 +25,15 @@ beforeEach(() => {
   })
 })
 
-const mockPodcast = () => {
+const ORIGIN = "http://test.learn.odl.local:8062"
+
+const mockPodcast = (slug = "beyond-biology") => {
+  const id = 1234
   const podcast = factories.learningResources.podcast({
+    id,
     title: "Beyond Biology",
+    url_slug: slug,
+    learn_url: `${ORIGIN}/podcast/${id}/${slug}`,
   })
   setMockResponse.get(
     urls.learningResources.details({ id: podcast.id }),
@@ -61,13 +67,9 @@ test("notFound for a non-numeric id", async () => {
   await expect(Page(pageProps("abc", "x"))).rejects.toThrow("NEXT_NOT_FOUND")
 })
 
-test("a blank-slug title canonicalizes to the literal 'resource' segment", async () => {
-  // Digits-only title → slugify() is blank → path uses the "resource" segment.
-  const podcast = factories.learningResources.podcast({ title: "2024" })
-  setMockResponse.get(
-    urls.learningResources.details({ id: podcast.id }),
-    podcast,
-  )
+test("honours the literal 'resource' segment for a title that has no slug", async () => {
+  // A digits-only title slugs to nothing, so the backend emits "resource".
+  const podcast = mockPodcast("resource")
   await expect(Page(pageProps(String(podcast.id), "wrong"))).rejects.toThrow(
     "NEXT_REDIRECT",
   )

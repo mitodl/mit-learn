@@ -2,8 +2,31 @@
 
 from django.contrib import admin
 from django.contrib.admin import TabularInline
+from django.contrib.admin.widgets import AdminTextareaWidget
+from django.contrib.postgres.fields import ArrayField
+from django.contrib.postgres.forms import SimpleArrayField
 
 from learning_resources import models
+
+
+class LineSeparatedArrayField(SimpleArrayField):
+    """
+    Edit an ArrayField as one item per line instead of one comma-separated line.
+    """
+
+    def __init__(self, base_field, **kwargs):
+        kwargs.setdefault("delimiter", "\n")
+        super().__init__(base_field, **kwargs)
+
+    def to_python(self, value):
+        """Split on lines, dropping the blank ones and any carriage returns"""
+        if isinstance(value, str):
+            # A textarea submits CRLF, and a trailing newline or a gap
+            # between entries would otherwise become an empty item.
+            value = self.delimiter.join(
+                line.strip() for line in value.splitlines() if line.strip()
+            )
+        return super().to_python(value)
 
 
 class LearningResourceInstructorAdmin(admin.ModelAdmin):
@@ -55,6 +78,29 @@ class ContentFileAdmin(admin.ModelAdmin):
     """Platform Admin"""
 
     model = models.ContentFile
+
+
+class TutorProblemFileAdmin(admin.ModelAdmin):
+    """TutorProblemFile Admin"""
+
+    model = models.TutorProblemFile
+    list_display = (
+        "problem_title",
+        "file_name",
+        "type",
+        "file_extension",
+        "run__run_id",
+        "updated_on",
+    )
+    list_select_related = ("run",)
+    list_filter = ("type", "file_extension")
+    search_fields = ("problem_title", "file_name", "source_path", "run__run_id")
+    autocomplete_fields = ("run",)
+    show_full_result_count = False
+
+    def get_queryset(self, request):
+        # content can run to megabytes a row and the list page never shows it
+        return super().get_queryset(request).defer("content")
 
 
 class LearningResourceOfferorAdmin(admin.ModelAdmin):
@@ -270,12 +316,82 @@ class ContentSummarizerConfigurationAdmin(admin.ModelAdmin):
     )
 
 
+class CredentialMetadataConfigurationAdmin(admin.ModelAdmin):
+    """CredentialMetadataConfiguration Admin"""
+
+    model = models.CredentialMetadataConfiguration
+    list_display = (
+        "field",
+        "llm_model",
+        "temperature",
+        "retrieval_query",
+        "is_active",
+    )
+    list_filter = ("is_active",)
+
+
+class CredentialMetadataGenerationLogAdmin(admin.ModelAdmin):
+    """CredentialMetadataGenerationLog Admin"""
+
+    model = models.CredentialMetadataGenerationLog
+    list_display = (
+        "learning_resource",
+        "field",
+        "llm_model",
+        "context_tokens",
+        "latency_ms",
+        "created_on",
+    )
+    list_filter = ("field", "llm_model")
+    search_fields = ("learning_resource__readable_id", "learning_resource__title")
+    readonly_fields = [field.name for field in model._meta.fields]  # noqa: SLF001
+
+    def get_queryset(self, request):
+        # context_text runs tens of KB a row and nothing on the list page shows
+        # it.
+        return super().get_queryset(request).defer("context_text")
+
+    def has_add_permission(self, request):  # noqa: ARG002
+        return False
+
+    def has_change_permission(self, request, obj=None):  # noqa: ARG002
+        return False
+
+    def has_delete_permission(self, request, obj=None):  # noqa: ARG002
+        return False
+
+
+class CredentialMetadataAdmin(admin.ModelAdmin):
+    """CredentialMetadata Admin"""
+
+    model = models.CredentialMetadata
+    list_display = (
+        "learning_resource",
+        "description",
+        "criteria",
+        "created_on",
+        "updated_on",
+    )
+    search_fields = ("learning_resource__readable_id", "learning_resource__title")
+    readonly_fields = ("created_on", "updated_on")
+    raw_id_fields = ("learning_resource",)
+    # `criteria` is the only ArrayField here. Without this it renders as a
+    # one-line TextInput beside `description`'s textarea, too small to read
+    # the values it holds.
+    formfield_overrides = {
+        ArrayField: {
+            "form_class": LineSeparatedArrayField,
+            "widget": AdminTextareaWidget,
+        }
+    }
+
+
 class ETLSourceOwnershipAdmin(admin.ModelAdmin):
     """ETLSourceOwnership Admin"""
 
     model = models.ETLSourceOwnership
-    list_display = ("etl_source", "resource_type", "mode", "updated_on")
-    list_filter = ("etl_source", "mode")
+    list_display = ("etl_source", "resource_type", "owner", "updated_on")
+    list_filter = ("etl_source", "owner")
     search_fields = ("etl_source", "resource_type")
 
 
@@ -291,7 +407,17 @@ admin.site.register(models.LearningResourceContentTag, LearningResourceContentTa
 admin.site.register(models.UserList, UserListAdmin)
 admin.site.register(models.VideoChannel, VideoChannelAdmin)
 admin.site.register(models.ContentFile, ContentFileAdmin)
+admin.site.register(models.TutorProblemFile, TutorProblemFileAdmin)
 admin.site.register(
     models.ContentSummarizerConfiguration, ContentSummarizerConfigurationAdmin
 )
+admin.site.register(
+    models.CredentialMetadataConfiguration, CredentialMetadataConfigurationAdmin
+)
+admin.site.register(
+    models.CredentialMetadataGenerationLog, CredentialMetadataGenerationLogAdmin
+)
+admin.site.register(models.CredentialMetadata, CredentialMetadataAdmin)
+
+
 admin.site.register(models.ETLSourceOwnership, ETLSourceOwnershipAdmin)

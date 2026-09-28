@@ -2,13 +2,15 @@
 Serializers for profile REST APIs
 """
 
-import re
+import logging
 
 import ulid
 from django.contrib.auth import get_user_model
 from django.db import transaction
 from django.urls import reverse
 from drf_spectacular.utils import extend_schema_field
+from keycloak.exceptions import KeycloakError
+from mitol.common.serializers import BaseSerializer
 from rest_framework import serializers
 from rest_framework.exceptions import ValidationError
 
@@ -16,15 +18,17 @@ from authentication import api as auth_api
 from learning_resources.models import LearningResourceTopic
 from learning_resources.permissions import is_admin_user, is_learning_path_editor
 from learning_resources.serializers import LearningResourceTopicSerializer
-from profiles.api import get_site_type_from_url
+from main.constants import (
+    ALLOWED_HTML_ATTRIBUTES_WITH_LINKS,
+    ALLOWED_HTML_TAGS_WITH_LINKS,
+)
+from main.utils import clean_data
+from profiles.api import sync_email_optin_to_keycloak
 from profiles.models import (
-    PERSONAL_SITE_TYPE,
     PROFILE_PROPS,
-    SOCIAL_SITE_NAME_MAP,
     Profile,
     ProgramCertificate,
     ProgramLetter,
-    UserWebsite,
 )
 from profiles.utils import (
     IMAGE_MEDIUM,
@@ -34,6 +38,8 @@ from profiles.utils import (
 )
 from website_content.permissions import is_website_content_editor
 
+log = logging.getLogger(__name__)
+
 User = get_user_model()
 
 
@@ -41,6 +47,10 @@ class TopicInterestsField(serializers.Field):
     """
     Serializer field for topic interests
     """
+
+    def get_attribute(self, instance):
+        """Read the dual-path list instead of the raw related manager"""
+        return instance.annotated_topic_interests
 
     def to_representation(self, value):
         """Serialize the topic_interests"""
@@ -84,7 +94,7 @@ class ProfileSerializer(serializers.ModelSerializer):
     """Serializer for Profile"""
 
     name = serializers.SerializerMethodField(read_only=True)
-    email_optin = serializers.BooleanField(required=False)
+    email_optin = serializers.BooleanField(required=False, allow_null=True)
     toc_optin = serializers.BooleanField(write_only=True, required=False)
     username = serializers.SerializerMethodField(read_only=True)
     profile_image_medium = serializers.SerializerMethodField(read_only=True)
@@ -128,8 +138,9 @@ class ProfileSerializer(serializers.ModelSerializer):
             filters["certification"] = (
                 obj.certificate_desired == Profile.CertificateDesired.YES.value
             )
-        if obj.topic_interests and obj.topic_interests.count() > 0:
-            filters["topic"] = obj.topic_interests.values_list("name", flat=True)
+        topic_names = [topic.name for topic in obj.annotated_topic_interests]
+        if topic_names:
+            filters["topic"] = topic_names
         if obj.delivery:
             filters["delivery"] = obj.delivery
         return PreferencesSearchSerializer(instance=filters).data
@@ -150,25 +161,41 @@ class ProfileSerializer(serializers.ModelSerializer):
 
             if topic_interests is not None:
                 instance.topic_interests.set(topic_interests)
+                # drop any prefetched/cached list so the response reserializes
+                # the new interests
+                instance.__dict__.pop("annotated_topic_interests", None)
+
+            # A null means no preference was expressed, so leave Keycloak alone
+            # rather than pushing the falsey coercion as an opt-out.
+            email_optin_changed = (
+                validated_data.get("email_optin") is not None
+                and validated_data["email_optin"] != instance.email_optin
+            )
 
             for attr, value in validated_data.items():
                 setattr(instance, attr, value)
 
+            if email_optin_changed:
+                try:
+                    sync_email_optin_to_keycloak(
+                        instance.user, email_optin=instance.email_optin
+                    )
+                except KeycloakError as exc:
+                    log.exception(
+                        "Failed to sync email_optin to Keycloak for user %s",
+                        instance.user.id,
+                    )
+                    raise ValidationError(
+                        {
+                            "email_optin": (
+                                "Unable to update email preferences at this time."
+                            )
+                        }
+                    ) from exc
+
             update_image = "image_file" in validated_data
             instance.save(update_image=update_image)
             return instance
-
-    def to_representation(self, instance):
-        """
-        Overridden serialization method. Adds serialized UserWebsites if an option in the context indicates that
-        it should be included.
-        """  # noqa: E501
-        data = super().to_representation(instance)
-        if self.context.get("include_user_websites"):
-            data["user_websites"] = UserWebsiteSerializer(
-                instance.userwebsite_set.all(), many=True
-            ).data
-        return data
 
     class Meta:
         model = Profile
@@ -207,95 +234,6 @@ class ProfileSerializer(serializers.ModelSerializer):
             "preference_search_filters",
         )
         extra_kwargs = {"location": {"write_only": True}}
-
-
-class UserWebsiteSerializer(serializers.ModelSerializer):
-    """Serializer for UserWebsite"""
-
-    def validate_url(self, value):
-        """
-        Validator for url. Prepends http protocol to the url if the protocol wasn't already included in the value.
-        """  # noqa: D401, E501
-        url = "" if not value else value.lower()
-        if not re.search(r"^http[s]?://", url):
-            return "{}{}".format("http://", url)
-        return url
-
-    def to_internal_value(self, data):
-        """
-        Overridden deserialization method. Changes the default behavior in the following ways:
-        1) Gets the profile id from a given username.
-        2) Calculates the site_type from the url value and adds it to the internal value.
-        """  # noqa: E501
-        internal_value = super().to_internal_value(
-            {
-                **data,
-                "profile": (
-                    Profile.objects.filter(user__username=data.get("username"))
-                    .values_list("id", flat=True)
-                    .first()
-                ),
-            }
-        )
-        internal_value["site_type"] = get_site_type_from_url(
-            internal_value.get("url", "")
-        )
-        return internal_value
-
-    def run_validators(self, value):
-        """
-        Overridden validation method. Changes the default behavior in the following ways:
-        1) If the user submitted a URL to save as a specific site type (personal/social),
-            ensure that the URL entered matches that submitted site type.
-        2) If the data provided violates the uniqueness of the site type for the given user, coerce
-            the error to a "url" field validation error instead of a non-field error.
-        """  # noqa: E501
-        submitted_site_type = self.initial_data.get("submitted_site_type")
-        calculated_site_type = value.get("site_type")
-        if submitted_site_type and calculated_site_type:
-            # The URL is for a personal site, but was submitted as a social site
-            if (
-                calculated_site_type == PERSONAL_SITE_TYPE
-                and submitted_site_type != calculated_site_type
-            ):
-                msg = "Please provide a URL for one of these social sites: {}".format(
-                    ", ".join(SOCIAL_SITE_NAME_MAP.values())
-                )
-                raise ValidationError({"url": [msg]})
-            # The URL is for a social site, but was submitted as a personal site
-            elif (
-                calculated_site_type in SOCIAL_SITE_NAME_MAP
-                and submitted_site_type == PERSONAL_SITE_TYPE
-            ):
-                raise ValidationError(
-                    {
-                        "url": [
-                            "A social site URL was provided. Please provide a URL for a personal website."  # noqa: E501
-                        ]
-                    }
-                )
-        try:
-            return super().run_validators(value)
-        except ValidationError as e:
-            if e.get_codes() == ["unique"]:
-                raise ValidationError(  # noqa: B904
-                    {"url": ["A website of this type has already been saved."]},
-                    code="unique",
-                )
-
-    def to_representation(self, instance):
-        """
-        Overridden serialization method. Excludes 'profile' from the serialized data as it isn't relevant as a
-        serialized field (we only need to deserialize that value).
-        """  # noqa: E501
-        data = super().to_representation(instance)
-        data.pop("profile")
-        return data
-
-    class Meta:
-        model = UserWebsite
-        fields = ("id", "profile", "url", "site_type")
-        read_only_fields = ("id", "site_type")
 
 
 class UserSerializer(serializers.ModelSerializer):
@@ -356,6 +294,7 @@ class UserSerializer(serializers.ModelSerializer):
         fields = (
             "id",
             "username",
+            "global_id",
             "profile",
             "email",
             "first_name",
@@ -364,13 +303,44 @@ class UserSerializer(serializers.ModelSerializer):
             "is_learning_path_editor",
             "is_authenticated",
         )
-        read_only_fields = ("id", "username", "is_authenticated")
+        read_only_fields = ("id", "username", "global_id", "is_authenticated")
 
 
-class ProgramCertificateSerializer(serializers.ModelSerializer):
+class CurrentUserSerializer(UserSerializer):
+    """
+    Serializer for the requesting user.
+
+    Unlike UserSerializer this exposes the user's own email plus whether they
+    can manage their credentials, both of which the settings page needs. It is
+    read-only: users change their email through Keycloak, not through us.
+    """
+
+    # AnonymousUser has no email attribute, and a read-only field whose
+    # attribute is missing is dropped from the output entirely (the same reason
+    # first_name/last_name don't appear for anonymous users). The default keeps
+    # the key present and blank instead.
+    email = serializers.CharField(read_only=True, default="")
+    is_sso_user = serializers.SerializerMethodField()
+
+    def get_is_sso_user(self, instance) -> bool:
+        """
+        Whether the user signs in through an external identity provider, and so
+        cannot change their email or password through us.
+        """
+        return auth_api.is_sso_user(instance)
+
+    class Meta(UserSerializer.Meta):
+        fields = (*UserSerializer.Meta.fields, "is_sso_user")
+
+
+class ProgramCertificateSerializer(BaseSerializer):
     """
     Serializer for Program Certificates
     """
+
+    # user_letter isn't a model field; callers attach the user's ProgramLetter
+    # to each certificate instance.
+    required_prefetches: list[str] = ["user_letter"]
 
     program_letter_generate_url = serializers.SerializerMethodField()
     program_letter_share_url = serializers.SerializerMethodField()
@@ -386,13 +356,10 @@ class ProgramCertificateSerializer(serializers.ModelSerializer):
         return letter_url
 
     def get_program_letter_share_url(self, instance) -> str:
+        # Callers attach user_letter, creating the letter if needed, so this is
+        # always a real URL -- same contract as when the get_or_create lived here.
+        letter_url = instance.user_letter.get_absolute_url()
         request = self.context.get("request")
-
-        user = User.objects.get(email=instance.user_email)
-        letter, _created = ProgramLetter.objects.get_or_create(
-            user=user, certificate=instance
-        )
-        letter_url = letter.get_absolute_url()
         if request:
             return request.build_absolute_uri(letter_url)
         return letter_url
@@ -400,6 +367,35 @@ class ProgramCertificateSerializer(serializers.ModelSerializer):
     class Meta:
         model = ProgramCertificate
         fields = "__all__"
+
+
+# The letter body is authored in MicroMasters' Wagtail CMS and rendered here
+# with dangerouslySetInnerHTML, so it is sanitized on the way out.
+#
+# Live letters use <a>, <b>, <br>, <p>, <ul> and <li>, and the letter page
+# styles h2-h4 inside its header and footer blocks, so headings are kept as
+# well -- sanitizing them away would silently drop authored content rather
+# than protect anyone. Links keep only href/title.
+PROGRAM_LETTER_ALLOWED_HTML_TAGS = ALLOWED_HTML_TAGS_WITH_LINKS | {
+    "h1",
+    "h2",
+    "h3",
+    "h4",
+    "h5",
+    "h6",
+}
+
+
+class SanitizedHTMLField(serializers.CharField):
+    """A CharField whose HTML is sanitized as it is serialized out."""
+
+    def to_representation(self, value) -> str:
+        """Strip any markup outside the program letter allowlist"""
+        return clean_data(
+            super().to_representation(value),
+            tags=PROGRAM_LETTER_ALLOWED_HTML_TAGS,
+            attributes=ALLOWED_HTML_ATTRIBUTES_WITH_LINKS,
+        )
 
 
 class ProgramLetterTemplateFieldSerializer(serializers.Serializer):
@@ -413,11 +409,27 @@ class ProgramLetterTemplateFieldSerializer(serializers.Serializer):
     title = serializers.CharField()
     program_id = serializers.IntegerField()
     program_letter_footer = serializers.JSONField()
-    program_letter_footer_text = serializers.CharField()
-    program_letter_header_text = serializers.CharField()
-    program_letter_text = serializers.CharField()
+    program_letter_footer_text = SanitizedHTMLField()
+    program_letter_header_text = SanitizedHTMLField()
+    program_letter_text = SanitizedHTMLField()
     program_letter_logo = serializers.JSONField()
     program_letter_signatories = serializers.ListField(child=serializers.JSONField())
+
+
+class ProgramLetterCertificateSerializer(serializers.ModelSerializer):
+    """
+    The certificate fields the public program letter view needs.
+
+    ProgramLetterViewSet is unauthenticated -- anyone holding a letter's uuid
+    can read it -- so this exposes only what the letter itself already states:
+    who earned it and which program. The learner's email, postal address, date
+    of birth, gender and platform usernames stay behind the authenticated
+    certificate list, which uses ProgramCertificateSerializer.
+    """
+
+    class Meta:
+        model = ProgramCertificate
+        fields = ["user_full_name", "program_title"]
 
 
 class ProgramLetterSerializer(serializers.ModelSerializer):
@@ -429,7 +441,7 @@ class ProgramLetterSerializer(serializers.ModelSerializer):
 
     template_fields = serializers.SerializerMethodField()
 
-    certificate = ProgramCertificateSerializer()
+    certificate = ProgramLetterCertificateSerializer()
 
     @extend_schema_field(ProgramLetterTemplateFieldSerializer())
     def get_template_fields(self, instance) -> dict:

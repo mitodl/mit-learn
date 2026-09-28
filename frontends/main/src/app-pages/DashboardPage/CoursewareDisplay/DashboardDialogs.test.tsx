@@ -3,30 +3,33 @@ import {
   renderWithProviders,
   screen,
   setMockResponse,
-  setupLocationMock,
   user,
+  waitFor,
   within,
 } from "@/test-utils"
 import { HomeEnrollmentsDisplay } from "./HomeEnrollmentsDisplay"
 import { CoursewareCard } from "./CoursewareCard"
-import { buildCourseEntry } from "./model/dashboardViewModel"
-import { dashboardCourse, setupEnrollments } from "./test-utils"
-import * as mitxonline from "api/mitxonline-test-utils"
 import {
-  urls as testUrls,
-  factories as testFactories,
-  makeRequest,
-} from "api/test-utils"
+  setupEnrollments,
+  setupOrderHistory,
+  setupProgramCertificates,
+} from "./test-utils"
+import { formatRunIdentifier } from "./courseDateUtils"
+import * as mitxonline from "api/mitxonline-test-utils"
+import { makeRequest } from "api/test-utils"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import { faker } from "@faker-js/faker/locale/en"
 import invariant from "tiny-invariant"
-import { getDescriptionFor } from "ol-test-utilities"
-import type { User as MitxUser } from "@mitodl/mitxonline-api-axios/v2"
-import type { PartialDeep } from "type-fest"
 import {
   trackCourseUnenrolled,
   trackProgramUnenrolled,
 } from "@/common/analytics/gtm"
+
+// Verified cards look up their order; default to none, tests override.
+beforeEach(() => {
+  setupOrderHistory()
+  setupProgramCertificates()
+})
 
 jest.mock("posthog-js/react")
 jest.mock("@/common/analytics/gtm", () => ({
@@ -54,7 +57,6 @@ describe("DashboardDialogs", () => {
       mitxonline.urls.programEnrollments.enrollmentsListV3(),
       [],
     )
-    setMockResponse.get(mitxonline.urls.contracts.contractsList(), [])
 
     return { enrollments, completed, expired, started, notStarted }
   }
@@ -88,7 +90,7 @@ describe("DashboardDialogs", () => {
     await user.click(emailSettingsButton)
 
     const dialog = await screen.findByRole("dialog", {
-      name: "Email Settings",
+      name: /^Email Settings/,
     })
     expect(dialog).toBeInTheDocument()
 
@@ -111,6 +113,85 @@ describe("DashboardDialogs", () => {
         url: mitxonline.urls.enrollment.courseEnrollment(enrollment.id),
       }),
     )
+  })
+
+  test("The email settings dialog shows an inline error when the update fails", async () => {
+    const { enrollments } = setupApis()
+    const enrollment = faker.helpers.arrayElement(enrollments)
+
+    setMockResponse.patch(
+      mitxonline.urls.enrollment.courseEnrollment(enrollment.id),
+      {},
+      { code: 500 },
+    )
+    renderWithProviders(<HomeEnrollmentsDisplay />)
+
+    const cards = await screen.findAllByTestId("enrollment-card-desktop")
+    const card = cards.find(
+      (c) => !!within(c).queryByText(enrollment.run.title),
+    )
+    invariant(card)
+
+    await user.click(await within(card).findByLabelText("More options"))
+    await user.click(
+      await screen.findByRole("menuitem", { name: "Email Settings" }),
+    )
+
+    const dialog = await screen.findByRole("dialog", {
+      name: /^Email Settings/,
+    })
+    await user.click(
+      within(dialog).getByRole("checkbox", { name: "Receive course emails" }),
+    )
+    await user.click(
+      within(dialog).getByRole("button", { name: "Save Settings" }),
+    )
+
+    // The dialog always renders a warning alert about unchecking the box, so the
+    // failure adds a second alert; pinning the count keeps a stray extra alert
+    // from passing as the inline error.
+    await waitFor(() =>
+      expect(within(dialog).getAllByRole("alert")).toHaveLength(2),
+    )
+    const [, errorAlert] = within(dialog).getAllByRole("alert")
+    expect(errorAlert).toHaveTextContent(
+      "There was a problem updating your email settings. Please try again later.",
+    )
+    // Dialog stays open so the user can retry.
+    expect(dialog).toBeInTheDocument()
+  })
+
+  test("The unenroll dialog shows an inline error when the unenroll fails", async () => {
+    const { enrollments } = setupApis()
+    const enrollment = faker.helpers.arrayElement(enrollments)
+
+    setMockResponse.delete(
+      mitxonline.urls.enrollment.courseEnrollment(enrollment.id),
+      {},
+      { code: 500 },
+    )
+    renderWithProviders(<HomeEnrollmentsDisplay />)
+
+    const cards = await screen.findAllByTestId("enrollment-card-desktop")
+    const card = cards.find(
+      (c) => !!within(c).queryByText(enrollment.run.title),
+    )
+    invariant(card)
+
+    await user.click(await within(card).findByLabelText("More options"))
+    await user.click(await screen.findByRole("menuitem", { name: "Unenroll" }))
+
+    const dialog = await screen.findByRole("dialog", {
+      name: new RegExp(`Unenroll from ${enrollment.run.title}`),
+    })
+    await user.click(within(dialog).getByRole("button", { name: "Unenroll" }))
+
+    expect(await within(dialog).findByRole("alert")).toHaveTextContent(
+      "There was a problem unenrolling you from this course. Please try again later.",
+    )
+    // The card survives a failed unenroll.
+    expect(card).toBeInTheDocument()
+    expect(trackCourseUnenrolled).not.toHaveBeenCalled()
   })
 
   test("Opening the unenroll dialog and confirming the unenroll fires the proper API call", async () => {
@@ -141,6 +222,13 @@ describe("DashboardDialogs", () => {
     })
     await user.click(unenrollButton)
 
+    // Named even for a single-run learner, so the run is always confirmable,
+    // and part of the dialog's name because that is all a screen reader
+    // announces on open.
+    await screen.findByRole("dialog", {
+      name: new RegExp(`Course run: ${formatRunIdentifier(enrollment.run)}`),
+    })
+
     const confirmButton = await screen.findByRole("button", {
       name: "Unenroll",
     })
@@ -154,6 +242,58 @@ describe("DashboardDialogs", () => {
         url: mitxonline.urls.enrollment.courseEnrollment(enrollment.id),
       }),
     )
+  })
+
+  test("Unenrolling removes the card immediately, before the enrollments list refetches", async () => {
+    const { enrollments } = setupApis()
+    const enrollment = faker.helpers.arrayElement(enrollments)
+
+    setMockResponse.delete(
+      mitxonline.urls.enrollment.courseEnrollment(enrollment.id),
+      null,
+    )
+    renderWithProviders(<HomeEnrollmentsDisplay />)
+
+    await screen.findByRole("heading", { name: "My Learning" })
+
+    const cards = await screen.findAllByTestId("enrollment-card-desktop")
+    expect(cards.length).toBe(enrollments.length)
+
+    const card = cards.find(
+      (c) => !!within(c).queryByText(enrollment.run.title),
+    )
+    invariant(card)
+
+    // Hold the post-unenroll invalidation refetch open. If the card only
+    // disappears once the list refetches, this test fails — proving the card is
+    // removed by the mutation's immediate cache update, not by the refetch.
+    const refetch = Promise.withResolvers<typeof enrollments>()
+    setMockResponse.get(
+      mitxonline.urls.enrollment.enrollmentsListV3(),
+      refetch.promise,
+    )
+
+    const contextMenuButton = await within(card).findByLabelText("More options")
+    await user.click(contextMenuButton)
+
+    const unenrollButton = await screen.findByRole("menuitem", {
+      name: "Unenroll",
+    })
+    await user.click(unenrollButton)
+
+    const confirmButton = await screen.findByRole("button", {
+      name: "Unenroll",
+    })
+    await user.click(confirmButton)
+
+    // Card is gone even though the refetch is still pending.
+    await waitFor(() => expect(card).not.toBeInTheDocument())
+    expect(screen.getAllByTestId("enrollment-card-desktop")).toHaveLength(
+      enrollments.length - 1,
+    )
+
+    // Let the held refetch settle so nothing dangles after the test.
+    refetch.resolve(enrollments.filter((e) => e.id !== enrollment.id))
   })
 })
 
@@ -286,6 +426,39 @@ describe("UnenrollProgramDialog", () => {
     expect(trackCourseUnenrolled).not.toHaveBeenCalled()
   })
 
+  test("Shows an inline error when the unenroll fails", async () => {
+    const { programEnrollment } = setupProgramCard("audit", null)
+
+    setMockResponse.delete(
+      mitxonline.urls.programEnrollments.programEnrollment(
+        programEnrollment.program.id,
+      ),
+      {},
+      { code: 500 },
+    )
+
+    renderWithProviders(
+      <CoursewareCard
+        kind="program-enrollment"
+        programEnrollment={programEnrollment}
+      />,
+    )
+
+    const desktopCard = await screen.findByTestId("enrollment-card-desktop")
+    await user.click(within(desktopCard).getByLabelText("More options"))
+    await user.click(await screen.findByRole("menuitem", { name: "Unenroll" }))
+
+    const dialog = await screen.findByRole("dialog", {
+      name: `Unenroll from ${programEnrollment.program.title}`,
+    })
+    await user.click(within(dialog).getByRole("button", { name: "Unenroll" }))
+
+    expect(await within(dialog).findByRole("alert")).toHaveTextContent(
+      "There was a problem unenrolling you from this program. Please try again later.",
+    )
+    expect(trackProgramUnenrolled).not.toHaveBeenCalled()
+  })
+
   test("Cancelling the dialog does not fire the API call", async () => {
     const { programEnrollment } = setupProgramCard("audit", null)
 
@@ -332,356 +505,4 @@ describe("UnenrollProgramDialog", () => {
       ).toBeInTheDocument()
     },
   )
-})
-
-describe("JustInTimeDialog", () => {
-  const getFields = (root: HTMLElement) => {
-    return {
-      country: within(root).getByRole("combobox", { name: "Country" }),
-      year_of_birth: within(root).getByRole("combobox", {
-        name: "Year of Birth",
-      }),
-    }
-  }
-
-  setupLocationMock()
-
-  type SetupJitOptions = {
-    userOverrides?: PartialDeep<MitxUser>
-  }
-
-  const setupJustInTimeTest = ({
-    userOverrides = {},
-  }: SetupJitOptions = {}) => {
-    // Setup MIT Learn user
-    const mitLearnUser = testFactories.user.user()
-    setMockResponse.get(testUrls.userMe.get(), mitLearnUser)
-
-    // Setup incomplete mitxonline user (missing country and year_of_birth)
-    const incompleteMitxUser = mitxonline.factories.user.user({
-      legal_address: null,
-      user_profile: null,
-      ...userOverrides,
-    })
-    setMockResponse.get(mitxonline.urls.userMe.get(), incompleteMitxUser)
-
-    // Setup countries data
-    const countries = [
-      { code: "US", name: "United States" },
-      { code: "CA", name: "Canada" },
-      { code: "GB", name: "United Kingdom" },
-    ]
-    setMockResponse.get(mitxonline.urls.countries.list(), countries)
-
-    // Setup course for enrollment
-    const b2bContractId = faker.number.int()
-    const run = mitxonline.factories.courses.courseRun({
-      b2b_contract: b2bContractId,
-      is_enrollable: true,
-      live: true,
-      enrollment_start: faker.date.past().toISOString(),
-      enrollment_end: faker.date.future().toISOString(),
-    })
-    const course = dashboardCourse({
-      courseruns: [run],
-      next_run_id: run.id,
-    })
-
-    // Setup enrollment API
-    setMockResponse.post(
-      mitxonline.urls.b2b.courseEnrollment(course.readable_id),
-      null,
-    )
-
-    return { mitLearnUser, incompleteMitxUser, countries, course, run }
-  }
-
-  test("Opens just-in-time dialog when enrolling with incomplete mitxonline user data", async () => {
-    const { course, run } = setupJustInTimeTest()
-
-    const entry = buildCourseEntry(course, [], {
-      contractId: run.b2b_contract ?? undefined,
-    })
-    invariant(entry)
-    renderWithProviders(<CoursewareCard kind="course" entry={entry} />)
-
-    const enrollButtons = await screen.findAllByTestId("courseware-button")
-    await user.click(enrollButtons[0]) // Use the first (desktop) button
-
-    const dialog = await screen.findByRole("dialog", {
-      name: "Just a Few More Details",
-    })
-    expect(dialog).toBeInTheDocument()
-
-    expect(
-      within(dialog).getByText(
-        "We need a bit more info before you can enroll.",
-      ),
-    ).toBeInTheDocument()
-    const fields = getFields(dialog)
-    expect(fields.country).toBeVisible()
-    expect(fields.year_of_birth).toBeInTheDocument()
-  })
-
-  test.each([
-    {
-      userOverrides: { legal_address: { country: "CA" } },
-      expectCountry: "Canada",
-      expectYob: "Please Select",
-    },
-    {
-      userOverrides: { user_profile: { year_of_birth: 1988 } },
-      expectCountry: "Please Select",
-      expectYob: "1988",
-    },
-  ])(
-    "Dialog pre-populates with user data if available",
-    async ({ userOverrides, expectCountry, expectYob }) => {
-      const { course, run } = setupJustInTimeTest({ userOverrides })
-      const entry = buildCourseEntry(course, [], {
-        contractId: run.b2b_contract ?? undefined,
-      })
-      invariant(entry)
-      renderWithProviders(<CoursewareCard kind="course" entry={entry} />)
-      const enrollButtons = await screen.findAllByTestId("courseware-button")
-      await user.click(enrollButtons[0]) // Use the first (desktop) button
-      const dialog = await screen.findByRole("dialog", {
-        name: "Just a Few More Details",
-      })
-      const fields = getFields(dialog)
-      expect(fields.country).toHaveTextContent(expectCountry)
-      expect(fields.year_of_birth).toHaveTextContent(expectYob)
-    },
-  )
-
-  test("Validates required fields in just-in-time dialog", async () => {
-    const { course, run } = setupJustInTimeTest()
-
-    const entry = buildCourseEntry(course, [], {
-      contractId: run.b2b_contract ?? undefined,
-    })
-    invariant(entry)
-    renderWithProviders(<CoursewareCard kind="course" entry={entry} />)
-
-    const enrollButtons = await screen.findAllByTestId("courseware-button")
-    await user.click(enrollButtons[0]) // Use the first (desktop) button
-
-    const dialog = await screen.findByRole("dialog", {
-      name: "Just a Few More Details",
-    })
-
-    const submitButton = within(dialog).getByRole("button", {
-      name: "Submit",
-    })
-
-    // Try submitting with empty fields - should show validation errors
-    await user.click(submitButton)
-
-    // Should show validation errors
-    const fields = getFields(dialog)
-    expect(fields.country).toBeInvalid()
-    expect(fields.year_of_birth).toBeInvalid()
-    expect(getDescriptionFor(fields.country)).toHaveTextContent(
-      "Country is required",
-    )
-    expect(getDescriptionFor(fields.year_of_birth)).toHaveTextContent(
-      "Year of birth is required",
-    )
-  })
-
-  test("Generates correct year of birth options (minimum age 13)", async () => {
-    const { course, run } = setupJustInTimeTest()
-
-    const entry = buildCourseEntry(course, [], {
-      contractId: run.b2b_contract ?? undefined,
-    })
-    invariant(entry)
-    renderWithProviders(<CoursewareCard kind="course" entry={entry} />)
-
-    const enrollButtons = await screen.findAllByTestId("courseware-button")
-    await user.click(enrollButtons[0]) // Use the first (desktop) button
-
-    const dialog = await screen.findByRole("dialog", {
-      name: "Just a Few More Details",
-    })
-    const fields = getFields(dialog)
-    await user.click(fields.year_of_birth)
-
-    const currentYear = new Date().getFullYear()
-    const maxYear = currentYear - 13
-    const options = screen.getAllByRole("option")
-    const optionValues = options.map((opt) => opt.textContent)
-    const expectedYears = Array.from({ length: maxYear - 1900 + 1 }, (_, i) =>
-      (maxYear - i).toString(),
-    )
-    expect(expectedYears.length).toBeGreaterThan(50) // sanity
-    expect(optionValues).toEqual(["Please Select", ...expectedYears])
-  })
-
-  test("Shows expected countries in country dropdown", async () => {
-    const { course, countries, run } = setupJustInTimeTest()
-
-    const entry = buildCourseEntry(course, [], {
-      contractId: run.b2b_contract ?? undefined,
-    })
-    invariant(entry)
-    renderWithProviders(<CoursewareCard kind="course" entry={entry} />)
-
-    const enrollButtons = await screen.findAllByTestId("courseware-button")
-    await user.click(enrollButtons[0]) // Use the first (desktop) button
-
-    const dialog = await screen.findByRole("dialog", {
-      name: "Just a Few More Details",
-    })
-    const fields = getFields(dialog)
-    await user.click(fields.country)
-
-    const options = screen.getAllByRole("option")
-    expect(countries.length).toBeGreaterThan(1) // sanity
-    const optionValues = options.map((opt) => opt.textContent)
-    expect(optionValues).toEqual([
-      "Please Select",
-      ...countries.map((c) => c.name),
-    ])
-  })
-
-  test("Cancels just-in-time dialog without making API calls", async () => {
-    const { course, run } = setupJustInTimeTest()
-
-    const entry = buildCourseEntry(course, [], {
-      contractId: run.b2b_contract ?? undefined,
-    })
-    invariant(entry)
-    renderWithProviders(<CoursewareCard kind="course" entry={entry} />)
-
-    const enrollButtons = await screen.findAllByTestId("courseware-button")
-    await user.click(enrollButtons[0]) // Use the first (desktop) button
-
-    const dialog = await screen.findByRole("dialog", {
-      name: "Just a Few More Details",
-    })
-
-    const cancelButton = within(dialog).getByRole("button", {
-      name: "Cancel",
-    })
-    await user.click(cancelButton)
-
-    // No PATCH calls should have been made
-    expect(makeRequest).not.toHaveBeenCalledWith(
-      expect.objectContaining({
-        method: "patch",
-        url: mitxonline.urls.userMe.get(),
-      }),
-    )
-  })
-
-  test("Submitting just-in-time dialog makes proper API calls", async () => {
-    const { course, run } = setupJustInTimeTest({
-      userOverrides: { user_profile: { year_of_birth: 1988 } },
-    })
-
-    const entry = buildCourseEntry(course, [], {
-      contractId: run.b2b_contract ?? undefined,
-    })
-    invariant(entry)
-    renderWithProviders(<CoursewareCard kind="course" entry={entry} />)
-    const enrollButtons = await screen.findAllByTestId("courseware-button")
-    await user.click(enrollButtons[0]) // Use the first (desktop) button
-
-    const dialog = await screen.findByRole("dialog", {
-      name: "Just a Few More Details",
-    })
-    const fields = getFields(dialog)
-    await user.click(fields.country)
-
-    const option = screen.getByRole("option", { name: "Canada" })
-    await user.click(option) // Select third option (first is "Please Select")
-
-    invariant(course.readable_id)
-    const spies = {
-      createEnrollment: jest.fn(),
-      patchUser: jest.fn(),
-    }
-    setMockResponse.patch(mitxonline.urls.userMe.get(), spies.patchUser, {
-      requestBody: {
-        user_profile: { year_of_birth: 1988 },
-        legal_address: { country: "CA" },
-      },
-    })
-    setMockResponse.post(
-      mitxonline.urls.b2b.courseEnrollment(run.courseware_id),
-      spies.createEnrollment,
-    )
-    setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV3(), [
-      mitxonline.factories.enrollment.courseEnrollment({
-        run: {
-          courseware_id: run.courseware_id,
-          courseware_url: run.courseware_url,
-        },
-      }),
-    ])
-
-    const submitButton = within(dialog).getByRole("button", {
-      name: "Submit",
-    })
-
-    await user.click(submitButton)
-    await expect(spies.patchUser).toHaveBeenCalled()
-    await expect(spies.createEnrollment).toHaveBeenCalled()
-    expect(window.location.assign).toHaveBeenCalledWith(run.courseware_url)
-  })
-
-  test("Submitting just-in-time dialog includes program_id when parentProgramReadableIds is provided", async () => {
-    const { course, run } = setupJustInTimeTest({
-      userOverrides: { user_profile: { year_of_birth: 1988 } },
-    })
-    const parentProgramReadableIds = ["program-v1:MITx+DEDP"]
-
-    const entry = buildCourseEntry(course, [], {
-      contractId: run.b2b_contract ?? undefined,
-      ancestorContext: { parentProgramReadableIds },
-    })
-    invariant(entry)
-    renderWithProviders(<CoursewareCard kind="course" entry={entry} />)
-    const enrollButtons = await screen.findAllByTestId("courseware-button")
-    await user.click(enrollButtons[0])
-
-    const dialog = await screen.findByRole("dialog", {
-      name: "Just a Few More Details",
-    })
-    const fields = getFields(dialog)
-    await user.click(fields.country)
-
-    const option = screen.getByRole("option", { name: "Canada" })
-    await user.click(option)
-
-    setMockResponse.patch(mitxonline.urls.userMe.get(), null)
-    setMockResponse.post(
-      mitxonline.urls.b2b.courseEnrollment(run.courseware_id),
-      null,
-    )
-    setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV3(), [
-      mitxonline.factories.enrollment.courseEnrollment({
-        run: {
-          courseware_id: run.courseware_id,
-          courseware_url: run.courseware_url,
-        },
-      }),
-    ])
-
-    const submitButton = within(dialog).getByRole("button", {
-      name: "Submit",
-    })
-    await user.click(submitButton)
-
-    expect(makeRequest).toHaveBeenCalledWith(
-      expect.objectContaining({
-        method: "post",
-        url: mitxonline.urls.b2b.courseEnrollment(run.courseware_id),
-        body: expect.objectContaining({
-          program_id: "program-v1:MITx+DEDP",
-        }),
-      }),
-    )
-  })
 })

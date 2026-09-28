@@ -27,7 +27,11 @@ const validateRequestParams = (
         const value = searchParams[paramKey] as string[]
         const validated = validator(toArray(value))
 
-        return { ...acc, [paramKey]: validated }
+        // A present-but-invalid value (e.g. ?show_ocw_files=nonsense) must be
+        // omitted, not set to undefined: an undefined entry changes the query
+        // key relative to the client-side request and invalidates the SSR
+        // prefetch.
+        return validated === undefined ? acc : { ...acc, [paramKey]: validated }
       }
 
       return acc

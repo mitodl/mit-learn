@@ -8,6 +8,7 @@ import {
   canPurchaseRun,
 } from "@/common/mitxonline"
 import { isInPast } from "ol-utilities"
+import type { Offering } from "./enrollTypes"
 
 export const getEnrollableRuns = (
   course: CourseWithCourseRunsSerializerV2,
@@ -59,7 +60,7 @@ export const getSelectedRun = (
  * - "free": free audit only
  * - "none": nothing enrollable (no run, or a paid-only run past its deadline)
  */
-export type CourseOffering = "none" | "free" | "paid" | "both"
+export type CourseOffering = Offering
 
 /**
  * Lifecycle of the selected run. "active" is the normal case; the others are
@@ -120,24 +121,4 @@ export const getCourseScenario = (
   }
   if (hasFree) return { status: "active", offering: "free" }
   return { status: "active", offering: "none" }
-}
-
-/**
- * How many offering boxes the enroll area renders: an enrolled user collapses to
- * a single box regardless of offering. The count-aware grid layout reads this so
- * it can't disagree with what CourseEnrollArea renders.
- */
-export const offeringBoxCount = (
-  scenario: CourseScenario,
-  isEnrolled: boolean,
-): 0 | 1 | 2 => {
-  if (isEnrolled) return 1
-  switch (scenario.offering) {
-    case "none":
-      return 0
-    case "both":
-      return 2
-    default:
-      return 1
-  }
 }

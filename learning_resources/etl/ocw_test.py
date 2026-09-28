@@ -58,7 +58,7 @@ def test_transform_content_files(settings, mocker, base_ocw_url):
         transform_content_files(s3_resource, OCW_TEST_PREFIX, False)  # noqa: FBT003
     )
 
-    assert len(content_data) == 4
+    assert len(content_data) == 5
 
     assert content_data[0] == {
         "content": "Pages Section",
@@ -105,6 +105,20 @@ def test_transform_content_files(settings, mocker, base_ocw_url):
 
     assert content_data[3] == {
         "content": "TEXT",
+        "content_type": "pdf",
+        "description": "This is a textbook",
+        "file_type": "application/pdf",
+        "key": "courses/16-01-unified-engineering-i-ii-iii-iv-fall-2005-spring-2006/resources/textbook/",
+        "content_tags": ["Open Textbooks"],
+        "published": True,
+        "title": "Textbook Title",
+        "content_title": "Textbook Title",
+        "url": f"{ocw_url}/courses/16-01-unified-engineering-i-ii-iii-iv-fall-2005-spring-2006/resources/textbook/",
+        "file_extension": ".pdf",
+    }
+
+    assert content_data[4] == {
+        "content": "TEXT",
         "content_type": "video",
         "description": "Video Description",
         "file_type": "video/mp4",
@@ -136,7 +150,7 @@ def test_transform_content_files_exceptions(settings, mocker):
         transform_content_files(s3_resource, OCW_TEST_PREFIX, False)  # noqa: FBT003
     )
     assert len(content_data) == 0
-    assert mock_log.call_count == 5
+    assert mock_log.call_count == 6
 
 
 @mock_aws

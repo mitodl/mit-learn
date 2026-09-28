@@ -14,16 +14,23 @@ import {
 } from "ol-components"
 import { Permission } from "api/hooks/user"
 import { useWebsiteContentList } from "api/hooks/website_content"
-import type {
-  WebsiteContent,
-  WebsiteContentApiWebsiteContentListRequest as WebsiteContentListRequest,
+import {
+  WebsiteContentContentTypeEnum,
+  type WebsiteContent,
+  type WebsiteContentApiWebsiteContentListRequest as WebsiteContentListRequest,
 } from "api/v1"
 import { LocalDate } from "ol-utilities"
-import { RiArrowLeftLine, RiArrowRightLine } from "@remixicon/react"
+import {
+  RiArrowLeftLine,
+  RiArrowRightLine,
+  RiDeleteBinLine,
+} from "@remixicon/react"
 import { extractFirstImage } from "@/common/websiteContentUtils"
+import { CONTENT_TYPE_LABELS } from "@/common/website_content"
 import { websiteContentEditView, websiteContentCreateView } from "@/common/urls"
 import RestrictedRoute from "@/components/RestrictedRoute/RestrictedRoute"
-import { ButtonLink } from "@mitodl/smoot-design"
+import { ActionButton, ButtonLink } from "@mitodl/smoot-design"
+import { showDeleteWebsiteContentDialog } from "@/page-components/WebsiteContentDialogs/DeleteWebsiteContentDialog"
 
 const PAGE_SIZE = 20
 
@@ -45,12 +52,21 @@ const PageHeader = styled.div`
   align-items: center;
   margin-bottom: 40px;
 `
-
-const DraftContentCard = styled(Card)`
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-`
+const DraftContentCard = styled(Card)({
+  display: "flex",
+  flexDirection: "column",
+  height: "100%",
+  // Card's internal wrapper around the footer and actions has no className of
+  // its own, so target it via the footer it always renders. Anchoring on the
+  // footer rather than the actions matters: Card omits the actions element
+  // entirely when it has no children, which is the case for published items.
+  // Keep the descendant form -- jsdom's selector engine rejects a leading
+  // combinator inside :has(), so `:has(> .MitCard-footer)` breaks the tests.
+  "> div:has(.MitCard-footer)": {
+    alignItems: "center",
+    paddingTop: "16px",
+  },
+})
 
 const PaginationContainer = styled.div`
   display: flex;
@@ -79,15 +95,10 @@ const DraftBadge = styled.span`
   font-weight: ${theme.typography.fontWeightMedium};
 `
 
-const CONTENT_TYPE_LABELS: Record<string, string> = {
-  article: "Article",
-  news: "News",
-}
-
-const DraftItem: React.FC<{ contentItem: WebsiteContent; type: string }> = ({
-  contentItem,
-  type,
-}) => {
+const DraftItem: React.FC<{
+  contentItem: WebsiteContent
+  type: WebsiteContentContentTypeEnum
+}> = ({ contentItem, type }) => {
   const itemUrl = contentItem.is_published
     ? `/${type === "article" ? "articles" : type}/${contentItem.slug || contentItem.id}`
     : websiteContentEditView(type, contentItem.id)
@@ -112,15 +123,34 @@ const DraftItem: React.FC<{ contentItem: WebsiteContent; type: string }> = ({
           </>
         )}
       </Card.Footer>
+      {/*
+        Only drafts are deletable — the API rejects deleting published content
+        with a 400. This page filters to drafts, so the guard is belt-and-braces:
+        it keeps the UI honest about the backend rule if a published item ever
+        reaches this list.
+      */}
+      {!contentItem.is_published && (
+        <Card.Actions>
+          <ActionButton
+            variant="secondary"
+            edge="circular"
+            size="small"
+            aria-label={`Delete ${contentItem.title}`}
+            onClick={() => showDeleteWebsiteContentDialog(contentItem)}
+          >
+            <RiDeleteBinLine size={16} />
+          </ActionButton>
+        </Card.Actions>
+      )}
     </DraftContentCard>
   )
 }
 
 interface WebsiteContentDraftListingPageProps {
   /**
-   * Content type to show drafts for (e.g. 'article', 'news').
+   * Content type to show drafts for. Defaults to news.
    */
-  contentType?: string
+  contentType?: WebsiteContentContentTypeEnum
 }
 
 const WebsiteContentDraftListingPage: React.FC<
@@ -128,14 +158,14 @@ const WebsiteContentDraftListingPage: React.FC<
 > = ({ contentType }) => {
   const [page, setPage] = useState(1)
   const scrollRef = useRef<HTMLDivElement>(null)
-  const type = contentType || "news"
-  const label = CONTENT_TYPE_LABELS[type] ?? type
+  const type = contentType ?? WebsiteContentContentTypeEnum.News
+  const label = CONTENT_TYPE_LABELS[type]
 
   const listParams: WebsiteContentListRequest = {
     limit: PAGE_SIZE,
     offset: (page - 1) * PAGE_SIZE,
     draft: true,
-    content_type: type as WebsiteContentListRequest["content_type"],
+    content_type: type,
   }
 
   const { data: contentItems, isLoading: isLoadingContentItems } =

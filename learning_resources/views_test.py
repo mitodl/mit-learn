@@ -2,6 +2,7 @@
 
 import random
 from datetime import timedelta
+from urllib.parse import quote
 
 import pytest
 from django.conf import settings
@@ -13,6 +14,7 @@ from rest_framework.reverse import reverse
 
 from channels.factories import ChannelTopicDetailFactory, ChannelUnitDetailFactory
 from channels.models import Channel
+from learning_resources.api import update_resource_view_counts
 from learning_resources.constants import (
     GROUP_CONTENT_FILE_CONTENT_VIEWERS,
     GROUP_TUTOR_PROBLEM_VIEWERS,
@@ -25,6 +27,7 @@ from learning_resources.exceptions import WebhookException
 from learning_resources.factories import (
     ContentFileFactory,
     CourseFactory,
+    LearningPathFactory,
     LearningResourceDepartmentFactory,
     LearningResourceFactory,
     LearningResourceOfferorFactory,
@@ -40,6 +43,7 @@ from learning_resources.factories import (
     VideoPlaylistFactory,
 )
 from learning_resources.models import (
+    LearningResource,
     LearningResourceOfferor,
     LearningResourceRelationship,
     PodcastEpisode,
@@ -57,10 +61,12 @@ from learning_resources.serializers import (
     VideoResourceSerializer,
     VideoSerializer,
 )
+from learning_resources.utils import encode_path_segment, path_slug
 from learning_resources.views import LearningResourceViewSet
 from learning_resources_search.api import Search
 from learning_resources_search.serializers import serialize_learning_resource_for_update
 from main.test_utils import assert_json_equal
+from main.utils import frontend_absolute_url
 
 pytestmark = [pytest.mark.django_db]
 
@@ -1055,6 +1061,10 @@ def test_popular_sort(client, resource_type):
             learning_resource=resource,
         )
 
+    # sortby=-views orders by the denormalized view_count column, so it must
+    # be populated the same way the PostHog ETL / backfill task would.
+    update_resource_view_counts()
+
     url = reverse("lr:v1:learning_resources_api-list")
 
     params = (
@@ -1540,6 +1550,15 @@ def test_learning_resources_summary_listing_endpoint(django_assert_num_queries, 
             "last_modified": lr.last_modified.isoformat().replace("+00:00", "Z"),
             "url": lr.url,
             "title": lr.title,
+            "resource_type": lr.resource_type,
+            "canonical_parent_ids": [],
+            # MITx Online courses get their product page; a video outside any
+            # playlist gets its own page with no ?playlist.
+            "learn_url": frontend_absolute_url(
+                f"/courses/{encode_path_segment(lr.readable_id)}"
+                if lr.resource_type == "course"
+                else f"/video/{lr.id}/{path_slug(lr.title)}"
+            ),
         }
         for lr in published
     ] == sorted(resp.data.get("results"), key=lambda x: int(x["id"]))
@@ -1594,6 +1613,272 @@ def test_learning_resources_summary_includes_stored_url(client):
 
     assert by_id[mitx_course.id]["url"] == mitx_learn_url
     assert by_id[edx_course.id]["url"] == edx_url
+
+
+def _relate(parent, child, relation_type, position):
+    """Attach child to parent at an explicit position."""
+    return LearningResourceRelationship.objects.create(
+        parent=parent, child=child, relation_type=relation_type, position=position
+    )
+
+
+def _summary_by_id(client):
+    """Map the summary endpoint's results by resource id."""
+    resp = client.get(reverse("lr:v1:learning_resources_api-summary"))
+    return {item["id"]: item for item in resp.data["results"]}
+
+
+def test_summary_canonical_parent_ids_match_detail_endpoint_for_video(client):
+    """
+    A video's canonical_parent_ids must equal detail's `playlists`, in order.
+    Positions are the reverse of creation order, so ordering by id fails this.
+    """
+    video = VideoFactory.create().learning_resource
+    first_created = VideoPlaylistFactory.create().learning_resource
+    second_created = VideoPlaylistFactory.create().learning_resource
+    relation = LearningResourceRelationTypes.PLAYLIST_VIDEOS.value
+    _relate(first_created, video, relation, position=1)
+    _relate(second_created, video, relation, position=0)
+
+    detail = client.get(
+        reverse("lr:v1:learning_resources_api-detail", args=[video.id])
+    ).data
+
+    assert detail["playlists"] == [second_created.id, first_created.id]
+    assert (
+        _summary_by_id(client)[video.id]["canonical_parent_ids"]
+        == (detail["playlists"])
+    )
+
+
+def test_summary_canonical_parent_ids_match_detail_endpoint_for_episode(client):
+    """
+    An episode's canonical_parent_ids must equal detail's nested podcasts.
+    Positions are equal here because ETL never sets one, which is the shape
+    production actually has.
+    """
+    episode = PodcastEpisodeFactory.create().learning_resource
+    first_created = PodcastFactory.create(episodes=[]).learning_resource
+    second_created = PodcastFactory.create(episodes=[]).learning_resource
+    relation = LearningResourceRelationTypes.PODCAST_EPISODES.value
+    _relate(first_created, episode, relation, position=0)
+    _relate(second_created, episode, relation, position=0)
+
+    detail = client.get(
+        reverse("lr:v1:learning_resources_api-detail", args=[episode.id])
+    ).data
+
+    assert detail["podcast_episode"]["podcasts"] == [
+        first_created.id,
+        second_created.id,
+    ]
+    assert (
+        _summary_by_id(client)[episode.id]["canonical_parent_ids"]
+        == (detail["podcast_episode"]["podcasts"])
+    )
+
+
+def test_summary_canonical_parent_ids_excludes_learning_path_membership(client):
+    """Learning paths are user-created and may be private; they never surface here."""
+    course = CourseFactory.create().learning_resource
+    path = LearningPathFactory.create().learning_resource
+    _relate(
+        path,
+        course,
+        LearningResourceRelationTypes.LEARNING_PATH_ITEMS.value,
+        position=0,
+    )
+
+    assert _summary_by_id(client)[course.id]["canonical_parent_ids"] == []
+
+
+def test_summary_canonical_parent_ids_keeps_unpublished_parents(client):
+    """An unpublished parent still owns the URL, so it is not filtered out."""
+    video = VideoFactory.create().learning_resource
+    playlist = VideoPlaylistFactory.create().learning_resource
+    _relate(
+        playlist,
+        video,
+        LearningResourceRelationTypes.PLAYLIST_VIDEOS.value,
+        position=0,
+    )
+    playlist.published = False
+    playlist.save(update_fields=["published"])
+
+    detail = client.get(
+        reverse("lr:v1:learning_resources_api-detail", args=[video.id])
+    ).data
+
+    assert detail["playlists"] == [playlist.id]
+    assert _summary_by_id(client)[video.id]["canonical_parent_ids"] == [playlist.id]
+
+
+def test_summary_learn_url_matches_detail_endpoint_for_video(client):
+    """
+    The two endpoints derive the canonical parent differently — summary from the
+    `canonical_parent_ids` annotation, detail from the `playlists` property — so
+    their learn_url must be asserted equal, not assumed.
+    """
+    video = VideoFactory.create().learning_resource
+    first_created = VideoPlaylistFactory.create().learning_resource
+    second_created = VideoPlaylistFactory.create().learning_resource
+    relation = LearningResourceRelationTypes.PLAYLIST_VIDEOS.value
+    _relate(first_created, video, relation, position=1)
+    _relate(second_created, video, relation, position=0)
+
+    detail = client.get(
+        reverse("lr:v1:learning_resources_api-detail", args=[video.id])
+    ).data
+
+    # position, not creation order, picks the parent
+    expected = frontend_absolute_url(
+        f"/video/{video.id}/{path_slug(video.title)}?playlist={second_created.id}"
+    )
+    assert detail["learn_url"] == expected
+    assert _summary_by_id(client)[video.id]["learn_url"] == expected
+
+
+def test_summary_learn_url_matches_detail_endpoint_for_episode(client):
+    """An episode's URL is scoped by its parent podcast on both endpoints."""
+    episode = PodcastEpisodeFactory.create().learning_resource
+    first_created = PodcastFactory.create(episodes=[]).learning_resource
+    second_created = PodcastFactory.create(episodes=[]).learning_resource
+    relation = LearningResourceRelationTypes.PODCAST_EPISODES.value
+    _relate(first_created, episode, relation, position=0)
+    _relate(second_created, episode, relation, position=0)
+
+    detail = client.get(
+        reverse("lr:v1:learning_resources_api-detail", args=[episode.id])
+    ).data
+
+    # Equal positions, so the tie breaks on id -> first created wins
+    expected = frontend_absolute_url(
+        f"/podcast/{first_created.id}/podcast_episode/"
+        f"{episode.id}/{path_slug(episode.title)}"
+    )
+    assert detail["learn_url"] == expected
+    assert _summary_by_id(client)[episode.id]["learn_url"] == expected
+
+
+def test_summary_learn_url_falls_back_to_the_drawer(client):
+    """A resource with no page of its own is addressed by its drawer."""
+    course = CourseFactory.create(platform=PlatformType.ocw.name).learning_resource
+
+    detail = client.get(
+        reverse("lr:v1:learning_resources_api-detail", args=[course.id])
+    ).data
+
+    expected_prefix = frontend_absolute_url(f"/search?resource={course.id}")
+    assert detail["learn_url"].startswith(expected_prefix)
+    assert _summary_by_id(client)[course.id]["learn_url"] == detail["learn_url"]
+
+
+def test_url_slug_is_the_slug_segment_of_a_video_learn_url(client):
+    """
+    Consumers build page paths from `url_slug` instead of parsing `learn_url`,
+    so the two have to agree on how a title is spelled.
+    """
+    video = VideoFactory.create(
+        learning_resource__title="Lecture 1: Intro to Widgets"
+    ).learning_resource
+    playlist = VideoPlaylistFactory.create().learning_resource
+    _relate(
+        playlist,
+        video,
+        LearningResourceRelationTypes.PLAYLIST_VIDEOS.value,
+        position=0,
+    )
+
+    detail = client.get(
+        reverse("lr:v1:learning_resources_api-detail", args=[video.id])
+    ).data
+
+    assert detail["url_slug"] == "lecture-1-intro-to-widgets"
+    assert detail["learn_url"] == frontend_absolute_url(
+        f"/video/{video.id}/{detail['url_slug']}?playlist={playlist.id}"
+    )
+
+
+def test_url_slug_is_the_slug_segment_of_an_episode_learn_url(client):
+    """An episode's slug is its own, not the parent podcast's."""
+    episode = PodcastEpisodeFactory.create(
+        learning_resource__title="Episode 2: Widgets Revisited"
+    ).learning_resource
+    podcast = PodcastFactory.create(
+        episodes=[], learning_resource__title="The Widget Hour"
+    ).learning_resource
+    _relate(
+        podcast,
+        episode,
+        LearningResourceRelationTypes.PODCAST_EPISODES.value,
+        position=0,
+    )
+
+    detail = client.get(
+        reverse("lr:v1:learning_resources_api-detail", args=[episode.id])
+    ).data
+
+    assert detail["url_slug"] == "episode-2-widgets-revisited"
+    assert detail["learn_url"] == frontend_absolute_url(
+        f"/podcast/{podcast.id}/podcast_episode/{episode.id}/{detail['url_slug']}"
+    )
+
+
+def test_url_slug_falls_back_when_a_title_yields_no_slug(client):
+    """A title with no ASCII still needs a URL segment, so it gets a literal one."""
+    video = VideoFactory.create(
+        learning_resource__title="日本語のビデオ"
+    ).learning_resource
+
+    detail = client.get(
+        reverse("lr:v1:learning_resources_api-detail", args=[video.id])
+    ).data
+
+    assert detail["url_slug"] == "resource"
+    assert detail["learn_url"] == frontend_absolute_url(f"/video/{video.id}/resource")
+
+
+def test_url_slug_is_present_for_a_resource_with_no_page_of_its_own(client):
+    """
+    Never blank and never absent, so consumers need no fallback and no branch on
+    resource type. A drawer-only resource carries the slug its drawer URL uses.
+    """
+    course = CourseFactory.create(
+        platform=PlatformType.ocw.name,
+        learning_resource__title="Intro to Widgets",
+    ).learning_resource
+
+    detail = client.get(
+        reverse("lr:v1:learning_resources_api-detail", args=[course.id])
+    ).data
+
+    assert detail["url_slug"] == "intro-to-widgets"
+    assert detail["learn_url"] == frontend_absolute_url(
+        f"/search?resource={course.id}&resource_title=intro-to-widgets"
+    )
+
+
+def test_summary_count_omits_the_parent_ids_annotation(
+    django_assert_num_queries, client
+):
+    """The count must not evaluate canonical_parent_ids for every row it counts."""
+    playlist = VideoPlaylistFactory.create().learning_resource
+    videos = [video.learning_resource for video in VideoFactory.create_batch(3)]
+    for position, video in enumerate(videos):
+        _relate(
+            playlist,
+            video,
+            LearningResourceRelationTypes.PLAYLIST_VIDEOS.value,
+            position=position,
+        )
+
+    with django_assert_num_queries(2) as captured:
+        resp = client.get(reverse("lr:v1:learning_resources_api-summary"))
+
+    assert resp.data["count"] == LearningResource.objects.filter(published=True).count()
+    count_sql, page_sql = (query["sql"] for query in captured.captured_queries)
+    assert "canonical_parent_ids" in page_sql
+    assert "canonical_parent_ids" not in count_sql
 
 
 @pytest.mark.parametrize(
@@ -1721,6 +2006,133 @@ def test_course_run_problems_endpoint(client, user_role, django_user_model):
         }
 
 
+# Canvas course 39673 in production; its course code contains slashes.
+# See mitodl/hq#13384.
+CANVAS_SLASH_RUN_ID = "39673-21M.385 / 21M.585 / 6.4550+canvas"
+
+
+def _canvas_run(run_id):
+    """Create a published Canvas course run with the given run_id"""
+    return LearningResourceRunFactory.create(
+        run_id=run_id,
+        learning_resource=CourseFactory.create(
+            platform=PlatformType.canvas.name
+        ).learning_resource,
+    )
+
+
+def test_course_run_problems_list_with_slashes(client):
+    """The list endpoint reaches the view even when the run id contains slashes"""
+    run = _canvas_run(CANVAS_SLASH_RUN_ID)
+    TutorProblemFileFactory.create(
+        run=run, problem_title="Problem Set 1", type="problem"
+    )
+    TutorProblemFileFactory.create(
+        run=run, problem_title="Problem Set 2", type="problem"
+    )
+
+    resp = client.get(f"/api/v0/tutor/problems/{CANVAS_SLASH_RUN_ID}/")
+
+    assert resp.status_code == 200
+    assert resp.json() == {"problem_set_titles": ["Problem Set 1", "Problem Set 2"]}
+
+
+@pytest.mark.parametrize("problem_title", ["Problem Set 1", "Weird+canvas"])
+def test_course_run_problems_detail_with_slashes(
+    client, django_user_model, problem_title
+):
+    """
+    The detail endpoint resolves a slash-containing run id and the title,
+    including titles that themselves end in the +canvas suffix.
+    """
+    run = _canvas_run(CANVAS_SLASH_RUN_ID)
+    TutorProblemFileFactory.create(
+        run=run,
+        problem_title=problem_title,
+        type="problem",
+        content="problem content",
+        file_name="problem.txt",
+        file_extension=".txt",
+    )
+    client.force_login(
+        django_user_model.objects.create_superuser(
+            "tutoradmin", "tutoradmin@example.com", "pass"
+        )
+    )
+
+    # The run id's slashes stay literal so the route can match across them;
+    # the title is encoded, as any correct client must for "#" and "?".
+    resp = client.get(
+        f"/api/v0/tutor/problems/{CANVAS_SLASH_RUN_ID}/{quote(problem_title, safe='')}/"
+    )
+
+    assert resp.status_code == 200
+    assert resp.json()["problem_set_files"] == [
+        {
+            "file_name": "problem.txt",
+            "content": "problem content",
+            "file_extension": ".txt",
+        }
+    ]
+
+
+def test_course_run_problems_slash_run_id_detail_forbidden(client):
+    """
+    The slash-tolerant detail route carries the viewset's permissions, which
+    only the router applies to the @action declarations.
+    """
+    run = _canvas_run(CANVAS_SLASH_RUN_ID)
+    TutorProblemFileFactory.create(
+        run=run, problem_title="Problem Set 1", type="problem"
+    )
+
+    resp = client.get(f"/api/v0/tutor/problems/{CANVAS_SLASH_RUN_ID}/Problem Set 1/")
+    assert resp.status_code == 403
+
+
+@pytest.mark.parametrize(
+    "prefix", ["/api/v0/tutor/problems/", "/api/v0/tutor/problems//"]
+)
+def test_course_run_problems_slash_run_id_as_learn_ai_calls_it(client, prefix):
+    """
+    Reproduce learn-ai's own URL: PROBLEM_SET_URL ends in "/" and the caller
+    adds another, so the real request has a doubled slash and no trailing one.
+    The extra slash must not end up inside the captured run id -- that misses
+    the lookup and returns an empty list instead of the titles.
+    """
+    run = _canvas_run(CANVAS_SLASH_RUN_ID)
+    TutorProblemFileFactory.create(
+        run=run, problem_title="Problem Set 1", type="problem"
+    )
+
+    followed = client.get(f"{prefix}{CANVAS_SLASH_RUN_ID}", follow=True)
+    assert followed.status_code == 200
+    assert followed.json() == {"problem_set_titles": ["Problem Set 1"]}
+
+
+def test_course_run_problems_doubled_slash_detail(client, django_user_model):
+    """The detail route tolerates the same doubled slash."""
+    run = _canvas_run(CANVAS_SLASH_RUN_ID)
+    TutorProblemFileFactory.create(
+        run=run,
+        problem_title="Problem Set 1",
+        type="problem",
+        content="problem content",
+        file_name="problem.txt",
+        file_extension=".txt",
+    )
+    client.force_login(
+        django_user_model.objects.create_superuser(
+            "dblslash", "dblslash@example.com", "pass"
+        )
+    )
+
+    resp = client.get(f"/api/v0/tutor/problems//{CANVAS_SLASH_RUN_ID}/Problem Set 1/")
+
+    assert resp.status_code == 200
+    assert [f["file_name"] for f in resp.json()["problem_set_files"]] == ["problem.txt"]
+
+
 def test_resource_items_only_shows_published_runs(client, user):
     """Test that ResourceListItemsViewSet only returns published runs for child resources"""
 
@@ -1773,3 +2185,60 @@ def test_resource_items_only_shows_published_runs(client, user):
                 >= child_data["runs"][idx - 1]["start_date"]
             )
     assert len(child_data["runs"]) == 4
+
+
+def test_podcast_episode_transcript_endpoint(client):
+    """The transcript endpoint returns the stored text for one episode"""
+    episode = PodcastEpisodeFactory.create(
+        transcript="Host: welcome back.",
+        rss='<item><podcast:transcript url="https://x/t.vtt" type="text/vtt"'
+        ' language="en"/></item>',
+    )
+
+    resp = client.get(
+        reverse(
+            "lr:v1:podcast_episodes_api-transcript",
+            args=[episode.learning_resource.id],
+        )
+    )
+
+    assert resp.status_code == 200
+    assert resp.data["transcript"] == "Host: welcome back."
+    assert resp.data["id"] == episode.learning_resource.id
+
+
+def test_podcast_episode_transcript_endpoint_empty(client):
+    """An episode with no transcript returns an empty string, not a 404"""
+    episode = PodcastEpisodeFactory.create(transcript="", rss="<item></item>")
+
+    resp = client.get(
+        reverse(
+            "lr:v1:podcast_episodes_api-transcript",
+            args=[episode.learning_resource.id],
+        )
+    )
+
+    assert resp.status_code == 200
+    assert resp.data["transcript"] == ""
+
+
+@pytest.mark.parametrize("bad_id", ["abc", "999999999"])
+def test_podcast_episode_transcript_endpoint_404(client, bad_id):
+    """
+    A non-numeric or unknown id is a 404, not a 500.
+
+    The router's lookup regex is [^/.]+, so a non-numeric id reaches the view;
+    int() would raise ValueError and 500.
+    """
+    resp = client.get(f"/api/v1/podcast_episodes/{bad_id}/transcript/")
+    assert resp.status_code == 404
+
+
+def test_podcast_episode_transcript_endpoint_rejects_other_resource_types(client):
+    """A non-episode resource id is not reachable through this endpoint"""
+    course = CourseFactory.create()
+
+    resp = client.get(
+        f"/api/v1/podcast_episodes/{course.learning_resource.id}/transcript/"
+    )
+    assert resp.status_code == 404

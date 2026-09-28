@@ -1,0 +1,28 @@
+{% extends "admin/change_form.html" %}
+{% comment %}
+Warn that this form does not undelete. SafeDeleteModel.save() undeletes by
+default, so WebsiteContentAdmin.save_model passes keep_deleted=True -- which
+means a deleted row stays deleted after Save, with nothing else on the page to
+say so. after_related_objects renders directly above the submit row.
+{% endcomment %}
+{% block after_related_objects %}
+{{ block.super }}
+{% if original.deleted %}
+<ul class="messagelist">
+  {% if original.is_published %}
+  <li class="warning">
+    This item is deleted, and it is published &mdash; restoring it would put it
+    straight back on the live site. It is read-only here. To restore it, use the
+    &ldquo;Undelete selected&rdquo; action on the
+    <a href="{% url 'admin:website_content_websitecontent_changelist' %}">content list</a>.
+  </li>
+  {% else %}
+  <li class="warning">
+    This item is deleted. Saving keeps it deleted &mdash; to restore it, use the
+    &ldquo;Undelete selected&rdquo; action on the
+    <a href="{% url 'admin:website_content_websitecontent_changelist' %}">content list</a>.
+  </li>
+  {% endif %}
+</ul>
+{% endif %}
+{% endblock %}

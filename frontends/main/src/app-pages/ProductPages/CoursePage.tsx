@@ -5,31 +5,30 @@ import { Typography } from "ol-components"
 
 import { pagesQueries } from "api/mitxonline-hooks/pages"
 import { useQuery } from "@tanstack/react-query"
-import { styled, Button } from "@mitodl/smoot-design"
+import { styled } from "@mitodl/smoot-design"
 import { coursesQueries } from "api/mitxonline-hooks/courses"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import { FeatureFlags } from "@/common/feature_flags"
 import { notFound } from "next/navigation"
 import { getOutlineCoursewareId, HeadingIds } from "./util"
 import InstructorsSection from "./InstructorsSection"
+import FaqsSection from "./FaqsSection"
+import TestimonialsSection from "./TestimonialsSection"
 import RawHTML from "./RawHTML"
 import AboutSection from "./AboutSection"
 import ProductPageTemplate from "./ProductPageTemplate"
 import WhatYoullLearnSection from "./WhatYoullLearnSection"
 import HowYoullLearnSection from "./HowYoullLearnSection"
 import { DEFAULT_RESOURCE_IMG } from "ol-utilities"
-import { isVerifiedEnrollmentMode } from "@/common/mitxonline"
 import CourseInfoBox from "./InfoBoxCourse"
 import CourseOutlineSection from "./CourseOutlineSection"
 import {
   trackViewCoursePage,
   trackCourseProgramView,
 } from "@/common/analytics/gtm"
-import { EnrollButton } from "./CourseEnrollArea"
+import HeaderEnrollButton from "./HeaderEnrollButton"
 import { useCourseEnrollment } from "./useCourseEnrollment"
 import { getSelectedRun } from "./courseRun"
-import { SignupPopover } from "@/page-components/SignupPopover/SignupPopover"
-import EnrolledLink from "./EnrolledLink"
 import type {
   CourseRunV2,
   CourseWithCourseRunsSerializerV2,
@@ -45,64 +44,30 @@ const PrerequisitesSection = styled.section({
   gap: "16px",
 })
 
-/**
- * The page-header enroll button uses the `bordered` variant but with darkGray2
- * text (matching production), not the variant's default silverGrayDark. Disabled
- * buttons keep the variant default. `display: contents` adds no layout box.
- */
-const HeaderButtonSlot = styled.div(({ theme }) => ({
-  display: "contents",
-  "& button:not(:disabled), & a": {
-    color: theme.custom.colors.darkGray2,
-  },
-}))
-
 const CourseHeaderEnrollButton: React.FC<{
   course: CourseWithCourseRunsSerializerV2
   selectedRun: CourseRunV2 | undefined
 }> = ({ course, selectedRun }) => {
   const [anchor, setAnchor] = React.useState<null | HTMLButtonElement>(null)
 
-  const { state, isStatusLoading, isPending } = useCourseEnrollment(
+  const { state, isStatusLoading, isPending, isError } = useCourseEnrollment(
     course,
     selectedRun,
     {
       tracking: { placement: "header" },
-      onRequireSignup: (el) => setAnchor(el),
+      onRequireSignup: setAnchor,
     },
   )
 
-  if (state.status === "enrolled") {
-    return (
-      <HeaderButtonSlot>
-        <EnrolledLink variant="bordered" href={state.href} />
-      </HeaderButtonSlot>
-    )
-  }
-
-  if (state.status === "options") {
-    return (
-      <HeaderButtonSlot>
-        <EnrollButton
-          action={state.options[0]}
-          size="large"
-          loading={isStatusLoading}
-          pending={isPending}
-          variant="bordered"
-          announceStatus={false}
-        />
-        <SignupPopover anchorEl={anchor} onClose={() => setAnchor(null)} />
-      </HeaderButtonSlot>
-    )
-  }
-
-  // status === "none"
   return (
-    <HeaderButtonSlot>
-      <Button variant="bordered" size="large" disabled>
-        Enroll
-      </Button>
-    </HeaderButtonSlot>
+    <HeaderEnrollButton
+      state={state}
+      isStatusLoading={isStatusLoading}
+      isPending={isPending}
+      isError={isError}
+      anchor={anchor}
+      onAnchorClose={() => setAnchor(null)}
+    />
   )
 }
 
@@ -164,20 +129,11 @@ const CoursePage: React.FC<CoursePageProps> = ({ readableId }) => {
       enrollmentAction={
         <CourseHeaderEnrollButton course={course} selectedRun={selectedRun} />
       }
-      showStayUpdated={
-        course.courseruns.length > 0 &&
-        course.courseruns.every(
-          (run) =>
-            run.enrollment_modes.length > 0 &&
-            run.enrollment_modes.every((mode) =>
-              isVerifiedEnrollmentMode(mode.mode_slug),
-            ),
-        )
-      }
       resource={{
         readable_id: course.readable_id,
         resource_type: "course",
       }}
+      hubspotFormId={page.hubspot_form_id}
     >
       {page.about ? (
         <AboutSection productNoun="Course" aboutHtml={page.about} />
@@ -199,6 +155,10 @@ const CoursePage: React.FC<CoursePageProps> = ({ readableId }) => {
       ) : null}
       {page.faculty.length ? (
         <InstructorsSection instructors={page.faculty} />
+      ) : null}
+      {page.faqs.length ? <FaqsSection faqs={page.faqs} /> : null}
+      {page.testimonials.length ? (
+        <TestimonialsSection testimonials={page.testimonials} />
       ) : null}
     </ProductPageTemplate>
   )

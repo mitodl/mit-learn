@@ -37,7 +37,7 @@ def test_channel_url_for_departments(published, channel_type, detail_factory):
     if published:
         assert (
             urlparse(channel.channel_url).path
-            == f"/c/{channel_type.name}/{channel.name}/"
+            == f"/c/{channel_type.name}/{channel.name}"
         )
     else:
         assert channel.channel_url is None

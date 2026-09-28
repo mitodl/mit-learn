@@ -294,6 +294,9 @@ response_test_response_1 = {
             "is_learning_material": False,
             "next_start_date": "2023-09-26T06:00:00Z",
             "best_run_id": 633,
+            # Derived: this document predates `url_slug`, as every indexed
+            # document does until it is reindexed.
+            "url_slug": "managing-complex-projects-and-organizations-for-success",
         }
     ],
     "metadata": {
@@ -545,6 +548,7 @@ response_test_response_2 = {
             "is_learning_material": True,
             "next_start_date": None,
             "best_run_id": None,
+            "url_slug": "broadignite-podcast",
         }
     ],
     "metadata": {
@@ -627,6 +631,8 @@ def test_serialize_bulk_learning_resources(mocker):
             ]
         if resource.resource_type == LearningResourceType.video.name:
             data["video"]["transcript"] = resource.video.transcript
+        if resource.resource_type == LearningResourceType.podcast_episode.name:
+            data["podcast_episode"]["transcript"] = resource.podcast_episode.transcript
         expected.append(data)
 
     for result, exp in zip(results, expected):
@@ -713,6 +719,10 @@ def test_serialize_learning_resource_for_bulk(  # noqa: PLR0913
     resource_data = LearningResourceSerializer(resource).data
     if resource_type == LearningResourceType.video.name:
         resource_data["video"]["transcript"] = resource.video.transcript
+    if resource_type == LearningResourceType.podcast_episode.name:
+        resource_data["podcast_episode"]["transcript"] = (
+            resource.podcast_episode.transcript
+        )
     assert serializers.serialize_learning_resource_for_bulk(resource) == {
         "_id": resource.id,
         "resource_relations": {"name": "resource"},
@@ -868,6 +878,25 @@ def test_serialize_bulk_learning_resources_for_deletion():
     assert list(
         serializers.serialize_bulk_learning_resources_for_deletion([resource.id])
     ) == [{"_id": resource.id, "_op_type": "delete"}]
+
+
+@pytest.mark.django_db
+def test_serialize_learning_resource_for_update_readds_content_file_text():
+    """
+    Indexed learning material docs should include full content file text even
+    though the API serializer omits it
+    """
+    resource = factories.LearningResourceFactory.create(
+        resource_type=LearningResourceType.video.name, runs=[]
+    )
+    factories.ContentFileFactory.create(
+        run=None,
+        direct_learning_resource=resource,
+        content="full text for nested search",
+    )
+    resource = LearningResource.objects.for_search_serialization().get(pk=resource.pk)
+    serialized = serializers.serialize_learning_resource_for_update(resource)
+    assert serialized["content_files"][0]["content"] == "full text for nested search"
 
 
 @pytest.mark.django_db
@@ -1050,6 +1079,57 @@ def test_learning_resources_search_response_serializer(
             raw_data, context={"request": request}
         ).data
     ) == JSONRenderer().render(response)
+
+
+def _search_results(sources, view):
+    """Run `sources` through the response serializer as OpenSearch hits."""
+    raw = {
+        "hits": {
+            "total": {"value": len(sources)},
+            "hits": [{"_source": source} for source in sources],
+        }
+    }
+    return list(
+        LearningResourcesSearchResponseSerializer(
+            raw, context={"request": get_request_object(view.url)}
+        ).data["results"]
+    )
+
+
+@pytest.mark.parametrize(
+    ("title", "expected"),
+    [
+        ("Introduction to Widgets", "introduction-to-widgets"),
+        # A title with no ASCII slug still needs a URL segment.
+        ("日本語のビデオ", "resource"),
+        ("", "resource"),
+        (None, "resource"),
+    ],
+)
+def test_search_results_derive_url_slug_from_the_title(
+    title, expected, learning_resources_search_view
+):
+    """
+    A document indexed before `url_slug` existed has no such key, and the
+    response schema declares the field required, so it is derived from the title
+    rather than left absent until a reindex.
+    """
+    results = _search_results(
+        [{"id": 1, "title": title, "resource_type": "video"}],
+        learning_resources_search_view,
+    )
+
+    assert results[0]["url_slug"] == expected
+
+
+def test_search_results_keep_an_indexed_url_slug(learning_resources_search_view):
+    """A reindexed document's own value wins; the title is not re-slugified."""
+    results = _search_results(
+        [{"id": 1, "title": "Introduction to Widgets", "url_slug": "renamed"}],
+        learning_resources_search_view,
+    )
+
+    assert results[0]["url_slug"] == "renamed"
 
 
 @pytest.mark.django_db
