@@ -334,6 +334,21 @@ describe("Learning Resource Card", () => {
     getByImageSrc(view.container, DEFAULT_RESOURCE_IMG)
   })
 
+  test("Falls back to DEFAULT_RESOURCE_IMG after one error for images Next.js serves unoptimized", () => {
+    // Next.js doesn't optimize SVGs, so there is no separate original to retry
+    const svgUrl = "https://example.com/logo.svg"
+    const resource = factories.learningResources.resource({
+      resource_type: ResourceTypeEnum.Document,
+      image: { url: svgUrl, alt: "logo" },
+    })
+
+    const view = setup({ resource })
+    fireEvent.error(
+      getByImageSrc(view.container, svgUrl, { nextJsOriginalSrc: false }),
+    )
+    getByImageSrc(view.container, DEFAULT_RESOURCE_IMG)
+  })
+
   test("Resource cards have headingLevel set for screen reader navigation", async () => {
     const resource = factories.learningResources.resource({})
 

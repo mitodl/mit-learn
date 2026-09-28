@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback } from "react"
+import type { SyntheticEvent } from "react"
 
 /**
  * - "optimized": `src` through the Next.js image optimizer
@@ -8,6 +9,14 @@ import { useState, useEffect, useCallback } from "react"
  * - "fallback": the fallback image
  */
 type Stage = "optimized" | "original" | "fallback"
+
+const isSameUrl = (src: string, loaded: string) => {
+  try {
+    return new URL(src, loaded).href === loaded
+  } catch {
+    return false
+  }
+}
 
 /**
  * Returns image `src`, `unoptimized` and `onError` for a Next.js `<Image>`,
@@ -28,9 +37,19 @@ const useImageWithFallback = (
     setStage(src ? "optimized" : "fallback")
   }, [src])
 
-  const onError = useCallback(() => {
-    setStage((current) => (current === "optimized" ? "original" : "fallback"))
-  }, [])
+  const onError = useCallback(
+    (event?: SyntheticEvent<HTMLImageElement>) => {
+      // Next.js serves some images unoptimized regardless (e.g. SVGs and data:
+      // URLs). If the image that failed was already the original, retrying it
+      // would render the same <img> and never error again, so skip ahead.
+      const failedSrc = event?.currentTarget.src
+      const wasOriginal = !!src && !!failedSrc && isSameUrl(src, failedSrc)
+      setStage((current) =>
+        current === "optimized" && !wasOriginal ? "original" : "fallback",
+      )
+    },
+    [src],
+  )
 
   return {
     src: stage === "fallback" || !src ? fallback : src,
