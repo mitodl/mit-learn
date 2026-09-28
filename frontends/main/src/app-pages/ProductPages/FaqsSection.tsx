@@ -97,6 +97,7 @@ const FaqRow: React.FC<{ index: number; faq: FAQItem }> = ({ index, faq }) => {
       expanded={expanded}
       onChange={() => setExpanded(!expanded)}
       disableGutters
+      slotProps={{ transition: { timeout: 250 } }}
     >
       <FaqSummary
         id={headerId}
