@@ -25,6 +25,11 @@ jest.mock("posthog-js/react", () => ({
   usePostHog: jest.fn(() => ({ capture: jest.fn() })),
 }))
 
+jest.mock("ol-utilities", () => ({
+  ...jest.requireActual("ol-utilities"),
+  NoSSR: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+}))
+
 jest.mock("@/common/analytics/gtm", () => ({
   trackCourseEnrolled: jest.fn(),
   trackStartEnrollment: jest.fn(),

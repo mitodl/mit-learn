@@ -132,4 +132,21 @@ describe("AiSearchOverview", () => {
     renderWithProviders(<AiSearchOverview searchParams={params("ml")} />)
     expect(screen.queryByText(/AI Overview/)).not.toBeInTheDocument()
   })
+
+  test("renders nothing when the assistant response includes an error message", () => {
+    setupChat({
+      status: "ready",
+      messages: [
+        { id: "1", role: "user", content: "prompt" },
+        {
+          id: "2",
+          role: "assistant",
+          content: "",
+          data: { error: { message: "Something went wrong" } },
+        },
+      ],
+    })
+    renderWithProviders(<AiSearchOverview searchParams={params("ml")} />)
+    expect(screen.queryByText(/AI Overview/)).not.toBeInTheDocument()
+  })
 })
