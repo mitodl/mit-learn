@@ -227,6 +227,17 @@ class BaseWarehouseETLTask(Task):
     acks_late = True
     table_name: str = ""
 
+    def __init_subclass__(cls, **kwargs):
+        """Reject subclasses that set ``view_name``.
+
+        A class attribute would shadow the property below and read whatever
+        catalog it names, whatever environment this runs in.
+        """
+        super().__init_subclass__(**kwargs)
+        if "view_name" in cls.__dict__:
+            msg = f"{cls.__name__} must set table_name, not view_name"
+            raise TypeError(msg)
+
     @property
     def view_name(self) -> str:
         """``table_name`` qualified as ``catalog.schema.table`` from settings.

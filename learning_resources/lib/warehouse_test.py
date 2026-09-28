@@ -390,6 +390,30 @@ def test_view_name_rejects_unsafe_setting_parts(mock_connect, setting, value):
     mock_connect.assert_not_called()
 
 
+@patch("learning_resources.lib.warehouse.connect_to_warehouse")
+def test_view_name_rejects_dotted_table_name(mock_connect):
+    """A dotted table_name would reach into another schema of the same catalog."""
+
+    class _DottedTask(BaseWarehouseETLTask):
+        table_name = "other_schema.integrations__learn__test"
+
+        def fetch_and_upsert(self, conn, *, since=None) -> int:  # noqa: ARG002
+            return 0
+
+    with pytest.raises(ValueError, match="Unsafe warehouse identifier"):
+        _DottedTask().run()
+
+    mock_connect.assert_not_called()
+
+
+def test_subclass_cannot_pin_view_name():
+    """Assigning view_name on a subclass would bypass WAREHOUSE_* entirely."""
+    with pytest.raises(TypeError, match="must set table_name, not view_name"):
+
+        class _PinnedTask(BaseWarehouseETLTask):
+            view_name = "ol_data_lake_production.schema.view"
+
+
 def test_base_warehouse_etl_task_fetch_and_upsert_is_abstract():
     """fetch_and_upsert raises NotImplementedError on the base class."""
     task = BaseWarehouseETLTask()
