@@ -12,6 +12,17 @@ import type { JSONContent } from "@tiptap/react"
 import { ArticleEditor } from "./ArticleEditor"
 import { renderWithProviders } from "@/test-utils"
 
+/**
+ * Far enough out that no draft saves itself while a test works. A background
+ * write landing mid-interaction re-renders the toolbar, and the update lands
+ * outside `act` -- which failed these suites intermittently, a different test
+ * each time. The tests that are about autosave set their own delay.
+ */
+const AUTOSAVE_OFF = 10 * 60 * 1000
+
+/** What production uses; the autosave tests wait this out deliberately. */
+const AUTOSAVE_DELAY_MS = 2000
+
 const content: JSONContent = {
   type: "doc",
   content: [
@@ -35,10 +46,12 @@ const renderArticleEditor = ({
   readOnly = false,
   isPublished = false,
   topics = [],
+  autosaveDelayMs = AUTOSAVE_OFF,
 }: {
   readOnly?: boolean
   isPublished?: boolean
   topics?: number[]
+  autosaveDelayMs?: number
 } = {}) => {
   const user = factories.user.user({
     is_authenticated: true,
@@ -50,9 +63,14 @@ const renderArticleEditor = ({
     is_published: isPublished,
     topics,
   })
-  renderWithProviders(<ArticleEditor article={article} readOnly={readOnly} />, {
-    user,
-  })
+  renderWithProviders(
+    <ArticleEditor
+      article={article}
+      readOnly={readOnly}
+      autosaveDelayMs={autosaveDelayMs}
+    />,
+    { user },
+  )
   return { article }
 }
 
@@ -76,11 +94,12 @@ describe("ArticleEditor article controls", () => {
     renderArticleEditor()
 
     await screen.findByRole("button", { name: "Settings" })
-    await screen.findByRole("button", { name: "Save as Draft" })
-    await screen.findByRole("button", { name: "Publish Article" })
-    expect(await screen.findByText(/Article status:/)).toHaveTextContent(
-      "Article status: Draft",
+    await screen.findByRole("button", { name: "Publish" })
+    expect(await screen.findByText(/Status:/)).toHaveTextContent(
+      "Status: Draft",
     )
+    /* A draft writes itself now, so there is nothing to press. */
+    expect(screen.queryByRole("button", { name: "Save as Draft" })).toBe(null)
   })
 
   test("a published article offers Draft, Edit and Settings", async () => {
@@ -89,8 +108,12 @@ describe("ArticleEditor article controls", () => {
     await screen.findByRole("link", { name: "Draft" })
     await screen.findByRole("link", { name: "Edit" })
     await screen.findByRole("button", { name: "Settings" })
-    expect(await screen.findByText(/Article status:/)).toHaveTextContent(
-      "Article status: Published",
+    expect(await screen.findByText(/Status:/)).toHaveTextContent(
+      "Status: Published",
+    )
+    /* Unpublishing lives on the listing card's menu, not here. */
+    expect(screen.queryByRole("button", { name: "Unpublish Article" })).toBe(
+      null,
     )
     /* Unpublishing lives on the listing card's menu, not here. */
     expect(screen.queryByRole("button", { name: "Unpublish Article" })).toBe(
@@ -272,7 +295,7 @@ describe("ArticleEditor publish confirmation", () => {
     })
 
     await userEvent.click(
-      await screen.findByRole("button", { name: "Publish Article" }),
+      await screen.findByRole("button", { name: "Publish" }),
     )
 
     // Nothing is saved until the dialog is confirmed.
@@ -302,7 +325,7 @@ describe("ArticleEditor publish confirmation", () => {
     renderTopicalArticle()
 
     await userEvent.click(
-      await screen.findByRole("button", { name: "Publish Article" }),
+      await screen.findByRole("button", { name: "Publish" }),
     )
     await screen.findByRole("heading", { name: "Publish article" })
     await userEvent.click(screen.getByRole("button", { name: "Cancel" }))
@@ -323,7 +346,7 @@ describe("ArticleEditor publish confirmation", () => {
     await userEvent.type(heading, " edited")
 
     await userEvent.click(
-      await screen.findByRole("button", { name: "Publish Article" }),
+      await screen.findByRole("button", { name: "Publish" }),
     )
 
     expect(
@@ -348,7 +371,7 @@ describe("ArticleEditor publish confirmation errors", () => {
     )
 
     await userEvent.click(
-      await screen.findByRole("button", { name: "Publish Article" }),
+      await screen.findByRole("button", { name: "Publish" }),
     )
     await screen.findByRole("heading", { name: "Publish article" })
     await userEvent.click(
@@ -384,7 +407,7 @@ describe("ArticleEditor publish confirmation errors", () => {
     })
 
     await userEvent.click(
-      await screen.findByRole("button", { name: "Publish Article" }),
+      await screen.findByRole("button", { name: "Publish" }),
     )
     await screen.findByRole("heading", { name: "Publish article" })
     await userEvent.click(
@@ -411,7 +434,7 @@ describe("ArticleEditor topics requirement", () => {
     renderArticleEditor()
 
     await userEvent.click(
-      await screen.findByRole("button", { name: "Publish Article" }),
+      await screen.findByRole("button", { name: "Publish" }),
     )
 
     // The drawer, not the publish confirmation, and nothing saved.
@@ -423,24 +446,34 @@ describe("ArticleEditor topics requirement", () => {
       expect.objectContaining({ method: "patch" }),
     )
     /* The section says why it opened, rather than leaving the editor to guess. */
-    await screen.findByText("Select at least one topic to save your article")
+    await screen.findByText("Select at least one topic to publish your article")
   })
 
-  test("saving a draft with no topics asks for them instead", async () => {
+  test("a draft saves itself without them, rather than asking", async () => {
     mockTopics()
-    renderArticleEditor()
+    const { article } = renderArticleEditor({
+      autosaveDelayMs: AUTOSAVE_DELAY_MS,
+    })
+    setMockResponse.patch(urls.websiteContent.details(article.id), article)
 
-    // "Save as Draft" only enables once the document is touched.
     await userEvent.type(await screen.findByRole("heading", { level: 1 }), "!")
-    await userEvent.click(
-      await screen.findByRole("button", { name: "Save as Draft" }),
-    )
 
-    await screen.findByRole("heading", { name: "Article Settings" })
-    expect(makeRequest).not.toHaveBeenCalledWith(
-      expect.objectContaining({ method: "patch" }),
+    // Autosave cannot stop to ask, so the requirement is the publish's alone.
+    await waitFor(
+      () => {
+        expect(makeRequest).toHaveBeenCalledWith(
+          expect.objectContaining({
+            method: "patch",
+            body: expect.objectContaining({ is_published: false }),
+          }),
+        )
+      },
+      { timeout: 6000 },
     )
-  })
+    expect(screen.queryByRole("heading", { name: "Article Settings" })).toBe(
+      null,
+    )
+  }, 15000)
 
   test("the held-back publish resumes once a topic is picked", async () => {
     const topic = mockTopics()
@@ -451,7 +484,7 @@ describe("ArticleEditor topics requirement", () => {
     })
 
     await userEvent.click(
-      await screen.findByRole("button", { name: "Publish Article" }),
+      await screen.findByRole("button", { name: "Publish" }),
     )
     await screen.findByRole("heading", { name: "Article Settings" })
 
@@ -481,7 +514,35 @@ describe("ArticleEditor topics requirement", () => {
     })
   })
 
-  test("the drawer will not save an article with its topics emptied", async () => {
+  test("a draft's topics can be cleared", async () => {
+    const topics = factories.learningResources.topics({ count: 1 })
+    const [topic] = topics.results
+    setMockResponse.get(urls.topics.list({ limit: 1000 }), topics)
+    const { article } = renderArticleEditor({ topics: [topic.id] })
+    setMockResponse.patch(urls.websiteContent.details(article.id), article)
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Settings" }),
+    )
+    await userEvent.click(
+      await screen.findByRole("button", { name: `Remove ${topic.name}` }),
+    )
+
+    /**
+     * Refused only once the content is public. A draft may sit without topics
+     * -- publishing is where they are insisted on, and autosave cannot stop to
+     * ask -- so the editor is not trapped into keeping a topic they removed.
+     */
+    await userEvent.click(screen.getByRole("button", { name: "Save Settings" }))
+
+    await waitFor(() => {
+      expect(makeRequest).toHaveBeenCalledWith(
+        expect.objectContaining({ method: "patch", body: { topics: [] } }),
+      )
+    })
+  })
+
+  test("the drawer will not save a published article with its topics emptied", async () => {
     const topics = factories.learningResources.topics({ count: 1 })
     const [topic] = topics.results
     setMockResponse.get(urls.topics.list({ limit: 1000 }), topics)
@@ -504,7 +565,7 @@ describe("ArticleEditor topics requirement", () => {
      * through here, and with them its place on a topic page.
      */
     expect(screen.getByRole("button", { name: "Save Settings" })).toBeDisabled()
-    await screen.findByText("Select at least one topic to save your article")
+    await screen.findByText("A published article needs at least one topic")
     expect(makeRequest).not.toHaveBeenCalledWith(
       expect.objectContaining({ method: "patch" }),
     )
@@ -516,7 +577,7 @@ describe("ArticleEditor topics requirement", () => {
     setMockResponse.patch(urls.websiteContent.details(article.id), article)
 
     await userEvent.click(
-      await screen.findByRole("button", { name: "Publish Article" }),
+      await screen.findByRole("button", { name: "Publish" }),
     )
     await screen.findByRole("heading", { name: "Article Settings" })
     await userEvent.click(screen.getByRole("button", { name: "Cancel" }))
@@ -549,12 +610,363 @@ describe("ArticleEditor topics requirement", () => {
   })
 })
 
+describe("ArticleEditor autosave", () => {
+  test("a draft saves itself once typing stops", async () => {
+    const { article } = renderArticleEditor({
+      autosaveDelayMs: AUTOSAVE_DELAY_MS,
+    })
+    setMockResponse.patch(urls.websiteContent.details(article.id), article)
+
+    await userEvent.type(
+      await screen.findByRole("heading", { level: 1 }),
+      " edited",
+    )
+
+    // Not on every keystroke: the write waits for the typing to stop.
+    expect(makeRequest).not.toHaveBeenCalledWith(
+      expect.objectContaining({ method: "patch" }),
+    )
+
+    await waitFor(
+      () => {
+        expect(makeRequest).toHaveBeenCalledWith(
+          expect.objectContaining({
+            method: "patch",
+            url: urls.websiteContent.details(article.id),
+            body: expect.objectContaining({ is_published: false }),
+          }),
+        )
+      },
+      { timeout: 6000 },
+    )
+  }, 15000)
+
+  test("an article that has never been saved is created once, then updated", async () => {
+    const user = factories.user.user({
+      is_authenticated: true,
+      is_article_editor: true,
+    })
+    setMockResponse.get(urls.userMe.get(), user)
+    const created = factories.websiteContent.websiteContent({
+      id: 909,
+      content,
+      is_published: false,
+    })
+    setMockResponse.post(urls.websiteContent.list(), created)
+    setMockResponse.patch(urls.websiteContent.details(created.id), created)
+
+    /* No `article`: the editor starts with nothing to update. */
+    renderWithProviders(<ArticleEditor autosaveDelayMs={AUTOSAVE_DELAY_MS} />, {
+      user,
+    })
+
+    await userEvent.type(
+      await screen.findByRole("heading", { level: 1 }),
+      " first",
+    )
+    await waitFor(
+      () => {
+        expect(makeRequest).toHaveBeenCalledWith(
+          expect.objectContaining({ method: "post" }),
+        )
+      },
+      { timeout: 12000 },
+    )
+    // Settled first: typing while the create is still open puts a background
+    // write in every synchronous gap, which updates the toolbar outside `act`.
+    await waitFor(() => expect(screen.queryByText("Saving...")).toBe(null))
+
+    /**
+     * The editor has created the item but still holds no `contentItem` -- the
+     * caller has not navigated here -- so without remembering what it created
+     * this second save would insert another article.
+     */
+    await userEvent.type(screen.getByRole("heading", { level: 1 }), " again")
+    await waitFor(
+      () => {
+        expect(makeRequest).toHaveBeenCalledWith(
+          expect.objectContaining({
+            method: "patch",
+            url: urls.websiteContent.details(created.id),
+          }),
+        )
+      },
+      { timeout: 12000 },
+    )
+
+    const posts = makeRequest.mock.calls.filter(
+      (call) => call[0]?.method === "post",
+    )
+    expect(posts).toHaveLength(1)
+  }, 30000)
+
+  test("an autosave of an existing draft asks for no navigation", async () => {
+    const onSave = jest.fn()
+    const user = factories.user.user({
+      is_authenticated: true,
+      is_article_editor: true,
+    })
+    setMockResponse.get(urls.userMe.get(), user)
+    const article = factories.websiteContent.websiteContent({
+      content,
+      is_published: false,
+    })
+    setMockResponse.get(urls.websiteContent.details(article.id), article)
+    setMockResponse.patch(urls.websiteContent.details(article.id), article)
+
+    renderWithProviders(
+      <ArticleEditor
+        article={article}
+        onSave={onSave}
+        autosaveDelayMs={AUTOSAVE_DELAY_MS}
+      />,
+      { user },
+    )
+
+    await userEvent.type(
+      await screen.findByRole("heading", { level: 1 }),
+      " edited",
+    )
+    await waitFor(
+      () => {
+        expect(makeRequest).toHaveBeenCalledWith(
+          expect.objectContaining({ method: "patch" }),
+        )
+      },
+      { timeout: 6000 },
+    )
+
+    /**
+     * `onSave` is how the caller learns to navigate, and a draft that already
+     * exists has not moved. Left to fire, every autosave would ask the page to
+     * push the route it is already on.
+     */
+    expect(onSave).not.toHaveBeenCalled()
+  }, 15000)
+
+  test("the indicator stops saying Saved as soon as typing resumes", async () => {
+    const { article } = renderArticleEditor({
+      autosaveDelayMs: AUTOSAVE_DELAY_MS,
+    })
+    setMockResponse.patch(urls.websiteContent.details(article.id), article)
+    const heading = await screen.findByRole("heading", { level: 1 })
+
+    await userEvent.type(heading, " edited")
+    await screen.findByText("Saved", {}, { timeout: 6000 })
+
+    /* The next keystroke is not saved, so the bar must stop claiming it is.
+       Re-queried: the node from before the save has been replaced. */
+    await userEvent.type(screen.getByRole("heading", { level: 1 }), "!")
+
+    expect(screen.queryByText("Saved")).toBe(null)
+  }, 15000)
+
+  test("a settings save is not overtaken by an autosave in flight", async () => {
+    const topics = factories.learningResources.topics({ count: 1 })
+    const [topic] = topics.results
+    setMockResponse.get(urls.topics.list({ limit: 1000 }), topics)
+    const { article } = renderArticleEditor({
+      autosaveDelayMs: AUTOSAVE_DELAY_MS,
+    })
+
+    let contentWriteFinished = false
+    let settingsSawContentWriteFinished: boolean | null = null
+    /**
+     * The content write carries `topics` as they were when it started, so it
+     * is slow here on purpose: still open while the drawer saves new ones.
+     */
+    setMockResponse.patch(
+      urls.websiteContent.details(article.id),
+      () =>
+        new Promise((resolve) =>
+          setTimeout(() => {
+            contentWriteFinished = true
+            resolve(article)
+          }, 3000),
+        ),
+      { requestBody: expect.objectContaining({ is_published: false }) },
+    )
+    /* The settings write, which sends topics and nothing else. */
+    setMockResponse.patch(
+      urls.websiteContent.details(article.id),
+      () => {
+        settingsSawContentWriteFinished = contentWriteFinished
+        return article
+      },
+      {
+        requestBody: expect.not.objectContaining({
+          is_published: expect.anything(),
+        }),
+      },
+    )
+
+    await userEvent.type(
+      await screen.findByRole("heading", { level: 1 }),
+      " edited",
+    )
+    await waitFor(
+      () => {
+        expect(makeRequest).toHaveBeenCalledWith(
+          expect.objectContaining({
+            method: "patch",
+            body: expect.objectContaining({ is_published: false }),
+          }),
+        )
+      },
+      { timeout: 12000 },
+    )
+
+    // Pick a topic while that write is still open.
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Settings" }),
+    )
+    await userEvent.click(await screen.findByLabelText("Topic"))
+    await userEvent.click(
+      await screen.findByRole("option", { name: topic.name }),
+    )
+    await userEvent.click(screen.getByRole("button", { name: "Add" }))
+    await userEvent.click(screen.getByRole("button", { name: "Save Settings" }))
+
+    await waitFor(
+      () => expect(settingsSawContentWriteFinished).not.toBe(null),
+      { timeout: 12000 },
+    )
+
+    /**
+     * Sent only once the content write had finished. Overlapping, the content
+     * write's older topic list could be the one the server stored last, and
+     * the editor's new selection would vanish with nothing to say so.
+     */
+    expect(settingsSawContentWriteFinished).toBe(true)
+  }, 30000)
+
+  test("a publish waits for the draft save already in flight", async () => {
+    const { article } = renderArticleEditor({
+      topics: [7],
+      autosaveDelayMs: AUTOSAVE_DELAY_MS,
+    })
+    /**
+     * A slow draft write, so it is genuinely still running when the publish is
+     * confirmed -- which is the only way the two can interleave.
+     */
+    setMockResponse.patch(
+      urls.websiteContent.details(article.id),
+      new Promise((resolve) => setTimeout(() => resolve(article), 800)),
+      { requestBody: expect.objectContaining({ is_published: false }) },
+    )
+    setMockResponse.patch(
+      urls.websiteContent.details(article.id),
+      { ...article, is_published: true },
+      { requestBody: expect.objectContaining({ is_published: true }) },
+    )
+
+    await userEvent.type(
+      await screen.findByRole("heading", { level: 1 }),
+      " edited",
+    )
+    // Wait for the draft write to start, then publish while it is in flight.
+    await waitFor(
+      () => {
+        expect(makeRequest).toHaveBeenCalledWith(
+          expect.objectContaining({
+            method: "patch",
+            body: expect.objectContaining({ is_published: false }),
+          }),
+        )
+      },
+      { timeout: 6000 },
+    )
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Publish" }),
+    )
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Yes, Publish article" }),
+    )
+
+    await waitFor(
+      () => {
+        expect(makeRequest).toHaveBeenCalledWith(
+          expect.objectContaining({
+            method: "patch",
+            body: expect.objectContaining({ is_published: true }),
+          }),
+        )
+      },
+      { timeout: 8000 },
+    )
+
+    /**
+     * The publish is the last write. Unqueued it could be sent while the draft
+     * PATCH was still open, and whichever the server handled last would decide
+     * whether the item ended up public -- with the dialog reporting success
+     * either way.
+     */
+    // Settled before teardown, so nothing updates after the test ends.
+    await waitFor(() => expect(screen.queryByRole("dialog")).toBe(null))
+
+    const bodies = makeRequest.mock.calls
+      .filter((call) => call[0]?.method === "patch")
+      // `body` is deliberately `unknown` in the request harness.
+      .map((call) => (call[0].body as { is_published?: boolean }).is_published)
+    expect(bodies).toEqual([false, true])
+  }, 25000)
+
+  test("a published article is never saved behind the author's back", async () => {
+    const { article } = renderArticleEditor({
+      isPublished: true,
+      topics: [7],
+      autosaveDelayMs: AUTOSAVE_DELAY_MS,
+    })
+    setMockResponse.patch(urls.websiteContent.details(article.id), article)
+
+    await userEvent.type(
+      await screen.findByRole("heading", { level: 1 }),
+      " edited",
+    )
+    await new Promise((resolve) => setTimeout(resolve, 3500))
+
+    /* Edits to something public go live only when Publish is pressed. */
+    expect(makeRequest).not.toHaveBeenCalledWith(
+      expect.objectContaining({ method: "patch" }),
+    )
+  }, 15000)
+
+  test("the indicator is a live region before it has anything to say", async () => {
+    renderArticleEditor()
+
+    /**
+     * Mounted empty, ahead of the first message. A live region inserted in the
+     * same paint as its content is routinely not announced at all, and the
+     * first message -- that the work is being saved -- is the one that matters.
+     */
+    const region = await screen.findByRole("status")
+    expect(region).toBeEmptyDOMElement()
+  })
+
+  test("the control bar reports the save", async () => {
+    const { article } = renderArticleEditor({
+      autosaveDelayMs: AUTOSAVE_DELAY_MS,
+    })
+    setMockResponse.patch(urls.websiteContent.details(article.id), article)
+
+    // Nothing is claimed before there is anything to save.
+    expect(screen.queryByText("Saved")).toBe(null)
+
+    await userEvent.type(
+      await screen.findByRole("heading", { level: 1 }),
+      " edited",
+    )
+
+    await screen.findByText("Saved", {}, { timeout: 6000 })
+  }, 15000)
+})
+
 describe("ArticleEditor edit-mode control bar layout", () => {
   test("stacks the actions above the formatting controls", async () => {
     renderArticleEditor()
 
     const publish = await screen.findByRole("button", {
-      name: "Publish Article",
+      name: "Publish",
     })
     const undo = screen.getByRole("button", { name: "Undo" })
     const bar = screen.getByRole("toolbar")
@@ -564,5 +976,33 @@ describe("ArticleEditor edit-mode control bar layout", () => {
     const [actionRow, formattingRow] = Array.from(bar.children)
     expect(actionRow).toContainElement(publish)
     expect(formattingRow).toContainElement(undo)
+  })
+
+  test("puts the status at one end and the actions at the other", async () => {
+    renderArticleEditor()
+
+    const publish = await screen.findByRole("button", {
+      name: "Publish",
+    })
+    const settings = screen.getByRole("button", { name: "Settings" })
+    const status = screen.getByText(/Status:/)
+
+    // The status leads the row; the actions follow it.
+    expect(
+      status.compareDocumentPosition(publish) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy()
+    // Settings sits immediately after Publish, as the design pairs them.
+    expect(publish.nextElementSibling).toBe(settings)
+  })
+
+  test("the settings control is the icon alone", async () => {
+    renderArticleEditor()
+
+    const settings = await screen.findByRole("button", { name: "Settings" })
+
+    /* No label of its own, so the name has to come from `aria-label`. */
+    expect(settings).toHaveTextContent("")
+    expect(settings.querySelector("svg")).toBeInTheDocument()
   })
 })

@@ -1759,6 +1759,18 @@ def test_sync_website_content_survives_an_unreachable_broker(mocker):
     tasks.sync_website_content_learning_resource.delay(content.id)
 
 
+def test_unpublish_website_content_task_retries():
+    """
+    The removal task retries, which is what the callers that hand off to it
+    depend on: the inline removal gives up its work to this one, so a
+    transient database or search error here must not end the attempt.
+    """
+    task = tasks.unpublish_website_content_learning_resource_task
+
+    assert task.autoretry_for == (Exception,)
+    assert task.retry_kwargs["max_retries"] == 3
+
+
 def test_unpublish_website_content_learning_resource_task(mocker):
     """The removal task works from the id, so a deleted item still leaves the index."""
     mock_unpublish = mocker.patch(
