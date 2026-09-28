@@ -675,7 +675,13 @@ const ContractContent: React.FC<ContractContentProps> = ({
         contractName={b2bContract.name}
         onAccept={() => submitConsent(true)}
         onDecline={() => submitConsent(false)}
-        isSubmitting={consentMutation.isPending}
+        submitting={
+          consentMutation.isPending
+            ? consentMutation.variables?.DataConsentRequest.consented
+              ? "accept"
+              : "decline"
+            : null
+        }
         isError={consentMutation.isError}
       />
     </>

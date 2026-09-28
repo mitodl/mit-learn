@@ -32,7 +32,7 @@ type DataConsentDialogProps = {
   contractName: string
   onAccept: () => void
   onDecline: () => void
-  isSubmitting?: boolean
+  submitting?: "accept" | "decline" | null
   isError?: boolean
 }
 
@@ -41,10 +41,11 @@ const DataConsentDialog: React.FC<DataConsentDialogProps> = ({
   contractName,
   onAccept,
   onDecline,
-  isSubmitting = false,
+  submitting = null,
   isError = false,
 }) => {
   const [agreed, setAgreed] = React.useState(false)
+  const spinner = <LoadingSpinner color="inherit" loading size={16} />
 
   return (
     <Dialog
@@ -60,19 +61,16 @@ const DataConsentDialog: React.FC<DataConsentDialogProps> = ({
           <Button
             variant="secondary"
             onClick={onDecline}
-            disabled={isSubmitting}
+            disabled={submitting !== null}
+            endIcon={submitting === "decline" ? spinner : undefined}
           >
             Decline
           </Button>
           <Button
             variant="primary"
             onClick={onAccept}
-            disabled={!agreed || isSubmitting}
-            endIcon={
-              isSubmitting ? (
-                <LoadingSpinner color="inherit" loading size={16} />
-              ) : undefined
-            }
+            disabled={!agreed || submitting !== null}
+            endIcon={submitting === "accept" ? spinner : undefined}
           >
             Agree and continue
           </Button>

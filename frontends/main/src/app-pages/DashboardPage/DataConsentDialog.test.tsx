@@ -65,13 +65,16 @@ describe("DataConsentDialog", () => {
     expect(onAccept).not.toHaveBeenCalled()
   })
 
-  test("disables both actions while submitting", () => {
-    setup({ isSubmitting: true })
-    expect(screen.getByRole("button", { name: "Decline" })).toBeDisabled()
-    expect(
-      screen.getByRole("button", { name: "Agree and continue" }),
-    ).toBeDisabled()
-  })
+  test.each(["accept", "decline"] as const)(
+    "disables both actions while submitting %s",
+    (submitting) => {
+      setup({ submitting })
+      expect(screen.getByRole("button", { name: "Decline" })).toBeDisabled()
+      expect(
+        screen.getByRole("button", { name: "Agree and continue" }),
+      ).toBeDisabled()
+    },
+  )
 
   test("shows an error when the last request failed", () => {
     setup({ isError: true })
