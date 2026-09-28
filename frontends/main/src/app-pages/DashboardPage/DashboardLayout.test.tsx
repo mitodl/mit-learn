@@ -21,14 +21,14 @@ import {
 } from "@/common/urls"
 import { faker } from "@faker-js/faker/locale/en"
 import invariant from "tiny-invariant"
-import { OrganizationPage } from "@mitodl/mitxonline-api-axios/v2"
+import { UserOrganizationPage } from "@mitodl/mitxonline-api-axios/v2"
 
 jest.mock("posthog-js/react")
 
 describe("DashboardLayout", () => {
   type SetupOptions = {
     initialUrl?: string
-    organizations?: OrganizationPage[]
+    organizations?: UserOrganizationPage[]
   }
   const setup = ({
     initialUrl = DASHBOARD_HOME,
