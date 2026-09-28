@@ -179,16 +179,14 @@ const DrawerChatDisplay = styled(AiChatDisplay)(({ theme }) => ({
         color: theme.custom.colors.red,
       },
     },
-    // Each recommended course renders as a heading with a numbered badge,
-    // followed by its description.
+    // Each recommended course renders as a heading followed by its
+    // description, without list numbers.
     ol: {
-      counterReset: "ai-recommendation",
       listStyle: "none",
       paddingInlineStart: 0,
       margin: "16px 0",
     },
     "ol > li": {
-      counterIncrement: "ai-recommendation",
       margin: "0 0 18px",
     },
     "ol > li strong": {
@@ -196,22 +194,6 @@ const DrawerChatDisplay = styled(AiChatDisplay)(({ theme }) => ({
       display: "block",
       marginBottom: "8px",
       color: theme.custom.colors.darkGray2,
-      "&::after": {
-        content: "counter(ai-recommendation)",
-        ...theme.typography.body4,
-        display: "inline-flex",
-        alignItems: "center",
-        justifyContent: "center",
-        minWidth: "16px",
-        height: "16px",
-        padding: "0 3px",
-        marginLeft: "8px",
-        verticalAlign: "text-bottom",
-        boxSizing: "border-box",
-        border: `1px solid ${theme.custom.colors.silverGrayLight}`,
-        borderRadius: "3px",
-        color: theme.custom.colors.darkGray1,
-      },
     },
     "ol > li strong + br": {
       display: "none",
