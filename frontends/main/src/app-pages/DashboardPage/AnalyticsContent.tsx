@@ -43,6 +43,7 @@ import ContractKpiCards from "./Analytics/ContractKpiCards"
 import CoursePerformanceTable from "./Analytics/CoursePerformanceTable"
 import EngagementTrendChart from "./Analytics/EngagementTrendChart"
 import { SUPPRESSED_LEGEND } from "./Analytics/format"
+import LearnerProgressCard from "./Analytics/LearnerProgressCard"
 import SectionHeader from "./Analytics/SectionHeader"
 import SectionTruncation from "./Analytics/SectionTruncation"
 
@@ -418,6 +419,25 @@ const AnalyticsContentInternal: React.FC<AnalyticsContentInternalProps> = ({
   })
 
   /**
+   * `learnerProgress` has no org-wide equivalent (see `analytics/types.ts`'s
+   * header comment and `ContractLearnersPage.tsx`'s), so this section only
+   * renders when a contract is in view — the same reason the "Learner
+   * analytics" header link above is hidden on the org-wide aggregate page.
+   * `limit: 1` asks for none of the underlying rows: only `total_count` and
+   * `completion_status_counts` are read, the same trick
+   * `ContractLearnersPage.tsx`'s own `totalQuery` uses.
+   */
+  const learnerProgress = useQuery({
+    ...analyticsContractQueries.learnerProgress(
+      orgUuid ?? "",
+      contractId ?? "",
+      { limit: 1 },
+    ),
+    enabled: analyticsAvailable && !!contractId,
+    placeholderData: keepPreviousData,
+  })
+
+  /**
    * The truncation footer for one section, or null when it is showing
    * everything. "Show all" asks for the whole result set in a single page,
    * bounded by what the API will serve — beyond that the message stands alone,
@@ -545,7 +565,7 @@ const AnalyticsContentInternal: React.FC<AnalyticsContentInternalProps> = ({
     )
   }
 
-  const failed = [utilization, trend, courses, content].some(
+  const failed = [utilization, trend, courses, content, learnerProgress].some(
     (query) => query.isError,
   )
 
@@ -577,6 +597,24 @@ const AnalyticsContentInternal: React.FC<AnalyticsContentInternalProps> = ({
         />
         {truncation(utilization, "utilization")}
       </Section>
+
+      {contractId ? (
+        <Section>
+          <SectionHeader
+            title="Learner progress"
+            description="Where this contract's learners stand across every enrollment."
+            asOf={learnerProgress.data?.as_of}
+            isLoading={learnerProgress.isPending}
+            isError={learnerProgress.isError}
+          />
+          <LearnerProgressCard
+            totalCount={learnerProgress.data?.total_count}
+            statusCounts={learnerProgress.data?.completion_status_counts}
+            isLoading={learnerProgress.isPending}
+            isError={learnerProgress.isError}
+          />
+        </Section>
+      ) : null}
 
       <Section>
         <SectionHeader

@@ -1,5 +1,6 @@
 import { faker } from "@faker-js/faker/locale/en"
 import type {
+  CompletionStatusCounts,
   ContentEngagementDepth,
   ContractContentEngagementDepth,
   ContractMonthlyEngagementTrend,
@@ -208,6 +209,27 @@ const withheldLearnerProgress = (
     ...overrides,
   })
 
+/**
+ * Tallies `data` by `completion_status`, the same default-from-rows approach
+ * `outcomes_withheld_count` above takes. A row with no status (withheld
+ * consent) is not counted here either — see the type's own header comment for
+ * why that's fine in every environment today.
+ */
+const completionStatusCounts = (
+  data: LearnerProgress[],
+): CompletionStatusCounts => {
+  const counts: CompletionStatusCounts = {
+    not_started: 0,
+    in_progress: 0,
+    passed: 0,
+    certified: 0,
+  }
+  for (const row of data) {
+    if (row.completion_status) counts[row.completion_status] += 1
+  }
+  return counts
+}
+
 const learnerProgressEnvelope = (
   data: LearnerProgress[],
   overrides: Partial<LearnerProgressResponse> = {},
@@ -216,11 +238,13 @@ const learnerProgressEnvelope = (
   as_of: "2026-07-01T04:00:00Z",
   total_count: data.length,
   outcomes_withheld_count: data.filter((row) => !row.outcomes_shared).length,
+  completion_status_counts: completionStatusCounts(data),
   data,
   ...overrides,
 })
 
 export {
+  completionStatusCounts,
   contentEngagementDepth,
   contractContentEngagementDepth,
   contractMonthlyEngagementTrend,

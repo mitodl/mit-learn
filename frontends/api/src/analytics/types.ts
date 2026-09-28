@@ -230,6 +230,15 @@ export type CompletionStatus =
  */
 export type CompletionStatusFilter = CompletionStatus | "unknown"
 
+/**
+ * Per-status counts across every enrollment the `learner-progress` endpoint
+ * matches, keyed by the same four values as {@link CompletionStatus}. Unlike
+ * the aggregate MV types above, this is not floored by k-anonymity (waived for
+ * this endpoint per mitodl/ol-analytics-api#58), so none of these are
+ * nullable and they always sum to `total_count`.
+ */
+export type CompletionStatusCounts = Record<CompletionStatus, number>
+
 export type LearnerProgressSort =
   | "full_name"
   | "email"
@@ -257,5 +266,6 @@ export type LearnerProgressResponse = {
   as_of: string | null
   total_count: number
   outcomes_withheld_count: number
+  completion_status_counts: CompletionStatusCounts
   data: LearnerProgress[]
 }

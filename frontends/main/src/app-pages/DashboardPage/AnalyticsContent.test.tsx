@@ -144,6 +144,21 @@ const setContractAnalyticsResponses = (
       { as_of: AS_OF },
     ),
   )
+  setMockResponse.get(
+    analyticsUrls.contracts.learnerProgress(ORG_UUID, contractId, {
+      limit: 1,
+    }),
+    analyticsFactories.learnerProgressEnvelope([], {
+      as_of: AS_OF,
+      total_count: 40,
+      completion_status_counts: {
+        not_started: 5,
+        in_progress: 15,
+        passed: 12,
+        certified: 8,
+      },
+    }),
+  )
 }
 
 describe("AnalyticsContent", () => {
@@ -920,9 +935,10 @@ describe("AnalyticsContent, contract-scoped", () => {
     )
   })
 
-  test("hides 'Learner analytics' on the org-wide aggregate page", async () => {
-    // learner-progress is contract-scoped only, so there is nowhere for this
-    // button to point without a contract in view.
+  test("hides 'Learner analytics' and the Learner progress section on the org-wide aggregate page", async () => {
+    // learner-progress is contract-scoped only, so there is nowhere for the
+    // link to point, and no data for the section to show, without a contract
+    // in view.
     const org = orgWithUuid()
     setManagerOrgs([org])
     setAnalyticsResponses()
@@ -934,6 +950,96 @@ describe("AnalyticsContent, contract-scoped", () => {
     expect(
       screen.queryByRole("link", { name: "Learner analytics" }),
     ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("heading", { name: "Learner progress" }),
+    ).not.toBeInTheDocument()
+  })
+
+  test("renders learner progress with its KPI cards and status distribution", async () => {
+    const contract = factories.contracts.contract()
+    const org = orgWithUuid({ contracts: [contract] })
+    setManagerOrgs([org])
+    const contractId = String(contract.id)
+    setContractAnalyticsResponses(contractId)
+
+    renderWithProviders(
+      <AnalyticsContent
+        orgSlug={org.slug.replace(/^org-/, "")}
+        contractSlug={contract.slug}
+      />,
+    )
+
+    await screen.findByRole("heading", { name: "Learner progress" })
+
+    const enrolled = await screen.findByRole("group", { name: "Enrolled" })
+    expect(within(enrolled).getByText("40")).toBeInTheDocument()
+
+    const notStarted = screen.getByRole("group", { name: "Not started" })
+    expect(within(notStarted).getByText("5")).toBeInTheDocument()
+
+    const inProgress = screen.getByRole("group", { name: "In progress" })
+    expect(within(inProgress).getByText("15")).toBeInTheDocument()
+
+    // passed (12) + certified (8) folded into one "Completed" tile.
+    const completed = screen.getByRole("group", { name: "Completed" })
+    expect(within(completed).getByText("20")).toBeInTheDocument()
+
+    // No real needs_attention aggregate exists yet — the tile must not
+    // appear at all rather than showing an invented number.
+    expect(
+      screen.queryByRole("group", { name: "Needs attention" }),
+    ).not.toBeInTheDocument()
+
+    const list = screen.getByRole("list", {
+      name: "Learner progress distribution",
+    })
+    expect(within(list).getAllByRole("listitem")).toHaveLength(3)
+    expect(within(list).getByText("Not started")).toBeInTheDocument()
+    expect(within(list).getByText("5")).toBeInTheDocument()
+    expect(within(list).getByText("In progress")).toBeInTheDocument()
+    expect(within(list).getByText("15")).toBeInTheDocument()
+    expect(within(list).getByText("Completed")).toBeInTheDocument()
+    expect(within(list).getByText("20")).toBeInTheDocument()
+  })
+
+  /**
+   * Each row's color fill is the only decorative part; everything else
+   * (label, count, percent) is real text, so there's no separate hidden-chart
+   * pairing to verify the way `EngagementTrendChart` needs — but converting
+   * from a table to this list dropped the "Learners"/"Percent" columnheaders
+   * a screen reader used to announce per cell, so the bare numbers need their
+   * own context restored some other way.
+   */
+  test("gives each distribution value screen-reader context without changing what's shown", async () => {
+    const contract = factories.contracts.contract()
+    const org = orgWithUuid({ contracts: [contract] })
+    setManagerOrgs([org])
+    const contractId = String(contract.id)
+    setContractAnalyticsResponses(contractId)
+
+    renderWithProviders(
+      <AnalyticsContent
+        orgSlug={org.slug.replace(/^org-/, "")}
+        contractSlug={contract.slug}
+      />,
+    )
+
+    const list = await screen.findByRole("list", {
+      name: "Learner progress distribution",
+    })
+
+    // Every row's visible count carries a visually-hidden "learners," and
+    // its percent a visually-hidden "of total" — sighted users still see
+    // just the bare numbers (asserted above), but a screen reader gets the
+    // units a dropped columnheader used to supply.
+    expect(within(list).getAllByText("learners,")).toHaveLength(3)
+    expect(within(list).getAllByText("of total")).toHaveLength(3)
+
+    // Nothing in the list should be a stray focus stop: every value here is
+    // plain text or a decorative, non-interactive fill.
+    expect(within(list).queryByRole("button")).not.toBeInTheDocument()
+    expect(within(list).queryByRole("link")).not.toBeInTheDocument()
+    expect(within(list).queryByRole("textbox")).not.toBeInTheDocument()
   })
 
   test("hides the Manage seats button when the manager-dashboard flag is off", async () => {
