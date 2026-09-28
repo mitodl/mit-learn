@@ -356,7 +356,7 @@ interface AiSearchOverviewProps {
 const AiSearchOverview: React.FC<AiSearchOverviewProps> = ({
   searchParams,
 }) => {
-  const query = searchParams.get("q")?.trim()
+  const query = searchParams.get("q")?.trim() || undefined
   const enabled = useFeatureFlagEnabled(FeatureFlags.SearchAiOverview)
   const requestOpts = useMemo(() => getOverviewRequestOpts(), [])
 

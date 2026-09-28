@@ -60,6 +60,13 @@ describe("AiSearchOverview", () => {
     expect(append).not.toHaveBeenCalled()
   })
 
+  test("renders nothing when the search query is only whitespace", () => {
+    const append = setupChat()
+    renderWithProviders(<AiSearchOverview searchParams={params("   ")} />)
+    expect(screen.queryByText(/AI Overview/)).not.toBeInTheDocument()
+    expect(append).not.toHaveBeenCalled()
+  })
+
   test("sends a templated prompt once and shows a loading state", () => {
     const append = setupChat()
     renderWithProviders(
