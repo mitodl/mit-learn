@@ -163,3 +163,10 @@ STARROCKS_HOST = get_string("STARROCKS_HOST", None)
 STARROCKS_PORT = get_int("STARROCKS_PORT", 9030)
 STARROCKS_USER = get_string("STARROCKS_USER", None)
 STARROCKS_PASSWORD = get_string("STARROCKS_PASSWORD", None)
+# Where the integrations__learn__* views live. BaseWarehouseETLTask composes
+# these with each task's table_name, so QA can read ol_data_lake_qa instead of
+# production learner data. The defaults are the production pair.
+WAREHOUSE_CATALOG = get_string("WAREHOUSE_CATALOG", "ol_data_lake_production")
+WAREHOUSE_SCHEMA = get_string(
+    "WAREHOUSE_SCHEMA", "ol_warehouse_production_integrations"
+)
