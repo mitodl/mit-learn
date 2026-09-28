@@ -300,9 +300,12 @@ const Overview: React.FC<{ query: string }> = ({ query }) => {
   }, [append, query])
 
   // The overview only shows the first response; follow-ups happen in the drawer.
-  const response = messages.find((m) => m.role === "assistant")?.content
+  const responseMessage = messages.find((m) => m.role === "assistant")
+  const response = responseMessage?.content
 
-  if (status === "error") return null
+  if (status === "error" || responseMessage?.data?.error?.message?.trim()) {
+    return null
+  }
 
   if (!response) {
     return (
