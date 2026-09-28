@@ -140,9 +140,7 @@ const setupApis = ({
 const waitForCoursePageToSettle = async (pageTitle: string) => {
   await screen.findByRole("heading", { name: pageTitle })
   await waitFor(() => {
-    expect(
-      screen.queryAllByRole("button", { name: "Loading" }),
-    ).toHaveLength(0)
+    expect(screen.queryAllByRole("button", { name: "Loading" })).toHaveLength(0)
   })
 }
 
