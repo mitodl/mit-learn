@@ -2,10 +2,18 @@ import React from "react"
 import GoogleReCAPTCHA from "react-google-recaptcha"
 import styled from "@emotion/styled"
 
+const RECAPTCHA_MARGIN_VAR = "--recaptcha-margin"
+
 const ReCaptchaContainer = styled.div({
   display: "flex",
   justifyContent: "flex-start",
-  margin: "12px 0",
+  /**
+   * Reads from a CSS custom property so a consumer whose own layout already
+   * provides spacing (e.g. a flex form with a `gap`) can zero this out for
+   * just its subtree without needing a selector into this component's
+   * internals: `[RECAPTCHA_MARGIN_VAR]: 0` on any ancestor.
+   */
+  margin: `var(${RECAPTCHA_MARGIN_VAR}, 12px 0)`,
   "& .g_id_signIn": {
     maxWidth: "100%",
   },
@@ -61,5 +69,5 @@ const ReCaptcha = ({
   )
 }
 
-export { ReCaptcha }
+export { ReCaptcha, RECAPTCHA_MARGIN_VAR }
 export type { ReCaptchaProps }

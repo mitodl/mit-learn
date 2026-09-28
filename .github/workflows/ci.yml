@@ -98,6 +98,7 @@ jobs:
           MITOL_COOKIE_DOMAIN: localhost
           MITOL_COOKIE_NAME: cookie_monster
           UNSUBSCRIBE_SECRET_KEY: fake_unsubscribe_secret
+          WEBHOOK_SECRET: fake_webhook_secret
 
       - name: Upload coverage to CodeCov
         uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0

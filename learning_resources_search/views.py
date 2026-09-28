@@ -23,7 +23,6 @@ from learning_resources_search.api import (
     unsubscribe_user_from_percolate_query,
 )
 from learning_resources_search.constants import CONTENT_FILE_TYPE, LEARNING_RESOURCE
-from learning_resources_search.models import PercolateQuery
 from learning_resources_search.serializers import (
     ContentFileSearchRequestSerializer,
     ContentFileSearchResponseSerializer,
@@ -219,7 +218,7 @@ class UserSearchSubscriptionViewSet(mixins.ListModelMixin, viewsets.GenericViewS
         PercolateQuerySerializer: The percolate query
         """
 
-        percolate_query = get_object_or_404(PercolateQuery, id=pk)
+        percolate_query = get_object_or_404(self.get_queryset(), id=pk)
         unsubscribe_user_from_percolate_query(request.user, percolate_query)
         return Response(
             PercolateQuerySerializer(percolate_query).data["original_query"]

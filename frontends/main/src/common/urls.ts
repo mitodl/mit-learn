@@ -117,6 +117,17 @@ export const CONTRACT_ANALYTICS_VIEW =
   "/dashboard/organization/[orgSlug]/contract/[contractSlug]/analytics"
 export const contractAnalyticsView = (orgSlug: string, contractSlug: string) =>
   generatePath(CONTRACT_ANALYTICS_VIEW, { orgSlug, contractSlug })
+/**
+ * Outside `/dashboard` — and so without its sidebar — for the same reason as
+ * CONTRACT_ADMIN_VIEW: the learner table is too wide for the dashboard grid's
+ * content column, and this page reads as a console rather than a dashboard
+ * section. Contract-scoped only; the learner-progress endpoint has no org-wide
+ * form.
+ */
+export const CONTRACT_LEARNERS_VIEW =
+  "/organization/[orgSlug]/contract/[contractSlug]/learners"
+export const contractLearnersView = (orgSlug: string, contractSlug: string) =>
+  generatePath(CONTRACT_LEARNERS_VIEW, { orgSlug, contractSlug })
 export const PROGRAM_VIEW = "/dashboard/program/[id]"
 export const programView = (id: number) =>
   generatePath(PROGRAM_VIEW, { id: String(id) })

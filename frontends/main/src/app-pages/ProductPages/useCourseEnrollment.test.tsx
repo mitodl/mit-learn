@@ -391,7 +391,13 @@ describe("useCourseEnrollment — actions", () => {
     paidOption!.onClick!(fakeEvent)
 
     expect(trackStartEnrollment).toHaveBeenCalledWith(course.title)
-    expect(trackBeginCheckout).toHaveBeenCalledWith(course.title)
+    expect(trackBeginCheckout).toHaveBeenCalledWith(
+      expect.objectContaining({
+        courseName: course.title,
+        courseId: course.readable_id,
+        value: parseFloat(product.price),
+      }),
+    )
 
     await waitFor(() =>
       expect(makeRequest).toHaveBeenCalledWith(

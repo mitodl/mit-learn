@@ -25,6 +25,11 @@ import {
 import type { NewsFeedItem } from "api/v0"
 import { LocalDate } from "ol-utilities"
 import { linkifyText } from "@/common/utils"
+import {
+  CONTENT_TYPE_LABELS,
+  websiteContentIdFromFeedGuid,
+} from "@/common/website_content"
+import { WebsiteContentActionsMenu } from "@/page-components/WebsiteContentActionsMenu/WebsiteContentActionsMenu"
 import { NewsBanner } from "./NewsBanner"
 
 const PAGE_SIZE = 20
@@ -63,6 +68,7 @@ const FeaturedStorySection = styled.div`
 
 const MainStoryCard = styled.div`
   display: flex;
+  position: relative;
   border-bottom: 1px solid ${theme.custom.colors.lightGray2};
   background: ${theme.custom.colors.darkGray2};
   border-top: 4px solid #a31f34;
@@ -202,6 +208,7 @@ const MainStoryDate = styled(Typography)`
 const StoryCard = styled.div`
   display: flex;
   flex-direction: row;
+  position: relative;
   gap: 24px;
   background: white;
   border-radius: 8px;
@@ -234,6 +241,31 @@ const StoryCard = styled.div`
       border-bottom: 1px solid ${theme.custom.colors.lightGray2};
       box-shadow: none;
     }
+  }
+`
+
+/**
+ * Holds the three-dot menu over a card's top-right corner, where the design
+ * puts it: level with the top of the image, 16px inside the card.
+ *
+ * A sibling of the card's links rather than a child of one, so clicking the
+ * menu cannot navigate to the story.
+ */
+const MainStoryActions = styled.div`
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  z-index: 1;
+`
+
+/**
+ * The same slot on the regular card, which goes full-bleed on small screens:
+ * it drops its horizontal padding there, so the menu follows the content out
+ * to the card edge rather than staying 16px inside it.
+ */
+const RegularStoryActions = styled(MainStoryActions)`
+  ${theme.breakpoints.down("sm")} {
+    right: 0;
   }
 `
 
@@ -480,11 +512,44 @@ const NewsBannerStyled = styled(NewsBanner)<{ page: number }>(
   }),
 )
 
+/**
+ * A story's three-dot menu, or nothing where it does not apply.
+ *
+ * Both card layouts show the same menu under the same conditions, so the
+ * conditions live here and each card supplies its own positioned `slot`.
+ * Externally ingested stories have no WebsiteContent behind them, so there is
+ * nothing to unpublish. Presence in the feed already means the item is
+ * published -- unpublishing deletes the feed entry -- so unlike the article
+ * listing there is no published check to make. The menu itself hides from
+ * users who cannot edit content.
+ */
+const StoryActionsMenu: React.FC<{
+  item: NewsFeedItem
+  slot: React.ComponentType<{ children: React.ReactNode }>
+}> = ({ item, slot: Slot }) => {
+  const contentId = websiteContentIdFromFeedGuid(item.guid)
+
+  if (contentId === null) {
+    return null
+  }
+
+  return (
+    <Slot>
+      <WebsiteContentActionsMenu
+        contentId={contentId}
+        contentLabel={CONTENT_TYPE_LABELS.news}
+        title={item.title}
+      />
+    </Slot>
+  )
+}
+
 const MainStory: React.FC<{ item: NewsFeedItem }> = ({ item }) => {
   const [imageError, setImageError] = React.useState(false)
 
   return (
     <MainStoryCard>
+      <StoryActionsMenu item={item} slot={MainStoryActions} />
       <MainStoryImage>
         {item.image?.url && !imageError && (
           <Link href={item.url}>
@@ -523,6 +588,7 @@ const RegularStory: React.FC<{ item: NewsFeedItem }> = ({ item }) => {
 
   return (
     <StoryCard>
+      <StoryActionsMenu item={item} slot={RegularStoryActions} />
       <StoryContent>
         <RegularStoryTitleWrapper>
           <StoryTitle>
@@ -558,6 +624,7 @@ const RegularStory: React.FC<{ item: NewsFeedItem }> = ({ item }) => {
 const NewsListingPage: React.FC = () => {
   const searchParams = useAppSearchParams()
   const setSearchParams = useSetSearchParams()
+  /* News is edited behind the same permission as articles. */
   const page = parseInt(searchParams.get("page") ?? "1", 10)
 
   const { data: news, isLoading } = useNewsEventsList({

@@ -18,6 +18,11 @@ from authentication import api as auth_api
 from learning_resources.models import LearningResourceTopic
 from learning_resources.permissions import is_admin_user, is_learning_path_editor
 from learning_resources.serializers import LearningResourceTopicSerializer
+from main.constants import (
+    ALLOWED_HTML_ATTRIBUTES_WITH_LINKS,
+    ALLOWED_HTML_TAGS_WITH_LINKS,
+)
+from main.utils import clean_data
 from profiles.api import sync_email_optin_to_keycloak
 from profiles.models import (
     PROFILE_PROPS,
@@ -364,6 +369,35 @@ class ProgramCertificateSerializer(BaseSerializer):
         fields = "__all__"
 
 
+# The letter body is authored in MicroMasters' Wagtail CMS and rendered here
+# with dangerouslySetInnerHTML, so it is sanitized on the way out.
+#
+# Live letters use <a>, <b>, <br>, <p>, <ul> and <li>, and the letter page
+# styles h2-h4 inside its header and footer blocks, so headings are kept as
+# well -- sanitizing them away would silently drop authored content rather
+# than protect anyone. Links keep only href/title.
+PROGRAM_LETTER_ALLOWED_HTML_TAGS = ALLOWED_HTML_TAGS_WITH_LINKS | {
+    "h1",
+    "h2",
+    "h3",
+    "h4",
+    "h5",
+    "h6",
+}
+
+
+class SanitizedHTMLField(serializers.CharField):
+    """A CharField whose HTML is sanitized as it is serialized out."""
+
+    def to_representation(self, value) -> str:
+        """Strip any markup outside the program letter allowlist"""
+        return clean_data(
+            super().to_representation(value),
+            tags=PROGRAM_LETTER_ALLOWED_HTML_TAGS,
+            attributes=ALLOWED_HTML_ATTRIBUTES_WITH_LINKS,
+        )
+
+
 class ProgramLetterTemplateFieldSerializer(serializers.Serializer):
     """
     Seriializer for program letter template data which is configured in
@@ -375,11 +409,27 @@ class ProgramLetterTemplateFieldSerializer(serializers.Serializer):
     title = serializers.CharField()
     program_id = serializers.IntegerField()
     program_letter_footer = serializers.JSONField()
-    program_letter_footer_text = serializers.CharField()
-    program_letter_header_text = serializers.CharField()
-    program_letter_text = serializers.CharField()
+    program_letter_footer_text = SanitizedHTMLField()
+    program_letter_header_text = SanitizedHTMLField()
+    program_letter_text = SanitizedHTMLField()
     program_letter_logo = serializers.JSONField()
     program_letter_signatories = serializers.ListField(child=serializers.JSONField())
+
+
+class ProgramLetterCertificateSerializer(serializers.ModelSerializer):
+    """
+    The certificate fields the public program letter view needs.
+
+    ProgramLetterViewSet is unauthenticated -- anyone holding a letter's uuid
+    can read it -- so this exposes only what the letter itself already states:
+    who earned it and which program. The learner's email, postal address, date
+    of birth, gender and platform usernames stay behind the authenticated
+    certificate list, which uses ProgramCertificateSerializer.
+    """
+
+    class Meta:
+        model = ProgramCertificate
+        fields = ["user_full_name", "program_title"]
 
 
 class ProgramLetterSerializer(serializers.ModelSerializer):
@@ -391,13 +441,7 @@ class ProgramLetterSerializer(serializers.ModelSerializer):
 
     template_fields = serializers.SerializerMethodField()
 
-    certificate = ProgramCertificateSerializer()
-
-    def to_representation(self, instance):
-        """Attach the letter the nested certificate serializer needs."""
-        # The view 404s a letter whose certificate is missing, so this is safe.
-        instance.certificate.user_letter = instance
-        return super().to_representation(instance)
+    certificate = ProgramLetterCertificateSerializer()
 
     @extend_schema_field(ProgramLetterTemplateFieldSerializer())
     def get_template_fields(self, instance) -> dict:

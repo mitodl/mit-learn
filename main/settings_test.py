@@ -23,6 +23,7 @@ REQUIRED_SETTINGS = {
     "MITOL_COOKIE_DOMAIN": "od.fake.domain",
     "MITOL_APP_BASE_URL": "http:localhost:8063/",
     "UNSUBSCRIBE_SECRET_KEY": "fake_unsubscribe_secret_key",  # pragma: allowlist-secret
+    "WEBHOOK_SECRET": "fake_webhook_secret",  # pragma: allowlist-secret
 }
 
 
@@ -170,6 +171,18 @@ class TestSettings(TestCase):
             settings_vars = self.reload_settings()
             assert "SECURE_PROXY_SSL_HEADER" not in settings_vars
 
+    def test_session_cookie_secure(self):
+        """SESSION_COOKIE_SECURE is on by default and can be turned off for local dev"""
+        with mock.patch.dict("os.environ", REQUIRED_SETTINGS, clear=True):
+            assert self.reload_settings()["SESSION_COOKIE_SECURE"] is True
+
+        with mock.patch.dict(
+            "os.environ",
+            {**REQUIRED_SETTINGS, "SESSION_COOKIE_SECURE": "False"},
+            clear=True,
+        ):
+            assert self.reload_settings()["SESSION_COOKIE_SECURE"] is False
+
     def test_x_forwarded_proto_makes_request_secure(self):
         """Only X-Forwarded-Proto: https marks a request as secure"""
         factory = RequestFactory()
@@ -218,6 +231,21 @@ class TestSettings(TestCase):
                 pytest.raises(ImproperlyConfigured),
             ):
                 self.reload_settings()
+
+    def test_webhook_secret_rejects_legacy_default(self):
+        """
+        Assert that an exception is raised if WEBHOOK_SECRET is explicitly
+        set to the legacy hardcoded default, not just when it's unset
+        """
+        with (
+            mock.patch.dict(
+                "os.environ",
+                {**REQUIRED_SETTINGS, "WEBHOOK_SECRET": "please-change-this"},
+                clear=True,
+            ),
+            pytest.raises(ImproperlyConfigured),
+        ):
+            self.reload_settings()
 
     def test_server_side_cursors_disabled(self):
         """DISABLE_SERVER_SIDE_CURSORS should be true by default"""
@@ -333,30 +361,6 @@ class TestSettings(TestCase):
             settings_vars = self.reload_settings(module="main.settings_celery")
             assert settings_vars["CELERY_RESULT_EXPIRES"] == 120
 
-    def test_warehouse_etl_cutover_sources_empty_by_default(self):
-        """No warehouse-pull sources are cut over by default."""
-        with mock.patch.dict("os.environ", REQUIRED_SETTINGS, clear=True):
-            settings_vars = self.reload_settings(module="main.settings_celery")
-            assert settings_vars["WAREHOUSE_ETL_CUTOVER_SOURCES"] == []
-
-    def test_warehouse_etl_cutover_sources_rejects_unknown_source(self):
-        """A typo'd source name fails loudly rather than silently no-op'ing —
-        _API_ETL_BEAT_ENTRIES_BY_SOURCE starts empty (no source has landed a
-        warehouse-pull task yet), so any non-empty value is "unknown" today.
-        """
-        with (
-            mock.patch.dict(
-                "os.environ",
-                {
-                    **REQUIRED_SETTINGS,
-                    "WAREHOUSE_ETL_CUTOVER_SOURCES": "mitxonline",
-                },
-                clear=True,
-            ),
-            pytest.raises(ImproperlyConfigured, match="mitxonline"),
-        ):
-            self.reload_settings(module="main.settings_celery")
-
     def test_program_certificates_beat_entry_absent_without_starrocks_host(self):
         """The certificate-sync beat entry isn't registered when StarRocks
         isn't configured, so it can't fail on every tick in an environment
@@ -405,6 +409,26 @@ class TestSettings(TestCase):
             ]
             assert entry["task"] == "profiles.tasks.SyncProgramCertificatesTask"
             assert entry["kwargs"] == {"full_refresh": True}
+
+    def test_credential_metadata_beat_entry(self):
+        """
+        The credential metadata sweep is scheduled, and fills gaps only.
+
+        An overwriting sweep regenerates the whole MITx Online catalogue at
+        full LLM cost every day, so `overwrite` being False here is the thing
+        worth pinning. No `resource_types`, so the sweep covers every type
+        credential metadata is generated for.
+        """
+        with mock.patch.dict("os.environ", REQUIRED_SETTINGS, clear=True):
+            settings_vars = self.reload_settings(module="main.settings_celery")
+            entry = settings_vars["CELERY_BEAT_SCHEDULE"][
+                "generate-credential-metadata-every-1-days"
+            ]
+            assert (
+                entry["task"]
+                == "learning_resources.tasks.generate_all_credential_metadata"
+            )
+            assert entry["kwargs"] == {"overwrite": False}
 
     def _assert_s3_storage_config(
         self,

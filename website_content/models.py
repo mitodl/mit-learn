@@ -84,16 +84,19 @@ class WebsiteContent(TimestampedModel, SafeDeleteModel):
         default=WebsiteContentType.news.name,
     )
     cover_image = models.URLField(max_length=2083, blank=True, default="")
-    # Where the content editor's topic selections live. Nothing else derives
-    # them: `learning_resources` holds no reference to WebsiteContent, so this
-    # content is not projected into a LearningResource today.
+    # Where the content editor's topic selections live, for every content type
+    # the settings drawer can tag. For an article they are also the source of
+    # the topics on the LearningResource that publishing mirrors it into -- see
+    # `learning_resources.api.sync_website_content_to_learning_resource`, which
+    # is what makes an article findable by topic in search. News is not
+    # mirrored, so its selections are stored but nothing searches on them yet.
     #
     # Only the leaves the editor picked are stored. A subtopic already implies
     # its parent, so recording the parent alongside its own subtopic would be
     # redundant, and would leave a deliberately bare parent indistinguishable
-    # from an implied one. Should these later feed topic search or filtering,
-    # walking the ancestor chain belongs wherever that happens -- `load_topics`
-    # does it for ETL-loaded resources -- rather than being duplicated here.
+    # from an implied one. The ancestors search filters on are filled in on the
+    # mirrored resource by `add_parent_topics_to_learning_resource`, so they are
+    # derived there rather than duplicated here.
     topics = models.ManyToManyField(
         "learning_resources.LearningResourceTopic",
         blank=True,

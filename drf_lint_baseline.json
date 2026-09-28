@@ -37,10 +37,9 @@
   "learning_resources/serializers.py:965:20:ORM004",
   "learning_resources_search/serializers.py:661:4:ORM005",
   "learning_resources_search/serializers.py:663:4:ORM005",
-  "profiles/serializers.py:104:39:ORM006",
-  "profiles/serializers.py:104:60:ORM006",
-  "profiles/serializers.py:109:19:ORM006",
-  "profiles/serializers.py:250:45:ORM004",
-  "profiles/serializers.py:256:45:ORM004",
-  "profiles/serializers.py:399:8:ORM006"
+  "profiles/serializers.py:109:39:ORM006",
+  "profiles/serializers.py:109:60:ORM006",
+  "profiles/serializers.py:114:19:ORM006",
+  "profiles/serializers.py:255:45:ORM004",
+  "profiles/serializers.py:261:45:ORM004"
 ]

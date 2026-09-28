@@ -102,6 +102,19 @@ describe("Website Content CRUD", () => {
     expect(queryClient.invalidateQueries).toHaveBeenCalledWith({
       queryKey: websiteContentKeys.detail(article.id),
     })
+    expect(queryClient.invalidateQueries).toHaveBeenCalledWith({
+      queryKey: websiteContentKeys.websiteContentDetailRetrieve(
+        article.slug || String(article.id),
+      ),
+    })
+    /**
+     * The listings render the fields a patch can change -- title, summary and
+     * whether the item is published at all. Without this, a card unpublished
+     * from the listing stays on screen until something else refetches.
+     */
+    expect(queryClient.invalidateQueries).toHaveBeenCalledWith({
+      queryKey: websiteContentKeys.listRoot(),
+    })
   })
 
   test("useWebsiteContentDestroy calls correct API", async () => {

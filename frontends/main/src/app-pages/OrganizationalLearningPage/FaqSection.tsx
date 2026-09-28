@@ -89,7 +89,11 @@ const FaqRow: React.FC<{ index: number; question: string; answer: string }> = ({
   const panelId = `faq-panel-${index}`
 
   return (
-    <FaqItem expanded={expanded} onChange={() => setExpanded(!expanded)}>
+    <FaqItem
+      disableGutters
+      expanded={expanded}
+      onChange={() => setExpanded(!expanded)}
+    >
       <FaqSummary
         id={headerId}
         aria-controls={panelId}

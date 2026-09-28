@@ -24,6 +24,8 @@ const extractNewsExtraFields = (content: {
 
 interface NewsEditorProps {
   onSave?: (savedContent: WebsiteContent) => void
+  /** See `WebsiteContentEditor`; only tests pass it. */
+  autosaveDelayMs?: number
   readOnly?: boolean
   newsItem?: WebsiteContent
 }
@@ -33,7 +35,12 @@ interface NewsEditorProps {
  * Owns its own save mutations (websiteContent API) and passes them to
  * WebsiteContentEditor — keeping the generic shell decoupled from any specific API.
  */
-const NewsEditor = ({ onSave, readOnly, newsItem }: NewsEditorProps) => {
+const NewsEditor = ({
+  onSave,
+  autosaveDelayMs,
+  readOnly,
+  newsItem,
+}: NewsEditorProps) => {
   // News content type uses the websiteContent API.
   // A different content type would call different hooks here.
   // The editor renders its own inline error (WebsiteContentEditor `error`), so
@@ -53,6 +60,7 @@ const NewsEditor = ({ onSave, readOnly, newsItem }: NewsEditorProps) => {
       saveMutations={{ create: createMutation, update: updateMutation }}
       uploadImage={uploadImage}
       onSave={onSave}
+      autosaveDelayMs={autosaveDelayMs}
       readOnly={readOnly}
       contentItem={newsItem}
     />

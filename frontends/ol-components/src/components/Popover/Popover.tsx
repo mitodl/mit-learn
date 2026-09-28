@@ -135,7 +135,14 @@ const Content = styled.div(({ theme }) => ({
 
 type PopoverProps = Pick<
   PopperProps,
-  "anchorEl" | "placement" | "open" | "style"
+  | "anchorEl"
+  | "placement"
+  | "open"
+  | "style"
+  // The popover is a `dialog` when modal, and a dialog owes assistive tech a
+  // name; nothing inside a bare body of text can supply one.
+  | "aria-label"
+  | "aria-labelledby"
 > & {
   children?: React.ReactNode
   /**

@@ -48,6 +48,7 @@ from vector_search.utils import (
     embed_learning_resources,
     embed_topics,
     filter_existing_qdrant_points_by_ids,
+    qdrant_content_files,
     remove_qdrant_records,
     vector_point_id,
     vector_point_key,
@@ -131,10 +132,7 @@ def _queue_program_content_file_embedding_tasks(index_tasks, program_ids, overwr
         return
 
     contentfile_ids = (
-        ContentFile.objects.filter(
-            learning_resource_id__in=program_ids,
-            published=True,
-        )
+        qdrant_content_files(LearningResource.objects.filter(id__in=program_ids))
         .order_by("id")
         .values_list("id", flat=True)
     )
@@ -289,10 +287,8 @@ def start_embed_resources(self, indexes, skip_content_files, overwrite):  # noqa
                     # Embed published content files across all runs of the course
                     # (Qdrant retains all runs, not just best_run).
                     contentfiles = (
-                        ContentFile.objects.filter(published=True)
-                        .filter(
-                            Q(run__learning_resource=course)
-                            | Q(learning_resource=course)
+                        qdrant_content_files(
+                            LearningResource.objects.filter(id=course.id)
                         )
                         .order_by("id")
                         .values_list("id", flat=True)
@@ -393,10 +389,8 @@ def embed_learning_resources_by_id(self, ids, skip_content_files, overwrite):
                     # Embed published content files across all runs of the course
                     # (Qdrant retains all runs, not just best_run).
                     content_ids = (
-                        ContentFile.objects.filter(published=True)
-                        .filter(
-                            Q(run__learning_resource=course)
-                            | Q(learning_resource=course)
+                        qdrant_content_files(
+                            LearningResource.objects.filter(id=course.id)
                         )
                         .order_by("id")
                         .values_list("id", flat=True)
@@ -465,13 +459,8 @@ def embed_new_content_files(self):
     log.info("Running content file embedding task")
     delta = datetime.timedelta(minutes=settings.QDRANT_EMBEDDINGS_TASK_LOOKBACK_WINDOW)
     since = now_in_utc() - delta
-    new_content_files = (
-        ContentFile.objects.filter(
-            published=True,
-            created_on__gt=since,
-        )
-        .exclude(run__published=False)
-        .exclude(learning_resource__published=False, learning_resource__test_mode=False)
+    new_content_files = qdrant_content_files(LearningResource.objects.all()).filter(
+        created_on__gt=since
     )
 
     return _replace_with_finalized_chain(
@@ -635,11 +624,8 @@ def embeddings_healthcheck(self):
     # streamed with iterator(): there are far more content files than resources, and
     # only one batch of ids needs to be in memory at a time to build the signatures
     content_file_ids = (
-        ContentFile.objects.filter(published=True)
+        qdrant_content_files(resources)
         .exclude(Q(content="") | Q(content__isnull=True))
-        .filter(
-            Q(run__learning_resource__in=resources) | Q(learning_resource__in=resources)
-        )
         .order_by("id")
         .values_list("id", flat=True)
         .iterator(chunk_size=HEALTHCHECK_CONTENT_FILE_BATCH_SIZE)

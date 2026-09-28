@@ -10,6 +10,7 @@ import userEvent from "@testing-library/user-event"
 import { setMockResponse, factories, urls, makeRequest } from "api/test-utils"
 import type { JSONContent } from "@tiptap/react"
 import { WebsiteContentEditPage } from "./WebsiteContentEditPage"
+import { websiteContentEditView } from "@/common/urls"
 import { renderWithProviders } from "@/test-utils"
 
 /**
@@ -24,6 +25,37 @@ import { renderWithProviders } from "@/test-utils"
  * outside any act() scope.
  */
 jest.setTimeout(20000)
+
+/**
+ * The page navigates through `next-nprogress-bar`'s wrapper rather than
+ * `next/navigation` directly, so this is where a push can be observed --
+ * spying on the memory router does not see it. The wrapper's own same-URL
+ * check only suppresses the progress bar; it still pushes.
+ *
+ * Referenced lazily so the factory, which jest hoists above these imports,
+ * does not read `routerMocks` before it exists.
+ */
+jest.mock("next-nprogress-bar", () => ({
+  useRouter: () => ({
+    push: (...args: unknown[]) => routerMocks.push(...args),
+  }),
+}))
+
+const routerMocks = { push: jest.fn() }
+
+beforeEach(() => {
+  routerMocks.push.mockClear()
+})
+
+/**
+ * No draft saves itself while these tests work: this suite is about the
+ * drawer and the refetch, and a background write landing mid-interaction
+ * updates the toolbar outside `act`.
+ */
+const AUTOSAVE_OFF = 10 * 60 * 1000
+
+/** What production uses; the navigation test waits this out deliberately. */
+const AUTOSAVE_DELAY_MS = 2000
 
 const SERVER_TEXT = "Paragraph as the server has it"
 
@@ -56,7 +88,7 @@ const detailFetchCount = (id: number) =>
       String(call[0]?.url).includes(`/website_content/detail/${id}/`),
   ).length
 
-const setup = async (id: number) => {
+const setup = async (id: number, autosaveDelayMs = AUTOSAVE_OFF) => {
   const user = factories.user.user({
     is_authenticated: true,
     is_article_editor: true,
@@ -76,8 +108,12 @@ const setup = async (id: number) => {
   setMockResponse.get(urls.topics.list({ limit: 1000 }), topics)
 
   renderWithProviders(
-    <WebsiteContentEditPage type="article" idOrSlug={String(id)} />,
-    { user },
+    <WebsiteContentEditPage
+      type="article"
+      idOrSlug={String(id)}
+      autosaveDelayMs={autosaveDelayMs}
+    />,
+    { user, url: websiteContentEditView("article", id) },
   )
   await screen.findByTestId("editor")
   return { article, topic: topics.results[0] }
@@ -126,6 +162,34 @@ const saveTopicInDrawer = async (
  * select-all that would clear the node first -- so these match on a substring
  * of the resulting text rather than the whole of it.
  */
+describe("WebsiteContentEditPage navigation", () => {
+  test("a draft save does not re-navigate to the page it is already on", async () => {
+    const { article } = await setup(4242, AUTOSAVE_DELAY_MS)
+    setMockResponse.patch(urls.websiteContent.details(article.id), article)
+
+    /**
+     * A draft writes itself every couple of seconds, and this page reads its
+     * item through React Query -- which the mutation already invalidates. So
+     * pushing the route we are on buys nothing and costs a soft navigation
+     * and a run of the progress bar each time.
+     */
+    await userEvent.type(
+      await screen.findByRole("heading", { level: 1 }),
+      " edited",
+    )
+    await waitFor(
+      () => {
+        expect(makeRequest).toHaveBeenCalledWith(
+          expect.objectContaining({ method: "patch" }),
+        )
+      },
+      { timeout: 6000 },
+    )
+
+    expect(routerMocks.push).not.toHaveBeenCalled()
+  })
+})
+
 describe("WebsiteContentEditPage settings drawer", () => {
   test("saving the drawer keeps unsaved body edits", async () => {
     const { article, topic } = await setup(601)

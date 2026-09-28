@@ -32,6 +32,12 @@ type UseProgramEnrollmentOptions = {
   tracking: { placement: EnrollCtaPlacement }
   /** Program-as-course product pages use different button copy. */
   displayAsCourse?: boolean
+  /**
+   * Label the paid action "Upgrade to Full Program". For a learner holding a
+   * purchase credit, and for nothing else: financial aid keeps the offering's
+   * own wording. Off by default, so the page-header CTA keeps that wording too.
+   */
+  upgradeLabel?: boolean
   /** Behavioral: called when an unauthenticated user clicks an enroll action. */
   onRequireSignup?: (anchor: HTMLButtonElement) => void
 }
@@ -126,8 +132,9 @@ export const useProgramEnrollment = (
   // tracks are independent; labels depend on the offering and displayAsCourse.
   const options: EnrollAction[] = []
   if (offering === "paid" || offering === "both") {
-    const label =
-      offering === "both"
+    const label = opts?.upgradeLabel
+      ? "Upgrade to Full Program"
+      : offering === "both"
         ? "Earn Certificate"
         : opts?.displayAsCourse
           ? "Enroll"

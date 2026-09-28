@@ -50,6 +50,8 @@ const extractArticleExtraFields = (content: {
 
 interface ArticleEditorProps {
   onSave?: (article: WebsiteContent) => void
+  /** See `WebsiteContentEditor`; only tests pass it. */
+  autosaveDelayMs?: number
   readOnly?: boolean
   article?: WebsiteContent
 }
@@ -66,7 +68,12 @@ interface ArticleEditorProps {
  *
  * WebsiteContentEditor does not need to change at all.
  */
-const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
+const ArticleEditor = ({
+  onSave,
+  autosaveDelayMs,
+  readOnly,
+  article,
+}: ArticleEditorProps) => {
   // Swap these hooks when a dedicated article API exists.
   // The editor renders its own inline error (WebsiteContentEditor `error`), so
   // suppress the global error toast.
@@ -85,6 +92,7 @@ const ArticleEditor = ({ onSave, readOnly, article }: ArticleEditorProps) => {
       saveMutations={{ create: createMutation, update: updateMutation }}
       uploadImage={uploadImage}
       onSave={onSave}
+      autosaveDelayMs={autosaveDelayMs}
       readOnly={readOnly}
       contentItem={article}
       bannerViewer={ArticleBannerViewer}

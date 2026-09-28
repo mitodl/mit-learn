@@ -192,6 +192,38 @@ test("treats null hidden multiple checkbox defaults as empty array", async () =>
   )
 })
 
+test("does not render a fieldset for a group whose fields are all hidden", () => {
+  const form = {
+    id: "test-form",
+    field_groups: [
+      {
+        fields: [
+          {
+            name: "email",
+            label: "Email",
+            field_type: "email",
+            hidden: false,
+          },
+        ],
+      },
+      {
+        fields: [
+          {
+            name: "hs_context",
+            label: "Context",
+            field_type: "single_line_text",
+            hidden: true,
+          },
+        ],
+      },
+    ],
+  }
+
+  renderWithTheme(<HubspotForm form={form} />)
+
+  expect(screen.getAllByRole("group")).toHaveLength(1)
+})
+
 test("renders inline error text in an alert", () => {
   const form = {
     id: "test-form",

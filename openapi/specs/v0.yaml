@@ -161,10 +161,34 @@ paths:
         '429':
           description: Rate limit exceeded
   /api/v0/credential_metadata/:
+    get:
+      operationId: credential_metadata_retrieve
+      description: |-
+        Read or generate Open Badges credential metadata for a learning resource.
+
+        Limited to MITx Online courses.
+      summary: Get stored credential metadata
+      parameters:
+      - in: query
+        name: resource_readable_id
+        schema:
+          type: string
+        description: The readable id of the learning resource to fetch stored metadata
+          for
+        required: true
+      tags:
+      - credential_metadata
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CredentialMetadata'
+          description: ''
     post:
       operationId: credential_metadata_create
       description: |-
-        Generate Open Badges credential metadata for a learning resource.
+        Read or generate Open Badges credential metadata for a learning resource.
 
         Limited to MITx Online courses.
       summary: Generate credential metadata

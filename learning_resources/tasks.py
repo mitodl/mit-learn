@@ -14,7 +14,16 @@ from django.db import OperationalError
 from django.db.models import Q
 from django.utils import timezone
 
-from learning_resources.constants import LearningResourceType
+from learning_resources.api import (
+    sync_website_content_to_learning_resource,
+    unpublish_website_content_learning_resource,
+)
+from learning_resources.constants import LearningResourceType, PlatformType
+from learning_resources.credentials_store import (
+    active_credential_metadata_fields,
+    incomplete_credential_metadata_query,
+    missing_credential_metadata_fields,
+)
 from learning_resources.etl import loaders, ovs, pipelines, podcast, youtube
 from learning_resources.etl.canvas import (
     sync_canvas_archive,
@@ -29,12 +38,13 @@ from learning_resources.etl.edx_shared import (
     get_most_recent_course_archives,
     sync_edx_archive,
     sync_edx_course_files,
-    unpublish_staff_only_content_files,
+    unpublish_excluded_content_files,
 )
 from learning_resources.etl.loaders import (
     load_learning_materials,
     load_run_dependent_values,
 )
+from learning_resources.etl.ownership import may_write
 from learning_resources.etl.pipelines import ocw_courses_etl
 from learning_resources.etl.utils import (
     get_bucket_by_name,
@@ -59,7 +69,7 @@ from learning_resources_search.exceptions import RetryError
 from main.celery import app
 from main.constants import ISOFORMAT
 from main.decorators import cooldown_task
-from main.utils import chunks, now_in_utc
+from main.utils import chunks, now_in_utc, run_on_worker_loop
 
 log = logging.getLogger(__name__)
 
@@ -232,27 +242,38 @@ def _content_file_resource_ids(etl_source: str, learning_resource_ids):
 
 
 @app.task(acks_late=True, reject_on_worker_lost=True)
-def unpublish_staff_only_files(ids: list[int], etl_source: str, keys: list[str]):
-    """Unpublish staff-only content files for a chunk of courses"""
-    return unpublish_staff_only_content_files(etl_source, ids, keys)
+def unpublish_excluded_files(
+    ids: list[int], etl_source: str, keys: list[str], *, dry_run: bool = False
+):
+    """Unpublish unused content files for a chunk of courses, a row per run"""
+    return unpublish_excluded_content_files(etl_source, ids, keys, dry_run=dry_run)
 
 
 @app.task(bind=True)
-def unpublish_all_staff_only_files(
-    self, *, etl_source, chunk_size=None, learning_resource_ids=None
+def unpublish_all_excluded_files(
+    self, *, etl_source, chunk_size=None, learning_resource_ids=None, dry_run=False
 ):
-    """Fan out unpublish_staff_only_files over an edX source's current archives"""
+    """Fan out unpublish_excluded_files over an edX source's current archives"""
     if chunk_size is None:
         chunk_size = settings.LEARNING_COURSE_ITERATOR_CHUNK_SIZE
     archive_keys = get_most_recent_course_archives(etl_source)
+    # drops whole courses with nothing to unpublish; the runs of the ones that
+    # remain are guarded in unpublish_excluded_content_files, as a course keeps
+    # runs whose archives would otherwise be downloaded for no rows. Not applied
+    # to the ingestion fan-out, where a course with no content files yet is
+    # exactly the one that needs its archive read.
+    resource_ids = (
+        _content_file_resource_ids(etl_source, learning_resource_ids)
+        .filter(runs__content_files__isnull=False)
+        .distinct()
+    )
     return self.replace(
         celery.group(
             [
-                unpublish_staff_only_files.si(ids, etl_source, archive_keys)
-                for ids in chunks(
-                    _content_file_resource_ids(etl_source, learning_resource_ids),
-                    chunk_size=chunk_size,
+                unpublish_excluded_files.si(
+                    ids, etl_source, archive_keys, dry_run=dry_run
                 )
+                for ids in chunks(resource_ids, chunk_size=chunk_size)
             ]
         )
     )
@@ -588,6 +609,12 @@ def get_youtube_data(*, channel_ids=None):
     Returns:
         int: the number of channels queued
     """
+    if not may_write(
+        ETLSource.youtube.name,
+        [LearningResourceType.video_playlist.name, LearningResourceType.video.name],
+    ):
+        return 0
+
     missing = [
         setting
         for setting in ("YOUTUBE_CONFIG_URL", "YOUTUBE_DEVELOPER_KEY")
@@ -812,6 +839,8 @@ def sync_canvas_courses(canvas_course_ids=None, overwrite=False):  # noqa: FBT00
     Returns:
         int or None: the number of courses queued, or None if no archives were found
     """
+    if not may_write(ETLSource.canvas.name, LearningResourceType.course.name):
+        return None
 
     bucket = get_bucket_by_name(settings.COURSE_ARCHIVE_BUCKET_NAME)
     s3_prefix = get_s3_prefix_for_source(ETLSource.canvas.name)
@@ -1041,3 +1070,230 @@ def cleanup_deleted_content_files():
         error = "cleanup_deleted_content_files threw an error"
         log.exception(error)
         return error
+
+
+@app.task(acks_late=True, reject_on_worker_lost=True)
+def sync_website_content_learning_resource(content_id: int) -> None:
+    """
+    Mirror a published article into a LearningResource.
+
+    Articles only: news has the news feed instead. Re-checked here rather than
+    trusting the caller, so a direct call -- a backfill, say -- cannot mirror
+    something the plugin would have skipped.
+
+    Args:
+        content_id (int): id of the content item that was published or updated
+    """
+    from website_content.constants import WebsiteContentType
+    from website_content.models import WebsiteContent
+
+    content = WebsiteContent.objects.filter(id=content_id).first()
+    if (
+        content is None
+        # Unpublished or deleted between the hook firing and this running.
+        or not content.is_published
+        or content.content_type != WebsiteContentType.article.name
+    ):
+        log.info("Skipping learning resource sync for website content %s", content_id)
+        return
+    sync_website_content_to_learning_resource(content)
+
+    # The check above is a read, and the row can change under it: unpublishing
+    # runs in the request, so it can land between that read and this write and
+    # then have nothing queued behind it to notice -- leaving a published,
+    # indexed resource for content that is no longer public. Whoever writes
+    # last reconciles, so re-read the row and undo if it has moved on.
+    if not WebsiteContent.objects.filter(id=content_id, is_published=True).exists():
+        log.info(
+            "WebsiteContent %s was unpublished while syncing, undoing the sync",
+            content_id,
+        )
+        try:
+            unpublish_website_content_learning_resource(content_id)
+        except Exception:
+            # Any failure, not just a database one: the undo runs the search
+            # and vector hooks inline, which fail in other ways -- a broker
+            # that cannot be reached escapes `try_with_retry_as_task`, whose
+            # own fallback is an unguarded `.delay()`.
+            #
+            # This task does not retry, so raising would leave the resource
+            # unpublished in the database and still in the index with nothing
+            # behind it. Hand the undo to the task that does retry; its own
+            # republish guard makes a late run safe.
+            log.exception(
+                "Undoing the sync failed for content %s, queueing the removal",
+                content_id,
+            )
+            try:
+                unpublish_website_content_learning_resource_task.delay(content_id)
+            except Exception:
+                # Queueing needs the broker, which is exactly what may have
+                # sent us here. Nothing further to try: the row is already
+                # unpublished and the indexes are left to the next reindex.
+                log.exception("Could not queue the removal for content %s", content_id)
+
+
+@app.task(
+    acks_late=True,
+    reject_on_worker_lost=True,
+    # Retried, unlike the sync side: this task is where the inline removal
+    # hands off when it fails, and the callers that do so describe it as the
+    # one carrying the retries. Without a policy a transient database or
+    # search error failed it once and left the resource indexed.
+    autoretry_for=(Exception,),
+    retry_kwargs={"max_retries": 3, "countdown": 5},
+)
+def unpublish_website_content_learning_resource_task(content_id: int) -> None:
+    """
+    Take an unpublished WebsiteContent item's LearningResource out of search.
+
+    Takes an id rather than the instance because the content may since have
+    been deleted -- the resource still has to come out of the index.
+
+    Args:
+        content_id (int): id of the content item that was unpublished
+    """
+    from website_content.models import WebsiteContent
+
+    # Queued work can run late. If the item was republished in the meantime, a
+    # stale removal would unpublish the resource the republish just restored,
+    # so bail out -- the mirror of the sync task only acting on a published
+    # row. `objects` hides soft-deleted rows, so a row that is gone or
+    # soft-deleted still falls through and gets cleaned up.
+    if WebsiteContent.objects.filter(id=content_id, is_published=True).exists():
+        log.info(
+            "WebsiteContent %s is published again, skipping learning resource removal",
+            content_id,
+        )
+        return
+
+    unpublish_website_content_learning_resource(content_id)
+
+
+def credential_metadata_resources(*, overwrite: bool = False):
+    """
+    Resources the credential metadata sweep should generate for.
+
+    Args:
+        overwrite (bool): include resources that already have metadata
+
+    Returns:
+        QuerySet: the matching resources, empty when no configuration is
+            active
+    """
+    active_fields = active_credential_metadata_fields()
+    if not active_fields:
+        log.warning("No active CredentialMetadataConfiguration; nothing to generate")
+        return LearningResource.objects.none()
+
+    resources = (
+        LearningResource.objects.filter(Q(published=True) | Q(test_mode=True))
+        .filter(
+            resource_type=LearningResourceType.course.name,
+            etl_source=ETLSource.mitxonline.name,
+            platform=PlatformType.mitxonline.name,
+        )
+        .exclude(readable_id__in=load_course_blocklist())
+    )
+    if not overwrite:
+        resources = resources.filter(
+            incomplete_credential_metadata_query(active_fields)
+        )
+    return resources
+
+
+def credential_metadata_resource_ids(*, overwrite: bool = False):
+    """
+    Return the ids of the resources the sweep should generate for, newest first.
+
+    Args:
+        overwrite (bool): include resources that already have metadata
+
+    Returns:
+        QuerySet: the matching resource ids, newest first
+    """
+    return (
+        credential_metadata_resources(overwrite=overwrite)
+        .order_by("-id")
+        .values_list("id", flat=True)
+    )
+
+
+@app.task(acks_late=True, reject_on_worker_lost=True)
+def generate_credential_metadata_for_resource(
+    resource_id: int, *, overwrite: bool = False
+) -> bool:
+    """
+    Generate and store credential metadata for one resource.
+
+    Only the fields the resource is actually missing are generated, unless
+    `overwrite` asks for the row to be regenerated whole.
+
+    Args:
+        resource_id (int): the resource to generate for
+        overwrite (bool): regenerate even if the resource already has
+            complete metadata
+
+    Returns:
+        bool: whether anything was stored
+    """
+
+    from learning_resources.credentials import generate_and_save_credential_metadata
+
+    resource = (
+        credential_metadata_resources(overwrite=overwrite)
+        .filter(id=resource_id)
+        .first()
+    )
+    if not resource:
+        log.info(
+            "Skipping credential metadata for resource %s:"
+            " it no longer needs generating",
+            resource_id,
+        )
+        return False
+
+    fields = (
+        None
+        if overwrite
+        else missing_credential_metadata_fields(
+            resource, active_credential_metadata_fields()
+        )
+    )
+    metadata = run_on_worker_loop(
+        generate_and_save_credential_metadata(resource, fields=fields)
+    )
+    if metadata.errors:
+        log.warning(
+            "Credential metadata for %s is missing %s",
+            resource.readable_id,
+            ", ".join(sorted(metadata.errors)),
+        )
+    return bool(metadata.fields)
+
+
+@app.task
+def generate_all_credential_metadata(*, overwrite=False) -> int:
+    """
+    Queue credential metadata generation for MITx Online courses.
+
+    Args:
+        overwrite (bool): regenerate resources that already have metadata
+
+    Returns:
+        int: how many resources were queued. Zero is the normal case for the
+            daily non-overwriting sweep once the catalogue has been filled.
+    """
+    generation_tasks = [
+        generate_credential_metadata_for_resource.si(resource_id, overwrite=overwrite)
+        for resource_id in credential_metadata_resource_ids(overwrite=overwrite)
+    ]
+    if not generation_tasks:
+        log.info("No resources need credential metadata generation")
+        return 0
+    celery.group(generation_tasks).apply_async()
+    log.info(
+        "Queued credential metadata generation for %d resource(s)",
+        len(generation_tasks),
+    )
+    return len(generation_tasks)

@@ -39,6 +39,16 @@ class LearningResourceType(ExtendedEnum):
     document = "Document"
 
 
+# `resource_category` for editorial articles. They are `document` resources --
+# 0105 folded the `article` resource type into `document` -- distinguished by
+# this category, the same way the MIT Climate ETL models its own articles and
+# what the frontend keys its "View Article" call to action off.
+ARTICLE_RESOURCE_CATEGORY = "Article"
+
+# Prefix for the readable_id of a LearningResource mirroring a WebsiteContent
+# item, so editorial content is distinguishable from ETL'd documents.
+WEBSITE_CONTENT_READABLE_ID_PREFIX = "website_content:"
+
 LEARNING_MATERIAL_RESOURCE_TYPE_GROUP = "learning_material"
 RESOURCE_TYPE_GROUP_VALUES = [
     LearningResourceType.course.name,
