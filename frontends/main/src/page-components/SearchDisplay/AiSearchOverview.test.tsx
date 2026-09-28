@@ -67,7 +67,7 @@ describe("AiSearchOverview", () => {
     expect(append).not.toHaveBeenCalled()
   })
 
-  test("sends a templated prompt once and shows a loading state", () => {
+  test("sends the search query once and shows a loading state", () => {
     const append = setupChat()
     renderWithProviders(
       <AiSearchOverview searchParams={params("machine learning")} />,
@@ -76,27 +76,24 @@ describe("AiSearchOverview", () => {
     expect(append).toHaveBeenCalledTimes(1)
     expect(append.mock.calls[0][0]).toEqual({
       role: "user",
-      content: expect.stringContaining(
-        'if I search "machine learning". Start with "here are some courses"',
-      ),
+      content: "machine learning",
     })
   })
 
-  test("uses the prompt from NEXT_PUBLIC_SEARCH_AI_OVERVIEW_PROMPT", () => {
-    const original = process.env.NEXT_PUBLIC_SEARCH_AI_OVERVIEW_PROMPT
-    process.env.NEXT_PUBLIC_SEARCH_AI_OVERVIEW_PROMPT =
-      'Courses about "{query}"? Again: {query}'
+  test("uses the search summary endpoint", () => {
+    const original = process.env.NEXT_PUBLIC_LEARN_AI_SEARCH_SUMMARY_ENDPOINT
+    const url = "http://ai.test/http/search_summary_agent/"
+    process.env.NEXT_PUBLIC_LEARN_AI_SEARCH_SUMMARY_ENDPOINT = url
     try {
-      const append = setupChat()
+      setupChat()
       renderWithProviders(<AiSearchOverview searchParams={params("ml")} />)
-      expect(append.mock.calls[0][0].content).toBe(
-        'Courses about "ml"? Again: ml',
-      )
+      const { requestOpts } = mockAiChatProvider.mock.calls[0][0]
+      expect(requestOpts.apiUrl).toBe(url)
     } finally {
       if (original === undefined) {
-        delete process.env.NEXT_PUBLIC_SEARCH_AI_OVERVIEW_PROMPT
+        delete process.env.NEXT_PUBLIC_LEARN_AI_SEARCH_SUMMARY_ENDPOINT
       } else {
-        process.env.NEXT_PUBLIC_SEARCH_AI_OVERVIEW_PROMPT = original
+        process.env.NEXT_PUBLIC_LEARN_AI_SEARCH_SUMMARY_ENDPOINT = original
       }
     }
   })

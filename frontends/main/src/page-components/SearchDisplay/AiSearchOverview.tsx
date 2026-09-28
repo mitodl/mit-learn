@@ -26,25 +26,17 @@ import {
 
 const COLLAPSED_HEIGHT = 100
 
-// The drawer and card styles expect the numbered-list shape described at the
-// end of the prompt, so keep that instruction if the wording changes.
-// Overridable via NEXT_PUBLIC_SEARCH_AI_OVERVIEW_PROMPT.
-const DEFAULT_PROMPT =
-  'Give me courses I might find interesting if I search "{query}". Start with "here are some courses". Keep it brief. Offer three to five suggestions. Attempt to continue the conversation by asking for more details or clarifying what the user is looking. Format the courses as a numbered markdown list where each item is the bolded, linked course title followed by a line break and a one-sentence description.'
-
-const buildPrompt = (query: string) =>
-  (env("NEXT_PUBLIC_SEARCH_AI_OVERVIEW_PROMPT") || DEFAULT_PROMPT)
-    .split("{query}")
-    .join(query)
-
 const getOverviewRequestOpts = (): AiChatProps["requestOpts"] => {
   const requestOpts = getRecommendationRequestOpts()
   return {
     ...requestOpts,
-    // The recommendation bot keeps its thread in a cookie, so without this
-    // every search would pile onto one long conversation and the model's
-    // answers drift in tone and format. Start a fresh thread per search;
-    // follow-ups in the drawer continue it.
+    // learn-ai has a separate search summary agent with its own prompt, thread
+    // cookie and rate limit, so this doesn't touch the AskTIM drawer's thread.
+    apiUrl: env("NEXT_PUBLIC_LEARN_AI_SEARCH_SUMMARY_ENDPOINT")!,
+    // The agent keeps its thread in a cookie, so without this every search
+    // would pile onto one long conversation and the model's answers drift in
+    // tone and format. Start a fresh thread per search; follow-ups in the
+    // drawer continue it.
     transformBody: (messages, body) => ({
       ...(requestOpts.transformBody?.(messages, body) as object),
       ...(messages.length === 1 && { clear_history: true }),
@@ -159,7 +151,7 @@ const DrawerChatDisplay = styled(AiChatDisplay)(({ theme }) => ({
   "& .MitAiChat--messagesContainer": {
     paddingTop: 0,
   },
-  // Hide the templated prompt that seeded the conversation.
+  // Hide the search query that seeded the conversation.
   "& .MitAiChat--messageRow:first-of-type[data-chat-role='user']": {
     display: "none",
   },
@@ -278,7 +270,9 @@ const Overview: React.FC<{ query: string }> = ({ query }) => {
   useEffect(() => {
     if (requested.current) return
     requested.current = true
-    append({ role: "user", content: buildPrompt(query) })
+    // The search summary agent's prompt handles formatting, so just send the
+    // query itself.
+    append({ role: "user", content: query })
   }, [append, query])
 
   // The overview only shows the first response; follow-ups happen in the drawer.
