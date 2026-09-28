@@ -77,6 +77,21 @@ const SeoSection = styled(Section)({
   padding: "40px",
 })
 
+/**
+ * What `WebsiteContent.seo_title` holds -- a `CharField(max_length=255)`.
+ *
+ * Enforced here rather than left to the server: the drawer's save is fired and
+ * forgotten, so a rejected PATCH surfaces only as the editor's generic error
+ * banner, with nothing to say which field was too long or by how much.
+ */
+const SEO_TITLE_MAX = 255
+
+const Counter = styled.div(({ theme }) => ({
+  ...theme.typography.body3,
+  color: theme.custom.colors.silverGrayDark,
+  textAlign: "right",
+}))
+
 const SectionHeading = styled.div({
   display: "flex",
   flexDirection: "column",
@@ -546,14 +561,26 @@ const ArticleSettingsDrawer = ({
                 understand and display your {contentLabel.toLowerCase()}.
               </Typography>
             </SectionHeading>
-            <TextField
-              name="seo_title"
-              label="SEO Title"
-              fullWidth
-              placeholder="Enter a title for search results"
-              value={seoTitle}
-              onChange={(event) => setSeoTitle(event.target.value)}
-            />
+            <div>
+              <TextField
+                name="seo_title"
+                label="SEO Title"
+                fullWidth
+                placeholder="Enter a title for search results"
+                /* The limit belongs in the description, not only in the
+                   counter: otherwise it is discoverable only by being cut off
+                   at it. */
+                helpText={`Up to ${SEO_TITLE_MAX} characters.`}
+                inputProps={{ maxLength: SEO_TITLE_MAX }}
+                value={seoTitle}
+                onChange={(event) => setSeoTitle(event.target.value)}
+              />
+              {/* Announced only when it settles, so it does not interrupt on
+                  every keystroke. */}
+              <Counter aria-live="polite">
+                {`${seoTitle.length} / ${SEO_TITLE_MAX} characters`}
+              </Counter>
+            </div>
             <TextField
               name="seo_description"
               label="SEO Description"

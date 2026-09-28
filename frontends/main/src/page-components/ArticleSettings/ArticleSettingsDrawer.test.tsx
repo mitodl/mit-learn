@@ -166,3 +166,33 @@ describe("ArticleSettingsDrawer saved values", () => {
     expect(onSave.mock.calls[0][0].topics).toEqual([subA.id])
   })
 })
+
+describe("ArticleSettingsDrawer SEO fields", () => {
+  /**
+   * `WebsiteContent.seo_title` is a `CharField(max_length=255)`, so anything
+   * longer is rejected by the server -- and the drawer's save is fired and
+   * forgotten, so that rejection reaches the editor only as a generic banner.
+   * The field stops it here instead.
+   */
+  test("the SEO title cannot be typed past what the server stores", async () => {
+    mockTopics()
+    const { onSave } = renderDrawer()
+
+    const field = await screen.findByLabelText("SEO Title")
+    expect(field).toHaveAttribute("maxLength", "255")
+
+    await userEvent.type(field, "x".repeat(260))
+    expect(field).toHaveValue("x".repeat(255))
+
+    await save()
+    expect(onSave.mock.calls[0][0].seoTitle).toHaveLength(255)
+  }, 30000)
+
+  test("the limit is stated, not left to be discovered", async () => {
+    mockTopics()
+    renderDrawer()
+
+    await screen.findByText("Up to 255 characters.")
+    await screen.findByText("0 / 255 characters")
+  })
+})
