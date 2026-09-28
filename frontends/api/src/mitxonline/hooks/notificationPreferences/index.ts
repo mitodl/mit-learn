@@ -33,7 +33,8 @@ const useNotificationPreferences = ({
  *
  * The response body is not enough to render from — the LMS fans a change to a
  * grouped type out to several types — so we re-read on success rather than
- * patching the cache.
+ * patching the cache. The invalidation promise is returned so that the
+ * mutation stays pending until that re-read lands, not just until the PUT does.
  */
 const useUpdateNotificationPreference = ({
   meta,
@@ -42,11 +43,10 @@ const useUpdateNotificationPreference = ({
   return useMutation({
     mutationFn: (update: NotificationPreferenceUpdate) =>
       mitxAxios.put(NOTIFICATION_PREFERENCES_URL, update),
-    onSuccess: () => {
+    onSuccess: () =>
       queryClient.invalidateQueries({
         queryKey: notificationPreferencesKeys.detail(),
-      })
-    },
+      }),
     meta,
   })
 }
