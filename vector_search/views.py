@@ -20,6 +20,7 @@ from vector_search.constants import (
     COLLECTION_PARAM_MAP,
     CONTENT_FILES_COLLECTION_NAME,
     CONTENT_FILES_RETRIEVE_PAYLOAD,
+    DEFAULT_EMPTY_QUERY_ORDER_BY,
     NULLABLE_ORDER_BY_KEYS,
     ORDER_BY_MISSING_TAIL_KEY,
     QDRANT_RESOURCE_PARAM_MAP,
@@ -707,7 +708,10 @@ class LearningResourcesVectorSearchView(QdrantView):
             hybrid_search = request_data.data.get("hybrid_search", False)
             limit = request_data.data.get("limit", 10)
             offset = request_data.data.get("offset", 0)
-            order_by = request_data.data.get("sortby")
+            # Featured resources lead an empty search, as they do in OpenSearch.
+            order_by = request_data.data.get("sortby") or (
+                None if query_text else DEFAULT_EMPTY_QUERY_ORDER_BY
+            )
             score_cutoff = request_data.data.get("score_cutoff")
 
             response = await self.async_vector_search(

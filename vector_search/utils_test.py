@@ -53,7 +53,7 @@ from vector_search.constants import (
     COMPLETENESS_PAYLOAD_KEY,
     CONTENT_FILES_COLLECTION_NAME,
     NEXT_START_DATE_PAYLOAD_KEY,
-    ORDER_BY_MISSING_DATETIME,
+    ORDER_BY_MISSING_VALUE,
     PROGRAM_SCORE_BOOST_NAME,
     QDRANT_CONTENT_FILE_INDEXES,
     QDRANT_CONTENT_FILE_PARAM_MAP,
@@ -3813,7 +3813,11 @@ def test_order_by_query_nullable_key_orders_by_formula(direction):
     )
 
     assert isinstance(query, models.FormulaQuery)
-    assert query.defaults == {"next_start_date": ORDER_BY_MISSING_DATETIME[direction]}
+    assert query.defaults == {
+        "next_start_date": ORDER_BY_MISSING_VALUE[models.PayloadSchemaType.DATETIME][
+            direction
+        ]
+    }
     if direction == models.Direction.DESC:
         # a higher score ranks first, so descending is the score's own direction
         assert query.formula == models.DatetimeKeyExpression(
@@ -3861,6 +3865,61 @@ def test_order_by_query_nullable_key_orders_missing_last(direction):
         prefetch=[models.Prefetch(query=vector, limit=10)],
         query=order_by_query(
             models.OrderBy(key="next_start_date", direction=direction),
+            RESOURCES_COLLECTION_NAME,
+        ),
+        limit=10,
+    ).points
+
+    assert [point.id for point in points] == (
+        [0, 1, 2] if direction == models.Direction.ASC else [1, 0, 2]
+    )
+
+
+@pytest.mark.parametrize("direction", [models.Direction.ASC, models.Direction.DESC])
+def test_order_by_query_featured_rank_orders_by_formula(direction):
+    """featured_rank is a nullable float, read straight off the payload"""
+    query = order_by_query(
+        models.OrderBy(key="featured_rank", direction=direction),
+        RESOURCES_COLLECTION_NAME,
+    )
+
+    assert isinstance(query, models.FormulaQuery)
+    assert query.defaults == {
+        "featured_rank": ORDER_BY_MISSING_VALUE[models.PayloadSchemaType.FLOAT][
+            direction
+        ]
+    }
+    if direction == models.Direction.DESC:
+        assert query.formula == "featured_rank"
+    else:
+        assert query.formula == models.NegExpression(neg="featured_rank")
+
+
+@pytest.mark.parametrize("direction", [models.Direction.ASC, models.Direction.DESC])
+def test_order_by_query_featured_rank_orders_missing_last(direction):
+    """Run the formula for real: resources that are not featured land last"""
+    vector = [0.1, 0.2]
+    client = QdrantClient(":memory:")
+    client.create_collection(
+        "test",
+        vectors_config=models.VectorParams(
+            size=len(vector), distance=models.Distance.COSINE
+        ),
+    )
+    client.upsert(
+        "test",
+        [
+            PointStruct(id=0, vector=vector, payload={"featured_rank": 0.3}),
+            PointStruct(id=1, vector=vector, payload={"featured_rank": 1.7}),
+            PointStruct(id=2, vector=vector, payload={}),
+        ],
+    )
+
+    points = client.query_points(
+        "test",
+        prefetch=[models.Prefetch(query=vector, limit=10)],
+        query=order_by_query(
+            models.OrderBy(key="featured_rank", direction=direction),
             RESOURCES_COLLECTION_NAME,
         ),
         limit=10,

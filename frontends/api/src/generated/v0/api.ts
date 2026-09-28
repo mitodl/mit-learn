@@ -7122,7 +7122,7 @@ export const VectorLearningResourcesSearchApiAxiosParamCreator = function (
      * @param {Array<VectorLearningResourcesSearchRetrieveResourceTypeGroupEnum>} [resource_type_group] The category of learning resource               * &#x60;course&#x60; - Course * &#x60;program&#x60; - Program * &#x60;learning_material&#x60; - Learning Material
      * @param {number} [score_cutoff] The minimum absolute score a result must have to be returned. Defaults to 0.0 when omitted, but the server clamps the effective cutoff to the minimum allowed for the selected search mode (dense or hybrid). This is only the backstop for a query that matched nothing; score_cutoff_ratio is what shapes a result set.
      * @param {number | null} [score_cutoff_ratio] Fraction of the query\&#39;s own best score a result must reach to be returned, applied after score_cutoff so the size of a result set follows how fast relevance falls off within the query. 0 disables the relative cutoff. Defaults to the server\&#39;s configured ratio for the selected search mode (dense or hybrid) when omitted.
-     * @param {VectorLearningResourcesSearchRetrieveSortbyEnum} [sortby] if the parameter starts with \&#39;-\&#39; the sort is in descending order  * &#x60;next_start_date&#x60; - next_start_date * &#x60;views&#x60; - views * &#x60;created_on&#x60; - created_on * &#x60;-next_start_date&#x60; - -next_start_date * &#x60;-views&#x60; - -views * &#x60;-created_on&#x60; - -created_on
+     * @param {VectorLearningResourcesSearchRetrieveSortbyEnum} [sortby] if the parameter starts with \&#39;-\&#39; the sort is in descending order  * &#x60;next_start_date&#x60; - next_start_date * &#x60;views&#x60; - views * &#x60;created_on&#x60; - created_on * &#x60;featured_rank&#x60; - featured_rank * &#x60;-next_start_date&#x60; - -next_start_date * &#x60;-views&#x60; - -views * &#x60;-created_on&#x60; - -created_on * &#x60;-featured_rank&#x60; - -featured_rank
      * @param {number | null} [staleness_horizon_years] Age in years at which a resource takes the full staleness penalty, with the penalty ramping linearly up to it. 0 disables the penalty. Defaults to the server\&#39;s configured horizon when omitted.
      * @param {number | null} [staleness_penalty] Fraction of its own score a resource gives up once it is at or beyond the staleness horizon, ramped linearly by age. Resources with an upcoming run are exempt. 0 disables the penalty. Defaults to the server\&#39;s configured weight when omitted.
      * @param {boolean | null} [title__isnull] Filter to learning resources where title is null/not null
@@ -7362,7 +7362,7 @@ export const VectorLearningResourcesSearchApiFp = function (
      * @param {Array<VectorLearningResourcesSearchRetrieveResourceTypeGroupEnum>} [resource_type_group] The category of learning resource               * &#x60;course&#x60; - Course * &#x60;program&#x60; - Program * &#x60;learning_material&#x60; - Learning Material
      * @param {number} [score_cutoff] The minimum absolute score a result must have to be returned. Defaults to 0.0 when omitted, but the server clamps the effective cutoff to the minimum allowed for the selected search mode (dense or hybrid). This is only the backstop for a query that matched nothing; score_cutoff_ratio is what shapes a result set.
      * @param {number | null} [score_cutoff_ratio] Fraction of the query\&#39;s own best score a result must reach to be returned, applied after score_cutoff so the size of a result set follows how fast relevance falls off within the query. 0 disables the relative cutoff. Defaults to the server\&#39;s configured ratio for the selected search mode (dense or hybrid) when omitted.
-     * @param {VectorLearningResourcesSearchRetrieveSortbyEnum} [sortby] if the parameter starts with \&#39;-\&#39; the sort is in descending order  * &#x60;next_start_date&#x60; - next_start_date * &#x60;views&#x60; - views * &#x60;created_on&#x60; - created_on * &#x60;-next_start_date&#x60; - -next_start_date * &#x60;-views&#x60; - -views * &#x60;-created_on&#x60; - -created_on
+     * @param {VectorLearningResourcesSearchRetrieveSortbyEnum} [sortby] if the parameter starts with \&#39;-\&#39; the sort is in descending order  * &#x60;next_start_date&#x60; - next_start_date * &#x60;views&#x60; - views * &#x60;created_on&#x60; - created_on * &#x60;featured_rank&#x60; - featured_rank * &#x60;-next_start_date&#x60; - -next_start_date * &#x60;-views&#x60; - -views * &#x60;-created_on&#x60; - -created_on * &#x60;-featured_rank&#x60; - -featured_rank
      * @param {number | null} [staleness_horizon_years] Age in years at which a resource takes the full staleness penalty, with the penalty ramping linearly up to it. 0 disables the penalty. Defaults to the server\&#39;s configured horizon when omitted.
      * @param {number | null} [staleness_penalty] Fraction of its own score a resource gives up once it is at or beyond the staleness horizon, ramped linearly by age. Resources with an upcoming run are exempt. 0 disables the penalty. Defaults to the server\&#39;s configured weight when omitted.
      * @param {boolean | null} [title__isnull] Filter to learning resources where title is null/not null
@@ -7643,7 +7643,7 @@ export interface VectorLearningResourcesSearchApiVectorLearningResourcesSearchRe
   readonly score_cutoff_ratio?: number | null
 
   /**
-   * if the parameter starts with \&#39;-\&#39; the sort is in descending order  * &#x60;next_start_date&#x60; - next_start_date * &#x60;views&#x60; - views * &#x60;created_on&#x60; - created_on * &#x60;-next_start_date&#x60; - -next_start_date * &#x60;-views&#x60; - -views * &#x60;-created_on&#x60; - -created_on
+   * if the parameter starts with \&#39;-\&#39; the sort is in descending order  * &#x60;next_start_date&#x60; - next_start_date * &#x60;views&#x60; - views * &#x60;created_on&#x60; - created_on * &#x60;featured_rank&#x60; - featured_rank * &#x60;-next_start_date&#x60; - -next_start_date * &#x60;-views&#x60; - -views * &#x60;-created_on&#x60; - -created_on * &#x60;-featured_rank&#x60; - -featured_rank
    */
   readonly sortby?: VectorLearningResourcesSearchRetrieveSortbyEnum
 
@@ -7881,9 +7881,11 @@ export const VectorLearningResourcesSearchRetrieveSortbyEnum = {
   NextStartDate: "next_start_date",
   Views: "views",
   CreatedOn: "created_on",
+  FeaturedRank: "featured_rank",
   NextStartDate2: "-next_start_date",
   Views2: "-views",
   CreatedOn2: "-created_on",
+  FeaturedRank2: "-featured_rank",
 } as const
 export type VectorLearningResourcesSearchRetrieveSortbyEnum =
   (typeof VectorLearningResourcesSearchRetrieveSortbyEnum)[keyof typeof VectorLearningResourcesSearchRetrieveSortbyEnum]

@@ -49,7 +49,7 @@ from vector_search.constants import (
     COURSE_NUMBER_INDEXING_ONLY_FIELDS,
     NEXT_START_DATE_PAYLOAD_KEY,
     NULLABLE_ORDER_BY_KEYS,
-    ORDER_BY_MISSING_DATETIME,
+    ORDER_BY_MISSING_VALUE,
     PROGRAM_SCORE_BOOST_NAME,
     QDRANT_CONTENT_FILE_INDEXES,
     QDRANT_CONTENT_FILE_PARAM_MAP,
@@ -2117,9 +2117,10 @@ def order_by_query(
     A plain OrderByQuery, unless the key is one a point can have no value for
     (see NULLABLE_ORDER_BY_KEYS), which order_by would drop rather than order
     last. Those are expressed as a rescoring formula instead: the score becomes
-    the datetime itself -- negated to sort ascending, since a higher score ranks
+    the value itself -- negated to sort ascending, since a higher score ranks
     first either way -- and `defaults` gives a point missing the key a value
-    beyond every real date, so it lands at the end with the rest of them.
+    beyond every real one (ORDER_BY_MISSING_VALUE), so it lands at the end with
+    the rest of them.
 
     Scores are 32-bit, so dates within a couple of minutes of each other can
     order as equals. Start dates are hours apart at the very least, and the
@@ -2135,16 +2136,21 @@ def order_by_query(
     if (
         order_by.key not in NULLABLE_ORDER_BY_KEYS
         # A nullable key of any other type would need its own sentinel value.
-        or schema != models.PayloadSchemaType.DATETIME
+        or schema not in ORDER_BY_MISSING_VALUE
     ):
         return models.OrderByQuery(order_by=order_by)
-    datetime_value = models.DatetimeKeyExpression(datetime_key=order_by.key)
+    value = (
+        models.DatetimeKeyExpression(datetime_key=order_by.key)
+        if schema == models.PayloadSchemaType.DATETIME
+        # A bare payload key reads a numeric value in a formula.
+        else order_by.key
+    )
     return models.FormulaQuery(
-        formula=datetime_value
+        formula=value
         if order_by.direction == models.Direction.DESC
-        else models.NegExpression(neg=datetime_value),
+        else models.NegExpression(neg=value),
         defaults={
-            order_by.key: ORDER_BY_MISSING_DATETIME[
+            order_by.key: ORDER_BY_MISSING_VALUE[schema][
                 order_by.direction or models.Direction.ASC
             ]
         },
