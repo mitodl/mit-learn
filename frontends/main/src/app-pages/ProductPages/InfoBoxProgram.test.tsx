@@ -12,6 +12,7 @@ import {
 } from "api/mitxonline-test-utils"
 import InfoBoxProgram from "./InfoBoxProgram"
 import { TestIds } from "./ProductSummary"
+import { makeProgram } from "./test-utils/userPricing"
 
 jest.mock("next-nprogress-bar", () => ({
   useRouter: () => ({ push: jest.fn() }),
@@ -26,7 +27,6 @@ jest.mock("@/common/analytics/gtm", () => ({
   trackProgramEnrolled: jest.fn(),
 }))
 
-const makeProgram = mitxFactories.programs.program
 const makeMode = mitxFactories.courses.enrollmentMode
 const makeProduct = mitxFactories.courses.product
 const makeProgramEnrollment = mitxFactories.enrollment.programEnrollmentV3

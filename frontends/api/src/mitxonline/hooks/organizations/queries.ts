@@ -4,29 +4,9 @@ import {
   OrganizationPage,
   ManagerContractDetail,
   PaginatedManagerEnrollmentCodeList,
-  B2bApiB2bOrganizationsRetrieveRequest,
   B2bApiB2bManagerOrganizationsContractsRetrieveRequest,
   B2bApiB2bManagerOrganizationsContractsCodesListRequest,
 } from "@mitodl/mitxonline-api-axios/v2"
-
-const organizationKeys = {
-  root: ["mitxonline", "organizations"],
-  organizationsRetrieve: (opts?: B2bApiB2bOrganizationsRetrieveRequest) => [
-    ...organizationKeys.root,
-    "retrieve",
-    opts,
-  ],
-}
-
-const organizationQueries = {
-  organizationsRetrieve: (opts: B2bApiB2bOrganizationsRetrieveRequest) =>
-    queryOptions({
-      queryKey: organizationKeys.organizationsRetrieve(opts),
-      queryFn: async (): Promise<OrganizationPage> => {
-        return b2bApi.b2bOrganizationsRetrieve(opts).then((res) => res.data)
-      },
-    }),
-}
 
 const managerOrganizationKeys = {
   list: () => ["mitxonline", "manager", "organizations", "list"] as const,
@@ -83,9 +63,4 @@ const managerOrganizationQueries = {
     }),
 }
 
-export {
-  organizationQueries,
-  organizationKeys,
-  managerOrganizationQueries,
-  managerOrganizationKeys,
-}
+export { managerOrganizationQueries, managerOrganizationKeys }

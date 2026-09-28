@@ -58,3 +58,20 @@ export const extractImageMetadata = (
     alt: attrs.caption || attrs.alt || "",
   }
 }
+
+/**
+ * The WebsiteContent id behind a news feed item, or null if it has none.
+ *
+ * The news feed mixes externally ingested items with website content that
+ * `WebsiteContentNewsPlugin` syncs into it, and only the latter can be
+ * unpublished from here. The feed carries no content id, so the link is the
+ * guid the sync writes -- see `website_content_feed_guid` in
+ * `news_events/etl/articles_news.py`, which is the convention's source of
+ * truth. Anything that does not match that shape is not ours to act on.
+ */
+export const websiteContentIdFromFeedGuid = (
+  guid: string | undefined,
+): number | null => {
+  const match = /^article-(\d+)$/.exec(guid ?? "")
+  return match ? Number(match[1]) : null
+}

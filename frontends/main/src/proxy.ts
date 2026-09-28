@@ -112,6 +112,12 @@ export function mitxonlineSurrogateKey(pathname: string): string | null {
  * next.config.js `headers()` runs at build time and cannot read env vars that
  * vary across environments (QA vs production). Proxy always runs on the
  * Node.js runtime, on every request, so the env read is always the live value.
+ *
+ * Never redirect or reject non-page requests here. The image optimizer
+ * fetches local images (/images/*, /_next/static/media/*) by routing an
+ * internal request through proxy with no Host or X-Forwarded-Proto header.
+ * An https redirect in the old middleware.ts broke every local image that
+ * way in Oct 2025 ("isn't a valid image ... received null").
  */
 export function proxy(request: NextRequest) {
   if (!isPageRoute(request.nextUrl.pathname)) {

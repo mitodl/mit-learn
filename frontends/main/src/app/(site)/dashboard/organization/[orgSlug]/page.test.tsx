@@ -21,7 +21,6 @@ useRouter.mockReturnValue({
 describe("Organization Page", () => {
   beforeEach(() => {
     mockReplace.mockClear()
-    setMockResponse.get(urls.contracts.contractsList(), [])
   })
 
   test("redirects to contract view with first contract when organization and contract exist", async () => {

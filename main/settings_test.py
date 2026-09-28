@@ -170,6 +170,18 @@ class TestSettings(TestCase):
             settings_vars = self.reload_settings()
             assert "SECURE_PROXY_SSL_HEADER" not in settings_vars
 
+    def test_session_cookie_secure(self):
+        """SESSION_COOKIE_SECURE is on by default and can be turned off for local dev"""
+        with mock.patch.dict("os.environ", REQUIRED_SETTINGS, clear=True):
+            assert self.reload_settings()["SESSION_COOKIE_SECURE"] is True
+
+        with mock.patch.dict(
+            "os.environ",
+            {**REQUIRED_SETTINGS, "SESSION_COOKIE_SECURE": "False"},
+            clear=True,
+        ):
+            assert self.reload_settings()["SESSION_COOKIE_SECURE"] is False
+
     def test_x_forwarded_proto_makes_request_secure(self):
         """Only X-Forwarded-Proto: https marks a request as secure"""
         factory = RequestFactory()
@@ -405,6 +417,26 @@ class TestSettings(TestCase):
             ]
             assert entry["task"] == "profiles.tasks.SyncProgramCertificatesTask"
             assert entry["kwargs"] == {"full_refresh": True}
+
+    def test_credential_metadata_beat_entry(self):
+        """
+        The credential metadata sweep is scheduled, and fills gaps only.
+
+        An overwriting sweep regenerates the whole MITx Online catalogue at
+        full LLM cost every day, so `overwrite` being False here is the thing
+        worth pinning. No `resource_types`, so the sweep covers every type
+        credential metadata is generated for.
+        """
+        with mock.patch.dict("os.environ", REQUIRED_SETTINGS, clear=True):
+            settings_vars = self.reload_settings(module="main.settings_celery")
+            entry = settings_vars["CELERY_BEAT_SCHEDULE"][
+                "generate-credential-metadata-every-1-days"
+            ]
+            assert (
+                entry["task"]
+                == "learning_resources.tasks.generate_all_credential_metadata"
+            )
+            assert entry["kwargs"] == {"overwrite": False}
 
     def _assert_s3_storage_config(
         self,

@@ -223,6 +223,10 @@ const programLetters = {
   details: (id: string) => `${getApiBaseUrl()}/api/v1/program_letters/${id}/`,
 }
 
+const programCertificates = {
+  list: () => `${getApiBaseUrl()}/api/v0/program_certificates/`,
+}
+
 const testimonials = {
   list: (params?: Paramsv0<TestimonialsApi, "testimonialsList">) =>
     `${getApiBaseUrl()}/api/v0/testimonials/${query(params)}`,
@@ -280,6 +284,7 @@ export {
   hubspot,
   search,
   userLists,
+  programCertificates,
   programLetters,
   channels,
   widgetLists,

@@ -1,7 +1,7 @@
 import { queryify } from "ol-test-utilities"
 import analyticsAxios from "../axios"
 import { B2B_DASHBOARD_ROOT } from "../clients"
-import type { AnalyticsPageParams } from "../types"
+import type { AnalyticsPageParams, LearnerProgressParams } from "../types"
 
 // Absolute, and read back from the configured axios instance, so the shared
 // request mock can tell analytics requests apart from Learn and MITx ones by
@@ -22,7 +22,7 @@ const contractResource = (
   organizationId: string,
   contractId: string,
   resource: string,
-  params?: AnalyticsPageParams,
+  params?: AnalyticsPageParams | LearnerProgressParams,
 ) =>
   `${getApiBaseUrl()}${B2B_DASHBOARD_ROOT}/organizations/${encodeURIComponent(
     organizationId,
@@ -68,6 +68,13 @@ const contracts = {
     params?: AnalyticsPageParams,
   ) =>
     contractResource(organizationId, contractId, "content-engagement", params),
+  // queryify explodes arrays into repeated bare keys, matching the client's
+  // `indexes: null` serializer.
+  learnerProgress: (
+    organizationId: string,
+    contractId: string,
+    params?: LearnerProgressParams,
+  ) => contractResource(organizationId, contractId, "learner-progress", params),
 }
 
 export { organizations, contracts }

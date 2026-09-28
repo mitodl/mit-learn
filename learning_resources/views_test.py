@@ -2,6 +2,7 @@
 
 import random
 from datetime import timedelta
+from urllib.parse import quote
 
 import pytest
 from django.conf import settings
@@ -2003,6 +2004,133 @@ def test_course_run_problems_endpoint(client, user_role, django_user_model):
             "detail": "Authentication credentials were not provided.",
             "error_type": "NotAuthenticated",
         }
+
+
+# Canvas course 39673 in production; its course code contains slashes.
+# See mitodl/hq#13384.
+CANVAS_SLASH_RUN_ID = "39673-21M.385 / 21M.585 / 6.4550+canvas"
+
+
+def _canvas_run(run_id):
+    """Create a published Canvas course run with the given run_id"""
+    return LearningResourceRunFactory.create(
+        run_id=run_id,
+        learning_resource=CourseFactory.create(
+            platform=PlatformType.canvas.name
+        ).learning_resource,
+    )
+
+
+def test_course_run_problems_list_with_slashes(client):
+    """The list endpoint reaches the view even when the run id contains slashes"""
+    run = _canvas_run(CANVAS_SLASH_RUN_ID)
+    TutorProblemFileFactory.create(
+        run=run, problem_title="Problem Set 1", type="problem"
+    )
+    TutorProblemFileFactory.create(
+        run=run, problem_title="Problem Set 2", type="problem"
+    )
+
+    resp = client.get(f"/api/v0/tutor/problems/{CANVAS_SLASH_RUN_ID}/")
+
+    assert resp.status_code == 200
+    assert resp.json() == {"problem_set_titles": ["Problem Set 1", "Problem Set 2"]}
+
+
+@pytest.mark.parametrize("problem_title", ["Problem Set 1", "Weird+canvas"])
+def test_course_run_problems_detail_with_slashes(
+    client, django_user_model, problem_title
+):
+    """
+    The detail endpoint resolves a slash-containing run id and the title,
+    including titles that themselves end in the +canvas suffix.
+    """
+    run = _canvas_run(CANVAS_SLASH_RUN_ID)
+    TutorProblemFileFactory.create(
+        run=run,
+        problem_title=problem_title,
+        type="problem",
+        content="problem content",
+        file_name="problem.txt",
+        file_extension=".txt",
+    )
+    client.force_login(
+        django_user_model.objects.create_superuser(
+            "tutoradmin", "tutoradmin@example.com", "pass"
+        )
+    )
+
+    # The run id's slashes stay literal so the route can match across them;
+    # the title is encoded, as any correct client must for "#" and "?".
+    resp = client.get(
+        f"/api/v0/tutor/problems/{CANVAS_SLASH_RUN_ID}/{quote(problem_title, safe='')}/"
+    )
+
+    assert resp.status_code == 200
+    assert resp.json()["problem_set_files"] == [
+        {
+            "file_name": "problem.txt",
+            "content": "problem content",
+            "file_extension": ".txt",
+        }
+    ]
+
+
+def test_course_run_problems_slash_run_id_detail_forbidden(client):
+    """
+    The slash-tolerant detail route carries the viewset's permissions, which
+    only the router applies to the @action declarations.
+    """
+    run = _canvas_run(CANVAS_SLASH_RUN_ID)
+    TutorProblemFileFactory.create(
+        run=run, problem_title="Problem Set 1", type="problem"
+    )
+
+    resp = client.get(f"/api/v0/tutor/problems/{CANVAS_SLASH_RUN_ID}/Problem Set 1/")
+    assert resp.status_code == 403
+
+
+@pytest.mark.parametrize(
+    "prefix", ["/api/v0/tutor/problems/", "/api/v0/tutor/problems//"]
+)
+def test_course_run_problems_slash_run_id_as_learn_ai_calls_it(client, prefix):
+    """
+    Reproduce learn-ai's own URL: PROBLEM_SET_URL ends in "/" and the caller
+    adds another, so the real request has a doubled slash and no trailing one.
+    The extra slash must not end up inside the captured run id -- that misses
+    the lookup and returns an empty list instead of the titles.
+    """
+    run = _canvas_run(CANVAS_SLASH_RUN_ID)
+    TutorProblemFileFactory.create(
+        run=run, problem_title="Problem Set 1", type="problem"
+    )
+
+    followed = client.get(f"{prefix}{CANVAS_SLASH_RUN_ID}", follow=True)
+    assert followed.status_code == 200
+    assert followed.json() == {"problem_set_titles": ["Problem Set 1"]}
+
+
+def test_course_run_problems_doubled_slash_detail(client, django_user_model):
+    """The detail route tolerates the same doubled slash."""
+    run = _canvas_run(CANVAS_SLASH_RUN_ID)
+    TutorProblemFileFactory.create(
+        run=run,
+        problem_title="Problem Set 1",
+        type="problem",
+        content="problem content",
+        file_name="problem.txt",
+        file_extension=".txt",
+    )
+    client.force_login(
+        django_user_model.objects.create_superuser(
+            "dblslash", "dblslash@example.com", "pass"
+        )
+    )
+
+    resp = client.get(f"/api/v0/tutor/problems//{CANVAS_SLASH_RUN_ID}/Problem Set 1/")
+
+    assert resp.status_code == 200
+    assert [f["file_name"] for f in resp.json()["problem_set_files"]] == ["problem.txt"]
 
 
 def test_resource_items_only_shows_published_runs(client, user):

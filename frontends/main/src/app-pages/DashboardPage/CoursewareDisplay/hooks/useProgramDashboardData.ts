@@ -5,7 +5,7 @@ import { coursesQueries } from "api/mitxonline-hooks/courses"
 import { programsQueries } from "api/mitxonline-hooks/programs"
 import type {
   CourseRunEnrollmentV3,
-  V2ProgramDisplayMode,
+  V2ProgramDisplayModeEnum,
 } from "@mitodl/mitxonline-api-axios/v2"
 import { getIdsFromReqTree } from "@/common/mitxonline"
 import {
@@ -21,7 +21,7 @@ export type ProgramDashboardData = {
   sections: RequirementSection[]
   programTitle: string | undefined
   programType: string | null | undefined
-  programDisplayMode: V2ProgramDisplayMode | null | undefined
+  programDisplayMode: V2ProgramDisplayModeEnum | null | undefined
   programCertificateUrl: string | null
   completedCount: number
   totalCount: number

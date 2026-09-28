@@ -180,4 +180,30 @@ describe("proxy", () => {
     const response = proxy(makeRequest("/courses/foo%0D%0AX-Injected%3A+yes"))
     expect(response.headers.get("Surrogate-Key")).toBe("html-pages")
   })
+
+  /**
+   * Regression: the image optimizer fetches local images by routing an
+   * internal request through proxy with no Host or X-Forwarded-Proto header.
+   * In Oct 2025 an https redirect in the old middleware.ts answered those with
+   * a 301, so every local image failed with "isn't a valid image ... received
+   * null". That redirect only ran when NODE_ENV was "production", so this
+   * test sets it.
+   */
+  describe("image optimizer's internal fetches", () => {
+    beforeEach(() => {
+      process.env = { ...process.env, NODE_ENV: "production" }
+    })
+
+    test.each([
+      "/images/hero/hero-1.png",
+      "/static/images/hero/hero-1.png",
+      "/_next/static/media/graduate.05tvlwc2-um9z.png",
+    ])("passes %s through without redirecting", (pathname) => {
+      const response = proxy(
+        new NextRequest(new URL(pathname, "http://localhost:3000")),
+      )
+      expect(response.headers.get("x-middleware-next")).toBe("1")
+      expect(response.headers.get("Location")).toBeNull()
+    })
+  })
 })

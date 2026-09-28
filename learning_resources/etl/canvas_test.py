@@ -35,6 +35,7 @@ from learning_resources.etl.canvas_utils import (
     parse_web_content,
 )
 from learning_resources.etl.constants import ETLSource
+from learning_resources.etl.loaders import load_content_files
 from learning_resources.etl.utils import get_edx_module_id, process_olx_path
 from learning_resources.factories import (
     ContentFileFactory,
@@ -44,10 +45,10 @@ from learning_resources.factories import (
     TutorProblemFileFactory,
 )
 from learning_resources.models import ContentFile, LearningResource
-from learning_resources_search.constants import CONTENT_FILE_TYPE
 from main.utils import now_in_utc
 
 pytestmark = pytest.mark.django_db
+
 
 DEFAULT_SETTINGS_XML = b"""<?xml version="1.0" encoding="UTF-8"?>
     <course identifier="gfef28ec71f16246c57edfeef25b26a54"
@@ -479,11 +480,14 @@ def test_parse_module_meta_handles_missing_identifierref(tmp_path):
 
 def test_transform_canvas_content_files_removes_unpublished_content(mocker, tmp_path):
     """
-    Test that transform_canvas_content_files removes content files not marked as published.
+    Content files no longer published in the export are unpublished by
+    load_content_files, whose content_files_loaded hook purges the indexes
     """
 
     # Setup: create a fake run with some content files
-    resource = LearningResourceFactory.create(etl_source=ETLSource.canvas.name)
+    resource = LearningResourceFactory.create(
+        etl_source=ETLSource.canvas.name, is_course=True, create_runs=False
+    )
     run = LearningResourceRunFactory.create(learning_resource=resource)
 
     published_path = "/test/published/file1.html"
@@ -547,24 +551,25 @@ def test_transform_canvas_content_files_removes_unpublished_content(mocker, tmp_
         "learning_resources.etl.utils.extract_text_metadata",
         return_value={"content": "test"},
     )
-    bulk_unpub = mocker.patch(
-        "learning_resources.etl.canvas.bulk_resources_unpublished_actions"
+
+    loaded_actions = mocker.patch(
+        "learning_resources.etl.loaders.content_files_loaded_actions"
     )
 
-    # Create a fake zipfile with the published file
-
-    list(
+    load_content_files(
+        run,
         transform_canvas_content_files(
             Path(zip_path), run, url_config={}, overwrite=True
-        )
+        ),
     )
 
-    # Ensure unpublished content is deleted and unpublished actions called
-    bulk_unpub.assert_called_once_with([unpublished_cf.id], CONTENT_FILE_TYPE)
+    unpublished_cf.refresh_from_db()
+    assert unpublished_cf.published is False
+    loaded_actions.assert_called_once_with(run=run)
 
 
 def test_transform_canvas_content_files_retains_failed_files(mocker, tmp_path):
-    """A file whose extraction raises must not be deleted; true orphans still are"""
+    """A file whose extraction raises is reported in failed_keys, rows untouched"""
     resource = LearningResourceFactory.create(etl_source=ETLSource.canvas.name)
     run = LearningResourceRunFactory.create(learning_resource=resource)
 
@@ -633,19 +638,18 @@ def test_transform_canvas_content_files_retains_failed_files(mocker, tmp_path):
         "learning_resources.etl.utils._extract_content",
         side_effect=FileNotFoundError("ocr output missing"),
     )
-    bulk_unpub = mocker.patch(
-        "learning_resources.etl.canvas.bulk_resources_unpublished_actions"
-    )
 
-    list(
+    failed_keys = []
+    results = list(
         transform_canvas_content_files(
-            Path(zip_path), run, url_config={}, overwrite=True
+            Path(zip_path), run, url_config={}, overwrite=True, failed_keys=failed_keys
         )
     )
 
-    assert ContentFile.objects.filter(id=failing_cf.id).exists()
-    assert not ContentFile.objects.filter(id=unpublished_cf.id).exists()
-    bulk_unpub.assert_called_once_with([unpublished_cf.id], CONTENT_FILE_TYPE)
+    assert results == []
+    assert failed_keys == [failing_cf.key]
+    assert ContentFile.objects.get(id=failing_cf.id).published is True
+    assert ContentFile.objects.get(id=unpublished_cf.id).published is True
 
 
 @pytest.mark.parametrize("overwrite", [True, False])
@@ -853,11 +857,6 @@ def test_transform_canvas_content_files_url_assignment(mocker, tmp_path):
     mocker.patch(
         "learning_resources.etl.canvas.get_edx_module_id", return_value="file1"
     )
-    # Patch bulk_resources_unpublished_actions to do nothing
-    mocker.patch("learning_resources.etl.canvas.bulk_resources_unpublished_actions")
-    # Patch run.content_files.exclude to return a mock with delete method
-    run.content_files.exclude.return_value.values_list.return_value = []
-    run.content_files.exclude.return_value.delete = lambda: None
 
     results = list(
         transform_canvas_content_files(
@@ -1039,9 +1038,6 @@ def test_published_module_and_files_meta_content_ingestion(mocker, tmp_path):
         "learning_resources.etl.utils.extract_text_metadata",
         return_value={"content": "TEXT"},
     )
-    bulk_unpub = mocker.patch(
-        "learning_resources.etl.canvas.bulk_resources_unpublished_actions"
-    )
     zip_path = make_canvas_zip(
         tmp_path,
         module_xml=module_xml,
@@ -1065,7 +1061,9 @@ def test_published_module_and_files_meta_content_ingestion(mocker, tmp_path):
     assert len(results) == 2
     assert "/file1.html" in result_paths
     assert "/file3.html" in result_paths
-    assert bulk_unpub.mock_calls[0].args[0] == [stale_contentfile.id]
+    # the transform leaves stale rows to load_content_files
+    stale_contentfile.refresh_from_db()
+    assert stale_contentfile.published is True
 
 
 @pytest.mark.parametrize(
@@ -1342,7 +1340,6 @@ def test_embedded_files_from_html(tmp_path, mocker, sample_pdf_content):
         "learning_resources.etl.utils.extract_text_metadata",
         return_value={"content": "test"},
     )
-    mocker.patch("learning_resources.etl.canvas.bulk_resources_unpublished_actions")
 
     # Create a fake zipfile with the published file
     run = LearningResourceRunFactory.create()
@@ -1519,7 +1516,6 @@ def test_get_url_config_assignments_and_pages(mocker, tmp_path):
         "learning_resources.etl.utils.extract_text_metadata",
         return_value={"content": "test"},
     )
-    mocker.patch("learning_resources.etl.canvas.bulk_resources_unpublished_actions")
     results = list(
         transform_canvas_content_files(
             Path(zip_path),
@@ -2523,6 +2519,29 @@ def test_sync_canvas_archive_skips_unchanged_archive(sync_mocks):
     assert _canvas_run(readable_id).checksum == first_checksum
 
 
+@pytest.mark.parametrize(
+    ("published", "reloaded"),
+    [(True, False), (False, True)],
+    ids=["published_rows", "all_rows_unpublished"],
+)
+def test_sync_canvas_archive_reloads_unpublished_run(sync_mocks, published, reloaded):
+    """
+    An unchanged archive is skipped unless every row of its run is unpublished,
+    which a bulk deindex does and the export never does
+    """
+    readable_id = sync_canvas_archive(
+        sync_mocks.bucket, "canvas/course_content/1/abc.imscc", overwrite=False
+    )
+    ContentFileFactory.create_batch(
+        2, run=_canvas_run(readable_id), published=published
+    )
+
+    sync_canvas_archive(
+        sync_mocks.bucket, "canvas/course_content/1/abc.imscc", overwrite=False
+    )
+    assert sync_mocks.load_content.call_count == (2 if reloaded else 1)
+
+
 def test_sync_canvas_archive_saves_checksum_only_after_successful_load(sync_mocks):
     """
     A failed load must leave the checksum unset so the next sync retries
@@ -2610,6 +2629,31 @@ def test_sync_canvas_archive_saves_checksum_for_legitimately_empty_course(
         sync_mocks.bucket, "canvas/course_content/1/abc.imscc", overwrite=False
     )
     assert _canvas_run(readable_id).checksum
+
+
+def test_sync_canvas_archive_keeps_rows_when_export_goes_empty(sync_mocks, tmp_path):
+    """
+    An export that drops to no files keeps its rows published, so the next
+    unchanged sync skips instead of treating the run as stale forever
+    """
+    key = "canvas/course_content/1/abc.imscc"
+    readable_id = sync_canvas_archive(sync_mocks.bucket, key, overwrite=False)
+    rows = ContentFileFactory.create_batch(
+        2, run=_canvas_run(readable_id), published=True
+    )
+    locked_zip = make_timed_lock_zip(
+        tmp_path, "2099-01-01T00:00:00", name="all_locked.zip"
+    )
+    sync_mocks.bucket.download_file.side_effect = lambda _key, dest: Path(
+        dest
+    ).write_bytes(locked_zip.read_bytes())
+    sync_mocks.load_content.return_value = []
+
+    sync_canvas_archive(sync_mocks.bucket, key, overwrite=False)
+    sync_canvas_archive(sync_mocks.bucket, key, overwrite=False)
+
+    assert sync_mocks.load_content.call_count == 2
+    assert all(ContentFile.objects.get(id=row.id).published for row in rows)
 
 
 TWO_FILE_MANIFEST_XML = b"""<?xml version="1.0" encoding="UTF-8"?>

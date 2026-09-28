@@ -12,14 +12,29 @@ type VectorControl = {
   max: number
   step: number
   explanation: string
+  formatValue?: (value: number) => string
 }
 
 /**
+ * A boost is a fraction of a result's own score, so read it out as the
+ * multiplier it works out to: an admin sets 0.1, a result gets 1.1x.
+ */
+const asMultiplier = (value: number) => `${(1 + value).toFixed(2)}x`
+
+/**
+ * A penalty is a fraction of a result's own score too, so read it out as the
+ * share of the score it costs rather than as a bare weight.
+ */
+const asFractionOfScore = (value: number) =>
+  `${Math.round(value * 100)}% of score`
+
+/**
  * Score formula weights the vector endpoint accepts, in the order they are
- * applied: the cutoff, then the boost and the penalties that rescore what
- * survives it. Ranges are in score units -- similarity scores are bounded and
- * sit in a narrow band, unlike the unbounded OpenSearch scores the percent
- * based controls tune.
+ * applied: the two cutoffs, then the boost and the penalties that rescore what
+ * survives them. The absolute cutoff is in score units, unlike the percents
+ * the OpenSearch controls tune; everything else here is a fraction -- the
+ * relative cutoff of the query's best score, the boost and the penalties of
+ * the score they adjust.
  */
 const VECTOR_CONTROLS: VectorControl[] = [
   {
@@ -31,18 +46,36 @@ const VECTOR_CONTROLS: VectorControl[] = [
     explanation:
       "Minimum similarity score for a result to be displayed. The server " +
       "raises anything below the minimum allowed for the search mode. Only " +
-      "affects results if there is a search term.",
+      "the backstop for a query that matched nothing -- the relative cutoff " +
+      "below is what shapes a result set. Only affects results if there is a " +
+      "search term.",
+  },
+  {
+    urlParam: "score_cutoff_ratio",
+    label: "Relative Score Cutoff",
+    min: 0,
+    max: 1,
+    step: 0.01,
+    explanation:
+      "Fraction of the query's own best score a result must reach, so how " +
+      "many results come back follows how fast relevance falls off within " +
+      "the query rather than how high its scores happened to reach. 0 " +
+      "disables the relative cutoff.",
   },
   {
     urlParam: "program_boost",
-    label: "Program Score Boost",
+    // Narrower and finer than the other controls: as a fraction, 0-1 tops out
+    // at doubling a program's score, and 0.05 steps are too coarse to straddle
+    // the factor where a boost starts outranking relevance.
+    label: "Program Score Multiplier",
     min: 0,
-    max: 1,
-    step: 0.05,
+    max: 0.5,
+    step: 0.01,
+    formatValue: asMultiplier,
     explanation:
-      "Score added to a program before ranking, scaled down as relevance " +
-      "drops so a weak match is not boosted over a strong one. 0 disables " +
-      "the boost.",
+      "Multiplies a program's own score before ranking, so a program can " +
+      "only overtake a result it was already within this factor of. 1.00x " +
+      "leaves programs unboosted.",
   },
   {
     urlParam: "staleness_penalty",
@@ -50,10 +83,11 @@ const VECTOR_CONTROLS: VectorControl[] = [
     min: 0,
     max: 0.5,
     step: 0.01,
+    formatValue: asFractionOfScore,
     explanation:
-      "Score subtracted from a resource once it is as old as the staleness " +
-      "horizon, ramped linearly by age. Resources with an upcoming run are " +
-      "never stale. 0 disables the penalty.",
+      "Fraction of its own score a resource gives up once it is as old as " +
+      "the staleness horizon, ramped linearly by age. Resources with an " +
+      "upcoming run are never stale. 0 disables the penalty.",
   },
   {
     urlParam: "staleness_horizon_years",
@@ -72,10 +106,11 @@ const VECTOR_CONTROLS: VectorControl[] = [
     min: 0,
     max: 0.5,
     step: 0.01,
+    formatValue: asFractionOfScore,
     explanation:
-      "Score subtracted from an OCW course with completeness = 0. Partially " +
-      "complete courses have a linear penalty proportional to the degree of " +
-      "incompleteness. 0 disables the penalty.",
+      "Fraction of its own score an OCW course with completeness = 0 gives " +
+      "up. Partially complete courses have a linear penalty proportional to " +
+      "the degree of incompleteness. 0 disables the penalty.",
   },
 ]
 
@@ -112,7 +147,7 @@ const VectorAdminOptions: React.FC<{
   return (
     <div data-testid="vector-admin-options">
       {VECTOR_CONTROLS.map(
-        ({ urlParam, label, min, max, step, explanation }) => (
+        ({ urlParam, label, min, max, step, explanation, formatValue }) => (
           <div key={urlParam}>
             <AdminTitleContainer>{label}</AdminTitleContainer>
             <SliderInput
@@ -127,6 +162,7 @@ const VectorAdminOptions: React.FC<{
               min={min}
               max={max}
               step={step}
+              formatValue={formatValue}
             />
             <ExplanationContainer>{explanation}</ExplanationContainer>
           </div>

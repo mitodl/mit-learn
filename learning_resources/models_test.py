@@ -19,7 +19,11 @@ from learning_resources.factories import (
     LearningResourceViewEventFactory,
     ProgramFactory,
 )
-from learning_resources.models import ContentFile, LearningResource
+from learning_resources.models import (
+    ContentFile,
+    CredentialMetadata,
+    LearningResource,
+)
 
 pytestmark = [pytest.mark.django_db]
 
@@ -193,3 +197,48 @@ def test_content_file_null_key_unique():
 
     with pytest.raises(IntegrityError), transaction.atomic():
         ContentFile.objects.create(run=run, key=None)
+
+
+def test_credential_metadata_round_trip():
+    """A stored description and criteria list read back unchanged"""
+    resource = LearningResourceFactory.create(is_course=True)
+    CredentialMetadata.objects.create(
+        learning_resource=resource,
+        description="A course about modelling fluid flow.",
+        criteria=["Applied conservation laws", "Modelled fluid flow"],
+    )
+
+    stored = LearningResource.objects.get(id=resource.id).credential_metadata
+    assert stored.description == "A course about modelling fluid flow."
+    assert stored.criteria == ["Applied conservation laws", "Modelled fluid flow"]
+
+
+def test_credential_metadata_long_criteria():
+    """
+    A criteria bullet longer than any varchar is stored whole.
+
+    criteria is a text[] rather than the varchar(N)[] every other ArrayField
+    in the module uses: nothing on the generation path truncates a bullet, so
+    a length limit would surface as a DataError mid-sweep.
+    """
+    resource = LearningResourceFactory.create(is_course=True)
+    bullet = "Demonstrated " + ("a very specific skill " * 500)
+
+    stored = CredentialMetadata.objects.create(
+        learning_resource=resource, criteria=[bullet]
+    )
+    stored.refresh_from_db()
+
+    assert stored.criteria == [bullet]
+
+
+def test_credential_metadata_deleted_with_its_resource():
+    """Metadata does not outlive the resource it describes"""
+    resource = LearningResourceFactory.create(is_course=True)
+    CredentialMetadata.objects.create(
+        learning_resource=resource, description="A course"
+    )
+
+    resource.delete()
+
+    assert not CredentialMetadata.objects.exists()

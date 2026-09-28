@@ -6,7 +6,7 @@ import {
   RiTimeLine,
   RiPresentationLine,
   RiStackLine,
-  RiMessage2Line,
+  RiPencilAiLine,
   RiEarthLine,
 } from "@remixicon/react"
 import CtaButton from "./CtaButton"
@@ -17,7 +17,7 @@ const HIGHLIGHT_ICONS = [
   RiTimeLine,
   RiPresentationLine,
   RiStackLine,
-  RiMessage2Line,
+  RiPencilAiLine,
   RiEarthLine,
 ]
 
@@ -28,17 +28,18 @@ const Band = styled(Section)(({ theme }) => ({
 const Inner = styled(SectionInner)(({ theme }) => ({
   display: "flex",
   alignItems: "center",
-  gap: "48px",
+  gap: "100px",
   [theme.breakpoints.down("lg")]: {
     flexDirection: "column",
     alignItems: "stretch",
+    gap: "48px",
   },
 }))
 
 const Copy = styled.div(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
-  gap: "32px",
+  gap: "40px",
   flex: "0 0 608px",
   [theme.breakpoints.down("lg")]: {
     flex: "initial",
@@ -64,13 +65,14 @@ const Tagline = styled.p(({ theme }) => ({
   ...theme.typography.h3,
   color: theme.custom.colors.darkGray2,
   margin: 0,
+  textWrap: "balance",
   [theme.breakpoints.down("md")]: {
     ...theme.typography.h4,
   },
 }))
 
 const Body = styled.p(({ theme }) => ({
-  ...theme.typography.body1,
+  ...theme.typography.body1Loose,
   color: theme.custom.colors.silverGrayDark,
   margin: 0,
 }))
@@ -110,6 +112,7 @@ const Highlight = styled.li(({ theme }) => ({
 
 const Actions = styled.div(({ theme }) => ({
   display: "flex",
+  marginTop: "24px",
   [theme.breakpoints.down("sm")]: {
     button: { width: "100%" },
   },
@@ -131,6 +134,7 @@ const Curriculum = styled.div(({ theme }) => ({
 
 const CurriculumEyebrow = styled.p(({ theme }) => ({
   ...theme.typography.subtitle3,
+  fontWeight: theme.typography.fontWeightRegular,
   color: theme.custom.colors.silverGrayLight,
   margin: 0,
 }))
@@ -173,9 +177,9 @@ const Modules = styled.ul({
 const Module = styled.li(({ theme }) => ({
   ...theme.typography.subtitle2,
   color: theme.custom.colors.white,
-  backgroundColor: theme.custom.colors.darkGray1,
+  backgroundColor: theme.custom.colors.darkGray2,
   borderRadius: "4px",
-  padding: "12px 16px",
+  padding: "16px",
 }))
 
 const FeaturedProgramSection: React.FC = () => (

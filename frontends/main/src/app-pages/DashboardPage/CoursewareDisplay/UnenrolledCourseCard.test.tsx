@@ -11,18 +11,31 @@ import {
 } from "@/test-utils"
 import * as mitxonline from "api/mitxonline-test-utils"
 import { makeRequest } from "api/test-utils"
+import { setupCoursePricing } from "./test-utils"
 import { faker } from "@faker-js/faker/locale/en"
 import moment from "moment"
 import { cartesianProduct } from "ol-test-utilities"
 import { UnenrolledCourseCard } from "./UnenrolledCourseCard"
-import { trackCourseEnrolled } from "@/common/analytics/gtm"
+import { trackCourseEnrolled, trackBeginCheckout } from "@/common/analytics/gtm"
 
 jest.mock("@/common/analytics/gtm", () => ({
   ...jest.requireActual("@/common/analytics/gtm"),
   trackCourseEnrolled: jest.fn(),
+  trackBeginCheckout: jest.fn(),
 }))
 
-const mitxOnlineCourse = mitxonline.factories.courses.course
+/**
+ * A course, with a list-price quote registered for every purchasable product on
+ * its runs. The enrollment dialog's certificate upsell quotes each one, so a
+ * course without them fails any test that opens the dialog.
+ */
+const mitxOnlineCourse: typeof mitxonline.factories.courses.course = (
+  overrides,
+) => {
+  const course = mitxonline.factories.courses.course(overrides)
+  setupCoursePricing(course)
+  return course
+}
 
 // The factory randomises is_staff, and staff bypass the start-date gate, which
 // would make these tests flaky. Staff tests pass it explicitly.
@@ -870,6 +883,14 @@ describe.each([
             expect.objectContaining({ method: "post", url: basketUrl }),
           )
         })
+
+        expect(trackBeginCheckout).toHaveBeenCalledWith(
+          expect.objectContaining({
+            courseName: course.title,
+            courseId: course.readable_id,
+            value: parseFloat(product.price),
+          }),
+        )
 
         expect(
           screen.queryByRole("dialog", { name: course.title }),

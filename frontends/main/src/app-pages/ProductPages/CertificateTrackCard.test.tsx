@@ -51,9 +51,9 @@ describe("CertificateTrackCard", () => {
       linkText: "Apply for financial aid",
     },
     {
-      name: "applied (visible at checkout), when applied",
+      name: "approved, when applied",
       applied: true,
-      linkText: "Financial aid approved (visible at checkout)",
+      linkText: "Financial aid approved",
     },
   ])(
     "renders financial aid link to the form — $name",

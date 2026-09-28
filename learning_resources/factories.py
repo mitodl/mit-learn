@@ -984,3 +984,15 @@ class CredentialMetadataGenerationLogFactory(DjangoModelFactory):
 
     class Meta:
         model = models.CredentialMetadataGenerationLog
+
+
+class CredentialMetadataFactory(DjangoModelFactory):
+    """Factory for CredentialMetadata"""
+
+    learning_resource = factory.SubFactory(LearningResourceFactory, is_course=True)
+    description = factory.Faker("sentence")
+    criteria = factory.List([factory.Faker("sentence"), factory.Faker("sentence")])
+
+    class Meta:
+        model = models.CredentialMetadata
+        django_get_or_create = ("learning_resource",)

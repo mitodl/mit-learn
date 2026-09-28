@@ -3,7 +3,7 @@
 import logging
 
 from django.apps import apps
-from django.db import transaction
+from django.db import DatabaseError, transaction
 
 log = logging.getLogger(__name__)
 
@@ -72,6 +72,8 @@ class WebsiteContentNewsPlugin:
             content.title,
         )
 
+        from news_events.etl.articles_news import delete_website_content_news_from_news
+
         content_id = content.id
 
         def trigger_async_delete():
@@ -83,5 +85,19 @@ class WebsiteContentNewsPlugin:
             )
             delete_website_content_from_news.delay(content_id)
 
-        # on_commit, so the feed is only torn down once the unpublish is durable.
-        transaction.on_commit(trigger_async_delete)
+        # Unlike the sync side, removal is a single indexed delete, so it runs
+        # inline: by the time the unpublish request answers, the news feed no
+        # longer serves the item. Queued, it left a window the editor could see
+        # through -- the listing refetches as soon as the request returns, and
+        # got the story back it had just unpublished.
+        try:
+            delete_website_content_news_from_news(content_id)
+        except DatabaseError:
+            # Losing a race with the sync task for the same row is transient, so
+            # hand off to the retrying task rather than failing the unpublish
+            # over it. on_commit, so a rolled back unpublish schedules nothing.
+            log.exception(
+                "Inline news feed removal failed for content %s, queueing task",
+                content_id,
+            )
+            transaction.on_commit(trigger_async_delete)

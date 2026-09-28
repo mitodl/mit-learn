@@ -2735,11 +2735,11 @@ def test_load_playlist_removed_videos_unpublished(
     ocw_video.refresh_from_db()
     assert ocw_video.published is False
 
-    # bulk_resources_unpublished_actions called only with the youtube video
-    mock_bulk_unpublish.assert_called_once_with(
-        [youtube_video.id, ocw_video.id],
-        LearningResourceType.video.name,
-    )
+    # the loader's queryset has no ORDER BY, so row order is arbitrary
+    mock_bulk_unpublish.assert_called_once()
+    unpublished_ids, resource_type = mock_bulk_unpublish.call_args[0]
+    assert sorted(unpublished_ids) == sorted([youtube_video.id, ocw_video.id])
+    assert resource_type == LearningResourceType.video.name
 
 
 @pytest.mark.parametrize("all_videos_exist", [True, False])
@@ -3690,6 +3690,25 @@ def test_course_with_unpublished_force_ingest_is_test_mode():
     course = load_course(course_data, [])
     assert course.require_summaries is True
     assert course.test_mode is True
+    assert course.published is False
+
+
+@pytest.mark.parametrize("force_ingest", [True, False])
+def test_load_course_blocklist_clears_test_mode(force_ingest):
+    """A blocklisted course leaves test_mode, even when force ingested"""
+    course = LearningResourceFactory.create(
+        is_course=True, published=False, test_mode=True
+    )
+    course_data = {
+        "readable_id": course.readable_id,
+        "platform": course.platform.code,
+        "title": "test",
+        "url": "http://test.com",
+        "force_ingest": force_ingest,
+        "runs": [{"run_id": "test-run"}],
+    }
+    course = load_course(course_data, [course.readable_id])
+    assert course.test_mode is False
     assert course.published is False
 
 

@@ -1,6 +1,56 @@
 Release Notes
 =============
 
+Version 0.80.17
+---------------
+
+- fix: more design QA fixes for Organizational Learning page (#3986)
+- fix(news): escape interpolated text/attrs when extracting news summaries (#3972)
+- feat: add B2B contract learner directory page (#3958)
+- fix: align Organizational Learning page with Figma design QA (#3971)
+- feat: add hover explanation for Active learners, fix clipped month label in engagement chart (#3966)
+- Track begin-checkout analytics for enrollments (#3959)
+
+Version 0.80.15
+---------------
+
+- credential metadata task (#3950)
+- Skip unreferenced static files when ingesting edX course archives (#3942)
+- Mark the Django session cookie Secure by default (#3968)
+
+Version 0.80.14
+---------------
+
+- adding link to program letter in dashboard (#3965)
+- Update actions/deploy-pages action to v5 (#3897)
+- feat(product-pages): render CMS-managed FAQs on course and program pages (#3954)
+- feat: show a learner's own program price as an applied-savings breakdown (#3943)
+
+Version 0.80.13
+---------------
+
+- fix: updated copy and small design edits (#3949)
+- feat(learning-resources): make published website content searchable by topic (#3944)
+- Pass platform parameter to AskTim (#3956)
+- Make playlist unpublish assertion order-insensitive (#3938)
+- hybrid search - fix program boosting, add IDF modifier to sparse vectors (#3947)
+
+Version 0.80.9
+--------------
+
+- refactor: drop unused queries for the B2B organization/contract page endpoints (#3948)
+
+Version 0.80.8
+--------------
+
+- Match Canvas run ids containing slashes in tutor problem routes (#3951)
+- build: bump @mitodl/mitxonline-api-axios to 2026.9.16 (#3952)
+
+Version 0.80.7
+--------------
+
+- feat(website-content): persist the settings drawer's topic selections (#3935)
+
 Version 0.80.6
 --------------
 

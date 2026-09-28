@@ -19,14 +19,15 @@ export const Section = styled.section({
   display: "flex",
   justifyContent: "center",
   width: "100%",
+  padding: "0 24px",
 })
 
 export const SectionInner = styled.div(({ theme }) => ({
   width: "100%",
   maxWidth: "1276px",
-  padding: "96px 24px",
+  padding: "96px 0",
   [theme.breakpoints.down("md")]: {
-    padding: "32px 24px",
+    padding: "32px 0",
   },
 }))
 

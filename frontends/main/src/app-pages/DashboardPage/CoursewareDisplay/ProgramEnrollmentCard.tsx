@@ -30,6 +30,7 @@ import NiceModal from "@ebay/nice-modal-react"
 import { UnenrollProgramDialog } from "./DashboardDialogs"
 import { getReceiptMenuItem } from "./receiptMenuItem"
 import { useOrderIdForProgram } from "@/common/mitxonline/useOrderIdForResource"
+import { useProgramLetterMenuItem } from "./hooks/useProgramLetterMenuItem"
 import { SimpleMenu, Stack } from "ol-components"
 import { EnrollmentStatus } from "./helpers"
 import { ProgressBadge } from "./ProgressBadge"
@@ -66,6 +67,7 @@ export const ProgramEnrollmentCard = ({
    * query with every other card on the dashboard.
    */
   const receiptResolution = useOrderIdForProgram(programId)
+  const programLetterMenuItem = useProgramLetterMenuItem(programId)
   const displayMode = program.display_mode
   const titleSection = (
     <Stack gap="12px">
@@ -107,6 +109,7 @@ export const ProgramEnrollmentCard = ({
     label: "Program Record",
     href: mitxonlineLegacyUrl(`/records/${programId}/`),
   })
+  if (programLetterMenuItem) menuItems.push(programLetterMenuItem)
   if (
     program.display_mode !== DisplayModeEnum.Course &&
     !isVerifiedEnrollmentMode(programEnrollment.enrollment_mode)

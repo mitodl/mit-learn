@@ -1,7 +1,13 @@
 "use client"
 
 import React from "react"
-import { HubspotForm, styled, type HubspotFormValue } from "ol-components"
+import {
+  HubspotForm,
+  Link,
+  RECAPTCHA_MARGIN_VAR,
+  styled,
+  type HubspotFormValue,
+} from "ol-components"
 import {
   Button,
   ButtonLink,
@@ -94,6 +100,16 @@ const OptionDescription = styled.span(({ theme }) => ({
   marginTop: "4px",
 }))
 
+const Note = styled.p(({ theme }) => ({
+  ...theme.typography.body2,
+  color: theme.custom.colors.silverGrayDark,
+  margin: 0,
+}))
+
+const NoteLink = styled(Link)({
+  textDecoration: "underline",
+})
+
 const Divider = styled.hr(({ theme }) => ({
   border: "none",
   borderTop: `1px solid ${theme.custom.colors.lightGray2}`,
@@ -111,6 +127,13 @@ const StyledHubspotForm = styled(HubspotForm)(({ theme }) => ({
       minWidth: 0,
     },
   },
+  /**
+   * ReCaptcha's own vertical margin stacks on top of this form's 24px gap and
+   * makes the space around it uneven with every other gap in the form.
+   * Cancel it via its margin custom property so the form's own gap is the
+   * only spacing mechanism.
+   */
+  [RECAPTCHA_MARGIN_VAR]: 0,
   [theme.breakpoints.down("md")]: {
     fieldset: {
       flexDirection: "column",
@@ -292,6 +315,14 @@ const OrgLeadForm: React.FC<{ className?: string }> = ({ className }) => {
           </>
         }
       />
+
+      <Note>
+        <strong>{copy.note.label}</strong> {copy.note.text}
+        <NoteLink href={SEARCH} color="red">
+          {copy.note.linkLabel}
+        </NoteLink>
+        .
+      </Note>
 
       <Divider />
 
