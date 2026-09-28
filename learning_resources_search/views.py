@@ -219,7 +219,7 @@ class UserSearchSubscriptionViewSet(mixins.ListModelMixin, viewsets.GenericViewS
         PercolateQuerySerializer: The percolate query
         """
 
-        percolate_query = get_object_or_404(PercolateQuery, id=pk)
+        percolate_query = get_object_or_404(self.get_queryset(), id=pk)
         unsubscribe_user_from_percolate_query(request.user, percolate_query)
         return Response(
             PercolateQuerySerializer(percolate_query).data["original_query"]

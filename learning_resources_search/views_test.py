@@ -9,6 +9,7 @@ import pytest
 from django.db.models import signals
 from django.urls import reverse
 from opensearchpy.exceptions import TransportError
+from rest_framework import status
 from rest_framework.renderers import JSONRenderer
 from rest_framework.request import Request
 from rest_framework.test import APIRequestFactory
@@ -20,6 +21,7 @@ from learning_resources_search.serializers import (
     LearningResourcesSearchRequestSerializer,
     LearningResourcesSearchResponseSerializer,
 )
+from main.factories import UserFactory
 from vector_search.constants import PROGRAM_SCORE_BOOST_NAME, default_score_boost
 
 FAKE_SEARCH_RESPONSE = {
@@ -318,6 +320,30 @@ def test_user_unsubscribe_to_search_by_id(client, user):
     )
     client.delete(unsub_url)
     assert user.percolate_queries.count() == 0
+
+
+@pytest.mark.django_db
+@factory.django.mute_signals(signals.post_delete, signals.post_save)
+def test_user_unsubscribe_to_search_by_id_404_for_other_users(client, user):
+    """Test another user cannot unsubscribe someone else's search"""
+
+    other_user = UserFactory.create()
+    sub_url = reverse("lr_search:v1:learning_resources_user_subscription-subscribe")
+
+    client.force_login(other_user)
+    client.post(sub_url, json.dumps({"q": "monkey"}), content_type="application/json")
+
+    query_id = other_user.percolate_queries.first().id
+
+    client.force_login(user)
+    unsub_url = reverse(
+        "lr_search:v1:learning_resources_user_subscription-unsubscribe",
+        args=[query_id],
+    )
+    response = client.delete(unsub_url)
+
+    assert response.status_code == status.HTTP_404_NOT_FOUND
+    assert other_user.percolate_queries.filter(id=query_id).exists()
 
 
 @pytest.mark.django_db
