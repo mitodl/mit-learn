@@ -86,7 +86,11 @@ describe("AiSearchOverview", () => {
         'Courses about "ml"? Again: ml',
       )
     } finally {
-      process.env.NEXT_PUBLIC_SEARCH_AI_OVERVIEW_PROMPT = original
+      if (original === undefined) {
+        delete process.env.NEXT_PUBLIC_SEARCH_AI_OVERVIEW_PROMPT
+      } else {
+        process.env.NEXT_PUBLIC_SEARCH_AI_OVERVIEW_PROMPT = original
+      }
     }
   })
 
