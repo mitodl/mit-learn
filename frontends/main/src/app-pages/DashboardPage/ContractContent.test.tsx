@@ -7,7 +7,7 @@ import {
   user,
 } from "@/test-utils"
 import ContractContent from "./ContractContent"
-import { setMockResponse } from "api/test-utils"
+import { makeRequest, setMockResponse } from "api/test-utils"
 import { urls, factories } from "api/mitxonline-test-utils"
 import {
   createCoursesWithContractRuns,
@@ -2547,5 +2547,172 @@ describe("ContractContent", () => {
         expect.anything(),
       ),
     )
+  })
+})
+
+describe("ContractContent data consent", () => {
+  beforeEach(() => {
+    setMockResponse.get(urls.enrollment.enrollmentsListV3(), [])
+    setMockResponse.get(urls.programEnrollments.enrollmentsListV3(), [])
+    mockedUseFeatureFlagEnabled.mockImplementation(
+      (flag) => flag === FeatureFlags.B2BDataConsent,
+    )
+  })
+
+  const setupConsent = (consented: boolean | null) => {
+    const setup = setupProgramsAndCourses()
+    const contract = {
+      ...setup.orgX.contracts[0],
+      consented_to_data_sharing: consented,
+    }
+    const org = { ...setup.orgX, contracts: [contract] }
+    const mitxOnlineUser = { ...setup.mitxOnlineUser, b2b_organizations: [org] }
+    setMockResponse.get(urls.userMe.get(), mitxOnlineUser)
+    return { org, contract, mitxOnlineUser }
+  }
+
+  const renderContract = (org: { slug: string }, contractSlug: string) =>
+    renderWithProviders(
+      <ContractContent orgSlug={org.slug} contractSlug={contractSlug} />,
+    )
+
+  const startButtons = async () => {
+    const programs = await screen.findAllByTestId("org-program-root")
+    const buttons = programs.flatMap((program) =>
+      within(program)
+        .getAllByTestId("enrollment-card-desktop")
+        .map((card) => within(card).getByTestId("courseware-button")),
+    )
+    expect(buttons.length).toBeGreaterThan(0)
+    return buttons
+  }
+
+  const consentCheckbox = () =>
+    screen.getByRole("checkbox", {
+      name: "I have read and consent to the data sharing described above.",
+    })
+
+  test.each([null, false])(
+    "shows the dialog and disables every card when consent is %s",
+    async (consented) => {
+      const { org, contract } = setupConsent(consented)
+      renderContract(org, contract.slug)
+
+      const dialog = await screen.findByRole("dialog")
+      expect(dialog).toHaveTextContent(contract.name)
+      for (const button of await startButtons()) {
+        expect(button).toBeDisabled()
+      }
+    },
+  )
+
+  test("shows no dialog and leaves cards enabled once consent is true", async () => {
+    const { org, contract } = setupConsent(true)
+    renderContract(org, contract.slug)
+
+    const buttons = await startButtons()
+    expect(buttons.some((button) => !button.hasAttribute("disabled"))).toBe(
+      true,
+    )
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
+  })
+
+  test("shows no dialog and leaves cards enabled when the flag is off", async () => {
+    mockedUseFeatureFlagEnabled.mockReturnValue(false)
+    const { org, contract } = setupConsent(null)
+    renderContract(org, contract.slug)
+
+    const buttons = await startButtons()
+    expect(buttons.some((button) => !button.hasAttribute("disabled"))).toBe(
+      true,
+    )
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
+  })
+
+  test("Decline records false and closes the dialog, but cards stay disabled", async () => {
+    const { org, contract, mitxOnlineUser } = setupConsent(null)
+    setMockResponse.post(urls.b2b.dataConsent(contract.id), undefined, {
+      code: 204,
+    })
+    renderContract(org, contract.slug)
+    await screen.findByRole("dialog")
+
+    // What users/me returns after the POST.
+    setMockResponse.get(urls.userMe.get(), {
+      ...mitxOnlineUser,
+      b2b_organizations: [
+        {
+          ...org,
+          contracts: [{ ...contract, consented_to_data_sharing: false }],
+        },
+      ],
+    })
+    await user.click(screen.getByRole("button", { name: "Decline" }))
+
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
+    })
+    expect(makeRequest).toHaveBeenCalledWith(
+      expect.objectContaining({
+        method: "post",
+        url: urls.b2b.dataConsent(contract.id),
+        body: { consented: false },
+      }),
+    )
+    for (const button of await startButtons()) {
+      expect(button).toBeDisabled()
+    }
+  })
+
+  test("Agree records true, closes the dialog, and enables the cards", async () => {
+    const { org, contract, mitxOnlineUser } = setupConsent(null)
+    setMockResponse.post(urls.b2b.dataConsent(contract.id), undefined, {
+      code: 204,
+    })
+    renderContract(org, contract.slug)
+    await screen.findByRole("dialog")
+
+    setMockResponse.get(urls.userMe.get(), {
+      ...mitxOnlineUser,
+      b2b_organizations: [
+        {
+          ...org,
+          contracts: [{ ...contract, consented_to_data_sharing: true }],
+        },
+      ],
+    })
+    await user.click(consentCheckbox())
+    await user.click(screen.getByRole("button", { name: "Agree and continue" }))
+
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
+    })
+    expect(makeRequest).toHaveBeenCalledWith(
+      expect.objectContaining({
+        method: "post",
+        url: urls.b2b.dataConsent(contract.id),
+        body: { consented: true },
+      }),
+    )
+    const buttons = await startButtons()
+    expect(buttons.some((button) => !button.hasAttribute("disabled"))).toBe(
+      true,
+    )
+  })
+
+  test("keeps the dialog open with an error when the request fails", async () => {
+    const { org, contract } = setupConsent(null)
+    setMockResponse.post(urls.b2b.dataConsent(contract.id), "Server error", {
+      code: 500,
+    })
+    renderContract(org, contract.slug)
+    await screen.findByRole("dialog")
+
+    await user.click(screen.getByRole("button", { name: "Decline" }))
+
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "We couldn't save your response. Please try again.",
+    )
+    expect(screen.getByRole("dialog")).toBeInTheDocument()
   })
 })

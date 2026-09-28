@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useEffect } from "react"
+import React, { useEffect, useState } from "react"
 import Image from "next/image"
 import { useQuery } from "@tanstack/react-query"
 import {
@@ -21,7 +21,11 @@ import type {
   V3UserProgramEnrollment,
 } from "@mitodl/mitxonline-api-axios/v2"
 import { mitxUserQueries } from "api/mitxonline-hooks/user"
-import { managerOrganizationQueries } from "api/mitxonline-hooks/organizations"
+import {
+  managerOrganizationQueries,
+  useDataConsentMutation,
+} from "api/mitxonline-hooks/organizations"
+import { SILENCE_ERROR_TOAST } from "api/mutation-meta"
 import { ButtonLink } from "@mitodl/smoot-design"
 import { RiAwardFill } from "@remixicon/react"
 import { useFeatureFlagEnabled } from "posthog-js/react"
@@ -39,6 +43,7 @@ import { useContractDashboardData } from "./CoursewareDisplay/hooks/useContractD
 import UnstyledRawHTML from "@/components/UnstyledRawHTML/UnstyledRawHTML"
 import { VariantPicker } from "./CoursewareDisplay/VariantPicker"
 import { CoursewareCard } from "./CoursewareDisplay/CoursewareCard"
+import { DataConsentDialog } from "./DataConsentDialog"
 
 const HeaderRoot = styled.div(({ theme }) => ({
   display: "flex",
@@ -251,7 +256,8 @@ const OrgProgramCollectionDisplay: React.FC<{
   collection: V2ProgramCollection
   entries: DashboardCourseEntry[]
   hideDescription?: boolean
-}> = ({ collection, entries, hideDescription }) => {
+  cardsDisabled?: boolean
+}> = ({ collection, entries, hideDescription, cardsDisabled }) => {
   const header = (
     <ProgramHeader>
       <ProgramHeaderText>
@@ -284,6 +290,7 @@ const OrgProgramCollectionDisplay: React.FC<{
               Component="li"
               kind="course"
               entry={entry}
+              disabled={cardsDisabled}
             />
           )
         })}
@@ -297,7 +304,14 @@ const OrgProgramDisplay: React.FC<{
   entries: DashboardCourseEntry[]
   programEnrollment?: V3UserProgramEnrollment
   hideDescription?: boolean
-}> = ({ program, entries, programEnrollment, hideDescription }) => {
+  cardsDisabled?: boolean
+}> = ({
+  program,
+  entries,
+  programEnrollment,
+  hideDescription,
+  cardsDisabled,
+}) => {
   const hasValidCertificate = !!programEnrollment?.certificate
 
   if (entries.length === 0) {
@@ -340,6 +354,7 @@ const OrgProgramDisplay: React.FC<{
               Component="li"
               kind="course"
               entry={entry}
+              disabled={cardsDisabled}
             />
           )
         })}
@@ -413,10 +428,12 @@ const HeaderActions = styled.div(({ theme }) => ({
 type ContractContentInternalProps = {
   org: OrganizationPage
   contract: ContractPage
+  cardsDisabled?: boolean
 }
 const ContractContentInternal: React.FC<ContractContentInternalProps> = ({
   org,
   contract,
+  cardsDisabled = false,
 }) => {
   const {
     isLoading,
@@ -546,6 +563,7 @@ const ContractContentInternal: React.FC<ContractContentInternalProps> = ({
             hideDescription={
               selectedVariant !== null && !selectedVariant.default_variant
             }
+            cardsDisabled={cardsDisabled}
           />
         ))}
         <ProgramCollectionsList>
@@ -560,6 +578,7 @@ const ContractContentInternal: React.FC<ContractContentInternalProps> = ({
               hideDescription={
                 selectedVariant !== null && !selectedVariant.default_variant
               }
+              cardsDisabled={cardsDisabled}
             />
           ))}
         </ProgramCollectionsList>
@@ -594,6 +613,29 @@ const ContractContent: React.FC<ContractContentProps> = ({
     (contract) => contract.slug === contractSlug,
   )
 
+  const consentFlag = useFeatureFlagEnabled(FeatureFlags.B2BDataConsent)
+  const consentRequired =
+    consentFlag === true &&
+    !!b2bContract &&
+    b2bContract.consented_to_data_sharing !== true
+  // Declining closes the dialog for this contract until the next page load.
+  const [declinedContractId, setDeclinedContractId] = useState<number | null>(
+    null,
+  )
+  const consentMutation = useDataConsentMutation({ meta: SILENCE_ERROR_TOAST })
+  const submitConsent = (consented: boolean) => {
+    if (!b2bContract) return
+    const contractId = b2bContract.id
+    consentMutation.mutate(
+      { contract_id: contractId, DataConsentRequest: { consented } },
+      {
+        onSuccess: () => {
+          if (!consented) setDeclinedContractId(contractId)
+        },
+      },
+    )
+  }
+
   useEffect(() => {
     if (b2bOrganization) {
       localStorage.setItem("last-dashboard-org", orgSlug)
@@ -621,7 +663,22 @@ const ContractContent: React.FC<ContractContentProps> = ({
   }
 
   return (
-    <ContractContentInternal org={b2bOrganization} contract={b2bContract} />
+    <>
+      <ContractContentInternal
+        org={b2bOrganization}
+        contract={b2bContract}
+        cardsDisabled={consentRequired}
+      />
+      <DataConsentDialog
+        key={b2bContract.id}
+        open={consentRequired && declinedContractId !== b2bContract.id}
+        contractName={b2bContract.name}
+        onAccept={() => submitConsent(true)}
+        onDecline={() => submitConsent(false)}
+        isSubmitting={consentMutation.isPending}
+        isError={consentMutation.isError}
+      />
+    </>
   )
 }
 
