@@ -205,9 +205,6 @@ def extract_text_from_url(url, *, mime_type=None):
     """
     Retrieve data from a URL and parse it with tika
 
-    Redirects are refused: callers check the url's host against an allowlist,
-    and a redirect would send the request to a host nobody checked.
-
     Args:
         url(str): The URL to retrieve content from
         mime_type(str): The expected mime-type of the content

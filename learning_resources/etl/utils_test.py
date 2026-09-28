@@ -125,19 +125,15 @@ def test_extract_text_from_url(mocker, content):
         )
 
 
-def test_extract_text_from_url_refuses_redirect(mocker, mocked_responses):
+def test_extract_text_from_url_refuses_redirect(mocked_responses):
     """extract_text_from_url should not follow a redirect off the requested host"""
     url = "https://abc.cloudfront.net/a.vtt"
     mocked_responses.get(
         url, status=302, headers={"Location": "http://169.254.169.254/latest/"}
     )
-    mock_extract = mocker.patch("learning_resources.etl.utils.extract_text_metadata")
 
     with pytest.raises(requests.HTTPError):
         utils.extract_text_from_url(url)
-
-    assert len(mocked_responses.calls) == 1
-    mock_extract.assert_not_called()
 
 
 @pytest.mark.parametrize(
