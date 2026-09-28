@@ -324,26 +324,26 @@ def test_user_unsubscribe_to_search_by_id(client, user):
 
 @pytest.mark.django_db
 @factory.django.mute_signals(signals.post_delete, signals.post_save)
-def test_user_unsubscribe_to_search_by_id_404_for_other_users(client, user):
-    """Test another user cannot unsubscribe someone else's search"""
+def test_user_cannot_unsubscribe_others_subscription(client, user):
+    """Unsubscribing from another user's subscription should 404, not disclose it"""
+
+    sub_url = reverse("lr_search:v1:learning_resources_user_subscription-subscribe")
+    client.force_login(user)
+    params = {"q": "idor-test-marker-distinguishing-string"}
+    client.post(sub_url, json.dumps(params), content_type="application/json")
+    assert user.percolate_queries.count() == 1
+    subscription_id = user.percolate_queries.first().id
 
     other_user = UserFactory.create()
-    sub_url = reverse("lr_search:v1:learning_resources_user_subscription-subscribe")
-
     client.force_login(other_user)
-    client.post(sub_url, json.dumps({"q": "monkey"}), content_type="application/json")
-
-    query_id = other_user.percolate_queries.first().id
-
-    client.force_login(user)
     unsub_url = reverse(
         "lr_search:v1:learning_resources_user_subscription-unsubscribe",
-        args=[query_id],
+        args=[subscription_id],
     )
-    response = client.delete(unsub_url)
+    resp = client.delete(unsub_url)
 
-    assert response.status_code == status.HTTP_404_NOT_FOUND
-    assert other_user.percolate_queries.filter(id=query_id).exists()
+    assert resp.status_code == 404
+    assert user.percolate_queries.count() == 1
 
 
 @pytest.mark.django_db
