@@ -20,6 +20,7 @@ from learning_resources_search.serializers import (
     LearningResourcesSearchRequestSerializer,
     LearningResourcesSearchResponseSerializer,
 )
+from main.factories import UserFactory
 from vector_search.constants import PROGRAM_SCORE_BOOST_NAME, default_score_boost
 
 FAKE_SEARCH_RESPONSE = {
@@ -318,6 +319,30 @@ def test_user_unsubscribe_to_search_by_id(client, user):
     )
     client.delete(unsub_url)
     assert user.percolate_queries.count() == 0
+
+
+@pytest.mark.django_db
+@factory.django.mute_signals(signals.post_delete, signals.post_save)
+def test_user_cannot_unsubscribe_others_subscription(client, user):
+    """Unsubscribing from another user's subscription should 404, not disclose it"""
+
+    sub_url = reverse("lr_search:v1:learning_resources_user_subscription-subscribe")
+    client.force_login(user)
+    params = {"q": "idor-test-marker-distinguishing-string"}
+    client.post(sub_url, json.dumps(params), content_type="application/json")
+    assert user.percolate_queries.count() == 1
+    subscription_id = user.percolate_queries.first().id
+
+    other_user = UserFactory.create()
+    client.force_login(other_user)
+    unsub_url = reverse(
+        "lr_search:v1:learning_resources_user_subscription-unsubscribe",
+        args=[subscription_id],
+    )
+    resp = client.delete(unsub_url)
+
+    assert resp.status_code == 404
+    assert user.percolate_queries.count() == 1
 
 
 @pytest.mark.django_db
