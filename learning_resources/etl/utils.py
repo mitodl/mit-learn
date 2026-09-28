@@ -205,6 +205,9 @@ def extract_text_from_url(url, *, mime_type=None):
     """
     Retrieve data from a URL and parse it with tika
 
+    Redirects are refused: callers check the url's host against an allowlist,
+    and a redirect would send the request to a host nobody checked.
+
     Args:
         url(str): The URL to retrieve content from
         mime_type(str): The expected mime-type of the content
@@ -212,8 +215,13 @@ def extract_text_from_url(url, *, mime_type=None):
     Returns:
         str: The text contained in the URL content.
     """
-    response = requests.get(url, timeout=30)
+    # ponytail: refuse redirects outright rather than re-validating each hop;
+    # add per-hop validation if a source ever needs to redirect legitimately
+    response = requests.get(url, timeout=30, allow_redirects=False)
     response.raise_for_status()
+    if response.is_redirect:
+        msg = f"Refusing to follow redirect from {url}"
+        raise requests.HTTPError(msg, response=response)
     if response.content:
         return extract_text_metadata(
             response.content,
