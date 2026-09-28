@@ -9,7 +9,7 @@ from django.utils.decorators import method_decorator
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_POST
 from drf_spectacular.utils import extend_schema, extend_schema_view
-from rest_framework import generics
+from rest_framework import generics, status
 from rest_framework.parsers import JSONParser
 from rest_framework.response import Response
 
@@ -26,6 +26,12 @@ from learning_resources.etl.loaders import (
     load_podcasts,
     load_programs,
     load_videos,
+)
+from learning_resources.etl.ownership import (
+    OwnershipError,
+    Pipeline,
+    assert_owner,
+    writing_as,
 )
 from learning_resources.models import LearningResource
 from learning_resources.tasks import ingest_canvas_course, ingest_edx_run_archive
@@ -218,12 +224,34 @@ class LearningResourceWebhookView(BaseWebhookView):
             return HttpResponseBadRequest("Invalid JSON format")
         serializer = LearningResourceWebhookRequestSerializer(data=payload)
         serializer.is_valid(raise_exception=True)
-        summary = process_learning_resources_webhook(
-            serializer.validated_data["resources"]
-        )
+        try:
+            summary = process_learning_resources_webhook(
+                serializer.validated_data["resources"]
+            )
+        except OwnershipError as exc:
+            # Nothing was written: ownership is checked for every group first.
+            log.warning("learning_resources webhook rejected: %s", exc)
+            return Response(
+                {"status": "error", "message": str(exc)},
+                status=status.HTTP_409_CONFLICT,
+            )
         log.info("learning_resources webhook processed: %s", summary)
         clear_views_cache()
         return self.success()
+
+
+# The resource types each supported group writes. A podcast group carries its
+# episodes inline, so the webhook must own both before it may load one.
+_WRITTEN_TYPES = {
+    LearningResourceType.course.name: [LearningResourceType.course.name],
+    LearningResourceType.program.name: [LearningResourceType.program.name],
+    LearningResourceType.document.name: [LearningResourceType.document.name],
+    LearningResourceType.video.name: [LearningResourceType.video.name],
+    LearningResourceType.podcast.name: [
+        LearningResourceType.podcast.name,
+        LearningResourceType.podcast_episode.name,
+    ],
+}
 
 
 def _load_resource_group(etl_source, resource_type, resources):
@@ -264,11 +292,24 @@ def process_learning_resources_webhook(resources):
     Group canonical LearningResource dicts by (etl_source, resource_type) and
     route each group to the appropriate loader. Unsupported resource types are
     logged and skipped rather than failing the whole batch.
+
+    Raises OwnershipError, before writing anything, if the webhook does not own
+    every (etl_source, resource_type) a supported group would write. A partial
+    load would leave the batch half applied with no way for the sender to tell.
     """
     grouped = defaultdict(list)
     for resource in resources:
         grouped[(resource["etl_source"], resource["resource_type"])].append(resource)
 
+    with writing_as(Pipeline.WEBHOOK):
+        for etl_source, resource_type in grouped:
+            if resource_type in _WRITTEN_TYPES:
+                assert_owner(etl_source, _WRITTEN_TYPES[resource_type])
+        return _load_groups(grouped)
+
+
+def _load_groups(grouped):
+    """Load each group and summarize what was loaded or skipped."""
     summary = {"loaded": 0, "skipped": 0, "groups": []}
     for (etl_source, resource_type), items in grouped.items():
         loaded = _load_resource_group(etl_source, resource_type, items)
