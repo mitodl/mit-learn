@@ -102,6 +102,8 @@ interface BaseLearningResourceCardProps {
   imageSrc?: string
   imageAlt?: string
   onImageError?: React.ReactEventHandler<HTMLImageElement>
+  /** Load `imageSrc` directly instead of through the Next.js image optimizer. */
+  imageUnoptimized?: boolean
   title?: string
   resourceType?: string
   /**
@@ -305,6 +307,7 @@ const BaseLearningResourceCard: React.FC<BaseLearningResourceCardProps> = ({
   imageSrc,
   imageAlt = "",
   onImageError,
+  imageUnoptimized,
   title,
   resourceType,
   resourcePrice,
@@ -518,6 +521,7 @@ const BaseLearningResourceCard: React.FC<BaseLearningResourceCardProps> = ({
             src={imageSrc}
             alt={imageAlt}
             onError={onImageError}
+            unoptimized={imageUnoptimized}
             {...IMAGE_SIZES["desktop"]}
           />
         )}
@@ -607,6 +611,7 @@ const BaseLearningResourceCard: React.FC<BaseLearningResourceCardProps> = ({
           src={imageSrc}
           alt={imageAlt}
           onError={onImageError}
+          unoptimized={imageUnoptimized}
           {...getImageDimensions(size, isMedia)}
         />
       )}

@@ -5,7 +5,7 @@ import type { LearningResourceCardProps } from "./LearningResourceCard"
 import { DEFAULT_RESOURCE_IMG, getReadableResourceType } from "ol-utilities"
 import { ResourceTypeEnum, PlatformEnum, AvailabilityEnum } from "api"
 import { factories } from "api/test-utils"
-import { getByImageSrc } from "ol-test-utilities"
+import { getByImageSrc, queryByImageSrc } from "ol-test-utilities"
 import { renderWithTheme } from "../../test-utils"
 
 // Helper function to create a date N days from today
@@ -316,7 +316,7 @@ describe("Learning Resource Card", () => {
     getByImageSrc(view.container, contentFileImageSrc)
   })
 
-  test("Falls back to DEFAULT_RESOURCE_IMG when image.url returns 404", () => {
+  test("Falls back to the original image, then DEFAULT_RESOURCE_IMG, when image.url fails", () => {
     const primaryUrl = "https://example.com/primary.jpg"
     const resource = factories.learningResources.resource({
       resource_type: ResourceTypeEnum.Document,
@@ -324,8 +324,13 @@ describe("Learning Resource Card", () => {
     })
 
     const view = setup({ resource })
+    const raw = { nextJsOriginalSrc: false }
+    expect(queryByImageSrc(view.container, primaryUrl, raw)).toBeNull()
+    // Optimized image fails: retry the original, loaded directly
     fireEvent.error(getByImageSrc(view.container, primaryUrl))
-
+    const original = getByImageSrc(view.container, primaryUrl, raw)
+    // Original fails too: use the default
+    fireEvent.error(original)
     getByImageSrc(view.container, DEFAULT_RESOURCE_IMG)
   })
 

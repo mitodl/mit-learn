@@ -3,24 +3,40 @@
 import { useState, useEffect, useCallback } from "react"
 
 /**
- * Returns image `src` and `onError` handler to assist in loading a fallback
- * image when `src` fails to load.
+ * - "optimized": `src` through the Next.js image optimizer
+ * - "original": `src` loaded directly by the browser (`unoptimized`)
+ * - "fallback": the fallback image
+ */
+type Stage = "optimized" | "original" | "fallback"
+
+/**
+ * Returns image `src`, `unoptimized` and `onError` for a Next.js `<Image>`,
+ * falling back first to the original image and then to `fallback`.
+ *
+ * The optimizer fetches remote images server-side, which some hosts block
+ * (e.g. bot protection returning 403) even though browsers can load them. So
+ * when the optimized image fails, retry `src` unoptimized before giving up.
+ * Pass all three values to the image.
  */
 const useImageWithFallback = (
   src: string | null | undefined,
   fallback: string,
 ) => {
-  const [resolvedSrc, setResolvedSrc] = useState(src ?? fallback)
+  const [stage, setStage] = useState<Stage>(src ? "optimized" : "fallback")
 
   useEffect(() => {
-    setResolvedSrc(src ?? fallback)
-  }, [src, fallback])
+    setStage(src ? "optimized" : "fallback")
+  }, [src])
 
   const onError = useCallback(() => {
-    setResolvedSrc((current) => (current === fallback ? current : fallback))
-  }, [fallback])
+    setStage((current) => (current === "optimized" ? "original" : "fallback"))
+  }, [])
 
-  return { src: resolvedSrc, onError }
+  return {
+    src: stage === "fallback" || !src ? fallback : src,
+    unoptimized: stage === "original",
+    onError,
+  }
 }
 
 export { useImageWithFallback }
