@@ -1,6 +1,5 @@
 import React from "react"
-import { screen } from "@testing-library/react"
-import { waitFor } from "@testing-library/react"
+import { screen, waitFor } from "@testing-library/react"
 import user from "@testing-library/user-event"
 import { renderWithTheme } from "../../test-utils"
 import { CarouselV2 } from "./CarouselV2"
