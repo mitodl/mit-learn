@@ -18,7 +18,7 @@
     "@mitodl/arithmix": "^0.2.5",
     "@mitodl/course-search-utils": "^3.8.1",
     "@mitodl/hacksnack": "^0.1.2",
-    "@mitodl/mitxonline-api-axios": "https://github.com/mitodl/mitxonline-api-clients/raw/52591e07848e42205ed3354ef4a421242bba6604/src/typescript/mitxonline-api-axios/package.tgz",
+    "@mitodl/mitxonline-api-axios": "https://github.com/mitodl/mitxonline-api-clients/raw/3101c6de3f93331d31ac09153df3b5e8f646b738/src/typescript/mitxonline-api-axios/package.tgz",
     "@mitodl/smoot-design": "6.38.0",
     "@mui/base": "5.0.0-beta.70",
     "@mui/material": "^6.4.5",
