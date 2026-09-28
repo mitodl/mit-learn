@@ -11,8 +11,25 @@ from learning_resources.etl.constants import (
     ETLSource,
     ProgramLoaderConfig,
 )
+from learning_resources.etl.ownership import current_pipeline
+from learning_resources.factories import ETLSourceOwnershipFactory
+from learning_resources.models import ETLSourceOwnership
 
 WEBHOOK_URL_NAME = "webhooks:v1:learning_resources_webhook"
+
+
+@pytest.fixture(autouse=True)
+def webhook_owns_every_pair(request):
+    """Hand the webhook every pair, so routing tests don't depend on ownership."""
+    if "django_db" not in request.keywords:
+        return
+    for etl_source in ETLSource:
+        for resource_type in LearningResourceType:
+            ETLSourceOwnershipFactory.create(
+                etl_source=etl_source.name,
+                resource_type=resource_type.name,
+                owner=ETLSourceOwnership.Pipeline.WEBHOOK,
+            )
 
 
 def _post(client, settings, payload, *, signature=None):
@@ -274,3 +291,79 @@ def test_invalid_json_returns_400(settings, client):
         headers={"X-MITLearn-Signature": signature},
     )
     assert response.status_code == 400
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    ("owner", "resource_type"),
+    [
+        (ETLSourceOwnership.Pipeline.LEGACY, LearningResourceType.course.name),
+        (ETLSourceOwnership.Pipeline.WAREHOUSE, LearningResourceType.course.name),
+        # A podcast group writes episodes too, so losing either type rejects it.
+        (ETLSourceOwnership.Pipeline.LEGACY, LearningResourceType.podcast.name),
+        (
+            ETLSourceOwnership.Pipeline.LEGACY,
+            LearningResourceType.podcast_episode.name,
+        ),
+    ],
+)
+def test_batch_rejected_when_webhook_does_not_own_a_group(
+    settings, client, mocker, owner, resource_type
+):
+    """One group the webhook doesn't own rejects the whole batch with 409, unwritten."""
+    etl_source = (
+        ETLSource.mitpe.name
+        if resource_type == LearningResourceType.course.name
+        else ETLSource.podcast.name
+    )
+    ETLSourceOwnership.objects.filter(
+        etl_source=etl_source, resource_type=resource_type
+    ).update(owner=owner)
+    mock_clear = mocker.patch("webhooks.views.clear_views_cache")
+    mock_load_courses = mocker.patch("webhooks.views.load_courses", return_value=[])
+    mock_load_documents = mocker.patch("webhooks.views.load_documents", return_value=[])
+    mock_load_podcasts = mocker.patch("webhooks.views.load_podcasts", return_value=[])
+
+    payload = {
+        "resources": [
+            _resource(
+                "doc-1", ETLSource.mit_climate.name, LearningResourceType.document.name
+            ),
+            _resource(
+                "course-1", ETLSource.mitpe.name, LearningResourceType.course.name
+            ),
+            _resource(
+                "pod-1", ETLSource.podcast.name, LearningResourceType.podcast.name
+            ),
+        ]
+    }
+    response = _post(client, settings, payload)
+
+    assert response.status_code == 409
+    assert response.json()["status"] == "error"
+    assert etl_source in response.json()["message"]
+    mock_load_documents.assert_not_called()
+    mock_load_courses.assert_not_called()
+    mock_load_podcasts.assert_not_called()
+    mock_clear.assert_not_called()
+
+
+@pytest.mark.django_db
+def test_loaders_run_as_the_webhook_pipeline(settings, client, mocker):
+    """The shared loaders see the webhook pipeline, so their own guard lets it write."""
+    seen = []
+    mocker.patch("webhooks.views.clear_views_cache")
+    mocker.patch(
+        "webhooks.views.load_courses",
+        side_effect=lambda *_args, **_kwargs: seen.append(current_pipeline()) or [],
+    )
+
+    payload = {
+        "resources": [
+            _resource(
+                "course-1", ETLSource.mitpe.name, LearningResourceType.course.name
+            )
+        ]
+    }
+    assert _post(client, settings, payload).status_code == 200
+    assert seen == [ETLSourceOwnership.Pipeline.WEBHOOK]
