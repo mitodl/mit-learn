@@ -311,6 +311,55 @@ describe("NotificationPreferences", () => {
     expect(within(other).getByLabelText("Email")).toBeEnabled()
   })
 
+  test("a row stays inert after its PUT lands until the refetch does", async () => {
+    setupApi()
+    renderWithProviders(<NotificationPreferences />)
+    const row = await rowFor("grouped_notification")
+
+    // The PUT resolves immediately, but hold the follow-up GET.
+    setMockResponse.get(
+      mitxonlineUrls.notificationPreferences.get(),
+      new Promise(() => {}),
+    )
+    await user.click(within(row).getByLabelText("On site"))
+
+    await waitFor(() =>
+      expect(makeRequest).toHaveBeenCalledWith(
+        expect.objectContaining({ method: "put" }),
+      ),
+    )
+    await waitFor(() =>
+      expect(makeRequest).toHaveBeenCalledTimes(
+        // initial GET + PUT + refetch GET
+        3,
+      ),
+    )
+    expect(within(row).getByLabelText("On site")).toBeDisabled()
+  })
+
+  test("a write in another row does not re-enable a row still in flight", async () => {
+    setupApi()
+    // Neither write ever resolves.
+    setMockResponse.put(
+      mitxonlineUrls.notificationPreferences.put(),
+      new Promise(() => {}),
+    )
+    renderWithProviders(<NotificationPreferences />)
+
+    const first = await rowFor("grouped_notification")
+    const second = await rowFor("new_discussion_post")
+    await user.click(within(first).getByLabelText("On site"))
+    await waitFor(() =>
+      expect(within(first).getByLabelText("On site")).toBeDisabled(),
+    )
+
+    await user.click(within(second).getByLabelText("Email"))
+    await waitFor(() =>
+      expect(within(second).getByLabelText("Email")).toBeDisabled(),
+    )
+    expect(within(first).getByLabelText("On site")).toBeDisabled()
+  })
+
   test.each([
     {
       description: "the LMS has the feature switched off",

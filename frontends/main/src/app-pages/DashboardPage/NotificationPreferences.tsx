@@ -168,13 +168,13 @@ type PreferenceRowProps = {
   config: PreferenceConfig
   nonEditable: string[]
   showEmail: boolean
-  /**
-   * A write for THIS row is in flight. The controls still show the last known
-   * server state, so a second click would recompute the same inverted value
-   * and cancel nothing — disable them until the refetch lands.
-   */
-  pending: boolean
-  onChange: (update: NotificationPreferenceUpdate) => void
+}
+
+const UPDATE_ERROR_META = {
+  getErrorMessage: (error: unknown) =>
+    (error as AxiosError)?.response?.status === 429
+      ? "Too many changes at once. Please wait a moment and try again."
+      : "We could not save that notification setting. Please try again.",
 }
 
 const PreferenceRow: React.FC<PreferenceRowProps> = ({
@@ -183,9 +183,19 @@ const PreferenceRow: React.FC<PreferenceRowProps> = ({
   config,
   nonEditable,
   showEmail,
-  pending,
-  onChange,
 }) => {
+  /*
+   * Each row owns its mutation, so a write in one row cannot clear another
+   * row's in-flight state. While pending, the controls still show the last
+   * known server state, so a second click would recompute the same inverted
+   * value and cancel nothing — they stay disabled until the refetch lands.
+   */
+  const updatePreference = useUpdateNotificationPreference({
+    meta: UPDATE_ERROR_META,
+  })
+  const pending = updatePreference.isPending
+  const onChange = (update: NotificationPreferenceUpdate) =>
+    updatePreference.mutate(update)
   const label = labelForType(notificationType)
   const description = descriptionForType(notificationType, config.info)
   const webLocked = nonEditable.includes("web")
@@ -302,22 +312,6 @@ const noticeFor = ({
 
 const NotificationPreferences: React.FC = () => {
   const preferences = useNotificationPreferences()
-  const updatePreference = useUpdateNotificationPreference({
-    meta: {
-      getErrorMessage: (error) =>
-        (error as AxiosError)?.response?.status === 429
-          ? "Too many changes at once. Please wait a moment and try again."
-          : "We could not save that notification setting. Please try again.",
-    },
-  })
-
-  /**
-   * One mutation serves every row, so `isPending` alone would freeze the whole
-   * section. `variables` names the row actually being written.
-   */
-  const inFlight = updatePreference.isPending
-    ? updatePreference.variables
-    : undefined
 
   const notice = noticeFor({
     isPending: preferences.isPending,
@@ -362,11 +356,6 @@ const NotificationPreferences: React.FC = () => {
                 config={types[type]}
                 nonEditable={lockedChannelsFor(group, type)}
                 showEmail={showEmail}
-                pending={
-                  inFlight?.notification_app === app &&
-                  inFlight?.notification_type === type
-                }
-                onChange={(update) => updatePreference.mutate(update)}
               />
             ))}
           </div>
