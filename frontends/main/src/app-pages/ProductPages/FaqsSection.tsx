@@ -45,6 +45,11 @@ const FaqSummary = styled(AccordionSummary)(({ theme }) => ({
   ".MuiAccordionSummary-content": {
     margin: "24px 0",
   },
+  // Tighten the question-to-answer gap to 16px when open; closed keeps 24px.
+  // No CSS transition on this margin: in Chrome a transition on the summary
+  // content margin gets stuck at the 24px start value on the first expand, so
+  // the gap stays wrong until a later toggle. The 8px change is masked by the
+  // simultaneous 250ms panel expansion anyway.
   "&.Mui-expanded .MuiAccordionSummary-content": {
     marginBottom: "16px",
   },
@@ -97,6 +102,9 @@ const FaqRow: React.FC<{ index: number; faq: FAQItem }> = ({ index, faq }) => {
       expanded={expanded}
       onChange={() => setExpanded(!expanded)}
       disableGutters
+      // Fixed timeout keeps open/close speed consistent; 250ms is a touch
+      // slower than MUI's default "auto" for a smoother, more natural feel.
+      slotProps={{ transition: { timeout: 250 } }}
     >
       <FaqSummary
         id={headerId}
