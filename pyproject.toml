@@ -148,7 +148,7 @@ dev = [
     "pytest-mock>=3.10.0,<4",
     "pytest-repeat>=0.9.4",
     "responses>=0.25.0,<0.26",
-    "ruff==0.16.3",
+    "ruff==0.16.8",
     "safety>=3.0.0,<4",
     "semantic-version>=2.10.0,<3",
     "freezegun>=1.4.0,<2",
@@ -193,7 +193,6 @@ lint.select = [
     "C4",  # flake8-comprehensions
     "C90",  # mccabe
     # "COM",  # flake8-commas
-    "CPY",  # flake8-copyright
     "D",  # pydocstyle
     "DJ",  # flake8-django
     "DTZ",  # flake8-datetimez
@@ -244,7 +243,6 @@ lint.select = [
 lint.ignore = [
     "B008",
     "B905",
-    "CPY001",
     "D104",
     "D200",
     "D202",
