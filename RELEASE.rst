@@ -1,6 +1,19 @@
 Release Notes
 =============
 
+Version 0.81.3
+--------------
+
+- Asktim Summary in search results (#3994)
+- Fix OLL archive content ingestion (#3973)
+- Read the warehouse catalog and schema from settings (#4005)
+- Fall back to the original image before the default image (#4007)
+- feat(website-content): require SEO fields to publish, and align the published control bar (#4009)
+- Do not follow redirects when fetching OVS transcripts (#4003)
+- fix(learning_resources): gate summary/flashcards like content on ContentFileViewSet (#3999)
+- fix(widgets): remove the unused RSS Feed widget type (#4000)
+- Update pre-commit hooks and adapt to ruff 0.16 (#3993)
+
 Version 0.81.1
 --------------
 
