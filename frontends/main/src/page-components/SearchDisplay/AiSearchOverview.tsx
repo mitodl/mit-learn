@@ -33,14 +33,19 @@ const getOverviewRequestOpts = (): AiChatProps["requestOpts"] => {
     // learn-ai has a separate search summary agent with its own prompt, thread
     // cookie and rate limit, so this doesn't touch the AskTIM drawer's thread.
     apiUrl: env("NEXT_PUBLIC_LEARN_AI_SEARCH_SUMMARY_ENDPOINT")!,
-    // The agent keeps its thread in a cookie, so without this every search
-    // would pile onto one long conversation and the model's answers drift in
-    // tone and format. Start a fresh thread per search; follow-ups in the
-    // drawer continue it.
-    transformBody: (messages, body) => ({
-      ...(requestOpts.transformBody?.(messages, body) as object),
-      ...(messages.length === 1 && { clear_history: true }),
-    }),
+    // Start a fresh thread per search, then send its thread_id with follow-ups.
+    // The thread cookie only remembers the latest search, so relying on it
+    // would send follow-ups from an older tab into the wrong thread.
+    // learn-ai ends each response with <!-- {"thread_id": ...} -->.
+    transformBody: (messages, body) => {
+      const threadId = messages
+        .findLast((m) => m.role === "assistant")
+        ?.content.match(/"thread_id":\s*"([^"]+)"/)?.[1]
+      return {
+        ...(requestOpts.transformBody?.(messages, body) as object),
+        ...(threadId ? { thread_id: threadId } : { clear_history: true }),
+      }
+    },
   }
 }
 
