@@ -98,13 +98,26 @@ describe("AiSearchOverview", () => {
     }
   })
 
-  test("starts a fresh thread on the first message only", () => {
+  test("starts a fresh thread, then sends its thread_id with follow-ups", () => {
     setupChat()
     renderWithProviders(<AiSearchOverview searchParams={params("ml")} />)
     const { requestOpts } = mockAiChatProvider.mock.calls[0][0]
+    // learn-ai ends each response with a metadata comment
+    const withMetadata = (content: string, threadId: string) =>
+      `${content}\n\n<!-- {"checkpoint_pk": 1, "thread_id": "${threadId}"} -->\n\n`
     const first = { id: "1", role: "user" as const, content: "first" }
-    const reply = { id: "2", role: "assistant" as const, content: "reply" }
+    const reply = {
+      id: "2",
+      role: "assistant" as const,
+      content: withMetadata("reply", "thread-1"),
+    }
     const followUp = { id: "3", role: "user" as const, content: "follow-up" }
+    const reply2 = {
+      id: "4",
+      role: "assistant" as const,
+      content: withMetadata("reply 2", "thread-2"),
+    }
+    const followUp2 = { id: "5", role: "user" as const, content: "follow-up 2" }
 
     expect(requestOpts.transformBody([first])).toEqual({
       message: "first",
@@ -112,6 +125,28 @@ describe("AiSearchOverview", () => {
     })
     expect(requestOpts.transformBody([first, reply, followUp])).toEqual({
       message: "follow-up",
+      thread_id: "thread-1",
+    })
+    // Uses the thread_id from the latest response
+    expect(
+      requestOpts.transformBody([first, reply, followUp, reply2, followUp2]),
+    ).toEqual({
+      message: "follow-up 2",
+      thread_id: "thread-2",
+    })
+  })
+
+  test("starts a fresh thread if the response has no thread_id", () => {
+    setupChat()
+    renderWithProviders(<AiSearchOverview searchParams={params("ml")} />)
+    const { requestOpts } = mockAiChatProvider.mock.calls[0][0]
+    const first = { id: "1", role: "user" as const, content: "first" }
+    const reply = { id: "2", role: "assistant" as const, content: "reply" }
+    const followUp = { id: "3", role: "user" as const, content: "follow-up" }
+
+    expect(requestOpts.transformBody([first, reply, followUp])).toEqual({
+      message: "follow-up",
+      clear_history: true,
     })
   })
 
