@@ -1,6 +1,21 @@
 Release Notes
 =============
 
+Version 0.81.1
+--------------
+
+- feat(website-content): render the SEO title and description into the page head (#3996)
+- feat(website-content): persist the SEO title and description (#3985)
+- fix(webhooks): make WEBHOOK_SECRET fail closed instead of using a public default (#3970)
+- Smooth FAQ accordion open/close animation (#3997)
+- feat(website-content): save drafts automatically, drop the draft button (#3978)
+- Posthog checkout_completed event (#3982)
+- fix: scope unsubscribe lookup to the requesting user's own subscriptions (#3984)
+- Sanitize MITPE news and events summary/content like sibling sources (#3977)
+- feat(website-content): unpublish published items from the listing card (#3963)
+- Re-ingest content files of republished runs, fix inconsistent contentfile (de)indexing  (#3976)
+- add back schedule and fix admin criteria text field (#3989)
+
 Version 0.80.18
 ---------------
 
