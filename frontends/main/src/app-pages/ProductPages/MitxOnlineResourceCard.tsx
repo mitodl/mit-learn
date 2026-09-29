@@ -151,7 +151,11 @@ const MitxOnlineResourceCard: React.FC<MitxOnlineResourceCardProps> = (
     label,
   } = props
 
-  const { src: imageSrc, onError: onImageError } = useImageWithFallback(
+  const {
+    src: imageSrc,
+    unoptimized: imageUnoptimized,
+    onError: onImageError,
+  } = useImageWithFallback(
     props.resource?.page?.feature_image_src,
     DEFAULT_RESOURCE_IMG,
   )
@@ -180,6 +184,7 @@ const MitxOnlineResourceCard: React.FC<MitxOnlineResourceCardProps> = (
       imageSrc={imageSrc}
       imageAlt=""
       onImageError={onImageError}
+      imageUnoptimized={imageUnoptimized}
       title={data.title}
       resourceType={data.displayType}
       resourcePrice={data.resourcePrice}

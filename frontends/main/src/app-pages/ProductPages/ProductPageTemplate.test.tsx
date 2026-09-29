@@ -12,7 +12,7 @@ import { PostHogEvents } from "@/common/constants"
 import type { ResourceInfo } from "./ProductPageTemplate"
 import { PlatformEnum } from "api"
 import { DEFAULT_RESOURCE_IMG } from "ol-utilities"
-import { getAllByImageSrc } from "ol-test-utilities"
+import { getAllByImageSrc, queryAllByImageSrc } from "ol-test-utilities"
 
 jest.mock("posthog-js/react", () => ({
   ...jest.requireActual("posthog-js/react"),
@@ -74,7 +74,7 @@ const renderProductPageTemplate = (
 }
 
 describe("ProductPageTemplate image error fallback", () => {
-  it("falls back to DEFAULT_RESOURCE_IMG when imageSrc returns 404", () => {
+  it("falls back to the original image, then DEFAULT_RESOURCE_IMG, when imageSrc fails", () => {
     setMockResponse.get(urls.userMe.get(), { is_authenticated: false })
     const { view } = renderWithProviders(
       <ProductPageTemplate
@@ -90,9 +90,14 @@ describe("ProductPageTemplate image error fallback", () => {
       </ProductPageTemplate>,
     )
 
-    getAllByImageSrc(view.container, "https://example.com/image.jpg").forEach(
-      (img) => fireEvent.error(img),
-    )
+    const src = "https://example.com/image.jpg"
+    const raw = { nextJsOriginalSrc: false }
+    expect(queryAllByImageSrc(view.container, src, raw)).toHaveLength(0)
+    // Optimized image fails: retry the original, loaded directly
+    getAllByImageSrc(view.container, src).forEach((img) => fireEvent.error(img))
+    const originals = getAllByImageSrc(view.container, src, raw)
+    // Original fails too: use the default
+    originals.forEach((img) => fireEvent.error(img))
     expect(
       getAllByImageSrc(view.container, DEFAULT_RESOURCE_IMG).length,
     ).toBeGreaterThan(0)
