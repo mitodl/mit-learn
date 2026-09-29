@@ -166,3 +166,87 @@ describe("ArticleSettingsDrawer saved values", () => {
     expect(onSave.mock.calls[0][0].topics).toEqual([subA.id])
   })
 })
+
+describe("ArticleSettingsDrawer SEO fields", () => {
+  /* The title budget is derived from this, so it has to be known, not ambient. */
+  const previousSiteName = process.env.NEXT_PUBLIC_SITE_NAME
+  beforeEach(() => {
+    process.env.NEXT_PUBLIC_SITE_NAME = "MIT Learn"
+  })
+  afterEach(() => {
+    process.env.NEXT_PUBLIC_SITE_NAME = previousSiteName
+  })
+
+  /**
+   * `WebsiteContent.seo_title` is a `CharField(max_length=255)`, so anything
+   * longer is rejected by the server -- and the drawer's save is fired and
+   * forgotten, so that rejection reaches the editor only as a generic banner.
+   * The field stops it here instead.
+   */
+  test("the SEO title cannot be typed past what the server stores", async () => {
+    mockTopics()
+    const { onSave } = renderDrawer()
+
+    const field = await screen.findByLabelText("SEO Title")
+    expect(field).toHaveAttribute("maxLength", "255")
+
+    await userEvent.type(field, "x".repeat(260))
+    expect(field).toHaveValue("x".repeat(255))
+
+    await save()
+    expect(onSave.mock.calls[0][0].seoTitle).toHaveLength(255)
+  }, 30000)
+
+  /**
+   * MIT's SEO rules ask for a title tag of 50-60 characters, and the page
+   * appends " | MIT Learn" to whatever is entered here -- so the budget shown
+   * to the editor is the 60 less that suffix, not 60 and not the 255 the
+   * column happens to hold.
+   */
+  test("the title budget is the tag's, less the appended site name", async () => {
+    mockTopics()
+    renderDrawer()
+
+    // 60 - " | MIT Learn".length
+    await screen.findByText("0 / 48 characters")
+    await screen.findByText(
+      /Aim for 48 characters or fewer\. " \| MIT Learn" is appended, for a 60-character title/,
+    )
+  })
+
+  test("the description budget is stated with the mobile cut-off", async () => {
+    mockTopics()
+    renderDrawer()
+
+    await screen.findByText("0 / 160 characters")
+    await screen.findByText(
+      /Aim for 160 characters or fewer\. Only about 120 show on a phone/,
+    )
+  })
+
+  /**
+   * Guidance, not a limit: both numbers stand in for pixel widths, and a tag a
+   * little over is truncated rather than rejected. So the counter says so and
+   * the save still goes through -- what it must not do is look like nothing
+   * happened.
+   */
+  test("going over the title budget is flagged but not prevented", async () => {
+    mockTopics()
+    const { onSave } = renderDrawer()
+
+    const under = await screen.findByText("0 / 48 characters")
+    expect(under).toHaveAttribute("data-over-budget", "false")
+
+    await userEvent.type(
+      await screen.findByLabelText("SEO Title"),
+      "x".repeat(50),
+    )
+
+    const over = await screen.findByText("50 / 48 characters")
+    expect(over).toHaveAttribute("data-over-budget", "true")
+
+    /* Still saved: the budget is guidance, and the editor has seen it. */
+    await save()
+    expect(onSave.mock.calls[0][0].seoTitle).toHaveLength(50)
+  }, 30000)
+})

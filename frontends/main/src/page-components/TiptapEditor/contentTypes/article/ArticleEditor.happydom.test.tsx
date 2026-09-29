@@ -46,11 +46,15 @@ const renderArticleEditor = ({
   readOnly = false,
   isPublished = false,
   topics = [],
+  seoTitle = "",
+  seoDescription = "",
   autosaveDelayMs = AUTOSAVE_OFF,
 }: {
   readOnly?: boolean
   isPublished?: boolean
   topics?: number[]
+  seoTitle?: string
+  seoDescription?: string
   autosaveDelayMs?: number
 } = {}) => {
   const user = factories.user.user({
@@ -62,6 +66,8 @@ const renderArticleEditor = ({
     content,
     is_published: isPublished,
     topics,
+    seo_title: seoTitle,
+    seo_description: seoDescription,
   })
   renderWithProviders(
     <ArticleEditor
@@ -232,7 +238,7 @@ describe("ArticleEditor article controls", () => {
 })
 
 describe("ArticleEditor settings", () => {
-  test("saving settings PATCHes the chosen topics and nothing else", async () => {
+  test("saving settings PATCHes the drawer's values and nothing else", async () => {
     const mainTopics = factories.learningResources.topics({ count: 1 })
     const [topic] = mainTopics.results
     setMockResponse.get(urls.topics.list({ limit: 1000 }), mainTopics)
@@ -256,10 +262,67 @@ describe("ArticleEditor settings", () => {
       expect(makeRequest).toHaveBeenCalledWith(
         expect.objectContaining({
           method: "patch",
-          body: { topics: [topic.id] },
+          body: { topics: [topic.id], seo_title: "", seo_description: "" },
         }),
       )
     })
+  })
+
+  test("saving settings PATCHes the SEO fields", async () => {
+    setMockResponse.get(
+      urls.topics.list({ limit: 1000 }),
+      factories.learningResources.topics({ count: 1 }),
+    )
+    const { article } = renderArticleEditor()
+    setMockResponse.patch(urls.websiteContent.details(article.id), article)
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Settings" }),
+    )
+    await userEvent.type(
+      await screen.findByLabelText("SEO Title"),
+      "A better title for search",
+    )
+    await userEvent.type(
+      screen.getByLabelText("SEO Description"),
+      "What this is about.",
+    )
+    await userEvent.click(screen.getByRole("button", { name: "Save Settings" }))
+
+    await waitFor(() => {
+      expect(makeRequest).toHaveBeenCalledWith(
+        expect.objectContaining({
+          method: "patch",
+          body: {
+            topics: [],
+            seo_title: "A better title for search",
+            seo_description: "What this is about.",
+          },
+        }),
+      )
+    })
+  })
+
+  test("the drawer opens with the saved SEO values", async () => {
+    setMockResponse.get(
+      urls.topics.list({ limit: 1000 }),
+      factories.learningResources.topics({ count: 1 }),
+    )
+    renderArticleEditor({
+      seoTitle: "Stored title",
+      seoDescription: "Stored description",
+    })
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Settings" }),
+    )
+
+    expect(await screen.findByLabelText("SEO Title")).toHaveValue(
+      "Stored title",
+    )
+    expect(screen.getByLabelText("SEO Description")).toHaveValue(
+      "Stored description",
+    )
   })
 
   test("an article's saved topics are already selected when the drawer opens", async () => {
@@ -537,7 +600,10 @@ describe("ArticleEditor topics requirement", () => {
 
     await waitFor(() => {
       expect(makeRequest).toHaveBeenCalledWith(
-        expect.objectContaining({ method: "patch", body: { topics: [] } }),
+        expect.objectContaining({
+          method: "patch",
+          body: { topics: [], seo_title: "", seo_description: "" },
+        }),
       )
     })
   })
@@ -597,7 +663,7 @@ describe("ArticleEditor topics requirement", () => {
       expect(makeRequest).toHaveBeenCalledWith(
         expect.objectContaining({
           method: "patch",
-          body: { topics: [topic.id] },
+          body: { topics: [topic.id], seo_title: "", seo_description: "" },
         }),
       )
     })
