@@ -624,6 +624,35 @@ def deindex_non_opensearch_run_content_files(
         return error
 
 
+@app.task(
+    autoretry_for=(RetryError,),
+    retry_backoff=True,
+    rate_limit=settings.CELERY_SEARCH_RATE_LIMIT,
+)
+def deindex_deleted_run_content_files(
+    run_id, learning_resource_id, resource_type=COURSE_TYPE
+):
+    """
+    Deindex the content files of a deleted LearningResourceRun
+
+    Args:
+        run_id(int): Id of the deleted run
+        learning_resource_id(int): Learning resource id the run belonged to
+        resource_type (string): The resource type of the parent learning resource
+    """
+    try:
+        with wrap_retry_exception(*SEARCH_CONN_EXCEPTIONS):
+            api.deindex_deleted_run_content_files(
+                run_id, learning_resource_id, resource_type=resource_type
+            )
+    except (RetryError, Ignore):
+        raise
+    except:  # noqa: E722
+        error = "deindex_deleted_run_content_files threw an error"
+        log.exception(error)
+        return error
+
+
 @contextmanager
 def wrap_retry_exception(*exception_classes):
     """

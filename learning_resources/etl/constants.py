@@ -110,6 +110,15 @@ QDRANT_RETAINED_SOURCES = (
     ETLSource.canvas.value,
 )
 
+# Sources whose course run_id is an edX course run key, which the source lets
+# belong to only one course at a time
+EDX_RUN_ID_SOURCES = (
+    ETLSource.mit_edx.value,
+    ETLSource.mitxonline.value,
+    ETLSource.xpro.value,
+    ETLSource.oll.value,
+)
+
 
 class CourseNumberType(Enum):
     """Enum of course number types"""

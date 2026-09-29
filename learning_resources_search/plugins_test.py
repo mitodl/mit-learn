@@ -10,7 +10,7 @@ from learning_resources.factories import (
     LearningResourceFactory,
     LearningResourceRunFactory,
 )
-from learning_resources.models import LearningResourceRun
+from learning_resources.models import ContentFile, LearningResourceRun
 from learning_resources_search.constants import COURSE_TYPE, PROGRAM_TYPE
 from learning_resources_search.plugins import SearchIndexPlugin
 
@@ -374,33 +374,50 @@ def test_resource_unpublished_course_purges_runs_from_qdrant(
 @pytest.mark.parametrize(
     "etl_source", [ETLSource.mitxonline.value, ETLSource.ocw.value]
 )
-@pytest.mark.parametrize("has_content_files", [True, False])
+@pytest.mark.parametrize("qdrant_hooks", [True, False])
 @pytest.mark.parametrize("test_mode", [True, False])
-def test_search_index_plugin_resource_run_delete(
-    mock_search_index_helpers, settings, etl_source, has_content_files, test_mode
+def test_search_index_plugin_resource_run_delete(  # noqa: PLR0913
+    mocker,
+    settings,
+    django_capture_on_commit_callbacks,
+    etl_source,
+    qdrant_hooks,
+    test_mode,
 ):
-    """Deleting a run always purges BOTH indexes and deletes the object,
-    regardless of source, test_mode, or whether content files exist.
+    """Deleting a run deletes it and its content files, then once committed
+    removes them from both indexes by keys saved beforehand, regardless of
+    source or test_mode.
     """
-    settings.QDRANT_ENABLE_INDEXING_PLUGIN_HOOKS = True
+    settings.QDRANT_ENABLE_INDEXING_PLUGIN_HOOKS = qdrant_hooks
+    mock_try_task = mocker.patch(
+        "learning_resources_search.plugins.try_with_retry_as_task"
+    )
+    mock_deindex = mocker.patch(
+        "learning_resources_search.plugins.tasks.deindex_deleted_run_content_files.si"
+    )
+    mock_remove_points = mocker.patch(
+        "learning_resources_search.plugins.vector_tasks.remove_deleted_run_content_files.si"
+    )
     run = LearningResourceRunFactory.create(
         learning_resource__published=True,
         learning_resource__test_mode=test_mode,
         learning_resource__etl_source=etl_source,
     )
-    if has_content_files:
-        ContentFileFactory.create(run=run)
-    run_id = run.id
+    ContentFileFactory.create(run=run)
+    run_pk, course = run.id, run.learning_resource
 
-    SearchIndexPlugin().resource_run_delete(run)
+    with django_capture_on_commit_callbacks(execute=True):
+        SearchIndexPlugin().resource_run_delete(run)
+        assert LearningResourceRun.objects.filter(id=run_pk).exists() is False
+        assert ContentFile.objects.filter(run_id=run_pk).exists() is False
+        mock_try_task.assert_not_called()
 
-    mock_search_index_helpers.mock_remove_contentfiles_immutable_signature.assert_called_once_with(
-        run_id, unpublished_only=False
-    )
-    mock_search_index_helpers.mock_remove_run_contentfiles_immutable_signature.assert_called_once_with(
-        run_id
-    )
-    assert LearningResourceRun.objects.filter(id=run_id).exists() is False
+    mock_try_task.assert_called_once()
+    mock_deindex.assert_called_once_with(run_pk, course.id, course.resource_type)
+    if qdrant_hooks:
+        mock_remove_points.assert_called_once_with(run.run_id, course.readable_id)
+    else:
+        mock_remove_points.assert_not_called()
 
 
 @pytest.mark.django_db
