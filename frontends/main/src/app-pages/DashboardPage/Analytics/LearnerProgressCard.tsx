@@ -198,7 +198,6 @@ const LearnerProgressCard: React.FC<{
   isError?: boolean
   learnersHref: string
 }> = ({ totalCount, statusCounts, isLoading, isError, learnersHref }) => {
-  // Above the early returns: hooks cannot be called conditionally.
   const statusColors = progressStatusColors(useTheme())
 
   if (isError) {
@@ -257,12 +256,6 @@ const LearnerProgressCard: React.FC<{
           value={buckets.completed}
           learnersHref={learnersHref}
         />
-        {/* Disabled: Needs attention tile — no needs_attention aggregate
-            exists yet (not_started OR 30+ days inactive). See the witan
-            project "Needs-attention aggregate for B2B learner progress".
-            Restore once that aggregate ships:
-          <Tile label="Needs attention" value={needsAttention} />
-          */}
       </TileRow>
 
       <TableCard>
@@ -288,8 +281,6 @@ const LearnerProgressCard: React.FC<{
                 <RowStats>
                   <RowCount>
                     {formatCount(count)}
-                    {/* Restores the "Learners" column header's context, lost
-                        when this became a list instead of a table. */}
                     <VisuallyHidden> learners,</VisuallyHidden>
                   </RowCount>
                   <RowPercent>
