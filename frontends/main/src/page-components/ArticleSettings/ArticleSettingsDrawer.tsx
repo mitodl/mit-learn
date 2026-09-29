@@ -199,23 +199,52 @@ const FooterCta = styled.div({
 
 /**
  * What the topics section says about itself, which depends on which rule is
- * speaking: one that refuses to save without a topic, one that only wants them
- * before publishing, or neither.
+ * speaking: content already public that cannot be left without them, content
+ * that only needs them before it goes public, or neither.
+ *
+ * Keyed on `published` rather than on whether the save is refused: the two no
+ * longer coincide -- a draft's save is refused too while a publish is waiting
+ * on the drawer -- and telling a draft it is published would be simply wrong.
  */
 const topicsMessage = (
   contentLabel: string,
   empty: boolean,
   required: boolean,
-  mayNotBeEmptied: boolean,
+  published: boolean,
 ) => {
   const noun = contentLabel.toLowerCase()
-  if (empty && mayNotBeEmptied) {
+  if (empty && published) {
     return `A published ${noun} needs at least one topic`
   }
   if (empty && required) {
     return `Select at least one topic to publish your ${noun}`
   }
   return `Select one or more topics for your ${noun}`
+}
+
+/**
+ * What the SEO section says about itself, on the same three rules as topics.
+ *
+ * Named for what is missing rather than "these fields are required": the
+ * drawer opens on its own when a publish is held back, and the first thing
+ * the author needs to know is why it did.
+ */
+const seoMessage = (
+  contentLabel: string,
+  missing: boolean,
+  required: boolean,
+  published: boolean,
+) => {
+  const noun = contentLabel.toLowerCase()
+  const always =
+    "Both should be unique to this page, and they are the first thing someone reads in search results."
+  if (missing && published) {
+    return `A published ${noun} needs an SEO title and description. ${always}`
+  }
+  if (missing && required) {
+    return `Add an SEO title and description to publish your ${noun}. ${always}`
+  }
+  return `Add an SEO title and description to help search engines understand and display your ${noun}. ${always}`
 }
 
 /** Settings the drawer collects. Mirrors the fields in the design. */
@@ -276,6 +305,32 @@ export interface ArticleSettingsDrawerProps {
    * stopped at publishing -- while content already public cannot.
    */
   topicsMayNotBeEmptied?: boolean
+  /**
+   * Whether the content needs an SEO title and description before it can go
+   * public. As with `topicsRequired`, the section says so while either is
+   * blank, which is what tells an editor why the drawer opened on them.
+   *
+   * Unlike topics this is not an article-only rule: a search result and a link
+   * preview are the editor's to write on news just as much.
+   */
+  seoRequired?: boolean
+  /**
+   * Whether a blank SEO title or description may not be saved at all.
+   *
+   * Separate from `seoRequired` for the same reason as topics: a draft may sit
+   * without them, since publishing is where they are insisted on and autosave
+   * cannot stop to ask. It is also what keeps a held-back publish from being
+   * dropped -- saving the drawer while the publish is still waiting, and still
+   * without what it needs, would close the drawer and forget the press.
+   */
+  seoMayNotBeEmptied?: boolean
+  /**
+   * Whether the content is already public, which is only a matter of wording:
+   * what a section says when something it needs is missing. The refusals are
+   * `topicsMayNotBeEmptied` and `seoMayNotBeEmptied`, which apply to a draft
+   * as well while a publish is waiting on this drawer.
+   */
+  contentIsPublished?: boolean
   /** Values to open with. Re-read each time the drawer opens. */
   initialValues?: Partial<ArticleSettingsValues>
   /**
@@ -295,6 +350,9 @@ const ArticleSettingsDrawer = ({
   showTopics = true,
   topicsRequired = false,
   topicsMayNotBeEmptied = false,
+  seoRequired = false,
+  seoMayNotBeEmptied = false,
+  contentIsPublished = false,
   initialValues,
   onSave,
 }: ArticleSettingsDrawerProps) => {
@@ -313,6 +371,13 @@ const ArticleSettingsDrawer = ({
    * Read here rather than at module scope, where NEXT_PUBLIC_* values are not
    * set yet. Missing, there is no suffix to reserve for.
    */
+  /**
+   * Whitespace does not count as provided: a space would satisfy a bare
+   * emptiness check and reach the page head as a blank title, which is worse
+   * than the fallback it displaced.
+   */
+  const seoMissing = !seoTitle.trim() || !seoDescription.trim()
+
   const siteName = env("NEXT_PUBLIC_SITE_NAME")
   const titleSuffix = siteName ? ` | ${siteName}` : ""
   const seoTitleBudget = SEO_TITLE_TAG_BUDGET - titleSuffix.length
@@ -514,7 +579,7 @@ const ArticleSettingsDrawer = ({
                     contentLabel,
                     selectedIds.length === 0,
                     topicsRequired,
-                    topicsMayNotBeEmptied,
+                    contentIsPublished,
                   )}
                 </Typography>
               </SectionHeading>
@@ -600,10 +665,12 @@ const ArticleSettingsDrawer = ({
                 SEO Settings
               </Typography>
               <Typography variant="body2">
-                Add an SEO title and description to help search engines
-                understand and display your {contentLabel.toLowerCase()}. Both
-                should be unique to this page, and they are the first thing
-                someone reads in search results.
+                {seoMessage(
+                  contentLabel,
+                  seoMissing,
+                  seoRequired,
+                  contentIsPublished,
+                )}
               </Typography>
             </SectionHeading>
             <div>
@@ -611,6 +678,7 @@ const ArticleSettingsDrawer = ({
                 name="seo_title"
                 label="SEO Title"
                 fullWidth
+                required={seoRequired}
                 placeholder="Enter a title for search results"
                 /* The budget belongs in the description, not only in the
                    counter: otherwise it is discoverable only by being run
@@ -635,6 +703,7 @@ const ArticleSettingsDrawer = ({
                 name="seo_description"
                 label="SEO Description"
                 fullWidth
+                required={seoRequired}
                 multiline
                 /* Sized to the budget rather than to the space: nine rows read
                    as an invitation to write far more than will ever show. */
@@ -663,9 +732,12 @@ const ArticleSettingsDrawer = ({
             <Button
               variant="primary"
               /* Refused rather than silently ignored: the editor has emptied
-                 the selection on screen and has to see why it will not save. */
+                 something on screen and has to see why it will not save. */
               disabled={
-                topicsMayNotBeEmptied && showTopics && selectedIds.length === 0
+                (topicsMayNotBeEmptied &&
+                  showTopics &&
+                  selectedIds.length === 0) ||
+                (seoMayNotBeEmptied && seoMissing)
               }
               onClick={() => {
                 onSave?.({

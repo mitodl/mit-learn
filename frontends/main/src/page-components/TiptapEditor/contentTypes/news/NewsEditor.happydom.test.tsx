@@ -65,6 +65,11 @@ describe("NewsEditor - Content Editing and Saving", () => {
       title,
       content,
       is_published: false,
+      /* These tests are about saving content, and publishing insists on an
+         SEO title and description -- without them the press opens the
+         settings drawer instead, which is covered on its own below. */
+      seo_title: "A title for search",
+      seo_description: "A description for search results.",
     })
     setMockResponse.get(urls.websiteContent.details(articleId), newsItem)
 
@@ -588,6 +593,26 @@ describe("NewsEditor - Content Editing and Saving", () => {
       expect(publishButton).not.toBeDisabled()
 
       fireEvent.click(publishButton!)
+
+      /**
+       * Nothing has ever been saved here, so there is no SEO title or
+       * description yet and the press opens the settings drawer first. Filling
+       * them in and saving resumes the publish, confirmation and all -- see
+       * "news is not published without an SEO title and description".
+       */
+      await screen.findByRole("heading", { name: "News Settings" })
+      await userEvent.type(
+        await screen.findByLabelText(/^SEO Title/),
+        "My Article in search",
+      )
+      await userEvent.type(
+        screen.getByLabelText(/^SEO Description/),
+        "What this article is about.",
+      )
+      await userEvent.click(
+        screen.getByRole("button", { name: "Save Settings" }),
+      )
+
       await confirmPublish()
 
       await waitFor(
@@ -1811,7 +1836,7 @@ describe("NewsEditor - shared content controls", () => {
        request for one would fail the suite. */
     setMockResponse.patch(urls.websiteContent.details(newsItem.id), newsItem)
     await userEvent.type(
-      await screen.findByLabelText("SEO Title"),
+      await screen.findByLabelText(/^SEO Title/),
       "News for search",
     )
     await userEvent.click(screen.getByRole("button", { name: "Save Settings" }))
@@ -1830,4 +1855,96 @@ describe("NewsEditor - shared content controls", () => {
       )
     })
   })
+
+  /**
+   * News has no topics section, so the SEO fields are the only thing
+   * publishing can be waiting on -- which makes this the case that would
+   * strand a held-back publish if the resume still tested the topic count.
+   */
+  test("news is not published without an SEO title and description", async () => {
+    const user = factories.user.user({
+      is_authenticated: true,
+      is_article_editor: true,
+    })
+    setMockResponse.get(urls.userMe.get(), user)
+
+    const newsItem = factories.websiteContent.websiteContent({
+      id: 404,
+      title: "Draft news",
+      content_type: "news",
+      is_published: false,
+      /* A real banner: the editor takes its title from that heading, and
+         Publish is disabled without one. */
+      content: {
+        type: "doc",
+        content: [
+          {
+            type: "banner",
+            content: [
+              {
+                type: "heading",
+                attrs: { level: 1 },
+                content: [{ type: "text", text: "Draft news" }],
+              },
+              { type: "paragraph", content: [] },
+            ],
+          },
+          { type: "byline" },
+          { type: "paragraph", content: [] },
+        ],
+      },
+    })
+    setMockResponse.get(urls.websiteContent.details(newsItem.id), newsItem)
+    setMockResponse.patch(urls.websiteContent.details(newsItem.id), {
+      ...newsItem,
+      is_published: true,
+    })
+
+    renderWithProviders(
+      <NewsEditor autosaveDelayMs={AUTOSAVE_OFF} newsItem={newsItem} />,
+      { user },
+    )
+    await screen.findByTestId("editor")
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Publish" }),
+    )
+
+    // The drawer, not the publish confirmation.
+    await screen.findByRole("heading", { name: "News Settings" })
+    expect(
+      screen.queryByRole("heading", { name: "Publish news" }),
+    ).not.toBeInTheDocument()
+    await screen.findByText(
+      /Add an SEO title and description to publish your news/,
+    )
+
+    await userEvent.type(
+      await screen.findByLabelText(/^SEO Title/),
+      "What MIT built this week",
+    )
+    await userEvent.type(
+      screen.getByLabelText(/^SEO Description/),
+      "A short summary for search results.",
+    )
+    await userEvent.click(screen.getByRole("button", { name: "Save Settings" }))
+
+    /* The press picks up where it left off, with no topics involved. */
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Yes, Publish news" }),
+    )
+
+    await waitFor(() => {
+      expect(makeRequest).toHaveBeenCalledWith(
+        expect.objectContaining({
+          method: "patch",
+          body: expect.objectContaining({
+            is_published: true,
+            seo_title: "What MIT built this week",
+            seo_description: "A short summary for search results.",
+          }),
+        }),
+      )
+    })
+  }, 30000)
 })
