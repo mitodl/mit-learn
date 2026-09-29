@@ -42,11 +42,6 @@ class WidgetInstanceFactory(DjangoModelFactory):
             title="Markdown Widget",
             configuration={"source": "*Here's some basic markdown*"},
         )
-        type_rss = factory.Trait(
-            widget_type="RSS Feed",
-            title="RSS Widget",
-            configuration={"url": "http://example.com", "feed_display_limit": 10},
-        )
         type_people = factory.Trait(
             widget_type="People",
             title="People Widget",
