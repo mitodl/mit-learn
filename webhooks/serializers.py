@@ -2,6 +2,7 @@ import re
 
 from rest_framework import serializers
 
+from learning_resources.constants import LearningResourceType
 from learning_resources.etl.constants import ETLSource
 from learning_resources.etl.ovs import is_allowed_media_url
 
@@ -131,6 +132,23 @@ class ContentFileWebhookRequestSerializer(serializers.Serializer):
     course = serializers.CharField(required=False, allow_blank=True)
 
 
+class LearningResourceSyncPairSerializer(serializers.Serializer):
+    """
+    An (etl_source, resource_type) pair a learning_resources webhook batch is
+    authoritative for. Only types whose loader prunes by source can be synced:
+    videos are never pruned and podcasts refuse an empty tracked set.
+    """
+
+    etl_source = serializers.CharField()
+    resource_type = serializers.ChoiceField(
+        choices=[
+            LearningResourceType.course.name,
+            LearningResourceType.program.name,
+            LearningResourceType.document.name,
+        ]
+    )
+
+
 class LearningResourceWebhookRequestSerializer(serializers.Serializer):
     """
     Serializer for the generic ``/api/v1/webhooks/learning_resources/`` endpoint.
@@ -141,11 +159,21 @@ class LearningResourceWebhookRequestSerializer(serializers.Serializer):
     route it to the correct loader; all other keys are preserved and passed
     through to the loaders unchanged.
 
-    An empty batch is rejected: it names no (etl_source, resource_type), so no
-    loader could sync or prune anything and the request would silently no-op.
+    ``sync`` declares (etl_source, resource_type) pairs the batch is
+    authoritative for. A declared pair with no resources in the batch is pruned,
+    unpublishing everything MIT Learn holds for it, so a source that stops
+    publishing a type can say so. A batch with neither resources nor ``sync``
+    is rejected: it names no pair, so the request would silently no-op.
     """
 
-    resources = serializers.ListField(child=serializers.DictField(), allow_empty=False)
+    resources = serializers.ListField(child=serializers.DictField(), allow_empty=True)
+    sync = LearningResourceSyncPairSerializer(many=True, required=False, default=list)
+
+    def validate(self, attrs):
+        if not attrs["resources"] and not attrs["sync"]:
+            msg = "A batch must carry resources or declare at least one sync pair"
+            raise serializers.ValidationError(msg)
+        return attrs
 
     def validate_resources(self, resources):
         required_fields = ("readable_id", "etl_source", "resource_type")

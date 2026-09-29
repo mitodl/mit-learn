@@ -28,9 +28,8 @@ from learning_resources.etl.loaders import (
     load_videos,
 )
 from learning_resources.etl.ownership import (
-    OwnershipError,
     Pipeline,
-    assert_owner,
+    may_write,
     writing_as,
 )
 from learning_resources.models import LearningResource
@@ -197,8 +196,10 @@ class LearningResourceWebhookView(BaseWebhookView):
     / ``load_podcasts``).
     Each loader performs a full sync for that source and upserts the OpenSearch
     index, so a batch must contain the authoritative set of resources for the
-    (etl_source, resource_type) it represents. Resource types without a loader
-    are logged and skipped rather than failing the whole batch.
+    (etl_source, resource_type) it represents. A pair listed in the optional
+    ``sync`` array with no resources in the batch is pruned, unpublishing all
+    of it. Resource types without a loader are logged and skipped rather than
+    failing the whole batch.
     """
 
     permission_classes = []
@@ -224,17 +225,26 @@ class LearningResourceWebhookView(BaseWebhookView):
             return HttpResponseBadRequest("Invalid JSON format")
         serializer = LearningResourceWebhookRequestSerializer(data=payload)
         serializer.is_valid(raise_exception=True)
-        try:
-            summary = process_learning_resources_webhook(
-                serializer.validated_data["resources"]
-            )
-        except OwnershipError as exc:
-            # Nothing was written: ownership is checked for every group first.
-            log.warning("learning_resources webhook rejected: %s", exc)
-            return Response(
-                {"status": "error", "message": str(exc)},
-                status=status.HTTP_409_CONFLICT,
-            )
+        grouped = group_learning_resources(
+            serializer.validated_data["resources"],
+            serializer.validated_data["sync"],
+        )
+        # Check ownership of every group before loading any, since a partial
+        # load would leave the batch half applied with no way for the sender
+        # to tell.
+        with writing_as(Pipeline.WEBHOOK):
+            unowned = unowned_groups(grouped)
+            if unowned:
+                msg = (
+                    f"The webhook does not own {', '.join(unowned)}. Set the "
+                    "ETLSourceOwnership rows in Django admin to cut them over."
+                )
+                log.warning("learning_resources webhook rejected: %s", msg)
+                return Response(
+                    {"status": "error", "message": msg},
+                    status=status.HTTP_409_CONFLICT,
+                )
+            summary = load_learning_resource_groups(grouped)
         log.info("learning_resources webhook processed: %s", summary)
         clear_views_cache()
         return self.success()
@@ -261,8 +271,13 @@ def _load_resource_group(etl_source, resource_type, resources):
     Returns the list of loaded LearningResource objects, or ``None`` if the
     resource_type has no supported loader (the group is then skipped).
     """
+    # Only a sync-declared pair reaches here with no resources, and an empty
+    # declared pair is the sender saying nothing of it is published any more.
+    prune_empty = not resources
     if resource_type == LearningResourceType.course.name:
-        return load_courses(etl_source, resources)
+        return load_courses(
+            etl_source, resources, config=CourseLoaderConfig(prune_empty=prune_empty)
+        )
     if resource_type == LearningResourceType.program.name:
         # Child courses arrive as references to courses their own source's
         # course delivery already loaded, so look them up rather than upsert,
@@ -271,7 +286,9 @@ def _load_resource_group(etl_source, resource_type, resources):
             etl_source,
             resources,
             config=ProgramLoaderConfig(
-                courses=CourseLoaderConfig(fetch_only=True), prune=True
+                courses=CourseLoaderConfig(fetch_only=True),
+                prune=True,
+                prune_empty=prune_empty,
             ),
         )
     if resource_type == LearningResourceType.document.name:
@@ -287,29 +304,39 @@ def _load_resource_group(etl_source, resource_type, resources):
     return None
 
 
-def process_learning_resources_webhook(resources):
+def group_learning_resources(resources, sync):
     """
-    Group canonical LearningResource dicts by (etl_source, resource_type) and
-    route each group to the appropriate loader. Unsupported resource types are
-    logged and skipped rather than failing the whole batch.
-
-    Raises OwnershipError, before writing anything, if the webhook does not own
-    every (etl_source, resource_type) a supported group would write. A partial
-    load would leave the batch half applied with no way for the sender to tell.
+    Group canonical LearningResource dicts by (etl_source, resource_type),
+    adding an empty group for each sync-declared pair with no resources so
+    its loader prunes it.
     """
     grouped = defaultdict(list)
     for resource in resources:
         grouped[(resource["etl_source"], resource["resource_type"])].append(resource)
-
-    with writing_as(Pipeline.WEBHOOK):
-        for etl_source, resource_type in grouped:
-            if resource_type in _WRITTEN_TYPES:
-                assert_owner(etl_source, _WRITTEN_TYPES[resource_type])
-        return _load_groups(grouped)
+    for pair in sync:
+        grouped.setdefault((pair["etl_source"], pair["resource_type"]), [])
+    return grouped
 
 
-def _load_groups(grouped):
-    """Load each group and summarize what was loaded or skipped."""
+def unowned_groups(grouped):
+    """
+    Return "etl_source/resource_type" for each supported group the current
+    pipeline does not own every written type of.
+    """
+    return [
+        f"{etl_source}/{resource_type}"
+        for etl_source, resource_type in grouped
+        if resource_type in _WRITTEN_TYPES
+        and not may_write(etl_source, _WRITTEN_TYPES[resource_type])
+    ]
+
+
+def load_learning_resource_groups(grouped):
+    """
+    Route each group to its loader and summarize what was loaded or skipped.
+    Unsupported resource types are logged and skipped rather than failing the
+    whole batch.
+    """
     summary = {"loaded": 0, "skipped": 0, "groups": []}
     for (etl_source, resource_type), items in grouped.items():
         loaded = _load_resource_group(etl_source, resource_type, items)

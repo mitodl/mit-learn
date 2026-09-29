@@ -67,20 +67,30 @@ LearningResourceRunLoaderConfig = namedtuple(  # noqa: PYI024
     "RunLoaderConfig", ["offered_by"], defaults=[OfferedByLoaderConfig()]
 )
 
+# prune_empty lets prune run when nothing was loaded, unpublishing every resource
+# of the source. Off by default so an empty extraction can't wipe a source; only
+# a caller that knows the empty set is authoritative should turn it on.
 CourseLoaderConfig = namedtuple(  # noqa: PYI024
     "CourseLoaderConfig",
-    ["prune", "offered_by", "runs", "fetch_only"],
-    defaults=[True, OfferedByLoaderConfig(), LearningResourceRunLoaderConfig(), False],
+    ["prune", "offered_by", "runs", "fetch_only", "prune_empty"],
+    defaults=[
+        True,
+        OfferedByLoaderConfig(),
+        LearningResourceRunLoaderConfig(),
+        False,
+        False,
+    ],
 )
 
 ProgramLoaderConfig = namedtuple(  # noqa: PYI024
     "ProgramLoaderConfig",
-    ["prune", "courses", "offered_by", "runs"],
+    ["prune", "courses", "offered_by", "runs", "prune_empty"],
     defaults=[
         True,
         CourseLoaderConfig(),
         OfferedByLoaderConfig(),
         LearningResourceRunLoaderConfig(),
+        False,
     ],
 )
 

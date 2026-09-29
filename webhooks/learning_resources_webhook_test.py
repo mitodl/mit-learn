@@ -12,7 +12,7 @@ from learning_resources.etl.constants import (
     ProgramLoaderConfig,
 )
 from learning_resources.etl.ownership import current_pipeline
-from learning_resources.factories import ETLSourceOwnershipFactory
+from learning_resources.factories import ETLSourceOwnershipFactory, ProgramFactory
 from learning_resources.models import ETLSourceOwnership
 
 WEBHOOK_URL_NAME = "webhooks:v1:learning_resources_webhook"
@@ -248,13 +248,107 @@ def test_missing_required_field_returns_400(settings, client, mocker):
 
 
 @pytest.mark.django_db
-def test_empty_batch_returns_400(settings, client, mocker):
+@pytest.mark.parametrize("payload", [{"resources": []}, {"resources": [], "sync": []}])
+def test_empty_batch_returns_400(settings, client, mocker, payload):
     """
-    An empty batch is rejected: it carries no (etl_source, resource_type) to
-    sync, so accepting it would report success while pruning nothing.
+    A batch with no resources and no sync pairs is rejected: it names no
+    (etl_source, resource_type), so accepting it would report success while
+    pruning nothing.
     """
     mock_clear = mocker.patch("webhooks.views.clear_views_cache")
-    response = _post(client, settings, {"resources": []})
+    response = _post(client, settings, payload)
+
+    assert response.status_code == 400
+    mock_clear.assert_not_called()
+
+
+@pytest.mark.django_db
+def test_sync_pair_without_resources_prunes(settings, client, mocker):
+    """
+    A sync-declared pair with no resources runs its loader with an empty set
+    and prune_empty, while a declared pair that has resources loads normally.
+    """
+    mocker.patch("webhooks.views.clear_views_cache")
+    mock_load_courses = mocker.patch("webhooks.views.load_courses", return_value=[])
+    mock_load_programs = mocker.patch("webhooks.views.load_programs", return_value=[])
+
+    payload = {
+        "resources": [
+            _resource(
+                "course-1", ETLSource.mitpe.name, LearningResourceType.course.name
+            ),
+        ],
+        "sync": [
+            {
+                "etl_source": ETLSource.mitpe.name,
+                "resource_type": LearningResourceType.course.name,
+            },
+            {
+                "etl_source": ETLSource.mitpe.name,
+                "resource_type": LearningResourceType.program.name,
+            },
+        ],
+    }
+    response = _post(client, settings, payload)
+
+    assert response.status_code == 200
+    _, courses_arg = mock_load_courses.call_args.args
+    assert [r["readable_id"] for r in courses_arg] == ["course-1"]
+    assert mock_load_courses.call_args.kwargs["config"].prune_empty is False
+    assert mock_load_programs.call_args.args == (ETLSource.mitpe.name, [])
+    assert mock_load_programs.call_args.kwargs["config"] == ProgramLoaderConfig(
+        courses=CourseLoaderConfig(fetch_only=True), prune=True, prune_empty=True
+    )
+
+
+@pytest.mark.django_db
+def test_sync_only_batch_unpublishes_the_pair(settings, client, mocker):
+    """A batch that only declares a pair unpublishes everything held for it."""
+    mocker.patch("webhooks.views.clear_views_cache")
+    mocker.patch(
+        "learning_resources.etl.loaders.load_course_blocklist", return_value=[]
+    )
+    mocker.patch("learning_resources_search.tasks.deindex_document")
+    program = ProgramFactory.create(learning_resource__etl_source=ETLSource.mitpe.name)
+    other_program = ProgramFactory.create(
+        learning_resource__etl_source=ETLSource.mitxonline.name
+    )
+
+    payload = {
+        "resources": [],
+        "sync": [
+            {
+                "etl_source": ETLSource.mitpe.name,
+                "resource_type": LearningResourceType.program.name,
+            }
+        ],
+    }
+    response = _post(client, settings, payload)
+
+    assert response.status_code == 200
+    program.learning_resource.refresh_from_db()
+    other_program.learning_resource.refresh_from_db()
+    assert program.learning_resource.published is False
+    assert other_program.learning_resource.published is True
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    "resource_type",
+    [LearningResourceType.video.name, LearningResourceType.podcast.name, "article"],
+)
+def test_sync_rejects_types_that_cannot_be_pruned(
+    settings, client, mocker, resource_type
+):
+    """Only course, program and document pairs can be declared for sync."""
+    mock_clear = mocker.patch("webhooks.views.clear_views_cache")
+    payload = {
+        "resources": [],
+        "sync": [
+            {"etl_source": ETLSource.youtube.name, "resource_type": resource_type}
+        ],
+    }
+    response = _post(client, settings, payload)
 
     assert response.status_code == 400
     mock_clear.assert_not_called()
@@ -346,6 +440,40 @@ def test_batch_rejected_when_webhook_does_not_own_a_group(
     mock_load_courses.assert_not_called()
     mock_load_podcasts.assert_not_called()
     mock_clear.assert_not_called()
+
+
+@pytest.mark.django_db
+def test_batch_rejected_when_webhook_does_not_own_a_sync_pair(settings, client, mocker):
+    """A declared pair the webhook doesn't own rejects the batch like a group would."""
+    ETLSourceOwnership.objects.filter(
+        etl_source=ETLSource.mitpe.name,
+        resource_type=LearningResourceType.program.name,
+    ).update(owner=ETLSourceOwnership.Pipeline.LEGACY)
+    mock_load_courses = mocker.patch("webhooks.views.load_courses", return_value=[])
+    mock_load_programs = mocker.patch("webhooks.views.load_programs", return_value=[])
+
+    payload = {
+        "resources": [
+            _resource(
+                "course-1", ETLSource.mitpe.name, LearningResourceType.course.name
+            ),
+        ],
+        "sync": [
+            {
+                "etl_source": ETLSource.mitpe.name,
+                "resource_type": LearningResourceType.program.name,
+            }
+        ],
+    }
+    response = _post(client, settings, payload)
+
+    assert response.status_code == 409
+    assert (
+        f"{ETLSource.mitpe.name}/{LearningResourceType.program.name}"
+        in response.json()["message"]
+    )
+    mock_load_courses.assert_not_called()
+    mock_load_programs.assert_not_called()
 
 
 @pytest.mark.django_db

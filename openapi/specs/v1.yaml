@@ -10028,8 +10028,10 @@ paths:
         / ``load_podcasts``).
         Each loader performs a full sync for that source and upserts the OpenSearch
         index, so a batch must contain the authoritative set of resources for the
-        (etl_source, resource_type) it represents. Resource types without a loader
-        are logged and skipped rather than failing the whole batch.
+        (etl_source, resource_type) it represents. A pair listed in the optional
+        ``sync`` array with no resources in the batch is pruned, unpublishing all
+        of it. Resource types without a loader are logged and skipped rather than
+        failing the whole batch.
       tags:
       - webhooks
       requestBody:
@@ -13709,6 +13711,35 @@ components:
       - Video
       - Video Playlist
       - Document
+    LearningResourceSyncPairRequest:
+      type: object
+      description: |-
+        An (etl_source, resource_type) pair a learning_resources webhook batch is
+        authoritative for. Only types whose loader prunes by source can be synced:
+        videos are never pruned and podcasts refuse an empty tracked set.
+      properties:
+        etl_source:
+          type: string
+          minLength: 1
+        resource_type:
+          $ref: '#/components/schemas/LearningResourceSyncPairResourceTypeEnum'
+      required:
+      - etl_source
+      - resource_type
+    LearningResourceSyncPairResourceTypeEnum:
+      enum:
+      - course
+      - program
+      - document
+      type: string
+      description: |-
+        * `course` - course
+        * `program` - program
+        * `document` - document
+      x-enum-descriptions:
+      - course
+      - program
+      - document
     LearningResourceTopic:
       type: object
       description: Serializer for LearningResourceTopic model
@@ -13745,14 +13776,21 @@ components:
         route it to the correct loader; all other keys are preserved and passed
         through to the loaders unchanged.
 
-        An empty batch is rejected: it names no (etl_source, resource_type), so no
-        loader could sync or prune anything and the request would silently no-op.
+        ``sync`` declares (etl_source, resource_type) pairs the batch is
+        authoritative for. A declared pair with no resources in the batch is pruned,
+        unpublishing everything MIT Learn holds for it, so a source that stops
+        publishing a type can say so. A batch with neither resources nor ``sync``
+        is rejected: it names no pair, so the request would silently no-op.
       properties:
         resources:
           type: array
           items:
             type: object
             additionalProperties: {}
+        sync:
+          type: array
+          items:
+            $ref: '#/components/schemas/LearningResourceSyncPairRequest'
       required:
       - resources
     LearningResourcesSearchResponse:
