@@ -120,9 +120,9 @@ const Tile: React.FC<{
       href={learnersHref}
       color="red"
       size="small"
-      aria-label={`View learners: ${label}`}
+      aria-label={`View all learners (${label} tile)`}
     >
-      View learners <RiArrowRightLine aria-hidden="true" />
+      View all learners <RiArrowRightLine aria-hidden="true" />
     </TileLink>
   </TileBox>
 )
