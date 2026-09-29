@@ -1788,6 +1788,42 @@ export type LearningResourceSummaryResourceTypeEnum =
   (typeof LearningResourceSummaryResourceTypeEnum)[keyof typeof LearningResourceSummaryResourceTypeEnum]
 
 /**
+ * An (etl_source, resource_type) pair a learning_resources webhook batch is authoritative for. Only types whose loader prunes by source can be synced: videos are never pruned and podcasts refuse an empty tracked set.
+ */
+export interface LearningResourceSyncPairRequest {
+  etl_source: string
+  resource_type: LearningResourceSyncPairResourceTypeEnum
+}
+
+/**
+ * * `course` - course * `program` - program * `document` - document
+ */
+
+export const LearningResourceSyncPairResourceTypeEnumDescriptions = {
+  course: "course",
+  program: "program",
+  document: "document",
+} as const
+
+export const LearningResourceSyncPairResourceTypeEnum = {
+  /**
+   * course
+   */
+  Course: "course",
+  /**
+   * program
+   */
+  Program: "program",
+  /**
+   * document
+   */
+  Document: "document",
+} as const
+
+export type LearningResourceSyncPairResourceTypeEnum =
+  (typeof LearningResourceSyncPairResourceTypeEnum)[keyof typeof LearningResourceSyncPairResourceTypeEnum]
+
+/**
  * Serializer for LearningResourceTopic model
  */
 export interface LearningResourceTopic {
@@ -1801,10 +1837,11 @@ export interface LearningResourceTopic {
   channel_url: string | null
 }
 /**
- * Serializer for the generic ``/api/v1/webhooks/learning_resources/`` endpoint.  Accepts a batch of pre-computed canonical LearningResource payloads pushed from the OL Data Platform (Dagster). Each resource must carry at minimum ``readable_id``, ``etl_source`` and ``resource_type`` so the handler can route it to the correct loader; all other keys are preserved and passed through to the loaders unchanged.  An empty batch is rejected: it names no (etl_source, resource_type), so no loader could sync or prune anything and the request would silently no-op.
+ * Serializer for the generic ``/api/v1/webhooks/learning_resources/`` endpoint.  Accepts a batch of pre-computed canonical LearningResource payloads pushed from the OL Data Platform (Dagster). Each resource must carry at minimum ``readable_id``, ``etl_source`` and ``resource_type`` so the handler can route it to the correct loader; all other keys are preserved and passed through to the loaders unchanged.  ``sync`` declares (etl_source, resource_type) pairs the batch is authoritative for. A declared pair with no resources in the batch is pruned, unpublishing everything MIT Learn holds for it, so a source that stops publishing a type can say so. A batch with neither resources nor ``sync`` is rejected: it names no pair, so the request would silently no-op.
  */
 export interface LearningResourceWebhookRequestRequest {
   resources: Array<{ [key: string]: any }>
+  sync?: Array<LearningResourceSyncPairRequest>
 }
 /**
  * SearchResponseSerializer with OpenAPI annotations for Learning Resources search
@@ -25288,7 +25325,7 @@ export const WebhooksApiAxiosParamCreator = function (
       }
     },
     /**
-     * Generic webhook handler for pre-computed LearningResource batches delivered by the OL Data Platform (Dagster).  The request body is ``{\"resources\": [ ... ]}`` where each resource is a canonical LearningResource dict carrying at minimum ``readable_id``, ``etl_source`` and ``resource_type``. Resources are grouped by ``(etl_source, resource_type)`` and routed to the matching loader (``load_courses`` / ``load_programs`` / ``load_documents`` / ``load_videos`` / ``load_podcasts``). Each loader performs a full sync for that source and upserts the OpenSearch index, so a batch must contain the authoritative set of resources for the (etl_source, resource_type) it represents. Resource types without a loader are logged and skipped rather than failing the whole batch.
+     * Generic webhook handler for pre-computed LearningResource batches delivered by the OL Data Platform (Dagster).  The request body is ``{\"resources\": [ ... ]}`` where each resource is a canonical LearningResource dict carrying at minimum ``readable_id``, ``etl_source`` and ``resource_type``. Resources are grouped by ``(etl_source, resource_type)`` and routed to the matching loader (``load_courses`` / ``load_programs`` / ``load_documents`` / ``load_videos`` / ``load_podcasts``). Each loader performs a full sync for that source and upserts the OpenSearch index, so a batch must contain the authoritative set of resources for the (etl_source, resource_type) it represents. A pair listed in the optional ``sync`` array with no resources in the batch is pruned, unpublishing all of it. Resource types without a loader are logged and skipped rather than failing the whole batch.
      * @param {LearningResourceWebhookRequestRequest} LearningResourceWebhookRequestRequest
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
@@ -25477,7 +25514,7 @@ export const WebhooksApiFp = function (configuration?: Configuration) {
         )(axios, localVarOperationServerBasePath || basePath)
     },
     /**
-     * Generic webhook handler for pre-computed LearningResource batches delivered by the OL Data Platform (Dagster).  The request body is ``{\"resources\": [ ... ]}`` where each resource is a canonical LearningResource dict carrying at minimum ``readable_id``, ``etl_source`` and ``resource_type``. Resources are grouped by ``(etl_source, resource_type)`` and routed to the matching loader (``load_courses`` / ``load_programs`` / ``load_documents`` / ``load_videos`` / ``load_podcasts``). Each loader performs a full sync for that source and upserts the OpenSearch index, so a batch must contain the authoritative set of resources for the (etl_source, resource_type) it represents. Resource types without a loader are logged and skipped rather than failing the whole batch.
+     * Generic webhook handler for pre-computed LearningResource batches delivered by the OL Data Platform (Dagster).  The request body is ``{\"resources\": [ ... ]}`` where each resource is a canonical LearningResource dict carrying at minimum ``readable_id``, ``etl_source`` and ``resource_type``. Resources are grouped by ``(etl_source, resource_type)`` and routed to the matching loader (``load_courses`` / ``load_programs`` / ``load_documents`` / ``load_videos`` / ``load_podcasts``). Each loader performs a full sync for that source and upserts the OpenSearch index, so a batch must contain the authoritative set of resources for the (etl_source, resource_type) it represents. A pair listed in the optional ``sync`` array with no resources in the batch is pruned, unpublishing all of it. Resource types without a loader are logged and skipped rather than failing the whole batch.
      * @param {LearningResourceWebhookRequestRequest} LearningResourceWebhookRequestRequest
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
@@ -25594,7 +25631,7 @@ export const WebhooksApiFactory = function (
         .then((request) => request(axios, basePath))
     },
     /**
-     * Generic webhook handler for pre-computed LearningResource batches delivered by the OL Data Platform (Dagster).  The request body is ``{\"resources\": [ ... ]}`` where each resource is a canonical LearningResource dict carrying at minimum ``readable_id``, ``etl_source`` and ``resource_type``. Resources are grouped by ``(etl_source, resource_type)`` and routed to the matching loader (``load_courses`` / ``load_programs`` / ``load_documents`` / ``load_videos`` / ``load_podcasts``). Each loader performs a full sync for that source and upserts the OpenSearch index, so a batch must contain the authoritative set of resources for the (etl_source, resource_type) it represents. Resource types without a loader are logged and skipped rather than failing the whole batch.
+     * Generic webhook handler for pre-computed LearningResource batches delivered by the OL Data Platform (Dagster).  The request body is ``{\"resources\": [ ... ]}`` where each resource is a canonical LearningResource dict carrying at minimum ``readable_id``, ``etl_source`` and ``resource_type``. Resources are grouped by ``(etl_source, resource_type)`` and routed to the matching loader (``load_courses`` / ``load_programs`` / ``load_documents`` / ``load_videos`` / ``load_podcasts``). Each loader performs a full sync for that source and upserts the OpenSearch index, so a batch must contain the authoritative set of resources for the (etl_source, resource_type) it represents. A pair listed in the optional ``sync`` array with no resources in the batch is pruned, unpublishing all of it. Resource types without a loader are logged and skipped rather than failing the whole batch.
      * @param {WebhooksApiWebhooksLearningResourcesCreateRequest} requestParameters Request parameters.
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
@@ -25714,7 +25751,7 @@ export class WebhooksApi extends BaseAPI {
   }
 
   /**
-   * Generic webhook handler for pre-computed LearningResource batches delivered by the OL Data Platform (Dagster).  The request body is ``{\"resources\": [ ... ]}`` where each resource is a canonical LearningResource dict carrying at minimum ``readable_id``, ``etl_source`` and ``resource_type``. Resources are grouped by ``(etl_source, resource_type)`` and routed to the matching loader (``load_courses`` / ``load_programs`` / ``load_documents`` / ``load_videos`` / ``load_podcasts``). Each loader performs a full sync for that source and upserts the OpenSearch index, so a batch must contain the authoritative set of resources for the (etl_source, resource_type) it represents. Resource types without a loader are logged and skipped rather than failing the whole batch.
+   * Generic webhook handler for pre-computed LearningResource batches delivered by the OL Data Platform (Dagster).  The request body is ``{\"resources\": [ ... ]}`` where each resource is a canonical LearningResource dict carrying at minimum ``readable_id``, ``etl_source`` and ``resource_type``. Resources are grouped by ``(etl_source, resource_type)`` and routed to the matching loader (``load_courses`` / ``load_programs`` / ``load_documents`` / ``load_videos`` / ``load_podcasts``). Each loader performs a full sync for that source and upserts the OpenSearch index, so a batch must contain the authoritative set of resources for the (etl_source, resource_type) it represents. A pair listed in the optional ``sync`` array with no resources in the batch is pruned, unpublishing all of it. Resource types without a loader are logged and skipped rather than failing the whole batch.
    * @param {WebhooksApiWebhooksLearningResourcesCreateRequest} requestParameters Request parameters.
    * @param {*} [options] Override http request option.
    * @throws {RequiredError}

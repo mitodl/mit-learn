@@ -709,7 +709,7 @@ def load_courses(
         if course is not None
     ]
 
-    if courses and config.prune:
+    if (courses or config.prune_empty) and config.prune:
         for learning_resource in LearningResource.objects.filter(
             etl_source=etl_source, resource_type=LearningResourceType.course.name
         ).exclude(
@@ -977,7 +977,7 @@ def load_programs(
             update_index(result.resource, result.created)
 
     programs = [r.resource for r in results if r.resource is not None]
-    if programs and config.prune:
+    if (programs or config.prune_empty) and config.prune:
         for learning_resource in LearningResource.objects.filter(
             etl_source=etl_source, resource_type=LearningResourceType.program.name
         ).exclude(id__in=[lr.id for lr in programs]):
