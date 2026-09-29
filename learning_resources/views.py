@@ -903,7 +903,9 @@ class LearningResourceListRelationshipViewSet(viewsets.GenericViewSet):
             )
             for index, relationship in enumerate(relationships):
                 relationship.position = index
-            LearningResourceRelationship.objects.bulk_update(relationships, ["position"])
+            LearningResourceRelationship.objects.bulk_update(
+                relationships, ["position"]
+            )
             last_index = len(relationships) - 1 if relationships else -1
 
             # Add new items as necessary
