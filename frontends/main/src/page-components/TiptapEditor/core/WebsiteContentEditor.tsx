@@ -894,34 +894,43 @@ const WebsiteContentEditor = ({
   )
 
   /**
-   * Published view: navigation and settings sit left, the status sits right
-   * (the Spacer splits them). Unpublishing is not offered here -- it lives on
-   * the listing card's menu, next to the item it acts on.
+   * Published view: the same row as edit mode -- status at the left end,
+   * actions at the right, the Spacer between them, all within the article's
+   * own column. Laid out here rather than differently because it is the same
+   * bar in the same place, and the two looked unrelated: this one ran the
+   * full width of the window, with its buttons against the left edge and the
+   * status against the right, while edit mode lines both up with the
+   * breadcrumb and the text.
+   *
+   * Unpublishing is not offered here -- it lives on the listing card's menu,
+   * next to the item it acts on.
    */
   const readOnlyToolbarSlot = (
-    <>
-      <ButtonLink
-        variant="bordered"
-        href={websiteContentDraftsView(contentType)}
-        size={buttonSize}
-        startIcon={<RiSave3Line />}
-      >
-        Draft
-      </ButtonLink>
-      {editIdOrSlug !== undefined ? (
+    <ActionRow>
+      {statusSlot}
+      <Spacer />
+      <StyledStatusContainer>
         <ButtonLink
           variant="bordered"
-          href={websiteContentEditView(contentType, editIdOrSlug)}
+          href={websiteContentDraftsView(contentType)}
           size={buttonSize}
-          startIcon={<RiEditLine />}
+          startIcon={<RiSave3Line />}
         >
-          Edit
+          Draft
         </ButtonLink>
-      ) : null}
-      {settingsButton}
-      <Spacer />
-      {statusSlot}
-    </>
+        {editIdOrSlug !== undefined ? (
+          <ButtonLink
+            variant="bordered"
+            href={websiteContentEditView(contentType, editIdOrSlug)}
+            size={buttonSize}
+            startIcon={<RiEditLine />}
+          >
+            Edit
+          </ButtonLink>
+        ) : null}
+        {settingsButton}
+      </StyledStatusContainer>
+    </ActionRow>
   )
 
   return (
@@ -940,9 +949,9 @@ const WebsiteContentEditor = ({
           <EditorContext.Provider value={{ editor }}>
             {isArticleEditor ? (
               readOnly ? (
-                <StyledStatusContainer>
-                  <StyledToolbar>{readOnlyToolbarSlot}</StyledToolbar>
-                </StyledStatusContainer>
+                /* No wrapper: `StyledToolbar` is fixed, so the flex box that
+                   used to be here could not lay it out either way. */
+                <StyledToolbar>{readOnlyToolbarSlot}</StyledToolbar>
               ) : (
                 <StackedToolbar>
                   {/* The design puts the actions above the formatting

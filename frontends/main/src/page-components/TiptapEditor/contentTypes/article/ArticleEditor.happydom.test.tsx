@@ -121,10 +121,6 @@ describe("ArticleEditor article controls", () => {
     expect(screen.queryByRole("button", { name: "Unpublish Article" })).toBe(
       null,
     )
-    /* Unpublishing lives on the listing card's menu, not here. */
-    expect(screen.queryByRole("button", { name: "Unpublish Article" })).toBe(
-      null,
-    )
   })
 
   test("Settings opens the article settings drawer", async () => {
@@ -1070,5 +1066,52 @@ describe("ArticleEditor edit-mode control bar layout", () => {
     /* No label of its own, so the name has to come from `aria-label`. */
     expect(settings).toHaveTextContent("")
     expect(settings.querySelector("svg")).toBeInTheDocument()
+  })
+})
+
+/**
+ * The published view's bar is the same bar in the same place, so it is laid
+ * out the same way. It used to run the full width of the window with its
+ * buttons against the left edge and the status against the right, which read
+ * as a different component.
+ */
+describe("ArticleEditor published control bar layout", () => {
+  const renderPublished = () =>
+    renderArticleEditor({ readOnly: true, isPublished: true })
+
+  test("puts the status at one end and the actions at the other", async () => {
+    renderPublished()
+
+    const draft = await screen.findByRole("link", { name: "Draft" })
+    const edit = screen.getByRole("link", { name: "Edit" })
+    const settings = screen.getByRole("button", { name: "Settings" })
+    const status = screen.getByText(/Status:/)
+
+    // The status leads the row, as in edit mode; the actions follow it.
+    expect(
+      status.compareDocumentPosition(draft) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy()
+    // Grouped at the far end, in the order the design has them.
+    expect(draft.nextElementSibling).toBe(edit)
+    expect(edit.nextElementSibling).toBe(settings)
+  })
+
+  test("the row is the same column the article is set in", async () => {
+    renderPublished()
+
+    const status = await screen.findByText(/Status:/)
+    const draft = screen.getByRole("link", { name: "Draft" })
+    const bar = screen.getByRole("toolbar")
+
+    /**
+     * One row inside the bar holding both ends, rather than the two sitting
+     * directly in a full-width toolbar. That row is what carries the article's
+     * 890px column, so the status lines up with the breadcrumb and the actions
+     * with the far edge of the text.
+     */
+    expect(bar.children).toHaveLength(1)
+    const [actionRow] = Array.from(bar.children)
+    expect(actionRow).toContainElement(status)
+    expect(actionRow).toContainElement(draft)
   })
 })
