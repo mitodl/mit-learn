@@ -990,6 +990,26 @@ describe("AnalyticsContent, contract-scoped", () => {
       screen.queryByRole("group", { name: "Needs attention" }),
     ).not.toBeInTheDocument()
 
+    // Every tile links to the same contract learner directory. Distinct
+    // accessible names (rather than four identical "View learners" links)
+    // so a screen reader's link list still says which tile each came from.
+    const expectedHref = contractLearnersView(
+      org.slug.replace(/^org-/, ""),
+      contract.slug,
+    )
+    for (const label of [
+      "Enrolled",
+      "Not started",
+      "In progress",
+      "Completed",
+    ]) {
+      const link = within(screen.getByRole("group", { name: label })).getByRole(
+        "link",
+        { name: `View learners: ${label}` },
+      )
+      expect(link).toHaveAttribute("href", expectedHref)
+    }
+
     const list = screen.getByRole("list", {
       name: "Learner progress distribution",
     })

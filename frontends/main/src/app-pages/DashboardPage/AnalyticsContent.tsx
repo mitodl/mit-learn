@@ -598,7 +598,7 @@ const AnalyticsContentInternal: React.FC<AnalyticsContentInternalProps> = ({
         {truncation(utilization, "utilization")}
       </Section>
 
-      {contractId ? (
+      {contract ? (
         <Section>
           <SectionHeader
             title="Learner progress"
@@ -612,6 +612,7 @@ const AnalyticsContentInternal: React.FC<AnalyticsContentInternalProps> = ({
             statusCounts={learnerProgress.data?.completion_status_counts}
             isLoading={learnerProgress.isPending}
             isError={learnerProgress.isError}
+            learnersHref={contractLearnersView(orgSlug, contract.slug)}
           />
         </Section>
       ) : null}

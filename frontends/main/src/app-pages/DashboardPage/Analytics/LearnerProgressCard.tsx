@@ -1,7 +1,8 @@
 "use client"
 
 import React from "react"
-import { Skeleton, styled, Typography, useTheme } from "ol-components"
+import { RiArrowRightLine } from "@remixicon/react"
+import { Link, Skeleton, styled, Typography, useTheme } from "ol-components"
 import { VisuallyHidden } from "@mitodl/smoot-design"
 import type { CompletionStatusCounts } from "api/analytics-hooks/organizations"
 import { EmptyTableMessage, TableCard } from "@/components/B2BTable/B2BTable"
@@ -65,6 +66,7 @@ const TileBox = styled.div(({ theme }) => ({
   padding: "20px 24px",
   backgroundColor: theme.custom.colors.white,
   borderLeft: `1px solid ${theme.custom.colors.lightGray2}`,
+  transition: "background-color 150ms ease",
   "&:first-of-type": {
     borderLeft: "none",
   },
@@ -75,7 +77,25 @@ const TileBox = styled.div(({ theme }) => ({
       borderTop: "none",
     },
   },
+  "&:hover, &:focus-within": {
+    backgroundColor: theme.custom.colors.lightGray1,
+    "& a": {
+      opacity: 1,
+    },
+  },
 }))
+
+const TileLink = styled(Link)({
+  display: "inline-flex",
+  alignItems: "center",
+  gap: "4px",
+  opacity: 0,
+  transition: "opacity 150ms ease",
+  "& svg": {
+    width: "14px",
+    height: "14px",
+  },
+})
 
 const TileLabel = styled(Typography)(({ theme }) => ({
   ...theme.typography.subtitle1,
@@ -88,10 +108,22 @@ const TileValue = styled(Typography)(({ theme }) => ({
   fontVariantNumeric: "tabular-nums",
 })) as typeof Typography
 
-const Tile: React.FC<{ label: string; value: number }> = ({ label, value }) => (
+const Tile: React.FC<{
+  label: string
+  value: number
+  learnersHref: string
+}> = ({ label, value, learnersHref }) => (
   <TileBox role="group" aria-label={label}>
     <TileLabel>{label}</TileLabel>
     <TileValue>{formatCount(value)}</TileValue>
+    <TileLink
+      href={learnersHref}
+      color="red"
+      size="small"
+      aria-label={`View learners: ${label}`}
+    >
+      View learners <RiArrowRightLine aria-hidden="true" />
+    </TileLink>
   </TileBox>
 )
 
@@ -164,7 +196,8 @@ const LearnerProgressCard: React.FC<{
   statusCounts: CompletionStatusCounts | undefined
   isLoading: boolean
   isError?: boolean
-}> = ({ totalCount, statusCounts, isLoading, isError }) => {
+  learnersHref: string
+}> = ({ totalCount, statusCounts, isLoading, isError, learnersHref }) => {
   // Above the early returns: hooks cannot be called conditionally.
   const statusColors = progressStatusColors(useTheme())
 
@@ -208,10 +241,22 @@ const LearnerProgressCard: React.FC<{
   return (
     <Root>
       <TileRow>
-        <Tile label="Enrolled" value={totalCount} />
-        <Tile label="Not started" value={buckets.not_started} />
-        <Tile label="In progress" value={buckets.in_progress} />
-        <Tile label="Completed" value={buckets.completed} />
+        <Tile label="Enrolled" value={totalCount} learnersHref={learnersHref} />
+        <Tile
+          label="Not started"
+          value={buckets.not_started}
+          learnersHref={learnersHref}
+        />
+        <Tile
+          label="In progress"
+          value={buckets.in_progress}
+          learnersHref={learnersHref}
+        />
+        <Tile
+          label="Completed"
+          value={buckets.completed}
+          learnersHref={learnersHref}
+        />
         {/* Disabled: Needs attention tile — no needs_attention aggregate
             exists yet (not_started OR 30+ days inactive). See the witan
             project "Needs-attention aggregate for B2B learner progress".
