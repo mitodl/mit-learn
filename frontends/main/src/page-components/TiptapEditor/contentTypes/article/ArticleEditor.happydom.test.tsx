@@ -121,10 +121,6 @@ describe("ArticleEditor article controls", () => {
     expect(screen.queryByRole("button", { name: "Unpublish Article" })).toBe(
       null,
     )
-    /* Unpublishing lives on the listing card's menu, not here. */
-    expect(screen.queryByRole("button", { name: "Unpublish Article" })).toBe(
-      null,
-    )
   })
 
   test("Settings opens the article settings drawer", async () => {
@@ -243,7 +239,12 @@ describe("ArticleEditor settings", () => {
     const [topic] = mainTopics.results
     setMockResponse.get(urls.topics.list({ limit: 1000 }), mainTopics)
 
-    const { article } = renderArticleEditor()
+    /* The SEO fields are required too, so they arrive already written -- this
+       test is about what the save sends, not about the requirement. */
+    const { article } = renderArticleEditor({
+      seoTitle: "A title for search",
+      seoDescription: "A description for search results.",
+    })
     setMockResponse.patch(urls.websiteContent.details(article.id), article)
 
     await userEvent.click(
@@ -262,7 +263,11 @@ describe("ArticleEditor settings", () => {
       expect(makeRequest).toHaveBeenCalledWith(
         expect.objectContaining({
           method: "patch",
-          body: { topics: [topic.id], seo_title: "", seo_description: "" },
+          body: {
+            topics: [topic.id],
+            seo_title: "A title for search",
+            seo_description: "A description for search results.",
+          },
         }),
       )
     })
@@ -273,18 +278,19 @@ describe("ArticleEditor settings", () => {
       urls.topics.list({ limit: 1000 }),
       factories.learningResources.topics({ count: 1 }),
     )
-    const { article } = renderArticleEditor()
+    /* A topic is required to save as well, so the article has one already. */
+    const { article } = renderArticleEditor({ topics: [7] })
     setMockResponse.patch(urls.websiteContent.details(article.id), article)
 
     await userEvent.click(
       await screen.findByRole("button", { name: "Settings" }),
     )
     await userEvent.type(
-      await screen.findByLabelText("SEO Title"),
+      await screen.findByLabelText(/^SEO Title/),
       "A better title for search",
     )
     await userEvent.type(
-      screen.getByLabelText("SEO Description"),
+      screen.getByLabelText(/^SEO Description/),
       "What this is about.",
     )
     await userEvent.click(screen.getByRole("button", { name: "Save Settings" }))
@@ -294,7 +300,7 @@ describe("ArticleEditor settings", () => {
         expect.objectContaining({
           method: "patch",
           body: {
-            topics: [],
+            topics: [7],
             seo_title: "A better title for search",
             seo_description: "What this is about.",
           },
@@ -317,10 +323,10 @@ describe("ArticleEditor settings", () => {
       await screen.findByRole("button", { name: "Settings" }),
     )
 
-    expect(await screen.findByLabelText("SEO Title")).toHaveValue(
+    expect(await screen.findByLabelText(/^SEO Title/)).toHaveValue(
       "Stored title",
     )
-    expect(screen.getByLabelText("SEO Description")).toHaveValue(
+    expect(screen.getByLabelText(/^SEO Description/)).toHaveValue(
       "Stored description",
     )
   })
@@ -345,13 +351,24 @@ describe("ArticleEditor settings", () => {
  * These are about the confirmation dialog, so they start from one that has
  * them -- as an article being published in earnest would.
  */
-const renderTopicalArticle = (
+/**
+ * An article that has everything publishing insists on: a topic, and an SEO
+ * title and description. Without all three the press opens the settings
+ * drawer instead, which is its own set of tests below.
+ */
+const renderPublishableArticle = (
   options: Parameters<typeof renderArticleEditor>[0] = {},
-) => renderArticleEditor({ topics: [7], ...options })
+) =>
+  renderArticleEditor({
+    topics: [7],
+    seoTitle: "A title for search",
+    seoDescription: "A description for search results.",
+    ...options,
+  })
 
 describe("ArticleEditor publish confirmation", () => {
   test("publishing a draft asks for confirmation first", async () => {
-    const { article } = renderTopicalArticle()
+    const { article } = renderPublishableArticle()
     setMockResponse.patch(urls.websiteContent.details(article.id), {
       ...article,
       is_published: true,
@@ -385,7 +402,7 @@ describe("ArticleEditor publish confirmation", () => {
   })
 
   test("cancelling the publish dialog saves nothing", async () => {
-    renderTopicalArticle()
+    renderPublishableArticle()
 
     await userEvent.click(
       await screen.findByRole("button", { name: "Publish" }),
@@ -401,7 +418,7 @@ describe("ArticleEditor publish confirmation", () => {
   test("re-saving an already published article does not ask", async () => {
     // The dialog confirms the transition to public, not every save, so editing
     // a live article and pressing Publish must save straight away.
-    const { article } = renderTopicalArticle({ isPublished: true })
+    const { article } = renderPublishableArticle({ isPublished: true })
     setMockResponse.patch(urls.websiteContent.details(article.id), article)
 
     const heading = await screen.findByRole("heading", { level: 1 })
@@ -426,7 +443,7 @@ describe("ArticleEditor publish confirmation errors", () => {
    * save was dismissed as though it had worked.
    */
   test("a failed publish leaves the confirmation open", async () => {
-    const { article } = renderTopicalArticle()
+    const { article } = renderPublishableArticle()
     setMockResponse.patch(
       urls.websiteContent.details(article.id),
       { detail: "boom" },
@@ -463,7 +480,7 @@ describe("ArticleEditor publish confirmation errors", () => {
   })
 
   test("a successful publish closes the confirmation", async () => {
-    const { article } = renderTopicalArticle()
+    const { article } = renderPublishableArticle()
     setMockResponse.patch(urls.websiteContent.details(article.id), {
       ...article,
       is_published: true,
@@ -494,7 +511,11 @@ describe("ArticleEditor topics requirement", () => {
 
   test("publishing with no topics asks for them instead", async () => {
     mockTopics()
-    renderArticleEditor()
+    /* SEO supplied, so topics are the only thing that can hold the press. */
+    renderArticleEditor({
+      seoTitle: "A title for search",
+      seoDescription: "A description for search results.",
+    })
 
     await userEvent.click(
       await screen.findByRole("button", { name: "Publish" }),
@@ -521,7 +542,8 @@ describe("ArticleEditor topics requirement", () => {
 
     await userEvent.type(await screen.findByRole("heading", { level: 1 }), "!")
 
-    // Autosave cannot stop to ask, so the requirement is the publish's alone.
+    // Autosave cannot stop to ask, so neither requirement -- topics or the
+    // SEO fields -- is the draft save's to enforce.
     await waitFor(
       () => {
         expect(makeRequest).toHaveBeenCalledWith(
@@ -540,7 +562,10 @@ describe("ArticleEditor topics requirement", () => {
 
   test("the held-back publish resumes once a topic is picked", async () => {
     const topic = mockTopics()
-    const { article } = renderArticleEditor()
+    const { article } = renderArticleEditor({
+      seoTitle: "A title for search",
+      seoDescription: "A description for search results.",
+    })
     setMockResponse.patch(urls.websiteContent.details(article.id), {
       ...article,
       is_published: true,
@@ -577,11 +602,15 @@ describe("ArticleEditor topics requirement", () => {
     })
   })
 
-  test("a draft's topics can be cleared", async () => {
+  test("a draft's topics may not be emptied either", async () => {
     const topics = factories.learningResources.topics({ count: 1 })
     const [topic] = topics.results
     setMockResponse.get(urls.topics.list({ limit: 1000 }), topics)
-    const { article } = renderArticleEditor({ topics: [topic.id] })
+    const { article } = renderArticleEditor({
+      topics: [topic.id],
+      seoTitle: "A title for search",
+      seoDescription: "A description for search results.",
+    })
     setMockResponse.patch(urls.websiteContent.details(article.id), article)
 
     await userEvent.click(
@@ -592,20 +621,14 @@ describe("ArticleEditor topics requirement", () => {
     )
 
     /**
-     * Refused only once the content is public. A draft may sit without topics
-     * -- publishing is where they are insisted on, and autosave cannot stop to
-     * ask -- so the editor is not trapped into keeping a topic they removed.
+     * Not only once the content is public. The field is marked required and
+     * the section says a topic is needed, so letting the save through on a
+     * draft would contradict both -- and the topics would be gone.
      */
-    await userEvent.click(screen.getByRole("button", { name: "Save Settings" }))
-
-    await waitFor(() => {
-      expect(makeRequest).toHaveBeenCalledWith(
-        expect.objectContaining({
-          method: "patch",
-          body: { topics: [], seo_title: "", seo_description: "" },
-        }),
-      )
-    })
+    expect(screen.getByRole("button", { name: "Save Settings" })).toBeDisabled()
+    expect(makeRequest).not.toHaveBeenCalledWith(
+      expect.objectContaining({ method: "patch" }),
+    )
   })
 
   test("the drawer will not save a published article with its topics emptied", async () => {
@@ -639,7 +662,10 @@ describe("ArticleEditor topics requirement", () => {
 
   test("closing the drawer abandons the held-back publish", async () => {
     const topic = mockTopics()
-    const { article } = renderArticleEditor()
+    const { article } = renderArticleEditor({
+      seoTitle: "A title for search",
+      seoDescription: "A description for search results.",
+    })
     setMockResponse.patch(urls.websiteContent.details(article.id), article)
 
     await userEvent.click(
@@ -663,7 +689,11 @@ describe("ArticleEditor topics requirement", () => {
       expect(makeRequest).toHaveBeenCalledWith(
         expect.objectContaining({
           method: "patch",
-          body: { topics: [topic.id], seo_title: "", seo_description: "" },
+          body: {
+            topics: [topic.id],
+            seo_title: "A title for search",
+            seo_description: "A description for search results.",
+          },
         }),
       )
     })
@@ -672,6 +702,188 @@ describe("ArticleEditor topics requirement", () => {
         method: "patch",
         body: expect.objectContaining({ is_published: true }),
       }),
+    )
+  })
+})
+
+/**
+ * The SEO title and description are held to the same rule as topics, and for
+ * the same reason: they are what a search result and a link preview show, and
+ * without them the page head falls back to the title and whatever the body
+ * happens to open with.
+ */
+describe("ArticleEditor SEO requirement", () => {
+  const mockTopics = () => {
+    setMockResponse.get(
+      urls.topics.list({ limit: 1000 }),
+      factories.learningResources.topics({ count: 1 }),
+    )
+  }
+
+  /** Topics supplied, so the SEO fields are the only thing left missing. */
+  const renderTopicalArticle = (
+    options: Parameters<typeof renderArticleEditor>[0] = {},
+  ) => renderArticleEditor({ topics: [7], ...options })
+
+  test("publishing without them asks for them instead", async () => {
+    mockTopics()
+    renderTopicalArticle()
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Publish" }),
+    )
+
+    // The drawer, not the publish confirmation, and nothing saved.
+    await screen.findByRole("heading", { name: "Article Settings" })
+    expect(
+      screen.queryByRole("heading", { name: "Publish article" }),
+    ).not.toBeInTheDocument()
+    expect(makeRequest).not.toHaveBeenCalledWith(
+      expect.objectContaining({ method: "patch" }),
+    )
+    /* The section says why it opened, rather than leaving the editor to guess. */
+    await screen.findByText(
+      /Add an SEO title and description to publish your article/,
+    )
+  })
+
+  test("a description without a title is not enough", async () => {
+    mockTopics()
+    renderTopicalArticle({ seoDescription: "A description for search." })
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Publish" }),
+    )
+
+    await screen.findByRole("heading", { name: "Article Settings" })
+    expect(
+      screen.queryByRole("heading", { name: "Publish article" }),
+    ).not.toBeInTheDocument()
+  })
+
+  test("whitespace does not pass for a title", async () => {
+    mockTopics()
+    renderTopicalArticle({
+      seoTitle: "   ",
+      seoDescription: "A description for search.",
+    })
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Publish" }),
+    )
+
+    /* A space would satisfy a bare emptiness check and reach the page head as
+       a blank title -- worse than the fallback it displaced. */
+    await screen.findByRole("heading", { name: "Article Settings" })
+  })
+
+  test("the held-back publish resumes once both are written", async () => {
+    mockTopics()
+    const { article } = renderTopicalArticle()
+    setMockResponse.patch(urls.websiteContent.details(article.id), {
+      ...article,
+      is_published: true,
+    })
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Publish" }),
+    )
+    await screen.findByRole("heading", { name: "Article Settings" })
+
+    await userEvent.type(
+      await screen.findByLabelText(/^SEO Title/),
+      "A title for search",
+    )
+    await userEvent.type(
+      screen.getByLabelText(/^SEO Description/),
+      "A description for search results.",
+    )
+    await userEvent.click(screen.getByRole("button", { name: "Save Settings" }))
+
+    // Picking up where the press left off, confirmation included.
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Yes, Publish article" }),
+    )
+
+    await waitFor(() => {
+      expect(makeRequest).toHaveBeenCalledWith(
+        expect.objectContaining({
+          method: "patch",
+          body: expect.objectContaining({
+            is_published: true,
+            seo_title: "A title for search",
+            seo_description: "A description for search results.",
+          }),
+        }),
+      )
+    })
+  }, 30000)
+
+  /**
+   * Saving the drawer closes it, and closing forgets the press -- so a save
+   * that still left the fields blank would drop the publish with nothing on
+   * screen to say why.
+   */
+  test("the drawer will not save while the publish is still waiting", async () => {
+    mockTopics()
+    renderTopicalArticle()
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Publish" }),
+    )
+    await screen.findByRole("heading", { name: "Article Settings" })
+
+    expect(screen.getByRole("button", { name: "Save Settings" })).toBeDisabled()
+
+    await userEvent.type(
+      await screen.findByLabelText(/^SEO Title/),
+      "A title for search",
+    )
+    /* Still only one of the two. */
+    expect(screen.getByRole("button", { name: "Save Settings" })).toBeDisabled()
+
+    await userEvent.type(
+      screen.getByLabelText(/^SEO Description/),
+      "A description.",
+    )
+    expect(screen.getByRole("button", { name: "Save Settings" })).toBeEnabled()
+  }, 30000)
+
+  test("a published article may not have them emptied", async () => {
+    mockTopics()
+    renderPublishableArticle({ isPublished: true })
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Settings" }),
+    )
+    await userEvent.clear(await screen.findByLabelText(/^SEO Title/))
+
+    expect(screen.getByRole("button", { name: "Save Settings" })).toBeDisabled()
+    await screen.findByText(
+      /A published article needs an SEO title and description/,
+    )
+  }, 20000)
+
+  test("a draft's settings cannot be saved without them", async () => {
+    mockTopics()
+    renderArticleEditor({ topics: [7] })
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Settings" }),
+    )
+
+    /**
+     * Refused on a draft too, not only once it is public: the fields are
+     * marked required and the section says so, so a save that went through
+     * anyway would contradict both.
+     *
+     * The draft's *content* is unaffected -- autosave keeps writing it, and
+     * only the drawer's own settings wait here.
+     */
+    await screen.findByRole("heading", { name: "Article Settings" })
+    expect(screen.getByRole("button", { name: "Save Settings" })).toBeDisabled()
+    expect(makeRequest).not.toHaveBeenCalledWith(
+      expect.objectContaining({ method: "patch" }),
     )
   })
 })
@@ -833,6 +1045,9 @@ describe("ArticleEditor autosave", () => {
     setMockResponse.get(urls.topics.list({ limit: 1000 }), topics)
     const { article } = renderArticleEditor({
       autosaveDelayMs: AUTOSAVE_DELAY_MS,
+      /* Required to save the drawer, and not what this test is about. */
+      seoTitle: "A title for search",
+      seoDescription: "A description for search results.",
     })
 
     let contentWriteFinished = false
@@ -907,8 +1122,7 @@ describe("ArticleEditor autosave", () => {
   }, 30000)
 
   test("a publish waits for the draft save already in flight", async () => {
-    const { article } = renderArticleEditor({
-      topics: [7],
+    const { article } = renderPublishableArticle({
       autosaveDelayMs: AUTOSAVE_DELAY_MS,
     })
     /**
@@ -978,9 +1192,8 @@ describe("ArticleEditor autosave", () => {
   }, 25000)
 
   test("a published article is never saved behind the author's back", async () => {
-    const { article } = renderArticleEditor({
+    const { article } = renderPublishableArticle({
       isPublished: true,
-      topics: [7],
       autosaveDelayMs: AUTOSAVE_DELAY_MS,
     })
     setMockResponse.patch(urls.websiteContent.details(article.id), article)
@@ -1070,5 +1283,52 @@ describe("ArticleEditor edit-mode control bar layout", () => {
     /* No label of its own, so the name has to come from `aria-label`. */
     expect(settings).toHaveTextContent("")
     expect(settings.querySelector("svg")).toBeInTheDocument()
+  })
+})
+
+/**
+ * The published view's bar is the same bar in the same place, so it is laid
+ * out the same way. It used to run the full width of the window with its
+ * buttons against the left edge and the status against the right, which read
+ * as a different component.
+ */
+describe("ArticleEditor published control bar layout", () => {
+  const renderPublished = () =>
+    renderArticleEditor({ readOnly: true, isPublished: true })
+
+  test("puts the status at one end and the actions at the other", async () => {
+    renderPublished()
+
+    const draft = await screen.findByRole("link", { name: "Draft" })
+    const edit = screen.getByRole("link", { name: "Edit" })
+    const settings = screen.getByRole("button", { name: "Settings" })
+    const status = screen.getByText(/Status:/)
+
+    // The status leads the row, as in edit mode; the actions follow it.
+    expect(
+      status.compareDocumentPosition(draft) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy()
+    // Grouped at the far end, in the order the design has them.
+    expect(draft.nextElementSibling).toBe(edit)
+    expect(edit.nextElementSibling).toBe(settings)
+  })
+
+  test("the row is the same column the article is set in", async () => {
+    renderPublished()
+
+    const status = await screen.findByText(/Status:/)
+    const draft = screen.getByRole("link", { name: "Draft" })
+    const bar = screen.getByRole("toolbar")
+
+    /**
+     * One row inside the bar holding both ends, rather than the two sitting
+     * directly in a full-width toolbar. That row is what carries the article's
+     * 890px column, so the status lines up with the breadcrumb and the actions
+     * with the far edge of the text.
+     */
+    expect(bar.children).toHaveLength(1)
+    const [actionRow] = Array.from(bar.children)
+    expect(actionRow).toContainElement(status)
+    expect(actionRow).toContainElement(draft)
   })
 })
