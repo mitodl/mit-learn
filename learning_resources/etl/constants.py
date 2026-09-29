@@ -125,6 +125,11 @@ RESOURCE_FILE_ETL_SOURCES = [
     ETLSource.xpro.value,
 ]
 
+# update_index and recreate_index index these sources' content files, matching
+# what content_files_loaded indexes on ingest. OLL is kept out of
+# RESOURCE_FILE_ETL_SOURCES, which also scopes cleanup_deleted_content_files.
+REINDEX_CONTENT_FILE_ETL_SOURCES = [*RESOURCE_FILE_ETL_SOURCES, ETLSource.oll.value]
+
 MARKETING_PAGE_FILE_TYPE = "marketing_page"
 
 RESOURCE_DELIVERY_MAPPING = {
