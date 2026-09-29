@@ -532,6 +532,51 @@ def test_set_learning_path_relationships_scopes_to_learning_path_items(
     ).exists()
 
 
+def test_set_learning_path_relationships_reorders_positions(client, staff_user):
+    """
+    PATCH should compact non-contiguous positions to 0-based sequential order
+    and append a newly added resource at the correct next position.
+    """
+    # Pass resources=[] to suppress the factory's default auto-generated children
+    learning_path = factories.LearningPathFactory.create(
+        author=staff_user, resources=[]
+    )
+    existing_courses = factories.CourseFactory.create_batch(3)
+    # Simulate gaps left by prior deletions
+    for pos, course in zip([0, 5, 10], existing_courses):
+        factories.LearningPathRelationshipFactory.create(
+            parent=learning_path.learning_resource,
+            child=course.learning_resource,
+            position=pos,
+        )
+    new_course = factories.CourseFactory.create()
+
+    url = reverse(
+        "lr:v1:learning_resource_relationships_api-learning-paths",
+        args=[new_course.learning_resource.id],
+    )
+    client.force_login(staff_user)
+    resp = client.patch(f"{url}?learning_path_id={learning_path.learning_resource.id}")
+
+    assert resp.status_code == 200
+
+    rels = list(
+        models.LearningResourceRelationship.objects.filter(
+            parent=learning_path.learning_resource,
+            relation_type=LearningResourceRelationTypes.LEARNING_PATH_ITEMS.value,
+        ).order_by("position")
+    )
+    # Existing items compacted to 0, 1, 2
+    assert [r.position for r in rels[:3]] == [0, 1, 2]
+    # Newly added resource appended at position 3
+    new_rel = models.LearningResourceRelationship.objects.get(
+        parent=learning_path.learning_resource,
+        child=new_course.learning_resource,
+        relation_type=LearningResourceRelationTypes.LEARNING_PATH_ITEMS.value,
+    )
+    assert new_rel.position == 3
+
+
 def test_adding_to_learning_path_not_effect_existing_membership(client, staff_user):
     """
     Given L1 (existing parent), L2 (new parent), and R (resource),
