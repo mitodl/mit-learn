@@ -89,8 +89,13 @@ const TileLink = styled(Link)({
   display: "inline-flex",
   alignItems: "center",
   gap: "4px",
-  opacity: 0,
   transition: "opacity 150ms ease",
+  // Hidden until hover/focus only on pointers that can actually hover — on a
+  // touch device this stays visible, since there is no hover state to reveal
+  // it and no other way to discover the tile's only control.
+  "@media (hover: hover)": {
+    opacity: 0,
+  },
   "& svg": {
     width: "14px",
     height: "14px",

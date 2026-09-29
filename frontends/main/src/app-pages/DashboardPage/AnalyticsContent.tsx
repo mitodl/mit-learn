@@ -423,9 +423,12 @@ const AnalyticsContentInternal: React.FC<AnalyticsContentInternalProps> = ({
    * header comment and `ContractLearnersPage.tsx`'s), so this section only
    * renders when a contract is in view — the same reason the "Learner
    * analytics" header link above is hidden on the org-wide aggregate page.
-   * `limit: 1` asks for none of the underlying rows: only `total_count` and
-   * `completion_status_counts` are read, the same trick
-   * `ContractLearnersPage.tsx`'s own `totalQuery` uses.
+   * One row is enough: only `total_count` and `completion_status_counts` are
+   * read, the same trick `ContractLearnersPage.tsx`'s own `totalQuery` uses.
+   * `include_inactive` is deliberately left unset (server default: active
+   * enrollments only) — a deactivated or refunded seat isn't "enrolled" to a
+   * manager, and counting it here would disagree with every other seat/
+   * utilization figure on this page.
    */
   const learnerProgress = useQuery({
     ...analyticsContractQueries.learnerProgress(
@@ -602,7 +605,7 @@ const AnalyticsContentInternal: React.FC<AnalyticsContentInternalProps> = ({
         <Section>
           <SectionHeader
             title="Learner progress"
-            description="Where this contract's learners stand across every enrollment."
+            description="Where this contract's learners stand across every active enrollment."
             asOf={learnerProgress.data?.as_of}
             isLoading={learnerProgress.isPending}
             isError={learnerProgress.isError}

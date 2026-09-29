@@ -235,7 +235,12 @@ export type CompletionStatusFilter = CompletionStatus | "unknown"
  * matches, keyed by the same four values as {@link CompletionStatus}. Unlike
  * the aggregate MV types above, this is not floored by k-anonymity (waived for
  * this endpoint per mitodl/ol-analytics-api#58), so none of these are
- * nullable and they always sum to `total_count`.
+ * nullable — but they sum to `total_count` minus `outcomes_withheld_count`,
+ * not `total_count` itself: a consent-withheld enrollment has no
+ * `completion_status` and lands in none of these four buckets. They happen to
+ * sum to `total_count` in every environment today only because
+ * `outcomes_withheld_count` is currently always zero (consent withholding is
+ * inert until a real consent field ships).
  */
 export type CompletionStatusCounts = Record<CompletionStatus, number>
 
