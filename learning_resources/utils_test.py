@@ -346,6 +346,49 @@ def test_bulk_resources_unpublished_actions(mock_plugin_manager, fixture_resourc
     )
 
 
+def test_resource_unpublished_actions_keeps_test_mode_direct_files(
+    mock_plugin_manager,
+):
+    """A test_mode resource's direct content files stay published when it is unpublished"""
+    resource = LearningResourceFactory.create(published=False, test_mode=True)
+    marketing_page = ContentFileFactory.create(
+        learning_resource=resource, published=True
+    )
+
+    utils.resource_unpublished_actions(resource)
+
+    marketing_page.refresh_from_db()
+    assert marketing_page.published is True
+    mock_plugin_manager.hook.resource_unpublished.assert_called_once_with(
+        resource=resource
+    )
+
+
+def test_bulk_resources_unpublished_actions_keeps_test_mode_direct_files(
+    mock_plugin_manager,
+):
+    """Only the non-test_mode resources' direct content files are unpublished in bulk"""
+    resource = LearningResourceFactory.create(is_course=True, published=False)
+    test_resource = LearningResourceFactory.create(
+        is_course=True, published=False, test_mode=True
+    )
+    marketing_page = ContentFileFactory.create(
+        learning_resource=resource, published=True
+    )
+    test_marketing_page = ContentFileFactory.create(
+        learning_resource=test_resource, published=True
+    )
+
+    utils.bulk_resources_unpublished_actions(
+        [resource.id, test_resource.id], resource.resource_type
+    )
+
+    marketing_page.refresh_from_db()
+    test_marketing_page.refresh_from_db()
+    assert marketing_page.published is False
+    assert test_marketing_page.published is True
+
+
 def test_resource_delete_actions(mock_plugin_manager, fixture_resource):
     """
     resource_delete_actions function should trigger plugin hook's resource_deleted function
@@ -1204,8 +1247,10 @@ def test_is_loggable_missing_content_id(edx_module_id, loggable):
         ("block-v1:34819-FA25 18.01L+canvas+type@g085f027c+block@2-dot-11", True),
         ("block-v1:33414-21H.363+canvas+type@+block@gfaf809b", True),
         (
-            "block-v1:28770-15.060_FA24+canvas"
-            "+type@Discrete+Nonlinear_Optimization+block@x",
+            (
+                "block-v1:28770-15.060_FA24+canvas"
+                "+type@Discrete+Nonlinear_Optimization+block@x"
+            ),
             True,
         ),
         ("asset-v1:MITxT+16.00x+0T2026+type@asset+block@lec_\t.srt", True),
@@ -1217,8 +1262,10 @@ def test_is_loggable_missing_content_id(edx_module_id, loggable):
         ("block-v1:X+type@library_content+block@y", True),
         # Never-content block types are rejected (case-insensitive)
         (
-            "block-v1:MITxT+18.03.2x+1T2025+type@discussion"
-            "+block@discussion_recitation13-tab3",
+            (
+                "block-v1:MITxT+18.03.2x+1T2025+type@discussion"
+                "+block@discussion_recitation13-tab3"
+            ),
             False,
         ),
         ("block-v1:X+type@DISCUSSION+block@y", False),

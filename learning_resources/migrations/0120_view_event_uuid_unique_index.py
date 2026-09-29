@@ -35,9 +35,11 @@ class Migration(migrations.Migration):
                         # leftover so a rerun rebuilds and enforces uniqueness
                         f"DROP INDEX CONCURRENTLY IF EXISTS {INDEX_NAME}",
                         # Partial: the legacy NULL rows need no index entries
-                        f"CREATE UNIQUE INDEX CONCURRENTLY {INDEX_NAME}"
-                        f" ON {TABLE_NAME} (event_uuid)"
-                        f" WHERE event_uuid IS NOT NULL",
+                        (
+                            f"CREATE UNIQUE INDEX CONCURRENTLY {INDEX_NAME}"
+                            f" ON {TABLE_NAME} (event_uuid)"
+                            f" WHERE event_uuid IS NOT NULL"
+                        ),
                     ],
                     reverse_sql=f"DROP INDEX CONCURRENTLY IF EXISTS {INDEX_NAME}",
                 ),

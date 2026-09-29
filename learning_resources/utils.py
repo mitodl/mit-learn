@@ -377,7 +377,8 @@ def resource_unpublished_actions(resource: LearningResource):
     Unpublish a resource's direct content files (e.g. marketing pages) and
     trigger plugins when a LearningResource is removed/unpublished
     """
-    resource.resource_content_files.filter(published=True).update(published=False)
+    if not resource.test_mode:
+        resource.resource_content_files.filter(published=True).update(published=False)
     pm = get_plugin_manager()
     hook = pm.hook
     hook.resource_unpublished(resource=resource)
@@ -410,7 +411,9 @@ def bulk_resources_unpublished_actions(resource_ids: list[int], resource_type: s
     trigger plugins when LearningResources are removed/unpublished
     """
     ContentFile.objects.filter(
-        learning_resource_id__in=resource_ids, published=True
+        learning_resource_id__in=resource_ids,
+        learning_resource__test_mode=False,
+        published=True,
     ).update(published=False)
     pm = get_plugin_manager()
     hook = pm.hook
@@ -507,7 +510,7 @@ def offeror_delete_actions(offeror: LearningResourceOfferor):
     hook.offeror_delete(offeror=offeror)
 
 
-def _walk_topic_map(topics: list, parent: None | LearningResourceTopic = None) -> None:
+def _walk_topic_map(topics: list, parent: LearningResourceTopic | None = None) -> None:
     """
     Walk the topic map provided and create topic records accordingly.
 

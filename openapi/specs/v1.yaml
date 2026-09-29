@@ -14684,6 +14684,13 @@ components:
           type: array
           items:
             type: integer
+        seo_title:
+          type: string
+          default: ''
+          maxLength: 255
+        seo_description:
+          type: string
+          default: ''
     PercolateQuery:
       type: object
       description: Serializer for PercolateQuery objects
@@ -17832,6 +17839,13 @@ components:
           type: array
           items:
             type: integer
+        seo_title:
+          type: string
+          default: ''
+          maxLength: 255
+        seo_description:
+          type: string
+          default: ''
       required:
       - cover_image
       - created_on
@@ -17888,5 +17902,12 @@ components:
           type: array
           items:
             type: integer
+        seo_title:
+          type: string
+          default: ''
+          maxLength: 255
+        seo_description:
+          type: string
+          default: ''
       required:
       - title

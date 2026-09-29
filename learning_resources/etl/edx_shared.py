@@ -133,7 +133,15 @@ def process_course_archive(
     Returns:
         bool: False if skipped via matching archive_key, True otherwise
     """
-    if run.archive_key == key and not overwrite:
+    # A saved checksum means this archive once produced published rows. If
+    # none are left (a bulk deindex unpublished them, cleanup may have deleted
+    # them since), the run is stale and must not skip the load. An empty
+    # archive records archive_key with no checksum, so it still skips.
+    stale_run = (
+        bool(run.checksum) and not run.content_files.filter(published=True).exists()
+    )
+
+    if run.archive_key == key and not overwrite and not stale_run:
         log.debug("Archive key unchanged for %s, skipping download", key)
         return False
     with TemporaryDirectory() as export_tempdir:
@@ -145,7 +153,7 @@ def process_course_archive(
         except tarfile.ReadError:
             log.exception("Error reading tar file %s, skipping", course_tarpath)
             return True
-        if run.checksum == checksum and not overwrite:
+        if run.checksum == checksum and not overwrite and not stale_run:
             # unchanged content under a new key: record it to skip future downloads
             run.archive_key = key
             run.save(update_fields=["archive_key"])
@@ -163,9 +171,12 @@ def process_course_archive(
                 if failed_keys:
                     # every file failed: retry next sync, don't mark as empty
                     return True
-                # empty archive: stop re-downloading it
+                # empty archive: stop re-downloading it. Drop any checksum
+                # from an earlier ingest so a stale run doesn't keep
+                # forcing the download.
                 run.archive_key = key
-                run.save(update_fields=["archive_key"])
+                run.checksum = None
+                run.save(update_fields=["archive_key", "checksum"])
                 return True
             content_files_ids = load_content_files(
                 run, chain([first], content_files_data), failed_keys=failed_keys

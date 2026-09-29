@@ -18,6 +18,7 @@ from learning_resources.factories import (
     LearningResourceDepartmentFactory,
     LearningResourceFactory,
     LearningResourceOfferorFactory,
+    LearningResourceRunFactory,
     LearningResourceTopicFactory,
     ProgramFactory,
 )
@@ -54,6 +55,8 @@ from learning_resources_search.tasks import (
     deindex_document,
     deindex_run_content_files,
     finish_reindex_job,
+    get_update_program_files_tasks,
+    get_update_resource_files_tasks,
     index_learning_resources,
     index_run_content_files,
     run_reindex_batch,
@@ -65,6 +68,7 @@ from learning_resources_search.tasks import (
     upsert_learning_resource,
     wrap_retry_exception,
 )
+from learning_resources_search.utils import opensearch_content_files
 from main.factories import TaskBatchFactory, TaskJobFactory, UserFactory
 from main.models import TaskBatch, TaskJob
 from main.test_utils import assert_not_raises
@@ -788,7 +792,7 @@ def test_run_reindex_batch_dispatch_content_files(mocker, mocked_api):
     """
     settings.OPENSEARCH_DOCUMENT_INDEXING_CHUNK_SIZE = 2
     course = CourseFactory.create(etl_source=ETLSource.ocw.value)
-    run = course.learning_resource.runs.first()
+    run = course.learning_resource.best_run
     run_files = sorted(
         ContentFileFactory.create_batch(3, run=run), key=lambda file: file.id
     )
@@ -1097,9 +1101,7 @@ def test_start_update_index(mocker, mocked_celery, indexes, etl_source, settings
         )
 
         for course in courses:
-            ContentFileFactory.create_batch(
-                3, run=course.learning_resource.runs.first()
-            )
+            ContentFileFactory.create_batch(3, run=course.learning_resource.best_run)
 
         # A resource-level (marketing page) content file attached directly to
         # the learning resource rather than a run.
@@ -1136,7 +1138,7 @@ def test_start_update_index(mocker, mocked_celery, indexes, etl_source, settings
         program_with_files.learning_resource.etl_source = ETLSource.mitxonline.value
         program_with_files.learning_resource.save()
         program_run_file = ContentFileFactory.create(
-            run=program_with_files.learning_resource.runs.first()
+            run=program_with_files.learning_resource.best_run
         )
         program_marketing_file = ContentFileFactory.create(
             learning_resource=program_with_files.learning_resource
@@ -1236,14 +1238,8 @@ def test_start_update_index(mocker, mocked_celery, indexes, etl_source, settings
 
         # Program content files are indexed with resource_type=PROGRAM_TYPE, for
         # both run-level and resource-level (marketing page) content files.
-        index_content_mock.si.assert_any_call(
-            [program_run_file.id],
-            program_with_files.learning_resource_id,
-            index_types=IndexestoUpdate.current_index.value,
-            resource_type=PROGRAM_TYPE,
-        )
-        index_content_mock.si.assert_any_call(
-            [program_marketing_file.id],
+        index_content_mock.si.assert_called_once_with(
+            [program_run_file.id, program_marketing_file.id],
             program_with_files.learning_resource_id,
             index_types=IndexestoUpdate.current_index.value,
             resource_type=PROGRAM_TYPE,
@@ -1251,39 +1247,27 @@ def test_start_update_index(mocker, mocked_celery, indexes, etl_source, settings
 
     if CONTENT_FILE_TYPE in indexes:
         if etl_source in RESOURCE_FILE_ETL_SOURCES:
-            # 2 run-level chunks + 1 resource-level (marketing page) chunk
-            assert index_content_mock.si.call_count == 3
+            # 3 run-level files + 1 resource-level (marketing page) file, in
+            # chunks of 2
+            assert index_content_mock.si.call_count == 2
             course = next(
                 course
                 for course in courses
                 if course.learning_resource.etl_source == etl_source
             )
-
-            content_file_ids = (
-                course.learning_resource.runs.first()
-                .content_files.order_by("id")
-                .values_list("id", flat=True)
-            )
-
-            index_content_mock.si.assert_any_call(
-                [content_file_ids[0], content_file_ids[1]],
-                course.learning_resource_id,
-                index_types=IndexestoUpdate.current_index.value,
-            )
-
-            index_content_mock.si.assert_any_call(
-                [content_file_ids[2]],
-                course.learning_resource_id,
-                index_types=IndexestoUpdate.current_index.value,
-            )
-
-            # resource-level (marketing page) content file attached directly to
-            # the learning resource
-            index_content_mock.si.assert_any_call(
-                [xpro_marketing_file.id],
-                course.learning_resource_id,
-                index_types=IndexestoUpdate.current_index.value,
-            )
+            expected_ids = [
+                *course.learning_resource.best_run.content_files.order_by(
+                    "id"
+                ).values_list("id", flat=True),
+                xpro_marketing_file.id,
+            ]
+            for ids in (expected_ids[:2], expected_ids[2:]):
+                index_content_mock.si.assert_any_call(
+                    ids,
+                    course.learning_resource_id,
+                    index_types=IndexestoUpdate.current_index.value,
+                    resource_type=COURSE_TYPE,
+                )
 
         elif etl_source:
             assert index_content_mock.si.call_count == 0
@@ -1968,3 +1952,178 @@ def test_cache_is_cleared_after_reindex(mocker):
     )
     finish_reindex_job.delay(job.id)
     assert mocked_clear_views_cache.call_count == 1
+
+
+def _course_with_best_and_older_run(**kwargs):
+    """Create a published mitxonline course with a best run and an older published run, each with files"""
+    course = LearningResourceFactory.create(
+        is_course=True,
+        create_runs=False,
+        etl_source=ETLSource.mitxonline.value,
+        published=True,
+        **kwargs,
+    )
+    best = LearningResourceRunFactory.create(learning_resource=course, published=True)
+    older = LearningResourceRunFactory.create(
+        learning_resource=course,
+        published=True,
+        start_date=best.start_date.replace(year=2000),
+    )
+    ContentFileFactory.create_batch(2, run=best)
+    ContentFileFactory.create_batch(2, run=older)
+    ContentFileFactory.create(learning_resource=course)
+    assert course.best_run == best
+    return course, best, older
+
+
+def test_get_update_resource_files_tasks_indexes_best_run_only(mocker):
+    """update_index indexes the best run's files and the direct files, not older runs'"""
+    course, _, older = _course_with_best_and_older_run()
+    index_content_mock = mocker.patch(
+        "learning_resources_search.tasks.index_content_files", autospec=True
+    )
+    mocker.patch("learning_resources_search.tasks.deindex_content_files", autospec=True)
+    deindex_runs_mock = mocker.patch(
+        "learning_resources_search.tasks.deindex_non_opensearch_run_content_files",
+        autospec=True,
+    )
+
+    get_update_resource_files_tasks([], ETLSource.mitxonline.value)
+
+    indexed = {
+        cf_id for call in index_content_mock.si.call_args_list for cf_id in call.args[0]
+    }
+    assert indexed == set(opensearch_content_files(course).values_list("id", flat=True))
+    assert not indexed & set(older.content_files.values_list("id", flat=True))
+    deindex_runs_mock.si.assert_called_once_with(course.id, resource_type=COURSE_TYPE)
+
+
+def test_run_reindex_batch_dispatch_content_files_best_run_only(mocker, mocked_api):
+    """A full rebuild dispatches the best run's files and the direct files, not older runs'"""
+    course, _, older = _course_with_best_and_older_run()
+    mocker.patch.object(run_reindex_batch, "delay")
+    job = TaskJobFactory.create(
+        task_name=REINDEX_TASK_NAME, status=TaskJob.Status.RUNNING
+    )
+    batch = TaskBatchFactory.create(
+        job=job,
+        kind=ReindexBatchKind.dispatch_content_files.value,
+        params={"learning_resource_ids": [course.id], "resource_type": COURSE_TYPE},
+    )
+
+    run_reindex_batch(batch.id)
+
+    dispatched = {
+        cf_id
+        for child in job.batches.filter(kind=ReindexBatchKind.content_files.value)
+        for cf_id in child.params["ids"]
+    }
+    assert dispatched == set(
+        opensearch_content_files(course).values_list("id", flat=True)
+    )
+    assert not dispatched & set(older.content_files.values_list("id", flat=True))
+
+
+def test_get_update_program_files_tasks_indexes_best_run_only(mocker):
+    """update_index indexes a program's best run files and direct files, not older runs'"""
+    program = LearningResourceFactory.create(
+        is_program=True,
+        create_runs=False,
+        etl_source=ETLSource.mitxonline.value,
+        published=True,
+    )
+    best = LearningResourceRunFactory.create(learning_resource=program, published=True)
+    older = LearningResourceRunFactory.create(
+        learning_resource=program,
+        published=True,
+        start_date=best.start_date.replace(year=2000),
+    )
+    ContentFileFactory.create_batch(2, run=best)
+    ContentFileFactory.create_batch(2, run=older)
+    ContentFileFactory.create(learning_resource=program)
+    assert program.best_run == best
+    index_content_mock = mocker.patch(
+        "learning_resources_search.tasks.index_content_files", autospec=True
+    )
+    mocker.patch("learning_resources_search.tasks.deindex_content_files", autospec=True)
+    deindex_runs_mock = mocker.patch(
+        "learning_resources_search.tasks.deindex_non_opensearch_run_content_files",
+        autospec=True,
+    )
+
+    get_update_program_files_tasks(ETLSource.mitxonline.value)
+
+    indexed = {
+        cf_id for call in index_content_mock.si.call_args_list for cf_id in call.args[0]
+    }
+    assert indexed == set(
+        opensearch_content_files(program).values_list("id", flat=True)
+    )
+    assert not indexed & set(older.content_files.values_list("id", flat=True))
+    deindex_runs_mock.si.assert_called_once_with(program.id, resource_type=PROGRAM_TYPE)
+
+
+def test_start_recreate_index_dispatches_test_mode_course_content_files(
+    mocker, mocked_api
+):
+    """
+    An unpublished test_mode course's content files are dispatched for indexing,
+    as the post-ingest hook indexes them, while its resource document is not.
+    """
+    course = LearningResourceFactory.create(
+        is_course=True,
+        create_runs=True,
+        etl_source=ETLSource.mitxonline.value,
+        published=False,
+        test_mode=True,
+    )
+    ContentFileFactory.create(run=course.runs.first())
+    mocker.patch(
+        "learning_resources_search.tasks.load_course_blocklist", return_value=[]
+    )
+    mocker.patch("learning_resources_search.tasks.run_reindex_batch", autospec=True)
+    mocked_api.get_existing_reindexing_indexes.return_value = []
+    mocked_api.create_backing_index.return_value = "backing"
+    job = TaskJobFactory.create(
+        task_name=REINDEX_TASK_NAME, params={"indexes": [COURSE_TYPE]}
+    )
+
+    start_recreate_index.delay(job.id)
+
+    dispatched_ids = {
+        resource_id
+        for batch in job.batches.filter(
+            kind=ReindexBatchKind.dispatch_content_files.value
+        )
+        for resource_id in batch.params["learning_resource_ids"]
+    }
+    indexed_resource_ids = {
+        resource_id
+        for batch in job.batches.filter(kind=ReindexBatchKind.learning_resources.value)
+        for resource_id in batch.params["ids"]
+    }
+    assert course.id in dispatched_ids
+    assert course.id not in indexed_resource_ids
+
+
+def test_get_update_resource_files_tasks_includes_test_mode_courses(mocker):
+    """update_index indexes an unpublished test_mode course's content files"""
+    course = LearningResourceFactory.create(
+        is_course=True,
+        create_runs=True,
+        etl_source=ETLSource.mitxonline.value,
+        published=False,
+        test_mode=True,
+    )
+    content_file = ContentFileFactory.create(run=course.runs.first())
+    index_content_mock = mocker.patch(
+        "learning_resources_search.tasks.index_content_files", autospec=True
+    )
+    mocker.patch("learning_resources_search.tasks.deindex_content_files", autospec=True)
+
+    get_update_resource_files_tasks([], ETLSource.mitxonline.value)
+
+    indexed = {
+        cf_id for call in index_content_mock.si.call_args_list for cf_id in call.args[0]
+    }
+    assert content_file.id in indexed

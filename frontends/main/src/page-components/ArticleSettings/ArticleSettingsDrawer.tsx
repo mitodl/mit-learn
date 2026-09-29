@@ -11,6 +11,7 @@ import {
 import { ActionButton, Button, TextField } from "@mitodl/smoot-design"
 import { RiCloseLargeLine, RiCloseLine } from "@remixicon/react"
 import { useLearningResourceTopics } from "api/hooks/learningResources"
+import { env } from "@/env"
 
 /**
  * Content settings drawer, drawn from the /articles design but shared by every
@@ -20,9 +21,9 @@ import { useLearningResourceTopics } from "api/hooks/learningResources"
  * Topic options come from the live topics API, and the topics the editor picks
  * are handed to `onSave` as the ids `WebsiteContent.topics` stores.
  *
- * The SEO values are still local-only: WebsiteContent has no `seo_title` or
- * `seo_description` field, so there is nothing to PATCH them onto. They ride
- * along in `onSave` so the caller can persist them once those fields exist.
+ * The SEO values are handed over the same way, and `WebsiteContent` now
+ * stores both -- for news as well as articles, since a link preview or a
+ * search result is the editor's to write on either.
  */
 
 /** Drawer width from the design; narrows to the viewport on small screens. */
@@ -76,6 +77,39 @@ const TopicsSection = styled(Section)(({ theme }) => ({
 const SeoSection = styled(Section)({
   padding: "40px",
 })
+
+/**
+ * What `WebsiteContent.seo_title` holds -- a `CharField(max_length=255)`.
+ *
+ * Enforced here rather than left to the server: the drawer's save is fired and
+ * forgotten, so a rejected PATCH surfaces only as the editor's generic error
+ * banner, with nothing to say which field was too long or by how much.
+ */
+const SEO_TITLE_MAX = 255
+
+/**
+ * What MIT's SEO rules ask of the tags these fields become: a title tag of
+ * 50-60 characters, and a description of 160 -- 120 on a phone, so whatever
+ * matters goes at the front either way.
+ *
+ * Guidance, not a limit. Both numbers stand in for pixel widths that a
+ * character count only approximates, and a tag a little over is truncated by
+ * the search engine rather than rejected -- so going past these is the
+ * editor's call to make, and worth telling them about rather than preventing.
+ * `SEO_TITLE_MAX` above is the one hard stop, because that one really fails.
+ */
+const SEO_TITLE_TAG_BUDGET = 60
+const SEO_DESCRIPTION_BUDGET = 160
+
+const Counter = styled.div<{ overBudget: boolean }>(
+  ({ theme, overBudget }) => ({
+    ...theme.typography.body3,
+    color: overBudget
+      ? theme.custom.colors.mitRed
+      : theme.custom.colors.silverGrayDark,
+    textAlign: "right",
+  }),
+)
 
 const SectionHeading = styled.div({
   display: "flex",
@@ -163,6 +197,27 @@ const FooterCta = styled.div({
   marginTop: "auto",
 })
 
+/**
+ * What the topics section says about itself, which depends on which rule is
+ * speaking: one that refuses to save without a topic, one that only wants them
+ * before publishing, or neither.
+ */
+const topicsMessage = (
+  contentLabel: string,
+  empty: boolean,
+  required: boolean,
+  mayNotBeEmptied: boolean,
+) => {
+  const noun = contentLabel.toLowerCase()
+  if (empty && mayNotBeEmptied) {
+    return `A published ${noun} needs at least one topic`
+  }
+  if (empty && required) {
+    return `Select at least one topic to publish your ${noun}`
+  }
+  return `Select one or more topics for your ${noun}`
+}
+
 /** Settings the drawer collects. Mirrors the fields in the design. */
 export interface ArticleSettingsValues {
   /**
@@ -174,8 +229,11 @@ export interface ArticleSettingsValues {
    *
    * The design still groups subtopics under their parent, which is derived
    * from each topic's own `parent` rather than stored alongside the id.
+   *
+   * Absent when `showTopics` is off: the drawer collected no selection, which
+   * is not the same as the editor having emptied one.
    */
-  topics: number[]
+  topics?: number[]
   seoTitle: string
   seoDescription: string
 }
@@ -194,6 +252,30 @@ export interface ArticleSettingsDrawerProps {
    * in the heading and the section copy.
    */
   contentLabel?: string
+  /**
+   * Whether to offer the topics section.
+   *
+   * The caller decides, since what topics reach is its business: only an
+   * article is projected into a LearningResource, so only there do they put
+   * the content on a topic page.
+   */
+  showTopics?: boolean
+  /**
+   * Whether the content needs a topic before it can go public. The section
+   * says so while none is picked, which is what tells an editor why the
+   * drawer opened on them when they pressed Publish.
+   */
+  topicsRequired?: boolean
+  /**
+   * Whether an empty selection may not be saved at all.
+   *
+   * This drawer is the one place a selection can be taken away, so a caller
+   * that gates only its own save buttons would still lose the topics through
+   * here. Separate from `topicsRequired` because the two do not coincide:
+   * content that is not public yet can be left without topics -- it is
+   * stopped at publishing -- while content already public cannot.
+   */
+  topicsMayNotBeEmptied?: boolean
   /** Values to open with. Re-read each time the drawer opens. */
   initialValues?: Partial<ArticleSettingsValues>
   /**
@@ -210,6 +292,9 @@ const ArticleSettingsDrawer = ({
   open,
   onClose,
   contentLabel = "Article",
+  showTopics = true,
+  topicsRequired = false,
+  topicsMayNotBeEmptied = false,
   initialValues,
   onSave,
 }: ArticleSettingsDrawerProps) => {
@@ -218,6 +303,30 @@ const ArticleSettingsDrawer = ({
   const [selectedIds, setSelectedIds] = useState<number[]>([])
   const [seoTitle, setSeoTitle] = useState("")
   const [seoDescription, setSeoDescription] = useState("")
+
+  /**
+   * The budget for this field, which is not the budget for the tag: the page
+   * appends " | <site name>" to whatever is entered here -- see
+   * `standardizeMetadata` -- and the guidance is about the tag that reaches
+   * search results, so the suffix comes out of the allowance.
+   *
+   * Read here rather than at module scope, where NEXT_PUBLIC_* values are not
+   * set yet. Missing, there is no suffix to reserve for.
+   */
+  const siteName = env("NEXT_PUBLIC_SITE_NAME")
+  const titleSuffix = siteName ? ` | ${siteName}` : ""
+  const seoTitleBudget = SEO_TITLE_TAG_BUDGET - titleSuffix.length
+  /* The suffix is named because it is what makes the budget below smaller
+     than the 60 the rules quote, which would otherwise look like an error. */
+  const seoTitleHelpText = [
+    `Aim for ${seoTitleBudget} characters or fewer.`,
+    titleSuffix
+      ? `"${titleSuffix}" is appended, for a ${SEO_TITLE_TAG_BUDGET}-character title in search results.`
+      : "",
+    "Lead with the words someone would search for.",
+  ]
+    .filter(Boolean)
+    .join(" ")
 
   /**
    * One fetch of every topic rather than a query per select.
@@ -235,7 +344,7 @@ const ArticleSettingsDrawer = ({
    * working from this same visible set.
    */
   const { data: topicsData, isLoading: topicsLoading } =
-    useLearningResourceTopics({ limit: 1000 }, { enabled: open })
+    useLearningResourceTopics({ limit: 1000 }, { enabled: open && showTopics })
 
   const allTopics = useMemo(() => topicsData?.results ?? [], [topicsData])
 
@@ -260,7 +369,8 @@ const ArticleSettingsDrawer = ({
   useEffect(() => {
     if (!open) return
     const values = { ...EMPTY_SETTINGS, ...initialValues }
-    setSelectedIds(values.topics)
+    /* `topics` is optional, so a caller may pass it explicitly undefined. */
+    setSelectedIds(values.topics ?? [])
     setSeoTitle(values.seoTitle)
     setSeoDescription(values.seoDescription)
     setTopicId("")
@@ -393,85 +503,96 @@ const ArticleSettingsDrawer = ({
         </Header>
 
         <Body>
-          <TopicsSection>
-            <SectionHeading>
-              <Typography variant="h5" component="h3">
-                Select Topics
-              </Typography>
-              <Typography variant="body2">
-                Select one or more topics for your {contentLabel.toLowerCase()}
-              </Typography>
-            </SectionHeading>
-            <TopicRow>
-              <GrowingSelect
-                name="topic"
-                label="Topic"
-                fullWidth
-                options={topicOptions}
-                value={topicId}
-                onChange={(event) => {
-                  setTopicId(event.target.value as string)
-                  // The old subtopic belongs to the old parent.
-                  setSubtopicId("")
-                }}
-              />
-              <GrowingSelect
-                name="subtopic"
-                label="Subtopic"
-                fullWidth
-                options={subtopicOptions}
-                value={subtopicId}
-                onChange={(event) =>
-                  setSubtopicId(event.target.value as string)
-                }
-              />
-              <Button variant="bordered" disabled={!canAdd} onClick={handleAdd}>
-                Add
-              </Button>
-            </TopicRow>
-            {groupedSelections.length > 0 ? (
-              <SelectedTopics aria-label="Selected topics">
-                {groupedSelections.map(([groupTopicId, group]) => {
-                  const topicName =
-                    topicsById.get(groupTopicId)?.name ??
-                    `Topic ${groupTopicId}`
-                  return (
-                    <SelectedTopicGroup key={groupTopicId}>
-                      <SelectedTopicName>{topicName}</SelectedTopicName>
-                      {group.map((id) => {
-                        /* A topic added without a subtopic has no pill of its
-                           own; its name alone represents it. */
-                        if (id === groupTopicId) return null
-                        const subtopicName =
-                          topicsById.get(id)?.name ?? `Subtopic ${id}`
-                        return (
-                          <SubtopicChip key={id}>
-                            {subtopicName}
-                            <ChipRemoveButton
-                              type="button"
-                              onClick={() => handleRemove(id)}
-                              aria-label={`Remove ${subtopicName} from ${topicName}`}
-                            >
-                              <RiCloseLine aria-hidden />
-                            </ChipRemoveButton>
-                          </SubtopicChip>
-                        )
-                      })}
-                      {group.every((id) => id === groupTopicId) ? (
-                        <ChipRemoveButton
-                          type="button"
-                          onClick={() => handleRemove(groupTopicId)}
-                          aria-label={`Remove ${topicName}`}
-                        >
-                          <RiCloseLine aria-hidden />
-                        </ChipRemoveButton>
-                      ) : null}
-                    </SelectedTopicGroup>
-                  )
-                })}
-              </SelectedTopics>
-            ) : null}
-          </TopicsSection>
+          {showTopics ? (
+            <TopicsSection>
+              <SectionHeading>
+                <Typography variant="h5" component="h3">
+                  Select Topics
+                </Typography>
+                <Typography variant="body2">
+                  {topicsMessage(
+                    contentLabel,
+                    selectedIds.length === 0,
+                    topicsRequired,
+                    topicsMayNotBeEmptied,
+                  )}
+                </Typography>
+              </SectionHeading>
+              <TopicRow>
+                <GrowingSelect
+                  name="topic"
+                  label="Topic"
+                  fullWidth
+                  options={topicOptions}
+                  value={topicId}
+                  onChange={(event) => {
+                    setTopicId(event.target.value as string)
+                    // The old subtopic belongs to the old parent.
+                    setSubtopicId("")
+                  }}
+                />
+                <GrowingSelect
+                  name="subtopic"
+                  label="Subtopic"
+                  fullWidth
+                  options={subtopicOptions}
+                  value={subtopicId}
+                  onChange={(event) =>
+                    setSubtopicId(event.target.value as string)
+                  }
+                />
+                <Button
+                  variant="bordered"
+                  disabled={!canAdd}
+                  onClick={handleAdd}
+                >
+                  Add
+                </Button>
+              </TopicRow>
+              {groupedSelections.length > 0 ? (
+                <SelectedTopics aria-label="Selected topics">
+                  {groupedSelections.map(([groupTopicId, group]) => {
+                    const topicName =
+                      topicsById.get(groupTopicId)?.name ??
+                      `Topic ${groupTopicId}`
+                    return (
+                      <SelectedTopicGroup key={groupTopicId}>
+                        <SelectedTopicName>{topicName}</SelectedTopicName>
+                        {group.map((id) => {
+                          /* A topic added without a subtopic has no pill of its
+                             own; its name alone represents it. */
+                          if (id === groupTopicId) return null
+                          const subtopicName =
+                            topicsById.get(id)?.name ?? `Subtopic ${id}`
+                          return (
+                            <SubtopicChip key={id}>
+                              {subtopicName}
+                              <ChipRemoveButton
+                                type="button"
+                                onClick={() => handleRemove(id)}
+                                aria-label={`Remove ${subtopicName} from ${topicName}`}
+                              >
+                                <RiCloseLine aria-hidden />
+                              </ChipRemoveButton>
+                            </SubtopicChip>
+                          )
+                        })}
+                        {group.every((id) => id === groupTopicId) ? (
+                          <ChipRemoveButton
+                            type="button"
+                            onClick={() => handleRemove(groupTopicId)}
+                            aria-label={`Remove ${topicName}`}
+                          >
+                            <RiCloseLine aria-hidden />
+                          </ChipRemoveButton>
+                        ) : null}
+                      </SelectedTopicGroup>
+                    )
+                  })}
+                </SelectedTopics>
+              ) : null}
+            </TopicsSection>
+          ) : null}
 
           <SeoSection>
             <SectionHeading>
@@ -480,27 +601,59 @@ const ArticleSettingsDrawer = ({
               </Typography>
               <Typography variant="body2">
                 Add an SEO title and description to help search engines
-                understand and display your {contentLabel.toLowerCase()}.
+                understand and display your {contentLabel.toLowerCase()}. Both
+                should be unique to this page, and they are the first thing
+                someone reads in search results.
               </Typography>
             </SectionHeading>
-            <TextField
-              name="seo_title"
-              label="SEO Title"
-              fullWidth
-              placeholder="Enter a title for search results"
-              value={seoTitle}
-              onChange={(event) => setSeoTitle(event.target.value)}
-            />
-            <TextField
-              name="seo_description"
-              label="SEO Description"
-              fullWidth
-              multiline
-              minRows={9}
-              placeholder={`Write a short description that summarizes your ${contentLabel.toLowerCase()} for search results.`}
-              value={seoDescription}
-              onChange={(event) => setSeoDescription(event.target.value)}
-            />
+            <div>
+              <TextField
+                name="seo_title"
+                label="SEO Title"
+                fullWidth
+                placeholder="Enter a title for search results"
+                /* The budget belongs in the description, not only in the
+                   counter: otherwise it is discoverable only by being run
+                   past. */
+                helpText={seoTitleHelpText}
+                inputProps={{ maxLength: SEO_TITLE_MAX }}
+                value={seoTitle}
+                onChange={(event) => setSeoTitle(event.target.value)}
+              />
+              {/* Announced only when it settles, so it does not interrupt on
+                  every keystroke. */}
+              <Counter
+                aria-live="polite"
+                overBudget={seoTitle.length > seoTitleBudget}
+                data-over-budget={seoTitle.length > seoTitleBudget}
+              >
+                {`${seoTitle.length} / ${seoTitleBudget} characters`}
+              </Counter>
+            </div>
+            <div>
+              <TextField
+                name="seo_description"
+                label="SEO Description"
+                fullWidth
+                multiline
+                /* Sized to the budget rather than to the space: nine rows read
+                   as an invitation to write far more than will ever show. */
+                minRows={4}
+                placeholder={`Write a short description that summarizes your ${contentLabel.toLowerCase()} for search results.`}
+                helpText={`Aim for ${SEO_DESCRIPTION_BUDGET} characters or fewer. Only about 120 show on a phone, so put what matters first.`}
+                value={seoDescription}
+                onChange={(event) => setSeoDescription(event.target.value)}
+              />
+              <Counter
+                aria-live="polite"
+                overBudget={seoDescription.length > SEO_DESCRIPTION_BUDGET}
+                data-over-budget={
+                  seoDescription.length > SEO_DESCRIPTION_BUDGET
+                }
+              >
+                {`${seoDescription.length} / ${SEO_DESCRIPTION_BUDGET} characters`}
+              </Counter>
+            </div>
           </SeoSection>
 
           <FooterCta>
@@ -509,8 +662,19 @@ const ArticleSettingsDrawer = ({
             </Button>
             <Button
               variant="primary"
+              /* Refused rather than silently ignored: the editor has emptied
+                 the selection on screen and has to see why it will not save. */
+              disabled={
+                topicsMayNotBeEmptied && showTopics && selectedIds.length === 0
+              }
               onClick={() => {
-                onSave?.({ topics: selectedIds, seoTitle, seoDescription })
+                onSave?.({
+                  /* Undefined rather than [] with the section hidden: the
+                     editor cleared nothing, so there is nothing to write. */
+                  topics: showTopics ? selectedIds : undefined,
+                  seoTitle,
+                  seoDescription,
+                })
                 onClose()
               }}
             >

@@ -52,6 +52,5 @@ class Command(BaseCommand):
 
         self.stdout.write(
             "Generation runs in the background, roughly a minute per resource."
-            " Follow the celery logs for progress and completion:"
+            " Follow the celery logs for progress."
         )
-        self.stdout.write("    docker compose logs -f celery")
