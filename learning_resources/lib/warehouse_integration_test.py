@@ -15,6 +15,7 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 from django.conf import settings
+from django.test import override_settings
 
 from learning_resources.lib.warehouse import BaseWarehouseETLTask, iter_rows
 from learning_resources.lib.warehouse_factories import WarehouseTestRowFactory
@@ -86,7 +87,7 @@ def _insert_rows(conn, rows):
 
 class _CollectingTask(BaseWarehouseETLTask):
     name = "test.CollectingTask"
-    view_name = _TEST_VIEW
+    table_name = _TEST_TABLE
 
     def fetch_and_upsert(self, conn, *, since=None) -> int:
         self.collected = list(iter_rows(conn, self.view_name, since=since))
@@ -148,7 +149,12 @@ def test_base_warehouse_etl_task_runs_against_real_starrocks(mocker, starrocks_c
     _insert_rows(starrocks_conn, rows)
 
     task = _CollectingTask()
-    count = task.run()
+    # default_catalog is StarRocks' internal catalog, where the scratch
+    # table lives; this also exercises the WAREHOUSE_* composition end to end.
+    with override_settings(
+        WAREHOUSE_CATALOG="default_catalog", WAREHOUSE_SCHEMA=_TEST_DB
+    ):
+        count = task.run()
 
     assert count == len(rows)
     assert {r["id"] for r in task.collected} == {row["id"] for row in rows}
