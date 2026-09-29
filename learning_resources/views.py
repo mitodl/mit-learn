@@ -139,8 +139,7 @@ def show_content_file_content(user):
         and (
             user.is_superuser
             or user.is_staff
-            or user.groups.filter(name=GROUP_CONTENT_FILE_CONTENT_VIEWERS).first()
-            is not None
+            or user.groups.filter(name=GROUP_CONTENT_FILE_CONTENT_VIEWERS).exists()
         )
     )
 
@@ -825,16 +824,16 @@ class LearningResourceListRelationshipViewSet(viewsets.GenericViewSet):
         current_parent_lists = current_relationships.values_list("parent_id", flat=True)
 
         for userlist_id in userlist_ids:
-            last_index = 0
             # re-number the positions for surviving items
-            for index, relationship in enumerate(
+            relationships = list(
                 UserListRelationship.objects.filter(
                     parent__author=request.user, parent__id=userlist_id
                 ).order_by("position")
-            ):
+            )
+            for index, relationship in enumerate(relationships):
                 relationship.position = index
-                relationship.save()
-                last_index = index
+            UserListRelationship.objects.bulk_update(relationships, ["position"])
+            last_index = len(relationships) - 1 if relationships else -1
             # Add new items as necessary
             if userlist_id not in list(current_parent_lists):
                 UserListRelationship.objects.create(
@@ -895,17 +894,17 @@ class LearningResourceListRelationshipViewSet(viewsets.GenericViewSet):
 
         for learning_path_id_str in learning_path_ids:
             learning_path_id = int(learning_path_id_str)
-            last_index = 0
             # re-number the positions for surviving items
-            for index, relationship in enumerate(
+            relationships = list(
                 LearningResourceRelationship.objects.filter(
                     parent__id=learning_path_id,
                     relation_type=LearningResourceRelationTypes.LEARNING_PATH_ITEMS.value,
                 ).order_by("position")
-            ):
+            )
+            for index, relationship in enumerate(relationships):
                 relationship.position = index
-                relationship.save()
-                last_index = index
+            LearningResourceRelationship.objects.bulk_update(relationships, ["position"])
+            last_index = len(relationships) - 1 if relationships else -1
 
             # Add new items as necessary
             if learning_path_id not in list(current_parent_lists):
