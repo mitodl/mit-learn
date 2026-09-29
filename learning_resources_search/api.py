@@ -1123,7 +1123,7 @@ def get_similar_topics(
     return list(dict(counter.most_common(num_topics)).keys())
 
 
-def get_similar_resources(  # noqa: PLR0913
+def get_similar_resources(  # noqa: PLR0913, PLR0917
     value_doc: dict,
     num_resources: int,
     min_term_freq: int,
