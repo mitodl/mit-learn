@@ -371,11 +371,12 @@ const WebsiteContentEditor = ({
   const [isPublishing, setIsPublishing] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
   /**
-   * Whether a publish is waiting on topics. `handleSettingsSave` resumes it
-   * once one has been picked. Only a publish is ever held back: a draft saves
+   * Whether a publish is waiting on the settings drawer -- for topics, for the
+   * SEO fields, or for both. `handleSettingsSave` resumes it once everything
+   * publishing needs is there. Only a publish is ever held back: a draft saves
    * itself, and autosave cannot stop to ask.
    */
-  const [awaitingTopicsForPublish, setAwaitingTopicsForPublish] =
+  const [awaitingSettingsForPublish, setAwaitingSettingsForPublish] =
     useState(false)
   const [uploadError, setUploadError] = useState<string | null>(null)
   const [resetAttempted, setResetAttempted] = useState(false)
@@ -592,10 +593,19 @@ const WebsiteContentEditor = ({
       overrides.topics = nextTopics
     }
 
-    // A publish that was held back resumes here, carrying the drawer's values,
-    // so the content write persists them and nothing is PATCHed twice.
-    if (awaitingTopicsForPublish && (nextTopics?.length ?? 0) > 0) {
-      setAwaitingTopicsForPublish(false)
+    /**
+     * A publish that was held back resumes here, carrying the drawer's values,
+     * so the content write persists them and nothing is PATCHed twice.
+     *
+     * Judged on what the drawer just handed over rather than on state, which
+     * has not landed yet. `!topicsRequired` matters for news: its drawer sends
+     * no `topics` at all, so a length test alone would strand a publish that
+     * was only ever waiting on the SEO fields.
+     */
+    const topicsSupplied = !topicsRequired || (nextTopics?.length ?? 0) > 0
+    const seoSupplied = !!seoTitle.trim() && !!seoDescription.trim()
+    if (awaitingSettingsForPublish && topicsSupplied && seoSupplied) {
+      setAwaitingSettingsForPublish(false)
       startPublish(overrides)
       return
     }
@@ -686,9 +696,21 @@ const WebsiteContentEditor = ({
   const topicsRequired = contentType === WebsiteContentContentTypeEnum.Article
   const topicsMissing = topicsRequired && topics.length === 0
 
-  /** Hold the publish back and ask for topics. */
-  const askForTopics = () => {
-    setAwaitingTopicsForPublish(true)
+  /**
+   * The SEO title and description are held to the same rule, and for the same
+   * reason: they are what a search result and a link preview show, and without
+   * them the page head falls back to the title and whatever the body happens
+   * to open with. Required on news as well as articles -- both are pages
+   * someone finds through search.
+   *
+   * Trimmed, so a space does not pass for a title.
+   */
+  const seoRequired = true
+  const seoMissing = !seo.title.trim() || !seo.description.trim()
+
+  /** Hold the publish back and ask for whatever publishing still needs. */
+  const askForSettings = () => {
+    setAwaitingSettingsForPublish(true)
     setSettingsOpen(true)
   }
 
@@ -894,34 +916,43 @@ const WebsiteContentEditor = ({
   )
 
   /**
-   * Published view: navigation and settings sit left, the status sits right
-   * (the Spacer splits them). Unpublishing is not offered here -- it lives on
-   * the listing card's menu, next to the item it acts on.
+   * Published view: the same row as edit mode -- status at the left end,
+   * actions at the right, the Spacer between them, all within the article's
+   * own column. Laid out here rather than differently because it is the same
+   * bar in the same place, and the two looked unrelated: this one ran the
+   * full width of the window, with its buttons against the left edge and the
+   * status against the right, while edit mode lines both up with the
+   * breadcrumb and the text.
+   *
+   * Unpublishing is not offered here -- it lives on the listing card's menu,
+   * next to the item it acts on.
    */
   const readOnlyToolbarSlot = (
-    <>
-      <ButtonLink
-        variant="bordered"
-        href={websiteContentDraftsView(contentType)}
-        size={buttonSize}
-        startIcon={<RiSave3Line />}
-      >
-        Draft
-      </ButtonLink>
-      {editIdOrSlug !== undefined ? (
+    <ActionRow>
+      {statusSlot}
+      <Spacer />
+      <StyledStatusContainer>
         <ButtonLink
           variant="bordered"
-          href={websiteContentEditView(contentType, editIdOrSlug)}
+          href={websiteContentDraftsView(contentType)}
           size={buttonSize}
-          startIcon={<RiEditLine />}
+          startIcon={<RiSave3Line />}
         >
-          Edit
+          Draft
         </ButtonLink>
-      ) : null}
-      {settingsButton}
-      <Spacer />
-      {statusSlot}
-    </>
+        {editIdOrSlug !== undefined ? (
+          <ButtonLink
+            variant="bordered"
+            href={websiteContentEditView(contentType, editIdOrSlug)}
+            size={buttonSize}
+            startIcon={<RiEditLine />}
+          >
+            Edit
+          </ButtonLink>
+        ) : null}
+        {settingsButton}
+      </StyledStatusContainer>
+    </ActionRow>
   )
 
   return (
@@ -940,9 +971,9 @@ const WebsiteContentEditor = ({
           <EditorContext.Provider value={{ editor }}>
             {isArticleEditor ? (
               readOnly ? (
-                <StyledStatusContainer>
-                  <StyledToolbar>{readOnlyToolbarSlot}</StyledToolbar>
-                </StyledStatusContainer>
+                /* No wrapper: `StyledToolbar` is fixed, so the flex box that
+                   used to be here could not lay it out either way. */
+                <StyledToolbar>{readOnlyToolbarSlot}</StyledToolbar>
               ) : (
                 <StackedToolbar>
                   {/* The design puts the actions above the formatting
@@ -962,8 +993,8 @@ const WebsiteContentEditor = ({
                           (!touched && contentItem?.is_published)
                         }
                         onClick={() => {
-                          if (topicsMissing) {
-                            askForTopics()
+                          if (topicsMissing || seoMissing) {
+                            askForSettings()
                             return
                           }
                           startPublish()
@@ -994,7 +1025,7 @@ const WebsiteContentEditor = ({
                   setSettingsOpen(false)
                   // Dropped rather than kept: a press the editor walked away
                   // from must not fire the next time topics happen to be saved.
-                  setAwaitingTopicsForPublish(false)
+                  setAwaitingSettingsForPublish(false)
                 }}
                 contentLabel={contentLabel}
                 /* Only an article becomes a LearningResource, so only there do
@@ -1003,13 +1034,10 @@ const WebsiteContentEditor = ({
                   contentType === WebsiteContentContentTypeEnum.Article
                 }
                 topicsRequired={topicsRequired}
-                /* Only once it is public: a draft may be left without topics,
-                   since publishing is where they are insisted on, and autosave
-                   cannot stop to ask. Refusing the save while the selection is
-                   empty would block the SEO fields along with them. */
-                topicsMayNotBeEmptied={
-                  topicsRequired && !!contentItem?.is_published
-                }
+                seoRequired={seoRequired}
+                /* Wording only -- which sentence a section shows when
+                   something it needs is missing. */
+                contentIsPublished={!!contentItem?.is_published}
                 initialValues={{
                   topics,
                   seoTitle: seo.title,

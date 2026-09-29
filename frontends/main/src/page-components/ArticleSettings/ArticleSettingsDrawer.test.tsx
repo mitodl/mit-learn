@@ -187,7 +187,7 @@ describe("ArticleSettingsDrawer SEO fields", () => {
     mockTopics()
     const { onSave } = renderDrawer()
 
-    const field = await screen.findByLabelText("SEO Title")
+    const field = await screen.findByLabelText(/^SEO Title/)
     expect(field).toHaveAttribute("maxLength", "255")
 
     await userEvent.type(field, "x".repeat(260))
@@ -238,7 +238,7 @@ describe("ArticleSettingsDrawer SEO fields", () => {
     expect(under).toHaveAttribute("data-over-budget", "false")
 
     await userEvent.type(
-      await screen.findByLabelText("SEO Title"),
+      await screen.findByLabelText(/^SEO Title/),
       "x".repeat(50),
     )
 

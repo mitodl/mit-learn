@@ -5,7 +5,7 @@ import { factories } from "api/mitxonline-test-utils"
 import { DisplayModeEnum } from "@mitodl/mitxonline-api-axios/v2"
 import { renderWithProviders } from "@/test-utils"
 import { DEFAULT_RESOURCE_IMG } from "ol-utilities"
-import { getByImageSrc } from "ol-test-utilities"
+import { getByImageSrc, queryByImageSrc } from "ol-test-utilities"
 import type { MitxOnlineResourceCardProps } from "./MitxOnlineResourceCard"
 
 const renderCard = (props: MitxOnlineResourceCardProps) =>
@@ -163,7 +163,7 @@ describe("MitxOnlineResourceCard", () => {
   })
 
   describe("image error fallback", () => {
-    test("falls back to DEFAULT_RESOURCE_IMG when course image returns 404", () => {
+    test("falls back to the original, then DEFAULT_RESOURCE_IMG, when course image fails", () => {
       const course = factories.courses.course({
         page: {
           feature_image_src: "https://example.com/course.jpg",
@@ -175,13 +175,25 @@ describe("MitxOnlineResourceCard", () => {
         resourceType: "course",
         href: "/test",
       })
+      const raw = { nextJsOriginalSrc: false }
+      expect(
+        queryByImageSrc(view.container, "https://example.com/course.jpg", raw),
+      ).toBeNull()
+      // Optimized image fails: retry the original, loaded directly
       fireEvent.error(
         getByImageSrc(view.container, "https://example.com/course.jpg"),
       )
+      const original = getByImageSrc(
+        view.container,
+        "https://example.com/course.jpg",
+        raw,
+      )
+      // Original fails too: use the default
+      fireEvent.error(original)
       getByImageSrc(view.container, DEFAULT_RESOURCE_IMG)
     })
 
-    test("falls back to DEFAULT_RESOURCE_IMG when program image returns 404", () => {
+    test("falls back to the original, then DEFAULT_RESOURCE_IMG, when program image fails", () => {
       const program = factories.programs.program({
         page: {
           feature_image_src: "https://example.com/program.jpg",
@@ -193,9 +205,21 @@ describe("MitxOnlineResourceCard", () => {
         resourceType: "program",
         href: "/test",
       })
+      const raw = { nextJsOriginalSrc: false }
+      expect(
+        queryByImageSrc(view.container, "https://example.com/program.jpg", raw),
+      ).toBeNull()
+      // Optimized image fails: retry the original, loaded directly
       fireEvent.error(
         getByImageSrc(view.container, "https://example.com/program.jpg"),
       )
+      const original = getByImageSrc(
+        view.container,
+        "https://example.com/program.jpg",
+        raw,
+      )
+      // Original fails too: use the default
+      fireEvent.error(original)
       getByImageSrc(view.container, DEFAULT_RESOURCE_IMG)
     })
   })

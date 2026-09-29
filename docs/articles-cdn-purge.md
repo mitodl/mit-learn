@@ -150,7 +150,7 @@ article = Article.objects.create(
     title="New Article",
     content={"type": "doc", "content": []},
     is_published=True,
-    user=some_user
+    user=some_user,
 )
 # CDN purge is automatically queued!
 
@@ -168,7 +168,7 @@ You can manually trigger CDN purges:
 from articles.tasks import (
     fastly_purge_relative_url,
     fastly_purge_articles_list,
-    fastly_full_purge
+    fastly_full_purge,
 )
 
 # Purge a specific URL immediately (blocking)
@@ -192,7 +192,7 @@ For backwards compatibility, the following aliases are available but deprecated:
 # Old names (still work but discouraged)
 from articles.tasks import (
     queue_fastly_purge_articles_list,  # Use fastly_purge_articles_list
-    queue_fastly_full_purge,           # Use fastly_full_purge
+    queue_fastly_full_purge,  # Use fastly_full_purge
 )
 ```
 
@@ -260,6 +260,7 @@ All CDN purge operations are logged using Python's standard logging:
 
 ```python
 import logging
+
 logger = logging.getLogger("fastly_purge")
 ```
 
