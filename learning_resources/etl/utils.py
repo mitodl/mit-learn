@@ -574,14 +574,56 @@ def static_olx_references(root: Path, skip: set[Path]) -> tuple[set[Path], set[P
     return referenced, unreferenced
 
 
-def excluded_olx_paths(olx_path: str | Path) -> set[Path]:
+def unreachable_static_tabs(root: Path) -> set[Path]:
     """
-    Files an OLX export contains that the course itself does not use: staff-only
-    subtrees, the asset manifests and announcement archive, and anything under
-    static/ that nothing refers to. See hq#13350.
+    Tab pages no navigation leads a learner to. Studio exports every static tab
+    it stores, but the LMS serves only the ones in the course's tab list, and
+    leaves staff-only and hidden ones out of the navigation. Empty when the tab
+    list cannot be read, so a tab is never dropped on a guess.
+    """
+    course = _parse_olx_block(root, "", "course")
+    url_name = course.get("url_name") if course is not None else None
+    try:
+        policy = json.loads(
+            (root / "policies" / url_name / "policy.json").read_text(errors="ignore")
+        )
+        tabs = policy[f"course/{url_name}"]["tabs"]
+    except (TypeError, OSError, ValueError, KeyError):
+        return set()
+    if not isinstance(tabs, list):
+        return set()
+    # ponytail: a staff-only or hidden tab that visible content links to is
+    # dropped too; check links to tab slugs if a course turns out to rely on that
+    reachable = {
+        tab.get("url_slug")
+        for tab in tabs
+        if isinstance(tab, dict)
+        and not (tab.get("course_staff_only") or tab.get("is_hidden"))
+    }
+    return {path for path in root.glob("tabs/*") if path.stem not in reachable}
+
+
+# The about page is the only place about/ files show, and only Open Learning
+# Library serves it; the other platforms redirect it to the course home. Of what
+# it shows, effort and end date are single values rather than prose (effort is
+# already on the run as time_commitment), so only the prose is content.
+ABOUT_PAGE_FILES = frozenset({"overview.html", "short_description.html"})
+
+
+def excluded_olx_paths(
+    olx_path: str | Path, etl_source: str | None = None
+) -> set[Path]:
+    """
+    Files an OLX export contains that no learner of the course can reach:
+    staff-only subtrees, tab pages outside the navigation, about pages the
+    platform does not show, the course settings, the asset manifests and
+    announcement archive, and anything under static/ that nothing learners see
+    refers to. See hq#13350.
 
     Args:
         olx_path (str or Path): The path to the directory with the OLX data
+        etl_source (str): The platform the archive is from, which decides
+            whether the about page is shown. None means one that does not.
 
     Returns:
         set of Path: files that should not be ingested
@@ -594,28 +636,37 @@ def excluded_olx_paths(olx_path: str | Path) -> set[Path]:
     excluded.update(
         root / name for name in NON_CONTENT_OLX_FILES if (root / name).is_file()
     )
+    excluded.update(unreachable_static_tabs(root))
+    shown = ABOUT_PAGE_FILES if etl_source == ETLSource.oll.name else ()
+    excluded.update(path for path in root.glob("about/*") if path.name not in shown)
     referenced, unreferenced = static_olx_references(root, excluded)
     excluded.update(unreferenced)
     # A hidden video's transcripts are in the staff-only set, but the same file is
     # often also the transcript of the visible copy of that video, so put back
     # anything a visible block still links.
     excluded.difference_update(referenced)
+    # Settings rather than content, but what they name (textbooks, the course
+    # image) is shown, so they were still read as references above
+    excluded.update(root.glob("policies/**/*"))
     return excluded
 
 
 def documents_from_olx(
-    olx_path: str, valid_file_types: list[str] = VALID_TEXT_FILE_TYPES
+    olx_path: str,
+    valid_file_types: list[str] = VALID_TEXT_FILE_TYPES,
+    etl_source: str | None = None,
 ) -> Generator[tuple, None, None]:
     """
     Extract text from OLX directory, skipping content the course does not use
 
     Args:
         olx_path (str): The path to the directory with the OLX data
+        etl_source (str): The platform the archive is from
 
     Yields:
         tuple: A list of (bytes of content, metadata)
     """
-    excluded = excluded_olx_paths(olx_path)
+    excluded = excluded_olx_paths(olx_path, etl_source)
     for root, _, files in os.walk(olx_path):
         path = "/".join(root.split("/")[3:])
         for filename in files:
@@ -1106,7 +1157,9 @@ def process_olx_path(  # noqa: PLR0913
     video_srt_metadata = get_video_metadata(olx_path, run)
 
     for document, metadata in documents_from_olx(
-        olx_path, valid_file_types=valid_file_types
+        olx_path,
+        valid_file_types=valid_file_types,
+        etl_source=run.learning_resource.etl_source,
     ):
         source_path = metadata.get("source_path")
         key = get_edx_module_id(source_path, run)
