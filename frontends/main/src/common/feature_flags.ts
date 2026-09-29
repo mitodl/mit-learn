@@ -7,6 +7,7 @@ export enum FeatureFlags {
   PrDrawerChatbot = "pr-drawer-chatbot",
   RecommendationBot = "recommendation-bot",
   HomePageRecommendationBot = "home-page-recommendation-bot",
+  SearchAiOverview = "search-ai-overview",
   UniversalAI = "universal-ai",
   UniversalAISearchBanner = "universal-ai-search-banner",
   CourseOutlineSection = "course-outline-section",
