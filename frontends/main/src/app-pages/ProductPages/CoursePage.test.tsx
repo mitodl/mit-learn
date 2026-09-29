@@ -137,6 +137,14 @@ const setupApis = ({
   }
 }
 
+/**
+ * Each test renders the full course page, and the header enrollment tests also
+ * drive the session select and enroll buttons. On slower CI runners that lands
+ * close enough to Jest's 5s default to time out intermittently (a different
+ * test each run, with the same code passing on a re-run).
+ */
+jest.setTimeout(15000)
+
 const waitForCoursePageToSettle = async (pageTitle: string) => {
   await screen.findByRole("heading", { name: pageTitle })
   await waitFor(() => {
