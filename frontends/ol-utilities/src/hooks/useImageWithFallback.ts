@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useCallback } from "react"
+import { useState, useCallback } from "react"
 import type { SyntheticEvent } from "react"
 
 /**
@@ -27,26 +27,34 @@ const isSameUrl = (src: string, loaded: string) => {
  * when the optimized image fails, retry `src` unoptimized before giving up.
  * Pass all three values to the image.
  */
+const initialStage = (src: string | null | undefined): Stage =>
+  src ? "optimized" : "fallback"
+
 const useImageWithFallback = (
   src: string | null | undefined,
   fallback: string,
 ) => {
-  const [stage, setStage] = useState<Stage>(src ? "optimized" : "fallback")
-
-  useEffect(() => {
-    setStage(src ? "optimized" : "fallback")
-  }, [src])
+  // The stage reached by the `src` that last failed. A different `src` starts
+  // over, derived during render so a new `src` never renders with the old
+  // `src`'s stage.
+  const [failure, setFailure] = useState<{ src: typeof src; stage: Stage }>()
+  const stage =
+    failure && failure.src === src ? failure.stage : initialStage(src)
 
   const onError = useCallback(
-    (event?: SyntheticEvent<HTMLImageElement>) => {
+    (event: SyntheticEvent<HTMLImageElement>) => {
       // Next.js serves some images unoptimized regardless (e.g. SVGs and data:
       // URLs). If the image that failed was already the original, retrying it
       // would render the same <img> and never error again, so skip ahead.
-      const failedSrc = event?.currentTarget.src
-      const wasOriginal = !!src && !!failedSrc && isSameUrl(src, failedSrc)
-      setStage((current) =>
-        current === "optimized" && !wasOriginal ? "original" : "fallback",
-      )
+      const wasOriginal = !!src && isSameUrl(src, event.currentTarget.src)
+      setFailure((cur) => {
+        const current = cur && cur.src === src ? cur.stage : initialStage(src)
+        return {
+          src,
+          stage:
+            current === "optimized" && !wasOriginal ? "original" : "fallback",
+        }
+      })
     },
     [src],
   )
