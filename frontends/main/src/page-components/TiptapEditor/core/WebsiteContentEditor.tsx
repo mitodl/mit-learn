@@ -1034,26 +1034,7 @@ const WebsiteContentEditor = ({
                   contentType === WebsiteContentContentTypeEnum.Article
                 }
                 topicsRequired={topicsRequired}
-                /**
-                 * Refused once the content is public, and while a publish is
-                 * sitting here waiting for what it needs. A draft may be left
-                 * without either -- publishing is where they are insisted on,
-                 * and autosave cannot stop to ask.
-                 *
-                 * The waiting case is what keeps the held-back publish from
-                 * being dropped: saving the drawer closes it, and `onClose`
-                 * forgets the press, so allowing a save that still leaves the
-                 * requirement unmet would lose the publish with nothing on
-                 * screen to say so.
-                 */
-                topicsMayNotBeEmptied={
-                  topicsRequired &&
-                  (!!contentItem?.is_published || awaitingSettingsForPublish)
-                }
                 seoRequired={seoRequired}
-                seoMayNotBeEmptied={
-                  !!contentItem?.is_published || awaitingSettingsForPublish
-                }
                 /* Wording only -- which sentence a section shows when
                    something it needs is missing. */
                 contentIsPublished={!!contentItem?.is_published}

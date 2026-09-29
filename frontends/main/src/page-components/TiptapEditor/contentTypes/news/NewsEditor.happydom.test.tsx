@@ -1839,6 +1839,12 @@ describe("NewsEditor - shared content controls", () => {
       await screen.findByLabelText(/^SEO Title/),
       "News for search",
     )
+    /* Both are required, so the title alone does not unlock the save. */
+    expect(screen.getByRole("button", { name: "Save Settings" })).toBeDisabled()
+    await userEvent.type(
+      screen.getByLabelText(/^SEO Description/),
+      "What this is about.",
+    )
     await userEvent.click(screen.getByRole("button", { name: "Save Settings" }))
 
     /**
@@ -1850,7 +1856,10 @@ describe("NewsEditor - shared content controls", () => {
       expect(makeRequest).toHaveBeenCalledWith(
         expect.objectContaining({
           method: "patch",
-          body: { seo_title: "News for search", seo_description: "" },
+          body: {
+            seo_title: "News for search",
+            seo_description: "What this is about.",
+          },
         }),
       )
     })

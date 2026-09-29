@@ -290,45 +290,28 @@ export interface ArticleSettingsDrawerProps {
    */
   showTopics?: boolean
   /**
-   * Whether the content needs a topic before it can go public. The section
-   * says so while none is picked, which is what tells an editor why the
-   * drawer opened on them when they pressed Publish.
+   * Whether the content needs at least one topic.
+   *
+   * The section says so while none is picked -- which is what tells an editor
+   * why the drawer opened on them when they pressed Publish -- and the save is
+   * refused until one is. Refused rather than merely announced because this
+   * drawer is the one place a selection can be taken away, and because a
+   * caller holding a publish back is waiting on this save: letting it through
+   * incomplete would close the drawer and forget the press.
    */
   topicsRequired?: boolean
   /**
-   * Whether an empty selection may not be saved at all.
-   *
-   * This drawer is the one place a selection can be taken away, so a caller
-   * that gates only its own save buttons would still lose the topics through
-   * here. Separate from `topicsRequired` because the two do not coincide:
-   * content that is not public yet can be left without topics -- it is
-   * stopped at publishing -- while content already public cannot.
-   */
-  topicsMayNotBeEmptied?: boolean
-  /**
-   * Whether the content needs an SEO title and description before it can go
-   * public. As with `topicsRequired`, the section says so while either is
-   * blank, which is what tells an editor why the drawer opened on them.
+   * Whether the content needs an SEO title and description, on exactly the
+   * same terms as `topicsRequired`.
    *
    * Unlike topics this is not an article-only rule: a search result and a link
    * preview are the editor's to write on news just as much.
    */
   seoRequired?: boolean
   /**
-   * Whether a blank SEO title or description may not be saved at all.
-   *
-   * Separate from `seoRequired` for the same reason as topics: a draft may sit
-   * without them, since publishing is where they are insisted on and autosave
-   * cannot stop to ask. It is also what keeps a held-back publish from being
-   * dropped -- saving the drawer while the publish is still waiting, and still
-   * without what it needs, would close the drawer and forget the press.
-   */
-  seoMayNotBeEmptied?: boolean
-  /**
    * Whether the content is already public, which is only a matter of wording:
-   * what a section says when something it needs is missing. The refusals are
-   * `topicsMayNotBeEmptied` and `seoMayNotBeEmptied`, which apply to a draft
-   * as well while a publish is waiting on this drawer.
+   * which sentence a section shows when something it needs is missing. What is
+   * required, and what the save refuses, does not depend on it.
    */
   contentIsPublished?: boolean
   /** Values to open with. Re-read each time the drawer opens. */
@@ -349,9 +332,7 @@ const ArticleSettingsDrawer = ({
   contentLabel = "Article",
   showTopics = true,
   topicsRequired = false,
-  topicsMayNotBeEmptied = false,
   seoRequired = false,
-  seoMayNotBeEmptied = false,
   contentIsPublished = false,
   initialValues,
   onSave,
@@ -731,13 +712,16 @@ const ArticleSettingsDrawer = ({
             </Button>
             <Button
               variant="primary"
-              /* Refused rather than silently ignored: the editor has emptied
-                 something on screen and has to see why it will not save. */
+              /**
+               * Refused rather than silently ignored, and refused on a draft
+               * as much as on something public: the fields are marked
+               * required and the section says they are, so letting the save
+               * through anyway would contradict both. The sections above say
+               * which one is missing.
+               */
               disabled={
-                (topicsMayNotBeEmptied &&
-                  showTopics &&
-                  selectedIds.length === 0) ||
-                (seoMayNotBeEmptied && seoMissing)
+                (topicsRequired && showTopics && selectedIds.length === 0) ||
+                (seoRequired && seoMissing)
               }
               onClick={() => {
                 onSave?.({
