@@ -15,10 +15,14 @@ const Body = styled.div({
   gap: "28px",
 })
 
-// smoot-design's Checkbox has a fixed 24px height; this label wraps.
-const ConsentCheckbox = styled(Checkbox)({
+// smoot-design's Checkbox has a fixed 24px height (this label wraps), and it
+// only darkens the label on hover or when checked; keep it dark throughout.
+const ConsentCheckbox = styled(Checkbox)(({ theme }) => ({
   "&&": { height: "auto" },
-})
+  '&& input[type="checkbox"] + .checkbox-label': {
+    color: theme.custom.colors.darkGray2,
+  },
+}))
 
 const Actions = styled(DialogActions)({
   gap: "12px",
