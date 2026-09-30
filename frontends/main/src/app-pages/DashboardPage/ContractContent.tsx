@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useEffect } from "react"
+import React, { useEffect, useState } from "react"
 import { useRouter } from "next-nprogress-bar"
 import Image from "next/image"
 import { useQuery } from "@tanstack/react-query"
@@ -624,6 +624,8 @@ const ContractContent: React.FC<ContractContentProps> = ({
     !!b2bContract &&
     b2bContract.consented_to_data_sharing !== true
   const router = useRouter()
+  // Keeps the dialog locked between a successful decline and the redirect.
+  const [redirecting, setRedirecting] = useState(false)
   const consentMutation = useDataConsentMutation({ meta: SILENCE_ERROR_TOAST })
   const submitConsent = (consented: boolean) => {
     if (!b2bContract) return
@@ -631,7 +633,10 @@ const ContractContent: React.FC<ContractContentProps> = ({
       { contract_id: b2bContract.id, DataConsentRequest: { consented } },
       {
         onSuccess: () => {
-          if (!consented) router.push(DASHBOARD_HOME)
+          if (!consented) {
+            setRedirecting(true)
+            router.push(DASHBOARD_HOME)
+          }
         },
       },
     )
@@ -677,11 +682,13 @@ const ContractContent: React.FC<ContractContentProps> = ({
         onAccept={() => submitConsent(true)}
         onDecline={() => submitConsent(false)}
         submitting={
-          consentMutation.isPending
-            ? consentMutation.variables?.DataConsentRequest.consented
-              ? "accept"
-              : "decline"
-            : null
+          redirecting
+            ? "decline"
+            : consentMutation.isPending
+              ? consentMutation.variables?.DataConsentRequest.consented
+                ? "accept"
+                : "decline"
+              : null
         }
         isError={consentMutation.isError}
       />
