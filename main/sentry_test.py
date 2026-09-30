@@ -5,11 +5,15 @@ import logging
 
 import pytest
 import sentry_sdk
+from rest_framework.reverse import reverse
+from sentry_sdk.integrations.django import DjangoIntegration
 from sentry_sdk.integrations.logging import LoggingIntegration
 from sentry_sdk.transport import Transport
 
+from learning_resources.exceptions import WebhookException
 from main.sentry import (
     before_send,
+    scrub_ocw_webhook_key,
     scrub_pg_detail,
     scrub_pg_details,
 )
@@ -51,6 +55,31 @@ def sentry_transport():
         default_integrations=False,
         integrations=[
             LoggingIntegration(level=logging.INFO, event_level=logging.ERROR)
+        ],
+    )
+    yield transport
+    sentry_sdk.get_global_scope().set_client(None)
+
+
+@pytest.fixture
+def sentry_transport_with_django():
+    """
+    Like sentry_transport, but with DjangoIntegration active -- needed to
+    reproduce request.data actually reaching the captured event, matching
+    what init_sentry() configures for real. The other tests in this file
+    don't need request context, so this stays separate rather than changing
+    the shared fixture they use.
+    """
+    transport = FakeTransport()
+    sentry_sdk.init(
+        dsn="https://k@o0.ingest.sentry.io/0",
+        transport=transport,
+        before_send=before_send,
+        max_request_body_size="small",
+        default_integrations=False,
+        integrations=[
+            LoggingIntegration(level=logging.INFO, event_level=logging.ERROR),
+            DjangoIntegration(),
         ],
     )
     yield transport
@@ -196,3 +225,84 @@ def test_real_sdk_scrubs_params_and_local_variables(sentry_transport):
     assert len(sentry_transport.events) == 2
     for event in sentry_transport.events:
         assert "learner@example.invalid" not in json.dumps(event)
+
+
+def test_scrub_ocw_webhook_key_redacts(settings):
+    """The key is replaced wherever it appears verbatim in a string."""
+    settings.OCW_WEBHOOK_KEY = "supersecretvalue123"
+    text = '{"webhook_key": "supersecretvalue123", "prefixes": 12345}'
+    scrubbed = scrub_ocw_webhook_key(text)
+    assert "supersecretvalue123" not in scrubbed
+    assert "[redacted]" in scrubbed
+    assert "12345" in scrubbed
+
+
+def test_scrub_ocw_webhook_key_unset(settings):
+    """No configured key means nothing to redact, and the text is untouched."""
+    settings.OCW_WEBHOOK_KEY = None
+    text = "nothing secret here"
+    assert scrub_ocw_webhook_key(text) == text
+
+
+def test_scrubs_ocw_webhook_key_from_frame_locals_and_request_data(settings):
+    """
+    The key must be redacted wherever the SDK independently captures it --
+    frame locals and request.data -- not just from a message the view
+    constructs, since fixing the view's own message doesn't stop the SDK's
+    own capture of the raw request from carrying the real secret separately.
+    """
+    settings.OCW_WEBHOOK_KEY = "supersecretvalue123"
+    event = {
+        "request": {"data": {"webhook_key": "supersecretvalue123", "prefixes": 12345}},
+        "exception": {
+            "values": [
+                {
+                    "value": "'int' object has no attribute 'split'",
+                    "stacktrace": {
+                        "frames": [
+                            {
+                                "function": "post",
+                                "vars": {
+                                    "content": (
+                                        '{"webhook_key": "supersecretvalue123", '
+                                        '"prefixes": 12345}'
+                                    )
+                                },
+                            }
+                        ]
+                    },
+                }
+            ]
+        },
+    }
+    scrub_pg_details(event)
+    assert "supersecretvalue123" not in repr(event)
+
+
+@pytest.mark.django_db
+def test_real_sdk_scrubs_ocw_webhook_key_end_to_end(
+    client, settings, sentry_transport_with_django
+):
+    """
+    Reproduces the exact reported scenario through the real Django view and
+    the real Sentry SDK (with DjangoIntegration active, so request.data is
+    actually attached): a correctly-authenticated request that errors after
+    the key check (prefixes sent as an int) must not leak the real secret via
+    any capture path the SDK uses, not just the view's own exception message.
+    """
+    settings.OCW_WEBHOOK_KEY = "supersecretvalue123"
+    with pytest.raises(WebhookException):
+        client.post(
+            reverse("lr:v1:ocw-next-webhook"),
+            data={
+                "webhook_key": "supersecretvalue123",
+                "prefixes": 12345,
+                "version": "live",
+            },
+            headers={"Content-Type": "text/plain"},
+        )
+    sentry_sdk.flush()
+
+    assert len(sentry_transport_with_django.events) >= 1
+    for event in sentry_transport_with_django.events:
+        assert "supersecretvalue123" not in json.dumps(event)

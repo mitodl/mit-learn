@@ -9,6 +9,7 @@ import pytest
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AnonymousUser
 from django.db import close_old_connections
+from django.urls import reverse
 
 from main.constants import PostHogEvents
 from main.factories import UserFactory
@@ -37,12 +38,16 @@ def mock_login(mocker):
 @pytest.fixture(autouse=True)
 def userinfo_flag_defaults(settings):
     """
-    Turn both userinfo create/update flags on, so the tests that exercise the full
-    create-and-sync behavior get it regardless of the setting defaults or of whatever
-    is set in backend.local.env. Tests for the disabled paths override these.
+    Turn both userinfo create/update flags on, and ensure the middleware itself
+    is enabled, so the tests that exercise the full create-and-sync behavior get
+    it regardless of the setting defaults or of whatever is set in
+    backend.local.env (which defaults DISABLE_APISIX_USER_MIDDLEWARE to True for
+    local dev/codespaces -- see env/backend.env). Tests for the disabled paths
+    override these.
     """
     settings.MITOL_APIGATEWAY_USERINFO_CREATE = True
     settings.MITOL_APIGATEWAY_USERINFO_UPDATE = True
+    settings.DISABLE_APISIX_USER_MIDDLEWARE = False
 
 
 @pytest.fixture(autouse=True)
@@ -356,6 +361,21 @@ def test_userinfo_update_disabled_skips_writes(mocker, settings, synced_user, ch
     )
     reloaded = User.objects.select_related("profile").get(pk=synced_user.pk)
     assert get_attr(reloaded) == original
+
+
+@pytest.mark.django_db(transaction=True)
+def test_disabled_middleware_ignores_forged_header(client, settings):
+    """
+    With the middleware disabled (the local-dev/codespaces default, since
+    nothing there actually verifies the header came from a real APISIX/
+    Keycloak login), a forged X-Userinfo header must not authenticate or
+    create a user.
+    """
+    settings.DISABLE_APISIX_USER_MIDDLEWARE = True
+    header = b64encode(json.dumps(apisix_user_info).encode())
+    resp = client.get(reverse("profile:v0:users_api-me"), HTTP_X_USERINFO=header)
+    assert resp.json()["is_authenticated"] is False
+    assert not User.objects.filter(global_id=apisix_user_info["sub"]).exists()
 
 
 @pytest.mark.django_db(transaction=True)

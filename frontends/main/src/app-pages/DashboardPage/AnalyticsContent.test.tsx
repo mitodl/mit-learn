@@ -9,7 +9,7 @@ import {
 import { waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import type { AxiosError } from "axios"
-import type { OrganizationPage } from "@mitodl/mitxonline-api-axios/v2"
+import type { UserOrganizationPage } from "@mitodl/mitxonline-api-axios/v2"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import { allowConsoleErrors } from "ol-test-utilities"
 import { ForbiddenError } from "@/common/errors"
@@ -57,7 +57,7 @@ const managerOrgsUrl = urls.organization.managerOrganizationsList()
 const ORG_UUID = "3fa85f64-5717-4562-b3fc-2c963f66afa6"
 
 const orgWithUuid = (
-  overrides: Partial<OrganizationPage> = {},
+  overrides: Partial<UserOrganizationPage> = {},
   ssoOrganizationId: string | null = ORG_UUID,
 ) =>
   factories.organizations.organization({
@@ -933,6 +933,32 @@ describe("AnalyticsContent, contract-scoped", () => {
       "href",
       contractLearnersView(orgSlug, second.slug),
     )
+  })
+
+  test("hides 'Learner analytics' and the Learner progress section when the learner analytics flag is off", async () => {
+    // The learner page throws ForbiddenError without its flag, so the button
+    // would be a dead end -- and every Learner progress tile links there too.
+    mockedUseFeatureFlagEnabled.mockImplementation(
+      (flag) => flag !== FeatureFlags.B2BLearnerAnalytics,
+    )
+    const contract = factories.contracts.contract()
+    const org = orgWithUuid({ contracts: [contract] })
+    setManagerOrgs([org])
+
+    setContractAnalyticsResponses(String(contract.id))
+
+    const orgSlug = org.slug.replace(/^org-/, "")
+    renderWithProviders(
+      <AnalyticsContent orgSlug={orgSlug} contractSlug={contract.slug} />,
+    )
+
+    await screen.findByText(`Analytics · ${contract.name}`)
+    expect(
+      screen.queryByRole("link", { name: "Learner analytics" }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("heading", { name: "Learner progress" }),
+    ).not.toBeInTheDocument()
   })
 
   test("hides 'Learner analytics' and the Learner progress section on the org-wide aggregate page", async () => {

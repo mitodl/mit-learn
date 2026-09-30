@@ -499,6 +499,60 @@ def test_unpublish_clears_the_view_cache_after_removing_the_feed_entry(
     assert seen == {"feed_entry": False}
 
 
+@pytest.mark.parametrize("content_type", ["article", "news"])
+def test_seo_fields_round_trip(staff_client, user, content_type):
+    """
+    Both content types carry SEO overrides, created and patched.
+
+    They are what search engines and link previews show in place of the title
+    and the opening of the content, so they are the editor's to set on either
+    type.
+    """
+    resp = staff_client.post(
+        reverse("website_content:v1:website_content-list"),
+        {
+            "content": {},
+            "title": "Optimised",
+            "content_type": content_type,
+            "seo_title": "A better title for search",
+            "seo_description": "What this is about, in one sentence.",
+        },
+        format="json",
+    )
+
+    assert resp.status_code == 201
+    assert resp.json()["seo_title"] == "A better title for search"
+    assert resp.json()["seo_description"] == "What this is about, in one sentence."
+
+    detail = reverse(
+        "website_content:v1:website_content-detail", kwargs={"pk": resp.json()["id"]}
+    )
+    patched = staff_client.patch(
+        detail, {"seo_description": "Reworded."}, format="json"
+    )
+
+    assert patched.status_code == 200
+    assert patched.json()["seo_description"] == "Reworded."
+    # Untouched by a patch that did not mention it.
+    assert patched.json()["seo_title"] == "A better title for search"
+    content = WebsiteContent.objects.get(id=resp.json()["id"])
+    assert content.seo_title == "A better title for search"
+    assert content.seo_description == "Reworded."
+
+
+def test_seo_fields_default_to_blank(staff_client):
+    """Omitted rather than null, so a consumer reads "" and falls back."""
+    resp = staff_client.post(
+        reverse("website_content:v1:website_content-list"),
+        {"content": {}, "title": "Plain", "content_type": "news"},
+        format="json",
+    )
+
+    assert resp.status_code == 201
+    assert resp.json()["seo_title"] == ""
+    assert resp.json()["seo_description"] == ""
+
+
 def test_create_with_topics(staff_client):
     """Topics sent on create are persisted and echoed back."""
     topics = LearningResourceTopicFactory.create_batch(2)

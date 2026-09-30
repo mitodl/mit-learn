@@ -297,6 +297,9 @@ const AnalyticsContentInternal: React.FC<AnalyticsContentInternalProps> = ({
   const managerDashboardFlag = useFeatureFlagEnabled(
     FeatureFlags.B2BContractManagerDashboard,
   )
+  const learnerAnalyticsFlag = useFeatureFlagEnabled(
+    FeatureFlags.B2BLearnerAnalytics,
+  )
   const {
     data: managerOrgs,
     isLoading: isLoadingOrgs,
@@ -423,6 +426,9 @@ const AnalyticsContentInternal: React.FC<AnalyticsContentInternalProps> = ({
    * header comment and `ContractLearnersPage.tsx`'s), so this section only
    * renders when a contract is in view — the same reason the "Learner
    * analytics" header link above is hidden on the org-wide aggregate page.
+   * It is gated on `B2BLearnerAnalytics` for the same reason that link is:
+   * every tile links to the learner directory, which throws `ForbiddenError`
+   * without the flag.
    * One row is enough: only `total_count` and `completion_status_counts` are
    * read, the same trick `ContractLearnersPage.tsx`'s own `totalQuery` uses.
    * `include_inactive` is deliberately left unset (server default: active
@@ -436,7 +442,7 @@ const AnalyticsContentInternal: React.FC<AnalyticsContentInternalProps> = ({
       contractId ?? "",
       { limit: 1 },
     ),
-    enabled: analyticsAvailable && !!contractId,
+    enabled: analyticsAvailable && !!contractId && !!learnerAnalyticsFlag,
     placeholderData: keepPreviousData,
   })
 
@@ -518,9 +524,10 @@ const AnalyticsContentInternal: React.FC<AnalyticsContentInternalProps> = ({
           </PageSubtitle>
         </div>
       </OrgDetailsContainer>
-      {(contract || (manageSeatsSlug && managerDashboardFlag)) && (
+      {((contract && learnerAnalyticsFlag) ||
+        (manageSeatsSlug && managerDashboardFlag)) && (
         <HeaderActions>
-          {contract ? (
+          {contract && learnerAnalyticsFlag ? (
             <ButtonLink
               size="small"
               variant="bordered"
@@ -601,7 +608,7 @@ const AnalyticsContentInternal: React.FC<AnalyticsContentInternalProps> = ({
         {truncation(utilization, "utilization")}
       </Section>
 
-      {contract ? (
+      {contract && learnerAnalyticsFlag ? (
         <Section>
           <SectionHeader
             title="Learner progress"

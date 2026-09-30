@@ -30,3 +30,14 @@
 2026-09-15 GET /api/v0/users/{username}/ the response property `profile/email_optin` became nullable for the status `200`
 2026-09-15 PATCH /api/v0/users/{username}/ the response property `profile/email_optin` became nullable for the status `200`
 2026-09-15 PUT /api/v0/users/{username}/ the response property `profile/email_optin` became nullable for the status `200`
+
+# Removing the RSS Feed widget type entirely (dead Open-Discussions-era
+# feature, no reachable frontend UI, confirmed with the team) --
+# nobody should be able to send this value anymore.
+# https://github.com/mitodl/hq/issues/13473
+2026-09-28 PATCH /api/v0/widget_lists/{id}/ removed the enum value `RSS Feed` of the request property `widgets/items/widget_type` (media type: application/json)
+2026-09-28 PATCH /api/v0/widget_lists/{id}/ removed the enum value `RSS Feed` of the request property `widgets/items/widget_type` (media type: application/x-www-form-urlencoded)
+2026-09-28 PATCH /api/v0/widget_lists/{id}/ removed the enum value `RSS Feed` of the request property `widgets/items/widget_type` (media type: multipart/form-data)
+2026-09-28 PUT /api/v0/widget_lists/{id}/ removed the enum value `RSS Feed` of the request property `widgets/items/widget_type` (media type: application/x-www-form-urlencoded)
+2026-09-28 PUT /api/v0/widget_lists/{id}/ removed the enum value `RSS Feed` of the request property `widgets/items/widget_type` (media type: multipart/form-data)
+2026-09-28 PUT /api/v0/widget_lists/{id}/ removed the enum value `RSS Feed` of the request property `widgets/items/widget_type` (media type: application/json)

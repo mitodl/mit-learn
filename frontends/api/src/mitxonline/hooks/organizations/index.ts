@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { b2bApi } from "../../clients"
 import {
   B2bApiB2bAttachCreateRequest,
+  B2bApiB2bDataConsentCreateRequest,
   B2bApiB2bManagerOrganizationsContractsCodesBulkAssignCreateRequest,
   B2bApiB2bManagerOrganizationsContractsCodesReassignUpdateRequest,
   B2bApiB2bManagerOrganizationsContractsCodesRemindCreateRequest,
@@ -9,6 +10,7 @@ import {
   B2bApiB2bManagerOrganizationsContractsCodesSendTestEmailCreateRequest,
 } from "@mitodl/mitxonline-api-axios/v2"
 import { managerOrganizationQueries, managerOrganizationKeys } from "./queries"
+import { mitxUserQueries } from "../user"
 import type { MutationHookOptions } from "../../../mutations/mutationMeta"
 
 const useB2BAttachMutation = (
@@ -24,6 +26,20 @@ const useB2BAttachMutation = (
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["mitxonline"] })
     },
+    meta,
+  })
+}
+
+const useDataConsentMutation = ({ meta }: MutationHookOptions = {}) => {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (opts: B2bApiB2bDataConsentCreateRequest) =>
+      b2bApi.b2bDataConsentCreate(opts),
+    // Returned so the mutation stays pending until users/me has the new value.
+    onSuccess: () =>
+      queryClient.invalidateQueries({
+        queryKey: mitxUserQueries.me().queryKey,
+      }),
     meta,
   })
 }
@@ -140,6 +156,7 @@ const useSendTestEmail = ({ meta }: MutationHookOptions = {}) =>
 export {
   managerOrganizationQueries,
   useB2BAttachMutation,
+  useDataConsentMutation,
   useBulkAssignSeats,
   useReassignCode,
   useRemindCode,

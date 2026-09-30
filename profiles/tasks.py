@@ -20,10 +20,7 @@ class SyncProgramCertificatesTask(BaseWarehouseETLTask):
     """
 
     name = "profiles.tasks.SyncProgramCertificatesTask"
-    view_name = (
-        "ol_data_lake_production.ol_warehouse_production_integrations"
-        ".integrations__learn__program_certificates"
-    )
+    table_name = "integrations__learn__program_certificates"
 
     def fetch_and_upsert(self, conn, *, since=None) -> int:
         """Upsert every row iter_rows yields; see profiles.etl for why this
