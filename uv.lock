@@ -2668,7 +2668,7 @@ dev = [
 [package.metadata]
 requires-dist = [
     { name = "attrs", specifier = ">=25.0.0,<26" },
-    { name = "azure-identity", specifier = ">=1.25.3" },
+    { name = "azure-identity", specifier = ">=1.25.3,<2" },
     { name = "base36", specifier = ">=0.1.1,<0.2" },
     { name = "beautifulsoup4", specifier = ">=4.8.2,<5" },
     { name = "boto3", specifier = ">=1.26.155,<2" },
