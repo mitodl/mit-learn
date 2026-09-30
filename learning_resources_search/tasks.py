@@ -625,6 +625,8 @@ def deindex_non_opensearch_run_content_files(
 
 
 @app.task(
+    acks_late=True,
+    reject_on_worker_lost=True,
     autoretry_for=(RetryError,),
     retry_backoff=True,
     rate_limit=settings.CELERY_SEARCH_RATE_LIMIT,

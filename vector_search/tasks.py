@@ -605,14 +605,21 @@ def remove_deleted_run_content_files(run_readable_id, resource_readable_id):
     Remove a deleted run's content files from Qdrant. The rows are gone, so
     match the points by run and resource instead of by content file.
     """
-    with wrap_retry_exception(*SEARCH_CONN_EXCEPTIONS):
-        remove_points_matching_params(
-            {
-                "run_readable_id": run_readable_id,
-                "resource_readable_id": resource_readable_id,
-            },
-            collection_name=CONTENT_FILES_COLLECTION_NAME,
-        )
+    try:
+        with wrap_retry_exception(*SEARCH_CONN_EXCEPTIONS):
+            remove_points_matching_params(
+                {
+                    "run_readable_id": run_readable_id,
+                    "resource_readable_id": resource_readable_id,
+                },
+                collection_name=CONTENT_FILES_COLLECTION_NAME,
+            )
+    except grpc.RpcError as err:
+        # SEARCH_CONN_EXCEPTIONS is OpenSearch-only; gRPC transients bypass
+        # autoretry_for=(RetryError,) unless we convert them here.
+        if err.code() == grpc.StatusCode.DEADLINE_EXCEEDED:
+            raise RetryError(str(err)) from err
+        raise
 
 
 @app.task(bind=True)
