@@ -137,19 +137,23 @@ def resolve_apisix_user(
     candidates = User.objects.filter(
         Q(global_id=global_id) | Q(global_id__isnull=True, email=email)
     ).select_related("profile")
-    if not candidates.exists():
-        # Only fall back to a case-insensitive email match when nothing matched
-        # exactly, so a legacy row differing only in email case doesn't make an
-        # already-linked user ambiguous.
-        candidates = User.objects.filter(
-            global_id__isnull=True, email__iexact=email
-        ).select_related("profile")
 
     try:
-        if settings.MITOL_APIGATEWAY_USERINFO_CREATE:
-            user, created = candidates.get_or_create(defaults=user_fields)
-        else:
+        try:
             user, created = candidates.get(), False
+        except User.DoesNotExist:
+            # Only fall back to a case-insensitive email match when nothing
+            # matched exactly, so a legacy row differing only in email case
+            # doesn't make an already-linked user ambiguous. The global_id match
+            # stays in so a row a concurrent request just linked or created is
+            # found, including on get_or_create's retry after an IntegrityError.
+            candidates = User.objects.filter(
+                Q(global_id=global_id) | Q(global_id__isnull=True, email__iexact=email)
+            ).select_related("profile")
+            if settings.MITOL_APIGATEWAY_USERINFO_CREATE:
+                user, created = candidates.get_or_create(defaults=user_fields)
+            else:
+                user, created = candidates.get(), False
     except User.MultipleObjectsReturned:
         log.exception(
             "resolve_apisix_user: ambiguous_apisix_identity global_id=%s email=%s "

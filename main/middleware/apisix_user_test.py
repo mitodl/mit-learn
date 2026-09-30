@@ -9,6 +9,7 @@ import pytest
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AnonymousUser
 from django.db import close_old_connections
+from django.db.models import QuerySet
 from django.urls import reverse
 
 from main.constants import PostHogEvents
@@ -265,6 +266,37 @@ def test_linked_user_not_ambiguous_with_case_variant_legacy_user(mocker, mock_lo
     assert request.user == linked_user
     legacy_user.refresh_from_db()
     assert legacy_user.global_id is None
+
+
+@pytest.mark.django_db(transaction=True)
+@pytest.mark.parametrize("userinfo_create", [True, False])
+def test_fallback_finds_user_linked_by_concurrent_request(
+    mocker, mock_login, settings, userinfo_create
+):
+    """A row linked after the exact lookup missed is still found by the fallback."""
+    settings.MITOL_APIGATEWAY_USERINFO_CREATE = userinfo_create
+    close_old_connections()
+    linked_user = UserFactory.create(
+        email=apisix_user_info["email"].upper(), global_id=apisix_user_info["sub"]
+    )
+    real_get = QuerySet.get
+    calls = []
+
+    def get_missing_first_call(self, *args, **kwargs):
+        """Simulate the exact lookup running before the other request committed."""
+        calls.append(1)
+        if len(calls) == 1:
+            raise self.model.DoesNotExist
+        return real_get(self, *args, **kwargs)
+
+    mocker.patch.object(QuerySet, "get", get_missing_first_call)
+    request = mocker.Mock(
+        META={"HTTP_X_USERINFO": b64encode(json.dumps(apisix_user_info).encode())},
+        user=AnonymousUser(),
+    )
+    ApisixUserMiddleware(mocker.Mock()).process_request(request)
+    mock_login.assert_called_once()
+    assert request.user == linked_user
 
 
 @pytest.mark.django_db(transaction=True)
