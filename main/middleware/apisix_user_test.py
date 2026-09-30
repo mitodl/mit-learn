@@ -225,11 +225,14 @@ def test_legacy_user_linked_with_update_disabled(
 
 @pytest.mark.django_db(transaction=True)
 def test_ambiguous_legacy_email_match_fails_closed(mocker, mock_login, caplog):
-    """Legacy users whose emails differ only in case aren't linked or duplicated."""
+    """
+    With no exact match, several legacy users matching the email case-insensitively
+    aren't linked, logged in, or duplicated.
+    """
     close_old_connections()
     legacy_users = [
-        UserFactory.create(email=apisix_user_info["email"], global_id=None),
         UserFactory.create(email=apisix_user_info["email"].upper(), global_id=None),
+        UserFactory.create(email=apisix_user_info["email"].title(), global_id=None),
     ]
     ApisixUserMiddleware(mocker.Mock()).process_request(
         mocker.Mock(
@@ -241,6 +244,27 @@ def test_ambiguous_legacy_email_match_fails_closed(mocker, mock_login, caplog):
     assert "ambiguous_apisix_identity" in caplog.text
     assert User.objects.count() == len(legacy_users)
     assert not User.objects.filter(global_id__isnull=False).exists()
+
+
+@pytest.mark.django_db(transaction=True)
+def test_linked_user_not_ambiguous_with_case_variant_legacy_user(mocker, mock_login):
+    """A legacy row whose email differs only in case doesn't lock out a linked user."""
+    close_old_connections()
+    legacy_user = UserFactory.create(
+        email=apisix_user_info["email"].upper(), global_id=None
+    )
+    linked_user = UserFactory.create(
+        email=apisix_user_info["email"], global_id=apisix_user_info["sub"]
+    )
+    request = mocker.Mock(
+        META={"HTTP_X_USERINFO": b64encode(json.dumps(apisix_user_info).encode())},
+        user=AnonymousUser(),
+    )
+    ApisixUserMiddleware(mocker.Mock()).process_request(request)
+    mock_login.assert_called_once()
+    assert request.user == linked_user
+    legacy_user.refresh_from_db()
+    assert legacy_user.global_id is None
 
 
 @pytest.mark.django_db(transaction=True)

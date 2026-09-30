@@ -135,8 +135,15 @@ def resolve_apisix_user(
         return request.user, False
 
     candidates = User.objects.filter(
-        Q(global_id=global_id) | Q(global_id__isnull=True, email__iexact=email)
+        Q(global_id=global_id) | Q(global_id__isnull=True, email=email)
     ).select_related("profile")
+    if not candidates.exists():
+        # Only fall back to a case-insensitive email match when nothing matched
+        # exactly, so a legacy row differing only in email case doesn't make an
+        # already-linked user ambiguous.
+        candidates = User.objects.filter(
+            global_id__isnull=True, email__iexact=email
+        ).select_related("profile")
 
     try:
         if settings.MITOL_APIGATEWAY_USERINFO_CREATE:
