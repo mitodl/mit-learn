@@ -37,19 +37,27 @@ be sure that you have the following set in your .env file:
 start the app without the profile, you can still start Keycloak later by
 specifying the profile.)
 
+`DISABLE_APISIX_USER_MIDDLEWARE=True` is the default in `env/backend.env`
+(without APISIX actually running, nothing verifies the `X-Userinfo` header
+Django would otherwise trust, so this is disabled unless you opt in). Add
+`DISABLE_APISIX_USER_MIDDLEWARE=False` to your `backend.local.env` file so
+Django will trust the header APISIX sets after a real Keycloak login.
+
 When you run `docker compose up`, the Keycloak and APISIX containers should start up.
 APISIX is on port 8065, Keycloak on port 8066. Now you should be able to log in at
 `https://open.odl.local:8065/login` with one of the users mentioned above, or
 just click "Log in" from the home page at http://open.odl.local:8062. Try
 logging out and back in a couple times to make sure it works.
 
-Keycloak is enabled by default. If you do NOT want to use the Keycloak and APISIX instances,
-follow these steps:
+Not using Keycloak/APISIX is the default (`DISABLE_APISIX_USER_MIDDLEWARE=True`,
+`COMPOSE_PROFILES=backend,frontend`) -- no extra steps needed. If you've
+already switched into Keycloak/APISIX mode above and want to switch back:
 
 1. Change the value of `MITOL_API_BASE_URL` to `http://api.open.odl.local:8063`
    in your `shared.local.env` file.
-2. Add `DISABLE_APISIX_USER_MIDDLEWARE=True` to your `backend.local.env` file
-3. Set `COMPOSE_PROFILES=backend,frontend` in your .env file
+2. Set `COMPOSE_PROFILES=backend,frontend` in your .env file
+3. Remove (or set to `True`) `DISABLE_APISIX_USER_MIDDLEWARE` in your
+   `backend.local.env` file
 
 ### Changing email and password
 
