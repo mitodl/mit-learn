@@ -225,6 +225,26 @@ const analyticsContractQueries = {
           .learnerProgress(orgId, contractId, params, signal)
           .then((res) => res.data),
     }),
+
+  /**
+   * The module filter's options. Kept on the hours-cadence stale time, unlike
+   * `learnerProgress` above: a contract's set of course runs changes when the
+   * contract does, not as learners move through it.
+   */
+  courseRuns: (orgId: string, contractId: string, page?: AnalyticsPageParams) =>
+    queryOptions({
+      queryKey: analyticsContractKeys.resource(
+        orgId,
+        contractId,
+        "course-runs",
+        page,
+      ),
+      staleTime: ANALYTICS_STALE_TIME,
+      queryFn: async ({ signal }) =>
+        analyticsContractsApi
+          .courseRuns(orgId, contractId, page, signal)
+          .then((res) => res.data),
+    }),
 }
 
 export {

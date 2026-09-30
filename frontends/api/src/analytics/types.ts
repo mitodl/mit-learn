@@ -209,6 +209,12 @@ export type LearnerProgress = {
   letter_grade: string | null
   certificate_issued_on: string | null
   certificate_is_revoked: boolean | null
+  /**
+   * A plain calendar date (`YYYY-MM-DD`), unlike every other date field here,
+   * which is a timestamp. `new Date()` reads it as UTC midnight, so formatting
+   * it in a negative-offset timezone renders the previous day — parse the
+   * parts instead.
+   */
   last_active_on: string | null
 }
 
@@ -242,8 +248,8 @@ export type LearnerProgressParams = AnalyticsPageParams & {
   include_inactive?: boolean
   sort?: LearnerProgressSort
   descending?: boolean
-  // Disabled: courserun_readable_id?: string — silently dropped by the
-  // real API. See ContractLearnersPage.tsx's file header (module filter).
+  /** Exact match on one course run's readable id — the module filter. */
+  courserun_readable_id?: string
 }
 
 /**
@@ -259,3 +265,23 @@ export type LearnerProgressResponse = {
   outcomes_withheld_count: number
   data: LearnerProgress[]
 }
+
+/**
+ * One course run under a contract, for the learner-progress module filter.
+ *
+ * `courserun_id` carries the readable id — the API aliases
+ * `courserun_readable_id AS courserun_id` — so it is what goes back as
+ * `LearnerProgressParams.courserun_readable_id`, despite the different name.
+ *
+ * Read from `mv_b2b_contract_courserun`, which is keyed on the contract rather
+ * than on enrollments, so this list is neither consent-gated nor limited to
+ * runs someone has enrolled in.
+ */
+export type CourseRun = {
+  courserun_id: string
+  courserun_title: string
+  courserun_start_on: string | null
+  courserun_end_on: string | null
+}
+
+export type CourseRunsResponse = OrgAnalyticsResponse<CourseRun>

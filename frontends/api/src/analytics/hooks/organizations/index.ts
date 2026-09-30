@@ -13,6 +13,8 @@ export type {
   ContractContentEngagementDepth,
   ContractMonthlyEngagementTrend,
   ContractUtilization,
+  CourseRun,
+  CourseRunsResponse,
   EnrollmentCompletionFunnel,
   LearnerProgress,
   LearnerProgressParams,

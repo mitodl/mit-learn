@@ -98,21 +98,27 @@ const mockList = (
   )
 }
 
-const mockFunnel = (contractId: string) => {
-  setMockResponse.get(
-    analyticsUrls.contracts.enrollmentFunnel(ORG_UUID, contractId, {
-      limit: 1000,
+/**
+ * The module dropdown's options. Every queryable render fires this, so it is
+ * mocked even in tests that never open the dropdown — an unmocked request
+ * throws rather than resolving empty.
+ */
+const mockCourseRuns = (
+  contractId: string,
+  runs = [
+    analyticsFactories.courseRun({
+      courserun_id: "course-v1:MITx+M5+2026",
+      courserun_title: "Module 5",
     }),
-    analyticsFactories.envelope([
-      analyticsFactories.enrollmentCompletionFunnel({
-        courserun_readable_id: "course-v1:MITx+M5+2026",
-        courserun_title: "Module 5",
-      }),
-      analyticsFactories.enrollmentCompletionFunnel({
-        courserun_readable_id: "course-v1:MITx+M6+2026",
-        courserun_title: "Module 6",
-      }),
-    ]),
+    analyticsFactories.courseRun({
+      courserun_id: "course-v1:MITx+M6+2026",
+      courserun_title: "Module 6",
+    }),
+  ],
+) => {
+  setMockResponse.get(
+    analyticsUrls.contracts.courseRuns(ORG_UUID, contractId, { limit: 1000 }),
+    analyticsFactories.envelope(runs),
   )
 }
 
@@ -261,6 +267,7 @@ describe("ContractLearnersPage", () => {
       paginate([org]),
     )
     mockTotal(contractId, 1)
+    mockCourseRuns(contractId)
     mockList(contractId, [
       analyticsFactories.learnerProgress({
         full_name: "Anton Petrov",
@@ -288,6 +295,7 @@ describe("ContractLearnersPage", () => {
       paginate([org]),
     )
     mockTotal(contractId, 1)
+    mockCourseRuns(contractId)
     mockList(contractId, [
       analyticsFactories.learnerProgress({
         full_name: "Anton Petrov",
@@ -320,6 +328,7 @@ describe("ContractLearnersPage", () => {
         paginate([org]),
       )
       mockTotal(contractId, 1)
+      mockCourseRuns(contractId)
       mockList(contractId, [
         analyticsFactories.learnerProgress({
           full_name: fullName,
@@ -349,6 +358,7 @@ describe("ContractLearnersPage", () => {
       paginate([org]),
     )
     mockTotal(contractId, 1)
+    mockCourseRuns(contractId)
     mockList(
       contractId,
       [
@@ -377,6 +387,7 @@ describe("ContractLearnersPage", () => {
       paginate([org]),
     )
     mockTotal(contractId, 10)
+    mockCourseRuns(contractId)
     mockList(
       contractId,
       [analyticsFactories.learnerProgress()],
@@ -422,6 +433,7 @@ describe("ContractLearnersPage", () => {
         paginate([org]),
       )
       mockTotal(contractId, 2)
+      mockCourseRuns(contractId)
       mockList(
         contractId,
         [
@@ -442,6 +454,7 @@ describe("ContractLearnersPage", () => {
           analyticsFactories.learnerProgress({
             full_name: "Certified Learner",
             completion_status: "certified",
+            last_active_on: "2026-09-30",
           }),
           analyticsFactories.withheldLearnerProgress({
             full_name: "Private Learner",
@@ -473,6 +486,11 @@ describe("ContractLearnersPage", () => {
       expect(csv).toContain("Certificate")
       expect(csv).not.toMatch(/,certified,/)
       expect(csv).toContain("No consent given")
+      // Raw, not the screen's "Sep 30, 2026", so a spreadsheet reads it as a
+      // date; the withheld row exports empty rather than a fabricated stub.
+      expect(csv).toContain("Last activity")
+      expect(csv).toContain(",2026-09-30")
+      expect(csv).not.toContain("Sep 30, 2026")
     })
 
     test("carries the active status filter, not just pagination", async () => {
@@ -483,6 +501,7 @@ describe("ContractLearnersPage", () => {
         paginate([org]),
       )
       mockTotal(contractId, 2)
+      mockCourseRuns(contractId)
       mockList(contractId, [
         analyticsFactories.learnerProgress({ full_name: "Everyone" }),
       ])
@@ -562,6 +581,7 @@ describe("ContractLearnersPage", () => {
       {},
       { total_count: 5 },
     )
+    mockCourseRuns(contractId)
 
     renderWithProviders(
       <ContractLearnersPage orgSlug={orgSlug} contractSlug={contract.slug} />,
@@ -574,13 +594,7 @@ describe("ContractLearnersPage", () => {
     expect(screen.queryByText("No learners found.")).not.toBeInTheDocument()
   })
 
-  /**
-   * Disabled: module filter — see ContractLearnersPage.tsx's file header
-   * comment. `test.skip` rather than deleting, so these stay real,
-   * type-checked code and re-enable by dropping `.skip` once the block they
-   * cover is restored.
-   */
-  test.skip("the module dropdown lists every course run on the contract", async () => {
+  test("the module dropdown lists every course run on the contract", async () => {
     const { org, contract, orgSlug } = setup()
     const contractId = String(contract.id)
     setMockResponse.get(
@@ -588,8 +602,8 @@ describe("ContractLearnersPage", () => {
       paginate([org]),
     )
     mockTotal(contractId, 1)
+    mockCourseRuns(contractId)
     mockList(contractId, [analyticsFactories.learnerProgress()])
-    mockFunnel(contractId)
 
     renderWithProviders(
       <ContractLearnersPage orgSlug={orgSlug} contractSlug={contract.slug} />,
@@ -602,13 +616,13 @@ describe("ContractLearnersPage", () => {
 
     const listbox = await screen.findByRole("listbox")
     expect(within(listbox).getByText("All modules")).toBeInTheDocument()
-    // Sourced from enrollment-funnel, so it covers runs with no row on the
-    // current page.
+    // Sourced from the contract's course runs, so it covers runs with no row
+    // on the current page — and runs nobody has enrolled in at all.
     expect(within(listbox).getByText("Module 5")).toBeInTheDocument()
     expect(within(listbox).getByText("Module 6")).toBeInTheDocument()
   })
 
-  test.skip("selecting a module sends courserun_readable_id", async () => {
+  test("selecting a module sends courserun_readable_id", async () => {
     const { org, contract, orgSlug } = setup()
     const contractId = String(contract.id)
     setMockResponse.get(
@@ -616,10 +630,10 @@ describe("ContractLearnersPage", () => {
       paginate([org]),
     )
     mockTotal(contractId, 2)
+    mockCourseRuns(contractId)
     mockList(contractId, [
       analyticsFactories.learnerProgress({ full_name: "Unfiltered Learner" }),
     ])
-    mockFunnel(contractId)
     mockList(
       contractId,
       [analyticsFactories.learnerProgress({ full_name: "Module Six Learner" })],
@@ -640,6 +654,91 @@ describe("ContractLearnersPage", () => {
     await screen.findByText("Module Six Learner")
   })
 
+  describe("the Last activity column", () => {
+    const rowFor = async (
+      overrides: Parameters<typeof analyticsFactories.learnerProgress>[0],
+    ) => {
+      const { org, contract, orgSlug } = setup()
+      const contractId = String(contract.id)
+      setMockResponse.get(
+        mitxUrls.organization.managerOrganizationsList(),
+        paginate([org]),
+      )
+      mockTotal(contractId, 1)
+      mockCourseRuns(contractId)
+      mockList(contractId, [
+        analyticsFactories.learnerProgress({
+          full_name: "Anton Petrov",
+          ...overrides,
+        }),
+      ])
+
+      renderWithProviders(
+        <ContractLearnersPage orgSlug={orgSlug} contractSlug={contract.slug} />,
+      )
+      return rowOf(await screen.findByText("Anton Petrov"))
+    }
+
+    test("shows the day the learner was last active", async () => {
+      const row = await rowFor({ last_active_on: "2026-09-30" })
+
+      expect(within(row).getByText("Sep 30, 2026")).toBeInTheDocument()
+    })
+
+    /**
+     * `last_active_on` is a plain `YYYY-MM-DD`, which `new Date` reads as UTC
+     * midnight — so formatting it through a `Date` renders the day before
+     * anywhere west of Greenwich. Pinned to a negative-offset zone because in
+     * UTC the correct and incorrect implementations agree, and CI runs in UTC.
+     */
+    test("shows the same calendar day west of Greenwich", async () => {
+      const tz = process.env.TZ
+      process.env.TZ = "America/Los_Angeles"
+      try {
+        const row = await rowFor({ last_active_on: "2026-09-30" })
+
+        expect(within(row).getByText("Sep 30, 2026")).toBeInTheDocument()
+        expect(within(row).queryByText("Sep 29, 2026")).not.toBeInTheDocument()
+      } finally {
+        process.env.TZ = tz
+      }
+    })
+
+    test("says so when a consenting learner has no recorded activity", async () => {
+      const row = await rowFor({ last_active_on: null })
+
+      expect(within(row).getByText("No activity")).toBeInTheDocument()
+    })
+
+    /**
+     * A withheld row's activity is hidden, not absent — "No activity" there
+     * would state a fact about the learner that they declined to share.
+     */
+    test("shows a stub, not 'No activity', for a withheld learner", async () => {
+      const { org, contract, orgSlug } = setup()
+      const contractId = String(contract.id)
+      setMockResponse.get(
+        mitxUrls.organization.managerOrganizationsList(),
+        paginate([org]),
+      )
+      mockTotal(contractId, 1)
+      mockCourseRuns(contractId)
+      mockList(contractId, [
+        analyticsFactories.withheldLearnerProgress({
+          full_name: "Priya Raman",
+        }),
+      ])
+
+      renderWithProviders(
+        <ContractLearnersPage orgSlug={orgSlug} contractSlug={contract.slug} />,
+      )
+
+      const row = rowOf(await screen.findByText("Priya Raman"))
+      expect(within(row).getByText("—")).toBeInTheDocument()
+      expect(within(row).queryByText("No activity")).not.toBeInTheDocument()
+    })
+  })
+
   test("the status filter sends completion_status", async () => {
     const { org, contract, orgSlug } = setup()
     const contractId = String(contract.id)
@@ -648,6 +747,7 @@ describe("ContractLearnersPage", () => {
       paginate([org]),
     )
     mockTotal(contractId, 2)
+    mockCourseRuns(contractId)
     mockList(contractId, [
       analyticsFactories.learnerProgress({ full_name: "Everyone" }),
     ])
@@ -679,6 +779,7 @@ describe("ContractLearnersPage", () => {
       paginate([org]),
     )
     mockTotal(contractId, 3)
+    mockCourseRuns(contractId)
     mockList(contractId, [
       analyticsFactories.learnerProgress({ full_name: "Everyone" }),
     ])
@@ -720,6 +821,7 @@ describe("ContractLearnersPage", () => {
       paginate([org]),
     )
     mockTotal(contractId, 5)
+    mockCourseRuns(contractId)
     mockList(contractId, [
       analyticsFactories.learnerProgress({ full_name: "Everyone" }),
     ])
@@ -759,6 +861,7 @@ describe("ContractLearnersPage", () => {
       paginate([org]),
     )
     mockTotal(contractId, 1)
+    mockCourseRuns(contractId)
     mockList(contractId, [
       analyticsFactories.learnerProgress({
         full_name: "Anton Petrov",
@@ -788,6 +891,7 @@ describe("ContractLearnersPage", () => {
       paginate([org]),
     )
     mockTotal(contractId, 1)
+    mockCourseRuns(contractId)
     mockList(contractId, [
       analyticsFactories.learnerProgress({ full_name: "Anton Petrov" }),
     ])

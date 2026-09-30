@@ -44,7 +44,9 @@ import { ForbiddenError, isForbiddenResponse } from "@/common/errors"
 import { FeatureFlags } from "@/common/feature_flags"
 import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
 import { contractAnalyticsView } from "@/common/urls"
-import SectionHeader from "../DashboardPage/Analytics/SectionHeader"
+import SectionHeader, {
+  SectionFreshness,
+} from "../DashboardPage/Analytics/SectionHeader"
 import { ErrorContent } from "../ErrorPage/ErrorPageTemplate"
 import { LearnerRow } from "./LearnerRow"
 import { COLUMN_FLEX } from "./columns"
@@ -52,36 +54,15 @@ import { DISPLAY_STATUS_LABEL, getDisplayStatus } from "./statusDisplay"
 
 /**
  * The B2B learner directory: one row per learner per course run under a
- * contract, with the status a manager needs to see who is falling behind.
+ * contract.
  *
- * # Where this sits
+ * Routed outside `/dashboard` (see `CONTRACT_LEARNERS_VIEW`) so it gets no
+ * sidebar and can use the full width this table needs.
  *
- * A third page alongside `ContractAdminPage` (seat administration) and
- * `AnalyticsContent` (aggregate reporting), sharing their table primitives so
- * the three read as one product. It is routed outside `/dashboard` — see
- * `CONTRACT_LEARNERS_VIEW` — so it gets no sidebar and can use the full width
- * this table needs.
- *
- * # What is real, and what is disabled
- *
- * The status pill, search, the status filter and CSV export are backed by
- * `learner-progress` and are real. `courserun_title` under each learner's
- * name is also real — enrollment metadata, not consent-gated.
- *
- * Everything else this feature was designed to show is implemented but
- * commented out, not deleted, so nothing fabricated ships while the table
- * stays ready to turn each one back on — search this file and
- * `LearnerRow.tsx` for "Disabled:" to find each block:
- *   - Selection + Send reminder: no endpoint exists to nudge an enrolled
- *     learner (MITx Online's remind mutation only covers an unredeemed seat
- *     code), so both were hidden rather than shipped as dead buttons.
- *   - Module filter: sends `courserun_readable_id`, a parameter the real
- *     `ol-analytics-api` does not implement (confirmed against its router
- *     source — an unrecognized query param is silently dropped, not
- *     rejected). Left visible it would look like it filters and wouldn't.
- *   - Progress (table cell and CSV columns alike) and Last activity: both
- *     fabricate a value with no real field behind them yet — see
- *     `placeholders.ts`'s header comment for what each is blocked on.
+ * Several columns and controls are built but commented out rather than
+ * deleted, so nothing fabricated ships while the UI stays ready to restore.
+ * Search this file and `LearnerRow.tsx` for "Disabled:" — each block says what
+ * it is waiting on.
  */
 
 const Page = styled(Container)(({ theme }) => ({
@@ -145,11 +126,33 @@ const ResultsSection = styled.div({
   gap: "16px",
 })
 
+/**
+ * The freshness line sits above the section rather than at the end of the
+ * header row, where every aggregate section puts it: this row already carries
+ * a search box and two filters, so a fourth item there either overflows or
+ * wraps to whichever spot is left. Right-aligned so it still reads as
+ * belonging to the section's top-right corner.
+ */
+const AsOfRow = styled.div(({ theme }) => ({
+  display: "flex",
+  justifyContent: "flex-end",
+  // Left-aligned once the header and controls stack: everything else in that
+  // column starts at the left edge, so a lone right-aligned line reads as
+  // stranded rather than as the section's corner.
+  [theme.breakpoints.down("md")]: {
+    justifyContent: "flex-start",
+  },
+}))
+
 const ControlsRow = styled.div(({ theme }) => ({
   display: "flex",
   alignItems: "flex-end",
   justifyContent: "space-between",
   gap: "16px",
+  // Wrap rather than overflow. Without this the controls' own min-widths
+  // (280px each) win over the container between `md` and roughly 1200px, and
+  // the last filter runs off the right edge.
+  flexWrap: "wrap",
   [theme.breakpoints.down("md")]: {
     flexDirection: "column",
     alignItems: "stretch",
@@ -160,6 +163,7 @@ const ControlsRight = styled.div(({ theme }) => ({
   display: "flex",
   alignItems: "flex-end",
   gap: "12px",
+  flexWrap: "wrap",
   [theme.breakpoints.down("md")]: {
     flexDirection: "column",
     alignItems: "stretch",
@@ -173,13 +177,23 @@ const StyledSearchInput = styled(SearchInput)(({ theme }) => ({
 }))
 
 const FilterField = styled(SimpleSelectField)(({ theme }) => ({
+  /**
+   * Fixed, not `minWidth`: a content-sized select changes width with whatever
+   * is selected, so picking a long module title reflowed the whole controls
+   * row. MUI already truncates the value with an ellipsis — that only takes
+   * effect once the box stops growing to fit. The full title stays in the DOM
+   * (so it is still announced) and in the open listbox.
+   *
+   * Not sized to the longest option either: module titles reach ~50
+   * characters, which would leave a control wide enough to crowd out the
+   * search box beside it.
+   */
   "& .MuiSelect-root": {
-    minWidth: "280px",
+    width: "280px",
   },
   [theme.breakpoints.down("md")]: {
     width: "100%",
     "& .MuiSelect-root": {
-      minWidth: "auto",
       width: "100%",
     },
   },
@@ -291,6 +305,7 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
   const [searchQuery, setSearchQuery] = useState("")
   const [debouncedSearch, setDebouncedSearch] = useState("")
   const [statusFilter, setStatusFilter] = useState<string>(ALL)
+  const [moduleFilter, setModuleFilter] = useState<string>(ALL)
   const [page, setPage] = useState(1)
   const [isExporting, setIsExporting] = useState(false)
   const [actionResult, setActionResult] = useState<{
@@ -345,9 +360,9 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
       sort: "full_name" as const,
       ...(debouncedSearch ? { search: debouncedSearch } : {}),
       ...(completionStatus ? { completion_status: completionStatus } : {}),
-      // courserun_readable_id (module filter) dropped here — see file header.
+      ...(moduleFilter === ALL ? {} : { courserun_readable_id: moduleFilter }),
     }),
-    [page, debouncedSearch, completionStatus],
+    [page, debouncedSearch, completionStatus, moduleFilter],
   )
 
   const rowsQuery = useQuery({
@@ -374,36 +389,34 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
     enabled: canQuery,
   })
 
-  // --- Disabled: module filter --------------------------------------------
-  //
-  // Sends `courserun_readable_id`, a parameter the real ol-analytics-api does
-  // not implement — see the file header comment. `enrollmentFunnel` was
-  // fetched here only to populate this dropdown's options.
-  //
-  // const funnelQuery = useQuery({
-  //   ...analyticsContractQueries.enrollmentFunnel(
-  //     orgUuid ?? "",
-  //     contractId ?? "",
-  //     { limit: 1000 },
-  //   ),
-  //   enabled: canQuery,
-  // })
-  //
-  // const moduleOptions = useMemo(() => {
-  //   const seen = new Map<string, string>()
-  //   for (const row of funnelQuery.data?.data ?? []) {
-  //     if (!seen.has(row.courserun_readable_id)) {
-  //       seen.set(row.courserun_readable_id, row.courserun_title)
-  //     }
-  //   }
-  //   return [
-  //     { value: ALL, label: "All modules" },
-  //     ...[...seen.entries()]
-  //       .map(([value, label]) => ({ value, label }))
-  //       .sort((a, b) => a.label.localeCompare(b.label)),
-  //   ]
-  // }, [funnelQuery.data])
-  // -------------------------------------------------------------------------
+  /**
+   * One page covers any real contract's course runs, and the dropdown has to
+   * list all of them or it silently hides runs a manager could filter by —
+   * hence a limit well clear of the count rather than `PAGE_SIZE`.
+   */
+  const courseRunsQuery = useQuery({
+    ...analyticsContractQueries.courseRuns(orgUuid ?? "", contractId ?? "", {
+      limit: 1000,
+    }),
+    enabled: canQuery,
+  })
+
+  /**
+   * From the contract's own course runs rather than distinct values off the
+   * learner rows, so the list does not narrow to whoever consented — and so
+   * that a run nobody has enrolled in is still offered.
+   */
+  const moduleOptions = useMemo(
+    () => [
+      { value: ALL, label: "All modules" },
+      ...(courseRunsQuery.data?.data ?? [])
+        // `courserun_id` carries the readable id the filter sends — see
+        // `CourseRun`.
+        .map((run) => ({ value: run.courserun_id, label: run.courserun_title }))
+        .sort((a, b) => a.label.localeCompare(b.label)),
+    ],
+    [courseRunsQuery.data],
+  )
 
   const rows = rowsQuery.data?.data ?? []
   const filteredCount = rowsQuery.data?.total_count ?? 0
@@ -500,8 +513,6 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
         if (data.data.length === 0) break
         offset += CSV_EXPORT_PAGE_SIZE
       }
-      // Last activity is omitted while it is a placeholder: a CSV outlives
-      // the screen and carries no "preview" marking with it.
       const header = buildCsvRow([
         "Name",
         "Email",
@@ -509,6 +520,7 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
         "Course ID",
         "Status",
         "Enrolled on",
+        "Last activity",
         // Disabled: fabricated Progress — see LearnerRow.tsx's and
         // placeholders.ts's "Disabled:" comments. Built and kept here rather
         // than shipped with invented numbers.
@@ -526,6 +538,9 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
           row.courserun_readable_id,
           DISPLAY_STATUS_LABEL[getDisplayStatus(row)],
           row.enrolled_on,
+          // Raw YYYY-MM-DD, like `enrolled_on` above: a spreadsheet reads it
+          // as a date, where the screen's "Sep 30, 2026" is just text.
+          row.last_active_on,
           // progress ? String(progress.percent) : "",
           // progress ? String(progress.lessonsCompleted) : "",
           // progress ? String(progress.lessonsTotal) : "",
@@ -625,7 +640,7 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
 
   const emptyMessage = debouncedSearch
     ? "No learners match your search."
-    : statusFilter !== ALL
+    : statusFilter !== ALL || moduleFilter !== ALL
       ? "No learners match this filter."
       : "No learners found."
 
@@ -677,6 +692,13 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
           </Alert>
         ) : (
           <ResultsSection>
+            <AsOfRow>
+              <SectionFreshness
+                asOf={rowsQuery.data?.as_of}
+                isLoading={rowsQuery.isPending}
+                isError={rowsQuery.isError}
+              />
+            </AsOfRow>
             <ControlsRow>
               <SectionHeader
                 component="h2"
@@ -686,9 +708,7 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
                     ? "Loading…"
                     : `${filteredCount} of ${totalEnrollments} enrollments`
                 }
-                asOf={rowsQuery.data?.as_of}
-                isLoading={rowsQuery.isPending}
-                isError={rowsQuery.isError}
+                asOfPlacement="external"
               />
               <ControlsRight>
                 <StyledSearchInput
@@ -714,19 +734,17 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
                     )
                   }
                 />
-                {/* Disabled: module filter — see file header comment.
-                  <FilterField
-                    label="Module"
-                    size="medium"
-                    value={moduleFilter}
-                    options={moduleOptions}
-                    onChange={(event) =>
-                      applyFilterChange(() =>
-                        setModuleFilter(String(event.target.value)),
-                      )
-                    }
-                  />
-                  */}
+                <FilterField
+                  label="Module"
+                  size="medium"
+                  value={moduleFilter}
+                  options={moduleOptions}
+                  onChange={(event) =>
+                    applyFilterChange(() =>
+                      setModuleFilter(String(event.target.value)),
+                    )
+                  }
+                />
               </ControlsRight>
             </ControlsRow>
 
@@ -819,15 +837,12 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
                         Progress
                       </TableHeaderCell>
                       */}
-                    {/* Disabled: fabricated Last activity column header —
-                          see LearnerRow.tsx's "Disabled:" comment.
-                      <TableHeaderCell
-                        role="columnheader"
-                        $flex={COLUMN_FLEX.lastActivity}
-                      >
-                        Last activity
-                      </TableHeaderCell>
-                      */}
+                    <TableHeaderCell
+                      role="columnheader"
+                      $flex={COLUMN_FLEX.lastActivity}
+                    >
+                      Last activity
+                    </TableHeaderCell>
                     {/* Disabled: action column header — see file header comment.
                       <ActionHeaderCell
                         role="columnheader"
@@ -850,7 +865,7 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
                       <EmptyTableMessage
                         component="div"
                         role="cell"
-                        aria-colspan={2}
+                        aria-colspan={3}
                         style={{ width: "100%" }}
                       >
                         {emptyMessage}
@@ -882,11 +897,12 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
             </TableCard>
 
             {/* Disabled: nothing fabricated currently renders on screen —
-                  Progress and Last activity are both commented out above —
-                  so this footnote has nothing left to disclose. Restore
-                  alongside whichever placeholder returns to view first.
+                  Last activity is real now, and Progress is still commented
+                  out above — so this footnote has nothing to disclose.
+                  Restore it, with wording naming whichever placeholder it is
+                  about, if one returns to view.
               <PlaceholderNotice component="p">
-                Last activity is a preview value and is not yet real data.
+                Progress is a preview value and is not yet real data.
               </PlaceholderNotice>
               */}
           </ResultsSection>

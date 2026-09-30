@@ -24,15 +24,14 @@ import type { LearnerProgress } from "api/analytics-hooks/organizations"
  *   `stg__mitxonline__openedx__blockcompletion`, which also needs a decision
  *   on what a "lesson" is (subsection or unit) and whether progress counts
  *   all blocks or only graded ones.
- * - `placeholderLastActiveOn` — `LearnerProgress.last_active_on` exists in the
- *   response but the API hardcodes it null for every row. Replaced by reading
- *   that field once mitodl/ol-data-platform#2672 is wired into the views.
- * - `placeholderNeedsAttention` — becomes a backend `needs_attention` field,
- *   defined as `not_enrolled OR now() - last_activity_at > 30 days`. Only the
- *   inactive half is computable here, since the activity half is the field
- *   above. Note the "not enrolled" half cannot be represented at all from this
- *   endpoint: it returns enrollments, so someone who never redeemed a seat has
- *   no row to flag.
+ * - `placeholderNeedsAttention` — becomes a backend `needs_attention` row
+ *   field. The aggregate `needs_attention_count` already ships, defined as
+ *   "never started, or last recorded activity at least 30 days ago"; the
+ *   per-row field is what this placeholder waits on. Not computed from
+ *   `last_active_on` here even though both inputs are now real: the rule's
+ *   30-day boundary has to be evaluated in the warehouse's timezone, and a
+ *   browser re-deriving it would disagree with the count beside it for the
+ *   rows nearest the cutoff.
  *
  * Values are derived from each row's own identity rather than `Math.random()`,
  * so a learner's numbers stay put across re-renders, refetches and paging
@@ -110,20 +109,10 @@ const placeholderProgress = (
 const placeholderDaysInactive = (row: LearnerProgress): number =>
   seed(`${rowKey(row)}:activity`) % 45
 
-/** Null for a never-active learner, mirroring the real field's nullability. */
-const placeholderLastActiveOn = (row: LearnerProgress): string | null => {
-  if (!row.outcomes_shared) return null
-  if (row.completion_status === "not_started") return null
-
-  const date = new Date()
-  date.setDate(date.getDate() - placeholderDaysInactive(row))
-  return date.toISOString()
-}
-
 /**
- * The inactive half of the planned rule. A deactivated enrollment stands in for
- * the "not enrolled" half, which this endpoint cannot express (see file
- * header).
+ * Approximates the shipped rule (see file header) without matching it: the
+ * stale-activity half is fabricated, and a deactivated enrollment stands in
+ * for "never started", which is not the same set.
  */
 const placeholderNeedsAttention = (row: LearnerProgress): boolean => {
   if (!row.outcomes_shared) return false
@@ -131,10 +120,5 @@ const placeholderNeedsAttention = (row: LearnerProgress): boolean => {
   return placeholderDaysInactive(row) > INACTIVE_DAYS_THRESHOLD
 }
 
-export {
-  PLACEHOLDER_ATTR,
-  placeholderProgress,
-  placeholderLastActiveOn,
-  placeholderNeedsAttention,
-}
+export { PLACEHOLDER_ATTR, placeholderProgress, placeholderNeedsAttention }
 export type { PlaceholderProgress }

@@ -3,11 +3,12 @@
 import React from "react"
 import { RiUserLine } from "@remixicon/react"
 import { styled, Typography } from "ol-components"
-import { initials } from "ol-utilities"
+import { formatDate, initials } from "ol-utilities"
 import type { LearnerProgress } from "api/analytics-hooks/organizations"
 import {
   CellText,
   MobileLabel,
+  STUB,
   TableCell,
   TableRow,
 } from "@/components/B2BTable/B2BTable"
@@ -161,24 +162,6 @@ const StatusDot = styled.span<{ $muted: boolean }>(({ $muted, theme }) => ({
 // })
 // --------------------------------------------------------------------------
 
-// --- Disabled: fabricated Last activity column ----------------------------
-//
-// `placeholderLastActiveOn` fabricates a date; the real `last_active_on`
-// field is hardcoded null by the API itself (activity data doesn't exist
-// upstream yet — see placeholders.ts's header comment). Built and kept here
-// rather than shipped with an invented date.
-//
-// import { PLACEHOLDER_ATTR, placeholderLastActiveOn } from "./placeholders"
-//
-// const formatDay = (iso: string | null): string | null => {
-//   if (!iso) return null
-//   const date = new Date(iso)
-//   return Number.isNaN(date.getTime())
-//     ? null
-//     : date.toLocaleDateString(undefined, { month: "short", day: "numeric" })
-// }
-// --------------------------------------------------------------------------
-
 const MutedText = styled.span(({ theme }) => ({
   color: theme.custom.colors.silverGrayDark,
 }))
@@ -194,6 +177,23 @@ const LearnerRow: React.FC<LearnerRowProps> = ({ row }) => {
   const statusLabel = DISPLAY_STATUS_LABEL[status]
   const isWithheld = status === "not-shared"
   const name = row.full_name?.trim() || null
+
+  /**
+   * Withheld and never-active are different facts, so they read differently: a
+   * consent-withheld row gets the same muted stub as every other hidden
+   * outcome, while a consenting learner with nothing recorded says so.
+   *
+   * `formatDate` (moment) rather than `new Date`, which takes this field's
+   * date-only value as UTC midnight and renders the day before west of
+   * Greenwich — see `LearnerProgress.last_active_on`. The year is kept because
+   * last activity is often long past, and a bare "Sep 30" reads as recent
+   * whether it was last month or two years ago.
+   */
+  const lastActivity = isWithheld
+    ? { text: STUB, muted: true }
+    : row.last_active_on
+      ? { text: formatDate(row.last_active_on), muted: false }
+      : { text: "No activity", muted: true }
 
   return (
     <TableRow role="row">
@@ -255,21 +255,16 @@ const LearnerRow: React.FC<LearnerRowProps> = ({ row }) => {
       </TableCell>
       */}
 
-      {/* Disabled: fabricated Last activity column — see file header comment.
       <TableCell role="cell" $flex={COLUMN_FLEX.lastActivity}>
         <MobileLabel>Last activity:</MobileLabel>
-        <CellText {...{ [PLACEHOLDER_ATTR]: "last-activity" }}>
-          {formatDay(lastActiveOn) ?? <MutedText>No activity</MutedText>}
-          {progress ? (
-            <CellText>
-              <MutedText>
-                {progress.lessonsCompleted} / {progress.lessonsTotal} lessons
-              </MutedText>
-            </CellText>
-          ) : null}
+        <CellText>
+          {lastActivity.muted ? (
+            <MutedText>{lastActivity.text}</MutedText>
+          ) : (
+            lastActivity.text
+          )}
         </CellText>
       </TableCell>
-      */}
 
       {/*
       <ActionCell role="cell">
