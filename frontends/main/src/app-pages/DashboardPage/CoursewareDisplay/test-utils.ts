@@ -11,6 +11,7 @@ import {
   CourseWithCourseRunsSerializerV2,
   OrganizationPage,
   User,
+  UserContractPage,
   V2Program,
   V2ProgramDetail,
   V3UserProgramEnrollment,
@@ -461,7 +462,7 @@ const createTestContracts = (
   orgId: number,
   count: number = 1,
   programs: number[] = [],
-): ContractPage[] =>
+): UserContractPage[] =>
   Array.from({ length: count }, () =>
     makeContract({ organization: orgId, programs }),
   )

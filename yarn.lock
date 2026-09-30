@@ -3631,13 +3631,13 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@mitodl/mitxonline-api-axios@npm:2026.9.23":
-  version: 2026.9.23
-  resolution: "@mitodl/mitxonline-api-axios@npm:2026.9.23"
+"@mitodl/mitxonline-api-axios@npm:2026.9.29":
+  version: 2026.9.29
+  resolution: "@mitodl/mitxonline-api-axios@npm:2026.9.29"
   dependencies:
     "@types/node": "npm:^20.11.19"
     axios: "npm:^1.6.5"
-  checksum: 10/b0790aed3769eae57fe37034cfdb2d74da2541bfe195a219d711a08b2293fccd63c8e2fa65af9342b473978c2fc08c42171793fcf9bb47a0fea56cd5a7072c3e
+  checksum: 10/119780b47bb74031ce342117b92705eaedb55297fbf216cab569e003cee325f4e933773e6adec9c769609ab4d9029fa613970716b3f640a631c7ff2dd9840475
   languageName: node
   linkType: hard
 
@@ -9570,7 +9570,7 @@ __metadata:
   dependencies:
     "@faker-js/faker": "npm:^10.5.0"
     "@mitodl/mit-learn-api-axios": "npm:2026.8.17"
-    "@mitodl/mitxonline-api-axios": "npm:2026.9.23"
+    "@mitodl/mitxonline-api-axios": "npm:2026.9.29"
     "@tanstack/react-query": "npm:^5.66.0"
     "@testing-library/react": "npm:^16.3.0"
     axios: "npm:^1.12.2"
@@ -16918,7 +16918,7 @@ __metadata:
     "@mitodl/arithmix": "npm:^0.2.5"
     "@mitodl/course-search-utils": "npm:^3.8.1"
     "@mitodl/hacksnack": "npm:^0.1.2"
-    "@mitodl/mitxonline-api-axios": "npm:2026.9.23"
+    "@mitodl/mitxonline-api-axios": "npm:2026.9.29"
     "@mitodl/smoot-design": "npm:6.38.0"
     "@mui/base": "npm:5.0.0-beta.70"
     "@mui/material": "npm:^6.4.5"

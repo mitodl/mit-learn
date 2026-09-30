@@ -1223,3 +1223,67 @@ describe("EnrolledCourseCard progress badge", () => {
     ).not.toBeInTheDocument()
   })
 })
+
+describe.each([
+  { display: "desktop", testId: "enrollment-card-desktop" },
+  { display: "mobile", testId: "enrollment-card-mobile" },
+])("EnrolledCourseCard disabled ($display)", ({ testId }) => {
+  setupLocationMock()
+
+  test("shows a plain-text title and disables the CTA and menu, keeping the certificate link", () => {
+    setupUserApis()
+    const certUuid = faker.string.uuid()
+    const enrollment = mitxonline.factories.enrollment.courseEnrollment({
+      run: { ...currentRunDates, courseware_url: faker.internet.url() },
+      certificate: {
+        uuid: certUuid,
+        link: `https://courses.example.com/certificate/${certUuid}/`,
+      },
+    })
+    renderWithProviders(<EnrolledCourseCard enrollment={enrollment} disabled />)
+    const card = within(screen.getByTestId(testId))
+
+    expect(
+      card.getByRole("heading", { name: enrollment.run.course.title }),
+    ).toBeInTheDocument()
+    expect(
+      card.queryByRole("link", { name: enrollment.run.course.title }),
+    ).not.toBeInTheDocument()
+    expect(card.getByTestId("courseware-button")).toBeDisabled()
+    expect(card.getByRole("button", { name: "More options" })).toBeDisabled()
+    expect(
+      card.getByRole("link", { name: /View Certificate/ }),
+    ).toHaveAttribute(
+      "href",
+      `https://courses.example.com/certificate/course/${certUuid}/`,
+    )
+  })
+})
+
+describe("EnrolledCourseCard disabled with sibling runs", () => {
+  setupLocationMock()
+
+  test("hides each run's View content link", async () => {
+    setupUserApis()
+    const enrollment = mitxonline.factories.enrollment.courseEnrollment({
+      run: { ...currentRunDates, courseware_url: faker.internet.url() },
+    })
+    const sibling = mitxonline.factories.enrollment.courseEnrollment({
+      run: { ...pastRunDates, courseware_url: faker.internet.url() },
+    })
+    renderWithProviders(
+      <EnrolledCourseCard
+        enrollment={enrollment}
+        siblingEnrollments={[sibling]}
+        disabled
+      />,
+    )
+    const desktopCard = within(screen.getByTestId("enrollment-card-desktop"))
+    await user.click(desktopCard.getByText("Course runs (2)"))
+
+    expect(desktopCard.getByText("Current run:")).toBeInTheDocument()
+    expect(
+      desktopCard.queryByRole("link", { name: /View content/ }),
+    ).not.toBeInTheDocument()
+  })
+})

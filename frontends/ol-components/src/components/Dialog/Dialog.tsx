@@ -85,6 +85,7 @@ type DialogProps = {
    */
   additionalLabelledBy?: string
   role?: MuiDialogProps["role"]
+  showCloseButton?: boolean
 }
 
 /**
@@ -117,6 +118,7 @@ const Dialog: React.FC<DialogProps> = ({
   "aria-describedby": ariaDescribedBy,
   additionalLabelledBy,
   role,
+  showCloseButton = true,
 }) => {
   const [confirming, setConfirming] = useState(isSubmitting)
   const titleId = useId()
@@ -162,11 +164,13 @@ const Dialog: React.FC<DialogProps> = ({
       maxWidth={maxWidth}
       scroll={scroll}
     >
-      <Close>
-        <ActionButton variant="text" onClick={onClose} aria-label="Close">
-          <RiCloseLine />
-        </ActionButton>
-      </Close>
+      {showCloseButton && (
+        <Close>
+          <ActionButton variant="text" onClick={onClose} aria-label="Close">
+            <RiCloseLine />
+          </ActionButton>
+        </Close>
+      )}
       {title && (
         <Header>
           <HeaderTitle id={titleId} component="h1" variant="h5">

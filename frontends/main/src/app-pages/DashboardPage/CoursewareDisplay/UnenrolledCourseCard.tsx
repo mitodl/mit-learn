@@ -34,6 +34,7 @@ type UnenrolledCourseCardProps = {
   layout?: "default" | "compact"
   headingLevel?: "h2" | "h3" | "h4" | "h5" | "h6"
   isModule?: boolean
+  disabled?: boolean
   Component?: React.ElementType
   className?: string
 }
@@ -46,6 +47,7 @@ export const UnenrolledCourseCard = ({
   layout = "default",
   headingLevel,
   isModule,
+  disabled = false,
   Component,
   className,
 }: UnenrolledCourseCardProps) => {
@@ -55,7 +57,8 @@ export const UnenrolledCourseCard = ({
     displayedRunProp ?? getBestRun(course, { enrollableOnly: true, contractId })
   const coursewareUrl = courseRun?.courseware_url || undefined
   const readableId = courseRun?.courseware_id
-  const isDisabled = !courseRun?.is_enrollable || !coursewareUrl || !readableId
+  const isDisabled =
+    disabled || !courseRun?.is_enrollable || !coursewareUrl || !readableId
   const title =
     layout === "compact" ? course.title : courseRun?.title || course.title
   const isContractPageResource = Boolean(contractId)

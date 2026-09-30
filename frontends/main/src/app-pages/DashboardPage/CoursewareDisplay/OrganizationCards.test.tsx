@@ -6,7 +6,7 @@ import {
   urls as mitxOnlineUrls,
 } from "api/mitxonline-test-utils"
 import { OrganizationCards } from "./OrganizationCards"
-import type { OrganizationPage } from "@mitodl/mitxonline-api-axios/v2"
+import type { UserOrganizationPage } from "@mitodl/mitxonline-api-axios/v2"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 
 jest.mock("posthog-js/react")
@@ -18,14 +18,14 @@ describe("OrganizationCards", () => {
   })
 
   type SetupOptions = {
-    organizations?: OrganizationPage[]
+    organizations?: UserOrganizationPage[]
     isUserLoading?: boolean
   }
 
   const createOrganizations = (
     count: number,
     withContracts: boolean = true,
-  ): OrganizationPage[] => {
+  ): UserOrganizationPage[] => {
     return Array.from({ length: count }, (_, i) =>
       mitxOnlineFactories.organizations.organization({
         id: i + 1,
