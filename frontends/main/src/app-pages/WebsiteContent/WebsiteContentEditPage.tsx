@@ -2,7 +2,7 @@
 
 import React from "react"
 import { useRouter } from "next-nprogress-bar"
-import { notFound, usePathname } from "next/navigation"
+import { notFound } from "next/navigation"
 import { Permission } from "api/hooks/user"
 import { useWebsiteContentDetailRetrieve } from "api/hooks/website_content"
 import RestrictedRoute from "@/components/RestrictedRoute/RestrictedRoute"
@@ -12,6 +12,7 @@ import { NewsEditor } from "@/page-components/TiptapEditor/contentTypes/news/New
 import { articleView, newsView, websiteContentEditView } from "@/common/urls"
 import invariant from "tiny-invariant"
 import type { WebsiteContent } from "api/v1"
+import { replaceDraftUrl } from "./draftUrl"
 
 const PageContainer = styled.div(({ theme }) => ({
   color: theme.custom.colors.darkGray2,
@@ -66,7 +67,6 @@ const WebsiteContentEditPage = ({
   autosaveDelayMs,
 }: WebsiteContentEditPageProps) => {
   const { data: article, isLoading } = useWebsiteContentDetailRetrieve(idOrSlug)
-  const pathname = usePathname()
   const router = useRouter()
 
   const Editor = EDITORS[type]
@@ -106,18 +106,13 @@ const WebsiteContentEditPage = ({
             /**
              * Where a draft lives, which is usually where we already are --
              * the exception being a URL that names the item by slug, which
-             * this canonicalises to the id once.
+             * this canonicalises to the id.
              *
-             * Guarded because a draft saves itself every couple of seconds:
-             * pushing the route we are on buys nothing (this page reads its
-             * item through React Query, which the mutation already
-             * invalidates) and costs a soft navigation and a run of the
-             * progress bar each time.
+             * Corrected in place rather than navigated to, because a draft
+             * saves itself while the author is typing and a navigation would
+             * take the editor down mid-sentence. See `replaceDraftUrl`.
              */
-            const draftUrl = websiteContentEditView(type, saved.id)
-            if (draftUrl !== pathname) {
-              router.push(draftUrl)
-            }
+            replaceDraftUrl(websiteContentEditView(type, saved.id))
           }}
         />
       </PageContainer>
