@@ -49,6 +49,7 @@ from learning_resources_search.utils import (
     adjust_search_for_percolator,
     document_percolated_actions,
 )
+from main.azure_openai import strip_azure_prefix
 from vector_search.constants import (
     RESOURCES_COLLECTION_NAME,
     TOPICS_COLLECTION_NAME,
@@ -765,7 +766,10 @@ def add_text_query_to_search(
         text_query = {"bool": {"must": [text_query], "filter": query_type_query}}
 
     if use_hybrid_search:
-        if settings.QDRANT_DENSE_MODEL not in settings.OPEN_AI_EMBEDDING_MODELS:
+        if (
+            strip_azure_prefix(settings.QDRANT_DENSE_MODEL)
+            not in settings.OPEN_AI_EMBEDDING_MODELS
+        ):
             error_message = "hybrid search only supported with OpenAI models"
             raise ValueError(error_message)
 

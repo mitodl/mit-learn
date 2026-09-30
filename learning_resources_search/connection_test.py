@@ -7,6 +7,7 @@ from django.conf import settings
 
 from learning_resources_search.connection import (
     configure_connections,
+    create_openai_embedding_connector_and_model,
     get_active_aliases,
 )
 from learning_resources_search.constants import COURSE_TYPE, IndexestoUpdate
@@ -108,3 +109,23 @@ def test_get_active_aliases(mocker, index_types, indexes_exist, object_types):
             ]
     else:
         assert active_aliases == []
+
+
+@pytest.mark.parametrize(
+    "dense_model", ["text-embedding-3-large", "azure/text-embedding-3-large"]
+)
+def test_create_openai_embedding_connector_uses_openai_model_name(mocker, dense_model):
+    """The OpenSearch connector calls OpenAI directly, so it drops an azure/ prefix"""
+    mock_conn = mocker.patch(
+        "learning_resources_search.connection.get_conn"
+    ).return_value
+
+    create_openai_embedding_connector_and_model(
+        model_name="vector_model", openai_model=dense_model
+    )
+
+    connector_call = mock_conn.transport.perform_request.call_args_list[0]
+    assert connector_call.args[1] == "/_plugins/_ml/connectors/_create"
+    assert connector_call.kwargs["body"]["parameters"] == {
+        "model": "text-embedding-3-large"
+    }

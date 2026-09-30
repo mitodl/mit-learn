@@ -12,6 +12,11 @@ from django.conf import settings
 from litellm import embedding
 from litellm.caching.caching import Cache
 
+from main.azure_openai import (
+    azure_openai_litellm_params,
+    is_azure_model,
+    strip_azure_prefix,
+)
 from vector_search.encoders.base import BaseEncoder
 
 log = logging.getLogger()
@@ -137,7 +142,9 @@ class LiteLLMEncoder(BaseEncoder):
         """Initialize LiteLLM encoder with model name."""
         self.model_name = model_name
         try:
-            self.token_encoding_name = tiktoken.encoding_name_for_model(model_name)
+            self.token_encoding_name = tiktoken.encoding_name_for_model(
+                strip_azure_prefix(model_name)
+            )
         except KeyError:
             msg = f"Model {model_name} not found in tiktoken. defaulting to None"
             log.warning(msg)
@@ -257,10 +264,15 @@ class LiteLLMEncoder(BaseEncoder):
                 "no-store": True,
             }
         config = {"model": self.model_name, "input": texts, "cache": cache_params}
-        if settings.LITELLM_CUSTOM_PROVIDER:
-            config["custom_llm_provider"] = settings.LITELLM_CUSTOM_PROVIDER
-        if settings.LITELLM_API_BASE:
-            config["api_base"] = settings.LITELLM_API_BASE
+        if is_azure_model(self.model_name):
+            # the token provider and endpoint are litellm_params, which
+            # litellm leaves out of the cache key
+            config |= azure_openai_litellm_params()
+        else:
+            if settings.LITELLM_CUSTOM_PROVIDER:
+                config["custom_llm_provider"] = settings.LITELLM_CUSTOM_PROVIDER
+            if settings.LITELLM_API_BASE:
+                config["api_base"] = settings.LITELLM_API_BASE
         if request_timeout:
             # bounds abandoned losing requests so they release their worker
             config["timeout"] = request_timeout
