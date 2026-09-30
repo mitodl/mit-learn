@@ -190,6 +190,60 @@ def test_get_request_ambiguous_identity_fails_closed(mocker, mock_login):
 
 
 @pytest.mark.django_db(transaction=True)
+@pytest.mark.parametrize("userinfo_create", [True, False])
+@pytest.mark.parametrize("legacy_email", [str, str.upper])
+def test_legacy_user_linked_with_update_disabled(
+    mocker, mock_login, settings, userinfo_create, legacy_email
+):
+    """
+    A legacy user matched by email (case-insensitively) gets its global_id set
+    even with userinfo updates disabled, and no other fields are synced.
+    """
+    close_old_connections()
+    settings.MITOL_APIGATEWAY_USERINFO_CREATE = userinfo_create
+    settings.MITOL_APIGATEWAY_USERINFO_UPDATE = False
+    user = UserFactory.create(
+        email=legacy_email(apisix_user_info["email"]),
+        global_id=None,
+        username="legacyuser",
+        first_name="legacy",
+    )
+    ApisixUserMiddleware(mocker.Mock()).process_request(
+        mocker.Mock(
+            META={"HTTP_X_USERINFO": b64encode(json.dumps(apisix_user_info).encode())},
+            user=AnonymousUser(),
+        )
+    )
+    mock_login.assert_called_once()
+    user.refresh_from_db()
+    assert user.global_id == apisix_user_info["sub"]
+    assert user.email == legacy_email(apisix_user_info["email"])
+    assert user.username == "legacyuser"
+    assert user.first_name == "legacy"
+    assert User.objects.count() == 1
+
+
+@pytest.mark.django_db(transaction=True)
+def test_ambiguous_legacy_email_match_fails_closed(mocker, mock_login, caplog):
+    """Legacy users whose emails differ only in case aren't linked or duplicated."""
+    close_old_connections()
+    legacy_users = [
+        UserFactory.create(email=apisix_user_info["email"], global_id=None),
+        UserFactory.create(email=apisix_user_info["email"].upper(), global_id=None),
+    ]
+    ApisixUserMiddleware(mocker.Mock()).process_request(
+        mocker.Mock(
+            META={"HTTP_X_USERINFO": b64encode(json.dumps(apisix_user_info).encode())},
+            user=AnonymousUser(),
+        )
+    )
+    mock_login.assert_not_called()
+    assert "ambiguous_apisix_identity" in caplog.text
+    assert User.objects.count() == len(legacy_users)
+    assert not User.objects.filter(global_id__isnull=False).exists()
+
+
+@pytest.mark.django_db(transaction=True)
 @pytest.mark.parametrize("same_user", [False, True])
 def test_get_request_different_user_logout(mocker, client, same_user):
     """Test that a request with mismatched users logs user out"""
