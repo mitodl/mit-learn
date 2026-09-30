@@ -15,6 +15,7 @@ export enum FeatureFlags {
   VideoPlaylistPage = "video-playlist-page",
   B2BContractManagerDashboard = "b2b-contract-manager-dashboard",
   B2BAnalyticsDashboard = "b2b-analytics-dashboard",
+  B2BLearnerAnalytics = "b2b-learner-analytics",
   Arithmix = "arithmix",
   Hacksnack = "hacksnack",
   AccountManagement = "account-management",

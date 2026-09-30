@@ -13,7 +13,9 @@ import {
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import { allowConsoleErrors } from "ol-test-utilities"
 import { ForbiddenError } from "@/common/errors"
+import { FeatureFlags } from "@/common/feature_flags"
 import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
+import { contractAnalyticsView } from "@/common/urls"
 import ContractLearnersPage from "./ContractLearnersPage"
 
 jest.mock("posthog-js/react", () => ({
@@ -45,6 +47,23 @@ const setup = () => {
     contracts: [contract],
     sso_organization_id: ORG_UUID,
   })
+  return { org, contract, orgSlug: org.slug.replace(/^org-/, "") }
+}
+
+/**
+ * A managed org with no analytics org ID, so the page renders its chrome
+ * without firing any analytics request — enough for the back link.
+ */
+const setupUnqueryable = () => {
+  const contract = mitxFactories.contracts.contract()
+  const org = mitxFactories.organizations.organization({
+    contracts: [contract],
+    sso_organization_id: null,
+  })
+  setMockResponse.get(
+    mitxUrls.organization.managerOrganizationsList(),
+    paginate([org]),
+  )
   return { org, contract, orgSlug: org.slug.replace(/^org-/, "") }
 }
 
@@ -107,7 +126,7 @@ describe("ContractLearnersPage", () => {
     )
   })
 
-  test("throws ForbiddenError when the analytics flag is off", () => {
+  test("throws ForbiddenError when the learner analytics flag is off", () => {
     mockedUseFeatureFlagEnabled.mockReturnValue(false)
     allowConsoleErrors()
 
@@ -116,6 +135,55 @@ describe("ContractLearnersPage", () => {
         <ContractLearnersPage orgSlug="acme" contractSlug="c1" />,
       ),
     ).toThrow(ForbiddenError)
+  })
+
+  test("the aggregate analytics flag alone does not open this page", () => {
+    // The two dashboards roll out independently: aggregate analytics must not
+    // confer access to per-learner data.
+    mockedUseFeatureFlagEnabled.mockImplementation(
+      (flag) => flag === FeatureFlags.B2BAnalyticsDashboard,
+    )
+    allowConsoleErrors()
+
+    expect(() =>
+      renderWithProviders(
+        <ContractLearnersPage orgSlug="acme" contractSlug="c1" />,
+      ),
+    ).toThrow(ForbiddenError)
+  })
+
+  test("the learner flag alone does not open this page", () => {
+    // Learner analytics is nested inside the analytics rollout: the back link
+    // and framing assume the aggregate page is reachable.
+    mockedUseFeatureFlagEnabled.mockImplementation(
+      (flag) => flag === FeatureFlags.B2BLearnerAnalytics,
+    )
+    allowConsoleErrors()
+
+    expect(() =>
+      renderWithProviders(
+        <ContractLearnersPage orgSlug="acme" contractSlug="c1" />,
+      ),
+    ).toThrow(ForbiddenError)
+  })
+
+  test("opens with both analytics flags on, linking back to aggregate analytics", async () => {
+    mockedUseFeatureFlagEnabled.mockImplementation(
+      (flag) =>
+        flag === FeatureFlags.B2BAnalyticsDashboard ||
+        flag === FeatureFlags.B2BLearnerAnalytics,
+    )
+    const { contract, orgSlug } = setupUnqueryable()
+
+    renderWithProviders(
+      <ContractLearnersPage orgSlug={orgSlug} contractSlug={contract.slug} />,
+    )
+
+    const back = await screen.findByRole("link", { name: /Program analytics/ })
+    expect(back).toHaveAttribute(
+      "href",
+      contractAnalyticsView(orgSlug, contract.slug),
+    )
   })
 
   test("denies access when the org is not one the user manages", async () => {
