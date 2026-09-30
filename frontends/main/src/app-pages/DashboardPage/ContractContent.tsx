@@ -1,6 +1,7 @@
 "use client"
 
-import React, { useEffect, useState } from "react"
+import React, { useEffect } from "react"
+import { useRouter } from "next-nprogress-bar"
 import Image from "next/image"
 import { useQuery } from "@tanstack/react-query"
 import {
@@ -36,6 +37,7 @@ import {
   contractAdminView,
   contractAnalyticsView,
   contractLearnersView,
+  DASHBOARD_HOME,
 } from "@/common/urls"
 import { ResourceType, getKey } from "./CoursewareDisplay/helpers"
 import type { DashboardCourseEntry } from "./CoursewareDisplay/model/dashboardViewModel"
@@ -621,19 +623,15 @@ const ContractContent: React.FC<ContractContentProps> = ({
     consentFlag === true &&
     !!b2bContract &&
     b2bContract.consented_to_data_sharing !== true
-  // Declining closes the dialog for this contract until the next page load.
-  const [declinedContractId, setDeclinedContractId] = useState<number | null>(
-    null,
-  )
+  const router = useRouter()
   const consentMutation = useDataConsentMutation({ meta: SILENCE_ERROR_TOAST })
   const submitConsent = (consented: boolean) => {
     if (!b2bContract) return
-    const contractId = b2bContract.id
     consentMutation.mutate(
-      { contract_id: contractId, DataConsentRequest: { consented } },
+      { contract_id: b2bContract.id, DataConsentRequest: { consented } },
       {
         onSuccess: () => {
-          if (!consented) setDeclinedContractId(contractId)
+          if (!consented) router.push(DASHBOARD_HOME)
         },
       },
     )
@@ -674,7 +672,7 @@ const ContractContent: React.FC<ContractContentProps> = ({
       />
       <DataConsentDialog
         key={b2bContract.id}
-        open={consentRequired && declinedContractId !== b2bContract.id}
+        open={consentRequired}
         contractName={b2bContract.name}
         onAccept={() => submitConsent(true)}
         onDecline={() => submitConsent(false)}
