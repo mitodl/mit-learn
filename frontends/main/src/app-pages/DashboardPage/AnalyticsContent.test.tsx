@@ -920,6 +920,29 @@ describe("AnalyticsContent, contract-scoped", () => {
     )
   })
 
+  test("hides 'Learner analytics' when its own flag is off", async () => {
+    // The learner page throws ForbiddenError without its flag, so the button
+    // would be a dead end.
+    mockedUseFeatureFlagEnabled.mockImplementation(
+      (flag) => flag !== FeatureFlags.B2BLearnerAnalytics,
+    )
+    const contract = factories.contracts.contract()
+    const org = orgWithUuid({ contracts: [contract] })
+    setManagerOrgs([org])
+
+    setContractAnalyticsResponses(String(contract.id))
+
+    const orgSlug = org.slug.replace(/^org-/, "")
+    renderWithProviders(
+      <AnalyticsContent orgSlug={orgSlug} contractSlug={contract.slug} />,
+    )
+
+    await screen.findByText(`Analytics · ${contract.name}`)
+    expect(
+      screen.queryByRole("link", { name: "Learner analytics" }),
+    ).not.toBeInTheDocument()
+  })
+
   test("hides 'Learner analytics' on the org-wide aggregate page", async () => {
     // learner-progress is contract-scoped only, so there is nowhere for this
     // button to point without a contract in view.

@@ -451,6 +451,9 @@ const ContractContentInternal: React.FC<ContractContentInternalProps> = ({
   const analyticsEnabled = useFeatureFlagEnabled(
     FeatureFlags.B2BAnalyticsDashboard,
   )
+  const learnerAnalyticsEnabled = useFeatureFlagEnabled(
+    FeatureFlags.B2BLearnerAnalytics,
+  )
   const { data: managerOrgs } = useQuery({
     ...managerOrganizationQueries.managerOrganizationsList(),
     enabled: managerDashboardFlag === true || analyticsEnabled === true,
@@ -512,7 +515,7 @@ const ContractContentInternal: React.FC<ContractContentInternalProps> = ({
                   View analytics
                 </ButtonLink>
               )}
-              {analyticsEnabled && (
+              {analyticsEnabled && learnerAnalyticsEnabled && (
                 <ButtonLink
                   size="small"
                   variant="bordered"
