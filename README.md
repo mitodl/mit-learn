@@ -108,24 +108,26 @@ MIT Learn uses [drf-spectacular](https://drf-spectacular.readthedocs.io/en/lates
 
 ## Committing & Formatting
 
-To ensure commits to GitHub are safe, first install [pre-commit](https://pre-commit.com/):
+To ensure commits to GitHub are safe, install [prek](https://prek.j178.dev/) from the lockfile:
 
-```
-pip install pre_commit
-pre-commit install
-```
-
-Running pre-commit can confirm your commit is safe to be pushed to GitHub and correctly formatted:
-
-```
-pre-commit run --all-files
+```bash
+uv sync
+uv run prek install -f
 ```
 
-To automatically install precommit hooks when cloning a repo, you can run this:
+`prek install -f` replaces any existing pre-commit git hook. Install the JavaScript dependencies with `yarn install --immutable` before running all checks:
 
+```bash
+uv run prek run --all-files
 ```
+
+The `prek` check runs these hooks on pull requests, and [autofix.ci](https://autofix.ci/) pushes any fixes they make.
+
+To automatically install prek hooks when cloning a repo, you can run this:
+
+```bash
 git config --global init.templateDir ~/.git-template
-pre-commit init-templatedir ~/.git-template
+uv run prek init-templatedir ~/.git-template
 ```
 
 ## Launching a Codespace
