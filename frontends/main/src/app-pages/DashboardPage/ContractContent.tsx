@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useEffect, useState } from "react"
+import React, { useEffect } from "react"
 import { useRouter } from "next-nprogress-bar"
 import Image from "next/image"
 import { useQuery } from "@tanstack/react-query"
@@ -22,11 +22,7 @@ import type {
   V3UserProgramEnrollment,
 } from "@mitodl/mitxonline-api-axios/v2"
 import { mitxUserQueries } from "api/mitxonline-hooks/user"
-import {
-  managerOrganizationQueries,
-  useDataConsentMutation,
-} from "api/mitxonline-hooks/organizations"
-import { SILENCE_ERROR_TOAST } from "api/mutation-meta"
+import { managerOrganizationQueries } from "api/mitxonline-hooks/organizations"
 import { ButtonLink } from "@mitodl/smoot-design"
 import { RiAwardFill } from "@remixicon/react"
 import { useFeatureFlagEnabled } from "posthog-js/react"
@@ -45,7 +41,7 @@ import { useContractDashboardData } from "./CoursewareDisplay/hooks/useContractD
 import UnstyledRawHTML from "@/components/UnstyledRawHTML/UnstyledRawHTML"
 import { VariantPicker } from "./CoursewareDisplay/VariantPicker"
 import { CoursewareCard } from "./CoursewareDisplay/CoursewareCard"
-import { DataConsentDialog } from "./DataConsentDialog"
+import { DataConsentPrompt } from "./DataConsentPrompt"
 
 const HeaderRoot = styled.div(({ theme }) => ({
   display: "flex",
@@ -624,23 +620,6 @@ const ContractContent: React.FC<ContractContentProps> = ({
     !!b2bContract &&
     b2bContract.consented_to_data_sharing !== true
   const router = useRouter()
-  // Keeps the dialog locked between a successful decline and the redirect.
-  const [redirecting, setRedirecting] = useState(false)
-  const consentMutation = useDataConsentMutation({ meta: SILENCE_ERROR_TOAST })
-  const submitConsent = (consented: boolean) => {
-    if (!b2bContract) return
-    consentMutation.mutate(
-      { contract_id: b2bContract.id, DataConsentRequest: { consented } },
-      {
-        onSuccess: () => {
-          if (!consented) {
-            setRedirecting(true)
-            router.push(DASHBOARD_HOME)
-          }
-        },
-      },
-    )
-  }
 
   useEffect(() => {
     if (b2bOrganization) {
@@ -675,22 +654,11 @@ const ContractContent: React.FC<ContractContentProps> = ({
         contract={b2bContract}
         cardsDisabled={consentRequired}
       />
-      <DataConsentDialog
+      <DataConsentPrompt
         key={b2bContract.id}
         open={consentRequired}
-        contractName={b2bContract.name}
-        onAccept={() => submitConsent(true)}
-        onDecline={() => submitConsent(false)}
-        submitting={
-          redirecting
-            ? "decline"
-            : consentMutation.isPending
-              ? consentMutation.variables?.DataConsentRequest.consented
-                ? "accept"
-                : "decline"
-              : null
-        }
-        isError={consentMutation.isError}
+        contract={b2bContract}
+        onDeclined={() => router.push(DASHBOARD_HOME)}
       />
     </>
   )
