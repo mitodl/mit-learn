@@ -837,7 +837,7 @@ class LearningResourceRun(TimestampedModel):
     learning_resource = models.ForeignKey(
         LearningResource, related_name="runs", on_delete=models.deletion.CASCADE
     )
-    run_id = models.CharField(max_length=128)
+    run_id = models.CharField(max_length=128, db_index=True)
     title = models.CharField(max_length=256)
     description = models.TextField(null=True, blank=True)  # noqa: DJ001
     full_description = models.TextField(null=True, blank=True)  # noqa: DJ001
