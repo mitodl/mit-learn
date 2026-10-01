@@ -611,7 +611,7 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
   const lastAnnounced = useRef<string | null>(null)
   useEffect(() => {
     if (isBusy || !rowsQuery.data) return
-    const key = `${statusFilter}:${debouncedSearch}`
+    const key = `${statusFilter}:${moduleFilter}:${debouncedSearch}`
     if (lastAnnounced.current === null) {
       lastAnnounced.current = key
       return
@@ -621,7 +621,14 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
     setAnnouncement(
       `${filteredCount} ${filteredCount === 1 ? "result" : "results"}`,
     )
-  }, [isBusy, rowsQuery.data, statusFilter, debouncedSearch, filteredCount])
+  }, [
+    isBusy,
+    rowsQuery.data,
+    statusFilter,
+    moduleFilter,
+    debouncedSearch,
+    filteredCount,
+  ])
 
   if (isLoadingOrgs) {
     return (
@@ -767,6 +774,15 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
                   size="medium"
                   value={moduleFilter}
                   options={moduleOptions}
+                  /**
+                   * Marked on the field rather than folded into
+                   * `hasLoadError`: the learner table is unaffected, and
+                   * swapping it for the page-level error would be a worse
+                   * failure than the dead dropdown. `error` is required for
+                   * `errorText` to render at all — see `FormFieldWrapper`.
+                   */
+                  error={courseRunsQuery.isError}
+                  errorText="Couldn't load modules. Reload to try again."
                   onChange={(event) =>
                     applyFilterChange(() =>
                       setModuleFilter(String(event.target.value)),

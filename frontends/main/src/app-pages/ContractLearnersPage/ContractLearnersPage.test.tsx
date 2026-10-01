@@ -657,6 +657,83 @@ describe("ContractLearnersPage", () => {
     )
   })
 
+  /**
+   * Covered separately from the request assertion above because the
+   * announcement is keyed on the active filters as one string: a module-only
+   * change that is missing from that key refetches the table and announces
+   * nothing, with no other symptom.
+   */
+  test("announces the result count when the module filter changes", async () => {
+    const { org, contract, orgSlug } = setup()
+    const contractId = String(contract.id)
+    setMockResponse.get(
+      mitxUrls.organization.managerOrganizationsList(),
+      paginate([org]),
+    )
+    mockTotal(contractId, 9)
+    mockCourseRuns(contractId)
+    mockList(contractId, [
+      analyticsFactories.learnerProgress({ full_name: "Unfiltered Learner" }),
+    ])
+    mockList(
+      contractId,
+      [analyticsFactories.learnerProgress({ full_name: "Module Six Learner" })],
+      { courserun_readable_id: "course-v1:MITx+M6+2026" },
+      { total_count: 4 },
+    )
+
+    renderWithProviders(
+      <ContractLearnersPage orgSlug={orgSlug} contractSlug={contract.slug} />,
+    )
+    await screen.findByText("Unfiltered Learner")
+
+    await user.click(await screen.findByRole("combobox", { name: /module/i }))
+    await user.click(
+      within(await screen.findByRole("listbox")).getByText("Module 6"),
+    )
+    await screen.findByText("Module Six Learner")
+
+    expect(document.querySelector('[aria-live="assertive"]')?.textContent).toBe(
+      "4 results",
+    )
+  })
+
+  test("marks the module filter when its options fail to load", async () => {
+    const { org, contract, orgSlug } = setup()
+    const contractId = String(contract.id)
+    setMockResponse.get(
+      mitxUrls.organization.managerOrganizationsList(),
+      paginate([org]),
+    )
+    mockTotal(contractId, 1)
+    mockList(contractId, [
+      analyticsFactories.learnerProgress({ full_name: "Anton Petrov" }),
+    ])
+    setMockResponse.get(
+      analyticsUrls.contracts.courseRuns(ORG_UUID, contractId, { limit: 1000 }),
+      "Internal Server Error",
+      { code: 500 },
+    )
+
+    renderWithProviders(
+      <ContractLearnersPage orgSlug={orgSlug} contractSlug={contract.slug} />,
+    )
+
+    await screen.findByText("Anton Petrov")
+    // The learner data loaded, so the page-level error must stay away.
+    expect(
+      screen.queryByText("Something went wrong loading learner data."),
+    ).not.toBeInTheDocument()
+
+    const message = screen.getByText(
+      "Couldn't load modules. Reload to try again.",
+    )
+    expect(screen.getByRole("combobox", { name: /module/i })).toHaveAttribute(
+      "aria-describedby",
+      expect.stringContaining(message.id),
+    )
+  })
+
   describe("the Last activity column", () => {
     const rowFor = async (
       overrides: Parameters<typeof analyticsFactories.learnerProgress>[0],
@@ -703,7 +780,17 @@ describe("ContractLearnersPage", () => {
         expect(within(row).getByText("Sep 30, 2026")).toBeInTheDocument()
         expect(within(row).queryByText("Sep 29, 2026")).not.toBeInTheDocument()
       } finally {
-        process.env.TZ = tz
+        /**
+         * Not a plain reassignment: `process.env` stringifies, so restoring an
+         * originally-unset `TZ` would store the literal "undefined", which
+         * Node reads as an invalid zone and resolves to UTC — leaving every
+         * later test in this worker in UTC rather than the host zone.
+         */
+        if (tz === undefined) {
+          delete process.env.TZ
+        } else {
+          process.env.TZ = tz
+        }
       }
     })
 
