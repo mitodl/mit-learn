@@ -672,9 +672,7 @@ def test_inferred_description_joins_a_formatted_subheading(staff_client):
         format="json",
     )
 
-    assert (
-        resp.json()["seo_description"] == "A complex article with various elements."
-    )
+    assert resp.json()["seo_description"] == "A complex article with various elements."
 
 
 def test_seo_override_wins_over_what_is_inferred(staff_client):
