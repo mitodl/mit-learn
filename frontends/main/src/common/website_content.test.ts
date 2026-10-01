@@ -1,10 +1,12 @@
 import { factories } from "api/test-utils"
-import { websiteContentSeo } from "./website_content"
+import {
+  extractWebsiteContentDescription,
+  websiteContentSeo,
+} from "./website_content"
 
 /**
- * A body shaped the way `extractWebsiteContentDescription` reads it: the
- * banner's second child's first text node. That is what the page head used
- * before the SEO fields existed, and what it falls back to now.
+ * A body shaped the way the banner is built: first child the heading, second
+ * the subheading. That subheading is what an SEO description falls back to.
  */
 const withBannerSubheading = (text: string) => ({
   type: "doc",
@@ -19,67 +21,60 @@ const withBannerSubheading = (text: string) => ({
   ],
 })
 
-const content = (overrides = {}) =>
-  factories.websiteContent.websiteContent({
-    title: "The content's own title",
-    content: withBannerSubheading("The opening of the body."),
-    ...overrides,
+describe("extractWebsiteContentDescription", () => {
+  /**
+   * Mirrored by `inferred_seo_description` in `website_content/utils.py`, which
+   * is what the API resolves with. This reads a document in hand instead, for
+   * the editor, so the two have to agree on where the subheading is.
+   */
+  test("reads the banner's subheading", () => {
+    expect(
+      extractWebsiteContentDescription({
+        content: withBannerSubheading("The line beneath it."),
+      }),
+    ).toBe("The line beneath it.")
   })
 
-describe("websiteContentSeo", () => {
-  test("the editor's overrides win where they are set", () => {
+  test("yields nothing for a body that is not that shape", () => {
     expect(
-      websiteContentSeo(
-        content({
-          seo_title: "A title written for search",
-          seo_description: "A description written for search.",
-        }),
-      ),
-    ).toEqual({
+      extractWebsiteContentDescription({
+        content: { type: "doc", content: [] },
+      }),
+    ).toBeUndefined()
+  })
+})
+
+/**
+ * The fallbacks live in the serializer now -- `seo_title` and
+ * `seo_description` arrive resolved -- so this only has to hand them on. It
+ * exists to keep the two routes reading the same two fields rather than each
+ * reaching into the payload.
+ */
+describe("websiteContentSeo", () => {
+  test("passes the resolved values through", () => {
+    const content = factories.websiteContent.websiteContent({
+      title: "The content's own title",
+      seo_title: "A title written for search",
+      seo_description: "A description written for search.",
+    })
+
+    expect(websiteContentSeo(content)).toEqual({
       title: "A title written for search",
       description: "A description written for search.",
     })
   })
 
   /**
-   * Blank, not null, is how an unset field arrives -- the serializer defaults
-   * both to `""` -- so the fallback has to be chosen on emptiness. Picking on
-   * `null` alone would emit an empty title, which is worse than the old
-   * behaviour rather than better than it.
+   * A blank description means the document had no subheading and nobody wrote
+   * one. `getMetadataAsync` substitutes its own default for `undefined`, and
+   * would emit an empty tag for `""` -- so the blank has to become absent here.
    */
-  test("blank falls back to the title and the body's opening", () => {
-    expect(websiteContentSeo(content())).toEqual({
-      title: "The content's own title",
-      description: "The opening of the body.",
+  test("turns a blank description into nothing at all", () => {
+    const content = factories.websiteContent.websiteContent({
+      seo_title: "Still has a title",
+      seo_description: "",
     })
-  })
 
-  test("the two fall back independently", () => {
-    expect(
-      websiteContentSeo(content({ seo_title: "Only the title is written" })),
-    ).toEqual({
-      title: "Only the title is written",
-      description: "The opening of the body.",
-    })
-    expect(
-      websiteContentSeo(content({ seo_description: "Only this is written." })),
-    ).toEqual({
-      title: "The content's own title",
-      description: "Only this is written.",
-    })
-  })
-
-  /**
-   * A body that is not the expected shape yields no description at all, which
-   * is what `getMetadataAsync` turns into its own default. An SEO description
-   * is the way out of that, so it must still be preferred here.
-   */
-  test("a body it cannot read leaves the description undefined", () => {
-    const unreadable = content({ content: { type: "doc", content: [] } })
-    expect(websiteContentSeo(unreadable).description).toBeUndefined()
-    expect(
-      websiteContentSeo({ ...unreadable, seo_description: "Written." })
-        .description,
-    ).toBe("Written.")
+    expect(websiteContentSeo(content).description).toBeUndefined()
   })
 })

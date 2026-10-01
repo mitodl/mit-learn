@@ -223,11 +223,11 @@ const topicsMessage = (
 }
 
 /**
- * What the SEO section says about itself, on the same three rules as topics.
+ * What the SEO section says about itself.
  *
- * Named for what is missing rather than "these fields are required": the
- * drawer opens on its own when a publish is held back, and the first thing
- * the author needs to know is why it did.
+ * "Missing" here means the resolved value is empty -- no override and nothing
+ * in the content to infer from -- not merely that the field is blank. A blank
+ * field is the ordinary case and says so: the content's own words are used.
  */
 const seoMessage = (
   contentLabel: string,
@@ -236,15 +236,14 @@ const seoMessage = (
   published: boolean,
 ) => {
   const noun = contentLabel.toLowerCase()
-  const always =
-    "Both should be unique to this page, and they are the first thing someone reads in search results."
+  const inferred = `Left blank, each one follows your ${noun} -- the title, and the line under the headline.`
   if (missing && published) {
-    return `A published ${noun} needs an SEO title and description. ${always}`
+    return `A published ${noun} needs an SEO title and description. ${inferred}`
   }
   if (missing && required) {
-    return `Add an SEO title and description to publish your ${noun}. ${always}`
+    return `Add an SEO title and description to publish your ${noun}. ${inferred}`
   }
-  return `Add an SEO title and description to help search engines understand and display your ${noun}. ${always}`
+  return `Override what search engines and link previews show for your ${noun}. ${inferred}`
 }
 
 /** Settings the drawer collects. Mirrors the fields in the design. */
@@ -309,6 +308,18 @@ export interface ArticleSettingsDrawerProps {
    */
   seoRequired?: boolean
   /**
+   * What each field resolves to when its override is blank, shown as the
+   * placeholder so the editor can see what will be used without typing it.
+   *
+   * Passed in rather than derived here because the editor has the live
+   * document: the title being typed into the banner right now, not the one the
+   * server last saw. Blank when the content has nothing to infer from -- an
+   * untitled draft, or a body with no subheading -- and the generic prompt is
+   * shown instead.
+   */
+  inferredSeoTitle?: string
+  inferredSeoDescription?: string
+  /**
    * Whether the content is already public, which is only a matter of wording:
    * which sentence a section shows when something it needs is missing. What is
    * required, and what the save refuses, does not depend on it.
@@ -333,6 +344,8 @@ const ArticleSettingsDrawer = ({
   showTopics = true,
   topicsRequired = false,
   seoRequired = false,
+  inferredSeoTitle = "",
+  inferredSeoDescription = "",
   contentIsPublished = false,
   initialValues,
   onSave,
@@ -353,11 +366,20 @@ const ArticleSettingsDrawer = ({
    * set yet. Missing, there is no suffix to reserve for.
    */
   /**
+   * What each field will actually produce: the override when there is one,
+   * otherwise whatever the content infers. This is what the counters measure
+   * and what the save is judged on -- a blank field is the ordinary case, not
+   * a missing value, so gating on the field itself would refuse every save
+   * that simply let the content speak for itself.
+   *
    * Whitespace does not count as provided: a space would satisfy a bare
    * emptiness check and reach the page head as a blank title, which is worse
-   * than the fallback it displaced.
+   * than the inference it displaced.
    */
-  const seoMissing = !seoTitle.trim() || !seoDescription.trim()
+  const resolvedSeoTitle = seoTitle.trim() || inferredSeoTitle.trim()
+  const resolvedSeoDescription =
+    seoDescription.trim() || inferredSeoDescription.trim()
+  const seoMissing = !resolvedSeoTitle || !resolvedSeoDescription
 
   const siteName = env("NEXT_PUBLIC_SITE_NAME")
   const titleSuffix = siteName ? ` | ${siteName}` : ""
@@ -660,7 +682,11 @@ const ArticleSettingsDrawer = ({
                 label="SEO Title"
                 fullWidth
                 required={seoRequired}
-                placeholder="Enter a title for search results"
+                /* What will be used if this is left alone. Only a prompt when
+                   there is nothing to infer from yet. */
+                placeholder={
+                  inferredSeoTitle || "Enter a title for search results"
+                }
                 /* The budget belongs in the description, not only in the
                    counter: otherwise it is discoverable only by being run
                    past. */
@@ -673,10 +699,12 @@ const ArticleSettingsDrawer = ({
                   every keystroke. */}
               <Counter
                 aria-live="polite"
-                overBudget={seoTitle.length > seoTitleBudget}
-                data-over-budget={seoTitle.length > seoTitleBudget}
+                overBudget={resolvedSeoTitle.length > seoTitleBudget}
+                data-over-budget={resolvedSeoTitle.length > seoTitleBudget}
               >
-                {`${seoTitle.length} / ${seoTitleBudget} characters`}
+                {/* The resolved value, not the field: what a search result
+                    will show is what is worth counting. */}
+                {`${resolvedSeoTitle.length} / ${seoTitleBudget} characters`}
               </Counter>
             </div>
             <div>
@@ -689,19 +717,24 @@ const ArticleSettingsDrawer = ({
                 /* Sized to the budget rather than to the space: nine rows read
                    as an invitation to write far more than will ever show. */
                 minRows={4}
-                placeholder={`Write a short description that summarizes your ${contentLabel.toLowerCase()} for search results.`}
+                placeholder={
+                  inferredSeoDescription ||
+                  `Write a short description that summarizes your ${contentLabel.toLowerCase()} for search results.`
+                }
                 helpText={`Aim for ${SEO_DESCRIPTION_BUDGET} characters or fewer. Only about 120 show on a phone, so put what matters first.`}
                 value={seoDescription}
                 onChange={(event) => setSeoDescription(event.target.value)}
               />
               <Counter
                 aria-live="polite"
-                overBudget={seoDescription.length > SEO_DESCRIPTION_BUDGET}
+                overBudget={
+                  resolvedSeoDescription.length > SEO_DESCRIPTION_BUDGET
+                }
                 data-over-budget={
-                  seoDescription.length > SEO_DESCRIPTION_BUDGET
+                  resolvedSeoDescription.length > SEO_DESCRIPTION_BUDGET
                 }
               >
-                {`${seoDescription.length} / ${SEO_DESCRIPTION_BUDGET} characters`}
+                {`${resolvedSeoDescription.length} / ${SEO_DESCRIPTION_BUDGET} characters`}
               </Counter>
             </div>
           </SeoSection>

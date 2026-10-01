@@ -30,7 +30,10 @@ const mockTopics = () => {
   return { topic, subA, subB }
 }
 
-const renderDrawer = (topics?: number[]) => {
+const renderDrawer = (
+  topics?: number[],
+  props: Partial<React.ComponentProps<typeof ArticleSettingsDrawer>> = {},
+) => {
   const onSave = jest.fn()
   renderWithProviders(
     <ArticleSettingsDrawer
@@ -38,6 +41,7 @@ const renderDrawer = (topics?: number[]) => {
       onClose={jest.fn()}
       onSave={onSave}
       initialValues={topics ? { topics } : undefined}
+      {...props}
     />,
   )
   return { onSave }
@@ -230,6 +234,105 @@ describe("ArticleSettingsDrawer SEO fields", () => {
    * the save still goes through -- what it must not do is look like nothing
    * happened.
    */
+  /**
+   * The inferred value is a placeholder rather than text in the field, which
+   * is what keeps "unset" apart from "set to the same words". Pre-filling it
+   * would make the next save store it as an override, and the field would stop
+   * following the content -- the opposite of what inferring it is for.
+   */
+  test("shows what will be used as a placeholder, not as a value", async () => {
+    mockTopics()
+    renderDrawer(undefined, {
+      inferredSeoTitle: "The content's own title",
+      inferredSeoDescription: "The line under the headline.",
+    })
+
+    const title = await screen.findByLabelText(/^SEO Title/)
+    expect(title).toHaveValue("")
+    expect(title).toHaveAttribute("placeholder", "The content's own title")
+
+    const description = screen.getByLabelText(/^SEO Description/)
+    expect(description).toHaveValue("")
+    expect(description).toHaveAttribute(
+      "placeholder",
+      "The line under the headline.",
+    )
+  })
+
+  test("an override is shown as the value, displacing the placeholder", async () => {
+    mockTopics()
+    renderDrawer(undefined, {
+      inferredSeoTitle: "The content's own title",
+      initialValues: { seoTitle: "Written for search" },
+    })
+
+    expect(await screen.findByLabelText(/^SEO Title/)).toHaveValue(
+      "Written for search",
+    )
+  })
+
+  test("saving with nothing typed overrides nothing", async () => {
+    mockTopics()
+    const { onSave } = renderDrawer(undefined, {
+      inferredSeoTitle: "The content's own title",
+      inferredSeoDescription: "The line under the headline.",
+    })
+
+    await save()
+
+    /* Blank is what hands the fields back to the content. */
+    expect(onSave.mock.calls[0][0]).toMatchObject({
+      seoTitle: "",
+      seoDescription: "",
+    })
+  })
+
+  /**
+   * The counter measures what a search result will show, which is the inferred
+   * value while the field is blank -- counting the empty field instead would
+   * read "0 / 48" under a placeholder that is plainly longer than that.
+   */
+  test("the counter measures the resolved value, not the field", async () => {
+    mockTopics()
+    renderDrawer(undefined, { inferredSeoTitle: "Twelve chars" })
+
+    await screen.findByText("12 / 48 characters")
+  })
+
+  test("the save is refused only when nothing resolves", async () => {
+    mockTopics()
+    renderDrawer(undefined, {
+      seoRequired: true,
+      inferredSeoTitle: "The content's own title",
+      inferredSeoDescription: "",
+    })
+
+    /* The title resolves; the description has nowhere to come from. */
+    const saveButton = await screen.findByRole("button", {
+      name: "Save Settings",
+    })
+    expect(saveButton).toBeDisabled()
+
+    await userEvent.type(
+      screen.getByLabelText(/^SEO Description/),
+      "Written for search.",
+    )
+    expect(saveButton).toBeEnabled()
+  }, 20000)
+
+  test("a required field that resolves is not refused", async () => {
+    mockTopics()
+    renderDrawer(undefined, {
+      seoRequired: true,
+      inferredSeoTitle: "The content's own title",
+      inferredSeoDescription: "The line under the headline.",
+    })
+
+    expect(
+      await screen.findByRole("button", { name: "Save Settings" }),
+    ).toBeEnabled()
+  })
+
   test("going over the title budget is flagged but not prevented", async () => {
     mockTopics()
     const { onSave } = renderDrawer()

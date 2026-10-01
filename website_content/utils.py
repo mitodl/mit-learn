@@ -154,3 +154,53 @@ def extract_text_from_content(content_json: dict | None) -> str:
     # split() on the joined text collapses the block separators above, along
     # with any newlines or runs of spaces inside the text itself.
     return " ".join("".join(parts).split())
+
+
+def inferred_seo_title(title: str | None) -> str:
+    """
+    Infer what a search result should say when no SEO title is set.
+
+    The content's own title, which is what makes the common case work without
+    anyone filling a field in: rename the article and the search title follows.
+
+    Args:
+        title: the WebsiteContent title.
+
+    Returns:
+        str: the title, or "" if there is none to infer from.
+    """
+    return (title or "").strip()
+
+
+def inferred_seo_description(content_json: dict | None) -> str:
+    """
+    Infer what a search result should say when no SEO description is set.
+
+    The banner's subheading -- the line under the headline -- which is the one
+    piece of the body written as a summary. Deliberately not
+    `extract_text_from_content`: the whole flattened document is far longer than
+    a meta description shows, so it would be cut mid-sentence.
+
+    Positional, because that is how the banner is built: its first child is the
+    heading and its second the subheading. Mirrored on the frontend by
+    `extractWebsiteContentDescription` in `common/website_content.ts`, which
+    reads the live document while the editor is open -- the two have to agree,
+    so a change to the banner's shape has to land in both.
+
+    Args:
+        content_json: The JSON content from a WebsiteContent record.
+
+    Returns:
+        str: the subheading's text, or "" if the content is not that shape.
+    """
+    if not content_json:
+        return ""
+    banner = (content_json.get("content") or [None])[0] or {}
+    children = banner.get("content") or []
+    if len(children) < 2:  # noqa: PLR2004
+        return ""
+    subheading = children[1] or {}
+    text_nodes = subheading.get("content") or []
+    if not text_nodes:
+        return ""
+    return (text_nodes[0] or {}).get("text", "").strip()

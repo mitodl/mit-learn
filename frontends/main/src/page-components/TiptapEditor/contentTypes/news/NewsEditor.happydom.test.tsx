@@ -65,11 +65,14 @@ describe("NewsEditor - Content Editing and Saving", () => {
       title,
       content,
       is_published: false,
-      /* These tests are about saving content, and publishing insists on an
-         SEO title and description -- without them the press opens the
-         settings drawer instead, which is covered on its own below. */
-      seo_title: "A title for search",
-      seo_description: "A description for search results.",
+      /**
+       * These tests are about saving content, and each passes its own `content`
+       * whose banner subheading is empty -- so there is nothing to infer a
+       * description from and publishing would stop to ask. An override settles
+       * it. The editor reads the override, not the resolved field, because it
+       * infers from the document it is holding rather than the saved one.
+       */
+      seo_description_override: "A description for search results.",
     })
     setMockResponse.get(urls.websiteContent.details(articleId), newsItem)
 
@@ -1857,8 +1860,8 @@ describe("NewsEditor - shared content controls", () => {
         expect.objectContaining({
           method: "patch",
           body: {
-            seo_title: "News for search",
-            seo_description: "What this is about.",
+            seo_title_override: "News for search",
+            seo_description_override: "What this is about.",
           },
         }),
       )
@@ -1949,8 +1952,8 @@ describe("NewsEditor - shared content controls", () => {
           method: "patch",
           body: expect.objectContaining({
             is_published: true,
-            seo_title: "What MIT built this week",
-            seo_description: "A short summary for search results.",
+            seo_title_override: "What MIT built this week",
+            seo_description_override: "A short summary for search results.",
           }),
         }),
       )

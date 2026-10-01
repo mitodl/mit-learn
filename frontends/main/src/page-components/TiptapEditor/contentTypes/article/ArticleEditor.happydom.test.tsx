@@ -42,19 +42,47 @@ const content: JSONContent = {
   ],
 }
 
+/** The same document, with the banner's subheading filled in. */
+const withSubheading = (text: string): JSONContent => ({
+  ...content,
+  content: [
+    {
+      type: "banner",
+      content: [
+        {
+          type: "heading",
+          attrs: { level: 1 },
+          content: [{ type: "text", text: "Article Title" }],
+        },
+        { type: "paragraph", content: [{ type: "text", text }] },
+      ],
+    },
+    { type: "byline" },
+    { type: "paragraph", content: [] },
+  ],
+})
+
 const renderArticleEditor = ({
   readOnly = false,
   isPublished = false,
   topics = [],
-  seoTitle = "",
-  seoDescription = "",
+  seoTitleOverride = "",
+  seoDescriptionOverride = "",
+  subheading = "",
   autosaveDelayMs = AUTOSAVE_OFF,
 }: {
   readOnly?: boolean
   isPublished?: boolean
   topics?: number[]
-  seoTitle?: string
-  seoDescription?: string
+  seoTitleOverride?: string
+  seoDescriptionOverride?: string
+  /**
+   * The banner's subheading, which is what an SEO description falls back to.
+   * Blank by default, matching `content` below -- so an article with neither
+   * an override nor a subheading has no description to resolve, which is the
+   * one case publishing still has to ask about.
+   */
+  subheading?: string
   autosaveDelayMs?: number
 } = {}) => {
   const user = factories.user.user({
@@ -63,11 +91,14 @@ const renderArticleEditor = ({
   })
   setMockResponse.get(urls.userMe.get(), user)
   const article = factories.websiteContent.websiteContent({
-    content,
+    content: subheading ? withSubheading(subheading) : content,
     is_published: isPublished,
     topics,
-    seo_title: seoTitle,
-    seo_description: seoDescription,
+    seo_title_override: seoTitleOverride,
+    seo_description_override: seoDescriptionOverride,
+    /* As the serializer resolves them: the override, else the content. */
+    seo_title: seoTitleOverride || "Article Title",
+    seo_description: seoDescriptionOverride || subheading,
   })
   renderWithProviders(
     <ArticleEditor
@@ -242,8 +273,7 @@ describe("ArticleEditor settings", () => {
     /* The SEO fields are required too, so they arrive already written -- this
        test is about what the save sends, not about the requirement. */
     const { article } = renderArticleEditor({
-      seoTitle: "A title for search",
-      seoDescription: "A description for search results.",
+      subheading: "The line under the headline.",
     })
     setMockResponse.patch(urls.websiteContent.details(article.id), article)
 
@@ -265,8 +295,8 @@ describe("ArticleEditor settings", () => {
           method: "patch",
           body: {
             topics: [topic.id],
-            seo_title: "A title for search",
-            seo_description: "A description for search results.",
+            seo_title_override: "",
+            seo_description_override: "",
           },
         }),
       )
@@ -301,8 +331,8 @@ describe("ArticleEditor settings", () => {
           method: "patch",
           body: {
             topics: [7],
-            seo_title: "A better title for search",
-            seo_description: "What this is about.",
+            seo_title_override: "A better title for search",
+            seo_description_override: "What this is about.",
           },
         }),
       )
@@ -315,8 +345,8 @@ describe("ArticleEditor settings", () => {
       factories.learningResources.topics({ count: 1 }),
     )
     renderArticleEditor({
-      seoTitle: "Stored title",
-      seoDescription: "Stored description",
+      seoTitleOverride: "Stored title",
+      seoDescriptionOverride: "Stored description",
     })
 
     await userEvent.click(
@@ -361,8 +391,12 @@ const renderPublishableArticle = (
 ) =>
   renderArticleEditor({
     topics: [7],
-    seoTitle: "A title for search",
-    seoDescription: "A description for search results.",
+    /**
+     * The SEO title resolves from the content's own title with no help, but a
+     * description has to come from somewhere -- so this gives the banner a
+     * subheading, which is the ordinary way an article has one.
+     */
+    subheading: "The line under the headline.",
     ...options,
   })
 
@@ -513,8 +547,7 @@ describe("ArticleEditor topics requirement", () => {
     mockTopics()
     /* SEO supplied, so topics are the only thing that can hold the press. */
     renderArticleEditor({
-      seoTitle: "A title for search",
-      seoDescription: "A description for search results.",
+      subheading: "The line under the headline.",
     })
 
     await userEvent.click(
@@ -563,8 +596,7 @@ describe("ArticleEditor topics requirement", () => {
   test("the held-back publish resumes once a topic is picked", async () => {
     const topic = mockTopics()
     const { article } = renderArticleEditor({
-      seoTitle: "A title for search",
-      seoDescription: "A description for search results.",
+      subheading: "The line under the headline.",
     })
     setMockResponse.patch(urls.websiteContent.details(article.id), {
       ...article,
@@ -608,8 +640,7 @@ describe("ArticleEditor topics requirement", () => {
     setMockResponse.get(urls.topics.list({ limit: 1000 }), topics)
     const { article } = renderArticleEditor({
       topics: [topic.id],
-      seoTitle: "A title for search",
-      seoDescription: "A description for search results.",
+      subheading: "The line under the headline.",
     })
     setMockResponse.patch(urls.websiteContent.details(article.id), article)
 
@@ -663,8 +694,7 @@ describe("ArticleEditor topics requirement", () => {
   test("closing the drawer abandons the held-back publish", async () => {
     const topic = mockTopics()
     const { article } = renderArticleEditor({
-      seoTitle: "A title for search",
-      seoDescription: "A description for search results.",
+      subheading: "The line under the headline.",
     })
     setMockResponse.patch(urls.websiteContent.details(article.id), article)
 
@@ -691,8 +721,8 @@ describe("ArticleEditor topics requirement", () => {
           method: "patch",
           body: {
             topics: [topic.id],
-            seo_title: "A title for search",
-            seo_description: "A description for search results.",
+            seo_title_override: "",
+            seo_description_override: "",
           },
         }),
       )
@@ -720,12 +750,17 @@ describe("ArticleEditor SEO requirement", () => {
     )
   }
 
-  /** Topics supplied, so the SEO fields are the only thing left missing. */
+  /**
+   * Topics supplied, and no subheading -- so the SEO description is the only
+   * thing publishing can still be waiting on. The title is never missing: it
+   * resolves from the content's own title, which is the whole point of
+   * inferring it.
+   */
   const renderTopicalArticle = (
     options: Parameters<typeof renderArticleEditor>[0] = {},
   ) => renderArticleEditor({ topics: [7], ...options })
 
-  test("publishing without them asks for them instead", async () => {
+  test("publishing with nothing to infer a description from asks for one", async () => {
     mockTopics()
     renderTopicalArticle()
 
@@ -747,37 +782,55 @@ describe("ArticleEditor SEO requirement", () => {
     )
   })
 
-  test("a description without a title is not enough", async () => {
+  /**
+   * The common case, and the one worth protecting: nobody has filled anything
+   * in, and publishing goes ahead on the content's own words.
+   */
+  test("publishing goes ahead on what the content infers", async () => {
     mockTopics()
-    renderTopicalArticle({ seoDescription: "A description for search." })
-
-    await userEvent.click(
-      await screen.findByRole("button", { name: "Publish" }),
-    )
-
-    await screen.findByRole("heading", { name: "Article Settings" })
-    expect(
-      screen.queryByRole("heading", { name: "Publish article" }),
-    ).not.toBeInTheDocument()
-  })
-
-  test("whitespace does not pass for a title", async () => {
-    mockTopics()
-    renderTopicalArticle({
-      seoTitle: "   ",
-      seoDescription: "A description for search.",
+    const { article } = renderTopicalArticle({
+      subheading: "The line under the headline.",
+    })
+    setMockResponse.patch(urls.websiteContent.details(article.id), {
+      ...article,
+      is_published: true,
     })
 
     await userEvent.click(
       await screen.findByRole("button", { name: "Publish" }),
     )
 
-    /* A space would satisfy a bare emptiness check and reach the page head as
-       a blank title -- worse than the fallback it displaced. */
-    await screen.findByRole("heading", { name: "Article Settings" })
+    // Straight to the confirmation -- no drawer, nothing to ask for.
+    await screen.findByRole("heading", { name: "Publish article" })
+    expect(
+      screen.queryByRole("heading", { name: "Article Settings" }),
+    ).not.toBeInTheDocument()
   })
 
-  test("the held-back publish resumes once both are written", async () => {
+  test("whitespace is not an override, so inference still applies", async () => {
+    mockTopics()
+    const { article } = renderTopicalArticle({
+      seoTitleOverride: "   ",
+      subheading: "The line under the headline.",
+    })
+    setMockResponse.patch(urls.websiteContent.details(article.id), {
+      ...article,
+      is_published: true,
+    })
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Publish" }),
+    )
+
+    /**
+     * A space is not something somebody wrote for search, so it does not
+     * displace the title -- and it does not block the publish either, which it
+     * would if emptiness were judged on the override alone.
+     */
+    await screen.findByRole("heading", { name: "Publish article" })
+  })
+
+  test("the held-back publish resumes once a description is written", async () => {
     mockTopics()
     const { article } = renderTopicalArticle()
     setMockResponse.patch(urls.websiteContent.details(article.id), {
@@ -791,11 +844,7 @@ describe("ArticleEditor SEO requirement", () => {
     await screen.findByRole("heading", { name: "Article Settings" })
 
     await userEvent.type(
-      await screen.findByLabelText(/^SEO Title/),
-      "A title for search",
-    )
-    await userEvent.type(
-      screen.getByLabelText(/^SEO Description/),
+      await screen.findByLabelText(/^SEO Description/),
       "A description for search results.",
     )
     await userEvent.click(screen.getByRole("button", { name: "Save Settings" }))
@@ -805,14 +854,18 @@ describe("ArticleEditor SEO requirement", () => {
       await screen.findByRole("button", { name: "Yes, Publish article" }),
     )
 
+    /**
+     * Only the description was written, so only it is stored -- the title is
+     * still the content's, and still following it.
+     */
     await waitFor(() => {
       expect(makeRequest).toHaveBeenCalledWith(
         expect.objectContaining({
           method: "patch",
           body: expect.objectContaining({
             is_published: true,
-            seo_title: "A title for search",
-            seo_description: "A description for search results.",
+            seo_title_override: "",
+            seo_description_override: "A description for search results.",
           }),
         }),
       )
@@ -833,30 +886,64 @@ describe("ArticleEditor SEO requirement", () => {
     )
     await screen.findByRole("heading", { name: "Article Settings" })
 
+    /* The description is what is missing; the title resolves on its own. */
     expect(screen.getByRole("button", { name: "Save Settings" })).toBeDisabled()
 
     await userEvent.type(
-      await screen.findByLabelText(/^SEO Title/),
-      "A title for search",
-    )
-    /* Still only one of the two. */
-    expect(screen.getByRole("button", { name: "Save Settings" })).toBeDisabled()
-
-    await userEvent.type(
-      screen.getByLabelText(/^SEO Description/),
+      await screen.findByLabelText(/^SEO Description/),
       "A description.",
     )
     expect(screen.getByRole("button", { name: "Save Settings" })).toBeEnabled()
   }, 30000)
 
-  test("a published article may not have them emptied", async () => {
+  /**
+   * Clearing an override is how an editor goes back to the content's own
+   * words, so it has to be allowed -- the save is only refused when there is
+   * nothing left to fall back to.
+   */
+  test("clearing an override is allowed, and hands the field back", async () => {
     mockTopics()
-    renderPublishableArticle({ isPublished: true })
+    const { article } = renderPublishableArticle({
+      isPublished: true,
+      seoTitleOverride: "Something written for search",
+    })
+    setMockResponse.patch(urls.websiteContent.details(article.id), article)
 
     await userEvent.click(
       await screen.findByRole("button", { name: "Settings" }),
     )
-    await userEvent.clear(await screen.findByLabelText(/^SEO Title/))
+    const field = await screen.findByLabelText(/^SEO Title/)
+    expect(field).toHaveValue("Something written for search")
+
+    await userEvent.clear(field)
+
+    // The content's own title is what will be used, and is shown as such.
+    expect(field).toHaveAttribute("placeholder", "Article Title")
+    await userEvent.click(screen.getByRole("button", { name: "Save Settings" }))
+
+    await waitFor(() => {
+      expect(makeRequest).toHaveBeenCalledWith(
+        expect.objectContaining({
+          method: "patch",
+          body: expect.objectContaining({ seo_title_override: "" }),
+        }),
+      )
+    })
+  }, 30000)
+
+  test("a published article may not be left with nothing to show", async () => {
+    mockTopics()
+    /* No subheading, so clearing the description override empties it. */
+    renderArticleEditor({
+      isPublished: true,
+      topics: [7],
+      seoDescriptionOverride: "A description for search.",
+    })
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Settings" }),
+    )
+    await userEvent.clear(await screen.findByLabelText(/^SEO Description/))
 
     expect(screen.getByRole("button", { name: "Save Settings" })).toBeDisabled()
     await screen.findByText(
@@ -864,7 +951,7 @@ describe("ArticleEditor SEO requirement", () => {
     )
   }, 20000)
 
-  test("a draft's settings cannot be saved without them", async () => {
+  test("a draft with nothing to infer from cannot save its settings", async () => {
     mockTopics()
     renderArticleEditor({ topics: [7] })
 
@@ -873,18 +960,46 @@ describe("ArticleEditor SEO requirement", () => {
     )
 
     /**
-     * Refused on a draft too, not only once it is public: the fields are
-     * marked required and the section says so, so a save that went through
-     * anyway would contradict both.
+     * Refused on a draft too, not only once it is public -- but only because
+     * this document has no subheading, so the description resolves to nothing
+     * at all. An ordinary article saves its settings untouched.
      *
-     * The draft's *content* is unaffected -- autosave keeps writing it, and
-     * only the drawer's own settings wait here.
+     * The draft's *content* is unaffected: autosave keeps writing it, and only
+     * the drawer's own settings wait here.
      */
     await screen.findByRole("heading", { name: "Article Settings" })
     expect(screen.getByRole("button", { name: "Save Settings" })).toBeDisabled()
     expect(makeRequest).not.toHaveBeenCalledWith(
       expect.objectContaining({ method: "patch" }),
     )
+  })
+
+  test("a draft whose content infers both saves its settings untouched", async () => {
+    mockTopics()
+    const { article } = renderArticleEditor({
+      topics: [7],
+      subheading: "The line under the headline.",
+    })
+    setMockResponse.patch(urls.websiteContent.details(article.id), article)
+
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Settings" }),
+    )
+    await userEvent.click(screen.getByRole("button", { name: "Save Settings" }))
+
+    /* Nothing typed, so nothing overridden -- and that is a valid save. */
+    await waitFor(() => {
+      expect(makeRequest).toHaveBeenCalledWith(
+        expect.objectContaining({
+          method: "patch",
+          body: {
+            topics: [7],
+            seo_title_override: "",
+            seo_description_override: "",
+          },
+        }),
+      )
+    })
   })
 })
 
@@ -1046,8 +1161,7 @@ describe("ArticleEditor autosave", () => {
     const { article } = renderArticleEditor({
       autosaveDelayMs: AUTOSAVE_DELAY_MS,
       /* Required to save the drawer, and not what this test is about. */
-      seoTitle: "A title for search",
-      seoDescription: "A description for search results.",
+      subheading: "The line under the headline.",
     })
 
     let contentWriteFinished = false
