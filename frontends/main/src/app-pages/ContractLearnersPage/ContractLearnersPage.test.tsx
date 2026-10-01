@@ -652,6 +652,9 @@ describe("ContractLearnersPage", () => {
     )
 
     await screen.findByText("Module Six Learner")
+    expect(screen.getByRole("combobox", { name: /module/i })).toHaveTextContent(
+      "Module 6",
+    )
   })
 
   describe("the Last activity column", () => {

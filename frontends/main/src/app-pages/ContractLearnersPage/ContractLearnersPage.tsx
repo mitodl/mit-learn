@@ -180,9 +180,8 @@ const FilterField = styled(SimpleSelectField)(({ theme }) => ({
   /**
    * Fixed, not `minWidth`: a content-sized select changes width with whatever
    * is selected, so picking a long module title reflowed the whole controls
-   * row. MUI already truncates the value with an ellipsis — that only takes
-   * effect once the box stops growing to fit. The full title stays in the DOM
-   * (so it is still announced) and in the open listbox.
+   * row. `FilterSelect` ellipsizes whatever does not fit; the full title
+   * stays in the DOM (so it is still announced) and in the open listbox.
    *
    * Not sized to the longest option either: module titles reach ~50
    * characters, which would leave a control wide enough to crowd out the
@@ -198,6 +197,35 @@ const FilterField = styled(SimpleSelectField)(({ theme }) => ({
     },
   },
 }))
+
+const SelectedValue = styled.span({
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  whiteSpace: "nowrap",
+})
+
+/**
+ * Renders the selected label into an element of its own. MUI ellipsizes the
+ * value for you, but smoot-design lays that value box out as a flex
+ * container, and `text-overflow` never applies to the anonymous flex item a
+ * bare text node becomes — nor can that item shrink below its min-content
+ * width, so a long module title ran under the chevron and stopped flat at
+ * the border instead of trailing off.
+ */
+const FilterSelect: React.FC<React.ComponentProps<typeof FilterField>> = ({
+  options,
+  ...props
+}) => (
+  <FilterField
+    options={options}
+    {...props}
+    renderValue={(value) => (
+      <SelectedValue>
+        {options.find((option) => option.value === value)?.label}
+      </SelectedValue>
+    )}
+  />
+)
 
 const ConsentNotice = styled(Typography)(({ theme }) => ({
   ...theme.typography.body3,
@@ -723,7 +751,7 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
                   onClear={() => applyFilterChange(() => setSearchQuery(""))}
                   onSubmit={() => {}}
                 />
-                <FilterField
+                <FilterSelect
                   label="Status"
                   size="medium"
                   value={statusFilter}
@@ -734,7 +762,7 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
                     )
                   }
                 />
-                <FilterField
+                <FilterSelect
                   label="Module"
                   size="medium"
                   value={moduleFilter}
