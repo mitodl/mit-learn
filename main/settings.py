@@ -36,7 +36,7 @@ from main.settings_course_etl import *  # noqa: F403
 from main.settings_pluggy import *  # noqa: F403
 from openapi.settings_spectacular import open_spectacular_settings
 
-VERSION = "0.80.18"
+VERSION = "0.81.4"
 
 log = logging.getLogger()
 
@@ -147,7 +147,10 @@ INSTALLED_APPS = (
     "health_check",
 )
 
-WEBHOOK_SECRET = get_string("WEBHOOK_SECRET", "please-change-this")
+WEBHOOK_SECRET = get_string("WEBHOOK_SECRET", None)
+if not WEBHOOK_SECRET or WEBHOOK_SECRET == "please-change-this":  # noqa: S105
+    msg = "WEBHOOK_SECRET is not set to a non-default value"
+    raise ImproperlyConfigured(msg)
 
 if not get_bool("RUN_DATA_MIGRATIONS", default=False):
     MIGRATION_MODULES = {"data_fixtures": None}
@@ -693,9 +696,6 @@ USE_X_FORWARDED_HOST = get_bool("USE_X_FORWARDED_HOST", False)  # noqa: FBT003
 # Guardian
 # disable the anonymous user creation
 ANONYMOUS_USER_NAME = None
-
-# Widgets
-WIDGETS_RSS_CACHE_TTL = get_int("WIDGETS_RSS_CACHE_TTL", 15 * 60)
 
 # x509 filenames
 MIT_WS_CERTIFICATE_FILE = os.path.join(STATIC_ROOT, "mit_x509.cert")  # noqa: PTH118

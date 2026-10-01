@@ -165,7 +165,11 @@ const LearningResourceListCard: React.FC<LearningResourceListCardProps> = ({
   onClick,
   headingLevel = 6,
 }) => {
-  const { src: imageSrc, onError: onImageError } = useImageWithFallback(
+  const {
+    src: imageSrc,
+    unoptimized: imageUnoptimized,
+    onError: onImageError,
+  } = useImageWithFallback(
     resource?.image?.url ??
       (resource ? resourceContentFilesImageSrc(resource) : null),
     DEFAULT_RESOURCE_IMG,
@@ -228,6 +232,7 @@ const LearningResourceListCard: React.FC<LearningResourceListCardProps> = ({
       imageSrc={imageSrc}
       imageAlt={resource.image?.alt ?? ""}
       onImageError={onImageError}
+      imageUnoptimized={imageUnoptimized}
       title={resource.title}
       parentCourseName={formattedParentCourseName(resource)}
       resourceType={resource.resource_category}

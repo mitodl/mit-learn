@@ -21,7 +21,7 @@ from opensearchpy.exceptions import NotFoundError, RequestError
 from requests.models import PreparedRequest
 
 from learning_resources.constants import LearningResourceType
-from learning_resources.etl.constants import RESOURCE_FILE_ETL_SOURCES
+from learning_resources.etl.constants import REINDEX_CONTENT_FILE_ETL_SOURCES
 from learning_resources.models import (
     ContentFile,
     Course,
@@ -698,7 +698,9 @@ def _build_reindex_batches(job):  # noqa: C901, PLR0912
                     Q(learning_resource__published=True)
                     | Q(learning_resource__test_mode=True)
                 )
-                .filter(learning_resource__etl_source__in=RESOURCE_FILE_ETL_SOURCES)
+                .filter(
+                    learning_resource__etl_source__in=REINDEX_CONTENT_FILE_ETL_SOURCES
+                )
                 .exclude(learning_resource__readable_id__in=blocklisted_ids)
                 .order_by("learning_resource_id")
                 .values_list("learning_resource_id", flat=True),
@@ -1145,7 +1147,7 @@ def get_update_resource_files_tasks(blocklisted_ids, etl_source):
         etl_source(str): ETL source filter for the task
     """
 
-    if etl_source is None or etl_source in RESOURCE_FILE_ETL_SOURCES:
+    if etl_source is None or etl_source in REINDEX_CONTENT_FILE_ETL_SOURCES:
         course_update_query = (
             LearningResource.objects.filter(resource_type=COURSE_TYPE)
             .filter(Q(published=True) | Q(test_mode=True))
@@ -1157,7 +1159,7 @@ def get_update_resource_files_tasks(blocklisted_ids, etl_source):
             course_update_query = course_update_query.filter(etl_source=etl_source)
         else:
             course_update_query = course_update_query.filter(
-                etl_source__in=RESOURCE_FILE_ETL_SOURCES
+                etl_source__in=REINDEX_CONTENT_FILE_ETL_SOURCES
             )
 
         return [
@@ -1176,7 +1178,7 @@ def get_update_program_files_tasks(etl_source):
     Args:
         etl_source(str): ETL source filter for the task
     """
-    if etl_source is not None and etl_source not in RESOURCE_FILE_ETL_SOURCES:
+    if etl_source is not None and etl_source not in REINDEX_CONTENT_FILE_ETL_SOURCES:
         return []
 
     program_update_query = (
@@ -1189,7 +1191,7 @@ def get_update_program_files_tasks(etl_source):
         program_update_query = program_update_query.filter(etl_source=etl_source)
     else:
         program_update_query = program_update_query.filter(
-            etl_source__in=RESOURCE_FILE_ETL_SOURCES
+            etl_source__in=REINDEX_CONTENT_FILE_ETL_SOURCES
         )
 
     return [

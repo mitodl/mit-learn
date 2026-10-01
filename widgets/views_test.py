@@ -66,33 +66,6 @@ EXPECTED_AVAILABLE_WIDGETS = [
         "description": "Embedded URL",
     },
     {
-        "form_spec": [
-            {
-                "field_name": "url",
-                "input_type": "url",
-                "label": "URL",
-                "under_text": None,
-                "props": {
-                    "max_length": "",
-                    "min_length": "",
-                    "placeholder": "RSS feed URL",
-                    "show_embed": False,
-                },
-                "default": "",
-            },
-            {
-                "field_name": "feed_display_limit",
-                "input_type": "number",
-                "label": "Max number of items",
-                "under_text": None,
-                "props": {"max": 10, "min": 1},
-                "default": 5,
-            },
-        ],
-        "widget_type": "RSS Feed",
-        "description": "RSS Feed",
-    },
-    {
         "description": "People",
         "form_spec": [
             {

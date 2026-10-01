@@ -5,6 +5,7 @@ import re
 
 import sentry_sdk
 from celery.exceptions import WorkerLostError
+from django.conf import settings
 from sentry_sdk.integrations.boto3 import Boto3Integration
 from sentry_sdk.integrations.celery import CeleryIntegration
 from sentry_sdk.integrations.django import DjangoIntegration
@@ -46,6 +47,11 @@ def scrub_pg_detail(text):
 def scrub_pg_details(event):
     """Truncate Postgres DETAIL lines everywhere in a Sentry event.
 
+    Despite the name, also redacts OCW_WEBHOOK_KEY wherever it appears (see
+    scrub_ocw_webhook_key) -- both scrubs share the same recursive walk since
+    they're the same problem: a sensitive value ending up in a place no SDK
+    privacy setting reaches.
+
     The row echo reaches Sentry through more fields than the exception value:
     LoggingIntegration puts the log message in a breadcrumb
     (BreadcrumbHandler._breadcrumb_from_record), logger.error("...: %s", exc)
@@ -61,10 +67,27 @@ def scrub_pg_details(event):
     return _scrub_node(event)
 
 
+def scrub_ocw_webhook_key(text):
+    """Redact the OCW webhook shared secret if it appears verbatim in a string.
+
+    OCW_WEBHOOK_KEY is unlike most secrets: a caller proves they know it by
+    literally sending it as request data (WebhookOCWView.post checks it
+    against content["webhook_key"]), so a genuinely authenticated request's
+    own body -- or a captured frame variable holding that body -- can carry
+    the real value into Sentry via request.data or frame locals, regardless
+    of what a view's own error handling redacts.
+    See https://github.com/mitodl/hq/issues/13470.
+    """
+    key = settings.OCW_WEBHOOK_KEY
+    if key and key in text:
+        return text.replace(key, "[redacted]")
+    return text
+
+
 def _scrub_node(node):
     """Recurse through the serialized event, rewriting strings in place."""
     if isinstance(node, str):
-        return scrub_pg_detail(node)
+        return scrub_ocw_webhook_key(scrub_pg_detail(node))
     if isinstance(node, dict):
         for key, value in node.items():
             node[key] = _scrub_node(value)

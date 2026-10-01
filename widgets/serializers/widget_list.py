@@ -80,7 +80,11 @@ class WidgetListSerializer(serializers.ModelSerializer):
         for data in widgets_data:
             widget_id = data.get("id", None)
             widget = existing_widgets_by_id.get(widget_id)
-            widget_serializer_cls = _serializer_for_widget_type(data["widget_type"])
+            widget_type = data.get("widget_type")
+            widget_serializer_cls = _serializer_for_widget_type(widget_type)
+            if widget_serializer_cls is None:
+                msg = f"Unsupported widget_type: {widget_type!r}"
+                raise serializers.ValidationError({"widget_type": msg})
 
             if not widget:
                 # if the widget provided was not in the data, ensure the user isn't trying to set id or widget_list_id  # noqa: E501

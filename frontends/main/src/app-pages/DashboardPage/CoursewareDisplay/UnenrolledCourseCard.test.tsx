@@ -1314,3 +1314,38 @@ describe("UnenrolledCourseCard progress badge", () => {
     ).not.toBeInTheDocument()
   })
 })
+
+describe.each([
+  { display: "desktop", testId: "enrollment-card-desktop" },
+  { display: "mobile", testId: "enrollment-card-mobile" },
+])("UnenrolledCourseCard disabled ($display)", ({ testId }) => {
+  setupLocationMock()
+
+  test("shows a plain-text title and a disabled Start button for an enrollable run", async () => {
+    setupUserApis()
+    const b2bContractId = faker.number.int()
+    const run = mitxonline.factories.courses.courseRun({
+      b2b_contract: b2bContractId,
+      is_enrollable: true,
+    })
+    const course = mitxOnlineCourse({
+      title: run.title,
+      courseruns: [run],
+      next_run_id: run.id,
+    })
+    renderWithProviders(
+      <UnenrolledCourseCard
+        course={course}
+        contractId={b2bContractId}
+        disabled
+      />,
+    )
+    const card = within(screen.getByTestId(testId))
+
+    expect(card.getByRole("heading", { name: run.title })).toBeInTheDocument()
+    expect(
+      card.queryByRole("button", { name: run.title }),
+    ).not.toBeInTheDocument()
+    expect(card.getByTestId("courseware-button")).toBeDisabled()
+  })
+})

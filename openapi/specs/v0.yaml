@@ -6960,16 +6960,13 @@ components:
       enum:
       - Markdown
       - URL
-      - RSS Feed
       - People
       type: string
       description: |-
         * `Markdown` - Markdown
         * `URL` - URL
-        * `RSS Feed` - RSS Feed
         * `People` - People
       x-enum-descriptions:
       - Markdown
       - URL
-      - RSS Feed
       - People

@@ -103,6 +103,8 @@ def build_run_lookup(
                 to_attr="_published_runs",
             )
         )
+        # ties among published runs go to the lowest id, as in run_for_edx_archive
+        .order_by("id")
     )
     if ids:
         runs = runs.filter(learning_resource_id__in=ids)
@@ -111,9 +113,10 @@ def build_run_lookup(
     for run in runs:
         normalized = normalize_run_id(etl_source, run.run_id)
         lookup.setdefault(normalized, []).append(run)
-        if etl_source == ETLSource.oll.name:
-            # OLL archive filenames omit the MITx+ prefix the run_ids carry
-            lookup.setdefault(normalized.removeprefix("mitx."), []).append(run)
+        if etl_source == ETLSource.oll.name and run.run_id.count("+") > 1:
+            # OLL archive filenames omit the org segment (MITx+, OCW+, ...)
+            org_less = normalize_run_id(etl_source, run.run_id.split("+", 1)[1])
+            lookup.setdefault(org_less, []).append(run)
     return lookup
 
 
@@ -335,7 +338,7 @@ def run_for_edx_archive(etl_source: str, archive_filename: str):
     # There should be only 1 matching run per course archive, warn if not
     if runs.count() > 1:
         log.warning("There are %d runs for %s", runs.count(), normalized_run_id)
-    return runs.first()
+    return runs.order_by("-published", "id").first()
 
 
 def sync_edx_course_files(
@@ -368,7 +371,8 @@ def sync_edx_course_files(
         if len(matching_runs) > 1:
             log.warning("There are %d runs for %s", len(matching_runs), key)
 
-        run = matching_runs[0]
+        # legacy unpublished runs can share an archive id with the current run
+        run = max(matching_runs, key=lambda r: r.published)
         if process_course_archive(bucket, key, run, overwrite=overwrite):
             processed += 1
         else:
@@ -412,7 +416,7 @@ def unpublish_excluded_content_files(
         matching_runs = run_lookup.get(extract_run_id_from_key(etl_source, key))
         if not matching_runs:
             continue
-        run = matching_runs[0]
+        run = max(matching_runs, key=lambda r: r.published)
         if not ContentFile.objects.filter(run=run).exists():
             # a run with no content files has none to unpublish, and its archive
             # is a download and an extract to find that out

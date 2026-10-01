@@ -2,13 +2,15 @@ import { faker } from "@faker-js/faker/locale/en"
 import type {
   BulkAssignError,
   BulkAssignResult,
-  ContractPage,
   ManagerEnrollmentCode,
   PaginatedManagerEnrollmentCodeList,
+  UserContractPage,
 } from "@mitodl/mitxonline-api-axios/v2"
 import { makePaginatedFactory } from "ol-test-utilities"
 
-const contract = (overrides: Partial<ContractPage> = {}): ContractPage => ({
+const contract = (
+  overrides: Partial<UserContractPage> = {},
+): UserContractPage => ({
   id: faker.number.int(),
   contract_end: faker.date.future().toISOString(),
   contract_start: faker.date.past().toISOString(),
@@ -20,6 +22,7 @@ const contract = (overrides: Partial<ContractPage> = {}): ContractPage => ({
   welcome_message: faker.lorem.sentence(),
   welcome_message_extra: `<p>${faker.lorem.paragraph()}</p>`,
   programs: [],
+  consented_to_data_sharing: null,
   ...overrides,
   variant_options: overrides.variant_options ?? [],
 })

@@ -11,9 +11,15 @@ jest.mock("@/app/getQueryClient", () => {
  * content_type is not in the factory's defaults, and the page not-founds
  * anything that isn't "news".
  */
-const mockNews = (slug: string) => {
+const mockNews = (
+  slug: string,
+  overrides: Partial<
+    Parameters<typeof factories.websiteContent.websiteContent>[0]
+  > = {},
+) => {
   const content = factories.websiteContent.websiteContent({
     content_type: "news",
+    ...overrides,
   })
   setMockResponse.get(urls.websiteContent.detailRetrieve(slug), content)
   return content
@@ -34,6 +40,20 @@ test("no resource param: metadata comes from the article", async () => {
 
   expect(meta.title).toContain(content.title)
   expect(meta.alternates?.canonical).toBeUndefined()
+})
+
+/* Not articles only: a link preview or a search result is the editor's to
+   write on news as well. */
+test("the editor's SEO title and description reach the page head", async () => {
+  mockNews("some-news", {
+    seo_title: "What MIT built this week",
+    seo_description: "A short, specific summary for search results.",
+  })
+
+  const meta = await generateMetadata(pageProps("some-news"))
+
+  expect(meta.title).toContain("What MIT built this week")
+  expect(meta.description).toBe("A short, specific summary for search results.")
 })
 
 test("resolving resource param: canonical, title, description and image come from the resource", async () => {

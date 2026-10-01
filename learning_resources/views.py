@@ -34,6 +34,7 @@ from channels.constants import ChannelType
 from channels.models import Channel
 from learning_resources import permissions
 from learning_resources.constants import (
+    CONTENT_FILE_LARGE_FIELDS,
     GROUP_CONTENT_FILE_CONTENT_VIEWERS,
     LearningResourceRelationTypes,
     LearningResourceType,
@@ -1076,7 +1077,11 @@ class ContentFileViewSet(viewsets.ReadOnlyModelViewSet):
     )
     filter_backends = [MultipleOptionsFilterBackend]
     filterset_class = ContentFileFilter
-    private_fields = ["content"]
+    # Derived from CONTENT_FILE_LARGE_FIELDS (rather than listing "content"
+    # alone) so summary/flashcards -- LLM-derived from the same gated content,
+    # and just as sensitive -- can't silently fall out of this gate again the
+    # next time a field is added there.
+    private_fields = list(CONTENT_FILE_LARGE_FIELDS)
 
     def get_serializer(self, *args, **kwargs):
         """
@@ -1288,6 +1293,30 @@ class UserListMembershipViewSet(viewsets.ReadOnlyModelViewSet):
         ).order_by("child", "parent")
 
 
+def _redact_webhook_key(body: bytes) -> str:
+    """
+    Return a safe-to-log version of a JSON request body, with any
+    webhook_key value redacted.
+
+    Parses the body the same way the view does and redacts based on the
+    decoded member name, rather than pattern-matching the raw text -- JSON
+    allows a member name to be spelled with \\uXXXX escapes (e.g.
+    "webhook\\u005fkey" decodes to "webhook_key"), so a raw-text match on
+    the literal key would miss a real key that's merely spelled that way,
+    letting the actual secret through unredacted. A body that can't be
+    parsed as a JSON object is redacted in full instead of assumed safe.
+    """
+    try:
+        parsed = rapidjson.loads(body.decode())
+    except (ValueError, UnicodeDecodeError):
+        return "<unparseable body, redacted>"
+    if not isinstance(parsed, dict):
+        return "<non-object body, redacted>"
+    if "webhook_key" in parsed:
+        parsed["webhook_key"] = "[redacted]"
+    return rapidjson.dumps(parsed)
+
+
 @method_decorator(blocked_ip_exempt, name="dispatch")
 class WebhookOCWView(views.APIView):
     """
@@ -1302,9 +1331,8 @@ class WebhookOCWView(views.APIView):
         Raise any exception with request info instead of returning response
         with error status/message
         """
-        msg = (
-            f"Error ({exc}). BODY: {self.request.body or ''}, META: {self.request.META}"
-        )
+        safe_body = _redact_webhook_key(self.request.body)
+        msg = f"Error ({exc}). BODY: {safe_body}, META: {self.request.META}"
         raise WebhookException(msg) from exc
 
     @extend_schema(exclude=True)

@@ -296,6 +296,9 @@ const AnalyticsContentInternal: React.FC<AnalyticsContentInternalProps> = ({
   const managerDashboardFlag = useFeatureFlagEnabled(
     FeatureFlags.B2BContractManagerDashboard,
   )
+  const learnerAnalyticsFlag = useFeatureFlagEnabled(
+    FeatureFlags.B2BLearnerAnalytics,
+  )
   const {
     data: managerOrgs,
     isLoading: isLoadingOrgs,
@@ -495,9 +498,10 @@ const AnalyticsContentInternal: React.FC<AnalyticsContentInternalProps> = ({
           </PageSubtitle>
         </div>
       </OrgDetailsContainer>
-      {(contract || (manageSeatsSlug && managerDashboardFlag)) && (
+      {((contract && learnerAnalyticsFlag) ||
+        (manageSeatsSlug && managerDashboardFlag)) && (
         <HeaderActions>
-          {contract ? (
+          {contract && learnerAnalyticsFlag ? (
             <ButtonLink
               size="small"
               variant="bordered"

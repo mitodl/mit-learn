@@ -137,12 +137,15 @@ def test_sync_program_certificates_task_upserts_iterated_rows(mocker):
     mocked_upsert.assert_any_call(rows[1])
 
 
-def test_sync_program_certificates_task_view_name_is_fully_qualified():
+def test_sync_program_certificates_task_view_name_is_fully_qualified(settings):
     """view_name is a fully-qualified catalog.database.table name, per
-    learning_resources.lib.warehouse.iter_rows's contract.
+    learning_resources.lib.warehouse.iter_rows's contract, taken from the
+    WAREHOUSE_* settings so QA reads its own lake.
     """
+    settings.WAREHOUSE_CATALOG = "ol_data_lake_qa"
+    settings.WAREHOUSE_SCHEMA = "ol_warehouse_qa_integrations"
     assert SyncProgramCertificatesTask.view_name == (
-        "ol_data_lake_production.ol_warehouse_production_integrations"
+        "ol_data_lake_qa.ol_warehouse_qa_integrations"
         ".integrations__learn__program_certificates"
     )
 

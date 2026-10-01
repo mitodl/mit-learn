@@ -11,6 +11,7 @@ import { NewsEditor } from "@/page-components/TiptapEditor/contentTypes/news/New
 import { articleView, newsView, websiteContentEditView } from "@/common/urls"
 import invariant from "tiny-invariant"
 import type { WebsiteContent } from "api/v1"
+import { replaceDraftUrl } from "./draftUrl"
 
 const PageContainer = styled.div(({ theme }) => ({
   color: theme.custom.colors.darkGray2,
@@ -29,6 +30,7 @@ const EDITORS: Record<
     onSave?: (savedContent: WebsiteContent) => void
     readOnly?: boolean
     contentItem?: WebsiteContent
+    autosaveDelayMs?: number
   }>
 > = {
   article: ({ contentItem, ...props }) => (
@@ -39,10 +41,17 @@ const EDITORS: Record<
 
 interface WebsiteContentNewPageProps {
   type: string
+  /**
+   * Passed straight to the editor; only tests set it, to keep a background
+   * draft save from landing in the middle of their interactions. See
+   * `WebsiteContentEditor`.
+   */
+  autosaveDelayMs?: number
 }
 
 const WebsiteContentNewPage: React.FC<WebsiteContentNewPageProps> = ({
   type,
+  autosaveDelayMs,
 }) => {
   const router = useRouter()
   const Editor = EDITORS[type]
@@ -56,13 +65,19 @@ const WebsiteContentNewPage: React.FC<WebsiteContentNewPageProps> = ({
     <RestrictedRoute requires={Permission.ArticleEditor}>
       <PageContainer>
         <Editor
+          autosaveDelayMs={autosaveDelayMs}
           onSave={(article) => {
             if (article.is_published) {
               invariant(article.slug, "Published content must have a slug")
               return router.push(viewUrl(article.slug))
-            } else {
-              router.push(websiteContentEditView(type, article.id))
             }
+            /**
+             * The draft has just been created by an autosave, so this fires
+             * while the author is still typing. The URL is corrected in place
+             * rather than navigated to -- see `replaceDraftUrl`, which is
+             * where the reasoning lives.
+             */
+            replaceDraftUrl(websiteContentEditView(type, article.id))
           }}
         />
       </PageContainer>

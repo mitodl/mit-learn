@@ -8,6 +8,7 @@ from tempfile import TemporaryDirectory
 
 import pypdf
 import pytest
+import requests
 from defusedxml import ElementTree
 
 from learning_resources.constants import (
@@ -112,16 +113,27 @@ def test_extract_text_from_url(mocker, content):
     url = "http://test.edu/file.pdf"
     mock_request = mocker.patch(
         "learning_resources.etl.utils.requests.get",
-        return_value=mocker.Mock(content=content),
+        return_value=mocker.Mock(content=content, is_redirect=False),
     )
     mock_extract = mocker.patch("learning_resources.etl.utils.extract_text_metadata")
     utils.extract_text_from_url(url, mime_type=mime_type)
 
-    mock_request.assert_called_once_with(url, timeout=30)
+    mock_request.assert_called_once_with(url, timeout=30, allow_redirects=False)
     if content:
         mock_extract.assert_called_once_with(
             content, other_headers={"Content-Type": mime_type}
         )
+
+
+def test_extract_text_from_url_refuses_redirect(mocked_responses):
+    """extract_text_from_url should not follow a redirect off the requested host"""
+    url = "https://abc.cloudfront.net/a.vtt"
+    mocked_responses.get(
+        url, status=302, headers={"Location": "http://169.254.169.254/latest/"}
+    )
+
+    with pytest.raises(requests.HTTPError):
+        utils.extract_text_from_url(url)
 
 
 @pytest.mark.parametrize(

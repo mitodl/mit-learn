@@ -120,15 +120,15 @@ yarn playwright:ui
 yarn playwright:report
 ```
 
-### Pre-commit Hooks
+### prek Hooks
 
 ```bash
-# Install pre-commit
-pip install pre-commit
-pre-commit install
+# Install prek from uv.lock and replace any existing git hook
+uv sync
+uv run prek install -f
 
 # Run all checks
-pre-commit run --all-files
+uv run prek run --all-files
 ```
 
 ## Code Generation

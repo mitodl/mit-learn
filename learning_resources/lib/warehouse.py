@@ -27,6 +27,9 @@ log = logging.getLogger(__name__)
 # (not `$`) is deliberate: `$` matches just before a trailing newline, which
 # would let a `view_name` ending in "\n" slip through this check.
 _SAFE_IDENTIFIER = re.compile(r"^[a-zA-Z0-9_.]+\Z")
+# One catalog, schema or table name. No dots: a WAREHOUSE_SCHEMA of "a.b"
+# would pass _SAFE_IDENTIFIER once composed but point at a different catalog.
+_SAFE_NAME_PART = re.compile(r"^[a-zA-Z0-9_]+\Z")
 
 # Cache alias for sync watermarks: must outlive Redis flushes (an evicted
 # watermark just makes the next incremental run fetch a wider-than-necessary
@@ -176,8 +179,12 @@ def iter_rows(conn, view_name, *, since=None, batch_size=1000):
 class BaseWarehouseETLTask(Task):
     """Celery task base class for warehouse-pull ETL jobs.
 
-    Subclasses declare ``view_name`` and implement
-    ``fetch_and_upsert(conn, *, since)``. Register concrete subclasses via
+    Subclasses declare ``table_name`` (the bare view name, e.g.
+    ``"integrations__learn__ocw_courses"``) and implement
+    ``fetch_and_upsert(conn, *, since)``. ``view_name`` qualifies it with
+    ``settings.WAREHOUSE_CATALOG`` and ``settings.WAREHOUSE_SCHEMA``, so the
+    same task reads ``ol_data_lake_qa`` in QA and ``ol_data_lake_production``
+    in production. Register concrete subclasses via
     ``app.register_task(SubclassTask())`` — a class decorated with
     ``@app.task(base=BaseWarehouseETLTask)`` does *not* work: Celery's
     function-task machinery wraps the decorated object as a ``staticmethod``
@@ -207,10 +214,7 @@ class BaseWarehouseETLTask(Task):
 
         class SyncOCWCoursesTask(BaseWarehouseETLTask):
             name = "learning_resources.tasks.SyncOCWCoursesTask"
-            view_name = (
-                "ol_data_lake_production.ol_warehouse_production_integrations"
-                ".integrations__learn__ocw_courses"
-            )
+            table_name = "integrations__learn__ocw_courses"
 
             def fetch_and_upsert(self, conn, *, since=None):
                 for row in iter_rows(conn, self.view_name, since=since):
@@ -221,13 +225,43 @@ class BaseWarehouseETLTask(Task):
 
     abstract = True
     acks_late = True
-    view_name: str = ""
+    table_name: str = ""
+
+    def __init_subclass__(cls, **kwargs):
+        """Reject subclasses that set ``view_name``.
+
+        A class attribute would shadow the property below and read whatever
+        catalog it names, whatever environment this runs in.
+        """
+        super().__init_subclass__(**kwargs)
+        if "view_name" in cls.__dict__:
+            msg = f"{cls.__name__} must set table_name, not view_name"
+            raise TypeError(msg)
+
+    @property
+    def view_name(self) -> str:
+        """``table_name`` qualified as ``catalog.schema.table`` from settings.
+
+        Fully qualified because the connection sets no default database; see
+        ``_connect_starrocks``.
+
+        Raises:
+            ValueError: If ``table_name`` is unset, or any part is not a
+                plain identifier.
+        """
+        if not self.table_name:
+            msg = f"{self.__class__.__name__}.table_name must be set"
+            raise ValueError(msg)
+        parts = (settings.WAREHOUSE_CATALOG, settings.WAREHOUSE_SCHEMA, self.table_name)
+        for part in parts:
+            if not _SAFE_NAME_PART.match(part):
+                msg = f"Unsafe warehouse identifier: {part!r}"
+                raise ValueError(msg)
+        return ".".join(parts)
 
     def run(self, *args, full_refresh: bool = True, **kwargs):  # noqa: ARG002
         """Open a warehouse connection, delegate to ``fetch_and_upsert``, log counts."""
-        if not self.view_name:
-            msg = f"{self.__class__.__name__}.view_name must be set"
-            raise ValueError(msg)
+        view_name = self.view_name
 
         since = None if full_refresh else self._get_watermark()
         # Captured before the fetch, not after: a row modified while the
@@ -246,7 +280,7 @@ class BaseWarehouseETLTask(Task):
             sentry_sdk.add_breadcrumb(
                 category="warehouse_etl",
                 message=f"{self.name} failed",
-                data={"view_name": self.view_name, "full_refresh": full_refresh},
+                data={"view_name": view_name, "full_refresh": full_refresh},
                 level="error",
             )
             raise

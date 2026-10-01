@@ -4,6 +4,7 @@ import { styled, RoutedDrawer } from "ol-components"
 import { RiCloseLine } from "@remixicon/react"
 import { ActionButton } from "@mitodl/smoot-design"
 import { AiChat } from "@mitodl/smoot-design/ai"
+import type { AiChatProps } from "@mitodl/smoot-design/ai"
 import { RECOMMENDER_QUERY_PARAM } from "@/common/urls"
 
 const CloseButtonContainer = styled("div")({
@@ -49,6 +50,18 @@ const STARTERS = [
   },
 ]
 
+const getRecommendationRequestOpts = (): AiChatProps["requestOpts"] => ({
+  apiUrl: env("NEXT_PUBLIC_LEARN_AI_RECOMMENDATION_ENDPOINT")!,
+  csrfCookieName: env("NEXT_PUBLIC_LEARN_AI_CSRF_COOKIE_NAME") || "csrftoken",
+  csrfHeaderName: "X-CSRFToken",
+  fetchOpts: {
+    credentials: "include",
+  },
+  transformBody: (messages) => ({
+    message: messages[messages.length - 1].content,
+  }),
+})
+
 const DrawerContent: React.FC<{
   onClose?: () => void
   scrollElement: HTMLElement | null
@@ -70,18 +83,7 @@ const DrawerContent: React.FC<{
         conversationStarters={STARTERS}
         askTimTitle="to recommend a course"
         scrollElement={scrollElement}
-        requestOpts={{
-          apiUrl: env("NEXT_PUBLIC_LEARN_AI_RECOMMENDATION_ENDPOINT")!,
-          csrfCookieName:
-            env("NEXT_PUBLIC_LEARN_AI_CSRF_COOKIE_NAME") || "csrftoken",
-          csrfHeaderName: "X-CSRFToken",
-          fetchOpts: {
-            credentials: "include",
-          },
-          transformBody: (messages) => ({
-            message: messages[messages.length - 1].content,
-          }),
-        }}
+        requestOpts={getRecommendationRequestOpts()}
       />
     </>
   )
@@ -124,3 +126,4 @@ const AiRecommendationBotDrawer = () => {
 }
 
 export default AiRecommendationBotDrawer
+export { getRecommendationRequestOpts, CloseButton, CloseButtonContainer }
