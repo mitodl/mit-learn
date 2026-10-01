@@ -1,6 +1,29 @@
 Release Notes
 =============
 
+Version 0.81.4
+--------------
+
+- gate learner analytics on its own feature flag (#4018)
+- Require B2B data consent on the contract dashboard (#4006)
+- Stop the first autosave navigating out of the editor (#4016)
+- fix(webhooks): stop leaking the real OCW_WEBHOOK_KEY into logs/Sentry (#3988)
+- fix(auth): disable ApisixUserMiddleware by default in local dev/codespaces (#4002)
+- fix(b2b): show learner email and icon avatar when name is blank (#3992)
+
+Version 0.81.3
+--------------
+
+- Asktim Summary in search results (#3994)
+- Fix OLL archive content ingestion (#3973)
+- Read the warehouse catalog and schema from settings (#4005)
+- Fall back to the original image before the default image (#4007)
+- feat(website-content): require SEO fields to publish, and align the published control bar (#4009)
+- Do not follow redirects when fetching OVS transcripts (#4003)
+- fix(learning_resources): gate summary/flashcards like content on ContentFileViewSet (#3999)
+- fix(widgets): remove the unused RSS Feed widget type (#4000)
+- Update pre-commit hooks and adapt to ruff 0.16 (#3993)
+
 Version 0.81.1
 --------------
 
