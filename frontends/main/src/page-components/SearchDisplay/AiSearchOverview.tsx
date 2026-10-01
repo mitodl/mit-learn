@@ -110,9 +110,9 @@ const Spinner = styled.span(({ theme }) => ({
   background: `conic-gradient(transparent 10%, ${theme.custom.colors.darkGray2})`,
   mask: "radial-gradient(farthest-side, transparent calc(100% - 2px), black calc(100% - 2px))",
   animation: `${spin} 0.8s linear infinite`,
-"@media (prefers-reduced-motion: reduce)": {
-  animation: "none",
-},
+  "@media (prefers-reduced-motion: reduce)": {
+    animation: "none",
+  },
 }))
 
 const Content = styled.div<{ collapsed: boolean }>(({ theme, collapsed }) => ({
