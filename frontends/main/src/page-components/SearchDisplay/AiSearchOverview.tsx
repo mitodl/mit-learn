@@ -1,7 +1,7 @@
 import { env } from "@/env"
 import React, { useEffect, useMemo, useRef, useState } from "react"
 import ReactMarkdown from "react-markdown"
-import { styled, Drawer, LoadingSpinner, Typography } from "ol-components"
+import { styled, keyframes, Drawer, Typography } from "ol-components"
 import { Button } from "@mitodl/smoot-design"
 import {
   AiChatDisplay,
@@ -25,6 +25,9 @@ import {
 } from "@/page-components/AiChat/AiRecommendationBotDrawer"
 
 const COLLAPSED_HEIGHT = 100
+// Shared by the loading spinner and the sparkle icon so the header doesn't
+// shift when the summary replaces the loading state.
+const HEADER_ICON_SIZE = 20
 
 const getOverviewRequestOpts = (): AiChatProps["requestOpts"] => {
   const requestOpts = getRecommendationRequestOpts()
@@ -54,10 +57,15 @@ const Container = styled.section(({ theme }) => ({
   backgroundColor: theme.custom.colors.lightGray1,
   border: `1px solid ${theme.custom.colors.lightGray2}`,
   borderRadius: "8px",
-  padding: "16px 24px 24px",
+  padding: "16px 24px",
   marginBottom: "16px",
+  // Extra room for the "Show more" button overlapping the bottom edge.
+  "&:has(> .show-more)": {
+    paddingBottom: "24px",
+  },
   [theme.breakpoints.down("md")]: {
-    padding: "16px",
+    paddingLeft: "16px",
+    paddingRight: "16px",
   },
 }))
 
@@ -65,16 +73,19 @@ const Header = styled.div(({ theme }) => ({
   display: "flex",
   alignItems: "center",
   gap: "8px",
-  minHeight: "24px",
+  minHeight: `${HEADER_ICON_SIZE}px`,
   svg: {
+    flexShrink: 0,
     fill: theme.custom.colors.red,
-    width: "20px",
-    height: "20px",
+    width: `${HEADER_ICON_SIZE}px`,
+    height: `${HEADER_ICON_SIZE}px`,
   },
 }))
 
 const HeaderLabel = styled(Typography)(({ theme }) => ({
   ...theme.typography.subtitle3,
+  fontSize: theme.typography.pxToRem(10),
+  lineHeight: theme.typography.pxToRem(12),
   textTransform: "uppercase",
   letterSpacing: "1.5px",
   color: theme.custom.colors.darkGray2,
@@ -82,12 +93,26 @@ const HeaderLabel = styled(Typography)(({ theme }) => ({
   span: {
     color: theme.custom.colors.silverGrayDark,
     fontWeight: theme.typography.fontWeightMedium,
-    marginLeft: "8px",
+    marginLeft: "4px",
   },
 })) as typeof Typography
 
-const Spinner = styled(LoadingSpinner)(({ theme }) => ({
-  color: theme.custom.colors.darkGray1,
+const spin = keyframes({
+  to: { transform: "rotate(360deg)" },
+})
+
+// A ring whose arc fades out toward its tail.
+const Spinner = styled.span(({ theme }) => ({
+  flexShrink: 0,
+  width: `${HEADER_ICON_SIZE}px`,
+  height: `${HEADER_ICON_SIZE}px`,
+  borderRadius: "50%",
+  background: `conic-gradient(transparent 10%, ${theme.custom.colors.darkGray2})`,
+  mask: "radial-gradient(farthest-side, transparent calc(100% - 2px), black calc(100% - 2px))",
+  animation: `${spin} 0.8s linear infinite`,
+  "@media (prefers-reduced-motion: reduce)": {
+    animationDuration: "2.4s",
+  },
 }))
 
 const Content = styled.div<{ collapsed: boolean }>(({ theme, collapsed }) => ({
@@ -106,9 +131,11 @@ const Content = styled.div<{ collapsed: boolean }>(({ theme, collapsed }) => ({
     paddingInlineStart: "22px",
   },
   "ol > li": {
-    ...theme.typography.body1,
-    color: theme.custom.colors.darkGray1,
+    ...theme.typography.body2,
     marginBottom: "12px",
+    "&::marker": {
+      color: theme.custom.colors.red,
+    },
   },
   // Responses put the course title and description in one paragraph,
   // separated by a line break.
@@ -117,17 +144,20 @@ const Content = styled.div<{ collapsed: boolean }>(({ theme, collapsed }) => ({
     color: theme.custom.colors.silverGray,
   },
   "li strong": {
-    ...theme.typography.body1,
+    ...theme.typography.body2,
     display: "block",
-    marginBottom: "10px",
+    marginBottom: "4px",
     color: theme.custom.colors.darkGray1,
   },
   "li strong + br": {
     display: "none",
   },
   a: {
-    color: "inherit",
+    color: theme.custom.colors.red,
     textDecoration: "none",
+    "&:hover": {
+      textDecoration: "underline",
+    },
   },
 }))
 
@@ -148,10 +178,6 @@ const DrawerChatDisplay = styled(AiChatDisplay)(({ theme }) => ({
   },
   "& .MitAiChat--title": {
     paddingRight: "72px", // clear the close button
-    p: {
-      ...theme.typography.h5,
-      fontWeight: theme.typography.fontWeightRegular,
-    },
   },
   "& .MitAiChat--messagesContainer": {
     paddingTop: 0,
@@ -160,60 +186,8 @@ const DrawerChatDisplay = styled(AiChatDisplay)(({ theme }) => ({
   "& .MitAiChat--messageRow:first-of-type[data-chat-role='user']": {
     display: "none",
   },
-  "& .MitAiChat--messageRowAssistant .MitAiChat--message": {
-    ...theme.typography.body2Loose,
-    color: theme.custom.colors.darkGray2,
-    p: {
-      margin: "0 0 16px",
-    },
-    // Links outside the course headings (e.g. inline mentions, or a response
-    // that skips the list format) read as underlined body text, not red.
-    a: {
-      color: "inherit",
-      textDecorationThickness: "1px",
-      textUnderlineOffset: "2px",
-      "&:hover": {
-        color: theme.custom.colors.red,
-      },
-    },
-    // Each recommended course renders as a heading followed by its
-    // description, without list numbers.
-    ol: {
-      listStyle: "none",
-      paddingInlineStart: 0,
-      margin: "16px 0",
-    },
-    "ol > li": {
-      margin: "0 0 18px",
-    },
-    "ol > li strong": {
-      ...theme.typography.subtitle1,
-      display: "block",
-      marginBottom: "8px",
-      color: theme.custom.colors.darkGray2,
-    },
-    "ol > li strong + br": {
-      display: "none",
-    },
-    "ol > li strong a": {
-      color: "inherit",
-      fontWeight: "inherit",
-      textDecoration: "none",
-      "&:hover": {
-        color: theme.custom.colors.red,
-        textDecoration: "underline",
-      },
-    },
-    "ul > li": {
-      paddingLeft: "20px",
-      margin: "8px 0",
-      "&::before": {
-        content: '"•"',
-        left: "6px",
-        color: theme.custom.colors.darkGray2,
-      },
-    },
-  },
+  // Message formatting (lists, links) is left to AiChat's defaults so the
+  // drawer matches the AskTIM drawer.
 }))
 
 const DrawerCloseButton = styled(CloseButton)(({ theme }) => ({
@@ -292,7 +266,7 @@ const Overview: React.FC<{ query: string }> = ({ query }) => {
     return (
       <Container aria-busy="true">
         <Header>
-          <Spinner loading size={24} color="inherit" />
+          <Spinner role="progressbar" aria-label="Loading" />
           <HeaderLabel component="h2">
             AI Overview:<span>Reviewing your request…</span>
           </HeaderLabel>
@@ -311,6 +285,7 @@ const Overview: React.FC<{ query: string }> = ({ query }) => {
         <ReactMarkdown skipHtml>{response}</ReactMarkdown>
       </Content>
       <ShowMoreButton
+        className="show-more"
         variant="bordered"
         size="small"
         endIcon={<RiArrowDownLine />}
