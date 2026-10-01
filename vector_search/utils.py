@@ -47,6 +47,7 @@ from vector_search.constants import (
     CONTENT_FILES_COLLECTION_NAME,
     CONTENT_FILES_RETRIEVE_PAYLOAD,
     COURSE_NUMBER_INDEXING_ONLY_FIELDS,
+    FEATURED_RANK_PAYLOAD_KEY,
     NEXT_START_DATE_PAYLOAD_KEY,
     NULLABLE_ORDER_BY_KEYS,
     ORDER_BY_MISSING_VALUE,
@@ -665,6 +666,53 @@ def update_learning_resource_payload(serialized_document):
         collection_name=RESOURCES_COLLECTION_NAME,
         payload=serialized_document,
         points=[point_id],
+        wait=False,
+    )
+
+
+def update_featured_ranks(featured_ranks):
+    """
+    Write featured ranks to the resources collection, and drop the rank from
+    every point that is no longer featured, so the empty-search order follows
+    the featured lists rather than whatever they were at embedding time.
+
+    Points are selected by filter rather than by id: set_payload rejects ids
+    that do not exist, and a featured resource may not be embedded yet.
+
+    Args:
+        featured_ranks (dict): featured rank by LearningResource
+    """
+    client = qdrant_client()
+    point_ids = []
+    for resource, rank in featured_ranks.items():
+        point_id = vector_point_id(
+            vector_point_key(
+                {
+                    "platform": {
+                        "code": resource.platform.code if resource.platform else ""
+                    },
+                    "readable_id": resource.readable_id,
+                }
+            )
+        )
+        point_ids.append(point_id)
+        client.set_payload(
+            collection_name=RESOURCES_COLLECTION_NAME,
+            payload={FEATURED_RANK_PAYLOAD_KEY: rank},
+            points=models.Filter(must=[models.HasIdCondition(has_id=[point_id])]),
+            wait=False,
+        )
+    client.delete_payload(
+        collection_name=RESOURCES_COLLECTION_NAME,
+        keys=[FEATURED_RANK_PAYLOAD_KEY],
+        points=models.Filter(
+            must_not=[
+                models.IsEmptyCondition(
+                    is_empty=models.PayloadField(key=FEATURED_RANK_PAYLOAD_KEY)
+                ),
+                *([models.HasIdCondition(has_id=point_ids)] if point_ids else []),
+            ]
+        ),
         wait=False,
     )
 

@@ -1416,11 +1416,9 @@ paths:
           - next_start_date
           - views
           - created_on
-          - featured_rank
           - -next_start_date
           - -views
           - -created_on
-          - -featured_rank
           type: string
           minLength: 1
         description: |-
@@ -1429,11 +1427,9 @@ paths:
           * `next_start_date` - next_start_date
           * `views` - views
           * `created_on` - created_on
-          * `featured_rank` - featured_rank
           * `-next_start_date` - -next_start_date
           * `-views` - -views
           * `-created_on` - -created_on
-          * `-featured_rank` - -featured_rank
       - in: query
         name: staleness_horizon_years
         schema:

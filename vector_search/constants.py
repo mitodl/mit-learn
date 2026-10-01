@@ -68,7 +68,8 @@ SECONDS_PER_YEAR = 365 * 24 * 60 * 60
 # Payload key holding a featured resource's rank: the position of the resource
 # in the featured lists plus a random fraction, which shuffles the resources
 # sharing a position. Null for every resource that is not featured. Set by the
-# search serializer, so it is written with the rest of the payload.
+# search serializer, so it is written with the rest of the payload, and
+# refreshed daily alongside OpenSearch by update_featured_rank.
 FEATURED_RANK_PAYLOAD_KEY = "featured_rank"
 
 # What an empty search (no query string, no sortby) is ordered by, so featured
@@ -150,7 +151,11 @@ QDRANT_LEARNING_RESOURCE_SORTBY_FIELDS = [
         models.PayloadSchemaType.FLOAT,
         models.PayloadSchemaType.UUID,
     ]
-] + [FEATURED_RANK_PAYLOAD_KEY]
+]
+# featured_rank is deliberately not a sortby choice. It is excluded from the
+# response payload (RESOURCES_PAYLOAD_EXCLUDE), so a query with text -- sorted in
+# Python on the returned hits -- would read None for every hit. It is only the
+# default order of an empty search, which Qdrant sorts itself.
 """
 Note: Be intentional about which fields we add as indexes.
 Only add fields that we expect to filter or facet on frequently.

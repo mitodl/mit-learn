@@ -658,6 +658,25 @@ def test_vector_search_empty_query_orders_by_featured_rank(
     assert mock_search.await_args.kwargs["order_by"] == expected_order_by
 
 
+@pytest.mark.parametrize("sortby", ["featured_rank", "-featured_rank"])
+def test_vector_search_featured_rank_is_not_a_sortby(mocker, client, sortby):
+    """
+    featured_rank is left out of the response payload, so a query sorted on it
+    would read None for every hit. It is only the empty-search default.
+    """
+    mock_search = mocker.patch.object(
+        QdrantView, "async_vector_search", new=mocker.AsyncMock()
+    )
+
+    response = client.get(
+        reverse("vector_search:v0:vector_learning_resources_search"),
+        data={"q": "robotics", "sortby": sortby},
+    )
+
+    assert response.status_code == 400
+    mock_search.assert_not_awaited()
+
+
 def test_vector_search_featured_rank_scroll(mocker, client):
     """
     The featured scroll is ascending by rank, then topped up with every resource
