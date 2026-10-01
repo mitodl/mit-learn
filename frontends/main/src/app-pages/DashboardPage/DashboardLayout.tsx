@@ -38,6 +38,10 @@ import { MitxOnlineUser, mitxUserQueries } from "api/mitxonline-hooks/user"
 import { GRID_GAP, SIDEBAR_WIDTH } from "./layoutMetrics"
 import { useUserMe } from "api/hooks/user"
 import { useQuery } from "@tanstack/react-query"
+import {
+  useConsentGatedNavigation,
+  type GatedLinkProps,
+} from "./useConsentGatedNavigation"
 
 const LearningResourceDrawer = dynamic(
   () =>
@@ -232,12 +236,16 @@ const DesktopTabLabel: React.FC<{
 type TabData = {
   value: string
   href: string
+  linkProps?: GatedLinkProps
   label: {
     mobile: string | React.ReactNode
     desktop: React.ReactNode
   }
 }
-const getTabData = (user?: MitxOnlineUser): TabData[] => {
+const getTabData = (
+  user?: MitxOnlineUser,
+  gateContractLink?: ReturnType<typeof useConsentGatedNavigation>,
+): TabData[] => {
   const orgTabs = user
     ? user?.b2b_organizations
         .map((org) => {
@@ -257,6 +265,7 @@ const getTabData = (user?: MitxOnlineUser): TabData[] => {
             return {
               value: href,
               href: href,
+              linkProps: gateContractLink?.(contract, href),
               label: {
                 mobile: label,
                 desktop: (
@@ -318,9 +327,13 @@ const DashboardPage: React.FC<{
     },
   )
 
+  const gateContractLink = useConsentGatedNavigation()
   const tabData = useMemo(
-    () => (isLoadingMitxOnlineUser ? getTabData() : getTabData(mitxOnlineUser)),
-    [isLoadingMitxOnlineUser, mitxOnlineUser],
+    () =>
+      isLoadingMitxOnlineUser
+        ? getTabData()
+        : getTabData(mitxOnlineUser, gateContractLink),
+    [isLoadingMitxOnlineUser, mitxOnlineUser, gateContractLink],
   )
 
   const tabValue = useMemo(() => {
@@ -360,6 +373,7 @@ const DashboardPage: React.FC<{
               label={tab.label.desktop}
               component={Link}
               href={tab.href}
+              {...tab.linkProps}
             />
           ))}
         </TabsContainer>
@@ -374,6 +388,7 @@ const DashboardPage: React.FC<{
           key={tab.value}
           value={tab.value}
           href={tab.href}
+          {...tab.linkProps}
           label={tab.label.mobile}
         />
       ))}
