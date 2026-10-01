@@ -50,7 +50,7 @@ describe("DashboardDialogs", () => {
 
     mockedUseFeatureFlagEnabled.mockReturnValue(true)
     setMockResponse.get(
-      mitxonline.urls.enrollment.enrollmentsListV3(),
+      mitxonline.urls.enrollment.enrollmentsListV3({ exclude_b2b: true }),
       enrollments,
     )
     setMockResponse.get(
@@ -269,7 +269,7 @@ describe("DashboardDialogs", () => {
     // removed by the mutation's immediate cache update, not by the refetch.
     const refetch = Promise.withResolvers<typeof enrollments>()
     setMockResponse.get(
-      mitxonline.urls.enrollment.enrollmentsListV3(),
+      mitxonline.urls.enrollment.enrollmentsListV3({ exclude_b2b: true }),
       refetch.promise,
     )
 
