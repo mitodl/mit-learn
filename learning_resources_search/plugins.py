@@ -265,7 +265,7 @@ class SearchIndexPlugin:
             if django_settings.QDRANT_ENABLE_INDEXING_PLUGIN_HOOKS:
                 deindex_tasks.append(
                     vector_tasks.remove_deleted_run_content_files.si(
-                        run_readable_id, resource.readable_id
+                        run_readable_id, resource.readable_id, resource.platform_id
                     )
                 )
             try_with_retry_as_task(chain(*deindex_tasks))

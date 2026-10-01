@@ -415,7 +415,9 @@ def test_search_index_plugin_resource_run_delete(  # noqa: PLR0913
     mock_try_task.assert_called_once()
     mock_deindex.assert_called_once_with(run_pk, course.id, course.resource_type)
     if qdrant_hooks:
-        mock_remove_points.assert_called_once_with(run.run_id, course.readable_id)
+        mock_remove_points.assert_called_once_with(
+            run.run_id, course.readable_id, course.platform_id
+        )
     else:
         mock_remove_points.assert_not_called()
 
