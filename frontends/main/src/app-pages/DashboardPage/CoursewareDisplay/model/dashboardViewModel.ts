@@ -600,10 +600,20 @@ const assembleHomeCardList = ({
   }
 }
 
-const filterEnrollmentsForContract = (contractId?: number) => {
+/**
+ * `b2b_contract_id` mirrors the run's `b2b_contract`, which can be blank on a
+ * contract run (staff-enrolled only), so also trust the API's contract scoping
+ * of `course.courseruns`.
+ */
+const filterEnrollmentsForContract = (
+  course: CourseWithCourseRunsSerializerV2,
+  contractId?: number,
+) => {
   if (typeof contractId !== "number") return isNonContractEnrollment
   return (enrollment: CourseRunEnrollmentV3) =>
-    enrollment.b2b_contract_id === contractId
+    enrollment.b2b_contract_id === contractId ||
+    (!enrollment.b2b_contract_id &&
+      course.courseruns.some((run) => run.id === enrollment.run.id))
 }
 
 /**
@@ -632,7 +642,7 @@ const resolveDisplayedRunAndEnrollment = (
     ? runMatchesVariant(opts.variant)
     : () => true
   const relevantEnrollments = enrollments
-    .filter(filterEnrollmentsForContract(opts?.contractId))
+    .filter(filterEnrollmentsForContract(course, opts?.contractId))
     .filter((e) => variantFilter(e.run))
 
   const displayedEnrollment = selectBestEnrollment(course, relevantEnrollments)

@@ -1827,6 +1827,56 @@ describe("dashboardViewModel", () => {
       expect(resolved.displayedEnrollment).toBeNull()
     })
 
+    test("picks a staff-made enrollment in a contract run with no b2b_contract", () => {
+      // The API scopes courseruns to the contract, including runs whose
+      // b2b_contract is blank so learners can't self-enroll.
+      const run = factories.courses.courseRun({
+        id: 2803,
+        b2b_contract: null,
+        is_enrollable: false,
+      })
+      const course = factories.courses.course({
+        id: 3,
+        courseruns: [run],
+        next_run_id: null,
+      })
+      const enrollment = factories.enrollment.courseEnrollment({
+        b2b_contract_id: null,
+        run: { ...run, course: { id: course.id, title: course.title } },
+      })
+
+      const resolved = resolveDisplayedRunAndEnrollment(course, [enrollment], {
+        contractId: 1905,
+      })
+
+      expect(resolved.displayedEnrollment).toBe(enrollment)
+      expect(resolved.displayedRun?.id).toBe(run.id)
+    })
+
+    test("ignores a non-contract enrollment in a run outside the contract", () => {
+      const contractRun = factories.courses.courseRun({
+        id: 41,
+        b2b_contract: 1905,
+      })
+      const course = factories.courses.course({
+        id: 4,
+        courseruns: [contractRun],
+        next_run_id: null,
+      })
+      const publicEnrollment = factories.enrollment.courseEnrollment({
+        b2b_contract_id: null,
+        run: { id: 42, course: { id: course.id, title: course.title } },
+      })
+
+      const resolved = resolveDisplayedRunAndEnrollment(
+        course,
+        [publicEnrollment],
+        { contractId: 1905 },
+      )
+
+      expect(resolved.displayedEnrollment).toBeNull()
+    })
+
     test("variant path: returns best candidate run when user is not enrolled", () => {
       // No enrollment; the enrollable candidate should be picked over the
       // unenrollable one (enrollable-first sort in selectVariantRunForCourse).
