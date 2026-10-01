@@ -52,22 +52,22 @@ const getOverviewRequestOpts = (): AiChatProps["requestOpts"] => {
   }
 }
 
-const Container = styled.section(({ theme }) => ({
-  position: "relative",
-  backgroundColor: theme.custom.colors.lightGray1,
-  border: `1px solid ${theme.custom.colors.lightGray2}`,
-  borderRadius: "8px",
-  padding: "16px 24px",
-  marginBottom: "16px",
-  // Extra room for the "Show more" button overlapping the bottom edge.
-  "&:has(> .show-more)": {
-    paddingBottom: "24px",
-  },
-  [theme.breakpoints.down("md")]: {
-    paddingLeft: "16px",
-    paddingRight: "16px",
-  },
-}))
+const Container = styled.section<{ hasShowMore?: boolean }>(
+  ({ theme, hasShowMore }) => ({
+    position: "relative",
+    backgroundColor: theme.custom.colors.lightGray1,
+    border: `1px solid ${theme.custom.colors.lightGray2}`,
+    borderRadius: "8px",
+    padding: "16px 24px",
+    marginBottom: "16px",
+    // Extra room for the "Show more" button overlapping the bottom edge.
+    paddingBottom: hasShowMore ? "24px" : "16px",
+    [theme.breakpoints.down("md")]: {
+      paddingLeft: "16px",
+      paddingRight: "16px",
+    },
+  }),
+)
 
 const Header = styled.div(({ theme }) => ({
   display: "flex",
@@ -276,7 +276,7 @@ const Overview: React.FC<{ query: string }> = ({ query }) => {
   }
 
   return (
-    <Container>
+    <Container hasShowMore>
       <Header>
         <RiSparkling2Line aria-hidden />
         <HeaderLabel component="h2">AI Overview</HeaderLabel>
@@ -285,7 +285,6 @@ const Overview: React.FC<{ query: string }> = ({ query }) => {
         <ReactMarkdown skipHtml>{response}</ReactMarkdown>
       </Content>
       <ShowMoreButton
-        className="show-more"
         variant="bordered"
         size="small"
         endIcon={<RiArrowDownLine />}
