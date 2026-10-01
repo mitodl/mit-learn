@@ -24,6 +24,9 @@ export default function sitemap(): MetadataRoute.Sitemap {
       url: `${BASE_URL}/about`,
     },
     {
+      url: `${BASE_URL}/organizational-learning`,
+    },
+    {
       url: `${BASE_URL}/topics`,
     },
     {
