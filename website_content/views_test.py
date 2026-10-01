@@ -621,6 +621,62 @@ def test_seo_description_is_inferred_from_the_subheading(staff_client):
     assert resp.json()["seo_description_override"] == ""
 
 
+def test_inferred_description_joins_a_formatted_subheading(staff_client):
+    """
+    A subheading split up by formatting resolves whole.
+
+    ProseMirror splits a line on every mark boundary, so "A **complex**
+    article" is three text nodes rather than one. Reading only the first
+    resolved a single word.
+    """
+    resp = staff_client.post(
+        reverse("website_content:v1:website_content-list"),
+        {
+            "content": {
+                "type": "doc",
+                "content": [
+                    {
+                        "type": "banner",
+                        "content": [
+                            {
+                                "type": "heading",
+                                "content": [
+                                    {"type": "text", "text": "Complex Article"}
+                                ],
+                            },
+                            {
+                                "type": "paragraph",
+                                "content": [
+                                    {"type": "text", "text": "A "},
+                                    {
+                                        "type": "text",
+                                        "marks": [{"type": "bold"}],
+                                        "text": "complex",
+                                    },
+                                    {"type": "text", "text": " article with "},
+                                    {
+                                        "type": "text",
+                                        "marks": [{"type": "italic"}],
+                                        "text": "various",
+                                    },
+                                    {"type": "text", "text": " elements."},
+                                ],
+                            },
+                        ],
+                    }
+                ],
+            },
+            "title": "Formatted subheading",
+            "content_type": "news",
+        },
+        format="json",
+    )
+
+    assert (
+        resp.json()["seo_description"] == "A complex article with various elements."
+    )
+
+
 def test_seo_override_wins_over_what_is_inferred(staff_client):
     """An override is the point: it displaces the content's own words."""
     resp = staff_client.post(

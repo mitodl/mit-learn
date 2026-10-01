@@ -6,6 +6,20 @@ import type { WebsiteContent } from "../../generated/v1"
 const websiteContent: Factory<WebsiteContent> = (overrides = {}) => {
   const title =
     (overrides.title as string | undefined) ?? faker.lorem.sentence()
+  /**
+   * Resolved the way the serializer resolves them, from whatever overrides the
+   * caller supplied. Defaulting them independently let a fixture claim an
+   * override and a resolved value that disagreed -- a response the API could
+   * never produce, which a test could then quietly rely on.
+   *
+   * An explicit `seo_title` or `seo_description` still wins, via the spread
+   * below: a test that wants an inferred description passes the content it was
+   * inferred from and the value together.
+   */
+  const titleOverride =
+    (overrides.seo_title_override as string | undefined) ?? ""
+  const descriptionOverride =
+    (overrides.seo_description_override as string | undefined) ?? ""
   return {
     id: faker.number.int(),
     title,
@@ -22,16 +36,15 @@ const websiteContent: Factory<WebsiteContent> = (overrides = {}) => {
     // The API always sends these, empty or not, so fixtures should too.
     topics: [],
     /**
-     * No override is the common case. The resolved `seo_title` then mirrors the
-     * title, as the serializer's does -- a fixture where the two disagree would
-     * be one the API could never produce. `seo_description` stays blank because
-     * the default `content` here has no banner subheading to infer from; a test
-     * that wants one passes both the content and the resolved value.
+     * No override is the common case: the resolved title is then the content's
+     * own. The resolved description defaults to blank rather than to anything
+     * inferred, because the default `content` here has no banner subheading --
+     * a test that wants one passes the content and the resolved value together.
      */
-    seo_title_override: "",
-    seo_description_override: "",
-    seo_title: title,
-    seo_description: "",
+    seo_title_override: titleOverride,
+    seo_description_override: descriptionOverride,
+    seo_title: titleOverride || title,
+    seo_description: descriptionOverride,
     user: {
       first_name: faker.person.firstName(),
       last_name: faker.person.lastName(),

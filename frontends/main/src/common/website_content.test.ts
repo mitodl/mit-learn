@@ -35,6 +35,50 @@ describe("extractWebsiteContentDescription", () => {
     ).toBe("The line beneath it.")
   })
 
+  /**
+   * A subheading with any formatting in it is several text nodes, not one --
+   * ProseMirror splits on every mark boundary. Reading only the first gave
+   * "A " for a line that reads "A complex article with various elements."
+   */
+  test("joins a subheading split up by formatting", () => {
+    expect(
+      extractWebsiteContentDescription({
+        content: {
+          type: "doc",
+          content: [
+            {
+              type: "banner",
+              content: [
+                {
+                  type: "heading",
+                  content: [{ type: "text", text: "Complex Article" }],
+                },
+                {
+                  type: "paragraph",
+                  content: [
+                    { type: "text", text: "A " },
+                    {
+                      type: "text",
+                      marks: [{ type: "bold" }],
+                      text: "complex",
+                    },
+                    { type: "text", text: " article with " },
+                    {
+                      type: "text",
+                      marks: [{ type: "italic" }],
+                      text: "various",
+                    },
+                    { type: "text", text: " elements." },
+                  ],
+                },
+              ],
+            },
+          ],
+        },
+      }),
+    ).toBe("A complex article with various elements.")
+  })
+
   test("yields nothing for a body that is not that shape", () => {
     expect(
       extractWebsiteContentDescription({

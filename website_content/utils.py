@@ -187,6 +187,13 @@ def inferred_seo_description(content_json: dict | None) -> str:
     reads the live document while the editor is open -- the two have to agree,
     so a change to the banner's shape has to land in both.
 
+    Every inline node is joined, not just the first: a subheading with any
+    formatting in it is several text nodes rather than one, so "A **complex**
+    article" is three. Joined with nothing between them, as
+    `_traverse_for_text` does and for the same reason -- they are contiguous
+    characters that differ only by their marks, and a separator would break
+    words apart.
+
     Args:
         content_json: The JSON content from a WebsiteContent record.
 
@@ -200,7 +207,6 @@ def inferred_seo_description(content_json: dict | None) -> str:
     if len(children) < 2:  # noqa: PLR2004
         return ""
     subheading = children[1] or {}
-    text_nodes = subheading.get("content") or []
-    if not text_nodes:
-        return ""
-    return (text_nodes[0] or {}).get("text", "").strip()
+    return "".join(
+        (node or {}).get("text") or "" for node in subheading.get("content") or []
+    ).strip()

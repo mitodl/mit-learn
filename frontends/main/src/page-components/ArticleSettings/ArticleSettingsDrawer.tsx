@@ -681,7 +681,11 @@ const ArticleSettingsDrawer = ({
                 name="seo_title"
                 label="SEO Title"
                 fullWidth
-                required={seoRequired}
+                /* Required only where nothing can stand in for it. Blank is
+                   valid -- and the ordinary case -- whenever the content has a
+                   title, so marking it required then would put an asterisk and
+                   `aria-required` on a field the save is perfectly happy with. */
+                required={seoRequired && !inferredSeoTitle}
                 /* What will be used if this is left alone. Only a prompt when
                    there is nothing to infer from yet. */
                 placeholder={
@@ -712,7 +716,7 @@ const ArticleSettingsDrawer = ({
                 name="seo_description"
                 label="SEO Description"
                 fullWidth
-                required={seoRequired}
+                required={seoRequired && !inferredSeoDescription}
                 multiline
                 /* Sized to the budget rather than to the space: nine rows read
                    as an invitation to write far more than will ever show. */

@@ -320,6 +320,26 @@ describe("ArticleSettingsDrawer SEO fields", () => {
     expect(saveButton).toBeEnabled()
   }, 20000)
 
+  /**
+   * The asterisk and `aria-required` have to agree with the save. A field
+   * whose blank the save accepts -- because the content supplies a value --
+   * must not announce itself as required, or a screen reader is told something
+   * the form does not enforce.
+   */
+  test("is marked required only where nothing can stand in", async () => {
+    mockTopics()
+    renderDrawer(undefined, {
+      seoRequired: true,
+      inferredSeoTitle: "The content's own title",
+      inferredSeoDescription: "",
+    })
+
+    /* The title has a fallback, so blank is fine and it says so. */
+    expect(await screen.findByLabelText("SEO Title")).not.toBeRequired()
+    /* The description has none, so this one really is required. */
+    expect(screen.getByLabelText(/^SEO Description/)).toBeRequired()
+  })
+
   test("a required field that resolves is not refused", async () => {
     mockTopics()
     renderDrawer(undefined, {

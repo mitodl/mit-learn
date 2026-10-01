@@ -41,14 +41,24 @@ export const toContentType = (
  * Positional, because that is how the banner is built: first child the
  * heading, second the subheading. The Python side matches, so a change to the
  * banner's shape has to land in both.
+ *
+ * Every inline node is joined, not just the first: a subheading with any
+ * formatting in it is several text nodes rather than one, so "A **complex**
+ * article" is three. Joined with nothing between them -- they are contiguous
+ * characters that differ only by their marks, and a separator would break
+ * words apart.
  */
 export const extractWebsiteContentDescription = (
   content: WebsiteContent | { content?: JSONContent },
 ): string | undefined => {
   const banner = content.content?.content?.[0]
   const subheading = banner?.content?.[1]
-  const textNode = subheading?.content?.[0]
-  return textNode?.text
+  const text = (subheading?.content ?? [])
+    .map((node: JSONContent) => node.text ?? "")
+    .join("")
+  /* Absent rather than blank, which is what `getMetadataAsync` needs to
+     substitute its own default instead of emitting an empty tag. */
+  return text || undefined
 }
 
 /**
