@@ -381,42 +381,6 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
     [statusFilter],
   )
 
-  const listParams = useMemo(
-    () => ({
-      limit: PAGE_SIZE,
-      offset: (page - 1) * PAGE_SIZE,
-      sort: "full_name" as const,
-      ...(debouncedSearch ? { search: debouncedSearch } : {}),
-      ...(completionStatus ? { completion_status: completionStatus } : {}),
-      ...(moduleFilter === ALL ? {} : { courserun_readable_id: moduleFilter }),
-    }),
-    [page, debouncedSearch, completionStatus, moduleFilter],
-  )
-
-  const rowsQuery = useQuery({
-    ...analyticsContractQueries.learnerProgress(
-      orgUuid ?? "",
-      contractId ?? "",
-      listParams,
-    ),
-    enabled: canQuery,
-    placeholderData: keepPreviousData,
-  })
-
-  /**
-   * One row is enough: only `total_count` is read. Unfiltered on purpose, so
-   * the "X of Y enrollments" summary below stays a fixed total while the
-   * table narrows with search/status filters.
-   */
-  const totalQuery = useQuery({
-    ...analyticsContractQueries.learnerProgress(
-      orgUuid ?? "",
-      contractId ?? "",
-      { limit: 1 },
-    ),
-    enabled: canQuery,
-  })
-
   /**
    * One page covers any real contract's course runs, and the dropdown has to
    * list all of them or it silently hides runs a manager could filter by —
@@ -445,6 +409,62 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
     ],
     [courseRunsQuery.data],
   )
+
+  /**
+   * A run can leave the contract while a manager has it selected, and the
+   * stale time is short enough that a refetch lands mid-session. Everything
+   * below reads this rather than `moduleFilter` so the control, the query and
+   * the empty message never disagree: left alone, `FilterSelect` would find no
+   * matching option and render an empty box — MUI warns about the out-of-range
+   * value — while the table stayed filtered by an id no longer on offer.
+   *
+   * Derived rather than corrected in an effect, which would both ship that bad
+   * render first and discard the selection for good. A run that comes back in
+   * a later refetch simply applies again.
+   */
+  const activeModule = useMemo(
+    () =>
+      moduleOptions.some((option) => option.value === moduleFilter)
+        ? moduleFilter
+        : ALL,
+    [moduleOptions, moduleFilter],
+  )
+
+  const listParams = useMemo(
+    () => ({
+      limit: PAGE_SIZE,
+      offset: (page - 1) * PAGE_SIZE,
+      sort: "full_name" as const,
+      ...(debouncedSearch ? { search: debouncedSearch } : {}),
+      ...(completionStatus ? { completion_status: completionStatus } : {}),
+      ...(activeModule === ALL ? {} : { courserun_readable_id: activeModule }),
+    }),
+    [page, debouncedSearch, completionStatus, activeModule],
+  )
+
+  const rowsQuery = useQuery({
+    ...analyticsContractQueries.learnerProgress(
+      orgUuid ?? "",
+      contractId ?? "",
+      listParams,
+    ),
+    enabled: canQuery,
+    placeholderData: keepPreviousData,
+  })
+
+  /**
+   * One row is enough: only `total_count` is read. Unfiltered on purpose, so
+   * the "X of Y enrollments" summary below stays a fixed total while the
+   * table narrows with search/status filters.
+   */
+  const totalQuery = useQuery({
+    ...analyticsContractQueries.learnerProgress(
+      orgUuid ?? "",
+      contractId ?? "",
+      { limit: 1 },
+    ),
+    enabled: canQuery,
+  })
 
   const rows = rowsQuery.data?.data ?? []
   const filteredCount = rowsQuery.data?.total_count ?? 0
@@ -566,8 +586,13 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
           row.courserun_readable_id,
           DISPLAY_STATUS_LABEL[getDisplayStatus(row)],
           row.enrolled_on,
-          // Raw YYYY-MM-DD, like `enrolled_on` above: a spreadsheet reads it
-          // as a date, where the screen's "Sep 30, 2026" is just text.
+          /**
+           * Raw `YYYY-MM-DD`, which a spreadsheet reads as a date where the
+           * screen's "Sep 30, 2026" is just text. Note this is a narrower
+           * shape than `enrolled_on` above, a full UTC timestamp — the two
+           * date columns are not interchangeable, and normalizing them here
+           * would mean picking a calendar day for an instant.
+           */
           row.last_active_on,
           // progress ? String(progress.percent) : "",
           // progress ? String(progress.lessonsCompleted) : "",
@@ -611,7 +636,7 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
   const lastAnnounced = useRef<string | null>(null)
   useEffect(() => {
     if (isBusy || !rowsQuery.data) return
-    const key = `${statusFilter}:${moduleFilter}:${debouncedSearch}`
+    const key = `${statusFilter}:${activeModule}:${debouncedSearch}`
     if (lastAnnounced.current === null) {
       lastAnnounced.current = key
       return
@@ -625,7 +650,7 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
     isBusy,
     rowsQuery.data,
     statusFilter,
-    moduleFilter,
+    activeModule,
     debouncedSearch,
     filteredCount,
   ])
@@ -675,7 +700,7 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
 
   const emptyMessage = debouncedSearch
     ? "No learners match your search."
-    : statusFilter !== ALL || moduleFilter !== ALL
+    : statusFilter !== ALL || activeModule !== ALL
       ? "No learners match this filter."
       : "No learners found."
 
@@ -772,7 +797,7 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
                 <FilterSelect
                   label="Module"
                   size="medium"
-                  value={moduleFilter}
+                  value={activeModule}
                   options={moduleOptions}
                   /**
                    * Marked on the field rather than folded into
@@ -780,8 +805,13 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
                    * swapping it for the page-level error would be a worse
                    * failure than the dead dropdown. `error` is required for
                    * `errorText` to render at all — see `FormFieldWrapper`.
+                   *
+                   * Gated on having no data, not on `isError` alone: a failed
+                   * *refetch* leaves the last good list in place, and claiming
+                   * failure over a dropdown that still lists every module and
+                   * filters correctly is worse than saying nothing.
                    */
-                  error={courseRunsQuery.isError}
+                  error={courseRunsQuery.isError && !courseRunsQuery.data}
                   errorText="Couldn't load modules. Reload to try again."
                   onChange={(event) =>
                     applyFilterChange(() =>

@@ -227,9 +227,11 @@ const analyticsContractQueries = {
     }),
 
   /**
-   * The module filter's options. Kept on the hours-cadence stale time, unlike
-   * `learnerProgress` above: a contract's set of course runs changes when the
-   * contract does, not as learners move through it.
+   * The module filter's options. Kept on the shared five-minute
+   * `ANALYTICS_STALE_TIME` rather than `learnerProgress`'s shorter one: a
+   * contract's set of course runs changes when the contract does, not as
+   * learners move through it. Five minutes is still short enough that a
+   * consumer has to expect a mid-session refetch.
    */
   courseRuns: (orgId: string, contractId: string, page?: AnalyticsPageParams) =>
     queryOptions({

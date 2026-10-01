@@ -1,6 +1,6 @@
 import React from "react"
 import { renderWithProviders, screen, user, within } from "@/test-utils"
-import { waitFor } from "@testing-library/react"
+import { act, waitFor } from "@testing-library/react"
 import { setMockResponse } from "api/test-utils"
 import {
   factories as mitxFactories,
@@ -695,6 +695,99 @@ describe("ContractLearnersPage", () => {
 
     expect(document.querySelector('[aria-live="assertive"]')?.textContent).toBe(
       "4 results",
+    )
+  })
+
+  /**
+   * A failed *refetch* keeps the last good options, so the field must not
+   * claim a failure the dropdown contradicts — see its `error` prop.
+   */
+  test("keeps the module options and stays quiet when a refetch fails", async () => {
+    const { org, contract, orgSlug } = setup()
+    const contractId = String(contract.id)
+    setMockResponse.get(
+      mitxUrls.organization.managerOrganizationsList(),
+      paginate([org]),
+    )
+    mockTotal(contractId, 1)
+    mockCourseRuns(contractId)
+    mockList(contractId, [
+      analyticsFactories.learnerProgress({ full_name: "Anton Petrov" }),
+    ])
+
+    const { queryClient } = renderWithProviders(
+      <ContractLearnersPage orgSlug={orgSlug} contractSlug={contract.slug} />,
+    )
+    await screen.findByText("Anton Petrov")
+
+    setMockResponse.get(
+      analyticsUrls.contracts.courseRuns(ORG_UUID, contractId, { limit: 1000 }),
+      "Internal Server Error",
+      { code: 500 },
+    )
+    // A visible change on the rows query, which refetches in the same pass, is
+    // the settle point: the field's own failure is by design invisible, so
+    // asserting its absence straight after `refetchQueries` resolves would run
+    // before React had committed either result.
+    mockList(contractId, [
+      analyticsFactories.learnerProgress({ full_name: "Refetched Learner" }),
+    ])
+    await act(async () => {
+      await queryClient.refetchQueries()
+    })
+    await screen.findByText("Refetched Learner")
+
+    expect(
+      screen.queryByText("Couldn't load modules. Reload to try again."),
+    ).not.toBeInTheDocument()
+    await user.click(screen.getByRole("combobox", { name: /module/i }))
+    expect(
+      within(await screen.findByRole("listbox")).getByText("Module 6"),
+    ).toBeInTheDocument()
+  })
+
+  test("falls back to All modules when the selected run leaves the contract", async () => {
+    const { org, contract, orgSlug } = setup()
+    const contractId = String(contract.id)
+    setMockResponse.get(
+      mitxUrls.organization.managerOrganizationsList(),
+      paginate([org]),
+    )
+    mockTotal(contractId, 2)
+    mockCourseRuns(contractId)
+    mockList(contractId, [
+      analyticsFactories.learnerProgress({ full_name: "Unfiltered Learner" }),
+    ])
+    mockList(
+      contractId,
+      [analyticsFactories.learnerProgress({ full_name: "Module Six Learner" })],
+      { courserun_readable_id: "course-v1:MITx+M6+2026" },
+    )
+
+    const { queryClient } = renderWithProviders(
+      <ContractLearnersPage orgSlug={orgSlug} contractSlug={contract.slug} />,
+    )
+    await screen.findByText("Unfiltered Learner")
+
+    await user.click(await screen.findByRole("combobox", { name: /module/i }))
+    await user.click(
+      within(await screen.findByRole("listbox")).getByText("Module 6"),
+    )
+    await screen.findByText("Module Six Learner")
+
+    mockCourseRuns(contractId, [
+      analyticsFactories.courseRun({
+        courserun_id: "course-v1:MITx+M5+2026",
+        courserun_title: "Module 5",
+      }),
+    ])
+    await act(async () => {
+      await queryClient.refetchQueries()
+    })
+
+    await screen.findByText("Unfiltered Learner")
+    expect(screen.getByRole("combobox", { name: /module/i })).toHaveTextContent(
+      "All modules",
     )
   })
 
