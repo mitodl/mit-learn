@@ -817,8 +817,8 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
               <ConsentNotice component="p">
                 Learners who have not agreed to share their progress are hidden
                 while this filter is on. Whether they need attention cannot be
-                determined. Clear this filter, then adjust any other active filters or
-                search terms as needed to see them.
+                determined. Clear this filter, then adjust any other active
+                filters or search terms as needed to see them.
               </ConsentNotice>
             ) : null}
 
