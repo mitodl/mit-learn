@@ -36,7 +36,11 @@ describe("hasCourseStaffRole", () => {
     // Absent while the generated client lags mitxonline, and null-safe for the
     // sibling rows, which may have no enrollment yet.
     { label: "null", enrollment: enrollmentWith(null), expected: false },
-    { label: "missing", enrollment: enrollmentWith(undefined), expected: false },
+    {
+      label: "missing",
+      enrollment: enrollmentWith(undefined),
+      expected: false,
+    },
     { label: "null enrollment", enrollment: null, expected: false },
     { label: "no enrollment", enrollment: undefined, expected: false },
   ])("reads $label as $expected", ({ enrollment, expected }) => {
