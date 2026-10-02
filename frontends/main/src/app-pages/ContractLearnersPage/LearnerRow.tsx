@@ -81,8 +81,18 @@ const StatusDot = styled.span<{ $muted: boolean }>(({ $muted, theme }) => ({
  * inline, and a Chip is `inline-flex` by default. Its own line rather than
  * beside the status because needing attention overlaps every completion
  * status instead of replacing one — a stale `In progress` row carries both.
+ *
+ * Rendered as a `span` (see its call site) because `CellText` is one and a
+ * Chip roots to a `div`. React's nesting validator does not check `span`
+ * parents, so nothing warns, but flow content inside phrasing content is
+ * still invalid — and `display` is set here regardless of the element. The
+ * prop is declared because `styled()` erases MUI's polymorphic `component`
+ * overload; emotion still forwards it, since Chip is a component rather than
+ * a tag name.
  */
-const NeedsAttentionBadge = styled(Chip)(({ theme }) => ({
+const NeedsAttentionBadge = styled(Chip)<{
+  component?: React.ElementType
+}>(({ theme }) => ({
   height: "20px",
   borderRadius: "4px",
   paddingRight: "8px",
@@ -150,7 +160,7 @@ const LearnerRow: React.FC<LearnerRowProps> = ({ row }) => {
           {/* Null, not false, on a withheld row — so a truthy check is also
               what keeps this off a "No consent given" row. */}
           {row.needs_attention ? (
-            <NeedsAttentionBadge label="Needs attention" />
+            <NeedsAttentionBadge component="span" label="Needs attention" />
           ) : null}
         </CellText>
       </TableCell>

@@ -72,12 +72,15 @@ const setupUnqueryable = () => {
  * for the "X of Y enrollments" summary text. Mocking by exact URL keeps the
  * assertion pinned to the request it is about.
  */
-const mockTotal = (contractId: string, total: number) => {
+const mockTotal = (contractId: string, total: number, withheld = 0) => {
   setMockResponse.get(
     analyticsUrls.contracts.learnerProgress(ORG_UUID, contractId, {
       limit: 1,
     }),
-    analyticsFactories.learnerProgressEnvelope([], { total_count: total }),
+    analyticsFactories.learnerProgressEnvelope([], {
+      total_count: total,
+      outcomes_withheld_count: withheld,
+    }),
   )
 }
 
@@ -426,6 +429,17 @@ describe("ContractLearnersPage", () => {
     })
 
     test("exports the same status label the table shows, not the raw completion_status enum", async () => {
+      /**
+       * The analytics API deploys separately, so `needs_attention` can be
+       * absent rather than null. Deleted rather than set to undefined: the
+       * field is required on the type, and the point is a response that never
+       * carried the key.
+       */
+      const legacyRow = analyticsFactories.learnerProgress({
+        full_name: "Legacy Row",
+      })
+      delete (legacyRow as Partial<typeof legacyRow>).needs_attention
+
       const { org, contract, orgSlug } = setup()
       const contractId = String(contract.id)
       setMockResponse.get(
@@ -459,6 +473,7 @@ describe("ContractLearnersPage", () => {
           analyticsFactories.withheldLearnerProgress({
             full_name: "Private Learner",
           }),
+          legacyRow,
         ]),
       )
 
@@ -492,11 +507,13 @@ describe("ContractLearnersPage", () => {
       expect(csv).toContain(",2026-09-30")
       expect(csv).not.toContain("Sep 30, 2026")
       // Yes/No for the consented row; empty for the withheld one, whose
-      // `needs_attention` is null rather than false.
+      // `needs_attention` is null rather than false, and empty for the row
+      // from an API that does not send the field at all.
       expect(csv).toContain("Needs attention")
-      const [, consented, withheld] = csv.trim().split("\n")
+      const [, consented, withheld, legacy] = csv.trim().split("\n")
       expect(consented).toMatch(/,No$/)
       expect(withheld).toMatch(/,$/)
+      expect(legacy).toMatch(/,$/)
     })
 
     test("carries the active status filter, not just pagination", async () => {
@@ -1037,9 +1054,15 @@ describe("ContractLearnersPage", () => {
   })
 
   describe("the Needs attention filter", () => {
+    /**
+     * `contractWithheldCount` lands on the unfiltered total rather than the
+     * row list: that is where the page reads it from, because the filtered
+     * envelope reports no withheld rows by construction.
+     */
     const renderWithRows = async (
       rows: ReturnType<typeof analyticsFactories.learnerProgress>[],
       extra?: (contractId: string) => void,
+      contractWithheldCount = 0,
     ) => {
       const { org, contract, orgSlug } = setup()
       const contractId = String(contract.id)
@@ -1047,7 +1070,7 @@ describe("ContractLearnersPage", () => {
         mitxUrls.organization.managerOrganizationsList(),
         paginate([org]),
       )
-      mockTotal(contractId, rows.length)
+      mockTotal(contractId, rows.length, contractWithheldCount)
       mockCourseRuns(contractId)
       mockList(contractId, rows)
       extra?.(contractId)
@@ -1075,10 +1098,16 @@ describe("ContractLearnersPage", () => {
       const stale = rowOf(await screen.findByText("Stale Learner"))
       const active = rowOf(await screen.findByText("Active Learner"))
 
-      expect(within(stale).getByText("Needs attention")).toBeInTheDocument()
+      const badge = within(stale).getByText("Needs attention")
+      expect(badge).toBeInTheDocument()
       expect(
         within(active).queryByText("Needs attention"),
       ).not.toBeInTheDocument()
+
+      // The badge sits inside `CellText`, a span, so a Chip left on its
+      // default `div` root would nest flow content in phrasing content —
+      // which React's nesting validator does not catch.
+      expect(badge.closest(".MuiChip-root")?.tagName).toBe("SPAN")
     })
 
     /**
@@ -1208,6 +1237,7 @@ describe("ContractLearnersPage", () => {
             ],
             { needs_attention: true },
           ),
+        1,
       )
 
       await screen.findByText("Everyone")
@@ -1217,6 +1247,34 @@ describe("ContractLearnersPage", () => {
       await screen.findByText("Only Stale")
 
       await screen.findByText(/are hidden while this filter is on/)
+    })
+
+    /**
+     * The notice states a fact about this contract, so on one where everybody
+     * consented it would be false: nothing is hidden, and saying otherwise
+     * invents a consent problem on the page meant to report consent honestly.
+     */
+    test("stays quiet when the contract has no withheld learners to hide", async () => {
+      await renderWithRows(
+        [analyticsFactories.learnerProgress({ full_name: "Everyone" })],
+        (contractId) =>
+          mockList(
+            contractId,
+            [
+              analyticsFactories.learnerProgress({
+                full_name: "Only Stale",
+                needs_attention: true,
+              }),
+            ],
+            { needs_attention: true },
+          ),
+      )
+
+      await screen.findByText("Everyone")
+      await user.click(await checkbox())
+      await screen.findByText("Only Stale")
+
+      expect(screen.queryByText(/are hidden while this filter/)).toBeNull()
     })
 
     test("announces the result count when the filter changes", async () => {
@@ -1244,6 +1302,44 @@ describe("ContractLearnersPage", () => {
 
       await waitFor(() => {
         expect(screen.getByText("1 result")).toBeInTheDocument()
+      })
+    })
+
+    /**
+     * The notice sits in no live region, so the count alone would reach a
+     * screen reader as a smaller number with no reason given — the exclusion
+     * has to ride along with it.
+     */
+    test("announces the exclusion alongside the count, not just the count", async () => {
+      await renderWithRows(
+        [
+          analyticsFactories.learnerProgress({ full_name: "Everyone" }),
+          analyticsFactories.learnerProgress({ full_name: "Someone Else" }),
+        ],
+        (contractId) =>
+          mockList(
+            contractId,
+            [
+              analyticsFactories.learnerProgress({
+                full_name: "Only Stale",
+                needs_attention: true,
+              }),
+            ],
+            { needs_attention: true },
+          ),
+        1,
+      )
+
+      await screen.findByText("Everyone")
+      await user.click(await checkbox())
+      await screen.findByText("Only Stale")
+
+      await waitFor(() => {
+        expect(
+          screen.getByText(
+            "1 result. Learners who have not agreed to share their progress are hidden.",
+          ),
+        ).toBeInTheDocument()
       })
     })
 

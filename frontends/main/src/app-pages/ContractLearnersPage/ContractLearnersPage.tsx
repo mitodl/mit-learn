@@ -445,6 +445,17 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
   const filteredCount = rowsQuery.data?.total_count ?? 0
   const withheldCount = rowsQuery.data?.outcomes_withheld_count ?? 0
   const totalEnrollments = totalQuery.data?.total_count ?? null
+  /**
+   * Read off the unfiltered `totalQuery` rather than `rowsQuery`: a withheld
+   * row matches neither `needs_attention=true` nor `false`, so the filtered
+   * envelope's own withheld count is zero at exactly the moment this has to
+   * be nonzero. Contract-wide is a superset of what the filter hides, which
+   * is the safe direction — it can only over-report, and only when a status
+   * or module filter had already excluded every withheld row.
+   */
+  const contractWithheldCount = totalQuery.data?.outcomes_withheld_count ?? 0
+  /** Gates both the notice and its announcement, so the two cannot disagree. */
+  const hidesWithheldLearners = needsAttentionOnly && contractWithheldCount > 0
   const totalPages = Math.ceil(filteredCount / PAGE_SIZE)
   const isStale = rowsQuery.isPlaceholderData || rowsQuery.isFetching
   const isBusy = rowsQuery.isLoading || isStale
@@ -514,12 +525,18 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
            * Blank rather than "No" on a withheld row: the API sends null
            * there, and a spreadsheet column that reads "No" for a learner
            * whose progress is hidden asserts something nobody checked.
+           *
+           * Tested for `boolean` rather than against `null`: the analytics
+           * API deploys separately, so the field can be absent entirely, and
+           * a strict null check would export "No" for every learner on an API
+           * that has not shipped it yet — the same unchecked assertion, across
+           * the whole column.
            */
-          row.needs_attention === null
-            ? ""
-            : row.needs_attention
+          typeof row.needs_attention === "boolean"
+            ? row.needs_attention
               ? "Yes"
-              : "No",
+              : "No"
+            : "",
         ]),
       )
       const csv = [header, ...body].join("\n")
@@ -566,8 +583,17 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
     }
     if (lastAnnounced.current === key) return
     lastAnnounced.current = key
+    /**
+     * The exclusion rides along with the count because the notice below it is
+     * plain text in no live region: without this, toggling the filter reaches
+     * assistive tech as a smaller number and nothing else.
+     */
     setAnnouncement(
-      `${filteredCount} ${filteredCount === 1 ? "result" : "results"}`,
+      `${filteredCount} ${filteredCount === 1 ? "result" : "results"}${
+        hidesWithheldLearners
+          ? ". Learners who have not agreed to share their progress are hidden."
+          : ""
+      }`,
     )
   }, [
     isBusy,
@@ -575,6 +601,7 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
     statusFilter,
     activeModule,
     needsAttentionOnly,
+    hidesWithheldLearners,
     debouncedSearch,
     filteredCount,
   ])
@@ -783,10 +810,10 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
               The API matches withheld rows against neither `true` nor `false`,
               so this filter hides them outright rather than listing them as
               not needing attention. Said here because nothing else on the page
-              would show it: `outcomes_withheld_count` counts the rows that
-              matched, so the notice above goes quiet at the same moment.
+              would show it: the notice above reads the filtered envelope,
+              whose withheld count is zero for that same reason.
             */}
-            {needsAttentionOnly ? (
+            {hidesWithheldLearners ? (
               <ConsentNotice component="p">
                 Learners who have not agreed to share their progress are hidden
                 while this filter is on. Whether they need attention can only be
