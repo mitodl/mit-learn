@@ -2746,10 +2746,13 @@ describe("ContractContent data consent", () => {
     await waitFor(() => {
       expect(mockRouter.asPath).toBe(DASHBOARD_HOME)
     })
-    expect(screen.getByRole("button", { name: "Decline" })).toBeDisabled()
+    expect(screen.getByRole("button", { name: "Decline" })).toHaveAttribute(
+      "aria-disabled",
+      "true",
+    )
     expect(
       screen.getByRole("button", { name: "Agree and continue" }),
-    ).toBeDisabled()
+    ).toHaveAttribute("aria-disabled", "true")
     expect(makeRequest).toHaveBeenCalledWith(
       expect.objectContaining({
         method: "post",

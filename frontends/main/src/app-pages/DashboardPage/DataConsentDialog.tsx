@@ -24,6 +24,21 @@ const ConsentCheckbox = styled(Checkbox)(({ theme }) => ({
   },
 }))
 
+// While submitting, the buttons use aria-disabled instead of disabled so the
+// pressed button keeps focus; smoot-design only styles :disabled.
+const ActionButton = styled(Button)(({ theme, variant }) => ({
+  '&&&[aria-disabled="true"], &&&[aria-disabled="true"]:hover': {
+    cursor: "default",
+    boxShadow: "none",
+    ...(variant === "primary"
+      ? { backgroundColor: theme.custom.colors.silverGray }
+      : {
+          backgroundColor: "transparent",
+          color: theme.custom.colors.silverGray,
+        }),
+  },
+}))
+
 const Actions = styled(DialogActions)({
   gap: "12px",
   "> *": {
@@ -50,6 +65,10 @@ const DataConsentDialog: React.FC<DataConsentDialogProps> = ({
 }) => {
   const [agreed, setAgreed] = React.useState(false)
   const spinner = <LoadingSpinner color="inherit" loading size={16} />
+  const busy = submitting !== null
+  const unlessBusy = (action: () => void) => () => {
+    if (!busy) action()
+  }
 
   return (
     <Dialog
@@ -62,22 +81,25 @@ const DataConsentDialog: React.FC<DataConsentDialogProps> = ({
       fullWidth
       actions={
         <Actions>
-          <Button
+          <ActionButton
             variant="secondary"
-            onClick={onDecline}
-            disabled={submitting !== null}
+            onClick={unlessBusy(onDecline)}
+            aria-disabled={busy}
+            aria-busy={submitting === "decline"}
             endIcon={submitting === "decline" ? spinner : undefined}
           >
             Decline
-          </Button>
-          <Button
+          </ActionButton>
+          <ActionButton
             variant="primary"
-            onClick={onAccept}
-            disabled={!agreed || submitting !== null}
+            onClick={unlessBusy(onAccept)}
+            disabled={!agreed}
+            aria-disabled={busy}
+            aria-busy={submitting === "accept"}
             endIcon={submitting === "accept" ? spinner : undefined}
           >
             Agree and continue
-          </Button>
+          </ActionButton>
         </Actions>
       }
     >

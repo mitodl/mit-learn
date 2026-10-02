@@ -9,6 +9,7 @@ import {
 import { makeRequest } from "api/test-utils"
 import mockRouter from "next-router-mock"
 import { contractView, DASHBOARD_HOME } from "@/common/urls"
+import { DashboardAnnouncer } from "../DashboardAnnouncer"
 import {
   factories as mitxOnlineFactories,
   urls as mitxOnlineUrls,
@@ -483,7 +484,12 @@ describe("OrganizationCards", () => {
         undefined,
         { code: 204 },
       )
-      renderWithProviders(<OrganizationCards />, { url: DASHBOARD_HOME })
+      renderWithProviders(
+        <DashboardAnnouncer>
+          <OrganizationCards />
+        </DashboardAnnouncer>,
+        { url: DASHBOARD_HOME },
+      )
       return { contract, href: contractView("consent-org", contract.slug) }
     }
 
@@ -539,6 +545,9 @@ describe("OrganizationCards", () => {
       )
 
       await waitFor(() => expect(mockRouter.asPath).toBe(href))
+      expect(
+        screen.getByText("Consent recorded. Opening Consent Contract."),
+      ).toBeInTheDocument()
       expect(makeRequest).toHaveBeenCalledWith(
         expect.objectContaining({
           method: "post",

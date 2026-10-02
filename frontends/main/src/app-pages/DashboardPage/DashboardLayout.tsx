@@ -36,6 +36,7 @@ import {
 import dynamic from "next/dynamic"
 import { MitxOnlineUser, mitxUserQueries } from "api/mitxonline-hooks/user"
 import { GRID_GAP, SIDEBAR_WIDTH } from "./layoutMetrics"
+import { DashboardAnnouncer } from "./DashboardAnnouncer"
 import { useUserMe } from "api/hooks/user"
 import { useQuery } from "@tanstack/react-query"
 import {
@@ -316,7 +317,7 @@ const getTabData = (
   ]
 }
 
-const DashboardPage: React.FC<{
+const DashboardPageContent: React.FC<{
   children: React.ReactNode
 }> = ({ children }) => {
   const pathname = usePathname()
@@ -418,6 +419,14 @@ const DashboardPage: React.FC<{
     </Background>
   )
 }
+
+const DashboardPage: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => (
+  <DashboardAnnouncer>
+    <DashboardPageContent>{children}</DashboardPageContent>
+  </DashboardAnnouncer>
+)
 
 export default DashboardPage
 

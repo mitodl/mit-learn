@@ -42,6 +42,7 @@ import UnstyledRawHTML from "@/components/UnstyledRawHTML/UnstyledRawHTML"
 import { VariantPicker } from "./CoursewareDisplay/VariantPicker"
 import { CoursewareCard } from "./CoursewareDisplay/CoursewareCard"
 import { DataConsentPrompt } from "./DataConsentPrompt"
+import { useDashboardAnnounce } from "./DashboardAnnouncer"
 
 const HeaderRoot = styled.div(({ theme }) => ({
   display: "flex",
@@ -620,6 +621,7 @@ const ContractContent: React.FC<ContractContentProps> = ({
     !!b2bContract &&
     b2bContract.consented_to_data_sharing !== true
   const router = useRouter()
+  const announce = useDashboardAnnounce()
 
   useEffect(() => {
     if (b2bOrganization) {
@@ -658,7 +660,11 @@ const ContractContent: React.FC<ContractContentProps> = ({
         key={b2bContract.id}
         open={consentRequired}
         contract={b2bContract}
-        onDeclined={() => router.push(DASHBOARD_HOME)}
+        onAccepted={() => announce("Consent recorded.")}
+        onDeclined={() => {
+          announce("Response recorded.")
+          router.push(DASHBOARD_HOME)
+        }}
       />
     </>
   )

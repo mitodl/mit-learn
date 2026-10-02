@@ -7,6 +7,7 @@ import type { UserContractPage } from "@mitodl/mitxonline-api-axios/v2"
 import { FeatureFlags } from "@/common/feature_flags"
 import { DASHBOARD_HOME } from "@/common/urls"
 import { DataConsentModal } from "./DataConsentPrompt"
+import { useDashboardAnnounce } from "./DashboardAnnouncer"
 
 type GatedLinkProps = {
   onClick?: React.MouseEventHandler
@@ -21,6 +22,7 @@ const useConsentGatedNavigation = () => {
   const consentFlag = useFeatureFlagEnabled(FeatureFlags.B2BDataConsent)
   const router = useRouter()
   const pathname = usePathname()
+  const announce = useDashboardAnnounce()
 
   return React.useCallback(
     (
@@ -40,13 +42,18 @@ const useConsentGatedNavigation = () => {
         onClick: (event) => {
           event.preventDefault()
           NiceModal.show(DataConsentModal, { contract }).then((result) => {
-            if (result === true) router.push(href)
-            else if (pathname !== DASHBOARD_HOME) router.push(DASHBOARD_HOME)
+            if (result === true) {
+              announce(`Consent recorded. Opening ${contract.name}.`)
+              router.push(href)
+            } else {
+              announce("Response recorded.")
+              if (pathname !== DASHBOARD_HOME) router.push(DASHBOARD_HOME)
+            }
           })
         },
       }
     },
-    [consentFlag, router, pathname],
+    [consentFlag, router, pathname, announce],
   )
 }
 

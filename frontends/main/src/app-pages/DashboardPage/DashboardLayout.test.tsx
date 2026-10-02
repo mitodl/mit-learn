@@ -189,5 +189,6 @@ describe("DashboardLayout", () => {
     )
 
     await waitFor(() => expect(mockRouter.asPath).toBe(DASHBOARD_HOME))
+    expect(screen.getByText("Response recorded.")).toBeInTheDocument()
   })
 })
