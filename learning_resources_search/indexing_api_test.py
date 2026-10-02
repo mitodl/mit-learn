@@ -38,6 +38,7 @@ from learning_resources_search.indexing_api import (
     deindex_content_files,
     deindex_deleted_run_content_files,
     deindex_document,
+    deindex_items,
     deindex_learning_resources,
     deindex_non_opensearch_run_content_files,
     deindex_percolators,
@@ -56,6 +57,9 @@ from learning_resources_search.utils import remove_child_queries
 from main.utils import chunks
 
 pytestmark = [pytest.mark.django_db, pytest.mark.usefixtures("mocked_es")]
+
+# deindex_items collects bulk errors itself rather than letting bulk raise
+DEINDEX_KWARGS = {"raise_on_error": False}
 
 
 @pytest.fixture
@@ -352,7 +356,9 @@ def test_index_learning_resources_for_hybrid_index(
                 )
 
 
-@pytest.mark.parametrize("errors", [(), "error"])
+@pytest.mark.parametrize(
+    "errors", [(), [{"delete": {"_id": "doc", "status": 500, "result": "error"}}]]
+)
 def test_deindex_learning_resources(mocked_es, mocker, settings, errors):
     """
     Deindex functions should call bulk with correct arguments
@@ -395,6 +401,7 @@ def test_deindex_learning_resources(mocked_es, mocker, settings, errors):
                     chunk,
                     index=alias,
                     chunk_size=settings.OPENSEARCH_INDEXING_CHUNK_SIZE,
+                    raise_on_error=False,
                 )
 
 
@@ -424,6 +431,32 @@ def test_deindex_document_not_found(mocked_es, mocker):
     mocked_es.conn.delete.side_effect = NotFoundError
     deindex_document(1, "course")
     assert patched_logger.debug.called is True
+
+
+@pytest.mark.parametrize("result", ["not_found", "error"])
+def test_deindex_items_not_found(settings, mocker, result):
+    """
+    A not_found in one chunk should not stop the chunks after it; other errors raise
+    """
+    settings.OPENSEARCH_INDEXING_CHUNK_SIZE = 2
+    mocker.patch("learning_resources_search.indexing_api.get_conn")
+    mocker.patch(
+        "learning_resources_search.indexing_api.get_active_aliases",
+        return_value=["a"],
+    )
+    mock_bulk = mocker.patch(
+        "learning_resources_search.indexing_api.bulk",
+        side_effect=[(1, [{"delete": {"_id": 1, "status": 404, "result": result}}])]
+        + [(2, [])] * 2,
+    )
+    documents = [{"_id": i, "_op_type": "delete"} for i in range(5)]
+    if result == "not_found":
+        deindex_items(documents, "course", IndexestoUpdate.all_indexes.value)
+        assert mock_bulk.call_count == 3
+    else:
+        with pytest.raises(ReindexError):
+            deindex_items(documents, "course", IndexestoUpdate.all_indexes.value)
+        assert mock_bulk.call_count == 1
 
 
 @pytest.mark.parametrize(("max_size", "chunks"), [(10000, 2), (500, 4)])
@@ -751,7 +784,9 @@ def test_bulk_content_file_deindex_on_program_deletion(mocker):
     ("indexing_chunk_size", "document_indexing_chunk_size"),
     [[2, 3], [3, 2]],  # noqa: PT007
 )
-@pytest.mark.parametrize("errors", [[], ["error"]])
+@pytest.mark.parametrize(
+    "errors", [[], [{"delete": {"_id": "doc", "status": 500, "result": "error"}}]]
+)
 def test_bulk_index_content_files(  # noqa: PLR0913
     mocked_es,
     mocker,
@@ -816,6 +851,9 @@ def test_bulk_index_content_files(  # noqa: PLR0913
         else:
             content_files = [*content_files, deindexed_content_file]
 
+        deindex_kwargs = (
+            {} if indexing_func_name == "index_run_content_files" else DEINDEX_KWARGS
+        )
         for alias in mock_get_aliases.return_value:
             for chunk in chunks([doc for _ in content_files], chunk_size=chunk_size):
                 bulk_mock.assert_any_call(
@@ -824,10 +862,13 @@ def test_bulk_index_content_files(  # noqa: PLR0913
                     index=alias,
                     chunk_size=settings.OPENSEARCH_INDEXING_CHUNK_SIZE,
                     routing=course.learning_resource_id,
+                    **deindex_kwargs,
                 )
 
 
-@pytest.mark.parametrize("errors", [[], ["error"]])
+@pytest.mark.parametrize(
+    "errors", [[], [{"delete": {"_id": "doc", "status": 500, "result": "error"}}]]
+)
 @pytest.mark.parametrize(
     ("indexing_func_name", "doc"),
     [
@@ -897,6 +938,9 @@ def test_index_content_files(  # noqa: PLR0913
         else:
             deindex_content_files(content_file_ids, course.learning_resource_id)
 
+        deindex_kwargs = (
+            {} if indexing_func_name == "index_content_files" else DEINDEX_KWARGS
+        )
         for alias in mock_get_aliases.return_value:
             bulk_mock.assert_any_call(
                 mocked_es.conn,
@@ -904,6 +948,7 @@ def test_index_content_files(  # noqa: PLR0913
                 index=alias,
                 chunk_size=6,
                 routing=course.learning_resource_id,
+                **deindex_kwargs,
             )
 
 
