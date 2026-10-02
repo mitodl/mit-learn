@@ -19,7 +19,7 @@ import {
   styled,
   Typography,
 } from "ol-components"
-import { Alert, Button, VisuallyHidden } from "@mitodl/smoot-design"
+import { Alert, Button, Checkbox, VisuallyHidden } from "@mitodl/smoot-design"
 import {
   analyticsContractQueries,
   type CompletionStatusFilter,
@@ -58,11 +58,6 @@ import { DISPLAY_STATUS_LABEL, getDisplayStatus } from "./statusDisplay"
  *
  * Routed outside `/dashboard` (see `CONTRACT_LEARNERS_VIEW`) so it gets no
  * sidebar and can use the full width this table needs.
- *
- * Several columns and controls are built but commented out rather than
- * deleted, so nothing fabricated ships while the UI stays ready to restore.
- * Search this file and `LearnerRow.tsx` for "Disabled:" — each block says what
- * it is waiting on.
  */
 
 const Page = styled(Container)(({ theme }) => ({
@@ -232,6 +227,15 @@ const ConsentNotice = styled(Typography)(({ theme }) => ({
   color: theme.custom.colors.silverGrayDark,
 })) as typeof Typography
 
+const CheckboxField = styled.div(({ theme }) => ({
+  display: "flex",
+  alignItems: "center",
+  minHeight: "40px",
+  [theme.breakpoints.down("md")]: {
+    minHeight: "auto",
+  },
+}))
+
 const ErrorRow = styled.div({
   display: "flex",
   alignItems: "center",
@@ -239,43 +243,6 @@ const ErrorRow = styled.div({
   flexWrap: "wrap",
   gap: "16px",
 })
-
-// --- Disabled: placeholder-data footnote ----------------------------------
-//
-// Unused while nothing fabricated renders on screen — see its JSX comment
-// further down for why.
-//
-// const PlaceholderNotice = styled(Typography)(({ theme }) => ({
-//   ...theme.typography.body3,
-//   color: theme.custom.colors.silverGrayDark,
-// })) as typeof Typography
-// --------------------------------------------------------------------------
-
-// --- Disabled: bulk selection bar (Select all + Send reminder) -----------
-//
-// Exists only to drive the bulk "Send reminder" action — see the file header
-// comment. Restore alongside LearnerRow.tsx's matching block.
-//
-// /** Same card treatment as the results table below it, so the two read as one surface. */
-// const BulkBar = styled(TableCard)({
-//   display: "flex",
-//   alignItems: "center",
-//   justifyContent: "space-between",
-//   gap: "16px",
-// })
-//
-// const BulkLabel = styled.label(({ theme }) => ({
-//   display: "flex",
-//   alignItems: "center",
-//   gap: "8px",
-//   ...theme.typography.subtitle2,
-//   color: theme.custom.colors.black,
-//   cursor: "pointer",
-// }))
-//
-// const SelectHeaderCell = styled.div({ width: "40px", flexShrink: 0 })
-// const ActionHeaderCell = styled.div({ width: "140px", flexShrink: 0 })
-// --------------------------------------------------------------------------
 
 const PAGE_SIZE = 25
 /** Below the API's max_page_size rather than pinned to it — that setting is env-overridable, and this only costs one extra round trip on a large contract. */
@@ -288,8 +255,8 @@ const UNAVAILABLE_MESSAGE_ID = "learner-analytics-unavailable-message"
 
 /**
  * The status dropdown's options. The progress bands the prototype also lists
- * (1-24%, 25-49%, 50-99%) are deliberately absent: they filter on progress
- * data that does not exist, so they could only ever filter placeholder values.
+ * (1-24%, 25-49%, 50-99%) are deliberately absent: the API exposes no
+ * percent-complete to filter on.
  */
 const STATUS_OPTIONS: { value: string; label: string }[] = [
   { value: ALL, label: "All learners" },
@@ -334,6 +301,7 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
   const [debouncedSearch, setDebouncedSearch] = useState("")
   const [statusFilter, setStatusFilter] = useState<string>(ALL)
   const [moduleFilter, setModuleFilter] = useState<string>(ALL)
+  const [needsAttentionOnly, setNeedsAttentionOnly] = useState(false)
   const [page, setPage] = useState(1)
   const [isExporting, setIsExporting] = useState(false)
   const [actionResult, setActionResult] = useState<{
@@ -438,8 +406,15 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
       ...(debouncedSearch ? { search: debouncedSearch } : {}),
       ...(completionStatus ? { completion_status: completionStatus } : {}),
       ...(activeModule === ALL ? {} : { courserun_readable_id: activeModule }),
+      /**
+       * Only ever sent as `true`. The param also takes `false` — "only the
+       * learners who are fine" — but that is a question no control here asks,
+       * and sending it when the box is unchecked would drop every withheld
+       * row from the default view.
+       */
+      ...(needsAttentionOnly ? { needs_attention: true } : {}),
     }),
-    [page, debouncedSearch, completionStatus, activeModule],
+    [page, debouncedSearch, completionStatus, activeModule, needsAttentionOnly],
   )
 
   const rowsQuery = useQuery({
@@ -487,58 +462,6 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
     totalQuery.refetch()
   }
 
-  // --- Disabled: row/bulk selection ---------------------------------------
-  //
-  // Only consumer is "Send reminder" — see the file header comment. Restore
-  // together with LearnerRow.tsx's matching block, the BulkBar JSX below, and
-  // the `setSelected(new Set())` calls noted in applyFilterChange and the
-  // search-debounce effect above.
-  //
-  // const [selected, setSelected] = useState<Set<string>>(new Set())
-  //
-  // const visibleIds = rows.map(rowIdOf)
-  // const selectedVisible = visibleIds.filter((id) => selected.has(id))
-  // const allVisibleSelected =
-  //   visibleIds.length > 0 && selectedVisible.length === visibleIds.length
-  // const someVisibleSelected = selectedVisible.length > 0 && !allVisibleSelected
-  //
-  // const toggleSelect = useCallback((rowId: string) => {
-  //   setSelected((current) => {
-  //     const next = new Set(current)
-  //     if (next.has(rowId)) next.delete(rowId)
-  //     else next.add(rowId)
-  //     return next
-  //   })
-  // }, [])
-  //
-  // const toggleSelectAll = useCallback(() => {
-  //   setSelected((current) => {
-  //     const next = new Set(current)
-  //     const everySelected = visibleIds.every((id) => next.has(id))
-  //     for (const id of visibleIds) {
-  //       if (everySelected) next.delete(id)
-  //       else next.add(id)
-  //     }
-  //     return next
-  //   })
-  // }, [visibleIds])
-  //
-  // /**
-  //  * PLACEHOLDER. No endpoint can nudge an enrolled learner: MITx Online's
-  //  * remind mutation resends the claim email for an *unredeemed* seat code, and
-  //  * every row here belongs to someone who already redeemed one. Wired to the
-  //  * real UI so only this handler changes when an endpoint exists.
-  //  */
-  // const sendReminder = useCallback((rowIds: string[]) => {
-  //   const message = `Reminders are not available yet. ${rowIds.length} learner${
-  //     rowIds.length === 1 ? "" : "s"
-  //   } would have been sent one.`
-  //   setActionResult({ message, severity: "error" })
-  //   setAnnouncement("")
-  //   setTimeout(() => setAnnouncement(message), 100)
-  // }, [])
-  // -------------------------------------------------------------------------
-
   const handleExport = useCallback(async () => {
     if (isExporting || !canQuery || !orgUuid || !contractId) return
     setIsExporting(true)
@@ -569,17 +492,10 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
         "Status",
         "Enrolled on",
         "Last activity",
-        // Disabled: fabricated Progress — see LearnerRow.tsx's and
-        // placeholders.ts's "Disabled:" comments. Built and kept here rather
-        // than shipped with invented numbers.
-        // "Progress %",
-        // "Lessons Completed",
-        // "Lessons Total",
+        "Needs attention",
       ])
-      const body = all.map((row) => {
-        // Disabled: fabricated Progress — see the header comment above.
-        // const progress = placeholderProgress(row)
-        return buildCsvRow([
+      const body = all.map((row) =>
+        buildCsvRow([
           row.full_name,
           row.email,
           row.courserun_title,
@@ -594,11 +510,18 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
            * would mean picking a calendar day for an instant.
            */
           row.last_active_on,
-          // progress ? String(progress.percent) : "",
-          // progress ? String(progress.lessonsCompleted) : "",
-          // progress ? String(progress.lessonsTotal) : "",
-        ])
-      })
+          /**
+           * Blank rather than "No" on a withheld row: the API sends null
+           * there, and a spreadsheet column that reads "No" for a learner
+           * whose progress is hidden asserts something nobody checked.
+           */
+          row.needs_attention === null
+            ? ""
+            : row.needs_attention
+              ? "Yes"
+              : "No",
+        ]),
+      )
       const csv = [header, ...body].join("\n")
       const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" })
       const url = URL.createObjectURL(blob)
@@ -636,7 +559,7 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
   const lastAnnounced = useRef<string | null>(null)
   useEffect(() => {
     if (isBusy || !rowsQuery.data) return
-    const key = `${statusFilter}:${activeModule}:${debouncedSearch}`
+    const key = `${statusFilter}:${activeModule}:${needsAttentionOnly}:${debouncedSearch}`
     if (lastAnnounced.current === null) {
       lastAnnounced.current = key
       return
@@ -651,6 +574,7 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
     rowsQuery.data,
     statusFilter,
     activeModule,
+    needsAttentionOnly,
     debouncedSearch,
     filteredCount,
   ])
@@ -700,7 +624,7 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
 
   const emptyMessage = debouncedSearch
     ? "No learners match your search."
-    : statusFilter !== ALL || activeModule !== ALL
+    : statusFilter !== ALL || activeModule !== ALL || needsAttentionOnly
       ? "No learners match this filter."
       : "No learners found."
 
@@ -819,6 +743,17 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
                     )
                   }
                 />
+                <CheckboxField>
+                  <Checkbox
+                    label="Needs attention only"
+                    checked={needsAttentionOnly}
+                    onChange={(event) =>
+                      applyFilterChange(() =>
+                        setNeedsAttentionOnly(event.target.checked),
+                      )
+                    }
+                  />
+                </CheckboxField>
               </ControlsRight>
             </ControlsRow>
 
@@ -836,36 +771,27 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
               {announcement}
             </VisuallyHidden>
 
-            {/* Disabled: bulk selection bar — see file header comment.
-              <BulkBar>
-                <BulkLabel>
-                  <MuiCheckbox
-                    size="small"
-                    checked={allVisibleSelected}
-                    indeterminate={someVisibleSelected}
-                    onChange={toggleSelectAll}
-                    inputProps={{
-                      "aria-label": "Select all learners on this page",
-                    }}
-                  />
-                  Select all
-                </BulkLabel>
-                <Button
-                  size="small"
-                  variant="bordered"
-                  disabled={selected.size === 0}
-                  onClick={() => sendReminder([...selected])}
-                >
-                  Send reminder
-                </Button>
-              </BulkBar>
-              */}
-
             {withheldCount > 0 ? (
               <ConsentNotice component="p">
                 {withheldCount} of these {filteredCount} enrollments belong to
                 learners who have not agreed to share their progress. Their
                 status, grade and activity read “No consent given”.
+              </ConsentNotice>
+            ) : null}
+
+            {/*
+              The API matches withheld rows against neither `true` nor `false`,
+              so this filter hides them outright rather than listing them as
+              not needing attention. Said here because nothing else on the page
+              would show it: `outcomes_withheld_count` counts the rows that
+              matched, so the notice above goes quiet at the same moment.
+            */}
+            {needsAttentionOnly ? (
+              <ConsentNotice component="p">
+                Learners who have not agreed to share their progress are hidden
+                while this filter is on. Whether they need attention can only be
+                read from the progress they withheld. Clear the filter to see
+                them.
               </ConsentNotice>
             ) : null}
 
@@ -884,12 +810,6 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
               >
                 <div role="rowgroup">
                   <TableHeaderRow role="row">
-                    {/* Disabled: selection column header — see file header comment.
-                      <SelectHeaderCell
-                        role="columnheader"
-                        aria-label="Select"
-                      />
-                      */}
                     <TableHeaderCell
                       role="columnheader"
                       $flex={COLUMN_FLEX.learner}
@@ -902,27 +822,12 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
                     >
                       Status
                     </TableHeaderCell>
-                    {/* Disabled: fabricated Progress column header — see
-                          LearnerRow.tsx's "Disabled:" comment.
-                      <TableHeaderCell
-                        role="columnheader"
-                        $flex={COLUMN_FLEX.progress}
-                      >
-                        Progress
-                      </TableHeaderCell>
-                      */}
                     <TableHeaderCell
                       role="columnheader"
                       $flex={COLUMN_FLEX.lastActivity}
                     >
                       Last activity
                     </TableHeaderCell>
-                    {/* Disabled: action column header — see file header comment.
-                      <ActionHeaderCell
-                        role="columnheader"
-                        aria-label="Actions"
-                      />
-                      */}
                   </TableHeaderRow>
                 </div>
                 <TableBody role="rowgroup" $stale={isStale}>
@@ -969,16 +874,6 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
                 ) : null}
               </TableFooter>
             </TableCard>
-
-            {/* Disabled: nothing fabricated currently renders on screen —
-                  Last activity is real now, and Progress is still commented
-                  out above — so this footnote has nothing to disclose.
-                  Restore it, with wording naming whichever placeholder it is
-                  about, if one returns to view.
-              <PlaceholderNotice component="p">
-                Progress is a preview value and is not yet real data.
-              </PlaceholderNotice>
-              */}
           </ResultsSection>
         )}
       </Stack>

@@ -491,6 +491,12 @@ describe("ContractLearnersPage", () => {
       expect(csv).toContain("Last activity")
       expect(csv).toContain(",2026-09-30")
       expect(csv).not.toContain("Sep 30, 2026")
+      // Yes/No for the consented row; empty for the withheld one, whose
+      // `needs_attention` is null rather than false.
+      expect(csv).toContain("Needs attention")
+      const [, consented, withheld] = csv.trim().split("\n")
+      expect(consented).toMatch(/,No$/)
+      expect(withheld).toMatch(/,$/)
     })
 
     test("carries the active status filter, not just pagination", async () => {
@@ -1030,68 +1036,229 @@ describe("ContractLearnersPage", () => {
     )
   })
 
-  /**
-   * Disabled: row/bulk selection + Send reminder — see
-   * ContractLearnersPage.tsx's file header comment. `test.skip` rather than
-   * deleting; re-enable by dropping `.skip` once that block and the matching
-   * one in LearnerRow.tsx are restored.
-   */
-  test.skip("row checkboxes are individually named for screen readers", async () => {
-    const { org, contract, orgSlug } = setup()
-    const contractId = String(contract.id)
-    setMockResponse.get(
-      mitxUrls.organization.managerOrganizationsList(),
-      paginate([org]),
-    )
-    mockTotal(contractId, 1)
-    mockCourseRuns(contractId)
-    mockList(contractId, [
-      analyticsFactories.learnerProgress({
-        full_name: "Anton Petrov",
-        courserun_title: "Module 5",
-      }),
-    ])
+  describe("the Needs attention filter", () => {
+    const renderWithRows = async (
+      rows: ReturnType<typeof analyticsFactories.learnerProgress>[],
+      extra?: (contractId: string) => void,
+    ) => {
+      const { org, contract, orgSlug } = setup()
+      const contractId = String(contract.id)
+      setMockResponse.get(
+        mitxUrls.organization.managerOrganizationsList(),
+        paginate([org]),
+      )
+      mockTotal(contractId, rows.length)
+      mockCourseRuns(contractId)
+      mockList(contractId, rows)
+      extra?.(contractId)
+      renderWithProviders(
+        <ContractLearnersPage orgSlug={orgSlug} contractSlug={contract.slug} />,
+      )
+      return { contractId }
+    }
 
-    renderWithProviders(
-      <ContractLearnersPage orgSlug={orgSlug} contractSlug={contract.slug} />,
-    )
+    const checkbox = () =>
+      screen.findByRole("checkbox", { name: "Needs attention only" })
 
-    // Guards the MUI-over-smoot-design Checkbox choice: smoot's takes no
-    // aria-label, so a regression back to it would leave this unnamed.
-    await screen.findByRole("checkbox", {
-      name: "Select Anton Petrov, Module 5",
+    test("flags the rows the API says need attention, and only those", async () => {
+      await renderWithRows([
+        analyticsFactories.learnerProgress({
+          full_name: "Stale Learner",
+          needs_attention: true,
+        }),
+        analyticsFactories.learnerProgress({
+          full_name: "Active Learner",
+          needs_attention: false,
+        }),
+      ])
+
+      const stale = rowOf(await screen.findByText("Stale Learner"))
+      const active = rowOf(await screen.findByText("Active Learner"))
+
+      expect(within(stale).getByText("Needs attention")).toBeInTheDocument()
+      expect(
+        within(active).queryByText("Needs attention"),
+      ).not.toBeInTheDocument()
     })
-    await screen.findByRole("checkbox", {
-      name: "Select all learners on this page",
+
+    /**
+     * The field is null on a withheld row, so the label must not appear
+     * beside "No consent given" — it would assert an outcome the learner
+     * declined to share.
+     */
+    test("says nothing about a learner who withheld consent", async () => {
+      await renderWithRows([
+        analyticsFactories.withheldLearnerProgress({
+          full_name: "Private Learner",
+        }),
+      ])
+
+      const row = rowOf(await screen.findByText("Private Learner"))
+      expect(within(row).getByText("No consent given")).toBeInTheDocument()
+      expect(within(row).queryByText("Needs attention")).not.toBeInTheDocument()
     })
-  })
 
-  test.skip("bulk reminder is disabled until a row is selected", async () => {
-    const { org, contract, orgSlug } = setup()
-    const contractId = String(contract.id)
-    setMockResponse.get(
-      mitxUrls.organization.managerOrganizationsList(),
-      paginate([org]),
-    )
-    mockTotal(contractId, 1)
-    mockCourseRuns(contractId)
-    mockList(contractId, [
-      analyticsFactories.learnerProgress({ full_name: "Anton Petrov" }),
-    ])
+    test("sends needs_attention=true when checked", async () => {
+      await renderWithRows(
+        [analyticsFactories.learnerProgress({ full_name: "Everyone" })],
+        (contractId) =>
+          mockList(
+            contractId,
+            [
+              analyticsFactories.learnerProgress({
+                full_name: "Only Stale",
+                needs_attention: true,
+              }),
+            ],
+            { needs_attention: true },
+          ),
+      )
 
-    renderWithProviders(
-      <ContractLearnersPage orgSlug={orgSlug} contractSlug={contract.slug} />,
-    )
+      await screen.findByText("Everyone")
+      await user.click(await checkbox())
 
-    const selectAll = await screen.findByRole("checkbox", {
-      name: "Select all learners on this page",
+      await screen.findByText("Only Stale")
     })
-    const bulkButton = screen
-      .getAllByRole("button", { name: "Send reminder" })
-      .at(-1)!
-    expect(bulkButton).toBeDisabled()
 
-    await user.click(selectAll)
-    expect(bulkButton).toBeEnabled()
+    /**
+     * The param is dropped rather than sent as `false`. Sending `false` would
+     * ask for "only the learners who are fine", which silently drops every
+     * withheld row from what reads as the unfiltered view.
+     */
+    test("drops the param again when unchecked, rather than sending false", async () => {
+      await renderWithRows(
+        [analyticsFactories.learnerProgress({ full_name: "Everyone" })],
+        (contractId) =>
+          mockList(
+            contractId,
+            [
+              analyticsFactories.learnerProgress({
+                full_name: "Only Stale",
+                needs_attention: true,
+              }),
+            ],
+            { needs_attention: true },
+          ),
+      )
+
+      await screen.findByText("Everyone")
+      await user.click(await checkbox())
+      await screen.findByText("Only Stale")
+
+      // An unmocked `needs_attention=false` URL would throw, so reaching the
+      // unfiltered rows again is the assertion.
+      await user.click(await checkbox())
+      await screen.findByText("Everyone")
+    })
+
+    /**
+     * The point of a separate control: needing attention overlaps the
+     * completion statuses instead of partitioning them, so "in progress AND
+     * stale" has to be expressible.
+     */
+    test("combines with the status filter instead of replacing it", async () => {
+      await renderWithRows(
+        [analyticsFactories.learnerProgress({ full_name: "Everyone" })],
+        (contractId) => {
+          mockList(
+            contractId,
+            [
+              analyticsFactories.learnerProgress({
+                full_name: "In Progress Only",
+              }),
+            ],
+            { completion_status: ["in_progress"] },
+          )
+          mockList(
+            contractId,
+            [
+              analyticsFactories.learnerProgress({
+                full_name: "Stale And In Progress",
+                needs_attention: true,
+              }),
+            ],
+            { completion_status: ["in_progress"], needs_attention: true },
+          )
+        },
+      )
+
+      await screen.findByText("Everyone")
+
+      await user.click(await screen.findByRole("combobox", { name: /status/i }))
+      await user.click(
+        within(await screen.findByRole("listbox")).getByText("In progress"),
+      )
+      await screen.findByText("In Progress Only")
+
+      await user.click(await checkbox())
+      await screen.findByText("Stale And In Progress")
+    })
+
+    test("says that withheld learners are hidden while the filter is on", async () => {
+      await renderWithRows(
+        [analyticsFactories.learnerProgress({ full_name: "Everyone" })],
+        (contractId) =>
+          mockList(
+            contractId,
+            [
+              analyticsFactories.learnerProgress({
+                full_name: "Only Stale",
+                needs_attention: true,
+              }),
+            ],
+            { needs_attention: true },
+          ),
+      )
+
+      await screen.findByText("Everyone")
+      expect(screen.queryByText(/are hidden while this filter/)).toBeNull()
+
+      await user.click(await checkbox())
+      await screen.findByText("Only Stale")
+
+      await screen.findByText(/are hidden while this filter is on/)
+    })
+
+    test("announces the result count when the filter changes", async () => {
+      await renderWithRows(
+        [
+          analyticsFactories.learnerProgress({ full_name: "Everyone" }),
+          analyticsFactories.learnerProgress({ full_name: "Someone Else" }),
+        ],
+        (contractId) =>
+          mockList(
+            contractId,
+            [
+              analyticsFactories.learnerProgress({
+                full_name: "Only Stale",
+                needs_attention: true,
+              }),
+            ],
+            { needs_attention: true },
+          ),
+      )
+
+      await screen.findByText("Everyone")
+      await user.click(await checkbox())
+      await screen.findByText("Only Stale")
+
+      await waitFor(() => {
+        expect(screen.getByText("1 result")).toBeInTheDocument()
+      })
+    })
+
+    test("reads as a filter, not an empty contract, when nothing matches", async () => {
+      await renderWithRows(
+        [analyticsFactories.learnerProgress({ full_name: "Everyone" })],
+        (contractId) => mockList(contractId, [], { needs_attention: true }),
+      )
+
+      await screen.findByText("Everyone")
+      await user.click(await checkbox())
+
+      await within(await screen.findByRole("cell")).findByText(
+        "No learners match this filter.",
+      )
+    })
   })
 })

@@ -183,10 +183,11 @@ export type AnalyticsPageParams = {
  *
  * Outcomes are gated on per-learner consent, not on a suppression floor. When
  * `outcomes_shared` is false the API nulls `completion_status`, `is_passing`,
- * `grade`, `letter_grade`, `certificate_issued_on`, `certificate_is_revoked`
- * and `last_active_on` — a `null` there means "the learner has not agreed to
- * share this", which is a different thing from zero, from absent, and from the
- * k-anonymity suppression the aggregate types above use. Render it as such.
+ * `grade`, `letter_grade`, `certificate_issued_on`, `certificate_is_revoked`,
+ * `last_active_on` and `needs_attention` — a `null` there means "the learner
+ * has not agreed to share this", which is a different thing from zero, from
+ * absent, and from the k-anonymity suppression the aggregate types above use.
+ * Render it as such.
  *
  * `learner_id` is the Keycloak user id (MITx Online's `global_id`). It is
  * stable across email changes, so join on it and never on `email`.
@@ -216,6 +217,18 @@ export type LearnerProgress = {
    * parts instead.
    */
   last_active_on: string | null
+  /**
+   * Whether the learner may need a nudge: they never started, or their last
+   * recorded activity was at least 30 days ago. Null only when outcomes are
+   * withheld — a consented row with no activity reads `false`, not `null`, so
+   * treat it as a plain boolean once `outcomes_shared` is true.
+   *
+   * Read this rather than re-deriving it from `last_active_on`. The 30-day
+   * cutoff is resolved once per request in the warehouse's timezone, so a
+   * browser computing its own "today" disagrees for the rows nearest the
+   * boundary — the ones the flag exists to surface.
+   */
+  needs_attention: boolean | null
 }
 
 /**
@@ -250,6 +263,16 @@ export type LearnerProgressParams = AnalyticsPageParams & {
   descending?: boolean
   /** Exact match on one course run's readable id — the module filter. */
   courserun_readable_id?: string
+  /**
+   * `true` keeps only the learners needing attention, `false` only those not.
+   * Omit it for no filter.
+   *
+   * Rows with withheld outcomes match NEITHER value, mirroring the consent
+   * gating on the row field: a filter must not reveal the outcome it is
+   * withholding. There is no `unknown` escape hatch as there is on
+   * `completion_status`, so omitting this is the only way to see those rows.
+   */
+  needs_attention?: boolean
 }
 
 /**
