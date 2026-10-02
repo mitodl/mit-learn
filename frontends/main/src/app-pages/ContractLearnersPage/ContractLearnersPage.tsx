@@ -382,9 +382,14 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
   )
 
   /**
-   * One page covers any real contract's course runs, and the dropdown has to
-   * list all of them or it silently hides runs a manager could filter by —
-   * hence a limit well clear of the count rather than `PAGE_SIZE`.
+   * The dropdown has to list every run or it silently hides ones a manager
+   * could filter by, so this asks for the analytics API's `max_page_size` —
+   * the most it will serve, not a number picked with headroom to spare.
+   *
+   * One page covers it because a contract's runs are generated per course in
+   * its programs, so the ceiling is the contract's course list. `total_count`
+   * is deliberately not consulted: exceeding this would mean ~1,000 courses on
+   * one contract, and a flat `SimpleSelectField` is unusable well before that.
    */
   const courseRunsQuery = useQuery({
     ...analyticsContractQueries.courseRuns(orgUuid ?? "", contractId ?? "", {
