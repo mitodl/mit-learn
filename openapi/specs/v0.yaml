@@ -1315,13 +1315,6 @@ paths:
           already within that factor of. 0 disables the boost. Defaults to the server's
           configured amount when omitted.
       - in: query
-        name: published
-        schema:
-          type: boolean
-          default: true
-        description: If the resource is published. We default to True unless passed
-          in
-      - in: query
         name: q
         schema:
           type: string
