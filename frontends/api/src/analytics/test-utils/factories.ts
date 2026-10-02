@@ -4,6 +4,7 @@ import type {
   ContractContentEngagementDepth,
   ContractMonthlyEngagementTrend,
   ContractUtilization,
+  CourseRun,
   EnrollmentCompletionFunnel,
   LearnerProgress,
   LearnerProgressResponse,
@@ -162,7 +163,11 @@ const contractContentEngagementDepth = (
 /**
  * Defaults to a learner who HAS consented, so a test that cares about consent
  * opts in with `outcomesShared: false` rather than every other test opting out.
- * `last_active_on` defaults to null because the API hardcodes it so today.
+ *
+ * `last_active_on` defaults to null, which is consistent with the default
+ * `in_progress`: the API reaches that status on a nonzero grade OR on tracked
+ * activity, so a graded row with nothing recorded yet is a real shape. A test
+ * about the Last activity column passes a `YYYY-MM-DD` date explicitly.
  */
 const learnerProgress = (
   overrides: Partial<LearnerProgress> = {},
@@ -208,6 +213,18 @@ const withheldLearnerProgress = (
     ...overrides,
   })
 
+/**
+ * `courserun_id` holds a readable id, matching the API's own alias — see
+ * `CourseRun`. Pair with `envelope` for a `CourseRunsResponse`.
+ */
+const courseRun = (overrides: Partial<CourseRun> = {}): CourseRun => ({
+  courserun_id: `course-v1:MITxT+${faker.string.alphanumeric(6)}+2T2026`,
+  courserun_title: faker.company.catchPhrase(),
+  courserun_start_on: "2026-02-01T00:00:00Z",
+  courserun_end_on: "2026-08-01T00:00:00Z",
+  ...overrides,
+})
+
 const learnerProgressEnvelope = (
   data: LearnerProgress[],
   overrides: Partial<LearnerProgressResponse> = {},
@@ -225,6 +242,7 @@ export {
   contractContentEngagementDepth,
   contractMonthlyEngagementTrend,
   contractUtilization,
+  courseRun,
   enrollmentCompletionFunnel,
   envelope,
   learnerProgress,

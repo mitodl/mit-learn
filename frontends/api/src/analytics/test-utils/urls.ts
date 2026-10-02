@@ -75,6 +75,11 @@ const contracts = {
     contractId: string,
     params?: LearnerProgressParams,
   ) => contractResource(organizationId, contractId, "learner-progress", params),
+  courseRuns: (
+    organizationId: string,
+    contractId: string,
+    params?: AnalyticsPageParams,
+  ) => contractResource(organizationId, contractId, "course-runs", params),
 }
 
 export { organizations, contracts }

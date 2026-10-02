@@ -66,6 +66,37 @@ type SectionHeaderProps = {
   isError?: boolean
   /** Heading level, so section headings nest correctly under the page `h1`. */
   component?: React.ElementType
+  asOfPlacement?: "inline" | "external"
+}
+
+type SectionFreshnessProps = Pick<
+  SectionHeaderProps,
+  "asOf" | "isLoading" | "isError"
+>
+
+const SectionFreshness: React.FC<SectionFreshnessProps> = ({
+  asOf,
+  isLoading,
+  isError,
+}) => {
+  const formatted = asOf ? formatAsOf(asOf) : null
+
+  /**
+   * A failed request tells us nothing about when the view last refreshed, so
+   * this claims nothing at all — "Data not yet refreshed" would be a
+   * statement about the view that we are in no position to make. The section
+   * body says it could not load.
+   */
+  if (isError) return null
+  if (isLoading) return <Skeleton width="180px" height="18px" />
+  if (formatted && asOf) {
+    return (
+      <AsOf>
+        Data as of <time dateTime={asOf}>{formatted}</time>
+      </AsOf>
+    )
+  }
+  return <AsOf>Data not yet refreshed</AsOf>
 }
 
 const SectionHeader: React.FC<SectionHeaderProps> = ({
@@ -75,38 +106,19 @@ const SectionHeader: React.FC<SectionHeaderProps> = ({
   isLoading,
   isError,
   component = "h2",
-}) => {
-  const formatted = asOf ? formatAsOf(asOf) : null
-
-  /**
-   * A failed request tells us nothing about when the view last refreshed, so
-   * this slot claims nothing at all — "Data not yet refreshed" would be a
-   * statement about the view that we are in no position to make. The section
-   * body says it could not load.
-   */
-  const freshness = isError ? null : isLoading ? (
-    <Skeleton width="180px" height="18px" />
-  ) : formatted && asOf ? (
-    <AsOf>
-      Data as of <time dateTime={asOf}>{formatted}</time>
-    </AsOf>
-  ) : (
-    // Distinguish "the view has never refreshed" from "we are still
-    // loading" — a manager reading a zero needs to know which.
-    <AsOf>Data not yet refreshed</AsOf>
-  )
-
-  return (
-    <Root>
-      <TitleGroup>
-        <Title component={component}>{title}</Title>
-        {description ? <Description>{description}</Description> : null}
-      </TitleGroup>
-      {freshness}
-    </Root>
-  )
-}
+  asOfPlacement = "inline",
+}) => (
+  <Root>
+    <TitleGroup>
+      <Title component={component}>{title}</Title>
+      {description ? <Description>{description}</Description> : null}
+    </TitleGroup>
+    {asOfPlacement === "inline" ? (
+      <SectionFreshness asOf={asOf} isLoading={isLoading} isError={isError} />
+    ) : null}
+  </Root>
+)
 
 export default SectionHeader
-export { formatAsOf }
-export type { SectionHeaderProps }
+export { formatAsOf, SectionFreshness }
+export type { SectionHeaderProps, SectionFreshnessProps }
