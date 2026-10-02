@@ -10,6 +10,7 @@ import { waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import type { AxiosError } from "axios"
 import type { UserOrganizationPage } from "@mitodl/mitxonline-api-axios/v2"
+import type { LearnerProgressResponse } from "api/analytics-hooks/organizations"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import { allowConsoleErrors } from "ol-test-utilities"
 import { ForbiddenError } from "@/common/errors"
@@ -116,6 +117,7 @@ const setAnalyticsResponses = ({
 const setContractAnalyticsResponses = (
   contractId: string,
   page = { limit: 200 },
+  learnerProgress: Partial<LearnerProgressResponse> = {},
 ) => {
   setMockResponse.get(
     analyticsUrls.contracts.contractUtilization(ORG_UUID, contractId, page),
@@ -157,6 +159,7 @@ const setContractAnalyticsResponses = (
         passed: 12,
         certified: 8,
       },
+      ...learnerProgress,
     }),
   )
 }
@@ -1088,6 +1091,105 @@ describe("AnalyticsContent, contract-scoped", () => {
     expect(within(list).queryByRole("button")).not.toBeInTheDocument()
     expect(within(list).queryByRole("link")).not.toBeInTheDocument()
     expect(within(list).queryByRole("textbox")).not.toBeInTheDocument()
+  })
+
+  /**
+   * A consent-withheld enrollment has no `completion_status`, so it is in
+   * `total_count` but in none of the three buckets. Dividing by `total_count`
+   * would make the rows add up to less than 100% for no reason a manager can
+   * see; the denominator is the learners who actually reported.
+   */
+  test("divides the distribution by consenting learners, not every enrollment", async () => {
+    const contract = factories.contracts.contract()
+    const org = orgWithUuid({ contracts: [contract] })
+    setManagerOrgs([org])
+    const contractId = String(contract.id)
+    setContractAnalyticsResponses(contractId, undefined, {
+      total_count: 50,
+      outcomes_withheld_count: 10,
+      completion_status_counts: {
+        not_started: 5,
+        in_progress: 15,
+        passed: 12,
+        certified: 8,
+      },
+    })
+
+    renderWithProviders(
+      <AnalyticsContent
+        orgSlug={org.slug.replace(/^org-/, "")}
+        contractSlug={contract.slug}
+      />,
+    )
+
+    const list = await screen.findByRole("list", {
+      name: "Learner progress distribution",
+    })
+
+    // 5, 15 and 20 of the 40 learners who consented -- not of all 50.
+    expect(within(list).getByText("12.5%")).toBeInTheDocument()
+    expect(within(list).getByText("37.5%")).toBeInTheDocument()
+    expect(within(list).getByText("50%")).toBeInTheDocument()
+    expect(within(list).queryByText("10%")).not.toBeInTheDocument()
+
+    // The counts themselves are untouched: only the denominator changed.
+    expect(within(list).getByText("5")).toBeInTheDocument()
+    expect(within(list).getByText("15")).toBeInTheDocument()
+    expect(within(list).getByText("20")).toBeInTheDocument()
+
+    // "Enrolled" stays the true enrollment count. A learner who withholds
+    // outcomes is still enrolled, and netting them out here would disagree
+    // with the learner directory and with the seat figures above.
+    const enrolled = screen.getByRole("group", { name: "Enrolled" })
+    expect(within(enrolled).getByText("50")).toBeInTheDocument()
+
+    // Which leaves a gap between the tile and the buckets, so it is named
+    // rather than left for the reader to notice and distrust.
+    expect(
+      screen.getByText(
+        "Percentages exclude 10 learners who have not agreed to share their progress.",
+      ),
+    ).toBeInTheDocument()
+
+    // And the per-row screen-reader suffix says which denominator it is.
+    expect(within(list).getAllByText("of learners who consented")).toHaveLength(
+      3,
+    )
+    expect(within(list).queryByText("of total")).not.toBeInTheDocument()
+  })
+
+  test("shows 0%, not NaN%, when every learner has withheld consent", async () => {
+    const contract = factories.contracts.contract()
+    const org = orgWithUuid({ contracts: [contract] })
+    setManagerOrgs([org])
+    const contractId = String(contract.id)
+    setContractAnalyticsResponses(contractId, undefined, {
+      total_count: 10,
+      outcomes_withheld_count: 10,
+      completion_status_counts: {
+        not_started: 0,
+        in_progress: 0,
+        passed: 0,
+        certified: 0,
+      },
+    })
+
+    renderWithProviders(
+      <AnalyticsContent
+        orgSlug={org.slug.replace(/^org-/, "")}
+        contractSlug={contract.slug}
+      />,
+    )
+
+    const list = await screen.findByRole("list", {
+      name: "Learner progress distribution",
+    })
+
+    expect(within(list).getAllByText("0%")).toHaveLength(3)
+    expect(within(list).queryByText(/NaN/)).not.toBeInTheDocument()
+
+    const enrolled = screen.getByRole("group", { name: "Enrolled" })
+    expect(within(enrolled).getByText("10")).toBeInTheDocument()
   })
 
   test("hides the Manage seats button when the manager-dashboard flag is off", async () => {

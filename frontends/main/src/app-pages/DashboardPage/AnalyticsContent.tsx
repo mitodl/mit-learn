@@ -429,8 +429,9 @@ const AnalyticsContentInternal: React.FC<AnalyticsContentInternalProps> = ({
    * It is gated on `B2BLearnerAnalytics` for the same reason that link is:
    * every tile links to the learner directory, which throws `ForbiddenError`
    * without the flag.
-   * One row is enough: only `total_count` and `completion_status_counts` are
-   * read, the same trick `ContractLearnersPage.tsx`'s own `totalQuery` uses.
+   * One row is enough: only `total_count`, `outcomes_withheld_count` and
+   * `completion_status_counts` are read, the same trick
+   * `ContractLearnersPage.tsx`'s own `totalQuery` uses.
    * `include_inactive` is deliberately left unset (server default: active
    * enrollments only) — a deactivated or refunded seat isn't "enrolled" to a
    * manager, and counting it here would disagree with every other seat/
@@ -619,6 +620,7 @@ const AnalyticsContentInternal: React.FC<AnalyticsContentInternalProps> = ({
           />
           <LearnerProgressCard
             totalCount={learnerProgress.data?.total_count}
+            withheldCount={learnerProgress.data?.outcomes_withheld_count}
             statusCounts={learnerProgress.data?.completion_status_counts}
             isLoading={learnerProgress.isPending}
             isError={learnerProgress.isError}

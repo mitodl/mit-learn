@@ -17,9 +17,16 @@ import SectionError from "./SectionError"
  *
  * `total_count` and `completion_status_counts` aren't k-anonymity-floored
  * like every other section on this page (waived for this endpoint — see
- * `analytics/types.ts`), so nothing here uses `SuppressibleValue`. The three
- * buckets falling short of `totalCount` isn't a bug: a consent-withheld
- * learner has no `completion_status` and lands in none of them.
+ * `analytics/types.ts`), so nothing here uses `SuppressibleValue`.
+ *
+ * A consent-withheld learner has no `completion_status` and so lands in none
+ * of the three buckets. The distribution therefore divides by `total_count`
+ * minus `outcomes_withheld_count`: against `total_count` the rows would stop
+ * summing to 100% the moment anyone withholds. The "Enrolled" tile still
+ * shows the true `total_count` — a learner who withholds outcomes is still
+ * enrolled, and netting them out there would disagree with the learner
+ * directory and with every seat figure on this page — so a footnote names
+ * the gap whenever there is one.
  */
 
 const BUCKETS = [
@@ -196,13 +203,27 @@ const RowPercent = styled(Typography)(({ theme }) => ({
   fontVariantNumeric: "tabular-nums",
 })) as typeof Typography
 
+const DistributionNote = styled(Typography)(({ theme }) => ({
+  ...theme.typography.body3,
+  color: theme.custom.colors.silverGrayDark,
+  marginTop: "12px",
+})) as typeof Typography
+
 const LearnerProgressCard: React.FC<{
   totalCount: number | undefined
+  withheldCount: number | undefined
   statusCounts: CompletionStatusCounts | undefined
   isLoading: boolean
   isError?: boolean
   learnersHref: string
-}> = ({ totalCount, statusCounts, isLoading, isError, learnersHref }) => {
+}> = ({
+  totalCount,
+  withheldCount,
+  statusCounts,
+  isLoading,
+  isError,
+  learnersHref,
+}) => {
   const statusColors = progressStatusColors(useTheme())
 
   if (isError) {
@@ -240,7 +261,11 @@ const LearnerProgressCard: React.FC<{
   }
 
   const buckets = bucketCounts(statusCounts)
-  const percentOf = (count: number) => (count / totalCount) * 100
+  const withheld = Math.min(withheldCount ?? 0, totalCount)
+  const reportedCount = totalCount - withheld
+  const percentOf = (count: number) =>
+    reportedCount > 0 ? (count / reportedCount) * 100 : 0
+  const percentBasis = withheld > 0 ? " of learners who consented" : " of total"
 
   return (
     <Root>
@@ -290,13 +315,20 @@ const LearnerProgressCard: React.FC<{
                   </RowCount>
                   <RowPercent>
                     {formatPercent(percent)}
-                    <VisuallyHidden> of total</VisuallyHidden>
+                    <VisuallyHidden>{percentBasis}</VisuallyHidden>
                   </RowPercent>
                 </RowStats>
               </DistributionRow>
             )
           })}
         </DistributionList>
+        {withheld > 0 ? (
+          <DistributionNote>
+            Percentages exclude {formatCount(withheld)}{" "}
+            {withheld === 1 ? "learner who has" : "learners who have"} not
+            agreed to share their progress.
+          </DistributionNote>
+        ) : null}
       </TableCard>
     </Root>
   )
