@@ -12,6 +12,8 @@ type SimpleSelectProps = Pick<
   | "renderValue"
   | "className"
   | "name"
+  | "disabled"
+  | "inputProps"
 > & {
   /**
    * The options for the dropdown
@@ -60,6 +62,7 @@ type SimpleSelectFieldProps<V = unknown> = Pick<
   | "name"
   | "className"
   | "renderValue"
+  | "disabled"
 > & {
   /**
    * The options for the dropdown
