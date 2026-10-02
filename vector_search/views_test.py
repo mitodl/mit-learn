@@ -169,6 +169,38 @@ def test_vector_search_filters_empty_query(mocker, client):
     )
 
 
+@pytest.mark.parametrize("q", ["test", ""])
+@pytest.mark.parametrize("published", ["false", "False", "0", "true", None])
+def test_vector_search_always_filters_published(mocker, client, q, published):
+    """A caller-supplied published param must never change the published filter"""
+
+    mock_qdrant = mocker.patch(
+        "qdrant_client.AsyncQdrantClient", return_value=mocker.AsyncMock()
+    )()
+    mock_qdrant.scroll = mocker.AsyncMock(return_value=([], None))
+    mock_qdrant.query_points = mocker.AsyncMock()
+    mock_qdrant.query_points_groups = mocker.AsyncMock()
+    mock_qdrant.count = mocker.AsyncMock(return_value=CountResult(count=0))
+    mocker.patch("vector_search.views.async_qdrant_client", return_value=mock_qdrant)
+
+    params = {"q": q}
+    if published is not None:
+        params["published"] = published
+
+    client.get(
+        reverse("vector_search:v0:vector_learning_resources_search"), data=params
+    )
+
+    if q:
+        query_filter = mock_qdrant.query_points.mock_calls[0].kwargs["query_filter"]
+    else:
+        query_filter = mock_qdrant.scroll.mock_calls[0].kwargs["scroll_filter"]
+    published_conditions = [c for c in query_filter.must if c.key == "published"]
+    assert published_conditions == [
+        models.FieldCondition(key="published", match=models.MatchValue(value=True))
+    ]
+
+
 @pytest.mark.django_db(transaction=True)
 @pytest.mark.parametrize(
     "user_role",
