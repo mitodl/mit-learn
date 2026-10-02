@@ -676,6 +676,23 @@ def test_documents_from_olx_ignores_deleted_announcements(tmp_path):
     assert "info/updates.items.json" not in paths
 
 
+def test_documents_from_olx_skips_legacy_announcements(tmp_path):
+    """updates.html is not ingested, but files its announcements link still are"""
+    olx = _reference_olx(tmp_path, **{"notes.pdf": "notes"})
+    _write_olx(olx, "html/h.html", "<p>no links</p>")
+    _write_olx(
+        olx,
+        "info/updates.html",
+        '<ol><li><h2>May 1</h2><a href="/static/notes.pdf">notes</a></li></ol>',
+    )
+    _write_olx(olx, "info/handouts.html", "<p>handouts</p>")
+    paths = _olx_source_paths(olx)
+    assert "info/updates.html" not in paths
+    assert "static/notes.pdf" in paths
+    # the Course Handouts box on the course home page
+    assert "info/handouts.html" in paths
+
+
 def test_documents_from_olx_drops_assets_only_staff_blocks_mention(tmp_path):
     """An answer key a hidden block links is unreferenced, not referenced"""
     olx = tmp_path / "course"
@@ -803,13 +820,17 @@ def _static_tab(slug, **flags):
         (_static_tab("resources", is_hidden=True), False),
     ],
 )
-def test_documents_from_olx_skips_tabs_learners_cannot_reach(tmp_path, tab, kept):
+# edX also reads tab pages from a folder named for the run
+@pytest.mark.parametrize("tab_dir", ["tabs", "tabs/run"])
+def test_documents_from_olx_skips_tabs_learners_cannot_reach(
+    tmp_path, tab, kept, tab_dir
+):
     """Only the tab pages the course's navigation leads to are ingested"""
     olx = _reference_olx(tmp_path)
     _write_olx(olx, "html/h.html", "<p>no links</p>")
-    _write_olx(olx, "tabs/resources.html", "<p>resources</p>")
+    _write_olx(olx, f"{tab_dir}/resources.html", "<p>resources</p>")
     _tab_policy(olx, [{"type": "courseware", "course_staff_only": False}, tab])
-    assert ("tabs/resources.html" in _olx_source_paths(olx)) is kept
+    assert (f"{tab_dir}/resources.html" in _olx_source_paths(olx)) is kept
 
 
 @pytest.mark.parametrize(
@@ -863,21 +884,25 @@ def test_documents_from_olx_skips_policy_files_but_keeps_what_they_name(tmp_path
     ("etl_source", "kept"),
     [
         # Open Learning Library is the only platform that shows the about page
-        (ETLSource.oll.name, ["about/overview.html", "about/short_description.html"]),
+        (ETLSource.oll.name, ["overview.html", "short_description.html"]),
         (ETLSource.mitxonline.name, []),
         (None, []),
     ],
 )
+# edX also reads about files from a folder named for the run
+@pytest.mark.parametrize("about_dir", ["about", "about/run"])
 def test_documents_from_olx_skips_about_files_learners_cannot_see(
-    tmp_path, etl_source, kept
+    tmp_path, etl_source, kept, about_dir
 ):
     """About files are ingested only where the about page is shown, and only its prose"""
     olx = _reference_olx(tmp_path)
     _write_olx(olx, "html/h.html", "<p>no links</p>")
     for name in ("overview", "short_description", "effort", "prerequisites"):
-        _write_olx(olx, f"about/{name}.html", name)
+        _write_olx(olx, f"{about_dir}/{name}.html", name)
     paths = _olx_source_paths(olx, etl_source)
-    assert [path for path in paths if path.startswith("about/")] == kept
+    assert [path for path in paths if path.startswith("about/")] == [
+        f"{about_dir}/{name}" for name in kept
+    ]
 
 
 def test_documents_from_olx_hidden_about_page_does_not_keep_assets(tmp_path):

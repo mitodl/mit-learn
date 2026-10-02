@@ -600,7 +600,8 @@ def unreachable_static_tabs(root: Path) -> set[Path]:
         if isinstance(tab, dict)
         and not (tab.get("course_staff_only") or tab.get("is_hidden"))
     }
-    return {path for path in root.glob("tabs/*") if path.stem not in reachable}
+    # recursive because edX also reads tab pages from a tabs/<url_name>/ folder
+    return {path for path in root.glob("tabs/**/*") if path.stem not in reachable}
 
 
 # The about page is the only place about/ files show, and only Open Learning
@@ -616,9 +617,9 @@ def excluded_olx_paths(
     """
     Files an OLX export contains that no learner of the course can reach:
     staff-only subtrees, tab pages outside the navigation, about pages the
-    platform does not show, the course settings, the asset manifests and
-    announcement archive, and anything under static/ that nothing learners see
-    refers to. See hq#13350.
+    platform does not show, the course settings, the asset manifests,
+    announcements, and anything under static/ that nothing learners see refers
+    to. See hq#13350.
 
     Args:
         olx_path (str or Path): The path to the directory with the OLX data
@@ -638,7 +639,8 @@ def excluded_olx_paths(
     )
     excluded.update(unreachable_static_tabs(root))
     shown = ABOUT_PAGE_FILES if etl_source == ETLSource.oll.name else ()
-    excluded.update(path for path in root.glob("about/*") if path.name not in shown)
+    # recursive for the about/<url_name>/ folder edX also reads
+    excluded.update(path for path in root.glob("about/**/*") if path.name not in shown)
     referenced, unreferenced = static_olx_references(root, excluded)
     excluded.update(unreferenced)
     # A hidden video's transcripts are in the staff-only set, but the same file is
@@ -648,6 +650,10 @@ def excluded_olx_paths(
     # Settings rather than content, but what they name (textbooks, the course
     # image) is shown, so they were still read as references above
     excluded.update(root.glob("policies/**/*"))
+    # Old-style announcements: Studio empties updates.html whenever an
+    # announcement is saved, so what is left is legacy announcements or Studio's
+    # sample text. Like the live ones, they still counted as references above.
+    excluded.update(root.glob("info/**/updates.html"))
     return excluded
 
 
