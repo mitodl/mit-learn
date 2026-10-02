@@ -598,6 +598,38 @@ def deindex_non_opensearch_run_content_files(
         )
 
 
+def deindex_deleted_run_content_files(
+    run_id, learning_resource_id, resource_type=COURSE_TYPE
+):
+    """
+    Delete a deleted run's content file documents. The rows are gone, so match
+    the documents by run and resource instead of by content file.
+
+    Args:
+        run_id(int): Id of the deleted run
+        learning_resource_id(int): Learning resource id the run belonged to
+        resource_type (string): The resource type of the parent learning resource
+    """
+    query = {
+        "query": {
+            "bool": {
+                "filter": [
+                    {"term": {"resource_id": learning_resource_id}},
+                    {"term": {"run_id": run_id}},
+                ]
+            }
+        }
+    }
+    conn = get_conn()
+    for alias in get_active_aliases(conn, object_types=[resource_type]):
+        conn.delete_by_query(
+            index=alias,
+            body=query,
+            routing=learning_resource_id,
+            conflicts="proceed",
+        )
+
+
 def deindex_document(doc_id, object_type, **kwargs):
     """
     Make a request to ES to delete a document
