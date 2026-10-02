@@ -73,7 +73,7 @@ SECONDS_PER_YEAR = 365 * 24 * 60 * 60
 FEATURED_RANK_PAYLOAD_KEY = "featured_rank"
 
 # What an empty search (no query string, no sortby) is ordered by, so featured
-# resources come first -- the vector counterpart of the OpenSearch DEFAULT_SORT.
+# resources come first
 DEFAULT_EMPTY_QUERY_ORDER_BY = FEATURED_RANK_PAYLOAD_KEY
 
 QDRANT_RESOURCE_PARAM_MAP = {
