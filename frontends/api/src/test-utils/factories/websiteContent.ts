@@ -8,9 +8,8 @@ const websiteContent: Factory<WebsiteContent> = (overrides = {}) => {
     (overrides.title as string | undefined) ?? faker.lorem.sentence()
   /**
    * Resolved the way the serializer resolves them, from whatever overrides the
-   * caller supplied. Defaulting them independently let a fixture claim an
-   * override and a resolved value that disagreed -- a response the API could
-   * never produce, which a test could then quietly rely on.
+   * caller supplied, so a fixture cannot claim an override and a resolved
+   * value that disagree -- a response the API never produces.
    *
    * An explicit `seo_title` or `seo_description` still wins, via the spread
    * below: a test that wants an inferred description passes the content it was

@@ -1074,6 +1074,15 @@ const WebsiteContentEditor = ({
                 /* Wording only -- which sentence a section shows when
                    something it needs is missing. */
                 contentIsPublished={!!contentItem?.is_published}
+                /**
+                 * A draft's settings save in whatever state they are in, so
+                 * they can be filled in a piece at a time. What publishing
+                 * needs is insisted on at the publish -- which is also what
+                 * keeps a held-back press from being saved away.
+                 */
+                mustResolve={
+                  !!contentItem?.is_published || awaitingSettingsForPublish
+                }
                 initialValues={{
                   topics,
                   seoTitle: seo.title,

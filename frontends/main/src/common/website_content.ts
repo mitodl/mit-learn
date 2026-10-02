@@ -69,7 +69,7 @@ export const extractWebsiteContentDescription = (
  *
  * Both come resolved from the API -- `seo_title` and `seo_description` are the
  * editor's override where there is one and the content's own words otherwise,
- * so there is no fallback left to apply here. A blank `seo_description` means
+ * so this applies no fallback of its own. A blank `seo_description` means
  * the document had no subheading to infer from, and `getMetadataAsync`
  * substitutes its own default for that.
  */

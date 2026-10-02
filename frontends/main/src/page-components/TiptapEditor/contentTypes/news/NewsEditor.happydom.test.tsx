@@ -1842,8 +1842,8 @@ describe("NewsEditor - shared content controls", () => {
       await screen.findByLabelText(/^SEO Title/),
       "News for search",
     )
-    /* Both are required, so the title alone does not unlock the save. */
-    expect(screen.getByRole("button", { name: "Save Settings" })).toBeDisabled()
+    /* This is a draft, so a title on its own saves -- the description is
+       insisted on at the publish, not here. */
     await userEvent.type(
       screen.getByLabelText(/^SEO Description/),
       "What this is about.",

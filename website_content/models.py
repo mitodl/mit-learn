@@ -103,6 +103,13 @@ class WebsiteContent(TimestampedModel, SafeDeleteModel):
     # and truncating their typing here would lose it.
     seo_title_override = models.CharField(max_length=255, blank=True, default="")
     seo_description_override = models.TextField(blank=True, default="")
+    # Superseded by the two above, and kept only for the length of a deploy.
+    # Rolling restarts mean old pods are still selecting these columns while
+    # the new ones are already in use, so dropping them has to be a separate
+    # migration once every pod is on the new code -- see migration 0010 for the
+    # expand-then-contract reasoning. Nothing reads or writes these.
+    seo_title = models.CharField(max_length=255, blank=True, default="")
+    seo_description = models.TextField(blank=True, default="")
     # Where the content editor's topic selections live, for every content type
     # the settings drawer can tag. For an article they are also the source of
     # the topics on the LearningResource that publishing mirrors it into -- see

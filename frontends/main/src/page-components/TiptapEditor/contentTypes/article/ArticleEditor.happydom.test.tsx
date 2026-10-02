@@ -634,7 +634,7 @@ describe("ArticleEditor topics requirement", () => {
     })
   })
 
-  test("a draft's topics may not be emptied either", async () => {
+  test("a draft's topics can be cleared", async () => {
     const topics = factories.learningResources.topics({ count: 1 })
     const [topic] = topics.results
     setMockResponse.get(urls.topics.list({ limit: 1000 }), topics)
@@ -652,14 +652,20 @@ describe("ArticleEditor topics requirement", () => {
     )
 
     /**
-     * Not only once the content is public. The field is marked required and
-     * the section says a topic is needed, so letting the save through on a
-     * draft would contradict both -- and the topics would be gone.
+     * A draft is worked on in pieces, so it saves in whatever state it is in
+     * -- the editor is not trapped into keeping a topic they just removed.
+     * Publishing is where a topic is insisted on.
      */
-    expect(screen.getByRole("button", { name: "Save Settings" })).toBeDisabled()
-    expect(makeRequest).not.toHaveBeenCalledWith(
-      expect.objectContaining({ method: "patch" }),
-    )
+    await userEvent.click(screen.getByRole("button", { name: "Save Settings" }))
+
+    await waitFor(() => {
+      expect(makeRequest).toHaveBeenCalledWith(
+        expect.objectContaining({
+          method: "patch",
+          body: expect.objectContaining({ topics: [] }),
+        }),
+      )
+    })
   })
 
   test("the drawer will not save a published article with its topics emptied", async () => {
@@ -951,27 +957,29 @@ describe("ArticleEditor SEO requirement", () => {
     )
   }, 20000)
 
-  test("a draft with nothing to infer from cannot save its settings", async () => {
+  test("a draft saves its settings with nothing resolving", async () => {
     mockTopics()
-    renderArticleEditor({ topics: [7] })
+    const { article } = renderArticleEditor({ topics: [7] })
+    setMockResponse.patch(urls.websiteContent.details(article.id), article)
 
     await userEvent.click(
       await screen.findByRole("button", { name: "Settings" }),
     )
+    await screen.findByRole("heading", { name: "Article Settings" })
 
     /**
-     * Refused on a draft too, not only once it is public -- but only because
-     * this document has no subheading, so the description resolves to nothing
-     * at all. An ordinary article saves its settings untouched.
-     *
-     * The draft's *content* is unaffected: autosave keeps writing it, and only
-     * the drawer's own settings wait here.
+     * No subheading and no override, so the description resolves to nothing at
+     * all -- and the save still goes through. A draft is filled in a piece at
+     * a time, and refusing until it is complete makes that impossible.
+     * Publishing is where the requirement bites.
      */
-    await screen.findByRole("heading", { name: "Article Settings" })
-    expect(screen.getByRole("button", { name: "Save Settings" })).toBeDisabled()
-    expect(makeRequest).not.toHaveBeenCalledWith(
-      expect.objectContaining({ method: "patch" }),
-    )
+    await userEvent.click(screen.getByRole("button", { name: "Save Settings" }))
+
+    await waitFor(() => {
+      expect(makeRequest).toHaveBeenCalledWith(
+        expect.objectContaining({ method: "patch" }),
+      )
+    })
   })
 
   test("a draft whose content infers both saves its settings untouched", async () => {

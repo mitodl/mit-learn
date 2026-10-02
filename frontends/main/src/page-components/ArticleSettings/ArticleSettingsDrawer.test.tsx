@@ -229,12 +229,6 @@ describe("ArticleSettingsDrawer SEO fields", () => {
   })
 
   /**
-   * Guidance, not a limit: both numbers stand in for pixel widths, and a tag a
-   * little over is truncated rather than rejected. So the counter says so and
-   * the save still goes through -- what it must not do is look like nothing
-   * happened.
-   */
-  /**
    * The inferred value is a placeholder rather than text in the field, which
    * is what keeps "unset" apart from "set to the same words". Pre-filling it
    * would make the next save store it as an override, and the field would stop
@@ -303,6 +297,7 @@ describe("ArticleSettingsDrawer SEO fields", () => {
     mockTopics()
     renderDrawer(undefined, {
       seoRequired: true,
+      mustResolve: true,
       inferredSeoTitle: "The content's own title",
       inferredSeoDescription: "",
     })
@@ -330,6 +325,7 @@ describe("ArticleSettingsDrawer SEO fields", () => {
     mockTopics()
     renderDrawer(undefined, {
       seoRequired: true,
+      mustResolve: true,
       inferredSeoTitle: "The content's own title",
       inferredSeoDescription: "",
     })
@@ -338,6 +334,45 @@ describe("ArticleSettingsDrawer SEO fields", () => {
     expect(await screen.findByLabelText("SEO Title")).not.toBeRequired()
     /* The description has none, so this one really is required. */
     expect(screen.getByLabelText(/^SEO Description/)).toBeRequired()
+  })
+
+  /**
+   * A draft is filled in a piece at a time -- topics now, a description once
+   * it is written -- so its settings save in whatever state they are in. What
+   * publishing needs is insisted on at the publish, not before it.
+   */
+  test("a draft saves even with nothing resolving", async () => {
+    mockTopics()
+    const { onSave } = renderDrawer(undefined, {
+      seoRequired: true,
+      topicsRequired: true,
+      mustResolve: false,
+      inferredSeoTitle: "",
+      inferredSeoDescription: "",
+    })
+
+    const saveButton = await screen.findByRole("button", {
+      name: "Save Settings",
+    })
+    expect(saveButton).toBeEnabled()
+
+    await userEvent.click(saveButton)
+    expect(onSave).toHaveBeenCalled()
+  })
+
+  test("a draft's incomplete fields are not announced as required", async () => {
+    mockTopics()
+    renderDrawer(undefined, {
+      seoRequired: true,
+      mustResolve: false,
+      inferredSeoTitle: "",
+      inferredSeoDescription: "",
+    })
+
+    /* Nothing resolves, but the save accepts it -- so neither may claim to be
+       required, or a screen reader is told something the form does not hold. */
+    expect(await screen.findByLabelText("SEO Title")).not.toBeRequired()
+    expect(screen.getByLabelText("SEO Description")).not.toBeRequired()
   })
 
   test("a required field that resolves is not refused", async () => {
@@ -353,6 +388,12 @@ describe("ArticleSettingsDrawer SEO fields", () => {
     ).toBeEnabled()
   })
 
+  /**
+   * Guidance, not a limit: both numbers stand in for pixel widths, and a tag a
+   * little over is truncated rather than rejected. So the counter says so and
+   * the save still goes through -- what it must not do is look like nothing
+   * happened.
+   */
   test("going over the title budget is flagged but not prevented", async () => {
     mockTopics()
     const { onSave } = renderDrawer()

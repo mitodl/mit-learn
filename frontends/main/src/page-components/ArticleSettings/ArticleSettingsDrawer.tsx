@@ -325,6 +325,21 @@ export interface ArticleSettingsDrawerProps {
    * required, and what the save refuses, does not depend on it.
    */
   contentIsPublished?: boolean
+  /**
+   * Whether the save is refused while anything required does not resolve.
+   *
+   * Separate from `topicsRequired` / `seoRequired`, which say what publishing
+   * needs: a draft can be filled in a piece at a time -- topics now, a
+   * description later -- and refusing the save until it is complete makes that
+   * impossible. So this is true once the content is public, and while a
+   * publish is waiting on this drawer, and false for a draft the editor simply
+   * opened.
+   *
+   * The publish-waiting case is what stops that press being dropped: saving
+   * closes the drawer, and closing forgets the press, so a save that left the
+   * requirement unmet would lose the publish with nothing on screen to say so.
+   */
+  mustResolve?: boolean
   /** Values to open with. Re-read each time the drawer opens. */
   initialValues?: Partial<ArticleSettingsValues>
   /**
@@ -347,6 +362,7 @@ const ArticleSettingsDrawer = ({
   inferredSeoTitle = "",
   inferredSeoDescription = "",
   contentIsPublished = false,
+  mustResolve = false,
   initialValues,
   onSave,
 }: ArticleSettingsDrawerProps) => {
@@ -685,7 +701,7 @@ const ArticleSettingsDrawer = ({
                    valid -- and the ordinary case -- whenever the content has a
                    title, so marking it required then would put an asterisk and
                    `aria-required` on a field the save is perfectly happy with. */
-                required={seoRequired && !inferredSeoTitle}
+                required={mustResolve && seoRequired && !inferredSeoTitle}
                 /* What will be used if this is left alone. Only a prompt when
                    there is nothing to infer from yet. */
                 placeholder={
@@ -716,7 +732,7 @@ const ArticleSettingsDrawer = ({
                 name="seo_description"
                 label="SEO Description"
                 fullWidth
-                required={seoRequired && !inferredSeoDescription}
+                required={mustResolve && seoRequired && !inferredSeoDescription}
                 multiline
                 /* Sized to the budget rather than to the space: nine rows read
                    as an invitation to write far more than will ever show. */
@@ -750,15 +766,17 @@ const ArticleSettingsDrawer = ({
             <Button
               variant="primary"
               /**
-               * Refused rather than silently ignored, and refused on a draft
-               * as much as on something public: the fields are marked
-               * required and the section says they are, so letting the save
-               * through anyway would contradict both. The sections above say
-               * which one is missing.
+               * Refused rather than silently ignored -- but only where the
+               * content has to be complete. A draft is saveable in pieces:
+               * topics now, a description once it is written. What publishing
+               * needs is insisted on at the publish, and from then on.
+               *
+               * The sections above say which one is missing.
                */
               disabled={
-                (topicsRequired && showTopics && selectedIds.length === 0) ||
-                (seoRequired && seoMissing)
+                mustResolve &&
+                ((topicsRequired && showTopics && selectedIds.length === 0) ||
+                  (seoRequired && seoMissing))
               }
               onClick={() => {
                 onSave?.({
