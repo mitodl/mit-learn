@@ -49,6 +49,7 @@ from vector_search.utils import (
     embed_topics,
     filter_existing_qdrant_points_by_ids,
     qdrant_content_files,
+    remove_points_matching_params,
     remove_qdrant_records,
     vector_point_id,
     vector_point_key,
@@ -590,6 +591,40 @@ def remove_run_content_files(self, run_id):
         for ids in chunks(content_file_ids, chunk_size=settings.QDRANT_CHUNK_SIZE)
     ]
     return _replace_with_chain(self, tasks)
+
+
+@app.task(
+    acks_late=True,
+    reject_on_worker_lost=True,
+    autoretry_for=(RetryError,),
+    retry_backoff=True,
+    rate_limit=settings.CELERY_VECTOR_SEARCH_RATE_LIMIT,
+)
+def remove_deleted_run_content_files(run_readable_id, resource_readable_id, platform):
+    """
+    Remove a deleted run's content files from Qdrant. The rows are gone, so
+    match the points by run, resource and platform instead of by content file.
+    The same resource readable_id can exist on more than one platform.
+    """
+    try:
+        with wrap_retry_exception(*SEARCH_CONN_EXCEPTIONS):
+            remove_points_matching_params(
+                {
+                    "run_readable_id": run_readable_id,
+                    "resource_readable_id": resource_readable_id,
+                    "platform": platform,
+                },
+                collection_name=CONTENT_FILES_COLLECTION_NAME,
+            )
+    except grpc.RpcError as err:
+        # SEARCH_CONN_EXCEPTIONS is OpenSearch-only; gRPC transients bypass
+        # autoretry_for=(RetryError,) unless we convert them here.
+        if err.code() in (
+            grpc.StatusCode.DEADLINE_EXCEEDED,
+            grpc.StatusCode.UNAVAILABLE,
+        ):
+            raise RetryError(str(err)) from err
+        raise
 
 
 @app.task(bind=True)

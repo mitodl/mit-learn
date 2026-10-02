@@ -36,6 +36,7 @@ from learning_resources_search.indexing_api import (
     clear_featured_rank,
     create_backing_index,
     deindex_content_files,
+    deindex_deleted_run_content_files,
     deindex_document,
     deindex_learning_resources,
     deindex_non_opensearch_run_content_files,
@@ -1069,6 +1070,34 @@ def test_deindex_non_opensearch_run_content_files_single_run(mocked_es):
     deindex_non_opensearch_run_content_files(course.id)
 
     mocked_es.conn.delete_by_query.assert_not_called()
+
+
+def test_deindex_deleted_run_content_files(mocker, mocked_es):
+    """A deleted run's content file docs are deleted by query, without its rows"""
+    mocker.patch(
+        "learning_resources_search.indexing_api.get_active_aliases",
+        autospec=True,
+        return_value=mocked_es.active_aliases,
+    )
+
+    deindex_deleted_run_content_files(12, 34, COURSE_TYPE)
+
+    for alias in mocked_es.active_aliases:
+        mocked_es.conn.delete_by_query.assert_any_call(
+            index=alias,
+            body={
+                "query": {
+                    "bool": {
+                        "filter": [
+                            {"term": {"resource_id": 34}},
+                            {"term": {"run_id": 12}},
+                        ]
+                    }
+                }
+            },
+            routing=34,
+            conflicts="proceed",
+        )
 
 
 def test_deindex_non_opensearch_run_content_files(mocker, mocked_es):

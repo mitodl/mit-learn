@@ -7,7 +7,8 @@ import { CardRoot } from "./CardShared"
 import { mitxUserQueries } from "api/mitxonline-hooks/user"
 import { ButtonLink } from "@mitodl/smoot-design"
 import { contractView } from "@/common/urls"
-import { OrganizationPage } from "@mitodl/mitxonline-api-axios/v2"
+import { UserOrganizationPage } from "@mitodl/mitxonline-api-axios/v2"
+import { useConsentGatedNavigation } from "../useConsentGatedNavigation"
 
 const Wrapper = styled.div(({ theme }) => ({
   display: "flex",
@@ -100,25 +101,28 @@ const CardButton = styled(ButtonLink)({
 })
 
 interface OrganizationContractsProps {
-  org: OrganizationPage
+  org: UserOrganizationPage
 }
 
 const OrganizationContracts: React.FC<OrganizationContractsProps> = ({
   org,
 }) => {
+  const gateContractLink = useConsentGatedNavigation()
   const contractContent =
     org.contracts?.map((contract) => {
       const href = contractView(org.slug.replace("org-", ""), contract.slug)
+      const linkProps = gateContractLink(contract, href)
       return (
         <CardContent key={contract.id} direction="row">
           <ContractTitleHeading>
-            <TitleLink size="medium" color="black" href={href}>
+            <TitleLink size="medium" color="black" href={href} {...linkProps}>
               {contract.name}
             </TitleLink>
           </ContractTitleHeading>
           <CardButton
             size="small"
             href={href}
+            {...linkProps}
             aria-label={`Continue ${contract.name}`}
           >
             Continue

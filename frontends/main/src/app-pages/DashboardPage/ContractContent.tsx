@@ -1,6 +1,7 @@
 "use client"
 
-import React, { useEffect, useState } from "react"
+import React, { useEffect } from "react"
+import { useRouter } from "next-nprogress-bar"
 import Image from "next/image"
 import { useQuery } from "@tanstack/react-query"
 import {
@@ -21,11 +22,7 @@ import type {
   V3UserProgramEnrollment,
 } from "@mitodl/mitxonline-api-axios/v2"
 import { mitxUserQueries } from "api/mitxonline-hooks/user"
-import {
-  managerOrganizationQueries,
-  useDataConsentMutation,
-} from "api/mitxonline-hooks/organizations"
-import { SILENCE_ERROR_TOAST } from "api/mutation-meta"
+import { managerOrganizationQueries } from "api/mitxonline-hooks/organizations"
 import { ButtonLink } from "@mitodl/smoot-design"
 import { RiAwardFill } from "@remixicon/react"
 import { useFeatureFlagEnabled } from "posthog-js/react"
@@ -36,6 +33,7 @@ import {
   contractAdminView,
   contractAnalyticsView,
   contractLearnersView,
+  DASHBOARD_HOME,
 } from "@/common/urls"
 import { ResourceType, getKey } from "./CoursewareDisplay/helpers"
 import type { DashboardCourseEntry } from "./CoursewareDisplay/model/dashboardViewModel"
@@ -43,7 +41,8 @@ import { useContractDashboardData } from "./CoursewareDisplay/hooks/useContractD
 import UnstyledRawHTML from "@/components/UnstyledRawHTML/UnstyledRawHTML"
 import { VariantPicker } from "./CoursewareDisplay/VariantPicker"
 import { CoursewareCard } from "./CoursewareDisplay/CoursewareCard"
-import { DataConsentDialog } from "./DataConsentDialog"
+import { DataConsentPrompt } from "./DataConsentPrompt"
+import { useDashboardAnnounce } from "./DashboardAnnouncer"
 
 const HeaderRoot = styled.div(({ theme }) => ({
   display: "flex",
@@ -621,23 +620,8 @@ const ContractContent: React.FC<ContractContentProps> = ({
     consentFlag === true &&
     !!b2bContract &&
     b2bContract.consented_to_data_sharing !== true
-  // Declining closes the dialog for this contract until the next page load.
-  const [declinedContractId, setDeclinedContractId] = useState<number | null>(
-    null,
-  )
-  const consentMutation = useDataConsentMutation({ meta: SILENCE_ERROR_TOAST })
-  const submitConsent = (consented: boolean) => {
-    if (!b2bContract) return
-    const contractId = b2bContract.id
-    consentMutation.mutate(
-      { contract_id: contractId, DataConsentRequest: { consented } },
-      {
-        onSuccess: () => {
-          if (!consented) setDeclinedContractId(contractId)
-        },
-      },
-    )
-  }
+  const router = useRouter()
+  const announce = useDashboardAnnounce()
 
   useEffect(() => {
     if (b2bOrganization) {
@@ -672,20 +656,15 @@ const ContractContent: React.FC<ContractContentProps> = ({
         contract={b2bContract}
         cardsDisabled={consentRequired}
       />
-      <DataConsentDialog
+      <DataConsentPrompt
         key={b2bContract.id}
-        open={consentRequired && declinedContractId !== b2bContract.id}
-        contractName={b2bContract.name}
-        onAccept={() => submitConsent(true)}
-        onDecline={() => submitConsent(false)}
-        submitting={
-          consentMutation.isPending
-            ? consentMutation.variables?.DataConsentRequest.consented
-              ? "accept"
-              : "decline"
-            : null
-        }
-        isError={consentMutation.isError}
+        open={consentRequired}
+        contract={b2bContract}
+        onAccepted={() => announce("Consent recorded.")}
+        onDeclined={() => {
+          announce("Response recorded.")
+          router.push(DASHBOARD_HOME)
+        }}
       />
     </>
   )

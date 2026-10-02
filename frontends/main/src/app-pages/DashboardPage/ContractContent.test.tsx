@@ -29,7 +29,9 @@ import {
   contractAdminView,
   contractAnalyticsView,
   contractLearnersView,
+  DASHBOARD_HOME,
 } from "@/common/urls"
+import mockRouter from "next-router-mock"
 
 // Verified cards look up their order; default to none, tests override.
 beforeEach(() => {
@@ -2721,7 +2723,7 @@ describe("ContractContent data consent", () => {
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
   })
 
-  test("Decline records false and closes the dialog, but cards stay disabled", async () => {
+  test("Decline records false and redirects to dashboard home", async () => {
     const { org, contract, mitxOnlineUser } = setupConsent(null)
     setMockResponse.post(urls.b2b.dataConsent(contract.id), undefined, {
       code: 204,
@@ -2742,8 +2744,15 @@ describe("ContractContent data consent", () => {
     await user.click(screen.getByRole("button", { name: "Decline" }))
 
     await waitFor(() => {
-      expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
+      expect(mockRouter.asPath).toBe(DASHBOARD_HOME)
     })
+    expect(screen.getByRole("button", { name: "Decline" })).toHaveAttribute(
+      "aria-disabled",
+      "true",
+    )
+    expect(
+      screen.getByRole("button", { name: "Agree and continue" }),
+    ).toHaveAttribute("aria-disabled", "true")
     expect(makeRequest).toHaveBeenCalledWith(
       expect.objectContaining({
         method: "post",
@@ -2751,9 +2760,6 @@ describe("ContractContent data consent", () => {
         body: { consented: false },
       }),
     )
-    for (const button of await startButtons()) {
-      expect(button).toBeDisabled()
-    }
   })
 
   test("Agree records true, closes the dialog, and enables the cards", async () => {

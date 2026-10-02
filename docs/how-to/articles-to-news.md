@@ -343,6 +343,7 @@ print(f"Found {source.feed_items.count()} articles in news feed")
    ```
 
 3. **Check for errors:**
+
    ```python
    from news_events.tasks import get_articles_news
 
@@ -354,6 +355,7 @@ print(f"Found {source.feed_items.count()} articles in news feed")
 - Check your `extract_text_from_content()` function
 - Verify the JSON structure matches your Article.content format
 - Add debug logging:
+
   ```python
   import logging
 

@@ -65,14 +65,31 @@ describe("DataConsentDialog", () => {
     expect(onAccept).not.toHaveBeenCalled()
   })
 
-  test.each(["accept", "decline"] as const)(
-    "disables both actions while submitting %s",
-    (submitting) => {
-      setup({ submitting })
-      expect(screen.getByRole("button", { name: "Decline" })).toBeDisabled()
-      expect(
-        screen.getByRole("button", { name: "Agree and continue" }),
-      ).toBeDisabled()
+  test.each([
+    { submitting: "accept" as const, busyName: "Agree and continue" },
+    { submitting: "decline" as const, busyName: "Decline" },
+  ])(
+    "while submitting $submitting, both actions are aria-disabled and ignore clicks, and only that one is busy",
+    async ({ submitting, busyName }) => {
+      const { onAccept, onDecline } = setup({ submitting })
+      const decline = screen.getByRole("button", { name: "Decline" })
+      const agree = screen.getByRole("button", { name: "Agree and continue" })
+
+      for (const button of [decline, agree]) {
+        expect(button).toHaveAttribute("aria-disabled", "true")
+        expect(button).toHaveAttribute(
+          "aria-busy",
+          button === screen.getByRole("button", { name: busyName })
+            ? "true"
+            : "false",
+        )
+      }
+      // Still focusable, so focus isn't lost when a submit starts.
+      expect(decline).not.toBeDisabled()
+
+      await user.click(decline)
+      expect(onDecline).not.toHaveBeenCalled()
+      expect(onAccept).not.toHaveBeenCalled()
     },
   )
 

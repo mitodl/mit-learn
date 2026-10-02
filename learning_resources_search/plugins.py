@@ -5,6 +5,7 @@ import logging
 from celery import chain
 from django.apps import apps
 from django.conf import settings as django_settings
+from django.db import transaction
 
 from learning_resources.etl.constants import QDRANT_RETAINED_SOURCES
 from learning_resources.models import ContentFile, LearningResource
@@ -247,16 +248,29 @@ class SearchIndexPlugin:
     @hookimpl
     def resource_run_delete(self, run):
         """
-        Remove a learning resource run's content files from BOTH search indexes
-        and then delete the object.
+        Delete a learning resource run, then remove its content files from BOTH
+        search indexes. The tasks run after the rows are gone, so they get the
+        keys to match on instead of looking the rows up.
         """
-        deindex_tasks = [
-            tasks.deindex_run_content_files.si(run.id, unpublished_only=False),
-        ]
-        if django_settings.QDRANT_ENABLE_INDEXING_PLUGIN_HOOKS:
-            deindex_tasks.append(vector_tasks.remove_run_content_files.si(run.id))
-        try_with_retry_as_task(chain(*deindex_tasks))
+        run_pk, run_readable_id = run.id, run.run_id
+        resource = run.learning_resource
         run.delete()
+
+        def deindex():
+            deindex_tasks = [
+                tasks.deindex_deleted_run_content_files.si(
+                    run_pk, resource.id, resource.resource_type
+                ),
+            ]
+            if django_settings.QDRANT_ENABLE_INDEXING_PLUGIN_HOOKS:
+                deindex_tasks.append(
+                    vector_tasks.remove_deleted_run_content_files.si(
+                        run_readable_id, resource.readable_id, resource.platform_id
+                    )
+                )
+            try_with_retry_as_task(chain(*deindex_tasks))
+
+        transaction.on_commit(deindex)
 
     @hookimpl
     def content_files_loaded(self, run):

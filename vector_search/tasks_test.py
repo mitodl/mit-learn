@@ -49,6 +49,7 @@ from vector_search.tasks import (
     embeddings_healthcheck_resource_embeddings,
     finalize_embeddings,
     generate_embeddings,
+    remove_deleted_run_content_files,
     remove_embeddings,
     remove_run_content_files,
     remove_unpublished_run_content_files,
@@ -1737,6 +1738,54 @@ def test_generate_embeddings_does_not_swallow_errors(mocker):
     )
     with pytest.raises(ValueError, match="boom"):
         generate_embeddings([1], COURSE_TYPE, overwrite=False)
+
+
+def test_remove_deleted_run_content_files(mocker):
+    """A deleted run's points are matched by run, course AND platform, so the
+    same run under the course it moved to, or the same course id on another
+    platform, keeps its points
+    """
+    from vector_search.constants import CONTENT_FILES_COLLECTION_NAME
+
+    mock_client = mocker.patch("vector_search.utils.qdrant_client").return_value
+
+    remove_deleted_run_content_files(
+        "course-v1:MITx+1.1x+1T2026", "MITx+1.1x", "mitxonline"
+    )
+
+    kwargs = mock_client.delete.call_args.kwargs
+    assert kwargs["collection_name"] == CONTENT_FILES_COLLECTION_NAME
+    assert {
+        (condition.key, condition.match.value)
+        for condition in kwargs["points_selector"].filter.must
+    } == {
+        ("run_readable_id", "course-v1:MITx+1.1x+1T2026"),
+        ("resource_readable_id", "MITx+1.1x"),
+        ("platform.code", "mitxonline"),
+    }
+
+
+@pytest.mark.parametrize(
+    "status_code", [grpc.StatusCode.DEADLINE_EXCEEDED, grpc.StatusCode.UNAVAILABLE]
+)
+def test_remove_deleted_run_content_files_retries_transient_grpc(mocker, status_code):
+    """Transient Qdrant errors retry; the deleted run can't trigger another cleanup"""
+    mocker.patch(
+        "vector_search.tasks.remove_points_matching_params",
+        side_effect=_rpc_error(status_code),
+    )
+    with pytest.raises(RetryError):
+        remove_deleted_run_content_files("run", "course", "mitxonline")
+
+
+def test_remove_deleted_run_content_files_reraises_other_grpc_errors(mocker):
+    """Non-transient gRPC errors fail the task rather than retrying"""
+    mocker.patch(
+        "vector_search.tasks.remove_points_matching_params",
+        side_effect=_rpc_error(grpc.StatusCode.INVALID_ARGUMENT),
+    )
+    with pytest.raises(grpc.RpcError):
+        remove_deleted_run_content_files("run", "course", "mitxonline")
 
 
 def test_remove_embeddings_raises_retryerror_on_grpc_deadline(mocker):
