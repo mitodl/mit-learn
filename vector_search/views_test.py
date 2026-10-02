@@ -627,6 +627,90 @@ def test_vector_search_nullable_sortby_scroll(mocker, client, sortby, expected_s
 
 
 @pytest.mark.parametrize(
+    ("params", "expected_order_by"),
+    [
+        # an empty search leads with the featured resources
+        ({"q": ""}, "featured_rank"),
+        ({}, "featured_rank"),
+        # filters alone are still an empty search
+        ({"q": "", "resource_type": ["course"]}, "featured_rank"),
+        # an explicit sort wins
+        ({"q": "", "sortby": "-views"}, "-views"),
+        # a query ranks by relevance
+        ({"q": "robotics"}, None),
+        ({"q": "robotics", "sortby": "-created_on"}, "-created_on"),
+    ],
+)
+def test_vector_search_empty_query_orders_by_featured_rank(
+    mocker, client, params, expected_order_by
+):
+    """Only a search with no query string and no sortby defaults to featured"""
+    mock_search = mocker.patch.object(
+        QdrantView,
+        "async_vector_search",
+        new=mocker.AsyncMock(return_value={"hits": [], "total": {"value": 0}}),
+    )
+
+    client.get(
+        reverse("vector_search:v0:vector_learning_resources_search"), data=params
+    )
+
+    assert mock_search.await_args.kwargs["order_by"] == expected_order_by
+
+
+@pytest.mark.parametrize("sortby", ["featured_rank", "-featured_rank"])
+def test_vector_search_featured_rank_is_not_a_sortby(mocker, client, sortby):
+    """
+    featured_rank is left out of the response payload, so a query sorted on it
+    would read None for every hit. It is only the empty-search default.
+    """
+    mock_search = mocker.patch.object(
+        QdrantView, "async_vector_search", new=mocker.AsyncMock()
+    )
+
+    response = client.get(
+        reverse("vector_search:v0:vector_learning_resources_search"),
+        data={"q": "robotics", "sortby": sortby},
+    )
+
+    assert response.status_code == 400
+    mock_search.assert_not_awaited()
+
+
+def test_vector_search_featured_rank_scroll(mocker, client):
+    """
+    The featured scroll is ascending by rank, then topped up with every resource
+    that is not featured, most recent first
+    """
+    mock_qdrant = _scroll_page_mock(mocker, dated=2, undated=2)
+
+    view = QdrantView()
+    results = asyncio.run(
+        view.async_vector_search("", {}, order_by="featured_rank", limit=10, offset=0)
+    )
+
+    assert [hit["readable_id"] for hit in results["hits"]] == [
+        "dated-0",
+        "dated-1",
+        "undated-0",
+        "undated-1",
+    ]
+    featured_kwargs, tail_kwargs = (
+        call.kwargs for call in mock_qdrant.scroll.mock_calls
+    )
+    assert featured_kwargs["order_by"] == models.OrderBy(
+        key="featured_rank", direction=models.Direction.ASC
+    )
+    assert tail_kwargs["order_by"] == models.OrderBy(
+        key="created_on", direction=models.Direction.DESC
+    )
+    assert (
+        models.IsEmptyCondition(is_empty=models.PayloadField(key="featured_rank"))
+        in tail_kwargs["scroll_filter"].must
+    )
+
+
+@pytest.mark.parametrize(
     ("offset", "limit", "expected"),
     [
         # wholly inside the ordered points

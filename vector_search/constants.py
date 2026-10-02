@@ -65,6 +65,17 @@ NEXT_START_DATE_PAYLOAD_KEY = "next_start_date"
 # length the OpenSearch decay's 365d scale uses.
 SECONDS_PER_YEAR = 365 * 24 * 60 * 60
 
+# Payload key holding a featured resource's rank: the position of the resource
+# in the featured lists plus a random fraction, which shuffles the resources
+# sharing a position. Null for every resource that is not featured. Set by the
+# search serializer, so it is written with the rest of the payload, and
+# refreshed daily alongside OpenSearch by update_featured_rank.
+FEATURED_RANK_PAYLOAD_KEY = "featured_rank"
+
+# What an empty search (no query string, no sortby) is ordered by, so featured
+# resources come first
+DEFAULT_EMPTY_QUERY_ORDER_BY = FEATURED_RANK_PAYLOAD_KEY
+
 QDRANT_RESOURCE_PARAM_MAP = {
     "readable_id": "readable_id",
     "resource_type": "resource_type",
@@ -124,6 +135,8 @@ QDRANT_LEARNING_RESOURCE_INDEXES = {
     # Scoring-only for the same reason: the staleness penalty decays over it, and
     # a datetime index is what makes it readable from a formula.
     RESOURCE_AGE_DATE_PAYLOAD_KEY: models.PayloadSchemaType.DATETIME,
+    # Sort-only: what an empty search orders by (DEFAULT_EMPTY_QUERY_ORDER_BY).
+    FEATURED_RANK_PAYLOAD_KEY: models.PayloadSchemaType.FLOAT,
 }
 
 
@@ -139,6 +152,10 @@ QDRANT_LEARNING_RESOURCE_SORTBY_FIELDS = [
         models.PayloadSchemaType.UUID,
     ]
 ]
+# featured_rank is deliberately not a sortby choice. It is excluded from the
+# response payload (RESOURCES_PAYLOAD_EXCLUDE), so a query with text -- sorted in
+# Python on the returned hits -- would read None for every hit. It is only the
+# default order of an empty search, which Qdrant sorts itself.
 """
 Note: Be intentional about which fields we add as indexes.
 Only add fields that we expect to filter or facet on frequently.
@@ -246,13 +263,21 @@ COLLECTION_INDEX_MAP = {
 # put those points last instead of dropping them. Everything else keeps the plain
 # order_by: views and created_on are on every resource payload, and their exact
 # index ordering is worth more than covering a case that cannot happen.
-NULLABLE_ORDER_BY_KEYS = frozenset({"next_start_date"})
+# featured_rank is null for all but the handful of featured resources.
+NULLABLE_ORDER_BY_KEYS = frozenset({"next_start_date", FEATURED_RANK_PAYLOAD_KEY})
 
-# The value a missing datetime is ordered by, which has to fall outside the range
-# real dates occupy so those points land at the end of the results either way.
-ORDER_BY_MISSING_DATETIME = {
-    models.Direction.ASC: "9999-01-01T00:00:00Z",
-    models.Direction.DESC: "0001-01-01T00:00:00Z",
+# The value a missing sort key is ordered by, per index type, which has to fall
+# outside the range real values occupy so those points land at the end of the
+# results either way. Featured ranks are small positive numbers.
+ORDER_BY_MISSING_VALUE = {
+    models.PayloadSchemaType.DATETIME: {
+        models.Direction.ASC: "9999-01-01T00:00:00Z",
+        models.Direction.DESC: "0001-01-01T00:00:00Z",
+    },
+    models.PayloadSchemaType.FLOAT: {
+        models.Direction.ASC: 1e9,
+        models.Direction.DESC: -1e9,
+    },
 }
 
 # Points with no value for the sort key have nothing to order them by, so they

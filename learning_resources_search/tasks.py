@@ -67,6 +67,7 @@ from main.utils import (
     now_in_utc,
 )
 from profiles.utils import send_template_email
+from vector_search.utils import update_featured_ranks as update_qdrant_featured_ranks
 
 User = get_user_model()
 log = logging.getLogger(__name__)
@@ -89,24 +90,29 @@ PARTIAL_UPDATE_TASK_SETTINGS = {
 
 @app.task(**PARTIAL_UPDATE_TASK_SETTINGS)
 def update_featured_rank():
-    """Update featured ranks for resources in the search index."""
+    """Update featured ranks for resources in the search index and Qdrant."""
     featured_view_set = FeaturedViewSet()
     featured_resources = featured_view_set.get_queryset()
+    # A resource in more than one featured list keeps its best (first) rank.
+    qdrant_ranks = {}
     for position, resources_with_position in groupby(
         featured_resources, key=lambda x: x.position
     ):
         api.clear_featured_rank(position, clear_all_greater_than=False)
         for resource in resources_with_position:
+            featured_rank = position + random()  # noqa: S311
             api.update_document_with_partial(
                 resource.id,
-                {"featured_rank": position + random()},  # noqa: S311
+                {"featured_rank": featured_rank},
                 resource.resource_type,
             )
+            qdrant_ranks.setdefault(resource, featured_rank)
 
     api.clear_featured_rank(
         featured_resources.values_list("position", flat=True).distinct().count(),
         clear_all_greater_than=True,
     )
+    update_qdrant_featured_ranks(qdrant_ranks)
 
 
 @app.task(**PARTIAL_UPDATE_TASK_SETTINGS)
