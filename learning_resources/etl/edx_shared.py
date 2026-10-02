@@ -434,7 +434,7 @@ def unpublish_excluded_content_files(
             if olx_path is None:
                 continue
             try:
-                excluded_paths = excluded_olx_paths(olx_path)
+                excluded_paths = excluded_olx_paths(olx_path, etl_source)
             except ElementTree.ParseError:
                 log.exception("Malformed OLX in %s, skipping", key)
                 continue

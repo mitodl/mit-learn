@@ -1776,6 +1776,9 @@ def _staff_only_archive(tmp_path) -> Path:
         "video/vid.xml": '<video url_name="vid" sub="ABC123"/>',
         "static/subs_ABC123.srt.sjson": "{}",
         "static/subs ABC123.srt.sjson": "{}",
+        # shown only where the platform serves the about page
+        "about/overview.html": "<p>about</p>",
+        "about/effort.html": "5",
     }
     for rel, text in files.items():
         (olx / rel).parent.mkdir(parents=True, exist_ok=True)
@@ -1889,6 +1892,41 @@ def test_unpublish_excluded_content_files_prefers_published_run(
         current.id, unpublished_only=True
     )
     mock_deindex_tasks.qdrant.assert_called_once_with(current.id)
+
+
+def test_unpublish_excluded_content_files_keeps_the_oll_about_page(
+    mock_course_archive_bucket, mock_deindex_tasks, mocker, tmp_path
+):
+    """OLL shows the about page, so its overview stays published"""
+    mocker.patch(
+        "learning_resources.etl.edx_shared.get_bucket_by_name",
+        return_value=mock_course_archive_bucket.bucket,
+    )
+    source = ETLSource.oll.name
+    course = LearningResourceFactory.create(
+        etl_source=source, is_course=True, published=True, create_runs=False
+    )
+    run = LearningResourceRunFactory.create(
+        learning_resource=course, run_id="MITx+8.01.1x+3T2018", published=True
+    )
+    key = f"{get_s3_prefix_for_source(source)}/8_01_1x_3T2018_OLL.tar.gz"
+    mock_course_archive_bucket.bucket.put_object(
+        Key=key, Body=_staff_only_archive(tmp_path).read_bytes()
+    )
+    keys = {
+        name: get_edx_module_id(f"course/about/{name}", run)
+        for name in ("overview.html", "effort.html")
+    }
+    for cf_key in keys.values():
+        ContentFileFactory.create(run=run, key=cf_key, published=True)
+
+    unpublish_excluded_content_files(source, [course.id], [key])
+
+    assert list(
+        ContentFile.objects.filter(run=run, published=True).values_list(
+            "key", flat=True
+        )
+    ) == [keys["overview.html"]]
 
 
 def test_unpublish_excluded_content_files_nothing_hidden(
