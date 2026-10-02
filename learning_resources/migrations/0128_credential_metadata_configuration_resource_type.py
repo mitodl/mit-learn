@@ -58,7 +58,7 @@ def remove_program_configurations(apps, schema_editor):
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("learning_resources", "0126_credential_metadata_store"),
+        ("learning_resources", "0127_learningresourcerun_run_id_index"),
     ]
 
     operations = [
