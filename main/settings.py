@@ -956,6 +956,12 @@ OPENAI_API_KEY = get_string(
     default=None,
 )
 
+# Azure OpenAI is used only for chat and embedding models configured with an
+# "azure/" prefix (e.g. "azure/gpt-4o", where the part after the prefix is the
+# deployment name). It authenticates with an Entra ID token, never an API key.
+AZURE_OPENAI_ENDPOINT = get_string(name="AZURE_OPENAI_ENDPOINT", default="")
+AZURE_OPENAI_API_VERSION = get_string(name="AZURE_OPENAI_API_VERSION", default="")
+
 # Hedged embedding requests: if the first request for a search query has not
 # come back within EMBEDDING_HEDGE_DELAY_SECONDS, send backup requests and use
 # whichever finishes first. The delay keeps the extra backend load proportional

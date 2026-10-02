@@ -43,6 +43,7 @@ from learning_resources.models import (
     LearningResourceTopicMapping,
     UserListRelationship,
 )
+from main.azure_openai import strip_azure_prefix
 from main.utils import frontend_absolute_url, generate_filepath
 
 log = logging.getLogger()
@@ -795,7 +796,7 @@ def token_encoding(model: str = "gpt-4o"):
     import tiktoken
 
     try:
-        return tiktoken.encoding_for_model(model)
+        return tiktoken.encoding_for_model(strip_azure_prefix(model))
     except KeyError:
         return tiktoken.get_encoding(
             settings.LITELLM_TOKEN_ENCODING_NAME or FALLBACK_ENCODING_NAME
