@@ -1300,9 +1300,7 @@ describe("ContractLearnersPage", () => {
       await user.click(await checkbox())
       await screen.findByText("Only Stale")
 
-      await waitFor(() => {
-        expect(screen.getByText("1 result")).toBeInTheDocument()
-      })
+      await screen.findByText("1 result")
     })
 
     /**
