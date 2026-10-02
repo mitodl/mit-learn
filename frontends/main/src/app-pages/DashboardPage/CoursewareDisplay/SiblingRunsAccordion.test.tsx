@@ -434,13 +434,9 @@ describe("SiblingRunsToggle + SiblingRunsPanel", () => {
       />,
     )
     await expandAccordion()
-    expect(await screen.findByText(/^Upcoming:/)).toBeInTheDocument()
+    await screen.findByText(/^Upcoming:/)
 
-    await waitFor(() => {
-      expect(
-        screen.getByRole("link", { name: /View content for Upcoming/ }),
-      ).toBeInTheDocument()
-    })
+    await screen.findByRole("link", { name: /View content for Upcoming/ })
   })
 
   test("upcoming sibling run reads the role from its own enrollment", async () => {
@@ -462,7 +458,7 @@ describe("SiblingRunsToggle + SiblingRunsPanel", () => {
       />,
     )
     await expandAccordion()
-    expect(await screen.findByText(/^Upcoming:/)).toBeInTheDocument()
+    await screen.findByText(/^Upcoming:/)
 
     expect(
       screen.queryByRole("link", { name: /View content for Upcoming/ }),
