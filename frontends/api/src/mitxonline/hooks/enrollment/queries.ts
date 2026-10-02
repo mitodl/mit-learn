@@ -7,12 +7,17 @@ import type {
 import { courseRunEnrollmentsApi, programEnrollmentsApi } from "../../clients"
 import { RawAxiosRequestConfig } from "axios"
 
+type CourseRunEnrollmentsListOpts = { exclude_b2b?: boolean }
+
 const enrollmentKeys = {
   root: ["mitxonline", "enrollments"],
-  courseRunEnrollmentsList: () => [
+  // Filtered variants extend the unfiltered key, so invalidating the
+  // unfiltered key refreshes them too.
+  courseRunEnrollmentsList: (opts?: CourseRunEnrollmentsListOpts) => [
     ...enrollmentKeys.root,
     "courseRunEnrollments",
     "list",
+    ...(opts ? [opts] : []),
   ],
   programEnrollmentsList: (opts?: RawAxiosRequestConfig) => [
     ...enrollmentKeys.root,
@@ -23,12 +28,12 @@ const enrollmentKeys = {
 }
 
 const enrollmentQueries = {
-  courseRunEnrollmentsList: () =>
+  courseRunEnrollmentsList: (opts?: CourseRunEnrollmentsListOpts) =>
     queryOptions({
-      queryKey: enrollmentKeys.courseRunEnrollmentsList(),
+      queryKey: enrollmentKeys.courseRunEnrollmentsList(opts),
       queryFn: async (): Promise<CourseRunEnrollmentV3[]> => {
         return courseRunEnrollmentsApi
-          .userEnrollmentsListV3()
+          .userEnrollmentsListV3(opts)
           .then((res) => res.data)
       },
     }),
