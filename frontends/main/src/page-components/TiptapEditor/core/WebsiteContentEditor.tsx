@@ -38,7 +38,10 @@ import { WebsiteContentProvider } from "../WebsiteContentContext"
 import { extractLearningResourceIds } from "../extensions/utils"
 import { LearningResourceProvider } from "../extensions/node/LearningResource/LearningResourceDataProvider"
 import { websiteContentDraftsView, websiteContentEditView } from "@/common/urls"
-import { CONTENT_TYPE_LABELS } from "@/common/website_content"
+import {
+  CONTENT_TYPE_LABELS,
+  extractWebsiteContentDescription,
+} from "@/common/website_content"
 
 const LearningResourceDrawer = dynamic(
   () =>
@@ -385,9 +388,15 @@ const WebsiteContentEditor = ({
   )
   const [title, setTitle] = useState(contentItem?.title)
   const [topics, setTopics] = useState<number[]>(contentItem?.topics ?? [])
+  /**
+   * The editor's SEO *overrides*, not the values that will be used. Blank is
+   * the ordinary state: the title then follows the content's own title and the
+   * description the banner's subheading, and both keep following them. Storing
+   * what was inferred would freeze it at today's wording.
+   */
   const [seo, setSeo] = useState({
-    title: contentItem?.seo_title ?? "",
-    description: contentItem?.seo_description ?? "",
+    title: contentItem?.seo_title_override ?? "",
+    description: contentItem?.seo_description_override ?? "",
   })
   const [touched, setTouched] = useState(false)
   /**
@@ -522,8 +531,8 @@ const WebsiteContentEditor = ({
     // them itself rather than leaving the drawer to PATCH them separately.
     const settings = {
       topics: overrides?.topics ?? topics,
-      seo_title: overrides?.seoTitle ?? seo.title,
-      seo_description: overrides?.seoDescription ?? seo.description,
+      seo_title_override: overrides?.seoTitle ?? seo.title,
+      seo_description_override: overrides?.seoDescription ?? seo.description,
     }
     const existingId = contentItem?.id ?? createdIdRef.current
     const saved = existingId
@@ -603,7 +612,15 @@ const WebsiteContentEditor = ({
      * was only ever waiting on the SEO fields.
      */
     const topicsSupplied = !topicsRequired || (nextTopics?.length ?? 0) > 0
-    const seoSupplied = !!seoTitle.trim() && !!seoDescription.trim()
+    /**
+     * Resolved, not the overrides the drawer just handed over. Blank overrides
+     * are the common case -- the content's own title and subheading are then
+     * what a search result shows -- so testing the overrides alone would
+     * strand a publish that was only ever waiting on topics.
+     */
+    const seoSupplied =
+      !!(seoTitle.trim() || inferredSeoTitle) &&
+      !!(seoDescription.trim() || inferredSeoDescription)
     if (awaitingSettingsForPublish && topicsSupplied && seoSupplied) {
       setAwaitingSettingsForPublish(false)
       startPublish(overrides)
@@ -621,8 +638,8 @@ const WebsiteContentEditor = ({
     queueSave(() =>
       updateMutation.mutateAsync({
         id: existingId,
-        seo_title: seoTitle,
-        seo_description: seoDescription,
+        seo_title_override: seoTitle,
+        seo_description_override: seoDescription,
         ...(nextTopics === undefined ? {} : { topics: nextTopics }),
       }),
     ).catch(() => undefined)
@@ -706,7 +723,24 @@ const WebsiteContentEditor = ({
    * Trimmed, so a space does not pass for a title.
    */
   const seoRequired = true
-  const seoMissing = !seo.title.trim() || !seo.description.trim()
+  /**
+   * Inferred from the document in hand rather than from `contentItem`: the
+   * author may have retitled the banner seconds ago, and the placeholder and
+   * the publish gate both have to reflect what would be saved now.
+   */
+  const inferredSeoTitle = (title ?? "").trim()
+  const inferredSeoDescription = (
+    extractWebsiteContentDescription({ content }) ?? ""
+  ).trim()
+  /**
+   * Missing means the *resolved* value is empty -- no override and nothing to
+   * infer from. A blank override is the common case and perfectly publishable:
+   * gating on the override itself would hold back every publish that simply
+   * let the content speak for itself.
+   */
+  const seoMissing =
+    !(seo.title.trim() || inferredSeoTitle) ||
+    !(seo.description.trim() || inferredSeoDescription)
 
   /** Hold the publish back and ask for whatever publishing still needs. */
   const askForSettings = () => {
@@ -1035,9 +1069,20 @@ const WebsiteContentEditor = ({
                 }
                 topicsRequired={topicsRequired}
                 seoRequired={seoRequired}
+                inferredSeoTitle={inferredSeoTitle}
+                inferredSeoDescription={inferredSeoDescription}
                 /* Wording only -- which sentence a section shows when
                    something it needs is missing. */
                 contentIsPublished={!!contentItem?.is_published}
+                /**
+                 * A draft's settings save in whatever state they are in, so
+                 * they can be filled in a piece at a time. What publishing
+                 * needs is insisted on at the publish -- which is also what
+                 * keeps a held-back press from being saved away.
+                 */
+                mustResolve={
+                  !!contentItem?.is_published || awaitingSettingsForPublish
+                }
                 initialValues={{
                   topics,
                   seoTitle: seo.title,

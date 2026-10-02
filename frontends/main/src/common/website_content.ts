@@ -29,35 +29,55 @@ export const toContentType = (
 ): WebsiteContentContentTypeEnum | undefined =>
   Object.values(WebsiteContentContentTypeEnum).find((type) => type === value)
 
+/**
+ * The banner's subheading -- the line under the headline, and the one part of
+ * the body written as a summary.
+ *
+ * This is what an SEO description falls back to. The API resolves that for
+ * saved content (`seo_description`, see `inferred_seo_description` in
+ * `website_content/utils.py`); this reads a document in hand, which is what
+ * the editor needs while someone is still typing into it.
+ *
+ * Positional, because that is how the banner is built: first child the
+ * heading, second the subheading. The Python side matches, so a change to the
+ * banner's shape has to land in both.
+ *
+ * Every inline node is joined, not just the first: a subheading with any
+ * formatting in it is several text nodes rather than one, so "A **complex**
+ * article" is three. Joined with nothing between them -- they are contiguous
+ * characters that differ only by their marks, and a separator would break
+ * words apart.
+ */
 export const extractWebsiteContentDescription = (
-  content: WebsiteContent,
+  content: WebsiteContent | { content?: JSONContent },
 ): string | undefined => {
   const banner = content.content?.content?.[0]
   const subheading = banner?.content?.[1]
-  const textNode = subheading?.content?.[0]
-  return textNode?.text
+  const text = (subheading?.content ?? [])
+    .map((node: JSONContent) => node.text ?? "")
+    .join("")
+  /* Absent rather than blank, which is what `getMetadataAsync` needs to
+     substitute its own default instead of emitting an empty tag. */
+  return text || undefined
 }
 
 /**
- * The title and description for the page head, which is the only place the
- * editor's SEO fields do anything: stored on the row they are invisible, and
- * it is `<title>` and `<meta name="description">` in the server's response
- * that a crawler reads and a search result shows.
+ * The title and description for the page head, which is where the SEO fields
+ * do their work: stored on the row they are invisible, and it is `<title>` and
+ * `<meta name="description">` in the server's response that a crawler reads
+ * and a search result shows.
  *
- * The override wins where it is set, and falls back otherwise -- to the
- * content's own title, and to the opening of its body, which is all there was
- * before these fields existed.
- *
- * `||` rather than `??`: unset is `""`, not null (the serializer defaults both
- * to blank so a consumer has one absent value to handle rather than two), and
- * `??` would let the blank through and emit an empty title.
+ * Both come resolved from the API -- `seo_title` and `seo_description` are the
+ * editor's override where there is one and the content's own words otherwise,
+ * so this applies no fallback of its own. A blank `seo_description` means
+ * the document had no subheading to infer from, and `getMetadataAsync`
+ * substitutes its own default for that.
  */
 export const websiteContentSeo = (
   content: WebsiteContent,
 ): { title: string; description: string | undefined } => ({
-  title: content.seo_title || content.title,
-  description:
-    content.seo_description || extractWebsiteContentDescription(content),
+  title: content.seo_title,
+  description: content.seo_description || undefined,
 })
 
 export const extractImageMetadata = (
