@@ -34,4 +34,21 @@ describe("next.config.js redirects", () => {
     )
     expect(matching).toEqual([])
   })
+
+  test("/universal-learning/ai redirects permanently to /organizational-learning", async () => {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const nextConfig = require("../next.config.js")
+    const redirects: { source: string; destination: string }[] =
+      await nextConfig.redirects()
+    const matching = redirects.filter(({ source }) =>
+      getPathMatch(source)("/universal-learning/ai"),
+    )
+    expect(matching).toEqual([
+      {
+        source: "/universal-learning/ai",
+        destination: "/organizational-learning",
+        permanent: true,
+      },
+    ])
+  })
 })
