@@ -628,19 +628,32 @@ def test_ovs_video_webhook_rejects_hostile_urls(settings, client, mocker, hostil
 
 @pytest.mark.django_db
 @pytest.mark.parametrize(
-    "cta_link",
+    ("cta_link", "expected_url"),
     [
-        pytest.param("https://why-this-matters.captivate.fm/listen", id="external"),
         pytest.param(
-            "https://evil.io\\@du3yhovcx8dht.cloudfront.net/x.jpg", id="backslash"
+            "https://why-this-matters.captivate.fm/listen",
+            "https://why-this-matters.captivate.fm/listen",
+            id="external",
         ),
-        pytest.param(5, id="not_a_string"),
+        pytest.param(
+            "https://evil.io\\@du3yhovcx8dht.cloudfront.net/x.jpg",
+            "https://video.odl.mit.edu/videos/external_cta",
+            id="backslash",
+        ),
+        pytest.param(
+            "javascript:alert(1)",
+            "https://video.odl.mit.edu/videos/external_cta",
+            id="javascript",
+        ),
+        pytest.param(
+            5, "https://video.odl.mit.edu/videos/external_cta", id="not_a_string"
+        ),
     ],
 )
-def test_ovs_video_webhook_ignores_disallowed_cta_link(
-    settings, client, mocker, ovs_platform, cta_link
+def test_ovs_video_webhook_cta_link(  # noqa: PLR0913
+    settings, client, mocker, ovs_platform, cta_link, expected_url
 ):
-    """A cta_link off the allowlist is dropped, and the video still loads."""
+    """An external cta_link is the video's url; an unsafe one is dropped."""
     mocker.patch("webhooks.views.clear_views_cache")
     mocker.patch("learning_resources.etl.loaders.update_index")
     mocker.patch(
@@ -658,7 +671,7 @@ def test_ovs_video_webhook_ignores_disallowed_cta_link(
     )
     assert response.status_code == 200
     video = LearningResource.objects.get(readable_id="external_cta")
-    assert video.url == "https://video.odl.mit.edu/videos/external_cta"
+    assert video.url == expected_url
 
 
 @pytest.mark.django_db
