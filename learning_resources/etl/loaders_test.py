@@ -1557,6 +1557,27 @@ def test_load_courses(mocker, mock_blocklist, prune):
     assert course_to_unpublish.learning_resource.published is not prune
 
 
+@pytest.mark.parametrize("prune_empty", [True, False])
+def test_load_courses_empty(mock_blocklist, prune_empty):
+    """An empty course set prunes the source only when prune_empty is set"""
+    course = CourseFactory.create(etl_source=ETLSource.xpro.name)
+    test_mode_course = CourseFactory.create(
+        etl_source=ETLSource.xpro.name, learning_resource__test_mode=True
+    )
+
+    assert (
+        load_courses(
+            ETLSource.xpro.name, [], config=CourseLoaderConfig(prune_empty=prune_empty)
+        )
+        == []
+    )
+
+    course.refresh_from_db()
+    test_mode_course.refresh_from_db()
+    assert course.learning_resource.published is not prune_empty
+    assert test_mode_course.learning_resource.published is True
+
+
 def test_load_courses_skips_write_when_not_owned(mocker):
     """load_courses should no-op (no writes, no prune) for a pair legacy does not own"""
     ETLSourceOwnershipFactory.create(
@@ -1598,6 +1619,24 @@ def test_load_programs(mocker, mock_blocklist):
     load_programs("mitx", program_data, config=ProgramLoaderConfig(prune=True))
     assert mock_load_program.call_count == len(program_data)
     mock_blocklist.assert_called_once()
+
+
+@pytest.mark.parametrize("prune_empty", [True, False])
+def test_load_programs_empty(mock_blocklist, prune_empty):
+    """An empty program set prunes the source only when prune_empty is set"""
+    program = ProgramFactory.create(learning_resource__etl_source=ETLSource.mitpe.name)
+
+    assert (
+        load_programs(
+            ETLSource.mitpe.name,
+            [],
+            config=ProgramLoaderConfig(prune_empty=prune_empty),
+        )
+        == []
+    )
+
+    program.refresh_from_db()
+    assert program.learning_resource.published is not prune_empty
 
 
 @pytest.mark.parametrize(
