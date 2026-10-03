@@ -17,6 +17,9 @@ python $MANAGE_FILE showmigrations --list 2>&1 | indent
 python $MANAGE_FILE migrate --noinput 2>&1 | indent
 RUN_DATA_MIGRATIONS=true python $MANAGE_FILE migrate --noinput 2>&1 | indent
 
+echo "-----> Syncing Qdrant collections and payload indexes"
+python $MANAGE_FILE create_qdrant_collections 2>&1 | indent
+
 # consolidate user subscriptions and remove duplicate percolate instances
 python $MANAGE_FILE prune_subscription_queries 2>&1 | indent
 

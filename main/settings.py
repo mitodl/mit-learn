@@ -36,7 +36,7 @@ from main.settings_course_etl import *  # noqa: F403
 from main.settings_pluggy import *  # noqa: F403
 from openapi.settings_spectacular import open_spectacular_settings
 
-VERSION = "0.80.18"
+VERSION = "0.81.4"
 
 log = logging.getLogger()
 
@@ -696,9 +696,6 @@ USE_X_FORWARDED_HOST = get_bool("USE_X_FORWARDED_HOST", False)  # noqa: FBT003
 # Guardian
 # disable the anonymous user creation
 ANONYMOUS_USER_NAME = None
-
-# Widgets
-WIDGETS_RSS_CACHE_TTL = get_int("WIDGETS_RSS_CACHE_TTL", 15 * 60)
 
 # x509 filenames
 MIT_WS_CERTIFICATE_FILE = os.path.join(STATIC_ROOT, "mit_x509.cert")  # noqa: PTH118

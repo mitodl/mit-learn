@@ -158,7 +158,7 @@ module.exports = {
       },
     },
     {
-      // Leading ./**/ keeps these globs working from any cwd: pre-commit
+      // Leading ./**/ keeps these globs working from any cwd: prek
       // lints from the repo root (paths start with frontends/), while
       // lint-check runs from frontends/ (paths start with main/).
       files: ["./**/main/src/**/*.ts", "./**/main/src/**/*.tsx"],

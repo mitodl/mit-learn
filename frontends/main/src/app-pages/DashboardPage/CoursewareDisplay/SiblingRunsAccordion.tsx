@@ -190,6 +190,7 @@ type RunListRowProps = {
   runLabel: string
   enrollment: CourseRunEnrollmentV3
   isFirst: boolean
+  disabled?: boolean
 }
 
 const RunListRow: React.FC<RunListRowProps> = ({
@@ -199,6 +200,7 @@ const RunListRow: React.FC<RunListRowProps> = ({
   runLabel,
   enrollment,
   isFirst,
+  disabled = false,
 }) => {
   const mitxOnlineUser = useQuery(mitxUserQueries.me())
   const coursewareUrl = enrollment.run?.courseware_url
@@ -251,7 +253,7 @@ const RunListRow: React.FC<RunListRowProps> = ({
         </Stack>
       </Stack>
       <Stack direction="row" gap="4px" alignItems="center" flexShrink={0}>
-        {coursewareUrl && coursewareOpen && (
+        {coursewareUrl && coursewareOpen && !disabled && (
           <>
             <ViewContentLink
               href={coursewareUrl}
@@ -262,24 +264,34 @@ const RunListRow: React.FC<RunListRowProps> = ({
             <ViewContentArrow aria-hidden="true" />
           </>
         )}
-        {perRunMenusEnabled && (
-          <SimpleMenu
-            items={menuItems}
-            // Every row's menu is otherwise just "menu" to a screen reader.
-            menuOverrideProps={{
-              MenuListProps: { "aria-label": `Options for ${runLabel}` },
-            }}
-            trigger={
-              <ActionButton
-                size="small"
-                variant="text"
-                aria-label={`More options for ${runLabel}`}
-              >
-                <RiMore2Line aria-hidden="true" />
-              </ActionButton>
-            }
-          />
-        )}
+        {perRunMenusEnabled &&
+          (disabled ? (
+            <ActionButton
+              size="small"
+              variant="text"
+              aria-label={`More options for ${runLabel}`}
+              disabled
+            >
+              <RiMore2Line aria-hidden="true" />
+            </ActionButton>
+          ) : (
+            <SimpleMenu
+              items={menuItems}
+              // Every row's menu is otherwise just "menu" to a screen reader.
+              menuOverrideProps={{
+                MenuListProps: { "aria-label": `Options for ${runLabel}` },
+              }}
+              trigger={
+                <ActionButton
+                  size="small"
+                  variant="text"
+                  aria-label={`More options for ${runLabel}`}
+                >
+                  <RiMore2Line aria-hidden="true" />
+                </ActionButton>
+              }
+            />
+          ))}
       </Stack>
     </RunRow>
   )
@@ -298,6 +310,7 @@ type SiblingRunsPanelProps = {
   id?: string
   /** id of the SiblingRunsToggle that labels this panel. */
   labelledBy?: string
+  disabled?: boolean
 }
 
 const SiblingRunsPanel: React.FC<SiblingRunsPanelProps> = ({
@@ -306,6 +319,7 @@ const SiblingRunsPanel: React.FC<SiblingRunsPanelProps> = ({
   expanded,
   id,
   labelledBy,
+  disabled = false,
 }) => {
   const currentRun = enrollment.run
   const currentStatus = getDashboardEnrollmentStatus({
@@ -351,6 +365,7 @@ const SiblingRunsPanel: React.FC<SiblingRunsPanelProps> = ({
             labelValue={currentLabelValue}
             runLabel={currentRunLabel}
             enrollment={enrollment}
+            disabled={disabled}
           />
           {siblingEnrollments.map((e) => {
             const startDate = e.run?.start_date
@@ -402,6 +417,7 @@ const SiblingRunsPanel: React.FC<SiblingRunsPanelProps> = ({
                 labelValue={runIdentifier}
                 runLabel={fullLabel}
                 enrollment={e}
+                disabled={disabled}
               />
             )
           })}

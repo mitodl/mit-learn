@@ -2242,6 +2242,8 @@ export interface PatchedWebsiteContentRequest {
   is_published?: boolean
   slug?: PatchedWebsiteContentRequestSlug
   topics?: Array<number>
+  seo_title?: string
+  seo_description?: string
 }
 
 /**
@@ -3812,6 +3814,8 @@ export interface WebsiteContent {
   slug?: PatchedWebsiteContentRequestSlug
   cover_image: WebsiteContentCoverImage
   topics?: Array<number>
+  seo_title?: string
+  seo_description?: string
 }
 
 /**
@@ -3853,6 +3857,8 @@ export interface WebsiteContentRequest {
   is_published?: boolean
   slug?: PatchedWebsiteContentRequestSlug
   topics?: Array<number>
+  seo_title?: string
+  seo_description?: string
 }
 
 /**

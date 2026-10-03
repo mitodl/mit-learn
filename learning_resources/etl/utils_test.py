@@ -1,6 +1,7 @@
 """ETL utils test"""
 
 import datetime
+import json
 import pathlib
 import tarfile
 from decimal import Decimal
@@ -8,6 +9,7 @@ from tempfile import TemporaryDirectory
 
 import pypdf
 import pytest
+import requests
 from defusedxml import ElementTree
 
 from learning_resources.constants import (
@@ -112,16 +114,27 @@ def test_extract_text_from_url(mocker, content):
     url = "http://test.edu/file.pdf"
     mock_request = mocker.patch(
         "learning_resources.etl.utils.requests.get",
-        return_value=mocker.Mock(content=content),
+        return_value=mocker.Mock(content=content, is_redirect=False),
     )
     mock_extract = mocker.patch("learning_resources.etl.utils.extract_text_metadata")
     utils.extract_text_from_url(url, mime_type=mime_type)
 
-    mock_request.assert_called_once_with(url, timeout=30)
+    mock_request.assert_called_once_with(url, timeout=30, allow_redirects=False)
     if content:
         mock_extract.assert_called_once_with(
             content, other_headers={"Content-Type": mime_type}
         )
+
+
+def test_extract_text_from_url_refuses_redirect(mocked_responses):
+    """extract_text_from_url should not follow a redirect off the requested host"""
+    url = "https://abc.cloudfront.net/a.vtt"
+    mocked_responses.get(
+        url, status=302, headers={"Location": "http://169.254.169.254/latest/"}
+    )
+
+    with pytest.raises(requests.HTTPError):
+        utils.extract_text_from_url(url)
 
 
 @pytest.mark.parametrize(
@@ -282,12 +295,15 @@ def test_transform_content_files(  # noqa: PLR0913
 def test_documents_from_olx():
     """Test for documents_from_olx"""
     parsed_documents = get_olx_test_docs()
-    # the archive's two asset manifests are excluded, everything else is yielded
-    assert len(parsed_documents) == 90
+    # the asset manifests, course settings and about page are excluded,
+    # everything else is yielded
+    assert len(parsed_documents) == 85
     assert not [
         doc
         for doc in parsed_documents
-        if doc[1]["source_path"].endswith(("policies/assets.json", "assets/assets.xml"))
+        if "/policies/" in doc[1]["source_path"]
+        or "/about/" in doc[1]["source_path"]
+        or doc[1]["source_path"].endswith("assets/assets.xml")
     ]
 
     formula2do = next(
@@ -514,11 +530,11 @@ def _reference_olx(tmp_path, **static_files):
     return olx
 
 
-def _olx_source_paths(olx):
+def _olx_source_paths(olx, etl_source=None):
     prefix = "/".join(str(olx).split("/")[3:]) + "/"
     return sorted(
         meta["source_path"].removeprefix(prefix)
-        for _, meta in utils.documents_from_olx(str(olx))
+        for _, meta in utils.documents_from_olx(str(olx), etl_source=etl_source)
     )
 
 
@@ -660,6 +676,23 @@ def test_documents_from_olx_ignores_deleted_announcements(tmp_path):
     assert "info/updates.items.json" not in paths
 
 
+def test_documents_from_olx_skips_legacy_announcements(tmp_path):
+    """updates.html is not ingested, but files its announcements link still are"""
+    olx = _reference_olx(tmp_path, **{"notes.pdf": "notes"})
+    _write_olx(olx, "html/h.html", "<p>no links</p>")
+    _write_olx(
+        olx,
+        "info/updates.html",
+        '<ol><li><h2>May 1</h2><a href="/static/notes.pdf">notes</a></li></ol>',
+    )
+    _write_olx(olx, "info/handouts.html", "<p>handouts</p>")
+    paths = _olx_source_paths(olx)
+    assert "info/updates.html" not in paths
+    assert "static/notes.pdf" in paths
+    # the Course Handouts box on the course home page
+    assert "info/handouts.html" in paths
+
+
 def test_documents_from_olx_drops_assets_only_staff_blocks_mention(tmp_path):
     """An answer key a hidden block links is unreferenced, not referenced"""
     olx = tmp_path / "course"
@@ -762,6 +795,123 @@ def test_documents_from_olx_without_course_xml_yields_everything(tmp_path):
     _write_olx(olx, "web_resources/b.html", "<p>b</p>")
     paths = [meta["source_path"] for _, meta in utils.documents_from_olx(str(olx))]
     assert len(paths) == 2
+
+
+def _tab_policy(olx, tabs):
+    """Write the run's policy.json with the given tab list"""
+    _write_olx(
+        olx, "policies/run/policy.json", json.dumps({"course/run": {"tabs": tabs}})
+    )
+
+
+def _static_tab(slug, **flags):
+    return {"type": "static_tab", "name": slug, "url_slug": slug, **flags}
+
+
+@pytest.mark.parametrize(
+    ("tab", "kept"),
+    [
+        (_static_tab("resources", course_staff_only=False), True),
+        # Studio exports every tab page it stores, but the LMS 404s a slug the
+        # tab list does not name
+        (_static_tab("other", course_staff_only=False), False),
+        # these still render by URL, but no navigation leads a learner there
+        (_static_tab("resources", course_staff_only=True), False),
+        (_static_tab("resources", is_hidden=True), False),
+    ],
+)
+# edX also reads tab pages from a folder named for the run
+@pytest.mark.parametrize("tab_dir", ["tabs", "tabs/run"])
+def test_documents_from_olx_skips_tabs_learners_cannot_reach(
+    tmp_path, tab, kept, tab_dir
+):
+    """Only the tab pages the course's navigation leads to are ingested"""
+    olx = _reference_olx(tmp_path)
+    _write_olx(olx, "html/h.html", "<p>no links</p>")
+    _write_olx(olx, f"{tab_dir}/resources.html", "<p>resources</p>")
+    _tab_policy(olx, [{"type": "courseware", "course_staff_only": False}, tab])
+    assert (f"{tab_dir}/resources.html" in _olx_source_paths(olx)) is kept
+
+
+@pytest.mark.parametrize(
+    "policy",
+    [
+        None,
+        "{broken",
+        json.dumps({"course/run": {}}),
+        json.dumps({"course/run": {"tabs": None}}),
+    ],
+)
+def test_documents_from_olx_keeps_tabs_without_a_tab_list(tmp_path, policy):
+    """A tab list that cannot be read is no reason to drop a tab page"""
+    olx = _reference_olx(tmp_path)
+    _write_olx(olx, "html/h.html", "<p>no links</p>")
+    _write_olx(olx, "tabs/resources.html", "<p>resources</p>")
+    if policy is not None:
+        _write_olx(olx, "policies/run/policy.json", policy)
+    assert "tabs/resources.html" in _olx_source_paths(olx)
+
+
+def test_documents_from_olx_unlisted_tabs_do_not_keep_assets(tmp_path):
+    """A page learners cannot reach does not make the files it links reachable"""
+    olx = _reference_olx(tmp_path, **{"old.pdf": "old", "current.pdf": "current"})
+    _write_olx(olx, "html/h.html", "<p>no links</p>")
+    _write_olx(olx, "tabs/old.html", '<a href="/static/old.pdf">old</a>')
+    _write_olx(olx, "tabs/current.html", '<a href="/static/current.pdf">now</a>')
+    _tab_policy(olx, [_static_tab("current")])
+    paths = _olx_source_paths(olx)
+    assert "static/old.pdf" not in paths
+    assert "static/current.pdf" in paths
+
+
+def test_documents_from_olx_skips_policy_files_but_keeps_what_they_name(tmp_path):
+    """Course settings are not content, but the textbooks they list are"""
+    olx = _reference_olx(tmp_path, **{"book.pdf": "book"})
+    _write_olx(olx, "html/h.html", "<p>no links</p>")
+    textbook = {"tab_title": "Book", "chapters": [{"url": "/static/book.pdf"}]}
+    _write_olx(
+        olx,
+        "policies/run/policy.json",
+        json.dumps({"course/run": {"pdf_textbooks": [textbook]}}),
+    )
+    _write_olx(olx, "policies/run/grading_policy.json", '{"GRADER": []}')
+    paths = _olx_source_paths(olx)
+    assert "static/book.pdf" in paths
+    assert [path for path in paths if path.startswith("policies/")] == []
+
+
+@pytest.mark.parametrize(
+    ("etl_source", "kept"),
+    [
+        # Open Learning Library is the only platform that shows the about page
+        (ETLSource.oll.name, ["overview.html", "short_description.html"]),
+        (ETLSource.mitxonline.name, []),
+        (None, []),
+    ],
+)
+# edX also reads about files from a folder named for the run
+@pytest.mark.parametrize("about_dir", ["about", "about/run"])
+def test_documents_from_olx_skips_about_files_learners_cannot_see(
+    tmp_path, etl_source, kept, about_dir
+):
+    """About files are ingested only where the about page is shown, and only its prose"""
+    olx = _reference_olx(tmp_path)
+    _write_olx(olx, "html/h.html", "<p>no links</p>")
+    for name in ("overview", "short_description", "effort", "prerequisites"):
+        _write_olx(olx, f"{about_dir}/{name}.html", name)
+    paths = _olx_source_paths(olx, etl_source)
+    assert [path for path in paths if path.startswith("about/")] == [
+        f"{about_dir}/{name}" for name in kept
+    ]
+
+
+def test_documents_from_olx_hidden_about_page_does_not_keep_assets(tmp_path):
+    """A file only a hidden about page links is not reachable"""
+    olx = _reference_olx(tmp_path, **{"intro.pdf": "pdf"})
+    _write_olx(olx, "html/h.html", "<p>no links</p>")
+    _write_olx(olx, "about/overview.html", '<a href="/static/intro.pdf">intro</a>')
+    assert "static/intro.pdf" not in _olx_source_paths(olx, ETLSource.mitxonline.name)
+    assert "static/intro.pdf" in _olx_source_paths(olx, ETLSource.oll.name)
 
 
 @pytest.mark.parametrize(
@@ -1680,6 +1830,28 @@ def test_process_olx_path_skips_failed_files(mocker, tmp_path):
     assert "good.html" in results[0]["source_path"]
     assert len(failed) == 1
     assert "bad.html" in failed[0]
+
+
+@pytest.mark.parametrize(
+    ("etl_source", "ingested"),
+    [(ETLSource.oll.name, True), (ETLSource.mitxonline.name, False)],
+)
+def test_process_olx_path_filters_by_the_runs_platform(
+    mocker, tmp_path, etl_source, ingested
+):
+    """Whether the about page is ingested depends on the platform the run is from"""
+    run = LearningResourceRunFactory.create(learning_resource__etl_source=etl_source)
+    olx = _reference_olx(tmp_path)
+    _write_olx(olx, "about/overview.html", "<p>about</p>")
+    mocker.patch(
+        "learning_resources.etl.utils._extract_content",
+        return_value={"content": "text", "content_title": ""},
+    )
+    paths = [
+        result["source_path"]
+        for result in utils.process_olx_path(str(olx), run, overwrite=True)
+    ]
+    assert any(path.endswith("about/overview.html") for path in paths) is ingested
 
 
 def test_extract_content_invalid_pdf_raises(mocker, settings, tmp_path):

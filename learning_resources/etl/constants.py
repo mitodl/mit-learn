@@ -120,6 +120,15 @@ QDRANT_RETAINED_SOURCES = (
     ETLSource.canvas.value,
 )
 
+# Sources whose course run_id is an edX course run key, which the source lets
+# belong to only one course at a time
+EDX_RUN_ID_SOURCES = (
+    ETLSource.mit_edx.value,
+    ETLSource.mitxonline.value,
+    ETLSource.xpro.value,
+    ETLSource.oll.value,
+)
+
 
 class CourseNumberType(Enum):
     """Enum of course number types"""
@@ -134,6 +143,11 @@ RESOURCE_FILE_ETL_SOURCES = [
     ETLSource.mitxonline.value,
     ETLSource.xpro.value,
 ]
+
+# update_index and recreate_index index these sources' content files, matching
+# what content_files_loaded indexes on ingest. OLL is kept out of
+# RESOURCE_FILE_ETL_SOURCES, which also scopes cleanup_deleted_content_files.
+REINDEX_CONTENT_FILE_ETL_SOURCES = [*RESOURCE_FILE_ETL_SOURCES, ETLSource.oll.value]
 
 MARKETING_PAGE_FILE_TYPE = "marketing_page"
 

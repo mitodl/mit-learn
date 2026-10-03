@@ -20,6 +20,7 @@ from vector_search.constants import (
     COLLECTION_PARAM_MAP,
     CONTENT_FILES_COLLECTION_NAME,
     CONTENT_FILES_RETRIEVE_PAYLOAD,
+    DEFAULT_EMPTY_QUERY_ORDER_BY,
     NULLABLE_ORDER_BY_KEYS,
     ORDER_BY_MISSING_TAIL_KEY,
     QDRANT_RESOURCE_PARAM_MAP,
@@ -136,7 +137,7 @@ class QdrantView(AsyncAPIView):
             sort = models.Direction.DESC
         return models.OrderBy(key=order_by_parameter, direction=sort)
 
-    async def _build_search_params(  # noqa: PLR0913
+    async def _build_search_params(  # noqa: PLR0913, PLR0917
         self,
         query_string: str,
         search_collection: str,
@@ -320,7 +321,7 @@ class QdrantView(AsyncAPIView):
         )
         return page_points
 
-    async def _execute_scroll_search(  # noqa: PLR0913
+    async def _execute_scroll_search(  # noqa: PLR0913, PLR0917
         self,
         client,
         search_collection,
@@ -391,7 +392,7 @@ class QdrantView(AsyncAPIView):
                 break
         return search_result[:limit]
 
-    async def _async_vector_hits(  # noqa: PLR0913
+    async def _async_vector_hits(  # noqa: PLR0913, PLR0917
         self,
         query_string: str,
         params: dict,
@@ -601,7 +602,7 @@ class QdrantView(AsyncAPIView):
             "aggregations": aggregations or {},
         }
 
-    async def async_vector_search(  # noqa: PLR0913
+    async def async_vector_search(  # noqa: PLR0913, PLR0917
         self,
         query_string: str,
         params: dict,
@@ -707,7 +708,10 @@ class LearningResourcesVectorSearchView(QdrantView):
             hybrid_search = request_data.data.get("hybrid_search", False)
             limit = request_data.data.get("limit", 10)
             offset = request_data.data.get("offset", 0)
-            order_by = request_data.data.get("sortby")
+            # Featured resources lead an empty search, as they do in OpenSearch.
+            order_by = request_data.data.get("sortby") or (
+                None if query_text else DEFAULT_EMPTY_QUERY_ORDER_BY
+            )
             score_cutoff = request_data.data.get("score_cutoff")
 
             response = await self.async_vector_search(

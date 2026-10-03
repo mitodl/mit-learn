@@ -241,6 +241,7 @@ type EnrolledCourseCardProps = {
   headingLevel?: "h2" | "h3" | "h4" | "h5" | "h6"
   onUpgradeError?: (error: string) => void
   isModule?: boolean
+  disabled?: boolean
   Component?: React.ElementType
   className?: string
 }
@@ -253,6 +254,7 @@ export const EnrolledCourseCard = ({
   headingLevel,
   onUpgradeError,
   isModule,
+  disabled = false,
   Component,
   className,
 }: EnrolledCourseCardProps) => {
@@ -364,7 +366,7 @@ export const EnrolledCourseCard = ({
     ) : null
   const titleSection = (
     <Stack gap="6px">
-      {coursewareUrl && coursewareOpen ? (
+      {coursewareUrl && coursewareOpen && !disabled ? (
         <TitleHeading as={headingLevel}>
           <EnrolledTitleLink
             size="medium"
@@ -382,7 +384,7 @@ export const EnrolledCourseCard = ({
     </Stack>
   )
   const courseHasEnded = run?.end_date ? isInPast(run.end_date) : false
-  const isDisabled = Boolean(!coursewareUrl || !coursewareOpen)
+  const isDisabled = disabled || !coursewareUrl || !coursewareOpen
   const isCompleted =
     enrollmentStatus === EnrollmentStatus.Completed || courseHasEnded
   const buttonText = isCompleted ? "View" : "Continue"
@@ -455,21 +457,23 @@ export const EnrolledCourseCard = ({
 
   menuItems.push(...getRunMenuItems({ enrollment, title, receiptResolution }))
 
-  const contextMenu = (
-    <SimpleMenu
-      items={menuItems}
-      trigger={
-        <MenuButton
-          size="small"
-          variant="text"
-          aria-label="More options"
-          status={enrollmentStatus}
-          hidden={menuItems.length === 0}
-        >
-          <RiMore2Line />
-        </MenuButton>
-      }
-    />
+  const menuButton = (
+    <MenuButton
+      size="small"
+      variant="text"
+      aria-label="More options"
+      status={enrollmentStatus}
+      hidden={menuItems.length === 0}
+      disabled={disabled}
+    >
+      <RiMore2Line />
+    </MenuButton>
+  )
+  // Rendered disabled rather than hidden so the CTA beside it doesn't shift.
+  const contextMenu = disabled ? (
+    menuButton
+  ) : (
+    <SimpleMenu items={menuItems} trigger={menuButton} />
   )
 
   const progressBadgeSection =
@@ -546,6 +550,7 @@ export const EnrolledCourseCard = ({
             expanded={runsExpanded}
             id={desktopRunsPanelId}
             labelledBy={desktopRunsToggleId}
+            disabled={disabled}
           />
         </EnrolledCardShell>
       ) : (
@@ -625,6 +630,7 @@ export const EnrolledCourseCard = ({
               expanded={runsExpanded}
               id={mobileRunsPanelId}
               labelledBy={mobileRunsToggleId}
+              disabled={disabled}
             />
           </MobileAccordionWrapper>
         )}

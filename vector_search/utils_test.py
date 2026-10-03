@@ -53,7 +53,7 @@ from vector_search.constants import (
     COMPLETENESS_PAYLOAD_KEY,
     CONTENT_FILES_COLLECTION_NAME,
     NEXT_START_DATE_PAYLOAD_KEY,
-    ORDER_BY_MISSING_DATETIME,
+    ORDER_BY_MISSING_VALUE,
     PROGRAM_SCORE_BOOST_NAME,
     QDRANT_CONTENT_FILE_INDEXES,
     QDRANT_CONTENT_FILE_PARAM_MAP,
@@ -111,6 +111,7 @@ from vector_search.utils import (
     should_generate_resource_embeddings,
     staleness_penalty_expression,
     update_content_file_payload,
+    update_featured_ranks,
     update_learning_resource_payload,
     update_qdrant_indexes,
     vector_point_id,
@@ -3813,7 +3814,11 @@ def test_order_by_query_nullable_key_orders_by_formula(direction):
     )
 
     assert isinstance(query, models.FormulaQuery)
-    assert query.defaults == {"next_start_date": ORDER_BY_MISSING_DATETIME[direction]}
+    assert query.defaults == {
+        "next_start_date": ORDER_BY_MISSING_VALUE[models.PayloadSchemaType.DATETIME][
+            direction
+        ]
+    }
     if direction == models.Direction.DESC:
         # a higher score ranks first, so descending is the score's own direction
         assert query.formula == models.DatetimeKeyExpression(
@@ -3869,6 +3874,150 @@ def test_order_by_query_nullable_key_orders_missing_last(direction):
     assert [point.id for point in points] == (
         [0, 1, 2] if direction == models.Direction.ASC else [1, 0, 2]
     )
+
+
+@pytest.mark.parametrize("direction", [models.Direction.ASC, models.Direction.DESC])
+def test_order_by_query_featured_rank_orders_by_formula(direction):
+    """featured_rank is a nullable float, read straight off the payload"""
+    query = order_by_query(
+        models.OrderBy(key="featured_rank", direction=direction),
+        RESOURCES_COLLECTION_NAME,
+    )
+
+    assert isinstance(query, models.FormulaQuery)
+    assert query.defaults == {
+        "featured_rank": ORDER_BY_MISSING_VALUE[models.PayloadSchemaType.FLOAT][
+            direction
+        ]
+    }
+    if direction == models.Direction.DESC:
+        assert query.formula == "featured_rank"
+    else:
+        assert query.formula == models.NegExpression(neg="featured_rank")
+
+
+@pytest.mark.parametrize("direction", [models.Direction.ASC, models.Direction.DESC])
+def test_order_by_query_featured_rank_orders_missing_last(direction):
+    """Run the formula for real: resources that are not featured land last"""
+    vector = [0.1, 0.2]
+    client = QdrantClient(":memory:")
+    client.create_collection(
+        "test",
+        vectors_config=models.VectorParams(
+            size=len(vector), distance=models.Distance.COSINE
+        ),
+    )
+    client.upsert(
+        "test",
+        [
+            PointStruct(id=0, vector=vector, payload={"featured_rank": 0.3}),
+            PointStruct(id=1, vector=vector, payload={"featured_rank": 1.7}),
+            PointStruct(id=2, vector=vector, payload={}),
+        ],
+    )
+
+    points = client.query_points(
+        "test",
+        prefetch=[models.Prefetch(query=vector, limit=10)],
+        query=order_by_query(
+            models.OrderBy(key="featured_rank", direction=direction),
+            RESOURCES_COLLECTION_NAME,
+        ),
+        limit=10,
+    ).points
+
+    assert [point.id for point in points] == (
+        [0, 1, 2] if direction == models.Direction.ASC else [1, 0, 2]
+    )
+
+
+def test_update_featured_ranks(mocker):
+    """
+    Featured points get their new rank, points no longer featured lose theirs,
+    and a featured resource with no point yet is not an error
+    """
+    vector = [0.1, 0.2]
+    client = QdrantClient(":memory:")
+    client.create_collection(
+        RESOURCES_COLLECTION_NAME,
+        vectors_config=models.VectorParams(
+            size=len(vector), distance=models.Distance.COSINE
+        ),
+    )
+    mocker.patch("vector_search.utils.qdrant_client", return_value=client)
+    still_featured, no_longer_featured, never_featured, not_embedded = (
+        LearningResourceFactory.create_batch(4)
+    )
+
+    def point_id(resource):
+        return vector_point_id(
+            vector_point_key(
+                {
+                    "platform": {"code": resource.platform.code},
+                    "readable_id": resource.readable_id,
+                }
+            )
+        )
+
+    client.upsert(
+        RESOURCES_COLLECTION_NAME,
+        [
+            PointStruct(
+                id=point_id(still_featured),
+                vector=vector,
+                payload={"featured_rank": 5.2},
+            ),
+            PointStruct(
+                id=point_id(no_longer_featured),
+                vector=vector,
+                payload={"featured_rank": 0.7},
+            ),
+            PointStruct(
+                id=point_id(never_featured),
+                vector=vector,
+                payload={"featured_rank": None},
+            ),
+        ],
+    )
+
+    update_featured_ranks({still_featured: 0.4, not_embedded: 1.1})
+
+    payloads = {
+        point.id: point.payload
+        for point in client.retrieve(
+            RESOURCES_COLLECTION_NAME,
+            ids=[
+                point_id(still_featured),
+                point_id(no_longer_featured),
+                point_id(never_featured),
+            ],
+        )
+    }
+    assert payloads[point_id(still_featured)] == {"featured_rank": 0.4}
+    assert payloads[point_id(no_longer_featured)] == {}
+    assert payloads[point_id(never_featured)] == {"featured_rank": None}
+    assert client.count(RESOURCES_COLLECTION_NAME).count == 3
+
+
+def test_update_featured_ranks_none_featured(mocker):
+    """With nothing featured, every rank is dropped"""
+    vector = [0.1, 0.2]
+    client = QdrantClient(":memory:")
+    client.create_collection(
+        RESOURCES_COLLECTION_NAME,
+        vectors_config=models.VectorParams(
+            size=len(vector), distance=models.Distance.COSINE
+        ),
+    )
+    mocker.patch("vector_search.utils.qdrant_client", return_value=client)
+    client.upsert(
+        RESOURCES_COLLECTION_NAME,
+        [PointStruct(id=0, vector=vector, payload={"featured_rank": 0.7})],
+    )
+
+    update_featured_ranks({})
+
+    assert client.retrieve(RESOURCES_COLLECTION_NAME, ids=[0])[0].payload == {}
 
 
 @pytest.mark.parametrize("key", ["views", "created_on"])

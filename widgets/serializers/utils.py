@@ -11,13 +11,11 @@ def get_widget_classes():
     # NOTE: these imports are inline to avoid circular imports
     from widgets.serializers.markdown import MarkdownWidgetSerializer
     from widgets.serializers.people import PeopleWidgetSerializer
-    from widgets.serializers.rss import RssFeedWidgetSerializer
     from widgets.serializers.url import URLWidgetSerializer
 
     return [
         MarkdownWidgetSerializer,
         URLWidgetSerializer,
-        RssFeedWidgetSerializer,
         PeopleWidgetSerializer,
     ]
 

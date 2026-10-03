@@ -7,6 +7,7 @@ export enum FeatureFlags {
   PrDrawerChatbot = "pr-drawer-chatbot",
   RecommendationBot = "recommendation-bot",
   HomePageRecommendationBot = "home-page-recommendation-bot",
+  SearchAiOverview = "search-ai-overview",
   UniversalAI = "universal-ai",
   UniversalAISearchBanner = "universal-ai-search-banner",
   CourseOutlineSection = "course-outline-section",
@@ -14,6 +15,7 @@ export enum FeatureFlags {
   VideoPlaylistPage = "video-playlist-page",
   B2BContractManagerDashboard = "b2b-contract-manager-dashboard",
   B2BAnalyticsDashboard = "b2b-analytics-dashboard",
+  B2BLearnerAnalytics = "b2b-learner-analytics",
   Arithmix = "arithmix",
   Hacksnack = "hacksnack",
   AccountManagement = "account-management",
@@ -22,6 +24,7 @@ export enum FeatureFlags {
   OrganizationalLearning = "organizational-learning",
   MultipleRunContextMenus = "multiple-run-context-menus",
   ProgramLetters = "program-letters",
+  B2BDataConsent = "b2b-data-consent",
 }
 
 /**

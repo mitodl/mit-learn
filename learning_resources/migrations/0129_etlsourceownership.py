@@ -5,7 +5,7 @@ from django.db import migrations, models
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("learning_resources", "0126_credential_metadata_store"),
+        ("learning_resources", "0128_credential_metadata_configuration_resource_type"),
     ]
 
     operations = [
