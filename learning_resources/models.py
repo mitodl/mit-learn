@@ -837,7 +837,7 @@ class LearningResourceRun(TimestampedModel):
     learning_resource = models.ForeignKey(
         LearningResource, related_name="runs", on_delete=models.deletion.CASCADE
     )
-    run_id = models.CharField(max_length=128)
+    run_id = models.CharField(max_length=128, db_index=True)
     title = models.CharField(max_length=256)
     description = models.TextField(null=True, blank=True)  # noqa: DJ001
     full_description = models.TextField(null=True, blank=True)  # noqa: DJ001
@@ -1693,16 +1693,21 @@ class CredentialMetadataConfiguration(TimestampedModel):
     """
     Admin-editable prompt and model for one credential metadata field.
 
-    One row per field, so the credential program can retune each prompt (and
-    pick a different model for it) without a deploy. Mirrors
+    One row per field and resource type, so the credential program can retune
+    each prompt (and pick a different model for it) without a deploy. Mirrors
     ContentSummarizerConfiguration.
     """
 
     field = models.CharField(
         max_length=32,
-        unique=True,
         choices=constants.CredentialMetadataField.as_tuple(),
         help_text="The metadata field this row configures.",
+    )
+    resource_type = models.CharField(
+        max_length=24,
+        default=constants.LearningResourceType.course.name,
+        choices=constants.LearningResourceType.as_tuple(),
+        help_text="The kind of resource this row's prompt is written for.",
     )
     llm_model = models.CharField(
         max_length=128, verbose_name="LLM Model", help_text="Add any OpenAI LLM model."
@@ -1723,8 +1728,18 @@ class CredentialMetadataConfiguration(TimestampedModel):
     )
     is_active = models.BooleanField(default=True)
 
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["field", "resource_type"],
+                name="unique_credential_metadata_configuration_field_resource_type",
+            )
+        ]
+
     def __str__(self):
-        return f"CredentialMetadataConfiguration for {self.field}"
+        return (
+            f"CredentialMetadataConfiguration for {self.field} ({self.resource_type})"
+        )
 
 
 class CredentialMetadataGenerationLog(TimestampedModel):

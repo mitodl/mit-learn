@@ -23,7 +23,7 @@ docker run --rm -v "${PWD}:/local" -w /local openapitools/openapi-generator-cli:
 docker run --rm -v "${PWD}:/local" -w /local openapitools/openapi-generator-cli:${GENERATOR_VERSION} \
 	generate -c scripts/openapi-configs/typescript-axios-v1.yaml
 
-# We expect pre-commit to exit with a non-zero status since it is reformatting
+# We expect prek to exit with a non-zero status since it is reformatting
 # the generated code.
-git ls-files frontends/api/src/generated | xargs pre-commit run --files ||
+git ls-files frontends/api/src/generated | xargs uv run prek run --files ||
 	echo "OpenAPI generation complete."

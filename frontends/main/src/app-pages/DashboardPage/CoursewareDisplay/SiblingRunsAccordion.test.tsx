@@ -175,7 +175,11 @@ describe("SiblingRunsToggle + SiblingRunsPanel", () => {
       start_date: moment("2026-01-05").toISOString(),
       end_date: moment("2026-08-20").toISOString(),
     })
-    const sibling = makeEnrollment()
+    // Fixed dates: a random factory date can land on Jan 5 and match twice.
+    const sibling = makeEnrollment({
+      start_date: moment("2025-03-02").toISOString(),
+      end_date: moment("2025-09-15").toISOString(),
+    })
     renderWithProviders(
       <SiblingRunsAccordionHarness
         enrollment={enrollment}

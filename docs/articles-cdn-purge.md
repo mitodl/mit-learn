@@ -32,6 +32,7 @@ APP_BASE_URL = get_string("APP_BASE_URL", "http://localhost:8063")
 ```
 
 **Environment Variables:**
+
 - `FASTLY_API_KEY`: Your Fastly API authentication key
 - `APP_BASE_URL`: The base URL of your application (e.g., `https://learn.mit.edu`)
 
@@ -40,15 +41,18 @@ APP_BASE_URL = get_string("APP_BASE_URL", "http://localhost:8063")
 Three Celery tasks handle CDN purging:
 
 #### `call_fastly_purge_api(relative_url, timeout=30)`
+
 Low-level function that makes HTTP PURGE requests to the Fastly API.
 
 **Features:**
+
 - Raises HTTPError for failed requests (4xx, 5xx status codes)
 - Raises RequestException for network/timeout errors
 - Returns parsed JSON response on success
 - Skips purge in dev environments (when `FASTLY_API_KEY` is empty)
 
 **Usage:**
+
 ```python
 try:
     result = call_fastly_purge_api("/news/my-article/", timeout=5)
@@ -61,14 +65,17 @@ except requests.RequestException:
 ```
 
 #### `fastly_purge_relative_url(relative_url, timeout=30)`
+
 Purges a specific relative URL from the CDN cache.
 
 **Behavior:**
+
 - Can be called directly (runs immediately) or via `.delay()` (enqueued for Celery)
 - Accepts any relative URL path (e.g., `/news/article-slug/`)
 - Returns dict with status on success, `{"status": "error"}` on failure
 
 **Example:**
+
 ```python
 # Call immediately in current thread
 result = fastly_purge_relative_url("/news/article-slug/", timeout=5)
@@ -78,14 +85,17 @@ fastly_purge_relative_url.delay("/news/article-slug/")
 ```
 
 #### `fastly_purge_articles_list()`
+
 Purges the articles list endpoint (`/news`).
 
 **Features:**
+
 - Uses `@single_task(10)` decorator to prevent duplicate runs within 10 seconds
 - Can be called directly or via `.delay()`
 - Ensures the articles list always shows current content
 
 #### `fastly_full_purge()`
+
 Purges the entire CDN cache (use sparingly).
 
 **Warning:** This purges ALL cached content, not just articles.
@@ -93,6 +103,7 @@ Purges the entire CDN cache (use sparingly).
 ### 3. Model Method (`articles/models.py`)
 
 #### `Article.get_url()`
+
 Returns the relative URL for an article:
 
 ```python
@@ -105,20 +116,24 @@ Returns `None` if the article has no slug.
 ### 4. API Functions (`articles/api.py`)
 
 #### `purge_article_on_save(article)`
+
 Handles CDN purge when articles are saved. This function implements a "try immediate, fall back to Celery" pattern.
 
 **Triggers when:**
+
 - An article is published (`is_published=True`)
 - The article has a slug
 - The article is saved or updated
 
 **Actions:**
+
 1. Attempts immediate purge with short timeout (5 seconds)
 2. If successful, logs and continues
 3. If fails or times out, enqueues for Celery retry
 4. Enqueues purge for the articles list page
 
 **Does not trigger when:**
+
 - Article is unpublished
 - Article has no slug (draft state)
 
@@ -150,7 +165,7 @@ article = Article.objects.create(
     title="New Article",
     content={"type": "doc", "content": []},
     is_published=True,
-    user=some_user
+    user=some_user,
 )
 # CDN purge is automatically queued!
 
@@ -168,7 +183,7 @@ You can manually trigger CDN purges:
 from articles.tasks import (
     fastly_purge_relative_url,
     fastly_purge_articles_list,
-    fastly_full_purge
+    fastly_full_purge,
 )
 
 # Purge a specific URL immediately (blocking)
@@ -192,7 +207,7 @@ For backwards compatibility, the following aliases are available but deprecated:
 # Old names (still work but discouraged)
 from articles.tasks import (
     queue_fastly_purge_articles_list,  # Use fastly_purge_articles_list
-    queue_fastly_full_purge,           # Use fastly_full_purge
+    queue_fastly_full_purge,  # Use fastly_full_purge
 )
 ```
 
@@ -260,15 +275,18 @@ All CDN purge operations are logged using Python's standard logging:
 
 ```python
 import logging
+
 logger = logging.getLogger("fastly_purge")
 ```
 
 **Log Levels:**
+
 - `INFO`: Successful purges, task execution
 - `DEBUG`: Detailed information (URLs, article IDs)
 - `ERROR`: Failed API calls, missing articles
 
 **Example logs:**
+
 ```
 INFO: Processing purge request for article 123
 DEBUG: Article URL is /api/v1/articles/my-article/
@@ -281,6 +299,7 @@ INFO: Purge request processed OK.
 ### Article not purging from CDN
 
 **Check:**
+
 1. Is the article published? (`is_published=True`)
 2. Does the article have a slug?
 3. Are `FASTLY_API_KEY` and `FASTLY_URL` configured?
@@ -298,6 +317,7 @@ Your `FASTLY_API_KEY` is invalid or expired. Generate a new API key from your Fa
 ### Celery tasks not running
 
 Ensure your Celery worker is running:
+
 ```bash
 celery -A main.celery:app worker -E -Q default --concurrency=2 -B -l INFO
 ```

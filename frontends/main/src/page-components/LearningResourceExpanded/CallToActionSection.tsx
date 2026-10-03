@@ -213,7 +213,11 @@ const ImageSection: React.FC<{
   resource?: LearningResource
   config: ImageConfig
 }> = ({ resource, config }) => {
-  const { src: imageUrl, onError: onImageError } = useImageWithFallback(
+  const {
+    src: imageUrl,
+    unoptimized,
+    onError: onImageError,
+  } = useImageWithFallback(
     resource?.image?.url ??
       (resource ? resourceContentFilesImageSrc(resource) : null),
     DEFAULT_RESOURCE_IMG,
@@ -227,6 +231,7 @@ const ImageSection: React.FC<{
           alt={resource?.image?.alt ?? ""}
           aspect={aspect}
           fill
+          unoptimized={unoptimized}
           onError={onImageError}
         />
       </ImageContainer>

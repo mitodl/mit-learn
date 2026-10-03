@@ -1,4 +1,4 @@
-import React, { useState } from "react"
+import React from "react"
 import Image from "next/image"
 import Link from "next/link"
 import {
@@ -8,7 +8,7 @@ import {
   Skeleton,
   type TypographyProps,
 } from "ol-components"
-import { formatDurationClockTime } from "ol-utilities"
+import { formatDurationClockTime, useImageWithFallback } from "ol-utilities"
 import { stripAnchorTags } from "@/common/utils"
 import type { VideoResource } from "api/v1"
 import {
@@ -126,10 +126,11 @@ type VideoCardProps = {
 }
 
 const VideoCard: React.FC<VideoCardProps> = ({ resource, href }) => {
-  const [imgError, setImgError] = useState(false)
-  const imageUrl = !imgError
-    ? (resource?.image?.url ?? PLACEHOLDER_IMG)
-    : PLACEHOLDER_IMG
+  const {
+    src: imageUrl,
+    unoptimized,
+    onError,
+  } = useImageWithFallback(resource?.image?.url, PLACEHOLDER_IMG)
   const description = resource.description ?? ""
   const duration = resource.video?.duration
     ? formatDurationClockTime(resource.video.duration)
@@ -143,7 +144,8 @@ const VideoCard: React.FC<VideoCardProps> = ({ resource, href }) => {
           alt={resource.title}
           fill
           sizes="160px"
-          onError={() => setImgError(true)}
+          unoptimized={unoptimized}
+          onError={onError}
         />
         {duration && <DurationBadge>{duration}</DurationBadge>}
         <PlayOverlay className="play-overlay">

@@ -1,12 +1,21 @@
 import React from "react"
 import { screen } from "@testing-library/react"
-import { renderWithProviders, setMockResponse } from "@/test-utils"
+import {
+  renderWithProviders,
+  setMockResponse,
+  user,
+  waitFor,
+} from "@/test-utils"
+import { makeRequest } from "api/test-utils"
+import mockRouter from "next-router-mock"
+import { contractView, DASHBOARD_HOME } from "@/common/urls"
+import { DashboardAnnouncer } from "../DashboardAnnouncer"
 import {
   factories as mitxOnlineFactories,
   urls as mitxOnlineUrls,
 } from "api/mitxonline-test-utils"
 import { OrganizationCards } from "./OrganizationCards"
-import type { OrganizationPage } from "@mitodl/mitxonline-api-axios/v2"
+import type { UserOrganizationPage } from "@mitodl/mitxonline-api-axios/v2"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 
 jest.mock("posthog-js/react")
@@ -18,14 +27,14 @@ describe("OrganizationCards", () => {
   })
 
   type SetupOptions = {
-    organizations?: OrganizationPage[]
+    organizations?: UserOrganizationPage[]
     isUserLoading?: boolean
   }
 
   const createOrganizations = (
     count: number,
     withContracts: boolean = true,
-  ): OrganizationPage[] => {
+  ): UserOrganizationPage[] => {
     return Array.from({ length: count }, (_, i) =>
       mitxOnlineFactories.organizations.organization({
         id: i + 1,
@@ -453,6 +462,124 @@ describe("OrganizationCards", () => {
       expect(
         screen.queryByRole("link", { name: /^Continue / }),
       ).not.toBeInTheDocument()
+    })
+  })
+
+  describe("data consent before navigating to a contract", () => {
+    const setupContract = (consented: boolean | null) => {
+      const contract = mitxOnlineFactories.contracts.contract({
+        name: "Consent Contract",
+        consented_to_data_sharing: consented,
+      })
+      const org = mitxOnlineFactories.organizations.organization({
+        slug: "org-consent-org",
+        contracts: [contract],
+      })
+      const mitxOnlineUser = mitxOnlineFactories.user.user({
+        b2b_organizations: [org],
+      })
+      setMockResponse.get(mitxOnlineUrls.userMe.get(), mitxOnlineUser)
+      setMockResponse.post(
+        mitxOnlineUrls.b2b.dataConsent(contract.id),
+        undefined,
+        { code: 204 },
+      )
+      renderWithProviders(
+        <DashboardAnnouncer>
+          <OrganizationCards />
+        </DashboardAnnouncer>,
+        { url: DASHBOARD_HOME },
+      )
+      return { contract, href: contractView("consent-org", contract.slug) }
+    }
+
+    const continueButton = async () =>
+      (
+        await screen.findAllByRole("link", {
+          name: "Continue Consent Contract",
+        })
+      )[0]
+
+    // Reports whether the app blocked the link, then stops jsdom from trying
+    // to navigate (it can't).
+    const clickIsBlocked = async (link: HTMLElement) => {
+      let blocked = false
+      const listener = (event: Event) => {
+        blocked = event.defaultPrevented
+        event.preventDefault()
+      }
+      window.addEventListener("click", listener)
+      await user.click(link)
+      window.removeEventListener("click", listener)
+      return blocked
+    }
+
+    it("follows the link without asking once consent is true", async () => {
+      setupContract(true)
+      const link = await continueButton()
+      expect(link).not.toHaveAttribute("data-disable-nprogress")
+      expect(await clickIsBlocked(link)).toBe(false)
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
+    })
+
+    it("asks first, and navigates to the contract after agreeing", async () => {
+      const { contract, href } = setupContract(null)
+      const links = await screen.findAllByRole("link", {
+        name: /Consent Contract/,
+      })
+      for (const link of links) {
+        expect(link).toHaveAttribute("data-disable-nprogress", "true")
+      }
+      expect(await clickIsBlocked(await continueButton())).toBe(true)
+
+      await screen.findByRole("dialog")
+      expect(mockRouter.asPath).toBe(DASHBOARD_HOME)
+
+      await user.click(
+        screen.getByRole("checkbox", {
+          name: "I have read and consent to the data sharing described above.",
+        }),
+      )
+      await user.click(
+        screen.getByRole("button", { name: "Agree and continue" }),
+      )
+
+      await waitFor(() => expect(mockRouter.asPath).toBe(href))
+      expect(
+        screen.getByText("Consent recorded. Opening Consent Contract."),
+      ).toBeInTheDocument()
+      expect(makeRequest).toHaveBeenCalledWith(
+        expect.objectContaining({
+          method: "post",
+          url: mitxOnlineUrls.b2b.dataConsent(contract.id),
+          body: { consented: true },
+        }),
+      )
+    })
+
+    it("stays on dashboard home after declining", async () => {
+      const { contract } = setupContract(false)
+      await user.click(await continueButton())
+      await user.click(await screen.findByRole("button", { name: "Decline" }))
+
+      await waitFor(() =>
+        expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
+      )
+      expect(mockRouter.asPath).toBe(DASHBOARD_HOME)
+      expect(makeRequest).toHaveBeenCalledWith(
+        expect.objectContaining({
+          method: "post",
+          url: mitxOnlineUrls.b2b.dataConsent(contract.id),
+          body: { consented: false },
+        }),
+      )
+    })
+
+    it("follows the link without asking when the flag is off", async () => {
+      mockedUseFeatureFlagEnabled.mockReturnValue(false)
+      setupContract(null)
+      expect(await clickIsBlocked(await continueButton())).toBe(false)
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
     })
   })
 })

@@ -16,8 +16,12 @@ const websiteContent: Factory<WebsiteContent> = (overrides = {}) => ({
       },
     ],
   },
-  // The API always sends this, empty or not, so fixtures should too.
+  // The API always sends these, empty or not, so fixtures should too. Blank
+  // SEO fields are the common case: the page head falls back to the title and
+  // the opening of the body, as it did before they existed.
   topics: [],
+  seo_title: "",
+  seo_description: "",
   user: {
     first_name: faker.person.firstName(),
     last_name: faker.person.lastName(),

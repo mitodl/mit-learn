@@ -34,6 +34,8 @@ from channels.constants import ChannelType
 from channels.models import Channel
 from learning_resources import permissions
 from learning_resources.constants import (
+    CONTENT_FILE_LARGE_FIELDS,
+    CREDENTIAL_METADATA_RESOURCE_TYPES,
     GROUP_CONTENT_FILE_CONTENT_VIEWERS,
     LearningResourceRelationTypes,
     LearningResourceType,
@@ -1076,7 +1078,11 @@ class ContentFileViewSet(viewsets.ReadOnlyModelViewSet):
     )
     filter_backends = [MultipleOptionsFilterBackend]
     filterset_class = ContentFileFilter
-    private_fields = ["content"]
+    # Derived from CONTENT_FILE_LARGE_FIELDS (rather than listing "content"
+    # alone) so summary/flashcards -- LLM-derived from the same gated content,
+    # and just as sensitive -- can't silently fall out of this gate again the
+    # next time a field is added there.
+    private_fields = list(CONTENT_FILE_LARGE_FIELDS)
 
     def get_serializer(self, *args, **kwargs):
         """
@@ -1288,6 +1294,30 @@ class UserListMembershipViewSet(viewsets.ReadOnlyModelViewSet):
         ).order_by("child", "parent")
 
 
+def _redact_webhook_key(body: bytes) -> str:
+    """
+    Return a safe-to-log version of a JSON request body, with any
+    webhook_key value redacted.
+
+    Parses the body the same way the view does and redacts based on the
+    decoded member name, rather than pattern-matching the raw text -- JSON
+    allows a member name to be spelled with \\uXXXX escapes (e.g.
+    "webhook\\u005fkey" decodes to "webhook_key"), so a raw-text match on
+    the literal key would miss a real key that's merely spelled that way,
+    letting the actual secret through unredacted. A body that can't be
+    parsed as a JSON object is redacted in full instead of assumed safe.
+    """
+    try:
+        parsed = rapidjson.loads(body.decode())
+    except (ValueError, UnicodeDecodeError):
+        return "<unparseable body, redacted>"
+    if not isinstance(parsed, dict):
+        return "<non-object body, redacted>"
+    if "webhook_key" in parsed:
+        parsed["webhook_key"] = "[redacted]"
+    return rapidjson.dumps(parsed)
+
+
 @method_decorator(blocked_ip_exempt, name="dispatch")
 class WebhookOCWView(views.APIView):
     """
@@ -1302,9 +1332,8 @@ class WebhookOCWView(views.APIView):
         Raise any exception with request info instead of returning response
         with error status/message
         """
-        msg = (
-            f"Error ({exc}). BODY: {self.request.body or ''}, META: {self.request.META}"
-        )
+        safe_body = _redact_webhook_key(self.request.body)
+        msg = f"Error ({exc}). BODY: {safe_body}, META: {self.request.META}"
         raise WebhookException(msg) from exc
 
     @extend_schema(exclude=True)
@@ -1773,24 +1802,27 @@ def problem_set_file_output(problem_set_file):
 
 async def credential_metadata_resource(readable_id: str) -> LearningResource:
     """
-    Resolve the MITx Online course a credential metadata request names.
+    Resolve the MITx Online resource a credential metadata request names.
 
+    Courses and programs both, matching what the sweep generates for -- see
+    CREDENTIAL_METADATA_RESOURCE_TYPES.
 
     Args:
         readable_id (str): the readable id the request asked for
 
     Returns:
-        LearningResource: the matching MITx Online course
+        LearningResource: the matching MITx Online course or program
 
     Raises:
         NotFound: no resource anywhere has that readable_id
-        ValidationError: a resource has it, but is not an MITx Online course
+        ValidationError: a resource has it, but is not one credential
+            metadata is generated for
     """
     resource = await db_sync_to_async(
         lambda: LearningResource.objects.filter(
             readable_id=readable_id,
             platform=PlatformType.mitxonline.name,
-            resource_type=LearningResourceType.course.name,
+            resource_type__in=CREDENTIAL_METADATA_RESOURCE_TYPES,
             etl_source=ETLSource.mitxonline.name,
         ).first()
     )()
@@ -1801,9 +1833,10 @@ async def credential_metadata_resource(readable_id: str) -> LearningResource:
         if not exists:
             msg = f"No learning resource with readable_id {readable_id}"
             raise NotFound(msg)
+        types = " or ".join(CREDENTIAL_METADATA_RESOURCE_TYPES)
         msg = (
             f"Credential metadata is only generated for"
-            f" {ETLSource.mitxonline.name} courses;"
+            f" {ETLSource.mitxonline.name} {types} resources;"
             f" {readable_id} is not one"
         )
         raise ValidationError(msg)

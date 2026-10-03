@@ -21,7 +21,7 @@ from opensearchpy.exceptions import NotFoundError, RequestError
 from requests.models import PreparedRequest
 
 from learning_resources.constants import LearningResourceType
-from learning_resources.etl.constants import RESOURCE_FILE_ETL_SOURCES
+from learning_resources.etl.constants import REINDEX_CONTENT_FILE_ETL_SOURCES
 from learning_resources.models import (
     ContentFile,
     Course,
@@ -67,6 +67,7 @@ from main.utils import (
     now_in_utc,
 )
 from profiles.utils import send_template_email
+from vector_search.utils import update_featured_ranks as update_qdrant_featured_ranks
 
 User = get_user_model()
 log = logging.getLogger(__name__)
@@ -89,24 +90,29 @@ PARTIAL_UPDATE_TASK_SETTINGS = {
 
 @app.task(**PARTIAL_UPDATE_TASK_SETTINGS)
 def update_featured_rank():
-    """Update featured ranks for resources in the search index."""
+    """Update featured ranks for resources in the search index and Qdrant."""
     featured_view_set = FeaturedViewSet()
     featured_resources = featured_view_set.get_queryset()
+    # A resource in more than one featured list keeps its best (first) rank.
+    qdrant_ranks = {}
     for position, resources_with_position in groupby(
         featured_resources, key=lambda x: x.position
     ):
         api.clear_featured_rank(position, clear_all_greater_than=False)
         for resource in resources_with_position:
+            featured_rank = position + random()  # noqa: S311
             api.update_document_with_partial(
                 resource.id,
-                {"featured_rank": position + random()},  # noqa: S311
+                {"featured_rank": featured_rank},
                 resource.resource_type,
             )
+            qdrant_ranks.setdefault(resource, featured_rank)
 
     api.clear_featured_rank(
         featured_resources.values_list("position", flat=True).distinct().count(),
         clear_all_greater_than=True,
     )
+    update_qdrant_featured_ranks(qdrant_ranks)
 
 
 @app.task(**PARTIAL_UPDATE_TASK_SETTINGS)
@@ -624,6 +630,37 @@ def deindex_non_opensearch_run_content_files(
         return error
 
 
+@app.task(
+    acks_late=True,
+    reject_on_worker_lost=True,
+    autoretry_for=(RetryError,),
+    retry_backoff=True,
+    rate_limit=settings.CELERY_SEARCH_RATE_LIMIT,
+)
+def deindex_deleted_run_content_files(
+    run_id, learning_resource_id, resource_type=COURSE_TYPE
+):
+    """
+    Deindex the content files of a deleted LearningResourceRun
+
+    Args:
+        run_id(int): Id of the deleted run
+        learning_resource_id(int): Learning resource id the run belonged to
+        resource_type (string): The resource type of the parent learning resource
+    """
+    try:
+        with wrap_retry_exception(*SEARCH_CONN_EXCEPTIONS):
+            api.deindex_deleted_run_content_files(
+                run_id, learning_resource_id, resource_type=resource_type
+            )
+    except (RetryError, Ignore):
+        raise
+    except:  # noqa: E722
+        error = "deindex_deleted_run_content_files threw an error"
+        log.exception(error)
+        return error
+
+
 @contextmanager
 def wrap_retry_exception(*exception_classes):
     """
@@ -698,7 +735,9 @@ def _build_reindex_batches(job):  # noqa: C901, PLR0912
                     Q(learning_resource__published=True)
                     | Q(learning_resource__test_mode=True)
                 )
-                .filter(learning_resource__etl_source__in=RESOURCE_FILE_ETL_SOURCES)
+                .filter(
+                    learning_resource__etl_source__in=REINDEX_CONTENT_FILE_ETL_SOURCES
+                )
                 .exclude(learning_resource__readable_id__in=blocklisted_ids)
                 .order_by("learning_resource_id")
                 .values_list("learning_resource_id", flat=True),
@@ -1145,7 +1184,7 @@ def get_update_resource_files_tasks(blocklisted_ids, etl_source):
         etl_source(str): ETL source filter for the task
     """
 
-    if etl_source is None or etl_source in RESOURCE_FILE_ETL_SOURCES:
+    if etl_source is None or etl_source in REINDEX_CONTENT_FILE_ETL_SOURCES:
         course_update_query = (
             LearningResource.objects.filter(resource_type=COURSE_TYPE)
             .filter(Q(published=True) | Q(test_mode=True))
@@ -1157,7 +1196,7 @@ def get_update_resource_files_tasks(blocklisted_ids, etl_source):
             course_update_query = course_update_query.filter(etl_source=etl_source)
         else:
             course_update_query = course_update_query.filter(
-                etl_source__in=RESOURCE_FILE_ETL_SOURCES
+                etl_source__in=REINDEX_CONTENT_FILE_ETL_SOURCES
             )
 
         return [
@@ -1176,7 +1215,7 @@ def get_update_program_files_tasks(etl_source):
     Args:
         etl_source(str): ETL source filter for the task
     """
-    if etl_source is not None and etl_source not in RESOURCE_FILE_ETL_SOURCES:
+    if etl_source is not None and etl_source not in REINDEX_CONTENT_FILE_ETL_SOURCES:
         return []
 
     program_update_query = (
@@ -1189,7 +1228,7 @@ def get_update_program_files_tasks(etl_source):
         program_update_query = program_update_query.filter(etl_source=etl_source)
     else:
         program_update_query = program_update_query.filter(
-            etl_source__in=RESOURCE_FILE_ETL_SOURCES
+            etl_source__in=REINDEX_CONTENT_FILE_ETL_SOURCES
         )
 
     return [

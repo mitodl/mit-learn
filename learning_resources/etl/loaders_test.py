@@ -1333,6 +1333,82 @@ def test_load_run_content_files_loaded_actions_only_on_republish(mocker, new_pub
     assert mock_loaded_actions.call_count == (1 if new_published else 0)
 
 
+@pytest.mark.parametrize(
+    "etl_source",
+    [
+        ETLSource.mitxonline.value,
+        ETLSource.xpro.value,
+        ETLSource.mit_edx.value,
+        ETLSource.oll.value,
+    ],
+)
+@pytest.mark.parametrize("new_course_has_run", [True, False])
+@pytest.mark.parametrize("old_course_test_mode", [True, False])
+def test_load_run_deletes_moved_run(
+    etl_source, new_course_has_run, old_course_test_mode
+):
+    """
+    A run_id loaded under one course is deleted from every other course of the
+    same source, test mode or not, so only the run the source lists now remains
+    """
+    old_course, new_course = LearningResourceFactory.create_batch(
+        2, is_course=True, create_runs=False, etl_source=etl_source
+    )
+    old_course.test_mode = old_course_test_mode
+    old_course.save()
+    old_run = LearningResourceRunFactory.create(learning_resource=old_course)
+    ContentFileFactory.create(run=old_run)
+    if new_course_has_run:
+        LearningResourceRunFactory.create(
+            learning_resource=new_course, run_id=old_run.run_id
+        )
+
+    run = load_run(new_course, {"run_id": old_run.run_id})
+
+    assert list(LearningResourceRun.objects.filter(run_id=old_run.run_id)) == [run]
+    assert run.learning_resource == new_course
+    assert not ContentFile.objects.filter(run_id=old_run.id).exists()
+
+
+@pytest.mark.parametrize(
+    ("other_etl_source", "etl_source", "resource_type"),
+    [
+        # same run_id in another source
+        (
+            ETLSource.xpro.value,
+            ETLSource.mitxonline.value,
+            LearningResourceType.course.name,
+        ),
+        # a source whose run_ids aren't edX course run keys
+        (ETLSource.ocw.value, ETLSource.ocw.value, LearningResourceType.course.name),
+        # program runs never move
+        (
+            ETLSource.mitxonline.value,
+            ETLSource.mitxonline.value,
+            LearningResourceType.program.name,
+        ),
+    ],
+)
+def test_load_run_keeps_run_id_under_other_resources(
+    other_etl_source, etl_source, resource_type
+):
+    """Runs are only deleted as moved within one edX-style source's courses"""
+    other_run = LearningResourceRunFactory.create(
+        learning_resource=LearningResourceFactory.create(
+            resource_type=resource_type,
+            etl_source=other_etl_source,
+            create_runs=False,
+        )
+    )
+    resource = LearningResourceFactory.create(
+        resource_type=resource_type, etl_source=etl_source, create_runs=False
+    )
+
+    load_run(resource, {"run_id": other_run.run_id})
+
+    assert LearningResourceRun.objects.filter(id=other_run.id).exists()
+
+
 @pytest.mark.parametrize("parent_factory", [CourseFactory, ProgramFactory])
 @pytest.mark.parametrize("topics_exist", [True, False])
 def test_load_topics(mocker, parent_factory, topics_exist):

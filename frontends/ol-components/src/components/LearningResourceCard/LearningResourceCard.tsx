@@ -62,7 +62,11 @@ const LearningResourceCard: React.FC<LearningResourceCardProps> = ({
   list = false,
   condensed = false,
 }) => {
-  const { src: imageSrc, onError: onImageError } = useImageWithFallback(
+  const {
+    src: imageSrc,
+    unoptimized: imageUnoptimized,
+    onError: onImageError,
+  } = useImageWithFallback(
     // won't try contentFile image if resource image 404s, but that matches
     // existing behavior: contentFile is only tried when resource has no image URL
     resource?.image?.url ??
@@ -169,6 +173,7 @@ const LearningResourceCard: React.FC<LearningResourceCardProps> = ({
       imageSrc={imageSrc}
       imageAlt={resource.image?.alt ?? ""}
       onImageError={onImageError}
+      imageUnoptimized={imageUnoptimized}
       title={resource.title}
       resourceType={resource.resource_category}
       resourcePrice={prices.course.display}

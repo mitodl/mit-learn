@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useEffect } from "react"
+import { useRouter } from "next-nprogress-bar"
 import Image from "next/image"
 import { useQuery } from "@tanstack/react-query"
 import {
@@ -32,6 +33,7 @@ import {
   contractAdminView,
   contractAnalyticsView,
   contractLearnersView,
+  DASHBOARD_HOME,
 } from "@/common/urls"
 import { ResourceType, getKey } from "./CoursewareDisplay/helpers"
 import type { DashboardCourseEntry } from "./CoursewareDisplay/model/dashboardViewModel"
@@ -39,6 +41,8 @@ import { useContractDashboardData } from "./CoursewareDisplay/hooks/useContractD
 import UnstyledRawHTML from "@/components/UnstyledRawHTML/UnstyledRawHTML"
 import { VariantPicker } from "./CoursewareDisplay/VariantPicker"
 import { CoursewareCard } from "./CoursewareDisplay/CoursewareCard"
+import { DataConsentPrompt } from "./DataConsentPrompt"
+import { useDashboardAnnounce } from "./DashboardAnnouncer"
 
 const HeaderRoot = styled.div(({ theme }) => ({
   display: "flex",
@@ -251,7 +255,8 @@ const OrgProgramCollectionDisplay: React.FC<{
   collection: V2ProgramCollection
   entries: DashboardCourseEntry[]
   hideDescription?: boolean
-}> = ({ collection, entries, hideDescription }) => {
+  cardsDisabled?: boolean
+}> = ({ collection, entries, hideDescription, cardsDisabled }) => {
   const header = (
     <ProgramHeader>
       <ProgramHeaderText>
@@ -284,6 +289,7 @@ const OrgProgramCollectionDisplay: React.FC<{
               Component="li"
               kind="course"
               entry={entry}
+              disabled={cardsDisabled}
             />
           )
         })}
@@ -297,7 +303,14 @@ const OrgProgramDisplay: React.FC<{
   entries: DashboardCourseEntry[]
   programEnrollment?: V3UserProgramEnrollment
   hideDescription?: boolean
-}> = ({ program, entries, programEnrollment, hideDescription }) => {
+  cardsDisabled?: boolean
+}> = ({
+  program,
+  entries,
+  programEnrollment,
+  hideDescription,
+  cardsDisabled,
+}) => {
   const hasValidCertificate = !!programEnrollment?.certificate
 
   if (entries.length === 0) {
@@ -340,6 +353,7 @@ const OrgProgramDisplay: React.FC<{
               Component="li"
               kind="course"
               entry={entry}
+              disabled={cardsDisabled}
             />
           )
         })}
@@ -413,10 +427,12 @@ const HeaderActions = styled.div(({ theme }) => ({
 type ContractContentInternalProps = {
   org: OrganizationPage
   contract: ContractPage
+  cardsDisabled?: boolean
 }
 const ContractContentInternal: React.FC<ContractContentInternalProps> = ({
   org,
   contract,
+  cardsDisabled = false,
 }) => {
   const {
     isLoading,
@@ -433,6 +449,9 @@ const ContractContentInternal: React.FC<ContractContentInternalProps> = ({
   )
   const analyticsEnabled = useFeatureFlagEnabled(
     FeatureFlags.B2BAnalyticsDashboard,
+  )
+  const learnerAnalyticsEnabled = useFeatureFlagEnabled(
+    FeatureFlags.B2BLearnerAnalytics,
   )
   const { data: managerOrgs } = useQuery({
     ...managerOrganizationQueries.managerOrganizationsList(),
@@ -495,7 +514,7 @@ const ContractContentInternal: React.FC<ContractContentInternalProps> = ({
                   View analytics
                 </ButtonLink>
               )}
-              {analyticsEnabled && (
+              {analyticsEnabled && learnerAnalyticsEnabled && (
                 <ButtonLink
                   size="small"
                   variant="bordered"
@@ -546,6 +565,7 @@ const ContractContentInternal: React.FC<ContractContentInternalProps> = ({
             hideDescription={
               selectedVariant !== null && !selectedVariant.default_variant
             }
+            cardsDisabled={cardsDisabled}
           />
         ))}
         <ProgramCollectionsList>
@@ -560,6 +580,7 @@ const ContractContentInternal: React.FC<ContractContentInternalProps> = ({
               hideDescription={
                 selectedVariant !== null && !selectedVariant.default_variant
               }
+              cardsDisabled={cardsDisabled}
             />
           ))}
         </ProgramCollectionsList>
@@ -594,6 +615,14 @@ const ContractContent: React.FC<ContractContentProps> = ({
     (contract) => contract.slug === contractSlug,
   )
 
+  const consentFlag = useFeatureFlagEnabled(FeatureFlags.B2BDataConsent)
+  const consentRequired =
+    consentFlag === true &&
+    !!b2bContract &&
+    b2bContract.consented_to_data_sharing !== true
+  const router = useRouter()
+  const announce = useDashboardAnnounce()
+
   useEffect(() => {
     if (b2bOrganization) {
       localStorage.setItem("last-dashboard-org", orgSlug)
@@ -621,7 +650,23 @@ const ContractContent: React.FC<ContractContentProps> = ({
   }
 
   return (
-    <ContractContentInternal org={b2bOrganization} contract={b2bContract} />
+    <>
+      <ContractContentInternal
+        org={b2bOrganization}
+        contract={b2bContract}
+        cardsDisabled={consentRequired}
+      />
+      <DataConsentPrompt
+        key={b2bContract.id}
+        open={consentRequired}
+        contract={b2bContract}
+        onAccepted={() => announce("Consent recorded.")}
+        onDeclined={() => {
+          announce("Response recorded.")
+          router.push(DASHBOARD_HOME)
+        }}
+      />
+    </>
   )
 }
 

@@ -84,6 +84,16 @@ class WebsiteContent(TimestampedModel, SafeDeleteModel):
         default=WebsiteContentType.news.name,
     )
     cover_image = models.URLField(max_length=2083, blank=True, default="")
+    # What search engines and link previews should show, when the editor wants
+    # something other than the title and the opening of the content. Optional
+    # and blank by default: whatever consumes these has to fall back to the
+    # content itself rather than render an empty tag.
+    #
+    # Lengths are storage limits, not the SEO guidance on how long a title or
+    # description ought to be -- that belongs wherever the editor is advised,
+    # and truncating their typing here would lose it.
+    seo_title = models.CharField(max_length=255, blank=True, default="")
+    seo_description = models.TextField(blank=True, default="")
     # Where the content editor's topic selections live, for every content type
     # the settings drawer can tag. For an article they are also the source of
     # the topics on the LearningResource that publishing mirrors it into -- see

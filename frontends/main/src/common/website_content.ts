@@ -38,6 +38,28 @@ export const extractWebsiteContentDescription = (
   return textNode?.text
 }
 
+/**
+ * The title and description for the page head, which is the only place the
+ * editor's SEO fields do anything: stored on the row they are invisible, and
+ * it is `<title>` and `<meta name="description">` in the server's response
+ * that a crawler reads and a search result shows.
+ *
+ * The override wins where it is set, and falls back otherwise -- to the
+ * content's own title, and to the opening of its body, which is all there was
+ * before these fields existed.
+ *
+ * `||` rather than `??`: unset is `""`, not null (the serializer defaults both
+ * to blank so a consumer has one absent value to handle rather than two), and
+ * `??` would let the blank through and emit an empty title.
+ */
+export const websiteContentSeo = (
+  content: WebsiteContent,
+): { title: string; description: string | undefined } => ({
+  title: content.seo_title || content.title,
+  description:
+    content.seo_description || extractWebsiteContentDescription(content),
+})
+
 export const extractImageMetadata = (
   content: WebsiteContent,
 ): { src: string; alt: string } | null => {
