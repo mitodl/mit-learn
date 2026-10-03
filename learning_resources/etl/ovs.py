@@ -114,6 +114,29 @@ def is_allowed_media_url(url: object) -> bool:
     return allowed_media_hostname(url) is not None
 
 
+def is_safe_link(url: object) -> bool:
+    """
+    Check that a url from an OVS payload is safe to render as an outbound link.
+
+    cta_link is the page a video links out to. It is never fetched and is not
+    media, so the host allowlist does not apply to it: OVS sets it to external
+    pages (e.g. a podcast site). What matters is that a browser will not run it
+    (javascript:, data:) or read its host differently than urllib does.
+
+    Args:
+        url: the url to check
+
+    Returns:
+        True if the url is an http(s) url with a host
+    """
+    parsed = parse_media_url(url)
+    return (
+        parsed is not None
+        and parsed.scheme in ("http", "https")
+        and bool(parsed.hostname)
+    )
+
+
 def _get_cloudfront_domain(video_data: dict) -> str | None:
     """
     Extract the CloudFront domain from thumbnail or source URLs.
@@ -276,8 +299,8 @@ def _get_resource_url(video_data: dict) -> str:
     """
     Get the user-facing URL for a video resource.
 
-    Uses cta_link if it points at an allowlisted host, otherwise builds a URL
-    from OVS_API_BASE_URL.
+    Uses cta_link if it is a safe outbound link, otherwise builds a URL from
+    OVS_API_BASE_URL.
 
     Args:
         video_data: OVS video API response dict
@@ -287,9 +310,9 @@ def _get_resource_url(video_data: dict) -> str:
     """
     cta_link = video_data.get("cta_link")
     if cta_link:
-        if is_allowed_media_url(cta_link):
+        if is_safe_link(cta_link):
             return cta_link
-        log.warning("Ignoring OVS cta_link on disallowed host: %s", cta_link)
+        log.warning("Ignoring unsafe OVS cta_link: %s", cta_link)
     base_url = settings.OVS_API_BASE_URL.rstrip("/")
     return f"{base_url}/videos/{quote(str(video_data['key']))}"
 

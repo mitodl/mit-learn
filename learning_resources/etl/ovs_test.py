@@ -842,11 +842,26 @@ class TestMediaUrlAllowlist:
         assert len(captions) == 1
         assert urlparse(captions[0]["url"]).hostname == "abc.cloudfront.net"
 
-    def test_resource_url_ignores_disallowed_cta_link(self, settings):
-        """cta_link pointing off-allowlist falls back to the OVS url"""
+    @pytest.mark.parametrize(
+        "cta_link",
+        [
+            "javascript:alert(document.cookie)",
+            "data:text/html,<script>alert(1)</script>",
+            "//evil.io/watch/abc123",
+            "https:///watch/abc123",
+        ],
+    )
+    def test_resource_url_ignores_unsafe_cta_link(self, settings, cta_link):
+        """A cta_link a browser could run or misread falls back to the OVS url"""
         settings.OVS_API_BASE_URL = OVS_TEST_BASE_URL
-        video = {"key": "abc123", "cta_link": "https://evil.io/watch/abc123"}
+        video = {"key": "abc123", "cta_link": cta_link}
         assert _get_resource_url(video) == f"{OVS_TEST_BASE_URL}/videos/abc123"
+
+    def test_resource_url_keeps_external_cta_link(self, settings):
+        """cta_link is an outbound link, so the media host allowlist does not apply"""
+        settings.OVS_ALLOWED_MEDIA_HOSTS = [".cloudfront.net"]
+        cta_link = "https://why-this-matters.captivate.fm/listen"
+        assert _get_resource_url({"key": "abc123", "cta_link": cta_link}) == cta_link
 
     def test_transform_video_skips_disallowed_source(self):
         """A video whose only source is off-allowlist is not transformed"""
