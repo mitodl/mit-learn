@@ -303,7 +303,7 @@ def test_base_warehouse_etl_task_run_success(mock_connect):
 
 class _PipelineRecordingTask(BaseWarehouseETLTask):
     name = "test.PipelineRecordingTask"
-    view_name = "ol_data_lake_production.ol_warehouse_production_integrations.integrations__learn__test"
+    table_name = "integrations__learn__test"
 
     def fetch_and_upsert(self, conn, *, since=None) -> int:  # noqa: ARG002
         self.pipeline = current_pipeline()
