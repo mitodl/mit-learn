@@ -1,5 +1,5 @@
 import React from "react"
-import { screen } from "@testing-library/react"
+import { screen, waitFor } from "@testing-library/react"
 import user from "@testing-library/user-event"
 import { renderWithTheme } from "../../test-utils"
 import { CarouselV2 } from "./CarouselV2"
@@ -54,6 +54,7 @@ describe("CarouselV2", () => {
         <div>slide</div>
       </CarouselV2>,
     )
+    await waitFor(() => expect(mockScrollTo).toHaveBeenCalled())
 
     await user.click(screen.getByRole("button", { name: "Show next slides" }))
     expect(mockScrollNext).toHaveBeenCalledTimes(1)
@@ -64,13 +65,14 @@ describe("CarouselV2", () => {
     expect(mockScrollPrev).toHaveBeenCalledTimes(1)
   })
 
-  it("calls onSettle with the slides currently in view when the carousel settles", () => {
+  it("calls onSettle with the slides currently in view when the carousel settles", async () => {
     const onSettle = jest.fn()
     renderWithTheme(
       <CarouselV2 onSettle={onSettle}>
         <div>slide</div>
       </CarouselV2>,
     )
+    await waitFor(() => expect(mockOn).toHaveBeenCalled())
 
     // CarouselV2 subscribes to Embla's "settle" event; grab that listener and
     // fire it to simulate a scroll (button page, drag, or wheel) settling.

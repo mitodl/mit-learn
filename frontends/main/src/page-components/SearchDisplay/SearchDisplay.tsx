@@ -68,6 +68,7 @@ import { useUserMe } from "api/hooks/user"
 import { usePostHog } from "posthog-js/react"
 import getSearchParams from "./getSearchParams"
 import UniversalAIBanner from "./UniversalAIBanner"
+import AiSearchOverview from "./AiSearchOverview"
 
 const StyledResourceTabs = styled(ResourceTypeGroupTabs.TabList)`
   margin-top: 0;
@@ -1016,6 +1017,7 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
               />
               <DesktopSortContainer>{sortDropdown}</DesktopSortContainer>
             </Stack>
+            <AiSearchOverview searchParams={searchParams} />
             <ResourceTypeGroupTabs.TabPanels tabs={TABS}>
               <MobileFilter>
                 <FilterButton

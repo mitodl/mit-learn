@@ -308,12 +308,14 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
   }, [])
 
   useEffect(() => {
+    // Nothing to apply (including on mount): don't schedule a state update.
+    if (searchQuery === debouncedSearch) return
     const id = setTimeout(() => {
       setDebouncedSearch(searchQuery)
       setPage(1)
     }, SEARCH_DEBOUNCE_MS)
     return () => clearTimeout(id)
-  }, [searchQuery])
+  }, [searchQuery, debouncedSearch])
 
   const {
     data: managerOrgs,
@@ -898,7 +900,13 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
 
 const ContractLearnersPage: React.FC<ContractLearnersPageProps> = (props) => {
   const flagsLoaded = useFeatureFlagsLoaded()
-  const enabled = useFeatureFlagEnabled(FeatureFlags.B2BAnalyticsDashboard)
+  const analyticsEnabled = useFeatureFlagEnabled(
+    FeatureFlags.B2BAnalyticsDashboard,
+  )
+  const learnerAnalyticsEnabled = useFeatureFlagEnabled(
+    FeatureFlags.B2BLearnerAnalytics,
+  )
+  const enabled = analyticsEnabled && learnerAnalyticsEnabled
 
   if (!flagsLoaded) {
     return (

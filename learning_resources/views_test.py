@@ -16,6 +16,7 @@ from channels.factories import ChannelTopicDetailFactory, ChannelUnitDetailFacto
 from channels.models import Channel
 from learning_resources.api import update_resource_view_counts
 from learning_resources.constants import (
+    CONTENT_FILE_LARGE_FIELDS,
     GROUP_CONTENT_FILE_CONTENT_VIEWERS,
     GROUP_TUTOR_PROBLEM_VIEWERS,
     LearningResourceRelationTypes,
@@ -288,7 +289,11 @@ def test_list_content_files_list_endpoint(client, user_role, django_user_model):
     content_file_ids = [
         cf.id
         for cf in ContentFileFactory.create_batch(
-            2, run=course.learning_resource.runs.first(), content="some content"
+            2,
+            run=course.learning_resource.runs.first(),
+            content="some content",
+            summary="some summary",
+            flashcards=[{"question": "q", "answer": "a"}],
         )
     ]
     # this should be filtered out
@@ -316,8 +321,12 @@ def test_list_content_files_list_endpoint(client, user_role, django_user_model):
 
         if user_role in ["admin", "group_content_file_content_viewer"]:
             assert result["content"] is not None
+            assert result["summary"] is not None
+            assert result["flashcards"] is not None
         else:
             assert result.get("content") is None
+            assert result.get("summary") is None
+            assert result.get("flashcards") is None
 
 
 def test_list_content_files_list_endpoint_with_no_runs(client):
@@ -393,7 +402,8 @@ def test_get_contentfiles_detail_endpoint(client, user_role, django_user_model):
         assert resp.data == ContentFileSerializer(instance=content_file).data
     else:
         data = ContentFileSerializer(instance=content_file).data
-        data.pop("content")
+        for field in CONTENT_FILE_LARGE_FIELDS:
+            data.pop(field)
         assert resp.data == data
 
 
@@ -674,6 +684,84 @@ def test_ocw_webhook_endpoint_bad_key(settings, client):
             data={"webhook_key": "bad_key", "prefix": "prefix", "version": "live"},
             headers={"Content-Type": "text/plain"},
         )
+
+
+def test_ocw_webhook_endpoint_bad_key_is_redacted_from_error(settings, client):
+    """The (wrong) attempted key must not appear verbatim in the raised error"""
+    settings.OCW_WEBHOOK_KEY = "fake_key"
+    with pytest.raises(WebhookException) as exc_info:
+        client.post(
+            reverse("lr:v1:ocw-next-webhook"),
+            data={"webhook_key": "bad_key", "prefix": "prefix", "version": "live"},
+            headers={"Content-Type": "text/plain"},
+        )
+    assert "bad_key" not in str(exc_info.value)
+    assert "[redacted]" in str(exc_info.value)
+
+
+def test_ocw_webhook_endpoint_does_not_leak_secret_on_post_auth_error(settings, client):
+    """
+    A correctly-authenticated request that errors *after* the key check (e.g.
+    prefixes sent as an int, which .split(',') can't handle) must not leak the
+    real webhook_key into the resulting exception message.
+    """
+    settings.OCW_WEBHOOK_KEY = "fake_key"
+    with pytest.raises(WebhookException) as exc_info:
+        client.post(
+            reverse("lr:v1:ocw-next-webhook"),
+            data={"webhook_key": "fake_key", "prefixes": 12345, "version": "live"},
+            headers={"Content-Type": "text/plain"},
+        )
+    assert "fake_key" not in str(exc_info.value)
+    assert "[redacted]" in str(exc_info.value)
+
+
+def test_ocw_webhook_endpoint_does_not_leak_secret_via_escaped_key_name(
+    settings, client
+):
+    """
+    JSON allows a member name to be spelled with \\uXXXX escapes (e.g.
+    "webhook\\u005fkey" decodes to "webhook_key"), so a request using that
+    spelling still authenticates. A raw-text match on the literal
+    "webhook_key" bytes would miss this spelling and let the real secret
+    through unredacted -- confirm it doesn't.
+    """
+    settings.OCW_WEBHOOK_KEY = "fake_key"
+    raw_body = '{"webhook\\u005fkey": "fake_key", "prefixes": 12345, "version": "live"}'
+    with pytest.raises(WebhookException) as exc_info:
+        client.post(
+            reverse("lr:v1:ocw-next-webhook"),
+            data=raw_body,
+            content_type="text/plain",
+        )
+    assert "fake_key" not in str(exc_info.value)
+    assert "[redacted]" in str(exc_info.value)
+
+
+def test_ocw_webhook_endpoint_redacts_unparseable_body(settings, client):
+    """A body that fails to parse as JSON must not be logged verbatim"""
+    settings.OCW_WEBHOOK_KEY = "fake_key"
+    with pytest.raises(WebhookException) as exc_info:
+        client.post(
+            reverse("lr:v1:ocw-next-webhook"),
+            data="not valid json {{{",
+            content_type="text/plain",
+        )
+    assert "not valid json" not in str(exc_info.value)
+    assert "redacted" in str(exc_info.value)
+
+
+def test_ocw_webhook_endpoint_redacts_non_object_body(settings, client):
+    """A syntactically valid but non-object JSON body must not be logged verbatim"""
+    settings.OCW_WEBHOOK_KEY = "fake_key"
+    with pytest.raises(WebhookException) as exc_info:
+        client.post(
+            reverse("lr:v1:ocw-next-webhook"),
+            data='"just a json string, not an object"',
+            content_type="text/plain",
+        )
+    assert "just a json string" not in str(exc_info.value)
+    assert "redacted" in str(exc_info.value)
 
 
 def test_topics_list_endpoint(client, django_assert_num_queries):

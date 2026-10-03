@@ -1840,8 +1840,8 @@ def test_unpublish_website_content_task_skips_a_republished_item(
     assert mock_unpublish.called is expect_removal
 
 
-def credential_metadata_course(**kwargs):
-    """Create a course the credential metadata sweep should pick up"""
+def credential_metadata_resource(**kwargs):
+    """Create a resource the credential metadata sweep should pick up (a course)"""
     return LearningResourceFactory.create(
         **{
             "is_course": True,
@@ -1853,6 +1853,11 @@ def credential_metadata_course(**kwargs):
             **kwargs,
         }
     )
+
+
+def credential_metadata_program(**kwargs):
+    """Create a program the credential metadata sweep should pick up"""
+    return credential_metadata_resource(is_course=False, is_program=True, **kwargs)
 
 
 @pytest.fixture
@@ -1869,6 +1874,20 @@ def credential_configurations():
     models.CredentialMetadataConfiguration.objects.all().delete()
     return [
         CredentialMetadataConfigurationFactory.create(field=field.name)
+        for field in CredentialMetadataField
+    ]
+
+
+@pytest.fixture
+def program_credential_configurations(credential_configurations):
+    """
+    Program configurations, on top of the course ones.
+    """
+    return [
+        CredentialMetadataConfigurationFactory.create(
+            field=field.name,
+            resource_type=LearningResourceType.program.name,
+        )
         for field in CredentialMetadataField
     ]
 
@@ -1903,7 +1922,7 @@ def test_generate_credential_metadata_for_resource(
     credential_configurations, mock_blocklist, mock_generate_and_save
 ):
     """The resource is generated for, and the store reports it stored something"""
-    resource = credential_metadata_course()
+    resource = credential_metadata_resource()
 
     assert tasks.generate_credential_metadata_for_resource(resource.id) is True
     assert mock_generate_and_save.call_count == 1
@@ -1919,7 +1938,7 @@ def test_generate_credential_metadata_for_resource_raises(
     one failed, where a chunked version had to swallow the error to keep the
     successes beside it. A visibly failed task is the point.
     """
-    resource = credential_metadata_course()
+    resource = credential_metadata_resource()
     mock_generate_and_save.side_effect = ValueError("the provider refused")
 
     with pytest.raises(ValueError, match="the provider refused"):
@@ -1930,7 +1949,7 @@ def test_generate_credential_metadata_for_resource_reports_nothing_stored(
     credential_configurations, mock_blocklist, mock_generate_and_save
 ):
     """A generation that produced nothing reports False"""
-    resource = credential_metadata_course()
+    resource = credential_metadata_resource()
     mock_generate_and_save.return_value = CredentialMetadata(
         fields={}, errors={"description": "litellm.APIConnectionError"}
     )
@@ -1960,7 +1979,7 @@ def test_generate_credential_metadata_rechecks_an_unpublished_resource(
     Hours can pass between the sweep's queryset and this task being picked
     up, and a course out of scope by then is pure spend.
     """
-    resource = credential_metadata_course()
+    resource = credential_metadata_resource()
     resource.published = False
     resource.save()
 
@@ -1972,7 +1991,7 @@ def test_generate_credential_metadata_rechecks_a_blocklisted_resource(
     credential_configurations, mocker, mock_generate_and_save
 ):
     """A resource blocklisted after the fan-out is not generated for"""
-    resource = credential_metadata_course()
+    resource = credential_metadata_resource()
     mocker.patch(
         "learning_resources.tasks.load_course_blocklist",
         return_value=[resource.readable_id],
@@ -1992,7 +2011,7 @@ def test_generate_credential_metadata_skips_a_duplicate_task(
     second finds nothing to do -- which is why the recheck uses that
     predicate rather than a bare existence check.
     """
-    resource = credential_metadata_course()
+    resource = credential_metadata_resource()
     CredentialMetadataFactory.create(
         learning_resource=resource, description="A course", criteria=["Did a thing"]
     )
@@ -2007,7 +2026,7 @@ def test_generate_credential_metadata_retries_a_partial_row(
     """
     A half-generated resource is generated for again, but only for what it lacks.
     """
-    resource = credential_metadata_course()
+    resource = credential_metadata_resource()
     CredentialMetadataFactory.create(
         learning_resource=resource, description="A course", criteria=[]
     )
@@ -2021,7 +2040,7 @@ def test_generate_credential_metadata_for_an_empty_row(
     credential_configurations, mock_blocklist, mock_generate_and_save
 ):
     """A resource with nothing stored is generated for in full"""
-    resource = credential_metadata_course()
+    resource = credential_metadata_resource()
 
     assert tasks.generate_credential_metadata_for_resource(resource.id) is True
     assert mock_generate_and_save.generator.call_args.kwargs["fields"] == [
@@ -2039,7 +2058,7 @@ def test_generate_credential_metadata_overwrite_ignores_a_complete_row(
     The recheck still applies -- an unpublished or blocklisted resource is
     skipped either way -- but a complete row stops being a reason to skip.
     """
-    resource = credential_metadata_course()
+    resource = credential_metadata_resource()
     CredentialMetadataFactory.create(
         learning_resource=resource, description="A course", criteria=["Did a thing"]
     )
@@ -2071,7 +2090,7 @@ def test_credential_metadata_scope_follows_the_active_configurations(
     resource on every sweep and pay to regenerate the still-active field each
     time.
     """
-    resource = credential_metadata_course()
+    resource = credential_metadata_resource()
     CredentialMetadataFactory.create(
         learning_resource=resource, description="A course", criteria=[]
     )
@@ -2091,7 +2110,7 @@ def test_credential_metadata_scope_with_no_active_configurations(
     Otherwise the sweep fans out a task per course that each generate and
     store nothing.
     """
-    credential_metadata_course()
+    credential_metadata_resource()
     models.CredentialMetadataConfiguration.objects.update(is_active=False)
 
     assert list(tasks.credential_metadata_resource_ids()) == []
@@ -2102,7 +2121,7 @@ def test_generate_all_credential_metadata_with_no_active_configurations(
     credential_configurations, mocked_celery, mock_blocklist
 ):
     """The sweep queues nothing when no configuration is active"""
-    credential_metadata_course()
+    credential_metadata_resource()
     models.CredentialMetadataConfiguration.objects.update(is_active=False)
 
     assert tasks.generate_all_credential_metadata.delay().get() == 0
@@ -2118,7 +2137,7 @@ def test_generate_credential_metadata_rechecks_the_active_configurations(
     The recheck shares the sweep's predicate, so turning a configuration off
     stops the spend at the task as well as at the fan-out.
     """
-    resource = credential_metadata_course()
+    resource = credential_metadata_resource()
     CredentialMetadataFactory.create(
         learning_resource=resource, description="A course", criteria=[]
     )
@@ -2132,11 +2151,11 @@ def test_credential_metadata_resource_ids_skips_complete_rows(
     credential_configurations, mock_blocklist
 ):
     """A resource with both fields stored is not regenerated"""
-    complete = credential_metadata_course()
+    complete = credential_metadata_resource()
     CredentialMetadataFactory.create(
         learning_resource=complete, description="A course", criteria=["Did a thing"]
     )
-    missing = credential_metadata_course()
+    missing = credential_metadata_resource()
 
     assert list(tasks.credential_metadata_resource_ids()) == [missing.id]
 
@@ -2154,7 +2173,7 @@ def test_credential_metadata_resource_ids_retries_partial_rows(
     One field failing writes the other, so `credential_metadata__isnull=True`
     alone would leave that resource permanently half-generated.
     """
-    resource = credential_metadata_course()
+    resource = credential_metadata_resource()
     CredentialMetadataFactory.create(
         learning_resource=resource, description=description, criteria=criteria
     )
@@ -2166,7 +2185,7 @@ def test_credential_metadata_resource_ids_overwrite(
     credential_configurations, mock_blocklist
 ):
     """Overwrite includes resources that already have complete metadata"""
-    complete = credential_metadata_course()
+    complete = credential_metadata_resource()
     CredentialMetadataFactory.create(
         learning_resource=complete, description="A course", criteria=["Did a thing"]
     )
@@ -2178,18 +2197,20 @@ def test_credential_metadata_resource_ids_excludes_other_resources(
     credential_configurations, mock_blocklist
 ):
     """
-    Only published MITx Online courses are swept.
+    Only published MITx Online resources of a swept type are selected.
 
     All four of published, resource_type, etl_source and platform are pinned
     because the endpoint's resolver pins them: generating for a row the API
     will never serve is pure spend.
     """
-    wanted = credential_metadata_course()
+    wanted = credential_metadata_resource()
     LearningResourceFactory.create(
         is_course=True, published=True, etl_source=ETLSource.mit_edx.name
     )
-    credential_metadata_course(published=False)
-    credential_metadata_course(is_course=False, is_program=True)
+    credential_metadata_resource(published=False)
+    # A type the sweep does not cover at all, unlike a program, which it does
+    # once that type has prompts of its own.
+    credential_metadata_resource(is_course=False, is_video=True)
 
     assert list(tasks.credential_metadata_resource_ids()) == [wanted.id]
 
@@ -2198,8 +2219,8 @@ def test_credential_metadata_resource_ids_respects_the_blocklist(
     credential_configurations, mocker
 ):
     """A blocklisted course is not generated for"""
-    blocked = credential_metadata_course()
-    wanted = credential_metadata_course()
+    blocked = credential_metadata_resource()
+    wanted = credential_metadata_resource()
     mocker.patch(
         "learning_resources.tasks.load_course_blocklist",
         return_value=[blocked.readable_id],
@@ -2208,11 +2229,145 @@ def test_credential_metadata_resource_ids_respects_the_blocklist(
     assert list(tasks.credential_metadata_resource_ids()) == [wanted.id]
 
 
+def test_credential_metadata_resource_ids_includes_programs(
+    program_credential_configurations, mock_blocklist
+):
+    """
+    Programs are swept alongside courses, newest first across both.
+
+    Sorted over the combined set rather than per type, so a program added
+    today is not queued behind every course in the catalogue.
+    """
+    course = credential_metadata_resource()
+    program = credential_metadata_program()
+
+    assert list(tasks.credential_metadata_resource_ids()) == sorted(
+        [course.id, program.id], reverse=True
+    )
+
+
+def test_credential_metadata_resource_ids_skips_a_type_with_no_prompts(
+    credential_configurations, mock_blocklist
+):
+    """
+    A program is not swept until it has prompts of its own.
+
+    `credential_configurations` configures courses only. Falling back to the
+    course prompts would generate a program description from a prompt asking
+    what the learner did to complete the course.
+    """
+    course = credential_metadata_resource()
+    credential_metadata_program()
+
+    assert list(tasks.credential_metadata_resource_ids()) == [course.id]
+
+
+def test_credential_metadata_resource_ids_per_type_completeness(
+    program_credential_configurations, mock_blocklist
+):
+    """
+    Completeness is judged against the resource's own type.
+
+    A program whose stored row is full is done even though a course with the
+    same stored row would be too -- the fields asked of each come from that
+    type's own active configurations.
+    """
+    done = credential_metadata_program()
+    CredentialMetadataFactory.create(
+        learning_resource=done, description="A program", criteria=["Did a thing"]
+    )
+    partial = credential_metadata_program()
+    CredentialMetadataFactory.create(
+        learning_resource=partial, description="A program", criteria=[]
+    )
+
+    assert list(tasks.credential_metadata_resource_ids()) == [partial.id]
+
+
+def test_generate_credential_metadata_for_a_program(
+    program_credential_configurations, mock_blocklist, mock_generate_and_save
+):
+    """The leaf generates for a program, asking for the fields it lacks"""
+    program = credential_metadata_program()
+
+    assert tasks.generate_credential_metadata_for_resource(program.id) is True
+    assert mock_generate_and_save.generator.call_args.kwargs["fields"] == [
+        "criteria",
+        "description",
+    ]
+
+
+def test_generate_credential_metadata_for_an_unswept_type(
+    program_credential_configurations, mock_blocklist, mock_generate_and_save
+):
+    """
+    A resource of a type the sweep does not cover is skipped, not generated.
+
+    The leaf is handed an id and reads the type back, so a task queued for
+    the wrong kind of resource -- a stale queue entry, a hand-run task --
+    must not spend anything.
+    """
+    video = credential_metadata_resource(is_course=False, is_video=True)
+
+    assert tasks.generate_credential_metadata_for_resource(video.id) is False
+    mock_generate_and_save.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    "resource_type",
+    [LearningResourceType.course.name, LearningResourceType.program.name],
+)
+def test_credential_metadata_resource_ids_for_one_type(
+    program_credential_configurations, mock_blocklist, resource_type
+):
+    """`resource_types` selects one type without touching the other"""
+    by_type = {
+        LearningResourceType.course.name: credential_metadata_resource(),
+        LearningResourceType.program.name: credential_metadata_program(),
+    }
+
+    assert list(
+        tasks.credential_metadata_resource_ids(resource_types=[resource_type])
+    ) == [by_type[resource_type].id]
+
+
+def test_generate_all_credential_metadata_for_one_type(
+    program_credential_configurations, mock_blocklist, mocker
+):
+    """The task queues only the named type's resources"""
+    credential_metadata_resource()
+    program = credential_metadata_program()
+    mock_group = mocker.patch("learning_resources.tasks.celery.group")
+
+    queued = tasks.generate_all_credential_metadata.delay(
+        resource_types=[LearningResourceType.program.name]
+    ).get()
+
+    assert queued == 1
+    assert {signature.args[0] for signature in mock_group.call_args.args[0]} == {
+        program.id
+    }
+
+
+def test_generate_all_credential_metadata_covers_both_types(
+    program_credential_configurations, mock_blocklist, mocker
+):
+    """One task per resource, whatever its type"""
+    course = credential_metadata_resource()
+    program = credential_metadata_program()
+    mock_group = mocker.patch("learning_resources.tasks.celery.group")
+
+    assert tasks.generate_all_credential_metadata.delay().get() == 2
+
+    queued = {signature.args[0] for signature in mock_group.call_args.args[0]}
+    assert queued == {course.id, program.id}
+
+
 def test_generate_all_credential_metadata(
     credential_configurations, mocked_celery, mock_blocklist
 ):
     """The sweep queues one task per resource and returns the count"""
-    resources = [credential_metadata_course() for _ in range(3)]
+    resources = [credential_metadata_resource() for _ in range(3)]
     expected_ids = sorted((resource.id for resource in resources), reverse=True)
 
     queued = tasks.generate_all_credential_metadata.delay().get()
@@ -2229,7 +2384,7 @@ def test_generate_all_credential_metadata_passes_overwrite(
     credential_configurations, mocked_celery, mock_blocklist, overwrite
 ):
     """Each per-resource task is told which mode the sweep ran in"""
-    resource = credential_metadata_course()
+    resource = credential_metadata_resource()
     CredentialMetadataFactory.create(
         learning_resource=resource, description="A course", criteria=["Did a thing"]
     )
@@ -2255,7 +2410,7 @@ def test_generate_all_credential_metadata_does_not_wait(
     hours of per-resource LLM calls to learn what each resource's own task
     already logs.
     """
-    credential_metadata_course()
+    credential_metadata_resource()
 
     tasks.generate_all_credential_metadata.delay().get()
 

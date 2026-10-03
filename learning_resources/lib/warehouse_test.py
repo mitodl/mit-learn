@@ -12,6 +12,7 @@ import django
 import pytest
 from django.conf import settings as django_settings
 from django.core.exceptions import ImproperlyConfigured
+from django.test import override_settings
 from freezegun import freeze_time
 
 # Configure Django minimally if not already configured — keeps this test
@@ -23,6 +24,8 @@ if not django_settings.configured:
         STARROCKS_PORT=9030,
         STARROCKS_USER="testuser",
         STARROCKS_PASSWORD="secret",  # noqa: S106
+        WAREHOUSE_CATALOG="ol_data_lake_production",
+        WAREHOUSE_SCHEMA="ol_warehouse_production_integrations",
     )
     django.setup()
 
@@ -271,7 +274,7 @@ def test_iter_rows_defers_description_until_first_fetch():
 
 class _ConcreteTask(BaseWarehouseETLTask):
     name = "test.ConcreteTask"
-    view_name = "ol_data_lake_production.ol_warehouse_production_integrations.integrations__learn__test"
+    table_name = "integrations__learn__test"
 
     def fetch_and_upsert(self, conn, *, since=None) -> int:  # noqa: ARG002
         return 42
@@ -279,7 +282,7 @@ class _ConcreteTask(BaseWarehouseETLTask):
 
 class _ErrorTask(BaseWarehouseETLTask):
     name = "test.ErrorTask"
-    view_name = "ol_data_lake_production.ol_warehouse_production_integrations.integrations__learn__test"
+    table_name = "integrations__learn__test"
 
     def fetch_and_upsert(self, conn, *, since=None) -> int:  # noqa: ARG002
         msg = "downstream failure"
@@ -349,25 +352,94 @@ def test_base_warehouse_etl_task_adds_sentry_breadcrumb_on_error(
 
 
 @patch("learning_resources.lib.warehouse.connect_to_warehouse")
-def test_base_warehouse_etl_task_raises_when_view_name_empty(mock_connect):
-    """run() raises ValueError immediately when view_name is not set."""
+def test_base_warehouse_etl_task_raises_when_table_name_empty(mock_connect):
+    """run() raises ValueError immediately when table_name is not set."""
 
     class _NoViewTask(BaseWarehouseETLTask):
-        view_name = ""
+        table_name = ""
 
         def fetch_and_upsert(self, conn) -> int:  # noqa: ARG002
             return 0
 
-    with pytest.raises(ValueError, match="view_name must be set"):
+    with pytest.raises(ValueError, match="table_name must be set"):
         _NoViewTask().run()
 
     mock_connect.assert_not_called()
 
 
+def test_view_name_defaults_to_the_production_catalog():
+    """With no override, view_name reads the production integrations schema,
+    matching the literal every task carried before it was configurable.
+    """
+    assert _ConcreteTask().view_name == (
+        "ol_data_lake_production.ol_warehouse_production_integrations"
+        ".integrations__learn__test"
+    )
+
+
+def test_view_name_follows_warehouse_settings():
+    """WAREHOUSE_CATALOG/WAREHOUSE_SCHEMA point every task at another
+    environment's lake, e.g. QA reading ol_data_lake_qa.
+    """
+    with override_settings(
+        WAREHOUSE_CATALOG="ol_data_lake_qa",
+        WAREHOUSE_SCHEMA="ol_warehouse_qa_integrations",
+    ):
+        assert _ConcreteTask().view_name == (
+            "ol_data_lake_qa.ol_warehouse_qa_integrations.integrations__learn__test"
+        )
+
+
+@pytest.mark.parametrize(
+    ("setting", "value"),
+    [
+        ("WAREHOUSE_CATALOG", "ol_data_lake_qa.other"),
+        ("WAREHOUSE_SCHEMA", "schema; DROP TABLE x"),
+        ("WAREHOUSE_SCHEMA", ""),
+    ],
+)
+@patch("learning_resources.lib.warehouse.connect_to_warehouse")
+def test_view_name_rejects_unsafe_setting_parts(mock_connect, setting, value):
+    """Each part is checked on its own: a dotted WAREHOUSE_CATALOG would still
+    pass iter_rows's check once composed, but address a different catalog.
+    """
+    with (
+        override_settings(**{setting: value}),
+        pytest.raises(ValueError, match="Unsafe warehouse identifier"),
+    ):
+        _ConcreteTask().run()
+
+    mock_connect.assert_not_called()
+
+
+@patch("learning_resources.lib.warehouse.connect_to_warehouse")
+def test_view_name_rejects_dotted_table_name(mock_connect):
+    """A dotted table_name would reach into another schema of the same catalog."""
+
+    class _DottedTask(BaseWarehouseETLTask):
+        table_name = "other_schema.integrations__learn__test"
+
+        def fetch_and_upsert(self, conn, *, since=None) -> int:  # noqa: ARG002
+            return 0
+
+    with pytest.raises(ValueError, match="Unsafe warehouse identifier"):
+        _DottedTask().run()
+
+    mock_connect.assert_not_called()
+
+
+def test_subclass_cannot_pin_view_name():
+    """Assigning view_name on a subclass would bypass WAREHOUSE_* entirely."""
+    with pytest.raises(TypeError, match="must set table_name, not view_name"):
+
+        class _PinnedTask(BaseWarehouseETLTask):
+            view_name = "ol_data_lake_production.schema.view"
+
+
 def test_base_warehouse_etl_task_fetch_and_upsert_is_abstract():
     """fetch_and_upsert raises NotImplementedError on the base class."""
     task = BaseWarehouseETLTask()
-    task.view_name = "catalog.schema.view"
+    task.table_name = "view"
     with pytest.raises(NotImplementedError):
         task.fetch_and_upsert(conn=None)
 
@@ -383,10 +455,7 @@ def test_base_warehouse_etl_task_rejects_non_int_return(mock_connect):
 
     class _BrokenTask(BaseWarehouseETLTask):
         name = "test.BrokenTask"
-        view_name = (
-            "ol_data_lake_production.ol_warehouse_production_integrations"
-            ".integrations__learn__test"
-        )
+        table_name = "integrations__learn__test"
 
         def fetch_and_upsert(self, conn, *, since=None):
             pass  # forgot to return count
@@ -419,7 +488,7 @@ class _RecordingTask(BaseWarehouseETLTask):
     """Records the `since` it was called with instead of hitting a real view."""
 
     name = "test.RecordingTask"
-    view_name = "ol_data_lake_production.ol_warehouse_production_integrations.integrations__learn__test"
+    table_name = "integrations__learn__test"
 
     def fetch_and_upsert(self, conn, *, since=None) -> int:  # noqa: ARG002
         self.seen_since = since
@@ -523,7 +592,7 @@ def test_incremental_watermark_is_stamped_before_fetch_not_after(mock_connect):
 
         class _SlowTask(BaseWarehouseETLTask):
             name = "test.SlowTask"
-            view_name = "ol_data_lake_production.ol_warehouse_production_integrations.integrations__learn__test"
+            table_name = "integrations__learn__test"
 
             def fetch_and_upsert(self, conn, *, since=None) -> int:  # noqa: ARG002
                 # Simulate a fetch that takes real wall-clock time.
@@ -549,7 +618,7 @@ def test_incremental_does_not_advance_watermark_on_failure(mock_connect):
 
     class _FailingTask(BaseWarehouseETLTask):
         name = "test.FailingTask"
-        view_name = "ol_data_lake_production.ol_warehouse_production_integrations.integrations__learn__test"
+        table_name = "integrations__learn__test"
 
         def fetch_and_upsert(self, conn, *, since=None) -> int:  # noqa: ARG002
             msg = "boom"

@@ -9,7 +9,7 @@ from math import ceil
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from opensearchpy.exceptions import ConflictError, NotFoundError
-from opensearchpy.helpers import BulkIndexError, bulk
+from opensearchpy.helpers import bulk
 
 from learning_resources.etl.constants import QDRANT_RETAINED_SOURCES
 from learning_resources.models import (
@@ -261,28 +261,39 @@ def update_document_with_partial(doc_id, doc, object_type, *, retry_on_conflict=
 
 def deindex_items(documents, object_type, index_types, **kwargs):
     """
-    Call index_items with error catching around not_found for objects that don't exist
-    in the index
+    Delete documents from the index, ignoring ones that are already gone
 
     Args:
-        documents (iterable of dict): An iterable with opensearch documents to index
+        documents (iterable of dict): An iterable with opensearch documents to delete
         object_type (str): the ES object type
         index_types (string): one of the values IndexestoUpdate. Whether the default
             index, the reindexing index or both need to be updated
 
     """
-
-    try:
-        index_items(documents, object_type, index_types, **kwargs)
-    except BulkIndexError as error:
-        error_messages = error.args[1]
-
-        for error_message in error_messages:
-            message = next(iter(error_message.values()))
-            if message["result"] != "not_found":
-                log.exception("Bulk deindex failed. Error: %s", str(message))
-                msg = f"Bulk deindex failed: {message}"
-                raise ReindexError(msg) from error
+    conn = get_conn()
+    for chunk in chunks(documents, chunk_size=settings.OPENSEARCH_INDEXING_CHUNK_SIZE):
+        for alias in get_active_aliases(
+            conn, object_types=[object_type], index_types=index_types
+        ):
+            # raise_on_error=False so a not_found in one chunk can't abort the
+            # chunks after it, which is what a raised BulkIndexError used to do
+            _, errors = bulk(
+                conn,
+                chunk,
+                index=alias,
+                chunk_size=settings.OPENSEARCH_INDEXING_CHUNK_SIZE,
+                raise_on_error=False,
+                **kwargs,
+            )
+            errors = [
+                error
+                for error in errors
+                if next(iter(error.values())).get("result") != "not_found"
+            ]
+            if errors:
+                log.error("Bulk deindex failed. Errors: %s", errors)
+                msg = f"Bulk deindex failed: {errors}"
+                raise ReindexError(msg)
 
 
 def index_items(documents, object_type, index_types, **kwargs):
@@ -585,6 +596,38 @@ def deindex_non_opensearch_run_content_files(
                     {"exists": {"field": "run_id"}},
                 ],
                 "must_not": [{"terms": {"run_id": keep_run_ids}}],
+            }
+        }
+    }
+    conn = get_conn()
+    for alias in get_active_aliases(conn, object_types=[resource_type]):
+        conn.delete_by_query(
+            index=alias,
+            body=query,
+            routing=learning_resource_id,
+            conflicts="proceed",
+        )
+
+
+def deindex_deleted_run_content_files(
+    run_id, learning_resource_id, resource_type=COURSE_TYPE
+):
+    """
+    Delete a deleted run's content file documents. The rows are gone, so match
+    the documents by run and resource instead of by content file.
+
+    Args:
+        run_id(int): Id of the deleted run
+        learning_resource_id(int): Learning resource id the run belonged to
+        resource_type (string): The resource type of the parent learning resource
+    """
+    query = {
+        "query": {
+            "bool": {
+                "filter": [
+                    {"term": {"resource_id": learning_resource_id}},
+                    {"term": {"run_id": run_id}},
+                ]
             }
         }
     }

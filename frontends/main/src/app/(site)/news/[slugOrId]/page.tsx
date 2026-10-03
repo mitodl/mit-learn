@@ -9,7 +9,7 @@ import { extractLearningResourceIds } from "@/page-components/TiptapEditor/exten
 import { safeGenerateMetadata, getMetadataAsync } from "@/common/metadata"
 import {
   extractImageMetadata,
-  extractWebsiteContentDescription,
+  websiteContentSeo,
 } from "@/common/website_content"
 import { notFound } from "next/navigation"
 
@@ -30,11 +30,13 @@ export const generateMetadata = async (
       return notFound()
     }
 
-    const description = extractWebsiteContentDescription(content)
+    /* The editor's SEO overrides where they are set, otherwise the title and
+       the opening of the body as before. */
+    const { title, description } = websiteContentSeo(content)
     const leadImage = extractImageMetadata(content)
 
     return getMetadataAsync({
-      title: content.title,
+      title,
       description,
       image: leadImage?.src,
       imageAlt: leadImage?.alt,

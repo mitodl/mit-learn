@@ -5,7 +5,7 @@ import { faker } from "@faker-js/faker/locale/en"
 import { factories } from "api/test-utils"
 import type { LearningResource } from "api"
 import { DEFAULT_RESOURCE_IMG } from "ol-utilities"
-import { getByImageSrc } from "ol-test-utilities"
+import { getByImageSrc, queryByImageSrc } from "ol-test-utilities"
 import { PlatformEnum, ResourceTypeEnum } from "api"
 import { useFeatureFlagEnabled, usePostHog } from "posthog-js/react"
 import type { PostHog } from "posthog-js"
@@ -364,7 +364,7 @@ describe("CallToActionSection", () => {
       getByImageSrc(view.container, contentFileImageSrc)
     })
 
-    it("falls back to DEFAULT_RESOURCE_IMG when image.url returns 404", () => {
+    it("falls back to the original image, then DEFAULT_RESOURCE_IMG, when image.url fails", () => {
       const primaryUrl = "https://example.com/primary.jpg"
       const resource = factories.learningResources.resource({
         resource_type: ResourceTypeEnum.Document,
@@ -372,8 +372,13 @@ describe("CallToActionSection", () => {
       })
 
       const { view } = render(resource)
+      const raw = { nextJsOriginalSrc: false }
+      expect(queryByImageSrc(view.container, primaryUrl, raw)).toBeNull()
+      // Optimized image fails: retry the original, loaded directly
       fireEvent.error(getByImageSrc(view.container, primaryUrl))
-
+      const original = getByImageSrc(view.container, primaryUrl, raw)
+      // Original fails too: use the default
+      fireEvent.error(original)
       getByImageSrc(view.container, DEFAULT_RESOURCE_IMG)
     })
   })

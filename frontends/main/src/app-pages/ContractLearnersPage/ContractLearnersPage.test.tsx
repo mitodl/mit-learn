@@ -13,7 +13,9 @@ import {
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import { allowConsoleErrors } from "ol-test-utilities"
 import { ForbiddenError } from "@/common/errors"
+import { FeatureFlags } from "@/common/feature_flags"
 import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
+import { contractAnalyticsView } from "@/common/urls"
 import ContractLearnersPage from "./ContractLearnersPage"
 
 jest.mock("posthog-js/react", () => ({
@@ -45,6 +47,23 @@ const setup = () => {
     contracts: [contract],
     sso_organization_id: ORG_UUID,
   })
+  return { org, contract, orgSlug: org.slug.replace(/^org-/, "") }
+}
+
+/**
+ * A managed org with no analytics org ID, so the page renders its chrome
+ * without firing any analytics request — enough for the back link.
+ */
+const setupUnqueryable = () => {
+  const contract = mitxFactories.contracts.contract()
+  const org = mitxFactories.organizations.organization({
+    contracts: [contract],
+    sso_organization_id: null,
+  })
+  setMockResponse.get(
+    mitxUrls.organization.managerOrganizationsList(),
+    paginate([org]),
+  )
   return { org, contract, orgSlug: org.slug.replace(/^org-/, "") }
 }
 
@@ -107,7 +126,7 @@ describe("ContractLearnersPage", () => {
     )
   })
 
-  test("throws ForbiddenError when the analytics flag is off", () => {
+  test("throws ForbiddenError when the learner analytics flag is off", () => {
     mockedUseFeatureFlagEnabled.mockReturnValue(false)
     allowConsoleErrors()
 
@@ -116,6 +135,55 @@ describe("ContractLearnersPage", () => {
         <ContractLearnersPage orgSlug="acme" contractSlug="c1" />,
       ),
     ).toThrow(ForbiddenError)
+  })
+
+  test("the aggregate analytics flag alone does not open this page", () => {
+    // The two dashboards roll out independently: aggregate analytics must not
+    // confer access to per-learner data.
+    mockedUseFeatureFlagEnabled.mockImplementation(
+      (flag) => flag === FeatureFlags.B2BAnalyticsDashboard,
+    )
+    allowConsoleErrors()
+
+    expect(() =>
+      renderWithProviders(
+        <ContractLearnersPage orgSlug="acme" contractSlug="c1" />,
+      ),
+    ).toThrow(ForbiddenError)
+  })
+
+  test("the learner flag alone does not open this page", () => {
+    // Learner analytics is nested inside the analytics rollout: the back link
+    // and framing assume the aggregate page is reachable.
+    mockedUseFeatureFlagEnabled.mockImplementation(
+      (flag) => flag === FeatureFlags.B2BLearnerAnalytics,
+    )
+    allowConsoleErrors()
+
+    expect(() =>
+      renderWithProviders(
+        <ContractLearnersPage orgSlug="acme" contractSlug="c1" />,
+      ),
+    ).toThrow(ForbiddenError)
+  })
+
+  test("opens with both analytics flags on, linking back to aggregate analytics", async () => {
+    mockedUseFeatureFlagEnabled.mockImplementation(
+      (flag) =>
+        flag === FeatureFlags.B2BAnalyticsDashboard ||
+        flag === FeatureFlags.B2BLearnerAnalytics,
+    )
+    const { contract, orgSlug } = setupUnqueryable()
+
+    renderWithProviders(
+      <ContractLearnersPage orgSlug={orgSlug} contractSlug={contract.slug} />,
+    )
+
+    const back = await screen.findByRole("link", { name: /Program analytics/ })
+    expect(back).toHaveAttribute(
+      "href",
+      contractAnalyticsView(orgSlug, contract.slug),
+    )
   })
 
   test("denies access when the org is not one the user manages", async () => {
@@ -211,6 +279,67 @@ describe("ContractLearnersPage", () => {
     expect(within(row).getByText("Module 5")).toBeInTheDocument()
     expect(within(row).getByText("Certificate")).toBeInTheDocument()
   })
+
+  test("a learner row shows the email alongside the name", async () => {
+    const { org, contract, orgSlug } = setup()
+    const contractId = String(contract.id)
+    setMockResponse.get(
+      mitxUrls.organization.managerOrganizationsList(),
+      paginate([org]),
+    )
+    mockTotal(contractId, 1)
+    mockList(contractId, [
+      analyticsFactories.learnerProgress({
+        full_name: "Anton Petrov",
+        email: "anton@example.com",
+        courserun_title: "Module 5",
+      }),
+    ])
+
+    renderWithProviders(
+      <ContractLearnersPage orgSlug={orgSlug} contractSlug={contract.slug} />,
+    )
+
+    const name = await screen.findByText("Anton Petrov")
+    const row = rowOf(name)
+    expect(within(row).getByText("anton@example.com")).toBeInTheDocument()
+    expect(within(row).getByText("AP")).toBeInTheDocument()
+  })
+
+  test.each([
+    { fullName: null, label: "null" },
+    { fullName: "", label: "empty" },
+    { fullName: "   ", label: "whitespace-only" },
+  ])(
+    "a learner with a $label name shows only the email and an icon avatar",
+    async ({ fullName }) => {
+      const { org, contract, orgSlug } = setup()
+      const contractId = String(contract.id)
+      setMockResponse.get(
+        mitxUrls.organization.managerOrganizationsList(),
+        paginate([org]),
+      )
+      mockTotal(contractId, 1)
+      mockList(contractId, [
+        analyticsFactories.learnerProgress({
+          full_name: fullName,
+          email: "x7k2m@example.com",
+          courserun_title: "Module 5",
+        }),
+      ])
+
+      renderWithProviders(
+        <ContractLearnersPage orgSlug={orgSlug} contractSlug={contract.slug} />,
+      )
+
+      const email = await screen.findByText("x7k2m@example.com")
+      const row = rowOf(email)
+      expect(within(row).getByText("Module 5")).toBeInTheDocument()
+      expect(within(row).queryByText("?")).not.toBeInTheDocument()
+      expect(within(row).queryByText("Unknown learner")).not.toBeInTheDocument()
+      expect(row.querySelector("[aria-hidden='true'] svg")).not.toBeNull()
+    },
+  )
 
   test("a learner who withheld consent shows No consent given", async () => {
     const { org, contract, orgSlug } = setup()

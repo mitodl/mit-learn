@@ -25,6 +25,7 @@ from learning_resources.constants import (
 )
 from learning_resources.etl.constants import (
     CONTENT_TAG_CATEGORIES,
+    EDX_RUN_ID_SOURCES,
     READABLE_ID_FIELD,
     ContentTagCategory,
     CourseLoaderConfig,
@@ -64,6 +65,7 @@ from learning_resources.utils import (
     content_files_loaded_actions,
     load_course_blocklist,
     resource_delete_actions,
+    resource_run_delete_actions,
     resource_run_unpublished_actions,
     resource_unpublished_actions,
     resource_upserted_actions,
@@ -345,6 +347,41 @@ def _resolve_run_prices(
     return resource_prices
 
 
+def delete_moved_runs(learning_resource: LearningResource, run_id: str):
+    """
+    Delete runs with this run_id under other courses of the same source.
+
+    For edX-style sources a run belongs to one course at a time, so if the
+    source now lists it under learning_resource, any other row is not the real
+    run anymore.
+
+    Args:
+        learning_resource (LearningResource): the course the run is loaded under
+        run_id (str): the run's id in the source
+    """
+    if (
+        learning_resource.resource_type != LearningResourceType.course.name
+        or learning_resource.etl_source not in EDX_RUN_ID_SOURCES
+    ):
+        return
+    for moved_run in (
+        LearningResourceRun.objects.filter(
+            run_id=run_id,
+            learning_resource__etl_source=learning_resource.etl_source,
+            learning_resource__resource_type=LearningResourceType.course.name,
+        )
+        .exclude(learning_resource=learning_resource)
+        .select_related("learning_resource")
+    ):
+        log.warning(
+            "Run %s moved from %s to %s, deleting the old run",
+            run_id,
+            moved_run.learning_resource.readable_id,
+            learning_resource.readable_id,
+        )
+        resource_run_delete_actions(moved_run)
+
+
 def load_run(
     learning_resource: LearningResource, run_data: dict
 ) -> LearningResourceRun:
@@ -377,6 +414,7 @@ def load_run(
         run_data["published"] = True
 
     with transaction.atomic():
+        delete_moved_runs(learning_resource, run_id)
         previously_published = (
             LearningResourceRun.objects.filter(
                 learning_resource=learning_resource, run_id=run_id

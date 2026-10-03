@@ -40,6 +40,8 @@ type QueryAllByImageSrcOpts = {
    */
   hidden?: boolean
 }
+type ByImageSrcArgs = [src: string | RegExp, opts?: QueryAllByImageSrcOpts]
+
 const DEFAULT_BY_IMAGE_SRC_OPTS: QueryAllByImageSrcOpts = {
   nextJsOriginalSrc: true,
   hidden: false,
@@ -83,7 +85,7 @@ const getImageSrcs = (c: HTMLElement, opts?: QueryAllByImageSrcOpts) => {
     .map((el) => (nextJsOriginalSrc ? getOriginalSrc(el) : el.src))
 }
 
-const getMultipleError: GetErrorFunction = (
+const getMultipleError: GetErrorFunction<ByImageSrcArgs> = (
   c,
   src: string | RegExp,
   opts?: QueryAllByImageSrcOpts,
@@ -92,7 +94,7 @@ const getMultipleError: GetErrorFunction = (
   const srcs = getImageSrcs(c, opts).join("\n\t")
   return `Found multiple <img /> elements matching src.\nExpected rrc:\n\t${src}\nFound srcs:\n\t${srcs}`
 }
-const getMissingError: GetErrorFunction = (
+const getMissingError: GetErrorFunction<ByImageSrcArgs> = (
   c,
   src: string | RegExp,
   opts?: QueryAllByImageSrcOpts,

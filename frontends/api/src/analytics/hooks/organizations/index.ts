@@ -8,6 +8,7 @@ export {
 export type {
   AnalyticsPageParams,
   CompletionStatus,
+  CompletionStatusCounts,
   CompletionStatusFilter,
   ContentEngagementDepth,
   ContractContentEngagementDepth,

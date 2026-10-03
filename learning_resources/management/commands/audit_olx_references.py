@@ -6,6 +6,9 @@ from django.core.management import BaseCommand
 
 from learning_resources.constants import VALID_TEXT_FILE_TYPES
 from learning_resources.etl.utils import excluded_olx_paths
+from learning_resources.management.commands.unpublish_excluded_files import (
+    EDX_SOURCES,
+)
 
 TRANSCRIPT_EXTENSIONS = (".srt", ".sjson", ".vtt")
 
@@ -16,7 +19,7 @@ class Command(BaseCommand):
     unpublish_excluded_files at production. Takes extracted OLX trees, e.g.
 
         docker compose run --rm -v /path/to/extracted:/archives web \\
-            ./manage.py audit_olx_references /archives/<course>
+            ./manage.py audit_olx_references --source oll /archives/<course>
 
     The excluded total counts archive paths, so it is an upper bound on what
     unpublish_excluded_files would unpublish rather than a row count: several
@@ -28,6 +31,12 @@ class Command(BaseCommand):
     def add_arguments(self, parser):
         parser.add_argument(
             "olx_paths", nargs="+", help="Paths to extracted OLX course directories"
+        )
+        parser.add_argument(
+            "--source",
+            choices=EDX_SOURCES,
+            help="Platform the archives are from (default: one that hides the "
+            "about page, i.e. not oll)",
         )
 
     def handle(self, *args, **options):  # noqa: ARG002
@@ -43,7 +52,7 @@ class Command(BaseCommand):
                     "draft" in part for part in path.relative_to(root).parts[:-1]
                 )
             }
-            excluded = excluded_olx_paths(root) & ingestable
+            excluded = excluded_olx_paths(root, options["source"]) & ingestable
             static = {
                 path for path in excluded if path.relative_to(root).parts[0] == "static"
             }
@@ -59,7 +68,17 @@ class Command(BaseCommand):
             self.stdout.write(f"    under static/       : {len(static)}")
             self.stdout.write(f"      transcripts       : {len(transcripts)}")
             self.stdout.write(f"      documents         : {len(static - transcripts)}")
+            elsewhere = excluded - static
+            self.stdout.write(f"    elsewhere           : {len(elsewhere)}")
+            for directory in ("tabs", "about", "policies"):
+                under = {
+                    path
+                    for path in elsewhere
+                    if path.relative_to(root).parts[0] == directory
+                }
+                self.stdout.write(f"      {directory + '/':<18}: {len(under)}")
+                elsewhere -= under
             self.stdout.write(
-                f"    elsewhere           : {len(excluded - static)}"
+                f"      other             : {len(elsewhere)}"
                 "  (staff-only blocks, manifests, announcements)"
             )

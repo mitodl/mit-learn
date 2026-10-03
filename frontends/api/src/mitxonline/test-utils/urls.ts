@@ -41,6 +41,8 @@ const programEnrollments = {
 const b2b = {
   courseEnrollment: (readableId?: string) =>
     `${getApiBaseUrl()}/api/v0/b2b/enroll/${readableId}/`,
+  dataConsent: (contractId: number) =>
+    `${getApiBaseUrl()}/api/v0/b2b/data_consent/${contractId}/`,
 }
 
 const programs = {

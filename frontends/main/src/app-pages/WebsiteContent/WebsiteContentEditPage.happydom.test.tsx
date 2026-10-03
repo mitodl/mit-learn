@@ -101,6 +101,9 @@ const setup = async (id: number, autosaveDelayMs = AUTOSAVE_OFF) => {
     content,
     content_type: "article",
     is_published: false,
+    /* Required to save the drawer, and not what these tests are about. */
+    seo_title: "A title for search",
+    seo_description: "A description for search results.",
   })
   setMockResponse.get(detailUrl(id), article)
 

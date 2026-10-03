@@ -14,13 +14,17 @@ say so. after_related_objects renders directly above the submit row.
     This item is deleted, and it is published &mdash; restoring it would put it
     straight back on the live site. It is read-only here. To restore it, use the
     &ldquo;Undelete selected&rdquo; action on the
-    <a href="{% url 'admin:website_content_websitecontent_changelist' %}">content list</a>.
+    <a href="{% url 'admin:website_content_websitecontent_changelist' %}"
+      >content list</a
+    >.
   </li>
   {% else %}
   <li class="warning">
     This item is deleted. Saving keeps it deleted &mdash; to restore it, use the
     &ldquo;Undelete selected&rdquo; action on the
-    <a href="{% url 'admin:website_content_websitecontent_changelist' %}">content list</a>.
+    <a href="{% url 'admin:website_content_websitecontent_changelist' %}"
+      >content list</a
+    >.
   </li>
   {% endif %}
 </ul>

@@ -1,10 +1,10 @@
 import { faker } from "@faker-js/faker/locale/en"
-import { OrganizationPage } from "@mitodl/mitxonline-api-axios/v2"
+import { UserOrganizationPage } from "@mitodl/mitxonline-api-axios/v2"
 import { mergeOverrides } from "ol-test-utilities"
 
 const organization = (
-  overrides: Partial<OrganizationPage>,
-): OrganizationPage => {
+  overrides: Partial<UserOrganizationPage>,
+): UserOrganizationPage => {
   const merged = mergeOverrides(
     {
       id: faker.number.int(),
