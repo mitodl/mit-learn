@@ -35,6 +35,7 @@ if not django_settings.configured:
 # database, no app registry" guarantee intact.
 
 
+from learning_resources.etl.ownership import Pipeline, current_pipeline
 from learning_resources.lib.warehouse import (
     _WATERMARK_LOOKBACK,
     BaseWarehouseETLTask,
@@ -298,6 +299,27 @@ def test_base_warehouse_etl_task_run_success(mock_connect):
 
     assert result == 42
     mock_conn.close.assert_called_once()
+
+
+class _PipelineRecordingTask(BaseWarehouseETLTask):
+    name = "test.PipelineRecordingTask"
+    table_name = "integrations__learn__test"
+
+    def fetch_and_upsert(self, conn, *, since=None) -> int:  # noqa: ARG002
+        self.pipeline = current_pipeline()
+        return 0
+
+
+@patch("learning_resources.lib.warehouse.connect_to_warehouse")
+def test_base_warehouse_etl_task_writes_as_the_warehouse_pipeline(mock_connect):
+    """Loaders called from fetch_and_upsert see the warehouse pipeline, and only there."""
+    mock_connect.return_value = MagicMock()
+    task = _PipelineRecordingTask()
+
+    task.run()
+
+    assert task.pipeline == Pipeline.WAREHOUSE
+    assert current_pipeline() == Pipeline.LEGACY
 
 
 @patch("learning_resources.lib.warehouse.connect_to_warehouse")

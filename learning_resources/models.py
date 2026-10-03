@@ -1840,3 +1840,32 @@ class CredentialMetadata(TimestampedModel):
 
     def __str__(self):
         return f"Credential metadata for {self.learning_resource.readable_id}"
+
+
+class ETLSourceOwnership(TimestampedModel):
+    """
+    Names the pipeline that owns writes for an (etl_source, resource_type) pair.
+
+    A missing row means legacy (the Celery ETL). Changing ``owner`` is the
+    per-source cutover between the legacy ETL, the warehouse pull and the data
+    platform's webhook push. See learning_resources/etl/ownership.py.
+    """
+
+    class Pipeline(models.TextChoices):
+        LEGACY = "legacy", "Legacy (Celery ETL)"
+        WAREHOUSE = "warehouse", "Warehouse pull (StarRocks)"
+        WEBHOOK = "webhook", "Webhook push (data platform)"
+
+    etl_source = models.CharField(max_length=32)
+    resource_type = models.CharField(max_length=32)
+    owner = models.CharField(
+        max_length=16, choices=Pipeline.choices, default=Pipeline.LEGACY
+    )
+
+    class Meta:
+        unique_together = ("etl_source", "resource_type")
+        verbose_name = "ETL source ownership"
+        verbose_name_plural = "ETL source ownerships"
+
+    def __str__(self):
+        return f"{self.etl_source}/{self.resource_type}: {self.owner}"

@@ -21,6 +21,8 @@ from django.conf import settings
 from django.core.cache import caches
 from django.core.exceptions import ImproperlyConfigured
 
+from learning_resources.etl.ownership import Pipeline, writing_as
+
 log = logging.getLogger(__name__)
 
 # Only alphanumeric, underscores, and dots (schema.table notation). `\Z`
@@ -274,7 +276,10 @@ class BaseWarehouseETLTask(Task):
         conn = connect_to_warehouse()
         start = time.monotonic()
         try:
-            count = self.fetch_and_upsert(conn, since=since)
+            # The shared loaders skip any (etl_source, resource_type) whose
+            # ETLSourceOwnership row does not name the warehouse pull.
+            with writing_as(Pipeline.WAREHOUSE):
+                count = self.fetch_and_upsert(conn, since=since)
         except Exception:
             log.exception("Warehouse ETL task %s failed", self.name)
             sentry_sdk.add_breadcrumb(

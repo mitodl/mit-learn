@@ -48,6 +48,7 @@ from learning_resources.etl.loaders import (
     load_learning_materials,
     load_run_dependent_values,
 )
+from learning_resources.etl.ownership import may_write
 from learning_resources.etl.pipelines import ocw_courses_etl
 from learning_resources.etl.utils import (
     get_bucket_by_name,
@@ -612,6 +613,12 @@ def get_youtube_data(*, channel_ids=None):
     Returns:
         int: the number of channels queued
     """
+    if not may_write(
+        ETLSource.youtube.name,
+        [LearningResourceType.video_playlist.name, LearningResourceType.video.name],
+    ):
+        return 0
+
     missing = [
         setting
         for setting in ("YOUTUBE_CONFIG_URL", "YOUTUBE_DEVELOPER_KEY")
@@ -836,6 +843,8 @@ def sync_canvas_courses(canvas_course_ids=None, overwrite=False):  # noqa: FBT00
     Returns:
         int or None: the number of courses queued, or None if no archives were found
     """
+    if not may_write(ETLSource.canvas.name, LearningResourceType.course.name):
+        return None
 
     bucket = get_bucket_by_name(settings.COURSE_ARCHIVE_BUCKET_NAME)
     s3_prefix = get_s3_prefix_for_source(ETLSource.canvas.name)

@@ -361,30 +361,6 @@ class TestSettings(TestCase):
             settings_vars = self.reload_settings(module="main.settings_celery")
             assert settings_vars["CELERY_RESULT_EXPIRES"] == 120
 
-    def test_warehouse_etl_cutover_sources_empty_by_default(self):
-        """No warehouse-pull sources are cut over by default."""
-        with mock.patch.dict("os.environ", REQUIRED_SETTINGS, clear=True):
-            settings_vars = self.reload_settings(module="main.settings_celery")
-            assert settings_vars["WAREHOUSE_ETL_CUTOVER_SOURCES"] == []
-
-    def test_warehouse_etl_cutover_sources_rejects_unknown_source(self):
-        """A typo'd source name fails loudly rather than silently no-op'ing —
-        _API_ETL_BEAT_ENTRIES_BY_SOURCE starts empty (no source has landed a
-        warehouse-pull task yet), so any non-empty value is "unknown" today.
-        """
-        with (
-            mock.patch.dict(
-                "os.environ",
-                {
-                    **REQUIRED_SETTINGS,
-                    "WAREHOUSE_ETL_CUTOVER_SOURCES": "mitxonline",
-                },
-                clear=True,
-            ),
-            pytest.raises(ImproperlyConfigured, match="mitxonline"),
-        ):
-            self.reload_settings(module="main.settings_celery")
-
     def test_program_certificates_beat_entry_absent_without_starrocks_host(self):
         """The certificate-sync beat entry isn't registered when StarRocks
         isn't configured, so it can't fail on every tick in an environment
