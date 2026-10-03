@@ -908,6 +908,13 @@ def load_programs(
     if not may_write(etl_source, LearningResourceType.program.name):
         return []
 
+    if not config.courses.fetch_only and not may_write(
+        etl_source, LearningResourceType.course.name
+    ):
+        # The source's courses belong to another pipeline, so link each program
+        # to the courses that pipeline loaded instead of writing them here.
+        config = config._replace(courses=config.courses._replace(fetch_only=True))
+
     blocklist = load_course_blocklist()
 
     # Pass 1: load all programs and their course children

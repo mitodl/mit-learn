@@ -1524,6 +1524,62 @@ def test_load_programs(mocker, mock_blocklist):
     mock_blocklist.assert_called_once()
 
 
+@pytest.mark.parametrize(
+    ("course_owner", "fetch_only"),
+    [
+        (ETLSourceOwnership.Pipeline.LEGACY, False),
+        (ETLSourceOwnership.Pipeline.WEBHOOK, True),
+    ],
+)
+def test_load_programs_does_not_write_courses_it_does_not_own(
+    mock_upsert_tasks, course_owner, fetch_only
+):
+    """A program's courses are only fetched when another pipeline owns the courses"""
+    platform = LearningResourcePlatformFactory.create()
+    ETLSourceOwnershipFactory.create(
+        etl_source=ETLSource.mitpe.name,
+        resource_type=LearningResourceType.course.name,
+        owner=course_owner,
+    )
+    course = CourseFactory.create(
+        platform=platform.code, etl_source=ETLSource.mitpe.name
+    ).learning_resource
+    title = course.title
+
+    run = {
+        "run_id": "program-run",
+        "enrollment_start": "2026-01-01T00:00:00Z",
+        "start_date": "2026-01-01T00:00:00Z",
+        "end_date": "2027-01-01T00:00:00Z",
+    }
+    result = load_programs(
+        ETLSource.mitpe.name,
+        [
+            {
+                "readable_id": "program-1",
+                "platform": platform.code,
+                "etl_source": ETLSource.mitpe.name,
+                "title": "Program",
+                "runs": [run],
+                "courses": [
+                    {
+                        "readable_id": course.readable_id,
+                        "platform": platform.code,
+                        "etl_source": ETLSource.mitpe.name,
+                        "title": "Rewritten by the program",
+                        "runs": [{**run, "run_id": "course-run"}],
+                    }
+                ],
+            }
+        ],
+        config=ProgramLoaderConfig(prune=True, courses=CourseLoaderConfig()),
+    )
+
+    course.refresh_from_db()
+    assert (course.title == title) is fetch_only
+    assert list(result[0].children.values_list("child_id", flat=True)) == [course.id]
+
+
 def test_load_programs_skips_write_when_not_owned(mocker):
     """load_programs should no-op (no writes, no prune) for a pair legacy does not own"""
     ETLSourceOwnershipFactory.create(
