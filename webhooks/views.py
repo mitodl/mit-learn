@@ -45,6 +45,7 @@ from webhooks.serializers import (
     OVSVideoWebhookRequestSerializer,
     WebhookResponseSerializer,
 )
+from webhooks.utils import sanitize_learning_resources
 
 log = logging.getLogger(__name__)
 
@@ -225,8 +226,10 @@ class LearningResourceWebhookView(BaseWebhookView):
             return HttpResponseBadRequest("Invalid JSON format")
         serializer = LearningResourceWebhookRequestSerializer(data=payload)
         serializer.is_valid(raise_exception=True)
+        # Descriptions come from third-party feeds by way of the sender, so
+        # they are sanitized here rather than trusted to arrive clean.
         grouped = group_learning_resources(
-            serializer.validated_data["resources"],
+            sanitize_learning_resources(serializer.validated_data["resources"]),
             serializer.validated_data["sync"],
         )
         # Check ownership of every group before loading any, since a partial

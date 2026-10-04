@@ -495,3 +495,81 @@ def test_loaders_run_as_the_webhook_pipeline(settings, client, mocker):
     }
     assert _post(client, settings, payload).status_code == 200
     assert seen == [ETLSourceOwnership.Pipeline.WEBHOOK]
+
+
+@pytest.mark.django_db
+def test_descriptions_are_sanitized_before_loading(settings, client, mocker):
+    """
+    Scripts are stripped from the description of a resource and of its nested
+    runs and episodes, links survive, and titles are left alone.
+    """
+    mocker.patch("webhooks.views.clear_views_cache")
+    mock_load_courses = mocker.patch("webhooks.views.load_courses", return_value=[])
+    mock_load_podcasts = mocker.patch("webhooks.views.load_podcasts", return_value=[])
+    dirty = '<p>Notes <a href="https://example.com" onclick="x()">here</a></p><script>alert(1)</script>'
+    clean = (
+        '<p>Notes <a href="https://example.com" rel="noopener noreferrer">here</a></p>'
+    )
+
+    payload = {
+        "resources": [
+            _resource(
+                "course-1",
+                ETLSource.mitpe.name,
+                LearningResourceType.course.name,
+                title="R&D <Basics>",
+                description=dirty,
+                runs=[{"run_id": "run-1", "description": dirty}],
+            ),
+            _resource(
+                "pod-1",
+                ETLSource.podcast.name,
+                LearningResourceType.podcast.name,
+                description=dirty,
+                episodes=[{"readable_id": "ep-1", "description": dirty}],
+            ),
+        ]
+    }
+    response = _post(client, settings, payload)
+
+    assert response.status_code == 200
+    (course,) = mock_load_courses.call_args.args[1]
+    assert course["description"] == clean
+    assert course["runs"][0]["description"] == clean
+    assert course["title"] == "R&D <Basics>"
+    (podcast,) = mock_load_podcasts.call_args.args[0]
+    assert podcast["description"] == clean
+    assert podcast["episodes"][0]["description"] == clean
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("description", [None, ""])
+def test_absent_or_empty_description_is_not_rewritten(
+    settings, client, mocker, description
+):
+    """
+    A null description stays null and a missing one stays missing: turning
+    either into "" would overwrite the stored description on load.
+    """
+    mocker.patch("webhooks.views.clear_views_cache")
+    mock_load_courses = mocker.patch("webhooks.views.load_courses", return_value=[])
+
+    payload = {
+        "resources": [
+            _resource(
+                "course-1",
+                ETLSource.mitpe.name,
+                LearningResourceType.course.name,
+                description=description,
+            ),
+            _resource(
+                "course-2", ETLSource.mitpe.name, LearningResourceType.course.name
+            ),
+        ]
+    }
+    response = _post(client, settings, payload)
+
+    assert response.status_code == 200
+    with_description, without = mock_load_courses.call_args.args[1]
+    assert with_description["description"] == description
+    assert "description" not in without
