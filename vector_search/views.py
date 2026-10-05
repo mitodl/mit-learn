@@ -22,7 +22,8 @@ from vector_search.constants import (
     CONTENT_FILES_RETRIEVE_PAYLOAD,
     DEFAULT_EMPTY_QUERY_ORDER_BY,
     NULLABLE_ORDER_BY_KEYS,
-    ORDER_BY_MISSING_TAIL_KEY,
+    ORDER_BY_MISSING_TAIL_DEFAULT,
+    ORDER_BY_MISSING_TAIL_ORDER,
     QDRANT_RESOURCE_PARAM_MAP,
     RESOURCES_COLLECTION_NAME,
 )
@@ -300,7 +301,8 @@ class QdrantView(AsyncAPIView):
     async def _scroll_missing_order_by_key(self, client, scroll_kwargs, key, limit):
         """
         Scroll the points an ordered scroll leaves out: those with no value for
-        the sort key, ordered by recency.
+        the sort key, ordered by popularity for the featured rank and by recency
+        otherwise.
         """
         search_filter = scroll_kwargs.get("scroll_filter")
         missing_filter = models.Filter(
@@ -313,8 +315,8 @@ class QdrantView(AsyncAPIView):
             **{
                 **scroll_kwargs,
                 "scroll_filter": missing_filter,
-                "order_by": models.OrderBy(
-                    key=ORDER_BY_MISSING_TAIL_KEY, direction=models.Direction.DESC
+                "order_by": ORDER_BY_MISSING_TAIL_ORDER.get(
+                    key, ORDER_BY_MISSING_TAIL_DEFAULT
                 ),
             },
             limit=limit,
