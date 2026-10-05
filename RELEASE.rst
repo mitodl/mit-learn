@@ -1,6 +1,12 @@
 Release Notes
 =============
 
+Version 0.81.7
+--------------
+
+- Fix FAQ accordion content shift when a panel closes (#4029)
+- Keep deindexing after a not_found in an earlier batch (#3980)
+
 Version 0.81.6
 --------------
 
