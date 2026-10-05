@@ -3,7 +3,7 @@
 /// <reference types="./types/typography.d.ts" />
 
 export { default as styled } from "@emotion/styled"
-export { css, Global } from "@emotion/react"
+export { css, Global, keyframes } from "@emotion/react"
 export { alpha, useTheme } from "@mui/material/styles"
 
 /**

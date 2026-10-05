@@ -960,13 +960,16 @@ class CredentialMetadataConfigurationFactory(DjangoModelFactory):
     """Factory for CredentialMetadataConfiguration"""
 
     field = FuzzyChoice([field.name for field in constants.CredentialMetadataField])
+    resource_type = constants.LearningResourceType.course.name
     llm_model = "gpt-4o-mini"
     prompt = factory.Faker("sentence")
     temperature = 0.0
 
     class Meta:
         model = models.CredentialMetadataConfiguration
-        django_get_or_create = ("field",)
+        # Both halves of the unique constraint: keyed on `field` alone, a
+        # program configuration would hand back the course row for that field.
+        django_get_or_create = ("field", "resource_type")
 
 
 class CredentialMetadataGenerationLogFactory(DjangoModelFactory):

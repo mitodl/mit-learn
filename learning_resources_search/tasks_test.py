@@ -1911,11 +1911,20 @@ def test_update_featured_rank(mocker, offeror_featured_lists):
     update_with_partial = mocker.patch(
         "learning_resources_search.tasks.api.update_document_with_partial"
     )
+    update_qdrant = mocker.patch(
+        "learning_resources_search.tasks.update_qdrant_featured_ranks"
+    )
 
     featured_view_set = FeaturedViewSet()
     featured_resources = featured_view_set.get_queryset()
 
     update_featured_rank()
+
+    # Qdrant gets the same rank OpenSearch does, the best one per resource
+    expected_qdrant_ranks = {}
+    for resource in featured_resources:
+        expected_qdrant_ranks.setdefault(resource, resource.position + 0.4)
+    update_qdrant.assert_called_once_with(expected_qdrant_ranks)
 
     for rank in range(3):
         clear_featured_rank.assert_any_call(rank, clear_all_greater_than=False)

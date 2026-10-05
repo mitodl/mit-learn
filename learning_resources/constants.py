@@ -425,3 +425,9 @@ class CredentialMetadataField(ExtendedEnum):
 
     description = "Description"
     criteria = "Criteria"
+
+
+CREDENTIAL_METADATA_RESOURCE_TYPES = (
+    LearningResourceType.course.name,
+    LearningResourceType.program.name,
+)
