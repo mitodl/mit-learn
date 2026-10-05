@@ -100,6 +100,7 @@ from vector_search.utils import (
     embed_learning_resources,
     embed_topics,
     filter_existing_qdrant_points,
+    interleave_pools,
     order_by_query,
     qdrant_query_conditions,
     remove_qdrant_records,
@@ -4566,3 +4567,35 @@ def test_qdrant_content_files_unpublished_course_has_none():
     )
 
     assert set(selected) == test_files
+
+
+def _points(*ids):
+    return [MagicMock(id=point_id) for point_id in ids]
+
+
+def test_interleave_pools_follows_shares_and_skips_duplicates():
+    """Pools are drawn from in proportion, and an item is only returned once"""
+    pools = {
+        "a": _points("a0", "a1", "a2", "a3"),
+        "b": _points("b0", "a0", "b1"),
+        "c": _points("c0", "c1", "b0"),
+    }
+
+    merged = interleave_pools(pools, {"a": 2, "b": 1, "c": 1}, 6)
+
+    assert [point.id for point in merged] == ["a0", "b0", "c0", "a1", "a2", "b1"]
+
+
+def test_interleave_pools_exhausted_pool_hands_over_its_share():
+    """A pool that runs dry no longer takes slots; the size caps the result"""
+    pools = {"a": _points("a0"), "b": _points("b0", "b1", "b2", "b3")}
+
+    assert [p.id for p in interleave_pools(pools, {"a": 1, "b": 1}, 10)] == [
+        "a0",
+        "b0",
+        "b1",
+        "b2",
+        "b3",
+    ]
+    assert len(interleave_pools(pools, {"a": 1, "b": 1}, 2)) == 2
+    assert interleave_pools({"a": [], "b": []}, {"a": 1, "b": 1}, 5) == []

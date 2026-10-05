@@ -29,6 +29,11 @@ from vector_search.utils import custom_score_formula, score_formula_query
 from vector_search.views import QdrantView, _relative_score_floor
 
 
+@pytest.fixture(autouse=True)
+def _default_mix_off(settings):
+    settings.VECTOR_SEARCH_DEFAULT_MIX_ENABLED = False
+
+
 @pytest.fixture
 def content_file_viewer(client, django_user_model):
     """Log in a user permitted to view content-file search results."""
@@ -2172,3 +2177,111 @@ def test_vector_search_kill_switch_hydrates_from_database(mocker, client, settin
     assert response.status_code == 200
     assert [result["id"] for result in response.json()["results"]] == [resource.id]
     payload_hits.assert_not_called()
+
+
+def _mix_client(mocker, pools):
+    """
+    Build an async client whose MMR queries return the given points, one list
+    per pool in DEFAULT_MIX_POOLS order, with a centroid sample to scroll.
+    """
+    mock_qdrant = mocker.AsyncMock()
+    vector_name = dense_encoder().model_short_name()
+    mock_qdrant.scroll = mocker.AsyncMock(
+        return_value=(
+            [
+                mocker.MagicMock(vector={vector_name: [1.0, 3.0]}),
+                mocker.MagicMock(vector={vector_name: [3.0, 5.0]}),
+            ],
+            None,
+        )
+    )
+    mock_qdrant.query_points = mocker.AsyncMock(
+        side_effect=[
+            mocker.MagicMock(
+                points=[
+                    mocker.MagicMock(id=point_id, payload={"readable_id": point_id})
+                    for point_id in pool
+                ]
+            )
+            for pool in pools
+        ]
+    )
+    mock_qdrant.count = mocker.AsyncMock(return_value=CountResult(count=10))
+    mocker.patch("vector_search.views.async_qdrant_client", return_value=mock_qdrant)
+    return mock_qdrant
+
+
+@pytest.mark.django_db
+def test_vector_search_default_mix(mocker, settings):
+    """An unqueried search mixes MMR-diversified pools, skipping duplicates"""
+    settings.VECTOR_SEARCH_DEFAULT_MIX_ENABLED = True
+    mocker.patch("vector_search.views.cache.get", return_value=None)
+    mocker.patch("vector_search.views.cache.set")
+    mock_qdrant = _mix_client(
+        mocker,
+        [
+            ["f0", "f1", "f2", "f3"],
+            ["n0", "f0", "n1", "n2"],
+            ["p0", "p1", "f1", "p2"],
+        ],
+    )
+
+    results = asyncio.run(
+        QdrantView().async_vector_search(
+            "", {}, order_by="featured_rank", limit=5, offset=1
+        )
+    )
+
+    # 4 featured : 3 new : 3 popular, over the first 6 slots, minus the offset
+    assert [hit["readable_id"] for hit in results["hits"]] == [
+        "n0",
+        "p0",
+        "f1",
+        "n1",
+        "p1",
+    ]
+    assert mock_qdrant.query_points.await_count == 3
+    featured_call, new_call, popular_call = (
+        call.kwargs for call in mock_qdrant.query_points.mock_calls
+    )
+    assert featured_call["query"].nearest == [2.0, 4.0]
+    assert featured_call["query"].mmr.candidates_limit == 30
+    assert featured_call["limit"] == 6
+    assert featured_call["prefetch"].query.order_by == models.OrderBy(
+        key="featured_rank", direction=models.Direction.ASC
+    )
+    assert popular_call["prefetch"].query.order_by == models.OrderBy(
+        key="views", direction=models.Direction.DESC
+    )
+    # only runs that have started count as new
+    assert new_call["prefetch"].query.order_by.key == "resource_age_date"
+    assert new_call["query_filter"].must[-1].key == "resource_age_date"
+    mock_qdrant.scroll.assert_awaited_once()
+
+
+@pytest.mark.django_db
+def test_vector_search_default_mix_falls_back_to_scroll(mocker, settings):
+    """A failing MMR query leaves the featured-rank scroll to answer"""
+    settings.VECTOR_SEARCH_DEFAULT_MIX_ENABLED = True
+    mocker.patch("vector_search.views.cache.get", return_value=None)
+    mocker.patch("vector_search.views.cache.set")
+    mock_qdrant = _mix_client(mocker, [])
+    mock_qdrant.query_points.side_effect = RuntimeError("no mmr")
+    mock_qdrant.scroll.side_effect = [
+        (
+            [
+                mocker.MagicMock(vector={dense_encoder().model_short_name(): [1.0]}),
+            ],
+            None,
+        ),
+        ([mocker.MagicMock(payload={"readable_id": "featured-0"})], None),
+        ([], None),
+    ]
+
+    results = asyncio.run(
+        QdrantView().async_vector_search(
+            "", {}, order_by="featured_rank", limit=5, offset=0
+        )
+    )
+
+    assert [hit["readable_id"] for hit in results["hits"]] == ["featured-0"]

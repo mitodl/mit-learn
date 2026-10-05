@@ -76,6 +76,21 @@ FEATURED_RANK_PAYLOAD_KEY = "featured_rank"
 # resources come first
 DEFAULT_EMPTY_QUERY_ORDER_BY = FEATURED_RANK_PAYLOAD_KEY
 
+# The pools an unqueried default search mixes, in tie-break order: the payload
+# key each is ordered by (descending, except featured_rank), and its share of
+# the results. Only the proportions matter.
+DEFAULT_MIX_POOLS = {
+    "featured": {"key": FEATURED_RANK_PAYLOAD_KEY, "direction": "asc", "share": 4},
+    "new": {"key": "resource_age_date", "direction": "desc", "share": 3},
+    "popular": {"key": "views", "direction": "desc", "share": 3},
+}
+
+# MMR needs a vector to rank against, and an unqueried search has none, so it
+# ranks against the average of a sample of the catalog. How long that average
+# is cached for, and how many points it is taken over.
+CATALOG_CENTROID_CACHE_SECONDS = 24 * 60 * 60
+CATALOG_CENTROID_SAMPLE_SIZE = 256
+
 QDRANT_RESOURCE_PARAM_MAP = {
     "readable_id": "readable_id",
     "resource_type": "resource_type",

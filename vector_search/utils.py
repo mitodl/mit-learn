@@ -2156,6 +2156,43 @@ def score_formula_query(  # noqa: PLR0913
     )
 
 
+def interleave_pools(pools, shares, size):
+    """
+    Merge ranked pools into one list of at most `size` items, drawing from each
+    pool in proportion to its share and skipping items an earlier pool already
+    supplied. A pool that runs dry hands its share to the others.
+
+    Args:
+        pools (dict): ranked items by pool name; items need an `id`
+        shares (dict): relative weight by pool name
+        size (int): number of items wanted
+
+    Returns:
+        list: the merged items
+    """
+    total = sum(shares[name] for name in pools) or 1
+    cursors = dict.fromkeys(pools, 0)
+    taken = dict.fromkeys(pools, 0)
+    seen = set()
+    merged = []
+    live = [name for name in pools if pools[name]]
+    while len(merged) < size and live:
+        # The pool furthest behind its share goes next; ties go to the first.
+        name = max(live, key=lambda n: shares[n] / total * (len(merged) + 1) - taken[n])
+        items = pools[name]
+        while cursors[name] < len(items) and items[cursors[name]].id in seen:
+            cursors[name] += 1
+        if cursors[name] >= len(items):
+            live.remove(name)
+            continue
+        item = items[cursors[name]]
+        cursors[name] += 1
+        taken[name] += 1
+        seen.add(item.id)
+        merged.append(item)
+    return merged
+
+
 def order_by_query(
     order_by: models.OrderBy, collection_name: str
 ) -> models.OrderByQuery | models.FormulaQuery:

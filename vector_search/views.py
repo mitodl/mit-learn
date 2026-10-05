@@ -1,9 +1,11 @@
 import asyncio
 import logging
 from collections import Counter
+from datetime import UTC, datetime
 from itertools import chain
 
 from django.conf import settings
+from django.core.cache import cache
 from django.utils.decorators import method_decorator
 from drf_spectacular.utils import extend_schema, extend_schema_view
 from qdrant_client import models
@@ -17,10 +19,14 @@ from learning_resources.constants import GROUP_CONTENT_FILE_CONTENT_VIEWERS
 from main.utils import cache_page_for_anonymous_users, db_sync_to_async
 from main.views import AsyncAPIView
 from vector_search.constants import (
+    CATALOG_CENTROID_CACHE_SECONDS,
+    CATALOG_CENTROID_SAMPLE_SIZE,
     COLLECTION_PARAM_MAP,
     CONTENT_FILES_COLLECTION_NAME,
     CONTENT_FILES_RETRIEVE_PAYLOAD,
     DEFAULT_EMPTY_QUERY_ORDER_BY,
+    DEFAULT_MIX_POOLS,
+    MAX_RESULT_WINDOW,
     NULLABLE_ORDER_BY_KEYS,
     ORDER_BY_MISSING_TAIL_KEY,
     QDRANT_RESOURCE_PARAM_MAP,
@@ -42,6 +48,7 @@ from vector_search.utils import (
     best_run_ids_for_resources,
     check_missing_content_file_ids,
     dense_encoder,
+    interleave_pools,
     order_by_query,
     qdrant_query_conditions,
     resources_payload_selector,
@@ -392,6 +399,135 @@ class QdrantView(AsyncAPIView):
                 break
         return search_result[:limit]
 
+    async def _catalog_centroid(self, client, collection_name, vector_name):
+        """
+        Return the average dense vector of a sample of the collection, which MMR ranks
+        an unqueried search against. Cached, as the catalog's overall shape
+        changes far more slowly than it is read.
+        """
+        cache_key = f"vector_search_centroid_{collection_name}_{vector_name}"
+        centroid = cache.get(cache_key)
+        if centroid is None:
+            points, _ = await client.scroll(
+                collection_name,
+                limit=CATALOG_CENTROID_SAMPLE_SIZE,
+                with_payload=False,
+                with_vectors=[vector_name],
+            )
+            vectors = [p.vector[vector_name] for p in points if p.vector]
+            if not vectors:
+                return None
+            centroid = [sum(dim) / len(vectors) for dim in zip(*vectors, strict=True)]
+            cache.set(cache_key, centroid, CATALOG_CENTROID_CACHE_SECONDS)
+        return centroid
+
+    async def _execute_default_mix_search(
+        self, client, search_collection, search_filter, limit, offset
+    ):
+        """
+        Run the default search with no query: featured, new and popular resources
+        mixed in the DEFAULT_MIX_POOLS proportions.
+
+        Each pool is the top of its own ordering, run through MMR so that the
+        pool does not fill up with one topic, and the pools are then
+        interleaved. Qdrant cannot offset an MMR query, so, as with an ordered
+        scroll, offset + limit are fetched and sliced here.
+        """
+        encoder_dense = dense_encoder()
+        vector_name = encoder_dense.model_short_name()
+        centroid = await self._catalog_centroid(client, search_collection, vector_name)
+        if centroid is None:
+            return None
+
+        window = offset + limit
+        candidates = min(
+            window * settings.VECTOR_SEARCH_DEFAULT_MIX_CANDIDATE_MULTIPLIER,
+            MAX_RESULT_WINDOW,
+        )
+        now = datetime.now(tz=UTC)
+
+        def pool_filter(pool):
+            if pool["key"] != "resource_age_date":
+                return search_filter
+            # Not-yet-started runs are dated in the future, which is not new.
+            conditions = [
+                models.FieldCondition(
+                    key=pool["key"], range=models.DatetimeRange(lte=now)
+                )
+            ]
+            if search_filter is None:
+                return models.Filter(must=conditions)
+            return models.Filter(
+                must=[*(search_filter.must or []), *conditions],
+                should=search_filter.should,
+                must_not=search_filter.must_not,
+            )
+
+        async def fetch_pool(pool):
+            pool_filter_ = pool_filter(pool)
+            result = await client.query_points(
+                collection_name=search_collection,
+                prefetch=models.Prefetch(
+                    query=models.OrderByQuery(
+                        order_by=models.OrderBy(
+                            key=pool["key"],
+                            direction=models.Direction(pool["direction"]),
+                        )
+                    ),
+                    filter=pool_filter_,
+                    limit=candidates,
+                ),
+                query=models.NearestQuery(
+                    nearest=centroid,
+                    mmr=models.Mmr(
+                        diversity=settings.VECTOR_SEARCH_DEFAULT_MIX_DIVERSITY,
+                        candidates_limit=candidates,
+                    ),
+                ),
+                using=vector_name,
+                query_filter=pool_filter_,
+                limit=window,
+                with_payload=resources_payload_selector(),
+                with_vectors=False,
+            )
+            return result.points
+
+        results = await asyncio.gather(
+            *(fetch_pool(pool) for pool in DEFAULT_MIX_POOLS.values())
+        )
+        merged = interleave_pools(
+            dict(zip(DEFAULT_MIX_POOLS, results, strict=True)),
+            {name: pool["share"] for name, pool in DEFAULT_MIX_POOLS.items()},
+            window,
+        )
+        return merged[offset:window]
+
+    async def _execute_unqueried_search(  # noqa: PLR0913, PLR0917
+        self, client, search_collection, search_filter, limit, offset, order_by, params
+    ):
+        """
+        Search with no query string: the featured/new/popular mix for the
+        default order, falling back to the scroll API.
+        """
+        if (
+            settings.VECTOR_SEARCH_DEFAULT_MIX_ENABLED
+            and search_collection == RESOURCES_COLLECTION_NAME
+            and order_by == DEFAULT_EMPTY_QUERY_ORDER_BY
+            and "group_by" not in params
+        ):
+            try:
+                mixed = await self._execute_default_mix_search(
+                    client, search_collection, search_filter, limit, offset
+                )
+            except Exception:
+                log.exception("Default mix search failed, falling back to scroll")
+            else:
+                if mixed is not None:
+                    return mixed
+        return await self._execute_scroll_search(
+            client, search_collection, search_filter, limit, offset, order_by
+        )
+
     async def _async_vector_hits(  # noqa: PLR0913, PLR0917
         self,
         query_string: str,
@@ -466,14 +602,14 @@ class QdrantView(AsyncAPIView):
                     ratio_override=params.get("score_cutoff_ratio"),
                 )
         else:
-            # No query string — use scroll API
-            search_result = await self._execute_scroll_search(
+            search_result = await self._execute_unqueried_search(
                 client,
                 search_collection,
                 search_filter,
                 limit,
                 offset,
                 order_by,
+                params,
             )
 
         if search_collection == RESOURCES_COLLECTION_NAME:
