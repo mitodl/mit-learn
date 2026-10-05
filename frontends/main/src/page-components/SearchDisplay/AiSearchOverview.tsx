@@ -317,7 +317,12 @@ const Overview: React.FC<{ query: string; onDismissed?: () => void }> = ({
             variant="text"
             size="small"
             aria-label="Dismiss AI Overview"
-            onClick={dismiss}
+            onClick={() => {
+              dismiss()
+              if (env("NEXT_PUBLIC_POSTHOG_API_KEY")) {
+                posthog.capture(PostHogEvents.SearchAiOverviewDismissed)
+              }
+            }}
           >
             <RiCloseLine />
           </DismissButton>
@@ -346,7 +351,8 @@ const Overview: React.FC<{ query: string; onDismissed?: () => void }> = ({
         onClose={() => {
           setDrawerOpen(false)
           // Once the user has explored the full conversation, the summary
-          // has served its purpose.
+          // has served its purpose. Not tracked: it says little about the
+          // summary itself.
           dismiss()
         }}
       />
