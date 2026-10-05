@@ -203,12 +203,28 @@ const pyKeyValue = (key: string) =>
     `['"]${key}['"]:\\s*(?:'((?:[^'\\\\]|\\\\.)*)'|"((?:[^"\\\\]|\\\\.)*)")`,
   )
 
-const PY_STR_ESCAPE_RE = /\\(.)/g
+const PY_STR_ESCAPE_RE =
+  /\\(?:x([0-9a-fA-F]{2})|u([0-9a-fA-F]{4})|U([0-9a-fA-F]{8})|(.))/g
+
+/** The only named escapes Python `repr()` emits. It writes every other control
+ * character numerically, so `\a` arrives as `\x07`. */
+const PY_NAMED_ESCAPES: Record<string, string> = { n: "\n", r: "\r", t: "\t" }
+
+/** `repr()` escapes whatever `str.isprintable()` rejects, so a name holding a
+ * non-breaking space arrives as `Anna\xa0Gavrilman`. Dropping the backslash
+ * alone would leave the escape letters behind as `Annaxa0Gavrilman`. */
+const decodePyString = (value: string): string =>
+  value.replace(PY_STR_ESCAPE_RE, (_match, hex, u16, u32, char) => {
+    const code = hex ?? u16 ?? u32
+    if (code === undefined) return PY_NAMED_ESCAPES[char] ?? char
+    const point = parseInt(code, 16)
+    return point > 0x10ffff ? "" : String.fromCodePoint(point)
+  })
 
 const pyValue = (repr: string, key: string): string => {
   const match = repr.match(pyKeyValue(key))
   if (!match) return ""
-  return (match[1] ?? match[2] ?? "").replace(PY_STR_ESCAPE_RE, "$1").trim()
+  return decodePyString(match[1] ?? match[2] ?? "").trim()
 }
 
 /**
@@ -228,7 +244,11 @@ export const parseStringifiedScimName = (value: string): string | null => {
   // reassembling the parts in an order this locale may not use.
   const formatted = pyValue(repr, "formatted")
   if (formatted) return formatted
-  const parts = [pyValue(repr, "givenName"), pyValue(repr, "familyName")]
+  const parts = [
+    pyValue(repr, "givenName"),
+    pyValue(repr, "middleName"),
+    pyValue(repr, "familyName"),
+  ]
   const name = parts.filter(Boolean).join(" ")
   return name || null
 }

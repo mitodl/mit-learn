@@ -285,6 +285,36 @@ describe("parseStringifiedScimName", () => {
       in: "{'givenName': 'Anna', 'familyName': None}",
       out: "Anna",
     },
+    {
+      label: "a middle name, between the given and family names",
+      in: "{'givenName': 'Anna', 'middleName': 'Maria', 'familyName': 'Gavrilman'}",
+      out: "Anna Maria Gavrilman",
+    },
+    {
+      label: "a non-breaking space, which repr escapes as \\xa0",
+      in: "{'formatted': 'Anna\\xa0Gavrilman'}",
+      out: "Anna\u00a0Gavrilman",
+    },
+    {
+      label: "an ideographic space, which repr escapes as \\u3000",
+      in: "{'formatted': 'Anna\\u3000Gavrilman'}",
+      out: "Anna\u3000Gavrilman",
+    },
+    {
+      label: "a tab, one of the three escapes repr writes by name",
+      in: "{'formatted': 'Anna\\tGavrilman'}",
+      out: "Anna\tGavrilman",
+    },
+    {
+      label: "an astral escape, decoded as a surrogate pair",
+      in: "{'givenName': 'Anna', 'familyName': 'Gavrilman\\U0001d173'}",
+      out: "Anna Gavrilman\u{1d173}",
+    },
+    {
+      label: "a literal backslash, not read as the start of an escape",
+      in: "{'givenName': 'Anna', 'familyName': 'Gavril\\\\man'}",
+      out: "Anna Gavril\\man",
+    },
   ])("Recovers a name from $label", (testcase) => {
     expect(parse(testcase.in)).toBe(testcase.out)
   })
