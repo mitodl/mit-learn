@@ -273,14 +273,6 @@ const Overview: React.FC<{ query: string }> = ({ query }) => {
     return null
   }
 
-  // The drawer stays mounted outside the container so it can animate closed
-  // after the overview is auto-dismissed.
-  if (dismissed) {
-    return (
-      <OverviewDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} />
-    )
-  }
-
   if (!response) {
     return (
       <Container aria-busy="true">
@@ -294,38 +286,44 @@ const Overview: React.FC<{ query: string }> = ({ query }) => {
     )
   }
 
+  // The drawer stays at a stable position outside the container so it can
+  // animate closed after the overview is auto-dismissed.
   return (
-    <Container hasShowMore>
-      <Header>
-        <RiSparkling2Line aria-hidden />
-        <HeaderLabel component="h2">AI Overview</HeaderLabel>
-      </Header>
-      <DismissButton
-        variant="text"
-        size="small"
-        aria-label="Dismiss AI Overview"
-        onClick={() => setDismissed(true)}
-      >
-        <RiCloseLine />
-      </DismissButton>
-      <Content collapsed>
-        <ReactMarkdown skipHtml>{response}</ReactMarkdown>
-      </Content>
-      <ShowMoreButton
-        variant="bordered"
-        size="small"
-        endIcon={<RiArrowDownLine />}
-        onClick={() => {
-          setDrawerOpen(true)
-          if (env("NEXT_PUBLIC_POSTHOG_API_KEY")) {
-            posthog.capture(PostHogEvents.AskTimClicked, {
-              type: "search_ai_overview",
-            })
-          }
-        }}
-      >
-        Show more
-      </ShowMoreButton>
+    <>
+      {!dismissed && (
+        <Container hasShowMore>
+          <Header>
+            <RiSparkling2Line aria-hidden />
+            <HeaderLabel component="h2">AI Overview</HeaderLabel>
+          </Header>
+          <DismissButton
+            variant="text"
+            size="small"
+            aria-label="Dismiss AI Overview"
+            onClick={() => setDismissed(true)}
+          >
+            <RiCloseLine />
+          </DismissButton>
+          <Content collapsed>
+            <ReactMarkdown skipHtml>{response}</ReactMarkdown>
+          </Content>
+          <ShowMoreButton
+            variant="bordered"
+            size="small"
+            endIcon={<RiArrowDownLine />}
+            onClick={() => {
+              setDrawerOpen(true)
+              if (env("NEXT_PUBLIC_POSTHOG_API_KEY")) {
+                posthog.capture(PostHogEvents.AskTimClicked, {
+                  type: "search_ai_overview",
+                })
+              }
+            }}
+          >
+            Show more
+          </ShowMoreButton>
+        </Container>
+      )}
       <OverviewDrawer
         open={drawerOpen}
         onClose={() => {
@@ -335,7 +333,7 @@ const Overview: React.FC<{ query: string }> = ({ query }) => {
           setDismissed(true)
         }}
       />
-    </Container>
+    </>
   )
 }
 
