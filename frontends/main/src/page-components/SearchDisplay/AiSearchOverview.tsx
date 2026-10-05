@@ -2,7 +2,7 @@ import { env } from "@/env"
 import React, { useEffect, useMemo, useRef, useState } from "react"
 import ReactMarkdown from "react-markdown"
 import { styled, keyframes, Drawer, Typography } from "ol-components"
-import { Button } from "@mitodl/smoot-design"
+import { Button, ActionButton } from "@mitodl/smoot-design"
 import {
   AiChatDisplay,
   AiChatProvider,
@@ -169,6 +169,16 @@ const ShowMoreButton = styled(Button)(({ theme }) => ({
   backgroundColor: theme.custom.colors.white,
 }))
 
+const DismissButton = styled(ActionButton)(({ theme }) => ({
+  position: "absolute",
+  top: "8px",
+  right: "12px",
+  "&&:hover": {
+    backgroundColor: "transparent",
+    color: theme.custom.colors.red,
+  },
+}))
+
 const DrawerChatDisplay = styled(AiChatDisplay)(({ theme }) => ({
   "& .MitAiChat--chatScreenContainer": {
     padding: "0 40px",
@@ -243,6 +253,7 @@ const OverviewDrawer: React.FC<{ open: boolean; onClose: () => void }> = ({
 const Overview: React.FC<{ query: string }> = ({ query }) => {
   const { messages, append, status } = useAiChat()
   const [drawerOpen, setDrawerOpen] = useState(false)
+  const [dismissed, setDismissed] = useState(false)
   const posthog = usePostHog()
   const requested = useRef(false)
 
@@ -260,6 +271,14 @@ const Overview: React.FC<{ query: string }> = ({ query }) => {
 
   if (status === "error" || responseMessage?.data?.error?.message?.trim()) {
     return null
+  }
+
+  // The drawer stays mounted outside the container so it can animate closed
+  // after the overview is auto-dismissed.
+  if (dismissed) {
+    return (
+      <OverviewDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} />
+    )
   }
 
   if (!response) {
@@ -281,6 +300,14 @@ const Overview: React.FC<{ query: string }> = ({ query }) => {
         <RiSparkling2Line aria-hidden />
         <HeaderLabel component="h2">AI Overview</HeaderLabel>
       </Header>
+      <DismissButton
+        variant="text"
+        size="small"
+        aria-label="Dismiss AI Overview"
+        onClick={() => setDismissed(true)}
+      >
+        <RiCloseLine />
+      </DismissButton>
       <Content collapsed>
         <ReactMarkdown skipHtml>{response}</ReactMarkdown>
       </Content>
@@ -299,7 +326,15 @@ const Overview: React.FC<{ query: string }> = ({ query }) => {
       >
         Show more
       </ShowMoreButton>
-      <OverviewDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} />
+      <OverviewDrawer
+        open={drawerOpen}
+        onClose={() => {
+          setDrawerOpen(false)
+          // Once the user has explored the full conversation, the summary
+          // has served its purpose.
+          setDismissed(true)
+        }}
+      />
     </Container>
   )
 }
