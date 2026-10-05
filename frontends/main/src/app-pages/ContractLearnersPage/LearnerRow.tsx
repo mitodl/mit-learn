@@ -11,6 +11,7 @@ import {
   TableCell,
   TableRow,
 } from "@/components/B2BTable/B2BTable"
+import { learnerDisplayName } from "./learnerName"
 import { DISPLAY_STATUS_LABEL, getDisplayStatus } from "./statusDisplay"
 import { COLUMN_FLEX } from "./columns"
 
@@ -193,7 +194,7 @@ const LearnerRow: React.FC<LearnerRowProps> = ({ row }) => {
   const status = getDisplayStatus(row)
   const statusLabel = DISPLAY_STATUS_LABEL[status]
   const isWithheld = status === "not-shared"
-  const name = row.full_name?.trim() || null
+  const name = learnerDisplayName(row.full_name)
 
   return (
     <TableRow role="row">

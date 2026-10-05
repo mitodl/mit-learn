@@ -341,6 +341,32 @@ describe("ContractLearnersPage", () => {
     },
   )
 
+  test("a corrupted full_name renders as a readable name", async () => {
+    const { org, contract, orgSlug } = setup()
+    const contractId = String(contract.id)
+    setMockResponse.get(
+      mitxUrls.organization.managerOrganizationsList(),
+      paginate([org]),
+    )
+    mockTotal(contractId, 1)
+    mockList(contractId, [
+      analyticsFactories.learnerProgress({
+        full_name: "{'givenName': 'Anna', 'familyName': 'Gavrilman'}",
+        email: "anna@example.com",
+        courserun_title: "Module 5",
+      }),
+    ])
+
+    renderWithProviders(
+      <ContractLearnersPage orgSlug={orgSlug} contractSlug={contract.slug} />,
+    )
+
+    const row = rowOf(await screen.findByText("anna@example.com"))
+    expect(within(row).getByText("Anna Gavrilman")).toBeInTheDocument()
+    expect(within(row).queryByText(/givenName/)).not.toBeInTheDocument()
+    expect(within(row).getByText("AG")).toBeInTheDocument()
+  })
+
   test("a learner who withheld consent shows No consent given", async () => {
     const { org, contract, orgSlug } = setup()
     const contractId = String(contract.id)
@@ -473,6 +499,55 @@ describe("ContractLearnersPage", () => {
       expect(csv).toContain("Certificate")
       expect(csv).not.toMatch(/,certified,/)
       expect(csv).toContain("No consent given")
+    })
+
+    test("exports the repaired name, not the stringified SCIM object", async () => {
+      const { org, contract, orgSlug } = setup()
+      const contractId = String(contract.id)
+      const corrupted = "{'givenName': 'Anna', 'familyName': 'Gavrilman'}"
+      setMockResponse.get(
+        mitxUrls.organization.managerOrganizationsList(),
+        paginate([org]),
+      )
+      mockTotal(contractId, 1)
+      mockList(
+        contractId,
+        [analyticsFactories.learnerProgress({ full_name: corrupted })],
+        {},
+        { total_count: 1 },
+      )
+      setMockResponse.get(
+        analyticsUrls.contracts.learnerProgress(ORG_UUID, contractId, {
+          sort: "full_name",
+          limit: 500,
+          offset: 0,
+        }),
+        analyticsFactories.learnerProgressEnvelope([
+          analyticsFactories.learnerProgress({ full_name: corrupted }),
+        ]),
+      )
+
+      renderWithProviders(
+        <ContractLearnersPage orgSlug={orgSlug} contractSlug={contract.slug} />,
+      )
+
+      await user.click(
+        await screen.findByRole("button", { name: "Export learners" }),
+      )
+
+      await waitFor(() => {
+        expect(mockCreateObjectURL).toHaveBeenCalledWith(expect.any(Blob))
+      })
+      const blob = mockCreateObjectURL.mock.calls[0][0] as Blob
+      const csv = await new Promise<string>((resolve, reject) => {
+        const reader = new FileReader()
+        reader.onload = () => resolve(reader.result as string)
+        reader.onerror = reject
+        reader.readAsText(blob)
+      })
+
+      expect(csv).toContain("Anna Gavrilman")
+      expect(csv).not.toContain("givenName")
     })
 
     test("carries the active status filter, not just pagination", async () => {

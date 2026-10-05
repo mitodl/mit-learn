@@ -245,3 +245,57 @@ describe("pluralize", () => {
     expect(u.pluralize("pup", 500, "puppies")).toBe("puppies")
   })
 })
+
+describe("parseStringifiedScimName", () => {
+  const parse = u.parseStringifiedScimName
+
+  it.each([
+    {
+      label: "the shape seen in the learner directory",
+      in: "{'givenName': 'Anna', 'familyName': 'Gavrilman'}",
+      out: "Anna Gavrilman",
+    },
+    {
+      label: "a double-quoted value, as Python writes an apostrophe",
+      in: "{'givenName': \"Seamus\", 'familyName': \"O'Brien\"}",
+      out: "Seamus O'Brien",
+    },
+    {
+      label: "an escaped apostrophe, used when a value holds both quotes",
+      in: "{'givenName': 'Anna', 'familyName': 'O\\'Brien \"A\"'}",
+      out: 'Anna O\'Brien "A"',
+    },
+    {
+      label: "keys in either order",
+      in: "{'familyName': 'Gavrilman', 'givenName': 'Anna'}",
+      out: "Anna Gavrilman",
+    },
+    {
+      label: "formatted, preferred over reassembling the parts",
+      in: "{'formatted': 'Anna Gavrilman', 'givenName': 'Anna', 'familyName': 'Gavrilman'}",
+      out: "Anna Gavrilman",
+    },
+    {
+      label: "a given name only",
+      in: "{'givenName': 'Madonna', 'familyName': ''}",
+      out: "Madonna",
+    },
+    {
+      label: "a JSON null, which Python writes as None",
+      in: "{'givenName': 'Anna', 'familyName': None}",
+      out: "Anna",
+    },
+  ])("Recovers a name from $label", (testcase) => {
+    expect(parse(testcase.in)).toBe(testcase.out)
+  })
+
+  it.each([
+    { label: "a real name", in: "Anna Gavrilman" },
+    { label: "the empty string", in: "" },
+    { label: "an empty dict", in: "{}" },
+    { label: "a dict with neither name key", in: "{'emailOptIn': '1'}" },
+    { label: "a name that merely contains a brace", in: "Anna {Gavrilman}" },
+  ])("Returns null for $label", (testcase) => {
+    expect(parse(testcase.in)).toBeNull()
+  })
+})

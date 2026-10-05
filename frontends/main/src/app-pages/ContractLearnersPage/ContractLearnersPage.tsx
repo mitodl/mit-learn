@@ -48,6 +48,7 @@ import SectionHeader from "../DashboardPage/Analytics/SectionHeader"
 import { ErrorContent } from "../ErrorPage/ErrorPageTemplate"
 import { LearnerRow } from "./LearnerRow"
 import { COLUMN_FLEX } from "./columns"
+import { learnerDisplayName } from "./learnerName"
 import { DISPLAY_STATUS_LABEL, getDisplayStatus } from "./statusDisplay"
 
 /**
@@ -82,6 +83,14 @@ import { DISPLAY_STATUS_LABEL, getDisplayStatus } from "./statusDisplay"
  *   - Progress (table cell and CSV columns alike) and Last activity: both
  *     fabricate a value with no real field behind them yet — see
  *     `placeholders.ts`'s header comment for what each is blocked on.
+ *
+ * # Known defect: corrupted learner names
+ *
+ * Some `full_name` values arrive as a stringified SCIM `name` object. Display
+ * and CSV route through `learnerName.ts`, which recovers a readable name —
+ * but search and sort run server-side against the stored string, so a
+ * full-name search finds nothing and corrupted rows sort past `z`. That
+ * header has the root cause and the backend fix.
  */
 
 const Page = styled(Container)(({ theme }) => ({
@@ -522,7 +531,7 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
         // Disabled: fabricated Progress — see the header comment above.
         // const progress = placeholderProgress(row)
         return buildCsvRow([
-          row.full_name,
+          learnerDisplayName(row.full_name),
           row.email,
           row.courserun_title,
           row.courserun_readable_id,

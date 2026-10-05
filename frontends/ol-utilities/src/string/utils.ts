@@ -193,3 +193,42 @@ export const pluralize = (singular: string, count: number, plural?: string) => {
   }
   return plural ?? `${singular}s`
 }
+
+const PY_DICT_REPR_RE = /^\{\s*['"][\s\S]*\}$/
+
+/** Python quotes with ' and switches to " when the value holds an apostrophe
+ * (O'Brien), escaping only when it holds both. */
+const pyKeyValue = (key: string) =>
+  new RegExp(
+    `['"]${key}['"]:\\s*(?:'((?:[^'\\\\]|\\\\.)*)'|"((?:[^"\\\\]|\\\\.)*)")`,
+  )
+
+const PY_STR_ESCAPE_RE = /\\(.)/g
+
+const pyValue = (repr: string, key: string): string => {
+  const match = repr.match(pyKeyValue(key))
+  if (!match) return ""
+  return (match[1] ?? match[2] ?? "").replace(PY_STR_ESCAPE_RE, "$1").trim()
+}
+
+/**
+ * Recover a readable name from a Python `repr()` of a SCIM `name` object, e.g.
+ * `{'givenName': 'Anna', 'familyName': 'Gavrilman'}` -> `Anna Gavrilman`.
+ * Returns null for anything that is not one, including `{}`.
+ *
+ * Such a value reaches a UI only through a backend defect, so this is a
+ * display-layer stopgap, never a parser to build on — the stored string is
+ * still what any server-side sort or substring search sees. See the
+ * `learnerName.ts` header in `ContractLearnersPage` for the live instance.
+ */
+export const parseStringifiedScimName = (value: string): string | null => {
+  const repr = value.trim()
+  if (!PY_DICT_REPR_RE.test(repr)) return null
+  // `formatted` is the name as the source system renders it, so prefer it to
+  // reassembling the parts in an order this locale may not use.
+  const formatted = pyValue(repr, "formatted")
+  if (formatted) return formatted
+  const parts = [pyValue(repr, "givenName"), pyValue(repr, "familyName")]
+  const name = parts.filter(Boolean).join(" ")
+  return name || null
+}
