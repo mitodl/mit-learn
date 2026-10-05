@@ -906,6 +906,26 @@ HYBRID_VECTOR_SEARCH_MIN_SCORE_RATIO = get_float(
 # hit still returns a usable page. 0 disables the exemption.
 VECTOR_SEARCH_MIN_CANDIDATES = get_int(name="VECTOR_SEARCH_MIN_CANDIDATES", default=10)
 
+# Mix the default (no query, no sortby) vector search of featured, new and
+# popular resources, each pool diversified with Qdrant's MMR, instead of
+# listing the featured resources and then the rest by recency. Set to False to
+# fall back to the featured-rank scroll without a deploy.
+VECTOR_SEARCH_DEFAULT_MIX_ENABLED = get_bool(
+    name="VECTOR_SEARCH_DEFAULT_MIX_ENABLED", default=True
+)
+
+# MMR diversity for the default mix: 0 is pure relevance to the catalog
+# centroid, 1 is pure diversity.
+VECTOR_SEARCH_DEFAULT_MIX_DIVERSITY = get_float(
+    name="VECTOR_SEARCH_DEFAULT_MIX_DIVERSITY", default=0.6
+)
+
+# How many candidates MMR picks each pool's page from, as a multiple of the
+# results needed (offset + limit).
+VECTOR_SEARCH_DEFAULT_MIX_CANDIDATE_MULTIPLIER = get_int(
+    name="VECTOR_SEARCH_DEFAULT_MIX_CANDIDATE_MULTIPLIER", default=5
+)
+
 # hard limit for special cases where we need to return all results without pagination
 VECTOR_SEARCH_PAGE_MAX_LIMIT = get_int("VECTOR_SEARCH_PAGE_MAX_LIMIT", 200)
 
