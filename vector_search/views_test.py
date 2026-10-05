@@ -712,7 +712,7 @@ def test_vector_search_featured_rank_is_not_a_sortby(mocker, client, sortby):
 def test_vector_search_featured_rank_scroll(mocker, client):
     """
     The featured scroll is ascending by rank, then topped up with every resource
-    that is not featured, most recent first
+    that is not featured, most popular first
     """
     mock_qdrant = _scroll_page_mock(mocker, dated=2, undated=2)
 
@@ -734,7 +734,7 @@ def test_vector_search_featured_rank_scroll(mocker, client):
         key="featured_rank", direction=models.Direction.ASC
     )
     assert tail_kwargs["order_by"] == models.OrderBy(
-        key="created_on", direction=models.Direction.DESC
+        key="views", direction=models.Direction.DESC
     )
     assert (
         models.IsEmptyCondition(is_empty=models.PayloadField(key="featured_rank"))
