@@ -719,7 +719,9 @@ class LearningResourcesVectorSearchView(QdrantView):
                 order_by=order_by,
                 limit=limit,
                 offset=offset,
-                params=request_data.data,
+                # Anonymous callers may only ever see published resources
+                # (test_mode resources are embedded but kept published=False)
+                params={**request_data.data, "published": True},
                 hybrid_search=hybrid_search,
                 score_cutoff=score_cutoff,
             )
