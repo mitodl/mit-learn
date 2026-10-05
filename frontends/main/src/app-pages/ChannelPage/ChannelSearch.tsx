@@ -13,6 +13,7 @@ import { SearchField } from "@/page-components/SearchField/SearchField"
 import { getFacets } from "./searchRequests"
 import { useHybridSearchEnabled } from "@/common/useHybridSearchEnabled"
 import { keyBy } from "lodash"
+import TopicSearchFilterBar from "./TopicSearchFilterBar"
 
 const SearchInputContainer = styled(Container)(({ theme }) => ({
   width: "100%",
@@ -28,6 +29,18 @@ const StyledSearchField = styled(SearchField)({
   width: "624px",
 })
 
+/**
+ * The topic layout's filter card, which the design sets 40px above the tabs.
+ * Without this the card's white edge runs straight into the white tab row
+ * below it and the two read as one block.
+ */
+const TopicSearchContainer = styled(Container)(({ theme }) => ({
+  paddingBottom: "40px",
+  [theme.breakpoints.down("md")]: {
+    paddingBottom: "24px",
+  },
+}))
+
 const SHOW_PROFESSIONAL_TOGGLE_BY_CHANNEL_TYPE: Record<
   ChannelTypeEnum,
   boolean
@@ -42,12 +55,21 @@ interface ChannelSearchProps {
   constantSearchParams: Facets & BooleanFacets
   channelType: ChannelTypeEnum
   channelTitle?: string
+  /**
+   * "topic" is the topic page's design: the search box and its facets in one
+   * card above the results, which are then a grid of cards with no sidebar.
+   *
+   * Defaults to "default" -- the centred search box and facet sidebar every
+   * other channel has, unchanged.
+   */
+  layout?: "default" | "topic"
 }
 
 const ChannelSearch: React.FC<ChannelSearchProps> = ({
   constantSearchParams,
   channelType,
   channelTitle,
+  layout = "default",
 }) => {
   const offerorsQuery = useOfferorsList()
   const offerors = useMemo(() => {
@@ -122,20 +144,34 @@ const ChannelSearch: React.FC<ChannelSearchProps> = ({
   return (
     <section>
       <VisuallyHidden as="h2">Search within {channelTitle}</VisuallyHidden>
-      <SearchInputContainer>
-        <StyledSearchField
-          value={currentText}
-          size="large"
-          onChange={(e) => setCurrentText(e.target.value)}
-          onSubmit={(e) => {
-            setCurrentTextAndQuery(e.target.value)
-          }}
-          onClear={() => {
-            setCurrentTextAndQuery("")
-          }}
-          setPage={setPage}
-        />
-      </SearchInputContainer>
+      {layout === "topic" ? (
+        <TopicSearchContainer>
+          <TopicSearchFilterBar
+            currentText={currentText}
+            setCurrentText={setCurrentText}
+            setCurrentTextAndQuery={setCurrentTextAndQuery}
+            setPage={setPage}
+            params={params}
+            setParamValue={setParamValue}
+            toggleParamValue={toggleParamValue}
+          />
+        </TopicSearchContainer>
+      ) : (
+        <SearchInputContainer>
+          <StyledSearchField
+            value={currentText}
+            size="large"
+            onChange={(e) => setCurrentText(e.target.value)}
+            onSubmit={(e) => {
+              setCurrentTextAndQuery(e.target.value)
+            }}
+            onClear={() => {
+              setCurrentTextAndQuery("")
+            }}
+            setPage={setPage}
+          />
+        </SearchInputContainer>
+      )}
 
       <ChannelSearchDisplay
         resultsHeadingEl="h3"
@@ -154,6 +190,7 @@ const ChannelSearch: React.FC<ChannelSearchProps> = ({
         showProfessionalToggle={
           SHOW_PROFESSIONAL_TOGGLE_BY_CHANNEL_TYPE[channelType]
         }
+        resultsLayout={layout === "topic" ? "cards" : "default"}
       />
     </section>
   )

@@ -35,7 +35,10 @@ const ChannelPage: React.FC = () => {
       <>
         <LearningResourceDrawer />
         <ChannelPageTemplate name={name} channelType={channelType}>
-          {publicDescription && (
+          {/* A topic page shows its description inside its own hero, beside
+              the title -- see `TopicChannelTemplate`. Rendering it here as
+              well would print it twice. */}
+          {channelType !== ChannelTypeEnum.Topic && publicDescription && (
             <Typography variant="body1">{publicDescription}</Typography>
           )}
           {channelSearchFilter && (
@@ -43,6 +46,9 @@ const ChannelPage: React.FC = () => {
               channelTitle={channelQuery.data!.title}
               constantSearchParams={searchParams}
               channelType={channelType}
+              layout={
+                channelType === ChannelTypeEnum.Topic ? "topic" : "default"
+              }
             />
           )}
         </ChannelPageTemplate>

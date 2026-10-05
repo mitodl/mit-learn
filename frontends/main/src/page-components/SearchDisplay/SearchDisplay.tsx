@@ -386,6 +386,25 @@ const StyledResultsContainer = styled.div<{ fetching: boolean }>(
   }),
 )
 
+/**
+ * The results as a grid, for `resultsLayout="cards"`: four across at desktop,
+ * as the design has it, with the same 24px gutter as the cards above it.
+ */
+const CardGrid = styled.div(({ theme }) => ({
+  display: "grid",
+  gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
+  gap: "24px",
+  [theme.breakpoints.down("lg")]: {
+    gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+  },
+  [theme.breakpoints.down("md")]: {
+    gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+  },
+  [theme.breakpoints.down("sm")]: {
+    gridTemplateColumns: "minmax(0, 1fr)",
+  },
+}))
+
 const MobileFilter = styled.div`
   ${({ theme }) => theme.breakpoints.up("md")} {
     display: none;
@@ -548,6 +567,15 @@ export interface SearchDisplayProps {
     params: ReturnType<typeof getSearchParams>,
   ) => LearningResourcesSearchResponse | undefined
   hidePagination?: boolean
+  /**
+   * "cards" is the topic page's layout: no facet sidebar, and results as a
+   * grid of compact cards rather than full-width rows. Its facets live in a
+   * bar above the results instead, which the caller renders.
+   *
+   * Defaults to "default", which is every other caller -- the search page and
+   * the unit, department and pathway channels are untouched by this.
+   */
+  resultsLayout?: "default" | "cards"
   adminOptionsSlot?: React.ReactNode
   /**
    * True when this instance queries the vector (hybrid) endpoint rather than
@@ -578,6 +606,7 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
   hidePagination = false,
   adminOptionsSlot,
   hybridSearchActive = false,
+  resultsLayout = "default",
 }) => {
   const searchParams = useAppSearchParams()
   const [expandAdminOptions, setExpandAdminOptions] = useState(false)
@@ -987,11 +1016,13 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
         <ResourceTypeGroupTabs.Context activeTabName={activeTab.name}>
           <Grid
             component="section"
-            size={{ xs: 12, md: 9 }}
+            size={{ xs: 12, md: resultsLayout === "cards" ? 12 : 9 }}
             sx={{
               display: "flex",
               flexDirection: "column",
-              gap: "16px",
+              /* The cards layout sets the tab row 24px above the grid, which
+                 is what its design specifies. */
+              gap: resultsLayout === "cards" ? "24px" : "16px",
             }}
           >
             <VisuallyHidden as={resultsHeadingEl}>
@@ -1086,17 +1117,29 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
                       ))}
                   </PlainList>
                 ) : displayData && (displayData.results?.length ?? 0) > 0 ? (
-                  <PlainList itemSpacing={1.5}>
-                    {displayData.results.map((resource: LearningResource) => (
-                      <li key={resource.id}>
+                  resultsLayout === "cards" ? (
+                    <CardGrid>
+                      {displayData.results.map((resource: LearningResource) => (
                         <ResourceCard
+                          key={resource.id}
                           resource={resource}
                           parentHeadingEl={resultsHeadingEl}
-                          list
                         />
-                      </li>
-                    ))}
-                  </PlainList>
+                      ))}
+                    </CardGrid>
+                  ) : (
+                    <PlainList itemSpacing={1.5}>
+                      {displayData.results.map((resource: LearningResource) => (
+                        <li key={resource.id}>
+                          <ResourceCard
+                            resource={resource}
+                            parentHeadingEl={resultsHeadingEl}
+                            list
+                          />
+                        </li>
+                      ))}
+                    </PlainList>
+                  )
                 ) : (
                   <NoneFound>No results found for your query.</NoneFound>
                 )}
@@ -1129,36 +1172,38 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
               </PaginationContainer>
             </ResourceTypeGroupTabs.TabPanels>
           </Grid>
-          <Grid
-            component="section"
-            size={{ xs: 12, md: 3 }}
-            sx={(theme) => ({
-              [theme.breakpoints.down("md")]: {
-                display: "none",
-              },
-            })}
-            data-testid="facets-container"
-          >
-            <FacetsTitleContainer>
-              <FilterTitle>
-                <Typography component={filterHeadingEl} variant="subtitle1">
-                  Filter
-                </Typography>
-                <RiEqualizerLine fontSize="medium" />
-              </FilterTitle>
-              {hasFacets ? (
-                <Button
-                  variant="text"
-                  color="secondary"
-                  size="small"
-                  onClick={clearAllFacets}
-                >
-                  Clear all
-                </Button>
-              ) : null}
-            </FacetsTitleContainer>
-            {filterContents}
-          </Grid>
+          {resultsLayout === "cards" ? null : (
+            <Grid
+              component="section"
+              size={{ xs: 12, md: 3 }}
+              sx={(theme) => ({
+                [theme.breakpoints.down("md")]: {
+                  display: "none",
+                },
+              })}
+              data-testid="facets-container"
+            >
+              <FacetsTitleContainer>
+                <FilterTitle>
+                  <Typography component={filterHeadingEl} variant="subtitle1">
+                    Filter
+                  </Typography>
+                  <RiEqualizerLine fontSize="medium" />
+                </FilterTitle>
+                {hasFacets ? (
+                  <Button
+                    variant="text"
+                    color="secondary"
+                    size="small"
+                    onClick={clearAllFacets}
+                  >
+                    Clear all
+                  </Button>
+                ) : null}
+              </FacetsTitleContainer>
+              {filterContents}
+            </Grid>
+          )}
         </ResourceTypeGroupTabs.Context>
       </Grid>
     </Container>

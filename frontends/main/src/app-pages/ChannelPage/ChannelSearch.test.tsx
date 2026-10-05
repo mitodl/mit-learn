@@ -308,7 +308,10 @@ describe("ChannelSearch", () => {
     })
 
     const { channel } = setMockApiResponses({
-      channelPatch: { channel_type: ChannelTypeEnum.Topic },
+      /* Department, not Topic: "Offered By" is a sidebar facet, and the topic
+         design has no sidebar -- its bar offers Format, Certificate and Free
+         only. Department still renders the facet this asserts. */
+      channelPatch: { channel_type: ChannelTypeEnum.Department },
       offerors,
       search: {
         count: resources.length,
@@ -405,16 +408,6 @@ describe("ChannelSearch", () => {
   )
 
   test.each([
-    {
-      channelType: ChannelTypeEnum.Topic,
-      displayedFacets: [
-        "Professional",
-        "Certificate",
-        "Offered By",
-        "Department",
-        "Format",
-      ],
-    },
     {
       channelType: ChannelTypeEnum.Department,
       displayedFacets: ["Certificate", "Offered By", "Topic", "Format"],
@@ -576,8 +569,8 @@ describe("ChannelSearch", () => {
     expect(location.current.searchParams.get("q")).toBe("woof")
   })
 
+  /* Topic omitted: its design has no facet sidebar for this to appear in. */
   test.each([
-    { channelType: ChannelTypeEnum.Topic },
     { channelType: ChannelTypeEnum.Department },
     { channelType: ChannelTypeEnum.Unit },
   ])(
