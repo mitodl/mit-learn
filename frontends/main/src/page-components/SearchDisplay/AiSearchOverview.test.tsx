@@ -189,9 +189,17 @@ describe("AiSearchOverview", () => {
         { id: "2", role: "assistant", content: "Here are some courses" },
       ],
     })
-    renderWithProviders(<AiSearchOverview searchParams={params("ml")} />)
+    const onDismissed = jest.fn()
+    renderWithProviders(
+      <AiSearchOverview
+        searchParams={params("ml")}
+        onDismissed={onDismissed}
+      />,
+    )
     await user.click(screen.getByRole("button", { name: "Show more" }))
+    expect(onDismissed).not.toHaveBeenCalled()
     await user.click(screen.getByRole("button", { name: "Close" }))
+    expect(onDismissed).toHaveBeenCalledTimes(1)
     expect(screen.queryByText("Here are some courses")).not.toBeInTheDocument()
     expect(
       screen.queryByRole("button", { name: "Show more" }),

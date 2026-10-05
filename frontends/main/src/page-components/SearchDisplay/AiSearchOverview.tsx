@@ -253,19 +253,23 @@ const OverviewDrawer: React.FC<{ open: boolean; onClose: () => void }> = ({
   )
 }
 
-const Overview: React.FC<{ query: string }> = ({ query }) => {
+const Overview: React.FC<{ query: string; onDismissed?: () => void }> = ({
+  query,
+  onDismissed,
+}) => {
   const { messages, append, status } = useAiChat()
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [dismissed, setDismissed] = useState(false)
   const posthog = usePostHog()
   const requested = useRef(false)
-  // Stays mounted after dismissal so focus has somewhere to go.
-  const focusTarget = useRef<HTMLDivElement>(null)
 
-  const dismiss = () => {
-    setDismissed(true)
-    focusTarget.current?.focus()
-  }
+  // Move focus once the dismissal has rendered. Doing it in the click handler
+  // runs before the drawer has closed, so its focus trap would take focus back.
+  useEffect(() => {
+    if (dismissed) onDismissed?.()
+  }, [dismissed, onDismissed])
+
+  const dismiss = () => setDismissed(true)
 
   useEffect(() => {
     if (requested.current) return
@@ -300,7 +304,6 @@ const Overview: React.FC<{ query: string }> = ({ query }) => {
   // animate closed after the overview is auto-dismissed.
   return (
     <>
-      <div ref={focusTarget} tabIndex={-1} aria-label="Search results" />
       <VisuallyHidden aria-live="polite" aria-atomic>
         {dismissed ? "AI Overview dismissed" : ""}
       </VisuallyHidden>
@@ -353,10 +356,13 @@ const Overview: React.FC<{ query: string }> = ({ query }) => {
 
 interface AiSearchOverviewProps {
   searchParams: RegisteredSearchParams
+  /** Called after the overview is dismissed, e.g. to move focus elsewhere. */
+  onDismissed?: () => void
 }
 
 const AiSearchOverview: React.FC<AiSearchOverviewProps> = ({
   searchParams,
+  onDismissed,
 }) => {
   const query = searchParams.get("q")?.trim() || undefined
   const enabled = useFeatureFlagEnabled(FeatureFlags.SearchAiOverview)
@@ -367,7 +373,7 @@ const AiSearchOverview: React.FC<AiSearchOverviewProps> = ({
   return (
     // Keyed on query so a new search starts a fresh conversation.
     <AiChatProvider key={query} requestOpts={requestOpts}>
-      <Overview query={query} />
+      <Overview query={query} onDismissed={onDismissed} />
     </AiChatProvider>
   )
 }
