@@ -2,7 +2,7 @@ import { env } from "@/env"
 import React, { useEffect, useMemo, useRef, useState } from "react"
 import ReactMarkdown from "react-markdown"
 import { styled, keyframes, Drawer, Typography } from "ol-components"
-import { Button, ActionButton } from "@mitodl/smoot-design"
+import { Button, ActionButton, VisuallyHidden } from "@mitodl/smoot-design"
 import {
   AiChatDisplay,
   AiChatProvider,
@@ -216,6 +216,9 @@ const OverviewDrawer: React.FC<{ open: boolean; onClose: () => void }> = ({
     <Drawer
       open={open}
       onClose={onClose}
+      // "Show more" is removed when the overview auto-dismisses, so there is
+      // nothing to restore focus to; the caller moves focus instead.
+      disableRestoreFocus
       anchor="right"
       aria-label="AskTIM course recommendations"
       PaperProps={{
@@ -256,6 +259,13 @@ const Overview: React.FC<{ query: string }> = ({ query }) => {
   const [dismissed, setDismissed] = useState(false)
   const posthog = usePostHog()
   const requested = useRef(false)
+  // Stays mounted after dismissal so focus has somewhere to go.
+  const focusTarget = useRef<HTMLDivElement>(null)
+
+  const dismiss = () => {
+    setDismissed(true)
+    focusTarget.current?.focus()
+  }
 
   useEffect(() => {
     if (requested.current) return
@@ -290,6 +300,10 @@ const Overview: React.FC<{ query: string }> = ({ query }) => {
   // animate closed after the overview is auto-dismissed.
   return (
     <>
+      <div ref={focusTarget} tabIndex={-1} aria-label="Search results" />
+      <VisuallyHidden aria-live="polite" aria-atomic>
+        {dismissed ? "AI Overview dismissed" : ""}
+      </VisuallyHidden>
       {!dismissed && (
         <Container hasShowMore>
           <Header>
@@ -300,7 +314,7 @@ const Overview: React.FC<{ query: string }> = ({ query }) => {
             variant="text"
             size="small"
             aria-label="Dismiss AI Overview"
-            onClick={() => setDismissed(true)}
+            onClick={dismiss}
           >
             <RiCloseLine />
           </DismissButton>
@@ -330,7 +344,7 @@ const Overview: React.FC<{ query: string }> = ({ query }) => {
           setDrawerOpen(false)
           // Once the user has explored the full conversation, the summary
           // has served its purpose.
-          setDismissed(true)
+          dismiss()
         }}
       />
     </>
