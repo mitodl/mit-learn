@@ -73,9 +73,14 @@ Each report has:
 - `details.changed`: `[before, after]` per field for the first 200 updated resources;
 - `error`: set when the load raised (an empty view, the mass-unpublish guard). The task fails too, as it would as the owner.
 
-Fields that a load changes on every run are ignored: database ids, `created_on`, `views` and `best_run_id`.
+Fields that a load changes on every run are ignored: database ids, `created_on`, `updated_on`, `views` and `best_run_id`.
 
-The load holds row locks on the resources it updates until it rolls back, so the owner's run of the same source waits for a shadow run in progress. A source's shadow run takes about as long as its real load.
+Things a shadow run costs while it is on:
+
+- The load is one transaction, so the row locks it takes last until it rolls back. The owner's run of the same source waits behind them, and so does a user action that references a locked resource (adding it to a list or a learning path). Run the first shadow of a large source at a quiet time and note how long it takes.
+- Every run of the task is a shadow run and a full refresh for as long as `shadow` is set.
+- If one task loads several types together and the pipeline already owns some of them, setting `shadow` on the rest makes the whole run a shadow run, so the types it owns stop being written until `shadow` is cleared.
+- A change the owner commits to the source while the shadow run is in progress can show up in the report as the shadow's.
 
 When the report is clean, clear `shadow` and set `owner` (below). Clear `shadow` on its own to stop shadowing.
 
