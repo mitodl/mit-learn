@@ -577,6 +577,74 @@ def test_set_learning_path_relationships_reorders_positions(client, staff_user):
     assert new_rel.position == 3
 
 
+def test_set_learning_path_relationships_empty_list_position(client, staff_user):
+    """
+    Adding a resource to an empty learning path should place it at position 0.
+    """
+    learning_path = factories.LearningPathFactory.create(
+        author=staff_user, resources=[]
+    )
+    new_course = factories.CourseFactory.create()
+
+    url = reverse(
+        "lr:v1:learning_resource_relationships_api-learning-paths",
+        args=[new_course.learning_resource.id],
+    )
+    client.force_login(staff_user)
+    resp = client.patch(f"{url}?learning_path_id={learning_path.learning_resource.id}")
+
+    assert resp.status_code == 200
+
+    rel = models.LearningResourceRelationship.objects.get(
+        parent=learning_path.learning_resource,
+        child=new_course.learning_resource,
+        relation_type=LearningResourceRelationTypes.LEARNING_PATH_ITEMS.value,
+    )
+    assert rel.position == 0
+
+
+def test_set_learning_path_relationships_already_member(client, staff_user):
+    """
+    PATCHing with a resource already in the learning path should renumber
+    positions without inserting a duplicate.
+    """
+    learning_path = factories.LearningPathFactory.create(
+        author=staff_user, resources=[]
+    )
+    existing_courses = factories.CourseFactory.create_batch(3)
+    for pos, course in zip([0, 5, 10], existing_courses):
+        factories.LearningPathRelationshipFactory.create(
+            parent=learning_path.learning_resource,
+            child=course.learning_resource,
+            position=pos,
+        )
+    existing_resource = existing_courses[0].learning_resource
+
+    url = reverse(
+        "lr:v1:learning_resource_relationships_api-learning-paths",
+        args=[existing_resource.id],
+    )
+    client.force_login(staff_user)
+    resp = client.patch(f"{url}?learning_path_id={learning_path.learning_resource.id}")
+
+    assert resp.status_code == 200
+    assert (
+        models.LearningResourceRelationship.objects.filter(
+            parent=learning_path.learning_resource,
+            relation_type=LearningResourceRelationTypes.LEARNING_PATH_ITEMS.value,
+        ).count()
+        == 3
+    )
+
+    rels = list(
+        models.LearningResourceRelationship.objects.filter(
+            parent=learning_path.learning_resource,
+            relation_type=LearningResourceRelationTypes.LEARNING_PATH_ITEMS.value,
+        ).order_by("position")
+    )
+    assert [r.position for r in rels] == [0, 1, 2]
+
+
 def test_adding_to_learning_path_not_effect_existing_membership(client, staff_user):
     """
     Given L1 (existing parent), L2 (new parent), and R (resource),
