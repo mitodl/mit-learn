@@ -33,16 +33,13 @@ describe("hasCourseStaffRole", () => {
   test.each([
     { label: "true", enrollment: enrollmentWith(true), expected: true },
     { label: "false", enrollment: enrollmentWith(false), expected: false },
-    // Absent while the generated client lags mitxonline, and null-safe for the
-    // sibling rows, which may have no enrollment yet.
+    // null and absent both occur while the generated client lags mitxonline.
     { label: "null", enrollment: enrollmentWith(null), expected: false },
     {
       label: "missing",
       enrollment: enrollmentWith(undefined),
       expected: false,
     },
-    { label: "null enrollment", enrollment: null, expected: false },
-    { label: "no enrollment", enrollment: undefined, expected: false },
   ])("reads $label as $expected", ({ enrollment, expected }) => {
     expect(hasCourseStaffRole(enrollment)).toBe(expected)
   })
@@ -67,12 +64,12 @@ describe("canOpenCourseware", () => {
    * to offer the link to them too.
    */
   test("is open before the run starts for course staff", () => {
-    expect(canOpenCourseware(future, { hasCourseStaffRole: true })).toBe(true)
+    expect(canOpenCourseware(future, { isCourseStaff: true })).toBe(true)
   })
 
   test("is closed for a learner who is neither", () => {
     expect(
-      canOpenCourseware(future, { isStaff: false, hasCourseStaffRole: false }),
+      canOpenCourseware(future, { isStaff: false, isCourseStaff: false }),
     ).toBe(false)
   })
 })

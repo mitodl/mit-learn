@@ -162,6 +162,24 @@ describe.each([
     expect(btn).toHaveAttribute("href", coursewareUrl)
   })
 
+  test("Title links to courseware for course staff before the run starts", async () => {
+    setupUserApis({ is_staff: false })
+    const coursewareUrl = faker.internet.url()
+    const enrollment = {
+      ...mitxonline.factories.enrollment.courseEnrollment({
+        grades: [],
+        certificate: null,
+        run: { ...futureRunDates, courseware_url: coursewareUrl },
+      }),
+      has_course_staff_role: true,
+    }
+    renderWithProviders(<EnrolledCourseCard enrollment={enrollment} />)
+    const link = await within(getCard()).findByRole("link", {
+      name: enrollment.run.course.title,
+    })
+    expect(link).toHaveAttribute("href", coursewareUrl)
+  })
+
   /**
    * Open edX lets a course staff or instructor on the run open the courseware
    * before it starts, regardless of site staff. The dashboard offers the same

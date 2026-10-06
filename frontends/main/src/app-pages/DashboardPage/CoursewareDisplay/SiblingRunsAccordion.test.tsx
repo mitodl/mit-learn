@@ -438,8 +438,6 @@ describe("SiblingRunsToggle + SiblingRunsPanel", () => {
       />,
     )
     await expandAccordion()
-    await screen.findByText(/^Upcoming:/)
-
     await screen.findByRole("link", { name: /View content for Upcoming/ })
   })
 

@@ -207,7 +207,7 @@ const RunListRow: React.FC<RunListRowProps> = ({
   const coursewareUrl = enrollment.run?.courseware_url
   const coursewareOpen = canOpenCourseware(enrollment.run?.start_date, {
     isStaff: mitxOnlineUser.data?.is_staff,
-    hasCourseStaffRole: hasCourseStaffRole(enrollment),
+    isCourseStaff: hasCourseStaffRole(enrollment),
   })
   /**
    * Resolved per row so each run's Receipt item reflects that run's own order.

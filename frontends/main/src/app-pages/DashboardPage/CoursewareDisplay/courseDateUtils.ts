@@ -24,11 +24,15 @@ export const getRunTimeState = (
 }
 
 /**
- * mitxonline serves `has_course_staff_role` on an enrollment, but the generated
- * client does not carry it yet - it lands with the next
+ * mitxonline serves `has_course_staff_role` on an enrollment (mitodl/mitxonline#4074),
+ * but the generated client does not carry it yet - it lands with the next
  * @mitodl/mitxonline-api-axios release. Declaring it here keeps the field typed
- * and optional in the meantime; drop this type and read the field directly once
- * the client has it.
+ * in the meantime.
+ *
+ * Once the client has it, this type and `hasCourseStaffRole` both go, and the
+ * two call sites read `enrollment.has_course_staff_role` directly. The other
+ * spots to clean up then are the `has_course_staff_role` fixture spreads in
+ * EnrolledCourseCard.test.tsx and SiblingRunsAccordion.test.tsx.
  */
 type EnrollmentWithCourseStaffRole = CourseRunEnrollmentV3 & {
   has_course_staff_role?: boolean | null
@@ -38,8 +42,8 @@ type EnrollmentWithCourseStaffRole = CourseRunEnrollmentV3 & {
  * Whether the user holds an Open edX course staff or instructor role on a run.
  */
 export const hasCourseStaffRole = (
-  enrollment?: EnrollmentWithCourseStaffRole | null,
-): boolean => Boolean(enrollment?.has_course_staff_role)
+  enrollment: EnrollmentWithCourseStaffRole,
+): boolean => Boolean(enrollment.has_course_staff_role)
 
 /**
  * Whether this run's courseware can be opened yet; staff may preview early.
@@ -57,10 +61,10 @@ export const canOpenCourseware = (
   startDate?: string | null,
   {
     isStaff = false,
-    hasCourseStaffRole = false,
-  }: { isStaff?: boolean; hasCourseStaffRole?: boolean } = {},
+    isCourseStaff = false,
+  }: { isStaff?: boolean; isCourseStaff?: boolean } = {},
 ): boolean =>
-  isStaff || hasCourseStaffRole || getRunTimeState(startDate) !== "upcoming"
+  isStaff || isCourseStaff || getRunTimeState(startDate) !== "upcoming"
 
 /**
  * A run's date range. Returns "" when the run has neither date; prefer

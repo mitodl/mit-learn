@@ -299,7 +299,7 @@ export const EnrolledCourseCard = ({
   const startDate = run?.start_date
   const coursewareOpen = canOpenCourseware(startDate, {
     isStaff,
-    hasCourseStaffRole: hasCourseStaffRole(enrollment),
+    isCourseStaff: hasCourseStaffRole(enrollment),
   })
   const endDate = run?.end_date
   const hasEnded = endDate ? isInPast(endDate) : false
