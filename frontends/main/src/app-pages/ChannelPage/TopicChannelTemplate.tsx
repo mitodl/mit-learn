@@ -33,30 +33,70 @@ const BannerSkeleton = styled(Skeleton)(({ theme }) => ({
 }))
 
 /**
+ * How deep the photograph runs before the hero is white.
+ *
+ * The design states this twice, as a share of two different heroes: 52.617%
+ * of the 768px hero that carries a Featured row, and 100% of the 304px hero
+ * that has nothing to feature. Those are 404px and 304px -- so it is a
+ * distance, and the shorter hero only reads as "100%" because it ends before
+ * that distance is up.
+ *
+ * Taking whichever comes first reproduces both exactly, and holds for the
+ * heights in between as a channel's description and Featured row come and go.
+ * A percentage alone would stretch the fade across the cards on a tall hero;
+ * a length alone would still be mid-fade where a short one meets the search
+ * area below it.
+ */
+const HERO_FADE_END = "min(404px, 100%)"
+
+/**
  * The hero, per the topic page design.
  *
  * The image stays data-driven: the channel's own configured banner, falling
  * back to the design's artwork when a channel has none. Either way it is a
- * photograph, and `HeroScrim` is the white wash that makes it a backdrop.
- *
- * The photograph is placed rather than stretched. The design sizes it to 76%
- * of the hero's width against its right edge, leaving the left quarter clear
- * for the text, and lifts it so the lower half of the frame is what shows.
- * `cover` instead fills the hero edge to edge, which blows the photograph up
- * and lands on the wrong part of it.
- *
- * The lift is a length rather than the design's percentage of its own 768px
- * band, so the crop stays put as the hero grows and shrinks with a channel's
- * description and Featured row.
+ * photograph: see `HeroPhoto` for how it is placed and `HeroScrim` for the
+ * white wash that makes it a backdrop.
  */
-const TopicHero = styled.section<{ backgroundUrl: string }>(
-  ({ theme, backgroundUrl }) => ({
-    position: "relative",
+const TopicHero = styled.section(({ theme }) => ({
+  position: "relative",
+  backgroundColor: theme.custom.colors.white,
+}))
+
+/**
+ * The photograph, on a band of its own as deep as the wash below it.
+ *
+ * The design's framing puts the lower part of the frame -- the floor, and the
+ * figure walking at its right edge -- across the top of the hero. A
+ * photograph covering the whole hero cannot be pushed up that far: it is only
+ * as much taller than the hero as the crop allows, and on a hero carrying a
+ * Featured row that is not nearly enough, which leaves the walking figure
+ * below the wash and washed out of the picture.
+ *
+ * Giving the photograph its own band as deep as the wash is what frees the
+ * crop, and it is also what keeps the scrim fading rather than concealing:
+ * covering a band has no edges inside it at any viewport, and the one edge it
+ * does have, along the bottom, is at the exact depth the wash finishes.
+ *
+ * Sizing the photograph to a share of the hero instead -- as the design's own
+ * 76%-wide placement does -- leaves edges that move with the viewport while
+ * the gradients that would have to hide them do not. At the design's width
+ * they coincide; at any other the photograph stops short of the wash and
+ * shows a seam.
+ */
+const HeroPhoto = styled.div<{ backgroundUrl: string }>(
+  ({ backgroundUrl }) => ({
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    height: HERO_FADE_END,
+    pointerEvents: "none",
     backgroundImage: backgroundUrl,
-    backgroundSize: "76% auto",
-    backgroundPosition: "right 0 top -458px",
+    backgroundSize: "cover",
+    /* Anchored right so the walking figure stays at the edge of the page, and
+     low, which is the part of the frame the design uses. */
+    backgroundPosition: "right 85%",
     backgroundRepeat: "no-repeat",
-    backgroundColor: theme.custom.colors.white,
   }),
 )
 
@@ -70,23 +110,9 @@ const TopicHero = styled.section<{ backgroundUrl: string }>(
  *
  * Both gradients start fully transparent, so the photograph reads at full
  * strength where they have not yet closed over it: the first draws white in
- * from the left, behind the text, and the second draws it down from the top,
- * so the hero fades out rather than ending on an edge.
- *
- * The design states the fade's end twice, as a share of two different heroes:
- * 52.617% of the 768px hero that carries a Featured row, and 100% of the
- * 304px hero that has nothing to feature. Those are 404px and 304px -- so it
- * is a distance, and the shorter hero only reads as "100%" because it ends
- * before that distance is up.
- *
- * Taking whichever comes first reproduces both exactly, and holds for the
- * heights in between as a channel's description and Featured row come and go.
- * A percentage alone would stretch the fade across the cards on a tall hero;
- * a length alone would still be mid-fade where a short one meets the search
- * area below it.
+ * from the left, behind the text, and the second draws it down from the top
+ * over `HERO_FADE_END`, finishing exactly where the photograph's band ends.
  */
-const HERO_FADE_END = "min(404px, 100%)"
-
 const HeroScrim = styled.div({
   position: "absolute",
   inset: 0,
@@ -341,13 +367,15 @@ const TopicChannelTemplateInternal: React.FC<
 
   return (
     <>
-      <TopicHero
-        backgroundUrl={
-          configuredBanner
-            ? `url(${configuredBanner})`
-            : backgroundSrcSetCSS(topicBannerDefault)
-        }
-      >
+      <TopicHero>
+        <HeroPhoto
+          aria-hidden
+          backgroundUrl={
+            configuredBanner
+              ? `url(${configuredBanner})`
+              : backgroundSrcSetCSS(topicBannerDefault)
+          }
+        />
         <HeroScrim aria-hidden />
         <HeroContent>
           <Container>
@@ -376,7 +404,13 @@ const TopicChannelTemplateInternal: React.FC<
                     <TopicDescription variant="body1">
                       {channel.public_description}
                     </TopicDescription>
-                  ) : null}
+                  ) : (
+                    <TopicDescription variant="body1">
+                      Explore how living systems work, from molecules and cells
+                      to organisms and ecosystems. Courses span genetics,
+                      biochemistry, neuroscience, and computational biology.
+                    </TopicDescription>
+                  )}
                 </TitleBlock>
               </BannerArea>
               <TopicFeaturedCarousel name={channel.name} />

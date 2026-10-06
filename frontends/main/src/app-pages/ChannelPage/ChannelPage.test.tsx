@@ -306,14 +306,24 @@ describe.each(NON_UNIT_CHANNEL_TYPES)(
         url: `/c/${channel.channel_type}/${channel.name}`,
       })
       const title = await screen.findByRole("heading", { name: channel.title })
+      const paintsBanner = (el: Element) =>
+        window
+          .getComputedStyle(el)
+          .backgroundImage.includes(channel.configuration.banner_background)
       // Banner background image
-      expect(
-        someAncestor(title, (el) =>
-          window
-            .getComputedStyle(el)
-            .backgroundImage.includes(channel.configuration.banner_background),
-        ),
-      ).toBe(true)
+      if (channelType === ChannelTypeEnum.Topic) {
+        /* A topic hero paints the photograph on a band of its own rather than
+           behind the text, so the wash over it can finish exactly where the
+           band ends -- see `HeroPhoto`. So it is somewhere in the hero rather
+           than above the title. */
+        const hero = title.closest("section")
+        expect(hero).not.toBe(null)
+        expect(
+          Array.from(hero!.querySelectorAll("div")).some(paintsBanner),
+        ).toBe(true)
+      } else {
+        expect(someAncestor(title, paintsBanner)).toBe(true)
+      }
       // logo -- not on a topic, whose hero is title and text only.
       if (channelType !== ChannelTypeEnum.Topic) {
         getByImageSrc(
