@@ -8,7 +8,7 @@ import { useComplianceGate } from "@/common/mitxonline/useComplianceGate"
 import { enrollmentAlertSuccessUrl } from "@/common/mitxonline"
 import { useRouter } from "next-nprogress-bar"
 import { usePostHog } from "posthog-js/react"
-import { trackProgramEnrolled } from "@/common/analytics/gtm"
+import { analytics } from "@/common/analytics"
 import { programView } from "@/common/urls"
 import { fireEnrollCta, type EnrollCtaPlacement } from "./enrollAnalytics"
 import { getProgramOffering, type ProgramOffering } from "./programOffering"
@@ -104,7 +104,7 @@ export const useProgramEnrollment = (
           { V3ProgramEnrollmentRequestRequest: { program_id: program.id } },
           {
             onSuccess: () => {
-              trackProgramEnrolled(program.title)
+              analytics.programEnrolled(program.title)
               router.push(
                 enrollmentAlertSuccessUrl({
                   title: program.title ?? "your enrollment",

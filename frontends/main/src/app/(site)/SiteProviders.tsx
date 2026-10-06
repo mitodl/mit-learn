@@ -2,12 +2,7 @@
 
 import React, { useEffect } from "react"
 import ConfiguredPostHogProvider from "@/page-components/ConfiguredPostHogProvider/ConfiguredPostHogProvider"
-import {
-  trackLandingPageArrival,
-  trackAdArrival,
-  trackReturnVisit,
-  trackOrganicSocialClick,
-} from "@/common/analytics/gtm"
+import { analytics } from "@/common/analytics"
 import { parseUtmParams, isOrganicSocialTraffic } from "@/common/analytics/utm"
 
 const SESSION_KEY = "gtm_landing_page_tracked"
@@ -32,13 +27,13 @@ function AnalyticsTracker() {
     if (alreadyTracked) return
 
     const utmParams = parseUtmParams(window.location.search)
-    trackLandingPageArrival(utmParams)
-    trackAdArrival(utmParams)
+    analytics.landingPageArrived(utmParams)
+    analytics.adArrived(utmParams)
     if (isOrganicSocialTraffic(utmParams)) {
-      trackOrganicSocialClick(utmParams.utm_source)
+      analytics.organicSocialClicked(utmParams.utm_source)
     }
     if (isReturnVisit) {
-      trackReturnVisit()
+      analytics.returnVisitDetected()
     }
   }, [])
   return null

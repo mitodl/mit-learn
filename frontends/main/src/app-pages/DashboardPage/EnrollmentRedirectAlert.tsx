@@ -9,7 +9,7 @@ import { Link, Skeleton, styled } from "ol-components"
 import { orderQueries } from "api/mitxonline-hooks/orders"
 import { mitxUserQueries } from "api/mitxonline-hooks/user"
 import { DASHBOARD_MY_LEARNING } from "@/common/urls"
-import { trackCheckoutCompleted } from "@/common/analytics/gtm"
+import { analytics } from "@/common/analytics"
 import { PostHogEvents } from "@/common/constants"
 import {
   ENROLLMENT_STATUS_PARAM,
@@ -201,7 +201,7 @@ const EnrollmentRedirectAlert: React.FC = () => {
     const courseName = paidReceipt.data?.lines[0]?.content_title
     const value = Number.isNaN(parsedValue) ? null : parsedValue
 
-    trackCheckoutCompleted({
+    analytics.checkoutCompleted({
       orderId: request.orderId,
       courseName,
       value,

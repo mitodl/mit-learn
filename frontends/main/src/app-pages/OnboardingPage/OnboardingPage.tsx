@@ -36,7 +36,7 @@ import {
 } from "@/common/profile"
 import { useAppSearchParams } from "@/common/useAppSearchParams"
 import { PostHogEvents } from "@/common/constants"
-import { trackAccountCreated } from "@/common/analytics/gtm"
+import { analytics } from "@/common/analytics"
 
 const NUM_STEPS = 5
 const ACCOUNT_CREATED_SESSION_KEY = "gtm_account_created_tracked"
@@ -220,7 +220,7 @@ const OnboardingPage: React.FC = () => {
     }
 
     if (!alreadyTracked) {
-      trackAccountCreated()
+      analytics.accountCreated()
     }
   }, [profile, isNewUser])
 

@@ -18,10 +18,7 @@ import {
 } from "api/mitxonline-hooks/enrollment"
 import { SILENCE_ERROR_TOAST } from "api/mutation-meta"
 import { CourseRunEnrollmentV3 } from "@mitodl/mitxonline-api-axios/v2"
-import {
-  trackCourseUnenrolled,
-  trackProgramUnenrolled,
-} from "@/common/analytics/gtm"
+import { analytics } from "@/common/analytics"
 import { formatRunIdentifier } from "./courseDateUtils"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import { FeatureFlags } from "@/common/feature_flags"
@@ -176,7 +173,7 @@ const UnenrollDialogInner: React.FC<DashboardDialogProps> = ({
     onSubmit: () => {
       destroyEnrollment.mutate(enrollment.id, {
         onSuccess: () => {
-          trackCourseUnenrolled(title)
+          analytics.courseUnenrolled(title)
           modal.hide()
         },
       })
@@ -259,7 +256,7 @@ const UnenrollProgramDialogInner: React.FC<UnenrollProgramDialogProps> = ({
     onSubmit: () => {
       destroyProgramEnrollment.mutate(programId, {
         onSuccess: () => {
-          trackProgramUnenrolled(title)
+          analytics.programUnenrolled(title)
           modal.hide()
         },
       })

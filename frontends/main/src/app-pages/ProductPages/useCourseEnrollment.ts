@@ -11,11 +11,7 @@ import { useComplianceGate } from "@/common/mitxonline/useComplianceGate"
 import { enrollmentAlertSuccessUrl } from "@/common/mitxonline"
 import { useRouter } from "next-nprogress-bar"
 import { usePostHog } from "posthog-js/react"
-import {
-  trackCourseEnrolled,
-  trackStartEnrollment,
-  trackBeginCheckout,
-} from "@/common/analytics/gtm"
+import { analytics } from "@/common/analytics"
 import { DASHBOARD_HOME } from "@/common/urls"
 import { getCourseScenario, type CourseScenario } from "./courseRun"
 import { useCourseEnrolledRunIds } from "./useCourseEnrolledRunIds"
@@ -101,11 +97,11 @@ export const useCourseEnrollment = (
         opts?.onRequireSignup?.(e.currentTarget)
         return
       }
-      trackStartEnrollment(course.title)
+      analytics.enrollmentStarted(course.title)
       if (kind === "paid") {
         const product = selectedRun?.products?.[0]
         if (product) {
-          trackBeginCheckout({
+          analytics.checkoutStarted({
             courseName: course.title,
             courseId: course.readable_id,
             value: product.price ? parseFloat(product.price) : 0,
@@ -119,7 +115,7 @@ export const useCourseEnrollment = (
             { run_id: selectedRun.id },
             {
               onSuccess: () => {
-                trackCourseEnrolled(course.title)
+                analytics.courseEnrolled(course.title)
                 router.push(
                   enrollmentAlertSuccessUrl({
                     title: course.title ?? "your enrollment",

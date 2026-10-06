@@ -56,7 +56,7 @@ import { useAppSearchParams } from "@/common/useAppSearchParams"
 import { PostHogEvents } from "@/common/constants"
 import { ResourceTypeGroupTabs } from "./ResourceTypeGroupTabs"
 import ProfessionalToggle from "./ProfessionalToggle"
-import { trackFilterCourseCatalog } from "@/common/analytics/gtm"
+import { analytics } from "@/common/analytics"
 import SliderInput from "./SliderInput"
 import VectorAdminOptions from "./VectorAdminOptions"
 import { AdminTitleContainer, ExplanationContainer } from "./adminStyles"
@@ -724,7 +724,7 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
     actuallyToggleParamValue(name, rawValue, checked)
     captureFilterEvent(name)
     if (checked)
-      trackFilterCourseCatalog({ filterName: name, filterValue: rawValue })
+      analytics.catalogFiltered({ filterName: name, filterValue: rawValue })
   }
 
   // Kept in the list rather than removed, so a sortby that arrives in the URL

@@ -22,10 +22,7 @@ import HowYoullLearnSection from "./HowYoullLearnSection"
 import { DEFAULT_RESOURCE_IMG } from "ol-utilities"
 import CourseInfoBox from "./InfoBoxCourse"
 import CourseOutlineSection from "./CourseOutlineSection"
-import {
-  trackViewCoursePage,
-  trackCourseProgramView,
-} from "@/common/analytics/gtm"
+import { analytics } from "@/common/analytics"
 import HeaderEnrollButton from "./HeaderEnrollButton"
 import { useCourseEnrollment } from "./useCourseEnrollment"
 import { getSelectedRun } from "./courseRun"
@@ -93,8 +90,8 @@ const CoursePage: React.FC<CoursePageProps> = ({ readableId }) => {
   const [selectedRunId, setSelectedRunId] = React.useState<number | null>(null)
   useEffect(() => {
     if (!course) return
-    trackViewCoursePage(course.title)
-    trackCourseProgramView({ name: course.title, id: course.readable_id })
+    analytics.coursePageViewed(course.title)
+    analytics.courseProgramViewed({ name: course.title, id: course.readable_id })
   }, [course])
 
   const doneLoading = pages.isSuccess && courses.isSuccess
