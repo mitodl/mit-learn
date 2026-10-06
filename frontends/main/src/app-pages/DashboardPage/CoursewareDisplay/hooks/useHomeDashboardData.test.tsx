@@ -5,7 +5,6 @@ import { makeBrowserQueryClient } from "@/app/getQueryClient"
 import * as mitxonline from "api/mitxonline-test-utils"
 import { useHomeDashboardData } from "./useHomeDashboardData"
 import { setupEnrollments } from "../test-utils"
-import { makeRequest } from "api/test-utils"
 
 const wrapper = ({ children }: { children: React.ReactNode }) => {
   const queryClient = makeBrowserQueryClient({ maxRetries: 0 })
@@ -29,7 +28,7 @@ describe("useHomeDashboardData", () => {
     setMockResponse.get(mitxonline.urls.userMe.get(), mitxOnlineUser)
     const { enrollments, expired } = setupEnrollments(true)
     setMockResponse.get(
-      mitxonline.urls.enrollment.enrollmentsListV3({ exclude_b2b: true }),
+      mitxonline.urls.enrollment.enrollmentsListV3(),
       enrollments,
     )
     setMockResponse.get(
@@ -65,41 +64,6 @@ describe("useHomeDashboardData", () => {
     ).toBe(true)
   })
 
-  test("asks the API to leave out enrollments in contract runs", async () => {
-    // A contract run can have a blank b2b_contract (staff-enrolled only), so
-    // its enrollments arrive with b2b_contract_id null; the API filters them
-    // on the run's contract list instead.
-    setMockResponse.get(
-      mitxonline.urls.userMe.get(),
-      mitxonline.factories.user.user(),
-    )
-    setMockResponse.get(
-      mitxonline.urls.enrollment.enrollmentsListV3({ exclude_b2b: true }),
-      [],
-    )
-    setMockResponse.get(
-      mitxonline.urls.programEnrollments.enrollmentsListV3(),
-      [],
-    )
-
-    const { result } = renderUseHomeDashboardData()
-    await waitFor(() => expect(result.current.isLoading).toBe(false))
-
-    expect(makeRequest).toHaveBeenCalledWith(
-      expect.objectContaining({
-        method: "get",
-        url: mitxonline.urls.enrollment.enrollmentsListV3({
-          exclude_b2b: true,
-        }),
-      }),
-    )
-    expect(makeRequest).not.toHaveBeenCalledWith(
-      expect.objectContaining({
-        url: mitxonline.urls.enrollment.enrollmentsListV3(),
-      }),
-    )
-  })
-
   test("excludes B2B course enrollments from the card list and enrollmentsByCourseId lookup", async () => {
     const mitxOnlineUser = mitxonline.factories.user.user()
     setMockResponse.get(mitxonline.urls.userMe.get(), mitxOnlineUser)
@@ -110,10 +74,10 @@ describe("useHomeDashboardData", () => {
     const personalEnrollment = mitxonline.factories.enrollment.courseEnrollment(
       { b2b_contract_id: null },
     )
-    setMockResponse.get(
-      mitxonline.urls.enrollment.enrollmentsListV3({ exclude_b2b: true }),
-      [b2bEnrollment, personalEnrollment],
-    )
+    setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV3(), [
+      b2bEnrollment,
+      personalEnrollment,
+    ])
     setMockResponse.get(
       mitxonline.urls.programEnrollments.enrollmentsListV3(),
       [],
@@ -146,10 +110,9 @@ describe("useHomeDashboardData", () => {
     const enrollment = mitxonline.factories.enrollment.courseEnrollment({
       b2b_contract_id: null,
     })
-    setMockResponse.get(
-      mitxonline.urls.enrollment.enrollmentsListV3({ exclude_b2b: true }),
-      [enrollment],
-    )
+    setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV3(), [
+      enrollment,
+    ])
     setMockResponse.get(
       mitxonline.urls.programEnrollments.enrollmentsListV3(),
       [],
@@ -167,10 +130,7 @@ describe("useHomeDashboardData", () => {
   test("reports loading until queries resolve", async () => {
     const mitxOnlineUser = mitxonline.factories.user.user()
     setMockResponse.get(mitxonline.urls.userMe.get(), mitxOnlineUser)
-    setMockResponse.get(
-      mitxonline.urls.enrollment.enrollmentsListV3({ exclude_b2b: true }),
-      [],
-    )
+    setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV3(), [])
     setMockResponse.get(
       mitxonline.urls.programEnrollments.enrollmentsListV3(),
       [],
@@ -211,10 +171,10 @@ describe("useHomeDashboardData", () => {
       certificate: null,
       grades: [],
     })
-    setMockResponse.get(
-      mitxonline.urls.enrollment.enrollmentsListV3({ exclude_b2b: true }),
-      [enrollmentA, enrollmentB],
-    )
+    setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV3(), [
+      enrollmentA,
+      enrollmentB,
+    ])
     setMockResponse.get(
       mitxonline.urls.programEnrollments.enrollmentsListV3(),
       [],
@@ -256,10 +216,10 @@ describe("useHomeDashboardData", () => {
       certificate: null,
       grades: [],
     })
-    setMockResponse.get(
-      mitxonline.urls.enrollment.enrollmentsListV3({ exclude_b2b: true }),
-      [englishEnrollment, germanEnrollment],
-    )
+    setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV3(), [
+      englishEnrollment,
+      germanEnrollment,
+    ])
     setMockResponse.get(
       mitxonline.urls.programEnrollments.enrollmentsListV3(),
       [],
@@ -291,10 +251,10 @@ describe("useHomeDashboardData", () => {
       certificate: null,
       grades: [],
     })
-    setMockResponse.get(
-      mitxonline.urls.enrollment.enrollmentsListV3({ exclude_b2b: true }),
-      [enrollmentA, enrollmentB],
-    )
+    setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV3(), [
+      enrollmentA,
+      enrollmentB,
+    ])
     setMockResponse.get(
       mitxonline.urls.programEnrollments.enrollmentsListV3(),
       [],
@@ -340,10 +300,7 @@ describe("useHomeDashboardData", () => {
       ],
     }
 
-    setMockResponse.get(
-      mitxonline.urls.enrollment.enrollmentsListV3({ exclude_b2b: true }),
-      [],
-    )
+    setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV3(), [])
     setMockResponse.get(
       mitxonline.urls.programEnrollments.enrollmentsListV3(),
       [programAsCourseEnrollment],

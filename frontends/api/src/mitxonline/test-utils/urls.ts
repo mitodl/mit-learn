@@ -29,8 +29,7 @@ const enrollment = {
     `${getApiBaseUrl()}/api/v1/enrollments/${id ? `${id}/` : ""}`,
   enrollmentsListV1: () => `${getApiBaseUrl()}/api/v1/enrollments/`,
   enrollmentsListV2: () => `${getApiBaseUrl()}/api/v2/enrollments/`,
-  enrollmentsListV3: (opts?: { exclude_b2b?: boolean }) =>
-    `${getApiBaseUrl()}/api/v3/enrollments/${opts?.exclude_b2b ? "?exclude_b2b=true" : ""}`,
+  enrollmentsListV3: () => `${getApiBaseUrl()}/api/v3/enrollments/`,
 }
 
 const programEnrollments = {

@@ -90,10 +90,7 @@ describe("HomeContent", () => {
     setMockResponse.get(urls.userMe.get(), user)
     setMockResponse.get(mitxonline.urls.userMe.get(), mitxOnlineUser)
     setMockResponse.get(urls.profileMe.get(), user.profile)
-    setMockResponse.get(
-      mitxonline.urls.enrollment.enrollmentsListV3({ exclude_b2b: true }),
-      [],
-    )
+    setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV3(), [])
 
     // Set Top Picks Response
     setSearchResponse(
@@ -215,7 +212,7 @@ describe("HomeContent", () => {
       }),
     )
     setMockResponse.get(
-      mitxonline.urls.enrollment.enrollmentsListV3({ exclude_b2b: true }),
+      mitxonline.urls.enrollment.enrollmentsListV3(),
       enrollments,
     )
 

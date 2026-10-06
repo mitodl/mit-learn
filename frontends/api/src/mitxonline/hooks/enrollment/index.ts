@@ -11,7 +11,6 @@ import {
   B2bApiB2bEnrollCreateRequest,
   EnrollmentsApiEnrollmentsPartialUpdateRequest,
   CourseRunEnrollmentRequest,
-  CourseRunEnrollmentV3,
   ProgramEnrollmentsApiV3ProgramEnrollmentsCreateRequest,
   VerifiedProgramEnrollmentsApiVerifiedProgramEnrollmentsCreateRequest,
 } from "@mitodl/mitxonline-api-axios/v2"
@@ -70,8 +69,8 @@ const useDestroyEnrollment = ({ meta }: MutationHookOptions = {}) => {
     mutationFn: (enrollmentId: number) =>
       courseRunEnrollmentsApi.enrollmentsDestroy({ id: enrollmentId }),
     onSuccess: (_data, enrollmentId) => {
-      queryClient.setQueriesData<CourseRunEnrollmentV3[]>(
-        { queryKey: enrollmentKeys.courseRunEnrollmentsList() },
+      queryClient.setQueryData(
+        enrollmentQueries.courseRunEnrollmentsList().queryKey,
         (data) => data?.filter((enrollment) => enrollment.id !== enrollmentId),
       )
     },

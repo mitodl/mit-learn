@@ -56,7 +56,7 @@ describe("HomeEnrollmentsDisplay", () => {
 
     mockedUseFeatureFlagEnabled.mockReturnValue(true)
     setMockResponse.get(
-      mitxonline.urls.enrollment.enrollmentsListV3({ exclude_b2b: true }),
+      mitxonline.urls.enrollment.enrollmentsListV3(),
       enrollments,
     )
     setMockResponse.get(
@@ -136,10 +136,10 @@ describe("HomeEnrollmentsDisplay", () => {
       grades: [],
     })
 
-    setMockResponse.get(
-      mitxonline.urls.enrollment.enrollmentsListV3({ exclude_b2b: true }),
-      [enrollmentA, enrollmentB],
-    )
+    setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV3(), [
+      enrollmentA,
+      enrollmentB,
+    ])
     setMockResponse.get(
       mitxonline.urls.programEnrollments.enrollmentsListV3(),
       [],
@@ -181,10 +181,10 @@ describe("HomeEnrollmentsDisplay", () => {
       grades: [],
     })
 
-    setMockResponse.get(
-      mitxonline.urls.enrollment.enrollmentsListV3({ exclude_b2b: true }),
-      [enrollmentA, enrollmentB],
-    )
+    setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV3(), [
+      enrollmentA,
+      enrollmentB,
+    ])
     setMockResponse.get(
       mitxonline.urls.programEnrollments.enrollmentsListV3(),
       [],
@@ -268,10 +268,7 @@ describe("HomeEnrollmentsDisplay", () => {
       })
 
     mockedUseFeatureFlagEnabled.mockReturnValue(true)
-    setMockResponse.get(
-      mitxonline.urls.enrollment.enrollmentsListV3({ exclude_b2b: true }),
-      [],
-    )
+    setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV3(), [])
     setMockResponse.get(
       mitxonline.urls.programEnrollments.enrollmentsListV3(),
       [programEnrollment],
@@ -358,10 +355,7 @@ describe("HomeEnrollmentsDisplay", () => {
     }
 
     mockedUseFeatureFlagEnabled.mockReturnValue(true)
-    setMockResponse.get(
-      mitxonline.urls.enrollment.enrollmentsListV3({ exclude_b2b: true }),
-      [],
-    )
+    setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV3(), [])
     setMockResponse.get(
       mitxonline.urls.programEnrollments.enrollmentsListV3(),
       [programAsCourseEnrollment],
@@ -447,10 +441,10 @@ describe("HomeEnrollmentsDisplay", () => {
     })
 
     mockedUseFeatureFlagEnabled.mockReturnValue(true)
-    setMockResponse.get(
-      mitxonline.urls.enrollment.enrollmentsListV3({ exclude_b2b: true }),
-      [coveredEnrollment, uncoveredEnrollment],
-    )
+    setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV3(), [
+      coveredEnrollment,
+      uncoveredEnrollment,
+    ])
     setMockResponse.get(
       mitxonline.urls.programEnrollments.enrollmentsListV3(),
       [programEnrollment],
@@ -554,10 +548,11 @@ describe("HomeEnrollmentsDisplay", () => {
     })
 
     mockedUseFeatureFlagEnabled.mockReturnValue(true)
-    setMockResponse.get(
-      mitxonline.urls.enrollment.enrollmentsListV3({ exclude_b2b: true }),
-      [coveredEnrollment, visibleEnrollment, ...expiredEnrollments],
-    )
+    setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV3(), [
+      coveredEnrollment,
+      visibleEnrollment,
+      ...expiredEnrollments,
+    ])
     setMockResponse.get(
       mitxonline.urls.programEnrollments.enrollmentsListV3(),
       [programEnrollment],
@@ -607,10 +602,9 @@ describe("HomeEnrollmentsDisplay", () => {
       mitxonline.factories.enrollment.programEnrollmentV3()
 
     mockedUseFeatureFlagEnabled.mockReturnValue(true)
-    setMockResponse.get(
-      mitxonline.urls.enrollment.enrollmentsListV3({ exclude_b2b: true }),
-      [courseEnrollment],
-    )
+    setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV3(), [
+      courseEnrollment,
+    ])
     setMockResponse.get(
       mitxonline.urls.programEnrollments.enrollmentsListV3(),
       [programEnrollment],
@@ -655,10 +649,7 @@ describe("HomeEnrollmentsDisplay", () => {
     setMockResponse.get(mitxonline.urls.userMe.get(), mitxOnlineUser)
 
     mockedUseFeatureFlagEnabled.mockReturnValue(true)
-    setMockResponse.get(
-      mitxonline.urls.enrollment.enrollmentsListV3({ exclude_b2b: true }),
-      [],
-    )
+    setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV3(), [])
     setMockResponse.get(
       mitxonline.urls.programEnrollments.enrollmentsListV3(),
       [],
@@ -692,10 +683,7 @@ describe("HomeEnrollmentsDisplay", () => {
       })
 
     mockedUseFeatureFlagEnabled.mockReturnValue(true)
-    setMockResponse.get(
-      mitxonline.urls.enrollment.enrollmentsListV3({ exclude_b2b: true }),
-      [],
-    )
+    setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV3(), [])
     setMockResponse.get(
       mitxonline.urls.programEnrollments.enrollmentsListV3(),
       [programEnrollment],
@@ -743,10 +731,9 @@ describe("HomeEnrollmentsDisplay", () => {
     })
 
     mockedUseFeatureFlagEnabled.mockReturnValue(true)
-    setMockResponse.get(
-      mitxonline.urls.enrollment.enrollmentsListV3({ exclude_b2b: true }),
-      [expiredEnrollment],
-    )
+    setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV3(), [
+      expiredEnrollment,
+    ])
     setMockResponse.get(
       mitxonline.urls.programEnrollments.enrollmentsListV3(),
       [],
@@ -786,7 +773,7 @@ describe("HomeEnrollmentsDisplay", () => {
 
     mockedUseFeatureFlagEnabled.mockReturnValue(true)
     setMockResponse.get(
-      mitxonline.urls.enrollment.enrollmentsListV3({ exclude_b2b: true }),
+      mitxonline.urls.enrollment.enrollmentsListV3(),
       expiredEnrollments,
     )
     setMockResponse.get(
@@ -847,10 +834,10 @@ describe("HomeEnrollmentsDisplay", () => {
     ]
 
     mockedUseFeatureFlagEnabled.mockReturnValue(true)
-    setMockResponse.get(
-      mitxonline.urls.enrollment.enrollmentsListV3({ exclude_b2b: true }),
-      [startedEnrollment, ...expiredEnrollments],
-    )
+    setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV3(), [
+      startedEnrollment,
+      ...expiredEnrollments,
+    ])
     setMockResponse.get(
       mitxonline.urls.programEnrollments.enrollmentsListV3(),
       [],
@@ -909,10 +896,7 @@ describe("HomeEnrollmentsDisplay", () => {
     setMockResponse.get(mitxonline.urls.userMe.get(), mitxOnlineUser)
 
     mockedUseFeatureFlagEnabled.mockReturnValue(true)
-    setMockResponse.get(
-      mitxonline.urls.enrollment.enrollmentsListV3({ exclude_b2b: true }),
-      [],
-    )
+    setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV3(), [])
     setMockResponse.get(
       mitxonline.urls.programEnrollments.enrollmentsListV3(),
       [b2bProgramEnrollment, nonB2BProgramEnrollment],
@@ -967,10 +951,10 @@ describe("HomeEnrollmentsDisplay", () => {
       },
     })
 
-    setMockResponse.get(
-      mitxonline.urls.enrollment.enrollmentsListV3({ exclude_b2b: true }),
-      [b2bEnrollment, nonB2BEnrollment],
-    )
+    setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV3(), [
+      b2bEnrollment,
+      nonB2BEnrollment,
+    ])
     setMockResponse.get(
       mitxonline.urls.programEnrollments.enrollmentsListV3(),
       [],
@@ -1020,10 +1004,7 @@ describe("HomeEnrollmentsDisplay", () => {
     })
 
     mockedUseFeatureFlagEnabled.mockReturnValue(true)
-    setMockResponse.get(
-      mitxonline.urls.enrollment.enrollmentsListV3({ exclude_b2b: true }),
-      [],
-    )
+    setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV3(), [])
     setMockResponse.get(
       mitxonline.urls.programEnrollments.enrollmentsListV3(),
       [parentProgramEnrollment, childProgramEnrollment],

@@ -48,9 +48,7 @@ export type HomeDashboardData = {
  */
 const useHomeDashboardData = (): HomeDashboardData => {
   const { data: enrolledCourses, isLoading: courseEnrollmentsLoading } =
-    // A contract run's b2b_contract can be blank (staff-enrolled only), so
-    // b2b_contract_id alone can't tell home which enrollments are contract ones.
-    useQuery(enrollmentQueries.courseRunEnrollmentsList({ exclude_b2b: true }))
+    useQuery(enrollmentQueries.courseRunEnrollmentsList())
   const { data: contracts, isLoading: contractsLoading } = useQuery({
     ...mitxUserQueries.me(),
     select: (user) => user.b2b_organizations.flatMap((org) => org.contracts),
