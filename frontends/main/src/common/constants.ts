@@ -5,6 +5,7 @@ export const PostHogEvents = {
   EnrollCtaClicked: "enroll_cta_clicked",
   CourseCardClicked: "course_card_clicked",
   AskTimClicked: "asktim_clicked",
+  SearchAiOverviewDismissed: "search_ai_overview_dismissed",
   LearningResourceDrawerOpen: "lrd_open",
   LearningResourceDrawerView: "lrd_view",
   HeroBrowseTopics: "clicked_hero_browse_topics",
