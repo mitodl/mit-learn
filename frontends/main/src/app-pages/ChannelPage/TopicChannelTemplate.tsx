@@ -49,6 +49,9 @@ const BannerSkeleton = styled(Skeleton)(({ theme }) => ({
  */
 const HERO_FADE_END = "min(404px, 100%)"
 
+/** Softens the photograph band's own left edge -- see `HeroPhoto`. */
+const HERO_PHOTO_EDGE_FADE = "linear-gradient(90deg, transparent 0%, #000 18%)"
+
 /**
  * The hero, per the topic page design.
  *
@@ -74,20 +77,25 @@ const TopicHero = styled.section(({ theme }) => ({
  *
  * Giving the photograph its own band as deep as the wash is what frees the
  * crop, and it is also what keeps the scrim fading rather than concealing:
- * covering a band has no edges inside it at any viewport, and the one edge it
- * does have, along the bottom, is at the exact depth the wash finishes.
+ * covering a band has no edges inside it at any viewport, and the edge along
+ * its bottom is at the exact depth the wash finishes.
  *
- * Sizing the photograph to a share of the hero instead -- as the design's own
- * 76%-wide placement does -- leaves edges that move with the viewport while
- * the gradients that would have to hide them do not. At the design's width
- * they coincide; at any other the photograph stops short of the wash and
- * shows a seam.
+ * The band stops short of the left edge, which is what sets the scale: the
+ * design draws the photograph three quarters of the hero wide, and covering
+ * the full width instead renders it a third larger than that.
+ *
+ * That leaves one edge the wash cannot be relied on to cover. The wash comes
+ * in at a slight angle, so the depth at which it reaches white is not a
+ * single column: across the band it ranges over about five percent of the
+ * width, and at the top it falls short of the band's edge. Rather than give
+ * up the scale to chase it, the band fades its own left edge out, which holds
+ * whatever the wash is doing behind it.
  */
 const HeroPhoto = styled.div<{ backgroundUrl: string }>(
   ({ backgroundUrl }) => ({
     position: "absolute",
     top: 0,
-    left: 0,
+    left: "24%",
     right: 0,
     height: HERO_FADE_END,
     pointerEvents: "none",
@@ -95,7 +103,9 @@ const HeroPhoto = styled.div<{ backgroundUrl: string }>(
     backgroundSize: "cover",
     /* Anchored right so the walking figure stays at the edge of the page, and
      low, which is the part of the frame the design uses. */
-    backgroundPosition: "right 85%",
+    backgroundPosition: "right 97%",
+    maskImage: HERO_PHOTO_EDGE_FADE,
+    WebkitMaskImage: HERO_PHOTO_EDGE_FADE,
     backgroundRepeat: "no-repeat",
   }),
 )
@@ -202,7 +212,7 @@ const HeroInner = styled.div(({ theme }) => ({
  * Held to 736px, as the design has it: the description is a paragraph to read,
  * and the full container width would run it to an uncomfortable measure.
  */
-const BannerArea = styled.div({
+const BannerArea = styled.div(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
   gap: "16px",
@@ -225,7 +235,19 @@ const BannerArea = styled.div({
   "> span": {
     paddingBottom: 0,
   },
-})
+  /**
+   * The design greys the last step of the trail and sets it in the regular
+   * weight. Breadcrumbs does that only for a step with nowhere to go; this
+   * one leads to the parent topic, and the link is worth keeping, so it is
+   * styled to match rather than flattened into plain text.
+   */
+  "> span > span:last-of-type": {
+    "&, a, a:hover": {
+      ...theme.typography.body3,
+      color: theme.custom.colors.silverGrayDark,
+    },
+  },
+}))
 
 const TitleBlock = styled.div({
   display: "flex",
@@ -267,6 +289,7 @@ const TopicTitle = styled.h1(({ theme }) => ({
 const TopicDescription = styled(Typography)(({ theme }) => ({
   color: theme.custom.colors.darkGray2,
   lineHeight: "26px",
+  width: "90%",
 }))
 
 /**
