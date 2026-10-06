@@ -3988,6 +3988,17 @@ def test_load_documents(mocker, climate_platform, mock_get_similar_topics_qdrant
     unpublished_article = LearningResourceFactory.create(
         resource_type=LearningResourceType.document.name,
         etl_source=ETLSource.mit_climate.name,
+        published=True,
+    )
+    already_unpublished_article = LearningResourceFactory.create(
+        resource_type=LearningResourceType.document.name,
+        etl_source=ETLSource.mit_climate.name,
+        published=False,
+    )
+    other_source_article = LearningResourceFactory.create(
+        resource_type=LearningResourceType.document.name,
+        etl_source=ETLSource.oll.name,
+        published=True,
     )
     mock_bulk_unpublish = mocker.patch(
         "learning_resources.etl.loaders.bulk_resources_unpublished_actions",
@@ -3996,12 +4007,19 @@ def test_load_documents(mocker, climate_platform, mock_get_similar_topics_qdrant
     result = loaders.load_documents(ETLSource.mit_climate.name, documents_data)
 
     assert result[0].title == documents_data[0]["title"]
+    assert result[0].published is True
 
-    # Ensure unpublished documents are handled
-    assert mock_bulk_unpublish.mock_calls[0].args[0][0] == unpublished_article.id
-    assert (
-        mock_bulk_unpublish.mock_calls[0].args[1] == LearningResourceType.document.name
+    # a document missing from the batch is unpublished in the database as well
+    # as handed to the unpublish actions, which only remove it from search
+    mock_bulk_unpublish.assert_called_once_with(
+        [unpublished_article.id], LearningResourceType.document.name
     )
+    unpublished_article.refresh_from_db()
+    assert unpublished_article.published is False
+    already_unpublished_article.refresh_from_db()
+    assert already_unpublished_article.published is False
+    other_source_article.refresh_from_db()
+    assert other_source_article.published is True
 
 
 @pytest.mark.django_db
