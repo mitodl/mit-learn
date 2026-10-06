@@ -2581,6 +2581,7 @@ YOUTUBE_OWNED = pytest.param(
 PODCAST_OWNED = pytest.param(
     (ETLSource.podcast.name, ["podcast", "podcast_episode"]), id="podcast"
 )
+XPRO_OWNED = pytest.param((ETLSource.xpro.name, ["course", "program"]), id="xpro")
 
 
 @pytest.mark.parametrize("warehouse_owns", [YOUTUBE_OWNED], indirect=True)
@@ -2737,3 +2738,56 @@ def test_media_sync_tasks_pass_on_allow_mass_unpublish(
     getattr(tasks, task).apply(kwargs=kwargs).get()
 
     assert mock_sync.call_args.kwargs == {"allow_mass_unpublish": allow}
+
+
+@pytest.mark.parametrize("warehouse_owns", [XPRO_OWNED], indirect=True)
+@pytest.mark.parametrize(
+    ("task", "sync", "views"),
+    [
+        (
+            "SyncXproCoursesTask",
+            "sync_courses",
+            ["integrations__learn__xpro_courses", "integrations__learn__xpro_runs"],
+        ),
+        (
+            "SyncXproProgramsTask",
+            "sync_programs",
+            ["integrations__learn__xpro_programs", "integrations__learn__xpro_courses"],
+        ),
+    ],
+)
+@pytest.mark.parametrize("allow", [True, False])
+def test_xpro_sync_tasks_read_their_views(  # noqa: PLR0913
+    mocker, warehouse_owns, task, sync, views, allow
+):
+    """Each xPRO sync task reads its two views in full and passes on the unpublish override"""
+    mocker.patch("learning_resources.lib.warehouse.connect_to_warehouse")
+    rows = {view: [{"readable_id": view}] for view in views}
+    mock_iter_rows = mocker.patch(
+        "learning_resources.tasks.iter_rows",
+        side_effect=lambda _conn, view: iter(rows[view.rsplit(".", 1)[1]]),
+    )
+    mock_sync = mocker.patch(
+        f"learning_resources.tasks.warehouse_xpro.{sync}", return_value=1
+    )
+
+    kwargs = {"allow_mass_unpublish": True} if allow else {}
+    assert getattr(tasks, task).apply(kwargs=kwargs).get() == 1
+
+    assert mock_iter_rows.call_count == 2
+    mock_sync.assert_called_once_with(
+        *(rows[view] for view in views), allow_mass_unpublish=allow
+    )
+
+
+@pytest.mark.parametrize("task", ["SyncXproCoursesTask", "SyncXproProgramsTask"])
+def test_xpro_sync_tasks_read_nothing_they_do_not_own(mocker, task):
+    """Until the ownership row is flipped a run neither connects to the warehouse nor writes"""
+    mock_connect = mocker.patch("learning_resources.lib.warehouse.connect_to_warehouse")
+    mock_iter_rows = mocker.patch("learning_resources.tasks.iter_rows")
+
+    assert getattr(tasks, task).run() == 0
+
+    mock_connect.assert_not_called()
+    mock_iter_rows.assert_not_called()
+    assert not LearningResource.objects.exists()
