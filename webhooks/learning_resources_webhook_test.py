@@ -13,7 +13,7 @@ from learning_resources.etl.constants import (
 )
 from learning_resources.etl.ownership import current_pipeline
 from learning_resources.factories import ETLSourceOwnershipFactory, ProgramFactory
-from learning_resources.models import ETLSourceOwnership
+from learning_resources.models import ETLSourceOwnership, LearningResource
 
 WEBHOOK_URL_NAME = "webhooks:v1:learning_resources_webhook"
 
@@ -145,22 +145,16 @@ def test_programs_fetch_existing_child_courses(settings, client, mocker):
 
 
 @pytest.mark.django_db
-def test_videos_and_podcasts_routed(settings, client, mocker):
-    """Video and podcast resources reach load_videos / load_podcasts."""
+def test_videos_routed_and_podcasts_skipped(settings, client, mocker):
+    """Video resources reach load_videos; podcasts have no route and are skipped."""
     mocker.patch("webhooks.views.clear_views_cache")
     mock_load_videos = mocker.patch("webhooks.views.load_videos", return_value=[])
-    mock_load_podcasts = mocker.patch(
-        "webhooks.views.load_podcasts", autospec=True, return_value=[]
-    )
 
     payload = {
         "resources": [
             _resource("v1", ETLSource.youtube.name, LearningResourceType.video.name),
             _resource(
                 "pod1", ETLSource.podcast.name, LearningResourceType.podcast.name
-            ),
-            _resource(
-                "pod2", ETLSource.podcast.name, LearningResourceType.podcast.name
             ),
         ]
     }
@@ -169,11 +163,7 @@ def test_videos_and_podcasts_routed(settings, client, mocker):
     assert response.status_code == 200
     mock_load_videos.assert_called_once()
     assert [r["readable_id"] for r in mock_load_videos.call_args.args[0]] == ["v1"]
-    mock_load_podcasts.assert_called_once()
-    podcasts_arg, tracked_ids_arg = mock_load_podcasts.call_args.args
-    assert [r["readable_id"] for r in podcasts_arg] == ["pod1", "pod2"]
-    # the batch is the authoritative podcast set, so it doubles as tracked_ids
-    assert tracked_ids_arg == ["pod1", "pod2"]
+    assert not LearningResource.objects.filter(readable_id="pod1").exists()
 
 
 @pytest.mark.django_db
@@ -211,7 +201,6 @@ def test_unsupported_resource_type_skipped(settings, client, mocker):
     mock_load_programs = mocker.patch("webhooks.views.load_programs", return_value=[])
     mock_load_documents = mocker.patch("webhooks.views.load_documents", return_value=[])
     mock_load_videos = mocker.patch("webhooks.views.load_videos", return_value=[])
-    mock_load_podcasts = mocker.patch("webhooks.views.load_podcasts", return_value=[])
 
     payload = {
         "resources": [
@@ -226,7 +215,6 @@ def test_unsupported_resource_type_skipped(settings, client, mocker):
     mock_load_programs.assert_not_called()
     mock_load_documents.assert_not_called()
     mock_load_videos.assert_not_called()
-    mock_load_podcasts.assert_not_called()
 
 
 @pytest.mark.django_db
@@ -335,7 +323,7 @@ def test_sync_only_batch_unpublishes_the_pair(settings, client, mocker):
 @pytest.mark.django_db
 @pytest.mark.parametrize(
     "resource_type",
-    [LearningResourceType.video.name, LearningResourceType.podcast.name, "article"],
+    [LearningResourceType.video.name, "article"],
 )
 def test_sync_rejects_types_that_cannot_be_pruned(
     settings, client, mocker, resource_type
@@ -393,30 +381,21 @@ def test_invalid_json_returns_400(settings, client):
     [
         (ETLSourceOwnership.Pipeline.LEGACY, LearningResourceType.course.name),
         (ETLSourceOwnership.Pipeline.WAREHOUSE, LearningResourceType.course.name),
-        # A podcast group writes episodes too, so losing either type rejects it.
-        (ETLSourceOwnership.Pipeline.LEGACY, LearningResourceType.podcast.name),
-        (
-            ETLSourceOwnership.Pipeline.LEGACY,
-            LearningResourceType.podcast_episode.name,
-        ),
+        (ETLSourceOwnership.Pipeline.LEGACY, LearningResourceType.program.name),
     ],
 )
 def test_batch_rejected_when_webhook_does_not_own_a_group(
     settings, client, mocker, owner, resource_type
 ):
     """One group the webhook doesn't own rejects the whole batch with 409, unwritten."""
-    etl_source = (
-        ETLSource.mitpe.name
-        if resource_type == LearningResourceType.course.name
-        else ETLSource.podcast.name
-    )
+    etl_source = ETLSource.mitpe.name
     ETLSourceOwnership.objects.filter(
         etl_source=etl_source, resource_type=resource_type
     ).update(owner=owner)
     mock_clear = mocker.patch("webhooks.views.clear_views_cache")
     mock_load_courses = mocker.patch("webhooks.views.load_courses", return_value=[])
     mock_load_documents = mocker.patch("webhooks.views.load_documents", return_value=[])
-    mock_load_podcasts = mocker.patch("webhooks.views.load_podcasts", return_value=[])
+    mock_load_programs = mocker.patch("webhooks.views.load_programs", return_value=[])
 
     payload = {
         "resources": [
@@ -427,7 +406,7 @@ def test_batch_rejected_when_webhook_does_not_own_a_group(
                 "course-1", ETLSource.mitpe.name, LearningResourceType.course.name
             ),
             _resource(
-                "pod-1", ETLSource.podcast.name, LearningResourceType.podcast.name
+                "program-1", ETLSource.mitpe.name, LearningResourceType.program.name
             ),
         ]
     }
@@ -438,7 +417,7 @@ def test_batch_rejected_when_webhook_does_not_own_a_group(
     assert etl_source in response.json()["message"]
     mock_load_documents.assert_not_called()
     mock_load_courses.assert_not_called()
-    mock_load_podcasts.assert_not_called()
+    mock_load_programs.assert_not_called()
     mock_clear.assert_not_called()
 
 
@@ -501,11 +480,10 @@ def test_loaders_run_as_the_webhook_pipeline(settings, client, mocker):
 def test_descriptions_are_sanitized_before_loading(settings, client, mocker):
     """
     Scripts are stripped from the description of a resource and of its nested
-    runs and episodes, links survive, and titles are left alone.
+    runs, links survive, and titles are left alone.
     """
     mocker.patch("webhooks.views.clear_views_cache")
     mock_load_courses = mocker.patch("webhooks.views.load_courses", return_value=[])
-    mock_load_podcasts = mocker.patch("webhooks.views.load_podcasts", return_value=[])
     dirty = '<p>Notes <a href="https://example.com" onclick="x()">here</a></p><script>alert(1)</script>'
     clean = (
         '<p>Notes <a href="https://example.com" rel="noopener noreferrer">here</a></p>'
@@ -521,13 +499,6 @@ def test_descriptions_are_sanitized_before_loading(settings, client, mocker):
                 description=dirty,
                 runs=[{"run_id": "run-1", "description": dirty}],
             ),
-            _resource(
-                "pod-1",
-                ETLSource.podcast.name,
-                LearningResourceType.podcast.name,
-                description=dirty,
-                episodes=[{"readable_id": "ep-1", "description": dirty}],
-            ),
         ]
     }
     response = _post(client, settings, payload)
@@ -537,9 +508,6 @@ def test_descriptions_are_sanitized_before_loading(settings, client, mocker):
     assert course["description"] == clean
     assert course["runs"][0]["description"] == clean
     assert course["title"] == "R&D <Basics>"
-    (podcast,) = mock_load_podcasts.call_args.args[0]
-    assert podcast["description"] == clean
-    assert podcast["episodes"][0]["description"] == clean
 
 
 @pytest.mark.django_db

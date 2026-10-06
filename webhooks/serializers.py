@@ -136,7 +136,7 @@ class LearningResourceSyncPairSerializer(serializers.Serializer):
     """
     An (etl_source, resource_type) pair a learning_resources webhook batch is
     authoritative for. Only types whose loader prunes by source can be synced:
-    videos are never pruned and podcasts refuse an empty tracked set.
+    videos are never pruned.
     """
 
     etl_source = serializers.CharField()

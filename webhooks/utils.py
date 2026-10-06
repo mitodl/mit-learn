@@ -12,7 +12,7 @@ from main.utils import clean_data
 SIGNATURE_HEADER_NAME = "X-MITLearn-Signature"
 
 # Keys of a resource that hold a list of dicts with a description of their own.
-NESTED_DESCRIPTION_KEYS = ("runs", "episodes")
+NESTED_DESCRIPTION_KEYS = ("runs",)
 
 
 def validate_webhook_signature(request):
@@ -46,9 +46,9 @@ def _sanitize_description(item):
 
 def sanitize_learning_resources(resources):
     """
-    Sanitize the HTML descriptions of webhook resources, and of the runs and
-    episodes nested in them, with the allowlist the podcast ETL uses, which
-    keeps links. Titles are plain text and are not touched: nh3 would escape
+    Sanitize the HTML descriptions of webhook resources, and of the runs
+    nested in them, with the allowlist the podcast ETL uses, which keeps
+    links. Titles are plain text and are not touched: nh3 would escape
     an ampersand in one.
     """
     for resource in resources:

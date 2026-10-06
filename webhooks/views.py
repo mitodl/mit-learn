@@ -23,7 +23,6 @@ from learning_resources.etl.loaders import (
     load_courses,
     load_documents,
     load_ovs_video_from_webhook,
-    load_podcasts,
     load_programs,
     load_videos,
 )
@@ -193,8 +192,7 @@ class LearningResourceWebhookView(BaseWebhookView):
     canonical LearningResource dict carrying at minimum ``readable_id``,
     ``etl_source`` and ``resource_type``. Resources are grouped by
     ``(etl_source, resource_type)`` and routed to the matching loader
-    (``load_courses`` / ``load_programs`` / ``load_documents`` / ``load_videos``
-    / ``load_podcasts``).
+    (``load_courses`` / ``load_programs`` / ``load_documents`` / ``load_videos``).
     Each loader performs a full sync for that source and upserts the OpenSearch
     index, so a batch must contain the authoritative set of resources for the
     (etl_source, resource_type) it represents. A pair listed in the optional
@@ -253,17 +251,13 @@ class LearningResourceWebhookView(BaseWebhookView):
         return self.success()
 
 
-# The resource types each supported group writes. A podcast group carries its
-# episodes inline, so the webhook must own both before it may load one.
-_WRITTEN_TYPES = {
-    LearningResourceType.course.name: [LearningResourceType.course.name],
-    LearningResourceType.program.name: [LearningResourceType.program.name],
-    LearningResourceType.document.name: [LearningResourceType.document.name],
-    LearningResourceType.video.name: [LearningResourceType.video.name],
-    LearningResourceType.podcast.name: [
-        LearningResourceType.podcast.name,
-        LearningResourceType.podcast_episode.name,
-    ],
+# The resource types _load_resource_group has a loader for. Podcasts are not
+# here: MIT Learn pulls them from the warehouse (SyncPodcastsTask).
+_SUPPORTED_TYPES = {
+    LearningResourceType.course.name,
+    LearningResourceType.program.name,
+    LearningResourceType.document.name,
+    LearningResourceType.video.name,
 }
 
 
@@ -298,12 +292,6 @@ def _load_resource_group(etl_source, resource_type, resources):
         return load_documents(etl_source, resources)
     if resource_type == LearningResourceType.video.name:
         return load_videos(resources)
-    if resource_type == LearningResourceType.podcast.name:
-        # The batch is the authoritative podcast set, so podcasts absent from
-        # it are the ones load_podcasts should stop tracking.
-        return load_podcasts(
-            resources, [resource["readable_id"] for resource in resources]
-        )
     return None
 
 
@@ -329,8 +317,8 @@ def unowned_groups(grouped):
     return [
         f"{etl_source}/{resource_type}"
         for etl_source, resource_type in grouped
-        if resource_type in _WRITTEN_TYPES
-        and not may_write(etl_source, _WRITTEN_TYPES[resource_type])
+        if resource_type in _SUPPORTED_TYPES
+        and not may_write(etl_source, resource_type)
     ]
 
 
