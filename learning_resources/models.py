@@ -843,7 +843,7 @@ class LearningResourceRun(TimestampedModel):
     full_description = models.TextField(null=True, blank=True)  # noqa: DJ001
     last_modified = models.DateTimeField(null=True, blank=True)
     published = models.BooleanField(default=True, db_index=True)
-    is_b2b = models.BooleanField(default=False, db_index=True)
+    b2b_only = models.BooleanField(default=False, db_default=False)
     is_variant = models.BooleanField(default=False, db_index=True)
     languages = ArrayField(models.CharField(max_length=24), null=True, blank=True)
     url = models.URLField(null=True, max_length=2048)  # noqa: DJ001
