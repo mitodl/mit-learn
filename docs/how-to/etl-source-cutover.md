@@ -34,8 +34,8 @@ Flip every resource type the source's legacy task writes, in one sitting. The le
 | `mitpe`       | `course`, `program`          | `update-professional-ed-resources-every-1-days` | webhook (`mitpe_schedule`)       |
 | `mit_climate` | `document`                   | `update-mit-climate-articles-every-1-days`      | webhook (`mit_climate_schedule`) |
 | `oll`         | `course`                     | none                                            | webhook (`oll_schedule`)         |
-| `podcast`     | `podcast`, `podcast_episode` | `update-podcasts`                               | webhook (`podcast_schedule`)     |
-| `youtube`     | `video_playlist`, `video`    | `update-youtube-videos`                         | webhook (not built)              |
+| `podcast`     | `podcast`, `podcast_episode` | `update-podcasts`                               | warehouse (`SyncPodcastsTask`)   |
+| `youtube`     | `video_playlist`, `video`    | `update-youtube-videos`                         | warehouse (`SyncYouTubeTask`)    |
 | `ovs`         | `video_playlist`, `video`    | `update-ovs-videos`                             | webhook (already pushing)        |
 | `see`         | `course`                     | `update_sloan_courses`                          | not built                        |
 | `canvas`      | `course`                     | `sync_canvas_courses-every-1-weeks`             | webhook (already pushing)        |
