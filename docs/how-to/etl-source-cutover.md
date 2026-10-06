@@ -15,9 +15,9 @@ This is the procedure for moving a source from one owner to another, checking it
 - No row means `legacy`. Nothing is seeded, so every source stays on the legacy ETL until someone creates a row.
 - Every pipeline stays scheduled. Each run checks ownership before it extracts anything and returns if it doesn't own the pair:
   - the legacy pipelines in `learning_resources/etl/pipelines.py` (and `get_youtube_data`, `sync_canvas_courses` and `get_ocw_data`, which have no pipeline function) log `Skipping legacy write for <source>: owned by <type>=<owner>` and make no call to the source;
-  - a warehouse task checks before it queries StarRocks;
+  - a warehouse task declares what it writes (`writes` on its `BaseWarehouseETLTask` subclass, required), and `run` returns 0 without connecting to StarRocks when the warehouse doesn't own it;
   - the webhook rejects the whole batch with `409` and writes nothing.
-- The loaders don't check. Code that calls `load_courses`, `load_programs`, `load_podcasts`, `load_documents` or `load_ovs_playlists` directly (a shell session, a new pipeline) has to call `may_write` itself first.
+- `load_courses`, `load_programs`, `load_podcasts`, `load_documents` and `load_ovs_playlists` check again as a backstop and return `[]` for a pair the caller doesn't own. Code that calls them directly (a shell session, a new pipeline) is the legacy pipeline unless it is inside `writing_as(...)`.
 - `ocw_courses_etl` is checked too. It loads a course and that course's content files together, so once `ocw`/`course` is not `legacy`, the ocw-studio webhook stops loading OCW content files as well.
 - Not checked: the OVS video webhook, Canvas content-file ingestion, the `import_all_*_files` content-file tasks, and the transcript jobs.
 
