@@ -225,6 +225,28 @@ const analyticsContractQueries = {
           .learnerProgress(orgId, contractId, params, signal)
           .then((res) => res.data),
     }),
+
+  /**
+   * The module filter's options. Kept on the shared five-minute
+   * `ANALYTICS_STALE_TIME` rather than `learnerProgress`'s shorter one: a
+   * contract's set of course runs changes when the contract does, not as
+   * learners move through it. Five minutes is still short enough that a
+   * consumer has to expect a mid-session refetch.
+   */
+  courseRuns: (orgId: string, contractId: string, page?: AnalyticsPageParams) =>
+    queryOptions({
+      queryKey: analyticsContractKeys.resource(
+        orgId,
+        contractId,
+        "course-runs",
+        page,
+      ),
+      staleTime: ANALYTICS_STALE_TIME,
+      queryFn: async ({ signal }) =>
+        analyticsContractsApi
+          .courseRuns(orgId, contractId, page, signal)
+          .then((res) => res.data),
+    }),
 }
 
 export {
