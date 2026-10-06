@@ -421,6 +421,12 @@ class TestSettings(TestCase):
             "warehouse-sync-youtube-every-1-days": (
                 "learning_resources.tasks.SyncYouTubeTask"
             ),
+            "warehouse-sync-xpro-courses-every-1-days": (
+                "learning_resources.tasks.SyncXproCoursesTask"
+            ),
+            "warehouse-sync-xpro-programs-every-1-days": (
+                "learning_resources.tasks.SyncXproProgramsTask"
+            ),
         }
         with mock.patch.dict("os.environ", REQUIRED_SETTINGS, clear=True):
             settings_vars = self.reload_settings(module="main.settings_celery")

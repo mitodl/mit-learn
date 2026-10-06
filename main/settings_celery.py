@@ -268,6 +268,17 @@ if (
                 "schedule": crontab(minute=30, hour=10),
                 "kwargs": {"full_refresh": True},
             },
+            # Programs look their courses up, so they follow the courses.
+            "warehouse-sync-xpro-courses-every-1-days": {
+                "task": "learning_resources.tasks.SyncXproCoursesTask",
+                "schedule": crontab(minute=0, hour=11),
+                "kwargs": {"full_refresh": True},
+            },
+            "warehouse-sync-xpro-programs-every-1-days": {
+                "task": "learning_resources.tasks.SyncXproProgramsTask",
+                "schedule": crontab(minute=30, hour=11),
+                "kwargs": {"full_refresh": True},
+            },
         }
     )
 
