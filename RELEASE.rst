@@ -1,6 +1,18 @@
 Release Notes
 =============
 
+Version 0.81.8
+--------------
+
+- feat(b2b): enable the Last activity column and the module filter (#4025)
+- Dismissable AskTim search summary (#4046)
+- default to ordering by popular on the tail end of searches without queries (#4048)
+- Ensure vector search does not return unpublished resources (#4040)
+- Redirect /universal-learning/ai to /organizational-learning (#4031)
+- Refresh uv.lock to clear pip-audit advisories (#4024)
+- Fix FAQ accordion content shift when a panel closes (#4029)
+- Keep deindexing after a not_found in an earlier batch (#3980)
+
 Version 0.81.6
 --------------
 
