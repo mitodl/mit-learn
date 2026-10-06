@@ -17,7 +17,7 @@ import { ChannelTypeEnum, TopicChannel } from "api/v0"
 import { useLearningResourceTopic } from "api/hooks/learningResources"
 import { backgroundSrcSetCSS } from "ol-utilities"
 import invariant from "tiny-invariant"
-import topicBannerDefault from "@/public/images/backgrounds/topic_banner_default.jpg"
+import topicBannerDefault from "@/public/images/backgrounds/bg-default-topics.jpg"
 import TopicFeaturedCarousel from "./TopicFeaturedCarousel"
 
 const ChildrenContainer = styled.div(({ theme }) => ({
@@ -36,37 +36,56 @@ const BannerSkeleton = styled(Skeleton)(({ theme }) => ({
  * The hero, per the topic page design.
  *
  * The image stays data-driven: the channel's own configured banner, falling
- * back to the design's artwork when a channel has none. A white wash over the
- * photo is what lifts the text off it and fades the section into the white
- * above the search area -- see `HeroScrim`, which supplies that wash for a
- * configured photo. The default artwork already carries it.
+ * back to the design's artwork when a channel has none. Either way it is a
+ * photograph, and `HeroScrim` is the white wash that makes it a backdrop.
+ *
+ * The vertical position is the design's crop. At the design's width the photo
+ * covers to roughly 1120px tall against a 304px band, and the band it draws
+ * sits about three quarters of the way down rather than centred.
  */
 const TopicHero = styled.section<{ backgroundUrl: string }>(
   ({ theme, backgroundUrl }) => ({
     position: "relative",
     backgroundImage: backgroundUrl,
     backgroundSize: "cover",
-    backgroundPosition: "center",
+    backgroundPosition: "50% 76%",
     backgroundColor: theme.custom.colors.white,
   }),
 )
 
 /**
- * The white wash over a channel's own photo, as its own layer rather than
- * extra values on the hero's `background-image`.
+ * The white wash over the photo, as its own layer rather than extra values on
+ * the hero's `background-image`.
  *
- * That is how the design builds it -- an image with a gradient over it -- and
- * it keeps the hero's own `background-image` to the single `url()` the channel
- * configured, which is what the page's tests look for. The angles and stops
- * are the design's.
+ * That is how the design builds it -- a photograph with two gradients over it
+ * -- and it keeps the hero's own `background-image` to the single `url()` the
+ * channel configured, which is what the page's tests look for.
+ *
+ * Both gradients start fully transparent, so the photograph reads at full
+ * strength where they have not yet closed over it: the first draws white in
+ * from the left, behind the text, and the second draws it down from the top,
+ * so the hero fades out rather than ending on an edge.
+ *
+ * The design draws this against a hero with nothing featured, 304px tall,
+ * where its 100% stop is both "the bottom" and "304px". Those come apart on
+ * any other hero, and in opposite directions: a hero carrying a Featured row
+ * is twice as tall, so a percentage would stretch the fade across the cards
+ * and leave them on open photograph; a hero whose channel has no description
+ * is shorter, so a fixed 304px would still be mid-fade at its bottom edge and
+ * meet the search area on a visible seam.
+ *
+ * Whichever comes first satisfies both: the fade is complete by 304px, or by
+ * the hero's own bottom if that arrives sooner.
  */
+const HERO_FADE_END = "min(304px, 100%)"
+
 const HeroScrim = styled.div({
   position: "absolute",
   inset: 0,
   pointerEvents: "none",
   backgroundImage: [
-    "linear-gradient(204.88deg, rgba(255, 255, 255, 0.2) 29.863%, rgb(255, 255, 255) 94.101%)",
-    "linear-gradient(180deg, rgba(255, 255, 255, 0.6) 0%, rgb(255, 255, 255) 53.125%)",
+    "linear-gradient(259.54deg, rgba(255, 255, 255, 0) 33.745%, rgb(255, 255, 255) 74.054%)",
+    `linear-gradient(180deg, rgba(255, 255, 255, 0) calc(${HERO_FADE_END} * 0.0489), rgb(255, 255, 255) ${HERO_FADE_END})`,
   ].join(", "),
 })
 
@@ -322,11 +341,7 @@ const TopicChannelTemplateInternal: React.FC<
             : backgroundSrcSetCSS(topicBannerDefault)
         }
       >
-        {/* The default artwork is the design's own composite, which carries
-            the white wash in its pixels already. Laying the scrim over it too
-            would wash it a second time, so the scrim is for a channel that
-            brings its own photo. */}
-        {configuredBanner ? <HeroScrim aria-hidden /> : null}
+        <HeroScrim aria-hidden />
         <HeroContent>
           <Container>
             <HeroInner>
