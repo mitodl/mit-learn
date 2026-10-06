@@ -39,16 +39,23 @@ const BannerSkeleton = styled(Skeleton)(({ theme }) => ({
  * back to the design's artwork when a channel has none. Either way it is a
  * photograph, and `HeroScrim` is the white wash that makes it a backdrop.
  *
- * The vertical position is the design's crop. At the design's width the photo
- * covers to roughly 1120px tall against a 304px band, and the band it draws
- * sits about three quarters of the way down rather than centred.
+ * The photograph is placed rather than stretched. The design sizes it to 76%
+ * of the hero's width against its right edge, leaving the left quarter clear
+ * for the text, and lifts it so the lower half of the frame is what shows.
+ * `cover` instead fills the hero edge to edge, which blows the photograph up
+ * and lands on the wrong part of it.
+ *
+ * The lift is a length rather than the design's percentage of its own 768px
+ * band, so the crop stays put as the hero grows and shrinks with a channel's
+ * description and Featured row.
  */
 const TopicHero = styled.section<{ backgroundUrl: string }>(
   ({ theme, backgroundUrl }) => ({
     position: "relative",
     backgroundImage: backgroundUrl,
-    backgroundSize: "cover",
-    backgroundPosition: "50% 76%",
+    backgroundSize: "76% auto",
+    backgroundPosition: "right 0 top -458px",
+    backgroundRepeat: "no-repeat",
     backgroundColor: theme.custom.colors.white,
   }),
 )
@@ -66,18 +73,19 @@ const TopicHero = styled.section<{ backgroundUrl: string }>(
  * from the left, behind the text, and the second draws it down from the top,
  * so the hero fades out rather than ending on an edge.
  *
- * The design draws this against a hero with nothing featured, 304px tall,
- * where its 100% stop is both "the bottom" and "304px". Those come apart on
- * any other hero, and in opposite directions: a hero carrying a Featured row
- * is twice as tall, so a percentage would stretch the fade across the cards
- * and leave them on open photograph; a hero whose channel has no description
- * is shorter, so a fixed 304px would still be mid-fade at its bottom edge and
- * meet the search area on a visible seam.
+ * The design states the fade's end twice, as a share of two different heroes:
+ * 52.617% of the 768px hero that carries a Featured row, and 100% of the
+ * 304px hero that has nothing to feature. Those are 404px and 304px -- so it
+ * is a distance, and the shorter hero only reads as "100%" because it ends
+ * before that distance is up.
  *
- * Whichever comes first satisfies both: the fade is complete by 304px, or by
- * the hero's own bottom if that arrives sooner.
+ * Taking whichever comes first reproduces both exactly, and holds for the
+ * heights in between as a channel's description and Featured row come and go.
+ * A percentage alone would stretch the fade across the cards on a tall hero;
+ * a length alone would still be mid-fade where a short one meets the search
+ * area below it.
  */
-const HERO_FADE_END = "min(304px, 100%)"
+const HERO_FADE_END = "min(404px, 100%)"
 
 const HeroScrim = styled.div({
   position: "absolute",
