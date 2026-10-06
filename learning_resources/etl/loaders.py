@@ -1709,13 +1709,21 @@ def load_documents(
             )
         else:
             document_resources.append(document_resource)
-    unpublished_documents = LearningResource.objects.filter(
-        resource_type=LearningResourceType.document.name,
-        etl_source=etl_source,
-    ).exclude(id__in=[resource.id for resource in document_resources])
-    # remove documents that no longer exist
+    # unpublish documents that no longer exist
+    unpublished_document_ids = list(
+        LearningResource.objects.filter(
+            resource_type=LearningResourceType.document.name,
+            etl_source=etl_source,
+            published=True,
+        )
+        .exclude(id__in=[resource.id for resource in document_resources])
+        .values_list("id", flat=True)
+    )
+    LearningResource.objects.filter(id__in=unpublished_document_ids).update(
+        published=False
+    )
     bulk_resources_unpublished_actions(
-        unpublished_documents.values_list("id", flat=True),
+        unpublished_document_ids,
         LearningResourceType.document.name,
     )
     return document_resources
