@@ -169,6 +169,10 @@ const contractContentEngagementDepth = (
  * `in_progress`: the API reaches that status on a nonzero grade OR on tracked
  * activity, so a graded row with nothing recorded yet is a real shape. A test
  * about the Last activity column passes a `YYYY-MM-DD` date explicitly.
+ *
+ * `needs_attention` defaults to false for the same row: the API documents a
+ * graded learner with no recorded activity as reading false, not null, so the
+ * default pair is a shape the API really emits.
  */
 const learnerProgress = (
   overrides: Partial<LearnerProgress> = {},
@@ -191,6 +195,7 @@ const learnerProgress = (
   certificate_issued_on: null,
   certificate_is_revoked: null,
   last_active_on: null,
+  needs_attention: false,
   ...overrides,
 })
 
@@ -211,6 +216,7 @@ const withheldLearnerProgress = (
     certificate_issued_on: null,
     certificate_is_revoked: null,
     last_active_on: null,
+    needs_attention: null,
     ...overrides,
   })
 
