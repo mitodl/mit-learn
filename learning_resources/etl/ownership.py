@@ -12,10 +12,13 @@ ETLSourceOwnership names the one pipeline allowed to write a pair. A missing row
 means legacy, so nothing changes until a row is created. Changing the row in
 Django admin is the per-source cutover (and the rollback), with no deploy.
 
-Each pipeline declares itself once, at its entry point, with ``writing_as``.
-The shared loaders then call ``may_write`` and skip a pair the current pipeline
-does not own. Code that never declares a pipeline is the legacy Celery ETL, so
-the existing tasks need no change to be guarded.
+Each pipeline declares itself once, at its entry point, with ``writing_as``, and
+calls ``may_write`` there, before it extracts anything, so a pipeline that does
+not own a pair costs one query and no extract or transform. Code that never
+declares a pipeline is the legacy Celery ETL: its checks are in
+``learning_resources.etl.pipelines`` and at the top of the tasks that have no
+pipeline function (``get_youtube_data``, ``sync_canvas_courses``,
+``get_ocw_data``). The loaders themselves do not check.
 """
 
 import logging

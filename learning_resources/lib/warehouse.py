@@ -276,8 +276,8 @@ class BaseWarehouseETLTask(Task):
         conn = connect_to_warehouse()
         start = time.monotonic()
         try:
-            # The shared loaders skip any (etl_source, resource_type) whose
-            # ETLSourceOwnership row does not name the warehouse pull.
+            # fetch_and_upsert must call may_write for the pairs it writes
+            # before it queries; this only names the pipeline it is checked as.
             with writing_as(Pipeline.WAREHOUSE):
                 count = self.fetch_and_upsert(conn, since=since)
         except Exception:
