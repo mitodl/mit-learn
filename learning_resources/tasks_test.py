@@ -2601,3 +2601,20 @@ def test_load_warehouse_youtube_playlist_stops_when_ownership_moved(mocker):
     tasks.load_warehouse_youtube_playlist(channel.channel_id, {"playlist_id": "p"})
 
     mock_load.assert_not_called()
+
+
+def test_get_ocw_data_skips_when_legacy_does_not_own_courses(settings, mocker):
+    """get_ocw_data lists no bucket and queues no course once OCW is owned elsewhere"""
+    settings.OCW_LIVE_BUCKET = "bucket"
+    ETLSourceOwnershipFactory.create(
+        etl_source=ETLSource.ocw.name,
+        resource_type=LearningResourceType.course.name,
+        owner=ETLSourceOwnership.Pipeline.WAREHOUSE,
+    )
+    mock_boto = mocker.patch("learning_resources.tasks.boto3")
+    mock_get_ocw_courses = mocker.patch("learning_resources.tasks.get_ocw_courses")
+
+    assert get_ocw_data.delay().get() is None
+
+    mock_boto.resource.assert_not_called()
+    mock_get_ocw_courses.si.assert_not_called()

@@ -13,17 +13,19 @@ This is the procedure for moving a source from one owner to another, checking it
 
 - One `ETLSourceOwnership` row per `(etl_source, resource_type)`, with `owner` set to `legacy`, `warehouse` or `webhook`.
 - No row means `legacy`. Nothing is seeded, so every source stays on the legacy ETL until someone creates a row.
-- Every pipeline stays scheduled. Each run checks ownership and skips a pair it doesn't own:
-  - the legacy tasks log `Skipping legacy write for <source>: owned by <type>=<owner>` and write nothing;
-  - warehouse tasks skip the same way, inside `fetch_and_upsert`;
+- Every pipeline stays scheduled. Each run checks ownership before it extracts anything and returns if it doesn't own the pair:
+  - the legacy pipelines in `learning_resources/etl/pipelines.py` (and `get_youtube_data`, `sync_canvas_courses` and `get_ocw_data`, which have no pipeline function) log `Skipping legacy write for <source>: owned by <type>=<owner>` and make no call to the source;
+  - a warehouse task checks before it queries StarRocks;
   - the webhook rejects the whole batch with `409` and writes nothing.
-- The guarded loaders are `load_courses`, `load_programs`, `load_podcasts`, `load_documents`, `load_ovs_playlists`, plus `get_youtube_data` and `sync_canvas_courses`. Per-record paths are not guarded: `ocw_courses_etl` (called per course from the ocw-studio webhook), the OVS video webhook, Canvas content-file ingestion, and the transcript jobs.
+- The loaders don't check. Code that calls `load_courses`, `load_programs`, `load_podcasts`, `load_documents` or `load_ovs_playlists` directly (a shell session, a new pipeline) has to call `may_write` itself first.
+- `ocw_courses_etl` is checked too. It loads a course and that course's content files together, so once `ocw`/`course` is not `legacy`, the ocw-studio webhook stops loading OCW content files as well.
+- Not checked: the OVS video webhook, Canvas content-file ingestion, the `import_all_*_files` content-file tasks, and the transcript jobs.
 
 Rows are edited in Django admin at `/admin/learning_resources/etlsourceownership/`. In production that takes a staff account with the `learning_resources.change_etlsourceownership` permission. Treat a production edit like a deploy: announce it, and be ready to roll it back.
 
 ## Cut a source over as a unit
 
-Flip every resource type the source's legacy task writes, in one sitting. The legacy program loaders upsert the programs' child courses as well, so a source whose courses belong to the webhook while its programs stay legacy would still have its courses written by the legacy ETL.
+Flip every resource type the source's legacy task writes, in one sitting, unless the split is the plan. A split works at the loader (`load_programs` links a program to the courses their owner loaded and writes none when the current pipeline doesn't own the source's courses), but the two halves are then validated and rolled back separately.
 
 | Source        | Rows to flip                 | Legacy beat entry                               | New path                         |
 | ------------- | ---------------------------- | ----------------------------------------------- | -------------------------------- |
