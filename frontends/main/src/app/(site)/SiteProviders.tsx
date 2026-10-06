@@ -2,13 +2,17 @@
 
 import React, { useEffect } from "react"
 import ConfiguredPostHogProvider from "@/page-components/ConfiguredPostHogProvider/ConfiguredPostHogProvider"
-import { analytics } from "@/common/analytics"
+import { analytics, initPostHog } from "@/common/analytics"
 import { parseUtmParams, isOrganicSocialTraffic } from "@/common/analytics/utm"
+import { usePostHog } from "posthog-js/react"
 
 const SESSION_KEY = "gtm_landing_page_tracked"
 const RETURN_VISIT_KEY = "gtm_has_visited"
 
 function AnalyticsTracker() {
+  const posthog = usePostHog()
+  initPostHog(posthog)
+
   useEffect(() => {
     let alreadyTracked = false
     let isReturnVisit = false

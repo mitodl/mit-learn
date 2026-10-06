@@ -1,11 +1,9 @@
-import { env } from "@/env"
 import React from "react"
 import type { OfferedByEnum } from "api"
 import type { UnitChannel } from "api/v0"
 import { Card, Skeleton, styled, theme, UnitLogo } from "ol-components"
 import Link from "next/link"
-import { usePostHog } from "posthog-js/react"
-import { PostHogEvents } from "@/common/constants"
+import { analytics } from "@/common/analytics"
 
 const CardStyled = styled(Card)({
   height: "100%",
@@ -83,7 +81,6 @@ interface UnitCardProps {
 }
 
 const UnitCard: React.FC<UnitCardProps> = (props) => {
-  const posthog = usePostHog()
   const { channel, courseCount, programCount } = props
   const unit = channel.unit_detail.unit
 
@@ -98,13 +95,9 @@ const UnitCard: React.FC<UnitCardProps> = (props) => {
             <LogoContainer>
               <Link
                 href={href}
-                onClick={() => {
-                  if (env("NEXT_PUBLIC_POSTHOG_API_KEY")) {
-                    posthog.capture(PostHogEvents.ProviderLinkClicked, {
-                      provider: unit,
-                    })
-                  }
-                }}
+                onClick={() =>
+                  analytics.providerLinkClicked({ provider: unit })
+                }
                 data-card-link
               >
                 <UnitLogo unitCode={unit.code as OfferedByEnum} height={50} />

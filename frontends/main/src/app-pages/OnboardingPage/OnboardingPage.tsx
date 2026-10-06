@@ -1,9 +1,7 @@
 "use client"
 
-import { env } from "@/env"
 import React, { useEffect, useId, useMemo } from "react"
 import { useRouter } from "next-nprogress-bar"
-import { usePostHog } from "posthog-js/react"
 import {
   styled,
   Step,
@@ -35,7 +33,6 @@ import {
   ProfileSchema,
 } from "@/common/profile"
 import { useAppSearchParams } from "@/common/useAppSearchParams"
-import { PostHogEvents } from "@/common/constants"
 import { analytics } from "@/common/analytics"
 
 const NUM_STEPS = 5
@@ -160,7 +157,6 @@ const OnboardingPage: React.FC = () => {
   const { isLoading: userLoading, data: user } = useUserMe()
   const [activeStep, setActiveStep] = React.useState<number>(0)
   const router = useRouter()
-  const posthog = usePostHog()
   const searchParams = useAppSearchParams()
   const nextUrl = searchParams.get("next")
   const isNewUser = searchParams.get("is_new_user") === "1"
@@ -177,13 +173,11 @@ const OnboardingPage: React.FC = () => {
         })
       }
       const label = activeStep < NUM_STEPS - 1 ? "Next" : "Finish"
-      if (env("NEXT_PUBLIC_POSTHOG_API_KEY")) {
-        posthog.capture(PostHogEvents.CallToActionClicked, {
-          label,
-          step: activeStep + 1,
-          location: "onboarding",
-        })
-      }
+      analytics.ctaClicked({
+        label,
+        step: activeStep + 1,
+        location: "onboarding",
+      })
       if (activeStep < NUM_STEPS - 1) {
         setActiveStep((prevActiveStep) => prevActiveStep + 1)
       } else {

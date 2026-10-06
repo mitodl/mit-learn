@@ -33,8 +33,7 @@ import {
   aggregateCourseCounts,
 } from "@/common/client-utils"
 import { useChannelCounts } from "api/hooks/channels"
-import { usePostHog } from "posthog-js/react"
-import { PostHogEvents } from "@/common/constants"
+import { analytics } from "@/common/analytics"
 
 const SCHOOL_ICONS: Record<string, React.ReactNode> = {
   // School of Architecture and Planning
@@ -134,7 +133,6 @@ const SchoolDepartments: React.FC<SchoolDepartmentProps> = ({
   programCounts,
   className,
 }) => {
-  const posthog = usePostHog()
   return (
     <section className={className}>
       <SchoolTitle>
@@ -159,11 +157,9 @@ const SchoolDepartments: React.FC<SchoolDepartmentProps> = ({
                   department.channel_url &&
                   new URL(department.channel_url).pathname
                 }
-                onClick={() => {
-                  posthog.capture(PostHogEvents.DepartmentLinkClicked, {
-                    department,
-                  })
-                }}
+                onClick={() =>
+                  analytics.departmentLinkClicked({ department })
+                }
               >
                 <ListItemText
                   primary={department.name}

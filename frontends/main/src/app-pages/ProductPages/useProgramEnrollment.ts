@@ -7,10 +7,9 @@ import { useReplaceBasketItem } from "@/common/mitxonline/useReplaceBasketItem"
 import { useComplianceGate } from "@/common/mitxonline/useComplianceGate"
 import { enrollmentAlertSuccessUrl } from "@/common/mitxonline"
 import { useRouter } from "next-nprogress-bar"
-import { usePostHog } from "posthog-js/react"
 import { analytics } from "@/common/analytics"
 import { programView } from "@/common/urls"
-import { fireEnrollCta, type EnrollCtaPlacement } from "./enrollAnalytics"
+import { type EnrollCtaPlacement } from "./enrollAnalytics"
 import { getProgramOffering, type ProgramOffering } from "./programOffering"
 import { useProgramIsEnrolled } from "./useProgramIsEnrolled"
 import type {
@@ -62,7 +61,6 @@ export const useProgramEnrollment = (
     meta: SILENCE_ERROR_TOAST,
   })
   const router = useRouter()
-  const posthog = usePostHog()
   // Paid enrollments are gated inside useReplaceBasketItem; the free track
   // calls the enrollment endpoint directly and so gates here.
   const { ensureCompliance } = useComplianceGate()
@@ -82,12 +80,12 @@ export const useProgramEnrollment = (
     async (e) => {
       // Same event as the course hook; `resourceType: "program"` distinguishes
       // program CTA clicks (including program-as-course display).
-      fireEnrollCta(posthog, {
+      analytics.enrollCtaClicked({
         placement: opts?.tracking.placement,
-        kind,
-        label,
+        enrollmentMode: kind === "paid" ? "verified" : "audit",
         resourceType: "program",
         readableId: program.readable_id,
+        label,
       })
       if (!me.data?.is_authenticated) {
         opts?.onRequireSignup?.(e.currentTarget)
