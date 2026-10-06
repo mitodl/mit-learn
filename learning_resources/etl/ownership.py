@@ -18,7 +18,12 @@ not own a pair costs one query and no extract or transform. Code that never
 declares a pipeline is the legacy Celery ETL: its checks are in
 ``learning_resources.etl.pipelines`` and at the top of the tasks that have no
 pipeline function (``get_youtube_data``, ``sync_canvas_courses``,
-``get_ocw_data``). The loaders themselves do not check.
+``get_ocw_data``); a warehouse task declares ``writes`` and
+``BaseWarehouseETLTask.run`` checks it before connecting.
+
+The batch loaders call ``may_write`` again as a backstop, so a caller that
+skipped the entry check (a shell session, a new pipeline) still cannot write a
+pair it does not own.
 """
 
 import logging
