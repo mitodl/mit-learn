@@ -35,6 +35,15 @@ const Container = styled.div(({ theme }) => ({
   h2: {
     color: theme.custom.colors.darkGray2,
   },
+  /**
+   * The paging arrows are lifted off the hero photograph they sit over, which
+   * the carousel does not do elsewhere -- its other callers put it on a plain
+   * ground. Addressed by the group's own label rather than a generated class,
+   * since the arrows are portalled in from the carousel component.
+   */
+  '[aria-label="Slide navigation"] button': {
+    boxShadow: "0 1px 3px 0 rgba(120, 147, 172, 0.4)",
+  },
 }))
 
 type TopicFeaturedCarouselProps = {

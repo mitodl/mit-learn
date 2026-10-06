@@ -113,12 +113,11 @@ const FollowPill = styled.div(({ theme }) => ({
     height: "32px",
     minHeight: "unset",
     minWidth: "unset",
-    boxShadow: "none",
+    boxShadow: "0 1px 3px 0 rgba(120, 147, 172, 0.40)",
     ...theme.typography.subtitle2,
     ":hover:not(:disabled)": {
       backgroundColor: theme.custom.colors.lightGray2,
       color: theme.custom.colors.darkGray2,
-      boxShadow: "none",
       svg: {
         color: theme.custom.colors.darkGray2,
       },
