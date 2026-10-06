@@ -2564,12 +2564,13 @@ def test_sync_podcasts_task_reads_both_views(mocker, warehouse_owns):
 
 @pytest.mark.parametrize("task", ["SyncYouTubeTask", "SyncPodcastsTask"])
 def test_media_sync_tasks_read_nothing_they_do_not_own(mocker, task):
-    """Until the ownership row is flipped a run neither reads the warehouse nor writes"""
-    mocker.patch("learning_resources.lib.warehouse.connect_to_warehouse")
+    """Until the ownership row is flipped a run neither connects to the warehouse nor writes"""
+    mock_connect = mocker.patch("learning_resources.lib.warehouse.connect_to_warehouse")
     mock_iter_rows = mocker.patch("learning_resources.tasks.iter_rows")
 
     assert getattr(tasks, task).run() == 0
 
+    mock_connect.assert_not_called()
     mock_iter_rows.assert_not_called()
     assert not LearningResource.objects.exists()
 

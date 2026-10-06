@@ -1400,11 +1400,10 @@ class SyncYouTubeTask(BaseWarehouseETLTask):
 
     name = "learning_resources.tasks.SyncYouTubeTask"
     table_name = "integrations__learn__youtube_playlists"
+    writes = (ETLSource.youtube.name, warehouse_media.YOUTUBE_TYPES)
 
     def fetch_and_upsert(self, conn, *, since=None) -> int:  # noqa: ARG002
         """Read the four youtube views and queue a load of each playlist."""
-        if not warehouse_media.may_write_youtube():
-            return 0
         channels, playlists, playlist_videos, videos = (
             list(iter_rows(conn, self.qualified_name(table)))
             for table in (
@@ -1446,11 +1445,10 @@ class SyncPodcastsTask(BaseWarehouseETLTask):
 
     name = "learning_resources.tasks.SyncPodcastsTask"
     table_name = "integrations__learn__podcasts"
+    writes = (ETLSource.podcast.name, warehouse_media.PODCAST_TYPES)
 
     def fetch_and_upsert(self, conn, *, since=None) -> int:  # noqa: ARG002
         """Read the two podcast views and load them."""
-        if not warehouse_media.may_write_podcasts():
-            return 0
         return warehouse_media.sync_podcasts(
             list(iter_rows(conn, self.view_name)),
             list(
