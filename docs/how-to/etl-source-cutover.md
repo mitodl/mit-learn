@@ -17,7 +17,7 @@ This is the procedure for moving a source from one owner to another, checking it
 - Every pipeline stays scheduled. Each run checks ownership before it extracts anything and returns if it doesn't own the pair:
   - the legacy pipelines in `learning_resources/etl/pipelines.py` (and `get_youtube_data`, `sync_canvas_courses` and `get_ocw_data`, which have no pipeline function) log `Skipping legacy write for <source>: owned by <type>=<owner>` and make no call to the source;
   - a warehouse task declares what it writes (`writes` on its `BaseWarehouseETLTask` subclass, required), and `run` returns 0 without connecting to StarRocks when the warehouse doesn't own it;
-  - the webhook rejects the whole batch with `409` and writes nothing.
+  - the webhook rejects the whole batch with `409` and writes nothing, unless it shadows the pairs it doesn't own.
 - `load_courses`, `load_programs`, `load_podcasts`, `load_documents` and `load_ovs_playlists` check again as a backstop and return `[]` for a pair the caller doesn't own. Code that calls them directly (a shell session, a new pipeline) is the legacy pipeline unless it is inside `writing_as(...)`.
 - `ocw_courses_etl` is checked too. It loads a course and that course's content files together, so once `ocw`/`course` is not `legacy`, the ocw-studio webhook stops loading OCW content files as well.
 - Not checked: the OVS video webhook, Canvas content-file ingestion, the `import_all_*_files` content-file tasks, and the transcript jobs.
@@ -62,7 +62,7 @@ A shadow run is the new pipeline's real load, with the owner unchanged and nothi
 1. In Django admin, create or edit the row for each resource type from the table above, leave `owner` as it is and set `shadow` to the new pipeline. All of a source's rows that one load writes together (`podcast` and `podcast_episode`, `video_playlist` and `video`) need it.
 2. Run the new pipeline as you would for the flip, or wait for its schedule:
    - warehouse: `<SyncTask>.delay()`. A shadow run is always a full refresh and leaves the incremental watermark alone.
-   - webhook: not wired to the shadow yet. Until it is, the webhook answers `409` for a pair it doesn't own, shadow or not.
+   - webhook: materialize the source's delivery asset in Dagster. The response, in the materialization's metadata, carries each pair's `counts` under `shadow`. A batch with any shadowed pair is a shadow run as a whole, so a pair the webhook already owns is not written by that batch.
 3. Read the report at `/admin/learning_resources/etlshadowrun/`. There is one per `(etl_source, resource_type)` per run, and the last 20 per pipeline are kept.
 
 Each report has:

@@ -10031,6 +10031,10 @@ paths:
         ``sync`` array with no resources in the batch is pruned, unpublishing all
         of it. Resource types without a loader are logged and skipped rather than
         failing the whole batch.
+
+        A batch with a group the webhook shadows (ETLSourceOwnership.shadow) is
+        loaded as a shadow run: nothing is written, and the response's ``shadow``
+        counts what each group's load would have changed.
       tags:
       - webhooks
       requestBody:
@@ -10044,7 +10048,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/WebhookResponse'
+                $ref: '#/components/schemas/LearningResourceWebhookResponse'
           description: ''
   /api/v1/webhooks/ovs_videos/:
     post:
@@ -13792,6 +13796,28 @@ components:
             $ref: '#/components/schemas/LearningResourceSyncPairRequest'
       required:
       - resources
+    LearningResourceWebhookResponse:
+      type: object
+      description: |-
+        Serializer for learning_resources webhook responses.
+
+        ``shadow`` is present when the batch was a shadow run: nothing was written,
+        and each entry counts what loading it would have changed for one
+        (etl_source, resource_type).
+      properties:
+        status:
+          type: string
+        message:
+          type: string
+        error:
+          type: string
+        shadow:
+          type: array
+          items:
+            type: object
+            additionalProperties: {}
+      required:
+      - status
     LearningResourcesSearchResponse:
       type: object
       description: |-

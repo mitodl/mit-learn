@@ -120,6 +120,18 @@ class WebhookResponseSerializer(serializers.Serializer):
     error = serializers.CharField(required=False, allow_blank=True)
 
 
+class LearningResourceWebhookResponseSerializer(WebhookResponseSerializer):
+    """
+    Serializer for learning_resources webhook responses.
+
+    ``shadow`` is present when the batch was a shadow run: nothing was written,
+    and each entry counts what loading it would have changed for one
+    (etl_source, resource_type).
+    """
+
+    shadow = serializers.ListField(child=serializers.DictField(), required=False)
+
+
 class ContentFileWebhookRequestSerializer(serializers.Serializer):
     """
     Serializer for ContentFile webhook requests.

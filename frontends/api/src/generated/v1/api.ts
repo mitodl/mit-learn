@@ -1844,6 +1844,15 @@ export interface LearningResourceWebhookRequestRequest {
   sync?: Array<LearningResourceSyncPairRequest>
 }
 /**
+ * Serializer for learning_resources webhook responses.  ``shadow`` is present when the batch was a shadow run: nothing was written, and each entry counts what loading it would have changed for one (etl_source, resource_type).
+ */
+export interface LearningResourceWebhookResponse {
+  status: string
+  message?: string
+  error?: string
+  shadow?: Array<{ [key: string]: any }>
+}
+/**
  * SearchResponseSerializer with OpenAPI annotations for Learning Resources search
  */
 export interface LearningResourcesSearchResponse {
@@ -25323,7 +25332,7 @@ export const WebhooksApiAxiosParamCreator = function (
       }
     },
     /**
-     * Generic webhook handler for pre-computed LearningResource batches delivered by the OL Data Platform (Dagster).  The request body is ``{\"resources\": [ ... ]}`` where each resource is a canonical LearningResource dict carrying at minimum ``readable_id``, ``etl_source`` and ``resource_type``. Resources are grouped by ``(etl_source, resource_type)`` and routed to the matching loader (``load_courses`` / ``load_programs`` / ``load_documents`` / ``load_videos``). Each loader performs a full sync for that source and upserts the OpenSearch index, so a batch must contain the authoritative set of resources for the (etl_source, resource_type) it represents. A pair listed in the optional ``sync`` array with no resources in the batch is pruned, unpublishing all of it. Resource types without a loader are logged and skipped rather than failing the whole batch.
+     * Generic webhook handler for pre-computed LearningResource batches delivered by the OL Data Platform (Dagster).  The request body is ``{\"resources\": [ ... ]}`` where each resource is a canonical LearningResource dict carrying at minimum ``readable_id``, ``etl_source`` and ``resource_type``. Resources are grouped by ``(etl_source, resource_type)`` and routed to the matching loader (``load_courses`` / ``load_programs`` / ``load_documents`` / ``load_videos``). Each loader performs a full sync for that source and upserts the OpenSearch index, so a batch must contain the authoritative set of resources for the (etl_source, resource_type) it represents. A pair listed in the optional ``sync`` array with no resources in the batch is pruned, unpublishing all of it. Resource types without a loader are logged and skipped rather than failing the whole batch.  A batch with a group the webhook shadows (ETLSourceOwnership.shadow) is loaded as a shadow run: nothing is written, and the response\'s ``shadow`` counts what each group\'s load would have changed.
      * @param {LearningResourceWebhookRequestRequest} LearningResourceWebhookRequestRequest
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
@@ -25512,7 +25521,7 @@ export const WebhooksApiFp = function (configuration?: Configuration) {
         )(axios, localVarOperationServerBasePath || basePath)
     },
     /**
-     * Generic webhook handler for pre-computed LearningResource batches delivered by the OL Data Platform (Dagster).  The request body is ``{\"resources\": [ ... ]}`` where each resource is a canonical LearningResource dict carrying at minimum ``readable_id``, ``etl_source`` and ``resource_type``. Resources are grouped by ``(etl_source, resource_type)`` and routed to the matching loader (``load_courses`` / ``load_programs`` / ``load_documents`` / ``load_videos``). Each loader performs a full sync for that source and upserts the OpenSearch index, so a batch must contain the authoritative set of resources for the (etl_source, resource_type) it represents. A pair listed in the optional ``sync`` array with no resources in the batch is pruned, unpublishing all of it. Resource types without a loader are logged and skipped rather than failing the whole batch.
+     * Generic webhook handler for pre-computed LearningResource batches delivered by the OL Data Platform (Dagster).  The request body is ``{\"resources\": [ ... ]}`` where each resource is a canonical LearningResource dict carrying at minimum ``readable_id``, ``etl_source`` and ``resource_type``. Resources are grouped by ``(etl_source, resource_type)`` and routed to the matching loader (``load_courses`` / ``load_programs`` / ``load_documents`` / ``load_videos``). Each loader performs a full sync for that source and upserts the OpenSearch index, so a batch must contain the authoritative set of resources for the (etl_source, resource_type) it represents. A pair listed in the optional ``sync`` array with no resources in the batch is pruned, unpublishing all of it. Resource types without a loader are logged and skipped rather than failing the whole batch.  A batch with a group the webhook shadows (ETLSourceOwnership.shadow) is loaded as a shadow run: nothing is written, and the response\'s ``shadow`` counts what each group\'s load would have changed.
      * @param {LearningResourceWebhookRequestRequest} LearningResourceWebhookRequestRequest
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
@@ -25524,7 +25533,7 @@ export const WebhooksApiFp = function (configuration?: Configuration) {
       (
         axios?: AxiosInstance,
         basePath?: string,
-      ) => AxiosPromise<WebhookResponse>
+      ) => AxiosPromise<LearningResourceWebhookResponse>
     > {
       const localVarAxiosArgs =
         await localVarAxiosParamCreator.webhooksLearningResourcesCreate(
@@ -25629,7 +25638,7 @@ export const WebhooksApiFactory = function (
         .then((request) => request(axios, basePath))
     },
     /**
-     * Generic webhook handler for pre-computed LearningResource batches delivered by the OL Data Platform (Dagster).  The request body is ``{\"resources\": [ ... ]}`` where each resource is a canonical LearningResource dict carrying at minimum ``readable_id``, ``etl_source`` and ``resource_type``. Resources are grouped by ``(etl_source, resource_type)`` and routed to the matching loader (``load_courses`` / ``load_programs`` / ``load_documents`` / ``load_videos``). Each loader performs a full sync for that source and upserts the OpenSearch index, so a batch must contain the authoritative set of resources for the (etl_source, resource_type) it represents. A pair listed in the optional ``sync`` array with no resources in the batch is pruned, unpublishing all of it. Resource types without a loader are logged and skipped rather than failing the whole batch.
+     * Generic webhook handler for pre-computed LearningResource batches delivered by the OL Data Platform (Dagster).  The request body is ``{\"resources\": [ ... ]}`` where each resource is a canonical LearningResource dict carrying at minimum ``readable_id``, ``etl_source`` and ``resource_type``. Resources are grouped by ``(etl_source, resource_type)`` and routed to the matching loader (``load_courses`` / ``load_programs`` / ``load_documents`` / ``load_videos``). Each loader performs a full sync for that source and upserts the OpenSearch index, so a batch must contain the authoritative set of resources for the (etl_source, resource_type) it represents. A pair listed in the optional ``sync`` array with no resources in the batch is pruned, unpublishing all of it. Resource types without a loader are logged and skipped rather than failing the whole batch.  A batch with a group the webhook shadows (ETLSourceOwnership.shadow) is loaded as a shadow run: nothing is written, and the response\'s ``shadow`` counts what each group\'s load would have changed.
      * @param {WebhooksApiWebhooksLearningResourcesCreateRequest} requestParameters Request parameters.
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
@@ -25637,7 +25646,7 @@ export const WebhooksApiFactory = function (
     webhooksLearningResourcesCreate(
       requestParameters: WebhooksApiWebhooksLearningResourcesCreateRequest,
       options?: RawAxiosRequestConfig,
-    ): AxiosPromise<WebhookResponse> {
+    ): AxiosPromise<LearningResourceWebhookResponse> {
       return localVarFp
         .webhooksLearningResourcesCreate(
           requestParameters.LearningResourceWebhookRequestRequest,
@@ -25749,7 +25758,7 @@ export class WebhooksApi extends BaseAPI {
   }
 
   /**
-   * Generic webhook handler for pre-computed LearningResource batches delivered by the OL Data Platform (Dagster).  The request body is ``{\"resources\": [ ... ]}`` where each resource is a canonical LearningResource dict carrying at minimum ``readable_id``, ``etl_source`` and ``resource_type``. Resources are grouped by ``(etl_source, resource_type)`` and routed to the matching loader (``load_courses`` / ``load_programs`` / ``load_documents`` / ``load_videos``). Each loader performs a full sync for that source and upserts the OpenSearch index, so a batch must contain the authoritative set of resources for the (etl_source, resource_type) it represents. A pair listed in the optional ``sync`` array with no resources in the batch is pruned, unpublishing all of it. Resource types without a loader are logged and skipped rather than failing the whole batch.
+   * Generic webhook handler for pre-computed LearningResource batches delivered by the OL Data Platform (Dagster).  The request body is ``{\"resources\": [ ... ]}`` where each resource is a canonical LearningResource dict carrying at minimum ``readable_id``, ``etl_source`` and ``resource_type``. Resources are grouped by ``(etl_source, resource_type)`` and routed to the matching loader (``load_courses`` / ``load_programs`` / ``load_documents`` / ``load_videos``). Each loader performs a full sync for that source and upserts the OpenSearch index, so a batch must contain the authoritative set of resources for the (etl_source, resource_type) it represents. A pair listed in the optional ``sync`` array with no resources in the batch is pruned, unpublishing all of it. Resource types without a loader are logged and skipped rather than failing the whole batch.  A batch with a group the webhook shadows (ETLSourceOwnership.shadow) is loaded as a shadow run: nothing is written, and the response\'s ``shadow`` counts what each group\'s load would have changed.
    * @param {WebhooksApiWebhooksLearningResourcesCreateRequest} requestParameters Request parameters.
    * @param {*} [options] Override http request option.
    * @throws {RequiredError}
