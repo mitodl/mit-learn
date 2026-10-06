@@ -107,6 +107,14 @@ def _shorten(value: Any) -> Any:
     return value
 
 
+def _field_changes(old: dict, new: dict) -> dict[str, list]:
+    return {
+        path: [_shorten(old.get(path)), _shorten(new.get(path))]
+        for path in sorted(old.keys() | new.keys())
+        if path != "published" and old.get(path) != new.get(path)
+    }
+
+
 def diff_snapshots(before: Snapshot, after: Snapshot) -> tuple[dict, dict]:
     """
     Compare two snapshots of a pair.
@@ -117,12 +125,17 @@ def diff_snapshots(before: Snapshot, after: Snapshot) -> tuple[dict, dict]:
         lists the readable_ids behind each count, ``field_counts`` (how many
         updated resources changed each field, list items collapsed to ``[]``)
         and ``changed`` ({readable_id: {path: [before, after]}}) for the first
-        MAX_CHANGED_DETAILS updated resources.
+        MAX_CHANGED_DETAILS updated resources, then the republished ones: a
+        resource that goes live again does so with the fields listed there.
+        An unpublished resource's other changes are not listed. It leaves
+        the catalog, and its runs leaving the serialized form with it would
+        read as changes.
     """
     created = sorted(after.keys() - before.keys())
     deleted = sorted(before.keys() - after.keys())
     unpublished, republished, unchanged = [], [], 0
     changed: dict[str, dict] = {}
+    republished_changes: dict[str, dict] = {}
     field_counts: Counter[str] = Counter()
     for key in sorted(before.keys() & after.keys()):
         old, new = before[key], after[key]
@@ -132,12 +145,10 @@ def diff_snapshots(before: Snapshot, after: Snapshot) -> tuple[dict, dict]:
             unpublished.append(key)
         elif new["published"] and not old["published"]:
             republished.append(key)
+            if fields := _field_changes(old, new):
+                republished_changes[key] = fields
         else:
-            fields = {
-                path: [_shorten(old.get(path)), _shorten(new.get(path))]
-                for path in sorted(old.keys() | new.keys())
-                if old.get(path) != new.get(path)
-            }
+            fields = _field_changes(old, new)
             field_counts.update({re.sub(r"\[[^\]]*\]", "[]", path) for path in fields})
             changed[key] = fields
     counts = {
@@ -158,8 +169,11 @@ def diff_snapshots(before: Snapshot, after: Snapshot) -> tuple[dict, dict]:
         "republished": republished,
         "updated": sorted(changed),
         "field_counts": dict(field_counts.most_common()),
-        "changed": dict(list(changed.items())[:MAX_CHANGED_DETAILS]),
-        "changed_truncated": len(changed) > MAX_CHANGED_DETAILS,
+        "changed": dict(
+            [*changed.items(), *republished_changes.items()][:MAX_CHANGED_DETAILS]
+        ),
+        "changed_truncated": len(changed) + len(republished_changes)
+        > MAX_CHANGED_DETAILS,
     }
     return counts, details
 
