@@ -426,6 +426,13 @@ class ETLShadowRunAdmin(admin.ModelAdmin):
     )
     readonly_fields = fields
 
+    def get_queryset(self, request):
+        """Leave the report bodies out of the list, which shows only counts"""
+        queryset = super().get_queryset(request)
+        if request.resolver_match.url_name.endswith("_changelist"):
+            return queryset.defer("details")
+        return queryset
+
     def has_add_permission(self, request):  # noqa: ARG002
         return False
 
