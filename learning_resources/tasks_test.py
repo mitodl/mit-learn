@@ -2791,7 +2791,7 @@ def test_media_sync_tasks_pass_on_allow_mass_unpublish(  # noqa: PLR0913
         (
             "SyncXproProgramsTask",
             "sync_programs",
-            ["integrations__learn__xpro_programs", "integrations__learn__xpro_courses"],
+            ["integrations__learn__xpro_programs"],
         ),
     ],
 )
@@ -2799,7 +2799,7 @@ def test_media_sync_tasks_pass_on_allow_mass_unpublish(  # noqa: PLR0913
 def test_xpro_sync_tasks_read_their_views(  # noqa: PLR0913
     mocker, warehouse_owns, task, sync, views, allow
 ):
-    """Each xPRO sync task reads its two views in full and passes on the unpublish override"""
+    """Each xPRO sync task reads its views in full and passes on the unpublish override"""
     mocker.patch("learning_resources.lib.warehouse.connect_to_warehouse")
     rows = {view: [{"readable_id": view}] for view in views}
     mock_iter_rows = mocker.patch(
@@ -2813,7 +2813,7 @@ def test_xpro_sync_tasks_read_their_views(  # noqa: PLR0913
     kwargs = {"allow_mass_unpublish": True} if allow else {}
     assert getattr(tasks, task).apply(kwargs=kwargs).get() == 1
 
-    assert mock_iter_rows.call_count == 2
+    assert mock_iter_rows.call_count == len(views)
     mock_sync.assert_called_once_with(
         *(rows[view] for view in views), allow_mass_unpublish=allow
     )

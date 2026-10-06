@@ -170,7 +170,7 @@ def test_transform_program_matches_the_api_etl(api_programs):
     """
     expected = xpro.transform_programs(api_programs)
     course_platforms = {
-        course["readable_id"]: course["platform"]
+        course["readable_id"]: xpro.XPRO_PLATFORM_TRANSFORM[course["platform"]]
         for program in api_programs
         for course in program["courses"]
     }
@@ -227,24 +227,102 @@ def test_transform_run_without_a_price_or_instructors():
     assert result["time_commitment"] == ""
 
 
-@pytest.mark.parametrize("sync", ["sync_courses", "sync_programs"])
-def test_sync_writes_nothing_it_does_not_own(mocker, api_courses, sync):
-    """Without an ownership row naming the warehouse, nothing is loaded"""
-    mock_load_courses = mocker.patch(
-        "learning_resources.etl.warehouse_xpro.loaders.load_courses"
+def _own(resource_type):
+    """Name the warehouse as the owner of one xpro pair"""
+    ETLSourceOwnershipFactory.create(
+        etl_source=ETLSource.xpro.name,
+        resource_type=resource_type,
+        owner=Pipeline.WAREHOUSE,
     )
-    mock_load_programs = mocker.patch(
-        "learning_resources.etl.warehouse_xpro.loaders.load_programs"
+
+
+@pytest.mark.parametrize("owned", [None, PROGRAM])
+def test_sync_courses_writes_nothing_without_the_course_pair(
+    mocker, api_courses, owned
+):
+    """Owning nothing, or only the programs, does not let the courses load"""
+    if owned:
+        _own(owned)
+    mock_load = mocker.patch(
+        "learning_resources.etl.warehouse_xpro.loaders.load_courses"
     )
 
     with writing_as(Pipeline.WAREHOUSE):
-        count = getattr(warehouse_xpro, sync)(
+        count = warehouse_xpro.sync_courses(
             [course_row(api_courses[0])], run_rows(api_courses[0])
         )
 
     assert count == 0
-    mock_load_courses.assert_not_called()
-    mock_load_programs.assert_not_called()
+    mock_load.assert_not_called()
+
+
+@pytest.mark.parametrize("owned", [None, COURSE])
+def test_sync_programs_writes_nothing_without_the_program_pair(
+    mocker, api_programs, owned
+):
+    """Owning nothing, or only the courses, does not let the programs load"""
+    if owned:
+        _own(owned)
+    mock_load = mocker.patch(
+        "learning_resources.etl.warehouse_xpro.loaders.load_programs"
+    )
+
+    with writing_as(Pipeline.WAREHOUSE):
+        count = warehouse_xpro.sync_programs([program_row(api_programs[0])])
+
+    assert count == 0
+    mock_load.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    ("column", "value", "expected"),
+    [
+        ("topics", ["Business:Strategy"], None),
+        ("topics", b'["Business:Strategy"]', None),
+        ("continuing_ed_credits", 1.25, 1.25),
+        ("min_weeks", 3, 3),
+        ("max_weekly_hours", 6, 6),
+    ],
+)
+def test_transform_course_reads_warehouse_types(api_courses, column, value, expected):
+    """Arrays arrive as lists, text or bytes, and numbers as numbers"""
+    row = {**course_row(api_courses[0]), column: value}
+
+    result = warehouse_xpro.transform_course(row, run_rows(api_courses[0]))
+
+    if column == "topics":
+        text_row = {**row, "topics": json.dumps(["Business:Strategy"])}
+        assert (
+            result["topics"]
+            == warehouse_xpro.transform_course(text_row, run_rows(api_courses[0]))[
+                "topics"
+            ]
+        )
+    elif column == "continuing_ed_credits":
+        assert result[column] == expected
+    else:
+        assert result["runs"][0][column] == expected
+
+
+def test_transform_course_with_a_zero_price_or_no_runs(api_courses):
+    """A course is unpublished when no run has a price above zero, or it has no runs"""
+    row = course_row(api_courses[0])
+    free = [{**run, "price": Decimal("0.00")} for run in run_rows(api_courses[0])]
+
+    result = warehouse_xpro.transform_course(row, free)
+
+    assert result["published"] is False
+    assert all(run["published"] is False for run in result["runs"])
+    assert all(run["prices"] == [] for run in result["runs"])
+    assert warehouse_xpro.transform_course(row, [])["published"] is False
+
+
+@pytest.mark.parametrize("courses", [None, "", "course-v1:xPRO+Unknown"])
+def test_transform_program_without_known_courses(api_programs, courses):
+    """A program with no courses, or one MIT Learn does not have, links none"""
+    row = {**program_row(api_programs[0]), "courses": courses}
+
+    assert warehouse_xpro.transform_program(row, {})["courses"] == []
 
 
 def test_sync_courses_loads_and_unpublishes(warehouse_owns_xpro, api_courses):
@@ -302,9 +380,7 @@ def test_sync_programs_loads_and_links_courses(warehouse_owns_xpro, api_programs
 
     with writing_as(Pipeline.WAREHOUSE):
         count = warehouse_xpro.sync_programs(
-            [program_row(program) for program in api_programs],
-            [course_row(course) for course in program_courses],
-            allow_mass_unpublish=True,
+            [program_row(program) for program in api_programs]
         )
 
     assert count == len(api_programs)
@@ -345,6 +421,60 @@ def test_sync_courses_refuses_to_unpublish_more_than_the_limit(
         warehouse_xpro.sync_courses(
             [course_row(api_courses[0])], run_rows(api_courses[0])
         )
+
+    for resource in published:
+        resource.refresh_from_db()
+        assert resource.published is True
+
+
+def test_sync_courses_counts_only_published_courses_as_pulled(
+    warehouse_owns_xpro, api_courses
+):
+    """Courses the view lists without a priced run count as unpublished by the sync"""
+    for course in api_courses:
+        LearningResourceFactory.create(
+            etl_source=ETLSource.xpro.name,
+            resource_type=COURSE,
+            published=True,
+            readable_id=course["readable_id"],
+            platform__code=xpro.XPRO_PLATFORM_TRANSFORM[course["platform"]],
+        )
+
+    with writing_as(Pipeline.WAREHOUSE), pytest.raises(ExtractException):
+        warehouse_xpro.sync_courses(
+            [course_row(course) for course in api_courses],
+            [
+                {**run, "price": None}
+                for course in api_courses
+                for run in run_rows(course)
+            ],
+        )
+
+    assert LearningResource.objects.filter(
+        etl_source=ETLSource.xpro.name, published=True
+    ).count() == len(api_courses)
+
+
+def test_sync_programs_refuses_an_empty_view(warehouse_owns_xpro):
+    """An empty programs view is a failed build, not an empty catalog"""
+    with writing_as(Pipeline.WAREHOUSE), pytest.raises(ExtractException):
+        warehouse_xpro.sync_programs([])
+
+
+def test_sync_programs_refuses_to_unpublish_more_than_the_limit(
+    warehouse_owns_xpro, api_programs
+):
+    """A sync that would unpublish most of the published programs fails unwritten"""
+    published = LearningResourceFactory.create_batch(
+        5,
+        etl_source=ETLSource.xpro.name,
+        resource_type=PROGRAM,
+        published=True,
+        platform__code=PlatformType.xpro.name,
+    )
+
+    with writing_as(Pipeline.WAREHOUSE), pytest.raises(ExtractException):
+        warehouse_xpro.sync_programs([program_row(api_programs[0])])
 
     for resource in published:
         resource.refresh_from_db()

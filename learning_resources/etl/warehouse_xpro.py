@@ -44,6 +44,7 @@ from learning_resources.etl.xpro import (
     XPRO_PLATFORM_TRANSFORM,
     parse_topics,
 )
+from learning_resources.models import LearningResource
 from main.utils import clean_data
 
 log = logging.getLogger(__name__)
@@ -59,7 +60,7 @@ def _string_list(value) -> list[str]:
     """
     if value is None:
         return []
-    if isinstance(value, str):
+    if isinstance(value, str | bytes):
         return json.loads(value)
     return list(value)
 
@@ -180,8 +181,8 @@ def transform_program(row: dict, course_platforms: dict[str, str]) -> dict:
 
     Args:
         row (dict): the program
-        course_platforms (dict): xPRO platform name by course readable id, to
-            find the program's courses by
+        course_platforms (dict): platform code by readable id of the xPRO
+            courses MIT Learn has, to find the program's courses by
 
     Returns:
         dict: the program as load_program takes it
@@ -210,11 +211,12 @@ def transform_program(row: dict, course_platforms: dict[str, str]) -> dict:
                 **_page_fields(row),
             }
         ],
-        # loaded with fetch_only, so only what finds the course is needed
+        # Loaded with fetch_only, so only what finds the course is needed. A
+        # course MIT Learn does not have is one the loader would not find.
         "courses": [
             {
                 "readable_id": course_id,
-                "platform": XPRO_PLATFORM_TRANSFORM.get(course_platforms[course_id]),
+                "platform": course_platforms[course_id],
                 "resource_type": COURSE,
             }
             for course_id in course_ids
@@ -263,16 +265,13 @@ def sync_courses(
     )
 
 
-def sync_programs(
-    programs: list[dict], courses: list[dict], *, allow_mass_unpublish: bool = False
-) -> int:
+def sync_programs(programs: list[dict], *, allow_mass_unpublish: bool = False) -> int:
     """
     Load the programs of the warehouse view, and unpublish the programs it no
     longer lists.
 
     Args:
         programs (list of dict): rows of integrations__learn__xpro_programs
-        courses (list of dict): rows of integrations__learn__xpro_courses
         allow_mass_unpublish (bool): skip the MAX_UNPUBLISH_SHARE check
 
     Returns:
@@ -281,8 +280,12 @@ def sync_programs(
     if not may_write(ETLSource.xpro.name, PROGRAM):
         return 0
 
-    refuse_empty(programs=programs, courses=courses)
-    course_platforms = {course["readable_id"]: course["platform"] for course in courses}
+    refuse_empty(programs=programs)
+    course_platforms = dict(
+        LearningResource.objects.filter(
+            etl_source=ETLSource.xpro.name, resource_type=COURSE
+        ).values_list("readable_id", "platform__code")
+    )
     programs_data = [
         transform_program(program, course_platforms) for program in programs
     ]

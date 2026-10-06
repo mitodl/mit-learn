@@ -11,8 +11,9 @@ Each sync is a full sync: the views are the complete current set, and whatever
 is absent from them is unpublished. A view that comes back empty is therefore
 refused, since the views are built separately and an empty one is a failed
 build, not an empty catalog. So is a sync that would unpublish more than
-MAX_UNPUBLISH_SHARE of what is published, which is what a partly built view
-looks like; a real removal of that size has to be run with the limit lifted.
+warehouse_guards.MAX_UNPUBLISH_SHARE of what is published, which is what a
+partly built view looks like; a real removal of that size has to be run with
+the limit lifted.
 """
 
 import logging
