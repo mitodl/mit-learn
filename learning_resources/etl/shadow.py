@@ -7,13 +7,19 @@ and rolls the transaction back. The difference is saved as one ETLShadowRun per
 (etl_source, resource_type), so a cutover can be checked against the live
 catalog before the ETLSourceOwnership row is flipped.
 
-Nothing outside the database is written either: the search index and embedding
-tasks the loaders trigger are dropped while ``is_shadow_run()`` is true
+No index hears of it either: the search index and embedding tasks the loaders
+trigger are dropped while ``is_shadow_run()`` is true
 (``learning_resources_search.plugins.try_with_retry_as_task``), and anything
-queued with ``transaction.on_commit`` goes with the rollback.
+queued with ``transaction.on_commit`` goes with the rollback. What the loaders
+read still happens (the course blocklist fetch and its cache entry, the
+similar-topics lookup for a resource with no topics).
 
-The load holds row locks on whatever it updates until the rollback, so the
-owner's own run waits behind a shadow run of the same source.
+The load runs in one transaction, so the row locks it takes (the loaders'
+``select_for_update`` among them) last until the rollback instead of one
+resource's load. The owner's run of the same source waits behind them, as does
+a user write that references a locked resource (a list or learning path item).
+The transaction is READ COMMITTED, so a change someone else commits to the
+source between the two snapshots is reported as the shadow's.
 """
 
 import json
@@ -76,9 +82,14 @@ def snapshot(etl_source: str, resource_type: str) -> Snapshot:
     """
     serializer = LearningResourceSerializer()
     resources: Snapshot = {}
-    for resource in LearningResource.objects.filter(
-        etl_source=etl_source, resource_type=resource_type
-    ).for_serialization():
+    for resource in (
+        LearningResource.objects.filter(
+            etl_source=etl_source, resource_type=resource_type
+        )
+        .for_serialization()
+        .order_by("id")
+        .iterator(chunk_size=500)
+    ):
         data = json.loads(
             json.dumps(serializer.to_representation(resource), cls=JSONEncoder)
         )
