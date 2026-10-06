@@ -232,6 +232,7 @@ const MobileAccordionWrapper = styled.div({
 type EnrolledCourseCardProps = {
   enrollment: CourseRunEnrollmentV3
   siblingEnrollments?: CourseRunEnrollmentV3[]
+  contractId?: number
   ancestorContext?: {
     programEnrollment?: V3UserProgramEnrollment
     parentProgramReadableIds?: string[]
@@ -249,6 +250,7 @@ type EnrolledCourseCardProps = {
 export const EnrolledCourseCard = ({
   enrollment,
   siblingEnrollments,
+  contractId,
   ancestorContext,
   layout = "default",
   headingLevel,
@@ -261,7 +263,9 @@ export const EnrolledCourseCard = ({
   const course = enrollment.run.course
   const run = enrollment.run
   const isCompact = layout === "compact"
-  const isContractPageResource = Boolean(enrollment.b2b_contract_id)
+  const isContractPageResource = Boolean(
+    contractId ?? enrollment.b2b_contract_id,
+  )
   const cardTypeLabelText =
     isModule || isContractPageResource ? "Module" : "Course"
   const cardTypeLabel =
@@ -287,7 +291,7 @@ export const EnrolledCourseCard = ({
     "course",
   )
   const enrollmentMode = enrollment?.enrollment_mode
-  const offerUpgrade = !enrollment?.b2b_contract_id
+  const offerUpgrade = !isContractPageResource
   const startDate = run?.start_date
   const coursewareOpen = canOpenCourseware(startDate, { isStaff })
   const endDate = run?.end_date
