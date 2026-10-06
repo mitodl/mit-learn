@@ -468,6 +468,9 @@ def get_ocw_data(  # noqa: PLR0913
         log.warning("Required settings missing for get_ocw_data")
         return None
 
+    if not may_write(ETLSource.ocw.name, LearningResourceType.course.name):
+        return None
+
     # get all the courses prefixes we care about
     raw_data_bucket = boto3.resource(
         "s3",

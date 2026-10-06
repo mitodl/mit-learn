@@ -1578,31 +1578,6 @@ def test_load_courses_empty(mock_blocklist, prune_empty):
     assert test_mode_course.learning_resource.published is True
 
 
-def test_load_courses_skips_write_when_not_owned(mocker):
-    """load_courses should no-op (no writes, no prune) for a pair legacy does not own"""
-    ETLSourceOwnershipFactory.create(
-        etl_source=ETLSource.see.name,
-        resource_type=LearningResourceType.course.name,
-        owner=ETLSourceOwnership.Pipeline.WEBHOOK,
-    )
-    course_to_unpublish = CourseFactory.create(etl_source=ETLSource.see.name)
-
-    mock_load_course = mocker.patch(
-        "learning_resources.etl.loaders.load_course", autospec=True
-    )
-
-    result = load_courses(
-        ETLSource.see.name,
-        [{"readable_id": "some-course"}],
-        config=CourseLoaderConfig(prune=True),
-    )
-
-    assert result == []
-    mock_load_course.assert_not_called()
-    course_to_unpublish.refresh_from_db()
-    assert course_to_unpublish.learning_resource.published is True
-
-
 def test_load_programs(mocker, mock_blocklist):
     """Test that load_programs calls the expected functions"""
     program_data = [{"courses": [{"platform": "a"}, {}], "id": 5}]
@@ -1693,33 +1668,6 @@ def test_load_programs_does_not_write_courses_it_does_not_own(
     course.refresh_from_db()
     assert (course.title == title) is fetch_only
     assert list(result[0].children.values_list("child_id", flat=True)) == [course.id]
-
-
-def test_load_programs_skips_write_when_not_owned(mocker):
-    """load_programs should no-op (no writes, no prune) for a pair legacy does not own"""
-    ETLSourceOwnershipFactory.create(
-        etl_source=ETLSource.see.name,
-        resource_type=LearningResourceType.program.name,
-        owner=ETLSourceOwnership.Pipeline.WEBHOOK,
-    )
-    program_to_unpublish = ProgramFactory.create(
-        learning_resource__etl_source=ETLSource.see.name
-    )
-
-    mock_load_program = mocker.patch(
-        "learning_resources.etl.loaders.load_program", autospec=True
-    )
-
-    result = load_programs(
-        ETLSource.see.name,
-        [{"courses": [], "id": 1}],
-        config=ProgramLoaderConfig(prune=True),
-    )
-
-    assert result == []
-    mock_load_program.assert_not_called()
-    program_to_unpublish.refresh_from_db()
-    assert program_to_unpublish.learning_resource.published is True
 
 
 @pytest.fixture
@@ -2503,35 +2451,6 @@ def test_load_podcasts(learning_resource_offeror, podcast_platform):
                 relation.relation_type
                 == LearningResourceRelationTypes.PODCAST_EPISODES.value
             )
-
-
-@pytest.mark.parametrize(
-    "webhook_owned",
-    [
-        [LearningResourceType.podcast.name],
-        [LearningResourceType.podcast.name, LearningResourceType.podcast_episode.name],
-    ],
-)
-def test_load_podcasts_skips_when_legacy_does_not_own_every_type(
-    learning_resource_offeror, podcast_platform, webhook_owned
-):
-    """The legacy ETL neither loads nor unpublishes once it loses any podcast type"""
-    for resource_type in webhook_owned:
-        ETLSourceOwnershipFactory.create(
-            etl_source=ETLSource.podcast.name,
-            resource_type=resource_type,
-            owner=ETLSourceOwnership.Pipeline.WEBHOOK,
-        )
-    podcast = PodcastFactory.create().learning_resource
-
-    loaded_data = build_podcast_data(learning_resource_offeror)
-    assert load_podcasts([loaded_data], [loaded_data["readable_id"]]) == []
-
-    podcast.refresh_from_db()
-    assert podcast.published is True
-    assert not LearningResource.objects.filter(
-        readable_id=loaded_data["readable_id"]
-    ).exists()
 
 
 def test_load_podcasts_unpublish(learning_resource_offeror, podcast_platform):

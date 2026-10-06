@@ -2477,3 +2477,20 @@ def test_credential_metadata_leaf_task_is_acknowledged_late():
 
     assert task.acks_late is True
     assert task.reject_on_worker_lost is True
+
+
+def test_get_ocw_data_skips_when_legacy_does_not_own_courses(settings, mocker):
+    """get_ocw_data lists no bucket and queues no course once OCW is owned elsewhere"""
+    settings.OCW_LIVE_BUCKET = "bucket"
+    ETLSourceOwnershipFactory.create(
+        etl_source=ETLSource.ocw.name,
+        resource_type=LearningResourceType.course.name,
+        owner=ETLSourceOwnership.Pipeline.WAREHOUSE,
+    )
+    mock_boto = mocker.patch("learning_resources.tasks.boto3")
+    mock_get_ocw_courses = mocker.patch("learning_resources.tasks.get_ocw_courses")
+
+    assert get_ocw_data.delay().get() is None
+
+    mock_boto.resource.assert_not_called()
+    mock_get_ocw_courses.si.assert_not_called()
