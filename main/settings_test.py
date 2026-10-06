@@ -410,6 +410,38 @@ class TestSettings(TestCase):
             assert entry["task"] == "profiles.tasks.SyncProgramCertificatesTask"
             assert entry["kwargs"] == {"full_refresh": True}
 
+    def test_media_warehouse_sync_beat_entries_follow_starrocks_config(self):
+        """The youtube and podcast warehouse syncs are scheduled only when
+        StarRocks is configured, as full refreshes.
+        """
+        names = {
+            "warehouse-sync-podcasts-every-1-days": (
+                "learning_resources.tasks.SyncPodcastsTask"
+            ),
+            "warehouse-sync-youtube-every-1-days": (
+                "learning_resources.tasks.SyncYouTubeTask"
+            ),
+        }
+        with mock.patch.dict("os.environ", REQUIRED_SETTINGS, clear=True):
+            settings_vars = self.reload_settings(module="main.settings_celery")
+            assert not names.keys() & settings_vars["CELERY_BEAT_SCHEDULE"].keys()
+
+        with mock.patch.dict(
+            "os.environ",
+            {
+                **REQUIRED_SETTINGS,
+                "STARROCKS_HOST": "starrocks.example.com",
+                "STARROCKS_USER": "testuser",
+            },
+            clear=True,
+        ):
+            schedule = self.reload_settings(module="main.settings_celery")[
+                "CELERY_BEAT_SCHEDULE"
+            ]
+            for name, task in names.items():
+                assert schedule[name]["task"] == task
+                assert schedule[name]["kwargs"] == {"full_refresh": True}
+
     def test_credential_metadata_beat_entry(self):
         """
         The credential metadata sweep is scheduled, and fills gaps only.

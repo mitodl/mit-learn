@@ -254,6 +254,20 @@ if (
                 "schedule": crontab(minute=0, hour=9),  # 5:00am EDT / 4:00am EST
                 "kwargs": {"full_refresh": True},
             },
+            # Scheduled like the legacy tasks they replace, and a no-op until
+            # ETLSourceOwnership names the warehouse for their pairs. After
+            # 10:00 UTC so the data platform's daily build of the views,
+            # which starts at 06:00 UTC, has finished.
+            "warehouse-sync-podcasts-every-1-days": {
+                "task": "learning_resources.tasks.SyncPodcastsTask",
+                "schedule": crontab(minute=0, hour=10),
+                "kwargs": {"full_refresh": True},
+            },
+            "warehouse-sync-youtube-every-1-days": {
+                "task": "learning_resources.tasks.SyncYouTubeTask",
+                "schedule": crontab(minute=30, hour=10),
+                "kwargs": {"full_refresh": True},
+            },
         }
     )
 

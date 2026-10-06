@@ -637,3 +637,16 @@ def test_incremental_does_not_advance_watermark_on_failure(mock_connect):
             task.run(full_refresh=False)
 
     mock_cache.set.assert_not_called()
+
+
+def test_qualified_name_qualifies_any_view_with_the_warehouse_settings():
+    """A task that reads several views gets each from the configured schema"""
+    with override_settings(
+        WAREHOUSE_CATALOG="ol_data_lake_qa",
+        WAREHOUSE_SCHEMA="ol_warehouse_qa_integrations",
+    ):
+        assert _ConcreteTask.qualified_name("integrations__learn__other") == (
+            "ol_data_lake_qa.ol_warehouse_qa_integrations.integrations__learn__other"
+        )
+    with pytest.raises(ValueError, match="Unsafe warehouse identifier"):
+        _ConcreteTask.qualified_name("other; drop table x")
