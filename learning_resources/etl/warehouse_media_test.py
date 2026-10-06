@@ -527,7 +527,9 @@ def test_sync_podcasts_loads_and_unpublishes(warehouse_owns_podcasts):
                 episode_row("guid-3", podcast="feeds.example.com/gone/"),
             ],
         )
-        loaded = warehouse_media.sync_podcasts([podcast_row()], [episode_row("guid-1")])
+        loaded = warehouse_media.sync_podcasts(
+            [podcast_row()], [episode_row("guid-1")], allow_mass_unpublish=True
+        )
 
     assert loaded == 1
     podcast = LearningResource.objects.get(
@@ -601,3 +603,64 @@ def test_sync_podcasts_skips_a_podcast_with_an_untitled_episode(
         ).count()
         == 3
     )
+
+
+def test_sync_podcasts_refuses_to_unpublish_more_than_the_limit(
+    warehouse_owns_podcasts,
+):
+    """A view missing over a tenth of the published episodes is a short read"""
+    podcasts = [podcast_row()]
+    episodes = [episode_row(f"guid-{number}") for number in range(20)]
+    with writing_as(Pipeline.WAREHOUSE):
+        warehouse_media.sync_podcasts(podcasts, episodes)
+        # two of twenty is at the limit, three is over it
+        assert warehouse_media.sync_podcasts(podcasts, episodes[:18]) == 1
+        with pytest.raises(
+            ExtractException, match="3 of 18 published podcast podcast_episode"
+        ):
+            warehouse_media.sync_podcasts(podcasts, episodes[:15])
+
+    assert (
+        LearningResource.objects.filter(
+            resource_type=LearningResourceType.podcast_episode.name, published=True
+        ).count()
+        == 18
+    )
+
+
+def test_sync_youtube_refuses_to_unpublish_more_than_the_limit(
+    warehouse_owns_youtube,
+):
+    """A videos view missing over a tenth of the published videos writes nothing"""
+    videos = [video_row(f"vid-{number}") for number in range(10)]
+    views = [
+        [channel_row()],
+        [playlist_row("PL-one"), playlist_row("PL-two")],
+        [membership_row("PL-one", f"vid-{number}", number) for number in range(10)]
+        + [membership_row("PL-two", "vid-0", 0)],
+        videos,
+    ]
+    sync_and_load_youtube(*views)
+
+    short = [views[0], views[1], views[2][:8] + views[2][10:], videos[:8]]
+    with (
+        writing_as(Pipeline.WAREHOUSE),
+        pytest.raises(ExtractException, match="2 of 10 published youtube video "),
+    ):
+        warehouse_media.sync_youtube_channels(*short)
+    with (
+        writing_as(Pipeline.WAREHOUSE),
+        pytest.raises(
+            ExtractException, match="1 of 2 published youtube video_playlist"
+        ),
+    ):
+        warehouse_media.sync_youtube_channels(
+            views[0], views[1][:1], views[2][:10], videos
+        )
+
+    assert LearningResource.objects.filter(published=True).count() == 12
+    with writing_as(Pipeline.WAREHOUSE):
+        to_load = warehouse_media.sync_youtube_channels(
+            *short, allow_mass_unpublish=True
+        )
+    assert len(to_load) == 2

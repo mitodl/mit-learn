@@ -1352,6 +1352,15 @@ def generate_all_credential_metadata(
     return len(generation_tasks)
 
 
+def _allow_mass_unpublish(task) -> bool:
+    """
+    Whether a warehouse media sync was queued with allow_mass_unpublish=True,
+    e.g. ``SyncPodcastsTask.delay(allow_mass_unpublish=True)``. The scheduled
+    runs never pass it.
+    """
+    return bool((task.request.kwargs or {}).get("allow_mass_unpublish", False))
+
+
 @app.task(acks_late=True, reject_on_worker_lost=True)
 def load_warehouse_youtube_playlist(channel_id, playlist_data):
     """
@@ -1383,6 +1392,10 @@ class SyncYouTubeTask(BaseWarehouseETLTask):
 
     Always a full sync, whatever ``since`` is: a playlist is loaded together
     with all of its videos, and the views carry no per-playlist change time.
+
+    A run that would unpublish more than warehouse_media.MAX_UNPUBLISH_SHARE of
+    the published playlists or videos fails before writing. Queue it with
+    ``allow_mass_unpublish=True`` when the removal is real.
     """
 
     name = "learning_resources.tasks.SyncYouTubeTask"
@@ -1402,7 +1415,11 @@ class SyncYouTubeTask(BaseWarehouseETLTask):
             )
         )
         to_load = warehouse_media.sync_youtube_channels(
-            channels, playlists, playlist_videos, videos
+            channels,
+            playlists,
+            playlist_videos,
+            videos,
+            allow_mass_unpublish=_allow_mass_unpublish(self),
         )
         log.info("Queueing %d youtube playlists from the warehouse", len(to_load))
         for channel_id, playlist_data in to_load:
@@ -1421,6 +1438,10 @@ class SyncPodcastsTask(BaseWarehouseETLTask):
 
     Always a full sync, whatever ``since`` is: load_podcasts unpublishes the
     episodes a podcast no longer lists, so it needs all of them.
+
+    A run that would unpublish more than warehouse_media.MAX_UNPUBLISH_SHARE of
+    the published podcasts or episodes fails before writing. Queue it with
+    ``allow_mass_unpublish=True`` when the removal is real.
     """
 
     name = "learning_resources.tasks.SyncPodcastsTask"
@@ -1437,6 +1458,7 @@ class SyncPodcastsTask(BaseWarehouseETLTask):
                     conn, self.qualified_name("integrations__learn__podcast_episodes")
                 )
             ),
+            allow_mass_unpublish=_allow_mass_unpublish(self),
         )
 
 

@@ -10,7 +10,9 @@ produce, and hand them to the same loaders the Celery ETL uses.
 Each sync is a full sync: the views are the complete current set, and whatever
 is absent from them is unpublished. A view that comes back empty is therefore
 refused, since the views are built separately and an empty one is a failed
-build, not an empty catalog. A view that is short but not empty is not caught.
+build, not an empty catalog. So is a sync that would unpublish more than
+MAX_UNPUBLISH_SHARE of what is published, which is what a partly built view
+looks like; a real removal of that size has to be run with the limit lifted.
 """
 
 import logging
@@ -26,6 +28,7 @@ from learning_resources.etl.exceptions import ExtractException
 from learning_resources.etl.ownership import may_write
 from learning_resources.etl.utils import iso8601_duration
 from learning_resources.etl.youtube import clean_youtube_description, parse_offered_by
+from learning_resources.models import LearningResource
 from main.constants import (
     ALLOWED_HTML_ATTRIBUTES_WITH_LINKS,
     ALLOWED_HTML_TAGS_WITH_LINKS,
@@ -62,6 +65,35 @@ def _utc_timestamp(value: str | datetime) -> datetime:
     """
     timestamp = value if isinstance(value, datetime) else parse(value)
     return timestamp if timestamp.tzinfo else timestamp.replace(tzinfo=UTC)
+
+
+# Largest share of a source's published resources of one type that a sync may
+# unpublish. Day-to-day removals are a handful of playlists, videos or episodes.
+MAX_UNPUBLISH_SHARE = 0.1
+
+
+def _refuse_mass_unpublish(
+    etl_source: str, resource_type: str, pulled_ids: set[str]
+) -> None:
+    """
+    Raise if loading would unpublish more than MAX_UNPUBLISH_SHARE of the
+    source's published resources of a type, i.e. if that share of them is
+    missing from the ids pulled.
+    """
+    published_ids = set(
+        LearningResource.objects.filter(
+            etl_source=etl_source, resource_type=resource_type, published=True
+        ).values_list("readable_id", flat=True)
+    )
+    missing = published_ids - pulled_ids
+    if len(missing) > len(published_ids) * MAX_UNPUBLISH_SHARE:
+        msg = (
+            f"Refusing to sync: {len(missing)} of {len(published_ids)} published "
+            f"{etl_source} {resource_type} resources are not in the warehouse "
+            f"views, over the {MAX_UNPUBLISH_SHARE:.0%} limit. If they were "
+            "removed at the source, rerun with allow_mass_unpublish=True."
+        )
+        raise ExtractException(msg)
 
 
 def _refuse_empty(**views: list[dict]) -> None:
@@ -172,6 +204,8 @@ def sync_youtube_channels(
     playlists: list[dict],
     playlist_videos: list[dict],
     videos: list[dict],
+    *,
+    allow_mass_unpublish: bool = False,
 ) -> list[tuple[str, dict]]:
     """
     Upsert the youtube channels of the warehouse views, unpublish the channels
@@ -186,6 +220,7 @@ def sync_youtube_channels(
         playlist_videos (list of dict):
             rows of integrations__learn__youtube_playlist_videos
         videos (list of dict): rows of integrations__learn__youtube_videos
+        allow_mass_unpublish (bool): skip the MAX_UNPUBLISH_SHARE check
 
     Returns:
         list of (str, dict): the channel id and the load_playlist data of every
@@ -200,6 +235,16 @@ def sync_youtube_channels(
         playlist_videos=playlist_videos,
         videos=videos,
     )
+    if not allow_mass_unpublish:
+        for resource_type, rows in (
+            (LearningResourceType.video_playlist.name, playlists),
+            (LearningResourceType.video.name, videos),
+        ):
+            _refuse_mass_unpublish(
+                ETLSource.youtube.name,
+                resource_type,
+                {row["readable_id"] for row in rows},
+            )
 
     # transformed before anything is written, so a bad row changes nothing
     videos_by_playlist = _videos_by_playlist(playlist_videos, videos)
@@ -343,7 +388,9 @@ def transform_podcast(row: dict, episode_rows: list[dict]) -> dict:
     }
 
 
-def sync_podcasts(podcasts: list[dict], episodes: list[dict]) -> int:
+def sync_podcasts(
+    podcasts: list[dict], episodes: list[dict], *, allow_mass_unpublish: bool = False
+) -> int:
     """
     Load the podcasts and episodes of the warehouse views, and unpublish the
     podcasts and episodes they no longer list.
@@ -355,6 +402,7 @@ def sync_podcasts(podcasts: list[dict], episodes: list[dict]) -> int:
     Args:
         podcasts (list of dict): rows of integrations__learn__podcasts
         episodes (list of dict): rows of integrations__learn__podcast_episodes
+        allow_mass_unpublish (bool): skip the MAX_UNPUBLISH_SHARE check
 
     Returns:
         int: the number of podcasts loaded
@@ -363,6 +411,16 @@ def sync_podcasts(podcasts: list[dict], episodes: list[dict]) -> int:
         return 0
 
     _refuse_empty(podcasts=podcasts, episodes=episodes)
+    if not allow_mass_unpublish:
+        for resource_type, rows in (
+            (LearningResourceType.podcast.name, podcasts),
+            (LearningResourceType.podcast_episode.name, episodes),
+        ):
+            _refuse_mass_unpublish(
+                ETLSource.podcast.name,
+                resource_type,
+                {row["readable_id"] for row in rows},
+            )
 
     episodes_by_podcast = defaultdict(list)
     for episode in episodes:
