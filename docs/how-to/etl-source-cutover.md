@@ -70,7 +70,7 @@ Each report has:
 - `counts`: resources `created`, `deleted`, `unpublished`, `republished`, `updated` and `unchanged`, with the published totals before and after;
 - `details.created`, `deleted`, `unpublished`, `republished` and `updated`: the `readable_id`s behind each count;
 - `details.field_counts`: how many updated resources changed each field (`runs[].prices`, `topics[].name`), the quickest way to see a systematic difference;
-- `details.changed`: `[before, after]` per field for the first 200 updated resources;
+- `details.changed`: `[before, after]` per field for the first 200 updated resources, then the republished ones. An unpublished resource's other changes are not listed;
 - `error`: set when the load raised (an empty view, the mass-unpublish guard). The task fails too, as it would as the owner.
 
 Fields that a load changes on every run are ignored: database ids, `created_on`, `updated_on`, `views` and `best_run_id`.

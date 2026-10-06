@@ -189,7 +189,7 @@ def test_diff_snapshots():
     after = {
         "same": {"published": True, "title": "a"},
         "hidden": {"published": False, "title": "c"},
-        "shown": {"published": True, "title": "d"},
+        "shown": {"published": True, "title": "d2"},
         "priced": {"published": True, "runs[r1].prices": ["12.00"], "title": "e"},
         "added": {"published": True, "title": "f"},
     }
@@ -211,7 +211,11 @@ def test_diff_snapshots():
     assert details["deleted"] == ["gone"]
     assert details["unpublished"] == ["hidden"]
     assert details["republished"] == ["shown"]
-    assert details["changed"] == {"priced": {"runs[r1].prices": [["10.00"], ["12.00"]]}}
+    assert details["changed"] == {
+        "priced": {"runs[r1].prices": [["10.00"], ["12.00"]]},
+        "shown": {"title": ["d", "d2"]},
+    }
+    assert details["updated"] == ["priced"]
     assert details["field_counts"] == {"runs[].prices": 1}
     assert details["changed_truncated"] is False
 
