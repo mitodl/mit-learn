@@ -12,6 +12,7 @@ This is the procedure for moving a source from one owner to another, checking it
 ## How ownership works
 
 - One `ETLSourceOwnership` row per `(etl_source, resource_type)`, with `owner` set to `legacy`, `warehouse` or `webhook`.
+- A row can also name a `shadow` pipeline (`warehouse` or `webhook`), which runs without writing and reports what it would have changed. See [Shadow run](#shadow-run).
 - No row means `legacy`. Nothing is seeded, so every source stays on the legacy ETL until someone creates a row.
 - Every pipeline stays scheduled. Each run checks ownership before it extracts anything and returns if it doesn't own the pair:
   - the legacy pipelines in `learning_resources/etl/pipelines.py` (and `get_youtube_data`, `sync_canvas_courses` and `get_ocw_data`, which have no pipeline function) log `Skipping legacy write for <source>: owned by <type>=<owner>` and make no call to the source;
@@ -50,25 +51,33 @@ OVS and Canvas already push per record, through their own webhooks, which owners
 
 1. The new path works end to end in QA first (see [QA rehearsal](#qa-rehearsal)).
 2. The platform's `integrations__learn__*` model for the source was rebuilt today. Check the asset's last materialization in Dagster. The delivery schedules currently fire at or before the staging rebuild (tracked in the data platform), so don't rely on the schedule's own timing yet.
-3. Compare what the new owner would write with what Learn has now. The first run of the new owner is a full sync, and anything published in Learn but missing from its batch will be unpublished.
-
-   In Learn (`./manage.py shell`):
-
-   ```python
-   from learning_resources.models import LearningResource
-
-   learn_ids = set(
-       LearningResource.objects.filter(
-           etl_source="mitpe", resource_type="course", published=True
-       ).values_list("readable_id", flat=True)
-   )
-   ```
-
-   On the platform, the same set from the model the new path reads, e.g. `select readable_id from ol_warehouse_production_integrations.integrations__learn__mitpe_courses`.
-
-   Every id in `learn_ids - platform_ids` will be unpublished. Every id in `platform_ids - learn_ids` will be created. Explain each one before going further, and spot-check a few shared ids field by field (title, URL, price, run dates).
+3. Shadow the source as its new owner and read the report (see [Shadow run](#shadow-run)). The first run of the new owner is a full sync, and anything published in Learn but missing from its batch will be unpublished. Explain every `unpublished`, `created` and `deleted` id and every entry of `field_counts` before going further. Leave the shadow on for a few scheduled runs if the source changes daily, so the report covers more than one day's data.
 
 4. Record the published counts per resource type for the source. They're the baseline for checking the flip.
+
+## Shadow run
+
+A shadow run is the new pipeline's real load, with the owner unchanged and nothing written. It runs the same loaders as a cutover would, prune included, inside a database transaction that is always rolled back, and compares the source's resources as the API serializes them before and after the load. No search index or embedding task is sent.
+
+1. In Django admin, create or edit the row for each resource type from the table above, leave `owner` as it is and set `shadow` to the new pipeline. All of a source's rows that one load writes together (`podcast` and `podcast_episode`, `video_playlist` and `video`) need it.
+2. Run the new pipeline as you would for the flip, or wait for its schedule:
+   - warehouse: `<SyncTask>.delay()`. A shadow run is always a full refresh and leaves the incremental watermark alone.
+   - webhook: not wired to the shadow yet. Until it is, the webhook answers `409` for a pair it doesn't own, shadow or not.
+3. Read the report at `/admin/learning_resources/etlshadowrun/`. There is one per `(etl_source, resource_type)` per run, and the last 20 per pipeline are kept.
+
+Each report has:
+
+- `counts`: resources `created`, `deleted`, `unpublished`, `republished`, `updated` and `unchanged`, with the published totals before and after;
+- `details.created`, `deleted`, `unpublished`, `republished` and `updated`: the `readable_id`s behind each count;
+- `details.field_counts`: how many updated resources changed each field (`runs[].prices`, `topics[].name`), the quickest way to see a systematic difference;
+- `details.changed`: `[before, after]` per field for the first 200 updated resources;
+- `error`: set when the load raised (an empty view, the mass-unpublish guard). The task fails too, as it would as the owner.
+
+Fields that a load changes on every run are ignored: database ids, `created_on`, `views` and `best_run_id`.
+
+The load holds row locks on the resources it updates until it rolls back, so the owner's run of the same source waits for a shadow run in progress. A source's shadow run takes about as long as its real load.
+
+When the report is clean, clear `shadow` and set `owner` (below). Clear `shadow` on its own to stop shadowing.
 
 ## Flip
 

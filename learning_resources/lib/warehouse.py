@@ -22,7 +22,8 @@ from django.conf import settings
 from django.core.cache import caches
 from django.core.exceptions import ImproperlyConfigured
 
-from learning_resources.etl.ownership import Pipeline, may_write, writing_as
+from learning_resources.etl.ownership import Pipeline, RunMode, run_mode, writing_as
+from learning_resources.etl.shadow import run_shadow
 
 log = logging.getLogger(__name__)
 
@@ -188,7 +189,11 @@ class BaseWarehouseETLTask(Task):
     that loads no catalog resource), and implement
     ``fetch_and_upsert(conn, *, since)``. ``run`` returns 0 without
     connecting unless ETLSourceOwnership names the warehouse for every one
-    of those resource types. ``view_name`` qualifies it with
+    of those resource types, as their owner or as their shadow. As a shadow,
+    the load is rolled back and reported instead of written (see
+    ``learning_resources.etl.shadow``); a ``fetch_and_upsert`` that hands its
+    writes to other tasks must do them inline when
+    ``ownership.is_shadow_run()``. ``view_name`` qualifies it with
     ``settings.WAREHOUSE_CATALOG`` and ``settings.WAREHOUSE_SCHEMA``, so the
     same task reads ``ol_data_lake_qa`` in QA and ``ol_data_lake_production``
     in production. Register concrete subclasses via
@@ -281,10 +286,16 @@ class BaseWarehouseETLTask(Task):
         """Open a warehouse connection, delegate to ``fetch_and_upsert``, log counts."""
         view_name = self.view_name
 
+        mode = RunMode.WRITE
         if self.writes is not None:
             with writing_as(Pipeline.WAREHOUSE):
-                if not may_write(*self.writes):
-                    return 0
+                mode = run_mode(*self.writes)
+            if mode == RunMode.SKIP:
+                return 0
+        # A shadow run is always a full one, so that its report includes what
+        # the prune would unpublish, and it leaves the watermark alone.
+        if mode == RunMode.SHADOW:
+            full_refresh = True
 
         since = None if full_refresh else self._get_watermark()
         # Captured before the fetch, not after: a row modified while the
@@ -299,7 +310,13 @@ class BaseWarehouseETLTask(Task):
         try:
             # The loaders check ownership again as the pipeline named here.
             with writing_as(Pipeline.WAREHOUSE):
-                count = self.fetch_and_upsert(conn, since=since)
+                if mode == RunMode.SHADOW:
+                    count, _ = run_shadow(
+                        [self.writes],
+                        lambda: self.fetch_and_upsert(conn, since=None),
+                    )
+                else:
+                    count = self.fetch_and_upsert(conn, since=since)
         except Exception:
             log.exception("Warehouse ETL task %s failed", self.name)
             sentry_sdk.add_breadcrumb(
@@ -334,7 +351,11 @@ class BaseWarehouseETLTask(Task):
         log.info(
             "Warehouse ETL task %s finished (%s): %d rows in %.1fs",
             self.name,
-            "full_refresh" if full_refresh else "incremental",
+            "shadow"
+            if mode == RunMode.SHADOW
+            else "full_refresh"
+            if full_refresh
+            else "incremental",
             count,
             elapsed,
         )
