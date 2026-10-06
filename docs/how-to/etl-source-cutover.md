@@ -82,7 +82,7 @@ For a warehouse source:
 
 1. Create the rows with `owner` set to `warehouse`.
 2. Run the source's `BaseWarehouseETLTask` in full from `./manage.py shell` rather than waiting for its beat entry: `<SyncTask>.delay(full_refresh=True)`. Only a full refresh prunes. (`SyncPodcastsTask`, `SyncYouTubeTask`, `SyncXproCoursesTask` and `SyncXproProgramsTask` are the catalog sources with a warehouse task so far. `profiles.tasks.SyncProgramCertificatesTask` writes certificates, not catalog resources, so ownership doesn't apply to it.)
-3. These tasks fail before writing if the run would unpublish more than 10% of the source's published resources of a type, since that is what a partly built view looks like. If the pre-flip comparison showed a larger difference and you have explained it, queue the run with `allow_mass_unpublish=True`.
+3. These tasks fail before writing if the run would unpublish more than 10% of the source's published resources of a type, since that is what a partly built view looks like. If the pre-flip comparison showed a larger difference and you have explained it, queue the run with `allow_mass_unpublish=True`. A type with fewer than ten published resources (e.g. xPRO programs) is over the limit as soon as one is removed, so its scheduled run fails, writing nothing, until the run is queued that way.
 
 Between the flip and the new owner's first run, the legacy task only skips. The source's data goes stale but nothing is unpublished.
 

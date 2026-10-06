@@ -1514,8 +1514,9 @@ class SyncXproProgramsTask(BaseWarehouseETLTask):
     Warehouse-pull sync of the xPRO programs, replacing get_xpro_data's program
     half once ETLSourceOwnership names the warehouse for xpro program.
 
-    A program's courses are looked up, not loaded, so run SyncXproCoursesTask
-    first. Always a full sync, whatever ``since`` is.
+    A program's courses are looked up among the xPRO courses MIT Learn has,
+    not loaded, so run SyncXproCoursesTask first. Always a full sync, whatever
+    ``since`` is.
 
     A run that would unpublish more than warehouse_guards.MAX_UNPUBLISH_SHARE of
     the published programs fails before writing. Queue it with
@@ -1527,14 +1528,9 @@ class SyncXproProgramsTask(BaseWarehouseETLTask):
     writes = (ETLSource.xpro.name, [LearningResourceType.program.name])
 
     def fetch_and_upsert(self, conn, *, since=None) -> int:  # noqa: ARG002
-        """Read the xPRO program and course views and load the programs."""
+        """Read the xPRO program view and load the programs."""
         return warehouse_xpro.sync_programs(
             list(iter_rows(conn, self.view_name)),
-            list(
-                iter_rows(
-                    conn, self.qualified_name("integrations__learn__xpro_courses")
-                )
-            ),
             allow_mass_unpublish=_allow_mass_unpublish(self),
         )
 
