@@ -35,13 +35,21 @@ if not django_settings.configured:
 # database, no app registry" guarantee intact.
 
 
-from learning_resources.etl.ownership import Pipeline, current_pipeline
+from learning_resources.etl.ownership import (
+    Pipeline,
+    RunMode,
+    current_pipeline,
+    is_shadow_run,
+    may_write,
+)
+from learning_resources.factories import ETLSourceOwnershipFactory
 from learning_resources.lib.warehouse import (
     _WATERMARK_LOOKBACK,
     BaseWarehouseETLTask,
     connect_to_warehouse,
     iter_rows,
 )
+from learning_resources.models import ETLShadowRun
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -331,23 +339,66 @@ class _CatalogTask(_PipelineRecordingTask):
 
 
 @pytest.mark.parametrize("owned", [True, False])
-@patch("learning_resources.lib.warehouse.may_write")
+@patch("learning_resources.lib.warehouse.run_mode")
 @patch("learning_resources.lib.warehouse.connect_to_warehouse")
 def test_base_warehouse_etl_task_runs_only_what_the_warehouse_owns(
-    mock_connect, mock_may_write, owned
+    mock_connect, mock_run_mode, owned
 ):
     """A task whose pair the warehouse doesn't own returns 0 without connecting."""
-    mock_may_write.side_effect = lambda *_: (
-        current_pipeline() == Pipeline.WAREHOUSE and owned
+    mock_run_mode.side_effect = lambda *_: (
+        RunMode.WRITE
+        if current_pipeline() == Pipeline.WAREHOUSE and owned
+        else RunMode.SKIP
     )
     task = _CatalogTask()
     task.pipeline = None
 
     assert task.run() == 0
 
-    mock_may_write.assert_called_once_with("ocw", ["course"])
+    mock_run_mode.assert_called_once_with("ocw", ["course"])
     assert mock_connect.called is owned
     assert task.pipeline == (Pipeline.WAREHOUSE if owned else None)
+
+
+class _ShadowRecordingTask(BaseWarehouseETLTask):
+    name = "test.ShadowRecordingTask"
+    table_name = "integrations__learn__test"
+    writes = ("ocw", ["course"])
+
+    def fetch_and_upsert(self, conn, *, since=None) -> int:  # noqa: ARG002
+        self.seen = (is_shadow_run(), since, may_write(*self.writes))
+        return 7
+
+
+@pytest.mark.django_db
+@patch("learning_resources.lib.warehouse.connect_to_warehouse")
+def test_base_warehouse_etl_task_shadows_a_pair(mock_connect):
+    """
+    As a pair's shadow the task does a full load inside a shadow run, saves the
+    report and leaves the watermark alone, even when queued as incremental.
+    """
+    mock_connect.return_value = MagicMock()
+    ETLSourceOwnershipFactory.create(
+        etl_source="ocw", resource_type="course", shadow=Pipeline.WAREHOUSE
+    )
+    task = _ShadowRecordingTask()
+
+    with (
+        patch.object(task, "_get_watermark") as mock_get_watermark,
+        patch.object(task, "_set_watermark") as mock_set_watermark,
+    ):
+        assert task.run(full_refresh=False) == 7
+
+    assert task.seen == (True, None, True)
+    mock_get_watermark.assert_not_called()
+    mock_set_watermark.assert_not_called()
+    run = ETLShadowRun.objects.get()
+    assert (run.etl_source, run.resource_type, run.pipeline) == (
+        "ocw",
+        "course",
+        Pipeline.WAREHOUSE,
+    )
+    assert is_shadow_run() is False
 
 
 def test_subclass_must_say_what_it_writes():
