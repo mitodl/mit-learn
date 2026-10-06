@@ -1,20 +1,22 @@
 """
 Add the SEO override columns beside the existing ones, and seed them (expand).
 
-Deploys are rolling: the Django pods restart over a window rather than all at
-once, so for a few minutes old code and new code run against the same database.
-Renaming the columns would take `seo_title` away from pods still selecting it,
-and those would 500 until they restarted.
+Deploys are rolling and migrate before the new pods start, so for a few minutes
+pods running the previous release query the migrated database. Each deploy has
+to leave the previous release's queries valid:
 
-So this adds the new columns and copies the old values into them, leaving
-`seo_title` and `seo_description` in place for the old code to keep reading.
-Dropping them is a separate migration in a separate PR, once every pod is on
-the new code -- expand, then contract.
+- The new columns get a database default, because the previous release
+  inserts rows without them.
+- `seo_title` and `seo_description` stay in the database, because the previous
+  release still selects them. They leave Django's model state here, and the
+  model, so this release never selects or writes them; they get a database
+  default for the same reason as above.
 
-One known gap in that window, and the reason it is a window rather than a
-plan: a write served by an old pod lands in the old column, which the new code
-does not read. Nothing 500s and nothing committed is lost, but an SEO override
-edited during the deploy may need re-entering.
+Dropping the old columns is a separate migration in a later release, once no
+deployed code references them -- expand, then contract.
+
+An override saved by a previous-release pod during the deploy lands in the old
+column, which this release does not read, so it may need re-entering.
 """
 
 from django.db import migrations, models
@@ -35,11 +37,11 @@ def copy_overrides_forward(apps, schema_editor):
 
 def copy_overrides_back(apps, schema_editor):
     """
-    Put the values back where the old code reads them.
+    Put the values back where the previous release reads them.
 
-    For a rollback between this migration and the one that drops the old
-    columns: anything written to an override in the meantime belongs in the old
-    column again, or unapplying this would lose it.
+    For a rollback before the old columns are dropped: anything written to an
+    override in the meantime belongs in the old column again, or unapplying
+    this would lose it.
     """
     website_content = apps.get_model("website_content", "WebsiteContent")
     website_content.objects.update(
@@ -57,12 +59,36 @@ class Migration(migrations.Migration):
         migrations.AddField(
             model_name="websitecontent",
             name="seo_title_override",
-            field=models.CharField(blank=True, default="", max_length=255),
+            field=models.CharField(
+                blank=True, default="", db_default="", max_length=255
+            ),
         ),
         migrations.AddField(
             model_name="websitecontent",
             name="seo_description_override",
-            field=models.TextField(blank=True, default=""),
+            field=models.TextField(blank=True, default="", db_default=""),
         ),
         migrations.RunPython(copy_overrides_forward, copy_overrides_back),
+        migrations.AlterField(
+            model_name="websitecontent",
+            name="seo_title",
+            field=models.CharField(
+                blank=True, default="", db_default="", max_length=255
+            ),
+        ),
+        migrations.AlterField(
+            model_name="websitecontent",
+            name="seo_description",
+            field=models.TextField(blank=True, default="", db_default=""),
+        ),
+        # State only: the columns stay for the previous release, and are
+        # dropped in a later migration.
+        migrations.SeparateDatabaseAndState(
+            state_operations=[
+                migrations.RemoveField(model_name="websitecontent", name="seo_title"),
+                migrations.RemoveField(
+                    model_name="websitecontent", name="seo_description"
+                ),
+            ],
+        ),
     ]
