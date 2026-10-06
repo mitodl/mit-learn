@@ -1827,9 +1827,9 @@ describe("dashboardViewModel", () => {
       expect(resolved.displayedEnrollment).toBeNull()
     })
 
-    test("picks a staff-made enrollment in a contract run with no b2b_contract", () => {
-      // The API scopes courseruns to the contract, including runs whose
-      // b2b_contract is blank so learners can't self-enroll.
+    test("picks an enrollment with no contract when its run is in the contract's courseruns", () => {
+      // e.g. staff enrolled the learner directly, so the enrollment carries no
+      // contract; the API has already scoped courseruns to the contract.
       const run = factories.courses.courseRun({
         id: 2803,
         b2b_contract: null,

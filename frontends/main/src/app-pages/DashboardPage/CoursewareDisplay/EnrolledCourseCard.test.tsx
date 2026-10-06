@@ -456,7 +456,7 @@ describe.each([
     ).not.toBeInTheDocument()
   })
 
-  test("Never shows upgrade banner on a contract page when the run has no b2b_contract", () => {
+  test("Never shows upgrade banner on a contract page when the enrollment has no contract", () => {
     setupUserApis()
     const enrollment = mitxonline.factories.enrollment.courseEnrollment({
       enrollment_mode: EnrollmentMode.Audit,
@@ -1157,7 +1157,7 @@ describe("EnrolledCourseCard card type label", () => {
     ).not.toBeInTheDocument()
   })
 
-  test("shows 'Module' on a contract page when the run has no b2b_contract", () => {
+  test("shows 'Module' on a contract page when the enrollment has no contract", () => {
     setupUserApis()
     const enrollment = mitxonline.factories.enrollment.courseEnrollment({
       b2b_contract_id: null,

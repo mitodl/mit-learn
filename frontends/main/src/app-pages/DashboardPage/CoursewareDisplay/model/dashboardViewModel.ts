@@ -601,9 +601,9 @@ const assembleHomeCardList = ({
 }
 
 /**
- * `b2b_contract_id` mirrors the run's `b2b_contract`, which can be blank on a
- * contract run (staff-enrolled only), so also trust the API's contract scoping
- * of `course.courseruns`.
+ * `b2b_contract_id` is null for an enrollment made without a contract (e.g.
+ * staff enrolling a learner directly), so an enrollment also counts when its
+ * run is in the contract-scoped `course.courseruns`.
  */
 const filterEnrollmentsForContract = (
   course: CourseWithCourseRunsSerializerV2,
