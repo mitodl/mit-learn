@@ -13,6 +13,7 @@ changes to support a new backend.
 import logging
 import re
 import time
+from collections.abc import Sequence
 from datetime import UTC, datetime, timedelta
 
 import sentry_sdk
@@ -21,7 +22,7 @@ from django.conf import settings
 from django.core.cache import caches
 from django.core.exceptions import ImproperlyConfigured
 
-from learning_resources.etl.ownership import Pipeline, writing_as
+from learning_resources.etl.ownership import Pipeline, may_write, writing_as
 
 log = logging.getLogger(__name__)
 
@@ -182,8 +183,12 @@ class BaseWarehouseETLTask(Task):
     """Celery task base class for warehouse-pull ETL jobs.
 
     Subclasses declare ``table_name`` (the bare view name, e.g.
-    ``"integrations__learn__ocw_courses"``) and implement
-    ``fetch_and_upsert(conn, *, since)``. ``view_name`` qualifies it with
+    ``"integrations__learn__ocw_courses"``) and ``writes`` (the
+    ``(etl_source, resource_types)`` the task loads, or ``None`` for a task
+    that loads no catalog resource), and implement
+    ``fetch_and_upsert(conn, *, since)``. ``run`` returns 0 without
+    connecting unless ETLSourceOwnership names the warehouse for every one
+    of those resource types. ``view_name`` qualifies it with
     ``settings.WAREHOUSE_CATALOG`` and ``settings.WAREHOUSE_SCHEMA``, so the
     same task reads ``ol_data_lake_qa`` in QA and ``ol_data_lake_production``
     in production. Register concrete subclasses via
@@ -217,6 +222,7 @@ class BaseWarehouseETLTask(Task):
         class SyncOCWCoursesTask(BaseWarehouseETLTask):
             name = "learning_resources.tasks.SyncOCWCoursesTask"
             table_name = "integrations__learn__ocw_courses"
+            writes = ("ocw", ["course"])
 
             def fetch_and_upsert(self, conn, *, since=None):
                 for row in iter_rows(conn, self.view_name, since=since):
@@ -228,16 +234,26 @@ class BaseWarehouseETLTask(Task):
     abstract = True
     acks_late = True
     table_name: str = ""
+    # No default: a task that forgot to say what it writes would run as a
+    # second writer next to the pair's owner.
+    writes: tuple[str, Sequence[str]] | None
 
     def __init_subclass__(cls, **kwargs):
-        """Reject subclasses that set ``view_name``.
+        """Reject subclasses that set ``view_name`` or leave ``writes`` unset.
 
-        A class attribute would shadow the property below and read whatever
-        catalog it names, whatever environment this runs in.
+        A ``view_name`` class attribute would shadow the property below and
+        read whatever catalog it names, whatever environment this runs in.
         """
         super().__init_subclass__(**kwargs)
         if "view_name" in cls.__dict__:
             msg = f"{cls.__name__} must set table_name, not view_name"
+            raise TypeError(msg)
+        if not hasattr(cls, "writes"):
+            msg = (
+                f"{cls.__name__} must set writes to the (etl_source, "
+                "resource_types) it loads, or to None if it loads no catalog "
+                "resource"
+            )
             raise TypeError(msg)
 
     @property
@@ -265,6 +281,11 @@ class BaseWarehouseETLTask(Task):
         """Open a warehouse connection, delegate to ``fetch_and_upsert``, log counts."""
         view_name = self.view_name
 
+        if self.writes is not None:
+            with writing_as(Pipeline.WAREHOUSE):
+                if not may_write(*self.writes):
+                    return 0
+
         since = None if full_refresh else self._get_watermark()
         # Captured before the fetch, not after: a row modified while the
         # fetch is in flight must still be picked up by the *next*
@@ -276,8 +297,7 @@ class BaseWarehouseETLTask(Task):
         conn = connect_to_warehouse()
         start = time.monotonic()
         try:
-            # fetch_and_upsert must call may_write for the pairs it writes
-            # before it queries; this only names the pipeline it is checked as.
+            # The loaders check ownership again as the pipeline named here.
             with writing_as(Pipeline.WAREHOUSE):
                 count = self.fetch_and_upsert(conn, since=since)
         except Exception:
