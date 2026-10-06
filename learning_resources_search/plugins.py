@@ -8,6 +8,7 @@ from django.conf import settings as django_settings
 from django.db import transaction
 
 from learning_resources.etl.constants import QDRANT_RETAINED_SOURCES
+from learning_resources.etl.ownership import is_shadow_run
 from learning_resources.models import ContentFile, LearningResource
 from learning_resources_search import tasks
 from learning_resources_search.api import get_similar_topics_qdrant
@@ -26,7 +27,12 @@ log = logging.getLogger()
 def try_with_retry_as_task(function, *args):
     """
     Try running the task, if it errors, run it as a celery task.
+
+    Does nothing inside an ETL shadow run: its database writes are rolled
+    back, so the indexes must not hear of them.
     """
+    if is_shadow_run():
+        return
     try:
         function(*args)
     except Exception:  # noqa: BLE001
