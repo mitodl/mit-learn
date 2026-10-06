@@ -155,6 +155,18 @@ const BannerArea = styled.div({
   flexDirection: "column",
   gap: "16px",
   maxWidth: "736px",
+  /**
+   * A channel with nothing featured has no row beneath the banner, and the
+   * design opens the trail-to-title gap to 32px there -- a 304px hero rather
+   * than a 752px one, so the text has room to sit in.
+   *
+   * Keyed off being the only child rather than off a flag: the Featured row
+   * renders nothing at all when the channel features nothing, so "no sibling"
+   * and "no featured row" are the same condition, and the two cannot drift.
+   */
+  "&:only-child": {
+    gap: "32px",
+  },
   /* The shared Breadcrumbs carries its own 16px bottom padding, which here
      would stack with this 16px gap and set the title 32px below the trail
      instead of the design's 16. */
