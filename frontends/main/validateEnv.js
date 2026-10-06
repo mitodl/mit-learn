@@ -77,11 +77,6 @@ const schema = yup.object().shape({
   NEXT_PUBLIC_PODCASTS_FEATURED_LIST_LEARNINGPATH_ID: yup
     .string()
     .matches(/^\d+$/, { excludeEmptyString: true }),
-  // The learning path whose items are the "Featured" row on a topic channel.
-  // Optional: unset, the row is not rendered at all rather than shown empty.
-  NEXT_PUBLIC_FEATURED_LIST_LEARNINGPATH_ID: yup
-    .string()
-    .matches(/^\d+$/, { excludeEmptyString: true }),
   GOOGLE_MAPS_API_KEY: yup.string(),
 })
 

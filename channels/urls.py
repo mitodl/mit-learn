@@ -6,6 +6,7 @@ from rest_framework.routers import DefaultRouter
 from channels.views import (
     ChannelByTypeNameDetailView,
     ChannelCountsView,
+    ChannelFeaturedView,
     ChannelViewSet,
 )
 
@@ -13,6 +14,12 @@ v0_router = DefaultRouter()
 v0_router.register(r"channels", ChannelViewSet, basename="channels_api")
 
 v0_urls = [
+    re_path(
+        r"^channels/type/(?P<channel_type>[A-Za-z0-9_\-]+)/"
+        r"(?P<name>[A-Za-z0-9_\-]+)/featured/$",
+        ChannelFeaturedView.as_view({"get": "list"}),
+        name="channel_featured_api-list",
+    ),
     re_path(
         r"^channels/type/(?P<channel_type>[A-Za-z0-9_\-]+)/(?P<name>[A-Za-z0-9_\-]+)/$",
         ChannelByTypeNameDetailView.as_view({"get": "retrieve"}),

@@ -4,22 +4,10 @@ import { factories, setMockResponse, urls, makeRequest } from "api/test-utils"
 import { renderWithProviders } from "@/test-utils"
 import TopicFeaturedCarousel, { FEATURED_COUNT } from "./TopicFeaturedCarousel"
 
-const LEARNING_PATH_ID = 227
+const CHANNEL_NAME = "data-science"
 
-const setLearningPathId = (value: string | undefined) => {
-  if (value === undefined) {
-    delete process.env.NEXT_PUBLIC_FEATURED_LIST_LEARNINGPATH_ID
-  } else {
-    process.env.NEXT_PUBLIC_FEATURED_LIST_LEARNINGPATH_ID = value
-  }
-}
-
-const previous = process.env.NEXT_PUBLIC_FEATURED_LIST_LEARNINGPATH_ID
-afterEach(() => setLearningPathId(previous))
-
-/** What the carousel requests: the helper takes no limit, so it is appended. */
-const itemsUrl = () =>
-  `${urls.learningResources.items({ id: LEARNING_PATH_ID })}?limit=${FEATURED_COUNT}`
+const featuredUrl = () =>
+  `${urls.channels.featured("topic", CHANNEL_NAME)}?limit=${FEATURED_COUNT}`
 
 /**
  * What a rendered resource card reads besides the resource itself: the current
@@ -33,31 +21,15 @@ const mockUser = () => {
 
 describe("TopicFeaturedCarousel", () => {
   /**
-   * The row is curated through a learning path rather than queried, so what it
-   * shows is whatever an editor put in that path -- in that order.
+   * The row is curated through the channel's learning path rather than
+   * queried, so what it shows is whatever an editor put there -- in that order.
    */
-  test("shows the configured learning path's items", async () => {
-    setLearningPathId(String(LEARNING_PATH_ID))
+  test("shows the channel's featured resources", async () => {
     mockUser()
     const resources = factories.learningResources.resources({ count: 3 })
-    setMockResponse.get(
-      itemsUrl(),
-      {
-        count: resources.results.length,
-        next: null,
-        previous: null,
-        results: resources.results.map((resource, position) => ({
-          id: position + 1,
-          position,
-          parent: LEARNING_PATH_ID,
-          child: resource.id,
-          resource,
-        })),
-      },
-      { requestBody: undefined },
-    )
+    setMockResponse.get(featuredUrl(), resources)
 
-    renderWithProviders(<TopicFeaturedCarousel />)
+    renderWithProviders(<TopicFeaturedCarousel name={CHANNEL_NAME} />)
 
     await screen.findByRole("heading", { name: "Featured" })
     for (const resource of resources.results) {
@@ -67,21 +39,29 @@ describe("TopicFeaturedCarousel", () => {
 
   /**
    * An empty "Featured" heading above a blank strip reads as a page that
-   * failed to load, and the sections below it stand on their own -- so an
-   * unconfigured environment gets no row rather than an empty one.
+   * failed to load, and the hero spaces its children 64px apart, so an empty
+   * row would also leave a gap. A channel featuring nothing gets no row.
    */
-  test.each([
-    { value: undefined, label: "unset" },
-    { value: "", label: "blank" },
-    { value: "0", label: "zero" },
-  ])("renders nothing when the id is $label", async ({ value }) => {
-    setLearningPathId(value)
+  test("renders nothing when the channel features nothing", async () => {
+    mockUser()
+    setMockResponse.get(featuredUrl(), {
+      count: 0,
+      next: null,
+      previous: null,
+      results: [],
+    })
 
-    renderWithProviders(<TopicFeaturedCarousel />)
+    renderWithProviders(<TopicFeaturedCarousel name={CHANNEL_NAME} />)
+
+    await waitFor(() => {
+      expect(screen.queryByText("Featured")).toBe(null)
+    })
+  })
+
+  test("renders nothing, and asks for nothing, without a channel name", async () => {
+    renderWithProviders(<TopicFeaturedCarousel name="" />)
 
     expect(screen.queryByText("Featured")).toBe(null)
-    // And asks the API for nothing: a request for learning path 0 or NaN
-    // could only 404.
     await waitFor(() => {
       expect(makeRequest).not.toHaveBeenCalledWith(
         expect.objectContaining({ method: "get" }),
@@ -89,23 +69,21 @@ describe("TopicFeaturedCarousel", () => {
     })
   })
 
-  test("asks for enough items to page through", async () => {
-    setLearningPathId(String(LEARNING_PATH_ID))
+  test("asks the channel's own endpoint for enough items to page through", async () => {
     mockUser()
-    setMockResponse.get(
-      itemsUrl(),
-      { count: 0, next: null, previous: null, results: [] },
-      { requestBody: undefined },
-    )
+    const resources = factories.learningResources.resources({ count: 1 })
+    setMockResponse.get(featuredUrl(), resources)
 
-    renderWithProviders(<TopicFeaturedCarousel />)
+    renderWithProviders(<TopicFeaturedCarousel name={CHANNEL_NAME} />)
 
     /* Four are on screen at desktop width; the rest are what the arrows page
        through, so the request has to cover more than one screenful. */
     await waitFor(() => {
       expect(makeRequest).toHaveBeenCalledWith(
         expect.objectContaining({
-          url: expect.stringContaining(`/${LEARNING_PATH_ID}/items/`),
+          url: expect.stringContaining(
+            `/channels/type/topic/${CHANNEL_NAME}/featured/`,
+          ),
         }),
       )
     })

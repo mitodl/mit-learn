@@ -3,7 +3,7 @@
 import logging
 from collections.abc import Callable
 
-from django.db.models import QuerySet
+from django.db.models import F, QuerySet
 from django.utils.decorators import method_decorator
 from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.utils import extend_schema, extend_schema_view
@@ -18,6 +18,8 @@ from channels.serializers import (
     ChannelCountsSerializer,
     ChannelSerializer,
 )
+from learning_resources.models import LearningResource
+from learning_resources.serializers import LearningResourceSerializer
 from main.permissions import AnonymousAccessReadonlyPermission
 from main.utils import cache_page_for_all_users
 
@@ -115,6 +117,56 @@ class ChannelByTypeNameDetailView(mixins.RetrieveModelMixin, viewsets.GenericVie
     def retrieve(self, request: Request, *args, **kwargs) -> Response:
         """View for retrieving an individual channel by type and name"""
         return super().retrieve(request, *args, **kwargs)
+
+
+@extend_schema_view(
+    list=extend_schema(
+        summary="Channel Featured Resources",
+        description=(
+            "Resources in the channel's featured learning path, in the order "
+            "the path lists them."
+        ),
+    ),
+)
+class ChannelFeaturedView(mixins.ListModelMixin, viewsets.GenericViewSet):
+    """
+    Resources in a channel's own featured learning path.
+
+    Read from the channel's `featured_list` directly, rather than by filtering
+    the aggregated featured endpoint down to one offeror. Two things follow
+    from that: a channel whose learning path is unpublished still has a
+    featured row -- editors curate these lists without publishing them, so
+    filtering on the path's published flag would empty the row -- and the row
+    can be fetched from the URL alone, without first waiting on the channel
+    detail request to learn the path's id.
+
+    The members of the list are still subject to their own published flag. An
+    unpublished *path* is a curation state; an unpublished *resource* is not
+    meant to be shown.
+    """
+
+    serializer_class = LearningResourceSerializer
+    permission_classes = (AnonymousAccessReadonlyPermission,)
+
+    def get_queryset(self) -> QuerySet[LearningResource]:
+        """Return the featured list's resources, in the path's own order."""
+        channel = get_object_or_404(
+            Channel.objects.filter(published=True),
+            channel_type=self.kwargs["channel_type"],
+            name=self.kwargs["name"],
+        )
+        if not channel.featured_list_id:
+            # No list configured is an empty row, not an error: a channel is
+            # not required to feature anything.
+            return LearningResource.objects.none()
+        return (
+            LearningResource.objects.for_serialization()
+            .filter(parents__parent_id=channel.featured_list_id)
+            .filter(published=True)
+            .annotate(position=F("parents__position"))
+            .order_by("position")
+            .distinct()
+        )
 
 
 @extend_schema_view(

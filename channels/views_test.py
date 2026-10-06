@@ -15,7 +15,11 @@ from channels.factories import (
 )
 from channels.models import Channel
 from channels.serializers import ChannelSerializer
-from learning_resources.factories import LearningResourceFactory
+from learning_resources.factories import (
+    LearningPathFactory,
+    LearningPathRelationshipFactory,
+    LearningResourceFactory,
+)
 from main.factories import UserFactory
 
 pytestmark = pytest.mark.django_db
@@ -290,3 +294,89 @@ def test_channel_counts_view_is_cached(client, is_authenticated):
 
     response = client.get(url).json()
     assert len(response) == channel_count
+
+
+def _featured_url(channel):
+    return reverse(
+        "channels:v0:channel_featured_api-list",
+        kwargs={"channel_type": channel.channel_type, "name": channel.name},
+    )
+
+
+def test_channel_featured_returns_the_list_in_its_own_order(client):
+    """The path's order is the row's order, not the resources' own."""
+    path = LearningPathFactory.create(resources=[]).learning_resource
+    channel = ChannelFactory.create(featured_list=path)
+    children = [
+        LearningPathRelationshipFactory.create(parent=path, position=position).child
+        for position in (2, 0, 1)
+    ]
+
+    results = client.get(_featured_url(channel)).json()["results"]
+
+    assert [r["id"] for r in results] == [
+        children[1].id,
+        children[2].id,
+        children[0].id,
+    ]
+
+
+def test_channel_featured_includes_an_unpublished_learning_path(client):
+    """
+    The reason this endpoint exists: editors curate these lists without
+    publishing them, so the aggregated featured endpoint leaves the row empty.
+    """
+    path = LearningPathFactory.create(resources=[]).learning_resource
+    path.published = False
+    path.save(update_fields=["published"])
+    channel = ChannelFactory.create(featured_list=path)
+    child = LearningPathRelationshipFactory.create(parent=path).child
+
+    results = client.get(_featured_url(channel)).json()["results"]
+
+    assert [r["id"] for r in results] == [child.id]
+
+
+def test_channel_featured_excludes_unpublished_resources(client):
+    """An unpublished path is a curation state; an unpublished member is not."""
+    path = LearningPathFactory.create(resources=[]).learning_resource
+    channel = ChannelFactory.create(featured_list=path)
+    published = LearningPathRelationshipFactory.create(parent=path, position=0).child
+    hidden = LearningPathRelationshipFactory.create(parent=path, position=1).child
+    hidden.published = False
+    hidden.save(update_fields=["published"])
+
+    results = client.get(_featured_url(channel)).json()["results"]
+
+    assert [r["id"] for r in results] == [published.id]
+
+
+def test_channel_featured_is_empty_without_a_configured_list(client):
+    """A channel need not feature anything, which is empty rather than a 404."""
+    channel = ChannelFactory.create(featured_list=None)
+
+    response = client.get(_featured_url(channel))
+
+    assert response.status_code == 200
+    assert response.json()["results"] == []
+
+
+def test_channel_featured_404s_for_an_unpublished_channel(client):
+    """Matching the other channel views, which only serve published channels."""
+    channel = ChannelFactory.create(published=False)
+
+    assert client.get(_featured_url(channel)).status_code == 404
+
+
+def test_channel_featured_is_scoped_to_its_own_channel(client):
+    """Each channel reads its own list, not the aggregate across channels."""
+    mine = LearningPathFactory.create(resources=[]).learning_resource
+    theirs = LearningPathFactory.create(resources=[]).learning_resource
+    channel = ChannelFactory.create(featured_list=mine)
+    ChannelFactory.create(featured_list=theirs)
+    child = LearningPathRelationshipFactory.create(parent=mine).child
+    LearningPathRelationshipFactory.create(parent=theirs)
+
+    results = client.get(_featured_url(channel)).json()["results"]
+
+    assert [r["id"] for r in results] == [child.id]

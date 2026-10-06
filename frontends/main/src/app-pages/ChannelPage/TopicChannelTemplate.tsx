@@ -345,7 +345,7 @@ const TopicChannelTemplateInternal: React.FC<
                   ) : null}
                 </TitleBlock>
               </BannerArea>
-              <TopicFeaturedCarousel />
+              <TopicFeaturedCarousel name={channel.name} />
             </HeroInner>
           </Container>
         </HeroContent>

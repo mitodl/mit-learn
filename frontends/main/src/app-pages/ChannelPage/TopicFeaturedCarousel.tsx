@@ -1,6 +1,8 @@
 import React from "react"
 import { styled } from "ol-components"
-import { env } from "@/env"
+import { useQuery } from "@tanstack/react-query"
+import { ChannelTypeEnum } from "api/v0"
+import { channelQueries } from "api/hooks/channels"
 import ResourceCarousel from "@/page-components/ResourceCarousel/ResourceCarousel"
 import type { TabConfig } from "@/page-components/ResourceCarousel/types"
 
@@ -20,8 +22,8 @@ const FEATURED_COUNT = 12
  * rather than in the shared component, which other pages rely on.
  *
  * The negative margin is safe to pair with the carousel like this because the
- * two always travel together: this component renders nothing at all when no
- * learning path is configured.
+ * two always travel together: this component renders nothing at all when the
+ * channel features nothing.
  */
 const Container = styled.div(({ theme }) => ({
   marginBottom: "-24px",
@@ -35,44 +37,59 @@ const Container = styled.div(({ theme }) => ({
   },
 }))
 
+type TopicFeaturedCarouselProps = {
+  /** The channel's `name`, as it appears in the page's own URL. */
+  name: string
+}
+
 /**
  * The "Featured" row on a topic channel.
  *
- * Curated rather than queried: the items come from a learning path whose id is
- * configured per environment, so editors choose what leads the page without a
- * deploy. That is also why it is a learning path and not a search -- a search
- * would re-rank itself as the catalogue changed.
+ * Curated rather than queried: the items are whatever an editor put in the
+ * channel's featured learning path, in that order. A search would re-rank
+ * itself as the catalogue changed, which is the opposite of what a curated
+ * row is for.
  *
- * Renders nothing at all when no learning path is configured. An empty
- * "Featured" heading above a blank strip reads as a failure, and the sections
- * below it stand on their own.
+ * It reads the channel's own featured endpoint, which takes the channel from
+ * the URL. So the row starts loading with the page rather than waiting on the
+ * channel detail request to learn the path's id, and it still shows a path the
+ * editors have not published -- these lists are routinely curated unpublished,
+ * and the aggregated featured endpoint drops them.
+ *
+ * Renders nothing when the channel features nothing. An empty "Featured"
+ * heading above a blank strip reads as a failure, and the sections below it
+ * stand on their own.
  */
-const TopicFeaturedCarousel: React.FC = () => {
-  const configuredId = Number(env("NEXT_PUBLIC_FEATURED_LIST_LEARNINGPATH_ID"))
-  /**
-   * `Number("")` is 0 and `Number(undefined)` is NaN, so both the unset and
-   * the blank cases have to be excluded -- and a non-positive id would be a
-   * request for a learning path that cannot exist.
-   */
-  const hasConfiguredId = Number.isFinite(configuredId) && configuredId > 0
-
-  const config: TabConfig[] = React.useMemo(
-    () => [
-      {
-        label: "Featured",
-        data: {
-          type: "resource_items",
-          params: {
-            learning_resource_id: configuredId,
-            limit: FEATURED_COUNT,
-          },
-        },
-      },
-    ],
-    [configuredId],
+const TopicFeaturedCarousel: React.FC<TopicFeaturedCarouselProps> = ({
+  name,
+}) => {
+  const params = React.useMemo(
+    () => ({
+      channel_type: ChannelTypeEnum.Topic,
+      name,
+      limit: FEATURED_COUNT,
+    }),
+    [name],
   )
 
-  if (!hasConfiguredId) {
+  const config: TabConfig[] = React.useMemo(
+    () => [{ label: "Featured", data: { type: "channel_featured", params } }],
+    [params],
+  )
+
+  /**
+   * The carousel hides itself once it knows the row is empty, but this
+   * wrapper would stay behind as an empty flex item -- and the hero spaces
+   * its children 64px apart, so an empty one is 64px of blank hero. The same
+   * query answers both; React Query serves one request for the two readers.
+   */
+  const { data, isLoading } = useQuery({
+    ...channelQueries.featured(params),
+    enabled: Boolean(name),
+  })
+  const isEmpty = !isLoading && !data?.results?.length
+
+  if (!name || isEmpty) {
     return null
   }
 

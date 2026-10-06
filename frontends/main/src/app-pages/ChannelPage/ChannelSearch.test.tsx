@@ -81,6 +81,14 @@ const setMockApiResponses = ({
     channel,
   )
 
+  // A topic hero carries a Featured row, which reads the channel's own list.
+  setMockResponse.get(
+    expect.stringContaining(
+      urls.channels.featured(channel.channel_type, channel.name),
+    ),
+    { count: 0, next: null, previous: null, results: [] },
+  )
+
   setMockResponse.get(
     urls.platforms.list(),
     factories.learningResources.platforms({ count: 5 }),

@@ -128,6 +128,11 @@ const setupTopicApis = (channel: Channel) => {
     "Topic channel must have a topic",
   )
   const topic = factories.learningResources.topic()
+  // The hero's Featured row reads the channel's own featured list.
+  setMockResponse.get(
+    `${urls.channels.featured(channel.channel_type, channel.name)}?limit=12`,
+    { count: 0, next: null, previous: null, results: [] },
+  )
   channel.channel_url = `/c/${channel.channel_type}/${channel.name.replace(/\s/g, "-")}`
   topic.channel_url = channel.channel_url
   topic.id = channel.topic_detail.topic ?? 0
