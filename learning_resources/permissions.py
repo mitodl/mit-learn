@@ -135,17 +135,20 @@ class IsAdminOrTutorProblemViewer(BasePermission):
         return user.groups.filter(name=GROUP_TUTOR_PROBLEM_VIEWERS).exists()
 
 
-class IsAdminOrCourseAuthor(BasePermission):
+class IsAdminOrCourseAuthorOrReadOnly(BasePermission):
     """
-    Permission for endpoints only course authors and staff may reach.
+    Permission for endpoints anyone may read but only course authors and
+    staff may write.
 
     Used to gate the credential metadata endpoint. Generating spends a
-    frontier-model call on a large prompt per request; reading the stored
-    values is cheap, but is gated the same way because it exposes unpublished
-    draft metadata that no learner-facing surface shows yet.
+    frontier-model call on a large prompt per request, so it is limited to
+    authors and staff; reading the stored values is cheap and open to all
+    users, including anonymous ones.
     """
 
     def has_permission(self, request, view):  # noqa: ARG002
+        if request.method in SAFE_METHODS:
+            return True
         user = request.user
         if not user or not user.is_authenticated:
             return False

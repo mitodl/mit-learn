@@ -31,6 +31,7 @@ import { useReplaceBasketItem } from "@/common/mitxonline/useReplaceBasketItem"
 import { useComplianceGate } from "@/common/mitxonline/useComplianceGate"
 import { useCreateVerifiedProgramEnrollment } from "api/mitxonline-hooks/enrollment"
 import { SILENCE_ERROR_TOAST } from "api/mutation-meta"
+import { badRequestDetail } from "api/mutation-errors"
 import { isInPast, calendarDaysUntil, NoSSR } from "ol-utilities"
 import { SiblingRunsPanel, SiblingRunsToggle } from "./SiblingRunsAccordion"
 import { EnrollmentStatusIcon } from "./EnrollmentStatus"
@@ -140,9 +141,10 @@ const UpgradeBanner: React.FC<
         if (coursewareUrl) {
           window.location.href = coursewareUrl
         }
-      } catch {
+      } catch (error) {
         onUpgradeFailure?.(
-          "There was a problem upgrading your enrollment. Please try again.",
+          badRequestDetail(error) ??
+            "There was a problem upgrading your enrollment. Please try again.",
         )
       }
       return
@@ -152,9 +154,10 @@ const UpgradeBanner: React.FC<
 
     try {
       await replaceBasketItem.mutateAsync(productId)
-    } catch {
+    } catch (error) {
       onUpgradeFailure?.(
-        "There was a problem adding the certificate to your cart.",
+        badRequestDetail(error) ??
+          "There was a problem adding the certificate to your cart.",
       )
     }
   }
@@ -232,6 +235,7 @@ const MobileAccordionWrapper = styled.div({
 type EnrolledCourseCardProps = {
   enrollment: CourseRunEnrollmentV3
   siblingEnrollments?: CourseRunEnrollmentV3[]
+  contractId?: number
   ancestorContext?: {
     programEnrollment?: V3UserProgramEnrollment
     parentProgramReadableIds?: string[]
@@ -249,6 +253,7 @@ type EnrolledCourseCardProps = {
 export const EnrolledCourseCard = ({
   enrollment,
   siblingEnrollments,
+  contractId,
   ancestorContext,
   layout = "default",
   headingLevel,
@@ -261,7 +266,9 @@ export const EnrolledCourseCard = ({
   const course = enrollment.run.course
   const run = enrollment.run
   const isCompact = layout === "compact"
-  const isContractPageResource = Boolean(enrollment.b2b_contract_id)
+  const isContractPageResource = Boolean(
+    contractId ?? enrollment.b2b_contract_id,
+  )
   const cardTypeLabelText =
     isModule || isContractPageResource ? "Module" : "Course"
   const cardTypeLabel =
@@ -287,7 +294,7 @@ export const EnrolledCourseCard = ({
     "course",
   )
   const enrollmentMode = enrollment?.enrollment_mode
-  const offerUpgrade = !enrollment?.b2b_contract_id
+  const offerUpgrade = !isContractPageResource
   const startDate = run?.start_date
   const coursewareOpen = canOpenCourseware(startDate, { isStaff })
   const endDate = run?.end_date

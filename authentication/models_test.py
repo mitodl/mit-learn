@@ -20,6 +20,7 @@ from authentication.models import BlockedIPRange
         ("194.168.20.100", None, "IP cannot be null"),
         ("192.168.2.2", "169.2.4.4", "IP 192.168.2.2 is not routable"),
         ("9.2.2.2", "10.2.4.4", "IP 10.2.4.4 is not routable"),
+        ("::ffff:10.0.0.1", "182.0.0.1", "IP ::ffff:10.0.0.1 is not routable"),
     ],
 )
 def test_blocked_ip_range_validation(ip_start, ip_end, error, settings):

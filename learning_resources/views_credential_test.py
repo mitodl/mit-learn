@@ -519,10 +519,25 @@ def test_credential_metadata_get_requires_a_readable_id(client, django_user_mode
 
 @pytest.mark.django_db(transaction=True)
 def test_credential_metadata_get_anonymous(client, resource):
-    """Stored metadata is author-only draft content"""
+    """Stored metadata is readable without logging in"""
     CredentialMetadataFactory.create(learning_resource=resource, **GENERATED)
 
-    assert fetch(client, resource.readable_id).status_code == 403
+    response = fetch(client, resource.readable_id)
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "resource_readable_id": resource.readable_id,
+        **GENERATED,
+    }
+
+
+@pytest.mark.django_db(transaction=True)
+def test_credential_metadata_get_non_author(client, django_user_model, resource):
+    """Stored metadata is readable by a logged-in user who is not an author"""
+    CredentialMetadataFactory.create(learning_resource=resource, **GENERATED)
+    client.force_login(django_user_model.objects.create())
+
+    assert fetch(client, resource.readable_id).status_code == 200
 
 
 @pytest.mark.django_db(transaction=True)

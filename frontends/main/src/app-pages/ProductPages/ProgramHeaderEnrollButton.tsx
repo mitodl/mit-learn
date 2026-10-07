@@ -15,7 +15,7 @@ const ProgramHeaderEnrollButton: React.FC<ProgramHeaderEnrollButtonProps> = ({
 }) => {
   const [anchor, setAnchor] = React.useState<null | HTMLButtonElement>(null)
 
-  const { state, isStatusLoading, isPending, isError } = useProgramEnrollment(
+  const { state, isStatusLoading, isPending, error } = useProgramEnrollment(
     program,
     {
       tracking: { placement: "header" },
@@ -29,7 +29,7 @@ const ProgramHeaderEnrollButton: React.FC<ProgramHeaderEnrollButtonProps> = ({
       state={state}
       isStatusLoading={isStatusLoading}
       isPending={isPending}
-      isError={isError}
+      error={error}
       anchor={anchor}
       onAnchorClose={() => setAnchor(null)}
     />
