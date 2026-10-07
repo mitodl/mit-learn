@@ -3201,18 +3201,21 @@ def test_load_videos_from_content_files(mocker, match_ratio, expected_result):
 
 
 @pytest.mark.parametrize(
-    ("content_file_published", "run_published"),
-    [(False, True), (True, False)],
+    ("content_file_published", "run_published", "resource_published"),
+    [(False, True, True), (True, False, True), (True, True, False)],
 )
 def test_load_videos_from_content_files_skips_unpublished(
-    mocker, content_file_published, run_published
+    mocker, content_file_published, run_published, resource_published
 ):
-    """An unpublished content file, or one on an unpublished run, is not matched"""
+    """An unpublished content file, run, or parent resource is not matched"""
     mock_load = mocker.patch(
         "learning_resources.etl.loaders.load_video_with_content_file",
     )
     ContentFileFactory.create(
-        run=LearningResourceRunFactory.create(published=run_published),
+        run=LearningResourceRunFactory.create(
+            published=run_published,
+            learning_resource__published=resource_published,
+        ),
         youtube_id="yt_id",
         published=content_file_published,
     )
