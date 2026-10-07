@@ -1740,7 +1740,9 @@ describe("ContractContent", () => {
       {
         language: LanguageEnum.En,
         variant_industry: "",
+        variant_industry_label: "Original",
         variant_length: "",
+        variant_length_label: "Full",
         active: true,
         b2b_only: true,
         default_variant: true,
@@ -1748,7 +1750,9 @@ describe("ContractContent", () => {
       {
         language: LanguageEnum.EsEs,
         variant_industry: "",
+        variant_industry_label: "Original",
         variant_length: "",
+        variant_length_label: "Full",
         active: true,
         b2b_only: true,
         default_variant: false,
@@ -1832,7 +1836,9 @@ describe("ContractContent", () => {
       {
         language: LanguageEnum.En,
         variant_industry: "",
+        variant_industry_label: "Original",
         variant_length: "",
+        variant_length_label: "Full",
         active: true,
         b2b_only: true,
         default_variant: true,
@@ -1840,7 +1846,9 @@ describe("ContractContent", () => {
       {
         language: LanguageEnum.EsEs,
         variant_industry: "",
+        variant_industry_label: "Original",
         variant_length: "",
+        variant_length_label: "Full",
         active: true,
         b2b_only: true,
         default_variant: false,
@@ -1921,7 +1929,9 @@ describe("ContractContent", () => {
       {
         language: LanguageEnum.En,
         variant_industry: "",
+        variant_industry_label: "Original",
         variant_length: "",
+        variant_length_label: "Full",
         active: true,
         b2b_only: true,
         default_variant: true,
@@ -1929,7 +1939,9 @@ describe("ContractContent", () => {
       {
         language: LanguageEnum.EsEs,
         variant_industry: "",
+        variant_industry_label: "Original",
         variant_length: "",
+        variant_length_label: "Full",
         active: true,
         b2b_only: true,
         default_variant: false,
@@ -2033,7 +2045,9 @@ describe("ContractContent", () => {
       {
         language: LanguageEnum.En,
         variant_industry: "",
+        variant_industry_label: "Original",
         variant_length: "",
+        variant_length_label: "Full",
         active: true,
         b2b_only: true,
         default_variant: true,
@@ -2041,7 +2055,9 @@ describe("ContractContent", () => {
       {
         language: LanguageEnum.EsEs,
         variant_industry: "",
+        variant_industry_label: "Original",
         variant_length: "",
+        variant_length_label: "Full",
         active: true,
         b2b_only: true,
         default_variant: false,
@@ -2150,7 +2166,9 @@ describe("ContractContent", () => {
       {
         language: LanguageEnum.En,
         variant_industry: "",
+        variant_industry_label: "Original",
         variant_length: "",
+        variant_length_label: "Full",
         active: true,
         b2b_only: true,
         default_variant: true,
@@ -2158,7 +2176,9 @@ describe("ContractContent", () => {
       {
         language: LanguageEnum.EsEs,
         variant_industry: "",
+        variant_industry_label: "Original",
         variant_length: "",
+        variant_length_label: "Full",
         active: true,
         b2b_only: true,
         default_variant: false,
@@ -2227,7 +2247,9 @@ describe("ContractContent", () => {
       {
         language: LanguageEnum.En,
         variant_industry: "",
+        variant_industry_label: "Original",
         variant_length: "",
+        variant_length_label: "Full",
         active: true,
         b2b_only: true,
         default_variant: true,
@@ -2235,7 +2257,9 @@ describe("ContractContent", () => {
       {
         language: LanguageEnum.EsEs,
         variant_industry: "",
+        variant_industry_label: "Original",
         variant_length: "",
+        variant_length_label: "Full",
         active: true,
         b2b_only: true,
         default_variant: false,

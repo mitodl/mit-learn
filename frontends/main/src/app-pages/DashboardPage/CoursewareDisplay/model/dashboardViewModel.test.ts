@@ -1773,7 +1773,9 @@ describe("dashboardViewModel", () => {
       const variant: SupportedVariant = {
         language: LanguageEnum.En,
         variant_industry: VariantIndustryEnum.E,
+        variant_industry_label: "Energy",
         variant_length: "",
+        variant_length_label: "Full",
         active: true,
         b2b_only: true,
         default_variant: false,
@@ -1904,7 +1906,9 @@ describe("dashboardViewModel", () => {
       const variant: SupportedVariant = {
         language: LanguageEnum.En,
         variant_industry: VariantIndustryEnum.F,
+        variant_industry_label: "Finance",
         variant_length: "",
+        variant_length_label: "Full",
         active: true,
         b2b_only: true,
         default_variant: false,
@@ -1955,7 +1959,9 @@ describe("dashboardViewModel", () => {
       const defaultEnglishVariant: SupportedVariant = {
         language: LanguageEnum.En,
         variant_industry: "",
+        variant_industry_label: "Original",
         variant_length: "",
+        variant_length_label: "Full",
         active: true,
         b2b_only: true,
         default_variant: true,
@@ -2005,17 +2011,32 @@ describe("dashboardViewModel", () => {
 // Variant picker model helpers
 // ---------------------------------------------------------------------------
 
+// The labels mitxonline sends for each code, so fixtures look like API data.
+const API_INDUSTRY_LABELS: Record<string, string> = {
+  "": "Original",
+  E: "Energy",
+  F: "Finance",
+  HC: "Healthcare",
+}
+const API_LENGTH_LABELS: Record<string, string> = { "": "Full", S: "Short" }
+
 const makeVariant = (
   overrides: Partial<SupportedVariant> = {},
-): SupportedVariant => ({
-  language: LanguageEnum.En,
-  variant_industry: "",
-  variant_length: "",
-  active: true,
-  b2b_only: true,
-  default_variant: false,
-  ...overrides,
-})
+): SupportedVariant => {
+  const industry = overrides.variant_industry ?? ""
+  const length = overrides.variant_length ?? ""
+  return {
+    language: LanguageEnum.En,
+    variant_industry: industry,
+    variant_industry_label: API_INDUSTRY_LABELS[industry] ?? industry,
+    variant_length: length,
+    variant_length_label: API_LENGTH_LABELS[length] ?? length,
+    active: true,
+    b2b_only: true,
+    default_variant: false,
+    ...overrides,
+  }
+}
 
 const makeRun = (overrides: Partial<BaseCourseRun> = {}): BaseCourseRun => ({
   id: 1,
@@ -2027,6 +2048,8 @@ const makeRun = (overrides: Partial<BaseCourseRun> = {}): BaseCourseRun => ({
   course_number: "T101",
   language: LanguageEnum.En,
   language_label: "",
+  variant_industry_label: "Original",
+  variant_length_label: "Full",
   enrollment_modes: [],
   is_upgradable: false,
   is_enrollable: true,
@@ -2138,15 +2161,36 @@ describe("buildVariantLabel", () => {
     ).toBe("English • Healthcare • Full")
   })
 
-  test("falls back to raw value for an unknown industry code", () => {
+  test("uses the API label for an industry code Learn doesn't know", () => {
     expect(
-      buildVariantLabel(makeVariant({ variant_industry: "XY" as never })),
+      buildVariantLabel(
+        makeVariant({
+          variant_industry: "M" as never,
+          variant_industry_label: "Manufacturing",
+        }),
+      ),
+    ).toBe("English • Manufacturing • Full")
+  })
+
+  test("falls back to the industry code when the API label is empty", () => {
+    expect(
+      buildVariantLabel(
+        makeVariant({
+          variant_industry: "XY" as never,
+          variant_industry_label: "",
+        }),
+      ),
     ).toBe("English • XY • Full")
   })
 
-  test("falls back to raw value for an unknown length code", () => {
+  test("falls back to the length code when the API label is empty", () => {
     expect(
-      buildVariantLabel(makeVariant({ variant_length: "XZ" as never })),
+      buildVariantLabel(
+        makeVariant({
+          variant_length: "XZ" as never,
+          variant_length_label: "",
+        }),
+      ),
     ).toBe("English • General • XZ")
   })
 })
