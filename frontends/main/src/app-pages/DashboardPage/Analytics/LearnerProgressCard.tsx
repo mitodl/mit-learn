@@ -5,6 +5,7 @@ import { RiArrowRightLine } from "@remixicon/react"
 import { Link, Skeleton, styled, Typography, useTheme } from "ol-components"
 import { VisuallyHidden } from "@mitodl/smoot-design"
 import type { CompletionStatusCounts } from "api/analytics-hooks/organizations"
+import type { ContractLearnersStatus } from "@/common/urls"
 import { EmptyTableMessage, TableCard } from "@/components/B2BTable/B2BTable"
 import { progressStatusColors } from "./chartPalette"
 import { formatCount, formatPercent } from "./format"
@@ -30,10 +31,14 @@ import SectionError from "./SectionError"
  */
 
 const BUCKETS = [
-  { key: "not_started", label: "Not started" },
-  { key: "in_progress", label: "In progress" },
-  { key: "completed", label: "Completed" },
-] as const
+  { key: "not_started", label: "Not started", status: "not_started" },
+  { key: "in_progress", label: "In progress", status: "in_progress" },
+  { key: "completed", label: "Completed", status: "passed" },
+] as const satisfies readonly {
+  key: string
+  label: string
+  status: ContractLearnersStatus
+}[]
 
 type BucketKey = (typeof BUCKETS)[number]["key"]
 
@@ -124,7 +129,9 @@ const Tile: React.FC<{
   label: string
   value: number
   learnersHref: string
-}> = ({ label, value, learnersHref }) => (
+  linkText: string
+  linkLabel: string
+}> = ({ label, value, learnersHref, linkText, linkLabel }) => (
   <TileBox role="group" aria-label={label}>
     <TileLabel>{label}</TileLabel>
     <TileValue>{formatCount(value)}</TileValue>
@@ -132,9 +139,9 @@ const Tile: React.FC<{
       href={learnersHref}
       color="red"
       size="small"
-      aria-label={`View all learners (${label} tile)`}
+      aria-label={linkLabel}
     >
-      View all learners <RiArrowRightLine aria-hidden="true" />
+      {linkText} <RiArrowRightLine aria-hidden="true" />
     </TileLink>
   </TileBox>
 )
@@ -215,7 +222,7 @@ const LearnerProgressCard: React.FC<{
   statusCounts: CompletionStatusCounts | undefined
   isLoading: boolean
   isError?: boolean
-  learnersHref: string
+  learnersHref: (status?: ContractLearnersStatus) => string
 }> = ({
   totalCount,
   withheldCount,
@@ -270,22 +277,23 @@ const LearnerProgressCard: React.FC<{
   return (
     <Root>
       <TileRow>
-        <Tile label="Enrolled" value={totalCount} learnersHref={learnersHref} />
         <Tile
-          label="Not started"
-          value={buckets.not_started}
-          learnersHref={learnersHref}
+          label="Enrolled"
+          value={totalCount}
+          learnersHref={learnersHref()}
+          linkText="View all learners"
+          linkLabel="View all learners"
         />
-        <Tile
-          label="In progress"
-          value={buckets.in_progress}
-          learnersHref={learnersHref}
-        />
-        <Tile
-          label="Completed"
-          value={buckets.completed}
-          learnersHref={learnersHref}
-        />
+        {BUCKETS.map((bucket) => (
+          <Tile
+            key={bucket.key}
+            label={bucket.label}
+            value={buckets[bucket.key]}
+            learnersHref={learnersHref(bucket.status)}
+            linkText="View learners"
+            linkLabel={`View ${bucket.label.toLowerCase()} learners`}
+          />
+        ))}
       </TileRow>
 
       <TableCard>

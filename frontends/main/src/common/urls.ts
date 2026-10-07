@@ -126,8 +126,41 @@ export const contractAnalyticsView = (orgSlug: string, contractSlug: string) =>
  */
 export const CONTRACT_LEARNERS_VIEW =
   "/organization/[orgSlug]/contract/[contractSlug]/learners"
-export const contractLearnersView = (orgSlug: string, contractSlug: string) =>
-  generatePath(CONTRACT_LEARNERS_VIEW, { orgSlug, contractSlug })
+/**
+ * The learner directory's Status filter values. `passed` covers both `passed`
+ * and `certified` (see `STATUS_FILTER_COMPLETION_STATUS`), which is why the
+ * URL param is `status` rather than the API's `completion_status`.
+ */
+export const CONTRACT_LEARNERS_STATUSES = [
+  "not_started",
+  "in_progress",
+  "passed",
+  "unknown",
+] as const
+export type ContractLearnersStatus = (typeof CONTRACT_LEARNERS_STATUSES)[number]
+export type ContractLearnersFilters = {
+  q?: string
+  status?: ContractLearnersStatus
+  /** A course run's readable id. */
+  module?: string
+  needsAttention?: boolean
+  page?: number
+}
+export const contractLearnersView = (
+  orgSlug: string,
+  contractSlug: string,
+  filters: ContractLearnersFilters = {},
+) => {
+  const path = generatePath(CONTRACT_LEARNERS_VIEW, { orgSlug, contractSlug })
+  const params = new URLSearchParams()
+  if (filters.q) params.set("q", filters.q)
+  if (filters.status) params.set("status", filters.status)
+  if (filters.module) params.set("module", filters.module)
+  if (filters.needsAttention) params.set("needs_attention", "true")
+  if (filters.page && filters.page > 1) params.set("page", String(filters.page))
+  const search = params.toString()
+  return search ? `${path}?${search}` : path
+}
 export const PROGRAM_VIEW = "/dashboard/program/[id]"
 export const programView = (id: number) =>
   generatePath(PROGRAM_VIEW, { id: String(id) })

@@ -624,7 +624,9 @@ const AnalyticsContentInternal: React.FC<AnalyticsContentInternalProps> = ({
             statusCounts={learnerProgress.data?.completion_status_counts}
             isLoading={learnerProgress.isPending}
             isError={learnerProgress.isError}
-            learnersHref={contractLearnersView(orgSlug, contract.slug)}
+            learnersHref={(status) =>
+              contractLearnersView(orgSlug, contract.slug, { status })
+            }
           />
         </Section>
       ) : null}

@@ -15,7 +15,7 @@ import { allowConsoleErrors } from "ol-test-utilities"
 import { ForbiddenError } from "@/common/errors"
 import { FeatureFlags } from "@/common/feature_flags"
 import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
-import { contractAnalyticsView } from "@/common/urls"
+import { contractAnalyticsView, contractLearnersView } from "@/common/urls"
 import ContractLearnersPage from "./ContractLearnersPage"
 
 jest.mock("posthog-js/react", () => ({
@@ -1353,6 +1353,230 @@ describe("ContractLearnersPage", () => {
       await within(await screen.findByRole("cell")).findByText(
         "No learners match this filter.",
       )
+    })
+  })
+
+  describe("URL state", () => {
+    const renderAt = (
+      filters: Parameters<typeof contractLearnersView>[2],
+      mock: (contractId: string) => void,
+    ) => {
+      const { org, contract, orgSlug } = setup()
+      const contractId = String(contract.id)
+      setMockResponse.get(
+        mitxUrls.organization.managerOrganizationsList(),
+        paginate([org]),
+      )
+      mockTotal(contractId, 60)
+      mockCourseRuns(contractId)
+      mock(contractId)
+      return renderWithProviders(
+        <ContractLearnersPage orgSlug={orgSlug} contractSlug={contract.slug} />,
+        { url: contractLearnersView(orgSlug, contract.slug, filters) },
+      )
+    }
+
+    test("opens with the filters a link carries", async () => {
+      renderAt(
+        { q: "ada", status: "in_progress", needsAttention: true },
+        (contractId) =>
+          mockList(
+            contractId,
+            [analyticsFactories.learnerProgress({ full_name: "Ada Stale" })],
+            {
+              search: "ada",
+              completion_status: ["in_progress"],
+              needs_attention: true,
+            },
+          ),
+      )
+
+      await screen.findByText("Ada Stale")
+      expect(screen.getByPlaceholderText("Search name or email")).toHaveValue(
+        "ada",
+      )
+      expect(
+        screen.getByRole("combobox", { name: /status/i }),
+      ).toHaveTextContent("In progress")
+      expect(
+        screen.getByRole("checkbox", { name: "Needs attention only" }),
+      ).toBeChecked()
+    })
+
+    test("a Completed link matches passed and certified", async () => {
+      renderAt({ status: "passed" }, (contractId) =>
+        mockList(
+          contractId,
+          [analyticsFactories.learnerProgress({ full_name: "Finished" })],
+          { completion_status: ["passed", "certified"] },
+        ),
+      )
+
+      await screen.findByText("Finished")
+    })
+
+    test("applies a linked module once the contract's runs load", async () => {
+      renderAt({ module: "course-v1:MITx+M6+2026" }, (contractId) =>
+        mockList(
+          contractId,
+          [analyticsFactories.learnerProgress({ full_name: "Module 6 Only" })],
+          { courserun_readable_id: "course-v1:MITx+M6+2026" },
+        ),
+      )
+
+      await screen.findByText("Module 6 Only")
+      expect(
+        screen.getByRole("combobox", { name: /module/i }),
+      ).toHaveTextContent("Module 6")
+    })
+
+    test("opens on the linked page", async () => {
+      renderAt({ page: 2 }, (contractId) =>
+        mockList(
+          contractId,
+          [analyticsFactories.learnerProgress({ full_name: "Second Page" })],
+          { offset: PAGE_SIZE },
+          { total_count: 60 },
+        ),
+      )
+
+      await screen.findByText("Second Page")
+      expect(screen.getByText("Page 2 of 3")).toBeInTheDocument()
+    })
+
+    test("ignores filter values it does not recognize", async () => {
+      const { org, contract, orgSlug } = setup()
+      const contractId = String(contract.id)
+      setMockResponse.get(
+        mitxUrls.organization.managerOrganizationsList(),
+        paginate([org]),
+      )
+      mockTotal(contractId, 1)
+      mockCourseRuns(contractId)
+      mockList(contractId, [
+        analyticsFactories.learnerProgress({ full_name: "Everyone" }),
+      ])
+
+      renderWithProviders(
+        <ContractLearnersPage orgSlug={orgSlug} contractSlug={contract.slug} />,
+        {
+          url: `${contractLearnersView(orgSlug, contract.slug)}?status=bogus&module=course-v1:Gone&needs_attention=yes`,
+        },
+      )
+
+      await screen.findByText("Everyone")
+      expect(
+        screen.getByRole("combobox", { name: /status/i }),
+      ).toHaveTextContent("All learners")
+      expect(
+        screen.getByRole("combobox", { name: /module/i }),
+      ).toHaveTextContent("All modules")
+      expect(
+        screen.getByRole("checkbox", { name: "Needs attention only" }),
+      ).not.toBeChecked()
+    })
+
+    test("drops a page past the last one", async () => {
+      const { location } = renderAt({ page: 9 }, (contractId) => {
+        mockList(contractId, [], { offset: 8 * PAGE_SIZE }, { total_count: 1 })
+        mockList(contractId, [
+          analyticsFactories.learnerProgress({ full_name: "Only Learner" }),
+        ])
+      })
+
+      await screen.findByText("Only Learner")
+      expect(location.current.searchParams.has("page")).toBe(false)
+    })
+
+    test("writes filter changes to the URL and resets the page", async () => {
+      const { location } = renderAt({ page: 2 }, (contractId) => {
+        mockList(
+          contractId,
+          [analyticsFactories.learnerProgress({ full_name: "Second Page" })],
+          { offset: PAGE_SIZE },
+          { total_count: 60 },
+        )
+        mockList(
+          contractId,
+          [analyticsFactories.learnerProgress({ full_name: "Not Started" })],
+          { completion_status: ["not_started"] },
+        )
+        mockList(
+          contractId,
+          [analyticsFactories.learnerProgress({ full_name: "Stale" })],
+          { completion_status: ["not_started"], needs_attention: true },
+        )
+      })
+
+      await screen.findByText("Second Page")
+      await user.click(screen.getByRole("combobox", { name: /status/i }))
+      await user.click(
+        within(await screen.findByRole("listbox")).getByText("Not started"),
+      )
+      await screen.findByText("Not Started")
+      expect(location.current.search).toBe("?status=not_started")
+
+      await user.click(
+        screen.getByRole("checkbox", { name: "Needs attention only" }),
+      )
+      await screen.findByText("Stale")
+      expect(location.current.search).toBe(
+        "?status=not_started&needs_attention=true",
+      )
+    })
+
+    test("writes the search to the URL once typing settles", async () => {
+      const { location } = renderAt({}, (contractId) => {
+        mockList(contractId, [
+          analyticsFactories.learnerProgress({ full_name: "Everyone" }),
+        ])
+        mockList(
+          contractId,
+          [analyticsFactories.learnerProgress({ full_name: "Ada" })],
+          { search: "ada" },
+        )
+      })
+
+      await screen.findByText("Everyone")
+      await user.type(
+        screen.getByPlaceholderText("Search name or email"),
+        "ada",
+      )
+      await screen.findByText("Ada")
+      expect(location.current.searchParams.get("q")).toBe("ada")
+    })
+
+    test("clearing a filter leaves no trace in the URL", async () => {
+      const { location } = renderAt({ needsAttention: true }, (contractId) => {
+        mockList(
+          contractId,
+          [analyticsFactories.learnerProgress({ full_name: "Stale" })],
+          { needs_attention: true },
+        )
+        mockList(contractId, [
+          analyticsFactories.learnerProgress({ full_name: "Everyone" }),
+        ])
+      })
+
+      await screen.findByText("Stale")
+      await user.click(
+        screen.getByRole("checkbox", { name: "Needs attention only" }),
+      )
+      await screen.findByText("Everyone")
+      expect(location.current.search).toBe("")
+    })
+
+    test("does not announce the filters a link opened with", async () => {
+      renderAt({ status: "in_progress" }, (contractId) =>
+        mockList(
+          contractId,
+          [analyticsFactories.learnerProgress({ full_name: "In Progress" })],
+          { completion_status: ["in_progress"] },
+        ),
+      )
+
+      await screen.findByText("In Progress")
+      expect(screen.queryByText(/^\d+ results?$/)).not.toBeInTheDocument()
     })
   })
 })

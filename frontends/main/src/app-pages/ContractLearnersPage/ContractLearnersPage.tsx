@@ -43,7 +43,12 @@ import { matchOrganizationBySlug } from "@/common/utils"
 import { ForbiddenError, isForbiddenResponse } from "@/common/errors"
 import { FeatureFlags } from "@/common/feature_flags"
 import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
-import { contractAnalyticsView } from "@/common/urls"
+import { useAppSearchParams } from "@/common/useAppSearchParams"
+import {
+  CONTRACT_LEARNERS_STATUSES,
+  contractAnalyticsView,
+  type ContractLearnersStatus,
+} from "@/common/urls"
 import SectionHeader, {
   SectionFreshness,
 } from "../DashboardPage/Analytics/SectionHeader"
@@ -276,13 +281,56 @@ const STATUS_OPTIONS: { value: string; label: string }[] = [
  * two outcomes; only the filter groups them.
  */
 const STATUS_FILTER_COMPLETION_STATUS: Record<
-  string,
+  ContractLearnersStatus,
   CompletionStatusFilter[]
 > = {
   not_started: ["not_started"],
   in_progress: ["in_progress"],
   passed: ["passed", "certified"],
   unknown: ["unknown"],
+}
+
+const isStatus = (value: string | null): value is ContractLearnersStatus =>
+  (CONTRACT_LEARNERS_STATUSES as readonly (string | null)[]).includes(value)
+
+const parsePage = (value: string | null) => {
+  const parsed = Number.parseInt(value ?? "", 10)
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 1
+}
+
+type DirectoryParam = "q" | "status" | "module" | "needs_attention" | "page"
+
+/**
+ * `history.replaceState` rather than `router.replace`: Next keeps
+ * `useSearchParams` in sync with it without re-running the route, so a filter
+ * change costs no server round trip. Replace rather than push, so Back leaves
+ * the directory instead of stepping through every filter change.
+ */
+const replaceSearchParams = (
+  changes: Partial<Record<DirectoryParam, string | null>>,
+) => {
+  const params = new URLSearchParams(window.location.search)
+  for (const [name, value] of Object.entries(changes)) {
+    if (value) {
+      params.set(name, value)
+    } else {
+      params.delete(name)
+    }
+  }
+  const search = params.toString()
+  window.history.replaceState(
+    null,
+    "",
+    search ? `?${search}` : window.location.pathname,
+  )
+}
+
+const applyFilterChange = (
+  changes: Partial<Record<Exclude<DirectoryParam, "page">, string | null>>,
+) => {
+  replaceSearchParams({ ...changes, page: null })
+  // Selection reset (`setSelected(new Set())`) lived here while row
+  // selection was enabled — restore it alongside that block.
 }
 
 const rowIdOf = (row: LearnerProgress) =>
@@ -297,12 +345,17 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
   orgSlug,
   contractSlug,
 }) => {
-  const [searchQuery, setSearchQuery] = useState("")
-  const [debouncedSearch, setDebouncedSearch] = useState("")
-  const [statusFilter, setStatusFilter] = useState<string>(ALL)
-  const [moduleFilter, setModuleFilter] = useState<string>(ALL)
-  const [needsAttentionOnly, setNeedsAttentionOnly] = useState(false)
-  const [page, setPage] = useState(1)
+  const searchParams = useAppSearchParams()
+  const statusParam = searchParams.get("status")
+  const statusFilter = isStatus(statusParam) ? statusParam : ALL
+  const moduleFilter = searchParams.get("module") || ALL
+  const needsAttentionOnly = searchParams.get("needs_attention") === "true"
+  const page = parsePage(searchParams.get("page"))
+  const debouncedSearch = (searchParams.get("q") ?? "").slice(
+    0,
+    SEARCH_MAX_LENGTH,
+  )
+  const [searchQuery, setSearchQuery] = useState(debouncedSearch)
   const [isExporting, setIsExporting] = useState(false)
   const [actionResult, setActionResult] = useState<{
     message: string
@@ -311,20 +364,13 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
   const [announcement, setAnnouncement] = useState("")
   const queryClient = useQueryClient()
 
-  const applyFilterChange = useCallback((apply: () => void) => {
-    apply()
-    setPage(1)
-    // Selection reset (`setSelected(new Set())`) lived here while row
-    // selection was enabled — restore it alongside that block.
-  }, [])
-
   useEffect(() => {
-    // Nothing to apply (including on mount): don't schedule a state update.
+    // Nothing to apply (including on mount): don't schedule a URL update.
     if (searchQuery === debouncedSearch) return
-    const id = setTimeout(() => {
-      setDebouncedSearch(searchQuery)
-      setPage(1)
-    }, SEARCH_DEBOUNCE_MS)
+    const id = setTimeout(
+      () => applyFilterChange({ q: searchQuery }),
+      SEARCH_DEBOUNCE_MS,
+    )
     return () => clearTimeout(id)
   }, [searchQuery, debouncedSearch])
 
@@ -405,6 +451,14 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
     [moduleOptions, moduleFilter],
   )
 
+  /**
+   * A module from the URL can only be checked once the contract's runs load.
+   * Until then the rows wait, rather than briefly listing every module and
+   * then announcing the narrowed count as though the manager had filtered.
+   */
+  const moduleResolved =
+    moduleFilter === ALL || courseRunsQuery.isSuccess || courseRunsQuery.isError
+
   const listParams = useMemo(
     () => ({
       limit: PAGE_SIZE,
@@ -430,7 +484,7 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
       contractId ?? "",
       listParams,
     ),
-    enabled: canQuery,
+    enabled: canQuery && moduleResolved,
     placeholderData: keepPreviousData,
   })
 
@@ -465,7 +519,8 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
   const hidesWithheldLearners = needsAttentionOnly && contractWithheldCount > 0
   const totalPages = Math.ceil(filteredCount / PAGE_SIZE)
   const isStale = rowsQuery.isPlaceholderData || rowsQuery.isFetching
-  const isBusy = rowsQuery.isLoading || isStale
+  /** `isPending`, not `isLoading`: the rows can sit disabled behind `moduleResolved`, and a disabled query is never `isLoading`. */
+  const isBusy = rowsQuery.isPending || isStale
 
   /**
    * Only 400/401/403 responses throw to an error boundary (see
@@ -613,6 +668,12 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
     filteredCount,
   ])
 
+  /** A stale or hand-edited link can name a page past the last one. */
+  useEffect(() => {
+    if (isBusy || !rowsQuery.data) return
+    if (page > Math.max(totalPages, 1)) replaceSearchParams({ page: null })
+  }, [isBusy, rowsQuery.data, page, totalPages])
+
   if (isLoadingOrgs) {
     return (
       <Page>
@@ -738,7 +799,10 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
                       event.target.value.slice(0, SEARCH_MAX_LENGTH),
                     )
                   }
-                  onClear={() => applyFilterChange(() => setSearchQuery(""))}
+                  onClear={() => {
+                    setSearchQuery("")
+                    applyFilterChange({ q: null })
+                  }}
                   onSubmit={() => {}}
                 />
                 <FilterSelect
@@ -746,11 +810,10 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
                   size="medium"
                   value={statusFilter}
                   options={STATUS_OPTIONS}
-                  onChange={(event) =>
-                    applyFilterChange(() =>
-                      setStatusFilter(String(event.target.value)),
-                    )
-                  }
+                  onChange={(event) => {
+                    const value = String(event.target.value)
+                    applyFilterChange({ status: value === ALL ? null : value })
+                  }}
                 />
                 <FilterSelect
                   label="Module"
@@ -771,20 +834,19 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
                    */
                   error={courseRunsQuery.isError && !courseRunsQuery.data}
                   errorText="Couldn't load modules. Reload to try again."
-                  onChange={(event) =>
-                    applyFilterChange(() =>
-                      setModuleFilter(String(event.target.value)),
-                    )
-                  }
+                  onChange={(event) => {
+                    const value = String(event.target.value)
+                    applyFilterChange({ module: value === ALL ? null : value })
+                  }}
                 />
                 <CheckboxField>
                   <Checkbox
                     label="Needs attention only"
                     checked={needsAttentionOnly}
                     onChange={(event) =>
-                      applyFilterChange(() =>
-                        setNeedsAttentionOnly(event.target.checked),
-                      )
+                      applyFilterChange({
+                        needs_attention: event.target.checked ? "true" : null,
+                      })
                     }
                   />
                 </CheckboxField>
@@ -831,7 +893,7 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
 
             <TableCard>
               <VisuallyHidden role="status" aria-atomic="true">
-                {rowsQuery.isLoading
+                {rowsQuery.isPending
                   ? "Loading learners"
                   : filteredCount === 0
                     ? emptyMessage
@@ -865,7 +927,7 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
                   </TableHeaderRow>
                 </div>
                 <TableBody role="rowgroup" $stale={isStale}>
-                  {rowsQuery.isLoading ? (
+                  {rowsQuery.isPending ? (
                     [1, 2, 3].map((key) => (
                       <TableRow key={key} role="row">
                         <div role="cell" style={{ width: "100%" }}>
@@ -903,7 +965,11 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
                     page={page}
                     shape="rounded"
                     size="small"
-                    onChange={(_event, value) => setPage(value)}
+                    onChange={(_event, value) =>
+                      replaceSearchParams({
+                        page: value > 1 ? String(value) : null,
+                      })
+                    }
                   />
                 ) : null}
               </TableFooter>

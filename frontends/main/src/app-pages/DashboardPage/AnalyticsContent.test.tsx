@@ -1019,26 +1019,21 @@ describe("AnalyticsContent, contract-scoped", () => {
       screen.queryByRole("group", { name: "Needs attention" }),
     ).not.toBeInTheDocument()
 
-    // Every tile links to the same, unfiltered contract learner directory —
-    // "View all learners" says so rather than implying a per-status filter
-    // that doesn't exist. Distinct accessible names (rather than four
-    // identical "View all learners" links) so a screen reader's link list
-    // still says which tile each came from.
-    const expectedHref = contractLearnersView(
-      org.slug.replace(/^org-/, ""),
-      contract.slug,
-    )
-    for (const label of [
-      "Enrolled",
-      "Not started",
-      "In progress",
-      "Completed",
-    ]) {
+    const orgSlug = org.slug.replace(/^org-/, "")
+    for (const [label, linkName, status] of [
+      ["Enrolled", "View all learners", undefined],
+      ["Not started", "View not started learners", "not_started"],
+      ["In progress", "View in progress learners", "in_progress"],
+      ["Completed", "View completed learners", "passed"],
+    ] as const) {
       const link = within(screen.getByRole("group", { name: label })).getByRole(
         "link",
-        { name: `View all learners (${label} tile)` },
+        { name: linkName },
       )
-      expect(link).toHaveAttribute("href", expectedHref)
+      expect(link).toHaveAttribute(
+        "href",
+        contractLearnersView(orgSlug, contract.slug, { status }),
+      )
     }
 
     const list = screen.getByRole("list", {
