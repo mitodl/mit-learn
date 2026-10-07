@@ -1260,8 +1260,9 @@ def test_transform_run_prices_not_fully_enrollable(mocker):
         )
 
 
-def test_transform_run_with_b2b_contract_is_unpublished(mocker):
-    """B2B contract runs should be stored as variants but never published."""
+@pytest.mark.parametrize("b2b_only", [True, False])
+def test_transform_run_published_unless_b2b_only(mocker, b2b_only):
+    """Contract-only runs are never published; public runs in a contract are."""
     mock_now = datetime(2023, 1, 1, tzinfo=UTC)
     mocker.patch("learning_resources.etl.mitxonline.now_in_utc", return_value=mock_now)
     course = {
@@ -1293,14 +1294,15 @@ def test_transform_run_with_b2b_contract_is_unpublished(mocker):
         "is_self_paced": False,
         "enrollment_modes": [{"mode_slug": "verified"}],
         "b2b_contract": 123,
+        "b2b_only": b2b_only,
         "page": {},
     }
 
     result = _transform_run(run, course)
 
-    assert result["is_b2b"] is True
-    assert result["is_variant"] is True
-    assert result["published"] is False
+    assert result["b2b_only"] is b2b_only
+    assert result["is_variant"] is b2b_only
+    assert result["published"] is not b2b_only
 
 
 def test_transform_run_with_non_default_variant_is_unpublished(mocker):
@@ -1340,13 +1342,12 @@ def test_transform_run_with_non_default_variant_is_unpublished(mocker):
             {"language": "en", "active": True, "default_variant": True},
             {"language": "fr", "active": True, "default_variant": False},
         ],
-        "b2b_contract": None,
         "page": {},
     }
 
     result = _transform_run(run, course)
 
-    assert result["is_b2b"] is False
+    assert result["b2b_only"] is False
     assert result["is_variant"] is True
     assert result["published"] is False
 

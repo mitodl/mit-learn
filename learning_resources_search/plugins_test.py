@@ -573,7 +573,7 @@ def test_content_files_loaded_variant_run_skips_opensearch(
         published=False, test_mode=True, create_runs=False
     )
     run = LearningResourceRunFactory.create(
-        learning_resource=course, published=True, is_b2b=True, is_variant=True
+        learning_resource=course, published=True, b2b_only=True, is_variant=True
     )
     ContentFileFactory.create(run=run)
 
