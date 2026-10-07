@@ -1,6 +1,15 @@
 import { env, requiredEnv } from "@/env"
 import { configureApiClients, isApiClientsConfigured } from "api/runtime"
 
+const SSR_USER_AGENT_PRODUCT = "mit-learn-ssr"
+
+const ssrUserAgent = () => {
+  const version = env("NEXT_PUBLIC_VERSION")
+  return version
+    ? `${SSR_USER_AGENT_PRODUCT}/${version}`
+    : SSR_USER_AGENT_PRODUCT
+}
+
 export const bootstrapApiClients = () => {
   // First-wins: the server calls this once at startup from instrumentation.ts;
   // the browser calls it once from instrumentation-client.ts, which can re-enter
@@ -26,16 +35,25 @@ export const bootstrapApiClients = () => {
   // startup for every environment that does not have the service.
   const analyticsBaseUrl = env("NEXT_PUBLIC_ANALYTICS_API_BASE_URL")
 
+  // api.learn's per-client-IP rate limit is sized for one browser and excludes
+  // the SSR layer by User-Agent (FIRST_PARTY_SERVICE_CLIENT_UA_REGEX in
+  // ol-infrastructure). Name ourselves so that exclusion does not depend on the
+  // HTTP client's default. Browsers must not send it, or they would be excluded
+  // from the limit too.
+  const userAgent = typeof window === "undefined" ? ssrUserAgent() : undefined
+
   configureApiClients({
     learn: {
       baseUrl: learnBaseUrl,
       csrfCookieName: requiredEnv("NEXT_PUBLIC_CSRF_COOKIE_NAME"),
       withCredentials,
+      userAgent,
     },
     mitxonline: {
       baseUrl: requiredEnv("NEXT_PUBLIC_MITX_ONLINE_BASE_URL"),
       csrfCookieName: requiredEnv("NEXT_PUBLIC_MITX_ONLINE_CSRF_COOKIE_NAME"),
       withCredentials,
+      userAgent,
     },
     ...(analyticsBaseUrl && {
       analytics: {
@@ -45,6 +63,7 @@ export const bootstrapApiClients = () => {
         // still sends the header if a mutating endpoint is ever added.
         csrfCookieName: requiredEnv("NEXT_PUBLIC_CSRF_COOKIE_NAME"),
         withCredentials,
+        userAgent,
       },
     }),
   })
