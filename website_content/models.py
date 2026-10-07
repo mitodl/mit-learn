@@ -84,16 +84,31 @@ class WebsiteContent(TimestampedModel, SafeDeleteModel):
         default=WebsiteContentType.news.name,
     )
     cover_image = models.URLField(max_length=2083, blank=True, default="")
-    # What search engines and link previews should show, when the editor wants
-    # something other than the title and the opening of the content. Optional
-    # and blank by default: whatever consumes these has to fall back to the
-    # content itself rather than render an empty tag.
+    # What search engines and link previews should show, *when the editor wants
+    # something other than what the content already says*. Named for that: the
+    # common case is that neither is set, and the effective values are inferred
+    # from the content -- the title from `title`, the description from the
+    # banner's subheading. See `website_content.utils.inferred_seo_title` and
+    # `inferred_seo_description`, which the serializer exposes as the read-only
+    # `seo_title` and `seo_description`.
+    #
+    # Blank, not null, so "unset" is one value rather than two. Blank is what
+    # hands the field back to inference: an editor who clears an override gets
+    # the content's own words again, and a title change starts tracking once
+    # more. That is why the override is stored rather than the resolved value --
+    # writing the inferred text into the column would silently freeze it.
     #
     # Lengths are storage limits, not the SEO guidance on how long a title or
     # description ought to be -- that belongs wherever the editor is advised,
     # and truncating their typing here would lose it.
-    seo_title = models.CharField(max_length=255, blank=True, default="")
-    seo_description = models.TextField(blank=True, default="")
+    #
+    # `db_default` as well as `default`: during a rolling deploy, pods running
+    # the previous release insert rows without these columns, and Postgres
+    # rejects a NOT NULL column unless it has a default of its own.
+    seo_title_override = models.CharField(
+        max_length=255, blank=True, default="", db_default=""
+    )
+    seo_description_override = models.TextField(blank=True, default="", db_default="")
     # Where the content editor's topic selections live, for every content type
     # the settings drawer can tag. For an article they are also the source of
     # the topics on the LearningResource that publishing mirrors it into -- see

@@ -101,9 +101,12 @@ const setup = async (id: number, autosaveDelayMs = AUTOSAVE_OFF) => {
     content,
     content_type: "article",
     is_published: false,
-    /* Required to save the drawer, and not what these tests are about. */
-    seo_title: "A title for search",
-    seo_description: "A description for search results.",
+    /**
+     * The drawer's save needs a resolvable SEO description, and `content` here
+     * has no banner subheading to infer one from -- so an override supplies
+     * it. Not what these tests are about.
+     */
+    seo_description_override: "A description for search results.",
   })
   setMockResponse.get(detailUrl(id), article)
 
