@@ -23,6 +23,15 @@ const AUTOSAVE_OFF = 10 * 60 * 1000
 /** What production uses; the autosave tests wait this out deliberately. */
 const AUTOSAVE_DELAY_MS = 2000
 
+/**
+ * A write recorded is not a write finished: `makeRequest` logs the call as it
+ * is made, while the response settles a tick later. Waiting for the indicator
+ * to reach "Saved" is what makes an assertion about a save a statement about
+ * the save having landed, rather than about it having been sent.
+ */
+const waitForSaveToSettle = () =>
+  screen.findByText("Saved", {}, { timeout: 6000 })
+
 const content: JSONContent = {
   type: "doc",
   content: [
@@ -1043,6 +1052,7 @@ describe("ArticleEditor autosave", () => {
       },
       { timeout: 6000 },
     )
+    await waitForSaveToSettle()
   }, 15000)
 
   test("an article that has never been saved is created once, then updated", async () => {
@@ -1076,9 +1086,9 @@ describe("ArticleEditor autosave", () => {
       },
       { timeout: 12000 },
     )
-    // Settled first: typing while the create is still open puts a background
-    // write in every synchronous gap, which updates the toolbar outside `act`.
-    await waitFor(() => expect(screen.queryByText("Saving...")).toBe(null))
+    // Settled first, so what follows is an edit made to an item the editor
+    // has already created -- not one racing the create that made it.
+    await waitForSaveToSettle()
 
     /**
      * The editor has created the item but still holds no `contentItem` -- the
@@ -1097,6 +1107,8 @@ describe("ArticleEditor autosave", () => {
       },
       { timeout: 12000 },
     )
+
+    await waitForSaveToSettle()
 
     const posts = makeRequest.mock.calls.filter(
       (call) => call[0]?.method === "post",
@@ -1144,7 +1156,11 @@ describe("ArticleEditor autosave", () => {
      * `onSave` is how the caller learns to navigate, and a draft that already
      * exists has not moved. Left to fire, every autosave would ask the page to
      * push the route it is already on.
+     *
+     * Checked once the write has landed: the handoff runs off the save
+     * finishing, so a mid-flight check could not see it either way.
      */
+    await waitForSaveToSettle()
     expect(onSave).not.toHaveBeenCalled()
   }, 15000)
 
