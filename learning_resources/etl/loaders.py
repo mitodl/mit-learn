@@ -2006,6 +2006,7 @@ def load_videos_from_content_files(
             youtube_id=youtube_id,
             published=True,
             run__published=True,
+            run__learning_resource__published=True,
         ).first()
         if content_file:
             matched.append((video_data, content_file))
