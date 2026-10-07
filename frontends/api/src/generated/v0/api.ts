@@ -7318,7 +7318,6 @@ export const VectorLearningResourcesSearchApiAxiosParamCreator = function (
      * @param {Array<VectorLearningResourcesSearchRetrievePlatformEnum>} [platform] The platform on which the learning resource is offered               * &#x60;edx&#x60; - edX * &#x60;ocw&#x60; - MIT OpenCourseWare * &#x60;oll&#x60; - Open Learning Library * &#x60;mitxonline&#x60; - MITx Online * &#x60;bootcamps&#x60; - Bootcamps * &#x60;xpro&#x60; - MIT xPRO * &#x60;csail&#x60; - CSAIL * &#x60;mitpe&#x60; - MIT Professional Education * &#x60;see&#x60; - MIT Sloan Executive Education * &#x60;scc&#x60; - Schwarzman College of Computing * &#x60;ctl&#x60; - Center for Transportation &amp; Logistics * &#x60;whu&#x60; - WHU * &#x60;susskind&#x60; - Susskind * &#x60;globalalumni&#x60; - Global Alumni * &#x60;simplilearn&#x60; - Simplilearn * &#x60;emeritus&#x60; - Emeritus * &#x60;podcast&#x60; - Podcast * &#x60;youtube&#x60; - YouTube * &#x60;canvas&#x60; - Canvas * &#x60;climate&#x60; - MIT Climate * &#x60;ovs&#x60; - ODL Video Service
      * @param {boolean | null} [professional]
      * @param {number | null} [program_boost] Fraction of its own score a program gains before ranking, so 0.1 multiplies it by 1.1 and a program can only overtake a result it was already within that factor of. 0 disables the boost. Defaults to the server\&#39;s configured amount when omitted.
-     * @param {boolean} [published] If the resource is published. We default to True unless passed in
      * @param {string} [q] The search text
      * @param {string} [readable_id] The readable id of the resource
      * @param {Array<string>} [resource_category] The resource category for the resource
@@ -7353,7 +7352,6 @@ export const VectorLearningResourcesSearchApiAxiosParamCreator = function (
       platform?: Array<VectorLearningResourcesSearchRetrievePlatformEnum>,
       professional?: boolean | null,
       program_boost?: number | null,
-      published?: boolean,
       q?: string,
       readable_id?: string,
       resource_category?: Array<string>,
@@ -7451,10 +7449,6 @@ export const VectorLearningResourcesSearchApiAxiosParamCreator = function (
 
       if (program_boost !== undefined) {
         localVarQueryParameter["program_boost"] = program_boost
-      }
-
-      if (published !== undefined) {
-        localVarQueryParameter["published"] = published
       }
 
       if (q !== undefined) {
@@ -7558,7 +7552,6 @@ export const VectorLearningResourcesSearchApiFp = function (
      * @param {Array<VectorLearningResourcesSearchRetrievePlatformEnum>} [platform] The platform on which the learning resource is offered               * &#x60;edx&#x60; - edX * &#x60;ocw&#x60; - MIT OpenCourseWare * &#x60;oll&#x60; - Open Learning Library * &#x60;mitxonline&#x60; - MITx Online * &#x60;bootcamps&#x60; - Bootcamps * &#x60;xpro&#x60; - MIT xPRO * &#x60;csail&#x60; - CSAIL * &#x60;mitpe&#x60; - MIT Professional Education * &#x60;see&#x60; - MIT Sloan Executive Education * &#x60;scc&#x60; - Schwarzman College of Computing * &#x60;ctl&#x60; - Center for Transportation &amp; Logistics * &#x60;whu&#x60; - WHU * &#x60;susskind&#x60; - Susskind * &#x60;globalalumni&#x60; - Global Alumni * &#x60;simplilearn&#x60; - Simplilearn * &#x60;emeritus&#x60; - Emeritus * &#x60;podcast&#x60; - Podcast * &#x60;youtube&#x60; - YouTube * &#x60;canvas&#x60; - Canvas * &#x60;climate&#x60; - MIT Climate * &#x60;ovs&#x60; - ODL Video Service
      * @param {boolean | null} [professional]
      * @param {number | null} [program_boost] Fraction of its own score a program gains before ranking, so 0.1 multiplies it by 1.1 and a program can only overtake a result it was already within that factor of. 0 disables the boost. Defaults to the server\&#39;s configured amount when omitted.
-     * @param {boolean} [published] If the resource is published. We default to True unless passed in
      * @param {string} [q] The search text
      * @param {string} [readable_id] The readable id of the resource
      * @param {Array<string>} [resource_category] The resource category for the resource
@@ -7593,7 +7586,6 @@ export const VectorLearningResourcesSearchApiFp = function (
       platform?: Array<VectorLearningResourcesSearchRetrievePlatformEnum>,
       professional?: boolean | null,
       program_boost?: number | null,
-      published?: boolean,
       q?: string,
       readable_id?: string,
       resource_category?: Array<string>,
@@ -7633,7 +7625,6 @@ export const VectorLearningResourcesSearchApiFp = function (
           platform,
           professional,
           program_boost,
-          published,
           q,
           readable_id,
           resource_category,
@@ -7705,7 +7696,6 @@ export const VectorLearningResourcesSearchApiFactory = function (
           requestParameters.platform,
           requestParameters.professional,
           requestParameters.program_boost,
-          requestParameters.published,
           requestParameters.q,
           requestParameters.readable_id,
           requestParameters.resource_category,
@@ -7807,11 +7797,6 @@ export interface VectorLearningResourcesSearchApiVectorLearningResourcesSearchRe
   readonly program_boost?: number | null
 
   /**
-   * If the resource is published. We default to True unless passed in
-   */
-  readonly published?: boolean
-
-  /**
    * The search text
    */
   readonly q?: string
@@ -7911,7 +7896,6 @@ export class VectorLearningResourcesSearchApi extends BaseAPI {
         requestParameters.platform,
         requestParameters.professional,
         requestParameters.program_boost,
-        requestParameters.published,
         requestParameters.q,
         requestParameters.readable_id,
         requestParameters.resource_category,
