@@ -102,7 +102,11 @@ describe("bootstrapApiClients", () => {
     ])(
       "identifies itself as $expected when NEXT_PUBLIC_VERSION is $version",
       ({ version, expected }) => {
-        process.env = { ...process.env, NEXT_PUBLIC_VERSION: version }
+        process.env = {
+          ...process.env,
+          NEXT_PUBLIC_VERSION: version,
+          NEXT_PUBLIC_ANALYTICS_API_BASE_URL: "https://analytics.example.edu",
+        }
         if (version === undefined) delete process.env.NEXT_PUBLIC_VERSION
 
         bootstrapApiClients()
@@ -111,6 +115,7 @@ describe("bootstrapApiClients", () => {
           expect.objectContaining({
             learn: expect.objectContaining({ userAgent: expected }),
             mitxonline: expect.objectContaining({ userAgent: expected }),
+            analytics: expect.objectContaining({ userAgent: expected }),
           }),
         )
       },
