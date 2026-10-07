@@ -1927,8 +1927,9 @@ describe("NewsEditor - shared content controls", () => {
     expect(
       screen.queryByRole("heading", { name: "Publish news" }),
     ).not.toBeInTheDocument()
+    /* Only the description: the banner's heading resolves the title. */
     await screen.findByText(
-      /Add an SEO title and description to publish your news/,
+      /Add an SEO description to publish your news\. Your news has no line under the headline to fall back to\./,
     )
 
     await userEvent.type(

@@ -415,3 +415,69 @@ describe("ArticleSettingsDrawer SEO fields", () => {
     expect(onSave.mock.calls[0][0].seoTitle).toHaveLength(50)
   }, 30000)
 })
+
+/**
+ * The two fields resolve separately, so most often only one of them is
+ * holding a publish back. What the section says has to agree with which field
+ * is marked required -- and must not offer to infer the very thing the
+ * content does not have.
+ */
+describe("ArticleSettingsDrawer SEO message", () => {
+  const renderBlocked = (inferred: {
+    inferredSeoTitle?: string
+    inferredSeoDescription?: string
+  }) => {
+    mockTopics()
+    renderDrawer(undefined, {
+      mustResolve: true,
+      seoRequired: true,
+      inferredSeoTitle: "",
+      inferredSeoDescription: "",
+      ...inferred,
+    })
+  }
+
+  const isRequired = (field: HTMLElement) =>
+    field.getAttribute("required") !== null ||
+    field.getAttribute("aria-required") === "true"
+
+  test("asks only for the description when the title resolves", async () => {
+    renderBlocked({ inferredSeoTitle: "The content's own title" })
+
+    await screen.findByText(
+      /Add an SEO description to publish your article\. Your article has no line under the headline to fall back to\./,
+    )
+    expect(isRequired(screen.getByLabelText(/^SEO Title/))).toBe(false)
+    expect(isRequired(screen.getByLabelText(/^SEO Description/))).toBe(true)
+  }, 30000)
+
+  test("asks only for the title when the description resolves", async () => {
+    renderBlocked({ inferredSeoDescription: "The line under the headline." })
+
+    await screen.findByText(
+      /Add an SEO title to publish your article\. Your article has no title to fall back to\./,
+    )
+    expect(isRequired(screen.getByLabelText(/^SEO Title/))).toBe(true)
+    expect(isRequired(screen.getByLabelText(/^SEO Description/))).toBe(false)
+  }, 30000)
+
+  test("asks for both when neither resolves", async () => {
+    renderBlocked({})
+
+    await screen.findByText(
+      /Add an SEO title and description to publish your article\. Your article has neither a title nor a line under the headline to fall back to\./,
+    )
+  }, 30000)
+
+  /* Nothing is blocked, so the invitation to leave them blank is sound. */
+  test("offers the fallback when both resolve", async () => {
+    renderBlocked({
+      inferredSeoTitle: "A title",
+      inferredSeoDescription: "A subheading.",
+    })
+
+    await screen.findByText(
+      /Left blank, each one follows your article -- the title, and the line under the headline\./,
+    )
+  }, 30000)
+})

@@ -782,9 +782,11 @@ describe("ArticleEditor SEO requirement", () => {
     expect(makeRequest).not.toHaveBeenCalledWith(
       expect.objectContaining({ method: "patch" }),
     )
-    /* The section says why it opened, rather than leaving the editor to guess. */
+    /* The section says why it opened, rather than leaving the editor to
+       guess -- and asks only for the description, since the title resolves
+       from the content's own. */
     await screen.findByText(
-      /Add an SEO title and description to publish your article/,
+      /Add an SEO description to publish your article\. Your article has no line under the headline to fall back to\./,
     )
   })
 
@@ -952,8 +954,9 @@ describe("ArticleEditor SEO requirement", () => {
     await userEvent.clear(await screen.findByLabelText(/^SEO Description/))
 
     expect(screen.getByRole("button", { name: "Save Settings" })).toBeDisabled()
+    /* The description alone: the title still resolves from the content's. */
     await screen.findByText(
-      /A published article needs an SEO title and description/,
+      /A published article needs an SEO description\. Your article has no line under the headline to fall back to\./,
     )
   }, 20000)
 

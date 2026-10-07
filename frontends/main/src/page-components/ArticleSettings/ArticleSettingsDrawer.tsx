@@ -229,22 +229,43 @@ const topicsMessage = (
  * "Missing" here means the resolved value is empty -- no override and nothing
  * in the content to infer from -- not merely that the field is blank. A blank
  * field is the ordinary case and says so: the content's own words are used.
+ *
+ * Which one is missing is the whole message where something is: the two
+ * resolve separately, so most often only one of them is holding the publish
+ * back, and the fields mark only that one required. Naming both would send
+ * the author to a field that is already fine, and the invitation to leave
+ * them blank is the opposite of the advice they need -- blank is exactly what
+ * is blocking them, because the thing it would fall back to is what the
+ * content does not have.
  */
 const seoMessage = (
   contentLabel: string,
-  missing: boolean,
+  missing: { title: boolean; description: boolean },
   required: boolean,
   published: boolean,
 ) => {
   const noun = contentLabel.toLowerCase()
-  const inferred = `Left blank, each one follows your ${noun} -- the title, and the line under the headline.`
-  if (missing && published) {
-    return `A published ${noun} needs an SEO title and description. ${inferred}`
+  if (!missing.title && !missing.description) {
+    return `Override what search engines and link previews show for your ${noun}. Left blank, each one follows your ${noun} -- the title, and the line under the headline.`
   }
-  if (missing && required) {
-    return `Add an SEO title and description to publish your ${noun}. ${inferred}`
+  const both = missing.title && missing.description
+  const what = both
+    ? "an SEO title and description"
+    : missing.title
+      ? "an SEO title"
+      : "an SEO description"
+  const because = both
+    ? `Your ${noun} has neither a title nor a line under the headline to fall back to.`
+    : missing.title
+      ? `Your ${noun} has no title to fall back to.`
+      : `Your ${noun} has no line under the headline to fall back to.`
+  if (published) {
+    return `A published ${noun} needs ${what}. ${because}`
   }
-  return `Override what search engines and link previews show for your ${noun}. ${inferred}`
+  if (required) {
+    return `Add ${what} to publish your ${noun}. ${because}`
+  }
+  return `Override what search engines and link previews show for your ${noun}. ${because}`
 }
 
 /** Settings the drawer collects. Mirrors the fields in the design. */
@@ -687,7 +708,10 @@ const ArticleSettingsDrawer = ({
               <Typography variant="body2">
                 {seoMessage(
                   contentLabel,
-                  seoMissing,
+                  {
+                    title: !resolvedSeoTitle,
+                    description: !resolvedSeoDescription,
+                  },
                   seoRequired,
                   contentIsPublished,
                 )}
