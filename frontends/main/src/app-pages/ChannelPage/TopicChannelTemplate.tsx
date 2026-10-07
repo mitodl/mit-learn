@@ -215,7 +215,7 @@ const HeroInner = styled.div(({ theme }) => ({
 const BannerArea = styled.div(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
-  gap: "16px",
+  gap: "32px",
   maxWidth: "736px",
   /**
    * A channel with nothing featured has no row beneath the banner, and the
@@ -427,13 +427,7 @@ const TopicChannelTemplateInternal: React.FC<
                     <TopicDescription variant="body1">
                       {channel.public_description}
                     </TopicDescription>
-                  ) : (
-                    <TopicDescription variant="body1">
-                      Explore how living systems work, from molecules and cells
-                      to organisms and ecosystems. Courses span genetics,
-                      biochemistry, neuroscience, and computational biology.
-                    </TopicDescription>
-                  )}
+                  ) : null}
                 </TitleBlock>
               </BannerArea>
               <TopicFeaturedCarousel name={channel.name} />
