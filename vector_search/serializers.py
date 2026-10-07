@@ -175,11 +175,6 @@ class LearningResourcesVectorSearchRequestSerializer(
     instead of id we use readable_id in case we upload qdrant snapshots
     """
 
-    published = serializers.BooleanField(
-        required=False,
-        default=True,
-        help_text="If the resource is published. We default to True unless passed in",
-    )
     sortby = serializers.ChoiceField(
         required=False,
         choices=QDRANT_LEARNING_RESOURCE_SORTBY_FIELDS

@@ -1,5 +1,5 @@
 import { env } from "@/env"
-import React, { useEffect, useMemo, useRef, useState } from "react"
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
   styled,
   Pagination,
@@ -588,6 +588,11 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
     useAdminSearchParams(expandAdminOptions && !hybridSearchActive)
 
   const scrollHook = useRef<HTMLDivElement>(null)
+  const resultsHeadingRef = useRef<HTMLHeadingElement>(null)
+  const focusResultsHeading = useCallback(
+    () => resultsHeadingRef.current?.focus(),
+    [],
+  )
   const activeTab =
     TABS.find(
       (t) => t.resource_type_group === searchParams.get("resource_type_group"),
@@ -994,7 +999,11 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
               gap: "16px",
             }}
           >
-            <VisuallyHidden as={resultsHeadingEl}>
+            <VisuallyHidden
+              as={resultsHeadingEl}
+              ref={resultsHeadingRef}
+              tabIndex={-1}
+            >
               Search Results
             </VisuallyHidden>
             <VisuallyHidden aria-live="polite" aria-atomic aria-relevant="all">
@@ -1017,7 +1026,10 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
               />
               <DesktopSortContainer>{sortDropdown}</DesktopSortContainer>
             </Stack>
-            <AiSearchOverview searchParams={searchParams} />
+            <AiSearchOverview
+              searchParams={searchParams}
+              onDismissed={focusResultsHeading}
+            />
             <ResourceTypeGroupTabs.TabPanels tabs={TABS}>
               <MobileFilter>
                 <FilterButton

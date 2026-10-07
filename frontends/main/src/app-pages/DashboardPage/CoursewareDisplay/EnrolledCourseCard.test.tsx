@@ -456,6 +456,26 @@ describe.each([
     ).not.toBeInTheDocument()
   })
 
+  test("Never shows upgrade banner on a contract page when the enrollment has no contract", () => {
+    setupUserApis()
+    const enrollment = mitxonline.factories.enrollment.courseEnrollment({
+      enrollment_mode: EnrollmentMode.Audit,
+      b2b_contract_id: null,
+      run: {
+        is_upgradable: true,
+        upgrade_product_id: faker.number.int(),
+        upgrade_product_price: faker.commerce.price(),
+        upgrade_product_is_active: true,
+      },
+    })
+    renderWithProviders(
+      <EnrolledCourseCard enrollment={enrollment} contractId={1905} />,
+    )
+    expect(
+      within(getCard()).queryByTestId("upgrade-root"),
+    ).not.toBeInTheDocument()
+  })
+
   test("Upgrade banner shows correct price and deadline", () => {
     setupUserApis()
     const price = faker.commerce.price()
@@ -1135,6 +1155,17 @@ describe("EnrolledCourseCard card type label", () => {
     expect(
       within(getDesktopCard()).queryByText("Course"),
     ).not.toBeInTheDocument()
+  })
+
+  test("shows 'Module' on a contract page when the enrollment has no contract", () => {
+    setupUserApis()
+    const enrollment = mitxonline.factories.enrollment.courseEnrollment({
+      b2b_contract_id: null,
+    })
+    renderWithProviders(
+      <EnrolledCourseCard enrollment={enrollment} contractId={1905} />,
+    )
+    expect(within(getDesktopCard()).getByText("Module")).toBeInTheDocument()
   })
 
   test("shows enrollment status indicator instead of 'Module' text when isModule is set (compact layout)", () => {

@@ -6,6 +6,7 @@ import type {
   ContractContentEngagementDepth,
   ContractMonthlyEngagementTrend,
   ContractUtilization,
+  CourseRun,
   EnrollmentCompletionFunnel,
   LearnerProgressParams,
   LearnerProgressResponse,
@@ -207,6 +208,25 @@ const analyticsContractsApi = {
     axiosInstance.get<LearnerProgressResponse>(
       `${contractRoot(organizationId, contractId)}/learner-progress`,
       { params, signal, paramsSerializer: { indexes: null } },
+    ),
+
+  /**
+   * The course runs to offer in `learnerProgress`'s module filter. A separate
+   * endpoint rather than distinct values off the enrollment rows: it reads the
+   * contract's own view, so the options do not narrow to whoever consented.
+   */
+  courseRuns: (
+    organizationId: string,
+    contractId: string,
+    page?: AnalyticsPageParams,
+    signal?: AbortSignal,
+  ) =>
+    getContractResource<CourseRun>(
+      organizationId,
+      contractId,
+      "course-runs",
+      page,
+      signal,
     ),
 }
 

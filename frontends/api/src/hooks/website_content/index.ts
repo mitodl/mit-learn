@@ -49,6 +49,10 @@ const useWebsiteContentCreate = ({ meta }: MutationHookOptions = {}) => {
         | "updated_on"
         | "publish_date"
         | "cover_image"
+        // Resolved by the serializer from the overrides and the content, so
+        // they come back on a read and are never sent.
+        | "seo_title"
+        | "seo_description"
       >,
     ) =>
       websiteContentApi

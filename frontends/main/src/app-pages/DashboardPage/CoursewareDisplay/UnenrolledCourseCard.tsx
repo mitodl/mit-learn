@@ -54,7 +54,7 @@ export const UnenrolledCourseCard = ({
   const enrollment = useEnrollmentHandler()
   const isPending = enrollment.isPending
   const courseRun =
-    displayedRunProp ?? getBestRun(course, { enrollableOnly: true, contractId })
+    displayedRunProp ?? getBestRun(course, { enrollableOnly: true })
   const coursewareUrl = courseRun?.courseware_url || undefined
   const readableId = courseRun?.courseware_id
   const isDisabled =

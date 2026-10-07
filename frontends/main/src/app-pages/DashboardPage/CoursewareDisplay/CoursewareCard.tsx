@@ -121,6 +121,7 @@ const CoursewareCard: React.FC<CoursewareCardProps> = (props) => {
         entry.enrollments,
         entry.displayedEnrollment,
       )}
+      contractId={entry.contractId}
       ancestorContext={entry.ancestorContext}
       layout={layout}
       headingLevel={headingLevel}
