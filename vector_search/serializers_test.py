@@ -57,6 +57,14 @@ def test_vector_search_request_serializer_inherits_filter_fields():
     assert "hybrid_search" in fields
 
 
+def test_vector_search_request_serializer_has_no_published_field():
+    """Published must not be caller-controllable on the anonymous endpoint"""
+    assert "published" not in LearningResourcesVectorSearchRequestSerializer().fields
+    s = LearningResourcesVectorSearchRequestSerializer(data={"published": "false"})
+    assert s.is_valid(), s.errors
+    assert "published" not in s.validated_data
+
+
 def test_vector_search_result_window_validation():
     """Test that the result window (offset + limit) is validated."""
     # Valid window

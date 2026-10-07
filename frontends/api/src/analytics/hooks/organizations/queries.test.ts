@@ -153,6 +153,13 @@ describe("analyticsContractQueries", () => {
         factories.contractContentEngagementDepth(),
       ]),
     },
+    {
+      name: "courseRuns",
+      query: () =>
+        erase(analyticsContractQueries.courseRuns(ORG_UUID, CONTRACT_ID)),
+      url: urls.contracts.courseRuns(ORG_UUID, CONTRACT_ID),
+      response: factories.envelope([factories.courseRun()]),
+    },
   ])(
     "$name requests the contract-nested path",
     async ({ query, url, response }) => {

@@ -169,6 +169,38 @@ def test_vector_search_filters_empty_query(mocker, client):
     )
 
 
+@pytest.mark.parametrize("q", ["test", ""])
+@pytest.mark.parametrize("published", ["false", "False", "0", "true", None])
+def test_vector_search_always_filters_published(mocker, client, q, published):
+    """A caller-supplied published param must never change the published filter"""
+
+    mock_qdrant = mocker.patch(
+        "qdrant_client.AsyncQdrantClient", return_value=mocker.AsyncMock()
+    )()
+    mock_qdrant.scroll = mocker.AsyncMock(return_value=([], None))
+    mock_qdrant.query_points = mocker.AsyncMock()
+    mock_qdrant.query_points_groups = mocker.AsyncMock()
+    mock_qdrant.count = mocker.AsyncMock(return_value=CountResult(count=0))
+    mocker.patch("vector_search.views.async_qdrant_client", return_value=mock_qdrant)
+
+    params = {"q": q}
+    if published is not None:
+        params["published"] = published
+
+    client.get(
+        reverse("vector_search:v0:vector_learning_resources_search"), data=params
+    )
+
+    if q:
+        query_filter = mock_qdrant.query_points.mock_calls[0].kwargs["query_filter"]
+    else:
+        query_filter = mock_qdrant.scroll.mock_calls[0].kwargs["scroll_filter"]
+    published_conditions = [c for c in query_filter.must if c.key == "published"]
+    assert published_conditions == [
+        models.FieldCondition(key="published", match=models.MatchValue(value=True))
+    ]
+
+
 @pytest.mark.django_db(transaction=True)
 @pytest.mark.parametrize(
     "user_role",
@@ -680,7 +712,7 @@ def test_vector_search_featured_rank_is_not_a_sortby(mocker, client, sortby):
 def test_vector_search_featured_rank_scroll(mocker, client):
     """
     The featured scroll is ascending by rank, then topped up with every resource
-    that is not featured, most recent first
+    that is not featured, most popular first
     """
     mock_qdrant = _scroll_page_mock(mocker, dated=2, undated=2)
 
@@ -702,7 +734,7 @@ def test_vector_search_featured_rank_scroll(mocker, client):
         key="featured_rank", direction=models.Direction.ASC
     )
     assert tail_kwargs["order_by"] == models.OrderBy(
-        key="created_on", direction=models.Direction.DESC
+        key="views", direction=models.Direction.DESC
     )
     assert (
         models.IsEmptyCondition(is_empty=models.PayloadField(key="featured_rank"))

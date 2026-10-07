@@ -14800,11 +14800,11 @@ components:
           type: array
           items:
             type: integer
-        seo_title:
+        seo_title_override:
           type: string
           default: ''
           maxLength: 255
-        seo_description:
+        seo_description_override:
           type: string
           default: ''
     PercolateQuery:
@@ -17955,18 +17955,27 @@ components:
           type: array
           items:
             type: integer
-        seo_title:
+        seo_title_override:
           type: string
           default: ''
           maxLength: 255
-        seo_description:
+        seo_description_override:
           type: string
           default: ''
+        seo_title:
+          type: string
+          maxLength: 255
+          readOnly: true
+        seo_description:
+          type: string
+          readOnly: true
       required:
       - cover_image
       - created_on
       - id
       - publish_date
+      - seo_description
+      - seo_title
       - title
       - updated_on
       - user
@@ -18018,11 +18027,11 @@ components:
           type: array
           items:
             type: integer
-        seo_title:
+        seo_title_override:
           type: string
           default: ''
           maxLength: 255
-        seo_description:
+        seo_description_override:
           type: string
           default: ''
       required:

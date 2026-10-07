@@ -6,6 +6,7 @@ from rest_framework import serializers
 from learning_resources.models import LearningResourceTopic
 from website_content import models
 from website_content.constants import WebsiteContentType
+from website_content.utils import inferred_seo_description, inferred_seo_title
 from website_content.validators import clean_html
 
 User = get_user_model()
@@ -84,15 +85,22 @@ class WebsiteContentSerializer(BaseSerializer):
         max_length=2083, allow_blank=True, default="", read_only=True
     )
     author_name = serializers.CharField(required=False, allow_blank=True, default="")
-    # Optional overrides for what search engines and link previews show. Blank
-    # rather than absent when unset, so a consumer reads "" and falls back to
-    # the title and content rather than having to handle null as well.
-    seo_title = serializers.CharField(
+    # What the editor wants search engines and link previews to show *instead
+    # of* what the content already says. Blank rather than absent when unset,
+    # so a consumer reads "" and does not have to handle null as well -- and
+    # blank is meaningful here: it is what hands the field back to inference.
+    seo_title_override = serializers.CharField(
         max_length=255, required=False, allow_blank=True, default=""
     )
-    seo_description = serializers.CharField(
+    seo_description_override = serializers.CharField(
         required=False, allow_blank=True, default=""
     )
+    # The values to actually use, resolved here so that every consumer agrees
+    # on them rather than each reimplementing the fallback. Read-only: what is
+    # stored is the override, because writing the inferred text back would
+    # freeze it and a later title change would stop being reflected.
+    seo_title = serializers.SerializerMethodField()
+    seo_description = serializers.SerializerMethodField()
     user = UserSerializer(read_only=True)
     content_type = serializers.ChoiceField(
         choices=WebsiteContentType.as_tuple(),
@@ -108,6 +116,28 @@ class WebsiteContentSerializer(BaseSerializer):
         ),
         required=False,
     )
+
+    # 255 is honest rather than inherited: both sources are capped there --
+    # the override by its own column, the fallback by `title` -- so the
+    # resolved value cannot be longer, and the response keeps the length it
+    # documented when this was a plain model field.
+    @extend_schema_field({"type": "string", "maxLength": 255})
+    def get_seo_title(self, instance) -> str:
+        """Resolve the SEO title: the editor's override, else the content title"""
+        return instance.seo_title_override or inferred_seo_title(instance.title)
+
+    @extend_schema_field(serializers.CharField())
+    def get_seo_description(self, instance) -> str:
+        """
+        Resolve the SEO description: the override, else the banner's subheading
+
+        Blank when neither is there -- a document with no subheading. The caller
+        decides what to do about that; there is nothing better to infer from,
+        and inventing something would put words in the editor's mouth.
+        """
+        return instance.seo_description_override or inferred_seo_description(
+            instance.content
+        )
 
     class Meta:
         model = models.WebsiteContent
@@ -125,6 +155,8 @@ class WebsiteContentSerializer(BaseSerializer):
             "slug",
             "cover_image",
             "topics",
+            "seo_title_override",
+            "seo_description_override",
             "seo_title",
             "seo_description",
         ]

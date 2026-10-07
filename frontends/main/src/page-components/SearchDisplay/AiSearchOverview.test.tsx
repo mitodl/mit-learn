@@ -166,6 +166,46 @@ describe("AiSearchOverview", () => {
     expect(screen.getByTestId("ai-chat-display")).toBeInTheDocument()
   })
 
+  test("can be dismissed with the close button", async () => {
+    setupChat({
+      status: "ready",
+      messages: [
+        { id: "1", role: "user", content: "prompt" },
+        { id: "2", role: "assistant", content: "Here are some courses" },
+      ],
+    })
+    renderWithProviders(<AiSearchOverview searchParams={params("ml")} />)
+    await user.click(
+      screen.getByRole("button", { name: "Dismiss AI Overview" }),
+    )
+    expect(screen.queryByText("Here are some courses")).not.toBeInTheDocument()
+  })
+
+  test("auto-dismisses after the drawer is closed", async () => {
+    setupChat({
+      status: "ready",
+      messages: [
+        { id: "1", role: "user", content: "prompt" },
+        { id: "2", role: "assistant", content: "Here are some courses" },
+      ],
+    })
+    const onDismissed = jest.fn()
+    renderWithProviders(
+      <AiSearchOverview
+        searchParams={params("ml")}
+        onDismissed={onDismissed}
+      />,
+    )
+    await user.click(screen.getByRole("button", { name: "Show more" }))
+    expect(onDismissed).not.toHaveBeenCalled()
+    await user.click(screen.getByRole("button", { name: "Close" }))
+    expect(onDismissed).toHaveBeenCalledTimes(1)
+    expect(screen.queryByText("Here are some courses")).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", { name: "Show more" }),
+    ).not.toBeInTheDocument()
+  })
+
   test("renders nothing on error", () => {
     setupChat({ status: "error" })
     renderWithProviders(<AiSearchOverview searchParams={params("ml")} />)

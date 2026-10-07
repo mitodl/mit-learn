@@ -514,13 +514,15 @@ def test_seo_fields_round_trip(staff_client, user, content_type):
             "content": {},
             "title": "Optimised",
             "content_type": content_type,
-            "seo_title": "A better title for search",
-            "seo_description": "What this is about, in one sentence.",
+            "seo_title_override": "A better title for search",
+            "seo_description_override": "What this is about, in one sentence.",
         },
         format="json",
     )
 
     assert resp.status_code == 201
+    # The override is echoed back, and is also what resolves.
+    assert resp.json()["seo_title_override"] == "A better title for search"
     assert resp.json()["seo_title"] == "A better title for search"
     assert resp.json()["seo_description"] == "What this is about, in one sentence."
 
@@ -528,7 +530,7 @@ def test_seo_fields_round_trip(staff_client, user, content_type):
         "website_content:v1:website_content-detail", kwargs={"pk": resp.json()["id"]}
     )
     patched = staff_client.patch(
-        detail, {"seo_description": "Reworded."}, format="json"
+        detail, {"seo_description_override": "Reworded."}, format="json"
     )
 
     assert patched.status_code == 200
@@ -536,12 +538,12 @@ def test_seo_fields_round_trip(staff_client, user, content_type):
     # Untouched by a patch that did not mention it.
     assert patched.json()["seo_title"] == "A better title for search"
     content = WebsiteContent.objects.get(id=resp.json()["id"])
-    assert content.seo_title == "A better title for search"
-    assert content.seo_description == "Reworded."
+    assert content.seo_title_override == "A better title for search"
+    assert content.seo_description_override == "Reworded."
 
 
-def test_seo_fields_default_to_blank(staff_client):
-    """Omitted rather than null, so a consumer reads "" and falls back."""
+def test_seo_overrides_default_to_blank(staff_client):
+    """Unset is blank rather than null, and blank is what defers to inference."""
     resp = staff_client.post(
         reverse("website_content:v1:website_content-list"),
         {"content": {}, "title": "Plain", "content_type": "news"},
@@ -549,8 +551,195 @@ def test_seo_fields_default_to_blank(staff_client):
     )
 
     assert resp.status_code == 201
-    assert resp.json()["seo_title"] == ""
-    assert resp.json()["seo_description"] == ""
+    assert resp.json()["seo_title_override"] == ""
+    assert resp.json()["seo_description_override"] == ""
+
+
+def test_seo_title_is_inferred_from_the_title(staff_client):
+    """
+    Unset, the SEO title is the content's own -- and keeps following it.
+
+    This is the common case: nobody fills the field in, and renaming the
+    article renames what a search result shows. Storing the resolved value
+    instead of the override is what would break that, which is why the column
+    holds the override.
+    """
+    resp = staff_client.post(
+        reverse("website_content:v1:website_content-list"),
+        {"content": {}, "title": "First name", "content_type": "news"},
+        format="json",
+    )
+    assert resp.json()["seo_title"] == "First name"
+
+    detail = reverse(
+        "website_content:v1:website_content-detail", kwargs={"pk": resp.json()["id"]}
+    )
+    renamed = staff_client.patch(detail, {"title": "Second name"}, format="json")
+
+    assert renamed.json()["seo_title"] == "Second name"
+    assert renamed.json()["seo_title_override"] == ""
+
+
+def test_seo_description_is_inferred_from_the_subheading(staff_client):
+    """
+    Unset, the SEO description is the banner's subheading.
+
+    The line under the headline is the one part of the body written as a
+    summary, so it is what a search result gets when nobody has written
+    something specific for it.
+    """
+    resp = staff_client.post(
+        reverse("website_content:v1:website_content-list"),
+        {
+            "content": {
+                "type": "doc",
+                "content": [
+                    {
+                        "type": "banner",
+                        "content": [
+                            {
+                                "type": "heading",
+                                "content": [{"type": "text", "text": "A headline"}],
+                            },
+                            {
+                                "type": "paragraph",
+                                "content": [
+                                    {"type": "text", "text": "The line beneath it."}
+                                ],
+                            },
+                        ],
+                    }
+                ],
+            },
+            "title": "Has a subheading",
+            "content_type": "news",
+        },
+        format="json",
+    )
+
+    assert resp.json()["seo_description"] == "The line beneath it."
+    assert resp.json()["seo_description_override"] == ""
+
+
+def test_inferred_description_joins_a_formatted_subheading(staff_client):
+    """
+    A subheading split up by formatting resolves whole.
+
+    ProseMirror splits a line on every mark boundary, so "A **complex**
+    article" is three text nodes rather than one. Reading only the first
+    resolved a single word.
+    """
+    resp = staff_client.post(
+        reverse("website_content:v1:website_content-list"),
+        {
+            "content": {
+                "type": "doc",
+                "content": [
+                    {
+                        "type": "banner",
+                        "content": [
+                            {
+                                "type": "heading",
+                                "content": [
+                                    {"type": "text", "text": "Complex Article"}
+                                ],
+                            },
+                            {
+                                "type": "paragraph",
+                                "content": [
+                                    {"type": "text", "text": "A "},
+                                    {
+                                        "type": "text",
+                                        "marks": [{"type": "bold"}],
+                                        "text": "complex",
+                                    },
+                                    {"type": "text", "text": " article with "},
+                                    {
+                                        "type": "text",
+                                        "marks": [{"type": "italic"}],
+                                        "text": "various",
+                                    },
+                                    {"type": "text", "text": " elements."},
+                                ],
+                            },
+                        ],
+                    }
+                ],
+            },
+            "title": "Formatted subheading",
+            "content_type": "news",
+        },
+        format="json",
+    )
+
+    assert resp.json()["seo_description"] == "A complex article with various elements."
+
+
+def test_seo_override_wins_over_what_is_inferred(staff_client):
+    """An override is the point: it displaces the content's own words."""
+    resp = staff_client.post(
+        reverse("website_content:v1:website_content-list"),
+        {
+            "content": {},
+            "title": "The content title",
+            "content_type": "news",
+            "seo_title_override": "Something written for search",
+        },
+        format="json",
+    )
+
+    assert resp.json()["seo_title"] == "Something written for search"
+
+
+def test_clearing_an_seo_override_restores_inference(staff_client):
+    """
+    Blanking an override hands the field back, rather than emptying the tag.
+
+    An editor who decides their wording was not worth keeping gets the
+    content's own words again -- which is only possible because the column
+    holds the override and not the resolved value.
+    """
+    resp = staff_client.post(
+        reverse("website_content:v1:website_content-list"),
+        {
+            "content": {},
+            "title": "The content title",
+            "content_type": "news",
+            "seo_title_override": "Something written for search",
+        },
+        format="json",
+    )
+    detail = reverse(
+        "website_content:v1:website_content-detail", kwargs={"pk": resp.json()["id"]}
+    )
+
+    cleared = staff_client.patch(detail, {"seo_title_override": ""}, format="json")
+
+    assert cleared.json()["seo_title_override"] == ""
+    assert cleared.json()["seo_title"] == "The content title"
+
+
+def test_seo_fields_are_read_only(staff_client):
+    """
+    The resolved values cannot be written; only the overrides can.
+
+    Sent anyway, they are ignored rather than rejected -- DRF drops read-only
+    fields -- so what matters is that nothing was stored under them.
+    """
+    resp = staff_client.post(
+        reverse("website_content:v1:website_content-list"),
+        {
+            "content": {},
+            "title": "The content title",
+            "content_type": "news",
+            "seo_title": "Written to the wrong field",
+        },
+        format="json",
+    )
+
+    assert resp.status_code == 201
+    assert resp.json()["seo_title"] == "The content title"
+    assert resp.json()["seo_title_override"] == ""
 
 
 def test_create_with_topics(staff_client):
