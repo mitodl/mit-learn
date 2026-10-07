@@ -34,6 +34,7 @@ from learning_resources.etl.constants import (
     ResourceNextRunConfig,
 )
 from learning_resources.etl.exceptions import ExtractException
+from learning_resources.etl.ownership import may_write
 from learning_resources.etl.utils import most_common_topics
 from learning_resources.models import (
     ContentFile,
@@ -691,6 +692,11 @@ def load_courses(
     Returns:
         A list of course LearningResources
     """
+    # Backstop: every pipeline checks before it extracts, so this only stops a
+    # caller that skipped that check. The other batch loaders do the same.
+    if not may_write(etl_source, LearningResourceType.course.name):
+        return []
+
     blocklist = load_course_blocklist()
 
     courses_list = list(courses_data or [])
@@ -939,6 +945,16 @@ def load_programs(
     For MITx Online data, each deferred child program may map to either
     PROGRAM_PROGRAMS or PROGRAM_COURSES based on child `display_mode`.
     """
+    if not may_write(etl_source, LearningResourceType.program.name):
+        return []
+
+    if not config.courses.fetch_only and not may_write(
+        etl_source, LearningResourceType.course.name
+    ):
+        # The source's courses belong to another pipeline, so link each program
+        # to the courses that pipeline loaded instead of writing them here.
+        config = config._replace(courses=config.courses._replace(fetch_only=True))
+
     blocklist = load_course_blocklist()
 
     # Pass 1: load all programs and their course children
@@ -1459,6 +1475,12 @@ def load_podcasts(
         list of LearningResources:
             list of the loaded podcast resources
     """
+    if not may_write(
+        ETLSource.podcast.name,
+        [LearningResourceType.podcast.name, LearningResourceType.podcast_episode.name],
+    ):
+        return []
+
     podcast_resources = []
 
     for podcast_data in podcasts_data:
@@ -1673,6 +1695,8 @@ def load_documents(
         list of LearningResource:
             the list of loaded documents
     """
+    if not may_write(etl_source, LearningResourceType.document.name):
+        return []
 
     document_resources = []
     for document_data in documents_data:
@@ -1790,6 +1814,12 @@ def load_ovs_playlists(playlists_data: iter) -> list[LearningResource]:
     Returns:
         list of LearningResource: the loaded playlist resources
     """
+    if not may_write(
+        ETLSource.ovs.name,
+        [LearningResourceType.video_playlist.name, LearningResourceType.video.name],
+    ):
+        return []
+
     ovs_platform = LearningResourcePlatform.objects.get(code=PlatformType.ovs.name)
 
     playlists = [load_ovs_playlist(playlist_data) for playlist_data in playlists_data]
