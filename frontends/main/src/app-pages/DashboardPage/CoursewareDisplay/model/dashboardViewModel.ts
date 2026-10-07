@@ -600,10 +600,20 @@ const assembleHomeCardList = ({
   }
 }
 
-const filterEnrollmentsForContract = (contractId?: number) => {
+/**
+ * `b2b_contract_id` is null for an enrollment made without a contract (e.g.
+ * staff enrolling a learner directly), so an enrollment also counts when its
+ * run is in the contract-scoped `course.courseruns`.
+ */
+const filterEnrollmentsForContract = (
+  course: CourseWithCourseRunsSerializerV2,
+  contractId?: number,
+) => {
   if (typeof contractId !== "number") return isNonContractEnrollment
   return (enrollment: CourseRunEnrollmentV3) =>
-    enrollment.b2b_contract_id === contractId
+    enrollment.b2b_contract_id === contractId ||
+    (!enrollment.b2b_contract_id &&
+      course.courseruns.some((run) => run.id === enrollment.run.id))
 }
 
 /**
@@ -632,7 +642,7 @@ const resolveDisplayedRunAndEnrollment = (
     ? runMatchesVariant(opts.variant)
     : () => true
   const relevantEnrollments = enrollments
-    .filter(filterEnrollmentsForContract(opts?.contractId))
+    .filter(filterEnrollmentsForContract(course, opts?.contractId))
     .filter((e) => variantFilter(e.run))
 
   const displayedEnrollment = selectBestEnrollment(course, relevantEnrollments)
@@ -646,9 +656,8 @@ const resolveDisplayedRunAndEnrollment = (
   const defaultRun =
     getBestRun(course, {
       enrollableOnly: true,
-      contractId: opts?.contractId,
     }) ??
-    getBestRun(course, { contractId: opts?.contractId }) ??
+    getBestRun(course) ??
     null
   const isNonDefaultVariant = opts?.variant && !opts.variant.default_variant
   const displayedRun = isNonDefaultVariant

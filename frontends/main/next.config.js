@@ -62,6 +62,15 @@ const nextConfig = {
         permanent: true,
       },
       {
+        /* The Fastly rule matches the full req.url, so a request carrying a
+         * query string (?utm_source=...) misses it and lands here instead.
+         * This rule therefore stays after the Fastly redirect is live.
+         */
+        source: "/universal-learning/ai",
+        destination: "/organizational-learning",
+        permanent: true,
+      },
+      {
         /* Department 21M was renamed "Music and Theater Arts" -> "Music", which
          * changed its channel slug. Without this, existing links
          * hit notFound().

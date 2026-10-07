@@ -2,7 +2,7 @@ import { env } from "@/env"
 import React, { useEffect, useMemo, useRef, useState } from "react"
 import ReactMarkdown from "react-markdown"
 import { styled, keyframes, Drawer, Typography } from "ol-components"
-import { Button } from "@mitodl/smoot-design"
+import { Button, ActionButton, VisuallyHidden } from "@mitodl/smoot-design"
 import {
   AiChatDisplay,
   AiChatProvider,
@@ -169,6 +169,16 @@ const ShowMoreButton = styled(Button)(({ theme }) => ({
   backgroundColor: theme.custom.colors.white,
 }))
 
+const DismissButton = styled(ActionButton)(({ theme }) => ({
+  position: "absolute",
+  top: "8px",
+  right: "12px",
+  "&&:hover": {
+    backgroundColor: "transparent",
+    color: theme.custom.colors.red,
+  },
+}))
+
 const DrawerChatDisplay = styled(AiChatDisplay)(({ theme }) => ({
   "& .MitAiChat--chatScreenContainer": {
     padding: "0 40px",
@@ -206,6 +216,9 @@ const OverviewDrawer: React.FC<{ open: boolean; onClose: () => void }> = ({
     <Drawer
       open={open}
       onClose={onClose}
+      // "Show more" is removed when the overview auto-dismisses, so there is
+      // nothing to restore focus to; the caller moves focus instead.
+      disableRestoreFocus
       anchor="right"
       aria-label="AskTIM course recommendations"
       PaperProps={{
@@ -240,11 +253,23 @@ const OverviewDrawer: React.FC<{ open: boolean; onClose: () => void }> = ({
   )
 }
 
-const Overview: React.FC<{ query: string }> = ({ query }) => {
+const Overview: React.FC<{ query: string; onDismissed?: () => void }> = ({
+  query,
+  onDismissed,
+}) => {
   const { messages, append, status } = useAiChat()
   const [drawerOpen, setDrawerOpen] = useState(false)
+  const [dismissed, setDismissed] = useState(false)
   const posthog = usePostHog()
   const requested = useRef(false)
+
+  // Move focus once the dismissal has rendered. Doing it in the click handler
+  // runs before the drawer has closed, so its focus trap would take focus back.
+  useEffect(() => {
+    if (dismissed) onDismissed?.()
+  }, [dismissed, onDismissed])
+
+  const dismiss = () => setDismissed(true)
 
   useEffect(() => {
     if (requested.current) return
@@ -275,41 +300,75 @@ const Overview: React.FC<{ query: string }> = ({ query }) => {
     )
   }
 
+  // The drawer stays at a stable position outside the container so it can
+  // animate closed after the overview is auto-dismissed.
   return (
-    <Container hasShowMore>
-      <Header>
-        <RiSparkling2Line aria-hidden />
-        <HeaderLabel component="h2">AI Overview</HeaderLabel>
-      </Header>
-      <Content collapsed>
-        <ReactMarkdown skipHtml>{response}</ReactMarkdown>
-      </Content>
-      <ShowMoreButton
-        variant="bordered"
-        size="small"
-        endIcon={<RiArrowDownLine />}
-        onClick={() => {
-          setDrawerOpen(true)
-          if (env("NEXT_PUBLIC_POSTHOG_API_KEY")) {
-            posthog.capture(PostHogEvents.AskTimClicked, {
-              type: "search_ai_overview",
-            })
-          }
+    <>
+      <VisuallyHidden aria-live="polite" aria-atomic>
+        {dismissed ? "AI Overview dismissed" : ""}
+      </VisuallyHidden>
+      {!dismissed && (
+        <Container hasShowMore>
+          <Header>
+            <RiSparkling2Line aria-hidden />
+            <HeaderLabel component="h2">AI Overview</HeaderLabel>
+          </Header>
+          <DismissButton
+            variant="text"
+            size="small"
+            aria-label="Dismiss AI Overview"
+            onClick={() => {
+              dismiss()
+              if (env("NEXT_PUBLIC_POSTHOG_API_KEY")) {
+                posthog.capture(PostHogEvents.SearchAiOverviewDismissed)
+              }
+            }}
+          >
+            <RiCloseLine />
+          </DismissButton>
+          <Content collapsed>
+            <ReactMarkdown skipHtml>{response}</ReactMarkdown>
+          </Content>
+          <ShowMoreButton
+            variant="bordered"
+            size="small"
+            endIcon={<RiArrowDownLine />}
+            onClick={() => {
+              setDrawerOpen(true)
+              if (env("NEXT_PUBLIC_POSTHOG_API_KEY")) {
+                posthog.capture(PostHogEvents.AskTimClicked, {
+                  type: "search_ai_overview",
+                })
+              }
+            }}
+          >
+            Show more
+          </ShowMoreButton>
+        </Container>
+      )}
+      <OverviewDrawer
+        open={drawerOpen}
+        onClose={() => {
+          setDrawerOpen(false)
+          // Once the user has explored the full conversation, the summary
+          // has served its purpose. Not tracked: it says little about the
+          // summary itself.
+          dismiss()
         }}
-      >
-        Show more
-      </ShowMoreButton>
-      <OverviewDrawer open={drawerOpen} onClose={() => setDrawerOpen(false)} />
-    </Container>
+      />
+    </>
   )
 }
 
 interface AiSearchOverviewProps {
   searchParams: RegisteredSearchParams
+  /** Called after the overview is dismissed, e.g. to move focus elsewhere. */
+  onDismissed?: () => void
 }
 
 const AiSearchOverview: React.FC<AiSearchOverviewProps> = ({
   searchParams,
+  onDismissed,
 }) => {
   const query = searchParams.get("q")?.trim() || undefined
   const enabled = useFeatureFlagEnabled(FeatureFlags.SearchAiOverview)
@@ -320,7 +379,7 @@ const AiSearchOverview: React.FC<AiSearchOverviewProps> = ({
   return (
     // Keyed on query so a new search starts a fresh conversation.
     <AiChatProvider key={query} requestOpts={requestOpts}>
-      <Overview query={query} />
+      <Overview query={query} onDismissed={onDismissed} />
     </AiChatProvider>
   )
 }

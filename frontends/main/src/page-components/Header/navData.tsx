@@ -30,15 +30,8 @@ import {
 } from "@/common/urls"
 import { PostHogEvents } from "@/common/constants"
 
-/**
- * Contents of the nav drawer, which desktop and mobile share.
- *
- * A function rather than a constant because the "For Organizations" entry is
- * behind a rollout flag, and flags can only be read from a hook inside a
- * component. Keeping it pure means the flag behaviour is testable without
- * mounting the header.
- */
-export const buildNavData = (showOrganizationalLearning: boolean): NavData => ({
+/** Contents of the nav drawer, which desktop and mobile share. */
+export const navData: NavData = {
   sections: [
     {
       title: "LEARN",
@@ -132,22 +125,18 @@ export const buildNavData = (showOrganizationalLearning: boolean): NavData => ({
      * it from the browse sections with a rule instead. It is a different
      * audience, not another way to browse the catalog.
      */
-    ...(showOrganizationalLearning
-      ? [
-          {
-            divider: true,
-            items: [
-              {
-                title: "Organizational Learning",
-                icon: <RiGlobalLine />,
-                description:
-                  "MIT learning programs for businesses, government, and higher education institutions",
-                href: ORGANIZATIONAL_LEARNING,
-                posthogEvent: PostHogEvents.ClickedNavForOrganizations,
-              },
-            ],
-          },
-        ]
-      : []),
+    {
+      divider: true,
+      items: [
+        {
+          title: "Organizational Learning",
+          icon: <RiGlobalLine />,
+          description:
+            "MIT learning programs for businesses, government, and higher education institutions",
+          href: ORGANIZATIONAL_LEARNING,
+          posthogEvent: PostHogEvents.ClickedNavForOrganizations,
+        },
+      ],
+    },
   ],
-})
+}
