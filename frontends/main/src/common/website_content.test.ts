@@ -84,7 +84,7 @@ describe("extractWebsiteContentDescription", () => {
       extractWebsiteContentDescription({
         content: { type: "doc", content: [] },
       }),
-    ).toBeUndefined()
+    ).toBe("")
   })
 })
 

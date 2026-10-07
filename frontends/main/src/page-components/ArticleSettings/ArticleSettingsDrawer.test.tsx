@@ -182,9 +182,10 @@ describe("ArticleSettingsDrawer SEO fields", () => {
   })
 
   /**
-   * `WebsiteContent.seo_title` is a `CharField(max_length=255)`, so anything
-   * longer is rejected by the server -- and the drawer's save is fired and
-   * forgotten, so that rejection reaches the editor only as a generic banner.
+   * `WebsiteContent.seo_title_override` is a `CharField(max_length=255)`, so
+   * anything longer is rejected by the server -- and the drawer's save is
+   * fired and forgotten, so that rejection reaches the editor only as a
+   * generic banner.
    * The field stops it here instead.
    */
   test("the SEO title cannot be typed past what the server stores", async () => {

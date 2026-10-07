@@ -714,13 +714,10 @@ const WebsiteContentEditor = ({
   const topicsMissing = topicsRequired && topics.length === 0
 
   /**
-   * The SEO title and description are held to the same rule, and for the same
-   * reason: they are what a search result and a link preview show, and without
-   * them the page head falls back to the title and whatever the body happens
-   * to open with. Required on news as well as articles -- both are pages
-   * someone finds through search.
-   *
-   * Trimmed, so a space does not pass for a title.
+   * What publishing needs: an SEO title and description that resolve -- an
+   * override, or the content's own title and banner subheading -- since they
+   * are what a search result and a link preview show. Required on news as
+   * well as articles -- both are pages someone finds through search.
    */
   const seoRequired = true
   /**
@@ -729,9 +726,9 @@ const WebsiteContentEditor = ({
    * the publish gate both have to reflect what would be saved now.
    */
   const inferredSeoTitle = (title ?? "").trim()
-  const inferredSeoDescription = (
-    extractWebsiteContentDescription({ content }) ?? ""
-  ).trim()
+  const inferredSeoDescription = extractWebsiteContentDescription({
+    content,
+  }).trim()
   /**
    * Missing means the *resolved* value is empty -- no override and nothing to
    * infer from. A blank override is the common case and perfectly publishable:

@@ -50,15 +50,12 @@ export const toContentType = (
  */
 export const extractWebsiteContentDescription = (
   content: WebsiteContent | { content?: JSONContent },
-): string | undefined => {
+): string => {
   const banner = content.content?.content?.[0]
   const subheading = banner?.content?.[1]
-  const text = (subheading?.content ?? [])
+  return (subheading?.content ?? [])
     .map((node: JSONContent) => node.text ?? "")
     .join("")
-  /* Absent rather than blank, which is what `getMetadataAsync` needs to
-     substitute its own default instead of emitting an empty tag. */
-  return text || undefined
 }
 
 /**

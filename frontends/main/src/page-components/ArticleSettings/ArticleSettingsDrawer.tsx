@@ -79,7 +79,8 @@ const SeoSection = styled(Section)({
 })
 
 /**
- * What `WebsiteContent.seo_title` holds -- a `CharField(max_length=255)`.
+ * What `WebsiteContent.seo_title_override` holds -- a
+ * `CharField(max_length=255)`.
  *
  * Enforced here rather than left to the server: the drawer's save is fired and
  * forgotten, so a rejected PATCH surfaces only as the editor's generic error
