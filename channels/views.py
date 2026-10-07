@@ -3,7 +3,7 @@
 import logging
 from collections.abc import Callable
 
-from django.db.models import F, QuerySet
+from django.db.models import Min, QuerySet
 from django.utils.decorators import method_decorator
 from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.utils import extend_schema, extend_schema_view
@@ -163,9 +163,13 @@ class ChannelFeaturedView(mixins.ListModelMixin, viewsets.GenericViewSet):
             LearningResource.objects.for_serialization()
             .filter(parents__parent_id=channel.featured_list_id)
             .filter(published=True)
-            .annotate(position=F("parents__position"))
+            # Nothing stops a list holding the same resource twice, and the
+            # row should still show it once. Taking the earliest of its
+            # positions groups the rows together, where annotating the
+            # position itself leaves them distinct by that very value and
+            # `distinct()` with it.
+            .annotate(position=Min("parents__position"))
             .order_by("position")
-            .distinct()
         )
 
 

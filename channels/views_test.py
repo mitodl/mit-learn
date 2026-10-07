@@ -380,3 +380,22 @@ def test_channel_featured_is_scoped_to_its_own_channel(client):
     results = client.get(_featured_url(channel)).json()["results"]
 
     assert [r["id"] for r in results] == [child.id]
+
+
+def test_channel_featured_shows_a_repeated_resource_once(client):
+    """
+    Nothing stops a list holding the same resource twice, and the row should
+    still show it once -- at the first place the list puts it.
+    """
+    path = LearningPathFactory.create(resources=[]).learning_resource
+    channel = ChannelFactory.create(featured_list=path)
+    repeated = LearningResourceFactory.create()
+    other = LearningResourceFactory.create()
+    LearningPathRelationshipFactory.create(parent=path, child=repeated, position=0)
+    LearningPathRelationshipFactory.create(parent=path, child=other, position=1)
+    LearningPathRelationshipFactory.create(parent=path, child=repeated, position=2)
+
+    body = client.get(_featured_url(channel)).json()
+
+    assert [r["id"] for r in body["results"]] == [repeated.id, other.id]
+    assert body["count"] == 2
