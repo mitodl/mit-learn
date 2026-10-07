@@ -1051,53 +1051,62 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
             <AiSearchOverview searchParams={searchParams} />
             <ResourceTypeGroupTabs.TabPanels tabs={TABS}>
               <MobileFilter>
-                <FilterButton
-                  size="small"
-                  variant="text"
-                  startIcon={<RiEqualizerLine />}
-                  onClick={toggleMobileDrawer(true)}
-                >
-                  Filter
-                </FilterButton>
-
-                <StyledDrawer
-                  anchor="left"
-                  open={mobileDrawerOpen}
-                  onClose={toggleMobileDrawer(false)}
-                >
-                  <MobileFacetsTitleContainer>
-                    <div>
-                      <div>
-                        <Typography component="h2" variant="subtitle3">
-                          Filter
-                        </Typography>
-                      </div>
-                    </div>
-                    <MobileDrawerCloseButton
-                      size="large"
+                {/* The cards layout carries its own filters above the
+                    results, so this drawer would offer a second, longer set
+                    of them -- including the facets that layout deliberately
+                    does not have. Sorting has nowhere else to go on a narrow
+                    screen, so it stays. */}
+                {resultsLayout === "cards" ? null : (
+                  <>
+                    <FilterButton
+                      size="small"
                       variant="text"
-                      aria-label="Close"
-                      onClick={toggleMobileDrawer(false)}
+                      startIcon={<RiEqualizerLine />}
+                      onClick={toggleMobileDrawer(true)}
                     >
-                      <RiCloseLine fontSize="inherit" />
-                    </MobileDrawerCloseButton>
-                  </MobileFacetsTitleContainer>
-                  {hasFacets ? (
-                    <MobileFacetSearchButtons>
-                      <Button
-                        variant="primary"
-                        size="small"
-                        onClick={toggleMobileDrawer(false)}
-                      >
-                        Apply Filters
-                      </Button>
-                      <ResetButton size="small" onClick={clearAllFacets}>
-                        Clear All
-                      </ResetButton>
-                    </MobileFacetSearchButtons>
-                  ) : null}
-                  {filterContents}
-                </StyledDrawer>
+                      Filter
+                    </FilterButton>
+
+                    <StyledDrawer
+                      anchor="left"
+                      open={mobileDrawerOpen}
+                      onClose={toggleMobileDrawer(false)}
+                    >
+                      <MobileFacetsTitleContainer>
+                        <div>
+                          <div>
+                            <Typography component="h2" variant="subtitle3">
+                              Filter
+                            </Typography>
+                          </div>
+                        </div>
+                        <MobileDrawerCloseButton
+                          size="large"
+                          variant="text"
+                          aria-label="Close"
+                          onClick={toggleMobileDrawer(false)}
+                        >
+                          <RiCloseLine fontSize="inherit" />
+                        </MobileDrawerCloseButton>
+                      </MobileFacetsTitleContainer>
+                      {hasFacets ? (
+                        <MobileFacetSearchButtons>
+                          <Button
+                            variant="primary"
+                            size="small"
+                            onClick={toggleMobileDrawer(false)}
+                          >
+                            Apply Filters
+                          </Button>
+                          <ResetButton size="small" onClick={clearAllFacets}>
+                            Clear All
+                          </ResetButton>
+                        </MobileFacetSearchButtons>
+                      ) : null}
+                      {filterContents}
+                    </StyledDrawer>
+                  </>
+                )}
                 <MobileSortContainer>{sortDropdown}</MobileSortContainer>
               </MobileFilter>
               <StyledResultsContainer fetching={isFetching} inert={isFetching}>

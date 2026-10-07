@@ -635,4 +635,38 @@ describe("ChannelSearch", () => {
       ).toBeInTheDocument()
     },
   )
+
+  /**
+   * The topic layout carries its own filters above the results, so the narrow
+   * screen's drawer would offer a second and longer set of them -- including
+   * the facets that layout deliberately drops. Sorting has nowhere else to go
+   * on a narrow screen, so it stays.
+   */
+  test("a topic page offers no second set of filters on a narrow screen", async () => {
+    const { channel } = setMockApiResponses({
+      channelPatch: { channel_type: ChannelTypeEnum.Topic },
+    })
+
+    renderWithProviders(<ChannelPage />, {
+      url: `/c/${channel.channel_type}/${channel.name}`,
+    })
+    await screen.findByTestId("topic-search-filter-bar")
+
+    expect(screen.queryByRole("button", { name: "Filter" })).toBe(null)
+    /* Both sort controls survive -- the one beside the tabs and the one the
+       narrow screen shows in the drawer's place. */
+    expect(screen.getAllByText(/^Sort by:/)).toHaveLength(2)
+  }, 10000)
+
+  test("other channels keep the narrow screen's filter drawer", async () => {
+    const { channel } = setMockApiResponses({
+      channelPatch: { channel_type: ChannelTypeEnum.Department },
+    })
+
+    renderWithProviders(<ChannelPage />, {
+      url: `/c/${channel.channel_type}/${channel.name}`,
+    })
+
+    await screen.findByRole("button", { name: "Filter" })
+  }, 10000)
 })
