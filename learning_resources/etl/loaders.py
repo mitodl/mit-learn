@@ -1983,7 +1983,8 @@ def load_videos_from_content_files(
 
     Checks how many videos have matching ContentFile objects by youtube_id.
     If at least 60% of the videos have matches, loads those videos.
-    Otherwise returns None.
+    Otherwise returns None. Only published content files on published runs
+    match, so a video whose content file was removed is not republished.
 
     Args:
         youtube_videos_data (Iterable of dict): video data dicts from youtube
@@ -2003,6 +2004,8 @@ def load_videos_from_content_files(
             continue
         content_file = ContentFile.objects.filter(
             youtube_id=youtube_id,
+            published=True,
+            run__published=True,
         ).first()
         if content_file:
             matched.append((video_data, content_file))

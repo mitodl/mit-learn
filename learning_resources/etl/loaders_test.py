@@ -3200,6 +3200,40 @@ def test_load_videos_from_content_files(mocker, match_ratio, expected_result):
         mock_load.assert_not_called()
 
 
+@pytest.mark.parametrize(
+    ("content_file_published", "run_published"),
+    [(False, True), (True, False)],
+)
+def test_load_videos_from_content_files_skips_unpublished(
+    mocker, content_file_published, run_published
+):
+    """An unpublished content file, or one on an unpublished run, is not matched"""
+    mock_load = mocker.patch(
+        "learning_resources.etl.loaders.load_video_with_content_file",
+    )
+    ContentFileFactory.create(
+        run=LearningResourceRunFactory.create(published=run_published),
+        youtube_id="yt_id",
+        published=content_file_published,
+    )
+
+    assert load_videos_from_content_files(iter([{"youtube_id": "yt_id"}])) is None
+    mock_load.assert_not_called()
+
+
+def test_load_videos_from_content_files_prefers_published(mocker):
+    """A published content file is matched over an unpublished one with the same id"""
+    mock_load = mocker.patch(
+        "learning_resources.etl.loaders.load_video_with_content_file",
+    )
+    ContentFileFactory.create(youtube_id="yt_id", published=False)
+    published = ContentFileFactory.create(youtube_id="yt_id")
+
+    load_videos_from_content_files(iter([{"youtube_id": "yt_id"}]))
+
+    assert mock_load.call_args.args[1] == published
+
+
 def test_load_videos_from_content_files_empty_input():
     """Test that an empty iterable returns an empty list"""
     result = load_videos_from_content_files(iter([]))
