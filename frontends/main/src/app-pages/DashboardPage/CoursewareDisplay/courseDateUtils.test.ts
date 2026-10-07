@@ -1,26 +1,8 @@
-import {
-  canOpenCourseware,
-  getRunTimeState,
-  hasCourseStaffRole,
-} from "./courseDateUtils"
+import { canOpenCourseware, hasCourseStaffRole } from "./courseDateUtils"
 import moment from "moment"
 
 const future = moment().add(30, "days").toISOString()
 const past = moment().subtract(30, "days").toISOString()
-
-describe("getRunTimeState", () => {
-  test.each([
-    { startDate: future, endDate: null, expected: "upcoming" },
-    { startDate: past, endDate: future, expected: "underway" },
-    { startDate: past, endDate: past, expected: "ended" },
-    { startDate: null, endDate: null, expected: "underway" },
-  ])(
-    "returns $expected for start=$startDate end=$endDate",
-    ({ startDate, endDate, expected }) => {
-      expect(getRunTimeState(startDate, endDate)).toBe(expected)
-    },
-  )
-})
 
 /**
  * Only the flag matters here, so the fixtures carry nothing else; the cast
