@@ -1905,7 +1905,7 @@ class CredentialMetadataView(AsyncAPIView):
     Limited to MITx Online courses.
     """
 
-    permission_classes = (permissions.IsAdminOrCourseAuthor,)
+    permission_classes = (permissions.IsAdminOrCourseAuthorOrReadOnly,)
 
     @extend_schema(summary="Get stored credential metadata")
     async def get(self, request):

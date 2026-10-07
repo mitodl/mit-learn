@@ -1685,7 +1685,7 @@ def test_credential_metadata_is_not_serialized():
     """
     Stored credential metadata stays off the public catalogue.
 
-    It is draft, author-only content behind IsAdminOrCourseAuthor. Nothing
+    It is served only by the credential metadata endpoint. Nothing
     excludes it by name: LearningResourceBaseSerializer.Meta uses `exclude`,
     and DRF skips reverse one-to-ones under it. That is implicit enough to be
     worth pinning, since a switch to `fields` or a ModelSerializer elsewhere

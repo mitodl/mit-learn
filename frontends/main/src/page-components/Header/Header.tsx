@@ -18,13 +18,11 @@ import MITLogoLink from "@/components/MITLogoLink/MITLogoLink"
 import UserMenu from "./UserMenu"
 import { MenuButton } from "./MenuButton"
 import HeaderNavLink from "./HeaderNavLink"
-import { buildNavData } from "./navData"
+import { navData } from "./navData"
 import { SEARCH, ORGANIZATIONAL_LEARNING, DASHBOARD_HOME } from "@/common/urls"
 import { useUserMe } from "api/hooks/user"
-import { usePostHog, useFeatureFlagEnabled } from "posthog-js/react"
+import { usePostHog } from "posthog-js/react"
 import { PostHogEvents } from "@/common/constants"
-import { FeatureFlags } from "@/common/feature_flags"
-import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
 
 const Bar = styled(AppBar)(({ theme }) => ({
   padding: "16px 8px",
@@ -219,22 +217,6 @@ const Header: FunctionComponent = () => {
     posthogCapture(drawerToggleEvent)
   }
 
-  /**
-   * Unlike a flagged route, a nav entry has no 404 to fall back on, so it fails
-   * closed: "not loaded yet" is treated the same as "off" rather than flashing
-   * a link that may not be available.
-   */
-  const orgLearningFlag = useFeatureFlagEnabled(
-    FeatureFlags.OrganizationalLearning,
-  )
-  const flagsLoaded = useFeatureFlagsLoaded()
-  const showOrgLearning = Boolean(flagsLoaded && orgLearningFlag)
-
-  const navData = React.useMemo(
-    () => buildNavData(showOrgLearning),
-    [showOrgLearning],
-  )
-
   return (
     <div>
       <Bar position="fixed">
@@ -249,18 +231,16 @@ const Header: FunctionComponent = () => {
               // "Selected" for a drawer trigger reads as "its drawer is open".
               active={drawerOpen}
             />
-            {showOrgLearning ? (
-              <HeaderNavLink
-                href={ORGANIZATIONAL_LEARNING}
-                label="For Organizations"
-                icon={<RiGlobalLine aria-hidden />}
-                onClick={() =>
-                  posthogCapture(PostHogEvents.ClickedNavForOrganizations, {
-                    placement: "headerBar",
-                  })
-                }
-              />
-            ) : null}
+            <HeaderNavLink
+              href={ORGANIZATIONAL_LEARNING}
+              label="For Organizations"
+              icon={<RiGlobalLine aria-hidden />}
+              onClick={() =>
+                posthogCapture(PostHogEvents.ClickedNavForOrganizations, {
+                  placement: "headerBar",
+                })
+              }
+            />
           </DesktopOnly>
           <MobileOnly>
             <MenuButton

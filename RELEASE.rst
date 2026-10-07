@@ -1,6 +1,32 @@
 Release Notes
 =============
 
+Version 0.81.8
+--------------
+
+- feat(b2b): enable the Last activity column and the module filter (#4025)
+- Dismissable AskTim search summary (#4046)
+- default to ordering by popular on the tail end of searches without queries (#4048)
+- Ensure vector search does not return unpublished resources (#4040)
+- Redirect /universal-learning/ai to /organizational-learning (#4031)
+- Refresh uv.lock to clear pip-audit advisories (#4024)
+- Fix FAQ accordion content shift when a panel closes (#4029)
+- Keep deindexing after a not_found in an earlier batch (#3980)
+
+Version 0.81.6
+--------------
+
+- Data consent follow-ups: ask before navigating, redirect on decline, fixed checkbox label color (#4026)
+- Do not ingest OLX tabs, about pages and course settings learners can't reach (#4014)
+- Hybrid search: default sort by featured courses  (#4033)
+- feat(b2b-analytics): add a Learner progress section to org/contract analytics (#4004)
+- Style fixes for AskTim search overview/summary (#4032)
+- chore: remove the interim pre-commit.ci ci: block (#4037)
+- fix migration (#4038)
+- Generate credential metadata for programs (#3975)
+- Delete runs that moved to another course (#4015)
+- ci: run hooks with prek and autofix.ci (#4027)
+
 Version 0.81.4
 --------------
 
