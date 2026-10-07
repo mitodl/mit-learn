@@ -9,7 +9,11 @@
  * during SSR) can import `showErrorToast` without pulling UI into that module.
  */
 
-export type ErrorToast = { message: string }
+export type ErrorToast = {
+  message: string
+  /** Render a "Contact Support" link alongside the message. */
+  contactSupport?: boolean
+}
 
 let current: ErrorToast | null = null
 const listeners = new Set<() => void>()
@@ -19,12 +23,15 @@ const emit = () => {
 }
 
 /** Show (or replace) the single error toast. */
-export const showErrorToast = (message: string): void => {
+export const showErrorToast = (
+  message: string,
+  options: Omit<ErrorToast, "message"> = {},
+): void => {
   // `current` is a module-level singleton; writing it on the server would leak
   // across concurrent SSR requests. The `MutationCache.onError` that calls this
   // is wired only on the browser client — this guard enforces that invariant.
   if (typeof window === "undefined") return
-  current = { message }
+  current = { message, ...options }
   emit()
 }
 
