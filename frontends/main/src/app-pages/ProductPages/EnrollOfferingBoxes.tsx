@@ -12,6 +12,9 @@ import {
   FullRowCell,
   FinancialAidIndicator,
 } from "./EnrollAreaParts"
+import { badRequestDetail } from "api/mutation-errors"
+import ErrorMessageWithSupport from "@/components/ErrorMessageWithSupport/ErrorMessageWithSupport"
+import { ENROLL_FAILURE_MESSAGE } from "./enrollTypes"
 import type {
   AppliedSavings,
   EnrollAreaState,
@@ -25,7 +28,8 @@ type EnrollOfferingBoxesProps = {
   state: EnrollAreaState
   isStatusLoading: boolean
   isPending: boolean
-  isError: boolean
+  /** The failed enroll action's error, or null when there was none. */
+  error: unknown
   /** Top-right plain price for the certificate card. */
   price: React.ReactNode
   /** Render that price at the title's size, for one too wide to sit beside the title at h4. */
@@ -63,7 +67,7 @@ const EnrollOfferingBoxes: React.FC<EnrollOfferingBoxesProps> = ({
   state,
   isStatusLoading,
   isPending,
-  isError,
+  error,
   price,
   compactPrice,
   priceBlock,
@@ -211,10 +215,12 @@ const EnrollOfferingBoxes: React.FC<EnrollOfferingBoxesProps> = ({
       )}
       {renderPaidBox()}
       {renderFreeBox()}
-      {isError && (
+      {!!error && (
         <FullRowCell>
           <Alert severity="error">
-            There was a problem processing your enrollment. Please try again.
+            <ErrorMessageWithSupport>
+              {badRequestDetail(error) ?? ENROLL_FAILURE_MESSAGE}
+            </ErrorMessageWithSupport>
           </Alert>
         </FullRowCell>
       )}

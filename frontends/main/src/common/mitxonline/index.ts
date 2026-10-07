@@ -300,16 +300,14 @@ export * from "./enrollmentAlert"
  *
  * @param opts.enrollableOnly - only consider runs where `is_enrollable` is true
  *   (use this on the dashboard where enrollment is the goal)
- * @param opts.contractId - only consider runs matching this B2B contract
  */
 const getBestRun = (
   course: CourseWithCourseRunsSerializerV2,
-  opts?: { contractId?: number; enrollableOnly?: boolean },
+  opts?: { enrollableOnly?: boolean },
 ): CourseRunV2 | undefined => {
-  const { contractId, enrollableOnly = false } = opts ?? {}
+  const { enrollableOnly = false } = opts ?? {}
   let runs = course.courseruns ?? []
   if (enrollableOnly) runs = runs.filter((run) => run.is_enrollable)
-  if (contractId) runs = runs.filter((run) => run.b2b_contract === contractId)
 
   if (course.next_run_id !== null && course.next_run_id !== undefined) {
     const next = runs.find((run) => run.id === course.next_run_id)

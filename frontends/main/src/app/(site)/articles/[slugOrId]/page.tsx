@@ -29,8 +29,8 @@ export const generateMetadata = async (
       return notFound()
     }
 
-    /* The editor's SEO overrides where they are set, otherwise the title and
-       the opening of the body as before. */
+    /* Resolved by the API: the editor's SEO override where set, otherwise the
+       title and the banner subheading. */
     const { title, description } = websiteContentSeo(content)
     const leadImage = extractImageMetadata(content)
 
