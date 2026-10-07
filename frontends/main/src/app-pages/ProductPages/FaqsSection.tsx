@@ -45,9 +45,6 @@ const FaqSummary = styled(AccordionSummary)(({ theme }) => ({
   ".MuiAccordionSummary-content": {
     margin: "24px 0",
   },
-  "&.Mui-expanded .MuiAccordionSummary-content": {
-    marginBottom: "16px",
-  },
   ".MuiAccordionSummary-expandIconWrapper": {
     color: theme.custom.colors.darkGray2,
   },

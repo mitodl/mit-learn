@@ -281,9 +281,18 @@ ORDER_BY_MISSING_VALUE = {
 }
 
 # Points with no value for the sort key have nothing to order them by, so they
-# are ordered by recency instead -- where the tie-broken tail of the equivalent
-# OpenSearch sort also ends up. On every resource payload, and indexed.
-ORDER_BY_MISSING_TAIL_KEY = "created_on"
+# are ordered by this instead. Featured resources are few, so the rest of an
+# empty search follows them by popularity; anything else falls back to recency,
+# where the tie-broken tail of the equivalent OpenSearch sort also ends up.
+# All on every resource payload, and indexed.
+ORDER_BY_MISSING_TAIL_ORDER = {
+    FEATURED_RANK_PAYLOAD_KEY: models.OrderBy(
+        key="views", direction=models.Direction.DESC
+    ),
+}
+ORDER_BY_MISSING_TAIL_DEFAULT = models.OrderBy(
+    key="created_on", direction=models.Direction.DESC
+)
 
 # Maximum value of offset + limit accepted by paginated vector search
 MAX_RESULT_WINDOW = 1000
