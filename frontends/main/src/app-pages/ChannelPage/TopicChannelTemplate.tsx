@@ -424,13 +424,7 @@ const TopicChannelTemplateInternal: React.FC<
                     <TopicDescription variant="body1">
                       {channel.public_description}
                     </TopicDescription>
-                  ) : (
-                    <TopicDescription variant="body1">
-                      Explore how living systems work, from molecules and cells
-                      to organisms and ecosystems. Courses span genetics,
-                      biochemistry, neuroscience, and computational biology.
-                    </TopicDescription>
-                  )}
+                  ) : null}
                 </TitleBlock>
               </BannerArea>
               <TopicFeaturedCarousel name={channel.name} />
