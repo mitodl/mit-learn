@@ -1,6 +1,13 @@
 Release Notes
 =============
 
+Version 0.81.10
+---------------
+
+- Renumber the b2b_only migration to 0130 (#4065)
+- Publish public mitxonline runs that are attached to a contract (#4055)
+- Add per-source ETL write ownership (legacy, warehouse or webhook) (#3565)
+
 Version 0.81.9
 --------------
 
