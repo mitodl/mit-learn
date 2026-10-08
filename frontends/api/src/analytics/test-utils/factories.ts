@@ -4,6 +4,7 @@ import type {
   ContentEngagementDepth,
   ContractContentEngagementDepth,
   ContractMonthlyEngagementTrend,
+  ContractNeedsAttention,
   ContractUtilization,
   CourseRun,
   EnrollmentCompletionFunnel,
@@ -232,6 +233,19 @@ const courseRun = (overrides: Partial<CourseRun> = {}): CourseRun => ({
   ...overrides,
 })
 
+const contractNeedsAttention = (
+  overrides: Partial<ContractNeedsAttention> = {},
+): ContractNeedsAttention => {
+  const considered = faker.number.int({ min: 20, max: 500 })
+  return {
+    contract_id: faker.number.int(),
+    learners_considered: considered,
+    learners_needing_attention: faker.number.int({ min: 0, max: considered }),
+    learners_outcomes_withheld: 0,
+    ...overrides,
+  }
+}
+
 /**
  * Tallies `data` by `completion_status`, the same default-from-rows approach
  * `outcomes_withheld_count` above takes. A row with no status (withheld
@@ -271,6 +285,7 @@ export {
   contentEngagementDepth,
   contractContentEngagementDepth,
   contractMonthlyEngagementTrend,
+  contractNeedsAttention,
   contractUtilization,
   courseRun,
   enrollmentCompletionFunnel,

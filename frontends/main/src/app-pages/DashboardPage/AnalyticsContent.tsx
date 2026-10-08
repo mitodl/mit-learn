@@ -44,6 +44,7 @@ import CoursePerformanceTable from "./Analytics/CoursePerformanceTable"
 import EngagementTrendChart from "./Analytics/EngagementTrendChart"
 import { SUPPRESSED_LEGEND } from "./Analytics/format"
 import LearnerProgressCard from "./Analytics/LearnerProgressCard"
+import NeedsAttentionCard from "./Analytics/NeedsAttentionCard"
 import SectionHeader from "./Analytics/SectionHeader"
 import SectionTruncation from "./Analytics/SectionTruncation"
 
@@ -447,6 +448,12 @@ const AnalyticsContentInternal: React.FC<AnalyticsContentInternalProps> = ({
     placeholderData: keepPreviousData,
   })
 
+  /** Gated like `learnerProgress`: its CTA lands on the same flagged directory. */
+  const needsAttention = useQuery({
+    ...analyticsContractQueries.needsAttention(orgUuid ?? "", contractId ?? ""),
+    enabled: analyticsAvailable && !!contractId && !!learnerAnalyticsFlag,
+  })
+
   /**
    * The truncation footer for one section, or null when it is showing
    * everything. "Show all" asks for the whole result set in a single page,
@@ -626,6 +633,16 @@ const AnalyticsContentInternal: React.FC<AnalyticsContentInternalProps> = ({
             isError={learnerProgress.isError}
             learnersHref={(status) =>
               contractLearnersView(orgSlug, contract.slug, { status })
+            }
+            aside={
+              <NeedsAttentionCard
+                row={needsAttention.data?.data[0]}
+                isLoading={needsAttention.isPending}
+                isError={needsAttention.isError}
+                learnersHref={contractLearnersView(orgSlug, contract.slug, {
+                  needsAttention: true,
+                })}
+              />
             }
           />
         </Section>

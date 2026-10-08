@@ -323,3 +323,28 @@ export type CourseRun = {
 }
 
 export type CourseRunsResponse = OrgAnalyticsResponse<CourseRun>
+
+/**
+ * Distinct learners needing attention — grain: org x contract. Computed at
+ * query time from the same expression as `LearnerProgress.needs_attention`,
+ * not read from a materialized view, so this count and the learner
+ * directory's filter cannot disagree.
+ *
+ * A learner needs attention if they never started, or are in progress with no
+ * recorded activity in at least 30 days; each is counted once however many
+ * courses they are behind in. That makes this a learner count, unlike
+ * `LearnerProgressResponse.needs_attention_count`, which counts enrollments.
+ *
+ * `learners_considered` (active enrollments only) gates the row: below the
+ * anonymity floor the contract has no row at all. The two outcome counts are
+ * floored independently, and the three do not sum.
+ */
+export type ContractNeedsAttention = {
+  contract_id: number
+  learners_considered: number
+  learners_needing_attention: number | null
+  learners_outcomes_withheld: number | null
+}
+
+export type ContractNeedsAttentionResponse =
+  OrgAnalyticsResponse<ContractNeedsAttention>

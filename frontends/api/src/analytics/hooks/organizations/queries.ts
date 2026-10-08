@@ -247,6 +247,25 @@ const analyticsContractQueries = {
           .courseRuns(orgId, contractId, page, signal)
           .then((res) => res.data),
     }),
+
+  /**
+   * On `learnerProgress`'s stale time, not the rollups': it is computed from
+   * the same rows at query time, and the count should not lag the directory a
+   * manager clicks through to.
+   */
+  needsAttention: (orgId: string, contractId: string) =>
+    queryOptions({
+      queryKey: analyticsContractKeys.resource(
+        orgId,
+        contractId,
+        "needs-attention",
+      ),
+      staleTime: LEARNER_PROGRESS_STALE_TIME,
+      queryFn: async ({ signal }) =>
+        analyticsContractsApi
+          .needsAttention(orgId, contractId, undefined, signal)
+          .then((res) => res.data),
+    }),
 }
 
 export {

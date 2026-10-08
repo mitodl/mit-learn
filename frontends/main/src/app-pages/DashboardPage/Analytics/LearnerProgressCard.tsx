@@ -59,6 +59,16 @@ const Root = styled.div({
   gap: "16px",
 })
 
+const DetailRow = styled.div(({ theme }) => ({
+  display: "grid",
+  gridTemplateColumns: "minmax(0, 2fr) minmax(0, 1fr)",
+  gap: "16px",
+  alignItems: "stretch",
+  [theme.breakpoints.down("md")]: {
+    gridTemplateColumns: "minmax(0, 1fr)",
+  },
+}))
+
 const TileRow = styled.div(({ theme }) => ({
   display: "flex",
   border: `1px solid ${theme.custom.colors.lightGray2}`,
@@ -223,6 +233,8 @@ const LearnerProgressCard: React.FC<{
   isLoading: boolean
   isError?: boolean
   learnersHref: (status?: ContractLearnersStatus) => string
+  /** Rendered beside the distribution, stacking below it on narrow screens. */
+  aside?: React.ReactNode
 }> = ({
   totalCount,
   withheldCount,
@@ -230,6 +242,7 @@ const LearnerProgressCard: React.FC<{
   isLoading,
   isError,
   learnersHref,
+  aside,
 }) => {
   const statusColors = progressStatusColors(useTheme())
 
@@ -274,6 +287,48 @@ const LearnerProgressCard: React.FC<{
     reportedCount > 0 ? (count / reportedCount) * 100 : 0
   const percentBasis = withheld > 0 ? " of learners who consented" : " of total"
 
+  const distribution = (
+    <TableCard>
+      <DistributionList role="list" aria-label="Learner progress distribution">
+        {BUCKETS.map((bucket) => {
+          const count = buckets[bucket.key]
+          const percent = percentOf(count)
+          return (
+            <DistributionRow key={bucket.key} role="listitem">
+              <RowLabel>{bucket.label}</RowLabel>
+              <Track>
+                {count > 0 ? (
+                  <TrackFill
+                    aria-hidden
+                    $color={statusColors[bucket.key]}
+                    style={{ width: `${percent}%` }}
+                  />
+                ) : null}
+              </Track>
+              <RowStats>
+                <RowCount>
+                  {formatCount(count)}
+                  <VisuallyHidden> learners,</VisuallyHidden>
+                </RowCount>
+                <RowPercent>
+                  {formatPercent(percent)}
+                  <VisuallyHidden>{percentBasis}</VisuallyHidden>
+                </RowPercent>
+              </RowStats>
+            </DistributionRow>
+          )
+        })}
+      </DistributionList>
+      {withheld > 0 ? (
+        <DistributionNote>
+          Percentages exclude {formatCount(withheld)}{" "}
+          {withheld === 1 ? "learner who has" : "learners who have"} not agreed
+          to share their progress.
+        </DistributionNote>
+      ) : null}
+    </TableCard>
+  )
+
   return (
     <Root>
       <TileRow>
@@ -296,48 +351,14 @@ const LearnerProgressCard: React.FC<{
         ))}
       </TileRow>
 
-      <TableCard>
-        <DistributionList
-          role="list"
-          aria-label="Learner progress distribution"
-        >
-          {BUCKETS.map((bucket) => {
-            const count = buckets[bucket.key]
-            const percent = percentOf(count)
-            return (
-              <DistributionRow key={bucket.key} role="listitem">
-                <RowLabel>{bucket.label}</RowLabel>
-                <Track>
-                  {count > 0 ? (
-                    <TrackFill
-                      aria-hidden
-                      $color={statusColors[bucket.key]}
-                      style={{ width: `${percent}%` }}
-                    />
-                  ) : null}
-                </Track>
-                <RowStats>
-                  <RowCount>
-                    {formatCount(count)}
-                    <VisuallyHidden> learners,</VisuallyHidden>
-                  </RowCount>
-                  <RowPercent>
-                    {formatPercent(percent)}
-                    <VisuallyHidden>{percentBasis}</VisuallyHidden>
-                  </RowPercent>
-                </RowStats>
-              </DistributionRow>
-            )
-          })}
-        </DistributionList>
-        {withheld > 0 ? (
-          <DistributionNote>
-            Percentages exclude {formatCount(withheld)}{" "}
-            {withheld === 1 ? "learner who has" : "learners who have"} not
-            agreed to share their progress.
-          </DistributionNote>
-        ) : null}
-      </TableCard>
+      {aside ? (
+        <DetailRow>
+          {distribution}
+          {aside}
+        </DetailRow>
+      ) : (
+        distribution
+      )}
     </Root>
   )
 }
