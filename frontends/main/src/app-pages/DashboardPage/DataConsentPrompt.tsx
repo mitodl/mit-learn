@@ -44,14 +44,14 @@ const DataConsentPrompt: React.FC<DataConsentPromptProps> = ({
       open={open}
       contractName={contract.name}
       onAccept={() => submit(true)}
-      onDecline={() => submit(false)}
+      onCancel={() => submit(false)}
       submitting={
         declined
-          ? "decline"
+          ? "cancel"
           : consentMutation.isPending
             ? consentMutation.variables?.DataConsentRequest.consented
               ? "accept"
-              : "decline"
+              : "cancel"
             : null
       }
       isError={consentMutation.isError}
