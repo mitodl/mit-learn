@@ -346,7 +346,7 @@ const LearnerProgressCard: React.FC<{
             value={buckets[bucket.key]}
             learnersHref={learnersHref(bucket.status)}
             linkText="View learners"
-            linkLabel={`View ${bucket.label.toLowerCase()} learners`}
+            linkLabel={`View learners (${bucket.label})`}
           />
         ))}
       </TileRow>

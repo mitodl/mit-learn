@@ -127,10 +127,21 @@ const setContractAnalyticsResponses = (
       learners_needing_attention: 20,
     }),
   ],
+  needsAttentionEnrollments = 26,
 ) => {
   setMockResponse.get(
     analyticsUrls.contracts.needsAttention(ORG_UUID, contractId),
     analyticsFactories.envelope(needsAttention, { as_of: AS_OF }),
+  )
+  setMockResponse.get(
+    analyticsUrls.contracts.learnerProgress(ORG_UUID, contractId, {
+      limit: 1,
+      needs_attention: true,
+    }),
+    analyticsFactories.learnerProgressEnvelope([], {
+      as_of: AS_OF,
+      total_count: needsAttentionEnrollments,
+    }),
   )
   setMockResponse.get(
     analyticsUrls.contracts.contractUtilization(ORG_UUID, contractId, page),
@@ -1029,9 +1040,9 @@ describe("AnalyticsContent, contract-scoped", () => {
     const orgSlug = org.slug.replace(/^org-/, "")
     for (const [label, linkName, status] of [
       ["Enrolled", "View all learners", undefined],
-      ["Not started", "View not started learners", "not_started"],
-      ["In progress", "View in progress learners", "in_progress"],
-      ["Completed", "View completed learners", "passed"],
+      ["Not started", "View learners (Not started)", "not_started"],
+      ["In progress", "View learners (In progress)", "in_progress"],
+      ["Completed", "View learners (Completed)", "passed"],
     ] as const) {
       const link = within(screen.getByRole("group", { name: label })).getByRole(
         "link",
@@ -1056,12 +1067,21 @@ describe("AnalyticsContent, contract-scoped", () => {
   })
 
   describe("Needs attention card", () => {
-    const renderCard = async (needsAttention: ContractNeedsAttention[]) => {
+    const renderCard = async (
+      needsAttention: ContractNeedsAttention[],
+      enrollments?: number,
+    ) => {
       const contract = factories.contracts.contract()
       const org = orgWithUuid({ contracts: [contract] })
       setManagerOrgs([org])
       const contractId = String(contract.id)
-      setContractAnalyticsResponses(contractId, undefined, {}, needsAttention)
+      setContractAnalyticsResponses(
+        contractId,
+        undefined,
+        {},
+        needsAttention,
+        enrollments,
+      )
       const orgSlug = org.slug.replace(/^org-/, "")
       renderWithProviders(
         <AnalyticsContent orgSlug={orgSlug} contractSlug={contract.slug} />,
@@ -1084,7 +1104,9 @@ describe("AnalyticsContent, contract-scoped", () => {
 
       expect(card).toHaveTextContent("20 learners")
       expect(
-        within(card).getByText("Not started, or inactive for 30+ days."),
+        await within(card).findByText(
+          "Not started, or inactive for 30+ days, across 26 enrollments.",
+        ),
       ).toBeInTheDocument()
       expect(
         within(card).getByRole("link", {
@@ -1103,6 +1125,31 @@ describe("AnalyticsContent, contract-scoped", () => {
 
       expect(card).toHaveTextContent("1 learner")
       expect(card).not.toHaveTextContent("1 learners")
+    })
+
+    test("uses singular wording for one enrollment", async () => {
+      const { card } = await renderCard(
+        [row({ learners_needing_attention: 1 })],
+        1,
+      )
+
+      expect(
+        await within(card).findByText(
+          "Not started, or inactive for 30+ days, across 1 enrollment.",
+        ),
+      ).toBeInTheDocument()
+    })
+
+    test("never shows an enrollment count in place of a suppressed learner count", async () => {
+      const { card } = await renderCard(
+        [row({ learners_needing_attention: null })],
+        7,
+      )
+
+      await within(card).findByText(
+        "Too few learners to report how many need attention.",
+      )
+      expect(card).not.toHaveTextContent(/enrollment/)
     })
 
     test("says no one needs attention instead of offering a follow-up with zero", async () => {

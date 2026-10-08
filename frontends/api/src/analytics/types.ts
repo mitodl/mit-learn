@@ -332,8 +332,9 @@ export type CourseRunsResponse = OrgAnalyticsResponse<CourseRun>
  *
  * A learner needs attention if they never started, or are in progress with no
  * recorded activity in at least 30 days; each is counted once however many
- * courses they are behind in. That makes this a learner count, unlike
- * `LearnerProgressResponse.needs_attention_count`, which counts enrollments.
+ * courses they are behind in. That makes this a learner count, unlike the
+ * `total_count` of a `learner-progress` request with `needs_attention=true`,
+ * which counts enrollments.
  *
  * `learners_considered` (active enrollments only) gates the row: below the
  * anonymity floor the contract has no row at all. The two outcome counts are

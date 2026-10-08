@@ -125,6 +125,25 @@ const mockCourseRuns = (
   )
 }
 
+/**
+ * The contract-wide distinct-learner count, fetched only while the Needs
+ * attention filter is on. An empty envelope is a contract under the floor.
+ */
+const mockNeedsAttention = (
+  contractId: string,
+  learners: number | null = 0,
+) => {
+  setMockResponse.get(
+    analyticsUrls.contracts.needsAttention(ORG_UUID, contractId),
+    analyticsFactories.envelope([
+      analyticsFactories.contractNeedsAttention({
+        contract_id: Number(contractId),
+        learners_needing_attention: learners,
+      }),
+    ]),
+  )
+}
+
 describe("ContractLearnersPage", () => {
   beforeEach(() => {
     mockedUseFeatureFlagsLoaded.mockReturnValue(true)
@@ -1072,6 +1091,7 @@ describe("ContractLearnersPage", () => {
       )
       mockTotal(contractId, rows.length, contractWithheldCount)
       mockCourseRuns(contractId)
+      mockNeedsAttention(contractId)
       mockList(contractId, rows)
       extra?.(contractId)
       renderWithProviders(
@@ -1147,6 +1167,37 @@ describe("ContractLearnersPage", () => {
       await user.click(await checkbox())
 
       await screen.findByText("Only Stale")
+    })
+
+    /**
+     * The rows are enrollments, but the dashboard card that links here counts
+     * learners; naming both keeps the two numbers from reading as a mismatch.
+     */
+    test("names the learners behind the enrollments when it is the only filter", async () => {
+      await renderWithRows(
+        [analyticsFactories.learnerProgress({ full_name: "Everyone" })],
+        (contractId) => {
+          mockNeedsAttention(contractId, 2)
+          mockList(
+            contractId,
+            [
+              analyticsFactories.learnerProgress({ full_name: "Stale One" }),
+              analyticsFactories.learnerProgress({ full_name: "Stale Two" }),
+              analyticsFactories.learnerProgress({ full_name: "Stale Three" }),
+            ],
+            { needs_attention: true },
+            { total_count: 3 },
+          )
+        },
+      )
+
+      await screen.findByText("Everyone")
+      expect(screen.queryByText(/learners\)/)).not.toBeInTheDocument()
+
+      await user.click(await checkbox())
+      expect(
+        await screen.findByText(/^3 of \d+ enrollments \(2 learners\)$/),
+      ).toBeInTheDocument()
     })
 
     /**
@@ -1369,12 +1420,32 @@ describe("ContractLearnersPage", () => {
       )
       mockTotal(contractId, 60)
       mockCourseRuns(contractId)
+      mockNeedsAttention(contractId)
       mock(contractId)
       return renderWithProviders(
         <ContractLearnersPage orgSlug={orgSlug} contractSlug={contract.slug} />,
         { url: contractLearnersView(orgSlug, contract.slug, filters) },
       )
     }
+
+    /** The learner count is contract-wide, so it cannot describe narrower rows. */
+    test("leaves the learner count out once another filter narrows the rows", async () => {
+      renderAt(
+        { q: "ada", needsAttention: true },
+        (contractId) => {
+          mockNeedsAttention(contractId, 2)
+          mockList(
+            contractId,
+            [analyticsFactories.learnerProgress({ full_name: "Ada Stale" })],
+            { search: "ada", needs_attention: true },
+            { total_count: 1 },
+          )
+        },
+      )
+
+      await screen.findByText("Ada Stale")
+      expect(await screen.findByText("1 of 60 enrollments")).toBeInTheDocument()
+    })
 
     test("opens with the filters a link carries", async () => {
       renderAt(

@@ -502,6 +502,24 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
     enabled: canQuery,
   })
 
+  /**
+   * The rows are enrollments; the dashboard card that links here counts
+   * learners. That count is contract-wide, so it only describes these rows
+   * while needs-attention is the sole filter.
+   */
+  const showsLearnerCount =
+    needsAttentionOnly &&
+    !debouncedSearch &&
+    statusFilter === ALL &&
+    activeModule === ALL
+  const needsAttentionQuery = useQuery({
+    ...analyticsContractQueries.needsAttention(orgUuid ?? "", contractId ?? ""),
+    enabled: canQuery && showsLearnerCount,
+  })
+  const learnersNeedingAttention = showsLearnerCount
+    ? (needsAttentionQuery.data?.data[0]?.learners_needing_attention ?? null)
+    : null
+
   const rows = rowsQuery.data?.data ?? []
   const filteredCount = rowsQuery.data?.total_count ?? 0
   const withheldCount = rowsQuery.data?.outcomes_withheld_count ?? 0
@@ -785,7 +803,15 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
                 description={
                   totalEnrollments === null
                     ? "Loading…"
-                    : `${filteredCount} of ${totalEnrollments} enrollments`
+                    : `${filteredCount} of ${totalEnrollments} enrollments${
+                        learnersNeedingAttention === null
+                          ? ""
+                          : ` (${learnersNeedingAttention} ${
+                              learnersNeedingAttention === 1
+                                ? "learner"
+                                : "learners"
+                            })`
+                      }`
                 }
                 asOfPlacement="external"
               />

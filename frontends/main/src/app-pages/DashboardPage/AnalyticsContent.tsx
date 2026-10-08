@@ -454,6 +454,16 @@ const AnalyticsContentInternal: React.FC<AnalyticsContentInternalProps> = ({
     enabled: analyticsAvailable && !!contractId && !!learnerAnalyticsFlag,
   })
 
+  /** The enrollment count behind `needsAttention`'s learner count: the rows the directory lists once its CTA is followed. */
+  const needsAttentionEnrollments = useQuery({
+    ...analyticsContractQueries.learnerProgress(
+      orgUuid ?? "",
+      contractId ?? "",
+      { limit: 1, needs_attention: true },
+    ),
+    enabled: analyticsAvailable && !!contractId && !!learnerAnalyticsFlag,
+  })
+
   /**
    * The truncation footer for one section, or null when it is showing
    * everything. "Show all" asks for the whole result set in a single page,
@@ -639,6 +649,7 @@ const AnalyticsContentInternal: React.FC<AnalyticsContentInternalProps> = ({
                 row={needsAttention.data?.data[0]}
                 isLoading={needsAttention.isPending}
                 isError={needsAttention.isError}
+                enrollmentCount={needsAttentionEnrollments.data?.total_count}
                 learnersHref={contractLearnersView(orgSlug, contract.slug, {
                   needsAttention: true,
                 })}

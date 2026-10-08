@@ -11,11 +11,12 @@ import SectionError from "./SectionError"
 /**
  * The "Needs attention" count and the follow-up it calls for, for one contract.
  *
- * Reads `ContractNeedsAttention`, a distinct-learner count, rather than
- * `learner-progress`'s `needs_attention_count`, which counts enrollments and
- * is not floored. The CTA lands on the learner directory with its
- * needs-attention filter on, which uses the same server-side rule, so the
- * count here and the rows there cannot disagree.
+ * Reads `ContractNeedsAttention`, a distinct-learner count. The CTA lands on
+ * the learner directory with its needs-attention filter on, which applies the
+ * same server-side rule but lists one row per enrollment, so a learner behind
+ * in several courses is one learner here and several rows there.
+ * `enrollmentCount` says so up front; it is shown only alongside the learner
+ * count, never in place of a floored one.
  *
  * The copy promises review, not sending: there is no reminder action yet.
  */
@@ -65,13 +66,17 @@ const Action = styled.div({
 })
 
 const learners = (count: number) => (count === 1 ? "learner" : "learners")
+const enrollments = (count: number) =>
+  count === 1 ? "enrollment" : "enrollments"
 
 const NeedsAttentionCard: React.FC<{
   row: ContractNeedsAttention | undefined
   isLoading: boolean
   isError?: boolean
+  /** Enrollments needing attention; omitted while loading or on error. */
+  enrollmentCount?: number
   learnersHref: string
-}> = ({ row, isLoading, isError, learnersHref }) => {
+}> = ({ row, isLoading, isError, enrollmentCount, learnersHref }) => {
   if (isError) {
     return (
       <Card>
@@ -108,7 +113,13 @@ const NeedsAttentionCard: React.FC<{
       ) : count === 0 ? (
         <Body component="p">No learners need attention right now.</Body>
       ) : (
-        <Body component="p">Not started, or inactive for 30+ days.</Body>
+        <Body component="p">
+          {enrollmentCount === undefined
+            ? "Not started, or inactive for 30+ days."
+            : `Not started, or inactive for 30+ days, across ${formatCount(
+                enrollmentCount,
+              )} ${enrollments(enrollmentCount)}.`}
+        </Body>
       )}
       {withheld ? (
         <Note component="p">
