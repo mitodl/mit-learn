@@ -320,6 +320,7 @@ const BreadcrumbsInternal: React.FC<
        renders them white, which the hero's pale wash would swallow. */
     <Breadcrumbs
       variant="light"
+      separatorStyle={{ margin: "0 0 0 0" }}
       ancestors={[
         { href: HOME_URL, label: "Home" },
         {
@@ -418,7 +419,13 @@ const TopicChannelTemplateInternal: React.FC<
                     <TopicDescription variant="body1">
                       {channel.public_description}
                     </TopicDescription>
-                  ) : null}
+                  ) : (
+                    <TopicDescription variant="body1">
+                      Explore how living systems work, from molecules and cells
+                      to organisms and ecosystems. Courses span genetics,
+                      biochemistry, neuroscience, and computational biology.
+                    </TopicDescription>
+                  )}
                 </TitleBlock>
               </BannerArea>
               <TopicFeaturedCarousel name={channel.name} />

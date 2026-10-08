@@ -97,6 +97,7 @@ const FacetSelect = styled(SimpleSelect)(({ theme }) => ({
    * two tie, Select's rule lands later, and the chevron crowds the label.
    */
   height: "36px",
+  border: "none",
   "&&& .MuiSelect-select": { padding: "9px 36px 9px 12px" },
   ".MuiSelect-icon": {
     width: "20px",
