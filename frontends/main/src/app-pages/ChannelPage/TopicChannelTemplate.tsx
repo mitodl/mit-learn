@@ -7,6 +7,7 @@ import {
   Typography,
   Skeleton,
   BreadcrumbsProps,
+  standardizeBackgroundUrl,
 } from "ol-components"
 import { SearchSubscriptionToggle } from "@/page-components/SearchSubscriptionToggle/SearchSubscriptionToggle"
 import { useChannelDetail } from "api/hooks/channels"
@@ -387,7 +388,11 @@ const TopicChannelTemplateInternal: React.FC<
           aria-hidden
           backgroundUrl={
             configuredBanner
-              ? `url(${configuredBanner})`
+              ? /* Through the same standardizer the other channel banners use:
+                   the field holds either a bare src or a value already written
+                   as `url(...)`, and wrapping the second kind again drops the
+                   declaration. */
+                standardizeBackgroundUrl(configuredBanner)
               : backgroundSrcSetCSS(topicBannerDefault)
           }
         />
