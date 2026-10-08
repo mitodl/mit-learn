@@ -386,8 +386,13 @@ const StyledResultsContainer = styled.div<{ fetching: boolean }>(
 /**
  * The results as a grid, for `resultsLayout="cards"`: four across at desktop,
  * as the design has it, with the same 24px gutter as the cards above it.
+ *
+ * Still a list, as the rows are: laying the items out in a grid is no reason
+ * for a screen reader to stop announcing how many results there are and which
+ * one it is on. Built on `PlainList` so the items carry the same reset, and
+ * spaced by the grid's gap rather than its `itemSpacing`.
  */
-const CardGrid = styled.div(({ theme }) => ({
+const CardGrid = styled(PlainList)(({ theme }) => ({
   display: "grid",
   gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
   gap: "24px",
@@ -1107,28 +1112,47 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
               <StyledResultsContainer fetching={isFetching} inert={isFetching}>
                 <div ref={scrollHook} />
                 {isLoading ? (
-                  <PlainList itemSpacing={1.5}>
-                    {Array(PAGE_SIZE)
-                      .fill(null)
-                      .map((a, index) => (
-                        <li key={index}>
-                          <ResourceCard
-                            isLoading={isLoading}
-                            parentHeadingEl={resultsHeadingEl}
-                            list
-                          />
-                        </li>
-                      ))}
-                  </PlainList>
+                  /* Skeletons in the shape the results will take, so the page
+                     does not rearrange itself from rows into a grid the
+                     moment they arrive. */
+                  resultsLayout === "cards" ? (
+                    <CardGrid data-testid="topic-results-grid">
+                      {Array(PAGE_SIZE)
+                        .fill(null)
+                        .map((a, index) => (
+                          <li key={index}>
+                            <ResourceCard
+                              isLoading={isLoading}
+                              parentHeadingEl={resultsHeadingEl}
+                            />
+                          </li>
+                        ))}
+                    </CardGrid>
+                  ) : (
+                    <PlainList itemSpacing={1.5}>
+                      {Array(PAGE_SIZE)
+                        .fill(null)
+                        .map((a, index) => (
+                          <li key={index}>
+                            <ResourceCard
+                              isLoading={isLoading}
+                              parentHeadingEl={resultsHeadingEl}
+                              list
+                            />
+                          </li>
+                        ))}
+                    </PlainList>
+                  )
                 ) : displayData && (displayData.results?.length ?? 0) > 0 ? (
                   resultsLayout === "cards" ? (
-                    <CardGrid>
+                    <CardGrid data-testid="topic-results-grid">
                       {displayData.results.map((resource: LearningResource) => (
-                        <ResourceCard
-                          key={resource.id}
-                          resource={resource}
-                          parentHeadingEl={resultsHeadingEl}
-                        />
+                        <li key={resource.id}>
+                          <ResourceCard
+                            resource={resource}
+                            parentHeadingEl={resultsHeadingEl}
+                          />
+                        </li>
                       ))}
                     </CardGrid>
                   ) : (

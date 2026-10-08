@@ -733,4 +733,54 @@ describe("ChannelSearch", () => {
       )
     }, 10000)
   })
+
+  /**
+   * The results are a grid here rather than rows, and laying them out that way
+   * is no reason for a screen reader to lose the list -- how many results
+   * there are, and which one it is on.
+   */
+  test("the card grid is still a list", async () => {
+    const resources = factories.learningResources.resources({ count: 3 })
+    const { channel } = setMockApiResponses({
+      channelPatch: { channel_type: ChannelTypeEnum.Topic },
+      search: { count: 3, results: resources.results },
+    })
+
+    renderWithProviders(<ChannelPage />, {
+      url: `/c/${channel.channel_type}/${channel.name}`,
+    })
+
+    /* Wait for the results themselves: the skeletons occupy the same grid. */
+    await screen.findByText(resources.results[0].title)
+
+    const list = await screen.findByTestId("topic-results-grid")
+    expect(list.tagName).toBe("UL")
+    expect(within(list).getAllByRole("listitem")).toHaveLength(
+      resources.results.length,
+    )
+  }, 10000)
+
+  /**
+   * The skeletons stand in for what is coming, so they take the same shape:
+   * rows resolving into a grid would rearrange the page under the reader at
+   * the moment the results land.
+   */
+  test("the loading skeletons take the grid's shape, not the rows'", async () => {
+    const { channel } = setMockApiResponses({
+      channelPatch: { channel_type: ChannelTypeEnum.Topic },
+    })
+    /* Held pending, so the display stays in its loading state. */
+    setMockResponse.get(
+      expect.stringContaining(urls.search.resources()),
+      new Promise(() => {}),
+    )
+
+    renderWithProviders(<ChannelPage />, {
+      url: `/c/${channel.channel_type}/${channel.name}`,
+    })
+
+    const grid = await screen.findByTestId("topic-results-grid")
+    expect(grid.tagName).toBe("UL")
+    expect(within(grid).getAllByRole("listitem").length).toBeGreaterThan(0)
+  }, 10000)
 })
