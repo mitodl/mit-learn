@@ -107,10 +107,11 @@ const getCompletionText = (
 ) => {
   const base = getBaseCompletionText(parsedReqs)
   if (!trackCount) return base
-  const trackClause = `complete 1 of ${trackCount} ${pluralize("track", trackCount)}`
+  const tracks = `1 of ${trackCount} ${pluralize("track", trackCount)}`
+  // A separate sentence: the base text can already be two sentences.
   return base
-    ? `${base.replace(/\.$/, "")}, and ${trackClause}.`
-    : `To complete this program, you must ${trackClause}.`
+    ? `${base} You must also complete ${tracks}.`
+    : `To complete this program, you must complete ${tracks}.`
 }
 
 const RequirementsSection: React.FC<RequirementsSectionProps> = ({

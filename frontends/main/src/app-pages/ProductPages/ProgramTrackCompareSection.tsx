@@ -150,7 +150,17 @@ const ProgramTrackCompareSection: React.FC<ProgramTrackCompareSectionProps> = ({
             <IncludedTitle component="h3">
               Included in every track
             </IncludedTitle>
-            <BulletList>{sharedSections.flatMap(renderItems)}</BulletList>
+            <TrackCourses>
+              {sharedSections.map((section) => {
+                const rule = getTrackGroupRuleText(section)
+                return (
+                  <React.Fragment key={section.id}>
+                    {rule ? <GroupRule>{rule}</GroupRule> : null}
+                    <BulletList>{renderItems(section)}</BulletList>
+                  </React.Fragment>
+                )
+              })}
+            </TrackCourses>
           </IncludedBox>
         ) : null}
         <TrackRows>

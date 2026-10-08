@@ -1032,7 +1032,7 @@ describe("ProgramPage", () => {
 
       const section = await screen.findByRole("region", { name: "Courses" })
       within(section).getByText(
-        "To complete this program, you must take 3 required courses, and complete 1 of 2 tracks.",
+        "To complete this program, you must take 3 required courses. You must also complete 1 of 2 tracks.",
       )
       const headings = within(section)
         .getAllByRole("heading", { level: 3 })
