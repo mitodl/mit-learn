@@ -97,7 +97,8 @@ const NeedsAttentionCard: React.FC<{
 
   /** No row means the contract is under the anonymity floor; a null count means the count itself is. */
   const count = row?.learners_needing_attention ?? null
-  const withheld = row?.learners_outcomes_withheld ?? 0
+  /** Null is a floored count, so at least one learner is excluded; zero is a real zero. */
+  const withheld = row ? row.learners_outcomes_withheld : 0
 
   return (
     <Card role="group" aria-label="Needs attention">
@@ -121,7 +122,11 @@ const NeedsAttentionCard: React.FC<{
               )} ${enrollments(enrollmentCount)}.`}
         </Body>
       )}
-      {withheld ? (
+      {withheld === null ? (
+        <Note component="p">
+          Excludes some learners who haven't shared their progress.
+        </Note>
+      ) : withheld > 0 ? (
         <Note component="p">
           {`Excludes ${formatCount(withheld)} ${learners(withheld)} who ${
             withheld === 1 ? "hasn't" : "haven't"

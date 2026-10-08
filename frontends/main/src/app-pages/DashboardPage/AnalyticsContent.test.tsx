@@ -1185,6 +1185,21 @@ describe("AnalyticsContent, contract-scoped", () => {
       ).toBeInTheDocument()
     })
 
+    test("says learners are left out, without a number, when that count is floored", async () => {
+      const { card } = await renderCard([
+        row({
+          learners_needing_attention: 0,
+          learners_outcomes_withheld: null,
+        }),
+      ])
+
+      expect(
+        within(card).getByText(
+          "Excludes some learners who haven't shared their progress.",
+        ),
+      ).toBeInTheDocument()
+    })
+
     test("says when learners without consent are left out", async () => {
       const { card } = await renderCard([
         row({ learners_needing_attention: 20, learners_outcomes_withheld: 3 }),

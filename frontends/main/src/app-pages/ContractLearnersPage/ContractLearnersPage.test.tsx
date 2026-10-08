@@ -28,6 +28,8 @@ const mockedUseFeatureFlagEnabled = jest.mocked(useFeatureFlagEnabled)
 
 const ORG_UUID = "11111111-2222-3333-4444-555555555555"
 const PAGE_SIZE = 25
+/** Past the page's 300ms search debounce. */
+const SEARCH_WAIT_MS = 400
 
 /** managerOrganizationsList reads `res.data.results`, so a bare array is not enough. */
 const paginate = (orgs: unknown[]) => ({
@@ -1498,6 +1500,44 @@ describe("ContractLearnersPage", () => {
       ).toHaveTextContent("Module 6")
     })
 
+    test("holds Export until a linked module can be applied to it", async () => {
+      const runs =
+        Promise.withResolvers<ReturnType<typeof analyticsFactories.envelope>>()
+      renderAt({ module: "course-v1:MITx+M6+2026" }, (contractId) => {
+        setMockResponse.get(
+          analyticsUrls.contracts.courseRuns(ORG_UUID, contractId, {
+            limit: 1000,
+          }),
+          runs.promise,
+        )
+        mockList(
+          contractId,
+          [analyticsFactories.learnerProgress({ full_name: "Module 6 Only" })],
+          { courserun_readable_id: "course-v1:MITx+M6+2026" },
+        )
+      })
+
+      const exportButton = await screen.findByRole("button", {
+        name: "Export learners",
+      })
+      expect(exportButton).toHaveAttribute("aria-disabled", "true")
+      await user.click(exportButton)
+      expect(exportButton).toHaveTextContent("Export learners")
+
+      await act(async () => {
+        runs.resolve(
+          analyticsFactories.envelope([
+            analyticsFactories.courseRun({
+              courserun_id: "course-v1:MITx+M6+2026",
+              courserun_title: "Module 6",
+            }),
+          ]),
+        )
+      })
+      await screen.findByText("Module 6 Only")
+      expect(exportButton).toHaveAttribute("aria-disabled", "false")
+    })
+
     test("opens on the linked page", async () => {
       renderAt({ page: 2 }, (contractId) =>
         mockList(
@@ -1612,6 +1652,33 @@ describe("ContractLearnersPage", () => {
       )
       await screen.findByText("Ada")
       expect(location.current.searchParams.get("q")).toBe("ada")
+    })
+
+    test("follows a search change made outside the input", async () => {
+      const { location } = renderAt({ q: "ada" }, (contractId) => {
+        mockList(
+          contractId,
+          [analyticsFactories.learnerProgress({ full_name: "Ada" })],
+          { search: "ada" },
+        )
+        mockList(contractId, [
+          analyticsFactories.learnerProgress({ full_name: "Everyone" }),
+        ])
+      })
+
+      await screen.findByText("Ada")
+      act(() => {
+        window.history.replaceState(null, "", location.current.pathname)
+      })
+
+      await screen.findByText("Everyone")
+      expect(screen.getByPlaceholderText("Search name or email")).toHaveValue(
+        "",
+      )
+      await act(
+        () => new Promise((resolve) => setTimeout(resolve, SEARCH_WAIT_MS)),
+      )
+      expect(location.current.searchParams.has("q")).toBe(false)
     })
 
     test("clearing a filter leaves no trace in the URL", async () => {

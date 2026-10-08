@@ -364,13 +364,25 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
   const [announcement, setAnnouncement] = useState("")
   const queryClient = useQueryClient()
 
+  /**
+   * The last `q` this page wrote. The input follows the URL only when something
+   * else changed it, so a keystroke landing just after a debounced write is
+   * not overwritten by that write's echo.
+   */
+  const writtenSearch = useRef(debouncedSearch)
+  useEffect(() => {
+    if (debouncedSearch === writtenSearch.current) return
+    writtenSearch.current = debouncedSearch
+    setSearchQuery(debouncedSearch)
+  }, [debouncedSearch])
+
   useEffect(() => {
     // Nothing to apply (including on mount): don't schedule a URL update.
     if (searchQuery === debouncedSearch) return
-    const id = setTimeout(
-      () => applyFilterChange({ q: searchQuery }),
-      SEARCH_DEBOUNCE_MS,
-    )
+    const id = setTimeout(() => {
+      writtenSearch.current = searchQuery
+      applyFilterChange({ q: searchQuery })
+    }, SEARCH_DEBOUNCE_MS)
     return () => clearTimeout(id)
   }, [searchQuery, debouncedSearch])
 
@@ -554,7 +566,8 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
   }
 
   const handleExport = useCallback(async () => {
-    if (isExporting || !canQuery || !orgUuid || !contractId) return
+    if (isExporting || !canQuery || !moduleResolved || !orgUuid || !contractId)
+      return
     setIsExporting(true)
     try {
       const all: LearnerProgress[] = []
@@ -644,6 +657,7 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
   }, [
     isExporting,
     canQuery,
+    moduleResolved,
     orgUuid,
     contractId,
     contractSlug,
@@ -760,7 +774,7 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
           <ExportWrapper>
             <Button
               variant="bordered"
-              aria-disabled={isExporting || !canQuery}
+              aria-disabled={isExporting || !canQuery || !moduleResolved}
               aria-describedby={canQuery ? undefined : UNAVAILABLE_MESSAGE_ID}
               aria-busy={isExporting}
               onClick={handleExport}
@@ -827,6 +841,7 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
                   }
                   onClear={() => {
                     setSearchQuery("")
+                    writtenSearch.current = ""
                     applyFilterChange({ q: null })
                   }}
                   onSubmit={() => {}}
