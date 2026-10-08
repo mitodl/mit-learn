@@ -645,7 +645,7 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
               variant="bordered"
               aria-disabled={isExporting || !canQuery || !moduleResolved}
               aria-describedby={canQuery ? undefined : UNAVAILABLE_MESSAGE_ID}
-              aria-busy={isExporting}
+              aria-busy={isExporting || (canQuery && !moduleResolved)}
               onClick={handleExport}
             >
               {isExporting ? "Exporting…" : "Export learners"}

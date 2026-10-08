@@ -127,21 +127,10 @@ const setContractAnalyticsResponses = (
       learners_needing_attention: 20,
     }),
   ],
-  needsAttentionEnrollments = 26,
 ) => {
   setMockResponse.get(
     analyticsUrls.contracts.needsAttention(ORG_UUID, contractId),
     analyticsFactories.envelope(needsAttention, { as_of: AS_OF }),
-  )
-  setMockResponse.get(
-    analyticsUrls.contracts.learnerProgress(ORG_UUID, contractId, {
-      limit: 1,
-      needs_attention: true,
-    }),
-    analyticsFactories.learnerProgressEnvelope([], {
-      as_of: AS_OF,
-      total_count: needsAttentionEnrollments,
-    }),
   )
   setMockResponse.get(
     analyticsUrls.contracts.contractUtilization(ORG_UUID, contractId, page),
@@ -183,6 +172,7 @@ const setContractAnalyticsResponses = (
         passed: 12,
         certified: 8,
       },
+      needs_attention_count: 26,
       ...learnerProgress,
     }),
   )
@@ -1078,15 +1068,18 @@ describe("AnalyticsContent, contract-scoped", () => {
       setContractAnalyticsResponses(
         contractId,
         undefined,
-        {},
+        enrollments === undefined ? {} : { needs_attention_count: enrollments },
         needsAttention,
-        enrollments,
       )
       const orgSlug = org.slug.replace(/^org-/, "")
       renderWithProviders(
         <AnalyticsContent orgSlug={orgSlug} contractSlug={contract.slug} />,
       )
-      const card = await screen.findByRole("group", { name: "Needs attention" })
+      const card = await waitFor(() => {
+        const group = screen.getByRole("group", { name: "Needs attention" })
+        expect(group).not.toHaveAttribute("aria-busy")
+        return group
+      })
       return { card, orgSlug, contract }
     }
 
@@ -1140,6 +1133,31 @@ describe("AnalyticsContent, contract-scoped", () => {
       ).toBeInTheDocument()
     })
 
+    test("leaves out the enrollment count when the response has none", async () => {
+      const contract = factories.contracts.contract()
+      const org = orgWithUuid({ contracts: [contract] })
+      setManagerOrgs([org])
+      setContractAnalyticsResponses(String(contract.id), undefined, {
+        needs_attention_count: undefined,
+      })
+
+      renderWithProviders(
+        <AnalyticsContent
+          orgSlug={org.slug.replace(/^org-/, "")}
+          contractSlug={contract.slug}
+        />,
+      )
+
+      const card = await waitFor(() => {
+        const group = screen.getByRole("group", { name: "Needs attention" })
+        expect(group).not.toHaveAttribute("aria-busy")
+        return group
+      })
+      expect(
+        within(card).getByText("Not started, or inactive for 30+ days."),
+      ).toBeInTheDocument()
+    })
+
     test("never shows an enrollment count in place of a suppressed learner count", async () => {
       const { card } = await renderCard(
         [row({ learners_needing_attention: null })],
@@ -1161,6 +1179,41 @@ describe("AnalyticsContent, contract-scoped", () => {
         within(card).getByText("No learners need attention right now."),
       ).toBeInTheDocument()
       expect(within(card).queryByRole("link")).not.toBeInTheDocument()
+    })
+
+    test("is not requested or shown when the distribution fails to load", async () => {
+      const contract = factories.contracts.contract()
+      const org = orgWithUuid({ contracts: [contract] })
+      setManagerOrgs([org])
+      allowConsoleErrors()
+      const contractId = String(contract.id)
+      setContractAnalyticsResponses(contractId)
+      setMockResponse.get(
+        analyticsUrls.contracts.learnerProgress(ORG_UUID, contractId, {
+          limit: 1,
+        }),
+        "Internal Server Error",
+        { code: 500 },
+      )
+
+      renderWithProviders(
+        <AnalyticsContent
+          orgSlug={org.slug.replace(/^org-/, "")}
+          contractSlug={contract.slug}
+        />,
+      )
+
+      await screen.findByText(
+        "This data could not be loaded. Please try again later.",
+      )
+      expect(
+        screen.queryByRole("group", { name: "Needs attention" }),
+      ).not.toBeInTheDocument()
+      expect(makeRequest).not.toHaveBeenCalledWith(
+        expect.objectContaining({
+          url: analyticsUrls.contracts.needsAttention(ORG_UUID, contractId),
+        }),
+      )
     })
 
     test.each([

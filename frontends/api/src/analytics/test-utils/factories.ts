@@ -276,6 +276,7 @@ const learnerProgressEnvelope = (
   total_count: data.length,
   outcomes_withheld_count: data.filter((row) => !row.outcomes_shared).length,
   completion_status_counts: completionStatusCounts(data),
+  needs_attention_count: data.filter((row) => row.needs_attention).length,
   data,
   ...overrides,
 })

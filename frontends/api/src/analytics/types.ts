@@ -301,6 +301,12 @@ export type LearnerProgressResponse = {
   total_count: number
   outcomes_withheld_count: number
   completion_status_counts: CompletionStatusCounts
+  /**
+   * Enrollments needing attention among `total_count`, the same rows a
+   * `needs_attention=true` request returns. Overlaps `completion_status_counts`
+   * rather than adding to it; withheld rows are never counted.
+   */
+  needs_attention_count: number
   data: LearnerProgress[]
 }
 
@@ -332,9 +338,8 @@ export type CourseRunsResponse = OrgAnalyticsResponse<CourseRun>
  *
  * A learner needs attention if they never started, or are in progress with no
  * recorded activity in at least 30 days; each is counted once however many
- * courses they are behind in. That makes this a learner count, unlike the
- * `total_count` of a `learner-progress` request with `needs_attention=true`,
- * which counts enrollments.
+ * courses they are behind in. That makes this a learner count, unlike
+ * `LearnerProgressResponse.needs_attention_count`, which counts enrollments.
  *
  * `learners_considered` (active enrollments only) gates the row: below the
  * anonymity floor the contract has no row at all. The two outcome counts are

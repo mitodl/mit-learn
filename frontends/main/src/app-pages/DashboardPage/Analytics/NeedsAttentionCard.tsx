@@ -73,13 +73,14 @@ const NeedsAttentionCard: React.FC<{
   row: ContractNeedsAttention | undefined
   isLoading: boolean
   isError?: boolean
-  /** Enrollments needing attention; omitted while loading or on error. */
+  /** Enrollments needing attention, from the distribution's own response. */
   enrollmentCount?: number
   learnersHref: string
 }> = ({ row, isLoading, isError, enrollmentCount, learnersHref }) => {
   if (isError) {
     return (
-      <Card>
+      <Card role="group" aria-label="Needs attention">
+        <Eyebrow component="p">Needs attention</Eyebrow>
         <SectionError />
       </Card>
     )
@@ -87,8 +88,8 @@ const NeedsAttentionCard: React.FC<{
 
   if (isLoading) {
     return (
-      <Card>
-        <Skeleton width="120px" height="16px" />
+      <Card role="group" aria-label="Needs attention" aria-busy="true">
+        <Eyebrow component="p">Needs attention</Eyebrow>
         <Skeleton width="48px" height="36px" />
         <Skeleton width="100%" height="40px" />
       </Card>
