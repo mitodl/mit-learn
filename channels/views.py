@@ -169,7 +169,13 @@ class ChannelFeaturedView(mixins.ListModelMixin, viewsets.GenericViewSet):
             # position itself leaves them distinct by that very value and
             # `distinct()` with it.
             .annotate(position=Min("parents__position"))
-            .order_by("position")
+            # Position is not unique within a path -- it defaults to 0, so a
+            # list built without setting it has every item tied. Ordering on
+            # it alone leaves the tied rows in whatever order the database
+            # finds them, which it is free to vary between requests, and a
+            # row that moves between two requests is one a reader sees twice
+            # or not at all across a page boundary.
+            .order_by("position", "id")
         )
 
 

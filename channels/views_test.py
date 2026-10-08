@@ -399,3 +399,24 @@ def test_channel_featured_shows_a_repeated_resource_once(client):
 
     assert [r["id"] for r in body["results"]] == [repeated.id, other.id]
     assert body["count"] == 2
+
+
+def test_channel_featured_orders_tied_positions_consistently(client):
+    """
+    `position` defaults to 0, so a list built without setting it has every
+    item tied. Ordering on position alone would leave those rows in whatever
+    order the database happened to return, which can differ between requests
+    -- and an item that moves between two requests is one a reader sees twice
+    or misses entirely across a page boundary.
+    """
+    path = LearningPathFactory.create(resources=[]).learning_resource
+    channel = ChannelFactory.create(featured_list=path)
+    tied = [LearningResourceFactory.create() for _ in range(4)]
+    for child in tied:
+        LearningPathRelationshipFactory.create(parent=path, child=child, position=0)
+
+    pages = [client.get(_featured_url(channel)).json()["results"] for _ in range(3)]
+
+    ids = [[r["id"] for r in page] for page in pages]
+    assert ids[0] == sorted(child.id for child in tied)
+    assert ids[0] == ids[1] == ids[2]
