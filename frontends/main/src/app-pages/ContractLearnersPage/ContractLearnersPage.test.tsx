@@ -1430,18 +1430,15 @@ describe("ContractLearnersPage", () => {
 
     /** The learner count is contract-wide, so it cannot describe narrower rows. */
     test("leaves the learner count out once another filter narrows the rows", async () => {
-      renderAt(
-        { q: "ada", needsAttention: true },
-        (contractId) => {
-          mockNeedsAttention(contractId, 2)
-          mockList(
-            contractId,
-            [analyticsFactories.learnerProgress({ full_name: "Ada Stale" })],
-            { search: "ada", needs_attention: true },
-            { total_count: 1 },
-          )
-        },
-      )
+      renderAt({ q: "ada", needsAttention: true }, (contractId) => {
+        mockNeedsAttention(contractId, 2)
+        mockList(
+          contractId,
+          [analyticsFactories.learnerProgress({ full_name: "Ada Stale" })],
+          { search: "ada", needs_attention: true },
+          { total_count: 1 },
+        )
+      })
 
       await screen.findByText("Ada Stale")
       expect(await screen.findByText("1 of 60 enrollments")).toBeInTheDocument()
