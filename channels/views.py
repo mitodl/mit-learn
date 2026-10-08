@@ -21,7 +21,7 @@ from channels.serializers import (
 from learning_resources.models import LearningResource
 from learning_resources.serializers import LearningResourceSerializer
 from main.permissions import AnonymousAccessReadonlyPermission
-from main.utils import cache_page_for_all_users
+from main.utils import cache_page_for_all_users, cache_page_for_anonymous_users
 
 log = logging.getLogger(__name__)
 
@@ -177,6 +177,24 @@ class ChannelFeaturedView(mixins.ListModelMixin, viewsets.GenericViewSet):
             # or not at all across a page boundary.
             .order_by("position", "id")
         )
+
+    @method_decorator(
+        cache_page_for_anonymous_users(
+            cache="redis",
+            key_prefix="featured_resources",
+        )
+    )
+    def list(self, request: Request, *args, **kwargs) -> Response:
+        """
+        List the channel's featured resources.
+
+        Under the same key prefix as the aggregated featured endpoint, which
+        is what an edit to any channel's featured list clears -- see
+        `clear_featured_caches`. Caching it under the prefix the other channel
+        views use would outlive the edit instead: nothing clears that one, and
+        a curated row would sit stale for the length of the cache.
+        """
+        return super().list(request, *args, **kwargs)
 
 
 @extend_schema_view(

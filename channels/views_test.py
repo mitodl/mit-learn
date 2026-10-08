@@ -420,3 +420,39 @@ def test_channel_featured_orders_tied_positions_consistently(client):
     ids = [[r["id"] for r in page] for page in pages]
     assert ids[0] == sorted(child.id for child in tied)
     assert ids[0] == ids[1] == ids[2]
+
+
+@pytest.mark.usefixtures("enabled_view_cache")
+def test_channel_featured_is_cached_for_anonymous_users(client):
+    """
+    The row is the same for everyone and sits on a public page, so an
+    anonymous view should not run the query again.
+    """
+    path = LearningPathFactory.create(resources=[]).learning_resource
+    channel = ChannelFactory.create(featured_list=path)
+    first = LearningPathRelationshipFactory.create(parent=path, position=0).child
+
+    assert [r["id"] for r in client.get(_featured_url(channel)).json()["results"]] == [
+        first.id
+    ]
+
+    LearningPathRelationshipFactory.create(parent=path, position=1)
+
+    # Served from the cache, which an edit through the API clears -- see
+    # `clear_featured_caches`.
+    assert [r["id"] for r in client.get(_featured_url(channel)).json()["results"]] == [
+        first.id
+    ]
+
+
+def test_channel_featured_is_not_cached_for_signed_in_users(client):
+    """Signed in, the row is read fresh rather than from the shared cache."""
+    path = LearningPathFactory.create(resources=[]).learning_resource
+    channel = ChannelFactory.create(featured_list=path)
+    LearningPathRelationshipFactory.create(parent=path, position=0)
+
+    client.force_login(UserFactory.create())
+    assert len(client.get(_featured_url(channel)).json()["results"]) == 1
+
+    LearningPathRelationshipFactory.create(parent=path, position=1)
+    assert len(client.get(_featured_url(channel)).json()["results"]) == 2
