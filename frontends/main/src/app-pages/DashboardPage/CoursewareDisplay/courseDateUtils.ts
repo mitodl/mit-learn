@@ -4,6 +4,7 @@ import {
   formatDate,
   isInPast,
 } from "ol-utilities"
+import type { CourseRunEnrollmentV3 } from "@mitodl/mitxonline-api-axios/v2"
 
 export type RunTimeState = "upcoming" | "underway" | "ended"
 
@@ -23,15 +24,47 @@ export const getRunTimeState = (
 }
 
 /**
+ * mitxonline serves `has_course_staff_role` on an enrollment (mitodl/mitxonline#4074),
+ * but the generated client does not carry it yet - it lands with the next
+ * @mitodl/mitxonline-api-axios release. Declaring it here keeps the field typed
+ * in the meantime.
+ *
+ * Once the client has it, this type and `hasCourseStaffRole` both go, and the
+ * two call sites read `enrollment.has_course_staff_role` directly. The other
+ * spots to clean up then are the `has_course_staff_role` fixture spreads in
+ * EnrolledCourseCard.test.tsx and SiblingRunsAccordion.test.tsx.
+ */
+type EnrollmentWithCourseStaffRole = CourseRunEnrollmentV3 & {
+  has_course_staff_role?: boolean | null
+}
+
+/**
+ * Whether the user holds an Open edX course staff or instructor role on a run.
+ */
+export const hasCourseStaffRole = (
+  enrollment: EnrollmentWithCourseStaffRole,
+): boolean => Boolean(enrollment.has_course_staff_role)
+
+/**
  * Whether this run's courseware can be opened yet; staff may preview early.
+ *
+ * "Staff" here is both kinds Open edX itself lets in before a run starts: a
+ * course staff or instructor role on that run, and mitxonline site staff. Open
+ * edX grants the former in `administrative_accesses_to_course_for_user`, so
+ * disabling the button for a course admin only sent them to paste the
+ * courseware URL by hand.
  *
  * Shared by every route in (card button, card title, sibling-run rows, upgrade
  * and post-enrollment redirects) so they cannot disagree.
  */
 export const canOpenCourseware = (
   startDate?: string | null,
-  { isStaff = false }: { isStaff?: boolean } = {},
-): boolean => isStaff || getRunTimeState(startDate) !== "upcoming"
+  {
+    isStaff = false,
+    isCourseStaff = false,
+  }: { isStaff?: boolean; isCourseStaff?: boolean } = {},
+): boolean =>
+  isStaff || isCourseStaff || getRunTimeState(startDate) !== "upcoming"
 
 /**
  * A run's date range. Returns "" when the run has neither date; prefer

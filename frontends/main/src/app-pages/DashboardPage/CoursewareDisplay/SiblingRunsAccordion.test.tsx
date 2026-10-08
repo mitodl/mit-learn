@@ -416,6 +416,57 @@ describe("SiblingRunsToggle + SiblingRunsPanel", () => {
     },
   )
 
+  /**
+   * Open edX lets a course staff or instructor on the run open its courseware
+   * before the run starts, whether or not they are site staff. The row has to
+   * read that per enrollment, so a sibling the user is course staff on gets
+   * the link while the displayed run's own role is irrelevant to it.
+   */
+  test("upcoming sibling run offers 'View content' to course staff who are not site staff", async () => {
+    setMockResponse.get(
+      mitxonline.urls.userMe.get(),
+      mitxonline.factories.user.user({ is_staff: false }),
+    )
+    const sibling = {
+      ...makeUpcomingEnrollment(),
+      has_course_staff_role: true,
+    }
+    renderWithProviders(
+      <SiblingRunsAccordionHarness
+        enrollment={makeEnrollment()}
+        siblingEnrollments={[sibling]}
+      />,
+    )
+    await expandAccordion()
+    await screen.findByRole("link", { name: /View content for Upcoming/ })
+  })
+
+  test("upcoming sibling run reads the role from its own enrollment", async () => {
+    setMockResponse.get(
+      mitxonline.urls.userMe.get(),
+      mitxonline.factories.user.user({ is_staff: false }),
+    )
+    // The role sits on the displayed run, not the sibling, so the sibling row
+    // must not inherit it.
+    const displayed = { ...makeEnrollment(), has_course_staff_role: true }
+    const sibling = {
+      ...makeUpcomingEnrollment(),
+      has_course_staff_role: false,
+    }
+    renderWithProviders(
+      <SiblingRunsAccordionHarness
+        enrollment={displayed}
+        siblingEnrollments={[sibling]}
+      />,
+    )
+    await expandAccordion()
+    await screen.findByText(/^Upcoming:/)
+
+    expect(
+      screen.queryByRole("link", { name: /View content for Upcoming/ }),
+    ).not.toBeInTheDocument()
+  })
+
   test("upcoming sibling run label starts with 'Upcoming:'", async () => {
     // A run that hasn't started cannot be completed, so drop the factory's
     // default certificate; completion outranks the dates.
