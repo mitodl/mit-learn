@@ -35,9 +35,22 @@ const Card = styled.div(({ theme }) => ({
   },
 }))
 
+/**
+ * The design's search box: 486x48, and everything about the frame -- the
+ * border, the 4px radius, the lift, the 16px inset, the 48px button with its
+ * 24px glass -- is what the shared field's large size already gives it.
+ *
+ * Its text is the exception. The large size sets 16/20, where the design sets
+ * the line at 14/18, so the placeholder and whatever is typed over it are
+ * both a size smaller here than the field draws them elsewhere.
+ */
 const StyledSearchField = styled(SearchField)(({ theme }) => ({
   width: "486px",
   flexShrink: 0,
+  gap: "8px",
+  input: {
+    ...theme.typography.body2,
+  },
   [theme.breakpoints.down("md")]: {
     width: "100%",
   },
