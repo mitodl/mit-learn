@@ -140,10 +140,22 @@ const ChannelSearch: React.FC<ChannelSearchProps> = ({
    * way. The bar is beside the results rather than inside them, so setters
    * reported from within the display alone would miss everything the bar does.
    */
-  const { setParamValue, toggleParamValue } = useTrackedFilterSetters({
-    setParamValue: rawSetParamValue,
-    toggleParamValue: rawToggleParamValue,
-  })
+  const { setParamValue, toggleParamValue, captureFilterEvent } =
+    useTrackedFilterSetters({
+      setParamValue: rawSetParamValue,
+      toggleParamValue: rawToggleParamValue,
+    })
+
+  /**
+   * Reported here because the bar is the only caller that needs it wrapped.
+   * The results display takes the unwrapped `clearAllFacets` and reports its
+   * own clear control itself; handing it this one would count every clear
+   * from there twice.
+   */
+  const clearAllFacetsFromBar = () => {
+    clearAllFacets()
+    captureFilterEvent("clear_all")
+  }
 
   const page = +(searchParams.get("page") ?? "1")
 
@@ -167,6 +179,7 @@ const ChannelSearch: React.FC<ChannelSearchProps> = ({
             params={params}
             setParamValue={setParamValue}
             toggleParamValue={toggleParamValue}
+            clearAllFacets={clearAllFacetsFromBar}
           />
         </TopicSearchContainer>
       ) : (

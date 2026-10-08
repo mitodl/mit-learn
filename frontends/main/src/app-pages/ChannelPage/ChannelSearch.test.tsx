@@ -735,6 +735,59 @@ describe("ChannelSearch", () => {
   })
 
   /**
+   * The dropdowns say what they are narrowed to, so the card states the
+   * filters without any of them being opened.
+   */
+  describe("topic filter bar selections", () => {
+    /* Returns the bar itself, so each test scopes its queries to the card. */
+    const filterBarAt = async (query: string) => {
+      const { channel } = setMockApiResponses({
+        channelPatch: { channel_type: ChannelTypeEnum.Topic },
+      })
+      renderWithProviders(<ChannelPage />, {
+        url: `/c/${channel.channel_type}/${channel.name}/${query}`,
+      })
+      return screen.findByTestId("topic-search-filter-bar")
+    }
+
+    test("a dropdown names its selection", async () => {
+      const bar = await filterBarAt("?delivery=in_person")
+
+      expect(within(bar).getByText("(In-Person)")).toBeInTheDocument()
+    }, 10000)
+
+    /**
+     * Naming only the first would leave the second narrowing the results with
+     * nothing on screen saying so.
+     */
+    test("a dropdown counts the selections it cannot name", async () => {
+      const bar = await filterBarAt("?delivery=in_person&delivery=online")
+
+      expect(within(bar).getByText("(In-Person +1)")).toBeInTheDocument()
+    }, 10000)
+
+    test("Clear drops the filters and keeps the query", async () => {
+      const bar = await filterBarAt("?q=robots&delivery=in_person&free=true")
+      expect(within(bar).getByRole("checkbox", { name: "Free" })).toBeChecked()
+
+      await user.click(within(bar).getByRole("button", { name: "Clear" }))
+
+      expect(within(bar).queryByText("(In-Person)")).toBe(null)
+      expect(
+        within(bar).getByRole("checkbox", { name: "Free" }),
+      ).not.toBeChecked()
+      /* The box sits beside the filters but is not one of them. */
+      expect(within(bar).getByDisplayValue("robots")).toBeInTheDocument()
+    }, 10000)
+
+    test("Clear is absent when nothing is filtering", async () => {
+      const bar = await filterBarAt("?q=robots")
+
+      expect(within(bar).queryByRole("button", { name: "Clear" })).toBe(null)
+    }, 10000)
+  })
+
+  /**
    * The results are a grid here rather than rows, and laying them out that way
    * is no reason for a screen reader to lose the list -- how many results
    * there are, and which one it is on.

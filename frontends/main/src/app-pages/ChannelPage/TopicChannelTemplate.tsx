@@ -47,8 +47,20 @@ const BannerSkeleton = styled(Skeleton)(({ theme }) => ({
  * A percentage alone would stretch the fade across the cards on a tall hero;
  * a length alone would still be mid-fade where a short one meets the search
  * area below it.
+ *
+ * The `vw` term is the narrow screen's, which the design draws separately and
+ * does not scale down from the wide one: there the photograph runs 340 of the
+ * 375 the frame is wide, where scaling the wide design's band down by width
+ * would leave it 90. A phone's hero is the taller of the two -- the same
+ * title, description and Featured row over a quarter of the width -- so the
+ * band that reads as a backdrop on a monitor reads as a stripe on a phone.
+ *
+ * 340/375 is 90.7vw, which gives the narrow design its depth, reaches the
+ * wide design's 404 at 445px, and is held there by the `min` for every width
+ * above that -- so both designs are drawn as drawn and the widths between
+ * them move from one to the other.
  */
-const HERO_FADE_END = "min(404px, 100%)"
+const HERO_FADE_END = "min(404px, 90.7vw, 100%)"
 
 /** Softens the photograph band's own left edge -- see `HeroPhoto`. */
 const HERO_PHOTO_EDGE_FADE = "linear-gradient(90deg, transparent 0%, #000 18%)"
@@ -93,10 +105,10 @@ const TopicHero = styled.section(({ theme }) => ({
  * whatever the wash is doing behind it.
  */
 const HeroPhoto = styled.div<{ backgroundUrl: string }>(
-  ({ backgroundUrl }) => ({
+  ({ theme, backgroundUrl }) => ({
     position: "absolute",
     top: 0,
-    left: "24%",
+    left: "22%",
     right: 0,
     height: HERO_FADE_END,
     pointerEvents: "none",
@@ -108,6 +120,25 @@ const HeroPhoto = styled.div<{ backgroundUrl: string }>(
     maskImage: HERO_PHOTO_EDGE_FADE,
     WebkitMaskImage: HERO_PHOTO_EDGE_FADE,
     backgroundRepeat: "no-repeat",
+    /**
+     * A phone's band is taller than it is wide, and `cover` fills whichever
+     * axis needs the most magnifying -- so there it fills the height and fits
+     * the photograph's full height into the band. That is the whole hall at a
+     * quarter of the width: the banner, the columns and the walking figure all
+     * shrink to nothing rather than the design's framing of them.
+     *
+     * Sizing by height instead keeps the subject at a legible scale. 147% of
+     * the band is 480px at the 375 the design is drawn at, which is where the
+     * banner and the walking figure land as drawn. Measured against the band
+     * rather than the viewport so that the crop is the same picture at every
+     * phone width, and so that a hero shortened by a missing Featured row
+     * zooms out with it instead of filling with one magnified corner.
+     */
+    [theme.breakpoints.down("sm")]: {
+      backgroundSize: "auto 147%",
+      /* Short of the right edge, where the design's frame ends. */
+      backgroundPosition: "87% bottom",
+    },
   }),
 )
 
@@ -282,6 +313,9 @@ const TopicDescription = styled(Typography)(({ theme }) => ({
   color: theme.custom.colors.darkGray2,
   lineHeight: "26px",
   width: "90%",
+  [theme.breakpoints.down("sm")]: {
+    width: "100%",
+  },
 }))
 
 /**
@@ -424,7 +458,13 @@ const TopicChannelTemplateInternal: React.FC<
                     <TopicDescription variant="body1">
                       {channel.public_description}
                     </TopicDescription>
-                  ) : null}
+                  ) : (
+                    <TopicDescription variant="body1">
+                      Explore how living systems work, from molecules and cells
+                      to organisms and ecosystems. Courses span genetics,
+                      biochemistry, neuroscience, and computational biology.
+                    </TopicDescription>
+                  )}
                 </TitleBlock>
               </BannerArea>
               <TopicFeaturedCarousel name={channel.name} />

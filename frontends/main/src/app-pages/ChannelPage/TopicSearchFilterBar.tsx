@@ -107,6 +107,43 @@ const FacetSelect = styled(SimpleSelect)(({ theme }) => ({
   },
 }))
 
+/**
+ * What a facet is currently narrowed to, named in the control itself.
+ *
+ * The design puts the selection beside the facet's name in red -- "Format
+ * (In-Person)" -- so the card says what is filtering without anything having
+ * to be opened.
+ */
+const FacetValue = styled.span(({ theme }) => ({
+  color: theme.custom.colors.red,
+}))
+
+/**
+ * Clears the filters, not the search box.
+ *
+ * It sits among the controls it clears, and `clearAllFacets` drops the facet
+ * params and leaves `q` alone -- so a reader who has typed a query keeps it
+ * and loses only the narrowing.
+ *
+ * Drawn only while something is actually filtering, since a Clear that is
+ * always there does nothing for most of the page's life. It is pushed to the
+ * card's trailing edge, so arriving and leaving never moves the facets.
+ */
+const ClearButton = styled.button(({ theme }) => ({
+  ...theme.typography.subtitle2,
+  color: theme.custom.colors.silverGrayDark,
+  textDecorationLine: "underline",
+  marginLeft: "auto",
+  flexShrink: 0,
+  padding: 0,
+  border: "none",
+  background: "none",
+  cursor: "pointer",
+  ":hover": {
+    color: theme.custom.colors.darkGray2,
+  },
+}))
+
 const FreeCheckbox = styled(Checkbox)(({ theme }) => ({
   margin: 0,
   padding: 0,
@@ -132,6 +169,41 @@ const CERTIFICATION_OPTIONS = Object.values(CertificationTypeEnum).map(
   }),
 )
 
+/**
+ * A facet's name, plus what it is narrowed to.
+ *
+ * The design names the first selection -- the dropdowns are multiple, but one
+ * option is what a reader usually picks, and the control has no room for a
+ * list. The count that follows is not in the design and is what keeps the
+ * control honest past that usual case: naming the first alone would leave a
+ * second filter narrowing the results with nothing on screen saying so.
+ *
+ * Falls back to the raw value when a selection has no matching option, which
+ * is what a facet that arrives in the URL looks like.
+ */
+const renderFacetValue = (
+  label: string,
+  value: string | string[],
+  options: { value: string; label: string }[],
+) => {
+  const selected = Array.isArray(value) ? value : [value].filter(Boolean)
+  if (selected.length === 0) {
+    return label
+  }
+  const first =
+    options.find((option) => option.value === selected[0])?.label ?? selected[0]
+  const others = selected.length - 1
+  return (
+    <>
+      {label}{" "}
+      <FacetValue>
+        ({first}
+        {others > 0 ? ` +${others}` : ""})
+      </FacetValue>
+    </>
+  )
+}
+
 type TopicSearchFilterBarProps = {
   currentText: string
   setCurrentText: (text: string) => void
@@ -140,6 +212,7 @@ type TopicSearchFilterBarProps = {
   params: UseResourceSearchParamsResult["params"]
   setParamValue: UseResourceSearchParamsResult["setParamValue"]
   toggleParamValue: UseResourceSearchParamsResult["toggleParamValue"]
+  clearAllFacets: UseResourceSearchParamsResult["clearAllFacets"]
 }
 
 const TopicSearchFilterBar: React.FC<TopicSearchFilterBarProps> = ({
@@ -150,11 +223,13 @@ const TopicSearchFilterBar: React.FC<TopicSearchFilterBarProps> = ({
   params,
   setParamValue,
   toggleParamValue,
+  clearAllFacets,
 }) => {
   const delivery = params.delivery ?? []
   const certification = params.certification_type ?? []
   /* `free` is a boolean facet rather than a list of values. */
   const isFree = !!params.free
+  const hasFilters = delivery.length > 0 || certification.length > 0 || isFree
   return (
     <Card data-testid="topic-search-filter-bar">
       <StyledSearchField
@@ -173,7 +248,9 @@ const TopicSearchFilterBar: React.FC<TopicSearchFilterBarProps> = ({
           name="delivery"
           value={delivery}
           multiple
-          renderValue={() => "Format"}
+          renderValue={(value) =>
+            renderFacetValue("Format", value, DELIVERY_OPTIONS)
+          }
           options={DELIVERY_OPTIONS}
           onChange={(event) => {
             setParamValue("delivery", event.target.value as string[])
@@ -186,7 +263,9 @@ const TopicSearchFilterBar: React.FC<TopicSearchFilterBarProps> = ({
           name="certification_type"
           value={certification}
           multiple
-          renderValue={() => "Certificate"}
+          renderValue={(value) =>
+            renderFacetValue("Certificate", value, CERTIFICATION_OPTIONS)
+          }
           options={CERTIFICATION_OPTIONS}
           onChange={(event) => {
             setParamValue("certification_type", event.target.value as string[])
@@ -202,6 +281,17 @@ const TopicSearchFilterBar: React.FC<TopicSearchFilterBarProps> = ({
             setPage(1)
           }}
         />
+        {hasFilters ? (
+          <ClearButton
+            type="button"
+            onClick={() => {
+              clearAllFacets()
+              setPage(1)
+            }}
+          >
+            Clear
+          </ClearButton>
+        ) : null}
       </Facets>
     </Card>
   )
