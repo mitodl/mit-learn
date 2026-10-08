@@ -2,6 +2,7 @@ import {
   parseReqTree,
   getOutlineCoursewareId,
   getTotalRequiredCourses,
+  getTrackGroupRuleText,
 } from "./util"
 import { RequirementTreeBuilder, factories } from "api/mitxonline-test-utils"
 
@@ -149,4 +150,22 @@ describe("getTotalRequiredCourses", () => {
     const program = factories.programs.program({ req_tree: root.serialize() })
     expect(getTotalRequiredCourses(program)).toBe(5)
   })
+})
+
+describe("getTrackGroupRuleText", () => {
+  const items = (n: number) =>
+    Array.from({ length: n }, (_, i) => ({ type: "course" as const, id: i }))
+
+  test.each([
+    { requiredCount: 2, count: 3, expected: "Complete 2 of 3 courses." },
+    { requiredCount: 3, count: 3, expected: null },
+    { requiredCount: 0, count: 3, expected: null },
+  ])(
+    "requiredCount $requiredCount of $count -> $expected",
+    ({ requiredCount, count, expected }) => {
+      expect(
+        getTrackGroupRuleText({ requiredCount, items: items(count) }),
+      ).toBe(expected)
+    },
+  )
 })

@@ -101,6 +101,7 @@ const getRequirementSectionSubtitle = (
 const getTrackGroupRuleText = (
   section: Pick<RequirementData, "requiredCount" | "items">,
 ) => {
+  if (section.requiredCount === 0) return null
   if (section.requiredCount >= section.items.length) return null
   return `Complete ${section.requiredCount} of ${section.items.length} courses.`
 }
