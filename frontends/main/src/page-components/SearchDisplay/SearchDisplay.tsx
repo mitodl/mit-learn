@@ -1,4 +1,3 @@
-import { env } from "@/env"
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
   styled,
@@ -53,10 +52,9 @@ import type {
   FacetManifest,
 } from "@mitodl/course-search-utils"
 import { useAppSearchParams } from "@/common/useAppSearchParams"
-import { PostHogEvents } from "@/common/constants"
 import { ResourceTypeGroupTabs } from "./ResourceTypeGroupTabs"
 import ProfessionalToggle from "./ProfessionalToggle"
-import { trackFilterCourseCatalog } from "@/common/analytics/gtm"
+import { useTrackedFilterSetters } from "@/common/analytics/searchFilters"
 import SliderInput from "./SliderInput"
 import VectorAdminOptions from "./VectorAdminOptions"
 import { AdminTitleContainer, ExplanationContainer } from "./adminStyles"
@@ -65,7 +63,6 @@ import type { TabConfig } from "./ResourceTypeGroupTabs"
 
 import { ResourceCard } from "../ResourceCard/ResourceCard"
 import { useUserMe } from "api/hooks/user"
-import { usePostHog } from "posthog-js/react"
 import getSearchParams from "./getSearchParams"
 import UniversalAIBanner from "./UniversalAIBanner"
 import AiSearchOverview from "./AiSearchOverview"
@@ -593,9 +590,9 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
   constantSearchParams,
   hasFacets,
   requestParams,
-  setParamValue: actuallySetParamValue,
+  setParamValue,
   clearAllFacets: actuallyClearAllFacets,
-  toggleParamValue: actuallyToggleParamValue,
+  toggleParamValue,
   showProfessionalToggle,
   setSearchParams: actuallySetSearchParams,
   resultsHeadingEl,
@@ -713,24 +710,21 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
 
   const [mobileDrawerOpen, setMobileDrawerOpen] = React.useState(false)
 
-  const posthog = usePostHog()
-
-  const NEXT_PUBLIC_POSTHOG_API_KEY = env("NEXT_PUBLIC_POSTHOG_API_KEY")
-
   const toggleMobileDrawer = (newOpen: boolean) => () => {
     setMobileDrawerOpen(newOpen)
   }
 
-  const captureFilterEvent = (control: string) => {
-    if (NEXT_PUBLIC_POSTHOG_API_KEY) {
-      posthog.capture(PostHogEvents.SearchFilterUpdate, { control })
-    }
-  }
-
-  const setParamValue = (name: string, rawValue: string | string[]) => {
-    actuallySetParamValue(name, rawValue)
-    captureFilterEvent(name)
-  }
+  /**
+   * The facet setters arrive already reporting what they change -- a page
+   * wraps them once and hands the same pair to every control it draws, so a
+   * second filter bar beside these facets reports the same way they do. The
+   * two below stay here: they have no second caller, and `setSearchParams`
+   * takes a name this component supplies rather than one the page knows.
+   */
+  const { captureFilterEvent } = useTrackedFilterSetters({
+    setParamValue,
+    toggleParamValue,
+  })
 
   const clearAllFacets = () => {
     actuallyClearAllFacets()
@@ -743,17 +737,6 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
   ) => {
     actuallySetSearchParams(value)
     captureFilterEvent(name)
-  }
-
-  const toggleParamValue = (
-    name: string,
-    rawValue: string,
-    checked: boolean,
-  ) => {
-    actuallyToggleParamValue(name, rawValue, checked)
-    captureFilterEvent(name)
-    if (checked)
-      trackFilterCourseCatalog({ filterName: name, filterValue: rawValue })
   }
 
   // Kept in the list rather than removed, so a sortby that arrives in the URL

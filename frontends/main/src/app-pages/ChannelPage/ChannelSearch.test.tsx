@@ -15,15 +15,23 @@ import invariant from "tiny-invariant"
 import type { Channel } from "api/v0"
 import { ChannelTypeEnum } from "api/v0"
 import ChannelPage from "./ChannelPage"
-import { useFeatureFlagEnabled } from "posthog-js/react"
+import { useFeatureFlagEnabled, usePostHog } from "posthog-js/react"
 import { FeatureFlags } from "@/common/feature_flags"
+import { PostHogEvents } from "@/common/constants"
 
 jest.mock("posthog-js/react", () => ({
   ...jest.requireActual("posthog-js/react"),
   useFeatureFlagEnabled: jest.fn(),
+  usePostHog: jest.fn(),
 }))
 
 const mockedUseFeatureFlagEnabled = jest.mocked(useFeatureFlagEnabled)
+
+const mockCapture = jest.fn()
+jest.mocked(usePostHog).mockReturnValue(
+  // @ts-expect-error Not mocking all of posthog
+  { capture: mockCapture },
+)
 
 /**
  * Mock the named flags, leaving every other flag `undefined`—PostHog's value
@@ -669,4 +677,60 @@ describe("ChannelSearch", () => {
 
     await screen.findByRole("button", { name: "Filter" })
   }, 10000)
+
+  /**
+   * The bar sits beside the results rather than inside them, so it is reached
+   * by setters the page wraps rather than ones the results display wraps for
+   * itself. Reporting exactly once is the point of both halves: the bar used
+   * to report nothing at all, and wrapping in both places would report twice.
+   */
+  describe("topic filter bar analytics", () => {
+    const previousKey = process.env.NEXT_PUBLIC_POSTHOG_API_KEY
+
+    beforeEach(() => {
+      process.env.NEXT_PUBLIC_POSTHOG_API_KEY = "test-key"
+      mockCapture.mockClear()
+    })
+    afterEach(() => {
+      if (previousKey === undefined) {
+        delete process.env.NEXT_PUBLIC_POSTHOG_API_KEY
+      } else {
+        process.env.NEXT_PUBLIC_POSTHOG_API_KEY = previousKey
+      }
+    })
+
+    const renderTopic = async () => {
+      const { channel } = setMockApiResponses({
+        channelPatch: { channel_type: ChannelTypeEnum.Topic },
+      })
+      renderWithProviders(<ChannelPage />, {
+        url: `/c/${channel.channel_type}/${channel.name}`,
+      })
+      await screen.findByTestId("topic-search-filter-bar")
+    }
+
+    test("the Free checkbox reports the filter it changed", async () => {
+      await renderTopic()
+
+      await user.click(await screen.findByRole("checkbox", { name: "Free" }))
+
+      expect(mockCapture).toHaveBeenCalledExactlyOnceWith(
+        PostHogEvents.SearchFilterUpdate,
+        { control: "free" },
+      )
+    }, 10000)
+
+    test("a dropdown reports the filter it changed", async () => {
+      await renderTopic()
+
+      await user.click(await screen.findByText("Format"))
+      const option = (await screen.findAllByRole("option"))[0]
+      await user.click(option)
+
+      expect(mockCapture).toHaveBeenCalledExactlyOnceWith(
+        PostHogEvents.SearchFilterUpdate,
+        { control: "delivery" },
+      )
+    }, 10000)
+  })
 })

@@ -14,6 +14,7 @@ import { getFacets } from "./searchRequests"
 import { useHybridSearchEnabled } from "@/common/useHybridSearchEnabled"
 import { keyBy } from "lodash"
 import TopicSearchFilterBar from "./TopicSearchFilterBar"
+import { useTrackedFilterSetters } from "@/common/analytics/searchFilters"
 
 const SearchInputContainer = styled(Container)(({ theme }) => ({
   width: "100%",
@@ -120,9 +121,9 @@ const ChannelSearch: React.FC<ChannelSearchProps> = ({
   const {
     hasFacets,
     params,
-    setParamValue,
+    setParamValue: rawSetParamValue,
     clearAllFacets,
-    toggleParamValue,
+    toggleParamValue: rawToggleParamValue,
     currentText,
     setCurrentText,
     setCurrentTextAndQuery,
@@ -132,6 +133,18 @@ const ChannelSearch: React.FC<ChannelSearchProps> = ({
     facets: facetNames,
     onFacetsChange,
   })
+
+  /**
+   * Wrapped once here and handed to both the filter bar and the results
+   * display, so a topic channel's two sets of filter controls report the same
+   * way. The bar is beside the results rather than inside them, so setters
+   * reported from within the display alone would miss everything the bar does.
+   */
+  const { setParamValue, toggleParamValue } = useTrackedFilterSetters({
+    setParamValue: rawSetParamValue,
+    toggleParamValue: rawToggleParamValue,
+  })
+
   const page = +(searchParams.get("page") ?? "1")
 
   useEffect(() => {
