@@ -1,4 +1,8 @@
-import { parseReqTree, getOutlineCoursewareId } from "./util"
+import {
+  parseReqTree,
+  getOutlineCoursewareId,
+  getTotalRequiredCourses,
+} from "./util"
 import { RequirementTreeBuilder, factories } from "api/mitxonline-test-utils"
 
 describe("parseReqTree", () => {
@@ -101,5 +105,48 @@ describe("getOutlineCoursewareId", () => {
     })
 
     expect(getOutlineCoursewareId(course)).toBeUndefined()
+  })
+})
+
+describe("getTotalRequiredCourses", () => {
+  test("sums each group's required count for an untracked program", () => {
+    const root = new RequirementTreeBuilder()
+    const core = root.addOperator({ operator: "all_of" })
+    core.addCourse()
+    core.addCourse()
+    const electives = root.addOperator({
+      operator: "min_number_of",
+      operator_value: "1",
+    })
+    electives.addCourse()
+    electives.addCourse()
+    const program = factories.programs.program({ req_tree: root.serialize() })
+    expect(getTotalRequiredCourses(program)).toBe(3)
+  })
+
+  test("counts the groups outside the tracks plus the smallest track", () => {
+    const root = new RequirementTreeBuilder()
+    const core = root.addOperator({ operator: "all_of" })
+    core.addCourse()
+    core.addCourse()
+    const container = root.addOperator({
+      operator: "min_number_of",
+      operator_value: "1",
+    })
+    const twoCourses = container
+      .addTrack()
+      .addOperator({ operator: "min_number_of", operator_value: "2" })
+    twoCourses.addCourse()
+    twoCourses.addCourse()
+    twoCourses.addCourse()
+    const threeCourses = container
+      .addTrack()
+      .addOperator({ operator: "all_of" })
+    threeCourses.addCourse()
+    threeCourses.addCourse()
+    threeCourses.addCourse()
+    root.addOperator({ operator: "all_of" }).addCourse()
+    const program = factories.programs.program({ req_tree: root.serialize() })
+    expect(getTotalRequiredCourses(program)).toBe(5)
   })
 })

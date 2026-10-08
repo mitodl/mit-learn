@@ -6,6 +6,7 @@ import {
   formatResourcePrice,
   getIdsFromReqTree,
   parseProgramRequirementSections,
+  parseTrackedProgramRequirements,
   toPriceRange,
 } from "@/common/mitxonline"
 
@@ -327,5 +328,105 @@ describe("getIdsFromReqTree", () => {
     const { courseIds, programIds } = getIdsFromReqTree(root.serialize())
     expect(courseIds).toEqual([])
     expect(programIds).toEqual([])
+  })
+})
+
+describe("parseTrackedProgramRequirements", () => {
+  const buildTrackedTree = () => {
+    const root = new RequirementTreeBuilder()
+    root.addOperator({ operator: "all_of", title: "Core" }).addCourse({
+      course: 1,
+    })
+    const container = root.addOperator({
+      operator: "min_number_of",
+      operator_value: "1",
+      title: "Tracks",
+    })
+    const general = container.addTrack({
+      title: "General",
+      description: "Broad foundation",
+    })
+    general.addOperator({ operator: "all_of", title: "Required" }).addCourse({
+      course: 2,
+    })
+    const methods = container.addTrack({ title: "Methods" })
+    methods.addOperator({ operator: "all_of", title: "Required" }).addCourse({
+      course: 3,
+    })
+    const electives = methods.addOperator({
+      operator: "min_number_of",
+      operator_value: "1",
+      title: "Electives",
+    })
+    electives.addCourse({ course: 4 })
+    electives.addCourse({ course: 5 })
+    root.addOperator({ operator: "all_of", title: "Capstone" }).addCourse({
+      course: 6,
+    })
+    return { reqTree: root.serialize(), container, general, methods }
+  }
+
+  test("returns null when the tree has no tracks container", () => {
+    const root = new RequirementTreeBuilder()
+    root.addOperator({ operator: "all_of" }).addCourse()
+    root
+      .addOperator({ operator: "min_number_of", operator_value: "1" })
+      .addCourse()
+    expect(parseTrackedProgramRequirements(root.serialize())).toBeNull()
+  })
+
+  test("returns null for an empty tree", () => {
+    expect(parseTrackedProgramRequirements([])).toBeNull()
+  })
+
+  test("splits top-level sections around the tracks container", () => {
+    const { reqTree, container } = buildTrackedTree()
+    const parsed = parseTrackedProgramRequirements(reqTree)
+    expect(parsed?.container.id).toBe(container.id)
+    expect(parsed?.sectionsBeforeTracks.map((s) => s.rawTitle)).toEqual([
+      "Core",
+    ])
+    expect(parsed?.sectionsAfterTracks.map((s) => s.rawTitle)).toEqual([
+      "Capstone",
+    ])
+  })
+
+  test("parses each track's own groups in order", () => {
+    const { reqTree, general, methods } = buildTrackedTree()
+    const parsed = parseTrackedProgramRequirements(reqTree)
+    expect(parsed?.tracks).toHaveLength(2)
+
+    const [first, second] = parsed!.tracks
+    expect(first).toMatchObject({
+      id: general.id,
+      title: "General",
+      description: "Broad foundation",
+    })
+    expect(first.sections.map((s) => s.items)).toEqual([
+      [{ type: "course", id: 2 }],
+    ])
+
+    expect(second.id).toBe(methods.id)
+    expect(
+      second.sections.map((s) => ({
+        title: s.rawTitle,
+        requiredCount: s.requiredCount,
+        items: s.items.map((i) => i.id),
+      })),
+    ).toEqual([
+      { title: "Required", requiredCount: 1, items: [3] },
+      { title: "Electives", requiredCount: 1, items: [4, 5] },
+    ])
+  })
+
+  test("does not treat a min_number_of group of courses as a container", () => {
+    const root = new RequirementTreeBuilder()
+    const electives = root.addOperator({
+      operator: "min_number_of",
+      operator_value: "1",
+    })
+    electives.addCourse()
+    electives.addCourse()
+    expect(parseTrackedProgramRequirements(root.serialize())).toBeNull()
   })
 })

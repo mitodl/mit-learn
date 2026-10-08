@@ -33,7 +33,8 @@ import {
   withHubspotFormId,
 } from "./test-utils/stayUpdated"
 
-import { usePostHog } from "posthog-js/react"
+import { useFeatureFlagEnabled, usePostHog } from "posthog-js/react"
+import { FeatureFlags } from "@/common/feature_flags"
 import invariant from "tiny-invariant"
 import { getIdsFromReqTree } from "@/common/mitxonline"
 import { faker } from "@faker-js/faker/locale/en"
@@ -946,5 +947,160 @@ describe("ProgramPage", () => {
     renderWithProviders(<ProgramPage readableId={program.readable_id} />)
 
     await screen.findByRole("heading", { name: page.title })
+  })
+
+  describe("program tracks", () => {
+    const makeTrackedProgram = () => {
+      const root = new RequirementTreeBuilder()
+      const core = root.addOperator({ operator: "all_of", title: "Core" })
+      core.addCourse()
+      core.addCourse()
+      const container = root.addOperator({
+        operator: "min_number_of",
+        operator_value: "1",
+        title: "Tracks",
+      })
+      const general = container.addTrack({
+        title: "General",
+        description: "Broad foundation.",
+      })
+      const generalRequired = general.addOperator({
+        operator: "all_of",
+        title: "Required",
+      })
+      generalRequired.addCourse()
+      generalRequired.addCourse()
+      const methods = container.addTrack({
+        title: "Methods",
+        description: "Time-series methods.",
+      })
+      const methodsElectives = methods.addOperator({
+        operator: "min_number_of",
+        operator_value: "2",
+        title: "Electives",
+      })
+      methodsElectives.addCourse()
+      methodsElectives.addCourse()
+      methodsElectives.addCourse()
+      root.addOperator({ operator: "all_of", title: "Capstone" }).addCourse()
+      return makeProgram({ req_tree: root.serialize() })
+    }
+
+    const setFlag = (enabled: boolean) => {
+      jest
+        .mocked(useFeatureFlagEnabled)
+        .mockImplementation((flag) =>
+          flag === FeatureFlags.ProgramTracksProductPage ? enabled : false,
+        )
+    }
+
+    afterEach(() => {
+      jest.mocked(useFeatureFlagEnabled).mockReset()
+    })
+
+    test("With the flag off, shows only the groups outside the tracks", async () => {
+      setFlag(false)
+      const program = makeTrackedProgram()
+      const page = makePage({ program_details: program })
+      setupApis({ program, page })
+      renderWithProviders(<ProgramPage readableId={program.readable_id} />)
+
+      const section = await screen.findByRole("region", { name: "Courses" })
+      within(section).getByText(
+        "To complete this program, you must take 3 required courses.",
+      )
+      within(section).getByRole("heading", { name: "Core" })
+      within(section).getByRole("heading", { name: "Capstone" })
+      expect(
+        within(section).queryByRole("heading", { name: "Tracks" }),
+      ).not.toBeInTheDocument()
+      expect(
+        within(section).queryByRole("heading", { name: "Track courses" }),
+      ).not.toBeInTheDocument()
+      expect(within(section).queryByRole("tablist")).not.toBeInTheDocument()
+      expect(
+        screen.queryByRole("region", { name: "Compare the tracks" }),
+      ).not.toBeInTheDocument()
+    })
+
+    test("With the flag on, shows a tab per track between the other groups", async () => {
+      setFlag(true)
+      const program = makeTrackedProgram()
+      const page = makePage({ program_details: program })
+      setupApis({ program, page })
+      renderWithProviders(<ProgramPage readableId={program.readable_id} />)
+
+      const section = await screen.findByRole("region", { name: "Courses" })
+      within(section).getByText(
+        "To complete this program, you must take 3 required courses, and complete 1 of 2 tracks.",
+      )
+      const headings = within(section)
+        .getAllByRole("heading", { level: 3 })
+        .map((h) => h.textContent)
+      expect(headings).toEqual(["Core", "Track courses", "Capstone"])
+
+      const tabs = within(section).getAllByRole("tab")
+      expect(tabs.map((tab) => tab.textContent)).toEqual(["General", "Methods"])
+      expect(tabs[0]).toHaveAttribute("aria-selected", "true")
+
+      const generalPanel = within(section).getByRole("tabpanel")
+      within(generalPanel).getByText("Broad foundation.")
+      await waitFor(() => {
+        expect(within(generalPanel).getAllByRole("listitem")).toHaveLength(2)
+      })
+
+      await user.click(tabs[1])
+      const methodsPanel = within(section).getByRole("tabpanel")
+      within(methodsPanel).getByText("Time-series methods.")
+      within(methodsPanel).getByText("Complete 2 of 3 courses.")
+      expect(within(methodsPanel).getAllByRole("listitem")).toHaveLength(3)
+    })
+
+    test("With the flag on, compares the tracks", async () => {
+      setFlag(true)
+      const program = makeTrackedProgram()
+      const page = makePage({ program_details: program })
+      const { courses } = setupApis({ program, page })
+      renderWithProviders(<ProgramPage readableId={program.readable_id} />)
+
+      const compare = await screen.findByRole("region", {
+        name: "Compare the tracks",
+      })
+      const [core1, core2, general1, general2, m1, m2, m3, capstone] = courses
+      const included = within(compare)
+        .getByRole("heading", { name: "Included in every track" })
+        .closest("div")
+      invariant(included)
+      await waitFor(() => {
+        expect(
+          within(included)
+            .getAllByRole("listitem")
+            .map((li) => li.textContent),
+        ).toEqual([core1.title, core2.title, capstone.title])
+      })
+
+      const rows = within(compare)
+        .getAllByRole("heading", { level: 3 })
+        .filter((h) => h.textContent !== "Included in every track")
+        .map((h) => h.closest("li"))
+      expect(rows.map((row) => row?.querySelector("h3")?.textContent)).toEqual([
+        "General",
+        "Methods",
+      ])
+      const [generalRow, methodsRow] = rows
+      invariant(generalRow && methodsRow)
+      within(generalRow).getByText("Broad foundation.")
+      expect(
+        within(generalRow)
+          .getAllByRole("listitem")
+          .map((li) => li.textContent),
+      ).toEqual([general1.title, general2.title])
+      within(methodsRow).getByText("Complete 2 of 3 courses.")
+      expect(
+        within(methodsRow)
+          .getAllByRole("listitem")
+          .map((li) => li.textContent),
+      ).toEqual([m1.title, m2.title, m3.title])
+    })
   })
 })
