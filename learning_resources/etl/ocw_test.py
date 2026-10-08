@@ -17,8 +17,10 @@ from learning_resources.constants import (
     Pace,
     RunStatus,
 )
+from learning_resources.etl import ocw
 from learning_resources.etl.constants import CourseNumberType, ETLSource
 from learning_resources.etl.ocw import (
+    get_video_transcript_path,
     parse_learn_topics,
     transform_content_files,
     transform_contentfile,
@@ -195,6 +197,93 @@ def test_transform_content_file_needs_text_update(
     else:
         mock_tika.assert_not_called()
         assert "content" not in content_data
+
+
+@pytest.mark.parametrize(
+    ("video_files", "expected"),
+    [
+        (
+            {"video_transcript_file": "courses/course/legacy_transcript.pdf"},
+            "courses/course/legacy_transcript.pdf",
+        ),
+        (
+            {
+                "video_transcript_resources": [
+                    {"file": "/courses/course/es_transcript.pdf", "language": "es"},
+                    {"file": "/courses/course/en_transcript.pdf", "language": "en"},
+                ],
+                "video_transcript_file": "courses/course/legacy_transcript.pdf",
+            },
+            "courses/course/en_transcript.pdf",
+        ),
+        (
+            {
+                "video_transcript_resources": [
+                    {"file": "/courses/course/es_transcript.pdf", "language": "es"}
+                ]
+            },
+            "courses/course/es_transcript.pdf",
+        ),
+        (
+            {
+                "video_transcript_resources": [],
+                "video_transcript_file": "courses/course/legacy_transcript.pdf",
+            },
+            "courses/course/legacy_transcript.pdf",
+        ),
+        ({"video_transcript_resources": [{"language": "en"}]}, None),
+        ({}, None),
+    ],
+)
+def test_get_video_transcript_path(video_files, expected):
+    """get_video_transcript_path prefers an English transcript resource"""
+    assert get_video_transcript_path(video_files) == expected
+
+
+@mock_aws
+def test_transform_contentfile_video_transcript_resources(settings, mocker):
+    """
+    A video whose transcripts are listed per language is transformed,
+    with its text read from the English transcript
+    """
+    setup_s3_ocw(settings)
+    s3_resource = boto3.resource("s3")
+    mocker.patch(
+        "learning_resources.etl.ocw.extract_text_metadata",
+        return_value={"content": "TEXT"},
+    )
+    mock_get_file_content = mocker.spy(ocw, "get_file_content")
+    s3_resource_object = s3_resource.Object(
+        settings.OCW_LIVE_BUCKET, f"{OCW_TEST_PREFIX}resources/video/data.json"
+    )
+    resource_json = safe_load_json(
+        get_s3_object_and_read(s3_resource_object), s3_resource_object.key
+    )
+    transcript_path = (
+        f"{OCW_TEST_PREFIX}1MTm4cjPnMl0AmnP42tDtBleiQ3Zc2g26_transcript.pdf"
+    )
+    resource_json["video_files"] = {
+        "archive_url": "",
+        "video_captions_resources": [
+            {"file": f"/{OCW_TEST_PREFIX}captions.vtt", "language": "en"}
+        ],
+        "video_thumbnail_file": "https://img.youtube.com/vi/vKer2U5W5-s/default.jpg",
+        "video_transcript_resources": [
+            {"file": f"/{transcript_path}", "language": "en"}
+        ],
+    }
+
+    content_data = transform_contentfile(
+        s3_resource_object.key,
+        resource_json,
+        s3_resource,
+        False,  # noqa: FBT003
+    )
+
+    assert content_data["content_type"] == "video"
+    assert content_data["content"] == "TEXT"
+    assert content_data["youtube_id"] == "vKer2U5W5-s"
+    assert mock_get_file_content.call_args.args[1] == transcript_path
 
 
 @mock_aws
