@@ -182,6 +182,7 @@ const coursePageItem: PartialFactory<CoursePageItem> = (override) => {
     min_weekly_hours: `${faker.number.int({ min: 1, max: 20 })}`,
     min_weeks: faker.number.int({ min: 1, max: 12 }),
     prerequisites: makeHTMLList(2),
+    show_course_outline: false,
     price: [priceItem()],
     title: faker.lorem.words(3),
     topic_list: [

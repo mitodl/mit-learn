@@ -96,6 +96,7 @@ const programEnrollmentV3: PartialFactory<V3UserProgramEnrollment> = (
       undefined,
     ]),
     program: program,
+    track: null,
   }
   return mergeOverrides<V3UserProgramEnrollment>(defaults, overrides)
 }

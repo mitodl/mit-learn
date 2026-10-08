@@ -24,6 +24,7 @@ export enum FeatureFlags {
   MultipleRunContextMenus = "multiple-run-context-menus",
   ProgramLetters = "program-letters",
   B2BDataConsent = "b2b-data-consent",
+  ProgramTracksProductPage = "program-tracks-product-page",
 }
 
 /**

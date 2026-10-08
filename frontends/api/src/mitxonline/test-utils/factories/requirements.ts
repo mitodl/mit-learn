@@ -89,6 +89,7 @@ class RequirementTreeBuilder implements V2ProgramRequirement {
     operator: "min_number_of" | "all_of"
     operator_value?: string
     title?: string
+    description?: string
   }) {
     invariant(opts.operator, "operator is required")
     if (opts.operator === "min_number_of") {
@@ -111,6 +112,34 @@ class RequirementTreeBuilder implements V2ProgramRequirement {
     const operatorNode = new RequirementTreeBuilder({ data })
     this.addChild(operatorNode)
     return operatorNode
+  }
+
+  /**
+   * Add a program track. Tracks belong under a `min_number_of` 1 operator
+   * (the tracks container) and hold their own operators:
+   *
+   * ```ts
+   * const tracks = root.addOperator({ operator: "min_number_of", operator_value: "1" })
+   * tracks.addTrack({ title: "General" })
+   *   .addOperator({ operator: "all_of" })
+   *   .addCourse()
+   * ```
+   */
+  addTrack(opts: { title?: string; description?: string } = {}) {
+    const data: V2ProgramRequirementData = {
+      node_type: NodeTypeEnum.Track,
+      course: null,
+      required_program: null,
+      program: this.#root.data.program,
+      title: opts.title ?? faker.lorem.words(2),
+      description: opts.description ?? faker.lorem.sentence(),
+      operator: null,
+      operator_value: null,
+      elective_flag: false,
+    }
+    const trackNode = new RequirementTreeBuilder({ data })
+    this.addChild(trackNode)
+    return trackNode
   }
 
   addProgram(opts: { program?: number; title?: string } = {}) {

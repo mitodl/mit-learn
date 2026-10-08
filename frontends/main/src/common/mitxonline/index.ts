@@ -288,6 +288,70 @@ const getIdsFromReqTree = (
   return { courseIds, programIds }
 }
 
+type ProgramTrack = {
+  node: V2ProgramRequirement
+  id: number | null | undefined
+  title: string
+  description: string
+  /** The track's own operator groups, e.g. its required courses and electives. */
+  sections: ProgramRequirementSection[]
+}
+
+type TrackedProgramRequirements = {
+  /** The top-level `min_number_of` operator whose children are the tracks. */
+  container: V2ProgramRequirement
+  /** Top-level sections ordered before the tracks container, e.g. core courses. */
+  sectionsBeforeTracks: ProgramRequirementSection[]
+  tracks: ProgramTrack[]
+  /** Top-level sections ordered after the tracks container, e.g. a capstone. */
+  sectionsAfterTracks: ProgramRequirementSection[]
+}
+
+const isTracksContainer = (node: V2ProgramRequirement): boolean =>
+  node.data.node_type === NodeTypeEnum.Operator &&
+  !!node.children?.length &&
+  node.children.every((child) => child.data.node_type === NodeTypeEnum.Track)
+
+/**
+ * Parse a tracked program's req_tree: a learner completes the top-level groups
+ * plus any one track.
+ *
+ * Returns `null` when the tree has no tracks container, so callers can keep
+ * using `parseProgramRequirementSections` for every other program. mitxonline
+ * allows at most one container; if a tree somehow has more, the first wins and
+ * the rest are treated as ordinary sections.
+ *
+ * `parseProgramRequirementSections` should not be given a tracked tree
+ * directly: it walks the container recursively and returns every track's
+ * courses as one section.
+ */
+const parseTrackedProgramRequirements = (
+  reqTree: V2ProgramRequirement[],
+): TrackedProgramRequirements | null => {
+  const containerIndex = reqTree.findIndex(isTracksContainer)
+  if (containerIndex === -1) return null
+  const container = reqTree[containerIndex]
+
+  const tracks: ProgramTrack[] = (container.children ?? []).map((track) => ({
+    node: track,
+    id: track.id,
+    title: track.data.title ?? "",
+    description: track.data.description ?? "",
+    sections: parseProgramRequirementSections(track.children ?? []),
+  }))
+
+  return {
+    container,
+    sectionsBeforeTracks: parseProgramRequirementSections(
+      reqTree.slice(0, containerIndex),
+    ),
+    tracks,
+    sectionsAfterTracks: parseProgramRequirementSections(
+      reqTree.slice(containerIndex + 1),
+    ),
+  }
+}
+
 export * from "./enrollmentAlert"
 
 /**
@@ -340,6 +404,7 @@ export {
   getCourseEnrollmentAction,
   getIdsFromReqTree,
   parseProgramRequirementSections,
+  parseTrackedProgramRequirements,
   getBestRun,
   isVerifiedEnrollmentMode,
 }
@@ -348,4 +413,6 @@ export type {
   EnrollmentType,
   CourseEnrollmentAction,
   ProgramRequirementSection,
+  ProgramTrack,
+  TrackedProgramRequirements,
 }
