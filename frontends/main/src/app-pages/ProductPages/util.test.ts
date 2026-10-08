@@ -1,4 +1,9 @@
-import { parseReqTree, getOutlineCoursewareId } from "./util"
+import {
+  parseReqTree,
+  getOutlineCoursewareId,
+  getTotalRequiredCourses,
+  getTrackGroupRuleText,
+} from "./util"
 import { RequirementTreeBuilder, factories } from "api/mitxonline-test-utils"
 
 describe("parseReqTree", () => {
@@ -102,4 +107,65 @@ describe("getOutlineCoursewareId", () => {
 
     expect(getOutlineCoursewareId(course)).toBeUndefined()
   })
+})
+
+describe("getTotalRequiredCourses", () => {
+  test("sums each group's required count for an untracked program", () => {
+    const root = new RequirementTreeBuilder()
+    const core = root.addOperator({ operator: "all_of" })
+    core.addCourse()
+    core.addCourse()
+    const electives = root.addOperator({
+      operator: "min_number_of",
+      operator_value: "1",
+    })
+    electives.addCourse()
+    electives.addCourse()
+    const program = factories.programs.program({ req_tree: root.serialize() })
+    expect(getTotalRequiredCourses(program)).toBe(3)
+  })
+
+  test("counts the groups outside the tracks plus the smallest track", () => {
+    const root = new RequirementTreeBuilder()
+    const core = root.addOperator({ operator: "all_of" })
+    core.addCourse()
+    core.addCourse()
+    const container = root.addOperator({
+      operator: "min_number_of",
+      operator_value: "1",
+    })
+    const twoCourses = container
+      .addTrack()
+      .addOperator({ operator: "min_number_of", operator_value: "2" })
+    twoCourses.addCourse()
+    twoCourses.addCourse()
+    twoCourses.addCourse()
+    const threeCourses = container
+      .addTrack()
+      .addOperator({ operator: "all_of" })
+    threeCourses.addCourse()
+    threeCourses.addCourse()
+    threeCourses.addCourse()
+    root.addOperator({ operator: "all_of" }).addCourse()
+    const program = factories.programs.program({ req_tree: root.serialize() })
+    expect(getTotalRequiredCourses(program)).toBe(5)
+  })
+})
+
+describe("getTrackGroupRuleText", () => {
+  const items = (n: number) =>
+    Array.from({ length: n }, (_, i) => ({ type: "course" as const, id: i }))
+
+  test.each([
+    { requiredCount: 2, count: 3, expected: "Complete 2 of 3 courses." },
+    { requiredCount: 3, count: 3, expected: null },
+    { requiredCount: 0, count: 3, expected: null },
+  ])(
+    "requiredCount $requiredCount of $count -> $expected",
+    ({ requiredCount, count, expected }) => {
+      expect(
+        getTrackGroupRuleText({ requiredCount, items: items(count) }),
+      ).toBe(expected)
+    },
+  )
 })

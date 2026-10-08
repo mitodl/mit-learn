@@ -1,14 +1,19 @@
 "use client"
 
 import React, { useEffect } from "react"
-import { PlainList, Stack, Typography } from "ol-components"
+import { Stack, Typography } from "ol-components"
 
 import { pagesQueries } from "api/mitxonline-hooks/pages"
 import { useQuery } from "@tanstack/react-query"
 import { styled, VisuallyHidden } from "@mitodl/smoot-design"
 import { programsQueries } from "api/mitxonline-hooks/programs"
 import { notFound } from "next/navigation"
-import { HeadingIds, parseReqTree, RequirementData } from "./util"
+import {
+  getRequirementSectionSubtitle,
+  HeadingIds,
+  parseReqTree,
+  RequirementData,
+} from "./util"
 import useReqTreeChildren from "./useReqTreeChildren"
 import InstructorsSection from "./InstructorsSection"
 import FaqsSection from "./FaqsSection"
@@ -25,11 +30,20 @@ import type {
 } from "@mitodl/mitxonline-api-axios/v2"
 import { DEFAULT_RESOURCE_IMG, pluralize } from "ol-utilities"
 import ProgramInfoBox from "./InfoBoxProgram"
-import MitxOnlineResourceCard from "./MitxOnlineResourceCard"
+import RequirementItemCard from "./RequirementItemCard"
+import {
+  RequirementsListing,
+  ReqSubsectionTitle,
+  ReqTitleNote,
+} from "./RequirementStyles"
+import ProgramTracksSection from "./ProgramTracksSection"
+import ProgramTrackCompareSection from "./ProgramTrackCompareSection"
 import ProgramHeaderEnrollButton from "./ProgramHeaderEnrollButton"
 import { trackCourseProgramView } from "@/common/analytics/gtm"
 import { keyBy } from "lodash"
-import { coursePageView, programPageView } from "@/common/urls"
+import { parseTrackedProgramRequirements } from "@/common/mitxonline"
+import { useFeatureFlagEnabled } from "posthog-js/react"
+import { FeatureFlags } from "@/common/feature_flags"
 
 type ProgramPageProps = {
   readableId: string
@@ -45,23 +59,6 @@ const DescriptionHTML = styled(UnstyledRawHTML)({
   p: { margin: 0 },
 })
 
-const RequirementsListing = styled(PlainList)({
-  display: "flex",
-  flexDirection: "column",
-  gap: "16px",
-  marginTop: "24px",
-})
-
-const ReqSubsectionTitle = styled(Typography)(({ theme }) => ({
-  ...theme.typography.h5,
-  fontSize: theme.typography.pxToRem(20), // boosted size
-})) as typeof Typography
-
-const ReqTitleNote = styled("span")(({ theme }) => ({
-  ...theme.typography.body1,
-  color: theme.custom.colors.silverGrayDark,
-}))
-
 type RequirementsSectionProps = {
   program: V2ProgramDetail
   courses?: CourseWithCourseRunsSerializerV2[]
@@ -72,7 +69,7 @@ type RequirementsSectionProps = {
 
 // Says "courses" for child programs too: those with display_mode="course" are
 // presented as courses here and on their own product pages.
-const getCompletionText = (parsedReqs: RequirementData[]) => {
+const getBaseCompletionText = (parsedReqs: RequirementData[]) => {
   let requiredCount = 0
   let requiredElectiveCount = 0
   let totalElectives = 0
@@ -99,14 +96,22 @@ const getCompletionText = (parsedReqs: RequirementData[]) => {
   return ""
 }
 
-const getRequirementSectionSubtitle = (reqData: RequirementData) => {
-  if (reqData.requiredCount === 0 && reqData.items.length > 0) {
-    return null
-  }
-  if (reqData.requiredCount < reqData.items.length) {
-    return `Complete ${reqData.requiredCount} out of ${reqData.items.length}`
-  }
-  return null
+// For a tracked program, `parsedReqs` excludes the tracks container and
+// `trackCount` adds a clause for it. The product page design uses
+// author-written copy instead ("The program includes 3 core courses and 1
+// track with 2 electives."); that waits on a ProgramPage CMS field mitxonline
+// doesn't have yet, so this generated sentence stands in for now.
+const getCompletionText = (
+  parsedReqs: RequirementData[],
+  trackCount: number = 0,
+) => {
+  const base = getBaseCompletionText(parsedReqs)
+  if (!trackCount) return base
+  const tracks = `1 of ${trackCount} ${pluralize("track", trackCount)}`
+  // A separate sentence: the base text can already be two sentences.
+  return base
+    ? `${base} You must also complete ${tracks}.`
+    : `To complete this program, you must complete ${tracks}.`
 }
 
 const RequirementsSection: React.FC<RequirementsSectionProps> = ({
@@ -118,7 +123,42 @@ const RequirementsSection: React.FC<RequirementsSectionProps> = ({
 }) => {
   const coursesById = keyBy(courses ?? [], "id")
   const programsById = keyBy(childPrograms ?? [], "id")
-  const parsedReqs = parseReqTree(program.req_tree)
+  const showTracks = useFeatureFlagEnabled(
+    FeatureFlags.ProgramTracksProductPage,
+  )
+  const tracked = parseTrackedProgramRequirements(program.req_tree)
+  const allReqs = parseReqTree(program.req_tree)
+  // The tracks container is a "choose 1" group whose children are tracks, not
+  // courses, so it must not be counted or rendered as an ordinary group.
+  const parsedReqs = tracked
+    ? allReqs.filter((req) => req.id !== tracked.container.id)
+    : allReqs
+  const trackCount = showTracks && tracked ? tracked.tracks.length : 0
+
+  const renderReq = (req: RequirementData) => {
+    const note = getRequirementSectionSubtitle(req)
+    return (
+      <div key={req.id}>
+        <ReqSubsectionTitle component="h3">
+          {req.title}
+          {note ? ": " : ""}
+          {note ? <ReqTitleNote>{note}</ReqTitleNote> : null}
+        </ReqSubsectionTitle>
+        <RequirementsListing>
+          {req.items.map((item) => (
+            <RequirementItemCard
+              key={`${item.type}-${item.id}`}
+              item={item}
+              coursesById={coursesById}
+              programsById={programsById}
+              isLoading={!!isLoading}
+              label={req.title}
+            />
+          ))}
+        </RequirementsListing>
+      </div>
+    )
+  }
 
   return (
     <Stack
@@ -137,7 +177,7 @@ const RequirementsSection: React.FC<RequirementsSectionProps> = ({
             Courses
           </Typography>
           <Typography variant="body1" component="p">
-            {getCompletionText(parsedReqs)}
+            {getCompletionText(parsedReqs, trackCount)}
           </Typography>
         </div>
       ) : (
@@ -148,62 +188,21 @@ const RequirementsSection: React.FC<RequirementsSectionProps> = ({
         </VisuallyHidden>
       )}
       <Stack gap={{ xs: "32px", sm: "56px" }}>
-        {parsedReqs.map((req) => {
-          const note = getRequirementSectionSubtitle(req)
-          return (
-            <div key={req.id}>
-              <ReqSubsectionTitle component="h3">
-                {req.title}
-                {note ? ": " : ""}
-                {note ? <ReqTitleNote>{note}</ReqTitleNote> : null}
-              </ReqSubsectionTitle>
-              <RequirementsListing>
-                {req.items.map((item) => {
-                  if (item.type === "course") {
-                    const course = coursesById[item.id]
-                    if (!isLoading && !course) return null
-                    return (
-                      <li key={`course-${item.id}`}>
-                        <MitxOnlineResourceCard
-                          resource={course}
-                          resourceType="course"
-                          href={
-                            course ? coursePageView(course.readable_id) : ""
-                          }
-                          size="small"
-                          isLoading={isLoading}
-                          label={req.title}
-                          list
-                        />
-                      </li>
-                    )
-                  }
-                  const prog = programsById[item.id]
-                  if (!isLoading && !prog) return null
-                  return (
-                    <li key={`program-${item.id}`}>
-                      <MitxOnlineResourceCard
-                        resource={prog}
-                        resourceType="program"
-                        href={
-                          prog
-                            ? programPageView({
-                                readable_id: prog.readable_id,
-                                display_mode: prog.display_mode,
-                              })
-                            : ""
-                        }
-                        size="small"
-                        isLoading={isLoading}
-                        label={req.title}
-                        list
-                      />
-                    </li>
-                  )
-                })}
-              </RequirementsListing>
-            </div>
-          )
+        {allReqs.map((req) => {
+          if (tracked && req.id === tracked.container.id) {
+            // Behind its flag until Learn's track UI ships; with the flag
+            // off a tracked program shows only its groups outside the tracks.
+            return showTracks ? (
+              <ProgramTracksSection
+                key={req.id}
+                tracks={tracked.tracks}
+                coursesById={coursesById}
+                programsById={programsById}
+                isLoading={!!isLoading}
+              />
+            ) : null
+          }
+          return renderReq(req)
         })}
       </Stack>
     </Stack>
@@ -294,6 +293,12 @@ const ProgramPage: React.FC<ProgramPageProps> = ({ readableId }) => {
         childPrograms={childPrograms}
         isLoading={dataLoading}
         showCourseFraming={showCourseFraming}
+      />
+      <ProgramTrackCompareSection
+        program={program}
+        courses={courses}
+        childPrograms={childPrograms}
+        isLoading={dataLoading}
       />
       <HowYoullLearnSection page={page} />
       {page.prerequisites ? (
