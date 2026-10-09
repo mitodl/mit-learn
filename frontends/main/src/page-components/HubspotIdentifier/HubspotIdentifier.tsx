@@ -26,7 +26,8 @@ const HubspotIdentifier = () => {
 
     window._hsq = window._hsq || []
     window._hsq.push(["identify", { email: user.email }])
-  }, [user])
+    window._hsq.push(["trackPageView"])
+  }, [user?.is_authenticated, user?.email])
 
   return null
 }
