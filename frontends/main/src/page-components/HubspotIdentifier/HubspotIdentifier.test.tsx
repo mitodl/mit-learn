@@ -21,8 +21,8 @@ describe("HubspotIdentifier", () => {
   const setup = (userOverrides = {}) => {
     const userData = factories.user.user(userOverrides)
     setMockResponse.get(urls.userMe.get(), userData)
-    const { queryClient } = renderWithProviders(<HubspotIdentifier />)
-    return { userData, queryClient }
+    renderWithProviders(<HubspotIdentifier />, { user: userData })
+    return userData
   }
 
   test("calls identify with the user's email when authenticated", async () => {
