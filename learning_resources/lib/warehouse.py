@@ -270,7 +270,18 @@ class BaseWarehouseETLTask(Task):
         if not self.table_name:
             msg = f"{self.__class__.__name__}.table_name must be set"
             raise ValueError(msg)
-        parts = (settings.WAREHOUSE_CATALOG, settings.WAREHOUSE_SCHEMA, self.table_name)
+        return self.qualified_name(self.table_name)
+
+    @staticmethod
+    def qualified_name(table_name: str) -> str:
+        """Qualify a bare view name as ``catalog.schema.table`` from settings.
+
+        For a task that reads more than the one view ``table_name`` names.
+
+        Raises:
+            ValueError: If any part is not a plain identifier.
+        """
+        parts = (settings.WAREHOUSE_CATALOG, settings.WAREHOUSE_SCHEMA, table_name)
         for part in parts:
             if not _SAFE_NAME_PART.match(part):
                 msg = f"Unsafe warehouse identifier: {part!r}"
