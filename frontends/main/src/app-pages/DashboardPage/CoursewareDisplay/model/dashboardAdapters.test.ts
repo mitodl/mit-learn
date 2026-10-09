@@ -1,5 +1,5 @@
 import { factories } from "api/mitxonline-test-utils"
-import { LanguageEnum } from "@mitodl/mitxonline-api-axios/v2"
+import { LanguageEnum } from "@mitodl/mitxonline-api-axios/v0"
 import {
   adaptCourseEntryToLegacyDashboardCardProps,
   type LegacyDashboardCardAdapterOutput,

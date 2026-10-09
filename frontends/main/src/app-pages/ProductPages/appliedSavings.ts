@@ -1,8 +1,8 @@
 import {
   DiscountTypeEnum,
   PaymentTypeEnum,
-} from "@mitodl/mitxonline-api-axios/v2"
-import type { UserPricingProduct } from "@mitodl/mitxonline-api-axios/v2"
+} from "@mitodl/mitxonline-api-axios/v0"
+import type { UserPricingProduct } from "@mitodl/mitxonline-api-axios/v0"
 import { formatPrice } from "@/common/mitxonline"
 import type { AppliedSavings } from "./enrollTypes"
 

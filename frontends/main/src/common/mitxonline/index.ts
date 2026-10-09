@@ -6,10 +6,8 @@ import type {
   EnrollmentMode,
   V2ProgramRequirement,
 } from "@mitodl/mitxonline-api-axios/v2"
-import {
-  EnrollmentModeEnum,
-  NodeTypeEnum,
-} from "@mitodl/mitxonline-api-axios/v2"
+import { NodeTypeEnum } from "@mitodl/mitxonline-api-axios/v2"
+import { EnrollmentModeEnum } from "@mitodl/mitxonline-api-axios/v3"
 
 const NEXT_PUBLIC_MITX_ONLINE_LEGACY_BASE_URL = env(
   "NEXT_PUBLIC_MITX_ONLINE_LEGACY_BASE_URL",

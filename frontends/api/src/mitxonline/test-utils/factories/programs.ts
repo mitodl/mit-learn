@@ -4,8 +4,8 @@ import type {
   BaseProgram,
   V2ProgramCollection,
   V2ProgramDetail,
-  V3SimpleProgram,
 } from "@mitodl/mitxonline-api-axios/v2"
+import type { V3SimpleProgram } from "@mitodl/mitxonline-api-axios/v3"
 import { faker } from "@faker-js/faker/locale/en"
 import { UniqueEnforcer } from "enforce-unique"
 import * as courses from "./courses"

@@ -5,7 +5,7 @@ import type {
   CourseRunEnrollmentV3,
   CourseRunGrade,
   V3UserProgramEnrollment,
-} from "@mitodl/mitxonline-api-axios/v2"
+} from "@mitodl/mitxonline-api-axios/v3"
 import { UniqueEnforcer } from "enforce-unique"
 import * as courses from "../factories/courses"
 import * as programs from "../factories/programs"
@@ -61,6 +61,8 @@ const courseEnrollment: PartialFactory<CourseRunEnrollmentV3> = (
       courseware_id: faker.string.uuid(),
       run_tag: faker.lorem.word(),
       language_label: "",
+      variant_industry_label: "",
+      variant_length_label: "",
       live: faker.datatype.boolean(),
       course_number: faker.lorem.word(),
       upgrade_product_id: faker.number.int(),

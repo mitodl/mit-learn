@@ -159,6 +159,7 @@ const coursePageItem: PartialFactory<CoursePageItem> = (override) => {
     id: uniquePageId.enforce(() => faker.number.int()),
     include_in_learn_catalog: faker.datatype.boolean(),
     ingest_content_files_for_ai: faker.datatype.boolean(),
+    show_course_outline: faker.datatype.boolean(),
     hubspot_form_id: faker.datatype.boolean() ? faker.string.uuid() : "",
     length: `${faker.number.int({ min: 1, max: 12 })} weeks`,
     max_price: `${faker.number.int({ min: 50, max: 500 })}`,

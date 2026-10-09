@@ -1,12 +1,14 @@
 import { queryOptions } from "@tanstack/react-query"
 import type {
-  CourseOutlineResponse as GeneratedCourseOutlineResponse,
   CoursesApiApiV2CoursesListRequest,
-  CoursesApiCourseVariantRunsV3Request,
-  CourseVariantRunsResponse,
   PaginatedCourseWithCourseRunsSerializerV2List,
 } from "@mitodl/mitxonline-api-axios/v2"
-import { coursesApi } from "../../clients"
+import type {
+  CourseOutlineResponse as GeneratedCourseOutlineResponse,
+  CoursesApiCourseVariantRunsV3Request,
+  CourseVariantRunsResponse,
+} from "@mitodl/mitxonline-api-axios/v3"
+import { coursesApi, coursesV3Api } from "../../clients"
 
 type CourseOutlineResponse = GeneratedCourseOutlineResponse
 type CourseOutlineModule = CourseOutlineResponse["modules"][number]
@@ -44,7 +46,7 @@ const coursesQueries = {
     queryOptions({
       queryKey: coursesKeys.courseOutline(coursewareId),
       queryFn: async (): Promise<CourseOutlineResponse> => {
-        return coursesApi
+        return coursesV3Api
           .courseOutlineRetrieveV3({ course_id: coursewareId })
           .then((res) => res.data)
       },
@@ -53,7 +55,7 @@ const coursesQueries = {
     queryOptions({
       queryKey: coursesKeys.courseVariantRunsList(opts),
       queryFn: async (): Promise<CourseVariantRunsResponse[]> => {
-        return coursesApi.courseVariantRunsV3(opts).then((res) => res.data)
+        return coursesV3Api.courseVariantRunsV3(opts).then((res) => res.data)
       },
     }),
 }

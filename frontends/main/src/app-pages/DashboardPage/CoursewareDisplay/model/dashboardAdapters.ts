@@ -1,9 +1,9 @@
+import type { CourseWithCourseRunsSerializerV2 } from "@mitodl/mitxonline-api-axios/v2"
 import type {
   BaseCourseRun,
   CourseRunEnrollmentV3,
-  CourseWithCourseRunsSerializerV2,
   V3UserProgramEnrollment,
-} from "@mitodl/mitxonline-api-axios/v2"
+} from "@mitodl/mitxonline-api-axios/v3"
 import type { DashboardCourseEntry } from "./dashboardViewModel"
 
 export type LegacyDashboardCardResource =

@@ -1,8 +1,8 @@
 import React from "react"
 import { renderWithProviders, screen, user } from "@/test-utils"
 import * as mitxonline from "api/mitxonline-test-utils"
-import { RefundStatusEnum } from "@mitodl/mitxonline-api-axios/v2"
-import type { Order } from "@mitodl/mitxonline-api-axios/v2"
+import { RefundStatusEnum } from "@mitodl/mitxonline-api-axios/v0"
+import type { Order } from "@mitodl/mitxonline-api-axios/v0"
 import { ReceiptRefundCard } from "./ReceiptRefundCard"
 
 const makeOrder = (overrides: Partial<Order> = {}) =>

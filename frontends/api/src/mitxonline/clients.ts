@@ -1,20 +1,26 @@
 import {
   B2bApi,
   BasketsApi,
+  UsersApi,
+  CountriesApi,
+  ProductsApi,
+  OrdersApi,
+} from "@mitodl/mitxonline-api-axios/v0"
+import { EnrollmentsApi as EnrollmentsApiV1 } from "@mitodl/mitxonline-api-axios/v1"
+import {
   CoursesApi,
   CourseCertificatesApi,
-  EnrollmentsApi,
   ProgramCollectionsApi,
   ProgramsApi,
   ProgramCertificatesApi,
-  UsersApi,
-  ProgramEnrollmentsApi,
   PagesApi,
-  CountriesApi,
-  ProductsApi,
   VerifiedProgramEnrollmentsApi,
-  OrdersApi,
 } from "@mitodl/mitxonline-api-axios/v2"
+import {
+  CoursesApi as CoursesApiV3,
+  EnrollmentsApi as EnrollmentsApiV3,
+  ProgramEnrollmentsApi,
+} from "@mitodl/mitxonline-api-axios/v3"
 import axiosInstance from "./axios"
 
 const BASE_PATH = ""
@@ -37,6 +43,7 @@ const programCertificatesApi = new ProgramCertificatesApi(
 )
 
 const coursesApi = new CoursesApi(undefined, BASE_PATH, axiosInstance)
+const coursesV3Api = new CoursesApiV3(undefined, BASE_PATH, axiosInstance)
 
 const courseCertificatesApi = new CourseCertificatesApi(
   undefined,
@@ -44,7 +51,13 @@ const courseCertificatesApi = new CourseCertificatesApi(
   axiosInstance,
 )
 
-const courseRunEnrollmentsApi = new EnrollmentsApi(
+const courseRunEnrollmentsApi = new EnrollmentsApiV1(
+  undefined,
+  BASE_PATH,
+  axiosInstance,
+)
+
+const courseRunEnrollmentsV3Api = new EnrollmentsApiV3(
   undefined,
   BASE_PATH,
   axiosInstance,
@@ -74,10 +87,12 @@ export {
   b2bApi,
   basketsApi,
   courseRunEnrollmentsApi,
+  courseRunEnrollmentsV3Api,
   programEnrollmentsApi,
   programsApi,
   programCollectionsApi,
   coursesApi,
+  coursesV3Api,
   programCertificatesApi,
   courseCertificatesApi,
   axiosInstance,

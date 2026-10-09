@@ -5,8 +5,8 @@ import { QueryClientProvider } from "@tanstack/react-query"
 import { makeBrowserQueryClient } from "@/app/getQueryClient"
 import { setMockResponse } from "api/test-utils"
 import * as mitxonline from "api/mitxonline-test-utils"
-import type { ProductPurchasableObject } from "@mitodl/mitxonline-api-axios/v2"
-import { StateEnum } from "@mitodl/mitxonline-api-axios/v2"
+import type { ProductPurchasableObject } from "@mitodl/mitxonline-api-axios/v0"
+import { StateEnum } from "@mitodl/mitxonline-api-axios/v0"
 import { useOrderIdForRun } from "./useOrderIdForResource"
 
 const RUN_ID = 777

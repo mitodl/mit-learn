@@ -5,12 +5,12 @@ import type {
   UserPricingDiscount,
   UserPricingProduct,
   V0Discount,
-} from "@mitodl/mitxonline-api-axios/v2"
+} from "@mitodl/mitxonline-api-axios/v0"
 import {
   DiscountSourceTypeEnum,
   DiscountTypeEnum,
   RedemptionTypeEnum,
-} from "@mitodl/mitxonline-api-axios/v2"
+} from "@mitodl/mitxonline-api-axios/v0"
 import { faker } from "@faker-js/faker/locale/en"
 import { UniqueEnforcer } from "enforce-unique"
 

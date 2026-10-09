@@ -1,7 +1,7 @@
 import { basketQueries } from "./queries"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { basketsApi } from "../../clients"
-import type { BasketWithProduct } from "@mitodl/mitxonline-api-axios/v2"
+import type { BasketWithProduct } from "@mitodl/mitxonline-api-axios/v0"
 import type { MutationHookOptions } from "../../../mutations/mutationMeta"
 
 /**

@@ -12,8 +12,8 @@ import type {
   RedeemedDiscount,
   RefundRequest,
   TransactionLine,
-} from "@mitodl/mitxonline-api-axios/v2"
-import { RefundStatusEnum } from "@mitodl/mitxonline-api-axios/v2"
+} from "@mitodl/mitxonline-api-axios/v0"
+import { RefundStatusEnum } from "@mitodl/mitxonline-api-axios/v0"
 
 const transactionLine = (
   overrides: Partial<TransactionLine> = {},

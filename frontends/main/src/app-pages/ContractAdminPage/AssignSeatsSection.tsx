@@ -18,7 +18,7 @@ import {
 import { SILENCE_ERROR_TOAST } from "api/mutation-meta"
 import { mitxUserQueries } from "api/mitxonline-hooks/user"
 import { useQuery } from "@tanstack/react-query"
-import type { BulkAssignError } from "@mitodl/mitxonline-api-axios/v2"
+import type { BulkAssignError } from "@mitodl/mitxonline-api-axios/v0"
 
 // Shared metrics — must be identical between EmailHighlightLayer and EmailTextarea
 // so the overlay and the real textarea render text in exactly the same position.

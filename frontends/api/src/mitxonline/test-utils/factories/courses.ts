@@ -1,10 +1,12 @@
 import { mergeOverrides, makePaginatedFactory } from "ol-test-utilities"
 import type { Factory, PartialFactory } from "ol-test-utilities"
 import type {
-  CourseWithCourseRunsSerializerV2,
-  CourseRunV2,
   V1CourseWithCourseRuns,
   ProductFlexibilePrice,
+} from "@mitodl/mitxonline-api-axios/v1"
+import type {
+  CourseWithCourseRunsSerializerV2,
+  CourseRunV2,
   EnrollmentMode,
 } from "@mitodl/mitxonline-api-axios/v2"
 import { faker } from "@faker-js/faker/locale/en"
@@ -73,6 +75,8 @@ const v1Course: PartialFactory<V1CourseWithCourseRuns> = (overrides = {}) => {
         live: faker.datatype.boolean(),
         course_number: faker.lorem.word(),
         language_label: "",
+        variant_industry_label: "",
+        variant_length_label: "",
         products: [
           {
             id: faker.number.int(),
@@ -125,6 +129,8 @@ const courseRun: PartialFactory<CourseRunV2> = (overrides = {}) => {
     live: faker.datatype.boolean(),
     course_number: faker.lorem.word(),
     language_label: "",
+    variant_industry_label: "",
+    variant_length_label: "",
     products: [product()],
     approved_flexible_price_exists: faker.datatype.boolean(),
     enrollment_modes: Array.from({

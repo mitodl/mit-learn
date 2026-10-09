@@ -1,5 +1,5 @@
 import { env } from "@/env"
-import { OrganizationPage } from "@mitodl/mitxonline-api-axios/v2"
+import { OrganizationPage } from "@mitodl/mitxonline-api-axios/v0"
 import type { VideoPlaylistResource } from "api/v1"
 
 const isInEnum = <T extends string>(
