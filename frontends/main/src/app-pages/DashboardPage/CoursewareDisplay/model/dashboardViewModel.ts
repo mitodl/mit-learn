@@ -177,11 +177,17 @@ export const getProgramEnrollmentStatus = (
   programEnrollment: V3UserProgramEnrollment | undefined,
   enrolledCourseCount: number,
   completedCourseCount = 0,
+  totalCourseCount = 0,
 ): EnrollmentStatus => {
   if (!programEnrollment) {
     return EnrollmentStatus.NotEnrolled
   }
   if (programEnrollment.certificate) {
+    return EnrollmentStatus.Completed
+  }
+  // Passing every course counts as completion even before a certificate is
+  // issued (e.g. audit-mode learners never receive one).
+  if (totalCourseCount > 0 && completedCourseCount >= totalCourseCount) {
     return EnrollmentStatus.Completed
   }
   if (completedCourseCount > 0 || enrolledCourseCount > 0) {

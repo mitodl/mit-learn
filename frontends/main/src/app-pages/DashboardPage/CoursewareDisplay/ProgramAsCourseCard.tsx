@@ -322,6 +322,7 @@ const ProgramAsCourseCard: React.FC<ProgramAsCourseCardProps> = ({
     courseProgramEnrollment,
     enrolledCount,
     completedCount,
+    totalCount,
   )
 
   // Ordered nearest-to-furthest (ancestor last). verified_program_enrollments
