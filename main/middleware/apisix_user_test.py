@@ -9,6 +9,7 @@ import pytest
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import AnonymousUser
 from django.db import close_old_connections
+from django.db.models import QuerySet
 from django.urls import reverse
 
 from main.constants import PostHogEvents
@@ -187,6 +188,115 @@ def test_get_request_ambiguous_identity_fails_closed(mocker, mock_login):
     exact_user.refresh_from_db()
     assert legacy_user.global_id is None
     assert exact_user.email == "old_email@test.edu"
+
+
+@pytest.mark.django_db(transaction=True)
+@pytest.mark.parametrize("userinfo_create", [True, False])
+@pytest.mark.parametrize("legacy_email", [str, str.upper])
+def test_legacy_user_linked_with_update_disabled(
+    mocker, mock_login, settings, userinfo_create, legacy_email
+):
+    """
+    A legacy user matched by email (case-insensitively) gets its global_id set
+    even with userinfo updates disabled, and no other fields are synced.
+    """
+    close_old_connections()
+    settings.MITOL_APIGATEWAY_USERINFO_CREATE = userinfo_create
+    settings.MITOL_APIGATEWAY_USERINFO_UPDATE = False
+    user = UserFactory.create(
+        email=legacy_email(apisix_user_info["email"]),
+        global_id=None,
+        username="legacyuser",
+        first_name="legacy",
+    )
+    ApisixUserMiddleware(mocker.Mock()).process_request(
+        mocker.Mock(
+            META={"HTTP_X_USERINFO": b64encode(json.dumps(apisix_user_info).encode())},
+            user=AnonymousUser(),
+        )
+    )
+    mock_login.assert_called_once()
+    user.refresh_from_db()
+    assert user.global_id == apisix_user_info["sub"]
+    assert user.email == legacy_email(apisix_user_info["email"])
+    assert user.username == "legacyuser"
+    assert user.first_name == "legacy"
+    assert User.objects.count() == 1
+
+
+@pytest.mark.django_db(transaction=True)
+def test_ambiguous_legacy_email_match_fails_closed(mocker, mock_login, caplog):
+    """
+    With no exact match, several legacy users matching the email case-insensitively
+    aren't linked, logged in, or duplicated.
+    """
+    close_old_connections()
+    legacy_users = [
+        UserFactory.create(email=apisix_user_info["email"].upper(), global_id=None),
+        UserFactory.create(email=apisix_user_info["email"].title(), global_id=None),
+    ]
+    ApisixUserMiddleware(mocker.Mock()).process_request(
+        mocker.Mock(
+            META={"HTTP_X_USERINFO": b64encode(json.dumps(apisix_user_info).encode())},
+            user=AnonymousUser(),
+        )
+    )
+    mock_login.assert_not_called()
+    assert "ambiguous_apisix_identity" in caplog.text
+    assert User.objects.count() == len(legacy_users)
+    assert not User.objects.filter(global_id__isnull=False).exists()
+
+
+@pytest.mark.django_db(transaction=True)
+def test_linked_user_not_ambiguous_with_case_variant_legacy_user(mocker, mock_login):
+    """A legacy row whose email differs only in case doesn't lock out a linked user."""
+    close_old_connections()
+    legacy_user = UserFactory.create(
+        email=apisix_user_info["email"].upper(), global_id=None
+    )
+    linked_user = UserFactory.create(
+        email=apisix_user_info["email"], global_id=apisix_user_info["sub"]
+    )
+    request = mocker.Mock(
+        META={"HTTP_X_USERINFO": b64encode(json.dumps(apisix_user_info).encode())},
+        user=AnonymousUser(),
+    )
+    ApisixUserMiddleware(mocker.Mock()).process_request(request)
+    mock_login.assert_called_once()
+    assert request.user == linked_user
+    legacy_user.refresh_from_db()
+    assert legacy_user.global_id is None
+
+
+@pytest.mark.django_db(transaction=True)
+@pytest.mark.parametrize("userinfo_create", [True, False])
+def test_fallback_finds_user_linked_by_concurrent_request(
+    mocker, mock_login, settings, userinfo_create
+):
+    """A row linked after the exact lookup missed is still found by the fallback."""
+    settings.MITOL_APIGATEWAY_USERINFO_CREATE = userinfo_create
+    close_old_connections()
+    linked_user = UserFactory.create(
+        email=apisix_user_info["email"].upper(), global_id=apisix_user_info["sub"]
+    )
+    real_get = QuerySet.get
+    calls = []
+
+    def get_missing_first_call(self, *args, **kwargs):
+        """Simulate the exact lookup running before the other request committed."""
+        calls.append(1)
+        if len(calls) == 1:
+            raise self.model.DoesNotExist
+        return real_get(self, *args, **kwargs)
+
+    mocker.patch.object(QuerySet, "get", get_missing_first_call)
+    request = mocker.Mock(
+        META={"HTTP_X_USERINFO": b64encode(json.dumps(apisix_user_info).encode())},
+        user=AnonymousUser(),
+    )
+    ApisixUserMiddleware(mocker.Mock()).process_request(request)
+    mock_login.assert_called_once()
+    assert request.user == linked_user
 
 
 @pytest.mark.django_db(transaction=True)
