@@ -171,6 +171,7 @@ const TopicSearchFilterBar: React.FC<TopicSearchFilterBarProps> = ({
         <FacetSelect
           size="small"
           name="delivery"
+          aria-label="Format"
           value={delivery}
           multiple
           renderValue={() => "Format"}
@@ -184,6 +185,7 @@ const TopicSearchFilterBar: React.FC<TopicSearchFilterBarProps> = ({
         <FacetSelect
           size="small"
           name="certification_type"
+          aria-label="Certificate"
           value={certification}
           multiple
           renderValue={() => "Certificate"}

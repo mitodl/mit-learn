@@ -854,6 +854,7 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
       onChange={(e) => setParamValue("sortby", e.target.value)}
       options={sortOptions}
       className="sort-dropdown"
+      aria-label="Sort by"
       renderValue={(value) => {
         const opt = SORT_OPTIONS.find((option) => option.value === value)
         return `Sort by: ${opt?.label}`
