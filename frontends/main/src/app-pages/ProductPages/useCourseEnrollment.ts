@@ -10,16 +10,11 @@ import { useReplaceBasketItem } from "@/common/mitxonline/useReplaceBasketItem"
 import { useComplianceGate } from "@/common/mitxonline/useComplianceGate"
 import { enrollmentAlertSuccessUrl } from "@/common/mitxonline"
 import { useRouter } from "next-nprogress-bar"
-import { usePostHog } from "posthog-js/react"
-import {
-  trackCourseEnrolled,
-  trackStartEnrollment,
-  trackBeginCheckout,
-} from "@/common/analytics/gtm"
+import { analytics } from "@/common/analytics"
 import { DASHBOARD_HOME } from "@/common/urls"
 import { getCourseScenario, type CourseScenario } from "./courseRun"
 import { useCourseEnrolledRunIds } from "./useCourseEnrolledRunIds"
-import { fireEnrollCta, type EnrollCtaPlacement } from "./enrollAnalytics"
+import { type EnrollCtaPlacement } from "./enrollAnalytics"
 import type {
   EnrollAction,
   EnrollActionKind,
@@ -67,7 +62,6 @@ export const useCourseEnrollment = (
   const replaceBasketItem = useReplaceBasketItem({ meta: SILENCE_ERROR_TOAST })
   const createEnrollment = useCreateEnrollment({ meta: SILENCE_ERROR_TOAST })
   const router = useRouter()
-  const posthog = usePostHog()
   // Paid enrollments are gated inside useReplaceBasketItem; the free track
   // calls the enrollment endpoint directly and so gates here.
   const { ensureCompliance } = useComplianceGate()
@@ -91,22 +85,22 @@ export const useCourseEnrollment = (
   const makeOnClick =
     (kind: EnrollActionKind, label: string): EnrollAction["onClick"] =>
     async (e) => {
-      fireEnrollCta(posthog, {
+      analytics.enrollCtaClicked({
         placement: opts?.tracking.placement,
-        kind,
-        label,
+        enrollmentMode: kind === "paid" ? "verified" : "audit",
         resourceType: "course",
         readableId: course.readable_id,
+        label,
       })
       if (!me.data?.is_authenticated) {
         opts?.onRequireSignup?.(e.currentTarget)
         return
       }
-      trackStartEnrollment(course.title)
+      analytics.enrollmentStarted(course.title)
       if (kind === "paid") {
         const product = selectedRun?.products?.[0]
         if (product) {
-          trackBeginCheckout({
+          analytics.checkoutStarted({
             courseName: course.title,
             courseId: course.readable_id,
             value: product.price ? parseFloat(product.price) : 0,
@@ -120,7 +114,7 @@ export const useCourseEnrollment = (
             { run_id: selectedRun.id },
             {
               onSuccess: () => {
-                trackCourseEnrolled(course.title)
+                analytics.courseEnrolled(course.title)
                 router.push(
                   enrollmentAlertSuccessUrl({
                     title: course.title ?? "your enrollment",

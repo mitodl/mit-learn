@@ -12,7 +12,7 @@ import YouTubeIframePlayer, {
 } from "./YouTubeIframePlayer"
 import type { VideoResource } from "api/v1"
 import type { VideoJsPlayerProps } from "./VideoJsPlayer"
-import { trackVideoStart, trackVideo50Percent } from "@/common/analytics/gtm"
+import { analytics } from "@/common/analytics"
 import type Player from "video.js/dist/types/player"
 
 const VideoJsPlayer = dynamic<VideoJsPlayerProps>(
@@ -197,8 +197,8 @@ const VideoResourcePlayer = React.forwardRef<
             onReady={(player) => {
               vjsPlayerRef.current = player
             }}
-            onPlay={() => trackVideoStart(videoTitleLabel)}
-            onHalfProgress={() => trackVideo50Percent(videoTitleLabel)}
+            onPlay={() => analytics.videoStarted(videoTitleLabel)}
+            onHalfProgress={() => analytics.videoReachedHalfway(videoTitleLabel)}
           />
         ) : thumbnailUrl ? (
           <ThumbnailWrapper>

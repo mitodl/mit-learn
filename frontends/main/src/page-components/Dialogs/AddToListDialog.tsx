@@ -1,4 +1,3 @@
-import { env } from "@/env"
 import React, { useCallback } from "react"
 import {
   LoadingSpinner,
@@ -10,7 +9,7 @@ import {
 import { Button, CheckboxChoiceField } from "@mitodl/smoot-design"
 
 import { RiAddLine } from "@remixicon/react"
-import { usePostHog } from "posthog-js/react"
+import { analytics } from "@/common/analytics"
 
 import NiceModal, { muiDialogV5 } from "@ebay/nice-modal-react"
 
@@ -29,7 +28,6 @@ import {
 import { manageListDialogs } from "@/page-components/ManageListDialogs/ManageListDialogs"
 import { ListType } from "api/constants"
 import { useFormik } from "formik"
-import { PostHogEvents } from "@/common/constants"
 
 const LIST_LIMIT = 100
 
@@ -76,7 +74,6 @@ const AddToListDialogInner: React.FC<AddToListDialogInnerProps> = ({
     mutateAsync: setLearningPathRelationships,
   } = useLearningResourceSetLearningPathRelationships()
 
-  const posthog = usePostHog()
   const isSaving =
     isSavingLearningPathRelationships || isSavingUserListRelationships
 
@@ -101,15 +98,13 @@ const AddToListDialogInner: React.FC<AddToListDialogInnerProps> = ({
     },
     onSubmit: async (values) => {
       if (resource) {
-        if (env("NEXT_PUBLIC_POSTHOG_API_KEY")) {
-          posthog.capture(PostHogEvents.LRAddToList, {
-            listType: listType,
-            resourceId: resource?.id,
-            readableId: resource?.readable_id,
-            platformCode: resource?.platform?.code,
-            resourceType: resource?.resource_type,
-          })
-        }
+        analytics.resourceAddedToList({
+          listType: listType,
+          resourceId: resource?.id,
+          readableId: resource?.readable_id,
+          platformCode: resource?.platform?.code,
+          resourceType: resource?.resource_type,
+        })
         if (listType === ListType.LearningPath) {
           const newParents = values.learning_paths.map((id) => parseInt(id))
           await setLearningPathRelationships({

@@ -16,9 +16,7 @@ import MITOpenLearningLogo from "@/public/images/mit-open-learning-logo.svg"
 import VideoJsPlayer from "@/page-components/VideoPlayer/VideoJsPlayer"
 import type Player from "video.js/dist/types/player"
 import { FocusTrap } from "@mui/base/FocusTrap"
-import { usePostHog } from "posthog-js/react"
-import { PostHogEvents } from "@/common/constants"
-import { env } from "@/env"
+import { analytics } from "@/common/analytics"
 
 const MODAL_VERTICAL_PADDING = 60
 const PORTRAIT_ASPECT_RATIO = 9 / 16
@@ -270,16 +268,6 @@ const VideoShortsModal = ({
   // all analytics until Embla fires for startIndex itself.
   const hasSettledRef = useRef<boolean>(startIndex === 0)
   const sessionEndedRef = useRef<boolean>(false)
-  const posthog = usePostHog()
-  const capture = useCallback(
-    (event: string, properties?: Record<string, unknown>) => {
-      if (env("NEXT_PUBLIC_POSTHOG_API_KEY")) {
-        posthog.capture(event, properties)
-      }
-    },
-    [posthog],
-  )
-
   useEffect(() => {
     const id = requestAnimationFrame(() => {
       muteButtonRef.current?.focus()
@@ -315,7 +303,7 @@ const VideoShortsModal = ({
           videoDurationMs = Math.round(duration * 1000)
         }
       }
-      capture(PostHogEvents.VideoShortViewed, {
+      analytics.videoShortViewed({
         videoId: videoData[currentIndex].id,
         videoTitle: videoData[currentIndex].title,
         timeOnVideoMs: Date.now() - currentVideoStartedAtRef.current,
@@ -323,11 +311,11 @@ const VideoShortsModal = ({
       })
       viewedIndicesRef.current.add(currentIndex)
     }
-    capture(PostHogEvents.VideoShortsClosed, {
+    analytics.videoShortsClosed({
       sessionDurationMs: Date.now() - sessionStartedAtRef.current,
       totalVideosViewed: viewedIndicesRef.current.size,
     })
-  }, [capture, videoData])
+  }, [videoData])
 
   const handleClose = useCallback(() => {
     captureSessionEnd()
@@ -394,7 +382,7 @@ const VideoShortsModal = ({
             videoDurationMs = Math.round(duration * 1000)
           }
         }
-        capture(PostHogEvents.VideoShortViewed, {
+        analytics.videoShortViewed({
           videoId: videoData[prevIndex].id,
           videoTitle: videoData[prevIndex].title,
           timeOnVideoMs: Date.now() - currentVideoStartedAtRef.current,
@@ -405,7 +393,7 @@ const VideoShortsModal = ({
       selectedIndexRef.current = newIndex
       currentVideoStartedAtRef.current = Date.now()
     },
-    [videoData, startIndex, capture],
+    [videoData, startIndex],
   )
 
   const onSlidesInView = useCallback(

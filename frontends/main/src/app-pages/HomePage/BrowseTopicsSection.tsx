@@ -1,4 +1,3 @@
-import { env } from "@/env"
 import React from "react"
 import Link from "next/link"
 import {
@@ -12,8 +11,7 @@ import { ButtonLink } from "@mitodl/smoot-design"
 import { useLearningResourceTopics } from "api/hooks/learningResources"
 import { RiArrowRightLine } from "@remixicon/react"
 import RootTopicIcon from "@/components/RootTopicIcon/RootTopicIcon"
-import { usePostHog } from "posthog-js/react"
-import { PostHogEvents } from "@/common/constants"
+import { analytics } from "@/common/analytics"
 
 const Section = styled.section`
   background: #fff url("/images/backgrounds/open-bg-texture-with-gradient.svg")
@@ -107,7 +105,6 @@ const SeeAllButton = styled(ButtonLink)`
 `
 
 const BrowseTopicsSection: React.FC = () => {
-  const posthog = usePostHog()
   const { data: topics } = useLearningResourceTopics({ is_toplevel: true })
 
   return (
@@ -124,11 +121,7 @@ const BrowseTopicsSection: React.FC = () => {
                   key={id}
                   href={channelUrl ? new URL(channelUrl!).pathname : ""}
                   onClick={() => {
-                    if (env("NEXT_PUBLIC_POSTHOG_API_KEY")) {
-                      posthog.capture(PostHogEvents.HomeTopicClicked, {
-                        topic: name,
-                      })
-                    }
+                    analytics.homeTopicClicked({ topic: name })
                   }}
                 >
                   <TopicBoxContent>
@@ -144,9 +137,7 @@ const BrowseTopicsSection: React.FC = () => {
         <SeeAllButton
           href="/topics/"
           onClick={() => {
-            if (env("NEXT_PUBLIC_POSTHOG_API_KEY")) {
-              posthog.capture(PostHogEvents.HomeSeeAllTopicsClicked)
-            }
+            analytics.homeSeeAllTopicsClicked()
           }}
           size="large"
           responsive

@@ -14,9 +14,9 @@ import {
   RiCloseLine,
   RiSparkling2Line,
 } from "@remixicon/react"
-import { useFeatureFlagEnabled, usePostHog } from "posthog-js/react"
+import { useFeatureFlagEnabled } from "posthog-js/react"
 import { FeatureFlags } from "@/common/feature_flags"
-import { PostHogEvents } from "@/common/constants"
+import { analytics } from "@/common/analytics"
 import type { RegisteredSearchParams } from "@/common/searchParams"
 import {
   CloseButton,
@@ -260,7 +260,6 @@ const Overview: React.FC<{ query: string; onDismissed?: () => void }> = ({
   const { messages, append, status } = useAiChat()
   const [drawerOpen, setDrawerOpen] = useState(false)
   const [dismissed, setDismissed] = useState(false)
-  const posthog = usePostHog()
   const requested = useRef(false)
 
   // Move focus once the dismissal has rendered. Doing it in the click handler
@@ -319,9 +318,7 @@ const Overview: React.FC<{ query: string; onDismissed?: () => void }> = ({
             aria-label="Dismiss AI Overview"
             onClick={() => {
               dismiss()
-              if (env("NEXT_PUBLIC_POSTHOG_API_KEY")) {
-                posthog.capture(PostHogEvents.SearchAiOverviewDismissed)
-              }
+              analytics.searchAiOverviewDismissed()
             }}
           >
             <RiCloseLine />
@@ -335,11 +332,7 @@ const Overview: React.FC<{ query: string; onDismissed?: () => void }> = ({
             endIcon={<RiArrowDownLine />}
             onClick={() => {
               setDrawerOpen(true)
-              if (env("NEXT_PUBLIC_POSTHOG_API_KEY")) {
-                posthog.capture(PostHogEvents.AskTimClicked, {
-                  type: "search_ai_overview",
-                })
-              }
+              analytics.askTimClicked({ type: "search_ai_overview" })
             }}
           >
             Show more

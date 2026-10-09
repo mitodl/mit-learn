@@ -1,4 +1,3 @@
-import { env } from "@/env"
 import React from "react"
 import {
   styled,
@@ -26,8 +25,7 @@ import {
 import { propsNotNil, backgroundSrcSetCSS } from "ol-utilities"
 import invariant from "tiny-invariant"
 import backgroundSteps from "@/public/images/backgrounds/background_steps.jpg"
-import { usePostHog } from "posthog-js/react"
-import { PostHogEvents } from "@/common/constants"
+import { analytics } from "@/common/analytics"
 
 const ChildrenContainer = styled.div(({ theme }) => ({
   paddingTop: "40px",
@@ -86,12 +84,8 @@ type TopicChipsInternalProps = {
 }
 
 const TopicChipsInternal: React.FC<TopicChipsInternalProps> = (props) => {
-  const posthog = usePostHog()
   const { topicId, parentTopicId, isTopLevelTopic } = props
   const title = isTopLevelTopic ? "Subtopics" : "Related Topics"
-  const posthogEvent = isTopLevelTopic
-    ? PostHogEvents.SubTopicClicked
-    : PostHogEvents.RelatedTopicClicked
   const subTopicsQuery = useLearningResourceTopics({
     parent_topic_id: [parentTopicId],
   })
@@ -110,8 +104,10 @@ const TopicChipsInternal: React.FC<TopicChipsInternalProps> = (props) => {
             key={topic.id}
             href={topic.channel_url ?? ""}
             onClick={() => {
-              if (env("NEXT_PUBLIC_POSTHOG_API_KEY")) {
-                posthog.capture(posthogEvent, { topic })
+              if (isTopLevelTopic) {
+                analytics.subTopicClicked({ topic: topic.name })
+              } else {
+                analytics.relatedTopicClicked({ topic: topic.name })
               }
             }}
             label={topic.name}

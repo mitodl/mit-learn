@@ -1,6 +1,5 @@
 "use client"
 
-import { env } from "@/env"
 import React from "react"
 import { learningResourceQueries } from "api/hooks/learningResources"
 import {
@@ -21,8 +20,7 @@ import {
   UseQueryResult,
   UseQueryOptions,
 } from "@tanstack/react-query"
-import { usePostHog } from "posthog-js/react"
-import { PostHogEvents } from "@/common/constants"
+import { analytics } from "@/common/analytics"
 
 /**
  * Only surface the "Skip {title}" affordance once the active tab holds enough
@@ -241,7 +239,6 @@ const ResourceCarousel: React.FC<ResourceCarouselProps> = ({
   titleVariant = "h4",
   excludeResourceId,
 }) => {
-  const posthog = usePostHog()
   const [tab, setTab] = React.useState("0")
   const [ref, setRef] = React.useState<HTMLDivElement | null>(null)
   const queries = useQueries({
@@ -350,21 +347,16 @@ const ResourceCarousel: React.FC<ResourceCarouselProps> = ({
                             resource={resource}
                             parentHeadingEl={titleComponent}
                             {...tabConfig.cardProps}
-                            onCardClick={() => {
-                              if (env("NEXT_PUBLIC_POSTHOG_API_KEY")) {
-                                posthog.capture(
-                                  PostHogEvents.CourseCardClicked,
-                                  {
-                                    label: title,
-                                    resourceId: resource.id,
-                                    readableId: resource.readable_id,
-                                    resourceType: resource.resource_type,
-                                    platformCode: resource.platform?.code,
-                                    position: index,
-                                  },
-                                )
-                              }
-                            }}
+                            onCardClick={() =>
+                              analytics.courseCardClicked({
+                                label: title,
+                                resourceId: resource.id,
+                                readableId: resource.readable_id,
+                                resourceType: resource.resource_type,
+                                platformCode: resource.platform?.code,
+                                position: index,
+                              })
+                            }
                           />
                         ))}
                 </StyledCarouselV2>

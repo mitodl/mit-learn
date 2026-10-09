@@ -1,4 +1,3 @@
-import { env } from "@/env"
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
   styled,
@@ -53,10 +52,9 @@ import type {
   FacetManifest,
 } from "@mitodl/course-search-utils"
 import { useAppSearchParams } from "@/common/useAppSearchParams"
-import { PostHogEvents } from "@/common/constants"
 import { ResourceTypeGroupTabs } from "./ResourceTypeGroupTabs"
 import ProfessionalToggle from "./ProfessionalToggle"
-import { trackFilterCourseCatalog } from "@/common/analytics/gtm"
+import { analytics } from "@/common/analytics"
 import SliderInput from "./SliderInput"
 import VectorAdminOptions from "./VectorAdminOptions"
 import { AdminTitleContainer, ExplanationContainer } from "./adminStyles"
@@ -65,7 +63,6 @@ import type { TabConfig } from "./ResourceTypeGroupTabs"
 
 import { ResourceCard } from "../ResourceCard/ResourceCard"
 import { useUserMe } from "api/hooks/user"
-import { usePostHog } from "posthog-js/react"
 import getSearchParams from "./getSearchParams"
 import UniversalAIBanner from "./UniversalAIBanner"
 import AiSearchOverview from "./AiSearchOverview"
@@ -684,28 +681,18 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
 
   const [mobileDrawerOpen, setMobileDrawerOpen] = React.useState(false)
 
-  const posthog = usePostHog()
-
-  const NEXT_PUBLIC_POSTHOG_API_KEY = env("NEXT_PUBLIC_POSTHOG_API_KEY")
-
   const toggleMobileDrawer = (newOpen: boolean) => () => {
     setMobileDrawerOpen(newOpen)
   }
 
-  const captureFilterEvent = (control: string) => {
-    if (NEXT_PUBLIC_POSTHOG_API_KEY) {
-      posthog.capture(PostHogEvents.SearchFilterUpdate, { control })
-    }
-  }
-
   const setParamValue = (name: string, rawValue: string | string[]) => {
     actuallySetParamValue(name, rawValue)
-    captureFilterEvent(name)
+    analytics.searchFilterChanged({ control: name })
   }
 
   const clearAllFacets = () => {
     actuallyClearAllFacets()
-    captureFilterEvent("clear_all")
+    analytics.searchFilterChanged({ control: "clear_all" })
   }
 
   const setSearchParams = (
@@ -713,7 +700,7 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
     value: URLSearchParams | ((prev: URLSearchParams) => URLSearchParams),
   ) => {
     actuallySetSearchParams(value)
-    captureFilterEvent(name)
+    analytics.searchFilterChanged({ control: name })
   }
 
   const toggleParamValue = (
@@ -722,9 +709,9 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
     checked: boolean,
   ) => {
     actuallyToggleParamValue(name, rawValue, checked)
-    captureFilterEvent(name)
+    analytics.searchFilterChanged({ control: name })
     if (checked)
-      trackFilterCourseCatalog({ filterName: name, filterValue: rawValue })
+      analytics.catalogFiltered({ filterName: name, filterValue: rawValue })
   }
 
   // Kept in the list rather than removed, so a sortby that arrives in the URL

@@ -1,11 +1,10 @@
-import { env } from "@/env"
 import React, { useMemo } from "react"
 import Link from "next/link"
 import { styled, Typography } from "ol-components"
-import { useFeatureFlagEnabled, usePostHog } from "posthog-js/react"
+import { useFeatureFlagEnabled } from "posthog-js/react"
 import { FeatureFlags } from "@/common/feature_flags"
 import { programPageView } from "@/common/urls"
-import { PostHogEvents } from "@/common/constants"
+import { analytics } from "@/common/analytics"
 import type { RegisteredSearchParams } from "@/common/searchParams"
 
 const BANNER_SEARCH_TERMS = [
@@ -95,8 +94,6 @@ const UniversalAIBanner: React.FC<UniversalAIBannerProps> = ({
   const featureFlagEnabled = useFeatureFlagEnabled(
     FeatureFlags.UniversalAISearchBanner,
   )
-  const posthog = usePostHog()
-
   const matchesSearchTerm = useMemo(() => {
     if (!searchTerm) return true // If no search term, show the banner by default
     const normalized = searchTerm.trim().toLowerCase()
@@ -113,12 +110,10 @@ const UniversalAIBanner: React.FC<UniversalAIBannerProps> = ({
   })
 
   const handleCTAClick = () => {
-    if (env("NEXT_PUBLIC_POSTHOG_API_KEY")) {
-      posthog.capture(PostHogEvents.CallToActionClicked, {
-        label: "Learn more about Universal AI",
-        readableId: UAI_PROGRAM_READABLE_ID,
-      })
-    }
+    analytics.ctaClicked({
+      label: "Learn more about Universal AI",
+      readableId: UAI_PROGRAM_READABLE_ID,
+    })
   }
 
   if (!showBanner) return null
