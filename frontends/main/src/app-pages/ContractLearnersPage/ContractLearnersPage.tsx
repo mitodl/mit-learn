@@ -961,6 +961,8 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
                     courseRunsFailed={
                       courseRunsQuery.isError && !courseRunsQuery.data
                     }
+                    courseRunsFetching={courseRunsQuery.isFetching}
+                    onRetryCourseRuns={() => courseRunsQuery.refetch()}
                     page={gridPage}
                     onPageChange={setGridPage}
                     emptyMessage={emptyMessage}

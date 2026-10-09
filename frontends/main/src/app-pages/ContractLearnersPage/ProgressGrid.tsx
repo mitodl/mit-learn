@@ -210,6 +210,8 @@ type ProgressGridProps = {
   /** From the page's own course-runs query: one grid column per run. */
   courseRuns: CourseRun[] | undefined
   courseRunsFailed: boolean
+  courseRunsFetching: boolean
+  onRetryCourseRuns: () => void
   page: number
   onPageChange: (page: number) => void
   emptyMessage: string
@@ -264,6 +266,8 @@ const ProgressGrid: React.FC<ProgressGridProps> = ({
   needsAttentionOnly,
   courseRuns,
   courseRunsFailed,
+  courseRunsFetching,
+  onRetryCourseRuns,
   page,
   onPageChange,
   emptyMessage,
@@ -318,18 +322,19 @@ const ProgressGrid: React.FC<ProgressGridProps> = ({
   }, [isBusy, query.data, params, learners.length, safePage, totalPages])
 
   const hasError = query.isError || courseRunsFailed
+  const isRetrying = query.isFetching || courseRunsFetching
 
   const regionRef = useRef<HTMLDivElement>(null)
   const restoreFocus = useRef(false)
   useEffect(() => {
-    if (!restoreFocus.current || query.isFetching) return
+    if (!restoreFocus.current || isRetrying) return
     restoreFocus.current = false
     if (!hasError) regionRef.current?.focus()
-  }, [hasError, query.isFetching])
+  }, [hasError, isRetrying])
   const liveMessage = query.isLoading
     ? "Loading learners"
     : hasError
-      ? query.isFetching
+      ? isRetrying
         ? "Loading learners"
         : "Something went wrong loading learner data."
       : learners.length === 0
@@ -351,14 +356,15 @@ const ProgressGrid: React.FC<ProgressGridProps> = ({
           <Button
             size="small"
             variant="bordered"
-            aria-busy={query.isFetching}
+            aria-busy={isRetrying}
             onClick={() => {
-              if (query.isFetching) return
+              if (isRetrying) return
               restoreFocus.current = true
-              query.refetch()
+              if (query.isError) query.refetch()
+              if (courseRunsFailed) onRetryCourseRuns()
             }}
           >
-            {query.isFetching ? "Retrying…" : "Try again"}
+            {isRetrying ? "Retrying…" : "Try again"}
           </Button>
         </Alert>
       </>
