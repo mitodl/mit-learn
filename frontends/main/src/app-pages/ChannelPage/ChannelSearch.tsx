@@ -34,11 +34,16 @@ const StyledSearchField = styled(SearchField)({
  * The topic layout's filter card, which the design sets 40px above the tabs.
  * Without this the card's white edge runs straight into the white tab row
  * below it and the two read as one block.
+ *
+ * Not drawn on a narrow screen, where the design replaces it with the filter
+ * drawer: the drawer holds the same facets and the same search box, so
+ * leaving the card there as well would ask twice for one set of filters --
+ * and the card is a row of controls that has nowhere to go at that width.
  */
 const TopicSearchContainer = styled(Container)(({ theme }) => ({
   paddingBottom: "40px",
   [theme.breakpoints.down("md")]: {
-    paddingBottom: "24px",
+    display: "none",
   },
 }))
 
@@ -46,7 +51,15 @@ const SHOW_PROFESSIONAL_TOGGLE_BY_CHANNEL_TYPE: Record<
   ChannelTypeEnum,
   boolean
 > = {
-  [ChannelTypeEnum.Topic]: true,
+  /**
+   * False since the topic design, which lists what its filter drawer holds
+   * and does not hold this. The toggle rides along with the facets, and a
+   * topic channel has drawn those in neither place since it moved to the
+   * "topic" layout -- no sidebar, and until now no drawer -- so this is the
+   * setting it has effectively had all along, now that there is somewhere
+   * for it to take effect.
+   */
+  [ChannelTypeEnum.Topic]: false,
   [ChannelTypeEnum.Department]: false,
   [ChannelTypeEnum.Unit]: false,
   [ChannelTypeEnum.Pathway]: false,
@@ -140,22 +153,10 @@ const ChannelSearch: React.FC<ChannelSearchProps> = ({
    * way. The bar is beside the results rather than inside them, so setters
    * reported from within the display alone would miss everything the bar does.
    */
-  const { setParamValue, toggleParamValue, captureFilterEvent } =
-    useTrackedFilterSetters({
-      setParamValue: rawSetParamValue,
-      toggleParamValue: rawToggleParamValue,
-    })
-
-  /**
-   * Reported here because the bar is the only caller that needs it wrapped.
-   * The results display takes the unwrapped `clearAllFacets` and reports its
-   * own clear control itself; handing it this one would count every clear
-   * from there twice.
-   */
-  const clearAllFacetsFromBar = () => {
-    clearAllFacets()
-    captureFilterEvent("clear_all")
-  }
+  const { setParamValue, toggleParamValue } = useTrackedFilterSetters({
+    setParamValue: rawSetParamValue,
+    toggleParamValue: rawToggleParamValue,
+  })
 
   const page = +(searchParams.get("page") ?? "1")
 
@@ -179,7 +180,6 @@ const ChannelSearch: React.FC<ChannelSearchProps> = ({
             params={params}
             setParamValue={setParamValue}
             toggleParamValue={toggleParamValue}
-            clearAllFacets={clearAllFacetsFromBar}
           />
         </TopicSearchContainer>
       ) : (
@@ -200,6 +200,18 @@ const ChannelSearch: React.FC<ChannelSearchProps> = ({
       )}
 
       <ChannelSearchDisplay
+        drawerSearchSlot={
+          layout === "topic" ? (
+            <SearchField
+              value={currentText}
+              placeholder="Search for courses, programs, and learning materials..."
+              onChange={(e) => setCurrentText(e.target.value)}
+              onSubmit={(e) => setCurrentTextAndQuery(e.target.value)}
+              onClear={() => setCurrentTextAndQuery("")}
+              setPage={setPage}
+            />
+          ) : undefined
+        }
         resultsHeadingEl="h3"
         filterHeadingEl="h3"
         page={page}

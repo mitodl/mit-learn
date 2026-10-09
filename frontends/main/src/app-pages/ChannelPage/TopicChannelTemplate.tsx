@@ -142,6 +142,13 @@ const HeroPhoto = styled.div<{ backgroundUrl: string }>(
   }),
 )
 
+/** Clears a column for the text beside the photograph. */
+const HERO_SCRIM_FROM_LEFT =
+  "linear-gradient(259.54deg, rgba(255, 255, 255, 0) 33.745%, rgb(255, 255, 255) 74.054%)"
+
+/** Carries the photograph off above the rest of the page. */
+const HERO_SCRIM_FROM_TOP = `linear-gradient(180deg, rgba(255, 255, 255, 0) calc(${HERO_FADE_END} * 0.0489), rgb(255, 255, 255) ${HERO_FADE_END})`
+
 /**
  * The white wash over the photo, as its own layer rather than extra values on
  * the hero's `background-image`.
@@ -155,15 +162,26 @@ const HeroPhoto = styled.div<{ backgroundUrl: string }>(
  * from the left, behind the text, and the second draws it down from the top
  * over `HERO_FADE_END`, finishing exactly where the photograph's band ends.
  */
-const HeroScrim = styled.div({
+const HeroScrim = styled.div(({ theme }) => ({
   position: "absolute",
   inset: 0,
   pointerEvents: "none",
-  backgroundImage: [
-    "linear-gradient(259.54deg, rgba(255, 255, 255, 0) 33.745%, rgb(255, 255, 255) 74.054%)",
-    `linear-gradient(180deg, rgba(255, 255, 255, 0) calc(${HERO_FADE_END} * 0.0489), rgb(255, 255, 255) ${HERO_FADE_END})`,
-  ].join(", "),
-})
+  backgroundImage: [HERO_SCRIM_FROM_LEFT, HERO_SCRIM_FROM_TOP].join(", "),
+  /**
+   * Only the wash from the top on a narrow screen.
+   *
+   * The other one clears a column for text to sit *beside* the photograph,
+   * and a phone has no beside: the text runs the full width, so that gradient
+   * closes over the photograph behind the breadcrumb and the description and
+   * leaves both on flat white. The design draws them with the photograph
+   * showing through, which is what is left once this one goes -- the wash
+   * from the top still carries it off before the rest of the page, and the
+   * photograph's own left edge still fades under the start of each line.
+   */
+  [theme.breakpoints.down("sm")]: {
+    backgroundImage: HERO_SCRIM_FROM_TOP,
+  },
+}))
 
 /**
  * The Follow control as the design draws it: a grey pill, not the primary red
@@ -241,6 +259,20 @@ const HeroInner = styled.div(({ theme }) => ({
 }))
 
 /**
+ * What the breadcrumb and the description sit on, on a narrow screen.
+ *
+ * A phone has no column clear of the photograph -- the text runs the full
+ * width, straight across it -- so the design gives each of them a pane of its
+ * own to be read against: white at three quarters, which lifts the words off
+ * the photograph while leaving it visible underneath.
+ */
+const HERO_TEXT_PANEL = {
+  backgroundColor: "rgba(255, 255, 255, 0.75)",
+  padding: "8px",
+  borderRadius: "8px",
+} as const
+
+/**
  * Held to 736px, as the design has it: the description is a paragraph to read,
  * and the full container width would run it to an uncomfortable measure.
  */
@@ -269,6 +301,11 @@ const BannerArea = styled.div(({ theme }) => ({
       ...theme.typography.body3,
       color: theme.custom.colors.silverGrayDark,
     },
+  },
+  /* The 8px here replaces the zeroed bottom padding above, which is why this
+     follows it rather than sitting with the other narrow-screen rules. */
+  [theme.breakpoints.down("sm")]: {
+    "> span": HERO_TEXT_PANEL,
   },
 }))
 
@@ -315,6 +352,7 @@ const TopicDescription = styled(Typography)(({ theme }) => ({
   width: "90%",
   [theme.breakpoints.down("sm")]: {
     width: "100%",
+    ...HERO_TEXT_PANEL,
   },
 }))
 

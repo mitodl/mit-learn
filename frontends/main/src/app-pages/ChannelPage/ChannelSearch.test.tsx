@@ -645,12 +645,12 @@ describe("ChannelSearch", () => {
   )
 
   /**
-   * The topic layout carries its own filters above the results, so the narrow
-   * screen's drawer would offer a second and longer set of them -- including
-   * the facets that layout deliberately drops. Sorting has nowhere else to go
-   * on a narrow screen, so it stays.
+   * The topic layout's filter card is a row of controls with nowhere to go on
+   * a narrow screen, so the design hides it there and puts the same filters
+   * in the drawer instead -- the search box among them, which is why the
+   * drawer carries one and the other channels' drawers do not.
    */
-  test("a topic page offers no second set of filters on a narrow screen", async () => {
+  test("a topic page puts its filters in the drawer on a narrow screen", async () => {
     const { channel } = setMockApiResponses({
       channelPatch: { channel_type: ChannelTypeEnum.Topic },
     })
@@ -658,12 +658,45 @@ describe("ChannelSearch", () => {
     renderWithProviders(<ChannelPage />, {
       url: `/c/${channel.channel_type}/${channel.name}`,
     })
-    await screen.findByTestId("topic-search-filter-bar")
+    await user.click(await screen.findByRole("button", { name: "Filter" }))
 
-    expect(screen.queryByRole("button", { name: "Filter" })).toBe(null)
-    /* Both sort controls survive -- the one beside the tabs and the one the
-       narrow screen shows in the drawer's place. */
-    expect(screen.getAllByText(/^Sort by:/)).toHaveLength(2)
+    const drawer = await screen.findByRole("presentation")
+    expect(
+      within(drawer).getByPlaceholderText(
+        "Search for courses, programs, and learning materials...",
+      ),
+    ).toBeInTheDocument()
+    /* The toggle rides along with the facets; this design does not list it. */
+    expect(within(drawer).queryByText("Academic")).toBe(null)
+    /* Nor Offered By or Department, which the drawer design stops short of. */
+    expect(within(drawer).queryByText("Offered By")).toBe(null)
+    expect(within(drawer).queryByText("Department")).toBe(null)
+  }, 10000)
+
+  /**
+   * The tab row does not fit a phone, so the design moves the choice into the
+   * drawer. It is still the tabs: one at a time, writing the same param, and
+   * unchecking the chosen one is how it gets back to All.
+   */
+  test("the drawer carries the resource type choice", async () => {
+    const { channel } = setMockApiResponses({
+      channelPatch: { channel_type: ChannelTypeEnum.Topic },
+    })
+
+    renderWithProviders(<ChannelPage />, {
+      url: `/c/${channel.channel_type}/${channel.name}`,
+    })
+    await user.click(await screen.findByRole("button", { name: "Filter" }))
+    const drawer = await screen.findByRole("presentation")
+    const courses = () =>
+      within(drawer).getByRole("checkbox", { name: "Courses" })
+
+    await user.click(courses())
+    expect(courses()).toBeChecked()
+
+    /* Unchecking it is the All tab, which the design draws no row for. */
+    await user.click(courses())
+    expect(courses()).not.toBeChecked()
   }, 10000)
 
   test("other channels keep the narrow screen's filter drawer", async () => {
@@ -738,52 +771,101 @@ describe("ChannelSearch", () => {
    * The dropdowns say what they are narrowed to, so the card states the
    * filters without any of them being opened.
    */
-  describe("topic filter bar selections", () => {
-    /* Returns the bar itself, so each test scopes its queries to the card. */
-    const filterBarAt = async (query: string) => {
+  /**
+   * The bar's dropdowns close over what they selected, so the row above the
+   * results is the only place the applied filters are named -- and the only
+   * place each one can be switched off by itself.
+   */
+  describe("selected filter chips", () => {
+    const chipRowAt = async (query: string) => {
       const { channel } = setMockApiResponses({
         channelPatch: { channel_type: ChannelTypeEnum.Topic },
       })
       renderWithProviders(<ChannelPage />, {
         url: `/c/${channel.channel_type}/${channel.name}/${query}`,
       })
-      return screen.findByTestId("topic-search-filter-bar")
+      return screen.findByTestId("selected-filters")
     }
 
-    test("a dropdown names its selection", async () => {
-      const bar = await filterBarAt("?delivery=in_person")
+    /* Labelled as the facets are labelled wherever else they are drawn. */
+    test("names each applied filter", async () => {
+      const row = await chipRowAt(
+        "?delivery=in_person&certification_type=professional&free=true",
+      )
 
-      expect(within(bar).getByText("(In-Person)")).toBeInTheDocument()
+      expect(
+        within(row).getByRole("button", { name: "Remove filter In-Person" }),
+      ).toBeInTheDocument()
+      expect(
+        within(row).getByRole("button", {
+          name: "Remove filter Professional Certificate",
+        }),
+      ).toBeInTheDocument()
+      expect(
+        within(row).getByRole("button", { name: "Remove filter Free" }),
+      ).toBeInTheDocument()
     }, 10000)
 
     /**
-     * Naming only the first would leave the second narrowing the results with
-     * nothing on screen saying so.
+     * One order for both screens: the same list that puts Format above
+     * Certificate in the narrow screen's drawer puts the formats before the
+     * certificates here, rather than leaving the chips in whichever order the
+     * URL happens to carry them.
      */
-    test("a dropdown counts the selections it cannot name", async () => {
-      const bar = await filterBarAt("?delivery=in_person&delivery=online")
+    test("lists them in the drawer's order, not the URL's", async () => {
+      const row = await chipRowAt(
+        "?certification_type=professional&delivery=in_person&free=true",
+      )
 
-      expect(within(bar).getByText("(In-Person +1)")).toBeInTheDocument()
-    }, 10000)
-
-    test("Clear drops the filters and keeps the query", async () => {
-      const bar = await filterBarAt("?q=robots&delivery=in_person&free=true")
-      expect(within(bar).getByRole("checkbox", { name: "Free" })).toBeChecked()
-
-      await user.click(within(bar).getByRole("button", { name: "Clear" }))
-
-      expect(within(bar).queryByText("(In-Person)")).toBe(null)
       expect(
-        within(bar).getByRole("checkbox", { name: "Free" }),
-      ).not.toBeChecked()
-      /* The box sits beside the filters but is not one of them. */
-      expect(within(bar).getByDisplayValue("robots")).toBeInTheDocument()
+        within(row)
+          .getAllByRole("button")
+          .map((button) => button.textContent),
+      ).toEqual([
+        "Free",
+        "In-Person",
+        "Professional Certificate",
+        "Clear all filters",
+      ])
     }, 10000)
 
-    test("Clear is absent when nothing is filtering", async () => {
-      const bar = await filterBarAt("?q=robots")
+    test("a chip removes only its own filter", async () => {
+      const row = await chipRowAt("?delivery=in_person&free=true")
 
-      expect(within(bar).queryByRole("button", { name: "Clear" })).toBe(null)
+      await user.click(
+        within(row).getByRole("button", { name: "Remove filter Free" }),
+      )
+
+      expect(
+        within(row).queryByRole("button", { name: "Remove filter Free" }),
+      ).toBe(null)
+      expect(
+        within(row).getByRole("button", { name: "Remove filter In-Person" }),
+      ).toBeInTheDocument()
+    }, 10000)
+
+    test("Clear all filters drops them all but keeps the query", async () => {
+      const row = await chipRowAt("?q=robots&delivery=in_person&free=true")
+
+      await user.click(
+        within(row).getByRole("button", { name: "Clear all filters" }),
+      )
+
+      expect(screen.queryByTestId("selected-filters")).toBe(null)
+      /* The search box sits beside the filters but is not one of them. */
+      expect(screen.getByDisplayValue("robots")).toBeInTheDocument()
+    }, 10000)
+
+    test("the row is absent when nothing is filtering", async () => {
+      const { channel } = setMockApiResponses({
+        channelPatch: { channel_type: ChannelTypeEnum.Topic },
+      })
+      renderWithProviders(<ChannelPage />, {
+        url: `/c/${channel.channel_type}/${channel.name}/?q=robots`,
+      })
+      await screen.findByTestId("topic-search-filter-bar")
+
+      expect(screen.queryByTestId("selected-filters")).toBe(null)
     }, 10000)
   })
 
