@@ -300,6 +300,26 @@ describe("helpers", () => {
         EnrollmentStatus.Enrolled,
       )
     })
+
+    test("returns Enrolled when only some modules are passed", () => {
+      const programEnrollment = factories.enrollment.programEnrollmentV3({
+        certificate: null,
+      })
+
+      expect(getProgramEnrollmentStatus(programEnrollment, 1, 2, 3)).toBe(
+        EnrollmentStatus.Enrolled,
+      )
+    })
+
+    test("returns Completed when all modules are passed without a certificate", () => {
+      const programEnrollment = factories.enrollment.programEnrollmentV3({
+        certificate: null,
+      })
+
+      expect(getProgramEnrollmentStatus(programEnrollment, 0, 2, 2)).toBe(
+        EnrollmentStatus.Completed,
+      )
+    })
   })
 
   describe("getRequirementsProgress", () => {
