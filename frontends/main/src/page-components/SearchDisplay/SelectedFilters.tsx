@@ -16,6 +16,25 @@ type SelectedFilter = {
 }
 
 /**
+ * One facet's setting, read out of the params by name.
+ *
+ * By name rather than by key, because the two lists are not the same list:
+ * the manifest holds the facets the page offers, including ones that only
+ * ever arrive in the URL, while the params type holds what the search request
+ * accepts. A facet in the one and not the other does not stop a value being
+ * read at runtime, but it does stop the lookup compiling.
+ */
+const facetSetting = (params: SearchParams, name: string): unknown =>
+  (params as Record<string, unknown>)[name]
+
+const facetValues = (params: SearchParams, name: string): string[] => {
+  const setting = facetSetting(params, name)
+  return Array.isArray(setting)
+    ? setting.filter((value): value is string => typeof value === "string")
+    : []
+}
+
+/**
  * The facet values currently narrowing the results, in the manifest's order.
  *
  * Read from the manifest rather than from a list kept here, so a facet that
@@ -28,19 +47,19 @@ const selectedFilters = (
   facetManifest: FacetManifest,
   params: SearchParams,
 ): SelectedFilter[] =>
-  facetManifest.flatMap((facet) => {
+  facetManifest.flatMap((facet): SelectedFilter[] => {
     if (facet.type === "group") {
       /* A boolean facet is either on or off, so the group's own label is the
          whole chip -- there is no value to name beside it. */
       return facet.facets
-        .filter((member) => params[member.name] === member.value)
+        .filter((member) => facetSetting(params, member.name) === member.value)
         .map((member) => ({
           name: member.name,
           value: String(member.value),
           label: member.label,
         }))
     }
-    return (params[facet.name] ?? []).map((value) => ({
+    return facetValues(params, facet.name).map((value) => ({
       name: facet.name,
       value,
       label: facet.labelFunction?.(value) ?? value,
