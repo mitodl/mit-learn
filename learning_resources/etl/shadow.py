@@ -605,9 +605,13 @@ def _save(
             resource_type,
             pair_error or counts,
         )
-        kept = ETLShadowRun.objects.filter(
-            etl_source=etl_source, resource_type=resource_type, pipeline=pipeline
-        ).values_list("id", flat=True)[:SHADOW_RUNS_KEPT]
+        kept = (
+            ETLShadowRun.objects.filter(
+                etl_source=etl_source, resource_type=resource_type, pipeline=pipeline
+            )
+            .order_by("-created_on", "-id")
+            .values_list("id", flat=True)[:SHADOW_RUNS_KEPT]
+        )
         ETLShadowRun.objects.filter(
             etl_source=etl_source, resource_type=resource_type, pipeline=pipeline
         ).exclude(id__in=list(kept)).delete()
