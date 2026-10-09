@@ -77,6 +77,8 @@ const LEGEND_STATUSES: DisplayStatus[] = [
   "certificate",
   "in-progress",
   "not-started",
+  "not-shared",
+  "unknown",
 ]
 
 const ScrollRegion = styled.div({
@@ -290,35 +292,65 @@ const ProgressGrid: React.FC<ProgressGridProps> = ({
     [query.data],
   )
   const totalPages = Math.ceil(learners.length / PAGE_SIZE)
-  const visible = learners.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
+  const safePage = Math.min(page, Math.max(totalPages, 1))
+  const visible = learners.slice(
+    (safePage - 1) * PAGE_SIZE,
+    safePage * PAGE_SIZE,
+  )
+  const enrollmentsFiltered = !!completionStatus || needsAttentionOnly
   const isStale = query.isPlaceholderData || query.isFetching
   const isBusy = query.isLoading || isStale
 
   const [scrolled, setScrolled] = useState(false)
   const [announcement, setAnnouncement] = useState("")
-  const lastAnnounced = useRef<string | null>(null)
+  const lastParams = useRef<string | null>(null)
   useEffect(() => {
     if (isBusy || !query.data) return
     const key = JSON.stringify(params)
-    if (lastAnnounced.current === null) {
-      lastAnnounced.current = key
-      return
-    }
-    if (lastAnnounced.current === key) return
-    lastAnnounced.current = key
+    const pageText = `Page ${safePage} of ${Math.max(totalPages, 1)}`
     setAnnouncement(
-      `${learners.length} ${learners.length === 1 ? "learner" : "learners"}`,
+      lastParams.current !== null && lastParams.current !== key
+        ? `${learners.length} ${learners.length === 1 ? "learner" : "learners"}. ${pageText}`
+        : `Showing ${pageText.toLowerCase()}`,
     )
-  }, [isBusy, query.data, params, learners.length])
+    lastParams.current = key
+  }, [isBusy, query.data, params, learners.length, safePage, totalPages])
 
-  if (query.isError || courseRunsFailed) {
+  const hasError = query.isError || courseRunsFailed
+  const liveMessage = query.isLoading
+    ? "Loading learners"
+    : hasError
+      ? query.isFetching
+        ? "Loading learners"
+        : "Something went wrong loading learner data."
+      : learners.length === 0
+        ? emptyMessage
+        : announcement
+
+  const liveRegion = (
+    <VisuallyHidden role="status" aria-atomic="true">
+      {liveMessage}
+    </VisuallyHidden>
+  )
+
+  if (hasError) {
     return (
-      <Alert severity="error">
-        Something went wrong loading learner data.{" "}
-        <Button size="small" variant="bordered" onClick={() => query.refetch()}>
-          Try again
-        </Button>
-      </Alert>
+      <>
+        {liveRegion}
+        <Alert severity="error">
+          Something went wrong loading learner data.{" "}
+          <Button
+            size="small"
+            variant="bordered"
+            aria-busy={query.isFetching}
+            onClick={() => {
+              if (!query.isFetching) query.refetch()
+            }}
+          >
+            {query.isFetching ? "Retrying…" : "Try again"}
+          </Button>
+        </Alert>
+      </>
     )
   }
 
@@ -335,18 +367,9 @@ const ProgressGrid: React.FC<ProgressGridProps> = ({
         </Alert>
       ) : null}
 
-      <VisuallyHidden aria-live="polite" aria-atomic="true">
-        {announcement}
-      </VisuallyHidden>
+      {liveRegion}
 
       <TableCard>
-        <VisuallyHidden role="status" aria-atomic="true">
-          {query.isLoading
-            ? "Loading learners"
-            : learners.length === 0
-              ? emptyMessage
-              : `Showing page ${page} of ${Math.max(totalPages, 1)}`}
-        </VisuallyHidden>
         <Legend aria-label="Legend">
           {LEGEND_STATUSES.map((status) => (
             <li key={status}>
@@ -360,8 +383,8 @@ const ProgressGrid: React.FC<ProgressGridProps> = ({
             </li>
           ))}
           <li>
-            <Muted>N/A</Muted>
-            Not enrolled
+            <Muted>{enrollmentsFiltered ? "—" : "N/A"}</Muted>
+            {enrollmentsFiltered ? "Hidden by filter" : "Not enrolled"}
           </li>
           <li>
             <AttentionMark style={{ margin: 0 }}>
@@ -436,8 +459,12 @@ const ProgressGrid: React.FC<ProgressGridProps> = ({
                         return (
                           <ModuleCell key={run.courserun_id} role="cell">
                             <Muted>
-                              N/A
-                              <VisuallyHidden>, not enrolled</VisuallyHidden>
+                              {enrollmentsFiltered ? "—" : "N/A"}
+                              <VisuallyHidden>
+                                {enrollmentsFiltered
+                                  ? "Hidden by the current filter"
+                                  : ", not enrolled"}
+                              </VisuallyHidden>
                             </Muted>
                           </ModuleCell>
                         )
@@ -471,13 +498,13 @@ const ProgressGrid: React.FC<ProgressGridProps> = ({
         <TableFooter>
           <TableFootnote component="p">
             {learners.length > 0
-              ? `Page ${page} of ${Math.max(totalPages, 1)}`
+              ? `Page ${safePage} of ${Math.max(totalPages, 1)}`
               : ""}
           </TableFootnote>
           {totalPages > 1 ? (
             <Pagination
               count={totalPages}
-              page={page}
+              page={safePage}
               shape="rounded"
               size="small"
               onChange={(_event, value) => onPageChange(value)}

@@ -359,7 +359,7 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
     window.history.replaceState(
       null,
       "",
-      `${window.location.pathname}${query ? `?${query}` : ""}`,
+      `${window.location.pathname}${query ? `?${query}` : ""}${window.location.hash}`,
     )
   }
 
