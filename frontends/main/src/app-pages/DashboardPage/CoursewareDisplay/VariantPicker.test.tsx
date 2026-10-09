@@ -13,6 +13,8 @@ const makeVariant = (
   language: LanguageEnum.En,
   variant_industry: "",
   variant_length: "",
+  variant_industry_label: "",
+  variant_length_label: "",
   active: true,
   b2b_only: true,
   default_variant: false,
