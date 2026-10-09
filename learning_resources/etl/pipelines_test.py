@@ -22,7 +22,12 @@ from learning_resources.etl.constants import (
     ProgramLoaderConfig,
 )
 from learning_resources.etl.exceptions import ExtractException
+from learning_resources.etl.ownership import Pipeline
+from learning_resources.factories import ETLSourceOwnershipFactory
 from learning_resources.models import LearningResource
+
+# Every pipeline checks ETLSourceOwnership before it extracts.
+pytestmark = pytest.mark.django_db
 
 
 @contextmanager
@@ -459,3 +464,104 @@ def test_posthog_etl():
     mock_load_events.assert_called_once_with(mock_transform.return_value)
 
     assert result == mock_load_events.return_value
+
+
+COURSE = LearningResourceType.course.name
+PROGRAM = LearningResourceType.program.name
+OWNED_PIPELINES = [
+    ("mit_edx_courses_etl", "mit_edx.extract", ETLSource.mit_edx, [COURSE]),
+    ("mit_edx_programs_etl", "mit_edx_programs.extract", ETLSource.mit_edx, [PROGRAM]),
+    (
+        "mitxonline_courses_etl",
+        "mitxonline.extract_courses",
+        ETLSource.mitxonline,
+        [COURSE],
+    ),
+    (
+        "mitxonline_programs_etl",
+        "mitxonline.extract_programs",
+        ETLSource.mitxonline,
+        [PROGRAM],
+    ),
+    ("xpro_courses_etl", "xpro.extract_courses", ETLSource.xpro, [COURSE]),
+    ("xpro_programs_etl", "xpro.extract_programs", ETLSource.xpro, [PROGRAM]),
+    ("oll_etl", "oll.extract", ETLSource.oll, [COURSE]),
+    ("sloan_courses_etl", "sloan.extract", ETLSource.see, [COURSE]),
+    ("ovs_etl", "ovs.extract", ETLSource.ovs, [LearningResourceType.video.name]),
+    (
+        "podcast_etl",
+        "podcast.extract",
+        ETLSource.podcast,
+        [LearningResourceType.podcast_episode.name],
+    ),
+    ("mitpe_etl", "mitpe.extract", ETLSource.mitpe, [COURSE, PROGRAM]),
+    (
+        "mit_climate_etl",
+        "mit_climate.extract_articles",
+        ETLSource.mit_climate,
+        [LearningResourceType.document.name],
+    ),
+]
+
+
+@pytest.mark.parametrize(
+    ("pipeline", "extract", "etl_source", "resource_types"), OWNED_PIPELINES
+)
+def test_pipeline_does_not_extract_what_legacy_does_not_own(
+    pipeline, extract, etl_source, resource_types
+):
+    """A pipeline whose source was cut over returns before it extracts anything"""
+    for resource_type in resource_types:
+        ETLSourceOwnershipFactory.create(
+            etl_source=etl_source.name,
+            resource_type=resource_type,
+            owner=Pipeline.WEBHOOK,
+        )
+
+    with reload_mocked_pipeline(
+        patch(f"learning_resources.etl.{extract}", autospec=True)
+    ) as (mock_extract,):
+        result = getattr(pipelines, pipeline)()
+
+    mock_extract.assert_not_called()
+    assert not any(result) if isinstance(result, tuple) else result == []
+
+
+@pytest.mark.parametrize(
+    ("webhook_owned", "loads_courses", "loads_programs"),
+    [(COURSE, False, True), (PROGRAM, True, False)],
+)
+def test_mitpe_etl_loads_only_the_types_legacy_owns(
+    mocker, webhook_owned, loads_courses, loads_programs
+):
+    """MIT PE extracts both types at once and loads whichever one legacy still owns"""
+    ETLSourceOwnershipFactory.create(
+        etl_source=ETLSource.mitpe.name,
+        resource_type=webhook_owned,
+        owner=Pipeline.WEBHOOK,
+    )
+    mocker.patch("learning_resources.etl.mitpe.extract")
+    mocker.patch("learning_resources.etl.mitpe.transform", return_value=([], []))
+    mock_load_courses = mocker.patch("learning_resources.etl.loaders.load_courses")
+    mock_load_programs = mocker.patch("learning_resources.etl.loaders.load_programs")
+
+    courses, programs = pipelines.mitpe_etl()
+
+    assert mock_load_courses.called is loads_courses
+    assert mock_load_programs.called is loads_programs
+    assert courses == (mock_load_courses.return_value if loads_courses else [])
+    assert programs == (mock_load_programs.return_value if loads_programs else [])
+
+
+def test_ocw_courses_etl_skips_when_legacy_does_not_own_courses(mocker):
+    """The ocw-studio webhook loads nothing once OCW courses are owned elsewhere"""
+    ETLSourceOwnershipFactory.create(
+        etl_source=ETLSource.ocw.name, resource_type=COURSE, owner=Pipeline.WAREHOUSE
+    )
+    mock_extract = mocker.patch("learning_resources.etl.ocw.extract_course")
+    mock_boto = mocker.patch("learning_resources.etl.pipelines.boto3")
+
+    pipelines.ocw_courses_etl(url_paths=["courses/a/"], force_overwrite=False)
+
+    mock_boto.resource.assert_not_called()
+    mock_extract.assert_not_called()

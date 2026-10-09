@@ -27,11 +27,12 @@ from learning_resources.factories import (
     ContentFileFactory,
     CredentialMetadataConfigurationFactory,
     CredentialMetadataFactory,
+    ETLSourceOwnershipFactory,
     LearningResourceFactory,
     LearningResourcePlatformFactory,
     LearningResourceRunFactory,
 )
-from learning_resources.models import ContentFile, LearningResource
+from learning_resources.models import ContentFile, ETLSourceOwnership, LearningResource
 from learning_resources.tasks import (
     cleanup_deleted_content_files,
     get_ocw_data,
@@ -662,6 +663,90 @@ def test_get_youtube_playlist_data_without_channel(mocker, youtube_settings):
         "channel1", _playlist_data("playlist1"), "ocw", create_videos=True
     )
 
+    mock_load_playlist.assert_not_called()
+
+
+def _warehouse_owns_youtube():
+    """Hand both YouTube resource types to the warehouse pipeline"""
+    for resource_type in (
+        LearningResourceType.video_playlist.name,
+        LearningResourceType.video.name,
+    ):
+        ETLSourceOwnershipFactory.create(
+            etl_source=ETLSource.youtube.name,
+            resource_type=resource_type,
+            owner=ETLSourceOwnership.Pipeline.WAREHOUSE,
+        )
+
+
+def test_get_youtube_data_skips_when_legacy_does_not_own_youtube(
+    mocker, youtube_settings
+):
+    """The fan-out queues nothing for a source the legacy ETL does not own"""
+    _warehouse_owns_youtube()
+    mock_configs = mocker.patch(
+        "learning_resources.tasks.youtube.get_youtube_channel_configs", autospec=True
+    )
+    mock_channel_task = mocker.patch(
+        "learning_resources.tasks.get_youtube_channel_data", autospec=True
+    )
+
+    assert get_youtube_data.delay().get() == 0
+
+    mock_configs.assert_not_called()
+    mock_channel_task.delay.assert_not_called()
+
+
+def test_get_youtube_channel_data_skips_when_ownership_changed(
+    mocker, youtube_settings
+):
+    """A channel task queued before the cutover writes nothing after it"""
+    _warehouse_owns_youtube()
+    mocker.patch("learning_resources.tasks.youtube.get_youtube_client", autospec=True)
+    mock_extract = mocker.patch(
+        "learning_resources.tasks.youtube.extract_channel",
+        autospec=True,
+        return_value={"id": "channel1", "snippet": {"title": "Channel 1"}},
+    )
+    mocker.patch(
+        "learning_resources.tasks.youtube.extract_playlist_metadata",
+        autospec=True,
+        return_value=iter([(_playlist_data("playlist1"), True)]),
+    )
+    mock_unpublish = mocker.patch(
+        "learning_resources.tasks.loaders.unpublish_removed_playlists", autospec=True
+    )
+    mock_playlist_task = mocker.patch(
+        "learning_resources.tasks.get_youtube_playlist_data", autospec=True
+    )
+
+    get_youtube_channel_data.delay(_channel_config("channel1"))
+
+    mock_extract.assert_not_called()
+    assert models.VideoChannel.objects.count() == 0
+    mock_unpublish.assert_not_called()
+    mock_playlist_task.delay.assert_not_called()
+
+
+def test_get_youtube_playlist_data_skips_when_ownership_changed(
+    mocker, youtube_settings
+):
+    """A playlist task queued before the cutover writes nothing after it"""
+    factories.VideoChannelFactory.create(channel_id="channel1")
+    _warehouse_owns_youtube()
+    mocker.patch("learning_resources.tasks.youtube.get_youtube_client", autospec=True)
+    mock_videos = mocker.patch(
+        "learning_resources.tasks.youtube.extract_playlist_items", autospec=True
+    )
+    mock_load_playlist = mocker.patch(
+        "learning_resources.tasks.loaders.load_playlist", autospec=True
+    )
+
+    get_youtube_playlist_data.delay(
+        "channel1", _playlist_data("playlist1"), "ocw", create_videos=True
+    )
+
+    mock_videos.assert_not_called()
     mock_load_playlist.assert_not_called()
 
 
@@ -1359,6 +1444,37 @@ def test_unpublish_removed_canvas_courses_empty(mocker):
     resource.refresh_from_db()
     assert resource.published is True
     assert resource.test_mode is True
+
+
+def test_sync_canvas_courses_skips_entirely_when_not_owned(settings, mocker):
+    """
+    sync_canvas_courses should not ingest archives or unpublish/delete stale
+    courses once canvas courses are owned by another pipeline.
+    """
+    settings.CANVAS_COURSE_BUCKET_PREFIX = "canvas/"
+    ETLSourceOwnershipFactory.create(
+        etl_source=ETLSource.canvas.name,
+        resource_type=LearningResourceType.course.name,
+        owner=ETLSourceOwnership.Pipeline.WEBHOOK,
+    )
+    mocker.patch("learning_resources.tasks.resource_unpublished_actions")
+    mock_get_bucket = mocker.patch("learning_resources.tasks.get_bucket_by_name")
+    mock_ingest_course = mocker.patch("learning_resources.tasks.ingest_canvas_course")
+
+    lr_stale = LearningResourceFactory.create(
+        readable_id="course3",
+        etl_source=ETLSource.canvas.name,
+        published=True,
+        test_mode=True,
+        resource_type="course",
+    )
+
+    sync_canvas_courses(canvas_course_ids=None, overwrite=False)
+
+    mock_get_bucket.assert_not_called()
+    mock_ingest_course.assert_not_called()
+    lr_stale.refresh_from_db()
+    assert lr_stale.published is True
 
 
 @pytest.mark.parametrize(
@@ -2445,3 +2561,20 @@ def test_credential_metadata_leaf_task_is_acknowledged_late():
 
     assert task.acks_late is True
     assert task.reject_on_worker_lost is True
+
+
+def test_get_ocw_data_skips_when_legacy_does_not_own_courses(settings, mocker):
+    """get_ocw_data lists no bucket and queues no course once OCW is owned elsewhere"""
+    settings.OCW_LIVE_BUCKET = "bucket"
+    ETLSourceOwnershipFactory.create(
+        etl_source=ETLSource.ocw.name,
+        resource_type=LearningResourceType.course.name,
+        owner=ETLSourceOwnership.Pipeline.WAREHOUSE,
+    )
+    mock_boto = mocker.patch("learning_resources.tasks.boto3")
+    mock_get_ocw_courses = mocker.patch("learning_resources.tasks.get_ocw_courses")
+
+    assert get_ocw_data.delay().get() is None
+
+    mock_boto.resource.assert_not_called()
+    mock_get_ocw_courses.si.assert_not_called()

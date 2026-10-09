@@ -29,7 +29,10 @@ import { isVerifiedEnrollmentMode } from "@/common/mitxonline"
 import { RiArrowUpCircleLine, RiAwardLine, RiMore2Line } from "@remixicon/react"
 import { useReplaceBasketItem } from "@/common/mitxonline/useReplaceBasketItem"
 import { useComplianceGate } from "@/common/mitxonline/useComplianceGate"
-import { useCreateVerifiedProgramEnrollment } from "api/mitxonline-hooks/enrollment"
+import {
+  useCreateB2bEnrollment,
+  useCreateVerifiedProgramEnrollment,
+} from "api/mitxonline-hooks/enrollment"
 import { SILENCE_ERROR_TOAST } from "api/mutation-meta"
 import { badRequestDetail } from "api/mutation-errors"
 import { isInPast, calendarDaysUntil, NoSSR } from "ol-utilities"
@@ -43,6 +46,7 @@ import { useOrderIdForRun } from "@/common/mitxonline/useOrderIdForResource"
 import type { SimpleMenuItem } from "ol-components"
 import {
   CourseRunEnrollmentV3,
+  EnrollmentModeEnum,
   V3UserProgramEnrollment,
 } from "@mitodl/mitxonline-api-axios/v2"
 import { ProgressBadge } from "./ProgressBadge"
@@ -323,6 +327,42 @@ export const EnrolledCourseCard = ({
     type: DashboardType.CourseRunEnrollment,
     data: enrollment,
   })
+  /**
+   * A contract run can be a public run, so the learner may hold an audit
+   * enrollment in it from before they joined the contract. Continuing through
+   * the one-click B2B enroll API upgrades that enrollment under the contract.
+   */
+  const needsContractUpgrade =
+    isContractPageResource && enrollmentMode === EnrollmentModeEnum.Audit
+  // Failures are deliberately silent: the learner is still enrolled, so the
+  // click falls through to the courseware either way rather than trapping them
+  // on the dashboard behind an upgrade they may not be eligible for.
+  const createB2bEnrollment = useCreateB2bEnrollment({
+    meta: SILENCE_ERROR_TOAST,
+  })
+  const { ensureCompliance } = useComplianceGate()
+  const handleContinueClick = async (e: React.MouseEvent<HTMLElement>) => {
+    if (!needsContractUpgrade || !run?.courseware_id || !coursewareUrl) return
+    e.preventDefault()
+    if (createB2bEnrollment.isPending) return
+    if (!(await ensureCompliance())) return
+    const b2bProgramId =
+      ancestorContext?.parentProgramReadableIds?.[0] ??
+      ancestorContext?.programEnrollment?.program.readable_id
+    createB2bEnrollment.mutate(
+      {
+        readable_id: run.courseware_id,
+        B2BEnrollRequestRequest: b2bProgramId
+          ? { program_id: b2bProgramId }
+          : undefined,
+      },
+      {
+        onSettled: () => {
+          window.location.href = coursewareUrl
+        },
+      },
+    )
+  }
   const upgradedAndIncomplete =
     !isContractPageResource && isVerifiedEnrollmentMode(enrollmentMode)
   const certButton = certificateLink ? (
@@ -379,6 +419,7 @@ export const EnrolledCourseCard = ({
             size="medium"
             color="black"
             href={coursewareUrl}
+            onClick={handleContinueClick}
             enrollmentstatus={enrollmentStatus}
           >
             {title}
@@ -413,6 +454,8 @@ export const EnrolledCourseCard = ({
         size="small"
         variant={compactVariant}
         href={coursewareUrl ?? ""}
+        onClick={handleContinueClick}
+        aria-busy={createB2bEnrollment.isPending}
         data-testid="courseware-button"
         aria-label={`${buttonText} course: ${title}`}
       >
@@ -434,6 +477,8 @@ export const EnrolledCourseCard = ({
       size="small"
       variant={variant}
       href={coursewareUrl ?? ""}
+      onClick={handleContinueClick}
+      aria-busy={createB2bEnrollment.isPending}
       data-testid="courseware-button"
       aria-label={`${buttonText} course: ${title}`}
     >
