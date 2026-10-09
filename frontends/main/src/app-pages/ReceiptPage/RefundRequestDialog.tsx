@@ -15,8 +15,8 @@ import {
   RadioChoiceField,
   TextField,
 } from "@mitodl/smoot-design"
-import { RefundReasonEnum } from "@mitodl/mitxonline-api-axios/v2"
-import type { Order } from "@mitodl/mitxonline-api-axios/v2"
+import { RefundReasonEnum } from "@mitodl/mitxonline-api-axios/v0"
+import type { Order } from "@mitodl/mitxonline-api-axios/v0"
 import { useCreateRefundRequest } from "api/mitxonline-hooks/orders"
 import { SILENCE_ERROR_TOAST } from "api/mutation-meta"
 import { formatMoney } from "./receiptUtils"

@@ -1,7 +1,7 @@
 import { orderQueries, orderKeys } from "./queries"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { ordersApi } from "../../clients"
-import type { RefundRequestRequest } from "@mitodl/mitxonline-api-axios/v2"
+import type { RefundRequestRequest } from "@mitodl/mitxonline-api-axios/v0"
 import type { MutationHookOptions } from "../../../mutations/mutationMeta"
 
 /**

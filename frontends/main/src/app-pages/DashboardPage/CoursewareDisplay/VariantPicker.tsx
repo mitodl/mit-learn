@@ -1,7 +1,7 @@
 import React from "react"
 import { Stack, Typography, styled } from "ol-components"
 import { RiCheckboxFill } from "@remixicon/react"
-import type { SupportedVariant } from "@mitodl/mitxonline-api-axios/v2"
+import type { SupportedVariant } from "@mitodl/mitxonline-api-axios/v0"
 import { buildVariantKey, buildVariantLabel } from "./model/dashboardViewModel"
 
 const VariantPickerRoot = styled.div(({ theme }) => ({

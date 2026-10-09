@@ -17,10 +17,12 @@ import graduateLogo from "@/public/images/dashboard/graduate.png"
 import type {
   ContractPage,
   OrganizationPage,
+} from "@mitodl/mitxonline-api-axios/v0"
+import type {
   V2ProgramCollection,
   V2Program,
-  V3UserProgramEnrollment,
 } from "@mitodl/mitxonline-api-axios/v2"
+import type { V3UserProgramEnrollment } from "@mitodl/mitxonline-api-axios/v3"
 import { mitxUserQueries } from "api/mitxonline-hooks/user"
 import { managerOrganizationQueries } from "api/mitxonline-hooks/organizations"
 import { ButtonLink } from "@mitodl/smoot-design"

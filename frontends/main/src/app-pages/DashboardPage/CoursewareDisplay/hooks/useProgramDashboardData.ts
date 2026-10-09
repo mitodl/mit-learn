@@ -3,10 +3,8 @@ import { useQuery } from "@tanstack/react-query"
 import { enrollmentQueries } from "api/mitxonline-hooks/enrollment"
 import { coursesQueries } from "api/mitxonline-hooks/courses"
 import { programsQueries } from "api/mitxonline-hooks/programs"
-import type {
-  CourseRunEnrollmentV3,
-  V2ProgramDisplayModeEnum,
-} from "@mitodl/mitxonline-api-axios/v2"
+import type { V2ProgramDisplayModeEnum } from "@mitodl/mitxonline-api-axios/v2"
+import type { CourseRunEnrollmentV3 } from "@mitodl/mitxonline-api-axios/v3"
 import { getIdsFromReqTree } from "@/common/mitxonline"
 import {
   groupCourseRunEnrollmentsByCourseId,

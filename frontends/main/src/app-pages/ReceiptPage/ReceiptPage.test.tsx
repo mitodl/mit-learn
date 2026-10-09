@@ -8,7 +8,7 @@ import {
 } from "@/test-utils"
 import * as mitxonline from "api/mitxonline-test-utils"
 import { useFeatureFlagEnabled } from "posthog-js/react"
-import { RefundStatusEnum } from "@mitodl/mitxonline-api-axios/v2"
+import { RefundStatusEnum } from "@mitodl/mitxonline-api-axios/v0"
 import ReceiptPage from "./ReceiptPage"
 import * as urls from "@/common/urls"
 import { FeatureFlags } from "@/common/feature_flags"

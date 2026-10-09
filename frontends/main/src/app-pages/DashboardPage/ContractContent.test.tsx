@@ -17,10 +17,8 @@ import {
   setupOrgDashboardMocks,
   setupProgramsAndCourses,
 } from "./CoursewareDisplay/test-utils"
-import {
-  CourseWithCourseRunsSerializerV2,
-  LanguageEnum,
-} from "@mitodl/mitxonline-api-axios/v2"
+import { LanguageEnum } from "@mitodl/mitxonline-api-axios/v0"
+import { CourseWithCourseRunsSerializerV2 } from "@mitodl/mitxonline-api-axios/v2"
 import { faker } from "@faker-js/faker/locale/en"
 import invariant from "tiny-invariant"
 import { useFeatureFlagEnabled } from "posthog-js/react"

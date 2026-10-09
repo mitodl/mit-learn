@@ -1,6 +1,6 @@
+import type { UserPricingProduct } from "@mitodl/mitxonline-api-axios/v0"
 import type {
   CourseRunV2,
-  UserPricingProduct,
   V2ProgramDetail,
 } from "@mitodl/mitxonline-api-axios/v2"
 import { urls, factories } from "api/mitxonline-test-utils"

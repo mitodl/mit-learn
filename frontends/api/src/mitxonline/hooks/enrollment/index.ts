@@ -7,13 +7,13 @@ import {
   programEnrollmentsApi,
   verifiedProgramEnrollmentsApi,
 } from "../../clients"
+import { B2bApiB2bEnrollCreateRequest } from "@mitodl/mitxonline-api-axios/v0"
 import {
-  B2bApiB2bEnrollCreateRequest,
   EnrollmentsApiEnrollmentsPartialUpdateRequest,
   CourseRunEnrollmentRequest,
-  ProgramEnrollmentsApiV3ProgramEnrollmentsCreateRequest,
-  VerifiedProgramEnrollmentsApiVerifiedProgramEnrollmentsCreateRequest,
-} from "@mitodl/mitxonline-api-axios/v2"
+} from "@mitodl/mitxonline-api-axios/v1"
+import { VerifiedProgramEnrollmentsApiVerifiedProgramEnrollmentsCreateRequest } from "@mitodl/mitxonline-api-axios/v2"
+import { ProgramEnrollmentsApiV3ProgramEnrollmentsCreateRequest } from "@mitodl/mitxonline-api-axios/v3"
 
 const useCreateB2bEnrollment = ({ meta }: MutationHookOptions = {}) => {
   const queryClient = useQueryClient()

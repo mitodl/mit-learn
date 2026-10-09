@@ -14,7 +14,7 @@ import {
 import {
   DiscountTypeEnum,
   PaymentTypeEnum,
-} from "@mitodl/mitxonline-api-axios/v2"
+} from "@mitodl/mitxonline-api-axios/v0"
 import { mitxonlineLegacyUrl } from "@/common/mitxonline"
 import { programView } from "@/common/urls"
 import ProgramEnrollArea from "./ProgramEnrollArea"

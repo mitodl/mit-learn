@@ -1,10 +1,12 @@
 import { mergeOverrides, makePaginatedFactory } from "ol-test-utilities"
 import type { Factory, PartialFactory } from "ol-test-utilities"
 import type {
-  CourseWithCourseRunsSerializerV2,
-  CourseRunV2,
   V1CourseWithCourseRuns,
   ProductFlexibilePrice,
+} from "@mitodl/mitxonline-api-axios/v1"
+import type {
+  CourseWithCourseRunsSerializerV2,
+  CourseRunV2,
   EnrollmentMode,
 } from "@mitodl/mitxonline-api-axios/v2"
 import { faker } from "@faker-js/faker/locale/en"

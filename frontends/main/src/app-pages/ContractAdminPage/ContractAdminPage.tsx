@@ -48,7 +48,7 @@ import {
   managerOrganizationQueries,
   type ManagerEnrollmentCode,
 } from "api/mitxonline-hooks/organizations"
-import type { B2bManagerOrganizationsContractsCodesListStatusEnum } from "@mitodl/mitxonline-api-axios/v2"
+import type { B2bManagerOrganizationsContractsCodesListStatusEnum } from "@mitodl/mitxonline-api-axios/v0"
 import type { AxiosError } from "axios"
 import { matchOrganizationBySlug } from "@/common/utils"
 import { ForbiddenError } from "@/common/errors"

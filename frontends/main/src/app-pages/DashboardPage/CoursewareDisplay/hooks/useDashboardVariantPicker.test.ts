@@ -3,7 +3,7 @@ import { renderHook } from "@testing-library/react"
 import {
   LanguageEnum,
   type SupportedVariant,
-} from "@mitodl/mitxonline-api-axios/v2"
+} from "@mitodl/mitxonline-api-axios/v0"
 import { useDashboardVariantPicker } from "./useDashboardVariantPicker"
 
 const makeVariant = (

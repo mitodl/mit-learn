@@ -48,7 +48,7 @@ import {
   CourseRunEnrollmentV3,
   EnrollmentModeEnum,
   V3UserProgramEnrollment,
-} from "@mitodl/mitxonline-api-axios/v2"
+} from "@mitodl/mitxonline-api-axios/v3"
 import { ProgressBadge } from "./ProgressBadge"
 
 const formatUpgradeTime = (daysFloat: number) => {

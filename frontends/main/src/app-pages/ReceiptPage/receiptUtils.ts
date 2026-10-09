@@ -1,5 +1,5 @@
 import moment from "moment"
-import type { Order, OrderStreetAddress } from "@mitodl/mitxonline-api-axios/v2"
+import type { Order, OrderStreetAddress } from "@mitodl/mitxonline-api-axios/v0"
 import { formatPrice } from "@/common/mitxonline"
 
 /** Receipt amounts always show cents, unlike catalog prices. */
