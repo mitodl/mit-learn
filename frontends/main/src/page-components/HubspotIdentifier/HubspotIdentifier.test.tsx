@@ -21,7 +21,7 @@ describe("HubspotIdentifier", () => {
   const setup = (userOverrides = {}) => {
     const userData = factories.user.user(userOverrides)
     setMockResponse.get(urls.userMe.get(), userData)
-    renderWithProviders(<HubspotIdentifier />)
+    renderWithProviders(<HubspotIdentifier />, { user: userData })
     return userData
   }
 
