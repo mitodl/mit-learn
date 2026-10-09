@@ -21,6 +21,7 @@ from learning_resources.constants import (
     PlatformType,
 )
 from learning_resources.credentials import CredentialMetadata
+from learning_resources.etl import ownership
 from learning_resources.etl.constants import MARKETING_PAGE_FILE_TYPE, ETLSource
 from learning_resources.etl.exceptions import ExtractException
 from learning_resources.factories import (
@@ -2619,6 +2620,34 @@ def test_sync_youtube_task_queues_a_task_per_playlist(mocker, settings, warehous
     ]
     mock_sync.assert_called_once_with(*rows.values(), allow_mass_unpublish=False)
     assert [call.args for call in mock_delay.call_args_list] == to_load
+
+
+def test_sync_youtube_task_loads_playlists_inline_in_a_shadow_run(mocker):
+    """A shadow run loads each playlist in the task, where it is rolled back"""
+    for resource_type in tasks.warehouse_media.YOUTUBE_TYPES:
+        ETLSourceOwnershipFactory.create(
+            etl_source=ETLSource.youtube.name,
+            resource_type=resource_type,
+            shadow=tasks.Pipeline.WAREHOUSE,
+        )
+    channel = factories.VideoChannelFactory.create()
+    mocker.patch("learning_resources.tasks.iter_rows", return_value=iter([]))
+    to_load = [(channel.channel_id, {"playlist_id": "p1"})]
+    mocker.patch(
+        "learning_resources.tasks.warehouse_media.sync_youtube_channels",
+        return_value=to_load,
+    )
+    mock_delay = mocker.patch(
+        "learning_resources.tasks.load_warehouse_youtube_playlist.delay"
+    )
+    mock_load_playlist = mocker.patch("learning_resources.tasks.loaders.load_playlist")
+
+    with tasks.writing_as(tasks.Pipeline.WAREHOUSE), ownership.shadowing():
+        count = tasks.SyncYouTubeTask.fetch_and_upsert(conn=mocker.Mock())
+
+    assert count == 1
+    mock_delay.assert_not_called()
+    mock_load_playlist.assert_called_once_with(channel, {"playlist_id": "p1"})
 
 
 @pytest.mark.parametrize("warehouse_owns", [PODCAST_OWNED], indirect=True)

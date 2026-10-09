@@ -55,7 +55,12 @@ from learning_resources.etl.loaders import (
     load_learning_materials,
     load_run_dependent_values,
 )
-from learning_resources.etl.ownership import Pipeline, may_write, writing_as
+from learning_resources.etl.ownership import (
+    Pipeline,
+    is_shadow_run,
+    may_write,
+    writing_as,
+)
 from learning_resources.etl.pipelines import ocw_courses_etl
 from learning_resources.etl.utils import (
     get_bucket_by_name,
@@ -1401,7 +1406,8 @@ class SyncYouTubeTask(BaseWarehouseETLTask):
     youtube video_playlist and video.
 
     Like get_youtube_data, it fans out into one task per playlist, so a culled
-    worker costs one playlist and not the run.
+    worker costs one playlist and not the run. A shadow run loads the playlists
+    in this task instead, so that they are in its report.
 
     Always a full sync, whatever ``since`` is: a playlist is loaded together
     with all of its videos, and the views carry no per-playlist change time.
@@ -1435,7 +1441,12 @@ class SyncYouTubeTask(BaseWarehouseETLTask):
         )
         log.info("Queueing %d youtube playlists from the warehouse", len(to_load))
         for channel_id, playlist_data in to_load:
-            load_warehouse_youtube_playlist.delay(channel_id, playlist_data)
+            if is_shadow_run():
+                # A queued task would run outside the transaction the shadow
+                # run rolls back, and so be refused as a non-owner.
+                load_warehouse_youtube_playlist(channel_id, playlist_data)
+            else:
+                load_warehouse_youtube_playlist.delay(channel_id, playlist_data)
         return len(to_load)
 
 
