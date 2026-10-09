@@ -318,10 +318,13 @@ const ProgramAsCourseCard: React.FC<ProgramAsCourseCardProps> = ({
 
   const totalCount = displayedModuleCourses.length
 
+  // Only program-as-course treats passing every module as completion; regular
+  // programs stay in progress until their certificate is issued.
   const programEnrollmentStatus = getProgramEnrollmentStatus(
     courseProgramEnrollment,
     enrolledCount,
     completedCount,
+    courseProgram.display_mode === DisplayModeEnum.Course ? totalCount : 0,
   )
 
   // Ordered nearest-to-furthest (ancestor last). verified_program_enrollments
