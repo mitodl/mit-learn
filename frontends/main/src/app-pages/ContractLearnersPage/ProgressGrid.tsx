@@ -8,6 +8,7 @@ import {
   RiErrorWarningLine,
   RiLockLine,
   RiProgress4Line,
+  RiQuestionLine,
   RiSubtractLine,
   RiUserLine,
 } from "@remixicon/react"
@@ -62,7 +63,7 @@ const STATUS_SYMBOL: Record<
   "in-progress": { Icon: RiProgress4Line, tone: "blue" },
   "not-started": { Icon: RiSubtractLine, tone: "gray" },
   "not-shared": { Icon: RiLockLine, tone: "gray" },
-  unknown: { Icon: RiSubtractLine, tone: "gray" },
+  unknown: { Icon: RiQuestionLine, tone: "gray" },
 }
 
 /**
@@ -317,6 +318,14 @@ const ProgressGrid: React.FC<ProgressGridProps> = ({
   }, [isBusy, query.data, params, learners.length, safePage, totalPages])
 
   const hasError = query.isError || courseRunsFailed
+
+  const regionRef = useRef<HTMLDivElement>(null)
+  const restoreFocus = useRef(false)
+  useEffect(() => {
+    if (!restoreFocus.current || query.isFetching) return
+    restoreFocus.current = false
+    if (!hasError) regionRef.current?.focus()
+  }, [hasError, query.isFetching])
   const liveMessage = query.isLoading
     ? "Loading learners"
     : hasError
@@ -344,7 +353,9 @@ const ProgressGrid: React.FC<ProgressGridProps> = ({
             variant="bordered"
             aria-busy={query.isFetching}
             onClick={() => {
-              if (!query.isFetching) query.refetch()
+              if (query.isFetching) return
+              restoreFocus.current = true
+              query.refetch()
             }}
           >
             {query.isFetching ? "Retrying…" : "Try again"}
@@ -394,6 +405,7 @@ const ProgressGrid: React.FC<ProgressGridProps> = ({
           </li>
         </Legend>
         <ScrollRegion
+          ref={regionRef}
           role="region"
           aria-label="Learner progress by module, scrolls horizontally"
           tabIndex={0}
@@ -475,7 +487,7 @@ const ProgressGrid: React.FC<ProgressGridProps> = ({
                           <StatusSymbol status={status} />
                           {enrollment.needs_attention ? (
                             <Tooltip title={attentionReason(status)}>
-                              <AttentionMark>
+                              <AttentionMark tabIndex={0}>
                                 <RiErrorWarningLine
                                   aria-hidden="true"
                                   size={16}
