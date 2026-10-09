@@ -13,6 +13,8 @@ export type {
   ContentEngagementDepth,
   ContractContentEngagementDepth,
   ContractMonthlyEngagementTrend,
+  ContractNeedsAttention,
+  ContractNeedsAttentionResponse,
   ContractUtilization,
   CourseRun,
   CourseRunsResponse,

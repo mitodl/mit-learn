@@ -10,7 +10,10 @@ import { waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import type { AxiosError } from "axios"
 import type { UserOrganizationPage } from "@mitodl/mitxonline-api-axios/v2"
-import type { LearnerProgressResponse } from "api/analytics-hooks/organizations"
+import type {
+  ContractNeedsAttention,
+  LearnerProgressResponse,
+} from "api/analytics-hooks/organizations"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import { allowConsoleErrors } from "ol-test-utilities"
 import { ForbiddenError } from "@/common/errors"
@@ -118,7 +121,17 @@ const setContractAnalyticsResponses = (
   contractId: string,
   page = { limit: 200 },
   learnerProgress: Partial<LearnerProgressResponse> = {},
+  needsAttention: ContractNeedsAttention[] = [
+    analyticsFactories.contractNeedsAttention({
+      contract_id: Number(contractId),
+      learners_needing_attention: 20,
+    }),
+  ],
 ) => {
+  setMockResponse.get(
+    analyticsUrls.contracts.needsAttention(ORG_UUID, contractId),
+    analyticsFactories.envelope(needsAttention, { as_of: AS_OF }),
+  )
   setMockResponse.get(
     analyticsUrls.contracts.contractUtilization(ORG_UUID, contractId, page),
     analyticsFactories.envelope([analyticsFactories.contractUtilization()], {
@@ -159,6 +172,7 @@ const setContractAnalyticsResponses = (
         passed: 12,
         certified: 8,
       },
+      needs_attention_count: 26,
       ...learnerProgress,
     }),
   )
@@ -1013,32 +1027,21 @@ describe("AnalyticsContent, contract-scoped", () => {
     const completed = screen.getByRole("group", { name: "Completed" })
     expect(within(completed).getByText("20")).toBeInTheDocument()
 
-    // No real needs_attention aggregate exists yet — the tile must not
-    // appear at all rather than showing an invented number.
-    expect(
-      screen.queryByRole("group", { name: "Needs attention" }),
-    ).not.toBeInTheDocument()
-
-    // Every tile links to the same, unfiltered contract learner directory —
-    // "View all learners" says so rather than implying a per-status filter
-    // that doesn't exist. Distinct accessible names (rather than four
-    // identical "View all learners" links) so a screen reader's link list
-    // still says which tile each came from.
-    const expectedHref = contractLearnersView(
-      org.slug.replace(/^org-/, ""),
-      contract.slug,
-    )
-    for (const label of [
-      "Enrolled",
-      "Not started",
-      "In progress",
-      "Completed",
-    ]) {
+    const orgSlug = org.slug.replace(/^org-/, "")
+    for (const [label, linkName, status] of [
+      ["Enrolled", "View all learners", undefined],
+      ["Not started", "View learners (Not started)", "not_started"],
+      ["In progress", "View learners (In progress)", "in_progress"],
+      ["Completed", "View learners (Completed)", "passed"],
+    ] as const) {
       const link = within(screen.getByRole("group", { name: label })).getByRole(
         "link",
-        { name: `View all learners (${label} tile)` },
+        { name: linkName },
       )
-      expect(link).toHaveAttribute("href", expectedHref)
+      expect(link).toHaveAttribute(
+        "href",
+        contractLearnersView(orgSlug, contract.slug, { status }),
+      )
     }
 
     const list = screen.getByRole("list", {
@@ -1051,6 +1054,216 @@ describe("AnalyticsContent, contract-scoped", () => {
     expect(within(list).getByText("15")).toBeInTheDocument()
     expect(within(list).getByText("Completed")).toBeInTheDocument()
     expect(within(list).getByText("20")).toBeInTheDocument()
+  })
+
+  describe("Needs attention card", () => {
+    const renderCard = async (
+      needsAttention: ContractNeedsAttention[],
+      enrollments?: number,
+    ) => {
+      const contract = factories.contracts.contract()
+      const org = orgWithUuid({ contracts: [contract] })
+      setManagerOrgs([org])
+      const contractId = String(contract.id)
+      setContractAnalyticsResponses(
+        contractId,
+        undefined,
+        enrollments === undefined ? {} : { needs_attention_count: enrollments },
+        needsAttention,
+      )
+      const orgSlug = org.slug.replace(/^org-/, "")
+      renderWithProviders(
+        <AnalyticsContent orgSlug={orgSlug} contractSlug={contract.slug} />,
+      )
+      const card = await waitFor(() => {
+        const group = screen.getByRole("group", { name: "Needs attention" })
+        expect(group).not.toHaveAttribute("aria-busy")
+        return group
+      })
+      return { card, orgSlug, contract }
+    }
+
+    const row = (overrides: Partial<ContractNeedsAttention> = {}) =>
+      analyticsFactories.contractNeedsAttention({
+        learners_considered: 120,
+        learners_outcomes_withheld: 0,
+        ...overrides,
+      })
+
+    test("counts learners and links to the directory filtered to them", async () => {
+      const { card, orgSlug, contract } = await renderCard([
+        row({ learners_needing_attention: 20 }),
+      ])
+
+      expect(card).toHaveTextContent("20 learners")
+      expect(
+        await within(card).findByText(
+          "Not started, or inactive for 30+ days, across 26 enrollments.",
+        ),
+      ).toBeInTheDocument()
+      expect(
+        within(card).getByRole("link", {
+          name: "Review learners who need attention",
+        }),
+      ).toHaveAttribute(
+        "href",
+        contractLearnersView(orgSlug, contract.slug, { needsAttention: true }),
+      )
+    })
+
+    test("uses singular wording for one learner", async () => {
+      const { card } = await renderCard([
+        row({ learners_needing_attention: 1 }),
+      ])
+
+      expect(card).toHaveTextContent("1 learner")
+      expect(card).not.toHaveTextContent("1 learners")
+    })
+
+    test("uses singular wording for one enrollment", async () => {
+      const { card } = await renderCard(
+        [row({ learners_needing_attention: 1 })],
+        1,
+      )
+
+      expect(
+        await within(card).findByText(
+          "Not started, or inactive for 30+ days, across 1 enrollment.",
+        ),
+      ).toBeInTheDocument()
+    })
+
+    test("leaves out the enrollment count when the response has none", async () => {
+      const contract = factories.contracts.contract()
+      const org = orgWithUuid({ contracts: [contract] })
+      setManagerOrgs([org])
+      setContractAnalyticsResponses(String(contract.id), undefined, {
+        needs_attention_count: undefined,
+      })
+
+      renderWithProviders(
+        <AnalyticsContent
+          orgSlug={org.slug.replace(/^org-/, "")}
+          contractSlug={contract.slug}
+        />,
+      )
+
+      const card = await waitFor(() => {
+        const group = screen.getByRole("group", { name: "Needs attention" })
+        expect(group).not.toHaveAttribute("aria-busy")
+        return group
+      })
+      expect(
+        within(card).getByText("Not started, or inactive for 30+ days."),
+      ).toBeInTheDocument()
+    })
+
+    test("never shows an enrollment count in place of a suppressed learner count", async () => {
+      const { card } = await renderCard(
+        [row({ learners_needing_attention: null })],
+        7,
+      )
+
+      await within(card).findByText(
+        "Too few learners to report how many need attention.",
+      )
+      expect(card).not.toHaveTextContent(/enrollment/)
+    })
+
+    test("says no one needs attention instead of offering a follow-up with zero", async () => {
+      const { card } = await renderCard([
+        row({ learners_needing_attention: 0 }),
+      ])
+
+      expect(
+        within(card).getByText("No learners need attention right now."),
+      ).toBeInTheDocument()
+      expect(within(card).queryByRole("link")).not.toBeInTheDocument()
+    })
+
+    test("is not requested or shown when the distribution fails to load", async () => {
+      const contract = factories.contracts.contract()
+      const org = orgWithUuid({ contracts: [contract] })
+      setManagerOrgs([org])
+      allowConsoleErrors()
+      const contractId = String(contract.id)
+      setContractAnalyticsResponses(contractId)
+      setMockResponse.get(
+        analyticsUrls.contracts.learnerProgress(ORG_UUID, contractId, {
+          limit: 1,
+        }),
+        "Internal Server Error",
+        { code: 500 },
+      )
+
+      renderWithProviders(
+        <AnalyticsContent
+          orgSlug={org.slug.replace(/^org-/, "")}
+          contractSlug={contract.slug}
+        />,
+      )
+
+      await screen.findByText(
+        "This data could not be loaded. Please try again later.",
+      )
+      expect(
+        screen.queryByRole("group", { name: "Needs attention" }),
+      ).not.toBeInTheDocument()
+      expect(makeRequest).not.toHaveBeenCalledWith(
+        expect.objectContaining({
+          url: analyticsUrls.contracts.needsAttention(ORG_UUID, contractId),
+        }),
+      )
+    })
+
+    test.each([
+      {
+        name: "a suppressed count",
+        rows: [row({ learners_needing_attention: null })],
+      },
+      { name: "a contract under the floor", rows: [] },
+    ])("withholds the number for $name", async ({ rows }) => {
+      const { card } = await renderCard(rows)
+
+      expect(within(card).getByText("—")).toBeInTheDocument()
+      expect(
+        within(card).getByText(
+          "Too few learners to report how many need attention.",
+        ),
+      ).toBeInTheDocument()
+      expect(
+        within(card).getByRole("link", {
+          name: "Review learners who need attention",
+        }),
+      ).toBeInTheDocument()
+    })
+
+    test("says learners are left out, without a number, when that count is floored", async () => {
+      const { card } = await renderCard([
+        row({
+          learners_needing_attention: 0,
+          learners_outcomes_withheld: null,
+        }),
+      ])
+
+      expect(
+        within(card).getByText(
+          "Excludes some learners who haven't shared their progress.",
+        ),
+      ).toBeInTheDocument()
+    })
+
+    test("says when learners without consent are left out", async () => {
+      const { card } = await renderCard([
+        row({ learners_needing_attention: 20, learners_outcomes_withheld: 3 }),
+      ])
+
+      expect(
+        within(card).getByText(
+          "Excludes 3 learners who haven't shared their progress.",
+        ),
+      ).toBeInTheDocument()
+    })
   })
 
   /**

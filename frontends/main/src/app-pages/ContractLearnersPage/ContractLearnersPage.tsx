@@ -43,7 +43,12 @@ import { matchOrganizationBySlug } from "@/common/utils"
 import { ForbiddenError, isForbiddenResponse } from "@/common/errors"
 import { FeatureFlags } from "@/common/feature_flags"
 import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
-import { contractAnalyticsView } from "@/common/urls"
+import { useAppSearchParams } from "@/common/useAppSearchParams"
+import {
+  CONTRACT_LEARNERS_STATUSES,
+  contractAnalyticsView,
+  type ContractLearnersStatus,
+} from "@/common/urls"
 import SectionHeader, {
   SectionFreshness,
 } from "../DashboardPage/Analytics/SectionHeader"
@@ -121,19 +126,9 @@ const ResultsSection = styled.div({
   gap: "16px",
 })
 
-/**
- * The freshness line sits above the section rather than at the end of the
- * header row, where every aggregate section puts it: this row already carries
- * a search box and two filters, so a fourth item there either overflows or
- * wraps to whichever spot is left. Right-aligned so it still reads as
- * belonging to the section's top-right corner.
- */
 const AsOfRow = styled.div(({ theme }) => ({
   display: "flex",
   justifyContent: "flex-end",
-  // Left-aligned once the header and controls stack: everything else in that
-  // column starts at the left edge, so a lone right-aligned line reads as
-  // stranded rather than as the section's corner.
   [theme.breakpoints.down("md")]: {
     justifyContent: "flex-start",
   },
@@ -144,9 +139,6 @@ const ControlsRow = styled.div(({ theme }) => ({
   alignItems: "flex-end",
   justifyContent: "space-between",
   gap: "16px",
-  // Wrap rather than overflow. Without this the controls' own min-widths
-  // (280px each) win over the container between `md` and roughly 1200px, and
-  // the last filter runs off the right edge.
   flexWrap: "wrap",
   [theme.breakpoints.down("md")]: {
     flexDirection: "column",
@@ -172,16 +164,6 @@ const StyledSearchInput = styled(SearchInput)(({ theme }) => ({
 }))
 
 const FilterField = styled(SimpleSelectField)(({ theme }) => ({
-  /**
-   * Fixed, not `minWidth`: a content-sized select changes width with whatever
-   * is selected, so picking a long module title reflowed the whole controls
-   * row. `FilterSelect` ellipsizes whatever does not fit; the full title
-   * stays in the DOM (so it is still announced) and in the open listbox.
-   *
-   * Not sized to the longest option either: module titles reach ~50
-   * characters, which would leave a control wide enough to crowd out the
-   * search box beside it.
-   */
   "& .MuiSelect-root": {
     width: "280px",
   },
@@ -253,11 +235,6 @@ const SEARCH_MAX_LENGTH = 254
 const ALL = "all"
 const UNAVAILABLE_MESSAGE_ID = "learner-analytics-unavailable-message"
 
-/**
- * The status dropdown's options. The progress bands the prototype also lists
- * (1-24%, 25-49%, 50-99%) are deliberately absent: the API exposes no
- * percent-complete to filter on.
- */
 const STATUS_OPTIONS: { value: string; label: string }[] = [
   { value: ALL, label: "All learners" },
   { value: "not_started", label: "Not started" },
@@ -267,22 +244,49 @@ const STATUS_OPTIONS: { value: string; label: string }[] = [
   { value: "unknown", label: "No consent given" },
 ]
 
-/**
- * "Completed" queries both `passed` and `certified`, matching the count
- * tile above it: a learner who passed but hasn't certified yet is still
- * "Completed" to a manager, and a standalone "Certificate" filter option
- * previously returned fewer rows than the tile it was supposed to explain.
- * The row-level status pill (`getDisplayStatus`) still distinguishes the
- * two outcomes; only the filter groups them.
- */
 const STATUS_FILTER_COMPLETION_STATUS: Record<
-  string,
+  ContractLearnersStatus,
   CompletionStatusFilter[]
 > = {
   not_started: ["not_started"],
   in_progress: ["in_progress"],
   passed: ["passed", "certified"],
   unknown: ["unknown"],
+}
+
+const isStatus = (value: string | null): value is ContractLearnersStatus =>
+  (CONTRACT_LEARNERS_STATUSES as readonly (string | null)[]).includes(value)
+
+const parsePage = (value: string | null) => {
+  const parsed = Number.parseInt(value ?? "", 10)
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 1
+}
+
+type DirectoryParam = "q" | "status" | "module" | "needs_attention" | "page"
+
+const replaceSearchParams = (
+  changes: Partial<Record<DirectoryParam, string | null>>,
+) => {
+  const params = new URLSearchParams(window.location.search)
+  for (const [name, value] of Object.entries(changes)) {
+    if (value) {
+      params.set(name, value)
+    } else {
+      params.delete(name)
+    }
+  }
+  const search = params.toString()
+  window.history.replaceState(
+    null,
+    "",
+    search ? `?${search}` : window.location.pathname,
+  )
+}
+
+const applyFilterChange = (
+  changes: Partial<Record<Exclude<DirectoryParam, "page">, string | null>>,
+) => {
+  replaceSearchParams({ ...changes, page: null })
 }
 
 const rowIdOf = (row: LearnerProgress) =>
@@ -297,12 +301,17 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
   orgSlug,
   contractSlug,
 }) => {
-  const [searchQuery, setSearchQuery] = useState("")
-  const [debouncedSearch, setDebouncedSearch] = useState("")
-  const [statusFilter, setStatusFilter] = useState<string>(ALL)
-  const [moduleFilter, setModuleFilter] = useState<string>(ALL)
-  const [needsAttentionOnly, setNeedsAttentionOnly] = useState(false)
-  const [page, setPage] = useState(1)
+  const searchParams = useAppSearchParams()
+  const statusParam = searchParams.get("status")
+  const statusFilter = isStatus(statusParam) ? statusParam : ALL
+  const moduleFilter = searchParams.get("module") || ALL
+  const needsAttentionOnly = searchParams.get("needs_attention") === "true"
+  const page = parsePage(searchParams.get("page"))
+  const debouncedSearch = (searchParams.get("q") ?? "").slice(
+    0,
+    SEARCH_MAX_LENGTH,
+  )
+  const [searchQuery, setSearchQuery] = useState(debouncedSearch)
   const [isExporting, setIsExporting] = useState(false)
   const [actionResult, setActionResult] = useState<{
     message: string
@@ -311,19 +320,18 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
   const [announcement, setAnnouncement] = useState("")
   const queryClient = useQueryClient()
 
-  const applyFilterChange = useCallback((apply: () => void) => {
-    apply()
-    setPage(1)
-    // Selection reset (`setSelected(new Set())`) lived here while row
-    // selection was enabled — restore it alongside that block.
-  }, [])
+  const writtenSearch = useRef(debouncedSearch)
+  useEffect(() => {
+    if (debouncedSearch === writtenSearch.current) return
+    writtenSearch.current = debouncedSearch
+    setSearchQuery(debouncedSearch)
+  }, [debouncedSearch])
 
   useEffect(() => {
-    // Nothing to apply (including on mount): don't schedule a state update.
     if (searchQuery === debouncedSearch) return
     const id = setTimeout(() => {
-      setDebouncedSearch(searchQuery)
-      setPage(1)
+      writtenSearch.current = searchQuery
+      applyFilterChange({ q: searchQuery })
     }, SEARCH_DEBOUNCE_MS)
     return () => clearTimeout(id)
   }, [searchQuery, debouncedSearch])
@@ -351,16 +359,6 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
     [statusFilter],
   )
 
-  /**
-   * The dropdown has to list every run or it silently hides ones a manager
-   * could filter by, so this asks for the analytics API's `max_page_size` —
-   * the most it will serve, not a number picked with headroom to spare.
-   *
-   * One page covers it because a contract's runs are generated per course in
-   * its programs, so the ceiling is the contract's course list. `total_count`
-   * is deliberately not consulted: exceeding this would mean ~1,000 courses on
-   * one contract, and a flat `SimpleSelectField` is unusable well before that.
-   */
   const courseRunsQuery = useQuery({
     ...analyticsContractQueries.courseRuns(orgUuid ?? "", contractId ?? "", {
       limit: 1000,
@@ -368,35 +366,17 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
     enabled: canQuery,
   })
 
-  /**
-   * From the contract's own course runs rather than distinct values off the
-   * learner rows, so the list does not narrow to whoever consented — and so
-   * that a run nobody has enrolled in is still offered.
-   */
   const moduleOptions = useMemo(
     () => [
       { value: ALL, label: "All modules" },
       ...(courseRunsQuery.data?.data ?? [])
-        // `courserun_id` carries the readable id the filter sends — see
-        // `CourseRun`.
+        // `courserun_id` carries the readable id the filter sends
         .map((run) => ({ value: run.courserun_id, label: run.courserun_title }))
         .sort((a, b) => a.label.localeCompare(b.label)),
     ],
     [courseRunsQuery.data],
   )
 
-  /**
-   * A run can leave the contract while a manager has it selected, and the
-   * stale time is short enough that a refetch lands mid-session. Everything
-   * below reads this rather than `moduleFilter` so the control, the query and
-   * the empty message never disagree: left alone, `FilterSelect` would find no
-   * matching option and render an empty box — MUI warns about the out-of-range
-   * value — while the table stayed filtered by an id no longer on offer.
-   *
-   * Derived rather than corrected in an effect, which would both ship that bad
-   * render first and discard the selection for good. A run that comes back in
-   * a later refetch simply applies again.
-   */
   const activeModule = useMemo(
     () =>
       moduleOptions.some((option) => option.value === moduleFilter)
@@ -404,6 +384,9 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
         : ALL,
     [moduleOptions, moduleFilter],
   )
+
+  const moduleResolved =
+    moduleFilter === ALL || courseRunsQuery.isSuccess || courseRunsQuery.isError
 
   const listParams = useMemo(
     () => ({
@@ -430,15 +413,10 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
       contractId ?? "",
       listParams,
     ),
-    enabled: canQuery,
+    enabled: canQuery && moduleResolved,
     placeholderData: keepPreviousData,
   })
 
-  /**
-   * One row is enough: only `total_count` is read. Unfiltered on purpose, so
-   * the "X of Y enrollments" summary below stays a fixed total while the
-   * table narrows with search/status filters.
-   */
   const totalQuery = useQuery({
     ...analyticsContractQueries.learnerProgress(
       orgUuid ?? "",
@@ -448,24 +426,28 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
     enabled: canQuery,
   })
 
+  const showsLearnerCount =
+    needsAttentionOnly &&
+    !debouncedSearch &&
+    statusFilter === ALL &&
+    activeModule === ALL
+  const needsAttentionQuery = useQuery({
+    ...analyticsContractQueries.needsAttention(orgUuid ?? "", contractId ?? ""),
+    enabled: canQuery && showsLearnerCount,
+  })
+  const learnersNeedingAttention = showsLearnerCount
+    ? (needsAttentionQuery.data?.data[0]?.learners_needing_attention ?? null)
+    : null
+
   const rows = rowsQuery.data?.data ?? []
   const filteredCount = rowsQuery.data?.total_count ?? 0
   const withheldCount = rowsQuery.data?.outcomes_withheld_count ?? 0
   const totalEnrollments = totalQuery.data?.total_count ?? null
-  /**
-   * Read off the unfiltered `totalQuery` rather than `rowsQuery`: a withheld
-   * row matches neither `needs_attention=true` nor `false`, so the filtered
-   * envelope's own withheld count is zero at exactly the moment this has to
-   * be nonzero. Contract-wide is a superset of what the filter hides, which
-   * is the safe direction — it can only over-report, and only when a status
-   * or module filter had already excluded every withheld row.
-   */
   const contractWithheldCount = totalQuery.data?.outcomes_withheld_count ?? 0
-  /** Gates both the notice and its announcement, so the two cannot disagree. */
   const hidesWithheldLearners = needsAttentionOnly && contractWithheldCount > 0
   const totalPages = Math.ceil(filteredCount / PAGE_SIZE)
   const isStale = rowsQuery.isPlaceholderData || rowsQuery.isFetching
-  const isBusy = rowsQuery.isLoading || isStale
+  const isBusy = rowsQuery.isPending || isStale
 
   /**
    * Only 400/401/403 responses throw to an error boundary (see
@@ -481,7 +463,8 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
   }
 
   const handleExport = useCallback(async () => {
-    if (isExporting || !canQuery || !orgUuid || !contractId) return
+    if (isExporting || !canQuery || !moduleResolved || !orgUuid || !contractId)
+      return
     setIsExporting(true)
     try {
       const all: LearnerProgress[] = []
@@ -497,8 +480,6 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
         )
         all.push(...data.data)
         total = data.total_count
-        // A page that comes back empty while the reported total says otherwise
-        // would otherwise spin forever.
         if (data.data.length === 0) break
         offset += CSV_EXPORT_PAGE_SIZE
       }
@@ -520,25 +501,7 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
           row.courserun_readable_id,
           DISPLAY_STATUS_LABEL[getDisplayStatus(row)],
           row.enrolled_on,
-          /**
-           * Raw `YYYY-MM-DD`, which a spreadsheet reads as a date where the
-           * screen's "Sep 30, 2026" is just text. Note this is a narrower
-           * shape than `enrolled_on` above, a full UTC timestamp — the two
-           * date columns are not interchangeable, and normalizing them here
-           * would mean picking a calendar day for an instant.
-           */
           row.last_active_on,
-          /**
-           * Blank rather than "No" on a withheld row: the API sends null
-           * there, and a spreadsheet column that reads "No" for a learner
-           * whose progress is hidden asserts something nobody checked.
-           *
-           * Tested for `boolean` rather than against `null`: the analytics
-           * API deploys separately, so the field can be absent entirely, and
-           * a strict null check would export "No" for every learner on an API
-           * that has not shipped it yet — the same unchecked assertion, across
-           * the whole column.
-           */
           typeof row.needs_attention === "boolean"
             ? row.needs_attention
               ? "Yes"
@@ -571,6 +534,7 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
   }, [
     isExporting,
     canQuery,
+    moduleResolved,
     orgUuid,
     contractId,
     contractSlug,
@@ -578,8 +542,6 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
     listParams,
   ])
 
-  // Announce the result count once a filter or search settles, but not on
-  // first load and not mid-flight.
   const lastAnnounced = useRef<string | null>(null)
   useEffect(() => {
     if (isBusy || !rowsQuery.data) return
@@ -590,11 +552,6 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
     }
     if (lastAnnounced.current === key) return
     lastAnnounced.current = key
-    /**
-     * The exclusion rides along with the count because the notice below it is
-     * plain text in no live region: without this, toggling the filter reaches
-     * assistive tech as a smaller number and nothing else.
-     */
     setAnnouncement(
       `${filteredCount} ${filteredCount === 1 ? "result" : "results"}${
         hidesWithheldLearners
@@ -612,6 +569,11 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
     debouncedSearch,
     filteredCount,
   ])
+
+  useEffect(() => {
+    if (isBusy || !rowsQuery.data) return
+    if (page > Math.max(totalPages, 1)) replaceSearchParams({ page: null })
+  }, [isBusy, rowsQuery.data, page, totalPages])
 
   if (isLoadingOrgs) {
     return (
@@ -681,9 +643,9 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
           <ExportWrapper>
             <Button
               variant="bordered"
-              aria-disabled={isExporting || !canQuery}
+              aria-disabled={isExporting || !canQuery || !moduleResolved}
               aria-describedby={canQuery ? undefined : UNAVAILABLE_MESSAGE_ID}
-              aria-busy={isExporting}
+              aria-busy={isExporting || (canQuery && !moduleResolved)}
               onClick={handleExport}
             >
               {isExporting ? "Exporting…" : "Export learners"}
@@ -724,7 +686,15 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
                 description={
                   totalEnrollments === null
                     ? "Loading…"
-                    : `${filteredCount} of ${totalEnrollments} enrollments`
+                    : `${filteredCount} of ${totalEnrollments} enrollments${
+                        learnersNeedingAttention === null
+                          ? ""
+                          : ` (${learnersNeedingAttention} ${
+                              learnersNeedingAttention === 1
+                                ? "learner"
+                                : "learners"
+                            })`
+                      }`
                 }
                 asOfPlacement="external"
               />
@@ -738,7 +708,11 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
                       event.target.value.slice(0, SEARCH_MAX_LENGTH),
                     )
                   }
-                  onClear={() => applyFilterChange(() => setSearchQuery(""))}
+                  onClear={() => {
+                    setSearchQuery("")
+                    writtenSearch.current = ""
+                    applyFilterChange({ q: null })
+                  }}
                   onSubmit={() => {}}
                 />
                 <FilterSelect
@@ -746,45 +720,31 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
                   size="medium"
                   value={statusFilter}
                   options={STATUS_OPTIONS}
-                  onChange={(event) =>
-                    applyFilterChange(() =>
-                      setStatusFilter(String(event.target.value)),
-                    )
-                  }
+                  onChange={(event) => {
+                    const value = String(event.target.value)
+                    applyFilterChange({ status: value === ALL ? null : value })
+                  }}
                 />
                 <FilterSelect
                   label="Module"
                   size="medium"
                   value={activeModule}
                   options={moduleOptions}
-                  /**
-                   * Marked on the field rather than folded into
-                   * `hasLoadError`: the learner table is unaffected, and
-                   * swapping it for the page-level error would be a worse
-                   * failure than the dead dropdown. `error` is required for
-                   * `errorText` to render at all — see `FormFieldWrapper`.
-                   *
-                   * Gated on having no data, not on `isError` alone: a failed
-                   * *refetch* leaves the last good list in place, and claiming
-                   * failure over a dropdown that still lists every module and
-                   * filters correctly is worse than saying nothing.
-                   */
                   error={courseRunsQuery.isError && !courseRunsQuery.data}
                   errorText="Couldn't load modules. Reload to try again."
-                  onChange={(event) =>
-                    applyFilterChange(() =>
-                      setModuleFilter(String(event.target.value)),
-                    )
-                  }
+                  onChange={(event) => {
+                    const value = String(event.target.value)
+                    applyFilterChange({ module: value === ALL ? null : value })
+                  }}
                 />
                 <CheckboxField>
                   <Checkbox
                     label="Needs attention only"
                     checked={needsAttentionOnly}
                     onChange={(event) =>
-                      applyFilterChange(() =>
-                        setNeedsAttentionOnly(event.target.checked),
-                      )
+                      applyFilterChange({
+                        needs_attention: event.target.checked ? "true" : null,
+                      })
                     }
                   />
                 </CheckboxField>
@@ -813,13 +773,6 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
               </ConsentNotice>
             ) : null}
 
-            {/*
-              The API matches withheld rows against neither `true` nor `false`,
-              so this filter hides them outright rather than listing them as
-              not needing attention. Said here because nothing else on the page
-              would show it: the notice above reads the filtered envelope,
-              whose withheld count is zero for that same reason.
-            */}
             {hidesWithheldLearners ? (
               <ConsentNotice component="p">
                 Learners who have not agreed to share their progress are hidden
@@ -831,7 +784,7 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
 
             <TableCard>
               <VisuallyHidden role="status" aria-atomic="true">
-                {rowsQuery.isLoading
+                {rowsQuery.isPending
                   ? "Loading learners"
                   : filteredCount === 0
                     ? emptyMessage
@@ -865,7 +818,7 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
                   </TableHeaderRow>
                 </div>
                 <TableBody role="rowgroup" $stale={isStale}>
-                  {rowsQuery.isLoading ? (
+                  {rowsQuery.isPending ? (
                     [1, 2, 3].map((key) => (
                       <TableRow key={key} role="row">
                         <div role="cell" style={{ width: "100%" }}>
@@ -903,7 +856,11 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
                     page={page}
                     shape="rounded"
                     size="small"
-                    onChange={(_event, value) => setPage(value)}
+                    onChange={(_event, value) =>
+                      replaceSearchParams({
+                        page: value > 1 ? String(value) : null,
+                      })
+                    }
                   />
                 ) : null}
               </TableFooter>
