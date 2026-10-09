@@ -9,7 +9,7 @@ import {
 import { waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import type { AxiosError } from "axios"
-import type { UserOrganizationPage } from "@mitodl/mitxonline-api-axios/v2"
+import type { UserOrganizationPage } from "@mitodl/mitxonline-api-axios/v0"
 import type { LearnerProgressResponse } from "api/analytics-hooks/organizations"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import { allowConsoleErrors } from "ol-test-utilities"

@@ -1,7 +1,7 @@
 import React from "react"
 import { styled } from "ol-components"
-import { StateEnum } from "@mitodl/mitxonline-api-axios/v2"
-import type { Order } from "@mitodl/mitxonline-api-axios/v2"
+import { StateEnum } from "@mitodl/mitxonline-api-axios/v0"
+import type { Order } from "@mitodl/mitxonline-api-axios/v0"
 import { ReceiptCard } from "./ReceiptCard"
 import { formatMoney, formatReceiptDate } from "./receiptUtils"
 

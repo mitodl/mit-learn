@@ -4,7 +4,7 @@ import type {
   LegalAddressRequest,
   PatchedUserRequest,
   User,
-} from "@mitodl/mitxonline-api-axios/v2"
+} from "@mitodl/mitxonline-api-axios/v0"
 
 /**
  * Fields the just-in-time dialog collects, in display order.

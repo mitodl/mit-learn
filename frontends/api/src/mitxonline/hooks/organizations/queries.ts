@@ -6,7 +6,7 @@ import {
   PaginatedManagerEnrollmentCodeList,
   B2bApiB2bManagerOrganizationsContractsRetrieveRequest,
   B2bApiB2bManagerOrganizationsContractsCodesListRequest,
-} from "@mitodl/mitxonline-api-axios/v2"
+} from "@mitodl/mitxonline-api-axios/v0"
 
 const managerOrganizationKeys = {
   list: () => ["mitxonline", "manager", "organizations", "list"] as const,

@@ -8,15 +8,19 @@ import { coursesQueries } from "api/mitxonline-hooks/courses"
 import { enrollmentQueries } from "api/mitxonline-hooks/enrollment"
 import { useDashboardVariantPicker } from "./useDashboardVariantPicker"
 import type {
-  BaseCourseRun,
   ContractPage,
-  CourseRunEnrollmentV3,
   OrganizationPage,
   SupportedVariant,
+} from "@mitodl/mitxonline-api-axios/v0"
+import type {
   V2Program,
   V2ProgramCollection,
-  V3UserProgramEnrollment,
 } from "@mitodl/mitxonline-api-axios/v2"
+import type {
+  BaseCourseRun,
+  CourseRunEnrollmentV3,
+  V3UserProgramEnrollment,
+} from "@mitodl/mitxonline-api-axios/v3"
 import {
   buildCourseEntry,
   getCollectionFirstCoursesInDisplayOrder,

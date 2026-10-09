@@ -1,4 +1,4 @@
-import type { User } from "@mitodl/mitxonline-api-axios/v2"
+import type { User } from "@mitodl/mitxonline-api-axios/v0"
 import { factories as mitxFactories } from "api/mitxonline-test-utils"
 import {
   MINIMUM_AGE,

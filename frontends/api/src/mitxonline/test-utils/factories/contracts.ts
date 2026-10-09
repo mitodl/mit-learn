@@ -5,7 +5,7 @@ import type {
   ManagerEnrollmentCode,
   PaginatedManagerEnrollmentCodeList,
   UserContractPage,
-} from "@mitodl/mitxonline-api-axios/v2"
+} from "@mitodl/mitxonline-api-axios/v0"
 import { makePaginatedFactory } from "ol-test-utilities"
 
 const contract = (
