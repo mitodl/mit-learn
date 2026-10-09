@@ -51,6 +51,21 @@ describe("api runtime configuration", () => {
     expect(mitxAxios.defaults.withCredentials).toBe(false)
   })
 
+  test("sets User-Agent only on clients configured with one, and reset clears it", () => {
+    configureApiClients({
+      ...makeConfig(),
+      learn: { ...makeConfig().learn, userAgent: "mit-learn-ssr/1.2.3" },
+    })
+
+    expect(learnAxios.defaults.headers.common["User-Agent"]).toBe(
+      "mit-learn-ssr/1.2.3",
+    )
+    expect(mitxAxios.defaults.headers.common["User-Agent"]).toBeUndefined()
+
+    resetApiClientsForTests()
+    expect(learnAxios.defaults.headers.common["User-Agent"]).toBeUndefined()
+  })
+
   test("isApiClientsConfigured reflects configuration state", () => {
     expect(isApiClientsConfigured()).toBe(false)
     configureApiClients(makeConfig())
