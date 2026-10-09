@@ -28,7 +28,7 @@ import {
   type ArticleSettingsValues,
 } from "@/page-components/ArticleSettings/ArticleSettingsDrawer"
 
-import { Toolbar } from "../vendor/components/tiptap-ui-primitive/toolbar"
+import { ControlBar } from "../ControlBar"
 import { TiptapEditor, MainToolbarContent, TipTapViewer } from "../TiptapEditor"
 import { BannerViewer } from "../extensions/node/Banner/BannerNode"
 import { Spacer } from "../vendor/components/tiptap-ui-primitive/spacer"
@@ -87,7 +87,7 @@ const ViewContainer = styled.div<{
   backgroundColor: theme.custom.colors.white,
 }))
 
-const StyledToolbar = styled(Toolbar)(({ theme }) => ({
+const StyledToolbar = styled(ControlBar)(({ theme }) => ({
   "&&": {
     position: "fixed",
     top: HEADER_HEIGHT,
