@@ -12,7 +12,7 @@ This is the procedure for moving a source from one owner to another, checking it
 ## How ownership works
 
 - One `ETLSourceOwnership` row per `(etl_source, resource_type)`, with `owner` set to `legacy`, `warehouse` or `webhook`.
-- A row can also name a `shadow` pipeline (`warehouse` or `webhook`), which runs without writing and reports what it would have changed. See [Shadow run](#shadow-run).
+- A row can also name a `shadow` pipeline (`warehouse` or `webhook`), which extracts and transforms without loading and reports what a load would have changed. See [Shadow run](#shadow-run).
 - No row means `legacy`. Nothing is seeded, so every source stays on the legacy ETL until someone creates a row.
 - Every pipeline stays scheduled. Each run checks ownership before it extracts anything and returns if it doesn't own the pair:
   - the legacy pipelines in `learning_resources/etl/pipelines.py` (and `get_youtube_data`, `sync_canvas_courses` and `get_ocw_data`, which have no pipeline function) log `Skipping legacy write for <source>: owned by <type>=<owner>` and make no call to the source;
@@ -51,36 +51,39 @@ OVS and Canvas already push per record, through their own webhooks, which owners
 
 1. The new path works end to end in QA first (see [QA rehearsal](#qa-rehearsal)).
 2. The platform's `integrations__learn__*` model for the source was rebuilt today. Check the asset's last materialization in Dagster. The delivery schedules currently fire at or before the staging rebuild (tracked in the data platform), so don't rely on the schedule's own timing yet.
-3. Shadow the source as its new owner and read the report (see [Shadow run](#shadow-run)). The first run of the new owner is a full sync, and anything published in Learn but missing from its batch will be unpublished. Explain every `unpublished`, `created` and `deleted` id and every entry of `field_counts` before going further. Leave the shadow on for a few scheduled runs if the source changes daily, so the report covers more than one day's data.
+3. Shadow the source as its new owner and read the report (see [Shadow run](#shadow-run)). The first run of the new owner is a full sync, and anything published in Learn but missing from its batch will be unpublished. Explain every `unpublished`, `republished` and `created` id and every entry of `field_counts` before going further. Leave the shadow on for a few scheduled runs if the source changes daily, so the report covers more than one day's data.
 
 4. Record the published counts per resource type for the source. They're the baseline for checking the flip.
 
 ## Shadow run
 
-A shadow run is the new pipeline's real load, with the owner unchanged and nothing written. It runs the same loaders as a cutover would, prune included, inside a database transaction that is always rolled back, and compares the source's resources as the API serializes them before and after the load. No search index or embedding task is sent.
+A shadow run is the new pipeline's extract and transform, with the owner unchanged and nothing loaded. Where a cutover would load the batch, `load_courses`, `load_programs`, `load_documents` and `load_podcasts` compare each item with the stored resource of the same `readable_id` instead, and work out what the prune would unpublish. It only reads the catalog, a few queries per 500 items, so it takes no row locks and holds no transaction open. Nothing reaches the search index.
+
+The comparison is a second copy of the loaders' rules (`learning_resources/etl/shadow.py`), not the loaders themselves. It tells you whether the new pipeline's data matches what is stored. It does not prove the load runs, so the first write after a flip is still the first time the loaders see that batch.
 
 1. In Django admin, create or edit the row for each resource type from the table above, leave `owner` as it is and set `shadow` to the new pipeline. All of a source's rows that one load writes together (`podcast` and `podcast_episode`, `video_playlist` and `video`) need it.
 2. Run the new pipeline as you would for the flip, or wait for its schedule:
-   - warehouse: `<SyncTask>.delay()`. A shadow run is always a full refresh and leaves the incremental watermark alone.
+   - warehouse: `<SyncTask>.delay()`. A shadow run is always a full refresh and leaves the incremental watermark alone. The task logs 0 rows, because the loaders return nothing in a shadow run.
    - webhook: not wired to the shadow yet. Until it is, the webhook answers `409` for a pair it doesn't own, shadow or not.
 3. Read the report at `/admin/learning_resources/etlshadowrun/`. There is one per `(etl_source, resource_type)` per run, and the last 20 per pipeline are kept.
 
 Each report has:
 
-- `counts`: resources `created`, `deleted`, `unpublished`, `republished`, `updated` and `unchanged`, with the published totals before and after;
-- `details.created`, `deleted`, `unpublished`, `republished` and `updated`: the `readable_id`s behind each count;
-- `details.field_counts`: how many updated resources changed each field (`runs[].prices`, `topics[].name`), the quickest way to see a systematic difference;
-- `details.changed`: `[before, after]` per field for the first 200 updated resources, then the republished ones. An unpublished resource's other changes are not listed;
-- `error`: set when the load raised (an empty view, the mass-unpublish guard). The task fails too, as it would as the owner.
+- `counts`: resources `created`, `unpublished`, `republished`, `updated` and `unchanged`, with the stored totals (`before`, `before_published`);
+- `details.created`, `unpublished`, `republished` and `updated`: the `readable_id`s behind each count. `unpublished` is the resources the batch leaves out or marks unpublished, `republished` the stored unpublished ones it publishes, and `updated` every resource with a field change, including ones that are also in the other two lists;
+- `details.field_counts`: how many updated resources changed each field (`title`, `runs[].prices`), the quickest way to see a systematic difference;
+- `details.changed`: `[stored, incoming]` per field for the first 200 updated resources;
+- `error`: set when the load raised (an empty view, the mass-unpublish guard), in which case the task fails too, as it would as the owner. It is also set when the load never reached one of the four loaders above for the pair, so that an uncompared pair doesn't read as a clean one.
 
-Fields that a load changes on every run are ignored: database ids, `created_on`, `updated_on`, `views` and `best_run_id`.
+What is compared: every key of an item that is a column of the resource, `published` as the loader would set it, topics, `offered_by`, image, departments, content tags, the course, podcast or episode detail row, each run by `run_id` (its columns, prices, instructors and image, and the runs a prune would unpublish), and a program's children.
+
+What is not: fields the loaders derive from a course's or program's runs (`availability`, `prices`, `next_start_date`, the duration and commitment fields), topics found by similarity for a document that has none, the courses a program load writes, content files, and anything a pipeline writes without going through those four loaders (playlists and videos).
 
 Things a shadow run costs while it is on:
 
-- The load is one transaction, so the row locks it takes last until it rolls back. The owner's run of the same source waits behind them, and so does a user action that references a locked resource (adding it to a list or a learning path). Run the first shadow of a large source at a quiet time and note how long it takes.
 - Every run of the task is a shadow run and a full refresh for as long as `shadow` is set.
 - If one task loads several types together and the pipeline already owns some of them, setting `shadow` on the rest makes the whole run a shadow run, so the types it owns stop being written until `shadow` is cleared.
-- A change the owner commits to the source while the shadow run is in progress can show up in the report as the shadow's.
+- The stored side is read while the owner may be writing, so a resource the owner changes during the run is compared in whichever state the read found it.
 
 When the report is clean, clear `shadow` and set `owner` (below). Clear `shadow` on its own to stop shadowing.
 

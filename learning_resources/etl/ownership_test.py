@@ -114,8 +114,8 @@ def test_shadow_runs_without_owning():
         assert run_mode(ETLSource.see.name, COURSE) == RunMode.SKIP
 
 
-def test_shadow_may_write_only_inside_a_shadow_run():
-    """Outside the rolled-back block a shadow is refused like any non-owner."""
+def test_nothing_may_write_as_a_shadow_or_inside_a_shadow_run():
+    """A shadow is refused like any non-owner, and so is the owner in a shadow run."""
     ETLSourceOwnershipFactory.create(
         etl_source=ETLSource.see.name, resource_type=COURSE, shadow=Pipeline.WAREHOUSE
     )
@@ -123,9 +123,10 @@ def test_shadow_may_write_only_inside_a_shadow_run():
         assert may_write(ETLSource.see.name, COURSE) is False
         with shadowing():
             assert is_shadow_run() is True
-            assert may_write(ETLSource.see.name, COURSE) is True
+            assert may_write(ETLSource.see.name, COURSE) is False
         assert is_shadow_run() is False
-    with writing_as(Pipeline.WEBHOOK), shadowing():
+    assert may_write(ETLSource.see.name, COURSE) is True
+    with shadowing():
         assert may_write(ETLSource.see.name, COURSE) is False
 
 
