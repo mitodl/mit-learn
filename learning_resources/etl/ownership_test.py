@@ -1,16 +1,21 @@
 """Tests for learning_resources.etl.ownership"""
 
 import pytest
+from django.core.exceptions import ValidationError
 
 from learning_resources.constants import LearningResourceType
 from learning_resources.etl.constants import ETLSource
 from learning_resources.etl.ownership import (
     OwnershipError,
     Pipeline,
+    RunMode,
     assert_owner,
     current_pipeline,
     get_owner,
+    is_shadow_run,
     may_write,
+    run_mode,
+    shadowing,
     writing_as,
 )
 from learning_resources.factories import ETLSourceOwnershipFactory
@@ -95,3 +100,68 @@ def test_assert_owner_raises_for_a_non_owner():
     )
     with writing_as(Pipeline.WEBHOOK):
         assert_owner(ETLSource.mitpe.name, COURSE)
+
+
+def test_shadow_runs_without_owning():
+    """The shadow pipeline shadows, the owner still writes, anything else skips."""
+    ETLSourceOwnershipFactory.create(
+        etl_source=ETLSource.see.name, resource_type=COURSE, shadow=Pipeline.WAREHOUSE
+    )
+    assert run_mode(ETLSource.see.name, COURSE) == RunMode.WRITE
+    with writing_as(Pipeline.WAREHOUSE):
+        assert run_mode(ETLSource.see.name, COURSE) == RunMode.SHADOW
+    with writing_as(Pipeline.WEBHOOK):
+        assert run_mode(ETLSource.see.name, COURSE) == RunMode.SKIP
+
+
+def test_nothing_may_write_as_a_shadow_or_inside_a_shadow_run():
+    """A shadow is refused like any non-owner, and so is the owner in a shadow run."""
+    ETLSourceOwnershipFactory.create(
+        etl_source=ETLSource.see.name, resource_type=COURSE, shadow=Pipeline.WAREHOUSE
+    )
+    with writing_as(Pipeline.WAREHOUSE):
+        assert may_write(ETLSource.see.name, COURSE) is False
+        with shadowing():
+            assert is_shadow_run() is True
+            assert may_write(ETLSource.see.name, COURSE) is False
+        assert is_shadow_run() is False
+    assert may_write(ETLSource.see.name, COURSE) is True
+    with shadowing():
+        assert may_write(ETLSource.see.name, COURSE) is False
+
+
+@pytest.mark.parametrize(
+    ("episode_row", "expected"),
+    [
+        ({"owner": Pipeline.WAREHOUSE}, RunMode.SHADOW),
+        ({"shadow": Pipeline.WAREHOUSE}, RunMode.SHADOW),
+        ({"owner": Pipeline.WEBHOOK}, RunMode.SKIP),
+        (None, RunMode.SKIP),
+    ],
+)
+def test_multi_type_shadow_needs_every_type(episode_row, expected):
+    """A run that shadows one type is a shadow only if it owns or shadows the rest."""
+    ETLSourceOwnershipFactory.create(
+        etl_source=ETLSource.podcast.name,
+        resource_type=PODCAST,
+        shadow=Pipeline.WAREHOUSE,
+    )
+    if episode_row:
+        ETLSourceOwnershipFactory.create(
+            etl_source=ETLSource.podcast.name, resource_type=EPISODE, **episode_row
+        )
+    with writing_as(Pipeline.WAREHOUSE):
+        assert run_mode(ETLSource.podcast.name, [PODCAST, EPISODE]) == expected
+
+
+def test_shadow_must_differ_from_owner():
+    """A row naming one pipeline as owner and shadow is rejected."""
+    row = ETLSourceOwnershipFactory.build(
+        etl_source=ETLSource.see.name,
+        resource_type=COURSE,
+        owner=Pipeline.WEBHOOK,
+        shadow=Pipeline.WEBHOOK,
+    )
+    with pytest.raises(ValidationError) as error:
+        row.full_clean()
+    assert "shadow" in error.value.message_dict

@@ -6,13 +6,21 @@ from django.contrib.admin.widgets import AdminTextareaWidget
 from django.test import RequestFactory
 from django.urls import reverse
 
-from learning_resources.admin import CredentialMetadataAdmin, TutorProblemFileAdmin
+from learning_resources.admin import (
+    CredentialMetadataAdmin,
+    ETLShadowRunAdmin,
+    TutorProblemFileAdmin,
+)
 from learning_resources.factories import (
     CredentialMetadataFactory,
     LearningResourceRunFactory,
     TutorProblemFileFactory,
 )
-from learning_resources.models import CredentialMetadata, TutorProblemFile
+from learning_resources.models import (
+    CredentialMetadata,
+    ETLShadowRun,
+    TutorProblemFile,
+)
 
 
 @pytest.mark.django_db
@@ -110,3 +118,38 @@ def test_credential_metadata_change_view_renders(admin_user):
 
     assert response.status_code == 200
     assert b"Did a thing" in response.render().content
+
+
+@pytest.mark.django_db
+def test_etl_shadow_run_admin_is_read_only(admin_client, admin_user):
+    """A superuser can read a shadow run's report and cannot add, change or delete it."""
+    run = ETLShadowRun.objects.create(
+        etl_source="ocw",
+        resource_type="course",
+        pipeline="warehouse",
+        counts={"created": 1, "unpublished": 2, "updated": 3, "unchanged": 4},
+        details={"created": ["a-new-course"]},
+    )
+    request = RequestFactory().get("/")
+    request.user = admin_user
+    model_admin = ETLShadowRunAdmin(ETLShadowRun, site)
+
+    assert model_admin.has_add_permission(request) is False
+    assert model_admin.has_change_permission(request, run) is False
+    assert model_admin.has_delete_permission(request, run) is False
+
+    changelist = admin_client.get(
+        reverse("admin:learning_resources_etlshadowrun_changelist")
+    )
+    assert changelist.status_code == 200
+    detail = admin_client.get(
+        reverse("admin:learning_resources_etlshadowrun_change", args=(run.id,))
+    )
+    assert detail.status_code == 200
+    assert b"a-new-course" in detail.content
+    delete = admin_client.post(
+        reverse("admin:learning_resources_etlshadowrun_delete", args=(run.id,)),
+        {"post": "yes"},
+    )
+    assert delete.status_code == 403
+    assert ETLShadowRun.objects.filter(id=run.id).exists()
