@@ -105,10 +105,17 @@ class WebsiteContentViewSet(viewsets.ModelViewSet):
         """
         return self.get_queryset().get(pk=content.pk)
 
-    # NOTE: clear the view cache on every mutation, published or not -- the
-    # staff listing view is cached and includes unpublished content, so a draft
-    # create/edit/delete can change a cached response too. Deferred to
-    # on_commit so it runs after the write is durable.
+    # NOTE: clear the view cache on every mutation, published or not. Not for
+    # the listing above, which is no longer cached, but for everywhere else
+    # this content reaches: a published article is mirrored into a
+    # `LearningResource`, and the resource, search, featured and channel
+    # endpoints that serve it are cached, as are the news feeds. A draft
+    # counts too -- publishing one is an update, and the entry it adds has to
+    # be in those responses by the time the next request reads them.
+    #
+    # It clears every view cache rather than a prefix, which is more than this
+    # content appears in. See https://github.com/mitodl/hq/issues/13846.
+    # Deferred to on_commit so it runs after the write is durable.
     def perform_create(self, serializer):
         content = serializer.save(user=self.request.user)
         transaction.on_commit(clear_views_cache)
@@ -130,7 +137,7 @@ class WebsiteContentViewSet(viewsets.ModelViewSet):
             content_unpublished_actions(content=content)
         # Last here, unlike on create: the unpublish plugins take the news feed
         # entry out synchronously, and clearing the cache before that ran would
-        # let any request in between re-cache the listing that still has it.
+        # let any request in between re-cache a feed that still has it.
         transaction.on_commit(clear_views_cache)
         serializer.instance = self._reloaded_for_response(content)
 

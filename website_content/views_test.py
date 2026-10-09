@@ -142,6 +142,28 @@ def test_staff_can_access_unpublished_content(client):
     assert data["id"] == content.id
 
 
+@pytest.fixture
+def enabled_view_cache(settings, request):
+    """
+    Give the view cache a real backend for one test.
+
+    The suite swaps the `redis` cache for a dummy one everywhere (the autouse
+    fixture in the root `conftest`), so by default a view that is cached and
+    one that is not behave identically here. Caching has to be on for a test
+    to tell them apart. Located per test so one does not read another's
+    entries.
+    """
+    settings.REDIS_VIEW_CACHE_DURATION = 60
+    settings.CACHES = {
+        **settings.CACHES,
+        "redis": {
+            "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+            "LOCATION": request.node.nodeid,
+        },
+    }
+
+
+@pytest.mark.usefixtures("enabled_view_cache")
 def test_listing_is_what_the_caller_may_see(staff_client):
     """
     An editor's listing must not become everyone's listing.
@@ -151,10 +173,8 @@ def test_listing_is_what_the_caller_may_see(staff_client):
     decided what the rest were served, and an editor's listing carries the
     drafts.
 
-    This pins the behaviour rather than reproducing that leak, which needs the
-    response to be stored before `SessionMiddleware` appends `Vary: Cookie` --
-    the suite swaps the `redis` cache for a dummy one everywhere (the autouse
-    fixture in the root `conftest`), so no test here caches anything at all.
+    Run with the view cache on, so that caching this listing again -- under
+    any key shared between callers -- fails here rather than in production.
 
     The anonymous caller is a client of its own because `staff_client` is the
     `client` fixture with a staff user logged into it -- asking for both hands
