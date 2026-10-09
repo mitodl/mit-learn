@@ -906,16 +906,16 @@ def sync_canvas_courses(canvas_course_ids=None, overwrite=False):  # noqa: FBT00
 @app.task(bind=True)
 def scrape_marketing_pages(self):
     """
-    Scrape marketing pages for all published programs and courses and store
-    them as content files. Pages whose content hasn't changed are left alone.
-    Child courses are scraped before their parent programs so a program's
-    children section is built from up-to-date child marketing pages.
+    Scrape marketing pages for all published or test mode programs and courses
+    and store them as content files. Pages whose content hasn't changed are
+    left alone. Child courses are scraped before their parent programs so a
+    program's children section is built from up-to-date child marketing pages.
     """
     log.info("Running scrape_marketing_pages task")
     resource_types = dict(
-        LearningResource.objects.filter(
-            published=True, resource_type__in=["course", "program"]
-        ).values_list("id", "resource_type")
+        LearningResource.objects.filter(Q(published=True) | Q(test_mode=True))
+        .filter(resource_type__in=["course", "program"])
+        .values_list("id", "resource_type")
     )
     course_ids = sorted(
         rid for rid, rtype in resource_types.items() if rtype == "course"

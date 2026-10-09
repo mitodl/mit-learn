@@ -1227,8 +1227,8 @@ def test_marketing_page_for_resources_updates_changed_page(
 
 @pytest.mark.django_db
 def test_scrape_marketing_pages(mocker, settings, mocked_celery):
-    """scrape_marketing_pages queues every published resource, including ones
-    that already have a marketing page
+    """scrape_marketing_pages queues every published or test mode resource,
+    including ones that already have a marketing page
     """
 
     settings.EMBEDDINGS_EXTERNAL_FETCH_USE_WEBDRIVER = True
@@ -1267,6 +1267,13 @@ def test_scrape_marketing_pages(mocker, settings, mocked_celery):
         resource_type="course",
         published=False,
     )
+    test_mode_course = models.LearningResource.objects.create(
+        title="Test Mode Course",
+        url="https://example.com/test-mode",
+        resource_type="course",
+        published=False,
+        test_mode=True,
+    )
 
     mock_group = mocker.patch("learning_resources.tasks.celery.group")
     mock_marketing_page_task = mocker.patch(
@@ -1278,7 +1285,9 @@ def test_scrape_marketing_pages(mocker, settings, mocked_celery):
     queued_ids = [
         rid for call in mock_marketing_page_task.call_args_list for rid in call.args[0]
     ]
-    assert sorted(queued_ids) == sorted([course1.id, course2.id, course3.id])
+    assert sorted(queued_ids) == sorted(
+        [course1.id, course2.id, course3.id, test_mode_course.id]
+    )
     mock_group.assert_called_once()
 
 
