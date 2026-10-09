@@ -2,6 +2,7 @@
 
 import React, { useEffect } from "react"
 import ConfiguredPostHogProvider from "@/page-components/ConfiguredPostHogProvider/ConfiguredPostHogProvider"
+import HubspotIdentifier from "@/page-components/HubspotIdentifier/HubspotIdentifier"
 import {
   trackLandingPageArrival,
   trackAdArrival,
@@ -52,6 +53,7 @@ export default function SiteProviders({
   return (
     <ConfiguredPostHogProvider>
       <AnalyticsTracker />
+      <HubspotIdentifier />
       {children}
     </ConfiguredPostHogProvider>
   )
