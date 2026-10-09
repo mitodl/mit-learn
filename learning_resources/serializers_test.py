@@ -546,10 +546,10 @@ def test_serialize_resource_excludes_variant_runs():
     )
     resource.runs.all().delete()
     public_run = LearningResourceRunFactory.create(
-        learning_resource=resource, published=True, is_b2b=False, is_variant=False
+        learning_resource=resource, published=True, is_variant=False
     )
     LearningResourceRunFactory.create(
-        learning_resource=resource, published=True, is_b2b=True, is_variant=True
+        learning_resource=resource, published=True, b2b_only=True, is_variant=True
     )
 
     serialized_resource = serializers.LearningResourceSerializer(resource).data
