@@ -21,7 +21,6 @@ from django.conf import settings
 from django.core.cache import caches
 from django.db import close_old_connections
 from django.http import HttpResponse
-from django.views.decorators.cache import cache_page
 from nh3 import nh3
 from rest_framework.renderers import JSONRenderer
 from rest_framework.response import Response
@@ -284,23 +283,6 @@ def cache_page_for_anonymous_users(
     return _cache_page_ignoring_cookies(
         timeout, cache=cache, key_prefix=key_prefix, only_anonymous=True
     )
-
-
-def cache_page_per_user(*cache_args, **cache_kwargs):
-    """
-    Create a cache per page and user/session
-    """
-
-    def inner_decorator(func):
-        @wraps(func)
-        def inner_function(request, *args, **kwargs):
-            return cache_page(*cache_args, **cache_kwargs)(func)(
-                request, *args, **kwargs
-            )
-
-        return inner_function
-
-    return inner_decorator
 
 
 def cache_page_for_all_users(

@@ -3,6 +3,7 @@
 import pytest
 from django.db import transaction
 from rest_framework.reverse import reverse
+from rest_framework.test import APIClient
 
 from learning_resources.factories import LearningResourceTopicFactory
 from main.factories import UserFactory
@@ -139,6 +140,40 @@ def test_staff_can_access_unpublished_content(client):
 
     assert resp.status_code == 200
     assert data["id"] == content.id
+
+
+def test_listing_is_what_the_caller_may_see(staff_client):
+    """
+    An editor's listing must not become everyone's listing.
+
+    The order here is the order that leaked: the listing was cached under a
+    key that did not vary by user, so whichever request missed the cache first
+    decided what the rest were served, and an editor's listing carries the
+    drafts.
+
+    This pins the behaviour rather than reproducing that leak, which needs the
+    response to be stored before `SessionMiddleware` appends `Vary: Cookie` --
+    the suite swaps the `redis` cache for a dummy one everywhere (the autouse
+    fixture in the root `conftest`), so no test here caches anything at all.
+
+    The anonymous caller is a client of its own because `staff_client` is the
+    `client` fixture with a staff user logged into it -- asking for both hands
+    back one client, logged in, and the second request would be the editor's
+    as well.
+    """
+    published = WebsiteContent.objects.create(
+        title="Published Article", content={}, is_published=True, content_type="news"
+    )
+    draft = WebsiteContent.objects.create(
+        title="Draft Article", content={}, is_published=False, content_type="news"
+    )
+    url = reverse("website_content:v1:website_content-list")
+
+    editor_ids = {item["id"] for item in staff_client.get(url).json()["results"]}
+    assert editor_ids == {published.id, draft.id}
+
+    anonymous_ids = {item["id"] for item in APIClient().get(url).json()["results"]}
+    assert anonymous_ids == {published.id}
 
 
 @pytest.fixture

@@ -1,7 +1,6 @@
 from django.conf import settings
 from django.db import transaction
 from django.shortcuts import get_object_or_404
-from django.utils.decorators import method_decorator
 from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.utils import (
     OpenApiParameter,
@@ -18,7 +17,7 @@ from rest_framework.views import APIView
 
 from learning_resources.permissions import is_admin_user
 from main.constants import VALID_HTTP_METHODS
-from main.utils import cache_page_per_user, clear_views_cache
+from main.utils import clear_views_cache
 from website_content.api import (
     content_published_actions,
     content_unpublished_actions,
@@ -80,15 +79,15 @@ class WebsiteContentViewSet(viewsets.ModelViewSet):
             .order_by("-publish_date", "-id")
         )
 
-    @method_decorator(
-        cache_page_per_user(
-            settings.REDIS_VIEW_CACHE_DURATION,
-            cache="redis",
-            key_prefix="website_content",
-        )
-    )
-    def list(self, request, *args, **kwargs):
-        return super().list(request, *args, **kwargs)
+    # NOTE: this listing is deliberately not cached. What it returns depends on
+    # who is asking -- `get_queryset` above hides unpublished content from
+    # everyone but an editor -- and the decorator it used to carry, named
+    # `cache_page_per_user`, was not per user: it wrapped Django's `cache_page`
+    # and nothing else. `cache_page` does honour a `Vary: Cookie`, but this
+    # response only acquires that header on its way out, after the entry has
+    # been stored under a key that ignores the cookie. So the first request to
+    # miss the cache decided what everyone saw until it expired, and when that
+    # request came from an editor, anonymous readers were served the drafts.
 
     def _reloaded_for_response(self, content):
         """
