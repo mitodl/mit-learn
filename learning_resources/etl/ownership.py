@@ -25,13 +25,13 @@ The batch loaders call ``may_write`` again as a backstop, so a caller that
 skipped the entry check (a shell session, a new pipeline) still cannot write a
 pair it does not own.
 
-A row can also name a ``shadow`` pipeline. The shadow runs its whole load while
-the owner keeps writing, inside a transaction that is always rolled back
-(``learning_resources.etl.shadow.run_shadow``), and what it would have changed
-is saved as an ETLShadowRun. ``run_mode`` tells an entry point which of the
-three it is doing: write, shadow or skip. ``may_write`` is true for a shadow
-only inside ``run_shadow``, so a shadow that reaches a loader any other way
-writes nothing.
+A row can also name a ``shadow`` pipeline. The shadow extracts and transforms
+while the owner keeps writing, and the batch loaders compare its batch with
+the stored resources instead of loading it
+(``learning_resources.etl.shadow.run_shadow``). What it would have changed is
+saved as an ETLShadowRun. ``run_mode`` tells an entry point which of the three
+it is doing: write, shadow or skip. ``may_write`` is never true for a shadow,
+nor for anyone inside a shadow run, so a shadow writes nothing.
 """
 
 import logging
@@ -85,7 +85,7 @@ _shadow_run: ContextVar[bool] = ContextVar("etl_shadow_run", default=False)
 def shadowing() -> Iterator[None]:
     """
     Mark the block as a shadow run. Only ``run_shadow`` enters it, because it
-    is what rolls the block's writes back.
+    is what collects what the batch loaders report inside the block.
     """
     token = _shadow_run.set(True)
     try:
@@ -95,7 +95,7 @@ def shadowing() -> Iterator[None]:
 
 
 def is_shadow_run() -> bool:
-    """Whether the caller is inside a shadow run, whose writes are rolled back."""
+    """Whether the caller is inside a shadow run, which must write nothing."""
     return _shadow_run.get()
 
 
@@ -120,8 +120,8 @@ def run_mode(etl_source: str, resource_types: str | Iterable[str]) -> RunMode:
     some would leave the rest to a pipeline that never receives them.
 
     SHADOW if it is the owner or the shadow of every one and the shadow of at
-    least one. The run is rolled back as a whole, so the types it owns are not
-    written by that run either.
+    least one. Nothing is written inside a shadow run, so the types it owns
+    are not written by that run either.
 
     SKIP otherwise.
     """
@@ -152,12 +152,10 @@ def run_mode(etl_source: str, resource_types: str | Iterable[str]) -> RunMode:
 
 def may_write(etl_source: str, resource_types: str | Iterable[str]) -> bool:
     """
-    Return whether the current pipeline may run the loaders for
-    ``resource_types`` of a source: it owns every one of them, or it shadows
-    them and is inside ``run_shadow``.
+    Return whether the current pipeline may write ``resource_types`` of a
+    source: it owns every one of them and is not inside a shadow run.
     """
-    mode = run_mode(etl_source, resource_types)
-    return mode == RunMode.WRITE or (mode == RunMode.SHADOW and is_shadow_run())
+    return not is_shadow_run() and run_mode(etl_source, resource_types) == RunMode.WRITE
 
 
 def assert_owner(etl_source: str, resource_types: str | Iterable[str]) -> None:
