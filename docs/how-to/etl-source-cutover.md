@@ -27,20 +27,20 @@ Rows are edited in Django admin at `/admin/learning_resources/etlsourceownership
 
 Flip every resource type the source's legacy task writes, in one sitting, unless the split is the plan. A split works at the loader (`load_programs` links a program to the courses their owner loaded and writes none when the current pipeline doesn't own the source's courses), but the two halves are then validated and rolled back separately.
 
-| Source        | Rows to flip                 | Legacy beat entry                               | New path                         |
-| ------------- | ---------------------------- | ----------------------------------------------- | -------------------------------- |
-| `mitxonline`  | `course`, `program`          | `update-mitxonline-courses-every-6-hours`       | warehouse                        |
-| `xpro`        | `course`, `program`          | `update-xpro-courses-every-1-days`              | warehouse                        |
-| `mit_edx`     | `course`, `program`          | `update_edx-courses-every-1-days`               | undecided                        |
-| `ocw`         | `course`                     | none (ocw-studio webhook)                       | warehouse                        |
-| `mitpe`       | `course`, `program`          | `update-professional-ed-resources-every-1-days` | webhook (`mitpe_schedule`)       |
-| `mit_climate` | `document`                   | `update-mit-climate-articles-every-1-days`      | webhook (`mit_climate_schedule`) |
-| `oll`         | `course`                     | none                                            | webhook (`oll_schedule`)         |
-| `podcast`     | `podcast`, `podcast_episode` | `update-podcasts`                               | warehouse (`SyncPodcastsTask`)   |
-| `youtube`     | `video_playlist`, `video`    | `update-youtube-videos`                         | warehouse (`SyncYouTubeTask`)    |
-| `ovs`         | `video_playlist`, `video`    | `update-ovs-videos`                             | webhook (already pushing)        |
-| `see`         | `course`                     | `update_sloan_courses`                          | not built                        |
-| `canvas`      | `course`                     | `sync_canvas_courses-every-1-weeks`             | webhook (already pushing)        |
+| Source        | Rows to flip                 | Legacy beat entry                               | New path                                                       |
+| ------------- | ---------------------------- | ----------------------------------------------- | -------------------------------------------------------------- |
+| `mitxonline`  | `course`, `program`          | `update-mitxonline-courses-every-6-hours`       | warehouse                                                      |
+| `xpro`        | `course`, `program`          | `update-xpro-courses-every-1-days`              | warehouse (`SyncXproCoursesTask`, then `SyncXproProgramsTask`) |
+| `mit_edx`     | `course`, `program`          | `update_edx-courses-every-1-days`               | undecided                                                      |
+| `ocw`         | `course`                     | none (ocw-studio webhook)                       | warehouse                                                      |
+| `mitpe`       | `course`, `program`          | `update-professional-ed-resources-every-1-days` | webhook (`mitpe_schedule`)                                     |
+| `mit_climate` | `document`                   | `update-mit-climate-articles-every-1-days`      | webhook (`mit_climate_schedule`)                               |
+| `oll`         | `course`                     | none                                            | webhook (`oll_schedule`)                                       |
+| `podcast`     | `podcast`, `podcast_episode` | `update-podcasts`                               | warehouse (`SyncPodcastsTask`)                                 |
+| `youtube`     | `video_playlist`, `video`    | `update-youtube-videos`                         | warehouse (`SyncYouTubeTask`)                                  |
+| `ovs`         | `video_playlist`, `video`    | `update-ovs-videos`                             | webhook (already pushing)                                      |
+| `see`         | `course`                     | `update_sloan_courses`                          | not built                                                      |
+| `canvas`      | `course`                     | `sync_canvas_courses-every-1-weeks`             | webhook (already pushing)                                      |
 
 The webhook schedules live in the data platform's `delivery` code location. They are registered in production only, stopped by default.
 
@@ -81,8 +81,8 @@ For a webhook source:
 For a warehouse source:
 
 1. Create the rows with `owner` set to `warehouse`.
-2. Run the source's `BaseWarehouseETLTask` in full from `./manage.py shell` rather than waiting for its beat entry: `<SyncTask>.delay(full_refresh=True)`. Only a full refresh prunes. (`SyncPodcastsTask` and `SyncYouTubeTask` are the catalog sources with a warehouse task so far. `profiles.tasks.SyncProgramCertificatesTask` writes certificates, not catalog resources, so ownership doesn't apply to it.)
-3. `SyncPodcastsTask` and `SyncYouTubeTask` fail before writing if the run would unpublish more than 10% of the source's published resources of a type, since that is what a partly built view looks like. If the pre-flip comparison showed a larger difference and you have explained it, queue the run with `allow_mass_unpublish=True`.
+2. Run the source's `BaseWarehouseETLTask` in full from `./manage.py shell` rather than waiting for its beat entry: `<SyncTask>.delay(full_refresh=True)`. Only a full refresh prunes. (`SyncPodcastsTask`, `SyncYouTubeTask`, `SyncXproCoursesTask` and `SyncXproProgramsTask` are the catalog sources with a warehouse task so far. `profiles.tasks.SyncProgramCertificatesTask` writes certificates, not catalog resources, so ownership doesn't apply to it.)
+3. These tasks fail before writing if the run would unpublish more than 10% of the source's published resources of a type, since that is what a partly built view looks like. If the pre-flip comparison showed a larger difference and you have explained it, queue the run with `allow_mass_unpublish=True`. A type with fewer than ten published resources (e.g. xPRO programs) is over the limit as soon as one is removed, so its scheduled run fails, writing nothing, until the run is queued that way.
 
 Between the flip and the new owner's first run, the legacy task only skips. The source's data goes stale but nothing is unpublished.
 

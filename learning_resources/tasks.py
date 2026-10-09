@@ -34,6 +34,7 @@ from learning_resources.etl import (
     pipelines,
     podcast,
     warehouse_media,
+    warehouse_xpro,
     youtube,
 )
 from learning_resources.etl.canvas import (
@@ -1367,7 +1368,7 @@ def generate_all_credential_metadata(
 
 def _allow_mass_unpublish(task) -> bool:
     """
-    Whether a warehouse media sync was queued with allow_mass_unpublish=True,
+    Whether a warehouse sync was queued with allow_mass_unpublish=True,
     e.g. ``SyncPodcastsTask.delay(allow_mass_unpublish=True)``. The scheduled
     runs never pass it.
     """
@@ -1406,7 +1407,7 @@ class SyncYouTubeTask(BaseWarehouseETLTask):
     Always a full sync, whatever ``since`` is: a playlist is loaded together
     with all of its videos, and the views carry no per-playlist change time.
 
-    A run that would unpublish more than warehouse_media.MAX_UNPUBLISH_SHARE of
+    A run that would unpublish more than warehouse_guards.MAX_UNPUBLISH_SHARE of
     the published playlists or videos fails before writing. Queue it with
     ``allow_mass_unpublish=True`` when the removal is real.
     """
@@ -1451,7 +1452,7 @@ class SyncPodcastsTask(BaseWarehouseETLTask):
     Always a full sync, whatever ``since`` is: load_podcasts unpublishes the
     episodes a podcast no longer lists, so it needs all of them.
 
-    A run that would unpublish more than warehouse_media.MAX_UNPUBLISH_SHARE of
+    A run that would unpublish more than warehouse_guards.MAX_UNPUBLISH_SHARE of
     the published podcasts or episodes fails before writing. Queue it with
     ``allow_mass_unpublish=True`` when the removal is real.
     """
@@ -1474,3 +1475,64 @@ class SyncPodcastsTask(BaseWarehouseETLTask):
 
 
 SyncPodcastsTask = app.register_task(SyncPodcastsTask())
+
+
+class SyncXproCoursesTask(BaseWarehouseETLTask):
+    """
+    Warehouse-pull sync of the xPRO courses and their runs, replacing
+    get_xpro_data's course half once ETLSourceOwnership names the warehouse for
+    xpro course.
+
+    Always a full sync, whatever ``since`` is: a course is loaded with all of
+    its runs, and the runs view lists only the runs that are open now.
+
+    A run that would unpublish more than warehouse_guards.MAX_UNPUBLISH_SHARE of
+    the published courses fails before writing. Queue it with
+    ``allow_mass_unpublish=True`` when the removal is real.
+    """
+
+    name = "learning_resources.tasks.SyncXproCoursesTask"
+    table_name = "integrations__learn__xpro_courses"
+    writes = (ETLSource.xpro.name, [LearningResourceType.course.name])
+
+    def fetch_and_upsert(self, conn, *, since=None) -> int:  # noqa: ARG002
+        """Read the xPRO course and run views and load them."""
+        return warehouse_xpro.sync_courses(
+            list(iter_rows(conn, self.view_name)),
+            list(
+                iter_rows(conn, self.qualified_name("integrations__learn__xpro_runs"))
+            ),
+            allow_mass_unpublish=_allow_mass_unpublish(self),
+        )
+
+
+SyncXproCoursesTask = app.register_task(SyncXproCoursesTask())
+
+
+class SyncXproProgramsTask(BaseWarehouseETLTask):
+    """
+    Warehouse-pull sync of the xPRO programs, replacing get_xpro_data's program
+    half once ETLSourceOwnership names the warehouse for xpro program.
+
+    A program's courses are looked up among the xPRO courses MIT Learn has,
+    not loaded, so run SyncXproCoursesTask first. Always a full sync, whatever
+    ``since`` is.
+
+    A run that would unpublish more than warehouse_guards.MAX_UNPUBLISH_SHARE of
+    the published programs fails before writing. Queue it with
+    ``allow_mass_unpublish=True`` when the removal is real.
+    """
+
+    name = "learning_resources.tasks.SyncXproProgramsTask"
+    table_name = "integrations__learn__xpro_programs"
+    writes = (ETLSource.xpro.name, [LearningResourceType.program.name])
+
+    def fetch_and_upsert(self, conn, *, since=None) -> int:  # noqa: ARG002
+        """Read the xPRO program view and load the programs."""
+        return warehouse_xpro.sync_programs(
+            list(iter_rows(conn, self.view_name)),
+            allow_mass_unpublish=_allow_mass_unpublish(self),
+        )
+
+
+SyncXproProgramsTask = app.register_task(SyncXproProgramsTask())

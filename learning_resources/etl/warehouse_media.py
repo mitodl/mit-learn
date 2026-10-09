@@ -11,13 +11,13 @@ Each sync is a full sync: the views are the complete current set, and whatever
 is absent from them is unpublished. A view that comes back empty is therefore
 refused, since the views are built separately and an empty one is a failed
 build, not an empty catalog. So is a sync that would unpublish more than
-MAX_UNPUBLISH_SHARE of what is published, which is what a partly built view
-looks like; a real removal of that size has to be run with the limit lifted.
+warehouse_guards.MAX_UNPUBLISH_SHARE of what is published, which is what a
+partly built view looks like; a real removal of that size has to be run with
+the limit lifted.
 """
 
 import logging
 from collections import defaultdict
-from datetime import UTC, datetime
 
 from dateutil.parser import ParserError, parse
 
@@ -27,8 +27,12 @@ from learning_resources.etl.constants import ETLSource
 from learning_resources.etl.exceptions import ExtractException
 from learning_resources.etl.ownership import may_write
 from learning_resources.etl.utils import iso8601_duration
+from learning_resources.etl.warehouse_guards import (
+    refuse_empty,
+    refuse_mass_unpublish,
+    utc_timestamp,
+)
 from learning_resources.etl.youtube import clean_youtube_description, parse_offered_by
-from learning_resources.models import LearningResource
 from main.constants import (
     ALLOWED_HTML_ATTRIBUTES_WITH_LINKS,
     ALLOWED_HTML_TAGS_WITH_LINKS,
@@ -58,55 +62,6 @@ def may_write_podcasts() -> bool:
     return may_write(ETLSource.podcast.name, PODCAST_TYPES)
 
 
-def _utc_timestamp(value: str | datetime) -> datetime:
-    """
-    Read a warehouse timestamp as an aware datetime. The warehouse renders a
-    UTC time as an ISO 8601 string that may carry no zone.
-    """
-    timestamp = value if isinstance(value, datetime) else parse(value)
-    return timestamp if timestamp.tzinfo else timestamp.replace(tzinfo=UTC)
-
-
-# Largest share of a source's published resources of one type that a sync may
-# unpublish. Day-to-day removals are a handful of playlists, videos or episodes.
-MAX_UNPUBLISH_SHARE = 0.1
-
-
-def _refuse_mass_unpublish(
-    etl_source: str, resource_type: str, pulled_ids: set[str]
-) -> None:
-    """
-    Raise if loading would unpublish more than MAX_UNPUBLISH_SHARE of the
-    source's published resources of a type, i.e. if that share of them is
-    missing from the ids pulled.
-    """
-    published_ids = set(
-        LearningResource.objects.filter(
-            etl_source=etl_source, resource_type=resource_type, published=True
-        ).values_list("readable_id", flat=True)
-    )
-    missing = published_ids - pulled_ids
-    if len(missing) > len(published_ids) * MAX_UNPUBLISH_SHARE:
-        msg = (
-            f"Refusing to sync: {len(missing)} of {len(published_ids)} published "
-            f"{etl_source} {resource_type} resources are not in the warehouse "
-            f"views, over the {MAX_UNPUBLISH_SHARE:.0%} limit. If they were "
-            "removed at the source, rerun with allow_mass_unpublish=True."
-        )
-        raise ExtractException(msg)
-
-
-def _refuse_empty(**views: list[dict]) -> None:
-    """Raise if any of the named views returned no rows."""
-    empty = [name for name, rows in views.items() if not rows]
-    if empty:
-        msg = (
-            f"Refusing to sync: no rows in {', '.join(empty)}. Loading would "
-            "unpublish what the empty view no longer lists."
-        )
-        raise ExtractException(msg)
-
-
 def transform_youtube_video(row: dict, offered_by_code: str | None) -> dict:
     """
     Map an integrations__learn__youtube_videos row to the dict
@@ -127,7 +82,7 @@ def transform_youtube_video(row: dict, offered_by_code: str | None) -> dict:
         "title": row["title"],
         "description": clean_youtube_description(clean_data(row["description_raw"])),
         "image": {"url": row["image_url"]},
-        "last_modified": _utc_timestamp(row["last_modified"]).isoformat(),
+        "last_modified": utc_timestamp(row["last_modified"]).isoformat(),
         "url": row["url"],
         "offered_by": parse_offered_by(offered_by_code),
         "published": True,
@@ -229,7 +184,7 @@ def sync_youtube_channels(
     if not may_write_youtube():
         return []
 
-    _refuse_empty(
+    refuse_empty(
         channels=channels,
         playlists=playlists,
         playlist_videos=playlist_videos,
@@ -240,7 +195,7 @@ def sync_youtube_channels(
             (LearningResourceType.video_playlist.name, playlists),
             (LearningResourceType.video.name, videos),
         ):
-            _refuse_mass_unpublish(
+            refuse_mass_unpublish(
                 ETLSource.youtube.name,
                 resource_type,
                 {row["readable_id"] for row in rows},
@@ -410,13 +365,13 @@ def sync_podcasts(
     if not may_write_podcasts():
         return 0
 
-    _refuse_empty(podcasts=podcasts, episodes=episodes)
+    refuse_empty(podcasts=podcasts, episodes=episodes)
     if not allow_mass_unpublish:
         for resource_type, rows in (
             (LearningResourceType.podcast.name, podcasts),
             (LearningResourceType.podcast_episode.name, episodes),
         ):
-            _refuse_mass_unpublish(
+            refuse_mass_unpublish(
                 ETLSource.podcast.name,
                 resource_type,
                 {row["readable_id"] for row in rows},
