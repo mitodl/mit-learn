@@ -106,13 +106,6 @@ const SERVER_KEYED_PARAMS = [
   "account_action",
   "account_action_status",
   "is_new_user",
-  /**
-   * TODO(ol-infrastructure): `view` is not yet in the Fastly cache-key
-   * whitelist (cache_key_query_whitelist.vcl). Add it there before this
-   * ships; the learner page's `?view=` tab is client-only today, so an
-   * un-keyed read self-heals at hydration, but this registry's rule is
-   * "readable ⇔ cache-keyed".
-   */
   "view",
 ] as const
 
