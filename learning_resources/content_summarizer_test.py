@@ -1,4 +1,5 @@
 import pytest
+from django.core.exceptions import ImproperlyConfigured
 
 from learning_resources.constants import (
     CONTENT_TYPE_FILE,
@@ -579,3 +580,54 @@ def test_summarize_single_content_file_sanitizes_llm_output(
     content_file.refresh_from_db()
     assert content_file.summary == "summary with nul and surrogate?"
     assert content_file.flashcards == [{"question": "Question", "answer": "An?swer"}]
+
+
+def test_get_llm_azure_model_does_not_need_openai_key(settings, mocker):
+    """An azure/ model is routed to Azure OpenAI without an OpenAI key"""
+    settings.OPENAI_API_KEY = None
+    settings.AZURE_OPENAI_ENDPOINT = "https://ol-openai-test.openai.azure.com/"
+    settings.AZURE_OPENAI_API_VERSION = "2024-10-21"
+    token_provider = mocker.Mock()
+    mocker.patch(
+        "main.azure_openai.azure_ad_token_provider", return_value=token_provider
+    )
+
+    llm = ContentSummarizer()._get_llm(model="azure/gpt-4o", max_tokens=500)  # noqa: SLF001
+
+    assert llm.model == "azure/gpt-4o"
+    assert llm.max_tokens == 500
+    assert llm.custom_llm_provider == "azure"
+    assert llm.api_base is None
+    assert llm.model_kwargs == {
+        "base_url": "https://ol-openai-test.openai.azure.com/",
+        "api_version": "2024-10-21",
+        "azure_ad_token_provider": token_provider,
+    }
+
+
+def test_get_llm_azure_model_requires_endpoint(settings):
+    """An azure/ model without AZURE_OPENAI_ENDPOINT fails loudly"""
+    settings.OPENAI_API_KEY = "test"
+    settings.AZURE_OPENAI_ENDPOINT = ""
+    with pytest.raises(ImproperlyConfigured, match="AZURE_OPENAI_ENDPOINT"):
+        ContentSummarizer()._get_llm(model="azure/gpt-4o")  # noqa: SLF001
+
+
+def test_get_llm_openai_model_unchanged(settings):
+    """Models without the azure/ prefix still use the OpenAI key and LiteLLM base"""
+    settings.OPENAI_API_KEY = "test"
+    settings.LITELLM_CUSTOM_PROVIDER = "openai"
+    settings.AZURE_OPENAI_ENDPOINT = "https://ol-openai-test.openai.azure.com/"
+
+    llm = ContentSummarizer()._get_llm(model="gpt-4o")  # noqa: SLF001
+
+    assert llm.custom_llm_provider == "openai"
+    assert llm.api_base == "https://test/api/"
+    assert llm.model_kwargs == {}
+
+
+def test_get_llm_openai_model_requires_openai_key(settings):
+    """Models without the azure/ prefix still require OPENAI_API_KEY"""
+    settings.OPENAI_API_KEY = None
+    with pytest.raises(ValueError, match="OPENAI_API_KEY"):
+        ContentSummarizer()._get_llm(model="gpt-4o")  # noqa: SLF001

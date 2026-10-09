@@ -33,6 +33,7 @@ from learning_resources.models import (
     LearningResource,
 )
 from learning_resources.utils import count_tokens, sanitize_llm_text
+from main.azure_openai import azure_openai_chat_litellm_kwargs, is_azure_model
 from main.utils import db_sync_to_async
 from vector_search.utils import async_content_file_chunks_for_resource
 
@@ -508,11 +509,15 @@ def _get_llm(config: CredentialMetadataConfiguration) -> ChatLiteLLM:
     Get the ChatLiteLLM instance for a field's configuration.
 
     """
+    if is_azure_model(config.llm_model):
+        connection = azure_openai_chat_litellm_kwargs()
+    else:
+        connection = {"api_base": settings.LITELLM_API_BASE}
     return ChatLiteLLM(
         model=config.llm_model,
         temperature=config.temperature,
-        api_base=settings.LITELLM_API_BASE,
         request_timeout=settings.CREDENTIAL_METADATA_LLM_TIMEOUT,
+        **connection,
     )
 
 
