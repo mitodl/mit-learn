@@ -48,7 +48,7 @@ from learning_resources.tasks import (
     update_ocw_learning_material_resources,
 )
 from main.celery import app
-from main.utils import now_in_utc
+from main.utils import checksum_for_content, now_in_utc
 
 pytestmark = pytest.mark.django_db
 # pylint:disable=redefined-outer-name,unused-argument,too-many-arguments
@@ -1134,8 +1134,154 @@ def test_marketing_page_for_resources_updates_existing_on_url_change(mocker):
 
 
 @pytest.mark.django_db
+def test_marketing_page_for_resources_skips_unchanged_content(mocker):
+    """A re-scrape that yields the same content leaves the page alone and
+    doesn't re-index or re-embed it
+    """
+    course = models.LearningResource.objects.create(
+        title="Test Course",
+        url="https://example.com/course",
+        resource_type="course",
+        published=True,
+    )
+    existing = models.ContentFile.objects.create(
+        learning_resource=course,
+        file_type=MARKETING_PAGE_FILE_TYPE,
+        file_extension=".md",
+        key=course.url,
+        url=course.url,
+        content="content",
+        published=True,
+    )
+    updated_on = existing.updated_on
+
+    scraper = mocker.Mock()
+    scraper.scrape.return_value = "<html><body><p>content</p></body></html>"
+    mocker.patch("learning_resources.tasks.scraper_for_site", return_value=scraper)
+    mocker.patch("learning_resources.tasks.html_to_markdown", return_value="content")
+    mock_generate_embeddings = mocker.patch("vector_search.tasks.generate_embeddings")
+    mock_upsert_content_file = mocker.patch(
+        "learning_resources_search.tasks.upsert_content_file"
+    )
+
+    marketing_page_for_resources([course.id])
+
+    existing.refresh_from_db()
+    assert existing.updated_on == updated_on
+    mock_generate_embeddings.delay.assert_not_called()
+    mock_upsert_content_file.delay.assert_not_called()
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    ("existing_content", "existing_published"),
+    [
+        ("old content", True),
+        ("new content", False),
+    ],
+)
+def test_marketing_page_for_resources_updates_changed_page(
+    mocker, existing_content, existing_published
+):
+    """A page whose content or published state changed is saved with a new
+    checksum, re-indexed and re-embedded
+    """
+    course = models.LearningResource.objects.create(
+        title="Test Course",
+        url="https://example.com/course",
+        resource_type="course",
+        published=True,
+    )
+    existing = models.ContentFile.objects.create(
+        learning_resource=course,
+        file_type=MARKETING_PAGE_FILE_TYPE,
+        file_extension=".md",
+        key=course.url,
+        url=course.url,
+        content=existing_content,
+        published=existing_published,
+    )
+
+    scraper = mocker.Mock()
+    scraper.scrape.return_value = "<html><body><p>new content</p></body></html>"
+    mocker.patch("learning_resources.tasks.scraper_for_site", return_value=scraper)
+    mocker.patch(
+        "learning_resources.tasks.html_to_markdown", return_value="new content"
+    )
+    mock_generate_embeddings = mocker.patch("vector_search.tasks.generate_embeddings")
+    mock_upsert_content_file = mocker.patch(
+        "learning_resources_search.tasks.upsert_content_file"
+    )
+
+    marketing_page_for_resources([course.id])
+
+    existing.refresh_from_db()
+    assert existing.content == "new content"
+    assert existing.checksum == checksum_for_content("new content")
+    assert existing.published is True
+    mock_generate_embeddings.delay.assert_called_once_with(
+        [existing.id], "content_file", overwrite=True
+    )
+    mock_upsert_content_file.delay.assert_called_once_with(existing.id)
+
+
+@pytest.mark.django_db
+def test_marketing_page_for_resources_publishes_test_mode_page(mocker):
+    """A test mode resource's marketing page is published and indexed even
+    though the resource itself is unpublished
+    """
+    course = models.LearningResource.objects.create(
+        title="Test Mode Course",
+        url="https://example.com/test-mode-course",
+        resource_type="course",
+        published=False,
+        test_mode=True,
+    )
+
+    scraper = mocker.Mock()
+    scraper.scrape.return_value = "<html><body><p>content</p></body></html>"
+    mocker.patch("learning_resources.tasks.scraper_for_site", return_value=scraper)
+    mocker.patch("learning_resources.tasks.html_to_markdown", return_value="content")
+    mocker.patch("vector_search.tasks.generate_embeddings")
+    mock_upsert_content_file = mocker.patch(
+        "learning_resources_search.tasks.upsert_content_file"
+    )
+
+    marketing_page_for_resources([course.id])
+
+    content_file = models.ContentFile.objects.get(
+        learning_resource=course, file_type=MARKETING_PAGE_FILE_TYPE
+    )
+    assert content_file.published is True
+    mock_upsert_content_file.delay.assert_called_once_with(content_file.id)
+
+
+@pytest.mark.django_db
+def test_marketing_page_for_resources_skips_unpublished_resource(mocker):
+    """A resource unpublished (and not in test mode) since it was queued is
+    not scraped
+    """
+    course = models.LearningResource.objects.create(
+        title="Unpublished Course",
+        url="https://example.com/unpublished-course",
+        resource_type="course",
+        published=False,
+    )
+    mock_scraper_for_site = mocker.patch("learning_resources.tasks.scraper_for_site")
+    mock_generate_embeddings = mocker.patch("vector_search.tasks.generate_embeddings")
+
+    marketing_page_for_resources([course.id])
+
+    mock_scraper_for_site.assert_not_called()
+    mock_generate_embeddings.delay.assert_not_called()
+    assert not models.ContentFile.objects.filter(learning_resource=course).exists()
+
+
+@pytest.mark.django_db
 def test_scrape_marketing_pages(mocker, settings, mocked_celery):
-    """Test that scrape_marketing_pages correctly identifies resources without marketing pages"""
+    """scrape_marketing_pages queues every published or test mode resource,
+    including ones that already have a marketing page
+    """
 
     settings.EMBEDDINGS_EXTERNAL_FETCH_USE_WEBDRIVER = True
     settings.QDRANT_CHUNK_SIZE = 2
@@ -1173,6 +1319,13 @@ def test_scrape_marketing_pages(mocker, settings, mocked_celery):
         resource_type="course",
         published=False,
     )
+    test_mode_course = models.LearningResource.objects.create(
+        title="Test Mode Course",
+        url="https://example.com/test-mode",
+        resource_type="course",
+        published=False,
+        test_mode=True,
+    )
 
     mock_group = mocker.patch("learning_resources.tasks.celery.group")
     mock_marketing_page_task = mocker.patch(
@@ -1181,10 +1334,11 @@ def test_scrape_marketing_pages(mocker, settings, mocked_celery):
     with pytest.raises(mocked_celery.replace_exception_class):
         scrape_marketing_pages.delay()
 
-    # Verify that only resources without marketing pages are included
-    expected_ids = [course1.id, course2.id]
-    assert all(
-        eid in mock_marketing_page_task.mock_calls[0].args[0] for eid in expected_ids
+    queued_ids = [
+        rid for call in mock_marketing_page_task.call_args_list for rid in call.args[0]
+    ]
+    assert sorted(queued_ids) == sorted(
+        [course1.id, course2.id, course3.id, test_mode_course.id]
     )
     mock_group.assert_called_once()
 
@@ -1234,57 +1388,6 @@ def test_scrape_marketing_pages_orders_courses_before_programs(
     )
     assert first_group_tasks == [("si", (course.id,))]
     assert second_group_tasks == [("si", (program.id,))]
-
-
-@pytest.mark.django_db
-def test_scrape_marketing_pages_queues_healable_programs(
-    mocker, settings, mocked_celery
-):
-    """A program that already has a page but is missing its children section
-    (with a child course page available) is queued for re-scrape.
-    """
-    settings.QDRANT_CHUNK_SIZE = 10
-    course = models.LearningResource.objects.create(
-        title="Course",
-        url="https://example.com/course",
-        resource_type="course",
-        published=True,
-    )
-    ContentFile.objects.create(
-        learning_resource=course,
-        file_type=MARKETING_PAGE_FILE_TYPE,
-        file_extension=".md",
-        key=course.url,
-        content="Child copy.",
-        published=True,
-    )
-    program = models.LearningResource.objects.create(
-        title="Program",
-        url="https://example.com/program",
-        resource_type="program",
-        published=True,
-    )
-    models.LearningResourceRelationship.objects.create(
-        parent=program, child=course, relation_type="PROGRAM_COURSES"
-    )
-    # Program already has a page, but WITHOUT the children marker.
-    ContentFile.objects.create(
-        learning_resource=program,
-        file_type=MARKETING_PAGE_FILE_TYPE,
-        file_extension=".md",
-        key=program.url,
-        content="Program page, no children yet.",
-        published=True,
-    )
-    si_mock = mocker.patch("learning_resources.tasks.marketing_page_for_resources.si")
-
-    with pytest.raises(mocked_celery.replace_exception_class):
-        scrape_marketing_pages.delay()
-
-    queued_ids = [i for call in si_mock.call_args_list for i in call.args[0]]
-    # Program re-queued for healing; course already has a page so it is NOT queued.
-    assert program.id in queued_ids
-    assert course.id not in queued_ids
 
 
 @pytest.fixture

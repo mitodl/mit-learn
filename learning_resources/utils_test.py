@@ -1114,46 +1114,6 @@ def test_reachable_published_course_ids_empty_input():
     assert utils.reachable_published_course_ids([]) == {}
 
 
-def _add_program_marketing_page(program_lr, content):
-    """Attach a published marketing-page content file to a program."""
-    from learning_resources.models import ContentFile
-
-    return ContentFile.objects.create(
-        learning_resource=program_lr,
-        file_type=MARKETING_PAGE_FILE_TYPE,
-        file_extension=".md",
-        key=f"mktg-{program_lr.id}",
-        content=content,
-        published=True,
-    )
-
-
-@pytest.mark.django_db
-@pytest.mark.parametrize(
-    ("child_has_page", "program_content", "expected_selected"),
-    [
-        # missing marker + an available child page → heal
-        (True, "Program page with no children yet.", True),
-        # no reachable child page → skip (termination guard)
-        (False, "Program page with no children yet.", False),
-        # marker already present → skip
-        (True, "Program page.\n\n## Program Contents\n\n### Child", False),
-    ],
-)
-def test_programs_needing_children_heal(
-    child_has_page, program_content, expected_selected
-):
-    """Heal a program only when its page lacks the marker AND a child page exists."""
-    course_lr = CourseFactory.create().learning_resource
-    if child_has_page:
-        _add_course_marketing_page(course_lr, "Child marketing copy.")
-    program_lr = ProgramFactory.create(courses=[course_lr]).learning_resource
-    _add_program_marketing_page(program_lr, program_content)
-
-    expected = {program_lr.id} if expected_selected else set()
-    assert utils.programs_needing_children_heal([program_lr.id]) == expected
-
-
 @pytest.mark.parametrize(
     ("input_md", "expected"),
     [

@@ -60,7 +60,6 @@ from learning_resources.utils import (
     build_program_children_content_bulk,
     html_to_markdown,
     load_course_blocklist,
-    programs_needing_children_heal,
     resource_unpublished_actions,
     resource_upserted_actions,
     strip_markdown_images,
@@ -73,7 +72,7 @@ from learning_resources_search.exceptions import RetryError
 from main.celery import app
 from main.constants import ISOFORMAT
 from main.decorators import cooldown_task
-from main.utils import chunks, now_in_utc, run_on_worker_loop
+from main.utils import checksum_for_content, chunks, now_in_utc, run_on_worker_loop
 
 log = logging.getLogger(__name__)
 
@@ -907,46 +906,31 @@ def sync_canvas_courses(canvas_course_ids=None, overwrite=False):  # noqa: FBT00
 @app.task(bind=True)
 def scrape_marketing_pages(self):
     """
-    Scrape marketing pages for programs and courses and store them as content
-    files. Child courses are scraped before their parent programs so a program's
-    children section is built from child marketing pages that already exist.
-    Programs whose stored page is missing its children section (and whose
-    children content is now available) are re-scraped to heal them.
+    Scrape marketing pages for all published or test mode programs and courses
+    and store them as content files. Pages whose content hasn't changed are
+    left alone. Child courses are scraped before their parent programs so a
+    program's children section is built from up-to-date child marketing pages.
     """
     log.info("Running scrape_marketing_pages task")
     resource_types = dict(
-        LearningResource.objects.filter(
-            published=True, resource_type__in=["course", "program"]
-        ).values_list("id", "resource_type")
+        LearningResource.objects.filter(Q(published=True) | Q(test_mode=True))
+        .filter(resource_type__in=["course", "program"])
+        .values_list("id", "resource_type")
     )
-    # Unpublished pages don't count as existing, so a resource whose page was
-    # unpublished along with it gets re-scraped (and republished) if the
-    # resource comes back.
-    existing_page_resource_ids = set(
-        ContentFile.objects.filter(
-            file_type=MARKETING_PAGE_FILE_TYPE, published=True
-        ).values_list("learning_resource_id", flat=True)
+    course_ids = sorted(
+        rid for rid, rtype in resource_types.items() if rtype == "course"
     )
-
-    missing_ids = set(resource_types) - existing_page_resource_ids
-    missing_course_ids = sorted(
-        rid for rid in missing_ids if resource_types[rid] == "course"
+    program_ids = sorted(
+        rid for rid, rtype in resource_types.items() if rtype == "program"
     )
-    program_ids_with_pages = {
-        rid
-        for rid in existing_page_resource_ids
-        if resource_types.get(rid) == "program"
-    }
-    program_ids = {rid for rid in missing_ids if resource_types[rid] == "program"}
-    program_ids |= programs_needing_children_heal(program_ids_with_pages)
 
     course_tasks = [
         marketing_page_for_resources.si(ids)
-        for ids in chunks(missing_course_ids, chunk_size=settings.QDRANT_CHUNK_SIZE)
+        for ids in chunks(course_ids, chunk_size=settings.QDRANT_CHUNK_SIZE)
     ]
     program_tasks = [
         marketing_page_for_resources.si(ids)
-        for ids in chunks(sorted(program_ids), chunk_size=settings.QDRANT_CHUNK_SIZE)
+        for ids in chunks(program_ids, chunk_size=settings.QDRANT_CHUNK_SIZE)
     ]
 
     if course_tasks and program_tasks:
@@ -1002,29 +986,41 @@ def marketing_page_for_resources(resource_ids):
                 marketing_page_url,
             )
             continue
-        if page_content:
-            content_file, _ = ContentFile.objects.update_or_create(
+        if not page_content:
+            continue
+        content = strip_markdown_images(html_to_markdown(page_content))
+        if learning_resource.resource_type == LearningResourceType.program.name:
+            children_content = program_children_content.get(learning_resource.id, "")
+            if children_content:
+                content += children_content
+        content_file = ContentFile.objects.filter(
+            learning_resource=learning_resource,
+            file_type=MARKETING_PAGE_FILE_TYPE,
+        ).first()
+
+        if (
+            content_file
+            and content_file.checksum == checksum_for_content(content)
+            and content_file.key == marketing_page_url
+            and content_file.url == marketing_page_url
+            and content_file.published
+        ):
+            # unchanged since the last scrape: skip re-indexing and re-embedding
+            continue
+        if content_file is None:
+            content_file = ContentFile(
                 learning_resource=learning_resource,
                 file_type=MARKETING_PAGE_FILE_TYPE,
-                defaults={
-                    "file_extension": ".md",
-                    "key": marketing_page_url,
-                    "url": marketing_page_url,
-                },
             )
-            content = strip_markdown_images(html_to_markdown(page_content))
-            if learning_resource.resource_type == LearningResourceType.program.name:
-                children_content = program_children_content.get(
-                    learning_resource.id, ""
-                )
-                if children_content:
-                    content += children_content
-            content_file.content = content
-            content_file.published = learning_resource.published
-            content_file.save()
-            content_file_ids.append(content_file.id)
-            if content_file.published:
-                upsert_content_file.delay(content_file.id)
+        content_file.file_extension = ".md"
+        content_file.key = marketing_page_url
+        content_file.url = marketing_page_url
+        content_file.content = content
+        # save() sets the checksum from the content
+        content_file.save()
+        content_file_ids.append(content_file.id)
+        if content_file.published:
+            upsert_content_file.delay(content_file.id)
     if content_file_ids:
         generate_embeddings.delay(content_file_ids, CONTENT_FILE_TYPE, overwrite=True)
 
