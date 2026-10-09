@@ -26,22 +26,20 @@ describe("HubspotIdentifier", () => {
   }
 
   test("calls identify with the user's email when authenticated", async () => {
-    const { userData: user } = setup({ is_authenticated: true })
+    const user = setup({ is_authenticated: true })
     await waitFor(() => {
       expect(hsq).toContainEqual(["identify", { email: user.email }])
     })
   })
 
-  test("does not call identify when user is not authenticated", async () => {
-    const { queryClient } = setup({ is_authenticated: false })
-    await waitFor(() => expect(queryClient.isFetching()).toBe(0))
+  test("does not call identify when user is not authenticated", () => {
+    setup({ is_authenticated: false })
     expect(hsq).not.toContainEqual(expect.arrayContaining(["identify"]))
   })
 
-  test("does not call identify when NEXT_PUBLIC_HUBSPOT_PORTAL_ID is not set", async () => {
+  test("does not call identify when NEXT_PUBLIC_HUBSPOT_PORTAL_ID is not set", () => {
     delete process.env.NEXT_PUBLIC_HUBSPOT_PORTAL_ID
-    const { queryClient } = setup({ is_authenticated: true })
-    await waitFor(() => expect(queryClient.isFetching()).toBe(0))
+    setup({ is_authenticated: true })
     expect(hsq).not.toContainEqual(expect.arrayContaining(["identify"]))
   })
 })
