@@ -30,14 +30,24 @@ export const getConstantSearchParams = (searchFilter?: string) => {
 }
 
 const FACETS_BY_CHANNEL_TYPE: Record<ChannelTypeEnum, string[]> = {
+  /**
+   * Shorter than the other channel types, and in a different order, because
+   * the topic design states both. Its filter drawer holds Free, Format and
+   * Certificate and stops there -- no Offered By, no Department -- and it
+   * lists Format above Certificate, which the row of applied filters above
+   * the results follows as well.
+   *
+   * Dropping a name here does not strand a filter that arrives in the URL:
+   * `getExtraFacetNames` picks those up and appends them, so a link carrying
+   * `offered_by` still shows and clears it. It only stops the drawer offering
+   * the two of them unprompted.
+   */
   [ChannelTypeEnum.Topic]: [
     "free",
     "resource_category",
     "resource_type",
-    "certification_type",
     "delivery",
-    "offered_by",
-    "department",
+    "certification_type",
   ],
   [ChannelTypeEnum.Department]: [
     "free",

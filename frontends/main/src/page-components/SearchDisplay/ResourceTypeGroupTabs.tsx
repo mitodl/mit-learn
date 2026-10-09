@@ -76,6 +76,37 @@ type ResourceTypeGroupTabsProps = {
   onTabChange?: () => void
   className?: string
 }
+
+/**
+ * Move to `tab`, or to the default one when there is none.
+ *
+ * Shared by the tab row and the drawer's list, which are the same choice
+ * drawn two ways -- so switching has to do the same housekeeping either way:
+ * drop the resource category that only the learning materials tab offers, and
+ * drop a sort this tab cannot apply rather than leave it ordering by nothing.
+ */
+const selectTab = (
+  tab: TabConfig | undefined,
+  setSearchParams: ResourceTypeGroupTabsProps["setSearchParams"],
+  onTabChange?: () => void,
+) => {
+  setSearchParams("resource_type_group", (prev) => {
+    const next = new URLSearchParams(prev)
+    if (prev.get("resource_type_group") === "learning_material") {
+      next.delete("resource_category")
+    }
+    if (tab?.resource_type_group) {
+      next.set("resource_type_group", tab.resource_type_group)
+    } else {
+      next.delete("resource_type_group")
+    }
+    if (tab?.unsupportedSortby?.includes(next.get("sortby") ?? "")) {
+      next.delete("sortby")
+    }
+    return next
+  })
+  onTabChange?.()
+}
 const ResourceTypeGroupTabList: React.FC<ResourceTypeGroupTabsProps> = ({
   tabs,
   aggregations,
@@ -95,23 +126,11 @@ const ResourceTypeGroupTabList: React.FC<ResourceTypeGroupTabsProps> = ({
     <TabsList
       className={className}
       onChange={(_e, value) => {
-        const tab = tabs.find((t) => t.name === value)
-        setSearchParams("resource_type_group", (prev) => {
-          const next = new URLSearchParams(prev)
-          if (prev.get("resource_type_group") === "learning_material") {
-            next.delete("resource_category")
-          }
-          if (tab?.resource_type_group) {
-            next.set("resource_type_group", tab.resource_type_group)
-          } else {
-            next.delete("resource_type_group")
-          }
-          if (tab?.unsupportedSortby?.includes(next.get("sortby") ?? "")) {
-            next.delete("sortby")
-          }
-          return next
-        })
-        onTabChange?.()
+        selectTab(
+          tabs.find((t) => t.name === value),
+          setSearchParams,
+          onTabChange,
+        )
       }}
     >
       {tabs.map((t) => {
@@ -134,6 +153,73 @@ const ResourceTypeGroupTabList: React.FC<ResourceTypeGroupTabsProps> = ({
         )
       })}
     </TabsList>
+  )
+}
+
+/**
+ * The same choice as the tab row, drawn as a facet group for the drawer.
+ *
+ * A tab row does not survive a phone -- four labels with counts, and the
+ * longest of them "Learning Materials" -- so the design moves the choice into
+ * the filter drawer and draws it as the facets around it are drawn. It is
+ * still the tabs: one at a time, writing the same `resource_type_group`, and
+ * the tab row reflects it at any width the row is drawn at.
+ *
+ * Deliberately the facets' own markup and class names rather than a styled
+ * component, so the surrounding `FacetStyles` reaches it and the rows match
+ * the Free group above them exactly.
+ *
+ * There is no "All" row because the design has none: unchecking whichever row
+ * is checked is what All is, and a row that undid itself and three others
+ * would be the odd one out among checkboxes.
+ */
+const ResourceTypeGroupChecklist: React.FC<
+  ResourceTypeGroupTabsProps & { activeTabName: string }
+> = ({ tabs, aggregations, setSearchParams, onTabChange, activeTabName }) => {
+  const counts = resourceTypeGroupCounts(aggregations)
+  const choices = tabs.filter((tab) => tab.resource_type_group)
+  if (choices.length === 0) {
+    return null
+  }
+  return (
+    <div className="facets multi-facet-group">
+      {choices.map((tab) => {
+        const checked = tab.name === activeTabName
+        const id = `resource-type-group-${tab.name}`
+        return (
+          <div
+            key={tab.name}
+            className={checked ? "facet-visible checked" : "facet-visible"}
+          >
+            <input
+              type="checkbox"
+              id={id}
+              name="resource_type_group"
+              value={tab.resource_type_group ?? ""}
+              /* The label beside it reads as the count run onto the end of
+                 the words -- "Courses12" -- so the control names itself. */
+              aria-label={tab.label}
+              checked={checked}
+              onChange={() =>
+                selectTab(
+                  checked ? tabs.find((t) => t.defaultTab) : tab,
+                  setSearchParams,
+                  onTabChange,
+                )
+              }
+            />
+            <label htmlFor={id} className="facet-label">
+              <span className="facet-text">{tab.label}</span>
+              <span className="facet-count">
+                {tab.resource_type_group
+                  ? (counts?.[tab.resource_type_group] ?? 0)
+                  : null}
+              </span>
+            </label>
+          </div>
+        )
+      })}
+    </div>
   )
 }
 
@@ -172,6 +258,7 @@ const ResourceTypeGroupTabs = {
   Context: ResourceTypeGroupTabContext,
   TabList: ResourceTypeGroupTabList,
   TabPanels: ResourceTypeGroupTabPanels,
+  Checklist: ResourceTypeGroupChecklist,
 }
 
 export { ResourceTypeGroupTabs }

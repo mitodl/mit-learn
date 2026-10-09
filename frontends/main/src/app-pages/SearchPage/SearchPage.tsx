@@ -9,6 +9,7 @@ import type {
 import { useSetSearchParams } from "@mitodl/course-search-utils/next"
 import { useAppSearchParams } from "@/common/useAppSearchParams"
 import { useResourceSearchParams } from "@mitodl/course-search-utils"
+import { useTrackedFilterSetters } from "@/common/analytics/searchFilters"
 import SearchDisplay from "@/page-components/SearchDisplay/SearchDisplay"
 import {
   AdminTitleContainer,
@@ -184,16 +185,24 @@ const SearchPage: React.FC = () => {
     params,
     hasFacets,
     clearAllFacets,
-    toggleParamValue,
+    toggleParamValue: rawToggleParamValue,
     currentText,
     setCurrentText,
     setCurrentTextAndQuery,
-    setParamValue,
+    setParamValue: rawSetParamValue,
   } = useResourceSearchParams({
     searchParams,
     setSearchParams,
     facets: searchParamFacets,
     onFacetsChange,
+  })
+
+  /* Wrapped here rather than inside the results display, so every page hands
+     its controls setters that report what they change -- see
+     `useTrackedFilterSetters`. */
+  const { setParamValue, toggleParamValue } = useTrackedFilterSetters({
+    setParamValue: rawSetParamValue,
+    toggleParamValue: rawToggleParamValue,
   })
 
   const page = +(searchParams.get("page") ?? "1")

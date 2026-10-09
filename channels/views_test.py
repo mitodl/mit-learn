@@ -15,7 +15,11 @@ from channels.factories import (
 )
 from channels.models import Channel
 from channels.serializers import ChannelSerializer
-from learning_resources.factories import LearningResourceFactory
+from learning_resources.factories import (
+    LearningPathFactory,
+    LearningPathRelationshipFactory,
+    LearningResourceFactory,
+)
 from main.factories import UserFactory
 
 pytestmark = pytest.mark.django_db
@@ -290,3 +294,165 @@ def test_channel_counts_view_is_cached(client, is_authenticated):
 
     response = client.get(url).json()
     assert len(response) == channel_count
+
+
+def _featured_url(channel):
+    return reverse(
+        "channels:v0:channel_featured_api-list",
+        kwargs={"channel_type": channel.channel_type, "name": channel.name},
+    )
+
+
+def test_channel_featured_returns_the_list_in_its_own_order(client):
+    """The path's order is the row's order, not the resources' own."""
+    path = LearningPathFactory.create(resources=[]).learning_resource
+    channel = ChannelFactory.create(featured_list=path)
+    children = [
+        LearningPathRelationshipFactory.create(parent=path, position=position).child
+        for position in (2, 0, 1)
+    ]
+
+    results = client.get(_featured_url(channel)).json()["results"]
+
+    assert [r["id"] for r in results] == [
+        children[1].id,
+        children[2].id,
+        children[0].id,
+    ]
+
+
+def test_channel_featured_includes_an_unpublished_learning_path(client):
+    """
+    The reason this endpoint exists: editors curate these lists without
+    publishing them, so the aggregated featured endpoint leaves the row empty.
+    """
+    path = LearningPathFactory.create(resources=[]).learning_resource
+    path.published = False
+    path.save(update_fields=["published"])
+    channel = ChannelFactory.create(featured_list=path)
+    child = LearningPathRelationshipFactory.create(parent=path).child
+
+    results = client.get(_featured_url(channel)).json()["results"]
+
+    assert [r["id"] for r in results] == [child.id]
+
+
+def test_channel_featured_excludes_unpublished_resources(client):
+    """An unpublished path is a curation state; an unpublished member is not."""
+    path = LearningPathFactory.create(resources=[]).learning_resource
+    channel = ChannelFactory.create(featured_list=path)
+    published = LearningPathRelationshipFactory.create(parent=path, position=0).child
+    hidden = LearningPathRelationshipFactory.create(parent=path, position=1).child
+    hidden.published = False
+    hidden.save(update_fields=["published"])
+
+    results = client.get(_featured_url(channel)).json()["results"]
+
+    assert [r["id"] for r in results] == [published.id]
+
+
+def test_channel_featured_is_empty_without_a_configured_list(client):
+    """A channel need not feature anything, which is empty rather than a 404."""
+    channel = ChannelFactory.create(featured_list=None)
+
+    response = client.get(_featured_url(channel))
+
+    assert response.status_code == 200
+    assert response.json()["results"] == []
+
+
+def test_channel_featured_404s_for_an_unpublished_channel(client):
+    """Matching the other channel views, which only serve published channels."""
+    channel = ChannelFactory.create(published=False)
+
+    assert client.get(_featured_url(channel)).status_code == 404
+
+
+def test_channel_featured_is_scoped_to_its_own_channel(client):
+    """Each channel reads its own list, not the aggregate across channels."""
+    mine = LearningPathFactory.create(resources=[]).learning_resource
+    theirs = LearningPathFactory.create(resources=[]).learning_resource
+    channel = ChannelFactory.create(featured_list=mine)
+    ChannelFactory.create(featured_list=theirs)
+    child = LearningPathRelationshipFactory.create(parent=mine).child
+    LearningPathRelationshipFactory.create(parent=theirs)
+
+    results = client.get(_featured_url(channel)).json()["results"]
+
+    assert [r["id"] for r in results] == [child.id]
+
+
+def test_channel_featured_shows_a_repeated_resource_once(client):
+    """
+    Nothing stops a list holding the same resource twice, and the row should
+    still show it once -- at the first place the list puts it.
+    """
+    path = LearningPathFactory.create(resources=[]).learning_resource
+    channel = ChannelFactory.create(featured_list=path)
+    repeated = LearningResourceFactory.create()
+    other = LearningResourceFactory.create()
+    LearningPathRelationshipFactory.create(parent=path, child=repeated, position=0)
+    LearningPathRelationshipFactory.create(parent=path, child=other, position=1)
+    LearningPathRelationshipFactory.create(parent=path, child=repeated, position=2)
+
+    body = client.get(_featured_url(channel)).json()
+
+    assert [r["id"] for r in body["results"]] == [repeated.id, other.id]
+    assert body["count"] == 2
+
+
+def test_channel_featured_orders_tied_positions_consistently(client):
+    """
+    `position` defaults to 0, so a list built without setting it has every
+    item tied. Ordering on position alone would leave those rows in whatever
+    order the database happened to return, which can differ between requests
+    -- and an item that moves between two requests is one a reader sees twice
+    or misses entirely across a page boundary.
+    """
+    path = LearningPathFactory.create(resources=[]).learning_resource
+    channel = ChannelFactory.create(featured_list=path)
+    tied = [LearningResourceFactory.create() for _ in range(4)]
+    for child in tied:
+        LearningPathRelationshipFactory.create(parent=path, child=child, position=0)
+
+    pages = [client.get(_featured_url(channel)).json()["results"] for _ in range(3)]
+
+    ids = [[r["id"] for r in page] for page in pages]
+    assert ids[0] == sorted(child.id for child in tied)
+    assert ids[0] == ids[1] == ids[2]
+
+
+@pytest.mark.usefixtures("enabled_view_cache")
+def test_channel_featured_is_cached_for_anonymous_users(client):
+    """
+    The row is the same for everyone and sits on a public page, so an
+    anonymous view should not run the query again.
+    """
+    path = LearningPathFactory.create(resources=[]).learning_resource
+    channel = ChannelFactory.create(featured_list=path)
+    first = LearningPathRelationshipFactory.create(parent=path, position=0).child
+
+    assert [r["id"] for r in client.get(_featured_url(channel)).json()["results"]] == [
+        first.id
+    ]
+
+    LearningPathRelationshipFactory.create(parent=path, position=1)
+
+    # Served from the cache, which an edit through the API clears -- see
+    # `clear_featured_caches`.
+    assert [r["id"] for r in client.get(_featured_url(channel)).json()["results"]] == [
+        first.id
+    ]
+
+
+def test_channel_featured_is_not_cached_for_signed_in_users(client):
+    """Signed in, the row is read fresh rather than from the shared cache."""
+    path = LearningPathFactory.create(resources=[]).learning_resource
+    channel = ChannelFactory.create(featured_list=path)
+    LearningPathRelationshipFactory.create(parent=path, position=0)
+
+    client.force_login(UserFactory.create())
+    assert len(client.get(_featured_url(channel)).json()["results"]) == 1
+
+    LearningPathRelationshipFactory.create(parent=path, position=1)
+    assert len(client.get(_featured_url(channel)).json()["results"]) == 2

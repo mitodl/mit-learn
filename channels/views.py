@@ -3,7 +3,7 @@
 import logging
 from collections.abc import Callable
 
-from django.db.models import QuerySet
+from django.db.models import Min, QuerySet
 from django.utils.decorators import method_decorator
 from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.utils import extend_schema, extend_schema_view
@@ -18,8 +18,10 @@ from channels.serializers import (
     ChannelCountsSerializer,
     ChannelSerializer,
 )
+from learning_resources.models import LearningResource
+from learning_resources.serializers import LearningResourceSerializer
 from main.permissions import AnonymousAccessReadonlyPermission
-from main.utils import cache_page_for_all_users
+from main.utils import cache_page_for_all_users, cache_page_for_anonymous_users
 
 log = logging.getLogger(__name__)
 
@@ -115,6 +117,84 @@ class ChannelByTypeNameDetailView(mixins.RetrieveModelMixin, viewsets.GenericVie
     def retrieve(self, request: Request, *args, **kwargs) -> Response:
         """View for retrieving an individual channel by type and name"""
         return super().retrieve(request, *args, **kwargs)
+
+
+@extend_schema_view(
+    list=extend_schema(
+        summary="Channel Featured Resources",
+        description=(
+            "Resources in the channel's featured learning path, in the order "
+            "the path lists them."
+        ),
+    ),
+)
+class ChannelFeaturedView(mixins.ListModelMixin, viewsets.GenericViewSet):
+    """
+    Resources in a channel's own featured learning path.
+
+    Read from the channel's `featured_list` directly, rather than by filtering
+    the aggregated featured endpoint down to one offeror. Two things follow
+    from that: a channel whose learning path is unpublished still has a
+    featured row -- editors curate these lists without publishing them, so
+    filtering on the path's published flag would empty the row -- and the row
+    can be fetched from the URL alone, without first waiting on the channel
+    detail request to learn the path's id.
+
+    The members of the list are still subject to their own published flag. An
+    unpublished *path* is a curation state; an unpublished *resource* is not
+    meant to be shown.
+    """
+
+    serializer_class = LearningResourceSerializer
+    permission_classes = (AnonymousAccessReadonlyPermission,)
+
+    def get_queryset(self) -> QuerySet[LearningResource]:
+        """Return the featured list's resources, in the path's own order."""
+        channel = get_object_or_404(
+            Channel.objects.filter(published=True),
+            channel_type=self.kwargs["channel_type"],
+            name=self.kwargs["name"],
+        )
+        if not channel.featured_list_id:
+            # No list configured is an empty row, not an error: a channel is
+            # not required to feature anything.
+            return LearningResource.objects.none()
+        return (
+            LearningResource.objects.for_serialization()
+            .filter(parents__parent_id=channel.featured_list_id)
+            .filter(published=True)
+            # Nothing stops a list holding the same resource twice, and the
+            # row should still show it once. Taking the earliest of its
+            # positions groups the rows together, where annotating the
+            # position itself leaves them distinct by that very value and
+            # `distinct()` with it.
+            .annotate(position=Min("parents__position"))
+            # Position is not unique within a path -- it defaults to 0, so a
+            # list built without setting it has every item tied. Ordering on
+            # it alone leaves the tied rows in whatever order the database
+            # finds them, which it is free to vary between requests, and a
+            # row that moves between two requests is one a reader sees twice
+            # or not at all across a page boundary.
+            .order_by("position", "id")
+        )
+
+    @method_decorator(
+        cache_page_for_anonymous_users(
+            cache="redis",
+            key_prefix="featured_resources",
+        )
+    )
+    def list(self, request: Request, *args, **kwargs) -> Response:
+        """
+        List the channel's featured resources.
+
+        Under the same key prefix as the aggregated featured endpoint, which
+        is what an edit to any channel's featured list clears -- see
+        `clear_featured_caches`. Caching it under the prefix the other channel
+        views use would outlive the edit instead: nothing clears that one, and
+        a curated row would sit stale for the length of the cache.
+        """
+        return super().list(request, *args, **kwargs)
 
 
 @extend_schema_view(

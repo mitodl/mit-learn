@@ -40,12 +40,19 @@ type SearchSubscriptionToggleProps = {
   itemName: string
   searchParams: URLSearchParams
   sourceType: SourceTypeEnum
+  /**
+   * The glyph beside the label. Defaults to the envelope, which is what every
+   * caller got before this existed -- the topic page's design asks for a
+   * different one, and this is the only thing that differs.
+   */
+  icon?: React.ReactNode
 }
 
 const SearchSubscriptionToggle: React.FC<SearchSubscriptionToggleProps> = ({
   itemName,
   searchParams,
   sourceType,
+  icon = <RiMailLine />,
 }) => {
   const [buttonEl, setButtonEl] = useState<null | HTMLElement>(null)
 
@@ -73,7 +80,7 @@ const SearchSubscriptionToggle: React.FC<SearchSubscriptionToggleProps> = ({
   if (isSubscribed) {
     return (
       <>
-        <SuccessButton onClick={onFollowClick} startIcon={<RiMailLine />}>
+        <SuccessButton onClick={onFollowClick} startIcon={icon}>
           Following
         </SuccessButton>
         <FollowPopover
@@ -92,7 +99,7 @@ const SearchSubscriptionToggle: React.FC<SearchSubscriptionToggleProps> = ({
       <StyledButton
         variant="primary"
         disabled={subscriptionCreate.isPending}
-        startIcon={<RiMailLine />}
+        startIcon={icon}
         onClick={onFollowClick}
       >
         Follow

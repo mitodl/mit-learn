@@ -566,14 +566,19 @@ class PodcastEpisodeViewSet(BaseLearningResourceViewSet):
         )
 
 
-def clear_featured_caches(channel_names):
+def clear_featured_caches(channels):
     """
     Clear the Redis featured-list cache, hard-purge channel pages from
     Fastly, and soft-purge the homepage. Each Fastly purge is independently
     best-effort so one failure doesn't leave the remaining pages stale.
+
+    Takes `(channel_type, name)` pairs: a channel's page lives under its own
+    type, and every type has a featured row to go stale.
     """
     clear_views_cache(key_prefix="featured_resources")
-    purges = [(f"/c/unit/{name}", False) for name in channel_names] + [("/", True)]
+    purges = [
+        (f"/c/{channel_type}/{name}", False) for channel_type, name in channels
+    ] + [("/", True)]
     for relative_url, soft in purges:
         try:
             call_fastly_purge_api(relative_url, timeout=5, soft=soft)
@@ -584,27 +589,30 @@ def clear_featured_caches(channel_names):
 def _clear_featured_caches_on_commit(path_resource_ids):
     """
     Clear the featured caches after commit if any of the given paths is a
-    unit channel's featured list; best-effort, never raises.
+    channel's featured list; best-effort, never raises.
+
+    Every channel type is considered, not only units: a topic channel serves
+    its own featured row from its own cached endpoint, and leaving its list
+    out here would hold an editor's change for the length of the cache.
 
     Runs synchronously in the request (not via Celery) so the purge is done
     by the time the editor's save returns, regardless of worker backlog.
     """
-    channel_names = list(
+    channels = list(
         Channel.objects.filter(
             featured_list_id__in=path_resource_ids,
-            channel_type=ChannelType.unit.name,
-        ).values_list("name", flat=True)
+        ).values_list("channel_type", "name")
     )
-    if not channel_names:
+    if not channels:
         return
 
     def _clear():
         try:
-            clear_featured_caches(channel_names)
+            clear_featured_caches(channels)
         except Exception:
             log.exception(
                 "Failed to clear featured caches for channels %s",
-                channel_names,
+                channels,
             )
 
     transaction.on_commit(_clear)

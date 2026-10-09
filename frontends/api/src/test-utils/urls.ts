@@ -210,6 +210,8 @@ const channels = {
     `${getApiBaseUrl()}/api/v0/channels/counts/${channelType}/`,
   details: (channelType: string, name: string) =>
     `${getApiBaseUrl()}/api/v0/channels/type/${channelType}/${name}/`,
+  featured: (channelType: string, name: string) =>
+    `${getApiBaseUrl()}/api/v0/channels/type/${channelType}/${name}/featured/`,
   patch: (id: number) => `${getApiBaseUrl()}/api/v0/channels/${id}/`,
   list: (params?: Paramsv0<ChannelsApi, "channelsList">) =>
     `${getApiBaseUrl()}/api/v0/channels/${query(params)}`,

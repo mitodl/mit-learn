@@ -6,6 +6,7 @@ import type {
   LearningResourcesApiLearningResourcesSimilarListRequest as SimilarListParams,
   LearningResourcesApiLearningResourcesVectorSimilarListRequest as VectorSimilarListParams,
 } from "api"
+import type { ChannelsApiChannelsTypeFeaturedListRequest as ChannelFeaturedParams } from "api/v0"
 import type { LearningResourceCardProps } from "ol-components"
 
 interface ResourceDataSource {
@@ -28,6 +29,12 @@ interface FeaturedDataSource {
   params: FeaturedListParams
 }
 
+/** A single channel's own featured learning path, published or not. */
+interface ChannelFeaturedDataSource {
+  type: "channel_featured"
+  params: ChannelFeaturedParams
+}
+
 interface SimilarDataSource {
   type: "lr_similar"
   params: SimilarListParams
@@ -43,6 +50,7 @@ type DataSource =
   | ResourceItemsDataSource
   | SearchDataSource
   | FeaturedDataSource
+  | ChannelFeaturedDataSource
   | SimilarDataSource
   | VectorSimilarDataSource
 
@@ -57,5 +65,6 @@ export type {
   ResourceDataSource,
   SearchDataSource,
   FeaturedDataSource,
+  ChannelFeaturedDataSource,
   DataSource,
 }

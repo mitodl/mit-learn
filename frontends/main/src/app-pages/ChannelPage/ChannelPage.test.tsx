@@ -128,6 +128,11 @@ const setupTopicApis = (channel: Channel) => {
     "Topic channel must have a topic",
   )
   const topic = factories.learningResources.topic()
+  // The hero's Featured row reads the channel's own featured list.
+  setMockResponse.get(
+    `${urls.channels.featured(channel.channel_type, channel.name)}?limit=12`,
+    { count: 0, next: null, previous: null, results: [] },
+  )
   channel.channel_url = `/c/${channel.channel_type}/${channel.name.replace(/\s/g, "-")}`
   topic.channel_url = channel.channel_url
   topic.id = channel.topic_detail.topic ?? 0
@@ -225,6 +230,15 @@ describe.each(ALL_CHANNEL_TYPES)(
       }
       await screen.findAllByText(channel.title)
 
+      /**
+       * Except on a topic, whose redesigned hero carries the public
+       * description instead -- see the design on `TopicChannelTemplate`. The
+       * configured heading and sub-heading are not part of it.
+       */
+      if (channelType === ChannelTypeEnum.Topic) {
+        expect(screen.queryByText(channel.configuration.sub_heading)).toBe(null)
+        return
+      }
       await waitFor(() => {
         screen.getAllByText(channel.configuration.sub_heading).forEach((el) => {
           expect(el).toBeInTheDocument()
@@ -292,19 +306,31 @@ describe.each(NON_UNIT_CHANNEL_TYPES)(
         url: `/c/${channel.channel_type}/${channel.name}`,
       })
       const title = await screen.findByRole("heading", { name: channel.title })
+      const paintsBanner = (el: Element) =>
+        window
+          .getComputedStyle(el)
+          .backgroundImage.includes(channel.configuration.banner_background)
       // Banner background image
-      expect(
-        someAncestor(title, (el) =>
-          window
-            .getComputedStyle(el)
-            .backgroundImage.includes(channel.configuration.banner_background),
-        ),
-      ).toBe(true)
-      // logo
-      getByImageSrc(
-        view.container,
-        `${window.origin}${channel.configuration.logo}`,
-      )
+      if (channelType === ChannelTypeEnum.Topic) {
+        /* A topic hero paints the photograph on a band of its own rather than
+           behind the text, so the wash over it can finish exactly where the
+           band ends -- see `HeroPhoto`. So it is somewhere in the hero rather
+           than above the title. */
+        const hero = title.closest("section")
+        expect(hero).not.toBe(null)
+        expect(
+          Array.from(hero!.querySelectorAll("div")).some(paintsBanner),
+        ).toBe(true)
+      } else {
+        expect(someAncestor(title, paintsBanner)).toBe(true)
+      }
+      // logo -- not on a topic, whose hero is title and text only.
+      if (channelType !== ChannelTypeEnum.Topic) {
+        getByImageSrc(
+          view.container,
+          `${window.origin}${channel.configuration.logo}`,
+        )
+      }
     }, 10000)
 
     test("headings", async () => {
@@ -324,15 +350,25 @@ describe.each(NON_UNIT_CHANNEL_TYPES)(
           { level: 1, name: channel.title },
           { level: 2, name: `Search within ${channel.title}` },
           { level: 3, name: "Search Results" },
-          { level: 3, name: "Filter" },
+          /* A topic has no facet sidebar, so no "Filter" heading: its design
+             puts Format, Certificate and Free in a bar above the results. */
+          ...(channelType === ChannelTypeEnum.Topic
+            ? []
+            : [{ level: 3, name: "Filter" }]),
         ])
       })
     }, 10000)
   },
 )
 
+/**
+ * The topic page's design has no subtopic or related-topic chips -- its hero is
+ * the breadcrumb, the title with Follow, the description, and the featured
+ * row. The chips those tests covered are gone with it; subtopic navigation
+ * still lives on the topics listing page, which has its own tests.
+ */
 describe("Channel Pages, Topic only", () => {
-  test("Subtopics display", async () => {
+  test("shows only what the design's hero carries", async () => {
     const { channel } = setupApis({
       search_filter: "topic=Physics",
       channel_type: ChannelTypeEnum.Topic,
@@ -340,48 +376,12 @@ describe("Channel Pages, Topic only", () => {
     renderWithProviders(<ChannelPage />, {
       url: `/c/${channel.channel_type}/${channel.name}`,
     })
-    const { topic, subTopics } = setupTopicApis(channel)
+    const { topic } = setupTopicApis(channel)
     invariant(topic)
 
-    const subTopicsTitle = await screen.findByText("Subtopics")
-    expect(subTopicsTitle).toBeInTheDocument()
-    const links = await screen.findAllByRole("link", {
-      // name arg can be string, regex, or function
-      name: (name) => subTopics?.results.map((t) => t.name).includes(name),
-    })
-    links.forEach((link, i) => {
-      expect(link).toHaveAttribute(
-        "href",
-        new URL(subTopics.results[i].channel_url!, "http://localhost").pathname,
-      )
-    })
-  }, 10000)
-
-  test("Related topics display", async () => {
-    const { channel } = setupApis({
-      search_filter: "topic=Physics",
-      channel_type: ChannelTypeEnum.Topic,
-    })
-    const { subTopics, subTopicChannels } = setupTopicApis(channel)
-    invariant(subTopicChannels)
-    const subTopicChannel = subTopicChannels[0]
-    const filteredSubTopics = subTopics?.results.filter(
-      (t) =>
-        t.name.replace(/\s/g, "-") !== subTopicChannel.name.replace(/\s/g, "-"),
-    )
-    renderWithProviders(<ChannelPage />, {
-      url: `/c/${subTopicChannel.channel_type}/${subTopicChannel.name.replace(/\s/g, "-")}`,
-    })
-
-    const relatedTopicsTitle = await screen.findByText("Related Topics")
-    expect(relatedTopicsTitle).toBeInTheDocument()
-    const links = await screen.findAllByRole("link", {
-      // name arg can be string, regex, or function
-      name: (name) => filteredSubTopics?.map((t) => t.name).includes(name),
-    })
-    links.forEach(async (link, i) => {
-      expect(link).toHaveAttribute("href", filteredSubTopics[i].channel_url)
-    })
+    await screen.findByRole("heading", { level: 1, name: channel.title })
+    expect(screen.queryByText("Subtopics")).toBe(null)
+    expect(screen.queryByText("Related Topics")).toBe(null)
   }, 10000)
 })
 

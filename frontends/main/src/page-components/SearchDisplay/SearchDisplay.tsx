@@ -1,4 +1,3 @@
-import { env } from "@/env"
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
   styled,
@@ -34,6 +33,8 @@ import {
   learningResourceQueries,
 } from "api/hooks/learningResources"
 import {
+  CertificationTypeEnum,
+  DeliveryEnum,
   LearningResource,
   LearningResourcesSearchApiLearningResourcesSearchRetrieveRequest as LRSearchRequest,
   LearningResourcesSearchResponse,
@@ -53,10 +54,10 @@ import type {
   FacetManifest,
 } from "@mitodl/course-search-utils"
 import { useAppSearchParams } from "@/common/useAppSearchParams"
-import { PostHogEvents } from "@/common/constants"
 import { ResourceTypeGroupTabs } from "./ResourceTypeGroupTabs"
 import ProfessionalToggle from "./ProfessionalToggle"
-import { trackFilterCourseCatalog } from "@/common/analytics/gtm"
+import { useTrackedFilterSetters } from "@/common/analytics/searchFilters"
+import SelectedFilters from "./SelectedFilters"
 import SliderInput from "./SliderInput"
 import VectorAdminOptions from "./VectorAdminOptions"
 import { AdminTitleContainer, ExplanationContainer } from "./adminStyles"
@@ -65,7 +66,6 @@ import type { TabConfig } from "./ResourceTypeGroupTabs"
 
 import { ResourceCard } from "../ResourceCard/ResourceCard"
 import { useUserMe } from "api/hooks/user"
-import { usePostHog } from "posthog-js/react"
 import getSearchParams from "./getSearchParams"
 import UniversalAIBanner from "./UniversalAIBanner"
 import AiSearchOverview from "./AiSearchOverview"
@@ -315,6 +315,11 @@ const FacetStyles = styled.div`
     padding-top: 12px;
     padding-bottom: 12px;
 
+    /* A group carries no button to expand it, so it is never the collapsed
+       half of that pair: the height set on .facets would simply cut it off,
+       as it did the moment one held more than the single row Free has. */
+    max-height: none;
+
     .facet-visible {
       margin-top: 0;
       margin-bottom: 0;
@@ -386,6 +391,46 @@ const StyledResultsContainer = styled.div<{ fetching: boolean }>(
   }),
 )
 
+/**
+ * The results as a grid, for `resultsLayout="cards"`: four across at desktop,
+ * as the design has it, with the same 24px gutter as the cards above it.
+ *
+ * Still a list, as the rows are: laying the items out in a grid is no reason
+ * for a screen reader to stop announcing how many results there are and which
+ * one it is on. Built on `PlainList` so the items carry the same reset, and
+ * spaced by the grid's gap rather than its `itemSpacing`.
+ */
+const CardGrid = styled(PlainList)(({ theme }) => ({
+  display: "grid",
+  gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
+  gap: "24px",
+  [theme.breakpoints.down("lg")]: {
+    gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+  },
+  [theme.breakpoints.down("md")]: {
+    gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+  },
+  [theme.breakpoints.down("sm")]: {
+    gridTemplateColumns: "minmax(0, 1fr)",
+  },
+  /**
+   * The card fixes its own width to the one its size is drawn at -- 300px for
+   * the medium it is here -- which is the column's width at the design's
+   * viewport and no other. Everywhere else the card sat at 300 in a column
+   * that was not 300, leaving a gap down the right of every card; on a phone,
+   * where the column is the full 343, that gap was the widest of all.
+   *
+   * The column is the width in a grid, so the cards give that measurement up
+   * here. Only the width: the size still decides the type, the date format
+   * and whether a start label is drawn at all.
+   */
+  "> li > *": {
+    minWidth: 0,
+    maxWidth: "none",
+    width: "100%",
+  },
+}))
+
 const MobileFilter = styled.div`
   ${({ theme }) => theme.breakpoints.up("md")} {
     display: none;
@@ -431,6 +476,19 @@ const MobileDrawerCloseButton = styled(Button)`
 
   padding-right: 0;
 `
+
+/** The design's 48px search box, 16px clear of the buttons above it. */
+const DrawerSearch = styled.div({
+  marginTop: "16px",
+  /**
+   * The field sizes itself to its own content, which in a drawer leaves it
+   * stopping short of the facet boxes below it. The design runs it the full
+   * width of the drawer's contents, as they do.
+   */
+  "> *": {
+    width: "100%",
+  },
+})
 
 const MobileFacetsTitleContainer = styled.div`
   display: flex;
@@ -499,6 +557,53 @@ const TABS: TabConfig[] = [
   },
 ]
 
+/**
+ * Every value each facet can take, in the order the cards design lists them.
+ *
+ * The buckets a search comes back with are only the values something matched,
+ * so a facet drawn from them alone changes shape with the results -- the
+ * topic design draws Format as Online, In-Person and Hybrid, where a topic
+ * with only online courses in it would otherwise draw Format as one row.
+ * Listing them all keeps the filters the same filters on every page, and lets
+ * a reader see what a facet offers before narrowing by it.
+ *
+ * Only for the cards layout. The sidebar layouts carry far more facets, where
+ * a value that matches nothing is worth leaving out rather than listing.
+ */
+const EVERY_FACET_VALUE: Record<string, string[]> = {
+  delivery: [
+    DeliveryEnum.Online,
+    DeliveryEnum.InPerson,
+    DeliveryEnum.Hybrid,
+    DeliveryEnum.Offline,
+  ],
+  certification_type: [
+    CertificationTypeEnum.None,
+    CertificationTypeEnum.Professional,
+    CertificationTypeEnum.Completion,
+    CertificationTypeEnum.Micromasters,
+  ],
+}
+
+type Aggregations = NonNullable<
+  LearningResourcesSearchResponse["metadata"]["aggregations"]
+>
+
+/** The search's own counts, over the full list of values. */
+const withEveryValue = (aggregations: Aggregations): Aggregations => {
+  const counted = { ...aggregations }
+  Object.entries(EVERY_FACET_VALUE).forEach(([name, values]) => {
+    const counts = new Map(
+      (counted[name] ?? []).map((bucket) => [bucket.key, bucket.doc_count]),
+    )
+    counted[name] = values.map((key) => ({
+      key,
+      doc_count: counts.get(key) ?? 0,
+    }))
+  })
+  return counted
+}
+
 const SORT_OPTIONS = [
   {
     label: "Best Match",
@@ -548,6 +653,25 @@ export interface SearchDisplayProps {
     params: ReturnType<typeof getSearchParams>,
   ) => LearningResourcesSearchResponse | undefined
   hidePagination?: boolean
+  /**
+   * "cards" is the topic page's layout: no facet sidebar, and results as a
+   * grid of compact cards rather than full-width rows. Its facets live in a
+   * bar above the results instead, which the caller renders.
+   *
+   * Defaults to "default", which is every other caller -- the search page and
+   * the unit, department and pathway channels are untouched by this.
+   */
+  resultsLayout?: "default" | "cards"
+  /**
+   * Rendered inside the narrow screen's filter drawer, above the facets.
+   *
+   * The cards layout draws its search box in the filter card beside the
+   * facets, and that card is not drawn on a narrow screen -- so the caller
+   * that owns the box hands it over to be drawn here instead, which is where
+   * the design has it. Omitted by the default layout, whose search box is
+   * above the results at every width.
+   */
+  drawerSearchSlot?: React.ReactNode
   adminOptionsSlot?: React.ReactNode
   /**
    * True when this instance queries the vector (hybrid) endpoint rather than
@@ -565,9 +689,9 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
   constantSearchParams,
   hasFacets,
   requestParams,
-  setParamValue: actuallySetParamValue,
+  setParamValue,
   clearAllFacets: actuallyClearAllFacets,
-  toggleParamValue: actuallyToggleParamValue,
+  toggleParamValue,
   showProfessionalToggle,
   setSearchParams: actuallySetSearchParams,
   resultsHeadingEl,
@@ -576,8 +700,10 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
   getQueryOptions,
   getDisplayData,
   hidePagination = false,
+  drawerSearchSlot,
   adminOptionsSlot,
   hybridSearchActive = false,
+  resultsLayout = "default",
 }) => {
   const searchParams = useAppSearchParams()
   const [expandAdminOptions, setExpandAdminOptions] = useState(false)
@@ -684,24 +810,21 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
 
   const [mobileDrawerOpen, setMobileDrawerOpen] = React.useState(false)
 
-  const posthog = usePostHog()
-
-  const NEXT_PUBLIC_POSTHOG_API_KEY = env("NEXT_PUBLIC_POSTHOG_API_KEY")
-
   const toggleMobileDrawer = (newOpen: boolean) => () => {
     setMobileDrawerOpen(newOpen)
   }
 
-  const captureFilterEvent = (control: string) => {
-    if (NEXT_PUBLIC_POSTHOG_API_KEY) {
-      posthog.capture(PostHogEvents.SearchFilterUpdate, { control })
-    }
-  }
-
-  const setParamValue = (name: string, rawValue: string | string[]) => {
-    actuallySetParamValue(name, rawValue)
-    captureFilterEvent(name)
-  }
+  /**
+   * The facet setters arrive already reporting what they change -- a page
+   * wraps them once and hands the same pair to every control it draws, so a
+   * second filter bar beside these facets reports the same way they do. The
+   * two below stay here: they have no second caller, and `setSearchParams`
+   * takes a name this component supplies rather than one the page knows.
+   */
+  const { captureFilterEvent } = useTrackedFilterSetters({
+    setParamValue,
+    toggleParamValue,
+  })
 
   const clearAllFacets = () => {
     actuallyClearAllFacets()
@@ -714,17 +837,6 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
   ) => {
     actuallySetSearchParams(value)
     captureFilterEvent(name)
-  }
-
-  const toggleParamValue = (
-    name: string,
-    rawValue: string,
-    checked: boolean,
-  ) => {
-    actuallyToggleParamValue(name, rawValue, checked)
-    captureFilterEvent(name)
-    if (checked)
-      trackFilterCourseCatalog({ filterName: name, filterValue: rawValue })
   }
 
   // Kept in the list rather than removed, so a sortby that arrives in the URL
@@ -742,6 +854,7 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
       onChange={(e) => setParamValue("sortby", e.target.value)}
       options={sortOptions}
       className="sort-dropdown"
+      aria-label="Sort by"
       renderValue={(value) => {
         const opt = SORT_OPTIONS.find((option) => option.value === value)
         return `Sort by: ${opt?.label}`
@@ -966,6 +1079,31 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
     )
   }
 
+  /**
+   * The cards layout's drawer takes the resource type choice between the
+   * boolean facets and the rest, which is where its design draws it -- under
+   * Free, over Format. `AvailableFacets` renders a fragment, so running it
+   * over each side of that split is the same markup it would render whole.
+   */
+  const facetsBeforeTypeChoice = facetManifest.slice(
+    0,
+    facetManifest.findIndex((facet) => facet.type !== "group"),
+  )
+  const facetsAfterTypeChoice = facetManifest.slice(
+    facetsBeforeTypeChoice.length,
+  )
+  const aggregations = displayData?.metadata.aggregations ?? {}
+  const availableFacets = (manifest: FacetManifest) => (
+    <AvailableFacets
+      facetManifest={manifest}
+      activeFacets={requestParams}
+      onFacetChange={toggleParamValue}
+      facetOptions={
+        resultsLayout === "cards" ? withEveryValue(aggregations) : aggregations
+      }
+    />
+  )
+
   const filterContents = (
     <FacetStyles>
       {showProfessionalToggle && (
@@ -974,13 +1112,25 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
           setParamValue={setParamValue}
         />
       )}
-      <AvailableFacets
-        facetManifest={facetManifest}
-        activeFacets={requestParams}
-        onFacetChange={toggleParamValue}
-        facetOptions={displayData?.metadata.aggregations ?? {}}
-      />
-      {user?.is_learning_path_editor
+      {resultsLayout === "cards" ? (
+        <>
+          {availableFacets(facetsBeforeTypeChoice)}
+          <ResourceTypeGroupTabs.Checklist
+            tabs={TABS}
+            aggregations={displayData?.metadata.aggregations}
+            activeTabName={activeTab.name}
+            setSearchParams={setSearchParams}
+            onTabChange={() => setPage(1)}
+          />
+          {availableFacets(facetsAfterTypeChoice)}
+        </>
+      ) : (
+        availableFacets(facetManifest)
+      )}
+      {/* The cards design lists what its drawer holds and stops at the
+          facets; the admin panel belongs to the layout that has a sidebar to
+          put it in, not to a reader's filter drawer. */}
+      {user?.is_learning_path_editor && resultsLayout !== "cards"
         ? AdminOptions(expandAdminOptions, setExpandAdminOptions, adminParams)
         : null}
     </FacetStyles>
@@ -992,10 +1142,12 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
         <ResourceTypeGroupTabs.Context activeTabName={activeTab.name}>
           <Grid
             component="section"
-            size={{ xs: 12, md: 9 }}
+            size={{ xs: 12, md: resultsLayout === "cards" ? 12 : 9 }}
             sx={{
               display: "flex",
               flexDirection: "column",
+              /* The cards layout sets the tab row 24px above the grid, which
+                 is what its design specifies. */
               gap: "16px",
             }}
           >
@@ -1017,15 +1169,57 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
               {isFetching || isLoading ? "" : `${displayData?.count} results`}
             </VisuallyHidden>
             <UniversalAIBanner searchParams={searchParams} />
-            <Stack direction="row" justifyContent="space-between">
+            <Stack
+              direction="row"
+              justifyContent="space-between"
+              /* The cards layout's narrow screen takes this choice in the
+                 filter drawer instead -- see the drawer's checklist. */
+              sx={
+                resultsLayout === "cards"
+                  ? { display: { xs: "none", md: "flex" } }
+                  : undefined
+              }
+            >
               <StyledResourceTabs
                 setSearchParams={setSearchParams}
                 tabs={TABS}
                 aggregations={displayData?.metadata.aggregations}
                 onTabChange={() => setPage(1)}
               />
-              <DesktopSortContainer>{sortDropdown}</DesktopSortContainer>
+              {/* The cards layout puts sorting on the row below, beside the
+                  filters it applies to, which is where its design has it. */}
+              {resultsLayout === "cards" ? null : (
+                <DesktopSortContainer>{sortDropdown}</DesktopSortContainer>
+              )}
             </Stack>
+            {resultsLayout === "cards" ? (
+              <Stack
+                direction="row"
+                justifyContent="flex-end"
+                alignItems="center"
+                gap="16px"
+                /* Not on a narrow screen, where the design has the Filter row
+                   and the results and nothing between them -- the drawer is
+                   where the applied filters are seen and removed there, and
+                   sorting has its own control in that row. */
+                sx={{ display: { xs: "none", md: "flex" } }}
+              >
+                <SelectedFilters
+                  facetManifest={facetManifest}
+                  params={requestParams}
+                  count={displayData?.count}
+                  onRemove={(name, value) => {
+                    toggleParamValue(name, value, false)
+                    setPage(1)
+                  }}
+                  onClearAll={() => {
+                    clearAllFacets()
+                    setPage(1)
+                  }}
+                />
+                <DesktopSortContainer>{sortDropdown}</DesktopSortContainer>
+              </Stack>
+            ) : null}
             <AiSearchOverview
               searchParams={searchParams}
               onDismissed={focusResultsHeading}
@@ -1042,7 +1236,7 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
                 </FilterButton>
 
                 <StyledDrawer
-                  anchor="left"
+                  anchor="right"
                   open={mobileDrawerOpen}
                   onClose={toggleMobileDrawer(false)}
                 >
@@ -1063,7 +1257,11 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
                       <RiCloseLine fontSize="inherit" />
                     </MobileDrawerCloseButton>
                   </MobileFacetsTitleContainer>
-                  {hasFacets ? (
+                  {/* `hasFacets` is whether a facet is in the URL, so these
+                      otherwise appear only once something is already filtering
+                      -- and Apply, which closes the drawer, is most wanted on
+                      the way in. The cards design draws both regardless. */}
+                  {resultsLayout === "cards" || hasFacets ? (
                     <MobileFacetSearchButtons>
                       <Button
                         variant="primary"
@@ -1077,6 +1275,12 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
                       </ResetButton>
                     </MobileFacetSearchButtons>
                   ) : null}
+                  {/* The cards layout's search box lives in its filter card,
+                      which a narrow screen does not draw -- the design puts it
+                      here instead, above the facets it narrows with. */}
+                  {drawerSearchSlot ? (
+                    <DrawerSearch>{drawerSearchSlot}</DrawerSearch>
+                  ) : null}
                   {filterContents}
                 </StyledDrawer>
                 <MobileSortContainer>{sortDropdown}</MobileSortContainer>
@@ -1084,31 +1288,62 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
               <StyledResultsContainer fetching={isFetching} inert={isFetching}>
                 <div ref={scrollHook} />
                 {isLoading ? (
-                  <PlainList itemSpacing={1.5}>
-                    {Array(PAGE_SIZE)
-                      .fill(null)
-                      .map((a, index) => (
-                        <li key={index}>
+                  /* Skeletons in the shape the results will take, so the page
+                     does not rearrange itself from rows into a grid the
+                     moment they arrive. */
+                  resultsLayout === "cards" ? (
+                    <CardGrid data-testid="topic-results-grid">
+                      {Array(PAGE_SIZE)
+                        .fill(null)
+                        .map((a, index) => (
+                          <li key={index}>
+                            <ResourceCard
+                              isLoading={isLoading}
+                              parentHeadingEl={resultsHeadingEl}
+                            />
+                          </li>
+                        ))}
+                    </CardGrid>
+                  ) : (
+                    <PlainList itemSpacing={1.5}>
+                      {Array(PAGE_SIZE)
+                        .fill(null)
+                        .map((a, index) => (
+                          <li key={index}>
+                            <ResourceCard
+                              isLoading={isLoading}
+                              parentHeadingEl={resultsHeadingEl}
+                              list
+                            />
+                          </li>
+                        ))}
+                    </PlainList>
+                  )
+                ) : displayData && (displayData.results?.length ?? 0) > 0 ? (
+                  resultsLayout === "cards" ? (
+                    <CardGrid data-testid="topic-results-grid">
+                      {displayData.results.map((resource: LearningResource) => (
+                        <li key={resource.id}>
                           <ResourceCard
-                            isLoading={isLoading}
+                            resource={resource}
+                            parentHeadingEl={resultsHeadingEl}
+                          />
+                        </li>
+                      ))}
+                    </CardGrid>
+                  ) : (
+                    <PlainList itemSpacing={1.5}>
+                      {displayData.results.map((resource: LearningResource) => (
+                        <li key={resource.id}>
+                          <ResourceCard
+                            resource={resource}
                             parentHeadingEl={resultsHeadingEl}
                             list
                           />
                         </li>
                       ))}
-                  </PlainList>
-                ) : displayData && (displayData.results?.length ?? 0) > 0 ? (
-                  <PlainList itemSpacing={1.5}>
-                    {displayData.results.map((resource: LearningResource) => (
-                      <li key={resource.id}>
-                        <ResourceCard
-                          resource={resource}
-                          parentHeadingEl={resultsHeadingEl}
-                          list
-                        />
-                      </li>
-                    ))}
-                  </PlainList>
+                    </PlainList>
+                  )
                 ) : (
                   <NoneFound>No results found for your query.</NoneFound>
                 )}
@@ -1141,36 +1376,38 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
               </PaginationContainer>
             </ResourceTypeGroupTabs.TabPanels>
           </Grid>
-          <Grid
-            component="section"
-            size={{ xs: 12, md: 3 }}
-            sx={(theme) => ({
-              [theme.breakpoints.down("md")]: {
-                display: "none",
-              },
-            })}
-            data-testid="facets-container"
-          >
-            <FacetsTitleContainer>
-              <FilterTitle>
-                <Typography component={filterHeadingEl} variant="subtitle1">
-                  Filter
-                </Typography>
-                <RiEqualizerLine fontSize="medium" />
-              </FilterTitle>
-              {hasFacets ? (
-                <Button
-                  variant="text"
-                  color="secondary"
-                  size="small"
-                  onClick={clearAllFacets}
-                >
-                  Clear all
-                </Button>
-              ) : null}
-            </FacetsTitleContainer>
-            {filterContents}
-          </Grid>
+          {resultsLayout === "cards" ? null : (
+            <Grid
+              component="section"
+              size={{ xs: 12, md: 3 }}
+              sx={(theme) => ({
+                [theme.breakpoints.down("md")]: {
+                  display: "none",
+                },
+              })}
+              data-testid="facets-container"
+            >
+              <FacetsTitleContainer>
+                <FilterTitle>
+                  <Typography component={filterHeadingEl} variant="subtitle1">
+                    Filter
+                  </Typography>
+                  <RiEqualizerLine fontSize="medium" />
+                </FilterTitle>
+                {hasFacets ? (
+                  <Button
+                    variant="text"
+                    color="secondary"
+                    size="small"
+                    onClick={clearAllFacets}
+                  >
+                    Clear all
+                  </Button>
+                ) : null}
+              </FacetsTitleContainer>
+              {filterContents}
+            </Grid>
+          )}
         </ResourceTypeGroupTabs.Context>
       </Grid>
     </Container>

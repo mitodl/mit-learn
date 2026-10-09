@@ -19,11 +19,20 @@ type BannerBackgroundProps = {
   backgroundDim?: number
 }
 
+/**
+ * A configured background as a `background-image` value.
+ *
+ * Takes what the field actually holds, which is either a bare src or a value
+ * already written as `url(...)` or `image-set(...)`, and returns something
+ * CSS will accept either way. Wrapping an already-wrapped value nests the
+ * function and the declaration is dropped; quoting is what lets a src contain
+ * a space or a parenthesis, which unquoted `url()` cannot.
+ */
 const standardizeBackgroundUrl = (url: string) => {
   if (url.startsWith("url(") || url.startsWith("image-set(")) {
     return url
   }
-  return url.startsWith("image-set(") ? url : `url('${url}')`
+  return `url('${url}')`
 }
 
 /**
@@ -172,5 +181,5 @@ const Banner = ({
   )
 }
 
-export { Banner, BannerBackground }
+export { Banner, BannerBackground, standardizeBackgroundUrl }
 export type { BannerProps, BannerBackgroundProps }
