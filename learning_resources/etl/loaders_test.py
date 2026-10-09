@@ -73,6 +73,7 @@ from learning_resources.etl.xpro import _parse_datetime
 from learning_resources.factories import (
     ContentFileFactory,
     CourseFactory,
+    ETLSourceOwnershipFactory,
     LearningResourceContentTagFactory,
     LearningResourceDepartmentFactory,
     LearningResourceFactory,
@@ -93,6 +94,7 @@ from learning_resources.factories import (
 from learning_resources.models import (
     ContentFile,
     Course,
+    ETLSourceOwnership,
     LearningResource,
     LearningResourceImage,
     LearningResourceOfferor,
@@ -1555,6 +1557,52 @@ def test_load_courses(mocker, mock_blocklist, prune):
     assert course_to_unpublish.learning_resource.published is not prune
 
 
+@pytest.mark.parametrize("prune_empty", [True, False])
+def test_load_courses_empty(mock_blocklist, prune_empty):
+    """An empty course set prunes the source only when prune_empty is set"""
+    course = CourseFactory.create(etl_source=ETLSource.xpro.name)
+    test_mode_course = CourseFactory.create(
+        etl_source=ETLSource.xpro.name, learning_resource__test_mode=True
+    )
+
+    assert (
+        load_courses(
+            ETLSource.xpro.name, [], config=CourseLoaderConfig(prune_empty=prune_empty)
+        )
+        == []
+    )
+
+    course.refresh_from_db()
+    test_mode_course.refresh_from_db()
+    assert course.learning_resource.published is not prune_empty
+    assert test_mode_course.learning_resource.published is True
+
+
+def test_load_courses_skips_write_when_not_owned(mocker):
+    """load_courses should no-op (no writes, no prune) for a pair legacy does not own"""
+    ETLSourceOwnershipFactory.create(
+        etl_source=ETLSource.see.name,
+        resource_type=LearningResourceType.course.name,
+        owner=ETLSourceOwnership.Pipeline.WEBHOOK,
+    )
+    course_to_unpublish = CourseFactory.create(etl_source=ETLSource.see.name)
+
+    mock_load_course = mocker.patch(
+        "learning_resources.etl.loaders.load_course", autospec=True
+    )
+
+    result = load_courses(
+        ETLSource.see.name,
+        [{"readable_id": "some-course"}],
+        config=CourseLoaderConfig(prune=True),
+    )
+
+    assert result == []
+    mock_load_course.assert_not_called()
+    course_to_unpublish.refresh_from_db()
+    assert course_to_unpublish.learning_resource.published is True
+
+
 def test_load_programs(mocker, mock_blocklist):
     """Test that load_programs calls the expected functions"""
     program_data = [{"courses": [{"platform": "a"}, {}], "id": 5}]
@@ -1571,6 +1619,107 @@ def test_load_programs(mocker, mock_blocklist):
     load_programs("mitx", program_data, config=ProgramLoaderConfig(prune=True))
     assert mock_load_program.call_count == len(program_data)
     mock_blocklist.assert_called_once()
+
+
+@pytest.mark.parametrize("prune_empty", [True, False])
+def test_load_programs_empty(mock_blocklist, prune_empty):
+    """An empty program set prunes the source only when prune_empty is set"""
+    program = ProgramFactory.create(learning_resource__etl_source=ETLSource.mitpe.name)
+
+    assert (
+        load_programs(
+            ETLSource.mitpe.name,
+            [],
+            config=ProgramLoaderConfig(prune_empty=prune_empty),
+        )
+        == []
+    )
+
+    program.refresh_from_db()
+    assert program.learning_resource.published is not prune_empty
+
+
+@pytest.mark.parametrize(
+    ("course_owner", "fetch_only"),
+    [
+        (ETLSourceOwnership.Pipeline.LEGACY, False),
+        (ETLSourceOwnership.Pipeline.WEBHOOK, True),
+    ],
+)
+def test_load_programs_does_not_write_courses_it_does_not_own(
+    mock_upsert_tasks, course_owner, fetch_only
+):
+    """A program's courses are only fetched when another pipeline owns the courses"""
+    platform = LearningResourcePlatformFactory.create()
+    ETLSourceOwnershipFactory.create(
+        etl_source=ETLSource.mitpe.name,
+        resource_type=LearningResourceType.course.name,
+        owner=course_owner,
+    )
+    course = CourseFactory.create(
+        platform=platform.code, etl_source=ETLSource.mitpe.name
+    ).learning_resource
+    title = course.title
+
+    run = {
+        "run_id": "program-run",
+        "enrollment_start": "2026-01-01T00:00:00Z",
+        "start_date": "2026-01-01T00:00:00Z",
+        "end_date": "2027-01-01T00:00:00Z",
+    }
+    result = load_programs(
+        ETLSource.mitpe.name,
+        [
+            {
+                "readable_id": "program-1",
+                "platform": platform.code,
+                "etl_source": ETLSource.mitpe.name,
+                "title": "Program",
+                "runs": [run],
+                "courses": [
+                    {
+                        "readable_id": course.readable_id,
+                        "platform": platform.code,
+                        "etl_source": ETLSource.mitpe.name,
+                        "title": "Rewritten by the program",
+                        "runs": [{**run, "run_id": "course-run"}],
+                    }
+                ],
+            }
+        ],
+        config=ProgramLoaderConfig(prune=True, courses=CourseLoaderConfig()),
+    )
+
+    course.refresh_from_db()
+    assert (course.title == title) is fetch_only
+    assert list(result[0].children.values_list("child_id", flat=True)) == [course.id]
+
+
+def test_load_programs_skips_write_when_not_owned(mocker):
+    """load_programs should no-op (no writes, no prune) for a pair legacy does not own"""
+    ETLSourceOwnershipFactory.create(
+        etl_source=ETLSource.see.name,
+        resource_type=LearningResourceType.program.name,
+        owner=ETLSourceOwnership.Pipeline.WEBHOOK,
+    )
+    program_to_unpublish = ProgramFactory.create(
+        learning_resource__etl_source=ETLSource.see.name
+    )
+
+    mock_load_program = mocker.patch(
+        "learning_resources.etl.loaders.load_program", autospec=True
+    )
+
+    result = load_programs(
+        ETLSource.see.name,
+        [{"courses": [], "id": 1}],
+        config=ProgramLoaderConfig(prune=True),
+    )
+
+    assert result == []
+    mock_load_program.assert_not_called()
+    program_to_unpublish.refresh_from_db()
+    assert program_to_unpublish.learning_resource.published is True
 
 
 @pytest.fixture
@@ -2354,6 +2503,35 @@ def test_load_podcasts(learning_resource_offeror, podcast_platform):
                 relation.relation_type
                 == LearningResourceRelationTypes.PODCAST_EPISODES.value
             )
+
+
+@pytest.mark.parametrize(
+    "webhook_owned",
+    [
+        [LearningResourceType.podcast.name],
+        [LearningResourceType.podcast.name, LearningResourceType.podcast_episode.name],
+    ],
+)
+def test_load_podcasts_skips_when_legacy_does_not_own_every_type(
+    learning_resource_offeror, podcast_platform, webhook_owned
+):
+    """The legacy ETL neither loads nor unpublishes once it loses any podcast type"""
+    for resource_type in webhook_owned:
+        ETLSourceOwnershipFactory.create(
+            etl_source=ETLSource.podcast.name,
+            resource_type=resource_type,
+            owner=ETLSourceOwnership.Pipeline.WEBHOOK,
+        )
+    podcast = PodcastFactory.create().learning_resource
+
+    loaded_data = build_podcast_data(learning_resource_offeror)
+    assert load_podcasts([loaded_data], [loaded_data["readable_id"]]) == []
+
+    podcast.refresh_from_db()
+    assert podcast.published is True
+    assert not LearningResource.objects.filter(
+        readable_id=loaded_data["readable_id"]
+    ).exists()
 
 
 def test_load_podcasts_unpublish(learning_resource_offeror, podcast_platform):
@@ -3810,6 +3988,17 @@ def test_load_documents(mocker, climate_platform, mock_get_similar_topics_qdrant
     unpublished_article = LearningResourceFactory.create(
         resource_type=LearningResourceType.document.name,
         etl_source=ETLSource.mit_climate.name,
+        published=True,
+    )
+    already_unpublished_article = LearningResourceFactory.create(
+        resource_type=LearningResourceType.document.name,
+        etl_source=ETLSource.mit_climate.name,
+        published=False,
+    )
+    other_source_article = LearningResourceFactory.create(
+        resource_type=LearningResourceType.document.name,
+        etl_source=ETLSource.oll.name,
+        published=True,
     )
     mock_bulk_unpublish = mocker.patch(
         "learning_resources.etl.loaders.bulk_resources_unpublished_actions",
@@ -3818,12 +4007,19 @@ def test_load_documents(mocker, climate_platform, mock_get_similar_topics_qdrant
     result = loaders.load_documents(ETLSource.mit_climate.name, documents_data)
 
     assert result[0].title == documents_data[0]["title"]
+    assert result[0].published is True
 
-    # Ensure unpublished documents are handled
-    assert mock_bulk_unpublish.mock_calls[0].args[0][0] == unpublished_article.id
-    assert (
-        mock_bulk_unpublish.mock_calls[0].args[1] == LearningResourceType.document.name
+    # a document missing from the batch is unpublished in the database as well
+    # as handed to the unpublish actions, which only remove it from search
+    mock_bulk_unpublish.assert_called_once_with(
+        [unpublished_article.id], LearningResourceType.document.name
     )
+    unpublished_article.refresh_from_db()
+    assert unpublished_article.published is False
+    already_unpublished_article.refresh_from_db()
+    assert already_unpublished_article.published is False
+    other_source_article.refresh_from_db()
+    assert other_source_article.published is True
 
 
 @pytest.mark.django_db
