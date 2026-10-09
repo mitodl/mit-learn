@@ -196,13 +196,6 @@ const FacetStyles = styled.div`
       transition: max-height 0.4s ease-in;
     }
 
-    /* A group carries no button to expand it, so it is never the collapsed
-       half of that pair: the height above would simply cut it off, as it did
-       the moment one held more than the single row Free has. */
-    &.multi-facet-group {
-      max-height: none;
-    }
-
     .facet-visible {
       display: flex;
       flex-direction: row;
@@ -321,6 +314,11 @@ const FacetStyles = styled.div`
     border-bottom: solid 1px ${({ theme }) => theme.custom.colors.lightGray2};
     padding-top: 12px;
     padding-bottom: 12px;
+
+    /* A group carries no button to expand it, so it is never the collapsed
+       half of that pair: the height set on .facets would simply cut it off,
+       as it did the moment one held more than the single row Free has. */
+    max-height: none;
 
     .facet-visible {
       margin-top: 0;
