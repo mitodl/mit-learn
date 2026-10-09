@@ -227,6 +227,53 @@ const analyticsContractQueries = {
     }),
 
   /**
+   * Every enrollment matching `params`, up to `maxRows`, fetched in
+   * `pageSize` requests. `truncated` is set when the contract has more
+   * matching rows than were fetched.
+   *
+   * TODO: replace with a learner-grouped, server-paginated endpoint from
+   * ol-analytics-api. The API pages by enrollment, so a view with one row per
+   * learner cannot page server-side without splitting a learner across pages.
+   */
+  learnerProgressAll: (
+    orgId: string,
+    contractId: string,
+    params: Omit<LearnerProgressParams, "limit" | "offset"> | undefined,
+    { maxRows, pageSize }: { maxRows: number; pageSize: number },
+  ) =>
+    queryOptions({
+      queryKey: [
+        ...analyticsContractKeys.learnerProgress(orgId, contractId, params),
+        "all",
+        maxRows,
+      ] as const,
+      staleTime: LEARNER_PROGRESS_STALE_TIME,
+      queryFn: async ({ signal }) => {
+        const fetchPage = (offset: number) =>
+          analyticsContractsApi
+            .learnerProgress(
+              orgId,
+              contractId,
+              { ...params, limit: pageSize, offset },
+              signal,
+            )
+            .then((res) => res.data)
+        const first = await fetchPage(0)
+        const wanted = Math.min(first.total_count, maxRows)
+        const offsets: number[] = []
+        for (let offset = pageSize; offset < wanted; offset += pageSize) {
+          offsets.push(offset)
+        }
+        const rest = await Promise.all(offsets.map(fetchPage))
+        return {
+          ...first,
+          data: [first, ...rest].flatMap((page) => page.data).slice(0, maxRows),
+          truncated: first.total_count > maxRows,
+        }
+      },
+    }),
+
+  /**
    * The module filter's options. Kept on the shared five-minute
    * `ANALYTICS_STALE_TIME` rather than `learnerProgress`'s shorter one: a
    * contract's set of course runs changes when the contract does, not as

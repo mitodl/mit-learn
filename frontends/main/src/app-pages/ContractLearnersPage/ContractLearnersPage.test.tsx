@@ -1,6 +1,6 @@
 import React from "react"
 import { renderWithProviders, screen, user, within } from "@/test-utils"
-import { act, waitFor } from "@testing-library/react"
+import { act, fireEvent, waitFor } from "@testing-library/react"
 import { setMockResponse } from "api/test-utils"
 import {
   factories as mitxFactories,
@@ -14,13 +14,16 @@ import { useFeatureFlagEnabled } from "posthog-js/react"
 import { allowConsoleErrors } from "ol-test-utilities"
 import { ForbiddenError } from "@/common/errors"
 import { FeatureFlags } from "@/common/feature_flags"
+import { PostHogEvents } from "@/common/constants"
 import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
 import { contractAnalyticsView } from "@/common/urls"
 import ContractLearnersPage from "./ContractLearnersPage"
 
+const mockCapture = jest.fn()
 jest.mock("posthog-js/react", () => ({
   ...jest.requireActual("posthog-js/react"),
   useFeatureFlagEnabled: jest.fn(),
+  usePostHog: () => ({ capture: mockCapture }),
 }))
 jest.mock("@/common/useFeatureFlagsLoaded")
 const mockedUseFeatureFlagsLoaded = jest.mocked(useFeatureFlagsLoaded)
@@ -1354,5 +1357,228 @@ describe("ContractLearnersPage", () => {
         "No learners match this filter.",
       )
     })
+  })
+})
+
+describe("ContractLearnersPage progress grid", () => {
+  const GRID_PAGE_SIZE = 500
+  const M5 = "course-v1:MITx+M5+2026"
+  const M6 = "course-v1:MITx+M6+2026"
+
+  const mockGridPage = (
+    contractId: string,
+    offset: number,
+    rows: ReturnType<typeof analyticsFactories.learnerProgress>[],
+    envelopeOverrides: Record<string, unknown> = {},
+    extraParams: Record<string, unknown> = {},
+  ) => {
+    setMockResponse.get(
+      analyticsUrls.contracts.learnerProgress(ORG_UUID, contractId, {
+        limit: GRID_PAGE_SIZE,
+        offset,
+        sort: "full_name",
+        ...extraParams,
+      }),
+      analyticsFactories.learnerProgressEnvelope(rows, envelopeOverrides),
+    )
+  }
+
+  const renderGrid = (url = "/") => {
+    const { org, contract, orgSlug } = setup()
+    const contractId = String(contract.id)
+    setMockResponse.get(
+      mitxUrls.organization.managerOrganizationsList(),
+      paginate([org]),
+    )
+    mockTotal(contractId, 3)
+    mockCourseRuns(contractId)
+    mockList(contractId, [])
+    renderWithProviders(
+      <ContractLearnersPage orgSlug={orgSlug} contractSlug={contract.slug} />,
+      { url },
+    )
+    return { contractId, orgSlug, contract }
+  }
+
+  beforeEach(() => {
+    mockCapture.mockClear()
+    mockedUseFeatureFlagsLoaded.mockReturnValue(true)
+    mockedUseFeatureFlagEnabled.mockReturnValue(true)
+    setMockResponse.get(
+      mitxUrls.userMe.get(),
+      mitxFactories.user.user({ email: "manager@test.com" }),
+    )
+  })
+
+  test("shows one row per learner with a column per module", async () => {
+    const { contractId } = renderGrid()
+    mockGridPage(contractId, 0, [
+      analyticsFactories.learnerProgress({
+        learner_id: "a",
+        email: "ada@example.com",
+        full_name: "Ada Lovelace",
+        courserun_readable_id: M5,
+        completion_status: "passed",
+      }),
+      analyticsFactories.learnerProgress({
+        learner_id: "a",
+        email: "ada@example.com",
+        full_name: "Ada Lovelace",
+        courserun_readable_id: M6,
+        completion_status: "in_progress",
+      }),
+      analyticsFactories.learnerProgress({
+        learner_id: "b",
+        email: "bob@example.com",
+        full_name: "Bob Barker",
+        courserun_readable_id: M5,
+        completion_status: "not_started",
+      }),
+    ])
+
+    await user.click(await screen.findByRole("tab", { name: "Progress grid" }))
+
+    const table = await screen.findByRole("table", {
+      name: "Learner progress by module",
+    })
+    expect(
+      await within(table).findByRole("columnheader", { name: "Module 5" }),
+    ).toBeInTheDocument()
+    expect(
+      within(table).getByRole("columnheader", { name: "Module 6" }),
+    ).toBeInTheDocument()
+
+    const ada = rowOf(await within(table).findByText("Ada Lovelace"))
+    expect(within(ada).getByText("Completed")).toBeInTheDocument()
+    expect(within(ada).getByText("In progress")).toBeInTheDocument()
+
+    const bob = rowOf(within(table).getByText("Bob Barker"))
+    expect(within(bob).getByText("Not started")).toBeInTheDocument()
+    expect(within(bob).getByText("N/A")).toBeInTheDocument()
+    expect(within(table).getAllByRole("row")).toHaveLength(3)
+  })
+
+  test("marks the modules a learner needs attention in", async () => {
+    const { contractId } = renderGrid()
+    mockGridPage(contractId, 0, [
+      analyticsFactories.learnerProgress({
+        email: "ada@example.com",
+        full_name: "Ada Lovelace",
+        courserun_readable_id: M5,
+        completion_status: "in_progress",
+        needs_attention: true,
+      }),
+      analyticsFactories.learnerProgress({
+        email: "ada@example.com",
+        full_name: "Ada Lovelace",
+        courserun_readable_id: M6,
+        completion_status: "not_started",
+        needs_attention: true,
+      }),
+    ])
+
+    await user.click(await screen.findByRole("tab", { name: "Progress grid" }))
+
+    const ada = rowOf(await screen.findByText("Ada Lovelace"))
+    expect(
+      within(ada).getByText("Needs attention in 2 modules"),
+    ).toBeInTheDocument()
+    expect(
+      within(ada).getByText(/needs attention: No activity in 30\+ days/),
+    ).toBeInTheDocument()
+    expect(
+      within(ada).getByText(/needs attention: Not started/),
+    ).toBeInTheDocument()
+  })
+
+  test("shadows the pinned learner column only once the grid has scrolled", async () => {
+    const { contractId } = renderGrid()
+    mockGridPage(contractId, 0, [
+      analyticsFactories.learnerProgress({
+        email: "ada@example.com",
+        full_name: "Ada Lovelace",
+        courserun_readable_id: M5,
+      }),
+    ])
+
+    await user.click(await screen.findByRole("tab", { name: "Progress grid" }))
+
+    const learnerCell = (await screen.findByText("Ada Lovelace")).closest(
+      '[role="rowheader"]',
+    )!
+    expect(learnerCell).toHaveStyle({ boxShadow: "none" })
+
+    const region = screen.getByRole("region", {
+      name: /Learner progress by module/,
+    })
+    fireEvent.scroll(region, { target: { scrollLeft: 40 } })
+    expect(learnerCell).not.toHaveStyle({ boxShadow: "none" })
+
+    fireEvent.scroll(region, { target: { scrollLeft: 0 } })
+    expect(learnerCell).toHaveStyle({ boxShadow: "none" })
+  })
+
+  test("reports the view change and mirrors it to the URL", async () => {
+    const { contractId, orgSlug, contract } = renderGrid()
+    mockGridPage(contractId, 0, [])
+
+    await user.click(await screen.findByRole("tab", { name: "Progress grid" }))
+
+    expect(mockCapture).toHaveBeenCalledWith(
+      PostHogEvents.AnalyticsViewChanged,
+      {
+        view: "grid",
+        previousView: "enrollments",
+        orgSlug,
+        contractSlug: contract.slug,
+      },
+    )
+    expect(window.location.search).toBe("?view=grid")
+
+    await user.click(screen.getByRole("tab", { name: "By enrollment" }))
+    expect(window.location.search).toBe("")
+  })
+
+  test("opens on the grid when the URL asks for it", async () => {
+    const { contractId } = renderGrid("/?view=grid")
+    mockGridPage(contractId, 0, [])
+
+    expect(
+      await screen.findByRole("table", { name: "Learner progress by module" }),
+    ).toBeInTheDocument()
+    expect(screen.getByRole("tab", { name: "Progress grid" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    )
+  })
+
+  test("hides Export and the Module filter on the grid", async () => {
+    const { contractId } = renderGrid()
+    mockGridPage(contractId, 0, [])
+    expect(
+      await screen.findByRole("button", { name: "Export learners" }),
+    ).toBeInTheDocument()
+
+    await user.click(screen.getByRole("tab", { name: "Progress grid" }))
+
+    expect(
+      screen.queryByRole("button", { name: "Export learners" }),
+    ).not.toBeInTheDocument()
+    expect(screen.queryByLabelText("Module")).not.toBeInTheDocument()
+  })
+
+  test("caps the fetch and says so when a contract has more enrollments", async () => {
+    const { contractId } = renderGrid()
+    const row = () => analyticsFactories.learnerProgress()
+    mockGridPage(contractId, 0, [row()], { total_count: 2500 })
+    mockGridPage(contractId, 500, [row()], { total_count: 2500 })
+    mockGridPage(contractId, 1000, [row()], { total_count: 2500 })
+    mockGridPage(contractId, 1500, [row()], { total_count: 2500 })
+
+    await user.click(await screen.findByRole("tab", { name: "Progress grid" }))
+
+    expect(
+      await screen.findByText(/Showing the first 2,000 of 2,500 enrollments/),
+    ).toBeInTheDocument()
   })
 })

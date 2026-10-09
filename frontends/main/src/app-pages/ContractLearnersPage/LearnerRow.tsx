@@ -179,4 +179,4 @@ const LearnerRow: React.FC<LearnerRowProps> = ({ row }) => {
   )
 }
 
-export { LearnerRow }
+export { Avatar, LearnerRow, NeedsAttentionBadge }
