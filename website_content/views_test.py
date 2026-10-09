@@ -3,6 +3,7 @@
 import pytest
 from django.db import transaction
 from rest_framework.reverse import reverse
+from rest_framework.test import APIClient
 
 from learning_resources.factories import LearningResourceTopicFactory
 from main.factories import UserFactory
@@ -139,6 +140,60 @@ def test_staff_can_access_unpublished_content(client):
 
     assert resp.status_code == 200
     assert data["id"] == content.id
+
+
+@pytest.fixture
+def enabled_view_cache(settings, request):
+    """
+    Give the view cache a real backend for one test.
+
+    The suite swaps the `redis` cache for a dummy one everywhere (the autouse
+    fixture in the root `conftest`), so by default a view that is cached and
+    one that is not behave identically here. Caching has to be on for a test
+    to tell them apart. Located per test so one does not read another's
+    entries.
+    """
+    settings.REDIS_VIEW_CACHE_DURATION = 60
+    settings.CACHES = {
+        **settings.CACHES,
+        "redis": {
+            "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+            "LOCATION": request.node.nodeid,
+        },
+    }
+
+
+@pytest.mark.usefixtures("enabled_view_cache")
+def test_listing_is_what_the_caller_may_see(staff_client):
+    """
+    An editor's listing must not become everyone's listing.
+
+    The order here is the order that leaked: the listing was cached under a
+    key that did not vary by user, so whichever request missed the cache first
+    decided what the rest were served, and an editor's listing carries the
+    drafts.
+
+    Run with the view cache on, so that caching this listing again -- under
+    any key shared between callers -- fails here rather than in production.
+
+    The anonymous caller is a client of its own because `staff_client` is the
+    `client` fixture with a staff user logged into it -- asking for both hands
+    back one client, logged in, and the second request would be the editor's
+    as well.
+    """
+    published = WebsiteContent.objects.create(
+        title="Published Article", content={}, is_published=True, content_type="news"
+    )
+    draft = WebsiteContent.objects.create(
+        title="Draft Article", content={}, is_published=False, content_type="news"
+    )
+    url = reverse("website_content:v1:website_content-list")
+
+    editor_ids = {item["id"] for item in staff_client.get(url).json()["results"]}
+    assert editor_ids == {published.id, draft.id}
+
+    anonymous_ids = {item["id"] for item in APIClient().get(url).json()["results"]}
+    assert anonymous_ids == {published.id}
 
 
 @pytest.fixture
