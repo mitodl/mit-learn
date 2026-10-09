@@ -354,42 +354,57 @@ describe("ProgramAsCourseCard", () => {
     )
   })
 
-  test("progress badge shows 'Completed' when every module is passed, even without a certificate", async () => {
-    const cardData = setupCardData({ includeProgramEnrollment: true })
-    invariant(cardData.courseProgramEnrollment)
-    const moduleEnrollmentsByCourseId = Object.fromEntries(
-      cardData.moduleCourses.map((course) => [
-        course.id,
-        [
-          mitxonline.factories.enrollment.courseEnrollment({
-            run: { ...course.courseruns[0], course },
-            enrollment_mode: "audit",
-            grades: [mitxonline.factories.enrollment.grade({ passed: true })],
+  test.each([
+    {
+      displayMode: "course" as const,
+      childrenLabel: "2 Modules (2 of 2 complete)",
+      badge: "Completed",
+    },
+    {
+      displayMode: null,
+      childrenLabel: "2 Courses (2 of 2 complete)",
+      badge: "In Progress",
+    },
+  ])(
+    "progress badge is '$badge' when every child is passed without a certificate (display_mode=$displayMode)",
+    async ({ displayMode, childrenLabel, badge }) => {
+      const cardData = setupCardData({
+        includeProgramEnrollment: true,
+        displayMode,
+      })
+      invariant(cardData.courseProgramEnrollment)
+      const moduleEnrollmentsByCourseId = Object.fromEntries(
+        cardData.moduleCourses.map((course) => [
+          course.id,
+          [
+            mitxonline.factories.enrollment.courseEnrollment({
+              run: { ...course.courseruns[0], course },
+              enrollment_mode: "audit",
+              grades: [mitxonline.factories.enrollment.grade({ passed: true })],
+              certificate: null,
+            }),
+          ],
+        ]),
+      )
+
+      renderWithProviders(
+        <ProgramAsCourseCard
+          courseProgram={cardData.courseProgram}
+          moduleCourses={cardData.moduleCourses}
+          moduleEnrollmentsByCourseId={moduleEnrollmentsByCourseId}
+          courseProgramEnrollment={{
+            ...cardData.courseProgramEnrollment,
             certificate: null,
-          }),
-        ],
-      ]),
-    )
+          }}
+        />,
+      )
 
-    renderWithProviders(
-      <ProgramAsCourseCard
-        courseProgram={cardData.courseProgram}
-        moduleCourses={cardData.moduleCourses}
-        moduleEnrollmentsByCourseId={moduleEnrollmentsByCourseId}
-        courseProgramEnrollment={{
-          ...cardData.courseProgramEnrollment,
-          certificate: null,
-        }}
-      />,
-    )
-
-    expect(
-      await screen.findByText("2 Modules (2 of 2 complete)"),
-    ).toBeInTheDocument()
-    expect(screen.getAllByTestId("progress-badge")[0]).toHaveTextContent(
-      "Completed",
-    )
-  })
+      expect(await screen.findByText(childrenLabel)).toBeInTheDocument()
+      expect(screen.getAllByTestId("progress-badge")[0]).toHaveTextContent(
+        badge,
+      )
+    },
+  )
 
   test("renders when user is not enrolled in the ProgramAsCourse", async () => {
     const cardData = setupCardData()
