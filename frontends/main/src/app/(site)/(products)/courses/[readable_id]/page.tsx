@@ -65,7 +65,10 @@ const Page: React.FC<AppPageProps<"/courses/[readable_id]">> = async (
   }
 
   const [course] = courses.results
-  const outlineCoursewareId = getOutlineCoursewareId(course)
+  const [coursePage] = coursePages.items
+  const outlineCoursewareId = coursePage.show_course_outline
+    ? getOutlineCoursewareId(course)
+    : undefined
 
   if (outlineCoursewareId) {
     await queryClient.prefetchQuery(
