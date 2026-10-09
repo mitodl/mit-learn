@@ -439,6 +439,9 @@ class ETLShadowRunAdmin(admin.ModelAdmin):
     def has_change_permission(self, request, obj=None):  # noqa: ARG002
         return False
 
+    def has_delete_permission(self, request, obj=None):  # noqa: ARG002
+        return False
+
     @admin.display(description="Created")
     def created(self, obj):
         return obj.counts.get("created")
