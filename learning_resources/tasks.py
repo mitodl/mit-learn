@@ -997,12 +997,13 @@ def marketing_page_for_resources(resource_ids):
             learning_resource=learning_resource,
             file_type=MARKETING_PAGE_FILE_TYPE,
         ).first()
+
         if (
             content_file
             and content_file.checksum == checksum_for_content(content)
             and content_file.key == marketing_page_url
             and content_file.url == marketing_page_url
-            and content_file.published == learning_resource.published
+            and content_file.published
         ):
             # unchanged since the last scrape: skip re-indexing and re-embedding
             continue
@@ -1015,7 +1016,6 @@ def marketing_page_for_resources(resource_ids):
         content_file.key = marketing_page_url
         content_file.url = marketing_page_url
         content_file.content = content
-        content_file.published = learning_resource.published
         # save() sets the checksum from the content
         content_file.save()
         content_file_ids.append(content_file.id)

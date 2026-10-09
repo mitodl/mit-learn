@@ -1226,6 +1226,58 @@ def test_marketing_page_for_resources_updates_changed_page(
 
 
 @pytest.mark.django_db
+def test_marketing_page_for_resources_publishes_test_mode_page(mocker):
+    """A test mode resource's marketing page is published and indexed even
+    though the resource itself is unpublished
+    """
+    course = models.LearningResource.objects.create(
+        title="Test Mode Course",
+        url="https://example.com/test-mode-course",
+        resource_type="course",
+        published=False,
+        test_mode=True,
+    )
+
+    scraper = mocker.Mock()
+    scraper.scrape.return_value = "<html><body><p>content</p></body></html>"
+    mocker.patch("learning_resources.tasks.scraper_for_site", return_value=scraper)
+    mocker.patch("learning_resources.tasks.html_to_markdown", return_value="content")
+    mocker.patch("vector_search.tasks.generate_embeddings")
+    mock_upsert_content_file = mocker.patch(
+        "learning_resources_search.tasks.upsert_content_file"
+    )
+
+    marketing_page_for_resources([course.id])
+
+    content_file = models.ContentFile.objects.get(
+        learning_resource=course, file_type=MARKETING_PAGE_FILE_TYPE
+    )
+    assert content_file.published is True
+    mock_upsert_content_file.delay.assert_called_once_with(content_file.id)
+
+
+@pytest.mark.django_db
+def test_marketing_page_for_resources_skips_unpublished_resource(mocker):
+    """A resource unpublished (and not in test mode) since it was queued is
+    not scraped
+    """
+    course = models.LearningResource.objects.create(
+        title="Unpublished Course",
+        url="https://example.com/unpublished-course",
+        resource_type="course",
+        published=False,
+    )
+    mock_scraper_for_site = mocker.patch("learning_resources.tasks.scraper_for_site")
+    mock_generate_embeddings = mocker.patch("vector_search.tasks.generate_embeddings")
+
+    marketing_page_for_resources([course.id])
+
+    mock_scraper_for_site.assert_not_called()
+    mock_generate_embeddings.delay.assert_not_called()
+    assert not models.ContentFile.objects.filter(learning_resource=course).exists()
+
+
+@pytest.mark.django_db
 def test_scrape_marketing_pages(mocker, settings, mocked_celery):
     """scrape_marketing_pages queues every published or test mode resource,
     including ones that already have a marketing page
