@@ -7,7 +7,7 @@ import {
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query"
-import { useFeatureFlagEnabled } from "posthog-js/react"
+import { useFeatureFlagEnabled, usePostHog } from "posthog-js/react"
 import { RiArrowLeftLine } from "@remixicon/react"
 import {
   Container,
@@ -17,12 +17,20 @@ import {
   Skeleton,
   Stack,
   styled,
+  TabContext,
+  TabPanel,
   Typography,
 } from "ol-components"
-import { Alert, Button, Checkbox, VisuallyHidden } from "@mitodl/smoot-design"
+import {
+  Alert,
+  Button,
+  Checkbox,
+  TabButton,
+  TabButtonList,
+  VisuallyHidden,
+} from "@mitodl/smoot-design"
 import {
   analyticsContractQueries,
-  type CompletionStatusFilter,
   type LearnerProgress,
 } from "api/analytics-hooks/organizations"
 import { managerOrganizationQueries } from "api/mitxonline-hooks/organizations"
@@ -43,6 +51,8 @@ import { matchOrganizationBySlug } from "@/common/utils"
 import { ForbiddenError, isForbiddenResponse } from "@/common/errors"
 import { FeatureFlags } from "@/common/feature_flags"
 import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
+import { useAppSearchParams } from "@/common/useAppSearchParams"
+import { PostHogEvents } from "@/common/constants"
 import { contractAnalyticsView } from "@/common/urls"
 import SectionHeader, {
   SectionFreshness,
@@ -51,6 +61,8 @@ import { ErrorContent } from "../ErrorPage/ErrorPageTemplate"
 import { LearnerRow } from "./LearnerRow"
 import { COLUMN_FLEX } from "./columns"
 import { DISPLAY_STATUS_LABEL, getDisplayStatus } from "./statusDisplay"
+import { ProgressGrid } from "./ProgressGrid"
+import { ALL, useLearnerFilters } from "./useLearnerFilters"
 
 /**
  * The B2B learner directory: one row per learner per course run under a
@@ -236,6 +248,14 @@ const CheckboxField = styled.div(({ theme }) => ({
   },
 }))
 
+const ViewPanel = styled(TabPanel)({
+  padding: 0,
+  display: "flex",
+  flexDirection: "column",
+  gap: "16px",
+  "&[hidden]": { display: "none" },
+})
+
 const ErrorRow = styled.div({
   display: "flex",
   alignItems: "center",
@@ -247,10 +267,11 @@ const ErrorRow = styled.div({
 const PAGE_SIZE = 25
 /** Below the API's max_page_size rather than pinned to it — that setting is env-overridable, and this only costs one extra round trip on a large contract. */
 const CSV_EXPORT_PAGE_SIZE = 500
-const SEARCH_DEBOUNCE_MS = 300
 /** Matches the API's cap on `search`; truncated below rather than sent as-is, since a long paste would otherwise 422 and read as "Something went wrong loading learner data" — 422 isn't in the error-boundary set below. */
 const SEARCH_MAX_LENGTH = 254
-const ALL = "all"
+const VIEW_PARAM = "view"
+const VIEWS = { enrollments: "enrollments", grid: "grid" } as const
+type View = (typeof VIEWS)[keyof typeof VIEWS]
 const UNAVAILABLE_MESSAGE_ID = "learner-analytics-unavailable-message"
 
 /**
@@ -267,24 +288,6 @@ const STATUS_OPTIONS: { value: string; label: string }[] = [
   { value: "unknown", label: "No consent given" },
 ]
 
-/**
- * "Completed" queries both `passed` and `certified`, matching the count
- * tile above it: a learner who passed but hasn't certified yet is still
- * "Completed" to a manager, and a standalone "Certificate" filter option
- * previously returned fewer rows than the tile it was supposed to explain.
- * The row-level status pill (`getDisplayStatus`) still distinguishes the
- * two outcomes; only the filter groups them.
- */
-const STATUS_FILTER_COMPLETION_STATUS: Record<
-  string,
-  CompletionStatusFilter[]
-> = {
-  not_started: ["not_started"],
-  in_progress: ["in_progress"],
-  passed: ["passed", "certified"],
-  unknown: ["unknown"],
-}
-
 const rowIdOf = (row: LearnerProgress) =>
   `${row.learner_id}:${row.courserun_readable_id}`
 
@@ -297,12 +300,14 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
   orgSlug,
   contractSlug,
 }) => {
-  const [searchQuery, setSearchQuery] = useState("")
-  const [debouncedSearch, setDebouncedSearch] = useState("")
-  const [statusFilter, setStatusFilter] = useState<string>(ALL)
   const [moduleFilter, setModuleFilter] = useState<string>(ALL)
-  const [needsAttentionOnly, setNeedsAttentionOnly] = useState(false)
   const [page, setPage] = useState(1)
+  const [gridPage, setGridPage] = useState(1)
+  const initialView = useAppSearchParams().get(VIEW_PARAM)
+  const [view, setView] = useState<View>(
+    initialView === VIEWS.grid ? VIEWS.grid : VIEWS.enrollments,
+  )
+  const posthog = usePostHog()
   const [isExporting, setIsExporting] = useState(false)
   const [actionResult, setActionResult] = useState<{
     message: string
@@ -311,22 +316,52 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
   const [announcement, setAnnouncement] = useState("")
   const queryClient = useQueryClient()
 
-  const applyFilterChange = useCallback((apply: () => void) => {
-    apply()
+  const resetPages = useCallback(() => {
     setPage(1)
+    setGridPage(1)
     // Selection reset (`setSelected(new Set())`) lived here while row
     // selection was enabled — restore it alongside that block.
   }, [])
 
-  useEffect(() => {
-    // Nothing to apply (including on mount): don't schedule a state update.
-    if (searchQuery === debouncedSearch) return
-    const id = setTimeout(() => {
-      setDebouncedSearch(searchQuery)
-      setPage(1)
-    }, SEARCH_DEBOUNCE_MS)
-    return () => clearTimeout(id)
-  }, [searchQuery, debouncedSearch])
+  const applyFilterChange = useCallback(
+    (apply: () => void) => {
+      apply()
+      resetPages()
+    },
+    [resetPages],
+  )
+
+  const {
+    searchQuery,
+    setSearchQuery,
+    clearSearch,
+    debouncedSearch,
+    statusFilter,
+    setStatusFilter,
+    completionStatus,
+    needsAttentionOnly,
+    setNeedsAttentionOnly,
+  } = useLearnerFilters(resetPages)
+
+  const handleViewChange = (_event: React.SyntheticEvent, next: View) => {
+    if (next === view) return
+    posthog?.capture(PostHogEvents.AnalyticsViewChanged, {
+      view: next,
+      previousView: view,
+      orgSlug,
+      contractSlug,
+    })
+    setView(next)
+    const params = new URLSearchParams(window.location.search)
+    if (next === VIEWS.grid) params.set(VIEW_PARAM, next)
+    else params.delete(VIEW_PARAM)
+    const query = params.toString()
+    window.history.replaceState(
+      null,
+      "",
+      `${window.location.pathname}${query ? `?${query}` : ""}${window.location.hash}`,
+    )
+  }
 
   const {
     data: managerOrgs,
@@ -342,14 +377,6 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
   const orgUuid = org?.sso_organization_id ?? null
   const contractId = contract ? String(contract.id) : null
   const canQuery = isAnalyticsConfigured() && !!orgUuid && !!contractId
-
-  const completionStatus = useMemo<CompletionStatusFilter[] | undefined>(
-    () =>
-      statusFilter === ALL
-        ? undefined
-        : STATUS_FILTER_COMPLETION_STATUS[statusFilter],
-    [statusFilter],
-  )
 
   /**
    * The dropdown has to list every run or it silently hides ones a manager
@@ -430,7 +457,7 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
       contractId ?? "",
       listParams,
     ),
-    enabled: canQuery,
+    enabled: canQuery && view === VIEWS.enrollments,
     placeholderData: keepPreviousData,
   })
 
@@ -582,7 +609,7 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
   // first load and not mid-flight.
   const lastAnnounced = useRef<string | null>(null)
   useEffect(() => {
-    if (isBusy || !rowsQuery.data) return
+    if (view !== VIEWS.enrollments || isBusy || !rowsQuery.data) return
     const key = `${statusFilter}:${activeModule}:${needsAttentionOnly}:${debouncedSearch}`
     if (lastAnnounced.current === null) {
       lastAnnounced.current = key
@@ -603,6 +630,7 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
       }`,
     )
   }, [
+    view,
     isBusy,
     rowsQuery.data,
     statusFilter,
@@ -678,17 +706,19 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
             <PageTitle component="h1">Learners</PageTitle>
             <PageSubtitle component="p">{contract.name}</PageSubtitle>
           </div>
-          <ExportWrapper>
-            <Button
-              variant="bordered"
-              aria-disabled={isExporting || !canQuery}
-              aria-describedby={canQuery ? undefined : UNAVAILABLE_MESSAGE_ID}
-              aria-busy={isExporting}
-              onClick={handleExport}
-            >
-              {isExporting ? "Exporting…" : "Export learners"}
-            </Button>
-          </ExportWrapper>
+          {view === VIEWS.enrollments ? (
+            <ExportWrapper>
+              <Button
+                variant="bordered"
+                aria-disabled={isExporting || !canQuery}
+                aria-describedby={canQuery ? undefined : UNAVAILABLE_MESSAGE_ID}
+                aria-busy={isExporting}
+                onClick={handleExport}
+              >
+                {isExporting ? "Exporting…" : "Export learners"}
+              </Button>
+            </ExportWrapper>
+          ) : null}
         </HeaderSection>
 
         {!canQuery ? (
@@ -712,202 +742,234 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
           <ResultsSection>
             <AsOfRow>
               <SectionFreshness
-                asOf={rowsQuery.data?.as_of}
-                isLoading={rowsQuery.isPending}
-                isError={rowsQuery.isError}
+                asOf={totalQuery.data?.as_of}
+                isLoading={totalQuery.isPending}
+                isError={totalQuery.isError}
               />
             </AsOfRow>
-            <ControlsRow>
-              <SectionHeader
-                component="h2"
-                title="Learner results"
-                description={
-                  totalEnrollments === null
-                    ? "Loading…"
-                    : `${filteredCount} of ${totalEnrollments} enrollments`
-                }
-                asOfPlacement="external"
-              />
-              <ControlsRight>
-                <StyledSearchInput
-                  placeholder="Search name or email"
-                  value={searchQuery}
-                  size="medium"
-                  onChange={(event) =>
-                    setSearchQuery(
-                      event.target.value.slice(0, SEARCH_MAX_LENGTH),
-                    )
+            <TabContext value={view}>
+              <TabButtonList
+                aria-label="Learner views"
+                onChange={handleViewChange}
+              >
+                <TabButton label="By enrollment" value={VIEWS.enrollments} />
+                <TabButton label="Progress grid" value={VIEWS.grid} />
+              </TabButtonList>
+              <ControlsRow>
+                <SectionHeader
+                  component="h2"
+                  title="Learner results"
+                  description={
+                    view === VIEWS.grid
+                      ? "One row per learner, one column per module"
+                      : totalEnrollments === null
+                        ? "Loading…"
+                        : `${filteredCount} of ${totalEnrollments} enrollments`
                   }
-                  onClear={() => applyFilterChange(() => setSearchQuery(""))}
-                  onSubmit={() => {}}
+                  asOfPlacement="external"
                 />
-                <FilterSelect
-                  label="Status"
-                  size="medium"
-                  value={statusFilter}
-                  options={STATUS_OPTIONS}
-                  onChange={(event) =>
-                    applyFilterChange(() =>
-                      setStatusFilter(String(event.target.value)),
-                    )
-                  }
-                />
-                <FilterSelect
-                  label="Module"
-                  size="medium"
-                  value={activeModule}
-                  options={moduleOptions}
-                  /**
-                   * Marked on the field rather than folded into
-                   * `hasLoadError`: the learner table is unaffected, and
-                   * swapping it for the page-level error would be a worse
-                   * failure than the dead dropdown. `error` is required for
-                   * `errorText` to render at all — see `FormFieldWrapper`.
-                   *
-                   * Gated on having no data, not on `isError` alone: a failed
-                   * *refetch* leaves the last good list in place, and claiming
-                   * failure over a dropdown that still lists every module and
-                   * filters correctly is worse than saying nothing.
-                   */
-                  error={courseRunsQuery.isError && !courseRunsQuery.data}
-                  errorText="Couldn't load modules. Reload to try again."
-                  onChange={(event) =>
-                    applyFilterChange(() =>
-                      setModuleFilter(String(event.target.value)),
-                    )
-                  }
-                />
-                <CheckboxField>
-                  <Checkbox
-                    label="Needs attention only"
-                    checked={needsAttentionOnly}
+                <ControlsRight>
+                  <StyledSearchInput
+                    placeholder="Search name or email"
+                    value={searchQuery}
+                    size="medium"
                     onChange={(event) =>
-                      applyFilterChange(() =>
-                        setNeedsAttentionOnly(event.target.checked),
+                      setSearchQuery(
+                        event.target.value.slice(0, SEARCH_MAX_LENGTH),
                       )
                     }
+                    onClear={clearSearch}
+                    onSubmit={() => {}}
                   />
-                </CheckboxField>
-              </ControlsRight>
-            </ControlsRow>
+                  <FilterSelect
+                    label="Status"
+                    size="medium"
+                    value={statusFilter}
+                    options={STATUS_OPTIONS}
+                    onChange={(event) =>
+                      setStatusFilter(String(event.target.value))
+                    }
+                  />
+                  {view === VIEWS.enrollments ? (
+                    <FilterSelect
+                      label="Module"
+                      size="medium"
+                      value={activeModule}
+                      options={moduleOptions}
+                      /**
+                       * Marked on the field rather than folded into
+                       * `hasLoadError`: the learner table is unaffected, and
+                       * swapping it for the page-level error would be a worse
+                       * failure than the dead dropdown. `error` is required for
+                       * `errorText` to render at all — see `FormFieldWrapper`.
+                       *
+                       * Gated on having no data, not on `isError` alone: a failed
+                       * *refetch* leaves the last good list in place, and claiming
+                       * failure over a dropdown that still lists every module and
+                       * filters correctly is worse than saying nothing.
+                       */
+                      error={courseRunsQuery.isError && !courseRunsQuery.data}
+                      errorText="Couldn't load modules. Reload to try again."
+                      onChange={(event) =>
+                        applyFilterChange(() =>
+                          setModuleFilter(String(event.target.value)),
+                        )
+                      }
+                    />
+                  ) : null}
+                  <CheckboxField>
+                    <Checkbox
+                      label="Needs attention only"
+                      checked={needsAttentionOnly}
+                      onChange={(event) =>
+                        setNeedsAttentionOnly(event.target.checked)
+                      }
+                    />
+                  </CheckboxField>
+                </ControlsRight>
+              </ControlsRow>
 
-            {actionResult ? (
-              <Alert
-                severity={actionResult.severity}
-                closable
-                onClose={() => setActionResult(null)}
-              >
-                {actionResult.message}
-              </Alert>
-            ) : null}
+              {actionResult ? (
+                <Alert
+                  severity={actionResult.severity}
+                  closable
+                  onClose={() => setActionResult(null)}
+                >
+                  {actionResult.message}
+                </Alert>
+              ) : null}
 
-            <VisuallyHidden aria-live="assertive" aria-atomic="true">
-              {announcement}
-            </VisuallyHidden>
+              <VisuallyHidden aria-live="assertive" aria-atomic="true">
+                {announcement}
+              </VisuallyHidden>
 
-            {withheldCount > 0 ? (
-              <ConsentNotice component="p">
-                {withheldCount} of these {filteredCount} enrollments belong to
-                learners who have not agreed to share their progress. Their
-                status, grade and activity read “No consent given”.
-              </ConsentNotice>
-            ) : null}
+              <ViewPanel value={VIEWS.enrollments}>
+                {withheldCount > 0 ? (
+                  <ConsentNotice component="p">
+                    {withheldCount} of these {filteredCount} enrollments belong
+                    to learners who have not agreed to share their progress.
+                    Their status, grade and activity read “No consent given”.
+                  </ConsentNotice>
+                ) : null}
 
-            {/*
+                {/*
               The API matches withheld rows against neither `true` nor `false`,
               so this filter hides them outright rather than listing them as
               not needing attention. Said here because nothing else on the page
               would show it: the notice above reads the filtered envelope,
               whose withheld count is zero for that same reason.
             */}
-            {hidesWithheldLearners ? (
-              <ConsentNotice component="p">
-                Learners who have not agreed to share their progress are hidden
-                while this filter is on. Whether they need attention cannot be
-                determined. Clear this filter, then adjust any other active
-                filters or search terms as needed to see them.
-              </ConsentNotice>
-            ) : null}
+                {hidesWithheldLearners ? (
+                  <ConsentNotice component="p">
+                    Learners who have not agreed to share their progress are
+                    hidden while this filter is on. Whether they need attention
+                    cannot be determined. Clear this filter, then adjust any
+                    other active filters or search terms as needed to see them.
+                  </ConsentNotice>
+                ) : null}
 
-            <TableCard>
-              <VisuallyHidden role="status" aria-atomic="true">
-                {rowsQuery.isLoading
-                  ? "Loading learners"
-                  : filteredCount === 0
-                    ? emptyMessage
-                    : `Showing page ${page} of ${Math.max(totalPages, 1)}`}
-              </VisuallyHidden>
-              <div
-                role="table"
-                aria-label="Learner progress"
-                aria-busy={isBusy}
-              >
-                <div role="rowgroup">
-                  <TableHeaderRow role="row">
-                    <TableHeaderCell
-                      role="columnheader"
-                      $flex={COLUMN_FLEX.learner}
-                    >
-                      Learner
-                    </TableHeaderCell>
-                    <TableHeaderCell
-                      role="columnheader"
-                      $flex={COLUMN_FLEX.status}
-                    >
-                      Status
-                    </TableHeaderCell>
-                    <TableHeaderCell
-                      role="columnheader"
-                      $flex={COLUMN_FLEX.lastActivity}
-                    >
-                      Last activity
-                    </TableHeaderCell>
-                  </TableHeaderRow>
-                </div>
-                <TableBody role="rowgroup" $stale={isStale}>
-                  {rowsQuery.isLoading ? (
-                    [1, 2, 3].map((key) => (
-                      <TableRow key={key} role="row">
-                        <div role="cell" style={{ width: "100%" }}>
-                          <Skeleton width="100%" height="48px" />
-                        </div>
-                      </TableRow>
-                    ))
-                  ) : rows.length === 0 ? (
-                    <TableRow role="row">
-                      <EmptyTableMessage
-                        component="div"
-                        role="cell"
-                        aria-colspan={3}
-                        style={{ width: "100%" }}
-                      >
-                        {emptyMessage}
-                      </EmptyTableMessage>
-                    </TableRow>
-                  ) : (
-                    rows.map((row) => (
-                      <LearnerRow key={rowIdOf(row)} row={row} />
-                    ))
-                  )}
-                </TableBody>
-              </div>
-              <TableFooter>
-                <TableFootnote component="p">
-                  {filteredCount > 0
-                    ? `Page ${page} of ${Math.max(totalPages, 1)}`
-                    : ""}
-                </TableFootnote>
-                {totalPages > 1 ? (
-                  <Pagination
-                    count={totalPages}
-                    page={page}
-                    shape="rounded"
-                    size="small"
-                    onChange={(_event, value) => setPage(value)}
+                <TableCard>
+                  <VisuallyHidden role="status" aria-atomic="true">
+                    {rowsQuery.isLoading
+                      ? "Loading learners"
+                      : filteredCount === 0
+                        ? emptyMessage
+                        : `Showing page ${page} of ${Math.max(totalPages, 1)}`}
+                  </VisuallyHidden>
+                  <div
+                    role="table"
+                    aria-label="Learner progress"
+                    aria-busy={isBusy}
+                  >
+                    <div role="rowgroup">
+                      <TableHeaderRow role="row">
+                        <TableHeaderCell
+                          role="columnheader"
+                          $flex={COLUMN_FLEX.learner}
+                        >
+                          Learner
+                        </TableHeaderCell>
+                        <TableHeaderCell
+                          role="columnheader"
+                          $flex={COLUMN_FLEX.status}
+                        >
+                          Status
+                        </TableHeaderCell>
+                        <TableHeaderCell
+                          role="columnheader"
+                          $flex={COLUMN_FLEX.lastActivity}
+                        >
+                          Last activity
+                        </TableHeaderCell>
+                      </TableHeaderRow>
+                    </div>
+                    <TableBody role="rowgroup" $stale={isStale}>
+                      {rowsQuery.isLoading ? (
+                        [1, 2, 3].map((key) => (
+                          <TableRow key={key} role="row">
+                            <div role="cell" style={{ width: "100%" }}>
+                              <Skeleton width="100%" height="48px" />
+                            </div>
+                          </TableRow>
+                        ))
+                      ) : rows.length === 0 ? (
+                        <TableRow role="row">
+                          <EmptyTableMessage
+                            component="div"
+                            role="cell"
+                            aria-colspan={3}
+                            style={{ width: "100%" }}
+                          >
+                            {emptyMessage}
+                          </EmptyTableMessage>
+                        </TableRow>
+                      ) : (
+                        rows.map((row) => (
+                          <LearnerRow key={rowIdOf(row)} row={row} />
+                        ))
+                      )}
+                    </TableBody>
+                  </div>
+                  <TableFooter>
+                    <TableFootnote component="p">
+                      {filteredCount > 0
+                        ? `Page ${page} of ${Math.max(totalPages, 1)}`
+                        : ""}
+                    </TableFootnote>
+                    {totalPages > 1 ? (
+                      <Pagination
+                        count={totalPages}
+                        page={page}
+                        shape="rounded"
+                        size="small"
+                        onChange={(_event, value) => setPage(value)}
+                      />
+                    ) : null}
+                  </TableFooter>
+                </TableCard>
+              </ViewPanel>
+
+              <ViewPanel value={VIEWS.grid}>
+                {orgUuid && contractId ? (
+                  <ProgressGrid
+                    orgUuid={orgUuid}
+                    contractId={contractId}
+                    search={debouncedSearch}
+                    completionStatus={completionStatus}
+                    needsAttentionOnly={needsAttentionOnly}
+                    courseRuns={courseRunsQuery.data?.data}
+                    courseRunsFailed={
+                      courseRunsQuery.isError && !courseRunsQuery.data
+                    }
+                    courseRunsFetching={courseRunsQuery.isFetching}
+                    onRetryCourseRuns={() => courseRunsQuery.refetch()}
+                    page={gridPage}
+                    onPageChange={setGridPage}
+                    emptyMessage={emptyMessage}
                   />
                 ) : null}
-              </TableFooter>
-            </TableCard>
+              </ViewPanel>
+            </TabContext>
           </ResultsSection>
         )}
       </Stack>
