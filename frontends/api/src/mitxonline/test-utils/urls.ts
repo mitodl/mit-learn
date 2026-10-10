@@ -165,6 +165,11 @@ const verifiedProgramEnrollments = {
     `${getApiBaseUrl()}/api/v2/verified_program_enrollments/${encodeURIComponent(courserunId)}/`,
 }
 
+const notificationPreferences = {
+  get: () => `${getApiBaseUrl()}/api/notification-preferences/`,
+  put: () => `${getApiBaseUrl()}/api/notification-preferences/`,
+}
+
 export {
   b2b,
   b2bAttach,
@@ -183,4 +188,5 @@ export {
   baskets,
   orders,
   verifiedProgramEnrollments,
+  notificationPreferences,
 }

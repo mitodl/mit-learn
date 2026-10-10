@@ -2,6 +2,7 @@ import React from "react"
 import { SettingsContent } from "./SettingsContent"
 import { renderWithProviders, screen, within, user } from "@/test-utils"
 import { urls, setMockResponse, factories, makeRequest } from "api/test-utils"
+import { urls as mitxonlineUrls } from "api/mitxonline-test-utils"
 import type { LearningResourcesUserSubscriptionApiLearningResourcesUserSubscriptionCheckListRequest as CheckSubscriptionRequest } from "api"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import { FeatureFlags } from "@/common/feature_flags"
@@ -43,6 +44,14 @@ const setupApis = ({
 
   setMockResponse.get(urls.profileMe.get(), { email_optin: emailOptin })
   setMockResponse.patch(urls.profileMe.patch(), {})
+
+  // Notification preferences live in MITx Online; the section renders a notice
+  // when they are unavailable, which is the default here.
+  setMockResponse.get(
+    mitxonlineUrls.notificationPreferences.get(),
+    { detail: "No Open edX account" },
+    { code: 409 },
+  )
 
   const subscribeResponse = isSubscribed
     ? factories.percolateQueries.percolateQueryList({ count: 5 }).results
