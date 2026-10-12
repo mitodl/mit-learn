@@ -136,11 +136,11 @@ describe("NotificationPreferences", () => {
     renderWithProviders(<NotificationPreferences />)
 
     const locked = await rowFor("new_discussion_post")
-    expect(within(locked).getByLabelText("On site")).toBeDisabled()
+    expect(within(locked).getByLabelText("In course")).toBeDisabled()
 
     // non_editable is keyed by type, so the other row stays editable.
     const unlocked = await rowFor("grouped_notification")
-    expect(within(unlocked).getByLabelText("On site")).toBeEnabled()
+    expect(within(unlocked).getByLabelText("In course")).toBeEnabled()
   })
 
   test("toggling a channel PUTs that single channel", async () => {
@@ -148,7 +148,7 @@ describe("NotificationPreferences", () => {
     renderWithProviders(<NotificationPreferences />)
 
     const row = await rowFor("grouped_notification")
-    await user.click(within(row).getByLabelText("On site"))
+    await user.click(within(row).getByLabelText("In course"))
 
     expect(makeRequest).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -244,7 +244,7 @@ describe("NotificationPreferences", () => {
     renderWithProviders(<NotificationPreferences />)
 
     const row = await rowFor("grouped_notification")
-    expect(within(row).getByLabelText("On site")).toBeInTheDocument()
+    expect(within(row).getByLabelText("In course")).toBeInTheDocument()
     expect(within(row).queryByLabelText("Email")).not.toBeInTheDocument()
     expect(within(row).queryByRole("combobox")).not.toBeInTheDocument()
   })
@@ -286,8 +286,8 @@ describe("NotificationPreferences", () => {
 
     const discussion = await rowFor("grouped_notification", "discussion")
     const updates = await rowFor("grouped_notification", "updates")
-    expect(within(discussion).getByLabelText("On site")).toBeChecked()
-    expect(within(updates).getByLabelText("On site")).not.toBeChecked()
+    expect(within(discussion).getByLabelText("In course")).toBeChecked()
+    expect(within(updates).getByLabelText("In course")).not.toBeChecked()
   })
 
   test("a row's controls are inert while its own write is in flight", async () => {
@@ -300,10 +300,10 @@ describe("NotificationPreferences", () => {
     renderWithProviders(<NotificationPreferences />)
 
     const row = await rowFor("grouped_notification")
-    await user.click(within(row).getByLabelText("On site"))
+    await user.click(within(row).getByLabelText("In course"))
 
     await waitFor(() =>
-      expect(within(row).getByLabelText("On site")).toBeDisabled(),
+      expect(within(row).getByLabelText("In course")).toBeDisabled(),
     )
     expect(within(row).getByLabelText("Email")).toBeDisabled()
     // A different row is unaffected.
@@ -321,7 +321,7 @@ describe("NotificationPreferences", () => {
       mitxonlineUrls.notificationPreferences.get(),
       new Promise(() => {}),
     )
-    await user.click(within(row).getByLabelText("On site"))
+    await user.click(within(row).getByLabelText("In course"))
 
     await waitFor(() =>
       expect(makeRequest).toHaveBeenCalledWith(
@@ -334,7 +334,7 @@ describe("NotificationPreferences", () => {
         3,
       ),
     )
-    expect(within(row).getByLabelText("On site")).toBeDisabled()
+    expect(within(row).getByLabelText("In course")).toBeDisabled()
   })
 
   test("a write in another row does not re-enable a row still in flight", async () => {
@@ -348,16 +348,16 @@ describe("NotificationPreferences", () => {
 
     const first = await rowFor("grouped_notification")
     const second = await rowFor("new_discussion_post")
-    await user.click(within(first).getByLabelText("On site"))
+    await user.click(within(first).getByLabelText("In course"))
     await waitFor(() =>
-      expect(within(first).getByLabelText("On site")).toBeDisabled(),
+      expect(within(first).getByLabelText("In course")).toBeDisabled(),
     )
 
     await user.click(within(second).getByLabelText("Email"))
     await waitFor(() =>
       expect(within(second).getByLabelText("Email")).toBeDisabled(),
     )
-    expect(within(first).getByLabelText("On site")).toBeDisabled()
+    expect(within(first).getByLabelText("In course")).toBeDisabled()
   })
 
   test.each([
@@ -404,7 +404,7 @@ describe("NotificationPreferences", () => {
       expect(
         await screen.findByRole("heading", { name: "Notifications" }),
       ).toBeInTheDocument()
-      expect(screen.queryByLabelText("On site")).not.toBeInTheDocument()
+      expect(screen.queryByLabelText("In course")).not.toBeInTheDocument()
     },
   )
 })

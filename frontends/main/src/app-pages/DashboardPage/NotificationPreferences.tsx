@@ -212,7 +212,7 @@ const PreferenceRow: React.FC<PreferenceRowProps> = ({
       <Controls role="group" aria-label={label}>
         <Checkbox
           name={`web-${notificationApp}-${notificationType}`}
-          label="On site"
+          label="In course"
           checked={config.web}
           disabled={webLocked || pending}
           onChange={() =>
