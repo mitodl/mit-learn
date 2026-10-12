@@ -4,12 +4,14 @@ learning_resources tasks
 
 import datetime as datetime_module
 import logging
+import uuid
 from datetime import UTC, datetime
 
 import boto3
 import celery
 from celery.exceptions import Ignore
 from django.conf import settings
+from django.core.cache import caches
 from django.db import OperationalError
 from django.db.models import Q
 from django.utils import timezone
@@ -61,7 +63,11 @@ from learning_resources.etl.utils import (
     get_bucket_by_name,
     get_s3_prefix_for_source,
 )
-from learning_resources.lib.warehouse import BaseWarehouseETLTask, iter_rows
+from learning_resources.lib.warehouse import (
+    WAREHOUSE_STATE_CACHE,
+    BaseWarehouseETLTask,
+    iter_rows,
+)
 from learning_resources.models import ContentFile, LearningResource, VideoChannel
 from learning_resources.site_scrapers.utils import scraper_for_site
 from learning_resources.utils import (
@@ -1369,23 +1375,40 @@ def _allow_mass_unpublish(task) -> bool:
     """
     Whether a warehouse media sync was queued with allow_mass_unpublish=True,
     e.g. ``SyncPodcastsTask.delay(allow_mass_unpublish=True)``. The scheduled
-    runs never pass it.
+    runs never pass it. Only the boolean lifts the limit: a serialized
+    ``"false"`` is truthy.
     """
-    return bool((task.request.kwargs or {}).get("allow_mass_unpublish", False))
+    return (task.request.kwargs or {}).get("allow_mass_unpublish", False) is True
+
+
+# Names the SyncYouTubeTask run whose playlist loads are current. Kept where
+# the warehouse watermarks are, so it outlives a cache flush.
+YOUTUBE_SYNC_GENERATION_KEY = "warehouse_etl:youtube_sync_generation"
 
 
 @app.task(acks_late=True, reject_on_worker_lost=True)
-def load_warehouse_youtube_playlist(channel_id, playlist_data):
+def load_warehouse_youtube_playlist(channel_id, playlist_data, generation):
     """
     Load a single youtube playlist and its videos, as read from the warehouse
 
     Args:
         channel_id (str): youtube's id for the playlist's channel
         playlist_data (dict): the playlist as load_playlist takes it
+        generation (str): the generation of the SyncYouTubeTask run that
+            queued this
     """
     with writing_as(Pipeline.WAREHOUSE):
         # ownership can change between the sync that queued this and now
         if not warehouse_media.may_write_youtube():
+            return
+        # A later sync may have unpublished this playlist, and loading it from
+        # the earlier read would publish it again. That sync queued every
+        # playlist it kept, so nothing is lost by dropping this one.
+        if caches[WAREHOUSE_STATE_CACHE].get(YOUTUBE_SYNC_GENERATION_KEY) != generation:
+            log.warning(
+                "Skipping youtube playlist %s: queued by a superseded sync",
+                playlist_data["playlist_id"],
+            )
             return
         video_channel = VideoChannel.objects.filter(channel_id=channel_id).first()
         if video_channel is None:
@@ -1426,6 +1449,12 @@ class SyncYouTubeTask(BaseWarehouseETLTask):
                 "integrations__learn__youtube_videos",
             )
         )
+        # Set before this run unpublishes anything, so a playlist load still
+        # queued from an earlier run cannot republish what this one removes.
+        generation = uuid.uuid4().hex
+        caches[WAREHOUSE_STATE_CACHE].set(
+            YOUTUBE_SYNC_GENERATION_KEY, generation, timeout=None
+        )
         to_load = warehouse_media.sync_youtube_channels(
             channels,
             playlists,
@@ -1435,7 +1464,7 @@ class SyncYouTubeTask(BaseWarehouseETLTask):
         )
         log.info("Queueing %d youtube playlists from the warehouse", len(to_load))
         for channel_id, playlist_data in to_load:
-            load_warehouse_youtube_playlist.delay(channel_id, playlist_data)
+            load_warehouse_youtube_playlist.delay(channel_id, playlist_data, generation)
         return len(to_load)
 
 

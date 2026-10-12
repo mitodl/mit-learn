@@ -15,6 +15,7 @@ from learning_resources.etl.constants import ETLSource
 from learning_resources.etl.exceptions import ExtractException
 from learning_resources.etl.ownership import Pipeline, writing_as
 from learning_resources.factories import (
+    ContentFileFactory,
     ETLSourceOwnershipFactory,
     LearningResourceOfferorFactory,
     LearningResourcePlatformFactory,
@@ -664,3 +665,73 @@ def test_sync_youtube_refuses_to_unpublish_more_than_the_limit(
             *short, allow_mass_unpublish=True
         )
     assert len(to_load) == 2
+
+
+def test_sync_youtube_counts_a_playlist_load_playlist_would_unpublish(
+    warehouse_owns_youtube,
+):
+    """A listed create_videos=False playlist short of content file matches is not kept"""
+    channel = VideoChannelFactory.create(channel_id="UC-mitx")
+    for playlist_id in ("PL-one", "PL-two"):
+        VideoPlaylistFactory.create(
+            channel=channel,
+            learning_resource__readable_id=playlist_id,
+            learning_resource__etl_source=ETLSource.youtube.name,
+            learning_resource__published=True,
+        )
+    video_ids = [f"vid-{number}" for number in range(5)]
+    views = [
+        [channel_row()],
+        [playlist_row("PL-one"), playlist_row("PL-two", create_videos=0)],
+        [
+            membership_row(playlist, video_id, position)
+            for playlist in ("PL-one", "PL-two")
+            for position, video_id in enumerate(video_ids)
+        ],
+        [video_row(video_id) for video_id in video_ids],
+    ]
+
+    # two of five matched is under OCW_PLAYLIST_VIDEO_THRESHOLD
+    ContentFileFactory.create(youtube_id="vid-0")
+    ContentFileFactory.create(youtube_id="vid-1")
+    with (
+        writing_as(Pipeline.WAREHOUSE),
+        pytest.raises(
+            ExtractException, match="1 of 2 published youtube video_playlist"
+        ),
+    ):
+        warehouse_media.sync_youtube_channels(*views)
+    assert (
+        LearningResource.objects.filter(
+            resource_type=LearningResourceType.video_playlist.name, published=True
+        ).count()
+        == 2
+    )
+
+    ContentFileFactory.create(youtube_id="vid-2")
+    with writing_as(Pipeline.WAREHOUSE):
+        assert len(warehouse_media.sync_youtube_channels(*views)) == 2
+
+
+def test_sync_podcasts_counts_a_podcast_without_episodes_as_unpublished(
+    warehouse_owns_podcasts,
+):
+    """A listed podcast with no episode rows is not kept, whatever the episode share"""
+    small_feeds = [f"feeds.example.com/small-{number}/" for number in range(2)]
+    podcasts = [podcast_row(), *(podcast_row(feed) for feed in small_feeds)]
+    episodes = [episode_row(f"guid-{number}") for number in range(30)] + [
+        episode_row(f"small-{number}", podcast=feed)
+        for number, feed in enumerate(small_feeds)
+    ]
+    with writing_as(Pipeline.WAREHOUSE):
+        warehouse_media.sync_podcasts(podcasts, episodes)
+        # 2 of 32 episodes is under the limit, 2 of 3 podcasts is not
+        with pytest.raises(ExtractException, match="2 of 3 published podcast podcast "):
+            warehouse_media.sync_podcasts(podcasts, episodes[:30])
+
+    assert (
+        LearningResource.objects.filter(
+            resource_type=LearningResourceType.podcast.name, published=True
+        ).count()
+        == 3
+    )

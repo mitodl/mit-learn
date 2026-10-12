@@ -7,6 +7,7 @@ from unittest.mock import ANY
 
 import pytest
 from decorator import contextmanager
+from django.core.cache import caches
 from django.db import DatabaseError
 from django.utils import timezone
 from kombu.exceptions import OperationalError as BrokerError
@@ -2618,7 +2619,11 @@ def test_sync_youtube_task_queues_a_task_per_playlist(mocker, settings, warehous
         prefix + table for table in rows
     ]
     mock_sync.assert_called_once_with(*rows.values(), allow_mass_unpublish=False)
-    assert [call.args for call in mock_delay.call_args_list] == to_load
+    generation = caches["durable"].get(tasks.YOUTUBE_SYNC_GENERATION_KEY)
+    assert generation
+    assert [call.args for call in mock_delay.call_args_list] == [
+        (*playlist, generation) for playlist in to_load
+    ]
 
 
 @pytest.mark.parametrize("warehouse_owns", [PODCAST_OWNED], indirect=True)
@@ -2671,11 +2676,36 @@ def test_load_warehouse_youtube_playlist(mocker, warehouse_owns):
         ),
     )
 
-    tasks.load_warehouse_youtube_playlist(channel.channel_id, {"playlist_id": "p"})
-    tasks.load_warehouse_youtube_playlist("no-such-channel", {"playlist_id": "p"})
+    caches["durable"].set(tasks.YOUTUBE_SYNC_GENERATION_KEY, "gen-2")
+
+    tasks.load_warehouse_youtube_playlist(
+        channel.channel_id, {"playlist_id": "p"}, "gen-2"
+    )
+    tasks.load_warehouse_youtube_playlist(
+        "no-such-channel", {"playlist_id": "p"}, "gen-2"
+    )
 
     mock_load.assert_called_once_with(channel, {"playlist_id": "p"})
     assert pipelines_seen == [True]
+
+
+@pytest.mark.parametrize("warehouse_owns", [YOUTUBE_OWNED], indirect=True)
+@pytest.mark.parametrize("current", ["gen-2", None])
+def test_load_warehouse_youtube_playlist_skips_a_superseded_sync(
+    mocker, warehouse_owns, current
+):
+    """A playlist queued by an earlier sync than the current one is not loaded"""
+    channel = factories.VideoChannelFactory.create()
+    mock_load = mocker.patch("learning_resources.tasks.loaders.load_playlist")
+    caches["durable"].clear()
+    if current:
+        caches["durable"].set(tasks.YOUTUBE_SYNC_GENERATION_KEY, current)
+
+    tasks.load_warehouse_youtube_playlist(
+        channel.channel_id, {"playlist_id": "p"}, "gen-1"
+    )
+
+    mock_load.assert_not_called()
 
 
 def test_load_warehouse_youtube_playlist_stops_when_ownership_moved(mocker):
@@ -2683,7 +2713,9 @@ def test_load_warehouse_youtube_playlist_stops_when_ownership_moved(mocker):
     channel = factories.VideoChannelFactory.create()
     mock_load = mocker.patch("learning_resources.tasks.loaders.load_playlist")
 
-    tasks.load_warehouse_youtube_playlist(channel.channel_id, {"playlist_id": "p"})
+    tasks.load_warehouse_youtube_playlist(
+        channel.channel_id, {"playlist_id": "p"}, "gen-1"
+    )
 
     mock_load.assert_not_called()
 
@@ -2720,11 +2752,19 @@ def test_get_ocw_data_skips_when_legacy_does_not_own_courses(settings, mocker):
     ],
     indirect=["warehouse_owns"],
 )
-@pytest.mark.parametrize("allow", [True, False])
-def test_media_sync_tasks_pass_on_allow_mass_unpublish(
-    mocker, warehouse_owns, task, sync, allow
+@pytest.mark.parametrize(
+    ("kwargs", "allow"),
+    [
+        ({"allow_mass_unpublish": True}, True),
+        ({}, False),
+        ({"allow_mass_unpublish": "false"}, False),
+        ({"allow_mass_unpublish": 1}, False),
+    ],
+)
+def test_media_sync_tasks_pass_on_allow_mass_unpublish(  # noqa: PLR0913
+    mocker, warehouse_owns, task, sync, kwargs, allow
 ):
-    """Only a run queued with allow_mass_unpublish=True lifts the unpublish limit"""
+    """Only a run queued with the boolean allow_mass_unpublish=True lifts the limit"""
     mocker.patch("learning_resources.lib.warehouse.connect_to_warehouse")
     mocker.patch("learning_resources.tasks.iter_rows", return_value=[])
     mock_sync = mocker.patch(
@@ -2733,7 +2773,6 @@ def test_media_sync_tasks_pass_on_allow_mass_unpublish(
     if sync == "sync_podcasts":
         mock_sync.return_value = 0
 
-    kwargs = {"allow_mass_unpublish": True} if allow else {}
     getattr(tasks, task).apply(kwargs=kwargs).get()
 
     assert mock_sync.call_args.kwargs == {"allow_mass_unpublish": allow}

@@ -21,14 +21,17 @@ from datetime import UTC, datetime
 
 from dateutil.parser import ParserError, parse
 
-from learning_resources.constants import LearningResourceType
+from learning_resources.constants import (
+    OCW_PLAYLIST_VIDEO_THRESHOLD,
+    LearningResourceType,
+)
 from learning_resources.etl import loaders
 from learning_resources.etl.constants import ETLSource
 from learning_resources.etl.exceptions import ExtractException
 from learning_resources.etl.ownership import may_write
 from learning_resources.etl.utils import iso8601_duration
 from learning_resources.etl.youtube import clean_youtube_description, parse_offered_by
-from learning_resources.models import LearningResource
+from learning_resources.models import ContentFile, LearningResource
 from main.constants import (
     ALLOWED_HTML_ATTRIBUTES_WITH_LINKS,
     ALLOWED_HTML_TAGS_WITH_LINKS,
@@ -73,25 +76,25 @@ MAX_UNPUBLISH_SHARE = 0.1
 
 
 def _refuse_mass_unpublish(
-    etl_source: str, resource_type: str, pulled_ids: set[str]
+    etl_source: str, resource_type: str, kept_ids: set[str]
 ) -> None:
     """
     Raise if loading would unpublish more than MAX_UNPUBLISH_SHARE of the
     source's published resources of a type, i.e. if that share of them is
-    missing from the ids pulled.
+    missing from the ids the load will keep published.
     """
     published_ids = set(
         LearningResource.objects.filter(
             etl_source=etl_source, resource_type=resource_type, published=True
         ).values_list("readable_id", flat=True)
     )
-    missing = published_ids - pulled_ids
+    missing = published_ids - kept_ids
     if len(missing) > len(published_ids) * MAX_UNPUBLISH_SHARE:
         msg = (
             f"Refusing to sync: {len(missing)} of {len(published_ids)} published "
-            f"{etl_source} {resource_type} resources are not in the warehouse "
-            f"views, over the {MAX_UNPUBLISH_SHARE:.0%} limit. If they were "
-            "removed at the source, rerun with allow_mass_unpublish=True."
+            f"{etl_source} {resource_type} resources would be unpublished, "
+            f"over the {MAX_UNPUBLISH_SHARE:.0%} limit. If they were removed "
+            "at the source, rerun with allow_mass_unpublish=True."
         )
         raise ExtractException(msg)
 
@@ -199,6 +202,37 @@ def _videos_by_playlist(
     return videos_by_playlist
 
 
+def _kept_playlists(playlists: list[dict]) -> list[dict]:
+    """
+    Return the transformed playlists load_playlist will leave published. It
+    unpublishes a create_videos=False playlist that has no videos, or fewer
+    than OCW_PLAYLIST_VIDEO_THRESHOLD of them matching an OCW content file.
+    """
+    matched_youtube_ids = set(
+        ContentFile.objects.filter(
+            youtube_id__in={
+                video["youtube_id"]
+                for playlist in playlists
+                if not playlist["create_videos"]
+                for video in playlist["videos"]
+            }
+        ).values_list("youtube_id", flat=True)
+    )
+
+    def is_kept(playlist: dict) -> bool:
+        if playlist["create_videos"]:
+            return True
+        videos = playlist["videos"]
+        matched = [
+            video for video in videos if video["youtube_id"] in matched_youtube_ids
+        ]
+        return bool(matched) and len(matched) >= (
+            len(videos) * OCW_PLAYLIST_VIDEO_THRESHOLD
+        )
+
+    return [playlist for playlist in playlists if is_kept(playlist)]
+
+
 def sync_youtube_channels(
     channels: list[dict],
     playlists: list[dict],
@@ -235,16 +269,6 @@ def sync_youtube_channels(
         playlist_videos=playlist_videos,
         videos=videos,
     )
-    if not allow_mass_unpublish:
-        for resource_type, rows in (
-            (LearningResourceType.video_playlist.name, playlists),
-            (LearningResourceType.video.name, videos),
-        ):
-            _refuse_mass_unpublish(
-                ETLSource.youtube.name,
-                resource_type,
-                {row["readable_id"] for row in rows},
-            )
 
     # transformed before anything is written, so a bad row changes nothing
     videos_by_playlist = _videos_by_playlist(playlist_videos, videos)
@@ -255,6 +279,33 @@ def sync_youtube_channels(
                 playlist, videos_by_playlist[playlist["readable_id"]]
             )
         )
+
+    if not allow_mass_unpublish:
+        # counted from what the loads keep, not from what the views list: a
+        # listed playlist can still be unpublished by load_playlist, and a
+        # video is only published through a playlist that is
+        kept_playlists = _kept_playlists(
+            [
+                playlist
+                for channel in channels
+                for playlist in playlists_by_channel[channel["channel_id"]]
+            ]
+        )
+        for resource_type, kept_ids in (
+            (
+                LearningResourceType.video_playlist.name,
+                {playlist["playlist_id"] for playlist in kept_playlists},
+            ),
+            (
+                LearningResourceType.video.name,
+                {
+                    video["readable_id"]
+                    for playlist in kept_playlists
+                    for video in playlist["videos"]
+                },
+            ),
+        ):
+            _refuse_mass_unpublish(ETLSource.youtube.name, resource_type, kept_ids)
 
     loaders.unpublish_removed_youtube_channels(
         [channel["channel_id"] for channel in channels]
@@ -411,20 +462,32 @@ def sync_podcasts(
         return 0
 
     _refuse_empty(podcasts=podcasts, episodes=episodes)
-    if not allow_mass_unpublish:
-        for resource_type, rows in (
-            (LearningResourceType.podcast.name, podcasts),
-            (LearningResourceType.podcast_episode.name, episodes),
-        ):
-            _refuse_mass_unpublish(
-                ETLSource.podcast.name,
-                resource_type,
-                {row["readable_id"] for row in rows},
-            )
 
     episodes_by_podcast = defaultdict(list)
     for episode in episodes:
         episodes_by_podcast[episode["podcast_readable_id"]].append(episode)
+
+    if not allow_mass_unpublish:
+        # load_podcast unpublishes a listed podcast that has no episodes, so
+        # only a podcast with episode rows counts as kept
+        _refuse_mass_unpublish(
+            ETLSource.podcast.name,
+            LearningResourceType.podcast.name,
+            {
+                podcast["readable_id"]
+                for podcast in podcasts
+                if episodes_by_podcast[podcast["readable_id"]]
+            },
+        )
+        _refuse_mass_unpublish(
+            ETLSource.podcast.name,
+            LearningResourceType.podcast_episode.name,
+            {
+                episode["readable_id"]
+                for podcast in podcasts
+                for episode in episodes_by_podcast[podcast["readable_id"]]
+            },
+        )
 
     podcasts_data = []
     for podcast in podcasts:

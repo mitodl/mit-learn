@@ -34,12 +34,13 @@ _SAFE_IDENTIFIER = re.compile(r"^[a-zA-Z0-9_.]+\Z")
 # would pass _SAFE_IDENTIFIER once composed but point at a different catalog.
 _SAFE_NAME_PART = re.compile(r"^[a-zA-Z0-9_]+\Z")
 
-# Cache alias for sync watermarks: must outlive Redis flushes (an evicted
-# watermark just makes the next incremental run fetch a wider-than-necessary
-# window, which is safe — see BaseWarehouseETLTask.fetch_and_upsert's
-# ``since`` contract), but should not require a dedicated model + migration
-# for what is ETL bookkeeping, not domain data.
-_WATERMARK_CACHE = "durable"
+# Cache alias for sync state (watermarks, sync generations): must outlive
+# Redis flushes (an evicted watermark just makes the next incremental run
+# fetch a wider-than-necessary window, which is safe, see
+# BaseWarehouseETLTask.fetch_and_upsert's ``since`` contract), but should not
+# require a dedicated model + migration for what is ETL bookkeeping, not
+# domain data.
+WAREHOUSE_STATE_CACHE = "durable"
 _WATERMARK_SQL_FORMAT = "%Y-%m-%d %H:%M:%S.%f"
 
 # Subtracted from the wall-clock watermark before it's stored: this consumer
@@ -370,8 +371,10 @@ class BaseWarehouseETLTask(Task):
 
     def _get_watermark(self):
         """Return this task's last recorded incremental watermark, if any."""
-        return caches[_WATERMARK_CACHE].get(self._watermark_cache_key())
+        return caches[WAREHOUSE_STATE_CACHE].get(self._watermark_cache_key())
 
     def _set_watermark(self, value: datetime) -> None:
         """Persist ``value`` as this task's incremental watermark."""
-        caches[_WATERMARK_CACHE].set(self._watermark_cache_key(), value, timeout=None)
+        caches[WAREHOUSE_STATE_CACHE].set(
+            self._watermark_cache_key(), value, timeout=None
+        )
