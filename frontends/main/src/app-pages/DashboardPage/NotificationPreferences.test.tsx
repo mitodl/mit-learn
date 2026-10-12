@@ -164,6 +164,14 @@ describe("NotificationPreferences", () => {
     )
   })
 
+  test("shows a visible Email frequency label next to each cadence select", async () => {
+    setupApi()
+    renderWithProviders(<NotificationPreferences />)
+
+    const row = await rowFor("grouped_notification")
+    expect(within(row).getByText("Email frequency")).toBeVisible()
+  })
+
   test("keeps the cadence control in place, disabled, while email is off", async () => {
     setupApi()
     renderWithProviders(<NotificationPreferences />)
