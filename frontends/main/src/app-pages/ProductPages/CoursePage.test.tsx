@@ -10,6 +10,7 @@ import type {
 } from "@mitodl/mitxonline-api-axios/v2"
 import {
   setMockResponse,
+  makeRequest,
   urls as learnUrls,
   factories as learnFactories,
 } from "api/test-utils"
@@ -275,6 +276,30 @@ describe("CoursePage", () => {
         name: "Course content",
       }),
     ).not.toBeInTheDocument()
+  })
+
+  test("Hides course content section when the CMS toggle is off", async () => {
+    const course = makeCourse()
+    const page = makePage({
+      course_details: course,
+      show_course_outline: false,
+    })
+    setupApis({ course, page })
+    renderWithProviders(<CoursePage readableId={course.readable_id} />)
+    await waitForCoursePageToSettle(page.title)
+
+    expect(
+      screen.queryByRole("region", {
+        name: "Course content",
+      }),
+    ).not.toBeInTheDocument()
+    const outlineCoursewareId = getOutlineCoursewareId(course)
+    invariant(outlineCoursewareId)
+    expect(makeRequest).not.toHaveBeenCalledWith(
+      expect.objectContaining({
+        url: mitxUrls.courses.courseOutline(outlineCoursewareId),
+      }),
+    )
   })
 
   test("Course content section shows metadata inline", async () => {
