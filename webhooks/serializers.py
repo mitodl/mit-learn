@@ -120,6 +120,33 @@ class WebhookResponseSerializer(serializers.Serializer):
     error = serializers.CharField(required=False, allow_blank=True)
 
 
+class ShadowRunCountsSerializer(serializers.Serializer):
+    """
+    What a shadow run found for one (etl_source, resource_type), as
+    ETLShadowRun.counts holds it.
+    """
+
+    before = serializers.IntegerField()
+    before_published = serializers.IntegerField()
+    created = serializers.IntegerField()
+    unpublished = serializers.IntegerField()
+    republished = serializers.IntegerField()
+    updated = serializers.IntegerField()
+    unchanged = serializers.IntegerField()
+
+
+class ShadowRunResultSerializer(serializers.Serializer):
+    """
+    The shadow run of one (etl_source, resource_type) of a batch. It has
+    ``counts`` when the pair was compared and ``error`` when it was not.
+    """
+
+    etl_source = serializers.CharField()
+    resource_type = serializers.CharField()
+    counts = ShadowRunCountsSerializer(required=False)
+    error = serializers.CharField(required=False)
+
+
 class LearningResourceWebhookResponseSerializer(WebhookResponseSerializer):
     """
     Serializer for learning_resources webhook responses.
@@ -129,7 +156,7 @@ class LearningResourceWebhookResponseSerializer(WebhookResponseSerializer):
     (etl_source, resource_type).
     """
 
-    shadow = serializers.ListField(child=serializers.DictField(), required=False)
+    shadow = ShadowRunResultSerializer(many=True, required=False)
 
 
 class ContentFileWebhookRequestSerializer(serializers.Serializer):

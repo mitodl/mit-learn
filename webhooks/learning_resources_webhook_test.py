@@ -12,6 +12,7 @@ from learning_resources.etl.constants import (
     ProgramLoaderConfig,
 )
 from learning_resources.etl.ownership import current_pipeline, is_shadow_run
+from learning_resources.etl.shadow import NOT_OBSERVED
 from learning_resources.factories import (
     ETLSourceOwnershipFactory,
     LearningResourcePlatformFactory,
@@ -603,7 +604,8 @@ def test_batch_with_a_shadowed_group_is_a_shadow_run(settings, client, mocker):
         (etl_source, course),
         (etl_source, program),
     ]
-    assert body["shadow"][0]["counts"]["created"] == 0
+    # the mocked loaders report nothing to the shadow run
+    assert [run["error"] for run in body["shadow"]] == [NOT_OBSERVED, NOT_OBSERVED]
     assert (
         ETLShadowRun.objects.filter(
             etl_source=etl_source, pipeline=ETLSourceOwnership.Pipeline.WEBHOOK
@@ -614,7 +616,7 @@ def test_batch_with_a_shadowed_group_is_a_shadow_run(settings, client, mocker):
 
 @pytest.mark.django_db
 def test_shadowed_batch_writes_nothing(settings, client, mocker):
-    """The real loaders run for a shadowed group and their writes are rolled back."""
+    """The real loaders compare a shadowed group with what is stored and write nothing."""
     etl_source = ETLSource.mit_climate.name
     document = LearningResourceType.document.name
     ETLSourceOwnership.objects.filter(
@@ -657,3 +659,29 @@ def test_shadowed_batch_writes_nothing(settings, client, mocker):
     assert response.json()["shadow"][0]["counts"]["created"] == 1
     assert not LearningResource.objects.filter(etl_source=etl_source).exists()
     mock_chain.return_value.assert_not_called()
+
+
+@pytest.mark.django_db
+def test_shadowed_batch_does_not_load_videos(settings, client, mocker):
+    """load_videos does not report to a shadow run, so a shadowed batch skips it."""
+    etl_source = ETLSource.youtube.name
+    video = LearningResourceType.video.name
+    ETLSourceOwnership.objects.update_or_create(
+        etl_source=etl_source,
+        resource_type=video,
+        defaults={
+            "owner": ETLSourceOwnership.Pipeline.LEGACY,
+            "shadow": ETLSourceOwnership.Pipeline.WEBHOOK,
+        },
+    )
+    mock_load_videos = mocker.patch("webhooks.views.load_videos")
+
+    response = _post(
+        client, settings, {"resources": [_resource("video-1", etl_source, video)]}
+    )
+
+    assert response.status_code == 200
+    assert response.json()["shadow"] == [
+        {"etl_source": etl_source, "resource_type": video, "error": NOT_OBSERVED}
+    ]
+    mock_load_videos.assert_not_called()

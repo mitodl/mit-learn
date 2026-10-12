@@ -29,6 +29,7 @@ from learning_resources.etl.loaders import (
 from learning_resources.etl.ownership import (
     Pipeline,
     RunMode,
+    is_shadow_run,
     run_mode,
     writing_as,
 )
@@ -205,7 +206,8 @@ class LearningResourceWebhookView(BaseWebhookView):
 
     A batch with a group the webhook shadows (ETLSourceOwnership.shadow) is
     loaded as a shadow run: nothing is written, and the response's ``shadow``
-    counts what each group's load would have changed.
+    counts what each group's load would have changed. A video group is not
+    compared, and its entry carries an ``error`` in place of the counts.
     """
 
     permission_classes = []
@@ -271,7 +273,11 @@ class LearningResourceWebhookView(BaseWebhookView):
                             {
                                 "etl_source": run.etl_source,
                                 "resource_type": run.resource_type,
-                                "counts": run.counts,
+                                **(
+                                    {"error": run.error}
+                                    if run.error
+                                    else {"counts": run.counts}
+                                ),
                             }
                             for run in shadow_runs
                         ],
@@ -323,7 +329,9 @@ def _load_resource_group(etl_source, resource_type, resources):
     if resource_type == LearningResourceType.document.name:
         return load_documents(etl_source, resources)
     if resource_type == LearningResourceType.video.name:
-        return load_videos(resources)
+        # load_videos does not report to a shadow run and would write, so a
+        # shadowed batch leaves its videos alone and reports them not compared.
+        return [] if is_shadow_run() else load_videos(resources)
     return None
 
 

@@ -10034,7 +10034,8 @@ paths:
 
         A batch with a group the webhook shadows (ETLSourceOwnership.shadow) is
         loaded as a shadow run: nothing is written, and the response's ``shadow``
-        counts what each group's load would have changed.
+        counts what each group's load would have changed. A video group is not
+        compared, and its entry carries an ``error`` in place of the counts.
       tags:
       - webhooks
       requestBody:
@@ -13814,8 +13815,7 @@ components:
         shadow:
           type: array
           items:
-            type: object
-            additionalProperties: {}
+            $ref: '#/components/schemas/ShadowRunResult'
       required:
       - status
     LearningResourcesSearchResponse:
@@ -16731,6 +16731,51 @@ components:
       - best_fields
       - most_fields
       - hybrid
+    ShadowRunCounts:
+      type: object
+      description: |-
+        What a shadow run found for one (etl_source, resource_type), as
+        ETLShadowRun.counts holds it.
+      properties:
+        before:
+          type: integer
+        before_published:
+          type: integer
+        created:
+          type: integer
+        unpublished:
+          type: integer
+        republished:
+          type: integer
+        updated:
+          type: integer
+        unchanged:
+          type: integer
+      required:
+      - before
+      - before_published
+      - created
+      - republished
+      - unchanged
+      - unpublished
+      - updated
+    ShadowRunResult:
+      type: object
+      description: |-
+        The shadow run of one (etl_source, resource_type) of a batch. It has
+        ``counts`` when the pair was compared and ``error`` when it was not.
+      properties:
+        etl_source:
+          type: string
+        resource_type:
+          type: string
+        counts:
+          $ref: '#/components/schemas/ShadowRunCounts'
+        error:
+          type: string
+      required:
+      - etl_source
+      - resource_type
     SortbyEnum:
       enum:
       - featured
