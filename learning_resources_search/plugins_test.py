@@ -5,7 +5,6 @@ from types import SimpleNamespace
 import pytest
 
 from learning_resources.etl.constants import ETLSource
-from learning_resources.etl.ownership import shadowing
 from learning_resources.factories import (
     ContentFileFactory,
     LearningResourceFactory,
@@ -13,10 +12,7 @@ from learning_resources.factories import (
 )
 from learning_resources.models import ContentFile, LearningResourceRun
 from learning_resources_search.constants import COURSE_TYPE, PROGRAM_TYPE
-from learning_resources_search.plugins import (
-    SearchIndexPlugin,
-    try_with_retry_as_task,
-)
+from learning_resources_search.plugins import SearchIndexPlugin
 
 
 @pytest.fixture
@@ -709,16 +705,3 @@ def test_content_files_loaded_best_run_with_only_unpublished_files_still_indexes
     SearchIndexPlugin().content_files_loaded(run)
 
     index_mock.assert_called_once_with(run.id)
-
-
-def test_try_with_retry_as_task_does_nothing_in_a_shadow_run(mocker):
-    """A shadow run's writes are rolled back, so no index task is run or queued."""
-    task = mocker.Mock()
-
-    with shadowing():
-        try_with_retry_as_task(task, 1)
-    task.assert_not_called()
-    task.delay.assert_not_called()
-
-    try_with_retry_as_task(task, 1)
-    task.assert_called_once_with(1)

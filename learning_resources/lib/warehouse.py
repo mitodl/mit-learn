@@ -190,9 +190,10 @@ class BaseWarehouseETLTask(Task):
     ``fetch_and_upsert(conn, *, since)``. ``run`` returns 0 without
     connecting unless ETLSourceOwnership names the warehouse for every one
     of those resource types, as their owner or as their shadow. As a shadow,
-    the load is rolled back and reported instead of written (see
-    ``learning_resources.etl.shadow``); a ``fetch_and_upsert`` that hands its
-    writes to other tasks must do them inline when
+    the batch is compared with the stored resources and reported instead of
+    loaded (see ``learning_resources.etl.shadow``), which only happens in the
+    batch loaders named there: a ``fetch_and_upsert`` that writes any other
+    way, or hands its writes to other tasks, must not do so when
     ``ownership.is_shadow_run()``. ``view_name`` qualifies it with
     ``settings.WAREHOUSE_CATALOG`` and ``settings.WAREHOUSE_SCHEMA``, so the
     same task reads ``ol_data_lake_qa`` in QA and ``ol_data_lake_production``

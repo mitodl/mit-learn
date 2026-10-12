@@ -389,7 +389,7 @@ def test_base_warehouse_etl_task_shadows_a_pair(mock_connect):
     ):
         assert task.run(full_refresh=False) == 7
 
-    assert task.seen == (True, None, True)
+    assert task.seen == (True, None, False)
     mock_get_watermark.assert_not_called()
     mock_set_watermark.assert_not_called()
     run = ETLShadowRun.objects.get()
