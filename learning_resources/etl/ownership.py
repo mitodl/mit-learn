@@ -24,12 +24,21 @@ pipeline function (``get_youtube_data``, ``sync_canvas_courses``,
 The batch loaders call ``may_write`` again as a backstop, so a caller that
 skipped the entry check (a shell session, a new pipeline) still cannot write a
 pair it does not own.
+
+A row can also name a ``shadow`` pipeline. The shadow extracts and transforms
+while the owner keeps writing, and the batch loaders compare its batch with
+the stored resources instead of loading it
+(``learning_resources.etl.shadow.run_shadow``). What it would have changed is
+saved as an ETLShadowRun. ``run_mode`` tells an entry point which of the three
+it is doing: write, shadow or skip. ``may_write`` is never true for a shadow,
+nor for anyone inside a shadow run, so a shadow writes nothing.
 """
 
 import logging
 from collections.abc import Iterable, Iterator
 from contextlib import contextmanager
 from contextvars import ContextVar
+from enum import StrEnum
 
 from learning_resources.models import ETLSourceOwnership
 
@@ -61,30 +70,75 @@ def current_pipeline() -> str:
     return _current_pipeline.get()
 
 
-def get_owner(etl_source: str, resource_type: str) -> str:
-    """Return the pipeline that owns an (etl_source, resource_type) pair."""
-    row = ETLSourceOwnership.objects.filter(
+class RunMode(StrEnum):
+    """What a pipeline's run does for the pairs it loads."""
+
+    WRITE = "write"
+    SHADOW = "shadow"
+    SKIP = "skip"
+
+
+_shadow_run: ContextVar[bool] = ContextVar("etl_shadow_run", default=False)
+
+
+@contextmanager
+def shadowing() -> Iterator[None]:
+    """
+    Mark the block as a shadow run. Only ``run_shadow`` enters it, because it
+    is what collects what the batch loaders report inside the block.
+    """
+    token = _shadow_run.set(True)
+    try:
+        yield
+    finally:
+        _shadow_run.reset(token)
+
+
+def is_shadow_run() -> bool:
+    """Whether the caller is inside a shadow run, which must write nothing."""
+    return _shadow_run.get()
+
+
+def _get_row(etl_source: str, resource_type: str) -> ETLSourceOwnership | None:
+    return ETLSourceOwnership.objects.filter(
         etl_source=etl_source, resource_type=resource_type
     ).first()
+
+
+def get_owner(etl_source: str, resource_type: str) -> str:
+    """Return the pipeline that owns an (etl_source, resource_type) pair."""
+    row = _get_row(etl_source, resource_type)
     return row.owner if row else Pipeline.LEGACY
 
 
-def may_write(etl_source: str, resource_types: str | Iterable[str]) -> bool:
+def run_mode(etl_source: str, resource_types: str | Iterable[str]) -> RunMode:
     """
-    Whether the current pipeline owns every one of ``resource_types`` for a source.
+    Return what the current pipeline's run does for ``resource_types`` of a source.
 
-    A batch loader that writes several types together (a podcast and its
-    episodes) needs all of them: owning only some would leave the rest to a
-    pipeline that never receives them.
+    WRITE if it owns every one of them. A batch loader that writes several
+    types together (a podcast and its episodes) needs all of them: owning only
+    some would leave the rest to a pipeline that never receives them.
+
+    SHADOW if it is the owner or the shadow of every one and the shadow of at
+    least one. Nothing is written inside a shadow run, so the types it owns
+    are not written by that run either.
+
+    SKIP otherwise.
     """
     if isinstance(resource_types, str):
         resource_types = [resource_types]
     pipeline = current_pipeline()
-    not_owned = {
-        resource_type: owner
-        for resource_type in resource_types
-        if (owner := get_owner(etl_source, resource_type)) != pipeline
-    }
+    mode = RunMode.WRITE
+    not_owned = {}
+    for resource_type in resource_types:
+        row = _get_row(etl_source, resource_type)
+        owner = row.owner if row else Pipeline.LEGACY
+        if owner == pipeline:
+            continue
+        if row and row.shadow == pipeline:
+            mode = RunMode.SHADOW
+        else:
+            not_owned[resource_type] = owner
     if not_owned:
         log.info(
             "Skipping %s write for %s: owned by %s",
@@ -92,7 +146,16 @@ def may_write(etl_source: str, resource_types: str | Iterable[str]) -> bool:
             etl_source,
             ", ".join(f"{rtype}={owner}" for rtype, owner in not_owned.items()),
         )
-    return not not_owned
+        return RunMode.SKIP
+    return mode
+
+
+def may_write(etl_source: str, resource_types: str | Iterable[str]) -> bool:
+    """
+    Return whether the current pipeline may write ``resource_types`` of a
+    source: it owns every one of them and is not inside a shadow run.
+    """
+    return not is_shadow_run() and run_mode(etl_source, resource_types) == RunMode.WRITE
 
 
 def assert_owner(etl_source: str, resource_types: str | Iterable[str]) -> None:

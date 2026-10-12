@@ -28,9 +28,12 @@ from learning_resources.etl.loaders import (
 )
 from learning_resources.etl.ownership import (
     Pipeline,
-    may_write,
+    RunMode,
+    is_shadow_run,
+    run_mode,
     writing_as,
 )
+from learning_resources.etl.shadow import run_shadow
 from learning_resources.models import LearningResource
 from learning_resources.tasks import ingest_canvas_course, ingest_edx_run_archive
 from learning_resources.utils import (
@@ -41,6 +44,7 @@ from webhooks.decorators import require_signature
 from webhooks.serializers import (
     ContentFileWebHookRequestSerializer,
     LearningResourceWebhookRequestSerializer,
+    LearningResourceWebhookResponseSerializer,
     OVSVideoWebhookRequestSerializer,
     WebhookResponseSerializer,
 )
@@ -180,7 +184,7 @@ class ContentFileDeleteWebhookView(ContentFileWebhookView):
 @extend_schema_view(
     post=extend_schema(
         request=LearningResourceWebhookRequestSerializer,
-        responses=WebhookResponseSerializer(),
+        responses=LearningResourceWebhookResponseSerializer(),
     ),
 )
 class LearningResourceWebhookView(BaseWebhookView):
@@ -199,6 +203,11 @@ class LearningResourceWebhookView(BaseWebhookView):
     ``sync`` array with no resources in the batch is pruned, unpublishing all
     of it. Resource types without a loader are logged and skipped rather than
     failing the whole batch.
+
+    A batch with a group the webhook shadows (ETLSourceOwnership.shadow) is
+    loaded as a shadow run: nothing is written, and the response's ``shadow``
+    counts what each group's load would have changed. A video group is not
+    compared, and its entry carries an ``error`` in place of the counts.
     """
 
     permission_classes = []
@@ -209,7 +218,7 @@ class LearningResourceWebhookView(BaseWebhookView):
     def success(self, extra_data=None):
         if not extra_data:
             extra_data = {}
-        response = WebhookResponseSerializer(
+        response = LearningResourceWebhookResponseSerializer(
             data={"status": "success", "message": "Webhook received", **extra_data}
         )
         if response.is_valid():
@@ -234,7 +243,12 @@ class LearningResourceWebhookView(BaseWebhookView):
         # load would leave the batch half applied with no way for the sender
         # to tell.
         with writing_as(Pipeline.WEBHOOK):
-            unowned = unowned_groups(grouped)
+            modes = group_modes(grouped)
+            unowned = [
+                f"{etl_source}/{resource_type}"
+                for (etl_source, resource_type), mode in modes.items()
+                if mode == RunMode.SKIP
+            ]
             if unowned:
                 msg = (
                     f"The webhook does not own {', '.join(unowned)}. Set the "
@@ -244,6 +258,30 @@ class LearningResourceWebhookView(BaseWebhookView):
                 return Response(
                     {"status": "error", "message": msg},
                     status=status.HTTP_409_CONFLICT,
+                )
+            if RunMode.SHADOW in modes.values():
+                # One shadow run for the batch, since a later group reads what
+                # an earlier one loaded (programs link to the batch's courses).
+                summary, shadow_runs = run_shadow(
+                    list(modes), lambda: load_learning_resource_groups(grouped)
+                )
+                log.info("learning_resources webhook shadowed: %s", summary)
+                return self.success(
+                    {
+                        "message": "Shadow run: nothing was written",
+                        "shadow": [
+                            {
+                                "etl_source": run.etl_source,
+                                "resource_type": run.resource_type,
+                                **(
+                                    {"error": run.error}
+                                    if run.error
+                                    else {"counts": run.counts}
+                                ),
+                            }
+                            for run in shadow_runs
+                        ],
+                    }
                 )
             summary = load_learning_resource_groups(grouped)
         log.info("learning_resources webhook processed: %s", summary)
@@ -291,7 +329,9 @@ def _load_resource_group(etl_source, resource_type, resources):
     if resource_type == LearningResourceType.document.name:
         return load_documents(etl_source, resources)
     if resource_type == LearningResourceType.video.name:
-        return load_videos(resources)
+        # load_videos does not report to a shadow run and would write, so a
+        # shadowed batch leaves its videos alone and reports them not compared.
+        return [] if is_shadow_run() else load_videos(resources)
     return None
 
 
@@ -309,17 +349,16 @@ def group_learning_resources(resources, sync):
     return grouped
 
 
-def unowned_groups(grouped):
+def group_modes(grouped):
     """
-    Return "etl_source/resource_type" for each supported group the current
-    pipeline does not own every written type of.
+    Return what the current pipeline's load does (write, shadow or skip) for
+    each supported (etl_source, resource_type) group.
     """
-    return [
-        f"{etl_source}/{resource_type}"
+    return {
+        (etl_source, resource_type): run_mode(etl_source, resource_type)
         for etl_source, resource_type in grouped
         if resource_type in _SUPPORTED_TYPES
-        and not may_write(etl_source, resource_type)
-    ]
+    }
 
 
 def load_learning_resource_groups(grouped):
