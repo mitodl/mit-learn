@@ -678,6 +678,23 @@ describe("ChannelSearch", () => {
    * drawer. It is still the tabs: one at a time, writing the same param, and
    * unchecking the chosen one is how it gets back to All.
    */
+  /* Without a name the checkboxes announce as a loose set of three. */
+  test("the drawer's resource type choice is a named group", async () => {
+    const { channel } = setMockApiResponses({
+      channelPatch: { channel_type: ChannelTypeEnum.Topic },
+    })
+
+    renderWithProviders(<ChannelPage />, {
+      url: `/c/${channel.channel_type}/${channel.name}`,
+    })
+    await user.click(await screen.findByRole("button", { name: "Filter" }))
+    const drawer = await screen.findByRole("presentation")
+
+    expect(
+      within(drawer).getByRole("group", { name: "Resource type" }),
+    ).toBeInTheDocument()
+  }, 10000)
+
   test("the drawer carries the resource type choice", async () => {
     const { channel } = setMockApiResponses({
       channelPatch: { channel_type: ChannelTypeEnum.Topic },
@@ -827,6 +844,36 @@ describe("ChannelSearch", () => {
         "Professional Certificate",
         "Clear all filters",
       ])
+    }, 10000)
+
+    /**
+     * Removing a chip unmounts the button that removed it, and the browser
+     * drops focus to the body rather than passing it on.
+     */
+    test("hands focus to the next chip when one is removed", async () => {
+      const row = await chipRowAt("?delivery=in_person&free=true")
+      const free = within(row).getByRole("button", {
+        name: "Remove filter Free",
+      })
+      free.focus()
+
+      await user.click(free)
+
+      expect(document.activeElement).toBe(
+        within(row).getByRole("button", { name: "Remove filter In-Person" }),
+      )
+      expect(document.activeElement).not.toBe(document.body)
+    }, 10000)
+
+    test("hands focus to the results when the last filter goes", async () => {
+      const row = await chipRowAt("?free=true")
+
+      await user.click(
+        within(row).getByRole("button", { name: "Remove filter Free" }),
+      )
+
+      expect(screen.queryByTestId("selected-filters")).toBe(null)
+      expect(document.activeElement).not.toBe(document.body)
     }, 10000)
 
     test("a chip removes only its own filter", async () => {

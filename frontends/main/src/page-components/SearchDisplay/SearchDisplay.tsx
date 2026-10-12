@@ -1216,6 +1216,9 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
                     clearAllFacets()
                     setPage(1)
                   }}
+                  /* The row unmounts with the last filter, so focus moves to
+                     the results it was describing. */
+                  onEmpty={focusResultsHeading}
                 />
                 <DesktopSortContainer>{sortDropdown}</DesktopSortContainer>
               </Stack>
@@ -1236,7 +1239,7 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
                 </FilterButton>
 
                 <StyledDrawer
-                  anchor="right"
+                  anchor="left"
                   open={mobileDrawerOpen}
                   onClose={toggleMobileDrawer(false)}
                 >

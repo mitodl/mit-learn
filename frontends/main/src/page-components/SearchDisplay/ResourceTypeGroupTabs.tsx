@@ -173,16 +173,46 @@ const ResourceTypeGroupTabList: React.FC<ResourceTypeGroupTabsProps> = ({
  * is checked is what All is, and a row that undid itself and three others
  * would be the odd one out among checkboxes.
  */
+/** See the effect in `ResourceTypeGroupChecklist` for why this is not a ref. */
+let pendingFocusId: string | null = null
+
 const ResourceTypeGroupChecklist: React.FC<
   ResourceTypeGroupTabsProps & { activeTabName: string }
 > = ({ tabs, aggregations, setSearchParams, onTabChange, activeTabName }) => {
   const counts = resourceTypeGroupCounts(aggregations)
   const choices = tabs.filter((tab) => tab.resource_type_group)
+
+  /**
+   * Put focus back on the box that was just ticked.
+   *
+   * These live in the filter drawer, which the results render inside the tab
+   * panel for the active tab -- so choosing one switches the panel out from
+   * under the box, and the box is unmounted along with it. Focus would land
+   * back on the drawer itself, leaving a keyboard or screen reader user at
+   * the top of the list again after every choice.
+   *
+   * The id is held outside the component because the component is what goes:
+   * a ref would be torn down with it, and the one that mounts in its place
+   * would have nothing to read.
+   */
+  React.useEffect(() => {
+    if (!pendingFocusId) {
+      return
+    }
+    const id = pendingFocusId
+    pendingFocusId = null
+    document.getElementById(id)?.focus()
+  })
+
   if (choices.length === 0) {
     return null
   }
   return (
-    <div className="facets multi-facet-group">
+    <div
+      className="facets multi-facet-group"
+      role="group"
+      aria-label="Resource type"
+    >
       {choices.map((tab) => {
         const checked = tab.name === activeTabName
         const id = `resource-type-group-${tab.name}`
@@ -200,13 +230,14 @@ const ResourceTypeGroupChecklist: React.FC<
                  the words -- "Courses12" -- so the control names itself. */
               aria-label={tab.label}
               checked={checked}
-              onChange={() =>
+              onChange={() => {
+                pendingFocusId = id
                 selectTab(
                   checked ? tabs.find((t) => t.defaultTab) : tab,
                   setSearchParams,
                   onTabChange,
                 )
-              }
+              }}
             />
             <label htmlFor={id} className="facet-label">
               <span className="facet-text">{tab.label}</span>

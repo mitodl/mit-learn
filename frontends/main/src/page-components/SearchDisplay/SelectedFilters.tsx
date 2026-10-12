@@ -133,6 +133,11 @@ type SelectedFiltersProps = {
   count?: number
   onRemove: (name: string, value: string) => void
   onClearAll: () => void
+  /**
+   * Where focus goes when the last filter is removed and the row unmounts
+   * with it -- there is no chip left to hand it to.
+   */
+  onEmpty: () => void
 }
 
 /**
@@ -153,8 +158,32 @@ const SelectedFilters: React.FC<SelectedFiltersProps> = ({
   count,
   onRemove,
   onClearAll,
+  onEmpty,
 }) => {
   const filters = selectedFilters(facetManifest, params)
+  const chipRefs = React.useRef<Record<string, HTMLButtonElement | null>>({})
+
+  /**
+   * Hand focus on before the chip holding it goes away.
+   *
+   * Removing a filter unmounts the chip that removed it, and the browser
+   * drops focus to the body rather than passing it on -- so a keyboard user
+   * is returned to the top of the document after every removal. The next chip
+   * takes it, or the previous one where the last was removed; when the last
+   * filter goes the row goes with it, and `onEmpty` says where focus belongs
+   * instead.
+   */
+  const removeAndMoveFocus = (index: number) => {
+    const remaining = filters.filter((_, position) => position !== index)
+    if (remaining.length === 0) {
+      onEmpty()
+    } else {
+      const next = remaining[Math.min(index, remaining.length - 1)]
+      chipRefs.current[`${next.name}-${next.value}`]?.focus()
+    }
+    onRemove(filters[index].name, filters[index].value)
+  }
+
   if (filters.length === 0) {
     return null
   }
@@ -165,18 +194,30 @@ const SelectedFilters: React.FC<SelectedFiltersProps> = ({
           ? "Results for:"
           : `${count} ${count === 1 ? "result" : "results"} for:`}
       </ResultCount>
-      {filters.map((filter) => (
-        <FilterChip
-          key={`${filter.name}-${filter.value}`}
-          type="button"
-          aria-label={`Remove filter ${filter.label}`}
-          onClick={() => onRemove(filter.name, filter.value)}
-        >
-          <RiCloseLine aria-hidden />
-          {filter.label}
-        </FilterChip>
-      ))}
-      <ClearAll type="button" onClick={onClearAll}>
+      {filters.map((filter, index) => {
+        const key = `${filter.name}-${filter.value}`
+        return (
+          <FilterChip
+            key={key}
+            ref={(node) => {
+              chipRefs.current[key] = node
+            }}
+            type="button"
+            aria-label={`Remove filter ${filter.label}`}
+            onClick={() => removeAndMoveFocus(index)}
+          >
+            <RiCloseLine aria-hidden />
+            {filter.label}
+          </FilterChip>
+        )
+      })}
+      <ClearAll
+        type="button"
+        onClick={() => {
+          onEmpty()
+          onClearAll()
+        }}
+      >
         Clear all filters
       </ClearAll>
     </Row>
