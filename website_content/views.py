@@ -79,15 +79,10 @@ class WebsiteContentViewSet(viewsets.ModelViewSet):
             .order_by("-publish_date", "-id")
         )
 
-    # NOTE: this listing is deliberately not cached. What it returns depends on
-    # who is asking -- `get_queryset` above hides unpublished content from
-    # everyone but an editor -- and the decorator it used to carry, named
-    # `cache_page_per_user`, was not per user: it wrapped Django's `cache_page`
-    # and nothing else. `cache_page` does honour a `Vary: Cookie`, but this
-    # response only acquires that header on its way out, after the entry has
-    # been stored under a key that ignores the cookie. So the first request to
-    # miss the cache decided what everyone saw until it expired, and when that
-    # request came from an editor, anonymous readers were served the drafts.
+    # Not cached: the response depends on the caller (editors also get drafts).
+    # Django's cache_page can't vary this by user -- it stores the entry before
+    # SessionMiddleware adds `Vary: Cookie`, so every caller would share it.
+    # See https://github.com/mitodl/hq/issues/13846
 
     def _reloaded_for_response(self, content):
         """
@@ -105,20 +100,17 @@ class WebsiteContentViewSet(viewsets.ModelViewSet):
         """
         return self.get_queryset().get(pk=content.pk)
 
-    # NOTE: clear the view cache on every mutation, published or not. Not for
-    # the listing above, which is no longer cached, but for everywhere else
-    # this content reaches: a published article is mirrored into a
-    # `LearningResource`, and the resource, search, featured and channel
-    # endpoints that serve it are cached, as are the news feeds. A draft
-    # counts too -- publishing one is an update, and the entry it adds has to
-    # be in those responses by the time the next request reads them.
-    #
-    # It clears every view cache rather than a prefix, which is more than this
-    # content appears in. See https://github.com/mitodl/hq/issues/13846.
+    # A write clears the view cache when it changes what a reader can see. A
+    # published article is mirrored into a `LearningResource`, and the
+    # resource, search, featured and channel endpoints serving it are cached,
+    # as are the news feeds; a draft is in none of them. So a draft saved as a
+    # draft clears nothing: the editor autosaves every couple of seconds, and
+    # each clear takes every view cache rather than a prefix.
     # Deferred to on_commit so it runs after the write is durable.
     def perform_create(self, serializer):
         content = serializer.save(user=self.request.user)
-        transaction.on_commit(clear_views_cache)
+        if content.is_published:
+            transaction.on_commit(clear_views_cache)
         purge_content_on_save(content)
         content_published_actions(content=content)
         serializer.instance = self._reloaded_for_response(content)
@@ -135,10 +127,11 @@ class WebsiteContentViewSet(viewsets.ModelViewSet):
             # now-private page and the listing still need clearing.
             purge_content_on_unpublish(content)
             content_unpublished_actions(content=content)
-        # Last here, unlike on create: the unpublish plugins take the news feed
-        # entry out synchronously, and clearing the cache before that ran would
-        # let any request in between re-cache a feed that still has it.
-        transaction.on_commit(clear_views_cache)
+        if was_published or content.is_published:
+            # Last here, unlike on create: the unpublish plugins take the news
+            # feed entry out synchronously, and clearing the cache before that
+            # ran would let any request in between re-cache a feed with it.
+            transaction.on_commit(clear_views_cache)
         serializer.instance = self._reloaded_for_response(content)
 
     def perform_destroy(self, instance):
@@ -150,7 +143,8 @@ class WebsiteContentViewSet(viewsets.ModelViewSet):
         # Soft delete: SOFT_DELETE policy stamps `deleted` and leaves the row
         # in place for recovery/audit.
         instance.delete()
-        transaction.on_commit(clear_views_cache)
+        # No clear: only a draft reaches here, and a draft is in none of the
+        # cached responses, so removing one changes nothing a reader sees.
 
     @extend_schema(
         summary="Retrieve by ID or slug",
