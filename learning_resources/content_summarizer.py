@@ -18,6 +18,7 @@ from learning_resources.models import (
     ContentSummarizerConfiguration,
 )
 from learning_resources.utils import sanitize_llm_text, truncate_to_tokens
+from main.azure_openai import azure_openai_chat_litellm_kwargs, is_azure_model
 
 logger = logging.getLogger(__name__)
 
@@ -215,18 +216,25 @@ class ContentSummarizer:
         if not model:
             raise ValueError("The 'model' parameter must be specified.")  # noqa: EM101, TRY003
 
-        if not settings.OPENAI_API_KEY:
-            raise ValueError("The 'OPENAI_API_KEY' setting must be set.")  # noqa: EM101, TRY003
+        if is_azure_model(model):
+            connection = azure_openai_chat_litellm_kwargs()
+        else:
+            if not settings.OPENAI_API_KEY:
+                raise ValueError("The 'OPENAI_API_KEY' setting must be set.")  # noqa: EM101, TRY003
 
-        if not settings.LITELLM_CUSTOM_PROVIDER:
-            raise ValueError("The 'LITELLM_CUSTOM_PROVIDER' setting must be set.")  # noqa: EM101, TRY003
+            if not settings.LITELLM_CUSTOM_PROVIDER:
+                raise ValueError("The 'LITELLM_CUSTOM_PROVIDER' setting must be set.")  # noqa: EM101, TRY003
+
+            connection = {
+                "custom_llm_provider": settings.LITELLM_CUSTOM_PROVIDER,
+                "api_base": settings.LITELLM_API_BASE,
+            }
 
         return ChatLiteLLM(
             model=model,
             temperature=temperature,
             max_tokens=max_tokens,
-            custom_llm_provider=settings.LITELLM_CUSTOM_PROVIDER,
-            api_base=settings.LITELLM_API_BASE,
+            **connection,
         )
 
     def _generate_summary(self, content: str, llm_model: str) -> str:
