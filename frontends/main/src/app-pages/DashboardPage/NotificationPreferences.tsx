@@ -134,11 +134,41 @@ const RowDescription = styled.span(({ theme }) => ({
   color: theme.custom.colors.silverGrayDark,
 }))
 
+/*
+ * Bottom-aligned so the checkboxes line up with the select rather than with
+ * the select plus its caption; each checkbox sits in a box as tall as the
+ * small select (32px) so they centre on it.
+ */
 const Controls = styled.div({
   display: "flex",
-  alignItems: "center",
+  alignItems: "flex-end",
   gap: "16px",
 })
+
+const ChannelBox = styled.div({
+  display: "flex",
+  alignItems: "center",
+  height: "32px",
+})
+
+/*
+ * Fixed width so every row's controls line up: sized to the select's content,
+ * the column would shift with the stored value ("Immediately" vs "Daily").
+ */
+const CadenceField = styled.div({
+  display: "flex",
+  flexDirection: "column",
+  gap: "4px",
+  width: "136px",
+  "& .MuiInputBase-root": {
+    width: "100%",
+  },
+})
+
+const CadenceLabel = styled.span(({ theme }) => ({
+  ...theme.typography.body4,
+  color: theme.custom.colors.silverGrayDark,
+}))
 
 const labelForApp = (app: string) => APP_LABELS[app] || app
 
@@ -210,59 +240,70 @@ const PreferenceRow: React.FC<PreferenceRowProps> = ({
         {description ? <RowDescription>{description}</RowDescription> : null}
       </RowText>
       <Controls role="group" aria-label={label}>
-        <Checkbox
-          name={`web-${notificationApp}-${notificationType}`}
-          label="In course"
-          checked={config.web}
-          disabled={webLocked || pending}
-          onChange={() =>
-            onChange({
-              notification_app: notificationApp,
-              notification_type: notificationType,
-              notification_channel: "web",
-              value: !config.web,
-            })
-          }
-        />
+        <ChannelBox>
+          <Checkbox
+            name={`web-${notificationApp}-${notificationType}`}
+            label="In course"
+            checked={config.web}
+            disabled={webLocked || pending}
+            onChange={() =>
+              onChange({
+                notification_app: notificationApp,
+                notification_type: notificationType,
+                notification_channel: "web",
+                value: !config.web,
+              })
+            }
+          />
+        </ChannelBox>
         {showEmail ? (
           <>
-            <Checkbox
-              name={`email-${notificationApp}-${notificationType}`}
-              label="Email"
-              checked={config.email}
-              disabled={emailLocked || pending}
-              onChange={() =>
-                onChange({
-                  notification_app: notificationApp,
-                  notification_type: notificationType,
-                  notification_channel: "email",
-                  value: !config.email,
-                })
-              }
-            />
+            <ChannelBox>
+              <Checkbox
+                name={`email-${notificationApp}-${notificationType}`}
+                label="Email"
+                checked={config.email}
+                disabled={emailLocked || pending}
+                onChange={() =>
+                  onChange({
+                    notification_app: notificationApp,
+                    notification_type: notificationType,
+                    notification_channel: "email",
+                    value: !config.email,
+                  })
+                }
+              />
+            </ChannelBox>
             {/*
               The cadence only means something while email delivery is on, but
               it stays in place disabled rather than appearing and disappearing:
               a control that pops into the row on click shifts the other rows,
               and the stored cadence is worth seeing even when email is off.
             */}
-            <SimpleSelect
-              size="small"
-              name={`cadence-${notificationApp}-${notificationType}`}
-              options={CADENCE_OPTIONS}
-              value={config.email_cadence}
-              disabled={!config.email || emailLocked || pending}
-              inputProps={{ "aria-label": `Email frequency for ${label}` }}
-              renderValue={(value) => `${value}`}
-              onChange={(event) =>
-                onChange({
-                  notification_app: notificationApp,
-                  notification_type: notificationType,
-                  notification_channel: "email_cadence",
-                  email_cadence: `${event.target.value}`,
-                })
-              }
-            />
+            <CadenceField>
+              {/*
+                Visible only: the select's accessible name already starts with
+                "Email frequency", so a screen reader would hear it twice.
+              */}
+              <CadenceLabel aria-hidden="true">Email frequency</CadenceLabel>
+              <SimpleSelect
+                size="small"
+                name={`cadence-${notificationApp}-${notificationType}`}
+                options={CADENCE_OPTIONS}
+                value={config.email_cadence}
+                disabled={!config.email || emailLocked || pending}
+                inputProps={{ "aria-label": `Email frequency for ${label}` }}
+                renderValue={(value) => `${value}`}
+                onChange={(event) =>
+                  onChange({
+                    notification_app: notificationApp,
+                    notification_type: notificationType,
+                    notification_channel: "email_cadence",
+                    email_cadence: `${event.target.value}`,
+                  })
+                }
+              />
+            </CadenceField>
           </>
         ) : null}
       </Controls>
