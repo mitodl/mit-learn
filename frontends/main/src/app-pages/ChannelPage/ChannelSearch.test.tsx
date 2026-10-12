@@ -43,10 +43,12 @@ const mockFeatureFlags = (flags: Partial<Record<FeatureFlags, boolean>>) => {
   )
 }
 
-// jest clears calls between tests but not implementations, so reset flags to
-// "not set" so a kill-switch test cannot leak into the next test.
+// jest clears calls between tests but not implementations, so reset flags
+// between tests. The redesigned topic page is on by default here: it is what
+// this suite is about, and the one test for the flag being off turns it off
+// for itself.
 beforeEach(() => {
-  mockFeatureFlags({})
+  mockFeatureFlags({ [FeatureFlags.TopicPageRedesign]: true })
 })
 
 const setMockApiResponses = ({
@@ -643,6 +645,27 @@ describe("ChannelSearch", () => {
       ).toBeInTheDocument()
     },
   )
+
+  /**
+   * The flag is the way back: a topic channel with it off draws the page every
+   * other channel draws, which is the page it had before the redesign.
+   */
+  test("a topic page without the flag is the page every channel had", async () => {
+    mockFeatureFlags({ [FeatureFlags.TopicPageRedesign]: false })
+    const { channel } = setMockApiResponses({
+      channelPatch: { channel_type: ChannelTypeEnum.Topic },
+    })
+
+    renderWithProviders(<ChannelPage />, {
+      url: `/c/${channel.channel_type}/${channel.name}`,
+    })
+    /* The facet sidebar is the default layout, and the topic layout drops it. */
+    await screen.findByTestId("facets-container")
+
+    expect(screen.queryByTestId("topic-search-filter-bar")).toBe(null)
+    expect(screen.queryByTestId("topic-results-grid")).toBe(null)
+    expect(screen.queryByTestId("selected-filters")).toBe(null)
+  }, 10000)
 
   /**
    * The topic layout's filter card is a row of controls with nowhere to go on

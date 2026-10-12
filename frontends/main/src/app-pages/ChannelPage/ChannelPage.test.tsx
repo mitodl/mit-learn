@@ -13,6 +13,20 @@ import ChannelSearch from "./ChannelSearch"
 import { assertHeadings, getByImageSrc } from "ol-test-utilities"
 import invariant from "tiny-invariant"
 import ChannelPage from "./ChannelPage"
+import { useFeatureFlagEnabled } from "posthog-js/react"
+import { FeatureFlags } from "@/common/feature_flags"
+
+jest.mock("posthog-js/react", () => ({
+  ...jest.requireActual("posthog-js/react"),
+  useFeatureFlagEnabled: jest.fn(),
+}))
+
+/* The topic cases below are the redesigned page, which is behind this flag. */
+beforeEach(() => {
+  jest
+    .mocked(useFeatureFlagEnabled)
+    .mockImplementation((flag) => flag === FeatureFlags.TopicPageRedesign)
+})
 
 jest.mock("./ChannelSearch", () => {
   const actual = jest.requireActual("./ChannelSearch")
