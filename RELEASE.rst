@@ -1,6 +1,22 @@
 Release Notes
 =============
 
+Version 0.83.0
+--------------
+
+- Stop caching the website content listing (#4073)
+- fix: typeography issue on video series page (#4082)
+
+Version 0.82.0
+--------------
+
+- Upgrade contract audit enrollments via one-click enroll on Continue (#4052)
+- Add generic /api/v1/webhooks/learning_resources/ endpoint (Cohort 2 webhook delivery) (#3557)
+- update dialog copy (#4069)
+- Renumber the b2b_only migration to 0130 (#4065)
+- Publish public mitxonline runs that are attached to a contract (#4055)
+- Add per-source ETL write ownership (legacy, warehouse or webhook) (#3565)
+
 Version 0.81.9
 --------------
 
