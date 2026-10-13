@@ -803,6 +803,47 @@ def test_patch_without_topics_leaves_them_alone(staff_client, user):
     assert list(content.topics.values_list("id", flat=True)) == [topic.id]
 
 
+@pytest.mark.parametrize(
+    ("stored_type", "requested_type"), [("article", "news"), ("news", "article")]
+)
+def test_patch_cannot_change_content_type(
+    staff_client, user, stored_type, requested_type
+):
+    """An existing item keeps its type; a PATCH that changes it is rejected."""
+    content = _make_content(user, is_published=False, content_type=stored_type)
+    url = reverse(
+        "website_content:v1:website_content-detail", kwargs={"pk": content.id}
+    )
+
+    resp = staff_client.patch(
+        url, {"title": "Renamed", "content_type": requested_type}, format="json"
+    )
+
+    assert resp.status_code == 400
+    assert "content_type" in resp.json()
+    content.refresh_from_db()
+    assert content.content_type == stored_type
+    assert content.title == "t"
+
+
+@pytest.mark.parametrize("content_type", ["article", "news"])
+def test_patch_with_unchanged_content_type_succeeds(staff_client, user, content_type):
+    """The editors send their type on every save, so resending it must pass."""
+    content = _make_content(user, is_published=False, content_type=content_type)
+    url = reverse(
+        "website_content:v1:website_content-detail", kwargs={"pk": content.id}
+    )
+
+    resp = staff_client.patch(
+        url, {"title": "Renamed", "content_type": content_type}, format="json"
+    )
+
+    assert resp.status_code == 200
+    content.refresh_from_db()
+    assert content.content_type == content_type
+    assert content.title == "Renamed"
+
+
 @pytest.mark.parametrize("bad_topics", [[-1], ["not-a-number"], "news"])
 def test_create_with_invalid_topics_rejected(staff_client, bad_topics):
     """
