@@ -45,6 +45,9 @@ type JustInTimeDialogProps = {
   retry?: () => Promise<JitField[]>
 }
 
+/** Stable default, so the effect syncing `rejected` only runs on a real change. */
+const NO_REJECTED_FIELDS: JitField[] = []
+
 const rejectedFieldMessage = (label: string) =>
   `Please enter a valid ${label.toLowerCase()}.`
 
@@ -103,7 +106,7 @@ const errorPaths = (body: unknown, prefix = ""): string[] => {
  * highlighted fields in place rather than closing the dialog.
  */
 const JustInTimeDialogInner: React.FC<JustInTimeDialogProps> = ({
-  rejectedFields = [],
+  rejectedFields = NO_REJECTED_FIELDS,
   retry,
 }) => {
   const modal = NiceModal.useModal()
@@ -117,6 +120,9 @@ const JustInTimeDialogInner: React.FC<JustInTimeDialogProps> = ({
   const fieldsRef = React.useRef<HTMLDivElement>(null)
   const [subdivisionNotice, setSubdivisionNotice] = React.useState("")
   const [rejected, setRejected] = React.useState(rejectedFields)
+  // NiceModal reuses a still-mounted instance (e.g. mid hide transition) when
+  // shown again, passing the new arguments as props, so follow them here.
+  React.useEffect(() => setRejected(rejectedFields), [rejectedFields])
 
   const formik = useFormik({
     enableReinitialize: true,

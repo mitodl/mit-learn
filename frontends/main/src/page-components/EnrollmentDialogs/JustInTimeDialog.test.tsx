@@ -81,6 +81,40 @@ const patchCalls = () =>
     )
 
 describe("JustInTimeDialog", () => {
+  test("picks up rejected fields when shown again while still mounted", async () => {
+    setup({
+      compliance_missing_fields: [],
+      legal_address: {
+        first_name: "David",
+        last_name: ".",
+        country: "GB",
+        street_address_1: "1 Main St",
+        city: "London",
+      },
+      user_profile: { year_of_birth: 1990 },
+    })
+    renderWithProviders(null)
+    // Opened for missing data first, then re-shown with rejected fields before
+    // the first instance has unmounted (e.g. during its hide transition).
+    await act(async () => {
+      NiceModal.show(JustInTimeDialog)
+    })
+    const dialog = await screen.findByRole("dialog", {
+      name: "Just a Few More Details",
+    })
+    await act(async () => {
+      NiceModal.show(JustInTimeDialog, { rejectedFields: ["last_name"] })
+    })
+
+    const lastName = textbox(dialog, "Last Name")
+    await waitFor(() =>
+      expect(getDescriptionFor(lastName)).toHaveTextContent(
+        "Please enter a valid last name.",
+      ),
+    )
+    await waitFor(() => expect(lastName).toHaveFocus())
+  })
+
   test("retries in place, updating the highlighted fields until none are rejected", async () => {
     setup({
       compliance_missing_fields: [],
