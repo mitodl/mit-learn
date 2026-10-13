@@ -6,17 +6,17 @@ const setup = (
   props: Partial<React.ComponentProps<typeof DataConsentDialog>> = {},
 ) => {
   const onAccept = jest.fn()
-  const onDecline = jest.fn()
+  const onCancel = jest.fn()
   renderWithProviders(
     <DataConsentDialog
       open
       contractName="Horizon Digital Program | Cohort 2"
       onAccept={onAccept}
-      onDecline={onDecline}
+      onCancel={onCancel}
       {...props}
     />,
   )
-  return { onAccept, onDecline }
+  return { onAccept, onCancel }
 }
 
 describe("DataConsentDialog", () => {
@@ -30,7 +30,7 @@ describe("DataConsentDialog", () => {
   })
 
   test("can't be dismissed: no close button, and Escape leaves it open", async () => {
-    const { onAccept, onDecline } = setup()
+    const { onAccept, onCancel } = setup()
     expect(
       screen.queryByRole("button", { name: "Close" }),
     ).not.toBeInTheDocument()
@@ -39,7 +39,7 @@ describe("DataConsentDialog", () => {
 
     expect(screen.getByRole("dialog")).toBeInTheDocument()
     expect(onAccept).not.toHaveBeenCalled()
-    expect(onDecline).not.toHaveBeenCalled()
+    expect(onCancel).not.toHaveBeenCalled()
   })
 
   test("Agree and continue is disabled until the consent box is checked", async () => {
@@ -58,24 +58,24 @@ describe("DataConsentDialog", () => {
     expect(onAccept).toHaveBeenCalledTimes(1)
   })
 
-  test("Decline calls onDecline without the box checked", async () => {
-    const { onAccept, onDecline } = setup()
-    await user.click(screen.getByRole("button", { name: "Decline" }))
-    expect(onDecline).toHaveBeenCalledTimes(1)
+  test("Cancel calls onCancel without the box checked", async () => {
+    const { onAccept, onCancel } = setup()
+    await user.click(screen.getByRole("button", { name: "Cancel" }))
+    expect(onCancel).toHaveBeenCalledTimes(1)
     expect(onAccept).not.toHaveBeenCalled()
   })
 
   test.each([
     { submitting: "accept" as const, busyName: "Agree and continue" },
-    { submitting: "decline" as const, busyName: "Decline" },
+    { submitting: "cancel" as const, busyName: "Cancel" },
   ])(
     "while submitting $submitting, both actions are aria-disabled and ignore clicks, and only that one is busy",
     async ({ submitting, busyName }) => {
-      const { onAccept, onDecline } = setup({ submitting })
-      const decline = screen.getByRole("button", { name: "Decline" })
+      const { onAccept, onCancel } = setup({ submitting })
+      const cancel = screen.getByRole("button", { name: "Cancel" })
       const agree = screen.getByRole("button", { name: "Agree and continue" })
 
-      for (const button of [decline, agree]) {
+      for (const button of [cancel, agree]) {
         expect(button).toHaveAttribute("aria-disabled", "true")
         expect(button).toHaveAttribute(
           "aria-busy",
@@ -85,10 +85,10 @@ describe("DataConsentDialog", () => {
         )
       }
       // Still focusable, so focus isn't lost when a submit starts.
-      expect(decline).not.toBeDisabled()
+      expect(cancel).not.toBeDisabled()
 
-      await user.click(decline)
-      expect(onDecline).not.toHaveBeenCalled()
+      await user.click(cancel)
+      expect(onCancel).not.toHaveBeenCalled()
       expect(onAccept).not.toHaveBeenCalled()
     },
   )
