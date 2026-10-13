@@ -1,6 +1,9 @@
 import { queryOptions } from "@tanstack/react-query"
 import { channelsApi } from "../../clients"
-import type { ChannelsApiChannelsListRequest as FieldsApiListRequest } from "../../generated/v0"
+import type {
+  ChannelsApiChannelsListRequest as FieldsApiListRequest,
+  ChannelsApiChannelsTypeFeaturedListRequest as ChannelFeaturedListRequest,
+} from "../../generated/v0"
 
 const channelKeys = {
   root: ["channel"],
@@ -17,6 +20,11 @@ const channelKeys = {
     ...channelKeys.root,
     "counts",
     channelType,
+  ],
+  featured: (params: ChannelFeaturedListRequest) => [
+    ...channelKeys.root,
+    "featured",
+    params,
   ],
 }
 
@@ -47,6 +55,20 @@ const channelQueries = {
       queryFn: () => {
         return channelsApi
           .channelsCountsList({ channel_type: channelType })
+          .then((res) => res.data)
+      },
+    }),
+  /**
+   * The channel's own featured learning path, which it reads directly rather
+   * than by filtering the aggregated featured endpoint -- so it includes a
+   * path the editors have not published, and needs only the URL to fetch.
+   */
+  featured: (params: ChannelFeaturedListRequest) =>
+    queryOptions({
+      queryKey: channelKeys.featured(params),
+      queryFn: () => {
+        return channelsApi
+          .channelsTypeFeaturedList(params)
           .then((res) => res.data)
       },
     }),
