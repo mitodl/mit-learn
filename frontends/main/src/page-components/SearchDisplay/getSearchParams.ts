@@ -16,7 +16,7 @@ type SearchParams = {
   searchParams?: RegisteredSearchParams
   requestParams: UseResourceSearchParamsResult["params"]
   constantSearchParams?: Facets & BooleanFacets
-  resourceTypeGroup?: ResourceTypeGroupEnum
+  resourceTypeGroups?: ResourceTypeGroupEnum[]
   facetNames: UseResourceSearchParamsProps["facets"]
   page: number
   pageSize?: number
@@ -26,7 +26,7 @@ const getSearchParams = ({
   searchParams = new URLSearchParams({}),
   requestParams,
   constantSearchParams = {},
-  resourceTypeGroup,
+  resourceTypeGroups,
   facetNames,
   page,
   pageSize = PAGE_SIZE,
@@ -39,7 +39,7 @@ const getSearchParams = ({
     min_score: searchParams.get("min_score"),
     max_incompleteness_penalty: searchParams.get("max_incompleteness_penalty"),
     content_file_score_weight: searchParams.get("content_file_score_weight"),
-    resource_type_group: resourceTypeGroup ? [resourceTypeGroup] : null,
+    resource_type_group: resourceTypeGroups?.length ? resourceTypeGroups : null,
     aggregations: [...(facetNames || []), "resource_type_group"],
     show_ocw_files: searchParams.get("show_ocw_files") === "true",
     ...requestParams,

@@ -5,7 +5,9 @@ import { useResourceSearchParams } from "@mitodl/course-search-utils"
 import type { Facets, BooleanFacets } from "@mitodl/course-search-utils"
 import { useSetSearchParams } from "@mitodl/course-search-utils/next"
 import { useAppSearchParams } from "@/common/useAppSearchParams"
-import SearchDisplay from "@/page-components/SearchDisplay/SearchDisplay"
+import SearchDisplay, {
+  TOPIC_TABS,
+} from "@/page-components/SearchDisplay/SearchDisplay"
 import HybridSearchDisplay from "@/page-components/SearchDisplay/HybridSearchDisplay"
 import { Container, styled } from "ol-components"
 import { VisuallyHidden } from "@mitodl/smoot-design"
@@ -229,6 +231,7 @@ const ChannelSearch: React.FC<ChannelSearchProps> = ({
           SHOW_PROFESSIONAL_TOGGLE_BY_CHANNEL_TYPE[channelType]
         }
         resultsLayout={layout === "topic" ? "cards" : "default"}
+        tabs={layout === "topic" ? TOPIC_TABS : undefined}
       />
     </section>
   )

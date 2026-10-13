@@ -54,7 +54,7 @@ import type {
   FacetManifest,
 } from "@mitodl/course-search-utils"
 import { useAppSearchParams } from "@/common/useAppSearchParams"
-import { ResourceTypeGroupTabs } from "./ResourceTypeGroupTabs"
+import { ResourceTypeGroupTabs, findActiveTab } from "./ResourceTypeGroupTabs"
 import ProfessionalToggle from "./ProfessionalToggle"
 import { useTrackedFilterSetters } from "@/common/analytics/searchFilters"
 import SelectedFilters from "./SelectedFilters"
@@ -528,33 +528,55 @@ const getLastPage = (count: number): number => {
  */
 const UPCOMING_SORT = "upcoming"
 
+const ALL_TAB: TabConfig = {
+  name: "all",
+  label: "All",
+  defaultTab: true,
+  resource_type_groups: [],
+  minWidth: 85,
+}
+
+const LEARNING_MATERIALS_TAB: TabConfig = {
+  name: "learning-materials",
+  label: "Learning Materials",
+  resource_type_groups: [ResourceTypeGroupEnum.LearningMaterial],
+  minWidth: 172,
+  unsupportedSortby: [UPCOMING_SORT],
+}
+
 const TABS: TabConfig[] = [
-  {
-    name: "all",
-    label: "All",
-    defaultTab: true,
-    resource_type_group: null,
-    minWidth: 85,
-  },
+  ALL_TAB,
   {
     name: "courses",
     label: "Courses",
-    resource_type_group: ResourceTypeGroupEnum.Course,
+    resource_type_groups: [ResourceTypeGroupEnum.Course],
     minWidth: 112,
   },
   {
     name: "programs",
     label: "Programs",
-    resource_type_group: ResourceTypeGroupEnum.Program,
+    resource_type_groups: [ResourceTypeGroupEnum.Program],
     minWidth: 118,
   },
+  LEARNING_MATERIALS_TAB,
+]
+
+/**
+ * The topic page's tabs: courses and programs together, and learning
+ * materials. There is no All -- the topic page opens on courses and programs.
+ */
+const TOPIC_TABS: TabConfig[] = [
   {
-    name: "learning-materials",
-    label: "Learning Materials",
-    resource_type_group: ResourceTypeGroupEnum.LearningMaterial,
-    minWidth: 172,
-    unsupportedSortby: [UPCOMING_SORT],
+    name: "courses-and-programs",
+    label: "Courses and Programs",
+    defaultTab: true,
+    resource_type_groups: [
+      ResourceTypeGroupEnum.Course,
+      ResourceTypeGroupEnum.Program,
+    ],
+    minWidth: 200,
   },
+  LEARNING_MATERIALS_TAB,
 ]
 
 /**
@@ -679,6 +701,11 @@ export interface SearchDisplayProps {
    * the OpenSearch-only relevance controls, which the vector endpoint ignores.
    */
   hybridSearchActive?: boolean
+  /**
+   * The resource type tabs above the results. Defaults to Courses, Programs
+   * and Learning Materials beside All; the topic page passes `TOPIC_TABS`.
+   */
+  tabs?: TabConfig[]
 }
 
 const SearchDisplay: React.FC<SearchDisplayProps> = ({
@@ -704,6 +731,7 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
   adminOptionsSlot,
   hybridSearchActive = false,
   resultsLayout = "default",
+  tabs = TABS,
 }) => {
   const searchParams = useAppSearchParams()
   const [expandAdminOptions, setExpandAdminOptions] = useState(false)
@@ -719,19 +747,17 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
     () => resultsHeadingRef.current?.focus(),
     [],
   )
-  const activeTab =
-    TABS.find(
-      (t) => t.resource_type_group === searchParams.get("resource_type_group"),
-    ) ??
-    TABS.find((t) => t.defaultTab) ??
-    TABS[0]
+  const activeTab = findActiveTab(
+    tabs,
+    searchParams.getAll("resource_type_group"),
+  )
 
   const allParams = useMemo(() => {
     return getSearchParams({
       searchParams,
       requestParams,
       constantSearchParams,
-      resourceTypeGroup: activeTab?.resource_type_group || undefined,
+      resourceTypeGroups: activeTab.resource_type_groups,
       facetNames,
       page,
       pageSize: PAGE_SIZE,
@@ -740,7 +766,7 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
     searchParams,
     requestParams,
     constantSearchParams,
-    activeTab?.resource_type_group,
+    activeTab.resource_type_groups,
     facetNames,
     page,
   ])
@@ -1116,7 +1142,7 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
         <>
           {availableFacets(facetsBeforeTypeChoice)}
           <ResourceTypeGroupTabs.Checklist
-            tabs={TABS}
+            tabs={tabs}
             aggregations={displayData?.metadata.aggregations}
             activeTabName={activeTab.name}
             setSearchParams={setSearchParams}
@@ -1182,7 +1208,7 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
             >
               <StyledResourceTabs
                 setSearchParams={setSearchParams}
-                tabs={TABS}
+                tabs={tabs}
                 aggregations={displayData?.metadata.aggregations}
                 onTabChange={() => setPage(1)}
               />
@@ -1227,7 +1253,7 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
               searchParams={searchParams}
               onDismissed={focusResultsHeading}
             />
-            <ResourceTypeGroupTabs.TabPanels tabs={TABS}>
+            <ResourceTypeGroupTabs.TabPanels tabs={tabs}>
               <MobileFilter>
                 <FilterButton
                   size="small"
@@ -1418,3 +1444,4 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
 }
 
 export default SearchDisplay
+export { TOPIC_TABS }
