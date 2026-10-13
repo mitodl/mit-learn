@@ -1,6 +1,12 @@
 Release Notes
 =============
 
+Version 0.83.0
+--------------
+
+- Stop caching the website content listing (#4073)
+- fix: typeography issue on video series page (#4082)
+
 Version 0.82.0
 --------------
 
