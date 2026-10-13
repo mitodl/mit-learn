@@ -310,6 +310,7 @@ const ProgramPage: React.FC<ProgramPageProps> = ({ readableId }) => {
         <TestimonialsSection
           testimonials={page.testimonials}
           itemReviewedName={page.title}
+          itemReviewedDescription={page.program_details.page?.description}
         />
       ) : null}
     </ProductPageTemplate>
