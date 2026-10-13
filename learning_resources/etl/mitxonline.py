@@ -31,6 +31,7 @@ from learning_resources.etl.utils import (
     transform_price,
     transform_topics,
 )
+from learning_resources.utils import html_to_markdown, strip_markdown_images
 from main.utils import clean_data, now_in_utc
 
 log = logging.getLogger(__name__)
@@ -38,6 +39,13 @@ log = logging.getLogger(__name__)
 EXCLUDE_REGEX = r"PROCTORED EXAM"
 
 OFFERED_BY = {"code": OfferedBy.mitx.name}
+
+# Wagtail pages API used by the Learn product pages; capped at 20 per request
+CMS_PAGES_API_PATH = "/api/v2/pages/"
+CMS_PAGES_PAGE_SIZE = 20
+CMS_COURSE_PAGE_TYPE = "cms.coursepage"
+CMS_PROGRAM_PAGE_TYPE = "cms.programpage"
+CMS_PAGE_KEY = "cms_page"
 
 
 def _mitxonline_api_headers():
@@ -115,6 +123,106 @@ def parse_certificate_type(certification_type: str) -> str:
     return certification_code
 
 
+def fetch_cms_pages(page_type: str) -> dict[str, dict]:
+    """
+    Fetch every MITx Online Wagtail product page of a type -- the same pages
+    the Learn product pages render -- keyed by course/program readable_id.
+
+    Returns an empty dict (and logs) on failure: callers then omit the fields
+    sourced from these pages, which leaves the stored values in place rather
+    than blanking them.
+    """
+    if not settings.MITX_ONLINE_BASE_URL:
+        log.warning("Missing required setting MITX_ONLINE_BASE_URL")
+        return {}
+    url = urljoin(settings.MITX_ONLINE_BASE_URL, CMS_PAGES_API_PATH)
+    details_key = (
+        "program_details" if page_type == CMS_PROGRAM_PAGE_TYPE else "course_details"
+    )
+    pages = {}
+    offset = 0
+    try:
+        while True:
+            response = requests.get(
+                url,
+                params={
+                    "fields": "*",
+                    "type": page_type,
+                    "limit": CMS_PAGES_PAGE_SIZE,
+                    "offset": offset,
+                },
+                headers=_mitxonline_api_headers(),
+                timeout=settings.REQUESTS_TIMEOUT,
+            )
+            response.raise_for_status()
+            data = response.json()
+            items = data.get("items") or []
+            for page in items:
+                readable_id = (page.get(details_key) or {}).get("readable_id")
+                if readable_id:
+                    pages[readable_id] = page
+            offset += len(items)
+            if not items or offset >= data.get("meta", {}).get("total_count", 0):
+                break
+    except Exception:
+        log.exception("Failed to fetch MITx Online %s pages", page_type)
+        return {}
+    return pages
+
+
+def _attach_cms_pages(items: list[dict], page_type: str) -> list[dict]:
+    """Attach each course/program's Wagtail product page under CMS_PAGE_KEY"""
+    if items:
+        pages = fetch_cms_pages(page_type)
+        for item in items:
+            item[CMS_PAGE_KEY] = pages.get(item.get("readable_id"))
+    return items
+
+
+def parse_full_description(mitx_json: dict) -> str | None:
+    """
+    Build a markdown full description from the product page sections that the
+    resource description leaves out (about, what you'll learn, prerequisites,
+    FAQs), so search and embeddings can match on them.
+    """
+    page = mitx_json.get(CMS_PAGE_KEY) or {}
+    sections = [
+        (heading, page.get(field))
+        for heading, field in (
+            ("About", "about"),
+            ("What you'll learn", "what_you_learn"),
+            ("Prerequisites", "prerequisites"),
+        )
+    ]
+    faqs = "".join(
+        f"<h3>{clean_data(faq['question'])}</h3>{clean_data(faq.get('answer'))}"
+        for faq in page.get("faqs") or []
+        if faq.get("question")
+    )
+    # Headings are added after cleaning: the allowed tags don't include them
+    html = "".join(
+        f"<h2>{heading}</h2>{clean_data(body)}" for heading, body in sections if body
+    )
+    if faqs:
+        html += f"<h2>Frequently asked questions</h2>{faqs}"
+    if not html:
+        return None
+    return strip_markdown_images(html_to_markdown(html)).strip()
+
+
+def _full_description_data(mitx_json: dict) -> dict:
+    """
+    Return the full_description field for a transformed course/program.
+
+    It is omitted when no product page was fetched, so the loader keeps
+    whatever is stored (e.g. courses nested in programs, which are not fetched
+    with their pages).
+    """
+    if mitx_json.get(CMS_PAGE_KEY) is None:
+        return {}
+    return {"full_description": parse_full_description(mitx_json)}
+
+
 def parse_page_attribute(
     mitx_json,
     attribute,
@@ -176,13 +284,16 @@ def _learn_product_url_for_mitx_program(
 def extract_programs():
     """Loads the MITx Online catalog data"""  # noqa: D401
     if settings.MITX_ONLINE_PROGRAMS_API_URL:
-        return list(
-            _fetch_data(
-                settings.MITX_ONLINE_PROGRAMS_API_URL,
-                params={
-                    "live": True,
-                },
-            )
+        return _attach_cms_pages(
+            list(
+                _fetch_data(
+                    settings.MITX_ONLINE_PROGRAMS_API_URL,
+                    params={
+                        "live": True,
+                    },
+                )
+            ),
+            CMS_PROGRAM_PAGE_TYPE,
         )
     else:
         log.warning("Missing required setting MITX_ONLINE_PROGRAMS_API_URL")
@@ -193,13 +304,16 @@ def extract_programs():
 def extract_courses():
     """Loads the MITx Online catalog data"""  # noqa: D401
     if settings.MITX_ONLINE_COURSES_API_URL:
-        return list(
-            _fetch_data(
-                settings.MITX_ONLINE_COURSES_API_URL,
-                params={
-                    "live": True,
-                },
-            )
+        return _attach_cms_pages(
+            list(
+                _fetch_data(
+                    settings.MITX_ONLINE_COURSES_API_URL,
+                    params={
+                        "live": True,
+                    },
+                )
+            ),
+            CMS_COURSE_PAGE_TYPE,
         )
     else:
         log.warning("Missing required setting MITX_ONLINE_COURSES_API_URL")
@@ -446,6 +560,7 @@ def _transform_course(course):
             has_product_page=bool(parse_page_attribute(course, "page_url")),
         ),
         "description": clean_data(parse_page_attribute(course, "description")),
+        **_full_description_data(course),
         "availability": course.get("availability"),
         "format": [Format.asynchronous.name],
         "pace": sorted({pace for run in runs for pace in run["pace"]}),
@@ -789,6 +904,7 @@ def transform_programs(programs: list[dict]) -> Iterator[dict]:
             else CertificationType.none.name,
             "topics": transform_topics(program.get("topics", []), OFFERED_BY["code"]),
             "description": clean_data(parse_page_attribute(program, "description")),
+            **_full_description_data(program),
             "url": learn_program_url,
             "image": _transform_image(program),
             "availability": program.get("availability"),
