@@ -35,6 +35,7 @@ import {
   selectVariantRunForCourse,
   sortVariants,
 } from "./dashboardViewModel"
+import type { RequirementSection } from "./dashboardViewModel"
 
 const daysFromNow = (days: number) =>
   new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString()
@@ -1742,6 +1743,246 @@ describe("dashboardViewModel", () => {
       })
 
       expect(sections[0].key).toBe(opNode.id)
+    })
+  })
+
+  describe("buildRequirementSections with program tracks", () => {
+    const withCourses = (
+      operator: RequirementTreeBuilder,
+      courseIds: number[],
+    ) => {
+      courseIds.forEach((course) => operator.addCourse({ course }))
+      return operator
+    }
+
+    /**
+     * Core (all_of 101, 102), a tracks container with "General" (all_of 201,
+     * 202) and "Methods" (all_of 201, 203), then a capstone (all_of 301).
+     */
+    const setup = () => {
+      const root = new RequirementTreeBuilder()
+      withCourses(
+        root.addOperator({ operator: "all_of", title: "Core Courses" }),
+        [101, 102],
+      )
+      const container = root.addOperator({
+        operator: "min_number_of",
+        operator_value: "1",
+        title: "Tracks",
+      })
+      const general = container.addTrack({
+        title: "General",
+        description: "Broad foundation",
+      })
+      withCourses(general.addOperator({ operator: "all_of" }), [201, 202])
+      const methods = container.addTrack({ title: "Methods" })
+      withCourses(methods.addOperator({ operator: "all_of" }), [201, 203])
+      withCourses(root.addOperator({ operator: "all_of", title: "Capstone" }), [
+        301,
+      ])
+      const programCourses = [101, 102, 201, 202, 203, 301].map((id) =>
+        factories.courses.course({ id, title: `Course ${id}` }),
+      )
+      return {
+        reqTree: root.serialize(),
+        programCourses,
+        generalId: general.id as number,
+        methodsId: methods.id as number,
+      }
+    }
+
+    const passed = (courseId: number) => [
+      factories.enrollment.courseEnrollment({
+        run: { course: { id: courseId } },
+        grades: [factories.enrollment.grade({ passed: true })],
+      }),
+    ]
+
+    const build = (
+      opts: {
+        track?: "General" | "Methods" | "missing"
+        enabled?: boolean
+        passedCourseIds?: number[]
+      } = {},
+    ) => {
+      const { reqTree, programCourses, generalId, methodsId } = setup()
+      const trackId = {
+        General: generalId,
+        Methods: methodsId,
+        missing: 999999,
+      }[opts.track ?? "missing"]
+      const enrollmentsByCourseId = Object.fromEntries(
+        (opts.passedCourseIds ?? []).map((id) => [id, passed(id)]),
+      )
+      const result = buildRequirementSections({
+        reqTree,
+        programCourses,
+        enrollmentsByCourseId,
+        programEnrollmentsById: {},
+        requiredPrograms: [],
+        requiredProgramModuleCoursesByProgramId: {},
+        ancestorProgramEnrollment: factories.enrollment.programEnrollmentV3({
+          track: opts.track ? { id: trackId, title: opts.track } : null,
+        }),
+        programTracksEnabled: opts.enabled ?? true,
+      })
+      return { ...result, generalId, methodsId }
+    }
+
+    const sectionCourseIds = (sections: RequirementSection[]) =>
+      sections.map((section) =>
+        section.items.map((item) =>
+          item.kind === "course" ? item.entry.course.id : null,
+        ),
+      )
+
+    test("shows only the groups before the tracks until a track is chosen", () => {
+      const { sections, completedCount, totalCount, trackState } = build({
+        passedCourseIds: [101],
+      })
+      expect(sections.map((s) => s.title)).toEqual(["Core Courses"])
+      expect([completedCount, totalCount]).toEqual([1, 2])
+      expect(trackState).toMatchObject({
+        currentTrack: null,
+        requiredBeforeTracks: 2,
+        beforeTracksComplete: false,
+        requiredPerTrack: 2,
+      })
+    })
+
+    test("lists every track with its course titles", () => {
+      const { trackState, generalId, methodsId } = build()
+      expect(trackState?.tracks).toEqual([
+        {
+          id: generalId,
+          title: "General",
+          description: "Broad foundation",
+          itemTitles: ["Course 201", "Course 202"],
+        },
+        {
+          id: methodsId,
+          title: "Methods",
+          description: expect.any(String),
+          itemTitles: ["Course 201", "Course 203"],
+        },
+      ])
+    })
+
+    test("shows the chosen track between the core and the capstone", () => {
+      const { sections, completedCount, totalCount, trackState } = build({
+        track: "Methods",
+        passedCourseIds: [101, 102, 203, 202],
+      })
+      expect(sections.map((s) => s.title)).toEqual([
+        "Core Courses",
+        "Methods courses",
+        "Capstone",
+      ])
+      expect(sectionCourseIds(sections)).toEqual([
+        [101, 102],
+        [201, 203],
+        [301],
+      ])
+      // 202 belongs to the other track, so it does not count.
+      expect([completedCount, totalCount]).toEqual([3, 5])
+      expect(trackState?.currentTrack?.title).toBe("Methods")
+      expect(trackState?.beforeTracksComplete).toBe(true)
+    })
+
+    test("treats a track id that is not in the tree as no track", () => {
+      const { sections, trackState } = build({ track: "missing" })
+      expect(sections.map((s) => s.title)).toEqual(["Core Courses"])
+      expect(trackState?.currentTrack).toBeNull()
+    })
+
+    test("titles each group when a track has more than one", () => {
+      const root = new RequirementTreeBuilder()
+      const track = root
+        .addOperator({ operator: "min_number_of", operator_value: "1" })
+        .addTrack({ title: "Policy" })
+      withCourses(
+        track.addOperator({ operator: "all_of", title: "Required" }),
+        [1],
+      )
+      withCourses(
+        track.addOperator({
+          operator: "min_number_of",
+          operator_value: "1",
+          title: "Electives",
+        }),
+        [2, 3],
+      )
+      const { sections, trackState } = buildRequirementSections({
+        reqTree: root.serialize(),
+        programCourses: [1, 2, 3].map((id) => factories.courses.course({ id })),
+        enrollmentsByCourseId: {},
+        programEnrollmentsById: {},
+        requiredPrograms: [],
+        requiredProgramModuleCoursesByProgramId: {},
+        ancestorProgramEnrollment: factories.enrollment.programEnrollmentV3({
+          track: { id: track.id as number, title: "Policy" },
+        }),
+        programTracksEnabled: true,
+      })
+      expect(sections.map((s) => [s.title, s.total])).toEqual([
+        ["Policy: Required", 1],
+        ["Policy: Electives", 1],
+      ])
+      expect(trackState?.requiredPerTrack).toBe(2)
+    })
+
+    test("has no single per-track count when the tracks differ in size", () => {
+      const root = new RequirementTreeBuilder()
+      const container = root.addOperator({
+        operator: "min_number_of",
+        operator_value: "1",
+      })
+      withCourses(container.addTrack().addOperator({ operator: "all_of" }), [1])
+      withCourses(
+        container.addTrack().addOperator({ operator: "all_of" }),
+        [2, 3],
+      )
+      const { trackState } = buildRequirementSections({
+        reqTree: root.serialize(),
+        programCourses: [],
+        enrollmentsByCourseId: {},
+        programEnrollmentsById: {},
+        requiredPrograms: [],
+        requiredProgramModuleCoursesByProgramId: {},
+        programTracksEnabled: true,
+      })
+      expect(trackState?.requiredPerTrack).toBeNull()
+    })
+
+    test("with the flag off, shows every track and counts the furthest one", () => {
+      const { sections, completedCount, totalCount, trackState } = build({
+        enabled: false,
+        passedCourseIds: [101, 203],
+      })
+      expect(sections.map((s) => s.title)).toEqual([
+        "Core Courses",
+        "General courses",
+        "Methods courses",
+        "Capstone",
+      ])
+      // Core (1 of 2) + Methods (1 of 2) + Capstone (0 of 1)
+      expect([completedCount, totalCount]).toEqual([2, 5])
+      expect(trackState).toBeNull()
+    })
+
+    test("returns no track state for an untracked program", () => {
+      const root = new RequirementTreeBuilder()
+      root.addOperator({ operator: "all_of" }).addCourse({ course: 1 })
+      const { trackState } = buildRequirementSections({
+        reqTree: root.serialize(),
+        programCourses: [factories.courses.course({ id: 1 })],
+        enrollmentsByCourseId: {},
+        programEnrollmentsById: {},
+        requiredPrograms: [],
+        requiredProgramModuleCoursesByProgramId: {},
+        programTracksEnabled: true,
+      })
+      expect(trackState).toBeNull()
     })
   })
 

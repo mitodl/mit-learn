@@ -2345,3 +2345,113 @@ describe("ProgramEnrollmentDisplay", () => {
     expect(certButton).not.toBeInTheDocument()
   })
 })
+
+describe("ProgramEnrollmentDisplay with program tracks", () => {
+  setupLocationMock()
+
+  const setupTrackedProgram = () => {
+    setMockResponse.get(
+      mitxonline.urls.userMe.get(),
+      mitxonline.factories.user.user(),
+    )
+    const root = new mitxonline.RequirementTreeBuilder()
+    root
+      .addOperator({ operator: "all_of", title: "Core Courses" })
+      .addCourse({ course: 1 })
+    const container = root.addOperator({
+      operator: "min_number_of",
+      operator_value: "1",
+    })
+    const general = container.addTrack({ title: "General Track" })
+    general.addOperator({ operator: "all_of" }).addCourse({ course: 2 })
+    const methods = container.addTrack({ title: "Methods Track" })
+    methods.addOperator({ operator: "all_of" }).addCourse({ course: 3 })
+
+    const program = mitxonline.factories.programs.program({
+      id: 456,
+      courses: [1, 2, 3],
+      req_tree: root.serialize(),
+    })
+    const courses = [1, 2, 3].map((id) =>
+      mitxonline.factories.courses.course({ id, title: `Course ${id}` }),
+    )
+    const enrollment = mitxonline.factories.enrollment.programEnrollmentV3({
+      program: mitxonline.factories.programs.simpleProgram({ id: program.id }),
+      track: null,
+    })
+    setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV3(), [])
+    setMockResponse.get(
+      mitxonline.urls.programEnrollments.enrollmentsListV3(),
+      [enrollment],
+    )
+    setMockResponse.get(
+      mitxonline.urls.programs.programDetail(program.id),
+      program,
+    )
+    setMockResponse.get(
+      mitxonline.urls.courses.coursesList({
+        id: program.courses,
+        page_size: program.courses.length,
+      }),
+      { count: courses.length, next: null, previous: null, results: courses },
+    )
+    return { program, enrollment, methodsId: methods.id }
+  }
+
+  test("Choosing a track saves it and shows that track's courses", async () => {
+    mockedUseFeatureFlagEnabled.mockReturnValue(true)
+    const { program, enrollment, methodsId } = setupTrackedProgram()
+    renderWithProviders(<ProgramEnrollmentDisplay programId={program.id} />)
+
+    await screen.findByText("Not selected")
+    expect(
+      screen.queryByRole("heading", { name: /Track courses/ }),
+    ).not.toBeInTheDocument()
+
+    const updated = {
+      ...enrollment,
+      track: { id: methodsId, title: "Methods Track" },
+    }
+    setMockResponse.patch(
+      mitxonline.urls.programEnrollments.programEnrollment(program.id),
+      updated,
+    )
+    setMockResponse.get(
+      mitxonline.urls.programEnrollments.enrollmentsListV3(),
+      [updated],
+    )
+    await user.click(screen.getByRole("button", { name: "Choose track" }))
+    const dialog = await screen.findByRole("dialog", { name: "Choose track" })
+    const submit = within(dialog).getByRole("button", { name: "Choose track" })
+    expect(submit).toBeDisabled()
+
+    await user.click(
+      within(dialog).getByRole("radio", { name: /Methods Track/ }),
+    )
+    await user.click(
+      within(dialog).getByRole("button", { name: "Choose Methods Track" }),
+    )
+
+    expect(makeRequest).toHaveBeenCalledWith(
+      expect.objectContaining({
+        method: "patch",
+        url: mitxonline.urls.programEnrollments.programEnrollment(program.id),
+        body: { track: methodsId },
+      }),
+    )
+    await screen.findByRole("heading", { name: "Methods Track courses" })
+    expect(screen.getByRole("button", { name: "Change track" })).toBeVisible()
+  })
+
+  test("Without the flag, shows every track and no track picker", async () => {
+    mockedUseFeatureFlagEnabled.mockReturnValue(false)
+    const { program } = setupTrackedProgram()
+    renderWithProviders(<ProgramEnrollmentDisplay programId={program.id} />)
+
+    await screen.findByRole("heading", { name: "General Track courses" })
+    expect(
+      screen.getByRole("heading", { name: "Methods Track courses" }),
+    ).toBeInTheDocument()
+    expect(screen.queryByText("Current track:")).not.toBeInTheDocument()
+  })
+})

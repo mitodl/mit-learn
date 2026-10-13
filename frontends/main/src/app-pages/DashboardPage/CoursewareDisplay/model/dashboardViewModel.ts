@@ -30,8 +30,12 @@ import {
   getBestRun,
   getIdsFromReqTree,
   parseProgramRequirementSections,
+  parseTrackedProgramRequirements,
 } from "@/common/mitxonline"
-import type { ProgramRequirementSection } from "@/common/mitxonline"
+import type {
+  ProgramRequirementSection,
+  ProgramTrack,
+} from "@/common/mitxonline"
 
 /**
  * Discriminant constants identifying the three home-dashboard resource shapes.
@@ -947,7 +951,52 @@ type BuildRequirementSectionsArgs = {
    * When present, placed on every course arm's `ancestorContext.programEnrollment`.
    */
   ancestorProgramEnrollment?: V3UserProgramEnrollment
+  /**
+   * Whether the program-tracks-dashboard flag is on. When off, a tracked
+   * program shows every track's courses and no track picker.
+   */
+  programTracksEnabled?: boolean
 }
+
+/**
+ * A track as offered in the choose/change track dialog.
+ */
+type ProgramTrackOption = {
+  id: number
+  title: string
+  description: string
+  /** Titles of the courses and programs inside the track, in tree order. */
+  itemTitles: string[]
+}
+
+/**
+ * Track state for a tracked program's dashboard header and dialog. Only
+ * present when the program has tracks and the program-tracks-dashboard flag
+ * is on.
+ */
+type ProgramTrackState = {
+  tracks: ProgramTrackOption[]
+  /** The learner's chosen track, or `null` before they choose one. */
+  currentTrack: ProgramTrackOption | null
+  /** Courses required by the groups before the tracks, e.g. core courses. */
+  requiredBeforeTracks: number
+  /** Whether every group before the tracks is complete. */
+  beforeTracksComplete: boolean
+  /** Courses each track requires, or `null` when the tracks differ. */
+  requiredPerTrack: number | null
+}
+
+/**
+ * Title for a group inside a track: "<Track> courses" when the track has one
+ * group, otherwise "<Track>: <group title>".
+ */
+const getTrackSectionTitle = (
+  track: ProgramTrack,
+  section: ProgramRequirementSection,
+): string =>
+  track.sections.length === 1
+    ? `${track.title} courses`
+    : `${track.title}: ${getRequirementSectionTitle(section.node)}`
 
 /**
  * Build the requirement sections for the program dashboard.
@@ -959,7 +1008,15 @@ type BuildRequirementSectionsArgs = {
  * progress counts (via `getRequirementsProgress`).
  *
  * Assumes a flat `req_tree`: operators are never nested inside operators.
- * See `getRequirementsProgress` for the same assumption and rationale.
+ * See `getRequirementsProgress` for the same assumption and rationale. The one
+ * exception is a tracked program, parsed by `parseTrackedProgramRequirements`:
+ * each track holds its own flat groups.
+ *
+ * For a tracked program with `programTracksEnabled`, the sections are the
+ * groups before the tracks, then the chosen track's groups, then the groups
+ * after the tracks (e.g. a capstone). Before a track is chosen, only the groups
+ * before the tracks are shown. With the flag off, every track's groups are
+ * shown and the overall count uses the track with the most completed courses.
  *
  * Preserves `req_tree` ordering. Sections with no resolved items are filtered
  * out (oracle: `.filter(section => section.items.length > 0)`).
@@ -974,10 +1031,12 @@ const buildRequirementSections = ({
   requiredPrograms,
   requiredProgramModuleCoursesByProgramId,
   ancestorProgramEnrollment,
+  programTracksEnabled = false,
 }: BuildRequirementSectionsArgs): {
   sections: RequirementSection[]
   completedCount: number
   totalCount: number
+  trackState: ProgramTrackState | null
 } => {
   const resolveContext: ResolveRequirementItemContext = {
     coursesById: new Map(programCourses.map((c) => [c.id, c])),
@@ -988,42 +1047,133 @@ const buildRequirementSections = ({
     ancestorProgramEnrollment,
   }
 
-  const parsedSections: ProgramRequirementSection[] =
-    parseProgramRequirementSections(reqTree)
-
-  const sections: RequirementSection[] = parsedSections
-    .map((section) => {
-      const items: RequirementSectionItem[] = section.items
-        .map((resource) => resolveRequirementItem(resource, resolveContext))
-        .filter((item): item is RequirementSectionItem => item !== null)
-
-      const { completed, total } = getRequirementsProgress(
-        [section.node],
-        enrollmentsByCourseId,
-        programEnrollmentsById,
-        resolveContext.programsById,
-      )
-
-      return {
-        key: section.id,
-        title: getRequirementSectionTitle(section.node),
-        node: section.node,
-        items,
-        completed,
-        total,
-      }
-    })
-    .filter((section) => section.items.length > 0)
-
-  const { completed: completedCount, total: totalCount } =
+  const progress = (nodes: V2ProgramRequirement[]) =>
     getRequirementsProgress(
-      sections.map((s) => s.node),
+      nodes,
       enrollmentsByCourseId,
       programEnrollmentsById,
       resolveContext.programsById,
     )
 
-  return { sections, completedCount, totalCount }
+  const toSection = (
+    section: ProgramRequirementSection,
+    title: string = getRequirementSectionTitle(section.node),
+  ): RequirementSection => {
+    const items: RequirementSectionItem[] = section.items
+      .map((resource) => resolveRequirementItem(resource, resolveContext))
+      .filter((item): item is RequirementSectionItem => item !== null)
+    const { completed, total } = progress([section.node])
+    return {
+      key: section.id,
+      title,
+      node: section.node,
+      items,
+      completed,
+      total,
+    }
+  }
+
+  const withItems = (sections: RequirementSection[]) =>
+    sections.filter((section) => section.items.length > 0)
+
+  const overall = (sections: RequirementSection[]) => {
+    const { completed, total } = progress(sections.map((s) => s.node))
+    return { completedCount: completed, totalCount: total }
+  }
+
+  const tracked = parseTrackedProgramRequirements(reqTree)
+
+  if (!tracked) {
+    const sections = withItems(
+      parseProgramRequirementSections(reqTree).map((s) => toSection(s)),
+    )
+    return { sections, ...overall(sections), trackState: null }
+  }
+
+  const before = withItems(
+    tracked.sectionsBeforeTracks.map((s) => toSection(s)),
+  )
+  const after = withItems(tracked.sectionsAfterTracks.map((s) => toSection(s)))
+  const sectionsByTrack = tracked.tracks.map((track) =>
+    withItems(
+      track.sections.map((s) => toSection(s, getTrackSectionTitle(track, s))),
+    ),
+  )
+
+  if (!programTracksEnabled) {
+    const sections = [...before, ...sectionsByTrack.flat(), ...after]
+    // Count the track the learner is furthest along in, so the overall total
+    // is one track's worth of courses rather than every track's.
+    const bestTrack = sectionsByTrack.reduce<RequirementSection[]>(
+      (best, trackSections) =>
+        progress(trackSections.map((s) => s.node)).completed >
+        progress(best.map((s) => s.node)).completed
+          ? trackSections
+          : best,
+      sectionsByTrack[0] ?? [],
+    )
+    return {
+      sections,
+      ...overall([...before, ...bestTrack, ...after]),
+      trackState: null,
+    }
+  }
+
+  const getItemTitle = (resource: {
+    type: "course" | "program"
+    id: number
+  }) =>
+    resource.type === "course"
+      ? resolveContext.coursesById.get(resource.id)?.title
+      : resolveContext.programsById.get(resource.id)?.title
+
+  const tracks: ProgramTrackOption[] = tracked.tracks.flatMap((track) =>
+    typeof track.id === "number"
+      ? [
+          {
+            id: track.id,
+            title: track.title,
+            description: track.description,
+            itemTitles: track.sections
+              .flatMap((section) => section.items.map(getItemTitle))
+              .filter((title): title is string => !!title),
+          },
+        ]
+      : [],
+  )
+
+  const currentTrackId = ancestorProgramEnrollment?.track?.id
+  const currentIndex = tracked.tracks.findIndex(
+    (track) => typeof track.id === "number" && track.id === currentTrackId,
+  )
+  const currentTrack =
+    tracks.find((track) => track.id === currentTrackId) ?? null
+
+  const sections =
+    currentIndex === -1
+      ? before
+      : [...before, ...sectionsByTrack[currentIndex], ...after]
+
+  const beforeProgress = progress(
+    tracked.sectionsBeforeTracks.map((s) => s.node),
+  )
+  const trackTotals = new Set(
+    tracked.tracks.map(
+      (track) => progress(track.sections.map((s) => s.node)).total,
+    ),
+  )
+
+  return {
+    sections,
+    ...overall(sections),
+    trackState: {
+      tracks,
+      currentTrack,
+      requiredBeforeTracks: beforeProgress.total,
+      beforeTracksComplete: beforeProgress.completed >= beforeProgress.total,
+      requiredPerTrack: trackTotals.size === 1 ? [...trackTotals][0] : null,
+    },
+  }
 }
 
 const getProgramsInCollections = (
@@ -1494,4 +1644,9 @@ export {
   getProgramAsCourseModuleIds,
 }
 
-export type { RequirementSectionItem, RequirementSection }
+export type {
+  RequirementSectionItem,
+  RequirementSection,
+  ProgramTrackOption,
+  ProgramTrackState,
+}

@@ -8,6 +8,7 @@ import NotFoundPage from "@/app-pages/ErrorPage/NotFoundPage"
 import { ProgramAsCourseCard } from "./ProgramAsCourseCard"
 import { RiAwardFill } from "@remixicon/react"
 import { useProgramDashboardData } from "./hooks/useProgramDashboardData"
+import { ProgramTrackHeader } from "./ProgramTrackHeader"
 import { env } from "@/env"
 
 const CourseEntryCardStyled = styled(CoursewareCard)({
@@ -87,6 +88,12 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
         <Typography component="h1" variant="h3" paddingBottom="32px">
           {data.programTitle}
         </Typography>
+        {data.trackState ? (
+          <ProgramTrackHeader
+            programId={programId}
+            trackState={data.trackState}
+          />
+        ) : null}
         <Stack direction="row" justifyContent="space-between">
           <Typography variant="body2" data-testid="program-completion-count">
             You have completed
