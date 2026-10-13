@@ -64,6 +64,26 @@ describe("pivotLearners", () => {
     expect(learner.needsAttentionCount).toBe(1)
   })
 
+  test("counts a run once when two rows share an email and a run", () => {
+    const [learner] = pivotLearners([
+      factories.learnerProgress({
+        learner_id: "a",
+        email: "a@example.com",
+        courserun_readable_id: "run-1",
+        needs_attention: true,
+      }),
+      factories.learnerProgress({
+        learner_id: "b",
+        email: "a@example.com",
+        courserun_readable_id: "run-1",
+        needs_attention: true,
+      }),
+    ])
+
+    expect(learner.enrollments.size).toBe(1)
+    expect(learner.needsAttentionCount).toBe(1)
+  })
+
   test("sorts by name, then email, with unnamed learners last", () => {
     const keys = pivotLearners([
       factories.learnerProgress({

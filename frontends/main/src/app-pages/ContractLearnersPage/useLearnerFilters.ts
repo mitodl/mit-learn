@@ -55,6 +55,7 @@ const useLearnerFilters = (onChange: () => void) => {
     setSearchQuery,
     clearSearch: () => {
       setSearchQuery("")
+      setDebouncedSearch("")
       onChange()
     },
     debouncedSearch,

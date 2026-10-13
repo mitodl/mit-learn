@@ -44,7 +44,11 @@ const pivotLearners = (rows: LearnerProgress[]): PivotedLearner[] => {
       byLearner.set(key, learner)
     }
     learner.enrollments.set(row.courserun_readable_id, row)
-    if (row.needs_attention) learner.needsAttentionCount += 1
+  }
+  for (const learner of byLearner.values()) {
+    learner.needsAttentionCount = [...learner.enrollments.values()].filter(
+      (enrollment) => enrollment.needs_attention,
+    ).length
   }
   const sortKey = (learner: PivotedLearner) =>
     learner.name ?? learner.email ?? ""
