@@ -140,7 +140,9 @@ const TestimonialsSection: React.FC<{
   testimonials: TestimonialItem[]
   /** Name of the course or program the testimonials review. */
   itemReviewedName: string
-}> = ({ testimonials, itemReviewedName }) => {
+  /** Its description, which may be rich text. Required on a schema.org Course. */
+  itemReviewedDescription?: string
+}> = ({ testimonials, itemReviewedName, itemReviewedDescription }) => {
   const [index, setIndex] = React.useState(0)
   const viewportRef = React.useRef<HTMLDivElement>(null)
   const innerRef = React.useRef<HTMLDivElement>(null)
@@ -158,6 +160,7 @@ const TestimonialsSection: React.FC<{
   const structuredData = buildTestimonialStructuredData(
     testimonials,
     itemReviewedName,
+    itemReviewedDescription,
   )
 
   // Content swaps synchronously; this effect layers a fade-in + height tween on

@@ -29,6 +29,44 @@ test("nests every review under a single Course node", () => {
   })
 })
 
+test("carries the reviewed item's description as plain text", () => {
+  const result = buildTestimonialStructuredData(
+    [makeTestimonial()],
+    "Intro to Rocketry",
+    "<p>Build a rocket &amp; launch it.</p><p>Twice.</p>",
+  )
+
+  expect(result?.description).toBe("Build a rocket & launch it. Twice.")
+})
+
+test("omits the description when the reviewed item has none", () => {
+  const result = buildTestimonialStructuredData(
+    [makeTestimonial()],
+    "Intro to Rocketry",
+  )
+
+  expect(result).not.toHaveProperty("description")
+})
+
+test("omits testimonials whose author name is only whitespace", () => {
+  const blank = makeTestimonial({ name: "   " })
+  const attributed = makeTestimonial()
+
+  const result = buildTestimonialStructuredData(
+    [blank, attributed],
+    "Intro to Rocketry",
+  )
+
+  expect(result?.review).toEqual([
+    {
+      "@type": "Review",
+      author: { "@type": "Person", name: attributed.name },
+      datePublished: attributed.date_published,
+      reviewBody: attributed.quote,
+    },
+  ])
+})
+
 test("omits testimonials without an author name", () => {
   const anonymous = makeTestimonial({ name: "" })
   const attributed = makeTestimonial()

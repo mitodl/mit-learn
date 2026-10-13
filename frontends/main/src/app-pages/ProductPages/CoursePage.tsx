@@ -161,6 +161,7 @@ const CoursePage: React.FC<CoursePageProps> = ({ readableId }) => {
         <TestimonialsSection
           testimonials={page.testimonials}
           itemReviewedName={page.title}
+          itemReviewedDescription={page.course_details.page?.description}
         />
       ) : null}
     </ProductPageTemplate>
