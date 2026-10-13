@@ -6,12 +6,12 @@ export function buildTestimonialStructuredData(
 ): Record<string, unknown> | null {
   if (!itemReviewedName) return null
 
-  // Google drops a Review snippet that has no author, so skip unattributed quotes.
+  // Google drops a Review with no author, and only allows reviewRating to be
+  // omitted when datePublished is present.
   const reviews = testimonials
-    .filter((testimonial) => testimonial.name)
+    .filter((testimonial) => testimonial.name && testimonial.date_published)
     .map((testimonial) => ({
       "@type": "Review",
-      itemReviewed: { "@type": "Course", name: itemReviewedName },
       author: { "@type": "Person", name: testimonial.name },
       datePublished: testimonial.date_published,
       reviewBody: testimonial.quote,
@@ -21,6 +21,8 @@ export function buildTestimonialStructuredData(
 
   return {
     "@context": "https://schema.org",
-    "@graph": reviews,
+    "@type": "Course",
+    name: itemReviewedName,
+    review: reviews,
   }
 }

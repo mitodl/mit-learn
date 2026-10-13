@@ -11,16 +11,17 @@ test("returns null without a reviewed item name", () => {
   expect(buildTestimonialStructuredData([makeTestimonial()], "")).toBeNull()
 })
 
-test("builds a schema.org Review graph from the testimonials", () => {
+test("nests every review under a single Course node", () => {
   const testimonials = [makeTestimonial(), makeTestimonial()]
 
   expect(
     buildTestimonialStructuredData(testimonials, "Intro to Rocketry"),
   ).toEqual({
     "@context": "https://schema.org",
-    "@graph": testimonials.map((testimonial) => ({
+    "@type": "Course",
+    name: "Intro to Rocketry",
+    review: testimonials.map((testimonial) => ({
       "@type": "Review",
-      itemReviewed: { "@type": "Course", name: "Intro to Rocketry" },
       author: { "@type": "Person", name: testimonial.name },
       datePublished: testimonial.date_published,
       reviewBody: testimonial.quote,
@@ -37,10 +38,9 @@ test("omits testimonials without an author name", () => {
     "Intro to Rocketry",
   )
 
-  expect(result?.["@graph"]).toEqual([
+  expect(result?.review).toEqual([
     {
       "@type": "Review",
-      itemReviewed: { "@type": "Course", name: "Intro to Rocketry" },
       author: { "@type": "Person", name: attributed.name },
       datePublished: attributed.date_published,
       reviewBody: attributed.quote,
@@ -48,10 +48,29 @@ test("omits testimonials without an author name", () => {
   ])
 })
 
-test("returns null when no testimonial has an author name", () => {
+test("omits testimonials without a publication date", () => {
+  const undated = makeTestimonial({ date_published: "" })
+  const dated = makeTestimonial()
+
+  const result = buildTestimonialStructuredData(
+    [undated, dated],
+    "Intro to Rocketry",
+  )
+
+  expect(result?.review).toEqual([
+    {
+      "@type": "Review",
+      author: { "@type": "Person", name: dated.name },
+      datePublished: dated.date_published,
+      reviewBody: dated.quote,
+    },
+  ])
+})
+
+test("returns null when no testimonial can be attributed and dated", () => {
   expect(
     buildTestimonialStructuredData(
-      [makeTestimonial({ name: "" })],
+      [makeTestimonial({ name: "" }), makeTestimonial({ date_published: "" })],
       "Intro to Rocketry",
     ),
   ).toBeNull()

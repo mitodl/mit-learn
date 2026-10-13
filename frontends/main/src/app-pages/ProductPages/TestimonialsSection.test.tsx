@@ -192,9 +192,10 @@ test("Emits Review structured data for every testimonial", async () => {
 
   expect(JSON.parse(script?.textContent ?? "")).toEqual({
     "@context": "https://schema.org",
-    "@graph": testimonials.map((testimonial) => ({
+    "@type": "Course",
+    name: "Intro to Rocketry",
+    review: testimonials.map((testimonial) => ({
       "@type": "Review",
-      itemReviewed: { "@type": "Course", name: "Intro to Rocketry" },
       author: { "@type": "Person", name: testimonial.name },
       datePublished: testimonial.date_published,
       reviewBody: testimonial.quote,
@@ -222,6 +223,26 @@ test("Escapes characters that could break out of the JSON-LD script tag", async 
   const raw = scripts[0].textContent ?? ""
   expect(raw).not.toContain("</script>")
   expect(JSON.parse(raw)).toMatchObject({
-    "@graph": [{ reviewBody: "</script><script>alert(1)</script>" }],
+    review: [{ reviewBody: "</script><script>alert(1)</script>" }],
   })
+})
+
+// jest-dom's toBeVisible() returns false for the `hidden` attribute alone, so
+// it would still pass if the CSS that overrides display:flex were removed.
+test("Collapses inactive slides with CSS, not just the hidden attribute", async () => {
+  const testimonials = Array.from({ length: 2 }, (_, i) =>
+    makeTestimonial({ quote: `Quote number ${i}` }),
+  )
+  renderWithProviders(
+    <TestimonialsSection
+      testimonials={testimonials}
+      itemReviewedName="Intro to Rocketry"
+    />,
+  )
+
+  const inactive = screen
+    .getByText(testimonials[1].quote)
+    .closest("[hidden]") as HTMLElement
+
+  expect(getComputedStyle(inactive).display).toBe("none")
 })
