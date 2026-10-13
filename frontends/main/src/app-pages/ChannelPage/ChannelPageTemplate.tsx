@@ -9,6 +9,7 @@ import {
 } from "@/common/urls"
 import { styled } from "ol-components"
 import TopicChannelTemplate from "./TopicChannelTemplate"
+import useTopicPageRedesign from "./useTopicPageRedesign"
 
 const TOPICS_LABEL = "Browse by Topic"
 const DEPARTMENTS_LABEL = "Browse by Academic Department"
@@ -72,12 +73,13 @@ const ChannelPageTemplate: React.FC<ChannelSkeletonProps> = ({
   channelType,
   name,
 }) => {
+  const topicRedesign = useTopicPageRedesign(channelType)
   const getChannelTemplate = (channelType: string) => {
     switch (channelType) {
       case ChannelTypeEnum.Unit:
         return UnitChannelTemplate
       case ChannelTypeEnum.Topic:
-        return TopicChannelTemplate
+        return topicRedesign ? TopicChannelTemplate : DefaultChannelTemplate
       default:
         return DefaultChannelTemplate
     }

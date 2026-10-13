@@ -12,6 +12,13 @@ type SimpleSelectProps = Pick<
   | "renderValue"
   | "className"
   | "name"
+  /**
+   * What the control is called. A combobox cannot take its name from its own
+   * contents, and this one has no visible label to borrow -- it renders the
+   * current selection and nothing else -- so without this it reaches a screen
+   * reader unnamed.
+   */
+  | "aria-label"
 > & {
   /**
    * The options for the dropdown
@@ -34,9 +41,23 @@ interface SimpleSelectOption {
 /**
  * An input for selection via dropdown.
  */
-const SimpleSelect: React.FC<SimpleSelectProps> = ({ options, ...others }) => {
+const SimpleSelect: React.FC<SimpleSelectProps> = ({
+  options,
+  "aria-label": ariaLabel,
+  ...others
+}) => {
   return (
-    <Select {...others} displayEmpty>
+    <Select
+      {...others}
+      displayEmpty
+      /**
+       * Onto the element that carries `role="combobox"`, which is the one
+       * that needs the name. Passed straight through, MUI puts it on the
+       * root instead, where the role prohibits it and the combobox is left
+       * unnamed either way.
+       */
+      SelectDisplayProps={ariaLabel ? { "aria-label": ariaLabel } : undefined}
+    >
       {options.map(({ label, value, ...itemProps }) => (
         <MenuItem key={value} size={others.size} {...itemProps} value={value}>
           {label}
