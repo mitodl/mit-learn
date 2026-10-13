@@ -1,6 +1,12 @@
 Release Notes
 =============
 
+Version 0.83.1
+--------------
+
+- Redesign the topic channel page to match the Figma design (#4044)
+- fix(ssr): send a first-party User-Agent from the SSR API client (#4061)
+
 Version 0.83.0
 --------------
 
