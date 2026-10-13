@@ -5,9 +5,8 @@ import { useResourceSearchParams } from "@mitodl/course-search-utils"
 import type { Facets, BooleanFacets } from "@mitodl/course-search-utils"
 import { useSetSearchParams } from "@mitodl/course-search-utils/next"
 import { useAppSearchParams } from "@/common/useAppSearchParams"
-import SearchDisplay, {
-  TOPIC_TABS,
-} from "@/page-components/SearchDisplay/SearchDisplay"
+import SearchDisplay from "@/page-components/SearchDisplay/SearchDisplay"
+import { TOPIC_TABS } from "@/page-components/SearchDisplay/tabConfigs"
 import HybridSearchDisplay from "@/page-components/SearchDisplay/HybridSearchDisplay"
 import { Container, styled } from "ol-components"
 import { VisuallyHidden } from "@mitodl/smoot-design"

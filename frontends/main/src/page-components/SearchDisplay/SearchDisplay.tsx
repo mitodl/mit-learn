@@ -38,7 +38,6 @@ import {
   LearningResource,
   LearningResourcesSearchApiLearningResourcesSearchRetrieveRequest as LRSearchRequest,
   LearningResourcesSearchResponse,
-  ResourceTypeGroupEnum,
   SearchModeEnumDescriptions,
 } from "api"
 import { keepPreviousData, useQuery } from "@tanstack/react-query"
@@ -54,7 +53,8 @@ import type {
   FacetManifest,
 } from "@mitodl/course-search-utils"
 import { useAppSearchParams } from "@/common/useAppSearchParams"
-import { ResourceTypeGroupTabs, findActiveTab } from "./ResourceTypeGroupTabs"
+import { ResourceTypeGroupTabs } from "./ResourceTypeGroupTabs"
+import { TABS, UPCOMING_SORT, findActiveTab } from "./tabConfigs"
 import ProfessionalToggle from "./ProfessionalToggle"
 import { useTrackedFilterSetters } from "@/common/analytics/searchFilters"
 import SelectedFilters from "./SelectedFilters"
@@ -62,7 +62,7 @@ import SliderInput from "./SliderInput"
 import VectorAdminOptions from "./VectorAdminOptions"
 import { AdminTitleContainer, ExplanationContainer } from "./adminStyles"
 
-import type { TabConfig } from "./ResourceTypeGroupTabs"
+import type { TabConfig } from "./tabConfigs"
 
 import { ResourceCard } from "../ResourceCard/ResourceCard"
 import { useUserMe } from "api/hooks/user"
@@ -520,64 +520,6 @@ const getLastPage = (count: number): number => {
   const pages = Math.ceil(count / PAGE_SIZE)
   return pages > MAX_PAGE ? MAX_PAGE : pages
 }
-
-/**
- * Sorts by the next start date of a resource's upcoming runs. Nothing without
- * runs -- no learning material -- has one, hence the tabs that declare it
- * unsupported.
- */
-const UPCOMING_SORT = "upcoming"
-
-const ALL_TAB: TabConfig = {
-  name: "all",
-  label: "All",
-  defaultTab: true,
-  resource_type_groups: [],
-  minWidth: 85,
-}
-
-const LEARNING_MATERIALS_TAB: TabConfig = {
-  name: "learning-materials",
-  label: "Learning Materials",
-  resource_type_groups: [ResourceTypeGroupEnum.LearningMaterial],
-  minWidth: 172,
-  unsupportedSortby: [UPCOMING_SORT],
-}
-
-const TABS: TabConfig[] = [
-  ALL_TAB,
-  {
-    name: "courses",
-    label: "Courses",
-    resource_type_groups: [ResourceTypeGroupEnum.Course],
-    minWidth: 112,
-  },
-  {
-    name: "programs",
-    label: "Programs",
-    resource_type_groups: [ResourceTypeGroupEnum.Program],
-    minWidth: 118,
-  },
-  LEARNING_MATERIALS_TAB,
-]
-
-/**
- * The topic page's tabs: courses and programs together, and learning
- * materials. There is no All -- the topic page opens on courses and programs.
- */
-const TOPIC_TABS: TabConfig[] = [
-  {
-    name: "courses-and-programs",
-    label: "Courses and Programs",
-    defaultTab: true,
-    resource_type_groups: [
-      ResourceTypeGroupEnum.Course,
-      ResourceTypeGroupEnum.Program,
-    ],
-    minWidth: 200,
-  },
-  LEARNING_MATERIALS_TAB,
-]
 
 /**
  * Every value each facet can take, in the order the cards design lists them.
@@ -1444,4 +1386,3 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
 }
 
 export default SearchDisplay
-export { TOPIC_TABS }

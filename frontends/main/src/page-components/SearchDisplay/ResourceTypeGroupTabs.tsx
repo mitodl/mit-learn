@@ -2,6 +2,7 @@ import React from "react"
 import { TabContext, TabPanel, styled } from "ol-components"
 import { TabButton, TabButtonList } from "@mitodl/smoot-design"
 import { ResourceTypeGroupEnum, LearningResourcesSearchResponse } from "api"
+import type { TabConfig } from "./tabConfigs"
 
 const TabsList = styled(TabButtonList)(({ theme }) => ({
   ".MuiTabScrollButton-root.Mui-disabled": {
@@ -17,25 +18,6 @@ const TabsList = styled(TabButtonList)(({ theme }) => ({
 const CountSpan = styled.span(({ theme }) => ({
   ...theme.typography.body3,
 }))
-
-type TabConfig = {
-  label: string
-  name: string
-  defaultTab?: boolean
-  /**
-   * The groups this tab filters to, written to the URL as one
-   * `resource_type_group` param each. Empty for an "All" tab, which filters
-   * nothing.
-   */
-  resource_type_groups: ResourceTypeGroupEnum[]
-  minWidth: number
-  /**
-   * sortby values that cannot order this tab's results, e.g. "upcoming" for
-   * learning materials, which have no runs and so no start dates. Offered
-   * disabled in the sort dropdown, and cleared from the URL on switching here.
-   */
-  unsupportedSortby?: string[]
-}
 
 type Aggregations = LearningResourcesSearchResponse["metadata"]["aggregations"]
 const resourceTypeGroupCounts = (aggregations?: Aggregations) => {
@@ -61,35 +43,6 @@ const tabCount = (
         0,
       )
     : undefined
-
-/**
- * The tab the URL's `resource_type_group` values pick out, or the default.
- *
- * An exact match first, then a tab that covers every value the URL names --
- * so where courses and programs share a tab, a link to just the courses lands
- * on it rather than falling back to All while still saying "course".
- */
-const findActiveTab = (tabs: TabConfig[], urlGroups: string[]): TabConfig => {
-  const wanted = new Set(urlGroups)
-  const fallback = tabs.find((t) => t.defaultTab) ?? tabs[0]
-  if (wanted.size === 0) {
-    return fallback
-  }
-  const groupsOf = (t: TabConfig) => new Set<string>(t.resource_type_groups)
-  return (
-    tabs.find((t) => {
-      const groups = groupsOf(t)
-      return (
-        groups.size === wanted.size && [...wanted].every((g) => groups.has(g))
-      )
-    }) ??
-    tabs.find((t) => {
-      const groups = groupsOf(t)
-      return groups.size > 0 && [...wanted].every((g) => groups.has(g))
-    }) ??
-    fallback
-  )
-}
 
 const appendCount = (label: string, count?: number | null) => {
   if (Number.isFinite(count)) {
@@ -333,5 +286,4 @@ const ResourceTypeGroupTabs = {
   Checklist: ResourceTypeGroupChecklist,
 }
 
-export { ResourceTypeGroupTabs, findActiveTab }
-export type { TabConfig }
+export { ResourceTypeGroupTabs }
