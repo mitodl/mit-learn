@@ -1,6 +1,7 @@
 import React from "react"
-import { renderHook, screen, user, waitFor, within } from "@/test-utils"
+import { act, renderHook, screen, user, waitFor, within } from "@/test-utils"
 import { QueryClientProvider } from "@tanstack/react-query"
+import type { MutateOptions } from "@tanstack/react-query"
 import { ThemeProvider } from "ol-components"
 import { makeBrowserQueryClient } from "@/app/getQueryClient"
 import { makeRequest, setMockResponse } from "api/test-utils"
@@ -187,5 +188,240 @@ describe("useComplianceGate", () => {
     // card must not also fire its own enroll/basket mutation.
     await expect(first).resolves.toBe(true)
     await expect(second).resolves.toBe(false)
+  })
+})
+
+describe("mutateWithCompliance", () => {
+  const rejection = (missingFields: string[]) => ({
+    response: {
+      status: 400,
+      data: {
+        detail: "Unable to complete enrollment. Error code: CS_701.",
+        missing_fields: missingFields,
+      },
+    },
+  })
+
+  /** A complete profile, so the up-front gate passes without the dialog. */
+  const setupCompleteUser = () => {
+    setMockResponse.get(
+      mitxonline.urls.userMe.get(),
+      mitxonline.factories.user.user({
+        compliance_missing_fields: [],
+        legal_address: {
+          first_name: "David",
+          last_name: ".",
+          country: "GB",
+          street_address_1: "1 Main St",
+          city: "London",
+        },
+        user_profile: { year_of_birth: 1990 },
+      }),
+    )
+    setMockResponse.get(mitxonline.urls.countries.list(), [
+      { code: "GB", name: "United Kingdom", states: [] },
+    ])
+    setMockResponse.patch(mitxonline.urls.userMe.get(), null)
+  }
+
+  type Options = MutateOptions<string, unknown, { id: number }, unknown>
+
+  /**
+   * A stand-in for a `useMutation` result whose attempts settle as scripted:
+   * each entry is the error that attempt fails with, or `null` to succeed.
+   */
+  const fakeMutation = (outcomes: (unknown | null)[]) => {
+    const mutate = jest.fn((variables: { id: number }, options?: Options) => {
+      const error = outcomes[mutate.mock.calls.length - 1]
+      if (error) {
+        options?.onError?.(error, variables, undefined)
+        options?.onSettled?.(undefined, error, variables, undefined)
+      } else {
+        options?.onSuccess?.("ok", variables, undefined)
+        options?.onSettled?.("ok", null, variables, undefined)
+      }
+    })
+    return { mutate, reset: jest.fn() }
+  }
+
+  const callbacks = () => ({
+    onSuccess: jest.fn(),
+    onError: jest.fn(),
+    onSettled: jest.fn(),
+  })
+
+  test("reopens the dialog on the rejected fields, then retries once saved", async () => {
+    setupCompleteUser()
+    const mutation = fakeMutation([rejection(["last_name"]), null])
+    const options = callbacks()
+    const { result } = renderHook(() => useComplianceGate(), { wrapper })
+
+    let pending: Promise<void> = Promise.resolve()
+    await act(async () => {
+      pending = result.current.mutateWithCompliance(
+        mutation,
+        { id: 1 },
+        options,
+      )
+    })
+
+    const dialog = await screen.findByRole("dialog", {
+      name: "Just a Few More Details",
+    })
+    expect(
+      within(dialog).getByText(/We couldn't verify some of your details/),
+    ).toBeInTheDocument()
+    // The failed attempt is cleared so an inline alert doesn't show behind the
+    // dialog, and its error never reaches the caller.
+    expect(mutation.reset).toHaveBeenCalled()
+    expect(options.onError).not.toHaveBeenCalled()
+
+    const lastName = within(dialog).getByRole("textbox", { name: "Last Name" })
+    await user.clear(lastName)
+    await user.type(lastName, "Cohen")
+    await user.click(within(dialog).getByRole("button", { name: "Submit" }))
+
+    await waitFor(() => expect(options.onSuccess).toHaveBeenCalled())
+    expect(mutation.mutate).toHaveBeenCalledTimes(2)
+    expect(mutation.mutate.mock.calls[1][0]).toEqual({ id: 1 })
+    expect(options.onError).not.toHaveBeenCalled()
+    await act(() => pending)
+  })
+
+  test("a further rejection keeps the same dialog open on the new fields", async () => {
+    setupCompleteUser()
+    const mutation = fakeMutation([
+      rejection(["last_name"]),
+      rejection(["postal_code"]),
+      null,
+    ])
+    const options = callbacks()
+    const { result } = renderHook(() => useComplianceGate(), { wrapper })
+
+    let pending: Promise<void> = Promise.resolve()
+    await act(async () => {
+      pending = result.current.mutateWithCompliance(
+        mutation,
+        { id: 1 },
+        options,
+      )
+    })
+    const dialog = await screen.findByRole("dialog", {
+      name: "Just a Few More Details",
+    })
+    const lastName = within(dialog).getByRole("textbox", { name: "Last Name" })
+    await user.clear(lastName)
+    await user.type(lastName, "-Cohen")
+    await user.click(within(dialog).getByRole("button", { name: "Submit" }))
+
+    await waitFor(() => expect(mutation.mutate).toHaveBeenCalledTimes(2))
+    expect(screen.getAllByRole("dialog")).toHaveLength(1)
+    expect(dialog).toBeInTheDocument()
+    expect(options.onError).not.toHaveBeenCalled()
+    expect(options.onSuccess).not.toHaveBeenCalled()
+
+    await user.click(within(dialog).getByRole("button", { name: "Submit" }))
+    await waitFor(() => expect(options.onSuccess).toHaveBeenCalled())
+    expect(mutation.mutate).toHaveBeenCalledTimes(3)
+    await waitFor(() => expect(dialog).not.toBeInTheDocument())
+    await act(() => pending)
+  })
+
+  test("dismissing the dialog skips onError but still runs onSettled", async () => {
+    setupCompleteUser()
+    const error = rejection(["last_name"])
+    const mutation = fakeMutation([error])
+    const options = callbacks()
+    const { result } = renderHook(() => useComplianceGate(), { wrapper })
+
+    let pending: Promise<void> = Promise.resolve()
+    await act(async () => {
+      pending = result.current.mutateWithCompliance(
+        mutation,
+        { id: 1 },
+        options,
+      )
+    })
+    const dialog = await screen.findByRole("dialog", {
+      name: "Just a Few More Details",
+    })
+    await user.click(within(dialog).getByRole("button", { name: "Cancel" }))
+
+    await waitFor(() =>
+      expect(options.onSettled).toHaveBeenCalledWith(
+        undefined,
+        error,
+        { id: 1 },
+        undefined,
+      ),
+    )
+    expect(options.onError).not.toHaveBeenCalled()
+    expect(mutation.mutate).toHaveBeenCalledTimes(1)
+    await act(() => pending)
+  })
+
+  test.each([
+    {
+      desc: "an unrelated failure",
+      error: {
+        response: {
+          status: 500,
+          data: {},
+        },
+      },
+    },
+    {
+      desc: "a rejection naming only fields the dialog can't fix",
+      error: rejection(["email"]),
+    },
+  ])("passes $desc straight to the caller", async ({ error }) => {
+    setupCompleteUser()
+    const mutation = fakeMutation([error])
+    const options = callbacks()
+    const { result } = renderHook(() => useComplianceGate(), { wrapper })
+
+    let pending: Promise<void> = Promise.resolve()
+    await act(async () => {
+      pending = result.current.mutateWithCompliance(
+        mutation,
+        { id: 1 },
+        options,
+      )
+    })
+
+    expect(options.onError).toHaveBeenCalledWith(error, { id: 1 }, undefined)
+    expect(options.onSettled).toHaveBeenCalled()
+    expect(mutation.reset).not.toHaveBeenCalled()
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
+    await act(() => pending)
+  })
+
+  test("doesn't attempt the mutation when the up-front gate is dismissed", async () => {
+    setMockResponse.get(
+      mitxonline.urls.userMe.get(),
+      mitxonline.factories.user.user({
+        compliance_missing_fields: ["city"],
+        legal_address: { country: "GB" },
+        user_profile: { year_of_birth: 1990 },
+      }),
+    )
+    setMockResponse.get(mitxonline.urls.countries.list(), [
+      { code: "GB", name: "United Kingdom", states: [] },
+    ])
+    const mutation = fakeMutation([null])
+    const { result } = renderHook(() => useComplianceGate(), { wrapper })
+
+    const pending = result.current.mutateWithCompliance(
+      mutation,
+      { id: 1 },
+      callbacks(),
+    )
+    const dialog = await screen.findByRole("dialog", {
+      name: "Just a Few More Details",
+    })
+    await user.click(within(dialog).getByRole("button", { name: "Cancel" }))
+    await pending
+
+    expect(mutation.mutate).not.toHaveBeenCalled()
   })
 })

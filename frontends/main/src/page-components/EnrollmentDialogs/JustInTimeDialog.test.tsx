@@ -81,6 +81,102 @@ const patchCalls = () =>
     )
 
 describe("JustInTimeDialog", () => {
+  test("retries in place, updating the highlighted fields until none are rejected", async () => {
+    setup({
+      compliance_missing_fields: [],
+      legal_address: {
+        first_name: "David",
+        last_name: ".",
+        country: "US",
+        street_address_1: "1 Main St",
+        city: "Boston",
+        state: "US-MA",
+        postal_code: "02139",
+      },
+      user_profile: { year_of_birth: 1990 },
+    })
+    const retry = jest
+      .fn()
+      .mockResolvedValueOnce(["postal_code"])
+      .mockResolvedValueOnce([])
+    renderWithProviders(null)
+    let result: Promise<unknown> = Promise.resolve()
+    await act(async () => {
+      result = NiceModal.show(JustInTimeDialog, {
+        rejectedFields: ["last_name"],
+        retry,
+      })
+    })
+    const dialog = await screen.findByRole("dialog", {
+      name: "Just a Few More Details",
+    })
+    const lastName = await waitFor(() => {
+      const input = textbox(dialog, "Last Name")
+      expect(input).toHaveValue(".")
+      return input
+    })
+    await user.clear(lastName)
+    await user.type(lastName, "Cohen")
+    await user.click(within(dialog).getByRole("button", { name: "Submit" }))
+
+    // Still rejected: the same dialog stays open on the newly rejected field.
+    const zipCode = textbox(dialog, "Zip Code")
+    await waitFor(() =>
+      expect(getDescriptionFor(zipCode)).toHaveTextContent(
+        "Please enter a valid zip code.",
+      ),
+    )
+    expect(textbox(dialog, "Last Name")).not.toHaveAccessibleDescription()
+    expect(dialog).toBeInTheDocument()
+    expect(retry).toHaveBeenCalledTimes(1)
+    expect(patchCalls()).toHaveLength(1)
+
+    await user.clear(zipCode)
+    await user.type(zipCode, "02140")
+    await user.click(within(dialog).getByRole("button", { name: "Submit" }))
+
+    await expect(result).resolves.toBe(true)
+    expect(retry).toHaveBeenCalledTimes(2)
+    expect(patchCalls()).toHaveLength(2)
+  })
+
+  test("highlights the fields an enrollment was rejected on", async () => {
+    setup({
+      compliance_missing_fields: [],
+      legal_address: {
+        first_name: "David",
+        last_name: ".",
+        country: "GB",
+        street_address_1: "1 Main St",
+        city: "London",
+      },
+      user_profile: { year_of_birth: 1990 },
+    })
+    renderWithProviders(null)
+    await act(async () => {
+      NiceModal.show(JustInTimeDialog, { rejectedFields: ["last_name"] })
+    })
+    const dialog = await screen.findByRole("dialog", {
+      name: "Just a Few More Details",
+    })
+
+    expect(
+      within(dialog).getByText(
+        "We couldn't verify some of your details. Please check the highlighted fields and try again.",
+      ),
+    ).toBeInTheDocument()
+    const lastName = await waitFor(() => {
+      const input = textbox(dialog, "Last Name")
+      expect(input).toHaveValue(".")
+      return input
+    })
+    expect(getDescriptionFor(lastName)).toHaveTextContent(
+      "Please enter a valid last name.",
+    )
+    expect(textbox(dialog, "First Name")).not.toHaveAccessibleDescription()
+    await waitFor(() => expect(lastName).toHaveFocus())
+  })
+
   test("collects every export-compliance field plus year of birth", async () => {
     setup()
     const dialog = await openDialog()

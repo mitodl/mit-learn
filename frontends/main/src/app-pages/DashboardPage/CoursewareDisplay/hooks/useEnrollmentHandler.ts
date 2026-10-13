@@ -48,7 +48,7 @@ export const useEnrollmentHandler = () => {
     meta: PROGRAM_ENROLL_META,
   })
   const replaceBasketItem = useReplaceBasketItem({ meta: CHECKOUT_META })
-  const { ensureCompliance } = useComplianceGate()
+  const { mutateWithCompliance } = useComplianceGate()
   const mitxOnlineUser = useQuery(mitxUserQueries.me())
   const isStaff = mitxOnlineUser.data?.is_staff
 
@@ -110,9 +110,9 @@ export const useEnrollmentHandler = () => {
           })
           return
         }
-        if (!(await ensureCompliance())) return
 
-        createB2bEnrollment.mutate(
+        await mutateWithCompliance(
+          createB2bEnrollment,
           {
             readable_id: readableId,
             B2BEnrollRequestRequest: b2bProgramId
@@ -151,8 +151,8 @@ export const useEnrollmentHandler = () => {
           : programCoursewareId
             ? [programCoursewareId]
             : []
-        if (!(await ensureCompliance())) return
-        createVerifiedProgramEnrollment.mutate(
+        await mutateWithCompliance(
+          createVerifiedProgramEnrollment,
           { courserun_id: readableId, request_body: requestBody },
           {
             onSuccess: () => {
@@ -164,8 +164,8 @@ export const useEnrollmentHandler = () => {
         const enrollmentAction = getCourseEnrollmentAction(course)
 
         if (enrollmentAction.type === "audit") {
-          if (!(await ensureCompliance())) return
-          createEnrollment.mutate(
+          await mutateWithCompliance(
+            createEnrollment,
             { run_id: enrollmentAction.run.id },
             {
               onSuccess: () => {
@@ -202,7 +202,7 @@ export const useEnrollmentHandler = () => {
       }
     },
     [
-      ensureCompliance,
+      mutateWithCompliance,
       createB2bEnrollment,
       createEnrollment,
       createVerifiedProgramEnrollment,

@@ -1,4 +1,5 @@
 import * as Yup from "yup"
+import { badRequestMissingFields } from "api/mutation-errors"
 import type {
   Country,
   LegalAddressRequest,
@@ -163,6 +164,21 @@ const needsComplianceInfo = (user: User | undefined): boolean => {
 }
 
 /**
+ * The fields this dialog can fix, from an enrollment MITx Online rejected
+ * because the export compliance check couldn't use the profile data - e.g. a
+ * last name CyberSource refuses. Those come back as `missing_fields` on a 400,
+ * and are invisible to `compliance_missing_fields`, which only flags empty
+ * fields.
+ *
+ * Empty for any other failure, and for a rejection naming only fields the
+ * dialog doesn't collect (e.g. `email`): reopening the dialog can't help there.
+ */
+const rejectedComplianceFields = (error: unknown): JitField[] =>
+  badRequestMissingFields(error).filter((field): field is JitField =>
+    (JIT_FIELDS as readonly string[]).includes(field),
+  )
+
+/**
  * Seed the form from the profile we already have.
  *
  * Every field is prefilled, not just the ones reported missing, so a value
@@ -305,6 +321,7 @@ export {
   isFieldRequired,
   yearOfBirthOptions,
   needsComplianceInfo,
+  rejectedComplianceFields,
   initialJitValues,
   jitSchema,
   jitPatchPayload,

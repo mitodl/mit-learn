@@ -383,7 +383,7 @@ const CourseEnrollmentDialogInner: React.FC<CourseEnrollmentDialogProps> = ({
   const router = useRouter()
   // The "Add to Cart" path inside CertificateUpsell is gated by
   // useReplaceBasketItem; this free-enrollment submit gates here.
-  const { ensureCompliance } = useComplianceGate()
+  const { mutateWithCompliance } = useComplianceGate()
   return (
     <StyledFormDialog
       {...muiDialogV5(modal)}
@@ -397,8 +397,8 @@ const CourseEnrollmentDialogInner: React.FC<CourseEnrollmentDialogProps> = ({
       onSubmit={async (e) => {
         e.preventDefault()
         if (!run) return
-        if (!(await ensureCompliance())) return
-        createEnrollment.mutate(
+        await mutateWithCompliance(
+          createEnrollment,
           {
             run_id: run.id,
           },

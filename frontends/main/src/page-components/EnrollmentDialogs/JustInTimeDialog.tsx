@@ -35,6 +35,19 @@ import {
 } from "./complianceFields"
 import type { JitField } from "./complianceFields"
 
+type JustInTimeDialogProps = {
+  rejectedFields?: JitField[]
+  /**
+   * Retries the rejected action once the profile is saved, resolving with any
+   * fields that are still rejected - the dialog stays open on those, and
+   * closes once none are left.
+   */
+  retry?: () => Promise<JitField[]>
+}
+
+const rejectedFieldMessage = (label: string) =>
+  `Please enter a valid ${label.toLowerCase()}.`
+
 const SelectPlaceholder = styled("span")(({ theme }) => ({
   color: theme.custom.colors.silverGrayDark,
 }))
@@ -81,8 +94,18 @@ const errorPaths = (body: unknown, prefix = ""): string[] => {
  * Resolves `true` once the profile has been saved and `false` if the user backs
  * out, so callers can continue or abandon the action that triggered it. This
  * dialog only updates the profile — it does not enroll.
+ *
+ * `rejectedFields` opens it after an enrollment was rejected because the
+ * export compliance check couldn't use those fields (see
+ * `rejectedComplianceFields`): they're highlighted so the learner knows what
+ * to correct, even though none of them is empty. With `retry`, submitting
+ * also retries the enrollment, and a further rejection updates the
+ * highlighted fields in place rather than closing the dialog.
  */
-const JustInTimeDialogInner: React.FC = () => {
+const JustInTimeDialogInner: React.FC<JustInTimeDialogProps> = ({
+  rejectedFields = [],
+  retry,
+}) => {
   const modal = NiceModal.useModal()
   const user = useQuery(mitxUserQueries.me())
   const countries = useQuery(mitxUserQueries.countries())
@@ -93,6 +116,7 @@ const JustInTimeDialogInner: React.FC = () => {
   const updateUser = useUpdateUserMutation({ meta: SILENCE_ERROR_TOAST })
   const fieldsRef = React.useRef<HTMLDivElement>(null)
   const [subdivisionNotice, setSubdivisionNotice] = React.useState("")
+  const [rejected, setRejected] = React.useState(rejectedFields)
 
   const formik = useFormik({
     enableReinitialize: true,
@@ -137,10 +161,28 @@ const JustInTimeDialogInner: React.FC = () => {
         }
         return
       }
+      if (retry) {
+        setRejected([])
+        const stillRejected = await retry()
+        if (stillRejected.length > 0) {
+          setRejected(stillRejected)
+          return
+        }
+      }
       modal.resolve(true)
       modal.hide()
     },
   })
+
+  const focusField = React.useCallback((field: JitField) => {
+    const wrapper = fieldsRef.current?.querySelector(
+      `[data-jit-field="${field}"]`,
+    )
+    wrapper?.querySelector<HTMLElement>(FOCUSABLE_CONTROL)?.focus()
+    // Bring the whole field into view, error text included - focusing only
+    // scrolls far enough to show the input.
+    wrapper?.scrollIntoView?.({ block: "nearest" })
+  }, [])
 
   // Move focus to the first field that failed validation. Errors only change on
   // submit (validateOnChange/Blur are off), so this cannot steal focus mid-typing.
@@ -151,11 +193,23 @@ const JustInTimeDialogInner: React.FC = () => {
     const firstInvalid = JIT_FIELDS.find((field) => errors[field])
     if (!firstInvalid) return
     focusedSubmitCount.current = submitCount
-    fieldsRef.current
-      ?.querySelector(`[data-jit-field="${firstInvalid}"]`)
-      ?.querySelector<HTMLElement>(FOCUSABLE_CONTROL)
-      ?.focus()
-  }, [submitCount, errors])
+    focusField(firstInvalid)
+  }, [submitCount, errors, focusField])
+
+  // Likewise for the first field an enrollment was rejected on - once the
+  // dialog has finished opening, since MUI moves focus into it on entering,
+  // and again whenever a retry is rejected.
+  const firstRejected = JIT_FIELDS.find((field) => rejected.includes(field))
+  React.useEffect(() => {
+    if (firstRejected) focusField(firstRejected)
+  }, [rejected, firstRejected, focusField])
+  const dialogProps = muiDialogV5(modal)
+  const TransitionProps = {
+    ...dialogProps.TransitionProps,
+    onEntered: () => {
+      if (firstRejected) focusField(firstRejected)
+    },
+  }
 
   const selectedCountry = countries.data?.find(
     ({ code }) => code === formik.values.country,
@@ -203,15 +257,22 @@ const JustInTimeDialogInner: React.FC = () => {
 
     const name = field
     const value = formik.values[name]
+    const label =
+      name === "postal_code"
+        ? postalCodeLabel(formik.values.country)
+        : spec.label
+    // A rejected field is flagged until the learner submits again; the
+    // schema's own errors take precedence. Derived here rather than seeded as
+    // Formik `initialErrors`, which FormDialog's reset-on-open would clear.
+    const errorText =
+      errors[name] ??
+      (rejected.includes(name) ? rejectedFieldMessage(label) : undefined)
     const shared = {
       name,
-      label:
-        name === "postal_code"
-          ? postalCodeLabel(formik.values.country)
-          : spec.label,
+      label,
       required: isFieldRequired(name, formik.values.country),
-      error: !!errors[name],
-      errorText: errors[name],
+      error: !!errorText,
+      errorText,
       fullWidth: true,
     }
 
@@ -283,7 +344,8 @@ const JustInTimeDialogInner: React.FC = () => {
       fullWidth
       onReset={formik.resetForm}
       onSubmit={formik.handleSubmit}
-      {...muiDialogV5(modal)}
+      {...dialogProps}
+      TransitionProps={TransitionProps}
       onClose={handleClose}
       actions={
         <DialogActions>
@@ -311,7 +373,9 @@ const JustInTimeDialogInner: React.FC = () => {
     >
       <Stack direction="column" gap="24px" ref={fieldsRef}>
         <Typography variant="body1">
-          We need a bit more info before you can enroll.
+          {rejectedFields.length > 0
+            ? "We couldn't verify some of your details. Please check the highlighted fields and try again."
+            : "We need a bit more info before you can enroll."}
         </Typography>
         {visibleFields.map((field) => (
           <div key={field} data-jit-field={field}>

@@ -113,7 +113,7 @@ const UpgradeBanner: React.FC<
   const replaceBasketItem = useReplaceBasketItem(upgradeErrorMeta)
   const createVerifiedProgramEnrollment =
     useCreateVerifiedProgramEnrollment(upgradeErrorMeta)
-  const { ensureCompliance } = useComplianceGate()
+  const { mutateWithCompliance } = useComplianceGate()
 
   const programRequestBody = programReadableIds?.length
     ? programReadableIds
@@ -132,25 +132,26 @@ const UpgradeBanner: React.FC<
     e.preventDefault()
 
     if (canOneClickUpgrade) {
-      // Gated before the try/catch: a dismissed compliance dialog is not an
-      // upgrade failure and must not surface onUpgradeFailure's error
-      // message. The checkout fallback below is gated inside
-      // useReplaceBasketItem instead, so it isn't checked twice.
-      if (!(await ensureCompliance())) return
-      try {
-        await createVerifiedProgramEnrollment.mutateAsync({
-          courserun_id: readableId!,
-          request_body: programRequestBody,
-        })
-        if (coursewareUrl) {
-          window.location.href = coursewareUrl
-        }
-      } catch (error) {
-        onUpgradeFailure?.(
-          badRequestDetail(error) ??
-            "There was a problem upgrading your enrollment. Please try again.",
-        )
-      }
+      // A dismissed compliance dialog is not an upgrade failure, so
+      // mutateWithCompliance skips onError for it. The checkout fallback below
+      // is gated inside useReplaceBasketItem instead, so it isn't checked twice.
+      await mutateWithCompliance(
+        createVerifiedProgramEnrollment,
+        { courserun_id: readableId!, request_body: programRequestBody },
+        {
+          onSuccess: () => {
+            if (coursewareUrl) {
+              window.location.href = coursewareUrl
+            }
+          },
+          onError: (error) => {
+            onUpgradeFailure?.(
+              badRequestDetail(error) ??
+                "There was a problem upgrading your enrollment. Please try again.",
+            )
+          },
+        },
+      )
       return
     }
 
@@ -340,16 +341,16 @@ export const EnrolledCourseCard = ({
   const createB2bEnrollment = useCreateB2bEnrollment({
     meta: SILENCE_ERROR_TOAST,
   })
-  const { ensureCompliance } = useComplianceGate()
+  const { mutateWithCompliance } = useComplianceGate()
   const handleContinueClick = async (e: React.MouseEvent<HTMLElement>) => {
     if (!needsContractUpgrade || !run?.courseware_id || !coursewareUrl) return
     e.preventDefault()
     if (createB2bEnrollment.isPending) return
-    if (!(await ensureCompliance())) return
     const b2bProgramId =
       ancestorContext?.parentProgramReadableIds?.[0] ??
       ancestorContext?.programEnrollment?.program.readable_id
-    createB2bEnrollment.mutate(
+    await mutateWithCompliance(
+      createB2bEnrollment,
       {
         readable_id: run.courseware_id,
         B2BEnrollRequestRequest: b2bProgramId

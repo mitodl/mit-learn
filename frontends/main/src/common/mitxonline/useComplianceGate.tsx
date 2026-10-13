@@ -1,9 +1,14 @@
 import React from "react"
 import NiceModal from "@ebay/nice-modal-react"
 import { useQueryClient } from "@tanstack/react-query"
+import type { MutateOptions, UseMutationResult } from "@tanstack/react-query"
 import { mitxUserQueries } from "api/mitxonline-hooks/user"
 import { JustInTimeDialog } from "@/page-components/EnrollmentDialogs/JustInTimeDialog"
-import { needsComplianceInfo } from "@/page-components/EnrollmentDialogs/complianceFields"
+import {
+  needsComplianceInfo,
+  rejectedComplianceFields,
+} from "@/page-components/EnrollmentDialogs/complianceFields"
+import type { JitField } from "@/page-components/EnrollmentDialogs/complianceFields"
 
 /**
  * Holds the single in-flight compliance check for the whole tree.
@@ -52,6 +57,12 @@ const ComplianceGateProvider: React.FC<{ children: React.ReactNode }> = ({
  * `useMutation` contract has no way to express "cancelled" that does not either
  * reject (which reads as a failure to the caller) or resolve as if the
  * enrollment had happened.
+ *
+ * The profile can also be complete yet still unusable: CyberSource refuses
+ * some values (e.g. a last name of "."), and MITx Online then rejects the
+ * enrollment naming the fields to fix. Enrollments therefore go through
+ * `mutateWithCompliance`, which gates them and recovers from that rejection by
+ * opening the dialog on those fields and retrying from it as they correct them.
  */
 const useComplianceGate = () => {
   const queryClient = useQueryClient()
@@ -109,7 +120,77 @@ const useComplianceGate = () => {
     return promise
   }, [queryClient, inFlight])
 
-  return { ensureCompliance }
+  /**
+   * `mutation.mutate(variables, options)`, gated by `ensureCompliance`.
+   *
+   * If MITx Online rejects it on profile fields the dialog can fix (see
+   * `rejectedComplianceFields`), the dialog opens on those fields, and each
+   * submit saves the profile and retries the mutation while it stays open -
+   * every attempt is another real check - until one isn't rejected.
+   *
+   * While the dialog handles a rejection the mutation is reset, so an inline
+   * error alert driven by it doesn't show behind the dialog, and `options`'
+   * `onError` doesn't run. The global error toast skips these rejections too
+   * (see `handleMutationError`), so a dismissed dialog is silent, like any
+   * other cancelled gate; `onSettled` still runs then, since callers use it
+   * for what happens whatever the outcome.
+   */
+  const mutateWithCompliance = React.useCallback(
+    async <TData, TError, TVariables, TContext>(
+      mutation: Pick<
+        UseMutationResult<TData, TError, TVariables, TContext>,
+        "mutate" | "reset"
+      >,
+      variables: TVariables,
+      options: MutateOptions<TData, TError, TVariables, TContext> = {},
+    ): Promise<void> => {
+      if (!(await ensureCompliance())) return
+
+      // Settles with the fields the attempt was rejected on, or [] for any
+      // other outcome, which `options` has then handled as usual.
+      let lastRejection: { error: TError | null; context?: TContext } = {
+        error: null,
+      }
+      const attempt = () =>
+        new Promise<JitField[]>((resolve) =>
+          mutation.mutate(variables, {
+            ...options,
+            onError: (error, ...rest) => {
+              if (rejectedComplianceFields(error).length > 0) return
+              options.onError?.(error, ...rest)
+            },
+            onSettled: (data, error, vars, context) => {
+              const rejectedFields = rejectedComplianceFields(error)
+              if (rejectedFields.length > 0) {
+                lastRejection = { error, context }
+                mutation.reset()
+              } else {
+                options.onSettled?.(data, error, vars, context)
+              }
+              resolve(rejectedFields)
+            },
+          }),
+        )
+
+      const rejectedFields = await attempt()
+      if (rejectedFields.length === 0) return
+      const saved = await NiceModal.show(JustInTimeDialog, {
+        rejectedFields,
+        retry: attempt,
+      })
+      if (saved !== true) {
+        options.onSettled?.(
+          undefined,
+          lastRejection.error,
+          variables,
+          lastRejection.context,
+        )
+      }
+    },
+    [ensureCompliance],
+  )
+
+  return { ensureCompliance, mutateWithCompliance }
 }
 
 export { useComplianceGate, ComplianceGateProvider }

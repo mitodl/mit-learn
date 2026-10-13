@@ -10,6 +10,7 @@ import {
   requiresSubdivision,
   subdivisionOptions,
   yearOfBirthOptions,
+  rejectedComplianceFields,
 } from "./complianceFields"
 import type { JitFormValues } from "./complianceFields"
 
@@ -319,5 +320,40 @@ describe("yearOfBirthOptions", () => {
     expect(options[0]).toBe(newest.toString())
     expect(options.at(-1)).toBe("1900")
     expect(options).toHaveLength(newest - 1900 + 1)
+  })
+})
+
+describe("rejectedComplianceFields", () => {
+  const apiError = (status: number, data: unknown) => ({
+    response: {
+      status,
+      data,
+    },
+  })
+
+  test("returns the rejected fields the dialog collects", () => {
+    const error = apiError(400, {
+      detail: "Unable to complete enrollment. Error code: CS_701.",
+      missing_fields: ["email", "last_name", "postal_code"],
+    })
+    expect(rejectedComplianceFields(error)).toEqual([
+      "last_name",
+      "postal_code",
+    ])
+  })
+
+  test.each([
+    {
+      desc: "a rejection naming only fields the dialog can't fix",
+      error: apiError(400, { missing_fields: ["email"] }),
+    },
+    {
+      desc: "a 400 without missing_fields",
+      error: apiError(400, { detail: "Unable to complete enrollment." }),
+    },
+    { desc: "a 500", error: apiError(500, { missing_fields: ["city"] }) },
+    { desc: "a non-API error", error: new Error("boom") },
+  ])("is empty for $desc", ({ error }) => {
+    expect(rejectedComplianceFields(error)).toEqual([])
   })
 })

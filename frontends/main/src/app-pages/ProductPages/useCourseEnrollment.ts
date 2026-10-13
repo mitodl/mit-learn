@@ -70,7 +70,7 @@ export const useCourseEnrollment = (
   const posthog = usePostHog()
   // Paid enrollments are gated inside useReplaceBasketItem; the free track
   // calls the enrollment endpoint directly and so gates here.
-  const { ensureCompliance } = useComplianceGate()
+  const { mutateWithCompliance } = useComplianceGate()
 
   const isEnrolledInSelected =
     selectedRun !== undefined && enrolledRunIds.includes(selectedRun.id)
@@ -115,8 +115,8 @@ export const useCourseEnrollment = (
         }
       } else if (kind === "free") {
         if (selectedRun) {
-          if (!(await ensureCompliance())) return
-          createEnrollment.mutate(
+          await mutateWithCompliance(
+            createEnrollment,
             { run_id: selectedRun.id },
             {
               onSuccess: () => {
