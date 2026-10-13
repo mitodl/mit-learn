@@ -560,7 +560,7 @@ describe("OrganizationCards", () => {
     it("stays on dashboard home after declining", async () => {
       const { contract } = setupContract(false)
       await user.click(await continueButton())
-      await user.click(await screen.findByRole("button", { name: "Decline" }))
+      await user.click(await screen.findByRole("button", { name: "Cancel" }))
 
       await waitFor(() =>
         expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),

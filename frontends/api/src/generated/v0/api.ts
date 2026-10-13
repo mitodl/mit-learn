@@ -1413,6 +1413,12 @@ export interface PaginatedFeedSourceList {
   previous?: string | null
   results: Array<FeedSource>
 }
+export interface PaginatedLearningResourceList {
+  count: number
+  next?: string | null
+  previous?: string | null
+  results: Array<LearningResource>
+}
 /**
  * Serializer for Profile
  */
@@ -2085,23 +2091,53 @@ export type RelationTypeEnum =
   (typeof RelationTypeEnum)[keyof typeof RelationTypeEnum]
 
 /**
- * * `news` - news * `events` - events
+ * * `course` - course * `program` - program * `learning_path` - learning_path * `podcast` - podcast * `podcast_episode` - podcast_episode * `video` - video * `video_playlist` - video_playlist * `document` - document
  */
 
 export const ResourceTypeEnumDescriptions = {
-  news: "news",
-  events: "events",
+  course: "course",
+  program: "program",
+  learning_path: "learning_path",
+  podcast: "podcast",
+  podcast_episode: "podcast_episode",
+  video: "video",
+  video_playlist: "video_playlist",
+  document: "document",
 } as const
 
 export const ResourceTypeEnum = {
   /**
-   * news
+   * course
    */
-  News: "news",
+  Course: "course",
   /**
-   * events
+   * program
    */
-  Events: "events",
+  Program: "program",
+  /**
+   * learning_path
+   */
+  LearningPath: "learning_path",
+  /**
+   * podcast
+   */
+  Podcast: "podcast",
+  /**
+   * podcast_episode
+   */
+  PodcastEpisode: "podcast_episode",
+  /**
+   * video
+   */
+  Video: "video",
+  /**
+   * video_playlist
+   */
+  VideoPlaylist: "video_playlist",
+  /**
+   * document
+   */
+  Document: "document",
 } as const
 
 export type ResourceTypeEnum =
@@ -2787,6 +2823,74 @@ export const ChannelsApiAxiosParamCreator = function (
       }
     },
     /**
+     * Resources in the channel\'s featured learning path, in the order the path lists them.
+     * @summary Channel Featured Resources
+     * @param {string} channel_type
+     * @param {string} name
+     * @param {number} [limit] Number of results to return per page.
+     * @param {number} [offset] The initial index from which to return the results.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    channelsTypeFeaturedList: async (
+      channel_type: string,
+      name: string,
+      limit?: number,
+      offset?: number,
+      options: RawAxiosRequestConfig = {},
+    ): Promise<RequestArgs> => {
+      // verify required parameter 'channel_type' is not null or undefined
+      assertParamExists(
+        "channelsTypeFeaturedList",
+        "channel_type",
+        channel_type,
+      )
+      // verify required parameter 'name' is not null or undefined
+      assertParamExists("channelsTypeFeaturedList", "name", name)
+      const localVarPath =
+        `/api/v0/channels/type/{channel_type}/{name}/featured/`
+          .replace("{channel_type}", encodeURIComponent(String(channel_type)))
+          .replace("{name}", encodeURIComponent(String(name)))
+      // use dummy base URL string because the URL constructor only accepts absolute URLs.
+      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL)
+      let baseOptions
+      if (configuration) {
+        baseOptions = configuration.baseOptions
+      }
+
+      const localVarRequestOptions = {
+        method: "GET",
+        ...baseOptions,
+        ...options,
+      }
+      const localVarHeaderParameter = {} as any
+      const localVarQueryParameter = {} as any
+
+      if (limit !== undefined) {
+        localVarQueryParameter["limit"] = limit
+      }
+
+      if (offset !== undefined) {
+        localVarQueryParameter["offset"] = offset
+      }
+
+      localVarHeaderParameter["Accept"] = "application/json"
+
+      setSearchParams(localVarUrlObj, localVarQueryParameter)
+      let headersFromBaseOptions =
+        baseOptions && baseOptions.headers ? baseOptions.headers : {}
+      localVarRequestOptions.headers = {
+        ...localVarHeaderParameter,
+        ...headersFromBaseOptions,
+        ...options.headers,
+      }
+
+      return {
+        url: toPathString(localVarUrlObj),
+        options: localVarRequestOptions,
+      }
+    },
+    /**
      * View for retrieving an individual channel by type and name
      * @summary Channel Detail Lookup by channel type and name
      * @param {string} channel_type
@@ -2948,6 +3052,49 @@ export const ChannelsApiFp = function (configuration?: Configuration) {
         )(axios, localVarOperationServerBasePath || basePath)
     },
     /**
+     * Resources in the channel\'s featured learning path, in the order the path lists them.
+     * @summary Channel Featured Resources
+     * @param {string} channel_type
+     * @param {string} name
+     * @param {number} [limit] Number of results to return per page.
+     * @param {number} [offset] The initial index from which to return the results.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    async channelsTypeFeaturedList(
+      channel_type: string,
+      name: string,
+      limit?: number,
+      offset?: number,
+      options?: RawAxiosRequestConfig,
+    ): Promise<
+      (
+        axios?: AxiosInstance,
+        basePath?: string,
+      ) => AxiosPromise<PaginatedLearningResourceList>
+    > {
+      const localVarAxiosArgs =
+        await localVarAxiosParamCreator.channelsTypeFeaturedList(
+          channel_type,
+          name,
+          limit,
+          offset,
+          options,
+        )
+      const localVarOperationServerIndex = configuration?.serverIndex ?? 0
+      const localVarOperationServerBasePath =
+        operationServerMap["ChannelsApi.channelsTypeFeaturedList"]?.[
+          localVarOperationServerIndex
+        ]?.url
+      return (axios, basePath) =>
+        createRequestFunction(
+          localVarAxiosArgs,
+          globalAxios,
+          BASE_PATH,
+          configuration,
+        )(axios, localVarOperationServerBasePath || basePath)
+    },
+    /**
      * View for retrieving an individual channel by type and name
      * @summary Channel Detail Lookup by channel type and name
      * @param {string} channel_type
@@ -3045,6 +3192,27 @@ export const ChannelsApiFactory = function (
         .then((request) => request(axios, basePath))
     },
     /**
+     * Resources in the channel\'s featured learning path, in the order the path lists them.
+     * @summary Channel Featured Resources
+     * @param {ChannelsApiChannelsTypeFeaturedListRequest} requestParameters Request parameters.
+     * @param {*} [options] Override http request option.
+     * @throws {RequiredError}
+     */
+    channelsTypeFeaturedList(
+      requestParameters: ChannelsApiChannelsTypeFeaturedListRequest,
+      options?: RawAxiosRequestConfig,
+    ): AxiosPromise<PaginatedLearningResourceList> {
+      return localVarFp
+        .channelsTypeFeaturedList(
+          requestParameters.channel_type,
+          requestParameters.name,
+          requestParameters.limit,
+          requestParameters.offset,
+          options,
+        )
+        .then((request) => request(axios, basePath))
+    },
+    /**
      * View for retrieving an individual channel by type and name
      * @summary Channel Detail Lookup by channel type and name
      * @param {ChannelsApiChannelsTypeRetrieveRequest} requestParameters Request parameters.
@@ -3101,6 +3269,25 @@ export interface ChannelsApiChannelsRetrieveRequest {
    * A unique integer value identifying this channel.
    */
   readonly id: number
+}
+
+/**
+ * Request parameters for channelsTypeFeaturedList operation in ChannelsApi.
+ */
+export interface ChannelsApiChannelsTypeFeaturedListRequest {
+  readonly channel_type: string
+
+  readonly name: string
+
+  /**
+   * Number of results to return per page.
+   */
+  readonly limit?: number
+
+  /**
+   * The initial index from which to return the results.
+   */
+  readonly offset?: number
 }
 
 /**
@@ -3166,6 +3353,28 @@ export class ChannelsApi extends BaseAPI {
   ) {
     return ChannelsApiFp(this.configuration)
       .channelsRetrieve(requestParameters.id, options)
+      .then((request) => request(this.axios, this.basePath))
+  }
+
+  /**
+   * Resources in the channel\'s featured learning path, in the order the path lists them.
+   * @summary Channel Featured Resources
+   * @param {ChannelsApiChannelsTypeFeaturedListRequest} requestParameters Request parameters.
+   * @param {*} [options] Override http request option.
+   * @throws {RequiredError}
+   */
+  public channelsTypeFeaturedList(
+    requestParameters: ChannelsApiChannelsTypeFeaturedListRequest,
+    options?: RawAxiosRequestConfig,
+  ) {
+    return ChannelsApiFp(this.configuration)
+      .channelsTypeFeaturedList(
+        requestParameters.channel_type,
+        requestParameters.name,
+        requestParameters.limit,
+        requestParameters.offset,
+        options,
+      )
       .then((request) => request(this.axios, this.basePath))
   }
 

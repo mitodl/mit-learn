@@ -113,7 +113,6 @@ export const DescriptionText = styled(Typography)<
   color: theme.custom.colors.darkGray2,
   marginBottom: "22px",
   fontSize: "18px",
-  fontWeight: theme.typography.fontWeightMedium,
   lineHeight: "30px",
   [theme.breakpoints.down("sm")]: {
     fontSize: "16px",

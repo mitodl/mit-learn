@@ -1740,7 +1740,9 @@ describe("ContractContent", () => {
       {
         language: LanguageEnum.En,
         variant_industry: "",
+        variant_industry_label: "Original",
         variant_length: "",
+        variant_length_label: "Full",
         active: true,
         b2b_only: true,
         default_variant: true,
@@ -1748,7 +1750,9 @@ describe("ContractContent", () => {
       {
         language: LanguageEnum.EsEs,
         variant_industry: "",
+        variant_industry_label: "Original",
         variant_length: "",
+        variant_length_label: "Full",
         active: true,
         b2b_only: true,
         default_variant: false,
@@ -1832,7 +1836,9 @@ describe("ContractContent", () => {
       {
         language: LanguageEnum.En,
         variant_industry: "",
+        variant_industry_label: "Original",
         variant_length: "",
+        variant_length_label: "Full",
         active: true,
         b2b_only: true,
         default_variant: true,
@@ -1840,7 +1846,9 @@ describe("ContractContent", () => {
       {
         language: LanguageEnum.EsEs,
         variant_industry: "",
+        variant_industry_label: "Original",
         variant_length: "",
+        variant_length_label: "Full",
         active: true,
         b2b_only: true,
         default_variant: false,
@@ -1921,7 +1929,9 @@ describe("ContractContent", () => {
       {
         language: LanguageEnum.En,
         variant_industry: "",
+        variant_industry_label: "Original",
         variant_length: "",
+        variant_length_label: "Full",
         active: true,
         b2b_only: true,
         default_variant: true,
@@ -1929,7 +1939,9 @@ describe("ContractContent", () => {
       {
         language: LanguageEnum.EsEs,
         variant_industry: "",
+        variant_industry_label: "Original",
         variant_length: "",
+        variant_length_label: "Full",
         active: true,
         b2b_only: true,
         default_variant: false,
@@ -2033,7 +2045,9 @@ describe("ContractContent", () => {
       {
         language: LanguageEnum.En,
         variant_industry: "",
+        variant_industry_label: "Original",
         variant_length: "",
+        variant_length_label: "Full",
         active: true,
         b2b_only: true,
         default_variant: true,
@@ -2041,7 +2055,9 @@ describe("ContractContent", () => {
       {
         language: LanguageEnum.EsEs,
         variant_industry: "",
+        variant_industry_label: "Original",
         variant_length: "",
+        variant_length_label: "Full",
         active: true,
         b2b_only: true,
         default_variant: false,
@@ -2150,7 +2166,9 @@ describe("ContractContent", () => {
       {
         language: LanguageEnum.En,
         variant_industry: "",
+        variant_industry_label: "Original",
         variant_length: "",
+        variant_length_label: "Full",
         active: true,
         b2b_only: true,
         default_variant: true,
@@ -2158,7 +2176,9 @@ describe("ContractContent", () => {
       {
         language: LanguageEnum.EsEs,
         variant_industry: "",
+        variant_industry_label: "Original",
         variant_length: "",
+        variant_length_label: "Full",
         active: true,
         b2b_only: true,
         default_variant: false,
@@ -2227,7 +2247,9 @@ describe("ContractContent", () => {
       {
         language: LanguageEnum.En,
         variant_industry: "",
+        variant_industry_label: "Original",
         variant_length: "",
+        variant_length_label: "Full",
         active: true,
         b2b_only: true,
         default_variant: true,
@@ -2235,7 +2257,9 @@ describe("ContractContent", () => {
       {
         language: LanguageEnum.EsEs,
         variant_industry: "",
+        variant_industry_label: "Original",
         variant_length: "",
+        variant_length_label: "Full",
         active: true,
         b2b_only: true,
         default_variant: false,
@@ -2723,7 +2747,7 @@ describe("ContractContent data consent", () => {
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
   })
 
-  test("Decline records false and redirects to dashboard home", async () => {
+  test("Cancel records false and redirects to dashboard home", async () => {
     const { org, contract, mitxOnlineUser } = setupConsent(null)
     setMockResponse.post(urls.b2b.dataConsent(contract.id), undefined, {
       code: 204,
@@ -2741,12 +2765,12 @@ describe("ContractContent data consent", () => {
         },
       ],
     })
-    await user.click(screen.getByRole("button", { name: "Decline" }))
+    await user.click(screen.getByRole("button", { name: "Cancel" }))
 
     await waitFor(() => {
       expect(mockRouter.asPath).toBe(DASHBOARD_HOME)
     })
-    expect(screen.getByRole("button", { name: "Decline" })).toHaveAttribute(
+    expect(screen.getByRole("button", { name: "Cancel" })).toHaveAttribute(
       "aria-disabled",
       "true",
     )
@@ -2806,7 +2830,7 @@ describe("ContractContent data consent", () => {
     renderContract(org, contract.slug)
     await screen.findByRole("dialog")
 
-    await user.click(screen.getByRole("button", { name: "Decline" }))
+    await user.click(screen.getByRole("button", { name: "Cancel" }))
 
     expect(await screen.findByRole("alert")).toHaveTextContent(
       "We couldn't save your response. Please try again.",

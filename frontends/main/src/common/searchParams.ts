@@ -109,6 +109,7 @@ const SERVER_KEYED_PARAMS = [
   "status",
   "module",
   "needs_attention",
+  "view",
 ] as const
 
 type ServerSearchParam = (typeof SERVER_KEYED_PARAMS)[number]

@@ -1,7 +1,6 @@
 from django.conf import settings
 from django.db import transaction
 from django.shortcuts import get_object_or_404
-from django.utils.decorators import method_decorator
 from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.utils import (
     OpenApiParameter,
@@ -18,7 +17,7 @@ from rest_framework.views import APIView
 
 from learning_resources.permissions import is_admin_user
 from main.constants import VALID_HTTP_METHODS
-from main.utils import cache_page_per_user, clear_views_cache
+from main.utils import clear_views_cache
 from website_content.api import (
     content_published_actions,
     content_unpublished_actions,
@@ -80,15 +79,10 @@ class WebsiteContentViewSet(viewsets.ModelViewSet):
             .order_by("-publish_date", "-id")
         )
 
-    @method_decorator(
-        cache_page_per_user(
-            settings.REDIS_VIEW_CACHE_DURATION,
-            cache="redis",
-            key_prefix="website_content",
-        )
-    )
-    def list(self, request, *args, **kwargs):
-        return super().list(request, *args, **kwargs)
+    # Not cached: the response depends on the caller (editors also get drafts).
+    # Django's cache_page can't vary this by user -- it stores the entry before
+    # SessionMiddleware adds `Vary: Cookie`, so every caller would share it.
+    # See https://github.com/mitodl/hq/issues/13846
 
     def _reloaded_for_response(self, content):
         """
@@ -106,13 +100,17 @@ class WebsiteContentViewSet(viewsets.ModelViewSet):
         """
         return self.get_queryset().get(pk=content.pk)
 
-    # NOTE: clear the view cache on every mutation, published or not -- the
-    # staff listing view is cached and includes unpublished content, so a draft
-    # create/edit/delete can change a cached response too. Deferred to
-    # on_commit so it runs after the write is durable.
+    # A write clears the view cache when it changes what a reader can see. A
+    # published article is mirrored into a `LearningResource`, and the
+    # resource, search, featured and channel endpoints serving it are cached,
+    # as are the news feeds; a draft is in none of them. So a draft saved as a
+    # draft clears nothing: the editor autosaves every couple of seconds, and
+    # each clear takes every view cache rather than a prefix.
+    # Deferred to on_commit so it runs after the write is durable.
     def perform_create(self, serializer):
         content = serializer.save(user=self.request.user)
-        transaction.on_commit(clear_views_cache)
+        if content.is_published:
+            transaction.on_commit(clear_views_cache)
         purge_content_on_save(content)
         content_published_actions(content=content)
         serializer.instance = self._reloaded_for_response(content)
@@ -129,10 +127,11 @@ class WebsiteContentViewSet(viewsets.ModelViewSet):
             # now-private page and the listing still need clearing.
             purge_content_on_unpublish(content)
             content_unpublished_actions(content=content)
-        # Last here, unlike on create: the unpublish plugins take the news feed
-        # entry out synchronously, and clearing the cache before that ran would
-        # let any request in between re-cache the listing that still has it.
-        transaction.on_commit(clear_views_cache)
+        if was_published or content.is_published:
+            # Last here, unlike on create: the unpublish plugins take the news
+            # feed entry out synchronously, and clearing the cache before that
+            # ran would let any request in between re-cache a feed with it.
+            transaction.on_commit(clear_views_cache)
         serializer.instance = self._reloaded_for_response(content)
 
     def perform_destroy(self, instance):
@@ -144,7 +143,8 @@ class WebsiteContentViewSet(viewsets.ModelViewSet):
         # Soft delete: SOFT_DELETE policy stamps `deleted` and leaves the row
         # in place for recovery/audit.
         instance.delete()
-        transaction.on_commit(clear_views_cache)
+        # No clear: only a draft reaches here, and a draft is in none of the
+        # cached responses, so removing one changes nothing a reader sees.
 
     @extend_schema(
         summary="Retrieve by ID or slug",

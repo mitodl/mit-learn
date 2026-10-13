@@ -184,9 +184,7 @@ describe("DashboardLayout", () => {
     expect(tab).toHaveAttribute("data-disable-nprogress", "true")
     expect(mobileTab).toHaveAttribute("data-disable-nprogress", "true")
     await userEvent.click(tab)
-    await userEvent.click(
-      await screen.findByRole("button", { name: "Decline" }),
-    )
+    await userEvent.click(await screen.findByRole("button", { name: "Cancel" }))
 
     await waitFor(() => expect(mockRouter.asPath).toBe(DASHBOARD_HOME))
     expect(screen.getByText("Response recorded.")).toBeInTheDocument()

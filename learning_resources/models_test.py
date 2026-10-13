@@ -78,7 +78,7 @@ def test_best_run_and_published_runs_ignore_variant_runs():
     b2b_run = LearningResourceRunFactory.create(
         learning_resource=resource,
         published=True,
-        is_b2b=True,
+        b2b_only=True,
         is_variant=True,
         start_date=now + timedelta(days=1),
         end_date=now + timedelta(days=90),
@@ -88,7 +88,6 @@ def test_best_run_and_published_runs_ignore_variant_runs():
     public_run = LearningResourceRunFactory.create(
         learning_resource=resource,
         published=True,
-        is_b2b=False,
         is_variant=False,
         start_date=now + timedelta(days=10),
         end_date=now + timedelta(days=100),
