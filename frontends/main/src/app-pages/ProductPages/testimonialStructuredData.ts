@@ -6,20 +6,19 @@ export function buildTestimonialStructuredData(
   itemReviewedName: string,
   itemReviewedDescription?: string,
 ): Record<string, unknown> | null {
-  if (!itemReviewedName) return null
+  const name = itemReviewedName.trim()
+  if (!name) return null
 
   // Google drops a Review with no author, and only allows reviewRating to be
   // omitted when datePublished is present.
   const reviews = testimonials
-    .filter(
-      (testimonial) => testimonial.name.trim() && testimonial.date_published,
-    )
     .map((testimonial) => ({
       "@type": "Review",
       author: { "@type": "Person", name: testimonial.name.trim() },
       datePublished: testimonial.date_published,
       reviewBody: testimonial.quote,
     }))
+    .filter((review) => review.author.name && review.datePublished)
 
   if (!reviews.length) return null
 
@@ -30,7 +29,7 @@ export function buildTestimonialStructuredData(
   return {
     "@context": "https://schema.org",
     "@type": "Course",
-    name: itemReviewedName,
+    name,
     // Course requires description, but an empty value is worse than none
     ...(description ? { description } : {}),
     review: reviews,
