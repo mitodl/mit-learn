@@ -73,6 +73,8 @@ const v1Course: PartialFactory<V1CourseWithCourseRuns> = (overrides = {}) => {
         live: faker.datatype.boolean(),
         course_number: faker.lorem.word(),
         language_label: "",
+        variant_industry_label: "Original",
+        variant_length_label: "Full",
         products: [
           {
             id: faker.number.int(),
@@ -125,6 +127,8 @@ const courseRun: PartialFactory<CourseRunV2> = (overrides = {}) => {
     live: faker.datatype.boolean(),
     course_number: faker.lorem.word(),
     language_label: "",
+    variant_industry_label: "Original",
+    variant_length_label: "Full",
     products: [product()],
     approved_flexible_price_exists: faker.datatype.boolean(),
     enrollment_modes: Array.from({
