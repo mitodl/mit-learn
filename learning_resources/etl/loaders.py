@@ -55,6 +55,8 @@ from learning_resources.models import (
     Program,
     RunInstructorRelationship,
     TutorProblemFile,
+    Unit,
+    UnitContentFile,
     Video,
     VideoChannel,
     VideoPlaylist,
@@ -1162,6 +1164,59 @@ def load_content_files(
 
         return content_files_ids
     return None
+
+
+def load_course_units(run: LearningResourceRun, units_data: list[dict]) -> list[int]:
+    """
+    Replace a run's units with the ones built from its latest archive. Units are
+    upserted on (run, external_id) so their ids stay stable across loads, and
+    the run's units missing from units_data are deleted. Only the run's
+    published content files are linked, and a unit left with none is dropped.
+
+    Args:
+        run (LearningResourceRun): the run the units belong to
+        units_data (list of dict): units as returned by olx_course_units. Empty
+            means the outline could not be read, and the run's units are kept
+
+    Returns:
+        list of int: ids of the run's units after the load
+    """
+    if not units_data:
+        return list(run.units.values_list("id", flat=True))
+    file_ids = dict(
+        ContentFile.objects.filter(run=run, published=True).values_list("key", "id")
+    )
+    unit_ids = []
+    position = 0
+    with transaction.atomic():
+        for unit_data in units_data:
+            links = {
+                file_ids[key]: relation
+                for key, relation in unit_data["content_files"].items()
+                if key in file_ids
+            }
+            if not links:
+                continue
+            is_ordered = unit_data["kind"] == Unit.Kind.UNIT
+            unit, _ = Unit.objects.update_or_create(
+                run=run,
+                external_id=unit_data["external_id"],
+                defaults={
+                    "kind": unit_data["kind"],
+                    "title": unit_data["title"][:1024],
+                    "url": unit_data.get("url") or "",
+                    "position": position if is_ordered else None,
+                },
+            )
+            position += is_ordered
+            UnitContentFile.objects.filter(unit=unit).delete()
+            UnitContentFile.objects.bulk_create(
+                UnitContentFile(unit=unit, content_file_id=file_id, relation=relation)
+                for file_id, relation in links.items()
+            )
+            unit_ids.append(unit.id)
+        run.units.exclude(id__in=unit_ids).delete()
+    return unit_ids
 
 
 def load_learning_materials(

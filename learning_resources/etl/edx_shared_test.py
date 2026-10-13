@@ -19,6 +19,7 @@ from learning_resources.etl.edx_shared import (
     normalize_run_id,
     process_course_archive,
     sync_edx_course_files,
+    sync_edx_course_units,
     unpublish_excluded_content_files,
 )
 from learning_resources.etl.utils import get_edx_module_id, get_s3_prefix_for_source
@@ -2165,3 +2166,63 @@ def test_process_course_archive_clears_stale_checksum_on_empty_archive(mocker):
     assert process_course_archive(bucket, key, run) is False
     bucket.download_file.assert_called_once()
     mock_load.assert_not_called()
+
+
+def test_sync_edx_course_units(staff_only_run):
+    """Units are rebuilt from the current archive for runs with published files"""
+    run = staff_only_run.run
+    files = {
+        name: ContentFileFactory.create(
+            run=run, key=get_edx_module_id(f"course/{name}", run), published=True
+        )
+        # the h_ok body shares the key of its html/h_ok.xml pointer
+        for name in ("html/h_ok.xml", "html/h_staff.xml")
+    }
+    # a course with no published files has no archive to read
+    empty_run = LearningResourceRunFactory.create(published=True)
+
+    rows = sync_edx_course_units(
+        staff_only_run.source,
+        [staff_only_run.course.id, empty_run.learning_resource.id],
+        [staff_only_run.key],
+    )
+
+    assert rows == [{"run_id": run.run_id, "units": 1, "linked": 1, "total": 2}]
+    unit = run.units.get()
+    assert unit.external_id == get_edx_module_id("sequential/seq_ok.xml", run)
+    assert list(unit.content_files.all()) == [files["html/h_ok.xml"]]
+    assert not empty_run.units.exists()
+
+
+def test_process_course_archive_loads_units(mocker):
+    """Units collected during the transform are loaded after the content files"""
+    key = "mitxonline/openedx/raw_data/course_xml/course-v1:Test+Course+R1/abc123.xml.tar.gz"
+    run = LearningResourceRunFactory.create(published=True)
+    mocker.patch(
+        "learning_resources.etl.edx_shared.calc_checksum", return_value="checksum"
+    )
+    unit_data = {"external_id": "seq"}
+
+    def fake_transform(*args, units, **kwargs):
+        yield {"key": "content.txt"}
+        units.append(unit_data)
+
+    mocker.patch(
+        "learning_resources.etl.edx_shared.transform_content_files",
+        side_effect=fake_transform,
+    )
+
+    def fake_load(run_arg, data, **kwargs):
+        list(data)  # consume the generator like the real loader
+        return [1]
+
+    mocker.patch(
+        "learning_resources.etl.edx_shared.load_content_files", side_effect=fake_load
+    )
+    mock_load_units = mocker.patch(
+        "learning_resources.etl.edx_shared.load_course_units"
+    )
+
+    process_course_archive(mocker.MagicMock(), key, run)
+
+    mock_load_units.assert_called_once_with(run, [unit_data])

@@ -42,6 +42,7 @@ from learning_resources.etl.edx_shared import (
     get_most_recent_course_archives,
     sync_edx_archive,
     sync_edx_course_files,
+    sync_edx_course_units,
     unpublish_excluded_content_files,
 )
 from learning_resources.etl.loaders import (
@@ -277,6 +278,35 @@ def unpublish_all_excluded_files(
                 unpublish_excluded_files.si(
                     ids, etl_source, archive_keys, dry_run=dry_run
                 )
+                for ids in chunks(resource_ids, chunk_size=chunk_size)
+            ]
+        )
+    )
+
+
+@app.task(acks_late=True, reject_on_worker_lost=True)
+def build_course_units(ids: list[int], etl_source: str, keys: list[str]):
+    """Rebuild units from current archives for a chunk of courses, a row per run"""
+    return sync_edx_course_units(etl_source, ids, keys)
+
+
+@app.task(bind=True)
+def build_all_course_units(
+    self, *, etl_source, chunk_size=None, learning_resource_ids=None
+):
+    """Fan out build_course_units over an edX source's current archives"""
+    if chunk_size is None:
+        chunk_size = settings.LEARNING_COURSE_ITERATOR_CHUNK_SIZE
+    archive_keys = get_most_recent_course_archives(etl_source)
+    resource_ids = (
+        _content_file_resource_ids(etl_source, learning_resource_ids)
+        .filter(runs__content_files__published=True)
+        .distinct()
+    )
+    return self.replace(
+        celery.group(
+            [
+                build_course_units.si(ids, etl_source, archive_keys)
                 for ids in chunks(resource_ids, chunk_size=chunk_size)
             ]
         )

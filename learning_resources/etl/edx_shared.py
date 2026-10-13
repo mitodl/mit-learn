@@ -2,6 +2,8 @@
 
 import logging
 import tarfile
+from collections.abc import Generator
+from contextlib import contextmanager
 from itertools import chain
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -13,13 +15,14 @@ from django.db.models import Prefetch, Q
 
 from learning_resources.constants import VALID_TEXT_FILE_TYPES
 from learning_resources.etl.constants import ETLSource
-from learning_resources.etl.loaders import load_content_files
+from learning_resources.etl.loaders import load_content_files, load_course_units
 from learning_resources.etl.utils import (
     calc_checksum,
     excluded_olx_paths,
     get_bucket_by_name,
     get_edx_module_id,
     get_s3_prefix_for_source,
+    olx_course_units,
     transform_content_files,
 )
 from learning_resources.models import ContentFile, LearningResourceRun
@@ -164,9 +167,14 @@ def process_course_archive(
             return True
         try:
             failed_keys = []
+            units = []
             content_files_data = iter(
                 transform_content_files(
-                    course_tarpath, run, overwrite=overwrite, failed_keys=failed_keys
+                    course_tarpath,
+                    run,
+                    overwrite=overwrite,
+                    failed_keys=failed_keys,
+                    units=units,
                 )
             )
             first = next(content_files_data, None)
@@ -188,6 +196,9 @@ def process_course_archive(
                 run.checksum = checksum
                 run.archive_key = key
                 run.save(update_fields=["checksum", "archive_key"])
+                # after the save, so a unit failure doesn't reload the files;
+                # backpopulate_course_units rebuilds units from the archive
+                load_course_units(run, units)
             # else: files yielded but none loaded — save nothing so the next
             # sync retries
         except:  # noqa: E722
@@ -385,6 +396,74 @@ def sync_edx_course_files(
     )
 
 
+@contextmanager
+def unpacked_archive(bucket, key: str) -> Generator[Path | None, None, None]:
+    """
+    Download and unpack a course archive, yielding the OLX directory inside it,
+    or None when the archive can't be read or holds no directory
+    """
+    with TemporaryDirectory() as tempdir:
+        tarpath = Path(tempdir, key.rsplit("/", maxsplit=1)[-1])
+        bucket.download_file(key, tarpath)
+        try:
+            with tarfile.open(tarpath) as tar:
+                tar.extractall(tempdir, filter="data")
+        except tarfile.ReadError:
+            log.exception("Error extracting %s, skipping", key)
+            yield None
+            return
+        yield next((p for p in Path(tempdir).iterdir() if p.is_dir()), None)
+
+
+def sync_edx_course_units(
+    etl_source: str, ids: list[int], keys: list[str]
+) -> list[dict]:
+    """
+    Rebuild the units of the runs matching the given archive keys from each
+    run's current archive, without re-extracting any content. Needed because
+    process_course_archive skips an archive that hasn't changed.
+
+    Args:
+        etl_source(str): The edx ETL source
+        ids(list of int): list of course ids to process
+        keys(list[str]): list of S3 archive keys to search through
+
+    Returns:
+        list of dict: a row per run with units built, counting its units, the
+            published content files they link and the published files in total
+    """
+    bucket = get_bucket_by_name(settings.COURSE_ARCHIVE_BUCKET_NAME)
+    run_lookup = build_run_lookup(etl_source, ids)
+    rows = []
+    for key in keys:
+        matching_runs = run_lookup.get(extract_run_id_from_key(etl_source, key))
+        if not matching_runs:
+            continue
+        run = max(matching_runs, key=lambda r: r.published)
+        published_files = ContentFile.objects.filter(run=run, published=True)
+        if not published_files.exists():
+            # units only link published files, so there is nothing to build
+            continue
+        with unpacked_archive(bucket, key) as olx_path:
+            if olx_path is None:
+                continue
+            try:
+                units = olx_course_units(olx_path, run)
+            except ElementTree.ParseError:
+                log.exception("Malformed OLX in %s, skipping", key)
+                continue
+        unit_ids = load_course_units(run, units)
+        rows.append(
+            {
+                "run_id": run.run_id,
+                "units": len(unit_ids),
+                "linked": published_files.filter(units__run=run).distinct().count(),
+                "total": published_files.count(),
+            }
+        )
+    return rows
+
+
 def unpublish_excluded_content_files(
     etl_source: str, ids: list[int], keys: list[str], *, dry_run: bool = False
 ) -> list[dict]:
@@ -421,16 +500,7 @@ def unpublish_excluded_content_files(
             # a run with no content files has none to unpublish, and its archive
             # is a download and an extract to find that out
             continue
-        with TemporaryDirectory() as tempdir:
-            tarpath = Path(tempdir, key.rsplit("/", maxsplit=1)[-1])
-            bucket.download_file(key, tarpath)
-            try:
-                with tarfile.open(tarpath) as tar:
-                    tar.extractall(tempdir, filter="data")
-            except tarfile.ReadError:
-                log.exception("Error extracting %s, skipping", key)
-                continue
-            olx_path = next((p for p in Path(tempdir).iterdir() if p.is_dir()), None)
+        with unpacked_archive(bucket, key) as olx_path:
             if olx_path is None:
                 continue
             try:

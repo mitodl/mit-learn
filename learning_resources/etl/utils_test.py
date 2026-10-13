@@ -1873,3 +1873,123 @@ def test_extract_content_invalid_pdf_raises(mocker, settings, tmp_path):
             str(tmp_path),
             "test-key",
         )
+
+
+def _write_unit_olx(olx):
+    """Write an OLX export with two chapters of sequentials and course-wide pages"""
+    files = {
+        "course.xml": '<course url_name="run" org="MITx" course="1"/>',
+        "course/run.xml": (
+            '<course><chapter url_name="ch1"/><chapter url_name="ch_staff"/>'
+            '<chapter url_name="ch2"/></course>'
+        ),
+        "chapter/ch1.xml": (
+            '<chapter><sequential url_name="seq1"/>'
+            '<sequential url_name="seq_toc"/></chapter>'
+        ),
+        "sequential/seq1.xml": (
+            '<sequential display_name="Lecture 1"><vertical url_name="v1"/>'
+            '<vertical url_name="v_staff"/></sequential>'
+        ),
+        "vertical/v1.xml": (
+            '<vertical><html url_name="h1"/><video url_name="vid1"/>'
+            '<problem url_name="p_shared"/></vertical>'
+        ),
+        # the body has its own filename, and links a static file
+        "html/h1.xml": '<html filename="h1_body"/>',
+        "html/h1_body.html": '<a href="/static/notes_1.pdf">notes</a>',
+        "video/vid1.xml": (
+            '<video url_name="vid1" youtube="1.00:ABC123">'
+            '<transcript language="en" src="vid1.srt"/></video>'
+        ),
+        "problem/p_shared.xml": "<problem/>",
+        "vertical/v_staff.xml": (
+            '<vertical visible_to_staff_only="true"><html url_name="h_staff"/></vertical>'
+        ),
+        "html/h_staff.xml": '<html filename="h_staff"/>',
+        "sequential/seq_toc.xml": (
+            '<sequential hide_from_toc="true"><vertical url_name="v_toc"/></sequential>'
+        ),
+        "vertical/v_toc.xml": '<vertical><html url_name="h_toc"/></vertical>',
+        "html/h_toc.xml": '<html filename="h_toc"/>',
+        "chapter/ch_staff.xml": (
+            '<chapter visible_to_staff_only="true">'
+            '<sequential url_name="seq_staff"/></chapter>'
+        ),
+        "sequential/seq_staff.xml": "<sequential/>",
+        # the second sequential holds its children inline, under a library block,
+        # and shares a problem with the first
+        "chapter/ch2.xml": (
+            '<chapter><sequential url_name="seq2" display_name="Problem Set 1">'
+            '<vertical><library_content url_name="lib">'
+            '<problem url_name="p_lib"/></library_content>'
+            '<problem url_name="p_shared"/></vertical></sequential></chapter>'
+        ),
+        "library_content/lib.xml": (
+            '<library_content><problem url_name="p_lib"/></library_content>'
+        ),
+        "problem/p_lib.xml": '<problem><a href="/static/notes_1.pdf"/></problem>',
+        "static/notes_1.pdf": "pdf",
+        "static/vid1.srt": "1\n00:00:00,000 --> 00:00:01,000\nhi\n",
+        "static/subs_ABC123.srt.sjson": "{}",
+        "static/unlinked.pdf": "pdf",
+        "tabs/syllabus.html": "<p>syllabus</p>",
+        "info/handouts.html": "<p>handouts</p>",
+        "about/overview.html": "<p>about</p>",
+    }
+    for rel, text in files.items():
+        _write_olx(olx, rel, text)
+
+
+def test_olx_course_units(tmp_path):
+    """Each visible sequential is a unit in tree order, with its files and links"""
+    olx = tmp_path / "course"
+    _write_unit_olx(olx)
+    run = LearningResourceRunFactory.create(
+        run_id="course-v1:MITx+1+run",
+        learning_resource=LearningResourceFactory.create(
+            etl_source=ETLSource.mitxonline.name, create_runs=False
+        ),
+    )
+
+    def key(rel):
+        return utils.get_edx_module_id(f"{olx}/{rel}", run)
+
+    units = utils.olx_course_units(olx, run)
+
+    assert [(unit["kind"], unit["title"]) for unit in units] == [
+        ("unit", "Lecture 1"),
+        ("unit", "Problem Set 1"),
+        ("context", "Course context"),
+    ]
+    lecture, problem_set, context = units
+    assert lecture["external_id"] == key("sequential/seq1.xml")
+    assert lecture["url"].endswith("/courses/course-v1:MITx+1+run/jump_to_id/seq1")
+    assert lecture["content_files"] == {
+        key("html/h1.xml"): "core",
+        key("html/h1_body.html"): "core",
+        key("video/vid1.xml"): "core",
+        key("static/vid1.srt"): "core",
+        key("static/subs_ABC123.srt.sjson"): "core",
+        key("problem/p_shared.xml"): "assessment",
+        key("static/notes_1.pdf"): "supplementary",
+    }
+    assert problem_set["content_files"] == {
+        key("library_content/lib.xml"): "core",
+        key("problem/p_lib.xml"): "assessment",
+        key("problem/p_shared.xml"): "assessment",
+        key("static/notes_1.pdf"): "supplementary",
+    }
+    assert context["external_id"] == "context"
+    assert set(context["content_files"]) == {
+        key("tabs/syllabus.html"),
+        key("info/handouts.html"),
+        key("about/overview.html"),
+    }
+
+
+def test_olx_course_units_not_olx(tmp_path):
+    """A directory with no course.xml has no units"""
+    _write_olx(tmp_path, "files/notes.pdf", "pdf")
+    run = LearningResourceRunFactory.create()
+    assert utils.olx_course_units(tmp_path, run) == []
