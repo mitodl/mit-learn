@@ -1,6 +1,24 @@
 Release Notes
 =============
 
+Version 0.82.0
+--------------
+
+- Upgrade contract audit enrollments via one-click enroll on Continue (#4052)
+- Add generic /api/v1/webhooks/learning_resources/ endpoint (Cohort 2 webhook delivery) (#3557)
+- update dialog copy (#4069)
+- Renumber the b2b_only migration to 0130 (#4065)
+- Publish public mitxonline runs that are attached to a contract (#4055)
+- Add per-source ETL write ownership (legacy, warehouse or webhook) (#3565)
+
+Version 0.81.9
+--------------
+
+- Display backend error message on enrollment failure (#3918)
+- feat(website-content): infer the SEO title and description, overridable (#4028)
+- Support staff-enrolled contract runs with no b2b_contract (#4035)
+- make credential metadata GET not require auth (#4049)
+
 Version 0.81.8
 --------------
 

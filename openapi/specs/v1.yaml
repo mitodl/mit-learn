@@ -10013,6 +10013,39 @@ paths:
               schema:
                 $ref: '#/components/schemas/ContentFileWebHookRequest'
           description: ''
+  /api/v1/webhooks/learning_resources/:
+    post:
+      operationId: webhooks_learning_resources_create
+      description: |-
+        Generic webhook handler for pre-computed LearningResource batches delivered
+        by the OL Data Platform (Dagster).
+
+        The request body is ``{"resources": [ ... ]}`` where each resource is a
+        canonical LearningResource dict carrying at minimum ``readable_id``,
+        ``etl_source`` and ``resource_type``. Resources are grouped by
+        ``(etl_source, resource_type)`` and routed to the matching loader
+        (``load_courses`` / ``load_programs`` / ``load_documents`` / ``load_videos``).
+        Each loader performs a full sync for that source and upserts the OpenSearch
+        index, so a batch must contain the authoritative set of resources for the
+        (etl_source, resource_type) it represents. A pair listed in the optional
+        ``sync`` array with no resources in the batch is pruned, unpublishing all
+        of it. Resource types without a loader are logged and skipped rather than
+        failing the whole batch.
+      tags:
+      - webhooks
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LearningResourceWebhookRequestRequest'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebhookResponse'
+          description: ''
   /api/v1/webhooks/ovs_videos/:
     post:
       operationId: webhooks_ovs_videos_create
@@ -13677,6 +13710,35 @@ components:
       - Video
       - Video Playlist
       - Document
+    LearningResourceSyncPairRequest:
+      type: object
+      description: |-
+        An (etl_source, resource_type) pair a learning_resources webhook batch is
+        authoritative for. Only types whose loader prunes by source can be synced:
+        videos are never pruned.
+      properties:
+        etl_source:
+          type: string
+          minLength: 1
+        resource_type:
+          $ref: '#/components/schemas/LearningResourceSyncPairResourceTypeEnum'
+      required:
+      - etl_source
+      - resource_type
+    LearningResourceSyncPairResourceTypeEnum:
+      enum:
+      - course
+      - program
+      - document
+      type: string
+      description: |-
+        * `course` - course
+        * `program` - program
+        * `document` - document
+      x-enum-descriptions:
+      - course
+      - program
+      - document
     LearningResourceTopic:
       type: object
       description: Serializer for LearningResourceTopic model
@@ -13702,6 +13764,34 @@ components:
       - channel_url
       - id
       - name
+    LearningResourceWebhookRequestRequest:
+      type: object
+      description: |-
+        Serializer for the generic ``/api/v1/webhooks/learning_resources/`` endpoint.
+
+        Accepts a batch of pre-computed canonical LearningResource payloads pushed
+        from the OL Data Platform (Dagster). Each resource must carry at minimum
+        ``readable_id``, ``etl_source`` and ``resource_type`` so the handler can
+        route it to the correct loader; all other keys are preserved and passed
+        through to the loaders unchanged.
+
+        ``sync`` declares (etl_source, resource_type) pairs the batch is
+        authoritative for. A declared pair with no resources in the batch is pruned,
+        unpublishing everything MIT Learn holds for it, so a source that stops
+        publishing a type can say so. A batch with neither resources nor ``sync``
+        is rejected: it names no pair, so the request would silently no-op.
+      properties:
+        resources:
+          type: array
+          items:
+            type: object
+            additionalProperties: {}
+        sync:
+          type: array
+          items:
+            $ref: '#/components/schemas/LearningResourceSyncPairRequest'
+      required:
+      - resources
     LearningResourcesSearchResponse:
       type: object
       description: |-

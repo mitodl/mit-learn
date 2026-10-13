@@ -319,8 +319,8 @@ def _transform_run(course_run: dict, course: dict) -> dict:
     """  # noqa: D401
     fully_enrollable = is_fully_enrollable(course_run)
     has_product_page = bool(parse_page_attribute(course, "page_url"))
-    is_b2b = bool(course_run.get("b2b_contract"))
-    is_variant = is_b2b or _is_non_default_variant(course_run)
+    b2b_only = bool(course_run.get("b2b_only"))
+    is_variant = b2b_only or _is_non_default_variant(course_run)
     return {
         "title": course_run["title"],
         "run_id": course_run["courseware_id"],
@@ -338,7 +338,7 @@ def _transform_run(course_run: dict, course: dict) -> dict:
             and course_run.get("is_enrollable", False)
             and (course.get("page") or {}).get("live", False)
         ),
-        "is_b2b": is_b2b,
+        "b2b_only": b2b_only,
         "is_variant": is_variant,
         "description": clean_data(parse_page_attribute(course_run, "description")),
         "image": _transform_image(course_run),
