@@ -1,6 +1,12 @@
 Release Notes
 =============
 
+Version 0.83.3
+--------------
+
+- Revert "fix(learning_resources): gate summary/flashcards like content on ContentFileViewSet (#3999)" (#4091)
+- feat(b2b-learner-analytics): add a progress grid view to the contract learners page (#4077)
+
 Version 0.83.2
 --------------
 
