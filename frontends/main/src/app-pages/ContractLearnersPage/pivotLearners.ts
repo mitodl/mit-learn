@@ -1,13 +1,10 @@
 import type { LearnerProgress } from "api/analytics-hooks/organizations"
 
 type PivotedLearner = {
-  /** The grouping key: the lowercased email, or `learner_id` when there is none. */
   key: string
   name: string | null
   email: string | null
-  /** How many of the learner's enrollments the API flagged. */
   needsAttentionCount: number
-  /** Keyed by `courserun_readable_id`. A run the learner is not in has no entry. */
   enrollments: Map<string, LearnerProgress>
 }
 
