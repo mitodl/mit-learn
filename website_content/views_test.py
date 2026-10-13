@@ -3,6 +3,7 @@
 import pytest
 from django.db import transaction
 from rest_framework.reverse import reverse
+from rest_framework.test import APIClient
 
 from learning_resources.factories import LearningResourceTopicFactory
 from main.factories import UserFactory
@@ -142,6 +143,60 @@ def test_staff_can_access_unpublished_content(client):
 
 
 @pytest.fixture
+def enabled_view_cache(settings, request):
+    """
+    Give the view cache a real backend for one test.
+
+    The suite swaps the `redis` cache for a dummy one everywhere (the autouse
+    fixture in the root `conftest`), so by default a view that is cached and
+    one that is not behave identically here. Caching has to be on for a test
+    to tell them apart. Located per test so one does not read another's
+    entries.
+    """
+    settings.REDIS_VIEW_CACHE_DURATION = 60
+    settings.CACHES = {
+        **settings.CACHES,
+        "redis": {
+            "BACKEND": "django.core.cache.backends.locmem.LocMemCache",
+            "LOCATION": request.node.nodeid,
+        },
+    }
+
+
+@pytest.mark.usefixtures("enabled_view_cache")
+def test_listing_is_what_the_caller_may_see(staff_client):
+    """
+    An editor's listing must not become everyone's listing.
+
+    The order here is the order that leaked: the listing was cached under a
+    key that did not vary by user, so whichever request missed the cache first
+    decided what the rest were served, and an editor's listing carries the
+    drafts.
+
+    Run with the view cache on, so that caching this listing again -- under
+    any key shared between callers -- fails here rather than in production.
+
+    The anonymous caller is a client of its own because `staff_client` is the
+    `client` fixture with a staff user logged into it -- asking for both hands
+    back one client, logged in, and the second request would be the editor's
+    as well.
+    """
+    published = WebsiteContent.objects.create(
+        title="Published Article", content={}, is_published=True, content_type="news"
+    )
+    draft = WebsiteContent.objects.create(
+        title="Draft Article", content={}, is_published=False, content_type="news"
+    )
+    url = reverse("website_content:v1:website_content-list")
+
+    editor_ids = {item["id"] for item in staff_client.get(url).json()["results"]}
+    assert editor_ids == {published.id, draft.id}
+
+    anonymous_ids = {item["id"] for item in APIClient().get(url).json()["results"]}
+    assert anonymous_ids == {published.id}
+
+
+@pytest.fixture
 def mock_clear_views_cache(mocker):
     """Patch the cache-clear hook so tests can assert whether it fired."""
     return mocker.patch("website_content.views.clear_views_cache")
@@ -157,17 +212,16 @@ def _make_content(user, *, is_published, content_type="news"):
     )
 
 
-# The staff listing view is cached and includes unpublished content, so every
-# mutation must clear the view cache -- including on drafts. The is_published
-# parametrization guards against reintroducing a published-only gate.
+# A write clears the view cache when it changes what a reader can see, which
+# a draft saved as a draft does not -- see `perform_create`.
 @pytest.mark.parametrize("is_published", [True, False])
-def test_create_clears_views_cache(
+def test_create_clears_views_cache_only_when_published(
     staff_client,
     mock_clear_views_cache,
     django_capture_on_commit_callbacks,
     is_published,
 ):
-    """Create clears the view cache on commit, published or draft."""
+    """Creating a draft leaves the cache alone; publishing one clears it."""
     url = reverse("website_content:v1:website_content-list")
     data = {
         "content": {},
@@ -179,24 +233,58 @@ def test_create_clears_views_cache(
         resp = staff_client.post(url, data, format="json")
 
     assert resp.status_code == 201
-    assert mock_clear_views_cache.called is True
+    assert mock_clear_views_cache.called is is_published
 
 
 @pytest.mark.parametrize("now_published", [True, False])
-def test_update_clears_views_cache(
+def test_update_of_a_draft_clears_views_cache_only_when_publishing(
     staff_client,
     user,
     mock_clear_views_cache,
     django_capture_on_commit_callbacks,
     now_published,
 ):
-    """Update clears the view cache on commit, even a draft-to-draft edit."""
+    """
+    Saving a draft as a draft leaves the cache alone.
+
+    This is the autosave path -- the editor saves every couple of seconds, and
+    each clear takes every view cache rather than a prefix.
+    """
     content = _make_content(user, is_published=False)
     url = reverse(
         "website_content:v1:website_content-detail", kwargs={"pk": content.id}
     )
     with django_capture_on_commit_callbacks(execute=True):
         resp = staff_client.patch(url, {"is_published": now_published}, format="json")
+
+    assert resp.status_code == 200
+    assert mock_clear_views_cache.called is now_published
+
+
+@pytest.mark.parametrize("now_published", [True, False])
+def test_update_of_published_always_clears_views_cache(
+    staff_client,
+    user,
+    mock_clear_views_cache,
+    django_capture_on_commit_callbacks,
+    now_published,
+):
+    """
+    Editing something already published clears either way.
+
+    Published to published changes what a reader sees; published to draft
+    takes it away from them, which the cached responses have to stop showing.
+    """
+    content = _make_content(user, is_published=True)
+    url = reverse(
+        "website_content:v1:website_content-detail", kwargs={"pk": content.id}
+    )
+    with django_capture_on_commit_callbacks(execute=True):
+        resp = staff_client.patch(
+            url,
+            {"is_published": now_published, "title": "Retitled"},
+            format="json",
+        )
 
     assert resp.status_code == 200
     assert mock_clear_views_cache.called is True
@@ -208,7 +296,7 @@ def test_destroy_draft_soft_deletes(
     mock_clear_views_cache,
     django_capture_on_commit_callbacks,
 ):
-    """Deleting a draft soft-deletes it and clears the view cache on commit."""
+    """Deleting a draft soft-deletes it and leaves the view cache alone."""
     content = _make_content(user, is_published=False)
     url = reverse(
         "website_content:v1:website_content-detail", kwargs={"pk": content.id}
@@ -217,7 +305,8 @@ def test_destroy_draft_soft_deletes(
         resp = staff_client.delete(url)
 
     assert resp.status_code == 204
-    assert mock_clear_views_cache.called is True
+    # Only a draft can be deleted, and a draft is in no cached response.
+    assert mock_clear_views_cache.called is False
 
     # Row is kept in the DB but marked deleted.
     content.refresh_from_db()
