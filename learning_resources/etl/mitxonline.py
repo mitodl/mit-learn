@@ -135,7 +135,10 @@ def fetch_cms_pages(page_type: str) -> dict[str, dict]:
     if not settings.MITX_ONLINE_BASE_URL:
         log.warning("Missing required setting MITX_ONLINE_BASE_URL")
         return {}
-    url = urljoin(settings.MITX_ONLINE_BASE_URL, CMS_PAGES_API_PATH)
+    url = urljoin(
+        f"{settings.MITX_ONLINE_BASE_URL.rstrip('/')}/",
+        CMS_PAGES_API_PATH.lstrip("/"),
+    )
     details_key = (
         "program_details" if page_type == CMS_PROGRAM_PAGE_TYPE else "course_details"
     )
