@@ -1,6 +1,14 @@
 Release Notes
 =============
 
+Version 0.83.2
+--------------
+
+- Use mitxonline's variant labels in the variant picker (#4066)
+- Change data consent dialog's Decline button to Cancel (#4071)
+- Redesign the topic channel page to match the Figma design (#4044)
+- fix(ssr): send a first-party User-Agent from the SSR API client (#4061)
+
 Version 0.83.0
 --------------
 
