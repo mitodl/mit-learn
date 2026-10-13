@@ -83,6 +83,7 @@ const LEGEND_STATUSES: DisplayStatus[] = [
 ]
 
 const ScrollRegion = styled.div({
+  position: "relative",
   overflowX: "auto",
 })
 
@@ -128,6 +129,7 @@ const LearnerCell = styled("div", {
 
 const ModuleCell = styled.div(({ theme }) => ({
   ...cellStyles,
+  paddingLeft: "20px",
   width: `${MODULE_COLUMN_WIDTH}px`,
   ...theme.typography.body2,
   color: theme.custom.colors.black,
