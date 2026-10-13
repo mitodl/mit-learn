@@ -15,6 +15,10 @@ type PivotedLearner = {
  * Email first, `learner_id` as the fallback. The API has returned a different
  * `learner_id` for each enrollment of one person (same name and email), so
  * keying on the id alone put one learner on several grid rows.
+ *
+ * This also merges two distinct learners who share an email upstream, and the
+ * later enrollment wins if both are in the same run. We accept that as too
+ * unlikely to special-case.
  */
 const learnerKey = (row: LearnerProgress) =>
   row.email?.trim().toLowerCase() || row.learner_id
