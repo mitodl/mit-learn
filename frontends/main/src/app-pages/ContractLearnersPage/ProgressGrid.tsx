@@ -13,6 +13,7 @@ import {
   RiUserLine,
 } from "@remixicon/react"
 import {
+  alpha,
   Pagination,
   Skeleton,
   styled,
@@ -123,8 +124,9 @@ const LearnerCell = styled("div", {
   gap: "12px",
   backgroundColor: theme.custom.colors.white,
   borderRight: `1px solid ${theme.custom.colors.lightGray2}`,
-  /** Only once content has slid under the column, as a cue that it scrolls. */
-  boxShadow: $scrolled ? "4px 0 6px -3px #2123262e" : "none",
+  boxShadow: $scrolled
+    ? `4px 0 6px -3px ${alpha(theme.custom.colors.darkGray2, 0.18)}`
+    : "none",
 }))
 
 const ModuleCell = styled.div(({ theme }) => ({
