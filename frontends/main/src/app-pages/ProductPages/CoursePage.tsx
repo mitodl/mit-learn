@@ -158,7 +158,10 @@ const CoursePage: React.FC<CoursePageProps> = ({ readableId }) => {
       ) : null}
       {page.faqs.length ? <FaqsSection faqs={page.faqs} /> : null}
       {page.testimonials.length ? (
-        <TestimonialsSection testimonials={page.testimonials} />
+        <TestimonialsSection
+          testimonials={page.testimonials}
+          itemReviewedName={page.title}
+        />
       ) : null}
     </ProductPageTemplate>
   )

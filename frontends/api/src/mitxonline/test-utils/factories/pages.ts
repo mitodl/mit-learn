@@ -77,6 +77,7 @@ const testimonialItem: Factory<TestimonialItem> = (override) => {
     quote: faker.lorem.sentences(2),
     name: faker.person.fullName(),
     title: faker.person.jobTitle(),
+    date_published: faker.date.past().toISOString().slice(0, 10),
     image_src: faker.image.avatar(),
     ...override,
   }
@@ -183,6 +184,7 @@ const coursePageItem: PartialFactory<CoursePageItem> = (override) => {
     min_weeks: faker.number.int({ min: 1, max: 12 }),
     prerequisites: makeHTMLList(2),
     price: [priceItem()],
+    show_course_outline: faker.datatype.boolean(),
     title: faker.lorem.words(3),
     topic_list: [
       {
