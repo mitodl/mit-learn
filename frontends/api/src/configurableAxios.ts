@@ -40,11 +40,7 @@ export type ConfigurableAxiosConfig = {
   baseUrl: string
   csrfCookieName: string
   withCredentials: boolean
-  /**
-   * Sent as `User-Agent` on every request. Server-side only: the API gateway
-   * uses it to tell the SSR layer apart from browsers, so a browser that sent
-   * it would drop out of the per-client rate limit.
-   */
+  /** Sent as `User-Agent` on every request. Server-side only. */
   userAgent?: string
 }
 

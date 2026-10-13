@@ -35,11 +35,6 @@ export const bootstrapApiClients = () => {
   // startup for every environment that does not have the service.
   const analyticsBaseUrl = env("NEXT_PUBLIC_ANALYTICS_API_BASE_URL")
 
-  // api.learn's per-client-IP rate limit is sized for one browser and excludes
-  // the SSR layer by User-Agent (FIRST_PARTY_SERVICE_CLIENT_UA_REGEX in
-  // ol-infrastructure). Name ourselves so that exclusion does not depend on the
-  // HTTP client's default. Browsers must not send it, or they would be excluded
-  // from the limit too.
   const userAgent = typeof window === "undefined" ? ssrUserAgent() : undefined
 
   configureApiClients({
