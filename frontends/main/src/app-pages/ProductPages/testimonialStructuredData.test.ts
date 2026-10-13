@@ -48,6 +48,35 @@ test("omits the description when the reviewed item has none", () => {
   expect(result).not.toHaveProperty("description")
 })
 
+test("omits a description whose markup strips to nothing", () => {
+  const result = buildTestimonialStructuredData(
+    [makeTestimonial()],
+    "Intro to Rocketry",
+    "<p>&nbsp;</p>",
+  )
+
+  expect(result).not.toHaveProperty("description")
+})
+
+test("returns null when the reviewed item name is only whitespace", () => {
+  expect(buildTestimonialStructuredData([makeTestimonial()], "   ")).toBeNull()
+})
+
+test("trims padding off the author name it emits", () => {
+  const padded = makeTestimonial({ name: "  Ada Lovelace  " })
+
+  const result = buildTestimonialStructuredData([padded], "Intro to Rocketry")
+
+  expect(result?.review).toEqual([
+    {
+      "@type": "Review",
+      author: { "@type": "Person", name: "Ada Lovelace" },
+      datePublished: padded.date_published,
+      reviewBody: padded.quote,
+    },
+  ])
+})
+
 test("omits testimonials whose author name is only whitespace", () => {
   const blank = makeTestimonial({ name: "   " })
   const attributed = makeTestimonial()
