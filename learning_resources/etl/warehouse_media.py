@@ -236,20 +236,18 @@ def _kept_playlists(playlists: list[dict]) -> list[dict]:
     return [playlist for playlist in playlists if is_kept(playlist)]
 
 
-def sync_youtube_channels(
+def prepare_youtube_sync(
     channels: list[dict],
     playlists: list[dict],
     playlist_videos: list[dict],
     videos: list[dict],
     *,
     allow_mass_unpublish: bool = False,
-) -> list[tuple[str, dict]]:
+) -> dict[str, list[dict]] | None:
     """
-    Upsert the youtube channels of the warehouse views, unpublish the channels
-    and playlists the views no longer list, and return the playlists to load.
-
-    The playlists are returned, not loaded, so the caller can load each in a
-    task of its own, as get_youtube_channel_data does.
+    Check and transform the youtube views without writing anything, for
+    sync_youtube_channels to write. Kept apart so a caller can act between a
+    run that passed its checks and its first write, as SyncYouTubeTask does.
 
     Args:
         channels (list of dict): rows of integrations__learn__youtube_channels
@@ -260,11 +258,15 @@ def sync_youtube_channels(
         allow_mass_unpublish (bool): skip the MAX_UNPUBLISH_SHARE check
 
     Returns:
-        list of (str, dict): the channel id and the load_playlist data of every
-            playlist, or an empty list if this pipeline does not own youtube
+        dict: the load_playlist data of each channel's playlists by channel id,
+            or None if this pipeline does not own youtube
+
+    Raises:
+        ExtractException: if a view is empty, a row is bad, or the sync would
+            unpublish over MAX_UNPUBLISH_SHARE of the playlists or videos
     """
     if not may_write_youtube():
-        return []
+        return None
 
     _refuse_empty(
         channels=channels,
@@ -273,7 +275,6 @@ def sync_youtube_channels(
         videos=videos,
     )
 
-    # transformed before anything is written, so a bad row changes nothing
     videos_by_playlist = _videos_by_playlist(playlist_videos, videos)
     playlists_by_channel = defaultdict(list)
     for playlist in playlists:
@@ -310,6 +311,28 @@ def sync_youtube_channels(
         ):
             _refuse_mass_unpublish(ETLSource.youtube.name, resource_type, kept_ids)
 
+    return playlists_by_channel
+
+
+def sync_youtube_channels(
+    channels: list[dict], playlists_by_channel: dict[str, list[dict]]
+) -> list[tuple[str, dict]]:
+    """
+    Upsert the youtube channels of the warehouse views, unpublish the channels
+    and playlists the views no longer list, and return the playlists to load.
+
+    The playlists are returned, not loaded, so the caller can load each in a
+    task of its own, as get_youtube_channel_data does.
+
+    Args:
+        channels (list of dict): rows of integrations__learn__youtube_channels
+        playlists_by_channel (dict): what prepare_youtube_sync returned for
+            the same views
+
+    Returns:
+        list of (str, dict): the channel id and the load_playlist data of every
+            playlist
+    """
     loaders.unpublish_removed_youtube_channels(
         [channel["channel_id"] for channel in channels]
     )
@@ -320,7 +343,7 @@ def sync_youtube_channels(
         video_channel = loaders.upsert_video_channel(
             {"channel_id": channel_id, "title": channel["title"], "published": True}
         )
-        channel_playlists = playlists_by_channel[channel_id]
+        channel_playlists = playlists_by_channel.get(channel_id, [])
         loaders.unpublish_removed_playlists(
             video_channel, [playlist["playlist_id"] for playlist in channel_playlists]
         )
