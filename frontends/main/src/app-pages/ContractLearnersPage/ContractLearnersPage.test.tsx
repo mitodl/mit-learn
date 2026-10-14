@@ -1036,6 +1036,56 @@ describe("ContractLearnersPage", () => {
     )
   })
 
+  test("ignores a status that is only an inherited object key", async () => {
+    const { org, contract, orgSlug } = setup()
+    const contractId = String(contract.id)
+    setMockResponse.get(
+      mitxUrls.organization.managerOrganizationsList(),
+      paginate([org]),
+    )
+    mockTotal(contractId, 1)
+    mockCourseRuns(contractId)
+    mockList(contractId, [
+      analyticsFactories.learnerProgress({ full_name: "Everyone" }),
+    ])
+
+    renderWithProviders(
+      <ContractLearnersPage orgSlug={orgSlug} contractSlug={contract.slug} />,
+      { url: "/?status=constructor" },
+    )
+
+    await screen.findByText("Everyone")
+    expect(
+      screen.queryByRole("button", { name: "Clear filters" }),
+    ).not.toBeInTheDocument()
+  })
+
+  test("moves a page past the end back to the last page", async () => {
+    const { org, contract, orgSlug } = setup()
+    const contractId = String(contract.id)
+    setMockResponse.get(
+      mitxUrls.organization.managerOrganizationsList(),
+      paginate([org]),
+    )
+    mockTotal(contractId, 30)
+    mockCourseRuns(contractId)
+    mockList(contractId, [], { offset: 24950 }, { total_count: 30 })
+    mockList(
+      contractId,
+      [analyticsFactories.learnerProgress({ full_name: "Last Page" })],
+      { offset: PAGE_SIZE },
+      { total_count: 30 },
+    )
+
+    const { location } = renderWithProviders(
+      <ContractLearnersPage orgSlug={orgSlug} contractSlug={contract.slug} />,
+      { url: "/?page=999" },
+    )
+
+    await screen.findByText("Last Page")
+    expect(location.current.searchParams.get("page")).toBe("2")
+  })
+
   test("Clear filters resets every filter and only shows while one is active", async () => {
     const { org, contract, orgSlug } = setup()
     const contractId = String(contract.id)

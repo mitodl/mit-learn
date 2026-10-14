@@ -60,8 +60,12 @@ const useLearnerFilters = () => {
 
   const urlSearch = (params.get("q") ?? "").slice(0, SEARCH_MAX_LENGTH)
   const statusParam = params.get("status") ?? ALL
-  const statusFilter =
-    statusParam in STATUS_FILTER_COMPLETION_STATUS ? statusParam : ALL
+  const statusFilter = Object.hasOwn(
+    STATUS_FILTER_COMPLETION_STATUS,
+    statusParam,
+  )
+    ? statusParam
+    : ALL
   const needsAttentionOnly = params.get("needs_attention") === "true"
   const moduleFilter = params.get("module") ?? ALL
   const view: View =

@@ -390,6 +390,17 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
   const isStale = rowsQuery.isPlaceholderData || rowsQuery.isFetching
   const isBusy = rowsQuery.isLoading || isStale
 
+  useEffect(() => {
+    if (
+      view === VIEWS.enrollments &&
+      !isBusy &&
+      totalPages > 0 &&
+      page > totalPages
+    ) {
+      setPage(totalPages)
+    }
+  }, [view, isBusy, page, totalPages, setPage])
+
   /**
    * Only 400/401/403 responses throw to an error boundary (see
    * `makeBrowserQueryClient`); a 5xx or network failure just settles into
