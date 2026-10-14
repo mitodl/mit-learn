@@ -580,10 +580,17 @@ def test_sync_podcasts_refuses_an_empty_view(warehouse_owns_podcasts, empty):
     assert LearningResource.objects.filter(published=True).count() == 2
 
 
-def test_sync_podcasts_skips_a_podcast_with_an_untitled_episode(
-    warehouse_owns_podcasts,
+@pytest.mark.parametrize(
+    "unloadable",
+    [{"title": None}, {"published_on_raw": None}, {"published_on_raw": "not a date"}],
+)
+def test_sync_podcasts_skips_a_podcast_with_an_unloadable_episode(
+    warehouse_owns_podcasts, unloadable
 ):
-    """The podcast keeps what it had, and the others are loaded"""
+    """
+    An episode without a title or a pubDate skips its podcast, which keeps what
+    it had, and the others are loaded
+    """
     views = (
         [podcast_row(), podcast_row("feeds.example.com/other/")],
         [
@@ -593,10 +600,13 @@ def test_sync_podcasts_skips_a_podcast_with_an_untitled_episode(
     )
     with writing_as(Pipeline.WAREHOUSE):
         assert warehouse_media.sync_podcasts(*views) == 2
-        views[1].append(episode_row("guid-3", title=None))
+        stored = LearningResource.objects.get(readable_id="guid-1").last_modified
+        views[1][0] = episode_row("guid-1", **unloadable)
         assert warehouse_media.sync_podcasts(*views) == 1
 
-    assert not LearningResource.objects.filter(readable_id="guid-3").exists()
+    episode = LearningResource.objects.get(readable_id="guid-1")
+    assert episode.last_modified == stored
+    assert episode.title == "Episode guid-1"
     assert (
         LearningResource.objects.filter(
             readable_id__in=["feeds.example.com/mit/", "guid-1", "guid-2"],
