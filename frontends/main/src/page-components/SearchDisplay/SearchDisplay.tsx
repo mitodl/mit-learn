@@ -414,6 +414,18 @@ const CardGrid = styled(PlainList)(({ theme }) => ({
     gridTemplateColumns: "minmax(0, 1fr)",
   },
   /**
+   * The results container spaces a list of rows by pushing each item below
+   * the one before it. A grid does not want that: `gap` already spaces these
+   * both ways, and the margin lands inside the row, so every card but the
+   * first in a row sits lower than its neighbours.
+   *
+   * Doubled to outweigh that rule, which names an ancestor and so starts
+   * ahead of anything this can say about its own children.
+   */
+  "&& > li + li": {
+    marginTop: 0,
+  },
+  /**
    * The card fixes its own width to the one its size is drawn at -- 300px for
    * the medium it is here -- which is the column's width at the design's
    * viewport and no other. Everywhere else the card sat at 300 in a column
@@ -1196,7 +1208,7 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
               flexDirection: "column",
               /* The cards layout sets the tab row 24px above the grid, which
                  is what its design specifies. */
-              gap: "16px",
+              gap: "40px",
             }}
           >
             <VisuallyHidden
