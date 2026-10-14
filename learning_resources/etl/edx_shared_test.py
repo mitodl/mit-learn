@@ -19,7 +19,6 @@ from learning_resources.etl.edx_shared import (
     normalize_run_id,
     process_course_archive,
     sync_edx_course_files,
-    sync_edx_course_units,
     unpublish_excluded_content_files,
 )
 from learning_resources.etl.utils import get_edx_module_id, get_s3_prefix_for_source
@@ -29,6 +28,8 @@ from learning_resources.factories import (
     LearningResourceFactory,
     LearningResourcePlatformFactory,
     LearningResourceRunFactory,
+    UnitContentFileFactory,
+    UnitFactory,
 )
 from learning_resources.models import ContentFile
 
@@ -143,6 +144,8 @@ def test_sync_edx_course_files_matching_checksum(mocker, mock_course_archive_buc
     run.checksum = "123"
     run.save()
     ContentFileFactory.create(run=run)
+    # with units, so only a changed archive is reloaded
+    UnitFactory.create(run=run)
     mocker.patch(
         "learning_resources.etl.edx_shared.calc_checksum", return_value=run.checksum
     )
@@ -1552,6 +1555,8 @@ def test_process_course_archive_skips_download_when_key_matches(mocker):
         published=True, archive_key=key, checksum="oldchecksum"
     )
     ContentFileFactory.create(run=run)
+    # with units, so only a changed archive is reloaded
+    UnitFactory.create(run=run)
     bucket = mocker.MagicMock()
     mock_load = mocker.patch("learning_resources.etl.edx_shared.load_content_files")
 
@@ -1571,6 +1576,8 @@ def test_process_course_archive_stamps_key_on_checksum_match(mocker):
         published=True, archive_key=None, checksum="samechecksum"
     )
     ContentFileFactory.create(run=run)
+    # with units, so only a changed archive is reloaded
+    UnitFactory.create(run=run)
     bucket = mocker.MagicMock()
     mocker.patch(
         "learning_resources.etl.edx_shared.calc_checksum", return_value="samechecksum"
@@ -2112,6 +2119,8 @@ def test_process_course_archive_skips_matching_archive_key(mocker, checksum, wit
     )
     if with_rows:
         ContentFileFactory.create(run=run)
+        # with units, so only a changed archive is reloaded
+        UnitFactory.create(run=run)
     bucket = mocker.MagicMock()
     mock_load = mocker.patch("learning_resources.etl.edx_shared.load_content_files")
 
@@ -2127,6 +2136,8 @@ def test_process_course_archive_skips_matching_checksum_with_rows(mocker):
         published=True, archive_key="old/key.tar.gz", checksum="abc123"
     )
     ContentFileFactory.create(run=run)
+    # with units, so only a changed archive is reloaded
+    UnitFactory.create(run=run)
     bucket = mocker.MagicMock()
     mocker.patch(
         "learning_resources.etl.edx_shared.calc_checksum", return_value="abc123"
@@ -2168,32 +2179,6 @@ def test_process_course_archive_clears_stale_checksum_on_empty_archive(mocker):
     mock_load.assert_not_called()
 
 
-def test_sync_edx_course_units(staff_only_run):
-    """Units are rebuilt from the current archive for runs with published files"""
-    run = staff_only_run.run
-    files = {
-        name: ContentFileFactory.create(
-            run=run, key=get_edx_module_id(f"course/{name}", run), published=True
-        )
-        # the h_ok body shares the key of its html/h_ok.xml pointer
-        for name in ("html/h_ok.xml", "html/h_staff.xml")
-    }
-    # a course with no published files has no archive to read
-    empty_run = LearningResourceRunFactory.create(published=True)
-
-    rows = sync_edx_course_units(
-        staff_only_run.source,
-        [staff_only_run.course.id, empty_run.learning_resource.id],
-        [staff_only_run.key],
-    )
-
-    assert rows == [{"run_id": run.run_id, "units": 1, "linked": 1, "total": 2}]
-    unit = run.units.get()
-    assert unit.external_id == get_edx_module_id("sequential/seq_ok.xml", run)
-    assert list(unit.content_files.all()) == [files["html/h_ok.xml"]]
-    assert not empty_run.units.exists()
-
-
 def test_process_course_archive_loads_units(mocker):
     """Units collected during the transform are loaded after the content files"""
     key = "mitxonline/openedx/raw_data/course_xml/course-v1:Test+Course+R1/abc123.xml.tar.gz"
@@ -2226,3 +2211,40 @@ def test_process_course_archive_loads_units(mocker):
     process_course_archive(mocker.MagicMock(), key, run)
 
     mock_load_units.assert_called_once_with(run, [unit_data])
+
+
+@pytest.mark.parametrize("has_units", [True, False])
+def test_process_course_archive_builds_missing_units(mocker, has_units):
+    """An unchanged archive is downloaded for units, but its files are not reloaded"""
+    key = "mitxonline/openedx/raw_data/course_xml/course-v1:Test+Course+R1/abc123.xml.tar.gz"
+    run = LearningResourceRunFactory.create(
+        published=True, archive_key=key, checksum="checksum"
+    )
+    ContentFileFactory.create(run=run, published=True)
+    if has_units:
+        UnitContentFileFactory.create(unit__run=run)
+    mocker.patch(
+        "learning_resources.etl.edx_shared.calc_checksum", return_value="checksum"
+    )
+    units = [{"external_id": "seq"}]
+    mock_units = mocker.patch(
+        "learning_resources.etl.edx_shared.course_units_from_archive",
+        return_value=units,
+    )
+    mock_load_units = mocker.patch(
+        "learning_resources.etl.edx_shared.load_course_units"
+    )
+    mock_transform = mocker.patch(
+        "learning_resources.etl.edx_shared.transform_content_files"
+    )
+    bucket = mocker.MagicMock()
+
+    assert process_course_archive(bucket, key, run) is not has_units
+
+    assert bucket.download_file.called is not has_units
+    mock_transform.assert_not_called()
+    if has_units:
+        mock_load_units.assert_not_called()
+    else:
+        mock_units.assert_called_once_with(mocker.ANY, run)
+        mock_load_units.assert_called_once_with(run, units)
