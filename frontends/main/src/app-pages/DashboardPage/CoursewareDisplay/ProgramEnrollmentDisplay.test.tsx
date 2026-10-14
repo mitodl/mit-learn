@@ -2452,16 +2452,4 @@ describe("ProgramEnrollmentDisplay with program tracks", () => {
     expect(screen.queryByText("Not selected")).not.toBeInTheDocument()
     expect(screen.getByRole("button", { name: "Change track" })).toBeVisible()
   })
-
-  test("Without the flag, shows every track and no track picker", async () => {
-    mockedUseFeatureFlagEnabled.mockReturnValue(false)
-    const { program } = setupTrackedProgram()
-    renderWithProviders(<ProgramEnrollmentDisplay programId={program.id} />)
-
-    await screen.findByRole("heading", { name: "General Track courses" })
-    expect(
-      screen.getByRole("heading", { name: "Methods Track courses" }),
-    ).toBeInTheDocument()
-    expect(screen.queryByText("Current track:")).not.toBeInTheDocument()
-  })
 })

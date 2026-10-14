@@ -25,7 +25,6 @@ export enum FeatureFlags {
   ProgramLetters = "program-letters",
   B2BDataConsent = "b2b-data-consent",
   TopicPageRedesign = "topic-page-redesign",
-  ProgramTracksDashboard = "program-tracks-dashboard",
 }
 
 /**

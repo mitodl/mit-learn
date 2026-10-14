@@ -957,11 +957,6 @@ type BuildRequirementSectionsArgs = {
    * When present, placed on every course arm's `ancestorContext.programEnrollment`.
    */
   ancestorProgramEnrollment?: V3UserProgramEnrollment
-  /**
-   * Whether the program-tracks-dashboard flag is on. When off, a tracked
-   * program shows every track's courses and no track picker.
-   */
-  programTracksEnabled?: boolean
 }
 
 /**
@@ -977,8 +972,7 @@ type ProgramTrackOption = {
 
 /**
  * Track state for a tracked program's choose/change track dialog. Only
- * present when the program has tracks and the program-tracks-dashboard flag
- * is on.
+ * present when the program has tracks.
  */
 type ProgramTrackState = {
   tracks: ProgramTrackOption[]
@@ -1012,13 +1006,11 @@ const getTrackSectionTitle = (
  * exception is a tracked program, parsed by `parseTrackedProgramRequirements`:
  * each track holds its own flat groups.
  *
- * For a tracked program with `programTracksEnabled`, the sections are the
- * groups before the tracks, then the chosen track's groups, then the groups
- * after the tracks (e.g. a capstone). Before a track is chosen, a "Track
- * courses" placeholder takes the chosen track's place. With the flag off,
- * every track's groups are shown. Either way, a track's progress counts the
- * chosen track, or the track with the most completed courses when none is
- * chosen.
+ * For a tracked program, the sections are the groups before the tracks, then
+ * the chosen track's groups, then the groups after the tracks (e.g. a
+ * capstone). Before a track is chosen, a "Track courses" placeholder takes the
+ * chosen track's place, and progress counts the track with the most completed
+ * courses.
  *
  * Preserves `req_tree` ordering. Sections with no resolved items are filtered
  * out (oracle: `.filter(section => section.items.length > 0)`).
@@ -1033,7 +1025,6 @@ const buildRequirementSections = ({
   requiredPrograms,
   requiredProgramModuleCoursesByProgramId,
   ancestorProgramEnrollment,
-  programTracksEnabled = false,
 }: BuildRequirementSectionsArgs): {
   sections: RequirementSection[]
   completedCount: number
@@ -1113,14 +1104,6 @@ const buildRequirementSections = ({
         : best,
     sectionsByTrack[0] ?? [],
   )
-
-  if (!programTracksEnabled) {
-    return {
-      sections: [...before, ...sectionsByTrack.flat(), ...after],
-      ...overall([...before, ...bestTrack, ...after]),
-      trackState: null,
-    }
-  }
 
   const getItemTitle = (resource: {
     type: "course" | "program"

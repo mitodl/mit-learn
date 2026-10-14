@@ -5,9 +5,7 @@ import { coursesQueries } from "api/mitxonline-hooks/courses"
 import { programsQueries } from "api/mitxonline-hooks/programs"
 import type { V2ProgramDisplayModeEnum } from "@mitodl/mitxonline-api-axios/v2"
 import type { CourseRunEnrollmentV3 } from "@mitodl/mitxonline-api-axios/v3"
-import { useFeatureFlagEnabled } from "posthog-js/react"
 import { getIdsFromReqTree } from "@/common/mitxonline"
-import { FeatureFlags } from "@/common/feature_flags"
 import {
   groupCourseRunEnrollmentsByCourseId,
   groupProgramEnrollmentsByProgramId,
@@ -28,7 +26,7 @@ export type ProgramDashboardData = {
   programCertificateUrl: string | null
   completedCount: number
   totalCount: number
-  /** Present for a tracked program when the program-tracks-dashboard flag is on. */
+  /** Present for a tracked program. */
   trackState: ProgramTrackState | null
   enrolledInProgram: boolean
   isLoading: boolean
@@ -58,10 +56,6 @@ export type ProgramDashboardData = {
  * hook's query→helper wiring is tested in `useProgramDashboardData.test.tsx`.
  */
 const useProgramDashboardData = (programId: number): ProgramDashboardData => {
-  const programTracksEnabled = !!useFeatureFlagEnabled(
-    FeatureFlags.ProgramTracksDashboard,
-  )
-
   // --- 6 program-dashboard queries ---
 
   const { data: rawEnrollments, isLoading: userEnrollmentsLoading } = useQuery(
@@ -167,7 +161,6 @@ const useProgramDashboardData = (programId: number): ProgramDashboardData => {
       requiredPrograms: requiredProgramList,
       requiredProgramModuleCoursesByProgramId,
       ancestorProgramEnrollment: programEnrollment,
-      programTracksEnabled,
     })
 
   // --- shared aux for non-course arms ---
