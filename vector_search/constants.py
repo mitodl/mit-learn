@@ -107,6 +107,10 @@ QDRANT_TOPICS_PARAM_MAP = {
 }
 
 QDRANT_LEARNING_RESOURCE_INDEXES = {
+    # The database id. Not a filter param -- indexed so that a resource's stale
+    # points (left behind when its platform or readable_id, and so its point id,
+    # changes) can be found and deleted when it is re-embedded.
+    "id": models.PayloadSchemaType.INTEGER,
     "readable_id": models.PayloadSchemaType.KEYWORD,
     "resource_type": models.PayloadSchemaType.KEYWORD,
     "certification": models.PayloadSchemaType.BOOL,
@@ -192,7 +196,7 @@ QDRANT_TOPIC_INDEXES = {
 
 
 CONTENT_FILES_RETRIEVE_PAYLOAD = True
-RESOURCES_RETRIEVE_PAYLOAD = ["readable_id", "platform"]
+RESOURCES_RETRIEVE_PAYLOAD = ["id", "readable_id", "platform"]
 
 # Payload key holding the checksum of the text that produced a resource point's
 # vector. The embed gate compares it against the checksum of the context
