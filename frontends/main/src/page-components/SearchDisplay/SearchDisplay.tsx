@@ -57,7 +57,7 @@ import { ResourceTypeGroupTabs } from "./ResourceTypeGroupTabs"
 import { TABS, UPCOMING_SORT, findActiveTab } from "./tabConfigs"
 import ProfessionalToggle from "./ProfessionalToggle"
 import { useTrackedFilterSetters } from "@/common/analytics/searchFilters"
-import SelectedFilters from "./SelectedFilters"
+import SelectedFilters, { selectedFilters } from "./SelectedFilters"
 import SliderInput from "./SliderInput"
 import VectorAdminOptions from "./VectorAdminOptions"
 import { AdminTitleContainer, ExplanationContainer } from "./adminStyles"
@@ -480,41 +480,48 @@ const TopicSearchCard = styled.div(({ theme }) => ({
  * live here rather than on the tab list so that the search page and the other
  * channels keep the buttons they already have.
  */
-const TopicTabsRow = styled.div(({ theme }) => ({
-  display: "flex",
-  alignItems: "center",
-  width: "100%",
-  borderBottom: `1px solid ${theme.custom.colors.lightGray2}`,
-  "> :last-child": {
-    marginLeft: "auto",
-  },
-  ".MuiTabs-flexContainer": {
-    gap: "40px",
-  },
-  '[role="tab"]': {
-    ...theme.typography.subtitle2,
-    minWidth: 0,
-    padding: "16px 8px",
-    borderRadius: 0,
-    backgroundColor: "transparent",
-    color: theme.custom.colors.silverGrayDark,
-    /* The rule the selected tab carries, kept on every tab at no width so
-       that selecting one does not move the row. */
-    borderBottom: "2px solid transparent",
-    ":hover": {
-      backgroundColor: "transparent",
-      color: theme.custom.colors.darkGray2,
+const TopicTabsRow = styled.div<{ dividesFilters: boolean }>(
+  ({ theme, dividesFilters }) => ({
+    display: "flex",
+    alignItems: "center",
+    width: "100%",
+    /* The rule separates the tabs from the filters applied below them, so it is
+     drawn only when there are some. With none, the design leaves the selected
+     tab's own red rule as the only line on the row. */
+    borderBottom: dividesFilters
+      ? `1px solid ${theme.custom.colors.lightGray2}`
+      : "none",
+    "> :last-child": {
+      marginLeft: "auto",
     },
-  },
-  /* Its own key rather than nested under the one above: the shared tab list
+    ".MuiTabs-flexContainer": {
+      gap: "40px",
+    },
+    '[role="tab"]': {
+      ...theme.typography.subtitle2,
+      minWidth: 0,
+      padding: "16px 8px",
+      borderRadius: 0,
+      backgroundColor: "transparent",
+      color: theme.custom.colors.silverGrayDark,
+      /* The rule the selected tab carries, kept on every tab at no width so
+       that selecting one does not move the row. */
+      borderBottom: "2px solid transparent",
+      ":hover": {
+        backgroundColor: "transparent",
+        color: theme.custom.colors.darkGray2,
+      },
+    },
+    /* Its own key rather than nested under the one above: the shared tab list
      fills the selected tab white from the button's own class, and only a
      selector naming both the row and the state outweighs it. */
-  '[role="tab"][aria-selected="true"]': {
-    backgroundColor: "transparent",
-    color: theme.custom.colors.black,
-    borderBottomColor: theme.custom.colors.lightRed,
-  },
-}))
+    '[role="tab"][aria-selected="true"]': {
+      backgroundColor: "transparent",
+      color: theme.custom.colors.black,
+      borderBottomColor: theme.custom.colors.lightRed,
+    },
+  }),
+)
 
 const MobileFilter = styled.div`
   ${({ theme }) => theme.breakpoints.up("md")} {
@@ -1153,6 +1160,9 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
     facetsBeforeTypeChoice.length,
   )
   const aggregations = displayData?.metadata.aggregations ?? {}
+  /* What the chip row will draw, which also decides whether the tabs above it
+     carry a rule -- see `TopicTabsRow`. */
+  const appliedFilters = selectedFilters(facetManifest, requestParams)
   const availableFacets = (manifest: FacetManifest) => (
     <AvailableFacets
       facetManifest={manifest}
@@ -1232,7 +1242,7 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
             {resultsLayout === "cards" ? (
               <TopicSearchCard>
                 {filterBarSlot}
-                <TopicTabsRow>
+                <TopicTabsRow dividesFilters={appliedFilters.length > 0}>
                   <StyledResourceTabs
                     setSearchParams={setSearchParams}
                     tabs={tabs}
