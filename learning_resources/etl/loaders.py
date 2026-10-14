@@ -1172,7 +1172,8 @@ def load_course_units(run: LearningResourceRun, units_data: list[dict]) -> list[
     upserted on (run, external_id) so their ids stay stable across loads, and
     the run's units missing from units_data are deleted. Only the run's
     published content files are linked, numbered in the order given within
-    ordered units, and a unit left with none is dropped.
+    ordered units, and a unit left with none is dropped, except the context
+    unit, which every run with a readable outline keeps.
 
     Args:
         run (LearningResourceRun): the run the units belong to
@@ -1196,7 +1197,9 @@ def load_course_units(run: LearningResourceRun, units_data: list[dict]) -> list[
                 for key, relation in unit_data["content_files"].items()
                 if key in file_ids
             }
-            if not links:
+            # the context unit stays even when empty, so a run with units is
+            # one whose outline was read
+            if not links and unit_data["kind"] != Unit.Kind.CONTEXT:
                 continue
             is_ordered = unit_data["kind"] == Unit.Kind.UNIT
             unit, _ = Unit.objects.update_or_create(

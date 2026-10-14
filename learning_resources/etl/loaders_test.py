@@ -4396,3 +4396,18 @@ def test_load_course_units_keeps_units_without_data():
     load_course_units(run, [_unit_data("seq1", "unit", {file.key: "core"})])
     assert load_course_units(run, []) == list(run.units.values_list("id", flat=True))
     assert run.units.count() == 1
+
+
+def test_load_course_units_keeps_empty_context():
+    """The context unit is kept with no files, unlike an empty sequential"""
+    run = LearningResourceRunFactory.create()
+    load_course_units(
+        run,
+        [
+            _unit_data("seq1", "unit", {"gone": "core"}),
+            _unit_data("context", "context", {}),
+        ],
+    )
+    unit = run.units.get()
+    assert (unit.external_id, unit.kind, unit.position) == ("context", "context", None)
+    assert not unit.content_files.exists()

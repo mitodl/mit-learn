@@ -16,7 +16,6 @@ from learning_resources.etl.constants import ETLSource
 from learning_resources.etl.loaders import load_content_files, load_course_units
 from learning_resources.etl.utils import (
     calc_checksum,
-    course_units_from_archive,
     excluded_olx_paths,
     get_bucket_by_name,
     get_edx_module_id,
@@ -143,11 +142,12 @@ def process_course_archive(
     # archive records archive_key with no checksum, so it still skips.
     has_published_files = run.content_files.filter(published=True).exists()
     stale_run = bool(run.checksum) and not has_published_files
-    reload = overwrite or stale_run
-    # a run loaded before units existed needs its archive once more, for them
+    # Units are built only while an archive loads, so a run loaded before units
+    # existed loads once more. Unchanged files reuse their text.
     missing_units = has_published_files and not run.units.exists()
+    reload = overwrite or stale_run or missing_units
 
-    if run.archive_key == key and not reload and not missing_units:
+    if run.archive_key == key and not reload:
         log.debug("Archive key unchanged for %s, skipping download", key)
         return False
     with TemporaryDirectory() as export_tempdir:
@@ -160,8 +160,6 @@ def process_course_archive(
             log.exception("Error reading tar file %s, skipping", course_tarpath)
             return True
         if run.checksum == checksum and not reload:
-            if missing_units:
-                load_course_units(run, course_units_from_archive(course_tarpath, run))
             # unchanged content under a new key: record it to skip future downloads
             run.archive_key = key
             run.save(update_fields=["archive_key"])

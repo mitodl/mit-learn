@@ -2214,8 +2214,8 @@ def test_process_course_archive_loads_units(mocker):
 
 
 @pytest.mark.parametrize("has_units", [True, False])
-def test_process_course_archive_builds_missing_units(mocker, has_units):
-    """An unchanged archive is downloaded for units, but its files are not reloaded"""
+def test_process_course_archive_reloads_runs_missing_units(mocker, has_units):
+    """An unchanged archive is loaded again only when its run has no units yet"""
     key = "mitxonline/openedx/raw_data/course_xml/course-v1:Test+Course+R1/abc123.xml.tar.gz"
     run = LearningResourceRunFactory.create(
         published=True, archive_key=key, checksum="checksum"
@@ -2226,25 +2226,13 @@ def test_process_course_archive_builds_missing_units(mocker, has_units):
     mocker.patch(
         "learning_resources.etl.edx_shared.calc_checksum", return_value="checksum"
     )
-    units = [{"external_id": "seq"}]
-    mock_units = mocker.patch(
-        "learning_resources.etl.edx_shared.course_units_from_archive",
-        return_value=units,
-    )
-    mock_load_units = mocker.patch(
-        "learning_resources.etl.edx_shared.load_course_units"
-    )
     mock_transform = mocker.patch(
-        "learning_resources.etl.edx_shared.transform_content_files"
+        "learning_resources.etl.edx_shared.transform_content_files",
+        return_value=iter([]),
     )
     bucket = mocker.MagicMock()
 
     assert process_course_archive(bucket, key, run) is not has_units
 
     assert bucket.download_file.called is not has_units
-    mock_transform.assert_not_called()
-    if has_units:
-        mock_load_units.assert_not_called()
-    else:
-        mock_units.assert_called_once_with(mocker.ANY, run)
-        mock_load_units.assert_called_once_with(run, units)
+    assert mock_transform.called is not has_units

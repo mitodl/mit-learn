@@ -1506,31 +1506,6 @@ def transform_content_files(
         )
 
 
-def course_units_from_archive(
-    course_tarpath: Path, run: LearningResourceRun
-) -> list[dict]:
-    """
-    Build a run's units from its archive without extracting any content
-
-    Args:
-        course_tarpath (str): The path to the tarball which contains the OLX
-        run (LearningResourceRun): The run the units belong to
-
-    Returns:
-        list of dict: units as returned by olx_course_units, or none if the
-            outline can't be read
-    """
-    with TemporaryDirectory(prefix=course_tarpath.name.split(".")[0]) as tempdir:
-        with tarfile.open(course_tarpath) as tar:
-            tar.extractall(tempdir, filter="data")
-        olx_path = glob.glob(tempdir + "/*")[0]  # noqa: PTH207
-        try:
-            return olx_course_units(olx_path, run)
-        except Exception:
-            log.exception("Could not build units for run %s", run.run_id)
-            return []
-
-
 def get_s3_prefix_for_source(etl_source: str) -> str:
     """
     Get the S3 prefix for a given ETL source
