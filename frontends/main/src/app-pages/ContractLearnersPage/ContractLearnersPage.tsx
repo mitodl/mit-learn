@@ -291,6 +291,12 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
   const [announcement, setAnnouncement] = useState("")
   const queryClient = useQueryClient()
 
+  const controlsRef = useRef<HTMLDivElement>(null)
+  const handleClearAll = () => {
+    clearAll()
+    controlsRef.current?.querySelector("input")?.focus()
+  }
+
   const handleViewChange = (_event: React.SyntheticEvent, next: View) => {
     if (next === view) return
     posthog?.capture(PostHogEvents.AnalyticsViewChanged, {
@@ -657,7 +663,7 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
                   }
                   asOfPlacement="external"
                 />
-                <ControlsRight>
+                <ControlsRight ref={controlsRef}>
                   <StyledSearchInput
                     placeholder="Search name or email"
                     value={searchQuery}
@@ -704,7 +710,7 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
                   <Button
                     variant="tertiary"
                     size="medium"
-                    onClick={clearAll}
+                    onClick={handleClearAll}
                     style={{
                       visibility: hasActiveFilters ? "visible" : "hidden",
                     }}

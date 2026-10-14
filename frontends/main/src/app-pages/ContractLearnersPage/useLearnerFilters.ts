@@ -4,6 +4,8 @@ import { useAppSearchParams } from "@/common/useAppSearchParams"
 
 const ALL = "all"
 const SEARCH_DEBOUNCE_MS = 300
+/** Past this, a page number is a typo or a hand-edited link, and its offset would overflow what the API accepts. */
+const MAX_PAGE = 10_000
 /** Matches the API's cap on `search`; truncated rather than sent as-is, since a long paste would otherwise 422 and read as "Something went wrong loading learner data" — 422 isn't in the error-boundary set. */
 const SEARCH_MAX_LENGTH = 254
 const VIEWS = { enrollments: "enrollments", grid: "grid" } as const
@@ -67,7 +69,11 @@ const useLearnerFilters = () => {
   const moduleFilter = params.get("module") ?? ALL
   const view: View =
     params.get("view") === VIEWS.grid ? VIEWS.grid : VIEWS.enrollments
-  const page = Math.max(1, parseInt(params.get("page") ?? "", 10) || 1)
+  const parsedPage = parseInt(params.get("page") ?? "", 10)
+  const page =
+    Number.isSafeInteger(parsedPage) && parsedPage > 0 && parsedPage <= MAX_PAGE
+      ? parsedPage
+      : 1
 
   const [searchQuery, setSearchQuery] = useState(urlSearch)
   const lastWrittenSearch = useRef(urlSearch)

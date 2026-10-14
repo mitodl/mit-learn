@@ -74,7 +74,6 @@ const LEGEND_STATUSES: DisplayStatus[] = [
   "in-progress",
   "not-started",
   "not-shared",
-  "unknown",
 ]
 
 const ScrollRegion = styled.div({
@@ -310,7 +309,6 @@ const ProgressGrid: React.FC<ProgressGridProps> = ({
     [query.data],
   )
   const totalPages = Math.ceil((query.data?.total_count ?? 0) / PAGE_SIZE)
-  const enrollmentsFiltered = !!completionStatus || needsAttentionOnly
   const isStale = query.isPlaceholderData || query.isFetching
   const isBusy = query.isLoading || isStale
 
@@ -407,8 +405,8 @@ const ProgressGrid: React.FC<ProgressGridProps> = ({
             </li>
           ))}
           <li>
-            <Muted>{enrollmentsFiltered ? "—" : "N/A"}</Muted>
-            {enrollmentsFiltered ? "Hidden by filter" : "Not enrolled"}
+            <Muted>N/A</Muted>
+            Not enrolled
           </li>
           <li>
             <AttentionMark style={{ margin: 0 }}>
@@ -487,12 +485,8 @@ const ProgressGrid: React.FC<ProgressGridProps> = ({
                           return (
                             <ModuleCell key={run.courserun_id} role="cell">
                               <Muted>
-                                {enrollmentsFiltered ? "—" : "N/A"}
-                                <VisuallyHidden>
-                                  {enrollmentsFiltered
-                                    ? "Hidden by the current filter"
-                                    : ", not enrolled"}
-                                </VisuallyHidden>
+                                N/A
+                                <VisuallyHidden>, not enrolled</VisuallyHidden>
                               </Muted>
                             </ModuleCell>
                           )

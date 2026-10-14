@@ -1158,6 +1158,27 @@ describe("ContractLearnersPage", () => {
     expect(search).toHaveValue("")
   })
 
+  test("treats an out-of-range page in the URL as page 1", async () => {
+    const { org, contract, orgSlug } = setup()
+    const contractId = String(contract.id)
+    setMockResponse.get(
+      mitxUrls.organization.managerOrganizationsList(),
+      paginate([org]),
+    )
+    mockTotal(contractId, 1)
+    mockCourseRuns(contractId)
+    mockList(contractId, [
+      analyticsFactories.learnerProgress({ full_name: "Everyone" }),
+    ])
+
+    renderWithProviders(
+      <ContractLearnersPage orgSlug={orgSlug} contractSlug={contract.slug} />,
+      { url: "/?page=99999999999999999999" },
+    )
+
+    await screen.findByText("Everyone")
+  })
+
   test("Clear filters resets every filter and only shows while one is active", async () => {
     const { org, contract, orgSlug } = setup()
     const contractId = String(contract.id)
@@ -1185,6 +1206,7 @@ describe("ContractLearnersPage", () => {
     await user.click(screen.getByRole("button", { name: "Clear filters" }))
 
     await screen.findByText("Everyone")
+    expect(screen.getByPlaceholderText("Search name or email")).toHaveFocus()
     expect(location.current.search).toBe("")
     expect(
       screen.queryByRole("button", { name: "Clear filters" }),
