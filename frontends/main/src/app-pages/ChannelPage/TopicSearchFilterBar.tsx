@@ -156,11 +156,21 @@ const MenuCount = styled.span(({ theme }) => ({
 
 /** The menu's own paper, which renders in a portal. */
 const FACET_MENU_PROPS = {
+  /**
+   * Hung below the control rather than over it. Select's default menu lines
+   * the chosen option up with the control, which puts the list across the
+   * button it came from; these are a short list under a short label, so the
+   * button stays visible and the list reads as belonging to it.
+   */
+  variant: "menu" as const,
+  anchorOrigin: { vertical: "bottom" as const, horizontal: "left" as const },
+  transformOrigin: { vertical: "top" as const, horizontal: "left" as const },
   PaperProps: {
     sx: {
-      width: "300px",
+      width: "270px",
       borderRadius: "8px",
-      boxShadow: "1px 3px 10px rgba(0, 0, 0, 0.12)",
+      boxShadow: "1px 3px 20px 0 rgba(0, 0, 0, 0.12)",
+
       padding: "16px",
       border: `1px solid ${theme.custom.colors.lightGray1}`,
       "& .MuiList-root": {
