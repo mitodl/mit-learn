@@ -1361,7 +1361,7 @@ describe("ContractLearnersPage", () => {
 })
 
 describe("ContractLearnersPage progress grid", () => {
-  const GRID_PAGE_SIZE = 500
+  const GRID_PAGE_SIZE = 25
   const M5 = "course-v1:MITx+M5+2026"
   const M6 = "course-v1:MITx+M6+2026"
 
@@ -1373,13 +1373,15 @@ describe("ContractLearnersPage progress grid", () => {
     extraParams: Record<string, unknown> = {},
   ) => {
     setMockResponse.get(
-      analyticsUrls.contracts.learnerProgress(ORG_UUID, contractId, {
+      analyticsUrls.contracts.learners(ORG_UUID, contractId, {
         limit: GRID_PAGE_SIZE,
         offset,
-        sort: "full_name",
         ...extraParams,
       }),
-      analyticsFactories.learnerProgressEnvelope(rows, envelopeOverrides),
+      analyticsFactories.learnersEnvelope(
+        analyticsFactories.learnersFromRows(rows),
+        envelopeOverrides,
+      ),
     )
   }
 
@@ -1462,6 +1464,7 @@ describe("ContractLearnersPage progress grid", () => {
     const { contractId } = renderGrid()
     mockGridPage(contractId, 0, [
       analyticsFactories.learnerProgress({
+        learner_id: "a",
         email: "ada@example.com",
         full_name: "Ada Lovelace",
         courserun_readable_id: M5,
@@ -1469,6 +1472,7 @@ describe("ContractLearnersPage progress grid", () => {
         needs_attention: true,
       }),
       analyticsFactories.learnerProgress({
+        learner_id: "a",
         email: "ada@example.com",
         full_name: "Ada Lovelace",
         courserun_readable_id: M6,
@@ -1567,18 +1571,72 @@ describe("ContractLearnersPage progress grid", () => {
     expect(screen.queryByLabelText("Module")).not.toBeInTheDocument()
   })
 
-  test("caps the fetch and says so when a contract has more enrollments", async () => {
+  test("requests the next page of learners by offset", async () => {
     const { contractId } = renderGrid()
-    const row = () => analyticsFactories.learnerProgress()
-    mockGridPage(contractId, 0, [row()], { total_count: 2500 })
-    mockGridPage(contractId, 500, [row()], { total_count: 2500 })
-    mockGridPage(contractId, 1000, [row()], { total_count: 2500 })
-    mockGridPage(contractId, 1500, [row()], { total_count: 2500 })
+    const learner = (name: string) =>
+      analyticsFactories.learnerProgress({
+        full_name: name,
+        courserun_readable_id: M5,
+      })
+    mockGridPage(contractId, 0, [learner("Ada Lovelace")], {
+      total_count: 30,
+    })
+    mockGridPage(contractId, GRID_PAGE_SIZE, [learner("Zed Zimmer")], {
+      total_count: 30,
+    })
 
     await user.click(await screen.findByRole("tab", { name: "Progress grid" }))
+    expect(await screen.findByText("Ada Lovelace")).toBeInTheDocument()
 
-    expect(
-      await screen.findByText(/Showing the first 2,000 of 2,500 enrollments/),
-    ).toBeInTheDocument()
+    const grid = screen.getByRole("table", {
+      name: "Learner progress by module",
+    })
+    const pagination = within(grid.closest("div[role=region]")!.parentElement!)
+    await user.click(pagination.getByRole("button", { name: /page 2/i }))
+
+    expect(await screen.findByText("Zed Zimmer")).toBeInTheDocument()
+    expect(screen.queryByText("Ada Lovelace")).not.toBeInTheDocument()
+  })
+
+  test("sends the filters and returns to the first page when they change", async () => {
+    const { contractId } = renderGrid()
+    const learner = (name: string) =>
+      analyticsFactories.learnerProgress({
+        full_name: name,
+        courserun_readable_id: M5,
+      })
+    mockGridPage(contractId, 0, [learner("Ada Lovelace")], {
+      total_count: 30,
+    })
+    mockGridPage(contractId, GRID_PAGE_SIZE, [learner("Zed Zimmer")], {
+      total_count: 30,
+    })
+    mockGridPage(
+      contractId,
+      0,
+      [learner("Ada Lovelace")],
+      { total_count: 1 },
+      { needs_attention: true },
+    )
+
+    await user.click(await screen.findByRole("tab", { name: "Progress grid" }))
+    await screen.findByText("Ada Lovelace")
+    const grid = screen.getByRole("table", {
+      name: "Learner progress by module",
+    })
+    await user.click(
+      within(grid.closest("div[role=region]")!.parentElement!).getByRole(
+        "button",
+        { name: /page 2/i },
+      ),
+    )
+    await screen.findByText("Zed Zimmer")
+
+    await user.click(
+      screen.getByRole("checkbox", { name: "Needs attention only" }),
+    )
+
+    expect(await screen.findByText("Ada Lovelace")).toBeInTheDocument()
+    expect(screen.queryByText("Zed Zimmer")).not.toBeInTheDocument()
   })
 })
