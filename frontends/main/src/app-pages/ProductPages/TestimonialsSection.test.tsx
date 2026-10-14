@@ -182,6 +182,7 @@ test("Emits Review structured data for every testimonial", async () => {
     <TestimonialsSection
       testimonials={testimonials}
       itemReviewedName="Intro to Rocketry"
+      itemReviewedDescription="<p>Build a rocket.</p>"
     />,
   )
 
@@ -194,6 +195,7 @@ test("Emits Review structured data for every testimonial", async () => {
     "@context": "https://schema.org",
     "@type": "Course",
     name: "Intro to Rocketry",
+    description: "Build a rocket.",
     review: testimonials.map((testimonial) => ({
       "@type": "Review",
       author: { "@type": "Person", name: testimonial.name },
@@ -230,6 +232,7 @@ test("Escapes characters that could break out of the JSON-LD script tag", async 
     <TestimonialsSection
       testimonials={[testimonial]}
       itemReviewedName="Intro to Rocketry"
+      itemReviewedDescription="<p>Build a rocket.</p>"
     />,
   )
 

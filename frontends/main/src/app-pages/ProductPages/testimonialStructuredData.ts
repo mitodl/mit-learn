@@ -9,6 +9,13 @@ export function buildTestimonialStructuredData(
   const name = itemReviewedName.trim()
   if (!name) return null
 
+  // Google requires name and description on Course, so a node without a
+  // description cannot earn a review snippet - emit nothing instead.
+  const description = itemReviewedDescription
+    ? stripHtmlToPlainText(itemReviewedDescription)
+    : ""
+  if (!description) return null
+
   // Google drops a Review with no author, and only allows reviewRating to be
   // omitted when datePublished is present.
   const reviews = testimonials
@@ -22,16 +29,11 @@ export function buildTestimonialStructuredData(
 
   if (!reviews.length) return null
 
-  const description = itemReviewedDescription
-    ? stripHtmlToPlainText(itemReviewedDescription)
-    : ""
-
   return {
     "@context": "https://schema.org",
     "@type": "Course",
     name,
-    // Course requires description, but an empty value is worse than none
-    ...(description ? { description } : {}),
+    description,
     review: reviews,
   }
 }
