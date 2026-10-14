@@ -1,6 +1,7 @@
 import React from "react"
 import { renderWithProviders, screen, user, within } from "@/test-utils"
 import { act, fireEvent, waitFor } from "@testing-library/react"
+import mockRouter from "next-router-mock"
 import { setMockResponse } from "api/test-utils"
 import {
   factories as mitxFactories,
@@ -1084,6 +1085,77 @@ describe("ContractLearnersPage", () => {
 
     await screen.findByText("Last Page")
     expect(location.current.searchParams.get("page")).toBe("2")
+  })
+
+  test("changing a filter sends the page back to page 1", async () => {
+    const { org, contract, orgSlug } = setup()
+    const contractId = String(contract.id)
+    setMockResponse.get(
+      mitxUrls.organization.managerOrganizationsList(),
+      paginate([org]),
+    )
+    mockTotal(contractId, 60)
+    mockCourseRuns(contractId)
+    mockList(
+      contractId,
+      [analyticsFactories.learnerProgress({ full_name: "Second Page" })],
+      { offset: PAGE_SIZE },
+      { total_count: 60 },
+    )
+    mockList(
+      contractId,
+      [analyticsFactories.learnerProgress({ full_name: "Only Not Started" })],
+      { completion_status: ["not_started"] },
+      { total_count: 60 },
+    )
+
+    const { location } = renderWithProviders(
+      <ContractLearnersPage orgSlug={orgSlug} contractSlug={contract.slug} />,
+      { url: "/?page=2" },
+    )
+    await screen.findByText("Second Page")
+
+    await user.click(await screen.findByRole("combobox", { name: /status/i }))
+    await user.click(
+      within(await screen.findByRole("listbox")).getByText("Not started"),
+    )
+
+    await screen.findByText("Only Not Started")
+    expect(location.current.searchParams.has("page")).toBe(false)
+  })
+
+  test("follows the URL when it changes outside the page, as on Back", async () => {
+    const { org, contract, orgSlug } = setup()
+    const contractId = String(contract.id)
+    setMockResponse.get(
+      mitxUrls.organization.managerOrganizationsList(),
+      paginate([org]),
+    )
+    mockTotal(contractId, 2)
+    mockCourseRuns(contractId)
+    mockList(
+      contractId,
+      [analyticsFactories.learnerProgress({ full_name: "Ada Match" })],
+      { search: "ada" },
+    )
+    mockList(contractId, [
+      analyticsFactories.learnerProgress({ full_name: "Everyone" }),
+    ])
+
+    renderWithProviders(
+      <ContractLearnersPage orgSlug={orgSlug} contractSlug={contract.slug} />,
+      { url: "/?q=ada" },
+    )
+    await screen.findByText("Ada Match")
+    const search = screen.getByPlaceholderText("Search name or email")
+    expect(search).toHaveValue("ada")
+
+    act(() => {
+      mockRouter.push("/")
+    })
+
+    await screen.findByText("Everyone")
+    expect(search).toHaveValue("")
   })
 
   test("Clear filters resets every filter and only shows while one is active", async () => {
