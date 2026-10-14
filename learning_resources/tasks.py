@@ -1372,16 +1372,6 @@ def generate_all_credential_metadata(
     return len(generation_tasks)
 
 
-def _allow_mass_unpublish(task) -> bool:
-    """
-    Whether a warehouse sync was queued with allow_mass_unpublish=True,
-    e.g. ``SyncPodcastsTask.delay(allow_mass_unpublish=True)``. The scheduled
-    runs never pass it. Only the boolean lifts the limit: a serialized
-    ``"false"`` is truthy.
-    """
-    return (task.request.kwargs or {}).get("allow_mass_unpublish", False) is True
-
-
 # Names the SyncYouTubeTask run whose playlist loads are current. Kept where
 # the warehouse watermarks are, so it outlives a cache flush.
 YOUTUBE_SYNC_GENERATION_KEY = "warehouse_etl:youtube_sync_generation"
@@ -1439,7 +1429,13 @@ class SyncYouTubeTask(BaseWarehouseETLTask):
     table_name = "integrations__learn__youtube_playlists"
     writes = (ETLSource.youtube.name, warehouse_media.YOUTUBE_TYPES)
 
-    def fetch_and_upsert(self, conn, *, since=None) -> int:  # noqa: ARG002
+    def fetch_and_upsert(
+        self,
+        conn,
+        *,
+        since=None,  # noqa: ARG002
+        allow_mass_unpublish: bool = False,
+    ) -> int:
         """Read the four youtube views and queue a load of each playlist."""
         channels, playlists, playlist_videos, videos = (
             list(iter_rows(conn, self.qualified_name(table)))
@@ -1461,7 +1457,7 @@ class SyncYouTubeTask(BaseWarehouseETLTask):
             playlists,
             playlist_videos,
             videos,
-            allow_mass_unpublish=_allow_mass_unpublish(self),
+            allow_mass_unpublish=allow_mass_unpublish,
         )
         log.info("Queueing %d youtube playlists from the warehouse", len(to_load))
         for channel_id, playlist_data in to_load:
@@ -1490,7 +1486,13 @@ class SyncPodcastsTask(BaseWarehouseETLTask):
     table_name = "integrations__learn__podcasts"
     writes = (ETLSource.podcast.name, warehouse_media.PODCAST_TYPES)
 
-    def fetch_and_upsert(self, conn, *, since=None) -> int:  # noqa: ARG002
+    def fetch_and_upsert(
+        self,
+        conn,
+        *,
+        since=None,  # noqa: ARG002
+        allow_mass_unpublish: bool = False,
+    ) -> int:
         """Read the two podcast views and load them."""
         return warehouse_media.sync_podcasts(
             list(iter_rows(conn, self.view_name)),
@@ -1499,7 +1501,7 @@ class SyncPodcastsTask(BaseWarehouseETLTask):
                     conn, self.qualified_name("integrations__learn__podcast_episodes")
                 )
             ),
-            allow_mass_unpublish=_allow_mass_unpublish(self),
+            allow_mass_unpublish=allow_mass_unpublish,
         )
 
 
@@ -1524,14 +1526,20 @@ class SyncXproCoursesTask(BaseWarehouseETLTask):
     table_name = "integrations__learn__xpro_courses"
     writes = (ETLSource.xpro.name, [LearningResourceType.course.name])
 
-    def fetch_and_upsert(self, conn, *, since=None) -> int:  # noqa: ARG002
+    def fetch_and_upsert(
+        self,
+        conn,
+        *,
+        since=None,  # noqa: ARG002
+        allow_mass_unpublish: bool = False,
+    ) -> int:
         """Read the xPRO course and run views and load them."""
         return warehouse_xpro.sync_courses(
             list(iter_rows(conn, self.view_name)),
             list(
                 iter_rows(conn, self.qualified_name("integrations__learn__xpro_runs"))
             ),
-            allow_mass_unpublish=_allow_mass_unpublish(self),
+            allow_mass_unpublish=allow_mass_unpublish,
         )
 
 
@@ -1556,11 +1564,17 @@ class SyncXproProgramsTask(BaseWarehouseETLTask):
     table_name = "integrations__learn__xpro_programs"
     writes = (ETLSource.xpro.name, [LearningResourceType.program.name])
 
-    def fetch_and_upsert(self, conn, *, since=None) -> int:  # noqa: ARG002
+    def fetch_and_upsert(
+        self,
+        conn,
+        *,
+        since=None,  # noqa: ARG002
+        allow_mass_unpublish: bool = False,
+    ) -> int:
         """Read the xPRO program view and load the programs."""
         return warehouse_xpro.sync_programs(
             list(iter_rows(conn, self.view_name)),
-            allow_mass_unpublish=_allow_mass_unpublish(self),
+            allow_mass_unpublish=allow_mass_unpublish,
         )
 
 

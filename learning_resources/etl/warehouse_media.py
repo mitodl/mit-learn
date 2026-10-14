@@ -314,6 +314,22 @@ def _parse_pub_date(raw: str | None):
         return None
 
 
+def _unloadable_episodes(episode_rows: list[dict]) -> list[str]:
+    """
+    Return the episodes podcast.transform fails on, which makes it skip the
+    whole podcast: one without a title (LearningResource.title is required),
+    or without a pubDate it can parse. Skipping the podcast keeps what it had,
+    where loading it would blank a stored last_modified, and Postgres sorts
+    that null first in the podcast's and the aggregate feed's newest-first
+    order.
+    """
+    return [
+        row["readable_id"]
+        for row in episode_rows
+        if not row["title"] or _parse_pub_date(row["published_on_raw"]) is None
+    ]
+
+
 def transform_podcast_episode(
     row: dict, topics: list[dict], offered_by: dict | None, parent_image: dict | None
 ) -> dict:
@@ -448,18 +464,13 @@ def sync_podcasts(
     podcasts_data = []
     for podcast in podcasts:
         podcast_episodes = episodes_by_podcast[podcast["readable_id"]]
-        untitled = [
-            episode["readable_id"]
-            for episode in podcast_episodes
-            if not episode["title"]
-        ]
-        if untitled:
-            # LearningResource.title is required. podcast.transform fails on such
-            # a feed and skips the podcast, which stays tracked and keeps its data
+        unloadable = _unloadable_episodes(podcast_episodes)
+        if unloadable:
+            # The podcast stays tracked, so it keeps its data
             log.error(
-                "Skipping podcast %s: episodes without a title: %s",
+                "Skipping podcast %s: episodes without a title or pubDate: %s",
                 podcast["readable_id"],
-                ", ".join(untitled),
+                ", ".join(unloadable),
             )
             continue
         podcasts_data.append(transform_podcast(podcast, podcast_episodes))
