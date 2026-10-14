@@ -2761,10 +2761,14 @@ def test_get_ocw_data_skips_when_legacy_does_not_own_courses(settings, mocker):
         ({"allow_mass_unpublish": 1}, False),
     ],
 )
+@pytest.mark.parametrize("call", ["run", "apply"])
 def test_media_sync_tasks_pass_on_allow_mass_unpublish(  # noqa: PLR0913
-    mocker, warehouse_owns, task, sync, kwargs, allow
+    mocker, warehouse_owns, task, sync, call, kwargs, allow
 ):
-    """Only a run queued with the boolean allow_mass_unpublish=True lifts the limit"""
+    """
+    Only the boolean allow_mass_unpublish=True lifts the limit, whether the task
+    is queued or run() is called directly
+    """
     mocker.patch("learning_resources.lib.warehouse.connect_to_warehouse")
     mocker.patch("learning_resources.tasks.iter_rows", return_value=[])
     mock_sync = mocker.patch(
@@ -2773,6 +2777,9 @@ def test_media_sync_tasks_pass_on_allow_mass_unpublish(  # noqa: PLR0913
     if sync == "sync_podcasts":
         mock_sync.return_value = 0
 
-    getattr(tasks, task).apply(kwargs=kwargs).get()
+    if call == "run":
+        getattr(tasks, task).run(**kwargs)
+    else:
+        getattr(tasks, task).apply(kwargs=kwargs).get()
 
     assert mock_sync.call_args.kwargs == {"allow_mass_unpublish": allow}
