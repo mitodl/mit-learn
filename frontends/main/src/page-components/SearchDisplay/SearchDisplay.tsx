@@ -67,7 +67,9 @@ import type { TabConfig } from "./tabConfigs"
 import { ResourceCard } from "../ResourceCard/ResourceCard"
 import { useUserMe } from "api/hooks/user"
 import getSearchParams from "./getSearchParams"
-import UniversalAIBanner from "./UniversalAIBanner"
+import UniversalAIBanner, {
+  useUniversalAIBannerVisible,
+} from "./UniversalAIBanner"
 import AiSearchOverview from "./AiSearchOverview"
 
 const StyledResourceTabs = styled(ResourceTypeGroupTabs.TabList)`
@@ -1169,6 +1171,9 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
   const facetsAfterTypeChoice = facetManifest.slice(
     facetsBeforeTypeChoice.length,
   )
+  /* The card takes its own space from the top when the banner above it draws
+     nothing -- see the padding on the column below. */
+  const aiBannerVisible = useUniversalAIBannerVisible(searchParams)
   const aggregations = displayData?.metadata.aggregations ?? {}
   /* What the chip row will draw, which also decides whether the tabs above it
      carry a rule -- see `TopicTabsRow`. */
@@ -1228,14 +1233,15 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
               flexDirection: "column",
               gap: "40px",
               /**
-               * The same 40px above whatever comes first, which is the card
-               * unless the AI banner is showing. As padding rather than a gap
-               * or a margin on the card: a gap needs something above the card
-               * to measure from, and the banner is usually not there --
-               * it renders nothing at all unless the search term is one it
-               * answers, and nothing is no flex item and so no gap.
+               * Only when the banner is not there to space the card from the
+               * hero itself. With the banner showing, the gap above the card
+               * already measures from it; without it the card has nothing
+               * above it, because a banner that draws nothing is no flex item
+               * and so no gap.
                */
-              ...(resultsLayout === "cards" ? { paddingTop: "40px" } : {}),
+              ...(resultsLayout === "cards" && !aiBannerVisible
+                ? { paddingTop: "40px" }
+                : {}),
             }}
           >
             <VisuallyHidden
