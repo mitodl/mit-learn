@@ -1801,7 +1801,6 @@ describe("dashboardViewModel", () => {
     const build = (
       opts: {
         track?: "General" | "Methods" | "missing"
-        enabled?: boolean
         passedCourseIds?: number[]
       } = {},
     ) => {
@@ -1824,7 +1823,6 @@ describe("dashboardViewModel", () => {
         ancestorProgramEnrollment: factories.enrollment.programEnrollmentV3({
           track: opts.track ? { id: trackId, title: opts.track } : null,
         }),
-        programTracksEnabled: opts.enabled ?? true,
       })
       return { ...result, generalId, methodsId }
     }
@@ -1938,7 +1936,6 @@ describe("dashboardViewModel", () => {
         ancestorProgramEnrollment: factories.enrollment.programEnrollmentV3({
           track: { id: track.id as number, title: "Policy" },
         }),
-        programTracksEnabled: true,
       })
       expect(sections.map((s) => [s.title, s.total, s.trackAction])).toEqual([
         ["Policy: Required", 1, "change"],
@@ -1964,29 +1961,12 @@ describe("dashboardViewModel", () => {
         programEnrollmentsById: {},
         requiredPrograms: [],
         requiredProgramModuleCoursesByProgramId: {},
-        programTracksEnabled: true,
       })
       expect(sections).toHaveLength(1)
       expect([sections[0].trackAction, sections[0].total]).toEqual([
         "choose",
         0,
       ])
-    })
-
-    test("with the flag off, shows every track and counts the furthest one", () => {
-      const { sections, completedCount, totalCount, trackState } = build({
-        enabled: false,
-        passedCourseIds: [101, 203],
-      })
-      expect(sections.map((s) => s.title)).toEqual([
-        "Core Courses",
-        "General courses",
-        "Methods courses",
-        "Capstone",
-      ])
-      // Core (1 of 2) + Methods (1 of 2) + Capstone (0 of 1)
-      expect([completedCount, totalCount]).toEqual([2, 5])
-      expect(trackState).toBeNull()
     })
 
     test("returns no track state for an untracked program", () => {
@@ -1999,7 +1979,6 @@ describe("dashboardViewModel", () => {
         programEnrollmentsById: {},
         requiredPrograms: [],
         requiredProgramModuleCoursesByProgramId: {},
-        programTracksEnabled: true,
       })
       expect(trackState).toBeNull()
     })
