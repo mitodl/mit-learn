@@ -1226,9 +1226,16 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
             sx={{
               display: "flex",
               flexDirection: "column",
-              /* The cards layout sets the tab row 24px above the grid, which
-                 is what its design specifies. */
               gap: "40px",
+              /**
+               * The same 40px above whatever comes first, which is the card
+               * unless the AI banner is showing. As padding rather than a gap
+               * or a margin on the card: a gap needs something above the card
+               * to measure from, and the banner is usually not there --
+               * it renders nothing at all unless the search term is one it
+               * answers, and nothing is no flex item and so no gap.
+               */
+              ...(resultsLayout === "cards" ? { paddingTop: "40px" } : {}),
             }}
           >
             <VisuallyHidden
