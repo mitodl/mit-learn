@@ -731,9 +731,11 @@ export interface SearchDisplayProps {
   /**
    * The search box and facets, drawn at the top of the card this renders for
    * the cards layout. The caller owns the search term, so it builds the bar
-   * and hands it over rather than this reaching back for the state.
+   * and hands it over rather than this reaching back for the state -- and
+   * takes the counts back the other way, since the search that produces them
+   * is run here.
    */
-  filterBarSlot?: React.ReactNode
+  filterBarSlot?: (aggregations: Aggregations) => React.ReactNode
   adminOptionsSlot?: React.ReactNode
   /**
    * True when this instance queries the vector (hybrid) endpoint rather than
@@ -1241,7 +1243,7 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
             <UniversalAIBanner searchParams={searchParams} />
             {resultsLayout === "cards" ? (
               <TopicSearchCard>
-                {filterBarSlot}
+                {filterBarSlot?.(withEveryValue(aggregations))}
                 <TopicTabsRow dividesFilters={appliedFilters.length > 0}>
                   <StyledResourceTabs
                     setSearchParams={setSearchParams}

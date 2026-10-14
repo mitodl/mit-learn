@@ -176,17 +176,20 @@ const ChannelSearch: React.FC<ChannelSearchProps> = ({
            sits in, so the display renders it rather than this placing it
            above -- see `TopicSearchCard`. */
         filterBarSlot={
-          layout === "topic" ? (
-            <TopicSearchFilterBar
-              currentText={currentText}
-              setCurrentText={setCurrentText}
-              setCurrentTextAndQuery={setCurrentTextAndQuery}
-              setPage={setPage}
-              params={params}
-              setParamValue={setParamValue}
-              toggleParamValue={toggleParamValue}
-            />
-          ) : undefined
+          layout === "topic"
+            ? (aggregations) => (
+                <TopicSearchFilterBar
+                  currentText={currentText}
+                  setCurrentText={setCurrentText}
+                  setCurrentTextAndQuery={setCurrentTextAndQuery}
+                  setPage={setPage}
+                  params={params}
+                  setParamValue={setParamValue}
+                  toggleParamValue={toggleParamValue}
+                  aggregations={aggregations}
+                />
+              )
+            : undefined
         }
         drawerSearchSlot={
           layout === "topic" ? (
