@@ -69,7 +69,7 @@ const selectedFilters = (
 const Row = styled.div({
   display: "flex",
   alignItems: "center",
-  gap: "8px",
+  gap: "16px",
   width: "100%",
   /* Narrow screens run out of room long before the filters do. */
   flexWrap: "wrap",
