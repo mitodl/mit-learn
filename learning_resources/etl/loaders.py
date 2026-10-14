@@ -1171,7 +1171,8 @@ def load_course_units(run: LearningResourceRun, units_data: list[dict]) -> list[
     Replace a run's units with the ones built from its latest archive. Units are
     upserted on (run, external_id) so their ids stay stable across loads, and
     the run's units missing from units_data are deleted. Only the run's
-    published content files are linked, and a unit left with none is dropped.
+    published content files are linked, numbered in the order given within
+    ordered units, and a unit left with none is dropped.
 
     Args:
         run (LearningResourceRun): the run the units belong to
@@ -1211,8 +1212,13 @@ def load_course_units(run: LearningResourceRun, units_data: list[dict]) -> list[
             position += is_ordered
             UnitContentFile.objects.filter(unit=unit).delete()
             UnitContentFile.objects.bulk_create(
-                UnitContentFile(unit=unit, content_file_id=file_id, relation=relation)
-                for file_id, relation in links.items()
+                UnitContentFile(
+                    unit=unit,
+                    content_file_id=file_id,
+                    relation=relation,
+                    position=position_in_unit if is_ordered else None,
+                )
+                for position_in_unit, (file_id, relation) in enumerate(links.items())
             )
             unit_ids.append(unit.id)
         run.units.exclude(id__in=unit_ids).delete()

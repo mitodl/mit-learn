@@ -1392,8 +1392,13 @@ class UnitContentFile(models.Model):
     relation = models.CharField(
         max_length=32, choices=Relation.choices, default=Relation.CORE
     )
+    # lesson order within the unit, approximate for static files, which sit
+    # after the first block that links them; null in units with no order, like
+    # the course context
+    position = models.PositiveIntegerField(null=True, blank=True)
 
     class Meta:
+        ordering = ["position"]
         constraints = [
             models.UniqueConstraint(
                 fields=["unit", "content_file"], name="unique_content_file_per_unit"
@@ -1401,7 +1406,9 @@ class UnitContentFile(models.Model):
         ]
 
     def __str__(self):
-        return f"{self.unit_id}/{self.content_file_id}: {self.relation}"
+        return (
+            f"{self.unit_id}/{self.content_file_id}: {self.relation} #{self.position}"
+        )
 
 
 class UserList(TimestampedModel):

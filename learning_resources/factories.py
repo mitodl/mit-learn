@@ -785,6 +785,7 @@ class UnitContentFileFactory(DjangoModelFactory):
         ContentFileFactory, run=factory.SelfAttribute("..unit.run")
     )
     relation = models.UnitContentFile.Relation.CORE
+    position = factory.Sequence(lambda n: n)
 
     class Meta:
         model = models.UnitContentFile

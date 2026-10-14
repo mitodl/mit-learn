@@ -4369,10 +4369,13 @@ def test_load_course_units():
         ("seq2", "unit", 1),
         ("context", "context", None),
     ]
-    assert {
-        (link.content_file_id, link.relation)
+    assert [
+        (link.content_file_id, link.relation, link.position)
         for link in units[0].unitcontentfile_set.all()
-    } == {(lecture.id, "core"), (notes.id, "supplementary")}
+    ] == [(lecture.id, "core", 0), (notes.id, "supplementary", 1)]
+    assert [link.position for link in units[1].unitcontentfile_set.all()] == [0, 1]
+    # the context has no order
+    assert [link.position for link in units[2].unitcontentfile_set.all()] == [None]
     assert set(notes.units.all()) == {units[0], units[1]}
     assert list(units[2].content_files.all()) == [lecture]
 

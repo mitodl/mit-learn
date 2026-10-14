@@ -1965,21 +1965,22 @@ def test_olx_course_units(tmp_path):
     lecture, problem_set, context = units
     assert lecture["external_id"] == key("sequential/seq1.xml")
     assert lecture["url"].endswith("/courses/course-v1:MITx+1+run/jump_to_id/seq1")
-    assert lecture["content_files"] == {
-        key("html/h1.xml"): "core",
-        key("html/h1_body.html"): "core",
-        key("video/vid1.xml"): "core",
-        key("static/vid1.srt"): "core",
-        key("static/subs_ABC123.srt.sjson"): "core",
-        key("problem/p_shared.xml"): "assessment",
-        key("static/notes_1.pdf"): "supplementary",
-    }
-    assert problem_set["content_files"] == {
-        key("library_content/lib.xml"): "core",
-        key("problem/p_lib.xml"): "assessment",
-        key("problem/p_shared.xml"): "assessment",
-        key("static/notes_1.pdf"): "supplementary",
-    }
+    # in lesson order: a linked static file follows the first block linking it
+    assert list(lecture["content_files"].items()) == [
+        (key("html/h1.xml"), "core"),
+        (key("html/h1_body.html"), "core"),
+        (key("static/notes_1.pdf"), "supplementary"),
+        (key("video/vid1.xml"), "core"),
+        (key("static/vid1.srt"), "core"),
+        (key("static/subs_ABC123.srt.sjson"), "core"),
+        (key("problem/p_shared.xml"), "assessment"),
+    ]
+    assert list(problem_set["content_files"].items()) == [
+        (key("library_content/lib.xml"), "core"),
+        (key("problem/p_lib.xml"), "assessment"),
+        (key("static/notes_1.pdf"), "supplementary"),
+        (key("problem/p_shared.xml"), "assessment"),
+    ]
     assert context["external_id"] == "context"
     assert set(context["content_files"]) == {
         key("tabs/syllabus.html"),
@@ -1993,3 +1994,66 @@ def test_olx_course_units_not_olx(tmp_path):
     _write_olx(tmp_path, "files/notes.pdf", "pdf")
     run = LearningResourceRunFactory.create()
     assert utils.olx_course_units(tmp_path, run) == []
+
+
+def test_olx_course_units_intro_and_conclusion_go_to_context(tmp_path):
+    """A chapter's only sequential goes to context when titled as an intro or wrap-up"""
+    olx = tmp_path / "course"
+    chapters = {
+        # the only sequential, titled as an introduction: context
+        "ch_intro": [("seq_welcome", "Welcome to the Course")],
+        # an introduction beside other sequentials is a step in the course
+        "ch_week1": [("seq_intro", "Introduction to Week 1"), ("seq_l1", "Lecture 1")],
+        # the only sequential, but not titled as an intro or conclusion
+        "ch_exam": [("seq_exam", "Final Exam")],
+        "ch_end": [("seq_wrap", "Course Wrap-up")],
+        # a module overview is context wherever it sits, and doesn't leave the
+        # lecture beside it counted as the chapter's only sequential
+        "ch_module": [
+            ("seq_goals", "Module  Overview and Learning Goals"),
+            ("seq_summary", "Summary of Results"),
+        ],
+    }
+    _write_olx(olx, "course.xml", '<course url_name="run" org="MITx" course="1"/>')
+    _write_olx(
+        olx,
+        "course/run.xml",
+        "<course>"
+        + "".join(f'<chapter url_name="{name}"/>' for name in chapters)
+        + "</course>",
+    )
+    for chapter, sequentials in chapters.items():
+        _write_olx(
+            olx,
+            f"chapter/{chapter}.xml",
+            "<chapter>"
+            + "".join(f'<sequential url_name="{seq}"/>' for seq, _ in sequentials)
+            + "</chapter>",
+        )
+        for seq, title in sequentials:
+            _write_olx(
+                olx,
+                f"sequential/{seq}.xml",
+                f'<sequential display_name="{title}">'
+                f'<vertical><problem url_name="p_{seq}"/></vertical></sequential>',
+            )
+            _write_olx(olx, f"problem/p_{seq}.xml", "<problem/>")
+    run = LearningResourceRunFactory.create()
+
+    def key(rel):
+        return utils.get_edx_module_id(f"{olx}/{rel}", run)
+
+    units = utils.olx_course_units(olx, run)
+
+    assert [unit["title"] for unit in units] == [
+        "Introduction to Week 1",
+        "Lecture 1",
+        "Final Exam",
+        "Summary of Results",
+        "Course context",
+    ]
+    assert units[-1]["content_files"] == {
+        key("problem/p_seq_welcome.xml"): "assessment",
+        key("problem/p_seq_wrap.xml"): "assessment",
+        key("problem/p_seq_goals.xml"): "assessment",
+    }
