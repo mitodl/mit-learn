@@ -980,6 +980,95 @@ describe("ContractLearnersPage", () => {
     await screen.findByText("Only Not Started")
   })
 
+  test("seeds the status filter from the URL and ignores an unknown status", async () => {
+    const { org, contract, orgSlug } = setup()
+    const contractId = String(contract.id)
+    setMockResponse.get(
+      mitxUrls.organization.managerOrganizationsList(),
+      paginate([org]),
+    )
+    mockTotal(contractId, 2)
+    mockCourseRuns(contractId)
+    mockList(
+      contractId,
+      [analyticsFactories.learnerProgress({ full_name: "Only Not Started" })],
+      { completion_status: ["not_started"] },
+    )
+
+    renderWithProviders(
+      <ContractLearnersPage orgSlug={orgSlug} contractSlug={contract.slug} />,
+      { url: "/?status=not_started&needs_attention=bogus&page=-3" },
+    )
+
+    await screen.findByText("Only Not Started")
+  })
+
+  test("writes the active filters back to the URL", async () => {
+    const { org, contract, orgSlug } = setup()
+    const contractId = String(contract.id)
+    setMockResponse.get(
+      mitxUrls.organization.managerOrganizationsList(),
+      paginate([org]),
+    )
+    mockTotal(contractId, 2)
+    mockCourseRuns(contractId)
+    mockList(contractId, [
+      analyticsFactories.learnerProgress({ full_name: "Everyone" }),
+    ])
+    mockList(
+      contractId,
+      [analyticsFactories.learnerProgress({ full_name: "Only Not Started" })],
+      { completion_status: ["not_started"] },
+    )
+
+    const { location } = renderWithProviders(
+      <ContractLearnersPage orgSlug={orgSlug} contractSlug={contract.slug} />,
+    )
+    await screen.findByText("Everyone")
+
+    await user.click(await screen.findByRole("combobox", { name: /status/i }))
+    await user.click(
+      within(await screen.findByRole("listbox")).getByText("Not started"),
+    )
+
+    await waitFor(() =>
+      expect(location.current.searchParams.get("status")).toBe("not_started"),
+    )
+  })
+
+  test("Clear filters resets every filter and only shows while one is active", async () => {
+    const { org, contract, orgSlug } = setup()
+    const contractId = String(contract.id)
+    setMockResponse.get(
+      mitxUrls.organization.managerOrganizationsList(),
+      paginate([org]),
+    )
+    mockTotal(contractId, 2)
+    mockCourseRuns(contractId)
+    mockList(contractId, [
+      analyticsFactories.learnerProgress({ full_name: "Everyone" }),
+    ])
+    mockList(
+      contractId,
+      [analyticsFactories.learnerProgress({ full_name: "Only Not Started" })],
+      { completion_status: ["not_started"] },
+    )
+
+    const { location } = renderWithProviders(
+      <ContractLearnersPage orgSlug={orgSlug} contractSlug={contract.slug} />,
+      { url: "/?status=not_started" },
+    )
+    await screen.findByText("Only Not Started")
+
+    await user.click(screen.getByRole("button", { name: "Clear filters" }))
+
+    await screen.findByText("Everyone")
+    expect(location.current.search).toBe("")
+    expect(
+      screen.queryByRole("button", { name: "Clear filters" }),
+    ).not.toBeInTheDocument()
+  })
+
   test("the Completed filter matches passed and certified, with no separate Certificate option", async () => {
     const { org, contract, orgSlug } = setup()
     const contractId = String(contract.id)
@@ -1395,11 +1484,11 @@ describe("ContractLearnersPage progress grid", () => {
     mockTotal(contractId, 3)
     mockCourseRuns(contractId)
     mockList(contractId, [])
-    renderWithProviders(
+    const { location } = renderWithProviders(
       <ContractLearnersPage orgSlug={orgSlug} contractSlug={contract.slug} />,
       { url },
     )
-    return { contractId, orgSlug, contract }
+    return { contractId, orgSlug, contract, location }
   }
 
   beforeEach(() => {
@@ -1523,7 +1612,7 @@ describe("ContractLearnersPage progress grid", () => {
   })
 
   test("reports the view change and mirrors it to the URL", async () => {
-    const { contractId, orgSlug, contract } = renderGrid()
+    const { contractId, orgSlug, contract, location } = renderGrid()
     mockGridPage(contractId, 0, [])
 
     await user.click(await screen.findByRole("tab", { name: "Progress grid" }))
@@ -1537,10 +1626,10 @@ describe("ContractLearnersPage progress grid", () => {
         contractSlug: contract.slug,
       },
     )
-    expect(window.location.search).toBe("?view=grid")
+    expect(location.current.search).toBe("?view=grid")
 
     await user.click(screen.getByRole("tab", { name: "By enrollment" }))
-    expect(window.location.search).toBe("")
+    expect(location.current.search).toBe("")
   })
 
   test("opens on the grid when the URL asks for it", async () => {

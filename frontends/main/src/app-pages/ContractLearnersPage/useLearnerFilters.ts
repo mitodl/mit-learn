@@ -1,8 +1,14 @@
-import { useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { useRouter } from "next-nprogress-bar"
 import type { CompletionStatusFilter } from "api/analytics-hooks/organizations"
+import { useAppSearchParams } from "@/common/useAppSearchParams"
 
 const ALL = "all"
 const SEARCH_DEBOUNCE_MS = 300
+/** Matches the API's cap on `search`; truncated rather than sent as-is, since a long paste would otherwise 422 and read as "Something went wrong loading learner data" — 422 isn't in the error-boundary set. */
+const SEARCH_MAX_LENGTH = 254
+const VIEWS = { enrollments: "enrollments", grid: "grid" } as const
+type View = (typeof VIEWS)[keyof typeof VIEWS]
 
 /**
  * "Completed" queries both `passed` and `certified`, matching the count
@@ -23,24 +29,63 @@ const STATUS_FILTER_COMPLETION_STATUS: Record<
 }
 
 /**
- * The filters both learner views share. `onChange` runs whenever a filter
- * settles on a new value, so each view can send its own pagination back to
- * page 1; typing in the search box only reports once the debounce lands.
+ * The learner directory's state, with the URL as the single source of
+ * truth: the filters both views share, the active view, and the page. Every
+ * change is one `router.replace`, so back/forward and links into the page
+ * update it, and a changed filter, view, or search always lands on page 1.
+ *
+ * Only the search box keeps local state, so typing isn't throttled by
+ * navigation; it is written to the URL once the debounce settles.
  */
-const useLearnerFilters = (onChange: () => void) => {
-  const [searchQuery, setSearchQuery] = useState("")
-  const [debouncedSearch, setDebouncedSearch] = useState("")
-  const [statusFilter, setStatusFilterState] = useState<string>(ALL)
-  const [needsAttentionOnly, setNeedsAttentionOnlyState] = useState(false)
+const useLearnerFilters = () => {
+  const router = useRouter()
+  const params = useAppSearchParams()
+
+  const update = useCallback(
+    (updates: Record<string, string | null>) => {
+      const next = new URLSearchParams(params.toString())
+      for (const [key, value] of Object.entries(updates)) {
+        if (value) next.set(key, value)
+        else next.delete(key)
+      }
+      const query = next.toString()
+      router.replace(
+        query ? `?${query}` : "?",
+        { scroll: false },
+        { showProgressBar: false },
+      )
+    },
+    [router, params],
+  )
+
+  const urlSearch = (params.get("q") ?? "").slice(0, SEARCH_MAX_LENGTH)
+  const statusParam = params.get("status") ?? ALL
+  const statusFilter =
+    statusParam in STATUS_FILTER_COMPLETION_STATUS ? statusParam : ALL
+  const needsAttentionOnly = params.get("needs_attention") === "true"
+  const moduleFilter = params.get("module") ?? ALL
+  const view: View =
+    params.get("view") === VIEWS.grid ? VIEWS.grid : VIEWS.enrollments
+  const page = Math.max(1, parseInt(params.get("page") ?? "", 10) || 1)
+
+  const [searchQuery, setSearchQuery] = useState(urlSearch)
+  const lastWrittenSearch = useRef(urlSearch)
 
   useEffect(() => {
-    if (searchQuery === debouncedSearch) return
+    if (urlSearch !== lastWrittenSearch.current) {
+      lastWrittenSearch.current = urlSearch
+      setSearchQuery(urlSearch)
+    }
+  }, [urlSearch])
+
+  useEffect(() => {
+    if (searchQuery === urlSearch) return
     const id = setTimeout(() => {
-      setDebouncedSearch(searchQuery)
-      onChange()
+      lastWrittenSearch.current = searchQuery
+      update({ q: searchQuery, page: null })
     }, SEARCH_DEBOUNCE_MS)
     return () => clearTimeout(id)
-  }, [searchQuery, debouncedSearch, onChange])
+  }, [searchQuery, urlSearch, update])
 
   const completionStatus = useMemo<CompletionStatusFilter[] | undefined>(
     () =>
@@ -51,26 +96,42 @@ const useLearnerFilters = (onChange: () => void) => {
   )
 
   return {
+    view,
+    setView: (next: View) =>
+      update({ view: next === VIEWS.grid ? next : null, page: null }),
+    page,
+    setPage: (next: number) => update({ page: next > 1 ? String(next) : null }),
     searchQuery,
     setSearchQuery,
     clearSearch: () => {
+      lastWrittenSearch.current = ""
       setSearchQuery("")
-      setDebouncedSearch("")
-      onChange()
+      update({ q: null, page: null })
     },
-    debouncedSearch,
+    debouncedSearch: urlSearch,
     statusFilter,
-    setStatusFilter: (value: string) => {
-      setStatusFilterState(value)
-      onChange()
-    },
+    setStatusFilter: (value: string) =>
+      update({ status: value === ALL ? null : value, page: null }),
     completionStatus,
     needsAttentionOnly,
-    setNeedsAttentionOnly: (value: boolean) => {
-      setNeedsAttentionOnlyState(value)
-      onChange()
+    setNeedsAttentionOnly: (value: boolean) =>
+      update({ needs_attention: value ? "true" : null, page: null }),
+    moduleFilter,
+    setModuleFilter: (value: string) =>
+      update({ module: value === ALL ? null : value, page: null }),
+    clearAll: () => {
+      lastWrittenSearch.current = ""
+      setSearchQuery("")
+      update({
+        q: null,
+        status: null,
+        module: null,
+        needs_attention: null,
+        page: null,
+      })
     },
   }
 }
 
-export { ALL, useLearnerFilters }
+export { ALL, SEARCH_MAX_LENGTH, VIEWS, useLearnerFilters }
+export type { View }

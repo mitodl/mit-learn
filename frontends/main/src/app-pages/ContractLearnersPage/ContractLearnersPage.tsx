@@ -51,7 +51,6 @@ import { matchOrganizationBySlug } from "@/common/utils"
 import { ForbiddenError, isForbiddenResponse } from "@/common/errors"
 import { FeatureFlags } from "@/common/feature_flags"
 import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
-import { useAppSearchParams } from "@/common/useAppSearchParams"
 import { PostHogEvents } from "@/common/constants"
 import { contractAnalyticsView } from "@/common/urls"
 import SectionHeader, {
@@ -62,7 +61,13 @@ import { LearnerRow } from "./LearnerRow"
 import { COLUMN_FLEX } from "./columns"
 import { DISPLAY_STATUS_LABEL, getDisplayStatus } from "./statusDisplay"
 import { ProgressGrid } from "./ProgressGrid"
-import { ALL, useLearnerFilters } from "./useLearnerFilters"
+import {
+  ALL,
+  SEARCH_MAX_LENGTH,
+  VIEWS,
+  useLearnerFilters,
+  type View,
+} from "./useLearnerFilters"
 
 /**
  * The B2B learner directory: one row per learner per course run under a
@@ -236,11 +241,6 @@ const ErrorRow = styled.div({
 const PAGE_SIZE = 25
 /** Below the API's max_page_size rather than pinned to it — that setting is env-overridable, and this only costs one extra round trip on a large contract. */
 const CSV_EXPORT_PAGE_SIZE = 500
-/** Matches the API's cap on `search`; truncated below rather than sent as-is, since a long paste would otherwise 422 and read as "Something went wrong loading learner data" — 422 isn't in the error-boundary set below. */
-const SEARCH_MAX_LENGTH = 254
-const VIEW_PARAM = "view"
-const VIEWS = { enrollments: "enrollments", grid: "grid" } as const
-type View = (typeof VIEWS)[keyof typeof VIEWS]
 const UNAVAILABLE_MESSAGE_ID = "learner-analytics-unavailable-message"
 
 const STATUS_OPTIONS: { value: string; label: string }[] = [
@@ -264,36 +264,11 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
   orgSlug,
   contractSlug,
 }) => {
-  const [moduleFilter, setModuleFilter] = useState<string>(ALL)
-  const [page, setPage] = useState(1)
-  const [gridPage, setGridPage] = useState(1)
-  const initialView = useAppSearchParams().get(VIEW_PARAM)
-  const [view, setView] = useState<View>(
-    initialView === VIEWS.grid ? VIEWS.grid : VIEWS.enrollments,
-  )
-  const posthog = usePostHog()
-  const [isExporting, setIsExporting] = useState(false)
-  const [actionResult, setActionResult] = useState<{
-    message: string
-    severity: "success" | "error"
-  } | null>(null)
-  const [announcement, setAnnouncement] = useState("")
-  const queryClient = useQueryClient()
-
-  const resetPages = useCallback(() => {
-    setPage(1)
-    setGridPage(1)
-  }, [])
-
-  const applyFilterChange = useCallback(
-    (apply: () => void) => {
-      apply()
-      resetPages()
-    },
-    [resetPages],
-  )
-
   const {
+    view,
+    setView,
+    page,
+    setPage,
     searchQuery,
     setSearchQuery,
     clearSearch,
@@ -303,7 +278,18 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
     completionStatus,
     needsAttentionOnly,
     setNeedsAttentionOnly,
-  } = useLearnerFilters(resetPages)
+    moduleFilter,
+    setModuleFilter,
+    clearAll,
+  } = useLearnerFilters()
+  const posthog = usePostHog()
+  const [isExporting, setIsExporting] = useState(false)
+  const [actionResult, setActionResult] = useState<{
+    message: string
+    severity: "success" | "error"
+  } | null>(null)
+  const [announcement, setAnnouncement] = useState("")
+  const queryClient = useQueryClient()
 
   const handleViewChange = (_event: React.SyntheticEvent, next: View) => {
     if (next === view) return
@@ -314,15 +300,6 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
       contractSlug,
     })
     setView(next)
-    const params = new URLSearchParams(window.location.search)
-    if (next === VIEWS.grid) params.set(VIEW_PARAM, next)
-    else params.delete(VIEW_PARAM)
-    const query = params.toString()
-    window.history.replaceState(
-      null,
-      "",
-      `${window.location.pathname}${query ? `?${query}` : ""}${window.location.hash}`,
-    )
   }
 
   const {
@@ -577,9 +554,17 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
     )
   }
 
+  const hasActiveFilters =
+    !!searchQuery ||
+    statusFilter !== ALL ||
+    (view === VIEWS.enrollments && activeModule !== ALL) ||
+    needsAttentionOnly
+
   const emptyMessage = debouncedSearch
     ? "No learners match your search."
-    : statusFilter !== ALL || activeModule !== ALL || needsAttentionOnly
+    : statusFilter !== ALL ||
+        (view === VIEWS.enrollments && activeModule !== ALL) ||
+        needsAttentionOnly
       ? "No learners match this filter."
       : "No learners found."
 
@@ -692,9 +677,7 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
                       error={courseRunsQuery.isError && !courseRunsQuery.data}
                       errorText="Couldn't load modules. Reload to try again."
                       onChange={(event) =>
-                        applyFilterChange(() =>
-                          setModuleFilter(String(event.target.value)),
-                        )
+                        setModuleFilter(String(event.target.value))
                       }
                     />
                   ) : null}
@@ -707,6 +690,16 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
                       }
                     />
                   </CheckboxField>
+                  <Button
+                    variant="tertiary"
+                    size="medium"
+                    onClick={clearAll}
+                    style={{
+                      visibility: hasActiveFilters ? "visible" : "hidden",
+                    }}
+                  >
+                    Clear filters
+                  </Button>
                 </ControlsRight>
               </ControlsRow>
 
@@ -844,8 +837,8 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
                     }
                     courseRunsFetching={courseRunsQuery.isFetching}
                     onRetryCourseRuns={() => courseRunsQuery.refetch()}
-                    page={gridPage}
-                    onPageChange={setGridPage}
+                    page={page}
+                    onPageChange={setPage}
                     emptyMessage={emptyMessage}
                   />
                 ) : null}
