@@ -21,13 +21,6 @@ import invariant from "tiny-invariant"
 import topicBannerDefault from "@/public/images/backgrounds/bg-default-topics.jpg"
 import TopicFeaturedCarousel from "./TopicFeaturedCarousel"
 
-const ChildrenContainer = styled.div(({ theme }) => ({
-  /* The design sets the search card 64px below the hero. */
-  [theme.breakpoints.down("sm")]: {
-    paddingTop: 0,
-  },
-}))
-
 const BannerSkeleton = styled(Skeleton)(({ theme }) => ({
   backgroundColor: theme.custom.colors.lightGray2,
 }))
@@ -202,11 +195,13 @@ const HeroScrim = styled.div(({ theme }) => ({
  * -- its `green` is a darker #008000 and `darkGreen` darker again, and against
  * the pill's near-white neither reads as the design's.
  *
- * Doubled because `FollowPill` colours every icon inside it, and a rule that
- * names the pill and the element beats one that names only the element.
+ * Repeated four times because `FollowPill` colours every icon inside it, and
+ * does it again on hover: that rule names the pill, the hover, the not-
+ * disabled and the svg, so three doubled classes still lose to it and the
+ * tick would go grey under the pointer. Four of them outweigh its three.
  */
 const FollowingIcon = styled(RiCheckboxCircleFill)({
-  "&&": {
+  "&&&&": {
     color: "#00ad00",
   },
 })
@@ -496,9 +491,9 @@ const TopicChannelTemplateInternal: React.FC<
           </Container>
         </HeroContent>
       </TopicHero>
-      <SearchArea>
-        <ChildrenContainer>{children}</ChildrenContainer>
-      </SearchArea>
+      {/* What the results are spaced from is the rule this draws, and the
+          column below sets its own distance from it -- see `SearchDisplay`. */}
+      <SearchArea>{children}</SearchArea>
     </>
   )
 }

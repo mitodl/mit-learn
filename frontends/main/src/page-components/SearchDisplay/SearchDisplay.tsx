@@ -933,7 +933,10 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
       options={sortOptions}
       className="sort-dropdown"
       aria-label="Sort by"
-      MenuProps={SORT_MENU_PROPS}
+      /* The lift belongs to the card design, where this menu is one of four
+         and has to match the facet menus beside it. The search page and the
+         other channels keep the menu they had. */
+      MenuProps={resultsLayout === "cards" ? SORT_MENU_PROPS : undefined}
       renderValue={(value) => {
         const opt = SORT_OPTIONS.find((option) => option.value === value)
         return `Sort by: ${opt?.label}`
@@ -1228,21 +1231,28 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
           <Grid
             component="section"
             size={{ xs: 12, md: resultsLayout === "cards" ? 12 : 9 }}
-            sx={{
+            sx={(theme) => ({
               display: "flex",
               flexDirection: "column",
-              gap: "40px",
+              /* The cards design sets its grid 40px below the card it filters
+                 from. Every other layout keeps the 16px it had. */
+              gap: resultsLayout === "cards" ? "40px" : "16px",
               /**
-               * Only when the banner is not there to space the card from the
-               * hero itself. With the banner showing, the gap above the card
-               * already measures from it; without it the card has nothing
-               * above it, because a banner that draws nothing is no flex item
-               * and so no gap.
+               * The column's own distance from the hero, which it needs when
+               * nothing above it supplies one: a banner that draws nothing is
+               * no flex item and so no gap, and the first thing in the column
+               * then sits against the hero's rule.
+               *
+               * The banner supplies it only from `md` up, where its own top
+               * margin is 48px. Below that the margin is 10px, which is not a
+               * distance from anything, so the padding stands either way.
                */
-              ...(resultsLayout === "cards" && !aiBannerVisible
-                ? { paddingTop: "40px" }
+              ...(resultsLayout === "cards"
+                ? aiBannerVisible
+                  ? { [theme.breakpoints.down("md")]: { paddingTop: "40px" } }
+                  : { paddingTop: "40px" }
                 : {}),
-            }}
+            })}
           >
             <VisuallyHidden
               as={resultsHeadingEl}

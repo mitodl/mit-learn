@@ -37,7 +37,12 @@ const Card = styled.div({
  */
 const StyledSearchField = styled(SearchField)(({ theme }) => ({
   width: "626px",
-  flexShrink: 0,
+  /* The elastic one of the two: the controls beside it are a fixed set of
+     fixed-width labels, so between `md` and the ~1080px the design's width
+     needs, the room has to come from the field. `min-width` because a flex
+     item will not shrink past its content otherwise, and the field's content
+     is a long placeholder. */
+  minWidth: 0,
   gap: "8px",
   input: {
     ...theme.typography.body2,
@@ -52,8 +57,15 @@ const Facets = styled.div(({ theme }) => ({
   alignItems: "center",
   /* 8px either side of each hairline, as the design spaces them. */
   gap: "16px",
-  flex: "1 0 0",
-  minWidth: 0,
+  /**
+   * Sized by what it holds, and given the rest of the row on top. A zero
+   * basis would take only the room left after the field's 626px, which
+   * between `md` and ~1080px is less than the controls measure -- they then
+   * run out of the card and take the page's width with them. Growing from
+   * their own width instead keeps the controls against the right edge where
+   * there is room, and leaves the field to give some up where there is not.
+   */
+  flex: "1 0 auto",
   [theme.breakpoints.down("md")]: {
     flexWrap: "wrap",
   },
