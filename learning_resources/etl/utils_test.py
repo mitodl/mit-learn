@@ -22,6 +22,7 @@ from learning_resources.constants import (
 )
 from learning_resources.etl import utils
 from learning_resources.etl.constants import CommitmentConfig, DurationConfig, ETLSource
+from learning_resources.etl.loaders import load_course_units
 from learning_resources.etl.utils import (
     get_s3_prefix_for_source,
     parse_certification,
@@ -2057,3 +2058,195 @@ def test_olx_course_units_intro_and_conclusion_go_to_context(tmp_path):
         key("problem/p_seq_wrap.xml"): "assessment",
         key("problem/p_seq_goals.xml"): "assessment",
     }
+
+
+def test_olx_course_units_inline_lessons(tmp_path):
+    """A file holding a component inline is a lesson; a pure outline file is not"""
+    olx = tmp_path / "course"
+    files = {
+        "course.xml": '<course url_name="run" org="MITx" course="1"/>',
+        "course/run.xml": '<course><chapter url_name="ch1"/><chapter url_name="ch2"/></course>',
+        "chapter/ch1.xml": (
+            '<chapter><sequential url_name="seq1"/><sequential url_name="seq2"/>'
+            "</chapter>"
+        ),
+        # the only lesson is an html body stored inline in the vertical
+        "sequential/seq1.xml": '<sequential><vertical url_name="v_inline"/></sequential>',
+        "vertical/v_inline.xml": (
+            '<vertical><html display_name="Notes"><p>inline body</p></html></vertical>'
+        ),
+        # an inline problem, beside a pure outline vertical
+        "sequential/seq2.xml": (
+            '<sequential><vertical url_name="v_problem"/>'
+            '<vertical url_name="v_outline"/></sequential>'
+        ),
+        "vertical/v_problem.xml": "<vertical><problem><p>2+2?</p></problem></vertical>",
+        "vertical/v_outline.xml": '<vertical><html url_name="h1"/></vertical>',
+        "html/h1.xml": '<html filename="h1"/>',
+        # a sequential stored inline in its chapter, holding an inline video
+        "chapter/ch2.xml": (
+            '<chapter><sequential url_name="seq3"><vertical>'
+            '<video youtube="1.00:XYZ789"/></vertical></sequential></chapter>'
+        ),
+        "static/subs_XYZ789.srt.sjson": "{}",
+    }
+    for rel, text in files.items():
+        _write_olx(olx, rel, text)
+    run = LearningResourceRunFactory.create()
+
+    def key(rel):
+        return utils.get_edx_module_id(f"{olx}/{rel}", run)
+
+    first, second, third, _context = utils.olx_course_units(olx, run)
+
+    assert first["content_files"] == {key("vertical/v_inline.xml"): "core"}
+    assert list(second["content_files"].items()) == [
+        (key("vertical/v_problem.xml"), "assessment"),
+        (key("html/h1.xml"), "core"),
+    ]
+    assert list(third["content_files"].items()) == [
+        (key("chapter/ch2.xml"), "core"),
+        (key("static/subs_XYZ789.srt.sjson"), "core"),
+    ]
+
+
+def test_load_inline_lesson_unit(tmp_path):
+    """A unit whose only lesson is inline in its vertical survives the load"""
+    olx = tmp_path / "course"
+    _write_olx(olx, "course.xml", '<course url_name="run" org="MITx" course="1"/>')
+    _write_olx(olx, "course/run.xml", '<course><chapter url_name="ch"/></course>')
+    _write_olx(
+        olx,
+        "chapter/ch.xml",
+        '<chapter><sequential url_name="a"/><sequential url_name="b"/></chapter>',
+    )
+    for name in ("a", "b"):
+        _write_olx(
+            olx,
+            f"sequential/{name}.xml",
+            f'<sequential><vertical url_name="v{name}"/></sequential>',
+        )
+        _write_olx(
+            olx, f"vertical/v{name}.xml", "<vertical><html><p>hi</p></html></vertical>"
+        )
+    run = LearningResourceRunFactory.create()
+    for name in ("a", "b"):
+        ContentFileFactory.create(
+            run=run, key=utils.get_edx_module_id(f"{olx}/vertical/v{name}.xml", run)
+        )
+
+    load_course_units(run, utils.olx_course_units(olx, run))
+
+    assert [
+        (unit.position, unit.content_files.count())
+        for unit in run.units.filter(kind="unit").order_by("position")
+    ] == [(0, 1), (1, 1)]
+
+
+def test_olx_course_units_ignores_staff_only_references(tmp_path):
+    """A link only staff-only content makes does not put an asset in the unit"""
+    olx = tmp_path / "course"
+    files = {
+        "course.xml": '<course url_name="run" org="MITx" course="1"/>',
+        "course/run.xml": '<course><chapter url_name="ch"/></course>',
+        "chapter/ch.xml": (
+            '<chapter><sequential url_name="seq_a"/><sequential url_name="seq_b"/>'
+            "</chapter>"
+        ),
+        # seq_a links shared.pdf only from a staff-only inline vertical, but
+        # links inline.pdf from a visible inline html block
+        "sequential/seq_a.xml": (
+            '<sequential><vertical url_name="v_a"/>'
+            '<vertical visible_to_staff_only="true">'
+            '<html><a href="/static/shared.pdf">answers</a></html></vertical>'
+            "</sequential>"
+        ),
+        "vertical/v_a.xml": (
+            '<vertical><html><a href="/static/inline.pdf">notes</a></html>'
+            '<problem visible_to_staff_only="true">'
+            '<a href="/static/shared.pdf"/></problem></vertical>'
+        ),
+        # seq_b is where learners see shared.pdf
+        "sequential/seq_b.xml": '<sequential><vertical url_name="v_b"/></sequential>',
+        "vertical/v_b.xml": '<vertical><html url_name="h_b"/></vertical>',
+        "html/h_b.xml": '<html filename="h_b"/>',
+        "html/h_b.html": '<a href="/static/shared.pdf">handout</a>',
+        "static/shared.pdf": "pdf",
+        "static/inline.pdf": "pdf",
+    }
+    for rel, text in files.items():
+        _write_olx(olx, rel, text)
+    run = LearningResourceRunFactory.create()
+
+    def key(rel):
+        return utils.get_edx_module_id(f"{olx}/{rel}", run)
+
+    seq_a, seq_b, _context = utils.olx_course_units(olx, run)
+
+    assert list(seq_a["content_files"]) == [
+        key("vertical/v_a.xml"),
+        key("static/inline.pdf"),
+    ]
+    assert key("static/shared.pdf") in seq_b["content_files"]
+
+
+def test_olx_course_units_context_static_files(tmp_path):
+    """The context unit gets the static files that only course-wide pages link"""
+    olx = tmp_path / "course"
+    files = {
+        "course.xml": '<course url_name="run" org="MITx" course="1"/>',
+        "course/run.xml": '<course><chapter url_name="ch"/></course>',
+        "chapter/ch.xml": '<chapter><sequential url_name="seq"/></chapter>',
+        "sequential/seq.xml": '<sequential><vertical url_name="v"/></sequential>',
+        "vertical/v.xml": '<vertical><html url_name="h"/></vertical>',
+        "html/h.xml": "<html><p>lesson</p></html>",
+        "info/handouts.html": '<a href="/static/syllabus.pdf">Syllabus</a>',
+        "info/updates.items.json": json.dumps(
+            [
+                {"content": '<a href="/static/live.pdf">x</a>', "status": "visible"},
+                {"content": '<a href="/static/deleted.pdf">x</a>', "status": "deleted"},
+            ]
+        ),
+        # only the "shown" tab is in the navigation
+        "policies/run/policy.json": json.dumps(
+            {"course/run": {"tabs": [{"type": "static_tab", "url_slug": "shown"}]}}
+        ),
+        "tabs/shown.html": '<a href="/static/tab_notes.pdf">notes</a>',
+        "tabs/hidden.html": '<a href="/static/hidden_tab.pdf">notes</a>',
+        # mitxonline doesn't show the about page
+        "about/overview.html": '<a href="/static/about.pdf">about</a>',
+    }
+    for name in (
+        "syllabus",
+        "live",
+        "deleted",
+        "tab_notes",
+        "hidden_tab",
+        "about",
+    ):
+        files[f"static/{name}.pdf"] = "pdf"
+    for rel, text in files.items():
+        _write_olx(olx, rel, text)
+    run = LearningResourceRunFactory.create(
+        learning_resource=LearningResourceFactory.create(
+            etl_source=ETLSource.mitxonline.name, create_runs=False
+        )
+    )
+
+    def key(rel):
+        return utils.get_edx_module_id(f"{olx}/{rel}", run)
+
+    unit, context = utils.olx_course_units(olx, run)
+
+    linked = {
+        k
+        for k, relation in context["content_files"].items()
+        if relation == "supplementary"
+    }
+    assert linked == {
+        key("static/syllabus.pdf"),
+        key("static/live.pdf"),
+        key("static/tab_notes.pdf"),
+    }
+    assert key("info/handouts.html") in context["content_files"]
+    assert not any(k.startswith("asset") for k in unit["content_files"])

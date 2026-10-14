@@ -142,8 +142,6 @@ def process_course_archive(
     # archive records archive_key with no checksum, so it still skips.
     has_published_files = run.content_files.filter(published=True).exists()
     stale_run = bool(run.checksum) and not has_published_files
-    # Units are built only while an archive loads, so a run loaded before units
-    # existed loads once more. Unchanged files reuse their text.
     missing_units = has_published_files and not run.units.exists()
     reload = overwrite or stale_run or missing_units
 
@@ -193,10 +191,10 @@ def process_course_archive(
                 run, chain([first], content_files_data), failed_keys=failed_keys
             )
             if content_files_ids:
+                load_course_units(run, units)
                 run.checksum = checksum
                 run.archive_key = key
                 run.save(update_fields=["checksum", "archive_key"])
-                load_course_units(run, units)
         except:  # noqa: E722
             log.exception("Error ingesting OLX content data for %s", key)
     return True

@@ -2236,3 +2236,35 @@ def test_process_course_archive_reloads_runs_missing_units(mocker, has_units):
 
     assert bucket.download_file.called is not has_units
     assert mock_transform.called is not has_units
+
+
+def test_process_course_archive_unit_failure_is_retried(mocker):
+    """A failed unit load leaves the archive unrecorded, so the next sync retries"""
+    key = "mitxonline/openedx/raw_data/course_xml/course-v1:Test+Course+R1/abc123.xml.tar.gz"
+    run = LearningResourceRunFactory.create(
+        published=True, archive_key="old.tar.gz", checksum="old"
+    )
+    mocker.patch(
+        "learning_resources.etl.edx_shared.calc_checksum", return_value="checksum"
+    )
+    mocker.patch(
+        "learning_resources.etl.edx_shared.transform_content_files",
+        return_value=iter([{"key": "content.txt"}]),
+    )
+
+    def fake_load(run_arg, data, **kwargs):
+        list(data)  # consume the generator like the real loader
+        return [1]
+
+    mocker.patch(
+        "learning_resources.etl.edx_shared.load_content_files", side_effect=fake_load
+    )
+    mocker.patch(
+        "learning_resources.etl.edx_shared.load_course_units",
+        side_effect=Exception("boom"),
+    )
+
+    process_course_archive(mocker.MagicMock(), key, run)
+
+    run.refresh_from_db()
+    assert (run.archive_key, run.checksum) == ("old.tar.gz", "old")
