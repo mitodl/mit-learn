@@ -61,6 +61,8 @@ const courseEnrollment: PartialFactory<CourseRunEnrollmentV3> = (
       courseware_id: faker.string.uuid(),
       run_tag: faker.lorem.word(),
       language_label: "",
+      variant_industry_label: "Original",
+      variant_length_label: "Full",
       live: faker.datatype.boolean(),
       course_number: faker.lorem.word(),
       upgrade_product_id: faker.number.int(),

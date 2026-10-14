@@ -50,8 +50,8 @@ type DataConsentDialogProps = {
   open: boolean
   contractName: string
   onAccept: () => void
-  onDecline: () => void
-  submitting?: "accept" | "decline" | null
+  onCancel: () => void
+  submitting?: "accept" | "cancel" | null
   isError?: boolean
 }
 
@@ -59,7 +59,7 @@ const DataConsentDialog: React.FC<DataConsentDialogProps> = ({
   open,
   contractName,
   onAccept,
-  onDecline,
+  onCancel,
   submitting = null,
   isError = false,
 }) => {
@@ -73,7 +73,7 @@ const DataConsentDialog: React.FC<DataConsentDialogProps> = ({
   return (
     <Dialog
       open={open}
-      // Only Accept or Decline can close it, not Escape or a backdrop click.
+      // Only Accept or Cancel can close it, not Escape or a backdrop click.
       onClose={() => {}}
       showCloseButton={false}
       title="Data Consent - Requirement for Enrollment"
@@ -83,12 +83,12 @@ const DataConsentDialog: React.FC<DataConsentDialogProps> = ({
         <Actions>
           <ActionButton
             variant="secondary"
-            onClick={unlessBusy(onDecline)}
+            onClick={unlessBusy(onCancel)}
             aria-disabled={busy}
-            aria-busy={submitting === "decline"}
-            endIcon={submitting === "decline" ? spinner : undefined}
+            aria-busy={submitting === "cancel"}
+            endIcon={submitting === "cancel" ? spinner : undefined}
           >
-            Decline
+            Cancel
           </ActionButton>
           <ActionButton
             variant="primary"
