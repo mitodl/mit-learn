@@ -23,9 +23,8 @@ import TopicFeaturedCarousel from "./TopicFeaturedCarousel"
 
 const ChildrenContainer = styled.div(({ theme }) => ({
   /* The design sets the search card 64px below the hero. */
-  paddingTop: "64px",
   [theme.breakpoints.down("sm")]: {
-    paddingTop: "24px",
+    paddingTop: 0,
   },
 }))
 

@@ -750,6 +750,13 @@ export interface SearchDisplayProps {
   tabs?: TabConfig[]
 }
 
+/** The lift the facet menus carry, so the two read as the same kind of menu. */
+const SORT_MENU_PROPS = {
+  PaperProps: {
+    sx: { boxShadow: "1px 3px 20px 0 rgba(0, 0, 0, 0.12)" },
+  },
+}
+
 const SearchDisplay: React.FC<SearchDisplayProps> = ({
   page,
   setPage,
@@ -924,6 +931,7 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
       options={sortOptions}
       className="sort-dropdown"
       aria-label="Sort by"
+      MenuProps={SORT_MENU_PROPS}
       renderValue={(value) => {
         const opt = SORT_OPTIONS.find((option) => option.value === value)
         return `Sort by: ${opt?.label}`
