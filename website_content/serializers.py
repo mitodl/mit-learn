@@ -139,6 +139,20 @@ class WebsiteContentSerializer(BaseSerializer):
             instance.content
         )
 
+    def validate_content_type(self, value):
+        """
+        Reject changing the type of an existing item
+
+        The type decides the item's public URL (/articles/ vs /news/) and which
+        listing it appears in, so retyping it would break every link already
+        shared. The editors send their own type on every save, so this is also
+        what stops an item opened in the wrong editor from being retyped.
+        """
+        if self.instance is not None and value != self.instance.content_type:
+            msg = "content_type cannot be changed after creation."
+            raise serializers.ValidationError(msg)
+        return value
+
     class Meta:
         model = models.WebsiteContent
         fields = [

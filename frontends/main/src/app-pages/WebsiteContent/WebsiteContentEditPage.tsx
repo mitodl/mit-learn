@@ -69,6 +69,21 @@ const WebsiteContentEditPage = ({
   const { data: article, isLoading } = useWebsiteContentDetailRetrieve(idOrSlug)
   const router = useRouter()
 
+  /**
+   * The URL names a type, but the item has its own. Each editor saves its own
+   * type on every write -- autosave included -- so the wrong editor would
+   * retype the item (the API refuses that, but the author would just see their
+   * saves fail). Send them to where the item actually lives instead.
+   */
+  const actualType = article?.content_type
+  const articleId = article?.id
+  const typeMismatch = !!actualType && actualType !== type
+  React.useEffect(() => {
+    if (actualType && articleId !== undefined && actualType !== type) {
+      router.replace(websiteContentEditView(actualType, articleId))
+    }
+  }, [actualType, articleId, type, router])
+
   const Editor = EDITORS[type]
   const viewUrl = PUBLISHED_VIEW_URL[type]
 
@@ -76,8 +91,10 @@ const WebsiteContentEditPage = ({
     notFound()
   }
 
-  if (isLoading) {
-    return <Spinner color="inherit" loading={isLoading} size={32} />
+  // Never mount the wrong editor, even for a moment: its autosave could fire
+  // before the redirect lands.
+  if (isLoading || typeMismatch) {
+    return <Spinner color="inherit" loading size={32} />
   }
   if (!article) {
     return notFound()
