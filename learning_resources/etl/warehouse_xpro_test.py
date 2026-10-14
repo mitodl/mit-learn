@@ -396,6 +396,45 @@ def test_sync_programs_loads_and_links_courses(warehouse_owns_xpro, api_programs
         ) == sorted(course["readable_id"] for course in program["courses"])
 
 
+def test_sync_programs_links_the_published_course_over_an_unpublished_copy(
+    warehouse_owns_xpro, api_programs
+):
+    """
+    A course that moved platform keeps an unpublished row on the old one, which
+    the program must not be linked through
+    """
+    program = api_programs[0]
+    for course in program["courses"]:
+        LearningResourceFactory.create(
+            etl_source=ETLSource.xpro.name,
+            resource_type=COURSE,
+            published=True,
+            readable_id=course["readable_id"],
+            platform__code=xpro.XPRO_PLATFORM_TRANSFORM[course["platform"]],
+        )
+        LearningResourceFactory.create(
+            etl_source=ETLSource.xpro.name,
+            resource_type=COURSE,
+            published=False,
+            test_mode=False,
+            readable_id=course["readable_id"],
+            platform__code=PlatformType.emeritus.name,
+        )
+
+    with writing_as(Pipeline.WAREHOUSE):
+        warehouse_xpro.sync_programs([program_row(program)])
+
+    resource = LearningResource.objects.get(
+        etl_source=ETLSource.xpro.name,
+        resource_type=PROGRAM,
+        readable_id=program["readable_id"],
+    )
+    assert sorted(
+        resource.children.values_list("child__readable_id", flat=True)
+    ) == sorted(course["readable_id"] for course in program["courses"])
+    assert set(resource.children.values_list("child__published", flat=True)) == {True}
+
+
 @pytest.mark.parametrize(
     ("courses", "runs"), [([], [{"readable_id": "a"}]), ([{"readable_id": "a"}], [])]
 )

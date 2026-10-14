@@ -16,6 +16,8 @@ import logging
 from collections import defaultdict
 from decimal import Decimal
 
+from django.db.models import Q
+
 from learning_resources.constants import (
     CertificationType,
     Format,
@@ -281,10 +283,14 @@ def sync_programs(programs: list[dict], *, allow_mass_unpublish: bool = False) -
         return 0
 
     refuse_empty(programs=programs)
+    # Only the rows the fetch_only lookup in upsert_course_or_program matches,
+    # so an unpublished copy of a course on another platform cannot win.
     course_platforms = dict(
         LearningResource.objects.filter(
             etl_source=ETLSource.xpro.name, resource_type=COURSE
-        ).values_list("readable_id", "platform__code")
+        )
+        .filter(Q(published=True) | Q(test_mode=True))
+        .values_list("readable_id", "platform__code")
     )
     programs_data = [
         transform_program(program, course_platforms) for program in programs
