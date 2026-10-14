@@ -138,6 +138,8 @@ const HeaderLearnerCell = styled(LearnerCell)(({ theme }) => ({
 }))
 
 const HeaderModuleCell = styled(ModuleCell)(({ theme }) => ({
+  padding: 0,
+  paddingLeft: "20px",
   ...theme.typography.subtitle2,
   display: "-webkit-box",
   WebkitBoxOrient: "vertical",
@@ -256,6 +258,27 @@ const StatusSymbol: React.FC<{ status: DisplayStatus }> = ({ status }) => {
         <Icon aria-hidden="true" size={20} />
         <VisuallyHidden>{label}</VisuallyHidden>
       </StatusMark>
+    </Tooltip>
+  )
+}
+
+/** The title is clamped to three lines; only then is it focusable and given a tooltip with the full name. */
+const ModuleHeader: React.FC<{ title: string }> = ({ title }) => {
+  const ref = useRef<HTMLDivElement>(null)
+  const [truncated, setTruncated] = useState(false)
+  useEffect(() => {
+    const el = ref.current
+    if (el) setTruncated(el.scrollHeight > el.clientHeight)
+  }, [title])
+  return (
+    <Tooltip title={truncated ? title : ""}>
+      <HeaderModuleCell
+        ref={ref}
+        role="columnheader"
+        tabIndex={truncated ? 0 : undefined}
+      >
+        {title}
+      </HeaderModuleCell>
     </Tooltip>
   )
 }
@@ -434,13 +457,10 @@ const ProgressGrid: React.FC<ProgressGridProps> = ({
                   Learner
                 </HeaderLearnerCell>
                 {columns.map((run) => (
-                  <HeaderModuleCell
+                  <ModuleHeader
                     key={run.courserun_id}
-                    role="columnheader"
                     title={run.courserun_title}
-                  >
-                    {run.courserun_title}
-                  </HeaderModuleCell>
+                  />
                 ))}
               </HeaderRow>
             </div>
