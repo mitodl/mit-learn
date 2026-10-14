@@ -3,23 +3,34 @@ import { buildTestimonialStructuredData } from "./testimonialStructuredData"
 
 const makeTestimonial = factories.pages.testimonialItem
 
+const DESCRIPTION = "Build a rocket."
+
 test("returns null when there are no testimonials", () => {
-  expect(buildTestimonialStructuredData([], "Intro to Rocketry")).toBeNull()
+  expect(
+    buildTestimonialStructuredData([], "Intro to Rocketry", DESCRIPTION),
+  ).toBeNull()
 })
 
 test("returns null without a reviewed item name", () => {
-  expect(buildTestimonialStructuredData([makeTestimonial()], "")).toBeNull()
+  expect(
+    buildTestimonialStructuredData([makeTestimonial()], "", DESCRIPTION),
+  ).toBeNull()
 })
 
 test("nests every review under a single Course node", () => {
   const testimonials = [makeTestimonial(), makeTestimonial()]
 
   expect(
-    buildTestimonialStructuredData(testimonials, "Intro to Rocketry"),
+    buildTestimonialStructuredData(
+      testimonials,
+      "Intro to Rocketry",
+      DESCRIPTION,
+    ),
   ).toEqual({
     "@context": "https://schema.org",
     "@type": "Course",
     name: "Intro to Rocketry",
+    description: DESCRIPTION,
     review: testimonials.map((testimonial) => ({
       "@type": "Review",
       author: { "@type": "Person", name: testimonial.name },
@@ -39,33 +50,36 @@ test("carries the reviewed item's description as plain text", () => {
   expect(result?.description).toBe("Build a rocket & launch it. Twice.")
 })
 
-test("omits the description when the reviewed item has none", () => {
-  const result = buildTestimonialStructuredData(
-    [makeTestimonial()],
-    "Intro to Rocketry",
-  )
-
-  expect(result).not.toHaveProperty("description")
+test("returns null when the reviewed item has no description", () => {
+  expect(
+    buildTestimonialStructuredData([makeTestimonial()], "Intro to Rocketry"),
+  ).toBeNull()
 })
 
-test("omits a description whose markup strips to nothing", () => {
-  const result = buildTestimonialStructuredData(
-    [makeTestimonial()],
-    "Intro to Rocketry",
-    "<p>&nbsp;</p>",
-  )
-
-  expect(result).not.toHaveProperty("description")
+test("returns null when the description markup strips to nothing", () => {
+  expect(
+    buildTestimonialStructuredData(
+      [makeTestimonial()],
+      "Intro to Rocketry",
+      "<p>&nbsp;</p>",
+    ),
+  ).toBeNull()
 })
 
 test("returns null when the reviewed item name is only whitespace", () => {
-  expect(buildTestimonialStructuredData([makeTestimonial()], "   ")).toBeNull()
+  expect(
+    buildTestimonialStructuredData([makeTestimonial()], "   ", DESCRIPTION),
+  ).toBeNull()
 })
 
 test("trims padding off the author name it emits", () => {
   const padded = makeTestimonial({ name: "  Ada Lovelace  " })
 
-  const result = buildTestimonialStructuredData([padded], "Intro to Rocketry")
+  const result = buildTestimonialStructuredData(
+    [padded],
+    "Intro to Rocketry",
+    DESCRIPTION,
+  )
 
   expect(result?.review).toEqual([
     {
@@ -84,6 +98,7 @@ test("omits testimonials whose author name is only whitespace", () => {
   const result = buildTestimonialStructuredData(
     [blank, attributed],
     "Intro to Rocketry",
+    DESCRIPTION,
   )
 
   expect(result?.review).toEqual([
@@ -103,6 +118,7 @@ test("omits testimonials without an author name", () => {
   const result = buildTestimonialStructuredData(
     [anonymous, attributed],
     "Intro to Rocketry",
+    DESCRIPTION,
   )
 
   expect(result?.review).toEqual([
@@ -122,6 +138,7 @@ test("omits testimonials without a publication date", () => {
   const result = buildTestimonialStructuredData(
     [undated, dated],
     "Intro to Rocketry",
+    DESCRIPTION,
   )
 
   expect(result?.review).toEqual([
@@ -139,6 +156,7 @@ test("returns null when no testimonial can be attributed and dated", () => {
     buildTestimonialStructuredData(
       [makeTestimonial({ name: "" }), makeTestimonial({ date_published: "" })],
       "Intro to Rocketry",
+      DESCRIPTION,
     ),
   ).toBeNull()
 })
