@@ -802,6 +802,12 @@ type RequirementSection = {
   items: RequirementSectionItem[]
   completed: number
   total: number
+  /**
+   * Set on a tracked program's track slot. "choose" marks the placeholder
+   * shown before a track is chosen (no items; `node` is the tracks
+   * container); "change" marks the first section of the chosen track.
+   */
+  trackAction?: "choose" | "change"
 }
 
 /**
@@ -970,7 +976,7 @@ type ProgramTrackOption = {
 }
 
 /**
- * Track state for a tracked program's dashboard header and dialog. Only
+ * Track state for a tracked program's choose/change track dialog. Only
  * present when the program has tracks and the program-tracks-dashboard flag
  * is on.
  */
@@ -978,12 +984,6 @@ type ProgramTrackState = {
   tracks: ProgramTrackOption[]
   /** The learner's chosen track, or `null` before they choose one. */
   currentTrack: ProgramTrackOption | null
-  /** Courses required by the groups before the tracks, e.g. core courses. */
-  requiredBeforeTracks: number
-  /** Whether every group before the tracks is complete. */
-  beforeTracksComplete: boolean
-  /** Courses each track requires, or `null` when the tracks differ. */
-  requiredPerTrack: number | null
 }
 
 /**
@@ -1014,9 +1014,11 @@ const getTrackSectionTitle = (
  *
  * For a tracked program with `programTracksEnabled`, the sections are the
  * groups before the tracks, then the chosen track's groups, then the groups
- * after the tracks (e.g. a capstone). Before a track is chosen, only the groups
- * before the tracks are shown. With the flag off, every track's groups are
- * shown and the overall count uses the track with the most completed courses.
+ * after the tracks (e.g. a capstone). Before a track is chosen, a "Track
+ * courses" placeholder takes the chosen track's place. With the flag off,
+ * every track's groups are shown. Either way, a track's progress counts the
+ * chosen track, or the track with the most completed courses when none is
+ * chosen.
  *
  * Preserves `req_tree` ordering. Sections with no resolved items are filtered
  * out (oracle: `.filter(section => section.items.length > 0)`).
@@ -1100,20 +1102,21 @@ const buildRequirementSections = ({
     ),
   )
 
+  const trackProgress = (trackSections: RequirementSection[]) =>
+    progress(trackSections.map((s) => s.node))
+  // The track the learner is furthest along in stands in for a chosen track
+  // in progress counts, so totals are one track's worth of courses.
+  const bestTrack = sectionsByTrack.reduce<RequirementSection[]>(
+    (best, trackSections) =>
+      trackProgress(trackSections).completed > trackProgress(best).completed
+        ? trackSections
+        : best,
+    sectionsByTrack[0] ?? [],
+  )
+
   if (!programTracksEnabled) {
-    const sections = [...before, ...sectionsByTrack.flat(), ...after]
-    // Count the track the learner is furthest along in, so the overall total
-    // is one track's worth of courses rather than every track's.
-    const bestTrack = sectionsByTrack.reduce<RequirementSection[]>(
-      (best, trackSections) =>
-        progress(trackSections.map((s) => s.node)).completed >
-        progress(best.map((s) => s.node)).completed
-          ? trackSections
-          : best,
-      sectionsByTrack[0] ?? [],
-    )
     return {
-      sections,
+      sections: [...before, ...sectionsByTrack.flat(), ...after],
       ...overall([...before, ...bestTrack, ...after]),
       trackState: null,
     }
@@ -1148,31 +1151,40 @@ const buildRequirementSections = ({
   )
   const currentTrack =
     tracks.find((track) => track.id === currentTrackId) ?? null
+  const currentTrackSections =
+    currentIndex === -1 ? [] : sectionsByTrack[currentIndex]
+  const trackState = { tracks, currentTrack }
 
-  const sections =
-    currentIndex === -1
-      ? before
-      : [...before, ...sectionsByTrack[currentIndex], ...after]
+  if (currentTrackSections.length > 0) {
+    const [first, ...rest] = currentTrackSections
+    const sections = [
+      ...before,
+      { ...first, trackAction: "change" as const },
+      ...rest,
+      ...after,
+    ]
+    return { sections, ...overall(sections), trackState }
+  }
 
-  const beforeProgress = progress(
-    tracked.sectionsBeforeTracks.map((s) => s.node),
-  )
+  // Tracks that require different numbers of courses have no single count,
+  // so the placeholder's total is 0, which hides it.
   const trackTotals = new Set(
-    tracked.tracks.map(
-      (track) => progress(track.sections.map((s) => s.node)).total,
-    ),
+    sectionsByTrack.map((t) => trackProgress(t).total),
   )
-
+  const best = trackProgress(bestTrack)
+  const placeholder: RequirementSection = {
+    key: `tracks-${tracked.container.id}`,
+    title: "Track courses",
+    node: tracked.container,
+    items: [],
+    completed: trackTotals.size === 1 ? best.completed : 0,
+    total: trackTotals.size === 1 ? best.total : 0,
+    trackAction: "choose",
+  }
   return {
-    sections,
-    ...overall(sections),
-    trackState: {
-      tracks,
-      currentTrack,
-      requiredBeforeTracks: beforeProgress.total,
-      beforeTracksComplete: beforeProgress.completed >= beforeProgress.total,
-      requiredPerTrack: trackTotals.size === 1 ? [...trackTotals][0] : null,
-    },
+    sections: [...before, placeholder, ...after],
+    ...overall([...before, ...bestTrack, ...after]),
+    trackState,
   }
 }
 
