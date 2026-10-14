@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { useRouter } from "next-nprogress-bar"
 import type { CompletionStatusFilter } from "api/analytics-hooks/organizations"
 import { useAppSearchParams } from "@/common/useAppSearchParams"
 
@@ -31,32 +30,30 @@ const STATUS_FILTER_COMPLETION_STATUS: Record<
 /**
  * The learner directory's state, with the URL as the single source of
  * truth: the filters both views share, the active view, and the page. Every
- * change is one `router.replace`, so back/forward and links into the page
- * update it, and a changed filter, view, or search always lands on page 1.
+ * change is one `history.replaceState`, which Next feeds into
+ * `useSearchParams` without a server round trip (the app is `force-dynamic`,
+ * so `router.replace` would re-render the route on every filter change). A
+ * changed filter, view, or search always lands on page 1.
  *
  * Only the search box keeps local state, so typing isn't throttled by
  * navigation; it is written to the URL once the debounce settles.
  */
 const useLearnerFilters = () => {
-  const router = useRouter()
   const params = useAppSearchParams()
 
-  const update = useCallback(
-    (updates: Record<string, string | null>) => {
-      const next = new URLSearchParams(params.toString())
-      for (const [key, value] of Object.entries(updates)) {
-        if (value) next.set(key, value)
-        else next.delete(key)
-      }
-      const query = next.toString()
-      router.replace(
-        query ? `?${query}` : "?",
-        { scroll: false },
-        { showProgressBar: false },
-      )
-    },
-    [router, params],
-  )
+  const update = useCallback((updates: Record<string, string | null>) => {
+    const next = new URLSearchParams(window.location.search)
+    for (const [key, value] of Object.entries(updates)) {
+      if (value) next.set(key, value)
+      else next.delete(key)
+    }
+    const query = next.toString()
+    window.history.replaceState(
+      null,
+      "",
+      `${window.location.pathname}${query ? `?${query}` : ""}${window.location.hash}`,
+    )
+  }, [])
 
   const urlSearch = (params.get("q") ?? "").slice(0, SEARCH_MAX_LENGTH)
   const statusParam = params.get("status") ?? ALL
