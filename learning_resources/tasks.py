@@ -1446,19 +1446,23 @@ class SyncYouTubeTask(BaseWarehouseETLTask):
                 "integrations__learn__youtube_videos",
             )
         )
-        # Set before this run unpublishes anything, so a playlist load still
-        # queued from an earlier run cannot republish what this one removes.
-        generation = uuid.uuid4().hex
-        caches[WAREHOUSE_STATE_CACHE].set(
-            YOUTUBE_SYNC_GENERATION_KEY, generation, timeout=None
-        )
-        to_load = warehouse_media.sync_youtube_channels(
+        playlists_by_channel = warehouse_media.prepare_youtube_sync(
             channels,
             playlists,
             playlist_videos,
             videos,
             allow_mass_unpublish=allow_mass_unpublish,
         )
+        if playlists_by_channel is None:
+            return 0
+        # Set once the checks have passed, so a refused run leaves an earlier
+        # run's queued loads current, and before this run unpublishes
+        # anything, so those loads cannot republish what this one removes.
+        generation = uuid.uuid4().hex
+        caches[WAREHOUSE_STATE_CACHE].set(
+            YOUTUBE_SYNC_GENERATION_KEY, generation, timeout=None
+        )
+        to_load = warehouse_media.sync_youtube_channels(channels, playlists_by_channel)
         log.info("Queueing %d youtube playlists from the warehouse", len(to_load))
         for channel_id, playlist_data in to_load:
             load_warehouse_youtube_playlist.delay(channel_id, playlist_data, generation)

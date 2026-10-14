@@ -19,6 +19,7 @@ from learning_resources.factories import (
     ETLSourceOwnershipFactory,
     LearningResourceOfferorFactory,
     LearningResourcePlatformFactory,
+    LearningResourceRunFactory,
     VideoChannelFactory,
     VideoPlaylistFactory,
 )
@@ -272,13 +273,20 @@ def test_transform_youtube_playlist(stored, expected):
     assert playlist["videos"][0]["offered_by"] == playlist["offered_by"]
 
 
+def sync_youtube(*views, **kwargs):
+    """Prepare the views and sync the channels, as SyncYouTubeTask does"""
+    return warehouse_media.sync_youtube_channels(
+        views[0], warehouse_media.prepare_youtube_sync(*views, **kwargs)
+    )
+
+
 def sync_and_load_youtube(*views):
     """
     Run the channel sync and load each playlist it returns, as the task does.
     Returns the (channel id, playlist id) pairs that were loaded.
     """
     with writing_as(Pipeline.WAREHOUSE):
-        to_load = warehouse_media.sync_youtube_channels(*views)
+        to_load = sync_youtube(*views)
         # load_playlist pops the keys it reads
         loaded = [(channel_id, data["playlist_id"]) for channel_id, data in to_load]
         for channel_id, playlist_data in to_load:
@@ -373,15 +381,16 @@ def test_sync_youtube_keeps_a_channel_with_no_playlists(warehouse_owns_youtube):
 
 
 def test_sync_youtube_does_nothing_unless_the_warehouse_owns_youtube():
-    """With no ownership row the legacy ETL owns youtube, and nothing is written"""
-    to_load = sync_and_load_youtube(
-        [channel_row()],
-        [playlist_row()],
-        [membership_row("PL-one", "vid-a", 0)],
-        [video_row("vid-a")],
-    )
+    """With no ownership row the legacy ETL owns youtube, and nothing is prepared"""
+    with writing_as(Pipeline.WAREHOUSE):
+        prepared = warehouse_media.prepare_youtube_sync(
+            [channel_row()],
+            [playlist_row()],
+            [membership_row("PL-one", "vid-a", 0)],
+            [video_row("vid-a")],
+        )
 
-    assert to_load == []
+    assert prepared is None
     assert not VideoChannel.objects.exists()
     assert not LearningResource.objects.exists()
 
@@ -408,7 +417,7 @@ def test_sync_youtube_refuses_an_empty_view(warehouse_owns_youtube, empty):
         writing_as(Pipeline.WAREHOUSE),
         pytest.raises(ExtractException, match=f"no rows in {empty}"),
     ):
-        warehouse_media.sync_youtube_channels(**views)
+        warehouse_media.prepare_youtube_sync(**views)
 
     existing.refresh_from_db()
     assert existing.published is True
@@ -441,7 +450,7 @@ def test_sync_youtube_writes_nothing_when_a_row_is_bad(
         writing_as(Pipeline.WAREHOUSE),
         pytest.raises(ExtractException, match=message),
     ):
-        warehouse_media.sync_youtube_channels(
+        warehouse_media.prepare_youtube_sync(
             [channel_row()], playlists, memberships, [video_row("vid-a")]
         )
 
@@ -658,29 +667,34 @@ def test_sync_youtube_refuses_to_unpublish_more_than_the_limit(
         writing_as(Pipeline.WAREHOUSE),
         pytest.raises(ExtractException, match="2 of 10 published youtube video "),
     ):
-        warehouse_media.sync_youtube_channels(*short)
+        warehouse_media.prepare_youtube_sync(*short)
     with (
         writing_as(Pipeline.WAREHOUSE),
         pytest.raises(
             ExtractException, match="1 of 2 published youtube video_playlist"
         ),
     ):
-        warehouse_media.sync_youtube_channels(
+        warehouse_media.prepare_youtube_sync(
             views[0], views[1][:1], views[2][:10], videos
         )
 
     assert LearningResource.objects.filter(published=True).count() == 12
     with writing_as(Pipeline.WAREHOUSE):
-        to_load = warehouse_media.sync_youtube_channels(
-            *short, allow_mass_unpublish=True
-        )
+        to_load = sync_youtube(*short, allow_mass_unpublish=True)
     assert len(to_load) == 2
 
 
+@pytest.mark.parametrize(
+    "unmatched",
+    [{"published": False}, {"run__published": False}],
+)
 def test_sync_youtube_counts_a_playlist_load_playlist_would_unpublish(
-    warehouse_owns_youtube,
+    warehouse_owns_youtube, unmatched
 ):
-    """A listed create_videos=False playlist short of content file matches is not kept"""
+    """
+    A listed create_videos=False playlist short of matches with published
+    content files on published runs is not kept
+    """
     channel = VideoChannelFactory.create(channel_id="UC-mitx")
     for playlist_id in ("PL-one", "PL-two"):
         VideoPlaylistFactory.create(
@@ -701,16 +715,23 @@ def test_sync_youtube_counts_a_playlist_load_playlist_would_unpublish(
         [video_row(video_id) for video_id in video_ids],
     ]
 
-    # two of five matched is under OCW_PLAYLIST_VIDEO_THRESHOLD
+    # two of five matched is under OCW_PLAYLIST_VIDEO_THRESHOLD, and a removed
+    # content file or run does not match
     ContentFileFactory.create(youtube_id="vid-0")
     ContentFileFactory.create(youtube_id="vid-1")
+    if "run__published" in unmatched:
+        ContentFileFactory.create(
+            youtube_id="vid-2", run=LearningResourceRunFactory.create(published=False)
+        )
+    else:
+        ContentFileFactory.create(youtube_id="vid-2", **unmatched)
     with (
         writing_as(Pipeline.WAREHOUSE),
         pytest.raises(
             ExtractException, match="1 of 2 published youtube video_playlist"
         ),
     ):
-        warehouse_media.sync_youtube_channels(*views)
+        warehouse_media.prepare_youtube_sync(*views)
     assert (
         LearningResource.objects.filter(
             resource_type=LearningResourceType.video_playlist.name, published=True
@@ -720,7 +741,7 @@ def test_sync_youtube_counts_a_playlist_load_playlist_would_unpublish(
 
     ContentFileFactory.create(youtube_id="vid-2")
     with writing_as(Pipeline.WAREHOUSE):
-        assert len(warehouse_media.sync_youtube_channels(*views)) == 2
+        assert len(sync_youtube(*views)) == 2
 
 
 def test_sync_podcasts_counts_a_podcast_without_episodes_as_unpublished(
