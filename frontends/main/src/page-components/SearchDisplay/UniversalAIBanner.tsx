@@ -29,7 +29,6 @@ const BannerContainer = styled.div(({ theme }) => ({
   display: "flex",
   justifyContent: "space-between",
   alignItems: "center",
-  marginBottom: "10px",
   [theme.breakpoints.up("md")]: {
     marginTop: "48px",
   },

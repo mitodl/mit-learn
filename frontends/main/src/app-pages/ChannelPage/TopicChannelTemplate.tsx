@@ -198,14 +198,18 @@ const HeroScrim = styled.div(({ theme }) => ({
 /**
  * The tick once following: filled, and green rather than the pill's grey.
  *
+ * The design system's own Green, which the published token set does not carry
+ * -- its `green` is a darker #008000 and `darkGreen` darker again, and against
+ * the pill's near-white neither reads as the design's.
+ *
  * Doubled because `FollowPill` colours every icon inside it, and a rule that
  * names the pill and the element beats one that names only the element.
  */
-const FollowingIcon = styled(RiCheckboxCircleFill)(({ theme }) => ({
+const FollowingIcon = styled(RiCheckboxCircleFill)({
   "&&": {
-    color: theme.custom.colors.darkGreen,
+    color: "#00ad00",
   },
-}))
+})
 
 const FollowPill = styled.div(({ theme }) => ({
   "button, a": {

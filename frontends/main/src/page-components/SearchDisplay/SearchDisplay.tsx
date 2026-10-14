@@ -485,7 +485,7 @@ const TopicSearchCard = styled.div(({ theme }) => ({
 const TopicTabsRow = styled.div<{ dividesFilters: boolean }>(
   ({ theme, dividesFilters }) => ({
     display: "flex",
-    alignItems: "center",
+    alignItems: "flex-start",
     width: "100%",
     /* The rule separates the tabs from the filters applied below them, so it is
      drawn only when there are some. With none, the design leaves the selected
