@@ -206,23 +206,32 @@ const FACET_MENU_PROPS = {
   },
 }
 
-/** A facet's options, each with its own count out of the current search. */
+/**
+ * A facet's options, each with its own count out of the current search.
+ *
+ * A value no result carries is left out: ticking it would narrow the search
+ * to nothing, so there is nothing to offer. One already ticked stays however
+ * it counts, because this menu is the only place it can be unticked --
+ * dropping it would strand whichever filter emptied the search.
+ */
 const facetOptions = (
   values: readonly string[],
   labelFor: (value: string) => string,
   selected: string[],
   counts: Record<string, number>,
 ) =>
-  values.map((value) => ({
-    value,
-    label: (
-      <MenuRow>
-        <MenuBox checked={selected.includes(value)} aria-hidden />
-        {labelFor(value)}
-        <MenuCount>{counts[value] ?? 0}</MenuCount>
-      </MenuRow>
-    ),
-  }))
+  values
+    .filter((value) => (counts[value] ?? 0) > 0 || selected.includes(value))
+    .map((value) => ({
+      value,
+      label: (
+        <MenuRow>
+          <MenuBox checked={selected.includes(value)} aria-hidden />
+          {labelFor(value)}
+          <MenuCount>{counts[value] ?? 0}</MenuCount>
+        </MenuRow>
+      ),
+    }))
 
 /** The counts a search came back with, by facet value. */
 const countsFor = (aggregations: Aggregations, name: string) =>

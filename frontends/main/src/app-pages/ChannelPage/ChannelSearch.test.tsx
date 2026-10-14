@@ -846,9 +846,22 @@ describe("ChannelSearch", () => {
       }
     })
 
+    /**
+     * `delivery` counts because the menus leave out a value no result
+     * carries: with none of them counting there is nothing in the menu to
+     * report having changed.
+     */
     const renderTopic = async () => {
       const { channel } = setMockApiResponses({
         channelPatch: { channel_type: ChannelTypeEnum.Topic },
+        search: {
+          metadata: {
+            aggregations: {
+              delivery: [{ key: "online", doc_count: 7 }],
+            },
+            suggestions: [],
+          },
+        },
       })
       renderWithProviders(<ChannelPage />, {
         url: `/c/${channel.channel_type}/${channel.name}`,
