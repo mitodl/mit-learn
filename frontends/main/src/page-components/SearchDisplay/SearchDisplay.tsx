@@ -69,6 +69,7 @@ import { useUserMe } from "api/hooks/user"
 import getSearchParams from "./getSearchParams"
 import UniversalAIBanner, {
   useUniversalAIBannerVisible,
+  BANNER_CLASS,
 } from "./UniversalAIBanner"
 import AiSearchOverview from "./AiSearchOverview"
 
@@ -1251,6 +1252,11 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
                 ? aiBannerVisible
                   ? { [theme.breakpoints.down("md")]: { paddingTop: "40px" } }
                   : { paddingTop: "40px" }
+                : {}),
+              /* This column's 40px is already more than the banner's own
+                 margin is there to make up for. */
+              ...(resultsLayout === "cards"
+                ? { [`.${BANNER_CLASS}`]: { marginBottom: 0 } }
                 : {}),
             })}
           >

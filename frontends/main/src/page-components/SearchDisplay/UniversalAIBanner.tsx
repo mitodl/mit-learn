@@ -22,6 +22,13 @@ const BANNER_SEARCH_TERMS = [
   "computer vision",
 ]
 
+/**
+ * A handle for the column the banner is dropped into, which owns the space
+ * around it and may not want the margin the banner carries for the default
+ * column's tighter rhythm.
+ */
+const BANNER_CLASS = "universal-ai-banner"
+
 const BannerContainer = styled.div(({ theme }) => ({
   backgroundColor: theme.custom.colors.white,
   padding: "16px 24px",
@@ -29,6 +36,10 @@ const BannerContainer = styled.div(({ theme }) => ({
   display: "flex",
   justifyContent: "space-between",
   alignItems: "center",
+  /* The column it sits in spaces its children 16px apart, which the banner
+     needs a little more than. A layout that spaces them further apart has no
+     use for it and takes it off again -- see `BANNER_CLASS` below. */
+  marginBottom: "10px",
   [theme.breakpoints.up("md")]: {
     marginTop: "48px",
   },
@@ -137,7 +148,7 @@ const UniversalAIBanner: React.FC<UniversalAIBannerProps> = ({
   if (!showBanner) return null
 
   return (
-    <BannerContainer>
+    <BannerContainer className={BANNER_CLASS}>
       <BannerContent>
         <BannerLabel>New on MIT Learn</BannerLabel>
         <BannerTitle component="h2">Universal AI</BannerTitle>
@@ -159,4 +170,4 @@ const UniversalAIBanner: React.FC<UniversalAIBannerProps> = ({
 }
 
 export default UniversalAIBanner
-export { useUniversalAIBannerVisible }
+export { useUniversalAIBannerVisible, BANNER_CLASS }
