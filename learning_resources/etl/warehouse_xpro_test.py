@@ -17,6 +17,7 @@ from learning_resources.factories import (
     LearningResourceFactory,
     LearningResourceOfferorFactory,
     LearningResourcePlatformFactory,
+    LearningResourceTopicFactory,
 )
 from learning_resources.models import LearningResource
 
@@ -33,6 +34,20 @@ def platforms():
     return [
         LearningResourcePlatformFactory.create(code=code)
         for code in xpro.XPRO_PLATFORM_TRANSFORM.values()
+    ]
+
+
+@pytest.fixture(autouse=True)
+def topics():
+    """Create the topics the fixtures name, which transform_topics keeps"""
+    return [
+        LearningResourceTopicFactory.create(name=name)
+        for name in (
+            "Leadership & Organizations",
+            "Organization & Leadership",
+            "Quantum Computing",
+            "Strategy",
+        )
     ]
 
 
@@ -161,6 +176,7 @@ def test_transform_course_matches_the_api_etl(api_courses):
     ]
 
     assert result == expected
+    assert any(course["topics"] for course in result)
 
 
 def test_transform_program_matches_the_api_etl(api_programs):
@@ -277,8 +293,9 @@ def test_sync_programs_writes_nothing_without_the_program_pair(
 @pytest.mark.parametrize(
     ("column", "value", "expected"),
     [
-        ("topics", ["Business:Strategy"], None),
-        ("topics", b'["Business:Strategy"]', None),
+        ("topics", ["Business:Strategy"], [{"name": "Strategy"}]),
+        ("topics", b'["Business:Strategy"]', [{"name": "Strategy"}]),
+        ("topics", '["Business:Strategy"]', [{"name": "Strategy"}]),
         ("continuing_ed_credits", 1.25, 1.25),
         ("min_weeks", 3, 3),
         ("max_weekly_hours", 6, 6),
@@ -290,15 +307,7 @@ def test_transform_course_reads_warehouse_types(api_courses, column, value, expe
 
     result = warehouse_xpro.transform_course(row, run_rows(api_courses[0]))
 
-    if column == "topics":
-        text_row = {**row, "topics": json.dumps(["Business:Strategy"])}
-        assert (
-            result["topics"]
-            == warehouse_xpro.transform_course(text_row, run_rows(api_courses[0]))[
-                "topics"
-            ]
-        )
-    elif column == "continuing_ed_credits":
+    if column in ("topics", "continuing_ed_credits"):
         assert result[column] == expected
     else:
         assert result["runs"][0][column] == expected
