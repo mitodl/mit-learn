@@ -164,6 +164,7 @@ const coursePageItem: PartialFactory<CoursePageItem> = (override) => {
     length: `${faker.number.int({ min: 1, max: 12 })} weeks`,
     max_price: `${faker.number.int({ min: 50, max: 500 })}`,
     max_weekly_hours: `${faker.number.int({ min: 1, max: 20 })}`,
+    show_course_outline: true,
     max_weeks: faker.number.int({ min: 1, max: 12 }),
     meta: {
       alias_of: null,
@@ -184,7 +185,6 @@ const coursePageItem: PartialFactory<CoursePageItem> = (override) => {
     min_weeks: faker.number.int({ min: 1, max: 12 }),
     prerequisites: makeHTMLList(2),
     price: [priceItem()],
-    show_course_outline: faker.datatype.boolean(),
     title: faker.lorem.words(3),
     topic_list: [
       {

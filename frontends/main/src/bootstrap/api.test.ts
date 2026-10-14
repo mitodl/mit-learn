@@ -73,6 +73,55 @@ describe("bootstrapApiClients", () => {
     )
   })
 
+  test("does not set a User-Agent in the browser", () => {
+    bootstrapApiClients()
+
+    expect(configureApiClients).toHaveBeenCalledWith(
+      expect.objectContaining({
+        learn: expect.objectContaining({ userAgent: undefined }),
+        mitxonline: expect.objectContaining({ userAgent: undefined }),
+      }),
+    )
+  })
+
+  describe("on the server", () => {
+    const originalWindow = globalThis.window
+
+    beforeEach(() => {
+      // @ts-expect-error simulating the server, where there is no window
+      delete globalThis.window
+    })
+
+    afterEach(() => {
+      globalThis.window = originalWindow
+    })
+
+    test.each([
+      { version: "1.2.3", expected: "mit-learn-ssr/1.2.3" },
+      { version: undefined, expected: "mit-learn-ssr" },
+    ])(
+      "identifies itself as $expected when NEXT_PUBLIC_VERSION is $version",
+      ({ version, expected }) => {
+        process.env = {
+          ...process.env,
+          NEXT_PUBLIC_VERSION: version,
+          NEXT_PUBLIC_ANALYTICS_API_BASE_URL: "https://analytics.example.edu",
+        }
+        if (version === undefined) delete process.env.NEXT_PUBLIC_VERSION
+
+        bootstrapApiClients()
+
+        expect(configureApiClients).toHaveBeenCalledWith(
+          expect.objectContaining({
+            learn: expect.objectContaining({ userAgent: expected }),
+            mitxonline: expect.objectContaining({ userAgent: expected }),
+            analytics: expect.objectContaining({ userAgent: expected }),
+          }),
+        )
+      },
+    )
+  })
+
   test("no-ops when API clients are already configured", () => {
     ;(isApiClientsConfigured as jest.Mock).mockReturnValueOnce(true)
 
