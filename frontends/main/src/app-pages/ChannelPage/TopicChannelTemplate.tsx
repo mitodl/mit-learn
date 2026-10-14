@@ -1,4 +1,4 @@
-import { RiCheckboxCircleLine } from "@remixicon/react"
+import { RiCheckboxCircleFill, RiCheckboxCircleLine } from "@remixicon/react"
 import React from "react"
 import {
   styled,
@@ -195,6 +195,18 @@ const HeroScrim = styled.div(({ theme }) => ({
  * stretch the pill, and it sizes its icon slot to the 14px its own small
  * variant uses, which leaves the 24px icon overflowing a short line box.
  */
+/**
+ * The tick once following: filled, and green rather than the pill's grey.
+ *
+ * Doubled because `FollowPill` colours every icon inside it, and a rule that
+ * names the pill and the element beats one that names only the element.
+ */
+const FollowingIcon = styled(RiCheckboxCircleFill)(({ theme }) => ({
+  "&&": {
+    color: theme.custom.colors.darkGreen,
+  },
+}))
+
 const FollowPill = styled.div(({ theme }) => ({
   "button, a": {
     backgroundColor: theme.custom.colors.lightGray1,
@@ -463,6 +475,7 @@ const TopicChannelTemplateInternal: React.FC<
                           sourceType={SourceTypeEnum.ChannelSubscriptionType}
                           searchParams={urlParams}
                           icon={<RiCheckboxCircleLine aria-hidden />}
+                          subscribedIcon={<FollowingIcon aria-hidden />}
                         />
                       </FollowPill>
                     ) : null}
