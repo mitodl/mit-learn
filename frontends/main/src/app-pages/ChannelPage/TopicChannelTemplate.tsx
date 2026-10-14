@@ -11,7 +11,7 @@ import {
 } from "ol-components"
 import { SearchSubscriptionToggle } from "@/page-components/SearchSubscriptionToggle/SearchSubscriptionToggle"
 import { useChannelDetail } from "api/hooks/channels"
-import { LearningResourceTopic, SourceTypeEnum } from "api"
+import { SourceTypeEnum } from "api"
 import { HOME as HOME_URL } from "../../common/urls"
 import { CHANNEL_TYPE_BREADCRUMB_TARGETS } from "./ChannelPageTemplate"
 import { ChannelTypeEnum, TopicChannel } from "api/v0"
@@ -365,25 +365,6 @@ const SearchArea = styled.div(({ theme }) => ({
   backgroundColor: theme.custom.colors.lightGray1,
 }))
 
-type SubTopicBreadcrumbsProps = {
-  topic: LearningResourceTopic | undefined
-  parentTopicId: number
-}
-
-const SubTopicBreadcrumbs: React.FC<SubTopicBreadcrumbsProps> = (props) => {
-  const { topic, parentTopicId } = props
-  const parentTopic = useLearningResourceTopic(parentTopicId).data
-  if (!topic?.parent) {
-    return null
-  }
-  return (
-    <BreadcrumbsInternal
-      current={parentTopic?.name}
-      currentHref={parentTopic?.channel_url}
-    />
-  )
-}
-
 const BreadcrumbsInternal: React.FC<
   Pick<BreadcrumbsProps, "current" | "currentHref">
 > = (props) => {
@@ -442,16 +423,11 @@ const TopicChannelTemplateInternal: React.FC<
   invariant(channel.topic_detail.topic, "Topic channel must have a topic")
   const topicQuery = useLearningResourceTopic(channel.topic_detail.topic)
   const topicQueryLoading = topicQuery.isLoading
-  const topic = topicQuery.data
-  const parentTopicId = topic?.parent
+
   const urlParams = new URLSearchParams(channel.search_filter)
   const displayConfiguration = channel.configuration
   const configuredBanner = displayConfiguration?.banner_background
-  const navText = parentTopicId ? (
-    <SubTopicBreadcrumbs topic={topic} parentTopicId={parentTopicId} />
-  ) : (
-    <BreadcrumbsInternal current={channel.title} />
-  )
+  const navText = <BreadcrumbsInternal current={channel.title} />
 
   return (
     <>
