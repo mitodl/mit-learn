@@ -66,57 +66,56 @@ const selectedFilters = (
     }))
   })
 
-const Row = styled.div(({ theme }) => ({
+const Row = styled.div({
   display: "flex",
   alignItems: "center",
-  gap: "16px",
-  /* Takes the row so that whatever sits beside it stays at the far edge. */
-  flex: "1 0 0",
-  minWidth: 0,
+  gap: "8px",
+  width: "100%",
   /* Narrow screens run out of room long before the filters do. */
   flexWrap: "wrap",
   rowGap: "8px",
-  color: theme.custom.colors.silverGrayDark,
-}))
-
-const ResultCount = styled.span(({ theme }) => ({
-  ...theme.typography.subtitle3,
-  fontWeight: theme.typography.fontWeightBold,
-  whiteSpace: "nowrap",
-}))
+})
 
 /**
  * One filter, which removing is the only thing it does.
  *
- * A button rather than the chip component used elsewhere: the design draws no
- * container around it at all, just the cross and the words.
+ * A button rather than the chip component used elsewhere, because removing is
+ * the whole of it: the design draws an outlined pill with the filter's name
+ * and a cross, and the pill is the control.
  */
 const FilterChip = styled.button(({ theme }) => ({
-  ...theme.typography.body3,
+  ...theme.typography.body2,
   display: "flex",
   alignItems: "center",
+  justifyContent: "center",
   gap: "4px",
-  padding: 0,
-  border: "none",
+  height: "32px",
+  /* Less on the cross's side, which carries its own space. */
+  padding: "0 12px 0 16px",
+  borderRadius: "20px",
+  border: `1px solid ${theme.custom.colors.silverGrayLight}`,
   background: "none",
-  color: "inherit",
+  color: theme.custom.colors.darkGray2,
   cursor: "pointer",
-  textAlign: "left",
+  whiteSpace: "nowrap",
   svg: {
     flexShrink: 0,
     width: "16px",
     height: "16px",
+    color: theme.custom.colors.silverGrayDark,
   },
   ":hover": {
-    color: theme.custom.colors.darkGray2,
+    borderColor: theme.custom.colors.darkGray2,
+    svg: { color: theme.custom.colors.darkGray2 },
   },
 }))
 
 const ClearAll = styled.button(({ theme }) => ({
-  ...theme.typography.subtitle3,
-  fontWeight: theme.typography.fontWeightBold,
-  color: theme.custom.colors.darkRed,
-  padding: 0,
+  ...theme.typography.body3,
+  color: theme.custom.colors.red,
+  /* Set in from the last pill rather than spaced from it, as the design has
+     it -- the gap belongs to the link, not to the row. */
+  padding: "0 16px",
   border: "none",
   background: "none",
   cursor: "pointer",
@@ -129,8 +128,6 @@ const ClearAll = styled.button(({ theme }) => ({
 type SelectedFiltersProps = {
   facetManifest: FacetManifest
   params: SearchParams
-  /** Total matching the current filters, as the design states it. */
-  count?: number
   onRemove: (name: string, value: string) => void
   onClearAll: () => void
   /**
@@ -155,7 +152,6 @@ type SelectedFiltersProps = {
 const SelectedFilters: React.FC<SelectedFiltersProps> = ({
   facetManifest,
   params,
-  count,
   onRemove,
   onClearAll,
   onEmpty,
@@ -189,11 +185,6 @@ const SelectedFilters: React.FC<SelectedFiltersProps> = ({
   }
   return (
     <Row data-testid="selected-filters">
-      <ResultCount>
-        {count === undefined
-          ? "Results for:"
-          : `${count} ${count === 1 ? "result" : "results"} for:`}
-      </ResultCount>
       {filters.map((filter, index) => {
         const key = `${filter.name}-${filter.value}`
         return (
@@ -206,8 +197,8 @@ const SelectedFilters: React.FC<SelectedFiltersProps> = ({
             aria-label={`Remove filter ${filter.label}`}
             onClick={() => removeAndMoveFocus(index)}
           >
-            <RiCloseLine aria-hidden />
             {filter.label}
+            <RiCloseLine aria-hidden />
           </FilterChip>
         )
       })}

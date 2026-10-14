@@ -7,33 +7,21 @@ import { getCertificationTypeName } from "@mitodl/course-search-utils"
 import { CertificationTypeEnum, DeliveryEnum } from "api"
 
 /**
- * The search and filter bar on a topic page, per the design.
+ * The search and filter row on a topic page: the search box and three
+ * controls, rather than the facet sidebar the other channels use. A topic
+ * page narrows by format, certificate and price, and the rest of the facets
+ * are not offered here.
  *
- * One white card holding the search box and three controls, rather than the
- * facet sidebar the other channels use: a topic page narrows by format,
- * certificate and price, and the rest of the facets are not offered here.
- *
- * The red edge and the lift are the design's -- a 2px rule on the leading edge
- * and a soft shadow, which is what separates the card from the grey ground it
- * sits on.
+ * The card around it belongs to the results header it shares with the tabs
+ * and the applied filters -- see `TopicSearchCard` in `SearchDisplay`.
  */
-const Card = styled.div(({ theme }) => ({
+const Card = styled.div({
   display: "flex",
   alignItems: "center",
   gap: "24px",
-  padding: "24px",
-  /* The rule sits inside the design's 24px inset rather than adding to it. */
-  paddingLeft: "22px",
-  borderRadius: "8px",
-  borderLeft: `2px solid ${theme.custom.colors.lightRed}`,
-  backgroundColor: theme.custom.colors.white,
-  filter: "drop-shadow(0px 3px 2.5px rgba(120, 147, 172, 0.1))",
-  [theme.breakpoints.down("md")]: {
-    flexDirection: "column",
-    alignItems: "stretch",
-    gap: "16px",
-  },
-}))
+  height: "48px",
+  width: "100%",
+})
 
 /**
  * The design's search box: 486x48, and everything about the frame -- the
@@ -45,7 +33,7 @@ const Card = styled.div(({ theme }) => ({
  * both a size smaller here than the field draws them elsewhere.
  */
 const StyledSearchField = styled(SearchField)(({ theme }) => ({
-  width: "486px",
+  width: "626px",
   flexShrink: 0,
   gap: "8px",
   input: {
@@ -83,8 +71,11 @@ const Divider = styled.div(({ theme }) => ({
 const FacetSelect = styled(SimpleSelect)(({ theme }) => ({
   ...theme.typography.body2,
   color: theme.custom.colors.silverGrayDark,
-  /* The design's control is the label and a chevron, with no field chrome. */
+  /* The design's control is the label and a chevron, with no field chrome.
+     The background goes with the border: left white it reads as a box
+     against the card's gradient, which is the chrome by another name. */
   ".MuiOutlinedInput-notchedOutline": { border: "none" },
+  "&&": { backgroundColor: "transparent" },
   /**
    * The design's 36px control: 12px either side of an 18px line, 4px between
    * the label and a 20px chevron, and 12px from the chevron to the right edge.
