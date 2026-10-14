@@ -8,7 +8,10 @@ import NotFoundPage from "@/app-pages/ErrorPage/NotFoundPage"
 import { ProgramAsCourseCard } from "./ProgramAsCourseCard"
 import { RiAwardFill } from "@remixicon/react"
 import { useProgramDashboardData } from "./hooks/useProgramDashboardData"
-import { ProgramTrackHeader } from "./ProgramTrackHeader"
+import {
+  ProgramChangeTrackLink,
+  ProgramTrackPlaceholder,
+} from "./ProgramTrackControls"
 import { env } from "@/env"
 
 const CourseEntryCardStyled = styled(CoursewareCard)({
@@ -88,22 +91,22 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
         <Typography component="h1" variant="h3" paddingBottom="32px">
           {data.programTitle}
         </Typography>
-        {data.trackState ? (
-          <ProgramTrackHeader
-            programId={programId}
-            trackState={data.trackState}
-          />
-        ) : null}
-        <Stack direction="row" justifyContent="space-between">
-          <Typography variant="body2" data-testid="program-completion-count">
-            You have completed
-            <Typography component="span" variant="subtitle2">
-              {` ${data.completedCount} of ${data.totalCount}`}
+        {/* Tracked programs show progress per section only. */}
+        <Stack
+          direction="row"
+          justifyContent={data.trackState ? "flex-end" : "space-between"}
+        >
+          {data.trackState ? null : (
+            <Typography variant="body2" data-testid="program-completion-count">
+              You have completed
+              <Typography component="span" variant="subtitle2">
+                {` ${data.completedCount} of ${data.totalCount}`}
+              </Typography>
+              {data.programDisplayMode === DisplayModeEnum.Course
+                ? " courses for this program."
+                : "."}
             </Typography>
-            {data.programDisplayMode === DisplayModeEnum.Course
-              ? " courses for this program."
-              : "."}
-          </Typography>
+          )}
           <Stack direction="column" alignItems="flex-end" gap="8px">
             {data.programCertificateUrl && (
               <ProgramCertificateButton
@@ -127,13 +130,21 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
               marginBottom="16px"
               marginTop={index > 0 ? "32px" : "0"}
             >
-              <Typography
-                component="h2"
-                variant="subtitle2"
-                color={theme.custom.colors.red}
-              >
-                {section.title}
-              </Typography>
+              <Stack direction="row" alignItems="center" gap="8px">
+                <Typography
+                  component="h2"
+                  variant="subtitle2"
+                  color={theme.custom.colors.red}
+                >
+                  {section.title}
+                </Typography>
+                {section.trackAction === "change" && data.trackState ? (
+                  <ProgramChangeTrackLink
+                    programId={programId}
+                    trackState={data.trackState}
+                  />
+                ) : null}
+              </Stack>
               {section.total > 0 ? (
                 <Typography
                   data-testid="section-completion-count"
@@ -144,6 +155,12 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
                 </Typography>
               ) : null}
             </Stack>
+            {section.trackAction === "choose" && data.trackState ? (
+              <ProgramTrackPlaceholder
+                programId={programId}
+                trackState={data.trackState}
+              />
+            ) : null}
             <Stack direction="column" gap="16px">
               {section.items.map((item) => {
                 if (item.kind === "course") {

@@ -1836,18 +1836,26 @@ describe("dashboardViewModel", () => {
         ),
       )
 
-    test("shows only the groups before the tracks until a track is chosen", () => {
+    test("shows a track placeholder between the core and the capstone until a track is chosen", () => {
       const { sections, completedCount, totalCount, trackState } = build({
         passedCourseIds: [101],
       })
-      expect(sections.map((s) => s.title)).toEqual(["Core Courses"])
-      expect([completedCount, totalCount]).toEqual([1, 2])
-      expect(trackState).toMatchObject({
-        currentTrack: null,
-        requiredBeforeTracks: 2,
-        beforeTracksComplete: false,
-        requiredPerTrack: 2,
-      })
+      expect(
+        sections.map((s) => [s.title, s.trackAction, s.items.length]),
+      ).toEqual([
+        ["Core Courses", undefined, 2],
+        ["Track courses", "choose", 0],
+        ["Capstone", undefined, 1],
+      ])
+      expect([sections[1].completed, sections[1].total]).toEqual([0, 2])
+      expect([completedCount, totalCount]).toEqual([1, 5])
+      expect(trackState?.currentTrack).toBeNull()
+    })
+
+    test("counts the furthest track in the placeholder", () => {
+      const { sections } = build({ passedCourseIds: [203] })
+      const placeholder = sections.find((s) => s.trackAction === "choose")
+      expect([placeholder?.completed, placeholder?.total]).toEqual([1, 2])
     })
 
     test("lists every track with its course titles", () => {
@@ -1883,15 +1891,23 @@ describe("dashboardViewModel", () => {
         [201, 203],
         [301],
       ])
+      expect(sections.map((s) => s.trackAction)).toEqual([
+        undefined,
+        "change",
+        undefined,
+      ])
       // 202 belongs to the other track, so it does not count.
       expect([completedCount, totalCount]).toEqual([3, 5])
       expect(trackState?.currentTrack?.title).toBe("Methods")
-      expect(trackState?.beforeTracksComplete).toBe(true)
     })
 
     test("treats a track id that is not in the tree as no track", () => {
       const { sections, trackState } = build({ track: "missing" })
-      expect(sections.map((s) => s.title)).toEqual(["Core Courses"])
+      expect(sections.map((s) => s.title)).toEqual([
+        "Core Courses",
+        "Track courses",
+        "Capstone",
+      ])
       expect(trackState?.currentTrack).toBeNull()
     })
 
@@ -1912,7 +1928,7 @@ describe("dashboardViewModel", () => {
         }),
         [2, 3],
       )
-      const { sections, trackState } = buildRequirementSections({
+      const { sections } = buildRequirementSections({
         reqTree: root.serialize(),
         programCourses: [1, 2, 3].map((id) => factories.courses.course({ id })),
         enrollmentsByCourseId: {},
@@ -1924,14 +1940,13 @@ describe("dashboardViewModel", () => {
         }),
         programTracksEnabled: true,
       })
-      expect(sections.map((s) => [s.title, s.total])).toEqual([
-        ["Policy: Required", 1],
-        ["Policy: Electives", 1],
+      expect(sections.map((s) => [s.title, s.total, s.trackAction])).toEqual([
+        ["Policy: Required", 1, "change"],
+        ["Policy: Electives", 1, undefined],
       ])
-      expect(trackState?.requiredPerTrack).toBe(2)
     })
 
-    test("has no single per-track count when the tracks differ in size", () => {
+    test("hides the placeholder count when the tracks differ in size", () => {
       const root = new RequirementTreeBuilder()
       const container = root.addOperator({
         operator: "min_number_of",
@@ -1942,16 +1957,20 @@ describe("dashboardViewModel", () => {
         container.addTrack().addOperator({ operator: "all_of" }),
         [2, 3],
       )
-      const { trackState } = buildRequirementSections({
+      const { sections } = buildRequirementSections({
         reqTree: root.serialize(),
-        programCourses: [],
+        programCourses: [1, 2, 3].map((id) => factories.courses.course({ id })),
         enrollmentsByCourseId: {},
         programEnrollmentsById: {},
         requiredPrograms: [],
         requiredProgramModuleCoursesByProgramId: {},
         programTracksEnabled: true,
       })
-      expect(trackState?.requiredPerTrack).toBeNull()
+      expect(sections).toHaveLength(1)
+      expect([sections[0].trackAction, sections[0].total]).toEqual([
+        "choose",
+        0,
+      ])
     })
 
     test("with the flag off, shows every track and counts the furthest one", () => {

@@ -2366,13 +2366,16 @@ describe("ProgramEnrollmentDisplay with program tracks", () => {
     general.addOperator({ operator: "all_of" }).addCourse({ course: 2 })
     const methods = container.addTrack({ title: "Methods Track" })
     methods.addOperator({ operator: "all_of" }).addCourse({ course: 3 })
+    root
+      .addOperator({ operator: "all_of", title: "Capstone" })
+      .addCourse({ course: 4 })
 
     const program = mitxonline.factories.programs.program({
       id: 456,
-      courses: [1, 2, 3],
+      courses: [1, 2, 3, 4],
       req_tree: root.serialize(),
     })
-    const courses = [1, 2, 3].map((id) =>
+    const courses = [1, 2, 3, 4].map((id) =>
       mitxonline.factories.courses.course({ id, title: `Course ${id}` }),
     )
     const enrollment = mitxonline.factories.enrollment.programEnrollmentV3({
@@ -2405,7 +2408,10 @@ describe("ProgramEnrollmentDisplay with program tracks", () => {
 
     await screen.findByText("Not selected")
     expect(
-      screen.queryByRole("heading", { name: /Track courses/ }),
+      screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent),
+    ).toEqual(["Core Courses", "Track courses", "Capstone"])
+    expect(
+      screen.queryByTestId("program-completion-count"),
     ).not.toBeInTheDocument()
 
     const updated = {
@@ -2440,6 +2446,10 @@ describe("ProgramEnrollmentDisplay with program tracks", () => {
       }),
     )
     await screen.findByRole("heading", { name: "Methods Track courses" })
+    expect(
+      screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent),
+    ).toEqual(["Core Courses", "Methods Track courses", "Capstone"])
+    expect(screen.queryByText("Not selected")).not.toBeInTheDocument()
     expect(screen.getByRole("button", { name: "Change track" })).toBeVisible()
   })
 
