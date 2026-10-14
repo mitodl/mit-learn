@@ -2803,10 +2803,14 @@ def test_media_sync_tasks_pass_on_allow_mass_unpublish(  # noqa: PLR0913
     ],
 )
 @pytest.mark.parametrize("allow", [True, False])
+@pytest.mark.parametrize("call", ["run", "apply"])
 def test_xpro_sync_tasks_read_their_views(  # noqa: PLR0913
-    mocker, warehouse_owns, task, sync, views, allow
+    mocker, warehouse_owns, task, sync, views, allow, call
 ):
-    """Each xPRO sync task reads its views in full and passes on the unpublish override"""
+    """
+    Each xPRO sync task reads its views in full and passes on the unpublish
+    override, whether queued or run directly
+    """
     mocker.patch("learning_resources.lib.warehouse.connect_to_warehouse")
     rows = {view: [{"readable_id": view}] for view in views}
     mock_iter_rows = mocker.patch(
@@ -2818,7 +2822,13 @@ def test_xpro_sync_tasks_read_their_views(  # noqa: PLR0913
     )
 
     kwargs = {"allow_mass_unpublish": True} if allow else {}
-    assert getattr(tasks, task).apply(kwargs=kwargs).get() == 1
+    count = (
+        getattr(tasks, task).run(**kwargs)
+        if call == "run"
+        else getattr(tasks, task).apply(kwargs=kwargs).get()
+    )
+
+    assert count == 1
 
     assert mock_iter_rows.call_count == len(views)
     mock_sync.assert_called_once_with(
