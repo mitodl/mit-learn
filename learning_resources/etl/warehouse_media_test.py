@@ -19,6 +19,7 @@ from learning_resources.factories import (
     ETLSourceOwnershipFactory,
     LearningResourceOfferorFactory,
     LearningResourcePlatformFactory,
+    LearningResourceRunFactory,
     VideoChannelFactory,
     VideoPlaylistFactory,
 )
@@ -677,10 +678,17 @@ def test_sync_youtube_refuses_to_unpublish_more_than_the_limit(
     assert len(to_load) == 2
 
 
+@pytest.mark.parametrize(
+    "unmatched",
+    [{"published": False}, {"run__published": False}],
+)
 def test_sync_youtube_counts_a_playlist_load_playlist_would_unpublish(
-    warehouse_owns_youtube,
+    warehouse_owns_youtube, unmatched
 ):
-    """A listed create_videos=False playlist short of content file matches is not kept"""
+    """
+    A listed create_videos=False playlist short of matches with published
+    content files on published runs is not kept
+    """
     channel = VideoChannelFactory.create(channel_id="UC-mitx")
     for playlist_id in ("PL-one", "PL-two"):
         VideoPlaylistFactory.create(
@@ -701,9 +709,16 @@ def test_sync_youtube_counts_a_playlist_load_playlist_would_unpublish(
         [video_row(video_id) for video_id in video_ids],
     ]
 
-    # two of five matched is under OCW_PLAYLIST_VIDEO_THRESHOLD
+    # two of five matched is under OCW_PLAYLIST_VIDEO_THRESHOLD, and a removed
+    # content file or run does not match
     ContentFileFactory.create(youtube_id="vid-0")
     ContentFileFactory.create(youtube_id="vid-1")
+    if "run__published" in unmatched:
+        ContentFileFactory.create(
+            youtube_id="vid-2", run=LearningResourceRunFactory.create(published=False)
+        )
+    else:
+        ContentFileFactory.create(youtube_id="vid-2", **unmatched)
     with (
         writing_as(Pipeline.WAREHOUSE),
         pytest.raises(
