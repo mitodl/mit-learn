@@ -8,8 +8,6 @@ import type {
 import type { ProgramRequirementSection } from "@/common/mitxonline"
 import { HeadingIds, getTrackGroupRuleText } from "./util"
 import { keyBy } from "lodash"
-import { useFeatureFlagEnabled } from "posthog-js/react"
-import { FeatureFlags } from "@/common/feature_flags"
 import { parseTrackedProgramRequirements } from "@/common/mitxonline"
 
 const CompareRoot = styled.section({
@@ -104,7 +102,7 @@ type ProgramTrackCompareSectionProps = {
 
 /**
  * Side-by-side summary of a tracked program's tracks. Renders nothing for an
- * untracked program or while the program-tracks-product-page flag is off.
+ * untracked program.
  */
 const ProgramTrackCompareSection: React.FC<ProgramTrackCompareSectionProps> = ({
   program,
@@ -112,11 +110,8 @@ const ProgramTrackCompareSection: React.FC<ProgramTrackCompareSectionProps> = ({
   childPrograms,
   isLoading,
 }) => {
-  const showTracks = useFeatureFlagEnabled(
-    FeatureFlags.ProgramTracksProductPage,
-  )
   const tracked = parseTrackedProgramRequirements(program.req_tree)
-  if (!showTracks || !tracked) return null
+  if (!tracked) return null
 
   const coursesById = keyBy(courses ?? [], "id")
   const programsById = keyBy(childPrograms ?? [], "id")

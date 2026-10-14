@@ -33,8 +33,7 @@ import {
   withHubspotFormId,
 } from "./test-utils/stayUpdated"
 
-import { useFeatureFlagEnabled, usePostHog } from "posthog-js/react"
-import { FeatureFlags } from "@/common/feature_flags"
+import { usePostHog } from "posthog-js/react"
 import invariant from "tiny-invariant"
 import { getIdsFromReqTree } from "@/common/mitxonline"
 import { faker } from "@faker-js/faker/locale/en"
@@ -986,45 +985,7 @@ describe("ProgramPage", () => {
       return makeProgram({ req_tree: root.serialize() })
     }
 
-    const setFlag = (enabled: boolean) => {
-      jest
-        .mocked(useFeatureFlagEnabled)
-        .mockImplementation((flag) =>
-          flag === FeatureFlags.ProgramTracksProductPage ? enabled : false,
-        )
-    }
-
-    afterEach(() => {
-      jest.mocked(useFeatureFlagEnabled).mockReset()
-    })
-
-    test("With the flag off, shows only the groups outside the tracks", async () => {
-      setFlag(false)
-      const program = makeTrackedProgram()
-      const page = makePage({ program_details: program })
-      setupApis({ program, page })
-      renderWithProviders(<ProgramPage readableId={program.readable_id} />)
-
-      const section = await screen.findByRole("region", { name: "Courses" })
-      within(section).getByText(
-        "To complete this program, you must take 3 required courses.",
-      )
-      within(section).getByRole("heading", { name: "Core" })
-      within(section).getByRole("heading", { name: "Capstone" })
-      expect(
-        within(section).queryByRole("heading", { name: "Tracks" }),
-      ).not.toBeInTheDocument()
-      expect(
-        within(section).queryByRole("heading", { name: "Track courses" }),
-      ).not.toBeInTheDocument()
-      expect(within(section).queryByRole("tablist")).not.toBeInTheDocument()
-      expect(
-        screen.queryByRole("region", { name: "Compare the tracks" }),
-      ).not.toBeInTheDocument()
-    })
-
-    test("With the flag on, shows a tab per track between the other groups", async () => {
-      setFlag(true)
+    test("Shows a tab per track between the other groups", async () => {
       const program = makeTrackedProgram()
       const page = makePage({ program_details: program })
       setupApis({ program, page })
@@ -1052,12 +1013,11 @@ describe("ProgramPage", () => {
       await user.click(tabs[1])
       const methodsPanel = within(section).getByRole("tabpanel")
       within(methodsPanel).getByText("Time-series methods.")
-      within(methodsPanel).getByText("Complete 2 of 3 courses.")
+      within(methodsPanel).getByText("Complete 2 out of 3 courses.")
       expect(within(methodsPanel).getAllByRole("listitem")).toHaveLength(3)
     })
 
-    test("With the flag on, compares the tracks", async () => {
-      setFlag(true)
+    test("Compares the tracks", async () => {
       const program = makeTrackedProgram()
       const page = makePage({ program_details: program })
       const { courses } = setupApis({ program, page })
@@ -1095,12 +1055,61 @@ describe("ProgramPage", () => {
           .getAllByRole("listitem")
           .map((li) => li.textContent),
       ).toEqual([general1.title, general2.title])
-      within(methodsRow).getByText("Complete 2 of 3 courses.")
+      within(methodsRow).getByText("Complete 2 out of 3 courses.")
       expect(
         within(methodsRow)
           .getAllByRole("listitem")
           .map((li) => li.textContent),
       ).toEqual([m1.title, m2.title, m3.title])
+    })
+
+    test("Shows a track's groups under sub-headings, and no callout without content", async () => {
+      const root = new RequirementTreeBuilder()
+      const container = root.addOperator({
+        operator: "min_number_of",
+        operator_value: "1",
+        title: "Tracks",
+      })
+      const plain = container.addTrack({ title: "Plain", description: "" })
+      plain.addOperator({ operator: "all_of", title: "Required" }).addCourse()
+      const mixed = container.addTrack({
+        title: "Mixed",
+        description: "Required plus electives.",
+      })
+      mixed.addOperator({ operator: "all_of", title: "Required" }).addCourse()
+      const electives = mixed.addOperator({
+        operator: "min_number_of",
+        operator_value: "1",
+        title: "Electives",
+      })
+      electives.addCourse()
+      electives.addCourse()
+      const program = makeProgram({ req_tree: root.serialize() })
+      const page = makePage({ program_details: program })
+      setupApis({ program, page })
+      renderWithProviders(<ProgramPage readableId={program.readable_id} />)
+
+      const section = await screen.findByRole("region", { name: "Courses" })
+      const plainPanel = within(section).getByRole("tabpanel")
+      // The panel opens straight onto the course list.
+      expect(plainPanel.firstElementChild).toContainElement(
+        within(plainPanel).getByRole("list"),
+      )
+      expect(
+        within(plainPanel).queryByRole("heading", { level: 4 }),
+      ).not.toBeInTheDocument()
+
+      await user.click(within(section).getByRole("tab", { name: "Mixed" }))
+      const mixedPanel = within(section).getByRole("tabpanel")
+      within(mixedPanel).getByText("Required plus electives.")
+      expect(
+        within(mixedPanel)
+          .getAllByRole("heading", { level: 4 })
+          .map((h) => h.textContent),
+      ).toEqual(["Required", "Electives: Complete 1 out of 2"])
+      expect(
+        within(mixedPanel).queryByText("Complete 1 out of 2 courses."),
+      ).not.toBeInTheDocument()
     })
   })
 })

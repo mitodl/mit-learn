@@ -135,19 +135,21 @@ const ProgramTracksSection: React.FC<ProgramTracksSectionProps> = ({
             : null
           return (
             <TrackPanel key={track.id} value={String(track.id)}>
-              <TrackCallout>
-                {track.description ? (
-                  <CalloutText>
-                    <strong>{track.title}:</strong> {track.description}
-                  </CalloutText>
-                ) : null}
-                {ruleText ? (
-                  <TrackRule>
-                    <RiStackLine aria-hidden="true" />
-                    {ruleText}
-                  </TrackRule>
-                ) : null}
-              </TrackCallout>
+              {track.description || ruleText ? (
+                <TrackCallout>
+                  {track.description ? (
+                    <CalloutText>
+                      <strong>{track.title}:</strong> {track.description}
+                    </CalloutText>
+                  ) : null}
+                  {ruleText ? (
+                    <TrackRule>
+                      <RiStackLine aria-hidden="true" />
+                      {ruleText}
+                    </TrackRule>
+                  ) : null}
+                </TrackCallout>
+              ) : null}
               {track.sections.map((section) => {
                 const note = onlySection
                   ? null

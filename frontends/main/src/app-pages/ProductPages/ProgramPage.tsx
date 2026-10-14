@@ -42,8 +42,6 @@ import ProgramHeaderEnrollButton from "./ProgramHeaderEnrollButton"
 import { trackCourseProgramView } from "@/common/analytics/gtm"
 import { keyBy } from "lodash"
 import { parseTrackedProgramRequirements } from "@/common/mitxonline"
-import { useFeatureFlagEnabled } from "posthog-js/react"
-import { FeatureFlags } from "@/common/feature_flags"
 
 type ProgramPageProps = {
   readableId: string
@@ -123,9 +121,6 @@ const RequirementsSection: React.FC<RequirementsSectionProps> = ({
 }) => {
   const coursesById = keyBy(courses ?? [], "id")
   const programsById = keyBy(childPrograms ?? [], "id")
-  const showTracks = useFeatureFlagEnabled(
-    FeatureFlags.ProgramTracksProductPage,
-  )
   const tracked = parseTrackedProgramRequirements(program.req_tree)
   const allReqs = parseReqTree(program.req_tree)
   // The tracks container is a "choose 1" group whose children are tracks, not
@@ -133,7 +128,7 @@ const RequirementsSection: React.FC<RequirementsSectionProps> = ({
   const parsedReqs = tracked
     ? allReqs.filter((req) => req.id !== tracked.container.id)
     : allReqs
-  const trackCount = showTracks && tracked ? tracked.tracks.length : 0
+  const trackCount = tracked ? tracked.tracks.length : 0
 
   const renderReq = (req: RequirementData) => {
     const note = getRequirementSectionSubtitle(req)
@@ -190,9 +185,7 @@ const RequirementsSection: React.FC<RequirementsSectionProps> = ({
       <Stack gap={{ xs: "32px", sm: "56px" }}>
         {allReqs.map((req) => {
           if (tracked && req.id === tracked.container.id) {
-            // Behind its flag until Learn's track UI ships; with the flag
-            // off a tracked program shows only its groups outside the tracks.
-            return showTracks ? (
+            return (
               <ProgramTracksSection
                 key={req.id}
                 tracks={tracked.tracks}
@@ -200,7 +193,7 @@ const RequirementsSection: React.FC<RequirementsSectionProps> = ({
                 programsById={programsById}
                 isLoading={!!isLoading}
               />
-            ) : null
+            )
           }
           return renderReq(req)
         })}

@@ -92,7 +92,7 @@ const getRequirementSectionSubtitle = (
 }
 
 /**
- * e.g. "Complete 2 of 3 courses." for a track group that is a choice.
+ * e.g. "Complete 2 out of 3 courses." for a track group that is a choice.
  *
  * DEDP's design adds "At least 1 must be advanced." and tags each course
  * Introductory or Advanced. The API has no course level or advanced-course
@@ -101,9 +101,11 @@ const getRequirementSectionSubtitle = (
 const getTrackGroupRuleText = (
   section: Pick<RequirementData, "requiredCount" | "items">,
 ) => {
+  // requiredCount is NaN when a min_number_of node has no operator_value.
+  if (!Number.isFinite(section.requiredCount)) return null
   if (section.requiredCount === 0) return null
   if (section.requiredCount >= section.items.length) return null
-  return `Complete ${section.requiredCount} of ${section.items.length} courses.`
+  return `Complete ${section.requiredCount} out of ${section.items.length} courses.`
 }
 
 const getTotalRequiredCourses = (program: V2ProgramDetail) => {

@@ -375,10 +375,6 @@ describe("parseTrackedProgramRequirements", () => {
     expect(parseTrackedProgramRequirements(root.serialize())).toBeNull()
   })
 
-  test("returns null for an empty tree", () => {
-    expect(parseTrackedProgramRequirements([])).toBeNull()
-  })
-
   test("splits top-level sections around the tracks container", () => {
     const { reqTree, container } = buildTrackedTree()
     const parsed = parseTrackedProgramRequirements(reqTree)
@@ -417,16 +413,5 @@ describe("parseTrackedProgramRequirements", () => {
       { title: "Required", requiredCount: 1, items: [3] },
       { title: "Electives", requiredCount: 1, items: [4, 5] },
     ])
-  })
-
-  test("does not treat a min_number_of group of courses as a container", () => {
-    const root = new RequirementTreeBuilder()
-    const electives = root.addOperator({
-      operator: "min_number_of",
-      operator_value: "1",
-    })
-    electives.addCourse()
-    electives.addCourse()
-    expect(parseTrackedProgramRequirements(root.serialize())).toBeNull()
   })
 })

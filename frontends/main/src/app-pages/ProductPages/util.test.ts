@@ -157,9 +157,10 @@ describe("getTrackGroupRuleText", () => {
     Array.from({ length: n }, (_, i) => ({ type: "course" as const, id: i }))
 
   test.each([
-    { requiredCount: 2, count: 3, expected: "Complete 2 of 3 courses." },
+    { requiredCount: 2, count: 3, expected: "Complete 2 out of 3 courses." },
     { requiredCount: 3, count: 3, expected: null },
     { requiredCount: 0, count: 3, expected: null },
+    { requiredCount: NaN, count: 3, expected: null },
   ])(
     "requiredCount $requiredCount of $count -> $expected",
     ({ requiredCount, count, expected }) => {
