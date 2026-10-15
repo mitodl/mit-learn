@@ -439,8 +439,9 @@ class OlxArchive:
             text = path.read_text(errors="ignore")
             ids: set[str] | None = set()
             if path.suffix.lower() == ".xml":
+                # parsed from the bytes, so a malformed file is still malformed
                 try:
-                    ids = self._video_ids_of(ElementTree.fromstring(text))
+                    ids = self._video_ids_of(ElementTree.parse(path).getroot())
                 except ElementTree.ParseError:
                     log.warning(
                         "Malformed XML in %s, keeping all legacy transcripts", path
@@ -459,7 +460,10 @@ class OlxArchive:
         for path in sources:
             text, found = self._source(path)
             texts.append(text)
-            ids = None if found is None or ids is None else ids | found
+            if found is None:
+                ids = None
+            elif ids is not None:
+                ids.update(found)
         return texts, ids
 
     @staticmethod

@@ -584,6 +584,15 @@ def test_olx_archive_unparsable_xml_keeps_legacy_transcripts(tmp_path):
     assert "static/subs_AbC123.srt.sjson" in _ingested(olx)
 
 
+def test_olx_archive_undecodable_xml_keeps_legacy_transcripts(tmp_path):
+    """Bytes that are not UTF-8 make a file malformed; reading it leniently for text must not hide that"""
+    olx = _reference_olx(tmp_path, **{"subs_AbC123.srt.sjson": "{}"})
+    _write_olx(olx, "html/h.html", "<p>no links</p>")
+    (olx / "tabs").mkdir(exist_ok=True)
+    (olx / "tabs/broken.xml").write_bytes(b"<tab>\xff</tab>")
+    assert "static/subs_AbC123.srt.sjson" in _ingested(olx)
+
+
 @pytest.mark.parametrize(
     ("tab", "kept"),
     [
