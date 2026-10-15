@@ -2271,6 +2271,53 @@ def test_olx_course_units_missing_course_file(tmp_path):
         utils.olx_course_units(tmp_path, run)
 
 
+@pytest.mark.parametrize(
+    ("missing", "message"),
+    [
+        ("chapter/ch.xml", r"chapter/ch\.xml is missing"),
+        ("sequential/seq.xml", r"sequential/seq\.xml is missing"),
+    ],
+)
+def test_olx_course_units_missing_outline_file(tmp_path, missing, message):
+    """A chapter or sequential pointing to a missing file is not read as empty"""
+    files = {
+        "course.xml": '<course url_name="run" org="MITx" course="1"/>',
+        "course/run.xml": '<course><chapter url_name="ch"/></course>',
+        "chapter/ch.xml": '<chapter><sequential url_name="seq"/></chapter>',
+        "sequential/seq.xml": "<sequential><vertical><html><p>hi</p></html></vertical></sequential>",
+    }
+    del files[missing]
+    for rel, text in files.items():
+        _write_olx(tmp_path, rel, text)
+    run = LearningResourceRunFactory.create()
+    with pytest.raises(ValueError, match=message):
+        utils.olx_course_units(tmp_path, run)
+
+
+def test_olx_course_units_missing_staff_only_file(tmp_path):
+    """A missing file is no error for a block learners can't see, or an inline one"""
+    _write_olx(tmp_path, "course.xml", '<course url_name="run" org="MITx" course="1"/>')
+    _write_olx(
+        tmp_path,
+        "course/run.xml",
+        '<course><chapter url_name="ch"/>'
+        '<chapter url_name="gone" visible_to_staff_only="true"/></course>',
+    )
+    _write_olx(
+        tmp_path,
+        "chapter/ch.xml",
+        '<chapter><sequential url_name="gone" visible_to_staff_only="true"/>'
+        # inline, with no file of its own to miss
+        '<sequential url_name="inline" display_name="Inline"><vertical>'
+        "<html><p>hi</p></html></vertical></sequential></chapter>",
+    )
+    run = LearningResourceRunFactory.create()
+    assert [unit["title"] for unit in utils.olx_course_units(tmp_path, run)] == [
+        "Inline",
+        "Course context",
+    ]
+
+
 def test_olx_course_units_inline_course(tmp_path):
     """A course.xml that holds the course inline is read without a course file"""
     _write_olx(

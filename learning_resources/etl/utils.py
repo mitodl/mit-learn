@@ -1107,13 +1107,29 @@ def _resolve_olx_block(root: Path, pointer):
     return pointer if element is None else element
 
 
+def _check_olx_reference(root: Path, pointer):
+    """
+    Raise if a pointer names a block file the export doesn't have. Read as an
+    empty inline block, it would make an incomplete outline replace the run's
+    units. An inline block holds its children, so it has no file to miss.
+    """
+    url_name = pointer.get("url_name")
+    if url_name and not len(pointer) and _olx_block_file(root, pointer) is None:
+        msg = f"{pointer.tag}/{url_name}.xml is missing"
+        raise ValueError(msg)
+
+
 def _olx_children(root: Path, element, tag: str):
-    """Yield (pointer, block) for the visible children of an element with a tag"""
+    """
+    Yield (pointer, block) for the visible children of an element with a tag.
+    Raises ValueError for a visible child whose block file is missing.
+    """
     for pointer in element:
         if pointer.tag != tag:
             continue
         block = _resolve_olx_block(root, pointer)
         if not _is_set("visible_to_staff_only", pointer, block):
+            _check_olx_reference(root, pointer)
             yield pointer, block
 
 
@@ -1195,24 +1211,16 @@ def olx_course_units(olx_path: str | Path, run: LearningResourceRun) -> list[dic
             mapping each ContentFile key to its relation, in lesson order
 
     Raises:
-        ValueError: course.xml names a course file the export doesn't have
+        ValueError: the course, or a visible chapter or sequential, names a
+            block file the export doesn't have
     """
     root = Path(olx_path)
     course_pointer = _parse_olx_block(root, "", "course")
     if course_pointer is None:
         return []
-    course_file = _olx_block_file(root, course_pointer)
-    if (
-        course_file is None
-        and course_pointer.get("url_name")
-        and not len(course_pointer)
-    ):
-        # an incomplete export: reading it as a course with no sequentials
-        # would delete the run's units
-        msg = f"course/{course_pointer.get('url_name')}.xml is missing"
-        raise ValueError(msg)
+    _check_olx_reference(root, course_pointer)
     course = _resolve_olx_block(root, course_pointer)
-    course_file = course_file or root / "course.xml"
+    course_file = _olx_block_file(root, course_pointer) or root / "course.xml"
     context_files = {
         get_edx_module_id(str(path), run): UnitContentFile.Relation.CORE
         for folder in OLX_CONTEXT_FOLDERS
