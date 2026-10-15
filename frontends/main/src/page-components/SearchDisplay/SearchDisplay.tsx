@@ -710,8 +710,12 @@ export interface SearchDisplayProps {
    * and hands it over rather than this reaching back for the state -- and
    * takes the counts back the other way, since the search that produces them
    * is run here.
+   *
+   * Undefined until there are counts, which is not the same as counting
+   * nothing: a bar that leaves out what the search has nothing under would
+   * otherwise leave out everything until the first response.
    */
-  filterBarSlot?: (aggregations: Aggregations) => React.ReactNode
+  filterBarSlot?: (aggregations: Aggregations | undefined) => React.ReactNode
   adminOptionsSlot?: React.ReactNode
   /**
    * True when this instance queries the vector (hybrid) endpoint rather than
@@ -1250,7 +1254,9 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
             <UniversalAIBanner searchParams={searchParams} />
             {resultsLayout === "cards" ? (
               <TopicSearchCard>
-                {filterBarSlot?.(withAvailableValues(aggregations))}
+                {filterBarSlot?.(
+                  displayData ? withAvailableValues(aggregations) : undefined,
+                )}
                 <TopicTabsRow dividesFilters={appliedFilters.length > 0}>
                   <StyledResourceTabs
                     setSearchParams={setSearchParams}

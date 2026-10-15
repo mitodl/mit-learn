@@ -218,28 +218,31 @@ const facetOptions = (
   values: readonly string[],
   labelFor: (value: string) => string,
   selected: string[],
-  counts: Record<string, number>,
+  counts: Record<string, number> | undefined,
 ) =>
   values
-    .filter((value) => (counts[value] ?? 0) > 0 || selected.includes(value))
+    .filter(
+      (value) =>
+        /* Until the first search is back there are no counts to go on, so
+           nothing is ruled out yet -- see `aggregations` on the props. */
+        !counts || (counts[value] ?? 0) > 0 || selected.includes(value),
+    )
     .map((value) => ({
       value,
       label: (
         <MenuRow>
           <MenuBox checked={selected.includes(value)} aria-hidden />
           {labelFor(value)}
-          <MenuCount>{counts[value] ?? 0}</MenuCount>
+          <MenuCount>{counts?.[value] ?? 0}</MenuCount>
         </MenuRow>
       ),
     }))
 
 /** The counts a search came back with, by facet value. */
-const countsFor = (aggregations: Aggregations, name: string) =>
+const countsFor = (aggregations: Aggregations | undefined, name: string) =>
+  aggregations &&
   Object.fromEntries(
-    (aggregations?.[name] ?? []).map((bucket) => [
-      bucket.key,
-      bucket.doc_count,
-    ]),
+    (aggregations[name] ?? []).map((bucket) => [bucket.key, bucket.doc_count]),
   )
 
 /** "Format" in the design is the `delivery` facet -- see `getFacetManifest`. */
@@ -262,9 +265,9 @@ const certificationLabel = (value: string) =>
  * only place it can be unticked.
  */
 const resourceCategoryValues = (
-  counts: Record<string, number>,
+  counts: Record<string, number> | undefined,
   selected: string[],
-) => [...new Set([...Object.keys(counts), ...selected])]
+) => [...new Set([...Object.keys(counts ?? {}), ...selected])]
 
 type TopicSearchFilterBarProps = {
   currentText: string
@@ -274,8 +277,16 @@ type TopicSearchFilterBarProps = {
   params: UseResourceSearchParamsResult["params"]
   setParamValue: UseResourceSearchParamsResult["setParamValue"]
   toggleParamValue: UseResourceSearchParamsResult["toggleParamValue"]
-  /** Counts from the current search, shown beside each option. */
-  aggregations: Aggregations
+  /**
+   * Counts from the current search, shown beside each option and deciding
+   * which of them there are to show.
+   *
+   * Undefined until the first search is back, which is not the same as a
+   * search that counted nothing: with no counts yet nothing is ruled out, so
+   * the controls stand with their full range rather than emptying and filling
+   * as the page loads.
+   */
+  aggregations: Aggregations | undefined
   /**
    * The resource type group the tabs have narrowed to, which decides whether
    * Resource Category is one of the controls: it sorts learning materials
@@ -305,6 +316,101 @@ const TopicSearchFilterBar: React.FC<TopicSearchFilterBarProps> = ({
   const resourceCategoryCounts = countsFor(aggregations, "resource_category")
   const showResourceCategory =
     resourceTypeGroup === ResourceTypeGroupEnum.LearningMaterial
+
+  const deliveryOptions = facetOptions(
+    DELIVERY_VALUES,
+    deliveryLabel,
+    delivery,
+    countsFor(aggregations, "delivery"),
+  )
+  const certificationOptions = facetOptions(
+    CERTIFICATION_VALUES,
+    certificationLabel,
+    certification,
+    countsFor(aggregations, "certification_type"),
+  )
+  const resourceCategoryOptions = facetOptions(
+    resourceCategoryValues(resourceCategoryCounts, resourceCategory),
+    (value) => value,
+    resourceCategory,
+    resourceCategoryCounts,
+  )
+
+  /**
+   * The controls there are to draw, which is not always all of them.
+   *
+   * A facet the search has nothing under is left out rather than offered: it
+   * would open on an empty panel, and a combobox that expands to nothing is
+   * worse than no combobox at all. A value already ticked counts as something
+   * to offer, so narrowing to nothing never takes away the control that did
+   * it.
+   *
+   * Free is always here: it is a switch rather than a list, so there is no
+   * such thing as having no values to show.
+   */
+  const controls = [
+    deliveryOptions.length > 0 ? (
+      <FacetSelect
+        key="delivery"
+        size="small"
+        name="delivery"
+        aria-label="Format"
+        value={delivery}
+        multiple
+        renderValue={() => "Format"}
+        MenuProps={FACET_MENU_PROPS}
+        options={deliveryOptions}
+        onChange={(event) => {
+          setParamValue("delivery", event.target.value as string[])
+          setPage(1)
+        }}
+      />
+    ) : null,
+    certificationOptions.length > 0 ? (
+      <FacetSelect
+        key="certification_type"
+        size="small"
+        name="certification_type"
+        aria-label="Certificate"
+        value={certification}
+        multiple
+        renderValue={() => "Certificate"}
+        MenuProps={FACET_MENU_PROPS}
+        options={certificationOptions}
+        onChange={(event) => {
+          setParamValue("certification_type", event.target.value as string[])
+          setPage(1)
+        }}
+      />
+    ) : null,
+    showResourceCategory && resourceCategoryOptions.length > 0 ? (
+      <FacetSelect
+        key="resource_category"
+        size="small"
+        name="resource_category"
+        aria-label="Resource Category"
+        value={resourceCategory}
+        multiple
+        renderValue={() => "Resource Category"}
+        MenuProps={FACET_MENU_PROPS}
+        options={resourceCategoryOptions}
+        onChange={(event) => {
+          setParamValue("resource_category", event.target.value as string[])
+          setPage(1)
+        }}
+      />
+    ) : null,
+    <FreeCheckbox
+      key="free"
+      label="Free"
+      checked={isFree}
+      onChange={(event) => {
+        toggleParamValue("free", "true", event.target.checked)
+        setPage(1)
+      }}
+    />,
+  ].filter((control): control is React.ReactElement => control !== null)
+
   return (
     <Card data-testid="topic-search-filter-bar">
       <StyledSearchField
@@ -318,84 +424,16 @@ const TopicSearchFilterBar: React.FC<TopicSearchFilterBarProps> = ({
         setPage={setPage}
       />
       <Facets>
-        <FacetSelect
-          size="small"
-          name="delivery"
-          aria-label="Format"
-          value={delivery}
-          multiple
-          renderValue={() => "Format"}
-          MenuProps={FACET_MENU_PROPS}
-          options={facetOptions(
-            DELIVERY_VALUES,
-            deliveryLabel,
-            delivery,
-            countsFor(aggregations, "delivery"),
-          )}
-          onChange={(event) => {
-            setParamValue("delivery", event.target.value as string[])
-            setPage(1)
-          }}
-        />
-        <Divider />
-        <FacetSelect
-          size="small"
-          name="certification_type"
-          aria-label="Certificate"
-          value={certification}
-          multiple
-          renderValue={() => "Certificate"}
-          MenuProps={FACET_MENU_PROPS}
-          options={facetOptions(
-            CERTIFICATION_VALUES,
-            certificationLabel,
-            certification,
-            countsFor(aggregations, "certification_type"),
-          )}
-          onChange={(event) => {
-            setParamValue("certification_type", event.target.value as string[])
-            setPage(1)
-          }}
-        />
-        {showResourceCategory ? (
-          <>
-            <Divider />
-            <FacetSelect
-              size="small"
-              name="resource_category"
-              aria-label="Resource Category"
-              value={resourceCategory}
-              multiple
-              renderValue={() => "Resource Category"}
-              MenuProps={FACET_MENU_PROPS}
-              options={facetOptions(
-                resourceCategoryValues(
-                  resourceCategoryCounts,
-                  resourceCategory,
-                ),
-                (value) => value,
-                resourceCategory,
-                resourceCategoryCounts,
-              )}
-              onChange={(event) => {
-                setParamValue(
-                  "resource_category",
-                  event.target.value as string[],
-                )
-                setPage(1)
-              }}
-            />
-          </>
-        ) : null}
-        <Divider />
-        <FreeCheckbox
-          label="Free"
-          checked={isFree}
-          onChange={(event) => {
-            toggleParamValue("free", "true", event.target.checked)
-            setPage(1)
-          }}
-        />
+        {/* Spaced by the hairlines between them, which belong between two
+            controls rather than to either -- so they are drawn here, around
+            whichever controls there turned out to be, rather than written
+            between them and left behind when one drops out. */}
+        {controls.map((control, index) => (
+          <React.Fragment key={control.key}>
+            {index > 0 ? <Divider /> : null}
+            {control}
+          </React.Fragment>
+        ))}
       </Facets>
     </Card>
   )
