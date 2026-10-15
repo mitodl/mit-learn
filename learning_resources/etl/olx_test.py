@@ -1085,6 +1085,12 @@ def test_olx_archive_separator_is_part_of_the_name(tmp_path, link, kept, dropped
     assert f"static/{dropped}" not in paths
 
 
+def test_olx_archive_name_at_start_of_source(tmp_path):
+    """A name at the very start of a source starts a name there, leading _ or not"""
+    olx = _reference_olx(tmp_path, "_notes.pdf", **{"_notes.pdf": "pdf"})
+    assert "static/_notes.pdf" in _ingested(olx)
+
+
 def test_olx_archive_keeps_reuploaded_asset_keys(tmp_path):
     """Assets re-uploaded under a flattened asset key still match (15.671.1x)"""
     name = "asset-v1_MITx+15.671.1x+3T2020+type@asset+block@09_Conversation.pdf"
