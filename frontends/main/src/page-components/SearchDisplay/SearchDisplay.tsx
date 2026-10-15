@@ -33,8 +33,6 @@ import {
   learningResourceQueries,
 } from "api/hooks/learningResources"
 import {
-  CertificationTypeEnum,
-  DeliveryEnum,
   LearningResource,
   LearningResourcesSearchApiLearningResourcesSearchRetrieveRequest as LRSearchRequest,
   LearningResourcesSearchResponse,
@@ -616,52 +614,30 @@ const getLastPage = (count: number): number => {
   return pages > MAX_PAGE ? MAX_PAGE : pages
 }
 
-/**
- * Every value each facet can take, in the order the cards design lists them.
- *
- * The buckets a search comes back with are only the values something matched,
- * so a facet drawn from them alone changes shape with the results -- the
- * topic design draws Format as Online, In-Person and Hybrid, where a topic
- * with only online courses in it would otherwise draw Format as one row.
- * Listing them all keeps the filters the same filters on every page, and lets
- * a reader see what a facet offers before narrowing by it.
- *
- * Only for the cards layout. The sidebar layouts carry far more facets, where
- * a value that matches nothing is worth leaving out rather than listing.
- */
-const EVERY_FACET_VALUE: Record<string, string[]> = {
-  delivery: [
-    DeliveryEnum.Online,
-    DeliveryEnum.InPerson,
-    DeliveryEnum.Hybrid,
-    DeliveryEnum.Offline,
-  ],
-  certification_type: [
-    CertificationTypeEnum.None,
-    CertificationTypeEnum.Professional,
-    CertificationTypeEnum.Completion,
-    CertificationTypeEnum.Micromasters,
-  ],
-}
-
 type Aggregations = NonNullable<
   LearningResourcesSearchResponse["metadata"]["aggregations"]
 >
 
-/** The search's own counts, over the full list of values. */
-const withEveryValue = (aggregations: Aggregations): Aggregations => {
-  const counted = { ...aggregations }
-  Object.entries(EVERY_FACET_VALUE).forEach(([name, values]) => {
-    const counts = new Map(
-      (counted[name] ?? []).map((bucket) => [bucket.key, bucket.doc_count]),
-    )
-    counted[name] = values.map((key) => ({
-      key,
-      doc_count: counts.get(key) ?? 0,
-    }))
-  })
-  return counted
-}
+/**
+ * The counts a search came back with, less the values it found nothing under.
+ *
+ * The buckets are the values something matched, but a facet already narrowed
+ * by is counted as if it were not -- so its own other values come back with
+ * the counts they would have, and a value the rest of the search rules out
+ * still comes back at nought. Ticking one of those empties the results, so
+ * there is nothing to offer under it.
+ *
+ * A value already ticked is not dropped here even at nought: `AvailableFacets`
+ * puts the active ones back, and the drawer is the only place a filter can be
+ * taken off one at a time on a narrow screen, where no chips are drawn.
+ */
+const withAvailableValues = (aggregations: Aggregations): Aggregations =>
+  Object.fromEntries(
+    Object.entries(aggregations).map(([name, buckets]) => [
+      name,
+      (buckets ?? []).filter((bucket) => bucket.doc_count > 0),
+    ]),
+  )
 
 const SORT_OPTIONS = [
   {
@@ -1188,7 +1164,9 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
       activeFacets={requestParams}
       onFacetChange={toggleParamValue}
       facetOptions={
-        resultsLayout === "cards" ? withEveryValue(aggregations) : aggregations
+        resultsLayout === "cards"
+          ? withAvailableValues(aggregations)
+          : aggregations
       }
     />
   )
@@ -1280,7 +1258,7 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
             <UniversalAIBanner searchParams={searchParams} />
             {resultsLayout === "cards" ? (
               <TopicSearchCard>
-                {filterBarSlot?.(withEveryValue(aggregations))}
+                {filterBarSlot?.(withAvailableValues(aggregations))}
                 <TopicTabsRow dividesFilters={appliedFilters.length > 0}>
                   <StyledResourceTabs
                     setSearchParams={setSearchParams}
