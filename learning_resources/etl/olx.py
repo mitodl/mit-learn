@@ -38,9 +38,10 @@ LEGACY_TRANSCRIPT_RE = re.compile(
     r"^(?:[a-z]{2}(?:[-_][a-z]{2})?_)?subs_(.+)\.srt\.sjson$", re.IGNORECASE
 )
 
-# edX writes a space, +, @ or other punctuation in an asset name as _, so a run
-# of them compares equal to one _. A run with anything but _ in it is also
-# where a name can start; _ alone is not, so final_exam.srt != exam.srt.
+# edX writes any character in an asset name but a letter, digit, ., - or % as
+# _, so a run of them, or of _, compares equal to one _. A run with anything
+# but _ in it is also where a name can start; _ alone is not, so
+# final_exam.srt != exam.srt.
 SEPARATORS = re.compile(r"(?:[^\w.\-]|_)+")
 
 # Only Open Learning Library serves the about page; other platforms redirect
@@ -101,7 +102,7 @@ def _parse_olx_start(value: str | None) -> datetime | None:
 
 
 def _normalize_asset_ref(text: str) -> str:
-    """Spell a filename the way any reference to it normalizes"""
+    """Unescape and lowercase a filename, with each separator run as one _"""
     return SEPARATORS.sub("_", unquote(html.unescape(text)).lower()).strip("_")
 
 

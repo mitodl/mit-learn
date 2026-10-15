@@ -926,7 +926,7 @@ def test_olx_archive_separator_is_part_of_the_name(tmp_path, link, kept, dropped
 
 
 def test_olx_archive_name_at_start_of_source(tmp_path):
-    """A name at the very start of a source starts a name there, leading _ or not"""
+    """A name at the very start of a source matches, even one starting with _"""
     olx = _reference_olx(tmp_path, "_notes.pdf", **{"_notes.pdf": "pdf"})
     assert "static/_notes.pdf" in _ingested(olx)
 
