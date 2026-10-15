@@ -1,11 +1,11 @@
-"""Report what excluded_olx_paths would drop from an extracted OLX course tree"""
+"""Report what an OlxArchive excludes from an extracted OLX course tree"""
 
 from pathlib import Path
 
 from django.core.management import BaseCommand
 
 from learning_resources.constants import VALID_TEXT_FILE_TYPES
-from learning_resources.etl.utils import excluded_olx_paths
+from learning_resources.etl.olx import OlxArchive
 from learning_resources.management.commands.unpublish_excluded_files import (
     EDX_SOURCES,
 )
@@ -52,7 +52,7 @@ class Command(BaseCommand):
                     "draft" in part for part in path.relative_to(root).parts[:-1]
                 )
             }
-            excluded = excluded_olx_paths(root, options["source"]) & ingestable
+            excluded = OlxArchive(root, options["source"]).excluded & ingestable
             static = {
                 path for path in excluded if path.relative_to(root).parts[0] == "static"
             }

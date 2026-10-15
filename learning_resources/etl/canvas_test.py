@@ -36,7 +36,8 @@ from learning_resources.etl.canvas_utils import (
 )
 from learning_resources.etl.constants import ETLSource
 from learning_resources.etl.loaders import load_content_files
-from learning_resources.etl.utils import get_edx_module_id, process_olx_path
+from learning_resources.etl.olx import get_edx_module_id
+from learning_resources.etl.utils import process_olx_path
 from learning_resources.factories import (
     ContentFileFactory,
     LearningResourceFactory,

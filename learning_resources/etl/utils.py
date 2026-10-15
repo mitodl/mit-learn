@@ -2,26 +2,21 @@
 
 import base64
 import glob
-import html
 import json
 import logging
 import math
 import mimetypes
-import os
 import re
 import tarfile
 import uuid
-from bisect import bisect_left
 from collections import Counter
 from collections.abc import Generator
 from datetime import UTC, datetime
 from decimal import Decimal
 from hashlib import md5
 from io import BytesIO
-from itertools import accumulate
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from urllib.parse import unquote
 
 import boto3
 import pypdfium2 as pdfium
@@ -56,6 +51,7 @@ from learning_resources.etl.constants import (
     DurationConfig,
     ETLSource,
 )
+from learning_resources.etl.olx import OlxArchive, get_edx_module_id
 from learning_resources.models import (
     ContentFile,
     Course,
@@ -328,403 +324,36 @@ def parse_dates(date_string, hour=12):
     return None
 
 
-def _hidden_block_files(root: Path, tag: str, url_name: str, element) -> set[Path]:
-    """Files belonging to one hidden block: its own files, html body, transcripts"""
-    files = set(root.glob(f"{tag}/{url_name}.*"))
-    if tag == "html" and element.get("filename"):
-        files.update(root.glob(f"html/{element.get('filename')}.*"))
-    if tag == "video":
-        files.update(
-            root / "static" / transcript.get("src")
-            for transcript in element.iter("transcript")
-            if transcript.get("src")
-        )
-    return files
-
-
-def _parse_olx_block(root: Path, tag: str, url_name: str):
+def documents_from_olx(archive: OlxArchive) -> Generator[tuple, None, None]:
     """
-    Parse <tag>/<url_name>.xml, returning None if missing. Malformed XML raises
-    so a course is never ingested with unverified staff-only status.
-    """
-    try:
-        return ElementTree.parse(root / tag / f"{url_name}.xml").getroot()
-    except (FileNotFoundError, NotADirectoryError):
-        return None
-
-
-def staff_only_olx_paths(olx_path: str | Path) -> set[Path]:
-    """
-    Return the files under visible_to_staff_only="true" subtrees of an OLX
-    course tree, including transcripts of hidden videos. Empty when olx_path
-    is not an OLX export (no course.xml). Blocks may be pointers to
-    <tag>/<url_name>.xml or hold their children inline; both are walked.
-    """
-    root = Path(olx_path)
-    course = _parse_olx_block(root, "", "course")
-    if course is None:
-        return set()
-    hidden: dict[tuple[str, str], set[Path]] = {}
-    visible: set[tuple[str, str]] = set()
-    seen: set[tuple[str, str, bool]] = set()
-    stack = [(course, "course", course.get("url_name"), False)]
-    while stack:
-        pointer, tag, url_name, staff_only = stack.pop()
-        # pointer file wins when present; otherwise the element is the block itself
-        element = _parse_olx_block(root, tag, url_name) if url_name else None
-        if element is None:
-            element = pointer
-        staff_only = staff_only or "true" in (
-            pointer.get("visible_to_staff_only"),
-            element.get("visible_to_staff_only"),
-        )
-        if url_name:
-            if (tag, url_name, staff_only) in seen:
-                continue
-            seen.add((tag, url_name, staff_only))
-            # a block can hang under two parents; seeing it anywhere a learner
-            # can reach makes it visible, whichever path the walk took first
-            if staff_only:
-                hidden[tag, url_name] = _hidden_block_files(
-                    root, tag, url_name, element
-                )
-            else:
-                visible.add((tag, url_name))
-        stack.extend(
-            (child, child.tag, child.get("url_name"), staff_only) for child in element
-        )
-    return {
-        path
-        for block, files in hidden.items()
-        if block not in visible
-        for path in files
-    }
-
-
-REFERENCE_SCAN_EXTENSIONS = frozenset({".xml", ".html", ".htm", ".json", ".txt", ".md"})
-
-# Asset manifests list every file in the export and updates.items.json is mostly
-# an archive of deleted announcements. None of them describes current course
-# content, and treating them as references keeps every stale asset alive.
-NON_CONTENT_OLX_FILES = (
-    "policies/assets.json",
-    "assets/assets.xml",
-    "info/updates.items.json",
-)
-
-# A legacy transcript is named for its video's id rather than for anything the
-# course text contains, so the id is the only link back to the block using it.
-VIDEO_ID_ATTRIBUTES = ("sub", "youtube", "youtube_id_1_0")
-LEGACY_TRANSCRIPT_RE = re.compile(
-    r"^(?:[a-z]{2}(?:[-_][a-z]{2})?_)?subs_(.+)\.srt\.sjson$", re.IGNORECASE
-)
-
-
-# A reference spells an asset name with the punctuation edX rewrote into it, or
-# with none of it: a file stored as "my file.pdf" is linked as my_file.pdf and as
-# my%20file.pdf, and a file re-uploaded under a flattened asset key is linked
-# with the + and @ of that key written as underscores. So the punctuation cannot
-# be part of the comparison, but the places it sat are still where a name starts.
-NAME_BREAK = "\x00"
-SEPARATORS = re.compile(r"(?:[^\w.\-]|_)+")
-
-
-def normalize_asset_ref(text: str) -> str:
-    """Strip the punctuation of a filename that a reference may spell differently"""
-    return SEPARATORS.sub("", unquote(html.unescape(text)).lower())
-
-
-def _reference_index(texts: list[str]) -> tuple[str, list[int]]:
-    """
-    Normalize the course text the same way, and return it with the offsets where
-    a name can start, i.e. everywhere the text had punctuation but an underscore.
-    Underscores do not break a name because that is what edX writes a space or a
-    +/@ as, so they are the one thing both sides drop.
-    """
-    stripped = NAME_BREAK.join(
-        SEPARATORS.sub(
-            NAME_BREAK, unquote(html.unescape(text)).lower().replace("_", "")
-        )
-        for text in texts
-    )
-    segments = stripped.split(NAME_BREAK)
-    return "".join(segments), list(accumulate(map(len, segments), initial=0))
-
-
-def _name_starts_at(blob: str, starts: list[int], name: str) -> bool:
-    """
-    Whether the course text spells a filename where a name can start, rather than
-    only inside a longer one. Without this a reference to final_exam.srt reads as
-    a reference to exam.srt too, and pulls that file back out of the staff-only
-    set.
-    """
-    start = blob.find(name)
-    while start != -1:
-        index = bisect_left(starts, start)
-        if index < len(starts) and starts[index] == start:
-            return True
-        start = blob.find(name, start + 1)
-    return False
-
-
-def _olx_reference_sources(root: Path, skip: set[Path]) -> list[Path]:
-    """Files whose text may legitimately refer to a static asset"""
-    sources = []
-    for path in root.rglob("*"):
-        if not path.is_file() or path.suffix.lower() not in REFERENCE_SCAN_EXTENSIONS:
-            continue
-        relative = path.relative_to(root)
-        if (
-            relative.parts[0] == "static"
-            or relative.as_posix() in NON_CONTENT_OLX_FILES
-            or path in skip
-            or any("draft" in part for part in relative.parts[:-1])
-        ):
-            continue
-        sources.append(path)
-    return sources
-
-
-def _live_course_updates(root: Path) -> str:
-    """
-    Text of the announcements the course team has not deleted. The whole file is
-    excluded as a reference source because edX keeps deleted announcements in
-    the export, but a live one still counts.
-    """
-    try:
-        items = json.loads(
-            (root / "info/updates.items.json").read_text(errors="ignore")
-        )
-    except (OSError, ValueError):
-        return ""
-    return "\n".join(
-        item.get("content") or ""
-        for item in items
-        if isinstance(item, dict) and item.get("status") != "deleted"
-    )
-
-
-def _olx_video_ids(sources: list[Path]) -> set[str] | None:
-    """
-    Video ids declared anywhere in the course, or None if any source could not
-    be parsed. None means "ids unknown", and callers keep every legacy
-    transcript rather than drop one whose video they failed to read.
-    """
-    ids = set()
-    for path in sources:
-        if path.suffix.lower() != ".xml":
-            continue
-        try:
-            element = ElementTree.parse(path).getroot()
-        except ElementTree.ParseError:
-            log.warning("Malformed XML in %s, keeping all legacy transcripts", path)
-            return None
-        # iter() finds <video> whether it has its own file or sits inline
-        for video in element.iter("video"):
-            for attribute in VIDEO_ID_ATTRIBUTES:
-                # youtube is a comma-separated "<speed>:<id>" list, the others
-                # are bare ids
-                for entry in (video.get(attribute) or "").split(","):
-                    value = entry.split(":")[-1].strip()
-                    if value:
-                        ids.add(normalize_asset_ref(value))
-    return ids
-
-
-def static_olx_references(root: Path, skip: set[Path]) -> tuple[set[Path], set[Path]]:
-    """
-    Split the files under static/ into the ones the course refers to and the
-    ones nothing in it does.
-
-    Matching is on the filename rather than on a "/static/" prefix, because
-    courses also link assets as "asset-v1:...+type@asset+block/<name>", and it
-    is a substring test rather than a parse so that an unanticipated spelling
-    keeps a file rather than dropping it. The substring has to begin a name,
-    though: a reference to final_exam.srt is not one to exam.srt.
-    See _reference_index for how the two are normalized.
+    Read the bytes of each file an OLX archive ingests
 
     Args:
-        root (Path): the root of the OLX tree
-        skip (set[Path]): files that must not count as references, i.e. the
-            staff-only set, so an asset only an answer key mentions is unreferenced
-
-    Returns:
-        tuple of (set of Path, set of Path): referenced and unreferenced static files
-    """
-    static_dir = root / "static"
-    if not static_dir.is_dir():
-        return set(), set()
-    sources = _olx_reference_sources(root, skip)
-    texts = [path.read_text(errors="ignore") for path in sources]
-    texts.append(_live_course_updates(root))
-    blob, starts = _reference_index(texts)
-    video_ids = _olx_video_ids(sources)
-
-    referenced, unreferenced = set(), set()
-    for path in sorted(static_dir.rglob("*")):
-        if not path.is_file():
-            continue
-        if _name_starts_at(blob, starts, normalize_asset_ref(path.name)) or (
-            (legacy := LEGACY_TRANSCRIPT_RE.match(path.name))
-            and (video_ids is None or normalize_asset_ref(legacy.group(1)) in video_ids)
-        ):
-            referenced.add(path)
-        else:
-            unreferenced.add(path)
-    return referenced, unreferenced
-
-
-def unreachable_static_tabs(root: Path) -> set[Path]:
-    """
-    Tab pages no navigation leads a learner to. Studio exports every static tab
-    it stores, but the LMS serves only the ones in the course's tab list, and
-    leaves staff-only and hidden ones out of the navigation. Empty when the tab
-    list cannot be read, so a tab is never dropped on a guess.
-    """
-    course = _parse_olx_block(root, "", "course")
-    url_name = course.get("url_name") if course is not None else None
-    try:
-        policy = json.loads(
-            (root / "policies" / url_name / "policy.json").read_text(errors="ignore")
-        )
-        tabs = policy[f"course/{url_name}"]["tabs"]
-    except (TypeError, OSError, ValueError, KeyError):
-        return set()
-    if not isinstance(tabs, list):
-        return set()
-    # ponytail: a staff-only or hidden tab that visible content links to is
-    # dropped too; check links to tab slugs if a course turns out to rely on that
-    reachable = {
-        tab.get("url_slug")
-        for tab in tabs
-        if isinstance(tab, dict)
-        and not (tab.get("course_staff_only") or tab.get("is_hidden"))
-    }
-    # recursive because edX also reads tab pages from a tabs/<url_name>/ folder
-    return {path for path in root.glob("tabs/**/*") if path.stem not in reachable}
-
-
-# The about page is the only place about/ files show, and only Open Learning
-# Library serves it; the other platforms redirect it to the course home. Of what
-# it shows, effort and end date are single values rather than prose (effort is
-# already on the run as time_commitment), so only the prose is content.
-ABOUT_PAGE_FILES = frozenset({"overview.html", "short_description.html"})
-
-
-def excluded_olx_paths(
-    olx_path: str | Path, etl_source: str | None = None
-) -> set[Path]:
-    """
-    Files an OLX export contains that no learner of the course can reach:
-    staff-only subtrees, tab pages outside the navigation, about pages the
-    platform does not show, the course settings, the asset manifests,
-    announcements, and anything under static/ that nothing learners see refers
-    to. See hq#13350.
-
-    Args:
-        olx_path (str or Path): The path to the directory with the OLX data
-        etl_source (str): The platform the archive is from, which decides
-            whether the about page is shown. None means one that does not.
-
-    Returns:
-        set of Path: files that should not be ingested
-    """
-    root = Path(olx_path)
-    excluded = staff_only_olx_paths(root)
-    if not (root / "course.xml").is_file():
-        # not an OLX export; Canvas archives reach here via process_olx_path
-        return excluded
-    excluded.update(
-        root / name for name in NON_CONTENT_OLX_FILES if (root / name).is_file()
-    )
-    excluded.update(unreachable_static_tabs(root))
-    shown = ABOUT_PAGE_FILES if etl_source == ETLSource.oll.name else ()
-    # recursive for the about/<url_name>/ folder edX also reads
-    excluded.update(path for path in root.glob("about/**/*") if path.name not in shown)
-    referenced, unreferenced = static_olx_references(root, excluded)
-    excluded.update(unreferenced)
-    # A hidden video's transcripts are in the staff-only set, but the same file is
-    # often also the transcript of the visible copy of that video, so put back
-    # anything a visible block still links.
-    excluded.difference_update(referenced)
-    # Settings rather than content, but what they name (textbooks, the course
-    # image) is shown, so they were still read as references above
-    excluded.update(root.glob("policies/**/*"))
-    # Old-style announcements: Studio empties updates.html whenever an
-    # announcement is saved, so what is left is legacy announcements or Studio's
-    # sample text. Like the live ones, they still counted as references above.
-    excluded.update(root.glob("info/**/updates.html"))
-    return excluded
-
-
-def documents_from_olx(
-    olx_path: str,
-    valid_file_types: list[str] = VALID_TEXT_FILE_TYPES,
-    etl_source: str | None = None,
-) -> Generator[tuple, None, None]:
-    """
-    Extract text from OLX directory, skipping content the course does not use
-
-    Args:
-        olx_path (str): The path to the directory with the OLX data
-        etl_source (str): The platform the archive is from
+        archive (OlxArchive): the extracted archive, already filtered to
+            ingestable paths
 
     Yields:
         tuple: A list of (bytes of content, metadata)
     """
-    excluded = excluded_olx_paths(olx_path, etl_source)
-    for root, _, files in os.walk(olx_path):
-        path = "/".join(root.split("/")[3:])
-        for filename in files:
-            extension_lower = Path(filename).suffix.lower()
+    for path in archive.paths:
+        extension_lower = path.suffix.lower()
+        rel_dir = "/".join(str(path.parent).split("/")[3:])
+        with Path.open(path, "rb") as f:
+            filebytes = f.read()
 
-            if Path(root, filename) in excluded:
-                continue
-            if extension_lower in valid_file_types and "draft" not in root:
-                with Path.open(Path(root, filename), "rb") as f:
-                    filebytes = f.read()
+        mimetype = mimetypes.types_map.get(extension_lower)
+        archive_checksum = md5(filebytes).hexdigest()  # noqa: S324
 
-                mimetype = mimetypes.types_map.get(extension_lower)
-                archive_checksum = md5(filebytes).hexdigest()  # noqa: S324
-
-                yield (
-                    filebytes,
-                    {
-                        "content_type": CONTENT_TYPE_FILE,
-                        "mime_type": mimetype,
-                        "archive_checksum": archive_checksum,
-                        "file_extension": extension_lower,
-                        "source_path": f"{path}/{filename}",
-                    },
-                )
-
-
-def get_edx_module_id(path: str, run: LearningResourceRun) -> str:
-    """
-    Return the XBlock ID from a path
-
-    Args:
-        path (str): The path to the file
-
-    Returns:
-        str: The XBlock ID
-    """
-    path = path.replace(" ", "_")
-    folder = path.split("/")[-2]
-
-    if folder == "static":
-        name = Path(path).name
-        key_type = "asset-v1"
-        module_type = "asset"
-    else:
-        name = Path(path).stem
-        key_type = "block-v1"
-        module_type = folder
-
-    return (
-        f"{key_type}:{run.run_id.replace('course-v1:', '')}"
-        f"+type@{module_type}+block@{name}"
-    )
+        yield (
+            filebytes,
+            {
+                "content_type": CONTENT_TYPE_FILE,
+                "mime_type": mimetype,
+                "archive_checksum": archive_checksum,
+                "file_extension": extension_lower,
+                "source_path": f"{rel_dir}/{path.name}",
+            },
+        )
 
 
 def text_from_srt_content(content: str):
@@ -834,64 +463,6 @@ def get_url_from_module_id(
         return f"{base_jump_url}{module_id.rsplit('@', maxsplit=1)[-1]}"
     else:
         return None
-
-
-def parse_video_transcripts_xml(
-    run: LearningResourceRun, xml_content: str, path: Path
-) -> dict:
-    """
-    Parse video XML content and create a mapping of
-    transcript edx_module_id to video edx_module_id
-    """
-    transcript_mapping = {}
-    try:
-        root = ElementTree.fromstring(xml_content)
-
-        # Get the video url_name from the root video element
-        video_url_name = root.get("url_name")
-        video_title = root.get("display_name")
-        if not video_url_name:
-            log.warning("No url_name found in video XML")
-            return {}
-
-        # Find all transcript elements and extract their src attributes
-        for transcript in root.findall(".//transcript"):
-            transcript_src = transcript.get("src")
-            if transcript_src:
-                transcript_mapping[
-                    get_edx_module_id(f"static/{transcript_src}", run)
-                ] = {
-                    "module_id": get_edx_module_id(str(path), run),
-                    "title": video_title,
-                }
-    except ElementTree.ParseError:
-        msg = f"xml parsing error for {path!s}"
-        log.debug(msg)
-        return transcript_mapping
-    return transcript_mapping
-
-
-def get_video_metadata(olx_path: str, run: LearningResourceRun) -> dict:
-    """
-    Get metadata for video SRT/VTT files in an OLX path
-    """
-    video_transcript_mapping = {}
-    video_path = Path(olx_path, "video")
-    if not video_path.exists():
-        log.debug("No video directory found in OLX path: %s", olx_path)
-        return video_transcript_mapping
-
-    for root, _, files in os.walk(str(Path(olx_path, "video"))):
-        for filename in files:
-            extension_lower = Path(filename).suffix.lower()
-            if extension_lower == ".xml":
-                with Path.open(Path(root, filename), "rb") as f:
-                    video_xml = f.read().decode("utf-8")
-
-                # Parse the XML and get transcript mappings
-                transcript_mapping = parse_video_transcripts_xml(run, video_xml, f)
-                video_transcript_mapping.update(transcript_mapping)
-    return video_transcript_mapping
 
 
 def _should_reprocess(existing_record, metadata: dict, overwrite) -> bool:
@@ -1115,7 +686,12 @@ def get_title_for_content(
 
 
 def _build_result(  # noqa: PLR0913, PLR0917
-    olx_path, metadata: dict, key: str, run, video_srt_metadata, content_dict: dict
+    olx_path,
+    metadata: dict,
+    key: str,
+    run,
+    video_srt_metadata,
+    content_dict: dict,
 ) -> dict:
     """Build the final result dictionary."""
     source_path = metadata.get("source_path")
@@ -1160,16 +736,14 @@ def process_olx_path(  # noqa: PLR0913
     source_path of each file whose processing raises; it is only complete once
     the generator is fully exhausted.
     """
-    video_srt_metadata = get_video_metadata(olx_path, run)
+    archive = OlxArchive(
+        olx_path, run.learning_resource.etl_source, valid_file_types=valid_file_types
+    )
+    video_srt_metadata = archive.video_metadata(run)
 
-    for document, metadata in documents_from_olx(
-        olx_path,
-        valid_file_types=valid_file_types,
-        etl_source=run.learning_resource.etl_source,
-    ):
+    for document, metadata in documents_from_olx(archive):
         source_path = metadata.get("source_path")
         key = get_edx_module_id(source_path, run)
-
         try:
             existing_record = _get_existing_record(
                 source_path, key, run, is_tutor_problem_file_import
@@ -1201,7 +775,12 @@ def process_olx_path(  # noqa: PLR0913
             continue
 
         yield _build_result(
-            olx_path, metadata, key, run, video_srt_metadata, content_dict
+            olx_path,
+            metadata,
+            key,
+            run,
+            video_srt_metadata,
+            content_dict,
         )
 
 

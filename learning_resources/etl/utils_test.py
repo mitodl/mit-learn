@@ -1,7 +1,6 @@
 """ETL utils test"""
 
 import datetime
-import json
 import pathlib
 import tarfile
 from decimal import Decimal
@@ -10,7 +9,6 @@ from tempfile import TemporaryDirectory
 import pypdf
 import pytest
 import requests
-from defusedxml import ElementTree
 
 from learning_resources.constants import (
     CONTENT_TYPE_FILE,
@@ -22,6 +20,13 @@ from learning_resources.constants import (
 )
 from learning_resources.etl import utils
 from learning_resources.etl.constants import CommitmentConfig, DurationConfig, ETLSource
+from learning_resources.etl.olx import OlxArchive
+from learning_resources.etl.olx_test import (
+    _ingested,
+    _reference_olx,
+    _write_html,
+    _write_olx,
+)
 from learning_resources.etl.utils import (
     get_s3_prefix_for_source,
     parse_certification,
@@ -51,7 +56,7 @@ def get_olx_test_docs():
             tar.extractall(temp, filter="data")
 
         olx_path = pathlib.Path(temp, "content-devops-0001")
-        return list(utils.documents_from_olx(str(olx_path)))
+        return list(utils.documents_from_olx(OlxArchive(olx_path)))
 
 
 @pytest.mark.parametrize("has_bucket", [True, False])
@@ -243,12 +248,13 @@ def test_transform_content_files(  # noqa: PLR0913
         "learning_resources.etl.utils.extract_text_metadata", return_value=tika_output
     )
 
-    # Mock the new functions called by process_olx_path
+    # Mock the archive facts and URL lookup process_olx_path uses
     video_metadata = {"test": "video"}
     test_url = "https://example.com/test"
 
     mocker.patch(
-        "learning_resources.etl.utils.get_video_metadata", return_value=video_metadata
+        "learning_resources.etl.olx.OlxArchive.video_metadata",
+        return_value=video_metadata,
     )
     mocker.patch(
         "learning_resources.etl.utils.get_url_from_module_id", return_value=test_url
@@ -293,7 +299,7 @@ def test_transform_content_files(  # noqa: PLR0913
 
 
 def test_documents_from_olx():
-    """Test for documents_from_olx"""
+    """documents_from_olx reads the bytes and metadata of each archive path"""
     parsed_documents = get_olx_test_docs()
     # the asset manifests, course settings and about page are excluded,
     # everything else is yielded
@@ -315,603 +321,6 @@ def test_documents_from_olx():
     assert formula2do[1]["source_path"].endswith("formula2do.xml")
     assert formula2do[1]["content_type"] == CONTENT_TYPE_FILE
     assert formula2do[1]["mime_type"].endswith("/xml")
-
-
-def _write_olx(root, rel, text):
-    path = root / rel
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(text)
-
-
-def test_documents_from_olx_skips_staff_only_subtrees(tmp_path):
-    """Files under visible_to_staff_only subtrees (and their transcripts) are skipped"""
-    olx = tmp_path / "course"
-    _write_olx(olx, "course.xml", '<course url_name="run" org="MITx" course="1"/>')
-    _write_olx(
-        olx,
-        "course/run.xml",
-        '<course><chapter url_name="ch_ok"/><chapter url_name="ch_staff"/></course>',
-    )
-    _write_olx(
-        olx, "chapter/ch_ok.xml", '<chapter><sequential url_name="seq_ok"/></chapter>'
-    )
-    _write_olx(
-        olx,
-        "sequential/seq_ok.xml",
-        '<sequential><vertical url_name="v_ok"/><vertical url_name="v_staff"/></sequential>',
-    )
-    _write_olx(
-        olx,
-        "vertical/v_ok.xml",
-        '<vertical><html url_name="h_ok"/><video url_name="vid_ok"/></vertical>',
-    )
-    _write_olx(olx, "html/h_ok.xml", '<html filename="h_ok"/>')
-    _write_olx(olx, "html/h_ok.html", "<p>visible</p>")
-    _write_olx(
-        olx,
-        "video/vid_ok.xml",
-        '<video url_name="vid_ok"><transcript language="en" src="visible.srt"/></video>',
-    )
-    _write_olx(
-        olx,
-        "vertical/v_staff.xml",
-        '<vertical visible_to_staff_only="true"><problem url_name="p_staff"/></vertical>',
-    )
-    _write_olx(olx, "problem/p_staff.xml", "<problem/>")
-    _write_olx(
-        olx,
-        "chapter/ch_staff.xml",
-        '<chapter visible_to_staff_only="true"><sequential url_name="seq_staff"/></chapter>',
-    )
-    _write_olx(
-        olx,
-        "sequential/seq_staff.xml",
-        '<sequential><vertical url_name="v_hidden"/></sequential>',
-    )
-    _write_olx(
-        olx,
-        "vertical/v_hidden.xml",
-        '<vertical><html url_name="h_hidden"/><video url_name="vid_hidden"/></vertical>',
-    )
-    _write_olx(olx, "html/h_hidden.xml", '<html filename="h_hidden_file"/>')
-    _write_olx(olx, "html/h_hidden_file.html", "<p>hidden</p>")
-    _write_olx(
-        olx,
-        "video/vid_hidden.xml",
-        '<video url_name="vid_hidden"><transcript language="en" src="hidden.srt"/></video>',
-    )
-    _write_olx(olx, "static/hidden.srt", "1\n00:00:00,000 --> 00:00:01,000\nhidden\n")
-    _write_olx(olx, "static/visible.srt", "1\n00:00:00,000 --> 00:00:01,000\nvisible\n")
-    _write_olx(olx, "tabs/syllabus.html", "<p>tab</p>")
-
-    prefix = "/".join(str(olx).split("/")[3:]) + "/"
-    paths = sorted(
-        meta["source_path"].removeprefix(prefix)
-        for _, meta in utils.documents_from_olx(str(olx))
-    )
-    assert paths == [
-        "chapter/ch_ok.xml",
-        "course.xml",
-        "course/run.xml",
-        "html/h_ok.html",
-        "html/h_ok.xml",
-        "sequential/seq_ok.xml",
-        "static/visible.srt",
-        "tabs/syllabus.html",
-        "vertical/v_ok.xml",
-        "video/vid_ok.xml",
-    ]
-
-
-def test_documents_from_olx_keeps_transcripts_a_visible_video_shares(tmp_path):
-    """A hidden copy of a video must not take the live copy's transcripts with it"""
-    olx = tmp_path / "course"
-    _write_olx(olx, "course.xml", '<course url_name="run" org="MITx" course="1"/>')
-    _write_olx(
-        olx,
-        "course/run.xml",
-        '<course><vertical url_name="v_ok"/>'
-        '<vertical url_name="v_staff" visible_to_staff_only="true"/></course>',
-    )
-    _write_olx(
-        olx, "vertical/v_ok.xml", '<vertical><video url_name="vid_ok"/></vertical>'
-    )
-    _write_olx(
-        olx, "vertical/v_staff.xml", '<vertical><video url_name="vid_old"/></vertical>'
-    )
-    shared = '<transcript language="en" src="shared.srt"/>'
-    _write_olx(olx, "video/vid_ok.xml", f'<video url_name="vid_ok">{shared}</video>')
-    _write_olx(
-        olx,
-        "video/vid_old.xml",
-        f'<video url_name="vid_old">{shared}'
-        '<transcript language="es" src="hidden_only.srt"/></video>',
-    )
-    _write_olx(olx, "static/shared.srt", "1\n00:00:00,000 --> 00:00:01,000\nshared\n")
-    _write_olx(olx, "static/hidden_only.srt", "1\n00:00:00,000 --> 00:00:01,000\nold\n")
-
-    excluded = utils.excluded_olx_paths(olx)
-    assert olx / "static/shared.srt" not in excluded
-    assert olx / "static/hidden_only.srt" in excluded
-    assert olx / "video/vid_old.xml" in excluded
-
-
-def test_documents_from_olx_keeps_a_block_a_visible_parent_also_holds(tmp_path):
-    """A block under two parents is hidden only when every parent hides it"""
-    olx = tmp_path / "course"
-    _write_olx(olx, "course.xml", '<course url_name="run" org="MITx" course="1"/>')
-    _write_olx(
-        olx,
-        "course/run.xml",
-        '<course><vertical url_name="v_ok"/>'
-        '<vertical url_name="v_staff" visible_to_staff_only="true"/></course>',
-    )
-    shared = '<video url_name="vid_shared"/>'
-    _write_olx(olx, "vertical/v_ok.xml", f"<vertical>{shared}</vertical>")
-    _write_olx(
-        olx,
-        "vertical/v_staff.xml",
-        f'<vertical>{shared}<video url_name="vid_hidden"/></vertical>',
-    )
-    _write_olx(
-        olx,
-        "video/vid_shared.xml",
-        '<video url_name="vid_shared"><transcript language="en" src="shared.srt"/></video>',
-    )
-    _write_olx(
-        olx,
-        "video/vid_hidden.xml",
-        '<video url_name="vid_hidden"><transcript language="en" src="hidden.srt"/></video>',
-    )
-    _write_olx(olx, "static/shared.srt", "1\n00:00:00,000 --> 00:00:01,000\nshared\n")
-    _write_olx(olx, "static/hidden.srt", "1\n00:00:00,000 --> 00:00:01,000\nhidden\n")
-
-    excluded = utils.excluded_olx_paths(olx)
-    assert olx / "video/vid_shared.xml" not in excluded
-    assert olx / "static/shared.srt" not in excluded
-    assert olx / "video/vid_hidden.xml" in excluded
-    assert olx / "static/hidden.srt" in excluded
-
-
-def test_documents_from_olx_skips_staff_only_inline_structure(tmp_path):
-    """Structure held inline in course.xml (no pointer files) is still filtered"""
-    olx = tmp_path / "course"
-    _write_olx(
-        olx,
-        "course.xml",
-        '<course org="MITx" course="1">'
-        '<chapter display_name="ok"><vertical><html url_name="h_ok"/></vertical></chapter>'
-        '<chapter visible_to_staff_only="true"><vertical>'
-        '<html url_name="h_staff"/><video url_name="vid_staff"/>'
-        "</vertical></chapter>"
-        "</course>",
-    )
-    _write_olx(olx, "html/h_ok.xml", '<html filename="h_ok"/>')
-    _write_olx(olx, "html/h_ok.html", "<p>visible</p>")
-    _write_olx(olx, "html/h_staff.xml", '<html filename="h_staff"/>')
-    _write_olx(olx, "html/h_staff.html", "<p>hidden</p>")
-    _write_olx(
-        olx,
-        "video/vid_staff.xml",
-        '<video url_name="vid_staff"><transcript language="en" src="hidden.srt"/></video>',
-    )
-    _write_olx(olx, "static/hidden.srt", "1\n00:00:00,000 --> 00:00:01,000\nhidden\n")
-
-    prefix = "/".join(str(olx).split("/")[3:]) + "/"
-    paths = sorted(
-        meta["source_path"].removeprefix(prefix)
-        for _, meta in utils.documents_from_olx(str(olx))
-    )
-    assert paths == ["course.xml", "html/h_ok.html", "html/h_ok.xml"]
-
-
-@pytest.mark.parametrize("bad_file", ["course.xml", "chapter/a.xml"])
-def test_documents_from_olx_malformed_block_fails_closed(tmp_path, bad_file):
-    """A malformed block raises rather than ingesting files with unchecked visibility"""
-    olx = tmp_path / "course"
-    _write_olx(olx, "course.xml", '<course url_name="run"/>')
-    _write_olx(olx, "course/run.xml", '<course><chapter url_name="a"/></course>')
-    _write_olx(olx, "chapter/a.xml", '<chapter visible_to_staff_only="true"/>')
-    _write_olx(olx, bad_file, "<broken")
-    with pytest.raises(ElementTree.ParseError):
-        list(utils.documents_from_olx(str(olx)))
-
-
-def _reference_olx(tmp_path, **static_files):
-    """Minimal OLX course with one visible html block and the given static files"""
-    olx = tmp_path / "course"
-    _write_olx(olx, "course.xml", '<course url_name="run" org="MITx" course="1"/>')
-    _write_olx(olx, "course/run.xml", '<course><chapter url_name="ch"/></course>')
-    _write_olx(olx, "chapter/ch.xml", '<chapter><vertical url_name="v"/></chapter>')
-    _write_olx(olx, "vertical/v.xml", '<vertical><html url_name="h"/></vertical>')
-    _write_olx(olx, "html/h.xml", '<html filename="h"/>')
-    for name, text in static_files.items():
-        _write_olx(olx, f"static/{name}", text)
-    return olx
-
-
-def _olx_source_paths(olx, etl_source=None):
-    prefix = "/".join(str(olx).split("/")[3:]) + "/"
-    return sorted(
-        meta["source_path"].removeprefix(prefix)
-        for _, meta in utils.documents_from_olx(str(olx), etl_source=etl_source)
-    )
-
-
-@pytest.mark.parametrize(
-    ("reference", "kept"),
-    [
-        ('<a href="/static/notes.pdf">notes</a>', True),
-        # courses also link assets by their asset key rather than /static/
-        ('<a href="/asset-v1:MITx+1+run+type@asset+block/notes.pdf">n</a>', True),
-        # percent-encoded and entity-escaped spellings are still references
-        ('<a href="/static/notes%2Epdf">notes</a>', True),
-        ('<a href="/static/notes.pdf?raw=1&amp;v=2">notes</a>', True),
-        ("<p>nothing here</p>", False),
-    ],
-)
-def test_documents_from_olx_static_reference_spellings(tmp_path, reference, kept):
-    """A static file survives when any block spells its name, however it spells it"""
-    olx = _reference_olx(tmp_path, **{"notes.pdf": "pdf bytes"})
-    _write_olx(olx, "html/h.html", reference)
-    assert ("static/notes.pdf" in _olx_source_paths(olx)) is kept
-
-
-@pytest.mark.parametrize(
-    "reference",
-    [
-        '<a href="/static/Course_Syllabus_V2.pdf">s</a>',
-        '<a href="/static/Course Syllabus V2.pdf">s</a>',
-        '<a href="/static/Course%20Syllabus%20V2.pdf">s</a>',
-        # one name can mix the two spellings (15.671.1x spells its Turkish
-        # transcripts "17 Principles_Turkish.srt")
-        '<a href="/static/Course Syllabus_V2.pdf">s</a>',
-        # an unlinked mention is a weak reference, but keeping the file costs
-        # less than dropping something a learner can see
-        "<p>The syllabus is Course Syllabus V2.pdf</p>",
-    ],
-)
-def test_documents_from_olx_normalizes_spaces_and_underscores(tmp_path, reference):
-    """A file stored with spaces matches a reference however it spells them"""
-    olx = _reference_olx(tmp_path, **{"Course Syllabus V2.pdf": "pdf"})
-    _write_olx(olx, "html/h.html", reference)
-    assert "static/Course Syllabus V2.pdf" in _olx_source_paths(olx)
-
-
-def test_documents_from_olx_skips_unreferenced_static_files(tmp_path):
-    """Static files no block refers to are not ingested (hq#13350)"""
-    olx = _reference_olx(
-        tmp_path, **{"current.pdf": "current", "syllabus_2015.pdf": "stale"}
-    )
-    _write_olx(olx, "html/h.html", '<a href="/static/current.pdf">current</a>')
-    paths = _olx_source_paths(olx)
-    assert "static/current.pdf" in paths
-    assert "static/syllabus_2015.pdf" not in paths
-
-
-@pytest.mark.parametrize(
-    ("reference", "kept"),
-    [
-        # a name that only appears inside a longer one is not referenced
-        ('<a href="/static/final_exam.srt">exam</a>', False),
-        # a space is where a name can start, so a reference written with one is
-        # kept as a reference to the shorter name too
-        ('<a href="/static/final exam.srt">exam</a>', True),
-        # but anything a name can start after still counts
-        ('<a href="/static/exam.srt">exam</a>', True),
-        ("<p>the transcript is exam.srt</p>", True),
-        ('<a href="/asset-v1:MITx+1+run+type@asset+block/exam.srt">e</a>', True),
-    ],
-)
-def test_documents_from_olx_partial_names_are_not_references(tmp_path, reference, kept):
-    """A link to final_exam.srt is not a link to exam.srt"""
-    olx = _reference_olx(tmp_path, **{"final_exam.srt": "1", "exam.srt": "2"})
-    _write_olx(olx, "html/h.html", reference)
-    assert ("static/exam.srt" in _olx_source_paths(olx)) is kept
-
-
-def test_documents_from_olx_keeps_reuploaded_asset_keys(tmp_path):
-    """
-    A file re-uploaded under a flattened asset key is linked with the + and @ of
-    that key written as underscores (seen in 15.671.1x)
-    """
-    name = "asset-v1_MITx+15.671.1x+3T2020+type@asset+block@09_Conversation.pdf"
-    olx = _reference_olx(tmp_path, **{name: "pdf"})
-    _write_olx(
-        olx,
-        "html/h.html",
-        '<a href="/asset-v1:MITxT+15.671.1x+2T2023+type@asset+block@'
-        'asset-v1_MITx_15.671.1x_3T2020_type_asset_block_09_Conversation.pdf">c</a>',
-    )
-    assert f"static/{name}" in _olx_source_paths(olx)
-
-
-def test_documents_from_olx_partial_name_does_not_unhide_staff_transcript(tmp_path):
-    """A hidden video's transcript stays hidden when only its name's tail matches"""
-    olx = _reference_olx(tmp_path, **{"exam.srt": "hidden", "final_exam.srt": "shown"})
-    _write_olx(olx, "html/h.html", '<a href="/static/final_exam.srt">exam</a>')
-    _write_olx(
-        olx,
-        "chapter/ch.xml",
-        '<chapter><vertical url_name="v"/>'
-        '<vertical url_name="v_staff" visible_to_staff_only="true"/></chapter>',
-    )
-    _write_olx(
-        olx, "vertical/v_staff.xml", '<vertical><video url_name="vid"/></vertical>'
-    )
-    _write_olx(
-        olx,
-        "video/vid.xml",
-        '<video><transcript language="en" src="exam.srt"/></video>',
-    )
-    assert "static/exam.srt" not in _olx_source_paths(olx)
-
-
-def test_documents_from_olx_ignores_asset_manifests(tmp_path):
-    """Manifests list every asset, so they cannot count as references"""
-    olx = _reference_olx(tmp_path, **{"stale.pdf": "stale"})
-    _write_olx(olx, "html/h.html", "<p>no links</p>")
-    _write_olx(olx, "policies/assets.json", '{"stale.pdf": {"filename": "stale.pdf"}}')
-    _write_olx(olx, "assets/assets.xml", "<assets><asset>stale.pdf</asset></assets>")
-    paths = _olx_source_paths(olx)
-    assert "static/stale.pdf" not in paths
-    assert "policies/assets.json" not in paths
-    assert "assets/assets.xml" not in paths
-
-
-def test_documents_from_olx_ignores_deleted_announcements(tmp_path):
-    """Deleted announcements are archived by edX but no longer part of the course"""
-    olx = _reference_olx(tmp_path, **{"old.pdf": "old", "new.pdf": "new"})
-    _write_olx(olx, "html/h.html", "<p>no links</p>")
-    _write_olx(
-        olx,
-        "info/updates.items.json",
-        '[{"id": 1, "status": "deleted", "content": "see /static/old.pdf"},'
-        ' {"id": 2, "status": "visible", "content": "see /static/new.pdf"}]',
-    )
-    paths = _olx_source_paths(olx)
-    assert "static/old.pdf" not in paths
-    assert "static/new.pdf" in paths
-    # the file itself is a decade of announcements, not current course content
-    assert "info/updates.items.json" not in paths
-
-
-def test_documents_from_olx_skips_legacy_announcements(tmp_path):
-    """updates.html is not ingested, but files its announcements link still are"""
-    olx = _reference_olx(tmp_path, **{"notes.pdf": "notes"})
-    _write_olx(olx, "html/h.html", "<p>no links</p>")
-    _write_olx(
-        olx,
-        "info/updates.html",
-        '<ol><li><h2>May 1</h2><a href="/static/notes.pdf">notes</a></li></ol>',
-    )
-    _write_olx(olx, "info/handouts.html", "<p>handouts</p>")
-    paths = _olx_source_paths(olx)
-    assert "info/updates.html" not in paths
-    assert "static/notes.pdf" in paths
-    # the Course Handouts box on the course home page
-    assert "info/handouts.html" in paths
-
-
-def test_documents_from_olx_drops_assets_only_staff_blocks_mention(tmp_path):
-    """An answer key a hidden block links is unreferenced, not referenced"""
-    olx = tmp_path / "course"
-    _write_olx(olx, "course.xml", '<course url_name="run" org="MITx" course="1"/>')
-    _write_olx(
-        olx,
-        "course/run.xml",
-        '<course><chapter url_name="ch_ok"/><chapter url_name="ch_staff"/></course>',
-    )
-    _write_olx(olx, "chapter/ch_ok.xml", '<chapter><vertical url_name="v"/></chapter>')
-    _write_olx(olx, "vertical/v.xml", '<vertical><html url_name="h"/></vertical>')
-    _write_olx(olx, "html/h.xml", '<html filename="h"/>')
-    _write_olx(olx, "html/h.html", "<p>visible</p>")
-    _write_olx(
-        olx,
-        "chapter/ch_staff.xml",
-        '<chapter visible_to_staff_only="true">'
-        '<vertical url_name="v_staff"/></chapter>',
-    )
-    _write_olx(
-        olx, "vertical/v_staff.xml", '<vertical><html url_name="h_staff"/></vertical>'
-    )
-    _write_olx(olx, "html/h_staff.xml", '<html filename="h_staff"/>')
-    _write_olx(olx, "html/h_staff.html", '<a href="/static/answers.pdf">key</a>')
-    _write_olx(olx, "static/answers.pdf", "answers")
-    assert "static/answers.pdf" not in _olx_source_paths(olx)
-
-
-def test_documents_from_olx_drafts_do_not_keep_assets(tmp_path):
-    """Drafts are not ingested, so their links do not keep an asset alive"""
-    olx = _reference_olx(tmp_path, **{"draft_only.pdf": "pdf"})
-    _write_olx(olx, "html/h.html", "<p>no links</p>")
-    _write_olx(olx, "drafts/html/d.html", '<a href="/static/draft_only.pdf">d</a>')
-    assert "static/draft_only.pdf" not in _olx_source_paths(olx)
-
-
-@pytest.mark.parametrize(
-    "video_xml",
-    [
-        # every spelling of the attribute is valid XML and must be honoured
-        '<video url_name="vid" sub="AbC123"/>',
-        "<video url_name='vid' sub='AbC123'/>",
-        '<video url_name="vid" sub = "AbC123"/>',
-        '<video url_name="vid" youtube="1.00:AbC123"/>',
-        '<video url_name="vid" youtube="0.75:Fast,1.00:AbC123,1.50:Slow"/>',
-        '<video url_name="vid" youtube_id_1_0="AbC123"/>',
-    ],
-)
-def test_documents_from_olx_keeps_legacy_transcripts(tmp_path, video_xml):
-    """subs_<id>.srt.sjson is named for the video id, never for its own filename"""
-    olx = _reference_olx(
-        tmp_path,
-        **{"subs_AbC123.srt.sjson": "{}", "es_subs_AbC123.srt.sjson": "{}"},
-    )
-    _write_olx(olx, "html/h.html", "<p>no links</p>")
-    _write_olx(olx, "vertical/v.xml", '<vertical><video url_name="vid"/></vertical>')
-    _write_olx(olx, "video/vid.xml", video_xml)
-    paths = _olx_source_paths(olx)
-    assert "static/subs_AbC123.srt.sjson" in paths
-    assert "static/es_subs_AbC123.srt.sjson" in paths
-
-
-def test_documents_from_olx_drops_orphaned_legacy_transcripts(tmp_path):
-    """A legacy transcript whose video is gone belongs to an earlier offering"""
-    olx = _reference_olx(
-        tmp_path, **{"subs_Current.srt.sjson": "{}", "subs_Removed.srt.sjson": "{}"}
-    )
-    _write_olx(olx, "html/h.html", "<p>no links</p>")
-    _write_olx(olx, "vertical/v.xml", '<vertical><video url_name="vid"/></vertical>')
-    _write_olx(olx, "video/vid.xml", '<video url_name="vid" sub="Current"/>')
-    paths = _olx_source_paths(olx)
-    assert "static/subs_Current.srt.sjson" in paths
-    assert "static/subs_Removed.srt.sjson" not in paths
-
-
-def test_documents_from_olx_keeps_inline_video_transcripts(tmp_path):
-    """A <video> inline in a parent declares its transcripts just as a file does"""
-    olx = _reference_olx(tmp_path, **{"subs_Inline.srt.sjson": "{}"})
-    _write_olx(olx, "html/h.html", "<p>no links</p>")
-    _write_olx(
-        olx,
-        "vertical/v.xml",
-        '<vertical><video url_name="vid" sub="Inline"/></vertical>',
-    )
-    assert "static/subs_Inline.srt.sjson" in _olx_source_paths(olx)
-
-
-def test_documents_from_olx_unparsable_xml_keeps_legacy_transcripts(tmp_path):
-    """Unknown video ids must not be read as "no video uses this transcript\""""
-    olx = _reference_olx(tmp_path, **{"subs_AbC123.srt.sjson": "{}"})
-    _write_olx(olx, "html/h.html", "<p>no links</p>")
-    _write_olx(olx, "tabs/broken.xml", "<tab")
-    assert "static/subs_AbC123.srt.sjson" in _olx_source_paths(olx)
-
-
-def test_documents_from_olx_without_course_xml_yields_everything(tmp_path):
-    """Non-OLX trees (canvas, tutor problem sets) are not filtered"""
-    olx = tmp_path / "course"
-    _write_olx(olx, "chapter/a.xml", '<chapter visible_to_staff_only="true"/>')
-    _write_olx(olx, "web_resources/b.html", "<p>b</p>")
-    paths = [meta["source_path"] for _, meta in utils.documents_from_olx(str(olx))]
-    assert len(paths) == 2
-
-
-def _tab_policy(olx, tabs):
-    """Write the run's policy.json with the given tab list"""
-    _write_olx(
-        olx, "policies/run/policy.json", json.dumps({"course/run": {"tabs": tabs}})
-    )
-
-
-def _static_tab(slug, **flags):
-    return {"type": "static_tab", "name": slug, "url_slug": slug, **flags}
-
-
-@pytest.mark.parametrize(
-    ("tab", "kept"),
-    [
-        (_static_tab("resources", course_staff_only=False), True),
-        # Studio exports every tab page it stores, but the LMS 404s a slug the
-        # tab list does not name
-        (_static_tab("other", course_staff_only=False), False),
-        # these still render by URL, but no navigation leads a learner there
-        (_static_tab("resources", course_staff_only=True), False),
-        (_static_tab("resources", is_hidden=True), False),
-    ],
-)
-# edX also reads tab pages from a folder named for the run
-@pytest.mark.parametrize("tab_dir", ["tabs", "tabs/run"])
-def test_documents_from_olx_skips_tabs_learners_cannot_reach(
-    tmp_path, tab, kept, tab_dir
-):
-    """Only the tab pages the course's navigation leads to are ingested"""
-    olx = _reference_olx(tmp_path)
-    _write_olx(olx, "html/h.html", "<p>no links</p>")
-    _write_olx(olx, f"{tab_dir}/resources.html", "<p>resources</p>")
-    _tab_policy(olx, [{"type": "courseware", "course_staff_only": False}, tab])
-    assert (f"{tab_dir}/resources.html" in _olx_source_paths(olx)) is kept
-
-
-@pytest.mark.parametrize(
-    "policy",
-    [
-        None,
-        "{broken",
-        json.dumps({"course/run": {}}),
-        json.dumps({"course/run": {"tabs": None}}),
-    ],
-)
-def test_documents_from_olx_keeps_tabs_without_a_tab_list(tmp_path, policy):
-    """A tab list that cannot be read is no reason to drop a tab page"""
-    olx = _reference_olx(tmp_path)
-    _write_olx(olx, "html/h.html", "<p>no links</p>")
-    _write_olx(olx, "tabs/resources.html", "<p>resources</p>")
-    if policy is not None:
-        _write_olx(olx, "policies/run/policy.json", policy)
-    assert "tabs/resources.html" in _olx_source_paths(olx)
-
-
-def test_documents_from_olx_unlisted_tabs_do_not_keep_assets(tmp_path):
-    """A page learners cannot reach does not make the files it links reachable"""
-    olx = _reference_olx(tmp_path, **{"old.pdf": "old", "current.pdf": "current"})
-    _write_olx(olx, "html/h.html", "<p>no links</p>")
-    _write_olx(olx, "tabs/old.html", '<a href="/static/old.pdf">old</a>')
-    _write_olx(olx, "tabs/current.html", '<a href="/static/current.pdf">now</a>')
-    _tab_policy(olx, [_static_tab("current")])
-    paths = _olx_source_paths(olx)
-    assert "static/old.pdf" not in paths
-    assert "static/current.pdf" in paths
-
-
-def test_documents_from_olx_skips_policy_files_but_keeps_what_they_name(tmp_path):
-    """Course settings are not content, but the textbooks they list are"""
-    olx = _reference_olx(tmp_path, **{"book.pdf": "book"})
-    _write_olx(olx, "html/h.html", "<p>no links</p>")
-    textbook = {"tab_title": "Book", "chapters": [{"url": "/static/book.pdf"}]}
-    _write_olx(
-        olx,
-        "policies/run/policy.json",
-        json.dumps({"course/run": {"pdf_textbooks": [textbook]}}),
-    )
-    _write_olx(olx, "policies/run/grading_policy.json", '{"GRADER": []}')
-    paths = _olx_source_paths(olx)
-    assert "static/book.pdf" in paths
-    assert [path for path in paths if path.startswith("policies/")] == []
-
-
-@pytest.mark.parametrize(
-    ("etl_source", "kept"),
-    [
-        # Open Learning Library is the only platform that shows the about page
-        (ETLSource.oll.name, ["overview.html", "short_description.html"]),
-        (ETLSource.mitxonline.name, []),
-        (None, []),
-    ],
-)
-# edX also reads about files from a folder named for the run
-@pytest.mark.parametrize("about_dir", ["about", "about/run"])
-def test_documents_from_olx_skips_about_files_learners_cannot_see(
-    tmp_path, etl_source, kept, about_dir
-):
-    """About files are ingested only where the about page is shown, and only its prose"""
-    olx = _reference_olx(tmp_path)
-    _write_olx(olx, "html/h.html", "<p>no links</p>")
-    for name in ("overview", "short_description", "effort", "prerequisites"):
-        _write_olx(olx, f"{about_dir}/{name}.html", name)
-    paths = _olx_source_paths(olx, etl_source)
-    assert [path for path in paths if path.startswith("about/")] == [
-        f"{about_dir}/{name}" for name in kept
-    ]
-
-
-def test_documents_from_olx_hidden_about_page_does_not_keep_assets(tmp_path):
-    """A file only a hidden about page links is not reachable"""
-    olx = _reference_olx(tmp_path, **{"intro.pdf": "pdf"})
-    _write_olx(olx, "html/h.html", "<p>no links</p>")
-    _write_olx(olx, "about/overview.html", '<a href="/static/intro.pdf">intro</a>')
-    assert "static/intro.pdf" not in _olx_source_paths(olx, ETLSource.mitxonline.name)
-    assert "static/intro.pdf" in _olx_source_paths(olx, ETLSource.oll.name)
 
 
 @pytest.mark.parametrize(
@@ -1305,122 +714,6 @@ def test_is_valid_uuid(uuid_string, expected):
 
 
 @pytest.mark.parametrize(
-    ("xml_content", "file_name", "expected_mapping"),
-    [
-        (
-            """<video url_name="test_video">
-                <transcript src="test_transcript.srt" />
-                <transcript src="test_transcript_es.srt" />
-            </video>""",
-            "test_video.xml",
-            {
-                "asset-v1:test_run+type@asset+block@test_transcript.srt": {
-                    "module_id": "block-v1:test_run+type@video+block@test_video",
-                    "title": None,
-                },
-                "asset-v1:test_run+type@asset+block@test_transcript_es.srt": {
-                    "module_id": "block-v1:test_run+type@video+block@test_video",
-                    "title": None,
-                },
-            },
-        ),
-        (
-            """<video url_name="another_video">
-                <transcript src="another_transcript.srt" />
-            </video>""",
-            "another_video.xml",
-            {
-                "asset-v1:test_run+type@asset+block@another_transcript.srt": {
-                    "module_id": "block-v1:test_run+type@video+block@another_video",
-                    "title": None,
-                }
-            },
-        ),
-        (
-            """<video>
-                <transcript src="no_url_name.srt" />
-            </video>""",
-            "no_url_name.xml",
-            {},  # No url_name, should return empty dict
-        ),
-        (
-            """<video url_name="no_transcripts">
-            </video>""",
-            "no_transcripts.xml",
-            {},  # No transcripts, should return empty dict
-        ),
-        (
-            """invalid xml content""",
-            "invalid.xml",
-            {},  # Invalid XML, should return empty dict
-        ),
-    ],
-)
-def test_parse_video_transcripts_xml(mocker, xml_content, file_name, expected_mapping):
-    """Test that parse_video_transcripts_xml correctly parses video XML and creates transcript mapping"""
-    run = LearningResourceRunFactory.create(run_id="course-v1:test_run")
-    path = mocker.Mock()
-    path.__str__ = mocker.Mock(return_value=f"video/{file_name}")
-
-    mock_log = mocker.patch("learning_resources.etl.utils.log")
-
-    result = utils.parse_video_transcripts_xml(run, xml_content, path)
-
-    assert result == expected_mapping
-
-    # Check if warning/exception was logged for invalid XML
-    if "invalid xml" in xml_content.lower():
-        mock_log.debug.assert_called_once()
-
-
-@pytest.mark.parametrize("video_dir_exists", [True, False])
-def test_get_video_metadata(mocker, tmp_path, video_dir_exists):
-    """Test that get_video_metadata correctly processes video directory and returns transcript mappings"""
-    run = LearningResourceRunFactory.create(run_id="course-v1:test_run")
-    olx_path = tmp_path / "course"
-    olx_path.mkdir()
-
-    if video_dir_exists:
-        video_dir = olx_path / "video"
-        video_dir.mkdir()
-
-        # Create a test video XML file
-        video_xml = """<video url_name="test_video">
-            <transcript src="test_transcript1.srt" />
-            <transcript src="test_transcript2.srt" />
-        </video>"""
-
-        video_file = video_dir / "test_video.xml"
-        video_file.write_text(video_xml)
-
-        # Mock parse_video_transcripts_xml to return expected mapping
-        expected_mapping = {
-            "asset-v1:test_run+type@asset+block@test_transcript1.srt": {
-                "module_id": "block-v1:test_run+type@video+block@test_video",
-                "title": None,
-            },
-            "asset-v1:test_run+type@asset+block@test_transcript2.srt": {
-                "module_id": "block-v1:test_run+type@video+block@test_video",
-                "title": None,
-            },
-        }
-        mock_parse = mocker.patch(
-            "learning_resources.etl.utils.parse_video_transcripts_xml",
-            return_value=expected_mapping,
-        )
-        result = utils.get_video_metadata(str(olx_path), run)
-
-        assert result == expected_mapping
-        assert mock_parse.call_count == 1
-        call_args = mock_parse.call_args[0]
-        assert call_args[0] == run
-        assert call_args[1] == video_xml
-    else:
-        # No video directory
-        assert utils.get_video_metadata(str(olx_path), run) == {}
-
-
-@pytest.mark.parametrize(
     (
         "etl_source",
         "module_id",
@@ -1598,8 +891,7 @@ def test_process_olx_path_encrypted_pdf(mocker, settings, tmp_path):
         ],
     )
 
-    # Mock mocks
-    mocker.patch("learning_resources.etl.utils.get_video_metadata", return_value={})
+    # the course has no video directory, so no transcript metadata is needed
     mocker.patch(
         "learning_resources.etl.utils.get_url_from_module_id",
         return_value="http://example.com",
@@ -1802,7 +1094,8 @@ def test_extract_content_ocr_failure_falls_back_to_tika(
     assert all(r.levelname == "WARNING" for r in ocr_records)
 
 
-@pytest.mark.django_db
+# an extraction that raises is recorded as failed; one Tika gave nothing back
+# for is only skipped
 def test_process_olx_path_skips_failed_files(mocker, tmp_path):
     """A file whose extraction raises is skipped and recorded; other files still yield"""
     run = LearningResourceRunFactory.create()
@@ -1873,3 +1166,29 @@ def test_extract_content_invalid_pdf_raises(mocker, settings, tmp_path):
             str(tmp_path),
             "test-key",
         )
+
+
+def test_documents_from_olx_reads_archive_paths(tmp_path):
+    """documents_from_olx yields exactly the archive's paths, excluded ones dropped"""
+    olx = _reference_olx(tmp_path)
+    _write_olx(
+        olx,
+        "chapter/ch.xml",
+        '<chapter><vertical url_name="v"/>'
+        '<vertical url_name="v_staff" visible_to_staff_only="true"/></chapter>',
+    )
+    _write_olx(
+        olx, "vertical/v_staff.xml", '<vertical><html url_name="h_staff"/></vertical>'
+    )
+    _write_olx(olx, "html/h.html", "<p>visible</p>")
+    _write_html(olx, "h_staff", "<p>staff only</p>")
+
+    archive = OlxArchive(olx)
+    documents = list(utils.documents_from_olx(archive))
+    assert len(documents) == len(archive.paths) == len(_ingested(olx))
+    for (content, meta), path in zip(documents, archive.paths):
+        assert meta["source_path"].endswith(str(path.relative_to(olx)))
+        assert content == path.read_bytes()
+        assert meta["file_extension"] == path.suffix
+    assert "html/h.html" in _ingested(olx)
+    assert "html/h_staff.html" not in _ingested(olx)
