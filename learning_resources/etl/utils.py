@@ -1001,6 +1001,8 @@ def _sequential_blocks(
             element = pointer
         if _is_set("visible_to_staff_only", pointer, element):
             continue
+        if tag in OLX_STRUCTURE_TAGS:
+            _check_olx_reference(root, pointer)
         if block_name:
             if (tag, block_name) in seen:
                 continue
