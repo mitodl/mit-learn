@@ -7,6 +7,7 @@ import { styled, ActionButton } from "@mitodl/smoot-design"
 import { RiArrowLeftLine, RiArrowRightLine } from "@remixicon/react"
 import type { TestimonialItem } from "@mitodl/mitxonline-api-axios/v2"
 import { HeadingIds } from "./util"
+import { buildTestimonialStructuredData } from "./testimonialStructuredData"
 
 // Fade + height-tween timing. ~300ms ease-out approximates the Figma
 // interactive-component dissolve; the exact spec isn't exposed in dev mode.
@@ -66,10 +67,15 @@ const BodyViewport = styled.div({
   overflow: "hidden",
 })
 
-const BodyInner = styled.div({
+// Every testimonial stays in the DOM so the Review structured data below only
+// describes content the page actually carries; the inactive ones are hidden.
+const Slide = styled.div({
   display: "flex",
   flexDirection: "column",
   gap: "24px",
+  "&[hidden]": {
+    display: "none",
+  },
 })
 
 const Quote = styled.blockquote(({ theme }) => ({
@@ -130,9 +136,13 @@ const prefersReducedMotion = () =>
   typeof window !== "undefined" &&
   window.matchMedia("(prefers-reduced-motion: reduce)").matches
 
-const TestimonialsSection: React.FC<{ testimonials: TestimonialItem[] }> = ({
-  testimonials,
-}) => {
+const TestimonialsSection: React.FC<{
+  testimonials: TestimonialItem[]
+  /** Name of the course or program the testimonials review. */
+  itemReviewedName: string
+  /** Its description, which may be rich text. Required on a schema.org Course. */
+  itemReviewedDescription?: string
+}> = ({ testimonials, itemReviewedName, itemReviewedDescription }) => {
   const [index, setIndex] = React.useState(0)
   const viewportRef = React.useRef<HTMLDivElement>(null)
   const innerRef = React.useRef<HTMLDivElement>(null)
@@ -147,6 +157,11 @@ const TestimonialsSection: React.FC<{ testimonials: TestimonialItem[] }> = ({
   const safeIndex = Math.min(index, Math.max(testimonials.length - 1, 0))
   const testimonial = testimonials[safeIndex]
   const hasArrows = testimonials.length > 1
+  const structuredData = buildTestimonialStructuredData(
+    testimonials,
+    itemReviewedName,
+    itemReviewedDescription,
+  )
 
   // Content swaps synchronously; this effect layers a fade-in + height tween on
   // top. It forces a reflow between the start and end states so the browser
@@ -267,25 +282,40 @@ const TestimonialsSection: React.FC<{ testimonials: TestimonialItem[] }> = ({
           ) : null}
         </HeaderRow>
         <BodyViewport ref={viewportRef}>
-          <BodyInner ref={innerRef} aria-live="polite">
-            <Quote>{testimonial.quote}</Quote>
-            <Attribution>
-              {testimonial.image_src ? (
-                <Avatar
-                  src={testimonial.image_src}
-                  alt=""
-                  width={48}
-                  height={48}
-                />
-              ) : null}
-              <NameGroup>
-                <Name>{testimonial.name}</Name>
-                {testimonial.title ? <Title>{testimonial.title}</Title> : null}
-              </NameGroup>
-            </Attribution>
-          </BodyInner>
+          <div ref={innerRef} aria-live="polite">
+            {testimonials.map((item, position) => (
+              <Slide key={item.id} hidden={position !== safeIndex}>
+                <Quote>{item.quote}</Quote>
+                <Attribution>
+                  {item.image_src ? (
+                    <Avatar
+                      src={item.image_src}
+                      alt=""
+                      width={48}
+                      height={48}
+                    />
+                  ) : null}
+                  <NameGroup>
+                    <Name>{item.name}</Name>
+                    {item.title ? <Title>{item.title}</Title> : null}
+                  </NameGroup>
+                </Attribution>
+              </Slide>
+            ))}
+          </div>
         </BodyViewport>
       </Card>
+      {structuredData ? (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify(structuredData)
+              .replace(/&/g, "\\u0026")
+              .replace(/</g, "\\u003c")
+              .replace(/>/g, "\\u003e"),
+          }}
+        />
+      ) : null}
     </TestimonialsSectionRoot>
   )
 }
