@@ -37,6 +37,14 @@ const setupChannel = (channelType: ChannelTypeEnum = ChannelTypeEnum.Topic) => {
   setMockResponse.get(expect.stringContaining(urls.search.vectorResources()), {
     ...SEARCH_RESPONSE,
   })
+  /* A topic page prefetches its Featured row, the hero being drawn
+     differently where there is none to carry. */
+  setMockResponse.get(
+    expect.stringContaining(
+      urls.channels.featured(channel.channel_type, channel.name),
+    ),
+    { count: 0, next: null, previous: null, results: [] },
+  )
   return channel
 }
 

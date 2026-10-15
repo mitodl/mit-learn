@@ -1,18 +1,10 @@
 import React from "react"
 import { styled } from "ol-components"
 import { useQuery } from "@tanstack/react-query"
-import { ChannelTypeEnum } from "api/v0"
 import { channelQueries } from "api/hooks/channels"
 import ResourceCarousel from "@/page-components/ResourceCarousel/ResourceCarousel"
 import type { TabConfig } from "@/page-components/ResourceCarousel/types"
-
-/**
- * How many items of the learning path to carry into the carousel.
- *
- * The row shows four at desktop width and the carousel pages through the rest,
- * so this is the size of the pool rather than what is on screen.
- */
-const FEATURED_COUNT = 12
+import { FEATURED_COUNT, featuredParams } from "./topicFeatured"
 
 /**
  * The design's Featured section is a 32px heading row, 32px, then the cards,
@@ -69,12 +61,6 @@ type TopicFeaturedCarouselProps = {
  * heading above a blank strip reads as a failure, and the sections below it
  * stand on their own.
  */
-const featuredParams = (name: string) => ({
-  channel_type: ChannelTypeEnum.Topic,
-  name,
-  limit: FEATURED_COUNT,
-})
-
 /**
  * Whether the row will draw anything.
  *
