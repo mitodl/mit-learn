@@ -30,9 +30,9 @@ import {
   getCertificateLink,
   buildCourseEntry,
   courseIsCompleted,
+  getProgramAsCourseModuleIds,
 } from "./model/dashboardViewModel"
 import {
-  getIdsFromReqTree,
   isVerifiedEnrollmentMode,
   mitxonlineLegacyUrl,
 } from "@/common/mitxonline"
@@ -288,13 +288,7 @@ const ProgramAsCourseCard: React.FC<ProgramAsCourseCardProps> = ({
   className,
   onUpgradeError,
 }) => {
-  const moduleRequirementSection = courseProgram?.req_tree?.find(
-    (node) => node.data.node_type === "operator",
-  )
-
-  const moduleIds = moduleRequirementSection
-    ? getIdsFromReqTree([moduleRequirementSection]).courseIds
-    : (courseProgram?.courses ?? [])
+  const moduleIds = getProgramAsCourseModuleIds(courseProgram)
 
   const moduleCoursesById = new Map(
     moduleCourses.map((course) => [course.id, course]),

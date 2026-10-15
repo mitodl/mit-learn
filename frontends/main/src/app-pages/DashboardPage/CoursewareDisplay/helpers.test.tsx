@@ -1,5 +1,8 @@
 import { factories } from "api/mitxonline-test-utils"
-import { V2ProgramRequirement } from "@mitodl/mitxonline-api-axios/v2"
+import {
+  DisplayModeEnum,
+  V2ProgramRequirement,
+} from "@mitodl/mitxonline-api-axios/v2"
 import {
   CourseRunEnrollmentV3,
   V3UserProgramEnrollment,
@@ -425,6 +428,60 @@ describe("helpers", () => {
         completed: 1,
         total: 2,
       })
+    })
+
+    test.each([
+      { displayMode: DisplayModeEnum.Course, completed: 1 },
+      { displayMode: null, completed: 0 },
+    ])(
+      "program leaf with all modules passed and no certificate counts as completed only for program-as-course (display_mode=$displayMode)",
+      ({ displayMode, completed }) => {
+        const program = factories.programs.program({
+          id: 10,
+          display_mode: displayMode, // eslint-disable-line camelcase
+          courses: [1, 2],
+          req_tree: [operator("all_of", [courseLeaf(1), courseLeaf(2)])], // eslint-disable-line camelcase
+        })
+        const programEnrollments = {
+          10: factories.enrollment.programEnrollmentV3({ certificate: null }),
+        }
+        const courseEnrollments = {
+          1: [courseEnrollment(1, true)],
+          2: [courseEnrollment(2, true)],
+        }
+        const nodes = [operator("all_of", [programLeaf(10)])]
+
+        expect(
+          getRequirementsProgress(
+            nodes,
+            courseEnrollments,
+            programEnrollments,
+            new Map([[10, program]]),
+          ),
+        ).toEqual({ completed, total: 1 })
+      },
+    )
+
+    test("program-as-course leaf with some modules unpassed is not completed", () => {
+      const program = factories.programs.program({
+        id: 10,
+        display_mode: DisplayModeEnum.Course, // eslint-disable-line camelcase
+        courses: [1, 2],
+        req_tree: [operator("all_of", [courseLeaf(1), courseLeaf(2)])], // eslint-disable-line camelcase
+      })
+      const programEnrollments = {
+        10: factories.enrollment.programEnrollmentV3({ certificate: null }),
+      }
+      const nodes = [operator("all_of", [programLeaf(10)])]
+
+      expect(
+        getRequirementsProgress(
+          nodes,
+          { 1: [courseEnrollment(1, true)], 2: [courseEnrollment(2, false)] },
+          programEnrollments,
+          new Map([[10, program]]),
+        ),
+      ).toEqual({ completed: 0, total: 1 })
     })
 
     test("ignores non-operator and non-leaf children (nested operators)", () => {
