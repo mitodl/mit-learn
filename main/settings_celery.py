@@ -17,12 +17,8 @@ will be a constant 60 minutes greater more than the schedule frequency
 EMBEDDING_SCHEDULE_MINUTES = get_int(name="EMBEDDING_SCHEDULE_MINUTES", default=60)
 QDRANT_EMBEDDINGS_TASK_LOOKBACK_WINDOW = EMBEDDING_SCHEDULE_MINUTES + 60
 
-# Hourly released-content-files sweep. LOOKBACK is the fallback window when
-# there is no watermark yet (first run, or the durable cache row was cleared).
-# OVERLAP is subtracted from the watermark on every sweep: the run hook only
-# queues an indexing chain, so a release whose chain failed gets one more
-# sweep. Both must be at least the sweep interval; the sweep is idempotent, so
-# a wider window only costs a redundant reindex.
+# Released-content sweep: LOOKBACK without a watermark; OVERLAP re-covers a
+# failed indexing chain. Both must be at least the sweep interval.
 RELEASED_CONTENT_FILES_LOOKBACK = timedelta(days=1)
 RELEASED_CONTENT_FILES_SWEEP_OVERLAP = timedelta(hours=1)
 

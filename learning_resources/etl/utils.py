@@ -705,12 +705,8 @@ def reconcile_release_dates(
     run: LearningResourceRun, key_dates: dict[str, datetime | None]
 ) -> None:
     """
-    Set release_date on the run's content file rows from key_dates: one
-    update per distinct date, cleared for a key dated None. Covers rows not
-    re-extracted this run too, and never touches published. A row whose key
-    is absent (its file left the archive or went staff-only) is left alone:
-    the stale pass unpublishes it, and clearing its date first would show it
-    in the meantime.
+    Set release_date on the run's rows from key_dates, one update per date.
+    Rows whose key is missing are left for the stale pass to unpublish.
     """
     rows = ContentFile.objects.filter(run=run)
     keys_by_date: dict[datetime | None, list[str]] = {}
@@ -732,17 +728,14 @@ def process_olx_path(  # noqa: PLR0913
     archive: OlxArchive | None = None,
 ) -> Generator[dict, None, None]:
     """
-    Process OLX path and yield content dictionaries.
-
-    Before extraction, rows take the release dates from the archive, so a
-    row is dated correctly even if its content isn't re-extracted this run.
+    Process OLX path and yield content dictionaries. Rows are dated from the
+    archive before extraction.
 
     failed_source_paths is a caller-owned list appended to in place with the
     source_path of each file whose processing raises; it is only complete once
-    the generator is fully exhausted. A file Tika returns nothing for is not a
-    failure: it has nothing to show, so its row, if any, is left to the stale
-    pass. archive is the OlxArchive of olx_path, if the caller has one to share;
-    the file types it reads are then the ones ingested, and a different
+    the generator is fully exhausted. A file Tika yields nothing for is not a
+    failure. archive is the OlxArchive of olx_path, if the caller has one to
+    share; the file types it reads are then the ones ingested, and a different
     valid_file_types raises ValueError.
     """
     if archive is None:

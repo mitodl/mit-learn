@@ -2154,26 +2154,24 @@ def test_load_content_files_does_not_update_already_unpublished_stale_files(mock
 @pytest.mark.parametrize("has_release_date", [False, True])
 def test_load_content_files_failed_keys_untouched(mocker, has_release_date):
     """
-    Contentfiles whose extraction failed are left as they are, while stale
-    files missing from this load are unpublished. release_date is a fact
-    about the archive and is never cleared by this pass.
+    Only files missing from this load are unpublished: failed ones, and a loaded
+    one's direct resource, are left alone. release_date is never cleared.
     """
     course = LearningResourceFactory.create(is_course=True, create_runs=False)
     course_run = LearningResourceRunFactory.create(
         published=True, learning_resource=course
     )
     release_date = now_in_utc() + timedelta(days=5) if has_release_date else None
-    loaded_cf = ContentFileFactory.create(
-        run=course_run, published=True, key="loaded-key"
-    )
-    failed_cf, stale_cf = (
+    direct_resource = LearningResourceFactory.create(published=True)
+    loaded_cf, failed_cf, stale_cf = (
         ContentFileFactory.create(
             run=course_run,
             published=True,
             key=key,
             release_date=release_date,
+            direct_learning_resource=direct_resource if key == "loaded-key" else None,
         )
-        for key in ("failed-key", "stale-key")
+        for key in ("loaded-key", "failed-key", "stale-key")
     )
 
     mocker.patch(
@@ -2194,55 +2192,12 @@ def test_load_content_files_failed_keys_untouched(mocker, has_release_date):
 
     assert result == [loaded_cf.id]
 
-    failed_cf.refresh_from_db()
-    stale_cf.refresh_from_db()
+    for obj in (loaded_cf, failed_cf, stale_cf, direct_resource):
+        obj.refresh_from_db()
+    assert (loaded_cf.published, loaded_cf.release_date) == (True, release_date)
+    assert direct_resource.published is True
     assert (failed_cf.published, failed_cf.release_date) == (True, release_date)
     assert (stale_cf.published, stale_cf.release_date) == (False, release_date)
-
-
-def test_load_content_files_unreleased_file_keeps_direct_resource(mocker):
-    """
-    A present-but-unreleased file stays published (it's part of the course,
-    just gated by release_date) and keeps its direct_learning_resource
-    published: only files absent from this load get swept.
-    """
-    course = LearningResourceFactory.create(is_course=True, create_runs=False)
-    course_run = LearningResourceRunFactory.create(
-        published=True, learning_resource=course
-    )
-    future_date = now_in_utc() + timedelta(days=5)
-    direct_resource = LearningResourceFactory.create(published=True)
-    unreleased_cf = ContentFileFactory.create(
-        run=course_run,
-        published=True,
-        key="unreleased-key",
-        release_date=future_date,
-        direct_learning_resource=direct_resource,
-    )
-
-    mocker.patch(
-        "learning_resources.etl.loaders.load_content_file",
-        return_value=unreleased_cf.id,
-        autospec=True,
-    )
-    mocker.patch(
-        "learning_resources.etl.loaders.content_files_loaded_actions",
-        autospec=True,
-    )
-
-    result = load_content_files(
-        course_run,
-        [{"key": "unreleased-key", "content": "text"}],
-        calc_completeness=False,
-    )
-
-    assert result == [unreleased_cf.id]
-
-    unreleased_cf.refresh_from_db()
-    direct_resource.refresh_from_db()
-    assert unreleased_cf.published is True
-    assert unreleased_cf.release_date == future_date
-    assert direct_resource.published is True
 
 
 @pytest.mark.parametrize("test_mode", [True, False])

@@ -1589,8 +1589,9 @@ def test_cleanup_deleted_content_files_respects_retention_window(settings):
     recent_unpublished = ContentFileFactory.create_batch(
         1, run=eligible_run, published=False
     )
+    # old and dated, but published: never cleaned up
     still_published = ContentFileFactory.create_batch(
-        1, run=eligible_run, published=True
+        1, run=eligible_run, published=True, release_date=recent_cutoff
     )
     ineligible_old_unpublished = ContentFileFactory.create_batch(
         2, run=ineligible_run, published=False
@@ -1598,7 +1599,9 @@ def test_cleanup_deleted_content_files_respects_retention_window(settings):
 
     # Force updated_on values so this test is deterministic around the threshold.
     ContentFile.objects.filter(
-        id__in=[f.id for f in old_unpublished + ineligible_old_unpublished]
+        id__in=[
+            f.id for f in old_unpublished + ineligible_old_unpublished + still_published
+        ]
     ).update(updated_on=old_cutoff)
     ContentFile.objects.filter(id__in=[f.id for f in recent_unpublished]).update(
         updated_on=recent_cutoff
@@ -1653,34 +1656,6 @@ def test_cleanup_deleted_content_files_skips_republished_rows(mocker, settings):
     assert survivor.id in remaining_ids
     for file in doomed:
         assert file.id not in remaining_ids
-
-
-def test_cleanup_deleted_content_files_ignores_release_date(settings):
-    """Cleanup never touches published rows, release_date or not"""
-    settings.CONTENT_FILE_RETENTION_DAYS = 14
-    settings.CONTENT_FILE_CLEANUP_CHUNK_SIZE = 10
-
-    run = LearningResourceRunFactory.create(
-        published=True, learning_resource__etl_source=ETLSource.mitxonline.value
-    )
-    old_cutoff = now_in_utc() - timedelta(days=15)
-
-    released = ContentFileFactory.create(
-        run=run, published=True, release_date=now_in_utc() - timedelta(days=1)
-    )
-    soft_deleted = ContentFileFactory.create(
-        run=run, published=False, release_date=None
-    )
-    ContentFile.objects.filter(id__in=[released.id, soft_deleted.id]).update(
-        updated_on=old_cutoff
-    )
-
-    deleted_count = cleanup_deleted_content_files()
-
-    assert deleted_count == 1
-    remaining_ids = set(ContentFile.objects.values_list("id", flat=True))
-    assert released.id in remaining_ids
-    assert soft_deleted.id not in remaining_ids
 
 
 def test_cleanup_deleted_content_files_no_eligible_returns_zero(mocker, settings):
@@ -2998,10 +2973,7 @@ def test_reindex_released_content_files_retries_a_release_once(
     settings.RELEASED_CONTENT_FILES_SWEEP_OVERLAP = HOUR
     start = now_in_utc()
     clock = mocker.patch("learning_resources.tasks.now_in_utc", return_value=start)
-    run = LearningResourceRunFactory.create()
-    content_file = ContentFileFactory.create(
-        run=run, published=True, release_date=start - (HOUR / 2)
-    )
+    ContentFileFactory.create(published=True, release_date=start - (HOUR / 2))
 
     assert tasks.reindex_released_content_files() == 1
     clock.return_value = start + HOUR
@@ -3010,9 +2982,6 @@ def test_reindex_released_content_files_retries_a_release_once(
     assert tasks.reindex_released_content_files() == 0
 
     assert mock_loaded_actions.call_count == 2
-    content_file.refresh_from_db()
-    assert content_file.published is True
-    assert content_file.release_date is not None
 
 
 def test_reindex_released_content_files_advances_watermark_to_sweep_start(

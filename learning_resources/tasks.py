@@ -121,17 +121,10 @@ def update_next_start_date_and_prices():
 @app.task(acks_late=True, reject_on_worker_lost=True)
 def reindex_released_content_files() -> int:
     """
-    Reindex every run with a published content file released since the last
-    successful sweep. Idempotent: flips no state, just re-triggers each run's
-    indexing hook.
-
-    Without a watermark (first run, or the cache row was cleared) the window
-    falls back to RELEASED_CONTENT_FILES_LOOKBACK; otherwise it starts one
-    RELEASED_CONTENT_FILES_SWEEP_OVERLAP before the watermark so a release
-    whose queued indexing chain failed is dispatched once more. The watermark
-    advances only after every hook dispatched, so a failed sweep leaves its
-    window for the retry. `now` is sampled before the query so a file released
-    mid-sweep lands in the next window, not between the two.
+    Reindex runs with content files released since the last sweep (watermark
+    minus OVERLAP, or LOOKBACK without one). The watermark only advances once
+    every hook is dispatched, and now is read first so no release falls
+    between two windows.
     """
     durable = caches["durable"]
     now = now_in_utc()

@@ -2126,43 +2126,35 @@ def test_unpublish_excluded_content_files_skips_runs_without_content_files(
     archive.assert_not_called()
 
 
-def test_unpublish_excluded_content_files_dry_run(staff_only_run, mock_deindex_tasks):
-    """A dry run counts the excluded rows but changes nothing and deindexes nothing"""
-    run = staff_only_run.run
-    ContentFileFactory.create(
-        run=run,
-        key=get_edx_module_id("course/static/stale_syllabus.pdf", run),
-        published=True,
-    )
-
-    rows = _unpublish(staff_only_run, dry_run=True)
-
-    assert [row["unpublished"] for row in rows] == [1]
-    assert ContentFile.objects.filter(run=run, published=True).count() == 1
-    mock_deindex_tasks.opensearch.assert_not_called()
-    mock_deindex_tasks.qdrant.assert_not_called()
-
-
 def test_unpublish_excluded_content_files_dates_unreleased(
     staff_only_run, mock_deindex_tasks
 ):
-    """A staff-only file is unpublished; dated files, released or not, record their date and stay published"""
+    """
+    A staff-only file is unpublished, keeping its date; dated files record
+    theirs and stay published; a row the archive lacks is left alone
+    """
     run = staff_only_run.run
-    staff = _content_file(run, "html/h_staff.xml", published=True)
-    future = _content_file(run, "html/h_future.xml", published=True)
-    past = _content_file(run, "html/h_past.xml", published=True)
-    ok = _content_file(run, "html/h_ok.xml", published=True)
+    rows = (
+        _content_file(
+            run, "html/h_staff.xml", published=True, release_date=FUTURE_START
+        ),
+        _content_file(run, "html/h_future.xml", published=True),
+        _content_file(run, "html/h_past.xml", published=True),
+        _content_file(run, "html/h_ok.xml", published=True),
+        _content_file(run, "html/h_removed.xml", published=False),
+    )
 
     assert _unpublish(staff_only_run) == [
-        _row(run, total=4, excluded=1, unreleased=1, unpublished=1)
+        _row(run, total=5, excluded=1, unreleased=1, unpublished=1)
     ]
-    for content_file in (staff, future, past, ok):
+    for content_file in rows:
         content_file.refresh_from_db()
-    assert [(cf.published, cf.release_date) for cf in (staff, future, past, ok)] == [
-        (False, None),
+    assert [(cf.published, cf.release_date) for cf in rows] == [
+        (False, FUTURE_START),
         (True, FUTURE_START),
         (True, PAST_START),
         (True, None),
+        (False, None),
     ]
     mock_deindex_tasks.opensearch.assert_called_once_with(run.id, unpublished_only=True)
     mock_deindex_tasks.qdrant.assert_called_once_with(run.id)
@@ -2170,8 +2162,8 @@ def test_unpublish_excluded_content_files_dates_unreleased(
 
 @pytest.mark.parametrize(
     ("published", "was"),
-    [(True, None), (False, None), (True, PAST_START)],
-    ids=["published", "unpublished", "stale-date"],
+    [(False, None), (True, PAST_START)],
+    ids=["unpublished", "stale-date"],
 )
 def test_unpublish_excluded_content_files_records_unreleased_date(
     staff_only_run, mock_deindex_tasks, published, was
@@ -2202,20 +2194,6 @@ def test_unpublish_excluded_content_files_leaves_stale_dates_to_ingestion(
     gone.refresh_from_db()
     assert (ok.published, ok.release_date) == (True, FUTURE_START)
     assert (gone.published, gone.release_date) == (True, FUTURE_START)
-
-
-def test_unpublish_excluded_content_files_keeps_excluded_release_date(
-    staff_only_run, mock_deindex_tasks
-):
-    """An excluded row is unpublished; its stale release_date is not the archive's to clear"""
-    run = staff_only_run.run
-    staff = _content_file(
-        run, "html/h_staff.xml", published=True, release_date=FUTURE_START
-    )
-
-    assert _unpublish(staff_only_run) == [_row(run, total=1, excluded=1, unpublished=1)]
-    staff.refresh_from_db()
-    assert (staff.published, staff.release_date) == (False, FUTURE_START)
 
 
 def test_unpublish_excluded_content_files_undated_twin_stays_published(
@@ -2249,20 +2227,6 @@ def test_unpublish_excluded_content_files_dry_run_counts_unreleased(
     ]
     mock_deindex_tasks.opensearch.assert_not_called()
     mock_deindex_tasks.qdrant.assert_not_called()
-
-
-def test_unpublish_excluded_content_files_leaves_rows_absent_from_archive(
-    staff_only_run, mock_deindex_tasks
-):
-    """A stale row whose key the archive no longer has keeps its state"""
-    run = staff_only_run.run
-    stale = _content_file(run, "html/h_removed.xml", published=False)
-    _content_file(run, "html/h_staff.xml", published=True)
-
-    _unpublish(staff_only_run)
-
-    stale.refresh_from_db()
-    assert (stale.published, stale.release_date) == (False, None)
 
 
 @pytest.mark.parametrize(

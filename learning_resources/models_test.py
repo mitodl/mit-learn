@@ -205,60 +205,32 @@ def test_content_file_null_key_unique():
 def test_content_file_visible_and_hidden_are_complements():
     """visible() and hidden() partition every row, with no overlap"""
     now = now_in_utc()
-    past = now - timedelta(days=1)
-    future = now + timedelta(days=1)
     run = LearningResourceRunFactory.create()
-
-    undated_published = ContentFileFactory.create(
-        run=run, published=True, release_date=None
-    )
-    past_published = ContentFileFactory.create(
-        run=run, published=True, release_date=past
-    )
-    exactly_now_published = ContentFileFactory.create(
-        run=run, published=True, release_date=now
-    )
-    future_published = ContentFileFactory.create(
-        run=run, published=True, release_date=future
-    )
-    past_unpublished = ContentFileFactory.create(
-        run=run, published=False, release_date=past
-    )
-
-    visible_ids = set(ContentFile.objects.visible(now=now).values_list("id", flat=True))
-    hidden_ids = set(ContentFile.objects.hidden(now=now).values_list("id", flat=True))
-    all_ids = {
-        undated_published.id,
-        past_published.id,
-        exactly_now_published.id,
-        future_published.id,
-        past_unpublished.id,
+    rows = {
+        name: ContentFileFactory.create(run=run, published=published, release_date=date)
+        for name, published, date in [
+            ("undated", True, None),
+            ("past", True, now - timedelta(days=1)),
+            ("exactly_now", True, now),
+            ("future", True, now + timedelta(days=1)),
+            ("past_unpublished", False, now - timedelta(days=1)),
+        ]
     }
+    names = {row.id: name for name, row in rows.items()}
 
-    assert visible_ids == {
-        undated_published.id,
-        past_published.id,
-        exactly_now_published.id,
+    def named(queryset):
+        return {names[pk] for pk in queryset.values_list("id", flat=True)}
+
+    assert named(ContentFile.objects.visible(now=now)) == {
+        "undated",
+        "past",
+        "exactly_now",
     }
-    assert hidden_ids == {future_published.id, past_unpublished.id}
-    # the two predicates partition every row: no overlap, nothing left over
-    assert visible_ids & hidden_ids == set()
-    assert visible_ids | hidden_ids == all_ids
-
-
-def test_content_file_visible_hidden_default_now():
-    """Omitting now uses now_in_utc(), matching an explicit now"""
-    run = LearningResourceRunFactory.create()
-    ContentFileFactory.create(
-        run=run, published=True, release_date=now_in_utc() + timedelta(days=1)
-    )
-
-    assert list(run.content_files.visible()) == []
-    assert run.content_files.hidden().count() == 1
+    assert named(ContentFile.objects.hidden(now=now)) == {"future", "past_unpublished"}
 
 
 def test_content_file_visible_on_related_manager():
-    """visible()/hidden() work through the run's related manager"""
+    """visible()/hidden() work through the run's related manager, defaulting now"""
     run = LearningResourceRunFactory.create()
     other_run = LearningResourceRunFactory.create()
     visible_file = ContentFileFactory.create(run=run, published=True)
@@ -268,6 +240,7 @@ def test_content_file_visible_on_related_manager():
     ContentFileFactory.create(run=other_run, published=True)
 
     assert list(run.content_files.visible()) == [visible_file]
+    assert run.content_files.hidden().count() == 1
 
 
 def test_credential_metadata_round_trip():
@@ -329,6 +302,7 @@ CONTENT_FILE_PUBLISHED_READERS = {
     "learning_resources/utils.py: ContentFile.objects.filter(learning_resource_id__in=resource_ids",
     "learning_resources_search/indexing_api.py: content_files.filter(published=True).update(",
     "learning_resources/tasks.py: ContentFile.objects.filter(published=False",
+    "learning_resources/etl/loaders.py: ContentFile.objects.filter(run=course_run, published=True",
     "learning_resources/tasks.py: ContentFile.objects.filter(id__in=chunk",
 }
 
