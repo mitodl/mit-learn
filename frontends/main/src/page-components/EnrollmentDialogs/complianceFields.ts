@@ -164,23 +164,17 @@ const needsComplianceInfo = (user: User | undefined): boolean => {
 }
 
 /**
- * MITx Online's support code for an enrollment blocked by profile data the
- * export compliance check can't use, in the 400's `detail`.
- */
-const COMPLIANCE_DATA_ERROR_CODE = "CS_701"
-
-/**
  * The fields this dialog can fix, from an enrollment MITx Online rejected
  * because the export compliance check couldn't use the profile data - e.g. a
  * last name CyberSource refuses. Those come back as `missing_fields` on a 400
- * carrying {@link COMPLIANCE_DATA_ERROR_CODE}, and are invisible to
+ * whose `detail` carries the support code `CS_701`, and are invisible to
  * `compliance_missing_fields`, which only flags empty fields.
  *
  * Empty for any other failure, and for a rejection naming only fields the
  * dialog doesn't collect (e.g. `email`): reopening the dialog can't help there.
  */
 const rejectedComplianceFields = (error: unknown): JitField[] => {
-  if (!badRequestDetail(error)?.includes(COMPLIANCE_DATA_ERROR_CODE)) return []
+  if (!badRequestDetail(error)?.includes("CS_701")) return []
   return badRequestMissingFields(error).filter((field): field is JitField =>
     (JIT_FIELDS as readonly string[]).includes(field),
   )

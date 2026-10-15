@@ -48,9 +48,6 @@ type JustInTimeDialogProps = {
 /** Stable default, so the effect syncing `rejected` only runs on a real change. */
 const NO_REJECTED_FIELDS: JitField[] = []
 
-const rejectedFieldMessage = (label: string) =>
-  `Please enter a valid ${label.toLowerCase()}.`
-
 const SelectPlaceholder = styled("span")(({ theme }) => ({
   color: theme.custom.colors.silverGrayDark,
 }))
@@ -272,7 +269,9 @@ const JustInTimeDialogInner: React.FC<JustInTimeDialogProps> = ({
     // Formik `initialErrors`, which FormDialog's reset-on-open would clear.
     const errorText =
       errors[name] ??
-      (rejected.includes(name) ? rejectedFieldMessage(label) : undefined)
+      (rejected.includes(name)
+        ? `Please enter a valid ${label.toLowerCase()}.`
+        : undefined)
     const shared = {
       name,
       label,
