@@ -355,7 +355,6 @@ class ClaimExtractionAdmin(admin.ModelAdmin):
         "extractor_version",
         "model",
         "unit",
-        "part",
         "created_on",
     )
     list_filter = ("level", "model", "extractor_version")

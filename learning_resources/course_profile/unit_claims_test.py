@@ -6,11 +6,7 @@ import pytest
 from langchain_core.messages import AIMessage
 
 from learning_resources.course_profile import unit_claims
-from learning_resources.course_profile.schemas import (
-    CourseContextOut,
-    UnitExtraction,
-    UnitMergeOut,
-)
+from learning_resources.course_profile.schemas import CourseContextOut, UnitExtraction
 from learning_resources.course_profile.unit_claims import (
     ClaimExtractionError,
     call_llm,
@@ -69,7 +65,7 @@ def _context_out(prompt):
     )
 
 
-def _unit_out(prompt, status="taught"):
+def _unit_out(prompt):
     evidence = _evidence(prompt)
     return UnitExtraction.model_validate(
         {
@@ -79,7 +75,7 @@ def _unit_out(prompt, status="taught"):
                     "label": "Newton's second law",
                     "description": "Force equals mass times acceleration",
                     "kind": "concept",
-                    "teaching_status": status,
+                    "teaching_status": "taught",
                     "evidence": evidence[:1],
                 }
             ],
@@ -103,34 +99,6 @@ def _unit_out(prompt, status="taught"):
     )
 
 
-def _merge_out():
-    return UnitMergeOut.model_validate(
-        {
-            "summary": "The whole unit teaches forces.",
-            "concepts": [
-                {
-                    "label": "Newton's second law",
-                    "description": "Force equals mass times acceleration",
-                    "kind": "concept",
-                    "teaching_status": "used",
-                    "part_claim_ids": ["P1:c1", "P2:c1"],
-                },
-                {
-                    "label": "Invented",
-                    "description": "Cites nothing real",
-                    "kind": "concept",
-                    "teaching_status": "taught",
-                    "part_claim_ids": ["P7:c1"],
-                },
-            ],
-            "skills": [],
-            "assumed_knowledge": [],
-            "assessment_expectations": [],
-            "extraction_notes": [],
-        }
-    )
-
-
 class FakeLLM:
     """Stands in for call_llm, answering each stage from its prompt"""
 
@@ -145,11 +113,7 @@ class FakeLLM:
             raise ClaimExtractionError(msg)
         if stage.name == "context":
             return _context_out(prompt), "context raw"
-        if stage.name == "unit_merge":
-            return _merge_out(), "merge raw"
-        # part 1 of a split unit uses the concept that part 2 teaches
-        status = "used" if "This is part 1 of the unit" in prompt else "taught"
-        return _unit_out(prompt, status), f"{stage.name} raw"
+        return _unit_out(prompt), f"{stage.name} raw"
 
     def names(self):
         return [name for name, _ in self.calls]
@@ -251,7 +215,6 @@ def test_generate_unit_claims(fake_llm):
     assert extraction.model == "test-model"
     assert extraction.extractor_version.startswith("unit-")
     assert extraction.raw_response == "unit raw"
-    assert extraction.part is None
     output = extraction.output
     assert [source["source_id"] for source in output["sources"]] == ["S01", "S02"]
     concept = output["concepts"][0]
@@ -314,49 +277,31 @@ def test_context_change_reruns_units(fake_llm):
     assert generate_unit_claims(run) == {"generated": 4, "extracted": 3}
 
 
-def test_split_unit(fake_llm):
-    """A unit over the budget is read in parts, and the parts are merged"""
+def test_unit_over_budget_skipped(fake_llm):
+    """A unit whose files are over the input budget makes no call"""
     CourseProfileConfiguration.objects.filter(stage="unit").update(
         input_token_budget=30
     )
-    run = LearningResourceRunFactory.create()
-    unit = UnitFactory.create(run=run, external_id="seq0", title="Week 0")
-    _add_file(unit, "Part one text: momentum is mass times velocity for any body.")
-    _add_file(
-        unit, "Part two text: impulse equals the change in momentum of a body.", 1
-    )
+    run = _build_run()
 
-    assert generate_unit_claims(run) == {"generated": 3, "extracted": 1}
-    assert fake_llm.names() == ["unit_part", "unit_part", "unit_merge"]
+    assert generate_unit_claims(run) == {"generated": 1, "over_budget": 3}
+    assert fake_llm.names() == ["context"]
+
+
+def test_context_over_budget_skipped(fake_llm):
+    """A context unit over the input budget is skipped and units go on without it"""
+    CourseProfileConfiguration.objects.filter(stage="context").update(
+        input_token_budget=10
+    )
+    run = _build_run()
+
+    assert generate_unit_claims(run) == {
+        "generated": 3,
+        "extracted": 3,
+        "over_budget": 1,
+    }
+    assert fake_llm.names() == ["unit", "unit", "unit"]
     assert "No course context is available." in fake_llm.calls[0][1]
-    assert "[P1:c1] [used] Newton's second law" in fake_llm.calls[2][1]
-    assert "[P2:c1] [taught] Newton's second law" in fake_llm.calls[2][1]
-
-    parts = ClaimExtraction.objects.filter(level=ClaimExtraction.Level.UNIT_PART)
-    assert sorted(parts.values_list("part", flat=True)) == [0, 1]
-    merged = ClaimExtraction.objects.get(unit=unit, level=ClaimExtraction.Level.UNIT)
-    assert merged.extractor_version.startswith("unit_merge-")
-    output = merged.output
-    assert output["part_keys"] == [
-        parts.get(part=0).key,
-        parts.get(part=1).key,
-    ]
-    # the invented claim cites no part claim and is dropped
-    assert len(output["concepts"]) == 1
-    concept = output["concepts"][0]
-    assert concept["id"] == "c1"
-    # the merge said "used", but part 2 taught it
-    assert concept["teaching_status"] == "taught"
-    assert concept["part_claim_ids"] == ["P1:c1", "P2:c1"]
-    assert [item["source_id"] for item in concept["evidence"]] == ["S01", "S02"]
-    assert {item["verified"] for item in concept["evidence"]} == {"exact"}
-    assert (
-        "1 merged claim(s) cited no part claim and were dropped"
-        in (output["extraction_notes"])
-    )
-    assert [source["source_id"] for source in output["sources"]] == ["S01", "S02"]
-
-    assert generate_unit_claims(run) == {"cached": 3, "extracted": 1}
 
 
 def test_truncated_files_noted(fake_llm):
@@ -408,8 +353,8 @@ def test_unit_without_text_skipped(fake_llm):
 
 def test_missing_configuration():
     """Generation needs every stage configured"""
-    CourseProfileConfiguration.objects.filter(stage="unit_merge").delete()
-    with pytest.raises(ClaimExtractionError, match="unit_merge"):
+    CourseProfileConfiguration.objects.filter(stage="context").delete()
+    with pytest.raises(ClaimExtractionError, match="context"):
         load_stages()
 
 

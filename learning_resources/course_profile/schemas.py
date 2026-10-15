@@ -119,51 +119,6 @@ class UnitExtraction(Strict):
     )
 
 
-# --------------------------------------------------------------------------- unit merge
-class MergedClaim(Strict):
-    part_claim_ids: list[str] = Field(
-        min_length=1,
-        description="Ids of the part claims this merges, e.g. ['P1:c3', 'P2:c1']",
-    )
-
-
-class MergedConcept(MergedClaim):
-    label: str
-    description: str
-    kind: Literal["concept", "method", "skill", "tool", "application"]
-    teaching_status: Literal["taught", "reviewed", "used", "mentioned"]
-    lesson_ref: str | None = None
-
-
-class MergedSkill(MergedClaim):
-    label: str
-    description: str
-
-
-class MergedAssumed(MergedClaim):
-    label: str
-    description: str
-    how_used: str
-    flagged_as_prior: bool
-
-
-class MergedAssessment(MergedClaim):
-    label: str
-    description: str
-    tests_concept_labels: list[str]
-
-
-class UnitMergeOut(Strict):
-    summary: str = Field(
-        description="3-5 sentence summary of what the whole unit teaches"
-    )
-    concepts: list[MergedConcept]
-    skills: list[MergedSkill]
-    assumed_knowledge: list[MergedAssumed]
-    assessment_expectations: list[MergedAssessment]
-    extraction_notes: list[str]
-
-
 # --------------------------------------------------------------------------- context
 class Statement(Strict):
     text: str

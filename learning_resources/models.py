@@ -1423,10 +1423,8 @@ class CourseProfileConfiguration(TimestampedModel):
     class Stage(models.TextChoices):
         # claims about the course as a whole, from the context unit
         CONTEXT = "context", "Context"
-        # claims about one unit or bin, or one part of a unit too large for a call
+        # claims about one unit or bin
         UNIT = "unit", "Unit"
-        # combines the claims of a split unit's parts into the unit's claims
-        UNIT_MERGE = "unit_merge", "Unit merge"
 
     stage = models.CharField(max_length=16, choices=Stage.choices, unique=True)
     llm_model = models.CharField(
@@ -1442,7 +1440,7 @@ class CourseProfileConfiguration(TimestampedModel):
     input_token_budget = models.PositiveIntegerField(
         default=100000,
         help_text=(
-            "Most file text one call may read. A unit over it is split into parts."
+            "Most file text one call may read. A unit over it is skipped."
             " Unit and context stages."
         ),
     )
@@ -1462,8 +1460,7 @@ class ClaimExtraction(TimestampedModel):
     """
 
     class Level(models.TextChoices):
-        UNIT_PART = "unit_part", "Unit part"
-        # a unit, bin or context unit, whether or not it was split into parts
+        # a unit, bin or context unit
         UNIT = "unit", "Unit"
         COURSE = "course", "Course"
 
@@ -1483,8 +1480,6 @@ class ClaimExtraction(TimestampedModel):
         on_delete=models.SET_NULL,
         related_name="claim_extractions",
     )
-    # unit_part level: index of the part within the unit
-    part = models.PositiveIntegerField(null=True, blank=True)
     resource = models.ForeignKey(
         LearningResource,
         null=True,

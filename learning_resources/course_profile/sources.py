@@ -148,32 +148,3 @@ def unit_sources(unit: Unit, max_file_tokens: int) -> list[Source]:
             )
         )
     return sources
-
-
-def pack(sources: list[Source], budget: int) -> list[list[Source]]:
-    """
-    Split sources, in order, into consecutive parts that fit a token budget.
-
-    A source is never split across parts. A source over the budget on its own
-    gets a part of its own, which only happens when the per-file limit is set
-    above the budget.
-
-    Args:
-        sources (list of Source): the unit's sources in order
-        budget (int): the most estimated tokens of source text in one part
-
-    Returns:
-        list of list of Source: the parts; one part when everything fits
-    """
-    parts: list[list[Source]] = []
-    current: list[Source] = []
-    used = 0
-    for source in sources:
-        if current and used + source.tokens > budget:
-            parts.append(current)
-            current, used = [], 0
-        current.append(source)
-        used += source.tokens
-    if current:
-        parts.append(current)
-    return parts

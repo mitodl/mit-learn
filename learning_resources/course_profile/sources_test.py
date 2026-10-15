@@ -4,8 +4,6 @@ import pytest
 
 from learning_resources.course_profile.sources import (
     CHARS_PER_TOKEN,
-    Source,
-    pack,
     truncate,
     unit_sources,
 )
@@ -39,33 +37,6 @@ def test_truncate_hard_cut():
     truncated, included = truncate(text, max_tokens=100)
     assert included == 400
     assert truncated.startswith("x" * 400 + "\n[... truncated: the first 400 of 1,000")
-
-
-def _source(source_id, chars):
-    return Source(
-        source_id=source_id,
-        content_file_id=1,
-        checksum="abc",
-        header=f"=== SOURCE {source_id} ===",
-        text="x" * chars,
-        included_chars=chars,
-        total_chars=chars,
-    )
-
-
-@pytest.mark.parametrize(
-    ("sizes", "expected"),
-    [
-        ([100, 100, 100], [["S1", "S2", "S3"]]),
-        ([300, 300, 300], [["S1", "S2"], ["S3"]]),
-        ([900, 100], [["S1"], ["S2"]]),
-    ],
-)
-def test_pack(sizes, expected):
-    """Sources are packed in order into parts under the budget, never split"""
-    sources = [_source(f"S{index}", size) for index, size in enumerate(sizes, 1)]
-    parts = pack(sources, budget=200)
-    assert [[source.source_id for source in part] for part in parts] == expected
 
 
 @pytest.mark.django_db

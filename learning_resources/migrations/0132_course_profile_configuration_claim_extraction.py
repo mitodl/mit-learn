@@ -70,26 +70,10 @@ Extract, with evidence:
     + EVIDENCE_RULES
 )
 
-UNIT_MERGE_SYSTEM = """You are an expert curriculum analyst combining extraction records for one instructional unit
-that was too long to read in one pass. You receive the course context and the records for each part of the unit, in
-unit order. Each claim carries an id like P2:c4 (part 2, concept 4) and its evidence.
-
-Produce one record for the whole unit, in the same format as a single-part unit:
-- summary: 3-5 sentences on what the whole unit teaches.
-- concepts: merge claims with the same or equivalent labels into one canonical label. A concept's status is the
-  strongest it has in any part (taught > reviewed > used > mentioned).
-- skills and assessment_expectations: merge duplicates.
-- assumed_knowledge: keep an item only if no part teaches or reviews it. Keep flagged_as_prior=true if any part set it.
-- extraction_notes: combine the parts' notes.
-Every merged claim must list the part claim ids it comes from. Do not write new evidence: evidence is carried over
-from the cited part claims. Do not add claims that no part claim supports.
-"""  # noqa: E501
-
 DEFAULT_LLM_MODEL = "gpt-4.1"
 DEFAULT_PROMPTS = {
     "context": CONTEXT_SYSTEM,
     "unit": UNIT_SYSTEM,
-    "unit_merge": UNIT_MERGE_SYSTEM,
 }
 
 
@@ -128,7 +112,6 @@ class Migration(migrations.Migration):
                         choices=[
                             ("context", "Context"),
                             ("unit", "Unit"),
-                            ("unit_merge", "Unit merge"),
                         ],
                         max_length=16,
                         unique=True,
@@ -164,7 +147,7 @@ class Migration(migrations.Migration):
                         default=100000,
                         help_text=(
                             "Most file text one call may read. A unit over it is"
-                            " split into parts. Unit and context stages."
+                            " skipped. Unit and context stages."
                         ),
                     ),
                 ),
@@ -192,7 +175,6 @@ class Migration(migrations.Migration):
                     "level",
                     models.CharField(
                         choices=[
-                            ("unit_part", "Unit part"),
                             ("unit", "Unit"),
                             ("course", "Course"),
                         ],
@@ -203,7 +185,6 @@ class Migration(migrations.Migration):
                 ("model", models.CharField(max_length=128)),
                 ("output", models.JSONField()),
                 ("raw_response", models.TextField(blank=True)),
-                ("part", models.PositiveIntegerField(blank=True, null=True)),
                 (
                     "resource",
                     models.ForeignKey(
