@@ -40,7 +40,8 @@ type JustInTimeDialogProps = {
   /**
    * Retries the rejected action once the profile is saved, resolving with any
    * fields that are still rejected - the dialog stays open on those, and
-   * closes once none are left.
+   * closes once none are left. Must not reject: report a failed attempt as
+   * fields to fix, or as none (closing the dialog) when nothing here can help.
    */
   retry?: () => Promise<JitField[]>
 }
@@ -199,13 +200,6 @@ const JustInTimeDialogInner: React.FC<JustInTimeDialogProps> = ({
     focusField(firstInvalid)
   }, [submitCount, errors, focusField])
 
-  // Likewise for the first field an enrollment was rejected on - once the
-  // dialog has finished opening, since MUI moves focus into it on entering,
-  // and again whenever a retry is rejected.
-  const firstRejected = JIT_FIELDS.find((field) => rejected.includes(field))
-  React.useEffect(() => {
-    if (firstRejected) focusField(firstRejected)
-  }, [rejected, firstRejected, focusField])
   const dialogProps = muiDialogV5(modal)
   const TransitionProps = {
     ...dialogProps.TransitionProps,
@@ -218,6 +212,21 @@ const JustInTimeDialogInner: React.FC<JustInTimeDialogProps> = ({
     ({ code }) => code === formik.values.country,
   )
   const showSubdivision = requiresSubdivision(formik.values.country)
+  // The postal code is sent for every country, so one CyberSource rejected
+  // must be shown even where it isn't normally collected.
+  const visibleFields = JIT_FIELDS.filter(
+    (field) =>
+      (field !== "state" && field !== "postal_code") ||
+      showSubdivision ||
+      (field === "postal_code" && rejected.includes("postal_code")),
+  )
+  // Likewise focus the first rendered field an enrollment was rejected on -
+  // once the dialog has finished opening, since MUI moves focus into it on
+  // entering, and again whenever a retry is rejected.
+  const firstRejected = visibleFields.find((field) => rejected.includes(field))
+  React.useEffect(() => {
+    if (firstRejected) focusField(firstRejected)
+  }, [rejected, firstRejected, focusField])
 
   const handleClose = () => {
     // A save in flight must run to completion: closing mid-submit would
@@ -337,11 +346,6 @@ const JustInTimeDialogInner: React.FC<JustInTimeDialogProps> = ({
     )
   }
 
-  const visibleFields = JIT_FIELDS.filter(
-    (field) =>
-      (field !== "state" && field !== "postal_code") || showSubdivision,
-  )
-
   return (
     <FormDialog
       noValidate
@@ -378,9 +382,13 @@ const JustInTimeDialogInner: React.FC<JustInTimeDialogProps> = ({
     >
       <Stack direction="column" gap="24px" ref={fieldsRef}>
         <Typography variant="body1">
-          {rejectedFields.length > 0
-            ? "We couldn't verify some of your details. Please check the highlighted fields and try again."
-            : "We need a bit more info before you can enroll."}
+          {rejectedFields.length === 0
+            ? "We need a bit more info before you can enroll."
+            : rejected.length > 0 && !firstRejected
+              ? // Only a field this country doesn't collect (a stale state) was
+                // rejected; submitting clears it along with the rest of the address.
+                "We couldn't verify your address. Please review it and submit again."
+              : "We couldn't verify some of your details. Please check the highlighted fields and try again."}
         </Typography>
         {visibleFields.map((field) => (
           <div key={field} data-jit-field={field}>

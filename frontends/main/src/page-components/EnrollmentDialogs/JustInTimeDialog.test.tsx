@@ -211,6 +211,67 @@ describe("JustInTimeDialog", () => {
     await waitFor(() => expect(lastName).toHaveFocus())
   })
 
+  test("shows a rejected postal code even for a country that doesn't collect one", async () => {
+    setup({
+      compliance_missing_fields: [],
+      legal_address: {
+        first_name: "Ada",
+        last_name: "Lovelace",
+        country: "GB",
+        street_address_1: "1 Main St",
+        city: "London",
+        postal_code: "_",
+      },
+      user_profile: { year_of_birth: 1990 },
+    })
+    renderWithProviders(null)
+    await act(async () => {
+      NiceModal.show(JustInTimeDialog, { rejectedFields: ["postal_code"] })
+    })
+    const dialog = await screen.findByRole("dialog", {
+      name: "Just a Few More Details",
+    })
+
+    const postalCode = await waitFor(() => {
+      const input = textbox(dialog, "Postal Code")
+      expect(input).toHaveValue("_")
+      return input
+    })
+    expect(getDescriptionFor(postalCode)).toHaveTextContent(
+      "Please enter a valid postal code.",
+    )
+    await waitFor(() => expect(postalCode).toHaveFocus())
+  })
+
+  test("explains a rejection on a field this country doesn't show", async () => {
+    setup({
+      compliance_missing_fields: [],
+      legal_address: {
+        first_name: "Ada",
+        last_name: "Lovelace",
+        country: "GB",
+        street_address_1: "1 Main St",
+        city: "London",
+        state: "US-MA",
+      },
+      user_profile: { year_of_birth: 1990 },
+    })
+    renderWithProviders(null)
+    await act(async () => {
+      NiceModal.show(JustInTimeDialog, { rejectedFields: ["state"] })
+    })
+    const dialog = await screen.findByRole("dialog", {
+      name: "Just a Few More Details",
+    })
+
+    expect(
+      within(dialog).getByText(
+        "We couldn't verify your address. Please review it and submit again.",
+      ),
+    ).toBeInTheDocument()
+    expect(within(dialog).queryByRole("combobox", { name: "State" })).toBeNull()
+  })
+
   test("collects every export-compliance field plus year of birth", async () => {
     setup()
     const dialog = await openDialog()
