@@ -331,9 +331,12 @@ def parse_dates(date_string, hour=12):
     return None
 
 
-def _block_files(root: Path, tag: str, url_name: str, element) -> set[Path]:
-    """Files belonging to one block: its own files, html body, transcripts"""
-    files = set(root.glob(f"{tag}/{url_name}.*"))
+def _block_files(root: Path, tag: str, url_name: str | None, element) -> set[Path]:
+    """
+    Files belonging to one block: its own files, html body, transcripts. An
+    unnamed inline block has no files of its own, but can still have the others.
+    """
+    files = set(root.glob(f"{tag}/{url_name}.*")) if url_name else set()
     if tag == "html" and element.get("filename"):
         files.update(root.glob(f"html/{element.get('filename')}.*"))
     if tag == "video":
@@ -1008,17 +1011,20 @@ def _sequential_blocks(
             else UnitContentFile.Relation.CORE
         )
         # the block's own file, then its html body, then its transcripts
-        paths = (
-            sorted(
-                _block_files(root, tag, block_name, element),
-                key=lambda path: (path.parent.name == "static", str(path)),
-            )
-            if block_name
-            else []
+        paths = sorted(
+            _block_files(root, tag, block_name, element),
+            key=lambda path: (path.parent.name == "static", str(path)),
         )
         files = [] if tag in OLX_STRUCTURE_TAGS else [(p, relation) for p in paths]
-        if own_file is None and tag not in OLX_STRUCTURE_TAGS and container:
-            # an inline component's text is in the file that holds it
+        # an inline component's text is in the file that holds it, unless it is
+        # an html block whose body has a file of its own
+        has_body = tag == "html" and any(p.parent.name == "html" for p in paths)
+        if (
+            own_file is None
+            and tag not in OLX_STRUCTURE_TAGS
+            and container
+            and not has_body
+        ):
             files.append((container, relation))
         # XML is read from the walked elements, so staff-only descendants are
         # left out; other files of the block, like an html body, are read whole

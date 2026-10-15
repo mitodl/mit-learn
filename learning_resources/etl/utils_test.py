@@ -2086,9 +2086,15 @@ def test_olx_course_units_inline_lessons(tmp_path):
         # a sequential stored inline in its chapter, holding an inline video
         "chapter/ch2.xml": (
             '<chapter><sequential url_name="seq3"><vertical>'
-            '<video youtube="1.00:XYZ789"/></vertical></sequential></chapter>'
+            '<video youtube="1.00:XYZ789"/></vertical></sequential>'
+            '<sequential url_name="seq4"/></chapter>'
         ),
         "static/subs_XYZ789.srt.sjson": "{}",
+        # an unnamed inline html block whose body is in html/body.html
+        "sequential/seq4.xml": '<sequential><vertical url_name="v_body"/></sequential>',
+        "vertical/v_body.xml": '<vertical><html filename="body"/></vertical>',
+        "html/body.html": '<a href="/static/body.pdf">reading</a>',
+        "static/body.pdf": "pdf",
     }
     for rel, text in files.items():
         _write_olx(olx, rel, text)
@@ -2097,7 +2103,7 @@ def test_olx_course_units_inline_lessons(tmp_path):
     def key(rel):
         return utils.get_edx_module_id(f"{olx}/{rel}", run)
 
-    first, second, third, _context = utils.olx_course_units(olx, run)
+    first, second, third, fourth, _context = utils.olx_course_units(olx, run)
 
     assert first["content_files"] == {key("vertical/v_inline.xml"): "core"}
     assert list(second["content_files"].items()) == [
@@ -2107,6 +2113,11 @@ def test_olx_course_units_inline_lessons(tmp_path):
     assert list(third["content_files"].items()) == [
         (key("chapter/ch2.xml"), "core"),
         (key("static/subs_XYZ789.srt.sjson"), "core"),
+    ]
+    # the body is the lesson, not the vertical holding its pointer
+    assert list(fourth["content_files"].items()) == [
+        (key("html/body.html"), "core"),
+        (key("static/body.pdf"), "supplementary"),
     ]
 
 
