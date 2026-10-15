@@ -5,6 +5,7 @@ import type {
   ContentEngagementDepth,
   ContractContentEngagementDepth,
   ContractMonthlyEngagementTrend,
+  ContractNeedsAttention,
   ContractUtilization,
   CourseRun,
   EnrollmentCompletionFunnel,
@@ -225,6 +226,20 @@ const analyticsContractsApi = {
       organizationId,
       contractId,
       "course-runs",
+      page,
+      signal,
+    ),
+
+  needsAttention: (
+    organizationId: string,
+    contractId: string,
+    page?: AnalyticsPageParams,
+    signal?: AbortSignal,
+  ) =>
+    getContractResource<ContractNeedsAttention>(
+      organizationId,
+      contractId,
+      "needs-attention",
       page,
       signal,
     ),
