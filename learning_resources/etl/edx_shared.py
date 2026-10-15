@@ -197,15 +197,18 @@ def process_course_archive(
             content_files_ids = load_content_files(
                 run, chain([first], content_files_data), failed_keys=failed_keys
             )
-            if content_files_ids and unit_errors:
-                # files are loaded, but the archive isn't recorded, so the
-                # next sync retries the units
-                log.error("Units not built for %s, will retry", key)
-            elif content_files_ids:
-                load_course_units(run, units)
-                run.checksum = checksum
-                run.archive_key = key
+            if content_files_ids:
+                # Invalidate any previous receipt so unit failures are retried.
+                run.checksum = None
+                run.archive_key = None
                 run.save(update_fields=["checksum", "archive_key"])
+                if unit_errors:
+                    log.error("Units not built for %s, will retry", key)
+                else:
+                    load_course_units(run, units)
+                    run.checksum = checksum
+                    run.archive_key = key
+                    run.save(update_fields=["checksum", "archive_key"])
         except:  # noqa: E722
             log.exception("Error ingesting OLX content data for %s", key)
     return True
