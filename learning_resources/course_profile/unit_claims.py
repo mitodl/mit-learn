@@ -170,7 +170,7 @@ def _raw_response(message: BaseMessage) -> str:
     return json.dumps(getattr(message, "tool_calls", []), ensure_ascii=False)
 
 
-def call_llm(stage: PromptStage, user: str) -> tuple[BaseModel, str]:
+def call_llm(stage: PromptStage, combined_prompt: str) -> tuple[BaseModel, str]:
     """
     Ask the model for a stage's structured output.
 
@@ -191,7 +191,10 @@ def call_llm(stage: PromptStage, user: str) -> tuple[BaseModel, str]:
         api_base=settings.LITELLM_API_BASE,
         request_timeout=settings.COURSE_PROFILE_LLM_TIMEOUT,
     ).with_structured_output(stage.schema, include_raw=True)
-    messages = [SystemMessage(content=stage.system), HumanMessage(content=user)]
+    messages = [
+        SystemMessage(content=stage.system),
+        HumanMessage(content=combined_prompt),
+    ]
     error = None
     for _ in range(settings.COURSE_PROFILE_LLM_ATTEMPTS):
         result = llm.invoke(messages)
@@ -427,7 +430,7 @@ class UnitClaimsGenerator:
         self,
         stage: PromptStage,
         key: str,
-        user: str,
+        combined_prompt: str,
         finish: Callable[[dict], dict],
         *,
         unit: Unit,
@@ -439,7 +442,7 @@ class UnitClaimsGenerator:
         Args:
             stage (PromptStage): the stage to call
             key (str): the call's cache key
-            user (str): the user prompt
+            combined_prompt (str): the course material for the call
             finish (callable): turns the model's validated output, as plain
                 data, into what is stored
             unit (Unit): the unit the call is for
@@ -449,7 +452,7 @@ class UnitClaimsGenerator:
         if extraction:
             self.stats["cached"] += 1
             return extraction
-        parsed, raw = call_llm(stage, user)
+        parsed, raw = call_llm(stage, combined_prompt)
         self.stats["generated"] += 1
         extraction, _ = ClaimExtraction.objects.get_or_create(
             key=key,
@@ -496,7 +499,7 @@ class UnitClaimsGenerator:
         extraction = self._cached_or_call(
             stage,
             key,
-            prompts.context_user(course_title, _blocks(included)),
+            prompts.context_unit_combined_prompt(course_title, _blocks(included)),
             partial(_context_output, sources=included, omitted=omitted),
             unit=unit,
         )
@@ -531,7 +534,9 @@ class UnitClaimsGenerator:
             return self._cached_or_call(
                 stage,
                 stage.key([source.cache_input() for source in sources], *common),
-                prompts.unit_user(context.digest, _unit_header(unit), _blocks(sources)),
+                prompts.unit_combined_prompt(
+                    context.digest, _unit_header(unit), _blocks(sources)
+                ),
                 partial(_unit_output, sources=sources, whole_unit=True),
                 unit=unit,
             )
@@ -542,7 +547,7 @@ class UnitClaimsGenerator:
                 stage.key(
                     [source.cache_input() for source in part_sources], index, *common
                 ),
-                prompts.unit_user(
+                prompts.unit_combined_prompt(
                     context.digest, _unit_header(unit, index), _blocks(part_sources)
                 ),
                 partial(_unit_output, sources=part_sources, whole_unit=False),
@@ -555,7 +560,7 @@ class UnitClaimsGenerator:
         return self._cached_or_call(
             stage,
             stage.key([part.key for part in part_extractions], unit.title, unit.kind),
-            prompts.unit_merge_user(
+            prompts.unit_merge_combined_prompt(
                 context.digest, _unit_header(unit), parts_digest(part_extractions)
             ),
             partial(_merge_output, parts=part_extractions, sources=sources),

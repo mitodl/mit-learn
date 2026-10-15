@@ -34,16 +34,16 @@ pytestmark = pytest.mark.django_db
 _SOURCE = re.compile(r"^=== SOURCE (S\d+) \|.*===\n(.*)$", re.MULTILINE)
 
 
-def _evidence(user):
+def _evidence(prompt):
     """Quote the first line of each source in a prompt"""
     return [
         {"source_id": source_id, "passage": text, "locator": None}
-        for source_id, text in _SOURCE.findall(user)
+        for source_id, text in _SOURCE.findall(prompt)
     ]
 
 
-def _context_out(user):
-    evidence = _evidence(user)[:1]
+def _context_out(prompt):
+    evidence = _evidence(prompt)[:1]
     return CourseContextOut.model_validate(
         {
             "title": "Classical Mechanics",
@@ -69,8 +69,8 @@ def _context_out(user):
     )
 
 
-def _unit_out(user, status="taught"):
-    evidence = _evidence(user)
+def _unit_out(prompt, status="taught"):
+    evidence = _evidence(prompt)
     return UnitExtraction.model_validate(
         {
             "summary": "The unit teaches forces.",
@@ -134,22 +134,22 @@ def _merge_out():
 class FakeLLM:
     """Stands in for call_llm, answering each stage from its prompt"""
 
-    def __init__(self, fail=lambda stage, user: False):  # noqa: ARG005
+    def __init__(self, fail=lambda stage, prompt: False):  # noqa: ARG005
         self.calls = []
         self.fail = fail
 
-    def __call__(self, stage, user):
-        self.calls.append((stage.name, user))
-        if self.fail(stage, user):
+    def __call__(self, stage, prompt):
+        self.calls.append((stage.name, prompt))
+        if self.fail(stage, prompt):
             msg = "bad response"
             raise ClaimExtractionError(msg)
         if stage.name == "context":
-            return _context_out(user), "context raw"
+            return _context_out(prompt), "context raw"
         if stage.name == "unit_merge":
             return _merge_out(), "merge raw"
         # part 1 of a split unit uses the concept that part 2 teaches
-        status = "used" if "This is part 1 of the unit" in user else "taught"
-        return _unit_out(user, status), f"{stage.name} raw"
+        status = "used" if "This is part 1 of the unit" in prompt else "taught"
+        return _unit_out(prompt, status), f"{stage.name} raw"
 
     def names(self):
         return [name for name, _ in self.calls]
@@ -241,8 +241,8 @@ def test_generate_unit_claims(fake_llm):
     assert stats == {"generated": 4, "extracted": 3}
     assert fake_llm.names() == ["context", "unit", "unit", "unit"]
     # every unit prompt has the context digest; the bin prompt says it is a bin
-    for _, user in fake_llm.calls[1:]:
-        assert "Prerequisites (stated): [prerequisite] 18.01 is required" in user
+    for _, prompt in fake_llm.calls[1:]:
+        assert "Prerequisites (stated): [prerequisite] 18.01 is required" in prompt
     assert "not part of a course unit" in fake_llm.calls[3][1]
 
     week = run.units.get(external_id="seq0")
@@ -377,7 +377,7 @@ def test_truncated_files_noted(fake_llm):
 
 def test_failed_unit_is_skipped(mocker):
     """A unit that fails doesn't stop the others"""
-    fake = FakeLLM(fail=lambda stage, user: "title='Week 0'" in user)  # noqa: ARG005
+    fake = FakeLLM(fail=lambda stage, prompt: "title='Week 0'" in prompt)  # noqa: ARG005
     mocker.patch.object(unit_claims, "call_llm", fake)
     run = _build_run()
 
@@ -387,7 +387,7 @@ def test_failed_unit_is_skipped(mocker):
 
 def test_failed_context_stops_run(mocker):
     """A context unit that fails stops the run"""
-    fake = FakeLLM(fail=lambda stage, user: stage.name == "context")  # noqa: ARG005
+    fake = FakeLLM(fail=lambda stage, prompt: stage.name == "context")  # noqa: ARG005
     mocker.patch.object(unit_claims, "call_llm", fake)
     run = _build_run()
 
@@ -432,7 +432,7 @@ def test_call_llm_retries_invalid_response(mocker, settings):
     chat = mocker.patch.object(unit_claims, "ChatLiteLLM")
     chat.return_value.with_structured_output.return_value = structured
 
-    assert call_llm(stage, "user prompt") == (output, '{"summary": 1}')
+    assert call_llm(stage, "prompt prompt") == (output, '{"summary": 1}')
     chat.assert_called_once_with(
         model="test-model",
         temperature=0.0,
@@ -459,4 +459,4 @@ def test_call_llm_gives_up(mocker, settings):
     chat.return_value.with_structured_output.return_value = structured
 
     with pytest.raises(ClaimExtractionError, match="after 2 attempt"):
-        call_llm(load_stages().unit, "user prompt")
+        call_llm(load_stages().unit, "prompt prompt")
