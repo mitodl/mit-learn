@@ -1,12 +1,22 @@
 import React from "react"
 import NiceModal from "@ebay/nice-modal-react"
 import { useQueryClient } from "@tanstack/react-query"
+import type { MutateOptions, UseMutationResult } from "@tanstack/react-query"
 import { mitxUserQueries } from "api/mitxonline-hooks/user"
+import { checkEnrollmentEligibility } from "api/mitxonline-hooks/enrollment"
+import type { EnrollmentTarget } from "api/mitxonline-hooks/enrollment"
 import { JustInTimeDialog } from "@/page-components/EnrollmentDialogs/JustInTimeDialog"
-import { needsComplianceInfo } from "@/page-components/EnrollmentDialogs/complianceFields"
+import {
+  editableJitFields,
+  needsComplianceInfo,
+  rejectedComplianceFields,
+} from "@/page-components/EnrollmentDialogs/complianceFields"
+import type { JitField } from "@/page-components/EnrollmentDialogs/complianceFields"
 
 /**
- * Holds the single in-flight compliance check for the whole tree.
+ * Holds the single in-flight gated action for the whole tree: the compliance
+ * check, and for `mutateWithCompliance`/`ensureEligibility` everything after
+ * it up to the recovery dialog closing.
  *
  * It has to be shared rather than per-hook: a product page has two gate
  * instances (the free-enrollment gate, plus the one inside
@@ -21,14 +31,14 @@ import { needsComplianceInfo } from "@/page-components/EnrollmentDialogs/complia
  * indefinitely and silently make every later enroll click a no-op.
  */
 const ComplianceGateContext =
-  React.createContext<React.MutableRefObject<Promise<boolean> | null> | null>(
+  React.createContext<React.MutableRefObject<Promise<unknown> | null> | null>(
     null,
   )
 
 const ComplianceGateProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
-  const inFlight = React.useRef<Promise<boolean> | null>(null)
+  const inFlight = React.useRef<Promise<unknown> | null>(null)
   return (
     <ComplianceGateContext.Provider value={inFlight}>
       {children}
@@ -52,6 +62,12 @@ const ComplianceGateProvider: React.FC<{ children: React.ReactNode }> = ({
  * `useMutation` contract has no way to express "cancelled" that does not either
  * reject (which reads as a failure to the caller) or resolve as if the
  * enrollment had happened.
+ *
+ * The profile can also be complete yet still unusable: CyberSource refuses
+ * some values (e.g. a last name of "."), and MITx Online then rejects the
+ * enrollment naming the fields to fix. Enrollments therefore go through
+ * `mutateWithCompliance`, which gates them and recovers from that rejection by
+ * opening the dialog on those fields and retrying from it as they correct them.
  */
 const useComplianceGate = () => {
   const queryClient = useQueryClient()
@@ -62,54 +78,182 @@ const useComplianceGate = () => {
   // ComplianceGateProvider is mounted, so a gate still works in isolation --
   // it just can't collapse calls from sibling instances.
   const shared = React.useContext(ComplianceGateContext)
-  const local = React.useRef<Promise<boolean> | null>(null)
+  const local = React.useRef<Promise<unknown> | null>(null)
   const inFlight = shared ?? local
 
-  const ensureCompliance = React.useCallback((): Promise<boolean> => {
-    if (inFlight.current) {
-      // A second caller arriving while the first is still in flight (e.g. a
-      // double-clicked enroll button) must not also resume once the first
-      // resolves true -- only the action that actually initiated the check
-      // should proceed, or both fire their own enroll/basket mutation.
-      return inFlight.current.then(() => false)
+  /**
+   * Runs `flow` as the tree's only gated action, resolving `cancelled` without
+   * running it if another is in flight. A second caller (e.g. a double-clicked
+   * enroll button) must not also resume once the first resolves, or both fire
+   * their own enroll/basket mutation. Held until `flow` settles, so the
+   * recovery dialog -- one per tree, whose `retry` a second `NiceModal.show`
+   * would replace -- only ever retries the action that opened it.
+   */
+  const exclusive = React.useCallback(
+    <T,>(flow: () => Promise<T>, cancelled: T): Promise<T> => {
+      if (inFlight.current) return Promise.resolve(cancelled)
+      const promise = flow().finally(() => {
+        inFlight.current = null
+      })
+      inFlight.current = promise
+      return promise
+    },
+    [inFlight],
+  )
+
+  const checkCompliance = React.useCallback(async (): Promise<boolean> => {
+    // Defaults to "missing" so a failed check fails closed: with no
+    // definitive answer, treat it the same as compliance info being
+    // missing rather than letting the action through unchecked.
+    let missing = true
+    try {
+      // Fetched on demand rather than subscribed to, so merely rendering an
+      // enroll button costs no request, and the compliance state backing the
+      // decision is read at the moment the user acts on it -- staleTime: 0
+      // overrides the query client's default so a cached profile from
+      // minutes ago can't stand in for a live check.
+      const user = await queryClient.fetchQuery({
+        ...mitxUserQueries.me(),
+        staleTime: 0,
+      })
+      missing = needsComplianceInfo(user)
+    } catch {
+      // Swallow the fetch error -- `missing` already defaults to `true`,
+      // which routes into the dialog below. The dialog fetches the profile
+      // itself and lets the user submit fresh values regardless of why
+      // this pre-check failed, so it doubles as the retry surface: a
+      // transient failure here just means the dialog opens with blank
+      // fields instead of prefilled ones, and a real backend outage
+      // surfaces as the dialog's own save-error alert.
     }
+    if (!missing) return true
+    return (await NiceModal.show(JustInTimeDialog)) === true
+  }, [queryClient])
 
-    const promise = (async (): Promise<boolean> => {
-      // Defaults to "missing" so a failed check fails closed: with no
-      // definitive answer, treat it the same as compliance info being
-      // missing rather than letting the action through unchecked.
-      let missing = true
-      try {
-        // Fetched on demand rather than subscribed to, so merely rendering an
-        // enroll button costs no request, and the compliance state backing the
-        // decision is read at the moment the user acts on it -- staleTime: 0
-        // overrides the query client's default so a cached profile from
-        // minutes ago can't stand in for a live check.
-        const user = await queryClient.fetchQuery({
-          ...mitxUserQueries.me(),
-          staleTime: 0,
+  const ensureCompliance = React.useCallback(
+    (): Promise<boolean> => exclusive(checkCompliance, false),
+    [exclusive, checkCompliance],
+  )
+
+  /**
+   * `mutation.mutate(variables, options)`, gated by `ensureCompliance`.
+   *
+   * If MITx Online rejects it on profile fields the dialog can fix (see
+   * `rejectedComplianceFields`), the dialog opens on those fields, and each
+   * submit saves the profile and retries the mutation while it stays open -
+   * every attempt is another real check - until one isn't rejected.
+   *
+   * While the dialog handles a rejection the mutation is reset, so an inline
+   * error alert driven by it doesn't show behind the dialog, and `options`'
+   * `onError` doesn't run. The global error toast skips these rejections too
+   * (see `handleMutationError`), so a dismissed dialog is silent, like any
+   * other cancelled gate; `onSettled` still runs then, since callers use it
+   * for what happens whatever the outcome.
+   *
+   * Attempts settle on `mutateAsync`'s promise rather than on `options`'
+   * callbacks, which TanStack Query skips once the calling component
+   * unmounts: the dialog lives at the root, so it can outlast its caller
+   * (e.g. after browser Back), and its retry must still finish.
+   */
+  const mutateWithCompliance = React.useCallback(
+    async <TData, TError, TVariables, TContext>(
+      mutation: Pick<
+        UseMutationResult<TData, TError, TVariables, TContext>,
+        "mutateAsync" | "reset"
+      >,
+      variables: TVariables,
+      options: MutateOptions<TData, TError, TVariables, TContext> = {},
+    ): Promise<void> =>
+      exclusive(async () => {
+        if (!(await checkCompliance())) return
+
+        // Settles with the fields the attempt was rejected on, or [] for any
+        // other outcome, which `options` has then handled as usual.
+        let lastRejection: { error: TError | null; context?: TContext } = {
+          error: null,
+        }
+        const attempt = async (): Promise<JitField[]> => {
+          try {
+            await mutation.mutateAsync(variables, {
+              ...options,
+              onError: (error, ...rest) => {
+                if (rejectedComplianceFields(error).length > 0) return
+                options.onError?.(error, ...rest)
+              },
+              onSettled: (data, error, vars, context) => {
+                if (rejectedComplianceFields(error).length > 0) {
+                  lastRejection = { error, context }
+                  mutation.reset()
+                } else {
+                  options.onSettled?.(data, error, vars, context)
+                }
+              },
+            })
+            return []
+          } catch (error) {
+            // Any other failure has been handled by `options.onError`.
+            return rejectedComplianceFields(error)
+          }
+        }
+
+        const rejectedFields = await attempt()
+        if (rejectedFields.length === 0) return
+        const saved = await NiceModal.show(JustInTimeDialog, {
+          rejectedFields,
+          retry: attempt,
         })
-        missing = needsComplianceInfo(user)
-      } catch {
-        // Swallow the fetch error -- `missing` already defaults to `true`,
-        // which routes into the dialog below. The dialog fetches the profile
-        // itself and lets the user submit fresh values regardless of why
-        // this pre-check failed, so it doubles as the retry surface: a
-        // transient failure here just means the dialog opens with blank
-        // fields instead of prefilled ones, and a real backend outage
-        // surfaces as the dialog's own save-error alert.
-      }
-      if (!missing) return true
-      return (await NiceModal.show(JustInTimeDialog)) === true
-    })().finally(() => {
-      inFlight.current = null
-    })
+        if (saved !== true) {
+          options.onSettled?.(
+            undefined,
+            lastRejection.error,
+            variables,
+            lastRejection.context,
+          )
+        }
+      }, undefined),
+    [exclusive, checkCompliance],
+  )
 
-    inFlight.current = promise
-    return promise
-  }, [queryClient, inFlight])
+  /**
+   * `ensureCompliance`, then the real export compliance check for `target`
+   * (the enrollment eligibility endpoint), so a purchase is caught here the
+   * way a free enrollment is: if CyberSource rejects profile fields, the
+   * dialog opens on them, and each submit re-checks while it stays open.
+   *
+   * Resolves `true` to continue to the cart, `false` if the learner backed
+   * out. A check that can't answer (e.g. throttled) also continues: checkout
+   * runs the same check and sends the learner back to fix anything it rejects.
+   */
+  const ensureEligibility = React.useCallback(
+    (target: EnrollmentTarget): Promise<boolean> =>
+      exclusive(async () => {
+        if (!(await checkCompliance())) return false
 
-  return { ensureCompliance }
+        // The fields to fix, or [] when there's nothing the dialog can fix.
+        const check = async (): Promise<JitField[]> => {
+          try {
+            const eligibility = await checkEnrollmentEligibility(target)
+            return eligibility.reason_code === "CS_701"
+              ? editableJitFields(eligibility.missing_fields ?? [])
+              : []
+          } catch {
+            return []
+          }
+        }
+
+        const rejectedFields = await check()
+        if (rejectedFields.length === 0) return true
+        return (
+          (await NiceModal.show(JustInTimeDialog, {
+            rejectedFields,
+            retry: check,
+          })) === true
+        )
+      }, false),
+    [exclusive, checkCompliance],
+  )
+
+  return { ensureCompliance, ensureEligibility, mutateWithCompliance }
 }
 
 export { useComplianceGate, ComplianceGateProvider }

@@ -4,9 +4,12 @@ import type { MutationHookOptions } from "../../../mutations/mutationMeta"
 import {
   b2bApi,
   courseRunEnrollmentsApi,
+  courseRunsV1Api,
   programEnrollmentsApi,
+  programsV1Api,
   verifiedProgramEnrollmentsApi,
 } from "../../clients"
+import type { EnrollmentEligibility } from "@mitodl/mitxonline-api-axios/v1"
 import {
   B2bApiB2bEnrollCreateRequest,
   EnrollmentsApiEnrollmentsPartialUpdateRequest,
@@ -14,6 +17,31 @@ import {
   ProgramEnrollmentsApiV3ProgramEnrollmentsCreateRequest,
   VerifiedProgramEnrollmentsApiVerifiedProgramEnrollmentsCreateRequest,
 } from "@mitodl/mitxonline-api-axios/v2"
+
+/** A course run or program a learner can enroll in or buy. */
+type EnrollmentTarget = { type: "course_run" | "program"; id: number }
+
+/**
+ * Whether the learner may enroll in `target`, without enrolling them. MITx
+ * Online runs the same export compliance check enrollment and checkout do.
+ *
+ * `missing_fields` (with `reason_code` CS_701: the profile fields to fix) is
+ * newer than this client version, so it is typed here until the client
+ * catches up.
+ */
+const checkEnrollmentEligibility = async (
+  target: EnrollmentTarget,
+): Promise<EnrollmentEligibility & { missing_fields?: string[] }> => {
+  const { data } =
+    target.type === "program"
+      ? await programsV1Api.programsEnrollmentEligible({
+          program_id: target.id,
+        })
+      : await courseRunsV1Api.courseRunsEnrollmentEligible({
+          run_id: target.id,
+        })
+  return data
+}
 
 const useCreateB2bEnrollment = ({ meta }: MutationHookOptions = {}) => {
   const queryClient = useQueryClient()
@@ -140,7 +168,9 @@ const useCreateVerifiedProgramEnrollment = ({
   })
 }
 
+export type { EnrollmentTarget }
 export {
+  checkEnrollmentEligibility,
   enrollmentQueries,
   enrollmentKeys,
   useCreateB2bEnrollment,
