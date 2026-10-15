@@ -1,6 +1,17 @@
 Release Notes
 =============
 
+Version 0.83.6
+--------------
+
+- Identify signed-in users for HubSpot (#4074)
+- build(deps): bump axios to 1.20.0 (#4098)
+- Fill full description for mitxonline courses with extended detail from wagtail api (#4089)
+- fix(docker): install runtime libcairo2 so the image runs on DHI Python (#4097)
+- Update dependency social-auth-core to v5 [SECURITY] (#3991)
+- Keep a website content item's type fixed after creation (#4083)
+- fix ocw video matching (#4063)
+
 Version 0.83.3
 --------------
 
