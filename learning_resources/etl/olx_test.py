@@ -201,7 +201,7 @@ def test_olx_archive_skips_staff_only_inline_structure(tmp_path):
 
 @pytest.mark.parametrize("bad_file", ["course.xml", "chapter/a.xml"])
 def test_olx_archive_malformed_block_fails_closed(tmp_path, bad_file):
-    """A malformed block raises on first use; building the archive itself reads nothing"""
+    """A malformed block raises on first use, not when the archive is built"""
     olx = tmp_path / "course"
     _write_olx(olx, "course.xml", '<course url_name="run"/>')
     _write_olx(olx, "course/run.xml", '<course><chapter url_name="a"/></course>')
@@ -213,7 +213,7 @@ def test_olx_archive_malformed_block_fails_closed(tmp_path, bad_file):
 
 
 def test_olx_archive_without_course_xml_is_not_olx(tmp_path):
-    """Non-OLX trees (canvas, tutor problem sets) exclude and date nothing"""
+    """Non-OLX trees (canvas, tutor problem sets) exclude nothing"""
     olx = tmp_path / "course"
     _write_olx(olx, "chapter/a.xml", '<chapter visible_to_staff_only="true"/>')
     _write_olx(olx, "web_resources/b.html", "<p>b</p>")

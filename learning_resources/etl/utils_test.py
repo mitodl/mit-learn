@@ -247,7 +247,7 @@ def test_transform_content_files(  # noqa: PLR0913
         "learning_resources.etl.utils.extract_text_metadata", return_value=tika_output
     )
 
-    # Mock the archive facts and URL lookup process_olx_path uses
+    # Mock the video metadata and URL lookup process_olx_path uses
     video_metadata = {"test": "video"}
     test_url = "https://example.com/test"
 
@@ -1093,8 +1093,6 @@ def test_extract_content_ocr_failure_falls_back_to_tika(
     assert all(r.levelname == "WARNING" for r in ocr_records)
 
 
-# an extraction that raises is recorded as failed; one Tika gave nothing back
-# for is only skipped
 def test_process_olx_path_skips_failed_files(mocker, tmp_path):
     """A file whose extraction raises is skipped and recorded; other files still yield"""
     run = LearningResourceRunFactory.create()

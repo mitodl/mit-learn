@@ -1,4 +1,4 @@
-"""An exported OLX course tree as a single source of facts about its files"""
+"""Which files of an exported OLX course tree to ingest, and which to skip"""
 
 import html
 import json
@@ -152,7 +152,7 @@ class OlxArchive:
 
     @cached_property
     def paths(self) -> list[Path]:
-        """The files to ingest: ingestable text files the course does not exclude"""
+        """Text files to ingest: text_files minus excluded"""
         return [path for path in self.text_files if path not in self.excluded]
 
     @cached_property
@@ -168,8 +168,8 @@ class OlxArchive:
         )
         referenced, unreferenced = self._static_references(excluded)
         excluded.update(unreferenced)
-        # A transcript's staff-only copy may share a file with a reachable
-        # copy, so put back anything a reachable block still links.
+        # A hidden video's transcript may also be a visible video's, so put
+        # back anything a reachable block still links.
         excluded.difference_update(referenced)
         # Settings rather than content, but what they name (textbooks, the
         # course image) is shown, so they were still read as references above
@@ -395,7 +395,7 @@ class OlxArchive:
             text = path.read_text(errors="ignore")
             ids: set[str] | None = set()
             if path.suffix.lower() == ".xml":
-                # parsed from the bytes, so a malformed file is still malformed
+                # parse the file, not the lenient text, so bad bytes still fail
                 try:
                     ids = self._video_ids_of(ElementTree.parse(path).getroot())
                 except ElementTree.ParseError:
@@ -439,9 +439,9 @@ class OlxArchive:
 
     def _static_references(self, skip: set[Path]) -> tuple[set[Path], set[Path]]:
         """
-        Split static/ files into (referenced, unreferenced) by filename, so an
-        asset key link counts, ignoring text in skip. Unknown video ids keep
-        every legacy transcript.
+        Split static/ files into (referenced, unreferenced) by whether text
+        outside skip names them. Matching by filename catches asset key links
+        too. Unknown video ids keep every legacy transcript.
         """
         if not (self.root / "static").is_dir():
             return set(), set()

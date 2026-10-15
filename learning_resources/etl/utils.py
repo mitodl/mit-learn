@@ -329,8 +329,7 @@ def documents_from_olx(archive: OlxArchive) -> Generator[tuple, None, None]:
     Read the bytes of each file an OLX archive ingests
 
     Args:
-        archive (OlxArchive): the extracted archive, already filtered to
-            ingestable paths
+        archive (OlxArchive): the extracted archive; only its paths are read
 
     Yields:
         tuple: A list of (bytes of content, metadata)
