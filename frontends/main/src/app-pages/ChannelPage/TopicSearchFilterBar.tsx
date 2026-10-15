@@ -316,6 +316,14 @@ const TopicSearchFilterBar: React.FC<TopicSearchFilterBarProps> = ({
   const resourceCategoryCounts = countsFor(aggregations, "resource_category")
   const showResourceCategory =
     resourceTypeGroup === ResourceTypeGroupEnum.LearningMaterial
+  /**
+   * Free is offered only where something is free, as the sidebar pages offer
+   * it: the facet counts what is and what is not, and `MultiFacetGroup` draws
+   * the switch only for a value the search returned a bucket for, so a search
+   * with nothing free in it has no Free to tick.
+   */
+  const freeCounts = countsFor(aggregations, "free")
+  const showFree = !freeCounts || (freeCounts["true"] ?? 0) > 0 || isFree
 
   const deliveryOptions = facetOptions(
     DELIVERY_VALUES,
@@ -339,14 +347,11 @@ const TopicSearchFilterBar: React.FC<TopicSearchFilterBarProps> = ({
   /**
    * The controls there are to draw, which is not always all of them.
    *
-   * A facet the search has nothing under is left out rather than offered: it
-   * would open on an empty panel, and a combobox that expands to nothing is
-   * worse than no combobox at all. A value already ticked counts as something
-   * to offer, so narrowing to nothing never takes away the control that did
-   * it.
-   *
-   * Free is always here: it is a switch rather than a list, so there is no
-   * such thing as having no values to show.
+   * A facet the search has nothing under is left out rather than offered: a
+   * menu would open on an empty panel, and a combobox that expands to nothing
+   * is worse than no combobox at all, while Free would be a switch that only
+   * ever empties the results. A value already ticked counts as something to
+   * offer, so narrowing to nothing never takes away the control that did it.
    */
   const controls = [
     deliveryOptions.length > 0 ? (
@@ -400,15 +405,17 @@ const TopicSearchFilterBar: React.FC<TopicSearchFilterBarProps> = ({
         }}
       />
     ) : null,
-    <FreeCheckbox
-      key="free"
-      label="Free"
-      checked={isFree}
-      onChange={(event) => {
-        toggleParamValue("free", "true", event.target.checked)
-        setPage(1)
-      }}
-    />,
+    showFree ? (
+      <FreeCheckbox
+        key="free"
+        label="Free"
+        checked={isFree}
+        onChange={(event) => {
+          toggleParamValue("free", "true", event.target.checked)
+          setPage(1)
+        }}
+      />
+    ) : null,
   ].filter((control): control is React.ReactElement => control !== null)
 
   return (

@@ -847,9 +847,9 @@ describe("ChannelSearch", () => {
     })
 
     /**
-     * `delivery` counts because the menus leave out a value no result
-     * carries: with none of them counting there is nothing in the menu to
-     * report having changed.
+     * Counts, because the bar offers only what the search has something
+     * under: with nothing counting there is no menu to report a change from
+     * and no Free to tick.
      */
     const renderTopic = async () => {
       const { channel } = setMockApiResponses({
@@ -858,6 +858,10 @@ describe("ChannelSearch", () => {
           metadata: {
             aggregations: {
               delivery: [{ key: "online", doc_count: 7 }],
+              free: [
+                { key: "true", doc_count: 3 },
+                { key: "false", doc_count: 4 },
+              ],
             },
             suggestions: [],
           },
