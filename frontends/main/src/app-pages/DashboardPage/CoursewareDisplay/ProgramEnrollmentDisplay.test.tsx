@@ -33,6 +33,11 @@ import { useFeatureFlagEnabled } from "posthog-js/react"
 import { faker } from "@faker-js/faker/locale/en"
 import invariant from "tiny-invariant"
 
+// The paid path checks enrollment eligibility before the cart.
+beforeEach(() => {
+  mitxonline.mockEnrollmentEligible()
+})
+
 // Verified cards look up their order; default to none, tests override.
 beforeEach(() => {
   setupOrderHistory()

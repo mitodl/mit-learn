@@ -15,6 +15,11 @@ import {
   VerifiedProgramEnrollmentsApi,
   OrdersApi,
 } from "@mitodl/mitxonline-api-axios/v2"
+// The enrollment eligibility endpoints are only in the v1 client module.
+import {
+  CourseRunsApi as CourseRunsV1Api,
+  ProgramsApi as ProgramsV1Api,
+} from "@mitodl/mitxonline-api-axios/v1"
 import axiosInstance from "./axios"
 
 const BASE_PATH = ""
@@ -68,6 +73,10 @@ const verifiedProgramEnrollmentsApi = new VerifiedProgramEnrollmentsApi(
 
 const ordersApi = new OrdersApi(undefined, BASE_PATH, axiosInstance)
 
+const courseRunsV1Api = new CourseRunsV1Api(undefined, BASE_PATH, axiosInstance)
+
+const programsV1Api = new ProgramsV1Api(undefined, BASE_PATH, axiosInstance)
+
 export {
   usersApi,
   countriesApi,
@@ -85,4 +94,6 @@ export {
   productsApi,
   verifiedProgramEnrollmentsApi,
   ordersApi,
+  courseRunsV1Api,
+  programsV1Api,
 }

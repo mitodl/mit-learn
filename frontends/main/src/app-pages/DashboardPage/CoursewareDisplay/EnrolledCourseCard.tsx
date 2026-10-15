@@ -83,6 +83,8 @@ const UpgradeBanner: React.FC<
     certificateUpgradeDeadline?: string | null
     certificateUpgradePrice?: string | null
     productId?: number | null
+    /** The run the upgrade product is for, for the compliance check. */
+    runId?: number
     isVerifiedProgramEnrollment?: boolean
     readableId?: string
     coursewareUrl?: string
@@ -95,6 +97,7 @@ const UpgradeBanner: React.FC<
   certificateUpgradeDeadline,
   certificateUpgradePrice,
   productId,
+  runId,
   isVerifiedProgramEnrollment,
   readableId,
   coursewareUrl,
@@ -158,7 +161,10 @@ const UpgradeBanner: React.FC<
     if (!productId) return
 
     try {
-      await replaceBasketItem.mutateAsync(productId)
+      await replaceBasketItem.mutateAsync(
+        productId,
+        runId ? { type: "course_run", id: runId } : undefined,
+      )
     } catch (error) {
       onUpgradeFailure?.(
         badRequestDetail(error) ??
@@ -383,6 +389,7 @@ export const EnrolledCourseCard = ({
       certificateUpgradeDeadline={run?.upgrade_deadline}
       certificateUpgradePrice={run?.upgrade_product_price}
       productId={run?.upgrade_product_id}
+      runId={run?.id}
       isVerifiedProgramEnrollment={isVerifiedProgramEnrollment}
       readableId={run?.courseware_id}
       coursewareUrl={coursewareOpen ? (coursewareUrl ?? undefined) : undefined}

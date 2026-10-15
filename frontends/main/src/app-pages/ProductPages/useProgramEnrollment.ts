@@ -97,7 +97,10 @@ export const useProgramEnrollment = (
       if (kind === "paid") {
         const product = program.products[0]
         if (product) {
-          replaceBasketItem.mutate(product.id)
+          replaceBasketItem.mutate(product.id, {
+            type: "program",
+            id: program.id,
+          })
         }
       } else if (kind === "free") {
         await mutateWithCompliance(

@@ -175,10 +175,14 @@ const needsComplianceInfo = (user: User | undefined): boolean => {
  */
 const rejectedComplianceFields = (error: unknown): JitField[] => {
   if (!badRequestDetail(error)?.includes("CS_701")) return []
-  return badRequestMissingFields(error).filter((field): field is JitField =>
+  return editableJitFields(badRequestMissingFields(error))
+}
+
+/** The given profile field names this dialog collects. */
+const editableJitFields = (fields: readonly string[]): JitField[] =>
+  fields.filter((field): field is JitField =>
     (JIT_FIELDS as readonly string[]).includes(field),
   )
-}
 
 /**
  * Seed the form from the profile we already have.
@@ -324,6 +328,7 @@ export {
   yearOfBirthOptions,
   needsComplianceInfo,
   rejectedComplianceFields,
+  editableJitFields,
   initialJitValues,
   jitSchema,
   jitPatchPayload,

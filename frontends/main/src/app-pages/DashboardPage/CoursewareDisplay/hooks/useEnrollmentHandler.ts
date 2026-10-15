@@ -191,7 +191,10 @@ export const useEnrollmentHandler = () => {
               ? parseFloat(enrollmentAction.product.price)
               : 0,
           })
-          replaceBasketItem.mutate(enrollmentAction.product.id)
+          replaceBasketItem.mutate(enrollmentAction.product.id, {
+            type: "course_run",
+            id: enrollmentAction.run.id,
+          })
           return
         }
 

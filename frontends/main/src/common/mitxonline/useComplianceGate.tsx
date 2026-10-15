@@ -3,8 +3,11 @@ import NiceModal from "@ebay/nice-modal-react"
 import { useQueryClient } from "@tanstack/react-query"
 import type { MutateOptions, UseMutationResult } from "@tanstack/react-query"
 import { mitxUserQueries } from "api/mitxonline-hooks/user"
+import { checkEnrollmentEligibility } from "api/mitxonline-hooks/enrollment"
+import type { EnrollmentTarget } from "api/mitxonline-hooks/enrollment"
 import { JustInTimeDialog } from "@/page-components/EnrollmentDialogs/JustInTimeDialog"
 import {
+  editableJitFields,
   needsComplianceInfo,
   rejectedComplianceFields,
 } from "@/page-components/EnrollmentDialogs/complianceFields"
@@ -190,7 +193,45 @@ const useComplianceGate = () => {
     [ensureCompliance],
   )
 
-  return { ensureCompliance, mutateWithCompliance }
+  /**
+   * `ensureCompliance`, then the real export compliance check for `target`
+   * (the enrollment eligibility endpoint), so a purchase is caught here the
+   * way a free enrollment is: if CyberSource rejects profile fields, the
+   * dialog opens on them, and each submit re-checks while it stays open.
+   *
+   * Resolves `true` to continue to the cart, `false` if the learner backed
+   * out. A check that can't answer (e.g. throttled) also continues: checkout
+   * runs the same check and sends the learner back to fix anything it rejects.
+   */
+  const ensureEligibility = React.useCallback(
+    async (target: EnrollmentTarget): Promise<boolean> => {
+      if (!(await ensureCompliance())) return false
+
+      // The fields to fix, or [] when there's nothing the dialog can fix.
+      const check = async (): Promise<JitField[]> => {
+        try {
+          const eligibility = await checkEnrollmentEligibility(target)
+          return eligibility.reason_code === "CS_701"
+            ? editableJitFields(eligibility.missing_fields ?? [])
+            : []
+        } catch {
+          return []
+        }
+      }
+
+      const rejectedFields = await check()
+      if (rejectedFields.length === 0) return true
+      return (
+        (await NiceModal.show(JustInTimeDialog, {
+          rejectedFields,
+          retry: check,
+        })) === true
+      )
+    },
+    [ensureCompliance],
+  )
+
+  return { ensureCompliance, ensureEligibility, mutateWithCompliance }
 }
 
 export { useComplianceGate, ComplianceGateProvider }

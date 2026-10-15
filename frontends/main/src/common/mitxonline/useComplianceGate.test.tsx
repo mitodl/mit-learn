@@ -425,3 +425,112 @@ describe("mutateWithCompliance", () => {
     expect(mutation.mutate).not.toHaveBeenCalled()
   })
 })
+
+describe("ensureEligibility", () => {
+  const target = { type: "program" as const, id: 9 }
+  const eligibilityUrl = mitxonline.urls.enrollmentEligibility.program(9)
+
+  const setupCompleteUser = () => {
+    setMockResponse.get(
+      mitxonline.urls.userMe.get(),
+      mitxonline.factories.user.user({
+        compliance_missing_fields: [],
+        legal_address: {
+          first_name: "David",
+          last_name: ".",
+          country: "GB",
+          street_address_1: "1 Main St",
+          city: "London",
+        },
+        user_profile: { year_of_birth: 1990 },
+      }),
+    )
+    setMockResponse.get(mitxonline.urls.countries.list(), [
+      { code: "GB", name: "United Kingdom", states: [] },
+    ])
+    setMockResponse.patch(mitxonline.urls.userMe.get(), null)
+  }
+
+  const eligibility = (reasonCode: string | null, missingFields: string[]) => ({
+    enrollable: reasonCode === null,
+    reason_code: reasonCode,
+    missing_fields: missingFields,
+  })
+
+  const eligibilityCalls = () =>
+    jest
+      .mocked(makeRequest)
+      .mock.calls.filter(
+        ([request]) =>
+          request.method === "post" && request.url === eligibilityUrl,
+      )
+
+  test("continues without a dialog when the learner may enroll", async () => {
+    setupCompleteUser()
+    setMockResponse.post(eligibilityUrl, eligibility(null, []), { code: 200 })
+    const { result } = renderHook(() => useComplianceGate(), { wrapper })
+
+    await expect(result.current.ensureEligibility(target)).resolves.toBe(true)
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
+  })
+
+  test("leaves a CS_700 rejection to checkout rather than the dialog", async () => {
+    setupCompleteUser()
+    setMockResponse.post(eligibilityUrl, eligibility("CS_700", []), {
+      code: 200,
+    })
+    const { result } = renderHook(() => useComplianceGate(), { wrapper })
+
+    await expect(result.current.ensureEligibility(target)).resolves.toBe(true)
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
+  })
+
+  test("opens the dialog on the rejected fields and re-checks on submit", async () => {
+    setupCompleteUser()
+    setMockResponse.post(eligibilityUrl, eligibility("CS_701", ["last_name"]), {
+      code: 200,
+    })
+    const { result } = renderHook(() => useComplianceGate(), { wrapper })
+
+    let pending: Promise<boolean> = Promise.resolve(false)
+    await act(async () => {
+      pending = result.current.ensureEligibility(target)
+    })
+    const dialog = await screen.findByRole("dialog", {
+      name: "Just a Few More Details",
+    })
+    const lastName = within(dialog).getByRole("textbox", { name: "Last Name" })
+    await waitFor(() =>
+      expect(lastName).toHaveAccessibleDescription(
+        "Please enter a valid last name.",
+      ),
+    )
+
+    setMockResponse.post(eligibilityUrl, eligibility(null, []), { code: 200 })
+    await user.clear(lastName)
+    await user.type(lastName, "Cohen")
+    await user.click(within(dialog).getByRole("button", { name: "Submit" }))
+
+    await expect(pending).resolves.toBe(true)
+    expect(eligibilityCalls()).toHaveLength(2)
+  })
+
+  test("resolves false when the learner dismisses the dialog", async () => {
+    setupCompleteUser()
+    setMockResponse.post(eligibilityUrl, eligibility("CS_701", ["last_name"]), {
+      code: 200,
+    })
+    const { result } = renderHook(() => useComplianceGate(), { wrapper })
+
+    let pending: Promise<boolean> = Promise.resolve(true)
+    await act(async () => {
+      pending = result.current.ensureEligibility(target)
+    })
+    const dialog = await screen.findByRole("dialog", {
+      name: "Just a Few More Details",
+    })
+    await user.click(within(dialog).getByRole("button", { name: "Cancel" }))
+
+    await expect(pending).resolves.toBe(false)
+  })
+})

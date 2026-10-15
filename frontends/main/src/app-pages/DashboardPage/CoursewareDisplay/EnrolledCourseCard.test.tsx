@@ -17,6 +17,11 @@ import moment from "moment"
 import { EnrolledCourseCard } from "./EnrolledCourseCard"
 import { setupOrderHistory } from "./test-utils"
 
+// The paid path checks enrollment eligibility before the cart.
+beforeEach(() => {
+  mitxonline.mockEnrollmentEligible()
+})
+
 // Verified cards look up their order; default to none, tests override.
 beforeEach(() => {
   setupOrderHistory()

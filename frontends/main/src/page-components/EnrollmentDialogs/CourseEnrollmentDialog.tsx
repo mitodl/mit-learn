@@ -322,7 +322,10 @@ const CertificateUpsell: React.FC<{
               courseId: course?.readable_id ?? String(product.id),
               value: product.price ? parseFloat(product.price) : 0,
             })
-            replaceBasketItem.mutate(product.id)
+            replaceBasketItem.mutate(
+              product.id,
+              courseRun ? { type: "course_run", id: courseRun.id } : undefined,
+            )
           }}
         />
       </CertificateBox>

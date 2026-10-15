@@ -105,13 +105,16 @@ export const useCourseEnrollment = (
       trackStartEnrollment(course.title)
       if (kind === "paid") {
         const product = selectedRun?.products?.[0]
-        if (product) {
+        if (selectedRun && product) {
           trackBeginCheckout({
             courseName: course.title,
             courseId: course.readable_id,
             value: product.price ? parseFloat(product.price) : 0,
           })
-          replaceBasketItem.mutate(product.id)
+          replaceBasketItem.mutate(product.id, {
+            type: "course_run",
+            id: selectedRun.id,
+          })
         }
       } else if (kind === "free") {
         if (selectedRun) {
