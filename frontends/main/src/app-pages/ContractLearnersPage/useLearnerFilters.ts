@@ -1,6 +1,10 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import type { CompletionStatusFilter } from "api/analytics-hooks/organizations"
 import { useAppSearchParams } from "@/common/useAppSearchParams"
+import {
+  CONTRACT_LEARNERS_STATUSES,
+  type ContractLearnersStatus,
+} from "@/common/urls"
 
 const ALL = "all"
 const SEARCH_DEBOUNCE_MS = 300
@@ -20,7 +24,7 @@ type View = (typeof VIEWS)[keyof typeof VIEWS]
  * two outcomes; only the filter groups them.
  */
 const STATUS_FILTER_COMPLETION_STATUS: Record<
-  string,
+  ContractLearnersStatus,
   CompletionStatusFilter[]
 > = {
   not_started: ["not_started"],
@@ -29,16 +33,18 @@ const STATUS_FILTER_COMPLETION_STATUS: Record<
   unknown: ["unknown"],
 }
 
+const isStatus = (value: string | null): value is ContractLearnersStatus =>
+  (CONTRACT_LEARNERS_STATUSES as readonly (string | null)[]).includes(value)
+
 /**
- * The learner directory's state, with the URL as the single source of
- * truth: the filters both views share, the active view, and the page. Every
+ * The learner directory's state: the filters both views share, the active
+ * view, and the page. View, page, status, module and needs-attention live in
+ * the URL; the search text deliberately does not, because it is a learner's
+ * name or email and the URL is recorded by PostHog and Sentry. Every URL
  * change is one `history.replaceState`, which Next feeds into
  * `useSearchParams` without a server round trip (the app is `force-dynamic`,
  * so `router.replace` would re-render the route on every filter change). A
  * changed filter, view, or search always lands on page 1.
- *
- * Only the search box keeps local state, so typing isn't throttled by
- * navigation; it is written to the URL once the debounce settles.
  */
 const useLearnerFilters = () => {
   const params = useAppSearchParams()
@@ -57,14 +63,8 @@ const useLearnerFilters = () => {
     )
   }, [])
 
-  const urlSearch = (params.get("q") ?? "").slice(0, SEARCH_MAX_LENGTH)
-  const statusParam = params.get("status") ?? ALL
-  const statusFilter = Object.hasOwn(
-    STATUS_FILTER_COMPLETION_STATUS,
-    statusParam,
-  )
-    ? statusParam
-    : ALL
+  const statusParam = params.get("status")
+  const statusFilter = isStatus(statusParam) ? statusParam : ALL
   const needsAttentionOnly = params.get("needs_attention") === "true"
   const moduleFilter = params.get("module") ?? ALL
   const view: View =
@@ -75,24 +75,17 @@ const useLearnerFilters = () => {
       ? parsedPage
       : 1
 
-  const [searchQuery, setSearchQuery] = useState(urlSearch)
-  const lastWrittenSearch = useRef(urlSearch)
+  const [searchQuery, setSearchQuery] = useState("")
+  const [debouncedSearch, setDebouncedSearch] = useState("")
 
   useEffect(() => {
-    if (urlSearch !== lastWrittenSearch.current) {
-      lastWrittenSearch.current = urlSearch
-      setSearchQuery(urlSearch)
-    }
-  }, [urlSearch])
-
-  useEffect(() => {
-    if (searchQuery === urlSearch) return
+    if (searchQuery === debouncedSearch) return
     const id = setTimeout(() => {
-      lastWrittenSearch.current = searchQuery
-      update({ q: searchQuery, page: null })
+      setDebouncedSearch(searchQuery.slice(0, SEARCH_MAX_LENGTH))
+      update({ page: null })
     }, SEARCH_DEBOUNCE_MS)
     return () => clearTimeout(id)
-  }, [searchQuery, urlSearch, update])
+  }, [searchQuery, debouncedSearch, update])
 
   const completionStatus = useMemo<CompletionStatusFilter[] | undefined>(
     () =>
@@ -111,11 +104,11 @@ const useLearnerFilters = () => {
     searchQuery,
     setSearchQuery,
     clearSearch: () => {
-      lastWrittenSearch.current = ""
       setSearchQuery("")
-      update({ q: null, page: null })
+      setDebouncedSearch("")
+      update({ page: null })
     },
-    debouncedSearch: urlSearch,
+    debouncedSearch,
     statusFilter,
     setStatusFilter: (value: string) =>
       update({ status: value === ALL ? null : value, page: null }),
@@ -127,10 +120,9 @@ const useLearnerFilters = () => {
     setModuleFilter: (value: string) =>
       update({ module: value === ALL ? null : value, page: null }),
     clearAll: () => {
-      lastWrittenSearch.current = ""
       setSearchQuery("")
+      setDebouncedSearch("")
       update({
-        q: null,
         status: null,
         module: null,
         needs_attention: null,

@@ -1,6 +1,6 @@
 import NiceModal from "@ebay/nice-modal-react"
 import type { SimpleMenuItem } from "ol-components"
-import type { CourseRunEnrollmentV3 } from "@mitodl/mitxonline-api-axios/v2"
+import type { CourseRunEnrollmentV3 } from "@mitodl/mitxonline-api-axios/v3"
 import { receiptByRunView } from "@/common/urls"
 import { EmailSettingsDialog, UnenrollDialog } from "./DashboardDialogs"
 import { getReceiptMenuItem } from "./receiptMenuItem"

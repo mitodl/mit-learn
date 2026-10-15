@@ -1,6 +1,6 @@
 import React, { useState } from "react"
 import NiceModal, { useModal } from "@ebay/nice-modal-react"
-import type { UserContractPage } from "@mitodl/mitxonline-api-axios/v2"
+import type { UserContractPage } from "@mitodl/mitxonline-api-axios/v0"
 import { useDataConsentMutation } from "api/mitxonline-hooks/organizations"
 import { SILENCE_ERROR_TOAST } from "api/mutation-meta"
 import { DataConsentDialog } from "./DataConsentDialog"

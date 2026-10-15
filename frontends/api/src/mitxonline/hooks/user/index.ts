@@ -6,8 +6,8 @@ import {
 } from "@tanstack/react-query"
 import { countriesApi, usersApi } from "../../clients"
 import type { MutationHookOptions } from "../../../mutations/mutationMeta"
-import type { User } from "@mitodl/mitxonline-api-axios/v2"
-import { UsersApiUsersMePartialUpdateRequest } from "@mitodl/mitxonline-api-axios/v2"
+import type { User } from "@mitodl/mitxonline-api-axios/v0"
+import { UsersApiUsersMePartialUpdateRequest } from "@mitodl/mitxonline-api-axios/v0"
 
 const userKeys = {
   root: ["mitxonline", "users"] as const,

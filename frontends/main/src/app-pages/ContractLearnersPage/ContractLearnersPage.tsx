@@ -348,6 +348,9 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
     [moduleOptions, moduleFilter],
   )
 
+  const moduleResolved =
+    moduleFilter === ALL || courseRunsQuery.isSuccess || courseRunsQuery.isError
+
   const listParams = useMemo(
     () => ({
       limit: PAGE_SIZE,
@@ -373,7 +376,7 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
       contractId ?? "",
       listParams,
     ),
-    enabled: canQuery && view === VIEWS.enrollments,
+    enabled: canQuery && moduleResolved && view === VIEWS.enrollments,
     placeholderData: keepPreviousData,
   })
 
@@ -386,6 +389,20 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
     enabled: canQuery,
   })
 
+  const showsLearnerCount =
+    view === VIEWS.enrollments &&
+    needsAttentionOnly &&
+    !debouncedSearch &&
+    statusFilter === ALL &&
+    activeModule === ALL
+  const needsAttentionQuery = useQuery({
+    ...analyticsContractQueries.needsAttention(orgUuid ?? "", contractId ?? ""),
+    enabled: canQuery && showsLearnerCount,
+  })
+  const learnersNeedingAttention = showsLearnerCount
+    ? (needsAttentionQuery.data?.data[0]?.learners_needing_attention ?? null)
+    : null
+
   const rows = rowsQuery.data?.data ?? []
   const filteredCount = rowsQuery.data?.total_count ?? 0
   const withheldCount = rowsQuery.data?.outcomes_withheld_count ?? 0
@@ -394,7 +411,7 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
   const hidesWithheldLearners = needsAttentionOnly && contractWithheldCount > 0
   const totalPages = Math.ceil(filteredCount / PAGE_SIZE)
   const isStale = rowsQuery.isPlaceholderData || rowsQuery.isFetching
-  const isBusy = rowsQuery.isLoading || isStale
+  const isBusy = rowsQuery.isPending || isStale
 
   useEffect(() => {
     if (
@@ -421,7 +438,8 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
   }
 
   const handleExport = useCallback(async () => {
-    if (isExporting || !canQuery || !orgUuid || !contractId) return
+    if (isExporting || !canQuery || !moduleResolved || !orgUuid || !contractId)
+      return
     setIsExporting(true)
     try {
       const all: LearnerProgress[] = []
@@ -491,6 +509,7 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
   }, [
     isExporting,
     canQuery,
+    moduleResolved,
     orgUuid,
     contractId,
     contractSlug,
@@ -508,7 +527,6 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
     }
     if (lastAnnounced.current === key) return
     lastAnnounced.current = key
-
     setAnnouncement(
       `${filteredCount} ${filteredCount === 1 ? "result" : "results"}${
         hidesWithheldLearners
@@ -605,9 +623,9 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
             <ExportWrapper>
               <Button
                 variant="bordered"
-                aria-disabled={isExporting || !canQuery}
+                aria-disabled={isExporting || !canQuery || !moduleResolved}
                 aria-describedby={canQuery ? undefined : UNAVAILABLE_MESSAGE_ID}
-                aria-busy={isExporting}
+                aria-busy={isExporting || (canQuery && !moduleResolved)}
                 onClick={handleExport}
               >
                 {isExporting ? "Exporting…" : "Export learners"}
@@ -659,7 +677,15 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
                       ? "One row per learner, one column per module"
                       : totalEnrollments === null
                         ? "Loading…"
-                        : `${filteredCount} of ${totalEnrollments} enrollments`
+                        : `${filteredCount} of ${totalEnrollments} enrollments${
+                            learnersNeedingAttention === null
+                              ? ""
+                              : ` (${learnersNeedingAttention} ${
+                                  learnersNeedingAttention === 1
+                                    ? "learner"
+                                    : "learners"
+                                })`
+                          }`
                   }
                   asOfPlacement="external"
                 />
@@ -761,7 +787,7 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
 
                 <TableCard>
                   <VisuallyHidden role="status" aria-atomic="true">
-                    {rowsQuery.isLoading
+                    {rowsQuery.isPending
                       ? "Loading learners"
                       : filteredCount === 0
                         ? emptyMessage
@@ -795,7 +821,7 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
                       </TableHeaderRow>
                     </div>
                     <TableBody role="rowgroup" $stale={isStale}>
-                      {rowsQuery.isLoading ? (
+                      {rowsQuery.isPending ? (
                         [1, 2, 3].map((key) => (
                           <TableRow key={key} role="row">
                             <div role="cell" style={{ width: "100%" }}>
