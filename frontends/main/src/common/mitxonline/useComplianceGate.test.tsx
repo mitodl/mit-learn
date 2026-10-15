@@ -1,6 +1,7 @@
 import React from "react"
 import { act, renderHook, screen, user, waitFor, within } from "@/test-utils"
-import { QueryClientProvider } from "@tanstack/react-query"
+import { render } from "@testing-library/react"
+import { QueryClientProvider, useMutation } from "@tanstack/react-query"
 import type { MutateOptions } from "@tanstack/react-query"
 import { ThemeProvider } from "ol-components"
 import { makeBrowserQueryClient } from "@/app/getQueryClient"
@@ -39,8 +40,6 @@ describe("useComplianceGate", () => {
     // Synchronous, like two rapid clicks on the same button: the second call
     // happens before the first's profile fetch has resolved.
     const first = result.current.ensureCompliance()
-    // `second` is chained onto the first's own promise, so it can't be
-    // awaited before the first actually resolves (below) without deadlocking.
     const second = result.current.ensureCompliance()
 
     const dialog = await screen.findByRole("dialog", {
@@ -231,17 +230,20 @@ describe("mutateWithCompliance", () => {
    * each entry is the error that attempt fails with, or `null` to succeed.
    */
   const fakeMutation = (outcomes: (unknown | null)[]) => {
-    const mutate = jest.fn((variables: { id: number }, options?: Options) => {
-      const error = outcomes[mutate.mock.calls.length - 1]
-      if (error) {
-        options?.onError?.(error, variables, undefined)
-        options?.onSettled?.(undefined, error, variables, undefined)
-      } else {
+    const mutateAsync = jest.fn(
+      async (variables: { id: number }, options?: Options) => {
+        const error = outcomes[mutateAsync.mock.calls.length - 1]
+        if (error) {
+          options?.onError?.(error, variables, undefined)
+          options?.onSettled?.(undefined, error, variables, undefined)
+          throw error
+        }
         options?.onSuccess?.("ok", variables, undefined)
         options?.onSettled?.("ok", null, variables, undefined)
-      }
-    })
-    return { mutate, reset: jest.fn() }
+        return "ok"
+      },
+    )
+    return { mutateAsync, reset: jest.fn() }
   }
 
   const callbacks = () => ({
@@ -282,8 +284,8 @@ describe("mutateWithCompliance", () => {
     await user.click(within(dialog).getByRole("button", { name: "Submit" }))
 
     await waitFor(() => expect(options.onSuccess).toHaveBeenCalled())
-    expect(mutation.mutate).toHaveBeenCalledTimes(2)
-    expect(mutation.mutate.mock.calls[1][0]).toEqual({ id: 1 })
+    expect(mutation.mutateAsync).toHaveBeenCalledTimes(2)
+    expect(mutation.mutateAsync.mock.calls[1][0]).toEqual({ id: 1 })
     expect(options.onError).not.toHaveBeenCalled()
     await act(() => pending)
   })
@@ -314,7 +316,7 @@ describe("mutateWithCompliance", () => {
     await user.type(lastName, "-Cohen")
     await user.click(within(dialog).getByRole("button", { name: "Submit" }))
 
-    await waitFor(() => expect(mutation.mutate).toHaveBeenCalledTimes(2))
+    await waitFor(() => expect(mutation.mutateAsync).toHaveBeenCalledTimes(2))
     expect(screen.getAllByRole("dialog")).toHaveLength(1)
     expect(dialog).toBeInTheDocument()
     expect(options.onError).not.toHaveBeenCalled()
@@ -322,7 +324,7 @@ describe("mutateWithCompliance", () => {
 
     await user.click(within(dialog).getByRole("button", { name: "Submit" }))
     await waitFor(() => expect(options.onSuccess).toHaveBeenCalled())
-    expect(mutation.mutate).toHaveBeenCalledTimes(3)
+    expect(mutation.mutateAsync).toHaveBeenCalledTimes(3)
     await waitFor(() => expect(dialog).not.toBeInTheDocument())
     await act(() => pending)
   })
@@ -356,7 +358,7 @@ describe("mutateWithCompliance", () => {
       ),
     )
     expect(options.onError).not.toHaveBeenCalled()
-    expect(mutation.mutate).toHaveBeenCalledTimes(1)
+    expect(mutation.mutateAsync).toHaveBeenCalledTimes(1)
     await act(() => pending)
   })
 
@@ -422,7 +424,97 @@ describe("mutateWithCompliance", () => {
     await user.click(within(dialog).getByRole("button", { name: "Cancel" }))
     await pending
 
-    expect(mutation.mutate).not.toHaveBeenCalled()
+    expect(mutation.mutateAsync).not.toHaveBeenCalled()
+  })
+
+  /** A real mutation function: rejected on the last name once, then succeeds. */
+  const rejectOnce = () =>
+    jest
+      .fn()
+      .mockRejectedValueOnce(rejection(["last_name"]))
+      .mockResolvedValue("ok")
+
+  const fixLastNameAndSubmit = async (dialog: HTMLElement) => {
+    const lastName = within(dialog).getByRole("textbox", { name: "Last Name" })
+    await user.clear(lastName)
+    await user.type(lastName, "Cohen")
+    await user.click(within(dialog).getByRole("button", { name: "Submit" }))
+  }
+
+  test("a retry still finishes after the caller unmounts", async () => {
+    setupCompleteUser()
+    const mutationFn = rejectOnce()
+    let pending: Promise<void> | null = null
+    let leave = () => {}
+    // The dialog lives at the root, so it outlasts the component that started
+    // the enrollment (e.g. after browser Back).
+    const Owner = () => {
+      const mutation = useMutation({ mutationFn })
+      const { mutateWithCompliance } = useComplianceGate()
+      React.useEffect(() => {
+        pending = mutateWithCompliance(mutation, { id: 1 })
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+      }, [])
+      return null
+    }
+    const Page = () => {
+      const [shown, setShown] = React.useState(true)
+      leave = () => setShown(false)
+      return shown ? <Owner /> : null
+    }
+    render(<Page />, { wrapper })
+
+    const dialog = await screen.findByRole("dialog", {
+      name: "Just a Few More Details",
+    })
+    act(() => leave())
+    await fixLastNameAndSubmit(dialog)
+
+    await waitFor(() => expect(dialog).not.toBeInTheDocument())
+    expect(mutationFn).toHaveBeenCalledTimes(2)
+    await act(() => pending!)
+  })
+
+  test("an action started while another's dialog is open doesn't take it over", async () => {
+    setupCompleteUser()
+    const first = rejectOnce()
+    const second = jest.fn().mockRejectedValue(rejection(["last_name"]))
+    const { result } = renderHook(
+      () => ({
+        cardA: useComplianceGate(),
+        cardB: useComplianceGate(),
+        first: useMutation({ mutationFn: first }),
+        second: useMutation({ mutationFn: second }),
+      }),
+      { wrapper },
+    )
+
+    let pendingA: Promise<void> = Promise.resolve()
+    await act(async () => {
+      pendingA = result.current.cardA.mutateWithCompliance(
+        result.current.first,
+        {
+          id: 1,
+        },
+      )
+    })
+    const dialog = await screen.findByRole("dialog", {
+      name: "Just a Few More Details",
+    })
+
+    // Card A's recovery is still open, so card B's click is ignored rather
+    // than swapping its own retry into the shared dialog.
+    await act(() =>
+      result.current.cardB.mutateWithCompliance(result.current.second, {
+        id: 2,
+      }),
+    )
+    expect(second).not.toHaveBeenCalled()
+
+    await fixLastNameAndSubmit(dialog)
+    await waitFor(() => expect(dialog).not.toBeInTheDocument())
+    expect(first).toHaveBeenCalledTimes(2)
+    await act(() => pendingA)
   })
 })
 
