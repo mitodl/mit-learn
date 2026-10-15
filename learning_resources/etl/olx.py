@@ -157,6 +157,14 @@ def _without_dated_blocks(element: Element) -> Element:
     return element
 
 
+def _reference_text(element: Element) -> str:
+    """
+    Serialize element as reference text. Serializing escapes text once more
+    than the file did, which would double-escape CDATA, so undo that layer.
+    """
+    return html.unescape(ElementTree.tostring(element, encoding="unicode"))
+
+
 def _parse_olx_start(value: str | None) -> datetime | None:
     """
     Parse an OLX start attribute as UTC. None when absent or unparsable
@@ -689,7 +697,7 @@ class OlxArchive:
         except ElementTree.ParseError:
             log.warning("Malformed XML in %s, keeping all legacy transcripts", path)
             return text, None
-        return ElementTree.tostring(root, encoding="unicode"), self._video_ids_of(root)
+        return _reference_text(root), self._video_ids_of(root)
 
     def _texts(
         self, sources: list[Path], elements: list[Element] = ()
@@ -710,7 +718,7 @@ class OlxArchive:
                 ids |= found
         for element in elements:
             own = _without_dated_blocks(element)
-            texts.append(ElementTree.tostring(own, encoding="unicode"))
+            texts.append(_reference_text(own))
             ids |= self._video_ids_of(own)
         return texts, ids, complete
 

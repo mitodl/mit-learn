@@ -876,6 +876,20 @@ def test_olx_archive_static_reference_spellings(tmp_path, reference, kept):
     assert ("static/notes.pdf" in _ingested(olx)) is kept
 
 
+def test_olx_archive_cdata_reference_with_entity(tmp_path):
+    """
+    HTML held in an XML file's CDATA keeps its entities as written, so its
+    reference matches like one in an .html file
+    """
+    olx = _reference_olx(tmp_path, **{"notes&guide.pdf": "pdf bytes"})
+    _write_olx(
+        olx,
+        "html/h.xml",
+        '<html><![CDATA[<a href="/static/notes&amp;guide.pdf">n</a>]]></html>',
+    )
+    assert "static/notes&guide.pdf" in _ingested(olx)
+
+
 @pytest.mark.parametrize(
     "reference",
     [
