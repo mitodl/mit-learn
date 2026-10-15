@@ -4,7 +4,7 @@ import { renderWithProviders, user, within } from "@/test-utils"
 import {
   LanguageEnum,
   type SupportedVariant,
-} from "@mitodl/mitxonline-api-axios/v2"
+} from "@mitodl/mitxonline-api-axios/v0"
 import { VariantPicker } from "./VariantPicker"
 
 const makeVariant = (

@@ -7,18 +7,22 @@
  * unit-testable in isolation.
  */
 import type {
-  BaseCourseRun,
-  V2ProgramDisplayModeEnum,
   ContractPage,
-  CourseRunEnrollmentV3,
-  CourseWithCourseRunsSerializerV2,
   SupportedVariant,
+} from "@mitodl/mitxonline-api-axios/v0"
+import type {
+  V2ProgramDisplayModeEnum,
+  CourseWithCourseRunsSerializerV2,
   V2Program,
   V2ProgramCollection,
   V2ProgramDetail,
   V2ProgramRequirement,
-  V3UserProgramEnrollment,
 } from "@mitodl/mitxonline-api-axios/v2"
+import type {
+  BaseCourseRun,
+  CourseRunEnrollmentV3,
+  V3UserProgramEnrollment,
+} from "@mitodl/mitxonline-api-axios/v3"
 import { DisplayModeEnum } from "@mitodl/mitxonline-api-axios/v2"
 import { getRunTimeState } from "../courseDateUtils"
 import type { RunTimeState } from "../courseDateUtils"
