@@ -1991,7 +1991,8 @@ def load_videos_from_content_files(
 
     Checks how many videos have matching ContentFile objects by youtube_id.
     If at least 60% of the videos have matches, loads those videos.
-    Otherwise returns None.
+    Otherwise returns None. Only published content files on published runs
+    match, so a video whose content file was removed is not republished.
 
     Args:
         youtube_videos_data (Iterable of dict): video data dicts from youtube
@@ -2002,20 +2003,35 @@ def load_videos_from_content_files(
             of videos have matching content files
     """
 
-    matched = []
-    total = 0
-    for video_data in youtube_videos_data:
-        total += 1
-        youtube_id = video_data.get("youtube_id")
-        if not youtube_id:
-            continue
-        content_file = ContentFile.objects.filter(
-            youtube_id=youtube_id,
-        ).first()
-        if content_file:
-            matched.append((video_data, content_file))
+    youtube_videos_data = list(youtube_videos_data)
+    youtube_ids = {
+        video_data["youtube_id"]
+        for video_data in youtube_videos_data
+        if video_data.get("youtube_id")
+    }
+    # Rarely, more than one content files can share a youtube_id
+    # (e.g. the same video on two pages of a course);
+    # keep the lowest id so the match is stable.
 
-    threshold = total * OCW_PLAYLIST_VIDEO_THRESHOLD
+    content_files_by_youtube_id = {}
+    for content_file in (
+        ContentFile.objects.filter(
+            youtube_id__in=youtube_ids,
+            published=True,
+            run__published=True,
+        )
+        .select_related("run__learning_resource")
+        .order_by("-id")
+    ):
+        content_files_by_youtube_id[content_file.youtube_id] = content_file
+
+    matched = [
+        (video_data, content_files_by_youtube_id[video_data["youtube_id"]])
+        for video_data in youtube_videos_data
+        if video_data.get("youtube_id") in content_files_by_youtube_id
+    ]
+
+    threshold = len(youtube_videos_data) * OCW_PLAYLIST_VIDEO_THRESHOLD
     if len(matched) < threshold:
         return None
 
