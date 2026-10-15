@@ -3259,7 +3259,7 @@ def test_load_videos_from_content_files(mocker, match_ratio, expected_result):
 def test_load_videos_from_content_files_skips_hidden(
     mocker, content_file_published, run_published, release_date
 ):
-    """An unpublished content file, one on an unpublished run, or one not yet released is not matched"""
+    """Unpublished, unreleased or unpublished-run content files are not matched"""
     mock_load = mocker.patch(
         "learning_resources.etl.loaders.load_video_with_content_file",
     )

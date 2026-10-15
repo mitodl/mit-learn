@@ -291,7 +291,7 @@ def _content_file_resource_ids(etl_source: str, learning_resource_ids):
 def unpublish_excluded_files(
     ids: list[int], etl_source: str, keys: list[str], *, dry_run: bool = False
 ):
-    """Unpublish excluded content files for a chunk of courses"""
+    """Unpublish excluded content files and date unreleased ones for some courses"""
     return unpublish_excluded_content_files(etl_source, ids, keys, dry_run=dry_run)
 
 

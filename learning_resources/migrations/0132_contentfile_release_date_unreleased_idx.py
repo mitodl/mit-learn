@@ -29,8 +29,8 @@ class Migration(migrations.Migration):
             database_operations=[
                 migrations.RunSQL(
                     [
-                        # An INVALID leftover from a failed CONCURRENTLY build
-                        # would satisfy IF NOT EXISTS silently — drop first.
+                        # A failed CONCURRENTLY build leaves an INVALID index
+                        # under this name, which would make CREATE fail.
                         f"DROP INDEX CONCURRENTLY IF EXISTS {INDEX_NAME}",
                         (
                             f"CREATE INDEX CONCURRENTLY {INDEX_NAME}"
