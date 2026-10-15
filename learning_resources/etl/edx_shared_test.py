@@ -1952,7 +1952,7 @@ def test_unpublish_excluded_content_files_malformed_archive(
 ):
     """A malformed archive is skipped without touching its content files"""
     mocker.patch(
-        "learning_resources.etl.edx_shared.excluded_olx_paths",
+        "learning_resources.etl.olx.OlxArchive.excluded_keys",
         side_effect=ElementTree.ParseError("bad"),
     )
     ContentFileFactory.create(
@@ -2033,7 +2033,7 @@ def test_unpublish_excluded_content_files_skips_runs_without_content_files(
     staff_only_run, mock_deindex_tasks, mocker
 ):
     """A run with no content files is skipped before its archive is downloaded"""
-    excluded = mocker.patch("learning_resources.etl.edx_shared.excluded_olx_paths")
+    archive = mocker.patch("learning_resources.etl.edx_shared.OlxArchive")
 
     assert (
         unpublish_excluded_content_files(
@@ -2041,7 +2041,7 @@ def test_unpublish_excluded_content_files_skips_runs_without_content_files(
         )
         == []
     )
-    excluded.assert_not_called()
+    archive.assert_not_called()
 
 
 def test_unpublish_excluded_content_files_dry_run(staff_only_run, mock_deindex_tasks):
