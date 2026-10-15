@@ -1,9 +1,9 @@
 import React from "react"
+import { CourseWithCourseRunsSerializerV2 } from "@mitodl/mitxonline-api-axios/v2"
 import {
   BaseCourseRun,
-  CourseWithCourseRunsSerializerV2,
   V3UserProgramEnrollment,
-} from "@mitodl/mitxonline-api-axios/v2"
+} from "@mitodl/mitxonline-api-axios/v3"
 import { LoadingSpinner, Stack } from "ol-components"
 import {
   CardRoot,

@@ -6,7 +6,7 @@ import * as mitxonline from "api/mitxonline-test-utils"
 import { useProgramDashboardData } from "./useProgramDashboardData"
 import { buildProgramScenario } from "../test-utils"
 import type { V2ProgramDetail } from "@mitodl/mitxonline-api-axios/v2"
-import { LanguageEnum } from "@mitodl/mitxonline-api-axios/v2"
+import { LanguageEnum } from "@mitodl/mitxonline-api-axios/v0"
 
 const makeProgramEnrollment = (
   program: V2ProgramDetail,

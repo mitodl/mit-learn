@@ -7,6 +7,7 @@ from datetime import UTC, datetime
 from urllib.parse import parse_qs, urlparse
 
 import pytest
+from responses import matchers as responses_matchers
 
 from learning_resources.constants import (
     CURRENCY_USD,
@@ -19,6 +20,9 @@ from learning_resources.constants import (
 )
 from learning_resources.etl.constants import ETLSource
 from learning_resources.etl.mitxonline import (
+    CMS_COURSE_PAGE_TYPE,
+    CMS_PAGE_KEY,
+    CMS_PROGRAM_PAGE_TYPE,
     OFFERED_BY,
     _fetch_courses_by_ids,
     _fetch_data,
@@ -29,11 +33,13 @@ from learning_resources.etl.mitxonline import (
     _transform_run,
     extract_courses,
     extract_programs,
+    fetch_cms_pages,
     get_child_positions,
     get_course_ids_from_req_tree,
     get_program_ids_from_req_tree,
     is_fully_enrollable,
     parse_certificate_type,
+    parse_full_description,
     parse_page_attribute,
     parse_prices,
     transform_courses,
@@ -133,10 +139,67 @@ def mock_fetch_courses_by_ids(mocker, courses):
     )
 
 
-@pytest.mark.usefixtures("mocked_mitxonline_programs_responses")
-def test_mitxonline_extract_programs(mock_mitxonline_programs_data):
+CMS_PAGES_URL = "https://mitxonline.example.test/api/v2/pages/"
+
+
+def _cms_page(readable_id, page_type=CMS_COURSE_PAGE_TYPE, **fields):
+    """Build a Wagtail product page as returned by the MITx Online pages API"""
+    details_key = (
+        "program_details" if page_type == CMS_PROGRAM_PAGE_TYPE else "course_details"
+    )
+    return {
+        "about": "",
+        "what_you_learn": "",
+        "prerequisites": "",
+        "faqs": [],
+        details_key: {"readable_id": readable_id},
+        **fields,
+    }
+
+
+def _mock_cms_pages(mocked_responses, settings, page_type, pages, page_size=20):
+    """Register paginated pages API responses for a page type"""
+    settings.MITX_ONLINE_BASE_URL = "https://mitxonline.example.test/"
+    for offset in range(0, max(len(pages), 1), page_size):
+        mocked_responses.add(
+            mocked_responses.GET,
+            CMS_PAGES_URL,
+            match=[
+                responses_matchers.query_param_matcher(
+                    {
+                        "fields": "*",
+                        "type": page_type,
+                        "limit": "20",
+                        "offset": str(offset),
+                    }
+                )
+            ],
+            json={
+                "meta": {"total_count": len(pages)},
+                "items": pages[offset : offset + page_size],
+            },
+        )
+
+
+def test_mitxonline_extract_programs(
+    mocked_mitxonline_programs_responses, mock_mitxonline_programs_data, settings
+):
     """Verify that the extraction function calls the mitxonline programs API and returns the responses"""
-    assert extract_programs() == mock_mitxonline_programs_data["results"]
+    program = mock_mitxonline_programs_data["results"][0]
+    page = _cms_page(
+        program["readable_id"], CMS_PROGRAM_PAGE_TYPE, about="<p>About</p>"
+    )
+    _mock_cms_pages(
+        mocked_mitxonline_programs_responses,
+        settings,
+        CMS_PROGRAM_PAGE_TYPE,
+        [page],
+    )
+    expected = [
+        {**item, CMS_PAGE_KEY: page if item is program else None}
+        for item in mock_mitxonline_programs_data["results"]
+    ]
+    assert extract_programs() == expected
 
 
 def test_mitxonline_extract_programs_disabled(settings):
@@ -145,10 +208,101 @@ def test_mitxonline_extract_programs_disabled(settings):
     assert extract_programs() == []
 
 
-@pytest.mark.usefixtures("mocked_mitxonline_courses_responses")
-def test_mitxonline_extract_courses(mock_mitxonline_courses_data):
+def test_mitxonline_extract_courses(
+    mocked_mitxonline_courses_responses, mock_mitxonline_courses_data, settings
+):
     """Verify that the extraction function calls the mitxonline courses API and returns the responses"""
-    assert extract_courses() == mock_mitxonline_courses_data["results"]
+    course = mock_mitxonline_courses_data["results"][0]
+    page = _cms_page(course["readable_id"], about="<p>About</p>")
+    _mock_cms_pages(
+        mocked_mitxonline_courses_responses,
+        settings,
+        CMS_COURSE_PAGE_TYPE,
+        [page],
+    )
+    expected = [
+        {**item, CMS_PAGE_KEY: page if item is course else None}
+        for item in mock_mitxonline_courses_data["results"]
+    ]
+    assert extract_courses() == expected
+
+
+def test_fetch_cms_pages_paginates(mocked_responses, settings):
+    """All pages are fetched 20 at a time and keyed by readable_id"""
+    pages = [_cms_page(f"course-v1:MITx+{i}") for i in range(45)]
+    _mock_cms_pages(mocked_responses, settings, CMS_COURSE_PAGE_TYPE, pages)
+
+    result = fetch_cms_pages(CMS_COURSE_PAGE_TYPE)
+
+    assert result == {page["course_details"]["readable_id"]: page for page in pages}
+    assert len(mocked_responses.calls) == 3
+
+
+def test_fetch_cms_pages_failure(mocked_responses, settings):
+    """A failed fetch returns no pages rather than raising"""
+    settings.MITX_ONLINE_BASE_URL = "https://mitxonline.example.test/"
+    mocked_responses.add(mocked_responses.GET, CMS_PAGES_URL, status=500)
+
+    assert fetch_cms_pages(CMS_PROGRAM_PAGE_TYPE) == {}
+
+
+def test_fetch_cms_pages_no_base_url(settings):
+    """Without a base url there is nothing to fetch"""
+    settings.MITX_ONLINE_BASE_URL = None
+    assert fetch_cms_pages(CMS_COURSE_PAGE_TYPE) == {}
+
+
+def test_parse_full_description():
+    """The product page sections are combined into markdown"""
+    page = _cms_page(
+        "course-v1:MITx+1",
+        about='<p>About text <img src="x.png" alt=""></p>',
+        what_you_learn="<ul><li>Regression</li></ul>",
+        prerequisites="",
+        faqs=[
+            {"question": "Is it free?", "answer": "<p>Auditing is free.</p>"},
+            {"question": "", "answer": "<p>dropped</p>"},
+        ],
+    )
+
+    full_description = parse_full_description({CMS_PAGE_KEY: page})
+
+    assert full_description.startswith("## About\n\nAbout text")
+    assert "## What you'll learn" in full_description
+    assert "Regression" in full_description
+    assert "Prerequisites" not in full_description
+    assert "### Is it free?\n\nAuditing is free." in full_description
+    assert "dropped" not in full_description
+    assert "x.png" not in full_description
+
+
+@pytest.mark.parametrize(
+    ("cms_page", "expected"),
+    [
+        ({"about": "<p>More details</p>"}, "## About\n\nMore details"),
+        ({}, None),
+    ],
+)
+def test_transform_course_full_description(
+    mock_mitxonline_courses_data, cms_page, expected
+):
+    """full_description comes from the product page when one was fetched"""
+    course = {
+        **mock_mitxonline_courses_data["results"][0],
+        CMS_PAGE_KEY: _cms_page("x", **cms_page),
+    }
+    assert transform_courses([course])[0]["full_description"] == expected
+
+
+def test_transform_without_cms_page_omits_full_description(
+    mock_mitxonline_courses_data,
+):
+    """
+    Without a fetched product page the key is left out, so loading keeps the
+    stored value (e.g. courses nested in a program)
+    """
+    course = mock_mitxonline_courses_data["results"][0]
+    assert "full_description" not in transform_courses([course])[0]
 
 
 def test_mitxonline_extract_courses_disabled(settings):

@@ -14,7 +14,7 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
     --mount=type=cache,target=/var/lib/apt,sharing=locked \
     apt-get update && \
     apt-get install -y --no-install-recommends \
-      libcairo2-dev \
+      libcairo2 \
       poppler-utils \
       default-jre \
       chromium \
@@ -23,6 +23,9 @@ RUN --mount=type=cache,target=/var/cache/apt,sharing=locked \
 FROM base AS deps
 
 # Trusted certs (org PKI + local-dev mkcert root injected at deploy time).
+# COPY --chmod also applies to directories it creates; make them first so
+# /usr/local/share stays traversable (perl, pg_config need it).
+RUN mkdir -p /usr/local/share/ca-certificates
 COPY --chmod=644 certs/ /usr/local/share/ca-certificates/
 RUN update-ca-certificates
 

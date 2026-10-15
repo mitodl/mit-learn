@@ -1,5 +1,5 @@
 import { queryOptions } from "@tanstack/react-query"
-import type { CheckoutPayload } from "@mitodl/mitxonline-api-axios/v2"
+import type { CheckoutPayload } from "@mitodl/mitxonline-api-axios/v0"
 
 import { basketsApi } from "../../clients"
 
