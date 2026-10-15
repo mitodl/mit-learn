@@ -318,7 +318,10 @@ const ProgressGrid: React.FC<ProgressGridProps> = ({
   const learners = useMemo(
     () =>
       (query.data?.data ?? []).map((learner) => ({
-        learner,
+        learner: {
+          ...learner,
+          full_name: learner.full_name?.trim() || null,
+        },
         enrollments: new Map(
           learner.enrollments.map((enrollment) => [
             enrollment.courserun_readable_id,
