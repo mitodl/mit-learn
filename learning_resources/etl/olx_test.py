@@ -1053,6 +1053,8 @@ def test_olx_archive_partial_names_are_not_references(tmp_path, reference, kept)
     [
         # a longer name is a different file
         ('<a href="/static/notes.pdf.txt">n</a>', "notes.pdf", False),
+        # _ alone is no break at the end either, as with final_exam.srt
+        ('<a href="/static/notes.pdf_old">n</a>', "notes.pdf", False),
         ('<a href="/static/notes.pdf?v=1#p2">n</a>', "notes.pdf", True),
         # a sentence's final period does not lengthen the name
         ("<p>Read notes.pdf.</p>", "notes.pdf", True),
@@ -1086,7 +1088,7 @@ def test_olx_archive_separator_is_part_of_the_name(tmp_path, link, kept, dropped
 
 
 def test_olx_archive_name_at_start_of_source(tmp_path):
-    """A name at the very start of a source starts a name there, leading _ or not"""
+    """A name at the very start of a source matches, even one starting with _"""
     olx = _reference_olx(tmp_path, "_notes.pdf", **{"_notes.pdf": "pdf"})
     assert "static/_notes.pdf" in _ingested(olx)
 

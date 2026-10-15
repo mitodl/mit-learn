@@ -43,10 +43,10 @@ LEGACY_TRANSCRIPT_RE = re.compile(
     r"^(?:[a-z]{2}(?:[-_][a-z]{2})?_)?subs_(.+)\.srt\.sjson$", re.IGNORECASE
 )
 
-# edX writes a space, +, @ or other punctuation in an asset name as _, so a run
-# of them compares equal to one _. A run with anything but _ in it is also
-# where a name can start or end; _ alone is not, so final_exam.srt !=
-# exam.srt.
+# edX writes any character in an asset name but a letter, digit, ., - or % as
+# _, so a run of them, or of _, compares equal to one _. A run with anything
+# but _ in it is also where a name can start or end; _ alone is not, so
+# final_exam.srt != exam.srt.
 SEPARATORS = re.compile(r"(?:[^\w.\-]|_)+")
 # _NameIndex looks names up by this many leading characters
 NAME_PREFIX_LENGTH = 4
@@ -174,12 +174,15 @@ def _parse_olx_start(value: str | None) -> datetime | None:
 
 
 def _normalize_asset_ref(text: str) -> str:
-    """Spell a filename the way any reference to it normalizes"""
+    """Unescape and lowercase a filename, with each separator run as one _"""
     return SEPARATORS.sub("_", unquote(html.unescape(text)).lower()).strip("_")
 
 
 def _reference_index(texts: list[str]) -> tuple[str, list[int]]:
-    """Return normalized text and the offsets where a name can start"""
+    """
+    Return normalized text and the offsets where a name can start; a name
+    can end at the _ just before one
+    """
     parts, starts, length = [], [0], 0
     for raw in texts:
         # newlines mark both ends of each text as places a name can start or end
