@@ -187,6 +187,7 @@ const ChannelSearch: React.FC<ChannelSearchProps> = ({
                   setParamValue={setParamValue}
                   toggleParamValue={toggleParamValue}
                   aggregations={aggregations}
+                  resourceTypeGroup={resourceTypeGroup}
                 />
               )
             : undefined

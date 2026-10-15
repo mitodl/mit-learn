@@ -4,7 +4,7 @@ import { Checkbox } from "@mitodl/smoot-design"
 import type { UseResourceSearchParamsResult } from "@mitodl/course-search-utils"
 import { SearchField } from "@/page-components/SearchField/SearchField"
 import { getCertificationTypeName } from "@mitodl/course-search-utils"
-import { CertificationTypeEnum, DeliveryEnum } from "api"
+import { CertificationTypeEnum, DeliveryEnum, ResourceTypeGroupEnum } from "api"
 import type { LearningResourcesSearchResponse } from "api"
 
 type Aggregations = LearningResourcesSearchResponse["metadata"]["aggregations"]
@@ -254,6 +254,18 @@ const CERTIFICATION_VALUES = Object.values(CertificationTypeEnum)
 const certificationLabel = (value: string) =>
   getCertificationTypeName(value) || value
 
+/**
+ * Resource Category's values, which unlike the other two facets' are not a
+ * fixed set: there is no enum of them, so what the search came back with is
+ * the list. A value the reader has already ticked is added back, because a
+ * search it narrows to nothing returns no bucket for it, and this menu is the
+ * only place it can be unticked.
+ */
+const resourceCategoryValues = (
+  counts: Record<string, number>,
+  selected: string[],
+) => [...new Set([...Object.keys(counts), ...selected])]
+
 type TopicSearchFilterBarProps = {
   currentText: string
   setCurrentText: (text: string) => void
@@ -264,6 +276,14 @@ type TopicSearchFilterBarProps = {
   toggleParamValue: UseResourceSearchParamsResult["toggleParamValue"]
   /** Counts from the current search, shown beside each option. */
   aggregations: Aggregations
+  /**
+   * The resource type group the tabs have narrowed to, which decides whether
+   * Resource Category is one of the controls: it sorts learning materials
+   * into videos, podcasts and the rest, and says nothing about a course or a
+   * programme. `getFacetManifest` admits the facet on the same condition, so
+   * the bar and the drawer offer it over exactly the same results.
+   */
+  resourceTypeGroup: string | null
 }
 
 const TopicSearchFilterBar: React.FC<TopicSearchFilterBarProps> = ({
@@ -275,11 +295,16 @@ const TopicSearchFilterBar: React.FC<TopicSearchFilterBarProps> = ({
   setParamValue,
   toggleParamValue,
   aggregations,
+  resourceTypeGroup,
 }) => {
   const delivery = params.delivery ?? []
   const certification = params.certification_type ?? []
+  const resourceCategory = params.resource_category ?? []
   /* `free` is a boolean facet rather than a list of values. */
   const isFree = !!params.free
+  const resourceCategoryCounts = countsFor(aggregations, "resource_category")
+  const showResourceCategory =
+    resourceTypeGroup === ResourceTypeGroupEnum.LearningMaterial
   return (
     <Card data-testid="topic-search-filter-bar">
       <StyledSearchField
@@ -332,6 +357,36 @@ const TopicSearchFilterBar: React.FC<TopicSearchFilterBarProps> = ({
             setPage(1)
           }}
         />
+        {showResourceCategory ? (
+          <>
+            <Divider />
+            <FacetSelect
+              size="small"
+              name="resource_category"
+              aria-label="Resource Category"
+              value={resourceCategory}
+              multiple
+              renderValue={() => "Resource Category"}
+              MenuProps={FACET_MENU_PROPS}
+              options={facetOptions(
+                resourceCategoryValues(
+                  resourceCategoryCounts,
+                  resourceCategory,
+                ),
+                (value) => value,
+                resourceCategory,
+                resourceCategoryCounts,
+              )}
+              onChange={(event) => {
+                setParamValue(
+                  "resource_category",
+                  event.target.value as string[],
+                )
+                setPage(1)
+              }}
+            />
+          </>
+        ) : null}
         <Divider />
         <FreeCheckbox
           label="Free"
