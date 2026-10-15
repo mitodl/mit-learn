@@ -48,7 +48,7 @@ from learning_resources_search.serializers import (
     serialize_bulk_content_files,
     serialize_bulk_learning_resources,
 )
-from main.utils import checksum_for_content
+from main.utils import checksum_for_content, now_in_utc
 from vector_search.constants import (
     COMPLETENESS_PAYLOAD_KEY,
     CONTENT_FILES_COLLECTION_NAME,
@@ -4528,7 +4528,7 @@ def test_async_content_file_chunks_for_resource_no_published_run(mocker):
 
 
 def _course_with_content_files(**kwargs):
-    """Create a course with files on published, variant and unpublished runs, plus direct and withdrawn files"""
+    """Create a course with files on published, variant and unpublished runs, plus direct, withdrawn and unreleased files"""
     course = LearningResourceFactory.create(is_course=True, create_runs=False, **kwargs)
     runs = [
         LearningResourceRunFactory.create(learning_resource=course, published=True),
@@ -4540,11 +4540,14 @@ def _course_with_content_files(**kwargs):
     files = {ContentFileFactory.create(run=run, published=True) for run in runs}
     files.add(ContentFileFactory.create(learning_resource=course, published=True))
     ContentFileFactory.create(run=runs[0], published=False)
+    ContentFileFactory.create(
+        run=runs[0], published=True, release_date=now_in_utc() + timedelta(days=1)
+    )
     return course, files
 
 
 def test_qdrant_content_files_every_run():
-    """Qdrant gets published files of every run, published or not, plus direct files"""
+    """Qdrant gets visible files of every run, published or not, plus direct files; withdrawn and unreleased ones are left out"""
     course, files = _course_with_content_files()
 
     selected = vs_utils.qdrant_content_files(

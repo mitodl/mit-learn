@@ -1,6 +1,8 @@
 """Tests for learning_resources.models"""
 
+import re
 from datetime import UTC, datetime, timedelta
+from pathlib import Path
 
 import pytest
 from django.db import IntegrityError, transaction
@@ -11,6 +13,7 @@ from learning_resources.constants import (
     LearningResourceType,
 )
 from learning_resources.factories import (
+    ContentFileFactory,
     CourseFactory,
     LearningPathFactory,
     LearningResourceFactory,
@@ -24,6 +27,7 @@ from learning_resources.models import (
     CredentialMetadata,
     LearningResource,
 )
+from main.utils import now_in_utc
 
 pytestmark = [pytest.mark.django_db]
 
@@ -198,6 +202,74 @@ def test_content_file_null_key_unique():
         ContentFile.objects.create(run=run, key=None)
 
 
+def test_content_file_visible_and_hidden_are_complements():
+    """visible() and hidden() partition every row, with no overlap"""
+    now = now_in_utc()
+    past = now - timedelta(days=1)
+    future = now + timedelta(days=1)
+    run = LearningResourceRunFactory.create()
+
+    undated_published = ContentFileFactory.create(
+        run=run, published=True, release_date=None
+    )
+    past_published = ContentFileFactory.create(
+        run=run, published=True, release_date=past
+    )
+    exactly_now_published = ContentFileFactory.create(
+        run=run, published=True, release_date=now
+    )
+    future_published = ContentFileFactory.create(
+        run=run, published=True, release_date=future
+    )
+    past_unpublished = ContentFileFactory.create(
+        run=run, published=False, release_date=past
+    )
+
+    visible_ids = set(ContentFile.objects.visible(now=now).values_list("id", flat=True))
+    hidden_ids = set(ContentFile.objects.hidden(now=now).values_list("id", flat=True))
+    all_ids = {
+        undated_published.id,
+        past_published.id,
+        exactly_now_published.id,
+        future_published.id,
+        past_unpublished.id,
+    }
+
+    assert visible_ids == {
+        undated_published.id,
+        past_published.id,
+        exactly_now_published.id,
+    }
+    assert hidden_ids == {future_published.id, past_unpublished.id}
+    # the two predicates partition every row: no overlap, nothing left over
+    assert visible_ids & hidden_ids == set()
+    assert visible_ids | hidden_ids == all_ids
+
+
+def test_content_file_visible_hidden_default_now():
+    """Omitting now uses now_in_utc(), matching an explicit now"""
+    run = LearningResourceRunFactory.create()
+    ContentFileFactory.create(
+        run=run, published=True, release_date=now_in_utc() + timedelta(days=1)
+    )
+
+    assert list(run.content_files.visible()) == []
+    assert run.content_files.hidden().count() == 1
+
+
+def test_content_file_visible_on_related_manager():
+    """visible()/hidden() work through the run's related manager"""
+    run = LearningResourceRunFactory.create()
+    other_run = LearningResourceRunFactory.create()
+    visible_file = ContentFileFactory.create(run=run, published=True)
+    ContentFileFactory.create(
+        run=run, published=True, release_date=now_in_utc() + timedelta(days=1)
+    )
+    ContentFileFactory.create(run=other_run, published=True)
+
+    assert list(run.content_files.visible()) == [visible_file]
+
+
 def test_credential_metadata_round_trip():
     """A stored description and criteria list read back unchanged"""
     resource = LearningResourceFactory.create(is_course=True)
@@ -213,13 +285,7 @@ def test_credential_metadata_round_trip():
 
 
 def test_credential_metadata_long_criteria():
-    """
-    A criteria bullet longer than any varchar is stored whole.
-
-    criteria is a text[] rather than the varchar(N)[] every other ArrayField
-    in the module uses: nothing on the generation path truncates a bullet, so
-    a length limit would surface as a DataError mid-sweep.
-    """
+    """A criteria bullet longer than any varchar is stored whole"""
     resource = LearningResourceFactory.create(is_course=True)
     bullet = "Demonstrated " + ("a very specific skill " * 500)
 
@@ -241,3 +307,65 @@ def test_credential_metadata_deleted_with_its_resource():
     resource.delete()
 
     assert not CredentialMetadata.objects.exists()
+
+
+# Content file visibility is derived: published AND released. A reader that
+# filters content files on `published` alone shows unreleased rows, and no
+# runtime seam catches a new such reader, so this test scans the source for
+# them. Each allowed site asks a non-visibility question or reads rows OLX
+# never dates; a key is a whitespace-free prefix of the queryset expression.
+CONTENT_FILE_PUBLISHED_READERS = {
+    # OCW learning materials: OCW files have no release date
+    "learning_resources/tasks.py: content_files.filter(published=True).values_list",
+    # marketing pages attached directly to a resource: never dated
+    "learning_resources/tasks.py: ContentFile.objects.filter(file_type=MARKETING",
+    "learning_resources/credentials.py: ContentFile.objects.filter(learning_resource=",
+    "learning_resources/utils.py: ContentFile.objects.filter(learning_resource_id__in=all_course_ids",
+    # "did this archive ever produce rows", not visibility
+    "learning_resources/etl/edx_shared.py: content_files.filter(published=True).exists()",
+    "learning_resources/etl/canvas.py: content_files.filter(published=True).exists()",
+    # writers that flip published, and the soft-delete purge of published=False rows
+    "learning_resources/utils.py: resource_content_files.filter(published=True).update(",
+    "learning_resources/utils.py: ContentFile.objects.filter(learning_resource_id__in=resource_ids",
+    "learning_resources_search/indexing_api.py: content_files.filter(published=True).update(",
+    "learning_resources/tasks.py: ContentFile.objects.filter(published=False",
+    "learning_resources/tasks.py: ContentFile.objects.filter(id__in=chunk",
+}
+
+CONTENT_FILE_QUERY_RE = re.compile(
+    r"(?:ContentFile\.objects|\w*content_files)"
+    r"(?:\.\w+\((?:[^()]|\([^()]*\))*\))*?"
+    r"\.(?:filter|exclude)\((?:[^()]|\([^()]*\))*\bpublished\b"
+    r"(?:[^()]|\([^()]*\))*\)(?:\.\w+\((?:[^()]|\([^()]*\))*\))*"
+)
+
+
+def _query_key(rel: str, snippet: str) -> str:
+    """One-line, whitespace-collapsed prefix of a matched queryset expression"""
+    flat = re.sub(r"\s+", "", snippet)
+    return f"{rel}:{flat}"
+
+
+def test_content_file_readers_use_visible_not_published():
+    """Every content file query on `published` is an allowed non-visibility site"""
+    root = Path(__file__).resolve().parents[1]
+    offenders = []
+    allowed = {re.sub(r"\s+", "", key) for key in CONTENT_FILE_PUBLISHED_READERS}
+    for path in sorted(
+        p
+        for app in ("learning_resources", "learning_resources_search", "vector_search")
+        for p in (root / app).rglob("*.py")
+        if not p.name.endswith("_test.py") and "migrations" not in p.parts
+    ):
+        text = path.read_text()
+        rel = str(path.relative_to(root))
+        for match in CONTENT_FILE_QUERY_RE.finditer(text):
+            key = _query_key(rel, match.group(0))
+            if not any(key.startswith(prefix) for prefix in allowed):
+                line = text.count("\n", 0, match.start()) + 1
+                offenders.append(f"{rel}:{line}: {match.group(0).strip()}")
+    assert offenders == [], (
+        "Content file readers must use ContentFile.objects.visible()/hidden(); "
+        "add deliberate non-visibility sites to CONTENT_FILE_PUBLISHED_READERS:\n"
+        + "\n".join(offenders)
+    )

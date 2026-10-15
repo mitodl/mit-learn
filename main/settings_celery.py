@@ -2,6 +2,8 @@
 Django settings for celery.
 """
 
+from datetime import timedelta
+
 from celery.schedules import crontab
 from redbeat import RedBeatScheduler
 
@@ -14,6 +16,15 @@ will be a constant 60 minutes greater more than the schedule frequency
 """
 EMBEDDING_SCHEDULE_MINUTES = get_int(name="EMBEDDING_SCHEDULE_MINUTES", default=60)
 QDRANT_EMBEDDINGS_TASK_LOOKBACK_WINDOW = EMBEDDING_SCHEDULE_MINUTES + 60
+
+# Hourly released-content-files sweep. LOOKBACK is the fallback window when
+# there is no watermark yet (first run, or the durable cache row was cleared).
+# OVERLAP is subtracted from the watermark on every sweep: the run hook only
+# queues an indexing chain, so a release whose chain failed gets one more
+# sweep. Both must be at least the sweep interval; the sweep is idempotent, so
+# a wider window only costs a redundant reindex.
+RELEASED_CONTENT_FILES_LOOKBACK = timedelta(days=1)
+RELEASED_CONTENT_FILES_SWEEP_OVERLAP = timedelta(hours=1)
 
 DEV_ENV = get_bool("DEV_ENV", False)  # noqa: FBT003
 USE_CELERY = True
@@ -44,6 +55,10 @@ CELERY_BEAT_SCHEDULE = (
         "update_next-start-date-every-1-days": {
             "task": "learning_resources.tasks.update_next_start_date_and_prices",
             "schedule": crontab(minute=0, hour=7),  # 3:00am EST
+        },
+        "reindex-released-content-files-every-1-hours": {
+            "task": "learning_resources.tasks.reindex_released_content_files",
+            "schedule": crontab(minute=15),
         },
         "update_edx-courses-every-1-days": {
             "task": "learning_resources.tasks.get_mit_edx_data",
