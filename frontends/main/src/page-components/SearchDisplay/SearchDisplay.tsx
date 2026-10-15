@@ -77,12 +77,47 @@ const DesktopSortContainer = styled.div`
     display: none;
   }
 `
-const MobileSortContainer = styled.div`
-  float: right;
-  ${({ theme }) => theme.breakpoints.up("md")} {
-    display: none;
-  }
-`
+const MobileSortContainer = styled("div", {
+  shouldForwardProp: (prop) => prop !== "cards",
+})<{ cards: boolean }>(({ theme, cards }) => ({
+  float: "right",
+  [theme.breakpoints.up("md")]: {
+    display: "none",
+  },
+  /**
+   * The cards design's Sort box: 160x40 of white behind the same hairline
+   * the Filter button carries, its label at the card's own 12/16 rather
+   * than the size the shared select picks. It sits in the row rather than
+   * floating out of it, the row being a flex one there.
+   */
+  ...(cards
+    ? {
+        float: "none",
+        /* The hairline is the shared select's own, and already the
+             `silverGrayLight` the design asks for. */
+        ".MuiInputBase-root": {
+          width: "160px",
+          height: "40px",
+          borderRadius: "4px",
+          backgroundColor: theme.custom.colors.white,
+          ...theme.typography.body3,
+          color: theme.custom.colors.darkGray2,
+        },
+        /* 12px of the 160 either side of the label, and 4px between it and
+             a 16px chevron -- which is laid over the field rather than in it,
+             so the right padding has to clear it. */
+        ".MuiSelect-select": {
+          padding: "8px 32px 8px 12px",
+        },
+        ".MuiSelect-icon": {
+          width: "16px",
+          height: "16px",
+          fontSize: "16px",
+          right: "12px",
+        },
+      }
+    : {}),
+}))
 
 const SearchModeDropdownContainer = styled.div`
   margin-top: 10px;
@@ -521,19 +556,69 @@ const TopicTabsRow = styled.div<{ dividesFilters: boolean }>(
   }),
 )
 
-const MobileFilter = styled.div`
-  ${({ theme }) => theme.breakpoints.up("md")} {
-    display: none;
-  }
+const MobileFilter = styled("div", {
+  shouldForwardProp: (prop) => prop !== "cards",
+})<{ cards: boolean }>(({ theme, cards }) => ({
+  [theme.breakpoints.up("md")]: {
+    display: "none",
+  },
+  color: theme.custom.colors.darkGray2,
+  marginTop: "20px",
+  marginBottom: "16px",
+  /**
+   * The cards design puts Filter and Sort on one row, a control at either
+   * end. The other layouts float Sort to the right of the same block, which
+   * is the same picture by other means -- changed only where the design
+   * states it, since the two controls are drawn differently there too.
+   */
+  ...(cards
+    ? {
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        marginTop: 0,
+      }
+    : {}),
+}))
 
-  color: ${({ theme }) => theme.custom.colors.darkGray2};
-  margin-top: 20px;
-  margin-bottom: 16px;
-`
-const FilterButton = styled(Button)({
-  marginLeft: "-8px",
-  minWidth: 0,
-})
+/**
+ * The button that opens the filter drawer.
+ *
+ * The cards design draws it as a bordered control to match the Sort box
+ * across the row from it -- 40px tall, its label beside a 20px glyph -- where
+ * the other layouts draw it as a bare label. `bordered` is the shared variant
+ * for that: white on a `silverGrayLight` hairline, which is what the design
+ * specifies. Only its label is a shade off, the design setting it in
+ * `darkGray1` where the variant leaves it `silverGrayDark`.
+ */
+const FilterButton = styled(Button, {
+  shouldForwardProp: (prop) => prop !== "cards",
+})<{ cards: boolean }>(({ theme, cards }) =>
+  cards
+    ? {
+        minWidth: 0,
+        height: "40px",
+        padding: "0 16px",
+        borderRadius: "4px",
+        gap: "8px",
+        color: theme.custom.colors.darkGray1,
+        /* The icon slot is sized for the 16px glyph this button's size would
+           otherwise carry, and nudged by margins the 8px gap above replaces. */
+        "> span": {
+          width: "20px",
+          height: "20px",
+          margin: 0,
+        },
+        svg: {
+          width: "20px",
+          height: "20px",
+        },
+      }
+    : {
+        marginLeft: "-8px",
+        minWidth: 0,
+      },
+)
 
 const StyledDrawer = styled(Drawer)`
   .MuiPaper-root {
@@ -1298,10 +1383,11 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
               onDismissed={focusResultsHeading}
             />
             <ResourceTypeGroupTabs.TabPanels tabs={tabs}>
-              <MobileFilter>
+              <MobileFilter cards={resultsLayout === "cards"}>
                 <FilterButton
-                  size="small"
-                  variant="text"
+                  cards={resultsLayout === "cards"}
+                  size={resultsLayout === "cards" ? "medium" : "small"}
+                  variant={resultsLayout === "cards" ? "bordered" : "text"}
                   startIcon={<RiEqualizerLine />}
                   onClick={toggleMobileDrawer(true)}
                 >
@@ -1356,7 +1442,9 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
                   ) : null}
                   {filterContents}
                 </StyledDrawer>
-                <MobileSortContainer>{sortDropdown}</MobileSortContainer>
+                <MobileSortContainer cards={resultsLayout === "cards"}>
+                  {sortDropdown}
+                </MobileSortContainer>
               </MobileFilter>
               <StyledResultsContainer fetching={isFetching} inert={isFetching}>
                 <div ref={scrollHook} />
