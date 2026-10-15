@@ -106,6 +106,7 @@ const SERVER_KEYED_PARAMS = [
   "account_action",
   "account_action_status",
   "is_new_user",
+  "view",
 ] as const
 
 type ServerSearchParam = (typeof SERVER_KEYED_PARAMS)[number]

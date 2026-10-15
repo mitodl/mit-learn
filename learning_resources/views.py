@@ -34,7 +34,6 @@ from channels.constants import ChannelType
 from channels.models import Channel
 from learning_resources import permissions
 from learning_resources.constants import (
-    CONTENT_FILE_LARGE_FIELDS,
     CREDENTIAL_METADATA_RESOURCE_TYPES,
     GROUP_CONTENT_FILE_CONTENT_VIEWERS,
     LearningResourceRelationTypes,
@@ -1086,11 +1085,7 @@ class ContentFileViewSet(viewsets.ReadOnlyModelViewSet):
     )
     filter_backends = [MultipleOptionsFilterBackend]
     filterset_class = ContentFileFilter
-    # Derived from CONTENT_FILE_LARGE_FIELDS (rather than listing "content"
-    # alone) so summary/flashcards -- LLM-derived from the same gated content,
-    # and just as sensitive -- can't silently fall out of this gate again the
-    # next time a field is added there.
-    private_fields = list(CONTENT_FILE_LARGE_FIELDS)
+    private_fields = ["content"]
 
     def get_serializer(self, *args, **kwargs):
         """
