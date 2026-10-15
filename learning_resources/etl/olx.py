@@ -43,10 +43,10 @@ LEGACY_TRANSCRIPT_RE = re.compile(
     r"^(?:[a-z]{2}(?:[-_][a-z]{2})?_)?subs_(.+)\.srt\.sjson$", re.IGNORECASE
 )
 
-# A reference spells an asset name with edX's punctuation substitutions (a
-# space, +, or @ written as _) or without them, so punctuation is stripped
-# before comparing, but still marks where a name can start and end.
-NAME_BREAK = "\x00"
+# edX writes a space, +, @ or other punctuation in an asset name as _, so a run
+# of them compares equal to one _. A run with anything but _ in it is also
+# where a name can start or end; _ alone is not, so final_exam.srt !=
+# exam.srt.
 SEPARATORS = re.compile(r"(?:[^\w.\-]|_)+")
 # _NameIndex looks names up by this many leading characters
 NAME_PREFIX_LENGTH = 4
@@ -174,26 +174,36 @@ def _parse_olx_start(value: str | None) -> datetime | None:
 
 
 def _normalize_asset_ref(text: str) -> str:
-    """Strip the punctuation of a filename that a reference may spell differently"""
-    return SEPARATORS.sub("", unquote(html.unescape(text)).lower())
+    """Spell a filename the way any reference to it normalizes"""
+    return SEPARATORS.sub("_", unquote(html.unescape(text)).lower()).strip("_")
 
 
 def _reference_index(texts: list[str]) -> tuple[str, list[int]]:
-    """Return normalized text and the offsets where a name can start; _ is no break"""
-    stripped = NAME_BREAK.join(
-        SEPARATORS.sub(
-            NAME_BREAK, unquote(html.unescape(text)).lower().replace("_", "")
-        )
-        for text in texts
-    )
-    segments = stripped.split(NAME_BREAK)
-    return "".join(segments), list(accumulate(map(len, segments), initial=0))
+    """Return normalized text and the offsets where a name can start"""
+    parts, starts, length = [], [0], 0
+    for raw in texts:
+        text = unquote(html.unescape(raw)).lower()
+        last = 0
+        # the trailing newline closes the last name and starts the next text's
+        for separator in SEPARATORS.finditer(f"{text}\n"):
+            parts.append(text[last : separator.start()] + "_")
+            length += len(parts[-1])
+            if separator.group().strip("_"):
+                starts.append(length)
+            last = separator.end()
+    return "".join(parts), starts
 
 
 def _ends_at(blob: str, starts: list[int], end: int) -> bool:
-    """Whether a name ending at end is followed by a break, or a sentence's period"""
-    index = bisect_left(starts, end)
-    return index < len(starts) and not blob[end : starts[index]].strip(".")
+    """
+    Whether a name ending at end is followed by a break, after any periods
+    that end a sentence; each break is the _ just before a start
+    """
+    index = bisect_left(starts, end + 1)
+    if index == len(starts):
+        return False
+    gap = blob[end : starts[index]]
+    return gap.endswith("_") and not gap[:-1].strip(".")
 
 
 class _NameIndex:
