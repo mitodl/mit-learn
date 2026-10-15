@@ -139,7 +139,6 @@ export const CONTRACT_LEARNERS_STATUSES = [
 ] as const
 export type ContractLearnersStatus = (typeof CONTRACT_LEARNERS_STATUSES)[number]
 export type ContractLearnersFilters = {
-  q?: string
   status?: ContractLearnersStatus
   /** A course run's readable id. */
   module?: string
@@ -153,7 +152,6 @@ export const contractLearnersView = (
 ) => {
   const path = generatePath(CONTRACT_LEARNERS_VIEW, { orgSlug, contractSlug })
   const params = new URLSearchParams()
-  if (filters.q) params.set("q", filters.q)
   if (filters.status) params.set("status", filters.status)
   if (filters.module) params.set("module", filters.module)
   if (filters.needsAttention) params.set("needs_attention", "true")

@@ -31,8 +31,6 @@ const mockedUseFeatureFlagEnabled = jest.mocked(useFeatureFlagEnabled)
 
 const ORG_UUID = "11111111-2222-3333-4444-555555555555"
 const PAGE_SIZE = 25
-/** Past the page's 300ms search debounce. */
-const SEARCH_WAIT_MS = 400
 
 /** managerOrganizationsList reads `res.data.results`, so a bare array is not enough. */
 const paginate = (orgs: unknown[]) => ({
@@ -1435,39 +1433,36 @@ describe("ContractLearnersPage", () => {
 
     /** The learner count is contract-wide, so it cannot describe narrower rows. */
     test("leaves the learner count out once another filter narrows the rows", async () => {
-      renderAt({ q: "ada", needsAttention: true }, (contractId) => {
-        mockNeedsAttention(contractId, 2)
-        mockList(
-          contractId,
-          [analyticsFactories.learnerProgress({ full_name: "Ada Stale" })],
-          { search: "ada", needs_attention: true },
-          { total_count: 1 },
-        )
-      })
+      renderAt(
+        { status: "in_progress", needsAttention: true },
+        (contractId) => {
+          mockNeedsAttention(contractId, 2)
+          mockList(
+            contractId,
+            [analyticsFactories.learnerProgress({ full_name: "Ada Stale" })],
+            { completion_status: ["in_progress"], needs_attention: true },
+            { total_count: 1 },
+          )
+        },
+      )
 
       await screen.findByText("Ada Stale")
       expect(await screen.findByText("1 of 60 enrollments")).toBeInTheDocument()
     })
 
     test("opens with the filters a link carries", async () => {
-      renderAt(
-        { q: "ada", status: "in_progress", needsAttention: true },
-        (contractId) =>
-          mockList(
-            contractId,
-            [analyticsFactories.learnerProgress({ full_name: "Ada Stale" })],
-            {
-              search: "ada",
-              completion_status: ["in_progress"],
-              needs_attention: true,
-            },
-          ),
+      renderAt({ status: "in_progress", needsAttention: true }, (contractId) =>
+        mockList(
+          contractId,
+          [analyticsFactories.learnerProgress({ full_name: "Ada Stale" })],
+          {
+            completion_status: ["in_progress"],
+            needs_attention: true,
+          },
+        ),
       )
 
       await screen.findByText("Ada Stale")
-      expect(screen.getByPlaceholderText("Search name or email")).toHaveValue(
-        "ada",
-      )
       expect(
         screen.getByRole("combobox", { name: /status/i }),
       ).toHaveTextContent("In progress")
@@ -1636,7 +1631,7 @@ describe("ContractLearnersPage", () => {
       )
     })
 
-    test("writes the search to the URL once typing settles", async () => {
+    test("keeps the search text out of the URL", async () => {
       const { location } = renderAt({}, (contractId) => {
         mockList(contractId, [
           analyticsFactories.learnerProgress({ full_name: "Everyone" }),
@@ -1654,34 +1649,7 @@ describe("ContractLearnersPage", () => {
         "ada",
       )
       await screen.findByText("Ada")
-      expect(location.current.searchParams.get("q")).toBe("ada")
-    })
-
-    test("follows a search change made outside the input", async () => {
-      const { location } = renderAt({ q: "ada" }, (contractId) => {
-        mockList(
-          contractId,
-          [analyticsFactories.learnerProgress({ full_name: "Ada" })],
-          { search: "ada" },
-        )
-        mockList(contractId, [
-          analyticsFactories.learnerProgress({ full_name: "Everyone" }),
-        ])
-      })
-
-      await screen.findByText("Ada")
-      act(() => {
-        window.history.replaceState(null, "", location.current.pathname)
-      })
-
-      await screen.findByText("Everyone")
-      expect(screen.getByPlaceholderText("Search name or email")).toHaveValue(
-        "",
-      )
-      await act(
-        () => new Promise((resolve) => setTimeout(resolve, SEARCH_WAIT_MS)),
-      )
-      expect(location.current.searchParams.has("q")).toBe(false)
+      expect(location.current.search).toBe("")
     })
 
     test("clearing a filter leaves no trace in the URL", async () => {

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import type { CompletionStatusFilter } from "api/analytics-hooks/organizations"
 import { useAppSearchParams } from "@/common/useAppSearchParams"
 import {
@@ -32,7 +32,7 @@ const STATUS_FILTER_COMPLETION_STATUS: Record<
 const isStatus = (value: string | null): value is ContractLearnersStatus =>
   (CONTRACT_LEARNERS_STATUSES as readonly (string | null)[]).includes(value)
 
-type DirectoryParam = "q" | "status" | "module" | "needs_attention" | "page"
+type DirectoryParam = "status" | "module" | "needs_attention" | "page"
 
 const replaceSearchParams = (
   changes: Partial<Record<DirectoryParam, string | null>>,
@@ -54,7 +54,9 @@ const replaceSearchParams = (
 }
 
 /**
- * The filters both learner views share, read from and written to the URL.
+ * The filters both learner views share. Status, module and needs-attention
+ * live in the URL; the search text deliberately does not, because it is a
+ * learner's name or email and the URL is recorded by PostHog and Sentry.
  * `onChange` runs whenever a filter settles on a new value, so each view can
  * send its own pagination back to page 1; typing in the search box only
  * reports once the debounce lands.
@@ -64,18 +66,8 @@ const useLearnerFilters = (onChange: () => void) => {
   const statusParam = searchParams.get("status")
   const statusFilter = isStatus(statusParam) ? statusParam : ALL
   const needsAttentionOnly = searchParams.get("needs_attention") === "true"
-  const debouncedSearch = (searchParams.get("q") ?? "").slice(
-    0,
-    SEARCH_MAX_LENGTH,
-  )
-  const [searchQuery, setSearchQuery] = useState(debouncedSearch)
-
-  const writtenSearch = useRef(debouncedSearch)
-  useEffect(() => {
-    if (debouncedSearch === writtenSearch.current) return
-    writtenSearch.current = debouncedSearch
-    setSearchQuery(debouncedSearch)
-  }, [debouncedSearch])
+  const [searchQuery, setSearchQuery] = useState("")
+  const [debouncedSearch, setDebouncedSearch] = useState("")
 
   const applyFilterChange = (
     changes: Partial<Record<Exclude<DirectoryParam, "page">, string | null>>,
@@ -87,8 +79,8 @@ const useLearnerFilters = (onChange: () => void) => {
   useEffect(() => {
     if (searchQuery === debouncedSearch) return
     const id = setTimeout(() => {
-      writtenSearch.current = searchQuery
-      replaceSearchParams({ q: searchQuery, page: null })
+      setDebouncedSearch(searchQuery)
+      replaceSearchParams({ page: null })
       onChange()
     }, SEARCH_DEBOUNCE_MS)
     return () => clearTimeout(id)
@@ -107,8 +99,8 @@ const useLearnerFilters = (onChange: () => void) => {
     setSearchQuery,
     clearSearch: () => {
       setSearchQuery("")
-      writtenSearch.current = ""
-      applyFilterChange({ q: null })
+      setDebouncedSearch("")
+      applyFilterChange({})
     },
     debouncedSearch,
     statusFilter,
