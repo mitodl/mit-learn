@@ -19,7 +19,9 @@ import { useLearningResourceTopic } from "api/hooks/learningResources"
 import { backgroundSrcSetCSS } from "ol-utilities"
 import invariant from "tiny-invariant"
 import topicBannerDefault from "@/public/images/backgrounds/bg-default-topics.jpg"
-import TopicFeaturedCarousel from "./TopicFeaturedCarousel"
+import TopicFeaturedCarousel, {
+  useTopicFeaturedIsEmpty,
+} from "./TopicFeaturedCarousel"
 
 const BannerSkeleton = styled(Skeleton)(({ theme }) => ({
   backgroundColor: theme.custom.colors.lightGray2,
@@ -96,8 +98,8 @@ const TopicHero = styled.section(({ theme }) => ({
  * up the scale to chase it, the band fades its own left edge out, which holds
  * whatever the wash is doing behind it.
  */
-const HeroPhoto = styled.div<{ backgroundUrl: string }>(
-  ({ theme, backgroundUrl }) => ({
+const HeroPhoto = styled.div<{ backgroundUrl: string; wholeWidth: boolean }>(
+  ({ theme, backgroundUrl, wholeWidth }) => ({
     position: "absolute",
     top: 0,
     left: "22%",
@@ -112,6 +114,40 @@ const HeroPhoto = styled.div<{ backgroundUrl: string }>(
     maskImage: HERO_PHOTO_EDGE_FADE,
     WebkitMaskImage: HERO_PHOTO_EDGE_FADE,
     backgroundRepeat: "no-repeat",
+    /**
+     * With no Featured row, the design draws a different photograph: one
+     * across the whole hero rather than a band three quarters of it wide, and
+     * framed by width rather than cropped to fill.
+     *
+     * It states the image at the hero's own width and 509.15% of its height,
+     * lifted 294.19% of that height above the top. The artwork is 1800x1203,
+     * and 1676/1.4963 is exactly the 1120px that 509.15% of the design's 220px
+     * hero comes to -- so the image is simply laid across the width at its own
+     * proportions, and what the numbers describe is which slice of it that
+     * leaves showing. Putting the lift over the overflow,
+     * -294.19 / (1 - 509.15), gives the 71.9% below, and stating it that way
+     * holds the same framing at every width rather than only at 1676.
+     *
+     * No mask: the band needed one because it had a left edge inside the hero
+     * to soften, and a photograph across the whole width has none. The wash
+     * is then the only thing taking it off, which is how the design builds it.
+     *
+     * Above `sm` only, so the narrow design -- drawn separately, and framed by
+     * height rather than width -- keeps its own crop whether or not the
+     * channel features anything.
+     */
+    ...(wholeWidth
+      ? {
+          [theme.breakpoints.up("sm")]: {
+            left: 0,
+            height: "100%",
+            backgroundSize: "100% auto",
+            backgroundPosition: "50% 71.903%",
+            maskImage: "none",
+            WebkitMaskImage: "none",
+          },
+        }
+      : {}),
     /**
      * A phone's band is taller than it is wide, and `cover` fills whichever
      * axis needs the most magnifying -- so there it fills the height and fits
@@ -142,6 +178,24 @@ const HERO_SCRIM_FROM_LEFT =
 const HERO_SCRIM_FROM_TOP = `linear-gradient(180deg, rgba(255, 255, 255, 0) calc(${HERO_FADE_END} * 0.0489), rgb(255, 255, 255) ${HERO_FADE_END})`
 
 /**
+ * The same two, as the design states them for the hero with no Featured row.
+ *
+ * Both are shares of that hero rather than distances, which is why they are
+ * separate values: the wash from the top is not finished when the hero ends
+ * -- white is 119.12% of the way down -- so the photograph is still faintly
+ * there along the bottom edge, which is what the design draws and what
+ * finishing the wash at the hero's own height washes away.
+ *
+ * The angles are the design's too. Figma states a gradient by where its
+ * handles fall, so an angle belongs to the frame it was measured in: 255.69
+ * is this hero's, where 259.54 above is the taller one's.
+ */
+const HERO_SCRIM_UNFEATURED_FROM_LEFT =
+  "linear-gradient(255.69deg, rgba(255, 255, 255, 0) 33.745%, rgb(255, 255, 255) 74.054%)"
+const HERO_SCRIM_UNFEATURED_FROM_TOP =
+  "linear-gradient(179.22deg, rgba(255, 255, 255, 0) 12.703%, rgb(255, 255, 255) 119.12%)"
+
+/**
  * The white wash over the photo, as its own layer rather than extra values on
  * the hero's `background-image`.
  *
@@ -154,26 +208,40 @@ const HERO_SCRIM_FROM_TOP = `linear-gradient(180deg, rgba(255, 255, 255, 0) calc
  * from the left, behind the text, and the second draws it down from the top
  * over `HERO_FADE_END`, finishing exactly where the photograph's band ends.
  */
-const HeroScrim = styled.div(({ theme }) => ({
-  position: "absolute",
-  inset: 0,
-  pointerEvents: "none",
-  backgroundImage: [HERO_SCRIM_FROM_LEFT, HERO_SCRIM_FROM_TOP].join(", "),
-  /**
-   * Only the wash from the top on a narrow screen.
-   *
-   * The other one clears a column for text to sit *beside* the photograph,
-   * and a phone has no beside: the text runs the full width, so that gradient
-   * closes over the photograph behind the breadcrumb and the description and
-   * leaves both on flat white. The design draws them with the photograph
-   * showing through, which is what is left once this one goes -- the wash
-   * from the top still carries it off before the rest of the page, and the
-   * photograph's own left edge still fades under the start of each line.
-   */
-  [theme.breakpoints.down("sm")]: {
-    backgroundImage: HERO_SCRIM_FROM_TOP,
-  },
-}))
+const HeroScrim = styled.div<{ unfeatured: boolean }>(
+  ({ theme, unfeatured }) => ({
+    position: "absolute",
+    inset: 0,
+    pointerEvents: "none",
+    backgroundImage: [HERO_SCRIM_FROM_LEFT, HERO_SCRIM_FROM_TOP].join(", "),
+    /* The hero with nothing to feature, which the design states on its own --
+       see the values above. Above `sm`, with the photograph it belongs to. */
+    ...(unfeatured
+      ? {
+          [theme.breakpoints.up("sm")]: {
+            backgroundImage: [
+              HERO_SCRIM_UNFEATURED_FROM_LEFT,
+              HERO_SCRIM_UNFEATURED_FROM_TOP,
+            ].join(", "),
+          },
+        }
+      : {}),
+    /**
+     * Only the wash from the top on a narrow screen.
+     *
+     * The other one clears a column for text to sit *beside* the photograph,
+     * and a phone has no beside: the text runs the full width, so that gradient
+     * closes over the photograph behind the breadcrumb and the description and
+     * leaves both on flat white. The design draws them with the photograph
+     * showing through, which is what is left once this one goes -- the wash
+     * from the top still carries it off before the rest of the page, and the
+     * photograph's own left edge still fades under the start of each line.
+     */
+    [theme.breakpoints.down("sm")]: {
+      backgroundImage: HERO_SCRIM_FROM_TOP,
+    },
+  }),
+)
 
 /**
  * The Follow control as the design draws it: a grey pill, not the primary red
@@ -438,12 +506,16 @@ const TopicChannelTemplateInternal: React.FC<
   const displayConfiguration = channel.configuration
   const configuredBanner = displayConfiguration?.banner_background
   const navText = <BreadcrumbsInternal current={channel.title} />
+  /* The design frames the photograph for the shorter hero a channel with
+     nothing to feature leaves -- see `HeroPhoto`. */
+  const featuredIsEmpty = useTopicFeaturedIsEmpty(channel.name)
 
   return (
     <>
       <TopicHero>
         <HeroPhoto
           aria-hidden
+          wholeWidth={featuredIsEmpty}
           backgroundUrl={
             configuredBanner
               ? /* Through the same standardizer the other channel banners use:
@@ -454,7 +526,7 @@ const TopicChannelTemplateInternal: React.FC<
               : backgroundSrcSetCSS(topicBannerDefault)
           }
         />
-        <HeroScrim aria-hidden />
+        <HeroScrim aria-hidden unfeatured={featuredIsEmpty} />
         <HeroContent>
           <Container>
             <HeroInner>

@@ -69,17 +69,36 @@ type TopicFeaturedCarouselProps = {
  * heading above a blank strip reads as a failure, and the sections below it
  * stand on their own.
  */
+const featuredParams = (name: string) => ({
+  channel_type: ChannelTypeEnum.Topic,
+  name,
+  limit: FEATURED_COUNT,
+})
+
+/**
+ * Whether the row will draw anything.
+ *
+ * Exported because the hero around it is drawn differently with no Featured
+ * row to carry -- the design frames the photograph for the shorter hero that
+ * leaves, not for a tall one cropped down. React Query serves one request
+ * however many readers ask.
+ *
+ * Reads as "not empty" while loading, so the hero does not frame itself for a
+ * short page and then reframe when the row arrives.
+ */
+const useTopicFeaturedIsEmpty = (name: string): boolean => {
+  const params = React.useMemo(() => featuredParams(name), [name])
+  const { data, isLoading } = useQuery({
+    ...channelQueries.featured(params),
+    enabled: Boolean(name),
+  })
+  return !name || (!isLoading && !data?.results?.length)
+}
+
 const TopicFeaturedCarousel: React.FC<TopicFeaturedCarouselProps> = ({
   name,
 }) => {
-  const params = React.useMemo(
-    () => ({
-      channel_type: ChannelTypeEnum.Topic,
-      name,
-      limit: FEATURED_COUNT,
-    }),
-    [name],
-  )
+  const params = React.useMemo(() => featuredParams(name), [name])
 
   const config: TabConfig[] = React.useMemo(
     () => [{ label: "Featured", data: { type: "channel_featured", params } }],
@@ -92,13 +111,7 @@ const TopicFeaturedCarousel: React.FC<TopicFeaturedCarouselProps> = ({
    * its children 64px apart, so an empty one is 64px of blank hero. The same
    * query answers both; React Query serves one request for the two readers.
    */
-  const { data, isLoading } = useQuery({
-    ...channelQueries.featured(params),
-    enabled: Boolean(name),
-  })
-  const isEmpty = !isLoading && !data?.results?.length
-
-  if (!name || isEmpty) {
+  if (useTopicFeaturedIsEmpty(name)) {
     return null
   }
 
@@ -115,4 +128,4 @@ const TopicFeaturedCarousel: React.FC<TopicFeaturedCarouselProps> = ({
 }
 
 export default TopicFeaturedCarousel
-export { FEATURED_COUNT }
+export { FEATURED_COUNT, useTopicFeaturedIsEmpty }
