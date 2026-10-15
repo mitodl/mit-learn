@@ -2239,7 +2239,7 @@ def test_process_course_archive_reloads_runs_missing_units(mocker, has_units):
 
 
 def test_process_course_archive_unit_failure_is_retried(mocker):
-    """A failed unit load leaves the archive unrecorded, so the next sync retries"""
+    """A failed unit load clears the archive receipt, so the next sync retries"""
     key = "mitxonline/openedx/raw_data/course_xml/course-v1:Test+Course+R1/abc123.xml.tar.gz"
     run = LearningResourceRunFactory.create(
         published=True, archive_key="old.tar.gz", checksum="old"
@@ -2267,7 +2267,8 @@ def test_process_course_archive_unit_failure_is_retried(mocker):
     process_course_archive(mocker.MagicMock(), key, run)
 
     run.refresh_from_db()
-    assert (run.archive_key, run.checksum) == ("old.tar.gz", "old")
+    # the old receipt is cleared, so the next sync reloads
+    assert (run.archive_key, run.checksum) == (None, None)
 
 
 def test_process_course_archive_skips_empty_archive_missing_units(mocker):
@@ -2286,7 +2287,7 @@ def test_process_course_archive_skips_empty_archive_missing_units(mocker):
 
 
 def test_process_course_archive_unit_build_failure_is_retried(mocker):
-    """Files load when units can't be built, but the archive is not recorded"""
+    """Files load when units can't be built, but the archive receipt is cleared"""
     key = "mitxonline/openedx/raw_data/course_xml/course-v1:Test+Course+R1/abc123.xml.tar.gz"
     run = LearningResourceRunFactory.create(
         published=True, archive_key="old.tar.gz", checksum="old"
@@ -2321,5 +2322,6 @@ def test_process_course_archive_unit_build_failure_is_retried(mocker):
     mock_load_files.assert_called_once()
     mock_load_units.assert_not_called()
     run.refresh_from_db()
-    assert (run.archive_key, run.checksum) == ("old.tar.gz", "old")
+    # the old receipt is cleared, so the next sync reloads
+    assert (run.archive_key, run.checksum) == (None, None)
     assert list(run.units.all()) == [existing]
