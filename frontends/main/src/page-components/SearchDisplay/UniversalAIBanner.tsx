@@ -23,9 +23,13 @@ const BANNER_SEARCH_TERMS = [
 ]
 
 /**
- * A handle for the column the banner is dropped into, which owns the space
- * around it and may not want the margin the banner carries for the default
- * column's tighter rhythm.
+ * A handle for the column the banner is dropped into.
+ *
+ * The margins below are the default column's: it spaces its children tightly
+ * and leaves the banner to hold itself off what is above and below it. A
+ * column that spaces its own children instead takes them off by this class,
+ * rather than every such column having to know whether the banner is there to
+ * space anything from.
  */
 const BANNER_CLASS = "universal-ai-banner"
 
@@ -36,9 +40,8 @@ const BannerContainer = styled.div(({ theme }) => ({
   display: "flex",
   justifyContent: "space-between",
   alignItems: "center",
-  /* The column it sits in spaces its children 16px apart, which the banner
-     needs a little more than. A layout that spaces them further apart has no
-     use for it and takes it off again -- see `BANNER_CLASS` below. */
+  /* 16px apart is how the default column spaces its children, which the
+     banner needs a little more than -- see `BANNER_CLASS` above. */
   marginBottom: "10px",
   [theme.breakpoints.up("md")]: {
     marginTop: "48px",
@@ -98,21 +101,14 @@ interface UniversalAIBannerProps {
   searchParams: RegisteredSearchParams
 }
 
-/**
- * Whether the banner will draw anything.
- *
- * Exported because what sits below it needs to know: the banner renders
- * nothing at all unless the flag is on and the search term is one it answers,
- * and nothing takes up no room, so a column that spaced itself from the
- * banner has nothing to space itself from.
- */
-const useUniversalAIBannerVisible = (
-  searchParams: RegisteredSearchParams,
-): boolean => {
+const UniversalAIBanner: React.FC<UniversalAIBannerProps> = ({
+  searchParams,
+}) => {
   const searchTerm = searchParams.get("q")
   const featureFlagEnabled = useFeatureFlagEnabled(
     FeatureFlags.UniversalAISearchBanner,
   )
+  const posthog = usePostHog()
 
   const matchesSearchTerm = useMemo(() => {
     if (!searchTerm) return true // If no search term, show the banner by default
@@ -121,14 +117,7 @@ const useUniversalAIBannerVisible = (
     return BANNER_SEARCH_TERMS.includes(normalized)
   }, [searchTerm])
 
-  return !!featureFlagEnabled && matchesSearchTerm
-}
-
-const UniversalAIBanner: React.FC<UniversalAIBannerProps> = ({
-  searchParams,
-}) => {
-  const posthog = usePostHog()
-  const showBanner = useUniversalAIBannerVisible(searchParams)
+  const showBanner = featureFlagEnabled && matchesSearchTerm
 
   const UAI_PROGRAM_READABLE_ID = "program-v1:UAI+B2C"
   const ctaHref = programPageView({
@@ -170,4 +159,4 @@ const UniversalAIBanner: React.FC<UniversalAIBannerProps> = ({
 }
 
 export default UniversalAIBanner
-export { useUniversalAIBannerVisible, BANNER_CLASS }
+export { BANNER_CLASS }

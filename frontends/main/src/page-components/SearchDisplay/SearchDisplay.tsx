@@ -65,10 +65,7 @@ import type { TabConfig } from "./tabConfigs"
 import { ResourceCard } from "../ResourceCard/ResourceCard"
 import { useUserMe } from "api/hooks/user"
 import getSearchParams from "./getSearchParams"
-import UniversalAIBanner, {
-  useUniversalAIBannerVisible,
-  BANNER_CLASS,
-} from "./UniversalAIBanner"
+import UniversalAIBanner, { BANNER_CLASS } from "./UniversalAIBanner"
 import AiSearchOverview from "./AiSearchOverview"
 
 const StyledResourceTabs = styled(ResourceTypeGroupTabs.TabList)`
@@ -1151,9 +1148,6 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
   const facetsAfterTypeChoice = facetManifest.slice(
     facetsBeforeTypeChoice.length,
   )
-  /* The card takes its own space from the top when the banner above it draws
-     nothing -- see the padding on the column below. */
-  const aiBannerVisible = useUniversalAIBannerVisible(searchParams)
   const aggregations = displayData?.metadata.aggregations ?? {}
   /* What the chip row will draw, which also decides whether the tabs above it
      carry a rule -- see `TopicTabsRow`. */
@@ -1210,33 +1204,31 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
           <Grid
             component="section"
             size={{ xs: 12, md: resultsLayout === "cards" ? 12 : 9 }}
-            sx={(theme) => ({
+            sx={{
               display: "flex",
               flexDirection: "column",
               /* The cards design sets its grid 40px below the card it filters
                  from. Every other layout keeps the 16px it had. */
               gap: resultsLayout === "cards" ? "40px" : "16px",
               /**
-               * The column's own distance from the hero, which it needs when
-               * nothing above it supplies one: a banner that draws nothing is
-               * no flex item and so no gap, and the first thing in the column
-               * then sits against the hero's rule.
+               * This column holds its own contents off the hero above it, and
+               * spaces them from each other, so whatever happens to come first
+               * sits the same distance down -- the card where the banner draws
+               * nothing, the banner where it draws.
                *
-               * The banner supplies it only from `md` up, where its own top
-               * margin is 48px. Below that the margin is 10px, which is not a
-               * distance from anything, so the padding stands either way.
+               * Which means taking the banner's own margins off: it carries
+               * them for the column it has always sat in, which spaces its
+               * children more tightly than this one and leaves it to hold
+               * itself off what is above and below. Here they would stack with
+               * the padding and the gap.
                */
               ...(resultsLayout === "cards"
-                ? aiBannerVisible
-                  ? { [theme.breakpoints.down("md")]: { paddingTop: "40px" } }
-                  : { paddingTop: "40px" }
+                ? {
+                    paddingTop: "40px",
+                    [`.${BANNER_CLASS}`]: { marginTop: 0, marginBottom: 0 },
+                  }
                 : {}),
-              /* This column's 40px is already more than the banner's own
-                 margin is there to make up for. */
-              ...(resultsLayout === "cards"
-                ? { [`.${BANNER_CLASS}`]: { marginBottom: 0 } }
-                : {}),
-            })}
+            }}
           >
             <VisuallyHidden
               as={resultsHeadingEl}
