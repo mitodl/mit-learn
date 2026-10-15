@@ -1208,45 +1208,17 @@ def test_documents_from_olx_reads_archive_paths(tmp_path):
         assert meta["file_extension"] == path.suffix
 
 
-@pytest.mark.parametrize("release_date", [None, START_PAST, START_FUTURE])
-def test_build_result_is_published_and_carries_release_date(release_date):
-    """A result is always published; its release date is a fact for the readers"""
-    run = LearningResourceRunFactory.create(run_id="course-v1:test_run")
-    result = utils._build_result(  # noqa: SLF001
-        "olx_path",
-        {"content_type": CONTENT_TYPE_FILE, "source_path": "html/h.html"},
-        "key",
-        run,
-        {},
-        {"content": "c", "content_title": "t"},
-        release_date,
-    )
-    assert result["published"] is True
-    assert result["release_date"] == release_date
-
-
 def test_process_olx_path_dates_results_by_key(tmp_path, mocker):
     """Twin assets named by an undated block are undated; html blocks take their own chapter's start; all are published"""
     run = LearningResourceRunFactory.create(run_id="course-v1:test_run")
     olx = _dated_olx(tmp_path)
-    _write_olx(
-        olx, "chapter/ch_dated.xml", '<chapter><vertical url_name="v_dated"/></chapter>'
-    )
-    _write_olx(
-        olx, "vertical/v_dated.xml", '<vertical><html url_name="h_dated"/></vertical>'
-    )
+    for dating in ("dated", "undated"):
+        _write_olx(
+            olx,
+            f"chapter/ch_{dating}.xml",
+            f'<chapter><html url_name="h_{dating}"/></chapter>',
+        )
     _write_html(olx, "h_dated", '<a href="/static/foo bar.pdf">f</a>')
-
-    _write_olx(
-        olx,
-        "chapter/ch_undated.xml",
-        '<chapter><vertical url_name="v_undated"/></chapter>',
-    )
-    _write_olx(
-        olx,
-        "vertical/v_undated.xml",
-        '<vertical><html url_name="h_undated"/></vertical>',
-    )
     _write_html(olx, "h_undated", '<a href="/static/foo_bar.pdf">f</a>')
 
     _write_olx(olx, "static/foo bar.pdf", "pdf bytes 1")

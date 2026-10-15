@@ -73,10 +73,8 @@ def get_edx_module_id(path: str, run: LearningResourceRun) -> str:
 
 def _without_dated_blocks(element: Element) -> Element:
     """
-    Copy element without the dated blocks held inline under it. Each of those
-    names its assets at its own release, so its text is not its parent's.
-    Only named blocks: _blocks tracks nothing else, so an unnamed one stays
-    its parent's text rather than vanish.
+    Copy element minus its named, dated inline blocks, whose text is their own.
+    An unnamed one stays its parent's: _blocks doesn't track it.
     """
     element = copy.deepcopy(element)
     for parent in list(element.iter()):
@@ -87,22 +85,16 @@ def _without_dated_blocks(element: Element) -> Element:
 
 
 def _reference_text(element: Element) -> str:
-    """
-    Serialize element as reference text. Serializing escapes text once more
-    than the file did, which would double-escape CDATA, so undo that layer.
-    """
+    """Serialize element, undoing the extra escape tostring adds to CDATA"""
     return html.unescape(ElementTree.tostring(element, encoding="unicode"))
 
 
 def _parse_olx_start(value: str | None) -> datetime | None:
-    """
-    Parse an OLX start attribute as UTC. None when absent or unparsable
-    (logged, not raised).
-    """
+    """Parse an OLX start as UTC; None if absent or unparsable (logged)"""
     if not value:
         return None
     try:
-        parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
+        parsed = datetime.fromisoformat(value)
         # astimezone overflows on year 1 or 9999 with a non-UTC offset
         return parsed.astimezone(UTC) if parsed.tzinfo else parsed.replace(tzinfo=UTC)
     except (ValueError, OverflowError):
@@ -136,6 +128,21 @@ def _name_starts_at(blob: str, starts: list[int], name: str) -> bool:
             return True
         start = blob.find(name, start + 1)
     return False
+
+
+def _refers_to(
+    path: Path, blob: str, starts: list[int], video_ids: set[str], *, guess=False
+) -> bool:
+    """
+    Whether indexed text names path, or declares the video a legacy transcript
+    is named for (any legacy transcript, with guess)
+    """
+    if _name_starts_at(blob, starts, _normalize_asset_ref(path.name)):
+        return True
+    legacy = LEGACY_TRANSCRIPT_RE.match(path.name)
+    return legacy is not None and (
+        guess or _normalize_asset_ref(legacy.group(1)) in video_ids
+    )
 
 
 def _parse_video_transcripts(
@@ -184,8 +191,7 @@ class OlxArchive:
         self.root = Path(root)
         self.etl_source = etl_source
         self.valid_file_types = valid_file_types
-        # parsed once per file; the same XML is read for the exclusion scan and
-        # again when static assets are dated
+        # parsed once per file: both the exclusion scan and asset dating read it
         self._sources_by_file: dict[Path, tuple[str, set[str] | None]] = {}
 
     @cached_property
@@ -225,11 +231,10 @@ class OlxArchive:
     @cached_property
     def release_dates(self) -> dict[Path, datetime]:
         """
-        The release date of each file whose every learner-visible path is
-        dated. Empty for a tree that is not an OLX export and for a self-paced
-        run, whose blocks are dated by its policy rather than by their starts.
+        Release date of each file whose every visible path is dated; empty for
+        non-OLX trees and self-paced runs (dated by policy, not starts)
         """
-        if not self.is_olx or self._self_paced:
+        if not self.is_olx or (self._course_policy or {}).get("self_paced"):
             return {}
         dates = self._block_release_dates()
         if (self.root / "static").is_dir():
@@ -246,20 +251,15 @@ class OlxArchive:
 
     def key_dates(self, run: LearningResourceRun) -> dict[str, datetime | None]:
         """
-        Return the release date of every ingestable content file key, None
-        for an undated one; the latest among colliding paths. A key the
-        archive lacks is absent, so a stale row keeps whatever date it had
-        until ingestion unpublishes it.
+        Release date per ingestable key (None if undated); the latest wins when
+        paths collide. Keys the archive lacks are absent.
         """
         dates: dict[str, datetime | None] = {}
         for path in self.paths:
             key = get_edx_module_id(str(path), run)
-            release_date = self.release_dates.get(path)
-            dated = dates.get(key)
-            dates[key] = (
-                max(dated, release_date)
-                if dated and release_date
-                else dated or release_date
+            dates[key] = max(
+                filter(None, (dates.get(key), self.release_dates.get(path))),
+                default=None,
             )
         return dates
 
@@ -393,11 +393,6 @@ class OlxArchive:
         except (TypeError, OSError, ValueError, KeyError):
             return None
 
-    @cached_property
-    def _self_paced(self) -> bool:
-        """Whether the run's policy marks it self-paced; False if unreadable"""
-        return bool(self._course_policy and self._course_policy.get("self_paced"))
-
     def _unreachable_tabs(self) -> set[Path]:
         """Tab pages hidden or missing from the tab list; none if it can't be read"""
         tabs = (self._course_policy or {}).get("tabs")
@@ -480,12 +475,7 @@ class OlxArchive:
 
     @cached_property
     def _inline_dated(self) -> dict[datetime, list[Element]]:
-        """
-        Dated learner-visible blocks held inline in another file, by release.
-        Dates what they name; their own text is still their parent file's.
-        Studio writes every block to its own file, so only hand-authored OLX
-        holds blocks inline.
-        """
+        """Dated, visible blocks held inline in another file, by release date"""
         inline: dict[datetime, list[Element]] = {}
         for _tag, _url_name, element, staff_only, release, is_inline in self._blocks:
             if is_inline and release is not None and not staff_only:
@@ -520,7 +510,7 @@ class OlxArchive:
         return self._sources_by_file[path]
 
     def _texts(
-        self, sources: list[Path], elements: list[Element] = ()
+        self, sources: list[Path], elements: list[Element]
     ) -> tuple[list[str], set[str], bool]:
         """
         Return the given files' and inline blocks' texts, the video ids they
@@ -558,30 +548,27 @@ class OlxArchive:
         return ids
 
     def _static_references(
-        self, skip: set[Path], *, inline: bool = True, guess: bool = True
+        self, skip: set[Path], *, confirmed: bool = False
     ) -> tuple[set[Path], set[Path]]:
         """
         Split static/ files into (referenced, unreferenced) by whether text
         outside skip names them. Matching by filename catches asset key links
-        too. inline=False also ignores dated inline blocks. Unknown video ids
-        keep every legacy transcript unless guess=False.
+        too. Unknown video ids keep every legacy transcript. confirmed=True
+        counts neither those guesses nor dated inline blocks.
         """
         if not (self.root / "static").is_dir():
             return set(), set()
         elements = [e for es in self._inline_dated.values() for e in es]
         texts, video_ids, complete = self._texts(
-            self._reference_sources(skip), elements if inline else []
+            self._reference_sources(skip), [] if confirmed else elements
         )
         texts.append(self._live_updates)
         blob, starts = _reference_index(texts)
-        guess = guess and not complete
+        guess = not (confirmed or complete)
 
         referenced, unreferenced = set(), set()
         for path in self._static_files:
-            if _name_starts_at(blob, starts, _normalize_asset_ref(path.name)) or (
-                (legacy := LEGACY_TRANSCRIPT_RE.match(path.name))
-                and (guess or _normalize_asset_ref(legacy.group(1)) in video_ids)
-            ):
+            if _refers_to(path, blob, starts, video_ids, guess=guess):
                 referenced.add(path)
             else:
                 unreferenced.add(path)
@@ -610,15 +597,12 @@ class OlxArchive:
 
     def _date_static_assets(self, dates: dict[Path, datetime]) -> None:
         """
-        Date static assets in place. An asset any undated learner-visible file
-        names (including handouts, listed tabs, policies) is undated, even if a
-        dated block owns it. Otherwise it takes the earliest date whose files
-        name it. Pages learners cannot reach do not count.
+        Date static assets in place: undated if any undated visible file names
+        one, else the earliest date of the files naming it
         """
         skip = set(dates) | self._unreachable
-        # confirmed references only: a guess may keep an asset ingested, but
-        # must neither release one a dated block owns nor hide a shared one
-        undated_refs, _ = self._static_references(skip, inline=False, guess=False)
+        # a guess may keep an asset ingested, but must not move its date
+        undated_refs, _ = self._static_references(skip, confirmed=True)
         for path in undated_refs:
             dates.pop(path, None)
         static_files = [path for path in self._static_files if path not in undated_refs]
@@ -632,10 +616,6 @@ class OlxArchive:
             for path in static_files:
                 if path in matched:
                     continue
-                legacy = LEGACY_TRANSCRIPT_RE.match(path.name)
-                if _name_starts_at(blob, starts, _normalize_asset_ref(path.name)) or (
-                    legacy is not None
-                    and _normalize_asset_ref(legacy.group(1)) in video_ids
-                ):
+                if _refers_to(path, blob, starts, video_ids):
                     dates[path] = min(dates.get(path, date), date)
                     matched.add(path)

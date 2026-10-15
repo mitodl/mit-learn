@@ -1136,12 +1136,11 @@ def load_content_files(
             )
             return content_files_ids
 
-        absent = ContentFile.objects.filter(run=course_run).exclude(
-            id__in=content_files_ids
-        )
+        stale_published_files = ContentFile.objects.filter(
+            run=course_run, published=True
+        ).exclude(id__in=content_files_ids)
         if failed_keys:
-            absent = absent.exclude(key__in=failed_keys)
-        stale_published_files = absent.filter(published=True)
+            stale_published_files = stale_published_files.exclude(key__in=failed_keys)
         stale_direct_resource_ids = list(
             stale_published_files.filter(direct_learning_resource__isnull=False)
             .values_list("direct_learning_resource_id", flat=True)

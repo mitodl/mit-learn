@@ -590,54 +590,36 @@ def test_release_dates_assets_unnamed_inline_block_stays_its_parents(tmp_path):
     _assert_release_dates(olx, {"static/notes.pdf": None})
 
 
-def test_release_dates_assets_unparsable_xml_still_dates_legacy_transcript(
-    tmp_path,
+@pytest.mark.parametrize(
+    ("undated_twin", "expected"), [(False, START_FUTURE), (True, None)]
+)
+def test_release_dates_assets_unparsable_xml_dates_legacy_transcript(
+    tmp_path, undated_twin, expected
 ):
-    """An unrelated malformed XML file makes every legacy transcript count as referenced; that must not keep a dated video's transcript from its date"""
-    olx = _dated_olx(tmp_path)
-    _write_olx(
-        olx, "chapter/ch_dated.xml", '<chapter><video url_name="vid"/></chapter>'
-    )
-    _write_olx(olx, "video/vid.xml", '<video url_name="vid" sub="ABC123"/>')
-    _write_olx(olx, "tabs/broken.xml", "<tab")
-    _write_olx(olx, "static/subs_ABC123.srt.sjson", "{}")
-
-    _assert_release_dates(olx, {"static/subs_ABC123.srt.sjson": START_FUTURE})
-
-
-def test_release_dates_assets_unparsable_xml_keeps_shared_legacy_transcript(
-    tmp_path,
-):
-    """With a malformed XML file elsewhere, an undated video's confirmed id still keeps the transcript it shares with a dated video undated"""
+    """
+    A malformed XML file elsewhere makes every legacy transcript count as
+    referenced, but only confirmed ids date one: a dated video's transcript
+    keeps its date unless an undated video also declares it
+    """
     olx = _dated_olx(tmp_path)
     _write_olx(
         olx, "chapter/ch_dated.xml", '<chapter><video url_name="vid_dated"/></chapter>'
     )
     _write_olx(olx, "video/vid_dated.xml", '<video url_name="vid_dated" sub="ABC123"/>')
-    _write_olx(
-        olx, "chapter/ch_undated.xml", '<chapter><video url_name="vid_open"/></chapter>'
-    )
-    _write_olx(olx, "video/vid_open.xml", '<video url_name="vid_open" sub="ABC123"/>')
+    if undated_twin:
+        _write_olx(
+            olx,
+            "chapter/ch_undated.xml",
+            '<chapter><video url_name="vid_open"/></chapter>',
+        )
+        _write_olx(
+            olx, "video/vid_open.xml", '<video url_name="vid_open" sub="ABC123"/>'
+        )
     _write_olx(olx, "tabs/broken.xml", "<tab")
     _write_olx(olx, "static/subs_ABC123.srt.sjson", "{}")
 
     assert "static/subs_ABC123.srt.sjson" in _ingested(olx)
-    _assert_release_dates(olx, {"static/subs_ABC123.srt.sjson": None})
-
-
-def test_release_dates_assets_undated_non_block_reference(tmp_path):
-    """A non-block file (handouts, updates, tabs, about page, policy) that names an asset keeps it undated, even when a dated block names it too"""
-    olx = _dated_olx(tmp_path)
-    _write_olx(
-        olx,
-        "chapter/ch_dated.xml",
-        '<chapter><html url_name="html_handout_linked"/></chapter>',
-    )
-    _write_html(olx, "html_handout_linked", '<p><a href="handout.pdf">h</a></p>')
-    _write_olx(olx, "info/handouts.html", '<p><a href="handout.pdf">h</a></p>')
-    _write_olx(olx, "static/handout.pdf", "pdf")
-
-    assert olx / "static/handout.pdf" not in OlxArchive(olx).release_dates
+    _assert_release_dates(olx, {"static/subs_ABC123.srt.sjson": expected})
 
 
 def _tab_policy(olx, tabs):
@@ -654,7 +636,8 @@ def _static_tab(slug, **flags):
 @pytest.mark.parametrize(
     ("page", "tabs", "etl_source", "dated"),
     [
-        # a listed tab is learner-visible, so it keeps the asset undated
+        # learner-visible non-block pages keep the asset undated
+        ("info/handouts.html", None, None, False),
         ("tabs/notes.html", [_static_tab("notes")], None, False),
         ("tabs/notes.html", [_static_tab("notes", is_hidden=True)], None, True),
         ("tabs/notes.html", [_static_tab("notes", course_staff_only=True)], None, True),

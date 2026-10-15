@@ -600,13 +600,18 @@ def test_deindex_run_content_files(mocker):
     """deindex_run_content_files should soft-delete files and keep DB records"""
     mock_deindex = mocker.patch("learning_resources_search.indexing_api.deindex_items")
     run = LearningResourceRunFactory.create(published=True)
-    ContentFileFactory.create_batch(3, run=run, published=True)
+    future_date = now_in_utc() + timedelta(days=5)
+    ContentFileFactory.create_batch(
+        3, run=run, published=True, release_date=future_date
+    )
     assert ContentFile.objects.count() == 3
     deindex_run_content_files(run.id, unpublished_only=False)
     mock_deindex.assert_called_once()
     run.refresh_from_db()
     assert ContentFile.objects.count() == 3
     assert ContentFile.objects.filter(published=False).count() == 3
+    # release_date is a fact about the archive, not deindex state
+    assert ContentFile.objects.filter(release_date=future_date).count() == 3
 
 
 @pytest.mark.django_db
@@ -616,7 +621,10 @@ def test_deindex_run_content_files_keep_published(mocker):
         "learning_resources_search.indexing_api.deindex_items"
     )
     run = LearningResourceRunFactory.create(published=True)
-    content_files = ContentFileFactory.create_batch(3, run=run, published=True)
+    future_date = now_in_utc() + timedelta(days=5)
+    content_files = ContentFileFactory.create_batch(
+        3, run=run, published=True, release_date=future_date
+    )
 
     indexing_api.deindex_run_content_files(
         run.id, unpublished_only=False, keep_published=True
@@ -624,33 +632,10 @@ def test_deindex_run_content_files_keep_published(mocker):
 
     # All files were sent for deindexing from OpenSearch...
     mock_deindex_items.assert_called_once()
-    # ...but none had published flipped.
+    # ...but none had published or release_date changed.
     for cf in content_files:
         cf.refresh_from_db()
-        assert cf.published is True
-
-
-@pytest.mark.parametrize("keep_published", [False, True])
-def test_deindex_run_content_files_preserves_release_date(mocker, keep_published):
-    """
-    deindex_run_content_files never clears release_date: it's a fact about the
-    archive, not a state the deindex path owns. Only published changes, and
-    only when keep_published is False.
-    """
-    mocker.patch("learning_resources_search.indexing_api.deindex_items")
-    run = LearningResourceRunFactory.create(published=True)
-    future_date = now_in_utc() + timedelta(days=5)
-    dated_file = ContentFileFactory.create(
-        run=run, published=True, release_date=future_date
-    )
-
-    indexing_api.deindex_run_content_files(
-        run.id, unpublished_only=False, keep_published=keep_published
-    )
-
-    dated_file.refresh_from_db()
-    assert dated_file.release_date == future_date
-    assert dated_file.published is keep_published
+        assert (cf.published, cf.release_date) == (True, future_date)
 
 
 def test_deindex_run_content_files_unpublished_only_does_not_hard_delete(mocker):

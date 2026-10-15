@@ -172,9 +172,7 @@ def process_course_archive(
             )
             first = next(content_files_data, None)
             if first is None:
-                # Nothing loaded, but a row may have just gone unreleased, so
-                # fire the hook to pull it from the indexes; it no-ops for a
-                # run without rows.
+                # a row may have just gone unreleased; deindex it
                 content_files_loaded_actions(run)
                 if failed_keys:
                     # every file raised: retry next sync, don't mark as empty
@@ -401,9 +399,6 @@ def unpublish_excluded_content_files(
     stay published but drop out of the API and indexes until their date
     passes.
 
-    Backfills rows loaded before release dates existed; ingestion dates rows
-    on its own otherwise, on every archive it downloads.
-
     Args:
         etl_source(str): The edx ETL source
         ids(list of int): list of course ids to process
@@ -411,20 +406,14 @@ def unpublish_excluded_content_files(
         dry_run(bool): count the rows but change nothing and deindex nothing
 
     Returns:
-        list of dict: a row per run whose archive excludes or has not
-            released content files it has, counting the excluded rows, the
-            unreleased rows, the excluded ones this call unpublished (or would
-            have, under dry_run) and the run's content files in total.
-            Counts, not paths, so the payload stays small enough to cross the
-            celery result backend for every run at once.
+        list of dict: a count row per run with excluded or unreleased files
+            (counts, not paths, to fit the celery result backend)
     """
     from learning_resources_search import tasks as search_tasks
     from vector_search import tasks as vector_tasks
 
     bucket = get_bucket_by_name(settings.COURSE_ARCHIVE_BUCKET_NAME)
     run_lookup = build_run_lookup(etl_source, ids)
-    # the one clock reading here only counts the CSV's unreleased column; the
-    # rows themselves just record their dates
     now = now_in_utc()
     rows = []
     for key in keys:
