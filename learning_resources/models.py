@@ -1411,6 +1411,92 @@ class UnitContentFile(models.Model):
         )
 
 
+class CourseProfileConfiguration(TimestampedModel):
+    """
+    Admin-editable prompt and model for one stage of course profile generation.
+
+    One row per stage. A stage's cache key includes a hash of its prompt, so
+    editing a prompt here invalidates that stage's cached results and nothing
+    else.
+    """
+
+    class Stage(models.TextChoices):
+        # claims about the course as a whole, from the context unit
+        CONTEXT = "context", "Context"
+        # claims about one unit or bin, or one part of a unit too large for a call
+        UNIT = "unit", "Unit"
+        # combines the claims of a split unit's parts into the unit's claims
+        UNIT_MERGE = "unit_merge", "Unit merge"
+
+    stage = models.CharField(max_length=16, choices=Stage.choices, unique=True)
+    llm_model = models.CharField(
+        max_length=128, verbose_name="LLM Model", help_text="Any LiteLLM model name."
+    )
+    prompt = models.TextField(help_text="The system prompt for this stage.")
+    temperature = models.FloatField(default=0.0)
+    max_output_tokens = models.PositiveIntegerField(default=16000)
+    max_file_tokens = models.PositiveIntegerField(
+        default=25000,
+        help_text="Files longer than this are truncated. Unit and context stages.",
+    )
+    input_token_budget = models.PositiveIntegerField(
+        default=100000,
+        help_text=(
+            "Most file text one call may read. A unit over it is split into parts."
+            " Unit and context stages."
+        ),
+    )
+
+    def __str__(self):
+        return f"CourseProfileConfiguration for {self.stage}"
+
+
+class ClaimExtraction(TimestampedModel):
+    """
+    The validated output of one course profile LLM call, keyed by its inputs.
+
+    Rows are a cache: before a call, its key is computed from everything that
+    goes into it, and a row with that key is used instead of calling again.
+    Units with identical files in different runs share a row, so `unit` is the
+    unit the row was first produced for.
+    """
+
+    class Level(models.TextChoices):
+        UNIT_PART = "unit_part", "Unit part"
+        # a unit, bin or context unit, whether or not it was split into parts
+        UNIT = "unit", "Unit"
+        COURSE = "course", "Course"
+
+    # sha256 of the stage's inputs
+    key = models.CharField(max_length=64, unique=True)
+    level = models.CharField(max_length=16, choices=Level.choices)
+    # stage name and a hash of its prompt and output schema
+    extractor_version = models.CharField(max_length=32)
+    model = models.CharField(max_length=128)
+    output = models.JSONField()  # validated stage output: claims + evidence + notes
+    # the model's response as returned, before validation
+    raw_response = models.TextField(blank=True)
+    unit = models.ForeignKey(
+        Unit,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="claim_extractions",
+    )
+    # unit_part level: index of the part within the unit
+    part = models.PositiveIntegerField(null=True, blank=True)
+    resource = models.ForeignKey(
+        LearningResource,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="claim_extractions",
+    )
+
+    def __str__(self):
+        return f"{self.level} {self.extractor_version} {self.key[:12]}"
+
+
 class UserList(TimestampedModel):
     """
     Similar in concept to a LearningPath: a list of learning resources.
