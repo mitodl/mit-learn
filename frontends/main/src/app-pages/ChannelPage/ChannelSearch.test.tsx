@@ -846,9 +846,26 @@ describe("ChannelSearch", () => {
       }
     })
 
+    /**
+     * Counts, because the bar offers only what the search has something
+     * under: with nothing counting there is no menu to report a change from
+     * and no Free to tick.
+     */
     const renderTopic = async () => {
       const { channel } = setMockApiResponses({
         channelPatch: { channel_type: ChannelTypeEnum.Topic },
+        search: {
+          metadata: {
+            aggregations: {
+              delivery: [{ key: "online", doc_count: 7 }],
+              free: [
+                { key: "true", doc_count: 3 },
+                { key: "false", doc_count: 4 },
+              ],
+            },
+            suggestions: [],
+          },
+        },
       })
       renderWithProviders(<ChannelPage />, {
         url: `/c/${channel.channel_type}/${channel.name}`,

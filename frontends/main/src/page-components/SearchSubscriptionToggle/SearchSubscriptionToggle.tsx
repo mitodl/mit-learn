@@ -46,6 +46,13 @@ type SearchSubscriptionToggleProps = {
    * different one, and this is the only thing that differs.
    */
   icon?: React.ReactNode
+  /**
+   * The icon once following, where that reads differently from the invitation
+   * to follow -- a filled tick for the state, against an outline for the
+   * action. Falls back to `icon`, so a caller that does not distinguish them
+   * keeps one icon throughout.
+   */
+  subscribedIcon?: React.ReactNode
 }
 
 const SearchSubscriptionToggle: React.FC<SearchSubscriptionToggleProps> = ({
@@ -53,6 +60,7 @@ const SearchSubscriptionToggle: React.FC<SearchSubscriptionToggleProps> = ({
   searchParams,
   sourceType,
   icon = <RiMailLine />,
+  subscribedIcon,
 }) => {
   const [buttonEl, setButtonEl] = useState<null | HTMLElement>(null)
 
@@ -80,7 +88,10 @@ const SearchSubscriptionToggle: React.FC<SearchSubscriptionToggleProps> = ({
   if (isSubscribed) {
     return (
       <>
-        <SuccessButton onClick={onFollowClick} startIcon={icon}>
+        <SuccessButton
+          onClick={onFollowClick}
+          startIcon={subscribedIcon ?? icon}
+        >
           Following
         </SuccessButton>
         <FollowPopover

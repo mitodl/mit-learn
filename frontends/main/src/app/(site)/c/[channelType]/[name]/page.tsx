@@ -18,6 +18,7 @@ import {
   offerorQueries,
 } from "api/hooks/learningResources"
 import { channelQueries } from "api/hooks/channels"
+import { featuredParams } from "@/app-pages/ChannelPage/topicFeatured"
 import { testimonialsQueries } from "api/hooks/testimonials"
 import getSearchParams from "@/page-components/SearchDisplay/getSearchParams"
 import {
@@ -88,6 +89,18 @@ const Page: React.FC<AppPageProps<"/c/[channelType]/[name]">> = async ({
       ),
     channelType === ChannelTypeEnum.Unit &&
       queryClient.prefetchQuery(testimonialsQueries.list({ offerors: [name] })),
+    /**
+     * The topic hero is drawn differently with no Featured row to carry, so
+     * the answer has to be in hand for the first paint: without it the hero
+     * renders as though there were a row, then reframes when the row turns
+     * out not to exist.
+     *
+     * Not conditional on the redesign flag, which a server component cannot
+     * read. The row is the redesign's, so this is a request the old topic
+     * page has no use for.
+     */
+    channelType === ChannelTypeEnum.Topic &&
+      queryClient.prefetchQuery(channelQueries.featured(featuredParams(name))),
   ])
 
   const offerors =
