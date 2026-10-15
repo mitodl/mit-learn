@@ -3,6 +3,7 @@ Tests for the indexing API
 """
 
 import json
+from datetime import timedelta
 from math import ceil
 from types import SimpleNamespace
 
@@ -54,7 +55,7 @@ from learning_resources_search.indexing_api import (
 )
 from learning_resources_search.models import PercolateQuery
 from learning_resources_search.utils import remove_child_queries
-from main.utils import chunks
+from main.utils import chunks, now_in_utc
 
 pytestmark = [pytest.mark.django_db, pytest.mark.usefixtures("mocked_es")]
 
@@ -629,15 +630,41 @@ def test_deindex_run_content_files_keep_published(mocker):
         assert cf.published is True
 
 
+@pytest.mark.parametrize("keep_published", [False, True])
+def test_deindex_run_content_files_preserves_release_date(mocker, keep_published):
+    """
+    deindex_run_content_files never clears release_date: it's a fact about the
+    archive, not a state the deindex path owns. Only published changes, and
+    only when keep_published is False.
+    """
+    mocker.patch("learning_resources_search.indexing_api.deindex_items")
+    run = LearningResourceRunFactory.create(published=True)
+    future_date = now_in_utc() + timedelta(days=5)
+    dated_file = ContentFileFactory.create(
+        run=run, published=True, release_date=future_date
+    )
+
+    indexing_api.deindex_run_content_files(
+        run.id, unpublished_only=False, keep_published=keep_published
+    )
+
+    dated_file.refresh_from_db()
+    assert dated_file.release_date == future_date
+    assert dated_file.published is keep_published
+
+
 def test_deindex_run_content_files_unpublished_only_does_not_hard_delete(mocker):
     """deindex_run_content_files with unpublished_only=True should deindex but not hard-delete"""
     mock_deindex = mocker.patch("learning_resources_search.indexing_api.deindex_items")
     run = LearningResourceRunFactory.create(published=True)
     ContentFileFactory.create_batch(2, run=run, published=False)
+    ContentFileFactory.create(
+        run=run, published=True, release_date=now_in_utc() + timedelta(days=1)
+    )
     ContentFileFactory.create_batch(1, run=run, published=True)
     deindex_run_content_files(run.id, unpublished_only=True)
     mock_deindex.assert_called_once()
-    assert ContentFile.objects.count() == 3
+    assert ContentFile.objects.count() == 4
 
 
 @pytest.mark.parametrize("content_file_count", [3, 17])
@@ -656,6 +683,9 @@ def test_index_run_content_files(settings, mocker, content_file_count, index_typ
         content_file_count, run=run, published=True
     )
     ContentFileFactory.create_batch(5, run=run, published=False)
+    ContentFileFactory.create(
+        run=run, published=True, release_date=now_in_utc() + timedelta(days=1)
+    )
     mock_index_content_files = mocker.patch(
         "learning_resources_search.indexing_api.index_content_files", autospec=True
     )

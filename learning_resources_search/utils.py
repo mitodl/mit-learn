@@ -178,9 +178,9 @@ def opensearch_runs(resource):
 
 
 def opensearch_content_files(resource):
-    """Select the published content files of `resource` that belong in OpenSearch."""
+    """Select the visible content files of `resource` that belong in OpenSearch."""
     if not resource.published and not _opensearch_test_mode(resource):
         return ContentFile.objects.none()
-    return ContentFile.objects.filter(published=True).filter(
+    return ContentFile.objects.visible().filter(
         Q(learning_resource_id=resource.id) | Q(run__in=opensearch_runs(resource))
     )

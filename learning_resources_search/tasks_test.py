@@ -1,6 +1,7 @@
 """Search task tests"""
 
 from collections import OrderedDict
+from datetime import timedelta
 
 import pytest
 import requests
@@ -74,7 +75,7 @@ from learning_resources_search.utils import opensearch_content_files
 from main.factories import TaskBatchFactory, TaskJobFactory, UserFactory
 from main.models import TaskBatch, TaskJob
 from main.test_utils import assert_not_raises
-from main.utils import frontend_absolute_url
+from main.utils import frontend_absolute_url, now_in_utc
 
 pytestmark = pytest.mark.django_db
 User = get_user_model()
@@ -2163,3 +2164,34 @@ def test_get_update_resource_files_tasks_includes_test_mode_courses(mocker):
         cf_id for call in index_content_mock.si.call_args_list for cf_id in call.args[0]
     }
     assert content_file.id in indexed
+
+
+def test_get_update_resource_files_tasks_deindexes_hidden_files(mocker):
+    """deindex_content_files is dispatched for both unpublished and unreleased (but published) content files -- everything hidden() excludes from the index"""
+    course = LearningResourceFactory.create(
+        is_course=True,
+        create_runs=False,
+        etl_source=ETLSource.mitxonline.value,
+        published=True,
+    )
+    run = LearningResourceRunFactory.create(learning_resource=course, published=True)
+    unpublished_file = ContentFileFactory.create(run=run, published=False)
+    unreleased_file = ContentFileFactory.create(
+        run=run,
+        published=True,
+        release_date=now_in_utc() + timedelta(days=1),
+    )
+    visible_file = ContentFileFactory.create(run=run, published=True)
+    mocker.patch("learning_resources_search.tasks.index_content_files", autospec=True)
+    deindex_mock = mocker.patch(
+        "learning_resources_search.tasks.deindex_content_files", autospec=True
+    )
+
+    get_update_resource_files_tasks([], ETLSource.mitxonline.value)
+
+    deindexed = {
+        cf_id for call in deindex_mock.si.call_args_list for cf_id in call.args[0]
+    }
+    assert unpublished_file.id in deindexed
+    assert unreleased_file.id in deindexed
+    assert visible_file.id not in deindexed

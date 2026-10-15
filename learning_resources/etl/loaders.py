@@ -1138,11 +1138,12 @@ def load_content_files(
             )
             return content_files_ids
 
-        stale_published_files = ContentFile.objects.filter(
-            run=course_run, published=True
-        ).exclude(id__in=content_files_ids)
+        absent = ContentFile.objects.filter(run=course_run).exclude(
+            id__in=content_files_ids
+        )
         if failed_keys:
-            stale_published_files = stale_published_files.exclude(key__in=failed_keys)
+            absent = absent.exclude(key__in=failed_keys)
+        stale_published_files = absent.filter(published=True)
         stale_direct_resource_ids = list(
             stale_published_files.filter(direct_learning_resource__isnull=False)
             .values_list("direct_learning_resource_id", flat=True)
@@ -2079,7 +2080,7 @@ def load_videos_from_content_files(
 
     Checks how many videos have matching ContentFile objects by youtube_id.
     If at least 60% of the videos have matches, loads those videos.
-    Otherwise returns None. Only published content files on published runs
+    Otherwise returns None. Only visible content files on published runs
     match, so a video whose content file was removed is not republished.
 
     Args:
@@ -2105,9 +2106,9 @@ def load_videos_from_content_files(
     for content_file in (
         ContentFile.objects.filter(
             youtube_id__in=youtube_ids,
-            published=True,
             run__published=True,
         )
+        .visible()
         .select_related("run__learning_resource")
         .order_by("-id")
     ):

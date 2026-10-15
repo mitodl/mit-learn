@@ -19,10 +19,13 @@ from learning_resources.etl.utils import (
     course_units_from_archive,
     get_bucket_by_name,
     get_s3_prefix_for_source,
+    reconcile_release_dates,
     transform_content_files,
     unpacked_course_archive,
 )
 from learning_resources.models import ContentFile, LearningResourceRun
+from learning_resources.utils import content_files_loaded_actions
+from main.utils import now_in_utc
 
 log = logging.getLogger(__name__)
 
@@ -206,8 +209,12 @@ def load_course_archive(
             )
             first = next(content_files_data, None)
             if first is None:
+                # Nothing loaded, but a row may have just gone unreleased, so
+                # fire the hook to pull it from the indexes; it no-ops for a
+                # run without rows.
+                content_files_loaded_actions(run)
                 if failed_keys:
-                    # every file failed: retry next sync, don't mark as empty
+                    # every file raised: retry next sync, don't mark as empty
                     return
                 # empty archive: stop re-downloading it. Drop any checksum
                 # from an earlier ingest so a stale run doesn't keep
@@ -469,27 +476,37 @@ def unpublish_excluded_content_files(
 ) -> list[dict]:
     """
     Unpublish (and deindex) content files the course does not use — staff-only
-    subtrees, asset manifests and unreferenced static files — for the runs
-    matching the given archive keys, without re-extracting anything.
+    subtrees, asset manifests and unreferenced static files — and record the
+    release date of each content file the course gates, for the runs matching
+    the given archive keys, without re-extracting anything. Unreleased files
+    stay published but drop out of the API and indexes until their date
+    passes.
+
+    Backfills rows loaded before release dates existed; ingestion dates rows
+    on its own otherwise, on every archive it downloads.
 
     Args:
         etl_source(str): The edx ETL source
         ids(list of int): list of course ids to process
         keys(list[str]): list of S3 archive keys to search through
-        dry_run(bool): count the rows but leave them published and deindex nothing
+        dry_run(bool): count the rows but change nothing and deindex nothing
 
     Returns:
-        list of dict: a row per run whose archive excludes content files it has,
-            counting the excluded rows, the ones this call unpublished (or would
-            have, under dry_run) and the run's content files in total. Counts,
-            not paths, so the payload stays small enough to cross the celery
-            result backend for every run at once.
+        list of dict: a row per run whose archive excludes or has not
+            released content files it has, counting the excluded rows, the
+            unreleased rows, the excluded ones this call unpublished (or would
+            have, under dry_run) and the run's content files in total.
+            Counts, not paths, so the payload stays small enough to cross the
+            celery result backend for every run at once.
     """
     from learning_resources_search import tasks as search_tasks
     from vector_search import tasks as vector_tasks
 
     bucket = get_bucket_by_name(settings.COURSE_ARCHIVE_BUCKET_NAME)
     run_lookup = build_run_lookup(etl_source, ids)
+    # the one clock reading here only counts the CSV's unreleased column; the
+    # rows themselves just record their dates
+    now = now_in_utc()
     rows = []
     for key in keys:
         matching_runs = run_lookup.get(extract_run_id_from_key(etl_source, key))
@@ -516,30 +533,39 @@ def unpublish_excluded_content_files(
             archive = OlxArchive(olx_path, etl_source)
             try:
                 excluded_keys = archive.excluded_keys(run)
+                key_dates = archive.key_dates(run)
             # one unreadable archive must not stop the rest of the backfill
             except (ElementTree.ParseError, DefusedXmlException, OSError):
                 log.exception("Malformed OLX in %s, skipping", key)
                 continue
         # scoped to this run: keys embed the run_id, but never rely on that alone
         excluded_files = run_files.filter(key__in=excluded_keys)
+        unreleased_keys = [
+            content_key
+            for content_key, date in key_dates.items()
+            if date and date > now
+        ]
         excluded = excluded_files.count()
-        if not excluded:
+        unreleased = run_files.filter(key__in=unreleased_keys).count()
+        if not (excluded or unreleased):
             continue
         unpublished = excluded_files.filter(published=True).count()
         if not dry_run:
             excluded_files.filter(published=True).update(published=False)
+            reconcile_release_dates(run, key_dates)
             log.info(
                 "Unpublished %d excluded content files for %s", unpublished, run.run_id
             )
-            # dispatched whenever excluded rows exist, not only when this call
-            # flipped them, so a re-run after a failed deindex task cleans up
-            # the indexes
+            # dispatched whenever excluded or unreleased rows exist, not only
+            # when this call flipped them, so a re-run after a failed deindex
+            # task cleans up the indexes
             search_tasks.deindex_run_content_files.delay(run.id, unpublished_only=True)
             vector_tasks.remove_unpublished_run_content_files.delay(run.id)
         rows.append(
             {
                 "run_id": run.run_id,
                 "excluded": excluded,
+                "unreleased": unreleased,
                 "unpublished": unpublished,
                 "total": run_files.count(),
             }

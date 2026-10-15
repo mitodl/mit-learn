@@ -1,4 +1,4 @@
-"""Unpublish edX content files that the course itself does not use"""
+"""Unpublish edX content files the course does not use; date the unreleased ones"""
 
 import csv
 from operator import itemgetter
@@ -19,7 +19,14 @@ EDX_SOURCES = [
 ]
 
 
-REPORT_FIELDS = ("etl_source", "run_id", "excluded", "unpublished", "total")
+REPORT_FIELDS = (
+    "etl_source",
+    "run_id",
+    "excluded",
+    "unreleased",
+    "unpublished",
+    "total",
+)
 
 
 def _sum(rows, field):
@@ -28,12 +35,13 @@ def _sum(rows, field):
 
 class Command(BaseCommand):
     """
-    Walk each course's current archive and unpublish the content files it
-    excludes — staff-only subtrees, asset manifests, and static files no block
-    refers to — then deindex them. Nothing is re-extracted or re-embedded.
+    Unpublish and deindex the content files each course's current archive
+    excludes (staff-only, asset manifests, unreferenced static files), and
+    date the ones it has not released yet so they stay hidden until then.
+    Nothing is re-extracted or re-embedded.
     """
 
-    help = "Unpublish unused edX content files from existing archives"
+    help = "Unpublish unused edX content files and date unreleased ones"
 
     def add_arguments(self, parser):
         parser.add_argument(
@@ -90,14 +98,16 @@ class Command(BaseCommand):
             rows = [row for chunk in task.get() or [] for row in chunk or []]
             for row in sorted(rows, key=itemgetter("run_id")):
                 self.stdout.write(
-                    f"{source} run {row['run_id']}: {row['excluded']} out of "
-                    f"{row['total']} content files excluded"
+                    f"{source} run {row['run_id']}: {row['excluded']} excluded, "
+                    f"{row['unreleased']} unreleased, "
+                    f"out of {row['total']} content files"
                 )
             verb = "would unpublish" if options["dry_run"] else "unpublished"
             self.stdout.write(
-                f"{source} summary: {_sum(rows, 'excluded')} out of "
-                f"{_sum(rows, 'total')} content files excluded across "
-                f"{len(rows)} run(s), {verb} {_sum(rows, 'unpublished')}"
+                f"{source} summary: {_sum(rows, 'excluded')} excluded, "
+                f"{_sum(rows, 'unreleased')} unreleased, out of "
+                f"{_sum(rows, 'total')} content files across {len(rows)} run(s), "
+                f"{verb} {_sum(rows, 'unpublished')}"
             )
             report.extend({"etl_source": source, **row} for row in rows)
 

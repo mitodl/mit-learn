@@ -1,5 +1,6 @@
 """Tests for learning_resources.etl.olx"""
 
+import datetime
 import json
 import pathlib
 
@@ -238,6 +239,7 @@ def test_olx_archive_without_course_xml_is_not_olx(tmp_path):
     archive = OlxArchive(olx)
     assert archive.is_olx is False
     assert archive.excluded == set()
+    assert archive.release_dates == {}
     assert _ingested(olx) == ["chapter/a.xml", "web_resources/b.html"]
 
 
@@ -262,6 +264,400 @@ def test_olx_archive_paths_honour_valid_file_types(tmp_path):
     assert _ingested(olx, valid_file_types=[".py"]) == ["problems/set1.py"]
 
 
+# relative to the test run, so "future" never goes stale; tests compare order
+FUTURE_YEAR = datetime.datetime.now(tz=datetime.UTC).year + 10
+START_FUTURE = datetime.datetime(FUTURE_YEAR, 1, 1, tzinfo=datetime.UTC)
+START_LATER = datetime.datetime(FUTURE_YEAR + 1, 1, 1, tzinfo=datetime.UTC)
+START_PAST = datetime.datetime(2020, 1, 1, tzinfo=datetime.UTC)
+
+
+def _start(date):
+    """Return an OLX start attribute for date"""
+    return f'start="{date.isoformat()}"'
+
+
+def _assert_release_dates(olx, expected, etl_source=None):
+    """release_dates gives each listed path its expected date (None: absent)"""
+    dates = OlxArchive(olx, etl_source).release_dates
+    assert {rel: dates.get(olx / rel) for rel in expected} == expected
+
+
+def _dated_olx(tmp_path):
+    """Build an OLX course with chapters ch_dated (START_FUTURE), ch_undated, and ch_both_parent (undated unless a test dates it); tests add the rest"""
+    olx = tmp_path / "course"
+    _write_olx(olx, "course.xml", '<course url_name="run" org="MITx" course="1"/>')
+    _write_olx(
+        olx,
+        "course/run.xml",
+        "<course>"
+        f'<chapter url_name="ch_dated" {_start(START_FUTURE)}/>'
+        '<chapter url_name="ch_undated"/>'
+        '<chapter url_name="ch_both_parent"/>'
+        "</course>",
+    )
+    return olx
+
+
+def test_release_dates_inherits_latest_ancestor(tmp_path):
+    """A block's release is the max start on its path from the course down"""
+    olx = _dated_olx(tmp_path)
+    # earlier than the chapter's own start, so the chapter's wins
+    earlier = START_FUTURE.replace(year=FUTURE_YEAR - 1, month=6)
+    _write_olx(
+        olx,
+        "chapter/ch_dated.xml",
+        "<chapter>"
+        f'<vertical url_name="v_dated_child" {_start(earlier)}/>'
+        f'<sequential url_name="seq_further_dated" {_start(START_LATER)}/>'
+        "</chapter>",
+    )
+    _write_olx(
+        olx,
+        "vertical/v_dated_child.xml",
+        '<vertical><html url_name="h_in_vertical"/></vertical>',
+    )
+    _write_html(olx, "h_in_vertical", "<p>vertical</p>")
+    _write_olx(
+        olx,
+        "sequential/seq_further_dated.xml",
+        '<sequential><html url_name="h_in_sequential"/></sequential>',
+    )
+    _write_html(olx, "h_in_sequential", "<p>sequential</p>")
+
+    _assert_release_dates(
+        olx,
+        {
+            "vertical/v_dated_child.xml": START_FUTURE,
+            "html/h_in_vertical.xml": START_FUTURE,
+            "html/h_in_vertical.html": START_FUTURE,
+            "sequential/seq_further_dated.xml": START_LATER,
+            "html/h_in_sequential.xml": START_LATER,
+            "html/h_in_sequential.html": START_LATER,
+        },
+    )
+
+
+def test_release_dates_undated_blocks_absent(tmp_path):
+    """A block reachable only through undated paths is absent; the root <course> element's own start is never read"""
+    olx = _dated_olx(tmp_path)
+    # the pointer in course.xml is "the root" too; its start must be ignored
+    _write_olx(
+        olx,
+        "course.xml",
+        f'<course url_name="run" org="MITx" course="1" {_start(START_FUTURE)}/>',
+    )
+    _write_olx(
+        olx,
+        "chapter/ch_undated.xml",
+        '<chapter><html url_name="h_under_undated"/></chapter>',
+    )
+    _write_html(olx, "h_under_undated", "<p>undated</p>")
+
+    assert OlxArchive(olx).release_dates == {}
+
+
+def test_release_dates_two_parents_takes_earliest(tmp_path):
+    """A block under an undated parent and a dated one is undated; under two dated parents it takes the earliest"""
+    olx = _dated_olx(tmp_path)
+    _write_olx(
+        olx,
+        "chapter/ch_dated.xml",
+        "<chapter>"
+        '<vertical url_name="v_mixed_parents"/>'
+        '<vertical url_name="v_two_dated"/>'
+        "</chapter>",
+    )
+    _write_olx(
+        olx,
+        "chapter/ch_undated.xml",
+        '<chapter><vertical url_name="v_mixed_parents"/></chapter>',
+    )
+    _write_olx(
+        olx,
+        "chapter/ch_both_parent.xml",
+        f"<chapter {_start(START_FUTURE.replace(year=FUTURE_YEAR + 2))}>"
+        '<vertical url_name="v_two_dated"/>'
+        "</chapter>",
+    )
+    _write_olx(olx, "vertical/v_mixed_parents.xml", "<vertical/>")
+    _write_olx(olx, "vertical/v_two_dated.xml", "<vertical/>")
+
+    _assert_release_dates(
+        olx,
+        {
+            "vertical/v_mixed_parents.xml": None,
+            "vertical/v_two_dated.xml": START_FUTURE,
+        },
+    )
+
+
+def test_release_dates_staff_only_path_does_not_vote(tmp_path):
+    """A staff-only path to a block neither excludes it nor makes it undated"""
+    olx = _dated_olx(tmp_path)
+    _write_olx(
+        olx,
+        "chapter/ch_dated.xml",
+        '<chapter><vertical url_name="v_staff_shared"/></chapter>',
+    )
+    _write_olx(
+        olx,
+        "chapter/ch_undated.xml",
+        '<chapter visible_to_staff_only="true">'
+        '<vertical url_name="v_staff_shared"/></chapter>',
+    )
+    _write_olx(
+        olx,
+        "vertical/v_staff_shared.xml",
+        '<vertical><html url_name="h_staff_shared"/></vertical>',
+    )
+    _write_html(olx, "h_staff_shared", "<p>shared</p>")
+
+    _assert_release_dates(
+        olx,
+        {
+            "vertical/v_staff_shared.xml": START_FUTURE,
+            "html/h_staff_shared.xml": START_FUTURE,
+            "html/h_staff_shared.html": START_FUTURE,
+        },
+    )
+    assert olx / "vertical/v_staff_shared.xml" not in OlxArchive(olx).excluded
+
+
+def test_release_dates_self_paced_returns_empty(tmp_path):
+    """A self-paced run never gets release dates, however its blocks are dated"""
+    olx = _dated_olx(tmp_path)
+    _write_olx(
+        olx,
+        "chapter/ch_dated.xml",
+        '<chapter><html url_name="h_self_paced"/></chapter>',
+    )
+    _write_html(olx, "h_self_paced", "<p>content</p>")
+    _write_olx(
+        olx,
+        "policies/run/policy.json",
+        json.dumps({"course/run": {"self_paced": True}}),
+    )
+
+    assert OlxArchive(olx).release_dates == {}
+
+
+@pytest.mark.parametrize(
+    ("raw", "expected"),
+    [
+        ("2030-01-01T00:00:00Z", datetime.datetime(2030, 1, 1, tzinfo=datetime.UTC)),
+        ("2030-01-01T00:00:00", datetime.datetime(2030, 1, 1, tzinfo=datetime.UTC)),
+        (
+            "2030-01-01T00:00:00-05:00",
+            datetime.datetime(2030, 1, 1, 5, tzinfo=datetime.UTC),
+        ),
+    ],
+)
+def test_release_dates_parse_starts_as_utc(tmp_path, raw, expected):
+    """OLX start attributes are parsed into UTC, converting any offset"""
+    olx = _dated_olx(tmp_path)
+    _write_olx(
+        olx,
+        "chapter/ch_undated.xml",
+        f'<chapter start="{raw}"><html url_name="h_raw"/></chapter>',
+    )
+    _write_html(olx, "h_raw", "<p>content</p>")
+
+    _assert_release_dates(olx, {"html/h_raw.xml": expected})
+
+
+# the second parses, then overflows converting to UTC
+@pytest.mark.parametrize("start", ["next tuesday", "0001-01-01T00:00:00+14:00"])
+def test_release_dates_malformed_start_ignored(tmp_path, caplog, start):
+    """A chapter with an unparsable start is treated as undated, with a warning"""
+    olx = _dated_olx(tmp_path)
+    _write_olx(
+        olx,
+        "chapter/ch_undated.xml",
+        f'<chapter start="{start}"><html url_name="h_malformed"/></chapter>',
+    )
+    _write_html(olx, "h_malformed", "<p>content</p>")
+
+    _assert_release_dates(
+        olx, {"html/h_malformed.xml": None, "html/h_malformed.html": None}
+    )
+    assert any(
+        record.levelname == "WARNING"
+        and record.message == f"Ignoring unparsable OLX start attribute '{start}'"
+        for record in caplog.records
+    )
+
+
+def test_release_dates_assets(tmp_path):
+    """An asset takes the earliest dated block that names it (by filename or legacy transcript id), and is undated if an undated block names it; a <transcript src> file is dated with its video"""
+    olx = _dated_olx(tmp_path)
+    _write_olx(
+        olx,
+        "chapter/ch_dated.xml",
+        '<chapter><html url_name="html_future"/><video url_name="video_future"/>'
+        "</chapter>",
+    )
+    _write_html(
+        olx, "html_future", '<p><a href="a.pdf">a</a> <a href="b.pdf">b</a></p>'
+    )
+    _write_olx(
+        olx,
+        "video/video_future.xml",
+        '<video url_name="video_future">'
+        '<transcript language="en" src="transcript_future.srt"/></video>',
+    )
+    _write_olx(
+        olx, "static/transcript_future.srt", "1\n00:00:00,000 --> 00:00:01,000\nhi\n"
+    )
+
+    _write_olx(
+        olx,
+        "chapter/ch_both_parent.xml",
+        f"<chapter {_start(START_LATER)}>"
+        '<html url_name="html_later"/>'
+        '<video url_name="video_later"/>'
+        '<video url_name="video_later_shared"/>'
+        "</chapter>",
+    )
+    _write_html(olx, "html_later", '<p><a href="a.pdf">a</a></p>')
+    _write_olx(
+        olx, "video/video_later.xml", '<video url_name="video_later" sub="ABC123"/>'
+    )
+    _write_olx(
+        olx,
+        "video/video_later_shared.xml",
+        '<video url_name="video_later_shared" sub="XYZ789"/>',
+    )
+
+    _write_olx(
+        olx,
+        "chapter/ch_undated.xml",
+        "<chapter>"
+        '<html url_name="html_undated"/>'
+        '<video url_name="video_undated_shared"/>'
+        "</chapter>",
+    )
+    _write_html(olx, "html_undated", '<p><a href="b.pdf">b</a></p>')
+    _write_olx(
+        olx,
+        "video/video_undated_shared.xml",
+        '<video url_name="video_undated_shared" sub="XYZ789"/>',
+    )
+
+    _write_olx(olx, "static/a.pdf", "pdf-a")
+    _write_olx(olx, "static/b.pdf", "pdf-b")
+    _write_olx(olx, "static/orphan.pdf", "pdf-orphan")
+    _write_olx(olx, "static/subs_ABC123.srt.sjson", "{}")
+    _write_olx(olx, "static/subs_XYZ789.srt.sjson", "{}")
+
+    _assert_release_dates(
+        olx,
+        {
+            "static/a.pdf": START_FUTURE,
+            "static/b.pdf": None,
+            "static/transcript_future.srt": START_FUTURE,
+            "static/subs_ABC123.srt.sjson": START_LATER,
+            "static/subs_XYZ789.srt.sjson": None,
+            "static/orphan.pdf": None,
+        },
+    )
+
+
+def test_release_dates_assets_dated_inline_block_in_undated_parent(tmp_path):
+    """A dated block held inline in an undated file dates what it names; the parent's text around it does not release them"""
+    olx = _dated_olx(tmp_path)
+    _write_olx(
+        olx,
+        "chapter/ch_undated.xml",
+        "<chapter>"
+        f'<video url_name="vid_inline" sub="ABC123" {_start(START_FUTURE)}>'
+        '<transcript language="en" src="inline.srt"/></video>'
+        f'<html url_name="html_inline" {_start(START_FUTURE)}>'
+        '<p><a href="/static/inline.pdf">i</a></p></html>'
+        '<html url_name="html_undated"/>'
+        "</chapter>",
+    )
+    _write_html(olx, "html_undated", '<p><a href="/static/shared.pdf">s</a></p>')
+    _write_olx(olx, "static/inline.srt", "1\n00:00:00,000 --> 00:00:01,000\nhi\n")
+    _write_olx(olx, "static/subs_ABC123.srt.sjson", "{}")
+    _write_olx(olx, "static/inline.pdf", "pdf")
+    _write_olx(olx, "static/shared.pdf", "pdf")
+
+    _assert_release_dates(
+        olx,
+        {
+            "static/inline.srt": START_FUTURE,
+            "static/subs_ABC123.srt.sjson": START_FUTURE,
+            "static/inline.pdf": START_FUTURE,
+            "static/shared.pdf": None,
+        },
+    )
+
+
+def test_release_dates_assets_unnamed_inline_block_stays_its_parents(tmp_path):
+    """A dated block held inline without a url_name is tracked by nothing, so what it names stays referenced by its undated parent rather than drop out"""
+    olx = _dated_olx(tmp_path)
+    _write_olx(
+        olx,
+        "chapter/ch_undated.xml",
+        f"<chapter><html {_start(START_FUTURE)}>"
+        '<p><a href="/static/notes.pdf">notes</a></p></html></chapter>',
+    )
+    _write_olx(olx, "static/notes.pdf", "pdf")
+
+    assert "static/notes.pdf" in _ingested(olx)
+    _assert_release_dates(olx, {"static/notes.pdf": None})
+
+
+def test_release_dates_assets_unparsable_xml_still_dates_legacy_transcript(
+    tmp_path,
+):
+    """An unrelated malformed XML file makes every legacy transcript count as referenced; that must not keep a dated video's transcript from its date"""
+    olx = _dated_olx(tmp_path)
+    _write_olx(
+        olx, "chapter/ch_dated.xml", '<chapter><video url_name="vid"/></chapter>'
+    )
+    _write_olx(olx, "video/vid.xml", '<video url_name="vid" sub="ABC123"/>')
+    _write_olx(olx, "tabs/broken.xml", "<tab")
+    _write_olx(olx, "static/subs_ABC123.srt.sjson", "{}")
+
+    _assert_release_dates(olx, {"static/subs_ABC123.srt.sjson": START_FUTURE})
+
+
+def test_release_dates_assets_unparsable_xml_keeps_shared_legacy_transcript(
+    tmp_path,
+):
+    """With a malformed XML file elsewhere, an undated video's confirmed id still keeps the transcript it shares with a dated video undated"""
+    olx = _dated_olx(tmp_path)
+    _write_olx(
+        olx, "chapter/ch_dated.xml", '<chapter><video url_name="vid_dated"/></chapter>'
+    )
+    _write_olx(olx, "video/vid_dated.xml", '<video url_name="vid_dated" sub="ABC123"/>')
+    _write_olx(
+        olx, "chapter/ch_undated.xml", '<chapter><video url_name="vid_open"/></chapter>'
+    )
+    _write_olx(olx, "video/vid_open.xml", '<video url_name="vid_open" sub="ABC123"/>')
+    _write_olx(olx, "tabs/broken.xml", "<tab")
+    _write_olx(olx, "static/subs_ABC123.srt.sjson", "{}")
+
+    assert "static/subs_ABC123.srt.sjson" in _ingested(olx)
+    _assert_release_dates(olx, {"static/subs_ABC123.srt.sjson": None})
+
+
+def test_release_dates_assets_undated_non_block_reference(tmp_path):
+    """A non-block file (handouts, updates, tabs, about page, policy) that names an asset keeps it undated, even when a dated block names it too"""
+    olx = _dated_olx(tmp_path)
+    _write_olx(
+        olx,
+        "chapter/ch_dated.xml",
+        '<chapter><html url_name="html_handout_linked"/></chapter>',
+    )
+    _write_html(olx, "html_handout_linked", '<p><a href="handout.pdf">h</a></p>')
+    _write_olx(olx, "info/handouts.html", '<p><a href="handout.pdf">h</a></p>')
+    _write_olx(olx, "static/handout.pdf", "pdf")
+
+    assert olx / "static/handout.pdf" not in OlxArchive(olx).release_dates
+
+
 def _tab_policy(olx, tabs):
     """Write the run's policy.json with the given tab list"""
     _write_olx(
@@ -271,6 +667,110 @@ def _tab_policy(olx, tabs):
 
 def _static_tab(slug, **flags):
     return {"type": "static_tab", "name": slug, "url_slug": slug, **flags}
+
+
+@pytest.mark.parametrize(
+    ("page", "tabs", "etl_source", "dated"),
+    [
+        # a listed tab is learner-visible, so it keeps the asset undated
+        ("tabs/notes.html", [_static_tab("notes")], None, False),
+        ("tabs/notes.html", [_static_tab("notes", is_hidden=True)], None, True),
+        ("tabs/notes.html", [_static_tab("notes", course_staff_only=True)], None, True),
+        ("tabs/notes.html", [], None, True),
+        # only Open Learning Library shows the about page
+        ("about/overview.html", None, ETLSource.oll.name, False),
+        ("about/overview.html", None, ETLSource.mitxonline.name, True),
+    ],
+)
+def test_release_dates_assets_hidden_page_does_not_release(
+    tmp_path, page, tabs, etl_source, dated
+):
+    """A page learners cannot reach does not undate an asset a dated block owns"""
+    olx = _dated_olx(tmp_path)
+    _write_olx(olx, "chapter/ch_dated.xml", '<chapter><html url_name="h_d"/></chapter>')
+    _write_html(olx, "h_d", '<p><a href="/static/notes.pdf">n</a></p>')
+    _write_olx(olx, page, '<p><a href="/static/notes.pdf">n</a></p>')
+    if tabs is not None:
+        _tab_policy(olx, tabs)
+    _write_olx(olx, "static/notes.pdf", "pdf")
+
+    dates = OlxArchive(olx, etl_source).release_dates
+    assert (dates.get(olx / "static/notes.pdf") == START_FUTURE) is dated
+
+
+def test_release_dates_assets_reconcile_owned_dates(tmp_path):
+    """A transcript owned by a START_LATER video is undated when an undated file links it, and takes START_FUTURE when a START_FUTURE block links it"""
+    olx = _dated_olx(tmp_path)
+    _write_olx(
+        olx,
+        "chapter/ch_both_parent.xml",
+        f"<chapter {_start(START_LATER)}>"
+        '<video url_name="vid_handout"/><video url_name="vid_early"/></chapter>',
+    )
+    for name in ("handout", "early"):
+        _write_olx(
+            olx,
+            f"video/vid_{name}.xml",
+            f'<video url_name="vid_{name}">'
+            f'<transcript language="en" src="{name}_t.srt"/></video>',
+        )
+        _write_olx(olx, f"static/{name}_t.srt", "1\n00:00:00,000 --> 00:00:01,000\n")
+    _write_olx(olx, "info/handouts.html", '<a href="handout_t.srt">t</a>')
+    _write_olx(
+        olx, "chapter/ch_dated.xml", '<chapter><html url_name="h_early"/></chapter>'
+    )
+    _write_html(olx, "h_early", '<a href="early_t.srt">t</a>')
+
+    _assert_release_dates(
+        olx,
+        {
+            "static/handout_t.srt": None,
+            "static/early_t.srt": START_FUTURE,
+            "video/vid_early.xml": START_LATER,
+        },
+    )
+
+
+@pytest.mark.parametrize(
+    ("starts", "expected"),
+    [
+        # one row may hold any colliding path's content, so the key takes the
+        # latest dated path, whichever comes first, and an undated twin waits too
+        ((START_FUTURE, None), START_FUTURE),
+        ((None, START_FUTURE), START_FUTURE),
+        ((START_FUTURE, START_LATER), START_LATER),
+        ((START_LATER, START_FUTURE), START_LATER),
+        # no path dated: the key is absent
+        ((None, None), None),
+    ],
+)
+def test_key_dates_colliding_paths_take_the_latest(tmp_path, starts, expected):
+    """The "foo bar" and "foo_bar" blocks share one content file key; it takes the latest date of its dated paths and None when none is dated"""
+    run = LearningResourceRun(run_id="course-v1:test_run")
+    olx = tmp_path / "course"
+    _write_olx(olx, "course.xml", '<course url_name="run" org="MITx" course="1"/>')
+    _write_olx(
+        olx,
+        "course/run.xml",
+        '<course><chapter url_name="ch_a"/><chapter url_name="ch_b"/></course>',
+    )
+    for chapter, name, start in zip(("ch_a", "ch_b"), ("foo bar", "foo_bar"), starts):
+        _write_olx(
+            olx,
+            f"chapter/{chapter}.xml",
+            f"<chapter {_start(start) if start else ''}>"
+            f'<html url_name="{name}"/></chapter>',
+        )
+        _write_html(olx, name, "<p>text</p>")
+
+    archive = OlxArchive(olx)
+    keys = {
+        get_edx_module_id(str(path), run)
+        for path in archive.paths
+        if path.parent.name == "html"
+    }
+    assert keys == {"block-v1:test_run+type@html+block@foo_bar"}
+    assert archive.key_dates(run)[keys.pop()] == expected
 
 
 def test_excluded_keys_spares_a_key_an_ingested_path_shares(tmp_path):
