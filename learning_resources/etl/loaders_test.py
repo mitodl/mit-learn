@@ -2149,20 +2149,27 @@ def test_load_content_files_does_not_update_already_unpublished_stale_files(mock
     assert stale_unpublished_file.updated_on == old_timestamp
 
 
-def test_load_content_files_failed_keys_stay_published(mocker):
-    """Contentfiles whose extraction failed are not unpublished as stale"""
+@pytest.mark.parametrize("has_release_date", [False, True])
+def test_load_content_files_failed_keys_untouched(mocker, has_release_date):
+    """
+    Only files missing from this load are unpublished: failed ones, and a loaded
+    one's direct resource, are left alone. release_date is never cleared.
+    """
     course = LearningResourceFactory.create(is_course=True, create_runs=False)
     course_run = LearningResourceRunFactory.create(
         published=True, learning_resource=course
     )
-    loaded_cf = ContentFileFactory.create(
-        run=course_run, published=True, key="loaded-key"
-    )
-    failed_cf = ContentFileFactory.create(
-        run=course_run, published=True, key="failed-key"
-    )
-    stale_cf = ContentFileFactory.create(
-        run=course_run, published=True, key="stale-key"
+    release_date = now_in_utc() + timedelta(days=5) if has_release_date else None
+    direct_resource = LearningResourceFactory.create(published=True)
+    loaded_cf, failed_cf, stale_cf = (
+        ContentFileFactory.create(
+            run=course_run,
+            published=True,
+            key=key,
+            release_date=release_date,
+            direct_learning_resource=direct_resource if key == "loaded-key" else None,
+        )
+        for key in ("loaded-key", "failed-key", "stale-key")
     )
 
     mocker.patch(
@@ -2183,10 +2190,12 @@ def test_load_content_files_failed_keys_stay_published(mocker):
 
     assert result == [loaded_cf.id]
 
-    failed_cf.refresh_from_db()
-    stale_cf.refresh_from_db()
-    assert failed_cf.published is True
-    assert stale_cf.published is False
+    for obj in (loaded_cf, failed_cf, stale_cf, direct_resource):
+        obj.refresh_from_db()
+    assert (loaded_cf.published, loaded_cf.release_date) == (True, release_date)
+    assert direct_resource.published is True
+    assert (failed_cf.published, failed_cf.release_date) == (True, release_date)
+    assert (stale_cf.published, stale_cf.release_date) == (False, release_date)
 
 
 @pytest.mark.parametrize("test_mode", [True, False])
@@ -3240,13 +3249,17 @@ def test_load_videos_from_content_files(mocker, match_ratio, expected_result):
 
 
 @pytest.mark.parametrize(
-    ("content_file_published", "run_published"),
-    [(False, True), (True, False)],
+    ("content_file_published", "run_published", "release_date"),
+    [
+        pytest.param(False, True, None, id="unpublished-file"),
+        pytest.param(True, False, None, id="unpublished-run"),
+        pytest.param(True, True, now_in_utc() + timedelta(days=1), id="future-release"),
+    ],
 )
-def test_load_videos_from_content_files_skips_unpublished(
-    mocker, content_file_published, run_published
+def test_load_videos_from_content_files_skips_hidden(
+    mocker, content_file_published, run_published, release_date
 ):
-    """An unpublished content file, or one on an unpublished run, is not matched"""
+    """Unpublished, unreleased or unpublished-run content files are not matched"""
     mock_load = mocker.patch(
         "learning_resources.etl.loaders.load_video_with_content_file",
     )
@@ -3254,6 +3267,7 @@ def test_load_videos_from_content_files_skips_unpublished(
         run=LearningResourceRunFactory.create(published=run_published),
         youtube_id="yt_id",
         published=content_file_published,
+        release_date=release_date,
     )
 
     assert load_videos_from_content_files(iter([{"youtube_id": "yt_id"}])) is None

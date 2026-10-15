@@ -691,6 +691,7 @@ def _build_result(  # noqa: PLR0913, PLR0917
     run,
     video_srt_metadata,
     content_dict: dict,
+    release_date: datetime | None,
 ) -> dict:
     """Build the final result dictionary."""
     source_path = metadata.get("source_path")
@@ -698,6 +699,7 @@ def _build_result(  # noqa: PLR0913, PLR0917
     data = {
         "key": key,
         "published": True,
+        "release_date": release_date,
         "content_type": metadata["content_type"],
         "archive_checksum": metadata.get("archive_checksum"),
         "file_extension": metadata.get("file_extension"),
@@ -718,6 +720,21 @@ def _build_result(  # noqa: PLR0913, PLR0917
     return data
 
 
+def reconcile_release_dates(
+    run: LearningResourceRun, key_dates: dict[str, datetime | None]
+) -> None:
+    """
+    Set release_date on the run's rows from key_dates, one update per date.
+    Rows whose key is missing are left alone.
+    """
+    rows = ContentFile.objects.filter(run=run)
+    keys_by_date: dict[datetime | None, list[str]] = {}
+    for key, date in key_dates.items():
+        keys_by_date.setdefault(date, []).append(key)
+    for date, keys in keys_by_date.items():
+        rows.filter(key__in=keys).exclude(release_date=date).update(release_date=date)
+
+
 def process_olx_path(  # noqa: PLR0913
     olx_path: str,
     run: LearningResourceRun,
@@ -729,16 +746,21 @@ def process_olx_path(  # noqa: PLR0913
     failed_source_paths: list | None = None,
 ) -> Generator[dict, None, None]:
     """
-    Process OLX path and yield content dictionaries.
+    Process OLX path and yield content dictionaries. Rows are dated from the
+    archive before extraction.
 
     failed_source_paths is a caller-owned list appended to in place with the
     source_path of each file whose processing raises; it is only complete once
-    the generator is fully exhausted.
+    the generator is fully exhausted. A file Tika yields nothing for is not a
+    failure.
     """
     archive = OlxArchive(
         olx_path, run.learning_resource.etl_source, valid_file_types=valid_file_types
     )
     video_srt_metadata = archive.video_metadata(run)
+    key_dates = archive.key_dates(run)
+    if not is_tutor_problem_file_import:
+        reconcile_release_dates(run, key_dates)
 
     for document, metadata in documents_from_olx(archive):
         source_path = metadata.get("source_path")
@@ -758,6 +780,9 @@ def process_olx_path(  # noqa: PLR0913
                     is_tutor_problem=is_tutor_problem_file_import,
                 )
                 if content_dict is None:
+                    log.info(
+                        "No content extracted for %s in run %s", source_path, run.id
+                    )
                     continue
             else:
                 content_dict = _get_cached_content(
@@ -780,6 +805,7 @@ def process_olx_path(  # noqa: PLR0913
             run,
             video_srt_metadata,
             content_dict,
+            key_dates.get(key),
         )
 
 

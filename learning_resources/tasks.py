@@ -10,6 +10,7 @@ import boto3
 import celery
 from celery.exceptions import Ignore
 from django.conf import settings
+from django.core.cache import caches
 from django.db import OperationalError
 from django.db.models import Q
 from django.utils import timezone
@@ -54,10 +55,16 @@ from learning_resources.etl.utils import (
     get_bucket_by_name,
     get_s3_prefix_for_source,
 )
-from learning_resources.models import ContentFile, LearningResource, VideoChannel
+from learning_resources.models import (
+    ContentFile,
+    LearningResource,
+    LearningResourceRun,
+    VideoChannel,
+)
 from learning_resources.site_scrapers.utils import scraper_for_site
 from learning_resources.utils import (
     build_program_children_content_bulk,
+    content_files_loaded_actions,
     html_to_markdown,
     load_course_blocklist,
     programs_needing_children_heal,
@@ -79,6 +86,10 @@ log = logging.getLogger(__name__)
 
 CLEANUP_RETRY_EXCEPTIONS = (*SEARCH_CONN_EXCEPTIONS, OperationalError)
 
+# Lives in the DB-backed "durable" cache (Redis is ephemeral) so a beat
+# outage of any length is caught up by the next sweep.
+RELEASED_CONTENT_FILES_WATERMARK_KEY = "released_content_files:swept_through"
+
 
 @app.task(acks_late=True, reject_on_worker_lost=True)
 def update_next_start_date_and_prices():
@@ -91,6 +102,37 @@ def update_next_start_date_and_prices():
                 resource, percolate=False, generate_embeddings=True
             )
     return len(resources)
+
+
+@app.task(acks_late=True, reject_on_worker_lost=True)
+def reindex_released_content_files() -> int:
+    """
+    Reindex runs with content files released since the last sweep (watermark
+    minus OVERLAP, or LOOKBACK without one). The watermark only advances once
+    every hook is dispatched, and now is read first so no release falls
+    between two windows.
+    """
+    durable = caches["durable"]
+    now = now_in_utc()
+    watermark = durable.get(RELEASED_CONTENT_FILES_WATERMARK_KEY)
+    since = (
+        watermark - settings.RELEASED_CONTENT_FILES_SWEEP_OVERLAP
+        if watermark
+        else now - settings.RELEASED_CONTENT_FILES_LOOKBACK
+    )
+    # visible() keeps the scan on contentfile_published_date_idx; the upper
+    # bound repeats visible()'s so the index range stops at now
+    run_ids = (
+        ContentFile.objects.visible(now)
+        .filter(release_date__gt=since, release_date__lte=now)
+        .values_list("run_id", flat=True)
+        .distinct()
+    )
+    runs = LearningResourceRun.objects.filter(id__in=run_ids)
+    for run in runs:
+        content_files_loaded_actions(run)
+    durable.set(RELEASED_CONTENT_FILES_WATERMARK_KEY, now, timeout=None)
+    return len(runs)
 
 
 @app.task(acks_late=True, reject_on_worker_lost=True)
@@ -249,7 +291,7 @@ def _content_file_resource_ids(etl_source: str, learning_resource_ids):
 def unpublish_excluded_files(
     ids: list[int], etl_source: str, keys: list[str], *, dry_run: bool = False
 ):
-    """Unpublish unused content files for a chunk of courses, a row per run"""
+    """Unpublish excluded content files and date unreleased ones for some courses"""
     return unpublish_excluded_content_files(etl_source, ids, keys, dry_run=dry_run)
 
 
