@@ -192,6 +192,8 @@ export type AnalyticsPageParams = {
  * `learner_id` is the Keycloak user id (MITx Online's `global_id`). It is
  * stable across email changes, so join on it and never on `email`.
  */
+export type ConsentStatus = "consented" | "declined" | "not_recorded"
+
 export type LearnerProgress = {
   learner_id: string
   email: string | null
@@ -203,6 +205,12 @@ export type LearnerProgress = {
   enrolled_on: string
   enrollment_is_active: boolean
   enrollment_mode: string | null
+  /**
+   * The learner's recorded decision, always present even when outcomes are
+   * withheld. `outcomes_shared` also folds in the deployment's default for
+   * `not_recorded`, so it can be true or false beside that value.
+   */
+  outcomes_consent_status: ConsentStatus
   outcomes_shared: boolean
   completion_status: CompletionStatus | null
   is_passing: boolean | null

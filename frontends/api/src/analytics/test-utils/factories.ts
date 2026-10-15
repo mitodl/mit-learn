@@ -187,6 +187,7 @@ const learnerProgress = (
   enrolled_on: "2026-02-15T00:00:00Z",
   enrollment_is_active: true,
   enrollment_mode: "verified",
+  outcomes_consent_status: "consented",
   outcomes_shared: true,
   completion_status: "in_progress",
   is_passing: false,
@@ -208,6 +209,7 @@ const withheldLearnerProgress = (
   overrides: Partial<LearnerProgress> = {},
 ): LearnerProgress =>
   learnerProgress({
+    outcomes_consent_status: "declined",
     outcomes_shared: false,
     completion_status: null,
     is_passing: null,
