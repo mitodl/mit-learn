@@ -75,11 +75,7 @@ def _normalize_asset_ref(text: str) -> str:
 
 
 def _reference_index(texts: list[str]) -> tuple[str, list[int]]:
-    """
-    Normalize text the same way as _normalize_asset_ref and return the
-    offsets where a name can start. Underscores don't break a name since
-    edX also writes a space, +, or @ as one.
-    """
+    """Return normalized text and the offsets where a name can start; _ is no break"""
     stripped = NAME_BREAK.join(
         SEPARATORS.sub(
             NAME_BREAK, unquote(html.unescape(text)).lower().replace("_", "")
@@ -91,10 +87,7 @@ def _reference_index(texts: list[str]) -> tuple[str, list[int]]:
 
 
 def _name_starts_at(blob: str, starts: list[int], name: str) -> bool:
-    """
-    Whether blob spells name starting at a name boundary, not mid-word.
-    Without this, a reference to final_exam.srt would also match exam.srt.
-    """
+    """Whether blob spells name at a name start, so final_exam.srt != exam.srt"""
     start = blob.find(name)
     while start != -1:
         index = bisect_left(starts, start)
@@ -128,19 +121,14 @@ def _parse_video_transcripts(
                     "title": video_title,
                 }
     except ElementTree.ParseError:
-        msg = f"xml parsing error for {path!s}"
-        log.debug(msg)
-        return transcript_mapping
+        log.debug("xml parsing error for %s", path)
     return transcript_mapping
 
 
 class OlxArchive:
     """
-    Facts about an OLX course tree's files: which are ingestable (paths) and
-    which are excluded from learners (excluded).
-
-    Malformed XML raises on first access, not later. A tree without a
-    course.xml is not an OLX export: nothing is excluded.
+    An OLX tree's ingestable files (paths) and the ones learners can't reach
+    (excluded). Malformed XML raises on first access.
     """
 
     def __init__(
@@ -150,10 +138,7 @@ class OlxArchive:
         *,
         valid_file_types: list[str] = VALID_TEXT_FILE_TYPES,
     ):
-        """
-        etl_source decides whether the about page is shown; None means it
-        isn't
-        """
+        """etl_source decides whether the about page is shown; None hides it"""
         self.root = Path(root)
         self.etl_source = etl_source
         self.valid_file_types = valid_file_types
@@ -168,16 +153,11 @@ class OlxArchive:
     @cached_property
     def paths(self) -> list[Path]:
         """The files to ingest: ingestable text files the course does not exclude"""
-        excluded = self.excluded
-        return [path for path in self._text_files if path not in excluded]
+        return [path for path in self.text_files if path not in self.excluded]
 
     @cached_property
     def excluded(self) -> set[Path]:
-        """
-        Files no learner can reach: staff-only subtrees, tabs outside the
-        navigation, hidden about pages, course settings, asset manifests,
-        old announcements, and unreferenced static files.
-        """
+        """Files no learner can reach, plus settings and manifests (not content)"""
         if not self.is_olx:
             return set()
         excluded = set(self._unreachable)
@@ -200,41 +180,28 @@ class OlxArchive:
         return excluded
 
     def excluded_keys(self, run: LearningResourceRun) -> set[str]:
-        """
-        Return the content file keys of the excluded files. get_edx_module_id
-        writes a space as an underscore, so "foo bar.pdf" and "foo_bar.pdf"
-        are one row; it stays if either path is ingested.
-        """
-        excluded = self.excluded
+        """Keys of excluded files, minus any key an ingested path shares"""
         return {
             get_edx_module_id(str(path), run)
-            for path in self._text_files
-            if path in excluded
+            for path in self.text_files
+            if path in self.excluded
         } - {get_edx_module_id(str(path), run) for path in self.paths}
 
     def video_metadata(self, run: LearningResourceRun) -> dict:
-        """
-        Return each video's key and title, keyed by its transcript's
-        content file key
-        """
-        video_transcript_mapping = {}
-        video_dir = self.root / "video"
-        if not video_dir.exists():
-            log.debug("No video directory found in OLX path: %s", self.root)
-            return video_transcript_mapping
-
-        for root, _, files in os.walk(video_dir):
-            for filename in files:
-                path = Path(root, filename)
-                if path.suffix.lower() == ".xml":
-                    video_xml = path.read_bytes().decode("utf-8")
-                    video_transcript_mapping.update(
-                        _parse_video_transcripts(run, video_xml, path)
+        """Transcript key -> its video's key and title"""
+        mapping = {}
+        # yields nothing when there is no video/ dir
+        for path in (self.root / "video").rglob("*"):
+            if path.suffix.lower() == ".xml":
+                mapping.update(
+                    _parse_video_transcripts(
+                        run, path.read_text(encoding="utf-8"), path
                     )
-        return video_transcript_mapping
+                )
+        return mapping
 
     @cached_property
-    def _text_files(self) -> list[Path]:
+    def text_files(self) -> list[Path]:
         """Files with an ingestable suffix outside draft dirs, excluded or not"""
         return [
             Path(root, filename)
@@ -308,11 +275,7 @@ class OlxArchive:
 
     @cached_property
     def _staff_only(self) -> set[Path]:
-        """
-        Files under visible_to_staff_only subtrees, including staff-only
-        video transcripts. A block can hang under two parents; it's
-        reachable if any parent is.
-        """
+        """Files of staff-only blocks no visible parent also holds"""
         staff_files: dict[tuple[str, str], set[Path]] = {}
         reachable: set[tuple[str, str]] = set()
         for tag, url_name, element, staff_only in self._blocks:
@@ -343,11 +306,7 @@ class OlxArchive:
             return None
 
     def _unreachable_tabs(self) -> set[Path]:
-        """
-        Tab pages no navigation reaches: ones missing from the course's tab
-        list, or marked hidden/staff-only. Empty if the tab list can't be
-        read, so a tab is never dropped on a guess.
-        """
+        """Tab pages hidden or missing from the tab list; none if it can't be read"""
         tabs = (self._course_policy or {}).get("tabs")
         if not isinstance(tabs, list):
             return set()
@@ -413,10 +372,7 @@ class OlxArchive:
 
     @cached_property
     def _live_updates(self) -> str:
-        """
-        Text of the announcements the course team hasn't deleted; edX keeps
-        deleted ones in the export too.
-        """
+        """Text of announcements not marked deleted"""
         try:
             items = json.loads(
                 (self.root / "info/updates.items.json").read_text(errors="ignore")
@@ -483,12 +439,9 @@ class OlxArchive:
 
     def _static_references(self, skip: set[Path]) -> tuple[set[Path], set[Path]]:
         """
-        Split files under static/ into ones the course refers to and ones
-        it doesn't. Matches by filename substring, not path, since courses
-        also link assets by their flattened asset key. skip excludes files
-        (e.g. staff-only ones) whose references shouldn't count. With a
-        malformed XML source some video ids are unknown, so every legacy
-        transcript counts as referenced rather than drop one.
+        Split static/ files into (referenced, unreferenced) by filename, so an
+        asset key link counts, ignoring text in skip. Unknown video ids keep
+        every legacy transcript.
         """
         if not (self.root / "static").is_dir():
             return set(), set()

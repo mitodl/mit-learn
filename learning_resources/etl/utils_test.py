@@ -22,7 +22,6 @@ from learning_resources.etl import utils
 from learning_resources.etl.constants import CommitmentConfig, DurationConfig, ETLSource
 from learning_resources.etl.olx import OlxArchive
 from learning_resources.etl.olx_test import (
-    _ingested,
     _reference_olx,
     _write_html,
     _write_olx,
@@ -1180,15 +1179,13 @@ def test_documents_from_olx_reads_archive_paths(tmp_path):
     _write_olx(
         olx, "vertical/v_staff.xml", '<vertical><html url_name="h_staff"/></vertical>'
     )
-    _write_olx(olx, "html/h.html", "<p>visible</p>")
     _write_html(olx, "h_staff", "<p>staff only</p>")
 
     archive = OlxArchive(olx)
+    assert olx / "html/h_staff.html" in archive.excluded
     documents = list(utils.documents_from_olx(archive))
-    assert len(documents) == len(archive.paths) == len(_ingested(olx))
+    assert len(documents) == len(archive.paths)
     for (content, meta), path in zip(documents, archive.paths):
         assert meta["source_path"].endswith(str(path.relative_to(olx)))
         assert content == path.read_bytes()
         assert meta["file_extension"] == path.suffix
-    assert "html/h.html" in _ingested(olx)
-    assert "html/h_staff.html" not in _ingested(olx)

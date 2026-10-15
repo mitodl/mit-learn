@@ -4,7 +4,6 @@ from pathlib import Path
 
 from django.core.management import BaseCommand
 
-from learning_resources.constants import VALID_TEXT_FILE_TYPES
 from learning_resources.etl.olx import OlxArchive
 from learning_resources.management.commands.unpublish_excluded_files import (
     EDX_SOURCES,
@@ -43,16 +42,10 @@ class Command(BaseCommand):
         """Print per-archive exclusion counts split by location and file class"""
         for olx_path in options["olx_paths"]:
             root = Path(olx_path)
-            ingestable = {
-                path
-                for path in root.rglob("*")
-                if path.is_file()
-                and path.suffix.lower() in VALID_TEXT_FILE_TYPES
-                and not any(
-                    "draft" in part for part in path.relative_to(root).parts[:-1]
-                )
-            }
-            excluded = OlxArchive(root, options["source"]).excluded & ingestable
+            archive = OlxArchive(root, options["source"])
+            # the same file list ingestion reads, so the counts match what it does
+            ingestable = set(archive.text_files)
+            excluded = archive.excluded & ingestable
             static = {
                 path for path in excluded if path.relative_to(root).parts[0] == "static"
             }
