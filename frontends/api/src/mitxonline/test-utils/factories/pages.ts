@@ -77,6 +77,7 @@ const testimonialItem: Factory<TestimonialItem> = (override) => {
     quote: faker.lorem.sentences(2),
     name: faker.person.fullName(),
     title: faker.person.jobTitle(),
+    date_published: faker.date.past().toISOString().slice(0, 10),
     image_src: faker.image.avatar(),
     ...override,
   }

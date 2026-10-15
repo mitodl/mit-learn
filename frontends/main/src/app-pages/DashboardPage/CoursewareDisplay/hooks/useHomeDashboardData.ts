@@ -1,9 +1,9 @@
 import { keepPreviousData, useQuery } from "@tanstack/react-query"
 import {
-  CourseRunEnrollmentV3,
   CourseWithCourseRunsSerializerV2,
   V2ProgramDetail,
 } from "@mitodl/mitxonline-api-axios/v2"
+import { CourseRunEnrollmentV3 } from "@mitodl/mitxonline-api-axios/v3"
 import { coursesQueries } from "api/mitxonline-hooks/courses"
 import { enrollmentQueries } from "api/mitxonline-hooks/enrollment"
 import { mitxUserQueries } from "api/mitxonline-hooks/user"

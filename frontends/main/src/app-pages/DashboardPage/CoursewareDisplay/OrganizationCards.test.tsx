@@ -15,7 +15,7 @@ import {
   urls as mitxOnlineUrls,
 } from "api/mitxonline-test-utils"
 import { OrganizationCards } from "./OrganizationCards"
-import type { UserOrganizationPage } from "@mitodl/mitxonline-api-axios/v2"
+import type { UserOrganizationPage } from "@mitodl/mitxonline-api-axios/v0"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 
 jest.mock("posthog-js/react")

@@ -1,11 +1,11 @@
 import {
-  DisplayModeEnum,
   LanguageEnum,
   VariantIndustryEnum,
   VariantLengthEnum,
-  type BaseCourseRun,
   type SupportedVariant,
-} from "@mitodl/mitxonline-api-axios/v2"
+} from "@mitodl/mitxonline-api-axios/v0"
+import { DisplayModeEnum } from "@mitodl/mitxonline-api-axios/v2"
+import { type BaseCourseRun } from "@mitodl/mitxonline-api-axios/v3"
 import { factories, RequirementTreeBuilder } from "api/mitxonline-test-utils"
 import {
   assembleHomeCardList,
