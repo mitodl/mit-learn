@@ -109,10 +109,10 @@ def _reference_index(texts: list[str]) -> tuple[str, list[int]]:
     """Return normalized text and the offsets where a name can start"""
     parts, starts, length = [], [0], 0
     for raw in texts:
-        text = unquote(html.unescape(raw)).lower()
+        # newlines mark both ends of each text as places a name can start or end
+        text = f"\n{unquote(html.unescape(raw)).lower()}\n"
         last = 0
-        # the trailing newline closes the last name and starts the next text's
-        for separator in SEPARATORS.finditer(f"{text}\n"):
+        for separator in SEPARATORS.finditer(text):
             parts.append(text[last : separator.start()] + "_")
             length += len(parts[-1])
             if separator.group().strip("_"):
