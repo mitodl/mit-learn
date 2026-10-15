@@ -1193,13 +1193,26 @@ def olx_course_units(olx_path: str | Path, run: LearningResourceRun) -> list[dic
     Returns:
         list of dict: unit data for load_course_units, ``content_files``
             mapping each ContentFile key to its relation, in lesson order
+
+    Raises:
+        ValueError: course.xml names a course file the export doesn't have
     """
     root = Path(olx_path)
     course_pointer = _parse_olx_block(root, "", "course")
     if course_pointer is None:
         return []
+    course_file = _olx_block_file(root, course_pointer)
+    if (
+        course_file is None
+        and course_pointer.get("url_name")
+        and not len(course_pointer)
+    ):
+        # an incomplete export: reading it as a course with no sequentials
+        # would delete the run's units
+        msg = f"course/{course_pointer.get('url_name')}.xml is missing"
+        raise ValueError(msg)
     course = _resolve_olx_block(root, course_pointer)
-    course_file = _olx_block_file(root, course_pointer) or root / "course.xml"
+    course_file = course_file or root / "course.xml"
     context_files = {
         get_edx_module_id(str(path), run): UnitContentFile.Relation.CORE
         for folder in OLX_CONTEXT_FOLDERS
@@ -1544,13 +1557,14 @@ def process_olx_path(  # noqa: PLR0913
         )
 
 
-def transform_content_files(
+def transform_content_files(  # noqa: PLR0913
     course_tarpath: Path,
     run: LearningResourceRun,
     *,
     overwrite: bool,
     failed_keys: list | None = None,
     units: list | None = None,
+    unit_errors: list | None = None,
 ) -> Generator[dict, None, None]:
     """
     Pass content to tika, then return JSON document with transformed content inside it
@@ -1564,6 +1578,9 @@ def transform_content_files(
         units (list): caller-owned list extended in place with the course's
             units (see olx_course_units); valid only once the generator is
             fully exhausted
+        unit_errors (list): caller-owned list appended with the exception if
+            the units could not be built, which units can't tell apart from a
+            course with none; valid only once the generator is fully exhausted
 
     Yields:
         dict: content from file
@@ -1582,8 +1599,10 @@ def transform_content_files(
             # fail the content file load it runs at the end of
             try:
                 units.extend(olx_course_units(olx_path, run))
-            except Exception:
+            except Exception as error:
                 log.exception("Could not build units for run %s", run.run_id)
+                if unit_errors is not None:
+                    unit_errors.append(error)
     if failed_keys is not None:
         failed_keys.extend(
             get_edx_module_id(source_path, run) for source_path in failed_source_paths

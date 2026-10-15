@@ -142,7 +142,12 @@ def process_course_archive(
     # archive records archive_key with no checksum, so it still skips.
     has_published_files = run.content_files.filter(published=True).exists()
     stale_run = bool(run.checksum) and not has_published_files
-    missing_units = has_published_files and not run.units.exists()
+    # Units are built only while an archive loads, so a run loaded before they
+    # existed loads once more. A recorded empty archive (no checksum) has no
+    # outline to build them from, so it keeps skipping.
+    missing_units = (
+        bool(run.checksum) and has_published_files and not run.units.exists()
+    )
     reload = overwrite or stale_run or missing_units
 
     if run.archive_key == key and not reload:
@@ -166,6 +171,7 @@ def process_course_archive(
         try:
             failed_keys = []
             units = []
+            unit_errors = []
             content_files_data = iter(
                 transform_content_files(
                     course_tarpath,
@@ -173,6 +179,7 @@ def process_course_archive(
                     overwrite=overwrite,
                     failed_keys=failed_keys,
                     units=units,
+                    unit_errors=unit_errors,
                 )
             )
             first = next(content_files_data, None)
@@ -190,7 +197,11 @@ def process_course_archive(
             content_files_ids = load_content_files(
                 run, chain([first], content_files_data), failed_keys=failed_keys
             )
-            if content_files_ids:
+            if content_files_ids and unit_errors:
+                # files are loaded, but the archive isn't recorded, so the
+                # next sync retries the units
+                log.error("Units not built for %s, will retry", key)
+            elif content_files_ids:
                 load_course_units(run, units)
                 run.checksum = checksum
                 run.archive_key = key

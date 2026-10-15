@@ -2268,3 +2268,58 @@ def test_process_course_archive_unit_failure_is_retried(mocker):
 
     run.refresh_from_db()
     assert (run.archive_key, run.checksum) == ("old.tar.gz", "old")
+
+
+def test_process_course_archive_skips_empty_archive_missing_units(mocker):
+    """A recorded empty archive is not reloaded for units it can't have"""
+    key = "mitxonline/openedx/raw_data/course_xml/course-v1:Test+Course+R1/abc123.xml.tar.gz"
+    run = LearningResourceRunFactory.create(
+        published=True, archive_key=key, checksum=None
+    )
+    # files kept from before the archive emptied
+    ContentFileFactory.create(run=run, published=True)
+    bucket = mocker.MagicMock()
+
+    assert process_course_archive(bucket, key, run) is False
+
+    bucket.download_file.assert_not_called()
+
+
+def test_process_course_archive_unit_build_failure_is_retried(mocker):
+    """Files load when units can't be built, but the archive is not recorded"""
+    key = "mitxonline/openedx/raw_data/course_xml/course-v1:Test+Course+R1/abc123.xml.tar.gz"
+    run = LearningResourceRunFactory.create(
+        published=True, archive_key="old.tar.gz", checksum="old"
+    )
+    existing = UnitContentFileFactory.create(unit__run=run).unit
+    mocker.patch(
+        "learning_resources.etl.edx_shared.calc_checksum", return_value="checksum"
+    )
+
+    def fake_transform(*args, unit_errors, **kwargs):
+        yield {"key": "content.txt"}
+        unit_errors.append(ValueError("course/run.xml is missing"))
+
+    mocker.patch(
+        "learning_resources.etl.edx_shared.transform_content_files",
+        side_effect=fake_transform,
+    )
+
+    def fake_load(run_arg, data, **kwargs):
+        list(data)  # consume the generator like the real loader
+        return [1]
+
+    mock_load_files = mocker.patch(
+        "learning_resources.etl.edx_shared.load_content_files", side_effect=fake_load
+    )
+    mock_load_units = mocker.patch(
+        "learning_resources.etl.edx_shared.load_course_units"
+    )
+
+    process_course_archive(mocker.MagicMock(), key, run)
+
+    mock_load_files.assert_called_once()
+    mock_load_units.assert_not_called()
+    run.refresh_from_db()
+    assert (run.archive_key, run.checksum) == ("old.tar.gz", "old")
+    assert list(run.units.all()) == [existing]

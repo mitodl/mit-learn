@@ -2261,3 +2261,49 @@ def test_olx_course_units_context_static_files(tmp_path):
     }
     assert key("info/handouts.html") in context["content_files"]
     assert not any(k.startswith("asset") for k in unit["content_files"])
+
+
+def test_olx_course_units_missing_course_file(tmp_path):
+    """An export whose course.xml points to a missing file is not read as empty"""
+    _write_olx(tmp_path, "course.xml", '<course url_name="run" org="MITx" course="1"/>')
+    run = LearningResourceRunFactory.create()
+    with pytest.raises(ValueError, match=r"course/run\.xml is missing"):
+        utils.olx_course_units(tmp_path, run)
+
+
+def test_olx_course_units_inline_course(tmp_path):
+    """A course.xml that holds the course inline is read without a course file"""
+    _write_olx(
+        tmp_path,
+        "course.xml",
+        '<course url_name="run" org="MITx" course="1">'
+        '<chapter><sequential url_name="seq" display_name="Lecture 1">'
+        "<vertical><html><p>hi</p></html></vertical></sequential></chapter></course>",
+    )
+    run = LearningResourceRunFactory.create()
+    units = utils.olx_course_units(tmp_path, run)
+    assert [unit["title"] for unit in units] == ["Lecture 1", "Course context"]
+    assert list(units[0]["content_files"]) == [
+        utils.get_edx_module_id(f"{tmp_path}/course.xml", run)
+    ]
+
+
+def test_transform_content_files_reports_unit_errors(mocker, tmp_path):
+    """A failed unit build is reported apart from a course with no units"""
+    olx = tmp_path / "course"
+    _write_olx(olx, "course.xml", '<course url_name="run" org="MITx" course="1"/>')
+    tarpath = tmp_path / "course.tar.gz"
+    with tarfile.open(tarpath, "w:gz") as tar:
+        tar.add(olx, arcname="course")
+    mocker.patch("learning_resources.etl.utils.process_olx_path", return_value=iter([]))
+    run = LearningResourceRunFactory.create()
+    units, unit_errors = [], []
+
+    list(
+        utils.transform_content_files(
+            tarpath, run, overwrite=False, units=units, unit_errors=unit_errors
+        )
+    )
+
+    assert units == []
+    assert [type(error) for error in unit_errors] == [ValueError]
