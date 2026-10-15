@@ -4813,7 +4813,7 @@ def test_async_content_file_chunks_for_resource_no_published_run(mocker):
 
 
 def _course_with_content_files(**kwargs):
-    """Create a course with files on published, variant and unpublished runs, plus direct, withdrawn and unreleased files"""
+    """Create a course with a file per run and a direct file, plus hidden ones"""
     course = LearningResourceFactory.create(is_course=True, create_runs=False, **kwargs)
     runs = [
         LearningResourceRunFactory.create(learning_resource=course, published=True),
@@ -4832,7 +4832,7 @@ def _course_with_content_files(**kwargs):
 
 
 def test_qdrant_content_files_every_run():
-    """Qdrant gets visible files of every run, published or not, plus direct files; withdrawn and unreleased ones are left out"""
+    """Qdrant gets visible files of every run and direct files, but no hidden ones"""
     course, files = _course_with_content_files()
 
     selected = vs_utils.qdrant_content_files(

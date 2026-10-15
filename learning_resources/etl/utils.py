@@ -706,7 +706,7 @@ def reconcile_release_dates(
 ) -> None:
     """
     Set release_date on the run's rows from key_dates, one update per date.
-    Rows whose key is missing are left for the stale pass to unpublish.
+    Rows whose key is missing are left alone.
     """
     rows = ContentFile.objects.filter(run=run)
     keys_by_date: dict[datetime | None, list[str]] = {}

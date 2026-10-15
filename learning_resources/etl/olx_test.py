@@ -283,7 +283,10 @@ def _assert_release_dates(olx, expected, etl_source=None):
 
 
 def _dated_olx(tmp_path):
-    """Build an OLX course with chapters ch_dated (START_FUTURE), ch_undated, and ch_both_parent (undated unless a test dates it); tests add the rest"""
+    """
+    Build an OLX course with chapters ch_dated (START_FUTURE), ch_undated and
+    ch_both_parent (undated unless a test dates it)
+    """
     olx = tmp_path / "course"
     _write_olx(olx, "course.xml", '<course url_name="run" org="MITx" course="1"/>')
     _write_olx(
@@ -338,9 +341,9 @@ def test_release_dates_inherits_latest_ancestor(tmp_path):
 
 
 def test_release_dates_undated_blocks_absent(tmp_path):
-    """A block reachable only through undated paths is absent; the root <course> element's own start is never read"""
+    """A block with only undated paths is absent; the root <course>'s start is ignored"""
     olx = _dated_olx(tmp_path)
-    # the pointer in course.xml is "the root" too; its start must be ignored
+    # a start on the course.xml pointer is ignored too
     _write_olx(
         olx,
         "course.xml",
@@ -357,7 +360,7 @@ def test_release_dates_undated_blocks_absent(tmp_path):
 
 
 def test_release_dates_two_parents_takes_earliest(tmp_path):
-    """A block under an undated parent and a dated one is undated; under two dated parents it takes the earliest"""
+    """An undated parent leaves a block undated; two dated parents give the earliest"""
     olx = _dated_olx(tmp_path)
     _write_olx(
         olx,
@@ -488,7 +491,11 @@ def test_release_dates_malformed_start_ignored(tmp_path, caplog, start):
 
 
 def test_release_dates_assets(tmp_path):
-    """An asset takes the earliest dated block that names it (by filename or legacy transcript id), and is undated if an undated block names it; a <transcript src> file is dated with its video"""
+    """
+    An asset takes the earliest date of the blocks naming it (by filename or legacy
+    transcript id), or none if an undated block names it; a <transcript src> file
+    takes its video's date
+    """
     olx = _dated_olx(tmp_path)
     _write_olx(
         olx,
@@ -563,7 +570,7 @@ def test_release_dates_assets(tmp_path):
 
 
 def test_release_dates_assets_dated_inline_block_in_undated_parent(tmp_path):
-    """A dated block held inline in an undated file dates what it names; the parent's text around it does not release them"""
+    """A dated inline block dates what it names; its undated parent's text doesn't"""
     olx = _dated_olx(tmp_path)
     _write_olx(
         olx,
@@ -594,7 +601,7 @@ def test_release_dates_assets_dated_inline_block_in_undated_parent(tmp_path):
 
 
 def test_release_dates_assets_unnamed_inline_block_stays_its_parents(tmp_path):
-    """A dated block held inline without a url_name is tracked by nothing, so what it names stays referenced by its undated parent rather than drop out"""
+    """An unnamed dated inline block's links count as its undated parent's"""
     olx = _dated_olx(tmp_path)
     _write_olx(
         olx,
@@ -682,7 +689,7 @@ def test_release_dates_assets_hidden_page_does_not_release(
 
 
 def test_release_dates_assets_reconcile_owned_dates(tmp_path):
-    """A transcript owned by a START_LATER video is undated when an undated file links it, and takes START_FUTURE when a START_FUTURE block links it"""
+    """A transcript an undated file links is undated, else takes the earliest date"""
     olx = _dated_olx(tmp_path)
     _write_olx(
         olx,
@@ -717,18 +724,18 @@ def test_release_dates_assets_reconcile_owned_dates(tmp_path):
 @pytest.mark.parametrize(
     ("starts", "expected"),
     [
-        # one row may hold any colliding path's content, so the key takes the
-        # latest dated path, whichever comes first, and an undated twin waits too
+        # one row may hold either colliding path's content, so the key takes the
+        # latest date in either order, even over an undated twin
         ((START_FUTURE, None), START_FUTURE),
         ((None, START_FUTURE), START_FUTURE),
         ((START_FUTURE, START_LATER), START_LATER),
         ((START_LATER, START_FUTURE), START_LATER),
-        # no path dated: the key is absent
+        # no path dated: the key maps to None
         ((None, None), None),
     ],
 )
 def test_key_dates_colliding_paths_take_the_latest(tmp_path, starts, expected):
-    """The "foo bar" and "foo_bar" blocks share one content file key; it takes the latest date of its dated paths and None when none is dated"""
+    """Twins foo bar and foo_bar share a key: the latest of their dates, or None"""
     run = LearningResourceRun(run_id="course-v1:test_run")
     olx = tmp_path / "course"
     _write_olx(olx, "course.xml", '<course url_name="run" org="MITx" course="1"/>')

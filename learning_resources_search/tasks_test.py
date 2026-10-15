@@ -2167,7 +2167,7 @@ def test_get_update_resource_files_tasks_includes_test_mode_courses(mocker):
 
 
 def test_get_update_resource_files_tasks_deindexes_hidden_files(mocker):
-    """deindex_content_files is dispatched for both unpublished and unreleased (but published) content files -- everything hidden() excludes from the index"""
+    """Unpublished and unreleased content files are both deindexed"""
     course = LearningResourceFactory.create(
         is_course=True,
         create_runs=False,

@@ -1106,7 +1106,7 @@ EXTRACTION_FAILURES = [
 @pytest.mark.django_db
 @pytest.mark.parametrize(("failure", "recorded"), EXTRACTION_FAILURES)
 def test_process_olx_path_skips_failed_files(mocker, tmp_path, failure, recorded):
-    """A file whose extraction fails is skipped, and recorded if it raised; other files still yield"""
+    """A failed file is skipped, and recorded if it raised; other files still yield"""
     run = LearningResourceRunFactory.create()
     static_dir = tmp_path / "static"
     static_dir.mkdir()
@@ -1267,7 +1267,7 @@ def test_process_olx_path_rejects_other_file_types(tmp_path):
 
 
 def test_process_olx_path_dates_results_by_key(tmp_path, mocker):
-    """Twin assets named by an undated block are undated; html blocks take their own chapter's start; all are published"""
+    """Both foo bar.pdf twins are undated; each html block takes its chapter's start"""
     run = LearningResourceRunFactory.create(run_id="course-v1:test_run")
     olx = _dated_olx(tmp_path)
     for dating in ("dated", "undated"):
@@ -1316,7 +1316,10 @@ def test_process_olx_path_dates_results_by_key(tmp_path, mocker):
 def test_process_olx_path_dates_rows_whose_extraction_fails(  # noqa: PLR0913
     tmp_path, mocker, failure, recorded, block, transition
 ):
-    """Rows are reconciled with the archive's dates before anything is extracted, so a row whose re-extraction fails or yields nothing is still dated; published is not touched"""
+    """
+    Rows are dated before extraction, so a row whose extraction fails or yields
+    nothing is still dated; published is not touched
+    """
     chapter, start = block
     was, expected = transition
     run = LearningResourceRunFactory.create(run_id="course-v1:test_run")
@@ -1352,7 +1355,11 @@ def test_process_olx_path_tutor_problem_import_leaves_content_files_alone(
     """A tutor problem import writes TutorProblemFiles, so it reconciles no rows"""
     run = LearningResourceRunFactory.create(run_id="course-v1:test_run")
     _write_olx(tmp_path, "problems/set1.py", "print(1)")
-    row = ContentFileFactory.create(run=run, release_date=START_FUTURE)
+    row = ContentFileFactory.create(
+        run=run,
+        key=get_edx_module_id("problems/set1.py", run),
+        release_date=START_FUTURE,
+    )
     mocker.patch(
         "learning_resources.etl.utils._extract_content",
         return_value={"content": "text", "content_title": ""},
@@ -1371,7 +1378,7 @@ def test_process_olx_path_tutor_problem_import_leaves_content_files_alone(
     assert [pathlib.Path(result["source_path"]).name for result in results] == [
         "set1.py"
     ]
-    # an empty archive would have cleared the date had the rows been reconciled
+    # reconciling would have cleared this row's date
     row.refresh_from_db()
     assert row.release_date == START_FUTURE
 
@@ -1383,7 +1390,7 @@ def _key(run, name):
 
 @pytest.mark.parametrize("published", [True, False])
 def test_reconcile_release_dates(published):
-    """Every row of the run takes the date its key has, or none; a row the archive lacks, rows of other runs and the published flag are left alone"""
+    """Each row takes its key's date; missing keys, other runs and published are kept"""
     run = LearningResourceRunFactory.create(run_id="course-v1:test_run")
     other_run = LearningResourceRunFactory.create(run_id="course-v1:other_run")
     rows = {

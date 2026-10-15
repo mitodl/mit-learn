@@ -1707,7 +1707,7 @@ def _make_olx_tarball(tmp_path):
 
 @pytest.fixture
 def olx_archive(mocker, tmp_path):
-    """Create a course run and a mock bucket serving _make_olx_tarball's export under one key"""
+    """Create a run and a mock bucket serving _make_olx_tarball's export"""
     # load_content_files no-ops for non-course resources; pin the random factory
     run = LearningResourceRunFactory.create(
         archive_key=None,
@@ -1762,7 +1762,10 @@ def test_process_course_archive_retains_failed_file(mocker, olx_archive):
     ],
 )
 def test_process_course_archive_nothing_loaded(mocker, olx_archive, failure, stamped):
-    """Every file raising leaves archive_key unstamped for a retry; every file empty stamps it. Either way rows take their dates, keep published, and the loaded hook fires"""
+    """
+    All files raising leave archive_key unset for a retry; all empty set it.
+    Either way rows get their dates, stay published, and the loaded hook fires
+    """
     run = olx_archive.run
     future = now_in_utc() + timedelta(days=30)
     failing_key = get_edx_module_id("course/static/bad.html", run)
@@ -1787,7 +1790,7 @@ def test_process_course_archive_nothing_loaded(mocker, olx_archive, failure, sta
 
 
 def _staff_only_archive(tmp_path) -> Path:
-    """Build an OLX export with visible, staff-only, future-dated and past-dated chapters; h_ok and h_future link different spellings of one asset key"""
+    """Build an OLX export with visible, staff-only, future and past chapters"""
     olx = tmp_path / "course"
     files = {
         "course.xml": '<course url_name="run" org="MITx" course="1"/>',
@@ -1836,9 +1839,9 @@ def _staff_only_archive(tmp_path) -> Path:
         "video/vid.xml": '<video url_name="vid" sub="ABC123"/>',
         "static/subs_ABC123.srt.sjson": "{}",
         "static/subs ABC123.srt.sjson": "{}",
-        # two paths, one key, referenced by a dated (h_future) and an undated
-        # (h_ok) block: normalize_asset_ref folds both spellings onto one
-        # vote, so the undated reference leaves both paths, and the key, undated
+        # two paths, one key, linked by a dated (h_future) and an undated (h_ok)
+        # block: both names match either link, so the undated link leaves both
+        # paths, and the key, undated
         "static/foo bar.pdf": "pdf bytes 1",
         "static/foo_bar.pdf": "pdf bytes 2",
         # shown only where the platform serves the about page
@@ -1893,7 +1896,7 @@ PAST_START = datetime(2020, 1, 1, tzinfo=UTC)
 
 
 def _unpublish(staff_only_run, **kwargs):
-    """Run unpublish_excluded_content_files for the staff_only_run fixture's archive"""
+    """Run unpublish_excluded_content_files on the staff_only_run archive"""
     return unpublish_excluded_content_files(
         staff_only_run.source,
         [staff_only_run.course.id],
@@ -2168,7 +2171,7 @@ def test_unpublish_excluded_content_files_dates_unreleased(
 def test_unpublish_excluded_content_files_records_unreleased_date(
     staff_only_run, mock_deindex_tasks, published, was
 ):
-    """An unreleased row takes the archive's current date, replacing one from an older export, and keeps whatever published says"""
+    """An unreleased row takes the archive's date over an older one; published stays"""
     run = staff_only_run.run
     future = _content_file(
         run, "html/h_future.xml", published=published, release_date=was
@@ -2182,7 +2185,7 @@ def test_unpublish_excluded_content_files_records_unreleased_date(
 def test_unpublish_excluded_content_files_leaves_stale_dates_to_ingestion(
     staff_only_run, mock_deindex_tasks
 ):
-    """A future-dated row the archive no longer dates, or no longer has, is ingestion's to re-date or unpublish; the backfill only dates and unpublishes"""
+    """With nothing excluded or unreleased, stale future dates are left for ingestion"""
     run = staff_only_run.run
     ok = _content_file(run, "html/h_ok.xml", published=True, release_date=FUTURE_START)
     gone = _content_file(
@@ -2199,7 +2202,7 @@ def test_unpublish_excluded_content_files_leaves_stale_dates_to_ingestion(
 def test_unpublish_excluded_content_files_undated_twin_stays_published(
     staff_only_run, mock_deindex_tasks
 ):
-    """The two paths foo bar.pdf and foo_bar.pdf share a key; the undated reference keeps that key undated"""
+    """Twins foo bar.pdf and foo_bar.pdf share a key; an undated link keeps it undated"""
     run = staff_only_run.run
     collision = _content_file(run, "static/foo_bar.pdf", published=True)
 

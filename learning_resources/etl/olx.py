@@ -384,7 +384,7 @@ class OlxArchive:
     def release_dates(self) -> dict[Path, datetime]:
         """
         Release date of each file whose every visible path is dated; empty for
-        non-OLX trees and self-paced runs (dated by policy, not starts)
+        non-OLX trees and self-paced runs, which ignore block starts
         """
         if not self.is_olx or (self._course_policy or {}).get("self_paced"):
             return {}
@@ -405,8 +405,8 @@ class OlxArchive:
 
     def key_dates(self, run: LearningResourceRun) -> dict[str, datetime | None]:
         """
-        Release date per ingestable key (None if undated); the latest wins when
-        paths collide. Keys the archive lacks are absent.
+        Release date per ingested key (None if undated); on a collision the
+        latest date wins
         """
         dates: dict[str, datetime | None] = {}
         for path in self.paths:
@@ -462,10 +462,9 @@ class OlxArchive:
     @property
     def _blocks(self) -> list[tuple[str, str, Element, bool, datetime | None, bool]]:
         """
-        Course tree blocks as (tag, url_name, element, staff_only, release,
-        inline), once per distinct state. Pointer files win over inline
-        elements; release ignores the root <course>'s own start so an
-        upcoming run stays indexed.
+        Named course blocks as (tag, url_name, element, staff_only, release,
+        inline), each (tag, url_name, staff_only, release) once. release ignores
+        the root <course>'s own start so an upcoming run stays indexed.
         """
         course = self._course
         if course is None:
@@ -675,10 +674,9 @@ class OlxArchive:
 
     def _source(self, path: Path) -> tuple[str, set[str] | None]:
         """
-        Return a reference source's text and the video ids it declares,
-        without the dated blocks it holds inline (see _without_dated_blocks).
-        Ids are None for malformed XML: "unknown", so callers keep every
-        legacy transcript rather than drop one whose video they failed to read.
+        Return a reference source's text and video ids, minus its dated inline
+        blocks. Ids are None for malformed XML, so callers keep every legacy
+        transcript.
         """
         text = path.read_text(errors="ignore")
         if path.suffix.lower() != ".xml":
@@ -695,8 +693,8 @@ class OlxArchive:
         self, sources: list[Path], elements: list[Element]
     ) -> tuple[list[str], set[str], bool]:
         """
-        Return the given files' and inline blocks' texts, the video ids they
-        declare, and whether every file could be read for ids
+        Return the texts and video ids of the files and inline blocks, and
+        whether every file parsed
         """
         texts: list[str] = []
         ids: set[str] = set()
@@ -1110,7 +1108,7 @@ class OlxArchive:
         one, else the earliest date of the files naming it
         """
         skip = set(dates) | self._unreachable
-        # a guess may keep an asset ingested, but must not move its date
+        # a guessed match keeps an asset ingested but must not mark it undated
         undated_refs, _ = self._static_references(skip, confirmed=True)
         for path in undated_refs:
             dates.pop(path, None)

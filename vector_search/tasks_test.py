@@ -367,7 +367,7 @@ def test_remove_run_content_files_no_content_files(mocker, mocked_celery):
 
 
 def test_remove_unpublished_run_content_files(mocker, mocked_celery):
-    """remove_unpublished_run_content_files removes every hidden content file (unpublished or unreleased) associated with the run"""
+    """Every hidden content file of the run, unpublished or unreleased, is removed"""
     run = LearningResourceRunFactory.create()
     unpublished_content_file = ContentFileFactory.create(run=run, published=False)
     unreleased_content_file = ContentFileFactory.create(

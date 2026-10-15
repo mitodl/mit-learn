@@ -282,11 +282,11 @@ def test_credential_metadata_deleted_with_its_resource():
     assert not CredentialMetadata.objects.exists()
 
 
-# Content file visibility is derived: published AND released. A reader that
-# filters content files on `published` alone shows unreleased rows, and no
-# runtime seam catches a new such reader, so this test scans the source for
-# them. Each allowed site asks a non-visibility question or reads rows OLX
-# never dates; a key is a whitespace-free prefix of the queryset expression.
+# Visible means published and released. A query filtering content files on
+# published alone shows unreleased rows, and nothing catches that at runtime,
+# so this test scans the source for such queries. Each allowed one below isn't
+# a visibility check or reads rows OLX never dates. Keys are prefixes of the
+# query with whitespace removed.
 CONTENT_FILE_PUBLISHED_READERS = {
     # OCW learning materials: OCW files have no release date
     "learning_resources/tasks.py: content_files.filter(published=True).values_list",
@@ -315,7 +315,7 @@ CONTENT_FILE_QUERY_RE = re.compile(
 
 
 def _query_key(rel: str, snippet: str) -> str:
-    """One-line, whitespace-collapsed prefix of a matched queryset expression"""
+    """Return rel and the matched query with all whitespace removed"""
     flat = re.sub(r"\s+", "", snippet)
     return f"{rel}:{flat}"
 
