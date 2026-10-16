@@ -56,7 +56,7 @@ const contractUtilization = (
   b2b_contract_membership_type: "fixed",
   seats_consumed: 62,
   active_learners: 48,
-  learners_certified: 20,
+  certified_learners: 20,
   seat_utilization_pct: 62,
   completion_rate_pct: 32.3,
   ...overrides,
