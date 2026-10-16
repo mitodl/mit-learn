@@ -1333,6 +1333,12 @@ def test_process_olx_path_dates_rows_whose_extraction_fails(  # noqa: PLR0913
     key = get_edx_module_id("course/html/h.html", run)
     row = ContentFileFactory.create(run=run, key=key, published=True, release_date=was)
     mocker.patch("learning_resources.etl.utils._extract_content", **failure)
+    deindex = mocker.patch(
+        "learning_resources_search.tasks.deindex_run_content_files.delay"
+    )
+    remove = mocker.patch(
+        "vector_search.tasks.remove_unpublished_run_content_files.delay"
+    )
 
     failed = []
     assert (
@@ -1347,6 +1353,13 @@ def test_process_olx_path_dates_rows_whose_extraction_fails(  # noqa: PLR0913
     assert any(path.endswith("html/h.html") for path in failed) is recorded
     row.refresh_from_db()
     assert (row.published, row.release_date) == (True, expected)
+    # a newly hidden row leaves the indexes now, since the post-load reindex
+    # never runs if loading fails
+    hid = expected == START_FUTURE
+    assert deindex.call_args_list == (
+        [mocker.call(run.id, unpublished_only=True)] if hid else []
+    )
+    assert remove.call_args_list == ([mocker.call(run.id)] if hid else [])
 
 
 def test_process_olx_path_tutor_problem_import_leaves_content_files_alone(
@@ -1413,7 +1426,7 @@ def test_reconcile_release_dates(published):
         release_date=START_PAST,
     )
 
-    utils.reconcile_release_dates(
+    hidden = utils.reconcile_release_dates(
         run,
         {
             _key(run, "dated_now"): START_FUTURE,
@@ -1438,6 +1451,8 @@ def test_reconcile_release_dates(published):
     }
     assert all(row.published is published for row in rows.values())
     assert (other.published, other.release_date) == (published, START_PAST)
+    # dated_now, redated and dated_later were visible; gone already was hidden
+    assert hidden == (3 if published else 0)
 
 
 def test_reconcile_release_dates_without_dates_clears_the_run(
