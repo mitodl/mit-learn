@@ -1757,9 +1757,14 @@ def test_process_course_archive_nothing_loaded(mocker, olx_archive, failure, sta
     loaded = mocker.patch(
         "learning_resources.etl.edx_shared.content_files_loaded_actions"
     )
+    deindex = mocker.patch(
+        "learning_resources_search.tasks.deindex_run_content_files.delay"
+    )
+    mocker.patch("vector_search.tasks.remove_unpublished_run_content_files.delay")
 
     process_course_archive(olx_archive.bucket, olx_archive.key, run)
 
+    deindex.assert_called_once_with(run.id, unpublished_only=True)
     run.refresh_from_db()
     assert run.archive_key == (olx_archive.key if stamped else None)
     assert run.checksum is None
