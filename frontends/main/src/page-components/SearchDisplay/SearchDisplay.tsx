@@ -33,12 +33,9 @@ import {
   learningResourceQueries,
 } from "api/hooks/learningResources"
 import {
-  CertificationTypeEnum,
-  DeliveryEnum,
   LearningResource,
   LearningResourcesSearchApiLearningResourcesSearchRetrieveRequest as LRSearchRequest,
   LearningResourcesSearchResponse,
-  ResourceTypeGroupEnum,
   SearchModeEnumDescriptions,
 } from "api"
 import { keepPreviousData, useQuery } from "@tanstack/react-query"
@@ -55,19 +52,20 @@ import type {
 } from "@mitodl/course-search-utils"
 import { useAppSearchParams } from "@/common/useAppSearchParams"
 import { ResourceTypeGroupTabs } from "./ResourceTypeGroupTabs"
+import { TABS, UPCOMING_SORT, findActiveTab } from "./tabConfigs"
 import ProfessionalToggle from "./ProfessionalToggle"
 import { useTrackedFilterSetters } from "@/common/analytics/searchFilters"
-import SelectedFilters from "./SelectedFilters"
+import SelectedFilters, { selectedFilters } from "./SelectedFilters"
 import SliderInput from "./SliderInput"
 import VectorAdminOptions from "./VectorAdminOptions"
 import { AdminTitleContainer, ExplanationContainer } from "./adminStyles"
 
-import type { TabConfig } from "./ResourceTypeGroupTabs"
+import type { TabConfig } from "./tabConfigs"
 
 import { ResourceCard } from "../ResourceCard/ResourceCard"
 import { useUserMe } from "api/hooks/user"
 import getSearchParams from "./getSearchParams"
-import UniversalAIBanner from "./UniversalAIBanner"
+import UniversalAIBanner, { BANNER_CLASS } from "./UniversalAIBanner"
 import AiSearchOverview from "./AiSearchOverview"
 
 const StyledResourceTabs = styled(ResourceTypeGroupTabs.TabList)`
@@ -79,12 +77,47 @@ const DesktopSortContainer = styled.div`
     display: none;
   }
 `
-const MobileSortContainer = styled.div`
-  float: right;
-  ${({ theme }) => theme.breakpoints.up("md")} {
-    display: none;
-  }
-`
+const MobileSortContainer = styled("div", {
+  shouldForwardProp: (prop) => prop !== "cards",
+})<{ cards: boolean }>(({ theme, cards }) => ({
+  float: "right",
+  [theme.breakpoints.up("md")]: {
+    display: "none",
+  },
+  /**
+   * The cards design's Sort box: 160x40 of white behind the same hairline
+   * the Filter button carries, its label at the card's own 12/16 rather
+   * than the size the shared select picks. It sits in the row rather than
+   * floating out of it, the row being a flex one there.
+   */
+  ...(cards
+    ? {
+        float: "none",
+        /* The hairline is the shared select's own, and already the
+             `silverGrayLight` the design asks for. */
+        ".MuiInputBase-root": {
+          width: "160px",
+          height: "40px",
+          borderRadius: "4px",
+          backgroundColor: theme.custom.colors.white,
+          ...theme.typography.body3,
+          color: theme.custom.colors.darkGray2,
+        },
+        /* 12px of the 160 either side of the label, and 4px between it and
+             a 16px chevron -- which is laid over the field rather than in it,
+             so the right padding has to clear it. */
+        ".MuiSelect-select": {
+          padding: "8px 32px 8px 12px",
+        },
+        ".MuiSelect-icon": {
+          width: "16px",
+          height: "16px",
+          fontSize: "16px",
+          right: "12px",
+        },
+      }
+    : {}),
+}))
 
 const SearchModeDropdownContainer = styled.div`
   margin-top: 10px;
@@ -414,6 +447,18 @@ const CardGrid = styled(PlainList)(({ theme }) => ({
     gridTemplateColumns: "minmax(0, 1fr)",
   },
   /**
+   * The results container spaces a list of rows by pushing each item below
+   * the one before it. A grid does not want that: `gap` already spaces these
+   * both ways, and the margin lands inside the row, so every card but the
+   * first in a row sits lower than its neighbours.
+   *
+   * Doubled to outweigh that rule, which names an ancestor and so starts
+   * ahead of anything this can say about its own children.
+   */
+  "&& > li + li": {
+    marginTop: 0,
+  },
+  /**
    * The card fixes its own width to the one its size is drawn at -- 300px for
    * the medium it is here -- which is the column's width at the design's
    * viewport and no other. Everywhere else the card sat at 300 in a column
@@ -431,19 +476,149 @@ const CardGrid = styled(PlainList)(({ theme }) => ({
   },
 }))
 
-const MobileFilter = styled.div`
-  ${({ theme }) => theme.breakpoints.up("md")} {
-    display: none;
-  }
+/**
+ * The topic design's one card: the search box and its facets, the resource
+ * type tabs with sorting, and the filters currently applied, stacked in that
+ * order behind a single edge.
+ *
+ * The gradient is the design's -- transparent at the top, where the page's
+ * own grey shows through, and white by the bottom. The thick pale rule along
+ * the bottom edge is what separates it from the results below.
+ *
+ * Not drawn on a narrow screen: every row in it has somewhere else to be
+ * there -- the facets and the search box in the filter drawer, the tabs in
+ * the drawer's checklist, and the applied filters among them.
+ */
+const TopicSearchCard = styled.div(({ theme }) => ({
+  display: "flex",
+  flexDirection: "column",
+  gap: "24px",
+  padding: "8px 24px 24px",
+  borderRadius: "8px",
+  borderBottom: `6px solid ${theme.custom.colors.lightGray1}`,
+  backgroundImage:
+    "linear-gradient(180deg, rgba(255, 255, 255, 0) 0%, #fff 100%)",
+  boxShadow: "0 8px 20px 0 rgba(120, 147, 172, 0.1)",
+  [theme.breakpoints.down("md")]: {
+    display: "none",
+  },
+}))
 
-  color: ${({ theme }) => theme.custom.colors.darkGray2};
-  margin-top: 20px;
-  margin-bottom: 16px;
-`
-const FilterButton = styled(Button)({
-  marginLeft: "-8px",
-  minWidth: 0,
-})
+/**
+ * The tabs, with sorting pushed to the far end of the same rule.
+ *
+ * The design draws these as underlined headings rather than the filled
+ * buttons the shared tab list draws elsewhere: the selected one in black over
+ * a red rule, the rest grey, and no fill or outline on either. The overrides
+ * live here rather than on the tab list so that the search page and the other
+ * channels keep the buttons they already have.
+ */
+const TopicTabsRow = styled.div<{ dividesFilters: boolean }>(
+  ({ theme, dividesFilters }) => ({
+    display: "flex",
+    alignItems: "flex-start",
+    width: "100%",
+    /* The rule separates the tabs from the filters applied below them, so it is
+     drawn only when there are some. With none, the design leaves the selected
+     tab's own red rule as the only line on the row. */
+    borderBottom: dividesFilters
+      ? `1px solid ${theme.custom.colors.lightGray2}`
+      : "none",
+    "> :last-child": {
+      marginLeft: "auto",
+    },
+    ".MuiTabs-flexContainer": {
+      gap: "40px",
+    },
+    '[role="tab"]': {
+      ...theme.typography.subtitle2,
+      minWidth: 0,
+      padding: "16px 8px",
+      borderRadius: 0,
+      backgroundColor: "transparent",
+      color: theme.custom.colors.silverGrayDark,
+      /* The rule the selected tab carries, kept on every tab at no width so
+       that selecting one does not move the row. */
+      borderBottom: "2px solid transparent",
+      ":hover": {
+        backgroundColor: "transparent",
+        color: theme.custom.colors.darkGray2,
+      },
+    },
+    /* Its own key rather than nested under the one above: the shared tab list
+     fills the selected tab white from the button's own class, and only a
+     selector naming both the row and the state outweighs it. */
+    '[role="tab"][aria-selected="true"]': {
+      backgroundColor: "transparent",
+      color: theme.custom.colors.black,
+      borderBottomColor: theme.custom.colors.lightRed,
+    },
+  }),
+)
+
+const MobileFilter = styled("div", {
+  shouldForwardProp: (prop) => prop !== "cards",
+})<{ cards: boolean }>(({ theme, cards }) => ({
+  [theme.breakpoints.up("md")]: {
+    display: "none",
+  },
+  color: theme.custom.colors.darkGray2,
+  marginTop: "20px",
+  marginBottom: "16px",
+  /**
+   * The cards design puts Filter and Sort on one row, a control at either
+   * end. The other layouts float Sort to the right of the same block, which
+   * is the same picture by other means -- changed only where the design
+   * states it, since the two controls are drawn differently there too.
+   */
+  ...(cards
+    ? {
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "space-between",
+        marginTop: 0,
+      }
+    : {}),
+}))
+
+/**
+ * The button that opens the filter drawer.
+ *
+ * The cards design draws it as a bordered control to match the Sort box
+ * across the row from it -- 40px tall, its label beside a 20px glyph -- where
+ * the other layouts draw it as a bare label. `bordered` is the shared variant
+ * for that: white on a `silverGrayLight` hairline, which is what the design
+ * specifies. Only its label is a shade off, the design setting it in
+ * `darkGray1` where the variant leaves it `silverGrayDark`.
+ */
+const FilterButton = styled(Button, {
+  shouldForwardProp: (prop) => prop !== "cards",
+})<{ cards: boolean }>(({ theme, cards }) =>
+  cards
+    ? {
+        minWidth: 0,
+        height: "40px",
+        padding: "0 16px",
+        borderRadius: "4px",
+        gap: "8px",
+        color: theme.custom.colors.darkGray1,
+        /* The icon slot is sized for the 16px glyph this button's size would
+           otherwise carry, and nudged by margins the 8px gap above replaces. */
+        "> span": {
+          width: "20px",
+          height: "20px",
+          margin: 0,
+        },
+        svg: {
+          width: "20px",
+          height: "20px",
+        },
+      }
+    : {
+        marginLeft: "-8px",
+        minWidth: 0,
+      },
+)
 
 const StyledDrawer = styled(Drawer)`
   .MuiPaper-root {
@@ -521,88 +696,30 @@ const getLastPage = (count: number): number => {
   return pages > MAX_PAGE ? MAX_PAGE : pages
 }
 
-/**
- * Sorts by the next start date of a resource's upcoming runs. Nothing without
- * runs -- no learning material -- has one, hence the tabs that declare it
- * unsupported.
- */
-const UPCOMING_SORT = "upcoming"
-
-const TABS: TabConfig[] = [
-  {
-    name: "all",
-    label: "All",
-    defaultTab: true,
-    resource_type_group: null,
-    minWidth: 85,
-  },
-  {
-    name: "courses",
-    label: "Courses",
-    resource_type_group: ResourceTypeGroupEnum.Course,
-    minWidth: 112,
-  },
-  {
-    name: "programs",
-    label: "Programs",
-    resource_type_group: ResourceTypeGroupEnum.Program,
-    minWidth: 118,
-  },
-  {
-    name: "learning-materials",
-    label: "Learning Materials",
-    resource_type_group: ResourceTypeGroupEnum.LearningMaterial,
-    minWidth: 172,
-    unsupportedSortby: [UPCOMING_SORT],
-  },
-]
-
-/**
- * Every value each facet can take, in the order the cards design lists them.
- *
- * The buckets a search comes back with are only the values something matched,
- * so a facet drawn from them alone changes shape with the results -- the
- * topic design draws Format as Online, In-Person and Hybrid, where a topic
- * with only online courses in it would otherwise draw Format as one row.
- * Listing them all keeps the filters the same filters on every page, and lets
- * a reader see what a facet offers before narrowing by it.
- *
- * Only for the cards layout. The sidebar layouts carry far more facets, where
- * a value that matches nothing is worth leaving out rather than listing.
- */
-const EVERY_FACET_VALUE: Record<string, string[]> = {
-  delivery: [
-    DeliveryEnum.Online,
-    DeliveryEnum.InPerson,
-    DeliveryEnum.Hybrid,
-    DeliveryEnum.Offline,
-  ],
-  certification_type: [
-    CertificationTypeEnum.None,
-    CertificationTypeEnum.Professional,
-    CertificationTypeEnum.Completion,
-    CertificationTypeEnum.Micromasters,
-  ],
-}
-
 type Aggregations = NonNullable<
   LearningResourcesSearchResponse["metadata"]["aggregations"]
 >
 
-/** The search's own counts, over the full list of values. */
-const withEveryValue = (aggregations: Aggregations): Aggregations => {
-  const counted = { ...aggregations }
-  Object.entries(EVERY_FACET_VALUE).forEach(([name, values]) => {
-    const counts = new Map(
-      (counted[name] ?? []).map((bucket) => [bucket.key, bucket.doc_count]),
-    )
-    counted[name] = values.map((key) => ({
-      key,
-      doc_count: counts.get(key) ?? 0,
-    }))
-  })
-  return counted
-}
+/**
+ * The counts a search came back with, less the values it found nothing under.
+ *
+ * The buckets are the values something matched, but a facet already narrowed
+ * by is counted as if it were not -- so its own other values come back with
+ * the counts they would have, and a value the rest of the search rules out
+ * still comes back at nought. Ticking one of those empties the results, so
+ * there is nothing to offer under it.
+ *
+ * A value already ticked is not dropped here even at nought: `AvailableFacets`
+ * puts the active ones back, and the drawer is the only place a filter can be
+ * taken off one at a time on a narrow screen, where no chips are drawn.
+ */
+const withAvailableValues = (aggregations: Aggregations): Aggregations =>
+  Object.fromEntries(
+    Object.entries(aggregations).map(([name, buckets]) => [
+      name,
+      (buckets ?? []).filter((bucket) => bucket.doc_count > 0),
+    ]),
+  )
 
 const SORT_OPTIONS = [
   {
@@ -672,6 +789,18 @@ export interface SearchDisplayProps {
    * above the results at every width.
    */
   drawerSearchSlot?: React.ReactNode
+  /**
+   * The search box and facets, drawn at the top of the card this renders for
+   * the cards layout. The caller owns the search term, so it builds the bar
+   * and hands it over rather than this reaching back for the state -- and
+   * takes the counts back the other way, since the search that produces them
+   * is run here.
+   *
+   * Undefined until there are counts, which is not the same as counting
+   * nothing: a bar that leaves out what the search has nothing under would
+   * otherwise leave out everything until the first response.
+   */
+  filterBarSlot?: (aggregations: Aggregations | undefined) => React.ReactNode
   adminOptionsSlot?: React.ReactNode
   /**
    * True when this instance queries the vector (hybrid) endpoint rather than
@@ -679,6 +808,18 @@ export interface SearchDisplayProps {
    * the OpenSearch-only relevance controls, which the vector endpoint ignores.
    */
   hybridSearchActive?: boolean
+  /**
+   * The resource type tabs above the results. Defaults to Courses, Programs
+   * and Learning Materials beside All; the topic page passes `TOPIC_TABS`.
+   */
+  tabs?: TabConfig[]
+}
+
+/** The lift the facet menus carry, so the two read as the same kind of menu. */
+const SORT_MENU_PROPS = {
+  PaperProps: {
+    sx: { boxShadow: "1px 3px 20px 0 rgba(0, 0, 0, 0.12)" },
+  },
 }
 
 const SearchDisplay: React.FC<SearchDisplayProps> = ({
@@ -701,9 +842,11 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
   getDisplayData,
   hidePagination = false,
   drawerSearchSlot,
+  filterBarSlot,
   adminOptionsSlot,
   hybridSearchActive = false,
   resultsLayout = "default",
+  tabs = TABS,
 }) => {
   const searchParams = useAppSearchParams()
   const [expandAdminOptions, setExpandAdminOptions] = useState(false)
@@ -719,19 +862,17 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
     () => resultsHeadingRef.current?.focus(),
     [],
   )
-  const activeTab =
-    TABS.find(
-      (t) => t.resource_type_group === searchParams.get("resource_type_group"),
-    ) ??
-    TABS.find((t) => t.defaultTab) ??
-    TABS[0]
+  const activeTab = findActiveTab(
+    tabs,
+    searchParams.getAll("resource_type_group"),
+  )
 
   const allParams = useMemo(() => {
     return getSearchParams({
       searchParams,
       requestParams,
       constantSearchParams,
-      resourceTypeGroup: activeTab?.resource_type_group || undefined,
+      resourceTypeGroups: activeTab.resource_type_groups,
       facetNames,
       page,
       pageSize: PAGE_SIZE,
@@ -740,7 +881,7 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
     searchParams,
     requestParams,
     constantSearchParams,
-    activeTab?.resource_type_group,
+    activeTab.resource_type_groups,
     facetNames,
     page,
   ])
@@ -855,6 +996,10 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
       options={sortOptions}
       className="sort-dropdown"
       aria-label="Sort by"
+      /* The lift belongs to the card design, where this menu is one of four
+         and has to match the facet menus beside it. The search page and the
+         other channels keep the menu they had. */
+      MenuProps={resultsLayout === "cards" ? SORT_MENU_PROPS : undefined}
       renderValue={(value) => {
         const opt = SORT_OPTIONS.find((option) => option.value === value)
         return `Sort by: ${opt?.label}`
@@ -1093,13 +1238,18 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
     facetsBeforeTypeChoice.length,
   )
   const aggregations = displayData?.metadata.aggregations ?? {}
+  /* What the chip row will draw, which also decides whether the tabs above it
+     carry a rule -- see `TopicTabsRow`. */
+  const appliedFilters = selectedFilters(facetManifest, requestParams)
   const availableFacets = (manifest: FacetManifest) => (
     <AvailableFacets
       facetManifest={manifest}
       activeFacets={requestParams}
       onFacetChange={toggleParamValue}
       facetOptions={
-        resultsLayout === "cards" ? withEveryValue(aggregations) : aggregations
+        resultsLayout === "cards"
+          ? withAvailableValues(aggregations)
+          : aggregations
       }
     />
   )
@@ -1116,7 +1266,7 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
         <>
           {availableFacets(facetsBeforeTypeChoice)}
           <ResourceTypeGroupTabs.Checklist
-            tabs={TABS}
+            tabs={tabs}
             aggregations={displayData?.metadata.aggregations}
             activeTabName={activeTab.name}
             setSearchParams={setSearchParams}
@@ -1146,9 +1296,27 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
             sx={{
               display: "flex",
               flexDirection: "column",
-              /* The cards layout sets the tab row 24px above the grid, which
-                 is what its design specifies. */
-              gap: "16px",
+              /* The cards design sets its grid 40px below the card it filters
+                 from. Every other layout keeps the 16px it had. */
+              gap: resultsLayout === "cards" ? "40px" : "16px",
+              /**
+               * This column holds its own contents off the hero above it, and
+               * spaces them from each other, so whatever happens to come first
+               * sits the same distance down -- the card where the banner draws
+               * nothing, the banner where it draws.
+               *
+               * Which means taking the banner's own margins off: it carries
+               * them for the column it has always sat in, which spaces its
+               * children more tightly than this one and leaves it to hold
+               * itself off what is above and below. Here they would stack with
+               * the padding and the gap.
+               */
+              ...(resultsLayout === "cards"
+                ? {
+                    paddingTop: "40px",
+                    [`.${BANNER_CLASS}`]: { marginTop: 0, marginBottom: 0 },
+                  }
+                : {}),
             }}
           >
             <VisuallyHidden
@@ -1169,45 +1337,23 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
               {isFetching || isLoading ? "" : `${displayData?.count} results`}
             </VisuallyHidden>
             <UniversalAIBanner searchParams={searchParams} />
-            <Stack
-              direction="row"
-              justifyContent="space-between"
-              /* The cards layout's narrow screen takes this choice in the
-                 filter drawer instead -- see the drawer's checklist. */
-              sx={
-                resultsLayout === "cards"
-                  ? { display: { xs: "none", md: "flex" } }
-                  : undefined
-              }
-            >
-              <StyledResourceTabs
-                setSearchParams={setSearchParams}
-                tabs={TABS}
-                aggregations={displayData?.metadata.aggregations}
-                onTabChange={() => setPage(1)}
-              />
-              {/* The cards layout puts sorting on the row below, beside the
-                  filters it applies to, which is where its design has it. */}
-              {resultsLayout === "cards" ? null : (
-                <DesktopSortContainer>{sortDropdown}</DesktopSortContainer>
-              )}
-            </Stack>
             {resultsLayout === "cards" ? (
-              <Stack
-                direction="row"
-                justifyContent="flex-end"
-                alignItems="center"
-                gap="16px"
-                /* Not on a narrow screen, where the design has the Filter row
-                   and the results and nothing between them -- the drawer is
-                   where the applied filters are seen and removed there, and
-                   sorting has its own control in that row. */
-                sx={{ display: { xs: "none", md: "flex" } }}
-              >
+              <TopicSearchCard>
+                {filterBarSlot?.(
+                  displayData ? withAvailableValues(aggregations) : undefined,
+                )}
+                <TopicTabsRow dividesFilters={appliedFilters.length > 0}>
+                  <StyledResourceTabs
+                    setSearchParams={setSearchParams}
+                    tabs={tabs}
+                    aggregations={displayData?.metadata.aggregations}
+                    onTabChange={() => setPage(1)}
+                  />
+                  <DesktopSortContainer>{sortDropdown}</DesktopSortContainer>
+                </TopicTabsRow>
                 <SelectedFilters
                   facetManifest={facetManifest}
                   params={requestParams}
-                  count={displayData?.count}
                   onRemove={(name, value) => {
                     toggleParamValue(name, value, false)
                     setPage(1)
@@ -1220,18 +1366,28 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
                      the results it was describing. */
                   onEmpty={focusResultsHeading}
                 />
+              </TopicSearchCard>
+            ) : (
+              <Stack direction="row" justifyContent="space-between">
+                <StyledResourceTabs
+                  setSearchParams={setSearchParams}
+                  tabs={tabs}
+                  aggregations={displayData?.metadata.aggregations}
+                  onTabChange={() => setPage(1)}
+                />
                 <DesktopSortContainer>{sortDropdown}</DesktopSortContainer>
               </Stack>
-            ) : null}
+            )}
             <AiSearchOverview
               searchParams={searchParams}
               onDismissed={focusResultsHeading}
             />
-            <ResourceTypeGroupTabs.TabPanels tabs={TABS}>
-              <MobileFilter>
+            <ResourceTypeGroupTabs.TabPanels tabs={tabs}>
+              <MobileFilter cards={resultsLayout === "cards"}>
                 <FilterButton
-                  size="small"
-                  variant="text"
+                  cards={resultsLayout === "cards"}
+                  size={resultsLayout === "cards" ? "medium" : "small"}
+                  variant={resultsLayout === "cards" ? "bordered" : "text"}
                   startIcon={<RiEqualizerLine />}
                   onClick={toggleMobileDrawer(true)}
                 >
@@ -1286,7 +1442,9 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
                   ) : null}
                   {filterContents}
                 </StyledDrawer>
-                <MobileSortContainer>{sortDropdown}</MobileSortContainer>
+                <MobileSortContainer cards={resultsLayout === "cards"}>
+                  {sortDropdown}
+                </MobileSortContainer>
               </MobileFilter>
               <StyledResultsContainer fetching={isFetching} inert={isFetching}>
                 <div ref={scrollHook} />
