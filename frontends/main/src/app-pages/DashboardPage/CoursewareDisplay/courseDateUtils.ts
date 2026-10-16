@@ -35,7 +35,7 @@ export const getRunTimeState = (
  * EnrolledCourseCard.test.tsx and SiblingRunsAccordion.test.tsx.
  */
 type EnrollmentWithCourseStaffRole = CourseRunEnrollmentV3 & {
-  has_course_staff_role?: boolean | null
+  has_course_staff_role?: boolean
 }
 
 /**
@@ -54,8 +54,15 @@ export const hasCourseStaffRole = (
  * disabling the button for a course admin only sent them to paste the
  * courseware URL by hand.
  *
- * Shared by every route in (card button, card title, sibling-run rows, upgrade
- * and post-enrollment redirects) so they cannot disagree.
+ * Shared by the card button, the card title and the sibling-run rows, so the
+ * three ways into a run from one card cannot disagree about whether it opens.
+ *
+ * The upgrade and post-enrollment redirects in `useEnrollmentHandler` call this
+ * too, but pass only `isStaff`, so a course admin enrolling into a run that has
+ * not started is not redirected into it. That is deliberate: those redirects
+ * fire for someone who just enrolled as a learner, and sending them somewhere
+ * the run has not begun would be the wrong default. They reach the courseware
+ * from the dashboard card instead.
  */
 export const canOpenCourseware = (
   startDate?: string | null,

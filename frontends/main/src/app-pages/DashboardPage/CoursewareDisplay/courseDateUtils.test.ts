@@ -8,15 +8,15 @@ const past = moment().subtract(30, "days").toISOString()
  * Only the flag matters here, so the fixtures carry nothing else; the cast
  * stands in for a full enrollment rather than building one.
  */
-const enrollmentWith = (flag?: boolean | null) =>
+const enrollmentWith = (flag?: boolean) =>
   ({ has_course_staff_role: flag }) as Parameters<typeof hasCourseStaffRole>[0]
 
 describe("hasCourseStaffRole", () => {
   test.each([
     { label: "true", enrollment: enrollmentWith(true), expected: true },
     { label: "false", enrollment: enrollmentWith(false), expected: false },
-    // null and absent both occur while the generated client lags mitxonline.
-    { label: "null", enrollment: enrollmentWith(null), expected: false },
+    // mitxonline declares the field required and non-nullable, so while the
+    // generated client lags it is absent rather than null.
     {
       label: "missing",
       enrollment: enrollmentWith(undefined),
