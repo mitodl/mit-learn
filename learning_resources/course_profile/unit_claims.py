@@ -167,7 +167,9 @@ def call_llm(stage: PromptStage, combined_prompt: str) -> tuple[BaseModel, str]:
         max_tokens=stage.config.max_output_tokens,
         api_base=settings.LITELLM_API_BASE,
         request_timeout=settings.COURSE_PROFILE_LLM_TIMEOUT,
-    ).with_structured_output(stage.schema, include_raw=True)
+        # Tool calling, not the default json_schema: OpenAI's strict json_schema
+        # mode rejects optional fields, and pydantic validates the response anyway.
+    ).with_structured_output(stage.schema, method="function_calling", include_raw=True)
     messages = [
         SystemMessage(content=stage.system),
         HumanMessage(content=combined_prompt),

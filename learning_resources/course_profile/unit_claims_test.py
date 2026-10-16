@@ -386,7 +386,7 @@ def test_call_llm_retries_invalid_response(mocker, settings):
         request_timeout=settings.COURSE_PROFILE_LLM_TIMEOUT,
     )
     chat.return_value.with_structured_output.assert_called_once_with(
-        UnitExtraction, include_raw=True
+        UnitExtraction, method="function_calling", include_raw=True
     )
     assert structured.invoke.call_count == 2
 

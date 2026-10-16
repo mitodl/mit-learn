@@ -70,7 +70,7 @@ Extract, with evidence:
     + EVIDENCE_RULES
 )
 
-DEFAULT_LLM_MODEL = "gpt-4.1"
+DEFAULT_LLM_MODEL = "gpt-4o-mini"
 DEFAULT_PROMPTS = {
     "context": CONTEXT_SYSTEM,
     "unit": UNIT_SYSTEM,
