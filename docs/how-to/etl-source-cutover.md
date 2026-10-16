@@ -36,8 +36,8 @@ Flip every resource type the source's legacy task writes, in one sitting, unless
 | `mitpe`       | `course`, `program`          | `update-professional-ed-resources-every-1-days` | webhook (`mitpe_schedule`)       |
 | `mit_climate` | `document`                   | `update-mit-climate-articles-every-1-days`      | webhook (`mit_climate_schedule`) |
 | `oll`         | `course`                     | none                                            | webhook (`oll_schedule`)         |
-| `podcast`     | `podcast`, `podcast_episode` | `update-podcasts`                               | webhook (`podcast_schedule`)     |
-| `youtube`     | `video_playlist`, `video`    | `update-youtube-videos`                         | webhook (not built)              |
+| `podcast`     | `podcast`, `podcast_episode` | `update-podcasts`                               | warehouse (`SyncPodcastsTask`)   |
+| `youtube`     | `video_playlist`, `video`    | `update-youtube-videos`                         | warehouse (`SyncYouTubeTask`)    |
 | `ovs`         | `video_playlist`, `video`    | `update-ovs-videos`                             | webhook (already pushing)        |
 | `see`         | `course`                     | `update_sloan_courses`                          | not built                        |
 | `canvas`      | `course`                     | `sync_canvas_courses-every-1-weeks`             | webhook (already pushing)        |
@@ -81,7 +81,9 @@ For a webhook source:
 For a warehouse source:
 
 1. Create the rows with `owner` set to `warehouse`.
-2. Run the source's `BaseWarehouseETLTask` in full from `./manage.py shell` rather than waiting for its beat entry: `<SyncTask>.delay(full_refresh=True)`. Only a full refresh prunes. (No catalog source has a warehouse task yet. `profiles.tasks.SyncProgramCertificatesTask` is the one that exists, and it writes certificates, not catalog resources, so ownership doesn't apply to it.)
+2. Run the source's `BaseWarehouseETLTask` in full from `./manage.py shell` rather than waiting for its beat entry: `<SyncTask>.delay(full_refresh=True)`. Only a full refresh prunes. (`SyncPodcastsTask` and `SyncYouTubeTask` are the catalog sources with a warehouse task so far. `profiles.tasks.SyncProgramCertificatesTask` writes certificates, not catalog resources, so ownership doesn't apply to it.)
+3. `SyncPodcastsTask` and `SyncYouTubeTask` fail before writing if the run would unpublish more than 10% of the source's published resources of a type, since that is what a partly built view looks like. If the pre-flip comparison showed a larger difference and you have explained it, pass `allow_mass_unpublish=True` to `.delay()` or `.run()`.
+4. `update-podcast-transcripts` stays on the legacy schedule (06:30 and 23:30 UTC), paired with `update-podcasts`. `SyncPodcastsTask` loads at 10:00 UTC, so after a podcast flip a new episode's transcript lands at 23:30 UTC, not 30 minutes after the episode.
 
 Between the flip and the new owner's first run, the legacy task only skips. The source's data goes stale but nothing is unpublished.
 

@@ -4,12 +4,14 @@ learning_resources tasks
 
 import datetime as datetime_module
 import logging
+import uuid
 from datetime import UTC, datetime
 
 import boto3
 import celery
 from celery.exceptions import Ignore
 from django.conf import settings
+from django.core.cache import caches
 from django.db import OperationalError
 from django.db.models import Q
 from django.utils import timezone
@@ -28,7 +30,14 @@ from learning_resources.credentials_store import (
     incomplete_credential_metadata_query,
     missing_credential_metadata_fields,
 )
-from learning_resources.etl import loaders, ovs, pipelines, podcast, youtube
+from learning_resources.etl import (
+    loaders,
+    ovs,
+    pipelines,
+    podcast,
+    warehouse_media,
+    youtube,
+)
 from learning_resources.etl.canvas import (
     sync_canvas_archive,
 )
@@ -48,11 +57,16 @@ from learning_resources.etl.loaders import (
     load_learning_materials,
     load_run_dependent_values,
 )
-from learning_resources.etl.ownership import may_write
+from learning_resources.etl.ownership import Pipeline, may_write, writing_as
 from learning_resources.etl.pipelines import ocw_courses_etl
 from learning_resources.etl.utils import (
     get_bucket_by_name,
     get_s3_prefix_for_source,
+)
+from learning_resources.lib.warehouse import (
+    WAREHOUSE_STATE_CACHE,
+    BaseWarehouseETLTask,
+    iter_rows,
 )
 from learning_resources.models import ContentFile, LearningResource, VideoChannel
 from learning_resources.site_scrapers.utils import scraper_for_site
@@ -1355,3 +1369,143 @@ def generate_all_credential_metadata(
         len(generation_tasks),
     )
     return len(generation_tasks)
+
+
+# Names the SyncYouTubeTask run whose playlist loads are current. Kept where
+# the warehouse watermarks are, so it outlives a cache flush.
+YOUTUBE_SYNC_GENERATION_KEY = "warehouse_etl:youtube_sync_generation"
+
+
+@app.task(acks_late=True, reject_on_worker_lost=True)
+def load_warehouse_youtube_playlist(channel_id, playlist_data, generation):
+    """
+    Load a single youtube playlist and its videos, as read from the warehouse
+
+    Args:
+        channel_id (str): youtube's id for the playlist's channel
+        playlist_data (dict): the playlist as load_playlist takes it
+        generation (str): the generation of the SyncYouTubeTask run that
+            queued this
+    """
+    with writing_as(Pipeline.WAREHOUSE):
+        # ownership can change between the sync that queued this and now
+        if not warehouse_media.may_write_youtube():
+            return
+        # A later sync may have unpublished this playlist, and loading it from
+        # the earlier read would publish it again. That sync queued every
+        # playlist it kept, so nothing is lost by dropping this one.
+        if caches[WAREHOUSE_STATE_CACHE].get(YOUTUBE_SYNC_GENERATION_KEY) != generation:
+            log.warning(
+                "Skipping youtube playlist %s: queued by a superseded sync",
+                playlist_data["playlist_id"],
+            )
+            return
+        video_channel = VideoChannel.objects.filter(channel_id=channel_id).first()
+        if video_channel is None:
+            log.error("No VideoChannel for channel_id=%s", channel_id)
+            return
+        loaders.load_playlist(video_channel, playlist_data)
+
+
+class SyncYouTubeTask(BaseWarehouseETLTask):
+    """
+    Warehouse-pull sync of the youtube channels, playlists and videos, replacing
+    get_youtube_data once ETLSourceOwnership names the warehouse for
+    youtube video_playlist and video.
+
+    Like get_youtube_data, it fans out into one task per playlist, so a culled
+    worker costs one playlist and not the run.
+
+    Always a full sync, whatever ``since`` is: a playlist is loaded together
+    with all of its videos, and the views carry no per-playlist change time.
+
+    A run that would unpublish more than warehouse_media.MAX_UNPUBLISH_SHARE of
+    the published playlists or videos fails before writing. Queue it with
+    ``allow_mass_unpublish=True`` when the removal is real.
+    """
+
+    name = "learning_resources.tasks.SyncYouTubeTask"
+    table_name = "integrations__learn__youtube_playlists"
+    writes = (ETLSource.youtube.name, warehouse_media.YOUTUBE_TYPES)
+
+    def fetch_and_upsert(
+        self,
+        conn,
+        *,
+        since=None,  # noqa: ARG002
+        allow_mass_unpublish: bool = False,
+    ) -> int:
+        """Read the four youtube views and queue a load of each playlist."""
+        channels, playlists, playlist_videos, videos = (
+            list(iter_rows(conn, self.qualified_name(table)))
+            for table in (
+                "integrations__learn__youtube_channels",
+                self.table_name,
+                "integrations__learn__youtube_playlist_videos",
+                "integrations__learn__youtube_videos",
+            )
+        )
+        playlists_by_channel = warehouse_media.prepare_youtube_sync(
+            channels,
+            playlists,
+            playlist_videos,
+            videos,
+            allow_mass_unpublish=allow_mass_unpublish,
+        )
+        if playlists_by_channel is None:
+            return 0
+        # Set once the checks have passed, so a refused run leaves an earlier
+        # run's queued loads current, and before this run unpublishes
+        # anything, so those loads cannot republish what this one removes.
+        generation = uuid.uuid4().hex
+        caches[WAREHOUSE_STATE_CACHE].set(
+            YOUTUBE_SYNC_GENERATION_KEY, generation, timeout=None
+        )
+        to_load = warehouse_media.sync_youtube_channels(channels, playlists_by_channel)
+        log.info("Queueing %d youtube playlists from the warehouse", len(to_load))
+        for channel_id, playlist_data in to_load:
+            load_warehouse_youtube_playlist.delay(channel_id, playlist_data, generation)
+        return len(to_load)
+
+
+SyncYouTubeTask = app.register_task(SyncYouTubeTask())
+
+
+class SyncPodcastsTask(BaseWarehouseETLTask):
+    """
+    Warehouse-pull sync of the podcasts and their episodes, replacing
+    get_podcast_data once ETLSourceOwnership names the warehouse for podcast
+    podcast and podcast_episode.
+
+    Always a full sync, whatever ``since`` is: load_podcasts unpublishes the
+    episodes a podcast no longer lists, so it needs all of them.
+
+    A run that would unpublish more than warehouse_media.MAX_UNPUBLISH_SHARE of
+    the published podcasts or episodes fails before writing. Queue it with
+    ``allow_mass_unpublish=True`` when the removal is real.
+    """
+
+    name = "learning_resources.tasks.SyncPodcastsTask"
+    table_name = "integrations__learn__podcasts"
+    writes = (ETLSource.podcast.name, warehouse_media.PODCAST_TYPES)
+
+    def fetch_and_upsert(
+        self,
+        conn,
+        *,
+        since=None,  # noqa: ARG002
+        allow_mass_unpublish: bool = False,
+    ) -> int:
+        """Read the two podcast views and load them."""
+        return warehouse_media.sync_podcasts(
+            list(iter_rows(conn, self.view_name)),
+            list(
+                iter_rows(
+                    conn, self.qualified_name("integrations__learn__podcast_episodes")
+                )
+            ),
+            allow_mass_unpublish=allow_mass_unpublish,
+        )
+
+
+SyncPodcastsTask = app.register_task(SyncPodcastsTask())
