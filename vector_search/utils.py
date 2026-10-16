@@ -616,7 +616,19 @@ def _with_run_readable_id_fallback(serialized_document):
     }
 
 
-def _process_resource_embeddings(serialized_resources):
+def _process_resource_embeddings(serialized_resources, refreshed_point_ids=None):
+    """
+    Embed the resources whose embedding context changed, and refresh the payload
+    of the rest.
+
+    Args:
+        serialized_resources (iterable of dict): serialized learning resources
+        refreshed_point_ids (dict or None): when given, filled with
+            {resource id: point id} for every resource whose existing point had
+            its payload refreshed instead of being re-embedded
+    Returns:
+        generator of PointStruct or None: the points to upsert, if any
+    """
     docs = []
     metadata = []
     ids = []
@@ -641,6 +653,8 @@ def _process_resource_embeddings(serialized_resources):
         )
         if not should_generate_resource_embeddings(doc, embedding_context):
             update_learning_resource_payload(doc)
+            if refreshed_point_ids is not None and doc.get("id") is not None:
+                refreshed_point_ids[doc["id"]] = vector_point_id(vector_point_key(doc))
             continue
         metadata.append(doc)
         ids.append(vector_point_id(vector_point_key(doc)))
@@ -1149,9 +1163,18 @@ def embed_learning_resources(ids, resource_type, overwrite):  # noqa: PLR0915, C
 
         collection_name = RESOURCES_COLLECTION_NAME
 
-        points = _process_resource_embeddings(serialized_resources)
+        # A resource's current point is either upserted below or already exists
+        # and had its payload refreshed; any other point carrying its database
+        # id is stale, whether or not the resource was re-embedded this run.
+        current_point_ids = {}
+        points = _process_resource_embeddings(
+            serialized_resources, refreshed_point_ids=current_point_ids
+        )
         points = list(points) if points else None
-        stale_points_filter = _stale_resource_points_filter(points or [])
+        for point in points or []:
+            if (point.payload or {}).get("id") is not None:
+                current_point_ids[point.payload["id"]] = point.id
+        stale_points_filter = _stale_resource_points_filter(current_point_ids)
         _embed_course_metadata_as_contentfile(serialized_resources)
     else:
         serialized_resources = _iter_serialized_content_files(ids)
@@ -1280,20 +1303,24 @@ def embed_learning_resources(ids, resource_type, overwrite):  # noqa: PLR0915, C
 
         points = None  # Handled inside the loop
         stale_points_filter = None
+    update_operations = []
     if points:
-        update_operations = [
+        update_operations.append(
             models.UpsertOperation(
                 upsert=models.PointsList(
                     points=points,
                 )
-            ),
-        ]
-        if stale_points_filter:
-            update_operations.append(
-                models.DeleteOperation(
-                    delete=models.FilterSelector(filter=stale_points_filter)
-                )
             )
+        )
+    if stale_points_filter:
+        # Runs even when nothing was re-embedded, so duplicates of resources
+        # whose payload was only refreshed are cleaned up too.
+        update_operations.append(
+            models.DeleteOperation(
+                delete=models.FilterSelector(filter=stale_points_filter)
+            )
+        )
+    if update_operations:
         client.batch_update_points(
             collection_name=collection_name,
             update_operations=update_operations,
@@ -1301,31 +1328,31 @@ def embed_learning_resources(ids, resource_type, overwrite):  # noqa: PLR0915, C
         )
 
 
-def _stale_resource_points_filter(points):
+def _stale_resource_points_filter(current_point_ids):
     """
-    Return a filter matching the stale points of the resources in `points`.
+    Return a filter matching the stale points of the given resources.
 
     A resource point's id derives from its platform and readable_id, so a change
     to either embeds the resource under a new id and leaves the old point
     behind. A stale point carries the same database id in its payload but is not
-    the point just computed, which is excluded so it is never the one deleted.
+    the resource's current point, which is excluded so it is never the one
+    deleted.
 
     Args:
-        points (list of PointStruct): resource points about to be upserted
+        current_point_ids (dict): {resource id: current point id}
     Returns:
-        Filter or None: None when no point carries a database id
+        Filter or None: None when there are no resources
     """
     conditions = [
         models.Filter(
             must=[
                 models.FieldCondition(
-                    key="id", match=models.MatchValue(value=point.payload["id"])
+                    key="id", match=models.MatchValue(value=resource_id)
                 )
             ],
-            must_not=[models.HasIdCondition(has_id=[point.id])],
+            must_not=[models.HasIdCondition(has_id=[point_id])],
         )
-        for point in points
-        if (point.payload or {}).get("id") is not None
+        for resource_id, point_id in current_point_ids.items()
     ]
     # An empty `should` matches every point -- never return one.
     return models.Filter(should=conditions) if conditions else None

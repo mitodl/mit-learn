@@ -318,7 +318,7 @@ def test_embed_learning_resources_deletes_stale_points(mocker, changed_field):
     mocker.patch("vector_search.utils._embed_course_metadata_as_contentfile")
     mocker.patch(
         "vector_search.utils._process_resource_embeddings",
-        side_effect=lambda docs: (
+        side_effect=lambda docs, **_kwargs: (
             PointStruct(
                 id=vector_point_id(vector_point_key(doc)),
                 vector=vector,
@@ -354,6 +354,72 @@ def test_embed_learning_resources_deletes_stale_points(mocker, changed_field):
         resource.id: [new_point_id],
         other.id: [vector_point_id(f"{other.platform.code}.{other.readable_id}")],
     }
+
+
+def test_embed_learning_resources_deletes_stale_points_when_unchanged(mocker):
+    """
+    A resource whose embedding context is unchanged only has its payload
+    refreshed, yet its stale duplicates are still deleted -- even when nothing
+    in the batch is re-embedded -- and its current point is kept.
+    """
+    vector = [0.1, 0.2]
+    client = QdrantClient(":memory:")
+    client.create_collection(
+        RESOURCES_COLLECTION_NAME,
+        vectors_config=models.VectorParams(
+            size=len(vector), distance=models.Distance.COSINE
+        ),
+    )
+    mocker.patch("vector_search.utils.qdrant_client", return_value=client)
+    mocker.patch("vector_search.utils.ensure_qdrant_collections")
+    mocker.patch("vector_search.utils._embed_course_metadata_as_contentfile")
+    mocker.patch(
+        "vector_search.utils._learning_resource_embedding_context",
+        return_value="context",
+    )
+    mocker.patch(
+        "vector_search.utils.should_generate_resource_embeddings",
+        return_value=False,
+    )
+    resource, other = LearningResourceFactory.create_batch(2, resource_type=COURSE_TYPE)
+    current_point_id = vector_point_id(
+        f"{resource.platform.code}.{resource.readable_id}"
+    )
+    other_point_id = vector_point_id(f"{other.platform.code}.{other.readable_id}")
+    stale_point_id = vector_point_id("stale.old-readable-id")
+    client.upsert(
+        RESOURCES_COLLECTION_NAME,
+        points=[
+            PointStruct(
+                id=current_point_id, vector=vector, payload={"id": resource.id}
+            ),
+            PointStruct(id=stale_point_id, vector=vector, payload={"id": resource.id}),
+            PointStruct(id=other_point_id, vector=vector, payload={"id": other.id}),
+        ],
+    )
+
+    embed_learning_resources([resource.id], COURSE_TYPE, overwrite=True)
+
+    point_ids = {
+        point.id for point in client.scroll(RESOURCES_COLLECTION_NAME, limit=10)[0]
+    }
+    assert point_ids == {current_point_id, other_point_id}
+
+
+def test_embed_learning_resources_leaves_unrenderable_resource_points(mocker):
+    """A resource whose context failed to render has none of its points deleted"""
+    mock_qdrant = mocker.patch("vector_search.utils.qdrant_client").return_value
+    mocker.patch("vector_search.utils.ensure_qdrant_collections")
+    mocker.patch("vector_search.utils._embed_course_metadata_as_contentfile")
+    mocker.patch(
+        "vector_search.utils._learning_resource_embedding_context",
+        return_value=None,
+    )
+    resource = LearningResourceFactory.create(resource_type=COURSE_TYPE)
+
+    embed_learning_resources([resource.id], COURSE_TYPE, overwrite=True)
+
+    mock_qdrant.batch_update_points.assert_not_called()
 
 
 def test_filter_existing_qdrant_points(mocker):
