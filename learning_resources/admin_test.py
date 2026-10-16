@@ -205,6 +205,21 @@ def test_resource_search_takes_a_non_numeric_term(
 
 
 @pytest.mark.django_db
+@pytest.mark.parametrize("term", ["²", "₁", "①"])
+def test_resource_search_takes_a_digit_int_cannot_read(
+    resource_search, searchable_resources, term
+):
+    """
+    A digit `int` will not read is searched for, not raised on.
+
+    `isdigit` answers for all of these, so guarding the lookup with it would
+    let them reach `int` and raise -- a 500 from the admin search box, and from
+    every autocomplete behind it, for a character someone can simply type.
+    """
+    assert resource_search(term, searchable_resources) == []
+
+
+@pytest.mark.django_db
 def test_resource_is_named_by_its_title():
     """
     A resource names itself by title, so the autocomplete lists titles.

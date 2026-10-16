@@ -290,12 +290,17 @@ class LearningResourceAdmin(admin.ModelAdmin):
         a log line, a bug report -- and pasting one of those in is the quickest
         way to find it. `search_fields` cannot do it: a `=id` entry there would
         raise on every non-numeric term typed into the same box.
+
+        Decimal rather than `isdigit`, which also answers for the digits `int`
+        will not read -- a superscript, a subscript, a digit in a circle -- and
+        those raise where they reach it.
         """
         results, may_have_duplicates = super().get_search_results(
             request, queryset, search_term
         )
-        if search_term.strip().isdigit():
-            results |= queryset.filter(pk=int(search_term))
+        term = search_term.strip()
+        if term.isdecimal():
+            results |= queryset.filter(pk=int(term))
         return results, may_have_duplicates
 
 
