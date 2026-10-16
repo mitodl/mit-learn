@@ -1424,9 +1424,15 @@ def _resource_payload_hits(search_result):
         if not payload.get("readable_id"):
             continue
         key = _resource_hit_key(payload)
-        if key in seen:
+        platform_key = (
+            "platform_readable_id",
+            _resource_platform_key(
+                (payload.get("platform") or {}).get("code"), payload["readable_id"]
+            ),
+        )
+        if key in seen or platform_key in seen:
             continue
-        seen.add(key)
+        seen.update((key, platform_key))
         hits.append(_trim_indexing_only_list_fields(payload))
     return hits
 
