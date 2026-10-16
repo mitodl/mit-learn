@@ -1,7 +1,7 @@
-# This file is for configuring Nginx on Heroku using the nginx-buildpack
+# Rendered by nginx/20-compile-nginx-conf-erb.sh for the docker-compose
+# nginx service.
 
 daemon off;
-#Heroku dynos have at least 4 cores.
 worker_processes <%= ENV['NGINX_WORKERS'] || 4 %>;
 
 events {
@@ -18,7 +18,6 @@ http {
 
     server_tokens off;
 
-    log_format l2met 'measure#nginx.service=$request_time request_id=$http_x_request_id';
     log_format apm '"$time_local" client=$remote_addr '
                    'method=$request_method request="$request" '
                    'request_length=$request_length '

@@ -778,15 +778,6 @@ wheels = [
 ]
 
 [[package]]
-name = "dj-static"
-version = "0.0.6"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "static3" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/2b/8f/77a4b8ec50c821193bf9682c7896f12fd0418eb3711a7d66796ede59c23b/dj-static-0.0.6.tar.gz", hash = "sha256:032ec1c532617922e6e3e956d504a6fb1acce4fc1c7c94612d0fda21828ce8ef", size = 3368, upload-time = "2014-07-11T17:14:41.094Z" }
-
-[[package]]
 name = "django"
 version = "5.2.17"
 source = { registry = "https://pypi.org/simple" }
@@ -2607,7 +2598,6 @@ dependencies = [
     { name = "dateparser" },
     { name = "deepmerge" },
     { name = "dj-database-url" },
-    { name = "dj-static" },
     { name = "django" },
     { name = "django-anymail" },
     { name = "django-bitfield" },
@@ -2695,7 +2685,6 @@ dependencies = [
     { name = "sentry-sdk" },
     { name = "social-auth-app-django" },
     { name = "social-auth-core" },
-    { name = "static3" },
     { name = "tika" },
     { name = "tiktoken" },
     { name = "toolz" },
@@ -2752,7 +2741,6 @@ requires-dist = [
     { name = "dateparser", specifier = ">=1.2.0,<2" },
     { name = "deepmerge", specifier = ">=2.0,<3" },
     { name = "dj-database-url", specifier = ">=3.0.0,<4" },
-    { name = "dj-static", specifier = ">=0.0.6,<0.0.7" },
     { name = "django", specifier = "==5.2.17" },
     { name = "django-anymail", extras = ["mailgun"], specifier = ">=13.0,<14" },
     { name = "django-bitfield", specifier = ">=2.2.0,<3" },
@@ -2840,7 +2828,6 @@ requires-dist = [
     { name = "sentry-sdk", specifier = ">=2.25.1,<3" },
     { name = "social-auth-app-django", specifier = ">=6,<7" },
     { name = "social-auth-core", specifier = ">=5,<6" },
-    { name = "static3", specifier = ">=0.7.0,<0.8" },
     { name = "tika", specifier = ">=3.0.0,<4" },
     { name = "tiktoken", specifier = ">=0.13,<0.14" },
     { name = "toolz", specifier = ">=1.0.0,<2" },
@@ -4964,12 +4951,6 @@ sdist = { url = "https://files.pythonhosted.org/packages/28/e3/55dcc2cfbc3ca9c29
 wheels = [
     { url = "https://files.pythonhosted.org/packages/f1/7b/ce1eafaf1a76852e2ec9b22edecf1daa58175c090266e9f6c64afcd81d91/stack_data-0.6.3-py3-none-any.whl", hash = "sha256:d5558e0c25a4cb0853cddad3d77da9891a08cb85dd9f9f91b9f8cd66e511e695", size = 24521, upload-time = "2023-09-30T13:58:03.53Z" },
 ]
-
-[[package]]
-name = "static3"
-version = "0.7.0"
-source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/87/b0/9cf15108b73c4f2ffffe11d237c938f57785f55d3693d822d565432cb680/static3-0.7.0.tar.gz", hash = "sha256:674641c64bc75507af2eb20bef7e7e3593dca993dec6674be108fa15b42f47c8", size = 24607, upload-time = "2016-05-10T11:43:45.17Z" }
 
 [[package]]
 name = "strenum"

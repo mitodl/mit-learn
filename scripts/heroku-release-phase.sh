@@ -1,30 +1,20 @@
 #!/usr/bin/env bash
 
 set -eo pipefail
-indent() {
-	RE="s/^/       /"
-	[ "$(uname)" == "Darwin" ] && sed -l "$RE" || sed -u "$RE"
-}
 
-MANAGE_FILE=$(find . -maxdepth 3 -type f -name 'manage.py' | head -1)
-# trim "./" from the path
-MANAGE_FILE=${MANAGE_FILE:2}
-#
-# Run migrations
+echo "Running django migrations"
+python manage.py showmigrations --list
+python manage.py migrate --noinput
+RUN_DATA_MIGRATIONS=true python manage.py migrate --noinput
 
-echo "-----> Running django migrations"
-python $MANAGE_FILE showmigrations --list 2>&1 | indent
-python $MANAGE_FILE migrate --noinput 2>&1 | indent
-RUN_DATA_MIGRATIONS=true python $MANAGE_FILE migrate --noinput 2>&1 | indent
-
-echo "-----> Syncing Qdrant collections and payload indexes"
-python $MANAGE_FILE create_qdrant_collections 2>&1 | indent
+echo "Syncing Qdrant collections and payload indexes"
+python manage.py create_qdrant_collections
 
 # consolidate user subscriptions and remove duplicate percolate instances
-python $MANAGE_FILE prune_subscription_queries 2>&1 | indent
+python manage.py prune_subscription_queries
 
-echo "-----> Generating cache tables"
-python $MANAGE_FILE createcachetable 2>&1 | indent
+echo "Generating cache tables"
+python manage.py createcachetable
 
 # clear cache entries
-python $MANAGE_FILE clear_cache 2>&1 | indent
+python manage.py clear_cache
