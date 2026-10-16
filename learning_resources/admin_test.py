@@ -6,13 +6,22 @@ from django.contrib.admin.widgets import AdminTextareaWidget
 from django.test import RequestFactory
 from django.urls import reverse
 
-from learning_resources.admin import CredentialMetadataAdmin, TutorProblemFileAdmin
+from learning_resources.admin import (
+    CredentialMetadataAdmin,
+    LearningResourceAdmin,
+    TutorProblemFileAdmin,
+)
 from learning_resources.factories import (
     CredentialMetadataFactory,
+    LearningResourceFactory,
     LearningResourceRunFactory,
     TutorProblemFileFactory,
 )
-from learning_resources.models import CredentialMetadata, TutorProblemFile
+from learning_resources.models import (
+    CredentialMetadata,
+    LearningResource,
+    TutorProblemFile,
+)
 
 
 @pytest.mark.django_db
@@ -110,3 +119,117 @@ def test_credential_metadata_change_view_renders(admin_user):
 
     assert response.status_code == 200
     assert b"Did a thing" in response.render().content
+
+
+@pytest.fixture
+def searchable_resources():
+    """
+    Two resources, and only two.
+
+    Both parts matter to a search for a bare primary key. The factory's
+    `readable_id` carries a random number, which such a search matches as a
+    substring whenever those digits land inside it, so these name their own and
+    neither those nor the titles hold a digit. And a resource of a fuzzily
+    chosen type brings related resources along -- a podcast its episodes, a
+    playlist its videos -- each with a random readable id of its own, so the
+    type is pinned to one that brings nothing.
+    """
+    return (
+        LearningResourceFactory.create(
+            is_course=True,
+            create_course=False,
+            title="Fluid Mechanics",
+            readable_id="course-v1:fluid-mechanics",
+        ),
+        LearningResourceFactory.create(
+            is_course=True,
+            create_course=False,
+            title="Thermodynamics",
+            readable_id="course-v1:thermodynamics",
+        ),
+    )
+
+
+@pytest.fixture
+def resource_search():
+    """Search the LearningResource admin the way its autocomplete does.
+
+    Over the resources handed in rather than the whole table, which is what the
+    admin does too: it passes `get_queryset(request)`. A test that searched
+    everything would answer for whatever else the database happened to hold.
+    """
+    model_admin = LearningResourceAdmin(LearningResource, site)
+
+    def search(term, among):
+        request = RequestFactory().get("/admin/autocomplete/")
+        results, _ = model_admin.get_search_results(
+            request,
+            LearningResource.objects.filter(pk__in=[r.pk for r in among]),
+            term,
+        )
+        return list(results)
+
+    return search
+
+
+@pytest.mark.django_db
+def test_resource_search_finds_a_bare_id(resource_search, searchable_resources):
+    """
+    A resource is found by its primary key, which is how one is identified in
+    an admin URL or a bug report.
+    """
+    wanted, _other = searchable_resources
+
+    assert resource_search(str(wanted.id), searchable_resources) == [wanted]
+
+
+@pytest.mark.django_db
+def test_resource_search_still_finds_a_title(resource_search, searchable_resources):
+    """Searching by title keeps working alongside the id lookup"""
+    wanted, _other = searchable_resources
+
+    assert resource_search("Fluid", searchable_resources) == [wanted]
+
+
+@pytest.mark.django_db
+def test_resource_search_takes_a_non_numeric_term(
+    resource_search, searchable_resources
+):
+    """
+    A term that is not a number does not reach the id lookup.
+
+    Naming `=id` in `search_fields` instead would raise on every word typed
+    into the same box, which is most of what is typed into it.
+    """
+    assert resource_search("nothing matches this", searchable_resources) == []
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize("term", ["²", "₁", "①"])
+def test_resource_search_takes_a_digit_int_cannot_read(
+    resource_search, searchable_resources, term
+):
+    """
+    A digit `int` will not read is searched for, not raised on.
+
+    `isdigit` answers for all of these, so guarding the lookup with it would
+    let them reach `int` and raise -- a 500 from the admin search box, and from
+    every autocomplete behind it, for a character someone can simply type.
+    """
+    assert resource_search(term, searchable_resources) == []
+
+
+@pytest.mark.django_db
+def test_resource_is_named_by_its_title():
+    """
+    A resource names itself by title, so the autocomplete lists titles.
+
+    Django renders a dropdown entry with `str()`, which without this is
+    "LearningResource object (123)" -- unrecognisable, and the point of
+    searching is to recognise what comes back.
+    """
+    resource = LearningResourceFactory.create(
+        title="Fluid Mechanics", readable_id="course-v1:MITx+2.006"
+    )
+
+    assert str(resource) == "Fluid Mechanics (course-v1:MITx+2.006)"
