@@ -310,6 +310,41 @@ export type LearnerProgressResponse = {
   data: LearnerProgress[]
 }
 
+type LearnerIdentity = Pick<
+  LearnerProgress,
+  "learner_id" | "email" | "full_name"
+>
+
+/** One of a learner's enrollments: a `LearnerProgress` row minus the identity. */
+export type LearnerEnrollment = Omit<LearnerProgress, keyof LearnerIdentity>
+
+/** A learner with every active enrollment they hold under the contract. */
+export type LearnerWithEnrollments = LearnerIdentity & {
+  enrollments: LearnerEnrollment[]
+}
+
+/**
+ * `limit` and `offset` count learners, not enrollments. The API caps `limit`
+ * at 25 and rejects anything larger.
+ */
+export type LearnersParams = AnalyticsPageParams &
+  Pick<
+    LearnerProgressParams,
+    "search" | "completion_status" | "needs_attention"
+  >
+
+/**
+ * `total_count` is the number of matching learners. A learner is listed when
+ * one enrollment matches every filter, and all their other enrollments come
+ * back too, whether or not they match.
+ */
+export type LearnersResponse = {
+  organization_id: string
+  as_of: string | null
+  total_count: number
+  data: LearnerWithEnrollments[]
+}
+
 /**
  * One course run under a contract, for the learner-progress module filter.
  *

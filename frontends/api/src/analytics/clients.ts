@@ -9,6 +9,8 @@ import type {
   ContractUtilization,
   CourseRun,
   EnrollmentCompletionFunnel,
+  LearnersParams,
+  LearnersResponse,
   LearnerProgressParams,
   LearnerProgressResponse,
   MonthlyEngagementTrend,
@@ -208,6 +210,21 @@ const analyticsContractsApi = {
   ): Promise<AxiosResponse<LearnerProgressResponse>> =>
     axiosInstance.get<LearnerProgressResponse>(
       `${contractRoot(organizationId, contractId)}/learner-progress`,
+      { params, signal, paramsSerializer: { indexes: null } },
+    ),
+
+  /**
+   * Learners paged by learner, each with all of their enrollments. Same array
+   * serialization as `learnerProgress`.
+   */
+  learners: (
+    organizationId: string,
+    contractId: string,
+    params?: LearnersParams,
+    signal?: AbortSignal,
+  ): Promise<AxiosResponse<LearnersResponse>> =>
+    axiosInstance.get<LearnersResponse>(
+      `${contractRoot(organizationId, contractId)}/learners`,
       { params, signal, paramsSerializer: { indexes: null } },
     ),
 
