@@ -8,6 +8,11 @@ import NotFoundPage from "@/app-pages/ErrorPage/NotFoundPage"
 import { ProgramAsCourseCard } from "./ProgramAsCourseCard"
 import { RiAwardFill } from "@remixicon/react"
 import { useProgramDashboardData } from "./hooks/useProgramDashboardData"
+import {
+  ProgramChangeTrackLink,
+  ProgramTrackPlaceholder,
+} from "./ProgramTrackControls"
+import { PROGRAM_TRACK_HEADING_ID } from "./ProgramTrackDialog"
 import { env } from "@/env"
 
 const CourseEntryCardStyled = styled(CoursewareCard)({
@@ -17,6 +22,11 @@ const CourseEntryCardStyled = styled(CoursewareCard)({
 
 const AlertBanner = styled(Alert)({
   marginBottom: "16px",
+})
+
+const SectionCount = styled(Typography)({
+  whiteSpace: "nowrap",
+  marginLeft: "auto",
 })
 
 const SUPPORT_EMAIL = env("NEXT_PUBLIC_MITOL_SUPPORT_EMAIL") || ""
@@ -87,16 +97,22 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
         <Typography component="h1" variant="h3" paddingBottom="32px">
           {data.programTitle}
         </Typography>
-        <Stack direction="row" justifyContent="space-between">
-          <Typography variant="body2" data-testid="program-completion-count">
-            You have completed
-            <Typography component="span" variant="subtitle2">
-              {` ${data.completedCount} of ${data.totalCount}`}
+        {/* Tracked programs show progress per section only. */}
+        <Stack
+          direction="row"
+          justifyContent={data.trackState ? "flex-end" : "space-between"}
+        >
+          {data.trackState ? null : (
+            <Typography variant="body2" data-testid="program-completion-count">
+              You have completed
+              <Typography component="span" variant="subtitle2">
+                {` ${data.completedCount} of ${data.totalCount}`}
+              </Typography>
+              {data.programDisplayMode === DisplayModeEnum.Course
+                ? " courses for this program."
+                : "."}
             </Typography>
-            {data.programDisplayMode === DisplayModeEnum.Course
-              ? " courses for this program."
-              : "."}
-          </Typography>
+          )}
           <Stack direction="column" alignItems="flex-end" gap="8px">
             {data.programCertificateUrl && (
               <ProgramCertificateButton
@@ -116,7 +132,10 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
           <React.Fragment key={section.key}>
             <Stack
               direction="row"
-              justifyContent="space-between"
+              flexWrap="wrap"
+              alignItems="baseline"
+              columnGap="8px"
+              rowGap="4px"
               marginBottom="16px"
               marginTop={index > 0 ? "32px" : "0"}
             >
@@ -124,19 +143,34 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
                 component="h2"
                 variant="subtitle2"
                 color={theme.custom.colors.red}
+                {...(section.trackAction
+                  ? { id: PROGRAM_TRACK_HEADING_ID, tabIndex: -1 }
+                  : {})}
               >
                 {section.title}
               </Typography>
+              {section.trackAction === "change" && data.trackState ? (
+                <ProgramChangeTrackLink
+                  programId={programId}
+                  trackState={data.trackState}
+                />
+              ) : null}
               {section.total > 0 ? (
-                <Typography
+                <SectionCount
                   data-testid="section-completion-count"
                   variant="body2"
                   color={theme.custom.colors.silverGrayDark}
                 >
                   Completed {section.completed} of {section.total}
-                </Typography>
+                </SectionCount>
               ) : null}
             </Stack>
+            {section.trackAction === "choose" && data.trackState ? (
+              <ProgramTrackPlaceholder
+                programId={programId}
+                trackState={data.trackState}
+              />
+            ) : null}
             <Stack direction="column" gap="16px">
               {section.items.map((item) => {
                 if (item.kind === "course") {
