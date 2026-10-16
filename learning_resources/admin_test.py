@@ -136,37 +136,54 @@ def resource_search():
     return search
 
 
+@pytest.fixture
+def searchable_resources():
+    """
+    Two resources a numeric search term cannot match except by primary key.
+
+    The factory's `readable_id` carries a random number, which a search for a
+    bare id matches as a substring often enough to fail at random -- so these
+    name their own, and neither it nor the titles hold a digit.
+    """
+    return (
+        LearningResourceFactory.create(
+            title="Fluid Mechanics", readable_id="course-v1:fluid-mechanics"
+        ),
+        LearningResourceFactory.create(
+            title="Thermodynamics", readable_id="course-v1:thermodynamics"
+        ),
+    )
+
+
 @pytest.mark.django_db
-def test_resource_search_finds_a_bare_id(resource_search):
+def test_resource_search_finds_a_bare_id(resource_search, searchable_resources):
     """
     A resource is found by its primary key, which is how one is identified in
     an admin URL or a bug report.
     """
-    wanted = LearningResourceFactory.create(title="Fluid Mechanics")
-    LearningResourceFactory.create(title="Thermodynamics")
+    wanted, _other = searchable_resources
 
     assert resource_search(str(wanted.id)) == [wanted]
 
 
 @pytest.mark.django_db
-def test_resource_search_still_finds_a_title(resource_search):
+def test_resource_search_still_finds_a_title(resource_search, searchable_resources):
     """Searching by title keeps working alongside the id lookup"""
-    wanted = LearningResourceFactory.create(title="Fluid Mechanics")
-    LearningResourceFactory.create(title="Thermodynamics")
+    wanted, _other = searchable_resources
 
     assert resource_search("Fluid") == [wanted]
 
 
 @pytest.mark.django_db
-def test_resource_search_takes_a_non_numeric_term(resource_search):
+def test_resource_search_takes_a_non_numeric_term(
+    resource_search, searchable_resources
+):
     """
     A term that is not a number does not reach the id lookup.
 
     Naming `=id` in `search_fields` instead would raise on every word typed
     into the same box, which is most of what is typed into it.
     """
-    LearningResourceFactory.create(title="Thermodynamics")
-
     assert resource_search("nothing matches this") == []
 
 
