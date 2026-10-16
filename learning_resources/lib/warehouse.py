@@ -189,9 +189,9 @@ class BaseWarehouseETLTask(Task):
     ``(etl_source, resource_types)`` the task loads, or ``None`` for a task
     that loads no catalog resource), and implement
     ``fetch_and_upsert(conn, *, since, allow_mass_unpublish)``. ``run``
-    returns 0 without
-    connecting unless ETLSourceOwnership names the warehouse for every one
-    of those resource types, as their owner or as their shadow. As a shadow,
+    returns 0 without connecting unless ETLSourceOwnership names the
+    warehouse for every one of those resource types, as their owner or as
+    their shadow. As a shadow,
     the batch is compared with the stored resources and reported instead of
     loaded (see ``learning_resources.etl.shadow``), which only happens in the
     batch loaders named there: a ``fetch_and_upsert`` that writes any other

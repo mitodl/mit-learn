@@ -406,7 +406,7 @@ class _ShadowRecordingTask(BaseWarehouseETLTask):
     table_name = "integrations__learn__test"
     writes = ("ocw", ["course"])
 
-    def fetch_and_upsert(self, conn, *, since=None) -> int:  # noqa: ARG002
+    def fetch_and_upsert(self, conn, *, since=None, **_) -> int:  # noqa: ARG002
         self.seen = (is_shadow_run(), since, may_write(*self.writes))
         return 7
 
