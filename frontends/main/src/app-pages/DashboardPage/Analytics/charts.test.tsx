@@ -163,9 +163,7 @@ describe("EngagementTrendChart", () => {
 
     const table = screen.getByRole("table", { name: "Monthly engagement" })
     expect(
-      within(table).getByLabelText(
-        /Learners who did course work this month/,
-      ),
+      within(table).getByLabelText(/Learners who did course work this month/),
     ).toBeInTheDocument()
   })
 
