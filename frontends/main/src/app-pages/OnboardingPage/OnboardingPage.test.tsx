@@ -19,19 +19,15 @@ import {
   type Profile,
 } from "api/v0"
 import OnboardingPage from "./OnboardingPage"
-import { usePostHog } from "posthog-js/react"
 import { PostHogEvents } from "@/common/constants"
 import { trackAccountCreated } from "@/common/analytics/gtm"
+import { capturePostHog } from "@/common/analytics/posthog"
 
-jest.mock("posthog-js/react", () => ({
-  ...jest.requireActual("posthog-js/react"),
-  usePostHog: jest.fn(),
+jest.mock("@/common/analytics/posthog", () => ({
+  capturePostHog: jest.fn(),
+  initPostHog: jest.fn(),
 }))
-const mockCapture = jest.fn()
-jest.mocked(usePostHog).mockReturnValue(
-  // @ts-expect-error Not mocking all of posthog
-  { capture: mockCapture },
-)
+const mockCapturePostHog = jest.mocked(capturePostHog)
 
 jest.mock("@/common/analytics/gtm", () => ({
   trackAccountCreated: jest.fn(),
@@ -188,7 +184,7 @@ describe("OnboardingPage", () => {
   describe("PostHog tracking", () => {
     beforeEach(() => {
       process.env.NEXT_PUBLIC_POSTHOG_API_KEY = "test-key"
-      mockCapture.mockReset()
+      mockCapturePostHog.mockReset()
     })
 
     afterEach(() => {
@@ -198,7 +194,7 @@ describe("OnboardingPage", () => {
     it("fires cta_clicked with label 'Next' and step when Next is clicked", async () => {
       await setupAndProgressToStep(0)
       await user.click(await findNextButton())
-      expect(mockCapture).toHaveBeenCalledWith(
+      expect(mockCapturePostHog).toHaveBeenCalledWith(
         PostHogEvents.CallToActionClicked,
         { label: "Next", step: 1, location: "onboarding" },
       )
@@ -206,20 +202,14 @@ describe("OnboardingPage", () => {
 
     it("fires cta_clicked with label 'Finish' and step when Finish is clicked", async () => {
       await setupAndProgressToStep(STEPS_DATA.length - 1)
-      mockCapture.mockClear()
+      mockCapturePostHog.mockClear()
       await user.click(await findFinishButton())
-      expect(mockCapture).toHaveBeenCalledWith(
+      expect(mockCapturePostHog).toHaveBeenCalledWith(
         PostHogEvents.CallToActionClicked,
         { label: "Finish", step: STEPS_DATA.length, location: "onboarding" },
       )
     })
 
-    it("does not fire cta_clicked when NEXT_PUBLIC_POSTHOG_API_KEY is not set", async () => {
-      delete process.env.NEXT_PUBLIC_POSTHOG_API_KEY
-      await setupAndProgressToStep(0)
-      await user.click(await findNextButton())
-      expect(mockCapture).not.toHaveBeenCalled()
-    })
   })
 
   describe("GTM account-created tracking", () => {

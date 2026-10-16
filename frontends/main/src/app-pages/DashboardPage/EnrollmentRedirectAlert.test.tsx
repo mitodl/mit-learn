@@ -10,18 +10,17 @@ import EnrollmentRedirectAlert from "./EnrollmentRedirectAlert"
 import { DASHBOARD_MY_LEARNING } from "@/common/urls"
 import * as mitxonline from "api/mitxonline-test-utils"
 import { trackCheckoutCompleted } from "@/common/analytics/gtm"
-import { usePostHog } from "posthog-js/react"
-import type { PostHog } from "posthog-js"
+import { capturePostHog } from "@/common/analytics/posthog"
 import { PostHogEvents } from "@/common/constants"
 
 jest.mock("@/common/analytics/gtm", () => ({
   trackCheckoutCompleted: jest.fn(),
 }))
-jest.mock("posthog-js/react")
-const mockedPostHogCapture = jest.fn()
-jest.mocked(usePostHog).mockReturnValue({
-  capture: mockedPostHogCapture,
-} as unknown as PostHog)
+jest.mock("@/common/analytics/posthog", () => ({
+  capturePostHog: jest.fn(),
+  initPostHog: jest.fn(),
+}))
+const mockedPostHogCapture = jest.mocked(capturePostHog)
 
 const escapeRegExp = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
 
@@ -290,6 +289,8 @@ describe("EnrollmentRedirectAlert", () => {
       orderId: 17,
       courseName: receipt.lines[0].content_title,
       value: 199.99,
+      readableId: receipt.lines[0].readable_id,
+      contentType: receipt.lines[0].content_type,
     })
     expect(mockedPostHogCapture).toHaveBeenCalledTimes(1)
     expect(mockedPostHogCapture).toHaveBeenCalledWith(
@@ -320,6 +321,8 @@ describe("EnrollmentRedirectAlert", () => {
       orderId: 18,
       courseName: undefined,
       value: null,
+      readableId: undefined,
+      contentType: undefined,
     })
     expect(mockedPostHogCapture).toHaveBeenCalledWith(
       PostHogEvents.CheckoutCompleted,
@@ -333,22 +336,6 @@ describe("EnrollmentRedirectAlert", () => {
     )
   })
 
-  test("does not capture PostHog checkout_completed when PostHog is not configured", async () => {
-    delete process.env.NEXT_PUBLIC_POSTHOG_API_KEY
-    setMockResponse.get(
-      mitxonline.urls.orders.receipt(19),
-      mitxonline.factories.orders.order(),
-    )
-
-    renderWithProviders(<EnrollmentRedirectAlert />, {
-      url: "/dashboard?order_status=fulfilled&order_id=19",
-    })
-
-    await screen.findByRole("alert")
-
-    expect(trackCheckoutCompleted).toHaveBeenCalledTimes(1)
-    expect(mockedPostHogCapture).not.toHaveBeenCalled()
-  })
 
   test("does not track checkout-completed for non-paid alerts", async () => {
     renderWithProviders(<EnrollmentRedirectAlert />, {

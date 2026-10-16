@@ -20,13 +20,13 @@ import type {
   CourseRunV2,
   CourseWithCourseRunsSerializerV2,
 } from "@mitodl/mitxonline-api-axios/v2"
-import { usePostHog } from "posthog-js/react"
 import { PostHogEvents } from "@/common/constants"
 import {
   trackCourseEnrolled,
   trackStartEnrollment,
   trackBeginCheckout,
 } from "@/common/analytics/gtm"
+import { capturePostHog } from "@/common/analytics/posthog"
 
 jest.mock("@/common/analytics/gtm", () => ({
   trackCourseEnrolled: jest.fn(),
@@ -34,15 +34,11 @@ jest.mock("@/common/analytics/gtm", () => ({
   trackBeginCheckout: jest.fn(),
 }))
 
-jest.mock("posthog-js/react", () => ({
-  ...jest.requireActual("posthog-js/react"),
-  usePostHog: jest.fn(),
+jest.mock("@/common/analytics/posthog", () => ({
+  capturePostHog: jest.fn(),
+  initPostHog: jest.fn(),
 }))
-const mockCapture = jest.fn()
-jest.mocked(usePostHog).mockReturnValue(
-  // @ts-expect-error Not mocking all of posthog
-  { capture: mockCapture },
-)
+const mockCapturePostHog = jest.mocked(capturePostHog)
 
 const mockPush = jest.fn()
 jest.mock("next-nprogress-bar", () => ({
@@ -595,7 +591,7 @@ describe("useCourseEnrollment — actions", () => {
 
     paidOption.onClick!(fakeEvent)
 
-    expect(mockCapture).toHaveBeenCalledWith(
+    expect(mockCapturePostHog).toHaveBeenCalledWith(
       PostHogEvents.EnrollCtaClicked,
       expect.objectContaining({
         placement: "infobox",
@@ -637,7 +633,7 @@ describe("useCourseEnrollment — actions", () => {
       currentTarget: document.createElement("button"),
     } as React.MouseEvent<HTMLButtonElement>)
 
-    expect(mockCapture).toHaveBeenCalledWith(
+    expect(mockCapturePostHog).toHaveBeenCalledWith(
       PostHogEvents.EnrollCtaClicked,
       expect.objectContaining({
         placement: "header",

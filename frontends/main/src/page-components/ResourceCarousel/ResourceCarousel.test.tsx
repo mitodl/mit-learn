@@ -13,18 +13,14 @@ import { factories, setMockResponse, makeRequest, urls } from "api/test-utils"
 import { LearningResourceCard } from "ol-components"
 import { ControlledPromise, allowConsoleErrors } from "ol-test-utilities"
 import invariant from "tiny-invariant"
-import { usePostHog } from "posthog-js/react"
 import { PostHogEvents } from "@/common/constants"
+import { capturePostHog } from "@/common/analytics/posthog"
 
-jest.mock("posthog-js/react", () => ({
-  ...jest.requireActual("posthog-js/react"),
-  usePostHog: jest.fn(),
+jest.mock("@/common/analytics/posthog", () => ({
+  capturePostHog: jest.fn(),
+  initPostHog: jest.fn(),
 }))
-const mockCapture = jest.fn()
-jest.mocked(usePostHog).mockReturnValue(
-  // @ts-expect-error Not mocking all of posthog
-  { capture: mockCapture },
-)
+const mockCapturePostHog = jest.mocked(capturePostHog)
 
 jest.mock("ol-components", () => {
   const actual = jest.requireActual("ol-components")
@@ -372,7 +368,7 @@ describe("ResourceCarousel", () => {
     ]
     const { resources } = setupApis({ count: 2 })
     process.env.NEXT_PUBLIC_POSTHOG_API_KEY = "test-key"
-    mockCapture.mockClear()
+    mockCapturePostHog.mockClear()
 
     renderWithProviders(
       <ResourceCarousel
@@ -388,7 +384,7 @@ describe("ResourceCarousel", () => {
     })
     await user.click(card)
 
-    expect(mockCapture).toHaveBeenCalledWith(
+    expect(mockCapturePostHog).toHaveBeenCalledWith(
       PostHogEvents.CourseCardClicked,
       expect.objectContaining({
         label: "Test Carousel",

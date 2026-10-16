@@ -5,14 +5,13 @@ import { ResourceTypeEnum } from "api/v1"
 import { factories } from "api/test-utils"
 import { renderWithProviders, screen, user, fireEvent, act } from "@/test-utils"
 import type Player from "video.js/dist/types/player"
-import { usePostHog } from "posthog-js/react"
-import type { PostHog } from "posthog-js"
+import { capturePostHog } from "@/common/analytics/posthog"
 
-jest.mock("posthog-js/react")
-const mockedPostHogCapture = jest.fn()
-jest.mocked(usePostHog).mockReturnValue({
-  capture: mockedPostHogCapture,
-} as unknown as PostHog)
+jest.mock("@/common/analytics/posthog", () => ({
+  capturePostHog: jest.fn(),
+  initPostHog: jest.fn(),
+}))
+const mockCapturePostHog = jest.mocked(capturePostHog)
 
 // Stub VideoJsPlayer to avoid loading video.js in the test environment.
 // Captures the onReady callback so tests can simulate the player being ready,
@@ -112,7 +111,7 @@ const makeVideoResource = (
 describe("VideoShortsModal", () => {
   beforeEach(() => {
     mockHandles.length = 0
-    mockedPostHogCapture.mockClear()
+    mockCapturePostHog.mockClear()
   })
 
   const defaultProps = {
@@ -380,7 +379,7 @@ describe("VideoShortsModal", () => {
         triggerSlidesInView([1])
       })
 
-      const call = mockedPostHogCapture.mock.calls.find(
+      const call = mockCapturePostHog.mock.calls.find(
         ([event]) => event === "video_short_viewed",
       )
       // Event describes the video being LEFT (slide 0), not the one arrived at
@@ -398,7 +397,7 @@ describe("VideoShortsModal", () => {
 
       await user.click(screen.getByRole("button", { name: "Close" }))
 
-      const call = mockedPostHogCapture.mock.calls.find(
+      const call = mockCapturePostHog.mock.calls.find(
         ([event]) => event === "video_short_viewed",
       )
       expect(call?.[1]).toMatchObject({
@@ -413,7 +412,7 @@ describe("VideoShortsModal", () => {
 
       await user.click(screen.getByRole("button", { name: "Close" }))
 
-      const call = mockedPostHogCapture.mock.calls.find(
+      const call = mockCapturePostHog.mock.calls.find(
         ([event]) => event === "video_shorts_closed",
       )
       expect(call?.[1].totalVideosViewed).toBe(1)
@@ -428,7 +427,7 @@ describe("VideoShortsModal", () => {
 
       await user.click(screen.getByRole("button", { name: "Close" }))
 
-      const call = mockedPostHogCapture.mock.calls.find(
+      const call = mockCapturePostHog.mock.calls.find(
         ([event]) => event === "video_shorts_closed",
       )
       expect(call?.[1].totalVideosViewed).toBe(2)
@@ -447,7 +446,7 @@ describe("VideoShortsModal", () => {
 
       await user.click(screen.getByRole("button", { name: "Close" }))
 
-      const call = mockedPostHogCapture.mock.calls.find(
+      const call = mockCapturePostHog.mock.calls.find(
         ([event]) => event === "video_shorts_closed",
       )
       expect(call?.[1].totalVideosViewed).toBe(2) // 2 unique videos, no double-count
@@ -458,7 +457,7 @@ describe("VideoShortsModal", () => {
 
       await user.click(screen.getByRole("button", { name: "Close" }))
 
-      expect(mockedPostHogCapture).toHaveBeenCalledWith(
+      expect(mockCapturePostHog).toHaveBeenCalledWith(
         "video_shorts_closed",
         expect.objectContaining({
           sessionDurationMs: expect.any(Number),
@@ -471,7 +470,7 @@ describe("VideoShortsModal", () => {
 
       fireEvent.keyDown(document, { key: "Escape" })
 
-      expect(mockedPostHogCapture).toHaveBeenCalledWith(
+      expect(mockCapturePostHog).toHaveBeenCalledWith(
         "video_shorts_closed",
         expect.objectContaining({
           sessionDurationMs: expect.any(Number),
@@ -484,7 +483,7 @@ describe("VideoShortsModal", () => {
 
       await user.click(screen.getByRole("button", { name: "Close" }))
 
-      const call = mockedPostHogCapture.mock.calls.find(
+      const call = mockCapturePostHog.mock.calls.find(
         ([event]) => event === "video_shorts_closed",
       )
       expect(call?.[1].sessionDurationMs).toBeGreaterThanOrEqual(0)
@@ -497,7 +496,7 @@ describe("VideoShortsModal", () => {
         window.dispatchEvent(new Event("pagehide"))
       })
 
-      expect(mockedPostHogCapture).toHaveBeenCalledWith(
+      expect(mockCapturePostHog).toHaveBeenCalledWith(
         "video_shorts_closed",
         expect.objectContaining({
           sessionDurationMs: expect.any(Number),
@@ -517,7 +516,7 @@ describe("VideoShortsModal", () => {
         document.dispatchEvent(new Event("visibilitychange"))
       })
 
-      expect(mockedPostHogCapture).toHaveBeenCalledWith(
+      expect(mockCapturePostHog).toHaveBeenCalledWith(
         "video_shorts_closed",
         expect.objectContaining({ sessionDurationMs: expect.any(Number) }),
       )
@@ -536,7 +535,7 @@ describe("VideoShortsModal", () => {
         window.dispatchEvent(new Event("pagehide"))
       })
 
-      const closeCalls = mockedPostHogCapture.mock.calls.filter(
+      const closeCalls = mockCapturePostHog.mock.calls.filter(
         ([event]) => event === "video_shorts_closed",
       )
       expect(closeCalls).toHaveLength(1)
