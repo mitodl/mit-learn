@@ -21,8 +21,16 @@ class SyncProgramCertificatesTask(BaseWarehouseETLTask):
 
     name = "profiles.tasks.SyncProgramCertificatesTask"
     table_name = "integrations__learn__program_certificates"
+    # Certificates are not catalog resources, so no ETLSourceOwnership applies.
+    writes = None
 
-    def fetch_and_upsert(self, conn, *, since=None) -> int:
+    def fetch_and_upsert(
+        self,
+        conn,
+        *,
+        since=None,
+        allow_mass_unpublish: bool = False,  # noqa: ARG002
+    ) -> int:
         """Upsert every row iter_rows yields; see profiles.etl for why this
         never prunes, even on a full_refresh run.
 

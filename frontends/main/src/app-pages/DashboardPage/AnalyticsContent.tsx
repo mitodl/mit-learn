@@ -44,6 +44,7 @@ import CoursePerformanceTable from "./Analytics/CoursePerformanceTable"
 import EngagementTrendChart from "./Analytics/EngagementTrendChart"
 import { SUPPRESSED_LEGEND } from "./Analytics/format"
 import LearnerProgressCard from "./Analytics/LearnerProgressCard"
+import NeedsAttentionCard from "./Analytics/NeedsAttentionCard"
 import SectionHeader from "./Analytics/SectionHeader"
 import SectionTruncation from "./Analytics/SectionTruncation"
 
@@ -448,6 +449,19 @@ const AnalyticsContentInternal: React.FC<AnalyticsContentInternalProps> = ({
   })
 
   /**
+   * The card renders only beside a populated distribution (see
+   * `LearnerProgressCard`'s empty and error states), so it waits for one.
+   */
+  const showsNeedsAttention =
+    learnerProgress.isSuccess &&
+    !!learnerProgress.data.total_count &&
+    !!learnerProgress.data.completion_status_counts
+  const needsAttention = useQuery({
+    ...analyticsContractQueries.needsAttention(orgUuid ?? "", contractId ?? ""),
+    enabled: showsNeedsAttention,
+  })
+
+  /**
    * The truncation footer for one section, or null when it is showing
    * everything. "Show all" asks for the whole result set in a single page,
    * bounded by what the API will serve — beyond that the message stands alone,
@@ -624,7 +638,20 @@ const AnalyticsContentInternal: React.FC<AnalyticsContentInternalProps> = ({
             statusCounts={learnerProgress.data?.completion_status_counts}
             isLoading={learnerProgress.isPending}
             isError={learnerProgress.isError}
-            learnersHref={contractLearnersView(orgSlug, contract.slug)}
+            learnersHref={(status) =>
+              contractLearnersView(orgSlug, contract.slug, { status })
+            }
+            aside={
+              <NeedsAttentionCard
+                row={needsAttention.data?.data[0]}
+                isLoading={needsAttention.isPending}
+                isError={needsAttention.isError}
+                enrollmentCount={learnerProgress.data?.needs_attention_count}
+                learnersHref={contractLearnersView(orgSlug, contract.slug, {
+                  needsAttention: true,
+                })}
+              />
+            }
           />
         </Section>
       ) : null}

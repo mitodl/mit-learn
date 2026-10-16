@@ -17,7 +17,7 @@ import {
   useUpdateEnrollment,
 } from "api/mitxonline-hooks/enrollment"
 import { SILENCE_ERROR_TOAST } from "api/mutation-meta"
-import { CourseRunEnrollmentV3 } from "@mitodl/mitxonline-api-axios/v2"
+import { CourseRunEnrollmentV3 } from "@mitodl/mitxonline-api-axios/v3"
 import { analytics } from "@/common/analytics"
 import { formatRunIdentifier } from "./courseDateUtils"
 import { useFeatureFlagEnabled } from "posthog-js/react"

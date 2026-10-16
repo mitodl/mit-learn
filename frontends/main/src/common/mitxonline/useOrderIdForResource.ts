@@ -4,8 +4,8 @@ import type {
   Line,
   OrderHistory,
   ProductPurchasableObject,
-} from "@mitodl/mitxonline-api-axios/v2"
-import { StateEnum } from "@mitodl/mitxonline-api-axios/v2"
+} from "@mitodl/mitxonline-api-axios/v0"
+import { StateEnum } from "@mitodl/mitxonline-api-axios/v0"
 
 /**
  * An explicit limit is required: without one, `orders/history` bypasses

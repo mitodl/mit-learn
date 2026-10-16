@@ -7,7 +7,7 @@ import { CardRoot } from "./CardShared"
 import { mitxUserQueries } from "api/mitxonline-hooks/user"
 import { ButtonLink } from "@mitodl/smoot-design"
 import { contractView } from "@/common/urls"
-import { UserOrganizationPage } from "@mitodl/mitxonline-api-axios/v2"
+import { UserOrganizationPage } from "@mitodl/mitxonline-api-axios/v0"
 import { useConsentGatedNavigation } from "../useConsentGatedNavigation"
 
 const Wrapper = styled.div(({ theme }) => ({

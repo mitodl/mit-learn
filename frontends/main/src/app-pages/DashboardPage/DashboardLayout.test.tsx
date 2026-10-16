@@ -23,7 +23,7 @@ import {
 } from "@/common/urls"
 import { faker } from "@faker-js/faker/locale/en"
 import invariant from "tiny-invariant"
-import { UserOrganizationPage } from "@mitodl/mitxonline-api-axios/v2"
+import { UserOrganizationPage } from "@mitodl/mitxonline-api-axios/v0"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import mockRouter from "next-router-mock"
 import { FeatureFlags } from "@/common/feature_flags"
@@ -184,9 +184,7 @@ describe("DashboardLayout", () => {
     expect(tab).toHaveAttribute("data-disable-nprogress", "true")
     expect(mobileTab).toHaveAttribute("data-disable-nprogress", "true")
     await userEvent.click(tab)
-    await userEvent.click(
-      await screen.findByRole("button", { name: "Decline" }),
-    )
+    await userEvent.click(await screen.findByRole("button", { name: "Cancel" }))
 
     await waitFor(() => expect(mockRouter.asPath).toBe(DASHBOARD_HOME))
     expect(screen.getByText("Response recorded.")).toBeInTheDocument()

@@ -7,16 +7,20 @@ import { setMockResponse } from "../../../test-utils"
 import moment from "moment"
 import {
   ContractPage,
-  CourseRunEnrollmentV3,
-  CourseWithCourseRunsSerializerV2,
   OrganizationPage,
   User,
   UserContractPage,
+  LanguageEnum,
+} from "@mitodl/mitxonline-api-axios/v0"
+import {
+  CourseWithCourseRunsSerializerV2,
   V2Program,
   V2ProgramDetail,
-  V3UserProgramEnrollment,
-  LanguageEnum,
 } from "@mitodl/mitxonline-api-axios/v2"
+import {
+  CourseRunEnrollmentV3,
+  V3UserProgramEnrollment,
+} from "@mitodl/mitxonline-api-axios/v3"
 import { getIdsFromReqTree } from "@/common/mitxonline"
 
 const makeCourses = factories.courses.courses

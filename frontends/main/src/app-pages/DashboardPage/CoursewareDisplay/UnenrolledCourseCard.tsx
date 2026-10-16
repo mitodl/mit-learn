@@ -1,9 +1,9 @@
 import React from "react"
+import { CourseWithCourseRunsSerializerV2 } from "@mitodl/mitxonline-api-axios/v2"
 import {
   BaseCourseRun,
-  CourseWithCourseRunsSerializerV2,
   V3UserProgramEnrollment,
-} from "@mitodl/mitxonline-api-axios/v2"
+} from "@mitodl/mitxonline-api-axios/v3"
 import { LoadingSpinner, Stack } from "ol-components"
 import {
   CardRoot,
@@ -54,7 +54,7 @@ export const UnenrolledCourseCard = ({
   const enrollment = useEnrollmentHandler()
   const isPending = enrollment.isPending
   const courseRun =
-    displayedRunProp ?? getBestRun(course, { enrollableOnly: true, contractId })
+    displayedRunProp ?? getBestRun(course, { enrollableOnly: true })
   const coursewareUrl = courseRun?.courseware_url || undefined
   const readableId = courseRun?.courseware_id
   const isDisabled =

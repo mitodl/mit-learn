@@ -38,13 +38,15 @@ jest.setTimeout(20000)
 jest.mock("next-nprogress-bar", () => ({
   useRouter: () => ({
     push: (...args: unknown[]) => routerMocks.push(...args),
+    replace: (...args: unknown[]) => routerMocks.replace(...args),
   }),
 }))
 
-const routerMocks = { push: jest.fn() }
+const routerMocks = { push: jest.fn(), replace: jest.fn() }
 
 beforeEach(() => {
   routerMocks.push.mockClear()
+  routerMocks.replace.mockClear()
 })
 
 /**
@@ -101,9 +103,12 @@ const setup = async (id: number, autosaveDelayMs = AUTOSAVE_OFF) => {
     content,
     content_type: "article",
     is_published: false,
-    /* Required to save the drawer, and not what these tests are about. */
-    seo_title: "A title for search",
-    seo_description: "A description for search results.",
+    /**
+     * The drawer's save needs a resolvable SEO description, and `content` here
+     * has no banner subheading to infer one from -- so an override supplies
+     * it. Not what these tests are about.
+     */
+    seo_description_override: "A description for search results.",
   })
   setMockResponse.get(detailUrl(id), article)
 
@@ -190,7 +195,48 @@ describe("WebsiteContentEditPage navigation", () => {
     )
 
     expect(routerMocks.push).not.toHaveBeenCalled()
+    expect(routerMocks.replace).not.toHaveBeenCalled()
   })
+})
+
+describe("WebsiteContentEditPage type mismatch", () => {
+  test.each([
+    { urlType: "news", actualType: "article" as const },
+    { urlType: "article", actualType: "news" as const },
+  ])(
+    "an item of type $actualType opened on the $urlType edit URL redirects without mounting an editor",
+    async ({ urlType, actualType }) => {
+      const id = 5150
+      const user = factories.user.user({
+        is_authenticated: true,
+        is_article_editor: true,
+      })
+      setMockResponse.get(urls.userMe.get(), user)
+      const item = factories.websiteContent.websiteContent({
+        id,
+        slug: "some-slug",
+        content,
+        content_type: actualType,
+        is_published: false,
+      })
+      setMockResponse.get(urls.websiteContent.detailRetrieve("some-slug"), item)
+
+      renderWithProviders(
+        <WebsiteContentEditPage type={urlType} idOrSlug="some-slug" />,
+        { user, url: websiteContentEditView(urlType, "some-slug") },
+      )
+
+      await waitFor(() =>
+        expect(routerMocks.replace).toHaveBeenCalledWith(
+          websiteContentEditView(actualType, id),
+        ),
+      )
+      expect(screen.queryByTestId("editor")).toBeNull()
+      expect(makeRequest).not.toHaveBeenCalledWith(
+        expect.objectContaining({ method: "patch" }),
+      )
+    },
+  )
 })
 
 describe("WebsiteContentEditPage settings drawer", () => {

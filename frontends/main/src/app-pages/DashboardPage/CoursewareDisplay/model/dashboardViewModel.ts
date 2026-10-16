@@ -7,18 +7,22 @@
  * unit-testable in isolation.
  */
 import type {
-  BaseCourseRun,
-  V2ProgramDisplayModeEnum,
   ContractPage,
-  CourseRunEnrollmentV3,
-  CourseWithCourseRunsSerializerV2,
   SupportedVariant,
+} from "@mitodl/mitxonline-api-axios/v0"
+import type {
+  V2ProgramDisplayModeEnum,
+  CourseWithCourseRunsSerializerV2,
   V2Program,
   V2ProgramCollection,
   V2ProgramDetail,
   V2ProgramRequirement,
-  V3UserProgramEnrollment,
 } from "@mitodl/mitxonline-api-axios/v2"
+import type {
+  BaseCourseRun,
+  CourseRunEnrollmentV3,
+  V3UserProgramEnrollment,
+} from "@mitodl/mitxonline-api-axios/v3"
 import { DisplayModeEnum } from "@mitodl/mitxonline-api-axios/v2"
 import { getRunTimeState } from "../courseDateUtils"
 import type { RunTimeState } from "../courseDateUtils"
@@ -202,10 +206,55 @@ export const getProgramEnrollmentStatus = (
 const courseIsCompleted = (enrollments: CourseRunEnrollmentV3[]): boolean =>
   enrollments.some((e) => e.grades.some((g) => g.passed))
 
+/**
+ * The module course ids of a program-as-course: the courses in its first
+ * requirement section, falling back to `courses` when it has no req_tree.
+ */
+const getProgramAsCourseModuleIds = (program: {
+  req_tree?: V2ProgramRequirement[] | null
+  courses?: number[] | null
+}): number[] => {
+  const moduleRequirementSection = program.req_tree?.find(
+    (node) => node.data.node_type === "operator",
+  )
+  return moduleRequirementSection
+    ? getIdsFromReqTree([moduleRequirementSection]).courseIds
+    : (program.courses ?? [])
+}
+
+/**
+ * Whether the learner has completed a program they are enrolled in.
+ *
+ * A certificate always means completed. A program-as-course also counts as
+ * completed once its own requirement tree is satisfied, even before a
+ * certificate is issued (e.g. audit-mode learners never receive one); regular
+ * programs stay in progress until certificated. Shared by
+ * `ProgramAsCourseCard`'s status badge and the program dashboard's counts.
+ */
+export const programIsCompleted = (
+  program: {
+    display_mode?: V2ProgramDisplayModeEnum | null
+    req_tree?: V2ProgramRequirement[] | null
+  },
+  programEnrollment: V3UserProgramEnrollment | undefined,
+  enrollmentsByCourseId: Record<number, CourseRunEnrollmentV3[]>,
+): boolean => {
+  if (!programEnrollment) return false
+  if (programEnrollment.certificate) return true
+  if (!isProgramAsCourse(program)) return false
+  const { completed, total } = getRequirementsProgress(
+    program.req_tree ?? [],
+    enrollmentsByCourseId,
+    {},
+  )
+  return total > 0 && completed >= total
+}
+
 const isLeafRequirementNodeCompleted = (
   node: V2ProgramRequirement,
   courseEnrollments: Record<number, CourseRunEnrollmentV3[]>,
   programEnrollments: Record<number, V3UserProgramEnrollment>,
+  programsById: Map<number, V2ProgramDetail>,
 ): boolean => {
   if (
     node.data.node_type === "course" &&
@@ -214,7 +263,11 @@ const isLeafRequirementNodeCompleted = (
     return courseIsCompleted(courseEnrollments[node.data.course] ?? [])
   }
   if (node.data.node_type === "program" && node.data.required_program) {
-    return !!programEnrollments[node.data.required_program]?.certificate
+    const programEnrollment = programEnrollments[node.data.required_program]
+    const program = programsById.get(node.data.required_program)
+    return program
+      ? programIsCompleted(program, programEnrollment, courseEnrollments)
+      : !!programEnrollment?.certificate
   }
   return false
 }
@@ -228,11 +281,15 @@ const isLeafRequirementNodeCompleted = (
  *
  * For `min_number_of` operators, `completed` is capped at `operator_value`
  * so extra electives don't inflate the overall total.
+ *
+ * Program leaves are completed per `programIsCompleted` when found in
+ * `programsById`, and otherwise only when certificated.
  */
 export const getRequirementsProgress = (
   nodes: V2ProgramRequirement[],
   courseEnrollments: Record<number, CourseRunEnrollmentV3[]>,
   programEnrollments: Record<number, V3UserProgramEnrollment>,
+  programsById: Map<number, V2ProgramDetail> = new Map(),
 ): { completed: number; total: number } => {
   return nodes.reduce(
     (acc, node) => {
@@ -251,6 +308,7 @@ export const getRequirementsProgress = (
           leaf,
           courseEnrollments,
           programEnrollments,
+          programsById,
         ),
       ).length
 
@@ -600,10 +658,20 @@ const assembleHomeCardList = ({
   }
 }
 
-const filterEnrollmentsForContract = (contractId?: number) => {
+/**
+ * `b2b_contract_id` is null for an enrollment made without a contract (e.g.
+ * staff enrolling a learner directly), so an enrollment also counts when its
+ * run is in the contract-scoped `course.courseruns`.
+ */
+const filterEnrollmentsForContract = (
+  course: CourseWithCourseRunsSerializerV2,
+  contractId?: number,
+) => {
   if (typeof contractId !== "number") return isNonContractEnrollment
   return (enrollment: CourseRunEnrollmentV3) =>
-    enrollment.b2b_contract_id === contractId
+    enrollment.b2b_contract_id === contractId ||
+    (!enrollment.b2b_contract_id &&
+      course.courseruns.some((run) => run.id === enrollment.run.id))
 }
 
 /**
@@ -632,7 +700,7 @@ const resolveDisplayedRunAndEnrollment = (
     ? runMatchesVariant(opts.variant)
     : () => true
   const relevantEnrollments = enrollments
-    .filter(filterEnrollmentsForContract(opts?.contractId))
+    .filter(filterEnrollmentsForContract(course, opts?.contractId))
     .filter((e) => variantFilter(e.run))
 
   const displayedEnrollment = selectBestEnrollment(course, relevantEnrollments)
@@ -646,9 +714,8 @@ const resolveDisplayedRunAndEnrollment = (
   const defaultRun =
     getBestRun(course, {
       enrollableOnly: true,
-      contractId: opts?.contractId,
     }) ??
-    getBestRun(course, { contractId: opts?.contractId }) ??
+    getBestRun(course) ??
     null
   const isNonDefaultVariant = opts?.variant && !opts.variant.default_variant
   const displayedRun = isNonDefaultVariant
@@ -934,6 +1001,7 @@ const buildRequirementSections = ({
         [section.node],
         enrollmentsByCourseId,
         programEnrollmentsById,
+        resolveContext.programsById,
       )
 
       return {
@@ -952,6 +1020,7 @@ const buildRequirementSections = ({
       sections.map((s) => s.node),
       enrollmentsByCourseId,
       programEnrollmentsById,
+      resolveContext.programsById,
     )
 
   return { sections, completedCount, totalCount }
@@ -1055,17 +1124,6 @@ const getRenderableContractCollections = (
 // ---------------------------------------------------------------------------
 // Variant picker model
 // ---------------------------------------------------------------------------
-
-const VARIANT_INDUSTRY_LABELS: Record<string, string> = {
-  E: "Energy",
-  F: "Finance",
-  HC: "Healthcare",
-}
-
-const VARIANT_LENGTH_LABELS: Record<string, string> = {
-  S: "Short",
-  F: "Full",
-}
 
 const FALLBACK_NATIVE_LANGUAGE_NAMES: Record<string, string> = {
   ar: "العربية",
@@ -1193,15 +1251,15 @@ const getVariantLanguageLabel = (variant: SupportedVariant): string => {
   return resolved ? capitalizeFirstWord(label) : label
 }
 
+// mitxonline labels an empty industry "Original"; the picker calls it "General".
 const getVariantIndustryLabel = (variant: SupportedVariant): string =>
   variant.variant_industry
-    ? (VARIANT_INDUSTRY_LABELS[variant.variant_industry] ??
-      variant.variant_industry)
+    ? variant.variant_industry_label || variant.variant_industry
     : "General"
 
 const getVariantLengthLabel = (variant: SupportedVariant): string =>
   variant.variant_length
-    ? (VARIANT_LENGTH_LABELS[variant.variant_length] ?? variant.variant_length)
+    ? variant.variant_length_label || variant.variant_length
     : "Full"
 
 const buildVariantLabel = (variant: SupportedVariant): string =>
@@ -1433,6 +1491,7 @@ export {
   pickDisplayedHomeEnrollments,
   pickCertificateEnrollment,
   courseIsCompleted,
+  getProgramAsCourseModuleIds,
 }
 
 export type { RequirementSectionItem, RequirementSection }

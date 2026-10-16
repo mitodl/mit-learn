@@ -3,7 +3,6 @@ Django settings for celery.
 """
 
 from celery.schedules import crontab
-from django.core.exceptions import ImproperlyConfigured
 from redbeat import RedBeatScheduler
 
 from main.envs import get_bool, get_int, get_string
@@ -255,49 +254,41 @@ if (
                 "schedule": crontab(minute=0, hour=9),  # 5:00am EDT / 4:00am EST
                 "kwargs": {"full_refresh": True},
             },
+            # No-ops until ETLSourceOwnership names the warehouse for their
+            # pairs. Once a day, after 10:00 UTC, because the data platform
+            # builds the views once a day starting at 06:00 UTC. update-podcasts
+            # runs at 06:00 and 23:00 UTC with update-podcast-transcripts 30
+            # minutes after each, so once podcasts are flipped the transcript
+            # job runs about 13.5 hours after the load.
+            "warehouse-sync-podcasts-every-1-days": {
+                "task": "learning_resources.tasks.SyncPodcastsTask",
+                "schedule": crontab(minute=0, hour=10),
+                "kwargs": {"full_refresh": True},
+            },
+            "warehouse-sync-youtube-every-1-days": {
+                "task": "learning_resources.tasks.SyncYouTubeTask",
+                "schedule": crontab(minute=30, hour=10),
+                "kwargs": {"full_refresh": True},
+            },
+            # Programs look their courses up, so they follow the courses.
+            "warehouse-sync-xpro-courses-every-1-days": {
+                "task": "learning_resources.tasks.SyncXproCoursesTask",
+                "schedule": crontab(minute=0, hour=11),
+                "kwargs": {"full_refresh": True},
+            },
+            "warehouse-sync-xpro-programs-every-1-days": {
+                "task": "learning_resources.tasks.SyncXproProgramsTask",
+                "schedule": crontab(minute=30, hour=11),
+                "kwargs": {"full_refresh": True},
+            },
         }
     )
 
-# Per-source cutover switch for warehouse-pull catalog ETL
-# (learning_resources.tasks.Sync*Task, StarRocks-backed — see
-# learning_resources.lib.warehouse.BaseWarehouseETLTask). Each stacked PR
-# that adds a source registers its beat entry above and adds itself to
-# _API_ETL_BEAT_ENTRIES_BY_SOURCE below; none are wired up yet.
-#
-# Deliberately *not* keyed on STARROCKS_HOST: during the parallel-validation
-# window for each source both pipelines must run so their outputs can be
-# compared. Cutover is a separate, per-source decision made once a source
-# clears validation, so it gets its own setting — a comma-separated list of
-# ETLSource names (e.g. "mitxonline,xpro").
-#
-# Only the catalog-metadata tasks belong here. The `import_all_*_files`
-# tasks stay scheduled regardless of cutover: the integrations__learn__*
-# views carry course/program metadata only, not content files.
-_API_ETL_BEAT_ENTRIES_BY_SOURCE: dict[str, tuple[str, ...]] = {}
-
-WAREHOUSE_ETL_CUTOVER_SOURCES = [
-    source.strip()
-    for source in get_string("WAREHOUSE_ETL_CUTOVER_SOURCES", "").split(",")
-    if source.strip()
-]
-
-_unknown_cutover_sources = sorted(
-    set(WAREHOUSE_ETL_CUTOVER_SOURCES) - set(_API_ETL_BEAT_ENTRIES_BY_SOURCE)
-)
-if _unknown_cutover_sources:
-    # Fail loud rather than silently leaving a legacy task scheduled: a
-    # typo here would mean both pipelines keep writing the same rows long
-    # after the source was believed to be cut over.
-    msg = (
-        f"WAREHOUSE_ETL_CUTOVER_SOURCES contains unrecognized source(s): "
-        f"{', '.join(_unknown_cutover_sources)}. "
-        f"Valid values: {', '.join(sorted(_API_ETL_BEAT_ENTRIES_BY_SOURCE))}"
-    )
-    raise ImproperlyConfigured(msg)
-
-for _source in WAREHOUSE_ETL_CUTOVER_SOURCES:
-    for _beat_entry in _API_ETL_BEAT_ENTRIES_BY_SOURCE[_source]:
-        CELERY_BEAT_SCHEDULE.pop(_beat_entry, None)
+# Per-source cutover between the legacy Celery ETL, the warehouse pull and the
+# data platform's webhook push is not configured here. Every pipeline stays
+# scheduled and checks ETLSourceOwnership when it runs, so only the owner of an
+# (etl_source, resource_type) writes it. Flip the row in Django admin to cut a
+# source over or back. See learning_resources/etl/ownership.py.
 
 CELERY_TASK_SERIALIZER = "json"
 CELERY_RESULT_SERIALIZER = "json"

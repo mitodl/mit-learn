@@ -19,7 +19,7 @@ import {
 import type {
   CourseRunEnrollmentV3,
   V3UserProgramEnrollment,
-} from "@mitodl/mitxonline-api-axios/v2"
+} from "@mitodl/mitxonline-api-axios/v3"
 import { ProgramEnrollmentCard } from "./ProgramEnrollmentCard"
 import { EnrolledCourseCard } from "./EnrolledCourseCard"
 import { UnenrolledCourseCard } from "./UnenrolledCourseCard"
@@ -121,6 +121,7 @@ const CoursewareCard: React.FC<CoursewareCardProps> = (props) => {
         entry.enrollments,
         entry.displayedEnrollment,
       )}
+      contractId={entry.contractId}
       ancestorContext={entry.ancestorContext}
       layout={layout}
       headingLevel={headingLevel}

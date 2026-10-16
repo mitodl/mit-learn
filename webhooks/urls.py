@@ -22,6 +22,11 @@ v1_urls = [
         views.OVSVideoWebhookView.as_view(),
         name="ovs_video_webhook",
     ),
+    re_path(
+        r"^learning_resources/$",
+        views.LearningResourceWebhookView.as_view(),
+        name="learning_resources_webhook",
+    ),
 ]
 
 urlpatterns = [

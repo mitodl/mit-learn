@@ -947,4 +947,169 @@ describe("ProgramPage", () => {
 
     await screen.findByRole("heading", { name: page.title })
   })
+
+  describe("program tracks", () => {
+    const makeTrackedProgram = () => {
+      const root = new RequirementTreeBuilder()
+      const core = root.addOperator({ operator: "all_of", title: "Core" })
+      core.addCourse()
+      core.addCourse()
+      const container = root.addOperator({
+        operator: "min_number_of",
+        operator_value: "1",
+        title: "Tracks",
+      })
+      const general = container.addTrack({
+        title: "General",
+        description: "Broad foundation.",
+      })
+      const generalRequired = general.addOperator({
+        operator: "all_of",
+        title: "Required",
+      })
+      generalRequired.addCourse()
+      generalRequired.addCourse()
+      const methods = container.addTrack({
+        title: "Methods",
+        description: "Time-series methods.",
+      })
+      const methodsElectives = methods.addOperator({
+        operator: "min_number_of",
+        operator_value: "2",
+        title: "Electives",
+      })
+      methodsElectives.addCourse()
+      methodsElectives.addCourse()
+      methodsElectives.addCourse()
+      root.addOperator({ operator: "all_of", title: "Capstone" }).addCourse()
+      return makeProgram({ req_tree: root.serialize() })
+    }
+
+    test("Shows a tab per track between the other groups", async () => {
+      const program = makeTrackedProgram()
+      const page = makePage({ program_details: program })
+      setupApis({ program, page })
+      renderWithProviders(<ProgramPage readableId={program.readable_id} />)
+
+      const section = await screen.findByRole("region", { name: "Courses" })
+      within(section).getByText(
+        "To complete this program, you must take 3 required courses. You must also complete 1 of 2 tracks.",
+      )
+      const headings = within(section)
+        .getAllByRole("heading", { level: 3 })
+        .map((h) => h.textContent)
+      expect(headings).toEqual(["Core", "Track courses", "Capstone"])
+
+      const tabs = within(section).getAllByRole("tab")
+      expect(tabs.map((tab) => tab.textContent)).toEqual(["General", "Methods"])
+      expect(tabs[0]).toHaveAttribute("aria-selected", "true")
+
+      const generalPanel = within(section).getByRole("tabpanel")
+      within(generalPanel).getByText("Broad foundation.")
+      await waitFor(() => {
+        expect(within(generalPanel).getAllByRole("listitem")).toHaveLength(2)
+      })
+
+      await user.click(tabs[1])
+      const methodsPanel = within(section).getByRole("tabpanel")
+      within(methodsPanel).getByText("Time-series methods.")
+      within(methodsPanel).getByText("Complete 2 out of 3 courses.")
+      expect(within(methodsPanel).getAllByRole("listitem")).toHaveLength(3)
+    })
+
+    test("Compares the tracks", async () => {
+      const program = makeTrackedProgram()
+      const page = makePage({ program_details: program })
+      const { courses } = setupApis({ program, page })
+      renderWithProviders(<ProgramPage readableId={program.readable_id} />)
+
+      const compare = await screen.findByRole("region", {
+        name: "Compare the tracks",
+      })
+      const [core1, core2, general1, general2, m1, m2, m3, capstone] = courses
+      const included = within(compare)
+        .getByRole("heading", { name: "Included in every track" })
+        .closest("div")
+      invariant(included)
+      await waitFor(() => {
+        expect(
+          within(included)
+            .getAllByRole("listitem")
+            .map((li) => li.textContent),
+        ).toEqual([core1.title, core2.title, capstone.title])
+      })
+
+      const rows = within(compare)
+        .getAllByRole("heading", { level: 3 })
+        .filter((h) => h.textContent !== "Included in every track")
+        .map((h) => h.closest("li"))
+      expect(rows.map((row) => row?.querySelector("h3")?.textContent)).toEqual([
+        "General",
+        "Methods",
+      ])
+      const [generalRow, methodsRow] = rows
+      invariant(generalRow && methodsRow)
+      within(generalRow).getByText("Broad foundation.")
+      expect(
+        within(generalRow)
+          .getAllByRole("listitem")
+          .map((li) => li.textContent),
+      ).toEqual([general1.title, general2.title])
+      within(methodsRow).getByText("Complete 2 out of 3 courses.")
+      expect(
+        within(methodsRow)
+          .getAllByRole("listitem")
+          .map((li) => li.textContent),
+      ).toEqual([m1.title, m2.title, m3.title])
+    })
+
+    test("Shows a track's groups under sub-headings, and no callout without content", async () => {
+      const root = new RequirementTreeBuilder()
+      const container = root.addOperator({
+        operator: "min_number_of",
+        operator_value: "1",
+        title: "Tracks",
+      })
+      const plain = container.addTrack({ title: "Plain", description: "" })
+      plain.addOperator({ operator: "all_of", title: "Required" }).addCourse()
+      const mixed = container.addTrack({
+        title: "Mixed",
+        description: "Required plus electives.",
+      })
+      mixed.addOperator({ operator: "all_of", title: "Required" }).addCourse()
+      const electives = mixed.addOperator({
+        operator: "min_number_of",
+        operator_value: "1",
+        title: "Electives",
+      })
+      electives.addCourse()
+      electives.addCourse()
+      const program = makeProgram({ req_tree: root.serialize() })
+      const page = makePage({ program_details: program })
+      setupApis({ program, page })
+      renderWithProviders(<ProgramPage readableId={program.readable_id} />)
+
+      const section = await screen.findByRole("region", { name: "Courses" })
+      const plainPanel = within(section).getByRole("tabpanel")
+      // The panel opens straight onto the course list.
+      expect(plainPanel.firstElementChild).toContainElement(
+        within(plainPanel).getByRole("list"),
+      )
+      expect(
+        within(plainPanel).queryByRole("heading", { level: 4 }),
+      ).not.toBeInTheDocument()
+
+      await user.click(within(section).getByRole("tab", { name: "Mixed" }))
+      const mixedPanel = within(section).getByRole("tabpanel")
+      within(mixedPanel).getByText("Required plus electives.")
+      expect(
+        within(mixedPanel)
+          .getAllByRole("heading", { level: 4 })
+          .map((h) => h.textContent),
+      ).toEqual(["Required", "Electives: Complete 1 out of 2"])
+      expect(
+        within(mixedPanel).queryByText("Complete 1 out of 2 courses."),
+      ).not.toBeInTheDocument()
+    })
+  })
 })

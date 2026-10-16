@@ -456,6 +456,26 @@ describe.each([
     ).not.toBeInTheDocument()
   })
 
+  test("Never shows upgrade banner on a contract page when the enrollment has no contract", () => {
+    setupUserApis()
+    const enrollment = mitxonline.factories.enrollment.courseEnrollment({
+      enrollment_mode: EnrollmentMode.Audit,
+      b2b_contract_id: null,
+      run: {
+        is_upgradable: true,
+        upgrade_product_id: faker.number.int(),
+        upgrade_product_price: faker.commerce.price(),
+        upgrade_product_is_active: true,
+      },
+    })
+    renderWithProviders(
+      <EnrolledCourseCard enrollment={enrollment} contractId={1905} />,
+    )
+    expect(
+      within(getCard()).queryByTestId("upgrade-root"),
+    ).not.toBeInTheDocument()
+  })
+
   test("Upgrade banner shows correct price and deadline", () => {
     setupUserApis()
     const price = faker.commerce.price()
@@ -810,6 +830,143 @@ describe.each([
   })
 
   // ---------------------------------------------------------------------------
+  // Contract audit enrollments upgrade through the one-click B2B enroll API
+  // ---------------------------------------------------------------------------
+
+  const makeContractAuditEnrollment = () =>
+    mitxonline.factories.enrollment.courseEnrollment({
+      enrollment_mode: EnrollmentMode.Audit,
+      b2b_contract_id: faker.number.int(),
+      certificate: null,
+      grades: [],
+      run: { ...currentRunDates, courseware_url: faker.internet.url() },
+    })
+
+  const CONTINUE_TRIGGERS = [
+    {
+      trigger: "button",
+      getTrigger: () => within(getCard()).getByTestId("courseware-button"),
+    },
+    {
+      trigger: "title link",
+      getTrigger: (title: string) =>
+        within(getCard()).getByRole("link", { name: title }),
+    },
+  ]
+
+  test.each(CONTINUE_TRIGGERS)(
+    "Contract audit enrollment upgrades via the B2B enroll API, then redirects to courseware ($trigger)",
+    async ({ getTrigger }) => {
+      setupUserApis()
+      const enrollment = makeContractAuditEnrollment()
+      const programReadableId = faker.lorem.slug()
+      const enrollUrl = mitxonline.urls.b2b.courseEnrollment(
+        enrollment.run.courseware_id,
+      )
+      setMockResponse.post(enrollUrl, {
+        result: "b2b-enroll-success",
+        order: 1,
+      })
+
+      renderWithProviders(
+        <EnrolledCourseCard
+          enrollment={enrollment}
+          ancestorContext={{ parentProgramReadableIds: [programReadableId] }}
+        />,
+      )
+      await user.click(getTrigger(enrollment.run.title))
+
+      await waitFor(() => {
+        expect(makeRequest).toHaveBeenCalledWith(
+          expect.objectContaining({
+            method: "post",
+            url: enrollUrl,
+            body: { program_id: programReadableId },
+          }),
+        )
+      })
+      await waitFor(() => {
+        expect(window.location.href).toBe(enrollment.run.courseware_url)
+      })
+    },
+  )
+
+  test("Contract audit enrollment still redirects to courseware when the upgrade fails", async () => {
+    setupUserApis()
+    const enrollment = makeContractAuditEnrollment()
+    const enrollUrl = mitxonline.urls.b2b.courseEnrollment(
+      enrollment.run.courseware_id,
+    )
+    setMockResponse.post(
+      enrollUrl,
+      { result: "b2b-error-not-enrollable" },
+      { code: 400 },
+    )
+
+    renderWithProviders(<EnrolledCourseCard enrollment={enrollment} />)
+    await user.click(within(getCard()).getByTestId("courseware-button"))
+
+    await waitFor(() => {
+      expect(makeRequest).toHaveBeenCalledWith(
+        expect.objectContaining({ method: "post", url: enrollUrl }),
+      )
+    })
+    await waitFor(() => {
+      expect(window.location.href).toBe(enrollment.run.courseware_url)
+    })
+  })
+
+  test.each([
+    {
+      case: "contract verified enrollment",
+      enrollmentMode: EnrollmentMode.Verified,
+      contractId: faker.number.int(),
+    },
+    {
+      case: "non-contract audit enrollment",
+      enrollmentMode: EnrollmentMode.Audit,
+      contractId: null,
+    },
+  ])(
+    "Continue goes straight to courseware without calling the B2B enroll API ($case)",
+    async ({ enrollmentMode, contractId }) => {
+      setupUserApis()
+      const enrollment = mitxonline.factories.enrollment.courseEnrollment({
+        enrollment_mode: enrollmentMode,
+        b2b_contract_id: contractId,
+        certificate: null,
+        grades: [],
+        run: { ...currentRunDates, courseware_url: faker.internet.url() },
+      })
+
+      renderWithProviders(<EnrolledCourseCard enrollment={enrollment} />)
+      // Runs after React's handlers. Records whether the card intercepted the
+      // click, then stops jsdom from attempting the (unsupported) navigation.
+      let interceptedByCard: boolean | undefined
+      const onWindowClick = (e: MouseEvent) => {
+        interceptedByCard = e.defaultPrevented
+        e.preventDefault()
+      }
+      window.addEventListener("click", onWindowClick)
+      try {
+        await user.click(within(getCard()).getByTestId("courseware-button"))
+      } finally {
+        window.removeEventListener("click", onWindowClick)
+      }
+
+      expect(interceptedByCard).toBe(false)
+      expect(makeRequest).not.toHaveBeenCalledWith(
+        expect.objectContaining({
+          method: "post",
+          url: mitxonline.urls.b2b.courseEnrollment(
+            enrollment.run.courseware_id,
+          ),
+        }),
+      )
+    },
+  )
+
+  // ---------------------------------------------------------------------------
   // Context menu
   // ---------------------------------------------------------------------------
 
@@ -1135,6 +1292,17 @@ describe("EnrolledCourseCard card type label", () => {
     expect(
       within(getDesktopCard()).queryByText("Course"),
     ).not.toBeInTheDocument()
+  })
+
+  test("shows 'Module' on a contract page when the enrollment has no contract", () => {
+    setupUserApis()
+    const enrollment = mitxonline.factories.enrollment.courseEnrollment({
+      b2b_contract_id: null,
+    })
+    renderWithProviders(
+      <EnrolledCourseCard enrollment={enrollment} contractId={1905} />,
+    )
+    expect(within(getDesktopCard()).getByText("Module")).toBeInTheDocument()
   })
 
   test("shows enrollment status indicator instead of 'Module' text when isModule is set (compact layout)", () => {

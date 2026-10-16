@@ -7,6 +7,7 @@ from unittest.mock import ANY
 
 import pytest
 from decorator import contextmanager
+from django.core.cache import caches
 from django.db import DatabaseError
 from django.utils import timezone
 from kombu.exceptions import OperationalError as BrokerError
@@ -27,11 +28,12 @@ from learning_resources.factories import (
     ContentFileFactory,
     CredentialMetadataConfigurationFactory,
     CredentialMetadataFactory,
+    ETLSourceOwnershipFactory,
     LearningResourceFactory,
     LearningResourcePlatformFactory,
     LearningResourceRunFactory,
 )
-from learning_resources.models import ContentFile, LearningResource
+from learning_resources.models import ContentFile, ETLSourceOwnership, LearningResource
 from learning_resources.tasks import (
     cleanup_deleted_content_files,
     get_ocw_data,
@@ -662,6 +664,90 @@ def test_get_youtube_playlist_data_without_channel(mocker, youtube_settings):
         "channel1", _playlist_data("playlist1"), "ocw", create_videos=True
     )
 
+    mock_load_playlist.assert_not_called()
+
+
+def _warehouse_owns_youtube():
+    """Hand both YouTube resource types to the warehouse pipeline"""
+    for resource_type in (
+        LearningResourceType.video_playlist.name,
+        LearningResourceType.video.name,
+    ):
+        ETLSourceOwnershipFactory.create(
+            etl_source=ETLSource.youtube.name,
+            resource_type=resource_type,
+            owner=ETLSourceOwnership.Pipeline.WAREHOUSE,
+        )
+
+
+def test_get_youtube_data_skips_when_legacy_does_not_own_youtube(
+    mocker, youtube_settings
+):
+    """The fan-out queues nothing for a source the legacy ETL does not own"""
+    _warehouse_owns_youtube()
+    mock_configs = mocker.patch(
+        "learning_resources.tasks.youtube.get_youtube_channel_configs", autospec=True
+    )
+    mock_channel_task = mocker.patch(
+        "learning_resources.tasks.get_youtube_channel_data", autospec=True
+    )
+
+    assert get_youtube_data.delay().get() == 0
+
+    mock_configs.assert_not_called()
+    mock_channel_task.delay.assert_not_called()
+
+
+def test_get_youtube_channel_data_skips_when_ownership_changed(
+    mocker, youtube_settings
+):
+    """A channel task queued before the cutover writes nothing after it"""
+    _warehouse_owns_youtube()
+    mocker.patch("learning_resources.tasks.youtube.get_youtube_client", autospec=True)
+    mock_extract = mocker.patch(
+        "learning_resources.tasks.youtube.extract_channel",
+        autospec=True,
+        return_value={"id": "channel1", "snippet": {"title": "Channel 1"}},
+    )
+    mocker.patch(
+        "learning_resources.tasks.youtube.extract_playlist_metadata",
+        autospec=True,
+        return_value=iter([(_playlist_data("playlist1"), True)]),
+    )
+    mock_unpublish = mocker.patch(
+        "learning_resources.tasks.loaders.unpublish_removed_playlists", autospec=True
+    )
+    mock_playlist_task = mocker.patch(
+        "learning_resources.tasks.get_youtube_playlist_data", autospec=True
+    )
+
+    get_youtube_channel_data.delay(_channel_config("channel1"))
+
+    mock_extract.assert_not_called()
+    assert models.VideoChannel.objects.count() == 0
+    mock_unpublish.assert_not_called()
+    mock_playlist_task.delay.assert_not_called()
+
+
+def test_get_youtube_playlist_data_skips_when_ownership_changed(
+    mocker, youtube_settings
+):
+    """A playlist task queued before the cutover writes nothing after it"""
+    factories.VideoChannelFactory.create(channel_id="channel1")
+    _warehouse_owns_youtube()
+    mocker.patch("learning_resources.tasks.youtube.get_youtube_client", autospec=True)
+    mock_videos = mocker.patch(
+        "learning_resources.tasks.youtube.extract_playlist_items", autospec=True
+    )
+    mock_load_playlist = mocker.patch(
+        "learning_resources.tasks.loaders.load_playlist", autospec=True
+    )
+
+    get_youtube_playlist_data.delay(
+        "channel1", _playlist_data("playlist1"), "ocw", create_videos=True
+    )
+
+    mock_videos.assert_not_called()
     mock_load_playlist.assert_not_called()
 
 
@@ -1359,6 +1445,37 @@ def test_unpublish_removed_canvas_courses_empty(mocker):
     resource.refresh_from_db()
     assert resource.published is True
     assert resource.test_mode is True
+
+
+def test_sync_canvas_courses_skips_entirely_when_not_owned(settings, mocker):
+    """
+    sync_canvas_courses should not ingest archives or unpublish/delete stale
+    courses once canvas courses are owned by another pipeline.
+    """
+    settings.CANVAS_COURSE_BUCKET_PREFIX = "canvas/"
+    ETLSourceOwnershipFactory.create(
+        etl_source=ETLSource.canvas.name,
+        resource_type=LearningResourceType.course.name,
+        owner=ETLSourceOwnership.Pipeline.WEBHOOK,
+    )
+    mocker.patch("learning_resources.tasks.resource_unpublished_actions")
+    mock_get_bucket = mocker.patch("learning_resources.tasks.get_bucket_by_name")
+    mock_ingest_course = mocker.patch("learning_resources.tasks.ingest_canvas_course")
+
+    lr_stale = LearningResourceFactory.create(
+        readable_id="course3",
+        etl_source=ETLSource.canvas.name,
+        published=True,
+        test_mode=True,
+        resource_type="course",
+    )
+
+    sync_canvas_courses(canvas_course_ids=None, overwrite=False)
+
+    mock_get_bucket.assert_not_called()
+    mock_ingest_course.assert_not_called()
+    lr_stale.refresh_from_db()
+    assert lr_stale.published is True
 
 
 @pytest.mark.parametrize(
@@ -2445,3 +2562,324 @@ def test_credential_metadata_leaf_task_is_acknowledged_late():
 
     assert task.acks_late is True
     assert task.reject_on_worker_lost is True
+
+
+@pytest.fixture
+def warehouse_owns(request):
+    """Name the warehouse as the owner of an etl source's resource types"""
+    etl_source, resource_types = request.param
+    for resource_type in resource_types:
+        factories.ETLSourceOwnershipFactory.create(
+            etl_source=etl_source,
+            resource_type=resource_type,
+            owner=ETLSourceOwnership.Pipeline.WAREHOUSE,
+        )
+
+
+YOUTUBE_OWNED = pytest.param(
+    (ETLSource.youtube.name, ["video_playlist", "video"]), id="youtube"
+)
+PODCAST_OWNED = pytest.param(
+    (ETLSource.podcast.name, ["podcast", "podcast_episode"]), id="podcast"
+)
+XPRO_OWNED = pytest.param((ETLSource.xpro.name, ["course", "program"]), id="xpro")
+
+
+@pytest.mark.parametrize("warehouse_owns", [YOUTUBE_OWNED], indirect=True)
+def test_sync_youtube_task_queues_a_task_per_playlist(mocker, settings, warehouse_owns):
+    """SyncYouTubeTask reads each youtube view in full and queues every playlist"""
+    settings.WAREHOUSE_CATALOG = "ol_data_lake_qa"
+    settings.WAREHOUSE_SCHEMA = "ol_warehouse_qa_integrations"
+    rows = {
+        "integrations__learn__youtube_channels": [{"channel_id": "c"}],
+        "integrations__learn__youtube_playlists": [{"readable_id": "p"}],
+        "integrations__learn__youtube_playlist_videos": [{"position": 0}],
+        "integrations__learn__youtube_videos": [{"readable_id": "v"}],
+    }
+    prefix = "ol_data_lake_qa.ol_warehouse_qa_integrations."
+    mock_iter_rows = mocker.patch(
+        "learning_resources.tasks.iter_rows",
+        side_effect=lambda _conn, view: iter(rows[view.removeprefix(prefix)]),
+    )
+    to_load = [("c", {"playlist_id": "p1"}), ("c", {"playlist_id": "p2"})]
+    prepared = {"c": [playlist for _, playlist in to_load]}
+    mock_prepare = mocker.patch(
+        "learning_resources.tasks.warehouse_media.prepare_youtube_sync",
+        return_value=prepared,
+    )
+    mock_sync = mocker.patch(
+        "learning_resources.tasks.warehouse_media.sync_youtube_channels",
+        return_value=to_load,
+    )
+    mock_delay = mocker.patch(
+        "learning_resources.tasks.load_warehouse_youtube_playlist.delay"
+    )
+
+    with tasks.writing_as(tasks.Pipeline.WAREHOUSE):
+        count = tasks.SyncYouTubeTask.fetch_and_upsert(
+            conn=mocker.Mock(), since="ignored"
+        )
+
+    assert count == 2
+    assert [call.args[1] for call in mock_iter_rows.call_args_list] == [
+        prefix + table for table in rows
+    ]
+    mock_prepare.assert_called_once_with(*rows.values(), allow_mass_unpublish=False)
+    mock_sync.assert_called_once_with(
+        rows["integrations__learn__youtube_channels"], prepared
+    )
+    generation = caches["durable"].get(tasks.YOUTUBE_SYNC_GENERATION_KEY)
+    assert generation
+    assert [call.args for call in mock_delay.call_args_list] == [
+        (*playlist, generation) for playlist in to_load
+    ]
+
+
+@pytest.mark.parametrize("warehouse_owns", [YOUTUBE_OWNED], indirect=True)
+def test_sync_youtube_task_keeps_the_generation_of_a_refused_run(
+    mocker, warehouse_owns
+):
+    """
+    A run its checks refuse writes nothing and leaves the generation alone, so
+    the playlist loads an earlier run queued still load
+    """
+    mocker.patch("learning_resources.tasks.iter_rows", return_value=iter([]))
+    mocker.patch(
+        "learning_resources.tasks.warehouse_media.prepare_youtube_sync",
+        side_effect=ExtractException("refused"),
+    )
+    mock_sync = mocker.patch(
+        "learning_resources.tasks.warehouse_media.sync_youtube_channels"
+    )
+    caches["durable"].set(tasks.YOUTUBE_SYNC_GENERATION_KEY, "earlier", timeout=None)
+
+    with (
+        tasks.writing_as(tasks.Pipeline.WAREHOUSE),
+        pytest.raises(ExtractException, match="refused"),
+    ):
+        tasks.SyncYouTubeTask.fetch_and_upsert(conn=mocker.Mock())
+
+    assert caches["durable"].get(tasks.YOUTUBE_SYNC_GENERATION_KEY) == "earlier"
+    mock_sync.assert_not_called()
+
+
+@pytest.mark.parametrize("warehouse_owns", [PODCAST_OWNED], indirect=True)
+def test_sync_podcasts_task_reads_both_views(mocker, warehouse_owns):
+    """SyncPodcastsTask reads both podcast views in full for sync_podcasts"""
+    rows = {
+        "integrations__learn__podcasts": [{"readable_id": "p"}],
+        "integrations__learn__podcast_episodes": [{"readable_id": "e"}],
+    }
+    mock_iter_rows = mocker.patch(
+        "learning_resources.tasks.iter_rows",
+        side_effect=lambda _conn, view: iter(rows[view.rsplit(".", 1)[1]]),
+    )
+    mock_sync = mocker.patch(
+        "learning_resources.tasks.warehouse_media.sync_podcasts", return_value=1
+    )
+
+    with tasks.writing_as(tasks.Pipeline.WAREHOUSE):
+        count = tasks.SyncPodcastsTask.fetch_and_upsert(
+            conn=mocker.Mock(), since="ignored"
+        )
+
+    assert count == 1
+    assert mock_iter_rows.call_count == 2
+    mock_sync.assert_called_once_with(*rows.values(), allow_mass_unpublish=False)
+
+
+@pytest.mark.parametrize("task", ["SyncYouTubeTask", "SyncPodcastsTask"])
+def test_media_sync_tasks_read_nothing_they_do_not_own(mocker, task):
+    """Until the ownership row is flipped a run neither connects to the warehouse nor writes"""
+    mock_connect = mocker.patch("learning_resources.lib.warehouse.connect_to_warehouse")
+    mock_iter_rows = mocker.patch("learning_resources.tasks.iter_rows")
+
+    assert getattr(tasks, task).run() == 0
+
+    mock_connect.assert_not_called()
+    mock_iter_rows.assert_not_called()
+    assert not LearningResource.objects.exists()
+
+
+@pytest.mark.parametrize("warehouse_owns", [YOUTUBE_OWNED], indirect=True)
+def test_load_warehouse_youtube_playlist(mocker, warehouse_owns):
+    """The playlist task loads as the warehouse pipeline, under the playlist's channel"""
+    channel = factories.VideoChannelFactory.create()
+    pipelines_seen = []
+    mock_load = mocker.patch(
+        "learning_resources.tasks.loaders.load_playlist",
+        side_effect=lambda *_: pipelines_seen.append(
+            tasks.may_write("youtube", "video")
+        ),
+    )
+
+    caches["durable"].set(tasks.YOUTUBE_SYNC_GENERATION_KEY, "gen-2")
+
+    tasks.load_warehouse_youtube_playlist(
+        channel.channel_id, {"playlist_id": "p"}, "gen-2"
+    )
+    tasks.load_warehouse_youtube_playlist(
+        "no-such-channel", {"playlist_id": "p"}, "gen-2"
+    )
+
+    mock_load.assert_called_once_with(channel, {"playlist_id": "p"})
+    assert pipelines_seen == [True]
+
+
+@pytest.mark.parametrize("warehouse_owns", [YOUTUBE_OWNED], indirect=True)
+@pytest.mark.parametrize("current", ["gen-2", None])
+def test_load_warehouse_youtube_playlist_skips_a_superseded_sync(
+    mocker, warehouse_owns, current
+):
+    """A playlist queued by an earlier sync than the current one is not loaded"""
+    channel = factories.VideoChannelFactory.create()
+    mock_load = mocker.patch("learning_resources.tasks.loaders.load_playlist")
+    caches["durable"].clear()
+    if current:
+        caches["durable"].set(tasks.YOUTUBE_SYNC_GENERATION_KEY, current)
+
+    tasks.load_warehouse_youtube_playlist(
+        channel.channel_id, {"playlist_id": "p"}, "gen-1"
+    )
+
+    mock_load.assert_not_called()
+
+
+def test_load_warehouse_youtube_playlist_stops_when_ownership_moved(mocker):
+    """A playlist queued before youtube was handed back is not loaded"""
+    channel = factories.VideoChannelFactory.create()
+    mock_load = mocker.patch("learning_resources.tasks.loaders.load_playlist")
+
+    tasks.load_warehouse_youtube_playlist(
+        channel.channel_id, {"playlist_id": "p"}, "gen-1"
+    )
+
+    mock_load.assert_not_called()
+
+
+def test_get_ocw_data_skips_when_legacy_does_not_own_courses(settings, mocker):
+    """get_ocw_data lists no bucket and queues no course once OCW is owned elsewhere"""
+    settings.OCW_LIVE_BUCKET = "bucket"
+    ETLSourceOwnershipFactory.create(
+        etl_source=ETLSource.ocw.name,
+        resource_type=LearningResourceType.course.name,
+        owner=ETLSourceOwnership.Pipeline.WAREHOUSE,
+    )
+    mock_boto = mocker.patch("learning_resources.tasks.boto3")
+    mock_get_ocw_courses = mocker.patch("learning_resources.tasks.get_ocw_courses")
+
+    assert get_ocw_data.delay().get() is None
+
+    mock_boto.resource.assert_not_called()
+    mock_get_ocw_courses.si.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    ("warehouse_owns", "task", "sync"),
+    [
+        pytest.param(
+            YOUTUBE_OWNED.values[0],
+            "SyncYouTubeTask",
+            "prepare_youtube_sync",
+            id="youtube",
+        ),
+        pytest.param(
+            PODCAST_OWNED.values[0], "SyncPodcastsTask", "sync_podcasts", id="podcast"
+        ),
+    ],
+    indirect=["warehouse_owns"],
+)
+@pytest.mark.parametrize(
+    ("kwargs", "allow"),
+    [
+        ({"allow_mass_unpublish": True}, True),
+        ({}, False),
+        ({"allow_mass_unpublish": "false"}, False),
+        ({"allow_mass_unpublish": 1}, False),
+    ],
+)
+@pytest.mark.parametrize("call", ["run", "apply"])
+def test_media_sync_tasks_pass_on_allow_mass_unpublish(  # noqa: PLR0913
+    mocker, warehouse_owns, task, sync, call, kwargs, allow
+):
+    """
+    Only the boolean allow_mass_unpublish=True lifts the limit, whether the task
+    is queued or run() is called directly
+    """
+    mocker.patch("learning_resources.lib.warehouse.connect_to_warehouse")
+    mocker.patch("learning_resources.tasks.iter_rows", return_value=[])
+    # None is a youtube run with nothing to write, which stops before the writes
+    mock_sync = mocker.patch(
+        f"learning_resources.tasks.warehouse_media.{sync}",
+        return_value=0 if sync == "sync_podcasts" else None,
+    )
+
+    if call == "run":
+        getattr(tasks, task).run(**kwargs)
+    else:
+        getattr(tasks, task).apply(kwargs=kwargs).get()
+
+    assert mock_sync.call_args.kwargs == {"allow_mass_unpublish": allow}
+
+
+@pytest.mark.parametrize("warehouse_owns", [XPRO_OWNED], indirect=True)
+@pytest.mark.parametrize(
+    ("task", "sync", "views"),
+    [
+        (
+            "SyncXproCoursesTask",
+            "sync_courses",
+            ["integrations__learn__xpro_courses", "integrations__learn__xpro_runs"],
+        ),
+        (
+            "SyncXproProgramsTask",
+            "sync_programs",
+            ["integrations__learn__xpro_programs"],
+        ),
+    ],
+)
+@pytest.mark.parametrize("allow", [True, False])
+@pytest.mark.parametrize("call", ["run", "apply"])
+def test_xpro_sync_tasks_read_their_views(  # noqa: PLR0913
+    mocker, warehouse_owns, task, sync, views, allow, call
+):
+    """
+    Each xPRO sync task reads its views in full and passes on the unpublish
+    override, whether queued or run directly
+    """
+    mocker.patch("learning_resources.lib.warehouse.connect_to_warehouse")
+    rows = {view: [{"readable_id": view}] for view in views}
+    mock_iter_rows = mocker.patch(
+        "learning_resources.tasks.iter_rows",
+        side_effect=lambda _conn, view: iter(rows[view.rsplit(".", 1)[1]]),
+    )
+    mock_sync = mocker.patch(
+        f"learning_resources.tasks.warehouse_xpro.{sync}", return_value=1
+    )
+
+    kwargs = {"allow_mass_unpublish": True} if allow else {}
+    count = (
+        getattr(tasks, task).run(**kwargs)
+        if call == "run"
+        else getattr(tasks, task).apply(kwargs=kwargs).get()
+    )
+
+    assert count == 1
+
+    assert mock_iter_rows.call_count == len(views)
+    mock_sync.assert_called_once_with(
+        *(rows[view] for view in views), allow_mass_unpublish=allow
+    )
+
+
+@pytest.mark.parametrize("task", ["SyncXproCoursesTask", "SyncXproProgramsTask"])
+def test_xpro_sync_tasks_read_nothing_they_do_not_own(mocker, task):
+    """Until the ownership row is flipped a run neither connects to the warehouse nor writes"""
+    mock_connect = mocker.patch("learning_resources.lib.warehouse.connect_to_warehouse")
+    mock_iter_rows = mocker.patch("learning_resources.tasks.iter_rows")
+
+    assert getattr(tasks, task).run() == 0
+
+    mock_connect.assert_not_called()
+    mock_iter_rows.assert_not_called()
+    assert not LearningResource.objects.exists()

@@ -3,6 +3,7 @@
 import React, { useEffect } from "react"
 import ConfiguredPostHogProvider from "@/page-components/ConfiguredPostHogProvider/ConfiguredPostHogProvider"
 import { analytics, initPostHog } from "@/common/analytics"
+import HubspotIdentifier from "@/page-components/HubspotIdentifier/HubspotIdentifier"
 import { parseUtmParams, isOrganicSocialTraffic } from "@/common/analytics/utm"
 import { usePostHog } from "posthog-js/react"
 
@@ -51,6 +52,7 @@ export default function SiteProviders({
   return (
     <ConfiguredPostHogProvider>
       <AnalyticsTracker />
+      <HubspotIdentifier />
       {children}
     </ConfiguredPostHogProvider>
   )

@@ -1,15 +1,19 @@
 import { factories } from "api/mitxonline-test-utils"
 import {
-  CourseRunEnrollmentV3,
+  DisplayModeEnum,
   V2ProgramRequirement,
-  V3UserProgramEnrollment,
 } from "@mitodl/mitxonline-api-axios/v2"
+import {
+  CourseRunEnrollmentV3,
+  V3UserProgramEnrollment,
+} from "@mitodl/mitxonline-api-axios/v3"
 import {
   EnrollmentStatus,
   filterEnrollmentsByOrganization,
   getBestRun,
   getRequirementsProgress,
   getProgramEnrollmentStatus,
+  programIsCompleted,
   getKey,
   getEnrollmentStatus,
   ResourceType,
@@ -158,73 +162,6 @@ describe("helpers", () => {
       expect(result).toEqual(run2)
     })
 
-    test("filters by contract ID when provided", () => {
-      const contractId = 100
-      const run1 = factories.courses.courseRun({
-        id: 1,
-        b2b_contract: null,
-        is_enrollable: true,
-        start_date: "2026-06-01T00:00:00Z",
-      })
-      const run2 = factories.courses.courseRun({
-        id: 2,
-        b2b_contract: contractId,
-        is_enrollable: true,
-        start_date: "2025-01-01T00:00:00Z",
-      })
-      const run3 = factories.courses.courseRun({
-        id: 3,
-        b2b_contract: contractId,
-        is_enrollable: true,
-        start_date: "2026-01-01T00:00:00Z",
-      })
-      const course = factories.courses.course({
-        courseruns: [run1, run2, run3],
-        next_run_id: null,
-      })
-
-      // run1 is filtered out (wrong contract); run3 has the most recent start
-      // date among contract runs, so it wins.
-      const result = getBestRun(course, { contractId })
-      expect(result).toEqual(run3)
-    })
-
-    test("prefers next_run_id within contract runs", () => {
-      const contractId = 100
-      const run1 = factories.courses.courseRun({
-        id: 1,
-        b2b_contract: contractId,
-        is_enrollable: true,
-      })
-      const run2 = factories.courses.courseRun({
-        id: 2,
-        b2b_contract: contractId,
-        is_enrollable: true,
-      })
-      const course = factories.courses.course({
-        courseruns: [run1, run2],
-        next_run_id: 2,
-      })
-
-      const result = getBestRun(course, { contractId })
-      expect(result).toEqual(run2)
-    })
-
-    test("returns undefined if no runs match contract", () => {
-      const run1 = factories.courses.courseRun({
-        id: 1,
-        b2b_contract: 200,
-        is_enrollable: true,
-      })
-      const course = factories.courses.course({
-        courseruns: [run1],
-        next_run_id: null,
-      })
-
-      const result = getBestRun(course, { contractId: 100 })
-      expect(result).toBeUndefined()
-    })
-
     test("returns undefined when no runs are enrollable (enrollableOnly)", () => {
       const run1 = factories.courses.courseRun({
         id: 1,
@@ -369,43 +306,43 @@ describe("helpers", () => {
     })
   })
 
+  const courseLeaf = (id: number): V2ProgramRequirement => ({
+    data: { node_type: "course", course: id }, // eslint-disable-line camelcase
+  })
+
+  const programLeaf = (id: number): V2ProgramRequirement => ({
+    data: { node_type: "program", required_program: id }, // eslint-disable-line camelcase
+  })
+
+  const operator = (
+    op: string,
+    children: V2ProgramRequirement[],
+    operatorValue: string | null = null,
+  ): V2ProgramRequirement => ({
+    data: {
+      node_type: "operator",
+      operator: op,
+      operator_value: operatorValue, // eslint-disable-line camelcase
+    },
+    children,
+  })
+
+  const courseEnrollment = (
+    courseId: number,
+    passed: boolean,
+  ): CourseRunEnrollmentV3 => {
+    const run = factories.courses.courseRun({ id: courseId })
+    const course = factories.courses.course({
+      id: courseId,
+      courseruns: [run],
+    })
+    return factories.enrollment.courseEnrollment({
+      run: { ...run, course },
+      grades: [factories.enrollment.grade({ passed })],
+    })
+  }
+
   describe("getRequirementsProgress", () => {
-    const courseLeaf = (id: number): V2ProgramRequirement => ({
-      data: { node_type: "course", course: id }, // eslint-disable-line camelcase
-    })
-
-    const programLeaf = (id: number): V2ProgramRequirement => ({
-      data: { node_type: "program", required_program: id }, // eslint-disable-line camelcase
-    })
-
-    const operator = (
-      op: string,
-      children: V2ProgramRequirement[],
-      operatorValue: string | null = null,
-    ): V2ProgramRequirement => ({
-      data: {
-        node_type: "operator",
-        operator: op,
-        operator_value: operatorValue, // eslint-disable-line camelcase
-      },
-      children,
-    })
-
-    const courseEnrollment = (
-      courseId: number,
-      passed: boolean,
-    ): CourseRunEnrollmentV3 => {
-      const run = factories.courses.courseRun({ id: courseId })
-      const course = factories.courses.course({
-        id: courseId,
-        courseruns: [run],
-      })
-      return factories.enrollment.courseEnrollment({
-        run: { ...run, course },
-        grades: [factories.enrollment.grade({ passed })],
-      })
-    }
-
     test("all_of counts completed courses against total children", () => {
       const nodes = [operator("all_of", [courseLeaf(1), courseLeaf(2)])]
       const courseEnrollments = {
@@ -474,6 +411,60 @@ describe("helpers", () => {
       })
     })
 
+    test.each([
+      { displayMode: DisplayModeEnum.Course, completed: 1 },
+      { displayMode: null, completed: 0 },
+    ])(
+      "program leaf with all modules passed and no certificate counts as completed only for program-as-course (display_mode=$displayMode)",
+      ({ displayMode, completed }) => {
+        const program = factories.programs.program({
+          id: 10,
+          display_mode: displayMode, // eslint-disable-line camelcase
+          courses: [1, 2],
+          req_tree: [operator("all_of", [courseLeaf(1), courseLeaf(2)])], // eslint-disable-line camelcase
+        })
+        const programEnrollments = {
+          10: factories.enrollment.programEnrollmentV3({ certificate: null }),
+        }
+        const courseEnrollments = {
+          1: [courseEnrollment(1, true)],
+          2: [courseEnrollment(2, true)],
+        }
+        const nodes = [operator("all_of", [programLeaf(10)])]
+
+        expect(
+          getRequirementsProgress(
+            nodes,
+            courseEnrollments,
+            programEnrollments,
+            new Map([[10, program]]),
+          ),
+        ).toEqual({ completed, total: 1 })
+      },
+    )
+
+    test("program-as-course leaf with some modules unpassed is not completed", () => {
+      const program = factories.programs.program({
+        id: 10,
+        display_mode: DisplayModeEnum.Course, // eslint-disable-line camelcase
+        courses: [1, 2],
+        req_tree: [operator("all_of", [courseLeaf(1), courseLeaf(2)])], // eslint-disable-line camelcase
+      })
+      const programEnrollments = {
+        10: factories.enrollment.programEnrollmentV3({ certificate: null }),
+      }
+      const nodes = [operator("all_of", [programLeaf(10)])]
+
+      expect(
+        getRequirementsProgress(
+          nodes,
+          { 1: [courseEnrollment(1, true)], 2: [courseEnrollment(2, false)] },
+          programEnrollments,
+          new Map([[10, program]]),
+        ),
+      ).toEqual({ completed: 0, total: 1 })
+    })
+
     test("ignores non-operator and non-leaf children (nested operators)", () => {
       // Nested operators are not counted — only direct course/program children
       const nested = operator("all_of", [courseLeaf(99)])
@@ -523,6 +514,86 @@ describe("helpers", () => {
         completed: 0,
         total: 0,
       })
+    })
+  })
+
+  describe("programIsCompleted", () => {
+    const programAsCourse = (reqTree: V2ProgramRequirement[]) =>
+      factories.programs.program({
+        display_mode: DisplayModeEnum.Course, // eslint-disable-line camelcase
+        req_tree: reqTree, // eslint-disable-line camelcase
+      })
+    const uncertified = () =>
+      factories.enrollment.programEnrollmentV3({ certificate: null })
+
+    test("is true when the enrollment has a certificate, for any display_mode", () => {
+      const program = factories.programs.program({ display_mode: null }) // eslint-disable-line camelcase
+      const enrollment = factories.enrollment.programEnrollmentV3({
+        certificate: { uuid: "cert-uuid" },
+      })
+
+      expect(programIsCompleted(program, enrollment, {})).toBe(true)
+    })
+
+    test("is false when the learner is not enrolled", () => {
+      const program = programAsCourse([operator("all_of", [courseLeaf(1)])])
+
+      expect(
+        programIsCompleted(program, undefined, {
+          1: [courseEnrollment(1, true)],
+        }),
+      ).toBe(false)
+    })
+
+    test.each([
+      { displayMode: DisplayModeEnum.Course, expected: true },
+      { displayMode: null, expected: false },
+    ])(
+      "with every module passed and no certificate is $expected (display_mode=$displayMode)",
+      ({ displayMode, expected }) => {
+        const program = factories.programs.program({
+          display_mode: displayMode, // eslint-disable-line camelcase
+          req_tree: [operator("all_of", [courseLeaf(1), courseLeaf(2)])], // eslint-disable-line camelcase
+        })
+
+        expect(
+          programIsCompleted(program, uncertified(), {
+            1: [courseEnrollment(1, true)],
+            2: [courseEnrollment(2, true)],
+          }),
+        ).toBe(expected)
+      },
+    )
+
+    test("is false when some modules are not passed", () => {
+      const program = programAsCourse([
+        operator("all_of", [courseLeaf(1), courseLeaf(2)]),
+      ])
+
+      expect(
+        programIsCompleted(program, uncertified(), {
+          1: [courseEnrollment(1, true)],
+          2: [courseEnrollment(2, false)],
+        }),
+      ).toBe(false)
+    })
+
+    test("is true once a min_number_of requirement is met", () => {
+      const program = programAsCourse([
+        operator("min_number_of", [courseLeaf(1), courseLeaf(2)], "1"),
+      ])
+
+      expect(
+        programIsCompleted(program, uncertified(), {
+          1: [courseEnrollment(1, true)],
+        }),
+      ).toBe(true)
+    })
+
+    test("is false when the req_tree is empty", () => {
+      expect(programIsCompleted(programAsCourse([]), uncertified(), {})).toBe(
+        false,
+      )
     })
   })
 })

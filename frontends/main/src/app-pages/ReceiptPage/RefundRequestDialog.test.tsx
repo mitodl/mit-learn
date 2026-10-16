@@ -9,7 +9,7 @@ import {
 import { makeRequest } from "api/test-utils"
 import * as mitxonline from "api/mitxonline-test-utils"
 import NiceModal from "@ebay/nice-modal-react"
-import type { Order } from "@mitodl/mitxonline-api-axios/v2"
+import type { Order } from "@mitodl/mitxonline-api-axios/v0"
 import { RefundRequestDialog } from "./RefundRequestDialog"
 
 const ORDER_ID = 4242

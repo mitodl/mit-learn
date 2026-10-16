@@ -88,8 +88,9 @@ def _insert_rows(conn, rows):
 class _CollectingTask(BaseWarehouseETLTask):
     name = "test.CollectingTask"
     table_name = _TEST_TABLE
+    writes = None
 
-    def fetch_and_upsert(self, conn, *, since=None) -> int:
+    def fetch_and_upsert(self, conn, *, since=None, **_) -> int:
         self.collected = list(iter_rows(conn, self.view_name, since=since))
         return len(self.collected)
 

@@ -13,6 +13,7 @@ changes to support a new backend.
 import logging
 import re
 import time
+from collections.abc import Sequence
 from datetime import UTC, datetime, timedelta
 
 import sentry_sdk
@@ -20,6 +21,8 @@ from celery import Task
 from django.conf import settings
 from django.core.cache import caches
 from django.core.exceptions import ImproperlyConfigured
+
+from learning_resources.etl.ownership import Pipeline, may_write, writing_as
 
 log = logging.getLogger(__name__)
 
@@ -31,12 +34,13 @@ _SAFE_IDENTIFIER = re.compile(r"^[a-zA-Z0-9_.]+\Z")
 # would pass _SAFE_IDENTIFIER once composed but point at a different catalog.
 _SAFE_NAME_PART = re.compile(r"^[a-zA-Z0-9_]+\Z")
 
-# Cache alias for sync watermarks: must outlive Redis flushes (an evicted
-# watermark just makes the next incremental run fetch a wider-than-necessary
-# window, which is safe — see BaseWarehouseETLTask.fetch_and_upsert's
-# ``since`` contract), but should not require a dedicated model + migration
-# for what is ETL bookkeeping, not domain data.
-_WATERMARK_CACHE = "durable"
+# Cache alias for sync state (watermarks, sync generations): must outlive
+# Redis flushes (an evicted watermark just makes the next incremental run
+# fetch a wider-than-necessary window, which is safe, see
+# BaseWarehouseETLTask.fetch_and_upsert's ``since`` contract), but should not
+# require a dedicated model + migration for what is ETL bookkeeping, not
+# domain data.
+WAREHOUSE_STATE_CACHE = "durable"
 _WATERMARK_SQL_FORMAT = "%Y-%m-%d %H:%M:%S.%f"
 
 # Subtracted from the wall-clock watermark before it's stored: this consumer
@@ -180,8 +184,13 @@ class BaseWarehouseETLTask(Task):
     """Celery task base class for warehouse-pull ETL jobs.
 
     Subclasses declare ``table_name`` (the bare view name, e.g.
-    ``"integrations__learn__ocw_courses"``) and implement
-    ``fetch_and_upsert(conn, *, since)``. ``view_name`` qualifies it with
+    ``"integrations__learn__ocw_courses"``) and ``writes`` (the
+    ``(etl_source, resource_types)`` the task loads, or ``None`` for a task
+    that loads no catalog resource), and implement
+    ``fetch_and_upsert(conn, *, since, allow_mass_unpublish)``. ``run``
+    returns 0 without
+    connecting unless ETLSourceOwnership names the warehouse for every one
+    of those resource types. ``view_name`` qualifies it with
     ``settings.WAREHOUSE_CATALOG`` and ``settings.WAREHOUSE_SCHEMA``, so the
     same task reads ``ol_data_lake_qa`` in QA and ``ol_data_lake_production``
     in production. Register concrete subclasses via
@@ -210,13 +219,22 @@ class BaseWarehouseETLTask(Task):
       comment for why a bare wall-clock watermark can permanently skip
       warehouse rows under build/replication lag.
 
+    ``allow_mass_unpublish=True``, passed the same way, reaches
+    ``fetch_and_upsert`` whether the task was queued or ``run()`` was called
+    directly. A task that refuses to unpublish a large share of its source
+    lifts that limit on it; the others ignore it. Only the boolean counts: a
+    serialized ``"false"`` is truthy.
+
     Example::
 
         class SyncOCWCoursesTask(BaseWarehouseETLTask):
             name = "learning_resources.tasks.SyncOCWCoursesTask"
             table_name = "integrations__learn__ocw_courses"
+            writes = ("ocw", ["course"])
 
-            def fetch_and_upsert(self, conn, *, since=None):
+            def fetch_and_upsert(
+                self, conn, *, since=None, allow_mass_unpublish=False
+            ):
                 for row in iter_rows(conn, self.view_name, since=since):
                     upsert_ocw_course(row, prune=since is None)
 
@@ -226,16 +244,26 @@ class BaseWarehouseETLTask(Task):
     abstract = True
     acks_late = True
     table_name: str = ""
+    # No default: a task that forgot to say what it writes would run as a
+    # second writer next to the pair's owner.
+    writes: tuple[str, Sequence[str]] | None
 
     def __init_subclass__(cls, **kwargs):
-        """Reject subclasses that set ``view_name``.
+        """Reject subclasses that set ``view_name`` or leave ``writes`` unset.
 
-        A class attribute would shadow the property below and read whatever
-        catalog it names, whatever environment this runs in.
+        A ``view_name`` class attribute would shadow the property below and
+        read whatever catalog it names, whatever environment this runs in.
         """
         super().__init_subclass__(**kwargs)
         if "view_name" in cls.__dict__:
             msg = f"{cls.__name__} must set table_name, not view_name"
+            raise TypeError(msg)
+        if not hasattr(cls, "writes"):
+            msg = (
+                f"{cls.__name__} must set writes to the (etl_source, "
+                "resource_types) it loads, or to None if it loads no catalog "
+                "resource"
+            )
             raise TypeError(msg)
 
     @property
@@ -252,16 +280,38 @@ class BaseWarehouseETLTask(Task):
         if not self.table_name:
             msg = f"{self.__class__.__name__}.table_name must be set"
             raise ValueError(msg)
-        parts = (settings.WAREHOUSE_CATALOG, settings.WAREHOUSE_SCHEMA, self.table_name)
+        return self.qualified_name(self.table_name)
+
+    @staticmethod
+    def qualified_name(table_name: str) -> str:
+        """Qualify a bare view name as ``catalog.schema.table`` from settings.
+
+        For a task that reads more than the one view ``table_name`` names.
+
+        Raises:
+            ValueError: If any part is not a plain identifier.
+        """
+        parts = (settings.WAREHOUSE_CATALOG, settings.WAREHOUSE_SCHEMA, table_name)
         for part in parts:
             if not _SAFE_NAME_PART.match(part):
                 msg = f"Unsafe warehouse identifier: {part!r}"
                 raise ValueError(msg)
         return ".".join(parts)
 
-    def run(self, *args, full_refresh: bool = True, **kwargs):  # noqa: ARG002
+    def run(
+        self,
+        *args,  # noqa: ARG002
+        full_refresh: bool = True,
+        allow_mass_unpublish: bool = False,
+        **kwargs,  # noqa: ARG002
+    ):
         """Open a warehouse connection, delegate to ``fetch_and_upsert``, log counts."""
         view_name = self.view_name
+
+        if self.writes is not None:
+            with writing_as(Pipeline.WAREHOUSE):
+                if not may_write(*self.writes):
+                    return 0
 
         since = None if full_refresh else self._get_watermark()
         # Captured before the fetch, not after: a row modified while the
@@ -274,7 +324,13 @@ class BaseWarehouseETLTask(Task):
         conn = connect_to_warehouse()
         start = time.monotonic()
         try:
-            count = self.fetch_and_upsert(conn, since=since)
+            # The loaders check ownership again as the pipeline named here.
+            with writing_as(Pipeline.WAREHOUSE):
+                count = self.fetch_and_upsert(
+                    conn,
+                    since=since,
+                    allow_mass_unpublish=allow_mass_unpublish is True,
+                )
         except Exception:
             log.exception("Warehouse ETL task %s failed", self.name)
             sentry_sdk.add_breadcrumb(
@@ -315,7 +371,9 @@ class BaseWarehouseETLTask(Task):
         )
         return count
 
-    def fetch_and_upsert(self, conn, *, since=None) -> int:
+    def fetch_and_upsert(
+        self, conn, *, since=None, allow_mass_unpublish: bool = False
+    ) -> int:
         """Pull rows from the warehouse and upsert into Django models.
 
         Args:
@@ -323,6 +381,8 @@ class BaseWarehouseETLTask(Task):
             since (datetime | None): Forwarded from ``run()``. ``None`` means
                 a full refresh — pull everything and prune. Otherwise, pull
                 only rows changed since this watermark and skip pruning.
+            allow_mass_unpublish (bool): Forwarded from ``run()``. Lifts the
+                limit on how much of a source one run may unpublish.
 
         Returns:
             int: Number of rows processed.
@@ -334,8 +394,10 @@ class BaseWarehouseETLTask(Task):
 
     def _get_watermark(self):
         """Return this task's last recorded incremental watermark, if any."""
-        return caches[_WATERMARK_CACHE].get(self._watermark_cache_key())
+        return caches[WAREHOUSE_STATE_CACHE].get(self._watermark_cache_key())
 
     def _set_watermark(self, value: datetime) -> None:
         """Persist ``value`` as this task's incremental watermark."""
-        caches[_WATERMARK_CACHE].set(self._watermark_cache_key(), value, timeout=None)
+        caches[WAREHOUSE_STATE_CACHE].set(
+            self._watermark_cache_key(), value, timeout=None
+        )

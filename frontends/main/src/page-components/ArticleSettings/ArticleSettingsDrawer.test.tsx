@@ -30,7 +30,10 @@ const mockTopics = () => {
   return { topic, subA, subB }
 }
 
-const renderDrawer = (topics?: number[]) => {
+const renderDrawer = (
+  topics?: number[],
+  props: Partial<React.ComponentProps<typeof ArticleSettingsDrawer>> = {},
+) => {
   const onSave = jest.fn()
   renderWithProviders(
     <ArticleSettingsDrawer
@@ -38,6 +41,7 @@ const renderDrawer = (topics?: number[]) => {
       onClose={jest.fn()}
       onSave={onSave}
       initialValues={topics ? { topics } : undefined}
+      {...props}
     />,
   )
   return { onSave }
@@ -178,9 +182,10 @@ describe("ArticleSettingsDrawer SEO fields", () => {
   })
 
   /**
-   * `WebsiteContent.seo_title` is a `CharField(max_length=255)`, so anything
-   * longer is rejected by the server -- and the drawer's save is fired and
-   * forgotten, so that rejection reaches the editor only as a generic banner.
+   * `WebsiteContent.seo_title_override` is a `CharField(max_length=255)`, so
+   * anything longer is rejected by the server -- and the drawer's save is
+   * fired and forgotten, so that rejection reaches the editor only as a
+   * generic banner.
    * The field stops it here instead.
    */
   test("the SEO title cannot be typed past what the server stores", async () => {
@@ -225,6 +230,166 @@ describe("ArticleSettingsDrawer SEO fields", () => {
   })
 
   /**
+   * The inferred value is a placeholder rather than text in the field, which
+   * is what keeps "unset" apart from "set to the same words". Pre-filling it
+   * would make the next save store it as an override, and the field would stop
+   * following the content -- the opposite of what inferring it is for.
+   */
+  test("shows what will be used as a placeholder, not as a value", async () => {
+    mockTopics()
+    renderDrawer(undefined, {
+      inferredSeoTitle: "The content's own title",
+      inferredSeoDescription: "The line under the headline.",
+    })
+
+    const title = await screen.findByLabelText(/^SEO Title/)
+    expect(title).toHaveValue("")
+    expect(title).toHaveAttribute("placeholder", "The content's own title")
+
+    const description = screen.getByLabelText(/^SEO Description/)
+    expect(description).toHaveValue("")
+    expect(description).toHaveAttribute(
+      "placeholder",
+      "The line under the headline.",
+    )
+  })
+
+  test("an override is shown as the value, displacing the placeholder", async () => {
+    mockTopics()
+    renderDrawer(undefined, {
+      inferredSeoTitle: "The content's own title",
+      initialValues: { seoTitle: "Written for search" },
+    })
+
+    expect(await screen.findByLabelText(/^SEO Title/)).toHaveValue(
+      "Written for search",
+    )
+  })
+
+  test("saving with nothing typed overrides nothing", async () => {
+    mockTopics()
+    const { onSave } = renderDrawer(undefined, {
+      inferredSeoTitle: "The content's own title",
+      inferredSeoDescription: "The line under the headline.",
+    })
+
+    await save()
+
+    /* Blank is what hands the fields back to the content. */
+    expect(onSave.mock.calls[0][0]).toMatchObject({
+      seoTitle: "",
+      seoDescription: "",
+    })
+  })
+
+  /**
+   * The counter measures what a search result will show, which is the inferred
+   * value while the field is blank -- counting the empty field instead would
+   * read "0 / 48" under a placeholder that is plainly longer than that.
+   */
+  test("the counter measures the resolved value, not the field", async () => {
+    mockTopics()
+    renderDrawer(undefined, { inferredSeoTitle: "Twelve chars" })
+
+    await screen.findByText("12 / 48 characters")
+  })
+
+  test("the save is refused only when nothing resolves", async () => {
+    mockTopics()
+    renderDrawer(undefined, {
+      seoRequired: true,
+      mustResolve: true,
+      inferredSeoTitle: "The content's own title",
+      inferredSeoDescription: "",
+    })
+
+    /* The title resolves; the description has nowhere to come from. */
+    const saveButton = await screen.findByRole("button", {
+      name: "Save Settings",
+    })
+    expect(saveButton).toBeDisabled()
+
+    await userEvent.type(
+      screen.getByLabelText(/^SEO Description/),
+      "Written for search.",
+    )
+    expect(saveButton).toBeEnabled()
+  }, 20000)
+
+  /**
+   * The asterisk and `aria-required` have to agree with the save. A field
+   * whose blank the save accepts -- because the content supplies a value --
+   * must not announce itself as required, or a screen reader is told something
+   * the form does not enforce.
+   */
+  test("is marked required only where nothing can stand in", async () => {
+    mockTopics()
+    renderDrawer(undefined, {
+      seoRequired: true,
+      mustResolve: true,
+      inferredSeoTitle: "The content's own title",
+      inferredSeoDescription: "",
+    })
+
+    /* The title has a fallback, so blank is fine and it says so. */
+    expect(await screen.findByLabelText("SEO Title")).not.toBeRequired()
+    /* The description has none, so this one really is required. */
+    expect(screen.getByLabelText(/^SEO Description/)).toBeRequired()
+  })
+
+  /**
+   * A draft is filled in a piece at a time -- topics now, a description once
+   * it is written -- so its settings save in whatever state they are in. What
+   * publishing needs is insisted on at the publish, not before it.
+   */
+  test("a draft saves even with nothing resolving", async () => {
+    mockTopics()
+    const { onSave } = renderDrawer(undefined, {
+      seoRequired: true,
+      topicsRequired: true,
+      mustResolve: false,
+      inferredSeoTitle: "",
+      inferredSeoDescription: "",
+    })
+
+    const saveButton = await screen.findByRole("button", {
+      name: "Save Settings",
+    })
+    expect(saveButton).toBeEnabled()
+
+    await userEvent.click(saveButton)
+    expect(onSave).toHaveBeenCalled()
+  })
+
+  test("a draft's incomplete fields are not announced as required", async () => {
+    mockTopics()
+    renderDrawer(undefined, {
+      seoRequired: true,
+      mustResolve: false,
+      inferredSeoTitle: "",
+      inferredSeoDescription: "",
+    })
+
+    /* Nothing resolves, but the save accepts it -- so neither may claim to be
+       required, or a screen reader is told something the form does not hold. */
+    expect(await screen.findByLabelText("SEO Title")).not.toBeRequired()
+    expect(screen.getByLabelText("SEO Description")).not.toBeRequired()
+  })
+
+  test("a required field that resolves is not refused", async () => {
+    mockTopics()
+    renderDrawer(undefined, {
+      seoRequired: true,
+      inferredSeoTitle: "The content's own title",
+      inferredSeoDescription: "The line under the headline.",
+    })
+
+    expect(
+      await screen.findByRole("button", { name: "Save Settings" }),
+    ).toBeEnabled()
+  })
+
+  /**
    * Guidance, not a limit: both numbers stand in for pixel widths, and a tag a
    * little over is truncated rather than rejected. So the counter says so and
    * the save still goes through -- what it must not do is look like nothing
@@ -248,5 +413,71 @@ describe("ArticleSettingsDrawer SEO fields", () => {
     /* Still saved: the budget is guidance, and the editor has seen it. */
     await save()
     expect(onSave.mock.calls[0][0].seoTitle).toHaveLength(50)
+  }, 30000)
+})
+
+/**
+ * The two fields resolve separately, so most often only one of them is
+ * holding a publish back. What the section says has to agree with which field
+ * is marked required -- and must not offer to infer the very thing the
+ * content does not have.
+ */
+describe("ArticleSettingsDrawer SEO message", () => {
+  const renderBlocked = (inferred: {
+    inferredSeoTitle?: string
+    inferredSeoDescription?: string
+  }) => {
+    mockTopics()
+    renderDrawer(undefined, {
+      mustResolve: true,
+      seoRequired: true,
+      inferredSeoTitle: "",
+      inferredSeoDescription: "",
+      ...inferred,
+    })
+  }
+
+  const isRequired = (field: HTMLElement) =>
+    field.getAttribute("required") !== null ||
+    field.getAttribute("aria-required") === "true"
+
+  test("asks only for the description when the title resolves", async () => {
+    renderBlocked({ inferredSeoTitle: "The content's own title" })
+
+    await screen.findByText(
+      /Add an SEO description to publish your article\. Your article has no line under the headline to fall back to\./,
+    )
+    expect(isRequired(screen.getByLabelText(/^SEO Title/))).toBe(false)
+    expect(isRequired(screen.getByLabelText(/^SEO Description/))).toBe(true)
+  }, 30000)
+
+  test("asks only for the title when the description resolves", async () => {
+    renderBlocked({ inferredSeoDescription: "The line under the headline." })
+
+    await screen.findByText(
+      /Add an SEO title to publish your article\. Your article has no title to fall back to\./,
+    )
+    expect(isRequired(screen.getByLabelText(/^SEO Title/))).toBe(true)
+    expect(isRequired(screen.getByLabelText(/^SEO Description/))).toBe(false)
+  }, 30000)
+
+  test("asks for both when neither resolves", async () => {
+    renderBlocked({})
+
+    await screen.findByText(
+      /Add an SEO title and description to publish your article\. Your article has neither a title nor a line under the headline to fall back to\./,
+    )
+  }, 30000)
+
+  /* Nothing is blocked, so the invitation to leave them blank is sound. */
+  test("offers the fallback when both resolve", async () => {
+    renderBlocked({
+      inferredSeoTitle: "A title",
+      inferredSeoDescription: "A subheading.",
+    })
+
+    await screen.findByText(
+      /Left blank, each one follows your article -- the title, and the line under the headline\./,
+    )
   }, 30000)
 })

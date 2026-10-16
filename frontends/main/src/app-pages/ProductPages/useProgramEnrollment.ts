@@ -23,7 +23,8 @@ export type UseProgramEnrollment = {
   offering: ProgramOffering
   isStatusLoading: boolean
   isPending: boolean
-  isError: boolean
+  /** The failed enroll *action*'s error, or null. Drives the alert copy. */
+  error: unknown
 }
 
 type UseProgramEnrollmentOptions = {
@@ -55,7 +56,7 @@ export const useProgramEnrollment = (
     useProgramIsEnrolled(program)
 
   // This area renders its own inline enrollment-failure alert (see
-  // EnrollOfferingBoxes `isError`), so suppress the global error toast.
+  // EnrollOfferingBoxes `error`), so suppress the global error toast.
   const replaceBasketItem = useReplaceBasketItem({ meta: SILENCE_ERROR_TOAST })
   const createProgramEnrollment = useCreateProgramEnrollment({
     meta: SILENCE_ERROR_TOAST,
@@ -73,7 +74,7 @@ export const useProgramEnrollment = (
 
   const isPending =
     replaceBasketItem.isPending || createProgramEnrollment.isPending
-  const isError = replaceBasketItem.isError || createProgramEnrollment.isError
+  const error = replaceBasketItem.error ?? createProgramEnrollment.error
 
   const makeOnClick =
     (kind: EnrollActionKind, label: string): EnrollAction["onClick"] =>
@@ -122,7 +123,7 @@ export const useProgramEnrollment = (
       offering,
       isStatusLoading,
       isPending,
-      isError,
+      error,
     }
   }
 
@@ -161,6 +162,6 @@ export const useProgramEnrollment = (
     offering,
     isStatusLoading,
     isPending,
-    isError,
+    error,
   }
 }

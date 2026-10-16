@@ -7,14 +7,22 @@ import {
   styled,
 } from "ol-components"
 import {
-  CourseRunEnrollmentV3,
   CourseWithCourseRunsSerializerV2,
   DisplayModeEnum,
   V2ProgramDisplayModeEnum,
-  V3UserProgramEnrollment,
   V2ProgramRequirement,
 } from "@mitodl/mitxonline-api-axios/v2"
-import { getKey, getProgramEnrollmentStatus, ResourceType } from "./helpers"
+import {
+  CourseRunEnrollmentV3,
+  V3UserProgramEnrollment,
+} from "@mitodl/mitxonline-api-axios/v3"
+import {
+  EnrollmentStatus,
+  getKey,
+  getProgramEnrollmentStatus,
+  programIsCompleted,
+  ResourceType,
+} from "./helpers"
 import { ProgressBadge } from "./ProgressBadge"
 import { CoursewareCard } from "./CoursewareCard"
 import {
@@ -28,9 +36,9 @@ import {
   getCertificateLink,
   buildCourseEntry,
   courseIsCompleted,
+  getProgramAsCourseModuleIds,
 } from "./model/dashboardViewModel"
 import {
-  getIdsFromReqTree,
   isVerifiedEnrollmentMode,
   mitxonlineLegacyUrl,
 } from "@/common/mitxonline"
@@ -286,13 +294,7 @@ const ProgramAsCourseCard: React.FC<ProgramAsCourseCardProps> = ({
   className,
   onUpgradeError,
 }) => {
-  const moduleRequirementSection = courseProgram?.req_tree?.find(
-    (node) => node.data.node_type === "operator",
-  )
-
-  const moduleIds = moduleRequirementSection
-    ? getIdsFromReqTree([moduleRequirementSection]).courseIds
-    : (courseProgram?.courses ?? [])
+  const moduleIds = getProgramAsCourseModuleIds(courseProgram)
 
   const moduleCoursesById = new Map(
     moduleCourses.map((course) => [course.id, course]),
@@ -318,11 +320,17 @@ const ProgramAsCourseCard: React.FC<ProgramAsCourseCardProps> = ({
 
   const totalCount = displayedModuleCourses.length
 
-  const programEnrollmentStatus = getProgramEnrollmentStatus(
+  const programEnrollmentStatus = programIsCompleted(
+    courseProgram,
     courseProgramEnrollment,
-    enrolledCount,
-    completedCount,
+    moduleEnrollmentsByCourseId,
   )
+    ? EnrollmentStatus.Completed
+    : getProgramEnrollmentStatus(
+        courseProgramEnrollment,
+        enrolledCount,
+        completedCount,
+      )
 
   // Ordered nearest-to-furthest (ancestor last). verified_program_enrollments
   // grants the free upgrade based on whichever given program is structurally

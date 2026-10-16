@@ -234,6 +234,34 @@ def get_file_content(
     return None
 
 
+def get_video_transcript_path(video_files: dict) -> str | None:
+    """
+    Return the S3 path of a video's transcript
+
+    Republished courses list one transcript per language under
+    video_transcript_resources; older data has a single video_transcript_file.
+
+    Args:
+        video_files (dict): the video_files data from a video resource's data.json
+
+    Returns:
+        str: the transcript path, English preferred, or None if there is none
+    """
+    transcripts = [
+        entry
+        for entry in video_files.get("video_transcript_resources") or []
+        if entry.get("file")
+    ]
+    if transcripts:
+        english = [
+            entry
+            for entry in transcripts
+            if (entry.get("language") or "").lower().startswith("en")
+        ]
+        return (english or transcripts)[0]["file"].lstrip("/")
+    return video_files.get("video_transcript_file")
+
+
 def transform_contentfile(
     s3_key: str,
     contentfile_data: dict,
@@ -265,7 +293,7 @@ def transform_contentfile(
             image_src = f"https://i.ytimg.com/vi/{youtube_id}/hqdefault.jpg"
         else:
             image_src = None
-        file_s3_path = video_files.get("video_transcript_file")
+        file_s3_path = get_video_transcript_path(video_files)
         file_extension = Path(
             contentfile_data.get("file") or video_files.get("archive_url") or ""
         ).suffix

@@ -50,8 +50,8 @@ type DataConsentDialogProps = {
   open: boolean
   contractName: string
   onAccept: () => void
-  onDecline: () => void
-  submitting?: "accept" | "decline" | null
+  onCancel: () => void
+  submitting?: "accept" | "cancel" | null
   isError?: boolean
 }
 
@@ -59,7 +59,7 @@ const DataConsentDialog: React.FC<DataConsentDialogProps> = ({
   open,
   contractName,
   onAccept,
-  onDecline,
+  onCancel,
   submitting = null,
   isError = false,
 }) => {
@@ -73,7 +73,7 @@ const DataConsentDialog: React.FC<DataConsentDialogProps> = ({
   return (
     <Dialog
       open={open}
-      // Only Accept or Decline can close it, not Escape or a backdrop click.
+      // Only Accept or Cancel can close it, not Escape or a backdrop click.
       onClose={() => {}}
       showCloseButton={false}
       title="Data Consent - Requirement for Enrollment"
@@ -83,12 +83,12 @@ const DataConsentDialog: React.FC<DataConsentDialogProps> = ({
         <Actions>
           <ActionButton
             variant="secondary"
-            onClick={unlessBusy(onDecline)}
+            onClick={unlessBusy(onCancel)}
             aria-disabled={busy}
-            aria-busy={submitting === "decline"}
-            endIcon={submitting === "decline" ? spinner : undefined}
+            aria-busy={submitting === "cancel"}
+            endIcon={submitting === "cancel" ? spinner : undefined}
           >
-            Decline
+            Cancel
           </ActionButton>
           <ActionButton
             variant="primary"
@@ -105,22 +105,22 @@ const DataConsentDialog: React.FC<DataConsentDialogProps> = ({
     >
       <Body>
         <Paragraph>
-          I understand that my employer has paid for my participation in the{" "}
+          I understand that my organization has paid for my participation in the{" "}
           {contractName}. I hereby consent and authorize MIT to share the
           following information about my participation and progress in the
-          Program with my employer: (a) Program completion status; (b) module
-          progress and completion dates; (c) assessment scores and performance
-          metrics; (d) certificates earned; and (e) any other progression or
-          assessment data maintained by MIT.
+          Program with my organization: (a) Program completion status; (b)
+          module progress and completion dates; (c) assessment scores and
+          performance metrics; (d) certificates earned; and (e) any other
+          progression or assessment data maintained by MIT.
         </Paragraph>
         <Paragraph>
           I understand that the data will be used solely to evaluate program
-          effectiveness, track workforce development and assess return on
-          training investment.
+          effectiveness, track learner development and assess return on training
+          investment.
         </Paragraph>
         <Paragraph>
           I understand that sharing of this data is a condition of my
-          participation in the Program; I acknowledge that my employer is
+          participation in the Program; I acknowledge that my organization is
           funding the training; and I have been informed of what data will be
           shared and with whom.
         </Paragraph>

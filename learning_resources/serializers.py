@@ -398,7 +398,7 @@ class LearningResourceRunSerializer(serializers.ModelSerializer):
         model = models.LearningResourceRun
         exclude = [
             "learning_resource",
-            "is_b2b",
+            "b2b_only",
             "is_variant",
             "archive_key",
             *COMMON_IGNORED_FIELDS,

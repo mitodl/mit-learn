@@ -2,6 +2,7 @@
 
 import React from "react"
 import { learningResourceQueries } from "api/hooks/learningResources"
+import { channelQueries } from "api/hooks/channels"
 import {
   TabPanel,
   TabContext,
@@ -203,6 +204,8 @@ const getTabQuery = (tab: TabConfig): CarouselQuery => {
       return learningResourceQueries.search(tab.data.params) as CarouselQuery
     case "lr_featured":
       return learningResourceQueries.featured(tab.data.params) as CarouselQuery
+    case "channel_featured":
+      return channelQueries.featured(tab.data.params) as CarouselQuery
     case "lr_similar":
       return learningResourceQueries.similar(
         tab.data.params.id,
