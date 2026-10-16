@@ -1,15 +1,19 @@
 import { canOpenCourseware, hasCourseStaffRole } from "./courseDateUtils"
 import moment from "moment"
+import * as mitxonline from "api/mitxonline-test-utils"
 
 const future = moment().add(30, "days").toISOString()
 const past = moment().subtract(30, "days").toISOString()
 
 /**
- * Only the flag matters here, so the fixtures carry nothing else; the cast
- * stands in for a full enrollment rather than building one.
+ * A real enrollment with the flag spread on top. Built from the factory rather
+ * than cast from a bare object, so a required field going missing is a type
+ * error here rather than something these tests quietly tolerate.
  */
-const enrollmentWith = (flag?: boolean) =>
-  ({ has_course_staff_role: flag }) as Parameters<typeof hasCourseStaffRole>[0]
+const enrollmentWith = (flag?: boolean) => ({
+  ...mitxonline.factories.enrollment.courseEnrollment(),
+  has_course_staff_role: flag,
+})
 
 describe("hasCourseStaffRole", () => {
   test.each([
