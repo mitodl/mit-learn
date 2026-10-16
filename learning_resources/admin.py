@@ -283,6 +283,21 @@ class LearningResourceAdmin(admin.ModelAdmin):
         qs = super().get_queryset(request)
         return qs.for_serialization()
 
+    def get_search_results(self, request, queryset, search_term):
+        """Match a bare primary key as well as the `search_fields`.
+
+        A resource is identified by its id in plenty of places -- an admin URL,
+        a log line, a bug report -- and pasting one of those in is the quickest
+        way to find it. `search_fields` cannot do it: a `=id` entry there would
+        raise on every non-numeric term typed into the same box.
+        """
+        results, may_have_duplicates = super().get_search_results(
+            request, queryset, search_term
+        )
+        if search_term.strip().isdigit():
+            results |= queryset.filter(pk=int(search_term))
+        return results, may_have_duplicates
+
 
 class UserListAdmin(admin.ModelAdmin):
     """UserList Admin"""

@@ -6,13 +6,22 @@ from django.contrib.admin.widgets import AdminTextareaWidget
 from django.test import RequestFactory
 from django.urls import reverse
 
-from learning_resources.admin import CredentialMetadataAdmin, TutorProblemFileAdmin
+from learning_resources.admin import (
+    CredentialMetadataAdmin,
+    LearningResourceAdmin,
+    TutorProblemFileAdmin,
+)
 from learning_resources.factories import (
     CredentialMetadataFactory,
+    LearningResourceFactory,
     LearningResourceRunFactory,
     TutorProblemFileFactory,
 )
-from learning_resources.models import CredentialMetadata, TutorProblemFile
+from learning_resources.models import (
+    CredentialMetadata,
+    LearningResource,
+    TutorProblemFile,
+)
 
 
 @pytest.mark.django_db
@@ -110,3 +119,68 @@ def test_credential_metadata_change_view_renders(admin_user):
 
     assert response.status_code == 200
     assert b"Did a thing" in response.render().content
+
+
+@pytest.fixture
+def resource_search():
+    """Search the LearningResource admin the way its autocomplete does"""
+    model_admin = LearningResourceAdmin(LearningResource, site)
+
+    def search(term):
+        request = RequestFactory().get("/admin/autocomplete/")
+        results, _ = model_admin.get_search_results(
+            request, LearningResource.objects.all(), term
+        )
+        return list(results)
+
+    return search
+
+
+@pytest.mark.django_db
+def test_resource_search_finds_a_bare_id(resource_search):
+    """
+    A resource is found by its primary key, which is how one is identified in
+    an admin URL or a bug report.
+    """
+    wanted = LearningResourceFactory.create(title="Fluid Mechanics")
+    LearningResourceFactory.create(title="Thermodynamics")
+
+    assert resource_search(str(wanted.id)) == [wanted]
+
+
+@pytest.mark.django_db
+def test_resource_search_still_finds_a_title(resource_search):
+    """Searching by title keeps working alongside the id lookup"""
+    wanted = LearningResourceFactory.create(title="Fluid Mechanics")
+    LearningResourceFactory.create(title="Thermodynamics")
+
+    assert resource_search("Fluid") == [wanted]
+
+
+@pytest.mark.django_db
+def test_resource_search_takes_a_non_numeric_term(resource_search):
+    """
+    A term that is not a number does not reach the id lookup.
+
+    Naming `=id` in `search_fields` instead would raise on every word typed
+    into the same box, which is most of what is typed into it.
+    """
+    LearningResourceFactory.create(title="Thermodynamics")
+
+    assert resource_search("nothing matches this") == []
+
+
+@pytest.mark.django_db
+def test_resource_is_named_by_its_title():
+    """
+    A resource names itself by title, so the autocomplete lists titles.
+
+    Django renders a dropdown entry with `str()`, which without this is
+    "LearningResource object (123)" -- unrecognisable, and the point of
+    searching is to recognise what comes back.
+    """
+    resource = LearningResourceFactory.create(
+        title="Fluid Mechanics", readable_id="course-v1:MITx+2.006"
+    )
+
+    assert str(resource) == "Fluid Mechanics (course-v1:MITx+2.006)"
