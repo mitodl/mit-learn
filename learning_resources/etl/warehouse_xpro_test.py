@@ -12,6 +12,7 @@ from learning_resources.etl import warehouse_xpro, xpro
 from learning_resources.etl.constants import ETLSource
 from learning_resources.etl.exceptions import ExtractException
 from learning_resources.etl.ownership import Pipeline, writing_as
+from learning_resources.etl.shadow import run_shadow
 from learning_resources.factories import (
     ETLSourceOwnershipFactory,
     LearningResourceFactory,
@@ -19,7 +20,7 @@ from learning_resources.factories import (
     LearningResourcePlatformFactory,
     LearningResourceTopicFactory,
 )
-from learning_resources.models import LearningResource
+from learning_resources.models import ETLSourceOwnership, LearningResource
 
 pytestmark = pytest.mark.django_db
 
@@ -400,6 +401,37 @@ def test_sync_programs_loads_and_links_courses(warehouse_owns_xpro, api_programs
         assert sorted(
             resource.children.values_list("child__readable_id", flat=True)
         ) == sorted(course["readable_id"] for course in program["courses"])
+
+
+def test_sync_as_a_shadow_compares_without_writing(
+    warehouse_owns_xpro, api_courses, api_programs
+):
+    """A shadow of the warehouse reaches the loaders' comparison and writes nothing"""
+    courses = [course_row(course) for course in api_courses]
+    runs = [run for course in api_courses for run in run_rows(course)]
+    programs = [program_row(program) for program in api_programs]
+    with writing_as(Pipeline.WAREHOUSE):
+        warehouse_xpro.sync_courses(courses, runs)
+        warehouse_xpro.sync_programs(programs)
+    ETLSourceOwnership.objects.filter(etl_source=ETLSource.xpro.name).update(
+        owner=Pipeline.LEGACY, shadow=Pipeline.WAREHOUSE
+    )
+    before = list(LearningResource.objects.order_by("id").values())
+
+    with writing_as(Pipeline.WAREHOUSE):
+        _, [course_report] = run_shadow(
+            [(ETLSource.xpro.name, COURSE)],
+            lambda: warehouse_xpro.sync_courses(courses, runs),
+        )
+        _, [program_report] = run_shadow(
+            [(ETLSource.xpro.name, PROGRAM)],
+            lambda: warehouse_xpro.sync_programs(programs),
+        )
+
+    for report in (course_report, program_report):
+        assert report.error == ""
+        assert report.counts["unchanged"] == report.counts["before"] > 0
+    assert list(LearningResource.objects.order_by("id").values()) == before
 
 
 def test_sync_programs_links_the_published_course_over_an_unpublished_copy(
