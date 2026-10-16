@@ -4,7 +4,7 @@ import {
   formatDate,
   isInPast,
 } from "ol-utilities"
-import type { CourseRunEnrollmentV3 } from "@mitodl/mitxonline-api-axios/v2"
+import type { CourseRunEnrollmentV3 } from "@mitodl/mitxonline-api-axios/v3"
 
 export type RunTimeState = "upcoming" | "underway" | "ended"
 
