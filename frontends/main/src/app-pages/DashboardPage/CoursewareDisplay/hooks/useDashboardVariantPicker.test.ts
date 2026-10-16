@@ -3,7 +3,7 @@ import { renderHook } from "@testing-library/react"
 import {
   LanguageEnum,
   type SupportedVariant,
-} from "@mitodl/mitxonline-api-axios/v2"
+} from "@mitodl/mitxonline-api-axios/v0"
 import { useDashboardVariantPicker } from "./useDashboardVariantPicker"
 
 const makeVariant = (
@@ -11,7 +11,9 @@ const makeVariant = (
 ): SupportedVariant => ({
   language: LanguageEnum.En,
   variant_industry: "",
+  variant_industry_label: "Original",
   variant_length: "",
+  variant_length_label: "Full",
   active: true,
   b2b_only: true,
   default_variant: false,

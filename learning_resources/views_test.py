@@ -16,7 +16,6 @@ from channels.factories import ChannelTopicDetailFactory, ChannelUnitDetailFacto
 from channels.models import Channel
 from learning_resources.api import update_resource_view_counts
 from learning_resources.constants import (
-    CONTENT_FILE_LARGE_FIELDS,
     GROUP_CONTENT_FILE_CONTENT_VIEWERS,
     GROUP_TUTOR_PROBLEM_VIEWERS,
     LearningResourceRelationTypes,
@@ -289,11 +288,7 @@ def test_list_content_files_list_endpoint(client, user_role, django_user_model):
     content_file_ids = [
         cf.id
         for cf in ContentFileFactory.create_batch(
-            2,
-            run=course.learning_resource.runs.first(),
-            content="some content",
-            summary="some summary",
-            flashcards=[{"question": "q", "answer": "a"}],
+            2, run=course.learning_resource.runs.first(), content="some content"
         )
     ]
     # this should be filtered out
@@ -321,12 +316,8 @@ def test_list_content_files_list_endpoint(client, user_role, django_user_model):
 
         if user_role in ["admin", "group_content_file_content_viewer"]:
             assert result["content"] is not None
-            assert result["summary"] is not None
-            assert result["flashcards"] is not None
         else:
             assert result.get("content") is None
-            assert result.get("summary") is None
-            assert result.get("flashcards") is None
 
 
 def test_list_content_files_list_endpoint_with_no_runs(client):
@@ -402,8 +393,7 @@ def test_get_contentfiles_detail_endpoint(client, user_role, django_user_model):
         assert resp.data == ContentFileSerializer(instance=content_file).data
     else:
         data = ContentFileSerializer(instance=content_file).data
-        for field in CONTENT_FILE_LARGE_FIELDS:
-            data.pop(field)
+        data.pop("content")
         assert resp.data == data
 
 

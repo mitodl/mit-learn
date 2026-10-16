@@ -4,7 +4,7 @@ import type {
   Order,
   OrdersApiOrdersHistoryListRequest,
   PaginatedOrderHistoryList,
-} from "@mitodl/mitxonline-api-axios/v2"
+} from "@mitodl/mitxonline-api-axios/v0"
 
 const orderKeys = {
   root: ["mitxonline", "orders"],

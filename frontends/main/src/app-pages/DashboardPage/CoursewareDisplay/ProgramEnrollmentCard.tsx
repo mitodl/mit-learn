@@ -7,7 +7,7 @@ import {
 import {
   DisplayModeEnum,
   V3UserProgramEnrollment,
-} from "@mitodl/mitxonline-api-axios/v2"
+} from "@mitodl/mitxonline-api-axios/v3"
 import {
   CardRoot,
   CardTypeText,

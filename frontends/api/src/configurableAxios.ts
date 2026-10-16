@@ -40,6 +40,8 @@ export type ConfigurableAxiosConfig = {
   baseUrl: string
   csrfCookieName: string
   withCredentials: boolean
+  /** Sent as `User-Agent` on every request. Server-side only. */
+  userAgent?: string
 }
 
 /**
@@ -88,6 +90,9 @@ export const createConfigurableAxios = (
     instance.defaults.baseURL = config.baseUrl
     instance.defaults.xsrfCookieName = config.csrfCookieName
     instance.defaults.withCredentials = config.withCredentials
+    if (config.userAgent) {
+      instance.defaults.headers.common["User-Agent"] = config.userAgent
+    }
     instance[CONFIGURED] = true
   }
 
@@ -98,6 +103,7 @@ export const createConfigurableAxios = (
     delete instance.defaults.baseURL
     delete instance.defaults.xsrfCookieName
     delete instance.defaults.withCredentials
+    delete instance.defaults.headers.common["User-Agent"]
   }
 
   return { instance, applyConfig, isConfigured, resetForTests }

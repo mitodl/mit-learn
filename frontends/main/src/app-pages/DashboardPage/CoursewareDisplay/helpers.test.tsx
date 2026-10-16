@@ -1,9 +1,9 @@
 import { factories } from "api/mitxonline-test-utils"
+import { V2ProgramRequirement } from "@mitodl/mitxonline-api-axios/v2"
 import {
   CourseRunEnrollmentV3,
-  V2ProgramRequirement,
   V3UserProgramEnrollment,
-} from "@mitodl/mitxonline-api-axios/v2"
+} from "@mitodl/mitxonline-api-axios/v3"
 import {
   EnrollmentStatus,
   filterEnrollmentsByOrganization,

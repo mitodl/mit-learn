@@ -387,6 +387,15 @@ class CredentialMetadataAdmin(admin.ModelAdmin):
     }
 
 
+class ETLSourceOwnershipAdmin(admin.ModelAdmin):
+    """ETLSourceOwnership Admin"""
+
+    model = models.ETLSourceOwnership
+    list_display = ("etl_source", "resource_type", "owner", "updated_on")
+    list_filter = ("etl_source", "owner")
+    search_fields = ("etl_source", "resource_type")
+
+
 admin.site.register(models.LearningResourceTopic, LearningResourceTopicAdmin)
 admin.site.register(models.LearningResourceInstructor, LearningResourceInstructorAdmin)
 admin.site.register(models.LearningResource, LearningResourceAdmin)
@@ -410,3 +419,6 @@ admin.site.register(
     models.CredentialMetadataGenerationLog, CredentialMetadataGenerationLogAdmin
 )
 admin.site.register(models.CredentialMetadata, CredentialMetadataAdmin)
+
+
+admin.site.register(models.ETLSourceOwnership, ETLSourceOwnershipAdmin)

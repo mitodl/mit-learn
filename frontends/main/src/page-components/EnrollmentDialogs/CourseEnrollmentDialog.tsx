@@ -26,6 +26,9 @@ import {
 } from "@/common/mitxonline"
 import { useCreateEnrollment } from "api/mitxonline-hooks/enrollment"
 import { SILENCE_ERROR_TOAST } from "api/mutation-meta"
+import { badRequestDetail } from "api/mutation-errors"
+import ErrorMessageWithSupport from "@/components/ErrorMessageWithSupport/ErrorMessageWithSupport"
+import { ENROLL_FAILURE_MESSAGE } from "@/app-pages/ProductPages/enrollTypes"
 import { useReplaceBasketItem } from "@/common/mitxonline/useReplaceBasketItem"
 import { useComplianceGate } from "@/common/mitxonline/useComplianceGate"
 import { useRouter } from "next-nprogress-bar"
@@ -323,9 +326,12 @@ const CertificateUpsell: React.FC<{
           }}
         />
       </CertificateBox>
-      {replaceBasketItem.isError && (
+      {!!replaceBasketItem.error && (
         <Alert severity="error">
-          There was a problem processing your enrollment. Please try again.
+          <ErrorMessageWithSupport>
+            {badRequestDetail(replaceBasketItem.error) ??
+              ENROLL_FAILURE_MESSAGE}
+          </ErrorMessageWithSupport>
         </Alert>
       )}
     </Stack>
@@ -434,8 +440,10 @@ const CourseEnrollmentDialogInner: React.FC<CourseEnrollmentDialogProps> = ({
         {createEnrollment.isError && (
           <div ref={(el) => el?.scrollIntoView()}>
             <Alert severity="error">
-              There was a problem enrolling you in this course. Please try again
-              later.
+              <ErrorMessageWithSupport>
+                {badRequestDetail(createEnrollment.error) ??
+                  "There was a problem enrolling you in this course. Please try again later."}
+              </ErrorMessageWithSupport>
             </Alert>
           </div>
         )}

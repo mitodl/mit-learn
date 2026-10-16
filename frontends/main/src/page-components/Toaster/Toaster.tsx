@@ -3,6 +3,7 @@
 import React, { useSyncExternalStore } from "react"
 import { Snackbar, HEADER_HEIGHT } from "ol-components"
 import { Alert } from "@mitodl/smoot-design"
+import ErrorMessageWithSupport from "@/components/ErrorMessageWithSupport/ErrorMessageWithSupport"
 import {
   subscribeToToast,
   getToastSnapshot,
@@ -40,7 +41,11 @@ export const Toaster: React.FC = () => {
       <div style={{ width: "min(680px, calc(100vw - 48px))" }}>
         {toast ? (
           <Alert severity="error" closable onClose={dismissErrorToast}>
-            {toast.message}
+            {toast.contactSupport ? (
+              <ErrorMessageWithSupport>{toast.message}</ErrorMessageWithSupport>
+            ) : (
+              toast.message
+            )}
           </Alert>
         ) : undefined}
       </div>

@@ -999,3 +999,15 @@ class CredentialMetadataFactory(DjangoModelFactory):
     class Meta:
         model = models.CredentialMetadata
         django_get_or_create = ("learning_resource",)
+
+
+class ETLSourceOwnershipFactory(DjangoModelFactory):
+    """Factory for ETLSourceOwnership"""
+
+    etl_source = factory.Faker("word")
+    resource_type = constants.LearningResourceType.course.name
+    owner = models.ETLSourceOwnership.Pipeline.LEGACY
+
+    class Meta:
+        model = models.ETLSourceOwnership
+        django_get_or_create = ("etl_source", "resource_type")

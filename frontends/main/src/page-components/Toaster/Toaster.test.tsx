@@ -1,5 +1,13 @@
 import React from "react"
-import { renderWithTheme, screen, act, waitFor, user } from "@/test-utils"
+import {
+  renderWithTheme,
+  screen,
+  act,
+  waitFor,
+  user,
+  within,
+} from "@/test-utils"
+import * as urls from "@/common/urls"
 import { Toaster } from "./Toaster"
 import { showErrorToast, dismissErrorToast } from "./toastStore"
 
@@ -49,4 +57,33 @@ test("the dismiss button clears the toast", async () => {
   await waitFor(() => {
     expect(screen.queryByRole("alert")).not.toBeInTheDocument()
   })
+})
+
+test("renders a support link when the toast asks for one", async () => {
+  renderWithTheme(<Toaster />)
+
+  act(() => {
+    showErrorToast("Enrollment failed", { contactSupport: true })
+  })
+
+  const alert = await screen.findByRole("alert")
+  expect(alert).toHaveTextContent("Enrollment failed")
+  expect(
+    within(alert).getByRole("link", { name: "Contact Support" }),
+  ).toHaveAttribute("href", urls.SUPPORT_REQUEST)
+  act(() => dismissErrorToast())
+})
+
+test("renders no support link by default", async () => {
+  renderWithTheme(<Toaster />)
+
+  act(() => {
+    showErrorToast("Something went wrong")
+  })
+
+  await screen.findByRole("alert")
+  expect(
+    screen.queryByRole("link", { name: "Contact Support" }),
+  ).not.toBeInTheDocument()
+  act(() => dismissErrorToast())
 })

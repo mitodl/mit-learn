@@ -28,7 +28,11 @@ export type { SnackbarProps } from "@mui/material/Snackbar"
 export { default as AppBar } from "@mui/material/AppBar"
 export type { AppBarProps } from "@mui/material/AppBar"
 
-export { Banner, BannerBackground } from "./components/Banner/Banner"
+export {
+  Banner,
+  BannerBackground,
+  standardizeBackgroundUrl,
+} from "./components/Banner/Banner"
 export type {
   BannerProps,
   BannerBackgroundProps,

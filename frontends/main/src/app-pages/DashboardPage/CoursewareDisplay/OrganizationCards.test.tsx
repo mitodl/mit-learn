@@ -15,7 +15,7 @@ import {
   urls as mitxOnlineUrls,
 } from "api/mitxonline-test-utils"
 import { OrganizationCards } from "./OrganizationCards"
-import type { UserOrganizationPage } from "@mitodl/mitxonline-api-axios/v2"
+import type { UserOrganizationPage } from "@mitodl/mitxonline-api-axios/v0"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 
 jest.mock("posthog-js/react")
@@ -560,7 +560,7 @@ describe("OrganizationCards", () => {
     it("stays on dashboard home after declining", async () => {
       const { contract } = setupContract(false)
       await user.click(await continueButton())
-      await user.click(await screen.findByRole("button", { name: "Decline" }))
+      await user.click(await screen.findByRole("button", { name: "Cancel" }))
 
       await waitFor(() =>
         expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),

@@ -48,7 +48,9 @@ const useReplaceBasketItem = (opts: MutationHookOptions = {}) => {
     mutate,
     mutateAsync,
     isPending: clearBasket.isPending || addToBasket.isPending,
-    isError: clearBasket.isError || addToBasket.isError,
+    // The error itself, not a boolean, so call sites can prefer a 400 `detail`.
+    // `addToBasket` wins: its 400 carries the product-specific explanation.
+    error: addToBasket.error ?? clearBasket.error,
   }
 }
 

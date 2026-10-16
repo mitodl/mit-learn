@@ -48,6 +48,7 @@ from learning_resources.etl.loaders import (
     load_learning_materials,
     load_run_dependent_values,
 )
+from learning_resources.etl.ownership import may_write
 from learning_resources.etl.pipelines import ocw_courses_etl
 from learning_resources.etl.utils import (
     get_bucket_by_name,
@@ -467,6 +468,9 @@ def get_ocw_data(  # noqa: PLR0913
         log.warning("Required settings missing for get_ocw_data")
         return None
 
+    if not may_write(ETLSource.ocw.name, LearningResourceType.course.name):
+        return None
+
     # get all the courses prefixes we care about
     raw_data_bucket = boto3.resource(
         "s3",
@@ -511,6 +515,14 @@ def get_ocw_data(  # noqa: PLR0913
     return self.replace(ocw_tasks)
 
 
+def _legacy_owns_youtube() -> bool:
+    """Whether the legacy ETL may write YouTube playlists and videos"""
+    return may_write(
+        ETLSource.youtube.name,
+        [LearningResourceType.video_playlist.name, LearningResourceType.video.name],
+    )
+
+
 @app.task(acks_late=True, reject_on_worker_lost=True)
 def get_youtube_playlist_data(
     channel_id, playlist_data, offered_by_code, *, create_videos
@@ -525,6 +537,11 @@ def get_youtube_playlist_data(
         create_videos (bool): whether to create videos from this playlist
             or match to existing videos without creating new ones
     """
+    # get_youtube_data checked before queueing this, but the task can run after
+    # the ownership row changes (a long fan-out, a redelivered message)
+    if not _legacy_owns_youtube():
+        return
+
     video_channel = VideoChannel.objects.filter(channel_id=channel_id).first()
     if video_channel is None:
         # the channel task upserts the channel before fanning out, so this only
@@ -558,6 +575,9 @@ def get_youtube_channel_data(channel_config):
     Args:
         channel_config (dict): the channel's configuration
     """
+    if not _legacy_owns_youtube():
+        return
+
     channel_id = channel_config["channel_id"]
     youtube_client = youtube.get_youtube_client()
 
@@ -612,6 +632,9 @@ def get_youtube_data(*, channel_ids=None):
     Returns:
         int: the number of channels queued
     """
+    if not _legacy_owns_youtube():
+        return 0
+
     missing = [
         setting
         for setting in ("YOUTUBE_CONFIG_URL", "YOUTUBE_DEVELOPER_KEY")
@@ -836,6 +859,8 @@ def sync_canvas_courses(canvas_course_ids=None, overwrite=False):  # noqa: FBT00
     Returns:
         int or None: the number of courses queued, or None if no archives were found
     """
+    if not may_write(ETLSource.canvas.name, LearningResourceType.course.name):
+        return None
 
     bucket = get_bucket_by_name(settings.COURSE_ARCHIVE_BUCKET_NAME)
     s3_prefix = get_s3_prefix_for_source(ETLSource.canvas.name)

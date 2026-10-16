@@ -7,18 +7,22 @@
  * unit-testable in isolation.
  */
 import type {
-  BaseCourseRun,
-  V2ProgramDisplayModeEnum,
   ContractPage,
-  CourseRunEnrollmentV3,
-  CourseWithCourseRunsSerializerV2,
   SupportedVariant,
+} from "@mitodl/mitxonline-api-axios/v0"
+import type {
+  V2ProgramDisplayModeEnum,
+  CourseWithCourseRunsSerializerV2,
   V2Program,
   V2ProgramCollection,
   V2ProgramDetail,
   V2ProgramRequirement,
-  V3UserProgramEnrollment,
 } from "@mitodl/mitxonline-api-axios/v2"
+import type {
+  BaseCourseRun,
+  CourseRunEnrollmentV3,
+  V3UserProgramEnrollment,
+} from "@mitodl/mitxonline-api-axios/v3"
 import { DisplayModeEnum } from "@mitodl/mitxonline-api-axios/v2"
 import { getRunTimeState } from "../courseDateUtils"
 import type { RunTimeState } from "../courseDateUtils"
@@ -1065,17 +1069,6 @@ const getRenderableContractCollections = (
 // Variant picker model
 // ---------------------------------------------------------------------------
 
-const VARIANT_INDUSTRY_LABELS: Record<string, string> = {
-  E: "Energy",
-  F: "Finance",
-  HC: "Healthcare",
-}
-
-const VARIANT_LENGTH_LABELS: Record<string, string> = {
-  S: "Short",
-  F: "Full",
-}
-
 const FALLBACK_NATIVE_LANGUAGE_NAMES: Record<string, string> = {
   ar: "العربية",
   de: "Deutsch",
@@ -1202,15 +1195,15 @@ const getVariantLanguageLabel = (variant: SupportedVariant): string => {
   return resolved ? capitalizeFirstWord(label) : label
 }
 
+// mitxonline labels an empty industry "Original"; the picker calls it "General".
 const getVariantIndustryLabel = (variant: SupportedVariant): string =>
   variant.variant_industry
-    ? (VARIANT_INDUSTRY_LABELS[variant.variant_industry] ??
-      variant.variant_industry)
+    ? variant.variant_industry_label || variant.variant_industry
     : "General"
 
 const getVariantLengthLabel = (variant: SupportedVariant): string =>
   variant.variant_length
-    ? (VARIANT_LENGTH_LABELS[variant.variant_length] ?? variant.variant_length)
+    ? variant.variant_length_label || variant.variant_length
     : "Full"
 
 const buildVariantLabel = (variant: SupportedVariant): string =>
