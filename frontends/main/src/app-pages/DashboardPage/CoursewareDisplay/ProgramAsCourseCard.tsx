@@ -16,7 +16,13 @@ import {
   CourseRunEnrollmentV3,
   V3UserProgramEnrollment,
 } from "@mitodl/mitxonline-api-axios/v3"
-import { getKey, getProgramEnrollmentStatus, ResourceType } from "./helpers"
+import {
+  EnrollmentStatus,
+  getKey,
+  getProgramEnrollmentStatus,
+  programIsCompleted,
+  ResourceType,
+} from "./helpers"
 import { ProgressBadge } from "./ProgressBadge"
 import { CoursewareCard } from "./CoursewareCard"
 import {
@@ -314,14 +320,17 @@ const ProgramAsCourseCard: React.FC<ProgramAsCourseCardProps> = ({
 
   const totalCount = displayedModuleCourses.length
 
-  // Only program-as-course treats passing every module as completion; regular
-  // programs stay in progress until their certificate is issued.
-  const programEnrollmentStatus = getProgramEnrollmentStatus(
+  const programEnrollmentStatus = programIsCompleted(
+    courseProgram,
     courseProgramEnrollment,
-    enrolledCount,
-    completedCount,
-    courseProgram.display_mode === DisplayModeEnum.Course ? totalCount : 0,
+    moduleEnrollmentsByCourseId,
   )
+    ? EnrollmentStatus.Completed
+    : getProgramEnrollmentStatus(
+        courseProgramEnrollment,
+        enrolledCount,
+        completedCount,
+      )
 
   // Ordered nearest-to-furthest (ancestor last). verified_program_enrollments
   // grants the free upgrade based on whichever given program is structurally

@@ -181,17 +181,11 @@ export const getProgramEnrollmentStatus = (
   programEnrollment: V3UserProgramEnrollment | undefined,
   enrolledCourseCount: number,
   completedCourseCount = 0,
-  totalCourseCount = 0,
 ): EnrollmentStatus => {
   if (!programEnrollment) {
     return EnrollmentStatus.NotEnrolled
   }
   if (programEnrollment.certificate) {
-    return EnrollmentStatus.Completed
-  }
-  // Passing every course counts as completion even before a certificate is
-  // issued (e.g. audit-mode learners never receive one).
-  if (totalCourseCount > 0 && completedCourseCount >= totalCourseCount) {
     return EnrollmentStatus.Completed
   }
   if (completedCourseCount > 0 || enrolledCourseCount > 0) {
@@ -229,19 +223,31 @@ const getProgramAsCourseModuleIds = (program: {
 }
 
 /**
- * A program-as-course counts as completed once every one of its modules is
- * passed, even before a certificate is issued (e.g. audit-mode learners never
- * receive one). Mirrors the status `ProgramAsCourseCard` displays.
+ * Whether the learner has completed a program they are enrolled in.
+ *
+ * A certificate always means completed. A program-as-course also counts as
+ * completed once its own requirement tree is satisfied, even before a
+ * certificate is issued (e.g. audit-mode learners never receive one); regular
+ * programs stay in progress until certificated. Shared by
+ * `ProgramAsCourseCard`'s status badge and the program dashboard's counts.
  */
-const programAsCourseModulesCompleted = (
-  program: V2ProgramDetail,
-  courseEnrollments: Record<number, CourseRunEnrollmentV3[]>,
+export const programIsCompleted = (
+  program: {
+    display_mode?: V2ProgramDisplayModeEnum | null
+    req_tree?: V2ProgramRequirement[] | null
+  },
+  programEnrollment: V3UserProgramEnrollment | undefined,
+  enrollmentsByCourseId: Record<number, CourseRunEnrollmentV3[]>,
 ): boolean => {
-  const moduleIds = getProgramAsCourseModuleIds(program)
-  return (
-    moduleIds.length > 0 &&
-    moduleIds.every((id) => courseIsCompleted(courseEnrollments[id] ?? []))
+  if (!programEnrollment) return false
+  if (programEnrollment.certificate) return true
+  if (!isProgramAsCourse(program)) return false
+  const { completed, total } = getRequirementsProgress(
+    program.req_tree ?? [],
+    enrollmentsByCourseId,
+    {},
   )
+  return total > 0 && completed >= total
 }
 
 const isLeafRequirementNodeCompleted = (
@@ -258,14 +264,10 @@ const isLeafRequirementNodeCompleted = (
   }
   if (node.data.node_type === "program" && node.data.required_program) {
     const programEnrollment = programEnrollments[node.data.required_program]
-    if (!programEnrollment) return false
-    if (programEnrollment.certificate) return true
     const program = programsById.get(node.data.required_program)
-    return (
-      !!program &&
-      isProgramAsCourse(program) &&
-      programAsCourseModulesCompleted(program, courseEnrollments)
-    )
+    return program
+      ? programIsCompleted(program, programEnrollment, courseEnrollments)
+      : !!programEnrollment?.certificate
   }
   return false
 }
@@ -280,8 +282,8 @@ const isLeafRequirementNodeCompleted = (
  * For `min_number_of` operators, `completed` is capped at `operator_value`
  * so extra electives don't inflate the overall total.
  *
- * Program leaves are completed when certificated; program-as-course leaves
- * found in `programsById` are also completed once all their modules pass.
+ * Program leaves are completed per `programIsCompleted` when found in
+ * `programsById`, and otherwise only when certificated.
  */
 export const getRequirementsProgress = (
   nodes: V2ProgramRequirement[],
