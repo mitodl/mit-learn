@@ -383,7 +383,6 @@ MITOL_APIGATEWAY_USERINFO_UPDATE = get_bool(
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/1.8/howto/static-files/
 
-# Serve static files with dj-static
 STATIC_URL = "/static/"
 
 STATIC_ROOT = "staticfiles"
@@ -556,10 +555,7 @@ OPENSEARCH_URL = get_string("OPENSEARCH_URL", None)
 if not OPENSEARCH_URL:
     msg = "Missing OPENSEARCH_URL"
     raise ImproperlyConfigured(msg)
-if get_string("HEROKU_PARENT_APP_NAME", None) is not None:
-    OPENSEARCH_INDEX = get_string("HEROKU_APP_NAME", None)
-else:
-    OPENSEARCH_INDEX = get_string("OPENSEARCH_INDEX", None)
+OPENSEARCH_INDEX = get_string("OPENSEARCH_INDEX", None)
 if not OPENSEARCH_INDEX:
     msg = "Missing OPENSEARCH_INDEX"
     raise ImproperlyConfigured(msg)
