@@ -8,18 +8,14 @@ import { renderWithProviders, screen, user } from "@/test-utils"
 import { factories } from "api/test-utils"
 import { ResourceTypeEnum, ResourceTypeGroupEnum } from "api"
 import invariant from "tiny-invariant"
-import { usePostHog } from "posthog-js/react"
+import { capturePostHog } from "@/common/analytics/posthog"
 import { PostHogEvents } from "@/common/constants"
 
-jest.mock("posthog-js/react", () => ({
-  ...jest.requireActual("posthog-js/react"),
-  usePostHog: jest.fn(),
+jest.mock("@/common/analytics/posthog", () => ({
+  capturePostHog: jest.fn(),
+  initPostHog: jest.fn(),
 }))
-const mockCapture = jest.fn()
-jest.mocked(usePostHog).mockReturnValue(
-  // @ts-expect-error Not mocking all of posthog
-  { capture: mockCapture },
-)
+const mockCapturePostHog = jest.mocked(capturePostHog)
 
 const mockAiChat = jest.fn<React.JSX.Element, [Record<string, unknown>]>(() => (
   <div data-testid="mock-ai-chat" />
@@ -131,7 +127,7 @@ describe("AiChatSyllabus", () => {
   test("clicking Ask TIM opener fires asktim_clicked with syllabus payload", async () => {
     const resource = factories.learningResources.course()
     process.env.NEXT_PUBLIC_POSTHOG_API_KEY = "test-key"
-    mockCapture.mockClear()
+    mockCapturePostHog.mockClear()
 
     renderWithProviders(
       <AiChatSyllabusOpener
@@ -143,7 +139,7 @@ describe("AiChatSyllabus", () => {
 
     await user.click(screen.getByRole("button", { name: /ask tim/i }))
 
-    expect(mockCapture).toHaveBeenCalledWith(
+    expect(mockCapturePostHog).toHaveBeenCalledWith(
       PostHogEvents.AskTimClicked,
       expect.objectContaining({
         type: "syllabus_bot",

@@ -2,7 +2,7 @@ import { env } from "@/env"
 import React, { useState } from "react"
 import styled from "@emotion/styled"
 import { default as NextImage } from "next/image"
-import { useFeatureFlagEnabled, usePostHog } from "posthog-js/react"
+import { useFeatureFlagEnabled } from "posthog-js/react"
 import {
   Skeleton,
   theme,
@@ -37,7 +37,7 @@ import {
   RiTwitterXLine,
 } from "@remixicon/react"
 import type { User } from "api/hooks/user"
-import { PostHogEvents } from "@/common/constants"
+import { analytics } from "@/common/analytics"
 import { kebabCase } from "lodash"
 import {
   FACEBOOK_SHARE_BASE_URL,
@@ -383,7 +383,6 @@ const CallToActionSection = ({
   onAddToLearningPathClick?: LearningResourceCardProps["onAddToLearningPathClick"]
   onAddToUserListClick?: LearningResourceCardProps["onAddToUserListClick"]
 }) => {
-  const posthog = usePostHog()
   const [shareExpanded, setShareExpanded] = useState(false)
   const [copyText, setCopyText] = useState("Copy Link")
   const ocwProductPages = useFeatureFlagEnabled(FeatureFlags.OcwProductPages)
@@ -430,12 +429,7 @@ const CallToActionSection = ({
           size="medium"
           href={url}
           onClick={() => {
-            if (env("NEXT_PUBLIC_POSTHOG_API_KEY")) {
-              posthog.capture(PostHogEvents.CallToActionClicked, {
-                resource,
-                label: cta,
-              })
-            }
+            analytics.ctaClicked({ resource, label: cta })
           }}
           data-ph-action="click-cta"
           data-ph-offered-by={offeredBy?.code}

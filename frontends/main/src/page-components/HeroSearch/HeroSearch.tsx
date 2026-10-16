@@ -1,10 +1,9 @@
 "use client"
 
-import { env } from "@/env"
 import React, { useState, useCallback } from "react"
 import { useRouter } from "next-nprogress-bar"
 import { FeatureFlags } from "@/common/feature_flags"
-import { useFeatureFlagEnabled, usePostHog } from "posthog-js/react"
+import { useFeatureFlagEnabled } from "posthog-js/react"
 import AskTimDrawerButton from "@/page-components/AiChat/AskTimDrawerButton"
 
 import {
@@ -32,7 +31,7 @@ import {
 } from "@remixicon/react"
 import Image from "next/image"
 import { SearchField } from "@/page-components/SearchField/SearchField"
-import { PostHogEvents } from "@/common/constants"
+import { analytics } from "@/common/analytics"
 
 type SearchChip = {
   label: string
@@ -201,12 +200,6 @@ const TrendingContainer = styled.div({
 })
 
 const HeroSearch: React.FC<{ imageIndex: number }> = ({ imageIndex }) => {
-  const posthog = usePostHog()
-  const posthogCapture = (event: string) => {
-    if (env("NEXT_PUBLIC_POSTHOG_API_KEY")) {
-      posthog.capture(event)
-    }
-  }
   const [searchText, setSearchText] = useState("")
   const onSearchClear = useCallback(() => setSearchText(""), [])
   const router = useRouter()
@@ -252,11 +245,7 @@ const HeroSearch: React.FC<{ imageIndex: number }> = ({ imageIndex }) => {
                 {recommendationBotEnabled ? "Browse by " : "or browse by "}
                 <TopicLink
                   href="/topics/"
-                  onClick={() => {
-                    if (env("NEXT_PUBLIC_POSTHOG_API_KEY")) {
-                      posthogCapture(PostHogEvents.HeroBrowseTopics)
-                    }
-                  }}
+                  onClick={() => analytics.heroBrowseTopicsClicked()}
                   color="red"
                 >
                   Topic

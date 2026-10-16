@@ -22,9 +22,7 @@ import type { Breakpoint } from "@mui/system"
 import NiceModal from "@ebay/nice-modal-react"
 import { useHubspotFormDetail } from "api/hooks/hubspot"
 import { StayUpdatedModal } from "./StayUpdatedModal"
-import { usePostHog } from "posthog-js/react"
-import { PostHogEvents } from "@/common/constants"
-import { PlatformEnum } from "api"
+import { analytics } from "@/common/analytics"
 import { useStickyRevealTop } from "./useStickyRevealTop"
 
 const LearningResourceDrawer = dynamic(
@@ -310,7 +308,6 @@ const ProductPageTemplate: React.FC<ProductPageTemplateProps> = ({
   resource,
   hubspotFormId,
 }) => {
-  const posthog = usePostHog()
   const summaryColRef = useStickyRevealTop(HEADER_HEIGHT + OFFSET_FROM_HEADER)
   const stayUpdatedFormId = hubspotFormId?.trim()
   const shouldShowStayUpdatedButton = Boolean(stayUpdatedFormId && resource)
@@ -323,14 +320,12 @@ const ProductPageTemplate: React.FC<ProductPageTemplateProps> = ({
 
   const handleStayUpdatedClick = () => {
     if (!resource) return
-    if (env("NEXT_PUBLIC_POSTHOG_API_KEY")) {
-      posthog.capture(PostHogEvents.CallToActionClicked, {
-        label: "Stay Updated",
-        readableId: resource.readable_id,
-        resourceType: resource.resource_type,
-        platform: PlatformEnum.Mitxonline,
-      })
-    }
+    analytics.ctaClicked({
+      label: "Stay Updated",
+      readableId: resource.readable_id,
+      resourceType: resource.resource_type,
+      platform: "mitxonline",
+    })
     NiceModal.show(StayUpdatedModal, {
       productReadableId: resource.readable_id,
       hubspotFormId: stayUpdatedFormId,

@@ -1,10 +1,7 @@
-import { env } from "@/env"
 import React from "react"
 import { SearchInput } from "ol-components"
 import type { SearchInputProps, SearchSubmissionEvent } from "ol-components"
-import { usePostHog } from "posthog-js/react"
-import { PostHogEvents } from "@/common/constants"
-import { trackSiteSearch } from "@/common/analytics/gtm"
+import { analytics } from "@/common/analytics"
 
 type SearchFieldProps = SearchInputProps & {
   onSubmit: (event: SearchSubmissionEvent) => void
@@ -21,7 +18,6 @@ const SearchField: React.FC<SearchFieldProps> = ({
   setPage,
   ...others
 }) => {
-  const posthog = usePostHog()
   const handleSubmit: SearchInputProps["onSubmit"] = (
     event,
     { isEnter } = {},
@@ -29,16 +25,10 @@ const SearchField: React.FC<SearchFieldProps> = ({
     const searchTerm = event.target.value
     onSubmit(event)
     setPage?.(1)
-    if (env("NEXT_PUBLIC_POSTHOG_API_KEY")) {
-      // onSubmit starts a router navigation that has not committed yet, so the
-      // $current_url posthog attaches still holds the previous query. Send the
-      // submitted string rather than letting the term be inferred from the URL.
-      posthog.capture(PostHogEvents.SearchUpdate, {
-        search_term: searchTerm,
-        isEnter,
-      })
-    }
-    trackSiteSearch(searchTerm)
+    // onSubmit starts a router navigation that has not committed yet, so the
+    // $current_url posthog attaches still holds the previous query. Send the
+    // submitted string rather than letting the term be inferred from the URL.
+    analytics.siteSearched({ query: searchTerm, isEnter })
   }
 
   return <SearchInput onSubmit={handleSubmit} {...others} />

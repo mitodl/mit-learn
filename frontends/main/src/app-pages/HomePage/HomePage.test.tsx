@@ -18,21 +18,22 @@ import invariant from "tiny-invariant"
 import * as routes from "@/common/urls"
 import { FeatureFlags } from "@/common/feature_flags"
 import { assertHeadings, allowConsoleErrors } from "ol-test-utilities"
-import { useFeatureFlagEnabled, usePostHog } from "posthog-js/react"
+import { useFeatureFlagEnabled } from "posthog-js/react"
+import { capturePostHog } from "@/common/analytics/posthog"
 import { PostHogEvents } from "@/common/constants"
 
 jest.mock("posthog-js/react")
+jest.mock("@/common/analytics/posthog", () => ({
+  capturePostHog: jest.fn(),
+  initPostHog: jest.fn(),
+}))
 jest.mock("ol-components/CarouselV2", () => ({
   CarouselV2: ({ children }: { children: React.ReactNode }) => (
     <div>{children}</div>
   ),
 }))
 const mockedUseFeatureFlagEnabled = jest.mocked(useFeatureFlagEnabled)
-const mockedPostHogCapture = jest.fn()
-jest.mocked(usePostHog).mockReturnValue(
-  // @ts-expect-error Not mocking all of posthog
-  { capture: mockedPostHogCapture },
-)
+const mockedPostHogCapture = jest.mocked(capturePostHog)
 
 const assertLinksTo = (
   el: HTMLElement,
