@@ -1,26 +1,30 @@
 import React from "react"
 import NiceModal from "@ebay/nice-modal-react"
-import { styled } from "ol-components"
+import { linkStyles, styled } from "ol-components"
 import { ProgramTrackDialog } from "./ProgramTrackDialog"
 import type { ProgramTrackState } from "./model/dashboardViewModel"
 
-const LinkButton = styled.button(({ theme }) => ({
+const buttonReset = {
   padding: 0,
   border: "none",
   background: "none",
   cursor: "pointer",
-  color: theme.custom.colors.red,
-}))
+}
 
-const ChangeTrackButton = styled(LinkButton)(({ theme }) => ({
-  ...theme.typography.body2,
-  textDecoration: "underline",
-}))
+const ChangeTrackButton = styled.button(
+  buttonReset,
+  linkStyles({ color: "red" }),
+  { textDecoration: "underline", whiteSpace: "nowrap" },
+)
 
-const ChooseTrackButton = styled(LinkButton)(({ theme }) => ({
-  ...theme.typography.subtitle1,
-  fontWeight: theme.typography.fontWeightBold,
-}))
+const ChooseTrackButton = styled.button(
+  buttonReset,
+  linkStyles({ color: "red" }),
+  ({ theme }) => ({
+    ...theme.typography.subtitle1,
+    fontWeight: theme.typography.fontWeightBold,
+  }),
+)
 
 const Placeholder = styled.div(({ theme }) => ({
   display: "flex",
@@ -31,7 +35,6 @@ const Placeholder = styled.div(({ theme }) => ({
   padding: "32px",
   border: `1px dashed ${theme.custom.colors.silverGrayLight}`,
   borderRadius: "8px",
-  opacity: 0.8,
 }))
 
 const CurrentTrackLabel = styled.span(({ theme }) => ({
@@ -49,21 +52,17 @@ type ProgramTrackControlProps = {
   trackState: ProgramTrackState
 }
 
-const useOpenTrackDialog = ({
+const openTrackDialog = ({
   programId,
-  trackState,
-}: ProgramTrackControlProps) => {
-  const { tracks, currentTrack } = trackState
-  return () =>
-    NiceModal.show(ProgramTrackDialog, { programId, tracks, currentTrack })
-}
+  trackState: { tracks, currentTrack },
+}: ProgramTrackControlProps) =>
+  NiceModal.show(ProgramTrackDialog, { programId, tracks, currentTrack })
 
 /**
  * Stands in for the track's sections until the learner's chosen track has
  * courses to show.
  */
 const ProgramTrackPlaceholder: React.FC<ProgramTrackControlProps> = (props) => {
-  const openDialog = useOpenTrackDialog(props)
   const { currentTrack } = props.trackState
   return (
     <Placeholder>
@@ -73,7 +72,7 @@ const ProgramTrackPlaceholder: React.FC<ProgramTrackControlProps> = (props) => {
           {currentTrack?.title ?? "Not selected"}
         </CurrentTrackTitle>
       </span>
-      <ChooseTrackButton type="button" onClick={openDialog}>
+      <ChooseTrackButton type="button" onClick={() => openTrackDialog(props)}>
         {currentTrack ? "Change track" : "Choose track"}
       </ChooseTrackButton>
     </Placeholder>
@@ -81,9 +80,8 @@ const ProgramTrackPlaceholder: React.FC<ProgramTrackControlProps> = (props) => {
 }
 
 const ProgramChangeTrackLink: React.FC<ProgramTrackControlProps> = (props) => {
-  const openDialog = useOpenTrackDialog(props)
   return (
-    <ChangeTrackButton type="button" onClick={openDialog}>
+    <ChangeTrackButton type="button" onClick={() => openTrackDialog(props)}>
       Change track
     </ChangeTrackButton>
   )

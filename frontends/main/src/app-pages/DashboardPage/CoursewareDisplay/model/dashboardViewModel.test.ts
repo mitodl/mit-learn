@@ -1770,10 +1770,7 @@ describe("dashboardViewModel", () => {
         operator_value: "1",
         title: "Tracks",
       })
-      const general = container.addTrack({
-        title: "General",
-        description: "Broad foundation",
-      })
+      const general = container.addTrack({ title: "General" })
       withCourses(general.addOperator({ operator: "all_of" }), [201, 202])
       const methods = container.addTrack({ title: "Methods" })
       withCourses(methods.addOperator({ operator: "all_of" }), [201, 203])
@@ -1781,14 +1778,9 @@ describe("dashboardViewModel", () => {
         301,
       ])
       const programCourses = [101, 102, 201, 202, 203, 301].map((id) =>
-        factories.courses.course({ id, title: `Course ${id}` }),
+        factories.courses.course({ id }),
       )
-      return {
-        reqTree: root.serialize(),
-        programCourses,
-        generalId: general.id as number,
-        methodsId: methods.id as number,
-      }
+      return { reqTree: root.serialize(), programCourses, general, methods }
     }
 
     const passed = (courseId: number) => [
@@ -1804,10 +1796,10 @@ describe("dashboardViewModel", () => {
         passedCourseIds?: number[]
       } = {},
     ) => {
-      const { reqTree, programCourses, generalId, methodsId } = setup()
+      const { reqTree, programCourses, general, methods } = setup()
       const trackId = {
-        General: generalId,
-        Methods: methodsId,
+        General: general.id,
+        Methods: methods.id,
         missing: 999999,
       }[opts.track ?? "missing"]
       const enrollmentsByCourseId = Object.fromEntries(
@@ -1824,7 +1816,7 @@ describe("dashboardViewModel", () => {
           track: opts.track ? { id: trackId, title: opts.track } : null,
         }),
       })
-      return { ...result, generalId, methodsId }
+      return { ...result, programCourses, general, methods }
     }
 
     const sectionCourseIds = (sections: RequirementSection[]) =>
@@ -1845,31 +1837,38 @@ describe("dashboardViewModel", () => {
         ["Track courses", "choose", 0],
         ["Capstone", undefined, 1],
       ])
-      expect([sections[1].completed, sections[1].total]).toEqual([0, 2])
-      expect([completedCount, totalCount]).toEqual([1, 5])
+      // The total of 0 hides the placeholder's count.
+      expect([sections[1].completed, sections[1].total]).toEqual([0, 0])
+      // Core (1 of 2) + Capstone (0 of 1); no track counts until one is chosen.
+      expect([completedCount, totalCount]).toEqual([1, 3])
       expect(trackState?.currentTrack).toBeNull()
     })
 
-    test("counts the furthest track in the placeholder", () => {
+    test("shows no placeholder count even when track courses are passed", () => {
       const { sections } = build({ passedCourseIds: [203] })
       const placeholder = sections.find((s) => s.trackAction === "choose")
-      expect([placeholder?.completed, placeholder?.total]).toEqual([1, 2])
+      expect([placeholder?.completed, placeholder?.total]).toEqual([0, 0])
     })
 
-    test("lists every track with its course titles", () => {
-      const { trackState, generalId, methodsId } = build()
+    test("lists every track with its courses", () => {
+      const { trackState, programCourses, general, methods } = build()
+      const course = (id: number) => ({
+        type: "course",
+        id,
+        title: programCourses.find((c) => c.id === id)?.title,
+      })
       expect(trackState?.tracks).toEqual([
         {
-          id: generalId,
+          id: general.id,
           title: "General",
-          description: "Broad foundation",
-          itemTitles: ["Course 201", "Course 202"],
+          description: general.data.description,
+          items: [course(201), course(202)],
         },
         {
-          id: methodsId,
+          id: methods.id,
           title: "Methods",
-          description: expect.any(String),
-          itemTitles: ["Course 201", "Course 203"],
+          description: methods.data.description,
+          items: [course(201), course(203)],
         },
       ])
     })
@@ -1934,38 +1933,12 @@ describe("dashboardViewModel", () => {
         requiredPrograms: [],
         requiredProgramModuleCoursesByProgramId: {},
         ancestorProgramEnrollment: factories.enrollment.programEnrollmentV3({
-          track: { id: track.id as number, title: "Policy" },
+          track: { id: track.id, title: "Policy" },
         }),
       })
       expect(sections.map((s) => [s.title, s.total, s.trackAction])).toEqual([
         ["Policy: Required", 1, "change"],
         ["Policy: Electives", 1, undefined],
-      ])
-    })
-
-    test("hides the placeholder count when the tracks differ in size", () => {
-      const root = new RequirementTreeBuilder()
-      const container = root.addOperator({
-        operator: "min_number_of",
-        operator_value: "1",
-      })
-      withCourses(container.addTrack().addOperator({ operator: "all_of" }), [1])
-      withCourses(
-        container.addTrack().addOperator({ operator: "all_of" }),
-        [2, 3],
-      )
-      const { sections } = buildRequirementSections({
-        reqTree: root.serialize(),
-        programCourses: [1, 2, 3].map((id) => factories.courses.course({ id })),
-        enrollmentsByCourseId: {},
-        programEnrollmentsById: {},
-        requiredPrograms: [],
-        requiredProgramModuleCoursesByProgramId: {},
-      })
-      expect(sections).toHaveLength(1)
-      expect([sections[0].trackAction, sections[0].total]).toEqual([
-        "choose",
-        0,
       ])
     })
 
