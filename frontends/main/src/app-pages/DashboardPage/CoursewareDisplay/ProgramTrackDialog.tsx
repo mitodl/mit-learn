@@ -1,9 +1,9 @@
 import React from "react"
 import {
+  ChoiceBox,
   DialogActions,
   FormDialog,
   LoadingSpinner,
-  Radio,
   Stack,
   Typography,
   styled,
@@ -14,47 +14,17 @@ import { useUpdateProgramEnrollmentTrack } from "api/mitxonline-hooks/enrollment
 import { SILENCE_ERROR_TOAST } from "api/mutation-meta"
 import type { ProgramTrackOption } from "./model/dashboardViewModel"
 
-const TrackChoice = styled.label(({ theme }) => ({
-  display: "flex",
-  justifyContent: "space-between",
-  gap: "16px",
-  padding: "12px 16px",
-  borderRadius: "4px",
-  background: theme.custom.colors.white,
-  boxShadow: `inset 0 0 0 1px ${theme.custom.colors.silverGrayLight}`,
-  cursor: "pointer",
-  "&:hover:not(.checked)": {
-    boxShadow: `inset 0 0 0 1px ${theme.custom.colors.silverGrayDark}`,
-  },
-  "&.checked": {
-    boxShadow: `inset 0 0 0 2px ${theme.custom.colors.darkGray2}`,
-  },
-}))
-
-const TrackTitle = styled.span(({ theme }) => ({
-  ...theme.typography.subtitle2,
-  color: theme.custom.colors.darkGray2,
-}))
-
 const CurrentTrackChip = styled.span(({ theme }) => ({
   ...theme.typography.body4,
+  display: "inline-block",
+  marginLeft: "8px",
   padding: "2px 8px",
   borderRadius: "4px",
   backgroundColor: theme.custom.colors.lightGray2,
   color: theme.custom.colors.darkGray2,
 }))
 
-const TrackText = styled.span(({ theme }) => ({
-  ...theme.typography.body3,
-  color: theme.custom.colors.silverGrayDark,
-  "label.checked &": {
-    color: theme.custom.colors.darkGray2,
-  },
-}))
-
-const TrackItems = styled.ul(({ theme }) => ({
-  ...theme.typography.body3,
-  color: theme.custom.colors.silverGrayDark,
+const TrackItems = styled.ul({
   display: "flex",
   flexWrap: "wrap",
   columnGap: "16px",
@@ -64,10 +34,13 @@ const TrackItems = styled.ul(({ theme }) => ({
   "li::before": {
     content: '"• "',
   },
-  "label.checked &": {
-    color: theme.custom.colors.darkGray2,
-  },
-}))
+})
+
+/**
+ * Id of the track slot's heading on the program dashboard. Choosing a track
+ * replaces the button that opened the dialog, so focus moves here instead.
+ */
+const PROGRAM_TRACK_HEADING_ID = "program-track-heading"
 
 type ProgramTrackDialogProps = {
   programId: number
@@ -106,7 +79,14 @@ const ProgramTrackDialogInner: React.FC<ProgramTrackDialogProps> = ({
         program_id: programId,
         PatchedV3ProgramEnrollmentTrackRequest: { track: selected.id },
       },
-      { onSuccess: () => modal.hide() },
+      {
+        onSuccess: () =>
+          modal
+            .hide()
+            .then(() =>
+              document.getElementById(PROGRAM_TRACK_HEADING_ID)?.focus(),
+            ),
+      },
     )
   }
 
@@ -145,32 +125,38 @@ const ProgramTrackDialogInner: React.FC<ProgramTrackDialogProps> = ({
         {tracks.map((track) => {
           const checked = track.id === selectedId
           return (
-            <TrackChoice key={track.id} className={checked ? "checked" : ""}>
-              <Stack gap="6px">
-                <Stack direction="row" alignItems="center" gap="8px">
-                  <TrackTitle>{track.title}</TrackTitle>
+            <ChoiceBox
+              key={track.id}
+              type="radio"
+              name="program-track"
+              value={String(track.id)}
+              checked={checked}
+              onChange={() => setSelectedId(track.id)}
+              label={
+                <>
+                  {track.title}
                   {track.id === currentTrack?.id ? (
                     <CurrentTrackChip>Current track</CurrentTrackChip>
                   ) : null}
-                </Stack>
-                {track.description ? (
-                  <TrackText>{track.description}</TrackText>
-                ) : null}
-                {track.itemTitles.length > 0 ? (
-                  <TrackItems aria-label={`Courses in ${track.title}`}>
-                    {track.itemTitles.map((title) => (
-                      <li key={title}>{title}</li>
-                    ))}
-                  </TrackItems>
-                ) : null}
-              </Stack>
-              <Radio
-                name="program-track"
-                value={String(track.id)}
-                checked={checked}
-                onChange={() => setSelectedId(track.id)}
-              />
-            </TrackChoice>
+                </>
+              }
+              description={
+                track.description || track.items.length > 0 ? (
+                  <Stack gap="6px">
+                    {track.description ? (
+                      <span>{track.description}</span>
+                    ) : null}
+                    {track.items.length > 0 ? (
+                      <TrackItems>
+                        {track.items.map((item) => (
+                          <li key={`${item.type}-${item.id}`}>{item.title}</li>
+                        ))}
+                      </TrackItems>
+                    ) : null}
+                  </Stack>
+                ) : undefined
+              }
+            />
           )
         })}
       </Stack>
@@ -185,4 +171,4 @@ const ProgramTrackDialogInner: React.FC<ProgramTrackDialogProps> = ({
 
 const ProgramTrackDialog = NiceModal.create(ProgramTrackDialogInner)
 
-export { ProgramTrackDialog }
+export { ProgramTrackDialog, PROGRAM_TRACK_HEADING_ID }

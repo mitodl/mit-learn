@@ -932,7 +932,8 @@ type BuildRequirementSectionsArgs = {
    * The program's `req_tree`. Assumes a flat structure: operators are never
    * nested inside operators; direct children of each operator are leaves
    * (`node_type: "course"` or `"program"`). See `getRequirementsProgress`
-   * for the same assumption and rationale.
+   * for the same assumption and rationale. The exception is a tracked
+   * program's tracks container, whose tracks each hold their own flat groups.
    */
   reqTree: V2ProgramRequirement[]
   /** All courses belonging to the program (fetched once by the composer). */
@@ -966,8 +967,8 @@ type ProgramTrackOption = {
   id: number
   title: string
   description: string
-  /** Titles of the courses and programs inside the track, in tree order. */
-  itemTitles: string[]
+  /** The courses and programs inside the track, in tree order. */
+  items: { type: "course" | "program"; id: number; title: string }[]
 }
 
 /**
@@ -1008,9 +1009,9 @@ const getTrackSectionTitle = (
  *
  * For a tracked program, the sections are the groups before the tracks, then
  * the chosen track's groups, then the groups after the tracks (e.g. a
- * capstone). Before a track is chosen, a "Track courses" placeholder takes the
- * chosen track's place, and progress counts the track with the most completed
- * courses.
+ * capstone). Before a track is chosen, a "Track courses" placeholder with no
+ * count takes the chosen track's place, and overall progress leaves the
+ * tracks out.
  *
  * Preserves `req_tree` ordering. Sections with no resolved items are filtered
  * out (oracle: `.filter(section => section.items.length > 0)`).
@@ -1093,25 +1094,13 @@ const buildRequirementSections = ({
     ),
   )
 
-  const trackProgress = (trackSections: RequirementSection[]) =>
-    progress(trackSections.map((s) => s.node))
-  // The track the learner is furthest along in stands in for a chosen track
-  // in progress counts, so totals are one track's worth of courses.
-  const bestTrack = sectionsByTrack.reduce<RequirementSection[]>(
-    (best, trackSections) =>
-      trackProgress(trackSections).completed > trackProgress(best).completed
-        ? trackSections
-        : best,
-    sectionsByTrack[0] ?? [],
-  )
-
-  const getItemTitle = (resource: {
-    type: "course" | "program"
-    id: number
-  }) =>
-    resource.type === "course"
-      ? resolveContext.coursesById.get(resource.id)?.title
-      : resolveContext.programsById.get(resource.id)?.title
+  const withTitle = (resource: { type: "course" | "program"; id: number }) => {
+    const title =
+      resource.type === "course"
+        ? resolveContext.coursesById.get(resource.id)?.title
+        : resolveContext.programsById.get(resource.id)?.title
+    return title ? [{ ...resource, title }] : []
+  }
 
   const tracks: ProgramTrackOption[] = tracked.tracks.flatMap((track) =>
     typeof track.id === "number"
@@ -1120,9 +1109,9 @@ const buildRequirementSections = ({
             id: track.id,
             title: track.title,
             description: track.description,
-            itemTitles: track.sections
-              .flatMap((section) => section.items.map(getItemTitle))
-              .filter((title): title is string => !!title),
+            items: track.sections.flatMap((section) =>
+              section.items.flatMap(withTitle),
+            ),
           },
         ]
       : [],
@@ -1149,24 +1138,19 @@ const buildRequirementSections = ({
     return { sections, ...overall(sections), trackState }
   }
 
-  // Tracks that require different numbers of courses have no single count,
-  // so the placeholder's total is 0, which hides it.
-  const trackTotals = new Set(
-    sectionsByTrack.map((t) => trackProgress(t).total),
-  )
-  const best = trackProgress(bestTrack)
+  // No count until a track is chosen: a total of 0 hides it.
   const placeholder: RequirementSection = {
     key: `tracks-${tracked.container.id}`,
     title: "Track courses",
     node: tracked.container,
     items: [],
-    completed: trackTotals.size === 1 ? best.completed : 0,
-    total: trackTotals.size === 1 ? best.total : 0,
+    completed: 0,
+    total: 0,
     trackAction: "choose",
   }
   return {
     sections: [...before, placeholder, ...after],
-    ...overall([...before, ...bestTrack, ...after]),
+    ...overall([...before, ...after]),
     trackState,
   }
 }

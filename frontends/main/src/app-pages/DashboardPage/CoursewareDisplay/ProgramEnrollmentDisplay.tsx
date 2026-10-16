@@ -12,6 +12,7 @@ import {
   ProgramChangeTrackLink,
   ProgramTrackPlaceholder,
 } from "./ProgramTrackControls"
+import { PROGRAM_TRACK_HEADING_ID } from "./ProgramTrackDialog"
 import { env } from "@/env"
 
 const CourseEntryCardStyled = styled(CoursewareCard)({
@@ -21,6 +22,11 @@ const CourseEntryCardStyled = styled(CoursewareCard)({
 
 const AlertBanner = styled(Alert)({
   marginBottom: "16px",
+})
+
+const SectionCount = styled(Typography)({
+  whiteSpace: "nowrap",
+  marginLeft: "auto",
 })
 
 const SUPPORT_EMAIL = env("NEXT_PUBLIC_MITOL_SUPPORT_EMAIL") || ""
@@ -126,33 +132,37 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
           <React.Fragment key={section.key}>
             <Stack
               direction="row"
-              justifyContent="space-between"
+              flexWrap="wrap"
+              alignItems="baseline"
+              columnGap="8px"
+              rowGap="4px"
               marginBottom="16px"
               marginTop={index > 0 ? "32px" : "0"}
             >
-              <Stack direction="row" alignItems="center" gap="8px">
-                <Typography
-                  component="h2"
-                  variant="subtitle2"
-                  color={theme.custom.colors.red}
-                >
-                  {section.title}
-                </Typography>
-                {section.trackAction === "change" && data.trackState ? (
-                  <ProgramChangeTrackLink
-                    programId={programId}
-                    trackState={data.trackState}
-                  />
-                ) : null}
-              </Stack>
+              <Typography
+                component="h2"
+                variant="subtitle2"
+                color={theme.custom.colors.red}
+                {...(section.trackAction
+                  ? { id: PROGRAM_TRACK_HEADING_ID, tabIndex: -1 }
+                  : {})}
+              >
+                {section.title}
+              </Typography>
+              {section.trackAction === "change" && data.trackState ? (
+                <ProgramChangeTrackLink
+                  programId={programId}
+                  trackState={data.trackState}
+                />
+              ) : null}
               {section.total > 0 ? (
-                <Typography
+                <SectionCount
                   data-testid="section-completion-count"
                   variant="body2"
                   color={theme.custom.colors.silverGrayDark}
                 >
                   Completed {section.completed} of {section.total}
-                </Typography>
+                </SectionCount>
               ) : null}
             </Stack>
             {section.trackAction === "choose" && data.trackState ? (

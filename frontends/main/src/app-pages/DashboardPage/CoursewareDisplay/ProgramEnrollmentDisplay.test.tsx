@@ -2349,7 +2349,9 @@ describe("ProgramEnrollmentDisplay", () => {
 describe("ProgramEnrollmentDisplay with program tracks", () => {
   setupLocationMock()
 
-  const setupTrackedProgram = () => {
+  const setupTrackedProgram = (
+    chosen: "General Track" | "Methods Track" | null = null,
+  ) => {
     setMockResponse.get(
       mitxonline.urls.userMe.get(),
       mitxonline.factories.user.user(),
@@ -2376,11 +2378,15 @@ describe("ProgramEnrollmentDisplay with program tracks", () => {
       req_tree: root.serialize(),
     })
     const courses = [1, 2, 3, 4].map((id) =>
-      mitxonline.factories.courses.course({ id, title: `Course ${id}` }),
+      mitxonline.factories.courses.course({ id }),
     )
+    const trackIds = {
+      "General Track": general.id,
+      "Methods Track": methods.id,
+    }
     const enrollment = mitxonline.factories.enrollment.programEnrollmentV3({
       program: mitxonline.factories.programs.simpleProgram({ id: program.id }),
-      track: null,
+      ...(chosen ? { track: { id: trackIds[chosen], title: chosen } } : {}),
     })
     setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV3(), [])
     setMockResponse.get(
@@ -2401,8 +2407,24 @@ describe("ProgramEnrollmentDisplay with program tracks", () => {
     return { program, enrollment, methodsId: methods.id }
   }
 
+  const expectTrackSaved = async (
+    programId: number,
+    trackId: number,
+    heading: string,
+  ) => {
+    expect(makeRequest).toHaveBeenCalledWith(
+      expect.objectContaining({
+        method: "patch",
+        url: mitxonline.urls.programEnrollments.programEnrollment(programId),
+        body: { track: trackId },
+      }),
+    )
+    const trackHeading = await screen.findByRole("heading", { name: heading })
+    // The button that opened the dialog is gone, so focus moves to the heading.
+    await waitFor(() => expect(trackHeading).toHaveFocus())
+  }
+
   test("Choosing a track saves it and shows that track's courses", async () => {
-    mockedUseFeatureFlagEnabled.mockReturnValue(true)
     const { program, enrollment, methodsId } = setupTrackedProgram()
     renderWithProviders(<ProgramEnrollmentDisplay programId={program.id} />)
 
@@ -2438,18 +2460,51 @@ describe("ProgramEnrollmentDisplay with program tracks", () => {
       within(dialog).getByRole("button", { name: "Choose Methods Track" }),
     )
 
-    expect(makeRequest).toHaveBeenCalledWith(
-      expect.objectContaining({
-        method: "patch",
-        url: mitxonline.urls.programEnrollments.programEnrollment(program.id),
-        body: { track: methodsId },
-      }),
-    )
-    await screen.findByRole("heading", { name: "Methods Track courses" })
+    await expectTrackSaved(program.id, methodsId, "Methods Track courses")
     expect(
       screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent),
     ).toEqual(["Core Courses", "Methods Track courses", "Capstone"])
     expect(screen.queryByText("Not selected")).not.toBeInTheDocument()
     expect(screen.getByRole("button", { name: "Change track" })).toBeVisible()
+  })
+
+  test("Changing tracks starts on the current track and saves a different one", async () => {
+    const { program, enrollment, methodsId } =
+      setupTrackedProgram("General Track")
+    renderWithProviders(<ProgramEnrollmentDisplay programId={program.id} />)
+
+    await screen.findByRole("heading", { name: "General Track courses" })
+    const updated = {
+      ...enrollment,
+      track: { id: methodsId, title: "Methods Track" },
+    }
+    setMockResponse.patch(
+      mitxonline.urls.programEnrollments.programEnrollment(program.id),
+      updated,
+    )
+    setMockResponse.get(
+      mitxonline.urls.programEnrollments.enrollmentsListV3(),
+      [updated],
+    )
+    await user.click(screen.getByRole("button", { name: "Change track" }))
+    const dialog = await screen.findByRole("dialog", { name: "Change track" })
+    expect(
+      within(dialog).getByRole("radio", { name: /General Track/ }),
+    ).toBeChecked()
+    expect(
+      within(dialog).getByRole("button", { name: "Switch track" }),
+    ).toBeDisabled()
+
+    await user.click(
+      within(dialog).getByRole("radio", { name: /Methods Track/ }),
+    )
+    await user.click(
+      within(dialog).getByRole("button", { name: "Switch to Methods Track" }),
+    )
+
+    await expectTrackSaved(program.id, methodsId, "Methods Track courses")
+    expect(
+      screen.queryByRole("heading", { name: "General Track courses" }),
+    ).not.toBeInTheDocument()
   })
 })
