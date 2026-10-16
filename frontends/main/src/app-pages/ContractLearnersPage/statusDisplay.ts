@@ -19,7 +19,8 @@ type DisplayStatus =
   | "in-progress"
   | "completed"
   | "certificate"
-  | "not-shared"
+  | "declined"
+  | "not-recorded"
   | "unknown"
 
 const DISPLAY_STATUS_LABEL: Record<DisplayStatus, string> = {
@@ -27,14 +28,19 @@ const DISPLAY_STATUS_LABEL: Record<DisplayStatus, string> = {
   "in-progress": "In progress",
   completed: "Completed",
   certificate: "Certificate",
-  "not-shared": "No consent given",
+  declined: "Declined",
+  "not-recorded": "Consent not recorded",
   unknown: "Unknown",
 }
 
 const getDisplayStatus = (row: LearnerProgress): DisplayStatus => {
   // Consent is checked before the status itself: the API nulls the outcome
   // fields when it is withheld, so a null here is ambiguous on its own.
-  if (!row.outcomes_shared) return "not-shared"
+  if (!row.outcomes_shared) {
+    return row.outcomes_consent_status === "declined"
+      ? "declined"
+      : "not-recorded"
+  }
 
   switch (row.completion_status) {
     case "certified":
@@ -48,12 +54,15 @@ const getDisplayStatus = (row: LearnerProgress): DisplayStatus => {
     default:
       // A row that consented but carries a `completion_status` outside the
       // four known values — e.g. a value the API added after this type was
-      // written. Distinct from "not-shared": that's a consent state, this is
+      // written. Distinct from "declined" and "not-recorded": that's a consent state, this is
       // an unrecognized one, and conflating them would misreport a consenting
       // learner as having withheld consent.
       return "unknown"
   }
 }
 
-export { getDisplayStatus, DISPLAY_STATUS_LABEL }
+const isWithheldStatus = (status: DisplayStatus) =>
+  status === "declined" || status === "not-recorded"
+
+export { getDisplayStatus, isWithheldStatus, DISPLAY_STATUS_LABEL }
 export type { DisplayStatus }

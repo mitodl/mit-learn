@@ -32,19 +32,27 @@ describe("getDisplayStatus", () => {
     // withheld. Consent still wins, so a query regression upstream cannot
     // leak a status through this function.
     const row = factories.learnerProgress({
+      outcomes_consent_status: "declined",
       outcomes_shared: false,
       completion_status: "certified",
     })
-    expect(getDisplayStatus(row)).toBe("not-shared")
+    expect(getDisplayStatus(row)).toBe("declined")
   })
 
-  test("a withheld row reads No consent given", () => {
+  test("a declined row reads Declined", () => {
     expect(getDisplayStatus(factories.withheldLearnerProgress())).toBe(
-      "not-shared",
+      "declined",
     )
   })
 
-  test("a consenting row with an unrecognized completion_status reads Unknown, not No consent given", () => {
+  test("a withheld row with no recorded decision reads Consent not recorded", () => {
+    const row = factories.withheldLearnerProgress({
+      outcomes_consent_status: "not_recorded",
+    })
+    expect(getDisplayStatus(row)).toBe("not-recorded")
+  })
+
+  test("a consenting row with an unrecognized completion_status reads Unknown, not Declined", () => {
     // A value outside the four known statuses — e.g. one the API added after
     // this union was written. Consent was given, so this must not collapse
     // into the withheld-consent state.
@@ -61,7 +69,8 @@ describe("getDisplayStatus", () => {
       "In progress",
       "Completed",
       "Certificate",
-      "No consent given",
+      "Declined",
+      "Consent not recorded",
       "Unknown",
     ])
   })
