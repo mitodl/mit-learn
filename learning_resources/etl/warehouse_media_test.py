@@ -14,6 +14,7 @@ from learning_resources.etl import warehouse_media
 from learning_resources.etl.constants import ETLSource
 from learning_resources.etl.exceptions import ExtractException
 from learning_resources.etl.ownership import Pipeline, writing_as
+from learning_resources.etl.shadow import run_shadow
 from learning_resources.factories import (
     ContentFileFactory,
     ETLSourceOwnershipFactory,
@@ -23,7 +24,11 @@ from learning_resources.factories import (
     VideoChannelFactory,
     VideoPlaylistFactory,
 )
-from learning_resources.models import LearningResource, VideoChannel
+from learning_resources.models import (
+    ETLSourceOwnership,
+    LearningResource,
+    VideoChannel,
+)
 
 pytestmark = pytest.mark.django_db
 
@@ -561,6 +566,31 @@ def test_sync_podcasts_loads_and_unpublishes(warehouse_owns_podcasts):
     episode = LearningResource.objects.get(readable_id="guid-1")
     assert episode.podcast_episode.duration == "PT1H12M59S"
     assert episode.podcast_episode.rss == "<item><guid>guid-1</guid></item>"
+
+
+def test_sync_podcasts_as_a_shadow_compares_without_writing(warehouse_owns_podcasts):
+    """A shadow of the warehouse reaches the loaders' comparison and writes nothing"""
+    LearningResourceOfferorFactory.create(name="MIT Open Learning")
+    podcasts = [podcast_row()]
+    episodes = [episode_row("guid-1"), episode_row("guid-2")]
+    with writing_as(Pipeline.WAREHOUSE):
+        warehouse_media.sync_podcasts(podcasts, episodes)
+    ETLSourceOwnership.objects.filter(etl_source=ETLSource.podcast.name).update(
+        owner=Pipeline.LEGACY, shadow=Pipeline.WAREHOUSE
+    )
+    before = list(LearningResource.objects.order_by("id").values())
+
+    with writing_as(Pipeline.WAREHOUSE):
+        _, reports = run_shadow(
+            [(ETLSource.podcast.name, warehouse_media.PODCAST_TYPES)],
+            lambda: warehouse_media.sync_podcasts(podcasts, episodes),
+        )
+
+    assert len(reports) == len(warehouse_media.PODCAST_TYPES)
+    for report in reports:
+        assert report.error == ""
+        assert report.counts["unchanged"] == report.counts["before"] > 0
+    assert list(LearningResource.objects.order_by("id").values()) == before
 
 
 def test_sync_podcasts_does_nothing_unless_the_warehouse_owns_podcasts():
