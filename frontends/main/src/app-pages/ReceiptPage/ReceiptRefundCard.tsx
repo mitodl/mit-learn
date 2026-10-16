@@ -1,8 +1,8 @@
 import React, { useId } from "react"
 import { styled } from "ol-components"
 import { Button } from "@mitodl/smoot-design"
-import { RefundStatusEnum } from "@mitodl/mitxonline-api-axios/v2"
-import type { Order } from "@mitodl/mitxonline-api-axios/v2"
+import { RefundStatusEnum } from "@mitodl/mitxonline-api-axios/v0"
+import type { Order } from "@mitodl/mitxonline-api-axios/v0"
 import { ReceiptCard } from "./ReceiptCard"
 import { formatMoney, formatReceiptDate } from "./receiptUtils"
 

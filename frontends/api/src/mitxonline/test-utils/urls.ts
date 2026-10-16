@@ -1,12 +1,12 @@
+import type { OrdersApiOrdersHistoryListRequest } from "@mitodl/mitxonline-api-axios/v0"
 import type {
   CoursesApiApiV2CoursesListRequest,
-  CoursesApiCourseVariantRunsV3Request,
   CourseCertificatesApiCourseCertificatesRetrieveRequest,
   ProgramCertificatesApiProgramCertificatesRetrieveRequest,
-  OrdersApiOrdersHistoryListRequest,
   ProgramCollectionsApiProgramCollectionsListRequest,
   ProgramsApiProgramsListV2Request,
 } from "@mitodl/mitxonline-api-axios/v2"
+import type { CoursesApiCourseVariantRunsV3Request } from "@mitodl/mitxonline-api-axios/v3"
 import { queryify } from "ol-test-utilities"
 import mitxAxios from "../axios"
 
