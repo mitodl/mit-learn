@@ -791,6 +791,33 @@ class UnitContentFileFactory(DjangoModelFactory):
         model = models.UnitContentFile
 
 
+class CourseProfileConfigurationFactory(DjangoModelFactory):
+    """Factory for CourseProfileConfiguration"""
+
+    stage = FuzzyChoice(models.CourseProfileConfiguration.Stage.values)
+    llm_model = "gpt-4o-mini"
+    prompt = factory.Faker("paragraph")
+    temperature = 0.0
+
+    class Meta:
+        model = models.CourseProfileConfiguration
+        django_get_or_create = ("stage",)
+
+
+class ClaimExtractionFactory(DjangoModelFactory):
+    """Factory for ClaimExtraction"""
+
+    key = factory.Faker("sha256")
+    level = models.ClaimExtraction.Level.UNIT
+    extractor_version = "unit-000000000000"
+    model = "gpt-4o-mini"
+    output = factory.LazyFunction(dict)
+    unit = factory.SubFactory(UnitFactory)
+
+    class Meta:
+        model = models.ClaimExtraction
+
+
 class UserListFactory(DjangoModelFactory):
     """Factory for Learning Paths"""
 
