@@ -1,10 +1,13 @@
 """admin for learning_resources"""
 
+import json
+
 from django.contrib import admin
 from django.contrib.admin import TabularInline
 from django.contrib.admin.widgets import AdminTextareaWidget
 from django.contrib.postgres.fields import ArrayField
 from django.contrib.postgres.forms import SimpleArrayField
+from django.utils.html import format_html
 
 from learning_resources import models
 
@@ -391,9 +394,85 @@ class ETLSourceOwnershipAdmin(admin.ModelAdmin):
     """ETLSourceOwnership Admin"""
 
     model = models.ETLSourceOwnership
-    list_display = ("etl_source", "resource_type", "owner", "updated_on")
-    list_filter = ("etl_source", "owner")
+    list_display = ("etl_source", "resource_type", "owner", "shadow", "updated_on")
+    list_filter = ("etl_source", "owner", "shadow")
     search_fields = ("etl_source", "resource_type")
+
+
+class ETLShadowRunAdmin(admin.ModelAdmin):
+    """Read-only admin for the reports shadow runs save"""
+
+    model = models.ETLShadowRun
+    list_display = (
+        "created_on",
+        "etl_source",
+        "resource_type",
+        "pipeline",
+        "created",
+        "unpublished",
+        "updated",
+        "unchanged",
+        "failed",
+    )
+    list_filter = ("etl_source", "resource_type", "pipeline")
+    fields = (
+        "created_on",
+        "etl_source",
+        "resource_type",
+        "pipeline",
+        "error",
+        "counts_json",
+        "details_json",
+    )
+    readonly_fields = fields
+
+    def get_queryset(self, request):
+        """Leave the report bodies out of the list, which shows only counts"""
+        queryset = super().get_queryset(request)
+        if request.resolver_match.url_name.endswith("_changelist"):
+            return queryset.defer("details")
+        return queryset
+
+    def has_add_permission(self, request):  # noqa: ARG002
+        return False
+
+    def has_change_permission(self, request, obj=None):  # noqa: ARG002
+        return False
+
+    def has_delete_permission(self, request, obj=None):  # noqa: ARG002
+        return False
+
+    @admin.display(description="Created")
+    def created(self, obj):
+        return obj.counts.get("created")
+
+    @admin.display(description="Unpublished")
+    def unpublished(self, obj):
+        return obj.counts.get("unpublished")
+
+    @admin.display(description="Updated")
+    def updated(self, obj):
+        return obj.counts.get("updated")
+
+    @admin.display(description="Unchanged")
+    def unchanged(self, obj):
+        return obj.counts.get("unchanged")
+
+    @admin.display(boolean=True, description="Load failed")
+    def failed(self, obj):
+        return bool(obj.error)
+
+    @admin.display(description="Counts")
+    def counts_json(self, obj):
+        return _pretty_json(obj.counts)
+
+    @admin.display(description="Details")
+    def details_json(self, obj):
+        return _pretty_json(obj.details)
+
+
+def _pretty_json(value):
+    return format_html("<pre>{}</pre>", json.dumps(value, indent=2, sort_keys=True))
 
 
 admin.site.register(models.LearningResourceTopic, LearningResourceTopicAdmin)
@@ -422,3 +501,4 @@ admin.site.register(models.CredentialMetadata, CredentialMetadataAdmin)
 
 
 admin.site.register(models.ETLSourceOwnership, ETLSourceOwnershipAdmin)
+admin.site.register(models.ETLShadowRun, ETLShadowRunAdmin)

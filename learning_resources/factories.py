@@ -1007,6 +1007,7 @@ class ETLSourceOwnershipFactory(DjangoModelFactory):
     etl_source = factory.Faker("word")
     resource_type = constants.LearningResourceType.course.name
     owner = models.ETLSourceOwnership.Pipeline.LEGACY
+    shadow = ""
 
     class Meta:
         model = models.ETLSourceOwnership

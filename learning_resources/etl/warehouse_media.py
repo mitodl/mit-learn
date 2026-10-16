@@ -28,7 +28,7 @@ from learning_resources.constants import (
 from learning_resources.etl import loaders
 from learning_resources.etl.constants import ETLSource
 from learning_resources.etl.exceptions import ExtractException
-from learning_resources.etl.ownership import may_write
+from learning_resources.etl.ownership import RunMode, may_write, run_mode
 from learning_resources.etl.utils import iso8601_duration
 from learning_resources.etl.warehouse_guards import (
     refuse_empty,
@@ -59,11 +59,6 @@ PODCAST_TYPES = [
 def may_write_youtube() -> bool:
     """Whether the current pipeline owns the youtube playlists and videos"""
     return may_write(ETLSource.youtube.name, YOUTUBE_TYPES)
-
-
-def may_write_podcasts() -> bool:
-    """Whether the current pipeline owns the podcasts and their episodes"""
-    return may_write(ETLSource.podcast.name, PODCAST_TYPES)
 
 
 def transform_youtube_video(row: dict, offered_by_code: str | None) -> dict:
@@ -456,7 +451,7 @@ def sync_podcasts(
     Returns:
         int: the number of podcasts loaded
     """
-    if not may_write_podcasts():
+    if run_mode(ETLSource.podcast.name, PODCAST_TYPES) == RunMode.SKIP:
         return 0
 
     refuse_empty(podcasts=podcasts, episodes=episodes)
