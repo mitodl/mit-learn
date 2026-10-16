@@ -13,7 +13,7 @@ from django.db.models import Prefetch, Q
 
 from learning_resources.constants import VALID_TEXT_FILE_TYPES
 from learning_resources.etl.constants import ETLSource
-from learning_resources.etl.loaders import load_content_files
+from learning_resources.etl.loaders import load_content_files, load_course_units
 from learning_resources.etl.utils import (
     calc_checksum,
     excluded_olx_paths,
@@ -140,11 +140,17 @@ def process_course_archive(
     # none are left (a bulk deindex unpublished them, cleanup may have deleted
     # them since), the run is stale and must not skip the load. An empty
     # archive records archive_key with no checksum, so it still skips.
-    stale_run = (
-        bool(run.checksum) and not run.content_files.filter(published=True).exists()
+    has_published_files = run.content_files.filter(published=True).exists()
+    stale_run = bool(run.checksum) and not has_published_files
+    # Units are built only while an archive loads, so a run loaded before they
+    # existed loads once more. A recorded empty archive (no checksum) has no
+    # outline to build them from, so it keeps skipping.
+    missing_units = (
+        bool(run.checksum) and has_published_files and not run.units.exists()
     )
+    reload = overwrite or stale_run or missing_units
 
-    if run.archive_key == key and not overwrite and not stale_run:
+    if run.archive_key == key and not reload:
         log.debug("Archive key unchanged for %s, skipping download", key)
         return False
     with TemporaryDirectory() as export_tempdir:
@@ -156,7 +162,7 @@ def process_course_archive(
         except tarfile.ReadError:
             log.exception("Error reading tar file %s, skipping", course_tarpath)
             return True
-        if run.checksum == checksum and not overwrite and not stale_run:
+        if run.checksum == checksum and not reload:
             # unchanged content under a new key: record it to skip future downloads
             run.archive_key = key
             run.save(update_fields=["archive_key"])
@@ -164,9 +170,16 @@ def process_course_archive(
             return True
         try:
             failed_keys = []
+            units = []
+            unit_errors = []
             content_files_data = iter(
                 transform_content_files(
-                    course_tarpath, run, overwrite=overwrite, failed_keys=failed_keys
+                    course_tarpath,
+                    run,
+                    overwrite=overwrite,
+                    failed_keys=failed_keys,
+                    units=units,
+                    unit_errors=unit_errors,
                 )
             )
             first = next(content_files_data, None)
@@ -185,11 +198,17 @@ def process_course_archive(
                 run, chain([first], content_files_data), failed_keys=failed_keys
             )
             if content_files_ids:
-                run.checksum = checksum
-                run.archive_key = key
+                # Invalidate any previous receipt so unit failures are retried.
+                run.checksum = None
+                run.archive_key = None
                 run.save(update_fields=["checksum", "archive_key"])
-            # else: files yielded but none loaded — save nothing so the next
-            # sync retries
+                if unit_errors:
+                    log.error("Units not built for %s, will retry", key)
+                else:
+                    load_course_units(run, units)
+                    run.checksum = checksum
+                    run.archive_key = key
+                    run.save(update_fields=["checksum", "archive_key"])
         except:  # noqa: E722
             log.exception("Error ingesting OLX content data for %s", key)
     return True

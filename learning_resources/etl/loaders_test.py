@@ -41,6 +41,7 @@ from learning_resources.etl.loaders import (
     load_content_file,
     load_content_files,
     load_course,
+    load_course_units,
     load_courses,
     load_image,
     load_instructors,
@@ -104,6 +105,7 @@ from learning_resources.models import (
     PodcastEpisode,
     Program,
     TutorProblemFile,
+    Unit,
     Video,
 )
 from learning_resources.test_utils import set_up_topics
@@ -4331,3 +4333,81 @@ def test_load_learning_material(mocker, learning_material_exists):
     assert learning_material.url == content_file.url
 
     assert content_file.direct_learning_resource_id == learning_material.id
+
+
+def _unit_data(external_id, kind, files):
+    return {
+        "external_id": external_id,
+        "kind": kind,
+        "title": f"Title {external_id}",
+        "url": f"https://example.com/{external_id}",
+        "content_files": files,
+    }
+
+
+def test_load_course_units():
+    """Units are upserted in order, link only published files and drop when empty"""
+    run = LearningResourceRunFactory.create()
+    lecture, notes, problem = ContentFileFactory.create_batch(3, run=run)
+    unpublished = ContentFileFactory.create(run=run, published=False)
+    other_run_file = ContentFileFactory.create()
+
+    units_data = [
+        _unit_data("seq1", "unit", {lecture.key: "core", notes.key: "supplementary"}),
+        # links nothing published on this run, so it is dropped
+        _unit_data("seq_empty", "unit", {unpublished.key: "core", "gone": "core"}),
+        _unit_data("seq2", "unit", {problem.key: "assessment", notes.key: "core"}),
+        _unit_data(
+            "context", "context", {other_run_file.key: "core", lecture.key: "core"}
+        ),
+    ]
+    load_course_units(run, units_data)
+
+    units = list(run.units.order_by("id"))
+    assert [(u.external_id, u.kind, u.position) for u in units] == [
+        ("seq1", "unit", 0),
+        ("seq2", "unit", 1),
+        ("context", "context", None),
+    ]
+    assert [
+        (link.content_file_id, link.relation, link.position)
+        for link in units[0].unitcontentfile_set.all()
+    ] == [(lecture.id, "core", 0), (notes.id, "supplementary", 1)]
+    assert [link.position for link in units[1].unitcontentfile_set.all()] == [0, 1]
+    # the context has no order
+    assert [link.position for link in units[2].unitcontentfile_set.all()] == [None]
+    assert set(notes.units.all()) == {units[0], units[1]}
+    assert list(units[2].content_files.all()) == [lecture]
+
+    # a reload keeps the ids of surviving units and replaces their links
+    unit_ids = load_course_units(
+        run, [_unit_data("seq2", "unit", {lecture.key: "core"})]
+    )
+    assert unit_ids == [units[1].id]
+    assert list(run.units.all()) == [units[1]]
+    assert list(units[1].content_files.all()) == [lecture]
+    assert Unit.objects.get(id=units[1].id).position == 0
+
+
+def test_load_course_units_keeps_units_without_data():
+    """An outline that could not be read leaves the run's units alone"""
+    run = LearningResourceRunFactory.create()
+    file = ContentFileFactory.create(run=run)
+    load_course_units(run, [_unit_data("seq1", "unit", {file.key: "core"})])
+    assert load_course_units(run, []) == list(run.units.values_list("id", flat=True))
+    assert run.units.count() == 1
+
+
+def test_load_course_units_keeps_empty_context():
+    """The context unit is kept with no files, unlike an empty sequential"""
+    run = LearningResourceRunFactory.create()
+    load_course_units(
+        run,
+        [
+            _unit_data("seq1", "unit", {"gone": "core"}),
+            _unit_data("context", "context", {}),
+        ],
+    )
+    unit = run.units.get()
+    assert (unit.external_id, unit.kind, unit.position) == ("context", "context", None)
+    assert not unit.content_files.exists()
