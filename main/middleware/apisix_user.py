@@ -121,7 +121,8 @@ def resolve_apisix_user(
 
     Returns:
         (user, created) tuple. user is None if the identity is ambiguous, or if
-        it's unknown and MITOL_APIGATEWAY_USERINFO_CREATE is disabled.
+        it's unknown and MITOL_APIGATEWAY_USERINFO_CREATE is disabled. A legacy
+        user matched by email gets global_id set before it's returned.
 
     """
     User = get_user_model()
@@ -138,22 +139,45 @@ def resolve_apisix_user(
     ).select_related("profile")
 
     try:
-        if settings.MITOL_APIGATEWAY_USERINFO_CREATE:
-            return candidates.get_or_create(defaults=user_fields)
-        return candidates.get(), False
+        try:
+            user, created = candidates.get(), False
+        except User.DoesNotExist:
+            # Only fall back to a case-insensitive email match when nothing
+            # matched exactly, so a legacy row differing only in email case
+            # doesn't make an already-linked user ambiguous. The global_id match
+            # stays in so a row a concurrent request just linked or created is
+            # found, including on get_or_create's retry after an IntegrityError.
+            candidates = User.objects.filter(
+                Q(global_id=global_id) | Q(global_id__isnull=True, email__iexact=email)
+            ).select_related("profile")
+            if settings.MITOL_APIGATEWAY_USERINFO_CREATE:
+                user, created = candidates.get_or_create(defaults=user_fields)
+            else:
+                user, created = candidates.get(), False
     except User.MultipleObjectsReturned:
         log.exception(
-            "Ambiguous APISIX user identity for global_id=%s and email=%s",
+            "resolve_apisix_user: ambiguous_apisix_identity global_id=%s email=%s "
+            "user_ids=%s",
             global_id,
             email,
+            list(candidates.values_list("id", flat=True)),
         )
+        return None, False
     except User.DoesNotExist:
         log.debug(
             "resolve_apisix_user: User %s not found and user creation is disabled",
             global_id,
         )
+        return None, False
 
-    return None, False
+    if user.global_id is None:
+        # Link a legacy user matched by email to its Keycloak identity even when
+        # MITOL_APIGATEWAY_USERINFO_UPDATE is off, otherwise it stays matched by
+        # email on every request and is never linked.
+        user.global_id = global_id
+        user.save(update_fields=["global_id", "updated_on"])
+
+    return user, created
 
 
 def get_user_from_apisix_headers(
