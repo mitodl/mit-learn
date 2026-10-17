@@ -898,46 +898,6 @@ def reachable_published_course_ids(program_ids):
     return _course_ids_by_program(relationships, LearningResourceType.course.name)
 
 
-def programs_needing_children_heal(program_ids):
-    """Return the subset of the given program ids whose marketing page lacks a
-    children section but whose children content is now available.
-
-    A program qualifies only when it has a reachable published (or test-mode)
-    child course with a non-empty marketing page, which guarantees re-scraping
-    will populate the section and prevents childless programs from being
-    re-scraped every run. Read-only and id-level only.
-    """
-    program_ids = list(program_ids)
-    if not program_ids:
-        return set()
-    candidate_ids = set(
-        ContentFile.objects.filter(
-            learning_resource_id__in=program_ids,
-            file_type=MARKETING_PAGE_FILE_TYPE,
-        )
-        .exclude(content__contains=PROGRAM_CHILDREN_CONTENT_MARKER)
-        .values_list("learning_resource_id", flat=True)
-    )
-    if not candidate_ids:
-        return set()
-    reachable = reachable_published_course_ids(candidate_ids)
-    all_course_ids = set().union(*reachable.values())
-    course_ids_with_pages = set(
-        ContentFile.objects.filter(
-            learning_resource_id__in=all_course_ids,
-            file_type=MARKETING_PAGE_FILE_TYPE,
-            published=True,
-        )
-        .exclude(content="")
-        .values_list("learning_resource_id", flat=True)
-    )
-    return {
-        program_id
-        for program_id, course_ids in reachable.items()
-        if course_ids & course_ids_with_pages
-    }
-
-
 def build_program_children_content(learning_resource):
     """Build markdown content describing a program's children.
 
