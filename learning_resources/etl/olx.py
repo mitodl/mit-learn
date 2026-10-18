@@ -345,6 +345,8 @@ class OlxArchive:
         self.valid_file_types = valid_file_types
         # file names only, so the tree is never held in memory
         self._listings: dict[Path, dict[str, list[Path]]] = {}
+        # static files each static text page names, scanned once per page
+        self._links_by_page: dict[Path, set[Path]] = {}
 
     @cached_property
     def is_olx(self) -> bool:
@@ -384,12 +386,13 @@ class OlxArchive:
     def release_dates(self) -> dict[Path, datetime]:
         """
         Release date of each file whose every visible path is dated; empty for
-        non-OLX trees and self-paced runs, which ignore block starts
+        non-OLX trees and self-paced runs, which ignore block starts. Dates follow
+        links through reachable static text pages; an undated route wins.
         """
         if not self.is_olx or (self._course_policy or {}).get("self_paced"):
             return {}
         dates = self._block_release_dates()
-        if (self.root / "static").is_dir():
+        if (self.root / "static").is_dir() and (dates or self._inline_dated):
             self._date_static_assets(dates)
         return dates
 
@@ -618,6 +621,13 @@ class OlxArchive:
         return {path for path in self.root.glob("about/**/*") if path.name not in shown}
 
     @cached_property
+    def _static_names(self) -> _NameIndex:
+        """_static_files' names, indexed once for every scan"""
+        return _NameIndex(
+            _normalize_asset_ref(path.name) for path in self._static_files
+        )
+
+    @cached_property
     def _static_files(self) -> list[Path]:
         """The files under static/, in path order"""
         return [
@@ -743,9 +753,7 @@ class OlxArchive:
             self._reference_sources(skip), [] if confirmed else elements
         )
         texts.append(self._live_updates)
-        found = _NameIndex(
-            _normalize_asset_ref(path.name) for path in self._static_files
-        ).first_starts(*_reference_index(texts))
+        found = self._static_names.first_starts(*_reference_index(texts))
         guess = not (confirmed or complete)
 
         referenced, unreferenced = set(), set()
@@ -1102,6 +1110,29 @@ class OlxArchive:
             dates.pop(path, None)
         return dates
 
+    def _follow_static_pages(self, referenced: set[Path]) -> set[Path]:
+        """Follow only reached text assets; visiting each once also breaks cycles."""
+        pending = list(referenced)
+        while pending:
+            for path in self._page_links(pending.pop()) - referenced:
+                referenced.add(path)
+                pending.append(path)
+        return referenced
+
+    def _page_links(self, page: Path) -> set[Path]:
+        """Return the static files a static text page names; empty for other files"""
+        if page.suffix.lower() not in REFERENCE_SCAN_EXTENSIONS:
+            return set()
+        if page not in self._links_by_page:
+            texts, video_ids, _complete = self._texts([page], [])
+            found = self._static_names.first_starts(*_reference_index(texts))
+            self._links_by_page[page] = {
+                path
+                for path in self._static_files
+                if _refers_to(path, found, video_ids)
+            }
+        return self._links_by_page[page]
+
     def _date_static_assets(self, dates: dict[Path, datetime]) -> None:
         """
         Date static assets in place: undated if any undated visible file names
@@ -1110,22 +1141,20 @@ class OlxArchive:
         skip = set(dates) | self._unreachable
         # a guessed match keeps an asset ingested but must not mark it undated
         undated_refs, _ = self._static_references(skip, confirmed=True)
+        undated_refs = self._follow_static_pages(undated_refs)
         for path in undated_refs:
             dates.pop(path, None)
         static_files = [path for path in self._static_files if path not in undated_refs]
-        name_index = _NameIndex(
-            _normalize_asset_ref(path.name) for path in static_files
-        )
         matched: set[Path] = set()
         inline = self._inline_dated
         for date in sorted(set(dates.values()) | set(inline)):
             files = [path for path, released in dates.items() if released == date]
             existing = [path for path in files if path.is_file()]
             texts, video_ids, _complete = self._texts(existing, inline.get(date, []))
-            found = name_index.first_starts(*_reference_index(texts))
-            for path in static_files:
-                if path in matched:
-                    continue
-                if _refers_to(path, found, video_ids):
-                    dates[path] = min(dates.get(path, date), date)
-                    matched.add(path)
+            found = self._static_names.first_starts(*_reference_index(texts))
+            referenced = {
+                path for path in static_files if _refers_to(path, found, video_ids)
+            }
+            for path in self._follow_static_pages(referenced) - undated_refs - matched:
+                dates[path] = min(dates.get(path, date), date)
+                matched.add(path)

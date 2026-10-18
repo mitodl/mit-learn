@@ -569,6 +569,50 @@ def test_release_dates_assets(tmp_path):
     )
 
 
+@pytest.mark.parametrize("release", [None, START_FUTURE, START_LATER])
+@pytest.mark.parametrize("link", ["none", "staff_only", "visible"])
+def test_release_dates_through_static_pages(tmp_path, release, link):
+    """Only reachable pages propagate dates, including chains and cycles."""
+    olx = _dated_olx(tmp_path)
+    reachable = link == "visible"
+    chapter = "ch_undated" if release is None else "ch_both_parent"
+    start = "" if release is None else _start(release)
+    staff = 'visible_to_staff_only="true"' if link == "staff_only" else ""
+    _write_olx(
+        olx,
+        f"chapter/{chapter}.xml",
+        f'<chapter {start} {staff}><html url_name="references"/></chapter>',
+    )
+    _write_html(
+        olx,
+        "references",
+        "" if link == "none" else '<a href="/static/resources.html">resources</a>',
+    )
+    _write_olx(
+        olx,
+        "chapter/ch_dated.xml",
+        f'<chapter {_start(START_LATER)}><html url_name="direct"/></chapter>',
+    )
+    _write_html(olx, "direct", '<a href="/static/handout.pdf">handout</a>')
+    _write_olx(olx, "static/resources.html", '<a href="second.html">next</a>')
+    _write_olx(
+        olx,
+        "static/second.html",
+        '<a href="resources.html">back</a><a href="handout.pdf">handout</a>',
+    )
+    _write_olx(olx, "static/handout.pdf", "pdf")
+
+    expected = release if reachable else START_LATER
+    _assert_release_dates(
+        olx,
+        {
+            "static/handout.pdf": expected,
+            "static/resources.html": release if reachable else None,
+            "static/second.html": release if reachable else None,
+        },
+    )
+
+
 def test_release_dates_assets_dated_inline_block_in_undated_parent(tmp_path):
     """A dated inline block dates what it names; its undated parent's text doesn't"""
     olx = _dated_olx(tmp_path)
