@@ -192,30 +192,20 @@ def test_resource_search_still_finds_a_title(resource_search, searchable_resourc
 
 
 @pytest.mark.django_db
-def test_resource_search_takes_a_non_numeric_term(
-    resource_search, searchable_resources
-):
-    """
-    A term that is not a number does not reach the id lookup.
-
-    Naming `=id` in `search_fields` instead would raise on every word typed
-    into the same box, which is most of what is typed into it.
-    """
-    assert resource_search("nothing matches this", searchable_resources) == []
-
-
-@pytest.mark.django_db
-@pytest.mark.parametrize("term", ["²", "₁", "①"])
-def test_resource_search_takes_a_digit_int_cannot_read(
+@pytest.mark.parametrize(
+    "term",
+    [
+        "nothing matches this",
+        # `int` reads none of these either, though `isdigit` answers for them.
+        "²",
+        "₁",
+        "①",
+    ],
+)
+def test_resource_search_takes_a_term_that_is_not_a_number(
     resource_search, searchable_resources, term
 ):
-    """
-    A digit `int` will not read is searched for, not raised on.
-
-    `isdigit` answers for all of these, so guarding the lookup with it would
-    let them reach `int` and raise -- a 500 from the admin search box, and from
-    every autocomplete behind it, for a character someone can simply type.
-    """
+    """A term `int` cannot read is searched for by the `search_fields` alone"""
     assert resource_search(term, searchable_resources) == []
 
 
@@ -229,7 +219,10 @@ def test_resource_is_named_by_its_title():
     searching is to recognise what comes back.
     """
     resource = LearningResourceFactory.create(
-        title="Fluid Mechanics", readable_id="course-v1:MITx+2.006"
+        is_course=True,
+        create_course=False,
+        title="Fluid Mechanics",
+        readable_id="course-v1:MITx+2.006",
     )
 
-    assert str(resource) == "Fluid Mechanics (course-v1:MITx+2.006)"
+    assert str(resource) == "Fluid Mechanics (Course: course-v1:MITx+2.006)"

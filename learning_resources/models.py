@@ -586,14 +586,15 @@ class LearningResource(TimestampedModel):
     view_count = models.PositiveBigIntegerField(null=True, default=None)
 
     def __str__(self):
-        """Name the resource by its title, with the readable id to tell apart
-        the ones that share a title -- a course and its own archived copy, say.
+        """Name the resource by its title, with the kind of resource it is and
+        the readable id to tell apart the ones that share a title -- a course
+        and its own archived copy, say.
 
         Without this a resource reads as "LearningResource object (123)"
         wherever Django renders one, which is every admin dropdown that points
         at it: the whole point of searching for one is to recognise it.
         """
-        return f"{self.title} ({self.readable_id})"
+        return f"{self.title} ({self.get_resource_type_display()}: {self.readable_id})"
 
     @property
     def audience(self) -> str | None:
