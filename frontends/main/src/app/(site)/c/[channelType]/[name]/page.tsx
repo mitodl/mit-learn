@@ -96,11 +96,14 @@ const Page: React.FC<AppPageProps<"/c/[channelType]/[name]">> = async ({
      * out not to exist.
      *
      * Not conditional on the redesign flag, which a server component cannot
-     * read. The row is the redesign's, so this is a request the old topic
-     * page has no use for.
+     * read. The row is the redesign's, so this is a request the old topic and
+     * department pages have no use for.
      */
-    channelType === ChannelTypeEnum.Topic &&
-      queryClient.prefetchQuery(channelQueries.featured(featuredParams(name))),
+    (channelType === ChannelTypeEnum.Topic ||
+      channelType === ChannelTypeEnum.Department) &&
+      queryClient.prefetchQuery(
+        channelQueries.featured(featuredParams(channelType, name)),
+      ),
   ])
 
   const offerors =

@@ -399,6 +399,58 @@ describe("Channel Pages, Topic only", () => {
   }, 10000)
 })
 
+describe("Channel Pages, Department only", () => {
+  /* The department page is the topic page's, behind a flag of its own. */
+  beforeEach(() => {
+    jest
+      .mocked(useFeatureFlagEnabled)
+      .mockImplementation(
+        (flag) => flag === FeatureFlags.DepartmentPageRedesign,
+      )
+  })
+
+  test("draws the redesigned hero, and reads its own featured list", async () => {
+    const { channel } = setupApis({
+      search_filter: "department=Theater+Arts",
+      channel_type: ChannelTypeEnum.Department,
+    })
+    const featured = factories.learningResources.resources({ count: 2 })
+    setMockResponse.get(
+      `${urls.channels.featured(channel.channel_type, channel.name)}?limit=12`,
+      featured,
+    )
+
+    renderWithProviders(<ChannelPage />, {
+      url: `/c/${channel.channel_type}/${channel.name}`,
+    })
+
+    await screen.findByRole("heading", { level: 1, name: channel.title })
+    /* The department's own trail, not the topics one. */
+    await screen.findByText("Browse by Academic Department")
+    /* The row is the channel's own curated list, so the titles in it are the
+       ones the department's featured endpoint answered with -- the point of
+       the whole exercise. */
+    for (const resource of featured.results) {
+      await screen.findByText(resource.title)
+    }
+  }, 10000)
+
+  test("draws the old page with the flag off", async () => {
+    jest.mocked(useFeatureFlagEnabled).mockImplementation(() => false)
+    const { channel } = setupApis({
+      search_filter: "department=Theater+Arts",
+      channel_type: ChannelTypeEnum.Department,
+    })
+
+    renderWithProviders(<ChannelPage />, {
+      url: `/c/${channel.channel_type}/${channel.name}`,
+    })
+
+    await screen.findByRole("heading", { level: 1, name: channel.title })
+    expect(screen.queryByText("Featured")).toBe(null)
+  }, 10000)
+})
+
 describe("Channel Pages, Unit only", () => {
   it("Displays the channel title, banner", async () => {
     const { channel } = setupApis({

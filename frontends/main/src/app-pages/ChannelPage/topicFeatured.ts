@@ -1,6 +1,6 @@
 /**
- * What the topic hero's Featured row asks for, kept free of React so the
- * server route can prefetch it under the same key the row will read.
+ * What a redesigned channel hero's Featured row asks for, kept free of React
+ * so the server route can prefetch it under the same key the row will read.
  *
  * The route has to: the hero is drawn differently with no Featured row to
  * carry, so without the answer in hand it paints as though there were one and
@@ -18,10 +18,22 @@ import { ChannelTypeEnum } from "api/v0"
  */
 const FEATURED_COUNT = 12
 
-const featuredParams = (name: string) => ({
-  channel_type: ChannelTypeEnum.Topic,
+/**
+ * The channel types whose pages draw a Featured row.
+ *
+ * The endpoint reads `featured_list` off whichever channel the path names, so
+ * it answers for any type; these are the ones with a hero to draw the answer
+ * in.
+ */
+type FeaturedChannelType =
+  | typeof ChannelTypeEnum.Topic
+  | typeof ChannelTypeEnum.Department
+
+const featuredParams = (channelType: FeaturedChannelType, name: string) => ({
+  channel_type: channelType,
   name,
   limit: FEATURED_COUNT,
 })
 
 export { FEATURED_COUNT, featuredParams }
+export type { FeaturedChannelType }
