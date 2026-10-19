@@ -54,7 +54,7 @@ jobs:
         run: sudo apt-get update -y
 
       - name: Apt install
-        run: cat Aptfile | sudo xargs apt-get install
+        run: sudo apt-get install -y pkg-config libffi-dev libpq-dev libxmlsec1-dev
 
       - name: Install uv
         uses: astral-sh/setup-uv@20cfd1bf945f4377ade1205e4dbc17946fc9a30d # v10.0.1

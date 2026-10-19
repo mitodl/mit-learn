@@ -17,7 +17,7 @@ QDRANT_EMBEDDINGS_TASK_LOOKBACK_WINDOW = EMBEDDING_SCHEDULE_MINUTES + 60
 
 DEV_ENV = get_bool("DEV_ENV", False)  # noqa: FBT003
 USE_CELERY = True
-REDIS_URL = get_string("REDIS_URL", get_string("REDISCLOUD_URL", None))
+REDIS_URL = get_string("REDIS_URL", None)
 CELERY_BROKER_URL = get_string("CELERY_BROKER_URL", None)
 CELERY_RESULT_BACKEND = get_string("CELERY_RESULT_BACKEND", None)
 # Celery's 24h default lets reindex chord fan-outs (thousands of subtask

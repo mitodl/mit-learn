@@ -34,7 +34,6 @@ const nextConfig = {
     return [
       /* Static assets moved from /static, though image paths are sometimes
        * returned on the API, e.g. /api/v0/channels/type/unit/ocw/
-       * Also rewrites requests for /static/hash.txt
        */
       {
         source: "/static/:path*",
