@@ -613,6 +613,39 @@ def test_release_dates_through_static_pages(tmp_path, release, link):
     )
 
 
+@pytest.mark.parametrize(
+    ("linker", "release"),
+    [("undated", None), ("earlier", START_FUTURE), ("static_page", None)],
+)
+def test_release_dates_longer_name_does_not_date_asset(tmp_path, linker, release):
+    """A link to notes.pdf.txt, however reached, leaves notes.pdf its own date"""
+    olx = _dated_olx(tmp_path)
+    link = '<a href="/static/notes.pdf.txt?v=1">notes</a>'
+    start = _start(release) if release else ""
+    _write_olx(
+        olx,
+        "chapter/ch_undated.xml",
+        f'<chapter {start}><html url_name="linker"/></chapter>',
+    )
+    if linker == "static_page":
+        _write_html(olx, "linker", '<a href="/static/resources.html">more</a>')
+        _write_olx(olx, "static/resources.html", link)
+    else:
+        _write_html(olx, "linker", link)
+    _write_olx(
+        olx,
+        "chapter/ch_dated.xml",
+        f'<chapter {_start(START_LATER)}><html url_name="dated"/></chapter>',
+    )
+    _write_html(olx, "dated", "<p>Read notes.pdf.</p>")
+    _write_olx(olx, "static/notes.pdf", "pdf")
+    _write_olx(olx, "static/notes.pdf.txt", "txt")
+
+    _assert_release_dates(
+        olx, {"static/notes.pdf": START_LATER, "static/notes.pdf.txt": release}
+    )
+
+
 def test_release_dates_assets_dated_inline_block_in_undated_parent(tmp_path):
     """A dated inline block dates what it names; its undated parent's text doesn't"""
     olx = _dated_olx(tmp_path)
@@ -964,6 +997,24 @@ def test_olx_archive_partial_names_are_not_references(tmp_path, reference, kept)
         tmp_path, reference, **{"final_exam.srt": "1", "exam.srt": "2"}
     )
     assert ("static/exam.srt" in _ingested(olx)) is kept
+
+
+@pytest.mark.parametrize(
+    ("reference", "name", "kept"),
+    [
+        # a longer name is a different file
+        ('<a href="/static/notes.pdf.txt">n</a>', "notes.pdf", False),
+        ('<a href="/static/notes.pdf?v=1#p2">n</a>', "notes.pdf", True),
+        # a sentence's final period does not lengthen the name
+        ("<p>Read notes.pdf.</p>", "notes.pdf", True),
+        # a period inside a name still matches before a separator
+        ('<a href="/static/Lec.%201.pdf">l</a>', "Lec. 1.pdf", True),
+    ],
+)
+def test_olx_archive_names_end_at_a_break(tmp_path, reference, name, kept):
+    """A reference names a file only if the name ends where the reference does"""
+    olx = _reference_olx(tmp_path, reference, **{name: "1", f"{name}.txt": "2"})
+    assert (f"static/{name}" in _ingested(olx)) is kept
 
 
 def test_olx_archive_keeps_reuploaded_asset_keys(tmp_path):

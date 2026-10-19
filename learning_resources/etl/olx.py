@@ -6,7 +6,7 @@ import json
 import logging
 import os
 import re
-from bisect import bisect_right
+from bisect import bisect_left, bisect_right
 from collections import defaultdict
 from collections.abc import Iterable
 from datetime import UTC, datetime
@@ -45,7 +45,7 @@ LEGACY_TRANSCRIPT_RE = re.compile(
 
 # A reference spells an asset name with edX's punctuation substitutions (a
 # space, +, or @ written as _) or without them, so punctuation is stripped
-# before comparing, but still marks where a name can start.
+# before comparing, but still marks where a name can start and end.
 NAME_BREAK = "\x00"
 SEPARATORS = re.compile(r"(?:[^\w.\-]|_)+")
 # _NameIndex looks names up by this many leading characters
@@ -190,6 +190,12 @@ def _reference_index(texts: list[str]) -> tuple[str, list[int]]:
     return "".join(segments), list(accumulate(map(len, segments), initial=0))
 
 
+def _ends_at(blob: str, starts: list[int], end: int) -> bool:
+    """Whether a name ending at end is followed by a break, or a sentence's period"""
+    index = bisect_left(starts, end)
+    return index < len(starts) and not blob[end : starts[index]].strip(".")
+
+
 class _NameIndex:
     """
     Normalized names to find in _reference_index text. Each name start is
@@ -207,19 +213,24 @@ class _NameIndex:
 
     def first_starts(self, blob: str, starts: list[int]) -> dict[str, int]:
         """
-        Map each name blob spells to the first name start it is spelled at, so
-        final_exam.srt doesn't match exam.srt
+        Map each name blob spells all of between name breaks to the first name
+        start it is spelled at, so final_exam.srt doesn't match exam.srt and
+        notes.pdf.txt doesn't match notes.pdf
         """
         found: dict[str, int] = {}
+
+        def spelled(name: str, start: int) -> bool:
+            return name not in found and _ends_at(blob, starts, start + len(name))
+
         for start in starts:
             for name in self._by_prefix.get(
                 blob[start : start + NAME_PREFIX_LENGTH], ()
             ):
-                if name not in found and blob.startswith(name, start):
+                if blob.startswith(name, start) and spelled(name, start):
                     found[name] = start
             for length, names in self._short.items():
                 name = blob[start : start + length]
-                if name in names and name not in found:
+                if name in names and spelled(name, start):
                     found[name] = start
         return found
 
