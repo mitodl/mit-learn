@@ -1,39 +1,30 @@
 import React from "react"
-import { styled, SimpleSelect } from "ol-components"
+import { styled, SimpleSelect, theme } from "ol-components"
 import { Checkbox } from "@mitodl/smoot-design"
 import type { UseResourceSearchParamsResult } from "@mitodl/course-search-utils"
 import { SearchField } from "@/page-components/SearchField/SearchField"
 import { getCertificationTypeName } from "@mitodl/course-search-utils"
-import { CertificationTypeEnum, DeliveryEnum } from "api"
+import { CertificationTypeEnum, DeliveryEnum, ResourceTypeGroupEnum } from "api"
+import type { LearningResourcesSearchResponse } from "api"
+
+type Aggregations = LearningResourcesSearchResponse["metadata"]["aggregations"]
 
 /**
- * The search and filter bar on a topic page, per the design.
+ * The search and filter row on a topic page: the search box and three
+ * controls, rather than the facet sidebar the other channels use. A topic
+ * page narrows by format, certificate and price, and the rest of the facets
+ * are not offered here.
  *
- * One white card holding the search box and three controls, rather than the
- * facet sidebar the other channels use: a topic page narrows by format,
- * certificate and price, and the rest of the facets are not offered here.
- *
- * The red edge and the lift are the design's -- a 2px rule on the leading edge
- * and a soft shadow, which is what separates the card from the grey ground it
- * sits on.
+ * The card around it belongs to the results header it shares with the tabs
+ * and the applied filters -- see `TopicSearchCard` in `SearchDisplay`.
  */
-const Card = styled.div(({ theme }) => ({
+const Card = styled.div({
   display: "flex",
   alignItems: "center",
   gap: "24px",
-  padding: "24px",
-  /* The rule sits inside the design's 24px inset rather than adding to it. */
-  paddingLeft: "22px",
-  borderRadius: "8px",
-  borderLeft: `2px solid ${theme.custom.colors.lightRed}`,
-  backgroundColor: theme.custom.colors.white,
-  filter: "drop-shadow(0px 3px 2.5px rgba(120, 147, 172, 0.1))",
-  [theme.breakpoints.down("md")]: {
-    flexDirection: "column",
-    alignItems: "stretch",
-    gap: "16px",
-  },
-}))
+  height: "48px",
+  width: "100%",
+})
 
 /**
  * The design's search box: 486x48, and everything about the frame -- the
@@ -45,8 +36,13 @@ const Card = styled.div(({ theme }) => ({
  * both a size smaller here than the field draws them elsewhere.
  */
 const StyledSearchField = styled(SearchField)(({ theme }) => ({
-  width: "486px",
-  flexShrink: 0,
+  width: "626px",
+  /* The elastic one of the two: the controls beside it are a fixed set of
+     fixed-width labels, so between `md` and the ~1080px the design's width
+     needs, the room has to come from the field. `min-width` because a flex
+     item will not shrink past its content otherwise, and the field's content
+     is a long placeholder. */
+  minWidth: 0,
   gap: "8px",
   input: {
     ...theme.typography.body2,
@@ -61,8 +57,15 @@ const Facets = styled.div(({ theme }) => ({
   alignItems: "center",
   /* 8px either side of each hairline, as the design spaces them. */
   gap: "16px",
-  flex: "1 0 0",
-  minWidth: 0,
+  /**
+   * Sized by what it holds, and given the rest of the row on top. A zero
+   * basis would take only the room left after the field's 626px, which
+   * between `md` and ~1080px is less than the controls measure -- they then
+   * run out of the card and take the page's width with them. Growing from
+   * their own width instead keeps the controls against the right edge where
+   * there is room, and leaves the field to give some up where there is not.
+   */
+  flex: "1 0 auto",
   [theme.breakpoints.down("md")]: {
     flexWrap: "wrap",
   },
@@ -83,8 +86,11 @@ const Divider = styled.div(({ theme }) => ({
 const FacetSelect = styled(SimpleSelect)(({ theme }) => ({
   ...theme.typography.body2,
   color: theme.custom.colors.silverGrayDark,
-  /* The design's control is the label and a chevron, with no field chrome. */
+  /* The design's control is the label and a chevron, with no field chrome.
+     The background goes with the border: left white it reads as a box
+     against the card's gradient, which is the chrome by another name. */
   ".MuiOutlinedInput-notchedOutline": { border: "none" },
+  "&&": { backgroundColor: "transparent" },
   /**
    * The design's 36px control: 12px either side of an 18px line, 4px between
    * the label and a 20px chevron, and 12px from the chevron to the right edge.
@@ -116,21 +122,152 @@ const FreeCheckbox = styled(Checkbox)(({ theme }) => ({
   },
 }))
 
-/** "Format" in the design is the `delivery` facet -- see `getFacetManifest`. */
-const DELIVERY_OPTIONS = Object.values(DeliveryEnum).map((value) => ({
-  value,
-  label: value
-    .split("_")
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
-    .join("-"),
+/**
+ * A row in a facet's menu: what it is, and how many results carry it.
+ *
+ * The box is drawn rather than wired: the menu item it sits in is the
+ * control, and carries the selected state to a screen reader itself, so a
+ * second checkbox here would be a second thing to operate and to announce.
+ */
+const MenuRow = styled.span({
+  display: "flex",
+  alignItems: "center",
+  gap: "8px",
+  width: "100%",
+})
+
+const MenuBox = styled.span<{ checked: boolean }>(({ theme, checked }) => ({
+  flexShrink: 0,
+  boxSizing: "border-box",
+  width: "20px",
+  height: "20px",
+  borderRadius: "2px",
+  border: `1px solid ${checked ? theme.custom.colors.mitRed : theme.custom.colors.silverGray}`,
+  backgroundColor: checked ? theme.custom.colors.mitRed : "transparent",
+  /* The tick, drawn as two sides of a rotated box. */
+  "::after": checked
+    ? {
+        content: '""',
+        display: "block",
+        width: "5px",
+        height: "9px",
+        margin: "2px auto",
+        border: `solid ${theme.custom.colors.white}`,
+        borderWidth: "0 2px 2px 0",
+        transform: "rotate(45deg)",
+      }
+    : undefined,
 }))
 
-const CERTIFICATION_OPTIONS = Object.values(CertificationTypeEnum).map(
-  (value) => ({
-    value,
-    label: getCertificationTypeName(value) || value,
-  }),
-)
+const MenuCount = styled.span(({ theme }) => ({
+  ...theme.typography.body3,
+  color: theme.custom.colors.silverGrayDark,
+  marginLeft: "auto",
+  paddingLeft: "8px",
+}))
+
+/** The menu's own paper, which renders in a portal. */
+const FACET_MENU_PROPS = {
+  /**
+   * Hung below the control rather than over it. Select's default menu lines
+   * the chosen option up with the control, which puts the list across the
+   * button it came from; these are a short list under a short label, so the
+   * button stays visible and the list reads as belonging to it.
+   */
+  variant: "menu" as const,
+  anchorOrigin: { vertical: "bottom" as const, horizontal: "left" as const },
+  transformOrigin: { vertical: "top" as const, horizontal: "left" as const },
+  PaperProps: {
+    sx: {
+      width: "270px",
+      borderRadius: "8px",
+      boxShadow: "1px 3px 20px 0 rgba(0, 0, 0, 0.12)",
+
+      padding: "16px",
+      border: `1px solid ${theme.custom.colors.lightGray1}`,
+      "& .MuiList-root": {
+        display: "flex",
+        flexDirection: "column",
+        gap: "12px",
+        padding: 0,
+      },
+      /* The box is what says a row is chosen. The shared menu item says it
+         again by filling the row red and turning the words white, which this
+         design does not do -- doubled to outweigh it, since the two rules are
+         otherwise of equal weight and its own lands later. */
+      "&& .MuiMenuItem-root, && .MuiMenuItem-root.Mui-selected, && .MuiMenuItem-root.Mui-selected:hover":
+        {
+          padding: 0,
+          minHeight: "unset",
+          backgroundColor: "transparent",
+          color: theme.custom.colors.darkGray2,
+        },
+    },
+  },
+}
+
+/**
+ * A facet's options, each with its own count out of the current search.
+ *
+ * A value no result carries is left out: ticking it would narrow the search
+ * to nothing, so there is nothing to offer. One already ticked stays however
+ * it counts, because this menu is the only place it can be unticked --
+ * dropping it would strand whichever filter emptied the search.
+ */
+const facetOptions = (
+  values: readonly string[],
+  labelFor: (value: string) => string,
+  selected: string[],
+  counts: Record<string, number> | undefined,
+) =>
+  values
+    .filter(
+      (value) =>
+        /* Until the first search is back there are no counts to go on, so
+           nothing is ruled out yet -- see `aggregations` on the props. */
+        !counts || (counts[value] ?? 0) > 0 || selected.includes(value),
+    )
+    .map((value) => ({
+      value,
+      label: (
+        <MenuRow>
+          <MenuBox checked={selected.includes(value)} aria-hidden />
+          {labelFor(value)}
+          <MenuCount>{counts?.[value] ?? 0}</MenuCount>
+        </MenuRow>
+      ),
+    }))
+
+/** The counts a search came back with, by facet value. */
+const countsFor = (aggregations: Aggregations | undefined, name: string) =>
+  aggregations &&
+  Object.fromEntries(
+    (aggregations[name] ?? []).map((bucket) => [bucket.key, bucket.doc_count]),
+  )
+
+/** "Format" in the design is the `delivery` facet -- see `getFacetManifest`. */
+const DELIVERY_VALUES = Object.values(DeliveryEnum)
+const deliveryLabel = (value: string) =>
+  value
+    .split("_")
+    .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+    .join("-")
+
+const CERTIFICATION_VALUES = Object.values(CertificationTypeEnum)
+const certificationLabel = (value: string) =>
+  getCertificationTypeName(value) || value
+
+/**
+ * Resource Category's values, which unlike the other two facets' are not a
+ * fixed set: there is no enum of them, so what the search came back with is
+ * the list. A value the reader has already ticked is added back, because a
+ * search it narrows to nothing returns no bucket for it, and this menu is the
+ * only place it can be unticked.
+ */
+const resourceCategoryValues = (
+  counts: Record<string, number> | undefined,
+  selected: string[],
+) => [...new Set([...Object.keys(counts ?? {}), ...selected])]
 
 type TopicSearchFilterBarProps = {
   currentText: string
@@ -140,6 +277,24 @@ type TopicSearchFilterBarProps = {
   params: UseResourceSearchParamsResult["params"]
   setParamValue: UseResourceSearchParamsResult["setParamValue"]
   toggleParamValue: UseResourceSearchParamsResult["toggleParamValue"]
+  /**
+   * Counts from the current search, shown beside each option and deciding
+   * which of them there are to show.
+   *
+   * Undefined until the first search is back, which is not the same as a
+   * search that counted nothing: with no counts yet nothing is ruled out, so
+   * the controls stand with their full range rather than emptying and filling
+   * as the page loads.
+   */
+  aggregations: Aggregations | undefined
+  /**
+   * The resource type group the tabs have narrowed to, which decides whether
+   * Resource Category is one of the controls: it sorts learning materials
+   * into videos, podcasts and the rest, and says nothing about a course or a
+   * programme. `getFacetManifest` admits the facet on the same condition, so
+   * the bar and the drawer offer it over exactly the same results.
+   */
+  resourceTypeGroup: string | null
 }
 
 const TopicSearchFilterBar: React.FC<TopicSearchFilterBarProps> = ({
@@ -150,11 +305,119 @@ const TopicSearchFilterBar: React.FC<TopicSearchFilterBarProps> = ({
   params,
   setParamValue,
   toggleParamValue,
+  aggregations,
+  resourceTypeGroup,
 }) => {
   const delivery = params.delivery ?? []
   const certification = params.certification_type ?? []
+  const resourceCategory = params.resource_category ?? []
   /* `free` is a boolean facet rather than a list of values. */
   const isFree = !!params.free
+  const resourceCategoryCounts = countsFor(aggregations, "resource_category")
+  const showResourceCategory =
+    resourceTypeGroup === ResourceTypeGroupEnum.LearningMaterial
+  /**
+   * Free is offered only where something is free, as the sidebar pages offer
+   * it: the facet counts what is and what is not, and `MultiFacetGroup` draws
+   * the switch only for a value the search returned a bucket for, so a search
+   * with nothing free in it has no Free to tick.
+   */
+  const freeCounts = countsFor(aggregations, "free")
+  const showFree = !freeCounts || (freeCounts["true"] ?? 0) > 0 || isFree
+
+  const deliveryOptions = facetOptions(
+    DELIVERY_VALUES,
+    deliveryLabel,
+    delivery,
+    countsFor(aggregations, "delivery"),
+  )
+  const certificationOptions = facetOptions(
+    CERTIFICATION_VALUES,
+    certificationLabel,
+    certification,
+    countsFor(aggregations, "certification_type"),
+  )
+  const resourceCategoryOptions = facetOptions(
+    resourceCategoryValues(resourceCategoryCounts, resourceCategory),
+    (value) => value,
+    resourceCategory,
+    resourceCategoryCounts,
+  )
+
+  /**
+   * The controls there are to draw, which is not always all of them.
+   *
+   * A facet the search has nothing under is left out rather than offered: a
+   * menu would open on an empty panel, and a combobox that expands to nothing
+   * is worse than no combobox at all, while Free would be a switch that only
+   * ever empties the results. A value already ticked counts as something to
+   * offer, so narrowing to nothing never takes away the control that did it.
+   */
+  const controls = [
+    deliveryOptions.length > 0 ? (
+      <FacetSelect
+        key="delivery"
+        size="small"
+        name="delivery"
+        aria-label="Format"
+        value={delivery}
+        multiple
+        renderValue={() => "Format"}
+        MenuProps={FACET_MENU_PROPS}
+        options={deliveryOptions}
+        onChange={(event) => {
+          setParamValue("delivery", event.target.value as string[])
+          setPage(1)
+        }}
+      />
+    ) : null,
+    certificationOptions.length > 0 ? (
+      <FacetSelect
+        key="certification_type"
+        size="small"
+        name="certification_type"
+        aria-label="Certificate"
+        value={certification}
+        multiple
+        renderValue={() => "Certificate"}
+        MenuProps={FACET_MENU_PROPS}
+        options={certificationOptions}
+        onChange={(event) => {
+          setParamValue("certification_type", event.target.value as string[])
+          setPage(1)
+        }}
+      />
+    ) : null,
+    showResourceCategory && resourceCategoryOptions.length > 0 ? (
+      <FacetSelect
+        key="resource_category"
+        size="small"
+        name="resource_category"
+        aria-label="Resource Category"
+        value={resourceCategory}
+        multiple
+        renderValue={() => "Resource Category"}
+        MenuProps={FACET_MENU_PROPS}
+        options={resourceCategoryOptions}
+        onChange={(event) => {
+          setParamValue("resource_category", event.target.value as string[])
+          setPage(1)
+        }}
+      />
+    ) : null,
+    showFree ? (
+      <FreeCheckbox
+        key="free"
+        label="Free"
+        checked={isFree}
+        onChange={(event) => {
+          toggleParamValue("free", "true", event.target.checked)
+          setPage(1)
+        }}
+      />
+    ) : null,
+  ].filter((control): control is React.ReactElement => control !== null)
+
   return (
     <Card data-testid="topic-search-filter-bar">
       <StyledSearchField
@@ -168,42 +431,16 @@ const TopicSearchFilterBar: React.FC<TopicSearchFilterBarProps> = ({
         setPage={setPage}
       />
       <Facets>
-        <FacetSelect
-          size="small"
-          name="delivery"
-          aria-label="Format"
-          value={delivery}
-          multiple
-          renderValue={() => "Format"}
-          options={DELIVERY_OPTIONS}
-          onChange={(event) => {
-            setParamValue("delivery", event.target.value as string[])
-            setPage(1)
-          }}
-        />
-        <Divider />
-        <FacetSelect
-          size="small"
-          name="certification_type"
-          aria-label="Certificate"
-          value={certification}
-          multiple
-          renderValue={() => "Certificate"}
-          options={CERTIFICATION_OPTIONS}
-          onChange={(event) => {
-            setParamValue("certification_type", event.target.value as string[])
-            setPage(1)
-          }}
-        />
-        <Divider />
-        <FreeCheckbox
-          label="Free"
-          checked={isFree}
-          onChange={(event) => {
-            toggleParamValue("free", "true", event.target.checked)
-            setPage(1)
-          }}
-        />
+        {/* Spaced by the hairlines between them, which belong between two
+            controls rather than to either -- so they are drawn here, around
+            whichever controls there turned out to be, rather than written
+            between them and left behind when one drops out. */}
+        {controls.map((control, index) => (
+          <React.Fragment key={control.key}>
+            {index > 0 ? <Divider /> : null}
+            {control}
+          </React.Fragment>
+        ))}
       </Facets>
     </Card>
   )

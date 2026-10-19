@@ -375,7 +375,7 @@ describe("ContractLearnersPage", () => {
     },
   )
 
-  test("a learner who withheld consent shows No consent given", async () => {
+  test("a learner who declined shows Declined", async () => {
     const { org, contract, orgSlug } = setup()
     const contractId = String(contract.id)
     setMockResponse.get(
@@ -401,7 +401,36 @@ describe("ContractLearnersPage", () => {
 
     const name = await screen.findByText("Private Learner")
     const row = rowOf(name)
-    expect(within(row).getByText("No consent given")).toBeInTheDocument()
+    expect(within(row).getByText("Declined")).toBeInTheDocument()
+  })
+
+  test("a learner with no recorded decision shows Consent not recorded", async () => {
+    const { org, contract, orgSlug } = setup()
+    const contractId = String(contract.id)
+    setMockResponse.get(
+      mitxUrls.organization.managerOrganizationsList(),
+      paginate([org]),
+    )
+    mockTotal(contractId, 1)
+    mockCourseRuns(contractId)
+    mockList(
+      contractId,
+      [
+        analyticsFactories.withheldLearnerProgress({
+          full_name: "Silent Learner",
+          outcomes_consent_status: "not_recorded",
+        }),
+      ],
+      {},
+      { outcomes_withheld_count: 1, total_count: 1 },
+    )
+
+    renderWithProviders(
+      <ContractLearnersPage orgSlug={orgSlug} contractSlug={contract.slug} />,
+    )
+
+    const row = rowOf(await screen.findByText("Silent Learner"))
+    expect(within(row).getByText("Consent not recorded")).toBeInTheDocument()
   })
 
   test("the consent banner counts withheld rows", async () => {
@@ -427,7 +456,8 @@ describe("ContractLearnersPage", () => {
       <ContractLearnersPage orgSlug={orgSlug} contractSlug={contract.slug} />,
     )
 
-    await screen.findByText(/3 of these 10 enrollments/)
+    const banner = await screen.findByText(/3 of these 10 enrollments/)
+    expect(banner).toHaveTextContent(/“Declined” or “Consent not recorded”/)
   })
 
   describe("CSV export", () => {
@@ -522,7 +552,7 @@ describe("ContractLearnersPage", () => {
       // and should export the same label, not the raw API enum.
       expect(csv).toContain("Certificate")
       expect(csv).not.toMatch(/,certified,/)
-      expect(csv).toContain("No consent given")
+      expect(csv).toContain("Declined")
       // Raw, not the screen's "Sep 30, 2026", so a spreadsheet reads it as a
       // date; the withheld row exports empty rather than a fabricated stub.
       expect(csv).toContain("Last activity")
@@ -1333,7 +1363,7 @@ describe("ContractLearnersPage", () => {
 
     /**
      * The field is null on a withheld row, so the label must not appear
-     * beside "No consent given" — it would assert an outcome the learner
+     * beside "Declined" — it would assert an outcome the learner
      * declined to share.
      */
     test("says nothing about a learner who withheld consent", async () => {
@@ -1344,7 +1374,7 @@ describe("ContractLearnersPage", () => {
       ])
 
       const row = rowOf(await screen.findByText("Private Learner"))
-      expect(within(row).getByText("No consent given")).toBeInTheDocument()
+      expect(within(row).getByText("Declined")).toBeInTheDocument()
       expect(within(row).queryByText("Needs attention")).not.toBeInTheDocument()
     })
 

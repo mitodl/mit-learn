@@ -57,7 +57,8 @@ const STATUS_SYMBOL: Record<
   certificate: { Icon: RiAwardLine, tone: "green" },
   "in-progress": { Icon: RiProgress4Line, tone: "blue" },
   "not-started": { Icon: RiSubtractLine, tone: "gray" },
-  "not-shared": { Icon: RiLockLine, tone: "gray" },
+  declined: { Icon: RiLockLine, tone: "gray" },
+  "not-recorded": { Icon: RiLockLine, tone: "gray" },
   unknown: { Icon: RiQuestionLine, tone: "gray" },
 }
 
@@ -73,7 +74,9 @@ const LEGEND_STATUSES: DisplayStatus[] = [
   "certificate",
   "in-progress",
   "not-started",
-  "not-shared",
+  "declined",
+  "not-recorded",
+  "unknown",
 ]
 
 const ScrollRegion = styled.div({

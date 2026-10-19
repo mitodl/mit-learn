@@ -11,7 +11,7 @@ import { styled } from "ol-components"
 import TopicChannelTemplate from "./TopicChannelTemplate"
 import useTopicPageRedesign from "./useTopicPageRedesign"
 
-const TOPICS_LABEL = "Browse by Topic"
+const TOPICS_LABEL = "Topic"
 const DEPARTMENTS_LABEL = "Browse by Academic Department"
 const UNITS_LABEL = "MIT Units"
 const PATHWAYS_LABEL = "Pathways"

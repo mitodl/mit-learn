@@ -254,6 +254,33 @@ if (
                 "schedule": crontab(minute=0, hour=9),  # 5:00am EDT / 4:00am EST
                 "kwargs": {"full_refresh": True},
             },
+            # No-ops until ETLSourceOwnership names the warehouse for their
+            # pairs. Once a day, after 10:00 UTC, because the data platform
+            # builds the views once a day starting at 06:00 UTC. update-podcasts
+            # runs at 06:00 and 23:00 UTC with update-podcast-transcripts 30
+            # minutes after each, so once podcasts are flipped the transcript
+            # job runs about 13.5 hours after the load.
+            "warehouse-sync-podcasts-every-1-days": {
+                "task": "learning_resources.tasks.SyncPodcastsTask",
+                "schedule": crontab(minute=0, hour=10),
+                "kwargs": {"full_refresh": True},
+            },
+            "warehouse-sync-youtube-every-1-days": {
+                "task": "learning_resources.tasks.SyncYouTubeTask",
+                "schedule": crontab(minute=30, hour=10),
+                "kwargs": {"full_refresh": True},
+            },
+            # Programs look their courses up, so they follow the courses.
+            "warehouse-sync-xpro-courses-every-1-days": {
+                "task": "learning_resources.tasks.SyncXproCoursesTask",
+                "schedule": crontab(minute=0, hour=11),
+                "kwargs": {"full_refresh": True},
+            },
+            "warehouse-sync-xpro-programs-every-1-days": {
+                "task": "learning_resources.tasks.SyncXproProgramsTask",
+                "schedule": crontab(minute=30, hour=11),
+                "kwargs": {"full_refresh": True},
+            },
         }
     )
 
