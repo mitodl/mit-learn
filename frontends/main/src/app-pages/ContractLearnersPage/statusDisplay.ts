@@ -54,9 +54,9 @@ const getDisplayStatus = (row: LearnerProgress): DisplayStatus => {
     default:
       // A row that consented but carries a `completion_status` outside the
       // four known values — e.g. a value the API added after this type was
-      // written. Distinct from "declined" and "not-recorded": that's a consent state, this is
-      // an unrecognized one, and conflating them would misreport a consenting
-      // learner as having withheld consent.
+      // written. Distinct from "declined" and "not-recorded": those are
+      // consent states, this is an unrecognized one, and conflating them
+      // would misreport a consenting learner as having withheld consent.
       return "unknown"
   }
 }

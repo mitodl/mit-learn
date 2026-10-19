@@ -437,7 +437,8 @@ describe("ContractLearnersPage", () => {
       <ContractLearnersPage orgSlug={orgSlug} contractSlug={contract.slug} />,
     )
 
-    await screen.findByText(/3 of these 10 enrollments/)
+    const banner = await screen.findByText(/3 of these 10 enrollments/)
+    expect(banner).toHaveTextContent(/“Declined” or “Consent not recorded”/)
   })
 
   describe("CSV export", () => {
