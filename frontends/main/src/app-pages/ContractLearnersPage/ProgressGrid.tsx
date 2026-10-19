@@ -26,6 +26,7 @@ import {
   analyticsContractQueries,
   type CompletionStatusFilter,
   type CourseRun,
+  type LearnerWithEnrollments,
 } from "api/analytics-hooks/organizations"
 import {
   EmptyTableMessage,
@@ -39,16 +40,9 @@ import {
   getDisplayStatus,
   type DisplayStatus,
 } from "./statusDisplay"
-import { pivotLearners, type PivotedLearner } from "./pivotLearners"
 
+/** The `/learners` endpoint's maximum page size, in learners. */
 const PAGE_SIZE = 25
-const FETCH_PAGE_SIZE = 500
-/**
- * The most enrollments the grid will fetch. Raising it costs one request per
- * `FETCH_PAGE_SIZE` rows and a larger in-memory pivot; see the TODO on
- * `analyticsContractQueries.learnerProgressAll` for the real fix.
- */
-const MAX_ENROLLMENTS = 2000
 
 const LEARNER_COLUMN_WIDTH = 280
 const MODULE_COLUMN_WIDTH = 160
@@ -147,6 +141,8 @@ const HeaderLearnerCell = styled(LearnerCell)(({ theme }) => ({
 }))
 
 const HeaderModuleCell = styled(ModuleCell)(({ theme }) => ({
+  padding: 0,
+  paddingLeft: "20px",
   ...theme.typography.subtitle2,
   display: "-webkit-box",
   WebkitBoxOrient: "vertical",
@@ -224,25 +220,30 @@ type ProgressGridProps = {
 }
 
 const GridLearnerCell: React.FC<{
-  learner: PivotedLearner
+  learner: LearnerWithEnrollments
+  needsAttentionCount: number
   scrolled: boolean
-}> = ({ learner, scrolled }) => (
+}> = ({ learner, needsAttentionCount, scrolled }) => (
   <LearnerCell role="rowheader" $scrolled={scrolled}>
     <Avatar aria-hidden="true">
-      {learner.name ? initials(learner.name) : <RiUserLine size={16} />}
+      {learner.full_name ? (
+        initials(learner.full_name)
+      ) : (
+        <RiUserLine size={16} />
+      )}
     </Avatar>
     <LearnerText>
-      {learner.name && (
-        <LearnerName component="div">{learner.name}</LearnerName>
+      {learner.full_name && (
+        <LearnerName component="div">{learner.full_name}</LearnerName>
       )}
       {learner.email && (
         <LearnerEmail component="div">{learner.email}</LearnerEmail>
       )}
-      {learner.needsAttentionCount > 0 ? (
+      {needsAttentionCount > 0 ? (
         <NeedsAttentionBadge
           component="span"
-          label={`Needs attention in ${learner.needsAttentionCount} ${
-            learner.needsAttentionCount === 1 ? "module" : "modules"
+          label={`Needs attention in ${needsAttentionCount} ${
+            needsAttentionCount === 1 ? "module" : "modules"
           }`}
         />
       ) : null}
@@ -264,6 +265,27 @@ const StatusSymbol: React.FC<{ status: DisplayStatus }> = ({ status }) => {
   )
 }
 
+/** The title is clamped to three lines; only then is it focusable and given a tooltip with the full name. */
+const ModuleHeader: React.FC<{ title: string }> = ({ title }) => {
+  const ref = useRef<HTMLDivElement>(null)
+  const [truncated, setTruncated] = useState(false)
+  useEffect(() => {
+    const el = ref.current
+    if (el) setTruncated(el.scrollHeight > el.clientHeight)
+  }, [title])
+  return (
+    <Tooltip title={truncated ? title : ""}>
+      <HeaderModuleCell
+        ref={ref}
+        role="columnheader"
+        tabIndex={truncated ? 0 : undefined}
+      >
+        {title}
+      </HeaderModuleCell>
+    </Tooltip>
+  )
+}
+
 const ProgressGrid: React.FC<ProgressGridProps> = ({
   orgUuid,
   contractId,
@@ -278,9 +300,8 @@ const ProgressGrid: React.FC<ProgressGridProps> = ({
   onPageChange,
   emptyMessage,
 }) => {
-  const params = useMemo(
+  const filters = useMemo(
     () => ({
-      sort: "full_name" as const,
       ...(search ? { search } : {}),
       ...(completionStatus ? { completion_status: completionStatus } : {}),
       ...(needsAttentionOnly ? { needs_attention: true } : {}),
@@ -289,43 +310,58 @@ const ProgressGrid: React.FC<ProgressGridProps> = ({
   )
 
   const query = useQuery({
-    ...analyticsContractQueries.learnerProgressAll(
-      orgUuid,
-      contractId,
-      params,
-      { maxRows: MAX_ENROLLMENTS, pageSize: FETCH_PAGE_SIZE },
-    ),
+    ...analyticsContractQueries.learners(orgUuid, contractId, {
+      ...filters,
+      limit: PAGE_SIZE,
+      offset: (page - 1) * PAGE_SIZE,
+    }),
     placeholderData: keepPreviousData,
   })
 
   const learners = useMemo(
-    () => pivotLearners(query.data?.data ?? []),
+    () =>
+      (query.data?.data ?? []).map((learner) => ({
+        learner: {
+          ...learner,
+          full_name: learner.full_name?.trim() || null,
+        },
+        enrollments: new Map(
+          learner.enrollments.map((enrollment) => [
+            enrollment.courserun_readable_id,
+            enrollment,
+          ]),
+        ),
+        needsAttentionCount: learner.enrollments.filter(
+          (enrollment) => enrollment.needs_attention,
+        ).length,
+      })),
     [query.data],
   )
-  const totalPages = Math.ceil(learners.length / PAGE_SIZE)
-  const safePage = Math.min(page, Math.max(totalPages, 1))
-  const visible = learners.slice(
-    (safePage - 1) * PAGE_SIZE,
-    safePage * PAGE_SIZE,
-  )
-  const enrollmentsFiltered = !!completionStatus || needsAttentionOnly
+  const totalPages = Math.ceil((query.data?.total_count ?? 0) / PAGE_SIZE)
   const isStale = query.isPlaceholderData || query.isFetching
   const isBusy = query.isLoading || isStale
 
+  useEffect(() => {
+    if (!isBusy && totalPages > 0 && page > totalPages) {
+      onPageChange(totalPages)
+    }
+  }, [isBusy, page, totalPages, onPageChange])
+
   const [scrolled, setScrolled] = useState(false)
   const [announcement, setAnnouncement] = useState("")
-  const lastParams = useRef<string | null>(null)
+  const lastFilters = useRef<string | null>(null)
   useEffect(() => {
     if (isBusy || !query.data) return
-    const key = JSON.stringify(params)
-    const pageText = `Page ${safePage} of ${Math.max(totalPages, 1)}`
+    const key = JSON.stringify(filters)
+    const total = query.data.total_count
+    const pageText = `Page ${page} of ${Math.max(totalPages, 1)}`
     setAnnouncement(
-      lastParams.current !== null && lastParams.current !== key
-        ? `${learners.length} ${learners.length === 1 ? "learner" : "learners"}. ${pageText}`
+      lastFilters.current !== null && lastFilters.current !== key
+        ? `${total} ${total === 1 ? "learner" : "learners"}. ${pageText}`
         : `Showing ${pageText.toLowerCase()}`,
     )
-    lastParams.current = key
-  }, [isBusy, query.data, params, learners.length, safePage, totalPages])
+    lastFilters.current = key
+  }, [isBusy, query.data, filters, page, totalPages])
 
   const hasError = query.isError || courseRunsFailed
   const isRetrying = query.isFetching || courseRunsFetching
@@ -382,14 +418,6 @@ const ProgressGrid: React.FC<ProgressGridProps> = ({
 
   return (
     <>
-      {query.data?.truncated ? (
-        <Alert severity="info">
-          Showing the first {MAX_ENROLLMENTS.toLocaleString()} of{" "}
-          {query.data.total_count.toLocaleString()} enrollments. Narrow your
-          search or filters to see the rest.
-        </Alert>
-      ) : null}
-
       {liveRegion}
 
       <TableCard>
@@ -406,8 +434,8 @@ const ProgressGrid: React.FC<ProgressGridProps> = ({
             </li>
           ))}
           <li>
-            <Muted>{enrollmentsFiltered ? "—" : "N/A"}</Muted>
-            {enrollmentsFiltered ? "Hidden by filter" : "Not enrolled"}
+            <Muted>N/A</Muted>
+            Not enrolled
           </li>
           <li>
             <AttentionMark style={{ margin: 0 }}>
@@ -435,13 +463,10 @@ const ProgressGrid: React.FC<ProgressGridProps> = ({
                   Learner
                 </HeaderLearnerCell>
                 {columns.map((run) => (
-                  <HeaderModuleCell
+                  <ModuleHeader
                     key={run.courserun_id}
-                    role="columnheader"
                     title={run.courserun_title}
-                  >
-                    {run.courserun_title}
-                  </HeaderModuleCell>
+                  />
                 ))}
               </HeaderRow>
             </div>
@@ -460,7 +485,7 @@ const ProgressGrid: React.FC<ProgressGridProps> = ({
                     </div>
                   </GridRow>
                 ))
-              ) : visible.length === 0 ? (
+              ) : learners.length === 0 ? (
                 <GridRow role="row">
                   <EmptyTableMessage
                     component="div"
@@ -472,49 +497,49 @@ const ProgressGrid: React.FC<ProgressGridProps> = ({
                   </EmptyTableMessage>
                 </GridRow>
               ) : (
-                visible.map((learner) => (
-                  <GridRow key={learner.key} role="row">
-                    <GridLearnerCell learner={learner} scrolled={scrolled} />
-                    {columns.map((run) => {
-                      const enrollment = learner.enrollments.get(
-                        run.courserun_id,
-                      )
-                      if (!enrollment) {
+                learners.map(
+                  ({ learner, enrollments, needsAttentionCount }) => (
+                    <GridRow key={learner.learner_id} role="row">
+                      <GridLearnerCell
+                        learner={learner}
+                        needsAttentionCount={needsAttentionCount}
+                        scrolled={scrolled}
+                      />
+                      {columns.map((run) => {
+                        const enrollment = enrollments.get(run.courserun_id)
+                        if (!enrollment) {
+                          return (
+                            <ModuleCell key={run.courserun_id} role="cell">
+                              <Muted>
+                                N/A
+                                <VisuallyHidden>, not enrolled</VisuallyHidden>
+                              </Muted>
+                            </ModuleCell>
+                          )
+                        }
+                        const status = getDisplayStatus(enrollment)
                         return (
                           <ModuleCell key={run.courserun_id} role="cell">
-                            <Muted>
-                              {enrollmentsFiltered ? "—" : "N/A"}
-                              <VisuallyHidden>
-                                {enrollmentsFiltered
-                                  ? "Hidden by the current filter"
-                                  : ", not enrolled"}
-                              </VisuallyHidden>
-                            </Muted>
+                            <StatusSymbol status={status} />
+                            {enrollment.needs_attention ? (
+                              <Tooltip title={attentionReason(status)}>
+                                <AttentionMark tabIndex={0}>
+                                  <RiErrorWarningLine
+                                    aria-hidden="true"
+                                    size={16}
+                                  />
+                                  <VisuallyHidden>
+                                    , needs attention: {attentionReason(status)}
+                                  </VisuallyHidden>
+                                </AttentionMark>
+                              </Tooltip>
+                            ) : null}
                           </ModuleCell>
                         )
-                      }
-                      const status = getDisplayStatus(enrollment)
-                      return (
-                        <ModuleCell key={run.courserun_id} role="cell">
-                          <StatusSymbol status={status} />
-                          {enrollment.needs_attention ? (
-                            <Tooltip title={attentionReason(status)}>
-                              <AttentionMark tabIndex={0}>
-                                <RiErrorWarningLine
-                                  aria-hidden="true"
-                                  size={16}
-                                />
-                                <VisuallyHidden>
-                                  , needs attention: {attentionReason(status)}
-                                </VisuallyHidden>
-                              </AttentionMark>
-                            </Tooltip>
-                          ) : null}
-                        </ModuleCell>
-                      )
-                    })}
-                  </GridRow>
-                ))
+                      })}
+                    </GridRow>
+                  ),
+                )
               )}
             </div>
           </Grid>
@@ -522,13 +547,13 @@ const ProgressGrid: React.FC<ProgressGridProps> = ({
         <TableFooter>
           <TableFootnote component="p">
             {learners.length > 0
-              ? `Page ${safePage} of ${Math.max(totalPages, 1)}`
+              ? `Page ${page} of ${Math.max(totalPages, 1)}`
               : ""}
           </TableFootnote>
           {totalPages > 1 ? (
             <Pagination
               count={totalPages}
-              page={safePage}
+              page={page}
               shape="rounded"
               size="small"
               onChange={(_event, value) => onPageChange(value)}

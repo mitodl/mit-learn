@@ -1,4 +1,4 @@
-import type { LearnerProgress } from "api/analytics-hooks/organizations"
+import type { LearnerEnrollment } from "api/analytics-hooks/organizations"
 
 /**
  * What the status pill shows, mapped directly from the API's
@@ -33,7 +33,7 @@ const DISPLAY_STATUS_LABEL: Record<DisplayStatus, string> = {
   unknown: "Unknown",
 }
 
-const getDisplayStatus = (row: LearnerProgress): DisplayStatus => {
+const getDisplayStatus = (row: LearnerEnrollment): DisplayStatus => {
   // Consent is checked before the status itself: the API nulls the outcome
   // fields when it is withheld, so a null here is ambiguous on its own.
   if (!row.outcomes_shared) {
