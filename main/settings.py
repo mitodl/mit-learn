@@ -1047,6 +1047,13 @@ CREDENTIAL_METADATA_LLM_TIMEOUT = get_int(
     name="CREDENTIAL_METADATA_LLM_TIMEOUT", default=120
 )
 
+# Course profile LLM calls read up to ~100k tokens of course material and
+# return tens of claims with evidence, so they take minutes, not seconds.
+COURSE_PROFILE_LLM_TIMEOUT = get_int(name="COURSE_PROFILE_LLM_TIMEOUT", default=600)
+# How many times one course profile call is made before giving up on a
+# response that doesn't validate against its schema
+COURSE_PROFILE_LLM_ATTEMPTS = get_int(name="COURSE_PROFILE_LLM_ATTEMPTS", default=2)
+
 # OpenTelemetry configuration (consumed by mitol-django-observability).
 # Telemetry turns on when any of OTEL_EXPORTER_OTLP_TRACES_ENDPOINT,
 # OTEL_EXPORTER_OTLP_METRICS_ENDPOINT or OTEL_EXPORTER_OTLP_ENDPOINT is set in
