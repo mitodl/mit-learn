@@ -138,12 +138,14 @@ class OlxArchive:
         *,
         valid_file_types: list[str] = VALID_TEXT_FILE_TYPES,
     ):
-        """etl_source decides whether the about page is shown; None hides it"""
+        """
+        etl_source is the platform the archive came from. Only OLL serves the
+        course about page, so about/ files are excluded for any other source,
+        including None.
+        """
         self.root = Path(root)
         self.etl_source = etl_source
         self.valid_file_types = valid_file_types
-        # each reference source is read and parsed once
-        self._sources_by_file: dict[Path, tuple[str, set[str] | None]] = {}
 
     @cached_property
     def is_olx(self) -> bool:
@@ -181,6 +183,8 @@ class OlxArchive:
 
     def excluded_keys(self, run: LearningResourceRun) -> set[str]:
         """Keys of excluded files, minus any key an ingested path shares"""
+        # each path is keyed once; the subtraction is needed because "foo bar.pdf"
+        # and "foo_bar.pdf" share a key, and that row stays if either is ingested
         return {
             get_edx_module_id(str(path), run)
             for path in self.text_files
@@ -211,7 +215,8 @@ class OlxArchive:
             if Path(filename).suffix.lower() in self.valid_file_types
         ]
 
-    @cached_property
+    # not cached, like _blocks: an inline export holds the whole tree here
+    @property
     def _course(self) -> Element | None:
         """The root <course> pointer, or None when the tree is not an OLX export"""
         return self._parse_block("", "course")
@@ -226,7 +231,9 @@ class OlxArchive:
         except (FileNotFoundError, NotADirectoryError):
             return None
 
-    @cached_property
+    # not cached, like _live_updates: parsed trees and file text would stay in
+    # memory for as long as the archive does, i.e. through every extraction
+    @property
     def _blocks(self) -> list[tuple[str, str, Element, bool]]:
         """
         Course tree blocks as (tag, url_name, element, staff_only), once per
@@ -370,7 +377,7 @@ class OlxArchive:
         """Files whose text may legitimately refer to a static asset"""
         return [path for path in self._reference_candidates if path not in skip]
 
-    @cached_property
+    @property
     def _live_updates(self) -> str:
         """Text of announcements not marked deleted"""
         try:
@@ -391,20 +398,16 @@ class OlxArchive:
         are None for malformed XML: "unknown", so callers keep every legacy
         transcript rather than drop one whose video they failed to read.
         """
-        if path not in self._sources_by_file:
-            text = path.read_text(errors="ignore")
-            ids: set[str] | None = set()
-            if path.suffix.lower() == ".xml":
-                # parse the file, not the lenient text, so bad bytes still fail
-                try:
-                    ids = self._video_ids_of(ElementTree.parse(path).getroot())
-                except ElementTree.ParseError:
-                    log.warning(
-                        "Malformed XML in %s, keeping all legacy transcripts", path
-                    )
-                    ids = None
-            self._sources_by_file[path] = (text, ids)
-        return self._sources_by_file[path]
+        text = path.read_text(errors="ignore")
+        ids: set[str] | None = set()
+        if path.suffix.lower() == ".xml":
+            # parse the file, not the lenient text, so bad bytes still fail
+            try:
+                ids = self._video_ids_of(ElementTree.parse(path).getroot())
+            except ElementTree.ParseError:
+                log.warning("Malformed XML in %s, keeping all legacy transcripts", path)
+                ids = None
+        return text, ids
 
     def _texts(self, sources: list[Path]) -> tuple[list[str], set[str] | None]:
         """

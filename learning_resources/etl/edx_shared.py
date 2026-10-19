@@ -6,7 +6,7 @@ from itertools import chain
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from defusedxml import ElementTree
+from defusedxml import DefusedXmlException, ElementTree
 from django.conf import settings
 from django.core.cache import caches
 from django.db.models import Prefetch, Q
@@ -435,7 +435,8 @@ def unpublish_excluded_content_files(
             archive = OlxArchive(olx_path, etl_source)
             try:
                 excluded_keys = archive.excluded_keys(run)
-            except ElementTree.ParseError:
+            # one unreadable archive must not stop the rest of the backfill
+            except (ElementTree.ParseError, DefusedXmlException, OSError):
                 log.exception("Malformed OLX in %s, skipping", key)
                 continue
         # scoped to this run: keys embed the run_id, but never rely on that alone

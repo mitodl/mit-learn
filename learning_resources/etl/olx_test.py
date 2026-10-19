@@ -325,6 +325,21 @@ def _reference_olx(tmp_path, html="<p>no links</p>", **static_files):
     return olx
 
 
+def test_olx_archive_keeps_no_parsed_trees_or_text(tmp_path):
+    """Ingestion holds the archive through every extraction, so it keeps only paths"""
+    olx = _reference_olx(
+        tmp_path,
+        html='<a href="/static/notes.pdf">course body</a>',
+        **{"notes.pdf": "x"},
+    )
+    archive = OlxArchive(olx)
+    assert archive.paths
+
+    cached = repr(vars(archive))
+    assert "<Element" not in cached
+    assert "course body" not in cached
+
+
 @pytest.mark.parametrize(
     ("reference", "kept"),
     [

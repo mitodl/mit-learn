@@ -9,6 +9,7 @@ from zoneinfo import ZoneInfo
 
 import pytest
 from defusedxml import ElementTree
+from defusedxml.common import EntitiesForbidden
 
 from learning_resources.constants import PlatformType
 from learning_resources.etl.constants import ETLSource
@@ -1947,13 +1948,20 @@ def test_unpublish_excluded_content_files_nothing_hidden(
     mock_deindex_tasks.opensearch.assert_not_called()
 
 
+@pytest.mark.parametrize(
+    "error",
+    [
+        ElementTree.ParseError("bad"),
+        EntitiesForbidden("x", None, None, None, None, None),
+        PermissionError("denied"),
+    ],
+)
 def test_unpublish_excluded_content_files_malformed_archive(
-    staff_only_run, mock_deindex_tasks, mocker
+    staff_only_run, mock_deindex_tasks, mocker, error
 ):
-    """A malformed archive is skipped without touching its content files"""
+    """An unreadable archive is skipped without touching its content files"""
     mocker.patch(
-        "learning_resources.etl.olx.OlxArchive.excluded_keys",
-        side_effect=ElementTree.ParseError("bad"),
+        "learning_resources.etl.olx.OlxArchive.excluded_keys", side_effect=error
     )
     ContentFileFactory.create(
         run=staff_only_run.run,
