@@ -166,7 +166,11 @@ const POINTER_CLASSNAME = "pointer-open"
  *
  * instead.
  */
-function Select<Value = unknown>({ size, ...props }: SelectProps<Value>) {
+function Select<Value = unknown>({
+  size,
+  MenuProps: menuProps,
+  ...props
+}: SelectProps<Value>) {
   const menu = React.useRef<HTMLDivElement | null>(null)
   return (
     <MuiSelect
@@ -189,15 +193,27 @@ function Select<Value = unknown>({ size, ...props }: SelectProps<Value>) {
       onPointerUp={() => {
         menu.current?.classList.add(POINTER_CLASSNAME)
       }}
+      /* Merged rather than set, so a caller can dress its own menu without
+         losing the workaround above -- its `sx` is layered over this one and
+         its `onKeyDown` runs after. */
       MenuProps={{
+        ...menuProps,
         ref: menu,
-        sx: {
-          [`&.${POINTER_CLASSNAME} .MuiMenuItem-root.Mui-focusVisible`]: {
-            outline: "none",
+        sx: [
+          {
+            [`&.${POINTER_CLASSNAME} .MuiMenuItem-root.Mui-focusVisible`]: {
+              outline: "none",
+            },
           },
-        },
-        onKeyDown: () => {
+          ...(Array.isArray(menuProps?.sx)
+            ? menuProps.sx
+            : menuProps?.sx
+              ? [menuProps.sx]
+              : []),
+        ],
+        onKeyDown: (event) => {
           menu.current?.classList.remove(POINTER_CLASSNAME)
+          menuProps?.onKeyDown?.(event)
         },
       }}
       input={<SelectInput size={size} />}

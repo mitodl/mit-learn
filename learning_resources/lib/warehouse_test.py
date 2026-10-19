@@ -277,7 +277,7 @@ class _ConcreteTask(BaseWarehouseETLTask):
     table_name = "integrations__learn__test"
     writes = None
 
-    def fetch_and_upsert(self, conn, *, since=None) -> int:  # noqa: ARG002
+    def fetch_and_upsert(self, conn, *, since=None, **_) -> int:  # noqa: ARG002
         return 42
 
 
@@ -286,7 +286,7 @@ class _ErrorTask(BaseWarehouseETLTask):
     table_name = "integrations__learn__test"
     writes = None
 
-    def fetch_and_upsert(self, conn, *, since=None) -> int:  # noqa: ARG002
+    def fetch_and_upsert(self, conn, *, since=None, **_) -> int:  # noqa: ARG002
         msg = "downstream failure"
         raise RuntimeError(msg)
 
@@ -303,12 +303,53 @@ def test_base_warehouse_etl_task_run_success(mock_connect):
     mock_conn.close.assert_called_once()
 
 
+class _FlagRecordingTask(BaseWarehouseETLTask):
+    name = "test.FlagRecordingTask"
+    table_name = "integrations__learn__test"
+    writes = None
+
+    def fetch_and_upsert(
+        self,
+        conn,  # noqa: ARG002
+        *,
+        since=None,  # noqa: ARG002
+        allow_mass_unpublish=False,
+    ) -> int:
+        self.allow_mass_unpublish = allow_mass_unpublish
+        return 0
+
+
+@pytest.mark.parametrize(
+    ("kwargs", "allow"),
+    [
+        ({"allow_mass_unpublish": True}, True),
+        ({}, False),
+        ({"allow_mass_unpublish": "false"}, False),
+        ({"allow_mass_unpublish": 1}, False),
+    ],
+)
+@patch("learning_resources.lib.warehouse.connect_to_warehouse")
+def test_base_warehouse_etl_task_forwards_allow_mass_unpublish(
+    mock_connect, kwargs, allow
+):
+    """
+    run() hands fetch_and_upsert the flag itself, not Celery's request, so it
+    holds for a direct call. Only the boolean True lifts the limit.
+    """
+    mock_connect.return_value = MagicMock()
+    task = _FlagRecordingTask()
+
+    task.run(**kwargs)
+
+    assert task.allow_mass_unpublish is allow
+
+
 class _PipelineRecordingTask(BaseWarehouseETLTask):
     name = "test.PipelineRecordingTask"
     table_name = "integrations__learn__test"
     writes = None
 
-    def fetch_and_upsert(self, conn, *, since=None) -> int:  # noqa: ARG002
+    def fetch_and_upsert(self, conn, *, since=None, **_) -> int:  # noqa: ARG002
         self.pipeline = current_pipeline()
         return 0
 
@@ -457,7 +498,7 @@ def test_view_name_rejects_dotted_table_name(mock_connect):
         table_name = "other_schema.integrations__learn__test"
         writes = None
 
-        def fetch_and_upsert(self, conn, *, since=None) -> int:  # noqa: ARG002
+        def fetch_and_upsert(self, conn, *, since=None, **_) -> int:  # noqa: ARG002
             return 0
 
     with pytest.raises(ValueError, match="Unsafe warehouse identifier"):
@@ -496,7 +537,7 @@ def test_base_warehouse_etl_task_rejects_non_int_return(mock_connect):
         table_name = "integrations__learn__test"
         writes = None
 
-        def fetch_and_upsert(self, conn, *, since=None):
+        def fetch_and_upsert(self, conn, *, since=None, **_):
             pass  # forgot to return count
 
     task = _BrokenTask()
@@ -530,7 +571,7 @@ class _RecordingTask(BaseWarehouseETLTask):
     table_name = "integrations__learn__test"
     writes = None
 
-    def fetch_and_upsert(self, conn, *, since=None) -> int:  # noqa: ARG002
+    def fetch_and_upsert(self, conn, *, since=None, **_) -> int:  # noqa: ARG002
         self.seen_since = since
         return 7
 
@@ -635,7 +676,7 @@ def test_incremental_watermark_is_stamped_before_fetch_not_after(mock_connect):
             table_name = "integrations__learn__test"
             writes = None
 
-            def fetch_and_upsert(self, conn, *, since=None) -> int:  # noqa: ARG002
+            def fetch_and_upsert(self, conn, *, since=None, **_) -> int:  # noqa: ARG002
                 # Simulate a fetch that takes real wall-clock time.
                 frozen_time.tick(timedelta(minutes=10))
                 return 3
@@ -662,7 +703,7 @@ def test_incremental_does_not_advance_watermark_on_failure(mock_connect):
         table_name = "integrations__learn__test"
         writes = None
 
-        def fetch_and_upsert(self, conn, *, since=None) -> int:  # noqa: ARG002
+        def fetch_and_upsert(self, conn, *, since=None, **_) -> int:  # noqa: ARG002
             msg = "boom"
             raise RuntimeError(msg)
 
@@ -679,3 +720,16 @@ def test_incremental_does_not_advance_watermark_on_failure(mock_connect):
             task.run(full_refresh=False)
 
     mock_cache.set.assert_not_called()
+
+
+def test_qualified_name_qualifies_any_view_with_the_warehouse_settings():
+    """A task that reads several views gets each from the configured schema"""
+    with override_settings(
+        WAREHOUSE_CATALOG="ol_data_lake_qa",
+        WAREHOUSE_SCHEMA="ol_warehouse_qa_integrations",
+    ):
+        assert _ConcreteTask.qualified_name("integrations__learn__other") == (
+            "ol_data_lake_qa.ol_warehouse_qa_integrations.integrations__learn__other"
+        )
+    with pytest.raises(ValueError, match="Unsafe warehouse identifier"):
+        _ConcreteTask.qualified_name("other; drop table x")
