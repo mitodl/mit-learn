@@ -19,7 +19,7 @@ echo "YOUTUBE_DEVELOPER_KEY=${YOUTUBE_DEVELOPER_KEY}" >>.env
 echo "POSTHOG_PROJECT_API_KEY=${POSTHOG_PROJECT_API_KEY}" >>.env
 echo "POSTHOG_PERSONAL_API_KEY=${POSTHOG_PERSONAL_API_KEY}" >>.env
 echo >>.env
-echo "# Heroku Vault Static Vars" >>.env
+echo "# Vault Static Vars" >>.env
 echo "ALLOWED_HOSTS=["*"]" >>.env
 echo "AWS_STORAGE_BUCKET_NAME=ol-mitlearn-app-storage-qa" >>.env
 echo "CORS_ALLOWED_ORIGIN_REGEXES=['^.+ocw-next.netlify.app$']" >>.env
@@ -79,7 +79,7 @@ echo "POSTHOG_API_HOST=https://app.posthog.com" >>.env
 echo "POSTHOG_UI_HOST=https://us.posthog.com" >>.env
 echo "POSTHOG_PROJECT_ID=63497" >>.env
 echo >>.env
-echo "# Heroku Interopelated Vars" >>.env
+echo "# Interpolated Vars" >>.env
 echo "ACCESS_TOKEN_URL=https://sso-qa.ol.mit.edu/realms/olapps/protocol/openid-connect/token" >>.env
 echo "AUTHORIZATION_URL=https://sso-qa.ol.mit.edu/realms/olapps/protocol/openid-connect/auth" >>.env
 echo 'CORS_ALLOWED_ORIGINS=["https://mitopen-rc.odl.mit.edu", "https://ocw-next.netlify.app", "https://ol-devops-ci.odl.mit.edu", "https://draft-qa.ocw.mit.edu", "https://live-qa.ocw.mit.edu"]' >>.env
@@ -94,7 +94,7 @@ echo 'SOCIAL_AUTH_ALLOWED_REDIRECT_HOSTS=["live-qa.ocw.mit.edu", "mitopen-rc.odl
 echo "SOCIAL_AUTH_OL_OIDC_OIDC_ENDPOINT=https://sso-qa.ol.mit.edu/realms/olapps" >>.env
 echo "USERINFO_URL=https://sso-qa.ol.mit.edu/realms/olapps/protocol/openid-connect/userinfo" >>.env
 echo >>.env
-echo "# Heroku Vars" >>.env
+echo "# App Vars" >>.env
 echo "COMPOSE_PROFILES=backend,frontend" >>.env
 echo "DEBUG=false" >>.env
 echo "ENABLE_INFINITE_CORRIDOR=true" >>.env

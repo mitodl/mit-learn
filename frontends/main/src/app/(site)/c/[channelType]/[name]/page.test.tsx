@@ -18,9 +18,9 @@ const SEARCH_RESPONSE = {
   },
 }
 
-const setupChannel = () => {
+const setupChannel = (channelType: ChannelTypeEnum = ChannelTypeEnum.Topic) => {
   const channel = factories.channels.channel({
-    channel_type: ChannelTypeEnum.Topic,
+    channel_type: channelType,
     search_filter: "topic=Economics",
   })
   setMockResponse.get(
@@ -37,6 +37,14 @@ const setupChannel = () => {
   setMockResponse.get(expect.stringContaining(urls.search.vectorResources()), {
     ...SEARCH_RESPONSE,
   })
+  /* A topic page prefetches its Featured row, the hero being drawn
+     differently where there is none to carry. */
+  setMockResponse.get(
+    expect.stringContaining(
+      urls.channels.featured(channel.channel_type, channel.name),
+    ),
+    { count: 0, next: null, previous: null, results: [] },
+  )
   return channel
 }
 
@@ -116,4 +124,61 @@ test("prefetches OpenSearch results when the env kill switch is set", async () =
 
   expect(calledWith(urls.search.resources())).toBe(true)
   expect(calledWith(urls.search.vectorResources())).toBe(false)
+})
+
+/** The resource_type_group values of each vector search prefetched. */
+const prefetchedGroups = () =>
+  makeRequest.mock.calls
+    .filter(([args]) => args.url.startsWith(urls.search.vectorResources()))
+    .map(([args]) =>
+      new URL(args.url, "http://mit.edu").searchParams.getAll(
+        "resource_type_group",
+      ),
+    )
+
+test("a bare topic URL also prefetches the redesign's courses and programs", async () => {
+  // Which page the client draws is a PostHog flag the server cannot read, so
+  // both searches are prefetched and either one hydrates.
+  const channel = setupChannel()
+
+  await Page({
+    params: Promise.resolve({
+      channelType: channel.channel_type,
+      name: channel.name,
+    }),
+    searchParams: Promise.resolve({}),
+  })
+
+  expect(prefetchedGroups()).toEqual(
+    expect.arrayContaining([[], ["course", "program"]]),
+  )
+  expect(prefetchedGroups()).toHaveLength(2)
+})
+
+test("a topic URL naming its groups prefetches only those", async () => {
+  const channel = setupChannel()
+
+  await Page({
+    params: Promise.resolve({
+      channelType: channel.channel_type,
+      name: channel.name,
+    }),
+    searchParams: Promise.resolve({ resource_type_group: "learning_material" }),
+  })
+
+  expect(prefetchedGroups()).toEqual([["learning_material"]])
+})
+
+test("other channels prefetch only the unfiltered search", async () => {
+  const channel = setupChannel(ChannelTypeEnum.Department)
+
+  await Page({
+    params: Promise.resolve({
+      channelType: channel.channel_type,
+      name: channel.name,
+    }),
+    searchParams: Promise.resolve({}),
+  })
+
+  expect(prefetchedGroups()).toEqual([[]])
 })

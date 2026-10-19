@@ -191,8 +191,7 @@ upload to S3. Steps:
 1. Also in `.env`, set these AWS variables: `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`,
    `AWS_STORAGE_BUCKET_NAME`
 
-   These values can be copied directly from the Open Discussions CI Heroku settings, or a
-   fellow dev can provide them.
+   A fellow dev can provide these values.
 
 ### Enabling searching the course catalog on opensearch
 

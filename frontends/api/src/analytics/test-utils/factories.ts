@@ -12,6 +12,8 @@ import type {
   LearnerProgressResponse,
   MonthlyEngagementTrend,
   OrgAnalyticsResponse,
+  LearnersResponse,
+  LearnerWithEnrollments,
 } from "../types"
 
 /**
@@ -188,6 +190,7 @@ const learnerProgress = (
   enrolled_on: "2026-02-15T00:00:00Z",
   enrollment_is_active: true,
   enrollment_mode: "verified",
+  outcomes_consent_status: "consented",
   outcomes_shared: true,
   completion_status: "in_progress",
   is_passing: false,
@@ -209,6 +212,7 @@ const withheldLearnerProgress = (
   overrides: Partial<LearnerProgress> = {},
 ): LearnerProgress =>
   learnerProgress({
+    outcomes_consent_status: "declined",
     outcomes_shared: false,
     completion_status: null,
     is_passing: null,
@@ -281,6 +285,40 @@ const learnerProgressEnvelope = (
   ...overrides,
 })
 
+/**
+ * Splits `LearnerProgress` rows sharing a `learner_id` into one learner with
+ * its enrollments, in first-seen order, as the `/learners` endpoint returns
+ * them.
+ */
+const learnersFromRows = (
+  rows: LearnerProgress[],
+): LearnerWithEnrollments[] => {
+  const byId = new Map<string, LearnerWithEnrollments>()
+  for (const row of rows) {
+    const { learner_id: id, email, full_name: name, ...enrollment } = row
+    const learner = byId.get(id) ?? {
+      learner_id: id,
+      email,
+      full_name: name,
+      enrollments: [],
+    }
+    learner.enrollments.push(enrollment)
+    byId.set(id, learner)
+  }
+  return [...byId.values()]
+}
+
+const learnersEnvelope = (
+  data: LearnerWithEnrollments[],
+  overrides: Partial<LearnersResponse> = {},
+): LearnersResponse => ({
+  organization_id: organizationId(),
+  as_of: "2026-07-01T04:00:00Z",
+  total_count: data.length,
+  data,
+  ...overrides,
+})
+
 export {
   completionStatusCounts,
   contentEngagementDepth,
@@ -293,6 +331,8 @@ export {
   envelope,
   learnerProgress,
   learnerProgressEnvelope,
+  learnersEnvelope,
+  learnersFromRows,
   monthlyEngagementTrend,
   organizationId,
   withheldLearnerProgress,

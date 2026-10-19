@@ -51,7 +51,6 @@ import { matchOrganizationBySlug } from "@/common/utils"
 import { ForbiddenError, isForbiddenResponse } from "@/common/errors"
 import { FeatureFlags } from "@/common/feature_flags"
 import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
-import { useAppSearchParams } from "@/common/useAppSearchParams"
 import { PostHogEvents } from "@/common/constants"
 import { contractAnalyticsView } from "@/common/urls"
 import SectionHeader, {
@@ -64,9 +63,10 @@ import { DISPLAY_STATUS_LABEL, getDisplayStatus } from "./statusDisplay"
 import { ProgressGrid } from "./ProgressGrid"
 import {
   ALL,
-  replaceSearchParams,
   SEARCH_MAX_LENGTH,
+  VIEWS,
   useLearnerFilters,
+  type View,
 } from "./useLearnerFilters"
 
 /**
@@ -241,9 +241,6 @@ const ErrorRow = styled.div({
 const PAGE_SIZE = 25
 /** Below the API's max_page_size rather than pinned to it — that setting is env-overridable, and this only costs one extra round trip on a large contract. */
 const CSV_EXPORT_PAGE_SIZE = 500
-const VIEW_PARAM = "view"
-const VIEWS = { enrollments: "enrollments", grid: "grid" } as const
-type View = (typeof VIEWS)[keyof typeof VIEWS]
 const UNAVAILABLE_MESSAGE_ID = "learner-analytics-unavailable-message"
 
 const STATUS_OPTIONS: { value: string; label: string }[] = [
@@ -251,14 +248,8 @@ const STATUS_OPTIONS: { value: string; label: string }[] = [
   { value: "not_started", label: "Not started" },
   { value: "in_progress", label: "In progress" },
   { value: "passed", label: "Completed" },
-  /** Inert until a real consent field exists — OL_ANALYTICS_API_B2B_DASHBOARD_CONSENT_FAIL_OPEN=true keeps outcomes_shared always true, so this matches zero rows everywhere today. Not a bug; keep it. */
-  { value: "unknown", label: "No consent given" },
+  { value: "unknown", label: "Consent withheld" },
 ]
-
-const parsePage = (value: string | null) => {
-  const parsed = Number.parseInt(value ?? "", 10)
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : 1
-}
 
 const rowIdOf = (row: LearnerProgress) =>
   `${row.learner_id}:${row.courserun_readable_id}`
@@ -272,26 +263,11 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
   orgSlug,
   contractSlug,
 }) => {
-  const searchParams = useAppSearchParams()
-  const moduleFilter = searchParams.get("module") || ALL
-  const page = parsePage(searchParams.get("page"))
-  const [gridPage, setGridPage] = useState(1)
-  const initialView = searchParams.get(VIEW_PARAM)
-  const [view, setView] = useState<View>(
-    initialView === VIEWS.grid ? VIEWS.grid : VIEWS.enrollments,
-  )
-  const posthog = usePostHog()
-  const [isExporting, setIsExporting] = useState(false)
-  const [actionResult, setActionResult] = useState<{
-    message: string
-    severity: "success" | "error"
-  } | null>(null)
-  const [announcement, setAnnouncement] = useState("")
-  const queryClient = useQueryClient()
-
-  const resetGridPage = useCallback(() => setGridPage(1), [])
-
   const {
+    view,
+    setView,
+    page,
+    setPage,
     searchQuery,
     setSearchQuery,
     clearSearch,
@@ -301,8 +277,24 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
     completionStatus,
     needsAttentionOnly,
     setNeedsAttentionOnly,
+    moduleFilter,
     setModuleFilter,
-  } = useLearnerFilters(resetGridPage)
+    clearAll,
+  } = useLearnerFilters()
+  const posthog = usePostHog()
+  const [isExporting, setIsExporting] = useState(false)
+  const [actionResult, setActionResult] = useState<{
+    message: string
+    severity: "success" | "error"
+  } | null>(null)
+  const [announcement, setAnnouncement] = useState("")
+  const queryClient = useQueryClient()
+
+  const controlsRef = useRef<HTMLDivElement>(null)
+  const handleClearAll = () => {
+    clearAll()
+    controlsRef.current?.querySelector("input")?.focus()
+  }
 
   const handleViewChange = (_event: React.SyntheticEvent, next: View) => {
     if (next === view) return
@@ -313,15 +305,6 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
       contractSlug,
     })
     setView(next)
-    const params = new URLSearchParams(window.location.search)
-    if (next === VIEWS.grid) params.set(VIEW_PARAM, next)
-    else params.delete(VIEW_PARAM)
-    const query = params.toString()
-    window.history.replaceState(
-      null,
-      "",
-      `${window.location.pathname}${query ? `?${query}` : ""}${window.location.hash}`,
-    )
   }
 
   const {
@@ -428,6 +411,17 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
   const totalPages = Math.ceil(filteredCount / PAGE_SIZE)
   const isStale = rowsQuery.isPlaceholderData || rowsQuery.isFetching
   const isBusy = rowsQuery.isPending || isStale
+
+  useEffect(() => {
+    if (
+      view === VIEWS.enrollments &&
+      !isBusy &&
+      totalPages > 0 &&
+      page > totalPages
+    ) {
+      setPage(totalPages)
+    }
+  }, [view, isBusy, page, totalPages, setPage])
 
   /**
    * Only 400/401/403 responses throw to an error boundary (see
@@ -551,11 +545,6 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
     filteredCount,
   ])
 
-  useEffect(() => {
-    if (isBusy || !rowsQuery.data) return
-    if (page > Math.max(totalPages, 1)) replaceSearchParams({ page: null })
-  }, [isBusy, rowsQuery.data, page, totalPages])
-
   if (isLoadingOrgs) {
     return (
       <Page>
@@ -599,9 +588,17 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
     )
   }
 
+  const hasActiveFilters =
+    !!searchQuery ||
+    statusFilter !== ALL ||
+    (view === VIEWS.enrollments && activeModule !== ALL) ||
+    needsAttentionOnly
+
   const emptyMessage = debouncedSearch
     ? "No learners match your search."
-    : statusFilter !== ALL || activeModule !== ALL || needsAttentionOnly
+    : statusFilter !== ALL ||
+        (view === VIEWS.enrollments && activeModule !== ALL) ||
+        needsAttentionOnly
       ? "No learners match this filter."
       : "No learners found."
 
@@ -691,7 +688,7 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
                   }
                   asOfPlacement="external"
                 />
-                <ControlsRight>
+                <ControlsRight ref={controlsRef}>
                   <StyledSearchInput
                     placeholder="Search name or email"
                     value={searchQuery}
@@ -735,6 +732,16 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
                       }
                     />
                   </CheckboxField>
+                  <Button
+                    variant="tertiary"
+                    size="medium"
+                    onClick={handleClearAll}
+                    style={{
+                      visibility: hasActiveFilters ? "visible" : "hidden",
+                    }}
+                  >
+                    Clear filters
+                  </Button>
                 </ControlsRight>
               </ControlsRow>
 
@@ -757,7 +764,8 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
                   <ConsentNotice component="p">
                     {withheldCount} of these {filteredCount} enrollments belong
                     to learners who have not agreed to share their progress.
-                    Their status, grade and activity read “No consent given”.
+                    Their status, grade and activity read “Declined” or “Consent
+                    not recorded”.
                   </ConsentNotice>
                 ) : null}
 
@@ -851,11 +859,7 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
                         page={page}
                         shape="rounded"
                         size="small"
-                        onChange={(_event, value) =>
-                          replaceSearchParams({
-                            page: value > 1 ? String(value) : null,
-                          })
-                        }
+                        onChange={(_event, value) => setPage(value)}
                       />
                     ) : null}
                   </TableFooter>
@@ -876,8 +880,8 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
                     }
                     courseRunsFetching={courseRunsQuery.isFetching}
                     onRetryCourseRuns={() => courseRunsQuery.refetch()}
-                    page={gridPage}
-                    onPageChange={setGridPage}
+                    page={page}
+                    onPageChange={setPage}
                     emptyMessage={emptyMessage}
                   />
                 ) : null}
