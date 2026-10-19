@@ -1,6 +1,24 @@
 Release Notes
 =============
 
+Version 0.84.0
+--------------
+
+- Topic page resdesign: Merge course and program tabs (#4094)
+- Mark program as course complete when all modules are complete (#4076)
+- Add warehouse-pull sync tasks for xPRO courses and programs (#4054)
+- Add warehouse-pull sync tasks for YouTube and podcasts (#4050)
+- feat(b2b): add a Needs attention card and keep learner directory filters in the URL (#4067)
+- Import mitxonline APIs from their partitioned client versions (#4079)
+- Show program tracks on the program product page (#4072)
+- Identify signed-in users for HubSpot (#4074)
+- build(deps): bump axios to 1.20.0 (#4098)
+- Fill full description for mitxonline courses with extended detail from wagtail api (#4089)
+- fix(docker): install runtime libcairo2 so the image runs on DHI Python (#4097)
+- Update dependency social-auth-core to v5 [SECURITY] (#3991)
+- Keep a website content item's type fixed after creation (#4083)
+- fix ocw video matching (#4063)
+
 Version 0.83.3
 --------------
 
