@@ -251,8 +251,7 @@ const STATUS_OPTIONS: { value: string; label: string }[] = [
   { value: "not_started", label: "Not started" },
   { value: "in_progress", label: "In progress" },
   { value: "passed", label: "Completed" },
-  /** Inert until a real consent field exists — OL_ANALYTICS_API_B2B_DASHBOARD_CONSENT_FAIL_OPEN=true keeps outcomes_shared always true, so this matches zero rows everywhere today. Not a bug; keep it. */
-  { value: "unknown", label: "No consent given" },
+  { value: "unknown", label: "Consent withheld" },
 ]
 
 const parsePage = (value: string | null) => {
@@ -757,7 +756,8 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
                   <ConsentNotice component="p">
                     {withheldCount} of these {filteredCount} enrollments belong
                     to learners who have not agreed to share their progress.
-                    Their status, grade and activity read “No consent given”.
+                    Their status, grade and activity read “Declined” or “Consent
+                    not recorded”.
                   </ConsentNotice>
                 ) : null}
 
