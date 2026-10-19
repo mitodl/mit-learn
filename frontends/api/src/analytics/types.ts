@@ -82,7 +82,7 @@ export type MonthlyEngagementTrend = {
   organization_key: string
   organization_name: string
   activity_year_and_month: string
-  monthly_active_learners: number
+  monthly_active_learners: number | null
   new_enrollments: number | null
   enrolling_learners: number | null
   certificates_earned: number | null
