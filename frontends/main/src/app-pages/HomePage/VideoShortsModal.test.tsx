@@ -388,7 +388,9 @@ describe("VideoShortsModal", () => {
         videoTitle: "First Video",
       })
       expect(call?.[1]).toHaveProperty("timeOnVideoMs")
-      expect(call?.[1].videoDurationMs).toBe(30000)
+      expect((call?.[1] as Record<string, unknown>)?.videoDurationMs).toBe(
+        30000,
+      )
       expect(call?.[1]).not.toHaveProperty("percentageWatched")
     })
 
@@ -415,7 +417,7 @@ describe("VideoShortsModal", () => {
       const call = mockCapturePostHog.mock.calls.find(
         ([event]) => event === "video_shorts_closed",
       )
-      expect(call?.[1].totalVideosViewed).toBe(1)
+      expect((call?.[1] as Record<string, unknown>)?.totalVideosViewed).toBe(1)
     })
 
     test("totalVideosViewed increments as user scrolls through videos", async () => {
@@ -430,7 +432,7 @@ describe("VideoShortsModal", () => {
       const call = mockCapturePostHog.mock.calls.find(
         ([event]) => event === "video_shorts_closed",
       )
-      expect(call?.[1].totalVideosViewed).toBe(2)
+      expect((call?.[1] as Record<string, unknown>)?.totalVideosViewed).toBe(2)
     })
 
     test("totalVideosViewed does not double-count when scrolling back to a previous video", async () => {
@@ -449,7 +451,7 @@ describe("VideoShortsModal", () => {
       const call = mockCapturePostHog.mock.calls.find(
         ([event]) => event === "video_shorts_closed",
       )
-      expect(call?.[1].totalVideosViewed).toBe(2) // 2 unique videos, no double-count
+      expect((call?.[1] as Record<string, unknown>)?.totalVideosViewed).toBe(2) // 2 unique videos, no double-count
     })
 
     test("captures VideoShortsClosed with sessionDurationMs when close button is clicked", async () => {
@@ -486,7 +488,9 @@ describe("VideoShortsModal", () => {
       const call = mockCapturePostHog.mock.calls.find(
         ([event]) => event === "video_shorts_closed",
       )
-      expect(call?.[1].sessionDurationMs).toBeGreaterThanOrEqual(0)
+      expect(
+        (call?.[1] as Record<string, unknown>)?.sessionDurationMs,
+      ).toBeGreaterThanOrEqual(0)
     })
 
     test("flushes session analytics on pagehide", () => {
