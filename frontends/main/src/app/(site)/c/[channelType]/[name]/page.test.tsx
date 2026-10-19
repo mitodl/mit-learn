@@ -155,6 +155,26 @@ test("a bare topic URL also prefetches the redesign's courses and programs", asy
   expect(prefetchedGroups()).toHaveLength(2)
 })
 
+test("a bare department URL prefetches the same two searches", async () => {
+  // The redesigned department page draws the same tabs as a topic, so it
+  // opens on the same groups -- and a type left out of the server's guard is
+  // a page that discards what was prefetched for it and asks again.
+  const channel = setupChannel(ChannelTypeEnum.Department)
+
+  await Page({
+    params: Promise.resolve({
+      channelType: channel.channel_type,
+      name: channel.name,
+    }),
+    searchParams: Promise.resolve({}),
+  })
+
+  expect(prefetchedGroups()).toEqual(
+    expect.arrayContaining([[], ["course", "program"]]),
+  )
+  expect(prefetchedGroups()).toHaveLength(2)
+})
+
 test("a topic URL naming its groups prefetches only those", async () => {
   const channel = setupChannel()
 
@@ -169,8 +189,26 @@ test("a topic URL naming its groups prefetches only those", async () => {
   expect(prefetchedGroups()).toEqual([["learning_material"]])
 })
 
-test("other channels prefetch only the unfiltered search", async () => {
+test("a department prefetches its own featured row", async () => {
   const channel = setupChannel(ChannelTypeEnum.Department)
+
+  await Page({
+    params: Promise.resolve({
+      channelType: channel.channel_type,
+      name: channel.name,
+    }),
+    searchParams: Promise.resolve({}),
+  })
+
+  expect(
+    calledWith(urls.channels.featured(channel.channel_type, channel.name)),
+  ).toBe(true)
+})
+
+test("other channels prefetch only the unfiltered search", async () => {
+  /* A pathway: the department has joined the redesign above, and a unit
+     prefetches a featured row of its own. */
+  const channel = setupChannel(ChannelTypeEnum.Pathway)
 
   await Page({
     params: Promise.resolve({

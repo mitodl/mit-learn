@@ -35,5 +35,24 @@ const featuredParams = (channelType: FeaturedChannelType, name: string) => ({
   limit: FEATURED_COUNT,
 })
 
-export { FEATURED_COUNT, featuredParams }
+/**
+ * The same type, where it arrives as a bare string -- from a URL, say.
+ *
+ * Returns the type rather than a boolean so what follows is typed by it, and
+ * kept here with `featuredParams` so the server route can ask without reaching
+ * for `useChannelPageRedesign`, which is a hook and reads PostHog.
+ */
+const asRedesignedChannelType = (
+  channelType: string,
+): FeaturedChannelType | null => {
+  if (channelType === ChannelTypeEnum.Topic) {
+    return ChannelTypeEnum.Topic
+  }
+  if (channelType === ChannelTypeEnum.Department) {
+    return ChannelTypeEnum.Department
+  }
+  return null
+}
+
+export { FEATURED_COUNT, featuredParams, asRedesignedChannelType }
 export type { FeaturedChannelType }

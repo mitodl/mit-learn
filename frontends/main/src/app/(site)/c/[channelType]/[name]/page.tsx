@@ -18,7 +18,10 @@ import {
   offerorQueries,
 } from "api/hooks/learningResources"
 import { channelQueries } from "api/hooks/channels"
-import { featuredParams } from "@/app-pages/ChannelPage/topicFeatured"
+import {
+  asRedesignedChannelType,
+  featuredParams,
+} from "@/app-pages/ChannelPage/topicFeatured"
 import { testimonialsQueries } from "api/hooks/testimonials"
 import getSearchParams from "@/page-components/SearchDisplay/getSearchParams"
 import {
@@ -73,6 +76,9 @@ const Page: React.FC<AppPageProps<"/c/[channelType]/[name]">> = async ({
   const search = await searchParams
 
   const queryClient = getQueryClient()
+  /* Which of the redesigned pages this is, if it is one of them -- the
+     Featured row and the tabs' default both turn on the answer. */
+  const redesignedChannelType = asRedesignedChannelType(channelType)
 
   const channel = await queryClient.fetchQueryOr404(
     channelQueries.detailByType(channelType, name),
@@ -99,10 +105,9 @@ const Page: React.FC<AppPageProps<"/c/[channelType]/[name]">> = async ({
      * read. The row is the redesign's, so this is a request the old topic and
      * department pages have no use for.
      */
-    (channelType === ChannelTypeEnum.Topic ||
-      channelType === ChannelTypeEnum.Department) &&
+    redesignedChannelType &&
       queryClient.prefetchQuery(
-        channelQueries.featured(featuredParams(channelType, name)),
+        channelQueries.featured(featuredParams(redesignedChannelType, name)),
       ),
   ])
 
@@ -180,25 +185,30 @@ const Page: React.FC<AppPageProps<"/c/[channelType]/[name]">> = async ({
   }
 
   /**
-   * A redesigned topic page opens on courses and programs, so a bare topic
-   * URL searches for those where every other page searches everything. Which
-   * page the client draws is a PostHog flag the server cannot read, so both
-   * are prefetched until the flag is gone -- either way the first render is
-   * the server's rather than a second request.
+   * A redesigned page opens on courses and programs, so a bare URL to one
+   * searches for those where every other page searches everything. Which page
+   * the client draws is a PostHog flag the server cannot read, so both are
+   * prefetched until the flag is gone -- either way the first render is the
+   * server's rather than a second request.
+   *
+   * Every channel type the redesign covers, not the topic alone: they draw
+   * the same tabs, so a bare URL to any of them opens on the same groups, and
+   * a type left out here is a page that discards what was prefetched for it
+   * and asks again.
    */
-  const topicDefaultGroups =
-    channelType === ChannelTypeEnum.Topic && !search.resource_type_group
+  const redesignDefaultGroups =
+    redesignedChannelType && !search.resource_type_group
       ? findActiveTab(TOPIC_TABS, []).resource_type_groups
       : []
 
   await Promise.all([
     prefetchSearch(searchRequest),
-    topicDefaultGroups.length > 0 &&
+    redesignDefaultGroups.length > 0 &&
       prefetchSearch(
         getSearchParams({
           requestParams,
           constantSearchParams,
-          resourceTypeGroups: topicDefaultGroups,
+          resourceTypeGroups: redesignDefaultGroups,
           facetNames,
           page: Number(search.page ?? 1),
         }),
