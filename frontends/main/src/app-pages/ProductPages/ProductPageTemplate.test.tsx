@@ -234,6 +234,5 @@ describe("ProductPageTemplate stay-updated trigger", () => {
         },
       )
     })
-
   })
 })

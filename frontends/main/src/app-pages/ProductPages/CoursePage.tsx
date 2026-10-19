@@ -91,7 +91,10 @@ const CoursePage: React.FC<CoursePageProps> = ({ readableId }) => {
   useEffect(() => {
     if (!course) return
     analytics.coursePageViewed(course.title)
-    analytics.courseProgramViewed({ name: course.title, id: course.readable_id })
+    analytics.courseProgramViewed({
+      name: course.title,
+      id: course.readable_id,
+    })
   }, [course])
 
   const doneLoading = pages.isSuccess && courses.isSuccess

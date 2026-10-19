@@ -198,7 +198,9 @@ const VideoResourcePlayer = React.forwardRef<
               vjsPlayerRef.current = player
             }}
             onPlay={() => analytics.videoStarted(videoTitleLabel)}
-            onHalfProgress={() => analytics.videoReachedHalfway(videoTitleLabel)}
+            onHalfProgress={() =>
+              analytics.videoReachedHalfway(videoTitleLabel)
+            }
           />
         ) : thumbnailUrl ? (
           <ThumbnailWrapper>

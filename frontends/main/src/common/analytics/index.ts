@@ -231,8 +231,7 @@ const analytics = {
     capturePostHog(event, properties),
 
   // Hero (PostHog)
-  heroBrowseTopicsClicked: () =>
-    capturePostHog(PostHogEvents.HeroBrowseTopics),
+  heroBrowseTopicsClicked: () => capturePostHog(PostHogEvents.HeroBrowseTopics),
 }
 
 export { analytics, initPostHog }

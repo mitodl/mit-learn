@@ -60,4 +60,3 @@ test.each([
     { search_term: "policy", isEnter },
   )
 })
-

@@ -55,9 +55,12 @@ describe("AskTIMButton", () => {
     mockCapturePostHog.mockClear()
     renderWithProviders(<AskTIMButton />)
     await user.click(screen.getByRole("link", { name: /ask tim/i }))
-    expect(mockCapturePostHog).toHaveBeenCalledWith(PostHogEvents.AskTimClicked, {
-      type: "recommendation_bot",
-    })
+    expect(mockCapturePostHog).toHaveBeenCalledWith(
+      PostHogEvents.AskTimClicked,
+      {
+        type: "recommendation_bot",
+      },
+    )
     delete process.env.NEXT_PUBLIC_POSTHOG_API_KEY
   })
 })

@@ -209,7 +209,6 @@ describe("OnboardingPage", () => {
         { label: "Finish", step: STEPS_DATA.length, location: "onboarding" },
       )
     })
-
   })
 
   describe("GTM account-created tracking", () => {

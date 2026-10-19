@@ -90,29 +90,26 @@ describe("LearningResourceDrawer", () => {
     return { resource, user }
   }
 
-  it(
-    "Renders drawer content when resource=id is in the URL and captures the view",
-    async () => {
-      const { resource } = setupApis({
-        resource: { resource_type: ResourceTypeEnum.Course },
-      })
+  it("Renders drawer content when resource=id is in the URL and captures the view", async () => {
+    const { resource } = setupApis({
+      resource: { resource_type: ResourceTypeEnum.Course },
+    })
 
-      renderWithProviders(<LearningResourceDrawer />, {
-        url: `?dog=woof&${RESOURCE_DRAWER_PARAMS.resource}=${resource.id}`,
+    renderWithProviders(<LearningResourceDrawer />, {
+      url: `?dog=woof&${RESOURCE_DRAWER_PARAMS.resource}=${resource.id}`,
+    })
+    expect(LearningResourceExpanded).toHaveBeenCalled()
+    await waitFor(() => {
+      expectProps(LearningResourceExpanded, {
+        resource,
+        // Share links use the resource's location on Learn
+        shareUrl: resource.learn_url,
       })
-      expect(LearningResourceExpanded).toHaveBeenCalled()
-      await waitFor(() => {
-        expectProps(LearningResourceExpanded, {
-          resource,
-          // Share links use the resource's location on Learn
-          shareUrl: resource.learn_url,
-        })
-      })
-      await screen.findByText(resource.title)
+    })
+    await screen.findByText(resource.title)
 
-      expect(mockedPostHogCapture).toHaveBeenCalled()
-    },
-  )
+    expect(mockedPostHogCapture).toHaveBeenCalled()
+  })
 
   it("Does not render drawer content when resource=id is NOT in the URL", async () => {
     renderWithProviders(<LearningResourceDrawer />, {

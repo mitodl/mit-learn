@@ -232,7 +232,10 @@ const ProgramPage: React.FC<ProgramPageProps> = ({ readableId }) => {
 
   useEffect(() => {
     if (!program) return
-    analytics.courseProgramViewed({ name: program.title, id: program.readable_id })
+    analytics.courseProgramViewed({
+      name: program.title,
+      id: program.readable_id,
+    })
   }, [program])
 
   const isLoading = pages.isLoading || programs.isLoading

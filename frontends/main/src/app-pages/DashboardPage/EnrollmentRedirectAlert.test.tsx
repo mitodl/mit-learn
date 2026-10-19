@@ -336,7 +336,6 @@ describe("EnrollmentRedirectAlert", () => {
     )
   })
 
-
   test("does not track checkout-completed for non-paid alerts", async () => {
     renderWithProviders(<EnrollmentRedirectAlert />, {
       url: "/dashboard?enrollment_status=success&enrollment_title=Data+Science",

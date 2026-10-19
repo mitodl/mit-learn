@@ -843,7 +843,6 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
       analytics.catalogFiltered({ filterName: name, filterValue: rawValue })
   }
 
-
   // Kept in the list rather than removed, so a sortby that arrives in the URL
   // still has a label to render.
   const sortOptions = SORT_OPTIONS.map((option) =>

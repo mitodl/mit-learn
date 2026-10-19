@@ -157,9 +157,7 @@ const SchoolDepartments: React.FC<SchoolDepartmentProps> = ({
                   department.channel_url &&
                   new URL(department.channel_url).pathname
                 }
-                onClick={() =>
-                  analytics.departmentLinkClicked({ department })
-                }
+                onClick={() => analytics.departmentLinkClicked({ department })}
               >
                 <ListItemText
                   primary={department.name}
