@@ -1497,13 +1497,15 @@ describe("ContractContent", () => {
       "aria-current",
       "page",
     )
-    expect(within(nav).getByRole("link", { name: "Seats" })).toHaveAttribute(
+    expect(
+      within(nav).getByRole("link", { name: "Manage seats" }),
+    ).toHaveAttribute(
       "href",
       contractAdminView(orgX.slug, orgX.contracts[0].slug),
     )
-    expect(
-      screen.queryByRole("link", { name: "Manage seats" }),
-    ).not.toBeInTheDocument()
+    expect(screen.getAllByRole("link", { name: "Manage seats" })).toHaveLength(
+      1,
+    )
   })
 
   test("renders the contract nav while programs are still loading", async () => {

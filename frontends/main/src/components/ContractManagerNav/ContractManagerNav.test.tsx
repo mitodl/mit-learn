@@ -42,13 +42,13 @@ describe("ContractManagerNav", () => {
       ["Overview", contractView("acme", "c1")],
       ["Analytics", contractAnalyticsView("acme", "c1")],
       ["Learners", contractLearnersView("acme", "c1")],
-      ["Seats", contractAdminView("acme", "c1")],
+      ["Manage seats", contractAdminView("acme", "c1")],
     ]
     expect(linkNames()).toEqual(expected.map(([name]) => name))
     for (const [name, href] of expected) {
       const link = within(nav).getByRole("link", { name })
       expect(link).toHaveAttribute("href", href)
-      if (name === "Seats") {
+      if (name === "Manage seats") {
         expect(link).toHaveAttribute("aria-current", "page")
       } else {
         expect(link).not.toHaveAttribute("aria-current")
@@ -73,7 +73,7 @@ describe("ContractManagerNav", () => {
         FeatureFlags.B2BLearnerAnalytics,
         FeatureFlags.B2BContractManagerDashboard,
       ],
-      links: ["Overview", "Seats"],
+      links: ["Overview", "Manage seats"],
     },
   ])(
     "shows only the sections whose flags are on: $links",

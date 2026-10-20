@@ -96,7 +96,7 @@ const ContractManagerNav: React.FC<ContractManagerNavProps> = ({
     },
     {
       key: "seats",
-      label: "Seats",
+      label: "Manage seats",
       href: contractAdminView(orgSlug, contractSlug),
       enabled: managerDashboardEnabled,
     },

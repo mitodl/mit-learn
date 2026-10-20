@@ -925,17 +925,16 @@ describe("AnalyticsContent, contract-scoped", () => {
     expect(
       within(nav).getByRole("link", { name: "Analytics" }),
     ).toHaveAttribute("aria-current", "page")
-    expect(within(nav).getByRole("link", { name: "Seats" })).toHaveAttribute(
-      "href",
-      contractAdminView(orgSlug, second.slug),
-    )
+    expect(
+      within(nav).getByRole("link", { name: "Manage seats" }),
+    ).toHaveAttribute("href", contractAdminView(orgSlug, second.slug))
     expect(within(nav).getByRole("link", { name: "Learners" })).toHaveAttribute(
       "href",
       contractLearnersView(orgSlug, second.slug),
     )
-    expect(
-      screen.queryByRole("link", { name: "Manage seats" }),
-    ).not.toBeInTheDocument()
+    expect(screen.getAllByRole("link", { name: "Manage seats" })).toHaveLength(
+      1,
+    )
   })
 
   test("hides the Learners link and the Learner progress section when the learner analytics flag is off", async () => {
