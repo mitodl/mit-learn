@@ -22,7 +22,8 @@ from learning_resources.etl.edx_shared import (
     sync_edx_course_files,
     unpublish_excluded_content_files,
 )
-from learning_resources.etl.utils import get_edx_module_id, get_s3_prefix_for_source
+from learning_resources.etl.olx import get_edx_module_id
+from learning_resources.etl.utils import get_s3_prefix_for_source
 from learning_resources.factories import (
     ContentFileFactory,
     CourseFactory,
