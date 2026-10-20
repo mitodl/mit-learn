@@ -9,6 +9,7 @@ from zoneinfo import ZoneInfo
 
 import pytest
 from defusedxml import ElementTree
+from defusedxml.common import EntitiesForbidden
 
 from learning_resources.constants import PlatformType
 from learning_resources.etl.constants import ETLSource
@@ -21,7 +22,8 @@ from learning_resources.etl.edx_shared import (
     sync_edx_course_files,
     unpublish_excluded_content_files,
 )
-from learning_resources.etl.utils import get_edx_module_id, get_s3_prefix_for_source
+from learning_resources.etl.olx import get_edx_module_id
+from learning_resources.etl.utils import get_s3_prefix_for_source
 from learning_resources.factories import (
     ContentFileFactory,
     CourseFactory,
@@ -1947,13 +1949,20 @@ def test_unpublish_excluded_content_files_nothing_hidden(
     mock_deindex_tasks.opensearch.assert_not_called()
 
 
+@pytest.mark.parametrize(
+    "error",
+    [
+        ElementTree.ParseError("bad"),
+        EntitiesForbidden("x", None, None, None, None, None),
+        PermissionError("denied"),
+    ],
+)
 def test_unpublish_excluded_content_files_malformed_archive(
-    staff_only_run, mock_deindex_tasks, mocker
+    staff_only_run, mock_deindex_tasks, mocker, error
 ):
-    """A malformed archive is skipped without touching its content files"""
+    """An unreadable archive is skipped without touching its content files"""
     mocker.patch(
-        "learning_resources.etl.edx_shared.excluded_olx_paths",
-        side_effect=ElementTree.ParseError("bad"),
+        "learning_resources.etl.olx.OlxArchive.excluded_keys", side_effect=error
     )
     ContentFileFactory.create(
         run=staff_only_run.run,
@@ -2033,7 +2042,7 @@ def test_unpublish_excluded_content_files_skips_runs_without_content_files(
     staff_only_run, mock_deindex_tasks, mocker
 ):
     """A run with no content files is skipped before its archive is downloaded"""
-    excluded = mocker.patch("learning_resources.etl.edx_shared.excluded_olx_paths")
+    archive = mocker.patch("learning_resources.etl.edx_shared.OlxArchive")
 
     assert (
         unpublish_excluded_content_files(
@@ -2041,7 +2050,7 @@ def test_unpublish_excluded_content_files_skips_runs_without_content_files(
         )
         == []
     )
-    excluded.assert_not_called()
+    archive.assert_not_called()
 
 
 def test_unpublish_excluded_content_files_dry_run(staff_only_run, mock_deindex_tasks):

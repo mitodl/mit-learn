@@ -6,19 +6,17 @@ from itertools import chain
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from defusedxml import ElementTree
+from defusedxml import DefusedXmlException, ElementTree
 from django.conf import settings
 from django.core.cache import caches
 from django.db.models import Prefetch, Q
 
-from learning_resources.constants import VALID_TEXT_FILE_TYPES
 from learning_resources.etl.constants import ETLSource
 from learning_resources.etl.loaders import load_content_files
+from learning_resources.etl.olx import OlxArchive
 from learning_resources.etl.utils import (
     calc_checksum,
-    excluded_olx_paths,
     get_bucket_by_name,
-    get_edx_module_id,
     get_s3_prefix_for_source,
     transform_content_files,
 )
@@ -417,7 +415,8 @@ def unpublish_excluded_content_files(
         if not matching_runs:
             continue
         run = max(matching_runs, key=lambda r: r.published)
-        if not ContentFile.objects.filter(run=run).exists():
+        run_files = ContentFile.objects.filter(run=run)
+        if not run_files.exists():
             # a run with no content files has none to unpublish, and its archive
             # is a download and an extract to find that out
             continue
@@ -433,42 +432,21 @@ def unpublish_excluded_content_files(
             olx_path = next((p for p in Path(tempdir).iterdir() if p.is_dir()), None)
             if olx_path is None:
                 continue
+            archive = OlxArchive(olx_path, etl_source)
             try:
-                excluded_paths = excluded_olx_paths(olx_path, etl_source)
-            except ElementTree.ParseError:
+                excluded_keys = archive.excluded_keys(run)
+            # one unreadable archive must not stop the rest of the backfill
+            except (ElementTree.ParseError, DefusedXmlException, OSError):
                 log.exception("Malformed OLX in %s, skipping", key)
                 continue
-            ingestable = [
-                path
-                for path in olx_path.rglob("*")
-                if path.is_file()
-                and path.suffix.lower() in VALID_TEXT_FILE_TYPES
-                and not any(
-                    "draft" in part for part in path.relative_to(olx_path).parts[:-1]
-                )
-            ]
-            # get_edx_module_id writes a space as an underscore, so "foo bar.pdf"
-            # and "foo_bar.pdf" are one row; it stays if either path is ingested
-            excluded_keys = {
-                get_edx_module_id(str(path), run)
-                for path in ingestable
-                if path in excluded_paths
-            } - {
-                get_edx_module_id(str(path), run)
-                for path in ingestable
-                if path not in excluded_paths
-            }
-        if not excluded_keys:
-            continue
         # scoped to this run: keys embed the run_id, but never rely on that alone
-        excluded_files = ContentFile.objects.filter(run=run, key__in=excluded_keys)
+        excluded_files = run_files.filter(key__in=excluded_keys)
         excluded = excluded_files.count()
         if not excluded:
             continue
-        if dry_run:
-            unpublished = excluded_files.filter(published=True).count()
-        else:
-            unpublished = excluded_files.filter(published=True).update(published=False)
+        unpublished = excluded_files.filter(published=True).count()
+        if not dry_run:
+            excluded_files.filter(published=True).update(published=False)
             log.info(
                 "Unpublished %d excluded content files for %s", unpublished, run.run_id
             )
@@ -482,7 +460,7 @@ def unpublish_excluded_content_files(
                 "run_id": run.run_id,
                 "excluded": excluded,
                 "unpublished": unpublished,
-                "total": ContentFile.objects.filter(run=run).count(),
+                "total": run_files.count(),
             }
         )
     return rows
