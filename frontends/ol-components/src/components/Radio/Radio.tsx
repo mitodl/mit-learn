@@ -60,6 +60,8 @@ export type RadioProps = {
   checked?: boolean
   onChange?: (event: React.ChangeEvent<HTMLInputElement>) => void
   className?: string
+  "aria-labelledby"?: string
+  "aria-describedby"?: string
 }
 
 const Radio = ({
@@ -69,6 +71,8 @@ const Radio = ({
   checked,
   onChange,
   className,
+  "aria-labelledby": ariaLabelledBy,
+  "aria-describedby": ariaDescribedBy,
 }: RadioProps) => {
   return (
     <Container className={className}>
@@ -80,6 +84,8 @@ const Radio = ({
             name={name}
             checked={checked}
             onChange={onChange}
+            aria-labelledby={ariaLabelledBy}
+            aria-describedby={ariaDescribedBy}
           />
           {label}
         </label>
@@ -90,6 +96,8 @@ const Radio = ({
           name={name}
           checked={checked}
           onChange={onChange}
+          aria-labelledby={ariaLabelledBy}
+          aria-describedby={ariaDescribedBy}
         />
       )}
     </Container>
