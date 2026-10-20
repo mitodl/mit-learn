@@ -2099,6 +2099,40 @@ describe("ContractLearnersPage progress grid", () => {
     expect(within(table).getAllByRole("row")).toHaveLength(3)
   })
 
+  test("makes a module header focusable once a resize clamps its title", async () => {
+    const resizeCallbacks = new Map<Element, () => void>()
+    const OriginalResizeObserver = window.ResizeObserver
+    window.ResizeObserver = class {
+      constructor(private callback: () => void) {}
+      observe(el: Element) {
+        resizeCallbacks.set(el, this.callback)
+      }
+      unobserve() {}
+      disconnect() {}
+    } as unknown as typeof ResizeObserver
+    try {
+      const { contractId } = renderGrid()
+      mockGridPage(contractId, 0, [
+        analyticsFactories.learnerProgress({ courserun_readable_id: M5 }),
+      ])
+      await user.click(
+        await screen.findByRole("tab", { name: "Progress grid" }),
+      )
+      const header = await screen.findByRole("columnheader", {
+        name: "Module 5",
+      })
+      expect(header).not.toHaveAttribute("tabindex")
+
+      Object.defineProperty(header, "scrollHeight", { value: 90 })
+      Object.defineProperty(header, "clientHeight", { value: 60 })
+      act(() => resizeCallbacks.get(header)?.())
+
+      expect(header).toHaveAttribute("tabindex", "0")
+    } finally {
+      window.ResizeObserver = OriginalResizeObserver
+    }
+  })
+
   test("marks the modules a learner needs attention in", async () => {
     const { contractId } = renderGrid()
     mockGridPage(contractId, 0, [

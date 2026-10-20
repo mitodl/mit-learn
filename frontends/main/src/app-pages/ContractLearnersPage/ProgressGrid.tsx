@@ -369,7 +369,12 @@ const ModuleHeader: React.FC<{ title: string }> = ({ title }) => {
   const [truncated, setTruncated] = useState(false)
   useEffect(() => {
     const el = ref.current
-    if (el) setTruncated(el.scrollHeight > el.clientHeight)
+    if (!el) return
+    const measure = () => setTruncated(el.scrollHeight > el.clientHeight)
+    measure()
+    const observer = new ResizeObserver(measure)
+    observer.observe(el)
+    return () => observer.disconnect()
   }, [title])
   return (
     <Tooltip title={truncated ? title : ""}>
