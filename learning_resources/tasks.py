@@ -100,8 +100,8 @@ log = logging.getLogger(__name__)
 
 CLEANUP_RETRY_EXCEPTIONS = (*SEARCH_CONN_EXCEPTIONS, OperationalError)
 
-# Lives in the DB-backed "durable" cache (Redis is ephemeral) so a beat
-# outage of any length is caught up by the next sweep.
+# Lives in a DB-backed cache of its own (Redis is ephemeral, "durable" is
+# culled) so a beat outage of any length is caught up by the next sweep.
 RELEASED_CONTENT_FILES_WATERMARK_KEY = "released_content_files:swept_through"
 
 
@@ -126,9 +126,9 @@ def reindex_released_content_files() -> int:
     every hook is dispatched, and now is read first so no release falls
     between two windows.
     """
-    durable = caches["durable"]
+    sweep_cache = caches["release_sweep"]
     now = now_in_utc()
-    watermark = durable.get(RELEASED_CONTENT_FILES_WATERMARK_KEY)
+    watermark = sweep_cache.get(RELEASED_CONTENT_FILES_WATERMARK_KEY)
     since = (
         watermark - settings.RELEASED_CONTENT_FILES_SWEEP_OVERLAP
         if watermark
@@ -145,7 +145,7 @@ def reindex_released_content_files() -> int:
     runs = LearningResourceRun.objects.filter(id__in=run_ids)
     for run in runs:
         content_files_loaded_actions(run)
-    durable.set(RELEASED_CONTENT_FILES_WATERMARK_KEY, now, timeout=None)
+    sweep_cache.set(RELEASED_CONTENT_FILES_WATERMARK_KEY, now, timeout=None)
     return len(runs)
 
 

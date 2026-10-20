@@ -2903,15 +2903,15 @@ def mock_loaded_actions(mocker):
 
 
 @pytest.fixture
-def durable_cache():
+def sweep_cache():
     """Return the DB-backed cache holding the sweep watermark, cleared first"""
-    cache = caches["durable"]
+    cache = caches["release_sweep"]
     cache.delete(WATERMARK_KEY)
     return cache
 
 
 def test_reindex_released_content_files_without_watermark_uses_lookback(
-    settings, mock_loaded_actions, durable_cache
+    settings, mock_loaded_actions, sweep_cache
 ):
     """With no watermark, one reindex per run released inside the fallback window"""
     settings.RELEASED_CONTENT_FILES_LOOKBACK = HOUR
@@ -2939,13 +2939,13 @@ def test_reindex_released_content_files_without_watermark_uses_lookback(
 
 
 def test_reindex_released_content_files_catches_up_from_watermark(
-    settings, mock_loaded_actions, durable_cache
+    settings, mock_loaded_actions, sweep_cache
 ):
     """A stale watermark widens the window past the fallback lookback"""
     settings.RELEASED_CONTENT_FILES_LOOKBACK = HOUR
     settings.RELEASED_CONTENT_FILES_SWEEP_OVERLAP = HOUR
     now = now_in_utc()
-    durable_cache.set(WATERMARK_KEY, now - timedelta(days=3), timeout=None)
+    sweep_cache.set(WATERMARK_KEY, now - timedelta(days=3), timeout=None)
 
     during_outage = LearningResourceRunFactory.create()
     in_overlap = LearningResourceRunFactory.create()
@@ -2966,7 +2966,7 @@ def test_reindex_released_content_files_catches_up_from_watermark(
 
 
 def test_reindex_released_content_files_retries_a_release_once(
-    settings, mocker, mock_loaded_actions, durable_cache
+    settings, mocker, mock_loaded_actions, sweep_cache
 ):
     """A release is swept on the next sweep too (overlap), then no more"""
     settings.RELEASED_CONTENT_FILES_LOOKBACK = timedelta(days=1)
@@ -2985,7 +2985,7 @@ def test_reindex_released_content_files_retries_a_release_once(
 
 
 def test_reindex_released_content_files_advances_watermark_to_sweep_start(
-    mocker, mock_loaded_actions, durable_cache
+    mocker, mock_loaded_actions, sweep_cache
 ):
     """The stored watermark is the time sampled before the query, not after"""
     sweep_start = now_in_utc()
@@ -2993,15 +2993,28 @@ def test_reindex_released_content_files_advances_watermark_to_sweep_start(
 
     tasks.reindex_released_content_files()
 
-    assert durable_cache.get(WATERMARK_KEY) == sweep_start
+    assert sweep_cache.get(WATERMARK_KEY) == sweep_start
+
+
+def test_reindex_released_content_files_watermark_survives_durable_culling(
+    mock_loaded_actions, sweep_cache
+):
+    """Culling the shared "durable" cache, which ignores timeouts, can't drop it"""
+    tasks.reindex_released_content_files()
+    durable = caches["durable"]
+    # keys that sort after the watermark's, so a shared table would cull it
+    for i in range(durable._max_entries + 100):  # noqa: SLF001
+        durable.set(f"zz_{i:04d}", "x", timeout=None)
+
+    assert sweep_cache.get(WATERMARK_KEY) is not None
 
 
 def test_reindex_released_content_files_keeps_watermark_on_failure(
-    mock_loaded_actions, durable_cache
+    mock_loaded_actions, sweep_cache
 ):
     """A sweep that fails mid-dispatch leaves its window for the retry"""
     previous = now_in_utc() - HOUR
-    durable_cache.set(WATERMARK_KEY, previous, timeout=None)
+    sweep_cache.set(WATERMARK_KEY, previous, timeout=None)
     run = LearningResourceRunFactory.create()
     ContentFileFactory.create(run=run, release_date=now_in_utc() - (HOUR / 2))
     mock_loaded_actions.side_effect = ConnectionError
@@ -3009,4 +3022,4 @@ def test_reindex_released_content_files_keeps_watermark_on_failure(
     with pytest.raises(ConnectionError):
         tasks.reindex_released_content_files()
 
-    assert durable_cache.get(WATERMARK_KEY) == previous
+    assert sweep_cache.get(WATERMARK_KEY) == previous

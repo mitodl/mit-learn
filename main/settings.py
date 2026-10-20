@@ -518,6 +518,12 @@ CACHES = {
         "BACKEND": "django.core.cache.backends.db.DatabaseCache",
         "LOCATION": "durable_cache",
     },
+    # its own table: DatabaseCache culls by key order once a table passes
+    # MAX_ENTRIES, whatever the timeout, and "durable" holds per-user flags
+    "release_sweep": {
+        "BACKEND": "django.core.cache.backends.db.DatabaseCache",
+        "LOCATION": "release_sweep_cache",
+    },
     "redis": {
         "BACKEND": "django_redis.cache.RedisCache",
         "LOCATION": REDIS_URL,  # noqa: F405
