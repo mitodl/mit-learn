@@ -198,22 +198,16 @@ describe("ContractManagerNav", () => {
     test.each([
       ["the current page's link", "Analytics", {}],
       ["a modifier-click that opens a new tab", "Learners", { metaKey: true }],
-    ])(
-      "does not save %s for refocus",
-      async (_case, name, eventInit) => {
-        enableLearnerFlags()
-        const { view } = renderNav()
-        fireEvent.click(
-          await screen.findByRole("link", { name }),
-          eventInit,
-        )
-        view.unmount()
+    ])("does not save %s for refocus", async (_case, name, eventInit) => {
+      enableLearnerFlags()
+      const { view } = renderNav()
+      fireEvent.click(await screen.findByRole("link", { name }), eventInit)
+      view.unmount()
 
-        renderNav()
-        await screen.findByRole("link", { name })
-        expect(document.body).toHaveFocus()
-      },
-    )
+      renderNav()
+      await screen.findByRole("link", { name })
+      expect(document.body).toHaveFocus()
+    })
 
     test("leaves focus alone when it already moved elsewhere", async () => {
       enableLearnerFlags()
