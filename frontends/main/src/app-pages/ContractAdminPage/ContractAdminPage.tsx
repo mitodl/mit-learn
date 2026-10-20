@@ -673,7 +673,7 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
             <div>
               <OrgName component="h1">{org.name}</OrgName>
               <ContractSubtitle>
-                <span>{contract.name}</span>
+                <span>Manage seats · {contract.name}</span>
                 {!isLoadingContractDetail && totalPurchased !== undefined ? (
                   <>
                     {" "}

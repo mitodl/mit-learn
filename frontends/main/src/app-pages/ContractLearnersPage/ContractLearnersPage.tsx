@@ -6,6 +6,7 @@ import {
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query"
+import Image from "next/image"
 import { useFeatureFlagEnabled, usePostHog } from "posthog-js/react"
 import {
   Container,
@@ -50,6 +51,7 @@ import { ForbiddenError, isForbiddenResponse } from "@/common/errors"
 import { FeatureFlags } from "@/common/feature_flags"
 import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
 import { PostHogEvents } from "@/common/constants"
+import graduateLogo from "@/public/images/dashboard/graduate.png"
 import ContractManagerNav from "@/components/ContractManagerNav/ContractManagerNav"
 import SectionHeader, {
   SectionFreshness,
@@ -85,24 +87,46 @@ const Page = styled(Container)(({ theme }) => ({
 
 const HeaderSection = styled.div(({ theme }) => ({
   display: "flex",
-  alignItems: "flex-end",
+  alignItems: "center",
   justifyContent: "space-between",
   gap: "24px",
-  paddingBottom: "16px",
-  borderBottom: `2px solid ${theme.custom.colors.black}`,
   [theme.breakpoints.down("md")]: {
     flexDirection: "column",
     alignItems: "stretch",
   },
 }))
 
-const PageTitle = styled(Typography)(({ theme }) => ({
-  ...theme.typography.h2,
-  color: theme.custom.colors.black,
+const OrgDetailsContainer = styled.div({
+  display: "flex",
+  alignItems: "center",
+  gap: "24px",
+})
+
+const ImageContainer = styled.div(({ theme }) => ({
+  display: "flex",
+  width: "60px",
+  height: "60px",
+  padding: "8px",
+  alignItems: "center",
+  justifyContent: "center",
+  flexShrink: 0,
+  borderRadius: "8px",
+  backgroundColor: theme.custom.colors.white,
+  border: `1px solid ${theme.custom.colors.lightGray2}`,
+  overflow: "hidden",
+  "> img": {
+    width: "100%",
+    height: "auto",
+  },
+}))
+
+const OrgName = styled(Typography)(({ theme }) => ({
+  ...theme.typography.h3,
+  color: theme.custom.colors.darkGray2,
 })) as typeof Typography
 
 const PageSubtitle = styled(Typography)(({ theme }) => ({
-  ...theme.typography.body1,
+  ...theme.typography.subtitle1,
   color: theme.custom.colors.silverGrayDark,
 })) as typeof Typography
 
@@ -587,10 +611,22 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
     <Page>
       <Stack gap="24px">
         <HeaderSection>
-          <div>
-            <PageTitle component="h1">Learners</PageTitle>
-            <PageSubtitle component="p">{contract.name}</PageSubtitle>
-          </div>
+          <OrgDetailsContainer>
+            <ImageContainer>
+              <Image
+                width={60}
+                height={60}
+                src={org.logo ?? graduateLogo}
+                alt=""
+              />
+            </ImageContainer>
+            <div>
+              <OrgName component="h1">{org.name}</OrgName>
+              <PageSubtitle component="p">
+                Learners · {contract.name}
+              </PageSubtitle>
+            </div>
+          </OrgDetailsContainer>
           {view === VIEWS.enrollments ? (
             <ExportWrapper>
               <Button
