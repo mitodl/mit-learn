@@ -261,13 +261,10 @@ def test_transform_content_files(  # noqa: PLR0913
 
     script_dir = (pathlib.Path(__file__).parent.absolute()).parent.parent
 
-    content = list(
-        utils.transform_content_files(
-            pathlib.Path(script_dir, "test_json", "exported_courses_12345.tar.gz"),
-            run,
-            overwrite=overwrite,
-        )
-    )
+    with utils.unpacked_course_archive(
+        pathlib.Path(script_dir, "test_json", "exported_courses_12345.tar.gz"), run
+    ) as archive:
+        content = list(utils.transform_content_files(archive, run, overwrite=overwrite))
 
     if tika_content or (matching_edx_module_id and not overwrite):
         assert content == [
@@ -842,13 +839,10 @@ def test_process_olx_path_malformed_sjson(mocker, settings):
 
     script_dir = (pathlib.Path(__file__).parent.absolute()).parent.parent
 
-    content = list(
-        utils.transform_content_files(
-            pathlib.Path(script_dir, "test_json", "exported_courses_12345.tar.gz"),
-            run,
-            overwrite=True,
-        )
-    )
+    with utils.unpacked_course_archive(
+        pathlib.Path(script_dir, "test_json", "exported_courses_12345.tar.gz"), run
+    ) as archive:
+        content = list(utils.transform_content_files(archive, run, overwrite=True))
     # Since the SJSON is malformed, no content should be returned
     assert content == []
 
@@ -1187,3 +1181,67 @@ def test_documents_from_olx_reads_archive_paths(tmp_path):
         assert meta["source_path"].endswith(str(path.relative_to(olx)))
         assert content == path.read_bytes()
         assert meta["file_extension"] == path.suffix
+
+
+def test_course_units_from_archive(tmp_path):
+    """Units are built from a course tarball"""
+    olx = tmp_path / "course"
+    _write_olx(
+        olx,
+        "course.xml",
+        '<course url_name="run" org="MITx" course="1">'
+        '<chapter><sequential url_name="seq" display_name="Lecture 1">'
+        "<vertical><html><p>hi</p></html></vertical></sequential></chapter></course>",
+    )
+    tarpath = tmp_path / "course.tar.gz"
+    with tarfile.open(tarpath, "w:gz") as tar:
+        tar.add(olx, arcname="course")
+    run = LearningResourceRunFactory.create()
+
+    units = utils.course_units_from_archive(tarpath, run)
+
+    assert [unit["title"] for unit in units] == ["Lecture 1", "Course context"]
+
+
+def test_course_units_from_archive_raises_for_missing_block(tmp_path):
+    """A course whose outline names a missing block file raises"""
+    olx = tmp_path / "course"
+    _write_olx(olx, "course.xml", '<course url_name="run" org="MITx" course="1"/>')
+    tarpath = tmp_path / "course.tar.gz"
+    with tarfile.open(tarpath, "w:gz") as tar:
+        tar.add(olx, arcname="course")
+
+    with pytest.raises(ValueError):  # noqa: PT011
+        utils.course_units_from_archive(tarpath, LearningResourceRunFactory.create())
+
+
+def test_unpacked_course_archive(tmp_path):
+    """The archive is unpacked for the block and removed after it"""
+    olx = tmp_path / "course"
+    _write_olx(olx, "course.xml", '<course url_name="run" org="MITx" course="1"/>')
+    tarpath = tmp_path / "course.tar.gz"
+    with tarfile.open(tarpath, "w:gz") as tar:
+        tar.add(olx, arcname="course")
+    run = LearningResourceRunFactory.create()
+
+    with utils.unpacked_course_archive(tarpath, run) as archive:
+        assert archive.is_olx
+        assert archive.etl_source == run.learning_resource.etl_source
+
+    assert not archive.root.exists()
+
+
+def test_process_olx_path_rejects_other_file_types(tmp_path):
+    """A shared archive's file types can't be overridden"""
+    archive = OlxArchive(tmp_path)
+
+    with pytest.raises(ValueError):  # noqa: PT011
+        list(
+            utils.process_olx_path(
+                str(tmp_path),
+                LearningResourceRunFactory.create(),
+                overwrite=False,
+                valid_file_types=[".xml"],
+                archive=archive,
+            )
+        )

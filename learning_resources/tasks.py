@@ -199,6 +199,7 @@ def get_content_files(
     keys: list[str],
     *,
     overwrite: bool = False,
+    overwrite_units: bool = False,
 ):
     """
     Task to sync edX course content files with database
@@ -210,7 +211,9 @@ def get_content_files(
     ):
         log.warning("Required settings missing for %s files", etl_source)
         return
-    sync_edx_course_files(etl_source, ids, keys, overwrite=overwrite)
+    sync_edx_course_files(
+        etl_source, ids, keys, overwrite=overwrite, overwrite_units=overwrite_units
+    )
 
 
 def get_content_tasks(
@@ -218,8 +221,8 @@ def get_content_tasks(
     *,
     chunk_size: int | None = None,
     overwrite: bool = False,
+    overwrite_units: bool = False,
     learning_resource_ids: list[int] | None = None,
-    # Updated parameter
 ) -> celery.group:
     """
     Return a list of grouped celery tasks for indexing edx content
@@ -232,7 +235,13 @@ def get_content_tasks(
 
     return celery.group(
         [
-            get_content_files.si(ids, etl_source, archive_keys, overwrite=overwrite)
+            get_content_files.si(
+                ids,
+                etl_source,
+                archive_keys,
+                overwrite=overwrite,
+                overwrite_units=overwrite_units,
+            )
             for ids in chunks(
                 learning_resources,
                 chunk_size=chunk_size,
@@ -300,7 +309,12 @@ def unpublish_all_excluded_files(
 
 @app.task(bind=True)
 def import_all_mit_edx_files(
-    self, *, chunk_size=None, overwrite=False, learning_resource_ids=None
+    self,
+    *,
+    chunk_size=None,
+    overwrite=False,
+    overwrite_units=False,
+    learning_resource_ids=None,
 ):
     """Ingest MIT edX files from an S3 bucket"""
     return self.replace(
@@ -308,6 +322,7 @@ def import_all_mit_edx_files(
             ETLSource.mit_edx.name,
             chunk_size=chunk_size,
             overwrite=overwrite,
+            overwrite_units=overwrite_units,
             learning_resource_ids=learning_resource_ids,
         )
     )
@@ -315,7 +330,12 @@ def import_all_mit_edx_files(
 
 @app.task(bind=True)
 def import_all_oll_files(
-    self, *, chunk_size=None, overwrite=False, learning_resource_ids=None
+    self,
+    *,
+    chunk_size=None,
+    overwrite=False,
+    overwrite_units=False,
+    learning_resource_ids=None,
 ):
     """Ingest MIT edX files from an S3 bucket"""
     return self.replace(
@@ -323,6 +343,7 @@ def import_all_oll_files(
             ETLSource.oll.name,
             chunk_size=chunk_size,
             overwrite=overwrite,
+            overwrite_units=overwrite_units,
             learning_resource_ids=learning_resource_ids,
         )
     )
@@ -330,7 +351,12 @@ def import_all_oll_files(
 
 @app.task(bind=True)
 def import_all_mitxonline_files(
-    self, *, chunk_size=None, overwrite=False, learning_resource_ids=None
+    self,
+    *,
+    chunk_size=None,
+    overwrite=False,
+    overwrite_units=False,
+    learning_resource_ids=None,
 ):
     """Ingest MITx Online files from an S3 bucket"""
 
@@ -339,6 +365,7 @@ def import_all_mitxonline_files(
             ETLSource.mitxonline.name,
             chunk_size=chunk_size,
             overwrite=overwrite,
+            overwrite_units=overwrite_units,
             learning_resource_ids=learning_resource_ids,
         )
     )
@@ -346,7 +373,12 @@ def import_all_mitxonline_files(
 
 @app.task(bind=True)
 def import_all_xpro_files(
-    self, *, chunk_size=None, overwrite=False, learning_resource_ids=None
+    self,
+    *,
+    chunk_size=None,
+    overwrite=False,
+    overwrite_units=False,
+    learning_resource_ids=None,
 ):
     """Ingest xPRO OLX files from an S3 bucket"""
 
@@ -355,14 +387,21 @@ def import_all_xpro_files(
             ETLSource.xpro.name,
             chunk_size=chunk_size,
             overwrite=overwrite,
+            overwrite_units=overwrite_units,
             learning_resource_ids=learning_resource_ids,
         )
     )
 
 
 @app.task(bind=True)
-def import_content_files(
-    self, etl_source, *, chunk_size=None, overwrite=False, learning_resource_ids=None
+def import_content_files(  # noqa: PLR0913
+    self,
+    etl_source,
+    *,
+    chunk_size=None,
+    overwrite=False,
+    overwrite_units=False,
+    learning_resource_ids=None,
 ):
     """Import content files for any edX-based ETL source.
 
@@ -375,6 +414,7 @@ def import_content_files(
             etl_source,
             chunk_size=chunk_size,
             overwrite=overwrite,
+            overwrite_units=overwrite_units,
             learning_resource_ids=learning_resource_ids,
         )
     )
