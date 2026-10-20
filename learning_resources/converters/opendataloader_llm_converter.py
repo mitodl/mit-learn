@@ -330,8 +330,10 @@ class OCRProcessor:
         if isinstance(response, Exception):
             log.warning("OCR request failed, retrying: %s", response)
             try:
+                # batch_completion already used up num_retries, so try just once
                 response = litellm.completion(
-                    messages=messages, **self._completion_kwargs()
+                    messages=messages,
+                    **{**self._completion_kwargs(), "num_retries": 0},
                 )
             except Exception:
                 log.exception("OCR request failed after retry")

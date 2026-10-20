@@ -333,7 +333,9 @@ def test_failed_ocr_request_is_retried(mocker, settings):
     assert OCRProcessor().process_images(images) == {1: "one", 2: "two"}
     for mock in (batch, completion):
         assert mock.call_args.kwargs["timeout"] == 33
-        assert mock.call_args.kwargs["num_retries"] == 4
+    assert batch.call_args.kwargs["num_retries"] == 4
+    # the fallback is a single attempt on top of batch_completion's retries
+    assert completion.call_args.kwargs["num_retries"] == 0
     completion.assert_called_once()
 
 
