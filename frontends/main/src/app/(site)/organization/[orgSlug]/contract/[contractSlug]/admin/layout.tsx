@@ -5,7 +5,7 @@ import { standardizeMetadata } from "@/common/metadata"
 import type { Metadata } from "next"
 
 export const metadata: Metadata = standardizeMetadata({
-  title: "Contract Management",
+  title: "Seats",
   social: false,
 })
 

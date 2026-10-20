@@ -198,7 +198,7 @@ describe("ContractLearnersPage", () => {
     ).toThrow(ForbiddenError)
   })
 
-  test("opens with both analytics flags on, linking back to aggregate analytics", async () => {
+  test("opens with both analytics flags on, with the contract nav marking Learners current", async () => {
     mockedUseFeatureFlagEnabled.mockImplementation(
       (flag) =>
         flag === FeatureFlags.B2BAnalyticsDashboard ||
@@ -210,11 +210,14 @@ describe("ContractLearnersPage", () => {
       <ContractLearnersPage orgSlug={orgSlug} contractSlug={contract.slug} />,
     )
 
-    const back = await screen.findByRole("link", { name: /Program analytics/ })
-    expect(back).toHaveAttribute(
-      "href",
-      contractAnalyticsView(orgSlug, contract.slug),
+    const nav = await screen.findByRole("navigation", { name: "Contract" })
+    expect(within(nav).getByRole("link", { name: "Learners" })).toHaveAttribute(
+      "aria-current",
+      "page",
     )
+    expect(
+      within(nav).getByRole("link", { name: "Analytics" }),
+    ).toHaveAttribute("href", contractAnalyticsView(orgSlug, contract.slug))
   })
 
   test("denies access when the org is not one the user manages", async () => {

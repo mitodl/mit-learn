@@ -31,12 +31,8 @@ import { useFeatureFlagEnabled } from "posthog-js/react"
 import { ErrorContent } from "../ErrorPage/ErrorPageTemplate"
 import { matchOrganizationBySlug, stripOrgPrefix } from "@/common/utils"
 import { FeatureFlags } from "@/common/feature_flags"
-import {
-  contractAdminView,
-  contractAnalyticsView,
-  contractLearnersView,
-  DASHBOARD_HOME,
-} from "@/common/urls"
+import { DASHBOARD_HOME } from "@/common/urls"
+import ContractManagerNav from "@/components/ContractManagerNav/ContractManagerNav"
 import { ResourceType, getKey } from "./CoursewareDisplay/helpers"
 import type { DashboardCourseEntry } from "./CoursewareDisplay/model/dashboardViewModel"
 import { useContractDashboardData } from "./CoursewareDisplay/hooks/useContractDashboardData"
@@ -390,39 +386,10 @@ const ContractHeaderSection = styled.div(({ theme }) => ({
   },
 }))
 
-/**
- * Three buttons where there used to be one, which is why `flex-shrink` and
- * `white-space` are set rather than left to default. Left shrinkable, flexbox
- * takes them toward min-content and breaks the labels across lines
- * ("View / analytics"); pinned, the header text reflows instead, which it can
- * afford to do.
- *
- * They wrap to their own row below `md` rather than `sm`. `md` is where the
- * dashboard grid becomes single-column, and it was already the point at which
- * two pinned buttons crowded the org logo, name and contract name; a third
- * label as long as "View learner analytics" makes that row unworkable well
- * before `sm`.
- */
-const HeaderActions = styled.div(({ theme }) => ({
-  display: "flex",
-  gap: "12px",
-  flexShrink: 0,
-  flexWrap: "wrap",
-  justifyContent: "flex-end",
-  "> a": {
-    whiteSpace: "nowrap",
-  },
-  [theme.breakpoints.down("md")]: {
-    width: "100%",
-    justifyContent: "flex-start",
-  },
+const ManagerNavContainer = styled.div(({ theme }) => ({
+  paddingTop: "16px",
   [theme.breakpoints.down("sm")]: {
-    flexDirection: "column",
-    width: "100%",
-    padding: "0 16px 16px",
-    "> a": {
-      width: "100%",
-    },
+    padding: "16px 16px 0",
   },
 }))
 
@@ -452,9 +419,6 @@ const ContractContentInternal: React.FC<ContractContentInternalProps> = ({
   const analyticsEnabled = useFeatureFlagEnabled(
     FeatureFlags.B2BAnalyticsDashboard,
   )
-  const learnerAnalyticsEnabled = useFeatureFlagEnabled(
-    FeatureFlags.B2BLearnerAnalytics,
-  )
   const { data: managerOrgs } = useQuery({
     ...managerOrganizationQueries.managerOrganizationsList(),
     enabled: managerDashboardFlag === true || analyticsEnabled === true,
@@ -483,6 +447,16 @@ const ContractContentInternal: React.FC<ContractContentInternalProps> = ({
     </Stack>
   )
 
+  const managerNav = isManager ? (
+    <ManagerNavContainer>
+      <ContractManagerNav
+        orgSlug={stripOrgPrefix(org.slug)}
+        contractSlug={contract.slug}
+        current="overview"
+      />
+    </ManagerNavContainer>
+  ) : null
+
   if (isLoading) {
     return (
       <>
@@ -490,6 +464,7 @@ const ContractContentInternal: React.FC<ContractContentInternalProps> = ({
           <ContractHeaderSection>
             <ContractHeader org={org} contract={contract} />
           </ContractHeaderSection>
+          {managerNav}
           <WelcomeMessage key="welcome" contract={contract} />
         </Stack>
         {skeleton}
@@ -502,46 +477,8 @@ const ContractContentInternal: React.FC<ContractContentInternalProps> = ({
       <Stack>
         <ContractHeaderSection>
           <ContractHeader org={org} contract={contract} />
-          {isManager && (managerDashboardFlag || analyticsEnabled) && (
-            <HeaderActions>
-              {analyticsEnabled && (
-                <ButtonLink
-                  size="small"
-                  variant="bordered"
-                  href={contractAnalyticsView(
-                    stripOrgPrefix(org.slug),
-                    contract.slug,
-                  )}
-                >
-                  View analytics
-                </ButtonLink>
-              )}
-              {analyticsEnabled && learnerAnalyticsEnabled && (
-                <ButtonLink
-                  size="small"
-                  variant="bordered"
-                  href={contractLearnersView(
-                    stripOrgPrefix(org.slug),
-                    contract.slug,
-                  )}
-                >
-                  View learner analytics
-                </ButtonLink>
-              )}
-              {managerDashboardFlag && (
-                <ButtonLink
-                  size="small"
-                  href={contractAdminView(
-                    stripOrgPrefix(org.slug),
-                    contract.slug,
-                  )}
-                >
-                  Manage seats
-                </ButtonLink>
-              )}
-            </HeaderActions>
-          )}
         </ContractHeaderSection>
+        {managerNav}
         {variantOptions.length > 1 && (
           <VariantPicker
             variantOptions={variantOptions}

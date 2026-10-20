@@ -23,12 +23,7 @@ import { faker } from "@faker-js/faker/locale/en"
 import invariant from "tiny-invariant"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import { FeatureFlags } from "@/common/feature_flags"
-import {
-  contractAdminView,
-  contractAnalyticsView,
-  contractLearnersView,
-  DASHBOARD_HOME,
-} from "@/common/urls"
+import { contractAdminView, DASHBOARD_HOME } from "@/common/urls"
 import mockRouter from "next-router-mock"
 
 // Verified cards look up their order; default to none, tests override.
@@ -1427,7 +1422,7 @@ describe("ContractContent", () => {
     await screen.findByRole("heading", { name: "Contract not found" })
   })
 
-  test("does not render the Manage seats button when the feature flag is off", async () => {
+  test("does not render the contract nav when the manager flags are off", async () => {
     mockedUseFeatureFlagEnabled.mockImplementation(() => false)
     const { orgX } = setupProgramsAndCourses()
 
@@ -1447,20 +1442,16 @@ describe("ContractContent", () => {
 
     await screen.findByRole("heading", { name: orgX.name })
     expect(
-      screen.queryByRole("link", { name: "Manage seats" }),
-    ).not.toBeInTheDocument()
-    expect(
-      screen.queryByRole("link", { name: "View analytics" }),
+      screen.queryByRole("navigation", { name: "Contract" }),
     ).not.toBeInTheDocument()
   })
 
-  test("does not render the Manage seats button when flag is on but user is not a manager for this org", async () => {
+  test("does not render the contract nav when the user is not a manager for this org", async () => {
     mockedUseFeatureFlagEnabled.mockImplementation(
-      (flag) => flag === FeatureFlags.B2BContractManagerDashboard,
+      (flag) => flag !== FeatureFlags.B2BDataConsent,
     )
     const { orgX } = setupProgramsAndCourses()
 
-    // Return a different org — user is a manager elsewhere, not for orgX
     const otherOrg = factories.organizations.organization({})
     setMockResponse.get(managerOrganizationsUrl, {
       count: 1,
@@ -1478,13 +1469,13 @@ describe("ContractContent", () => {
 
     await screen.findByRole("heading", { name: orgX.name })
     expect(
-      screen.queryByRole("link", { name: "Manage seats" }),
+      screen.queryByRole("navigation", { name: "Contract" }),
     ).not.toBeInTheDocument()
   })
 
-  test("renders the Manage seats button with correct href when flag is on and user is a manager", async () => {
+  test("renders the contract nav for a manager, with Overview as the current page", async () => {
     mockedUseFeatureFlagEnabled.mockImplementation(
-      (flag) => flag === FeatureFlags.B2BContractManagerDashboard,
+      (flag) => flag !== FeatureFlags.B2BDataConsent,
     )
     const { orgX } = setupProgramsAndCourses()
 
@@ -1501,54 +1492,30 @@ describe("ContractContent", () => {
       />,
     )
 
-    const manageButton = await screen.findByRole("link", {
-      name: "Manage seats",
-    })
-    expect(manageButton).toHaveAttribute(
+    const nav = await screen.findByRole("navigation", { name: "Contract" })
+    expect(within(nav).getByRole("link", { name: "Overview" })).toHaveAttribute(
+      "aria-current",
+      "page",
+    )
+    expect(within(nav).getByRole("link", { name: "Seats" })).toHaveAttribute(
       "href",
       contractAdminView(orgX.slug, orgX.contracts[0].slug),
-    )
-  })
-
-  test("renders the View analytics button with correct href when the analytics flag is on and user is a manager", async () => {
-    mockedUseFeatureFlagEnabled.mockImplementation(
-      (flag) => flag === FeatureFlags.B2BAnalyticsDashboard,
-    )
-    const { orgX } = setupProgramsAndCourses()
-
-    setMockResponse.get(managerOrganizationsUrl, {
-      count: 1,
-      next: null,
-      previous: null,
-      results: [orgX],
-    })
-    renderWithProviders(
-      <ContractContent
-        orgSlug={orgX.slug}
-        contractSlug={orgX.contracts[0].slug}
-      />,
-    )
-
-    const analyticsLink = await screen.findByRole("link", {
-      name: "View analytics",
-    })
-    expect(analyticsLink).toHaveAttribute(
-      "href",
-      contractAnalyticsView(orgX.slug, orgX.contracts[0].slug),
     )
     expect(
       screen.queryByRole("link", { name: "Manage seats" }),
     ).not.toBeInTheDocument()
   })
 
-  test("renders both the Manage seats and View analytics buttons when both flags are on and user is a manager", async () => {
+  test("renders the contract nav while programs are still loading", async () => {
     mockedUseFeatureFlagEnabled.mockImplementation(
-      (flag) =>
-        flag === FeatureFlags.B2BContractManagerDashboard ||
-        flag === FeatureFlags.B2BAnalyticsDashboard,
+      (flag) => flag !== FeatureFlags.B2BDataConsent,
     )
     const { orgX } = setupProgramsAndCourses()
-
+    const { promise, resolve } = Promise.withResolvers<{ results: [] }>()
+    setMockResponse.get(
+      urls.programCollections.programCollectionsList(),
+      promise,
+    )
     setMockResponse.get(managerOrganizationsUrl, {
       count: 1,
       next: null,
@@ -1562,108 +1529,9 @@ describe("ContractContent", () => {
       />,
     )
 
-    const manageButton = await screen.findByRole("link", {
-      name: "Manage seats",
-    })
-    const analyticsLink = await screen.findByRole("link", {
-      name: "View analytics",
-    })
-    expect(manageButton).toHaveAttribute(
-      "href",
-      contractAdminView(orgX.slug, orgX.contracts[0].slug),
-    )
-    expect(analyticsLink).toHaveAttribute(
-      "href",
-      contractAnalyticsView(orgX.slug, orgX.contracts[0].slug),
-    )
-  })
-
-  test("the learner analytics button follows its own flag, not the aggregate one", async () => {
-    // Aggregate analytics on, learner analytics off: the learner page 403s
-    // without its flag, so only "View analytics" may appear.
-    mockedUseFeatureFlagEnabled.mockImplementation(
-      (flag) => flag === FeatureFlags.B2BAnalyticsDashboard,
-    )
-    const { orgX } = setupProgramsAndCourses()
-
-    setMockResponse.get(managerOrganizationsUrl, {
-      count: 1,
-      next: null,
-      previous: null,
-      results: [orgX],
-    })
-    renderWithProviders(
-      <ContractContent
-        orgSlug={orgX.slug}
-        contractSlug={orgX.contracts[0].slug}
-      />,
-    )
-
-    await screen.findByRole("link", { name: "View analytics" })
-    expect(
-      screen.queryByRole("link", { name: "View learner analytics" }),
-    ).not.toBeInTheDocument()
-  })
-
-  test("the learner flag alone renders neither analytics button", async () => {
-    // Learner analytics is nested inside the analytics rollout, so its flag
-    // grants nothing on its own — the page it links to 403s without both.
-    mockedUseFeatureFlagEnabled.mockImplementation(
-      (flag) => flag === FeatureFlags.B2BLearnerAnalytics,
-    )
-    const { orgX } = setupProgramsAndCourses()
-
-    setMockResponse.get(managerOrganizationsUrl, {
-      count: 1,
-      next: null,
-      previous: null,
-      results: [orgX],
-    })
-    renderWithProviders(
-      <ContractContent
-        orgSlug={orgX.slug}
-        contractSlug={orgX.contracts[0].slug}
-      />,
-    )
-
-    await screen.findByRole("heading", { name: orgX.name })
-    expect(
-      screen.queryByRole("link", { name: "View learner analytics" }),
-    ).not.toBeInTheDocument()
-    expect(
-      screen.queryByRole("link", { name: "View analytics" }),
-    ).not.toBeInTheDocument()
-  })
-
-  test("renders both analytics buttons when both flags are on", async () => {
-    mockedUseFeatureFlagEnabled.mockImplementation(
-      (flag) =>
-        flag === FeatureFlags.B2BAnalyticsDashboard ||
-        flag === FeatureFlags.B2BLearnerAnalytics,
-    )
-    const { orgX } = setupProgramsAndCourses()
-
-    setMockResponse.get(managerOrganizationsUrl, {
-      count: 1,
-      next: null,
-      previous: null,
-      results: [orgX],
-    })
-    renderWithProviders(
-      <ContractContent
-        orgSlug={orgX.slug}
-        contractSlug={orgX.contracts[0].slug}
-      />,
-    )
-
-    const learnersLink = await screen.findByRole("link", {
-      name: "View learner analytics",
-    })
-    expect(learnersLink).toHaveAttribute(
-      "href",
-      contractLearnersView(orgX.slug, orgX.contracts[0].slug),
-    )
-    await screen.findByRole("link", { name: "View analytics" })
+    await screen.findByRole("navigation", { name: "Contract" })
+    expect(screen.queryAllByTestId("org-program-root")).toHaveLength(0)
+    resolve({ results: [] })
   })
 
   test("sanitizes HTML content in welcome_message_extra", async () => {

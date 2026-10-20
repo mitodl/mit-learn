@@ -37,6 +37,7 @@ import {
   organizationAnalyticsView,
 } from "@/common/urls"
 import { ErrorContent } from "../ErrorPage/ErrorPageTemplate"
+import ContractManagerNav from "@/components/ContractManagerNav/ContractManagerNav"
 import graduateLogo from "@/public/images/dashboard/graduate.png"
 import ContentEngagementTable from "./Analytics/ContentEngagementTable"
 import ContractKpiCards from "./Analytics/ContractKpiCards"
@@ -425,11 +426,10 @@ const AnalyticsContentInternal: React.FC<AnalyticsContentInternalProps> = ({
   /**
    * `learnerProgress` has no org-wide equivalent (see `analytics/types.ts`'s
    * header comment and `ContractLearnersPage.tsx`'s), so this section only
-   * renders when a contract is in view — the same reason the "Learner
-   * analytics" header link above is hidden on the org-wide aggregate page.
-   * It is gated on `B2BLearnerAnalytics` for the same reason that link is:
-   * every tile links to the learner directory, which throws `ForbiddenError`
-   * without the flag.
+   * renders when a contract is in view — the same reason the contract nav's
+   * Learners link is absent from the org-wide aggregate page. It is gated on
+   * `B2BLearnerAnalytics` for the same reason that link is: every tile links
+   * to the Learners page, which throws `ForbiddenError` without the flag.
    * One row is enough: only `total_count`, `outcomes_withheld_count` and
    * `completion_status_counts` are read, the same trick
    * `ContractLearnersPage.tsx`'s own `totalQuery` uses.
@@ -518,40 +518,33 @@ const AnalyticsContentInternal: React.FC<AnalyticsContentInternalProps> = ({
     return <ErrorContent title="Access denied" timSays="403" />
   }
 
-  // On a contract-scoped page this must be the contract being viewed, not the
-  // org's first one, or "Manage seats" silently sends the manager to a
-  // different contract's admin page. And when that contract fails to
-  // resolve, it must stay undefined rather than falling back to the org's
-  // first contract, or the unresolved-link notice renders a "Manage seats"
-  // button pointing at an unrelated contract.
-  const manageSeatsSlug = contractSlug ? contract?.slug : org.contracts[0]?.slug
+  /**
+   * Org-wide only. A contract-scoped page reaches Seats through
+   * ContractManagerNav, so it must never fall back to the org's first contract.
+   */
+  const manageSeatsSlug = contractSlug ? undefined : org.contracts[0]?.slug
 
   const header = (
-    <HeaderSection>
-      <OrgDetailsContainer>
-        <ImageContainer>
-          <Image width={60} height={60} src={org.logo ?? graduateLogo} alt="" />
-        </ImageContainer>
-        <div>
-          <OrgName component="h1">{org.name}</OrgName>
-          <PageSubtitle>
-            {contract ? `Analytics · ${contract.name}` : "Analytics"}
-          </PageSubtitle>
-        </div>
-      </OrgDetailsContainer>
-      {((contract && learnerAnalyticsFlag) ||
-        (manageSeatsSlug && managerDashboardFlag)) && (
-        <HeaderActions>
-          {contract && learnerAnalyticsFlag ? (
-            <ButtonLink
-              size="small"
-              variant="bordered"
-              href={contractLearnersView(orgSlug, contract.slug)}
-            >
-              Learner analytics
-            </ButtonLink>
-          ) : null}
-          {manageSeatsSlug && managerDashboardFlag ? (
+    <>
+      <HeaderSection>
+        <OrgDetailsContainer>
+          <ImageContainer>
+            <Image
+              width={60}
+              height={60}
+              src={org.logo ?? graduateLogo}
+              alt=""
+            />
+          </ImageContainer>
+          <div>
+            <OrgName component="h1">{org.name}</OrgName>
+            <PageSubtitle>
+              {contract ? `Analytics · ${contract.name}` : "Analytics"}
+            </PageSubtitle>
+          </div>
+        </OrgDetailsContainer>
+        {manageSeatsSlug && managerDashboardFlag ? (
+          <HeaderActions>
             <ButtonLink
               size="small"
               variant="bordered"
@@ -559,10 +552,17 @@ const AnalyticsContentInternal: React.FC<AnalyticsContentInternalProps> = ({
             >
               Manage seats
             </ButtonLink>
-          ) : null}
-        </HeaderActions>
-      )}
-    </HeaderSection>
+          </HeaderActions>
+        ) : null}
+      </HeaderSection>
+      {contract ? (
+        <ContractManagerNav
+          orgSlug={orgSlug}
+          contractSlug={contract.slug}
+          current="analytics"
+        />
+      ) : null}
+    </>
   )
 
   if (!analyticsAvailable) {

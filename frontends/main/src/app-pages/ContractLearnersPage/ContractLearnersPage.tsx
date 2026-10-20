@@ -1,14 +1,12 @@
 "use client"
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import NextLink from "next/link"
 import {
   keepPreviousData,
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query"
 import { useFeatureFlagEnabled, usePostHog } from "posthog-js/react"
-import { RiArrowLeftLine } from "@remixicon/react"
 import {
   Container,
   Pagination,
@@ -52,7 +50,7 @@ import { ForbiddenError, isForbiddenResponse } from "@/common/errors"
 import { FeatureFlags } from "@/common/feature_flags"
 import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
 import { PostHogEvents } from "@/common/constants"
-import { contractAnalyticsView } from "@/common/urls"
+import ContractManagerNav from "@/components/ContractManagerNav/ContractManagerNav"
 import SectionHeader, {
   SectionFreshness,
 } from "../DashboardPage/Analytics/SectionHeader"
@@ -85,16 +83,6 @@ const Page = styled(Container)(({ theme }) => ({
   },
 }))
 
-const BackLink = styled(NextLink)(({ theme }) => ({
-  ...theme.typography.subtitle3,
-  display: "inline-flex",
-  alignItems: "center",
-  gap: "8px",
-  color: theme.custom.colors.mitRed,
-  textDecoration: "none",
-  ":hover": { textDecoration: "underline" },
-}))
-
 const HeaderSection = styled.div(({ theme }) => ({
   display: "flex",
   alignItems: "flex-end",
@@ -107,13 +95,6 @@ const HeaderSection = styled.div(({ theme }) => ({
     alignItems: "stretch",
   },
 }))
-
-const Eyebrow = styled(Typography)(({ theme }) => ({
-  ...theme.typography.subtitle4,
-  color: theme.custom.colors.mitRed,
-  textTransform: "uppercase",
-  letterSpacing: "0.06em",
-})) as typeof Typography
 
 const PageTitle = styled(Typography)(({ theme }) => ({
   ...theme.typography.h2,
@@ -605,16 +586,8 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
   return (
     <Page>
       <Stack gap="24px">
-        <div>
-          <BackLink href={contractAnalyticsView(orgSlug, contractSlug)}>
-            <RiArrowLeftLine size={16} aria-hidden="true" />
-            Program analytics
-          </BackLink>
-        </div>
-
         <HeaderSection>
           <div>
-            <Eyebrow component="p">Learner Directory</Eyebrow>
             <PageTitle component="h1">Learners</PageTitle>
             <PageSubtitle component="p">{contract.name}</PageSubtitle>
           </div>
@@ -632,6 +605,12 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
             </ExportWrapper>
           ) : null}
         </HeaderSection>
+
+        <ContractManagerNav
+          orgSlug={orgSlug}
+          contractSlug={contractSlug}
+          current="learners"
+        />
 
         {!canQuery ? (
           <Typography id={UNAVAILABLE_MESSAGE_ID} variant="body1">
