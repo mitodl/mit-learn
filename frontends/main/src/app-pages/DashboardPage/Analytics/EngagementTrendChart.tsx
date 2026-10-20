@@ -116,11 +116,11 @@ const SERIES = [
      * ol-analytics-api's b2b_dashboard models (mitodl/ol-analytics-api#57),
      * itself derived from the backing dbt SQL in ol-data-platform. That
      * description lives only in the OpenAPI schema (/openapi.json, /docs) —
-     * the actual row data this component fetches never carries it, and this
-     * client is hand-written rather than generated from the schema (see
-     * the header comment in analytics/types.ts), so there is no fetch-and-
-     * parse step that could keep this in sync automatically. If the backend
-     * description changes, this string has to be updated by hand to match.
+     * the actual row data this component fetches never carries it, and the
+     * generated client (`@mitodl/ol-analytics-dashboard-api-axios`) keeps it
+     * only as a doc comment on the type, not as a runtime value, so nothing
+     * keeps this string in sync automatically. If the backend description
+     * changes, this string has to be updated by hand to match.
      */
     description:
       "Learners who did course work this month: watched a video, attempted a problem, posted in a discussion, used the chatbot or moved through course pages. Enrolling or earning a certificate alone doesn't count. Withheld when too few learners are in the group to report without identifying them.",
