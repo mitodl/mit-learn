@@ -22,8 +22,7 @@ const getModule = () => {
   return mod!
 }
 
-const makeMockPostHog = () =>
-  ({ capture: jest.fn() }) as unknown as PostHog
+const makeMockPostHog = () => ({ capture: jest.fn() }) as unknown as PostHog
 
 describe("capturePostHog / initPostHog", () => {
   beforeEach(() => {
