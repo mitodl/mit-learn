@@ -137,6 +137,7 @@ def test_import_all_mit_edx_files(settings, mocker, mocked_celery, mock_blocklis
         ETLSource.mit_edx.name,
         chunk_size=4,
         overwrite=False,
+        overwrite_units=False,
         learning_resource_ids=[1],
     )
 
@@ -157,6 +158,7 @@ def test_import_all_mitxonline_files(settings, mocker, mocked_celery, mock_block
         PlatformType.mitxonline.name,
         chunk_size=3,
         overwrite=True,
+        overwrite_units=False,
         learning_resource_ids=None,
     )
 
@@ -171,7 +173,11 @@ def test_import_all_xpro_files(settings, mocker, mocked_celery, mock_blocklist):
     with pytest.raises(mocked_celery.replace_exception_class):
         tasks.import_all_xpro_files.delay(chunk_size=3, learning_resource_ids=[1])
     get_content_tasks_mock.assert_called_once_with(
-        PlatformType.xpro.name, chunk_size=3, overwrite=False, learning_resource_ids=[1]
+        PlatformType.xpro.name,
+        chunk_size=3,
+        overwrite=False,
+        overwrite_units=False,
+        learning_resource_ids=[1],
     )
 
 
@@ -188,6 +194,7 @@ def test_import_all_oll_files(settings, mocker, mocked_celery, mock_blocklist):
         ETLSource.oll.name,
         chunk_size=4,
         overwrite=False,
+        overwrite_units=False,
         learning_resource_ids=None,
     )
 
@@ -204,12 +211,14 @@ def test_import_content_files(settings, mocker, mocked_celery, mock_blocklist):
             ETLSource.mitxonline.name,
             chunk_size=5,
             overwrite=True,
+            overwrite_units=True,
             learning_resource_ids=[42],
         )
     get_content_tasks_mock.assert_called_once_with(
         ETLSource.mitxonline.name,
         chunk_size=5,
         overwrite=True,
+        overwrite_units=True,
         learning_resource_ids=[42],
     )
 
@@ -272,11 +281,12 @@ def test_get_content_tasks(
             etl_source,
             ["foo.tar.gz"],
             overwrite=True,
+            overwrite_units=False,
         )
     else:
         assert mock_get_content_files.call_count == 2
         mock_get_content_files.assert_any_call(
-            ANY, etl_source, ["foo.tar.gz"], overwrite=True
+            ANY, etl_source, ["foo.tar.gz"], overwrite=True, overwrite_units=False
         )
 
 
@@ -336,9 +346,15 @@ def test_get_content_files(mocker, mock_course_archive_bucket):
         "learning_resources.tasks.get_bucket_by_name",
         return_value=mock_course_archive_bucket.bucket,
     )
-    tasks.get_content_files([1, 2], ETLSource.mit_edx.value, ["foo.tar.gz"])
+    tasks.get_content_files(
+        [1, 2], ETLSource.mit_edx.value, ["foo.tar.gz"], overwrite_units=True
+    )
     mock_sync_edx_course_files.assert_called_once_with(
-        ETLSource.mit_edx.value, [1, 2], ["foo.tar.gz"], overwrite=False
+        ETLSource.mit_edx.value,
+        [1, 2],
+        ["foo.tar.gz"],
+        overwrite=False,
+        overwrite_units=True,
     )
 
 

@@ -2335,6 +2335,38 @@ def test_olx_course_units_inline_course(tmp_path):
     ]
 
 
+def test_course_units_from_archive(tmp_path):
+    """Units are built from a course tarball"""
+    olx = tmp_path / "course"
+    _write_olx(
+        olx,
+        "course.xml",
+        '<course url_name="run" org="MITx" course="1">'
+        '<chapter><sequential url_name="seq" display_name="Lecture 1">'
+        "<vertical><html><p>hi</p></html></vertical></sequential></chapter></course>",
+    )
+    tarpath = tmp_path / "course.tar.gz"
+    with tarfile.open(tarpath, "w:gz") as tar:
+        tar.add(olx, arcname="course")
+    run = LearningResourceRunFactory.create()
+
+    units = utils.course_units_from_archive(tarpath, run)
+
+    assert [unit["title"] for unit in units] == ["Lecture 1", "Course context"]
+
+
+def test_course_units_from_archive_raises_for_missing_block(tmp_path):
+    """A course whose outline names a missing block file raises"""
+    olx = tmp_path / "course"
+    _write_olx(olx, "course.xml", '<course url_name="run" org="MITx" course="1"/>')
+    tarpath = tmp_path / "course.tar.gz"
+    with tarfile.open(tarpath, "w:gz") as tar:
+        tar.add(olx, arcname="course")
+
+    with pytest.raises(ValueError):  # noqa: PT011
+        utils.course_units_from_archive(tarpath, LearningResourceRunFactory.create())
+
+
 def test_transform_content_files_reports_unit_errors(mocker, tmp_path):
     """A failed unit build is reported apart from a course with no units"""
     olx = tmp_path / "course"

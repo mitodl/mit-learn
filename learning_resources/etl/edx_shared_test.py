@@ -28,7 +28,6 @@ from learning_resources.factories import (
     LearningResourceFactory,
     LearningResourcePlatformFactory,
     LearningResourceRunFactory,
-    UnitContentFileFactory,
     UnitFactory,
 )
 from learning_resources.models import ContentFile
@@ -144,8 +143,6 @@ def test_sync_edx_course_files_matching_checksum(mocker, mock_course_archive_buc
     run.checksum = "123"
     run.save()
     ContentFileFactory.create(run=run)
-    # with units, so only a changed archive is reloaded
-    UnitFactory.create(run=run)
     mocker.patch(
         "learning_resources.etl.edx_shared.calc_checksum", return_value=run.checksum
     )
@@ -1555,8 +1552,6 @@ def test_process_course_archive_skips_download_when_key_matches(mocker):
         published=True, archive_key=key, checksum="oldchecksum"
     )
     ContentFileFactory.create(run=run)
-    # with units, so only a changed archive is reloaded
-    UnitFactory.create(run=run)
     bucket = mocker.MagicMock()
     mock_load = mocker.patch("learning_resources.etl.edx_shared.load_content_files")
 
@@ -1576,8 +1571,6 @@ def test_process_course_archive_stamps_key_on_checksum_match(mocker):
         published=True, archive_key=None, checksum="samechecksum"
     )
     ContentFileFactory.create(run=run)
-    # with units, so only a changed archive is reloaded
-    UnitFactory.create(run=run)
     bucket = mocker.MagicMock()
     mocker.patch(
         "learning_resources.etl.edx_shared.calc_checksum", return_value="samechecksum"
@@ -2119,8 +2112,6 @@ def test_process_course_archive_skips_matching_archive_key(mocker, checksum, wit
     )
     if with_rows:
         ContentFileFactory.create(run=run)
-        # with units, so only a changed archive is reloaded
-        UnitFactory.create(run=run)
     bucket = mocker.MagicMock()
     mock_load = mocker.patch("learning_resources.etl.edx_shared.load_content_files")
 
@@ -2136,8 +2127,6 @@ def test_process_course_archive_skips_matching_checksum_with_rows(mocker):
         published=True, archive_key="old/key.tar.gz", checksum="abc123"
     )
     ContentFileFactory.create(run=run)
-    # with units, so only a changed archive is reloaded
-    UnitFactory.create(run=run)
     bucket = mocker.MagicMock()
     mocker.patch(
         "learning_resources.etl.edx_shared.calc_checksum", return_value="abc123"
@@ -2213,29 +2202,18 @@ def test_process_course_archive_loads_units(mocker):
     mock_load_units.assert_called_once_with(run, [unit_data])
 
 
-@pytest.mark.parametrize("has_units", [True, False])
-def test_process_course_archive_reloads_runs_missing_units(mocker, has_units):
-    """An unchanged archive is loaded again only when its run has no units yet"""
+def test_process_course_archive_skips_runs_without_units(mocker):
+    """An unchanged archive isn't reloaded just because its run has no units"""
     key = "mitxonline/openedx/raw_data/course_xml/course-v1:Test+Course+R1/abc123.xml.tar.gz"
     run = LearningResourceRunFactory.create(
         published=True, archive_key=key, checksum="checksum"
     )
     ContentFileFactory.create(run=run, published=True)
-    if has_units:
-        UnitContentFileFactory.create(unit__run=run)
-    mocker.patch(
-        "learning_resources.etl.edx_shared.calc_checksum", return_value="checksum"
-    )
-    mock_transform = mocker.patch(
-        "learning_resources.etl.edx_shared.transform_content_files",
-        return_value=iter([]),
-    )
     bucket = mocker.MagicMock()
 
-    assert process_course_archive(bucket, key, run) is not has_units
+    assert process_course_archive(bucket, key, run) is False
 
-    assert bucket.download_file.called is not has_units
-    assert mock_transform.called is not has_units
+    bucket.download_file.assert_not_called()
 
 
 def test_process_course_archive_unit_failure_is_retried(mocker):
@@ -2271,31 +2249,18 @@ def test_process_course_archive_unit_failure_is_retried(mocker):
     assert (run.archive_key, run.checksum) == (None, None)
 
 
-def test_process_course_archive_skips_empty_archive_missing_units(mocker):
-    """A recorded empty archive is not reloaded for units it can't have"""
-    key = "mitxonline/openedx/raw_data/course_xml/course-v1:Test+Course+R1/abc123.xml.tar.gz"
-    run = LearningResourceRunFactory.create(
-        published=True, archive_key=key, checksum=None
-    )
-    # files kept from before the archive emptied
-    ContentFileFactory.create(run=run, published=True)
-    bucket = mocker.MagicMock()
-
-    assert process_course_archive(bucket, key, run) is False
-
-    bucket.download_file.assert_not_called()
-
-
-def test_process_course_archive_unit_build_failure_is_retried(mocker):
-    """Files load when units can't be built, but the archive receipt is cleared"""
+def test_process_course_archive_unit_build_failure_is_not_retried(mocker):
+    """Files load when units can't be built, and the archive isn't tried again"""
     key = "mitxonline/openedx/raw_data/course_xml/course-v1:Test+Course+R1/abc123.xml.tar.gz"
     run = LearningResourceRunFactory.create(
         published=True, archive_key="old.tar.gz", checksum="old"
     )
-    existing = UnitContentFileFactory.create(unit__run=run).unit
+    # the file the mocked load would have written
+    ContentFileFactory.create(run=run, published=True)
     mocker.patch(
         "learning_resources.etl.edx_shared.calc_checksum", return_value="checksum"
     )
+    mock_log = mocker.patch("learning_resources.etl.edx_shared.log")
 
     def fake_transform(*args, unit_errors, **kwargs):
         yield {"key": "content.txt"}
@@ -2317,11 +2282,118 @@ def test_process_course_archive_unit_build_failure_is_retried(mocker):
         "learning_resources.etl.edx_shared.load_course_units"
     )
 
-    process_course_archive(mocker.MagicMock(), key, run)
+    bucket = mocker.MagicMock()
+    process_course_archive(bucket, key, run)
 
     mock_load_files.assert_called_once()
     mock_load_units.assert_not_called()
+    mock_log.error.assert_called_once()
     run.refresh_from_db()
-    # the old receipt is cleared, so the next sync reloads
-    assert (run.archive_key, run.checksum) == (None, None)
+    # the receipt is recorded, so the same archive is skipped though the run
+    # has no units
+    assert (run.archive_key, run.checksum) == (key, "checksum")
+    assert not run.units.exists()
+
+    assert process_course_archive(bucket, key, run) is False
+    bucket.download_file.assert_called_once()
+    mock_load_files.assert_called_once()
+
+
+@pytest.mark.parametrize("same_key", [True, False])
+def test_process_course_archive_overwrite_units(mocker, same_key):
+    """overwrite_units rebuilds units from an unchanged archive without loading files"""
+    key = "mitxonline/openedx/raw_data/course_xml/course-v1:Test+Course+R1/abc123.xml.tar.gz"
+    run = LearningResourceRunFactory.create(
+        published=True,
+        archive_key=key if same_key else "old.tar.gz",
+        checksum="checksum",
+    )
+    ContentFileFactory.create(run=run, published=True)
+    mocker.patch(
+        "learning_resources.etl.edx_shared.calc_checksum", return_value="checksum"
+    )
+    unit_data = {"external_id": "seq"}
+    mock_units_from_archive = mocker.patch(
+        "learning_resources.etl.edx_shared.course_units_from_archive",
+        return_value=[unit_data],
+    )
+    mock_load_units = mocker.patch(
+        "learning_resources.etl.edx_shared.load_course_units"
+    )
+    mock_transform = mocker.patch(
+        "learning_resources.etl.edx_shared.transform_content_files"
+    )
+    mock_load_files = mocker.patch(
+        "learning_resources.etl.edx_shared.load_content_files"
+    )
+    bucket = mocker.MagicMock()
+
+    assert process_course_archive(bucket, key, run, overwrite_units=True) is True
+
+    bucket.download_file.assert_called_once()
+    mock_units_from_archive.assert_called_once()
+    mock_load_units.assert_called_once_with(run, [unit_data])
+    mock_transform.assert_not_called()
+    mock_load_files.assert_not_called()
+    run.refresh_from_db()
+    assert (run.archive_key, run.checksum) == (key, "checksum")
+
+
+@pytest.mark.parametrize("failing", ["build", "load"])
+def test_process_course_archive_overwrite_units_failure(mocker, failing):
+    """A failed units-only rebuild is logged and keeps the run's units"""
+    key = "mitxonline/openedx/raw_data/course_xml/course-v1:Test+Course+R1/abc123.xml.tar.gz"
+    run = LearningResourceRunFactory.create(
+        published=True, archive_key=key, checksum="checksum"
+    )
+    ContentFileFactory.create(run=run, published=True)
+    existing = UnitFactory.create(run=run)
+    mocker.patch(
+        "learning_resources.etl.edx_shared.calc_checksum", return_value="checksum"
+    )
+    error = ValueError("course/run.xml is missing")
+    mocker.patch(
+        "learning_resources.etl.edx_shared.course_units_from_archive",
+        **({"side_effect": error} if failing == "build" else {"return_value": []}),
+    )
+    mocker.patch(
+        "learning_resources.etl.edx_shared.load_course_units",
+        **({"side_effect": error} if failing == "load" else {}),
+    )
+    mock_log = mocker.patch("learning_resources.etl.edx_shared.log")
+
+    assert (
+        process_course_archive(mocker.MagicMock(), key, run, overwrite_units=True)
+        is True
+    )
+
+    mock_log.exception.assert_called_once()
     assert list(run.units.all()) == [existing]
+    run.refresh_from_db()
+    assert (run.archive_key, run.checksum) == (key, "checksum")
+
+
+def test_sync_edx_course_files_passes_overwrite_units(mocker):
+    """sync_edx_course_files hands overwrite_units to process_course_archive"""
+    run = LearningResourceRunFactory.create(
+        published=True,
+        learning_resource__etl_source=ETLSource.mitxonline.name,
+        learning_resource__published=True,
+        run_id="course-v1:Test+Course+R1",
+    )
+    key = "mitxonline/openedx/raw_data/course_xml/course-v1:Test+Course+R1/abc123.xml.tar.gz"
+    mocker.patch("learning_resources.etl.edx_shared.get_bucket_by_name")
+    mock_process = mocker.patch(
+        "learning_resources.etl.edx_shared.process_course_archive", return_value=True
+    )
+
+    sync_edx_course_files(
+        ETLSource.mitxonline.name,
+        [run.learning_resource.id],
+        [key],
+        overwrite_units=True,
+    )
+
+    mock_process.assert_called_once_with(
+        mocker.ANY, key, run, overwrite=False, overwrite_units=True
+    )
