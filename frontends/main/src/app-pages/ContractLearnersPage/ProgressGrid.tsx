@@ -35,7 +35,7 @@ import {
   TableFooter,
   TableFootnote,
 } from "@/components/B2BTable/B2BTable"
-import { Avatar, NeedsAttentionBadge } from "./LearnerRow"
+import { Avatar, ConsentNotice, NeedsAttentionBadge } from "./LearnerRow"
 import {
   contentProgressPercent,
   DISPLAY_STATUS_LABEL,
@@ -303,6 +303,8 @@ type ProgressGridProps = {
   page: number
   onPageChange: (page: number) => void
   emptyMessage: string
+  /** The learners matching the filters, for the page's "N of M" line. */
+  onLearnerCountChange: (count: number | null) => void
 }
 
 const GridLearnerCell: React.FC<{
@@ -387,6 +389,7 @@ const ProgressGrid: React.FC<ProgressGridProps> = ({
   page,
   onPageChange,
   emptyMessage,
+  onLearnerCountChange,
 }) => {
   const filters = useMemo(
     () => ({
@@ -407,6 +410,36 @@ const ProgressGrid: React.FC<ProgressGridProps> = ({
     enabled,
     placeholderData: keepPreviousData,
   })
+
+  /**
+   * Consent is per learner per contract, so learners matching `unknown` are
+   * exactly the withheld learners among those matched. Known statuses and
+   * `needs_attention` match only shared rows, so they leave none to count.
+   */
+  const countsWithheld =
+    !needsAttentionOnly &&
+    (!completionStatus || completionStatus.includes("unknown"))
+  const withheldOnly =
+    completionStatus?.length === 1 && completionStatus[0] === "unknown"
+  const withheldQuery = useQuery({
+    ...analyticsContractQueries.learners(orgUuid, contractId, {
+      ...filters,
+      completion_status: ["unknown"],
+      limit: 1,
+      offset: 0,
+    }),
+    enabled: enabled && countsWithheld && !withheldOnly,
+    placeholderData: keepPreviousData,
+  })
+  const learnerCount = query.data?.total_count ?? 0
+  useEffect(() => {
+    onLearnerCountChange(query.data?.total_count ?? null)
+  }, [query.data, onLearnerCountChange])
+  const withheldCount = !countsWithheld
+    ? 0
+    : withheldOnly
+      ? learnerCount
+      : (withheldQuery.data?.total_count ?? 0)
 
   const learners = useMemo(
     () =>
@@ -513,6 +546,15 @@ const ProgressGrid: React.FC<ProgressGridProps> = ({
   return (
     <>
       {liveRegion}
+
+      {withheldCount > 0 ? (
+        <ConsentNotice component="p">
+          {withheldCount} of these {learnerCount}{" "}
+          {learnerCount === 1 ? "learner has" : "learners have"} not agreed to
+          share their progress. Their modules read “Declined” or “Consent not
+          recorded”.
+        </ConsentNotice>
+      ) : null}
 
       <TableCard>
         <Legend aria-label="Legend">

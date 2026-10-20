@@ -57,7 +57,7 @@ import SectionHeader, {
   SectionFreshness,
 } from "../DashboardPage/Analytics/SectionHeader"
 import { ErrorContent } from "../ErrorPage/ErrorPageTemplate"
-import { LearnerRow } from "./LearnerRow"
+import { ConsentNotice, LearnerRow } from "./LearnerRow"
 import { COLUMN_FLEX } from "./columns"
 import {
   contentProgressPercent,
@@ -150,17 +150,11 @@ const AsOfRow = styled.div(({ theme }) => ({
   },
 }))
 
-const ControlsRow = styled.div(({ theme }) => ({
+const ControlsRow = styled.div({
   display: "flex",
-  alignItems: "flex-end",
-  justifyContent: "space-between",
+  flexDirection: "column",
   gap: "16px",
-  flexWrap: "wrap",
-  [theme.breakpoints.down("md")]: {
-    flexDirection: "column",
-    alignItems: "stretch",
-  },
-}))
+})
 
 const ControlsRight = styled.div(({ theme }) => ({
   display: "flex",
@@ -271,11 +265,6 @@ const ModulesSelect: React.FC<{
     }}
   />
 )
-
-const ConsentNotice = styled(Typography)(({ theme }) => ({
-  ...theme.typography.body3,
-  color: theme.custom.colors.silverGrayDark,
-})) as typeof Typography
 
 const CheckboxField = styled.div(({ theme }) => ({
   display: "flex",
@@ -406,20 +395,25 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
     () => [{ value: ALL, label: "All modules" }, ...courseRunOptions],
     [courseRunOptions],
   )
+  /** Kept while loading or on error, so its error text can show. */
+  const showModuleFilter = !courseRunsQuery.data || courseRunOptions.length > 1
   const activeGridModules = useMemo(
     () =>
-      gridModules.filter((id) =>
-        courseRunOptions.some((option) => option.value === id),
-      ),
-    [gridModules, courseRunOptions],
+      showModuleFilter
+        ? gridModules.filter((id) =>
+            courseRunOptions.some((option) => option.value === id),
+          )
+        : [],
+    [showModuleFilter, gridModules, courseRunOptions],
   )
 
   const activeModule = useMemo(
     () =>
+      showModuleFilter &&
       moduleOptions.some((option) => option.value === moduleFilter)
         ? moduleFilter
         : ALL,
-    [moduleOptions, moduleFilter],
+    [showModuleFilter, moduleOptions, moduleFilter],
   )
 
   const courseRunsSettled = courseRunsQuery.isSuccess || courseRunsQuery.isError
@@ -463,6 +457,18 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
     ),
     enabled: canQuery,
   })
+
+  const [gridLearnerCount, setGridLearnerCount] = useState<number | null>(
+    null,
+  )
+  const learnerTotalQuery = useQuery({
+    ...analyticsContractQueries.learners(orgUuid ?? "", contractId ?? "", {
+      limit: 1,
+      offset: 0,
+    }),
+    enabled: canQuery && view === VIEWS.grid,
+  })
+  const totalLearners = learnerTotalQuery.data?.total_count ?? null
 
   const showsLearnerCount =
     view === VIEWS.enrollments &&
@@ -756,7 +762,9 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
                   title="Learner results"
                   description={
                     view === VIEWS.grid
-                      ? "One row per learner, one column per module"
+                      ? gridLearnerCount === null || totalLearners === null
+                        ? "Loading…"
+                        : `${gridLearnerCount} of ${totalLearners} enrolled learners`
                       : totalEnrollments === null
                         ? "Loading…"
                         : `${filteredCount} of ${totalEnrollments} enrollments${
@@ -793,7 +801,7 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
                       setStatusFilter(String(event.target.value))
                     }
                   />
-                  {view === VIEWS.enrollments ? (
+                  {!showModuleFilter ? null : view === VIEWS.enrollments ? (
                     <FilterSelect
                       label="Module"
                       size="medium"
@@ -849,6 +857,22 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
                 {announcement}
               </VisuallyHidden>
 
+              {/*
+              The API matches withheld rows against neither `true` nor `false`,
+              so this filter hides them outright rather than listing them as
+              not needing attention. Said here because nothing else on the page
+              would show it: each view's withheld notice reads a filtered
+              count, which is zero for that same reason.
+              */}
+              {hidesWithheldLearners ? (
+                <ConsentNotice component="p">
+                  Learners who have not agreed to share their progress are
+                  hidden while this filter is on. Whether they need attention
+                  cannot be determined. Clear this filter, then adjust any
+                  other active filters or search terms as needed to see them.
+                </ConsentNotice>
+              ) : null}
+
               <ViewPanel value={VIEWS.enrollments}>
                 {withheldCount > 0 ? (
                   <ConsentNotice component="p">
@@ -856,22 +880,6 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
                     to learners who have not agreed to share their progress.
                     Their status, grade and activity read “Declined” or “Consent
                     not recorded”.
-                  </ConsentNotice>
-                ) : null}
-
-                {/*
-              The API matches withheld rows against neither `true` nor `false`,
-              so this filter hides them outright rather than listing them as
-              not needing attention. Said here because nothing else on the page
-              would show it: the notice above reads the filtered envelope,
-              whose withheld count is zero for that same reason.
-              */}
-                {hidesWithheldLearners ? (
-                  <ConsentNotice component="p">
-                    Learners who have not agreed to share their progress are
-                    hidden while this filter is on. Whether they need attention
-                    cannot be determined. Clear this filter, then adjust any
-                    other active filters or search terms as needed to see them.
                   </ConsentNotice>
                 ) : null}
 
@@ -981,6 +989,7 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
                     page={page}
                     onPageChange={setPage}
                     emptyMessage={emptyMessage}
+                    onLearnerCountChange={setGridLearnerCount}
                   />
                 ) : null}
               </ViewPanel>

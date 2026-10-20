@@ -45,6 +45,11 @@ const LearnerCell = styled(TableCell)({
   gap: "12px",
 })
 
+const ConsentNotice = styled(Typography)(({ theme }) => ({
+  ...theme.typography.body3,
+  color: theme.custom.colors.silverGrayDark,
+})) as typeof Typography
+
 const LearnerName = styled(Typography)(({ theme }) => ({
   ...theme.typography.subtitle2,
   color: theme.custom.colors.black,
@@ -197,4 +202,4 @@ const LearnerRow: React.FC<LearnerRowProps> = ({ row }) => {
   )
 }
 
-export { Avatar, LearnerRow, NeedsAttentionBadge }
+export { Avatar, ConsentNotice, LearnerRow, NeedsAttentionBadge }
