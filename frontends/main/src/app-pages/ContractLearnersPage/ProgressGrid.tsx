@@ -24,9 +24,9 @@ import { Alert, Button, VisuallyHidden } from "@mitodl/smoot-design"
 import { formatDate, initials } from "ol-utilities"
 import {
   analyticsContractQueries,
-  type CompletionStatusFilter,
   type CourseRun,
   type LearnerEnrollment,
+  type LearnersParams,
   type LearnerWithEnrollments,
 } from "api/analytics-hooks/organizations"
 import {
@@ -47,6 +47,21 @@ import { ContentProgress } from "./ContentProgress"
 
 /** The `/learners` endpoint's maximum page size, in learners. */
 const PAGE_SIZE = 25
+
+type GridFilters = Omit<LearnersParams, "limit" | "offset">
+
+/** Shared with the page, which reads the same cached query for its "N of M" line. */
+const gridLearnersQuery = (
+  orgUuid: string,
+  contractId: string,
+  filters: GridFilters,
+  page: number,
+) =>
+  analyticsContractQueries.learners(orgUuid, contractId, {
+    ...filters,
+    limit: PAGE_SIZE,
+    offset: (page - 1) * PAGE_SIZE,
+  })
 
 const LEARNER_COLUMN_WIDTH = 280
 const MODULE_COLUMN_WIDTH = 160
@@ -288,11 +303,8 @@ const Muted = styled.span(({ theme }) => ({
 type ProgressGridProps = {
   orgUuid: string
   contractId: string
-  search: string
-  completionStatus: CompletionStatusFilter[] | undefined
-  needsAttentionOnly: boolean
-  /** Selected modules: narrows rows and columns. Empty means all modules. */
-  courserunIds: string[]
+  /** `courserun_readable_id` narrows columns as well as rows. */
+  filters: GridFilters
   /** False until stale module ids in the URL can be dropped against `courseRuns`. */
   enabled: boolean
   /** From the page's own course-runs query: one grid column per run. */
@@ -303,8 +315,6 @@ type ProgressGridProps = {
   page: number
   onPageChange: (page: number) => void
   emptyMessage: string
-  /** The learners matching the filters, for the page's "N of M" line. */
-  onLearnerCountChange: (count: number | null) => void
 }
 
 const GridLearnerCell: React.FC<{
@@ -377,10 +387,7 @@ const ModuleHeader: React.FC<{ title: string }> = ({ title }) => {
 const ProgressGrid: React.FC<ProgressGridProps> = ({
   orgUuid,
   contractId,
-  search,
-  completionStatus,
-  needsAttentionOnly,
-  courserunIds,
+  filters,
   enabled,
   courseRuns,
   courseRunsFailed,
@@ -389,24 +396,15 @@ const ProgressGrid: React.FC<ProgressGridProps> = ({
   page,
   onPageChange,
   emptyMessage,
-  onLearnerCountChange,
 }) => {
-  const filters = useMemo(
-    () => ({
-      ...(search ? { search } : {}),
-      ...(completionStatus ? { completion_status: completionStatus } : {}),
-      ...(needsAttentionOnly ? { needs_attention: true } : {}),
-      ...(courserunIds.length ? { courserun_readable_id: courserunIds } : {}),
-    }),
-    [search, completionStatus, needsAttentionOnly, courserunIds],
-  )
+  const {
+    completion_status: completionStatus,
+    needs_attention: needsAttentionOnly,
+  } = filters
+  const courserunIds = filters.courserun_readable_id ?? []
 
   const query = useQuery({
-    ...analyticsContractQueries.learners(orgUuid, contractId, {
-      ...filters,
-      limit: PAGE_SIZE,
-      offset: (page - 1) * PAGE_SIZE,
-    }),
+    ...gridLearnersQuery(orgUuid, contractId, filters, page),
     enabled,
     placeholderData: keepPreviousData,
   })
@@ -429,17 +427,15 @@ const ProgressGrid: React.FC<ProgressGridProps> = ({
       offset: 0,
     }),
     enabled: enabled && countsWithheld && !withheldOnly,
-    placeholderData: keepPreviousData,
   })
   const learnerCount = query.data?.total_count ?? 0
-  useEffect(() => {
-    onLearnerCountChange(query.data?.total_count ?? null)
-  }, [query.data, onLearnerCountChange])
-  const withheldCount = !countsWithheld
-    ? 0
-    : withheldOnly
-      ? learnerCount
-      : (withheldQuery.data?.total_count ?? 0)
+  /** Zero while the learner page is stale, so a fresh withheld count never meets an old learner count. */
+  const withheldCount =
+    !countsWithheld || query.isPlaceholderData
+      ? 0
+      : withheldOnly
+        ? learnerCount
+        : (withheldQuery.data?.total_count ?? 0)
 
   const learners = useMemo(
     () =>
@@ -549,10 +545,9 @@ const ProgressGrid: React.FC<ProgressGridProps> = ({
 
       {withheldCount > 0 ? (
         <ConsentNotice component="p">
-          {withheldCount} of these {learnerCount}{" "}
-          {learnerCount === 1 ? "learner has" : "learners have"} not agreed to
-          share their progress. Their modules read “Declined” or “Consent not
-          recorded”.
+          {withheldCount} of these {learnerCount} learners{" "}
+          {withheldCount === 1 ? "has" : "have"} not agreed to share their
+          progress. Their modules read “Declined” or “Consent not recorded”.
         </ConsentNotice>
       ) : null}
 
@@ -737,4 +732,5 @@ const ProgressGrid: React.FC<ProgressGridProps> = ({
   )
 }
 
-export { ProgressGrid }
+export { gridLearnersQuery, ProgressGrid }
+export type { GridFilters }

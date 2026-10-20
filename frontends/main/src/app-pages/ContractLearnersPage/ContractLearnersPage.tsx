@@ -64,7 +64,7 @@ import {
   DISPLAY_STATUS_LABEL,
   getDisplayStatus,
 } from "./statusDisplay"
-import { ProgressGrid } from "./ProgressGrid"
+import { gridLearnersQuery, ProgressGrid } from "./ProgressGrid"
 import {
   ALL,
   SEARCH_MAX_LENGTH,
@@ -458,7 +458,22 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
     enabled: canQuery,
   })
 
-  const [gridLearnerCount, setGridLearnerCount] = useState<number | null>(null)
+  const gridFilters = useMemo(
+    () => ({
+      ...(debouncedSearch ? { search: debouncedSearch } : {}),
+      ...(completionStatus ? { completion_status: completionStatus } : {}),
+      ...(needsAttentionOnly ? { needs_attention: true } : {}),
+      ...(activeGridModules.length
+        ? { courserun_readable_id: activeGridModules }
+        : {}),
+    }),
+    [debouncedSearch, completionStatus, needsAttentionOnly, activeGridModules],
+  )
+  const gridQuery = useQuery({
+    ...gridLearnersQuery(orgUuid ?? "", contractId ?? "", gridFilters, page),
+    enabled: canQuery && view === VIEWS.grid && gridModulesResolved,
+    placeholderData: keepPreviousData,
+  })
   const learnerTotalQuery = useQuery({
     ...analyticsContractQueries.learners(orgUuid ?? "", contractId ?? "", {
       limit: 1,
@@ -760,9 +775,11 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
                   title="Learner results"
                   description={
                     view === VIEWS.grid
-                      ? gridLearnerCount === null || totalLearners === null
-                        ? "Loading…"
-                        : `${gridLearnerCount} of ${totalLearners} enrolled learners`
+                      ? gridQuery.isError || learnerTotalQuery.isError
+                        ? undefined
+                        : gridQuery.data && totalLearners !== null
+                          ? `${gridQuery.data.total_count} of ${totalLearners} enrolled learners`
+                          : "Loading…"
                       : totalEnrollments === null
                         ? "Loading…"
                         : `${filteredCount} of ${totalEnrollments} enrollments${
@@ -973,10 +990,7 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
                   <ProgressGrid
                     orgUuid={orgUuid}
                     contractId={contractId}
-                    search={debouncedSearch}
-                    completionStatus={completionStatus}
-                    needsAttentionOnly={needsAttentionOnly}
-                    courserunIds={activeGridModules}
+                    filters={gridFilters}
                     enabled={gridModulesResolved}
                     courseRuns={courseRunsQuery.data?.data}
                     courseRunsFailed={
@@ -987,7 +1001,6 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
                     page={page}
                     onPageChange={setPage}
                     emptyMessage={emptyMessage}
-                    onLearnerCountChange={setGridLearnerCount}
                   />
                 ) : null}
               </ViewPanel>

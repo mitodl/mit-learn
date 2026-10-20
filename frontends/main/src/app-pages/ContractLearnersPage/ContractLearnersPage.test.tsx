@@ -2402,6 +2402,22 @@ describe("ContractLearnersPage progress grid", () => {
     ).toBeInTheDocument()
   })
 
+  test("drops the learner count, rather than loading forever, when the grid fails", async () => {
+    const { contractId } = renderGrid("/?view=grid")
+    setMockResponse.get(
+      analyticsUrls.contracts.learners(ORG_UUID, contractId, {
+        limit: GRID_PAGE_SIZE,
+        offset: 0,
+      }),
+      "Internal Server Error",
+      { code: 500 },
+    )
+
+    await screen.findByText("Something went wrong loading learner data.")
+    expect(screen.queryByText("Loading…")).not.toBeInTheDocument()
+    expect(screen.queryByText(/enrolled learners/)).not.toBeInTheDocument()
+  })
+
   test("counts the learners who have not agreed to share their progress", async () => {
     const { contractId } = renderGrid("/?view=grid", undefined, 2)
     mockGridPage(contractId, 0, [
@@ -2436,7 +2452,7 @@ describe("ContractLearnersPage progress grid", () => {
       {},
       { needs_attention: true },
     )
-    await screen.findByText(/^1 of these 1 learner has not agreed/)
+    await screen.findByText(/^1 of these 1 learners has not agreed/)
 
     await user.click(
       screen.getByRole("checkbox", { name: "Needs attention only" }),
