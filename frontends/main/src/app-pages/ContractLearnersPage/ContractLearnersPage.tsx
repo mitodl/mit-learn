@@ -8,7 +8,7 @@ import {
   useQueryClient,
 } from "@tanstack/react-query"
 import { useFeatureFlagEnabled, usePostHog } from "posthog-js/react"
-import { RiArrowLeftLine } from "@remixicon/react"
+import { RiArrowLeftLine, RiCheckLine } from "@remixicon/react"
 import {
   Container,
   Pagination,
@@ -59,7 +59,11 @@ import SectionHeader, {
 import { ErrorContent } from "../ErrorPage/ErrorPageTemplate"
 import { LearnerRow } from "./LearnerRow"
 import { COLUMN_FLEX } from "./columns"
-import { DISPLAY_STATUS_LABEL, getDisplayStatus } from "./statusDisplay"
+import {
+  contentProgressPercent,
+  DISPLAY_STATUS_LABEL,
+  getDisplayStatus,
+} from "./statusDisplay"
 import { ProgressGrid } from "./ProgressGrid"
 import {
   ALL,
@@ -208,6 +212,66 @@ const FilterSelect: React.FC<React.ComponentProps<typeof FilterField>> = ({
   />
 )
 
+const OptionLabel = styled.span({
+  display: "flex",
+  alignItems: "center",
+  gap: "8px",
+})
+
+/** Hidden rather than absent on unselected options, so labels stay aligned. */
+const OptionCheck = styled(RiCheckLine)({ flexShrink: 0 })
+
+/**
+ * Multi-select, unlike the enrollments view's Module filter. A check marks
+ * each selected option, since MUI's selected background alone is color-only.
+ */
+const ModulesSelect: React.FC<{
+  options: { value: string; label: string }[]
+  value: string[]
+  onChange: (value: string[]) => void
+  error: boolean
+}> = ({ options, value, onChange, error }) => (
+  <FilterField
+    label="Modules"
+    size="medium"
+    multiple
+    value={value}
+    error={error}
+    errorText="Couldn't load modules. Reload to try again."
+    options={options.map((option) => ({
+      value: option.value,
+      label: (
+        <OptionLabel>
+          <OptionCheck
+            aria-hidden="true"
+            size={16}
+            style={{
+              visibility: value.includes(option.value) ? "visible" : "hidden",
+            }}
+          />
+          {option.label}
+        </OptionLabel>
+      ),
+    }))}
+    renderValue={(selected) => {
+      const ids = selected as string[]
+      return (
+        <SelectedValue>
+          {ids.length === 0
+            ? "All modules"
+            : ids.length === 1
+              ? options.find((option) => option.value === ids[0])?.label
+              : `${ids.length} modules`}
+        </SelectedValue>
+      )
+    }}
+    onChange={(event) => {
+      const next = event.target.value
+      onChange(typeof next === "string" ? next.split(",") : (next as string[]))
+    }}
+  />
+)
+
 const ConsentNotice = styled(Typography)(({ theme }) => ({
   ...theme.typography.body3,
   color: theme.custom.colors.silverGrayDark,
@@ -279,6 +343,8 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
     setNeedsAttentionOnly,
     moduleFilter,
     setModuleFilter,
+    gridModules,
+    setGridModules,
     clearAll,
   } = useLearnerFilters()
   const posthog = usePostHog()
@@ -329,14 +395,23 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
     enabled: canQuery,
   })
 
-  const moduleOptions = useMemo(
-    () => [
-      { value: ALL, label: "All modules" },
-      ...(courseRunsQuery.data?.data ?? [])
+  const courseRunOptions = useMemo(
+    () =>
+      (courseRunsQuery.data?.data ?? [])
         .map((run) => ({ value: run.courserun_id, label: run.courserun_title }))
         .sort((a, b) => a.label.localeCompare(b.label)),
-    ],
     [courseRunsQuery.data],
+  )
+  const moduleOptions = useMemo(
+    () => [{ value: ALL, label: "All modules" }, ...courseRunOptions],
+    [courseRunOptions],
+  )
+  const activeGridModules = useMemo(
+    () =>
+      gridModules.filter((id) =>
+        courseRunOptions.some((option) => option.value === id),
+      ),
+    [gridModules, courseRunOptions],
   )
 
   const activeModule = useMemo(
@@ -347,8 +422,9 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
     [moduleOptions, moduleFilter],
   )
 
-  const moduleResolved =
-    moduleFilter === ALL || courseRunsQuery.isSuccess || courseRunsQuery.isError
+  const courseRunsSettled = courseRunsQuery.isSuccess || courseRunsQuery.isError
+  const moduleResolved = moduleFilter === ALL || courseRunsSettled
+  const gridModulesResolved = gridModules.length === 0 || courseRunsSettled
 
   const listParams = useMemo(
     () => ({
@@ -463,17 +539,21 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
         "Course",
         "Course ID",
         "Status",
+        "Progress",
         "Enrolled on",
         "Last activity",
         "Needs attention",
       ])
-      const body = all.map((row) =>
-        buildCsvRow([
+      const body = all.map((row) => {
+        const status = getDisplayStatus(row)
+        const progress = contentProgressPercent(row, status)
+        return buildCsvRow([
           row.full_name,
           row.email,
           row.courserun_title,
           row.courserun_readable_id,
-          DISPLAY_STATUS_LABEL[getDisplayStatus(row)],
+          DISPLAY_STATUS_LABEL[status],
+          progress === null ? "" : `${progress}%`,
           row.enrolled_on,
           row.last_active_on,
           typeof row.needs_attention === "boolean"
@@ -481,8 +561,8 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
               ? "Yes"
               : "No"
             : "",
-        ]),
-      )
+        ])
+      })
       const csv = [header, ...body].join("\n")
       const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" })
       const url = URL.createObjectURL(blob)
@@ -588,17 +668,20 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
     )
   }
 
+  const hasModuleFilter =
+    view === VIEWS.enrollments
+      ? activeModule !== ALL
+      : activeGridModules.length > 0
+
   const hasActiveFilters =
     !!searchQuery ||
     statusFilter !== ALL ||
-    (view === VIEWS.enrollments && activeModule !== ALL) ||
+    hasModuleFilter ||
     needsAttentionOnly
 
   const emptyMessage = debouncedSearch
     ? "No learners match your search."
-    : statusFilter !== ALL ||
-        (view === VIEWS.enrollments && activeModule !== ALL) ||
-        needsAttentionOnly
+    : statusFilter !== ALL || hasModuleFilter || needsAttentionOnly
       ? "No learners match this filter."
       : "No learners found."
 
@@ -722,7 +805,14 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
                         setModuleFilter(String(event.target.value))
                       }
                     />
-                  ) : null}
+                  ) : (
+                    <ModulesSelect
+                      options={courseRunOptions}
+                      value={activeGridModules}
+                      onChange={setGridModules}
+                      error={courseRunsQuery.isError && !courseRunsQuery.data}
+                    />
+                  )}
                   <CheckboxField>
                     <Checkbox
                       label="Needs attention only"
@@ -814,6 +904,12 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
                         </TableHeaderCell>
                         <TableHeaderCell
                           role="columnheader"
+                          $flex={COLUMN_FLEX.progress}
+                        >
+                          Progress
+                        </TableHeaderCell>
+                        <TableHeaderCell
+                          role="columnheader"
                           $flex={COLUMN_FLEX.lastActivity}
                         >
                           Last activity
@@ -834,7 +930,7 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
                           <EmptyTableMessage
                             component="div"
                             role="cell"
-                            aria-colspan={3}
+                            aria-colspan={4}
                             style={{ width: "100%" }}
                           >
                             {emptyMessage}
@@ -874,6 +970,8 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
                     search={debouncedSearch}
                     completionStatus={completionStatus}
                     needsAttentionOnly={needsAttentionOnly}
+                    courserunIds={activeGridModules}
+                    enabled={gridModulesResolved}
                     courseRuns={courseRunsQuery.data?.data}
                     courseRunsFailed={
                       courseRunsQuery.isError && !courseRunsQuery.data

@@ -108,6 +108,7 @@ const SERVER_KEYED_PARAMS = [
   "is_new_user",
   "status",
   "module",
+  "modules",
   "needs_attention",
   "view",
 ] as const

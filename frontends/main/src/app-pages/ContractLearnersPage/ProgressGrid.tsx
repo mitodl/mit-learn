@@ -37,16 +37,23 @@ import {
 } from "@/components/B2BTable/B2BTable"
 import { Avatar, NeedsAttentionBadge } from "./LearnerRow"
 import {
+  contentProgressPercent,
   DISPLAY_STATUS_LABEL,
   getDisplayStatus,
+  isStartedStatus,
   type DisplayStatus,
 } from "./statusDisplay"
+import { ContentProgress } from "./ContentProgress"
 
 /** The `/learners` endpoint's maximum page size, in learners. */
 const PAGE_SIZE = 25
 
 const LEARNER_COLUMN_WIDTH = 280
 const MODULE_COLUMN_WIDTH = 160
+/** Columns grow into spare width up to this, so a contract with few modules doesn't leave the card mostly empty. */
+const MODULE_COLUMN_MAX_WIDTH = 360
+/** From this cell width, a cell lays out in one line and shows its status label. */
+const WIDE_CELL = "@container (min-width: 300px)"
 
 type MarkTone = "green" | "blue" | "gray"
 
@@ -75,13 +82,7 @@ const attentionReason = (status: DisplayStatus) =>
  * reads this date-only field as UTC midnight — see `LearnerRow`.
  */
 const lastActivity = (enrollment: LearnerEnrollment, status: DisplayStatus) => {
-  if (
-    status !== "in-progress" &&
-    status !== "completed" &&
-    status !== "certificate"
-  ) {
-    return null
-  }
+  if (!isStartedStatus(status)) return null
   if (enrollment.last_active_on) {
     return {
       prefix: ", last active ",
@@ -150,7 +151,9 @@ const LearnerCell = styled("div", {
 const ModuleCell = styled.div(({ theme }) => ({
   ...cellStyles,
   paddingLeft: "20px",
-  width: `${MODULE_COLUMN_WIDTH}px`,
+  flex: `1 0 ${MODULE_COLUMN_WIDTH}px`,
+  maxWidth: `${MODULE_COLUMN_MAX_WIDTH}px`,
+  containerType: "inline-size",
   ...theme.typography.body2,
   color: theme.custom.colors.black,
 }))
@@ -221,11 +224,61 @@ const Legend = styled.ul(({ theme }) => ({
   "& li": { display: "inline-flex", alignItems: "center", gap: "6px" },
 }))
 
+/** The icon's height, so N/A, the not-started dash and every icon share a centerline across a row. */
+const StatusLine = styled.div({
+  display: "flex",
+  alignItems: "center",
+  minHeight: "20px",
+})
+
+const CellContent = styled.div({
+  [WIDE_CELL]: {
+    display: "flex",
+    alignItems: "center",
+    flexWrap: "wrap",
+    gap: "4px 16px",
+  },
+})
+
 const ActivityDate = styled.div(({ theme }) => ({
   ...theme.typography.body3,
   fontSize: theme.typography.pxToRem(11),
   color: theme.custom.colors.darkGray2,
   marginTop: "4px",
+  [WIDE_CELL]: { marginTop: 0 },
+}))
+
+const CellProgress = styled(ContentProgress)({
+  marginTop: "6px",
+  maxWidth: "none",
+  [WIDE_CELL]: { marginTop: 0, width: "140px", flex: "none" },
+})
+
+const InlineDate = styled.span(({ theme }) => ({
+  fontSize: theme.typography.pxToRem(11),
+}))
+
+/** Screen-reader-only in a narrow cell; the same element shows beside the icon in a wide one, so it is never read twice. */
+const StatusLabel = styled.span(({ theme }) => ({
+  position: "absolute",
+  width: "1px",
+  height: "1px",
+  margin: "-1px",
+  padding: 0,
+  overflow: "hidden",
+  clip: "rect(0 0 0 0)",
+  whiteSpace: "nowrap",
+  border: 0,
+  [WIDE_CELL]: {
+    position: "static",
+    width: "auto",
+    height: "auto",
+    margin: "0 0 0 6px",
+    overflow: "visible",
+    clip: "auto",
+    ...theme.typography.body2,
+    color: theme.custom.colors.black,
+  },
 }))
 
 const Muted = styled.span(({ theme }) => ({
@@ -238,6 +291,10 @@ type ProgressGridProps = {
   search: string
   completionStatus: CompletionStatusFilter[] | undefined
   needsAttentionOnly: boolean
+  /** Selected modules: narrows rows and columns. Empty means all modules. */
+  courserunIds: string[]
+  /** False until stale module ids in the URL can be dropped against `courseRuns`. */
+  enabled: boolean
   /** From the page's own course-runs query: one grid column per run. */
   courseRuns: CourseRun[] | undefined
   courseRunsFailed: boolean
@@ -288,7 +345,7 @@ const StatusSymbol: React.FC<{ status: DisplayStatus }> = ({ status }) => {
     <Tooltip title={label}>
       <StatusMark $tone={tone}>
         <Icon aria-hidden="true" size={20} />
-        <VisuallyHidden>{label}</VisuallyHidden>
+        <StatusLabel>{label}</StatusLabel>
       </StatusMark>
     </Tooltip>
   )
@@ -321,6 +378,8 @@ const ProgressGrid: React.FC<ProgressGridProps> = ({
   search,
   completionStatus,
   needsAttentionOnly,
+  courserunIds,
+  enabled,
   courseRuns,
   courseRunsFailed,
   courseRunsFetching,
@@ -334,8 +393,9 @@ const ProgressGrid: React.FC<ProgressGridProps> = ({
       ...(search ? { search } : {}),
       ...(completionStatus ? { completion_status: completionStatus } : {}),
       ...(needsAttentionOnly ? { needs_attention: true } : {}),
+      ...(courserunIds.length ? { courserun_readable_id: courserunIds } : {}),
     }),
-    [search, completionStatus, needsAttentionOnly],
+    [search, completionStatus, needsAttentionOnly, courserunIds],
   )
 
   const query = useQuery({
@@ -344,6 +404,7 @@ const ProgressGrid: React.FC<ProgressGridProps> = ({
       limit: PAGE_SIZE,
       offset: (page - 1) * PAGE_SIZE,
     }),
+    enabled,
     placeholderData: keepPreviousData,
   })
 
@@ -402,7 +463,7 @@ const ProgressGrid: React.FC<ProgressGridProps> = ({
     restoreFocus.current = false
     if (!hasError) regionRef.current?.focus()
   }, [hasError, isRetrying])
-  const liveMessage = query.isLoading
+  const liveMessage = query.isPending
     ? "Loading learners"
     : hasError
       ? isRetrying
@@ -442,7 +503,11 @@ const ProgressGrid: React.FC<ProgressGridProps> = ({
     )
   }
 
-  const columns = courseRuns ?? []
+  const columns = courserunIds.length
+    ? (courseRuns ?? []).filter((run) =>
+        courserunIds.includes(run.courserun_id),
+      )
+    : (courseRuns ?? [])
   const width = LEARNER_COLUMN_WIDTH + columns.length * MODULE_COLUMN_WIDTH
 
   return (
@@ -472,6 +537,7 @@ const ProgressGrid: React.FC<ProgressGridProps> = ({
             </AttentionMark>
             Needs attention
           </li>
+          <li>Percent shows content completed, not grade</li>
           <li>Dates show last activity</li>
         </Legend>
         <ScrollRegion
@@ -507,7 +573,7 @@ const ProgressGrid: React.FC<ProgressGridProps> = ({
                 transition: isStale ? "opacity 150ms ease 150ms" : "none",
               }}
             >
-              {query.isLoading || !courseRuns ? (
+              {query.isPending || !courseRuns ? (
                 [1, 2, 3].map((key) => (
                   <GridRow key={key} role="row">
                     <div role="cell" style={{ width: "100%" }}>
@@ -540,39 +606,64 @@ const ProgressGrid: React.FC<ProgressGridProps> = ({
                         if (!enrollment) {
                           return (
                             <ModuleCell key={run.courserun_id} role="cell">
-                              <Muted>
-                                N/A
-                                <VisuallyHidden>, not enrolled</VisuallyHidden>
-                              </Muted>
+                              <StatusLine>
+                                <Muted>
+                                  N/A
+                                  <VisuallyHidden>
+                                    , not enrolled
+                                  </VisuallyHidden>
+                                </Muted>
+                              </StatusLine>
                             </ModuleCell>
                           )
                         }
                         const status = getDisplayStatus(enrollment)
                         const activity = lastActivity(enrollment, status)
+                        const progress = contentProgressPercent(
+                          enrollment,
+                          status,
+                        )
                         return (
                           <ModuleCell key={run.courserun_id} role="cell">
-                            <StatusSymbol status={status} />
-                            {enrollment.needs_attention ? (
-                              <Tooltip title={attentionReason(status)}>
-                                <AttentionMark tabIndex={0}>
-                                  <RiErrorWarningLine
-                                    aria-hidden="true"
-                                    size={16}
-                                  />
+                            <CellContent>
+                              <StatusLine>
+                                <StatusSymbol status={status} />
+                                {enrollment.needs_attention ? (
+                                  <Tooltip title={attentionReason(status)}>
+                                    <AttentionMark tabIndex={0}>
+                                      <RiErrorWarningLine
+                                        aria-hidden="true"
+                                        size={16}
+                                      />
+                                      <VisuallyHidden>
+                                        , needs attention:{" "}
+                                        {attentionReason(status)}
+                                      </VisuallyHidden>
+                                    </AttentionMark>
+                                  </Tooltip>
+                                ) : null}
+                              </StatusLine>
+                              {progress === null ? null : (
+                                <CellProgress percent={progress}>
+                                  {activity ? (
+                                    <InlineDate>
+                                      <VisuallyHidden>
+                                        {activity.prefix}
+                                      </VisuallyHidden>
+                                      {activity.text}
+                                    </InlineDate>
+                                  ) : null}
+                                </CellProgress>
+                              )}
+                              {progress === null && activity ? (
+                                <ActivityDate>
                                   <VisuallyHidden>
-                                    , needs attention: {attentionReason(status)}
+                                    {activity.prefix}
                                   </VisuallyHidden>
-                                </AttentionMark>
-                              </Tooltip>
-                            ) : null}
-                            {activity ? (
-                              <ActivityDate>
-                                <VisuallyHidden>
-                                  {activity.prefix}
-                                </VisuallyHidden>
-                                {activity.text}
-                              </ActivityDate>
-                            ) : null}
+                                  {activity.text}
+                                </ActivityDate>
+                              ) : null}
+                            </CellContent>
                           </ModuleCell>
                         )
                       })}

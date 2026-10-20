@@ -520,6 +520,7 @@ describe("ContractLearnersPage", () => {
           analyticsFactories.learnerProgress({
             full_name: "Certified Learner",
             completion_status: "certified",
+            content_progress: 0.9,
             last_active_on: "2026-09-30",
           }),
           analyticsFactories.withheldLearnerProgress({
@@ -553,6 +554,9 @@ describe("ContractLearnersPage", () => {
       expect(csv).toContain("Certificate")
       expect(csv).not.toMatch(/,certified,/)
       expect(csv).toContain("Declined")
+      expect(csv).toContain("Status,Progress,")
+      expect(csv).toContain(",Certificate,90%,")
+      expect(csv).toContain(",Declined,,")
       // Raw, not the screen's "Sep 30, 2026", so a spreadsheet reads it as a
       // date; the withheld row exports empty rather than a fabricated stub.
       expect(csv).toContain("Last activity")
@@ -992,9 +996,59 @@ describe("ContractLearnersPage", () => {
       )
 
       const row = rowOf(await screen.findByText("Priya Raman"))
-      expect(within(row).getByText("—")).toBeInTheDocument()
+      /** One stub each for Progress and Last activity. */
+      expect(within(row).getAllByText("—")).toHaveLength(2)
       expect(within(row).queryByText("No activity")).not.toBeInTheDocument()
     })
+  })
+
+  describe("the Progress column", () => {
+    const rowFor = async (
+      overrides: Parameters<typeof analyticsFactories.learnerProgress>[0],
+    ) => {
+      const { org, contract, orgSlug } = setup()
+      const contractId = String(contract.id)
+      setMockResponse.get(
+        mitxUrls.organization.managerOrganizationsList(),
+        paginate([org]),
+      )
+      mockTotal(contractId, 1)
+      mockCourseRuns(contractId)
+      mockList(contractId, [
+        analyticsFactories.learnerProgress({
+          full_name: "Anton Petrov",
+          last_active_on: "2026-09-30",
+          ...overrides,
+        }),
+      ])
+      renderWithProviders(
+        <ContractLearnersPage orgSlug={orgSlug} contractSlug={contract.slug} />,
+      )
+      return rowOf(await screen.findByText("Anton Petrov"))
+    }
+
+    test.each([
+      { completion_status: "in_progress" as const, content_progress: 0.454 },
+      { completion_status: "passed" as const, content_progress: 0.454 },
+    ])(
+      "shows the rounded percent for a $completion_status enrollment",
+      async (overrides) => {
+        const row = await rowFor(overrides)
+        expect(within(row).getByText(/^45%/)).toHaveTextContent("45% complete")
+      },
+    )
+
+    test.each([
+      { completion_status: "not_started" as const, content_progress: 0 },
+      { completion_status: "in_progress" as const, content_progress: null },
+    ])(
+      "shows a stub for $completion_status with progress $content_progress",
+      async (overrides) => {
+        const row = await rowFor(overrides)
+        expect(within(row).getByText("—")).toBeInTheDocument()
+        expect(within(row).queryByText(/%/)).not.toBeInTheDocument()
+      },
+    )
   })
 
   test("the status filter sends completion_status", async () => {
@@ -2093,6 +2147,112 @@ describe("ContractLearnersPage progress grid", () => {
         "Dates show last activity",
       ),
     ).toBeInTheDocument()
+  })
+
+  test("shows content progress under started modules only", async () => {
+    const { contractId } = renderGrid()
+    const ada = {
+      learner_id: "a",
+      email: "ada@example.com",
+      full_name: "Ada Lovelace",
+    }
+    mockGridPage(contractId, 0, [
+      analyticsFactories.learnerProgress({
+        ...ada,
+        courserun_readable_id: M5,
+        completion_status: "in_progress",
+        content_progress: 0.45,
+      }),
+      analyticsFactories.learnerProgress({
+        ...ada,
+        courserun_readable_id: M6,
+        completion_status: "not_started",
+        content_progress: 0.1,
+      }),
+    ])
+
+    await user.click(await screen.findByRole("tab", { name: "Progress grid" }))
+
+    const row = rowOf(await screen.findByText("Ada Lovelace"))
+    expect(within(row).getByText(/^45%/)).toHaveTextContent("45% complete")
+    expect(within(row).queryByText(/^10%/)).not.toBeInTheDocument()
+    expect(
+      within(screen.getByRole("list", { name: "Legend" })).getByText(
+        "Percent shows content completed, not grade",
+      ),
+    ).toBeInTheDocument()
+  })
+
+  test("the Modules filter narrows learners and columns to the selected modules", async () => {
+    const { contractId, location } = renderGrid()
+    mockGridPage(contractId, 0, [
+      analyticsFactories.learnerProgress({
+        learner_id: "a",
+        full_name: "Ada Lovelace",
+        courserun_readable_id: M5,
+      }),
+    ])
+    mockGridPage(
+      contractId,
+      0,
+      [
+        analyticsFactories.learnerProgress({
+          learner_id: "b",
+          full_name: "Bob Barker",
+          courserun_readable_id: M6,
+        }),
+      ],
+      {},
+      { courserun_readable_id: [M6] },
+    )
+
+    await user.click(await screen.findByRole("tab", { name: "Progress grid" }))
+    await screen.findByText("Ada Lovelace")
+
+    await user.click(screen.getByRole("combobox", { name: /modules/i }))
+    const option = within(await screen.findByRole("listbox")).getByRole(
+      "option",
+      { name: "Module 6" },
+    )
+    await user.click(option)
+    expect(option).toHaveAttribute("aria-selected", "true")
+    await user.keyboard("{Escape}")
+
+    expect(await screen.findByText("Bob Barker")).toBeInTheDocument()
+    expect(location.current.searchParams.getAll("modules")).toEqual([M6])
+    const table = screen.getByRole("table", {
+      name: "Learner progress by module",
+    })
+    expect(
+      within(table).getByRole("columnheader", { name: "Module 6" }),
+    ).toBeInTheDocument()
+    expect(
+      within(table).queryByRole("columnheader", { name: "Module 5" }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.getByRole("combobox", { name: /modules/i }),
+    ).toHaveTextContent("Module 6")
+  })
+
+  test("drops module ids in the URL that aren't on the contract", async () => {
+    const { contractId } = renderGrid(
+      `/?view=grid&modules=${encodeURIComponent(M5)}&modules=gone`,
+    )
+    mockGridPage(
+      contractId,
+      0,
+      [
+        analyticsFactories.learnerProgress({
+          learner_id: "a",
+          full_name: "Ada Lovelace",
+          courserun_readable_id: M5,
+        }),
+      ],
+      {},
+      { courserun_readable_id: [M5] },
+    )
+
+    expect(await screen.findByText("Ada Lovelace")).toBeInTheDocument()
   })
 
   test("shadows the pinned learner column only once the grid has scrolled", async () => {

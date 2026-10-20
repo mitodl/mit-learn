@@ -64,5 +64,23 @@ const getDisplayStatus = (row: LearnerEnrollment): DisplayStatus => {
 const isWithheldStatus = (status: DisplayStatus) =>
   status === "declined" || status === "not-recorded"
 
-export { getDisplayStatus, isWithheldStatus, DISPLAY_STATUS_LABEL }
+const isStartedStatus = (status: DisplayStatus) =>
+  status === "in-progress" || status === "completed" || status === "certificate"
+
+/** Whole percent of content completed, or null where progress isn't shown. */
+const contentProgressPercent = (
+  row: LearnerEnrollment,
+  status: DisplayStatus,
+) =>
+  isStartedStatus(status) && typeof row.content_progress === "number"
+    ? Math.round(row.content_progress * 100)
+    : null
+
+export {
+  contentProgressPercent,
+  getDisplayStatus,
+  isStartedStatus,
+  isWithheldStatus,
+  DISPLAY_STATUS_LABEL,
+}
 export type { DisplayStatus }

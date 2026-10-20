@@ -183,8 +183,8 @@ export type AnalyticsPageParams = {
  *
  * Outcomes are gated on per-learner consent, not on a suppression floor. When
  * `outcomes_shared` is false the API nulls `completion_status`, `is_passing`,
- * `grade`, `letter_grade`, `certificate_issued_on`, `certificate_is_revoked`,
- * `last_active_on` and `needs_attention` — a `null` there means "the learner
+ * `grade`, `letter_grade`, `content_progress`, `certificate_issued_on`,
+ * `certificate_is_revoked`, `last_active_on` and `needs_attention` — a `null` there means "the learner
  * has not agreed to share this", which is a different thing from zero, from
  * absent, and from the k-anonymity suppression the aggregate types above use.
  * Render it as such.
@@ -216,6 +216,12 @@ export type LearnerProgress = {
   is_passing: boolean | null
   grade: number | null
   letter_grade: string | null
+  /**
+   * Share of the run's course content completed, from 0 to 1. Not the grade,
+   * so a learner can pass or certify below 1. Null when withheld, or when the
+   * course has no content to count.
+   */
+  content_progress: number | null
   certificate_issued_on: string | null
   certificate_is_revoked: boolean | null
   /**
@@ -339,7 +345,10 @@ export type LearnersParams = AnalyticsPageParams &
   Pick<
     LearnerProgressParams,
     "search" | "completion_status" | "needs_attention"
-  >
+  > & {
+    /** Repeatable, unlike on `learner-progress`: values OR together. At most 50. */
+    courserun_readable_id?: string[]
+  }
 
 /**
  * `total_count` is the number of matching learners. A learner is listed when
