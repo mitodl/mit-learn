@@ -300,6 +300,43 @@ def test_fallback_finds_user_linked_by_concurrent_request(
 
 
 @pytest.mark.django_db(transaction=True)
+@pytest.mark.parametrize("same_subject", [True, False])
+def test_legacy_user_linked_by_concurrent_request(
+    mocker, mock_login, settings, same_subject
+):
+    """
+    A legacy row another request links between our lookup and our link is only
+    returned if it was linked to the same subject.
+    """
+    close_old_connections()
+    settings.MITOL_APIGATEWAY_USERINFO_UPDATE = False
+    legacy_user = UserFactory.create(email=apisix_user_info["email"], global_id=None)
+    winner_global_id = apisix_user_info["sub"] if same_subject else uuid4().hex
+    real_get = QuerySet.get
+
+    def get_then_link_concurrently(self, *args, **kwargs):
+        """Simulate another request linking the row after this one loaded it."""
+        user = real_get(self, *args, **kwargs)
+        User.objects.filter(pk=user.pk).update(global_id=winner_global_id)
+        return user
+
+    mocker.patch.object(QuerySet, "get", get_then_link_concurrently)
+    request = mocker.Mock(
+        META={"HTTP_X_USERINFO": b64encode(json.dumps(apisix_user_info).encode())},
+        user=AnonymousUser(),
+    )
+    ApisixUserMiddleware(mocker.Mock()).process_request(request)
+    mocker.stopall()
+    legacy_user.refresh_from_db()
+    assert legacy_user.global_id == winner_global_id
+    if same_subject:
+        mock_login.assert_called_once()
+        assert request.user == legacy_user
+    else:
+        mock_login.assert_not_called()
+
+
+@pytest.mark.django_db(transaction=True)
 @pytest.mark.parametrize("same_user", [False, True])
 def test_get_request_different_user_logout(mocker, client, same_user):
     """Test that a request with mismatched users logs user out"""

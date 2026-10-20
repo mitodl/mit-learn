@@ -16,6 +16,7 @@ from posthog import Posthog
 
 from authentication.api import user_created_actions
 from main.constants import PostHogEvents
+from main.utils import now_in_utc
 from profiles.models import filter_profile_props
 
 log = logging.getLogger(__name__)
@@ -173,9 +174,23 @@ def resolve_apisix_user(
     if user.global_id is None:
         # Link a legacy user matched by email to its Keycloak identity even when
         # MITOL_APIGATEWAY_USERINFO_UPDATE is off, otherwise it stays matched by
-        # email on every request and is never linked.
-        user.global_id = global_id
-        user.save(update_fields=["global_id", "updated_on"])
+        # email on every request and is never linked. Claim the row only while
+        # it's still unlinked: a concurrent request for another subject with a
+        # matching email may have loaded it too, and a plain save would let both
+        # requests authenticate as it.
+        User.objects.filter(pk=user.pk, global_id__isnull=True).update(
+            global_id=global_id, updated_on=now_in_utc()
+        )
+        user.refresh_from_db(fields=["global_id", "updated_on"])
+        if user.global_id != global_id:
+            log.error(
+                "resolve_apisix_user: legacy_user_claimed_by_other_subject "
+                "global_id=%s email=%s user_id=%s",
+                global_id,
+                email,
+                user.pk,
+            )
+            return None, False
 
     return user, created
 
