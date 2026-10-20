@@ -68,6 +68,10 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
   if (!data.enrolledInProgram) {
     return <NotFoundPage />
   }
+  // A tracked program's total depends on the track, so wait for a choice.
+  const showCompletionCount = !data.sections.some(
+    (section) => section.trackAction === "choose",
+  )
   return (
     <Stack direction="column">
       {upgradeError && (
@@ -97,12 +101,11 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
         <Typography component="h1" variant="h3" paddingBottom="32px">
           {data.programTitle}
         </Typography>
-        {/* Tracked programs show progress per section only. */}
         <Stack
           direction="row"
-          justifyContent={data.trackState ? "flex-end" : "space-between"}
+          justifyContent={showCompletionCount ? "space-between" : "flex-end"}
         >
-          {data.trackState ? null : (
+          {showCompletionCount && (
             <Typography variant="body2" data-testid="program-completion-count">
               You have completed
               <Typography component="span" variant="subtitle2">

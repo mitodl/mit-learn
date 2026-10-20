@@ -2466,6 +2466,10 @@ describe("ProgramEnrollmentDisplay with program tracks", () => {
     ).toEqual(["Core Courses", "Methods Track courses", "Capstone"])
     expect(screen.queryByText("Not selected")).not.toBeInTheDocument()
     expect(screen.getByRole("button", { name: "Change track" })).toBeVisible()
+    // Core, the chosen track and the capstone each have one course.
+    expect(screen.getByTestId("program-completion-count")).toHaveTextContent(
+      /You have completed 0 of 3/,
+    )
   })
 
   test("Changing tracks starts on the current track and saves a different one", async () => {
