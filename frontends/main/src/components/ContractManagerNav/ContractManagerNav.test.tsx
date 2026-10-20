@@ -1,10 +1,12 @@
 import React from "react"
 import {
   renderWithProviders,
+  fireEvent,
   screen,
   within,
   setMockResponse,
 } from "@/test-utils"
+import userEvent from "@testing-library/user-event"
 import { urls, factories } from "api/mitxonline-test-utils"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import { FeatureFlags } from "@/common/feature_flags"
@@ -45,7 +47,10 @@ const mockUserWithContract = (hasContract = true) => {
 }
 
 describe("ContractManagerNav", () => {
-  beforeEach(() => mockUserWithContract())
+  beforeEach(() => {
+    sessionStorage.clear()
+    mockUserWithContract()
+  })
 
   test("links to every section for the contract, marking only the current one", async () => {
     enableFlags(
@@ -137,5 +142,99 @@ describe("ContractManagerNav", () => {
     )
     await screen.findByRole("navigation", { name: "Contract" })
     expect(linkNames()).toEqual(["Analytics", "Manage seats"])
+  })
+
+  describe("focus after navigation", () => {
+    const stopNavigation = (event: Event) => event.preventDefault()
+    beforeEach(() => document.addEventListener("click", stopNavigation))
+    afterEach(() => document.removeEventListener("click", stopNavigation))
+
+    const renderNav = () =>
+      renderWithProviders(
+        <ContractManagerNav
+          orgSlug="acme"
+          contractSlug="c1"
+          current="analytics"
+        />,
+      )
+
+    const enableLearnerFlags = () =>
+      enableFlags(
+        FeatureFlags.B2BAnalyticsDashboard,
+        FeatureFlags.B2BLearnerAnalytics,
+      )
+
+    test.each([
+      [
+        "keyboard",
+        async (link: HTMLElement) => {
+          link.focus()
+          await userEvent.keyboard("{Enter}")
+        },
+      ],
+      ["mouse", (link: HTMLElement) => userEvent.click(link)],
+    ])(
+      "refocuses the link that was activated by %s when the nav remounts",
+      async (_input, activate) => {
+        enableLearnerFlags()
+        const { view } = renderNav()
+        await activate(await screen.findByRole("link", { name: "Learners" }))
+        view.unmount()
+
+        renderNav()
+        expect(
+          await screen.findByRole("link", { name: "Learners" }),
+        ).toHaveFocus()
+      },
+    )
+
+    test("does not refocus when no link was activated", async () => {
+      enableLearnerFlags()
+      renderNav()
+      await screen.findByRole("link", { name: "Learners" })
+      expect(document.body).toHaveFocus()
+    })
+
+    test.each([
+      ["the current page's link", "Analytics", {}],
+      ["a modifier-click that opens a new tab", "Learners", { metaKey: true }],
+    ])(
+      "does not save %s for refocus",
+      async (_case, name, eventInit) => {
+        enableLearnerFlags()
+        const { view } = renderNav()
+        fireEvent.click(
+          await screen.findByRole("link", { name }),
+          eventInit,
+        )
+        view.unmount()
+
+        renderNav()
+        await screen.findByRole("link", { name })
+        expect(document.body).toHaveFocus()
+      },
+    )
+
+    test("leaves focus alone when it already moved elsewhere", async () => {
+      enableLearnerFlags()
+      const { view } = renderNav()
+      await userEvent.click(
+        await screen.findByRole("link", { name: "Learners" }),
+      )
+      view.unmount()
+
+      renderWithProviders(
+        <>
+          <button ref={(el) => el?.focus()}>Elsewhere</button>
+          <ContractManagerNav
+            orgSlug="acme"
+            contractSlug="c1"
+            current="analytics"
+          />
+        </>,
+      )
+      await screen.findByRole("link", { name: "Learners" })
+      expect(screen.getByRole("button", { name: "Elsewhere" })).toHaveFocus()
+    })
   })
 })

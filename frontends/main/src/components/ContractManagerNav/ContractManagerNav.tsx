@@ -1,6 +1,6 @@
 "use client"
 
-import React from "react"
+import React, { useEffect, useRef } from "react"
 import Link from "next/link"
 import { useQuery } from "@tanstack/react-query"
 import { useFeatureFlagEnabled } from "posthog-js/react"
@@ -16,6 +16,27 @@ import {
 } from "@/common/urls"
 
 type ContractManagerSection = "overview" | "analytics" | "learners" | "seats"
+
+const FOCUS_RESTORE_KEY = "contract-manager-nav-focus"
+
+/** Storage throws when site data is blocked, and a missed focus restore is harmless. */
+const saveFocusTarget = (key: ContractManagerSection) => {
+  try {
+    sessionStorage.setItem(FOCUS_RESTORE_KEY, key)
+  } catch {
+    return
+  }
+}
+
+const takeFocusTarget = () => {
+  try {
+    const key = sessionStorage.getItem(FOCUS_RESTORE_KEY)
+    sessionStorage.removeItem(FOCUS_RESTORE_KEY)
+    return key
+  } catch {
+    return null
+  }
+}
 
 const NavList = styled.ul(({ theme }) => ({
   display: "flex",
@@ -57,6 +78,11 @@ type ContractManagerNavProps = {
 /**
  * Links between a contract's manager views. Plain links rather than ARIA tabs,
  * because each one loads a separate page.
+ *
+ * shortcut: every page renders its own nav, so a navigation remounts it and
+ * drops focus to `<body>`. The activated link is remembered in
+ * sessionStorage and refocused on the next mount. Replace with one shared
+ * layout if these routes are ever moved under a common parent.
  */
 const ContractManagerNav: React.FC<ContractManagerNavProps> = ({
   orgSlug,
@@ -111,16 +137,38 @@ const ContractManagerNav: React.FC<ContractManagerNavProps> = ({
     },
   ]
   const visible = sections.filter((section) => section.enabled)
+  const showNav = visible.length >= 2
 
-  if (visible.length < 2) return null
+  const navRef = useRef<HTMLElement>(null)
+  useEffect(() => {
+    if (!showNav) return
+    const key = takeFocusTarget()
+    if (document.activeElement !== document.body) return
+    navRef.current
+      ?.querySelector<HTMLAnchorElement>(`a[data-section="${key}"]`)
+      ?.focus()
+  }, [showNav])
+
+  if (!showNav) return null
 
   return (
-    <nav aria-label="Contract">
+    <nav aria-label="Contract" ref={navRef}>
       <NavList>
         {visible.map((section) => (
           <li key={section.key}>
             <NavLink
               href={section.href}
+              data-section={section.key}
+              onClick={(event) => {
+                const opensElsewhere =
+                  event.metaKey ||
+                  event.ctrlKey ||
+                  event.shiftKey ||
+                  event.altKey
+                if (section.key !== current && !opensElsewhere) {
+                  saveFocusTarget(section.key)
+                }
+              }}
               aria-current={section.key === current ? "page" : undefined}
             >
               {section.label}
