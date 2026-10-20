@@ -1,6 +1,22 @@
 Release Notes
 =============
 
+Version 0.84.1
+--------------
+
+- Show program tracks on the program dashboard (#4100)
+- build(deps): bump handlebars from 4.7.9 to 4.7.10 in /load_testing (#4123)
+- Update dependency sharp to v0.35.5 [SECURITY] (#4053)
+- Update zizmorcore/zizmor-action action to v0.6.4 (#4086)
+- Update dependency cairosvg to v2.9.1 [SECURITY] (#4070)
+- Search for a channel's featured list instead of scrolling to it (#4113)
+- Let course staff open courseware before the start date (#4036)
+- Qdrant/search: Dedup courses that change platforms (#4112)
+- feat(b2b-learner-analytics): paginate the progress grid on the server and keep learner filters in the URL (#4099)
+- fix(b2b-analytics): type monthly_active_learners as nullable and update its tooltip (#4114)
+- chore: remove leftover Heroku artifacts (#4115)
+- feat(b2b-learner-analytics): show declined vs. not-recorded consent on the learners page (#4110)
+
 Version 0.84.0
 --------------
 
