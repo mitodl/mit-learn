@@ -2443,7 +2443,9 @@ describe("ContractLearnersPage progress grid", () => {
     )
 
     await screen.findByText(/are hidden while this filter is on/)
-    expect(screen.queryByText(/of these \d+ learners? ha/)).not.toBeInTheDocument()
+    expect(
+      screen.queryByText(/of these \d+ learners? ha/),
+    ).not.toBeInTheDocument()
   })
 
   test("requests the next page of learners by offset", async () => {
