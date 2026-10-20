@@ -6,6 +6,7 @@
 const COLUMN_FLEX = {
   learner: 2.5,
   status: 1.5,
+  progress: 1,
   lastActivity: 1.5,
 } as const
 

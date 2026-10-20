@@ -183,8 +183,8 @@ export type AnalyticsPageParams = {
  *
  * Outcomes are gated on per-learner consent, not on a suppression floor. When
  * `outcomes_shared` is false the API nulls `completion_status`, `is_passing`,
- * `grade`, `letter_grade`, `certificate_issued_on`, `certificate_is_revoked`,
- * `last_active_on` and `needs_attention` — a `null` there means "the learner
+ * `grade`, `letter_grade`, `content_progress`, `certificate_issued_on`,
+ * `certificate_is_revoked`, `last_active_on` and `needs_attention` — a `null` there means "the learner
  * has not agreed to share this", which is a different thing from zero, from
  * absent, and from the k-anonymity suppression the aggregate types above use.
  * Render it as such.
@@ -216,6 +216,12 @@ export type LearnerProgress = {
   is_passing: boolean | null
   grade: number | null
   letter_grade: string | null
+  /**
+   * Share of the run's course content completed, from 0 to 1. Not the grade,
+   * so a learner can pass or certify below 1. Null when withheld, or when the
+   * course has no content to count.
+   */
+  content_progress: number | null
   certificate_issued_on: string | null
   certificate_is_revoked: boolean | null
   /**
@@ -264,10 +270,7 @@ export type CompletionStatusFilter = CompletionStatus | "unknown"
  * this endpoint per mitodl/ol-analytics-api#58), so none of these are
  * nullable — but they sum to `total_count` minus `outcomes_withheld_count`,
  * not `total_count` itself: a consent-withheld enrollment has no
- * `completion_status` and lands in none of these four buckets. They happen to
- * sum to `total_count` in every environment today only because
- * `outcomes_withheld_count` is currently always zero (consent withholding is
- * inert until a real consent field ships).
+ * `completion_status` and lands in none of these four buckets.
  */
 export type CompletionStatusCounts = Record<CompletionStatus, number>
 
@@ -339,7 +342,10 @@ export type LearnersParams = AnalyticsPageParams &
   Pick<
     LearnerProgressParams,
     "search" | "completion_status" | "needs_attention"
-  >
+  > & {
+    /** Repeatable, unlike on `learner-progress`: values OR together. At most 50. */
+    courserun_readable_id?: string[]
+  }
 
 /**
  * `total_count` is the number of matching learners. A learner is listed when

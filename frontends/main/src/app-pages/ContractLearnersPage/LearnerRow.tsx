@@ -13,11 +13,13 @@ import {
   TableRow,
 } from "@/components/B2BTable/B2BTable"
 import {
+  contentProgressPercent,
   DISPLAY_STATUS_LABEL,
   getDisplayStatus,
   isWithheldStatus,
 } from "./statusDisplay"
 import { COLUMN_FLEX } from "./columns"
+import { ContentProgress } from "./ContentProgress"
 
 /**
  * Initials, not a photo: the analytics API returns no avatar image. Without a
@@ -42,6 +44,11 @@ const LearnerCell = styled(TableCell)({
   alignItems: "center",
   gap: "12px",
 })
+
+const ConsentNotice = styled(Typography)(({ theme }) => ({
+  ...theme.typography.body3,
+  color: theme.custom.colors.silverGrayDark,
+})) as typeof Typography
 
 const LearnerName = styled(Typography)(({ theme }) => ({
   ...theme.typography.subtitle2,
@@ -123,6 +130,7 @@ const LearnerRow: React.FC<LearnerRowProps> = ({ row }) => {
   const statusLabel = DISPLAY_STATUS_LABEL[status]
   const isWithheld = isWithheldStatus(status)
   const name = row.full_name?.trim() || null
+  const progress = contentProgressPercent(row, status)
 
   /**
    * Withheld and never-active are different facts, so they read differently: a
@@ -169,6 +177,17 @@ const LearnerRow: React.FC<LearnerRowProps> = ({ row }) => {
         </CellText>
       </TableCell>
 
+      <TableCell role="cell" $flex={COLUMN_FLEX.progress}>
+        <MobileLabel>Progress:</MobileLabel>
+        {progress === null ? (
+          <CellText>
+            <MutedText>{STUB}</MutedText>
+          </CellText>
+        ) : (
+          <ContentProgress percent={progress} />
+        )}
+      </TableCell>
+
       <TableCell role="cell" $flex={COLUMN_FLEX.lastActivity}>
         <MobileLabel>Last activity:</MobileLabel>
         <CellText>
@@ -183,4 +202,4 @@ const LearnerRow: React.FC<LearnerRowProps> = ({ row }) => {
   )
 }
 
-export { Avatar, LearnerRow, NeedsAttentionBadge }
+export { Avatar, ConsentNotice, LearnerRow, NeedsAttentionBadge }
