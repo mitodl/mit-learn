@@ -11,6 +11,7 @@ from imagekit.models import ImageSpecField, ProcessedImageField
 from imagekit.processors import ResizeToFit
 
 from channels.constants import CHANNEL_ROLE_CHOICES, ChannelType
+from learning_resources.constants import LearningResourceType
 from learning_resources.models import (
     LearningResource,
     LearningResourceDepartment,
@@ -153,6 +154,12 @@ class Channel(TimestampedModel):
         blank=True,
         on_delete=deletion.SET_NULL,
         related_name="channel",
+        # The frontend reads this as a list of its own members, which only a
+        # learning path is; anything else here is a resource presented as a
+        # list of resources.
+        limit_choices_to={
+            "resource_type": LearningResourceType.learning_path.name,
+        },
     )
 
     widget_list = models.ForeignKey(

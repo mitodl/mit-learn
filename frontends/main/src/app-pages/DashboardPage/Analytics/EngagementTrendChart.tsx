@@ -123,7 +123,7 @@ const SERIES = [
      * description changes, this string has to be updated by hand to match.
      */
     description:
-      "Learners who did anything in a course this month: watched a video, attempted a problem, posted in a discussion, used the chatbot, moved through course pages or earned a certificate. Enrolling alone doesn't count. If too few learners were active, the whole month is withheld to avoid identifying them.",
+      "Learners who did course work this month: watched a video, attempted a problem, posted in a discussion, used the chatbot or moved through course pages. Enrolling or earning a certificate alone doesn't count. Withheld when too few learners are in the group to report without identifying them.",
   },
   {
     key: "new_enrollments",

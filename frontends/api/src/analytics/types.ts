@@ -82,7 +82,7 @@ export type MonthlyEngagementTrend = {
   organization_key: string
   organization_name: string
   activity_year_and_month: string
-  monthly_active_learners: number
+  monthly_active_learners: number | null
   new_enrollments: number | null
   enrolling_learners: number | null
   certificates_earned: number | null
@@ -192,6 +192,8 @@ export type AnalyticsPageParams = {
  * `learner_id` is the Keycloak user id (MITx Online's `global_id`). It is
  * stable across email changes, so join on it and never on `email`.
  */
+export type ConsentStatus = "consented" | "declined" | "not_recorded"
+
 export type LearnerProgress = {
   learner_id: string
   email: string | null
@@ -203,6 +205,12 @@ export type LearnerProgress = {
   enrolled_on: string
   enrollment_is_active: boolean
   enrollment_mode: string | null
+  /**
+   * The learner's recorded decision, always present even when outcomes are
+   * withheld. `outcomes_shared` also folds in the deployment's default for
+   * `not_recorded`, so it can be true or false beside that value.
+   */
+  outcomes_consent_status: ConsentStatus
   outcomes_shared: boolean
   completion_status: CompletionStatus | null
   is_passing: boolean | null
@@ -308,6 +316,41 @@ export type LearnerProgressResponse = {
    */
   needs_attention_count: number
   data: LearnerProgress[]
+}
+
+type LearnerIdentity = Pick<
+  LearnerProgress,
+  "learner_id" | "email" | "full_name"
+>
+
+/** One of a learner's enrollments: a `LearnerProgress` row minus the identity. */
+export type LearnerEnrollment = Omit<LearnerProgress, keyof LearnerIdentity>
+
+/** A learner with every active enrollment they hold under the contract. */
+export type LearnerWithEnrollments = LearnerIdentity & {
+  enrollments: LearnerEnrollment[]
+}
+
+/**
+ * `limit` and `offset` count learners, not enrollments. The API caps `limit`
+ * at 25 and rejects anything larger.
+ */
+export type LearnersParams = AnalyticsPageParams &
+  Pick<
+    LearnerProgressParams,
+    "search" | "completion_status" | "needs_attention"
+  >
+
+/**
+ * `total_count` is the number of matching learners. A learner is listed when
+ * one enrollment matches every filter, and all their other enrollments come
+ * back too, whether or not they match.
+ */
+export type LearnersResponse = {
+  organization_id: string
+  as_of: string | null
+  total_count: number
+  data: LearnerWithEnrollments[]
 }
 
 /**

@@ -801,6 +801,148 @@ describe("ProgramEnrollmentDisplay", () => {
     )
   })
 
+  test("Program-as-course items with every module passed count toward completion total without a certificate", async () => {
+    /**
+     * A section contains 1 course (not completed) + 1 program-as-course whose
+     * only module is passed in audit mode (no certificate). The counter should
+     * show "Completed 1 of 2".
+     */
+    const mitxOnlineUser = mitxonline.factories.user.user()
+    setMockResponse.get(mitxonline.urls.userMe.get(), mitxOnlineUser)
+
+    const parentReqTree =
+      new mitxonline.factories.requirements.RequirementTreeBuilder()
+    const parentRequirements = parentReqTree.addOperator({
+      operator: "all_of",
+      title: "Requirements",
+    })
+    parentRequirements.addCourse({ course: 1 })
+    parentRequirements.addProgram({ program: 900 })
+
+    const parentProgram = mitxonline.factories.programs.program({
+      id: 4321,
+      title: "Parent Program",
+      courses: [1],
+      req_tree: parentReqTree.serialize(),
+    })
+
+    const parentCourses = {
+      count: 1,
+      next: null,
+      previous: null,
+      results: [
+        mitxonline.factories.courses.course({
+          id: 1,
+          title: "Core Course",
+          courseruns: [mitxonline.factories.courses.courseRun()],
+        }),
+      ],
+    }
+
+    const programAsCourseReqTree =
+      new mitxonline.factories.requirements.RequirementTreeBuilder()
+    const programAsCourseRequirements = programAsCourseReqTree.addOperator({
+      operator: "all_of",
+      title: "Modules",
+    })
+    programAsCourseRequirements.addCourse({ course: 11 })
+
+    const programAsCourseProgram = mitxonline.factories.programs.program({
+      id: 900,
+      title: "Program As Course",
+      display_mode: "course",
+      courses: [11],
+      req_tree: programAsCourseReqTree.serialize(),
+    })
+
+    const moduleRun = mitxonline.factories.courses.courseRun()
+    const moduleCourse = mitxonline.factories.courses.course({
+      id: 11,
+      title: "Module A",
+      courseruns: [moduleRun],
+    })
+    const programAsCourseCourses = {
+      count: 1,
+      next: null,
+      previous: null,
+      results: [moduleCourse],
+    }
+
+    mockedUseFeatureFlagEnabled.mockReturnValue(true)
+    setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV3(), [
+      mitxonline.factories.enrollment.courseEnrollment({
+        run: { ...moduleRun, course: moduleCourse },
+        enrollment_mode: "audit",
+        grades: [mitxonline.factories.enrollment.grade({ passed: true })],
+        certificate: null,
+      }),
+    ])
+    setMockResponse.get(
+      mitxonline.urls.programEnrollments.enrollmentsListV3(),
+      [
+        mitxonline.factories.enrollment.programEnrollmentV3({
+          program: {
+            id: parentProgram.id,
+            title: parentProgram.title,
+            live: parentProgram.live,
+            program_type: parentProgram.program_type,
+            readable_id: parentProgram.readable_id,
+          },
+        }),
+        mitxonline.factories.enrollment.programEnrollmentV3({
+          program: {
+            id: programAsCourseProgram.id,
+            title: programAsCourseProgram.title,
+            live: programAsCourseProgram.live,
+            program_type: programAsCourseProgram.program_type,
+            readable_id: programAsCourseProgram.readable_id,
+          },
+          certificate: null,
+        }),
+      ],
+    )
+    setMockResponse.get(
+      mitxonline.urls.programs.programDetail(parentProgram.id),
+      parentProgram,
+    )
+    setMockResponse.get(
+      mitxonline.urls.courses.coursesList({
+        id: parentProgram.courses,
+        page_size: parentProgram.courses.length,
+      }),
+      parentCourses,
+    )
+    setMockResponse.get(
+      mitxonline.urls.programs.programsList({
+        id: [900],
+        page_size: 1,
+      }),
+      {
+        count: 1,
+        next: null,
+        previous: null,
+        results: [programAsCourseProgram],
+      },
+    )
+    setMockResponse.get(
+      mitxonline.urls.courses.coursesList({
+        id: [11],
+        page_size: 1,
+      }),
+      programAsCourseCourses,
+    )
+
+    renderWithProviders(
+      <ProgramEnrollmentDisplay programId={parentProgram.id} />,
+    )
+
+    // every module passed → program-as-course counts as completed
+    await screen.findByText(/Completed 1 of 2/)
+    expect(screen.getByTestId("program-completion-count")).toHaveTextContent(
+      "1 of 2",
+    )
+  })
+
   test("Shows enrollment status for program courses", async () => {
     const mitxOnlineUser = mitxonline.factories.user.user()
     setMockResponse.get(mitxonline.urls.userMe.get(), mitxOnlineUser)
@@ -2201,5 +2343,172 @@ describe("ProgramEnrollmentDisplay", () => {
     await screen.findByText("Program Without Certificate")
     const certButton = screen.queryByRole("link", { name: "Certificate" })
     expect(certButton).not.toBeInTheDocument()
+  })
+})
+
+describe("ProgramEnrollmentDisplay with program tracks", () => {
+  setupLocationMock()
+
+  const setupTrackedProgram = (
+    chosen: "General Track" | "Methods Track" | null = null,
+  ) => {
+    setMockResponse.get(
+      mitxonline.urls.userMe.get(),
+      mitxonline.factories.user.user(),
+    )
+    const root = new mitxonline.RequirementTreeBuilder()
+    root
+      .addOperator({ operator: "all_of", title: "Core Courses" })
+      .addCourse({ course: 1 })
+    const container = root.addOperator({
+      operator: "min_number_of",
+      operator_value: "1",
+    })
+    const general = container.addTrack({ title: "General Track" })
+    general.addOperator({ operator: "all_of" }).addCourse({ course: 2 })
+    const methods = container.addTrack({ title: "Methods Track" })
+    methods.addOperator({ operator: "all_of" }).addCourse({ course: 3 })
+    root
+      .addOperator({ operator: "all_of", title: "Capstone" })
+      .addCourse({ course: 4 })
+
+    const program = mitxonline.factories.programs.program({
+      id: 456,
+      courses: [1, 2, 3, 4],
+      req_tree: root.serialize(),
+    })
+    const courses = [1, 2, 3, 4].map((id) =>
+      mitxonline.factories.courses.course({ id }),
+    )
+    const trackIds = {
+      "General Track": general.id,
+      "Methods Track": methods.id,
+    }
+    const enrollment = mitxonline.factories.enrollment.programEnrollmentV3({
+      program: mitxonline.factories.programs.simpleProgram({ id: program.id }),
+      ...(chosen ? { track: { id: trackIds[chosen], title: chosen } } : {}),
+    })
+    setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV3(), [])
+    setMockResponse.get(
+      mitxonline.urls.programEnrollments.enrollmentsListV3(),
+      [enrollment],
+    )
+    setMockResponse.get(
+      mitxonline.urls.programs.programDetail(program.id),
+      program,
+    )
+    setMockResponse.get(
+      mitxonline.urls.courses.coursesList({
+        id: program.courses,
+        page_size: program.courses.length,
+      }),
+      { count: courses.length, next: null, previous: null, results: courses },
+    )
+    return { program, enrollment, methodsId: methods.id }
+  }
+
+  const expectTrackSaved = async (
+    programId: number,
+    trackId: number,
+    heading: string,
+  ) => {
+    expect(makeRequest).toHaveBeenCalledWith(
+      expect.objectContaining({
+        method: "patch",
+        url: mitxonline.urls.programEnrollments.programEnrollment(programId),
+        body: { track: trackId },
+      }),
+    )
+    const trackHeading = await screen.findByRole("heading", { name: heading })
+    // The button that opened the dialog is gone, so focus moves to the heading.
+    await waitFor(() => expect(trackHeading).toHaveFocus())
+  }
+
+  test("Choosing a track saves it and shows that track's courses", async () => {
+    const { program, enrollment, methodsId } = setupTrackedProgram()
+    renderWithProviders(<ProgramEnrollmentDisplay programId={program.id} />)
+
+    await screen.findByText("Not selected")
+    expect(
+      screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent),
+    ).toEqual(["Core Courses", "Track courses", "Capstone"])
+    expect(
+      screen.queryByTestId("program-completion-count"),
+    ).not.toBeInTheDocument()
+
+    const updated = {
+      ...enrollment,
+      track: { id: methodsId, title: "Methods Track" },
+    }
+    setMockResponse.patch(
+      mitxonline.urls.programEnrollments.programEnrollment(program.id),
+      updated,
+    )
+    setMockResponse.get(
+      mitxonline.urls.programEnrollments.enrollmentsListV3(),
+      [updated],
+    )
+    await user.click(screen.getByRole("button", { name: "Choose track" }))
+    const dialog = await screen.findByRole("dialog", { name: "Choose track" })
+    const submit = within(dialog).getByRole("button", { name: "Choose track" })
+    expect(submit).toBeDisabled()
+
+    await user.click(
+      within(dialog).getByRole("radio", { name: /Methods Track/ }),
+    )
+    await user.click(
+      within(dialog).getByRole("button", { name: "Choose Methods Track" }),
+    )
+
+    await expectTrackSaved(program.id, methodsId, "Methods Track courses")
+    expect(
+      screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent),
+    ).toEqual(["Core Courses", "Methods Track courses", "Capstone"])
+    expect(screen.queryByText("Not selected")).not.toBeInTheDocument()
+    expect(screen.getByRole("button", { name: "Change track" })).toBeVisible()
+    // Core, the chosen track and the capstone each have one course.
+    expect(screen.getByTestId("program-completion-count")).toHaveTextContent(
+      /You have completed 0 of 3/,
+    )
+  })
+
+  test("Changing tracks starts on the current track and saves a different one", async () => {
+    const { program, enrollment, methodsId } =
+      setupTrackedProgram("General Track")
+    renderWithProviders(<ProgramEnrollmentDisplay programId={program.id} />)
+
+    await screen.findByRole("heading", { name: "General Track courses" })
+    const updated = {
+      ...enrollment,
+      track: { id: methodsId, title: "Methods Track" },
+    }
+    setMockResponse.patch(
+      mitxonline.urls.programEnrollments.programEnrollment(program.id),
+      updated,
+    )
+    setMockResponse.get(
+      mitxonline.urls.programEnrollments.enrollmentsListV3(),
+      [updated],
+    )
+    await user.click(screen.getByRole("button", { name: "Change track" }))
+    const dialog = await screen.findByRole("dialog", { name: "Change track" })
+    expect(
+      within(dialog).getByRole("radio", { name: /General Track/ }),
+    ).toBeChecked()
+    expect(
+      within(dialog).getByRole("button", { name: "Switch track" }),
+    ).toBeDisabled()
+
+    await user.click(
+      within(dialog).getByRole("radio", { name: /Methods Track/ }),
+    )
+    await user.click(
+      within(dialog).getByRole("button", { name: "Switch to Methods Track" }),
+    )
+
+    await expectTrackSaved(program.id, methodsId, "Methods Track courses")
+    expect(
+      screen.queryByRole("heading", { name: "General Track courses" }),
+    ).not.toBeInTheDocument()
   })
 })

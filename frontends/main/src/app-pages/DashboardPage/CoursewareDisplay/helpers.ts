@@ -13,5 +13,6 @@ export {
   getEnrollmentStatus,
   getProgramEnrollmentStatus,
   getRequirementsProgress,
+  programIsCompleted,
 } from "./model/dashboardViewModel"
 export { getBestRun } from "@/common/mitxonline"

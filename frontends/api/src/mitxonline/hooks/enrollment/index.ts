@@ -13,7 +13,10 @@ import {
   CourseRunEnrollmentRequest,
 } from "@mitodl/mitxonline-api-axios/v1"
 import { VerifiedProgramEnrollmentsApiVerifiedProgramEnrollmentsCreateRequest } from "@mitodl/mitxonline-api-axios/v2"
-import { ProgramEnrollmentsApiV3ProgramEnrollmentsCreateRequest } from "@mitodl/mitxonline-api-axios/v3"
+import {
+  ProgramEnrollmentsApiV3ProgramEnrollmentsCreateRequest,
+  ProgramEnrollmentsApiV3ProgramEnrollmentsPartialUpdateRequest,
+} from "@mitodl/mitxonline-api-axios/v3"
 
 const useCreateB2bEnrollment = ({ meta }: MutationHookOptions = {}) => {
   const queryClient = useQueryClient()
@@ -120,6 +123,34 @@ const useCreateProgramEnrollment = ({ meta }: MutationHookOptions = {}) => {
   })
 }
 
+const useUpdateProgramEnrollmentTrack = ({
+  meta,
+}: MutationHookOptions = {}) => {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (
+      opts: ProgramEnrollmentsApiV3ProgramEnrollmentsPartialUpdateRequest,
+    ) => programEnrollmentsApi.v3ProgramEnrollmentsPartialUpdate(opts),
+    onSuccess: (response) => {
+      queryClient.setQueryData(
+        enrollmentQueries.programEnrollmentsList().queryKey,
+        (data) =>
+          data?.map((enrollment) =>
+            enrollment.program.id === response.data.program.id
+              ? response.data
+              : enrollment,
+          ),
+      )
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({
+        queryKey: enrollmentKeys.programEnrollmentsList(),
+      })
+    },
+    meta,
+  })
+}
+
 const useCreateVerifiedProgramEnrollment = ({
   meta,
 }: MutationHookOptions = {}) => {
@@ -149,5 +180,6 @@ export {
   useDestroyEnrollment,
   useDestroyProgramEnrollment,
   useCreateProgramEnrollment,
+  useUpdateProgramEnrollmentTrack,
   useCreateVerifiedProgramEnrollment,
 }

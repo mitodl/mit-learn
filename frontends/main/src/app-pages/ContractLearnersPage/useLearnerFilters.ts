@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import type { CompletionStatusFilter } from "api/analytics-hooks/organizations"
 import { useAppSearchParams } from "@/common/useAppSearchParams"
 import {
@@ -8,8 +8,12 @@ import {
 
 const ALL = "all"
 const SEARCH_DEBOUNCE_MS = 300
-/** Matches the API's cap on `search`; truncated below rather than sent as-is, since a long paste would otherwise 422 and read as "Something went wrong loading learner data" — 422 isn't in the page's error-boundary set. */
+/** Past this, a page number is a typo or a hand-edited link, and its offset would overflow what the API accepts. */
+const MAX_PAGE = 10_000
+/** Matches the API's cap on `search`; truncated rather than sent as-is, since a long paste would otherwise 422 and read as "Something went wrong loading learner data" — 422 isn't in the error-boundary set. */
 const SEARCH_MAX_LENGTH = 254
+const VIEWS = { enrollments: "enrollments", grid: "grid" } as const
+type View = (typeof VIEWS)[keyof typeof VIEWS]
 
 /**
  * "Completed" queries both `passed` and `certified`, matching the count
@@ -32,59 +36,56 @@ const STATUS_FILTER_COMPLETION_STATUS: Record<
 const isStatus = (value: string | null): value is ContractLearnersStatus =>
   (CONTRACT_LEARNERS_STATUSES as readonly (string | null)[]).includes(value)
 
-type DirectoryParam = "status" | "module" | "needs_attention" | "page"
-
-const replaceSearchParams = (
-  changes: Partial<Record<DirectoryParam, string | null>>,
-) => {
-  const params = new URLSearchParams(window.location.search)
-  for (const [name, value] of Object.entries(changes)) {
-    if (value) {
-      params.set(name, value)
-    } else {
-      params.delete(name)
-    }
-  }
-  const search = params.toString()
-  window.history.replaceState(
-    null,
-    "",
-    search ? `?${search}` : window.location.pathname,
-  )
-}
-
 /**
- * The filters both learner views share. Status, module and needs-attention
- * live in the URL; the search text deliberately does not, because it is a
- * learner's name or email and the URL is recorded by PostHog and Sentry.
- * `onChange` runs whenever a filter settles on a new value, so each view can
- * send its own pagination back to page 1; typing in the search box only
- * reports once the debounce lands.
+ * The learner directory's state: the filters both views share, the active
+ * view, and the page. View, page, status, module and needs-attention live in
+ * the URL; the search text deliberately does not, because it is a learner's
+ * name or email and the URL is recorded by PostHog and Sentry. Every URL
+ * change is one `history.replaceState`, which Next feeds into
+ * `useSearchParams` without a server round trip (the app is `force-dynamic`,
+ * so `router.replace` would re-render the route on every filter change). A
+ * changed filter, view, or search always lands on page 1.
  */
-const useLearnerFilters = (onChange: () => void) => {
-  const searchParams = useAppSearchParams()
-  const statusParam = searchParams.get("status")
+const useLearnerFilters = () => {
+  const params = useAppSearchParams()
+
+  const update = useCallback((updates: Record<string, string | null>) => {
+    const next = new URLSearchParams(window.location.search)
+    for (const [key, value] of Object.entries(updates)) {
+      if (value) next.set(key, value)
+      else next.delete(key)
+    }
+    const query = next.toString()
+    window.history.replaceState(
+      null,
+      "",
+      `${window.location.pathname}${query ? `?${query}` : ""}${window.location.hash}`,
+    )
+  }, [])
+
+  const statusParam = params.get("status")
   const statusFilter = isStatus(statusParam) ? statusParam : ALL
-  const needsAttentionOnly = searchParams.get("needs_attention") === "true"
+  const needsAttentionOnly = params.get("needs_attention") === "true"
+  const moduleFilter = params.get("module") ?? ALL
+  const view: View =
+    params.get("view") === VIEWS.grid ? VIEWS.grid : VIEWS.enrollments
+  const parsedPage = parseInt(params.get("page") ?? "", 10)
+  const page =
+    Number.isSafeInteger(parsedPage) && parsedPage > 0 && parsedPage <= MAX_PAGE
+      ? parsedPage
+      : 1
+
   const [searchQuery, setSearchQuery] = useState("")
   const [debouncedSearch, setDebouncedSearch] = useState("")
-
-  const applyFilterChange = (
-    changes: Partial<Record<Exclude<DirectoryParam, "page">, string | null>>,
-  ) => {
-    replaceSearchParams({ ...changes, page: null })
-    onChange()
-  }
 
   useEffect(() => {
     if (searchQuery === debouncedSearch) return
     const id = setTimeout(() => {
-      setDebouncedSearch(searchQuery)
-      replaceSearchParams({ page: null })
-      onChange()
+      setDebouncedSearch(searchQuery.slice(0, SEARCH_MAX_LENGTH))
+      update({ page: null })
     }, SEARCH_DEBOUNCE_MS)
     return () => clearTimeout(id)
-  }, [searchQuery, debouncedSearch, onChange])
+  }, [searchQuery, debouncedSearch, update])
 
   const completionStatus = useMemo<CompletionStatusFilter[] | undefined>(
     () =>
@@ -95,24 +96,41 @@ const useLearnerFilters = (onChange: () => void) => {
   )
 
   return {
+    view,
+    setView: (next: View) =>
+      update({ view: next === VIEWS.grid ? next : null, page: null }),
+    page,
+    setPage: (next: number) => update({ page: next > 1 ? String(next) : null }),
     searchQuery,
     setSearchQuery,
     clearSearch: () => {
       setSearchQuery("")
       setDebouncedSearch("")
-      applyFilterChange({})
+      update({ page: null })
     },
     debouncedSearch,
     statusFilter,
     setStatusFilter: (value: string) =>
-      applyFilterChange({ status: value === ALL ? null : value }),
+      update({ status: value === ALL ? null : value, page: null }),
     completionStatus,
     needsAttentionOnly,
     setNeedsAttentionOnly: (value: boolean) =>
-      applyFilterChange({ needs_attention: value ? "true" : null }),
+      update({ needs_attention: value ? "true" : null, page: null }),
+    moduleFilter,
     setModuleFilter: (value: string) =>
-      applyFilterChange({ module: value === ALL ? null : value }),
+      update({ module: value === ALL ? null : value, page: null }),
+    clearAll: () => {
+      setSearchQuery("")
+      setDebouncedSearch("")
+      update({
+        status: null,
+        module: null,
+        needs_attention: null,
+        page: null,
+      })
+    },
   }
 }
 
-export { ALL, SEARCH_MAX_LENGTH, replaceSearchParams, useLearnerFilters }
+export { ALL, SEARCH_MAX_LENGTH, VIEWS, useLearnerFilters }
+export type { View }
