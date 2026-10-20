@@ -2,9 +2,12 @@
 
 import React from "react"
 import Link from "next/link"
+import { useQuery } from "@tanstack/react-query"
 import { useFeatureFlagEnabled } from "posthog-js/react"
+import { mitxUserQueries } from "api/mitxonline-hooks/user"
 import { styled } from "ol-components"
 import { FeatureFlags } from "@/common/feature_flags"
+import { matchOrganizationBySlug } from "@/common/utils"
 import {
   contractAdminView,
   contractAnalyticsView,
@@ -70,6 +73,12 @@ const ContractManagerNav: React.FC<ContractManagerNavProps> = ({
     FeatureFlags.B2BContractManagerDashboard,
   )
 
+  const { data: mitxOnlineUser } = useQuery(mitxUserQueries.me())
+  /** The Overview page only resolves contracts from the user's own `b2b_organizations`. */
+  const overviewAvailable = !!mitxOnlineUser?.b2b_organizations
+    .find(matchOrganizationBySlug(orgSlug))
+    ?.contracts.some((contract) => contract.slug === contractSlug)
+
   const sections: Array<{
     key: ContractManagerSection
     label: string
@@ -80,7 +89,7 @@ const ContractManagerNav: React.FC<ContractManagerNavProps> = ({
       key: "overview",
       label: "Overview",
       href: contractView(orgSlug, contractSlug),
-      enabled: true,
+      enabled: overviewAvailable,
     },
     {
       key: "analytics",
