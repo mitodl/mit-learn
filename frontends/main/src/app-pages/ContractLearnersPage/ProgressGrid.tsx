@@ -431,7 +431,7 @@ const ProgressGrid: React.FC<ProgressGridProps> = ({
   const learnerCount = query.data?.total_count ?? 0
   /** Zero while the learner page is stale, so a fresh withheld count never meets an old learner count. */
   const withheldCount =
-    !countsWithheld || query.isPlaceholderData
+    !countsWithheld || !query.data || query.isPlaceholderData
       ? 0
       : withheldOnly
         ? learnerCount
