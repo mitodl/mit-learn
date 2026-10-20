@@ -830,9 +830,9 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
   constantSearchParams,
   hasFacets,
   requestParams,
-  setParamValue: actuallySetParamValue,
+  setParamValue,
   clearAllFacets: actuallyClearAllFacets,
-  toggleParamValue: actuallyToggleParamValue,
+  toggleParamValue,
   showProfessionalToggle,
   setSearchParams: actuallySetSearchParams,
   resultsHeadingEl,
@@ -955,11 +955,6 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
     setMobileDrawerOpen(newOpen)
   }
 
-  const setParamValue = (name: string, rawValue: string | string[]) => {
-    actuallySetParamValue(name, rawValue)
-    analytics.searchFilterChanged({ control: name })
-  }
-
   const clearAllFacets = () => {
     actuallyClearAllFacets()
     analytics.searchFilterChanged({ control: "clear_all" })
@@ -971,17 +966,6 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
   ) => {
     actuallySetSearchParams(value)
     analytics.searchFilterChanged({ control: name })
-  }
-
-  const toggleParamValue = (
-    name: string,
-    rawValue: string,
-    checked: boolean,
-  ) => {
-    actuallyToggleParamValue(name, rawValue, checked)
-    analytics.searchFilterChanged({ control: name })
-    if (checked)
-      analytics.catalogFiltered({ filterName: name, filterValue: rawValue })
   }
 
   // Kept in the list rather than removed, so a sortby that arrives in the URL

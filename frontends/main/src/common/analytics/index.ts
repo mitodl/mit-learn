@@ -31,6 +31,7 @@ import type {
 import type { UtmParams } from "./utm"
 import { capturePostHog, initPostHog } from "./posthog"
 import { PostHogEvents } from "@/common/constants"
+import { PlatformEnum } from "api"
 
 type EnrollCtaClickedParams = {
   placement: "header" | "infobox" | undefined
@@ -139,7 +140,7 @@ const analytics = {
   enrollCtaClicked: (params: EnrollCtaClickedParams) =>
     capturePostHog(PostHogEvents.EnrollCtaClicked, {
       ...params,
-      platform: "mitxonline",
+      platform: PlatformEnum.Mitxonline,
     }),
 
   // Account
@@ -235,4 +236,19 @@ const analytics = {
 }
 
 export { analytics, initPostHog }
-export type { UtmParams }
+export type {
+  UtmParams,
+  AddToCartParams,
+  BeginCheckoutParams,
+  CourseProgramViewParams,
+  CheckoutCompletedParams,
+  CatalogFilterParams,
+  EnrollCtaClickedParams,
+  ResourceViewedParams,
+  ResourceAddedToListParams,
+  CourseCardClickedParams,
+  AskTimClickedParams,
+  VideoShortOpenedParams,
+  VideoShortViewedParams,
+  VideoShortsClosedParams,
+}

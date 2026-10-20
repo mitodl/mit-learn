@@ -1,8 +1,7 @@
-import { usePostHog } from "posthog-js/react"
 import type { UseResourceSearchParamsResult } from "@mitodl/course-search-utils"
-import { env } from "@/env"
 import { PostHogEvents } from "@/common/constants"
 import { trackFilterCourseCatalog } from "@/common/analytics/gtm"
+import { capturePostHog } from "./posthog"
 
 type Setters = Pick<
   UseResourceSearchParamsResult,
@@ -26,13 +25,8 @@ const useTrackedFilterSetters = ({
   setParamValue,
   toggleParamValue,
 }: Setters) => {
-  const posthog = usePostHog()
-  const hasPostHog = !!env("NEXT_PUBLIC_POSTHOG_API_KEY")
-
   const captureFilterEvent = (control: string) => {
-    if (hasPostHog) {
-      posthog.capture(PostHogEvents.SearchFilterUpdate, { control })
-    }
+    capturePostHog(PostHogEvents.SearchFilterUpdate, { control })
   }
 
   return {

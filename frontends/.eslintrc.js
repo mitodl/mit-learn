@@ -144,6 +144,18 @@ module.exports = {
             message:
               "Import breaks component hierarchy. See https://github.com/mitodl/mit-open/blob/main/docs/architecture/front-end-component-structure.md#module-boundary-and-importexport-rules",
           },
+          {
+            target: "./**/main/src/{app,app-pages,page-components}/**",
+            from: "./**/main/src/common/analytics/posthog.ts",
+            message:
+              "Import from '@/common/analytics' instead of the internal posthog adapter.",
+          },
+          {
+            target: "./**/main/src/{app,app-pages,page-components}/**",
+            from: "./**/main/src/common/analytics/gtm.ts",
+            message:
+              "Import from '@/common/analytics' instead of the internal GTM adapter.",
+          },
         ],
       },
     ],
@@ -209,6 +221,14 @@ module.exports = {
       extends: ["plugin:testing-library/react"],
       rules: {
         "testing-library/no-node-access": "off",
+      },
+    },
+    {
+      // Tests mock '@/common/analytics/posthog' and import capturePostHog
+      // from there to assert on it — allow the direct import for that purpose.
+      files: ["./**/*.test.{ts,tsx}"],
+      rules: {
+        "import/no-restricted-paths": "off",
       },
     },
     // Note: eslint-plugin-storybook is incompatible with Storybook 10 (ESM) and ESLint 8 (CommonJS)

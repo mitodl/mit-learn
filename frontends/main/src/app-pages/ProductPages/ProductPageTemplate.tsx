@@ -20,6 +20,7 @@ import Image from "next/image"
 import type { Breakpoint } from "@mui/system"
 import NiceModal from "@ebay/nice-modal-react"
 import { useHubspotFormDetail } from "api/hooks/hubspot"
+import { PlatformEnum } from "api"
 import { StayUpdatedModal } from "./StayUpdatedModal"
 import { analytics } from "@/common/analytics"
 import { useStickyRevealTop } from "./useStickyRevealTop"
@@ -323,7 +324,7 @@ const ProductPageTemplate: React.FC<ProductPageTemplateProps> = ({
       label: "Stay Updated",
       readableId: resource.readable_id,
       resourceType: resource.resource_type,
-      platform: "mitxonline",
+      platform: PlatformEnum.Mitxonline,
     })
     NiceModal.show(StayUpdatedModal, {
       productReadableId: resource.readable_id,
