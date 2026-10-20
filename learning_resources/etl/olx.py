@@ -684,7 +684,8 @@ class OlxArchive:
             if isinstance(item, dict) and item.get("status") != "deleted"
         )
 
-    @cached_property
+    # not cached, like _blocks: the elements hold their parsed subtrees
+    @property
     def _inline_dated(self) -> dict[datetime, list[Element]]:
         """Dated, visible blocks held inline in another file, by release date"""
         inline: dict[datetime, list[Element]] = {}
@@ -759,9 +760,11 @@ class OlxArchive:
         """
         if not (self.root / "static").is_dir():
             return set(), set()
-        elements = [e for es in self._inline_dated.values() for e in es]
+        elements = (
+            [] if confirmed else [e for es in self._inline_dated.values() for e in es]
+        )
         texts, video_ids, complete = self._texts(
-            self._reference_sources(skip), [] if confirmed else elements
+            self._reference_sources(skip), elements
         )
         texts.append(self._live_updates)
         found = self._static_names.first_starts(*_reference_index(texts))

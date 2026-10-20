@@ -915,14 +915,23 @@ def test_olx_archive_keeps_no_parsed_trees_or_text(tmp_path):
     olx = _reference_olx(
         tmp_path,
         html='<a href="/static/notes.pdf">course body</a>',
-        **{"notes.pdf": "x"},
+        **{"notes.pdf": "x", "late.pdf": "x"},
+    )
+    # a dated inline block, so release dating holds inline elements too
+    _write_olx(
+        olx,
+        "vertical/v.xml",
+        f'<vertical><html url_name="h"/><html url_name="inl" {_start(START_FUTURE)}>'
+        '<a href="/static/late.pdf">inline body</a></html></vertical>',
     )
     archive = OlxArchive(olx)
     assert archive.paths
+    assert archive.release_dates == {olx / "static" / "late.pdf": START_FUTURE}
 
     cached = repr(vars(archive))
     assert "<Element" not in cached
     assert "course body" not in cached
+    assert "inline body" not in cached
 
 
 @pytest.mark.parametrize(
