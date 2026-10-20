@@ -24,10 +24,6 @@ class ChannelAdmin(admin.ModelAdmin):
     model = Channel
     exclude = ("widget_list",)
     search_fields = ("name", "title")
-    # Every learning resource is a candidate for the featured list, which is
-    # far too many for a plain select: it renders the lot, and names each one
-    # by its id. Searched instead, against the title and readable id that
-    # `LearningResourceAdmin.search_fields` names.
     autocomplete_fields = ("featured_list",)
     list_display = ("title", "name", "channel_type")
     list_filter = ("channel_type",)
