@@ -529,6 +529,7 @@ const TopicChannelHero: React.FC<{
       background={
         <>
           <HeroPhoto
+            data-testid="channel-hero-photo"
             aria-hidden
             wholeWidth={featuredIsEmpty}
             backgroundUrl={

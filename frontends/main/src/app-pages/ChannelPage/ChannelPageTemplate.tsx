@@ -14,7 +14,7 @@ import TopicChannelTemplate, {
 import useChannelPageRedesign from "./useChannelPageRedesign"
 
 const TOPICS_LABEL = "Topic"
-const DEPARTMENTS_LABEL = "Browse by Academic Department"
+const DEPARTMENTS_LABEL = "Department"
 const UNITS_LABEL = "MIT Units"
 const PATHWAYS_LABEL = "Pathways"
 
