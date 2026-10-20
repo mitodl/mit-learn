@@ -283,6 +283,29 @@ class LearningResourceAdmin(admin.ModelAdmin):
         qs = super().get_queryset(request)
         return qs.for_serialization()
 
+    def get_search_results(self, request, queryset, search_term):
+        """Match a bare primary key as well as the `search_fields`.
+
+        A resource is identified by its id in plenty of places -- an admin URL,
+        a log line, a bug report -- and pasting one of those in is the quickest
+        way to find it. Naming `=id` in `search_fields` would find it too, but
+        by comparing `id::text` against every row, which is the comparison
+        Django's own documentation gives this override to avoid.
+
+        Anything `int` will not read -- a word, a superscript, a digit in a
+        circle -- falls through to the `search_fields` match alone.
+        """
+        results, may_have_duplicates = super().get_search_results(
+            request, queryset, search_term
+        )
+        try:
+            pk = int(search_term)
+        except ValueError:
+            pass
+        else:
+            results |= queryset.filter(pk=pk)
+        return results, may_have_duplicates
+
 
 class UserListAdmin(admin.ModelAdmin):
     """UserList Admin"""
