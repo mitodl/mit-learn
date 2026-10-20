@@ -1,5 +1,10 @@
 import React from "react"
-import { renderWithProviders, screen, within, setMockResponse } from "@/test-utils"
+import {
+  renderWithProviders,
+  screen,
+  within,
+  setMockResponse,
+} from "@/test-utils"
 import { urls, factories } from "api/mitxonline-test-utils"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import { FeatureFlags } from "@/common/feature_flags"
