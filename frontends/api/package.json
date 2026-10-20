@@ -20,7 +20,6 @@
     "./mutation-errors": "./src/mutations/errorMessages.ts",
     "./mitxonline-test-utils": "./src/mitxonline/test-utils/index.ts",
     "./analytics-hooks/*": "./src/analytics/hooks/*/index.ts",
-    "./analytics-types": "./src/analytics/types.ts",
     "./analytics-test-utils": "./src/analytics/test-utils/index.ts"
   },
   "peerDependencies": {
