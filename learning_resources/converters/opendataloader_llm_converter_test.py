@@ -13,6 +13,7 @@ from learning_resources.converters.opendataloader_llm_converter import (
     OpenDataLoaderLLMConverter,
     PDFPageRenderer,
     _optimize_image,
+    flatten_lists,
     parse_content_block,
 )
 
@@ -171,6 +172,45 @@ def test_labeled_list_items_not_renumbered(label):
         )
     ]
     assert MarkdownAssembler().assemble(blocks, {}) == f"{label} Question"
+
+
+def test_children_only_list_items_keep_markers():
+    """Items whose text is only in their kids still get their markers"""
+    blocks = [
+        parse_content_block(
+            _list_block(
+                [
+                    {"type": "list item", "kids": [{"type": "image", "id": 7}]},
+                    {
+                        "type": "list item",
+                        "kids": [_paragraph("Question"), _paragraph("More text")],
+                    },
+                    {"type": "list item", "kids": [_paragraph("(c) Labeled")]},
+                ]
+            )
+        )
+    ]
+    markdown = MarkdownAssembler().assemble(blocks, {7: "IMAGE TEXT"})
+    assert markdown.split("\n\n") == [
+        "IMAGE TEXT",
+        "2. Question",
+        "More text",
+        "(c) Labeled",
+    ]
+
+
+def test_list_markers_not_scored_as_math():
+    """Generated list markers shouldn't count towards the math score"""
+    converter = OpenDataLoaderLLMConverter(Path("test.pdf"))
+    bullets = parse_content_block(
+        _list_block(
+            [{"type": "list item", "content": f"Plain item {i}"} for i in range(6)],
+            numbering_style="bullets",
+        )
+    )
+    blocks = flatten_lists([bullets])
+    assert all(block.list_marker == "-" for block in blocks)
+    assert converter._calculate_page_math_score(blocks) == 0  # noqa: SLF001
 
 
 def test_nested_list_images_keep_their_page(mocker, settings, fake_renderer):

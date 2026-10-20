@@ -81,6 +81,15 @@ class BlockType:
     FULL_PAGE_OCR = "full_page_ocr"
 
 
+# Block types whose text can take a list item's marker
+LIST_MARKER_BLOCK_TYPES = {
+    BlockType.PARAGRAPH,
+    BlockType.TEXT_CHUNK,
+    BlockType.TEXT_BLOCK,
+    BlockType.LINE,
+}
+
+
 @dataclass
 class TableCell:
     """Represents a cell in a table."""
@@ -131,6 +140,9 @@ class ContentBlock:
     numbering_style: str | None = None
     # Nested content (for complex structures)
     kids: list[Any] = field(default_factory=list)
+    # "1." / "-" marker of the list item this block came from. Kept apart from
+    # content so it isn't scored as math.
+    list_marker: str | None = None
 
 
 @dataclass
@@ -432,29 +444,37 @@ def flatten_lists(blocks: list[ContentBlock]) -> list[ContentBlock]:
         )
         is_ordered = _is_ordered_list(block.numbering_style)
         for idx, item in enumerate(items, start=1):
+            item_blocks = []
             if item.content and item.content.strip():
-                if LIST_LABEL_REGEX.match(item.content):
-                    # The item already has its own label, don't add another
-                    content = item.content
-                elif is_ordered:
-                    content = f"{idx}. {item.content}"
-                else:
-                    content = f"- {item.content}"
-                flat.append(
+                item_blocks.append(
                     ContentBlock(
                         block_type=BlockType.PARAGRAPH,
                         block_id=item.block_id,
                         page_number=item.page_number or block.page_number,
                         bounding_box=item.bounding_box or block.bounding_box,
-                        content=content,
+                        content=item.content,
                         font=item.font,
                     )
                 )
-            flat.extend(
+            item_blocks.extend(
                 flatten_lists(
                     [parse_content_block(k) for k in item.kids if isinstance(k, dict)]
                 )
             )
+            # The marker goes on the item's first text, which is in its kids
+            # when the item has no content of its own
+            first_text = next(
+                (b for b in item_blocks if b.content and b.content.strip()), None
+            )
+            if (
+                first_text
+                and first_text.block_type in LIST_MARKER_BLOCK_TYPES
+                and first_text.list_marker is None
+                # The item already has its own label, don't add another
+                and not LIST_LABEL_REGEX.match(first_text.content)
+            ):
+                first_text.list_marker = f"{idx}." if is_ordered else "-"
+            flat.extend(item_blocks)
     return flat
 
 
@@ -558,6 +578,9 @@ class MarkdownAssembler:
         # Table row (standalone, unusual but possible)
         if block_type == BlockType.TABLE_ROW:
             block_content = self._format_table_row_standalone(block)
+
+        if block_content and block.list_marker:
+            block_content = f"{block.list_marker} {block_content}"
 
         return block_content
 
