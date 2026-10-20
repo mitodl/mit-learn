@@ -331,6 +331,42 @@ class CredentialMetadataConfigurationAdmin(admin.ModelAdmin):
     list_filter = ("is_active", "resource_type")
 
 
+class CourseProfileConfigurationAdmin(admin.ModelAdmin):
+    """CourseProfileConfiguration Admin"""
+
+    model = models.CourseProfileConfiguration
+    list_display = (
+        "stage",
+        "llm_model",
+        "temperature",
+        "max_file_tokens",
+        "input_token_budget",
+        "updated_on",
+    )
+
+
+class ClaimExtractionAdmin(admin.ModelAdmin):
+    """ClaimExtraction Admin"""
+
+    model = models.ClaimExtraction
+    list_display = (
+        "key",
+        "level",
+        "extractor_version",
+        "model",
+        "unit",
+        "created_on",
+    )
+    list_filter = ("level", "model", "extractor_version")
+    search_fields = ("key", "unit__external_id", "unit__run__run_id")
+    raw_id_fields = ("unit", "resource")
+    show_full_result_count = False
+
+    def get_queryset(self, request):
+        # outputs run to hundreds of kilobytes a row and the list never shows them
+        return super().get_queryset(request).defer("output", "raw_response")
+
+
 class CredentialMetadataGenerationLogAdmin(admin.ModelAdmin):
     """CredentialMetadataGenerationLog Admin"""
 
@@ -419,6 +455,8 @@ admin.site.register(
     models.CredentialMetadataGenerationLog, CredentialMetadataGenerationLogAdmin
 )
 admin.site.register(models.CredentialMetadata, CredentialMetadataAdmin)
+admin.site.register(models.CourseProfileConfiguration, CourseProfileConfigurationAdmin)
+admin.site.register(models.ClaimExtraction, ClaimExtractionAdmin)
 
 
 admin.site.register(models.ETLSourceOwnership, ETLSourceOwnershipAdmin)
