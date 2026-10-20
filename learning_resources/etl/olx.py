@@ -541,9 +541,10 @@ class OlxArchive:
 
     def _files_named(self, folder: str, name: str) -> set[Path]:
         """
-        Return the files glob("<folder>/<name>.*") would find, without the
-        glob: each directory is listed once, and name is not read as a pattern,
-        so a url_name with [ still finds its file
+        Return the files named <folder>/<name>.<ext>, without a glob: each
+        directory is listed once, and name is not read as a pattern, so a
+        url_name with [ still finds its file. Only the name before the last dot
+        counts, so notes doesn't also take notes.extra.html.
         """
         path = self.root / folder / name
         if path.parent not in self._listings:
@@ -553,11 +554,8 @@ class OlxArchive:
             except (FileNotFoundError, NotADirectoryError):
                 entries = []
             for entry in entries:
-                if entry.is_file():
-                    # every name before a dot, as name.* can match any of them
-                    for index, char in enumerate(entry.name):
-                        if char == ".":
-                            listing[entry.name[:index]].append(Path(entry.path))
+                if entry.is_file() and "." in entry.name:
+                    listing[Path(entry.name).stem].append(Path(entry.path))
             self._listings[path.parent] = listing
         return set(self._listings[path.parent].get(path.name, ()))
 

@@ -359,6 +359,29 @@ def test_release_dates_undated_blocks_absent(tmp_path):
     assert OlxArchive(olx).release_dates == {}
 
 
+def test_release_dates_dotted_name_is_a_different_block(tmp_path):
+    """An undated `notes` block does not claim, and undate, `notes.extra`'s files"""
+    olx = _dated_olx(tmp_path)
+    _write_olx(
+        olx, "chapter/ch_undated.xml", '<chapter><html url_name="notes"/></chapter>'
+    )
+    _write_olx(
+        olx, "chapter/ch_dated.xml", '<chapter><html url_name="notes.extra"/></chapter>'
+    )
+    _write_html(olx, "notes", "<p>undated</p>")
+    _write_html(olx, "notes.extra", "<p>dated</p>")
+
+    _assert_release_dates(
+        olx,
+        {
+            "html/notes.xml": None,
+            "html/notes.html": None,
+            "html/notes.extra.xml": START_FUTURE,
+            "html/notes.extra.html": START_FUTURE,
+        },
+    )
+
+
 def test_release_dates_two_parents_takes_earliest(tmp_path):
     """An undated parent leaves a block undated; two dated parents give the earliest"""
     olx = _dated_olx(tmp_path)
