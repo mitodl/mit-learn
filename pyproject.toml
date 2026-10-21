@@ -127,6 +127,7 @@ dependencies = [
     "langchain-text-splitters>=1.1.2",
     "mitol-django-keycloak>=2026.7.13,<2027",
     "pymysql>=1.1.1,<2",
+    "ol-llm>=0.0.3",
 ]
 
 [dependency-groups]
@@ -170,6 +171,7 @@ mitol-django-common = "0d"
 mitol-django-observability = "0d"
 mitol-django-scim = "0d"
 mitol-drf-lint = "0d"
+ol-llm = "0d"
 
 [tool.uv.build-backend]
 module-root = ""

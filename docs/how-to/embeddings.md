@@ -25,6 +25,28 @@ The following embeddings related settings are available in the `settings.py` fil
 | LITELLM_API_BASE            | Required to enable ollama as the litellm provider                                                                  |
 | OPENAI_API_KEY              | Required if using "LiteLLMEncoder" with openai as a provider (default)                                             |
 
+## Tracing
+
+`LiteLLMEncoder` traces every embedding request it sends to the provider to Opik through [ol-llm](https://github.com/mitodl/ol-llm)'s `traced_embedding`. Each request is one trace in the `mit-learn` Opik project, tagged with the app, use case, and environment, with a span that names the model and the input tokens billed. There are two use cases:
+
+- `search-query` (request profile): `embed_query`, for search and retrieval queries.
+- `document-embedding` (batch profile): `embed_documents`, for resources and content files. The trace carries the Celery task id as `run_id`.
+
+The model is the ol-llm catalog id of `QDRANT_DENSE_MODEL` as litellm resolves it, e.g. `openai:text-embedding-3-large`.
+
+Hedged query requests are each traced, since each one is billed. A query served from the Redis cache reports 0 input tokens. Requests with more than one text skip the cache: litellm caches each text separately and reports a partial hit's usage as the sum of cached and billed tokens.
+
+Tracing is off unless `OPIK_URL_OVERRIDE` is set, so local development, CI, and tests need no Opik. The variables, read by ol-llm and the Opik SDK:
+
+| Variable                                                                      | Description                                                                                                     |
+| ----------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| OL_LLM_ENVIRONMENT                                                            | Environment on every trace, e.g. `ci`, `qa`, `production`. Defaults to `MITOL_ENVIRONMENT`                      |
+| OPIK_URL_OVERRIDE                                                             | The Opik API, e.g. `https://opik-qa.ol.mit.edu/api/`. Unset turns tracing off                                   |
+| OPIK_WORKSPACE                                                                | `default` on our instances                                                                                      |
+| OPIK_KEYCLOAK_TOKEN_URL, OPIK_KEYCLOAK_CLIENT_ID, OPIK_KEYCLOAK_CLIENT_SECRET | The Keycloak client that authenticates to Opik (Vault `secret-operations/sso/opik`). Leave `OPIK_API_KEY` unset |
+| OPIK_TRACK_DISABLE                                                            | `true` turns tracing off even with `OPIK_URL_OVERRIDE` set                                                      |
+| OL_LLM_TRACE_CONTENT                                                          | `false` keeps the embedded texts (search queries, document chunks) out of traces. Defaults to `true`            |
+
 ## Embeddings for New Content
 
 Embeddings are automatically generated for new content by a periodic celery task. The tasks are defined `vector_search/tasks.py`.

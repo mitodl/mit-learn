@@ -1,13 +1,16 @@
 """LiteLLM encoder module for vector search."""
 
 import concurrent.futures
+import contextvars
 import logging
 import os
 import threading
 from urllib.parse import urlparse
 
 import litellm
+import ol_llm
 import tiktoken
+from celery import current_task
 from django.conf import settings
 from litellm import embedding
 from litellm.caching.caching import Cache
@@ -33,6 +36,14 @@ litellm.cache = Cache(
     ttl=settings.QDRANT_QUERY_EMBEDDING_CACHE_TTL,
     **({"ssl_cert_reqs": "required"} if redis_ssl else {}),
 )
+
+ol_llm.configure(ol_llm.Settings(environment=settings.OL_LLM_ENVIRONMENT))
+ol_llm.configure_tracing(
+    None if settings.OPIK_URL_OVERRIDE else ol_llm.TracingConfig(enabled=False)
+)
+
+APP_NAME = "mit-learn"
+NO_ATTRIBUTION = ol_llm.Attribution()
 
 
 class CapacityLimitedExecutor:
@@ -126,6 +137,28 @@ def reset_embedding_executors():
         executor.shutdown()
 
 
+def catalog_model_id(model_name):
+    """
+    Return the ol-llm catalog id (``provider:model``) of the model litellm calls.
+
+    The provider is the one litellm resolves for the request the encoder sends,
+    e.g. ``openai:text-embedding-3-large`` for ``text-embedding-3-large``.
+    """
+    model, provider, _api_key, _api_base = litellm.get_llm_provider(
+        model=model_name,
+        custom_llm_provider=settings.LITELLM_CUSTOM_PROVIDER,
+        api_base=settings.LITELLM_API_BASE,
+    )
+    return f"{provider}:{model}"
+
+
+def _document_attribution():
+    """Attribute document embeddings to the Celery task making them, if any."""
+    if current_task and current_task.request.id:
+        return ol_llm.Attribution(run_id=current_task.request.id)
+    return NO_ATTRIBUTION
+
+
 class LiteLLMEncoder(BaseEncoder):
     """
     LiteLLM encoder
@@ -141,10 +174,35 @@ class LiteLLMEncoder(BaseEncoder):
         except KeyError:
             msg = f"Model {model_name} not found in tiktoken. defaulting to None"
             log.warning(msg)
+        model_id = catalog_model_id(model_name)
+        self.query_use_case = ol_llm.UseCase(
+            app=APP_NAME, name="search-query", profile="request", model=model_id
+        )
+        self.document_use_case = ol_llm.UseCase(
+            app=APP_NAME, name="document-embedding", profile="batch", model=model_id
+        )
 
     def embed_documents(self, documents):
         """Embed a list of documents without hedging."""
-        return [result["embedding"] for result in self.get_embedding(documents)["data"]]
+        response = self.get_embedding(
+            documents, self.document_use_case, attribution=_document_attribution()
+        )
+        return [result["embedding"] for result in response["data"]]
+
+    def _submit_query(self, executor, texts, timeout_seconds):
+        """
+        Submit one query embedding request, returning ``None`` if the pool is full.
+
+        The request runs in a copy of the caller's context, so its trace nests
+        under any Opik trace the caller has open instead of starting its own.
+        """
+        return executor.submit(
+            contextvars.copy_context().run,
+            self.get_embedding,
+            texts,
+            self.query_use_case,
+            request_timeout=timeout_seconds,
+        )
 
     def _hedged_get_embedding(self, texts, hedge_count, hedge_delay):
         """
@@ -164,14 +222,14 @@ class LiteLLMEncoder(BaseEncoder):
         un-hedged requests rather than queueing behind abandoned losers.
         """
         timeout_seconds = settings.EMBEDDING_HEDGE_REQUEST_TIMEOUT_SECONDS
-        primary = get_primary_executor().submit(
-            self.get_embedding, texts, request_timeout=timeout_seconds
-        )
+        primary = self._submit_query(get_primary_executor(), texts, timeout_seconds)
         if primary is None:
             log.warning(
                 "Embedding pool saturated, running embedding request without hedging"
             )
-            return self.get_embedding(texts, request_timeout=timeout_seconds)
+            return self.get_embedding(
+                texts, self.query_use_case, request_timeout=timeout_seconds
+            )
 
         pending = {primary}
         hedge_futures = set()
@@ -204,9 +262,7 @@ class LiteLLMEncoder(BaseEncoder):
                 # the first request is slow (or failed) - send the backups
                 hedge_executor = get_hedge_executor()
                 hedges = {
-                    hedge_executor.submit(
-                        self.get_embedding, texts, request_timeout=timeout_seconds
-                    )
+                    self._submit_query(hedge_executor, texts, timeout_seconds)
                     for _ in range(hedges_remaining)
                 }
                 hedges.discard(None)
@@ -241,11 +297,21 @@ class LiteLLMEncoder(BaseEncoder):
                 hedge_delay=settings.EMBEDDING_HEDGE_DELAY_SECONDS,
             )
             return res["data"][0]["embedding"]
-        return self.embed(query)
+        res = self.get_embedding([query], self.query_use_case)
+        return res["data"][0]["embedding"]
 
-    def get_embedding(self, texts, request_timeout=None):
-        """Generate embeddings using LiteLLM/OpenAI API."""
-        if self.cache:
+    def get_embedding(
+        self, texts, use_case, request_timeout=None, attribution=NO_ATTRIBUTION
+    ):
+        """
+        Generate embeddings using LiteLLM/OpenAI API, traced as one request.
+
+        Only single-text requests use the cache. litellm caches each text of a
+        request separately and reports a partial hit's usage as the sum of the
+        cached and billed texts, so the billed tokens of a multi-text request
+        could not be told apart.
+        """
+        if self.cache and len(texts) == 1:
             cache_params = {
                 "caching": True,
                 "ttl": settings.QDRANT_QUERY_EMBEDDING_CACHE_TTL,
@@ -264,4 +330,15 @@ class LiteLLMEncoder(BaseEncoder):
         if request_timeout:
             # bounds abandoned losing requests so they release their worker
             config["timeout"] = request_timeout
-        return embedding(**config).to_dict()
+        with ol_llm.traced_embedding(
+            use_case, texts, attribution=attribution
+        ) as request:
+            response = embedding(**config)
+            # read before to_dict(), which drops _hidden_params
+            cache_hit = response._hidden_params.get("cache_hit") is True  # noqa: SLF001
+            result = response.to_dict()
+            request.record(
+                [item["embedding"] for item in result["data"]],
+                input_tokens=0 if cache_hit else response.usage.prompt_tokens,
+            )
+        return result
