@@ -28,7 +28,7 @@ def _fresh_embedding_executors():
     """Isolate the shared embedding thread pools between tests"""
     reset_embedding_executors()
     yield
-    reset_embedding_executors()
+    reset_embedding_executors(wait=True)
 
 
 def _embedding_response(*vectors, prompt_tokens=3, cache_hit=None):
