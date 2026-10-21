@@ -132,6 +132,7 @@ class _Report:
     """What one shadow run has found for a pair so far."""
 
     observed: bool = False
+    items: int = 0
     prune: bool = False
     keep: Q = field(default_factory=Q)
     seen: set[int] = field(default_factory=set)
@@ -500,6 +501,7 @@ def observe(  # noqa: PLR0913
                 prune=prune,
                 blocklist=blocklist,
             )
+    report.items += count
     if prune and (count or prune_empty):
         report.prune = True
         report.keep = keep or Q()
@@ -561,6 +563,7 @@ def _finish(etl_source: str, resource_type: str, report: _Report) -> tuple[dict,
             if resource_id not in report.seen
         )
     counts = {
+        "items": report.items,
         "before": resources.count(),
         "before_published": before_published,
         "created": len(report.created),
