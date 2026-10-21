@@ -907,6 +907,57 @@ describe("ChannelSearch", () => {
    * results is the only place the applied filters are named -- and the only
    * place each one can be switched off by itself.
    */
+  describe("filter counts on the controls", () => {
+    const barAt = async (query: string) => {
+      const { channel } = setMockApiResponses({
+        channelPatch: { channel_type: ChannelTypeEnum.Topic },
+        search: {
+          metadata: {
+            aggregations: {
+              delivery: [
+                { key: "online", doc_count: 7 },
+                { key: "in_person", doc_count: 4 },
+              ],
+              certification_type: [{ key: "professional", doc_count: 5 }],
+            },
+            suggestions: [],
+          },
+        },
+      })
+      renderWithProviders(<ChannelPage />, {
+        url: `/c/${channel.channel_type}/${channel.name}/${query}`,
+      })
+      return screen.findByTestId("topic-search-filter-bar")
+    }
+
+    /**
+     * The menu closes over what it selected, so a control that says only its
+     * own name reads the same whether or not it is narrowing anything.
+     */
+    test("counts what each control has narrowed by", async () => {
+      const bar = await barAt("?delivery=online&delivery=in_person")
+
+      expect(
+        within(bar).getByRole("combobox", { name: "Format" }),
+      ).toHaveTextContent("2")
+      expect(
+        within(bar).getByRole("combobox", { name: "Certificate" }),
+      ).not.toHaveTextContent(/\d/)
+    }, 10000)
+
+    /* A badge reading 0 is a filter announcing that it is not filtering. */
+    test("says nothing where a control is narrowing nothing", async () => {
+      const bar = await barAt("")
+
+      expect(
+        within(bar).getByRole("combobox", { name: "Format" }),
+      ).not.toHaveTextContent(/\d/)
+      expect(
+        within(bar).getByRole("combobox", { name: "Certificate" }),
+      ).not.toHaveTextContent(/\d/)
+    }, 10000)
+  })
+
   describe("selected filter chips", () => {
     const chipRowAt = async (query: string) => {
       const { channel } = setMockApiResponses({
