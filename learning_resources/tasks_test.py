@@ -33,7 +33,13 @@ from learning_resources.factories import (
     LearningResourcePlatformFactory,
     LearningResourceRunFactory,
 )
-from learning_resources.models import ContentFile, ETLSourceOwnership, LearningResource
+from learning_resources.models import (
+    ContentFile,
+    ETLShadowRun,
+    ETLSourceOwnership,
+    LearningResource,
+    VideoChannel,
+)
 from learning_resources.tasks import (
     cleanup_deleted_content_files,
     get_ocw_data,
@@ -2661,6 +2667,80 @@ def test_sync_youtube_task_keeps_the_generation_of_a_refused_run(
 
     assert caches["durable"].get(tasks.YOUTUBE_SYNC_GENERATION_KEY) == "earlier"
     mock_sync.assert_not_called()
+
+
+def test_sync_youtube_task_as_a_shadow_queues_and_writes_nothing(mocker):
+    """
+    As the shadow of youtube, SyncYouTubeTask compares the playlists and their
+    videos, saves a report of each pair, and queues and writes nothing
+    """
+    for resource_type in tasks.warehouse_media.YOUTUBE_TYPES:
+        factories.ETLSourceOwnershipFactory.create(
+            etl_source=ETLSource.youtube.name,
+            resource_type=resource_type,
+            shadow=ETLSourceOwnership.Pipeline.WAREHOUSE,
+        )
+    factories.LearningResourcePlatformFactory.create(code=PlatformType.youtube.name)
+    rows = {
+        "integrations__learn__youtube_channels": [{"channel_id": "c", "title": "C"}],
+        "integrations__learn__youtube_playlists": [
+            {
+                "readable_id": "p",
+                "channel_id": "c",
+                "title": "P",
+                "url": "https://www.youtube.com/playlist?list=p",
+                "image_url": None,
+                "image_alt": None,
+                "offered_by": None,
+                "create_videos": 1,
+                "etl_source": ETLSource.youtube.name,
+                "platform": PlatformType.youtube.name,
+                "availability": "anytime",
+            }
+        ],
+        "integrations__learn__youtube_playlist_videos": [
+            {"playlist_readable_id": "p", "video_readable_id": "v", "position": 0}
+        ],
+        "integrations__learn__youtube_videos": [
+            {
+                "readable_id": "v",
+                "youtube_id": "v",
+                "title": "V",
+                "description_raw": "",
+                "url": "https://www.youtube.com/watch?v=v",
+                "image_url": None,
+                "last_modified": "2026-10-01T00:00:00Z",
+                "duration": "PT1M",
+                "etl_source": ETLSource.youtube.name,
+                "platform": PlatformType.youtube.name,
+                "resource_type": "video",
+                "availability": "anytime",
+            }
+        ],
+    }
+    mocker.patch("learning_resources.lib.warehouse.connect_to_warehouse")
+    mocker.patch(
+        "learning_resources.tasks.iter_rows",
+        side_effect=lambda _conn, view: iter(rows[view.rsplit(".", 1)[1]]),
+    )
+    mock_delay = mocker.patch(
+        "learning_resources.tasks.load_warehouse_youtube_playlist.delay"
+    )
+    caches["durable"].set(tasks.YOUTUBE_SYNC_GENERATION_KEY, "earlier", timeout=None)
+
+    count = tasks.SyncYouTubeTask.run()
+
+    # one playlist and one video compared
+    assert count == 2
+    mock_delay.assert_not_called()
+    assert caches["durable"].get(tasks.YOUTUBE_SYNC_GENERATION_KEY) == "earlier"
+    reports = ETLShadowRun.objects.filter(etl_source=ETLSource.youtube.name)
+    assert {
+        (report.resource_type, report.error, report.counts["created"])
+        for report in reports
+    } == {("video_playlist", "", 1), ("video", "", 1)}
+    assert not LearningResource.objects.exists()
+    assert not VideoChannel.objects.exists()
 
 
 @pytest.mark.parametrize("warehouse_owns", [PODCAST_OWNED], indirect=True)

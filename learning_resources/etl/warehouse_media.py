@@ -210,13 +210,13 @@ def prepare_youtube_sync(
 
     Returns:
         dict: the load_playlist data of each channel's playlists by channel id,
-            or None if this pipeline does not own youtube
+            or None if this pipeline neither owns nor shadows youtube
 
     Raises:
         ExtractException: if a view is empty, a row is bad, or the sync would
             unpublish over MAX_UNPUBLISH_SHARE of the playlists or videos
     """
-    if not may_write_youtube():
+    if run_mode(ETLSource.youtube.name, YOUTUBE_TYPES) == RunMode.SKIP:
         return None
 
     refuse_empty(
@@ -242,8 +242,7 @@ def prepare_youtube_sync(
         kept_playlists = _kept_playlists(
             [
                 playlist
-                for channel in channels
-                for playlist in playlists_by_channel[channel["channel_id"]]
+                for _, playlist in playlists_to_load(channels, playlists_by_channel)
             ]
         )
         for resource_type, kept_ids in (
@@ -263,6 +262,20 @@ def prepare_youtube_sync(
             refuse_mass_unpublish(ETLSource.youtube.name, resource_type, kept_ids)
 
     return playlists_by_channel
+
+
+def playlists_to_load(
+    channels: list[dict], playlists_by_channel: dict[str, list[dict]]
+) -> list[tuple[str, dict]]:
+    """
+    Return the channel id and load_playlist data of every playlist of the
+    listed channels, which are the playlists a sync loads.
+    """
+    return [
+        (channel["channel_id"], playlist)
+        for channel in channels
+        for playlist in playlists_by_channel.get(channel["channel_id"], [])
+    ]
 
 
 def sync_youtube_channels(
@@ -288,18 +301,19 @@ def sync_youtube_channels(
         [channel["channel_id"] for channel in channels]
     )
 
-    to_load = []
     for channel in channels:
         channel_id = channel["channel_id"]
         video_channel = loaders.upsert_video_channel(
             {"channel_id": channel_id, "title": channel["title"], "published": True}
         )
-        channel_playlists = playlists_by_channel.get(channel_id, [])
         loaders.unpublish_removed_playlists(
-            video_channel, [playlist["playlist_id"] for playlist in channel_playlists]
+            video_channel,
+            [
+                playlist["playlist_id"]
+                for playlist in playlists_by_channel.get(channel_id, [])
+            ],
         )
-        to_load.extend((channel_id, playlist) for playlist in channel_playlists)
-    return to_load
+    return playlists_to_load(channels, playlists_by_channel)
 
 
 def _podcast_topics(raw: str | None) -> list[dict]:
