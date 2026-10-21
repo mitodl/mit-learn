@@ -294,6 +294,8 @@ CONTENT_FILE_PUBLISHED_READERS = {
     "learning_resources/tasks.py: ContentFile.objects.filter(file_type=MARKETING",
     "learning_resources/credentials.py: ContentFile.objects.filter(learning_resource=",
     "learning_resources/utils.py: ContentFile.objects.filter(learning_resource_id__in=all_course_ids",
+    # units link a run's files before they release; readers filter visibility
+    "learning_resources/etl/loaders.py: ContentFile.objects.filter(run=run, published=True).values_list",
     # "did this archive ever produce rows", not visibility
     "learning_resources/etl/edx_shared.py: content_files.filter(published=True).exists()",
     "learning_resources/etl/canvas.py: content_files.filter(published=True).exists()",
