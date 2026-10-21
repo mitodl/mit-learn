@@ -153,31 +153,31 @@ class OVSVideoWebhookView(BaseWebhookView):
         # only once (ovs, video_playlist) and (ovs, video) are cut over to the
         # webhook, the same flip that stops get_ovs_data.
         with writing_as(Pipeline.WEBHOOK):
-            owned = may_write(ETLSource.ovs.name, OVS_TYPES)
-        if not owned:
-            msg = (
-                f"The webhook does not own {ETLSource.ovs.name}/"
-                f"{', '.join(OVS_TYPES)}. Set the ETLSourceOwnership rows in "
-                "Django admin to cut them over."
-            )
-            return Response(
-                {"status": "error", "message": msg},
-                status=status.HTTP_409_CONFLICT,
-            )
-
-        if data.get("delete"):
-            video_id = data["video_id"]
-            resource = LearningResource.objects.filter(
-                readable_id=video_id,
-                etl_source=ETLSource.ovs.name,
-                resource_type=LearningResourceType.video.name,
-            ).first()
-            if resource:
-                resource_delete_actions(resource)
+            if not may_write(ETLSource.ovs.name, OVS_TYPES):
+                msg = (
+                    f"The webhook does not own {ETLSource.ovs.name}/"
+                    f"{', '.join(OVS_TYPES)}. Set the ETLSourceOwnership rows in "
+                    "Django admin to cut them over."
+                )
+                return Response(
+                    {"status": "error", "message": msg},
+                    status=status.HTTP_409_CONFLICT,
+                )
+            if data.get("delete"):
+                video_id = data["video_id"]
+                resource = LearningResource.objects.filter(
+                    readable_id=video_id,
+                    etl_source=ETLSource.ovs.name,
+                    resource_type=LearningResourceType.video.name,
+                ).first()
+                if resource:
+                    resource_delete_actions(resource)
+                else:
+                    log.info(
+                        "OVS delete webhook: no resource for video_id=%s", video_id
+                    )
             else:
-                log.info("OVS delete webhook: no resource for video_id=%s", video_id)
-        else:
-            load_ovs_video_from_webhook(payload)
+                load_ovs_video_from_webhook(payload)
 
         clear_views_cache()
         return self.success()

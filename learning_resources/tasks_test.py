@@ -3218,3 +3218,17 @@ def test_ingest_edx_run_archive_runs_only_while_legacy_owns_content_files(
     tasks.ingest_edx_run_archive.delay(ETLSource.xpro.name, "xpro/a.tar.gz")
 
     assert mock_sync.called is (owner == ETLSourceOwnership.Pipeline.LEGACY)
+
+
+def test_sync_canvas_courses_skips_when_legacy_does_not_own_content_files(mocker):
+    """Every archive it would queue needs canvas content files too"""
+    _owned_by(
+        ETLSourceOwnership.Pipeline.WAREHOUSE, ETLSource.canvas.name, CONTENT_FILE
+    )
+    mock_get_bucket = mocker.patch("learning_resources.tasks.get_bucket_by_name")
+    mock_ingest_course = mocker.patch("learning_resources.tasks.ingest_canvas_course")
+
+    assert sync_canvas_courses(canvas_course_ids=None, overwrite=False) is None
+
+    mock_get_bucket.assert_not_called()
+    mock_ingest_course.delay.assert_not_called()

@@ -989,7 +989,11 @@ def sync_canvas_courses(canvas_course_ids=None, overwrite=False):  # noqa: FBT00
     Returns:
         int or None: the number of courses queued, or None if no archives were found
     """
-    if not may_write(ETLSource.canvas.name, LearningResourceType.course.name):
+    # every archive it queues is ingested by ingest_canvas_course, which needs
+    # both pairs, so with either one moved there is nothing to queue
+    if not may_write(
+        ETLSource.canvas.name, [LearningResourceType.course.name, CONTENT_FILE]
+    ):
         return None
 
     bucket = get_bucket_by_name(settings.COURSE_ARCHIVE_BUCKET_NAME)
