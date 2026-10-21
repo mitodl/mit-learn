@@ -729,7 +729,7 @@ describe("ChannelSearch", () => {
 
     const tabs = await screen.findAllByRole("tab")
     expect(tabs.map((tab) => tab.textContent)).toEqual([
-      expect.stringContaining("Courses and Programs"),
+      expect.stringContaining("Courses & Programs"),
       expect.stringContaining("Learning Materials"),
     ])
     expect(tabs[0]).toHaveAttribute("aria-selected", "true")
@@ -743,7 +743,7 @@ describe("ChannelSearch", () => {
     ])
   })
 
-  test("a topic channel link to just courses lands on Courses and Programs", async () => {
+  test("a topic channel link to just courses lands on Courses & Programs", async () => {
     const { channel } = setMockApiResponses({
       channelPatch: { channel_type: ChannelTypeEnum.Topic },
     })
@@ -753,7 +753,7 @@ describe("ChannelSearch", () => {
     })
 
     expect(
-      await screen.findByRole("tab", { name: /Courses and Programs/ }),
+      await screen.findByRole("tab", { name: /Courses & Programs/ }),
     ).toHaveAttribute("aria-selected", "true")
   })
 
@@ -789,7 +789,7 @@ describe("ChannelSearch", () => {
        up afresh each time rather than hold on to the one that was removed. */
     const inDrawer = (name: string) =>
       within(screen.getByRole("presentation")).getByRole("checkbox", { name })
-    const coursesAndPrograms = () => inDrawer("Courses and Programs")
+    const coursesAndPrograms = () => inDrawer("Courses & Programs")
     const learningMaterials = () => inDrawer("Learning Materials")
 
     expect(coursesAndPrograms()).toBeChecked()

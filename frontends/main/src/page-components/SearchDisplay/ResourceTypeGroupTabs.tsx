@@ -169,7 +169,7 @@ const ResourceTypeGroupTabList: React.FC<ResourceTypeGroupTabsProps> = ({
  *
  * There is no "All" row because the design has none: unchecking whichever row
  * is checked goes back to the default tab -- All where there is one, and on
- * the topic page, which has none, Courses and Programs.
+ * the topic page, which has none, Courses & Programs.
  */
 /** See the effect in `ResourceTypeGroupChecklist` for why this is not a ref. */
 let pendingFocusId: string | null = null

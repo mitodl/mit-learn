@@ -94,7 +94,9 @@ const FilterChip = styled.button(({ theme }) => ({
   padding: "0 12px 0 16px",
   borderRadius: "20px",
   border: `1px solid ${theme.custom.colors.silverGrayLight}`,
-  background: "none",
+  /* Filled rather than left clear: the row sits on the page's own grey, and
+     the design draws the pills white against it. */
+  backgroundColor: theme.custom.colors.white,
   color: theme.custom.colors.darkGray2,
   cursor: "pointer",
   whiteSpace: "nowrap",
@@ -135,6 +137,13 @@ type SelectedFiltersProps = {
    * with it -- there is no chip left to hand it to.
    */
   onEmpty: () => void
+  /**
+   * Set by whoever places the row, which is where the row's own place on the
+   * page is decided. Here rather than on a wrapper because the row renders
+   * nothing when nothing is filtering, and a wrapper would hold its space
+   * open anyway.
+   */
+  className?: string
 }
 
 /**
@@ -155,6 +164,7 @@ const SelectedFilters: React.FC<SelectedFiltersProps> = ({
   onRemove,
   onClearAll,
   onEmpty,
+  className,
 }) => {
   const filters = selectedFilters(facetManifest, params)
   const chipRefs = React.useRef<Record<string, HTMLButtonElement | null>>({})
@@ -184,7 +194,7 @@ const SelectedFilters: React.FC<SelectedFiltersProps> = ({
     return null
   }
   return (
-    <Row data-testid="selected-filters">
+    <Row className={className} data-testid="selected-filters">
       {filters.map((filter, index) => {
         const key = `${filter.name}-${filter.value}`
         return (

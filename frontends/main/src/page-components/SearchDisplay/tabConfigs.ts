@@ -70,7 +70,7 @@ const TABS: TabConfig[] = [
 const TOPIC_TABS: TabConfig[] = [
   {
     name: "courses-and-programs",
-    label: "Courses and Programs",
+    label: "Courses & Programs",
     defaultTab: true,
     resource_type_groups: [
       ResourceTypeGroupEnum.Course,

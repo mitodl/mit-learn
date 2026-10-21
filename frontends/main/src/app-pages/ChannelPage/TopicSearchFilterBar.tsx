@@ -36,10 +36,10 @@ const Card = styled.div({
  * both a size smaller here than the field draws them elsewhere.
  */
 const StyledSearchField = styled(SearchField)(({ theme }) => ({
-  width: "626px",
+  width: "486px",
   /* The elastic one of the two: the controls beside it are a fixed set of
-     fixed-width labels, so between `md` and the ~1080px the design's width
-     needs, the room has to come from the field. `min-width` because a flex
+     fixed-width labels, so where the row is narrower than the two together
+     measure, the room has to come from the field. `min-width` because a flex
      item will not shrink past its content otherwise, and the field's content
      is a long placeholder. */
   minWidth: 0,
