@@ -47,6 +47,7 @@ from contextlib import contextmanager
 from contextvars import ContextVar
 from enum import StrEnum
 
+from learning_resources.constants import SHADOW_COMPARED_TYPES
 from learning_resources.models import ETLSourceOwnership
 
 log = logging.getLogger(__name__)
@@ -134,7 +135,8 @@ def run_mode(etl_source: str, resource_types: str | Iterable[str]) -> RunMode:
 
     SHADOW if it is the owner or the shadow of every one and the shadow of at
     least one. Nothing is written inside a shadow run, so the types it owns
-    are not written by that run either.
+    are not written by that run either. Only the SHADOW_COMPARED_TYPES can be
+    shadowed: a shadow of any other type is skipped.
 
     SKIP otherwise.
     """
@@ -148,7 +150,9 @@ def run_mode(etl_source: str, resource_types: str | Iterable[str]) -> RunMode:
         owner = row.owner if row else Pipeline.LEGACY
         if owner == pipeline:
             continue
-        if row and row.shadow == pipeline:
+        # ETLSourceOwnership.clean refuses a shadow of a type no shadow run
+        # compares, and this catches a row saved without it
+        if row and row.shadow == pipeline and resource_type in SHADOW_COMPARED_TYPES:
             mode = RunMode.SHADOW
         else:
             not_owned[resource_type] = owner

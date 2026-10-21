@@ -23,6 +23,7 @@ from django.utils import timezone
 
 from learning_resources import constants
 from learning_resources.constants import (
+    SHADOW_COMPARED_TYPES,
     WEBSITE_CONTENT_READABLE_ID_PREFIX,
     Availability,
     CertificationType,
@@ -2088,11 +2089,23 @@ class ETLSourceOwnership(TimestampedModel):
         return f"{self.etl_source}/{self.resource_type}: {self.owner}"
 
     def clean(self):
-        """Reject a shadow that is also the owner: it would write, not shadow."""
+        """
+        Reject a shadow that is also the owner, which would write, not shadow,
+        and a shadow of a type no shadow run compares, which would report nothing.
+        """
         super().clean()
         if self.shadow and self.shadow == self.owner:
             raise ValidationError(
                 {"shadow": "The shadow pipeline must differ from the owner."}
+            )
+        if self.shadow and self.resource_type not in SHADOW_COMPARED_TYPES:
+            raise ValidationError(
+                {
+                    "shadow": (
+                        f"A shadow run does not compare {self.resource_type} "
+                        "resources yet."
+                    )
+                }
             )
 
 

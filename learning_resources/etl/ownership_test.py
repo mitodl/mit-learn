@@ -26,6 +26,8 @@ COURSE = LearningResourceType.course.name
 PROGRAM = LearningResourceType.program.name
 PODCAST = LearningResourceType.podcast.name
 EPISODE = LearningResourceType.podcast_episode.name
+PLAYLIST = LearningResourceType.video_playlist.name
+VIDEO = LearningResourceType.video.name
 
 
 def test_missing_row_means_legacy():
@@ -165,3 +167,23 @@ def test_shadow_must_differ_from_owner():
     with pytest.raises(ValidationError) as error:
         row.full_clean()
     assert "shadow" in error.value.message_dict
+
+
+@pytest.mark.parametrize("resource_type", [PLAYLIST, VIDEO])
+def test_a_type_no_shadow_run_compares_cannot_be_shadowed(resource_type):
+    """
+    Nothing compares playlists or videos, so admin refuses their shadow, and a
+    row saved without that check is skipped rather than shadowed
+    """
+    row = ETLSourceOwnershipFactory.build(
+        etl_source=ETLSource.youtube.name,
+        resource_type=resource_type,
+        shadow=Pipeline.WAREHOUSE,
+    )
+    with pytest.raises(ValidationError) as error:
+        row.full_clean()
+    assert "shadow" in error.value.message_dict
+
+    row.save()
+    with writing_as(Pipeline.WAREHOUSE):
+        assert run_mode(ETLSource.youtube.name, [PLAYLIST, VIDEO]) == RunMode.SKIP
