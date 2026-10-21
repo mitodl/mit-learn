@@ -1498,8 +1498,9 @@ def load_podcasts(
             list of the loaded podcast resources
     """
     if is_shadow_run():
+        # fail the shadow where the owner's load would fail
         if not tracked_ids:
-            msg = "No podcasts to track, refusing to unpublish every podcast"
+            msg = "No podcasts to track, the load would unpublish every podcast"
             raise ExtractException(msg)
         shadow.observe_podcasts(podcasts_data, tracked_ids)
         return []
