@@ -58,9 +58,12 @@ BASIC_MATH_SYMBOLS = re.compile(r"[+=<>≤≥≠±\-]")
 COMPLEX_MATH_REGEX = re.compile(
     r"([∑∏∫∂∇√∞∀∃∈⊂∪→⇒⇔αβγδεθλμπστφωΩΓΛΨ]|\b(lim|sin|cos|tan|log|ln|det|mod)\b)"  # noqa: RUF001
 )
+# Private Use Area glyphs that Symbol/Wingdings fonts commonly use for list
+# bullets (e.g. U+F0B7 in Word PDFs). They're harmless, so they don't count.
+PRIVATE_USE_BULLETS = "\uf06c\uf06e\uf071\uf076\uf0a7\uf0a8\uf0b7\uf0d8\uf0e0\uf0fc"
 # Private Use Area glyphs (e.g. old equation-editor / Symbol font pieces) and the
 # replacement character carry no meaning as text, so the page needs full OCR
-UNMAPPABLE_GLYPH_REGEX = re.compile("[\ue000-\uf8ff\ufffd]")
+UNMAPPABLE_GLYPH_REGEX = re.compile(f"(?![{PRIVATE_USE_BULLETS}])[\ue000-\uf8ff\ufffd]")
 # List item text that already starts with its own label, e.g. "1.", "(a)", "iv)"
 LIST_LABEL_REGEX = re.compile(r"^\s*\(?(\d+|[a-zA-Z]|[ivxlcdmIVXLCDM]+)[.)](\s|$)")
 
@@ -143,6 +146,8 @@ class ContentBlock:
     # "1." / "-" marker of the list item this block came from. Kept apart from
     # content so it isn't scored as math.
     list_marker: str | None = None
+    # For full-page OCR: the page's parsed blocks, used if the OCR request fails
+    fallback_blocks: list["ContentBlock"] = field(default_factory=list)
 
 
 @dataclass
@@ -284,9 +289,9 @@ class OCRProcessor:
     def __init__(self, batch_size: int = IMAGE_BATCH_SIZE):
         self.batch_size = batch_size
 
-    def process_images(self, images: list[ImageForOCR]) -> dict[int, str]:
+    def process_images(self, images: list[ImageForOCR]) -> dict[int, str | None]:
         """
-        Batch OCR images
+        Batch OCR images. A failed request's result is None.
         """
         if not images:
             return {}
@@ -309,35 +314,24 @@ class OCRProcessor:
             "num_retries": settings.OCR_REQUEST_NUM_RETRIES,
         }
 
-    def _execute_batch_ocr(self, messages_list: list[list[dict]]) -> list[str]:
+    def _execute_batch_ocr(self, messages_list: list[list[dict]]) -> list[str | None]:
         all_texts = []
         for i in range(0, len(messages_list), self.batch_size):
             batch = messages_list[i : i + self.batch_size]
             responses = batch_completion(messages=batch, **self._completion_kwargs())
-            all_texts.extend(
-                self._response_text(messages, resp)
-                for messages, resp in zip(batch, responses, strict=True)
-            )
+            all_texts.extend(self._response_text(resp) for resp in responses)
             gc.collect()
         return all_texts
 
-    def _response_text(self, messages: list[dict], response: Any) -> str:
+    def _response_text(self, response: Any) -> str | None:
         """
-        Get the text of an OCR response. batch_completion returns the exception
-        in place of a response for a failed request, so retry that request once
-        and fall back to a placeholder if it fails again.
+        Get the text of an OCR response, or None if the request failed.
+        batch_completion returns the exception in place of a response for a
+        request that failed after num_retries, so it isn't retried again here.
         """
         if isinstance(response, Exception):
-            log.warning("OCR request failed, retrying: %s", response)
-            try:
-                # batch_completion already used up num_retries, so try just once
-                response = litellm.completion(
-                    messages=messages,
-                    **{**self._completion_kwargs(), "num_retries": 0},
-                )
-            except Exception:
-                log.exception("OCR request failed after retry")
-                return OCR_FAILED_PLACEHOLDER
+            log.warning("OCR request failed: %s", response)
+            return None
         return response.choices[0].message.content or ""
 
 
@@ -518,12 +512,31 @@ class MarkdownAssembler:
     - list item: Individual list items (when standalone)
     """
 
-    def assemble(self, blocks: list[ContentBlock], ocr_results: dict[int, str]) -> str:
+    def assemble(
+        self, blocks: list[ContentBlock], ocr_results: dict[int, str | None]
+    ) -> str:
         formatted_parts = []
         for block in flatten_lists(blocks):
             # Full Page OCR overrides all individual blocks on that page
             if block.block_type == BlockType.FULL_PAGE_OCR:
-                formatted_parts.append(ocr_results.get(block.block_id, ""))
+                page_text = ocr_results.get(block.block_id, "")
+                if page_text is not None:
+                    formatted_parts.append(page_text)
+                    continue
+                # OCR failed, so use the page's parsed text instead
+                log.warning(
+                    "Page %d: full-page OCR failed, using parsed text",
+                    block.page_number,
+                )
+                formatted_parts.extend(
+                    filter(
+                        None,
+                        (
+                            self._format_block(b, ocr_results)
+                            for b in block.fallback_blocks
+                        ),
+                    )
+                )
                 continue
 
             # Standard formatting
@@ -533,7 +546,7 @@ class MarkdownAssembler:
         return "\n\n".join(formatted_parts)
 
     def _format_block(
-        self, block: ContentBlock, ocr_results: dict[int, str]
+        self, block: ContentBlock, ocr_results: dict[int, str | None]
     ) -> str | None:
         """
         Format a content block to markdown.
@@ -559,7 +572,7 @@ class MarkdownAssembler:
 
         # Image - use OCR result
         if block_type == BlockType.IMAGE:
-            block_content = ocr_results.get(block.block_id)
+            block_content = self._format_image(block, ocr_results)
 
         # Table
         if block_type == BlockType.TABLE:
@@ -585,6 +598,15 @@ class MarkdownAssembler:
             block_content = f"{block.list_marker} {block_content}"
 
         return block_content
+
+    def _format_image(
+        self, block: ContentBlock, ocr_results: dict[int, str | None]
+    ) -> str | None:
+        """Format an image's OCR result. A result of None means OCR failed."""
+        if block.block_id not in ocr_results:
+            return None
+        text = ocr_results[block.block_id]
+        return OCR_FAILED_PLACEHOLDER if text is None else text
 
     def _format_table(self, block: ContentBlock) -> str | None:
         """
@@ -849,6 +871,7 @@ class OpenDataLoaderLLMConverter:
                             block_id=page_block_id,
                             page_number=page_num,
                             bounding_box=[],
+                            fallback_blocks=page_blocks,
                         )
                     )
 

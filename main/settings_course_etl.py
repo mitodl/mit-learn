@@ -73,12 +73,12 @@ OCR_MODEL = get_string(name="OCR_MODEL", default=None)
 OCR_PROMPT = get_string(
     "OCR_PROMPT",
     "Transcribe this image to markdown. Properly format text, formulas, "
-    "tables, and code into markdown format."
-    " Write every mathematical expression, inline ones included, in LaTeX "
-    "($...$ inline, $$...$$ display), even when it is printed as plain text."
+    "tables, and code into markdown format. "
+    "Write every mathematical expression, inline ones included, in LaTeX "
+    "($...$ inline, $$...$$ display), even when it is printed as plain text. "
     "Include a markdown comment for elements that cannot be transcribed such as "
-    "photos and other visual elements."
-    "Do not include any indications your output is the result of a transcription."
+    "photos and other visual elements. "
+    "Do not include any indications your output is the result of a transcription. "
     "Do not include extra commentary - "
     "ONLY include the resulting transcribed markdown.",
 )

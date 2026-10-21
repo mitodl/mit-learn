@@ -284,7 +284,12 @@ def test_math_score_includes_nested_text():
 
 @pytest.mark.parametrize(
     ("content", "expected"),
-    [("w = cos 2\uf8eb L", True), ("bad \ufffd glyph", True), ("plain text", False)],
+    [
+        ("w = cos 2\uf8eb L", True),
+        ("bad \ufffd glyph", True),
+        ("plain text", False),
+        ("\uf0b7 Word bullet \uf0a7 Wingdings bullet", False),
+    ],
 )
 def test_unmappable_glyphs_trigger_full_page_ocr(
     mocker, settings, fake_renderer, content, expected
@@ -314,8 +319,8 @@ def _response(text):
     )
 
 
-def test_failed_ocr_request_is_retried(mocker, settings):
-    """A failed request in a batch is retried once on its own"""
+def test_failed_ocr_request_returns_none(mocker, settings):
+    """A failed request's result is None and isn't retried again"""
     settings.OCR_REQUEST_TIMEOUT = 33
     settings.OCR_REQUEST_NUM_RETRIES = 4
     mocker.patch.object(OCRProcessor, "_execute_batch_ocr", execute_batch_ocr)
@@ -323,38 +328,52 @@ def test_failed_ocr_request_is_retried(mocker, settings):
         f"{MODULE}.batch_completion",
         return_value=[_response("one"), Exception("timeout")],
     )
-    completion = mocker.patch(
-        f"{MODULE}.litellm.completion", return_value=_response("two")
-    )
+    completion = mocker.patch(f"{MODULE}.litellm.completion")
     images = [
         ImageForOCR(1, "data:image/jpeg;base64,", is_full_page=False),
         ImageForOCR(2, "data:image/jpeg;base64,", is_full_page=False),
     ]
-    assert OCRProcessor().process_images(images) == {1: "one", 2: "two"}
-    for mock in (batch, completion):
-        assert mock.call_args.kwargs["timeout"] == 33
+    assert OCRProcessor().process_images(images) == {1: "one", 2: None}
+    assert batch.call_args.kwargs["timeout"] == 33
     assert batch.call_args.kwargs["num_retries"] == 4
-    # the fallback is a single attempt on top of batch_completion's retries
-    assert completion.call_args.kwargs["num_retries"] == 0
-    completion.assert_called_once()
+    completion.assert_not_called()
 
 
-def test_failed_ocr_retry_uses_placeholder(mocker):
-    """A request that fails twice is replaced by a placeholder"""
-    mocker.patch.object(OCRProcessor, "_execute_batch_ocr", execute_batch_ocr)
-    mocker.patch(
-        f"{MODULE}.batch_completion",
-        return_value=[Exception("timeout"), _response("two")],
+def test_failed_ocr_falls_back(mocker, settings, fake_renderer):
+    """
+    A failed full-page OCR uses the page's parsed text, and a failed image
+    becomes a placeholder
+    """
+    settings.OCR_MATH_DENSITY_THRESHOLD = 2
+    mocker.patch(f"{MODULE}._optimize_image", return_value=mocker.MagicMock())
+    mocker.patch(f"{MODULE}.PDFPageRenderer", return_value=fake_renderer)
+    mocker.patch.object(
+        OCRProcessor, "process_images", return_value={888001: None, 5: None}
     )
-    mocker.patch(f"{MODULE}.litellm.completion", side_effect=Exception("timeout"))
-    images = [
-        ImageForOCR(1, "data:image/jpeg;base64,", is_full_page=False),
-        ImageForOCR(2, "data:image/jpeg;base64,", is_full_page=False),
+    converter = OpenDataLoaderLLMConverter(Path("test.pdf"))
+    mocker.patch.object(
+        converter,
+        "_convert_pdf_to_json",
+        return_value={
+            "kids": [
+                _paragraph("∫ f(x) dx = 1"),
+                {"type": "heading", "page number": 1, "content": "Title"},
+                _paragraph("Page two", page=2),
+                {
+                    "type": "image",
+                    "id": 5,
+                    "page number": 2,
+                    "bounding box": [0, 0, 100, 100],
+                },
+            ]
+        },
+    )
+    assert converter.convert_to_markdown().split("\n\n") == [
+        "∫ f(x) dx = 1",
+        "# Title",
+        "Page two",
+        OCR_FAILED_PLACEHOLDER,
     ]
-    assert OCRProcessor().process_images(images) == {
-        1: OCR_FAILED_PLACEHOLDER,
-        2: "two",
-    }
 
 
 @pytest.mark.parametrize(("num_colors", "expect_binary"), [(2, True), (500, False)])
