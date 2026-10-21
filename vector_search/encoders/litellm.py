@@ -313,12 +313,12 @@ class LiteLLMEncoder(BaseEncoder):
         """
         Generate embeddings using LiteLLM/OpenAI API, traced as one request.
 
-        Only single-text requests use the cache. litellm caches each text of a
-        request separately and reports a partial hit's usage as the sum of the
-        cached and billed texts, so the billed tokens of a multi-text request
-        could not be told apart.
+        litellm's sync ``embedding`` caches the request as a whole, so a
+        response either came wholly from the cache, which billed nothing, or
+        from the provider. (Per-text caching, where a partial hit sums cached
+        and billed usage, is only on the async ``aembedding`` path.)
         """
-        if self.cache and len(texts) == 1:
+        if self.cache:
             cache_params = {
                 "caching": True,
                 "ttl": settings.QDRANT_QUERY_EMBEDDING_CACHE_TTL,
