@@ -2,6 +2,7 @@ import React from "react"
 import { screen, waitFor } from "@testing-library/react"
 import { factories, setMockResponse, urls, makeRequest } from "api/test-utils"
 import { renderWithProviders } from "@/test-utils"
+import { ChannelTypeEnum } from "api/v0"
 import TopicFeaturedCarousel, { FEATURED_COUNT } from "./TopicFeaturedCarousel"
 
 const CHANNEL_NAME = "data-science"
@@ -29,7 +30,12 @@ describe("TopicFeaturedCarousel", () => {
     const resources = factories.learningResources.resources({ count: 3 })
     setMockResponse.get(featuredUrl(), resources)
 
-    renderWithProviders(<TopicFeaturedCarousel name={CHANNEL_NAME} />)
+    renderWithProviders(
+      <TopicFeaturedCarousel
+        name={CHANNEL_NAME}
+        channelType={ChannelTypeEnum.Topic}
+      />,
+    )
 
     await screen.findByRole("heading", { name: "Featured" })
     for (const resource of resources.results) {
@@ -51,7 +57,12 @@ describe("TopicFeaturedCarousel", () => {
       results: [],
     })
 
-    renderWithProviders(<TopicFeaturedCarousel name={CHANNEL_NAME} />)
+    renderWithProviders(
+      <TopicFeaturedCarousel
+        name={CHANNEL_NAME}
+        channelType={ChannelTypeEnum.Topic}
+      />,
+    )
 
     await waitFor(() => {
       expect(screen.queryByText("Featured")).toBe(null)
@@ -59,7 +70,9 @@ describe("TopicFeaturedCarousel", () => {
   })
 
   test("renders nothing, and asks for nothing, without a channel name", async () => {
-    renderWithProviders(<TopicFeaturedCarousel name="" />)
+    renderWithProviders(
+      <TopicFeaturedCarousel name="" channelType={ChannelTypeEnum.Topic} />,
+    )
 
     expect(screen.queryByText("Featured")).toBe(null)
     await waitFor(() => {
@@ -74,7 +87,12 @@ describe("TopicFeaturedCarousel", () => {
     const resources = factories.learningResources.resources({ count: 1 })
     setMockResponse.get(featuredUrl(), resources)
 
-    renderWithProviders(<TopicFeaturedCarousel name={CHANNEL_NAME} />)
+    renderWithProviders(
+      <TopicFeaturedCarousel
+        name={CHANNEL_NAME}
+        channelType={ChannelTypeEnum.Topic}
+      />,
+    )
 
     /* Four are on screen at desktop width; the rest are what the arrows page
        through, so the request has to cover more than one screenful. */
