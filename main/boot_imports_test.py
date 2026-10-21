@@ -24,6 +24,8 @@ OFFENDING_PACKAGES = [
     "opendataloader_pdf",
     "cv2",
     "pdf2image",
+    "opik",
+    "ol_llm",
 ]
 
 PROBE_SCRIPT = textwrap.dedent(
