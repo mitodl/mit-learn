@@ -85,9 +85,9 @@ class CapacityLimitedExecutor:
         future.add_done_callback(lambda _future: self._slots.release())
         return future
 
-    def shutdown(self):
-        """Shut down the underlying pool without waiting on in-flight calls."""
-        self._executor.shutdown(wait=False)
+    def shutdown(self, *, wait=False):
+        """Shut down the underlying pool, by default without waiting on calls."""
+        self._executor.shutdown(wait=wait)
 
 
 # Speculative requests get their own pool so a pile-up of abandoned hedges can
@@ -133,13 +133,18 @@ def get_hedge_executor():
     )
 
 
-def reset_embedding_executors():
-    """Drop the shared embedding executors. Intended for tests."""
+def reset_embedding_executors(*, wait=False):
+    """
+    Drop the shared embedding executors. Intended for tests.
+
+    ``wait`` blocks until their in-flight requests finish, so an abandoned
+    request cannot record its trace during a later test.
+    """
     with _executor_lock:
         executors = list(_executors.values())
         _executors.clear()
     for executor in executors:
-        executor.shutdown()
+        executor.shutdown(wait=wait)
 
 
 def catalog_model_id(model_name):
