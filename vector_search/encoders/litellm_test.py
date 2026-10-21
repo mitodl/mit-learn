@@ -653,3 +653,33 @@ def test_litellm_encoder_failed_request_traced(mock_embedding, traced):
 
     assert traced["requests"].call_count == 1
     assert traced["records"].call_count == 0
+
+
+@patch("vector_search.encoders.litellm.embedding")
+def test_litellm_encoder_embed_traced_as_query(mock_embedding, traced, mocker):
+    """embed() serves request-time lookups, so it is traced as a query"""
+    mocker.patch(
+        "vector_search.encoders.litellm.current_task",
+        mocker.Mock(request=mocker.Mock(id="task-1")),
+    )
+    mock_embedding.return_value = _embedding_response([0.7, 0.8], prompt_tokens=5)
+    encoder = LiteLLMEncoder("test_model")
+
+    assert encoder.embed("a resource title") == [0.7, 0.8]
+
+    [request] = traced["requests"].call_args_list
+    assert request.args[0] is encoder.query_use_case
+    assert request.kwargs["attribution"] == ol_llm.Attribution()
+    assert mock_embedding.call_count == 1
+
+
+@patch("vector_search.encoders.litellm.embedding")
+def test_litellm_encoder_dim_probes_as_a_document(mock_embedding, traced):
+    """dim() is an index-creation probe and stays a document request"""
+    mock_embedding.return_value = _embedding_response([0.1, 0.2, 0.3])
+    encoder = LiteLLMEncoder("test_model")
+
+    assert encoder.dim() == 3
+
+    [request] = traced["requests"].call_args_list
+    assert request.args[0] is encoder.document_use_case

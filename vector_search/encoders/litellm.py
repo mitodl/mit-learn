@@ -194,6 +194,24 @@ class LiteLLMEncoder(BaseEncoder):
         )
         return [result["embedding"] for result in response["data"]]
 
+    def embed(self, text):
+        """
+        Embed one text for a request-time lookup, traced as a query.
+
+        Its caller (similar topics for a resource) runs in a request, so it
+        belongs to the request-profile use case, not document-embedding.
+        """
+        res = self.get_embedding([text], self.query_use_case)
+        return res["data"][0]["embedding"]
+
+    def dim(self):
+        """
+        Return the dimension of the embeddings.
+
+        Probes with a document request, as before ``embed`` became a query.
+        """
+        return len(self.embed_documents(["test"])[0])
+
     def _submit_query(self, executor, texts, timeout_seconds):
         """
         Submit one query embedding request, returning ``None`` if the pool is full.
