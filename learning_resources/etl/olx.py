@@ -1159,10 +1159,12 @@ class OlxArchive:
         static_files = [path for path in self._static_files if path not in undated_refs]
         matched: set[Path] = set()
         inline = self._inline_dated
+        # only the files the undated scan reads; transcripts can't link assets
+        candidates = set(self._reference_candidates)
         for date in sorted(set(dates.values()) | set(inline)):
             files = [path for path, released in dates.items() if released == date]
-            existing = [path for path in files if path.is_file()]
-            texts, video_ids, _complete = self._texts(existing, inline.get(date, []))
+            sources = [path for path in files if path in candidates]
+            texts, video_ids, _complete = self._texts(sources, inline.get(date, []))
             found = self._static_names.first_starts(*_reference_index(texts))
             referenced = {
                 path for path in static_files if _refers_to(path, found, video_ids)
