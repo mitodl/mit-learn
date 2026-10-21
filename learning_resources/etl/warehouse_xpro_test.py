@@ -434,6 +434,41 @@ def test_sync_as_a_shadow_compares_without_writing(
     assert list(LearningResource.objects.order_by("id").values()) == before
 
 
+def test_sync_courses_past_the_unpublish_limit(warehouse_owns_xpro, api_courses):
+    """
+    The owner refuses to unpublish over MAX_UNPUBLISH_SHARE of the courses, and
+    a shadow carries on and reports which ones it would unpublish
+    """
+    courses = [course_row(course) for course in api_courses]
+    runs = [run for course in api_courses for run in run_rows(course)]
+    with writing_as(Pipeline.WAREHOUSE):
+        warehouse_xpro.sync_courses(courses, runs)
+    dropped = (
+        LearningResource.objects.filter(resource_type=COURSE, published=True)
+        .values_list("readable_id", flat=True)
+        .first()
+    )
+    kept = [course for course in courses if course["readable_id"] != dropped]
+
+    with (
+        writing_as(Pipeline.WAREHOUSE),
+        pytest.raises(ExtractException, match="Refusing to sync"),
+    ):
+        warehouse_xpro.sync_courses(kept, runs)
+    ETLSourceOwnership.objects.filter(etl_source=ETLSource.xpro.name).update(
+        owner=Pipeline.LEGACY, shadow=Pipeline.WAREHOUSE
+    )
+    with writing_as(Pipeline.WAREHOUSE):
+        _, [report] = run_shadow(
+            [(ETLSource.xpro.name, COURSE)],
+            lambda: warehouse_xpro.sync_courses(kept, runs),
+        )
+
+    assert report.error == ""
+    assert report.details["unpublished"] == [dropped]
+    assert LearningResource.objects.get(readable_id=dropped).published is True
+
+
 def test_sync_programs_links_the_published_course_over_an_unpublished_copy(
     warehouse_owns_xpro, api_programs
 ):
