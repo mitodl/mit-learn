@@ -22,6 +22,7 @@ from learning_resources.factories import (
 from learning_resources.models import ContentFile
 from learning_resources.serializers import ContentFileSerializer
 from learning_resources_search import indexing_api
+from learning_resources_search.api import gen_content_file_id
 from learning_resources_search.connection import get_default_alias_name
 from learning_resources_search.constants import (
     ALIAS_ALL_INDICES,
@@ -642,13 +643,18 @@ def test_deindex_run_content_files_unpublished_only_does_not_hard_delete(mocker)
     """deindex_run_content_files with unpublished_only=True should deindex but not hard-delete"""
     mock_deindex = mocker.patch("learning_resources_search.indexing_api.deindex_items")
     run = LearningResourceRunFactory.create(published=True)
-    ContentFileFactory.create_batch(2, run=run, published=False)
-    ContentFileFactory.create(
+    unpublished = ContentFileFactory.create_batch(2, run=run, published=False)
+    unreleased = ContentFileFactory.create(
         run=run, published=True, release_date=now_in_utc() + timedelta(days=1)
     )
     ContentFileFactory.create_batch(1, run=run, published=True)
     deindex_run_content_files(run.id, unpublished_only=True)
     mock_deindex.assert_called_once()
+    # unreleased files are hidden too, so they leave the index with unpublished ones
+    assert {doc["_id"] for doc in mock_deindex.call_args.args[0]} == {
+        gen_content_file_id(content_file.id)
+        for content_file in [*unpublished, unreleased]
+    }
     assert ContentFile.objects.count() == 4
 
 
