@@ -55,6 +55,8 @@ from learning_resources.models import (
     Program,
     RunInstructorRelationship,
     TutorProblemFile,
+    Unit,
+    UnitContentFile,
     Video,
     VideoChannel,
     VideoPlaylist,
@@ -1162,6 +1164,92 @@ def load_content_files(
 
         return content_files_ids
     return None
+
+
+UNIT_EXTERNAL_ID_MAX_LENGTH = Unit._meta.get_field("external_id").max_length  # noqa: SLF001
+UNIT_TITLE_MAX_LENGTH = Unit._meta.get_field("title").max_length  # noqa: SLF001
+UNIT_URL_MAX_LENGTH = Unit._meta.get_field("url").max_length  # noqa: SLF001
+
+
+def load_course_units(run: LearningResourceRun, units_data: list[dict]) -> list[int]:
+    """
+    Replace a run's units with the ones built from its latest archive.
+
+    Args:
+        run (LearningResourceRun): the run the units belong to
+        units_data (list of dict): units as returned by OlxArchive.units. Empty
+            means the outline could not be read, and the run's units are kept,
+            minus their links to files no longer published
+
+    Returns:
+        list of int: ids of the run's units after the load
+    """
+    if not units_data:
+        UnitContentFile.objects.filter(
+            unit__run=run, content_file__published=False
+        ).delete()
+        return list(run.units.values_list("id", flat=True))
+    file_ids = dict(
+        ContentFile.objects.filter(run=run, published=True).values_list("key", "id")
+    )
+    units = []
+    unit_links = []
+    seen = set()
+    position = 0
+    for unit_data in units_data:
+        links = {
+            file_ids[key]: relation
+            for key, relation in unit_data["content_files"].items()
+            if key in file_ids
+        }
+        external_id = unit_data["external_id"]
+        # a block in two places of the outline keeps its first
+        if (
+            not links and unit_data["kind"] != Unit.Kind.CONTEXT
+        ) or external_id in seen:
+            continue
+        if len(external_id) > UNIT_EXTERNAL_ID_MAX_LENGTH:
+            # cut, it could match another unit's id
+            log.warning("Unit id too long, skipping: %s", external_id)
+            continue
+        seen.add(external_id)
+        url = unit_data.get("url") or ""
+        is_ordered = unit_data["kind"] == Unit.Kind.UNIT
+        units.append(
+            Unit(
+                run=run,
+                external_id=external_id,
+                kind=unit_data["kind"],
+                title=unit_data["title"][:UNIT_TITLE_MAX_LENGTH],
+                # a cut url would be broken
+                url=url if len(url) <= UNIT_URL_MAX_LENGTH else "",
+                position=position if is_ordered else None,
+            )
+        )
+        unit_links.append((links, is_ordered))
+        position += is_ordered
+    with transaction.atomic():
+        # an upsert on the run's external ids keeps each unit's id across loads
+        Unit.objects.bulk_create(
+            units,
+            update_conflicts=True,
+            unique_fields=["run", "external_id"],
+            update_fields=["kind", "title", "url", "position", "updated_on"],
+        )
+        unit_ids = [unit.id for unit in units]
+        run.units.exclude(id__in=unit_ids).delete()
+        UnitContentFile.objects.filter(unit__run=run).delete()
+        UnitContentFile.objects.bulk_create(
+            UnitContentFile(
+                unit=unit,
+                content_file_id=file_id,
+                relation=relation,
+                position=position_in_unit if is_ordered else None,
+            )
+            for unit, (links, is_ordered) in zip(units, unit_links, strict=True)
+            for position_in_unit, (file_id, relation) in enumerate(links.items())
+        )
+    return unit_ids
 
 
 def load_learning_materials(

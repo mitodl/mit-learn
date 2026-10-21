@@ -10,7 +10,8 @@ import re
 import tarfile
 import uuid
 from collections import Counter
-from collections.abc import Generator
+from collections.abc import Generator, Iterator
+from contextlib import contextmanager
 from datetime import UTC, datetime
 from decimal import Decimal
 from hashlib import md5
@@ -51,7 +52,12 @@ from learning_resources.etl.constants import (
     DurationConfig,
     ETLSource,
 )
-from learning_resources.etl.olx import OlxArchive, get_edx_module_id
+from learning_resources.etl.olx import (
+    OlxArchive,
+    get_edx_module_id,
+    get_jump_to_url,
+    get_root_url_for_source,
+)
 from learning_resources.models import (
     ContentFile,
     Course,
@@ -393,25 +399,6 @@ def text_from_sjson_content(content: str):
         log.exception("Error parsing sjson content")
 
 
-def get_root_url_for_source(etl_source: str) -> tuple[str, str]:
-    """
-    Get the base URL and path for an ETL source
-
-    Args:
-        etl_source (str): The ETL source path
-
-    Returns:
-        tuple[str, str]: The base URL and path
-    """
-    mapping = {
-        ETLSource.mitxonline.value: settings.CONTENT_BASE_URL_MITXONLINE,
-        ETLSource.xpro.value: settings.CONTENT_BASE_URL_XPRO,
-        ETLSource.oll.value: settings.CONTENT_BASE_URL_OLL,
-        ETLSource.mit_edx.value: settings.CONTENT_BASE_URL_EDX,
-    }
-    return mapping.get(etl_source)
-
-
 def is_valid_uuid(uuid_string: str) -> bool:
     """
     Check if a string is a valid UUID
@@ -441,13 +428,7 @@ def get_url_from_module_id(
     if not module_id:
         return None
     root_url = get_root_url_for_source(run.learning_resource.etl_source)
-    # OLL needs to have 'course-v1:' added to the run_id
-    run_id = (
-        f"course-v1:{run.run_id}"
-        if run.learning_resource.etl_source == ETLSource.oll.value
-        else run.run_id
-    )
-    base_jump_url = f"{root_url}/courses/{run_id}/jump_to_id/"
+    base_jump_url = get_jump_to_url(run, "")
     if module_id.startswith("asset"):
         video_meta = (
             video_srt_metadata.get(module_id, {}).get("module_id", {})
@@ -723,21 +704,30 @@ def process_olx_path(  # noqa: PLR0913
     run: LearningResourceRun,
     *,
     overwrite: bool,
-    valid_file_types=VALID_TEXT_FILE_TYPES,
+    valid_file_types: list[str] | None = None,
     is_tutor_problem_file_import=False,
     use_ocr=False,
     failed_source_paths: list | None = None,
+    archive: OlxArchive | None = None,
 ) -> Generator[dict, None, None]:
     """
     Process OLX path and yield content dictionaries.
 
     failed_source_paths is a caller-owned list appended to in place with the
     source_path of each file whose processing raises; it is only complete once
-    the generator is fully exhausted.
+    the generator is fully exhausted. archive is the OlxArchive of olx_path, if
+    the caller has one to share; the file types it reads are then the ones
+    ingested, and a different valid_file_types raises ValueError.
     """
-    archive = OlxArchive(
-        olx_path, run.learning_resource.etl_source, valid_file_types=valid_file_types
-    )
+    if archive is None:
+        archive = OlxArchive(
+            olx_path,
+            run.learning_resource.etl_source,
+            valid_file_types=valid_file_types or VALID_TEXT_FILE_TYPES,
+        )
+    elif valid_file_types is not None and valid_file_types != archive.valid_file_types:
+        msg = "valid_file_types differs from the archive's"
+        raise ValueError(msg)
     video_srt_metadata = archive.video_metadata(run)
 
     for document, metadata in documents_from_olx(archive):
@@ -783,8 +773,31 @@ def process_olx_path(  # noqa: PLR0913
         )
 
 
+@contextmanager
+def unpacked_course_archive(
+    course_tarpath: Path, run: LearningResourceRun
+) -> Iterator[OlxArchive]:
+    """
+    Unpack a course tarball into a temporary directory, yielding its OlxArchive.
+    The directory is removed on exit.
+
+    Args:
+        course_tarpath (Path): The path to the tarball which contains the OLX
+        run (LearningResourceRun): The run the archive belongs to
+
+    Yields:
+        OlxArchive: the unpacked course tree
+    """
+    basedir = course_tarpath.name.split(".")[0]
+    with TemporaryDirectory(prefix=basedir) as inner_tempdir:
+        with tarfile.open(course_tarpath) as tar:
+            tar.extractall(inner_tempdir, filter="data")
+        olx_path = glob.glob(inner_tempdir + "/*")[0]  # noqa: PTH207
+        yield OlxArchive(olx_path, run.learning_resource.etl_source)
+
+
 def transform_content_files(
-    course_tarpath: Path,
+    archive: OlxArchive,
     run: LearningResourceRun,
     *,
     overwrite: bool,
@@ -794,7 +807,7 @@ def transform_content_files(
     Pass content to tika, then return JSON document with transformed content inside it
 
     Args:
-        course_tarpath (str): The path to the tarball which contains the OLX
+        archive (OlxArchive): The unpacked course, see unpacked_course_archive
         run (LearningResourceRun): The run associated witb the content files
         failed_keys (list): caller-owned list extended in place with the
             ContentFile keys of files whose extraction failed; valid only once
@@ -803,19 +816,38 @@ def transform_content_files(
     Yields:
         dict: content from file
     """
-    basedir = course_tarpath.name.split(".")[0]
     failed_source_paths = []
-    with TemporaryDirectory(prefix=basedir) as inner_tempdir:
-        with tarfile.open(course_tarpath) as tar:
-            tar.extractall(inner_tempdir, filter="data")
-        olx_path = glob.glob(inner_tempdir + "/*")[0]  # noqa: PTH207
-        yield from process_olx_path(
-            olx_path, run, overwrite=overwrite, failed_source_paths=failed_source_paths
-        )
+    yield from process_olx_path(
+        str(archive.root),
+        run,
+        overwrite=overwrite,
+        failed_source_paths=failed_source_paths,
+        archive=archive,
+    )
     if failed_keys is not None:
         failed_keys.extend(
             get_edx_module_id(source_path, run) for source_path in failed_source_paths
         )
+
+
+def course_units_from_archive(
+    course_tarpath: Path, run: LearningResourceRun
+) -> list[dict]:
+    """
+    Build a run's units from its course archive without loading content files
+
+    Args:
+        course_tarpath (Path): The path to the tarball which contains the OLX
+        run (LearningResourceRun): The run the units belong to
+
+    Returns:
+        list of dict: unit data for load_course_units (see OlxArchive.units)
+
+    Raises:
+        ValueError: the archive's outline names a block file it doesn't have
+    """
+    with unpacked_course_archive(course_tarpath, run) as archive:
+        return archive.units(run)
 
 
 def get_s3_prefix_for_source(etl_source: str) -> str:

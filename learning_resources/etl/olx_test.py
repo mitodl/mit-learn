@@ -1,13 +1,26 @@
 """Tests for learning_resources.etl.olx"""
 
 import json
+import pathlib
 
 import pytest
 from defusedxml import ElementTree
 
 from learning_resources.etl.constants import ETLSource
-from learning_resources.etl.olx import OlxArchive, get_edx_module_id
+from learning_resources.etl.loaders import load_course_units
+from learning_resources.etl.olx import (
+    OlxArchive,
+    _is_context_sequential,
+    get_edx_module_id,
+)
+from learning_resources.factories import (
+    ContentFileFactory,
+    LearningResourceFactory,
+    LearningResourceRunFactory,
+)
 from learning_resources.models import LearningResourceRun
+
+pytestmark = pytest.mark.django_db
 
 
 def _write_olx(root, rel, text):
@@ -22,6 +35,11 @@ def _ingested(olx, etl_source=None, **kwargs):
         str(path.relative_to(olx))
         for path in OlxArchive(olx, etl_source, **kwargs).paths
     )
+
+
+def _units(olx, run):
+    """Return the units of the course at olx, built for run"""
+    return OlxArchive(olx, run.learning_resource.etl_source).units(run)
 
 
 def _write_html(root, name, body):
@@ -657,3 +675,701 @@ def test_olx_archive_hidden_about_page_does_not_keep_assets(tmp_path):
     _write_olx(olx, "about/overview.html", '<a href="/static/intro.pdf">intro</a>')
     assert "static/intro.pdf" not in _ingested(olx, ETLSource.mitxonline.name)
     assert "static/intro.pdf" in _ingested(olx, ETLSource.oll.name)
+
+
+def _write_unit_olx(olx):
+    """Write an OLX export with two chapters of sequentials and course-wide pages"""
+    files = {
+        "course.xml": '<course url_name="run" org="MITx" course="1"/>',
+        "course/run.xml": (
+            '<course><chapter url_name="ch1"/><chapter url_name="ch_staff"/>'
+            '<chapter url_name="ch_toc"/><chapter url_name="ch2"/></course>'
+        ),
+        "chapter/ch1.xml": (
+            '<chapter><sequential url_name="seq1"/>'
+            '<sequential url_name="seq_toc"/></chapter>'
+        ),
+        "sequential/seq1.xml": (
+            '<sequential display_name="Lecture 1"><vertical url_name="v1"/>'
+            '<vertical url_name="v_staff"/></sequential>'
+        ),
+        "vertical/v1.xml": (
+            '<vertical><html url_name="h1"/><video url_name="vid1"/>'
+            '<problem url_name="p_shared"/></vertical>'
+        ),
+        # the body has its own filename, and links a static file
+        "html/h1.xml": '<html filename="h1_body"/>',
+        "html/h1_body.html": '<a href="/static/notes_1.pdf">notes</a>',
+        "video/vid1.xml": (
+            '<video url_name="vid1" youtube="1.00:ABC123">'
+            '<transcript language="en" src="vid1.srt"/></video>'
+        ),
+        "problem/p_shared.xml": "<problem/>",
+        "vertical/v_staff.xml": (
+            '<vertical visible_to_staff_only="true"><html url_name="h_staff"/></vertical>'
+        ),
+        "html/h_staff.xml": '<html filename="h_staff"/>',
+        "sequential/seq_toc.xml": (
+            '<sequential hide_from_toc="true"><vertical url_name="v_toc"/></sequential>'
+        ),
+        "vertical/v_toc.xml": '<vertical><html url_name="h_toc"/></vertical>',
+        "html/h_toc.xml": '<html filename="h_toc"/>',
+        "chapter/ch_staff.xml": (
+            '<chapter visible_to_staff_only="true">'
+            '<sequential url_name="seq_staff"/></chapter>'
+        ),
+        "sequential/seq_staff.xml": "<sequential/>",
+        # hidden from the outline, so its sequential is too
+        "chapter/ch_toc.xml": (
+            '<chapter hide_from_toc="true">'
+            '<sequential url_name="seq_in_toc_chapter"/></chapter>'
+        ),
+        "sequential/seq_in_toc_chapter.xml": (
+            '<sequential display_name="Hidden Lecture">'
+            '<vertical url_name="v_toc_chapter"/></sequential>'
+        ),
+        "vertical/v_toc_chapter.xml": '<vertical><html url_name="h_toc"/></vertical>',
+        # the second sequential holds its children inline, under a library block,
+        # and shares a problem with the first
+        "chapter/ch2.xml": (
+            '<chapter><sequential url_name="seq2" display_name="Problem Set 1">'
+            '<vertical><library_content url_name="lib">'
+            '<problem url_name="p_lib"/></library_content>'
+            '<problem url_name="p_shared"/></vertical></sequential></chapter>'
+        ),
+        "library_content/lib.xml": (
+            '<library_content><problem url_name="p_lib"/></library_content>'
+        ),
+        "problem/p_lib.xml": '<problem><a href="/static/notes_1.pdf"/></problem>',
+        "static/notes_1.pdf": "pdf",
+        "static/vid1.srt": "1\n00:00:00,000 --> 00:00:01,000\nhi\n",
+        "static/subs_ABC123.srt.sjson": "{}",
+        "static/unlinked.pdf": "pdf",
+        "tabs/syllabus.html": "<p>syllabus</p>",
+        "info/handouts.html": "<p>handouts</p>",
+        # excluded, so not course context
+        "info/updates.html": "<p>old announcement</p>",
+        "about/overview.html": "<p>about</p>",
+    }
+    for rel, text in files.items():
+        _write_olx(olx, rel, text)
+
+
+def test_olx_archive_units(tmp_path):
+    """Each visible sequential is a unit in tree order, with its files and links"""
+    olx = tmp_path / "course"
+    _write_unit_olx(olx)
+    run = LearningResourceRunFactory.create(
+        run_id="course-v1:MITx+1+run",
+        learning_resource=LearningResourceFactory.create(
+            etl_source=ETLSource.mitxonline.name, create_runs=False
+        ),
+    )
+
+    def key(rel):
+        return get_edx_module_id(f"{olx}/{rel}", run)
+
+    units = _units(olx, run)
+
+    assert [(unit["kind"], unit["title"]) for unit in units] == [
+        ("unit", "Lecture 1"),
+        ("unit", "Problem Set 1"),
+        ("context", "Course context"),
+    ]
+    lecture, problem_set, context = units
+    assert lecture["external_id"] == key("sequential/seq1.xml")
+    assert lecture["url"].endswith("/courses/course-v1:MITx+1+run/jump_to_id/seq1")
+    # in lesson order: a linked static file follows the first block linking it
+    assert list(lecture["content_files"].items()) == [
+        (key("html/h1.xml"), "core"),
+        (key("html/h1_body.html"), "core"),
+        (key("static/notes_1.pdf"), "supplementary"),
+        (key("video/vid1.xml"), "core"),
+        (key("static/vid1.srt"), "core"),
+        (key("static/subs_ABC123.srt.sjson"), "core"),
+        (key("problem/p_shared.xml"), "assessment"),
+    ]
+    assert list(problem_set["content_files"].items()) == [
+        (key("library_content/lib.xml"), "core"),
+        (key("problem/p_lib.xml"), "assessment"),
+        (key("static/notes_1.pdf"), "supplementary"),
+        (key("problem/p_shared.xml"), "assessment"),
+    ]
+    assert context["external_id"] == "context"
+    # updates.html is excluded, as are about pages outside OLL
+    assert set(context["content_files"]) == {
+        key("tabs/syllabus.html"),
+        key("info/handouts.html"),
+    }
+
+
+def test_olx_archive_units_oll_about_pages(tmp_path):
+    """OLL shows its about pages, so they are course context"""
+    olx = tmp_path / "course"
+    _write_unit_olx(olx)
+    run = LearningResourceRunFactory.create(
+        run_id="course-v1:MITx+1+run",
+        learning_resource=LearningResourceFactory.create(
+            etl_source=ETLSource.oll.name, create_runs=False
+        ),
+    )
+
+    def key(rel):
+        return get_edx_module_id(f"{olx}/{rel}", run)
+
+    context = _units(olx, run)[-1]
+
+    assert context["external_id"] == "context"
+    assert set(context["content_files"]) == {
+        key("tabs/syllabus.html"),
+        key("info/handouts.html"),
+        key("about/overview.html"),
+    }
+
+
+def test_olx_archive_units_missing_transcript(tmp_path):
+    """A transcript the export doesn't have is left out, and the units still build"""
+    olx = tmp_path / "course"
+    _write_unit_olx(olx)
+    _write_olx(
+        olx,
+        "video/vid1.xml",
+        '<video url_name="vid1" youtube="1.00:ABC123">'
+        '<transcript language="en" src="vid1.srt"/>'
+        '<transcript language="es" src="missing.srt"/></video>',
+    )
+    run = LearningResourceRunFactory.create(
+        run_id="course-v1:MITx+1+run",
+        learning_resource=LearningResourceFactory.create(
+            etl_source=ETLSource.mitxonline.name, create_runs=False
+        ),
+    )
+
+    lecture = _units(olx, run)[0]
+
+    assert get_edx_module_id(f"{olx}/static/vid1.srt", run) in lecture["content_files"]
+    assert not any("missing.srt" in key for key in lecture["content_files"])
+
+
+def test_olx_archive_units_url_name_with_glob_characters(tmp_path):
+    """A url_name is a name, not a pattern: [ still finds the block's own file"""
+    olx = tmp_path / "course"
+    _write_olx(olx, "course.xml", '<course url_name="run" org="MITx" course="1"/>')
+    _write_olx(
+        olx,
+        "course/run.xml",
+        '<course><chapter><sequential url_name="seq1"><vertical>'
+        '<problem url_name="p[1]"/><problem url_name="p1"/>'
+        "</vertical></sequential></chapter></course>",
+    )
+    _write_olx(olx, "problem/p[1].xml", "<problem/>")
+    _write_olx(olx, "problem/p1.xml", "<problem/>")
+    run = LearningResourceRunFactory.create(
+        run_id="course-v1:MITx+1+run",
+        learning_resource=LearningResourceFactory.create(
+            etl_source=ETLSource.mitxonline.name, create_runs=False
+        ),
+    )
+
+    unit = _units(olx, run)[0]
+
+    assert list(unit["content_files"]) == [
+        get_edx_module_id(f"{olx}/problem/p[1].xml", run),
+        get_edx_module_id(f"{olx}/problem/p1.xml", run),
+    ]
+
+
+def test_olx_archive_units_not_olx(tmp_path):
+    """A directory with no course.xml has no units"""
+    _write_olx(tmp_path, "files/notes.pdf", "pdf")
+    run = LearningResourceRunFactory.create()
+    assert _units(tmp_path, run) == []
+
+
+def test_olx_archive_units_intro_and_conclusion_go_to_context(tmp_path):
+    """A chapter's only sequential goes to context when titled as an intro or wrap-up"""
+    olx = tmp_path / "course"
+    chapters = {
+        # the only sequential, titled as an introduction: context
+        "ch_intro": [("seq_welcome", "Welcome to the Course")],
+        # an introduction beside other sequentials is a step in the course
+        "ch_week1": [("seq_intro", "Introduction to Week 1"), ("seq_l1", "Lecture 1")],
+        # the only sequential, but not titled as an intro or conclusion
+        "ch_exam": [("seq_exam", "Final Exam")],
+        "ch_end": [("seq_wrap", "Course Wrap-up")],
+        # a module overview is context wherever it sits, and doesn't leave the
+        # lecture beside it counted as the chapter's only sequential
+        "ch_module": [
+            ("seq_goals", "Module  Overview and Learning Goals"),
+            ("seq_summary", "Summary of Results"),
+        ],
+    }
+    _write_olx(olx, "course.xml", '<course url_name="run" org="MITx" course="1"/>')
+    _write_olx(
+        olx,
+        "course/run.xml",
+        "<course>"
+        + "".join(f'<chapter url_name="{name}"/>' for name in chapters)
+        + "</course>",
+    )
+    for chapter, sequentials in chapters.items():
+        _write_olx(
+            olx,
+            f"chapter/{chapter}.xml",
+            "<chapter>"
+            + "".join(f'<sequential url_name="{seq}"/>' for seq, _ in sequentials)
+            + "</chapter>",
+        )
+        for seq, title in sequentials:
+            _write_olx(
+                olx,
+                f"sequential/{seq}.xml",
+                f'<sequential display_name="{title}">'
+                f'<vertical><problem url_name="p_{seq}"/></vertical></sequential>',
+            )
+            _write_olx(olx, f"problem/p_{seq}.xml", "<problem/>")
+    run = LearningResourceRunFactory.create()
+
+    def key(rel):
+        return get_edx_module_id(f"{olx}/{rel}", run)
+
+    units = _units(olx, run)
+
+    assert [unit["title"] for unit in units] == [
+        "Introduction to Week 1",
+        "Lecture 1",
+        "Final Exam",
+        "Summary of Results",
+        "Course context",
+    ]
+    assert units[-1]["content_files"] == {
+        key("problem/p_seq_welcome.xml"): "assessment",
+        key("problem/p_seq_wrap.xml"): "assessment",
+        key("problem/p_seq_goals.xml"): "assessment",
+    }
+
+
+@pytest.mark.parametrize(
+    ("title", "is_context"),
+    [
+        ("Welcome", True),
+        ("Welcome to Just Money", True),
+        ("Welcome to 14.444x - Energy Economics and Policy", True),
+        ("Welcome & Logistics", True),
+        ("Welcome & Introduction", True),
+        ("Course Introduction", True),
+        ("Introduction", True),
+        ("Introduction to the Course", True),
+        ("Course Overview", True),
+        ("Module Summary", True),
+        ("Conclusion", True),
+        ("Course Wrap-up", True),
+        ("Wrapping Up", True),
+        ("Course  Overview:", True),
+        ("Introduction to Probability", False),
+        ("Summary Statistics", False),
+        ("Summary of Results", False),
+        ("Lecture 1 - Introduction and Course Overview", False),
+        ("Session 1: Introduction", False),
+        ("Chapter overview", False),
+        ("Nonintrusive Methods", False),
+        ("Wrapper Classes", False),
+    ],
+)
+def test_is_context_sequential_title(title, is_context):
+    """Only titles about the course itself make a lone sequential context"""
+    assert _is_context_sequential({"title": title}, chapter_size=1) is is_context
+    # a chapter of several sequentials keeps each of them as a step
+    assert _is_context_sequential({"title": title}, chapter_size=2) is False
+
+
+def test_olx_archive_units_inline_lessons(tmp_path):
+    """A file holding a component inline is a lesson; a pure outline file is not"""
+    olx = tmp_path / "course"
+    files = {
+        "course.xml": '<course url_name="run" org="MITx" course="1"/>',
+        "course/run.xml": '<course><chapter url_name="ch1"/><chapter url_name="ch2"/></course>',
+        "chapter/ch1.xml": (
+            '<chapter><sequential url_name="seq1"/><sequential url_name="seq2"/>'
+            "</chapter>"
+        ),
+        # the only lesson is an html body stored inline in the vertical
+        "sequential/seq1.xml": '<sequential><vertical url_name="v_inline"/></sequential>',
+        "vertical/v_inline.xml": (
+            '<vertical><html display_name="Notes"><p>inline body</p></html></vertical>'
+        ),
+        # an inline problem, beside a pure outline vertical
+        "sequential/seq2.xml": (
+            '<sequential><vertical url_name="v_problem"/>'
+            '<vertical url_name="v_outline"/></sequential>'
+        ),
+        "vertical/v_problem.xml": "<vertical><problem><p>2+2?</p></problem></vertical>",
+        "vertical/v_outline.xml": '<vertical><html url_name="h1"/></vertical>',
+        "html/h1.xml": '<html filename="h1"/>',
+        # a sequential stored inline in its chapter, holding an inline video
+        "chapter/ch2.xml": (
+            '<chapter><sequential url_name="seq3"><vertical>'
+            '<video youtube="1.00:XYZ789"/></vertical></sequential>'
+            '<sequential url_name="seq4"/></chapter>'
+        ),
+        "static/subs_XYZ789.srt.sjson": "{}",
+        # an unnamed inline html block whose body is in html/body.html
+        "sequential/seq4.xml": '<sequential><vertical url_name="v_body"/></sequential>',
+        "vertical/v_body.xml": '<vertical><html filename="body"/></vertical>',
+        "html/body.html": '<a href="/static/body.pdf">reading</a>',
+        "static/body.pdf": "pdf",
+    }
+    for rel, text in files.items():
+        _write_olx(olx, rel, text)
+    run = LearningResourceRunFactory.create()
+
+    def key(rel):
+        return get_edx_module_id(f"{olx}/{rel}", run)
+
+    first, second, third, fourth, _context = _units(olx, run)
+
+    assert first["content_files"] == {key("vertical/v_inline.xml"): "core"}
+    assert list(second["content_files"].items()) == [
+        (key("vertical/v_problem.xml"), "assessment"),
+        (key("html/h1.xml"), "core"),
+    ]
+    assert list(third["content_files"].items()) == [
+        (key("chapter/ch2.xml"), "core"),
+        (key("static/subs_XYZ789.srt.sjson"), "core"),
+    ]
+    # the body is the lesson, not the vertical holding its pointer
+    assert list(fourth["content_files"].items()) == [
+        (key("html/body.html"), "core"),
+        (key("static/body.pdf"), "supplementary"),
+    ]
+
+
+def test_load_inline_lesson_unit(tmp_path):
+    """A unit whose only lesson is inline in its vertical survives the load"""
+    olx = tmp_path / "course"
+    _write_olx(olx, "course.xml", '<course url_name="run" org="MITx" course="1"/>')
+    _write_olx(olx, "course/run.xml", '<course><chapter url_name="ch"/></course>')
+    _write_olx(
+        olx,
+        "chapter/ch.xml",
+        '<chapter><sequential url_name="a"/><sequential url_name="b"/></chapter>',
+    )
+    for name in ("a", "b"):
+        _write_olx(
+            olx,
+            f"sequential/{name}.xml",
+            f'<sequential><vertical url_name="v{name}"/></sequential>',
+        )
+        _write_olx(
+            olx, f"vertical/v{name}.xml", "<vertical><html><p>hi</p></html></vertical>"
+        )
+    run = LearningResourceRunFactory.create()
+    for name in ("a", "b"):
+        ContentFileFactory.create(
+            run=run, key=get_edx_module_id(f"{olx}/vertical/v{name}.xml", run)
+        )
+
+    load_course_units(run, _units(olx, run))
+
+    assert [
+        (unit.position, unit.content_files.count())
+        for unit in run.units.filter(kind="unit").order_by("position")
+    ] == [(0, 1), (1, 1)]
+
+
+def test_olx_archive_units_ignores_staff_only_references(tmp_path):
+    """A link only staff-only content makes does not put an asset in the unit"""
+    olx = tmp_path / "course"
+    files = {
+        "course.xml": '<course url_name="run" org="MITx" course="1"/>',
+        "course/run.xml": '<course><chapter url_name="ch"/></course>',
+        "chapter/ch.xml": (
+            '<chapter><sequential url_name="seq_a"/><sequential url_name="seq_b"/>'
+            "</chapter>"
+        ),
+        # seq_a links shared.pdf only from a staff-only inline vertical, but
+        # links inline.pdf from a visible inline html block
+        "sequential/seq_a.xml": (
+            '<sequential><vertical url_name="v_a"/>'
+            '<vertical visible_to_staff_only="true">'
+            '<html><a href="/static/shared.pdf">answers</a></html></vertical>'
+            "</sequential>"
+        ),
+        "vertical/v_a.xml": (
+            '<vertical><html><a href="/static/inline.pdf">notes</a></html>'
+            '<problem visible_to_staff_only="true">'
+            '<a href="/static/shared.pdf"/></problem></vertical>'
+        ),
+        # seq_b is where learners see shared.pdf
+        "sequential/seq_b.xml": '<sequential><vertical url_name="v_b"/></sequential>',
+        "vertical/v_b.xml": '<vertical><html url_name="h_b"/></vertical>',
+        "html/h_b.xml": '<html filename="h_b"/>',
+        "html/h_b.html": '<a href="/static/shared.pdf">handout</a>',
+        "static/shared.pdf": "pdf",
+        "static/inline.pdf": "pdf",
+    }
+    for rel, text in files.items():
+        _write_olx(olx, rel, text)
+    run = LearningResourceRunFactory.create()
+
+    def key(rel):
+        return get_edx_module_id(f"{olx}/{rel}", run)
+
+    seq_a, seq_b, _context = _units(olx, run)
+
+    assert list(seq_a["content_files"]) == [
+        key("vertical/v_a.xml"),
+        key("static/inline.pdf"),
+    ]
+    assert key("static/shared.pdf") in seq_b["content_files"]
+
+
+def test_olx_archive_units_context_static_files(tmp_path):
+    """The context unit gets the static files that only course-wide pages link"""
+    olx = tmp_path / "course"
+    files = {
+        "course.xml": '<course url_name="run" org="MITx" course="1"/>',
+        "course/run.xml": '<course><chapter url_name="ch"/></course>',
+        "chapter/ch.xml": '<chapter><sequential url_name="seq"/></chapter>',
+        "sequential/seq.xml": '<sequential><vertical url_name="v"/></sequential>',
+        "vertical/v.xml": '<vertical><html url_name="h"/></vertical>',
+        "html/h.xml": "<html><p>lesson</p></html>",
+        "info/handouts.html": '<a href="/static/syllabus.pdf">Syllabus</a>',
+        "info/updates.items.json": json.dumps(
+            [
+                {"content": '<a href="/static/live.pdf">x</a>', "status": "visible"},
+                {"content": '<a href="/static/deleted.pdf">x</a>', "status": "deleted"},
+            ]
+        ),
+        # only the "shown" tab is in the navigation
+        "policies/run/policy.json": json.dumps(
+            {"course/run": {"tabs": [{"type": "static_tab", "url_slug": "shown"}]}}
+        ),
+        "tabs/shown.html": '<a href="/static/tab_notes.pdf">notes</a>',
+        "tabs/hidden.html": '<a href="/static/hidden_tab.pdf">notes</a>',
+        # mitxonline doesn't show the about page
+        "about/overview.html": '<a href="/static/about.pdf">about</a>',
+    }
+    for name in (
+        "syllabus",
+        "live",
+        "deleted",
+        "tab_notes",
+        "hidden_tab",
+        "about",
+    ):
+        files[f"static/{name}.pdf"] = "pdf"
+    for rel, text in files.items():
+        _write_olx(olx, rel, text)
+    run = LearningResourceRunFactory.create(
+        learning_resource=LearningResourceFactory.create(
+            etl_source=ETLSource.mitxonline.name, create_runs=False
+        )
+    )
+
+    def key(rel):
+        return get_edx_module_id(f"{olx}/{rel}", run)
+
+    unit, context = _units(olx, run)
+
+    linked = {
+        k
+        for k, relation in context["content_files"].items()
+        if relation == "supplementary"
+    }
+    assert linked == {
+        key("static/syllabus.pdf"),
+        key("static/live.pdf"),
+        key("static/tab_notes.pdf"),
+    }
+    assert key("info/handouts.html") in context["content_files"]
+    assert not any(k.startswith("asset") for k in unit["content_files"])
+
+
+def test_olx_archive_units_missing_course_file(tmp_path):
+    """An export whose course.xml points to a missing file is not read as empty"""
+    _write_olx(tmp_path, "course.xml", '<course url_name="run" org="MITx" course="1"/>')
+    run = LearningResourceRunFactory.create()
+    with pytest.raises(ValueError, match=r"course/run\.xml is missing"):
+        _units(tmp_path, run)
+
+
+@pytest.mark.parametrize(
+    ("missing", "message"),
+    [
+        ("chapter/ch.xml", r"chapter/ch\.xml is missing"),
+        ("sequential/seq.xml", r"sequential/seq\.xml is missing"),
+    ],
+)
+def test_olx_archive_units_missing_outline_file(tmp_path, missing, message):
+    """A chapter or sequential pointing to a missing file is not read as empty"""
+    files = {
+        "course.xml": '<course url_name="run" org="MITx" course="1"/>',
+        "course/run.xml": '<course><chapter url_name="ch"/></course>',
+        "chapter/ch.xml": '<chapter><sequential url_name="seq"/></chapter>',
+        "sequential/seq.xml": "<sequential><vertical><html><p>hi</p></html></vertical></sequential>",
+    }
+    del files[missing]
+    for rel, text in files.items():
+        _write_olx(tmp_path, rel, text)
+    run = LearningResourceRunFactory.create()
+    with pytest.raises(ValueError, match=message):
+        _units(tmp_path, run)
+
+
+def test_olx_archive_units_missing_staff_only_file(tmp_path):
+    """A missing file is no error for a block learners can't see, or an inline one"""
+    _write_olx(tmp_path, "course.xml", '<course url_name="run" org="MITx" course="1"/>')
+    _write_olx(
+        tmp_path,
+        "course/run.xml",
+        '<course><chapter url_name="ch"/>'
+        '<chapter url_name="gone" visible_to_staff_only="true"/></course>',
+    )
+    _write_olx(
+        tmp_path,
+        "chapter/ch.xml",
+        '<chapter><sequential url_name="gone" visible_to_staff_only="true"/>'
+        # inline, with no file of its own to miss
+        '<sequential url_name="inline" display_name="Inline"><vertical>'
+        "<html><p>hi</p></html></vertical></sequential></chapter>",
+    )
+    run = LearningResourceRunFactory.create()
+    assert [unit["title"] for unit in _units(tmp_path, run)] == [
+        "Inline",
+        "Course context",
+    ]
+
+
+def test_olx_archive_units_missing_hidden_file(tmp_path):
+    """A missing file is no error for a block hidden from the table of contents"""
+    _write_olx(tmp_path, "course.xml", '<course url_name="run" org="MITx" course="1"/>')
+    _write_olx(
+        tmp_path,
+        "course/run.xml",
+        '<course><chapter url_name="ch"/>'
+        '<chapter url_name="gone" hide_from_toc="true"/></course>',
+    )
+    _write_olx(
+        tmp_path,
+        "chapter/ch.xml",
+        '<chapter><sequential url_name="gone" hide_from_toc="true"/>'
+        '<sequential url_name="inline" display_name="Inline"><vertical>'
+        "<html><p>hi</p></html></vertical></sequential></chapter>",
+    )
+    run = LearningResourceRunFactory.create()
+    assert [unit["title"] for unit in _units(tmp_path, run)] == [
+        "Inline",
+        "Course context",
+    ]
+
+
+def test_olx_archive_units_inline_course(tmp_path):
+    """A course.xml that holds the course inline is read without a course file"""
+    _write_olx(
+        tmp_path,
+        "course.xml",
+        '<course url_name="run" org="MITx" course="1">'
+        '<chapter><sequential url_name="seq" display_name="Lecture 1">'
+        "<vertical><html><p>hi</p></html></vertical></sequential></chapter></course>",
+    )
+    run = LearningResourceRunFactory.create()
+    units = _units(tmp_path, run)
+    assert [unit["title"] for unit in units] == ["Lecture 1", "Course context"]
+    assert list(units[0]["content_files"]) == [
+        get_edx_module_id(f"{tmp_path}/course.xml", run)
+    ]
+
+
+def test_olx_archive_units_list_static_once(mocker, tmp_path):
+    """static/ is listed once per course, not once per sequential"""
+    olx = tmp_path / "course"
+    pointers = "".join(f'<sequential url_name="s{i}"/>' for i in range(3))
+    _write_olx(olx, "course.xml", '<course url_name="run" org="MITx" course="1"/>')
+    _write_olx(olx, "course/run.xml", '<course><chapter url_name="ch"/></course>')
+    _write_olx(olx, "chapter/ch.xml", f"<chapter>{pointers}</chapter>")
+    for i in range(3):
+        _write_olx(
+            olx,
+            f"sequential/s{i}.xml",
+            f'<sequential display_name="Lesson {i}"><html url_name="h{i}"/>'
+            "</sequential>",
+        )
+        _write_olx(olx, f"html/h{i}.xml", f'<html><a href="/static/n{i}.pdf"/></html>')
+        _write_olx(olx, f"static/n{i}.pdf", "pdf")
+    run = LearningResourceRunFactory.create()
+    glob = mocker.spy(pathlib.Path, "glob")
+
+    units = _units(olx, run)
+
+    assert [list(unit["content_files"]) for unit in units[:-1]] == [
+        [
+            get_edx_module_id(str(olx / f"html/h{i}.xml"), run),
+            get_edx_module_id(str(olx / f"static/n{i}.pdf"), run),
+        ]
+        for i in range(3)
+    ]
+    static_listings = [
+        call for call in glob.call_args_list if call.args[1] == "static/**/*"
+    ]
+    assert len(static_listings) == 1
+
+
+def _inline_markup_olx(tmp_path):
+    """Write a sequential with an inline html and problem that hold markup"""
+    olx = tmp_path / "course"
+    _write_olx(olx, "course.xml", '<course url_name="run" org="MITx" course="1"/>')
+    _write_olx(olx, "course/run.xml", '<course><chapter url_name="ch"/></course>')
+    _write_olx(olx, "chapter/ch.xml", '<chapter><sequential url_name="seq"/></chapter>')
+    _write_olx(
+        olx, "sequential/seq.xml", '<sequential><vertical url_name="v"/></sequential>'
+    )
+    _write_olx(
+        olx,
+        "vertical/v.xml",
+        "<vertical>"
+        '<html><p>Read <a href="/static/notes.pdf">the <b>notes</b></a></p>'
+        '<img src="/static/figure.png"/></html>'
+        "<problem><choiceresponse><checkboxgroup>"
+        '<choice correct="true">yes</choice><choice>no</choice>'
+        '</checkboxgroup></choiceresponse><solution><a href="/static/key.pdf"/>'
+        "</solution></problem>"
+        "</vertical>",
+    )
+    for name in ("notes.pdf", "figure.png", "key.pdf"):
+        _write_olx(olx, f"static/{name}", "file")
+    return olx
+
+
+def test_olx_archive_units_read_component_markup(tmp_path):
+    """Links anywhere in a component's markup reach its unit, in component order"""
+    olx = _inline_markup_olx(tmp_path)
+    run = LearningResourceRunFactory.create()
+
+    unit, _context = _units(olx, run)
+
+    def key(rel):
+        return get_edx_module_id(str(olx / rel), run)
+
+    assert unit["content_files"] == {
+        key("vertical/v.xml"): "core",
+        key("static/figure.png"): "supplementary",
+        key("static/notes.pdf"): "supplementary",
+        key("static/key.pdf"): "supplementary",
+    }
+
+
+def test_olx_archive_sequential_blocks_skip_markup(tmp_path):
+    """A component's markup elements are not walked as blocks of their own"""
+    olx = _inline_markup_olx(tmp_path)
+    archive = OlxArchive(olx)
+    pointer = ElementTree.fromstring('<sequential url_name="seq"/>')
+
+    sequential = ElementTree.parse(olx / "sequential/seq.xml").getroot()
+
+    blocks = archive._sequential_blocks(  # noqa: SLF001
+        pointer, sequential, olx / "chapter/ch.xml"
+    )
+
+    # the sequential, the vertical, the html and the problem
+    assert len(blocks) == 4

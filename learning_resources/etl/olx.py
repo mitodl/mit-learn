@@ -5,18 +5,22 @@ import json
 import logging
 import os
 import re
-from bisect import bisect_left
+from bisect import bisect_right
+from collections import defaultdict
+from collections.abc import Iterable
 from functools import cached_property
 from itertools import accumulate
 from pathlib import Path
+from typing import NamedTuple
 from urllib.parse import unquote
 from xml.etree.ElementTree import Element
 
 from defusedxml import ElementTree
+from django.conf import settings
 
 from learning_resources.constants import VALID_TEXT_FILE_TYPES
 from learning_resources.etl.constants import ETLSource
-from learning_resources.models import LearningResourceRun
+from learning_resources.models import LearningResourceRun, Unit, UnitContentFile
 
 log = logging.getLogger(__name__)
 
@@ -42,11 +46,47 @@ LEGACY_TRANSCRIPT_RE = re.compile(
 # before comparing, but still marks where a name can start.
 NAME_BREAK = "\x00"
 SEPARATORS = re.compile(r"(?:[^\w.\-]|_)+")
+# _NameIndex looks names up by this many leading characters
+NAME_PREFIX_LENGTH = 4
 
 # Only Open Learning Library serves the about page; other platforms redirect
 # it to the course home. Of what it shows, only the prose is content — effort
 # and end date are single values, not prose.
 ABOUT_PAGE_FILES = frozenset({"overview.html", "short_description.html"})
+
+# Folders of course-wide pages rather than steps of the course: the about page,
+# the tabs and the handouts. Their files make up the run's context unit.
+OLX_CONTEXT_FOLDERS = ("about", "tabs", "info")
+TRANSCRIPT_EXTENSIONS = frozenset({".srt", ".sjson", ".vtt"})
+OLX_STRUCTURE_TAGS = frozenset({"sequential", "vertical"})
+# Blocks whose child elements are blocks too. In any other block, like html,
+# problem or video, the children are the block's own markup.
+OLX_CONTAINER_TAGS = OLX_STRUCTURE_TAGS | frozenset(
+    {"split_test", "conditional", "library_content", "randomize", "itembank"}
+)
+CONTEXT_UNIT_ID = "context"
+# A chapter holding a single sequential titled like this is the course's
+# introduction or conclusion: material about the course rather than a step in
+# it, so its files go to the context unit. A welcome or wrap-up is never a
+# lesson, so any title starting with one counts ("Welcome to 14.444x"). An
+# introduction, overview or summary counts only as the whole title, since
+# "Introduction to Probability", "Summary Statistics" and "Lecture 1 -
+# Introduction" are lessons. Either may follow "Course" or "Module".
+CONTEXT_SEQUENTIAL_TITLE_RE = re.compile(
+    r"""
+    ^(?:(?:course|module)\s+)?
+    (?:
+        (?:welcome|wrap[\s-]?up|wrapping\s+up|conclusions?|concluding)\b.*
+        | (?:introduction|intro|overview|summary)
+          (?:\s+(?:to|of)\s+(?:the|this)\s+(?:course|module))?
+    )
+    [\W_]*$
+    """,
+    re.IGNORECASE | re.VERBOSE,
+)
+# Sequentials with these titles describe the module around them rather than
+# teach, so their files go to the context unit wherever they sit
+CONTEXT_SEQUENTIAL_TITLES = frozenset({"module overview and learning goals"})
 
 
 def get_edx_module_id(path: str, run: LearningResourceRun) -> str:
@@ -69,6 +109,37 @@ def get_edx_module_id(path: str, run: LearningResourceRun) -> str:
     )
 
 
+def get_root_url_for_source(etl_source: str) -> tuple[str, str]:
+    """
+    Get the base URL and path for an ETL source
+
+    Args:
+        etl_source (str): The ETL source path
+
+    Returns:
+        tuple[str, str]: The base URL and path
+    """
+    mapping = {
+        ETLSource.mitxonline.value: settings.CONTENT_BASE_URL_MITXONLINE,
+        ETLSource.xpro.value: settings.CONTENT_BASE_URL_XPRO,
+        ETLSource.oll.value: settings.CONTENT_BASE_URL_OLL,
+        ETLSource.mit_edx.value: settings.CONTENT_BASE_URL_EDX,
+    }
+    return mapping.get(etl_source)
+
+
+def get_jump_to_url(run: LearningResourceRun, url_name: str) -> str:
+    """Return the LMS URL that opens the block with this url_name in a run"""
+    root_url = get_root_url_for_source(run.learning_resource.etl_source)
+    # OLL needs to have 'course-v1:' added to the run_id
+    run_id = (
+        f"course-v1:{run.run_id}"
+        if run.learning_resource.etl_source == ETLSource.oll.value
+        else run.run_id
+    )
+    return f"{root_url}/courses/{run_id}/jump_to_id/{url_name}"
+
+
 def _normalize_asset_ref(text: str) -> str:
     """Strip the punctuation of a filename that a reference may spell differently"""
     return SEPARATORS.sub("", unquote(html.unescape(text)).lower())
@@ -86,15 +157,38 @@ def _reference_index(texts: list[str]) -> tuple[str, list[int]]:
     return "".join(segments), list(accumulate(map(len, segments), initial=0))
 
 
-def _name_starts_at(blob: str, starts: list[int], name: str) -> bool:
-    """Whether blob spells name at a name start, so final_exam.srt != exam.srt"""
-    start = blob.find(name)
-    while start != -1:
-        index = bisect_left(starts, start)
-        if index < len(starts) and starts[index] == start:
-            return True
-        start = blob.find(name, start + 1)
-    return False
+class _NameIndex:
+    """
+    Normalized names to find in _reference_index text. Each name start is
+    looked up once, so a scan costs the same however many names there are.
+    """
+
+    def __init__(self, names: Iterable[str]):
+        self._by_prefix: dict[str, set[str]] = defaultdict(set)
+        self._short: dict[int, set[str]] = defaultdict(set)
+        for name in names:
+            if len(name) >= NAME_PREFIX_LENGTH:
+                self._by_prefix[name[:NAME_PREFIX_LENGTH]].add(name)
+            else:
+                self._short[len(name)].add(name)
+
+    def first_starts(self, blob: str, starts: list[int]) -> dict[str, int]:
+        """
+        Map each name blob spells to the first name start it is spelled at, so
+        final_exam.srt doesn't match exam.srt
+        """
+        found: dict[str, int] = {}
+        for start in starts:
+            for name in self._by_prefix.get(
+                blob[start : start + NAME_PREFIX_LENGTH], ()
+            ):
+                if name not in found and blob.startswith(name, start):
+                    found[name] = start
+            for length, names in self._short.items():
+                name = blob[start : start + length]
+                if name in names and name not in found:
+                    found[name] = start
+        return found
 
 
 def _parse_video_transcripts(
@@ -125,6 +219,59 @@ def _parse_video_transcripts(
     return transcript_mapping
 
 
+def _is_context_sequential(unit: dict, chapter_size: int) -> bool:
+    """Whether a sequential's unit belongs to the course context"""
+    title = unit["title"]
+    return " ".join(title.split()).casefold() in CONTEXT_SEQUENTIAL_TITLES or (
+        chapter_size == 1
+        and bool(CONTEXT_SEQUENTIAL_TITLE_RE.match(" ".join(title.split())))
+    )
+
+
+def _is_set(attribute: str, *elements) -> bool:
+    return any(element.get(attribute) == "true" for element in elements)
+
+
+def _visible_text(pointer, element, *, markup: bool) -> str:
+    """
+    Text a block contributes itself: its attributes, its own text and the text
+    between its children, and with markup, everything in its subtree too,
+    attributes included, since a component links assets from its markup. A
+    container's children add their own when the walk reaches them, so a
+    staff-only subtree, which the walk skips, adds nothing.
+    """
+    parts = [*pointer.attrib.values()]
+    if element is not pointer:
+        parts.extend(element.attrib.values())
+    parts.append(element.text or "")
+    for child in element:
+        if markup and isinstance(child.tag, str):
+            for node in child.iter():
+                if isinstance(node.tag, str):
+                    parts.extend(node.attrib.values())
+                parts.append(node.text or "")
+                if node is not child:
+                    parts.append(node.tail or "")
+        parts.append(child.tail or "")
+    return " ".join(parts)
+
+
+class _OlxBlock(NamedTuple):
+    """A visible block of a sequential, as the unit builder sees it"""
+
+    files: list[tuple[Path, str]]  # lesson files with their relation
+    texts: list[str]  # visible text that can link a static asset
+    video_ids: set[str]
+
+
+class _StaticTarget(NamedTuple):
+    """A static file a unit can link, with the names a link is matched on"""
+
+    path: Path
+    name: str  # normalized filename
+    legacy_video_id: str | None  # normalized video id of a legacy transcript
+
+
 class OlxArchive:
     """
     An OLX tree's ingestable files (paths) and the ones learners can't reach
@@ -146,6 +293,8 @@ class OlxArchive:
         self.root = Path(root)
         self.etl_source = etl_source
         self.valid_file_types = valid_file_types
+        # file names only, so the tree is never held in memory
+        self._listings: dict[Path, dict[str, list[Path]]] = {}
 
     @cached_property
     def is_olx(self) -> bool:
@@ -267,18 +416,48 @@ class OlxArchive:
             )
         return blocks
 
-    def _block_files(self, tag: str, url_name: str, element: Element) -> set[Path]:
-        """Files belonging to one block: its own files, html body, transcripts"""
-        files = set(self.root.glob(f"{tag}/{url_name}.*"))
+    def _block_files(
+        self, tag: str, url_name: str | None, element: Element
+    ) -> set[Path]:
+        """
+        Files belonging to one block: its own files, html body, transcripts. An
+        unnamed inline block has no files of its own, but can still have the
+        others.
+        """
+        files = self._files_named(tag, url_name) if url_name else set()
         if tag == "html" and element.get("filename"):
-            files.update(self.root.glob(f"html/{element.get('filename')}.*"))
+            files.update(self._files_named("html", element.get("filename")))
         if tag == "video":
+            # a transcript the export doesn't have is skipped
             files.update(
-                self.root / "static" / transcript.get("src")
+                path
                 for transcript in element.iter("transcript")
                 if transcript.get("src")
+                and (path := self.root / "static" / transcript.get("src")).is_file()
             )
         return files
+
+    def _files_named(self, folder: str, name: str) -> set[Path]:
+        """
+        Return the files glob("<folder>/<name>.*") would find, without the
+        glob: each directory is listed once, and name is not read as a pattern,
+        so a url_name with [ still finds its file
+        """
+        path = self.root / folder / name
+        if path.parent not in self._listings:
+            listing = defaultdict(list)
+            try:
+                entries = list(os.scandir(path.parent))
+            except (FileNotFoundError, NotADirectoryError):
+                entries = []
+            for entry in entries:
+                if entry.is_file():
+                    # every name before a dot, as name.* can match any of them
+                    for index, char in enumerate(entry.name):
+                        if char == ".":
+                            listing[entry.name[:index]].append(Path(entry.path))
+            self._listings[path.parent] = listing
+        return set(self._listings[path.parent].get(path.name, ()))
 
     @cached_property
     def _staff_only(self) -> set[Path]:
@@ -312,6 +491,7 @@ class OlxArchive:
         except (TypeError, OSError, ValueError, KeyError):
             return None
 
+    @cached_property
     def _unreachable_tabs(self) -> set[Path]:
         """Tab pages hidden or missing from the tab list; none if it can't be read"""
         tabs = (self._course_policy or {}).get("tabs")
@@ -338,13 +518,16 @@ class OlxArchive:
         pages outside the navigation, and about pages the platform does not show.
         """
         unreachable = set(self._staff_only)
-        unreachable.update(self._unreachable_tabs())
+        unreachable.update(self._unreachable_tabs)
+        unreachable.update(self._hidden_about_pages)
+        return unreachable
+
+    @cached_property
+    def _hidden_about_pages(self) -> set[Path]:
+        """Files under about/ that the platform does not show"""
         shown = ABOUT_PAGE_FILES if self.etl_source == ETLSource.oll.name else ()
         # recursive for the about/<url_name>/ folder edX also reads
-        unreachable.update(
-            path for path in self.root.glob("about/**/*") if path.name not in shown
-        )
-        return unreachable
+        return {path for path in self.root.glob("about/**/*") if path.name not in shown}
 
     @cached_property
     def _static_files(self) -> list[Path]:
@@ -450,11 +633,12 @@ class OlxArchive:
             return set(), set()
         texts, video_ids = self._texts(self._reference_sources(skip))
         texts.append(self._live_updates)
-        blob, starts = _reference_index(texts)
+        names = {path: _normalize_asset_ref(path.name) for path in self._static_files}
+        found = _NameIndex(names.values()).first_starts(*_reference_index(texts))
 
         referenced, unreferenced = set(), set()
         for path in self._static_files:
-            if _name_starts_at(blob, starts, _normalize_asset_ref(path.name)) or (
+            if names[path] in found or (
                 (legacy := LEGACY_TRANSCRIPT_RE.match(path.name))
                 and (
                     video_ids is None
@@ -465,3 +649,328 @@ class OlxArchive:
             else:
                 unreferenced.add(path)
         return referenced, unreferenced
+
+    def units(self, run: LearningResourceRun) -> list[dict]:
+        """
+        Break the course into units: one per visible sequential (subsection),
+        in course-tree order, plus a context unit for the about page, tabs,
+        handouts, the static files those link to, and the introduction,
+        conclusion and module overview sequentials (see
+        _is_context_sequential). A unit holds the ContentFile keys of its
+        blocks, the html bodies and transcripts of those blocks, and the static
+        files they link to. Sequentials that are staff-only or hidden from the
+        table of contents, or in a chapter that is, produce no unit. Empty when
+        the tree is not an OLX export.
+
+        Args:
+            run (LearningResourceRun): The run the units belong to
+
+        Returns:
+            list of dict: unit data for load_course_units, ``content_files``
+                mapping each ContentFile key to its relation, in lesson order
+
+        Raises:
+            ValueError: the course, or a visible chapter or sequential, names a
+                block file the export doesn't have
+        """
+        course_pointer = self._course
+        if course_pointer is None:
+            return []
+        self._check_reference(course_pointer)
+        course = self._resolve(course_pointer)
+        course_file = self._block_file(course_pointer) or self.root / "course.xml"
+        context_files = {
+            get_edx_module_id(str(path), run): UnitContentFile.Relation.CORE
+            for folder in OLX_CONTEXT_FOLDERS
+            for path in sorted((self.root / folder).rglob("*"))
+            if path.is_file() and path not in self.excluded
+        }
+        for path in self._context_static_files():
+            context_files.setdefault(
+                get_edx_module_id(str(path), run),
+                UnitContentFile.Relation.SUPPLEMENTARY,
+            )
+        units = []
+        # hide_from_toc is inherited, so _children skipping a hidden chapter
+        # hides its sequentials
+        for chapter_pointer, chapter in self._children(course, "chapter"):
+            chapter_units = self._chapter_units(
+                run, chapter, self._block_file(chapter_pointer) or course_file
+            )
+            for unit in chapter_units:
+                if _is_context_sequential(unit, len(chapter_units)):
+                    for key, relation in unit["content_files"].items():
+                        context_files.setdefault(key, relation)
+                else:
+                    units.append(unit)
+        units.append(
+            {
+                "external_id": CONTEXT_UNIT_ID,
+                "kind": Unit.Kind.CONTEXT,
+                "title": "Course context",
+                "url": "",
+                "content_files": context_files,
+            }
+        )
+        return units
+
+    @cached_property
+    def _static_targets(self) -> list[_StaticTarget]:
+        """
+        The static files a unit can link: the ingested ones, as the rest have
+        no ContentFile to link to. Names are normalized once for every unit.
+        """
+        targets = []
+        for path in self._static_files:
+            if path in self.excluded:
+                continue
+            legacy = LEGACY_TRANSCRIPT_RE.match(path.name)
+            targets.append(
+                _StaticTarget(
+                    path,
+                    _normalize_asset_ref(path.name),
+                    _normalize_asset_ref(legacy.group(1)) if legacy else None,
+                )
+            )
+        return targets
+
+    @cached_property
+    def _target_names(self) -> _NameIndex:
+        """_static_targets' names, indexed once for every unit"""
+        return _NameIndex(target.name for target in self._static_targets)
+
+    def _block_file(self, pointer: Element) -> Path | None:
+        """Return the file a pointer's block is stored in, or None if inline"""
+        url_name = pointer.get("url_name")
+        path = self.root / pointer.tag / f"{url_name}.xml"
+        return path if url_name and path.is_file() else None
+
+    def _resolve(self, pointer: Element) -> Element:
+        """Return the block a pointer names: its own file if present, else it"""
+        url_name = pointer.get("url_name")
+        element = self._parse_block(pointer.tag, url_name) if url_name else None
+        return pointer if element is None else element
+
+    def _check_reference(self, pointer: Element):
+        """
+        Raise if a pointer names a block file the export doesn't have. Read as
+        an empty inline block, it would make an incomplete outline replace the
+        run's units. An inline block holds its children, so has no file to miss.
+        """
+        url_name = pointer.get("url_name")
+        if url_name and not len(pointer) and self._block_file(pointer) is None:
+            msg = f"{pointer.tag}/{url_name}.xml is missing"
+            raise ValueError(msg)
+
+    def _children(self, element: Element, tag: str):
+        """
+        Yield (pointer, block) for the children of an element with a tag that
+        are neither staff-only nor hidden from the table of contents. Raises
+        ValueError for such a child whose block file is missing; a hidden one
+        produces no unit, so its file isn't needed.
+        """
+        for pointer in element:
+            if pointer.tag != tag:
+                continue
+            block = self._resolve(pointer)
+            if not _is_set("visible_to_staff_only", pointer, block) and not _is_set(
+                "hide_from_toc", pointer, block
+            ):
+                self._check_reference(pointer)
+                yield pointer, block
+
+    def _chapter_units(
+        self, run: LearningResourceRun, chapter: Element, container: Path | None
+    ) -> list[dict]:
+        """
+        Build the units of a chapter's sequentials that a learner can navigate
+        to. container is the file the chapter is stored in.
+        """
+        return [
+            self._sequential_unit(run, pointer, sequential, container)
+            for pointer, sequential in self._children(chapter, "sequential")
+            if pointer.get("url_name")
+        ]
+
+    def _sequential_unit(
+        self,
+        run: LearningResourceRun,
+        pointer: Element,
+        sequential: Element,
+        container: Path | None,
+    ) -> dict:
+        """Build the unit data for one sequential, whose pointer is in container"""
+        url_name = pointer.get("url_name")
+        files = self._unit_files(
+            self._sequential_blocks(pointer, sequential, container)
+        )
+        return {
+            "external_id": get_edx_module_id(f"sequential/{url_name}.xml", run),
+            "kind": Unit.Kind.UNIT,
+            "title": sequential.get("display_name")
+            or pointer.get("display_name")
+            or url_name,
+            "url": get_jump_to_url(run, url_name),
+            "content_files": {
+                get_edx_module_id(str(path), run): relation
+                for path, relation in files.items()
+            },
+        }
+
+    def _sequential_blocks(
+        self, pointer: Element, sequential: Element, container: Path | None
+    ) -> list[_OlxBlock]:
+        """
+        Walk one sequential, returning its visible blocks in course-tree order.
+        Staff-only subtrees are skipped, as in _staff_only. An outline file is
+        a lesson only when it holds a component inline, since the component's
+        text is then ingested under the outline file's key.
+
+        Args:
+            pointer: the sequential's pointer element
+            sequential: the sequential's block, as _resolve returns it
+            container (Path): the file the pointer element is in
+        """
+        blocks = []
+        seen: set[tuple[str, str]] = set()
+        # children are resolved when popped; the sequential already is
+        stack = [
+            (pointer, "sequential", pointer.get("url_name"), container, sequential)
+        ]
+        while stack:
+            pointer, tag, block_name, container, element = stack.pop()
+            if element is None:
+                element = self._resolve(pointer)
+            own_file = (
+                None if element is pointer else self.root / tag / f"{block_name}.xml"
+            )
+            if _is_set("visible_to_staff_only", pointer, element):
+                continue
+            if tag in OLX_STRUCTURE_TAGS:
+                self._check_reference(pointer)
+            if block_name:
+                if (tag, block_name) in seen:
+                    continue
+                seen.add((tag, block_name))
+            relation = (
+                UnitContentFile.Relation.ASSESSMENT
+                if tag == "problem"
+                else UnitContentFile.Relation.CORE
+            )
+            # the block's own file, then its html body, then its transcripts
+            paths = sorted(
+                self._block_files(tag, block_name, element),
+                key=lambda path: (path.parent.name == "static", str(path)),
+            )
+            files = [] if tag in OLX_STRUCTURE_TAGS else [(p, relation) for p in paths]
+            # an inline component's text is in the file that holds it, unless
+            # it is an html block whose body has a file of its own
+            has_body = tag == "html" and any(p.parent.name == "html" for p in paths)
+            if (
+                own_file is None
+                and tag not in OLX_STRUCTURE_TAGS
+                and container
+                and not has_body
+            ):
+                files.append((container, relation))
+            # XML is read from the walked elements, so staff-only descendants
+            # are left out; other files of the block, like an html body, are
+            # read whole
+            is_container = tag in OLX_CONTAINER_TAGS
+            texts = [_visible_text(pointer, element, markup=not is_container)] + [
+                path.read_text(errors="ignore")
+                for path in paths
+                if path.suffix.lower() in REFERENCE_SCAN_EXTENSIONS
+                and path.suffix.lower() != ".xml"
+            ]
+            blocks.append(
+                _OlxBlock(
+                    files=files,
+                    texts=texts,
+                    video_ids=self._video_ids_of(element) if tag == "video" else set(),
+                )
+            )
+            # a component's children are its markup, read above, unless one
+            # points at a block file of its own
+            stack.extend(
+                (child, child.tag, child.get("url_name"), own_file or container, None)
+                for child in reversed(element)
+                if isinstance(child.tag, str)
+                and (is_container or self._block_file(child) is not None)
+            )
+        return blocks
+
+    def _unit_files(self, blocks: list[_OlxBlock]) -> dict[Path, str]:
+        """
+        Order a unit's lesson files: each block's files in tree order, each
+        static file the unit links to right after the first block linking it.
+        Static files are matched the way _static_references matches them, so a
+        unit gets an asset only when the ETL would also have found the reference.
+        """
+        linked = self._linked_targets(blocks) if self._static_targets else {}
+        files: dict[Path, str] = {}
+        for position, block in enumerate(blocks):
+            for path, relation in block.files:
+                files.setdefault(path, relation)
+            for target in linked.get(position, ()):
+                files.setdefault(
+                    target.path,
+                    UnitContentFile.Relation.CORE
+                    if target.path.suffix.lower() in TRANSCRIPT_EXTENSIONS
+                    else UnitContentFile.Relation.SUPPLEMENTARY,
+                )
+        return files
+
+    def _linked_targets(
+        self, blocks: list[_OlxBlock]
+    ) -> dict[int, list[_StaticTarget]]:
+        """
+        Return the static targets a unit's blocks link, by the position of the
+        first block linking each. The unit's text is indexed once; a link split
+        across two blocks counts for the block it starts in.
+        """
+        indexes = [_reference_index(block.texts) for block in blocks]
+        offsets = list(accumulate((len(blob) for blob, _ in indexes), initial=0))
+        blob = "".join(blob for blob, _ in indexes)
+        starts = [
+            offset + start
+            for offset, (_, block_starts) in zip(offsets, indexes, strict=False)
+            for start in block_starts
+        ]
+        found = self._target_names.first_starts(blob, starts)
+        own = {path for block in blocks for path, _ in block.files}
+        linked: dict[int, list[_StaticTarget]] = defaultdict(list)
+        for target in self._static_targets:
+            if target.path in own:
+                continue
+            positions = []
+            if target.name in found:
+                position = bisect_right(offsets, found[target.name]) - 1
+                positions.append(min(position, len(blocks) - 1))
+            if target.legacy_video_id is not None:
+                positions.extend(
+                    position
+                    for position, block in enumerate(blocks)
+                    if target.legacy_video_id in block.video_ids
+                )
+            if positions:
+                linked[min(positions)].append(target)
+        return linked
+
+    def _context_static_files(self) -> list[Path]:
+        """
+        Return the static files the course-wide pages link to: reachable tabs,
+        the about pages the platform shows, handouts, and live announcements.
+        Matched as _static_references matches them, from the same sources.
+        """
+        if not self._static_targets:
+            return []
+        skip = self._unreachable_tabs | self._hidden_about_pages
+        texts = [
+            path.read_text(errors="ignore")
+            for path in self._reference_sources(skip)
+            if path.relative_to(self.root).parts[0] in OLX_CONTEXT_FOLDERS
+        ]
+        texts.append(self._live_updates)
+        found = self._target_names.first_starts(*_reference_index(texts))
+        return [target.path for target in self._static_targets if target.name in found]

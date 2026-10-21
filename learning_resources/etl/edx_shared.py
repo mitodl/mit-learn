@@ -12,13 +12,15 @@ from django.core.cache import caches
 from django.db.models import Prefetch, Q
 
 from learning_resources.etl.constants import ETLSource
-from learning_resources.etl.loaders import load_content_files
+from learning_resources.etl.loaders import load_content_files, load_course_units
 from learning_resources.etl.olx import OlxArchive
 from learning_resources.etl.utils import (
     calc_checksum,
+    course_units_from_archive,
     get_bucket_by_name,
     get_s3_prefix_for_source,
     transform_content_files,
+    unpacked_course_archive,
 )
 from learning_resources.models import ContentFile, LearningResourceRun
 
@@ -119,7 +121,12 @@ def build_run_lookup(
 
 
 def process_course_archive(
-    bucket, key: str, run: LearningResourceRun, *, overwrite: bool = False
+    bucket,
+    key: str,
+    run: LearningResourceRun,
+    *,
+    overwrite: bool = False,
+    overwrite_units: bool = False,
 ) -> bool:
     """
     Download and process a course archive from S3, skipping the download
@@ -130,6 +137,8 @@ def process_course_archive(
         key(str): S3 object key for the course archive
         run(LearningResourceRun): The run to process
         overwrite(bool): Whether to overwrite existing content files
+        overwrite_units(bool): Whether to rebuild the run's units from an
+            unchanged archive, without reloading its content files
 
     Returns:
         bool: False if skipped via matching archive_key, True otherwise
@@ -141,8 +150,9 @@ def process_course_archive(
     stale_run = (
         bool(run.checksum) and not run.content_files.filter(published=True).exists()
     )
+    reload = overwrite or stale_run
 
-    if run.archive_key == key and not overwrite and not stale_run:
+    if run.archive_key == key and not reload and not overwrite_units:
         log.debug("Archive key unchanged for %s, skipping download", key)
         return False
     with TemporaryDirectory() as export_tempdir:
@@ -154,43 +164,109 @@ def process_course_archive(
         except tarfile.ReadError:
             log.exception("Error reading tar file %s, skipping", course_tarpath)
             return True
-        if run.checksum == checksum and not overwrite and not stale_run:
+        if run.checksum == checksum and not reload:
             # unchanged content under a new key: record it to skip future downloads
-            run.archive_key = key
-            run.save(update_fields=["archive_key"])
+            if run.archive_key != key:
+                run.archive_key = key
+                run.save(update_fields=["archive_key"])
             log.info("Checksums match for %s, skipping load", key)
+            if overwrite_units:
+                rebuild_course_units(course_tarpath, run)
             return True
-        try:
+        load_course_archive(course_tarpath, key, run, checksum, overwrite=overwrite)
+    return True
+
+
+def load_course_archive(
+    course_tarpath: Path,
+    key: str,
+    run: LearningResourceRun,
+    checksum: str,
+    *,
+    overwrite: bool,
+):
+    """
+    Load a downloaded course archive's content files and units, recording the
+    archive receipt on the run once they're loaded.
+
+    Args:
+        course_tarpath(Path): The path to the downloaded course archive
+        key(str): S3 object key for the course archive
+        run(LearningResourceRun): The run to load
+        checksum(str): The archive's checksum
+        overwrite(bool): Whether to overwrite existing content files
+    """
+    try:
+        with unpacked_course_archive(course_tarpath, run) as archive:
             failed_keys = []
             content_files_data = iter(
                 transform_content_files(
-                    course_tarpath, run, overwrite=overwrite, failed_keys=failed_keys
+                    archive, run, overwrite=overwrite, failed_keys=failed_keys
                 )
             )
             first = next(content_files_data, None)
             if first is None:
                 if failed_keys:
                     # every file failed: retry next sync, don't mark as empty
-                    return True
+                    return
                 # empty archive: stop re-downloading it. Drop any checksum
                 # from an earlier ingest so a stale run doesn't keep
                 # forcing the download.
                 run.archive_key = key
                 run.checksum = None
                 run.save(update_fields=["archive_key", "checksum"])
-                return True
+                return
             content_files_ids = load_content_files(
                 run, chain([first], content_files_data), failed_keys=failed_keys
             )
             if content_files_ids:
+                load_archive_units(archive, run, key)
                 run.checksum = checksum
                 run.archive_key = key
                 run.save(update_fields=["checksum", "archive_key"])
-            # else: files yielded but none loaded — save nothing so the next
-            # sync retries
-        except:  # noqa: E722
-            log.exception("Error ingesting OLX content data for %s", key)
-    return True
+    except:  # noqa: E722
+        log.exception("Error ingesting OLX content data for %s", key)
+
+
+def load_archive_units(archive: OlxArchive, run: LearningResourceRun, key: str):
+    """
+    Load a run's units from its unpacked archive, after its content files. A
+    failure is logged rather than raised: the same archive fails the same way
+    every time, so the receipt is still recorded and the archive isn't reloaded
+    on every sync. A new export, overwrite or overwrite_units tries again. The
+    run then keeps its units, minus links to files no longer published.
+
+    Args:
+        archive(OlxArchive): The run's unpacked course archive
+        run(LearningResourceRun): The run whose units to load
+        key(str): S3 object key for the course archive
+    """
+    units = []
+    try:
+        units = archive.units(run)
+    except Exception:
+        log.exception("Units not built for run %s from %s", run.run_id, key)
+    try:
+        load_course_units(run, units)
+    except Exception:
+        log.exception("Units not loaded for run %s from %s", run.run_id, key)
+
+
+def rebuild_course_units(course_tarpath: Path, run: LearningResourceRun):
+    """
+    Rebuild a run's units from its course archive, leaving its content files
+    as they are. The run's units are kept if the archive's can't be built.
+
+    Args:
+        course_tarpath(Path): The path to the downloaded course archive
+        run(LearningResourceRun): The run whose units to rebuild
+    """
+    try:
+        load_course_units(run, course_units_from_archive(course_tarpath, run))
+    except Exception:
+        log.exception(
+            "Units not built for run %s from %s", run.run_id, course_tarpath.name
+        )
 
 
 def get_most_recent_course_archives(etl_source: str) -> list[str]:
@@ -345,6 +421,7 @@ def sync_edx_course_files(
     keys: list[str],
     *,
     overwrite: bool = False,
+    overwrite_units: bool = False,
 ):
     """
     Sync all edx course run files for a list of course ids to database
@@ -353,6 +430,8 @@ def sync_edx_course_files(
         etl_source(str): The edx ETL source
         ids(list of int): list of course ids to process
         keys(list[str]): list of S3 archive keys to search through
+        overwrite(bool): Whether to overwrite existing content files
+        overwrite_units(bool): Whether to rebuild units from unchanged archives
     """
     bucket = get_bucket_by_name(settings.COURSE_ARCHIVE_BUCKET_NAME)
     run_lookup = build_run_lookup(etl_source, ids)
@@ -371,7 +450,9 @@ def sync_edx_course_files(
 
         # legacy unpublished runs can share an archive id with the current run
         run = max(matching_runs, key=lambda r: r.published)
-        if process_course_archive(bucket, key, run, overwrite=overwrite):
+        if process_course_archive(
+            bucket, key, run, overwrite=overwrite, overwrite_units=overwrite_units
+        ):
             processed += 1
         else:
             skipped += 1
