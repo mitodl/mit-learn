@@ -18,7 +18,11 @@ from learning_resources.constants import (
     RunStatus,
 )
 from learning_resources.etl import mitxonline, warehouse_mitxonline
-from learning_resources.etl.constants import ETLSource
+from learning_resources.etl.constants import (
+    CourseLoaderConfig,
+    ETLSource,
+    ProgramLoaderConfig,
+)
 from learning_resources.etl.exceptions import ExtractException
 from learning_resources.etl.ownership import Pipeline, writing_as
 from learning_resources.etl.utils import (
@@ -697,26 +701,83 @@ def test_sync_courses_loads_and_unpublishes(warehouse_owns_mitxonline, api_cours
     assert not variants.filter(published=True).exists()
 
 
+def _as_starrocks(row: dict) -> dict:
+    """Send a row's booleans as StarRocks does, as 0 or 1"""
+    return {
+        key: int(value) if isinstance(value, bool) else value
+        for key, value in row.items()
+    }
+
+
+@pytest.mark.parametrize("starrocks_booleans", [False, True])
 def test_sync_courses_writes_what_the_api_etl_writes(
-    mocker, warehouse_owns_mitxonline, api_courses
+    mocker, warehouse_owns_mitxonline, api_courses, starrocks_booleans
 ):
-    """The loader receives the same courses from the views as from the API ETL"""
+    """
+    The loader receives the same courses, with the same config, from the views
+    as from the API ETL, whether booleans arrive as bools or as 0 and 1
+    """
     mock_load = mocker.patch(
         "learning_resources.etl.warehouse_mitxonline.loaders.load_courses",
         return_value=[],
     )
+    convert = _as_starrocks if starrocks_booleans else dict
 
     with writing_as(Pipeline.WAREHOUSE):
         warehouse_mitxonline.sync_courses(
-            [course_row(course) for course in api_courses],
-            [run for course in api_courses for run in run_rows(course)],
+            [convert(course_row(course)) for course in api_courses],
+            [convert(run) for course in api_courses for run in run_rows(course)],
             allow_mass_unpublish=True,
         )
 
-    assert mock_load.call_args.args == (
-        ETLSource.mitxonline.name,
-        mitxonline.transform_courses(api_courses),
+    result = mock_load.call_args.args[1]
+    assert mock_load.call_args.args[0] == ETLSource.mitxonline.name
+    assert result == mitxonline.transform_courses(api_courses)
+    assert all(
+        isinstance(course[key], bool)
+        for course in result
+        for key in ("published", "certification", "force_ingest")
     )
+    assert all(
+        isinstance(run[key], bool)
+        for course in result
+        for run in course["runs"]
+        for key in ("published", "b2b_only", "is_variant")
+    )
+    assert mock_load.call_args.kwargs == {"config": CourseLoaderConfig(prune=True)}
+
+
+@pytest.mark.parametrize("starrocks_booleans", [False, True])
+def test_sync_programs_loads_with_the_api_etl_config(
+    mocker, warehouse_owns_mitxonline, api_courses, api_programs, starrocks_booleans
+):
+    """
+    The loader gets the API ETL's program config, and bools whether booleans
+    arrive as bools or as 0 and 1
+    """
+    mock_load = mocker.patch(
+        "learning_resources.etl.warehouse_mitxonline.loaders.load_programs",
+        return_value=[],
+    )
+    convert = _as_starrocks if starrocks_booleans else dict
+
+    with writing_as(Pipeline.WAREHOUSE):
+        warehouse_mitxonline.sync_programs(
+            [convert(program_row(program)) for program in api_programs],
+            children_rows(api_programs, api_courses),
+            [convert(course_row(course)) for course in api_courses],
+            allow_mass_unpublish=True,
+        )
+
+    assert mock_load.call_args.kwargs == {
+        "config": ProgramLoaderConfig(
+            courses=CourseLoaderConfig(fetch_only=True), prune=True
+        )
+    }
+    for program in mock_load.call_args.args[1]:
+        assert isinstance(program["published"], bool)
+        assert isinstance(program["certification"], bool)
+        assert isinstance(program["runs"][0]["published"], bool)
 
 
 def test_sync_programs_loads_and_links_courses(

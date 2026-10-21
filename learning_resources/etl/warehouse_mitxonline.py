@@ -139,9 +139,11 @@ def _resource_fields(row: dict) -> dict:
         "offered_by": copy.deepcopy(OFFERED_BY),
         "topics": _topics(row),
         "departments": parse_departments(warehouse_list(row["departments"])),
-        "published": row["published"],
+        # StarRocks returns a boolean column as 0 or 1, and the loaders test
+        # published and certification with `is False`
+        "published": bool(row["published"]),
         "professional": False,
-        "certification": row["certification"],
+        "certification": bool(row["certification"]),
         "certification_type": _certification_type(row),
         "image": _image(row),
         "description": _description(row["description"]),
@@ -173,9 +175,9 @@ def transform_run(row: dict, course_row: dict) -> dict:
         "url": _learn_product_url_for_mitx_course(
             course_row["readable_id"], has_product_page=course_row["has_page"]
         ),
-        "published": row["published"],
-        "b2b_only": row["b2b_only"],
-        "is_variant": row["is_variant"],
+        "published": bool(row["published"]),
+        "b2b_only": bool(row["b2b_only"]),
+        "is_variant": bool(row["is_variant"]),
         # The API lists a run without a page, so the API ETL gives it no
         # description or image of its own
         "description": "",
@@ -207,7 +209,7 @@ def transform_course(row: dict, run_rows: list[dict]) -> dict:
         **_resource_fields(row),
         "resource_type": COURSE,
         "runs": [transform_run(run, row) for run in run_rows],
-        "force_ingest": row["ingest_content_files_for_ai"],
+        "force_ingest": bool(row["ingest_content_files_for_ai"]),
         "course": {
             "course_numbers": generate_course_numbers_json(
                 course_numbers[0], extra_nums=course_numbers[1:], is_ocw=False
@@ -278,7 +280,7 @@ def transform_program(
                 "start_date": utc_timestamp_or_none(row["start_date"]),
                 "end_date": utc_timestamp_or_none(row["end_date"]),
                 "title": row["title"],
-                "published": row["has_page"],
+                "published": bool(row["has_page"]),
                 "url": url,
                 "image": _image(row),
                 "description": description,
