@@ -11,7 +11,6 @@ runs and programs absent from them are unpublished.
 """
 
 import copy
-import json
 import logging
 from collections import defaultdict
 from decimal import Decimal
@@ -39,7 +38,8 @@ from learning_resources.etl.utils import (
 from learning_resources.etl.warehouse_guards import (
     refuse_empty,
     refuse_mass_unpublish,
-    utc_timestamp,
+    utc_timestamp_or_none,
+    warehouse_list,
 )
 from learning_resources.etl.xpro import (
     OFFERED_BY,
@@ -55,27 +55,10 @@ COURSE = LearningResourceType.course.name
 PROGRAM = LearningResourceType.program.name
 
 
-def _string_list(value) -> list[str]:
-    """
-    Read a warehouse array(varchar) column. StarRocks sends an array over the
-    MySQL protocol as JSON text; a null array is an empty list here.
-    """
-    if value is None:
-        return []
-    if isinstance(value, str | bytes):
-        return json.loads(value)
-    return list(value)
-
-
-def _timestamp(value):
-    """Read a nullable warehouse timestamp"""
-    return utc_timestamp(value) if value else None
-
-
 def _topics(row: dict) -> list[dict]:
     """Map the row's xPRO topic names as parse_topics maps the API's"""
     return parse_topics(
-        {"topics": [{"name": name} for name in _string_list(row["topics"])]}
+        {"topics": [{"name": name} for name in warehouse_list(row["topics"])]}
     )
 
 
@@ -138,14 +121,16 @@ def transform_run(row: dict, course_row: dict) -> dict:
     return {
         "run_id": row["run_id"],
         "title": row["title"],
-        "start_date": _timestamp(row["start_date"] or row["enrollment_start"]),
-        "end_date": _timestamp(row["end_date"]),
-        "enrollment_start": _timestamp(row["enrollment_start"]),
-        "enrollment_end": _timestamp(row["enrollment_end"]),
+        "start_date": utc_timestamp_or_none(
+            row["start_date"] or row["enrollment_start"]
+        ),
+        "end_date": utc_timestamp_or_none(row["end_date"]),
+        "enrollment_start": utc_timestamp_or_none(row["enrollment_start"]),
+        "enrollment_end": utc_timestamp_or_none(row["enrollment_end"]),
         "published": bool(row["price"]),
         "prices": _prices(row["price"]),
         "instructors": [
-            {"full_name": name} for name in _string_list(row["instructors"])
+            {"full_name": name} for name in warehouse_list(row["instructors"])
         ],
         **_page_fields(course_row),
     }
@@ -203,12 +188,14 @@ def transform_program(row: dict, course_platforms: dict[str, str]) -> dict:
                 "prices": _prices(row["price"]),
                 "title": row["title"],
                 "run_id": row["readable_id"],
-                "enrollment_start": _timestamp(row["enrollment_start"]),
-                "start_date": _timestamp(row["start_date"] or row["enrollment_start"]),
-                "end_date": _timestamp(row["end_date"]),
+                "enrollment_start": utc_timestamp_or_none(row["enrollment_start"]),
+                "start_date": utc_timestamp_or_none(
+                    row["start_date"] or row["enrollment_start"]
+                ),
+                "end_date": utc_timestamp_or_none(row["end_date"]),
                 "description": row["description"],
                 "instructors": [
-                    {"full_name": name} for name in _string_list(row["instructors"])
+                    {"full_name": name} for name in warehouse_list(row["instructors"])
                 ],
                 **_page_fields(row),
             }

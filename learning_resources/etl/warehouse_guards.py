@@ -1,10 +1,12 @@
-"""Checks shared by the warehouse-pull syncs before they load a full set.
+"""Checks and column readers shared by the warehouse-pull syncs.
 
 Each sync treats its views as the complete current set and unpublishes what
 they no longer list, so a view that is empty or partly built must not be loaded.
 """
 
+import json
 from datetime import UTC, datetime
+from decimal import Decimal
 
 from dateutil.parser import parse
 
@@ -19,6 +21,24 @@ def utc_timestamp(value: str | datetime) -> datetime:
     """
     timestamp = value if isinstance(value, datetime) else parse(value)
     return timestamp if timestamp.tzinfo else timestamp.replace(tzinfo=UTC)
+
+
+def utc_timestamp_or_none(value: str | datetime | None) -> datetime | None:
+    """Read a nullable warehouse timestamp"""
+    return utc_timestamp(value) if value else None
+
+
+def warehouse_list(value) -> list:
+    """
+    Read a warehouse array column. StarRocks sends an array over the MySQL
+    protocol as JSON text; a null array is an empty list here. Decimals are
+    read as Decimal, not float.
+    """
+    if value is None:
+        return []
+    if isinstance(value, str | bytes):
+        return json.loads(value, parse_float=Decimal)
+    return list(value)
 
 
 # Largest share of a source's published resources of one type that a sync may
