@@ -37,6 +37,7 @@ from learning_resources.etl import (
     podcast,
     warehouse_media,
     warehouse_mitxonline,
+    warehouse_ocw,
     warehouse_xpro,
     youtube,
 )
@@ -1786,3 +1787,41 @@ class SyncMITxOnlineProgramsTask(BaseWarehouseETLTask):
 
 
 SyncMITxOnlineProgramsTask = app.register_task(SyncMITxOnlineProgramsTask())
+
+
+class SyncOCWCoursesTask(BaseWarehouseETLTask):
+    """
+    Warehouse-pull sync of the OCW courses and their runs, replacing
+    get_ocw_data and the ocw-studio webhook's course loads once
+    ETLSourceOwnership names the warehouse for ocw course.
+
+    It loads no content files. ocw_courses_etl loads a course's content files
+    with the course, and stops for both once the warehouse owns ocw course.
+
+    Always a full sync, whatever ``since`` is: only a full set prunes, and the
+    view is a few thousand rows.
+
+    A run that would unpublish more than warehouse_guards.MAX_UNPUBLISH_SHARE of
+    the published courses fails before writing. Queue it with
+    ``allow_mass_unpublish=True`` when the removal is real.
+    """
+
+    name = "learning_resources.tasks.SyncOCWCoursesTask"
+    table_name = "integrations__learn__ocw_courses"
+    writes = (ETLSource.ocw.name, [LearningResourceType.course.name])
+
+    def fetch_and_upsert(
+        self,
+        conn,
+        *,
+        since=None,  # noqa: ARG002
+        allow_mass_unpublish: bool = False,
+    ) -> int:
+        """Read the OCW course view and load the courses."""
+        return warehouse_ocw.sync_courses(
+            list(iter_rows(conn, self.view_name)),
+            allow_mass_unpublish=allow_mass_unpublish,
+        )
+
+
+SyncOCWCoursesTask = app.register_task(SyncOCWCoursesTask())

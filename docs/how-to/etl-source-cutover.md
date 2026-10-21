@@ -35,7 +35,7 @@ Flip every resource type the source's legacy task writes, in one sitting, unless
 | `mitxonline`  | `course`, `program`          | `update-mitxonline-courses-every-6-hours`       | warehouse (`SyncMITxOnlineCoursesTask`, then `SyncMITxOnlineProgramsTask`) |
 | `xpro`        | `course`, `program`          | `update-xpro-courses-every-1-days`              | warehouse (`SyncXproCoursesTask`, then `SyncXproProgramsTask`)             |
 | `mit_edx`     | `course`, `program`          | `update_edx-courses-every-1-days`               | undecided                                                                  |
-| `ocw`         | `course`                     | none (ocw-studio webhook)                       | warehouse                                                                  |
+| `ocw`         | `course`                     | none (ocw-studio webhook)                       | warehouse (`SyncOCWCoursesTask`)                                           |
 | `mitpe`       | `course`, `program`          | `update-professional-ed-resources-every-1-days` | webhook (`mitpe_schedule`)                                                 |
 | `mit_climate` | `document`                   | `update-mit-climate-articles-every-1-days`      | webhook (`mit_climate_schedule`)                                           |
 | `oll`         | `course`                     | none                                            | webhook (`oll_schedule`)                                                   |
@@ -86,9 +86,10 @@ For a webhook source:
 For a warehouse source:
 
 1. Create the rows with `owner` set to `warehouse`.
-2. Run the source's `BaseWarehouseETLTask` in full from `./manage.py shell` rather than waiting for its beat entry: `<SyncTask>.delay(full_refresh=True)`. Only a full refresh prunes. (`SyncPodcastsTask`, `SyncYouTubeTask`, `SyncXproCoursesTask`, `SyncXproProgramsTask`, `SyncMITxOnlineCoursesTask` and `SyncMITxOnlineProgramsTask` are the catalog sources with a warehouse task so far. `profiles.tasks.SyncProgramCertificatesTask` writes certificates, not catalog resources, so ownership doesn't apply to it.)
+2. Run the source's `BaseWarehouseETLTask` in full from `./manage.py shell` rather than waiting for its beat entry: `<SyncTask>.delay(full_refresh=True)`. Only a full refresh prunes. (`SyncPodcastsTask`, `SyncYouTubeTask`, `SyncXproCoursesTask`, `SyncXproProgramsTask`, `SyncMITxOnlineCoursesTask`, `SyncMITxOnlineProgramsTask` and `SyncOCWCoursesTask` are the catalog sources with a warehouse task so far. `profiles.tasks.SyncProgramCertificatesTask` writes certificates, not catalog resources, so ownership doesn't apply to it.)
 3. These tasks fail before writing if the run would unpublish more than 10% of the source's published resources of a type, since that is what a partly built view looks like. If the pre-flip comparison showed a larger difference and you have explained it, pass `allow_mass_unpublish=True` to `.delay()` or `.run()`. A type with fewer than ten published resources (e.g. xPRO programs) is over the limit as soon as one is removed, so its scheduled run fails, writing nothing, until it is run that way.
-4. `update-podcast-transcripts` stays on the legacy schedule (06:30 and 23:30 UTC), paired with `update-podcasts`. `SyncPodcastsTask` loads at 10:00 UTC, so after a podcast flip a new episode's transcript lands at 23:30 UTC, not 30 minutes after the episode.
+4. For OCW, flip only once the platform's `ocw_content` load has read the whole live bucket. The view lists only the courses read so far, so a partial view would unpublish the rest. Flipping `ocw`/`course` also stops the ocw-studio webhook from loading OCW content files, since `ocw_courses_etl` loads a course and its files together, and `SyncOCWCoursesTask` loads no content files. Have the content-file path ready before the flip.
+5. `update-podcast-transcripts` stays on the legacy schedule (06:30 and 23:30 UTC), paired with `update-podcasts`. `SyncPodcastsTask` loads at 10:00 UTC, so after a podcast flip a new episode's transcript lands at 23:30 UTC, not 30 minutes after the episode.
 
 Between the flip and the new owner's first run, the legacy task only skips. The source's data goes stale but nothing is unpublished.
 
@@ -104,6 +105,9 @@ Between the flip and the new owner's first run, the legacy task only skips. The 
 1. Delete the source's rows, or set them to `legacy`.
 2. Stop the webhook schedule, or leave the warehouse beat entry alone (it skips from now on). A webhook schedule left running fails with `409` every run.
 3. Run the legacy task by hand, e.g. `get_mitpe_data.delay()`. Legacy is a full sync: it republishes every resource in its batch, including any the new owner unpublished, and unpublishes anything the new owner created that legacy doesn't know.
+
+   OCW is the exception. Run `get_ocw_data.delay(force_overwrite=True)`: `SyncOCWCoursesTask` stores the time the platform read a course as its `last_modified`, which is later than the data.json modification time, and without `force_overwrite` legacy skips a course whose stored `last_modified` is not older than its data.json. Legacy OCW unpublishes nothing, so a course the warehouse unpublished stays unpublished unless its data.json is still in the bucket.
+
 4. Check the published counts against the pre-flip baseline.
 
 Fields only the new owner writes (e.g. `podcast_episode.rss` from the platform) stay as they are until legacy overwrites them. That's harmless.
