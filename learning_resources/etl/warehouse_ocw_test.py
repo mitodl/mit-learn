@@ -349,7 +349,7 @@ def test_sync_courses_matches_courses_on_url(warehouse_owns_ocw, data_json):
 def test_sync_courses_loads_a_course_stored_as_newer(warehouse_owns_ocw, data_json):
     """
     The OCW ETL skips a course whose stored last_modified is not older than its
-    data.json. The sync loads every listed course.
+    data.json, when it finds the course. The sync loads every listed course.
     """
     row = view_row(data_json)
     existing = LearningResourceFactory.create(

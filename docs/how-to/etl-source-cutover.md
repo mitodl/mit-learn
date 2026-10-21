@@ -106,7 +106,7 @@ Between the flip and the new owner's first run, the legacy task only skips. The 
 2. Stop the webhook schedule, or leave the warehouse beat entry alone (it skips from now on). A webhook schedule left running fails with `409` every run.
 3. Run the legacy task by hand, e.g. `get_mitpe_data.delay()`. Legacy is a full sync: it republishes every resource in its batch, including any the new owner unpublished, and unpublishes anything the new owner created that legacy doesn't know.
 
-   OCW is the exception. Run `get_ocw_data.delay(force_overwrite=True)`: `SyncOCWCoursesTask` stores the time the platform read a course as its `last_modified`, which is later than the data.json modification time, and without `force_overwrite` legacy skips a course whose stored `last_modified` is not older than its data.json. Legacy OCW unpublishes nothing, so a course the warehouse unpublished stays unpublished unless its data.json is still in the bucket.
+   OCW is the exception. Run `get_ocw_data.delay()`. Legacy OCW unpublishes nothing, so a course the warehouse unpublished stays unpublished unless its data.json is still in the bucket. Legacy skips a course whose stored `last_modified` is not older than its data.json, but it looks the course up by its primary course number, which matches the stored readable id only for a course with no term or year. `SyncOCWCoursesTask` stores the time the platform read a course as its `last_modified`, which is later than the data.json, so those few courses are skipped until they change. `force_overwrite=True` reloads them too, at the cost of extracting the text of every content file again.
 
 4. Check the published counts against the pre-flip baseline.
 
