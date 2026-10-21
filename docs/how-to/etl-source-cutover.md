@@ -77,7 +77,7 @@ Each report has:
 - `details.created`, `unpublished`, `republished` and `updated`: the `readable_id`s behind each count. `unpublished` is the resources the batch leaves out or marks unpublished, `republished` the stored unpublished ones it publishes, and `updated` every resource with a field change, including ones that are also in the other two lists;
 - `details.field_counts`: how many updated resources changed each field (`title`, `runs[].prices`), the quickest way to see a systematic difference;
 - `details.changed`: `[stored, incoming]` per field for the first 200 updated resources;
-- `error`: set when the load raised (an empty view, the mass-unpublish guard), in which case the task fails too, as it would as the owner. It is also set when the load never reached one of the four loaders above for the pair, so that an uncompared pair doesn't read as a clean one.
+- `error`: set when the load raised (e.g. an empty view), in which case the task fails too, as it would as the owner. The mass-unpublish guard does not stop a shadow: it logs a warning and the report lists what the owner's run would unpublish. It is also set when the load never reached one of the four loaders above for the pair, so that an uncompared pair doesn't read as a clean one.
 
 What is compared: every key of an item that is a column of the resource, `published` as the loader would set it, topics, `offered_by`, image, departments, content tags, the course, podcast or episode detail row, each run by `run_id` (its columns, prices, instructors and image, and the runs a prune would unpublish), and a program's children.
 
