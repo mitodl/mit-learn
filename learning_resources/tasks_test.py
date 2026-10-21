@@ -24,6 +24,7 @@ from learning_resources.constants import (
 from learning_resources.credentials import CredentialMetadata
 from learning_resources.etl.constants import MARKETING_PAGE_FILE_TYPE, ETLSource
 from learning_resources.etl.exceptions import ExtractException
+from learning_resources.etl.ownership import CONTENT_FILE, TRANSCRIPT
 from learning_resources.factories import (
     ContentFileFactory,
     CredentialMetadataConfigurationFactory,
@@ -3057,3 +3058,163 @@ def test_reindex_released_content_files_keeps_watermark_on_failure(
         tasks.reindex_released_content_files()
 
     assert sweep_cache.get(WATERMARK_KEY) == previous
+
+
+ALL_OWNERS = pytest.mark.parametrize("owner", list(ETLSourceOwnership.Pipeline))
+
+
+def _owned_by(owner, etl_source, resource_type):
+    """Record which pipeline owns a pair"""
+    ETLSourceOwnershipFactory.create(
+        etl_source=etl_source, resource_type=resource_type, owner=owner
+    )
+
+
+@ALL_OWNERS
+@pytest.mark.parametrize(
+    ("task", "etl_source"),
+    [
+        ("import_all_mit_edx_files", ETLSource.mit_edx.name),
+        ("import_all_oll_files", ETLSource.oll.name),
+        ("import_all_mitxonline_files", ETLSource.mitxonline.name),
+        ("import_all_xpro_files", ETLSource.xpro.name),
+        ("import_content_files", ETLSource.xpro.name),
+    ],
+)
+def test_import_files_tasks_run_only_while_legacy_owns_content_files(
+    mocker, mocked_celery, owner, task, etl_source
+):
+    """The content-file fan-out lists no archives for a source cut over elsewhere"""
+    _owned_by(owner, etl_source, CONTENT_FILE)
+    mock_get_content_tasks = mocker.patch(
+        "learning_resources.tasks.get_content_tasks", autospec=True
+    )
+    args = [etl_source] if task == "import_content_files" else []
+
+    if owner == ETLSourceOwnership.Pipeline.LEGACY:
+        with pytest.raises(mocked_celery.replace_exception_class):
+            getattr(tasks, task).delay(*args)
+        mock_get_content_tasks.assert_called_once()
+    else:
+        assert getattr(tasks, task).delay(*args).get() is None
+        mock_get_content_tasks.assert_not_called()
+        mocked_celery.replace.assert_not_called()
+
+
+@ALL_OWNERS
+def test_get_content_files_runs_only_while_legacy_owns_content_files(
+    mocker, settings, owner
+):
+    """A chunk queued before the cutover reads no archive after it"""
+    settings.AWS_ACCESS_KEY_ID = "key"
+    settings.AWS_SECRET_ACCESS_KEY = "secret"  # noqa: S105
+    settings.COURSE_ARCHIVE_BUCKET_NAME = "bucket"
+    _owned_by(owner, ETLSource.mitxonline.name, CONTENT_FILE)
+    mock_sync = mocker.patch("learning_resources.tasks.sync_edx_course_files")
+
+    tasks.get_content_files([1], ETLSource.mitxonline.name, ["foo.tar.gz"])
+
+    assert mock_sync.called is (owner == ETLSourceOwnership.Pipeline.LEGACY)
+
+
+@ALL_OWNERS
+def test_unpublish_excluded_files_run_only_while_legacy_owns_content_files(
+    mocker, mocked_celery, mock_blocklist, owner
+):
+    """Neither the fan-out nor a queued chunk touches a source cut over elsewhere"""
+    etl_source = ETLSource.mitxonline.name
+    _owned_by(owner, etl_source, CONTENT_FILE)
+    mock_archives = mocker.patch(
+        "learning_resources.tasks.get_most_recent_course_archives", return_value=[]
+    )
+    mock_unpublish = mocker.patch(
+        "learning_resources.tasks.unpublish_excluded_content_files", return_value=[]
+    )
+
+    if owner == ETLSourceOwnership.Pipeline.LEGACY:
+        with pytest.raises(mocked_celery.replace_exception_class):
+            tasks.unpublish_all_excluded_files.delay(etl_source=etl_source)
+        tasks.unpublish_excluded_files([1], etl_source, ["k"])
+        mock_archives.assert_called_once()
+        mock_unpublish.assert_called_once()
+    else:
+        assert (
+            tasks.unpublish_all_excluded_files.delay(etl_source=etl_source).get()
+            is None
+        )
+        assert tasks.unpublish_excluded_files([1], etl_source, ["k"]) == []
+        mock_archives.assert_not_called()
+        mock_unpublish.assert_not_called()
+
+
+@ALL_OWNERS
+@pytest.mark.parametrize(
+    ("task", "module", "etl_source", "job", "fetch"),
+    [
+        (
+            "get_youtube_transcripts",
+            "youtube",
+            ETLSource.youtube.name,
+            "get_youtube_videos_for_transcripts_job",
+            "get_youtube_transcripts",
+        ),
+        (
+            "get_ovs_transcripts",
+            "ovs",
+            ETLSource.ovs.name,
+            "get_ovs_videos_for_transcripts_job",
+            "get_ovs_transcripts",
+        ),
+        (
+            "get_podcast_transcripts",
+            "podcast",
+            ETLSource.podcast.name,
+            "get_podcast_episodes_for_transcripts_job",
+            "get_podcast_transcripts",
+        ),
+    ],
+)
+def test_transcript_tasks_run_only_while_legacy_owns_transcripts(  # noqa: PLR0913
+    mocker, owner, task, module, etl_source, job, fetch
+):
+    """A transcript job fetches nothing for a source whose transcripts moved"""
+    _owned_by(owner, etl_source, TRANSCRIPT)
+    mock_module = mocker.patch(f"learning_resources.tasks.{module}")
+
+    getattr(tasks, task).delay()
+
+    legacy = owner == ETLSourceOwnership.Pipeline.LEGACY
+    assert getattr(mock_module, job).called is legacy
+    assert getattr(mock_module, fetch).called is legacy
+
+
+@pytest.mark.parametrize(
+    "resource_type", [LearningResourceType.course.name, CONTENT_FILE]
+)
+@ALL_OWNERS
+def test_ingest_canvas_course_runs_only_while_legacy_owns_canvas(
+    mocker, owner, resource_type
+):
+    """A canvas archive loads nothing once its course or content files moved"""
+    _owned_by(owner, ETLSource.canvas.name, resource_type)
+    mock_bucket = mocker.patch("learning_resources.tasks.get_bucket_by_name")
+    mock_sync = mocker.patch("learning_resources.tasks.sync_canvas_archive")
+
+    tasks.ingest_canvas_course.delay("canvas/course/archive.imscc", False)  # noqa: FBT003
+
+    legacy = owner == ETLSourceOwnership.Pipeline.LEGACY
+    assert mock_bucket.called is legacy
+    assert mock_sync.called is legacy
+
+
+@ALL_OWNERS
+def test_ingest_edx_run_archive_runs_only_while_legacy_owns_content_files(
+    mocker, owner
+):
+    """The content_files webhook's edX task reads no archive for a source cut over"""
+    _owned_by(owner, ETLSource.xpro.name, CONTENT_FILE)
+    mock_sync = mocker.patch("learning_resources.tasks.sync_edx_archive")
+
+    tasks.ingest_edx_run_archive.delay(ETLSource.xpro.name, "xpro/a.tar.gz")
+
+    assert mock_sync.called is (owner == ETLSourceOwnership.Pipeline.LEGACY)

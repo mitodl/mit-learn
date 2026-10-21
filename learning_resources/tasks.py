@@ -59,7 +59,13 @@ from learning_resources.etl.loaders import (
     load_learning_materials,
     load_run_dependent_values,
 )
-from learning_resources.etl.ownership import Pipeline, may_write, writing_as
+from learning_resources.etl.ownership import (
+    CONTENT_FILE,
+    TRANSCRIPT,
+    Pipeline,
+    may_write,
+    writing_as,
+)
 from learning_resources.etl.pipelines import ocw_courses_etl
 from learning_resources.etl.utils import (
     get_bucket_by_name,
@@ -253,6 +259,10 @@ def get_content_files(
     ):
         log.warning("Required settings missing for %s files", etl_source)
         return
+    # the fan-out checked before queueing this, but the task can run after the
+    # ownership row changes (a long fan-out, a redelivered message)
+    if not may_write(etl_source, CONTENT_FILE):
+        return
     sync_edx_course_files(
         etl_source, ids, keys, overwrite=overwrite, overwrite_units=overwrite_units
     )
@@ -316,6 +326,8 @@ def unpublish_excluded_files(
     ids: list[int], etl_source: str, keys: list[str], *, dry_run: bool = False
 ):
     """Unpublish excluded content files and date unreleased ones for some courses"""
+    if not may_write(etl_source, CONTENT_FILE):
+        return []
     return unpublish_excluded_content_files(etl_source, ids, keys, dry_run=dry_run)
 
 
@@ -324,6 +336,8 @@ def unpublish_all_excluded_files(
     self, *, etl_source, chunk_size=None, learning_resource_ids=None, dry_run=False
 ):
     """Fan out unpublish_excluded_files over an edX source's current archives"""
+    if not may_write(etl_source, CONTENT_FILE):
+        return None
     if chunk_size is None:
         chunk_size = settings.LEARNING_COURSE_ITERATOR_CHUNK_SIZE
     archive_keys = get_most_recent_course_archives(etl_source)
@@ -349,6 +363,18 @@ def unpublish_all_excluded_files(
     )
 
 
+def _replace_with_content_tasks(task, etl_source: str, **kwargs):
+    """
+    Replace a task with the content-file fan-out for an edX source, if the legacy
+    ETL still owns that source's content files.
+
+    The check comes before get_content_tasks, which lists the archive bucket.
+    """
+    if not may_write(etl_source, CONTENT_FILE):
+        return None
+    return task.replace(get_content_tasks(etl_source, **kwargs))
+
+
 @app.task(bind=True)
 def import_all_mit_edx_files(
     self,
@@ -359,14 +385,13 @@ def import_all_mit_edx_files(
     learning_resource_ids=None,
 ):
     """Ingest MIT edX files from an S3 bucket"""
-    return self.replace(
-        get_content_tasks(
-            ETLSource.mit_edx.name,
-            chunk_size=chunk_size,
-            overwrite=overwrite,
-            overwrite_units=overwrite_units,
-            learning_resource_ids=learning_resource_ids,
-        )
+    return _replace_with_content_tasks(
+        self,
+        ETLSource.mit_edx.name,
+        chunk_size=chunk_size,
+        overwrite=overwrite,
+        overwrite_units=overwrite_units,
+        learning_resource_ids=learning_resource_ids,
     )
 
 
@@ -380,14 +405,13 @@ def import_all_oll_files(
     learning_resource_ids=None,
 ):
     """Ingest MIT edX files from an S3 bucket"""
-    return self.replace(
-        get_content_tasks(
-            ETLSource.oll.name,
-            chunk_size=chunk_size,
-            overwrite=overwrite,
-            overwrite_units=overwrite_units,
-            learning_resource_ids=learning_resource_ids,
-        )
+    return _replace_with_content_tasks(
+        self,
+        ETLSource.oll.name,
+        chunk_size=chunk_size,
+        overwrite=overwrite,
+        overwrite_units=overwrite_units,
+        learning_resource_ids=learning_resource_ids,
     )
 
 
@@ -401,15 +425,13 @@ def import_all_mitxonline_files(
     learning_resource_ids=None,
 ):
     """Ingest MITx Online files from an S3 bucket"""
-
-    return self.replace(
-        get_content_tasks(
-            ETLSource.mitxonline.name,
-            chunk_size=chunk_size,
-            overwrite=overwrite,
-            overwrite_units=overwrite_units,
-            learning_resource_ids=learning_resource_ids,
-        )
+    return _replace_with_content_tasks(
+        self,
+        ETLSource.mitxonline.name,
+        chunk_size=chunk_size,
+        overwrite=overwrite,
+        overwrite_units=overwrite_units,
+        learning_resource_ids=learning_resource_ids,
     )
 
 
@@ -423,15 +445,13 @@ def import_all_xpro_files(
     learning_resource_ids=None,
 ):
     """Ingest xPRO OLX files from an S3 bucket"""
-
-    return self.replace(
-        get_content_tasks(
-            ETLSource.xpro.name,
-            chunk_size=chunk_size,
-            overwrite=overwrite,
-            overwrite_units=overwrite_units,
-            learning_resource_ids=learning_resource_ids,
-        )
+    return _replace_with_content_tasks(
+        self,
+        ETLSource.xpro.name,
+        chunk_size=chunk_size,
+        overwrite=overwrite,
+        overwrite_units=overwrite_units,
+        learning_resource_ids=learning_resource_ids,
     )
 
 
@@ -451,14 +471,13 @@ def import_content_files(  # noqa: PLR0913
     task-group construction happen asynchronously in a Celery worker, rather
     than blocking the calling task.
     """
-    return self.replace(
-        get_content_tasks(
-            etl_source,
-            chunk_size=chunk_size,
-            overwrite=overwrite,
-            overwrite_units=overwrite_units,
-            learning_resource_ids=learning_resource_ids,
-        )
+    return _replace_with_content_tasks(
+        self,
+        etl_source,
+        chunk_size=chunk_size,
+        overwrite=overwrite,
+        overwrite_units=overwrite_units,
+        learning_resource_ids=learning_resource_ids,
     )
 
 
@@ -777,6 +796,8 @@ def get_youtube_transcripts(
         overwrite (bool):
             if true, transcripts are updated for videos that already have transcripts
     """
+    if not may_write(ETLSource.youtube.name, TRANSCRIPT):
+        return
 
     videos = youtube.get_youtube_videos_for_transcripts_job(
         created_after=created_after,
@@ -797,6 +818,8 @@ def get_ovs_transcripts(*, overwrite=False):
         overwrite (bool):
             if true, transcripts are updated for videos that already have transcripts
     """
+    if not may_write(ETLSource.ovs.name, TRANSCRIPT):
+        return
 
     videos = ovs.get_ovs_videos_for_transcripts_job(overwrite=overwrite)
 
@@ -813,6 +836,8 @@ def get_podcast_transcripts(*, overwrite=False):
         overwrite (bool):
             if true, transcripts are updated for episodes that already have one
     """
+    if not may_write(ETLSource.podcast.name, TRANSCRIPT):
+        return
 
     episodes = podcast.get_podcast_episodes_for_transcripts_job(overwrite=overwrite)
 
@@ -882,6 +907,12 @@ def summarize_unprocessed_content(
 
 @app.task(acks_late=True, reject_on_worker_lost=True)
 def ingest_canvas_course(archive_path, overwrite):
+    # reached from sync_canvas_courses and from the content_files webhook. The
+    # archive is both the course's metadata and its content files.
+    if not may_write(
+        ETLSource.canvas.name, [LearningResourceType.course.name, CONTENT_FILE]
+    ):
+        return None
     bucket = get_bucket_by_name(settings.COURSE_ARCHIVE_BUCKET_NAME)
     return sync_canvas_archive(bucket, archive_path, overwrite=overwrite)
 
@@ -894,6 +925,8 @@ def ingest_edx_run_archive(
     run_id: str | None = None,
     overwrite: bool = False,
 ):
+    if not may_write(etl_source, CONTENT_FILE):
+        return None
     return sync_edx_archive(
         etl_source, archive_path, run_id=run_id, overwrite=overwrite
     )

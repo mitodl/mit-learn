@@ -109,6 +109,10 @@ class ContentFileWebhookView(BaseWebhookView):
             return HttpResponseBadRequest("Invalid JSON format")
 
 
+# An upsert writes the video and its collection's playlist together.
+OVS_TYPES = [LearningResourceType.video_playlist.name, LearningResourceType.video.name]
+
+
 @extend_schema_view(
     post=extend_schema(
         request=OVSVideoWebhookRequestSerializer,
@@ -144,6 +148,22 @@ class OVSVideoWebhookView(BaseWebhookView):
         serializer = OVSVideoWebhookRequestSerializer(data=payload)
         serializer.is_valid(raise_exception=True)
         data = serializer.validated_data
+
+        # The OVS push is the data platform's webhook path for OVS, so it writes
+        # only once (ovs, video_playlist) and (ovs, video) are cut over to the
+        # webhook, the same flip that stops get_ovs_data.
+        with writing_as(Pipeline.WEBHOOK):
+            owned = may_write(ETLSource.ovs.name, OVS_TYPES)
+        if not owned:
+            msg = (
+                f"The webhook does not own {ETLSource.ovs.name}/"
+                f"{', '.join(OVS_TYPES)}. Set the ETLSourceOwnership rows in "
+                "Django admin to cut them over."
+            )
+            return Response(
+                {"status": "error", "message": msg},
+                status=status.HTTP_409_CONFLICT,
+            )
 
         if data.get("delete"):
             video_id = data["video_id"]
@@ -384,6 +404,9 @@ def process_delete_content_file_request(data):
     course_id_pattern = (
         f"{course_id}-" if etl_source == ETLSource.canvas.name else course_id
     )
+    # This deletes the course itself, which the legacy ETL may no longer own.
+    if not may_write(etl_source, LearningResourceType.course.name):
+        return
     if course_id:
         try:
             resource = LearningResource.objects.get(
