@@ -291,6 +291,27 @@ def test_a_shadow_of_what_was_just_loaded_reports_nothing(catalog, pairs, load, 
         ) == (0, 0, 0, 0)
 
 
+def test_run_shadow_reports_an_item_on_another_platform_as_created(catalog):
+    """
+    The loaders key a resource on its platform, so an item whose stored
+    resource of the same readable_id is on another platform is a new resource.
+    """
+    _load_courses([_course("c1")])
+    batch = [_course("c1", platform=PlatformType.climate.name)]
+
+    run = _shadow([(SOURCE, COURSE)], lambda: _load_courses(batch))[COURSE]
+
+    assert run.details["created"] == ["c1"]
+    assert run.details["unpublished"] == ["c1"]
+    assert run.counts["unchanged"] == 0
+    _load_courses(batch)
+    assert dict(
+        LearningResource.objects.filter(readable_id="c1").values_list(
+            "platform__code", "published"
+        )
+    ) == {PlatformType.see.name: False, PlatformType.climate.name: True}
+
+
 def test_a_shadow_of_loaded_programs_reports_nothing(catalog):
     """Programs compare clean too, with the courses they link to."""
     _load_courses([_course("c1"), _course("c2")])
