@@ -13,6 +13,7 @@ runs and programs absent from them are unpublished.
 """
 
 import copy
+import json
 import logging
 from collections import defaultdict
 from decimal import Decimal
@@ -33,11 +34,13 @@ from learning_resources.etl.constants import (
     ProgramLoaderConfig,
 )
 from learning_resources.etl.mitxonline import (
+    CMS_PAGE_KEY,
     OFFERED_BY,
     _learn_product_url_for_mitx_course,
     _learn_product_url_for_mitx_program,
     parse_certificate_type,
     parse_departments,
+    parse_full_description,
 )
 from learning_resources.etl.ownership import may_write
 from learning_resources.etl.utils import (
@@ -94,6 +97,24 @@ def _certification_type(row: dict) -> str:
     return CertificationType.none.name
 
 
+def _full_description(row: dict) -> dict:
+    """
+    Build full_description from the product page's sections as the API ETL
+    does. MITx Online's pages API lists a page to MIT Learn only when it is
+    live and in the Learn catalog (has_catalog_page), and the API ETL leaves
+    the stored value alone for a page it does not see, so the key is left out.
+    """
+    if not row["has_catalog_page"]:
+        return {}
+    page = {
+        "about": row["about"],
+        "what_you_learn": row["what_you_learn"],
+        "prerequisites": row["prerequisites"],
+        "faqs": json.loads(row["faqs"]),
+    }
+    return {"full_description": parse_full_description({CMS_PAGE_KEY: page})}
+
+
 def _page_fields(row: dict) -> dict:
     """Build the fields the API ETL copies from a course or program to its run"""
     return {
@@ -124,6 +145,7 @@ def _resource_fields(row: dict) -> dict:
         "certification_type": _certification_type(row),
         "image": _image(row),
         "description": _description(row["description"]),
+        **_full_description(row),
         "availability": row["availability"],
         "format": [Format.asynchronous.name],
     }

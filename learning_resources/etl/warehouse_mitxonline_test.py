@@ -39,6 +39,17 @@ pytestmark = pytest.mark.django_db
 COURSE = LearningResourceType.course.name
 PROGRAM = LearningResourceType.program.name
 NOW = datetime(2023, 1, 1, tzinfo=UTC)
+# A Wagtail product page as the pages API lists it, with the sections
+# full_description is built from
+CMS_PAGE = {
+    "about": '<p>About <a linktype="page" id="3">this</a> <img src="x.png"></p>',
+    "what_you_learn": "<ul><li>Regression</li></ul>",
+    "prerequisites": "",
+    "faqs": [
+        {"id": 1, "question": "Is it free?", "answer": "<p>Auditing is free.</p>"},
+        {"id": 2, "question": "", "answer": "<p>dropped</p>"},
+    ],
+}
 
 
 @pytest.fixture(autouse=True)
@@ -101,6 +112,7 @@ def api_courses():
         ],
     )
     courses[0]["courseruns"].extend([b2b_run, language_run])
+    courses[0][mitxonline.CMS_PAGE_KEY] = CMS_PAGE
     return courses
 
 
@@ -117,6 +129,7 @@ def api_programs():
         program["page"]["description"] = re.sub(
             r"<[^>]+>", "", program["page"]["description"]
         )
+    programs[0][mitxonline.CMS_PAGE_KEY] = CMS_PAGE
     return programs
 
 
@@ -139,6 +152,26 @@ def _decimals(amounts) -> str:
     return f"[{','.join(str(amount) for amount in amounts)}]"
 
 
+def _section_columns(cms_page: dict | None) -> dict:
+    """Build the page section columns, null unless the pages API lists the page"""
+    if cms_page is None:
+        return dict.fromkeys(
+            ("about", "what_you_learn", "prerequisites", "faqs"), None
+        ) | {"has_catalog_page": False}
+    return {
+        "has_catalog_page": True,
+        "about": cms_page["about"],
+        "what_you_learn": cms_page["what_you_learn"],
+        "prerequisites": cms_page["prerequisites"],
+        "faqs": _array(
+            [
+                {"question": faq["question"], "answer": faq["answer"]}
+                for faq in cms_page["faqs"]
+            ]
+        ),
+    }
+
+
 def _page_columns(api: dict) -> dict:
     """Columns a course row and a program row share, from an API object"""
     page = api.get("page") or {}
@@ -154,6 +187,7 @@ def _page_columns(api: dict) -> dict:
             else None
         ),
         "has_page": bool(page.get("page_url")),
+        **_section_columns(api.get(mitxonline.CMS_PAGE_KEY)),
         "topics": _array([topic["name"] for topic in api.get("topics", [])]),
         "departments": _array(
             [department["name"] for department in api.get("departments", [])]
@@ -353,6 +387,8 @@ def test_transform_course_matches_the_api_etl(api_courses):
 
     assert result == expected
     assert any(course["topics"] for course in result)
+    assert any("full_description" in course for course in result)
+    assert not all("full_description" in course for course in result)
     assert any(run["is_variant"] for course in result for run in course["runs"])
     assert any(course["certification"] for course in result)
 
@@ -488,6 +524,45 @@ def test_transform_course_strips_description_tags_as_the_api_does(
         ]
         == expected
     )
+
+
+@pytest.mark.parametrize(
+    ("sections", "expected"),
+    [
+        ({"has_catalog_page": False}, {}),
+        (
+            {"has_catalog_page": True, "faqs": "[]"},
+            {"full_description": None},
+        ),
+        (
+            {
+                "has_catalog_page": True,
+                "prerequisites": "<p>Calculus</p>",
+                "faqs": '[{"question": "When?", "answer": "<p>Now</p>"}]',
+            },
+            {
+                "full_description": "## Prerequisites\n\nCalculus\n\n"
+                "## Frequently asked questions\n\n### When?\n\nNow"
+            },
+        ),
+    ],
+)
+def test_transform_course_full_description(api_courses, sections, expected):
+    """
+    full_description is built from the sections of a page the pages API lists,
+    and left out for one it does not, so the stored value stays
+    """
+    row = {
+        **course_row(api_courses[1]),
+        **_section_columns(None),
+        **sections,
+    }
+
+    result = warehouse_mitxonline.transform_course(row, run_rows(api_courses[1]))
+
+    assert {
+        key: value for key, value in result.items() if key == "full_description"
+    } == expected
 
 
 @pytest.mark.parametrize(
