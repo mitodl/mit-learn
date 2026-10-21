@@ -238,6 +238,7 @@ def test_run_shadow_reports_the_load_and_writes_nothing(catalog, mock_index):
     assert ETLShadowRun.objects.get() == run
     assert (run.etl_source, run.pipeline, run.error) == (SOURCE, Pipeline.WAREHOUSE, "")
     assert run.counts == {
+        "items": 3,
         "before": 3,
         "before_published": 3,
         "created": 1,

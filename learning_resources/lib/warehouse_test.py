@@ -35,6 +35,7 @@ if not django_settings.configured:
 # database, no app registry" guarantee intact.
 
 
+from learning_resources.etl import shadow
 from learning_resources.etl.ownership import (
     Pipeline,
     RunMode,
@@ -408,7 +409,14 @@ class _ShadowRecordingTask(BaseWarehouseETLTask):
 
     def fetch_and_upsert(self, conn, *, since=None, **_) -> int:  # noqa: ARG002
         self.seen = (is_shadow_run(), since, may_write(*self.writes))
-        return 7
+        # what a batch loader hands to the comparison in place of loading
+        shadow.observe(
+            "ocw",
+            "course",
+            [{"readable_id": readable_id, "platform": "ocw"} for readable_id in "ab"],
+            prune=False,
+        )
+        return 0
 
 
 @pytest.mark.django_db
@@ -416,7 +424,8 @@ class _ShadowRecordingTask(BaseWarehouseETLTask):
 def test_base_warehouse_etl_task_shadows_a_pair(mock_connect):
     """
     As a pair's shadow the task does a full load inside a shadow run, saves the
-    report and leaves the watermark alone, even when queued as incremental.
+    report, returns how many items it compared and leaves the watermark alone,
+    even when queued as incremental.
     """
     mock_connect.return_value = MagicMock()
     ETLSourceOwnershipFactory.create(
@@ -428,7 +437,7 @@ def test_base_warehouse_etl_task_shadows_a_pair(mock_connect):
         patch.object(task, "_get_watermark") as mock_get_watermark,
         patch.object(task, "_set_watermark") as mock_set_watermark,
     ):
-        assert task.run(full_refresh=False) == 7
+        assert task.run(full_refresh=False) == 2
 
     assert task.seen == (True, None, False)
     mock_get_watermark.assert_not_called()

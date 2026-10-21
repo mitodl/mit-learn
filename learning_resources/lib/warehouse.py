@@ -339,7 +339,9 @@ class BaseWarehouseETLTask(Task):
             # The loaders check ownership again as the pipeline named here.
             with writing_as(Pipeline.WAREHOUSE):
                 if mode == RunMode.SHADOW:
-                    count, _ = run_shadow(
+                    # the loaders return nothing in a shadow, so count what
+                    # they compared instead
+                    _, runs = run_shadow(
                         [self.writes],
                         lambda: self.fetch_and_upsert(
                             conn,
@@ -347,6 +349,7 @@ class BaseWarehouseETLTask(Task):
                             allow_mass_unpublish=allow_mass_unpublish is True,
                         ),
                     )
+                    count = sum(run.counts.get("items", 0) for run in runs)
                 else:
                     count = self.fetch_and_upsert(
                         conn,
@@ -384,17 +387,21 @@ class BaseWarehouseETLTask(Task):
             self._set_watermark(fetch_started_at - _WATERMARK_LOOKBACK)
 
         elapsed = time.monotonic() - start
-        log.info(
-            "Warehouse ETL task %s finished (%s): %d rows in %.1fs",
-            self.name,
-            "shadow"
-            if mode == RunMode.SHADOW
-            else "full_refresh"
-            if full_refresh
-            else "incremental",
-            count,
-            elapsed,
-        )
+        if mode == RunMode.SHADOW:
+            log.info(
+                "Warehouse ETL task %s finished (shadow): %d items compared in %.1fs",
+                self.name,
+                count,
+                elapsed,
+            )
+        else:
+            log.info(
+                "Warehouse ETL task %s finished (%s): %d rows in %.1fs",
+                self.name,
+                "full_refresh" if full_refresh else "incremental",
+                count,
+                elapsed,
+            )
         return count
 
     def fetch_and_upsert(

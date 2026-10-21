@@ -63,13 +63,13 @@ The comparison is a second copy of the loaders' rules (`learning_resources/etl/s
 
 1. In Django admin, create or edit the row for each resource type from the table above, leave `owner` as it is and set `shadow` to the new pipeline. All of a source's rows that one load writes together (`podcast` and `podcast_episode`, `video_playlist` and `video`) need it.
 2. Run the new pipeline as you would for the flip, or wait for its schedule:
-   - warehouse: `<SyncTask>.delay()`. A shadow run is always a full refresh and leaves the incremental watermark alone. The task logs 0 rows, because the loaders return nothing in a shadow run.
+   - warehouse: `<SyncTask>.delay()`. A shadow run is always a full refresh and leaves the incremental watermark alone. The task logs how many items the loaders compared, since they load none.
    - webhook: not wired to the shadow yet. Until it is, the webhook answers `409` for a pair it doesn't own, shadow or not.
 3. Read the report at `/admin/learning_resources/etlshadowrun/`. There is one per `(etl_source, resource_type)` per run, and the last 20 per pipeline are kept.
 
 Each report has:
 
-- `counts`: resources `created`, `unpublished`, `republished`, `updated` and `unchanged`, with the stored totals (`before`, `before_published`);
+- `counts`: the `items` in the batch, resources `created`, `unpublished`, `republished`, `updated` and `unchanged`, and the stored totals (`before`, `before_published`);
 - `details.created`, `unpublished`, `republished` and `updated`: the `readable_id`s behind each count. `unpublished` is the resources the batch leaves out or marks unpublished, `republished` the stored unpublished ones it publishes, and `updated` every resource with a field change, including ones that are also in the other two lists;
 - `details.field_counts`: how many updated resources changed each field (`title`, `runs[].prices`), the quickest way to see a systematic difference;
 - `details.changed`: `[stored, incoming]` per field for the first 200 updated resources;
