@@ -10,11 +10,10 @@ from learning_resources.constants import (
     LearningResourceType,
     PlatformType,
 )
-from learning_resources.etl import warehouse_media
+from learning_resources.etl import shadow, warehouse_media
 from learning_resources.etl.constants import ETLSource
 from learning_resources.etl.exceptions import ExtractException
 from learning_resources.etl.ownership import Pipeline, writing_as
-from learning_resources.etl.shadow import run_shadow
 from learning_resources.factories import (
     ContentFileFactory,
     ETLSourceOwnershipFactory,
@@ -385,6 +384,162 @@ def test_sync_youtube_keeps_a_channel_with_no_playlists(warehouse_owns_youtube):
     assert VideoChannel.objects.get(channel_id="UC-empty").published is True
 
 
+def shadow_youtube(*views):
+    """
+    Shadow the warehouse's youtube sync as SyncYouTubeTask does, with the
+    warehouse as the shadow of both pairs. Returns the reports by type.
+    """
+    ETLSourceOwnership.objects.filter(etl_source=ETLSource.youtube.name).update(
+        owner=Pipeline.LEGACY, shadow=Pipeline.WAREHOUSE
+    )
+    with writing_as(Pipeline.WAREHOUSE):
+        _, reports = shadow.run_shadow(
+            [(ETLSource.youtube.name, warehouse_media.YOUTUBE_TYPES)],
+            lambda: shadow.observe_youtube(
+                warehouse_media.playlists_to_load(
+                    views[0], warehouse_media.prepare_youtube_sync(*views)
+                )
+            ),
+        )
+    return {report.resource_type: report for report in reports}
+
+
+def stored_youtube():
+    """Return the youtube resources, playlist videos and channels as stored"""
+    return (
+        list(LearningResource.objects.order_by("id").values()),
+        list(
+            LearningResource.objects.filter(
+                resource_type=LearningResourceType.video_playlist.name
+            )
+            .order_by("id")
+            .values_list(
+                "readable_id", "children__child__readable_id", "children__position"
+            )
+        ),
+        list(VideoChannel.objects.order_by("channel_id").values()),
+    )
+
+
+YOUTUBE_VIEWS = (
+    [channel_row()],
+    [playlist_row("PL-one"), playlist_row("PL-two")],
+    [
+        membership_row("PL-one", "vid-a", 0),
+        membership_row("PL-one", "vid-b", 1),
+        membership_row("PL-two", "vid-a", 0),
+    ],
+    [video_row("vid-a"), video_row("vid-b")],
+)
+
+
+def test_sync_youtube_as_a_shadow_of_what_it_loaded_is_unchanged(
+    warehouse_owns_youtube, mock_search
+):
+    """A shadow of the views the warehouse just loaded finds nothing to change"""
+    sync_and_load_youtube(*YOUTUBE_VIEWS)
+    mock_search.upsert.reset_mock()
+    before = stored_youtube()
+
+    reports = shadow_youtube(*YOUTUBE_VIEWS)
+
+    assert set(reports) == set(warehouse_media.YOUTUBE_TYPES)
+    for report in reports.values():
+        assert report.error == ""
+        assert report.counts["unchanged"] == report.counts["before"] == 2
+        assert report.details["field_counts"] == {}
+    assert stored_youtube() == before
+    mock_search.upsert.assert_not_called()
+
+
+def test_sync_youtube_as_a_shadow_reports_playlist_and_video_changes(
+    warehouse_owns_youtube, mock_search
+):
+    """
+    A dropped playlist, a video no kept playlist lists, a reorder, a new
+    playlist and video and a retitled video are reported, and nothing is written
+    """
+    sync_and_load_youtube(*YOUTUBE_VIEWS)
+    mock_search.upsert.reset_mock()
+    mock_search.bulk_deindex.reset_mock()
+    before = stored_youtube()
+
+    reports = shadow_youtube(
+        [channel_row()],
+        [playlist_row("PL-one"), playlist_row("PL-three")],
+        [
+            membership_row("PL-one", "vid-a", 0),
+            membership_row("PL-three", "vid-c", 0),
+        ],
+        [video_row("vid-a", title="Retitled"), video_row("vid-c")],
+    )
+
+    playlists = reports[LearningResourceType.video_playlist.name]
+    assert playlists.counts["created"] == 1
+    assert playlists.details["created"] == ["PL-three"]
+    assert playlists.details["unpublished"] == ["PL-two"]
+    assert playlists.details["changed"] == {
+        "PL-one": {"videos": [["vid-a", "vid-b"], ["vid-a"]]}
+    }
+    videos = reports[LearningResourceType.video.name]
+    assert videos.details["created"] == ["vid-c"]
+    assert videos.details["unpublished"] == ["vid-b"]
+    assert videos.details["changed"] == {
+        "vid-a": {"title": ["Video vid-a", "Retitled"]}
+    }
+    assert stored_youtube() == before
+    mock_search.upsert.assert_not_called()
+    mock_search.bulk_deindex.assert_not_called()
+
+
+def test_sync_youtube_as_a_shadow_compares_content_file_playlists(
+    warehouse_owns_youtube,
+):
+    """
+    A create_videos=False playlist's videos are compared as the content files
+    make them, and one with too few matches left is reported unpublished
+    """
+    run = LearningResourceRunFactory.create(published=True)
+    content_files = {
+        video_id: ContentFileFactory.create(youtube_id=video_id, run=run)
+        for video_id in ("vid-a", "vid-b", "vid-c")
+    }
+    views = (
+        [channel_row()],
+        [
+            playlist_row("PL-ocw", create_videos=0),
+            playlist_row("PL-gone", create_videos=0),
+        ],
+        [
+            membership_row("PL-ocw", "vid-a", 0),
+            membership_row("PL-ocw", "vid-b", 1),
+            membership_row("PL-gone", "vid-c", 0),
+        ],
+        [video_row("vid-a"), video_row("vid-b"), video_row("vid-c")],
+    )
+    sync_and_load_youtube(*views)
+    assert (
+        LearningResource.objects.get(readable_id="vid-a").title
+        == content_files["vid-a"].title
+    )
+    content_files["vid-c"].published = False
+    content_files["vid-c"].save()
+    before = stored_youtube()
+
+    reports = shadow_youtube(*views)
+
+    playlists = reports[LearningResourceType.video_playlist.name]
+    assert playlists.details["unpublished"] == ["PL-gone"]
+    assert playlists.counts["unchanged"] == 1
+    videos = reports[LearningResourceType.video.name]
+    assert videos.details["unpublished"] == ["vid-c"]
+    assert videos.counts["unchanged"] == 2
+    for report in reports.values():
+        assert report.error == ""
+        assert report.details["field_counts"] == {}
+    assert stored_youtube() == before
+
+
 def test_sync_youtube_does_nothing_unless_the_warehouse_owns_youtube():
     """With no ownership row the legacy ETL owns youtube, and nothing is prepared"""
     with writing_as(Pipeline.WAREHOUSE):
@@ -581,7 +736,7 @@ def test_sync_podcasts_as_a_shadow_compares_without_writing(warehouse_owns_podca
     before = list(LearningResource.objects.order_by("id").values())
 
     with writing_as(Pipeline.WAREHOUSE):
-        _, reports = run_shadow(
+        _, reports = shadow.run_shadow(
             [(ETLSource.podcast.name, warehouse_media.PODCAST_TYPES)],
             lambda: warehouse_media.sync_podcasts(podcasts, episodes),
         )
