@@ -49,7 +49,7 @@ from typing import Any
 from django.db.models import Model, Prefetch, Q
 from django.utils import timezone
 
-from learning_resources.constants import LearningResourceType, RunStatus
+from learning_resources.constants import LearningResourceType, PlatformType, RunStatus
 from learning_resources.etl.constants import ETLSource
 from learning_resources.etl.ownership import current_pipeline, shadowing
 from learning_resources.models import (
@@ -427,17 +427,19 @@ def _observe_item(  # noqa: PLR0913
 ) -> None:
     """Classify one item of a batch against the stored resource it would load into."""
     key = item["readable_id"]
-    if not candidates:
-        report.created.append(key)
-        return
+    # the loaders key a resource on its platform too, so one on another
+    # platform is a different resource and the item would be created
     resource = next(
         (
             candidate
             for candidate in candidates
-            if candidate.platform and candidate.platform.code == item.get("platform")
+            if candidate.platform and candidate.platform.code == item["platform"]
         ),
-        candidates[0],
+        None,
     )
+    if resource is None:
+        report.created.append(key)
+        return
     report.seen.add(resource.id)
     published = item.get("published", resource.published)
     if resource_type in _TYPES_WITH_RUNS and (not item.get("runs") or key in blocklist):
@@ -513,16 +515,18 @@ def observe_podcasts(podcasts_data: Iterable[dict], tracked_ids: Sequence[str]) 
     publish.
     """
     etl_source = ETLSource.podcast.name
+    # load_podcast and load_podcast_episode store every item on this platform
+    platform = {"platform": PlatformType.podcast.name}
     podcasts, episodes, published, empty = [], [], set(), set()
     for podcast in podcasts_data:
         podcast_episodes = list(podcast.get("episodes", []))
         if not podcast_episodes:
             empty.add(podcast["readable_id"])
             continue
-        podcasts.append(podcast)
+        podcasts.append({**podcast, **platform})
         if podcast.get("published", True):
             published.add(podcast["readable_id"])
-            episodes.extend(podcast_episodes)
+            episodes.extend({**episode, **platform} for episode in podcast_episodes)
     observe(
         etl_source,
         PODCAST,
