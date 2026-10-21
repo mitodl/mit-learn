@@ -165,6 +165,17 @@ package = false
 default-groups = "all"
 exclude-newer = "7d"
 required-version = ">=0.9.17"
+# opik (through ol-llm) hard-requires these, but nothing litellm, ol_llm, or a
+# traced embedding imports needs them. See ol-llm's README, "Installing without
+# the Opik SDK's heavy dependencies"; mit-learn keeps the rest of that list
+# (click, litellm, openai, pytest, watchfiles) because it uses them.
+override-dependencies = [
+    "boto3-stubs; sys_platform == 'never'",
+    "rapidfuzz; sys_platform == 'never'",
+    "tree-sitter; sys_platform == 'never'",
+    "tree-sitter-javascript; sys_platform == 'never'",
+    "tree-sitter-typescript; sys_platform == 'never'",
+]
 
 [tool.uv.exclude-newer-package]
 mitol-django-common = "0d"
