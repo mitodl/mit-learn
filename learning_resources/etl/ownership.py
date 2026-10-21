@@ -99,7 +99,9 @@ def is_shadow_run() -> bool:
     return _shadow_run.get()
 
 
-def _get_row(etl_source: str, resource_type: str) -> ETLSourceOwnership | None:
+def _get_ownership_record(
+    etl_source: str, resource_type: str
+) -> ETLSourceOwnership | None:
     return ETLSourceOwnership.objects.filter(
         etl_source=etl_source, resource_type=resource_type
     ).first()
@@ -107,7 +109,7 @@ def _get_row(etl_source: str, resource_type: str) -> ETLSourceOwnership | None:
 
 def get_owner(etl_source: str, resource_type: str) -> str:
     """Return the pipeline that owns an (etl_source, resource_type) pair."""
-    row = _get_row(etl_source, resource_type)
+    row = _get_ownership_record(etl_source, resource_type)
     return row.owner if row else Pipeline.LEGACY
 
 
@@ -131,7 +133,7 @@ def run_mode(etl_source: str, resource_types: str | Iterable[str]) -> RunMode:
     mode = RunMode.WRITE
     not_owned = {}
     for resource_type in resource_types:
-        row = _get_row(etl_source, resource_type)
+        row = _get_ownership_record(etl_source, resource_type)
         owner = row.owner if row else Pipeline.LEGACY
         if owner == pipeline:
             continue
