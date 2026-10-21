@@ -34,7 +34,7 @@ The following embeddings related settings are available in the `settings.py` fil
 
 The model is the ol-llm catalog id of `QDRANT_DENSE_MODEL` as litellm resolves it, e.g. `openai:text-embedding-3-large`.
 
-Hedged query requests are each traced, since each one is billed. A query served from the Redis cache reports 0 input tokens. Requests with more than one text skip the cache: litellm caches each text separately and reports a partial hit's usage as the sum of cached and billed tokens.
+Hedged query requests are each traced, since each one is billed. A request served from the Redis cache reports 0 input tokens. litellm's sync `embedding` caches a request as a whole, so a response comes either wholly from the cache or wholly from the provider.
 
 Tracing is off unless `OPIK_URL_OVERRIDE` is set, so local development, CI, and tests need no Opik. The variables, read by ol-llm and the Opik SDK:
 

@@ -546,25 +546,25 @@ def test_litellm_encoder_cache_hit_reports_no_tokens(
     assert [tokens for *_, tokens in _recorded(traced)] == [expected_tokens]
 
 
+@pytest.mark.parametrize(("cache_hit", "expected_tokens"), [(True, 0), (False, 9)])
 @patch("vector_search.encoders.litellm.embedding")
-def test_litellm_encoder_multi_text_bypasses_cache(mock_embedding, traced):
+def test_litellm_encoder_multi_text_cache_hit_reports_no_tokens(
+    mock_embedding, traced, cache_hit, expected_tokens
+):
     """
-    Several texts are never served from the cache, where a partial hit would
-    sum cached and billed usage, so the tokens recorded are the billed ones
+    A multi-text request is cached as a whole, so a hit reports 0 tokens and a
+    miss reports the provider's usage
     """
     mock_embedding.return_value = _embedding_response(
-        [0.1], [0.2], prompt_tokens=9, cache_hit=False
+        [0.1], [0.2], prompt_tokens=9, cache_hit=cache_hit
     )
     encoder = LiteLLMEncoder("test_model")
     encoder.cache = True
 
     encoder.embed_documents(["one", "two"])
 
-    assert mock_embedding.call_args.kwargs["cache"] == {
-        "no-cache": True,
-        "no-store": True,
-    }
-    assert [tokens for *_, tokens in _recorded(traced)] == [9]
+    assert mock_embedding.call_args.kwargs["cache"]["caching"] is True
+    assert [tokens for *_, tokens in _recorded(traced)] == [expected_tokens]
 
 
 @patch("vector_search.encoders.litellm.embedding")
