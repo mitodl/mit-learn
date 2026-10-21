@@ -1296,15 +1296,15 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
                     paddingTop: "48px",
                     [`.${BANNER_CLASS}`]: { marginTop: 0, marginBottom: 0 },
                     /**
-                     * The 8px that makes the results sit 32px below the last
-                     * of those rows rather than the 24px between them -- the
-                     * design groups the four together and sets the grid
-                     * further off than they are off each other.
+                     * The 8px on top of the column's 24px that sets the grid
+                     * 32px below the filters -- the design spaces the banner,
+                     * the card, the tabs and the filters evenly, then sets the
+                     * results further off than that.
                      *
-                     * On the panel because the panel is what the gap lands
-                     * against; above `md` only, because below it the panel
-                     * leads with the Filter button, which holds itself off
-                     * what is above it already.
+                     * On the panel because the panel is what the column's gap
+                     * lands against. Above `md` only, because below it the
+                     * panel leads with the Filter button rather than the grid,
+                     * and that holds itself off what is above it already.
                      */
                     [theme.breakpoints.up("md")]: {
                       ".MuiTabPanel-root": { paddingTop: "8px" },
