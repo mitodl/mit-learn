@@ -61,7 +61,7 @@ A shadow run is the new pipeline's extract and transform, with the owner unchang
 
 The comparison is a second copy of the loaders' rules (`learning_resources/etl/shadow.py`), not the loaders themselves. It tells you whether the new pipeline's data matches what is stored. It does not prove the load runs, so the first write after a flip is still the first time the loaders see that batch.
 
-1. In Django admin, create or edit the row for each resource type from the table above, leave `owner` as it is and set `shadow` to the new pipeline. All of a source's rows that one load writes together (`podcast` and `podcast_episode`, `video_playlist` and `video`) need it.
+1. In Django admin, create or edit the row for each resource type from the table above, leave `owner` as it is and set `shadow` to the new pipeline. All of a source's rows that one load writes together (e.g. `podcast` and `podcast_episode`) need it. Admin refuses a shadow on a `video_playlist` or `video` row, because nothing compares playlists and videos yet, so `youtube` and `ovs` can't be shadowed.
 2. Run the new pipeline as you would for the flip, or wait for its schedule:
    - warehouse: `<SyncTask>.delay()`. A shadow run is always a full refresh and leaves the incremental watermark alone. The task logs how many items the loaders compared, since they load none.
    - webhook: not wired to the shadow yet. Until it is, the webhook answers `409` for a pair it doesn't own, shadow or not.
@@ -77,7 +77,7 @@ Each report has:
 
 What is compared: every key of an item that is a column of the resource, `published` as the loader would set it, topics, `offered_by`, image, departments, content tags, the course, podcast or episode detail row, each run by `run_id` (its columns, prices, instructors and image, and the runs a prune would unpublish), and a program's children.
 
-What is not: fields the loaders derive from a course's or program's runs (`availability`, `prices`, `next_start_date`, the duration and commitment fields), topics found by similarity for a document that has none, the courses a program load writes, content files, and anything a pipeline writes without going through those four loaders (playlists and videos).
+What is not: fields the loaders derive from a course's or program's runs (`availability`, `prices`, `next_start_date`, the duration and commitment fields), topics found by similarity for a document that has none, the courses a program load writes, content files, and anything a pipeline writes without going through those four loaders.
 
 Things a shadow run costs while it is on:
 
