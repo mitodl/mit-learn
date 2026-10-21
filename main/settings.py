@@ -43,10 +43,12 @@ log = logging.getLogger()
 ENVIRONMENT = get_string("MITOL_ENVIRONMENT", "dev")
 DEFAULT_AUTO_FIELD = "django.db.models.AutoField"
 
-# litellm imports the Opik SDK whenever it is installed (ol-llm brings it in), and
-# the SDK starts its own Sentry client on import, replacing ours. ol_llm sets this
-# on import too, but importing it here would put opik on the boot path.
+# litellm imports the Opik SDK whenever it is installed (ol-llm brings it in). The
+# SDK then starts its own Sentry client, replacing ours, and reports usage analytics
+# to Comet. Importing ol_llm here, which disables the Sentry client on import, would
+# put opik on the boot path, and litellm imports opik before ol_llm anyway.
 os.environ.setdefault("OPIK_SENTRY_ENABLE", "false")
+os.environ.setdefault("OPIK_ANALYTICS_ENABLE", "false")
 
 # initialize Sentry before doing anything else so we capture any config errors
 SENTRY_DSN = get_string("SENTRY_DSN", "")
