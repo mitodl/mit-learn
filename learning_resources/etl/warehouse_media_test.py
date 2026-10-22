@@ -540,6 +540,55 @@ def test_sync_youtube_as_a_shadow_compares_content_file_playlists(
     assert stored_youtube() == before
 
 
+def test_sync_youtube_as_a_shadow_finds_a_content_file_video_on_another_platform(
+    warehouse_owns_youtube,
+):
+    """
+    load_video_with_content_file finds a video by its etl_source and not its
+    platform, and moves it to its course's platform, so a youtube video that
+    an OCW content file now matches is reported updated, not created and
+    unpublished
+    """
+    youtube_views = (
+        [channel_row()],
+        [playlist_row("PL-one")],
+        [membership_row("PL-one", "vid-a", 0)],
+        [video_row("vid-a")],
+    )
+    sync_and_load_youtube(*youtube_views)
+    video_id = LearningResource.objects.get(readable_id="vid-a").id
+    run = LearningResourceRunFactory.create(
+        published=True,
+        learning_resource__platform=LearningResourcePlatformFactory.create(
+            code=PlatformType.ocw.name
+        ),
+    )
+    ContentFileFactory.create(youtube_id="vid-a", run=run)
+    ocw_views = (
+        youtube_views[0],
+        [playlist_row("PL-one", create_videos=0)],
+        *youtube_views[2:],
+    )
+
+    reports = shadow_youtube(*ocw_views)
+
+    videos = reports[LearningResourceType.video.name]
+    assert videos.details["created"] == []
+    assert videos.details["unpublished"] == []
+    assert videos.details["changed"]["vid-a"]["platform"] == [
+        PlatformType.youtube.name,
+        PlatformType.ocw.name,
+    ]
+    # and the owner's load does what the report says
+    ETLSourceOwnership.objects.filter(etl_source=ETLSource.youtube.name).update(
+        owner=Pipeline.WAREHOUSE
+    )
+    sync_and_load_youtube(*ocw_views)
+    video = LearningResource.objects.get(readable_id="vid-a")
+    assert video.id == video_id
+    assert video.platform.code == PlatformType.ocw.name
+
+
 def test_sync_youtube_does_nothing_unless_the_warehouse_owns_youtube():
     """With no ownership row the legacy ETL owns youtube, and nothing is prepared"""
     with writing_as(Pipeline.WAREHOUSE):
