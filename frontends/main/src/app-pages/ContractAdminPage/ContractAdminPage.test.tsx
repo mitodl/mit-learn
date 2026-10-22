@@ -354,6 +354,19 @@ describe("ContractAdminPage", () => {
       )
     }
 
+    // Wrapped in act so the page's pending timers (search debounce, live
+    // region announcement) can't fire outside act while the read is awaited.
+    const readBlobText = (blob: Blob) =>
+      act(
+        () =>
+          new Promise<string>((resolve, reject) => {
+            const reader = new FileReader()
+            reader.onload = () => resolve(reader.result as string)
+            reader.onerror = reject
+            reader.readAsText(blob)
+          }),
+      )
+
     const mockAnchorClick = jest.fn()
     const mockCreateObjectURL = jest.fn().mockReturnValue("blob:fake-url")
     const mockRevokeObjectURL = jest.fn()
@@ -449,12 +462,7 @@ describe("ContractAdminPage", () => {
         expect(mockCreateObjectURL).toHaveBeenCalledWith(expect.any(Blob))
       })
       const blob = mockCreateObjectURL.mock.calls[0][0] as Blob
-      const csv = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader()
-        reader.onload = () => resolve(reader.result as string)
-        reader.onerror = reject
-        reader.readAsText(blob)
-      })
+      const csv = await readBlobText(blob)
       expect(csv).toContain("alice@example.com")
       expect(csv).toContain("bob@example.com")
     })
@@ -506,12 +514,7 @@ describe("ContractAdminPage", () => {
         expect(mockCreateObjectURL).toHaveBeenCalledWith(expect.any(Blob))
       })
       const blob = mockCreateObjectURL.mock.calls[0][0] as Blob
-      const csv = await new Promise<string>((resolve, reject) => {
-        const reader = new FileReader()
-        reader.onload = () => resolve(reader.result as string)
-        reader.onerror = reject
-        reader.readAsText(blob)
-      })
+      const csv = await readBlobText(blob)
 
       // Status is the 3rd CSV column (Assigned to, Redeemed by, Status, ...).
       // Parsed by row rather than a full-row string match since assigned_on

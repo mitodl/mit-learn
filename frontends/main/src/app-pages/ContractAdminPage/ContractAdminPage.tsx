@@ -415,12 +415,13 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
 
   // Debounce search query to avoid firing a new request on every keystroke.
   useEffect(() => {
+    if (searchQuery === debouncedSearchQuery) return
     const id = setTimeout(() => {
       setDebouncedSearchQuery(searchQuery)
       setPage(1)
     }, 300)
     return () => clearTimeout(id)
-  }, [searchQuery])
+  }, [searchQuery, debouncedSearchQuery])
 
   // Mirror row-action Alert text into an assertive live region — smoot-design
   // Alert announces only its aria-describedby ("success/error message") via NVDA

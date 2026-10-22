@@ -285,7 +285,7 @@ def start_embed_resources(self, indexes, skip_content_files, overwrite):  # noqa
                     .exclude(readable_id__in=blocklisted_ids)
                     .order_by("id")
                 ):
-                    # Embed published content files across all runs of the course
+                    # Embed visible content files across all runs of the course
                     # (Qdrant retains all runs, not just best_run).
                     contentfiles = (
                         qdrant_content_files(
@@ -474,7 +474,7 @@ def embed_new_content_files(self):
 @app.task(bind=True, max_retries=3)
 def embed_run_content_files(self, run_id):
     """
-    Embed the run's published content files whose Qdrant points are missing or
+    Embed the run's visible content files whose Qdrant points are missing or
     stale (checksum or a payload metadata field differs).
 
     A run-level pre-pass batch-compares each file's DB checksum and payload
@@ -520,17 +520,15 @@ def embed_run_content_files(self, run_id):
     contentless = Q(content__isnull=True) | Q(content="")
     pid_rows = [
         (cf_id, first_chunk_point_id(key), checksum, meta)
-        for cf_id, key, checksum, *meta in ContentFile.objects.filter(
-            run=run, published=True
-        )
+        for cf_id, key, checksum, *meta in run.content_files.visible()
         .exclude(contentless)
         .values_list("id", "key", "checksum", *CONTENT_FILE_PREPASS_PAYLOAD_FIELDS)
     ]
     contentless_rows = [
         (cf_id, first_chunk_point_id(key))
-        for cf_id, key in ContentFile.objects.filter(
-            contentless, run=run, published=True
-        ).values_list("id", "key")
+        for cf_id, key in run.content_files.visible()
+        .filter(contentless)
+        .values_list("id", "key")
     ]
     try:
         stored = _stored_content_payloads(
@@ -630,12 +628,10 @@ def remove_deleted_run_content_files(run_readable_id, resource_readable_id, plat
 @app.task(bind=True)
 def remove_unpublished_run_content_files(self, run_id):
     """
-    Remove unpublished content files associated with a run from Qdrant
+    Remove hidden content files associated with a run from Qdrant
     """
     content_file_ids = list(
-        ContentFile.objects.filter(run__id=run_id, published=False).values_list(
-            "id", flat=True
-        )
+        ContentFile.objects.filter(run__id=run_id).hidden().values_list("id", flat=True)
     )
     tasks = [
         remove_embeddings.si(ids, CONTENT_FILE_TYPE)

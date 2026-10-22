@@ -39,7 +39,7 @@ const SHOW_PROFESSIONAL_TOGGLE_BY_CHANNEL_TYPE: Record<
    * False since the topic design, which lists what its filter drawer holds
    * and does not hold this. The toggle rides along with the facets, and a
    * topic channel has drawn those in neither place since it moved to the
-   * "topic" layout -- no sidebar, and until now no drawer -- so this is the
+   * "cards" layout -- no sidebar, and until now no drawer -- so this is the
    * setting it has effectively had all along, now that there is somewhere
    * for it to take effect.
    */
@@ -60,7 +60,7 @@ interface ChannelSearchProps {
    * Defaults to "default" -- the centred search box and facet sidebar every
    * other channel has, unchanged.
    */
-  layout?: "default" | "topic"
+  layout?: "default" | "cards"
 }
 
 const ChannelSearch: React.FC<ChannelSearchProps> = ({
@@ -154,7 +154,7 @@ const ChannelSearch: React.FC<ChannelSearchProps> = ({
   return (
     <section>
       <VisuallyHidden as="h2">Search within {channelTitle}</VisuallyHidden>
-      {layout === "topic" ? null : (
+      {layout === "cards" ? null : (
         <SearchInputContainer>
           <StyledSearchField
             value={currentText}
@@ -176,7 +176,7 @@ const ChannelSearch: React.FC<ChannelSearchProps> = ({
            sits in, so the display renders it rather than this placing it
            above -- see `TopicSearchCard`. */
         filterBarSlot={
-          layout === "topic"
+          layout === "cards"
             ? (aggregations) => (
                 <TopicSearchFilterBar
                   currentText={currentText}
@@ -193,7 +193,7 @@ const ChannelSearch: React.FC<ChannelSearchProps> = ({
             : undefined
         }
         drawerSearchSlot={
-          layout === "topic" ? (
+          layout === "cards" ? (
             <SearchField
               value={currentText}
               placeholder="Search for courses, programs, and learning materials..."
@@ -220,8 +220,8 @@ const ChannelSearch: React.FC<ChannelSearchProps> = ({
         showProfessionalToggle={
           SHOW_PROFESSIONAL_TOGGLE_BY_CHANNEL_TYPE[channelType]
         }
-        resultsLayout={layout === "topic" ? "cards" : "default"}
-        tabs={layout === "topic" ? TOPIC_TABS : undefined}
+        resultsLayout={layout === "cards" ? "cards" : "default"}
+        tabs={layout === "cards" ? TOPIC_TABS : undefined}
       />
     </section>
   )
