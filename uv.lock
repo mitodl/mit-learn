@@ -2868,7 +2868,7 @@ requires-dist = [
     { name = "nested-lookup", specifier = ">=0.2.25,<0.3" },
     { name = "nh3", specifier = ">=0.3.0,<0.4" },
     { name = "ocw-data-parser", specifier = ">=0.35.1,<0.36" },
-    { name = "ol-llm", specifier = ">=0.0.3" },
+    { name = "ol-llm", specifier = ">=0.0.4" },
     { name = "onnxruntime", specifier = "==1.24.4" },
     { name = "openai", specifier = ">=2.0.0,<3" },
     { name = "opencv-python", specifier = ">=4.12.0.88,<5" },
