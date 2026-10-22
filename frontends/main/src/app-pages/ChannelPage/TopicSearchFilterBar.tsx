@@ -111,6 +111,18 @@ const FacetSelect = styled(SimpleSelect)(({ theme }) => ({
     fontSize: "20px",
     right: "12px",
   },
+  /**
+   * The same answer to the pointer an unselected tab gives: the label darkens
+   * to `darkGray2`, with nothing drawn behind it.
+   *
+   * The chevron is named as well as the label because it does not inherit --
+   * Select colours its own icon, so on the label alone the words would darken
+   * and the arrow beside them would sit unchanged.
+   */
+  ":hover": {
+    color: theme.custom.colors.darkGray2,
+    ".MuiSelect-icon": { color: theme.custom.colors.darkGray2 },
+  },
 }))
 
 /**
