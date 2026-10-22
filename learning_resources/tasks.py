@@ -36,6 +36,7 @@ from learning_resources.etl import (
     pipelines,
     podcast,
     warehouse_media,
+    warehouse_mitxonline,
     warehouse_xpro,
     youtube,
 )
@@ -1664,3 +1665,87 @@ class SyncXproProgramsTask(BaseWarehouseETLTask):
 
 
 SyncXproProgramsTask = app.register_task(SyncXproProgramsTask())
+
+
+class SyncMITxOnlineCoursesTask(BaseWarehouseETLTask):
+    """
+    Warehouse-pull sync of the MITx Online courses and their runs, replacing
+    get_mitxonline_data's course half once ETLSourceOwnership names the
+    warehouse for mitxonline course.
+
+    Always a full sync, whatever ``since`` is: a course is loaded with all of
+    its runs, and a run's published state and prices depend on when the view
+    was built.
+
+    A run that would unpublish more than warehouse_guards.MAX_UNPUBLISH_SHARE of
+    the published courses fails before writing. Queue it with
+    ``allow_mass_unpublish=True`` when the removal is real.
+    """
+
+    name = "learning_resources.tasks.SyncMITxOnlineCoursesTask"
+    table_name = "integrations__learn__mitxonline_courses"
+    writes = (ETLSource.mitxonline.name, [LearningResourceType.course.name])
+
+    def fetch_and_upsert(
+        self,
+        conn,
+        *,
+        since=None,  # noqa: ARG002
+        allow_mass_unpublish: bool = False,
+    ) -> int:
+        """Read the MITx Online course and run views and load them."""
+        return warehouse_mitxonline.sync_courses(
+            list(iter_rows(conn, self.view_name)),
+            list(
+                iter_rows(
+                    conn, self.qualified_name("integrations__learn__mitxonline_runs")
+                )
+            ),
+            allow_mass_unpublish=allow_mass_unpublish,
+        )
+
+
+SyncMITxOnlineCoursesTask = app.register_task(SyncMITxOnlineCoursesTask())
+
+
+class SyncMITxOnlineProgramsTask(BaseWarehouseETLTask):
+    """
+    Warehouse-pull sync of the MITx Online programs, replacing
+    get_mitxonline_data's program half once ETLSourceOwnership names the
+    warehouse for mitxonline program.
+
+    A program's courses are looked up among the MITx Online courses MIT Learn
+    has, not loaded, so run SyncMITxOnlineCoursesTask first. Always a full
+    sync, whatever ``since`` is.
+
+    A run that would unpublish more than warehouse_guards.MAX_UNPUBLISH_SHARE of
+    the published programs fails before writing. Queue it with
+    ``allow_mass_unpublish=True`` when the removal is real.
+    """
+
+    name = "learning_resources.tasks.SyncMITxOnlineProgramsTask"
+    table_name = "integrations__learn__mitxonline_programs"
+    writes = (ETLSource.mitxonline.name, [LearningResourceType.program.name])
+
+    def fetch_and_upsert(
+        self,
+        conn,
+        *,
+        since=None,  # noqa: ARG002
+        allow_mass_unpublish: bool = False,
+    ) -> int:
+        """Read the MITx Online program views and load the programs."""
+        return warehouse_mitxonline.sync_programs(
+            *(
+                list(iter_rows(conn, self.qualified_name(table)))
+                for table in (
+                    self.table_name,
+                    "integrations__learn__mitxonline_program_children",
+                    "integrations__learn__mitxonline_courses",
+                )
+            ),
+            allow_mass_unpublish=allow_mass_unpublish,
+        )
+
+
+SyncMITxOnlineProgramsTask = app.register_task(SyncMITxOnlineProgramsTask())

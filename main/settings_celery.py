@@ -292,6 +292,19 @@ if (
                 "schedule": crontab(minute=30, hour=11),
                 "kwargs": {"full_refresh": True},
             },
+            # 12:30, not 12:00, which update-mitxonline-courses-every-6-hours
+            # takes. The legacy task runs every 6 hours; the views change once a
+            # day.
+            "warehouse-sync-mitxonline-courses-every-1-days": {
+                "task": "learning_resources.tasks.SyncMITxOnlineCoursesTask",
+                "schedule": crontab(minute=30, hour=12),
+                "kwargs": {"full_refresh": True},
+            },
+            "warehouse-sync-mitxonline-programs-every-1-days": {
+                "task": "learning_resources.tasks.SyncMITxOnlineProgramsTask",
+                "schedule": crontab(minute=0, hour=13),
+                "kwargs": {"full_refresh": True},
+            },
         }
     )
 

@@ -2590,6 +2590,9 @@ PODCAST_OWNED = pytest.param(
     (ETLSource.podcast.name, ["podcast", "podcast_episode"]), id="podcast"
 )
 XPRO_OWNED = pytest.param((ETLSource.xpro.name, ["course", "program"]), id="xpro")
+MITXONLINE_OWNED = pytest.param(
+    (ETLSource.mitxonline.name, ["course", "program"]), id="mitxonline"
+)
 
 
 @pytest.mark.parametrize("warehouse_owns", [YOUTUBE_OWNED], indirect=True)
@@ -2829,30 +2832,55 @@ def test_media_sync_tasks_pass_on_allow_mass_unpublish(  # noqa: PLR0913
     assert mock_sync.call_args.kwargs == {"allow_mass_unpublish": allow}
 
 
-@pytest.mark.parametrize("warehouse_owns", [XPRO_OWNED], indirect=True)
 @pytest.mark.parametrize(
-    ("task", "sync", "views"),
+    ("warehouse_owns", "task", "sync", "views"),
     [
-        (
+        pytest.param(
+            XPRO_OWNED.values[0],
             "SyncXproCoursesTask",
-            "sync_courses",
+            "warehouse_xpro.sync_courses",
             ["integrations__learn__xpro_courses", "integrations__learn__xpro_runs"],
+            id="xpro-courses",
         ),
-        (
+        pytest.param(
+            XPRO_OWNED.values[0],
             "SyncXproProgramsTask",
-            "sync_programs",
+            "warehouse_xpro.sync_programs",
             ["integrations__learn__xpro_programs"],
+            id="xpro-programs",
+        ),
+        pytest.param(
+            MITXONLINE_OWNED.values[0],
+            "SyncMITxOnlineCoursesTask",
+            "warehouse_mitxonline.sync_courses",
+            [
+                "integrations__learn__mitxonline_courses",
+                "integrations__learn__mitxonline_runs",
+            ],
+            id="mitxonline-courses",
+        ),
+        pytest.param(
+            MITXONLINE_OWNED.values[0],
+            "SyncMITxOnlineProgramsTask",
+            "warehouse_mitxonline.sync_programs",
+            [
+                "integrations__learn__mitxonline_programs",
+                "integrations__learn__mitxonline_program_children",
+                "integrations__learn__mitxonline_courses",
+            ],
+            id="mitxonline-programs",
         ),
     ],
+    indirect=["warehouse_owns"],
 )
 @pytest.mark.parametrize("allow", [True, False])
 @pytest.mark.parametrize("call", ["run", "apply"])
-def test_xpro_sync_tasks_read_their_views(  # noqa: PLR0913
+def test_catalog_sync_tasks_read_their_views(  # noqa: PLR0913
     mocker, warehouse_owns, task, sync, views, allow, call
 ):
     """
-    Each xPRO sync task reads its views in full and passes on the unpublish
-    override, whether queued or run directly
+    Each xPRO and MITx Online sync task reads its views in full and passes on
+    the unpublish override, whether queued or run directly
     """
     mocker.patch("learning_resources.lib.warehouse.connect_to_warehouse")
     rows = {view: [{"readable_id": view}] for view in views}
@@ -2860,9 +2888,7 @@ def test_xpro_sync_tasks_read_their_views(  # noqa: PLR0913
         "learning_resources.tasks.iter_rows",
         side_effect=lambda _conn, view: iter(rows[view.rsplit(".", 1)[1]]),
     )
-    mock_sync = mocker.patch(
-        f"learning_resources.tasks.warehouse_xpro.{sync}", return_value=1
-    )
+    mock_sync = mocker.patch(f"learning_resources.tasks.{sync}", return_value=1)
 
     kwargs = {"allow_mass_unpublish": True} if allow else {}
     count = (
@@ -2879,8 +2905,16 @@ def test_xpro_sync_tasks_read_their_views(  # noqa: PLR0913
     )
 
 
-@pytest.mark.parametrize("task", ["SyncXproCoursesTask", "SyncXproProgramsTask"])
-def test_xpro_sync_tasks_read_nothing_they_do_not_own(mocker, task):
+@pytest.mark.parametrize(
+    "task",
+    [
+        "SyncXproCoursesTask",
+        "SyncXproProgramsTask",
+        "SyncMITxOnlineCoursesTask",
+        "SyncMITxOnlineProgramsTask",
+    ],
+)
+def test_catalog_sync_tasks_read_nothing_they_do_not_own(mocker, task):
     """Until the ownership row is flipped a run neither connects to the warehouse nor writes"""
     mock_connect = mocker.patch("learning_resources.lib.warehouse.connect_to_warehouse")
     mock_iter_rows = mocker.patch("learning_resources.tasks.iter_rows")

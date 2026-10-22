@@ -503,6 +503,35 @@ def test_sync_courses_counts_only_published_courses_as_pulled(
     ).count() == len(api_courses)
 
 
+def test_sync_courses_counts_a_published_course_without_runs_as_unpublished(
+    warehouse_owns_xpro, api_courses
+):
+    """
+    A course whose runs are missing from the runs view is loaded unpublished,
+    so it counts toward the limit
+    """
+    published = [
+        LearningResourceFactory.create(
+            etl_source=ETLSource.xpro.name,
+            resource_type=COURSE,
+            readable_id=course["readable_id"],
+            published=True,
+            platform__code=xpro.XPRO_PLATFORM_TRANSFORM[course["platform"]],
+        )
+        for course in api_courses
+    ]
+
+    with writing_as(Pipeline.WAREHOUSE), pytest.raises(ExtractException):
+        warehouse_xpro.sync_courses(
+            [course_row(course) for course in api_courses],
+            run_rows(api_courses[0]),
+        )
+
+    for resource in published:
+        resource.refresh_from_db()
+        assert resource.published is True
+
+
 def test_sync_programs_refuses_an_empty_view(warehouse_owns_xpro):
     """An empty programs view is a failed build, not an empty catalog"""
     with writing_as(Pipeline.WAREHOUSE), pytest.raises(ExtractException):

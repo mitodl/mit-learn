@@ -413,6 +413,12 @@ class TestSettings(TestCase):
             "warehouse-sync-xpro-programs-every-1-days": (
                 "learning_resources.tasks.SyncXproProgramsTask"
             ),
+            "warehouse-sync-mitxonline-courses-every-1-days": (
+                "learning_resources.tasks.SyncMITxOnlineCoursesTask"
+            ),
+            "warehouse-sync-mitxonline-programs-every-1-days": (
+                "learning_resources.tasks.SyncMITxOnlineProgramsTask"
+            ),
         }
         with mock.patch.dict("os.environ", REQUIRED_SETTINGS, clear=True):
             settings_vars = self.reload_settings(module="main.settings_celery")
