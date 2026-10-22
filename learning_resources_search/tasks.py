@@ -583,7 +583,7 @@ def deindex_run_content_files(run_id, unpublished_only, keep_published=False):  
 
     Args:
         run_id(int): LearningResourceRun id
-        unpublished_only(bool): Whether to only deindex unpublished content files
+        unpublished_only(bool): Whether to only deindex hidden content files
         keep_published(bool): Whether to remove from OpenSearch without flipping
             ContentFile.published
     """
@@ -1134,13 +1134,12 @@ def start_update_index(self, indexes, etl_source):
 def _update_content_files_tasks(learning_resource, resource_type):
     """
     Get tasks that index a resource's OpenSearch content files and deindex
-    everything else: files of runs no longer selected, and unpublished files.
+    everything else: files of runs no longer selected, and hidden files.
     """
-    unpublished = ContentFile.objects.filter(
+    hidden = ContentFile.objects.filter(
         Q(run__learning_resource_id=learning_resource.id)
-        | Q(learning_resource_id=learning_resource.id),
-        published=False,
-    )
+        | Q(learning_resource_id=learning_resource.id)
+    ).hidden()
     return (
         [
             index_content_files.si(
@@ -1166,7 +1165,7 @@ def _update_content_files_tasks(learning_resource, resource_type):
                 ids, learning_resource.id, resource_type=resource_type
             )
             for ids in chunks(
-                unpublished.order_by("id").values_list("id", flat=True),
+                hidden.order_by("id").values_list("id", flat=True),
                 chunk_size=settings.OPENSEARCH_DOCUMENT_INDEXING_CHUNK_SIZE,
             )
         ]

@@ -2,7 +2,8 @@
 
 import shutil
 import tarfile
-from datetime import datetime
+from contextlib import nullcontext
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from types import SimpleNamespace
 from zoneinfo import ZoneInfo
@@ -22,7 +23,7 @@ from learning_resources.etl.edx_shared import (
     sync_edx_course_files,
     unpublish_excluded_content_files,
 )
-from learning_resources.etl.olx import get_edx_module_id
+from learning_resources.etl.olx import OlxArchive, get_edx_module_id
 from learning_resources.etl.utils import get_s3_prefix_for_source
 from learning_resources.factories import (
     ContentFileFactory,
@@ -30,10 +31,24 @@ from learning_resources.factories import (
     LearningResourceFactory,
     LearningResourcePlatformFactory,
     LearningResourceRunFactory,
+    UnitFactory,
 )
 from learning_resources.models import ContentFile
+from main.utils import now_in_utc
 
 pytestmark = pytest.mark.django_db
+
+
+@pytest.fixture
+def mock_archive(mocker):
+    """Stand in for the unpacked course archive, which has no units by default"""
+    archive = mocker.MagicMock()
+    archive.units.return_value = []
+    mocker.patch(
+        "learning_resources.etl.edx_shared.unpacked_course_archive",
+        return_value=nullcontext(archive),
+    )
+    return archive
 
 
 @pytest.mark.parametrize(
@@ -354,7 +369,7 @@ def test_sync_edx_course_files_error(mock_course_archive_bucket, mocker, source)
     )
     sync_edx_course_files(source, [run.learning_resource.id], [key])
     assert mock_transform.call_count == 1
-    assert str(mock_transform.call_args[0][0]).endswith("foo.tar.gz") is True
+    assert isinstance(mock_transform.call_args[0][0], OlxArchive)
     mock_load_content_files.assert_called_once()
     called_run, called_data = mock_load_content_files.call_args[0]
     assert called_run == run
@@ -858,8 +873,6 @@ def test_sync_edx_archive_non_best_run_processed(
         published=True,
         create_runs=False,
     )
-    from datetime import UTC, datetime
-
     old_run = LearningResourceRunFactory.create(
         learning_resource=course,
         published=True,
@@ -1466,7 +1479,9 @@ def test_build_run_lookup_cross_format_prefix_match():
     assert lookup[normalized_key][0].id == run.id
 
 
-def test_process_course_archive_saves_nothing_when_all_files_fail_ingest(mocker):
+def test_process_course_archive_saves_nothing_when_all_files_fail_ingest(
+    mocker, mock_archive
+):
     """process_course_archive should not update run.checksum or run.archive_key if all files fail to load"""
     run = LearningResourceRunFactory.create(published=True, checksum=None)
     bucket = mocker.MagicMock()
@@ -1496,7 +1511,9 @@ def test_process_course_archive_saves_nothing_when_all_files_fail_ingest(mocker)
     assert run.archive_key is None
 
 
-def test_process_course_archive_sets_checksum_on_successful_ingest(mocker):
+def test_process_course_archive_sets_checksum_on_successful_ingest(
+    mocker, mock_archive
+):
     """process_course_archive should update run.checksum when load_content_files returns non-empty list"""
     run = LearningResourceRunFactory.create(published=True, checksum=None)
     bucket = mocker.MagicMock()
@@ -1521,7 +1538,9 @@ def test_process_course_archive_sets_checksum_on_successful_ingest(mocker):
     assert run.checksum == "newchecksum"
 
 
-def test_process_course_archive_does_not_set_checksum_on_exception(mocker):
+def test_process_course_archive_does_not_set_checksum_on_exception(
+    mocker, mock_archive
+):
     """process_course_archive should not persist checksum if load_content_files raises"""
     run = LearningResourceRunFactory.create(published=True, checksum="oldchecksum")
     bucket = mocker.MagicMock()
@@ -1587,7 +1606,7 @@ def test_process_course_archive_stamps_key_on_checksum_match(mocker):
     assert run.checksum == "samechecksum"
 
 
-def test_process_course_archive_saves_both_fields_on_load(mocker):
+def test_process_course_archive_saves_both_fields_on_load(mocker, mock_archive):
     """A changed archive should load and save both checksum and archive_key"""
     key = "mitxonline/openedx/raw_data/course_xml/course-v1:Test+Course+R1/abc123.xml.tar.gz"
     run = LearningResourceRunFactory.create(
@@ -1617,7 +1636,7 @@ def test_process_course_archive_saves_both_fields_on_load(mocker):
     assert run.checksum == "newchecksum"
 
 
-def test_process_course_archive_stamps_key_for_empty_archive(mocker):
+def test_process_course_archive_stamps_key_for_empty_archive(mocker, mock_archive):
     """An archive whose transform yields no payloads should stamp archive_key only"""
     key = "mitxonline/openedx/raw_data/course_xml/course-v1:Test+Course+R1/abc123.xml.tar.gz"
     run = LearningResourceRunFactory.create(
@@ -1641,7 +1660,7 @@ def test_process_course_archive_stamps_key_for_empty_archive(mocker):
     assert run.checksum is None
 
 
-def test_process_course_archive_overwrite_bypasses_key_gate(mocker):
+def test_process_course_archive_overwrite_bypasses_key_gate(mocker, mock_archive):
     """overwrite=True should download and load even when the stored key matches"""
     key = "mitxonline/openedx/raw_data/course_xml/course-v1:Test+Course+R1/abc123.xml.tar.gz"
     run = LearningResourceRunFactory.create(
@@ -1686,10 +1705,9 @@ def _make_olx_tarball(tmp_path):
     return tarball
 
 
-def test_process_course_archive_retains_failed_file(mocker, tmp_path):
-    """One raising file: others load, its existing ContentFile stays published,
-    checksum and archive_key are stamped
-    """
+@pytest.fixture
+def olx_archive(mocker, tmp_path):
+    """Create a run and a mock bucket serving _make_olx_tarball's export"""
     # load_content_files no-ops for non-course resources; pin the random factory
     run = LearningResourceRunFactory.create(
         archive_key=None,
@@ -1699,7 +1717,14 @@ def test_process_course_archive_retains_failed_file(mocker, tmp_path):
     tarball = _make_olx_tarball(tmp_path)
     bucket = mocker.MagicMock()
     bucket.download_file.side_effect = lambda _key, dest: shutil.copy(tarball, dest)
+    return SimpleNamespace(run=run, bucket=bucket, key="20240101/courses/course.tar.gz")
 
+
+def test_process_course_archive_retains_failed_file(mocker, olx_archive):
+    """One raising file: others load, its existing ContentFile stays published,
+    checksum and archive_key are stamped
+    """
+    run = olx_archive.run
     failing_key = get_edx_module_id("course/static/bad.html", run)
     existing = ContentFileFactory.create(run=run, key=failing_key, published=True)
 
@@ -1716,8 +1741,7 @@ def test_process_course_archive_retains_failed_file(mocker, tmp_path):
     # fields and hits a nonexistent opensearch in CI
     mocker.patch("learning_resources.etl.loaders.content_files_loaded_actions")
 
-    key = "20240101/courses/course.tar.gz"
-    process_course_archive(bucket, key, run)
+    process_course_archive(olx_archive.bucket, olx_archive.key, run)
 
     good_key = get_edx_module_id("course/static/good.html", run)
     assert ContentFile.objects.filter(run=run, key=good_key).exists()
@@ -1725,45 +1749,68 @@ def test_process_course_archive_retains_failed_file(mocker, tmp_path):
     assert existing.published is True
     run.refresh_from_db()
     assert run.checksum
-    assert run.archive_key == key
+    assert run.archive_key == olx_archive.key
 
 
-def test_process_course_archive_all_failures_not_marked_empty(mocker, tmp_path):
-    """Every file raising: archive_key is NOT stamped, so the archive retries"""
-    run = LearningResourceRunFactory.create(
-        archive_key=None,
-        checksum=None,
-        learning_resource=LearningResourceFactory.create(is_course=True),
-    )
-    tarball = _make_olx_tarball(tmp_path)
-    bucket = mocker.MagicMock()
-    bucket.download_file.side_effect = lambda _key, dest: shutil.copy(tarball, dest)
-
+@pytest.mark.parametrize(
+    ("failure", "stamped"),
+    [
+        pytest.param(
+            {"side_effect": FileNotFoundError("converter missing")}, False, id="raise"
+        ),
+        pytest.param({"return_value": None}, True, id="none"),
+    ],
+)
+def test_process_course_archive_nothing_loaded(mocker, olx_archive, failure, stamped):
+    """
+    All files raising leave archive_key unset for a retry; all empty set it.
+    Either way rows get their dates, stay published, and the loaded hook fires
+    """
+    run = olx_archive.run
+    future = now_in_utc() + timedelta(days=30)
+    failing_key = get_edx_module_id("course/static/bad.html", run)
+    existing = ContentFileFactory.create(run=run, key=failing_key, published=True)
     mocker.patch(
-        "learning_resources.etl.utils._extract_content",
-        side_effect=FileNotFoundError("converter output missing"),
+        "learning_resources.etl.olx.OlxArchive.key_dates",
+        return_value={failing_key: future},
     )
+    mocker.patch("learning_resources.etl.utils._extract_content", **failure)
+    loaded = mocker.patch(
+        "learning_resources.etl.edx_shared.content_files_loaded_actions"
+    )
+    deindex = mocker.patch(
+        "learning_resources_search.tasks.deindex_run_content_files.delay"
+    )
+    mocker.patch("vector_search.tasks.remove_unpublished_run_content_files.delay")
 
-    process_course_archive(bucket, "20240101/courses/course.tar.gz", run)
+    process_course_archive(olx_archive.bucket, olx_archive.key, run)
 
+    deindex.assert_called_once_with(run.id, unpublished_only=True)
     run.refresh_from_db()
-    assert run.archive_key is None
+    assert run.archive_key == (olx_archive.key if stamped else None)
     assert run.checksum is None
+    existing.refresh_from_db()
+    assert (existing.published, existing.release_date) == (True, future)
+    loaded.assert_called_once_with(run)
 
 
 def _staff_only_archive(tmp_path) -> Path:
-    """Build a tar.gz OLX export with one visible and one staff-only chapter"""
+    """Build an OLX export with visible, staff-only, future and past chapters"""
     olx = tmp_path / "course"
     files = {
         "course.xml": '<course url_name="run" org="MITx" course="1"/>',
-        "course/run.xml": '<course><chapter url_name="ok"/><chapter url_name="staff"/></course>',
+        "course/run.xml": (
+            '<course><chapter url_name="ok"/><chapter url_name="staff"/>'
+            '<chapter url_name="future"/><chapter url_name="past"/></course>'
+        ),
         "chapter/ok.xml": '<chapter><sequential url_name="seq_ok"/></chapter>',
         "sequential/seq_ok.xml": '<sequential><vertical url_name="v_ok"/></sequential>',
         "vertical/v_ok.xml": (
             '<vertical><html url_name="h_ok"/><video url_name="vid"/></vertical>'
         ),
         "html/h_ok.xml": '<html filename="h_ok"/>',
-        "html/h_ok.html": "<p>ok</p>",
+        # undated: references the underscore-spelled twin of the shared asset
+        "html/h_ok.html": '<p>ok</p><a href="/static/foo_bar.pdf">f</a>',
         "chapter/staff.xml": (
             '<chapter visible_to_staff_only="true"><sequential url_name="seq_staff"/></chapter>'
         ),
@@ -1771,6 +1818,25 @@ def _staff_only_archive(tmp_path) -> Path:
         "vertical/v_staff.xml": '<vertical><html url_name="h_staff"/></vertical>',
         "html/h_staff.xml": '<html filename="h_staff"/>',
         "html/h_staff.html": "<p>staff</p>",
+        "chapter/future.xml": (
+            f'<chapter start="{FUTURE_START.isoformat()}">'
+            '<sequential url_name="seq_future"/></chapter>'
+        ),
+        "sequential/seq_future.xml": (
+            '<sequential><vertical url_name="v_future"/></sequential>'
+        ),
+        "vertical/v_future.xml": '<vertical><html url_name="h_future"/></vertical>',
+        "html/h_future.xml": '<html filename="h_future"/>',
+        # dated: references the space-spelled twin of the shared asset
+        "html/h_future.html": '<p>future</p><a href="/static/foo bar.pdf">f</a>',
+        "chapter/past.xml": (
+            '<chapter start="2020-01-01T00:00:00+00:00">'
+            '<sequential url_name="seq_past"/></chapter>'
+        ),
+        "sequential/seq_past.xml": '<sequential><vertical url_name="v_past"/></sequential>',
+        "vertical/v_past.xml": '<vertical><html url_name="h_past"/></vertical>',
+        "html/h_past.xml": '<html filename="h_past"/>',
+        "html/h_past.html": "<p>past</p>",
         # nothing links this, so it is from an earlier offering
         "static/stale_syllabus.pdf": "stale",
         # the video id keeps subs_ABC123; its space-spelled twin is a stale copy
@@ -1778,6 +1844,11 @@ def _staff_only_archive(tmp_path) -> Path:
         "video/vid.xml": '<video url_name="vid" sub="ABC123"/>',
         "static/subs_ABC123.srt.sjson": "{}",
         "static/subs ABC123.srt.sjson": "{}",
+        # two paths, one key, linked by a dated (h_future) and an undated (h_ok)
+        # block: both names match either link, so the undated link leaves both
+        # paths, and the key, undated
+        "static/foo bar.pdf": "pdf bytes 1",
+        "static/foo_bar.pdf": "pdf bytes 2",
         # shown only where the platform serves the about page
         "about/overview.html": "<p>about</p>",
         "about/effort.html": "5",
@@ -1823,6 +1894,41 @@ def mock_deindex_tasks(mocker):
     )
 
 
+# the starts _staff_only_archive gives chapter/future.xml and chapter/past.xml;
+# the future one is relative to the test run so it never goes stale
+FUTURE_START = datetime(now_in_utc().year + 10, 1, 1, tzinfo=UTC)
+PAST_START = datetime(2020, 1, 1, tzinfo=UTC)
+
+
+def _unpublish(staff_only_run, **kwargs):
+    """Run unpublish_excluded_content_files on the staff_only_run archive"""
+    return unpublish_excluded_content_files(
+        staff_only_run.source,
+        [staff_only_run.course.id],
+        [staff_only_run.key],
+        **kwargs,
+    )
+
+
+def _content_file(run, name, **kwargs):
+    """Create a content file of run, keyed as the archive file course/<name>"""
+    return ContentFileFactory.create(
+        run=run, key=get_edx_module_id(f"course/{name}", run), **kwargs
+    )
+
+
+def _row(run, total, **counts):
+    """Build a report row for run; counts not given are 0"""
+    return {
+        "run_id": run.run_id,
+        "excluded": 0,
+        "unreleased": 0,
+        "unpublished": 0,
+        **counts,
+        "total": total,
+    }
+
+
 def test_unpublish_excluded_content_files(staff_only_run, mock_deindex_tasks):
     """Only the matching run's staff-only content files are unpublished and deindexed"""
     run = staff_only_run.run
@@ -1839,9 +1945,7 @@ def test_unpublish_excluded_content_files(staff_only_run, mock_deindex_tasks):
     for cf_key in run_keys.values():
         ContentFileFactory.create(run=other_run, key=cf_key, published=True)
 
-    rows = unpublish_excluded_content_files(
-        staff_only_run.source, [staff_only_run.course.id], [staff_only_run.key]
-    )
+    rows = _unpublish(staff_only_run)
 
     assert [row["unpublished"] for row in rows] == [1]
     assert not ContentFile.objects.filter(
@@ -1934,19 +2038,15 @@ def test_unpublish_excluded_content_files_keeps_the_oll_about_page(
 def test_unpublish_excluded_content_files_nothing_hidden(
     staff_only_run, mock_deindex_tasks
 ):
-    """No deindex tasks are queued when a run has no staff-only content files"""
+    """No deindex tasks are queued when a run has nothing excluded or unreleased"""
     run = staff_only_run.run
     ContentFileFactory.create(
         run=run, key=get_edx_module_id("course/html/h_ok.xml", run), published=True
     )
 
-    assert (
-        unpublish_excluded_content_files(
-            staff_only_run.source, [staff_only_run.course.id], [staff_only_run.key]
-        )
-        == []
-    )
+    assert _unpublish(staff_only_run) == []
     mock_deindex_tasks.opensearch.assert_not_called()
+    mock_deindex_tasks.qdrant.assert_not_called()
 
 
 @pytest.mark.parametrize(
@@ -1970,12 +2070,7 @@ def test_unpublish_excluded_content_files_malformed_archive(
         published=True,
     )
 
-    assert (
-        unpublish_excluded_content_files(
-            staff_only_run.source, [staff_only_run.course.id], [staff_only_run.key]
-        )
-        == []
-    )
+    assert _unpublish(staff_only_run) == []
     assert ContentFile.objects.filter(run=staff_only_run.run, published=True).exists()
     mock_deindex_tasks.opensearch.assert_not_called()
 
@@ -1989,12 +2084,10 @@ def test_unpublish_excluded_content_files_rerun_redeindexes(
         run=run, key=get_edx_module_id("course/html/h_staff.xml", run), published=False
     )
 
-    rows = unpublish_excluded_content_files(
-        staff_only_run.source, [staff_only_run.course.id], [staff_only_run.key]
-    )
+    rows = _unpublish(staff_only_run)
 
     # still counted as excluded, but this call had nothing left to flip
-    assert rows == [{"run_id": run.run_id, "excluded": 1, "unpublished": 0, "total": 1}]
+    assert rows == [_row(run, total=1, excluded=1)]
     mock_deindex_tasks.opensearch.assert_called_once_with(run.id, unpublished_only=True)
     mock_deindex_tasks.qdrant.assert_called_once_with(run.id)
 
@@ -2007,9 +2100,7 @@ def test_unpublish_excluded_content_files_drops_unreferenced_static(
     stale_key = get_edx_module_id("course/static/stale_syllabus.pdf", run)
     ContentFileFactory.create(run=run, key=stale_key, published=True)
 
-    rows = unpublish_excluded_content_files(
-        staff_only_run.source, [staff_only_run.course.id], [staff_only_run.key]
-    )
+    rows = _unpublish(staff_only_run)
 
     assert [row["unpublished"] for row in rows] == [1]
     assert not ContentFile.objects.filter(
@@ -2029,12 +2120,7 @@ def test_unpublish_excluded_content_files_keeps_colliding_key(
     assert shared_key == get_edx_module_id("course/static/subs_ABC123.srt.sjson", run)
     ContentFileFactory.create(run=run, key=shared_key, published=True)
 
-    assert (
-        unpublish_excluded_content_files(
-            staff_only_run.source, [staff_only_run.course.id], [staff_only_run.key]
-        )
-        == []
-    )
+    assert _unpublish(staff_only_run) == []
     assert ContentFile.objects.filter(run=run, key=shared_key, published=True).exists()
 
 
@@ -2044,33 +2130,109 @@ def test_unpublish_excluded_content_files_skips_runs_without_content_files(
     """A run with no content files is skipped before its archive is downloaded"""
     archive = mocker.patch("learning_resources.etl.edx_shared.OlxArchive")
 
-    assert (
-        unpublish_excluded_content_files(
-            staff_only_run.source, [staff_only_run.course.id], [staff_only_run.key]
-        )
-        == []
-    )
+    assert _unpublish(staff_only_run) == []
     archive.assert_not_called()
 
 
-def test_unpublish_excluded_content_files_dry_run(staff_only_run, mock_deindex_tasks):
-    """A dry run counts the rows but changes nothing and deindexes nothing"""
+def test_unpublish_excluded_content_files_dates_unreleased(
+    staff_only_run, mock_deindex_tasks
+):
+    """
+    A staff-only file is unpublished, keeping its date; dated files record
+    theirs and stay published; a row the archive lacks is left alone
+    """
     run = staff_only_run.run
-    ContentFileFactory.create(
-        run=run,
-        key=get_edx_module_id("course/static/stale_syllabus.pdf", run),
-        published=True,
+    rows = (
+        _content_file(
+            run, "html/h_staff.xml", published=True, release_date=FUTURE_START
+        ),
+        _content_file(run, "html/h_future.xml", published=True),
+        _content_file(run, "html/h_past.xml", published=True),
+        _content_file(run, "html/h_ok.xml", published=True),
+        _content_file(run, "html/h_removed.xml", published=False),
     )
 
-    rows = unpublish_excluded_content_files(
-        staff_only_run.source,
-        [staff_only_run.course.id],
-        [staff_only_run.key],
-        dry_run=True,
+    assert _unpublish(staff_only_run) == [
+        _row(run, total=5, excluded=1, unreleased=1, unpublished=1)
+    ]
+    for content_file in rows:
+        content_file.refresh_from_db()
+    assert [(cf.published, cf.release_date) for cf in rows] == [
+        (False, FUTURE_START),
+        (True, FUTURE_START),
+        (True, PAST_START),
+        (True, None),
+        (False, None),
+    ]
+    mock_deindex_tasks.opensearch.assert_called_once_with(run.id, unpublished_only=True)
+    mock_deindex_tasks.qdrant.assert_called_once_with(run.id)
+
+
+@pytest.mark.parametrize(
+    ("published", "was"),
+    [(False, None), (True, PAST_START)],
+    ids=["unpublished", "stale-date"],
+)
+def test_unpublish_excluded_content_files_records_unreleased_date(
+    staff_only_run, mock_deindex_tasks, published, was
+):
+    """An unreleased row takes the archive's date over an older one; published stays"""
+    run = staff_only_run.run
+    future = _content_file(
+        run, "html/h_future.xml", published=published, release_date=was
     )
 
-    assert [row["unpublished"] for row in rows] == [1]
-    assert ContentFile.objects.filter(run=run, published=True).count() == 1
+    assert _unpublish(staff_only_run) == [_row(run, total=1, unreleased=1)]
+    future.refresh_from_db()
+    assert (future.published, future.release_date) == (published, FUTURE_START)
+
+
+def test_unpublish_excluded_content_files_leaves_stale_dates_to_ingestion(
+    staff_only_run, mock_deindex_tasks
+):
+    """With nothing excluded or unreleased, stale future dates are left for ingestion"""
+    run = staff_only_run.run
+    ok = _content_file(run, "html/h_ok.xml", published=True, release_date=FUTURE_START)
+    gone = _content_file(
+        run, "html/h_gone.xml", published=True, release_date=FUTURE_START
+    )
+
+    assert _unpublish(staff_only_run) == []
+    ok.refresh_from_db()
+    gone.refresh_from_db()
+    assert (ok.published, ok.release_date) == (True, FUTURE_START)
+    assert (gone.published, gone.release_date) == (True, FUTURE_START)
+
+
+def test_unpublish_excluded_content_files_undated_twin_stays_published(
+    staff_only_run, mock_deindex_tasks
+):
+    """Twins foo bar.pdf and foo_bar.pdf share a key; an undated link keeps it undated"""
+    run = staff_only_run.run
+    collision = _content_file(run, "static/foo_bar.pdf", published=True)
+
+    assert _unpublish(staff_only_run) == []
+    collision.refresh_from_db()
+    assert (collision.published, collision.release_date) == (True, None)
+
+
+def test_unpublish_excluded_content_files_dry_run_counts_unreleased(
+    staff_only_run, mock_deindex_tasks
+):
+    """A dry run counts excluded and unreleased rows but writes nothing"""
+    run = staff_only_run.run
+    staff = _content_file(run, "html/h_staff.xml", published=True)
+    future = _content_file(run, "html/h_future.xml", published=True)
+
+    assert _unpublish(staff_only_run, dry_run=True) == [
+        _row(run, total=2, excluded=1, unreleased=1, unpublished=1)
+    ]
+    for content_file in (staff, future):
+        content_file.refresh_from_db()
+    assert [(cf.published, cf.release_date) for cf in (staff, future)] == [
+        (True, None),
+        (True, None),
+    ]
     mock_deindex_tasks.opensearch.assert_not_called()
     mock_deindex_tasks.qdrant.assert_not_called()
 
@@ -2078,7 +2240,9 @@ def test_unpublish_excluded_content_files_dry_run(staff_only_run, mock_deindex_t
 @pytest.mark.parametrize(
     "unpublished_rows", [False, True], ids=["deleted", "unpublished"]
 )
-def test_process_course_archive_reloads_when_receipt_is_stale(mocker, unpublished_rows):
+def test_process_course_archive_reloads_when_receipt_is_stale(
+    mocker, mock_archive, unpublished_rows
+):
     """
     A matching archive_key and checksum must not skip a run whose rows are
     gone or all unpublished
@@ -2150,7 +2314,9 @@ def test_process_course_archive_skips_matching_checksum_with_rows(mocker):
     assert run.archive_key == key
 
 
-def test_process_course_archive_clears_stale_checksum_on_empty_archive(mocker):
+def test_process_course_archive_clears_stale_checksum_on_empty_archive(
+    mocker, mock_archive
+):
     """A stale run on a now-empty archive has its checksum cleared"""
     key = "mitxonline/courses/course-v1:Test+Course+R1/archive.tar.gz"
     run = LearningResourceRunFactory.create(
@@ -2174,3 +2340,194 @@ def test_process_course_archive_clears_stale_checksum_on_empty_archive(mocker):
     assert process_course_archive(bucket, key, run) is False
     bucket.download_file.assert_called_once()
     mock_load.assert_not_called()
+
+
+def test_process_course_archive_loads_units(mocker, mock_archive):
+    """The archive's units are loaded after the content files"""
+    key = "mitxonline/openedx/raw_data/course_xml/course-v1:Test+Course+R1/abc123.xml.tar.gz"
+    run = LearningResourceRunFactory.create(published=True)
+    mocker.patch(
+        "learning_resources.etl.edx_shared.calc_checksum", return_value="checksum"
+    )
+    unit_data = {"external_id": "seq"}
+    mock_archive.units.return_value = [unit_data]
+    mocker.patch(
+        "learning_resources.etl.edx_shared.transform_content_files",
+        return_value=iter([{"key": "content.txt"}]),
+    )
+    mocker.patch(
+        "learning_resources.etl.edx_shared.load_content_files", return_value=[1]
+    )
+    mock_load_units = mocker.patch(
+        "learning_resources.etl.edx_shared.load_course_units"
+    )
+
+    process_course_archive(mocker.MagicMock(), key, run)
+
+    mock_load_units.assert_called_once_with(run, [unit_data])
+    run.refresh_from_db()
+    assert (run.archive_key, run.checksum) == (key, "checksum")
+
+
+def test_process_course_archive_skips_runs_without_units(mocker):
+    """An unchanged archive isn't reloaded just because its run has no units"""
+    key = "mitxonline/openedx/raw_data/course_xml/course-v1:Test+Course+R1/abc123.xml.tar.gz"
+    run = LearningResourceRunFactory.create(
+        published=True, archive_key=key, checksum="checksum"
+    )
+    ContentFileFactory.create(run=run, published=True)
+    bucket = mocker.MagicMock()
+
+    assert process_course_archive(bucket, key, run) is False
+
+    bucket.download_file.assert_not_called()
+
+
+@pytest.mark.parametrize("failing", ["build", "load"])
+def test_process_course_archive_unit_failure_is_not_retried(
+    mocker, mock_archive, failing
+):
+    """
+    Files load when units can't be built or saved, and the archive isn't
+    tried again
+    """
+    key = "mitxonline/openedx/raw_data/course_xml/course-v1:Test+Course+R1/abc123.xml.tar.gz"
+    run = LearningResourceRunFactory.create(
+        published=True, archive_key="old.tar.gz", checksum="old"
+    )
+    # the file the mocked load would have written
+    ContentFileFactory.create(run=run, published=True)
+    mocker.patch(
+        "learning_resources.etl.edx_shared.calc_checksum", return_value="checksum"
+    )
+    mock_log = mocker.patch("learning_resources.etl.edx_shared.log")
+    error = ValueError("course/run.xml is missing")
+    if failing == "build":
+        mock_archive.units.side_effect = error
+    mocker.patch(
+        "learning_resources.etl.edx_shared.transform_content_files",
+        return_value=iter([{"key": "content.txt"}]),
+    )
+    mock_load_files = mocker.patch(
+        "learning_resources.etl.edx_shared.load_content_files", return_value=[1]
+    )
+    mock_load_units = mocker.patch(
+        "learning_resources.etl.edx_shared.load_course_units",
+        **({"side_effect": error} if failing == "load" else {}),
+    )
+
+    bucket = mocker.MagicMock()
+    process_course_archive(bucket, key, run)
+
+    mock_load_files.assert_called_once()
+    # a failed build keeps the run's units, minus unpublished files' links
+    mock_load_units.assert_called_once_with(run, [])
+    mock_log.exception.assert_called_once()
+    run.refresh_from_db()
+    # the receipt is recorded, so the same archive is skipped though the run
+    # has no units
+    assert (run.archive_key, run.checksum) == (key, "checksum")
+
+    assert process_course_archive(bucket, key, run) is False
+    bucket.download_file.assert_called_once()
+    mock_load_files.assert_called_once()
+
+
+@pytest.mark.parametrize("same_key", [True, False])
+def test_process_course_archive_overwrite_units(mocker, same_key):
+    """overwrite_units rebuilds units from an unchanged archive without loading files"""
+    key = "mitxonline/openedx/raw_data/course_xml/course-v1:Test+Course+R1/abc123.xml.tar.gz"
+    run = LearningResourceRunFactory.create(
+        published=True,
+        archive_key=key if same_key else "old.tar.gz",
+        checksum="checksum",
+    )
+    ContentFileFactory.create(run=run, published=True)
+    mocker.patch(
+        "learning_resources.etl.edx_shared.calc_checksum", return_value="checksum"
+    )
+    unit_data = {"external_id": "seq"}
+    mock_units_from_archive = mocker.patch(
+        "learning_resources.etl.edx_shared.course_units_from_archive",
+        return_value=[unit_data],
+    )
+    mock_load_units = mocker.patch(
+        "learning_resources.etl.edx_shared.load_course_units"
+    )
+    mock_transform = mocker.patch(
+        "learning_resources.etl.edx_shared.transform_content_files"
+    )
+    mock_load_files = mocker.patch(
+        "learning_resources.etl.edx_shared.load_content_files"
+    )
+    bucket = mocker.MagicMock()
+
+    assert process_course_archive(bucket, key, run, overwrite_units=True) is True
+
+    bucket.download_file.assert_called_once()
+    mock_units_from_archive.assert_called_once()
+    mock_load_units.assert_called_once_with(run, [unit_data])
+    mock_transform.assert_not_called()
+    mock_load_files.assert_not_called()
+    run.refresh_from_db()
+    assert (run.archive_key, run.checksum) == (key, "checksum")
+
+
+@pytest.mark.parametrize("failing", ["build", "load"])
+def test_process_course_archive_overwrite_units_failure(mocker, failing):
+    """A failed units-only rebuild is logged and keeps the run's units"""
+    key = "mitxonline/openedx/raw_data/course_xml/course-v1:Test+Course+R1/abc123.xml.tar.gz"
+    run = LearningResourceRunFactory.create(
+        published=True, archive_key=key, checksum="checksum"
+    )
+    ContentFileFactory.create(run=run, published=True)
+    existing = UnitFactory.create(run=run)
+    mocker.patch(
+        "learning_resources.etl.edx_shared.calc_checksum", return_value="checksum"
+    )
+    error = ValueError("course/run.xml is missing")
+    mocker.patch(
+        "learning_resources.etl.edx_shared.course_units_from_archive",
+        **({"side_effect": error} if failing == "build" else {"return_value": []}),
+    )
+    mocker.patch(
+        "learning_resources.etl.edx_shared.load_course_units",
+        **({"side_effect": error} if failing == "load" else {}),
+    )
+    mock_log = mocker.patch("learning_resources.etl.edx_shared.log")
+
+    assert (
+        process_course_archive(mocker.MagicMock(), key, run, overwrite_units=True)
+        is True
+    )
+
+    mock_log.exception.assert_called_once()
+    assert list(run.units.all()) == [existing]
+    run.refresh_from_db()
+    assert (run.archive_key, run.checksum) == (key, "checksum")
+
+
+def test_sync_edx_course_files_passes_overwrite_units(mocker):
+    """sync_edx_course_files hands overwrite_units to process_course_archive"""
+    run = LearningResourceRunFactory.create(
+        published=True,
+        learning_resource__etl_source=ETLSource.mitxonline.name,
+        learning_resource__published=True,
+        run_id="course-v1:Test+Course+R1",
+    )
+    key = "mitxonline/openedx/raw_data/course_xml/course-v1:Test+Course+R1/abc123.xml.tar.gz"
+    mocker.patch("learning_resources.etl.edx_shared.get_bucket_by_name")
+    mock_process = mocker.patch(
+        "learning_resources.etl.edx_shared.process_course_archive", return_value=True
+    )
+
+    sync_edx_course_files(
+        ETLSource.mitxonline.name,
+        [run.learning_resource.id],
+        [key],
+        overwrite_units=True,
+    )
+
+    mock_process.assert_called_once_with(
+        mocker.ANY, key, run, overwrite=False, overwrite_units=True
+    )

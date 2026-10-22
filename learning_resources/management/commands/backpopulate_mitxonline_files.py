@@ -29,6 +29,12 @@ class Command(TestResourceIdMixin, BaseCommand):
             action="store_true",
             help="Overwrite any existing records",
         )
+        parser.add_argument(
+            "--overwrite-units",
+            dest="overwrite_units",
+            action="store_true",
+            help="Rebuild units from unchanged archives without reloading files",
+        )
 
         parser.add_argument(
             "--resource-ids",
@@ -49,6 +55,7 @@ class Command(TestResourceIdMixin, BaseCommand):
         task = import_all_mitxonline_files.delay(
             chunk_size=chunk_size,
             overwrite=options["force_overwrite"],
+            overwrite_units=options["overwrite_units"],
             learning_resource_ids=resource_ids,
         )
         self.stdout.write(

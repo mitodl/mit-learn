@@ -1140,6 +1140,16 @@ class LearningResourceRelationship(TimestampedModel):
 class ContentFileQuerySet(TimestampedModelQuerySet):
     """QuerySet for ContentFile"""
 
+    def visible(self, now=None):
+        """Content files a learner can see: published, and undated or released"""
+        return self.filter(published=True).filter(
+            Q(release_date__isnull=True) | Q(release_date__lte=now or now_in_utc())
+        )
+
+    def hidden(self, now=None):
+        """Content files a learner cannot currently see: the complement of visible()"""
+        return self.filter(Q(published=False) | Q(release_date__gt=now or now_in_utc()))
+
     def for_serialization(self):
         """Return a queryset ready for serialization"""
         return self.select_related(
@@ -1282,6 +1292,14 @@ class ContentFile(TimestampedModel):
     )
     content_tags = models.ManyToManyField(LearningResourceContentTag)
     published = models.BooleanField(default=True)
+    release_date = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text=(
+            "When the course releases this file to learners; null if the "
+            "course does not gate it."
+        ),
+    )
     archive_checksum = models.CharField(max_length=32, null=True, blank=True)  # noqa: DJ001
     checksum = models.CharField(max_length=32, null=True, blank=True)  # noqa: DJ001
     source_path = models.CharField(max_length=1024, null=True, blank=True)  # noqa: DJ001
@@ -1346,6 +1364,87 @@ class ContentFile(TimestampedModel):
                 name="contentfile_direct_learning_resource_key_uniq",
             ),
         ]
+        indexes = [
+            models.Index(
+                fields=["release_date"],
+                condition=models.Q(published=True),
+                name="contentfile_published_date_idx",
+            ),
+        ]
+
+
+class Unit(TimestampedModel):
+    """
+    A group of a run's content files: an ordered step from the course structure
+    (edX sequential, OCW week or lecture), the course-wide context, or an
+    unordered bin of leftover files.
+    """
+
+    class Kind(models.TextChoices):
+        # an ordered step derived from the course structure
+        UNIT = "unit", "Unit"
+        # content that belongs to the course as a whole, like the syllabus
+        CONTEXT = "context", "Context"
+        # an unordered group of files used to break up the course
+        BIN = "bin", "Bin"
+
+    run = models.ForeignKey(
+        LearningResourceRun, related_name="units", on_delete=models.CASCADE
+    )
+    # edX sequential usage key, OCW nav id/path/"session-N", "context",
+    # or "bin:" followed by a page key or resource type
+    external_id = models.CharField(max_length=1024)
+    kind = models.CharField(max_length=16, choices=Kind.choices, default=Kind.UNIT)
+    title = models.CharField(max_length=1024)
+    # order within the run; null for context and bins
+    position = models.PositiveIntegerField(null=True, blank=True)
+    url = models.URLField(max_length=2048, blank=True)  # edX jump_to_id; OCW page URL
+    content_files = models.ManyToManyField(
+        ContentFile, through="UnitContentFile", related_name="units"
+    )
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["run", "external_id"], name="unique_unit_per_run"
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.run_id}/{self.external_id}: {self.title}"
+
+
+class UnitContentFile(models.Model):
+    """Membership of a ContentFile in a Unit"""
+
+    class Relation(models.TextChoices):
+        CORE = "core", "Core"
+        ASSESSMENT = "assessment", "Assessment"
+        SUPPLEMENTARY = "supplementary", "Supplementary"
+        REFERENCE = "reference", "Reference"
+
+    unit = models.ForeignKey(Unit, on_delete=models.CASCADE)
+    content_file = models.ForeignKey(ContentFile, on_delete=models.CASCADE)
+    relation = models.CharField(
+        max_length=32, choices=Relation.choices, default=Relation.CORE
+    )
+    # lesson order within the unit, approximate for static files, which sit
+    # after the first block that links them; null in units with no order, like
+    # the course context
+    position = models.PositiveIntegerField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["position"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["unit", "content_file"], name="unique_content_file_per_unit"
+            )
+        ]
+
+    def __str__(self):
+        return (
+            f"{self.unit_id}/{self.content_file_id}: {self.relation} #{self.position}"
+        )
 
 
 class UserList(TimestampedModel):

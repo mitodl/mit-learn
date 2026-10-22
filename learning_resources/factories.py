@@ -761,6 +761,36 @@ class ContentFileFactory(DjangoModelFactory):
         model = models.ContentFile
 
 
+class UnitFactory(DjangoModelFactory):
+    """Factory for Units"""
+
+    run = factory.SubFactory(LearningResourceRunFactory)
+    external_id = factory.Sequence(
+        lambda n: f"block-v1:MITx+1.00x+run+type@sequential+block@{n}"
+    )
+    kind = models.Unit.Kind.UNIT
+    title = factory.Faker("sentence")
+    position = factory.Sequence(lambda n: n)
+    url = factory.Faker("url")
+
+    class Meta:
+        model = models.Unit
+
+
+class UnitContentFileFactory(DjangoModelFactory):
+    """Factory for UnitContentFiles"""
+
+    unit = factory.SubFactory(UnitFactory)
+    content_file = factory.SubFactory(
+        ContentFileFactory, run=factory.SelfAttribute("..unit.run")
+    )
+    relation = models.UnitContentFile.Relation.CORE
+    position = factory.Sequence(lambda n: n)
+
+    class Meta:
+        model = models.UnitContentFile
+
+
 class UserListFactory(DjangoModelFactory):
     """Factory for Learning Paths"""
 

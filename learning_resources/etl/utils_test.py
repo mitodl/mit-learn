@@ -20,9 +20,14 @@ from learning_resources.constants import (
 )
 from learning_resources.etl import utils
 from learning_resources.etl.constants import CommitmentConfig, DurationConfig, ETLSource
-from learning_resources.etl.olx import OlxArchive
+from learning_resources.etl.olx import OlxArchive, get_edx_module_id
 from learning_resources.etl.olx_test import (
+    START_FUTURE,
+    START_LATER,
+    START_PAST,
+    _dated_olx,
     _reference_olx,
+    _start,
     _write_html,
     _write_olx,
 )
@@ -261,13 +266,10 @@ def test_transform_content_files(  # noqa: PLR0913
 
     script_dir = (pathlib.Path(__file__).parent.absolute()).parent.parent
 
-    content = list(
-        utils.transform_content_files(
-            pathlib.Path(script_dir, "test_json", "exported_courses_12345.tar.gz"),
-            run,
-            overwrite=overwrite,
-        )
-    )
+    with utils.unpacked_course_archive(
+        pathlib.Path(script_dir, "test_json", "exported_courses_12345.tar.gz"), run
+    ) as archive:
+        content = list(utils.transform_content_files(archive, run, overwrite=overwrite))
 
     if tika_content or (matching_edx_module_id and not overwrite):
         assert content == [
@@ -277,6 +279,7 @@ def test_transform_content_files(  # noqa: PLR0913
                 else tika_output["content"],
                 "title": metadata["title"] if has_metadata else "Uuid",
                 "key": edx_module_id,
+                "release_date": None,
                 "published": True,
                 "content_title": metadata["title"] if has_metadata else "",
                 "content_type": content_type,
@@ -842,13 +845,10 @@ def test_process_olx_path_malformed_sjson(mocker, settings):
 
     script_dir = (pathlib.Path(__file__).parent.absolute()).parent.parent
 
-    content = list(
-        utils.transform_content_files(
-            pathlib.Path(script_dir, "test_json", "exported_courses_12345.tar.gz"),
-            run,
-            overwrite=True,
-        )
-    )
+    with utils.unpacked_course_archive(
+        pathlib.Path(script_dir, "test_json", "exported_courses_12345.tar.gz"), run
+    ) as archive:
+        content = list(utils.transform_content_files(archive, run, overwrite=True))
     # Since the SJSON is malformed, no content should be returned
     assert content == []
 
@@ -1093,18 +1093,30 @@ def test_extract_content_ocr_failure_falls_back_to_tika(
     assert all(r.levelname == "WARNING" for r in ocr_records)
 
 
-def test_process_olx_path_skips_failed_files(mocker, tmp_path):
-    """A file whose extraction raises is skipped and recorded; other files still yield"""
+# an extraction that raises is recorded as failed; one Tika gave nothing back
+# for is only skipped
+EXTRACTION_FAILURES = [
+    pytest.param(
+        {"side_effect": RuntimeError("converter output missing")}, True, id="raise"
+    ),
+    pytest.param({"return_value": None}, False, id="none"),
+]
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(("failure", "recorded"), EXTRACTION_FAILURES)
+def test_process_olx_path_skips_failed_files(mocker, tmp_path, failure, recorded):
+    """A failed file is skipped, and recorded if it raised; other files still yield"""
     run = LearningResourceRunFactory.create()
     static_dir = tmp_path / "static"
     static_dir.mkdir()
     (static_dir / "good.html").write_text("<p>good</p>")
     (static_dir / "bad.html").write_text("<p>bad</p>")
+    bad = mocker.Mock(**failure)
 
     def fake_extract(document, metadata, olx_path, key, **kwargs):
         if "bad.html" in metadata["source_path"]:
-            msg = "converter output missing"
-            raise FileNotFoundError(msg)
+            return bad()
         return {"content": "text", "content_title": ""}
 
     mocker.patch(
@@ -1118,8 +1130,9 @@ def test_process_olx_path_skips_failed_files(mocker, tmp_path):
     )
     assert len(results) == 1
     assert "good.html" in results[0]["source_path"]
-    assert len(failed) == 1
-    assert "bad.html" in failed[0]
+    assert [pathlib.Path(path).name for path in failed] == (
+        ["bad.html"] if recorded else []
+    )
 
 
 @pytest.mark.parametrize(
@@ -1187,3 +1200,272 @@ def test_documents_from_olx_reads_archive_paths(tmp_path):
         assert meta["source_path"].endswith(str(path.relative_to(olx)))
         assert content == path.read_bytes()
         assert meta["file_extension"] == path.suffix
+
+
+def test_course_units_from_archive(tmp_path):
+    """Units are built from a course tarball"""
+    olx = tmp_path / "course"
+    _write_olx(
+        olx,
+        "course.xml",
+        '<course url_name="run" org="MITx" course="1">'
+        '<chapter><sequential url_name="seq" display_name="Lecture 1">'
+        "<vertical><html><p>hi</p></html></vertical></sequential></chapter></course>",
+    )
+    tarpath = tmp_path / "course.tar.gz"
+    with tarfile.open(tarpath, "w:gz") as tar:
+        tar.add(olx, arcname="course")
+    run = LearningResourceRunFactory.create()
+
+    units = utils.course_units_from_archive(tarpath, run)
+
+    assert [unit["title"] for unit in units] == ["Lecture 1", "Course context"]
+
+
+def test_course_units_from_archive_raises_for_missing_block(tmp_path):
+    """A course whose outline names a missing block file raises"""
+    olx = tmp_path / "course"
+    _write_olx(olx, "course.xml", '<course url_name="run" org="MITx" course="1"/>')
+    tarpath = tmp_path / "course.tar.gz"
+    with tarfile.open(tarpath, "w:gz") as tar:
+        tar.add(olx, arcname="course")
+
+    with pytest.raises(ValueError):  # noqa: PT011
+        utils.course_units_from_archive(tarpath, LearningResourceRunFactory.create())
+
+
+def test_unpacked_course_archive(tmp_path):
+    """The archive is unpacked for the block and removed after it"""
+    olx = tmp_path / "course"
+    _write_olx(olx, "course.xml", '<course url_name="run" org="MITx" course="1"/>')
+    tarpath = tmp_path / "course.tar.gz"
+    with tarfile.open(tarpath, "w:gz") as tar:
+        tar.add(olx, arcname="course")
+    run = LearningResourceRunFactory.create()
+
+    with utils.unpacked_course_archive(tarpath, run) as archive:
+        assert archive.is_olx
+        assert archive.etl_source == run.learning_resource.etl_source
+
+    assert not archive.root.exists()
+
+
+def test_process_olx_path_rejects_other_file_types(tmp_path):
+    """A shared archive's file types can't be overridden"""
+    archive = OlxArchive(tmp_path)
+
+    with pytest.raises(ValueError):  # noqa: PT011
+        list(
+            utils.process_olx_path(
+                str(tmp_path),
+                LearningResourceRunFactory.create(),
+                overwrite=False,
+                valid_file_types=[".xml"],
+                archive=archive,
+            )
+        )
+
+
+def test_process_olx_path_dates_results_by_key(tmp_path, mocker):
+    """Both foo bar.pdf twins are undated; each html block takes its chapter's start"""
+    run = LearningResourceRunFactory.create(run_id="course-v1:test_run")
+    olx = _dated_olx(tmp_path)
+    for dating in ("dated", "undated"):
+        _write_olx(
+            olx,
+            f"chapter/ch_{dating}.xml",
+            f'<chapter><html url_name="h_{dating}"/></chapter>',
+        )
+    _write_html(olx, "h_dated", '<a href="/static/foo bar.pdf">f</a>')
+    _write_html(olx, "h_undated", '<a href="/static/foo_bar.pdf">f</a>')
+
+    _write_olx(olx, "static/foo bar.pdf", "pdf bytes 1")
+    _write_olx(olx, "static/foo_bar.pdf", "pdf bytes 2")
+
+    mocker.patch(
+        "learning_resources.etl.utils._extract_content",
+        return_value={"content": "text", "content_title": ""},
+    )
+    by_name = {
+        pathlib.Path(result["source_path"]).name: result
+        for result in utils.process_olx_path(str(olx), run, overwrite=True)
+    }
+    assert {
+        name: (by_name[name]["published"], by_name[name]["release_date"])
+        for name in ("foo bar.pdf", "foo_bar.pdf", "h_dated.html", "h_undated.html")
+    } == {
+        "foo bar.pdf": (True, None),
+        "foo_bar.pdf": (True, None),
+        "h_dated.html": (True, START_FUTURE),
+        "h_undated.html": (True, None),
+    }
+
+
+@pytest.mark.parametrize(("failure", "recorded"), EXTRACTION_FAILURES)
+@pytest.mark.parametrize(
+    ("block", "transition"),
+    [
+        # a row whose block is now future-dated takes the date
+        (("ch_dated", ""), (None, START_FUTURE)),
+        # a row whose block lost its date, or whose date moved, follows suit;
+        # the stale pass skips failed keys so nothing else would date it
+        (("ch_undated", ""), (START_FUTURE, None)),
+        (("ch_undated", _start(START_PAST)), (START_FUTURE, START_PAST)),
+    ],
+)
+def test_process_olx_path_dates_rows_whose_extraction_fails(  # noqa: PLR0913
+    tmp_path, mocker, failure, recorded, block, transition
+):
+    """
+    Rows are dated before extraction, so a row whose extraction fails or yields
+    nothing is still dated; published is not touched
+    """
+    chapter, start = block
+    was, expected = transition
+    run = LearningResourceRunFactory.create(run_id="course-v1:test_run")
+    olx = _dated_olx(tmp_path)
+    _write_olx(
+        olx,
+        f"chapter/{chapter}.xml",
+        f'<chapter {start}><html url_name="h"/></chapter>',
+    )
+    _write_html(olx, "h", "<p>text</p>")
+    key = get_edx_module_id("course/html/h.html", run)
+    row = ContentFileFactory.create(run=run, key=key, published=True, release_date=was)
+    mocker.patch("learning_resources.etl.utils._extract_content", **failure)
+    deindex = mocker.patch(
+        "learning_resources_search.tasks.deindex_run_content_files.delay"
+    )
+    remove = mocker.patch(
+        "vector_search.tasks.remove_unpublished_run_content_files.delay"
+    )
+
+    failed = []
+    assert (
+        list(
+            utils.process_olx_path(
+                str(olx), run, overwrite=True, failed_source_paths=failed
+            )
+        )
+        == []
+    )
+
+    assert any(path.endswith("html/h.html") for path in failed) is recorded
+    row.refresh_from_db()
+    assert (row.published, row.release_date) == (True, expected)
+    # a newly hidden row leaves the indexes now, since the post-load reindex
+    # never runs if loading fails
+    hid = expected == START_FUTURE
+    assert deindex.call_args_list == (
+        [mocker.call(run.id, unpublished_only=True)] if hid else []
+    )
+    assert remove.call_args_list == ([mocker.call(run.id)] if hid else [])
+
+
+def test_process_olx_path_tutor_problem_import_leaves_content_files_alone(
+    tmp_path, mocker
+):
+    """A tutor problem import writes TutorProblemFiles, so it reconciles no rows"""
+    run = LearningResourceRunFactory.create(run_id="course-v1:test_run")
+    _write_olx(tmp_path, "problems/set1.py", "print(1)")
+    row = ContentFileFactory.create(
+        run=run,
+        key=get_edx_module_id("problems/set1.py", run),
+        release_date=START_FUTURE,
+    )
+    mocker.patch(
+        "learning_resources.etl.utils._extract_content",
+        return_value={"content": "text", "content_title": ""},
+    )
+
+    results = list(
+        utils.process_olx_path(
+            str(tmp_path),
+            run,
+            overwrite=True,
+            valid_file_types=[".py"],
+            is_tutor_problem_file_import=True,
+        )
+    )
+
+    assert [pathlib.Path(result["source_path"]).name for result in results] == [
+        "set1.py"
+    ]
+    # reconciling would have cleared this row's date
+    row.refresh_from_db()
+    assert row.release_date == START_FUTURE
+
+
+def _key(run, name):
+    """Return the content file key of the archive path course/html/<name>.html"""
+    return get_edx_module_id(f"course/html/{name}.html", run)
+
+
+@pytest.mark.parametrize("published", [True, False])
+def test_reconcile_release_dates(published):
+    """Each row takes its key's date; missing keys, other runs and published are kept"""
+    run = LearningResourceRunFactory.create(run_id="course-v1:test_run")
+    other_run = LearningResourceRunFactory.create(run_id="course-v1:other_run")
+    rows = {
+        name: ContentFileFactory.create(
+            run=run, key=_key(run, name), published=published, release_date=was
+        )
+        for name, was in {
+            "dated_now": None,
+            "redated": START_PAST,
+            "dated_later": None,
+            "undated_now": START_FUTURE,
+            "never_dated": None,
+            "gone": START_FUTURE,
+        }.items()
+    }
+    other = ContentFileFactory.create(
+        run=other_run,
+        key=_key(other_run, "dated_now"),
+        published=published,
+        release_date=START_PAST,
+    )
+
+    hidden = utils.reconcile_release_dates(
+        run,
+        {
+            _key(run, "dated_now"): START_FUTURE,
+            _key(run, "redated"): START_FUTURE,
+            _key(run, "dated_later"): START_LATER,
+            _key(run, "undated_now"): None,
+            _key(run, "never_dated"): None,
+            # a key the run has no row for is nothing to update
+            _key(run, "absent"): START_FUTURE,
+        },
+    )
+
+    for row in (*rows.values(), other):
+        row.refresh_from_db()
+    assert {name: row.release_date for name, row in rows.items()} == {
+        "dated_now": START_FUTURE,
+        "redated": START_FUTURE,
+        "dated_later": START_LATER,
+        "undated_now": None,
+        "never_dated": None,
+        "gone": START_FUTURE,
+    }
+    assert all(row.published is published for row in rows.values())
+    assert (other.published, other.release_date) == (published, START_PAST)
+    # dated_now, redated and dated_later were visible; gone already was hidden
+    assert hidden == (3 if published else 0)
+
+
+def test_reconcile_release_dates_without_dates_clears_the_run(
+    django_assert_num_queries,
+):
+    """An archive that dates nothing leaves no dates behind, in one query"""
+    run = LearningResourceRunFactory.create(run_id="course-v1:test_run")
+    dated = ContentFileFactory.create(run=run, release_date=START_FUTURE)
+    undated = ContentFileFactory.create(run=run, release_date=None)
+
+    with django_assert_num_queries(1):
+        utils.reconcile_release_dates(run, {dated.key: None, undated.key: None})
+
+    dated.refresh_from_db()
+    undated.refresh_from_db()
+    assert (dated.release_date, undated.release_date) == (None, None)

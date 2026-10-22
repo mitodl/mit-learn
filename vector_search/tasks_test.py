@@ -367,12 +367,14 @@ def test_remove_run_content_files_no_content_files(mocker, mocked_celery):
 
 
 def test_remove_unpublished_run_content_files(mocker, mocked_celery):
-    """
-    remove_unpublished_run_content_files should only remove unpublished content
-    files associated with the run.
-    """
+    """Every hidden content file of the run, unpublished or unreleased, is removed"""
     run = LearningResourceRunFactory.create()
     unpublished_content_file = ContentFileFactory.create(run=run, published=False)
+    unreleased_content_file = ContentFileFactory.create(
+        run=run,
+        published=True,
+        release_date=now_in_utc() + datetime.timedelta(days=1),
+    )
     ContentFileFactory.create(run=run, published=True)
     ContentFileFactory.create(published=False)
     remove_embeddings_mock = mocker.patch(
@@ -382,10 +384,9 @@ def test_remove_unpublished_run_content_files(mocker, mocked_celery):
     with pytest.raises(mocked_celery.replace_exception_class):
         remove_unpublished_run_content_files.delay(run.id)
 
-    remove_embeddings_mock.si.assert_called_once_with(
-        [unpublished_content_file.id],
-        CONTENT_FILE_TYPE,
-    )
+    (call_ids, call_type), _ = remove_embeddings_mock.si.call_args
+    assert set(call_ids) == {unpublished_content_file.id, unreleased_content_file.id}
+    assert call_type == CONTENT_FILE_TYPE
     assert mocked_celery.chain.call_count == 1
     assert mocked_celery.replace.call_count == 1
     assert mocked_celery.replace.call_args[0][1] == mocked_celery.chain.return_value
@@ -497,6 +498,11 @@ def test_embed_by_id_all_runs_excludes_unpublished(mocker, mocked_celery):
     unpublished_ids = {
         cf.id for cf in ContentFileFactory.create_batch(2, run=run_a, published=False)
     }
+    unreleased_id = ContentFileFactory.create(
+        run=run_a,
+        published=True,
+        release_date=now_in_utc() + datetime.timedelta(days=1),
+    ).id
 
     generate_embeddings_mock = mocker.patch(
         "vector_search.tasks.generate_embeddings", autospec=True
@@ -510,6 +516,7 @@ def test_embed_by_id_all_runs_excludes_unpublished(mocker, mocked_celery):
     embedded = _embedded_content_file_ids(generate_embeddings_mock)
     assert published_ids <= embedded
     assert not (unpublished_ids & embedded)
+    assert unreleased_id not in embedded
 
 
 def test_embedded_content_file_without_runs(mocker, mocked_celery):
@@ -780,12 +787,18 @@ def test_embed_run_content_files_no_files_returns_none(mocker, mocked_celery):
     mocked_celery.chain.assert_not_called()
 
 
-def test_embed_run_content_files_skips_unpublished(mocker, mocked_celery, settings):
-    """Unpublished files are never embedded."""
+def test_embed_run_content_files_skips_hidden(mocker, mocked_celery, settings):
+    """Unpublished and unreleased files are never embedded."""
     settings.QDRANT_CHUNK_SIZE = 50
     run = LearningResourceRunFactory.create()
     published = ContentFileFactory.create(run=run, published=True, content="aaa")
     ContentFileFactory.create(run=run, published=False, content="bbb")
+    ContentFileFactory.create(
+        run=run,
+        published=True,
+        content="ccc",
+        release_date=now_in_utc() + datetime.timedelta(days=1),
+    )
     generate_embeddings_mock = mocker.patch(
         "vector_search.tasks.generate_embeddings", autospec=True
     )

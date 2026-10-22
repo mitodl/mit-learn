@@ -69,10 +69,16 @@ from learning_resources.lib.warehouse import (
     BaseWarehouseETLTask,
     iter_rows,
 )
-from learning_resources.models import ContentFile, LearningResource, VideoChannel
+from learning_resources.models import (
+    ContentFile,
+    LearningResource,
+    LearningResourceRun,
+    VideoChannel,
+)
 from learning_resources.site_scrapers.utils import scraper_for_site
 from learning_resources.utils import (
     build_program_children_content_bulk,
+    content_files_loaded_actions,
     html_to_markdown,
     load_course_blocklist,
     programs_needing_children_heal,
@@ -94,6 +100,10 @@ log = logging.getLogger(__name__)
 
 CLEANUP_RETRY_EXCEPTIONS = (*SEARCH_CONN_EXCEPTIONS, OperationalError)
 
+# Lives in a DB-backed cache of its own (Redis is ephemeral, "durable" is
+# culled) so a beat outage of any length is caught up by the next sweep.
+RELEASED_CONTENT_FILES_WATERMARK_KEY = "released_content_files:swept_through"
+
 
 @app.task(acks_late=True, reject_on_worker_lost=True)
 def update_next_start_date_and_prices():
@@ -106,6 +116,37 @@ def update_next_start_date_and_prices():
                 resource, percolate=False, generate_embeddings=True
             )
     return len(resources)
+
+
+@app.task(acks_late=True, reject_on_worker_lost=True)
+def reindex_released_content_files() -> int:
+    """
+    Reindex runs with content files released since the last sweep (watermark
+    minus OVERLAP, or LOOKBACK without one). The watermark only advances once
+    every hook is dispatched, and now is read first so no release falls
+    between two windows.
+    """
+    sweep_cache = caches["release_sweep"]
+    now = now_in_utc()
+    watermark = sweep_cache.get(RELEASED_CONTENT_FILES_WATERMARK_KEY)
+    since = (
+        watermark - settings.RELEASED_CONTENT_FILES_SWEEP_OVERLAP
+        if watermark
+        else now - settings.RELEASED_CONTENT_FILES_LOOKBACK
+    )
+    # visible() keeps the scan on contentfile_published_date_idx; the upper
+    # bound repeats visible()'s so the index range stops at now
+    run_ids = (
+        ContentFile.objects.visible(now)
+        .filter(release_date__gt=since, release_date__lte=now)
+        .values_list("run_id", flat=True)
+        .distinct()
+    )
+    runs = LearningResourceRun.objects.filter(id__in=run_ids)
+    for run in runs:
+        content_files_loaded_actions(run)
+    sweep_cache.set(RELEASED_CONTENT_FILES_WATERMARK_KEY, now, timeout=None)
+    return len(runs)
 
 
 @app.task(acks_late=True, reject_on_worker_lost=True)
@@ -199,6 +240,7 @@ def get_content_files(
     keys: list[str],
     *,
     overwrite: bool = False,
+    overwrite_units: bool = False,
 ):
     """
     Task to sync edX course content files with database
@@ -210,7 +252,9 @@ def get_content_files(
     ):
         log.warning("Required settings missing for %s files", etl_source)
         return
-    sync_edx_course_files(etl_source, ids, keys, overwrite=overwrite)
+    sync_edx_course_files(
+        etl_source, ids, keys, overwrite=overwrite, overwrite_units=overwrite_units
+    )
 
 
 def get_content_tasks(
@@ -218,8 +262,8 @@ def get_content_tasks(
     *,
     chunk_size: int | None = None,
     overwrite: bool = False,
+    overwrite_units: bool = False,
     learning_resource_ids: list[int] | None = None,
-    # Updated parameter
 ) -> celery.group:
     """
     Return a list of grouped celery tasks for indexing edx content
@@ -232,7 +276,13 @@ def get_content_tasks(
 
     return celery.group(
         [
-            get_content_files.si(ids, etl_source, archive_keys, overwrite=overwrite)
+            get_content_files.si(
+                ids,
+                etl_source,
+                archive_keys,
+                overwrite=overwrite,
+                overwrite_units=overwrite_units,
+            )
             for ids in chunks(
                 learning_resources,
                 chunk_size=chunk_size,
@@ -264,7 +314,7 @@ def _content_file_resource_ids(etl_source: str, learning_resource_ids):
 def unpublish_excluded_files(
     ids: list[int], etl_source: str, keys: list[str], *, dry_run: bool = False
 ):
-    """Unpublish unused content files for a chunk of courses, a row per run"""
+    """Unpublish excluded content files and date unreleased ones for some courses"""
     return unpublish_excluded_content_files(etl_source, ids, keys, dry_run=dry_run)
 
 
@@ -300,7 +350,12 @@ def unpublish_all_excluded_files(
 
 @app.task(bind=True)
 def import_all_mit_edx_files(
-    self, *, chunk_size=None, overwrite=False, learning_resource_ids=None
+    self,
+    *,
+    chunk_size=None,
+    overwrite=False,
+    overwrite_units=False,
+    learning_resource_ids=None,
 ):
     """Ingest MIT edX files from an S3 bucket"""
     return self.replace(
@@ -308,6 +363,7 @@ def import_all_mit_edx_files(
             ETLSource.mit_edx.name,
             chunk_size=chunk_size,
             overwrite=overwrite,
+            overwrite_units=overwrite_units,
             learning_resource_ids=learning_resource_ids,
         )
     )
@@ -315,7 +371,12 @@ def import_all_mit_edx_files(
 
 @app.task(bind=True)
 def import_all_oll_files(
-    self, *, chunk_size=None, overwrite=False, learning_resource_ids=None
+    self,
+    *,
+    chunk_size=None,
+    overwrite=False,
+    overwrite_units=False,
+    learning_resource_ids=None,
 ):
     """Ingest MIT edX files from an S3 bucket"""
     return self.replace(
@@ -323,6 +384,7 @@ def import_all_oll_files(
             ETLSource.oll.name,
             chunk_size=chunk_size,
             overwrite=overwrite,
+            overwrite_units=overwrite_units,
             learning_resource_ids=learning_resource_ids,
         )
     )
@@ -330,7 +392,12 @@ def import_all_oll_files(
 
 @app.task(bind=True)
 def import_all_mitxonline_files(
-    self, *, chunk_size=None, overwrite=False, learning_resource_ids=None
+    self,
+    *,
+    chunk_size=None,
+    overwrite=False,
+    overwrite_units=False,
+    learning_resource_ids=None,
 ):
     """Ingest MITx Online files from an S3 bucket"""
 
@@ -339,6 +406,7 @@ def import_all_mitxonline_files(
             ETLSource.mitxonline.name,
             chunk_size=chunk_size,
             overwrite=overwrite,
+            overwrite_units=overwrite_units,
             learning_resource_ids=learning_resource_ids,
         )
     )
@@ -346,7 +414,12 @@ def import_all_mitxonline_files(
 
 @app.task(bind=True)
 def import_all_xpro_files(
-    self, *, chunk_size=None, overwrite=False, learning_resource_ids=None
+    self,
+    *,
+    chunk_size=None,
+    overwrite=False,
+    overwrite_units=False,
+    learning_resource_ids=None,
 ):
     """Ingest xPRO OLX files from an S3 bucket"""
 
@@ -355,14 +428,21 @@ def import_all_xpro_files(
             ETLSource.xpro.name,
             chunk_size=chunk_size,
             overwrite=overwrite,
+            overwrite_units=overwrite_units,
             learning_resource_ids=learning_resource_ids,
         )
     )
 
 
 @app.task(bind=True)
-def import_content_files(
-    self, etl_source, *, chunk_size=None, overwrite=False, learning_resource_ids=None
+def import_content_files(  # noqa: PLR0913
+    self,
+    etl_source,
+    *,
+    chunk_size=None,
+    overwrite=False,
+    overwrite_units=False,
+    learning_resource_ids=None,
 ):
     """Import content files for any edX-based ETL source.
 
@@ -375,6 +455,7 @@ def import_content_files(
             etl_source,
             chunk_size=chunk_size,
             overwrite=overwrite,
+            overwrite_units=overwrite_units,
             learning_resource_ids=learning_resource_ids,
         )
     )

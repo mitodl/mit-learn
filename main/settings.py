@@ -36,7 +36,7 @@ from main.settings_course_etl import *  # noqa: F403
 from main.settings_pluggy import *  # noqa: F403
 from openapi.settings_spectacular import open_spectacular_settings
 
-VERSION = "0.84.2"
+VERSION = "0.84.3"
 
 log = logging.getLogger()
 
@@ -517,6 +517,12 @@ CACHES = {
     "durable": {
         "BACKEND": "django.core.cache.backends.db.DatabaseCache",
         "LOCATION": "durable_cache",
+    },
+    # its own table: DatabaseCache culls by key order once a table passes
+    # MAX_ENTRIES, whatever the timeout, and "durable" holds per-user flags
+    "release_sweep": {
+        "BACKEND": "django.core.cache.backends.db.DatabaseCache",
+        "LOCATION": "release_sweep_cache",
     },
     "redis": {
         "BACKEND": "django_redis.cache.RedisCache",

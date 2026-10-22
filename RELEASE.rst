@@ -1,6 +1,16 @@
 Release Notes
 =============
 
+Version 0.84.3
+--------------
+
+- Fixes for canvas pdf processing (#4126)
+- Update opensearchproject/opensearch Docker tag to v3.3.2 (#3911)
+- build(deps): bump next from 16.2.7 to 16.4.2 (#4124)
+- Stop matching asset names that differ by a dropped separator (#4106)
+- Hide edX content files until their release date (#4093)
+- Build course units from edX OLX archives (#4095)
+
 Version 0.84.2
 --------------
 
