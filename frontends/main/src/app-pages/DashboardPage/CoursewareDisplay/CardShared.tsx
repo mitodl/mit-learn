@@ -231,6 +231,52 @@ const UpgradedBanner: React.FC<{ className?: string }> = ({ className }) => (
   </UpgradedBannerRoot>
 )
 
+const MetaRowRoot = styled.div<{ $wrap: boolean }>(({ $wrap }) => ({
+  display: "flex",
+  alignItems: "center",
+  flexWrap: $wrap ? "wrap" : "nowrap",
+  columnGap: "12px",
+  rowGap: "4px",
+}))
+
+// Below the large breakpoint the card is too narrow for the note and the other
+// segments on one line, so the note takes its own line rather than leaving a
+// wrapped row that starts with a separator.
+const RequirementNote = styled.span(({ theme }) => ({
+  ...theme.typography.body3,
+  color: theme.custom.colors.silverGrayDark,
+  [theme.breakpoints.down("lg")]: {
+    flexBasis: "100%",
+  },
+}))
+
+const RequirementNoteSeparator = styled(Ellipse)(({ theme }) => ({
+  [theme.breakpoints.down("lg")]: {
+    display: "none",
+  },
+}))
+
+/** A card's info row: segments separated by dots, optionally led by a note. */
+const CardMetaRow: React.FC<{
+  note?: string
+  segments: React.ReactNode[]
+}> = ({ note, segments }) => {
+  const present = segments.filter(Boolean)
+  if (!note && present.length === 0) return null
+  return (
+    <MetaRowRoot $wrap={!!note}>
+      {note ? <RequirementNote>{note}</RequirementNote> : null}
+      {note && present.length > 0 ? <RequirementNoteSeparator /> : null}
+      {present.map((segment, i) => (
+        <React.Fragment key={i}>
+          {i > 0 && <Ellipse />}
+          {segment}
+        </React.Fragment>
+      ))}
+    </MetaRowRoot>
+  )
+}
+
 const DatePopoverContent = styled.div({
   maxWidth: "240px",
   display: "flex",
@@ -369,4 +415,5 @@ export {
   CourseDateText,
   CourseDateSummary,
   UpgradedBanner,
+  CardMetaRow,
 }

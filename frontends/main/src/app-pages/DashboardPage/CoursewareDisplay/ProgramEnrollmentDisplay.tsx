@@ -188,6 +188,9 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
                       })}
                       kind="course"
                       entry={item.entry}
+                      requirementNote={
+                        section.node.data.description || undefined
+                      }
                       onUpgradeError={setUpgradeError}
                     />
                   )
