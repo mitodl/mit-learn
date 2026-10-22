@@ -6,7 +6,11 @@ describe("contactUsConfig", () => {
   const original = process.env.NEXT_PUBLIC_LEARN_AI_SUPPORT_ENDPOINT
 
   afterEach(() => {
-    process.env.NEXT_PUBLIC_LEARN_AI_SUPPORT_ENDPOINT = original
+    if (original === undefined) {
+      delete process.env.NEXT_PUBLIC_LEARN_AI_SUPPORT_ENDPOINT
+    } else {
+      process.env.NEXT_PUBLIC_LEARN_AI_SUPPORT_ENDPOINT = original
+    }
   })
 
   test("isContactUsEnabled is false when the endpoint is unset", () => {
