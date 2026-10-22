@@ -34,7 +34,7 @@ from learning_resources.etl.constants import (
     ResourceNextRunConfig,
 )
 from learning_resources.etl.exceptions import ExtractException
-from learning_resources.etl.ownership import may_write
+from learning_resources.etl.ownership import CONTENT_FILE, may_write
 from learning_resources.etl.utils import most_common_topics
 from learning_resources.models import (
     ContentFile,
@@ -1121,6 +1121,11 @@ def load_content_files(
         list of int: Ids of the ContentFile objects that were created/updated
 
     """
+    # Backstop, as in load_courses: every caller checks before it extracts, so
+    # this only stops one that skipped that check.
+    if not may_write(course_run.learning_resource.etl_source, CONTENT_FILE):
+        return []
+
     if course_run.learning_resource.resource_type == LearningResourceType.course.name:
         content_files_ids = []
         content_tags = []
