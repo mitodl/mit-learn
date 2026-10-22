@@ -57,6 +57,7 @@ from learning_resources.models import (
     ETLShadowRun,
     LearningResource,
     LearningResourceOfferor,
+    LearningResourcePlatform,
     LearningResourceRun,
     LearningResourceTopic,
     Podcast,
@@ -243,6 +244,11 @@ def _offeror_code(lookup: tuple) -> str | None:
     return offeror.code if offeror else None
 
 
+@cache
+def _platform_codes() -> frozenset[str]:
+    return frozenset(LearningResourcePlatform.objects.values_list("code", flat=True))
+
+
 def _instructor_names(instructors_data: Iterable[dict]) -> list[str]:
     names = [
         (
@@ -425,8 +431,16 @@ def _observe_item(  # noqa: PLR0913
     *,
     prune: bool,
     blocklist: Sequence[str],
-) -> None:
-    """Classify one item of a batch against the stored resource it would load into."""
+) -> bool:
+    """
+    Classify one item of a batch against the stored resource it would load into.
+
+    Returns:
+        whether the loader would load the item
+    """
+    if resource_type in _TYPES_WITH_RUNS and item["platform"] not in _platform_codes():
+        # upsert_course_or_program logs and skips an item with no known platform
+        return False
     key = item["readable_id"]
     # the loaders key a resource on its platform too, so one on another
     # platform is a different resource and the item would be created
@@ -440,7 +454,7 @@ def _observe_item(  # noqa: PLR0913
     )
     if resource is None:
         report.created.append(key)
-        return
+        return True
     report.seen.add(resource.id)
     published = item.get("published", resource.published)
     if resource_type in _TYPES_WITH_RUNS and (not item.get("runs") or key in blocklist):
@@ -457,6 +471,7 @@ def _observe_item(  # noqa: PLR0913
         report.field_counts.update({_LIST_ITEM.sub("[]", path) for path in fields})
         if len(report.changed) < MAX_CHANGED_DETAILS:
             report.changed[key] = fields
+    return True
 
 
 def observe(  # noqa: PLR0913
@@ -488,12 +503,12 @@ def observe(  # noqa: PLR0913
     """
     report = _reports.get()[(etl_source, resource_type)]
     report.observed = True
-    count = 0
+    count = loaded = 0
     for chunk in batched(items, OBSERVE_CHUNK_SIZE):
         count += len(chunk)
         stored = _stored(resource_type, [item["readable_id"] for item in chunk])
         for item in chunk:
-            _observe_item(
+            loaded += _observe_item(
                 report,
                 stored.get(item["readable_id"], []),
                 item,
@@ -502,7 +517,9 @@ def observe(  # noqa: PLR0913
                 blocklist=blocklist,
             )
     report.items += count
-    if prune and (count or prune_empty):
+    # the loaders prune only when they loaded something, not on a batch of
+    # items they all skipped
+    if prune and (loaded or prune_empty):
         report.prune = True
         report.keep = keep or Q()
 
@@ -675,4 +692,5 @@ def run_shadow(
         _reports.reset(token)
         _topic_parents.cache_clear()
         _offeror_code.cache_clear()
+        _platform_codes.cache_clear()
     return result, _save(pairs, reports)
