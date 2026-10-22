@@ -321,6 +321,7 @@ Run [learn-ai](https://github.com/mitodl/learn-ai) locally, then point the Learn
 NEXT_PUBLIC_LEARN_AI_RECOMMENDATION_ENDPOINT=http://open.odl.local:8065/ai/http/recommendation_agent/
 NEXT_PUBLIC_LEARN_AI_SEARCH_SUMMARY_ENDPOINT=http://open.odl.local:8065/ai/http/search_summary_agent/
 NEXT_PUBLIC_LEARN_AI_SYLLABUS_ENDPOINT=http://open.odl.local:8065/ai/http/syllabus_agent/
+NEXT_PUBLIC_LEARN_AI_SUPPORT_ENDPOINT=http://open.odl.local:8065/ai/http/support_agent/
 ```
 
 On the learn-ai side, add the Learn gateway origin to its trusted origins so
