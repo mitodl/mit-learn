@@ -410,6 +410,12 @@ def _note_youtube(
             resource.platform.code if resource.platform else None,
             data["content_file_platform"],
         )
+        _note(
+            changes,
+            "topics",
+            sorted(topic.name for topic in resource.topics.all()),
+            data["content_file_topics"],
+        )
 
 
 def _resource_changes(
@@ -852,7 +858,8 @@ def _content_file_video(
     That loader finds the video by readable_id and etl_source, not platform,
     and moves it to its course's platform. ``platform`` is the stored video's,
     so that the comparison finds the resource the loader updates, and
-    ``content_file_platform`` is the course's.
+    ``content_file_platform`` is the course's. The course's topics are copied
+    as they are, without their parents.
     """
     course = content_file.run.learning_resource
     course_platform = course.platform.code if course.platform else None
@@ -868,7 +875,9 @@ def _content_file_video(
         "platform": stored_platform or course_platform,
         "content_file_platform": course_platform,
         "offered_by": {"code": course.offered_by.code} if course.offered_by else None,
-        "topics": [{"name": topic.name} for topic in course.topics.all()],
+        # not "topics": that comparison adds each topic's parents, as
+        # load_topics does, and this loader copies the course's as they are
+        "content_file_topics": sorted(topic.name for topic in course.topics.all()),
     }
 
 
