@@ -7,6 +7,7 @@ from django.contrib.postgres.fields import ArrayField
 from django.contrib.postgres.forms import SimpleArrayField
 
 from learning_resources import models
+from learning_resources.profiles import admin as profiles_admin  # noqa: F401
 
 
 class LineSeparatedArrayField(SimpleArrayField):

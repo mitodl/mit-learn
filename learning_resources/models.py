@@ -1428,7 +1428,7 @@ class UnitContentFile(models.Model):
     relation = models.CharField(
         max_length=32, choices=Relation.choices, default=Relation.CORE
     )
-    # lesson order within the unit, approximate for static files, which sit
+    # content file order within the unit, approximate for static files, which sit
     # after the first block that links them; null in units with no order, like
     # the course context
     position = models.PositiveIntegerField(null=True, blank=True)
@@ -1445,6 +1445,99 @@ class UnitContentFile(models.Model):
         return (
             f"{self.unit_id}/{self.content_file_id}: {self.relation} #{self.position}"
         )
+
+
+class ResourceProfileConfiguration(TimestampedModel):
+    """
+    Admin-editable prompt and model for one stage of resource profile generation.
+
+    One row per stage. Cache keys leave the configuration out, so editing it
+    here changes stored results only when they are regenerated with overwrite.
+    """
+
+    class Stage(models.TextChoices):
+        # claims about one unit or bin
+        UNIT = "unit", "Unit"
+
+    stage = models.CharField(max_length=16, choices=Stage.choices, unique=True)
+    llm_model = models.CharField(
+        max_length=128, verbose_name="LLM Model", help_text="Any LiteLLM model name."
+    )
+    prompt = models.TextField(help_text="The system prompt for this stage.")
+    temperature = models.FloatField(
+        null=True,
+        blank=True,
+        help_text="Leave blank to use the model's default. Reasoning models"
+        " accept only that.",
+    )
+    # Blank fields aren't sent. One that is set is sent as is, and a model that
+    # doesn't take it rejects the call.
+    max_tokens = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        help_text="Most tokens the model may return. Leave blank for no limit."
+        " Newer OpenAI models reject it: use max completion tokens.",
+    )
+    max_completion_tokens = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        help_text="Most tokens the model may return, reasoning included. Leave"
+        " blank for no limit. Older models may reject it: use max tokens.",
+    )
+    reasoning_effort = models.CharField(  # noqa: DJ001
+        max_length=16,
+        null=True,
+        blank=True,
+        help_text="none, low, medium, high, ... Leave blank for the model's"
+        " default, and for models without reasoning, which reject it.",
+    )
+    max_file_tokens = models.PositiveIntegerField(
+        default=25000, help_text="Files longer than this are truncated."
+    )
+    input_token_budget = models.PositiveIntegerField(
+        default=100000,
+        help_text="Most file text one call may read. A unit over it is skipped.",
+    )
+
+    def __str__(self):
+        return f"ResourceProfileConfiguration for {self.stage}"
+
+
+class ClaimExtraction(TimestampedModel):
+    """
+    The validated output of one resource profile LLM call, keyed by its inputs.
+
+    Rows are a cache: before a call, its key is computed from the text of the
+    files it reads, and a row with that key is used instead of calling again.
+    The prompt and model aren't in the key, so changing them leaves rows as
+    they are until they are regenerated with overwrite.
+    Units with identical files in different runs share a row, so `unit` is the
+    unit the row was first produced for.
+    """
+
+    class Level(models.TextChoices):
+        # a unit, bin or context unit
+        UNIT = "unit", "Unit"
+
+    # sha256 of the stage's inputs
+    key = models.CharField(max_length=64, unique=True)
+    level = models.CharField(max_length=16, choices=Level.choices)
+    # stage name and when its configuration was last saved
+    extractor_version = models.CharField(max_length=32)
+    model = models.CharField(max_length=128)
+    output = models.JSONField()  # validated stage output: claims + evidence + notes
+    # the model's response as returned, before validation
+    raw_response = models.TextField(blank=True)
+    unit = models.ForeignKey(
+        Unit,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="claim_extractions",
+    )
+
+    def __str__(self):
+        return f"{self.level} {self.extractor_version} {self.key[:12]}"
 
 
 class UserList(TimestampedModel):
