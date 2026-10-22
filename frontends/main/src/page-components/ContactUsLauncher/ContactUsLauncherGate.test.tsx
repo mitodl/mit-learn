@@ -27,7 +27,11 @@ describe("ContactUsLauncherGate", () => {
     mockLauncher.mockClear()
   })
   afterEach(() => {
-    process.env.NEXT_PUBLIC_LEARN_AI_SUPPORT_ENDPOINT = original
+    if (original === undefined) {
+      delete process.env.NEXT_PUBLIC_LEARN_AI_SUPPORT_ENDPOINT
+    } else {
+      process.env.NEXT_PUBLIC_LEARN_AI_SUPPORT_ENDPOINT = original
+    }
   })
 
   test("renders the launcher and forwards the signed-in email", () => {
@@ -80,5 +84,18 @@ describe("ContactUsLauncherGate", () => {
       user: { is_authenticated: false },
     })
     expect(screen.queryByTestId("launcher")).not.toBeInTheDocument()
+  })
+
+  test("keeps the same settings object across re-renders", () => {
+    mockLoaded.mockReturnValue(true)
+    mockEnabled.mockReturnValue(true)
+    const { view } = renderWithProviders(<ContactUsLauncherGate />, {
+      user: { is_authenticated: true, email: "learner@example.com" },
+    })
+    view.rerender(<ContactUsLauncherGate />)
+    expect(mockLauncher.mock.calls.length).toBeGreaterThan(1)
+    const first = mockLauncher.mock.calls[0][0].settings
+    const last = mockLauncher.mock.calls.at(-1)![0].settings
+    expect(last).toBe(first)
   })
 })
