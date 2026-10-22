@@ -1130,4 +1130,64 @@ describe("ChannelSearch", () => {
     expect(grid.tagName).toBe("UL")
     expect(within(grid).getAllByRole("listitem").length).toBeGreaterThan(0)
   }, 10000)
+
+  describe("the empty state", () => {
+    /* The mocked search answers with no results, so every case here is empty. */
+    const emptyAt = async (query: string) => {
+      const { channel } = setMockApiResponses({
+        channelPatch: { channel_type: ChannelTypeEnum.Topic },
+      })
+      const { location } = renderWithProviders(<ChannelPage />, {
+        url: `/c/${channel.channel_type}/${channel.name}/${query}`,
+      })
+      return { location, card: await screen.findByTestId("no-results") }
+    }
+
+    /**
+     * The filters are what emptied the search, so the way out of it is to drop
+     * them -- and the grid they would have appeared above is not there to
+     * carry the chip row's own link into view.
+     */
+    test("offers to clear the filters that emptied the search", async () => {
+      const { card, location } = await emptyAt("?delivery=online&free=true")
+
+      await user.click(
+        within(card).getByRole("button", { name: "Clear all filters" }),
+      )
+
+      await waitFor(() => {
+        expect(location.current.searchParams.get("delivery")).toBe(null)
+      })
+      expect(location.current.searchParams.get("free")).toBe(null)
+    }, 10000)
+
+    /* A button that cannot change the answer is worse than no button. */
+    test("offers nothing to clear when nothing is filtering", async () => {
+      const { card } = await emptyAt("")
+
+      expect(
+        within(card).queryByRole("button", { name: "Clear all filters" }),
+      ).toBe(null)
+    }, 10000)
+
+    /**
+     * "No results" says nothing the empty grid does not. Naming what was
+     * looked for says which tab came back empty, where the other may not have.
+     */
+    test("names what the active tab found none of", async () => {
+      const { card } = await emptyAt("?resource_type_group=learning_material")
+
+      expect(card).toHaveTextContent(
+        "No learning materials match these filters",
+      )
+    }, 10000)
+
+    test("names courses and programs on the default tab", async () => {
+      const { card } = await emptyAt("")
+
+      expect(card).toHaveTextContent(
+        "No courses or programs match these filters",
+      )
+    }, 10000)
+  })
 })

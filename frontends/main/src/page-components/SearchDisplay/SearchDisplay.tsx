@@ -55,7 +55,8 @@ import { ResourceTypeGroupTabs } from "./ResourceTypeGroupTabs"
 import { TABS, UPCOMING_SORT, findActiveTab } from "./tabConfigs"
 import ProfessionalToggle from "./ProfessionalToggle"
 import { useTrackedFilterSetters } from "@/common/analytics/searchFilters"
-import SelectedFilters from "./SelectedFilters"
+import SelectedFilters, { selectedFilters } from "./SelectedFilters"
+import NoResults from "./NoResults"
 import SliderInput from "./SliderInput"
 import VectorAdminOptions from "./VectorAdminOptions"
 import { AdminTitleContainer, ExplanationContainer } from "./adminStyles"
@@ -1231,6 +1232,9 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
     facetsBeforeTypeChoice.length,
   )
   const aggregations = displayData?.metadata.aggregations ?? {}
+  /* What the chip row draws, which is also what there is for the empty
+     state's button to clear -- read from one place so the two agree. */
+  const appliedFilters = selectedFilters(facetManifest, requestParams)
   const availableFacets = (manifest: FacetManifest) => (
     <AvailableFacets
       facetManifest={manifest}
@@ -1510,6 +1514,15 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
                       ))}
                     </PlainList>
                   )
+                ) : resultsLayout === "cards" ? (
+                  <NoResults
+                    noun={activeTab.emptyNoun ?? "results"}
+                    canClearFilters={appliedFilters.length > 0}
+                    onClearFilters={() => {
+                      clearAllFacets()
+                      setPage(1)
+                    }}
+                  />
                 ) : (
                   <NoneFound>No results found for your query.</NoneFound>
                 )}
