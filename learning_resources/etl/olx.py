@@ -1,13 +1,15 @@
 """Which files of an exported OLX course tree to ingest, and which to skip"""
 
+import copy
 import html
 import json
 import logging
 import os
 import re
-from bisect import bisect_right
+from bisect import bisect_left, bisect_right
 from collections import defaultdict
 from collections.abc import Iterable
+from datetime import UTC, datetime
 from functools import cached_property
 from itertools import accumulate
 from pathlib import Path
@@ -43,7 +45,7 @@ LEGACY_TRANSCRIPT_RE = re.compile(
 
 # A reference spells an asset name with edX's punctuation substitutions (a
 # space, +, or @ written as _) or without them, so punctuation is stripped
-# before comparing, but still marks where a name can start.
+# before comparing, but still marks where a name can start and end.
 NAME_BREAK = "\x00"
 SEPARATORS = re.compile(r"(?:[^\w.\-]|_)+")
 # _NameIndex looks names up by this many leading characters
@@ -140,6 +142,37 @@ def get_jump_to_url(run: LearningResourceRun, url_name: str) -> str:
     return f"{root_url}/courses/{run_id}/jump_to_id/{url_name}"
 
 
+def _without_dated_blocks(element: Element) -> Element:
+    """
+    Copy element minus its named, dated inline blocks, whose text is their own.
+    An unnamed one stays its parent's: _blocks doesn't track it.
+    """
+    element = copy.deepcopy(element)
+    for parent in list(element.iter()):
+        for child in list(parent):
+            if child.get("url_name") and _parse_olx_start(child.get("start")):
+                parent.remove(child)
+    return element
+
+
+def _reference_text(element: Element) -> str:
+    """Serialize element, undoing the extra escape tostring adds to CDATA"""
+    return html.unescape(ElementTree.tostring(element, encoding="unicode"))
+
+
+def _parse_olx_start(value: str | None) -> datetime | None:
+    """Parse an OLX start as UTC; None if absent or unparsable (logged)"""
+    if not value:
+        return None
+    try:
+        parsed = datetime.fromisoformat(value)
+        # astimezone overflows on year 1 or 9999 with a non-UTC offset
+        return parsed.astimezone(UTC) if parsed.tzinfo else parsed.replace(tzinfo=UTC)
+    except (ValueError, OverflowError):
+        log.warning("Ignoring unparsable OLX start attribute %r", value)
+        return None
+
+
 def _normalize_asset_ref(text: str) -> str:
     """Strip the punctuation of a filename that a reference may spell differently"""
     return SEPARATORS.sub("", unquote(html.unescape(text)).lower())
@@ -155,6 +188,12 @@ def _reference_index(texts: list[str]) -> tuple[str, list[int]]:
     )
     segments = stripped.split(NAME_BREAK)
     return "".join(segments), list(accumulate(map(len, segments), initial=0))
+
+
+def _ends_at(blob: str, starts: list[int], end: int) -> bool:
+    """Whether a name ending at end is followed by a break, or a sentence's period"""
+    index = bisect_left(starts, end)
+    return index < len(starts) and not blob[end : starts[index]].strip(".")
 
 
 class _NameIndex:
@@ -174,21 +213,42 @@ class _NameIndex:
 
     def first_starts(self, blob: str, starts: list[int]) -> dict[str, int]:
         """
-        Map each name blob spells to the first name start it is spelled at, so
-        final_exam.srt doesn't match exam.srt
+        Map each name blob spells all of between name breaks to the first name
+        start it is spelled at, so final_exam.srt doesn't match exam.srt and
+        notes.pdf.txt doesn't match notes.pdf
         """
         found: dict[str, int] = {}
+
+        def spelled(name: str, start: int) -> bool:
+            return name not in found and _ends_at(blob, starts, start + len(name))
+
         for start in starts:
             for name in self._by_prefix.get(
                 blob[start : start + NAME_PREFIX_LENGTH], ()
             ):
-                if name not in found and blob.startswith(name, start):
+                if blob.startswith(name, start) and spelled(name, start):
                     found[name] = start
             for length, names in self._short.items():
                 name = blob[start : start + length]
-                if name in names and name not in found:
+                if name in names and spelled(name, start):
                     found[name] = start
         return found
+
+
+def _refers_to(
+    path: Path, found: dict[str, int], video_ids: set[str], *, guess=False
+) -> bool:
+    """
+    Whether indexed text names path (found by _NameIndex.first_starts), or
+    declares the video a legacy transcript is named for (any legacy
+    transcript, with guess)
+    """
+    if _normalize_asset_ref(path.name) in found:
+        return True
+    legacy = LEGACY_TRANSCRIPT_RE.match(path.name)
+    return legacy is not None and (
+        guess or _normalize_asset_ref(legacy.group(1)) in video_ids
+    )
 
 
 def _parse_video_transcripts(
@@ -274,8 +334,9 @@ class _StaticTarget(NamedTuple):
 
 class OlxArchive:
     """
-    An OLX tree's ingestable files (paths) and the ones learners can't reach
-    (excluded). Malformed XML raises on first access.
+    An OLX tree's ingestable files (paths), the ones learners can't reach
+    (excluded), and when each releases (release_dates). Malformed XML
+    raises on first access.
     """
 
     def __init__(
@@ -295,6 +356,8 @@ class OlxArchive:
         self.valid_file_types = valid_file_types
         # file names only, so the tree is never held in memory
         self._listings: dict[Path, dict[str, list[Path]]] = {}
+        # static files each static text page names, scanned once per page
+        self._links_by_page: dict[Path, set[Path]] = {}
 
     @cached_property
     def is_olx(self) -> bool:
@@ -330,6 +393,20 @@ class OlxArchive:
         excluded.update(self.root.glob("info/**/updates.html"))
         return excluded
 
+    @cached_property
+    def release_dates(self) -> dict[Path, datetime]:
+        """
+        Release date of each file whose every visible path is dated; empty for
+        non-OLX trees and self-paced runs, which ignore block starts. Dates follow
+        links through reachable static text pages; an undated route wins.
+        """
+        if not self.is_olx or (self._course_policy or {}).get("self_paced"):
+            return {}
+        dates = self._block_release_dates()
+        if (self.root / "static").is_dir() and (dates or self._inline_dated):
+            self._date_static_assets(dates)
+        return dates
+
     def excluded_keys(self, run: LearningResourceRun) -> set[str]:
         """Keys of excluded files, minus any key an ingested path shares"""
         # each path is keyed once; the subtraction is needed because "foo bar.pdf"
@@ -339,6 +416,20 @@ class OlxArchive:
             for path in self.text_files
             if path in self.excluded
         } - {get_edx_module_id(str(path), run) for path in self.paths}
+
+    def key_dates(self, run: LearningResourceRun) -> dict[str, datetime | None]:
+        """
+        Release date per ingested key (None if undated); on a collision the
+        latest date wins
+        """
+        dates: dict[str, datetime | None] = {}
+        for path in self.paths:
+            key = get_edx_module_id(str(path), run)
+            dates[key] = max(
+                filter(None, (dates.get(key), self.release_dates.get(path))),
+                default=None,
+            )
+        return dates
 
     def video_metadata(self, run: LearningResourceRun) -> dict:
         """Transcript key -> its video's key and title"""
@@ -383,19 +474,20 @@ class OlxArchive:
     # not cached, like _live_updates: parsed trees and file text would stay in
     # memory for as long as the archive does, i.e. through every extraction
     @property
-    def _blocks(self) -> list[tuple[str, str, Element, bool]]:
+    def _blocks(self) -> list[tuple[str, str, Element, bool, datetime | None, bool]]:
         """
-        Course tree blocks as (tag, url_name, element, staff_only), once per
-        distinct state. Pointer files win over inline elements.
+        Named course blocks as (tag, url_name, element, staff_only, release,
+        inline), each (tag, url_name, staff_only, release) once. release ignores
+        the root <course>'s own start so an upcoming run stays indexed.
         """
         course = self._course
         if course is None:
             return []
         blocks = []
-        seen: set[tuple[str, str, bool]] = set()
-        stack = [(course, "course", course.get("url_name"), False)]
+        seen: set[tuple[str, str, bool, datetime | None]] = set()
+        stack = [(course, "course", course.get("url_name"), False, None)]
         while stack:
-            pointer, tag, url_name, staff_only = stack.pop()
+            pointer, tag, url_name, staff_only, release = stack.pop()
             # pointer file wins when present; otherwise the element is the block
             element = self._parse_block(tag, url_name) if url_name else None
             if element is None:
@@ -404,14 +496,24 @@ class OlxArchive:
                 pointer.get("visible_to_staff_only"),
                 element.get("visible_to_staff_only"),
             )
+            if tag != "course":
+                # a set, so a pointer that is its own element is parsed (and
+                # warned about) once
+                starts = {pointer.get("start"), element.get("start")}
+                release = max(
+                    filter(None, [release, *map(_parse_olx_start, starts)]),
+                    default=None,
+                )
             if url_name:
-                state = (tag, url_name, staff_only)
+                state = (tag, url_name, staff_only, release)
                 if state in seen:
                     continue
                 seen.add(state)
-                blocks.append((tag, url_name, element, staff_only))
+                blocks.append(
+                    (tag, url_name, element, staff_only, release, element is pointer)
+                )
             stack.extend(
-                (child, child.tag, child.get("url_name"), staff_only)
+                (child, child.tag, child.get("url_name"), staff_only, release)
                 for child in element
             )
         return blocks
@@ -439,9 +541,10 @@ class OlxArchive:
 
     def _files_named(self, folder: str, name: str) -> set[Path]:
         """
-        Return the files glob("<folder>/<name>.*") would find, without the
-        glob: each directory is listed once, and name is not read as a pattern,
-        so a url_name with [ still finds its file
+        Return the files named <folder>/<name>.<ext>, without a glob: each
+        directory is listed once, and name is not read as a pattern, so a
+        url_name with [ still finds its file. Only the name before the last dot
+        counts, so notes doesn't also take notes.extra.html.
         """
         path = self.root / folder / name
         if path.parent not in self._listings:
@@ -451,11 +554,8 @@ class OlxArchive:
             except (FileNotFoundError, NotADirectoryError):
                 entries = []
             for entry in entries:
-                if entry.is_file():
-                    # every name before a dot, as name.* can match any of them
-                    for index, char in enumerate(entry.name):
-                        if char == ".":
-                            listing[entry.name[:index]].append(Path(entry.path))
+                if entry.is_file() and "." in entry.name:
+                    listing[Path(entry.name).stem].append(Path(entry.path))
             self._listings[path.parent] = listing
         return set(self._listings[path.parent].get(path.name, ()))
 
@@ -464,7 +564,7 @@ class OlxArchive:
         """Files of staff-only blocks no visible parent also holds"""
         staff_files: dict[tuple[str, str], set[Path]] = {}
         reachable: set[tuple[str, str]] = set()
-        for tag, url_name, element, staff_only in self._blocks:
+        for tag, url_name, element, staff_only, _release, _inline in self._blocks:
             if staff_only:
                 staff_files[tag, url_name] = self._block_files(tag, url_name, element)
             else:
@@ -530,6 +630,13 @@ class OlxArchive:
         return {path for path in self.root.glob("about/**/*") if path.name not in shown}
 
     @cached_property
+    def _static_names(self) -> _NameIndex:
+        """_static_files' names, indexed once for every scan"""
+        return _NameIndex(
+            _normalize_asset_ref(path.name) for path in self._static_files
+        )
+
+    @cached_property
     def _static_files(self) -> list[Path]:
         """The files under static/, in path order"""
         return [
@@ -575,38 +682,55 @@ class OlxArchive:
             if isinstance(item, dict) and item.get("status") != "deleted"
         )
 
+    # not cached, like _blocks: the elements hold their parsed subtrees
+    @property
+    def _inline_dated(self) -> dict[datetime, list[Element]]:
+        """Dated, visible blocks held inline in another file, by release date"""
+        inline: dict[datetime, list[Element]] = {}
+        for _tag, _url_name, element, staff_only, release, is_inline in self._blocks:
+            if is_inline and release is not None and not staff_only:
+                inline.setdefault(release, []).append(element)
+        return inline
+
     def _source(self, path: Path) -> tuple[str, set[str] | None]:
         """
-        Return a reference source's text and the video ids it declares. Ids
-        are None for malformed XML: "unknown", so callers keep every legacy
-        transcript rather than drop one whose video they failed to read.
+        Return a reference source's text and video ids, minus its dated inline
+        blocks. Ids are None for malformed XML, so callers keep every legacy
+        transcript.
         """
         text = path.read_text(errors="ignore")
-        ids: set[str] | None = set()
-        if path.suffix.lower() == ".xml":
-            # parse the file, not the lenient text, so bad bytes still fail
-            try:
-                ids = self._video_ids_of(ElementTree.parse(path).getroot())
-            except ElementTree.ParseError:
-                log.warning("Malformed XML in %s, keeping all legacy transcripts", path)
-                ids = None
-        return text, ids
+        if path.suffix.lower() != ".xml":
+            return text, set()
+        # parse the file, not the lenient text, so bad bytes still fail
+        try:
+            root = _without_dated_blocks(ElementTree.parse(path).getroot())
+        except ElementTree.ParseError:
+            log.warning("Malformed XML in %s, keeping all legacy transcripts", path)
+            return text, None
+        return _reference_text(root), self._video_ids_of(root)
 
-    def _texts(self, sources: list[Path]) -> tuple[list[str], set[str] | None]:
+    def _texts(
+        self, sources: list[Path], elements: list[Element]
+    ) -> tuple[list[str], set[str], bool]:
         """
-        Return the given files' texts and the video ids they declare, None if
-        any file could not be read for ids
+        Return the texts and video ids of the files and inline blocks, and
+        whether every file parsed
         """
         texts: list[str] = []
-        ids: set[str] | None = set()
+        ids: set[str] = set()
+        complete = True
         for path in sources:
             text, found = self._source(path)
             texts.append(text)
             if found is None:
-                ids = None
-            elif ids is not None:
-                ids.update(found)
-        return texts, ids
+                complete = False
+            else:
+                ids |= found
+        for element in elements:
+            own = _without_dated_blocks(element)
+            texts.append(_reference_text(own))
+            ids |= self._video_ids_of(own)
+        return texts, ids, complete
 
     @staticmethod
     def _video_ids_of(element: Element) -> set[str]:
@@ -623,28 +747,30 @@ class OlxArchive:
                         ids.add(_normalize_asset_ref(value))
         return ids
 
-    def _static_references(self, skip: set[Path]) -> tuple[set[Path], set[Path]]:
+    def _static_references(
+        self, skip: set[Path], *, confirmed: bool = False
+    ) -> tuple[set[Path], set[Path]]:
         """
         Split static/ files into (referenced, unreferenced) by whether text
         outside skip names them. Matching by filename catches asset key links
-        too. Unknown video ids keep every legacy transcript.
+        too. Unknown video ids keep every legacy transcript. confirmed=True
+        counts neither those guesses nor dated inline blocks.
         """
         if not (self.root / "static").is_dir():
             return set(), set()
-        texts, video_ids = self._texts(self._reference_sources(skip))
+        elements = (
+            [] if confirmed else [e for es in self._inline_dated.values() for e in es]
+        )
+        texts, video_ids, complete = self._texts(
+            self._reference_sources(skip), elements
+        )
         texts.append(self._live_updates)
-        names = {path: _normalize_asset_ref(path.name) for path in self._static_files}
-        found = _NameIndex(names.values()).first_starts(*_reference_index(texts))
+        found = self._static_names.first_starts(*_reference_index(texts))
+        guess = not (confirmed or complete)
 
         referenced, unreferenced = set(), set()
         for path in self._static_files:
-            if names[path] in found or (
-                (legacy := LEGACY_TRANSCRIPT_RE.match(path.name))
-                and (
-                    video_ids is None
-                    or _normalize_asset_ref(legacy.group(1)) in video_ids
-                )
-            ):
+            if _refers_to(path, found, video_ids, guess=guess):
                 referenced.add(path)
             else:
                 unreferenced.add(path)
@@ -974,3 +1100,75 @@ class OlxArchive:
         texts.append(self._live_updates)
         found = self._target_names.first_starts(*_reference_index(texts))
         return [target.path for target in self._static_targets if target.name in found]
+
+    def _block_release_dates(self) -> dict[Path, datetime]:
+        """
+        Date each file owned by a learner-visible block. A file is undated if
+        any non-staff path to its block is undated, otherwise it takes the
+        earliest.
+        """
+        dates: dict[Path, datetime] = {}
+        undated: set[Path] = set()
+        for tag, url_name, element, staff_only, release, _inline in self._blocks:
+            if staff_only:
+                continue
+            files = self._block_files(tag, url_name, element)
+            if release is None:
+                undated.update(files)
+            else:
+                for path in files:
+                    dates[path] = min(dates.get(path, release), release)
+        for path in undated:
+            dates.pop(path, None)
+        return dates
+
+    def _follow_static_pages(self, referenced: set[Path]) -> set[Path]:
+        """Follow only reached text assets; visiting each once also breaks cycles."""
+        pending = list(referenced)
+        while pending:
+            for path in self._page_links(pending.pop()) - referenced:
+                referenced.add(path)
+                pending.append(path)
+        return referenced
+
+    def _page_links(self, page: Path) -> set[Path]:
+        """Return the static files a static text page names; empty for other files"""
+        if page.suffix.lower() not in REFERENCE_SCAN_EXTENSIONS:
+            return set()
+        if page not in self._links_by_page:
+            texts, video_ids, _complete = self._texts([page], [])
+            found = self._static_names.first_starts(*_reference_index(texts))
+            self._links_by_page[page] = {
+                path
+                for path in self._static_files
+                if _refers_to(path, found, video_ids)
+            }
+        return self._links_by_page[page]
+
+    def _date_static_assets(self, dates: dict[Path, datetime]) -> None:
+        """
+        Date static assets in place: undated if any undated visible file names
+        one, else the earliest date of the files naming it
+        """
+        skip = set(dates) | self._unreachable
+        # a guessed match keeps an asset ingested but must not mark it undated
+        undated_refs, _ = self._static_references(skip, confirmed=True)
+        undated_refs = self._follow_static_pages(undated_refs)
+        for path in undated_refs:
+            dates.pop(path, None)
+        static_files = [path for path in self._static_files if path not in undated_refs]
+        matched: set[Path] = set()
+        inline = self._inline_dated
+        # only the files the undated scan reads; transcripts can't link assets
+        candidates = set(self._reference_candidates)
+        for date in sorted(set(dates.values()) | set(inline)):
+            files = [path for path, released in dates.items() if released == date]
+            sources = [path for path in files if path in candidates]
+            texts, video_ids, _complete = self._texts(sources, inline.get(date, []))
+            found = self._static_names.first_starts(*_reference_index(texts))
+            referenced = {
+                path for path in static_files if _refers_to(path, found, video_ids)
+            }
+            for path in self._follow_static_pages(referenced) - undated_refs - matched:
+                dates[path] = min(dates.get(path, date), date)
+                matched.add(path)

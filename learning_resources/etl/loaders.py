@@ -2079,7 +2079,7 @@ def load_videos_from_content_files(
 
     Checks how many videos have matching ContentFile objects by youtube_id.
     If at least 60% of the videos have matches, loads those videos.
-    Otherwise returns None. Only published content files on published runs
+    Otherwise returns None. Only visible content files on published runs
     match, so a video whose content file was removed is not republished.
 
     Args:
@@ -2105,9 +2105,9 @@ def load_videos_from_content_files(
     for content_file in (
         ContentFile.objects.filter(
             youtube_id__in=youtube_ids,
-            published=True,
             run__published=True,
         )
+        .visible()
         .select_related("run__learning_resource")
         .order_by("-id")
     ):

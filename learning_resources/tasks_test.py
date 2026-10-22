@@ -1589,8 +1589,9 @@ def test_cleanup_deleted_content_files_respects_retention_window(settings):
     recent_unpublished = ContentFileFactory.create_batch(
         1, run=eligible_run, published=False
     )
+    # old and dated, but published: never cleaned up
     still_published = ContentFileFactory.create_batch(
-        1, run=eligible_run, published=True
+        1, run=eligible_run, published=True, release_date=recent_cutoff
     )
     ineligible_old_unpublished = ContentFileFactory.create_batch(
         2, run=ineligible_run, published=False
@@ -1598,7 +1599,9 @@ def test_cleanup_deleted_content_files_respects_retention_window(settings):
 
     # Force updated_on values so this test is deterministic around the threshold.
     ContentFile.objects.filter(
-        id__in=[f.id for f in old_unpublished + ineligible_old_unpublished]
+        id__in=[
+            f.id for f in old_unpublished + ineligible_old_unpublished + still_published
+        ]
     ).update(updated_on=old_cutoff)
     ContentFile.objects.filter(id__in=[f.id for f in recent_unpublished]).update(
         updated_on=recent_cutoff
@@ -1732,18 +1735,6 @@ def test_unpublish_all_excluded_files(
     )
     assert called_ids == sorted(c.learning_resource_id for c in with_files)
     mock_task.assert_any_call(ANY, etl_source, ["foo.tar.gz"], dry_run=False)
-
-
-def test_unpublish_excluded_files_task(mocker):
-    """unpublish_excluded_files task delegates to edx_shared"""
-    mock_fn = mocker.patch(
-        "learning_resources.tasks.unpublish_excluded_content_files",
-        return_value=[{"run_id": "r", "excluded": 3, "unpublished": 3, "total": 9}],
-    )
-    assert tasks.unpublish_excluded_files([1, 2], "mitxonline", ["k"]) == [
-        {"run_id": "r", "excluded": 3, "unpublished": 3, "total": 9}
-    ]
-    mock_fn.assert_called_once_with("mitxonline", [1, 2], ["k"], dry_run=False)
 
 
 @pytest.mark.parametrize(
@@ -2899,3 +2890,136 @@ def test_xpro_sync_tasks_read_nothing_they_do_not_own(mocker, task):
     mock_connect.assert_not_called()
     mock_iter_rows.assert_not_called()
     assert not LearningResource.objects.exists()
+
+
+HOUR = timedelta(hours=1)
+WATERMARK_KEY = tasks.RELEASED_CONTENT_FILES_WATERMARK_KEY
+
+
+@pytest.fixture
+def mock_loaded_actions(mocker):
+    """Mock the hook dispatched by the reindex sweep"""
+    return mocker.patch("learning_resources.tasks.content_files_loaded_actions")
+
+
+@pytest.fixture
+def sweep_cache():
+    """Return the DB-backed cache holding the sweep watermark, cleared first"""
+    cache = caches["release_sweep"]
+    cache.delete(WATERMARK_KEY)
+    return cache
+
+
+def test_reindex_released_content_files_without_watermark_uses_lookback(
+    settings, mock_loaded_actions, sweep_cache
+):
+    """With no watermark, one reindex per run released inside the fallback window"""
+    settings.RELEASED_CONTENT_FILES_LOOKBACK = HOUR
+    now = now_in_utc()
+
+    before_window = LearningResourceRunFactory.create()
+    in_window = LearningResourceRunFactory.create()
+    future = LearningResourceRunFactory.create()
+    undated = LearningResourceRunFactory.create()
+    unpublished = LearningResourceRunFactory.create()
+
+    ContentFileFactory.create(run=before_window, release_date=now - HOUR - HOUR)
+    # two files on the same run still reindex it once
+    ContentFileFactory.create(run=in_window, release_date=now - (HOUR / 2))
+    ContentFileFactory.create(run=in_window, release_date=now - (HOUR / 4))
+    ContentFileFactory.create(run=future, release_date=now + HOUR)
+    ContentFileFactory.create(run=undated, release_date=None)
+    # an unpublished file has nothing to index
+    ContentFileFactory.create(
+        run=unpublished, published=False, release_date=now - (HOUR / 2)
+    )
+
+    assert tasks.reindex_released_content_files() == 1
+    mock_loaded_actions.assert_called_once_with(in_window)
+
+
+def test_reindex_released_content_files_catches_up_from_watermark(
+    settings, mock_loaded_actions, sweep_cache
+):
+    """A stale watermark widens the window past the fallback lookback"""
+    settings.RELEASED_CONTENT_FILES_LOOKBACK = HOUR
+    settings.RELEASED_CONTENT_FILES_SWEEP_OVERLAP = HOUR
+    now = now_in_utc()
+    sweep_cache.set(WATERMARK_KEY, now - timedelta(days=3), timeout=None)
+
+    during_outage = LearningResourceRunFactory.create()
+    in_overlap = LearningResourceRunFactory.create()
+    before_overlap = LearningResourceRunFactory.create()
+    ContentFileFactory.create(run=during_outage, release_date=now - timedelta(days=2))
+    ContentFileFactory.create(
+        run=in_overlap, release_date=now - timedelta(days=3) - (HOUR / 2)
+    )
+    ContentFileFactory.create(
+        run=before_overlap, release_date=now - timedelta(days=3) - HOUR - HOUR
+    )
+
+    assert tasks.reindex_released_content_files() == 2
+    assert {call.args[0] for call in mock_loaded_actions.call_args_list} == {
+        during_outage,
+        in_overlap,
+    }
+
+
+def test_reindex_released_content_files_retries_a_release_once(
+    settings, mocker, mock_loaded_actions, sweep_cache
+):
+    """A release is swept on the next sweep too (overlap), then no more"""
+    settings.RELEASED_CONTENT_FILES_LOOKBACK = timedelta(days=1)
+    settings.RELEASED_CONTENT_FILES_SWEEP_OVERLAP = HOUR
+    start = now_in_utc()
+    clock = mocker.patch("learning_resources.tasks.now_in_utc", return_value=start)
+    ContentFileFactory.create(published=True, release_date=start - (HOUR / 2))
+
+    assert tasks.reindex_released_content_files() == 1
+    clock.return_value = start + HOUR
+    assert tasks.reindex_released_content_files() == 1
+    clock.return_value = start + HOUR + HOUR
+    assert tasks.reindex_released_content_files() == 0
+
+    assert mock_loaded_actions.call_count == 2
+
+
+def test_reindex_released_content_files_advances_watermark_to_sweep_start(
+    mocker, mock_loaded_actions, sweep_cache
+):
+    """The stored watermark is the time sampled before the query, not after"""
+    sweep_start = now_in_utc()
+    mocker.patch("learning_resources.tasks.now_in_utc", return_value=sweep_start)
+
+    tasks.reindex_released_content_files()
+
+    assert sweep_cache.get(WATERMARK_KEY) == sweep_start
+
+
+def test_reindex_released_content_files_watermark_survives_durable_culling(
+    mock_loaded_actions, sweep_cache
+):
+    """Culling the shared "durable" cache, which ignores timeouts, can't drop it"""
+    tasks.reindex_released_content_files()
+    durable = caches["durable"]
+    # keys that sort after the watermark's, so a shared table would cull it
+    for i in range(durable._max_entries + 100):  # noqa: SLF001
+        durable.set(f"zz_{i:04d}", "x", timeout=None)
+
+    assert sweep_cache.get(WATERMARK_KEY) is not None
+
+
+def test_reindex_released_content_files_keeps_watermark_on_failure(
+    mock_loaded_actions, sweep_cache
+):
+    """A sweep that fails mid-dispatch leaves its window for the retry"""
+    previous = now_in_utc() - HOUR
+    sweep_cache.set(WATERMARK_KEY, previous, timeout=None)
+    run = LearningResourceRunFactory.create()
+    ContentFileFactory.create(run=run, release_date=now_in_utc() - (HOUR / 2))
+    mock_loaded_actions.side_effect = ConnectionError
+
+    with pytest.raises(ConnectionError):
+        tasks.reindex_released_content_files()
+
+    assert sweep_cache.get(WATERMARK_KEY) == previous

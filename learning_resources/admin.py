@@ -78,6 +78,15 @@ class ContentFileAdmin(admin.ModelAdmin):
     """Platform Admin"""
 
     model = models.ContentFile
+    list_display = ("key", "run__run_id", "published", "release_date", "updated_on")
+    list_filter = ("published",)
+    list_select_related = ("run",)
+    search_fields = ("key", "run__run_id")
+    show_full_result_count = False
+
+    def get_queryset(self, request):
+        # content can run to megabytes a row and the list page never shows it
+        return super().get_queryset(request).defer("content")
 
 
 class TutorProblemFileAdmin(admin.ModelAdmin):

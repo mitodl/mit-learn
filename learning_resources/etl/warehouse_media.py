@@ -162,7 +162,7 @@ def _kept_playlists(playlists: list[dict]) -> list[dict]:
     """
     Return the transformed playlists load_playlist will leave published. It
     unpublishes a create_videos=False playlist that has no videos, or fewer
-    than OCW_PLAYLIST_VIDEO_THRESHOLD of them matching a published OCW content
+    than OCW_PLAYLIST_VIDEO_THRESHOLD of them matching a visible OCW content
     file on a published run, as load_videos_from_content_files matches them.
     """
     matched_youtube_ids = set(
@@ -173,9 +173,10 @@ def _kept_playlists(playlists: list[dict]) -> list[dict]:
                 if not playlist["create_videos"]
                 for video in playlist["videos"]
             },
-            published=True,
             run__published=True,
-        ).values_list("youtube_id", flat=True)
+        )
+        .visible()
+        .values_list("youtube_id", flat=True)
     )
 
     def is_kept(playlist: dict) -> bool:

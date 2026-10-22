@@ -1140,6 +1140,16 @@ class LearningResourceRelationship(TimestampedModel):
 class ContentFileQuerySet(TimestampedModelQuerySet):
     """QuerySet for ContentFile"""
 
+    def visible(self, now=None):
+        """Content files a learner can see: published, and undated or released"""
+        return self.filter(published=True).filter(
+            Q(release_date__isnull=True) | Q(release_date__lte=now or now_in_utc())
+        )
+
+    def hidden(self, now=None):
+        """Content files a learner cannot currently see: the complement of visible()"""
+        return self.filter(Q(published=False) | Q(release_date__gt=now or now_in_utc()))
+
     def for_serialization(self):
         """Return a queryset ready for serialization"""
         return self.select_related(
@@ -1282,6 +1292,14 @@ class ContentFile(TimestampedModel):
     )
     content_tags = models.ManyToManyField(LearningResourceContentTag)
     published = models.BooleanField(default=True)
+    release_date = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text=(
+            "When the course releases this file to learners; null if the "
+            "course does not gate it."
+        ),
+    )
     archive_checksum = models.CharField(max_length=32, null=True, blank=True)  # noqa: DJ001
     checksum = models.CharField(max_length=32, null=True, blank=True)  # noqa: DJ001
     source_path = models.CharField(max_length=1024, null=True, blank=True)  # noqa: DJ001
@@ -1344,6 +1362,13 @@ class ContentFile(TimestampedModel):
                 condition=models.Q(direct_learning_resource__isnull=False),
                 nulls_distinct=False,
                 name="contentfile_direct_learning_resource_key_uniq",
+            ),
+        ]
+        indexes = [
+            models.Index(
+                fields=["release_date"],
+                condition=models.Q(published=True),
+                name="contentfile_published_date_idx",
             ),
         ]
 
