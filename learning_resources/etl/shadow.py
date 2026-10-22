@@ -29,7 +29,8 @@ second copy of those rules and can drift from them. It covers:
   ``podcast_episode``);
 - each run by ``run_id``: its columns, prices, instructors and image, and the
   published runs a pruning load would unpublish;
-- a program's child courses and programs, by readable_id;
+- a program's child courses and programs, by readable_id, as its load would
+  find them;
 - the published resources a pruning load would unpublish.
 
 It does not cover what only the loaders decide: topics found by similarity for
@@ -345,9 +346,19 @@ def _note_runs(
 
 
 def _resource_changes(
-    resource: LearningResource, item: dict, resource_type: str, *, prune: bool
+    resource: LearningResource,
+    item: dict,
+    resource_type: str,
+    *,
+    prune: bool,
+    children: frozenset[tuple[str, str, str]] = frozenset(),
 ) -> dict[str, list]:
-    """Return {path: [stored, incoming]} for what loading ``item`` would change."""
+    """
+    Return {path: [stored, incoming]} for what loading ``item`` would change.
+
+    ``children`` are the (resource_type, platform, readable_id) a program
+    load would find to link a program to (see ``_findable_children``).
+    """
     has_runs = resource_type in _TYPES_WITH_RUNS
     data = {
         **_LOADER_DEFAULTS[resource_type],
@@ -409,20 +420,24 @@ def _resource_changes(
     if has_runs:
         _note_runs(changes, resource, data, prune=prune)
     if resource_type == PROGRAM:
+        # load_program links a course on its own platform and
+        # _create_child_program_relationships a program on the parent's
+        refs = [
+            (COURSE, course["platform"], course["readable_id"])
+            for course in data.get("courses") or []
+            if course.get("readable_id")
+        ] + [
+            (PROGRAM, item["platform"], child["readable_id"])
+            for child in data.get("child_programs") or []
+            if child.get("readable_id")
+        ]
         _note(
             changes,
             "children",
             sorted(
                 {relation.child.readable_id for relation in resource.children.all()}
             ),
-            sorted(
-                {
-                    child["readable_id"]
-                    for key in ("courses", "child_programs")
-                    for child in data.get(key) or []
-                    if child.get("readable_id")
-                }
-            ),
+            sorted({readable_id for *_, readable_id in set(refs) & children}),
         )
     return changes
 
@@ -468,6 +483,57 @@ def _with_test_mode(
     return item
 
 
+def _findable_children(
+    programs: Sequence[dict],
+    *,
+    fetch_courses: bool,
+    batch_programs: set[tuple[str, str]],
+) -> frozenset[tuple[str, str, str]]:
+    """
+    Return the (resource_type, platform, readable_id) of the children a load of
+    ``programs`` would link them to.
+
+    load_program skips a course with no known platform, and with
+    ``fetch_courses`` one that is not stored published or in test mode, as
+    upsert_course_or_program finds it. _create_child_program_relationships
+    skips a child program not stored on the parent's platform, after every
+    program of the batch (``batch_programs``) is loaded.
+    """
+    platforms = _platform_codes()
+    loaded = [program for program in programs if program["platform"] in platforms]
+    courses = {
+        (course["platform"], course["readable_id"])
+        for program in loaded
+        for course in program.get("courses") or []
+        if course.get("readable_id")
+    }
+    if fetch_courses:
+        courses &= set(
+            LearningResource.objects.filter(
+                Q(published=True) | Q(test_mode=True),
+                resource_type=COURSE,
+                readable_id__in={readable_id for _, readable_id in courses},
+            ).values_list("platform__code", "readable_id")
+        )
+    else:
+        courses = {course for course in courses if course[0] in platforms}
+    child_ids = {
+        child["readable_id"]
+        for program in loaded
+        for child in program.get("child_programs") or []
+        if child.get("readable_id")
+    }
+    child_programs = batch_programs | set(
+        LearningResource.objects.filter(
+            resource_type=PROGRAM, readable_id__in=child_ids
+        ).values_list("platform__code", "readable_id")
+    )
+    return frozenset(
+        [(COURSE, *course) for course in courses]
+        + [(PROGRAM, *program) for program in child_programs]
+    )
+
+
 def _observe_item(  # noqa: PLR0913
     report: _Report,
     candidates: list[LearningResource],
@@ -476,6 +542,7 @@ def _observe_item(  # noqa: PLR0913
     *,
     prune: bool,
     blocklist: Sequence[str],
+    children: frozenset[tuple[str, str, str]] = frozenset(),
 ) -> bool:
     """
     Classify one item of a batch against the stored resource it would load into.
@@ -506,7 +573,9 @@ def _observe_item(  # noqa: PLR0913
     if resource_type in _TYPES_WITH_RUNS and (not item.get("runs") or blocked):
         published = False
     item = _with_test_mode(item, resource_type, published=published, blocked=blocked)
-    fields = _resource_changes(resource, item, resource_type, prune=prune)
+    fields = _resource_changes(
+        resource, item, resource_type, prune=prune, children=children
+    )
     if resource.published and not published:
         report.unpublished.append(key)
     elif published and not resource.published:
@@ -530,6 +599,7 @@ def observe(  # noqa: PLR0913
     prune_empty: bool = True,
     blocklist: Sequence[str] = (),
     keep: Q | None = None,
+    fetch_courses: bool = False,
 ) -> None:
     """
     Compare a batch with the stored resources of a pair, for the shadow run
@@ -544,16 +614,33 @@ def observe(  # noqa: PLR0913
         prune_empty: whether an empty batch prunes too
         blocklist: readable_ids the loader would not publish
         keep: stored resources the prune leaves alone
+        fetch_courses: whether a program load looks its courses up instead
+            of loading them
 
     Raises:
         KeyError: the pair is not one ``run_shadow`` was told the load writes
     """
     report = _reports.get()[(etl_source, resource_type)]
     report.observed = True
+    batch_programs: set[tuple[str, str]] = set()
+    if resource_type == PROGRAM:
+        items = list(items)
+        batch_programs = {
+            (item["platform"], item["readable_id"])
+            for item in items
+            if item["platform"] in _platform_codes()
+        }
     count = loaded = 0
     for chunk in batched(items, OBSERVE_CHUNK_SIZE):
         count += len(chunk)
         stored = _stored(resource_type, [item["readable_id"] for item in chunk])
+        children = (
+            _findable_children(
+                chunk, fetch_courses=fetch_courses, batch_programs=batch_programs
+            )
+            if resource_type == PROGRAM
+            else frozenset()
+        )
         for item in chunk:
             loaded += _observe_item(
                 report,
@@ -562,6 +649,7 @@ def observe(  # noqa: PLR0913
                 resource_type,
                 prune=prune,
                 blocklist=blocklist,
+                children=children,
             )
     report.items += count
     # the loaders prune only when they loaded something, not on a batch of

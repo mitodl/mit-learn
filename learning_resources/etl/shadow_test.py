@@ -29,6 +29,7 @@ from learning_resources.factories import (
 )
 from learning_resources.models import (
     ETLShadowRun,
+    ETLSourceOwnership,
     LearningResource,
     LearningResourceRun,
 )
@@ -467,6 +468,77 @@ def test_run_shadow_reports_a_blocklisted_course_leaving_test_mode(
         "c1+r1": True,
         "c1+r2": False,
     }
+
+
+def _children(readable_id):
+    return set(
+        LearningResource.objects.get(
+            readable_id=readable_id, resource_type=PROGRAM
+        ).children.values_list("child__readable_id", flat=True)
+    )
+
+
+def test_run_shadow_reports_only_the_children_the_program_load_finds(catalog):
+    """
+    A program is linked only to the courses its load looks up and finds, and
+    to the child programs on its own platform that are stored or in the batch.
+    """
+    climate = PlatformType.climate.name
+    _load_courses([_course("c1"), _course("c2"), _course("c4", published=False)])
+    _load_programs([_program("p1", ["c1", "c2"]), _program("p2", [], platform=climate)])
+    p1 = _program(
+        "p1",
+        ["c1", "c3", "c4"],
+        child_programs=[{"readable_id": "p2"}, {"readable_id": "p3"}, {}],
+    )
+    p1["courses"].append({"readable_id": "c2", "platform": climate})
+    p1["child_programs"].append({"readable_id": "p9"})
+    batch = [p1, _program("p2", [], platform=climate), _program("p3", [])]
+
+    run = _shadow([(SOURCE, PROGRAM)], lambda: _load_programs(batch))[PROGRAM]
+
+    assert run.details["created"] == ["p3"]
+    assert run.details["changed"] == {"p1": {"children": [["c1", "c2"], ["c1", "p3"]]}}
+    _load_programs(batch)
+    assert _children("p1") == {"c1", "p3"}
+
+
+@pytest.mark.parametrize(
+    ("course_owner", "children"),
+    [(Pipeline.WAREHOUSE, ["c1", "c3"]), (Pipeline.LEGACY, ["c1"])],
+)
+def test_run_shadow_links_the_courses_a_program_load_writes(
+    catalog, course_owner, children
+):
+    """
+    A program load whose pipeline owns the source's courses loads them
+    instead of looking them up, so it links any course on a known platform.
+    One that does not own them looks them up whatever its config says.
+    """
+    _load_courses([_course("c1")])
+    _load_programs([_program("p1", ["c1"])])
+    ETLSourceOwnershipFactory.create(
+        etl_source=SOURCE, resource_type=COURSE, owner=course_owner
+    )
+    p1 = _program("p1", ["c1", "c3"])
+    p1["courses"].append({"readable_id": "c5", "platform": "no_such_platform"})
+    config = ProgramLoaderConfig(prune=True)
+
+    run = _shadow(
+        [(SOURCE, PROGRAM)],
+        lambda: load_programs(SOURCE, deepcopy([p1]), config=config),
+    )[PROGRAM]
+
+    assert run.details["changed"] == (
+        {"p1": {"children": [["c1"], children]}} if children != ["c1"] else {}
+    )
+    # the cutover the shadow is for
+    ETLSourceOwnership.objects.filter(etl_source=SOURCE, resource_type=PROGRAM).update(
+        owner=Pipeline.WAREHOUSE, shadow=""
+    )
+    with writing_as(Pipeline.WAREHOUSE):
+        load_programs(SOURCE, deepcopy([p1]), config=config)
+    assert _children("p1") == set(children)
 
 
 def test_run_shadow_reports_runs_and_related_values(catalog):
