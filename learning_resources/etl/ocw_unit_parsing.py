@@ -1,4 +1,3 @@
-# ruff: noqa: PLR0915 PLR0912 C901 PLR0917 PLR0913
 """Assemble course material from an MIT OpenCourseWare course site.
 
 Mirrors the structure MIT Learn ingests from the OCW publishing bucket (course
@@ -252,13 +251,8 @@ def _fmt(sec: float) -> str:
     return f"{s // 3600:02d}:{(s % 3600) // 60:02d}:{s % 60:02d}"
 
 
-def vtt_to_text(vtt: str, block_seconds: int = 30) -> str:
-    """Render a WebVTT file as '[hh:mm:ss] text'
-    blocks merged over ~block_seconds windows.
-
-    Cue text is kept verbatim (whitespace-normalised)
-    so verbatim quotes still match.
-    """
+def _vtt_cues(vtt: str) -> list[tuple[float, str]]:
+    """Return the (start seconds, text) of each cue in a WebVTT file."""
     cues: list[tuple[float, str]] = []
     cur_start: float | None = None
     buf: list[str] = []
@@ -276,11 +270,21 @@ def vtt_to_text(vtt: str, block_seconds: int = 30) -> str:
             cur_start, buf = None, []
         elif cur_start is not None and not line.isdigit() and line != "WEBVTT":
             buf.append(re.sub(r"<[^>]+>", "", line))
+    return cues
+
+
+def vtt_to_text(vtt: str, block_seconds: int = 30) -> str:
+    """Render a WebVTT file as '[hh:mm:ss] text'
+    blocks merged over ~block_seconds windows.
+
+    Cue text is kept verbatim (whitespace-normalised)
+    so verbatim quotes still match.
+    """
     blocks: list[str] = []
     bstart: float | None = None
     btext: list[str] = []
     last = None
-    for start, text in cues:
+    for start, text in _vtt_cues(vtt):
         if text == last:
             continue
         last = text
@@ -392,6 +396,30 @@ def _short(slug: str, n: int = 40) -> str:
     )  # OCW prefixes file names with a content hash
     slug = re.sub(r"[^a-z0-9]+", "-", slug.lower()).strip("-")
     return slug[:n].rstrip("-")
+
+
+def _nav_find(nav: list[str], pat: str) -> str | None:
+    return next((u for u in nav if re.search(pat, _slug(u))), None)
+
+
+def _lesson_kind(role: str, heading: str, links: list[tuple[str, str]]) -> str:
+    """Classify a module's group of lesson links by its heading."""
+    hl = heading.lower()
+    if role == "review":
+        kind = "review"
+    elif hl.startswith("lesson"):
+        kind = "lesson"
+    elif "worked example" in hl:
+        kind = "worked_examples"
+    elif "problem set" in hl:
+        kind = "problem_set"
+    elif "deep dive" in hl:
+        kind = "deep_dive"
+    elif any(t.lower().endswith("introduction") for _, t in links):
+        kind = "introduction"
+    else:
+        kind = "other"
+    return kind
 
 
 class Ingestor:
@@ -564,7 +592,7 @@ class Ingestor:
             **kw,
         )
 
-    def _process_page(
+    def _process_page(  # noqa: C901, PLR0912
         self, unit: Unit, lesson: Lesson, page_url: str, title: str
     ) -> None:
         """Classify one lesson/child page and register its materials."""
@@ -676,7 +704,68 @@ class Ingestor:
             if it:
                 added.append(it)
         # Resource pages (e.g. problem set PDFs are linked via /resources/<name>/).
-        for r in media["resources"]:
+        added += self._page_resources(
+            base_id, title, req, common, lesson, media["resources"]
+        )
+        if not added:
+            text = html_to_text(html)
+            if len(text) > MIN_NOTES_LENGTH:
+                added.append(
+                    self._add_text_source(
+                        f"{base_id}-page",
+                        text,
+                        title=title,
+                        url=page_url,
+                        material_type="notes",
+                        locator_kind="section",
+                        required_status=req,
+                        **common,
+                    )
+                )
+            elif media["youtube"]:
+                added.append(
+                    self._add(
+                        source_id=f"{base_id}-video",
+                        title=title,
+                        url=page_url,
+                        material_type="other",
+                        status="missing",
+                        status_detail="video without caption transcript "
+                        "(video processing out of scope)",
+                        required_status=req,
+                        **common,
+                    )
+                )
+            else:
+                added.append(
+                    self._add(
+                        source_id=f"{base_id}-page",
+                        title=title,
+                        url=page_url,
+                        material_type="other",
+                        status="missing",
+                        status_detail="page has no transcript, PDF or substantive text",
+                        required_status=req,
+                        **common,
+                    )
+                )
+        for it in added:
+            lesson.source_ids.append(it.source_id)
+            if it.material_type == "problem_set" and it.status == "extracted":
+                unit.assessment_source_ids.append(it.source_id)
+
+    def _page_resources(  # noqa: PLR0913, PLR0917
+        self,
+        base_id: str,
+        title: str,
+        req: str,
+        common: dict[str, str],
+        lesson: Lesson,
+        resources: list[str],
+    ) -> list[SourceItem]:
+        """Register the captions or PDFs of resource pages a lesson page links."""
+        added: list[SourceItem] = []
+        for r in resources:
             try:
                 rhtml = self.fetch.text(r)
             except Exception as e:  # noqa: BLE001
@@ -731,52 +820,7 @@ class Ingestor:
                 )
                 if it:
                     added.append(it)
-        if not added:
-            text = html_to_text(html)
-            if len(text) > MIN_NOTES_LENGTH:
-                added.append(
-                    self._add_text_source(
-                        f"{base_id}-page",
-                        text,
-                        title=title,
-                        url=page_url,
-                        material_type="notes",
-                        locator_kind="section",
-                        required_status=req,
-                        **common,
-                    )
-                )
-            elif media["youtube"]:
-                added.append(
-                    self._add(
-                        source_id=f"{base_id}-video",
-                        title=title,
-                        url=page_url,
-                        material_type="other",
-                        status="missing",
-                        status_detail="video without caption transcript "
-                        "(video processing out of scope)",
-                        required_status=req,
-                        **common,
-                    )
-                )
-            else:
-                added.append(
-                    self._add(
-                        source_id=f"{base_id}-page",
-                        title=title,
-                        url=page_url,
-                        material_type="other",
-                        status="missing",
-                        status_detail="page has no transcript, PDF or substantive text",
-                        required_status=req,
-                        **common,
-                    )
-                )
-        for it in added:
-            lesson.source_ids.append(it.source_id)
-            if it.material_type == "problem_set" and it.status == "extracted":
-                unit.assessment_source_ids.append(it.source_id)
+        return added
 
     def _add_zip(
         self, sid: str, url: str, file_url: str, mtype: str, **kw
@@ -807,7 +851,7 @@ class Ingestor:
             **kw,
         )
 
-    def _add_from_resource(
+    def _add_from_resource(  # noqa: PLR0913, PLR0917
         self, unit: Unit, lesson: Lesson, rurl: str, title: str, hint: str, req: str
     ) -> list[SourceItem]:
         """Register whatever a /resources/ page offers.
@@ -855,7 +899,72 @@ class Ingestor:
             )
             if it:
                 added.append(it)
-        for p in media["pdf"]:
+        added += self._resource_pdfs(
+            base_id, rurl, rtitle, req, common, media["pdf"], yt_ids, hint
+        )
+        for zp in media["zip"]:
+            mtype = "problem_set" if hint == "problem_set" else "code"
+            it = self._add_zip(
+                f"{base_id}-zip",
+                rurl,
+                zp,
+                mtype,
+                title=rtitle,
+                required_status=req,
+                **common,
+            )
+            if it:
+                added.append(it)
+        added += self._resource_text_files(
+            base_id, rurl, rtitle, req, common, media["text"]
+        )
+        if not added and media["youtube"]:
+            added.append(
+                self._add(
+                    source_id=f"{base_id}-video",
+                    title=rtitle,
+                    url=rurl,
+                    material_type="other",
+                    status="missing",
+                    status_detail="video without caption transcript "
+                    "(video processing out of scope)",
+                    required_status=req,
+                    **common,
+                )
+            )
+        elif not added:
+            added.append(
+                self._add(
+                    source_id=f"{base_id}-resource",
+                    title=rtitle,
+                    url=rurl,
+                    material_type="other",
+                    status="unsupported",
+                    status_detail="resource page offers no vtt/pdf/zip",
+                    required_status=req,
+                    **common,
+                )
+            )
+        for it in added:
+            lesson.source_ids.append(it.source_id)
+            if it.material_type == "problem_set" and it.status == "extracted":
+                unit.assessment_source_ids.append(it.source_id)
+        return added
+
+    def _resource_pdfs(  # noqa: PLR0913, PLR0917
+        self,
+        base_id: str,
+        rurl: str,
+        rtitle: str,
+        req: str,
+        common: dict[str, str],
+        pdfs: list[str],
+        yt_ids: set[str],
+        hint: str,
+    ) -> list[SourceItem]:
+        """Register a resource page's PDFs, skipping video transcripts."""
+        added: list[SourceItem] = []
+        for p in pdfs:
             if yt_ids and any(y in p for y in yt_ids):
                 if p not in self._seen_files:
                     self._seen_files.add(p)
@@ -890,20 +999,20 @@ class Ingestor:
             )
             if it:
                 added.append(it)
-        for zp in media["zip"]:
-            mtype = "problem_set" if hint == "problem_set" else "code"
-            it = self._add_zip(
-                f"{base_id}-zip",
-                rurl,
-                zp,
-                mtype,
-                title=rtitle,
-                required_status=req,
-                **common,
-            )
-            if it:
-                added.append(it)
-        for tf in media["text"]:
+        return added
+
+    def _resource_text_files(  # noqa: PLR0913, PLR0917
+        self,
+        base_id: str,
+        rurl: str,
+        rtitle: str,
+        req: str,
+        common: dict[str, str],
+        files: list[str],
+    ) -> list[SourceItem]:
+        """Register the plain text files (code, data) a resource page links."""
+        added: list[SourceItem] = []
+        for tf in files:
             if tf in self._seen_files:
                 continue
             self._seen_files.add(tf)
@@ -935,37 +1044,6 @@ class Ingestor:
                         **common,
                     )
                 )
-        if not added and media["youtube"]:
-            added.append(
-                self._add(
-                    source_id=f"{base_id}-video",
-                    title=rtitle,
-                    url=rurl,
-                    material_type="other",
-                    status="missing",
-                    status_detail="video without caption transcript "
-                    "(video processing out of scope)",
-                    required_status=req,
-                    **common,
-                )
-            )
-        elif not added:
-            added.append(
-                self._add(
-                    source_id=f"{base_id}-resource",
-                    title=rtitle,
-                    url=rurl,
-                    material_type="other",
-                    status="unsupported",
-                    status_detail="resource page offers no vtt/pdf/zip",
-                    required_status=req,
-                    **common,
-                )
-            )
-        for it in added:
-            lesson.source_ids.append(it.source_id)
-            if it.material_type == "problem_set" and it.status == "extracted":
-                unit.assessment_source_ids.append(it.source_id)
         return added
 
     def _session_table(
@@ -992,7 +1070,7 @@ class Ingestor:
             rows[int(m.group(1))] = row
         return rows
 
-    def _lecture_layout(self, nav: list[str], page_html: dict[str, str]) -> bool:
+    def _lecture_layout(self, nav: list[str], page_html: dict[str, str]) -> bool:  # noqa: C901, PLR0912, PLR0915
         """Units = numbered lecture video resources (OCW 'lecture-N-...' pages);
         attach slides/code, in-class questions,
         problem sets released at that session (syllabus calendar),
@@ -1229,20 +1307,7 @@ class Ingestor:
             groups = [(unit.title, links)]
         for gi, (heading, links) in enumerate(groups, start=1):
             hl = heading.lower()
-            if unit.role == "review":
-                kind = "review"
-            elif hl.startswith("lesson"):
-                kind = "lesson"
-            elif "worked example" in hl:
-                kind = "worked_examples"
-            elif "problem set" in hl:
-                kind = "problem_set"
-            elif "deep dive" in hl:
-                kind = "deep_dive"
-            elif any(t.lower().endswith("introduction") for _, t in links):
-                kind = "introduction"
-            else:
-                kind = "other"
+            kind = _lesson_kind(unit.role, heading, links)
             m = re.match(r"lesson\s+(\d+)", hl)
             lid = (
                 f"{unit.unit_id}-L{int(m.group(1)):02d}"
@@ -1292,6 +1357,108 @@ class Ingestor:
         )
         return per_unit, [str(c) for c in chapters]
 
+    def _add_textbook(self, tb: str) -> None:
+        """Register the chapters linked from the online textbook page."""
+        try:
+            tb_html = self.fetch.text(tb)
+            for r, t in self._links(html_main(tb_html), r"/resources/[^/]+/?$"):
+                m = re.search(r"chapter(\d+)", r)
+                if not m:
+                    continue
+                ch = int(m.group(1))
+                sid = f"TEXTBOOK-ch{ch:02d}"
+                if self.include_readings:
+                    rm = self._media_links(self.fetch.text(r))
+                    if rm["pdf"]:
+                        self._add_pdf(
+                            sid,
+                            r,
+                            rm["pdf"][0],
+                            "textbook_chapter",
+                            title=t or f"Chapter {ch}",
+                            required_status="reference",
+                        )
+                    else:
+                        self._add(
+                            source_id=sid,
+                            title=t,
+                            url=r,
+                            material_type="textbook_chapter",
+                            status="missing",
+                            status_detail="no PDF on resource page",
+                            required_status="reference",
+                        )
+                else:
+                    self._add(
+                        source_id=sid,
+                        title=t or f"Chapter {ch}",
+                        url=r,
+                        material_type="textbook_chapter",
+                        status="skipped",
+                        status_detail="textbook chapters not processed in "
+                        "this run (rerun with --include-readings); "
+                        "the Readings page mapping is still given to the model",
+                        required_status="reference",
+                    )
+        except Exception as e:  # noqa: BLE001
+            self.notes.append(f"online textbook page failed: {e}")
+
+    def _add_course_pages(self, nav: list[str]) -> dict[str, str]:
+        """Register the syllabus, readings and assignments pages.
+
+        Returns the html of each page found, keyed by its source id.
+        """
+        page_html: dict[str, str] = {}
+        for sid, pat, mtype, ttl in [
+            ("COURSE-syllabus", r"^syllabus$", "syllabus", "Syllabus"),
+            ("COURSE-readings", r"^readings$", "readings_index", "Readings"),
+            (
+                "COURSE-assignments",
+                r"^assignments$",
+                "assignments_index",
+                "Assignments",
+            ),
+        ]:
+            u = _nav_find(nav, pat)
+            if not u:
+                self._add(
+                    source_id=sid,
+                    title=ttl,
+                    url=self.course_url,
+                    material_type=mtype,
+                    status="missing",
+                    status_detail="no such page in course navigation",
+                    required_status="reference",
+                )
+                continue
+            try:
+                html = self.fetch.text(u)
+                page_html[sid] = html
+                self._add_text_source(
+                    sid,
+                    html_to_text(html),
+                    title=ttl,
+                    url=u,
+                    material_type=mtype,
+                    locator_kind="section",
+                    required_status="reference",
+                )
+                if mtype == "syllabus":
+                    for vtt in self._media_links(html)["vtt"]:
+                        self._add_vtt(
+                            "COURSE-syllabus-video-vtt",
+                            u,
+                            vtt,
+                            "syllabus_video_transcript",
+                            title="Course introduction video (transcript)",
+                            required_status="reference",
+                        )
+                if mtype == "readings_index":
+                    self._readings, self._chapters = self._parse_readings(html)
+            except Exception as e:  # noqa: BLE001
+                self._add_failed(sid, str(e), title=ttl, url=u, material_type=mtype)
+        return page_html
+
     # ------------------------------------------------------------------ main
     def run(self) -> SourceManifest:
         home_html = self.fetch.text(self.course_url)
@@ -1340,58 +1507,7 @@ class Ingestor:
             if u not in nav:
                 nav.append(u)
 
-        def nav_find(pat: str) -> str | None:
-            return next((u for u in nav if re.search(pat, _slug(u))), None)
-
-        page_html: dict[str, str] = {}
-        for sid, pat, mtype, ttl in [
-            ("COURSE-syllabus", r"^syllabus$", "syllabus", "Syllabus"),
-            ("COURSE-readings", r"^readings$", "readings_index", "Readings"),
-            (
-                "COURSE-assignments",
-                r"^assignments$",
-                "assignments_index",
-                "Assignments",
-            ),
-        ]:
-            u = nav_find(pat)
-            if not u:
-                self._add(
-                    source_id=sid,
-                    title=ttl,
-                    url=self.course_url,
-                    material_type=mtype,
-                    status="missing",
-                    status_detail="no such page in course navigation",
-                    required_status="reference",
-                )
-                continue
-            try:
-                html = self.fetch.text(u)
-                page_html[sid] = html
-                self._add_text_source(
-                    sid,
-                    html_to_text(html),
-                    title=ttl,
-                    url=u,
-                    material_type=mtype,
-                    locator_kind="section",
-                    required_status="reference",
-                )
-                if mtype == "syllabus":
-                    for vtt in self._media_links(html)["vtt"]:
-                        self._add_vtt(
-                            "COURSE-syllabus-video-vtt",
-                            u,
-                            vtt,
-                            "syllabus_video_transcript",
-                            title="Course introduction video (transcript)",
-                            required_status="reference",
-                        )
-                if mtype == "readings_index":
-                    self._readings, self._chapters = self._parse_readings(html)
-            except Exception as e:  # noqa: BLE001
-                self._add_failed(sid, str(e), title=ttl, url=u, material_type=mtype)
+        page_html = self._add_course_pages(nav)
         readings = getattr(self, "_readings", {})
 
         # Modules -> units, in navigation order
@@ -1439,51 +1555,9 @@ class Ingestor:
 
         # Textbook chapters (reference material).
         # Downloaded/extracted only with include_readings.
-        tb = nav_find(r"^online-textbook$")
+        tb = _nav_find(nav, r"^online-textbook$")
         if tb:
-            try:
-                tb_html = self.fetch.text(tb)
-                for r, t in self._links(html_main(tb_html), r"/resources/[^/]+/?$"):
-                    m = re.search(r"chapter(\d+)", r)
-                    if not m:
-                        continue
-                    ch = int(m.group(1))
-                    sid = f"TEXTBOOK-ch{ch:02d}"
-                    if self.include_readings:
-                        rm = self._media_links(self.fetch.text(r))
-                        if rm["pdf"]:
-                            self._add_pdf(
-                                sid,
-                                r,
-                                rm["pdf"][0],
-                                "textbook_chapter",
-                                title=t or f"Chapter {ch}",
-                                required_status="reference",
-                            )
-                        else:
-                            self._add(
-                                source_id=sid,
-                                title=t,
-                                url=r,
-                                material_type="textbook_chapter",
-                                status="missing",
-                                status_detail="no PDF on resource page",
-                                required_status="reference",
-                            )
-                    else:
-                        self._add(
-                            source_id=sid,
-                            title=t or f"Chapter {ch}",
-                            url=r,
-                            material_type="textbook_chapter",
-                            status="skipped",
-                            status_detail="textbook chapters not processed in "
-                            "this run (rerun with --include-readings); "
-                            "the Readings page mapping is still given to the model",
-                            required_status="reference",
-                        )
-            except Exception as e:  # noqa: BLE001
-                self.notes.append(f"online textbook page failed: {e}")
+            self._add_textbook(tb)
 
         self.notes.append(
             f"downloads={self.fetch.downloads} raw_cache_hits={self.fetch.cache_hits}"
