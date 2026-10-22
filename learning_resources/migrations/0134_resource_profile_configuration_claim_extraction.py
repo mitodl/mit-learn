@@ -69,7 +69,7 @@ def add_unit_configuration(apps, schema_editor):
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("learning_resources", "0131_unit_unitcontentfile"),
+        ("learning_resources", "0133_contentfile_release_date_unreleased_idx"),
     ]
 
     operations = [
