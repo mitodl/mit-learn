@@ -50,7 +50,7 @@ export type ContractUtilization = {
   b2b_contract_membership_type: string | null
   seats_consumed: number
   active_learners: number | null
-  learners_certified: number | null
+  certified_learners: number | null
   seat_utilization_pct: number | null
   completion_rate_pct: number | null
 }
