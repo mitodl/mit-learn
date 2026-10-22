@@ -20,6 +20,7 @@ from learning_resources.factories import (
     LearningResourceOfferorFactory,
     LearningResourcePlatformFactory,
     LearningResourceRunFactory,
+    LearningResourceTopicFactory,
     VideoChannelFactory,
     VideoPlaylistFactory,
 )
@@ -587,6 +588,40 @@ def test_sync_youtube_as_a_shadow_finds_a_content_file_video_on_another_platform
     video = LearningResource.objects.get(readable_id="vid-a")
     assert video.id == video_id
     assert video.platform.code == PlatformType.ocw.name
+
+
+def test_sync_youtube_as_a_shadow_compares_content_file_topics_as_they_are(
+    warehouse_owns_youtube,
+):
+    """
+    load_video_with_content_file copies its course's topics without adding
+    their parents, so a parent the course lacks is not reported as a change
+    """
+    science = LearningResourceTopicFactory.create(name="Science", parent=None)
+    physics = LearningResourceTopicFactory.create(name="Physics", parent=science)
+    optics = LearningResourceTopicFactory.create(name="Optics", parent=science)
+    run = LearningResourceRunFactory.create(
+        published=True, learning_resource__topics=[physics]
+    )
+    ContentFileFactory.create(youtube_id="vid-a", run=run)
+    views = (
+        [channel_row()],
+        [playlist_row("PL-ocw", create_videos=0)],
+        [membership_row("PL-ocw", "vid-a", 0)],
+        [video_row("vid-a")],
+    )
+    sync_and_load_youtube(*views)
+    video = LearningResource.objects.get(readable_id="vid-a")
+    assert list(video.topics.values_list("name", flat=True)) == ["Physics"]
+
+    unchanged = shadow_youtube(*views)
+    run.learning_resource.topics.add(optics)
+    changed = shadow_youtube(*views)
+
+    assert unchanged[LearningResourceType.video.name].details["changed"] == {}
+    assert changed[LearningResourceType.video.name].details["changed"] == {
+        "vid-a": {"topics": [["Physics"], ["Optics", "Physics"]]}
+    }
 
 
 def test_sync_youtube_does_nothing_unless_the_warehouse_owns_youtube():
