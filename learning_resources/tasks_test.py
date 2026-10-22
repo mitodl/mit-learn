@@ -2604,19 +2604,9 @@ def test_sync_youtube_task_keeps_the_generation_of_a_refused_run(
     mock_sync.assert_not_called()
 
 
-def test_sync_youtube_task_as_a_shadow_queues_and_writes_nothing(mocker):
-    """
-    As the shadow of youtube, SyncYouTubeTask compares the playlists and their
-    videos, saves a report of each pair, and queues and writes nothing
-    """
-    for resource_type in tasks.warehouse_media.YOUTUBE_TYPES:
-        factories.ETLSourceOwnershipFactory.create(
-            etl_source=ETLSource.youtube.name,
-            resource_type=resource_type,
-            shadow=ETLSourceOwnership.Pipeline.WAREHOUSE,
-        )
-    factories.LearningResourcePlatformFactory.create(code=PlatformType.youtube.name)
-    rows = {
+def youtube_view_rows():
+    """Rows of the four youtube views, for one playlist with one video"""
+    return {
         "integrations__learn__youtube_channels": [{"channel_id": "c", "title": "C"}],
         "integrations__learn__youtube_playlists": [
             {
@@ -2653,6 +2643,21 @@ def test_sync_youtube_task_as_a_shadow_queues_and_writes_nothing(mocker):
             }
         ],
     }
+
+
+def test_sync_youtube_task_as_a_shadow_queues_and_writes_nothing(mocker):
+    """
+    As the shadow of youtube, SyncYouTubeTask compares the playlists and their
+    videos, saves a report of each pair, and queues and writes nothing
+    """
+    for resource_type in tasks.warehouse_media.YOUTUBE_TYPES:
+        factories.ETLSourceOwnershipFactory.create(
+            etl_source=ETLSource.youtube.name,
+            resource_type=resource_type,
+            shadow=ETLSourceOwnership.Pipeline.WAREHOUSE,
+        )
+    factories.LearningResourcePlatformFactory.create(code=PlatformType.youtube.name)
+    rows = youtube_view_rows()
     mocker.patch("learning_resources.lib.warehouse.connect_to_warehouse")
     mocker.patch(
         "learning_resources.tasks.iter_rows",
@@ -2676,6 +2681,41 @@ def test_sync_youtube_task_as_a_shadow_queues_and_writes_nothing(mocker):
     } == {("video_playlist", "", 1), ("video", "", 1)}
     assert not LearningResource.objects.exists()
     assert not VideoChannel.objects.exists()
+
+
+def test_sync_youtube_task_writes_nothing_once_it_is_only_the_shadow(mocker):
+    """
+    A run that started as the owner of youtube and became only its shadow
+    while it read the views writes and queues nothing, since it is not a
+    shadow run
+    """
+    for resource_type in tasks.warehouse_media.YOUTUBE_TYPES:
+        factories.ETLSourceOwnershipFactory.create(
+            etl_source=ETLSource.youtube.name,
+            resource_type=resource_type,
+            owner=ETLSourceOwnership.Pipeline.WAREHOUSE,
+        )
+    factories.LearningResourcePlatformFactory.create(code=PlatformType.youtube.name)
+    rows = youtube_view_rows()
+
+    def read_after_cutback(_conn, view):
+        ETLSourceOwnership.objects.filter(etl_source=ETLSource.youtube.name).update(
+            owner=ETLSourceOwnership.Pipeline.LEGACY,
+            shadow=ETLSourceOwnership.Pipeline.WAREHOUSE,
+        )
+        return iter(rows[view.rsplit(".", 1)[1]])
+
+    mocker.patch("learning_resources.lib.warehouse.connect_to_warehouse")
+    mocker.patch("learning_resources.tasks.iter_rows", side_effect=read_after_cutback)
+    mock_delay = mocker.patch(
+        "learning_resources.tasks.load_warehouse_youtube_playlist.delay"
+    )
+
+    assert tasks.SyncYouTubeTask.run() == 0
+
+    mock_delay.assert_not_called()
+    assert not VideoChannel.objects.exists()
+    assert not ETLShadowRun.objects.exists()
 
 
 @pytest.mark.parametrize("warehouse_owns", [PODCAST_OWNED], indirect=True)

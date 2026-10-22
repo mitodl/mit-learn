@@ -28,7 +28,12 @@ from learning_resources.constants import (
 from learning_resources.etl import loaders
 from learning_resources.etl.constants import ETLSource
 from learning_resources.etl.exceptions import ExtractException
-from learning_resources.etl.ownership import RunMode, may_write, run_mode
+from learning_resources.etl.ownership import (
+    RunMode,
+    is_shadow_run,
+    may_write,
+    run_mode,
+)
 from learning_resources.etl.utils import iso8601_duration
 from learning_resources.etl.warehouse_guards import (
     refuse_empty,
@@ -211,13 +216,21 @@ def prepare_youtube_sync(
 
     Returns:
         dict: the load_playlist data of each channel's playlists by channel id,
-            or None if this pipeline neither owns nor shadows youtube
+            or None if this pipeline neither owns nor shadows youtube, or if it
+            only shadows youtube and this is not a shadow run
 
     Raises:
         ExtractException: if a view is empty, a row is bad, or the sync would
             unpublish over MAX_UNPUBLISH_SHARE of the playlists or videos
     """
-    if run_mode(ETLSource.youtube.name, YOUTUBE_TYPES) == RunMode.SKIP:
+    # Checked here and not only where the run started: ownership can change
+    # while the views are read, and the channel sync that follows does not
+    # check it again. A run that became the shadow must not write.
+    if (
+        run_mode(ETLSource.youtube.name, YOUTUBE_TYPES) == RunMode.SKIP
+        if is_shadow_run()
+        else not may_write_youtube()
+    ):
         return None
 
     refuse_empty(
