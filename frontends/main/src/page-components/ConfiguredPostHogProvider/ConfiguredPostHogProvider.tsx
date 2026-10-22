@@ -4,6 +4,7 @@ import { PostHogProvider, usePostHog } from "posthog-js/react"
 import { useUserMe } from "api/hooks/user"
 import { INTERNAL_BOOTSTRAPPING_FLAG } from "@/common/feature_flags"
 import { env, fullEnv } from "@/env"
+import { initPostHog } from "@/common/analytics"
 
 /**
  * Compute PostHog bootstrap feature flags from the runtime env (fullEnv()).
@@ -33,6 +34,10 @@ const getBootstrapFeatureFlags = (): Record<
 const PosthogIdentifier = () => {
   const { data: user } = useUserMe()
   const posthog = usePostHog()
+
+  useEffect(() => {
+    initPostHog(posthog)
+  }, [posthog])
 
   /**
    * Posthog docs recommend calling `posthog.identify` on signin and

@@ -33,9 +33,11 @@ import { capturePostHog, initPostHog } from "./posthog"
 import { PostHogEvents } from "@/common/constants"
 import { PlatformEnum } from "api"
 
+type EnrollActionKind = "paid" | "free"
+
 type EnrollCtaClickedParams = {
   placement: "header" | "infobox" | undefined
-  enrollmentMode: "verified" | "audit"
+  kind: EnrollActionKind
   resourceType: "course" | "program"
   readableId: string
   label: string
@@ -91,6 +93,13 @@ type VideoShortsClosedParams = {
   totalVideosViewed: number
 }
 
+type AnalyticsViewChangedParams = {
+  view: string
+  previousView: string
+  orgSlug: string
+  contractSlug: string
+}
+
 const analytics = {
   // Session / arrival
   landingPageArrived: (params?: UtmParams) => trackLandingPageArrival(params),
@@ -136,10 +145,13 @@ const analytics = {
     })
   },
 
-  // Enrollment CTA (PostHog)
   enrollCtaClicked: (params: EnrollCtaClickedParams) =>
     capturePostHog(PostHogEvents.EnrollCtaClicked, {
-      ...params,
+      placement: params.placement,
+      enrollmentMode: params.kind === "paid" ? "verified" : "audit",
+      resourceType: params.resourceType,
+      readableId: params.readableId,
+      label: params.label,
       platform: PlatformEnum.Mitxonline,
     }),
 
@@ -196,8 +208,6 @@ const analytics = {
     capturePostHog(PostHogEvents.TopicClicked, params),
   subTopicClicked: (params: { topic: string }) =>
     capturePostHog(PostHogEvents.SubTopicClicked, params),
-  relatedTopicClicked: (params: { topic: string }) =>
-    capturePostHog(PostHogEvents.RelatedTopicClicked, params),
 
   // Departments / providers (PostHog)
   departmentLinkClicked: (params: { department: unknown }) =>
@@ -233,10 +243,15 @@ const analytics = {
 
   // Hero (PostHog)
   heroBrowseTopicsClicked: () => capturePostHog(PostHogEvents.HeroBrowseTopics),
+
+  // B2B analytics (PostHog)
+  analyticsViewChanged: (params: AnalyticsViewChangedParams) =>
+    capturePostHog(PostHogEvents.AnalyticsViewChanged, params),
 }
 
 export { analytics, initPostHog }
 export type {
+  EnrollActionKind,
   UtmParams,
   AddToCartParams,
   BeginCheckoutParams,
@@ -251,4 +266,5 @@ export type {
   VideoShortOpenedParams,
   VideoShortViewedParams,
   VideoShortsClosedParams,
+  AnalyticsViewChangedParams,
 }

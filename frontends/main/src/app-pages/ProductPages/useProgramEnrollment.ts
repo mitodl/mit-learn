@@ -83,7 +83,7 @@ export const useProgramEnrollment = (
       // program CTA clicks (including program-as-course display).
       analytics.enrollCtaClicked({
         placement: opts?.tracking.placement,
-        enrollmentMode: kind === "paid" ? "verified" : "audit",
+        kind,
         resourceType: "program",
         readableId: program.readable_id,
         label,

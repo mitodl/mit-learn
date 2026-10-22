@@ -1,7 +1,7 @@
 import type { UseResourceSearchParamsResult } from "@mitodl/course-search-utils"
 import { PostHogEvents } from "@/common/constants"
-import { trackFilterCourseCatalog } from "@/common/analytics/gtm"
 import { capturePostHog } from "./posthog"
+import { analytics } from "./index"
 
 type Setters = Pick<
   UseResourceSearchParamsResult,
@@ -40,7 +40,7 @@ const useTrackedFilterSetters = ({
       captureFilterEvent(name)
       /* Only what was added: the catalog funnel counts filters applied. */
       if (checked) {
-        trackFilterCourseCatalog({ filterName: name, filterValue: rawValue })
+        analytics.catalogFiltered({ filterName: name, filterValue: rawValue })
       }
     },
   }

@@ -1,3 +1,19 @@
+const HIERARCHY_MSG =
+  "Import breaks component hierarchy. See https://github.com/mitodl/mit-open/blob/main/docs/architecture/front-end-component-structure.md#module-boundary-and-importexport-rules"
+
+const COMPONENT_HIERARCHY_ZONES = [
+  {
+    target: "**/components/**",
+    from: "**/{app,app-pages,page-components}/**",
+    message: HIERARCHY_MSG,
+  },
+  {
+    target: "**/page-components/**",
+    from: "**/{app,app-pages}/**",
+    message: HIERARCHY_MSG,
+  },
+]
+
 module.exports = {
   extends: [
     "eslint-config-mitodl",
@@ -132,18 +148,7 @@ module.exports = {
       "error",
       {
         zones: [
-          {
-            target: "**/components/**",
-            from: "**/{app,app-pages,page-components}/**",
-            message:
-              "Import breaks component hierarchy. See https://github.com/mitodl/mit-open/blob/main/docs/architecture/front-end-component-structure.md#module-boundary-and-importexport-rules",
-          },
-          {
-            target: "**/page-components/**",
-            from: "**/{app,app-pages}/**",
-            message:
-              "Import breaks component hierarchy. See https://github.com/mitodl/mit-open/blob/main/docs/architecture/front-end-component-structure.md#module-boundary-and-importexport-rules",
-          },
+          ...COMPONENT_HIERARCHY_ZONES,
           {
             target: "./**/main/src/{app,app-pages,page-components}/**",
             from: "./**/main/src/common/analytics/posthog.ts",
@@ -224,11 +229,42 @@ module.exports = {
       },
     },
     {
-      // Tests mock '@/common/analytics/posthog' and import capturePostHog
-      // from there to assert on it — allow the direct import for that purpose.
+      // Restrict direct usePostHog() usage in app code — call analytics methods
+      // from '@/common/analytics' instead. ConfiguredPostHogProvider is the one
+      // legitimate exception: it bridges the React PostHog context (identify,
+      // reset) with our analytics singleton.
+      files: [
+        "./**/main/src/app/**/*.{ts,tsx}",
+        "./**/main/src/app-pages/**/*.{ts,tsx}",
+        "./**/main/src/page-components/**/*.{ts,tsx}",
+      ],
+      excludedFiles: [
+        "./**/ConfiguredPostHogProvider/**",
+        "./**/*.test.{ts,tsx}",
+      ],
+      rules: {
+        ...restrictedImports({
+          paths: [
+            {
+              name: "posthog-js/react",
+              importNames: ["usePostHog"],
+              message:
+                "Call analytics methods from '@/common/analytics' instead of using usePostHog() directly.",
+            },
+          ],
+        }),
+      },
+    },
+    {
+      // Tests mock '@/common/analytics/posthog' and import capturePostHog from
+      // there to assert on it — exempt the analytics-adapter zones but keep
+      // the component-hierarchy zones intact.
       files: ["./**/*.test.{ts,tsx}"],
       rules: {
-        "import/no-restricted-paths": "off",
+        "import/no-restricted-paths": [
+          "error",
+          { zones: COMPONENT_HIERARCHY_ZONES },
+        ],
       },
     },
     // Note: eslint-plugin-storybook is incompatible with Storybook 10 (ESM) and ESLint 8 (CommonJS)

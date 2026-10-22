@@ -87,7 +87,7 @@ export const useCourseEnrollment = (
     async (e) => {
       analytics.enrollCtaClicked({
         placement: opts?.tracking.placement,
-        enrollmentMode: kind === "paid" ? "verified" : "audit",
+        kind,
         resourceType: "course",
         readableId: course.readable_id,
         label,
