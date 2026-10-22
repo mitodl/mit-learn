@@ -70,6 +70,19 @@ def refuse_mass_unpublish(
         raise ExtractException(msg)
 
 
+def kept_course_ids(courses: list[dict]) -> set[str]:
+    """
+    Return the readable_ids of the transformed courses load_courses will leave
+    published. upsert_course_or_program unpublishes a course with no runs, and
+    the runs come from a view that can be built apart from the courses.
+    """
+    return {
+        course["readable_id"]
+        for course in courses
+        if course["published"] and course["runs"]
+    }
+
+
 def refuse_empty(**views: list[dict]) -> None:
     """Raise if any of the named views returned no rows."""
     empty = [name for name, rows in views.items() if not rows]

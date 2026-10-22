@@ -36,6 +36,7 @@ from learning_resources.etl.utils import (
     transform_price,
 )
 from learning_resources.etl.warehouse_guards import (
+    kept_course_ids,
     refuse_empty,
     refuse_mass_unpublish,
     utc_timestamp_or_none,
@@ -243,9 +244,7 @@ def sync_courses(
     ]
     if not allow_mass_unpublish:
         refuse_mass_unpublish(
-            ETLSource.xpro.name,
-            COURSE,
-            {course["readable_id"] for course in courses_data if course["published"]},
+            ETLSource.xpro.name, COURSE, kept_course_ids(courses_data)
         )
     return len(
         loaders.load_courses(

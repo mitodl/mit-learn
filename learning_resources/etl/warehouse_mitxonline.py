@@ -50,6 +50,7 @@ from learning_resources.etl.utils import (
     transform_topics,
 )
 from learning_resources.etl.warehouse_guards import (
+    kept_course_ids,
     refuse_empty,
     refuse_mass_unpublish,
     utc_timestamp_or_none,
@@ -343,16 +344,8 @@ def sync_courses(
         for course in courses
     ]
     if not allow_mass_unpublish:
-        # The loader unpublishes a course with no runs, and the runs are a
-        # separate view that can be built apart from the courses
         refuse_mass_unpublish(
-            ETLSource.mitxonline.name,
-            COURSE,
-            {
-                course["readable_id"]
-                for course in courses_data
-                if course["published"] and course["runs"]
-            },
+            ETLSource.mitxonline.name, COURSE, kept_course_ids(courses_data)
         )
     return len(
         loaders.load_courses(
