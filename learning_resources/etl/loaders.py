@@ -35,7 +35,13 @@ from learning_resources.etl.constants import (
     ResourceNextRunConfig,
 )
 from learning_resources.etl.exceptions import ExtractException
-from learning_resources.etl.ownership import CONTENT_FILE, is_shadow_run, may_write
+from learning_resources.etl.ownership import (
+    CONTENT_FILE,
+    RunMode,
+    is_shadow_run,
+    may_write,
+    run_mode,
+)
 from learning_resources.etl.utils import most_common_topics
 from learning_resources.models import (
     ContentFile,
@@ -959,6 +965,10 @@ def load_programs(
             programs_data,
             prune=config.prune,
             prune_empty=config.prune_empty,
+            # as below, where the source's courses are looked up unless this
+            # pipeline owns them
+            fetch_courses=config.courses.fetch_only
+            or run_mode(etl_source, LearningResourceType.course.name) != RunMode.WRITE,
         )
         return []
     if not may_write(etl_source, LearningResourceType.program.name):
