@@ -11,19 +11,17 @@ from __future__ import annotations
 import hashlib
 import json
 import re
-import time
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Literal
 from urllib.parse import urljoin, urlparse
 
-import httpx
 from bs4 import BeautifulSoup, NavigableString, Tag
 from pydantic import BaseModel, ConfigDict
 
-MODULE_RE = re.compile(r"^(week-\d+|review-)")
+from learning_resources.etl.ocw_unit_parsing_fetchers import Fetcher
 
-UA = "course-profile-prototype/0.1 (+research; contact: local)"
+MODULE_RE = re.compile(r"^(week-\d+|review-)")
 
 MIN_CELL_COUNT = 3
 MIN_NOTES_LENGTH = 200
@@ -149,52 +147,6 @@ class SourceManifest(Strict):
     def by_id(self) -> dict[str, SourceItem]:
         """Return the sources keyed by source_id."""
         return {s.source_id: s for s in self.sources}
-
-
-class Fetcher:
-    """HTTP fetcher that caches raw responses on disk."""
-
-    def __init__(self, raw_dir: Path, *, refresh: bool = False):
-        """Cache responses in raw_dir; refresh re-downloads cached urls."""
-        self.raw_dir = raw_dir
-        self.raw_dir.mkdir(parents=True, exist_ok=True)
-        self.refresh = refresh
-        self.client = httpx.Client(
-            timeout=60, follow_redirects=True, headers={"User-Agent": UA}
-        )
-        self.downloads = 0
-        self.cache_hits = 0
-
-    def path_for(self, url: str) -> Path:
-        """Return the cache path for a url."""
-        ext = Path(urlparse(url).path).suffix.lower() or ".html"
-        if ext not in (".html", ".pdf", ".vtt", ".json", ".xml", ".txt"):
-            ext = ".bin"
-        url_hash = hashlib.sha1(url.encode(), usedforsecurity=False).hexdigest()
-        return self.raw_dir / (url_hash[:20] + ext)
-
-    def get(self, url: str) -> bytes:
-        """Return the body of a url, from the cache when possible."""
-        p = self.path_for(url)
-        if p.exists() and not self.refresh:
-            self.cache_hits += 1
-            return p.read_bytes()
-        last: Exception | None = None
-        for attempt in range(3):
-            try:
-                r = self.client.get(url)
-                r.raise_for_status()
-                p.write_bytes(r.content)
-                self.downloads += 1
-                return r.content  # noqa: TRY300
-            except httpx.HTTPError as e:  # retry on transient errors
-                last = e
-                time.sleep(1.5 * (attempt + 1))
-        msg = f"fetch failed for {url}: {last}"
-        raise RuntimeError(msg)
-
-    def text(self, url: str) -> str:
-        return self.get(url).decode("utf-8", errors="replace")
 
 
 def _render_text(node: NavigableString, out: list[str]) -> None:
@@ -430,6 +382,7 @@ class Ingestor:
         *,
         include_readings: bool = False,
         refresh: bool = False,
+        fetcher: Fetcher | None = None,
     ):
         self.course_url = course_url.rstrip("/") + "/"
         self.course_id = _slug(self.course_url)
@@ -437,7 +390,7 @@ class Ingestor:
         self.course_dir = data_dir / self.course_id
         self.text_dir = self.course_dir / "text"
         self.text_dir.mkdir(parents=True, exist_ok=True)
-        self.fetch = Fetcher(self.course_dir / "raw", refresh=refresh)
+        self.fetch = fetcher or Fetcher(self.course_dir / "raw", refresh=refresh)
         self.include_readings = include_readings
         self.sources: list[SourceItem] = []
         self.units: list[Unit] = []
