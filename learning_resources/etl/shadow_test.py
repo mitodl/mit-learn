@@ -313,6 +313,43 @@ def test_run_shadow_reports_an_item_on_another_platform_as_created(catalog):
     ) == {PlatformType.see.name: False, PlatformType.climate.name: True}
 
 
+def test_run_shadow_skips_an_item_with_no_known_platform(catalog):
+    """
+    upsert_course_or_program skips an item whose platform is not stored, so a
+    shadow does not report it as created, and its stored resource is pruned.
+    """
+    _load_courses([_course("c1"), _course("c2")])
+    batch = [_course("c1", platform=None), _course("c2")]
+
+    run = _shadow([(SOURCE, COURSE)], lambda: _load_courses(batch))[COURSE]
+
+    assert run.details["created"] == []
+    assert run.details["unpublished"] == ["c1"]
+    assert run.counts["unchanged"] == 1
+    _load_courses(batch)
+    assert dict(
+        LearningResource.objects.filter(readable_id__in=["c1", "c2"]).values_list(
+            "readable_id", "published"
+        )
+    ) == {"c1": False, "c2": True}
+
+
+def test_run_shadow_does_not_prune_for_a_batch_the_loader_skips_entirely(catalog):
+    """The loader prunes only when it loaded something, so neither does a shadow."""
+    _load_courses([_course("c1"), _course("c2")])
+    batch = [_course("c1", platform=None)]
+
+    run = _shadow([(SOURCE, COURSE)], lambda: _load_courses(batch))[COURSE]
+
+    assert run.counts["created"] == run.counts["unpublished"] == 0
+    _load_courses(batch)
+    assert set(
+        LearningResource.objects.filter(published=True).values_list(
+            "readable_id", flat=True
+        )
+    ) == {"c1", "c2"}
+
+
 def test_a_shadow_of_loaded_programs_reports_nothing(catalog):
     """Programs compare clean too, with the courses they link to."""
     _load_courses([_course("c1"), _course("c2")])
