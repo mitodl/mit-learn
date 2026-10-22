@@ -35,6 +35,7 @@ from learning_resources.etl import (
     ovs,
     pipelines,
     podcast,
+    shadow,
     warehouse_media,
     warehouse_xpro,
     youtube,
@@ -58,7 +59,12 @@ from learning_resources.etl.loaders import (
     load_learning_materials,
     load_run_dependent_values,
 )
-from learning_resources.etl.ownership import Pipeline, may_write, writing_as
+from learning_resources.etl.ownership import (
+    Pipeline,
+    is_shadow_run,
+    may_write,
+    writing_as,
+)
 from learning_resources.etl.pipelines import ocw_courses_etl
 from learning_resources.etl.utils import (
     get_bucket_by_name,
@@ -1415,7 +1421,8 @@ class SyncYouTubeTask(BaseWarehouseETLTask):
     youtube video_playlist and video.
 
     Like get_youtube_data, it fans out into one task per playlist, so a culled
-    worker costs one playlist and not the run.
+    worker costs one playlist and not the run. A shadow run queues nothing and
+    writes nothing: it hands the playlists to shadow.observe_youtube.
 
     Always a full sync, whatever ``since`` is: a playlist is loaded together
     with all of its videos, and the views carry no per-playlist change time.
@@ -1455,6 +1462,12 @@ class SyncYouTubeTask(BaseWarehouseETLTask):
         )
         if playlists_by_channel is None:
             return 0
+        if is_shadow_run():
+            # the channel sync and the playlist tasks write, so a shadow
+            # compares what they would load instead
+            to_load = warehouse_media.playlists_to_load(channels, playlists_by_channel)
+            shadow.observe_youtube(to_load)
+            return len(to_load)
         # Set once the checks have passed, so a refused run leaves an earlier
         # run's queued loads current, and before this run unpublishes
         # anything, so those loads cannot republish what this one removes.
