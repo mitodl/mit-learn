@@ -98,26 +98,34 @@ const FilterChip = styled.button(({ theme }) => ({
   padding: "0 12px 0 16px",
   border: "none",
   background: "none",
-  color: theme.custom.colors.darkGray2,
+  color: theme.custom.colors.silverGrayDark,
   cursor: "pointer",
   whiteSpace: "nowrap",
+  /* Nothing to see until the pill is hovered, but it decides that pill's
+     shape, so it is set here rather than alongside the outline below. */
+  borderRadius: "20px",
   svg: {
     flexShrink: 0,
     width: "16px",
     height: "16px",
-    color: theme.custom.colors.silverGrayDark,
   },
-  /* With no border to darken, hovering darkens the cross and the label
-     together -- otherwise nothing answers the pointer at all. */
+  /**
+   * Hovering draws the outlined pill the design puts around the filter under
+   * the pointer.
+   *
+   * As an inset shadow rather than a border, because a border would lay the
+   * row out 2px wider for as long as the pointer was over it and shunt every
+   * filter after this one sideways. The design's stroke sits inside the
+   * pill's 32px too, which is what an inset shadow draws.
+   */
   ":hover": {
-    svg: { color: theme.custom.colors.darkGray2 },
-    textDecorationLine: "underline",
+    boxShadow: `inset 0 0 0 1px ${theme.custom.colors.silverGrayDark}`,
   },
 }))
 
 const ClearAll = styled.button(({ theme }) => ({
   ...theme.typography.body2Loose,
-  color: theme.custom.colors.darkGray2,
+  color: theme.custom.colors.silverGrayDark,
   /* Underlined standing, as the design has it: it is the one thing on the row
      that is a link rather than a filter, and nothing else distinguishes it. */
   textDecorationLine: "underline",
