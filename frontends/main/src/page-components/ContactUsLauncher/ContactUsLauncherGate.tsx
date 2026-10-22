@@ -13,8 +13,6 @@ const ContactUsLauncherGate: React.FC = () => {
   const flagsLoaded = useFeatureFlagsLoaded()
   const { data: user } = useUserMe()
   const userEmail = user?.is_authenticated ? user.email : undefined
-  // ContactUsLauncher memoizes on `settings`; a fresh object each render would
-  // rebuild the chat fetcher on every re-render.
   const settings = React.useMemo(
     () => getContactUsSettings(userEmail),
     [userEmail],
