@@ -1,7 +1,7 @@
 import React from "react"
 import HomePage from "./HomePage"
 import NewsEventsSection from "./NewsEventsSection"
-import { urls, setMockResponse } from "api/test-utils"
+import { urls, setMockResponse, makeRequest } from "api/test-utils"
 import {
   learningResources,
   newsEvents,
@@ -436,6 +436,46 @@ describe("Home Page Carousel", () => {
         name: "Professional & Executive Learning",
       })
     })
+  })
+
+  test("Featured requests exclude Sloan and Professional Education", async () => {
+    setupAPIs()
+
+    renderWithProviders(<HomePage heroImageIndex={1} />)
+
+    const featuredPath = new URL(urls.learningResources.featured()).pathname
+    const featuredParams = () =>
+      jest
+        .mocked(makeRequest)
+        .mock.calls.map(([request]) => request)
+        .filter(({ method }) => method === "get")
+        .map(({ url }) => new URL(url))
+        .filter((url) => url.pathname === featuredPath)
+        .map((url) => url.searchParams)
+
+    await waitFor(() => expect(featuredParams()).toHaveLength(4))
+    const params = featuredParams()
+    for (const p of params) {
+      expect(p.getAll("offered_by").sort()).toEqual([
+        "bootcamps",
+        "climate",
+        "mitx",
+        "ocw",
+        "xpro",
+      ])
+    }
+    const tabParams = params.map((p) => {
+      const { free, certification, professional } = Object.fromEntries(p)
+      return { free, certification, professional }
+    })
+    expect(tabParams).toEqual(
+      expect.arrayContaining([
+        { free: undefined, certification: undefined, professional: undefined },
+        { free: "true", certification: undefined, professional: undefined },
+        { free: undefined, certification: "true", professional: "false" },
+        { free: undefined, certification: undefined, professional: "true" },
+      ]),
+    )
   })
 })
 
