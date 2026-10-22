@@ -1380,6 +1380,7 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
             )}
             <AiSearchOverview
               searchParams={searchParams}
+              constantSearchParams={constantSearchParams}
               onDismissed={focusResultsHeading}
             />
             <ResourceTypeGroupTabs.TabPanels tabs={tabs}>
