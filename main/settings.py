@@ -43,6 +43,13 @@ log = logging.getLogger()
 ENVIRONMENT = get_string("MITOL_ENVIRONMENT", "dev")
 DEFAULT_AUTO_FIELD = "django.db.models.AutoField"
 
+# litellm imports the Opik SDK whenever it is installed (ol-llm brings it in). The
+# SDK then starts its own Sentry client, replacing ours, and reports usage analytics
+# to Comet. Importing ol_llm here, which disables the Sentry client on import, would
+# put opik on the boot path, and litellm imports opik before ol_llm anyway.
+os.environ.setdefault("OPIK_SENTRY_ENABLE", "false")
+os.environ.setdefault("OPIK_ANALYTICS_ENABLE", "false")
+
 # initialize Sentry before doing anything else so we capture any config errors
 SENTRY_DSN = get_string("SENTRY_DSN", "")
 SENTRY_LOG_LEVEL = get_string("SENTRY_LOG_LEVEL", "ERROR")
@@ -981,6 +988,12 @@ EMBEDDING_HEDGE_MAX_WORKERS = get_int(name="EMBEDDING_HEDGE_MAX_WORKERS", defaul
 EMBEDDING_HEDGE_REQUEST_TIMEOUT_SECONDS = get_float(
     name="EMBEDDING_HEDGE_REQUEST_TIMEOUT_SECONDS", default=10.0
 )
+
+# Embedding requests are traced to Opik through ol-llm. OL_LLM_ENVIRONMENT goes on
+# every trace. Tracing is off unless OPIK_URL_OVERRIDE names an Opik instance, since
+# the SDK would otherwise send to Comet's hosted Opik.
+OL_LLM_ENVIRONMENT = get_string(name="OL_LLM_ENVIRONMENT", default=ENVIRONMENT)
+OPIK_URL_OVERRIDE = get_string(name="OPIK_URL_OVERRIDE", default=None)
 
 CONTENT_FILE_EMBEDDING_CHUNK_SIZE_OVERRIDE = get_int(
     name="CONTENT_FILE_EMBEDDING_CHUNK_SIZE", default=512
