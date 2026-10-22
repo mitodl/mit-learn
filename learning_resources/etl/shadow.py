@@ -33,7 +33,8 @@ second copy of those rules and can drift from them. It covers:
   published runs a pruning load would unpublish;
 - a program's child courses and programs, by readable_id, as its load would
   find them;
-- a playlist's channel and its videos in order, and a video's detail row;
+- a playlist's channel and its videos in order, a video's detail row, and
+  the course platform a content file moves a video to;
 - the published resources a pruning load would unpublish.
 
 It does not cover what only the loaders decide: topics found by similarity for
@@ -365,6 +366,40 @@ def _note_runs(
                 changes[f"runs[{run_id}].published"] = [True, False]
 
 
+def _note_youtube(
+    changes: dict, resource: LearningResource, data: dict, resource_type: str
+) -> None:
+    """Note what the youtube loads change outside the resource's columns."""
+    if resource_type == VIDEO_PLAYLIST:
+        playlist = getattr(resource, "video_playlist", None)
+        _note(
+            changes,
+            "channel",
+            playlist.channel_id if playlist else None,
+            data["channel"],
+        )
+        _note(
+            changes,
+            "videos",
+            [
+                relation.child.readable_id
+                for relation in sorted(
+                    resource.children.all(), key=lambda relation: relation.position
+                )
+                if relation.relation_type
+                == LearningResourceRelationTypes.PLAYLIST_VIDEOS.value
+            ],
+            data["videos"],
+        )
+    if "content_file_platform" in data:
+        _note(
+            changes,
+            "platform",
+            resource.platform.code if resource.platform else None,
+            data["content_file_platform"],
+        )
+
+
 def _resource_changes(
     resource: LearningResource,
     item: dict,
@@ -440,27 +475,7 @@ def _resource_changes(
         )
     if has_runs:
         _note_runs(changes, resource, data, prune=prune)
-    if resource_type == VIDEO_PLAYLIST:
-        playlist = getattr(resource, "video_playlist", None)
-        _note(
-            changes,
-            "channel",
-            playlist.channel_id if playlist else None,
-            data["channel"],
-        )
-        _note(
-            changes,
-            "videos",
-            [
-                relation.child.readable_id
-                for relation in sorted(
-                    resource.children.all(), key=lambda relation: relation.position
-                )
-                if relation.relation_type
-                == LearningResourceRelationTypes.PLAYLIST_VIDEOS.value
-            ],
-            data["videos"],
-        )
+    _note_youtube(changes, resource, data, resource_type)
     if resource_type == PROGRAM:
         # load_program links a course on its own platform and
         # _create_child_program_relationships a program on the parent's
@@ -771,9 +786,19 @@ def _youtube_video(video: dict) -> dict:
     }
 
 
-def _content_file_video(video: dict, content_file: ContentFile) -> dict:
-    """Return a video as load_video_with_content_file would load it."""
+def _content_file_video(
+    video: dict, content_file: ContentFile, stored_platform: str | None
+) -> dict:
+    """
+    Return a video as load_video_with_content_file would load it.
+
+    That loader finds the video by readable_id and etl_source, not platform,
+    and moves it to its course's platform. ``platform`` is the stored video's,
+    so that the comparison finds the resource the loader updates, and
+    ``content_file_platform`` is the course's.
+    """
     course = content_file.run.learning_resource
+    course_platform = course.platform.code if course.platform else None
     tags = {tag.name for tag in content_file.content_tags.all()}
     return {
         **_youtube_video(video),
@@ -783,7 +808,8 @@ def _content_file_video(video: dict, content_file: ContentFile) -> dict:
         "resource_category": LearningResourceType.video.value
         if OCW_INSTRUCTOR_INSIGHTS_TAG in tags
         else OCW_CONTENT_CATEGORY_LECTURE_VIDEOS,
-        "platform": course.platform.code if course.platform else None,
+        "platform": stored_platform or course_platform,
+        "content_file_platform": course_platform,
         "offered_by": {"code": course.offered_by.code} if course.offered_by else None,
         "topics": [{"name": topic.name} for topic in course.topics.all()],
     }
@@ -820,13 +846,30 @@ def observe_youtube(to_load: Iterable[tuple[str, dict]]) -> None:
             if video.get("youtube_id")
         }
     )
+    stored_platforms = dict(
+        LearningResource.objects.filter(
+            resource_type=VIDEO,
+            etl_source=etl_source,
+            readable_id__in={
+                video["readable_id"]
+                for _, playlist in to_load
+                if not playlist["create_videos"]
+                for video in playlist["videos"]
+                if video.get("youtube_id") in content_files
+            },
+        ).values_list("readable_id", "platform__code")
+    )
     playlists, videos = [], {}
     for channel_id, playlist in to_load:
         if playlist["create_videos"]:
             playlist_videos = [_youtube_video(video) for video in playlist["videos"]]
         else:
             playlist_videos = [
-                _content_file_video(video, content_files[video["youtube_id"]])
+                _content_file_video(
+                    video,
+                    content_files[video["youtube_id"]],
+                    stored_platforms.get(video["readable_id"]),
+                )
                 for video in playlist["videos"]
                 if video.get("youtube_id") in content_files
             ]
