@@ -137,8 +137,11 @@ const ClearAll = styled.button(({ theme }) => ({
   background: "none",
   cursor: "pointer",
   whiteSpace: "nowrap",
+  /* Hovering turns it red and leaves the underline where it is -- the same
+     red the filter counts are drawn in, which is the only other thing on the
+     card that is not grey. */
   ":hover": {
-    textDecorationLine: "none",
+    color: theme.custom.colors.red,
   },
 }))
 
