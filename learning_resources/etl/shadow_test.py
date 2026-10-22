@@ -362,6 +362,65 @@ def test_a_shadow_of_loaded_programs_reports_nothing(catalog):
     assert run.counts["unchanged"] == run.counts["before"] == 2
 
 
+@pytest.mark.parametrize("resource_type", [COURSE, PROGRAM])
+def test_run_shadow_reports_the_values_the_loader_fills_in(catalog, resource_type):
+    """
+    The loader stores online delivery and the type as resource_category for
+    an item that leaves them out, so a shadow compares those values with the
+    stored ones.
+    """
+    if resource_type == COURSE:
+        load, item = _load_courses, _course
+    else:
+        load = _load_programs
+        _load_courses([_course("c1")])
+
+        def item(readable_id, **overrides):
+            return _program(readable_id, ["c1"], **overrides)
+
+    load([item("r1", delivery=["in_person"], resource_category="Workshop")])
+    batch = [item("r1")]
+    category = LearningResourceType[resource_type].value
+
+    run = _shadow([(SOURCE, resource_type)], lambda: load(batch))[resource_type]
+
+    assert run.details["changed"] == {
+        "r1": {
+            "delivery": [["in_person"], ["online"]],
+            "resource_category": ["Workshop", category],
+        }
+    }
+    load(batch)
+    stored = LearningResource.objects.get(readable_id="r1")
+    assert (stored.delivery, stored.resource_category) == (["online"], category)
+
+
+def test_run_shadow_reports_the_resource_category_podcast_loaders_set(catalog):
+    """load_podcast and load_podcast_episode set resource_category whatever the item says."""
+    batch = [_podcast("p1", ["e1"])]
+    _load_podcasts(batch)
+    LearningResource.objects.update(resource_category="Something else")
+    podcast = _podcast("p1", [], resource_category="Ignored")
+    podcast["episodes"] = [_episode("p1-e1", resource_category="Ignored")]
+    batch = [podcast]
+    source = ETLSource.podcast.name
+
+    runs = _shadow(
+        [(source, PODCAST), (source, EPISODE)], lambda: _load_podcasts(batch)
+    )
+
+    assert runs[PODCAST].details["changed"] == {
+        "p1": {"resource_category": ["Something else", "Podcast"]}
+    }
+    assert runs[EPISODE].details["changed"] == {
+        "p1-e1": {"resource_category": ["Something else", "Podcast Episode"]}
+    }
+    _load_podcasts(batch)
+    assert dict(
+        LearningResource.objects.values_list("readable_id", "resource_category")
+    ) == {"p1": "Podcast", "p1-e1": "Podcast Episode"}
+
+
 def test_run_shadow_reports_runs_and_related_values(catalog):
     """Each kind of value the loaders set is compared as they would set it."""
     _load_courses([_course("c1")])

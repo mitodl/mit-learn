@@ -17,7 +17,9 @@ The comparison follows the loaders' rules instead of running them, so it is a
 second copy of those rules and can drift from them. It covers:
 
 - every key of an item that is a column of LearningResource, apart from the
-  ones the loaders derive from the best run (``_RUN_DERIVED``);
+  ones the loaders derive from the best run (``_RUN_DERIVED``), and the
+  columns a loader sets for an item that leaves them out (``delivery`` and
+  ``resource_category``);
 - ``published``, as the loader would set it (false for a course or program
   with no runs or on the blocklist, and for a podcast with no episodes);
 - topics (with the parents the loader adds), offered_by, image, departments,
@@ -49,7 +51,12 @@ from typing import Any
 from django.db.models import Model, Prefetch, Q
 from django.utils import timezone
 
-from learning_resources.constants import LearningResourceType, PlatformType, RunStatus
+from learning_resources.constants import (
+    LearningResourceDelivery,
+    LearningResourceType,
+    PlatformType,
+    RunStatus,
+)
 from learning_resources.etl.constants import ETLSource
 from learning_resources.etl.ownership import current_pipeline, shadowing
 from learning_resources.models import (
@@ -105,6 +112,7 @@ _RUN_DERIVED = {
     "next_start_date",
 }
 _TYPES_WITH_RUNS = {COURSE, PROGRAM}
+_ONLINE = [LearningResourceDelivery.online.name]
 # What each loader does with a key its item leaves out. None means "leave the
 # stored value alone" for topics and content_tags, and "clear it" for the rest.
 _LOADER_DEFAULTS = {
@@ -114,8 +122,15 @@ _LOADER_DEFAULTS = {
         "image": None,
         "departments": [],
         "content_tags": [],
+        "delivery": _ONLINE,
     },
-    PROGRAM: {"topics": [], "offered_by": None, "image": None, "departments": None},
+    PROGRAM: {
+        "topics": [],
+        "offered_by": None,
+        "image": None,
+        "departments": None,
+        "delivery": _ONLINE,
+    },
     DOCUMENT: {"offered_by": None},
     PODCAST: {"topics": [], "offered_by": None, "image": None, "departments": []},
     PODCAST_EPISODE: {
@@ -124,6 +139,11 @@ _LOADER_DEFAULTS = {
         "image": None,
         "departments": [],
     },
+}
+# What a loader sets whatever its item says.
+_LOADER_OVERRIDES = {
+    PODCAST: {"resource_category": LearningResourceType.podcast.value},
+    PODCAST_EPISODE: {"resource_category": LearningResourceType.podcast_episode.value},
 }
 _DETAIL_MODELS = {COURSE: Course, PODCAST: Podcast, PODCAST_EPISODE: PodcastEpisode}
 
@@ -325,9 +345,14 @@ def _resource_changes(
 ) -> dict[str, list]:
     """Return {path: [stored, incoming]} for what loading ``item`` would change."""
     has_runs = resource_type in _TYPES_WITH_RUNS
-    data = {**_LOADER_DEFAULTS[resource_type], **item}
+    data = {
+        **_LOADER_DEFAULTS[resource_type],
+        **item,
+        **_LOADER_OVERRIDES.get(resource_type, {}),
+    }
     if has_runs and not data.get("resource_category"):
-        data.pop("resource_category", None)
+        # what upsert_course_or_program stores for an item with none
+        data["resource_category"] = LearningResourceType[resource_type].value
     changes: dict[str, list] = {}
     _note_columns(
         changes,
