@@ -964,7 +964,12 @@ def observe_youtube(to_load: Iterable[tuple[str, dict]]) -> None:
                 "offered_by": playlist.get("offered_by"),
                 **({"image": playlist["image"]} if playlist.get("image") else {}),
                 "channel": channel_id,
-                "videos": [video["readable_id"] for video in playlist_videos],
+                # load_playlist adds each video through the relation manager,
+                # which skips one already related, so a repeat keeps the
+                # first position
+                "videos": list(
+                    dict.fromkeys(video["readable_id"] for video in playlist_videos)
+                ),
             }
         )
     observe(etl_source, VIDEO_PLAYLIST, playlists, prune=True)

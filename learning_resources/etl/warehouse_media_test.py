@@ -493,6 +493,37 @@ def test_sync_youtube_as_a_shadow_reports_playlist_and_video_changes(
     mock_search.bulk_deindex.assert_not_called()
 
 
+def test_sync_youtube_as_a_shadow_lists_a_repeated_video_once(
+    warehouse_owns_youtube,
+):
+    """
+    load_playlist relates a video a playlist lists twice once, at its first
+    position, so the shadow of that playlist finds nothing to change
+    """
+    views = (
+        [channel_row()],
+        [playlist_row("PL-one")],
+        [
+            membership_row("PL-one", "vid-a", 0),
+            membership_row("PL-one", "vid-b", 1),
+            membership_row("PL-one", "vid-a", 2),
+        ],
+        [video_row("vid-a"), video_row("vid-b")],
+    )
+    sync_and_load_youtube(*views)
+    assert list(
+        LearningResource.objects.get(readable_id="PL-one")
+        .children.order_by("position")
+        .values_list("child__readable_id", flat=True)
+    ) == ["vid-a", "vid-b"]
+
+    reports = shadow_youtube(*views)
+
+    for report in reports.values():
+        assert report.details["changed"] == {}
+        assert report.counts["unchanged"] == report.counts["before"]
+
+
 def test_sync_youtube_as_a_shadow_compares_content_file_playlists(
     warehouse_owns_youtube,
 ):
