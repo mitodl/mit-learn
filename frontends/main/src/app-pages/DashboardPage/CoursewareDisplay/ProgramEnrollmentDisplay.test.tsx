@@ -2344,6 +2344,95 @@ describe("ProgramEnrollmentDisplay", () => {
     const certButton = screen.queryByRole("link", { name: "Certificate" })
     expect(certButton).not.toBeInTheDocument()
   })
+  test("Shows a requirement group's description in its course cards' info row", async () => {
+    const mitxOnlineUser = mitxonline.factories.user.user()
+    setMockResponse.get(mitxonline.urls.userMe.get(), mitxOnlineUser)
+
+    const description = "Unlocks after all required courses are complete"
+    const reqTree =
+      new mitxonline.factories.requirements.RequirementTreeBuilder()
+    reqTree
+      .addOperator({ operator: "all_of", title: "Core Courses" })
+      .addCourse({ course: 1 })
+    const capstone = reqTree.addOperator({
+      operator: "all_of",
+      title: "Capstone Exam",
+      description,
+    })
+    capstone.addCourse({ course: 2 })
+    capstone.addCourse({ course: 3 })
+
+    const program = mitxonline.factories.programs.program({
+      id: 7777,
+      courses: [1, 2, 3],
+      req_tree: reqTree.serialize(),
+    })
+    const [course1, course2, course3] = [1, 2, 3].map((id) =>
+      mitxonline.factories.courses.course({
+        id,
+        courseruns: [mitxonline.factories.courses.courseRun({ id: 300 + id })],
+      }),
+    )
+    // Course 2 is enrolled, course 3 is not: both card kinds show it.
+    const enrollment = mitxonline.factories.enrollment.courseEnrollment({
+      run: { ...course2.courseruns[0], course: course2 },
+    })
+
+    setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV3(), [
+      enrollment,
+    ])
+    setMockResponse.get(
+      mitxonline.urls.programEnrollments.enrollmentsListV3(),
+      [
+        mitxonline.factories.enrollment.programEnrollmentV3({
+          program: {
+            id: program.id,
+            title: program.title,
+            live: program.live,
+            program_type: program.program_type,
+            readable_id: program.readable_id,
+          },
+        }),
+      ],
+    )
+    setMockResponse.get(mitxonline.urls.programs.programDetail(7777), program)
+    setMockResponse.get(
+      mitxonline.urls.courses.coursesList({
+        id: program.courses,
+        page_size: program.courses.length,
+      }),
+      {
+        count: 3,
+        next: null,
+        previous: null,
+        results: [course1, course2, course3],
+      },
+    )
+
+    renderWithProviders(<ProgramEnrollmentDisplay programId={7777} />)
+    await screen.findByText("Capstone Exam")
+
+    const desktopCardFor = (course: { id: number }) => {
+      const card = screen
+        .getAllByTestId("enrollment-card-desktop")
+        .find((el) =>
+          within(el).queryByText(
+            course.id === course2.id
+              ? enrollment.run.title
+              : course.id === course3.id
+                ? course3.courseruns[0].title
+                : course1.courseruns[0].title,
+          ),
+        )
+      invariant(card, `no card for course ${course.id}`)
+      return card
+    }
+    expect(within(desktopCardFor(course2)).getByText(description)).toBeVisible()
+    expect(within(desktopCardFor(course3)).getByText(description)).toBeVisible()
+    expect(
+      within(desktopCardFor(course1)).queryByText(description),
+    ).not.toBeInTheDocument()
+  })
 })
 
 describe("ProgramEnrollmentDisplay with program tracks", () => {
