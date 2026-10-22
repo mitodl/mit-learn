@@ -69,7 +69,7 @@ const selectedFilters = (
 const Row = styled.div({
   display: "flex",
   alignItems: "center",
-  gap: "16px",
+  gap: "8px",
   width: "100%",
   /* Narrow screens run out of room long before the filters do. */
   flexWrap: "wrap",
@@ -80,8 +80,12 @@ const Row = styled.div({
  * One filter, which removing is the only thing it does.
  *
  * A button rather than the chip component used elsewhere, because removing is
- * the whole of it: the design draws an outlined pill with the filter's name
- * and a cross, and the pill is the control.
+ * the whole of it: the design draws the filter's name and a cross, and the
+ * pair is the control.
+ *
+ * Neither outlined nor filled. The row sits inside the white search card, and
+ * the design leaves these as plain labels on it -- what marks each one as
+ * something to operate is the cross, not a box around it.
  */
 const FilterChip = styled.button(({ theme }) => ({
   ...theme.typography.body2,
@@ -92,11 +96,8 @@ const FilterChip = styled.button(({ theme }) => ({
   height: "32px",
   /* Less on the cross's side, which carries its own space. */
   padding: "0 12px 0 16px",
-  borderRadius: "20px",
-  border: `1px solid ${theme.custom.colors.silverGrayLight}`,
-  /* Filled rather than left clear: the row sits on the page's own grey, and
-     the design draws the pills white against it. */
-  backgroundColor: theme.custom.colors.white,
+  border: "none",
+  background: "none",
   color: theme.custom.colors.darkGray2,
   cursor: "pointer",
   whiteSpace: "nowrap",
@@ -106,24 +107,30 @@ const FilterChip = styled.button(({ theme }) => ({
     height: "16px",
     color: theme.custom.colors.silverGrayDark,
   },
+  /* With no border to darken, hovering darkens the cross and the label
+     together -- otherwise nothing answers the pointer at all. */
   ":hover": {
-    borderColor: theme.custom.colors.darkGray2,
     svg: { color: theme.custom.colors.darkGray2 },
+    textDecorationLine: "underline",
   },
 }))
 
 const ClearAll = styled.button(({ theme }) => ({
-  ...theme.typography.body3,
-  color: theme.custom.colors.red,
-  /* Set in from the last pill rather than spaced from it, as the design has
-     it -- the gap belongs to the link, not to the row. */
-  padding: "0 16px",
+  ...theme.typography.body2Loose,
+  color: theme.custom.colors.darkGray2,
+  /* Underlined standing, as the design has it: it is the one thing on the row
+     that is a link rather than a filter, and nothing else distinguishes it. */
+  textDecorationLine: "underline",
+  /* 8px on top of the row's own 8px, which is the 16px the design sets it in
+     from the last filter. The gap belongs to the link, not to the row. */
+  marginLeft: "8px",
+  padding: 0,
   border: "none",
   background: "none",
   cursor: "pointer",
   whiteSpace: "nowrap",
   ":hover": {
-    textDecorationLine: "underline",
+    textDecorationLine: "none",
   },
 }))
 
@@ -137,13 +144,6 @@ type SelectedFiltersProps = {
    * with it -- there is no chip left to hand it to.
    */
   onEmpty: () => void
-  /**
-   * Set by whoever places the row, which is where the row's own place on the
-   * page is decided. Here rather than on a wrapper because the row renders
-   * nothing when nothing is filtering, and a wrapper would hold its space
-   * open anyway.
-   */
-  className?: string
 }
 
 /**
@@ -164,7 +164,6 @@ const SelectedFilters: React.FC<SelectedFiltersProps> = ({
   onRemove,
   onClearAll,
   onEmpty,
-  className,
 }) => {
   const filters = selectedFilters(facetManifest, params)
   const chipRefs = React.useRef<Record<string, HTMLButtonElement | null>>({})
@@ -194,7 +193,7 @@ const SelectedFilters: React.FC<SelectedFiltersProps> = ({
     return null
   }
   return (
-    <Row className={className} data-testid="selected-filters">
+    <Row data-testid="selected-filters">
       {filters.map((filter, index) => {
         const key = `${filter.name}-${filter.value}`
         return (

@@ -76,7 +76,7 @@ const TOPIC_TABS: TabConfig[] = [
       ResourceTypeGroupEnum.Course,
       ResourceTypeGroupEnum.Program,
     ],
-    minWidth: 200,
+    minWidth: 185,
   },
   LEARNING_MATERIALS_TAB,
 ]

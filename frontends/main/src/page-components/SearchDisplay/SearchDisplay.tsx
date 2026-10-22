@@ -477,23 +477,23 @@ const CardGrid = styled(PlainList)(({ theme }) => ({
 }))
 
 /**
- * The topic design's search card: the search box and its facet controls, and
- * nothing else.
+ * The topic design's one card: the search box with its facet controls, the
+ * resource type tabs with sorting, and the filters currently applied, stacked
+ * 16px apart behind a single edge.
  *
- * The tabs and the applied filters are drawn below it rather than in it --
- * the design stands the card on its own, marked out by the red edge down its
- * left side and the low shadow beneath it, and leaves the rows that follow on
- * the page's own grey.
+ * Plain white under a low shadow -- the card is marked out by the shadow
+ * alone, with no rule or coloured edge anywhere on it.
  *
- * Not drawn on a narrow screen: both of the things in it have somewhere else
- * to be there, the search box and the facets alike in the filter drawer.
+ * Not drawn on a narrow screen: every row in it has somewhere else to be
+ * there -- the facets and the search box in the filter drawer, the tabs in
+ * the drawer's checklist, and the applied filters among them.
  */
 const TopicSearchCard = styled.div(({ theme }) => ({
   display: "flex",
-  alignItems: "center",
+  flexDirection: "column",
+  gap: "16px",
   padding: "24px",
   borderRadius: "8px",
-  borderLeft: `2px solid ${theme.custom.colors.lightRed}`,
   backgroundColor: theme.custom.colors.white,
   boxShadow: "0 3px 2.5px 0 rgba(120, 147, 172, 0.1)",
   [theme.breakpoints.down("md")]: {
@@ -504,14 +504,11 @@ const TopicSearchCard = styled.div(({ theme }) => ({
 /**
  * The tabs, with sorting pushed to the far end of the same row.
  *
- * Below the search card rather than inside it, which is where the design puts
- * them -- and drawn as the shared tab list draws them everywhere else, as
- * pills, white for the one selected and grey for the rest. So there is
- * nothing here but the row: no overrides, because the tab list already
- * matches.
- *
- * Not drawn on a narrow screen, where the same choice is in the filter
- * drawer's checklist and sorting is beside the Filter button.
+ * The design draws these as underlined headings rather than the filled
+ * buttons the shared tab list draws elsewhere: the selected one in black over
+ * a dark rule, the rest in `silverGray`, and no fill or outline on either.
+ * The overrides live here rather than on the tab list so that the search page
+ * and the other channels keep the buttons they already have.
  */
 const TopicTabsRow = styled.div(({ theme }) => ({
   display: "flex",
@@ -520,21 +517,35 @@ const TopicTabsRow = styled.div(({ theme }) => ({
   "> :last-child": {
     marginLeft: "auto",
   },
-  [theme.breakpoints.down("md")]: {
-    display: "none",
+  /* Doubled to outweigh the shared tab list's own 8px, which is written
+     against a class of equal weight and otherwise lands later. */
+  "&& .MuiTabs-flexContainer": {
+    gap: "10px",
   },
-}))
-
-/**
- * The applied filters, on the page below the tabs.
- *
- * Hidden at the width the card is hidden at, for the same reason: a narrow
- * screen filters from the drawer, and the filters it has applied are shown
- * ticked among the facets there.
- */
-const TopicSelectedFilters = styled(SelectedFilters)(({ theme }) => ({
-  [theme.breakpoints.down("md")]: {
-    display: "none",
+  '[role="tab"]': {
+    ...theme.typography.subtitle2,
+    minWidth: 0,
+    /* 2px short at the bottom because the rule below makes the difference up:
+       the design draws it within the row's 42px rather than under them. */
+    padding: "12px 4px 10px",
+    borderRadius: 0,
+    backgroundColor: "transparent",
+    color: theme.custom.colors.silverGray,
+    /* The rule the selected tab carries, kept on every tab at no colour so
+       that selecting one does not move the row. */
+    borderBottom: "2px solid transparent",
+    ":hover": {
+      backgroundColor: "transparent",
+      color: theme.custom.colors.darkGray2,
+    },
+  },
+  /* Its own key rather than nested under the one above: the shared tab list
+     fills the selected tab white from the button's own class, and only a
+     selector naming both the row and the state outweighs it. */
+  '[role="tab"][aria-selected="true"]': {
+    backgroundColor: "transparent",
+    color: theme.custom.colors.black,
+    borderBottomColor: theme.custom.colors.darkGray2,
   },
 }))
 
@@ -1332,12 +1343,10 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
             </VisuallyHidden>
             <UniversalAIBanner searchParams={searchParams} />
             {resultsLayout === "cards" ? (
-              <>
-                <TopicSearchCard>
-                  {filterBarSlot?.(
-                    displayData ? withAvailableValues(aggregations) : undefined,
-                  )}
-                </TopicSearchCard>
+              <TopicSearchCard>
+                {filterBarSlot?.(
+                  displayData ? withAvailableValues(aggregations) : undefined,
+                )}
                 <TopicTabsRow>
                   <StyledResourceTabs
                     setSearchParams={setSearchParams}
@@ -1347,7 +1356,7 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
                   />
                   <DesktopSortContainer>{sortDropdown}</DesktopSortContainer>
                 </TopicTabsRow>
-                <TopicSelectedFilters
+                <SelectedFilters
                   facetManifest={facetManifest}
                   params={requestParams}
                   onRemove={(name, value) => {
@@ -1362,7 +1371,7 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
                      the results it was describing. */
                   onEmpty={focusResultsHeading}
                 />
-              </>
+              </TopicSearchCard>
             ) : (
               <Stack direction="row" justifyContent="space-between">
                 <StyledResourceTabs
