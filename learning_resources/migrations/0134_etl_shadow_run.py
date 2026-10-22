@@ -5,7 +5,7 @@ from django.db import migrations, models
 
 class Migration(migrations.Migration):
     dependencies = [
-        ("learning_resources", "0130_learningresourcerun_b2b_only"),
+        ("learning_resources", "0133_contentfile_release_date_unreleased_idx"),
     ]
 
     operations = [
