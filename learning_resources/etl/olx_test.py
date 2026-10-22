@@ -669,6 +669,23 @@ def test_release_dates_longer_name_does_not_date_asset(tmp_path, linker, release
     )
 
 
+def test_release_dates_assets_separator_is_part_of_the_name(tmp_path):
+    """An undated link to lecture1.pdf does not release lecture_1.pdf"""
+    olx = _dated_olx(tmp_path)
+    _write_olx(olx, "chapter/ch_dated.xml", '<chapter><html url_name="h_d"/></chapter>')
+    _write_html(olx, "h_d", '<a href="/static/lecture_1.pdf">d</a>')
+    _write_olx(
+        olx, "chapter/ch_undated.xml", '<chapter><html url_name="h_u"/></chapter>'
+    )
+    _write_html(olx, "h_u", '<a href="/static/lecture1.pdf">u</a>')
+    _write_olx(olx, "static/lecture1.pdf", "released")
+    _write_olx(olx, "static/lecture_1.pdf", "not yet")
+
+    _assert_release_dates(
+        olx, {"static/lecture_1.pdf": START_FUTURE, "static/lecture1.pdf": None}
+    )
+
+
 def test_release_dates_assets_dated_inline_block_in_undated_parent(tmp_path):
     """A dated inline block dates what it names; its undated parent's text doesn't"""
     olx = _dated_olx(tmp_path)
@@ -1036,6 +1053,8 @@ def test_olx_archive_partial_names_are_not_references(tmp_path, reference, kept)
     [
         # a longer name is a different file
         ('<a href="/static/notes.pdf.txt">n</a>', "notes.pdf", False),
+        # _ alone is no break at the end either, as with final_exam.srt
+        ('<a href="/static/notes.pdf_old">n</a>', "notes.pdf", False),
         ('<a href="/static/notes.pdf?v=1#p2">n</a>', "notes.pdf", True),
         # a sentence's final period does not lengthen the name
         ("<p>Read notes.pdf.</p>", "notes.pdf", True),
@@ -1047,6 +1066,31 @@ def test_olx_archive_names_end_at_a_break(tmp_path, reference, name, kept):
     """A reference names a file only if the name ends where the reference does"""
     olx = _reference_olx(tmp_path, reference, **{name: "1", f"{name}.txt": "2"})
     assert (f"static/{name}" in _ingested(olx)) is kept
+
+
+@pytest.mark.parametrize(
+    ("link", "kept", "dropped"),
+    [
+        ("lecture1.pdf", "lecture1.pdf", "lecture_1.pdf"),
+        ("lecture_1.pdf", "lecture_1.pdf", "lecture1.pdf"),
+    ],
+)
+def test_olx_archive_separator_is_part_of_the_name(tmp_path, link, kept, dropped):
+    """lecture1.pdf and lecture_1.pdf are different files; a link keeps only its own"""
+    olx = _reference_olx(
+        tmp_path,
+        f'<a href="/static/{link}">l</a>',
+        **{"lecture1.pdf": "one", "lecture_1.pdf": "other"},
+    )
+    paths = _ingested(olx)
+    assert f"static/{kept}" in paths
+    assert f"static/{dropped}" not in paths
+
+
+def test_olx_archive_name_at_start_of_source(tmp_path):
+    """A name at the very start of a source matches, even one starting with _"""
+    olx = _reference_olx(tmp_path, "_notes.pdf", **{"_notes.pdf": "pdf"})
+    assert "static/_notes.pdf" in _ingested(olx)
 
 
 def test_olx_archive_keeps_reuploaded_asset_keys(tmp_path):
