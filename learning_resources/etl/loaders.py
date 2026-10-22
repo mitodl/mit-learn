@@ -23,6 +23,7 @@ from learning_resources.constants import (
     PlatformType,
     RunStatus,
 )
+from learning_resources.etl import shadow
 from learning_resources.etl.constants import (
     CONTENT_TAG_CATEGORIES,
     EDX_RUN_ID_SOURCES,
@@ -34,7 +35,12 @@ from learning_resources.etl.constants import (
     ResourceNextRunConfig,
 )
 from learning_resources.etl.exceptions import ExtractException
-from learning_resources.etl.ownership import may_write
+from learning_resources.etl.ownership import (
+    RunMode,
+    is_shadow_run,
+    may_write,
+    run_mode,
+)
 from learning_resources.etl.utils import most_common_topics
 from learning_resources.models import (
     ContentFile,
@@ -694,6 +700,18 @@ def load_courses(
     Returns:
         A list of course LearningResources
     """
+    # A shadow run compares the batch with what is stored and loads nothing.
+    # The other batch loaders a shadow can reach do the same.
+    if is_shadow_run():
+        shadow.observe(
+            etl_source,
+            LearningResourceType.course.name,
+            courses_data or [],
+            prune=config.prune,
+            prune_empty=config.prune_empty,
+            blocklist=load_course_blocklist(),
+        )
+        return []
     # Backstop: every pipeline checks before it extracts, so this only stops a
     # caller that skipped that check. The other batch loaders do the same.
     if not may_write(etl_source, LearningResourceType.course.name):
@@ -947,6 +965,19 @@ def load_programs(
     For MITx Online data, each deferred child program may map to either
     PROGRAM_PROGRAMS or PROGRAM_COURSES based on child `display_mode`.
     """
+    if is_shadow_run():
+        shadow.observe(
+            etl_source,
+            LearningResourceType.program.name,
+            programs_data,
+            prune=config.prune,
+            prune_empty=config.prune_empty,
+            # as below, where the source's courses are looked up unless this
+            # pipeline owns them
+            fetch_courses=config.courses.fetch_only
+            or run_mode(etl_source, LearningResourceType.course.name) != RunMode.WRITE,
+        )
+        return []
     if not may_write(etl_source, LearningResourceType.program.name):
         return []
 
@@ -1563,6 +1594,13 @@ def load_podcasts(
         list of LearningResources:
             list of the loaded podcast resources
     """
+    if is_shadow_run():
+        # fail the shadow where the owner's load would fail
+        if not tracked_ids:
+            msg = "No podcasts to track, the load would unpublish every podcast"
+            raise ExtractException(msg)
+        shadow.observe_podcasts(podcasts_data, tracked_ids)
+        return []
     if not may_write(
         ETLSource.podcast.name,
         [LearningResourceType.podcast.name, LearningResourceType.podcast_episode.name],
@@ -1783,6 +1821,11 @@ def load_documents(
         list of LearningResource:
             the list of loaded documents
     """
+    if is_shadow_run():
+        shadow.observe(
+            etl_source, LearningResourceType.document.name, documents_data, prune=True
+        )
+        return []
     if not may_write(etl_source, LearningResourceType.document.name):
         return []
 
