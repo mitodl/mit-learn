@@ -343,10 +343,16 @@ def sync_courses(
         for course in courses
     ]
     if not allow_mass_unpublish:
+        # The loader unpublishes a course with no runs, and the runs are a
+        # separate view that can be built apart from the courses
         refuse_mass_unpublish(
             ETLSource.mitxonline.name,
             COURSE,
-            {course["readable_id"] for course in courses_data if course["published"]},
+            {
+                course["readable_id"]
+                for course in courses_data
+                if course["published"] and course["runs"]
+            },
         )
     return len(
         loaders.load_courses(

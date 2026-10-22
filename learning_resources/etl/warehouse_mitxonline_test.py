@@ -854,6 +854,33 @@ def test_sync_courses_refuses_to_unpublish_more_than_the_limit(
         assert resource.published is True
 
 
+def test_sync_courses_counts_a_published_course_without_runs_as_unpublished(
+    warehouse_owns_mitxonline, api_courses
+):
+    """
+    A published course whose runs are missing from the runs view is unpublished
+    by the loader, so it counts toward the limit
+    """
+    rows = [course_row(course) | {"published": True} for course in api_courses]
+    published = [
+        LearningResourceFactory.create(
+            etl_source=ETLSource.mitxonline.name,
+            resource_type=COURSE,
+            readable_id=row["readable_id"],
+            published=True,
+            platform__code=PlatformType.mitxonline.name,
+        )
+        for row in rows
+    ]
+
+    with writing_as(Pipeline.WAREHOUSE), pytest.raises(ExtractException):
+        warehouse_mitxonline.sync_courses(rows, run_rows(api_courses[0]))
+
+    for resource in published:
+        resource.refresh_from_db()
+        assert resource.published is True
+
+
 @pytest.mark.parametrize("empty", ["programs", "children", "courses"])
 def test_sync_programs_refuses_an_empty_view(
     warehouse_owns_mitxonline, api_courses, api_programs, empty
