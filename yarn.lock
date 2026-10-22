@@ -3414,6 +3414,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@mitodl/ol-analytics-dashboard-api-axios@npm:2026.10.20-1":
+  version: 2026.10.20-1
+  resolution: "@mitodl/ol-analytics-dashboard-api-axios@npm:2026.10.20-1"
+  dependencies:
+    axios: "npm:^1.6.5"
+  checksum: 10/71bde606fc42c213802094d473cb75e0a0bfddd1030419518825eb247edd9f7f2b98b035173c5605ec5318f05744faa58d85af5a38e0a28c5a89661c37f36b81
+  languageName: node
+  linkType: hard
+
 "@mitodl/smoot-design@npm:6.38.0":
   version: 6.38.0
   resolution: "@mitodl/smoot-design@npm:6.38.0"
@@ -9344,6 +9353,7 @@ __metadata:
     "@faker-js/faker": "npm:^10.5.0"
     "@mitodl/mit-learn-api-axios": "npm:2026.8.17"
     "@mitodl/mitxonline-api-axios": "npm:2026.10.15-1"
+    "@mitodl/ol-analytics-dashboard-api-axios": "npm:2026.10.20-1"
     "@tanstack/react-query": "npm:^5.66.0"
     "@testing-library/react": "npm:^16.3.0"
     axios: "npm:^1.20.0"

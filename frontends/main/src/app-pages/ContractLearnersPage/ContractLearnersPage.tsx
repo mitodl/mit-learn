@@ -319,11 +319,11 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
   const org = managerOrgs?.find(matchOrganizationBySlug(orgSlug))
   const contract = org?.contracts.find((item) => item.slug === contractSlug)
   const orgUuid = org?.sso_organization_id ?? null
-  const contractId = contract ? String(contract.id) : null
+  const contractId = contract?.id ?? null
   const canQuery = isAnalyticsConfigured() && !!orgUuid && !!contractId
 
   const courseRunsQuery = useQuery({
-    ...analyticsContractQueries.courseRuns(orgUuid ?? "", contractId ?? "", {
+    ...analyticsContractQueries.courseRuns(orgUuid ?? "", contractId ?? 0, {
       limit: 1000,
     }),
     enabled: canQuery,
@@ -372,7 +372,7 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
   const rowsQuery = useQuery({
     ...analyticsContractQueries.learnerProgress(
       orgUuid ?? "",
-      contractId ?? "",
+      contractId ?? 0,
       listParams,
     ),
     enabled: canQuery && moduleResolved && view === VIEWS.enrollments,
@@ -382,7 +382,7 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
   const totalQuery = useQuery({
     ...analyticsContractQueries.learnerProgress(
       orgUuid ?? "",
-      contractId ?? "",
+      contractId ?? 0,
       { limit: 1 },
     ),
     enabled: canQuery,
@@ -395,7 +395,7 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
     statusFilter === ALL &&
     activeModule === ALL
   const needsAttentionQuery = useQuery({
-    ...analyticsContractQueries.needsAttention(orgUuid ?? "", contractId ?? ""),
+    ...analyticsContractQueries.needsAttention(orgUuid ?? "", contractId ?? 0),
     enabled: canQuery && showsLearnerCount,
   })
   const learnersNeedingAttention = showsLearnerCount
