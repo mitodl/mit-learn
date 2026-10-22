@@ -325,7 +325,7 @@ def test_sync_courses_loads_and_unpublishes(warehouse_owns_ocw, data_json):
 def test_sync_courses_matches_courses_on_url(warehouse_owns_ocw, data_json):
     """
     A course is matched on its URL, so a new term or year updates its readable
-    id and does not add a second course
+    id and does not add a second course, or count against the unpublish limit
     """
     row = view_row(data_json)
     existing = LearningResourceFactory.create(
@@ -338,7 +338,7 @@ def test_sync_courses_matches_courses_on_url(warehouse_owns_ocw, data_json):
     )
 
     with writing_as(Pipeline.WAREHOUSE):
-        warehouse_ocw.sync_courses([row], allow_mass_unpublish=True)
+        warehouse_ocw.sync_courses([row])
 
     existing.refresh_from_db()
     assert existing.readable_id == row["readable_id"]

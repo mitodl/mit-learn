@@ -47,17 +47,23 @@ MAX_UNPUBLISH_SHARE = 0.1
 
 
 def refuse_mass_unpublish(
-    etl_source: str, resource_type: str, kept_ids: set[str]
+    etl_source: str,
+    resource_type: str,
+    kept_ids: set[str],
+    *,
+    field: str = "readable_id",
 ) -> None:
     """
     Raise if loading would unpublish more than MAX_UNPUBLISH_SHARE of the
     source's published resources of a type, i.e. if that share of them is
-    missing from the ids the load will keep published.
+    missing from the ids the load will keep published. ``field`` is the
+    LearningResource field the loader matches the source's resources on, and
+    the one ``kept_ids`` holds.
     """
     published_ids = set(
         LearningResource.objects.filter(
             etl_source=etl_source, resource_type=resource_type, published=True
-        ).values_list("readable_id", flat=True)
+        ).values_list(field, flat=True)
     )
     missing = published_ids - kept_ids
     if len(missing) > len(published_ids) * MAX_UNPUBLISH_SHARE:

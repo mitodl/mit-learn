@@ -163,7 +163,8 @@ def sync_courses(courses: list[dict], *, allow_mass_unpublish: bool = False) -> 
         refuse_mass_unpublish(
             ETLSource.ocw.name,
             COURSE,
-            {course["readable_id"] for course in courses_data},
+            {course[UNIQUE_FIELD] for course in courses_data},
+            field=UNIQUE_FIELD,
         )
     return len(
         loaders.load_courses(
