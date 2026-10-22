@@ -69,6 +69,7 @@ from learning_resources.etl.loaders import (
     unpublish_removed_youtube_channels,
 )
 from learning_resources.etl.mitxonline import transform_programs
+from learning_resources.etl.ownership import CONTENT_FILE
 from learning_resources.etl.utils import get_s3_prefix_for_source
 from learning_resources.etl.xpro import _parse_datetime
 from learning_resources.factories import (
@@ -2198,6 +2199,46 @@ def test_load_content_files_failed_keys_untouched(mocker, has_release_date):
     assert direct_resource.published is True
     assert (failed_cf.published, failed_cf.release_date) == (True, release_date)
     assert (stale_cf.published, stale_cf.release_date) == (False, release_date)
+
+
+@pytest.mark.parametrize(
+    ("owner", "writes"),
+    [
+        (ETLSourceOwnership.Pipeline.LEGACY, True),
+        (ETLSourceOwnership.Pipeline.WAREHOUSE, False),
+    ],
+)
+def test_load_content_files_skips_write_when_not_owned(mocker, owner, writes):
+    """load_content_files writes and prunes only when legacy owns the source's content files"""
+    course = LearningResourceFactory.create(
+        is_course=True, create_runs=False, etl_source=ETLSource.mit_edx.name
+    )
+    course_run = LearningResourceRunFactory.create(
+        published=True, learning_resource=course
+    )
+    ETLSourceOwnershipFactory.create(
+        etl_source=ETLSource.mit_edx.name, resource_type=CONTENT_FILE, owner=owner
+    )
+    kept_cf = ContentFileFactory.create(run=course_run, published=True)
+    stale_cf = ContentFileFactory.create(run=course_run, published=True)
+
+    mock_load_content_file = mocker.patch(
+        "learning_resources.etl.loaders.load_content_file",
+        return_value=kept_cf.id,
+        autospec=True,
+    )
+    mock_loaded_actions = mocker.patch(
+        "learning_resources.etl.loaders.content_files_loaded_actions",
+        autospec=True,
+    )
+
+    result = load_content_files(course_run, [{"key": kept_cf.key}])
+
+    assert result == ([kept_cf.id] if writes else [])
+    assert mock_load_content_file.called is writes
+    assert mock_loaded_actions.called is writes
+    stale_cf.refresh_from_db()
+    assert stale_cf.published is not writes
 
 
 @pytest.mark.parametrize("test_mode", [True, False])
