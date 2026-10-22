@@ -22,6 +22,8 @@ second copy of those rules and can drift from them. It covers:
   ``resource_category``);
 - ``published``, as the loader would set it (false for a course or program
   with no runs or on the blocklist, and for a podcast with no episodes);
+- ``test_mode`` and ``require_summaries``, as the loader sets them for a
+  blocklisted or force-ingested course;
 - topics (with the parents the loader adds), offered_by, image, departments,
   content tags, and the columns of the detail row (``course``, ``podcast``,
   ``podcast_episode``);
@@ -287,6 +289,8 @@ def _note_runs(
     """Note what load_run would change on each run of the item."""
     stored_runs = {run.run_id: run for run in resource.runs.all()}
     certification = item.get("certification", resource.certification)
+    # load_run reads test_mode after the resource is saved with the item's
+    test_mode = item.get("test_mode", resource.test_mode)
     runs_data = item.get("runs") or []
     for run_data in runs_data:
         run_id = run_data["run_id"]
@@ -295,7 +299,7 @@ def _note_runs(
         if run is None:
             changes[f"runs[{run_id}]"] = [None, "new run"]
             continue
-        data = {**run_data, "published": True} if resource.test_mode else run_data
+        data = {**run_data, "published": True} if test_mode else run_data
         _note_columns(
             changes, LearningResourceRun, run, data, prefix=prefix, skip={"prices"}
         )
@@ -333,7 +337,7 @@ def _note_runs(
                     for price in prices
                 ),
             )
-    if prune and not resource.test_mode:
+    if prune and not test_mode:
         listed = {run_data["run_id"] for run_data in runs_data}
         for run_id, run in stored_runs.items():
             if run.published and run_id not in listed:
@@ -448,6 +452,22 @@ def _stored(resource_type: str, readable_ids: list[str]) -> dict:
     return resources
 
 
+def _with_test_mode(
+    item: dict, resource_type: str, *, published: bool, blocked: bool
+) -> dict:
+    """Return ``item`` with the test_mode and require_summaries the loader sets."""
+    if blocked:
+        # upsert_course_or_program takes a blocklisted resource out of test mode
+        item = {**item, "test_mode": False}
+    if resource_type == COURSE and item.get("force_ingest"):
+        # load_course marks a force-ingested course for summaries, and puts it
+        # in test mode when it does not publish it and it is not blocklisted
+        item = {**item, "require_summaries": True}
+        if not published and not blocked:
+            item["test_mode"] = True
+    return item
+
+
 def _observe_item(  # noqa: PLR0913
     report: _Report,
     candidates: list[LearningResource],
@@ -482,8 +502,10 @@ def _observe_item(  # noqa: PLR0913
         return True
     report.seen.add(resource.id)
     published = item.get("published", resource.published)
-    if resource_type in _TYPES_WITH_RUNS and (not item.get("runs") or key in blocklist):
+    blocked = resource_type in _TYPES_WITH_RUNS and key in blocklist
+    if resource_type in _TYPES_WITH_RUNS and (not item.get("runs") or blocked):
         published = False
+    item = _with_test_mode(item, resource_type, published=published, blocked=blocked)
     fields = _resource_changes(resource, item, resource_type, prune=prune)
     if resource.published and not published:
         report.unpublished.append(key)

@@ -421,6 +421,54 @@ def test_run_shadow_reports_the_resource_category_podcast_loaders_set(catalog):
     ) == {"p1": "Podcast", "p1-e1": "Podcast Episode"}
 
 
+def test_run_shadow_reports_a_force_ingested_course_going_into_test_mode(catalog):
+    """
+    load_course marks a force-ingested course for summaries, and puts it in
+    test mode when it does not publish it.
+    """
+    _load_courses([_course("c1")])
+    batch = [_course("c1", published=False, force_ingest=True)]
+
+    run = _shadow([(SOURCE, COURSE)], lambda: _load_courses(batch))[COURSE]
+
+    assert run.details["unpublished"] == ["c1"]
+    assert run.details["changed"] == {
+        "c1": {"test_mode": [False, True], "require_summaries": [False, True]}
+    }
+    _load_courses(batch)
+    stored = LearningResource.objects.get(readable_id="c1")
+    assert (stored.published, stored.test_mode, stored.require_summaries) == (
+        False,
+        True,
+        True,
+    )
+
+
+def test_run_shadow_reports_a_blocklisted_course_leaving_test_mode(
+    catalog, mock_blocklist
+):
+    """
+    upsert_course_or_program takes a blocklisted course out of test mode, so
+    its runs are no longer kept published and the ones it leaves out are pruned.
+    """
+    _load_courses([_course("c1", published=False, force_ingest=True)])
+    mock_blocklist.return_value = ["c1"]
+    batch = [_course("c1", runs=[_run("c1+r1")])]
+
+    run = _shadow([(SOURCE, COURSE)], lambda: _load_courses(batch))[COURSE]
+
+    assert run.details["changed"] == {
+        "c1": {"test_mode": [True, False], "runs[c1+r2].published": [True, False]}
+    }
+    _load_courses(batch)
+    stored = LearningResource.objects.get(readable_id="c1")
+    assert stored.test_mode is False
+    assert dict(stored.runs.values_list("run_id", "published")) == {
+        "c1+r1": True,
+        "c1+r2": False,
+    }
+
+
 def test_run_shadow_reports_runs_and_related_values(catalog):
     """Each kind of value the loaders set is compared as they would set it."""
     _load_courses([_course("c1")])
