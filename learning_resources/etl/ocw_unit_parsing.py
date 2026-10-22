@@ -198,11 +198,26 @@ class Fetcher:
         return self.get(url).decode("utf-8", errors="replace")
 
 
+def _render_text(node: NavigableString, out: list[str]) -> None:
+    t = str(node)
+    if t.strip():
+        out.append(re.sub(r"\s+", " ", t))
+
+
+def _render_table(node: Tag, out: list[str]) -> None:
+    out.append("\n")
+    for tr in node.find_all("tr"):
+        cells = [
+            re.sub(r"\s+", " ", c.get_text(" ", strip=True))
+            for c in tr.find_all(["th", "td"])
+        ]
+        out.append("| " + " | ".join(cells) + " |\n")
+    out.append("\n")
+
+
 def _render(node: Tag | NavigableString, out: list[str]) -> None:
     if isinstance(node, NavigableString):
-        t = str(node)
-        if t.strip():
-            out.append(re.sub(r"\s+", " ", t))
+        _render_text(node, out)
         return
     name = node.name
     if name in ("script", "style", "nav", "button", "svg", "video", "iframe"):
@@ -217,14 +232,7 @@ def _render(node: Tag | NavigableString, out: list[str]) -> None:
         )
         return
     if name == "table":
-        out.append("\n")
-        for tr in node.find_all("tr"):
-            cells = [
-                re.sub(r"\s+", " ", c.get_text(" ", strip=True))
-                for c in tr.find_all(["th", "td"])
-            ]
-            out.append("| " + " | ".join(cells) + " |\n")
-        out.append("\n")
+        _render_table(node, out)
         return
     if name == "li":
         out.append("\n- ")
