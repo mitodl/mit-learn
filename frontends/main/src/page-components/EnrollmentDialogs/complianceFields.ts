@@ -1,4 +1,5 @@
 import * as Yup from "yup"
+import { badRequestDetail, badRequestMissingFields } from "api/mutation-errors"
 import type {
   Country,
   LegalAddressRequest,
@@ -163,6 +164,27 @@ const needsComplianceInfo = (user: User | undefined): boolean => {
 }
 
 /**
+ * The fields this dialog can fix, from an enrollment MITx Online rejected
+ * because the export compliance check couldn't use the profile data - e.g. a
+ * last name CyberSource refuses. Those come back as `missing_fields` on a 400
+ * whose `detail` carries the support code `CS_701`, and are invisible to
+ * `compliance_missing_fields`, which only flags empty fields.
+ *
+ * Empty for any other failure, and for a rejection naming only fields the
+ * dialog doesn't collect (e.g. `email`): reopening the dialog can't help there.
+ */
+const rejectedComplianceFields = (error: unknown): JitField[] => {
+  if (!badRequestDetail(error)?.includes("CS_701")) return []
+  return editableJitFields(badRequestMissingFields(error))
+}
+
+/** The given profile field names this dialog collects. */
+const editableJitFields = (fields: readonly string[]): JitField[] =>
+  fields.filter((field): field is JitField =>
+    (JIT_FIELDS as readonly string[]).includes(field),
+  )
+
+/**
  * Seed the form from the profile we already have.
  *
  * Every field is prefilled, not just the ones reported missing, so a value
@@ -271,6 +293,10 @@ const jitSchema = Yup.object().shape({
 const jitPatchPayload = (
   values: JitFormValues,
   currentYearOfBirth: number | null | undefined,
+  // The dialog also shows the postal code outside subdivision countries when
+  // CyberSource rejected it (it's sent for every country); keep the
+  // learner's correction then.
+  { keepPostalCode = false }: { keepPostalCode?: boolean } = {},
 ): PatchedUserRequest => {
   const legalAddress: LegalAddressRequest = {
     first_name: values.first_name.trim(),
@@ -283,9 +309,10 @@ const jitPatchPayload = (
     // meaningless under a country that has no subdivisions, so a
     // previously-stored value is dropped rather than carried over.
     state: requiresSubdivision(values.country) ? values.state : "",
-    postal_code: requiresSubdivision(values.country)
-      ? values.postal_code.trim()
-      : "",
+    postal_code:
+      requiresSubdivision(values.country) || keepPostalCode
+        ? values.postal_code.trim()
+        : "",
   }
   const yearOfBirth = Number.parseInt(values.year_of_birth, 10)
   const payload: PatchedUserRequest = { legal_address: legalAddress }
@@ -305,6 +332,8 @@ export {
   isFieldRequired,
   yearOfBirthOptions,
   needsComplianceInfo,
+  rejectedComplianceFields,
+  editableJitFields,
   initialJitValues,
   jitSchema,
   jitPatchPayload,

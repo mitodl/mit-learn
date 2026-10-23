@@ -10,11 +10,10 @@ const BAD_REQUEST = 400
 const nonEmpty = (value: unknown): value is string =>
   typeof value === "string" && value.trim() !== ""
 
-/**
- * The `detail` string from a 400 response body, or `undefined` for anything
- * else. Never throws; call sites supply their own copy via `?? FALLBACK`.
- */
-const badRequestDetail = (error: unknown): string | undefined => {
+/** A 400 response's body as an object, or `undefined` for anything else. */
+const badRequestBody = (
+  error: unknown,
+): Record<string, unknown> | undefined => {
   // Structural rather than `axios.isAxiosError`, keeping the import type-only.
   const response = (error as AxiosError | undefined)?.response
   if (response?.status !== BAD_REQUEST) return undefined
@@ -23,8 +22,15 @@ const badRequestDetail = (error: unknown): string | undefined => {
   if (typeof data !== "object" || data === null || Array.isArray(data)) {
     return undefined
   }
+  return data as Record<string, unknown>
+}
 
-  const detail: unknown = (data as { detail?: unknown }).detail
+/**
+ * The `detail` string from a 400 response body, or `undefined` for anything
+ * else. Never throws; call sites supply their own copy via `?? FALLBACK`.
+ */
+const badRequestDetail = (error: unknown): string | undefined => {
+  const detail = badRequestBody(error)?.detail
   if (nonEmpty(detail)) return detail.trim()
   // DRF renders `ValidationError(["a", "b"])` as a list of ErrorDetail strings.
   if (Array.isArray(detail)) {
@@ -38,6 +44,18 @@ const badRequestDetail = (error: unknown): string | undefined => {
 }
 
 /**
+ * The profile fields a 400 says to fix, from its `missing_fields`, or `[]`.
+ *
+ * MITx Online sends these when an enrollment is blocked by profile data the
+ * export compliance check can't use - e.g. a last name CyberSource rejects -
+ * using the same field names as `compliance_missing_fields`.
+ */
+const badRequestMissingFields = (error: unknown): string[] => {
+  const fields = badRequestBody(error)?.missing_fields
+  return Array.isArray(fields) ? fields.filter(nonEmpty) : []
+}
+
+/**
  * Builds a `MutationErrorMeta["getErrorMessage"]`: the 400 detail, else
  * `fallback`. The default `""` fails the global handler's message check, so the
  * toast falls through to the generic copy.
@@ -47,4 +65,4 @@ const badRequestDetailOr =
   (error: unknown): string =>
     badRequestDetail(error) ?? fallback
 
-export { badRequestDetail, badRequestDetailOr }
+export { badRequestDetail, badRequestDetailOr, badRequestMissingFields }

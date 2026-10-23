@@ -45,8 +45,11 @@ const mockedUseFeatureFlagEnabled = jest.mocked(useFeatureFlagEnabled)
 const mockB2bEnrollMutate = jest.fn()
 jest.mock("api/mitxonline-hooks/enrollment", () => ({
   ...jest.requireActual("api/mitxonline-hooks/enrollment"),
+  // Enrollments go through useComplianceGate's mutateWithCompliance, which
+  // calls mutateAsync (and reset, on a fixable rejection).
   useCreateB2bEnrollment: () => ({
-    mutate: mockB2bEnrollMutate,
+    mutateAsync: mockB2bEnrollMutate,
+    reset: jest.fn(),
     isPending: false,
   }),
 }))

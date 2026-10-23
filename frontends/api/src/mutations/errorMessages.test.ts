@@ -1,6 +1,10 @@
 import { AxiosError } from "axios"
 import type { AxiosResponse } from "axios"
-import { badRequestDetail, badRequestDetailOr } from "./errorMessages"
+import {
+  badRequestDetail,
+  badRequestDetailOr,
+  badRequestMissingFields,
+} from "./errorMessages"
 
 /** Shaped like the errors `setMockResponse` throws. */
 const apiError = (status: number, data: unknown) =>
@@ -105,5 +109,36 @@ describe("badRequestDetailOr", () => {
     expect(getMessage(apiError(400, { detail: "Server copy." }))).toBe(
       "Server copy.",
     )
+  })
+})
+
+describe("badRequestMissingFields", () => {
+  test("returns the fields a 400 names", () => {
+    const error = apiError(400, {
+      detail: "Unable to complete enrollment. Error code: CS_701.",
+      missing_fields: ["last_name", "postal_code"],
+    })
+    expect(badRequestMissingFields(error)).toEqual(["last_name", "postal_code"])
+  })
+
+  test("drops entries that aren't field names", () => {
+    const error = apiError(400, { missing_fields: ["city", "", 3, null] })
+    expect(badRequestMissingFields(error)).toEqual(["city"])
+  })
+
+  test.each([
+    { desc: "a 400 without missing_fields", error: apiError(400, {}) },
+    {
+      desc: "a 400 with a non-list missing_fields",
+      error: apiError(400, { missing_fields: "city" }),
+    },
+    {
+      desc: "a 500 with missing_fields",
+      error: apiError(500, { missing_fields: ["city"] }),
+    },
+    { desc: "a network error", error: new AxiosError("Network") },
+    { desc: "null", error: null },
+  ])("returns [] for $desc", ({ error }) => {
+    expect(badRequestMissingFields(error)).toEqual([])
   })
 })
