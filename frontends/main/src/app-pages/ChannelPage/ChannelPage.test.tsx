@@ -327,15 +327,15 @@ describe.each(NON_UNIT_CHANNEL_TYPES)(
           .backgroundImage.includes(channel.configuration.banner_background)
       // Banner background image
       if (channelType === ChannelTypeEnum.Topic) {
-        /* A topic hero paints the photograph on a band of its own rather than
-           behind the text, so the wash over it can finish exactly where the
-           band ends -- see `HeroPhoto`. So it is somewhere in the hero rather
-           than above the title. */
+        /* The redesigned topic hero paints no photograph: the design dropped
+           it for plain white, so the channel's configured banner is drawn
+           nowhere in the hero -- not behind the title and not on a band of
+           its own. */
         const hero = title.closest("section")
         expect(hero).not.toBe(null)
         expect(
           Array.from(hero!.querySelectorAll("div")).some(paintsBanner),
-        ).toBe(true)
+        ).toBe(false)
       } else {
         expect(someAncestor(title, paintsBanner)).toBe(true)
       }
@@ -496,11 +496,11 @@ describe("Channel Pages, Topic only, hero", () => {
       .mockImplementation((flag) => flag === FeatureFlags.TopicPageRedesign)
   })
 
-  test("keeps its photograph, which the department hero does without", async () => {
-    /* The two pages are one template now, told apart by the ground the hero
-       stands on, so this is the half of that the department case cannot
-       cover: a refactor that dropped the photograph would leave every other
-       assertion about a topic page passing. */
+  test("stands on plain white, with no photograph behind the title", async () => {
+    /* The design used to run a photograph across the top of this and no longer
+       does. Asserted for the topic page specifically because the photograph
+       was only ever the topic page's: the department case below passing
+       proves nothing about whether this one still draws one. */
     const { channel } = setupApis({
       search_filter: "topic=Physics",
       channel_type: ChannelTypeEnum.Topic,
@@ -512,7 +512,7 @@ describe("Channel Pages, Topic only, hero", () => {
     })
 
     await screen.findByRole("heading", { level: 1, name: channel.title })
-    await screen.findByTestId("channel-hero-photo")
+    expect(screen.queryByTestId("channel-hero-photo")).toBe(null)
   }, 10000)
 
   test("names the topics trail, not the departments one", async () => {

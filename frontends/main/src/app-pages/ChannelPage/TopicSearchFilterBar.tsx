@@ -36,10 +36,10 @@ const Card = styled.div({
  * both a size smaller here than the field draws them elsewhere.
  */
 const StyledSearchField = styled(SearchField)(({ theme }) => ({
-  width: "626px",
+  width: "486px",
   /* The elastic one of the two: the controls beside it are a fixed set of
-     fixed-width labels, so between `md` and the ~1080px the design's width
-     needs, the room has to come from the field. `min-width` because a flex
+     fixed-width labels, so where the row is narrower than the two together
+     measure, the room has to come from the field. `min-width` because a flex
      item will not shrink past its content otherwise, and the field's content
      is a long placeholder. */
   minWidth: 0,
@@ -111,7 +111,71 @@ const FacetSelect = styled(SimpleSelect)(({ theme }) => ({
     fontSize: "20px",
     right: "12px",
   },
+  /**
+   * The same answer to the pointer an unselected tab gives: the label darkens
+   * to `darkGray2`, with nothing drawn behind it.
+   *
+   * The chevron is named as well as the label because it does not inherit --
+   * Select colours its own icon, so on the label alone the words would darken
+   * and the arrow beside them would sit unchanged.
+   */
+  ":hover": {
+    color: theme.custom.colors.darkGray2,
+    ".MuiSelect-icon": { color: theme.custom.colors.darkGray2 },
+  },
 }))
+
+/**
+ * What the control says: its name, and how many of its values are narrowing
+ * the results.
+ *
+ * The menu closes over what it selected, so without this the control reads
+ * exactly the same whether or not it is filtering anything. The chips above
+ * the results name the values; this says only how many, which is what there
+ * is room for beside a label.
+ */
+const FacetLabel = styled.span({
+  display: "flex",
+  alignItems: "center",
+  /* The design's 4px between the label and what follows it. */
+  gap: "4px",
+})
+
+/**
+ * The count beside a narrowed facet's name, as the design draws it: a 20px
+ * red disc with the number in white.
+ *
+ * Hidden rather than shown as a nought when the facet is not narrowing
+ * anything -- a badge reading 0 is a filter announcing that it is not
+ * filtering.
+ */
+const FacetCount = styled.span(({ theme }) => ({
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  flexShrink: 0,
+  boxSizing: "border-box",
+  width: "20px",
+  height: "20px",
+  borderRadius: "100px",
+  backgroundColor: theme.custom.colors.red,
+  color: theme.custom.colors.white,
+  fontSize: "10px",
+  lineHeight: "14px",
+  fontWeight: theme.typography.fontWeightMedium,
+}))
+
+/** A facet control's label, with the count of what it has narrowed by. */
+const facetLabel = (label: string, selected: string[]) => (
+  <FacetLabel>
+    {label}
+    {selected.length > 0 ? (
+      <FacetCount aria-label={`${selected.length} selected`}>
+        {selected.length}
+      </FacetCount>
+    ) : null}
+  </FacetLabel>
+)
 
 const FreeCheckbox = styled(Checkbox)(({ theme }) => ({
   margin: 0,
@@ -362,7 +426,7 @@ const TopicSearchFilterBar: React.FC<TopicSearchFilterBarProps> = ({
         aria-label="Format"
         value={delivery}
         multiple
-        renderValue={() => "Format"}
+        renderValue={() => facetLabel("Format", delivery)}
         MenuProps={FACET_MENU_PROPS}
         options={deliveryOptions}
         onChange={(event) => {
@@ -379,7 +443,7 @@ const TopicSearchFilterBar: React.FC<TopicSearchFilterBarProps> = ({
         aria-label="Certificate"
         value={certification}
         multiple
-        renderValue={() => "Certificate"}
+        renderValue={() => facetLabel("Certificate", certification)}
         MenuProps={FACET_MENU_PROPS}
         options={certificationOptions}
         onChange={(event) => {
@@ -396,7 +460,7 @@ const TopicSearchFilterBar: React.FC<TopicSearchFilterBarProps> = ({
         aria-label="Resource Category"
         value={resourceCategory}
         multiple
-        renderValue={() => "Resource Category"}
+        renderValue={() => facetLabel("Resource Category", resourceCategory)}
         MenuProps={FACET_MENU_PROPS}
         options={resourceCategoryOptions}
         onChange={(event) => {

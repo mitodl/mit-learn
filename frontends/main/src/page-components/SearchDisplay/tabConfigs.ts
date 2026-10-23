@@ -21,6 +21,15 @@ type TabConfig = {
    * disabled in the sort dropdown, and cleared from the URL on switching here.
    */
   unsupportedSortby?: string[]
+  /**
+   * What this tab's results are called in the empty state -- "no learning
+   * materials match these filters". Lower case, and plural, because it is
+   * read mid-sentence.
+   *
+   * Not the label, which is title case and joins "Courses" to "Programs" with
+   * an ampersand that does not read as prose.
+   */
+  emptyNoun?: string
 }
 
 /**
@@ -44,6 +53,7 @@ const LEARNING_MATERIALS_TAB: TabConfig = {
   resource_type_groups: [ResourceTypeGroupEnum.LearningMaterial],
   minWidth: 172,
   unsupportedSortby: [UPCOMING_SORT],
+  emptyNoun: "learning materials",
 }
 
 const TABS: TabConfig[] = [
@@ -70,15 +80,19 @@ const TABS: TabConfig[] = [
 const TOPIC_TABS: TabConfig[] = [
   {
     name: "courses-and-programs",
-    label: "Courses and Programs",
+    label: "Courses & Programs",
     defaultTab: true,
     resource_type_groups: [
       ResourceTypeGroupEnum.Course,
       ResourceTypeGroupEnum.Program,
     ],
-    minWidth: 200,
+    minWidth: 175,
+    emptyNoun: "courses or programs",
   },
-  LEARNING_MATERIALS_TAB,
+  /* Narrower here than on the search page, where the same tab is a filled
+     button with a bracketed count rather than an underlined heading with a
+     bare one. */
+  { ...LEARNING_MATERIALS_TAB, minWidth: 145 },
 ]
 
 /**

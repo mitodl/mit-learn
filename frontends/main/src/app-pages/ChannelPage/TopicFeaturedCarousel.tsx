@@ -19,9 +19,9 @@ import type { FeaturedChannelType } from "./topicFeatured"
  * channel features nothing.
  */
 const Container = styled.div(({ theme }) => ({
-  marginBottom: "-24px",
+  marginBottom: "-31px",
   ".MitCarousel-track": {
-    marginTop: "8px",
+    marginTop: 0,
   },
   /* The design's heading is darkGray2, where the shared carousel leaves its
      title to inherit black. Scoped here so other carousels are unaffected. */
