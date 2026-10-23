@@ -117,16 +117,18 @@ const FilterChip = styled.button(({ theme }) => ({
   color: theme.custom.colors.darkGray2,
   cursor: "pointer",
   whiteSpace: "nowrap",
+  /* Its own grey rather than the label's near-black: the cross is the quieter
+     half of the tablet until it is pointed at. */
   svg: {
     flexShrink: 0,
     width: "16px",
     height: "16px",
+    color: theme.custom.colors.silverGrayDark,
   },
-  /* Nothing in the design says what hovering does, and the tablet is already
-     drawn as something to operate -- so it deepens by one step of its own
-     grey rather than taking an outline or a colour from elsewhere. */
-  ":hover": {
-    backgroundColor: theme.custom.colors.lightGray2,
+  /* The tablet keeps its grey and its label: hovering reddens the cross
+     alone, which is the half of it that does anything. */
+  ":hover svg": {
+    color: theme.custom.colors.red,
   },
 }))
 
