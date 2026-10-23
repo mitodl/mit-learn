@@ -412,7 +412,7 @@ const TitleRow = styled.div({
   gap: "20px",
   /* Bottom-aligned, as the design has it -- the pill sits on the title's
      baseline rather than centred against its 60px cap height. */
-  alignItems: "center",
+  alignItems: "flex-end",
   flexWrap: "wrap",
 })
 
