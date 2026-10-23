@@ -5916,13 +5916,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@sentry/core@npm:10.50.0":
-  version: 10.50.0
-  resolution: "@sentry/core@npm:10.50.0"
-  checksum: 10/9d0c0cfd706e2b318dbb13b03a1fa1aee89ebceed00e67a9cbb7f088a338bc21714432740c538878fc144ddfba263ff48b704394fa2cd4c68ddb5c95080556e5
-  languageName: node
-  linkType: hard
-
 "@sentry/core@npm:10.75.2":
   version: 10.75.2
   resolution: "@sentry/core@npm:10.75.2"
@@ -6017,20 +6010,6 @@ __metadata:
     "@sentry/server-utils": "npm:10.75.2"
     import-in-the-middle: "npm:^3.0.0"
   checksum: 10/2d0f7e7485362d23ba65cf0b95da4263027fe936f6a04a042c1c547109f7fd32e56b1de9f53d06ef9ff19b7bbf4a074f35226003843a436153325653935e3121
-  languageName: node
-  linkType: hard
-
-"@sentry/opentelemetry@npm:10.50.0":
-  version: 10.50.0
-  resolution: "@sentry/opentelemetry@npm:10.50.0"
-  dependencies:
-    "@sentry/core": "npm:10.50.0"
-  peerDependencies:
-    "@opentelemetry/api": ^1.9.0
-    "@opentelemetry/core": ^1.30.1 || ^2.1.0
-    "@opentelemetry/sdk-trace-base": ^1.30.1 || ^2.1.0
-    "@opentelemetry/semantic-conventions": ^1.39.0
-  checksum: 10/759bc8ac4da4f253c42504742f92e313a429e2a0a86fc79998a01cba177069feed110a48ff894ef718c78559335e02d57c33b271aae7ffcbc8e426b5d4f7b794
   languageName: node
   linkType: hard
 
@@ -16510,7 +16489,7 @@ __metadata:
     "@react-pdf/renderer": "npm:^4.3.0"
     "@remixicon/react": "npm:^4.9.0"
     "@sentry/nextjs": "npm:10.75.2"
-    "@sentry/opentelemetry": "npm:10.50.0"
+    "@sentry/opentelemetry": "npm:10.75.2"
     "@tanstack/react-query": "npm:^5.66.0"
     "@testing-library/jest-dom": "npm:^6.4.8"
     "@testing-library/react": "npm:^16.3.0"

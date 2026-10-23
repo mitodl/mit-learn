@@ -159,7 +159,7 @@ const nextConfig = {
     process.env.NEXT_PUBLIC_VERSION || process.env.GIT_REF || "dev",
 }
 
-const { withSentryConfig } = require("@sentry/nextjs")
+const { withSentryConfig } = require("@sentry/nextjs/config")
 /** @param {import('next').NextConfig} config */
 const withSentry = (config) =>
   withSentryConfig(config, {
