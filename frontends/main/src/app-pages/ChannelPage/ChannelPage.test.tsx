@@ -15,6 +15,7 @@ import invariant from "tiny-invariant"
 import ChannelPage from "./ChannelPage"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import { FeatureFlags } from "@/common/feature_flags"
+import { DEPARTMENTS_LABEL, TOPICS_LABEL } from "./ChannelPageTemplate"
 
 jest.mock("posthog-js/react", () => ({
   ...jest.requireActual("posthog-js/react"),
@@ -396,6 +397,137 @@ describe("Channel Pages, Topic only", () => {
     await screen.findByRole("heading", { level: 1, name: channel.title })
     expect(screen.queryByText("Subtopics")).toBe(null)
     expect(screen.queryByText("Related Topics")).toBe(null)
+  }, 10000)
+})
+
+describe("Channel Pages, Department only", () => {
+  /* The department page is the topic page's, behind a flag of its own. */
+  beforeEach(() => {
+    jest
+      .mocked(useFeatureFlagEnabled)
+      .mockImplementation(
+        (flag) => flag === FeatureFlags.DepartmentPageRedesign,
+      )
+  })
+
+  /**
+   * A department channel, and the Featured row its hero will ask for.
+   *
+   * The row is asked for whether or not a case cares about it, the hero
+   * being drawn differently by whether there is one.
+   */
+  const setupDepartment = ({ featuredCount = 2 } = {}) => {
+    const { channel } = setupApis({
+      search_filter: "department=Theater+Arts",
+      channel_type: ChannelTypeEnum.Department,
+    })
+    const featured = factories.learningResources.resources({
+      count: featuredCount,
+    })
+    setMockResponse.get(
+      `${urls.channels.featured(channel.channel_type, channel.name)}?limit=12`,
+      featured,
+    )
+    return { channel, featured }
+  }
+
+  test("draws the redesigned hero, and reads its own featured list", async () => {
+    const { channel, featured } = setupDepartment()
+
+    renderWithProviders(<ChannelPage />, {
+      url: `/c/${channel.channel_type}/${channel.name}`,
+    })
+
+    await screen.findByRole("heading", { level: 1, name: channel.title })
+    /* The department's own trail step, not the topics one -- the two labels
+       come from one map, so a page reading the wrong key is a page whose
+       trail leads somewhere else entirely. */
+    await screen.findByRole("link", { name: DEPARTMENTS_LABEL })
+    expect(screen.queryByRole("link", { name: TOPICS_LABEL })).toBe(null)
+    /* The row is the channel's own curated list, so the titles in it are the
+       ones the department's featured endpoint answered with -- the point of
+       the whole exercise. */
+    for (const resource of featured.results) {
+      await screen.findByText(resource.title)
+    }
+  }, 10000)
+
+  test("stands on plain white, with no photograph behind the title", async () => {
+    const { channel } = setupDepartment()
+
+    renderWithProviders(<ChannelPage />, {
+      url: `/c/${channel.channel_type}/${channel.name}`,
+    })
+
+    await screen.findByRole("heading", { level: 1, name: channel.title })
+    expect(screen.queryByTestId("channel-hero-photo")).toBe(null)
+  }, 10000)
+
+  test("carries Follow beside the title", async () => {
+    const { channel } = setupDepartment()
+
+    renderWithProviders(<ChannelPage />, {
+      url: `/c/${channel.channel_type}/${channel.name}`,
+    })
+
+    await screen.findByRole("button", { name: "Follow" })
+  }, 10000)
+
+  test("draws the old page with the flag off", async () => {
+    jest.mocked(useFeatureFlagEnabled).mockImplementation(() => false)
+    const { channel } = setupApis({
+      search_filter: "department=Theater+Arts",
+      channel_type: ChannelTypeEnum.Department,
+    })
+
+    renderWithProviders(<ChannelPage />, {
+      url: `/c/${channel.channel_type}/${channel.name}`,
+    })
+
+    await screen.findByRole("heading", { level: 1, name: channel.title })
+    expect(screen.queryByText("Featured")).toBe(null)
+  }, 10000)
+})
+
+describe("Channel Pages, Topic only, hero", () => {
+  beforeEach(() => {
+    jest
+      .mocked(useFeatureFlagEnabled)
+      .mockImplementation((flag) => flag === FeatureFlags.TopicPageRedesign)
+  })
+
+  test("keeps its photograph, which the department hero does without", async () => {
+    /* The two pages are one template now, told apart by the ground the hero
+       stands on, so this is the half of that the department case cannot
+       cover: a refactor that dropped the photograph would leave every other
+       assertion about a topic page passing. */
+    const { channel } = setupApis({
+      search_filter: "topic=Physics",
+      channel_type: ChannelTypeEnum.Topic,
+    })
+    setupTopicApis(channel)
+
+    renderWithProviders(<ChannelPage />, {
+      url: `/c/${channel.channel_type}/${channel.name}`,
+    })
+
+    await screen.findByRole("heading", { level: 1, name: channel.title })
+    await screen.findByTestId("channel-hero-photo")
+  }, 10000)
+
+  test("names the topics trail, not the departments one", async () => {
+    const { channel } = setupApis({
+      search_filter: "topic=Physics",
+      channel_type: ChannelTypeEnum.Topic,
+    })
+    setupTopicApis(channel)
+
+    renderWithProviders(<ChannelPage />, {
+      url: `/c/${channel.channel_type}/${channel.name}`,
+    })
+
+    await screen.findByRole("link", { name: TOPICS_LABEL })
+    expect(screen.queryByRole("link", { name: DEPARTMENTS_LABEL })).toBe(null)
   }, 10000)
 })
 

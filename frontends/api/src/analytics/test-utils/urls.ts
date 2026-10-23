@@ -1,7 +1,11 @@
 import { queryify } from "ol-test-utilities"
 import analyticsAxios from "../axios"
 import { B2B_DASHBOARD_ROOT } from "../clients"
-import type { AnalyticsPageParams, LearnerProgressParams } from "../types"
+import type {
+  AnalyticsPageParams,
+  LearnerProgressParams,
+  LearnersParams,
+} from "../types"
 
 // Absolute, and read back from the configured axios instance, so the shared
 // request mock can tell analytics requests apart from Learn and MITx ones by
@@ -75,11 +79,21 @@ const contracts = {
     contractId: string,
     params?: LearnerProgressParams,
   ) => contractResource(organizationId, contractId, "learner-progress", params),
+  learners: (
+    organizationId: string,
+    contractId: string,
+    params?: LearnersParams,
+  ) => contractResource(organizationId, contractId, "learners", params),
   courseRuns: (
     organizationId: string,
     contractId: string,
     params?: AnalyticsPageParams,
   ) => contractResource(organizationId, contractId, "course-runs", params),
+  needsAttention: (
+    organizationId: string,
+    contractId: string,
+    params?: AnalyticsPageParams,
+  ) => contractResource(organizationId, contractId, "needs-attention", params),
 }
 
 export { organizations, contracts }

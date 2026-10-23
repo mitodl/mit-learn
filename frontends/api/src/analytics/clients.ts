@@ -5,9 +5,12 @@ import type {
   ContentEngagementDepth,
   ContractContentEngagementDepth,
   ContractMonthlyEngagementTrend,
+  ContractNeedsAttention,
   ContractUtilization,
   CourseRun,
   EnrollmentCompletionFunnel,
+  LearnersParams,
+  LearnersResponse,
   LearnerProgressParams,
   LearnerProgressResponse,
   MonthlyEngagementTrend,
@@ -211,6 +214,21 @@ const analyticsContractsApi = {
     ),
 
   /**
+   * Learners paged by learner, each with all of their enrollments. Same array
+   * serialization as `learnerProgress`.
+   */
+  learners: (
+    organizationId: string,
+    contractId: string,
+    params?: LearnersParams,
+    signal?: AbortSignal,
+  ): Promise<AxiosResponse<LearnersResponse>> =>
+    axiosInstance.get<LearnersResponse>(
+      `${contractRoot(organizationId, contractId)}/learners`,
+      { params, signal, paramsSerializer: { indexes: null } },
+    ),
+
+  /**
    * The course runs to offer in `learnerProgress`'s module filter. A separate
    * endpoint rather than distinct values off the enrollment rows: it reads the
    * contract's own view, so the options do not narrow to whoever consented.
@@ -225,6 +243,20 @@ const analyticsContractsApi = {
       organizationId,
       contractId,
       "course-runs",
+      page,
+      signal,
+    ),
+
+  needsAttention: (
+    organizationId: string,
+    contractId: string,
+    page?: AnalyticsPageParams,
+    signal?: AbortSignal,
+  ) =>
+    getContractResource<ContractNeedsAttention>(
+      organizationId,
+      contractId,
+      "needs-attention",
       page,
       signal,
     ),

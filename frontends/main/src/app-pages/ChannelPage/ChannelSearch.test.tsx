@@ -718,7 +718,7 @@ describe("ChannelSearch", () => {
     ).toBeInTheDocument()
   }, 10000)
 
-  test("the drawer carries the resource type choice", async () => {
+  test("topic channels offer courses and programs together, and no All", async () => {
     const { channel } = setMockApiResponses({
       channelPatch: { channel_type: ChannelTypeEnum.Topic },
     })
@@ -726,17 +726,91 @@ describe("ChannelSearch", () => {
     renderWithProviders(<ChannelPage />, {
       url: `/c/${channel.channel_type}/${channel.name}`,
     })
+
+    const tabs = await screen.findAllByRole("tab")
+    expect(tabs.map((tab) => tab.textContent)).toEqual([
+      expect.stringContaining("Courses and Programs"),
+      expect.stringContaining("Learning Materials"),
+    ])
+    expect(tabs[0]).toHaveAttribute("aria-selected", "true")
+
+    await waitFor(() => {
+      expect(makeRequest.mock.calls.length > 0).toBe(true)
+    })
+    expect(getLastApiSearchParams().getAll("resource_type_group")).toEqual([
+      "course",
+      "program",
+    ])
+  })
+
+  test("a topic channel link to just courses lands on Courses and Programs", async () => {
+    const { channel } = setMockApiResponses({
+      channelPatch: { channel_type: ChannelTypeEnum.Topic },
+    })
+
+    renderWithProviders(<ChannelPage />, {
+      url: `/c/${channel.channel_type}/${channel.name}?resource_type_group=course`,
+    })
+
+    expect(
+      await screen.findByRole("tab", { name: /Courses and Programs/ }),
+    ).toHaveAttribute("aria-selected", "true")
+  })
+
+  test("other channels keep separate Courses and Programs tabs", async () => {
+    const { channel } = setMockApiResponses({
+      channelPatch: { channel_type: ChannelTypeEnum.Department },
+    })
+
+    renderWithProviders(<ChannelPage />, {
+      url: `/c/${channel.channel_type}/${channel.name}`,
+    })
+
+    const tabs = await screen.findAllByRole("tab")
+    expect(tabs.map((tab) => tab.textContent)).toEqual([
+      expect.stringContaining("All"),
+      expect.stringContaining("Courses"),
+      expect.stringContaining("Programs"),
+      expect.stringContaining("Learning Materials"),
+    ])
+  })
+
+  test("the drawer carries the resource type choice", async () => {
+    const { channel } = setMockApiResponses({
+      channelPatch: { channel_type: ChannelTypeEnum.Topic },
+    })
+
+    const { location } = renderWithProviders(<ChannelPage />, {
+      url: `/c/${channel.channel_type}/${channel.name}`,
+    })
     await user.click(await screen.findByRole("button", { name: "Filter" }))
-    const drawer = await screen.findByRole("presentation")
-    const courses = () =>
-      within(drawer).getByRole("checkbox", { name: "Courses" })
+    await screen.findByRole("presentation")
+    /* Switching tabs remounts the drawer in the new tab's panel, so look it
+       up afresh each time rather than hold on to the one that was removed. */
+    const inDrawer = (name: string) =>
+      within(screen.getByRole("presentation")).getByRole("checkbox", { name })
+    const coursesAndPrograms = () => inDrawer("Courses and Programs")
+    const learningMaterials = () => inDrawer("Learning Materials")
 
-    await user.click(courses())
-    expect(courses()).toBeChecked()
+    expect(coursesAndPrograms()).toBeChecked()
+    expect(learningMaterials()).not.toBeChecked()
 
-    /* Unchecking it is the All tab, which the design draws no row for. */
-    await user.click(courses())
-    expect(courses()).not.toBeChecked()
+    await user.click(learningMaterials())
+    await waitFor(() => expect(coursesAndPrograms()).not.toBeChecked())
+    expect(learningMaterials()).toBeChecked()
+    expect(
+      new URLSearchParams(location.current.search).getAll(
+        "resource_type_group",
+      ),
+    ).toEqual(["learning_material"])
+
+    /* With no All to fall back to, unchecking goes back to the default. */
+    await user.click(learningMaterials())
+    await waitFor(() => expect(coursesAndPrograms()).toBeChecked())
+    expect(learningMaterials()).not.toBeChecked()
+    expect(
+      new URLSearchParams(location.current.search).has("resource_type_group"),
+    ).toBe(false)
   }, 10000)
 
   test("other channels keep the narrow screen's filter drawer", async () => {
@@ -772,9 +846,26 @@ describe("ChannelSearch", () => {
       }
     })
 
+    /**
+     * Counts, because the bar offers only what the search has something
+     * under: with nothing counting there is no menu to report a change from
+     * and no Free to tick.
+     */
     const renderTopic = async () => {
       const { channel } = setMockApiResponses({
         channelPatch: { channel_type: ChannelTypeEnum.Topic },
+        search: {
+          metadata: {
+            aggregations: {
+              delivery: [{ key: "online", doc_count: 7 }],
+              free: [
+                { key: "true", doc_count: 3 },
+                { key: "false", doc_count: 4 },
+              ],
+            },
+            suggestions: [],
+          },
+        },
       })
       renderWithProviders(<ChannelPage />, {
         url: `/c/${channel.channel_type}/${channel.name}`,

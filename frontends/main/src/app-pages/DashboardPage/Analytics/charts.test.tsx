@@ -163,9 +163,7 @@ describe("EngagementTrendChart", () => {
 
     const table = screen.getByRole("table", { name: "Monthly engagement" })
     expect(
-      within(table).getByLabelText(
-        /Learners who did anything in a course this month/,
-      ),
+      within(table).getByLabelText(/Learners who did course work this month/),
     ).toBeInTheDocument()
   })
 
@@ -179,7 +177,7 @@ describe("EngagementTrendChart", () => {
 
     const table = screen.getByRole("table", { name: "Monthly engagement" })
     const triggers = screen.getAllByLabelText(
-      /Learners who did anything in a course this month/,
+      /Learners who did course work this month/,
     )
     expect(triggers).toHaveLength(2)
     expect(triggers.some((trigger) => !table.contains(trigger))).toBe(true)
@@ -200,13 +198,13 @@ describe("EngagementTrendChart", () => {
 
     const table = screen.getByRole("table", { name: "Monthly engagement" })
     const trigger = within(table).getByLabelText(
-      /Learners who did anything in a course this month/,
+      /Learners who did course work this month/,
     )
 
     await user.hover(trigger)
     expect(
       await screen.findByRole("tooltip", {
-        name: /Learners who did anything in a course this month/,
+        name: /Learners who did course work this month/,
       }),
     ).toBeInTheDocument()
 
@@ -287,6 +285,27 @@ describe("EngagementTrendChart", () => {
     expect(
       screen.getAllByLabelText(/Withheld: too few learners/).length,
     ).toBeGreaterThan(0)
+  })
+
+  test("shows certificates for a month whose active count is withheld", () => {
+    renderWithTheme(
+      <EngagementTrendChart
+        rows={[
+          factories.monthlyEngagementTrend({
+            activity_year_and_month: "2026-01",
+            monthly_active_learners: null,
+            certificates_earned: 7,
+          }),
+        ]}
+        isLoading={false}
+      />,
+    )
+
+    const table = screen.getByRole("table", { name: "Monthly engagement" })
+    expect(within(table).getByText("7")).toBeInTheDocument()
+    expect(
+      within(table).getAllByLabelText(/Withheld: too few learners/),
+    ).toHaveLength(1)
   })
 
   test("says the data could not be loaded rather than showing an empty state", () => {

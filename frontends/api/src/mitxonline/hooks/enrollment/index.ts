@@ -4,19 +4,22 @@ import type { MutationHookOptions } from "../../../mutations/mutationMeta"
 import {
   b2bApi,
   courseRunEnrollmentsApi,
-  courseRunsV1Api,
+  courseRunsV3Api,
   programEnrollmentsApi,
-  programsV1Api,
+  programsV3Api,
   verifiedProgramEnrollmentsApi,
 } from "../../clients"
-import type { EnrollmentEligibility } from "@mitodl/mitxonline-api-axios/v1"
+import { B2bApiB2bEnrollCreateRequest } from "@mitodl/mitxonline-api-axios/v0"
 import {
-  B2bApiB2bEnrollCreateRequest,
   EnrollmentsApiEnrollmentsPartialUpdateRequest,
   CourseRunEnrollmentRequest,
+} from "@mitodl/mitxonline-api-axios/v1"
+import { VerifiedProgramEnrollmentsApiVerifiedProgramEnrollmentsCreateRequest } from "@mitodl/mitxonline-api-axios/v2"
+import type { EnrollmentEligibility } from "@mitodl/mitxonline-api-axios/v3"
+import {
   ProgramEnrollmentsApiV3ProgramEnrollmentsCreateRequest,
-  VerifiedProgramEnrollmentsApiVerifiedProgramEnrollmentsCreateRequest,
-} from "@mitodl/mitxonline-api-axios/v2"
+  ProgramEnrollmentsApiV3ProgramEnrollmentsPartialUpdateRequest,
+} from "@mitodl/mitxonline-api-axios/v3"
 
 /** A course run or program a learner can enroll in or buy. */
 type EnrollmentTarget = { type: "course_run" | "program"; id: number }
@@ -34,10 +37,10 @@ const checkEnrollmentEligibility = async (
 ): Promise<EnrollmentEligibility & { missing_fields?: string[] }> => {
   const { data } =
     target.type === "program"
-      ? await programsV1Api.programsEnrollmentEligible({
+      ? await programsV3Api.programsEnrollmentEligible({
           program_id: target.id,
         })
-      : await courseRunsV1Api.courseRunsEnrollmentEligible({
+      : await courseRunsV3Api.courseRunsEnrollmentEligible({
           run_id: target.id,
         })
   return data
@@ -148,6 +151,34 @@ const useCreateProgramEnrollment = ({ meta }: MutationHookOptions = {}) => {
   })
 }
 
+const useUpdateProgramEnrollmentTrack = ({
+  meta,
+}: MutationHookOptions = {}) => {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (
+      opts: ProgramEnrollmentsApiV3ProgramEnrollmentsPartialUpdateRequest,
+    ) => programEnrollmentsApi.v3ProgramEnrollmentsPartialUpdate(opts),
+    onSuccess: (response) => {
+      queryClient.setQueryData(
+        enrollmentQueries.programEnrollmentsList().queryKey,
+        (data) =>
+          data?.map((enrollment) =>
+            enrollment.program.id === response.data.program.id
+              ? response.data
+              : enrollment,
+          ),
+      )
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({
+        queryKey: enrollmentKeys.programEnrollmentsList(),
+      })
+    },
+    meta,
+  })
+}
+
 const useCreateVerifiedProgramEnrollment = ({
   meta,
 }: MutationHookOptions = {}) => {
@@ -179,5 +210,6 @@ export {
   useDestroyEnrollment,
   useDestroyProgramEnrollment,
   useCreateProgramEnrollment,
+  useUpdateProgramEnrollmentTrack,
   useCreateVerifiedProgramEnrollment,
 }

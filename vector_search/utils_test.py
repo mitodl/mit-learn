@@ -48,7 +48,7 @@ from learning_resources_search.serializers import (
     serialize_bulk_content_files,
     serialize_bulk_learning_resources,
 )
-from main.utils import checksum_for_content
+from main.utils import checksum_for_content, now_in_utc
 from vector_search.constants import (
     COMPLETENESS_PAYLOAD_KEY,
     CONTENT_FILES_COLLECTION_NAME,
@@ -299,6 +299,129 @@ def test_embed_learning_resources_no_overwrite(mocker, content_type):
         )
 
 
+@pytest.mark.parametrize("changed_field", ["readable_id", "platform"])
+def test_embed_learning_resources_deletes_stale_points(mocker, changed_field):
+    """
+    Re-embedding a resource whose readable_id or platform (and so point id)
+    changed leaves exactly one point for it, and other resources' points alone.
+    """
+    vector = [0.1, 0.2]
+    client = QdrantClient(":memory:")
+    client.create_collection(
+        RESOURCES_COLLECTION_NAME,
+        vectors_config=models.VectorParams(
+            size=len(vector), distance=models.Distance.COSINE
+        ),
+    )
+    mocker.patch("vector_search.utils.qdrant_client", return_value=client)
+    mocker.patch("vector_search.utils.ensure_qdrant_collections")
+    mocker.patch("vector_search.utils._embed_course_metadata_as_contentfile")
+    mocker.patch(
+        "vector_search.utils._process_resource_embeddings",
+        side_effect=lambda docs, **_kwargs: (
+            PointStruct(
+                id=vector_point_id(vector_point_key(doc)),
+                vector=vector,
+                payload={"id": doc["id"], "readable_id": doc["readable_id"]},
+            )
+            for doc in docs
+        ),
+    )
+    resource, other = LearningResourceFactory.create_batch(
+        2,
+        resource_type=COURSE_TYPE,
+        platform=LearningResourcePlatformFactory.create(code=PlatformType.youtube.name),
+    )
+    embed_learning_resources([resource.id, other.id], COURSE_TYPE, overwrite=True)
+    old_point_id = vector_point_id(f"{resource.platform.code}.{resource.readable_id}")
+
+    if changed_field == "readable_id":
+        resource.readable_id = "renumbered-readable-id"
+    else:
+        resource.platform = LearningResourcePlatformFactory.create(
+            code=PlatformType.ocw.name
+        )
+    resource.save()
+    embed_learning_resources([resource.id], COURSE_TYPE, overwrite=True)
+
+    points = client.scroll(RESOURCES_COLLECTION_NAME, limit=10)[0]
+    point_ids_by_resource = {}
+    for point in points:
+        point_ids_by_resource.setdefault(point.payload["id"], []).append(point.id)
+    new_point_id = vector_point_id(f"{resource.platform.code}.{resource.readable_id}")
+    assert new_point_id != old_point_id
+    assert point_ids_by_resource == {
+        resource.id: [new_point_id],
+        other.id: [vector_point_id(f"{other.platform.code}.{other.readable_id}")],
+    }
+
+
+def test_embed_learning_resources_deletes_stale_points_when_unchanged(mocker):
+    """
+    A resource whose embedding context is unchanged only has its payload
+    refreshed, yet its stale duplicates are still deleted -- even when nothing
+    in the batch is re-embedded -- and its current point is kept.
+    """
+    vector = [0.1, 0.2]
+    client = QdrantClient(":memory:")
+    client.create_collection(
+        RESOURCES_COLLECTION_NAME,
+        vectors_config=models.VectorParams(
+            size=len(vector), distance=models.Distance.COSINE
+        ),
+    )
+    mocker.patch("vector_search.utils.qdrant_client", return_value=client)
+    mocker.patch("vector_search.utils.ensure_qdrant_collections")
+    mocker.patch("vector_search.utils._embed_course_metadata_as_contentfile")
+    mocker.patch(
+        "vector_search.utils._learning_resource_embedding_context",
+        return_value="context",
+    )
+    mocker.patch(
+        "vector_search.utils.should_generate_resource_embeddings",
+        return_value=False,
+    )
+    resource, other = LearningResourceFactory.create_batch(2, resource_type=COURSE_TYPE)
+    current_point_id = vector_point_id(
+        f"{resource.platform.code}.{resource.readable_id}"
+    )
+    other_point_id = vector_point_id(f"{other.platform.code}.{other.readable_id}")
+    stale_point_id = vector_point_id("stale.old-readable-id")
+    client.upsert(
+        RESOURCES_COLLECTION_NAME,
+        points=[
+            PointStruct(
+                id=current_point_id, vector=vector, payload={"id": resource.id}
+            ),
+            PointStruct(id=stale_point_id, vector=vector, payload={"id": resource.id}),
+            PointStruct(id=other_point_id, vector=vector, payload={"id": other.id}),
+        ],
+    )
+
+    embed_learning_resources([resource.id], COURSE_TYPE, overwrite=True)
+
+    point_ids = {
+        point.id for point in client.scroll(RESOURCES_COLLECTION_NAME, limit=10)[0]
+    }
+    assert point_ids == {current_point_id, other_point_id}
+
+
+def test_embed_learning_resources_leaves_unrenderable_resource_points(mocker):
+    """A resource whose context failed to render has none of its points deleted"""
+    mock_qdrant = mocker.patch("vector_search.utils.qdrant_client").return_value
+    mocker.patch("vector_search.utils.ensure_qdrant_collections")
+    mocker.patch("vector_search.utils._embed_course_metadata_as_contentfile")
+    mocker.patch(
+        "vector_search.utils._learning_resource_embedding_context",
+        return_value=None,
+    )
+    resource = LearningResourceFactory.create(resource_type=COURSE_TYPE)
+
+    embed_learning_resources([resource.id], COURSE_TYPE, overwrite=True)
+
+    mock_qdrant.batch_update_points.assert_not_called()
+
+
 def test_filter_existing_qdrant_points(mocker):
     """
     Test that filter_existing_qdrant_points filters out
@@ -362,6 +485,7 @@ def test_remove_qdrant_records_filters_learning_resources_by_platform(
     mock_remove_points_matching_params = mocker.patch(
         "vector_search.utils.remove_points_matching_params"
     )
+    mock_qdrant = mocker.patch("vector_search.utils.qdrant_client").return_value
 
     remove_qdrant_records([1], COURSE_TYPE)
 
@@ -369,6 +493,54 @@ def test_remove_qdrant_records_filters_learning_resources_by_platform(
         expected_params,
         collection_name=RESOURCES_COLLECTION_NAME,
     )
+    # Stale points left under an old platform/readable_id go too
+    mock_qdrant.delete.assert_called_once()
+    delete_kwargs = mock_qdrant.delete.call_args.kwargs
+    assert delete_kwargs["collection_name"] == RESOURCES_COLLECTION_NAME
+    assert delete_kwargs["points_selector"].filter == models.Filter(
+        must=[models.FieldCondition(key="id", match=models.MatchAny(any=[1]))]
+    )
+
+
+def test_remove_qdrant_records_removes_stale_resource_points(mocker):
+    """Removing a resource also removes its points under an old readable_id"""
+    vector = [0.1, 0.2]
+    client = QdrantClient(":memory:")
+    client.create_collection(
+        RESOURCES_COLLECTION_NAME,
+        vectors_config=models.VectorParams(
+            size=len(vector), distance=models.Distance.COSINE
+        ),
+    )
+    mocker.patch("vector_search.utils.qdrant_client", return_value=client)
+    resource, other = LearningResourceFactory.create_batch(2)
+    client.upsert(
+        RESOURCES_COLLECTION_NAME,
+        [
+            PointStruct(
+                id=vector_point_id(f"{resource.platform.code}.{readable_id}"),
+                vector=vector,
+                payload={
+                    "id": resource.id,
+                    "readable_id": readable_id,
+                    "platform": {"code": resource.platform.code},
+                },
+            )
+            for readable_id in [resource.readable_id, "renumbered-readable-id"]
+        ]
+        + [
+            PointStruct(
+                id=vector_point_id(f"{other.platform.code}.{other.readable_id}"),
+                vector=vector,
+                payload={"id": other.id, "readable_id": other.readable_id},
+            )
+        ],
+    )
+
+    remove_qdrant_records([resource.id], COURSE_TYPE)
+
+    remaining = client.scroll(RESOURCES_COLLECTION_NAME, limit=10)[0]
+    assert [point.payload["id"] for point in remaining] == [other.id]
 
 
 def test_remove_qdrant_records_filters_content_files_by_platform(mocker):
@@ -2524,6 +2696,83 @@ def test_resource_vector_hits_duplicate_readable_ids_different_platforms():
     assert result_2[1]["platform"]["code"] == "xpro"
 
 
+def test_resource_vector_hits_dedupes_on_database_id():
+    """
+    A resource whose platform or readable_id changed can have a stale point
+    alongside its current one. Both carry the same database id, so they hydrate
+    to one result -- the current row, even for the stale hit -- rather than a
+    duplicate or a dropped hit.
+    """
+    resource, other = LearningResourceFactory.create_batch(2)
+    search_result = [
+        MagicMock(
+            payload={
+                "id": resource.id,
+                "readable_id": "renumbered-readable-id",
+                "platform": {"code": "youtube"},
+            }
+        ),
+        MagicMock(
+            payload={
+                "id": other.id,
+                "readable_id": other.readable_id,
+                "platform": {"code": other.platform.code},
+            }
+        ),
+        MagicMock(
+            payload={
+                "id": resource.id,
+                "readable_id": resource.readable_id,
+                "platform": {"code": resource.platform.code},
+            }
+        ),
+    ]
+
+    result = _resource_vector_hits(search_result)
+
+    assert [hit["id"] for hit in result] == [resource.id, other.id]
+    assert result[0]["readable_id"] == resource.readable_id
+
+
+def test_resource_vector_hits_without_payload_id_falls_back_to_readable_id():
+    """
+    A point with no database id (e.g. loaded from an external system) is looked
+    up by platform:readable_id, and dedupes against a hit for the same row
+    that does carry an id.
+    """
+    resource, other = LearningResourceFactory.create_batch(2)
+    search_result = [
+        MagicMock(
+            payload={
+                "readable_id": resource.readable_id,
+                "platform": {"code": resource.platform.code},
+            }
+        ),
+        MagicMock(
+            payload={
+                "readable_id": other.readable_id,
+                "platform": {"code": other.platform.code},
+            }
+        ),
+        MagicMock(
+            payload={
+                "id": resource.id,
+                "readable_id": resource.readable_id,
+                "platform": {"code": resource.platform.code},
+            }
+        ),
+    ]
+
+    result = _resource_vector_hits(search_result)
+
+    assert [hit["id"] for hit in result] == [resource.id, other.id]
+
+
+def test_resource_vector_hits_empty():
+    """No hits, no query"""
+    assert _resource_vector_hits([]) == []
+
+
 def test_resources_payload_selector_excludes_indexing_fields(settings):
     """The selector should ask for the whole payload minus indexing-only keys"""
     settings.VECTOR_SEARCH_RESOURCES_FROM_PAYLOAD = True
@@ -2583,6 +2832,42 @@ def test_resource_payload_hits_preserves_order_and_dedupes():
         ("course-2", "xpro"),
     ]
     assert hits[0]["title"] == "Second"
+
+
+def test_resource_payload_hits_dedupes_on_database_id():
+    """
+    Points sharing a database id are the same resource, even when one is a stale
+    point left under an old platform/readable_id: only the higher-ranked is kept.
+    Points with no id still dedupe on platform:readable_id.
+    """
+    search_result = [
+        MagicMock(
+            payload={
+                "id": 4767,
+                "readable_id": "21T.150+spring_2005",
+                "platform": {"code": "ocw"},
+            }
+        ),
+        MagicMock(
+            payload={
+                "id": 4767,
+                "readable_id": "21M.604+spring_2005",
+                "platform": {"code": "ocw"},
+            }
+        ),
+        MagicMock(
+            payload={"id": 4767, "readable_id": "video-1", "platform": {"code": "yt"}}
+        ),
+        MagicMock(payload={"readable_id": "external", "platform": {"code": "ocw"}}),
+        MagicMock(payload={"readable_id": "external", "platform": {"code": "ocw"}}),
+    ]
+
+    hits = _resource_payload_hits(search_result)
+
+    assert [hit["readable_id"] for hit in hits] == [
+        "21T.150+spring_2005",
+        "external",
+    ]
 
 
 def test_resource_payload_hits_handles_null_platform():
@@ -4528,7 +4813,7 @@ def test_async_content_file_chunks_for_resource_no_published_run(mocker):
 
 
 def _course_with_content_files(**kwargs):
-    """Create a course with files on published, variant and unpublished runs, plus direct and withdrawn files"""
+    """Create a course with a file per run and a direct file, plus hidden ones"""
     course = LearningResourceFactory.create(is_course=True, create_runs=False, **kwargs)
     runs = [
         LearningResourceRunFactory.create(learning_resource=course, published=True),
@@ -4540,11 +4825,14 @@ def _course_with_content_files(**kwargs):
     files = {ContentFileFactory.create(run=run, published=True) for run in runs}
     files.add(ContentFileFactory.create(learning_resource=course, published=True))
     ContentFileFactory.create(run=runs[0], published=False)
+    ContentFileFactory.create(
+        run=runs[0], published=True, release_date=now_in_utc() + timedelta(days=1)
+    )
     return course, files
 
 
 def test_qdrant_content_files_every_run():
-    """Qdrant gets published files of every run, published or not, plus direct files"""
+    """Qdrant gets visible files of every run and direct files, but no hidden ones"""
     course, files = _course_with_content_files()
 
     selected = vs_utils.qdrant_content_files(

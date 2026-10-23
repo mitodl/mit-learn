@@ -8,7 +8,7 @@ import {
   B2bApiB2bManagerOrganizationsContractsCodesRemindCreateRequest,
   B2bApiB2bManagerOrganizationsContractsCodesRevokeDestroyRequest,
   B2bApiB2bManagerOrganizationsContractsCodesSendTestEmailCreateRequest,
-} from "@mitodl/mitxonline-api-axios/v2"
+} from "@mitodl/mitxonline-api-axios/v0"
 import { managerOrganizationQueries, managerOrganizationKeys } from "./queries"
 import { mitxUserQueries } from "../user"
 import type { MutationHookOptions } from "../../../mutations/mutationMeta"
@@ -166,4 +166,4 @@ export {
 export type {
   ManagerEnrollmentCode,
   PaginatedManagerEnrollmentCodeList,
-} from "@mitodl/mitxonline-api-axios/v2"
+} from "@mitodl/mitxonline-api-axios/v0"

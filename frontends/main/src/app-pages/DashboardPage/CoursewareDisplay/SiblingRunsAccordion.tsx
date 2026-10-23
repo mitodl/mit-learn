@@ -14,6 +14,7 @@ import {
 } from "@remixicon/react"
 import {
   canOpenCourseware,
+  hasCourseStaffRole,
   formatRunIdentifier,
   getRunTimeState,
 } from "./courseDateUtils"
@@ -21,7 +22,7 @@ import type { RunTimeState } from "./courseDateUtils"
 import { ActionButton, VisuallyHidden } from "@mitodl/smoot-design"
 import { EnrollmentStatusIcon } from "./EnrollmentStatus"
 import NextLink from "next/link"
-import { CourseRunEnrollmentV3 } from "@mitodl/mitxonline-api-axios/v2"
+import { CourseRunEnrollmentV3 } from "@mitodl/mitxonline-api-axios/v3"
 import { useOrderIdForRun } from "@/common/mitxonline/useOrderIdForResource"
 import { getRunMenuItems } from "./runMenuItems"
 import { useFeatureFlagEnabled } from "posthog-js/react"
@@ -206,6 +207,7 @@ const RunListRow: React.FC<RunListRowProps> = ({
   const coursewareUrl = enrollment.run?.courseware_url
   const coursewareOpen = canOpenCourseware(enrollment.run?.start_date, {
     isStaff: mitxOnlineUser.data?.is_staff,
+    isCourseStaff: hasCourseStaffRole(enrollment),
   })
   /**
    * Resolved per row so each run's Receipt item reflects that run's own order.

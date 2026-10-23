@@ -73,10 +73,12 @@ OCR_MODEL = get_string(name="OCR_MODEL", default=None)
 OCR_PROMPT = get_string(
     "OCR_PROMPT",
     "Transcribe this image to markdown. Properly format text, formulas, "
-    "tables, and code into markdown format."
+    "tables, and code into markdown format. "
+    "Write every mathematical expression, inline ones included, in LaTeX "
+    "($...$ inline, $$...$$ display), even when it is printed as plain text. "
     "Include a markdown comment for elements that cannot be transcribed such as "
-    "photos and other visual elements."
-    "Do not include any indications your output is the result of a transcription."
+    "photos and other visual elements. "
+    "Do not include any indications your output is the result of a transcription. "
     "Do not include extra commentary - "
     "ONLY include the resulting transcribed markdown.",
 )
@@ -86,6 +88,9 @@ OCR_PDF_MAX_PAGE_THRESHOLD = get_int(name="OCR_PDF_MAX_PAGE_THRESHOLD", default=
 # OCR the entire page if the density of math formulas exceeds this threshold
 OCR_MATH_DENSITY_THRESHOLD = get_int(name="OCR_MATH_DENSITY_THRESHOLD", default=5)
 OCR_DEBUG_DIRECTORY = get_string(name="OCR_DEBUG_DIRECTORY", default="ocr_debug")
+# Timeout in seconds and number of retries for each OCR request
+OCR_REQUEST_TIMEOUT = get_int(name="OCR_REQUEST_TIMEOUT", default=180)
+OCR_REQUEST_NUM_RETRIES = get_int(name="OCR_REQUEST_NUM_RETRIES", default=2)
 
 
 # More MIT URLs

@@ -6,6 +6,7 @@ import type { Facets, BooleanFacets } from "@mitodl/course-search-utils"
 import { useSetSearchParams } from "@mitodl/course-search-utils/next"
 import { useAppSearchParams } from "@/common/useAppSearchParams"
 import SearchDisplay from "@/page-components/SearchDisplay/SearchDisplay"
+import { TOPIC_TABS } from "@/page-components/SearchDisplay/tabConfigs"
 import HybridSearchDisplay from "@/page-components/SearchDisplay/HybridSearchDisplay"
 import { Container, styled } from "ol-components"
 import { VisuallyHidden } from "@mitodl/smoot-design"
@@ -30,23 +31,6 @@ const StyledSearchField = styled(SearchField)({
   width: "624px",
 })
 
-/**
- * The topic layout's filter card, which the design sets 40px above the tabs.
- * Without this the card's white edge runs straight into the white tab row
- * below it and the two read as one block.
- *
- * Not drawn on a narrow screen, where the design replaces it with the filter
- * drawer: the drawer holds the same facets and the same search box, so
- * leaving the card there as well would ask twice for one set of filters --
- * and the card is a row of controls that has nowhere to go at that width.
- */
-const TopicSearchContainer = styled(Container)(({ theme }) => ({
-  paddingBottom: "40px",
-  [theme.breakpoints.down("md")]: {
-    display: "none",
-  },
-}))
-
 const SHOW_PROFESSIONAL_TOGGLE_BY_CHANNEL_TYPE: Record<
   ChannelTypeEnum,
   boolean
@@ -55,7 +39,7 @@ const SHOW_PROFESSIONAL_TOGGLE_BY_CHANNEL_TYPE: Record<
    * False since the topic design, which lists what its filter drawer holds
    * and does not hold this. The toggle rides along with the facets, and a
    * topic channel has drawn those in neither place since it moved to the
-   * "topic" layout -- no sidebar, and until now no drawer -- so this is the
+   * "cards" layout -- no sidebar, and until now no drawer -- so this is the
    * setting it has effectively had all along, now that there is somewhere
    * for it to take effect.
    */
@@ -76,7 +60,7 @@ interface ChannelSearchProps {
    * Defaults to "default" -- the centred search box and facet sidebar every
    * other channel has, unchanged.
    */
-  layout?: "default" | "topic"
+  layout?: "default" | "cards"
 }
 
 const ChannelSearch: React.FC<ChannelSearchProps> = ({
@@ -170,19 +154,7 @@ const ChannelSearch: React.FC<ChannelSearchProps> = ({
   return (
     <section>
       <VisuallyHidden as="h2">Search within {channelTitle}</VisuallyHidden>
-      {layout === "topic" ? (
-        <TopicSearchContainer>
-          <TopicSearchFilterBar
-            currentText={currentText}
-            setCurrentText={setCurrentText}
-            setCurrentTextAndQuery={setCurrentTextAndQuery}
-            setPage={setPage}
-            params={params}
-            setParamValue={setParamValue}
-            toggleParamValue={toggleParamValue}
-          />
-        </TopicSearchContainer>
-      ) : (
+      {layout === "cards" ? null : (
         <SearchInputContainer>
           <StyledSearchField
             value={currentText}
@@ -200,8 +172,28 @@ const ChannelSearch: React.FC<ChannelSearchProps> = ({
       )}
 
       <ChannelSearchDisplay
+        /* The design draws the bar at the top of the card the results header
+           sits in, so the display renders it rather than this placing it
+           above -- see `TopicSearchCard`. */
+        filterBarSlot={
+          layout === "cards"
+            ? (aggregations) => (
+                <TopicSearchFilterBar
+                  currentText={currentText}
+                  setCurrentText={setCurrentText}
+                  setCurrentTextAndQuery={setCurrentTextAndQuery}
+                  setPage={setPage}
+                  params={params}
+                  setParamValue={setParamValue}
+                  toggleParamValue={toggleParamValue}
+                  aggregations={aggregations}
+                  resourceTypeGroup={resourceTypeGroup}
+                />
+              )
+            : undefined
+        }
         drawerSearchSlot={
-          layout === "topic" ? (
+          layout === "cards" ? (
             <SearchField
               value={currentText}
               placeholder="Search for courses, programs, and learning materials..."
@@ -228,7 +220,8 @@ const ChannelSearch: React.FC<ChannelSearchProps> = ({
         showProfessionalToggle={
           SHOW_PROFESSIONAL_TOGGLE_BY_CHANNEL_TYPE[channelType]
         }
-        resultsLayout={layout === "topic" ? "cards" : "default"}
+        resultsLayout={layout === "cards" ? "cards" : "default"}
+        tabs={layout === "cards" ? TOPIC_TABS : undefined}
       />
     </section>
   )

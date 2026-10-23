@@ -5,6 +5,7 @@ import { RiArrowRightLine } from "@remixicon/react"
 import { Link, Skeleton, styled, Typography, useTheme } from "ol-components"
 import { VisuallyHidden } from "@mitodl/smoot-design"
 import type { CompletionStatusCounts } from "api/analytics-hooks/organizations"
+import type { ContractLearnersStatus } from "@/common/urls"
 import { EmptyTableMessage, TableCard } from "@/components/B2BTable/B2BTable"
 import { progressStatusColors } from "./chartPalette"
 import { formatCount, formatPercent } from "./format"
@@ -30,10 +31,14 @@ import SectionError from "./SectionError"
  */
 
 const BUCKETS = [
-  { key: "not_started", label: "Not started" },
-  { key: "in_progress", label: "In progress" },
-  { key: "completed", label: "Completed" },
-] as const
+  { key: "not_started", label: "Not started", status: "not_started" },
+  { key: "in_progress", label: "In progress", status: "in_progress" },
+  { key: "completed", label: "Completed", status: "passed" },
+] as const satisfies readonly {
+  key: string
+  label: string
+  status: ContractLearnersStatus
+}[]
 
 type BucketKey = (typeof BUCKETS)[number]["key"]
 
@@ -53,6 +58,16 @@ const Root = styled.div({
   flexDirection: "column",
   gap: "16px",
 })
+
+const DetailRow = styled.div(({ theme }) => ({
+  display: "grid",
+  gridTemplateColumns: "minmax(0, 2fr) minmax(0, 1fr)",
+  gap: "16px",
+  alignItems: "stretch",
+  [theme.breakpoints.down("md")]: {
+    gridTemplateColumns: "minmax(0, 1fr)",
+  },
+}))
 
 const TileRow = styled.div(({ theme }) => ({
   display: "flex",
@@ -124,7 +139,9 @@ const Tile: React.FC<{
   label: string
   value: number
   learnersHref: string
-}> = ({ label, value, learnersHref }) => (
+  linkText: string
+  linkLabel: string
+}> = ({ label, value, learnersHref, linkText, linkLabel }) => (
   <TileBox role="group" aria-label={label}>
     <TileLabel>{label}</TileLabel>
     <TileValue>{formatCount(value)}</TileValue>
@@ -132,9 +149,9 @@ const Tile: React.FC<{
       href={learnersHref}
       color="red"
       size="small"
-      aria-label={`View all learners (${label} tile)`}
+      aria-label={linkLabel}
     >
-      View all learners <RiArrowRightLine aria-hidden="true" />
+      {linkText} <RiArrowRightLine aria-hidden="true" />
     </TileLink>
   </TileBox>
 )
@@ -215,7 +232,9 @@ const LearnerProgressCard: React.FC<{
   statusCounts: CompletionStatusCounts | undefined
   isLoading: boolean
   isError?: boolean
-  learnersHref: string
+  learnersHref: (status?: ContractLearnersStatus) => string
+  /** Rendered beside the distribution, stacking below it on narrow screens. */
+  aside?: React.ReactNode
 }> = ({
   totalCount,
   withheldCount,
@@ -223,6 +242,7 @@ const LearnerProgressCard: React.FC<{
   isLoading,
   isError,
   learnersHref,
+  aside,
 }) => {
   const statusColors = progressStatusColors(useTheme())
 
@@ -267,69 +287,78 @@ const LearnerProgressCard: React.FC<{
     reportedCount > 0 ? (count / reportedCount) * 100 : 0
   const percentBasis = withheld > 0 ? " of learners who consented" : " of total"
 
+  const distribution = (
+    <TableCard>
+      <DistributionList role="list" aria-label="Learner progress distribution">
+        {BUCKETS.map((bucket) => {
+          const count = buckets[bucket.key]
+          const percent = percentOf(count)
+          return (
+            <DistributionRow key={bucket.key} role="listitem">
+              <RowLabel>{bucket.label}</RowLabel>
+              <Track>
+                {count > 0 ? (
+                  <TrackFill
+                    aria-hidden
+                    $color={statusColors[bucket.key]}
+                    style={{ width: `${percent}%` }}
+                  />
+                ) : null}
+              </Track>
+              <RowStats>
+                <RowCount>
+                  {formatCount(count)}
+                  <VisuallyHidden> learners,</VisuallyHidden>
+                </RowCount>
+                <RowPercent>
+                  {formatPercent(percent)}
+                  <VisuallyHidden>{percentBasis}</VisuallyHidden>
+                </RowPercent>
+              </RowStats>
+            </DistributionRow>
+          )
+        })}
+      </DistributionList>
+      {withheld > 0 ? (
+        <DistributionNote>
+          Percentages exclude {formatCount(withheld)}{" "}
+          {withheld === 1 ? "learner who has" : "learners who have"} not agreed
+          to share their progress.
+        </DistributionNote>
+      ) : null}
+    </TableCard>
+  )
+
   return (
     <Root>
       <TileRow>
-        <Tile label="Enrolled" value={totalCount} learnersHref={learnersHref} />
         <Tile
-          label="Not started"
-          value={buckets.not_started}
-          learnersHref={learnersHref}
+          label="Enrolled"
+          value={totalCount}
+          learnersHref={learnersHref()}
+          linkText="View all learners"
+          linkLabel="View all learners"
         />
-        <Tile
-          label="In progress"
-          value={buckets.in_progress}
-          learnersHref={learnersHref}
-        />
-        <Tile
-          label="Completed"
-          value={buckets.completed}
-          learnersHref={learnersHref}
-        />
+        {BUCKETS.map((bucket) => (
+          <Tile
+            key={bucket.key}
+            label={bucket.label}
+            value={buckets[bucket.key]}
+            learnersHref={learnersHref(bucket.status)}
+            linkText="View learners"
+            linkLabel={`View learners (${bucket.label})`}
+          />
+        ))}
       </TileRow>
 
-      <TableCard>
-        <DistributionList
-          role="list"
-          aria-label="Learner progress distribution"
-        >
-          {BUCKETS.map((bucket) => {
-            const count = buckets[bucket.key]
-            const percent = percentOf(count)
-            return (
-              <DistributionRow key={bucket.key} role="listitem">
-                <RowLabel>{bucket.label}</RowLabel>
-                <Track>
-                  {count > 0 ? (
-                    <TrackFill
-                      aria-hidden
-                      $color={statusColors[bucket.key]}
-                      style={{ width: `${percent}%` }}
-                    />
-                  ) : null}
-                </Track>
-                <RowStats>
-                  <RowCount>
-                    {formatCount(count)}
-                    <VisuallyHidden> learners,</VisuallyHidden>
-                  </RowCount>
-                  <RowPercent>
-                    {formatPercent(percent)}
-                    <VisuallyHidden>{percentBasis}</VisuallyHidden>
-                  </RowPercent>
-                </RowStats>
-              </DistributionRow>
-            )
-          })}
-        </DistributionList>
-        {withheld > 0 ? (
-          <DistributionNote>
-            Percentages exclude {formatCount(withheld)}{" "}
-            {withheld === 1 ? "learner who has" : "learners who have"} not
-            agreed to share their progress.
-          </DistributionNote>
-        ) : null}
-      </TableCard>
+      {aside ? (
+        <DetailRow>
+          {distribution}
+          {aside}
+        </DetailRow>
+      ) : (
+        distribution
+      )}
     </Root>
   )
 }

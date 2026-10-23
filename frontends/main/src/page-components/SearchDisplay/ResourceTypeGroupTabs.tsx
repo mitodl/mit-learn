@@ -2,6 +2,7 @@ import React from "react"
 import { TabContext, TabPanel, styled } from "ol-components"
 import { TabButton, TabButtonList } from "@mitodl/smoot-design"
 import { ResourceTypeGroupEnum, LearningResourcesSearchResponse } from "api"
+import type { TabConfig } from "./tabConfigs"
 
 const TabsList = styled(TabButtonList)(({ theme }) => ({
   ".MuiTabScrollButton-root.Mui-disabled": {
@@ -18,20 +19,6 @@ const CountSpan = styled.span(({ theme }) => ({
   ...theme.typography.body3,
 }))
 
-type TabConfig = {
-  label: string
-  name: string
-  defaultTab?: boolean
-  resource_type_group: ResourceTypeGroupEnum | null
-  minWidth: number
-  /**
-   * sortby values that cannot order this tab's results, e.g. "upcoming" for
-   * learning materials, which have no runs and so no start dates. Offered
-   * disabled in the sort dropdown, and cleared from the URL on switching here.
-   */
-  unsupportedSortby?: string[]
-}
-
 type Aggregations = LearningResourcesSearchResponse["metadata"]["aggregations"]
 const resourceTypeGroupCounts = (aggregations?: Aggregations) => {
   if (!aggregations) return null
@@ -45,6 +32,18 @@ const resourceTypeGroupCounts = (aggregations?: Aggregations) => {
   )
   return counts
 }
+/** How many results fall in any of a tab's groups, e.g. courses plus programs. */
+const tabCount = (
+  tab: TabConfig,
+  counts: Record<ResourceTypeGroupEnum, number> | null,
+) =>
+  counts
+    ? tab.resource_type_groups.reduce(
+        (total, group) => total + (counts[group] ?? 0),
+        0,
+      )
+    : undefined
+
 const appendCount = (label: string, count?: number | null) => {
   if (Number.isFinite(count)) {
     return (
@@ -92,11 +91,18 @@ const selectTab = (
 ) => {
   setSearchParams("resource_type_group", (prev) => {
     const next = new URLSearchParams(prev)
-    if (prev.get("resource_type_group") === "learning_material") {
+    if (prev.getAll("resource_type_group").includes("learning_material")) {
       next.delete("resource_category")
     }
-    if (tab?.resource_type_group) {
-      next.set("resource_type_group", tab.resource_type_group)
+    // The default tab is what a bare URL shows, so it needs no param of its
+    // own. Otherwise `set` the first group so the param keeps its place in the
+    // URL, and append the rest beside it.
+    const [first, ...rest] = tab?.defaultTab
+      ? []
+      : (tab?.resource_type_groups ?? [])
+    if (first) {
+      next.set("resource_type_group", first)
+      rest.forEach((group) => next.append("resource_type_group", group))
     } else {
       next.delete("resource_type_group")
     }
@@ -134,15 +140,7 @@ const ResourceTypeGroupTabList: React.FC<ResourceTypeGroupTabsProps> = ({
       }}
     >
       {tabs.map((t) => {
-        let count: number | undefined
-        if (t.name === "all") {
-          count = allCount
-        } else {
-          count =
-            counts && t.resource_type_group
-              ? (counts[t.resource_type_group] ?? 0)
-              : undefined
-        }
+        const count = t.name === "all" ? allCount : tabCount(t, counts)
         return (
           <TabButton
             style={{ minWidth: t.minWidth }}
@@ -170,8 +168,8 @@ const ResourceTypeGroupTabList: React.FC<ResourceTypeGroupTabsProps> = ({
  * the Free group above them exactly.
  *
  * There is no "All" row because the design has none: unchecking whichever row
- * is checked is what All is, and a row that undid itself and three others
- * would be the odd one out among checkboxes.
+ * is checked goes back to the default tab -- All where there is one, and on
+ * the topic page, which has none, Courses and Programs.
  */
 /** See the effect in `ResourceTypeGroupChecklist` for why this is not a ref. */
 let pendingFocusId: string | null = null
@@ -180,7 +178,7 @@ const ResourceTypeGroupChecklist: React.FC<
   ResourceTypeGroupTabsProps & { activeTabName: string }
 > = ({ tabs, aggregations, setSearchParams, onTabChange, activeTabName }) => {
   const counts = resourceTypeGroupCounts(aggregations)
-  const choices = tabs.filter((tab) => tab.resource_type_group)
+  const choices = tabs.filter((tab) => tab.resource_type_groups.length > 0)
 
   /**
    * Put focus back on the box that was just ticked.
@@ -225,7 +223,7 @@ const ResourceTypeGroupChecklist: React.FC<
               type="checkbox"
               id={id}
               name="resource_type_group"
-              value={tab.resource_type_group ?? ""}
+              value={tab.resource_type_groups.join(",")}
               /* The label beside it reads as the count run onto the end of
                  the words -- "Courses12" -- so the control names itself. */
               aria-label={tab.label}
@@ -241,11 +239,7 @@ const ResourceTypeGroupChecklist: React.FC<
             />
             <label htmlFor={id} className="facet-label">
               <span className="facet-text">{tab.label}</span>
-              <span className="facet-count">
-                {tab.resource_type_group
-                  ? (counts?.[tab.resource_type_group] ?? 0)
-                  : null}
-              </span>
+              <span className="facet-count">{tabCount(tab, counts) ?? 0}</span>
             </label>
           </div>
         )
@@ -293,4 +287,3 @@ const ResourceTypeGroupTabs = {
 }
 
 export { ResourceTypeGroupTabs }
-export type { TabConfig }

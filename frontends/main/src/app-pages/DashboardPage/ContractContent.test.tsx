@@ -17,10 +17,8 @@ import {
   setupOrgDashboardMocks,
   setupProgramsAndCourses,
 } from "./CoursewareDisplay/test-utils"
-import {
-  CourseWithCourseRunsSerializerV2,
-  LanguageEnum,
-} from "@mitodl/mitxonline-api-axios/v2"
+import { LanguageEnum } from "@mitodl/mitxonline-api-axios/v0"
+import { CourseWithCourseRunsSerializerV2 } from "@mitodl/mitxonline-api-axios/v2"
 import { faker } from "@faker-js/faker/locale/en"
 import invariant from "tiny-invariant"
 import { useFeatureFlagEnabled } from "posthog-js/react"
@@ -47,8 +45,11 @@ const mockedUseFeatureFlagEnabled = jest.mocked(useFeatureFlagEnabled)
 const mockB2bEnrollMutate = jest.fn()
 jest.mock("api/mitxonline-hooks/enrollment", () => ({
   ...jest.requireActual("api/mitxonline-hooks/enrollment"),
+  // Enrollments go through useComplianceGate's mutateWithCompliance, which
+  // calls mutateAsync (and reset, on a fixable rejection).
   useCreateB2bEnrollment: () => ({
-    mutate: mockB2bEnrollMutate,
+    mutateAsync: mockB2bEnrollMutate,
+    reset: jest.fn(),
     isPending: false,
   }),
 }))

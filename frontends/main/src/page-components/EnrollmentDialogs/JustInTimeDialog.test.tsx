@@ -12,7 +12,7 @@ import {
   urls as mitxUrls,
   factories as mitxFactories,
 } from "api/mitxonline-test-utils"
-import type { User as MitxUser } from "@mitodl/mitxonline-api-axios/v2"
+import type { User as MitxUser } from "@mitodl/mitxonline-api-axios/v0"
 import type { PartialDeep } from "type-fest"
 import NiceModal from "@ebay/nice-modal-react"
 import { getDescriptionFor } from "ol-test-utilities"

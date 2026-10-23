@@ -2,6 +2,8 @@
 Django settings for celery.
 """
 
+from datetime import timedelta
+
 from celery.schedules import crontab
 from redbeat import RedBeatScheduler
 
@@ -15,9 +17,14 @@ will be a constant 60 minutes greater more than the schedule frequency
 EMBEDDING_SCHEDULE_MINUTES = get_int(name="EMBEDDING_SCHEDULE_MINUTES", default=60)
 QDRANT_EMBEDDINGS_TASK_LOOKBACK_WINDOW = EMBEDDING_SCHEDULE_MINUTES + 60
 
+# Released-content sweep: LOOKBACK without a watermark; OVERLAP re-covers a
+# failed indexing chain. Both must be at least the sweep interval.
+RELEASED_CONTENT_FILES_LOOKBACK = timedelta(days=1)
+RELEASED_CONTENT_FILES_SWEEP_OVERLAP = timedelta(hours=1)
+
 DEV_ENV = get_bool("DEV_ENV", False)  # noqa: FBT003
 USE_CELERY = True
-REDIS_URL = get_string("REDIS_URL", get_string("REDISCLOUD_URL", None))
+REDIS_URL = get_string("REDIS_URL", None)
 CELERY_BROKER_URL = get_string("CELERY_BROKER_URL", None)
 CELERY_RESULT_BACKEND = get_string("CELERY_RESULT_BACKEND", None)
 # Celery's 24h default lets reindex chord fan-outs (thousands of subtask
@@ -44,6 +51,10 @@ CELERY_BEAT_SCHEDULE = (
         "update_next-start-date-every-1-days": {
             "task": "learning_resources.tasks.update_next_start_date_and_prices",
             "schedule": crontab(minute=0, hour=7),  # 3:00am EST
+        },
+        "reindex-released-content-files-every-1-hours": {
+            "task": "learning_resources.tasks.reindex_released_content_files",
+            "schedule": crontab(minute=15),
         },
         "update_edx-courses-every-1-days": {
             "task": "learning_resources.tasks.get_mit_edx_data",
@@ -252,6 +263,46 @@ if (
             "warehouse-sync-program-certificates-every-1-days": {
                 "task": "profiles.tasks.SyncProgramCertificatesTask",
                 "schedule": crontab(minute=0, hour=9),  # 5:00am EDT / 4:00am EST
+                "kwargs": {"full_refresh": True},
+            },
+            # No-ops until ETLSourceOwnership names the warehouse for their
+            # pairs. Once a day, after 10:00 UTC, because the data platform
+            # builds the views once a day starting at 06:00 UTC. update-podcasts
+            # runs at 06:00 and 23:00 UTC with update-podcast-transcripts 30
+            # minutes after each, so once podcasts are flipped the transcript
+            # job runs about 13.5 hours after the load.
+            "warehouse-sync-podcasts-every-1-days": {
+                "task": "learning_resources.tasks.SyncPodcastsTask",
+                "schedule": crontab(minute=0, hour=10),
+                "kwargs": {"full_refresh": True},
+            },
+            "warehouse-sync-youtube-every-1-days": {
+                "task": "learning_resources.tasks.SyncYouTubeTask",
+                "schedule": crontab(minute=30, hour=10),
+                "kwargs": {"full_refresh": True},
+            },
+            # Programs look their courses up, so they follow the courses.
+            "warehouse-sync-xpro-courses-every-1-days": {
+                "task": "learning_resources.tasks.SyncXproCoursesTask",
+                "schedule": crontab(minute=0, hour=11),
+                "kwargs": {"full_refresh": True},
+            },
+            "warehouse-sync-xpro-programs-every-1-days": {
+                "task": "learning_resources.tasks.SyncXproProgramsTask",
+                "schedule": crontab(minute=30, hour=11),
+                "kwargs": {"full_refresh": True},
+            },
+            # 12:30, not 12:00, which update-mitxonline-courses-every-6-hours
+            # takes. The legacy task runs every 6 hours; the views change once a
+            # day.
+            "warehouse-sync-mitxonline-courses-every-1-days": {
+                "task": "learning_resources.tasks.SyncMITxOnlineCoursesTask",
+                "schedule": crontab(minute=30, hour=12),
+                "kwargs": {"full_refresh": True},
+            },
+            "warehouse-sync-mitxonline-programs-every-1-days": {
+                "task": "learning_resources.tasks.SyncMITxOnlineProgramsTask",
+                "schedule": crontab(minute=0, hour=13),
                 "kwargs": {"full_refresh": True},
             },
         }

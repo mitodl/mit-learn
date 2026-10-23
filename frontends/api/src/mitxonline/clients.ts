@@ -1,25 +1,28 @@
 import {
   B2bApi,
   BasketsApi,
+  UsersApi,
+  CountriesApi,
+  ProductsApi,
+  OrdersApi,
+} from "@mitodl/mitxonline-api-axios/v0"
+import { EnrollmentsApi as EnrollmentsApiV1 } from "@mitodl/mitxonline-api-axios/v1"
+import {
   CoursesApi,
   CourseCertificatesApi,
-  EnrollmentsApi,
   ProgramCollectionsApi,
   ProgramsApi,
   ProgramCertificatesApi,
-  UsersApi,
-  ProgramEnrollmentsApi,
   PagesApi,
-  CountriesApi,
-  ProductsApi,
   VerifiedProgramEnrollmentsApi,
-  OrdersApi,
 } from "@mitodl/mitxonline-api-axios/v2"
-// The enrollment eligibility endpoints are only in the v1 client module.
 import {
-  CourseRunsApi as CourseRunsV1Api,
-  ProgramsApi as ProgramsV1Api,
-} from "@mitodl/mitxonline-api-axios/v1"
+  CourseRunsApi as CourseRunsApiV3,
+  CoursesApi as CoursesApiV3,
+  EnrollmentsApi as EnrollmentsApiV3,
+  ProgramEnrollmentsApi,
+  ProgramsApi as ProgramsApiV3,
+} from "@mitodl/mitxonline-api-axios/v3"
 import axiosInstance from "./axios"
 
 const BASE_PATH = ""
@@ -42,6 +45,7 @@ const programCertificatesApi = new ProgramCertificatesApi(
 )
 
 const coursesApi = new CoursesApi(undefined, BASE_PATH, axiosInstance)
+const coursesV3Api = new CoursesApiV3(undefined, BASE_PATH, axiosInstance)
 
 const courseCertificatesApi = new CourseCertificatesApi(
   undefined,
@@ -49,7 +53,13 @@ const courseCertificatesApi = new CourseCertificatesApi(
   axiosInstance,
 )
 
-const courseRunEnrollmentsApi = new EnrollmentsApi(
+const courseRunEnrollmentsApi = new EnrollmentsApiV1(
+  undefined,
+  BASE_PATH,
+  axiosInstance,
+)
+
+const courseRunEnrollmentsV3Api = new EnrollmentsApiV3(
   undefined,
   BASE_PATH,
   axiosInstance,
@@ -73,9 +83,9 @@ const verifiedProgramEnrollmentsApi = new VerifiedProgramEnrollmentsApi(
 
 const ordersApi = new OrdersApi(undefined, BASE_PATH, axiosInstance)
 
-const courseRunsV1Api = new CourseRunsV1Api(undefined, BASE_PATH, axiosInstance)
+const courseRunsV3Api = new CourseRunsApiV3(undefined, BASE_PATH, axiosInstance)
 
-const programsV1Api = new ProgramsV1Api(undefined, BASE_PATH, axiosInstance)
+const programsV3Api = new ProgramsApiV3(undefined, BASE_PATH, axiosInstance)
 
 export {
   usersApi,
@@ -83,10 +93,12 @@ export {
   b2bApi,
   basketsApi,
   courseRunEnrollmentsApi,
+  courseRunEnrollmentsV3Api,
   programEnrollmentsApi,
   programsApi,
   programCollectionsApi,
   coursesApi,
+  coursesV3Api,
   programCertificatesApi,
   courseCertificatesApi,
   axiosInstance,
@@ -94,6 +106,6 @@ export {
   productsApi,
   verifiedProgramEnrollmentsApi,
   ordersApi,
-  courseRunsV1Api,
-  programsV1Api,
+  courseRunsV3Api,
+  programsV3Api,
 }

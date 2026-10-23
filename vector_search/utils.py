@@ -616,7 +616,19 @@ def _with_run_readable_id_fallback(serialized_document):
     }
 
 
-def _process_resource_embeddings(serialized_resources):
+def _process_resource_embeddings(serialized_resources, refreshed_point_ids=None):
+    """
+    Embed the resources whose embedding context changed, and refresh the payload
+    of the rest.
+
+    Args:
+        serialized_resources (iterable of dict): serialized learning resources
+        refreshed_point_ids (dict or None): when given, filled with
+            {resource id: point id} for every resource whose existing point had
+            its payload refreshed instead of being re-embedded
+    Returns:
+        generator of PointStruct or None: the points to upsert, if any
+    """
     docs = []
     metadata = []
     ids = []
@@ -641,6 +653,8 @@ def _process_resource_embeddings(serialized_resources):
         )
         if not should_generate_resource_embeddings(doc, embedding_context):
             update_learning_resource_payload(doc)
+            if refreshed_point_ids is not None and doc.get("id") is not None:
+                refreshed_point_ids[doc["id"]] = vector_point_id(vector_point_key(doc))
             continue
         metadata.append(doc)
         ids.append(vector_point_id(vector_point_key(doc)))
@@ -1149,7 +1163,18 @@ def embed_learning_resources(ids, resource_type, overwrite):  # noqa: PLR0915, C
 
         collection_name = RESOURCES_COLLECTION_NAME
 
-        points = _process_resource_embeddings(serialized_resources)
+        # A resource's current point is either upserted below or already exists
+        # and had its payload refreshed; any other point carrying its database
+        # id is stale, whether or not the resource was re-embedded this run.
+        current_point_ids = {}
+        points = _process_resource_embeddings(
+            serialized_resources, refreshed_point_ids=current_point_ids
+        )
+        points = list(points) if points else None
+        for point in points or []:
+            if (point.payload or {}).get("id") is not None:
+                current_point_ids[point.payload["id"]] = point.id
+        stale_points_filter = _stale_resource_points_filter(current_point_ids)
         _embed_course_metadata_as_contentfile(serialized_resources)
     else:
         serialized_resources = _iter_serialized_content_files(ids)
@@ -1277,29 +1302,71 @@ def embed_learning_resources(ids, resource_type, overwrite):  # noqa: PLR0915, C
             gc.collect()
 
         points = None  # Handled inside the loop
+        stale_points_filter = None
+    update_operations = []
     if points:
+        update_operations.append(
+            models.UpsertOperation(
+                upsert=models.PointsList(
+                    points=points,
+                )
+            )
+        )
+    if stale_points_filter:
+        # Runs even when nothing was re-embedded, so duplicates of resources
+        # whose payload was only refreshed are cleaned up too.
+        update_operations.append(
+            models.DeleteOperation(
+                delete=models.FilterSelector(filter=stale_points_filter)
+            )
+        )
+    if update_operations:
         client.batch_update_points(
             collection_name=collection_name,
-            update_operations=[
-                models.UpsertOperation(
-                    upsert=models.PointsList(
-                        points=points,
-                    )
-                ),
-            ],
+            update_operations=update_operations,
             wait=False,
         )
 
 
+def _stale_resource_points_filter(current_point_ids):
+    """
+    Return a filter matching the stale points of the given resources.
+
+    A resource point's id derives from its platform and readable_id, so a change
+    to either embeds the resource under a new id and leaves the old point
+    behind. A stale point carries the same database id in its payload but is not
+    the resource's current point, which is excluded so it is never the one
+    deleted.
+
+    Args:
+        current_point_ids (dict): {resource id: current point id}
+    Returns:
+        Filter or None: None when there are no resources
+    """
+    conditions = [
+        models.Filter(
+            must=[
+                models.FieldCondition(
+                    key="id", match=models.MatchValue(value=resource_id)
+                )
+            ],
+            must_not=[models.HasIdCondition(has_id=[point_id])],
+        )
+        for resource_id, point_id in current_point_ids.items()
+    ]
+    # An empty `should` matches every point -- never return one.
+    return models.Filter(should=conditions) if conditions else None
+
+
 def qdrant_content_files(resources):
     """
-    Select the published content files of every run of, or attached directly
+    Select the visible content files of every run of, or attached directly
     to, the published or test_mode resources in the `resources` queryset.
     Unlike OpenSearch (see learning_resources_search.utils.opensearch_runs),
     Qdrant carries every run, not just the best one.
     """
     eligible = resources.filter(Q(published=True) | Q(test_mode=True))
-    return ContentFile.objects.filter(published=True).filter(
+    return ContentFile.objects.visible().filter(
         Q(run__learning_resource__in=eligible) | Q(learning_resource__in=eligible)
     )
 
@@ -1374,52 +1441,105 @@ def _resource_payload_hits(search_result):
     The payload is the resource as the indexing serializer wrote it, so no
     database hydration is required -- but a payload written before a field was
     added carries no such key until it is reindexed, which the response
-    serializer makes up for. Dedupes on platform:readable_id and preserves the
-    Qdrant ranking, the same way the hydrated path does.
+    serializer makes up for. Dedupes on the resource and preserves the Qdrant
+    ranking, the same way the hydrated path does.
     """
     hits = []
     seen = set()
     for hit in search_result:
         payload = hit.payload or {}
-        readable_id = payload.get("readable_id")
-        if not readable_id:
+        if not payload.get("readable_id"):
             continue
-        key = f"{(payload.get('platform') or {}).get('code', '')}:{readable_id}"
-        if key in seen:
+        key = _resource_hit_key(payload)
+        platform_key = (
+            "platform_readable_id",
+            _resource_platform_key(
+                (payload.get("platform") or {}).get("code"), payload["readable_id"]
+            ),
+        )
+        if key in seen or platform_key in seen:
             continue
-        seen.add(key)
+        seen.update((key, platform_key))
         hits.append(_trim_indexing_only_list_fields(payload))
     return hits
 
 
+def _resource_platform_key(platform_code, readable_id):
+    return f"{platform_code or ''}:{readable_id}"
+
+
+def _resource_hit_key(payload):
+    """
+    Return the key a resource hit is deduped on.
+
+    The database id is stable across platform and readable_id changes, which
+    alter the point id and can leave a stale point for the same resource behind.
+    Points loaded from external systems may carry no id, so those fall back to
+    platform:readable_id.
+    """
+    if payload.get("id") is not None:
+        return ("id", payload["id"])
+    return (
+        "platform_readable_id",
+        _resource_platform_key(
+            (payload.get("platform") or {}).get("code"), payload.get("readable_id")
+        ),
+    )
+
+
 def _resource_vector_hits(search_result):
-    readable_ids = [
-        hit.payload.get("readable_id")
-        for hit in search_result
-        if hit.payload.get("readable_id")
-    ]
-    keys = [
-        key
-        for key in (
-            f"{(hit.payload.get('platform') or {}).get('code', '')}:"
-            f"{hit.payload.get('readable_id')}"
+    """
+    Hydrate resource hits from the database, deduped and in Qdrant ranking order.
+
+    Resources are looked up by the payload's database id, which survives
+    platform and readable_id changes. Points with no id (e.g. loaded from an
+    external system) are looked up by platform:readable_id instead.
+    """
+    keys = list(
+        dict.fromkeys(
+            _resource_hit_key(hit.payload)
             for hit in search_result
+            if hit.payload and hit.payload.get("readable_id")
         )
-        if key
+    )
+    resource_ids = [value for kind, value in keys if kind == "id"]
+    readable_ids = [
+        hit.payload["readable_id"]
+        for hit in search_result
+        if hit.payload
+        and hit.payload.get("readable_id")
+        and hit.payload.get("id") is None
     ]
-    hits = list(dict.fromkeys(keys))
-    """
-    Always lookup learning resources by readable_id for portability
-    in case we load points from external systems
-    """
-    resources_by_id = {
-        f"{(r.platform.code if r.platform else '')}:{r.readable_id}": r
-        for r in LearningResource.objects.for_serialization().filter(
-            readable_id__in=readable_ids
+    resources = (
+        LearningResource.objects.for_serialization().filter(
+            Q(id__in=resource_ids) | Q(readable_id__in=readable_ids)
         )
-    }
-    # Re-order to match the Qdrant ranking
-    ordered_resources = [resources_by_id[rid] for rid in hits if rid in resources_by_id]
+        if keys
+        else []
+    )
+    resources_by_key = {}
+    for resource in resources:
+        resources_by_key[("id", resource.id)] = resource
+        resources_by_key[
+            (
+                "platform_readable_id",
+                _resource_platform_key(
+                    resource.platform.code if resource.platform else "",
+                    resource.readable_id,
+                ),
+            )
+        ] = resource
+
+    # Re-order to match the Qdrant ranking. A point with an id and one without
+    # can still resolve to the same resource, so dedupe on the row as well.
+    ordered_resources = []
+    seen = set()
+    for key in keys:
+        resource = resources_by_key.get(key)
+        if resource is None or resource.id in seen:
+            continue
+        seen.add(resource.id)
+        ordered_resources.append(resource)
 
     return LearningResourceSerializer(ordered_resources, many=True).data
 
@@ -1863,6 +1983,22 @@ def remove_qdrant_records(ids, resource_type):
                     params[key] = value
         if params:
             remove_points_matching_params(params, collection_name=collection_name)
+    if resource_type != CONTENT_FILE_TYPE and ids:
+        # Also catch stale points the resources left behind under an old
+        # platform or readable_id, which the current values above cannot match.
+        qdrant_client().delete(
+            collection_name=collection_name,
+            points_selector=models.FilterSelector(
+                filter=models.Filter(
+                    must=[
+                        models.FieldCondition(
+                            key="id", match=models.MatchAny(any=list(ids))
+                        )
+                    ]
+                )
+            ),
+            wait=False,
+        )
 
 
 def remove_points_matching_params(

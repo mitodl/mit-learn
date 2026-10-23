@@ -51,7 +51,6 @@ import { matchOrganizationBySlug } from "@/common/utils"
 import { ForbiddenError, isForbiddenResponse } from "@/common/errors"
 import { FeatureFlags } from "@/common/feature_flags"
 import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
-import { useAppSearchParams } from "@/common/useAppSearchParams"
 import { PostHogEvents } from "@/common/constants"
 import { contractAnalyticsView } from "@/common/urls"
 import SectionHeader, {
@@ -62,7 +61,13 @@ import { LearnerRow } from "./LearnerRow"
 import { COLUMN_FLEX } from "./columns"
 import { DISPLAY_STATUS_LABEL, getDisplayStatus } from "./statusDisplay"
 import { ProgressGrid } from "./ProgressGrid"
-import { ALL, useLearnerFilters } from "./useLearnerFilters"
+import {
+  ALL,
+  SEARCH_MAX_LENGTH,
+  VIEWS,
+  useLearnerFilters,
+  type View,
+} from "./useLearnerFilters"
 
 /**
  * The B2B learner directory: one row per learner per course run under a
@@ -236,11 +241,6 @@ const ErrorRow = styled.div({
 const PAGE_SIZE = 25
 /** Below the API's max_page_size rather than pinned to it — that setting is env-overridable, and this only costs one extra round trip on a large contract. */
 const CSV_EXPORT_PAGE_SIZE = 500
-/** Matches the API's cap on `search`; truncated below rather than sent as-is, since a long paste would otherwise 422 and read as "Something went wrong loading learner data" — 422 isn't in the error-boundary set below. */
-const SEARCH_MAX_LENGTH = 254
-const VIEW_PARAM = "view"
-const VIEWS = { enrollments: "enrollments", grid: "grid" } as const
-type View = (typeof VIEWS)[keyof typeof VIEWS]
 const UNAVAILABLE_MESSAGE_ID = "learner-analytics-unavailable-message"
 
 const STATUS_OPTIONS: { value: string; label: string }[] = [
@@ -248,8 +248,7 @@ const STATUS_OPTIONS: { value: string; label: string }[] = [
   { value: "not_started", label: "Not started" },
   { value: "in_progress", label: "In progress" },
   { value: "passed", label: "Completed" },
-  /** Inert until a real consent field exists — OL_ANALYTICS_API_B2B_DASHBOARD_CONSENT_FAIL_OPEN=true keeps outcomes_shared always true, so this matches zero rows everywhere today. Not a bug; keep it. */
-  { value: "unknown", label: "No consent given" },
+  { value: "unknown", label: "Consent withheld" },
 ]
 
 const rowIdOf = (row: LearnerProgress) =>
@@ -264,36 +263,11 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
   orgSlug,
   contractSlug,
 }) => {
-  const [moduleFilter, setModuleFilter] = useState<string>(ALL)
-  const [page, setPage] = useState(1)
-  const [gridPage, setGridPage] = useState(1)
-  const initialView = useAppSearchParams().get(VIEW_PARAM)
-  const [view, setView] = useState<View>(
-    initialView === VIEWS.grid ? VIEWS.grid : VIEWS.enrollments,
-  )
-  const posthog = usePostHog()
-  const [isExporting, setIsExporting] = useState(false)
-  const [actionResult, setActionResult] = useState<{
-    message: string
-    severity: "success" | "error"
-  } | null>(null)
-  const [announcement, setAnnouncement] = useState("")
-  const queryClient = useQueryClient()
-
-  const resetPages = useCallback(() => {
-    setPage(1)
-    setGridPage(1)
-  }, [])
-
-  const applyFilterChange = useCallback(
-    (apply: () => void) => {
-      apply()
-      resetPages()
-    },
-    [resetPages],
-  )
-
   const {
+    view,
+    setView,
+    page,
+    setPage,
     searchQuery,
     setSearchQuery,
     clearSearch,
@@ -303,7 +277,24 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
     completionStatus,
     needsAttentionOnly,
     setNeedsAttentionOnly,
-  } = useLearnerFilters(resetPages)
+    moduleFilter,
+    setModuleFilter,
+    clearAll,
+  } = useLearnerFilters()
+  const posthog = usePostHog()
+  const [isExporting, setIsExporting] = useState(false)
+  const [actionResult, setActionResult] = useState<{
+    message: string
+    severity: "success" | "error"
+  } | null>(null)
+  const [announcement, setAnnouncement] = useState("")
+  const queryClient = useQueryClient()
+
+  const controlsRef = useRef<HTMLDivElement>(null)
+  const handleClearAll = () => {
+    clearAll()
+    controlsRef.current?.querySelector("input")?.focus()
+  }
 
   const handleViewChange = (_event: React.SyntheticEvent, next: View) => {
     if (next === view) return
@@ -314,15 +305,6 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
       contractSlug,
     })
     setView(next)
-    const params = new URLSearchParams(window.location.search)
-    if (next === VIEWS.grid) params.set(VIEW_PARAM, next)
-    else params.delete(VIEW_PARAM)
-    const query = params.toString()
-    window.history.replaceState(
-      null,
-      "",
-      `${window.location.pathname}${query ? `?${query}` : ""}${window.location.hash}`,
-    )
   }
 
   const {
@@ -365,6 +347,9 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
     [moduleOptions, moduleFilter],
   )
 
+  const moduleResolved =
+    moduleFilter === ALL || courseRunsQuery.isSuccess || courseRunsQuery.isError
+
   const listParams = useMemo(
     () => ({
       limit: PAGE_SIZE,
@@ -390,7 +375,7 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
       contractId ?? "",
       listParams,
     ),
-    enabled: canQuery && view === VIEWS.enrollments,
+    enabled: canQuery && moduleResolved && view === VIEWS.enrollments,
     placeholderData: keepPreviousData,
   })
 
@@ -403,6 +388,20 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
     enabled: canQuery,
   })
 
+  const showsLearnerCount =
+    view === VIEWS.enrollments &&
+    needsAttentionOnly &&
+    !debouncedSearch &&
+    statusFilter === ALL &&
+    activeModule === ALL
+  const needsAttentionQuery = useQuery({
+    ...analyticsContractQueries.needsAttention(orgUuid ?? "", contractId ?? ""),
+    enabled: canQuery && showsLearnerCount,
+  })
+  const learnersNeedingAttention = showsLearnerCount
+    ? (needsAttentionQuery.data?.data[0]?.learners_needing_attention ?? null)
+    : null
+
   const rows = rowsQuery.data?.data ?? []
   const filteredCount = rowsQuery.data?.total_count ?? 0
   const withheldCount = rowsQuery.data?.outcomes_withheld_count ?? 0
@@ -411,7 +410,18 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
   const hidesWithheldLearners = needsAttentionOnly && contractWithheldCount > 0
   const totalPages = Math.ceil(filteredCount / PAGE_SIZE)
   const isStale = rowsQuery.isPlaceholderData || rowsQuery.isFetching
-  const isBusy = rowsQuery.isLoading || isStale
+  const isBusy = rowsQuery.isPending || isStale
+
+  useEffect(() => {
+    if (
+      view === VIEWS.enrollments &&
+      !isBusy &&
+      totalPages > 0 &&
+      page > totalPages
+    ) {
+      setPage(totalPages)
+    }
+  }, [view, isBusy, page, totalPages, setPage])
 
   /**
    * Only 400/401/403 responses throw to an error boundary (see
@@ -427,7 +437,8 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
   }
 
   const handleExport = useCallback(async () => {
-    if (isExporting || !canQuery || !orgUuid || !contractId) return
+    if (isExporting || !canQuery || !moduleResolved || !orgUuid || !contractId)
+      return
     setIsExporting(true)
     try {
       const all: LearnerProgress[] = []
@@ -497,6 +508,7 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
   }, [
     isExporting,
     canQuery,
+    moduleResolved,
     orgUuid,
     contractId,
     contractSlug,
@@ -514,7 +526,6 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
     }
     if (lastAnnounced.current === key) return
     lastAnnounced.current = key
-
     setAnnouncement(
       `${filteredCount} ${filteredCount === 1 ? "result" : "results"}${
         hidesWithheldLearners
@@ -577,9 +588,17 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
     )
   }
 
+  const hasActiveFilters =
+    !!searchQuery ||
+    statusFilter !== ALL ||
+    (view === VIEWS.enrollments && activeModule !== ALL) ||
+    needsAttentionOnly
+
   const emptyMessage = debouncedSearch
     ? "No learners match your search."
-    : statusFilter !== ALL || activeModule !== ALL || needsAttentionOnly
+    : statusFilter !== ALL ||
+        (view === VIEWS.enrollments && activeModule !== ALL) ||
+        needsAttentionOnly
       ? "No learners match this filter."
       : "No learners found."
 
@@ -603,9 +622,9 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
             <ExportWrapper>
               <Button
                 variant="bordered"
-                aria-disabled={isExporting || !canQuery}
+                aria-disabled={isExporting || !canQuery || !moduleResolved}
                 aria-describedby={canQuery ? undefined : UNAVAILABLE_MESSAGE_ID}
-                aria-busy={isExporting}
+                aria-busy={isExporting || (canQuery && !moduleResolved)}
                 onClick={handleExport}
               >
                 {isExporting ? "Exporting…" : "Export learners"}
@@ -657,11 +676,19 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
                       ? "One row per learner, one column per module"
                       : totalEnrollments === null
                         ? "Loading…"
-                        : `${filteredCount} of ${totalEnrollments} enrollments`
+                        : `${filteredCount} of ${totalEnrollments} enrollments${
+                            learnersNeedingAttention === null
+                              ? ""
+                              : ` (${learnersNeedingAttention} ${
+                                  learnersNeedingAttention === 1
+                                    ? "learner"
+                                    : "learners"
+                                })`
+                          }`
                   }
                   asOfPlacement="external"
                 />
-                <ControlsRight>
+                <ControlsRight ref={controlsRef}>
                   <StyledSearchInput
                     placeholder="Search name or email"
                     value={searchQuery}
@@ -692,9 +719,7 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
                       error={courseRunsQuery.isError && !courseRunsQuery.data}
                       errorText="Couldn't load modules. Reload to try again."
                       onChange={(event) =>
-                        applyFilterChange(() =>
-                          setModuleFilter(String(event.target.value)),
-                        )
+                        setModuleFilter(String(event.target.value))
                       }
                     />
                   ) : null}
@@ -707,6 +732,16 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
                       }
                     />
                   </CheckboxField>
+                  <Button
+                    variant="tertiary"
+                    size="medium"
+                    onClick={handleClearAll}
+                    style={{
+                      visibility: hasActiveFilters ? "visible" : "hidden",
+                    }}
+                  >
+                    Clear filters
+                  </Button>
                 </ControlsRight>
               </ControlsRow>
 
@@ -729,7 +764,8 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
                   <ConsentNotice component="p">
                     {withheldCount} of these {filteredCount} enrollments belong
                     to learners who have not agreed to share their progress.
-                    Their status, grade and activity read “No consent given”.
+                    Their status, grade and activity read “Declined” or “Consent
+                    not recorded”.
                   </ConsentNotice>
                 ) : null}
 
@@ -751,7 +787,7 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
 
                 <TableCard>
                   <VisuallyHidden role="status" aria-atomic="true">
-                    {rowsQuery.isLoading
+                    {rowsQuery.isPending
                       ? "Loading learners"
                       : filteredCount === 0
                         ? emptyMessage
@@ -785,7 +821,7 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
                       </TableHeaderRow>
                     </div>
                     <TableBody role="rowgroup" $stale={isStale}>
-                      {rowsQuery.isLoading ? (
+                      {rowsQuery.isPending ? (
                         [1, 2, 3].map((key) => (
                           <TableRow key={key} role="row">
                             <div role="cell" style={{ width: "100%" }}>
@@ -844,8 +880,8 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
                     }
                     courseRunsFetching={courseRunsQuery.isFetching}
                     onRetryCourseRuns={() => courseRunsQuery.refetch()}
-                    page={gridPage}
-                    onPageChange={setGridPage}
+                    page={page}
+                    onPageChange={setPage}
                     emptyMessage={emptyMessage}
                   />
                 ) : null}

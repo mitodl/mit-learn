@@ -19,6 +19,13 @@ type SimpleSelectProps = Pick<
    * reader unnamed.
    */
   | "aria-label"
+  /**
+   * The menu renders in a portal, outside anything a `styled()` on this can
+   * reach, so a caller that needs to dress it says so here.
+   */
+  | "MenuProps"
+  | "disabled"
+  | "inputProps"
 > & {
   /**
    * The options for the dropdown
@@ -81,6 +88,7 @@ type SimpleSelectFieldProps<V = unknown> = Pick<
   | "name"
   | "className"
   | "renderValue"
+  | "disabled"
 > & {
   /**
    * The options for the dropdown

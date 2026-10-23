@@ -18,7 +18,7 @@ import {
 import { SILENCE_ERROR_TOAST } from "api/mutation-meta"
 import { mitxUserQueries } from "api/mitxonline-hooks/user"
 import { useQuery } from "@tanstack/react-query"
-import type { BulkAssignError } from "@mitodl/mitxonline-api-axios/v2"
+import type { BulkAssignError } from "@mitodl/mitxonline-api-axios/v0"
 
 // Shared metrics — must be identical between EmailHighlightLayer and EmailTextarea
 // so the overlay and the real textarea render text in exactly the same position.
@@ -290,9 +290,10 @@ const AssignSeatsSection: React.FC<AssignSeatsSectionProps> = ({
 
   // Debounce the live-region text so screen readers aren't spammed on every keystroke.
   useEffect(() => {
+    if (announcement === debouncedAnnouncement) return
     const id = setTimeout(() => setDebouncedAnnouncement(announcement), 600)
     return () => clearTimeout(id)
-  }, [announcement])
+  }, [announcement, debouncedAnnouncement])
 
   // Severity and headline message for the bulk-assign outcome, derived from the
   // result shape (and surfaced via an inline Alert).

@@ -1,5 +1,5 @@
 import { faker } from "@faker-js/faker/locale/en"
-import { UserOrganizationPage } from "@mitodl/mitxonline-api-axios/v2"
+import { UserOrganizationPage } from "@mitodl/mitxonline-api-axios/v0"
 import { mergeOverrides } from "ol-test-utilities"
 
 const organization = (

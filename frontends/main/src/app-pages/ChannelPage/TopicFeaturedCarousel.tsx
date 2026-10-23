@@ -1,18 +1,11 @@
 import React from "react"
 import { styled } from "ol-components"
 import { useQuery } from "@tanstack/react-query"
-import { ChannelTypeEnum } from "api/v0"
 import { channelQueries } from "api/hooks/channels"
 import ResourceCarousel from "@/page-components/ResourceCarousel/ResourceCarousel"
 import type { TabConfig } from "@/page-components/ResourceCarousel/types"
-
-/**
- * How many items of the learning path to carry into the carousel.
- *
- * The row shows four at desktop width and the carousel pages through the rest,
- * so this is the size of the pool rather than what is on screen.
- */
-const FEATURED_COUNT = 12
+import { FEATURED_COUNT, featuredParams } from "./topicFeatured"
+import type { FeaturedChannelType } from "./topicFeatured"
 
 /**
  * The design's Featured section is a 32px heading row, 32px, then the cards,
@@ -49,6 +42,8 @@ const Container = styled.div(({ theme }) => ({
 type TopicFeaturedCarouselProps = {
   /** The channel's `name`, as it appears in the page's own URL. */
   name: string
+  /** Which kind of channel the name belongs to -- the path carries both. */
+  channelType: FeaturedChannelType
 }
 
 /**
@@ -69,16 +64,39 @@ type TopicFeaturedCarouselProps = {
  * heading above a blank strip reads as a failure, and the sections below it
  * stand on their own.
  */
+/**
+ * Whether the row will draw anything.
+ *
+ * Exported because the hero around it is drawn differently with no Featured
+ * row to carry -- the design frames the photograph for the shorter hero that
+ * leaves, not for a tall one cropped down. React Query serves one request
+ * however many readers ask.
+ *
+ * Reads as "not empty" while loading, so the hero does not frame itself for a
+ * short page and then reframe when the row arrives.
+ */
+const useTopicFeaturedIsEmpty = (
+  channelType: FeaturedChannelType,
+  name: string,
+): boolean => {
+  const params = React.useMemo(
+    () => featuredParams(channelType, name),
+    [channelType, name],
+  )
+  const { data, isLoading } = useQuery({
+    ...channelQueries.featured(params),
+    enabled: Boolean(name),
+  })
+  return !name || (!isLoading && !data?.results?.length)
+}
+
 const TopicFeaturedCarousel: React.FC<TopicFeaturedCarouselProps> = ({
   name,
+  channelType,
 }) => {
   const params = React.useMemo(
-    () => ({
-      channel_type: ChannelTypeEnum.Topic,
-      name,
-      limit: FEATURED_COUNT,
-    }),
-    [name],
+    () => featuredParams(channelType, name),
+    [channelType, name],
   )
 
   const config: TabConfig[] = React.useMemo(
@@ -92,13 +110,7 @@ const TopicFeaturedCarousel: React.FC<TopicFeaturedCarouselProps> = ({
    * its children 64px apart, so an empty one is 64px of blank hero. The same
    * query answers both; React Query serves one request for the two readers.
    */
-  const { data, isLoading } = useQuery({
-    ...channelQueries.featured(params),
-    enabled: Boolean(name),
-  })
-  const isEmpty = !isLoading && !data?.results?.length
-
-  if (!name || isEmpty) {
+  if (useTopicFeaturedIsEmpty(channelType, name)) {
     return null
   }
 
@@ -115,4 +127,4 @@ const TopicFeaturedCarousel: React.FC<TopicFeaturedCarouselProps> = ({
 }
 
 export default TopicFeaturedCarousel
-export { FEATURED_COUNT }
+export { FEATURED_COUNT, useTopicFeaturedIsEmpty }

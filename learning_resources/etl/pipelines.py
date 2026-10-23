@@ -28,7 +28,7 @@ from learning_resources.etl.constants import (
     ProgramLoaderConfig,
 )
 from learning_resources.etl.exceptions import ExtractException
-from learning_resources.etl.ownership import may_write
+from learning_resources.etl.ownership import CONTENT_FILE, may_write, when_owned
 from learning_resources.models import LearningResource
 
 log = logging.getLogger(__name__)
@@ -38,23 +38,6 @@ load_courses = curry(loaders.load_courses)
 
 COURSE = LearningResourceType.course.name
 PROGRAM = LearningResourceType.program.name
-
-
-def when_owned(etl_source: str, resource_types: str | list[str], pipeline):
-    """
-    Wrap a pipeline so it runs only while the current pipeline owns what it writes.
-
-    The check comes before extract, so a source that was cut over to the warehouse
-    pull or the webhook costs the legacy task one query per run instead of a full
-    extract and transform.
-    """
-
-    def run(*args, **kwargs):
-        if not may_write(etl_source, resource_types):
-            return []
-        return pipeline(*args, **kwargs)
-
-    return run
 
 
 mit_edx_courses_etl = when_owned(
@@ -192,6 +175,9 @@ def ocw_courses_etl(
     """
     if not may_write(ETLSource.ocw.name, COURSE):
         return
+    skip_content_files = skip_content_files or not may_write(
+        ETLSource.ocw.name, CONTENT_FILE
+    )
 
     s3_resource = boto3.resource(
         "s3",

@@ -18,8 +18,16 @@ import {
   offerorQueries,
 } from "api/hooks/learningResources"
 import { channelQueries } from "api/hooks/channels"
+import {
+  asRedesignedChannelType,
+  featuredParams,
+} from "@/app-pages/ChannelPage/topicFeatured"
 import { testimonialsQueries } from "api/hooks/testimonials"
 import getSearchParams from "@/page-components/SearchDisplay/getSearchParams"
+import {
+  TOPIC_TABS,
+  findActiveTab,
+} from "@/page-components/SearchDisplay/tabConfigs"
 import validateRequestParams from "@/page-components/SearchDisplay/validateRequestParams"
 import {
   getConstantSearchParams,
@@ -68,6 +76,9 @@ const Page: React.FC<AppPageProps<"/c/[channelType]/[name]">> = async ({
   const search = await searchParams
 
   const queryClient = getQueryClient()
+  /* Which of the redesigned pages this is, if it is one of them -- the
+     Featured row and the tabs' default both turn on the answer. */
+  const redesignedChannelType = asRedesignedChannelType(channelType)
 
   const channel = await queryClient.fetchQueryOr404(
     channelQueries.detailByType(channelType, name),
@@ -84,6 +95,20 @@ const Page: React.FC<AppPageProps<"/c/[channelType]/[name]">> = async ({
       ),
     channelType === ChannelTypeEnum.Unit &&
       queryClient.prefetchQuery(testimonialsQueries.list({ offerors: [name] })),
+    /**
+     * The topic hero is drawn differently with no Featured row to carry, so
+     * the answer has to be in hand for the first paint: without it the hero
+     * renders as though there were a row, then reframes when the row turns
+     * out not to exist.
+     *
+     * Not conditional on the redesign flag, which a server component cannot
+     * read. The row is the redesign's, so this is a request the old topic and
+     * department pages have no use for.
+     */
+    redesignedChannelType &&
+      queryClient.prefetchQuery(
+        channelQueries.featured(featuredParams(redesignedChannelType, name)),
+      ),
   ])
 
   const offerors =
@@ -119,9 +144,11 @@ const Page: React.FC<AppPageProps<"/c/[channelType]/[name]">> = async ({
     urlParams,
   )
 
+  // @ts-expect-error -- this will error until mitodl/mit-learn-api-axios is updated
+  const requestParams: Parameters<typeof getSearchParams>[0]["requestParams"] =
+    validateRequestParams(search)
   const searchRequest = getSearchParams({
-    // @ts-expect-error -- this will error until mitodl/mit-learn-api-axios is updated
-    requestParams: validateRequestParams(search),
+    requestParams,
     constantSearchParams,
     facetNames,
     page: Number(search.page ?? 1),
@@ -132,29 +159,61 @@ const Page: React.FC<AppPageProps<"/c/[channelType]/[name]">> = async ({
   // NEXT_PUBLIC_DISABLE_HYBRID_SEARCH alongside the PostHog flag is what keeps
   // this prefetch on the same endpoint the client will query.
   const isHybridSearch = isHybridSearchEnabled(urlParams)
-  const hasSearchTerm =
-    typeof searchRequest.q === "string" && searchRequest.q.trim() !== ""
+  // The admin score tuning params are part of the request, so the prefetch
+  // must include them or the client would refetch on hydration.
+  const scoreTuning = getVectorScoreTuning(urlParams)
 
-  if (isHybridSearch) {
-    // The admin score tuning params are part of the request, so the prefetch
-    // must include them or the client would refetch on hydration.
-    const scoreTuning = getVectorScoreTuning(urlParams)
-    await queryClient.prefetchQuery(
-      learningResourceQueries.vectorSearch(
-        hasSearchTerm
-          ? toUnfacetedVectorSearchParams(
-              searchRequest,
-              constantSearchParams,
-              scoreTuning,
-            )
-          : toVectorSearchParams(searchRequest, scoreTuning),
-      ),
-    )
-  } else {
-    await queryClient.prefetchQuery(
-      learningResourceQueries.search(searchRequest as LRSearchRequest),
+  const prefetchSearch = (request: typeof searchRequest) => {
+    const hasSearchTerm =
+      typeof request.q === "string" && request.q.trim() !== ""
+    if (isHybridSearch) {
+      return queryClient.prefetchQuery(
+        learningResourceQueries.vectorSearch(
+          hasSearchTerm
+            ? toUnfacetedVectorSearchParams(
+                request,
+                constantSearchParams,
+                scoreTuning,
+              )
+            : toVectorSearchParams(request, scoreTuning),
+        ),
+      )
+    }
+    return queryClient.prefetchQuery(
+      learningResourceQueries.search(request as LRSearchRequest),
     )
   }
+
+  /**
+   * A redesigned page opens on courses and programs, so a bare URL to one
+   * searches for those where every other page searches everything. Which page
+   * the client draws is a PostHog flag the server cannot read, so both are
+   * prefetched until the flag is gone -- either way the first render is the
+   * server's rather than a second request.
+   *
+   * Every channel type the redesign covers, not the topic alone: they draw
+   * the same tabs, so a bare URL to any of them opens on the same groups, and
+   * a type left out here is a page that discards what was prefetched for it
+   * and asks again.
+   */
+  const redesignDefaultGroups =
+    redesignedChannelType && !search.resource_type_group
+      ? findActiveTab(TOPIC_TABS, []).resource_type_groups
+      : []
+
+  await Promise.all([
+    prefetchSearch(searchRequest),
+    redesignDefaultGroups.length > 0 &&
+      prefetchSearch(
+        getSearchParams({
+          requestParams,
+          constantSearchParams,
+          resourceTypeGroups: redesignDefaultGroups,
+          facetNames,
+          page: Number(search.page ?? 1),
+        }),
+      ),
+  ])
 
   return (
     <HydrationBoundary state={dehydrate(queryClient)}>

@@ -1,4 +1,4 @@
-import { RiCheckboxCircleLine } from "@remixicon/react"
+import { RiCheckboxCircleFill, RiCheckboxCircleLine } from "@remixicon/react"
 import React from "react"
 import {
   styled,
@@ -11,23 +11,18 @@ import {
 } from "ol-components"
 import { SearchSubscriptionToggle } from "@/page-components/SearchSubscriptionToggle/SearchSubscriptionToggle"
 import { useChannelDetail } from "api/hooks/channels"
-import { LearningResourceTopic, SourceTypeEnum } from "api"
+import { SourceTypeEnum } from "api"
 import { HOME as HOME_URL } from "../../common/urls"
 import { CHANNEL_TYPE_BREADCRUMB_TARGETS } from "./ChannelPageTemplate"
-import { ChannelTypeEnum, TopicChannel } from "api/v0"
+import { ChannelTypeEnum, TopicChannel, DepartmentChannel } from "api/v0"
 import { useLearningResourceTopic } from "api/hooks/learningResources"
 import { backgroundSrcSetCSS } from "ol-utilities"
 import invariant from "tiny-invariant"
 import topicBannerDefault from "@/public/images/backgrounds/bg-default-topics.jpg"
-import TopicFeaturedCarousel from "./TopicFeaturedCarousel"
-
-const ChildrenContainer = styled.div(({ theme }) => ({
-  /* The design sets the search card 64px below the hero. */
-  paddingTop: "64px",
-  [theme.breakpoints.down("sm")]: {
-    paddingTop: "24px",
-  },
-}))
+import type { FeaturedChannelType } from "./topicFeatured"
+import TopicFeaturedCarousel, {
+  useTopicFeaturedIsEmpty,
+} from "./TopicFeaturedCarousel"
 
 const BannerSkeleton = styled(Skeleton)(({ theme }) => ({
   backgroundColor: theme.custom.colors.lightGray2,
@@ -104,8 +99,8 @@ const TopicHero = styled.section(({ theme }) => ({
  * up the scale to chase it, the band fades its own left edge out, which holds
  * whatever the wash is doing behind it.
  */
-const HeroPhoto = styled.div<{ backgroundUrl: string }>(
-  ({ theme, backgroundUrl }) => ({
+const HeroPhoto = styled.div<{ backgroundUrl: string; wholeWidth: boolean }>(
+  ({ theme, backgroundUrl, wholeWidth }) => ({
     position: "absolute",
     top: 0,
     left: "22%",
@@ -120,6 +115,40 @@ const HeroPhoto = styled.div<{ backgroundUrl: string }>(
     maskImage: HERO_PHOTO_EDGE_FADE,
     WebkitMaskImage: HERO_PHOTO_EDGE_FADE,
     backgroundRepeat: "no-repeat",
+    /**
+     * With no Featured row, the design draws a different photograph: one
+     * across the whole hero rather than a band three quarters of it wide, and
+     * framed by width rather than cropped to fill.
+     *
+     * It states the image at the hero's own width and 509.15% of its height,
+     * lifted 294.19% of that height above the top. The artwork is 1800x1203,
+     * and 1676/1.4963 is exactly the 1120px that 509.15% of the design's 220px
+     * hero comes to -- so the image is simply laid across the width at its own
+     * proportions, and what the numbers describe is which slice of it that
+     * leaves showing. Putting the lift over the overflow,
+     * -294.19 / (1 - 509.15), gives the 71.9% below, and stating it that way
+     * holds the same framing at every width rather than only at 1676.
+     *
+     * No mask: the band needed one because it had a left edge inside the hero
+     * to soften, and a photograph across the whole width has none. The wash
+     * is then the only thing taking it off, which is how the design builds it.
+     *
+     * Above `sm` only, so the narrow design -- drawn separately, and framed by
+     * height rather than width -- keeps its own crop whether or not the
+     * channel features anything.
+     */
+    ...(wholeWidth
+      ? {
+          [theme.breakpoints.up("sm")]: {
+            left: 0,
+            height: "100%",
+            backgroundSize: "100% auto",
+            backgroundPosition: "50% 71.903%",
+            maskImage: "none",
+            WebkitMaskImage: "none",
+          },
+        }
+      : {}),
     /**
      * A phone's band is taller than it is wide, and `cover` fills whichever
      * axis needs the most magnifying -- so there it fills the height and fits
@@ -150,6 +179,24 @@ const HERO_SCRIM_FROM_LEFT =
 const HERO_SCRIM_FROM_TOP = `linear-gradient(180deg, rgba(255, 255, 255, 0) calc(${HERO_FADE_END} * 0.0489), rgb(255, 255, 255) ${HERO_FADE_END})`
 
 /**
+ * The same two, as the design states them for the hero with no Featured row.
+ *
+ * Both are shares of that hero rather than distances, which is why they are
+ * separate values: the wash from the top is not finished when the hero ends
+ * -- white is 119.12% of the way down -- so the photograph is still faintly
+ * there along the bottom edge, which is what the design draws and what
+ * finishing the wash at the hero's own height washes away.
+ *
+ * The angles are the design's too. Figma states a gradient by where its
+ * handles fall, so an angle belongs to the frame it was measured in: 255.69
+ * is this hero's, where 259.54 above is the taller one's.
+ */
+const HERO_SCRIM_UNFEATURED_FROM_LEFT =
+  "linear-gradient(255.69deg, rgba(255, 255, 255, 0) 33.745%, rgb(255, 255, 255) 74.054%)"
+const HERO_SCRIM_UNFEATURED_FROM_TOP =
+  "linear-gradient(179.22deg, rgba(255, 255, 255, 0) 12.703%, rgb(255, 255, 255) 119.12%)"
+
+/**
  * The white wash over the photo, as its own layer rather than extra values on
  * the hero's `background-image`.
  *
@@ -162,26 +209,40 @@ const HERO_SCRIM_FROM_TOP = `linear-gradient(180deg, rgba(255, 255, 255, 0) calc
  * from the left, behind the text, and the second draws it down from the top
  * over `HERO_FADE_END`, finishing exactly where the photograph's band ends.
  */
-const HeroScrim = styled.div(({ theme }) => ({
-  position: "absolute",
-  inset: 0,
-  pointerEvents: "none",
-  backgroundImage: [HERO_SCRIM_FROM_LEFT, HERO_SCRIM_FROM_TOP].join(", "),
-  /**
-   * Only the wash from the top on a narrow screen.
-   *
-   * The other one clears a column for text to sit *beside* the photograph,
-   * and a phone has no beside: the text runs the full width, so that gradient
-   * closes over the photograph behind the breadcrumb and the description and
-   * leaves both on flat white. The design draws them with the photograph
-   * showing through, which is what is left once this one goes -- the wash
-   * from the top still carries it off before the rest of the page, and the
-   * photograph's own left edge still fades under the start of each line.
-   */
-  [theme.breakpoints.down("sm")]: {
-    backgroundImage: HERO_SCRIM_FROM_TOP,
-  },
-}))
+const HeroScrim = styled.div<{ unfeatured: boolean }>(
+  ({ theme, unfeatured }) => ({
+    position: "absolute",
+    inset: 0,
+    pointerEvents: "none",
+    backgroundImage: [HERO_SCRIM_FROM_LEFT, HERO_SCRIM_FROM_TOP].join(", "),
+    /* The hero with nothing to feature, which the design states on its own --
+       see the values above. Above `sm`, with the photograph it belongs to. */
+    ...(unfeatured
+      ? {
+          [theme.breakpoints.up("sm")]: {
+            backgroundImage: [
+              HERO_SCRIM_UNFEATURED_FROM_LEFT,
+              HERO_SCRIM_UNFEATURED_FROM_TOP,
+            ].join(", "),
+          },
+        }
+      : {}),
+    /**
+     * Only the wash from the top on a narrow screen.
+     *
+     * The other one clears a column for text to sit *beside* the photograph,
+     * and a phone has no beside: the text runs the full width, so that gradient
+     * closes over the photograph behind the breadcrumb and the description and
+     * leaves both on flat white. The design draws them with the photograph
+     * showing through, which is what is left once this one goes -- the wash
+     * from the top still carries it off before the rest of the page, and the
+     * photograph's own left edge still fades under the start of each line.
+     */
+    [theme.breakpoints.down("sm")]: {
+      backgroundImage: HERO_SCRIM_FROM_TOP,
+    },
+  }),
+)
 
 /**
  * The Follow control as the design draws it: a grey pill, not the primary red
@@ -196,6 +257,24 @@ const HeroScrim = styled.div(({ theme }) => ({
  * stretch the pill, and it sizes its icon slot to the 14px its own small
  * variant uses, which leaves the 24px icon overflowing a short line box.
  */
+/**
+ * The tick once following: filled, and green rather than the pill's grey.
+ *
+ * The design system's own Green, which the published token set does not carry
+ * -- its `green` is a darker #008000 and `darkGreen` darker again, and against
+ * the pill's near-white neither reads as the design's.
+ *
+ * Repeated four times because `FollowPill` colours every icon inside it, and
+ * does it again on hover: that rule names the pill, the hover, the not-
+ * disabled and the svg, so three doubled classes still lose to it and the
+ * tick would go grey under the pointer. Four of them outweigh its three.
+ */
+const FollowingIcon = styled(RiCheckboxCircleFill)({
+  "&&&&": {
+    color: "#00ad00",
+  },
+})
+
 const FollowPill = styled.div(({ theme }) => ({
   "button, a": {
     backgroundColor: theme.custom.colors.lightGray1,
@@ -265,6 +344,9 @@ const HeroInner = styled.div(({ theme }) => ({
  * width, straight across it -- so the design gives each of them a pane of its
  * own to be read against: white at three quarters, which lifts the words off
  * the photograph while leaving it visible underneath.
+ *
+ * Only where there is a photograph. A hero that is plain white already reads,
+ * and a white pane on white draws a box around the words for nothing.
  */
 const HERO_TEXT_PANEL = {
   backgroundColor: "rgba(255, 255, 255, 0.75)",
@@ -276,7 +358,9 @@ const HERO_TEXT_PANEL = {
  * Held to 736px, as the design has it: the description is a paragraph to read,
  * and the full container width would run it to an uncomfortable measure.
  */
-const BannerArea = styled.div(({ theme }) => ({
+const BannerArea = styled("div", {
+  shouldForwardProp: (prop) => prop !== "overPhoto",
+})<{ overPhoto: boolean }>(({ theme, overPhoto }) => ({
   display: "flex",
   flexDirection: "column",
   /* The design draws this at 16px where a Featured row follows and 32px where
@@ -304,9 +388,9 @@ const BannerArea = styled.div(({ theme }) => ({
   },
   /* The 8px here replaces the zeroed bottom padding above, which is why this
      follows it rather than sitting with the other narrow-screen rules. */
-  [theme.breakpoints.down("sm")]: {
-    "> span": HERO_TEXT_PANEL,
-  },
+  ...(overPhoto
+    ? { [theme.breakpoints.down("sm")]: { "> span": HERO_TEXT_PANEL } }
+    : {}),
 }))
 
 const TitleBlock = styled.div({
@@ -346,13 +430,15 @@ const TopicTitle = styled.h1(({ theme }) => ({
  * the design file and the design system have drifted apart on this token. The
  * line height is set here to the design's, so the paragraph reads as drawn.
  */
-const TopicDescription = styled(Typography)(({ theme }) => ({
+const TopicDescription = styled(Typography, {
+  shouldForwardProp: (prop) => prop !== "overPhoto",
+})<{ overPhoto: boolean }>(({ theme, overPhoto }) => ({
   color: theme.custom.colors.darkGray2,
   lineHeight: "26px",
   width: "90%",
   [theme.breakpoints.down("sm")]: {
     width: "100%",
-    ...HERO_TEXT_PANEL,
+    ...(overPhoto ? HERO_TEXT_PANEL : {}),
   },
 }))
 
@@ -365,40 +451,24 @@ const SearchArea = styled.div(({ theme }) => ({
   backgroundColor: theme.custom.colors.lightGray1,
 }))
 
-type SubTopicBreadcrumbsProps = {
-  topic: LearningResourceTopic | undefined
-  parentTopicId: number
-}
-
-const SubTopicBreadcrumbs: React.FC<SubTopicBreadcrumbsProps> = (props) => {
-  const { topic, parentTopicId } = props
-  const parentTopic = useLearningResourceTopic(parentTopicId).data
-  if (!topic?.parent) {
-    return null
-  }
-  return (
-    <BreadcrumbsInternal
-      current={parentTopic?.name}
-      currentHref={parentTopic?.channel_url}
-    />
-  )
-}
-
 const BreadcrumbsInternal: React.FC<
-  Pick<BreadcrumbsProps, "current" | "currentHref">
-> = (props) => {
+  Pick<BreadcrumbsProps, "current" | "currentHref"> & {
+    channelType: FeaturedChannelType
+  }
+> = ({ channelType, ...props }) => {
   return (
-    /* "light" is the variant for a light ground: black links over the topic's
-       own silverGrayDark current page, which is what the design draws. "dark"
-       renders them white, which the hero's pale wash would swallow. */
+    /* "light" is the variant for a light ground: black links over the
+       channel's own silverGrayDark current page, which is what the design
+       draws. "dark" renders them white, which the hero's pale wash would
+       swallow. */
     <Breadcrumbs
       variant="light"
       separatorStyle={{ margin: "0 0 0 0" }}
       ancestors={[
         { href: HOME_URL, label: "Home" },
         {
-          href: CHANNEL_TYPE_BREADCRUMB_TARGETS[ChannelTypeEnum.Topic].href,
-          label: CHANNEL_TYPE_BREADCRUMB_TARGETS[ChannelTypeEnum.Topic].label,
+          href: CHANNEL_TYPE_BREADCRUMB_TARGETS[channelType].href,
+          label: CHANNEL_TYPE_BREADCRUMB_TARGETS[channelType].label,
         },
       ]}
       current={props.current}
@@ -424,59 +494,139 @@ const TopicChannelTemplate: React.FC<TopicChannelTemplateProps> = ({
   const channel = useChannelDetail(String(ChannelTypeEnum.Topic), String(name))
   if (channel.data?.channel_type === ChannelTypeEnum.Topic) {
     return (
-      <TopicChannelTemplateInternal channel={channel.data}>
-        {children}
-      </TopicChannelTemplateInternal>
+      <TopicChannelHero channel={channel.data}>{children}</TopicChannelHero>
     )
   } else return null
 }
 
-type TopicChannelTemplateInternalProps = {
+/**
+ * The topic hero: the shared one over a photograph.
+ *
+ * Its own component because the photograph is framed by whether the channel
+ * features anything, which is a hook's answer -- and the shared hero is also
+ * rendered without any of this.
+ */
+const TopicChannelHero: React.FC<{
   channel: TopicChannel
   children: React.ReactNode
-}
-
-const TopicChannelTemplateInternal: React.FC<
-  TopicChannelTemplateInternalProps
-> = ({ channel, children }) => {
+}> = ({ channel, children }) => {
   invariant(channel.topic_detail.topic, "Topic channel must have a topic")
   const topicQuery = useLearningResourceTopic(channel.topic_detail.topic)
-  const topicQueryLoading = topicQuery.isLoading
-  const topic = topicQuery.data
-  const parentTopicId = topic?.parent
-  const urlParams = new URLSearchParams(channel.search_filter)
-  const displayConfiguration = channel.configuration
-  const configuredBanner = displayConfiguration?.banner_background
-  const navText = parentTopicId ? (
-    <SubTopicBreadcrumbs topic={topic} parentTopicId={parentTopicId} />
-  ) : (
-    <BreadcrumbsInternal current={channel.title} />
+  const configuredBanner = channel.configuration?.banner_background
+  /* The design frames the photograph for the shorter hero a channel with
+     nothing to feature leaves -- see `HeroPhoto`. */
+  const featuredIsEmpty = useTopicFeaturedIsEmpty(
+    ChannelTypeEnum.Topic,
+    channel.name,
   )
+
+  return (
+    <ChannelRedesignHero
+      channel={channel}
+      channelType={ChannelTypeEnum.Topic}
+      overPhoto
+      trailLoading={topicQuery.isLoading}
+      background={
+        <>
+          <HeroPhoto
+            data-testid="channel-hero-photo"
+            aria-hidden
+            wholeWidth={featuredIsEmpty}
+            backgroundUrl={
+              configuredBanner
+                ? /* Through the same standardizer the other channel banners
+                     use: the field holds either a bare src or a value already
+                     written as `url(...)`, and wrapping the second kind again
+                     drops the declaration. */
+                  standardizeBackgroundUrl(configuredBanner)
+                : backgroundSrcSetCSS(topicBannerDefault)
+            }
+          />
+          <HeroScrim aria-hidden unfeatured={featuredIsEmpty} />
+        </>
+      }
+    >
+      {children}
+    </ChannelRedesignHero>
+  )
+}
+
+/**
+ * The same page for an academic department.
+ *
+ * The design is the topic page's but for the hero's ground: a department has
+ * no photograph behind its title, so the hero is the plain white the section
+ * already paints and the words need no pane to be read against.
+ */
+const DepartmentChannelTemplate: React.FC<TopicChannelTemplateProps> = ({
+  children,
+  name,
+}) => {
+  const channel = useChannelDetail(
+    String(ChannelTypeEnum.Department),
+    String(name),
+  )
+  if (channel.data?.channel_type === ChannelTypeEnum.Department) {
+    return (
+      <ChannelRedesignHero
+        channel={channel.data}
+        channelType={ChannelTypeEnum.Department}
+      >
+        {children}
+      </ChannelRedesignHero>
+    )
+  } else return null
+}
+
+type ChannelRedesignHeroProps = {
+  channel: TopicChannel | DepartmentChannel
+  channelType: FeaturedChannelType
+  children: React.ReactNode
+  /**
+   * The layers behind the words, where there are any. A topic hero puts its
+   * photograph and the wash over it here; a department has neither, and the
+   * section's own white is the ground.
+   */
+  background?: React.ReactNode
+  /** Whether that background is a photograph the words need lifting off. */
+  overPhoto?: boolean
+  /** Shown in the trail's place until the channel's own detail is in hand. */
+  trailLoading?: boolean
+}
+
+/**
+ * The hero and the catalogue beneath it, which the redesigned topic and
+ * department pages share.
+ *
+ * Everything but the ground is the same page: the trail, the red title, the
+ * Follow pill beside it, an optional description, the curated Featured row,
+ * and the search area below the rule.
+ */
+const ChannelRedesignHero: React.FC<ChannelRedesignHeroProps> = ({
+  channel,
+  channelType,
+  children,
+  background,
+  overPhoto = false,
+  trailLoading = false,
+}) => {
+  const urlParams = new URLSearchParams(channel.search_filter)
 
   return (
     <>
       <TopicHero>
-        <HeroPhoto
-          aria-hidden
-          backgroundUrl={
-            configuredBanner
-              ? /* Through the same standardizer the other channel banners use:
-                   the field holds either a bare src or a value already written
-                   as `url(...)`, and wrapping the second kind again drops the
-                   declaration. */
-                standardizeBackgroundUrl(configuredBanner)
-              : backgroundSrcSetCSS(topicBannerDefault)
-          }
-        />
-        <HeroScrim aria-hidden />
+        {background}
         <HeroContent>
           <Container>
             <HeroInner>
-              <BannerArea>
-                {topicQueryLoading ? (
+              <BannerArea overPhoto={overPhoto}>
+                {trailLoading ? (
                   <BannerSkeleton variant="text" width="33%" />
                 ) : (
-                  navText
+                  <BreadcrumbsInternal
+                    channelType={channelType}
+                    current={channel.title}
+                  />
                 )}
                 <TitleBlock>
                   <TitleRow>
@@ -488,27 +638,32 @@ const TopicChannelTemplateInternal: React.FC<
                           sourceType={SourceTypeEnum.ChannelSubscriptionType}
                           searchParams={urlParams}
                           icon={<RiCheckboxCircleLine aria-hidden />}
+                          subscribedIcon={<FollowingIcon aria-hidden />}
                         />
                       </FollowPill>
                     ) : null}
                   </TitleRow>
                   {channel.public_description ? (
-                    <TopicDescription variant="body1">
+                    <TopicDescription variant="body1" overPhoto={overPhoto}>
                       {channel.public_description}
                     </TopicDescription>
                   ) : null}
                 </TitleBlock>
               </BannerArea>
-              <TopicFeaturedCarousel name={channel.name} />
+              <TopicFeaturedCarousel
+                name={channel.name}
+                channelType={channelType}
+              />
             </HeroInner>
           </Container>
         </HeroContent>
       </TopicHero>
-      <SearchArea>
-        <ChildrenContainer>{children}</ChildrenContainer>
-      </SearchArea>
+      {/* What the results are spaced from is the rule this draws, and the
+          column below sets its own distance from it -- see `SearchDisplay`. */}
+      <SearchArea>{children}</SearchArea>
     </>
   )
 }
 
 export default TopicChannelTemplate
+export { DepartmentChannelTemplate }

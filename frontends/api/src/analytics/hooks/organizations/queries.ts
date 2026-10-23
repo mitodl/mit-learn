@@ -1,6 +1,10 @@
 import { queryOptions } from "@tanstack/react-query"
 import { analyticsContractsApi, analyticsOrganizationsApi } from "../../clients"
-import type { AnalyticsPageParams, LearnerProgressParams } from "../../types"
+import type {
+  AnalyticsPageParams,
+  LearnerProgressParams,
+  LearnersParams,
+} from "../../types"
 
 /**
  * `orgId` in every key is the Keycloak organization UUID — see
@@ -227,50 +231,21 @@ const analyticsContractQueries = {
     }),
 
   /**
-   * Every enrollment matching `params`, up to `maxRows`, fetched in
-   * `pageSize` requests. `truncated` is set when the contract has more
-   * matching rows than were fetched.
-   *
-   * TODO: replace with a learner-grouped, server-paginated endpoint from
-   * ol-analytics-api. The API pages by enrollment, so a view with one row per
-   * learner cannot page server-side without splitting a learner across pages.
+   * One page of learners, each with all of their enrollments. `params.limit`
+   * and `params.offset` count learners.
    */
-  learnerProgressAll: (
-    orgId: string,
-    contractId: string,
-    params: Omit<LearnerProgressParams, "limit" | "offset"> | undefined,
-    { maxRows, pageSize }: { maxRows: number; pageSize: number },
-  ) =>
+  learners: (orgId: string, contractId: string, params?: LearnersParams) =>
     queryOptions({
       queryKey: [
-        ...analyticsContractKeys.learnerProgress(orgId, contractId, params),
-        "all",
-        maxRows,
+        ...analyticsContractKeys.contract(orgId, contractId),
+        "learners",
+        params,
       ] as const,
       staleTime: LEARNER_PROGRESS_STALE_TIME,
-      queryFn: async ({ signal }) => {
-        const fetchPage = (offset: number) =>
-          analyticsContractsApi
-            .learnerProgress(
-              orgId,
-              contractId,
-              { ...params, limit: pageSize, offset },
-              signal,
-            )
-            .then((res) => res.data)
-        const first = await fetchPage(0)
-        const wanted = Math.min(first.total_count, maxRows)
-        const offsets: number[] = []
-        for (let offset = pageSize; offset < wanted; offset += pageSize) {
-          offsets.push(offset)
-        }
-        const rest = await Promise.all(offsets.map(fetchPage))
-        return {
-          ...first,
-          data: [first, ...rest].flatMap((page) => page.data).slice(0, maxRows),
-          truncated: first.total_count > maxRows,
-        }
-      },
+      queryFn: async ({ signal }) =>
+        analyticsContractsApi
+          .learners(orgId, contractId, params, signal)
+          .then((res) => res.data),
     }),
 
   /**
@@ -292,6 +267,25 @@ const analyticsContractQueries = {
       queryFn: async ({ signal }) =>
         analyticsContractsApi
           .courseRuns(orgId, contractId, page, signal)
+          .then((res) => res.data),
+    }),
+
+  /**
+   * On `learnerProgress`'s stale time, not the rollups': it is computed from
+   * the same rows at query time, and the count should not lag the directory a
+   * manager clicks through to.
+   */
+  needsAttention: (orgId: string, contractId: string) =>
+    queryOptions({
+      queryKey: analyticsContractKeys.resource(
+        orgId,
+        contractId,
+        "needs-attention",
+      ),
+      staleTime: LEARNER_PROGRESS_STALE_TIME,
+      queryFn: async ({ signal }) =>
+        analyticsContractsApi
+          .needsAttention(orgId, contractId, undefined, signal)
           .then((res) => res.data),
     }),
 }

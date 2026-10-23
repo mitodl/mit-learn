@@ -36,7 +36,7 @@ from main.settings_course_etl import *  # noqa: F403
 from main.settings_pluggy import *  # noqa: F403
 from openapi.settings_spectacular import open_spectacular_settings
 
-VERSION = "0.83.3"
+VERSION = "0.84.2"
 
 log = logging.getLogger()
 
@@ -383,7 +383,6 @@ MITOL_APIGATEWAY_USERINFO_UPDATE = get_bool(
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/1.8/howto/static-files/
 
-# Serve static files with dj-static
 STATIC_URL = "/static/"
 
 STATIC_ROOT = "staticfiles"
@@ -519,6 +518,12 @@ CACHES = {
         "BACKEND": "django.core.cache.backends.db.DatabaseCache",
         "LOCATION": "durable_cache",
     },
+    # its own table: DatabaseCache culls by key order once a table passes
+    # MAX_ENTRIES, whatever the timeout, and "durable" holds per-user flags
+    "release_sweep": {
+        "BACKEND": "django.core.cache.backends.db.DatabaseCache",
+        "LOCATION": "release_sweep_cache",
+    },
     "redis": {
         "BACKEND": "django_redis.cache.RedisCache",
         "LOCATION": REDIS_URL,  # noqa: F405
@@ -556,10 +561,7 @@ OPENSEARCH_URL = get_string("OPENSEARCH_URL", None)
 if not OPENSEARCH_URL:
     msg = "Missing OPENSEARCH_URL"
     raise ImproperlyConfigured(msg)
-if get_string("HEROKU_PARENT_APP_NAME", None) is not None:
-    OPENSEARCH_INDEX = get_string("HEROKU_APP_NAME", None)
-else:
-    OPENSEARCH_INDEX = get_string("OPENSEARCH_INDEX", None)
+OPENSEARCH_INDEX = get_string("OPENSEARCH_INDEX", None)
 if not OPENSEARCH_INDEX:
     msg = "Missing OPENSEARCH_INDEX"
     raise ImproperlyConfigured(msg)
@@ -1046,6 +1048,10 @@ CREDENTIAL_METADATA_MIN_CHUNK_CHARS = get_int(
 CREDENTIAL_METADATA_LLM_TIMEOUT = get_int(
     name="CREDENTIAL_METADATA_LLM_TIMEOUT", default=120
 )
+
+# Resource profile LLM calls read up to ~100k tokens of course material and
+# return tens of claims with evidence, so they take minutes, not seconds.
+RESOURCE_PROFILE_LLM_TIMEOUT = get_int(name="RESOURCE_PROFILE_LLM_TIMEOUT", default=600)
 
 # OpenTelemetry configuration (consumed by mitol-django-observability).
 # Telemetry turns on when any of OTEL_EXPORTER_OTLP_TRACES_ENDPOINT,

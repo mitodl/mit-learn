@@ -24,7 +24,11 @@ import {
   getDashboardEnrollmentStatus,
   pickCertificateEnrollment,
 } from "./model/dashboardViewModel"
-import { canOpenCourseware, getCourseDateText } from "./courseDateUtils"
+import {
+  canOpenCourseware,
+  getCourseDateText,
+  hasCourseStaffRole,
+} from "./courseDateUtils"
 import { isVerifiedEnrollmentMode } from "@/common/mitxonline"
 import { RiArrowUpCircleLine, RiAwardLine, RiMore2Line } from "@remixicon/react"
 import { useReplaceBasketItem } from "@/common/mitxonline/useReplaceBasketItem"
@@ -48,7 +52,7 @@ import {
   CourseRunEnrollmentV3,
   EnrollmentModeEnum,
   V3UserProgramEnrollment,
-} from "@mitodl/mitxonline-api-axios/v2"
+} from "@mitodl/mitxonline-api-axios/v3"
 import { ProgressBadge } from "./ProgressBadge"
 
 const formatUpgradeTime = (daysFloat: number) => {
@@ -307,7 +311,10 @@ export const EnrolledCourseCard = ({
   const enrollmentMode = enrollment?.enrollment_mode
   const offerUpgrade = !isContractPageResource
   const startDate = run?.start_date
-  const coursewareOpen = canOpenCourseware(startDate, { isStaff })
+  const coursewareOpen = canOpenCourseware(startDate, {
+    isStaff,
+    isCourseStaff: hasCourseStaffRole(enrollment),
+  })
   const endDate = run?.end_date
   const hasEnded = endDate ? isInPast(endDate) : false
   const hasCourseDateText = getCourseDateText(startDate, endDate) !== null

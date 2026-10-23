@@ -8,7 +8,7 @@ import ChannelSearch from "./ChannelSearch"
 import { ChannelTypeEnum } from "api/v0"
 import { Typography } from "ol-components"
 import { getConstantSearchParams } from "./searchRequests"
-import useTopicPageRedesign from "./useTopicPageRedesign"
+import useChannelPageRedesign from "./useChannelPageRedesign"
 import dynamic from "next/dynamic"
 
 const LearningResourceDrawer = dynamic(
@@ -29,7 +29,7 @@ const ChannelPage: React.FC = () => {
   const channelSearchFilter = channelQuery.data?.search_filter
 
   const searchParams = getConstantSearchParams(channelSearchFilter)
-  const topicRedesign = useTopicPageRedesign(String(channelType))
+  const channelRedesign = useChannelPageRedesign(String(channelType))
 
   return (
     name &&
@@ -40,7 +40,7 @@ const ChannelPage: React.FC = () => {
           {/* The redesigned topic page shows its description inside its own
               hero, beside the title -- see `TopicChannelTemplate`. Rendering
               it here as well would print it twice. */}
-          {!topicRedesign && publicDescription && (
+          {!channelRedesign && publicDescription && (
             <Typography variant="body1">{publicDescription}</Typography>
           )}
           {channelSearchFilter && (
@@ -48,7 +48,7 @@ const ChannelPage: React.FC = () => {
               channelTitle={channelQuery.data!.title}
               constantSearchParams={searchParams}
               channelType={channelType}
-              layout={topicRedesign ? "topic" : "default"}
+              layout={channelRedesign ? "cards" : "default"}
             />
           )}
         </ChannelPageTemplate>

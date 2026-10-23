@@ -14,10 +14,10 @@ import {
 } from "ol-components"
 import { Alert } from "@mitodl/smoot-design"
 import {
-  CourseRunEnrollmentV3,
   CourseWithCourseRunsSerializerV2,
   V2ProgramDetail,
 } from "@mitodl/mitxonline-api-axios/v2"
+import { CourseRunEnrollmentV3 } from "@mitodl/mitxonline-api-axios/v3"
 import { DASHBOARD_MY_LEARNING_ID } from "@/common/urls"
 import {
   isProgramAsCourse,

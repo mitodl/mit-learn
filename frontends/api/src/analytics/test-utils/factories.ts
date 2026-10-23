@@ -4,6 +4,7 @@ import type {
   ContentEngagementDepth,
   ContractContentEngagementDepth,
   ContractMonthlyEngagementTrend,
+  ContractNeedsAttention,
   ContractUtilization,
   CourseRun,
   EnrollmentCompletionFunnel,
@@ -11,6 +12,8 @@ import type {
   LearnerProgressResponse,
   MonthlyEngagementTrend,
   OrgAnalyticsResponse,
+  LearnersResponse,
+  LearnerWithEnrollments,
 } from "../types"
 
 /**
@@ -187,6 +190,7 @@ const learnerProgress = (
   enrolled_on: "2026-02-15T00:00:00Z",
   enrollment_is_active: true,
   enrollment_mode: "verified",
+  outcomes_consent_status: "consented",
   outcomes_shared: true,
   completion_status: "in_progress",
   is_passing: false,
@@ -208,6 +212,7 @@ const withheldLearnerProgress = (
   overrides: Partial<LearnerProgress> = {},
 ): LearnerProgress =>
   learnerProgress({
+    outcomes_consent_status: "declined",
     outcomes_shared: false,
     completion_status: null,
     is_passing: null,
@@ -231,6 +236,19 @@ const courseRun = (overrides: Partial<CourseRun> = {}): CourseRun => ({
   courserun_end_on: "2026-08-01T00:00:00Z",
   ...overrides,
 })
+
+const contractNeedsAttention = (
+  overrides: Partial<ContractNeedsAttention> = {},
+): ContractNeedsAttention => {
+  const considered = faker.number.int({ min: 20, max: 500 })
+  return {
+    contract_id: faker.number.int(),
+    learners_considered: considered,
+    learners_needing_attention: faker.number.int({ min: 0, max: considered }),
+    learners_outcomes_withheld: 0,
+    ...overrides,
+  }
+}
 
 /**
  * Tallies `data` by `completion_status`, the same default-from-rows approach
@@ -262,6 +280,41 @@ const learnerProgressEnvelope = (
   total_count: data.length,
   outcomes_withheld_count: data.filter((row) => !row.outcomes_shared).length,
   completion_status_counts: completionStatusCounts(data),
+  needs_attention_count: data.filter((row) => row.needs_attention).length,
+  data,
+  ...overrides,
+})
+
+/**
+ * Splits `LearnerProgress` rows sharing a `learner_id` into one learner with
+ * its enrollments, in first-seen order, as the `/learners` endpoint returns
+ * them.
+ */
+const learnersFromRows = (
+  rows: LearnerProgress[],
+): LearnerWithEnrollments[] => {
+  const byId = new Map<string, LearnerWithEnrollments>()
+  for (const row of rows) {
+    const { learner_id: id, email, full_name: name, ...enrollment } = row
+    const learner = byId.get(id) ?? {
+      learner_id: id,
+      email,
+      full_name: name,
+      enrollments: [],
+    }
+    learner.enrollments.push(enrollment)
+    byId.set(id, learner)
+  }
+  return [...byId.values()]
+}
+
+const learnersEnvelope = (
+  data: LearnerWithEnrollments[],
+  overrides: Partial<LearnersResponse> = {},
+): LearnersResponse => ({
+  organization_id: organizationId(),
+  as_of: "2026-07-01T04:00:00Z",
+  total_count: data.length,
   data,
   ...overrides,
 })
@@ -271,12 +324,15 @@ export {
   contentEngagementDepth,
   contractContentEngagementDepth,
   contractMonthlyEngagementTrend,
+  contractNeedsAttention,
   contractUtilization,
   courseRun,
   enrollmentCompletionFunnel,
   envelope,
   learnerProgress,
   learnerProgressEnvelope,
+  learnersEnvelope,
+  learnersFromRows,
   monthlyEngagementTrend,
   organizationId,
   withheldLearnerProgress,

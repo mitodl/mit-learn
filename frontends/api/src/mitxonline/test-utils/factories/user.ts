@@ -4,7 +4,7 @@ import type {
   User,
   LegalAddress,
   UserProfile,
-} from "@mitodl/mitxonline-api-axios/v2"
+} from "@mitodl/mitxonline-api-axios/v0"
 import { organization } from "./organization"
 import { UniqueEnforcer } from "enforce-unique"
 

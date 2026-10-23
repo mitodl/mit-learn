@@ -190,20 +190,6 @@ class TestSettings(TestCase):
         assert factory.get("/", HTTP_X_FORWARDED_PROTO="http").is_secure() is False
         assert factory.get("/").is_secure() is False
 
-    def test_opensearch_index_pr_build(self):
-        """For PR builds we will use the heroku app name instead of the given OPENSEARCH_INDEX"""
-        index_name = "heroku_app_name_as_index"
-        with mock.patch.dict(
-            "os.environ",
-            {
-                **REQUIRED_SETTINGS,
-                "HEROKU_APP_NAME": index_name,
-                "HEROKU_PARENT_APP_NAME": "some_name",
-            },
-        ):
-            settings_vars = self.reload_settings()
-            assert settings_vars["OPENSEARCH_INDEX"] == index_name
-
     @pytest.mark.skip(
         reason="The version format does not yet match until the Concourse pipeline takes over from Doof"
     )
@@ -409,6 +395,50 @@ class TestSettings(TestCase):
             ]
             assert entry["task"] == "profiles.tasks.SyncProgramCertificatesTask"
             assert entry["kwargs"] == {"full_refresh": True}
+
+    def test_media_warehouse_sync_beat_entries_follow_starrocks_config(self):
+        """The youtube and podcast warehouse syncs are scheduled only when
+        StarRocks is configured, as full refreshes.
+        """
+        names = {
+            "warehouse-sync-podcasts-every-1-days": (
+                "learning_resources.tasks.SyncPodcastsTask"
+            ),
+            "warehouse-sync-youtube-every-1-days": (
+                "learning_resources.tasks.SyncYouTubeTask"
+            ),
+            "warehouse-sync-xpro-courses-every-1-days": (
+                "learning_resources.tasks.SyncXproCoursesTask"
+            ),
+            "warehouse-sync-xpro-programs-every-1-days": (
+                "learning_resources.tasks.SyncXproProgramsTask"
+            ),
+            "warehouse-sync-mitxonline-courses-every-1-days": (
+                "learning_resources.tasks.SyncMITxOnlineCoursesTask"
+            ),
+            "warehouse-sync-mitxonline-programs-every-1-days": (
+                "learning_resources.tasks.SyncMITxOnlineProgramsTask"
+            ),
+        }
+        with mock.patch.dict("os.environ", REQUIRED_SETTINGS, clear=True):
+            settings_vars = self.reload_settings(module="main.settings_celery")
+            assert not names.keys() & settings_vars["CELERY_BEAT_SCHEDULE"].keys()
+
+        with mock.patch.dict(
+            "os.environ",
+            {
+                **REQUIRED_SETTINGS,
+                "STARROCKS_HOST": "starrocks.example.com",
+                "STARROCKS_USER": "testuser",
+            },
+            clear=True,
+        ):
+            schedule = self.reload_settings(module="main.settings_celery")[
+                "CELERY_BEAT_SCHEDULE"
+            ]
+            for name, task in names.items():
+                assert schedule[name]["task"] == task
+                assert schedule[name]["kwargs"] == {"full_refresh": True}
 
     def test_credential_metadata_beat_entry(self):
         """

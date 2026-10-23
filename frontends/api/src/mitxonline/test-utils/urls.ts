@@ -1,12 +1,12 @@
+import type { OrdersApiOrdersHistoryListRequest } from "@mitodl/mitxonline-api-axios/v0"
 import type {
   CoursesApiApiV2CoursesListRequest,
-  CoursesApiCourseVariantRunsV3Request,
   CourseCertificatesApiCourseCertificatesRetrieveRequest,
   ProgramCertificatesApiProgramCertificatesRetrieveRequest,
-  OrdersApiOrdersHistoryListRequest,
   ProgramCollectionsApiProgramCollectionsListRequest,
   ProgramsApiProgramsListV2Request,
 } from "@mitodl/mitxonline-api-axios/v2"
+import type { CoursesApiCourseVariantRunsV3Request } from "@mitodl/mitxonline-api-axios/v3"
 import { queryify } from "ol-test-utilities"
 import mitxAxios from "../axios"
 
@@ -172,6 +172,11 @@ const verifiedProgramEnrollments = {
     `${getApiBaseUrl()}/api/v2/verified_program_enrollments/${encodeURIComponent(courserunId)}/`,
 }
 
+const notificationPreferences = {
+  get: () => `${getApiBaseUrl()}/api/notification-preferences/`,
+  put: () => `${getApiBaseUrl()}/api/notification-preferences/`,
+}
+
 export {
   b2b,
   b2bAttach,
@@ -191,4 +196,5 @@ export {
   orders,
   verifiedProgramEnrollments,
   enrollmentEligibility,
+  notificationPreferences,
 }

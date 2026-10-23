@@ -12,7 +12,11 @@ import {
   TableCell,
   TableRow,
 } from "@/components/B2BTable/B2BTable"
-import { DISPLAY_STATUS_LABEL, getDisplayStatus } from "./statusDisplay"
+import {
+  DISPLAY_STATUS_LABEL,
+  getDisplayStatus,
+  isWithheldStatus,
+} from "./statusDisplay"
 import { COLUMN_FLEX } from "./columns"
 
 /**
@@ -117,7 +121,7 @@ type LearnerRowProps = {
 const LearnerRow: React.FC<LearnerRowProps> = ({ row }) => {
   const status = getDisplayStatus(row)
   const statusLabel = DISPLAY_STATUS_LABEL[status]
-  const isWithheld = status === "not-shared"
+  const isWithheld = isWithheldStatus(status)
   const name = row.full_name?.trim() || null
 
   /**
@@ -158,7 +162,7 @@ const LearnerRow: React.FC<LearnerRowProps> = ({ row }) => {
           <StatusDot $muted={isWithheld} aria-hidden="true" />
           {isWithheld ? <MutedText>{statusLabel}</MutedText> : statusLabel}
           {/* Null, not false, on a withheld row — so a truthy check is also
-              what keeps this off a "No consent given" row. */}
+              what keeps this off a withheld row. */}
           {row.needs_attention ? (
             <NeedsAttentionBadge component="span" label="Needs attention" />
           ) : null}

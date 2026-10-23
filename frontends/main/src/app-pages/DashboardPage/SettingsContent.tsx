@@ -22,6 +22,7 @@ import * as NiceModal from "@ebay/nice-modal-react"
 import { FeatureFlags } from "@/common/feature_flags"
 import { AccountAction, SETTINGS, accountAction } from "@/common/urls"
 import AccountActionAlert from "./AccountActionAlert"
+import NotificationPreferences from "./NotificationPreferences"
 import { TitleText } from "./HomeContent"
 const SOURCE_LABEL_DISPLAY = {
   topic: "Topic",
@@ -275,6 +276,7 @@ const SettingsContent: React.FC = () => {
         checked={profile?.email_optin ?? true}
         onChange={(e) => updateProfile({ email_optin: e.target.checked })}
       />
+      {user.is_authenticated ? <NotificationPreferences /> : null}
       <SettingsHeader>
         <SettingsHeaderLeft>
           <SubtitleTitleText>Following</SubtitleTitleText>
