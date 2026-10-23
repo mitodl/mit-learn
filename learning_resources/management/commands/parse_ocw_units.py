@@ -2,7 +2,6 @@
 
 import tempfile
 from pathlib import Path
-from urllib.parse import urlparse
 
 from django.conf import settings
 from django.core.management import BaseCommand, CommandError
@@ -63,9 +62,7 @@ class Command(BaseCommand):
             if not settings.OCW_LIVE_BUCKET:
                 msg = "OCW_LIVE_BUCKET is not set"
                 raise CommandError(msg)
-            fetcher = S3Fetcher(
-                settings.OCW_LIVE_BUCKET, urlparse(options["course_url"]).netloc
-            )
+            fetcher = S3Fetcher(settings.OCW_LIVE_BUCKET)
         manifest = Ingestor(
             options["course_url"],
             options["data_dir"],

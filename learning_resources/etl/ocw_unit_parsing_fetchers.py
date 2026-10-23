@@ -62,24 +62,21 @@ class Fetcher:
 
 
 class S3Fetcher:
-    """Fetcher that reads OCW site urls from the OCW bucket, without caching."""
+    """Fetcher that reads OCW site urls from the
+    OCW bucket, without filesystem caching.
+    """
 
     cache_hits = 0  # never caches; kept for the Ingestor's summary note
 
-    def __init__(self, bucket_name: str, host: str):
-        """Read keys from bucket_name for urls on host."""
+    def __init__(self, bucket_name: str):
+        """Read url paths as keys in bucket_name."""
         self.bucket = get_bucket_by_name(bucket_name)
-        self.host = host
         self.seen: set[str] = set()
         self.downloads = 0
 
     def key_for(self, url: str) -> str:
         """Return the bucket key for a url."""
-        parsed = urlparse(url)
-        if parsed.netloc != self.host:
-            msg = f"fetch failed for {url}: not on {self.host}"
-            raise RuntimeError(msg)
-        key = unquote(parsed.path).lstrip("/")
+        key = unquote(urlparse(url).path).lstrip("/")
         if not key or key.endswith("/"):
             key += "index.html"
         elif not PurePosixPath(key).suffix:
