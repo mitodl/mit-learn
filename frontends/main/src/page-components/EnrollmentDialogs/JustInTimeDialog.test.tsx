@@ -174,6 +174,64 @@ describe("JustInTimeDialog", () => {
     expect(patchCalls()).toHaveLength(2)
   })
 
+  test("stays busy while a retry is in flight, even after the saved profile reloads", async () => {
+    const legalAddress = {
+      first_name: "David",
+      last_name: ".",
+      country: "GB",
+      street_address_1: "1 Main St",
+      city: "London",
+    }
+    const { mitxUser } = setup({
+      compliance_missing_fields: [],
+      legal_address: legalAddress,
+      user_profile: { year_of_birth: 1990 },
+    })
+    let finishRetry: (fields: never[]) => void = () => {}
+    const retry = jest.fn(
+      () => new Promise<never[]>((resolve) => (finishRetry = resolve)),
+    )
+    renderWithProviders(null)
+    let result: Promise<unknown> = Promise.resolve()
+    await act(async () => {
+      result = NiceModal.show(JustInTimeDialog, {
+        rejectedFields: ["last_name"],
+        retry,
+      })
+    })
+    const dialog = await screen.findByRole("dialog", {
+      name: "Just a Few More Details",
+    })
+    const lastName = await waitFor(() => {
+      const input = textbox(dialog, "Last Name")
+      expect(input).toHaveValue(".")
+      return input
+    })
+    // The save refetches the profile, which now carries the new name.
+    setMockResponse.get(mitxUrls.userMe.get(), {
+      ...mitxUser,
+      legal_address: { ...mitxUser.legal_address, last_name: "Cohen" },
+    })
+    await user.clear(lastName)
+    await user.type(lastName, "Cohen")
+    await user.click(within(dialog).getByRole("button", { name: "Submit" }))
+    await waitFor(() => expect(retry).toHaveBeenCalledTimes(1))
+    await waitFor(() =>
+      expect(textbox(dialog, "Last Name")).toHaveValue("Cohen"),
+    )
+
+    const cancel = within(dialog).getByRole("button", { name: "Cancel" })
+    expect(cancel).toBeDisabled()
+    expect(
+      within(dialog).getByRole("button", { name: "Submit" }),
+    ).toBeDisabled()
+    await user.keyboard("{Escape}")
+    expect(dialog).toBeInTheDocument()
+
+    await act(async () => finishRetry([]))
+    await expect(result).resolves.toBe(true)
+  })
+
   test("highlights the fields an enrollment was rejected on", async () => {
     setup({
       compliance_missing_fields: [],

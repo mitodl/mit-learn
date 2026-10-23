@@ -118,6 +118,10 @@ const JustInTimeDialogInner: React.FC<JustInTimeDialogProps> = ({
   const fieldsRef = React.useRef<HTMLDivElement>(null)
   const [subdivisionNotice, setSubdivisionNotice] = React.useState("")
   const [rejected, setRejected] = React.useState(rejectedFields)
+  // Tracked apart from Formik's isSubmitting: the save refetches the profile,
+  // and with enableReinitialize the new initial values reset the form,
+  // clearing isSubmitting while the retry is still in flight.
+  const [retrying, setRetrying] = React.useState(false)
   // NiceModal reuses a still-mounted instance (e.g. mid hide transition) when
   // shown again, passing the new arguments as props, so follow them here.
   React.useEffect(() => setRejected(rejectedFields), [rejectedFields])
@@ -167,7 +171,8 @@ const JustInTimeDialogInner: React.FC<JustInTimeDialogProps> = ({
       }
       if (retry) {
         setRejected([])
-        const stillRejected = await retry()
+        setRetrying(true)
+        const stillRejected = await retry().finally(() => setRetrying(false))
         if (stillRejected.length > 0) {
           setRejected(stillRejected)
           return
@@ -228,12 +233,13 @@ const JustInTimeDialogInner: React.FC<JustInTimeDialogProps> = ({
     if (firstRejected) focusField(firstRejected)
   }, [rejected, firstRejected, focusField])
 
+  const busy = formik.isSubmitting || retrying
   const handleClose = () => {
     // A save in flight must run to completion: closing mid-submit would
     // resolve this modal `false` while `onSubmit` could still land and
     // resolve/hide it again, letting a cancelled action's caller and a
     // just-completed save race for the final outcome.
-    if (formik.isSubmitting) return
+    if (busy) return
     modal.resolve(false)
     modal.hide()
   }
@@ -358,19 +364,15 @@ const JustInTimeDialogInner: React.FC<JustInTimeDialogProps> = ({
       onClose={handleClose}
       actions={
         <DialogActions>
-          <Button
-            variant="secondary"
-            onClick={handleClose}
-            disabled={formik.isSubmitting}
-          >
+          <Button variant="secondary" onClick={handleClose} disabled={busy}>
             Cancel
           </Button>
           <Button
             variant="primary"
             type="submit"
-            disabled={formik.isSubmitting}
+            disabled={busy}
             endIcon={
-              formik.isSubmitting ? (
+              busy ? (
                 <LoadingSpinner color="inherit" loading={true} size={16} />
               ) : undefined
             }
