@@ -13,7 +13,7 @@ import NiceModal from "@ebay/nice-modal-react"
 import { getCourseEnrollmentAction } from "@/common/mitxonline"
 import { useComplianceGate } from "@/common/mitxonline/useComplianceGate"
 import CourseEnrollmentDialog from "@/page-components/EnrollmentDialogs/CourseEnrollmentDialog"
-import { trackCourseEnrolled, trackBeginCheckout } from "@/common/analytics/gtm"
+import { analytics } from "@/common/analytics"
 import { canOpenCourseware } from "../courseDateUtils"
 import { mitxUserQueries } from "api/mitxonline-hooks/user"
 import { useQuery } from "@tanstack/react-query"
@@ -169,7 +169,7 @@ export const useEnrollmentHandler = () => {
             { run_id: enrollmentAction.run.id },
             {
               onSuccess: () => {
-                trackCourseEnrolled(course.title)
+                analytics.courseEnrolled(course.title)
                 const destination =
                   selectedCoursewareUrl ??
                   enrollmentAction.run.courseware_url ??
@@ -184,7 +184,7 @@ export const useEnrollmentHandler = () => {
         }
 
         if (enrollmentAction.type === "checkout") {
-          trackBeginCheckout({
+          analytics.checkoutStarted({
             courseName: course.title,
             courseId: course.readable_id,
             value: enrollmentAction.product.price

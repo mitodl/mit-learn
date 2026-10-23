@@ -21,14 +21,19 @@ import {
   allowConsoleErrors,
 } from "ol-test-utilities"
 import { act } from "@testing-library/react"
-import { useFeatureFlagEnabled, usePostHog } from "posthog-js/react"
+import { useFeatureFlagEnabled } from "posthog-js/react"
 import { PostHogEvents } from "@/common/constants"
 import { FeatureFlags } from "@/common/feature_flags"
+import { capturePostHog } from "@/common/analytics/posthog"
 
 jest.mock("posthog-js/react", () => ({
   ...jest.requireActual("posthog-js/react"),
   useFeatureFlagEnabled: jest.fn(),
-  usePostHog: jest.fn(),
+}))
+
+jest.mock("@/common/analytics/posthog", () => ({
+  capturePostHog: jest.fn(),
+  initPostHog: jest.fn(),
 }))
 
 const mockedUseFeatureFlagEnabled = jest.mocked(useFeatureFlagEnabled)
@@ -52,11 +57,7 @@ const mockFeatureFlags = (flags: Partial<Record<FeatureFlags, boolean>>) => {
 beforeEach(() => {
   mockFeatureFlags({})
 })
-const mockCapture = jest.fn()
-jest.mocked(usePostHog).mockReturnValue(
-  // @ts-expect-error Not mocking all of posthog
-  { capture: mockCapture },
-)
+const mockCapturePostHog = jest.mocked(capturePostHog)
 
 const DEFAULT_SEARCH_RESPONSE: LearningResourcesSearchResponse = {
   count: 0,
@@ -1476,7 +1477,7 @@ test("changing a facet resets unsubmitted text", async () => {
 describe("Search analytics events", () => {
   beforeEach(() => {
     process.env.NEXT_PUBLIC_POSTHOG_API_KEY = "test-key"
-    mockCapture.mockClear()
+    mockCapturePostHog.mockClear()
   })
   afterEach(() => {
     delete process.env.NEXT_PUBLIC_POSTHOG_API_KEY
@@ -1492,7 +1493,7 @@ describe("Search analytics events", () => {
     await user.paste("policy")
     await user.type(input, "{Enter}")
 
-    expect(mockCapture).toHaveBeenCalledExactlyOnceWith(
+    expect(mockCapturePostHog).toHaveBeenCalledExactlyOnceWith(
       PostHogEvents.SearchUpdate,
       { search_term: "policy", isEnter: true },
     )
@@ -1513,7 +1514,7 @@ describe("Search analytics events", () => {
     const physics = await screen.findByRole("checkbox", { name: "Physics 100" })
     await user.click(physics)
 
-    expect(mockCapture).toHaveBeenCalledExactlyOnceWith(
+    expect(mockCapturePostHog).toHaveBeenCalledExactlyOnceWith(
       PostHogEvents.SearchFilterUpdate,
       { control: "topic" },
     )
@@ -1527,7 +1528,7 @@ describe("Search analytics events", () => {
     await user.click(sortDropdown)
     await user.click(await screen.findByRole("option", { name: /Popular/i }))
 
-    expect(mockCapture).toHaveBeenCalledExactlyOnceWith(
+    expect(mockCapturePostHog).toHaveBeenCalledExactlyOnceWith(
       PostHogEvents.SearchFilterUpdate,
       { control: "sortby" },
     )
@@ -1547,7 +1548,7 @@ describe("Search analytics events", () => {
 
     await user.click(await screen.findByRole("button", { name: /clear all/i }))
 
-    expect(mockCapture).toHaveBeenCalledExactlyOnceWith(
+    expect(mockCapturePostHog).toHaveBeenCalledExactlyOnceWith(
       PostHogEvents.SearchFilterUpdate,
       { control: "clear_all" },
     )
@@ -1573,7 +1574,7 @@ describe("Search analytics events", () => {
     const tabCourses = await screen.findByRole("tab", { name: /Courses/ })
     await user.click(tabCourses)
 
-    expect(mockCapture).toHaveBeenCalledExactlyOnceWith(
+    expect(mockCapturePostHog).toHaveBeenCalledExactlyOnceWith(
       PostHogEvents.SearchFilterUpdate,
       { control: "resource_type_group" },
     )
@@ -1613,7 +1614,7 @@ describe("Search analytics events", () => {
     })
     await user.click(checkbox)
 
-    expect(mockCapture).toHaveBeenCalledExactlyOnceWith(
+    expect(mockCapturePostHog).toHaveBeenCalledExactlyOnceWith(
       PostHogEvents.SearchFilterUpdate,
       { control: "show_ocw_files" },
     )
@@ -1653,7 +1654,7 @@ describe("Search analytics events", () => {
     await act(async () => input.focus())
     await user.keyboard("{ArrowRight}")
 
-    expect(mockCapture).toHaveBeenCalledExactlyOnceWith(
+    expect(mockCapturePostHog).toHaveBeenCalledExactlyOnceWith(
       PostHogEvents.SearchFilterUpdate,
       { control: "min_score" },
     )
@@ -1962,7 +1963,7 @@ describe("UniversalAIBanner", () => {
   test("clicking Learn More fires cta_clicked with label and readableId", async () => {
     allowConsoleErrors()
     mockFeatureFlags({ [FeatureFlags.UniversalAISearchBanner]: true })
-    mockCapture.mockClear()
+    mockCapturePostHog.mockClear()
     process.env.NEXT_PUBLIC_POSTHOG_API_KEY = "test-key"
     setMockApiResponses({ search: { count: 10 } })
     renderWithProviders(<SearchPage />)
@@ -1970,7 +1971,7 @@ describe("UniversalAIBanner", () => {
       name: "Learn more about Universal AI",
     })
     await user.click(link)
-    expect(mockCapture).toHaveBeenCalledWith(
+    expect(mockCapturePostHog).toHaveBeenCalledWith(
       PostHogEvents.CallToActionClicked,
       expect.objectContaining({
         label: "Learn more about Universal AI",

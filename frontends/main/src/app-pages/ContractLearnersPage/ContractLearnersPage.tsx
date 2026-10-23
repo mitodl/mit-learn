@@ -7,7 +7,7 @@ import {
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query"
-import { useFeatureFlagEnabled, usePostHog } from "posthog-js/react"
+import { useFeatureFlagEnabled } from "posthog-js/react"
 import { RiArrowLeftLine } from "@remixicon/react"
 import {
   Container,
@@ -51,7 +51,7 @@ import { matchOrganizationBySlug } from "@/common/utils"
 import { ForbiddenError, isForbiddenResponse } from "@/common/errors"
 import { FeatureFlags } from "@/common/feature_flags"
 import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
-import { PostHogEvents } from "@/common/constants"
+import { analytics } from "@/common/analytics"
 import { contractAnalyticsView } from "@/common/urls"
 import SectionHeader, {
   SectionFreshness,
@@ -281,7 +281,6 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
     setModuleFilter,
     clearAll,
   } = useLearnerFilters()
-  const posthog = usePostHog()
   const [isExporting, setIsExporting] = useState(false)
   const [actionResult, setActionResult] = useState<{
     message: string
@@ -298,7 +297,7 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
 
   const handleViewChange = (_event: React.SyntheticEvent, next: View) => {
     if (next === view) return
-    posthog?.capture(PostHogEvents.AnalyticsViewChanged, {
+    analytics.analyticsViewChanged({
       view: next,
       previousView: view,
       orgSlug,

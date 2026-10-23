@@ -1,6 +1,5 @@
 "use client"
 
-import { env } from "@/env"
 import React, { FunctionComponent } from "react"
 import {
   styled,
@@ -21,7 +20,7 @@ import HeaderNavLink from "./HeaderNavLink"
 import { navData } from "./navData"
 import { SEARCH, ORGANIZATIONAL_LEARNING, DASHBOARD_HOME } from "@/common/urls"
 import { useUserMe } from "api/hooks/user"
-import { usePostHog } from "posthog-js/react"
+import { analytics } from "@/common/analytics"
 import { PostHogEvents } from "@/common/constants"
 
 const Bar = styled(AppBar)(({ theme }) => ({
@@ -197,24 +196,12 @@ const UserView: FunctionComponent = () => {
 }
 
 const Header: FunctionComponent = () => {
-  const posthog = usePostHog()
   const [drawerOpen, toggleDrawer] = useToggle(false)
   const desktopTrigger = React.useRef<HTMLButtonElement>(null)
   const mobileTrigger = React.useRef<HTMLButtonElement>(null)
-  const drawerToggleEvent = drawerOpen
-    ? PostHogEvents.ClosedNavDrawer
-    : PostHogEvents.OpenedNavDrawer
-  const posthogCapture = (
-    event: string,
-    properties?: Record<string, unknown>,
-  ) => {
-    if (env("NEXT_PUBLIC_POSTHOG_API_KEY")) {
-      posthog.capture(event, properties)
-    }
-  }
   const menuClick = () => {
+    analytics.navDrawerToggled(!drawerOpen)
     toggleDrawer.toggle()
-    posthogCapture(drawerToggleEvent)
   }
 
   return (
@@ -236,9 +223,10 @@ const Header: FunctionComponent = () => {
               label="For Organizations"
               icon={<RiGlobalLine aria-hidden />}
               onClick={() =>
-                posthogCapture(PostHogEvents.ClickedNavForOrganizations, {
-                  placement: "headerBar",
-                })
+                analytics.navItemClicked(
+                  PostHogEvents.ClickedNavForOrganizations,
+                  { placement: "headerBar" },
+                )
               }
             />
           </DesktopOnly>
@@ -265,7 +253,7 @@ const Header: FunctionComponent = () => {
         navData={navData}
         open={drawerOpen}
         onClose={() => {
-          posthogCapture(drawerToggleEvent)
+          analytics.navDrawerToggled(false)
           toggleDrawer.off()
         }}
         /**
@@ -274,7 +262,7 @@ const Header: FunctionComponent = () => {
          * and the drawer, and without this they are indistinguishable.
          */
         posthogCapture={(event) =>
-          posthogCapture(event, { placement: "navDrawer" })
+          analytics.navItemClicked(event, { placement: "navDrawer" })
         }
       />
     </div>

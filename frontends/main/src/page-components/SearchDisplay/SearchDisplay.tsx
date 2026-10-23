@@ -54,7 +54,7 @@ import { useAppSearchParams } from "@/common/useAppSearchParams"
 import { ResourceTypeGroupTabs } from "./ResourceTypeGroupTabs"
 import { TABS, UPCOMING_SORT, findActiveTab } from "./tabConfigs"
 import ProfessionalToggle from "./ProfessionalToggle"
-import { useTrackedFilterSetters } from "@/common/analytics/searchFilters"
+import { analytics } from "@/common/analytics"
 import SelectedFilters, { selectedFilters } from "./SelectedFilters"
 import SliderInput from "./SliderInput"
 import VectorAdminOptions from "./VectorAdminOptions"
@@ -955,21 +955,9 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
     setMobileDrawerOpen(newOpen)
   }
 
-  /**
-   * The facet setters arrive already reporting what they change -- a page
-   * wraps them once and hands the same pair to every control it draws, so a
-   * second filter bar beside these facets reports the same way they do. The
-   * two below stay here: they have no second caller, and `setSearchParams`
-   * takes a name this component supplies rather than one the page knows.
-   */
-  const { captureFilterEvent } = useTrackedFilterSetters({
-    setParamValue,
-    toggleParamValue,
-  })
-
   const clearAllFacets = () => {
     actuallyClearAllFacets()
-    captureFilterEvent("clear_all")
+    analytics.searchFilterChanged({ control: "clear_all" })
   }
 
   const setSearchParams = (
@@ -977,7 +965,7 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
     value: URLSearchParams | ((prev: URLSearchParams) => URLSearchParams),
   ) => {
     actuallySetSearchParams(value)
-    captureFilterEvent(name)
+    analytics.searchFilterChanged({ control: name })
   }
 
   // Kept in the list rather than removed, so a sortby that arrives in the URL

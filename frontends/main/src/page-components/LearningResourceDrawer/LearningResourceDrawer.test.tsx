@@ -15,7 +15,8 @@ import { RESOURCE_DRAWER_PARAMS } from "@/common/urls"
 import { LearningResource, ResourceTypeEnum } from "api"
 import { makeUserSettings } from "@/test-utils/factories"
 import type { User } from "api/hooks/user"
-import { useFeatureFlagEnabled, usePostHog } from "posthog-js/react"
+import { useFeatureFlagEnabled } from "posthog-js/react"
+import { capturePostHog } from "@/common/analytics/posthog"
 
 jest.mock("../LearningResourceExpanded/LearningResourceExpanded", () => {
   const actual = jest.requireActual(
@@ -27,12 +28,12 @@ jest.mock("../LearningResourceExpanded/LearningResourceExpanded", () => {
   }
 })
 
-const mockedPostHogCapture = jest.fn()
 jest.mock("posthog-js/react")
-jest.mocked(usePostHog).mockReturnValue(
-  // @ts-expect-error Not mocking all of posthog
-  { capture: mockedPostHogCapture },
-)
+jest.mock("@/common/analytics/posthog", () => ({
+  capturePostHog: jest.fn(),
+  initPostHog: jest.fn(),
+}))
+const mockedPostHogCapture = jest.mocked(capturePostHog)
 const mockedUseFeatureFlagEnabled = jest
   .mocked(useFeatureFlagEnabled)
   .mockImplementation(() => false)
@@ -89,39 +90,26 @@ describe("LearningResourceDrawer", () => {
     return { resource, user }
   }
 
-  it.each([
-    { descriptor: "is enabled", enablePostHog: true },
-    { descriptor: "is not enabled", enablePostHog: false },
-  ])(
-    "Renders drawer content when resource=id is in the URL and captures the view if PostHog $descriptor",
-    async ({ enablePostHog }) => {
-      const { resource } = setupApis({
-        resource: { resource_type: ResourceTypeEnum.Course },
-      })
-      process.env.NEXT_PUBLIC_POSTHOG_API_KEY = enablePostHog
-        ? "12345abcdef" // pragma: allowlist secret
-        : ""
+  it("Renders drawer content when resource=id is in the URL and captures the view", async () => {
+    const { resource } = setupApis({
+      resource: { resource_type: ResourceTypeEnum.Course },
+    })
 
-      renderWithProviders(<LearningResourceDrawer />, {
-        url: `?dog=woof&${RESOURCE_DRAWER_PARAMS.resource}=${resource.id}`,
+    renderWithProviders(<LearningResourceDrawer />, {
+      url: `?dog=woof&${RESOURCE_DRAWER_PARAMS.resource}=${resource.id}`,
+    })
+    expect(LearningResourceExpanded).toHaveBeenCalled()
+    await waitFor(() => {
+      expectProps(LearningResourceExpanded, {
+        resource,
+        // Share links use the resource's location on Learn
+        shareUrl: resource.learn_url,
       })
-      expect(LearningResourceExpanded).toHaveBeenCalled()
-      await waitFor(() => {
-        expectProps(LearningResourceExpanded, {
-          resource,
-          // Share links use the resource's location on Learn
-          shareUrl: resource.learn_url,
-        })
-      })
-      await screen.findByText(resource.title)
+    })
+    await screen.findByText(resource.title)
 
-      if (enablePostHog) {
-        expect(mockedPostHogCapture).toHaveBeenCalled()
-      } else {
-        expect(mockedPostHogCapture).not.toHaveBeenCalled()
-      }
-    },
-  )
+    expect(mockedPostHogCapture).toHaveBeenCalled()
+  })
 
   it("Does not render drawer content when resource=id is NOT in the URL", async () => {
     renderWithProviders(<LearningResourceDrawer />, {

@@ -14,24 +14,20 @@ import {
 } from "api/mitxonline-test-utils"
 import { useProgramEnrollment } from "./useProgramEnrollment"
 import { programView } from "@/common/urls"
-import { usePostHog } from "posthog-js/react"
 import { PostHogEvents } from "@/common/constants"
 import { trackProgramEnrolled } from "@/common/analytics/gtm"
+import { capturePostHog } from "@/common/analytics/posthog"
 import { PlatformEnum } from "api"
 
 jest.mock("@/common/analytics/gtm", () => ({
   trackProgramEnrolled: jest.fn(),
 }))
 
-jest.mock("posthog-js/react", () => ({
-  ...jest.requireActual("posthog-js/react"),
-  usePostHog: jest.fn(),
+jest.mock("@/common/analytics/posthog", () => ({
+  capturePostHog: jest.fn(),
+  initPostHog: jest.fn(),
 }))
-const mockCapture = jest.fn()
-jest.mocked(usePostHog).mockReturnValue(
-  // @ts-expect-error Not mocking all of posthog
-  { capture: mockCapture },
-)
+const mockCapturePostHog = jest.mocked(capturePostHog)
 
 const mockPush = jest.fn()
 jest.mock("next-nprogress-bar", () => ({
@@ -260,7 +256,7 @@ describe("useProgramEnrollment — actions", () => {
 
     paid.onClick!(fakeClickEvent())
 
-    expect(mockCapture).toHaveBeenCalledWith(
+    expect(mockCapturePostHog).toHaveBeenCalledWith(
       PostHogEvents.EnrollCtaClicked,
       expect.objectContaining({
         placement: "infobox",
@@ -304,7 +300,7 @@ describe("useProgramEnrollment — actions", () => {
       currentTarget: anchorButton,
     } as React.MouseEvent<HTMLButtonElement>)
 
-    expect(mockCapture).toHaveBeenCalledWith(
+    expect(mockCapturePostHog).toHaveBeenCalledWith(
       PostHogEvents.EnrollCtaClicked,
       expect.objectContaining({
         placement: "header",

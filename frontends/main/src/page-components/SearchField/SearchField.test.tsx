@@ -1,19 +1,15 @@
 import React from "react"
 import { renderWithProviders, screen, user } from "@/test-utils"
 import { SearchField } from "./SearchField"
-import { usePostHog } from "posthog-js/react"
 import { PostHogEvents } from "@/common/constants"
+import { capturePostHog } from "@/common/analytics/posthog"
 
-jest.mock("posthog-js/react", () => ({
-  ...jest.requireActual("posthog-js/react"),
-  usePostHog: jest.fn(),
+jest.mock("@/common/analytics/posthog", () => ({
+  capturePostHog: jest.fn(),
+  initPostHog: jest.fn(),
 }))
 
-const mockCapture = jest.fn()
-jest.mocked(usePostHog).mockReturnValue(
-  // @ts-expect-error Not mocking all of posthog
-  { capture: mockCapture },
-)
+const mockCapturePostHog = jest.mocked(capturePostHog)
 
 /**
  * In the app, `onSubmit` triggers a router navigation that has not committed
@@ -34,7 +30,7 @@ const ControlledSearchField = ({ onSubmit }: { onSubmit: () => void }) => {
 
 beforeEach(() => {
   process.env.NEXT_PUBLIC_POSTHOG_API_KEY = "test-key"
-  mockCapture.mockClear()
+  mockCapturePostHog.mockClear()
 })
 
 afterEach(() => {
@@ -59,18 +55,8 @@ test.each([
   }
 
   expect(onSubmit).toHaveBeenCalledTimes(1)
-  expect(mockCapture).toHaveBeenCalledExactlyOnceWith(
+  expect(mockCapturePostHog).toHaveBeenCalledExactlyOnceWith(
     PostHogEvents.SearchUpdate,
     { search_term: "policy", isEnter },
   )
-})
-
-test("No event is captured without a posthog key", async () => {
-  delete process.env.NEXT_PUBLIC_POSTHOG_API_KEY
-  renderWithProviders(<ControlledSearchField onSubmit={jest.fn()} />)
-
-  const input = screen.getByRole("textbox", { name: "Search for" })
-  await user.type(input, "policy{Enter}")
-
-  expect(mockCapture).not.toHaveBeenCalled()
 })
