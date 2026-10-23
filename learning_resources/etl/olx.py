@@ -287,7 +287,7 @@ def _parse_video_transcripts(
                     "module_id": get_edx_module_id(str(path), run),
                     "title": video_title,
                 }
-    except ElementTree.ParseError:
+    except (ElementTree.ParseError, DefusedXmlException):
         log.debug("xml parsing error for %s", path)
     return transcript_mapping
 

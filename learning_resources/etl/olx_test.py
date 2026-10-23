@@ -922,6 +922,7 @@ def test_excluded_keys_spares_a_key_an_ingested_path_shares(tmp_path):
         ('<video><transcript src="no_url_name.srt"/></video>', {}),
         ('<video url_name="test_video"></video>', {}),
         ("invalid xml content", {}),
+        ('<!DOCTYPE video [<!ENTITY e "x">]><video url_name="v">&e;</video>', {}),
         # no video directory at all
         (None, {}),
     ],
