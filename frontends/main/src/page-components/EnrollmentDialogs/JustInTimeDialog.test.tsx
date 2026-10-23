@@ -299,6 +299,20 @@ describe("JustInTimeDialog", () => {
       "Please enter a valid postal code.",
     )
     await waitFor(() => expect(postalCode).toHaveFocus())
+
+    // The correction is saved, not cleared like an unshown postal code.
+    await user.clear(postalCode)
+    await user.type(postalCode, "SW1A 1AA")
+    await user.click(within(dialog).getByRole("button", { name: "Submit" }))
+    await waitFor(() => expect(patchCalls()).toHaveLength(1))
+    expect(patchCalls()[0].body).toEqual(
+      expect.objectContaining({
+        legal_address: expect.objectContaining({
+          country: "GB",
+          postal_code: "SW1A 1AA",
+        }),
+      }),
+    )
   })
 
   test("explains a rejection on a field this country doesn't show", async () => {

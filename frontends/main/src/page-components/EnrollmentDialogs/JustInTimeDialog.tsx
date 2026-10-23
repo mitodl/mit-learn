@@ -138,6 +138,7 @@ const JustInTimeDialogInner: React.FC<JustInTimeDialogProps> = ({
           PatchedUserRequest: jitPatchPayload(
             values,
             user.data?.user_profile?.year_of_birth,
+            { keepPostalCode: rejected.includes("postal_code") },
           ),
         })
       } catch (error) {

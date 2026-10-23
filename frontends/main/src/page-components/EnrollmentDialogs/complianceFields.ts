@@ -293,6 +293,10 @@ const jitSchema = Yup.object().shape({
 const jitPatchPayload = (
   values: JitFormValues,
   currentYearOfBirth: number | null | undefined,
+  // The dialog also shows the postal code outside subdivision countries when
+  // CyberSource rejected it (it's sent for every country); keep the
+  // learner's correction then.
+  { keepPostalCode = false }: { keepPostalCode?: boolean } = {},
 ): PatchedUserRequest => {
   const legalAddress: LegalAddressRequest = {
     first_name: values.first_name.trim(),
@@ -305,9 +309,10 @@ const jitPatchPayload = (
     // meaningless under a country that has no subdivisions, so a
     // previously-stored value is dropped rather than carried over.
     state: requiresSubdivision(values.country) ? values.state : "",
-    postal_code: requiresSubdivision(values.country)
-      ? values.postal_code.trim()
-      : "",
+    postal_code:
+      requiresSubdivision(values.country) || keepPostalCode
+        ? values.postal_code.trim()
+        : "",
   }
   const yearOfBirth = Number.parseInt(values.year_of_birth, 10)
   const payload: PatchedUserRequest = { legal_address: legalAddress }
