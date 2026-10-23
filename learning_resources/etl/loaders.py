@@ -678,6 +678,18 @@ def load_course(
     return learning_resource
 
 
+def unpublish_resources(resources: QuerySet) -> None:
+    """
+    Unpublish the published resources of a queryset and remove them from
+    search. One already unpublished is left alone, so a prune doesn't requeue
+    its removal on every run.
+    """
+    for learning_resource in resources.filter(published=True):
+        learning_resource.published = False
+        learning_resource.save()
+        resource_unpublished_actions(learning_resource)
+
+
 def load_courses(
     etl_source: str, courses_data: list[dict], *, config=CourseLoaderConfig()
 ) -> list[LearningResource]:
@@ -712,15 +724,14 @@ def load_courses(
     ]
 
     if (courses or config.prune_empty) and config.prune:
-        for learning_resource in LearningResource.objects.filter(
-            etl_source=etl_source, resource_type=LearningResourceType.course.name
-        ).exclude(
-            Q(id__in=[learning_resource.id for learning_resource in courses])
-            | Q(test_mode=True)
-        ):
-            learning_resource.published = False
-            learning_resource.save()
-            resource_unpublished_actions(learning_resource)
+        unpublish_resources(
+            LearningResource.objects.filter(
+                etl_source=etl_source, resource_type=LearningResourceType.course.name
+            ).exclude(
+                Q(id__in=[learning_resource.id for learning_resource in courses])
+                | Q(test_mode=True)
+            )
+        )
 
     return courses
 
@@ -980,12 +991,11 @@ def load_programs(
 
     programs = [r.resource for r in results if r.resource is not None]
     if (programs or config.prune_empty) and config.prune:
-        for learning_resource in LearningResource.objects.filter(
-            etl_source=etl_source, resource_type=LearningResourceType.program.name
-        ).exclude(id__in=[lr.id for lr in programs]):
-            learning_resource.published = False
-            learning_resource.save()
-            resource_unpublished_actions(learning_resource)
+        unpublish_resources(
+            LearningResource.objects.filter(
+                etl_source=etl_source, resource_type=LearningResourceType.program.name
+            ).exclude(id__in=[lr.id for lr in programs])
+        )
     return programs
 
 
