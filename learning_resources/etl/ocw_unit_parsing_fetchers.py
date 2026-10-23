@@ -1,9 +1,16 @@
 import hashlib
+import logging
 import time
-from pathlib import Path
-from urllib.parse import urlparse
+from pathlib import Path, PurePosixPath
+from urllib.parse import unquote, urlparse
 
 import httpx
+from botocore.exceptions import ClientError
+
+from learning_resources.etl.utils import get_bucket_by_name
+from learning_resources.utils import get_s3_object_and_read
+
+log = logging.getLogger(__name__)
 
 UA = "course-profile-prototype/0.1 (+research; contact: local)"
 
@@ -51,4 +58,48 @@ class Fetcher:
         raise RuntimeError(msg)
 
     def text(self, url: str) -> str:
+        return self.get(url).decode("utf-8", errors="replace")
+
+
+class S3Fetcher:
+    """Fetcher that reads OCW site urls from the OCW bucket, without caching."""
+
+    cache_hits = 0  # never caches; kept for the Ingestor's summary note
+
+    def __init__(self, bucket_name: str, host: str):
+        """Read keys from bucket_name for urls on host."""
+        self.bucket = get_bucket_by_name(bucket_name)
+        self.host = host
+        self.seen: set[str] = set()
+        self.downloads = 0
+
+    def key_for(self, url: str) -> str:
+        """Return the bucket key for a url."""
+        parsed = urlparse(url)
+        if parsed.netloc != self.host:
+            msg = f"fetch failed for {url}: not on {self.host}"
+            raise RuntimeError(msg)
+        key = unquote(parsed.path).lstrip("/")
+        if not key or key.endswith("/"):
+            key += "index.html"
+        elif not PurePosixPath(key).suffix:
+            key += "/index.html"
+        return key
+
+    def get(self, url: str) -> bytes:
+        """Return the body of a url, warning when it was already downloaded."""
+        key = self.key_for(url)
+        if key in self.seen:
+            log.warning("Re-downloading %s from S3", key)
+        self.seen.add(key)
+        try:
+            body = get_s3_object_and_read(self.bucket.Object(key))
+        except ClientError as e:
+            msg = f"fetch failed for {url}: {e}"
+            raise RuntimeError(msg) from e
+        self.downloads += 1
+        return body
+
+    def text(self, url: str) -> str:
+        """Return the body of a url as text."""
         return self.get(url).decode("utf-8", errors="replace")
