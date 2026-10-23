@@ -115,7 +115,7 @@ def test_chat_litellm_passes_azure_kwargs_to_litellm(azure_settings, mocker):
     assert kwargs["base_url"] == AZURE_ENDPOINT
     assert kwargs["api_version"] == "2024-10-21"
     assert kwargs["azure_ad_token_provider"] is fake_token_provider
-    assert kwargs["api_base"] is None
+    assert "api_base" not in kwargs
     assert litellm.api_base is None
 
 
