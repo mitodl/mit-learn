@@ -193,7 +193,11 @@ def sync_courses(courses: list[dict], *, allow_mass_unpublish: bool = False) -> 
         try:
             course = transform_course(row)
             course["etl_checksum"] = course_checksum(course)
-            if stored_checksums.get(row[UNIQUE_FIELD]) == course["etl_checksum"]:
+            # A newly blocklisted course hashes the same, but must load to unpublish
+            if (
+                course["readable_id"] not in blocklist
+                and stored_checksums.get(row[UNIQUE_FIELD]) == course["etl_checksum"]
+            ):
                 continue
             if loaders.load_course(
                 course, blocklist, config=CourseLoaderConfig(prune=True)

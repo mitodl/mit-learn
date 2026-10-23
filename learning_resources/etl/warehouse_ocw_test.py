@@ -425,6 +425,27 @@ def test_sync_courses_reloads_a_course_changed_since_its_hash(
     )
 
 
+def test_sync_courses_unpublishes_a_newly_blocklisted_course(
+    mocker, warehouse_owns_ocw, data_json
+):
+    """An unchanged course added to the blocklist is loaded, and so unpublished"""
+    row = view_row(data_json)
+    with writing_as(Pipeline.WAREHOUSE):
+        warehouse_ocw.sync_courses([row], allow_mass_unpublish=True)
+    resource = LearningResource.objects.get(url=row["url"])
+    assert resource.published is True
+
+    mocker.patch(
+        "learning_resources.etl.warehouse_ocw.load_course_blocklist",
+        return_value=[resource.readable_id],
+    )
+    with writing_as(Pipeline.WAREHOUSE):
+        warehouse_ocw.sync_courses([row], allow_mass_unpublish=True)
+
+    resource.refresh_from_db()
+    assert resource.published is False
+
+
 def test_sync_courses_loads_the_other_rows_when_one_fails(
     mocker, warehouse_owns_ocw, data_json
 ):
