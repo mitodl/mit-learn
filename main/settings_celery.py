@@ -305,6 +305,11 @@ if (
                 "schedule": crontab(minute=0, hour=13),
                 "kwargs": {"full_refresh": True},
             },
+            "warehouse-sync-ocw-courses-every-1-days": {
+                "task": "learning_resources.tasks.SyncOCWCoursesTask",
+                "schedule": crontab(minute=0, hour=12),
+                "kwargs": {"full_refresh": True},
+            },
         }
     )
 

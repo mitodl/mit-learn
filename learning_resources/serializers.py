@@ -1390,6 +1390,7 @@ class LearningResourceBaseSerializer(serializers.ModelSerializer, WriteableTopic
             "resource_tags",
             "resources",
             "etl_source",
+            "etl_checksum",
             "view_count",
             "updated_on",
         ]

@@ -515,6 +515,9 @@ def upsert_course_or_program(  # noqa: C901, PLR0912
     unique_field_value = resource_data.get(unique_field_name)
     readable_id = resource_data.pop("readable_id")
     runs = resource_data.pop("runs", [])
+    # A load that doesn't hash its data leaves the stored hash stale, so it
+    # clears it and the next hashing sync reloads the resource.
+    resource_data.setdefault("etl_checksum", None)
 
     if readable_id in blocklist or not runs:
         resource_data["published"] = False
@@ -678,6 +681,18 @@ def load_course(
     return learning_resource
 
 
+def unpublish_resources(resources: QuerySet) -> None:
+    """
+    Unpublish the published resources of a queryset and remove them from
+    search. One already unpublished is left alone, so a prune doesn't requeue
+    its removal on every run.
+    """
+    for learning_resource in resources.filter(published=True):
+        learning_resource.published = False
+        learning_resource.save()
+        resource_unpublished_actions(learning_resource)
+
+
 def load_courses(
     etl_source: str, courses_data: list[dict], *, config=CourseLoaderConfig()
 ) -> list[LearningResource]:
@@ -712,15 +727,14 @@ def load_courses(
     ]
 
     if (courses or config.prune_empty) and config.prune:
-        for learning_resource in LearningResource.objects.filter(
-            etl_source=etl_source, resource_type=LearningResourceType.course.name
-        ).exclude(
-            Q(id__in=[learning_resource.id for learning_resource in courses])
-            | Q(test_mode=True)
-        ):
-            learning_resource.published = False
-            learning_resource.save()
-            resource_unpublished_actions(learning_resource)
+        unpublish_resources(
+            LearningResource.objects.filter(
+                etl_source=etl_source, resource_type=LearningResourceType.course.name
+            ).exclude(
+                Q(id__in=[learning_resource.id for learning_resource in courses])
+                | Q(test_mode=True)
+            )
+        )
 
     return courses
 
@@ -980,12 +994,11 @@ def load_programs(
 
     programs = [r.resource for r in results if r.resource is not None]
     if (programs or config.prune_empty) and config.prune:
-        for learning_resource in LearningResource.objects.filter(
-            etl_source=etl_source, resource_type=LearningResourceType.program.name
-        ).exclude(id__in=[lr.id for lr in programs]):
-            learning_resource.published = False
-            learning_resource.save()
-            resource_unpublished_actions(learning_resource)
+        unpublish_resources(
+            LearningResource.objects.filter(
+                etl_source=etl_source, resource_type=LearningResourceType.program.name
+            ).exclude(id__in=[lr.id for lr in programs])
+        )
     return programs
 
 
