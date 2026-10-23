@@ -14,6 +14,7 @@ import {
   TitleButton,
   CourseDateSummary,
   Separator,
+  CardMetaRow,
 } from "./CardShared"
 import { getCourseDateText } from "./courseDateUtils"
 import { EnrollmentStatus, getBestRun } from "./helpers"
@@ -35,6 +36,7 @@ type UnenrolledCourseCardProps = {
   headingLevel?: "h2" | "h3" | "h4" | "h5" | "h6"
   isModule?: boolean
   disabled?: boolean
+  requirementNote?: string
   Component?: React.ElementType
   className?: string
 }
@@ -48,6 +50,7 @@ export const UnenrolledCourseCard = ({
   headingLevel,
   isModule,
   disabled = false,
+  requirementNote,
   Component,
   className,
 }: UnenrolledCourseCardProps) => {
@@ -115,14 +118,19 @@ export const UnenrolledCourseCard = ({
   )
   const hasCourseDateText =
     getCourseDateText(courseRun?.start_date, courseRun?.end_date) !== null
-  const courseDateText = hasCourseDateText ? (
-    <Stack direction="row" gap="8px" alignItems="start">
-      <CourseDateSummary
-        startDate={courseRun?.start_date}
-        endDate={courseRun?.end_date}
-      />
-    </Stack>
-  ) : null
+  const metaSection = (
+    <CardMetaRow
+      note={requirementNote}
+      segments={[
+        hasCourseDateText ? (
+          <CourseDateSummary
+            startDate={courseRun?.start_date}
+            endDate={courseRun?.end_date}
+          />
+        ) : null,
+      ]}
+    />
+  )
   const startButton = (
     <CoursewareButton
       size="small"
@@ -172,7 +180,7 @@ export const UnenrolledCourseCard = ({
           {progressBadgeSection}
           <Stack gap="12px">
             {titleSection}
-            {courseDateText}
+            {metaSection}
           </Stack>
         </Stack>
         <Stack
@@ -216,7 +224,7 @@ export const UnenrolledCourseCard = ({
             >
               <Stack direction="column" gap="8px" flex={1} minWidth={0}>
                 {titleSection}
-                {!isCompact && courseDateText}
+                {!isCompact && metaSection}
               </Stack>
             </Stack>
             <Stack
