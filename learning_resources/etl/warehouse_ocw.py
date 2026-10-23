@@ -6,14 +6,18 @@ with its one run in the same row. The functions here turn a row into what
 ``learning_resources.etl.ocw.transform_course`` builds from the data.json and
 hand the courses to the loader the Celery ETL uses.
 
-The sync is a full sync: the view is the complete current set, and courses
-absent from it are unpublished. Unlike ``ocw.extract_course`` it does not skip
-a course whose stored last_modified is not older: every listed course is
-loaded on every run. Content files are not loaded here.
+The sync reads the whole view: it is the complete current set, and courses
+absent from it are unpublished. A course is loaded only when the hash of its
+transformed row differs from the one stored with it (``etl_checksum``), so a
+daily run writes and reindexes only the courses that changed. Any other load of
+a course clears its hash. Content files are not loaded here.
 """
 
 import copy
 import json
+import logging
+
+from django.db.models import Q
 
 from learning_resources.constants import (
     Availability,
@@ -25,6 +29,7 @@ from learning_resources.constants import (
 )
 from learning_resources.etl import loaders
 from learning_resources.etl.constants import CourseLoaderConfig, ETLSource
+from learning_resources.etl.exceptions import ExtractException
 from learning_resources.etl.ocw import OFFERED_BY, UNIQUE_FIELD, parse_delivery
 from learning_resources.etl.ownership import may_write
 from learning_resources.etl.utils import (
@@ -38,8 +43,11 @@ from learning_resources.etl.warehouse_guards import (
     utc_timestamp,
     warehouse_list,
 )
-from learning_resources.utils import parse_instructors
-from main.utils import clean_data
+from learning_resources.models import LearningResource
+from learning_resources.utils import load_course_blocklist, parse_instructors
+from main.utils import checksum_for_content, clean_data
+
+log = logging.getLogger(__name__)
 
 COURSE = LearningResourceType.course.name
 
@@ -142,10 +150,19 @@ def transform_course(row: dict) -> dict:
     }
 
 
+def course_checksum(course: dict) -> str:
+    """Hash a transformed course, to tell whether the stored course matches it"""
+    return checksum_for_content(json.dumps(course, sort_keys=True, default=str))
+
+
 def sync_courses(courses: list[dict], *, allow_mass_unpublish: bool = False) -> int:
     """
-    Load the courses of the warehouse view, and unpublish the courses it no
-    longer lists.
+    Load the courses of the warehouse view that changed since they were last
+    loaded, and unpublish the courses it no longer lists.
+
+    A row that fails to transform or load is logged and the others still load.
+    It stays published, since it is still in the view, and the sync raises once
+    the rest are done.
 
     Args:
         courses (list of dict): rows of integrations__learn__ocw_courses
@@ -158,16 +175,38 @@ def sync_courses(courses: list[dict], *, allow_mass_unpublish: bool = False) -> 
         return 0
 
     refuse_empty(courses=courses)
-    courses_data = [transform_course(course) for course in courses]
+    view_urls = {course[UNIQUE_FIELD] for course in courses}
     if not allow_mass_unpublish:
-        refuse_mass_unpublish(
-            ETLSource.ocw.name,
-            COURSE,
-            {course[UNIQUE_FIELD] for course in courses_data},
-            field=UNIQUE_FIELD,
-        )
-    return len(
-        loaders.load_courses(
-            ETLSource.ocw.name, courses_data, config=CourseLoaderConfig(prune=True)
-        )
+        refuse_mass_unpublish(ETLSource.ocw.name, COURSE, view_urls, field=UNIQUE_FIELD)
+
+    ocw_courses = LearningResource.objects.filter(
+        etl_source=ETLSource.ocw.name, resource_type=COURSE
     )
+    # An unpublished course is reloaded whatever its hash, so it is republished
+    stored_checksums = dict(
+        ocw_courses.filter(published=True).values_list(UNIQUE_FIELD, "etl_checksum")
+    )
+    blocklist = load_course_blocklist()
+    loaded = 0
+    failed = []
+    for row in courses:
+        try:
+            course = transform_course(row)
+            course["etl_checksum"] = course_checksum(course)
+            if stored_checksums.get(row[UNIQUE_FIELD]) == course["etl_checksum"]:
+                continue
+            if loaders.load_course(
+                course, blocklist, config=CourseLoaderConfig(prune=True)
+            ):
+                loaded += 1
+        except Exception:
+            log.exception("Error loading OCW course %s", row[UNIQUE_FIELD])
+            failed.append(row[UNIQUE_FIELD])
+
+    loaders.unpublish_resources(
+        ocw_courses.exclude(Q(url__in=view_urls) | Q(test_mode=True))
+    )
+    if failed:
+        msg = f"{len(failed)} OCW courses failed to load: {', '.join(failed)}"
+        raise ExtractException(msg)
+    return loaded

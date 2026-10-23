@@ -515,6 +515,9 @@ def upsert_course_or_program(  # noqa: C901, PLR0912
     unique_field_value = resource_data.get(unique_field_name)
     readable_id = resource_data.pop("readable_id")
     runs = resource_data.pop("runs", [])
+    # A load that doesn't hash its data leaves the stored hash stale, so it
+    # clears it and the next hashing sync reloads the resource.
+    resource_data.setdefault("etl_checksum", None)
 
     if readable_id in blocklist or not runs:
         resource_data["published"] = False

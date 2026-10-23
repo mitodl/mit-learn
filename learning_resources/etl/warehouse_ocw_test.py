@@ -1,6 +1,7 @@
 """Tests for the warehouse-pull OCW loading"""
 
 import json
+import re
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from types import SimpleNamespace
@@ -14,7 +15,7 @@ from learning_resources.constants import (
     LearningResourceType,
     PlatformType,
 )
-from learning_resources.etl import ocw, warehouse_ocw
+from learning_resources.etl import loaders, ocw, warehouse_ocw
 from learning_resources.etl.constants import ETLSource
 from learning_resources.etl.exceptions import ExtractException
 from learning_resources.etl.ownership import Pipeline, writing_as
@@ -70,7 +71,7 @@ def mock_search(mocker):
     """Mock out the search index tasks, the topic lookup and the blocklist"""
     mocker.patch("learning_resources_search.plugins.get_similar_topics_qdrant")
     mocker.patch(
-        "learning_resources.etl.loaders.load_course_blocklist", return_value=[]
+        "learning_resources.etl.warehouse_ocw.load_course_blocklist", return_value=[]
     )
     return SimpleNamespace(
         upsert=mocker.patch("learning_resources_search.tasks.upsert_learning_resource"),
@@ -274,9 +275,7 @@ def test_transform_course_with_empty_columns(data_json):
 
 def test_sync_courses_writes_nothing_without_the_course_pair(mocker, data_json):
     """Until the warehouse owns ocw course nothing is loaded"""
-    mock_load = mocker.patch(
-        "learning_resources.etl.warehouse_ocw.loaders.load_courses"
-    )
+    mock_load = mocker.patch("learning_resources.etl.warehouse_ocw.loaders.load_course")
 
     with writing_as(Pipeline.WAREHOUSE):
         count = warehouse_ocw.sync_courses([view_row(data_json)])
@@ -369,6 +368,100 @@ def test_sync_courses_loads_a_course_stored_as_newer(warehouse_owns_ocw, data_js
     existing.refresh_from_db()
     assert existing.title == row["title"]
     assert existing.last_modified == READ_AT
+
+
+def test_sync_courses_skips_unchanged_courses(
+    warehouse_owns_ocw, data_json, mock_search
+):
+    """
+    A course whose transformed row hashes as it did when loaded is neither
+    loaded nor reindexed, nor unpublished, and a changed row is loaded
+    """
+    row = view_row(data_json)
+    with writing_as(Pipeline.WAREHOUSE):
+        assert warehouse_ocw.sync_courses([row], allow_mass_unpublish=True) == 1
+    mock_search.upsert.reset_mock()
+
+    with writing_as(Pipeline.WAREHOUSE):
+        assert warehouse_ocw.sync_courses([row]) == 0
+
+    mock_search.upsert.assert_not_called()
+    resource = LearningResource.objects.get(url=row["url"])
+    assert resource.published is True
+
+    with writing_as(Pipeline.WAREHOUSE):
+        assert warehouse_ocw.sync_courses([{**row, "title": "New title"}]) == 1
+
+    resource.refresh_from_db()
+    assert resource.title == "New title"
+
+
+@pytest.mark.parametrize("change", ["unpublished", "loaded_elsewhere"])
+def test_sync_courses_reloads_a_course_changed_since_its_hash(
+    warehouse_owns_ocw, data_json, change
+):
+    """
+    An unchanged row is loaded again for a course since unpublished, or since
+    written by a load that doesn't hash its data
+    """
+    row = view_row(data_json)
+    with writing_as(Pipeline.WAREHOUSE):
+        warehouse_ocw.sync_courses([row], allow_mass_unpublish=True)
+    resource = LearningResource.objects.get(url=row["url"])
+    if change == "unpublished":
+        LearningResource.objects.filter(pk=resource.pk).update(published=False)
+    else:
+        loaders.load_course(warehouse_ocw.transform_course(row), [])
+        resource.refresh_from_db()
+        assert resource.etl_checksum is None
+
+    with writing_as(Pipeline.WAREHOUSE):
+        assert warehouse_ocw.sync_courses([row], allow_mass_unpublish=True) == 1
+
+    resource.refresh_from_db()
+    assert resource.published is True
+    assert resource.etl_checksum == warehouse_ocw.course_checksum(
+        warehouse_ocw.transform_course(row)
+    )
+
+
+def test_sync_courses_loads_the_other_rows_when_one_fails(
+    mocker, warehouse_owns_ocw, data_json
+):
+    """A row that fails is raised after the rest load, and is not unpublished"""
+    good = view_row(data_json)
+    bad = view_row(
+        {**data_json, "legacy_uid": "a-b-c", "primary_course_number": "18.06"},
+        slug="18-06-linear-algebra",
+    )
+    existing = LearningResourceFactory.create(
+        etl_source=ETLSource.ocw.name,
+        resource_type=COURSE,
+        published=True,
+        url=bad["url"],
+        platform__code=PlatformType.ocw.name,
+    )
+    load_course = loaders.load_course
+
+    def load_or_fail(course, *args, **kwargs):
+        if course["url"] == bad["url"]:
+            raise ValueError
+        return load_course(course, *args, **kwargs)
+
+    mocker.patch(
+        "learning_resources.etl.warehouse_ocw.loaders.load_course",
+        side_effect=load_or_fail,
+    )
+
+    with (
+        writing_as(Pipeline.WAREHOUSE),
+        pytest.raises(ExtractException, match=re.escape(bad["url"])),
+    ):
+        warehouse_ocw.sync_courses([good, bad], allow_mass_unpublish=True)
+
+    assert LearningResource.objects.get(url=good["url"]).published is True
+    existing.refresh_from_db()
+    assert existing.published is True
 
 
 def test_sync_courses_refuses_an_empty_view(warehouse_owns_ocw):

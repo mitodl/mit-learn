@@ -1798,8 +1798,10 @@ class SyncOCWCoursesTask(BaseWarehouseETLTask):
     It loads no content files. ocw_courses_etl loads a course's content files
     with the course, and stops for both once the warehouse owns ocw course.
 
-    Always a full sync, whatever ``since`` is: only a full set prunes, and the
-    view is a few thousand rows.
+    Always reads the whole view, whatever ``since`` is: only a full set prunes,
+    and the view is a few thousand rows. A course whose row hashes as it did at
+    its last load is skipped (warehouse_ocw.sync_courses). A course that fails
+    to load is skipped too, and the run raises after loading the rest.
 
     A run that would unpublish more than warehouse_guards.MAX_UNPUBLISH_SHARE of
     the published courses fails before writing. Queue it with
