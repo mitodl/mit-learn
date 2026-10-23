@@ -381,12 +381,16 @@ class Ingestor:
         self.base = self.course_url
         self.course_dir = data_dir / self.course_id
         self.text_dir = self.course_dir / "text"
+        # If write text is specified as false, the extracted text will be
+        # stored in the `self.texts` dictionary instead of being written to files.
+        # The initial implementation used the filesystem,
+        # but that may not be tractable in the etl pipeline
         self.write_text = write_text
         if write_text:
             self.text_dir.mkdir(parents=True, exist_ok=True)
+        self.texts: dict[str, str] = {}
         self.fetch = fetcher or Fetcher(self.course_dir / "raw", refresh=refresh)
         self.include_readings = include_readings
-        self.texts: dict[str, str] = {}  # extracted text by text_path, if not written
         self.sources: list[SourceItem] = []
         self.units: list[Unit] = []
         self.notes: list[str] = []
