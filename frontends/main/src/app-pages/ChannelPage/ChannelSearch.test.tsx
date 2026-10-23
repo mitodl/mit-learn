@@ -1007,7 +1007,9 @@ describe("ChannelSearch", () => {
         "Free",
         "In-Person",
         "Professional Certificate",
-        "Clear all filters",
+        /* Reads "Clear all filters" to assistive tech; the row it ends is what
+           supplies "filters" to everyone else. */
+        "Clear all",
       ])
     }, 10000)
 

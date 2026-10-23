@@ -44,11 +44,22 @@ const tabCount = (
       )
     : undefined
 
-const appendCount = (label: string, count?: number | null) => {
+/**
+ * The tab's name with how many results fall under it.
+ *
+ * `bare` drops the brackets, which is how the redesigned channel pages draw
+ * it: the count sits beside the name as a figure rather than an aside. The
+ * search page and the other channels keep the bracketed form.
+ */
+const appendCount = (
+  label: string,
+  count?: number | null,
+  bare: boolean = false,
+) => {
   if (Number.isFinite(count)) {
     return (
       <>
-        {label}&nbsp;<CountSpan>({count})</CountSpan>
+        {label}&nbsp;<CountSpan>{bare ? count : `(${count})`}</CountSpan>
       </>
     )
   }
@@ -74,6 +85,8 @@ type ResourceTypeGroupTabsProps = {
   ) => void
   onTabChange?: () => void
   className?: string
+  /** Draws each tab's count without brackets -- see `appendCount`. */
+  bareCounts?: boolean
 }
 
 /**
@@ -119,6 +132,7 @@ const ResourceTypeGroupTabList: React.FC<ResourceTypeGroupTabsProps> = ({
   setSearchParams,
   onTabChange,
   className,
+  bareCounts = false,
 }) => {
   const counts = resourceTypeGroupCounts(aggregations)
   const allCount = aggregations?.resource_type_group
@@ -146,7 +160,7 @@ const ResourceTypeGroupTabList: React.FC<ResourceTypeGroupTabsProps> = ({
             style={{ minWidth: t.minWidth }}
             key={t.name}
             value={t.name}
-            label={appendCount(t.label, count)}
+            label={appendCount(t.label, count, bareCounts)}
           />
         )
       })}

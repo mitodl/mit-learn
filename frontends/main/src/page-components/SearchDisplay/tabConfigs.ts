@@ -86,10 +86,13 @@ const TOPIC_TABS: TabConfig[] = [
       ResourceTypeGroupEnum.Course,
       ResourceTypeGroupEnum.Program,
     ],
-    minWidth: 185,
+    minWidth: 175,
     emptyNoun: "courses or programs",
   },
-  LEARNING_MATERIALS_TAB,
+  /* Narrower here than on the search page, where the same tab is a filled
+     button with a bracketed count rather than an underlined heading with a
+     bare one. */
+  { ...LEARNING_MATERIALS_TAB, minWidth: 145 },
 ]
 
 /**
