@@ -127,7 +127,7 @@ dependencies = [
     "langchain-text-splitters>=1.1.2",
     "mitol-django-keycloak>=2026.7.13,<2027",
     "pymysql>=1.1.1,<2",
-    "ol-llm>=0.0.4",
+    "ol-llm>=0.0.5",
 ]
 
 [dependency-groups]
@@ -181,6 +181,8 @@ override-dependencies = [
 mitol-django-common = "0d"
 mitol-django-observability = "0d"
 mitol-django-scim = "0d"
+# ol-llm 0.0.5 requires certifi>=2026.10.19, the fix for GHSA-6q48-6c7w-9gw2.
+certifi = "0d"
 mitol-drf-lint = "0d"
 ol-llm = "0d"
 
