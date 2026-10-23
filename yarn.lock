@@ -2580,18 +2580,18 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@happy-dom/jest-environment@npm:^20.1.0":
-  version: 20.3.4
-  resolution: "@happy-dom/jest-environment@npm:20.3.4"
+"@happy-dom/jest-environment@npm:^20.14.6":
+  version: 20.14.6
+  resolution: "@happy-dom/jest-environment@npm:20.14.6"
   dependencies:
-    happy-dom: "npm:^20.3.4"
+    happy-dom: "npm:^20.14.6"
   peerDependencies:
     "@jest/environment": ">=25.0.0"
     "@jest/fake-timers": ">=25.0.0"
     "@jest/types": ">=25.0.0"
     jest-mock: ">=25.0.0"
     jest-util: ">=25.0.0"
-  checksum: 10/0ddc997f83373b5e96ea5d663aa0570715375a1092d6dae32fe34e0ba68c3630b7168aab39433a9eae3c2ea0c8e7397045436e1bfdc531d529ee43d770fe5b4c
+  checksum: 10/b3874d871584a5394bbdd54987bf9a31af1d59bf6141f615e1914e968cc1623e9a7ecd7bd5b7dfd3b7cf05de73153cc220f64fe98f97569994c53f250f313432
   languageName: node
   linkType: hard
 
@@ -10186,6 +10186,15 @@ __metadata:
   languageName: node
   linkType: hard
 
+"buffer-image-size@npm:^0.6.4":
+  version: 0.6.4
+  resolution: "buffer-image-size@npm:0.6.4"
+  dependencies:
+    "@types/node": "npm:*"
+  checksum: 10/82d4ca9bc8e71c9c0cbc74191d3613100d0a20dd21da018c6f373d7dc88ec4a9225eebe06c44a982de074f695402e81ab8a8daa40afce36b915042fa9fb32c52
+  languageName: node
+  linkType: hard
+
 "buffer-xor@npm:^1.0.3":
   version: 1.0.3
   resolution: "buffer-xor@npm:1.0.3"
@@ -11930,7 +11939,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"entities@npm:^4.4.0, entities@npm:^4.5.0":
+"entities@npm:^4.4.0":
   version: 4.5.0
   resolution: "entities@npm:4.5.0"
   checksum: 10/ede2a35c9bce1aeccd055a1b445d41c75a14a2bb1cd22e242f20cf04d236cdcd7f9c859eb83f76885327bfae0c25bf03303665ee1ce3d47c5927b98b0e3e3d48
@@ -11941,6 +11950,13 @@ __metadata:
   version: 6.0.1
   resolution: "entities@npm:6.0.1"
   checksum: 10/62af1307202884349d2867f0aac5c60d8b57102ea0b0e768b16246099512c28e239254ad772d6834e7e14cb1b6f153fc3d0c031934e3183b086c86d3838d874a
+  languageName: node
+  linkType: hard
+
+"entities@npm:^7.0.1":
+  version: 7.0.1
+  resolution: "entities@npm:7.0.1"
+  checksum: 10/3c0c58d869c45148463e96d21dee2d1b801bd3fe4cf47aa470cd26dfe81d59e9e0a9be92ae083fa02fa441283c883a471486e94538dcfb8544428aa80a55271b
   languageName: node
   linkType: hard
 
@@ -13917,17 +13933,18 @@ __metadata:
   languageName: node
   linkType: hard
 
-"happy-dom@npm:^20.3.4":
-  version: 20.3.4
-  resolution: "happy-dom@npm:20.3.4"
+"happy-dom@npm:^20.14.6":
+  version: 20.14.6
+  resolution: "happy-dom@npm:20.14.6"
   dependencies:
     "@types/node": "npm:>=20.0.0"
     "@types/whatwg-mimetype": "npm:^3.0.2"
     "@types/ws": "npm:^8.18.1"
-    entities: "npm:^4.5.0"
+    buffer-image-size: "npm:^0.6.4"
+    entities: "npm:^7.0.1"
     whatwg-mimetype: "npm:^3.0.0"
-    ws: "npm:^8.18.3"
-  checksum: 10/6dba6b4dfdaedf5def805685bbc23da7d2cdaea09d37bbc8423db0acbcdfddf04c003c8f8f43176ab53a8176ef3a3fd8811648aef977d19f465598ac1e08d563
+    ws: "npm:^8.21.0"
+  checksum: 10/d1bc335233067b044e625e969eaadc28a774dda5ca413d919e18d911f3edea44b7eaa286f43cd8992533acd6d469ab1f7467a0e8e7f7cd27d4bf4d45f1f3ab02
   languageName: node
   linkType: hard
 
@@ -16663,7 +16680,7 @@ __metadata:
     "@emotion/styled": "npm:^11.11.0"
     "@faker-js/faker": "npm:^10.5.0"
     "@floating-ui/react": "npm:^0.27.16"
-    "@happy-dom/jest-environment": "npm:^20.1.0"
+    "@happy-dom/jest-environment": "npm:^20.14.6"
     "@mitodl/arithmix": "npm:^0.2.5"
     "@mitodl/course-search-utils": "npm:^3.8.1"
     "@mitodl/hacksnack": "npm:^0.1.2"
@@ -24170,6 +24187,21 @@ __metadata:
     utf-8-validate:
       optional: true
   checksum: 10/26e4901e93abaf73af9f26a93707c95b4845e91a7a347ec8c569e6e9be7f9df066f6c2b817b2d685544e208207898a750b78461e6e8d810c11a370771450c31b
+  languageName: node
+  linkType: hard
+
+"ws@npm:^8.21.0":
+  version: 8.22.0
+  resolution: "ws@npm:8.22.0"
+  peerDependencies:
+    bufferutil: ^4.0.1
+    utf-8-validate: ">=5.0.2"
+  peerDependenciesMeta:
+    bufferutil:
+      optional: true
+    utf-8-validate:
+      optional: true
+  checksum: 10/ed771c2766bdb5724a66872f60ffc1a39f06e1a5bc8849f453c273e97c91a40ed5a224f06dc0e22f44b4a9e03938bf746fc5938d6887433cc0f4c416237d3b10
   languageName: node
   linkType: hard
 
