@@ -17,9 +17,9 @@ from typing import Literal
 from urllib.parse import urljoin, urlparse
 
 from bs4 import BeautifulSoup, NavigableString, Tag
-from pydantic import BaseModel, ConfigDict
 
 from learning_resources.etl.ocw_unit_parsing_fetchers import Fetcher
+from learning_resources.profiles.schemas import Strict
 
 MODULE_RE = re.compile(r"^(week-\d+|review-)")
 
@@ -66,12 +66,6 @@ RequiredStatus = Literal[
     "core", "review", "assessment", "supplementary", "reference", "unknown"
 ]
 Status = Literal["extracted", "skipped", "failed", "missing", "unsupported"]
-
-
-class Strict(BaseModel):
-    """Base model that rejects unknown fields."""
-
-    model_config = ConfigDict(extra="forbid")
 
 
 class SourceItem(Strict):
