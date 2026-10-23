@@ -17,7 +17,7 @@ from typing import NamedTuple
 from urllib.parse import unquote
 from xml.etree.ElementTree import Element
 
-from defusedxml import ElementTree
+from defusedxml import DefusedXmlException, ElementTree
 from django.conf import settings
 
 from learning_resources.constants import VALID_TEXT_FILE_TYPES
@@ -717,7 +717,7 @@ class OlxArchive:
         # parse the file, not the lenient text, so bad bytes still fail
         try:
             root = _without_dated_blocks(ElementTree.parse(path).getroot())
-        except ElementTree.ParseError:
+        except (ElementTree.ParseError, DefusedXmlException):
             log.warning("Malformed XML in %s, keeping all legacy transcripts", path)
             return text, None
         return _reference_text(root), self._video_ids_of(root)
