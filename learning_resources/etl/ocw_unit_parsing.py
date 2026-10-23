@@ -1,8 +1,8 @@
 """Assemble course material from an MIT OpenCourseWare course site.
 
 Mirrors the structure MIT Learn ingests from the OCW publishing bucket (course
-data.json, pages, resources) but reads the public site because the bucket is not
-reachable here. Produces the source manifest with stable ids, module/lesson structure
+data.json, pages, resources) but currently reads the public site.
+Produces the source manifest with stable ids, module/lesson structure
 and extracted text.
 """
 
@@ -417,6 +417,11 @@ class Ingestor:
         return item
 
     def _add_text_source(self, source_id: str, text: str, **kw) -> SourceItem:
+        existing = {s.source_id for s in self.sources}
+        base, suffix = source_id, 2
+        while source_id in existing:
+            source_id = f"{base}-{suffix}"
+            suffix += 1
         path, sha, n = self._store(source_id, text)
         if n < MIN_TEXT_LENGTH:
             return self._add(
@@ -749,7 +754,14 @@ class Ingestor:
                     )
                     if it:
                         added.append(it)
-                continue
+
+                if any(
+                    source.status == "extracted"
+                    and source.url == r
+                    and source.file_url in rmedia["vtt"]
+                    for source in added
+                ):
+                    continue
             for p in rmedia["pdf"]:
                 mtype = (
                     "problem_set"
@@ -913,6 +925,25 @@ class Ingestor:
         added: list[SourceItem] = []
         for p in pdfs:
             if yt_ids and any(y in p for y in yt_ids):
+                if not any(
+                    source.url == rurl
+                    and source.status == "extracted"
+                    and source.file_url
+                    and source.file_url.endswith(".vtt")
+                    for source in self.sources
+                ):
+                    item = self._add_pdf(
+                        f"{base_id}-transcript-pdf",
+                        rurl,
+                        p,
+                        "lecture_transcript_pdf",
+                        title=f"{rtitle} (transcript PDF)",
+                        required_status=req,
+                        **common,
+                    )
+                    if item:
+                        added.append(item)
+                    continue
                 if p not in self._seen_files:
                     self._seen_files.add(p)
                     added.append(
