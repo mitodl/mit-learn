@@ -206,6 +206,9 @@ def sync_courses(courses: list[dict], *, allow_mass_unpublish: bool = False) -> 
         except Exception:
             log.exception("Error loading OCW course %s", row[UNIQUE_FIELD])
             failed.append(row[UNIQUE_FIELD])
+            # Indexing runs after the load commits, so a course whose indexing
+            # failed has its new hash stored and would be skipped next time
+            ocw_courses.filter(url=row[UNIQUE_FIELD]).update(etl_checksum=None)
 
     loaders.unpublish_resources(
         ocw_courses.exclude(Q(url__in=view_urls) | Q(test_mode=True))

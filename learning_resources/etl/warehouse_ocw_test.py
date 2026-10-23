@@ -446,6 +446,34 @@ def test_sync_courses_unpublishes_a_newly_blocklisted_course(
     assert resource.published is False
 
 
+def test_sync_courses_reloads_a_course_whose_indexing_failed(
+    mocker, warehouse_owns_ocw, data_json
+):
+    """
+    A course that loaded but failed to index keeps no hash, so the next sync
+    loads and indexes it again
+    """
+    row = view_row(data_json)
+    mocker.patch(
+        "learning_resources.etl.loaders.update_index", side_effect=RuntimeError
+    )
+    with (
+        writing_as(Pipeline.WAREHOUSE),
+        pytest.raises(ExtractException, match=re.escape(row["url"])),
+    ):
+        warehouse_ocw.sync_courses([row], allow_mass_unpublish=True)
+    resource = LearningResource.objects.get(url=row["url"])
+    assert resource.etl_checksum is None
+
+    update_index = mocker.patch("learning_resources.etl.loaders.update_index")
+    with writing_as(Pipeline.WAREHOUSE):
+        assert warehouse_ocw.sync_courses([row]) == 1
+
+    update_index.assert_called_once()
+    resource.refresh_from_db()
+    assert resource.etl_checksum is not None
+
+
 def test_sync_courses_loads_the_other_rows_when_one_fails(
     mocker, warehouse_owns_ocw, data_json
 ):
