@@ -18,7 +18,7 @@ from urllib.parse import urljoin, urlparse
 
 from bs4 import BeautifulSoup, NavigableString, Tag
 
-from learning_resources.etl.ocw_unit_parsing_fetchers import Fetcher
+from learning_resources.etl.ocw_unit_parsing_fetchers import Fetcher, S3Fetcher
 from learning_resources.profiles.schemas import Strict
 
 MODULE_RE = re.compile(r"^(week-\d+|review-)")
@@ -245,11 +245,11 @@ def vtt_to_text(vtt: str, block_seconds: int = 30) -> str:
     return "\n".join(blocks)
 
 
-def pdf_to_text(path: Path) -> tuple[str, int]:
+def pdf_to_text(data: bytes) -> tuple[str, int]:
     """Extract PDF text with '[page N]' markers. Returns (text, page_count)."""
     import pymupdf
 
-    doc = pymupdf.open(str(path))
+    doc = pymupdf.open(stream=data, filetype="pdf")
     parts = []
     for i, page in enumerate(doc, start=1):
         txt = page.get_text("text")
@@ -261,15 +261,15 @@ def pdf_to_text(path: Path) -> tuple[str, int]:
     return "\n\n".join(parts), n
 
 
-def zip_to_text(path: Path, max_members: int = 40) -> tuple[str, list[str]]:
+def zip_to_text(data: bytes, max_members: int = 40) -> tuple[str, list[str]]:
     """Extract text from a ZIP: PDFs (with page markers), .py/.txt/.md/.csv members.
     Returns (text, member names).
     """
-    import tempfile
+    import io
     import zipfile
 
     parts, names = [], []
-    with zipfile.ZipFile(path) as z:
+    with zipfile.ZipFile(io.BytesIO(data)) as z:
         for info in z.infolist()[:max_members]:
             name = info.filename
             if info.is_dir() or "__MACOSX" in name or Path(name).name.startswith("."):
@@ -278,10 +278,7 @@ def zip_to_text(path: Path, max_members: int = 40) -> tuple[str, list[str]]:
             data = z.read(info)
             names.append(name)
             if ext == ".pdf":
-                with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tmp:
-                    tmp.write(data)
-                txt, _ = pdf_to_text(Path(tmp.name))
-                Path(tmp.name).unlink(missing_ok=True)
+                txt, _ = pdf_to_text(data)
                 parts.append(f"[file {Path(name).name}]\n{txt}")
             elif ext in (".py", ".txt", ".md", ".csv", ".json"):
                 txt = (
@@ -369,21 +366,29 @@ def _lesson_kind(role: str, heading: str, links: list[tuple[str, str]]) -> str:
 
 
 class Ingestor:
-    def __init__(
+    def __init__(  # noqa: PLR0913
         self,
         course_url: str,
         data_dir: Path,
         *,
         include_readings: bool = False,
         refresh: bool = False,
-        fetcher: Fetcher | None = None,
+        write_text: bool = True,
+        fetcher: Fetcher | S3Fetcher | None = None,
     ):
         self.course_url = course_url.rstrip("/") + "/"
         self.course_id = _slug(self.course_url)
         self.base = self.course_url
         self.course_dir = data_dir / self.course_id
         self.text_dir = self.course_dir / "text"
-        self.text_dir.mkdir(parents=True, exist_ok=True)
+        # If write text is specified as false, the extracted text will be
+        # stored in the `self.texts` dictionary instead of being written to files.
+        # The initial implementation used the filesystem,
+        # but that may not be tractable in the etl pipeline
+        self.write_text = write_text
+        if write_text:
+            self.text_dir.mkdir(parents=True, exist_ok=True)
+        self.texts: dict[str, str] = {}
         self.fetch = fetcher or Fetcher(self.course_dir / "raw", refresh=refresh)
         self.include_readings = include_readings
         self.sources: list[SourceItem] = []
@@ -398,7 +403,10 @@ class Ingestor:
 
     def _store(self, source_id: str, text: str) -> tuple[str, str, int]:
         p = self.text_dir / f"{source_id}.txt"
-        p.write_text(text, encoding="utf-8")
+        if self.write_text:
+            p.write_text(text, encoding="utf-8")
+        else:
+            self.texts[str(p)] = text
         return str(p), hashlib.sha256(text.encode()).hexdigest(), len(text)
 
     def _add(self, **kw) -> SourceItem:
@@ -522,8 +530,7 @@ class Ingestor:
             return None
         self._seen_files.add(file_url)
         try:
-            self.fetch.get(file_url)
-            text, _pages = pdf_to_text(self.fetch.path_for(file_url))
+            text, _pages = pdf_to_text(self.fetch.get(file_url))
         except Exception as e:  # noqa: BLE001
             return self._add_failed(
                 sid,
@@ -788,8 +795,7 @@ class Ingestor:
             return None
         self._seen_files.add(file_url)
         try:
-            self.fetch.get(file_url)
-            text, _names = zip_to_text(self.fetch.path_for(file_url))
+            text, _names = zip_to_text(self.fetch.get(file_url))
         except Exception as e:  # noqa: BLE001
             return self._add_failed(
                 sid,
