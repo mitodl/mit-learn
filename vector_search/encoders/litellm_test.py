@@ -6,15 +6,18 @@ import time
 from collections import Counter
 from unittest.mock import MagicMock, patch
 
+import litellm
 import pytest
 from django.conf import settings
 
+from main.azure_openai import azure_openai_litellm_params
 from vector_search.encoders.litellm import (
     LiteLLMEncoder,
     get_hedge_executor,
     get_primary_executor,
     reset_embedding_executors,
 )
+from vector_search.utils import create_qdrant_collection
 
 pytestmark = pytest.mark.django_db
 
@@ -427,3 +430,106 @@ def test_litellm_encoder_embed_query_hedge_count_three(mock_embedding, settings)
         time.sleep(0.01)
     assert len(calls) == 3
     assert sum(name.startswith("embed-hedge") for name in calls) == 2
+
+
+AZURE_ENDPOINT = "https://ol-openai-test.openai.azure.com/"
+
+
+@pytest.fixture
+def azure_openai(settings, mocker):
+    """Configure Azure OpenAI with a fake token provider"""
+    settings.AZURE_OPENAI_ENDPOINT = AZURE_ENDPOINT
+    settings.AZURE_OPENAI_API_VERSION = "2024-10-21"
+    token_provider = MagicMock(return_value="fake-entra-token")
+    mocker.patch(
+        "main.azure_openai.azure_ad_token_provider", return_value=token_provider
+    )
+    return token_provider
+
+
+@patch("vector_search.encoders.litellm.embedding")
+def test_litellm_encoder_azure_model(mock_embedding, azure_openai):
+    """An azure/ model is sent to Azure OpenAI instead of LITELLM_API_BASE"""
+    mock_embedding.return_value = _embedding_response([0.1, 0.2])
+    encoder = LiteLLMEncoder("azure/text-embedding-3-large")
+    encoder.get_embedding(["test"], request_timeout=5)
+
+    mock_embedding.assert_called_once_with(
+        model="azure/text-embedding-3-large",
+        input=["test"],
+        cache={"no-cache": True, "no-store": True},
+        custom_llm_provider="azure",
+        api_base=AZURE_ENDPOINT,
+        api_version="2024-10-21",
+        azure_ad_token_provider=azure_openai,
+        timeout=5,
+    )
+
+
+@patch("vector_search.encoders.litellm.embedding")
+def test_litellm_encoder_azure_model_hedged_requests(
+    mock_embedding, settings, azure_openai
+):
+    """The primary and backup requests for a query all go to Azure OpenAI"""
+    settings.EMBEDDING_REQUEST_HEDGING_ENABLED = True
+    settings.EMBEDDING_HEDGE_COUNT = 3
+    settings.EMBEDDING_HEDGE_DELAY_SECONDS = 0.05
+    mock_embedding.side_effect = _timed_responses(1.0, 1.0, 0.0)
+    encoder = LiteLLMEncoder("azure/text-embedding-3-large")
+
+    assert encoder.embed_query("search query") == [2.0, 0.2, 0.3]
+    assert mock_embedding.call_count == 3
+    for call in mock_embedding.call_args_list:
+        assert call.kwargs["custom_llm_provider"] == "azure"
+        assert call.kwargs["api_base"] == AZURE_ENDPOINT
+        assert call.kwargs["azure_ad_token_provider"] is azure_openai
+
+
+def test_litellm_encoder_azure_cache_key(azure_openai):
+    """
+    The embedding cache key depends on the model string and input, not on the
+    Azure endpoint or token provider.
+    """
+    encoder = LiteLLMEncoder("azure/text-embedding-3-large")
+    encoder.cache = True
+    base = {"model": "azure/text-embedding-3-large", "input": ["test"]}
+    config = {**base, **azure_openai_litellm_params()}
+    with_other_provider = {
+        **config,
+        "azure_ad_token_provider": MagicMock(return_value="another-token"),
+    }
+
+    key = litellm.cache.get_cache_key(**config)
+
+    assert key == litellm.cache.get_cache_key(**base)
+    assert key == litellm.cache.get_cache_key(**with_other_provider)
+    assert key != litellm.cache.get_cache_key(
+        model="text-embedding-3-large", input=["test"]
+    )
+
+
+@pytest.mark.parametrize(
+    "model_name", ["text-embedding-3-large", "azure/text-embedding-3-large"]
+)
+def test_litellm_encoder_azure_prefix_keeps_vector_name(
+    model_name, mocker, azure_openai
+):
+    """
+    The azure/ prefix doesn't change the tokenizer, the Qdrant vector name, or
+    the vector size, so switching to Azure doesn't need a reindex.
+    """
+    mocker.patch(
+        "vector_search.encoders.litellm.embedding",
+        return_value=_embedding_response([0.1] * 3072),
+    )
+    encoder = LiteLLMEncoder(model_name)
+    mocker.patch("vector_search.utils.dense_encoder", return_value=encoder)
+    mock_qdrant = mocker.patch("vector_search.utils.qdrant_client").return_value
+    mock_qdrant.collection_exists.return_value = False
+
+    create_qdrant_collection("test.resources", force_recreate=False)
+
+    assert encoder.token_encoding_name == "cl100k_base"  # noqa: S105
+    vectors_config = mock_qdrant.recreate_collection.call_args.kwargs["vectors_config"]
+    assert list(vectors_config) == ["text-embedding-3-large"]
+    assert vectors_config["text-embedding-3-large"].size == 3072
