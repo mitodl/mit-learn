@@ -24,6 +24,12 @@ const nextConfig = {
   productionBrowserSourceMaps: true,
   allowedDevOrigins,
   /**
+   * Suppress the `X-Powered-By: Next.js` header, which advertises the
+   * framework to anyone enumerating the site. Flagged as "HTTP Header Version
+   * Disclosure" by the 2026-10 application assessment (mitodl/hq#14080).
+   */
+  poweredByHeader: false,
+  /**
    * Standalone output emits a minimal self-contained server at
    * .next/standalone/ with only the required runtime files. The resulting
    * Docker image requires no node_modules and no yarn at startup.
@@ -90,6 +96,40 @@ const nextConfig = {
        * Cache-Control value) depend on runtime state that is unavailable at
        * build time. The rules below are genuinely static and immutable.
        */
+
+      /* Static security headers, on every route including static assets --
+       * nosniff matters most on the asset responses, which is where a wrong
+       * Content-Type gets acted on.
+       *
+       * These two, plus poweredByHeader above, are the only parts of
+       * mitodl/hq#14080 that belong here. They have one value in every
+       * environment, so a build-time config can express them. The
+       * Content-Security-Policy cannot: it has to allowlist a host read from
+       * NEXT_PUBLIC_APPZI_URL, which differs per environment and is unreadable
+       * at build time. It is set in src/proxy.ts instead. See docs/rfcs/
+       * 0007-security-headers.md, D2.
+       *
+       * Referrer-Policy is deliberately strict-origin-when-cross-origin rather
+       * than the tighter same-origin or no-referrer. OCW is about to start
+       * sending search traffic here as cross-origin navigations
+       * (mitodl/hq#13617, mitodl/hq#13767). The tighter values send no Referer
+       * on that hop, so every OCW-originated visit would arrive with no
+       * referrer for analytics to attribute it to -- a silent loss, with no
+       * error anywhere to trace it back to this line.
+       */
+      {
+        source: "/:path*",
+        headers: [
+          {
+            key: "X-Content-Type-Options",
+            value: "nosniff",
+          },
+          {
+            key: "Referrer-Policy",
+            value: "strict-origin-when-cross-origin",
+          },
+        ],
+      },
 
       /* Raw public images. The image optimizer also reuses this as the max-age
        * of the optimized /_next/image responses it produces from them.

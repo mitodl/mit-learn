@@ -1,4 +1,5 @@
 import { getPathMatch } from "next/dist/shared/lib/router/utils/path-match"
+import { buildCustomRoute } from "next/dist/server/lib/router-utils/filesystem"
 
 /**
  * The image optimizer fetches local images through the Next.js router, so a
@@ -50,5 +51,135 @@ describe("next.config.js redirects", () => {
         permanent: true,
       },
     ])
+  })
+})
+
+type HeaderRule = {
+  source: string
+  headers: { key: string; value: string }[]
+}
+
+/**
+ * Collapses every headers() rule matching `pathname` into one key/value map,
+ * so a test asserts on what a response actually carries rather than on which
+ * rule happened to supply it.
+ *
+ * Compiles each rule with Next's own `buildCustomRoute` rather than a bare
+ * `getPathMatch(source)`. The two are not equivalent: Next compiles header
+ * rules with `strict: true` plus a `regexModifier`, and a bare matcher is
+ * loose. They agree on the sources used here, but a future source where
+ * strict and loose diverge would be asserted against the loose matcher and
+ * shipped with the strict one.
+ *
+ * Last-wins on a duplicate key mirrors the router, which assigns
+ * `resHeaders[key] = value` per matching rule, in array order, for every rule
+ * that matches (header rules are non-terminal).
+ */
+const headersFor = (rules: HeaderRule[], pathname: string) =>
+  Object.fromEntries(
+    rules
+      .filter((rule) =>
+        buildCustomRoute("header", rule, "", false).match(pathname),
+      )
+      .flatMap(({ headers }) => headers.map(({ key, value }) => [key, value])),
+  )
+
+describe("next.config.js headers", () => {
+  const originalEnv = process.env
+
+  beforeEach(() => {
+    // Skip validateEnv(), as the Docker build does.
+    process.env = { ...originalEnv, NEXT_BUILD_CI: "1" }
+  })
+  afterEach(() => {
+    process.env = originalEnv
+  })
+
+  const getRules = async (): Promise<HeaderRule[]> => {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const nextConfig = require("../next.config.js")
+    return nextConfig.headers()
+  }
+
+  /**
+   * The root and a nested page confirm the `/:path*` pattern spans both.
+   * Not via the `*` modifier making the segment optional -- Next compiles
+   * header rules with `strict: true`, which disables exactly that, and
+   * `getPathMatch("/:path*", { strict: true })("/")` is false. It matches
+   * because `buildCustomRoute` passes a `regexModifier` that rewrites the
+   * trailing `$` to `(?:\/)?$`. Hence compiling through `buildCustomRoute`
+   * above rather than asserting against a bare matcher.
+   *
+   * The asset paths are the reason the rule is not scoped to page routes:
+   * nosniff matters most where a wrong Content-Type gets acted on.
+   */
+  test.each([
+    "/",
+    "/search",
+    "/c/department/music",
+    "/images/hero/hero-1.png",
+    "/favicon.ico",
+    "/_next/static/media/graduate.05tvlwc2-um9z.png",
+  ])("security headers are present on %s", async (pathname) => {
+    const headers = headersFor(await getRules(), pathname)
+    expect(headers["X-Content-Type-Options"]).toBe("nosniff")
+    expect(headers["Referrer-Policy"]).toBe("strict-origin-when-cross-origin")
+  })
+
+  /**
+   * Not a restatement of the test above. That one would still pass if someone
+   * tightened the value; this one fails if they do. OCW is about to send
+   * cross-origin navigations here (mitodl/hq#13617, mitodl/hq#13767), and
+   * same-origin or no-referrer sends no Referer on that hop, so those visits
+   * arrive with nothing to attribute them to -- a silent loss rather than a
+   * failure anyone would notice.
+   */
+  test("Referrer-Policy is not tightened past strict-origin-when-cross-origin", async () => {
+    const rules = await getRules()
+    const values = rules
+      .flatMap(({ headers }) => headers)
+      .filter(({ key }) => key === "Referrer-Policy")
+      .map(({ value }) => value)
+
+    expect(values).toEqual(["strict-origin-when-cross-origin"])
+  })
+
+  /**
+   * The security rule is additive. Cache-Control for these two paths is a
+   * separate concern and must survive alongside it.
+   */
+  test.each([
+    ["/images/hero/hero-1.png", "s-maxage=31536000"],
+    ["/favicon.ico", "s-maxage=31536000"],
+  ])("%s keeps its Cache-Control", async (pathname, expected) => {
+    const headers = headersFor(await getRules(), pathname)
+    expect(headers["Cache-Control"]).toBe(expected)
+  })
+
+  /**
+   * Per-request Cache-Control belongs to src/proxy.ts, which reads the TTL
+   * from the environment at request time. A second source here would diverge
+   * from it silently.
+   */
+  test("page routes get no Cache-Control from the build-time config", async () => {
+    const headers = headersFor(await getRules(), "/search")
+    expect(headers["Cache-Control"]).toBeUndefined()
+  })
+})
+
+describe("next.config.js poweredByHeader", () => {
+  const originalEnv = process.env
+
+  beforeEach(() => {
+    process.env = { ...originalEnv, NEXT_BUILD_CI: "1" }
+  })
+  afterEach(() => {
+    process.env = originalEnv
+  })
+
+  test("is disabled, so responses carry no X-Powered-By", () => {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const nextConfig = require("../next.config.js")
+    expect(nextConfig.poweredByHeader).toBe(false)
   })
 })
