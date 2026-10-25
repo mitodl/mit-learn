@@ -144,18 +144,18 @@ Asked of the OCW and MITx Online teams at [this comment](https://github.com/mito
 
 **Residual risk from the permissive `script-src`.** The host allowlist still has value — it blocks loading script from an arbitrary attacker-controlled origin, and `object-src 'none'` plus `base-uri 'self'` remove two common escalation paths — but the allowlist includes GTM, which can load arbitrary third-party script by design. In practice the trust boundary includes everyone with write access to the GTM container.
 
-**`Referrer-Policy` has an availability consequence, not just a privacy one.** It must be `strict-origin-when-cross-origin`. The tighter `same-origin` or `no-referrer` would send no `Referer` on cross-origin navigations, and OCW is in the middle of redirecting its search traffic to Learn behind a PostHog flag whose success is measured on that attribution. Tightening it would make that measurement silently wrong, with no error anywhere to connect it back to this change.
+**`Referrer-Policy` has consequences beyond privacy.** It must be `strict-origin-when-cross-origin`. The tighter `same-origin` and `no-referrer` send no `Referer` at all on a cross-origin navigation, and OCW is about to start sending search traffic here as exactly that ([mitodl/hq#13617](https://github.com/mitodl/hq/issues/13617), [mitodl/hq#13767](https://github.com/mitodl/hq/issues/13767)). Those visits would then arrive with no referrer for any analytics to attribute them to — a silent loss, with no error anywhere to connect it back to this change. Note this is the mechanical consequence; neither issue states how the rollout will be measured, so treat "it would break their measurement" as unverified and the referrer loss as the thing actually established.
 
 **`Cache-Control` scoping cuts both ways.** Too narrow and user-specific responses stay cacheable in shared caches, which is the finding. Too broad and public search endpoints lose caching at the moment OCW starts sending them significant traffic.
 
 ### Testing & Rollout
 
-Four chunks. Chunks 1–3 are independent and may land in any order or in parallel; chunk 4 depends on chunk 3 being **deployed and soaked**, not merged. Sizes are estimates taken from the measured starting point and are re-measured during implementation. Epic: `tk-add-missing-security-headers-to-learn-mit-edu-an-4097f6`.
+Four chunks. Chunk 1 is stacked on this RFC's own pull request, so it merges after this document does. Chunks 2 and 3 are independent of it and of each other, and may land in any order or in parallel. Chunk 4 depends on chunk 3 being **deployed and soaked**, not merged. Sizes are estimates taken from the measured starting point and are re-measured during implementation. Epic: `tk-add-missing-security-headers-to-learn-mit-edu-an-4097f6`.
 
 #### Sequencing
 
 1. **Static headers** — `tk-chunk-1-static-security-headers-on-learn-mit-edu-9062b4`, ~40 lines, touches `frontends/main/next.config.js` and `frontends/main/src/nextConfig.test.ts`.
-   Done when `curl -sI https://learn.mit.edu/` shows `X-Content-Type-Options: nosniff` and `Referrer-Policy: strict-origin-when-cross-origin`, and no `X-Powered-By`. Blocked by nothing, including every open decision above — this can start immediately.
+   Done when `curl -sI https://learn.mit.edu/` shows `X-Content-Type-Options: nosniff` and `Referrer-Policy: strict-origin-when-cross-origin`, and no `X-Powered-By`. Unblocked by every open decision above, so the work can start immediately; it is stacked on this RFC's pull request, so it merges after this document does.
 
 2. **API cache scoping** — `tk-chunk-2-cache-control-no-store-on-user-specific--c0a90d`, ~80 lines, touches `main/settings.py`, middleware or a DRF mixin, and tests. Requires D5.
    Done when an authenticated response carries `Cache-Control: no-store` and an anonymous search response still carries its existing caching headers, both asserted in tests rather than checked by hand.
