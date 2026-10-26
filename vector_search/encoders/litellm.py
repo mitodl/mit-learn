@@ -154,10 +154,17 @@ def catalog_model_id(model_name):
     The provider is the one litellm resolves for the request the encoder sends,
     e.g. ``openai:text-embedding-3-large`` for ``text-embedding-3-large``.
     """
+    if is_azure_model(model_name):
+        # get_embedding sends azure/ models to Azure OpenAI whatever
+        # LITELLM_CUSTOM_PROVIDER says
+        provider_params = {"custom_llm_provider": "azure"}
+    else:
+        provider_params = {
+            "custom_llm_provider": settings.LITELLM_CUSTOM_PROVIDER,
+            "api_base": settings.LITELLM_API_BASE,
+        }
     model, provider, _api_key, _api_base = litellm.get_llm_provider(
-        model=model_name,
-        custom_llm_provider=settings.LITELLM_CUSTOM_PROVIDER,
-        api_base=settings.LITELLM_API_BASE,
+        model=model_name, **provider_params
     )
     return f"{provider}:{model}"
 

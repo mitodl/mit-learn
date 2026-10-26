@@ -568,6 +568,7 @@ def _recorded(traced):
         ("openai/text-embedding-3-small", "openai", "openai:text-embedding-3-small"),
         ("text-embedding-3-large", "azure", "azure:text-embedding-3-large"),
         ("azure/text-embedding-3-large", None, "azure:text-embedding-3-large"),
+        ("azure/text-embedding-3-large", "openai", "azure:text-embedding-3-large"),
     ],
 )
 def test_catalog_model_id(settings, model_name, provider, expected):
