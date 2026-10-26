@@ -4,8 +4,10 @@ http://celery.readthedocs.org/en/latest/django/first-steps-with-django.html
 """
 
 import os
+import sys
 
 from celery import Celery
+from celery.signals import worker_process_shutdown
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "main.settings")
 
@@ -41,3 +43,21 @@ app.conf.task_routes = {
     "learning_resources.tasks.ingest_canvas_course": {"queue": "edx_content"},
     "learning_resources.tasks.sync_canvas_courses": {"queue": "edx_content"},
 }
+
+# How long a recycled pool child waits for ol-llm's span exporters to send.
+LLM_TRACE_FLUSH_TIMEOUT_MILLIS = 10_000
+
+
+@worker_process_shutdown.connect
+def flush_llm_traces(**_kwargs):
+    """
+    Send the LLM traces this pool child has queued before it exits.
+
+    ol-llm and the Opik SDK send traces from background threads and flush them
+    at exit, but billiard ends a pool child with os._exit, which skips atexit,
+    so a child recycled after a task (CELERY_WORKER_MAX_MEMORY_PER_CHILD) would
+    drop them. A child that never imported ol_llm has nothing queued.
+    """
+    ol_llm = sys.modules.get("ol_llm")
+    if ol_llm is not None and ol_llm.tracing.enabled():
+        ol_llm.tracing.flush(timeout_millis=LLM_TRACE_FLUSH_TIMEOUT_MILLIS)
