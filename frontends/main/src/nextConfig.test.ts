@@ -127,14 +127,18 @@ describe("next.config.js headers", () => {
   })
 
   /**
-   * Not a restatement of the test above. That one would still pass if someone
-   * tightened the value; this one fails if they do. OCW is about to send
-   * cross-origin navigations here (mitodl/hq#13617, mitodl/hq#13767), and
-   * same-origin or no-referrer sends no Referer on that hop, so those visits
-   * arrive with nothing to attribute them to -- a silent loss rather than a
-   * failure anyone would notice.
+   * Config-wide, where the test above samples paths. That one asserts the
+   * value on six specific paths, so it already fails if the value is tightened;
+   * this one additionally fails if a SECOND Referrer-Policy rule appears
+   * anywhere in headers(), or if a rule matching some unsampled path carries a
+   * different value. A per-path sample cannot see either.
+   *
+   * (An earlier version of this comment claimed the sampled test would still
+   * pass if the value were tightened, and justified the value by inbound OCW
+   * traffic. Both were wrong -- the sampled test asserts the exact string, and
+   * this header governs outbound requests only. See next.config.js.)
    */
-  test("Referrer-Policy is not tightened past strict-origin-when-cross-origin", async () => {
+  test("exactly one Referrer-Policy rule exists, with the intended value", async () => {
     const rules = await getRules()
     const values = rules
       .flatMap(({ headers }) => headers)
