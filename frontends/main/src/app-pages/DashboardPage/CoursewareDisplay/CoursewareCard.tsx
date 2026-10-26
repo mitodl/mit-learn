@@ -52,7 +52,6 @@ type CoursewareCardCourseProps = StyledComponentBaseProps &
     kind: "course"
     entry: DashboardCourseEntry
     disabled?: boolean
-    requirementNote?: string
   }
 
 /**
@@ -112,7 +111,7 @@ const CoursewareCard: React.FC<CoursewareCardProps> = (props) => {
     )
   }
 
-  const { entry, disabled, requirementNote } = props
+  const { entry, disabled } = props
   return entry.displayedEnrollment ? (
     // Happens to be the same as the enrollment branch above, for now.
     // Will likely diverge with multiple enrollment display.
@@ -129,7 +128,6 @@ const CoursewareCard: React.FC<CoursewareCardProps> = (props) => {
       onUpgradeError={onUpgradeError}
       isModule={isModule}
       disabled={disabled}
-      requirementNote={requirementNote}
       Component={Component}
       className={className}
     />
@@ -143,7 +141,6 @@ const CoursewareCard: React.FC<CoursewareCardProps> = (props) => {
       headingLevel={headingLevel}
       isModule={isModule}
       disabled={disabled}
-      requirementNote={requirementNote}
       Component={Component}
       className={className}
     />

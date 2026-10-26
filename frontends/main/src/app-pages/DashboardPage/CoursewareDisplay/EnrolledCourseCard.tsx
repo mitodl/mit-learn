@@ -16,7 +16,6 @@ import {
   TitleText,
   CourseDateSummary,
   UpgradedBanner,
-  CardMetaRow,
 } from "./CardShared"
 import {
   EnrollmentStatus,
@@ -255,7 +254,6 @@ type EnrolledCourseCardProps = {
   onUpgradeError?: (error: string) => void
   isModule?: boolean
   disabled?: boolean
-  requirementNote?: string
   Component?: React.ElementType
   className?: string
 }
@@ -270,7 +268,6 @@ export const EnrolledCourseCard = ({
   onUpgradeError,
   isModule,
   disabled = false,
-  requirementNote,
   Component,
   className,
 }: EnrolledCourseCardProps) => {
@@ -405,12 +402,22 @@ export const EnrolledCourseCard = ({
     <UpgradedBanner />
   ) : null
 
-  const endDateAndUpgradeSection = (
-    <CardMetaRow
-      note={requirementNote}
-      segments={[hasCourseDateText ? courseDateText : null, certStatus]}
-    />
-  )
+  const metaSegments = [
+    hasCourseDateText ? courseDateText : null,
+    certStatus,
+  ].filter(Boolean)
+
+  const endDateAndUpgradeSection =
+    metaSegments.length > 0 ? (
+      <Stack direction="row" alignItems="center" gap="12px">
+        {metaSegments.map((segment, i) => (
+          <React.Fragment key={i}>
+            {i > 0 && <Ellipse />}
+            {segment}
+          </React.Fragment>
+        ))}
+      </Stack>
+    ) : null
   const titleSection = (
     <Stack gap="6px">
       {coursewareUrl && coursewareOpen && !disabled ? (

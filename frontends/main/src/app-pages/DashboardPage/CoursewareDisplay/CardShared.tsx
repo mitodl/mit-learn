@@ -231,40 +231,6 @@ const UpgradedBanner: React.FC<{ className?: string }> = ({ className }) => (
   </UpgradedBannerRoot>
 )
 
-const RequirementNote = styled.span(({ theme }) => ({
-  ...theme.typography.body3,
-  color: theme.custom.colors.silverGrayDark,
-}))
-
-/**
- * A card's info row: segments separated by dots. A note goes on its own line
- * above them, since free-text notes can be long enough to wrap the row.
- */
-const CardMetaRow: React.FC<{
-  note?: string
-  segments: React.ReactNode[]
-}> = ({ note, segments }) => {
-  const present = segments.filter(Boolean)
-  const row =
-    present.length > 0 ? (
-      <Stack direction="row" alignItems="center" gap="12px">
-        {present.map((segment, i) => (
-          <React.Fragment key={i}>
-            {i > 0 && <Ellipse />}
-            {segment}
-          </React.Fragment>
-        ))}
-      </Stack>
-    ) : null
-  if (!note) return row
-  return (
-    <Stack gap="4px">
-      <RequirementNote>{note}</RequirementNote>
-      {row}
-    </Stack>
-  )
-}
-
 const DatePopoverContent = styled.div({
   maxWidth: "240px",
   display: "flex",
@@ -403,6 +369,4 @@ export {
   CourseDateText,
   CourseDateSummary,
   UpgradedBanner,
-  CardMetaRow,
-  RequirementNote,
 }

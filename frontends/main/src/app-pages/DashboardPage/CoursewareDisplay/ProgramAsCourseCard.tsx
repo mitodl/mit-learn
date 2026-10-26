@@ -29,7 +29,6 @@ import {
   CardTypeText,
   CourseDateSummary,
   MenuButton,
-  RequirementNote,
   Separator,
   UpgradedBanner,
 } from "./CardShared"
@@ -268,7 +267,6 @@ interface ProgramAsCourseCardProps {
   contextMenuItems?: SimpleMenuItem[]
   className?: string
   onUpgradeError?: (error: string) => void
-  requirementNote?: string
 }
 
 /**
@@ -295,7 +293,6 @@ const ProgramAsCourseCard: React.FC<ProgramAsCourseCardProps> = ({
   contextMenuItems = [],
   className,
   onUpgradeError,
-  requirementNote,
 }) => {
   const moduleIds = getProgramAsCourseModuleIds(courseProgram)
 
@@ -430,9 +427,6 @@ const ProgramAsCourseCard: React.FC<ProgramAsCourseCardProps> = ({
             <Typography variant="subtitle2" component="h3">
               {courseProgram?.title}
             </Typography>
-            {requirementNote ? (
-              <RequirementNote>{requirementNote}</RequirementNote>
-            ) : null}
           </ProgramCardHeaderInner>
           <Stack direction="row" gap="8px">
             {programCertificateUrl ? (
@@ -479,9 +473,6 @@ const ProgramAsCourseCard: React.FC<ProgramAsCourseCardProps> = ({
             <Typography variant="subtitle2" component="h3">
               {courseProgram?.title}
             </Typography>
-            {requirementNote ? (
-              <RequirementNote>{requirementNote}</RequirementNote>
-            ) : null}
           </ProgramCardHeaderInner>
         </ProgramCardHeaderOuter>
       </ProgramHeaderMobile>

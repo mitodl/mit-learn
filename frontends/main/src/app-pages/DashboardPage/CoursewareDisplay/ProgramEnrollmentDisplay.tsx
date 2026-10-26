@@ -29,6 +29,10 @@ const SectionCount = styled(Typography)({
   marginLeft: "auto",
 })
 
+const SectionDescription = styled(Typography)({
+  flexBasis: "100%",
+})
+
 const SUPPORT_EMAIL = env("NEXT_PUBLIC_MITOL_SUPPORT_EMAIL") || ""
 
 export const ProgramCertificateButton = styled(ButtonLink)(({ theme }) => ({
@@ -167,6 +171,14 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
                   Completed {section.completed} of {section.total}
                 </SectionCount>
               ) : null}
+              {section.node.data.description ? (
+                <SectionDescription
+                  variant="body2"
+                  color={theme.custom.colors.silverGrayDark}
+                >
+                  {section.node.data.description}
+                </SectionDescription>
+              ) : null}
             </Stack>
             {section.trackAction === "choose" && data.trackState ? (
               <ProgramTrackPlaceholder
@@ -188,9 +200,6 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
                       })}
                       kind="course"
                       entry={item.entry}
-                      requirementNote={
-                        section.node.data.description || undefined
-                      }
                       onUpgradeError={setUpgradeError}
                     />
                   )
@@ -208,9 +217,6 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
                       moduleEnrollmentsByCourseId={data.enrollmentsByCourseId}
                       courseProgramEnrollment={item.courseProgramEnrollment}
                       ancestorProgramEnrollment={data.ancestorProgramEnrollment}
-                      requirementNote={
-                        section.node.data.description || undefined
-                      }
                       onUpgradeError={setUpgradeError}
                     />
                   )
@@ -230,7 +236,6 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
                     moduleEnrollmentsByCourseId={data.enrollmentsByCourseId}
                     courseProgramEnrollment={item.programEnrollment}
                     ancestorProgramEnrollment={data.ancestorProgramEnrollment}
-                    requirementNote={section.node.data.description || undefined}
                     onUpgradeError={setUpgradeError}
                   />
                 )

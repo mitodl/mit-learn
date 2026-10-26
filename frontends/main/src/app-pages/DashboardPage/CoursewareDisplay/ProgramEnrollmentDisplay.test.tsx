@@ -2344,7 +2344,7 @@ describe("ProgramEnrollmentDisplay", () => {
     const certButton = screen.queryByRole("link", { name: "Certificate" })
     expect(certButton).not.toBeInTheDocument()
   })
-  test("Shows a requirement group's description in its course cards' info row", async () => {
+  test("Shows a requirement group's description under its heading, not on its cards", async () => {
     const mitxOnlineUser = mitxonline.factories.user.user()
     setMockResponse.get(mitxonline.urls.userMe.get(), mitxOnlineUser)
 
@@ -2373,7 +2373,7 @@ describe("ProgramEnrollmentDisplay", () => {
         courseruns: [mitxonline.factories.courses.courseRun({ id: 300 + id })],
       }),
     )
-    // Course 2 is enrolled, course 3 is not: both card kinds show it.
+    // Course 2 is enrolled and course 3 is not, so both card kinds are present.
     const enrollment = mitxonline.factories.enrollment.courseEnrollment({
       run: { ...course2.courseruns[0], course: course2 },
     })
@@ -2412,140 +2412,14 @@ describe("ProgramEnrollmentDisplay", () => {
     renderWithProviders(<ProgramEnrollmentDisplay programId={7777} />)
     await screen.findByText("Capstone Exam")
 
-    const desktopCardFor = (course: { id: number }) => {
-      const card = screen
-        .getAllByTestId("enrollment-card-desktop")
-        .find((el) =>
-          within(el).queryByText(
-            course.id === course2.id
-              ? enrollment.run.title
-              : course.id === course3.id
-                ? course3.courseruns[0].title
-                : course1.courseruns[0].title,
-          ),
-        )
-      invariant(card, `no card for course ${course.id}`)
-      return card
-    }
-    expect(within(desktopCardFor(course2)).getByText(description)).toBeVisible()
-    expect(within(desktopCardFor(course3)).getByText(description)).toBeVisible()
+    // Once, in the Capstone Exam header rather than on either course card.
+    const [note] = screen.getAllByText(description)
+    expect(screen.getAllByText(description)).toHaveLength(1)
     expect(
-      within(desktopCardFor(course1)).queryByText(description),
-    ).not.toBeInTheDocument()
-  })
-  test("Shows a requirement group's description on a program-as-course card in that group, not on its modules", async () => {
-    const mitxOnlineUser = mitxonline.factories.user.user()
-    setMockResponse.get(mitxonline.urls.userMe.get(), mitxOnlineUser)
-
-    const description = "Unlocks after all required courses are complete"
-    const parentReqTree =
-      new mitxonline.factories.requirements.RequirementTreeBuilder()
-    parentReqTree
-      .addOperator({ operator: "all_of", title: "Core Courses" })
-      .addCourse({ course: 1 })
-    parentReqTree
-      .addOperator({ operator: "all_of", title: "Capstone", description })
-      .addProgram({ program: 900 })
-
-    const parentProgram = mitxonline.factories.programs.program({
-      id: 1234,
-      courses: [1],
-      req_tree: parentReqTree.serialize(),
-    })
-
-    const programAsCourseReqTree =
-      new mitxonline.factories.requirements.RequirementTreeBuilder()
-    const modules = programAsCourseReqTree.addOperator({
-      operator: "all_of",
-      title: "Modules",
-    })
-    modules.addCourse({ course: 11 })
-    modules.addCourse({ course: 12 })
-    const programAsCourseProgram = mitxonline.factories.programs.program({
-      id: 900,
-      title: "Capstone Program As Course",
-      display_mode: "course",
-      courses: [11, 12],
-      req_tree: programAsCourseReqTree.serialize(),
-    })
-
-    setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV3(), [])
-    setMockResponse.get(
-      mitxonline.urls.programEnrollments.enrollmentsListV3(),
-      [
-        mitxonline.factories.enrollment.programEnrollmentV3({
-          program: {
-            id: parentProgram.id,
-            title: parentProgram.title,
-            live: parentProgram.live,
-            program_type: parentProgram.program_type,
-            readable_id: parentProgram.readable_id,
-          },
-        }),
-      ],
-    )
-    setMockResponse.get(
-      mitxonline.urls.programs.programDetail(parentProgram.id),
-      parentProgram,
-    )
-    setMockResponse.get(
-      mitxonline.urls.courses.coursesList({ id: [1], page_size: 1 }),
-      {
-        count: 1,
-        next: null,
-        previous: null,
-        results: [
-          mitxonline.factories.courses.course({
-            id: 1,
-            courseruns: [mitxonline.factories.courses.courseRun()],
-          }),
-        ],
-      },
-    )
-    setMockResponse.get(
-      mitxonline.urls.programs.programsList({ id: [900], page_size: 1 }),
-      {
-        count: 1,
-        next: null,
-        previous: null,
-        results: [programAsCourseProgram],
-      },
-    )
-    setMockResponse.get(
-      mitxonline.urls.programs.programDetail(900),
-      programAsCourseProgram,
-    )
-    setMockResponse.get(
-      mitxonline.urls.courses.coursesList({ id: [11, 12], page_size: 2 }),
-      {
-        count: 2,
-        next: null,
-        previous: null,
-        results: [11, 12].map((id) =>
-          mitxonline.factories.courses.course({
-            id,
-            courseruns: [mitxonline.factories.courses.courseRun()],
-          }),
-        ),
-      },
-    )
-
-    renderWithProviders(
-      <ProgramEnrollmentDisplay programId={parentProgram.id} />,
-    )
-
-    const card = await screen.findByTestId("program-as-course-card")
-    const desktopHeader = within(card).getByTestId(
-      "program-as-course-card-desktop-header",
-    )
-    expect(within(desktopHeader).getByText(description)).toBeVisible()
-    // Once per header (desktop and mobile). The module cards don't repeat it:
-    // the note is about the program card's place in the parent program.
-    expect(within(card).getAllByText(description)).toHaveLength(2)
-    for (const moduleCard of within(card).getAllByTestId(
-      "enrollment-card-desktop",
-    )) {
-      expect(within(moduleCard).queryByText(description)).toBeNull()
+      screen.getByRole("heading", { name: "Capstone Exam" }).parentElement,
+    ).toContainElement(note)
+    for (const card of screen.getAllByTestId("enrollment-card-desktop")) {
+      expect(card).not.toContainElement(note)
     }
   })
 })
