@@ -100,7 +100,13 @@ const TopicFeaturedCarousel: React.FC<TopicFeaturedCarouselProps> = ({
   )
 
   const config: TabConfig[] = React.useMemo(
-    () => [{ label: "Featured", data: { type: "channel_featured", params } }],
+    () => [
+      {
+        label: "Featured",
+        cardProps: { size: "medium" },
+        data: { type: "channel_featured", params },
+      },
+    ],
     [params],
   )
 

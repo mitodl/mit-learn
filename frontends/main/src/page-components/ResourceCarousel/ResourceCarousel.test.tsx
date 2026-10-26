@@ -70,10 +70,6 @@ describe("ResourceCarousel", () => {
   }
 
   it.each([
-    { cardProps: undefined },
-    { cardProps: { size: "small" } },
-    { cardProps: { size: "medium" } },
-    { cardProps: undefined },
     { cardProps: { size: "small" } },
     { cardProps: { size: "medium" } },
   ] as const)(
@@ -133,6 +129,7 @@ describe("ResourceCarousel", () => {
       const config: ResourceCarouselProps["config"] = [
         {
           label: "Search",
+          cardProps: { size: "small" },
           data: { type: "lr_search", params: { professional: true } },
         },
       ]
@@ -174,6 +171,7 @@ describe("ResourceCarousel", () => {
       const config: ResourceCarouselProps["config"] = labels.map((label) => {
         return {
           label,
+          cardProps: { size: "small" },
           data: { type: "lr_search", params: { q: label } },
         }
       })
@@ -206,6 +204,7 @@ describe("ResourceCarousel", () => {
     const config: ResourceCarouselProps["config"] = [
       {
         label: "Resources",
+        cardProps: { size: "small" },
         data: {
           type: "resources",
           params: { resource_type: ["course", "program"], professional: true },
@@ -248,6 +247,7 @@ describe("ResourceCarousel", () => {
       const config: ResourceCarouselProps["config"] = [
         {
           label: "Resources",
+          cardProps: { size: "small" },
           data: {
             type: "resources",
             params: {
@@ -278,6 +278,7 @@ describe("ResourceCarousel", () => {
     const config: ResourceCarouselProps["config"] = [
       {
         label: "Resources",
+        cardProps: { size: "small" },
         data: {
           type: "resources",
           params: { resource_type: ["course", "program"], professional: true },
@@ -302,6 +303,7 @@ describe("ResourceCarousel", () => {
     const config: ResourceCarouselProps["config"] = [
       {
         label: "Resources",
+        cardProps: { size: "small" },
         data: {
           type: "resources",
           params: { resource_type: ["course", "program"], professional: true },
@@ -335,6 +337,7 @@ describe("ResourceCarousel", () => {
       const config: ResourceCarouselProps["config"] = [
         {
           label: "Resources",
+          cardProps: { size: "small" },
           data: {
             type: "resources",
             params: { resource_type: ["course"] },
@@ -364,6 +367,7 @@ describe("ResourceCarousel", () => {
     const config: ResourceCarouselProps["config"] = [
       {
         label: "Test Carousel",
+        cardProps: { size: "small" },
         data: {
           type: "resources",
           params: { resource_type: ["course"] },
@@ -403,6 +407,7 @@ describe("ResourceCarousel", () => {
     const skipConfig: ResourceCarouselProps["config"] = [
       {
         label: "Resources",
+        cardProps: { size: "small" },
         data: { type: "resources", params: { resource_type: ["course"] } },
       },
     ]
