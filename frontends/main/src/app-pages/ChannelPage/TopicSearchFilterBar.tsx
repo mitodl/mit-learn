@@ -14,11 +14,8 @@ type Aggregations = LearningResourcesSearchResponse["metadata"]["aggregations"]
  * controls, rather than the facet sidebar the other channels use. A topic
  * page narrows by format, certificate and price, and the rest of the facets
  * are not offered here.
- *
- * The card around it belongs to the results header it shares with the tabs
- * and the applied filters -- see `TopicSearchCard` in `SearchDisplay`.
  */
-const Card = styled.div({
+const Row = styled.div({
   display: "flex",
   alignItems: "center",
   gap: "24px",
@@ -86,9 +83,7 @@ const Divider = styled.div(({ theme }) => ({
 const FacetSelect = styled(SimpleSelect)(({ theme }) => ({
   ...theme.typography.body2,
   color: theme.custom.colors.silverGrayDark,
-  /* The design's control is the label and a chevron, with no field chrome.
-     The background goes with the border: left white it reads as a box
-     against the card's gradient, which is the chrome by another name. */
+  /* The design's control is the label and a chevron, with no field chrome. */
   ".MuiOutlinedInput-notchedOutline": { border: "none" },
   "&&": { backgroundColor: "transparent" },
   /**
@@ -483,7 +478,7 @@ const TopicSearchFilterBar: React.FC<TopicSearchFilterBarProps> = ({
   ].filter((control): control is React.ReactElement => control !== null)
 
   return (
-    <Card data-testid="topic-search-filter-bar">
+    <Row data-testid="topic-search-filter-bar">
       <StyledSearchField
         value={currentText}
         /* 48px, which is what makes the card the design's 96px tall. */
@@ -506,7 +501,7 @@ const TopicSearchFilterBar: React.FC<TopicSearchFilterBarProps> = ({
           </React.Fragment>
         ))}
       </Facets>
-    </Card>
+    </Row>
   )
 }
 

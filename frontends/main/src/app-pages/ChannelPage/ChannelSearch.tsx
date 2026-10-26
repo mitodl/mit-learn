@@ -172,9 +172,6 @@ const ChannelSearch: React.FC<ChannelSearchProps> = ({
       )}
 
       <ChannelSearchDisplay
-        /* The design draws the bar at the top of the card the results header
-           sits in, so the display renders it rather than this placing it
-           above -- see `TopicSearchCard`. */
         filterBarSlot={
           layout === "cards"
             ? (aggregations) => (

@@ -833,8 +833,8 @@ export interface SearchDisplayProps {
    */
   drawerSearchSlot?: React.ReactNode
   /**
-   * The search box and facets, drawn at the top of the card this renders for
-   * the cards layout. The caller owns the search term, so it builds the bar
+   * The search box and facets, drawn in the search card this renders for the
+   * cards layout. The caller owns the search term, so it builds the bar
    * and hands it over rather than this reaching back for the state -- and
    * takes the counts back the other way, since the search that produces them
    * is run here.

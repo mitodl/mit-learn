@@ -902,11 +902,6 @@ describe("ChannelSearch", () => {
    * The dropdowns say what they are narrowed to, so the card states the
    * filters without any of them being opened.
    */
-  /**
-   * The bar's dropdowns close over what they selected, so the row above the
-   * results is the only place the applied filters are named -- and the only
-   * place each one can be switched off by itself.
-   */
   describe("filter counts on the controls", () => {
     const barAt = async (query: string) => {
       const { channel } = setMockApiResponses({
@@ -958,6 +953,11 @@ describe("ChannelSearch", () => {
     }, 10000)
   })
 
+  /**
+   * The bar's dropdowns close over what they selected, so the row under the
+   * search box is the only place the applied filters are named -- and the
+   * only place each one can be switched off by itself.
+   */
   describe("selected filter chips", () => {
     const chipRowAt = async (query: string) => {
       const { channel } = setMockApiResponses({
