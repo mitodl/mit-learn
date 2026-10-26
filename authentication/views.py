@@ -1,6 +1,9 @@
 """Authentication views"""
 
+import hashlib
 import logging
+import secrets
+from base64 import urlsafe_b64encode
 from urllib.parse import urlparse, urlunparse
 
 from django.conf import settings
@@ -223,6 +226,16 @@ class AccountActionStartView(RedirectView):
             self.request, next_url=next_url, action=action
         )
 
+        # Keycloak's pkce-enforcer client policy rejects an authorization
+        # request without an S256 challenge. The callback never redeems the
+        # code (it only reads kc_action_status), so the verifier isn't kept.
+        code_verifier = secrets.token_urlsafe(64)
+        code_challenge = (
+            urlsafe_b64encode(hashlib.sha256(code_verifier.encode()).digest())
+            .decode()
+            .rstrip("=")
+        )
+
         qs = {
             "client_id": settings.KEYCLOAK_CLIENT_ID,
             "response_type": "code",
@@ -233,6 +246,8 @@ class AccountActionStartView(RedirectView):
             # environment's client would fail silently and confusingly.
             "scope": "openid email",
             "kc_action": KEYCLOAK_ACTIONS[action],
+            "code_challenge": code_challenge,
+            "code_challenge_method": "S256",
         }
 
         return "".join(
