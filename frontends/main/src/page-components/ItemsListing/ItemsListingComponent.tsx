@@ -23,7 +23,6 @@ type ItemsListingComponentProps = {
   isLoading: boolean
   isFetching: boolean
   handleEdit: OnEdit
-  condensed?: boolean
 }
 
 const HeaderText = styled.h1(({ theme }) => ({
@@ -76,7 +75,6 @@ const ItemsListingComponent: React.FC<ItemsListingComponentProps> = ({
   isLoading,
   isFetching,
   handleEdit,
-  condensed = false,
 }) => {
   const [isSorting, toggleIsSorting] = useToggle(false)
 
@@ -155,7 +153,6 @@ const ItemsListingComponent: React.FC<ItemsListingComponentProps> = ({
         isRefetching={isFetching}
         sortable={isSorting}
         emptyMessage="There are no items in this list yet."
-        condensed={condensed}
       />
     </>
   )

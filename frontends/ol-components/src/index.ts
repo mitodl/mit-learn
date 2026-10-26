@@ -38,7 +38,7 @@ export type {
   BannerBackgroundProps,
 } from "./components/Banner/Banner"
 
-export { ListCard, ListCardActionButton } from "./components/Card/ListCard"
+export { ListCard } from "./components/Card/ListCard"
 
 export { default as Chip } from "@mui/material/Chip"
 export type { ChipProps } from "@mui/material/Chip"
