@@ -15,11 +15,11 @@ nav_order: 7
 - Table of Contents
   {:toc}
 
-Status: **spec** — D1–D4 decided, D5–D7 open. Nothing here is implemented yet.
+Status: **spec** — D1–D4 and D7–D9 decided, D5, D6 and D10 open. Nothing here is implemented yet.
 Project: `wp-worknest-assessment-remediation-security-headers-ef7183`
 Basis: [mitodl/hq#14080](https://github.com/mitodl/hq/issues/14080), its [scoping comment](https://github.com/mitodl/hq/issues/14080#issuecomment-6372991750) and [plan comment](https://github.com/mitodl/hq/issues/14080#issuecomment-6373957431)
 
-All `mit-learn` source anchors below are against `origin/main` @ `59d24e38b`. All `ol-infrastructure` anchors are against its `origin/main` @ `a3a258ee4`. Line numbers rot; if one does not match, trust the symbol name and re-derive.
+All `mit-learn` source anchors below are against `origin/main` @ `0deaee154`. All `ol-infrastructure` anchors are against its `origin/main` @ `a3a258ee4`. Line numbers rot; if one does not match, trust the symbol name and re-derive.
 
 ### Abstract
 
@@ -27,7 +27,7 @@ The Worknest web application assessment of learn.mit.edu and api.learn.mit.edu (
 
 Two of those are a few lines of configuration. The CSP is not, and the reason is worth stating up front because it drives most of this document: **learn.mit.edu cannot have a strict `script-src`.** Next.js App Router emits a per-page inline `<script>` carrying the React Server Components flight payload, so hashing is infeasible; the only alternative is a per-request nonce, and learn.mit.edu serves one Fastly-cached HTML body to every viewer, so a nonce would be shared by all of them and protect nothing. Closing that gap means changing the caching strategy, which is a larger piece of work than this one.
 
-So this RFC ships the CSP directives that can be enforced without touching the caching strategy or Google Tag Manager's workflow — `frame-ancestors`, `object-src`, `base-uri`, `form-action`, `frame-src`, `img-src`, `style-src`, `connect-src` — and leaves `script-src` permissive as an explicit, tracked gap ([mitodl/hq#14083](https://github.com/mitodl/hq/issues/14083)). That is a real limitation, not a technicality: an attacker who achieves HTML injection on learn.mit.edu can still execute script after this work lands.
+So this RFC ships the CSP directives that can be enforced without touching the caching strategy or Google Tag Manager's workflow — `frame-ancestors`, `object-src`, `base-uri`, `form-action`, `frame-src`, `img-src`, `style-src`, `connect-src`, and the `default-src`/`media-src`/`font-src`/`worker-src` set D10 adds — and leaves `script-src` permissive as an explicit, tracked gap ([mitodl/hq#14083](https://github.com/mitodl/hq/issues/14083)). That is a real limitation, not a technicality: an attacker who achieves HTML injection on learn.mit.edu can still execute script after this work lands.
 
 Gateway TLS and HSTS are a separate issue and out of scope here.
 
@@ -35,9 +35,13 @@ Gateway TLS and HSTS are a separate issue and out of scope here.
 
 - `frontends/main/next.config.js` `headers()` has exactly two entries, both `Cache-Control`, for `/images/(.*)` and `/favicon.ico`. No security headers anywhere. `poweredByHeader` is unset, so Next's default `X-Powered-By` is sent.
 - `frontends/main/src/proxy.ts` runs on every page route and sets `Cache-Control: s-maxage=<env>, stale-if-error=86400, stale-while-revalidate=86400` plus the `html-pages` `Surrogate-Key`. Its header comment explains that `next.config.js` `headers()` runs at build time and cannot read per-environment variables, which is why this file exists.
+- `frontends/main/src/app/(embed)/` is a second route group serving exactly two paths — `/video/embed/<id>` (which accepts `?t=<seconds>`) and `/podcast/embed/<id>`. Next.js route groups contribute nothing to the URL, so there is no `/embed/` prefix, and the sibling `(site)` paths `/video/<id>` and `/podcast/<podcastId>` must not be matched by a rule meant for these. Its `layout.tsx` renders only `<MITLearnGlobalStyles />` plus children: no GTM, no Appzi, no HubSpot, no header or footer. The root `app/layout.tsx` still applies.
+- `frontends/main/src/components/ShareDialog/ShareDialog.tsx` hands users a copy-paste `<iframe>` snippet pointing at `/video/embed/<id>` for videos on the `ovs` and `ocw` platforms, and displays `/podcast/embed/<id>` as a copyable "Audio URL" that users wrap in an iframe themselves. Both are meant to be pasted onto arbitrary third-party domains. This is the fact D7 was originally written without.
+- learn.mit.edu does **not** frame itself today, despite appearances. `MediaEmbedURLHandler.ts` does recognise own-origin embed URLs, but it stores them as a `mitLearnVideoId` attribute, and both render sites branch on exactly that to produce a native React `OVSVideoPlayer` — the `<iframe>` is the fallback for third-party URLs only (`MediaEmbedViewer.tsx:84`, `MediaEmbedNodeView.tsx:245`). Podcast URLs become a `podcastEpisodeEmbed` node whose render tree contains no iframe at all. An earlier draft of this RFC claimed the opposite; it was read from the URL handler without following the branch.
 - `frontends/main/src/app/(site)/layout.tsx` renders an inline `<Script>` bootstrapping GTM whose body interpolates `GTM_AUTH` and `GTM_PREVIEW`, a `<noscript>` iframe pointing at `googletagmanager.com/ns.html`, and external scripts for Appzi (`NEXT_PUBLIC_APPZI_URL`) and HubSpot.
 - Emotion and MUI v6 inject `<style>` elements at runtime.
-- Third-party hosts referenced from the frontend: `www.googletagmanager.com`, `js.hs-scripts.com`, `use.typekit.net`, `p.typekit.net`, `fonts.googleapis.com`, `cdn.jsdelivr.net`, `player.vimeo.com`, `www.youtube.com`.
+- Third-party hosts referenced from the frontend: `www.googletagmanager.com`, `js.hs-scripts.com`, `use.typekit.net`, `p.typekit.net`, `fonts.googleapis.com`, `cdn.jsdelivr.net`, `player.vimeo.com`, `www.youtube.com`, `video.odl.mit.edu`. The last is resolved by `convertToEmbedUrl()` in `frontends/main/src/common/utils.ts` alongside the YouTube and Vimeo players; an earlier draft of this list omitted it.
+- Media sources are **not** enumerable from this repo. `learning_resources/etl/ovs.py` sets a video's `streaming_url` to whatever the OVS API returns (a CloudFront host), and podcast audio URLs come from third-party RSS feeds. See D10.
 - Django 5.2.17. `SecurityMiddleware` is first in `MIDDLEWARE` (`main/settings.py`). Only `SECURE_CROSS_ORIGIN_OPENER_POLICY` is set explicitly; `SECURE_CONTENT_TYPE_NOSNIFF` and `SECURE_REFERRER_POLICY` are unset, so Django's defaults (`True` and `same-origin`) apply and the API probably already sends both. There is no `django-csp` dependency and no `Cache-Control` logic anywhere in the Python code.
 
 #### Where response headers come from today
@@ -73,13 +77,15 @@ Rejected for three reasons. The policy has to allowlist the Appzi host, which co
 
 `X-Content-Type-Options`, `Referrer-Policy` and `poweredByHeader: false` are genuinely static — one value, every environment — so they go in `next.config.js`, which is where the repo already keeps static response-header rules.
 
-The CSP cannot go there. `headers()` is evaluated at build time and the policy must contain the per-environment Appzi host. It goes in `frontends/main/src/proxy.ts`, which exists for exactly this reason and already sets `Cache-Control` from runtime environment for the same underlying cause.
+The CSP cannot go there. `headers()` is evaluated at build time and the policy must contain the per-environment Appzi host. It is emitted from `frontends/main/src/proxy.ts`, which exists for exactly this reason and already sets `Cache-Control` from runtime environment for the same underlying cause. D8 refines this without overriding it: the header is still set in `proxy.ts`, but the policy is _built_ in a separate `frontends/main/src/common/csp.ts` so it can be tested on its own.
 
 mitodl/hq#14080's original Plan/Design says to put the CSP in `next.config.js`. That is wrong, and this supersedes it.
 
 #### D3. `script-src` stays permissive; every other directive is enforced (decided)
 
-The policy enforces `object-src 'none'`, `base-uri 'self'`, `form-action 'self'`, `frame-ancestors` (D7), `frame-src`, `img-src`, `style-src` and `connect-src`. `script-src` keeps `'unsafe-inline'` alongside a host allowlist.
+The policy enforces `object-src 'none'`, `base-uri 'self'`, `form-action 'self'`, `frame-ancestors` (D7), `frame-src`, `img-src`, `style-src`, `connect-src` and the fallbacks named in D10. `script-src` keeps `'unsafe-inline'` alongside a host allowlist — except on the `(embed)` routes, where D8 narrows the allowlist to `'self'` plus YouTube.
+
+Be honest about which of those are load-bearing. Under a permissive `script-src`, **`connect-src` and `img-src` buy close to nothing**: an attacker who can already execute inline script, or who reaches the GTM container, has an exfiltration channel regardless, and tightening `connect-src` would break HLS video long before it inconvenienced them. The directives actually doing work are `frame-ancestors`, `object-src 'none'`, `base-uri 'self'`, `form-action 'self'`, `frame-src`, and the embed group's narrowed `script-src`.
 
 Three facts force this, and they compound:
 
@@ -124,21 +130,94 @@ Volume matters here. A report-only CSP on a high-traffic public site generates a
 
 **Who decides:** whoever picks up `tk-chunk-3-csp-report-only-on-learn-mit-edu-emitted-f8001f`.
 
-#### D7. The `frame-ancestors` origin list (open — externally blocked)
+#### D7. `frame-ancestors` is two values, not one list (decided)
 
-`frame-ancestors` controls which sites may embed learn.mit.edu in an iframe. Set too narrowly, any site embedding Learn today breaks, and it breaks as a blank frame rather than as an error anyone is paged for.
+`(site)` routes send `frame-ancestors 'self'`. The two `(embed)` routes — `/video/embed/<id>` and `/podcast/embed/<id>` — send `frame-ancestors *`.
 
-Asked of the OCW and MITx Online teams at [this comment](https://github.com/mitodl/hq/issues/14080#issuecomment-6373425561). What is known:
+D7 was originally posed as "which origins legitimately embed learn.mit.edu", asked of the OCW and MITx Online teams at [this comment](https://github.com/mitodl/hq/issues/14080#issuecomment-6373425561), on the assumption that the answer was a closed list. Two things since changed that:
 
-- The OCW search switchover is link-and-redirect, so inbound navigation does not require framing.
-- OCW does have a live browser-side integration with the Learn API and with learn-ai (`LEARN_AI_SYLLABUS_ENDPOINT`), and whether the AI syllabus widget renders in an iframe is not determinable from the code.
-- MITx Online almost certainly does frame something: `ol-infrastructure` already sets `frame-ancestors 'self' {openedx_base_url}` for mitxonline, so that stack has an established embedding relationship.
+1. **OCW answered: it does not frame learn.mit.edu.** (@nlevesq, 2026-10-26.) The speculation recorded here earlier — that the learn-ai syllabus widget might render in an iframe — is resolved and removed.
+2. **Learn ships its own embed feature, and a closed list cannot express it.** `ShareDialog` exists to hand users an iframe snippet to paste on their own site, wherever that is. Those two routes must be framable from any origin, by design and as a product requirement. No origin list, however carefully gathered, is the right shape for them.
 
-**Who decides:** the OCW and MITx Online teams. This is not answerable from the codebase and must not be guessed.
+So the question is not "which origins" but "which routes". The split is exact and narrow: the `(embed)` route group is already separate in the App Router, already has its own minimal layout, and already carries `robots: "noindex, nofollow"`. Everything else — dashboard, cart, search, channels, settings — gets `'self'`, which is what closes the clickjacking finding the assessment raised.
+
+**The accepted tradeoff.** Giving up: clickjacking protection on `/video/embed/<id>` and `/podcast/embed/<id>`. Those pages are **deliberately framable by any site, and therefore deliberately clickjackable.** That is inherent to shipping an embed feature; the mitigation is that they are media players with no state-changing controls, no authenticated actions and no cross-origin credentials, so there is nothing on them worth hijacking a click for. To get: `frame-ancestors` on every route that does carry such controls, without breaking a shipped feature. Revisit when: the embed pages grow an interactive or authenticated control, at which point this decision has to be re-argued rather than inherited.
+
+`*` is written explicitly on the embed routes rather than omitting the directive. The two are mechanically identical — `frame-ancestors` does not fall back to `default-src` — but the explicit value is the difference between "deliberately open, because `ShareDialog` hands this URL to arbitrary third parties" and "someone forgot", and it gives the test something to assert against.
+
+**MITx Online never answered.** No evidence of it framing Learn exists in any repo. The `frame-ancestors 'self' {openedx_base_url}` precedent in `ol-infrastructure` points the other way: it is mitxonline being framed _by_ Open edX, which says nothing about mitxonline framing Learn. The relationship in this repo runs in the opposite direction again — Learn _hosts_ the MITxOnline product pages (`proxy.ts` `mitxonlineSurrogateKey`, with per-item Fastly purge keys MITxOnline triggers), which is a canonical-page relationship reached by navigation, not framing.
+
+Silence is therefore being treated as "no". That is a judgement, not a finding, and it is the one thing in this decision that could still be wrong — **and the report-only soak cannot check it.** `frame-ancestors` is ignored outright when delivered in a report-only policy — the CSP specification says so explicitly, and Chrome, Firefox and WebKit all drop the directive and log a warning. It produces no violation reports at all, only that warning on every page view. Shipping it report-only buys nothing and costs noise. Confirm this with one devtools load before relying on it either way; the measurement that does work is chunk 3b in Testing & Rollout.
+
+**Would have won if** the embed routes did not exist, or if they shared a layout with the rest of the site so no clean route boundary was available to split on.
+
+#### D8. Two policies from a shared base, not one string with a swapped directive (decided)
+
+The `(site)` and `(embed)` groups get independently tuned policies built from a shared base. The branch is a pathname test in `frontends/main/src/proxy.ts`; the policy builder lives in a new `frontends/main/src/common/csp.ts` rather than in `common/config.ts`, which is thirty lines of env getters that client code already imports (`getCacheSMaxageSeconds` is read by `getQueryClient.ts`) and is the wrong import graph for a policy builder with its own test file.
+
+The simpler option — one body, only `frame-ancestors` differing — was considered and rejected on a security argument that only becomes visible once D7 is settled. **An `(embed)` document executes inside arbitrary third-party origins.** Giving it the `(site)` group's `script-src` means the union of GTM, HubSpot, Appzi and reCAPTCHA hosts is trusted inside every embedder's page, so a GTM container compromise reaches all of them. The embed layout loads none of those — it has no GTM, no Appzi, no HubSpot, no reCAPTCHA, and no PostHog (`ConfiguredPostHogProvider` is mounted only from `app/(site)/SiteProviders.tsx`) — so its `script-src` host allowlist can drop to `'self'` plus YouTube.
+
+That is also the **only** place D3's accepted tradeoff can be partially bought back without touching the caching strategy. `'unsafe-inline'` is still forced on both groups by Next's own flight-payload scripts, so this does not make the embed routes XSS-proof; it shrinks which third parties are trusted on the one surface that runs in someone else's security context.
+
+**This creates a new invariant: nothing may add GTM, Appzi, HubSpot, reCAPTCHA or PostHog to the `(embed)` layout.** An invariant that exists only in prose will be broken, so it is locked by a test asserting the embed `script-src` contains no analytics host (see Testing & Rollout).
+
+The cost is honest: two policies to maintain, two violation streams to interpret, and a soak that has to be read per group. Accepted for the reason above.
+
+`next.config.js` `headers()` still cannot host any of this, for the reason given in D2 — it is evaluated at build time and the policy contains a per-environment host.
+
+**The matcher must be exact.** Route groups are parenthesised and contribute nothing to the URL, so the rule targets `/video/embed/<id>` and `/podcast/embed/<id>` literally. `/video/<id>` and `/podcast/<podcastId>` are ordinary `(site)` pages; a loose prefix match that caught them would hand the embed policy to a large part of the catalogue. Two subtleties worth encoding in the matcher rather than rediscovering:
+
+- Match **any** id segment, not just digits. Both pages `Number()`-parse the id and call `notFound()` on a non-positive non-integer, and that 404 renders from `(embed)/not-found.tsx` — still inside the embed group. A digits-only matcher would give that 404 the site policy, so a third-party embed of a deleted video would render as a blank frame instead of the embed not-found page.
+- The id segment is **required**. `/video/embed` with no id resolves to `(site)/video/[id]` with `id="embed"`, so it is a site route.
+
+**The branch lands in chunk 3, not chunk 4** — see Testing & Rollout. Note the reason is D8, not D7: it is the rest of the policy that differs per group and therefore has to be soaked per group. `frame-ancestors` itself cannot be soaked at all.
+
+#### D9. `X-Frame-Options: SAMEORIGIN` on `(site)` only, derived from `frame-ancestors` (decided)
+
+`(site)` routes also send `X-Frame-Options: SAMEORIGIN`. `(embed)` routes send no `X-Frame-Options` at all.
+
+The header is strictly redundant — where both are present, `frame-ancestors` wins and `X-Frame-Options` is ignored, in every browser Learn supports. It is set anyway because it costs one derived line and closes the finding by name for the next scanner pass, which is cheaper than arguing it away again in a year.
+
+**It must be computed from the same source of truth as `frame-ancestors`, not written twice.** `xFrameOptions(group)` returns `SAMEORIGIN` if and only if that group's `frame-ancestors` is exactly `'self'`, and `null` otherwise. Hardcoding it is the failure mode: the two drift, and the drift is invisible.
+
+The hazard this decision exists to prevent is specific and worth stating plainly. `X-Frame-Options` has no portable value meaning "any origin" — `DENY` and `SAMEORIGIN` are the only two values browsers agree on, `ALLOWALL` is not in the specification, and `ALLOW-FROM` was never widely implemented and is gone. So **adding `X-Frame-Options: SAMEORIGIN` to the existing `/:path*` rule in `next.config.js` would silently break every third-party embed of a Learn video or podcast.** That is the obvious place to put it, since the `nosniff` and `Referrer-Policy` rule is already there and already matches every path. `X-Frame-Options` has no reporting channel, so the report-only soak would not catch it: every externally embedded player would go blank, with no violation report, no console error and nobody paged. A test asserts that `next.config.js` emits no framing header for any source.
+
+This concerns the frontend only. `django.middleware.clickjacking.XFrameOptionsMiddleware` is active in `main/settings.py` and `X_FRAME_OPTIONS` is unset, so api.learn.mit.edu already sends `DENY` — correct for a JSON API, and left alone.
+
+#### D10. How far `default-src` reaches, and what `media-src` and `connect-src` allow (open)
+
+The directive list in D3 has no `media-src`, and this document has never said whether `default-src` is set at all. The embed feature is what makes that bite.
+
+`/video/embed/<id>` plays OVS HLS through video.js, and `/podcast/embed/<id>` feeds a podcast-RSS audio URL straight into an `<audio>` element. Neither host is enumerable from this repo (see the measured starting point). HLS compounds it: video.js fetches the `.m3u8` manifest and its `.ts` segments over XHR, which **`connect-src`** governs — and D3 scopes `connect-src` to the API, Sentry and the analytics vendors. A `default-src` with no `media-src` beside it, or a `connect-src` that lists only those three, breaks video playback.
+
+This is not confined to the embed routes. `VideoResourcePlayer` is used on ordinary `(site)` video pages too.
+
+**Set `default-src 'self'`.** Omitting it would leave every directive this document forgot wide open — which is exactly how `media-src` and `font-src` went unnoticed until the embed feature surfaced them. The gap is structural, not an oversight, and `default-src` is what makes the policy fail closed so the report-only soak can tell you which fallbacks you broke. That is what the soak is for.
+
+Having set it, these have to be named or they break. Starting point for chunk 3, to be corrected by the soak rather than trusted:
+
+| directive     | value                                                                  | why                                                                                                                                               |
+| ------------- | ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `media-src`   | `'self' https: blob:`                                                  | **`blob:` is mandatory.** video.js/VHS plays HLS through MSE via `URL.createObjectURL(mediaSource)`. Omit it and HLS dies — at enforce, silently. |
+| `worker-src`  | `'self' blob:`                                                         | VHS spawns its transmuxer from a blob worker.                                                                                                     |
+| `connect-src` | `'self' https:`                                                        | VHS fetches the `.m3u8` and its segments by XHR from a host not knowable here.                                                                    |
+| `img-src`     | `'self' data: blob: https:`                                            | podcast cover art and the video.js `poster` are raw cross-origin URLs, not routed through the image optimizer.                                    |
+| `font-src`    | `'self' data: https://use.typekit.net`                                 | the **root** `app/layout.tsx` loads the typekit stylesheet, so this applies to both groups, not just `(site)`.                                    |
+| `style-src`   | `'self' 'unsafe-inline' https://use.typekit.net https://p.typekit.net` | Emotion and MUI inject `<style>` and inline `style=`; `MITLearnGlobalStyles` is in the embed layout too.                                          |
+
+**A cross-engine subtlety that will bite at enforce.** Chrome fetches HLS manifests and segments by XHR through MSE, so they fall under `connect-src`. Safari uses native HLS, where the media element fetches them, so they fall under `media-src`. Both must be permissive, and testing in one browser proves nothing about the other. This belongs in chunk 4a's pre-flight, not in a post-mortem.
+
+**Two host-list corrections while here.** `cdn.jsdelivr.net` is in the inventory above but does not belong in any policy: its only use is `FONTSOURCE_CDN` in the certificate PDF route handler, which fetches in Node where CSP does not apply. reCAPTCHA is missing: `react-google-recaptcha` (via `ol-components` `ReCaptcha.tsx`, used by `OrgLeadForm` and `StayUpdatedModal`, both `(site)`) loads script and an iframe from Google-owned hosts. Those hosts come from the library rather than from any literal in this repo, so treat them as a soak finding to confirm rather than a settled list.
+
+**Do not wire `OVS_ALLOWED_MEDIA_HOSTS` into the CSP**, tempting as it looks. It is genuinely enumerable — `main/settings_course_etl.py` with a production value of `['.cloudfront.net']`, enforced in `learning_resources/etl/ovs.py` — and CSP's grammar would take `*.cloudfront.net` directly. Rejected because it is a backend ETL setting in a different part of the system: mirroring it into a `NEXT_PUBLIC_*` means the frontend CSP breaks silently whenever that list changes, with no test anywhere that notices. And podcast `audio_url` comes from arbitrary RSS enclosure hosts with no allowlist at all, so `media-src https:` is needed regardless. Recorded as a possible future tightening with the pointer, not as a TODO.
+
+**What is still open:** whether the values above survive contact with production. That is chunk 3's soak to answer.
+
+**Who decides:** whoever picks up `tk-chunk-3-csp-report-only-on-learn-mit-edu-emitted-f8001f`, in review on this RFC, alongside D6.
 
 ### Security Considerations
 
-**What this closes.** After D1–D4 and D7 land: clickjacking via framing (`frame-ancestors`), plugin-based content injection (`object-src 'none'`), base-tag hijacking that redirects relative script URLs (`base-uri 'self'`), form exfiltration to third-party origins (`form-action 'self'`), MIME-sniffing attacks (`X-Content-Type-Options: nosniff`), full-URL referrer leakage to third parties (`Referrer-Policy`), framework version disclosure (`X-Powered-By`), and shared-cache retention of user-specific API responses (D5).
+**What this closes.** After D1–D4 and D7 land: clickjacking via framing on every route except the two embed routes (`frame-ancestors`, D7), plugin-based content injection (`object-src 'none'`), base-tag hijacking that redirects relative script URLs (`base-uri 'self'`), form exfiltration to third-party origins (`form-action 'self'`), MIME-sniffing attacks (`X-Content-Type-Options: nosniff`), full-URL referrer leakage to third parties (`Referrer-Policy`), framework version disclosure (`X-Powered-By`), and shared-cache retention of user-specific API responses (D5).
 
 **What this does not close, and will not.** Cross-site scripting. With `'unsafe-inline'` in `script-src`, an attacker who achieves HTML injection executes script. The CSP constrains where script may be _loaded from_; it does not constrain inline execution. Anyone reading "learn.mit.edu now has a CSP" and inferring XSS protection has inferred wrongly, and a subsequent assessment could reasonably raise the same finding. This is the single most important caveat in this document and the reason hq#14083 exists.
 
@@ -146,38 +225,70 @@ Asked of the OCW and MITx Online teams at [this comment](https://github.com/mito
 
 **`Referrer-Policy` has consequences beyond privacy.** It must be `strict-origin-when-cross-origin`. The tighter `same-origin` and `no-referrer` send no `Referer` at all on a cross-origin navigation, and OCW is about to start sending search traffic here as exactly that ([mitodl/hq#13617](https://github.com/mitodl/hq/issues/13617), [mitodl/hq#13767](https://github.com/mitodl/hq/issues/13767)). Those visits would then arrive with no referrer for any analytics to attribute them to — a silent loss, with no error anywhere to connect it back to this change. Note this is the mechanical consequence; neither issue states how the rollout will be measured, so treat "it would break their measurement" as unverified and the referrer loss as the thing actually established.
 
+**The embed routes are exempt from the clickjacking protection, on purpose.** D7 states the tradeoff; it is repeated here because this section is what a future assessment reads. `/video/embed/<id>` and `/podcast/embed/<id>` send `frame-ancestors *` and can be framed by anyone. They carry no authenticated actions and no state-changing controls, which is why that is acceptable — and that property is a precondition of the decision, not a coincidence. Adding one to those pages reopens D7.
+
+**The inbound login link from a third party is unaffected by this policy.** OCW (and anything else) can link a user to Learn to log in and get them back. That flow is `GET https://api.learn.mit.edu/login?next=…` → APISIX `openid-connect` 302 (`config/apisix/apisix.yaml`, route `reqauth`) → Keycloak → 302 back → `CustomLoginView.get` 302 (`authentication/views.py`). Every leg is a GET and a redirect; there is no form POST anywhere in it, and the one document that does carry a credential form is served from Keycloak's origin under Keycloak's own CSP. `form-action 'self'` on learn.mit.edu therefore cannot touch it, and neither can `frame-ancestors`. The round trip is already gated by `ALLOWED_REDIRECT_HOSTS` in `main/settings.py`, which is where that trust decision lives and stays. Recorded because it looks like it ought to be a CSP concern and is not.
+
 **`Cache-Control` scoping cuts both ways.** Too narrow and user-specific responses stay cacheable in shared caches, which is the finding. Too broad and public search endpoints lose caching at the moment OCW starts sending them significant traffic.
 
 ### Testing & Rollout
 
-Four chunks. Chunk 1 is stacked on this RFC's own pull request, so it merges after this document does. Chunks 2 and 3 are independent of it and of each other, and may land in any order or in parallel. Chunk 4 depends on chunk 3 being **deployed and soaked**, not merged. Sizes are estimates taken from the measured starting point and are re-measured during implementation. Epic: `tk-add-missing-security-headers-to-learn-mit-edu-an-4097f6`.
+Six chunks. Chunk 1 is stacked on this RFC's own pull request, so it merges after this document does. Chunks 2, 3 and 3b are independent of it and of each other, and may land in any order or in parallel. Chunk 4a depends on chunk 3 being **deployed and soaked**, not merged; chunk 4b additionally depends on 4a being deployed and on 3b's data having been read. Sizes are estimates taken from the measured starting point and are re-measured during implementation. Epic: `tk-add-missing-security-headers-to-learn-mit-edu-an-4097f6`.
+
+The original four-chunk plan had the per-route-group branch arriving at the enforce step. That was wrong on two counts, both consequences of D7 and D8: the policies differ in more than `frame-ancestors`, so a single union policy would have soaked the wrong experiment; and `frame-ancestors` cannot be soaked at all, so there was never a soak signal to wait for.
 
 #### Sequencing
 
-1. **Static headers** — `tk-chunk-1-static-security-headers-on-learn-mit-edu-9062b4`, ~40 lines, touches `frontends/main/next.config.js` and `frontends/main/src/nextConfig.test.ts`.
-   Done when `curl -sI https://learn.mit.edu/` shows `X-Content-Type-Options: nosniff` and `Referrer-Policy: strict-origin-when-cross-origin`, and no `X-Powered-By`. Unblocked by every open decision above, so the work can start immediately; it is stacked on this RFC's pull request, so it merges after this document does.
+1. **Static headers** — `tk-chunk-1-static-security-headers-on-learn-mit-edu-9062b4`, ~40 lines estimated / 171 actual, touches `frontends/main/next.config.js` and `frontends/main/src/nextConfig.test.ts`.
+   Done when `curl -sI https://learn.mit.edu/` shows `X-Content-Type-Options: nosniff` and `Referrer-Policy: strict-origin-when-cross-origin`, and no `X-Powered-By`. Built and open for review, stacked on this RFC's pull request so it merges after this document does.
 
 2. **API cache scoping** — `tk-chunk-2-cache-control-no-store-on-user-specific--c0a90d`, ~80 lines, touches `main/settings.py`, middleware or a DRF mixin, and tests. Requires D5.
    Done when an authenticated response carries `Cache-Control: no-store` and an anonymous search response still carries its existing caching headers, both asserted in tests rather than checked by hand.
 
-3. **CSP report-only** — `tk-chunk-3-csp-report-only-on-learn-mit-edu-emitted-f8001f`, ~150 lines, touches `frontends/main/src/proxy.ts`, `frontends/main/src/common/config.ts`, `frontends/main/src/proxy.test.ts`. Requires D6.
-   Done when the header is live in production, violations are arriving at the chosen collector, and a violation sample has been gathered over a stated soak window.
+3. **CSP report-only, per route group** — `tk-chunk-3-csp-report-only-on-learn-mit-edu-emitted-f8001f`, ~200 lines, touches a new `frontends/main/src/common/csp.ts` and its test, plus `frontends/main/src/proxy.ts`, `frontends/main/src/proxy.test.ts` and `frontends/main/src/nextConfig.test.ts`. Requires D6 and D10.
+   Ships **both** policies as `Content-Security-Policy-Report-Only`, with `frame-ancestors` **omitted entirely** — it is ignored in a report-only policy, so including it would emit a console warning on every production page view for the length of the soak in exchange for no reports.
+   Done when both headers are live, violations are arriving at the chosen collector, and a violation sample has been gathered **per route group** over a stated soak window.
 
-4. **CSP enforced** — `tk-chunk-4-enforce-the-csp-and-add-frame-ancestors-57a453`, ~20 lines, touches `frontends/main/src/proxy.ts` and its test. Requires D7 and chunk 3 deployed and soaked.
-   Done when the header is `Content-Security-Policy` rather than `-Report-Only`, `frame-ancestors` carries the confirmed origin list, and the Fastly HTML hit ratio is unchanged.
+4. **Framing telemetry** — chunk 3b, ~20 lines in `frontends/main/src/app/(site)/SiteProviders.tsx`. Independent of chunk 3; lands alongside it.
+   A client-side probe inside the already-mounted `ConfiguredPostHogProvider`: when `window.self !== window.top`, capture `document.referrer` and `location.ancestorOrigins`. This is what answers D7's MITx Online question with data rather than inference, and it is needed because `frame-ancestors` cannot be soaked.
+   It has to be client-side. learn.mit.edu HTML is Fastly-cached, so a `Sec-Fetch-Dest: iframe` check at the origin would observe only cache misses, and adding that header to the cache key would wreck the hit ratio D3 exists to protect. `Referrer-Policy: strict-origin-when-cross-origin` — already shipped in chunk 1 — means `document.referrer` in a framed document yields the embedder's origin, which is exactly the answer D7 wanted.
+   Done when the probe has run for the length of chunk 3's soak and the set of observed framing origins has been written down.
+
+5. **Enforce the embed policy** — chunk 4a, `frontends/main/src/common/csp.ts` and its test. Requires chunk 3 deployed and soaked.
+   Flips the `(embed)` group to enforcing and adds `frame-ancestors *`.
+   Done when `/video/embed/<an ovs id>` and `/podcast/embed/<id>` play in **both** Chrome (MSE, so `connect-src`) and Safari (native HLS, so `media-src`), and both load correctly from an off-origin test page.
+
+6. **Enforce the site policy** — chunk 4b, `tk-chunk-4-enforce-the-csp-and-add-frame-ancestors-57a453`, ~20 lines. Requires chunk 4a deployed, and chunk 3b's data read.
+   Flips the `(site)` group to enforcing, adds `frame-ancestors 'self'` and `X-Frame-Options: SAMEORIGIN` (D9).
+   Done when the header is `Content-Security-Policy` rather than `-Report-Only` and the Fastly HTML hit ratio is unchanged.
+
+**Why 4 is split.** The two policies have disjoint violation surfaces, and flipping both at once throws away the ability to attribute a regression to one of them. The embed policy goes first because its surface is small and fully derivable from this repo, whereas the site policy's depends on the GTM container's contents. The counter-argument is real and should not be glossed: an embed breakage is _harder_ to notice than a site breakage, because it happens on a page nobody here is watching. That is why 4a's done-condition is a manual two-browser, two-origin check rather than "no reports arrived".
 
 #### Verification
 
 Beyond each chunk's done-condition:
 
 - **Headers are verified against production, not locally.** `curl -sI https://learn.mit.edu/` and `curl -sI https://api.learn.mit.edu/api/v0/users/me/` with a session. Four layers can set a header on these hostnames and a local run exercises one of them.
-- **The Fastly HTML hit ratio is checked after chunk 4.** D3 was chosen specifically so the policy is identical for every viewer and the cache is unaffected. A hit-ratio drop means something in the implementation made responses vary per request, which is a bug in the implementation and not an accepted cost.
+- **Cache safety is asserted in CI, not inferred from a metric afterwards.** D3 was chosen specifically so the policy is identical for every viewer and the cache is unaffected, and D8's branch keys on pathname only — never on a request header — so Fastly's per-URL caching needs no `Vary` and the hit ratio cannot move. Encode that as a test: call `proxy()` twice for the same path with different `Referer`, `Cookie` and `Sec-Fetch-Dest`, and assert the policy is byte-identical. The post-deploy hit-ratio check after chunk 4b stays as a backstop; a drop means something made responses vary per request, which is a bug and not an accepted cost.
 - **The soak's violation budget is written down before the flip.** An enforce with unexplained violations in the sample means the policy is still wrong for somebody who has not been identified.
 - **OCW's integration is exercised after chunk 2.** A public search request from a browser on ocw.mit.edu should still be served with its existing caching headers.
+- **Both route groups are checked, separately.** `curl -sI https://learn.mit.edu/video/embed/<id>` and `curl -sI https://learn.mit.edu/` must show different policies, and `/video/<id>` must show the site one. A single spot-check of the homepage cannot distinguish a working branch from a branch that never fires.
+
+Five of chunk 3's tests are load-bearing rather than routine, in the sense that the bug each prevents is silent:
+
+1. **A `routeGroup()` table**, written first. `embed`: `/video/embed/123`, `/video/embed/123/`, `/podcast/embed/137277`, `/video/embed/abc`. `site`: `/video/123`, `/video/123/slug`, `/podcast/137277`, `/podcast/137277/podcast_episode/1`, `/video-playlist/5`, `/video/embed`, `/`, `/search`, `/courses/course-v1:MITxT+5.601x`. This is the regression test for the parenthesised-route-group trap in D8.
+2. **A gap guard**: every policy either sets `default-src` or names every one of `media-src`, `font-src`, `connect-src`, `img-src`, `worker-src`, `frame-src`, `style-src`, `script-src`. This is what stops D10's class of omission recurring.
+3. **An HLS guard**: `media-src` and `worker-src` both contain `blob:` on both groups. The failure it prevents appears only at enforce.
+4. **The D8 invariant**: the embed `script-src` contains no GTM, Appzi, HubSpot, reCAPTCHA or PostHog host.
+5. **No framing header from `next.config.js`**, for any source — asserted through Next's own `buildCustomRoute`, as chunk 1's tests already do. This is the guard against the one mistake in this design that breaks a user-facing feature silently on third-party sites.
+
+Assert per directive against a parsed policy, not against the whole header string: whole-string assertions rot on every reorder and say nothing useful when they fail.
 
 #### Rollback
 
-Chunks 1, 2 and 4 revert cleanly — headers appear and disappear with the deploy, and no data or external contract moves. Chunk 3 is report-only and carries no user-visible behaviour to roll back, though a misconfigured collector can generate significant report volume; that is a reason to settle D6's sampling story before shipping, not a reason to skip the soak.
+Chunks 1, 2, 4a and 4b revert cleanly — headers appear and disappear with the deploy, and no data or external contract moves. Chunk 3 is report-only and carries no user-visible behaviour to roll back, though a misconfigured collector can generate significant report volume; that is a reason to settle D6's sampling story before shipping, not a reason to skip the soak. Chunk 3b writes only telemetry.
+
+One asymmetry to plan for: a 4a regression surfaces on **other people's sites**, not ours. Nobody here is watching an embedded player on a third-party page, and an enforced-CSP breakage there looks like a blank frame to that site's visitors. Reverting is trivial; noticing is the hard part, which is why 4a's done-condition is an explicit manual check rather than an absence of alerts.
 
 ### Non-goals
 
@@ -185,22 +296,30 @@ Chunks 1, 2 and 4 revert cleanly — headers appear and disappear with the deplo
 - **A strict `script-src`.** Deliberately deferred — see D3 and [mitodl/hq#14083](https://github.com/mitodl/hq/issues/14083). This RFC should not be amended to add it; that work replaces part of this policy and gets its own RFC if it needs one.
 - **Changing the HTML caching strategy.** The entire shape of D3 follows from leaving it alone.
 - **The shared APISIX CORS configuration.** Already addressed by `ol-infrastructure` [#5755](https://github.com/mitodl/ol-infrastructure/pull/5755), which replaced the wildcard default with required per-app origin lists. An earlier draft of the scoping for hq#14080 claimed otherwise; that was read from a stale checkout and is wrong.
-- **`Content-Security-Policy` on api.learn.mit.edu.** The assessment lists it, but a CSP on a JSON API has no document context to constrain and buys nothing. If a reader disagrees, that is a decision to open as D8 rather than an omission.
+- **`Content-Security-Policy` on api.learn.mit.edu.** The assessment lists it, but a CSP on a JSON API has no document context to constrain and buys nothing. If a reader disagrees, that is a decision to open as a new D-number rather than an omission.
+- **Enumerating OVS and podcast media hosts in the policy.** `media-src` and `connect-src` stay broad. See D10 for why mirroring `OVS_ALLOWED_MEDIA_HOSTS` into the frontend is a worse trade than it looks, and why podcast audio has no allowlist to mirror in the first place.
+- **Removing the embed routes' `frame-ancestors *`.** That is the feature, not a finding. Narrowing it is a product decision about `ShareDialog`, not a security fix, and would be a different RFC.
 
 ### Open questions
 
-|     | Question                                                                                                      | Who answers                                                                                                |
-| --- | ------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| D5  | Which mechanism scopes `Cache-Control: no-store` to user-specific responses without catching public endpoints | Implementer of chunk 2, in review on this RFC                                                              |
-| D6  | Which reporting mechanism and ingest path collects CSP violations, and how the volume is sampled              | Implementer of chunk 3, in review on this RFC                                                              |
-| D7  | Which origins legitimately embed learn.mit.edu                                                                | OCW and MITx Online teams, [asked here](https://github.com/mitodl/hq/issues/14080#issuecomment-6373425561) |
+|     | Question                                                                                                      | Who answers                                        |
+| --- | ------------------------------------------------------------------------------------------------------------- | -------------------------------------------------- |
+| D5  | Which mechanism scopes `Cache-Control: no-store` to user-specific responses without catching public endpoints | Implementer of chunk 2, in review on this RFC      |
+| D6  | Which reporting mechanism and ingest path collects CSP violations, and how the volume is sampled              | Implementer of chunk 3, in review on this RFC      |
+| D10 | Whether D10's directive values survive production, and which reCAPTCHA hosts the policy actually needs        | Chunk 3's soak, read by the implementer of chunk 3 |
+
+D7 is closed. It was "which origins legitimately embed learn.mit.edu", asked of the OCW and MITx Online teams [here](https://github.com/mitodl/hq/issues/14080#issuecomment-6373425561). OCW answered no; MITx Online never answered and chunk 3b measures it rather than waiting. See D7.
 
 ### Risks
 
 **The violation inventory is incomplete.** The third-party host list was assembled by reading source, and runtime behaviour differs — GTM loads tags configured outside this repo, and those tags load whatever they like. Mitigated by D4's soak, which is the only way to find them. Residual risk: a low-frequency tag that fires for a small audience may not appear in the sample and will break at enforce. Accepted; the reporting stays on after the flip so it surfaces as a report rather than a silent failure.
 
-**D7 arrives late or vague.** `frame-ancestors` is the directive the assessment most directly motivates, and it is the one blocked on other teams. If no answer arrives, the fallback is to ship chunk 4 with every other directive enforced and `frame-ancestors` omitted, then add it separately — not to guess a value. Omitting it leaves the clickjacking finding open and should be stated as such rather than quietly dropped.
+**`frame-ancestors` cannot be soaked, so D7 ships on a judgement.** This is the directive the assessment most directly motivates, and it is the only one in the policy that a report-only deploy tells you nothing about: it is ignored outright in a report-only policy, producing no reports and a console warning. So the normal safety net does not apply to the one decision that is still inference — that MITx Online does not frame Learn. Mitigated by chunk 3b, which measures framing directly from the client and does not depend on CSP reporting at all. Residual risk: a low-traffic embedder who frames Learn but whose users do not visit during the soak window. If 3b returns an unexpected origin, `frame-ancestors 'self'` on `(site)` has to be reconsidered before chunk 4b, not after.
 
-**Line numbers in this document rot.** Anchored to `59d24e38b` and `a3a258ee4` as noted in the header. If an anchor does not match, the code moved; re-derive from the symbol name rather than assuming this RFC is describing something that no longer exists.
+**An embed-policy regression is invisible from here.** Chunk 4a enforces a policy on documents that render inside other people's pages. A breakage shows up as a blank frame to that site's visitors, with no report, no error and no alert on our side. Mitigated by 4a's manual two-browser, two-origin done-condition and by keeping the embed violation stream separate from the site one. This is the reason chunk 4 is split rather than flipped at once.
+
+**The embed routes' exemption could be inherited rather than re-decided.** D7's `frame-ancestors *` is safe only because those pages carry no state-changing or authenticated controls. Nothing structurally enforces that. If someone adds an interactive control to the embed player, the decision silently becomes wrong. Partially mitigated by D8's test guard against analytics creeping into the embed layout, which is adjacent but not the same invariant.
+
+**Line numbers in this document rot.** Anchored to `0deaee154` and `a3a258ee4` as noted in the header. If an anchor does not match, the code moved; re-derive from the symbol name rather than assuming this RFC is describing something that no longer exists.
 
 **GTM container write access is part of the trust boundary.** D3 accepts a `script-src` permissive enough that GTM can load arbitrary third-party script. That is the status quo rather than a regression, but this RFC makes it explicit, and anyone reasoning about the site's script trust boundary should start from the GTM container's access list.
