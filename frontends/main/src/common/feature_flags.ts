@@ -26,6 +26,7 @@ export enum FeatureFlags {
   B2BDataConsent = "b2b-data-consent",
   DepartmentPageRedesign = "department-page-redesign",
   ContactUs = "contact-us",
+  ResourceCardRedesign = "resource-card-redesign",
 }
 
 /**
