@@ -89,6 +89,9 @@ const BannerLink = styled(Link)(({ theme }) => ({
     backgroundColor: theme.custom.colors.lightGray1,
     fontWeight: theme.typography.fontWeightBold,
   },
+  [theme.breakpoints.down("sm")]: {
+    padding: "0px 16px 0px 0",
+  },
 }))
 
 const BannerDescription = styled(Typography)(({ theme }) => ({

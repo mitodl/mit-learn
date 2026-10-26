@@ -729,7 +729,7 @@ describe("ChannelSearch", () => {
 
     const tabs = await screen.findAllByRole("tab")
     expect(tabs.map((tab) => tab.textContent)).toEqual([
-      expect.stringContaining("Courses and Programs"),
+      expect.stringContaining("Courses & Programs"),
       expect.stringContaining("Learning Materials"),
     ])
     expect(tabs[0]).toHaveAttribute("aria-selected", "true")
@@ -743,7 +743,7 @@ describe("ChannelSearch", () => {
     ])
   })
 
-  test("a topic channel link to just courses lands on Courses and Programs", async () => {
+  test("a topic channel link to just courses lands on Courses & Programs", async () => {
     const { channel } = setMockApiResponses({
       channelPatch: { channel_type: ChannelTypeEnum.Topic },
     })
@@ -753,7 +753,7 @@ describe("ChannelSearch", () => {
     })
 
     expect(
-      await screen.findByRole("tab", { name: /Courses and Programs/ }),
+      await screen.findByRole("tab", { name: /Courses & Programs/ }),
     ).toHaveAttribute("aria-selected", "true")
   })
 
@@ -789,7 +789,7 @@ describe("ChannelSearch", () => {
        up afresh each time rather than hold on to the one that was removed. */
     const inDrawer = (name: string) =>
       within(screen.getByRole("presentation")).getByRole("checkbox", { name })
-    const coursesAndPrograms = () => inDrawer("Courses and Programs")
+    const coursesAndPrograms = () => inDrawer("Courses & Programs")
     const learningMaterials = () => inDrawer("Learning Materials")
 
     expect(coursesAndPrograms()).toBeChecked()
@@ -902,10 +902,76 @@ describe("ChannelSearch", () => {
    * The dropdowns say what they are narrowed to, so the card states the
    * filters without any of them being opened.
    */
+  describe("filter counts on the controls", () => {
+    const barAt = async (query: string) => {
+      const { channel } = setMockApiResponses({
+        channelPatch: { channel_type: ChannelTypeEnum.Topic },
+        search: {
+          metadata: {
+            aggregations: {
+              delivery: [
+                { key: "online", doc_count: 7 },
+                { key: "in_person", doc_count: 4 },
+              ],
+              certification_type: [{ key: "professional", doc_count: 5 }],
+            },
+            suggestions: [],
+          },
+        },
+      })
+      renderWithProviders(<ChannelPage />, {
+        url: `/c/${channel.channel_type}/${channel.name}/${query}`,
+      })
+      return screen.findByTestId("topic-search-filter-bar")
+    }
+
+    /**
+     * The menu closes over what it selected, so a control that says only its
+     * own name reads the same whether or not it is narrowing anything.
+     */
+    test("counts what each control has narrowed by", async () => {
+      const bar = await barAt("?delivery=online&delivery=in_person")
+
+      expect(
+        within(bar).getByRole("combobox", { name: "Format, 2 selected" }),
+      ).toHaveTextContent("2")
+      expect(
+        within(bar).getByRole("combobox", { name: "Certificate" }),
+      ).not.toHaveTextContent(/\d/)
+    }, 10000)
+
+    /**
+     * The disc is drawn, not named: `aria-label` on a combobox replaces what
+     * is inside it, so a count left to the disc alone is read by nobody.
+     */
+    test("says the count in the control's name, not just the disc", async () => {
+      const bar = await barAt("?delivery=online&delivery=in_person")
+
+      expect(
+        within(bar).getByRole("combobox", { name: "Format, 2 selected" }),
+      ).toBeInTheDocument()
+      expect(
+        within(bar).queryByRole("combobox", { name: "Format" }),
+      ).not.toBeInTheDocument()
+    }, 10000)
+
+    /* A badge reading 0 is a filter announcing that it is not filtering. */
+    test("says nothing where a control is narrowing nothing", async () => {
+      const bar = await barAt("")
+
+      expect(
+        within(bar).getByRole("combobox", { name: "Format" }),
+      ).not.toHaveTextContent(/\d/)
+      expect(
+        within(bar).getByRole("combobox", { name: "Certificate" }),
+      ).not.toHaveTextContent(/\d/)
+    }, 10000)
+  })
+
   /**
-   * The bar's dropdowns close over what they selected, so the row above the
-   * results is the only place the applied filters are named -- and the only
-   * place each one can be switched off by itself.
+   * The bar's dropdowns close over what they selected, so the row under the
+   * search box is the only place the applied filters are named -- and the
+   * only place each one can be switched off by itself.
    */
   describe("selected filter chips", () => {
     const chipRowAt = async (query: string) => {
@@ -956,7 +1022,9 @@ describe("ChannelSearch", () => {
         "Free",
         "In-Person",
         "Professional Certificate",
-        "Clear all filters",
+        /* Reads "Clear all filters" to assistive tech; the row it ends is what
+           supplies "filters" to everyone else. */
+        "Clear all",
       ])
     }, 10000)
 
@@ -1079,4 +1147,64 @@ describe("ChannelSearch", () => {
     expect(grid.tagName).toBe("UL")
     expect(within(grid).getAllByRole("listitem").length).toBeGreaterThan(0)
   }, 10000)
+
+  describe("the empty state", () => {
+    /* The mocked search answers with no results, so every case here is empty. */
+    const emptyAt = async (query: string) => {
+      const { channel } = setMockApiResponses({
+        channelPatch: { channel_type: ChannelTypeEnum.Topic },
+      })
+      const { location } = renderWithProviders(<ChannelPage />, {
+        url: `/c/${channel.channel_type}/${channel.name}/${query}`,
+      })
+      return { location, card: await screen.findByTestId("no-results") }
+    }
+
+    /**
+     * The filters are what emptied the search, so the way out of it is to drop
+     * them -- and the grid they would have appeared above is not there to
+     * carry the chip row's own link into view.
+     */
+    test("offers to clear the filters that emptied the search", async () => {
+      const { card, location } = await emptyAt("?delivery=online&free=true")
+
+      await user.click(
+        within(card).getByRole("button", { name: "Clear all filters" }),
+      )
+
+      await waitFor(() => {
+        expect(location.current.searchParams.get("delivery")).toBe(null)
+      })
+      expect(location.current.searchParams.get("free")).toBe(null)
+    }, 10000)
+
+    /* A button that cannot change the answer is worse than no button. */
+    test("offers nothing to clear when nothing is filtering", async () => {
+      const { card } = await emptyAt("")
+
+      expect(
+        within(card).queryByRole("button", { name: "Clear all filters" }),
+      ).toBe(null)
+    }, 10000)
+
+    /**
+     * "No results" says nothing the empty grid does not. Naming what was
+     * looked for says which tab came back empty, where the other may not have.
+     */
+    test("names what the active tab found none of", async () => {
+      const { card } = await emptyAt("?resource_type_group=learning_material")
+
+      expect(card).toHaveTextContent(
+        "No learning materials match these filters",
+      )
+    }, 10000)
+
+    test("names courses and programs on the default tab", async () => {
+      const { card } = await emptyAt("")
+
+      expect(card).toHaveTextContent(
+        "No courses or programs match these filters",
+      )
+    }, 10000)
+  })
 })

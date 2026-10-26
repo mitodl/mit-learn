@@ -56,6 +56,7 @@ import { TABS, UPCOMING_SORT, findActiveTab } from "./tabConfigs"
 import ProfessionalToggle from "./ProfessionalToggle"
 import { useTrackedFilterSetters } from "@/common/analytics/searchFilters"
 import SelectedFilters, { selectedFilters } from "./SelectedFilters"
+import NoResults from "./NoResults"
 import SliderInput from "./SliderInput"
 import VectorAdminOptions from "./VectorAdminOptions"
 import { AdminTitleContainer, ExplanationContainer } from "./adminStyles"
@@ -72,11 +73,47 @@ const StyledResourceTabs = styled(ResourceTypeGroupTabs.TabList)`
   margin-top: 0;
 `
 
-const DesktopSortContainer = styled.div`
-  ${({ theme }) => theme.breakpoints.down("md")} {
-    display: none;
-  }
-`
+const DesktopSortContainer = styled("div", {
+  shouldForwardProp: (prop) => prop !== "cards",
+})<{ cards: boolean }>(({ theme, cards }) => ({
+  [theme.breakpoints.down("md")]: {
+    display: "none",
+  },
+  /**
+   * The cards design draws Sort as a label and a chevron with no field chrome
+   * at all -- no box, no hairline, no fill -- at 12/16 in black beside an
+   * 18px arrow.
+   *
+   * Every other layout keeps the outlined select it has. The chevron is set
+   * clear of the label by padding rather than a gap, because Select lays it
+   * over the field rather than in it.
+   */
+  ...(cards
+    ? {
+        /* The hairline is the shared select's own, drawn on this element --
+           there is no notched outline to clear, which is where MUI's own
+           outlined variants keep theirs. */
+        ".MuiInputBase-root": {
+          ...theme.typography.body3,
+          color: theme.custom.colors.black,
+          backgroundColor: "transparent",
+          border: "none",
+          borderRadius: 0,
+        },
+        "&& .MuiSelect-select": { padding: "0 26px 0 0" },
+        /* Doubled for the same reason as the padding above: the shared select
+           sizes and insets its own icon from a selector of equal weight, which
+           lands later. */
+        "&& .MuiSelect-icon": {
+          width: "18px",
+          height: "18px",
+          fontSize: "18px",
+          right: 0,
+          color: theme.custom.colors.black,
+        },
+      }
+    : {}),
+}))
 const MobileSortContainer = styled("div", {
   shouldForwardProp: (prop) => prop !== "cards",
 })<{ cards: boolean }>(({ theme, cards }) => ({
@@ -477,84 +514,90 @@ const CardGrid = styled(PlainList)(({ theme }) => ({
 }))
 
 /**
- * The topic design's one card: the search box and its facets, the resource
- * type tabs with sorting, and the filters currently applied, stacked in that
- * order behind a single edge.
+ * The topic design's search card: the search box with its facet controls, and
+ * below a rule the filters currently applied.
  *
- * The gradient is the design's -- transparent at the top, where the page's
- * own grey shows through, and white by the bottom. The thick pale rule along
- * the bottom edge is what separates it from the results below.
+ * Plain white under a low shadow -- the card is marked out by the shadow
+ * alone, with no coloured edge anywhere on it. Less padding at the foot than
+ * at the head, as the design has it: the applied filters already carry 16px
+ * above themselves, and the row they sit in is shorter than the search row.
  *
- * Not drawn on a narrow screen: every row in it has somewhere else to be
- * there -- the facets and the search box in the filter drawer, the tabs in
- * the drawer's checklist, and the applied filters among them.
+ * Not drawn on a narrow screen: both of the things in it have somewhere else
+ * to be there, the search box and the facets alike in the filter drawer.
  */
 const TopicSearchCard = styled.div(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
-  gap: "24px",
-  padding: "8px 24px 24px",
+  gap: "16px",
+  padding: "24px 24px 16px",
   borderRadius: "8px",
-  borderBottom: `6px solid ${theme.custom.colors.lightGray1}`,
-  backgroundImage:
-    "linear-gradient(180deg, rgba(255, 255, 255, 0) 0%, #fff 100%)",
-  boxShadow: "0 8px 20px 0 rgba(120, 147, 172, 0.1)",
+  backgroundColor: theme.custom.colors.white,
+  boxShadow: "0 3px 2.5px 0 rgba(120, 147, 172, 0.1)",
   [theme.breakpoints.down("md")]: {
     display: "none",
   },
 }))
 
 /**
- * The tabs, with sorting pushed to the far end of the same rule.
+ * The tabs, with sorting pushed to the far end of the same row.
  *
- * The design draws these as underlined headings rather than the filled
- * buttons the shared tab list draws elsewhere: the selected one in black over
- * a red rule, the rest grey, and no fill or outline on either. The overrides
- * live here rather than on the tab list so that the search page and the other
- * channels keep the buttons they already have.
+ * Below the card rather than inside it, on the page's own ground, and the row
+ * carries a hairline along its full width for the selected tab's heavier rule
+ * to sit on.
+ *
+ * The design draws these as underlined headings rather than the filled buttons
+ * the shared tab list draws elsewhere: the selected one in black over a dark
+ * rule, the rest in `silverGray`, and no fill or outline on either. The
+ * overrides live here rather than on the tab list so that the search page and
+ * the other channels keep the buttons they already have.
  */
-const TopicTabsRow = styled.div<{ dividesFilters: boolean }>(
-  ({ theme, dividesFilters }) => ({
-    display: "flex",
-    alignItems: "flex-start",
-    width: "100%",
-    /* The rule separates the tabs from the filters applied below them, so it is
-     drawn only when there are some. With none, the design leaves the selected
-     tab's own red rule as the only line on the row. */
-    borderBottom: dividesFilters
-      ? `1px solid ${theme.custom.colors.lightGray2}`
-      : "none",
-    "> :last-child": {
-      marginLeft: "auto",
-    },
-    ".MuiTabs-flexContainer": {
-      gap: "40px",
-    },
-    '[role="tab"]': {
-      ...theme.typography.subtitle2,
-      minWidth: 0,
-      padding: "16px 8px",
-      borderRadius: 0,
-      backgroundColor: "transparent",
-      color: theme.custom.colors.silverGrayDark,
-      /* The rule the selected tab carries, kept on every tab at no width so
+const TopicTabsRow = styled.div(({ theme }) => ({
+  display: "flex",
+  alignItems: "center",
+  width: "100%",
+  borderBottom: `1px solid ${theme.custom.colors.lightGray2}`,
+  "> :last-child": {
+    marginLeft: "auto",
+  },
+  /* Doubled to outweigh the shared tab list's own 8px, which is written
+     against a class of equal weight and otherwise lands later. */
+  "&& .MuiTabs-flexContainer": {
+    gap: "16px",
+  },
+  '[role="tab"]': {
+    ...theme.typography.subtitle2,
+    minWidth: 0,
+    /**
+     * 16 above and 14 below, which with the 18px line and the 2px rule makes
+     * the design's 50px row and leaves the words evenly set in it.
+     *
+     * The rule is drawn within those 50px rather than under them, so that it
+     * lands on the row's own hairline rather than below it.
+     */
+    padding: "16px 4px 14px",
+    borderRadius: 0,
+    backgroundColor: "transparent",
+    color: theme.custom.colors.silverGray,
+    /* The rule the selected tab carries, kept on every tab at no colour so
        that selecting one does not move the row. */
-      borderBottom: "2px solid transparent",
-      ":hover": {
-        backgroundColor: "transparent",
-        color: theme.custom.colors.darkGray2,
-      },
+    borderBottom: "2px solid transparent",
+    ":hover": {
+      backgroundColor: "transparent",
+      color: theme.custom.colors.darkGray2,
     },
-    /* Its own key rather than nested under the one above: the shared tab list
+  },
+  /* Its own key rather than nested under the one above: the shared tab list
      fills the selected tab white from the button's own class, and only a
      selector naming both the row and the state outweighs it. */
-    '[role="tab"][aria-selected="true"]': {
-      backgroundColor: "transparent",
-      color: theme.custom.colors.black,
-      borderBottomColor: theme.custom.colors.lightRed,
-    },
-  }),
-)
+  '[role="tab"][aria-selected="true"]': {
+    backgroundColor: "transparent",
+    color: theme.custom.colors.black,
+    borderBottomColor: theme.custom.colors.darkGray2,
+  },
+  [theme.breakpoints.down("md")]: {
+    display: "none",
+  },
+}))
 
 const MobileFilter = styled("div", {
   shouldForwardProp: (prop) => prop !== "cards",
@@ -564,7 +607,7 @@ const MobileFilter = styled("div", {
   },
   color: theme.custom.colors.darkGray2,
   marginTop: "20px",
-  marginBottom: "16px",
+  marginBottom: "24px",
   /**
    * The cards design puts Filter and Sort on one row, a control at either
    * end. The other layouts float Sort to the right of the same block, which
@@ -790,8 +833,8 @@ export interface SearchDisplayProps {
    */
   drawerSearchSlot?: React.ReactNode
   /**
-   * The search box and facets, drawn at the top of the card this renders for
-   * the cards layout. The caller owns the search term, so it builds the bar
+   * The search box and facets, drawn in the search card this renders for the
+   * cards layout. The caller owns the search term, so it builds the bar
    * and hands it over rather than this reaching back for the state -- and
    * takes the counts back the other way, since the search that produces them
    * is run here.
@@ -1238,8 +1281,8 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
     facetsBeforeTypeChoice.length,
   )
   const aggregations = displayData?.metadata.aggregations ?? {}
-  /* What the chip row will draw, which also decides whether the tabs above it
-     carry a rule -- see `TopicTabsRow`. */
+  /* What the chip row draws, which is also what there is for the empty
+     state's button to clear -- read from one place so the two agree. */
   const appliedFilters = selectedFilters(facetManifest, requestParams)
   const availableFacets = (manifest: FacetManifest) => (
     <AvailableFacets
@@ -1293,12 +1336,13 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
           <Grid
             component="section"
             size={{ xs: 12, md: resultsLayout === "cards" ? 12 : 9 }}
-            sx={{
+            sx={(theme) => ({
               display: "flex",
               flexDirection: "column",
-              /* The cards design sets its grid 40px below the card it filters
-                 from. Every other layout keeps the 16px it had. */
-              gap: resultsLayout === "cards" ? "40px" : "16px",
+              /* The cards design spaces the banner, the search card, the tabs
+                 and the results grid 24px apart. Every other layout keeps the
+                 16px it had. */
+              gap: resultsLayout === "cards" ? "24px" : "16px",
               /**
                * This column holds its own contents off the hero above it, and
                * spaces them from each other, so whatever happens to come first
@@ -1313,11 +1357,23 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
                */
               ...(resultsLayout === "cards"
                 ? {
-                    paddingTop: "40px",
+                    paddingTop: "48px",
                     [`.${BANNER_CLASS}`]: { marginTop: 0, marginBottom: 0 },
+                    /**
+                     * The panel the results sit in adds nothing on top, so the
+                     * column's own 24px is the whole of the space between the
+                     * tabs and the grid, as the design has it.
+                     *
+                     * Above `md` only, because below it the panel leads with
+                     * the Filter button rather than the grid, and that holds
+                     * itself off what is above it already.
+                     */
+                    [theme.breakpoints.up("md")]: {
+                      ".MuiTabPanel-root": { paddingTop: 0 },
+                    },
                   }
                 : {}),
-            }}
+            })}
           >
             <VisuallyHidden
               as={resultsHeadingEl}
@@ -1338,35 +1394,40 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
             </VisuallyHidden>
             <UniversalAIBanner searchParams={searchParams} />
             {resultsLayout === "cards" ? (
-              <TopicSearchCard>
-                {filterBarSlot?.(
-                  displayData ? withAvailableValues(aggregations) : undefined,
-                )}
-                <TopicTabsRow dividesFilters={appliedFilters.length > 0}>
+              <>
+                <TopicSearchCard>
+                  {filterBarSlot?.(
+                    displayData ? withAvailableValues(aggregations) : undefined,
+                  )}
+                  <SelectedFilters
+                    facetManifest={facetManifest}
+                    params={requestParams}
+                    onRemove={(name, value) => {
+                      toggleParamValue(name, value, false)
+                      setPage(1)
+                    }}
+                    onClearAll={() => {
+                      clearAllFacets()
+                      setPage(1)
+                    }}
+                    /* The row unmounts with the last filter, so focus moves to
+                       the results it was describing. */
+                    onEmpty={focusResultsHeading}
+                  />
+                </TopicSearchCard>
+                <TopicTabsRow>
                   <StyledResourceTabs
                     setSearchParams={setSearchParams}
                     tabs={tabs}
                     aggregations={displayData?.metadata.aggregations}
                     onTabChange={() => setPage(1)}
+                    bareCounts
                   />
-                  <DesktopSortContainer>{sortDropdown}</DesktopSortContainer>
+                  <DesktopSortContainer cards={resultsLayout === "cards"}>
+                    {sortDropdown}
+                  </DesktopSortContainer>
                 </TopicTabsRow>
-                <SelectedFilters
-                  facetManifest={facetManifest}
-                  params={requestParams}
-                  onRemove={(name, value) => {
-                    toggleParamValue(name, value, false)
-                    setPage(1)
-                  }}
-                  onClearAll={() => {
-                    clearAllFacets()
-                    setPage(1)
-                  }}
-                  /* The row unmounts with the last filter, so focus moves to
-                     the results it was describing. */
-                  onEmpty={focusResultsHeading}
-                />
-              </TopicSearchCard>
+              </>
             ) : (
               <Stack direction="row" justifyContent="space-between">
                 <StyledResourceTabs
@@ -1375,7 +1436,10 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
                   aggregations={displayData?.metadata.aggregations}
                   onTabChange={() => setPage(1)}
                 />
-                <DesktopSortContainer>{sortDropdown}</DesktopSortContainer>
+                {/* Never the cards layout: this is the branch it is not. */}
+                <DesktopSortContainer cards={false}>
+                  {sortDropdown}
+                </DesktopSortContainer>
               </Stack>
             )}
             <AiSearchOverview
@@ -1505,6 +1569,15 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
                       ))}
                     </PlainList>
                   )
+                ) : resultsLayout === "cards" ? (
+                  <NoResults
+                    noun={activeTab.emptyNoun ?? "results"}
+                    canClearFilters={appliedFilters.length > 0}
+                    onClearFilters={() => {
+                      clearAllFacets()
+                      setPage(1)
+                    }}
+                  />
                 ) : (
                   <NoneFound>No results found for your query.</NoneFound>
                 )}
