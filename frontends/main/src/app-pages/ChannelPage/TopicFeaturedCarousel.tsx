@@ -103,7 +103,7 @@ const TopicFeaturedCarousel: React.FC<TopicFeaturedCarouselProps> = ({
     () => [
       {
         label: "Featured",
-        cardProps: { size: "medium" },
+        size: "medium",
         data: { type: "channel_featured", params },
       },
     ],

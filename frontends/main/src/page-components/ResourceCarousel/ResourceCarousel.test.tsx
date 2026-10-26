@@ -69,59 +69,53 @@ describe("ResourceCarousel", () => {
     return { resources, resolve, searchResponse }
   }
 
-  it.each([
-    { cardProps: { size: "small" } },
-    { cardProps: { size: "medium" } },
-  ] as const)(
-    "Shows loading state then renders results from the correct endpoint with expected props",
-    async ({ cardProps }) => {
-      const config: ResourceCarouselProps["config"] = [
-        {
-          label: "Resources",
-          data: {
-            type: "resources",
-            params: { resource_type: ["video", "podcast"] },
-          },
-          cardProps,
+  it("Shows loading state then renders results from the correct endpoint with expected props", async () => {
+    const config: ResourceCarouselProps["config"] = [
+      {
+        label: "Resources",
+        data: {
+          type: "resources",
+          params: { resource_type: ["video", "podcast"] },
         },
-        {
-          label: "Search",
-          data: {
-            type: "lr_search",
-            params: { professional: true },
-          },
-          cardProps,
+        size: "small",
+      },
+      {
+        label: "Search",
+        data: {
+          type: "lr_search",
+          params: { professional: true },
         },
-      ]
+        size: "small",
+      },
+    ]
 
-      const { resources } = setupApis({ autoResolve: true })
+    const { resources } = setupApis({ autoResolve: true })
 
-      renderWithProviders(
-        <ResourceCarousel
-          titleComponent="h1"
-          title="My Carousel"
-          config={config}
-        />,
-      )
+    renderWithProviders(
+      <ResourceCarousel
+        titleComponent="h1"
+        title="My Carousel"
+        config={config}
+      />,
+    )
 
-      const tabs = await screen.findAllByRole("tab")
+    const tabs = await screen.findAllByRole("tab")
 
-      expect(tabs).toHaveLength(2)
-      expect(tabs[0]).toHaveTextContent("Resources")
-      expect(tabs[1]).toHaveTextContent("Search")
+    expect(tabs).toHaveLength(2)
+    expect(tabs[0]).toHaveTextContent("Resources")
+    expect(tabs[1]).toHaveTextContent("Search")
 
-      await screen.findByText(resources.list.results[0].title)
-      await screen.findByText(resources.list.results[1].title)
-      await screen.findByText(resources.list.results[2].title)
-      expectLastProps(spyLearningResourceCard, { ...cardProps })
+    await screen.findByText(resources.list.results[0].title)
+    await screen.findByText(resources.list.results[1].title)
+    await screen.findByText(resources.list.results[2].title)
+    expectLastProps(spyLearningResourceCard, { size: "small" })
 
-      await user.click(tabs[1])
-      await screen.findByText(resources.search.results[0].title)
-      await screen.findByText(resources.search.results[1].title)
-      await screen.findByText(resources.search.results[2].title)
-      expectLastProps(spyLearningResourceCard, { ...cardProps })
-    },
-  )
+    await user.click(tabs[1])
+    await screen.findByText(resources.search.results[0].title)
+    await screen.findByText(resources.search.results[1].title)
+    await screen.findByText(resources.search.results[2].title)
+    expectLastProps(spyLearningResourceCard, { size: "small" })
+  })
 
   it.each([{ isLoading: true }, { isLoading: false }])(
     "Hits the carousel endpoint iff not in loading state (isLoading=$isLoading)",
@@ -129,7 +123,7 @@ describe("ResourceCarousel", () => {
       const config: ResourceCarouselProps["config"] = [
         {
           label: "Search",
-          cardProps: { size: "small" },
+          size: "small",
           data: { type: "lr_search", params: { professional: true } },
         },
       ]
@@ -171,7 +165,7 @@ describe("ResourceCarousel", () => {
       const config: ResourceCarouselProps["config"] = labels.map((label) => {
         return {
           label,
-          cardProps: { size: "small" },
+          size: "small",
           data: { type: "lr_search", params: { q: label } },
         }
       })
@@ -204,7 +198,7 @@ describe("ResourceCarousel", () => {
     const config: ResourceCarouselProps["config"] = [
       {
         label: "Resources",
-        cardProps: { size: "small" },
+        size: "small",
         data: {
           type: "resources",
           params: { resource_type: ["course", "program"], professional: true },
@@ -247,7 +241,7 @@ describe("ResourceCarousel", () => {
       const config: ResourceCarouselProps["config"] = [
         {
           label: "Resources",
-          cardProps: { size: "small" },
+          size: "small",
           data: {
             type: "resources",
             params: {
@@ -278,7 +272,7 @@ describe("ResourceCarousel", () => {
     const config: ResourceCarouselProps["config"] = [
       {
         label: "Resources",
-        cardProps: { size: "small" },
+        size: "small",
         data: {
           type: "resources",
           params: { resource_type: ["course", "program"], professional: true },
@@ -303,7 +297,7 @@ describe("ResourceCarousel", () => {
     const config: ResourceCarouselProps["config"] = [
       {
         label: "Resources",
-        cardProps: { size: "small" },
+        size: "small",
         data: {
           type: "resources",
           params: { resource_type: ["course", "program"], professional: true },
@@ -337,7 +331,7 @@ describe("ResourceCarousel", () => {
       const config: ResourceCarouselProps["config"] = [
         {
           label: "Resources",
-          cardProps: { size: "small" },
+          size: "small",
           data: {
             type: "resources",
             params: { resource_type: ["course"] },
@@ -367,7 +361,7 @@ describe("ResourceCarousel", () => {
     const config: ResourceCarouselProps["config"] = [
       {
         label: "Test Carousel",
-        cardProps: { size: "small" },
+        size: "small",
         data: {
           type: "resources",
           params: { resource_type: ["course"] },
@@ -407,7 +401,7 @@ describe("ResourceCarousel", () => {
     const skipConfig: ResourceCarouselProps["config"] = [
       {
         label: "Resources",
-        cardProps: { size: "small" },
+        size: "small",
         data: { type: "resources", params: { resource_type: ["course"] } },
       },
     ]

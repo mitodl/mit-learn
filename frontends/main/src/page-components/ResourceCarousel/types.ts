@@ -7,7 +7,6 @@ import type {
   LearningResourcesApiLearningResourcesVectorSimilarListRequest as VectorSimilarListParams,
 } from "api"
 import type { ChannelsApiChannelsTypeFeaturedListRequest as ChannelFeaturedParams } from "api/v0"
-import type { LearningResourceCardProps } from "ol-components"
 import type { ResourceCardSize } from "../ResourceCardView/ResourceCardView"
 
 interface ResourceDataSource {
@@ -58,10 +57,7 @@ type DataSource =
 type TabConfig<D extends DataSource = DataSource> = {
   label: React.ReactNode
   /** Required: an unsized card collapses to 0 width in the carousel track (see `ResourceCardView`). */
-  cardProps: { size: ResourceCardSize } & Pick<
-    LearningResourceCardProps,
-    "isMedia"
-  >
+  size: ResourceCardSize
   data: D
 }
 
