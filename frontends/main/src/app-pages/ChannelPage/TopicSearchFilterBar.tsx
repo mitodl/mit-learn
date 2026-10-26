@@ -165,12 +165,20 @@ const facetLabel = (label: string, selected: string[]) => (
   <FacetLabel>
     {label}
     {selected.length > 0 ? (
-      <FacetCount aria-label={`${selected.length} selected`}>
-        {selected.length}
-      </FacetCount>
+      <FacetCount aria-hidden="true">{selected.length}</FacetCount>
     ) : null}
   </FacetLabel>
 )
+
+/**
+ * What the control is called to a screen reader, which has to carry the count
+ * itself: `aria-label` on a combobox replaces everything drawn inside it, so
+ * the disc is never read as part of the name. Naming the disc instead does not
+ * work either -- it is a span with no role, which `aria-label` cannot name --
+ * so it is hidden above and said here.
+ */
+const facetName = (label: string, selected: string[]) =>
+  selected.length > 0 ? `${label}, ${selected.length} selected` : label
 
 const FreeCheckbox = styled(Checkbox)(({ theme }) => ({
   margin: 0,
@@ -418,7 +426,7 @@ const TopicSearchFilterBar: React.FC<TopicSearchFilterBarProps> = ({
         key="delivery"
         size="small"
         name="delivery"
-        aria-label="Format"
+        aria-label={facetName("Format", delivery)}
         value={delivery}
         multiple
         renderValue={() => facetLabel("Format", delivery)}
@@ -435,7 +443,7 @@ const TopicSearchFilterBar: React.FC<TopicSearchFilterBarProps> = ({
         key="certification_type"
         size="small"
         name="certification_type"
-        aria-label="Certificate"
+        aria-label={facetName("Certificate", certification)}
         value={certification}
         multiple
         renderValue={() => facetLabel("Certificate", certification)}
@@ -452,7 +460,7 @@ const TopicSearchFilterBar: React.FC<TopicSearchFilterBarProps> = ({
         key="resource_category"
         size="small"
         name="resource_category"
-        aria-label="Resource Category"
+        aria-label={facetName("Resource Category", resourceCategory)}
         value={resourceCategory}
         multiple
         renderValue={() => facetLabel("Resource Category", resourceCategory)}

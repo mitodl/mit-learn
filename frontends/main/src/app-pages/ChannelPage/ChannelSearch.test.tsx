@@ -933,11 +933,26 @@ describe("ChannelSearch", () => {
       const bar = await barAt("?delivery=online&delivery=in_person")
 
       expect(
-        within(bar).getByRole("combobox", { name: "Format" }),
+        within(bar).getByRole("combobox", { name: "Format, 2 selected" }),
       ).toHaveTextContent("2")
       expect(
         within(bar).getByRole("combobox", { name: "Certificate" }),
       ).not.toHaveTextContent(/\d/)
+    }, 10000)
+
+    /**
+     * The disc is drawn, not named: `aria-label` on a combobox replaces what
+     * is inside it, so a count left to the disc alone is read by nobody.
+     */
+    test("says the count in the control's name, not just the disc", async () => {
+      const bar = await barAt("?delivery=online&delivery=in_person")
+
+      expect(
+        within(bar).getByRole("combobox", { name: "Format, 2 selected" }),
+      ).toBeInTheDocument()
+      expect(
+        within(bar).queryByRole("combobox", { name: "Format" }),
+      ).not.toBeInTheDocument()
     }, 10000)
 
     /* A badge reading 0 is a filter announcing that it is not filtering. */
