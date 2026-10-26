@@ -330,7 +330,7 @@ const HeroInner = styled("div", {
   paddingTop: "48px",
   paddingBottom: "64px",
   [theme.breakpoints.down("sm")]: {
-    gap: "32px",
+    gap: "16px",
     paddingTop: "24px",
     paddingBottom: "32px",
   },
@@ -388,6 +388,9 @@ const BannerArea = styled("div", {
         color: theme.custom.colors.silverGrayDark,
       },
     },
+    [theme.breakpoints.down("sm")]: {
+      gap: "16px",
+    },
     /* The 8px here replaces the zeroed bottom padding above, which is why this
      follows it rather than sitting with the other narrow-screen rules. */
     ...(overPhoto
@@ -396,11 +399,14 @@ const BannerArea = styled("div", {
   }),
 )
 
-const TitleBlock = styled.div({
+const TitleBlock = styled.div(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
   gap: "32px",
-})
+  [theme.breakpoints.down("sm")]: {
+    gap: "16px",
+  },
+}))
 
 /* Wraps rather than squeezing the title: the Follow control has a fixed size
    and a long topic name would otherwise crush it.
@@ -426,6 +432,9 @@ const TopicTitle = styled.h1(({ theme }) => ({
   ...theme.typography.h1,
   color: theme.custom.colors.lightRed,
   margin: 0,
+  [theme.breakpoints.down("sm")]: {
+    ...theme.typography.h3,
+  },
 }))
 
 /**
@@ -441,6 +450,8 @@ const TopicDescription = styled(Typography, {
   width: "90%",
   [theme.breakpoints.down("sm")]: {
     width: "100%",
+    ...theme.typography.body2,
+    lineHeight: "22px",
     ...(overPhoto ? HERO_TEXT_PANEL : {}),
   },
 }))

@@ -607,7 +607,7 @@ const MobileFilter = styled("div", {
   },
   color: theme.custom.colors.darkGray2,
   marginTop: "20px",
-  marginBottom: "16px",
+  marginBottom: "24px",
   /**
    * The cards design puts Filter and Sort on one row, a control at either
    * end. The other layouts float Sort to the right of the same block, which
