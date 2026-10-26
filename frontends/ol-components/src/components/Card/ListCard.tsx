@@ -7,7 +7,6 @@ import React, {
 } from "react"
 import type { AriaRole, AriaAttributes } from "react"
 import styled from "@emotion/styled"
-import { RiDraggable } from "@remixicon/react"
 import { theme } from "../ThemeProvider/ThemeProvider"
 import { BaseContainer, ImageProps, useClickChildLink, Linkable } from "./Card"
 import type { LinkTargetProps } from "./Card"
@@ -198,7 +197,6 @@ type CardProps = {
    *    - The click target is a child of any element with data-card-actions attribute
    */
   forwardClicksToLink?: boolean
-  draggable?: boolean
   onClick?: React.MouseEventHandler<HTMLElement>
   as?: React.ElementType
 } & AriaAttributes
@@ -239,7 +237,6 @@ const ListCard: Card = ({
   children,
   className,
   forwardClicksToLink = false,
-  draggable,
   onClick,
   ...others
 }) => {
@@ -281,11 +278,6 @@ const ListCard: Card = ({
       display="flex"
       onClick={handleClick}
     >
-      {draggable && (
-        <DragArea>
-          <RiDraggable />
-        </DragArea>
-      )}
       <Body>
         <Info>{info}</Info>
         {title && <LinkableTitle title={title} />}

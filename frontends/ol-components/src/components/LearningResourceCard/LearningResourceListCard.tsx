@@ -145,7 +145,6 @@ interface LearningResourceListCardProps {
   editMenu?: React.ReactNode | null
   inUserList?: boolean
   inLearningPath?: boolean
-  draggable?: boolean
   onClick?: React.MouseEventHandler
   headingLevel?: number
 }
@@ -161,7 +160,6 @@ const LearningResourceListCard: React.FC<LearningResourceListCardProps> = ({
   editMenu,
   inLearningPath,
   inUserList,
-  draggable,
   onClick,
   headingLevel = 6,
 }) => {
@@ -246,7 +244,6 @@ const LearningResourceListCard: React.FC<LearningResourceListCardProps> = ({
       lang={getResourceLanguage(resource)}
       ariaLabel={`${resource.resource_category}: ${resource.title}`}
       footerContent={footerContent}
-      draggable={draggable}
       editMenu={editMenu}
     />
   )
