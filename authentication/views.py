@@ -153,9 +153,8 @@ def build_account_action_callback_url(request, *, next_url, action):
     """
     Build the callback URL Keycloak returns the user to.
 
-    Both legs of the flow must produce a byte-identical string: it is sent as
-    `redirect_uri` in the authorization request, and again when exchanging the
-    authorization code, where Keycloak requires an exact match.
+    It is sent as `redirect_uri` in the authorization request, and Keycloak
+    checks it against the client's registered redirect URIs.
 
     Keycloak returns the user to the API domain, which is where APISIX (and so
     the OIDC client's registered redirect URIs) lives.
@@ -240,10 +239,6 @@ class AccountActionStartView(RedirectView):
             "client_id": settings.KEYCLOAK_CLIENT_ID,
             "response_type": "code",
             "redirect_uri": callback_url,
-            # `email` is requested explicitly so the code we exchange on the
-            # callback can read the updated address. It is one of Keycloak's
-            # default client scopes, but relying on that being true of every
-            # environment's client would fail silently and confusingly.
             "scope": "openid email",
             "kc_action": KEYCLOAK_ACTIONS[action],
             "code_challenge": code_challenge,
