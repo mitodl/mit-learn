@@ -169,6 +169,7 @@ exclude-newer = "7d"
 required-version = ">=0.9.17"
 
 [tool.uv.exclude-newer-package]
+brotli = "0d"  # CVE-2026-111497 fix (1.2.1), remove after 2026-10-29
 certifi = "0d"  # eMudhra CA compromise fix (2026.10.19), skip cooldown
 mitol-django-common = "0d"
 mitol-django-observability = "0d"
