@@ -160,8 +160,9 @@ const useComplianceGate = () => {
    * unmounts: the dialog lives at the root, so it can outlast its caller
    * (e.g. after browser Back), and its retry must still finish.
    *
-   * If another action's recovery dialog is already open, a rejection goes to
-   * this action's own `onError`/`onSettled` instead.
+   * If another action's recovery dialog is already open, this one waits for
+   * it to close and then retries: the profile the learner just fixed usually
+   * lets it through, and if it's still rejected its own dialog opens.
    */
   const mutateWithCompliance = React.useCallback(
     async <TData, TError, TVariables, TContext>(
@@ -203,21 +204,36 @@ const useComplianceGate = () => {
         }
       }
 
-      const rejectedFields = await attempt()
+      let rejectedFields = await attempt()
       if (rejectedFields.length === 0) return
-      const saved = await exclusive<unknown>(
+      let saved = await exclusive<unknown>(
         () =>
           NiceModal.show(JustInTimeDialog, { rejectedFields, retry: attempt }),
         DIALOG_BUSY,
       )
-      if (saved === true) return
-      const { error, context } = lastRejection
-      if (saved === DIALOG_BUSY && error !== null) {
-        options.onError?.(error, variables, context)
+      while (saved === DIALOG_BUSY) {
+        // Another action's dialog is open: wait for it, then try again.
+        await inFlight.current?.catch(() => undefined)
+        rejectedFields = await attempt()
+        if (rejectedFields.length === 0) return
+        saved = await exclusive<unknown>(
+          () =>
+            NiceModal.show(JustInTimeDialog, {
+              rejectedFields,
+              retry: attempt,
+            }),
+          DIALOG_BUSY,
+        )
       }
-      options.onSettled?.(undefined, error, variables, context)
+      if (saved === true) return
+      options.onSettled?.(
+        undefined,
+        lastRejection.error,
+        variables,
+        lastRejection.context,
+      )
     },
-    [exclusive, ensureCompliance],
+    [exclusive, ensureCompliance, inFlight],
   )
 
   /**

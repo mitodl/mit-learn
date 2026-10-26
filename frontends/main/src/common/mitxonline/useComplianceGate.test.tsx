@@ -518,70 +518,91 @@ describe("mutateWithCompliance", () => {
     await act(() => pendingA)
   })
 
-  test("a second rejection while the dialog is open goes to its own onError", async () => {
-    setupCompleteUser()
-    let rejectFirst: (error: unknown) => void = () => {}
-    let rejectSecond: (error: unknown) => void = () => {}
-    const first = jest
-      .fn()
-      .mockImplementationOnce(
-        () => new Promise((_, reject) => (rejectFirst = reject)),
+  test.each([
+    { secondRetry: "succeeds", opensOwnDialog: false },
+    { secondRetry: "is rejected again", opensOwnDialog: true },
+  ])(
+    "a rejection while another dialog is open waits, then retries ($secondRetry)",
+    async ({ opensOwnDialog }) => {
+      setupCompleteUser()
+      let rejectFirst: (error: unknown) => void = () => {}
+      let rejectSecond: (error: unknown) => void = () => {}
+      const first = jest
+        .fn()
+        .mockImplementationOnce(
+          () => new Promise((_, reject) => (rejectFirst = reject)),
+        )
+        .mockResolvedValue("ok")
+      const second = jest
+        .fn()
+        .mockImplementationOnce(
+          () => new Promise((_, reject) => (rejectSecond = reject)),
+        )
+      if (opensOwnDialog) {
+        second
+          .mockRejectedValueOnce(rejection(["last_name"]))
+          .mockResolvedValue("ok")
+      } else {
+        second.mockResolvedValue("ok")
+      }
+      const { result } = renderHook(
+        () => ({
+          cardA: useComplianceGate(),
+          cardB: useComplianceGate(),
+          first: useMutation({ mutationFn: first }),
+          second: useMutation({ mutationFn: second }),
+        }),
+        { wrapper },
       )
-      .mockResolvedValue("ok")
-    const second = jest.fn(
-      (_vars: { id: number }) =>
-        new Promise((_, reject) => (rejectSecond = reject)),
-    )
-    const { result } = renderHook(
-      () => ({
-        cardA: useComplianceGate(),
-        cardB: useComplianceGate(),
-        first: useMutation({ mutationFn: first }),
-        second: useMutation({ mutationFn: second }),
-      }),
-      { wrapper },
-    )
 
-    // Both enrollments are in flight before either is rejected.
-    let pendingA: Promise<void> = Promise.resolve()
-    let pendingB: Promise<void> = Promise.resolve()
-    const onErrorB = jest.fn()
-    await act(async () => {
-      pendingA = result.current.cardA.mutateWithCompliance(
-        result.current.first,
-        { id: 1 },
-      )
-    })
-    await waitFor(() => expect(first).toHaveBeenCalledTimes(1))
-    await act(async () => {
-      pendingB = result.current.cardB.mutateWithCompliance(
-        result.current.second,
-        { id: 2 },
-        { onError: onErrorB },
-      )
-    })
-    await waitFor(() => expect(second).toHaveBeenCalledTimes(1))
+      // Both enrollments are in flight before either is rejected.
+      let pendingA: Promise<void> = Promise.resolve()
+      let pendingB: Promise<void> = Promise.resolve()
+      const onSuccessB = jest.fn()
+      const onErrorB = jest.fn()
+      await act(async () => {
+        pendingA = result.current.cardA.mutateWithCompliance(
+          result.current.first,
+          { id: 1 },
+        )
+      })
+      await waitFor(() => expect(first).toHaveBeenCalledTimes(1))
+      await act(async () => {
+        pendingB = result.current.cardB.mutateWithCompliance(
+          result.current.second,
+          { id: 2 },
+          { onSuccess: onSuccessB, onError: onErrorB },
+        )
+      })
+      await waitFor(() => expect(second).toHaveBeenCalledTimes(1))
 
-    await act(async () => rejectFirst(rejection(["last_name"])))
-    const dialog = await screen.findByRole("dialog", {
-      name: "Just a Few More Details",
-    })
-    await act(async () => rejectSecond(rejection(["last_name"])))
-    await act(() => pendingB)
+      await act(async () => rejectFirst(rejection(["last_name"])))
+      const dialog = await screen.findByRole("dialog", {
+        name: "Just a Few More Details",
+      })
+      await act(async () => rejectSecond(rejection(["last_name"])))
 
-    // B's rejection is reported to B; the open dialog still belongs to A.
-    expect(onErrorB).toHaveBeenCalledWith(
-      rejection(["last_name"]),
-      { id: 2 },
-      undefined,
-    )
-    expect(screen.getAllByRole("dialog")).toHaveLength(1)
-    await fixLastNameAndSubmit(dialog)
-    await waitFor(() => expect(dialog).not.toBeInTheDocument())
-    expect(first).toHaveBeenCalledTimes(2)
-    expect(second).toHaveBeenCalledTimes(1)
-    await act(() => pendingA)
-  })
+      // B's rejection doesn't take over A's dialog; B waits for it.
+      expect(screen.getAllByRole("dialog")).toHaveLength(1)
+      expect(second).toHaveBeenCalledTimes(1)
+      await fixLastNameAndSubmit(dialog)
+      await act(() => pendingA)
+      expect(first).toHaveBeenCalledTimes(2)
+
+      // Then B retries with the fixed profile.
+      await waitFor(() => expect(second).toHaveBeenCalledTimes(2))
+      if (opensOwnDialog) {
+        const own = await screen.findByRole("dialog", {
+          name: "Just a Few More Details",
+        })
+        await fixLastNameAndSubmit(own)
+        await waitFor(() => expect(second).toHaveBeenCalledTimes(3))
+      }
+      await act(() => pendingB)
+      expect(onSuccessB).toHaveBeenCalledTimes(1)
+      expect(onErrorB).not.toHaveBeenCalled()
+    },
+  )
 
   test("another action isn't held up while an enrollment request is in flight", async () => {
     setupCompleteUser()
