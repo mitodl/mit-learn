@@ -2,9 +2,10 @@
 
 import { env } from "@/env"
 import React from "react"
-import { usePostHog } from "posthog-js/react"
+import { useFeatureFlagEnabled, usePostHog } from "posthog-js/react"
 import { BaseLearningResourceCard } from "ol-components"
 import { PostHogEvents } from "@/common/constants"
+import { FeatureFlags } from "@/common/feature_flags"
 import type {
   CourseWithCourseRunsSerializerV2,
   V2ProgramDetail,
@@ -20,12 +21,23 @@ import {
   getBestRun,
   getEnrollmentType,
 } from "@/common/mitxonline"
+import {
+  ResourceCardSkeleton,
+  ResourceCardView,
+  freeToAuditPanel,
+  startsMetadata,
+} from "@/page-components/ResourceCardView/ResourceCardView"
+import type {
+  HeadingLevel,
+  PricePanel,
+  ResourceCardContent,
+} from "@/page-components/ResourceCardView/ResourceCardView"
 
 type CommonCardProps = {
   href: string
   size?: "small" | "medium"
   isLoading?: boolean
-  headingLevel?: number
+  headingLevel?: HeadingLevel
   className?: string
   list?: boolean
   label?: string
@@ -137,10 +149,89 @@ const extractCardData = (
   }
 }
 
+type CardContentSource =
+  | Pick<MitxOnlineCourseCardProps, "resource" | "resourceType">
+  | Pick<MitxOnlineProgramCardProps, "resource" | "resourceType">
+
+const getPricePanel = (
+  resource: {
+    min_price?: number | null
+    max_price?: number | null
+    certificate_available: boolean
+    certificate_type: string
+  },
+  productPrice: string | number | undefined | null,
+  enrollmentModes: Parameters<typeof getEnrollmentType>[0],
+): PricePanel => {
+  const price = formatResourcePrice(resource, productPrice)
+  // `||`, not `??`: an empty `certificate_type` also falls back.
+  const certificate = resource.certificate_available
+    ? resource.certificate_type || "Certificate"
+    : undefined
+  switch (getEnrollmentType(enrollmentModes)) {
+    case "free":
+      return { tone: "light", primary: "Free", certificate }
+    case "paid":
+      return { tone: "dark", primary: price ?? "Paid", certificate }
+    case "both":
+      return freeToAuditPanel(price)
+    default:
+      return { tone: "neutral", certificate }
+  }
+}
+
+/**
+ * The redesigned card's content for a course or program. Unlike
+ * `extractCardData`, it is the same at every card size.
+ */
+const mitxOnlineCardContent = (
+  props: CardContentSource,
+): ResourceCardContent | null => {
+  if (props.resourceType === "course") {
+    const course = props.resource
+    if (!course) return null
+    const bestRun = getBestRun(course)
+    return {
+      title: course.title,
+      typeLabel: "Course",
+      imageSrc: course.page?.feature_image_src || null,
+      metadata: startsMetadata(
+        course.availability === "anytime",
+        bestRun?.start_date,
+      ),
+      price: getPricePanel(
+        course,
+        bestRun?.products[0]?.price,
+        bestRun?.enrollment_modes,
+      ),
+    }
+  }
+
+  const program = props.resource
+  if (!program) return null
+  return {
+    title: program.title,
+    typeLabel:
+      program.display_mode === DisplayModeEnum.Course ? "Course" : "Program",
+    imageSrc: program.page?.feature_image_src || null,
+    metadata: startsMetadata(
+      program.availability === "anytime",
+      program.start_date,
+    ),
+    price: getPricePanel(
+      program,
+      program.products[0]?.price,
+      program.enrollment_modes,
+    ),
+  }
+}
+
 const MitxOnlineResourceCard: React.FC<MitxOnlineResourceCardProps> = (
   props,
 ) => {
   const posthog = usePostHog()
+  const redesign =
+    useFeatureFlagEnabled(FeatureFlags.ResourceCardRedesign) === true
   const {
     href,
     size = "small",
@@ -159,6 +250,36 @@ const MitxOnlineResourceCard: React.FC<MitxOnlineResourceCardProps> = (
     props.resource?.page?.feature_image_src,
     DEFAULT_RESOURCE_IMG,
   )
+
+  const captureClick = () => {
+    if (env("NEXT_PUBLIC_POSTHOG_API_KEY")) {
+      posthog.capture(PostHogEvents.CourseCardClicked, {
+        label,
+        resourceId: props.resource?.id,
+        readableId: props.resource?.readable_id,
+        resourceType: props.resourceType,
+      })
+    }
+  }
+
+  if (redesign) {
+    if (isLoading) {
+      return <ResourceCardSkeleton className={className} layout="responsive" />
+    }
+    const content = mitxOnlineCardContent(props)
+    if (!content) return null
+    return (
+      <ResourceCardView
+        {...content}
+        layout="responsive"
+        href={href}
+        onLinkClick={captureClick}
+        actions={[]}
+        headingLevel={headingLevel}
+        className={className}
+      />
+    )
+  }
 
   if (isLoading) {
     return (
@@ -195,19 +316,11 @@ const MitxOnlineResourceCard: React.FC<MitxOnlineResourceCardProps> = (
       startDate={data.startDate}
       ariaLabel={`${data.displayType}: ${data.title}`}
       list={list}
-      onClick={() => {
-        if (env("NEXT_PUBLIC_POSTHOG_API_KEY")) {
-          posthog.capture(PostHogEvents.CourseCardClicked, {
-            label,
-            resourceId: props.resource?.id,
-            readableId: props.resource?.readable_id,
-            resourceType: props.resourceType,
-          })
-        }
-      }}
+      onClick={captureClick}
     />
   )
 }
 
 export default MitxOnlineResourceCard
+export { mitxOnlineCardContent }
 export type { MitxOnlineResourceCardProps }
