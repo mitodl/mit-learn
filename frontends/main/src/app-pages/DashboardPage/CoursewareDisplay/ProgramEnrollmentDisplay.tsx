@@ -208,6 +208,9 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
                       moduleEnrollmentsByCourseId={data.enrollmentsByCourseId}
                       courseProgramEnrollment={item.courseProgramEnrollment}
                       ancestorProgramEnrollment={data.ancestorProgramEnrollment}
+                      requirementNote={
+                        section.node.data.description || undefined
+                      }
                       onUpgradeError={setUpgradeError}
                     />
                   )
@@ -227,6 +230,7 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
                     moduleEnrollmentsByCourseId={data.enrollmentsByCourseId}
                     courseProgramEnrollment={item.programEnrollment}
                     ancestorProgramEnrollment={data.ancestorProgramEnrollment}
+                    requirementNote={section.node.data.description || undefined}
                     onUpgradeError={setUpgradeError}
                   />
                 )

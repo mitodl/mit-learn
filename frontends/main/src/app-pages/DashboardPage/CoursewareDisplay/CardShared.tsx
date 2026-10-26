@@ -404,4 +404,5 @@ export {
   CourseDateSummary,
   UpgradedBanner,
   CardMetaRow,
+  RequirementNote,
 }

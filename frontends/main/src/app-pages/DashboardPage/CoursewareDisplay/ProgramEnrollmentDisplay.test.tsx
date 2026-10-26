@@ -2433,6 +2433,121 @@ describe("ProgramEnrollmentDisplay", () => {
       within(desktopCardFor(course1)).queryByText(description),
     ).not.toBeInTheDocument()
   })
+  test("Shows a requirement group's description on a program-as-course card in that group, not on its modules", async () => {
+    const mitxOnlineUser = mitxonline.factories.user.user()
+    setMockResponse.get(mitxonline.urls.userMe.get(), mitxOnlineUser)
+
+    const description = "Unlocks after all required courses are complete"
+    const parentReqTree =
+      new mitxonline.factories.requirements.RequirementTreeBuilder()
+    parentReqTree
+      .addOperator({ operator: "all_of", title: "Core Courses" })
+      .addCourse({ course: 1 })
+    parentReqTree
+      .addOperator({ operator: "all_of", title: "Capstone", description })
+      .addProgram({ program: 900 })
+
+    const parentProgram = mitxonline.factories.programs.program({
+      id: 1234,
+      courses: [1],
+      req_tree: parentReqTree.serialize(),
+    })
+
+    const programAsCourseReqTree =
+      new mitxonline.factories.requirements.RequirementTreeBuilder()
+    const modules = programAsCourseReqTree.addOperator({
+      operator: "all_of",
+      title: "Modules",
+    })
+    modules.addCourse({ course: 11 })
+    modules.addCourse({ course: 12 })
+    const programAsCourseProgram = mitxonline.factories.programs.program({
+      id: 900,
+      title: "Capstone Program As Course",
+      display_mode: "course",
+      courses: [11, 12],
+      req_tree: programAsCourseReqTree.serialize(),
+    })
+
+    setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV3(), [])
+    setMockResponse.get(
+      mitxonline.urls.programEnrollments.enrollmentsListV3(),
+      [
+        mitxonline.factories.enrollment.programEnrollmentV3({
+          program: {
+            id: parentProgram.id,
+            title: parentProgram.title,
+            live: parentProgram.live,
+            program_type: parentProgram.program_type,
+            readable_id: parentProgram.readable_id,
+          },
+        }),
+      ],
+    )
+    setMockResponse.get(
+      mitxonline.urls.programs.programDetail(parentProgram.id),
+      parentProgram,
+    )
+    setMockResponse.get(
+      mitxonline.urls.courses.coursesList({ id: [1], page_size: 1 }),
+      {
+        count: 1,
+        next: null,
+        previous: null,
+        results: [
+          mitxonline.factories.courses.course({
+            id: 1,
+            courseruns: [mitxonline.factories.courses.courseRun()],
+          }),
+        ],
+      },
+    )
+    setMockResponse.get(
+      mitxonline.urls.programs.programsList({ id: [900], page_size: 1 }),
+      {
+        count: 1,
+        next: null,
+        previous: null,
+        results: [programAsCourseProgram],
+      },
+    )
+    setMockResponse.get(
+      mitxonline.urls.programs.programDetail(900),
+      programAsCourseProgram,
+    )
+    setMockResponse.get(
+      mitxonline.urls.courses.coursesList({ id: [11, 12], page_size: 2 }),
+      {
+        count: 2,
+        next: null,
+        previous: null,
+        results: [11, 12].map((id) =>
+          mitxonline.factories.courses.course({
+            id,
+            courseruns: [mitxonline.factories.courses.courseRun()],
+          }),
+        ),
+      },
+    )
+
+    renderWithProviders(
+      <ProgramEnrollmentDisplay programId={parentProgram.id} />,
+    )
+
+    const card = await screen.findByTestId("program-as-course-card")
+    const desktopHeader = within(card).getByTestId(
+      "program-as-course-card-desktop-header",
+    )
+    expect(within(desktopHeader).getByText(description)).toBeVisible()
+    // Once per header (desktop and mobile). The module cards don't repeat it:
+    // the note is about the program card's place in the parent program.
+    expect(within(card).getAllByText(description)).toHaveLength(2)
+    for (const moduleCard of within(card).getAllByTestId(
+      "enrollment-card-desktop",
+    )) {
+      expect(within(moduleCard).queryByText(description)).toBeNull()
+    }
+  })
 })
 
 describe("ProgramEnrollmentDisplay with program tracks", () => {
