@@ -353,6 +353,17 @@ const JustInTimeDialogInner: React.FC<JustInTimeDialogProps> = ({
     )
   }
 
+  // Opened for an enrollment CyberSource rejected, rather than for empty fields.
+  const openedForRejection = rejectedFields.length > 0
+  // Only a field this country doesn't collect (a stale state) is rejected, so
+  // there's nothing to highlight; submitting clears it with the rest of the address.
+  const onlyHiddenFieldRejected = rejected.length > 0 && !firstRejected
+  const intro = !openedForRejection
+    ? "We need a bit more info before you can enroll."
+    : onlyHiddenFieldRejected
+      ? "We couldn't verify your address. Please review it and submit again."
+      : "We couldn't verify some of your details. Please check the highlighted fields and try again."
+
   return (
     <FormDialog
       noValidate
@@ -384,15 +395,7 @@ const JustInTimeDialogInner: React.FC<JustInTimeDialogProps> = ({
       }
     >
       <Stack direction="column" gap="24px" ref={fieldsRef}>
-        <Typography variant="body1">
-          {rejectedFields.length === 0
-            ? "We need a bit more info before you can enroll."
-            : rejected.length > 0 && !firstRejected
-              ? // Only a field this country doesn't collect (a stale state) was
-                // rejected; submitting clears it along with the rest of the address.
-                "We couldn't verify your address. Please review it and submit again."
-              : "We couldn't verify some of your details. Please check the highlighted fields and try again."}
-        </Typography>
+        <Typography variant="body1">{intro}</Typography>
         {visibleFields.map((field) => (
           <div key={field} data-jit-field={field}>
             {renderField(field)}

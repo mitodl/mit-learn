@@ -502,7 +502,8 @@ describe("mutateWithCompliance", () => {
       name: "Just a Few More Details",
     })
 
-    // Card A's recovery is still open, so card B's click is ignored rather
+    // Card A's recovery dialog is open (in the browser its backdrop blocks the
+    // click anyway), so card B's action stops at the compliance check rather
     // than swapping its own retry into the shared dialog.
     await act(() =>
       result.current.cardB.mutateWithCompliance(result.current.second, {
@@ -514,6 +515,113 @@ describe("mutateWithCompliance", () => {
     await fixLastNameAndSubmit(dialog)
     await waitFor(() => expect(dialog).not.toBeInTheDocument())
     expect(first).toHaveBeenCalledTimes(2)
+    await act(() => pendingA)
+  })
+
+  test("a second rejection while the dialog is open goes to its own onError", async () => {
+    setupCompleteUser()
+    let rejectFirst: (error: unknown) => void = () => {}
+    let rejectSecond: (error: unknown) => void = () => {}
+    const first = jest
+      .fn()
+      .mockImplementationOnce(
+        () => new Promise((_, reject) => (rejectFirst = reject)),
+      )
+      .mockResolvedValue("ok")
+    const second = jest.fn(
+      (_vars: { id: number }) =>
+        new Promise((_, reject) => (rejectSecond = reject)),
+    )
+    const { result } = renderHook(
+      () => ({
+        cardA: useComplianceGate(),
+        cardB: useComplianceGate(),
+        first: useMutation({ mutationFn: first }),
+        second: useMutation({ mutationFn: second }),
+      }),
+      { wrapper },
+    )
+
+    // Both enrollments are in flight before either is rejected.
+    let pendingA: Promise<void> = Promise.resolve()
+    let pendingB: Promise<void> = Promise.resolve()
+    const onErrorB = jest.fn()
+    await act(async () => {
+      pendingA = result.current.cardA.mutateWithCompliance(
+        result.current.first,
+        { id: 1 },
+      )
+    })
+    await waitFor(() => expect(first).toHaveBeenCalledTimes(1))
+    await act(async () => {
+      pendingB = result.current.cardB.mutateWithCompliance(
+        result.current.second,
+        { id: 2 },
+        { onError: onErrorB },
+      )
+    })
+    await waitFor(() => expect(second).toHaveBeenCalledTimes(1))
+
+    await act(async () => rejectFirst(rejection(["last_name"])))
+    const dialog = await screen.findByRole("dialog", {
+      name: "Just a Few More Details",
+    })
+    await act(async () => rejectSecond(rejection(["last_name"])))
+    await act(() => pendingB)
+
+    // B's rejection is reported to B; the open dialog still belongs to A.
+    expect(onErrorB).toHaveBeenCalledWith(
+      rejection(["last_name"]),
+      { id: 2 },
+      undefined,
+    )
+    expect(screen.getAllByRole("dialog")).toHaveLength(1)
+    await fixLastNameAndSubmit(dialog)
+    await waitFor(() => expect(dialog).not.toBeInTheDocument())
+    expect(first).toHaveBeenCalledTimes(2)
+    expect(second).toHaveBeenCalledTimes(1)
+    await act(() => pendingA)
+  })
+
+  test("another action isn't held up while an enrollment request is in flight", async () => {
+    setupCompleteUser()
+    let finishFirst: (value: string) => void = () => {}
+    const first = jest.fn(
+      (_vars: { id: number }) =>
+        new Promise<string>((resolve) => (finishFirst = resolve)),
+    )
+    const second = jest.fn().mockResolvedValue("ok")
+    const { result } = renderHook(
+      () => ({
+        cardA: useComplianceGate(),
+        cardB: useComplianceGate(),
+        first: useMutation({ mutationFn: first }),
+        second: useMutation({ mutationFn: second }),
+      }),
+      { wrapper },
+    )
+
+    let pendingA: Promise<void> = Promise.resolve()
+    await act(async () => {
+      pendingA = result.current.cardA.mutateWithCompliance(
+        result.current.first,
+        { id: 1 },
+      )
+    })
+    await waitFor(() => expect(first).toHaveBeenCalledTimes(1))
+
+    const onSuccessB = jest.fn()
+    await act(() =>
+      result.current.cardB.mutateWithCompliance(
+        result.current.second,
+        { id: 2 },
+        { onSuccess: onSuccessB },
+      ),
+    )
+    expect(second).toHaveBeenCalledTimes(1)
+    expect(onSuccessB).toHaveBeenCalled()
+
+    await act(async () => finishFirst("ok"))
     await act(() => pendingA)
   })
 })

@@ -69,6 +69,9 @@ const ComplianceGateProvider: React.FC<{ children: React.ReactNode }> = ({
  * `mutateWithCompliance`, which gates them and recovers from that rejection by
  * opening the dialog on those fields and retrying from it as they correct them.
  */
+/** `exclusive`'s result when another action's recovery dialog is open. */
+const DIALOG_BUSY = Symbol("dialog busy")
+
 const useComplianceGate = () => {
   const queryClient = useQueryClient()
   // Collapses concurrent callers (e.g. two dashboard cards clicked before the
@@ -82,12 +85,14 @@ const useComplianceGate = () => {
   const inFlight = shared ?? local
 
   /**
-   * Runs `flow` as the tree's only gated action, resolving `cancelled` without
-   * running it if another is in flight. A second caller (e.g. a double-clicked
-   * enroll button) must not also resume once the first resolves, or both fire
-   * their own enroll/basket mutation. Held until `flow` settles, so the
+   * Runs `flow` as the tree's only gated step, resolving `cancelled` without
+   * running it if another is in flight. Guards the compliance check, so a
+   * second caller (e.g. a double-clicked enroll button) doesn't also resume
+   * once the first resolves and fire its own enroll/basket mutation, and the
    * recovery dialog -- one per tree, whose `retry` a second `NiceModal.show`
-   * would replace -- only ever retries the action that opened it.
+   * would replace -- so it only ever retries the action that opened it. The
+   * enrollment request itself runs outside it, so other actions aren't held
+   * up while it's in flight.
    */
   const exclusive = React.useCallback(
     <T,>(flow: () => Promise<T>, cancelled: T): Promise<T> => {
@@ -154,6 +159,9 @@ const useComplianceGate = () => {
    * callbacks, which TanStack Query skips once the calling component
    * unmounts: the dialog lives at the root, so it can outlast its caller
    * (e.g. after browser Back), and its retry must still finish.
+   *
+   * If another action's recovery dialog is already open, a rejection goes to
+   * this action's own `onError`/`onSettled` instead.
    */
   const mutateWithCompliance = React.useCallback(
     async <TData, TError, TVariables, TContext>(
@@ -163,55 +171,53 @@ const useComplianceGate = () => {
       >,
       variables: TVariables,
       options: MutateOptions<TData, TError, TVariables, TContext> = {},
-    ): Promise<void> =>
-      exclusive(async () => {
-        if (!(await checkCompliance())) return
+    ): Promise<void> => {
+      if (!(await ensureCompliance())) return
 
-        // Settles with the fields the attempt was rejected on, or [] for any
-        // other outcome, which `options` has then handled as usual.
-        let lastRejection: { error: TError | null; context?: TContext } = {
-          error: null,
+      // Settles with the fields the attempt was rejected on, or [] for any
+      // other outcome, which `options` has then handled as usual.
+      let lastRejection: { error: TError | null; context?: TContext } = {
+        error: null,
+      }
+      const attempt = async (): Promise<JitField[]> => {
+        try {
+          await mutation.mutateAsync(variables, {
+            ...options,
+            onError: (error, ...rest) => {
+              if (rejectedComplianceFields(error).length > 0) return
+              options.onError?.(error, ...rest)
+            },
+            onSettled: (data, error, vars, context) => {
+              if (rejectedComplianceFields(error).length > 0) {
+                lastRejection = { error, context }
+                mutation.reset()
+              } else {
+                options.onSettled?.(data, error, vars, context)
+              }
+            },
+          })
+          return []
+        } catch (error) {
+          // Any other failure has been handled by `options.onError`.
+          return rejectedComplianceFields(error)
         }
-        const attempt = async (): Promise<JitField[]> => {
-          try {
-            await mutation.mutateAsync(variables, {
-              ...options,
-              onError: (error, ...rest) => {
-                if (rejectedComplianceFields(error).length > 0) return
-                options.onError?.(error, ...rest)
-              },
-              onSettled: (data, error, vars, context) => {
-                if (rejectedComplianceFields(error).length > 0) {
-                  lastRejection = { error, context }
-                  mutation.reset()
-                } else {
-                  options.onSettled?.(data, error, vars, context)
-                }
-              },
-            })
-            return []
-          } catch (error) {
-            // Any other failure has been handled by `options.onError`.
-            return rejectedComplianceFields(error)
-          }
-        }
+      }
 
-        const rejectedFields = await attempt()
-        if (rejectedFields.length === 0) return
-        const saved = await NiceModal.show(JustInTimeDialog, {
-          rejectedFields,
-          retry: attempt,
-        })
-        if (saved !== true) {
-          options.onSettled?.(
-            undefined,
-            lastRejection.error,
-            variables,
-            lastRejection.context,
-          )
-        }
-      }, undefined),
-    [exclusive, checkCompliance],
+      const rejectedFields = await attempt()
+      if (rejectedFields.length === 0) return
+      const saved = await exclusive<unknown>(
+        () =>
+          NiceModal.show(JustInTimeDialog, { rejectedFields, retry: attempt }),
+        DIALOG_BUSY,
+      )
+      if (saved === true) return
+      const { error, context } = lastRejection
+      if (saved === DIALOG_BUSY && error !== null) {
+        options.onError?.(error, variables, context)
+      }
+      options.onSettled?.(undefined, error, variables, context)
+    },
+    [exclusive, ensureCompliance],
   )
 
   /**
