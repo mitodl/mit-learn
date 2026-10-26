@@ -1031,6 +1031,12 @@ const buildRequirementSections = ({
   completedCount: number
   totalCount: number
   trackState: ProgramTrackState | null
+  /**
+   * For a tracked program: enrolled courses and programs from tracks other
+   * than the chosen one (any track, before one is chosen) that no section
+   * already shows. They don't count toward progress.
+   */
+  otherTrackItems: RequirementSectionItem[]
 } => {
   const resolveContext: ResolveRequirementItemContext = {
     coursesById: new Map(programCourses.map((c) => [c.id, c])),
@@ -1081,7 +1087,12 @@ const buildRequirementSections = ({
     const sections = withItems(
       parseProgramRequirementSections(reqTree).map((s) => toSection(s)),
     )
-    return { sections, ...overall(sections), trackState: null }
+    return {
+      sections,
+      ...overall(sections),
+      trackState: null,
+      otherTrackItems: [],
+    }
   }
 
   const before = withItems(
@@ -1127,6 +1138,56 @@ const buildRequirementSections = ({
     currentIndex === -1 ? [] : sectionsByTrack[currentIndex]
   const trackState = { tracks, currentTrack }
 
+  // Courses the learner is enrolled in that sit only in tracks other than the
+  // chosen one (or in any track, before one is chosen) would otherwise be
+  // hidden, and My Learning skips courses in the learner's programs too.
+  const getOtherTrackItems = (shown: RequirementSection[]) => {
+    const resourceKey = (resource: {
+      type: "course" | "program"
+      id: number
+    }) => `${resource.type}-${resource.id}`
+    const seen = new Set(
+      shown.flatMap((section) =>
+        section.items.map((item) =>
+          item.kind === "course"
+            ? resourceKey({ type: "course", id: item.entry.course.id })
+            : resourceKey({
+                type: "program",
+                id:
+                  item.kind === "program"
+                    ? item.program.id
+                    : item.courseProgram.id,
+              }),
+        ),
+      ),
+    )
+    const isEnrolled = (resource: {
+      type: "course" | "program"
+      id: number
+    }) => {
+      if (resource.type === "course") {
+        return (enrollmentsByCourseId[resource.id] ?? []).length > 0
+      }
+      return (
+        Boolean(programEnrollmentsById[resource.id]) ||
+        (requiredProgramModuleCoursesByProgramId[resource.id] ?? []).some(
+          (course) => (enrollmentsByCourseId[course.id] ?? []).length > 0,
+        )
+      )
+    }
+    return tracked.tracks
+      .filter((_track, index) => index !== currentIndex)
+      .flatMap((track) => track.sections.flatMap((section) => section.items))
+      .filter((resource) => {
+        const key = resourceKey(resource)
+        if (seen.has(key) || !isEnrolled(resource)) return false
+        seen.add(key)
+        return true
+      })
+      .map((resource) => resolveRequirementItem(resource, resolveContext))
+      .filter((item): item is RequirementSectionItem => item !== null)
+  }
+
   if (currentTrackSections.length > 0) {
     const [first, ...rest] = currentTrackSections
     const sections = [
@@ -1135,7 +1196,12 @@ const buildRequirementSections = ({
       ...rest,
       ...after,
     ]
-    return { sections, ...overall(sections), trackState }
+    return {
+      sections,
+      ...overall(sections),
+      trackState,
+      otherTrackItems: getOtherTrackItems(sections),
+    }
   }
 
   // No count until a track is chosen: a total of 0 hides it.
@@ -1152,6 +1218,7 @@ const buildRequirementSections = ({
     sections: [...before, placeholder, ...after],
     ...overall([...before, ...after]),
     trackState,
+    otherTrackItems: getOtherTrackItems([...before, ...after]),
   }
 }
 

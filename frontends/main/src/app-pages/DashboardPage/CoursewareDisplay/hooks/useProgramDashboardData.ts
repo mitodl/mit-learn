@@ -16,6 +16,7 @@ import {
 import type {
   ProgramTrackState,
   RequirementSection,
+  RequirementSectionItem,
 } from "../model/dashboardViewModel"
 
 export type ProgramDashboardData = {
@@ -28,6 +29,8 @@ export type ProgramDashboardData = {
   totalCount: number
   /** Present for a tracked program. */
   trackState: ProgramTrackState | null
+  /** Enrolled items outside the chosen track; empty for an untracked program. */
+  otherTrackItems: RequirementSectionItem[]
   enrolledInProgram: boolean
   isLoading: boolean
   /** Shared aux: course-run enrollments keyed by course id. Used by
@@ -152,7 +155,7 @@ const useProgramDashboardData = (programId: number): ProgramDashboardData => {
     requiredProgramCourses?.results ?? [],
   )
 
-  const { sections, completedCount, totalCount, trackState } =
+  const { sections, completedCount, totalCount, trackState, otherTrackItems } =
     buildRequirementSections({
       reqTree: program?.req_tree ?? [],
       programCourses: allProgramCourses,
@@ -187,6 +190,7 @@ const useProgramDashboardData = (programId: number): ProgramDashboardData => {
     completedCount,
     totalCount,
     trackState,
+    otherTrackItems,
     enrolledInProgram: Boolean(enrolledInProgram),
     isLoading,
     enrollmentsByCourseId,

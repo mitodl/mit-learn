@@ -1,8 +1,17 @@
 import React from "react"
-import { Link, Skeleton, Stack, Typography, styled, theme } from "ol-components"
+import {
+  Divider,
+  Link,
+  Skeleton,
+  Stack,
+  Typography,
+  styled,
+  theme,
+} from "ol-components"
 import { Alert, ButtonLink } from "@mitodl/smoot-design"
 import { DisplayModeEnum } from "@mitodl/mitxonline-api-axios/v2"
 import { ResourceType, getKey } from "./model/dashboardViewModel"
+import type { RequirementSectionItem } from "./model/dashboardViewModel"
 import { CoursewareCard } from "./CoursewareCard"
 import NotFoundPage from "@/app-pages/ErrorPage/NotFoundPage"
 import { ProgramAsCourseCard } from "./ProgramAsCourseCard"
@@ -32,6 +41,11 @@ const SectionCount = styled(Typography)({
 const SectionDescription = styled(Typography)({
   flexBasis: "100%",
 })
+
+const OtherCoursesDivider = styled(Divider)(({ theme }) => ({
+  borderColor: theme.custom.colors.lightGray2,
+  margin: "32px 0",
+}))
 
 const SUPPORT_EMAIL = env("NEXT_PUBLIC_MITOL_SUPPORT_EMAIL") || ""
 
@@ -72,6 +86,60 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
   if (!data.enrolledInProgram) {
     return <NotFoundPage />
   }
+  const renderItem = (item: RequirementSectionItem) => {
+    if (item.kind === "course") {
+      return (
+        <CourseEntryCardStyled
+          key={getKey({
+            resourceType: ResourceType.Course,
+            id: item.entry.course.id,
+            runId:
+              item.entry.displayedEnrollment?.run.id ??
+              item.entry.displayedRun?.id,
+          })}
+          kind="course"
+          entry={item.entry}
+          onUpgradeError={setUpgradeError}
+        />
+      )
+    }
+
+    if (item.kind === "program-as-course") {
+      return (
+        <ProgramAsCourseCard
+          key={getKey({
+            resourceType: ResourceType.Program,
+            id: item.courseProgram.id,
+          })}
+          courseProgram={item.courseProgram}
+          moduleCourses={item.moduleCourses}
+          moduleEnrollmentsByCourseId={data.enrollmentsByCourseId}
+          courseProgramEnrollment={item.courseProgramEnrollment}
+          ancestorProgramEnrollment={data.ancestorProgramEnrollment}
+          onUpgradeError={setUpgradeError}
+        />
+      )
+    }
+
+    // item.kind === "program" — rendered with the same card as
+    // program-as-course; the card derives its "Program" wording
+    // from display_mode.
+    return (
+      <ProgramAsCourseCard
+        key={getKey({
+          resourceType: ResourceType.Program,
+          id: item.program.id,
+        })}
+        courseProgram={item.program}
+        moduleCourses={item.moduleCourses}
+        moduleEnrollmentsByCourseId={data.enrollmentsByCourseId}
+        courseProgramEnrollment={item.programEnrollment}
+        ancestorProgramEnrollment={data.ancestorProgramEnrollment}
+        onUpgradeError={setUpgradeError}
+      />
+    )
+  }
+
   // A tracked program's total depends on the track, so wait for a choice.
   const showCompletionCount = !data.sections.some(
     (section) => section.trackAction === "choose",
@@ -187,63 +255,38 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
               />
             ) : null}
             <Stack direction="column" gap="16px">
-              {section.items.map((item) => {
-                if (item.kind === "course") {
-                  return (
-                    <CourseEntryCardStyled
-                      key={getKey({
-                        resourceType: ResourceType.Course,
-                        id: item.entry.course.id,
-                        runId:
-                          item.entry.displayedEnrollment?.run.id ??
-                          item.entry.displayedRun?.id,
-                      })}
-                      kind="course"
-                      entry={item.entry}
-                      onUpgradeError={setUpgradeError}
-                    />
-                  )
-                }
-
-                if (item.kind === "program-as-course") {
-                  return (
-                    <ProgramAsCourseCard
-                      key={getKey({
-                        resourceType: ResourceType.Program,
-                        id: item.courseProgram.id,
-                      })}
-                      courseProgram={item.courseProgram}
-                      moduleCourses={item.moduleCourses}
-                      moduleEnrollmentsByCourseId={data.enrollmentsByCourseId}
-                      courseProgramEnrollment={item.courseProgramEnrollment}
-                      ancestorProgramEnrollment={data.ancestorProgramEnrollment}
-                      onUpgradeError={setUpgradeError}
-                    />
-                  )
-                }
-
-                // item.kind === "program" — rendered with the same card as
-                // program-as-course; the card derives its "Program" wording
-                // from display_mode.
-                return (
-                  <ProgramAsCourseCard
-                    key={getKey({
-                      resourceType: ResourceType.Program,
-                      id: item.program.id,
-                    })}
-                    courseProgram={item.program}
-                    moduleCourses={item.moduleCourses}
-                    moduleEnrollmentsByCourseId={data.enrollmentsByCourseId}
-                    courseProgramEnrollment={item.programEnrollment}
-                    ancestorProgramEnrollment={data.ancestorProgramEnrollment}
-                    onUpgradeError={setUpgradeError}
-                  />
-                )
-              })}
+              {section.items.map(renderItem)}
             </Stack>
           </React.Fragment>
         )
       })}
+      {data.otherTrackItems.length > 0 ? (
+        <>
+          <OtherCoursesDivider />
+          <Stack direction="column" gap="4px" marginBottom="16px">
+            <Typography
+              component="h2"
+              variant="subtitle2"
+              color={theme.custom.colors.red}
+            >
+              Other courses in this program
+            </Typography>
+            <Typography
+              variant="body2"
+              color={theme.custom.colors.silverGrayDark}
+            >
+              across all tracks
+            </Typography>
+          </Stack>
+          <Stack
+            direction="column"
+            gap="16px"
+            data-testid="other-track-courses"
+          >
+            {data.otherTrackItems.map(renderItem)}
+          </Stack>
+        </>
+      ) : null}
     </Stack>
   )
 }

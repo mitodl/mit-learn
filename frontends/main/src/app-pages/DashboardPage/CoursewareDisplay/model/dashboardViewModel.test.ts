@@ -35,7 +35,10 @@ import {
   selectVariantRunForCourse,
   sortVariants,
 } from "./dashboardViewModel"
-import type { RequirementSection } from "./dashboardViewModel"
+import type {
+  RequirementSection,
+  RequirementSectionItem,
+} from "./dashboardViewModel"
 
 const daysFromNow = (days: number) =>
   new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString()
@@ -1945,7 +1948,7 @@ describe("dashboardViewModel", () => {
     test("returns no track state for an untracked program", () => {
       const root = new RequirementTreeBuilder()
       root.addOperator({ operator: "all_of" }).addCourse({ course: 1 })
-      const { trackState } = buildRequirementSections({
+      const { trackState, otherTrackItems } = buildRequirementSections({
         reqTree: root.serialize(),
         programCourses: [factories.courses.course({ id: 1 })],
         enrollmentsByCourseId: {},
@@ -1954,6 +1957,74 @@ describe("dashboardViewModel", () => {
         requiredProgramModuleCoursesByProgramId: {},
       })
       expect(trackState).toBeNull()
+      expect(otherTrackItems).toEqual([])
+    })
+
+    const itemCourseIds = (items: RequirementSectionItem[]) =>
+      items.map((item) =>
+        item.kind === "course" ? item.entry.course.id : null,
+      )
+
+    test("lists enrolled courses that only another track holds", () => {
+      // 201 is in both tracks, so Methods already shows it; 202 is General's.
+      const { otherTrackItems } = build({
+        track: "Methods",
+        passedCourseIds: [101, 201, 202],
+      })
+      expect(itemCourseIds(otherTrackItems)).toEqual([202])
+    })
+
+    test("lists no other-track courses the learner isn't enrolled in", () => {
+      const { otherTrackItems } = build({
+        track: "Methods",
+        passedCourseIds: [101, 203],
+      })
+      expect(otherTrackItems).toEqual([])
+    })
+
+    test("lists enrolled track courses once each, in tree order, before a track is chosen", () => {
+      const { otherTrackItems } = build({
+        passedCourseIds: [203, 201, 202, 101, 301],
+      })
+      // 101 and 301 are in core and the capstone, which are shown anyway.
+      expect(itemCourseIds(otherTrackItems)).toEqual([201, 202, 203])
+    })
+
+    test("lists a program in another track when the learner is enrolled in one of its courses", () => {
+      const root = new RequirementTreeBuilder()
+      const container = root.addOperator({
+        operator: "min_number_of",
+        operator_value: "1",
+      })
+      const policy = container.addTrack({ title: "Policy" })
+      withCourses(policy.addOperator({ operator: "all_of" }), [1])
+      container
+        .addTrack({ title: "Development" })
+        .addOperator({ operator: "all_of" })
+        .addProgram({ program: 900 })
+      const program = factories.programs.program({
+        id: 900,
+        display_mode: DisplayModeEnum.Course,
+        courses: [11],
+      })
+      const { otherTrackItems } = buildRequirementSections({
+        reqTree: root.serialize(),
+        programCourses: [factories.courses.course({ id: 1 })],
+        enrollmentsByCourseId: { 11: passed(11) },
+        programEnrollmentsById: {},
+        requiredPrograms: [program],
+        requiredProgramModuleCoursesByProgramId: {
+          900: [factories.courses.course({ id: 11 })],
+        },
+        ancestorProgramEnrollment: factories.enrollment.programEnrollmentV3({
+          track: { id: policy.id, title: "Policy" },
+        }),
+      })
+      expect(
+        otherTrackItems.map((item) =>
+          item.kind === "program-as-course" ? item.courseProgram.id : null,
+        ),
+      ).toEqual([900])
     })
   })
 
