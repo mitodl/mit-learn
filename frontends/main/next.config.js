@@ -109,13 +109,21 @@ const nextConfig = {
        * at build time. It is set in src/proxy.ts instead. See docs/rfcs/
        * 0007-security-headers.md, D2.
        *
-       * Referrer-Policy is deliberately strict-origin-when-cross-origin rather
-       * than the tighter same-origin or no-referrer. OCW is about to start
-       * sending search traffic here as cross-origin navigations
-       * (mitodl/hq#13617, mitodl/hq#13767). The tighter values send no Referer
-       * on that hop, so every OCW-originated visit would arrive with no
-       * referrer for analytics to attribute it to -- a silent loss, with no
-       * error anywhere to trace it back to this line.
+       * Referrer-Policy is deliberately strict-origin-when-cross-origin.
+       *
+       * This header governs the Referer on requests this site SENDS -- outbound
+       * navigations and subresource loads. It has no effect on the referrer
+       * arriving on an inbound navigation: when another site links here, that
+       * site's policy decides what we receive. An earlier version of this
+       * comment had it backwards and justified the value by OCW's inbound
+       * search traffic (mitodl/hq#13617, #13767); tightening this header would
+       * not have touched those visits. See docs/rfcs/0007-security-headers.md.
+       *
+       * The real case is outbound disclosure: full URL same-origin, origin only
+       * cross-origin. On a search-driven site that keeps page paths and query
+       * strings out of the Referer sent to GTM's tags, HubSpot, Appzi and
+       * embedded players. no-referrer would cost same-origin diagnostics for no
+       * third-party gain; same-origin buys nothing over origin-only.
        */
       {
         source: "/:path*",
