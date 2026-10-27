@@ -337,6 +337,39 @@ def test_legacy_user_linked_by_concurrent_request(
 
 
 @pytest.mark.django_db(transaction=True)
+def test_same_subject_concurrently_links_other_legacy_row(
+    mocker, mock_login, settings, caplog
+):
+    """
+    A legacy row isn't linked or logged in once another request has linked a
+    different legacy row (e.g. the pre-email-change address) to the same subject.
+    """
+    close_old_connections()
+    settings.MITOL_APIGATEWAY_USERINFO_UPDATE = False
+    legacy_user = UserFactory.create(email=apisix_user_info["email"], global_id=None)
+    other_user = UserFactory.create(email="old_email@test.edu", global_id=None)
+    real_get = QuerySet.get
+
+    def get_then_link_other(self, *args, **kwargs):
+        """Simulate another request linking the other row after this one loaded."""
+        user = real_get(self, *args, **kwargs)
+        User.objects.filter(pk=other_user.pk).update(global_id=apisix_user_info["sub"])
+        return user
+
+    mocker.patch.object(QuerySet, "get", get_then_link_other)
+    request = mocker.Mock(
+        META={"HTTP_X_USERINFO": b64encode(json.dumps(apisix_user_info).encode())},
+        user=AnonymousUser(),
+    )
+    ApisixUserMiddleware(mocker.Mock()).process_request(request)
+    mocker.stopall()
+    mock_login.assert_not_called()
+    assert "global_id_linked_to_other_user" in caplog.text
+    legacy_user.refresh_from_db()
+    assert legacy_user.global_id is None
+
+
+@pytest.mark.django_db(transaction=True)
 @pytest.mark.parametrize("userinfo_create", [True, False])
 def test_missing_email_does_not_link_blank_email_legacy_user(
     mocker, mock_login, settings, userinfo_create

@@ -10,6 +10,7 @@ from django.conf import settings
 from django.contrib.auth import get_user_model, login, logout
 from django.contrib.auth.middleware import RemoteUserMiddleware
 from django.core.exceptions import ObjectDoesNotExist
+from django.db import IntegrityError, transaction
 from django.db.models import Q
 from django.http import HttpRequest
 from posthog import Posthog
@@ -175,28 +176,62 @@ def resolve_apisix_user(
         )
         return None, False
 
-    if user.global_id is None:
-        # Link a legacy user matched by email to its Keycloak identity even when
-        # MITOL_APIGATEWAY_USERINFO_UPDATE is off, otherwise it stays matched by
-        # email on every request and is never linked. Claim the row only while
-        # it's still unlinked: a concurrent request for another subject with a
-        # matching email may have loaded it too, and a plain save would let both
-        # requests authenticate as it.
-        User.objects.filter(pk=user.pk, global_id__isnull=True).update(
-            global_id=global_id, updated_on=now_in_utc()
-        )
-        user.refresh_from_db(fields=["global_id", "updated_on"])
-        if user.global_id != global_id:
-            log.error(
-                "resolve_apisix_user: legacy_user_claimed_by_other_subject "
-                "global_id=%s email=%s user_id=%s",
-                global_id,
-                email,
-                user.pk,
-            )
-            return None, False
+    # Link a legacy user matched by email to its Keycloak identity even when
+    # MITOL_APIGATEWAY_USERINFO_UPDATE is off, otherwise it stays matched by
+    # email on every request and is never linked.
+    if user.global_id is None and not link_legacy_user(user, global_id, email):
+        return None, False
 
     return user, created
+
+
+def link_legacy_user(user: "User", global_id: str, email: str) -> bool:
+    """
+    Set global_id on a legacy user that was matched by email.
+
+    The row is claimed only while it's still unlinked: a concurrent request for
+    another subject with a matching email may have loaded it too, and a plain
+    save would let both requests authenticate as it.
+
+    Args:
+        user: the unlinked legacy user
+        global_id: global_id from the APISIX headers
+        email: email from the APISIX headers
+
+    Returns:
+        True if the user is now linked to global_id, False if a concurrent
+        request linked it, or another user, to a subject first.
+
+    """
+    User = get_user_model()
+    try:
+        with transaction.atomic():
+            User.objects.filter(pk=user.pk, global_id__isnull=True).update(
+                global_id=global_id, updated_on=now_in_utc()
+            )
+    except IntegrityError:
+        # A concurrent request for the same subject linked a different legacy
+        # row first, e.g. one matched by the email from before an email change.
+        # Both rows now match this subject, so later requests are ambiguous too.
+        log.exception(
+            "link_legacy_user: global_id_linked_to_other_user "
+            "global_id=%s email=%s user_id=%s",
+            global_id,
+            email,
+            user.pk,
+        )
+        return False
+    user.refresh_from_db(fields=["global_id", "updated_on"])
+    if user.global_id != global_id:
+        log.error(
+            "link_legacy_user: legacy_user_claimed_by_other_subject "
+            "global_id=%s email=%s user_id=%s",
+            global_id,
+            email,
+            user.pk,
+        )
+        return False
+    return True
 
 
 def get_user_from_apisix_headers(
