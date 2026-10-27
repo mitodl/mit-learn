@@ -286,11 +286,17 @@ The three options were:
 The container is served as public JavaScript, so its contents are evidence rather than something to be taken on trust. This is the procedure that produced the list above; re-run it whenever the allowlist is in doubt.
 
 ```sh
-# 1. container id, auth and environment, straight out of production
-curl -s https://learn.mit.edu/ | grep -oE 'googletagmanager\.com/gtm\.js\?[^"]*'
+# 1. container id, auth and environment, straight out of production.
+#    Derived rather than pasted: all three change when the container's
+#    environment does, and a hardcoded copy would fetch a stale container
+#    while looking like it worked.
+#    Read off the <noscript> iframe, NOT the inline bootstrap -- the latter
+#    builds its query string at runtime ("gtm.js?'+q+dl"), so matching on
+#    gtm.js here silently captures JavaScript source instead of parameters.
+Q=$(curl -s https://learn.mit.edu/ | grep -oE 'ns\.html\?[^"]+' | head -1 | sed 's/^ns\.html?//; s/&amp;/\&/g')
 
 # 2. fetch the container (~556 KB of JavaScript)
-curl -s "https://www.googletagmanager.com/gtm.js?id=GTM-NMJ2CT6T&gtm_auth=TVdLeYWP6BLCRsILCebafA&gtm_preview=env-1" -o gtm.js
+curl -s "https://www.googletagmanager.com/gtm.js?$Q" -o gtm.js
 
 # 3. every host it references, anywhere
 grep -oE 'https?://[a-zA-Z0-9._-]+\.[a-z]{2,}' gtm.js | sed -E 's|https?://||' | sort -u
