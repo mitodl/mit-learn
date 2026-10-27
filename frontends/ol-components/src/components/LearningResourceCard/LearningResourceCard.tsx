@@ -16,7 +16,6 @@ import type { PushUrl } from "../LinkAdapter/LinkAdapter"
 import { BaseLearningResourceCard } from "../BaseLearningResourceCard/BaseLearningResourceCard"
 import type { ActionButtonInfo } from "../BaseLearningResourceCard/BaseLearningResourceCard"
 import { LearningResourceListCard } from "./LearningResourceListCard"
-import { LearningResourceListCardCondensed } from "./LearningResourceListCardCondensed"
 
 type ResourceIdCallback = (
   event: React.MouseEvent<HTMLButtonElement>,
@@ -42,7 +41,6 @@ interface LearningResourceCardProps {
   onClick?: React.MouseEventHandler
   headingLevel?: number
   list?: boolean
-  condensed?: boolean
 }
 
 const LearningResourceCard: React.FC<LearningResourceCardProps> = ({
@@ -60,7 +58,6 @@ const LearningResourceCard: React.FC<LearningResourceCardProps> = ({
   onClick,
   headingLevel = 6,
   list = false,
-  condensed = false,
 }) => {
   const {
     src: imageSrc,
@@ -74,25 +71,7 @@ const LearningResourceCard: React.FC<LearningResourceCardProps> = ({
     DEFAULT_RESOURCE_IMG,
   )
 
-  // Use list card variants if list prop is true
   if (list) {
-    if (condensed) {
-      return (
-        <LearningResourceListCardCondensed
-          isLoading={isLoading}
-          resource={resource}
-          className={className}
-          href={href}
-          pushUrl={pushUrl}
-          onAddToLearningPathClick={onAddToLearningPathClick}
-          onAddToUserListClick={onAddToUserListClick}
-          inUserList={inUserList}
-          inLearningPath={inLearningPath}
-          onClick={onClick}
-          headingLevel={headingLevel}
-        />
-      )
-    }
     return (
       <LearningResourceListCard
         isLoading={isLoading}

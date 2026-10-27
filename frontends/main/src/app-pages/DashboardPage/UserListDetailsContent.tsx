@@ -49,7 +49,6 @@ const UserListDetailsContent: React.FC<UserListDetailsContentProps> = (
       handleEdit={() =>
         manageListDialogs.upsertUserList(listQuery.data, onDestroyUserList)
       }
-      condensed
     />
   )
 }

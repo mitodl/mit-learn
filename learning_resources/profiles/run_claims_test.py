@@ -1,6 +1,7 @@
 """Tests for generating a run's resource profile claims"""
 
 import re
+from collections import Counter
 
 import pytest
 from langchain_core.messages import AIMessage
@@ -18,11 +19,16 @@ from learning_resources.models import (
 )
 from learning_resources.profiles import unit_claims
 from learning_resources.profiles.run_claims import (
+    generate_context_claims,
     generate_run_claims,
     load_context_stage,
 )
 from learning_resources.profiles.schemas import CourseContextOut, UnitExtraction
-from learning_resources.profiles.unit_claims import ClaimExtractionError, call_llm
+from learning_resources.profiles.unit_claims import (
+    ClaimExtractionError,
+    call_llm,
+    title_context,
+)
 
 pytestmark = pytest.mark.django_db
 
@@ -351,6 +357,119 @@ def test_unit_without_text_skipped(fake_llm):
 
     assert generate_run_claims(run) == {"skipped": 1}
     assert fake_llm.calls == []
+
+
+def test_generate_context_claims(fake_llm):
+    """The context unit gets one call, and its verified output is stored"""
+    run = _build_run()
+    stats = Counter()
+
+    context = generate_context_claims(run, stats=stats)
+
+    assert stats == {"generated": 1}
+    assert [name for name, _ in fake_llm.calls] == ["context"]
+    prompt = fake_llm.calls[0][1]
+    assert f"Course: {run.learning_resource.title}" in prompt
+    assert "first-year students" in prompt
+    assert "net force" not in prompt
+
+    extraction = ClaimExtraction.objects.get(unit__kind=Unit.Kind.CONTEXT)
+    assert extraction.model == "test-model"
+    assert extraction.extractor_version.startswith("context-")
+    assert extraction.raw_response == "context raw"
+    output = extraction.output
+    assert output["description"]["evidence"][0]["verified"] == "exact"
+    assert [source["source_id"] for source in output["sources"]] == ["S01"]
+    assert context.key == extraction.key
+    assert "Title: Classical Mechanics" in context.digest
+    assert "Prerequisites (stated): [prerequisite] 18.01 is required" in context.digest
+    assert "Outline: Week 1 Kinematics" in context.digest
+
+
+def test_generate_context_claims_cached(fake_llm):
+    """A second call makes no model call and returns the same context"""
+    run = _build_run()
+    first = generate_context_claims(run)
+    stats = Counter()
+
+    assert generate_context_claims(run, stats=stats) == first
+    assert stats == {"cached": 1}
+    assert len(fake_llm.calls) == 1
+
+
+def test_context_reused_by_other_run(fake_llm):
+    """Another run of the course with the same files reuses the extraction"""
+    run = _build_run()
+    first = generate_context_claims(run)
+    other_run = _build_run(
+        LearningResourceRunFactory.create(learning_resource=run.learning_resource)
+    )
+
+    assert generate_context_claims(other_run) == first
+    assert len(fake_llm.calls) == 1
+
+
+def test_context_of_other_course_with_same_files(fake_llm):
+    """Another course with the same files gets its own context, with its title"""
+    first = generate_context_claims(_build_run())
+    other_run = _build_run()
+
+    assert generate_context_claims(other_run).key != first.key
+    assert other_run.learning_resource.title in fake_llm.calls[1][1]
+
+
+def test_changed_context_file_changes_key(fake_llm):
+    """A changed context file reruns the context and changes its key"""
+    run = _build_run()
+    first = generate_context_claims(run)
+    _add_file(run.units.get(kind=Unit.Kind.CONTEXT), "Grading: 50% exams.", position=1)
+
+    assert generate_context_claims(run).key != first.key
+    assert len(fake_llm.calls) == 2
+
+
+def test_context_overwrite(fake_llm):
+    """Overwrite calls the model again and replaces the extraction"""
+    run = _build_run()
+    generate_context_claims(run)
+    stats = Counter()
+
+    generate_context_claims(run, overwrite=True, stats=stats)
+
+    assert stats == {"generated": 1}
+    assert len(fake_llm.calls) == 2
+    assert ClaimExtraction.objects.count() == 1
+
+
+def test_no_context_unit(fake_llm):
+    """A run with no context unit gets the course title alone"""
+    run = LearningResourceRunFactory.create()
+
+    assert generate_context_claims(run) == title_context(run)
+    assert fake_llm.calls == []
+
+
+def test_context_over_budget(fake_llm):
+    """A context unit over the input budget makes no call"""
+    ResourceProfileConfiguration.objects.filter(stage="context").update(
+        input_token_budget=10
+    )
+    run = _build_run()
+    stats = Counter()
+
+    assert generate_context_claims(run, stats=stats) == title_context(run)
+    assert stats == {"over_budget": 1}
+    assert fake_llm.calls == []
+
+
+def test_failed_context(mocker):
+    """A context unit with no valid response raises, and nothing is stored"""
+    fake = FakeLLM(fail=lambda stage, prompt: True)  # noqa: ARG005
+    mocker.patch.object(unit_claims, "call_llm", fake)
+
+    with pytest.raises(ClaimExtractionError):
+        generate_context_claims(_build_run())
+    assert not ClaimExtraction.objects.exists()
 
 
 def test_missing_configuration():
