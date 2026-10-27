@@ -5,7 +5,11 @@ from decimal import Decimal
 
 import pytest
 
-from learning_resources.constants import LearningResourceType, PlatformType
+from learning_resources.constants import (
+    LearningResourceRelationTypes,
+    LearningResourceType,
+    PlatformType,
+)
 from learning_resources.etl import shadow
 from learning_resources.etl.constants import (
     CourseLoaderConfig,
@@ -42,6 +46,8 @@ DOCUMENT = LearningResourceType.document.name
 PODCAST = LearningResourceType.podcast.name
 EPISODE = LearningResourceType.podcast_episode.name
 SOURCE = ETLSource.see.name
+PROGRAM_COURSES = LearningResourceRelationTypes.PROGRAM_COURSES.value
+PROGRAM_PROGRAMS = LearningResourceRelationTypes.PROGRAM_PROGRAMS.value
 PRUNE = CourseLoaderConfig(prune=True)
 
 
@@ -498,14 +504,24 @@ def test_run_shadow_reports_only_the_children_the_program_load_finds(catalog):
     run = _shadow([(SOURCE, PROGRAM)], lambda: _load_programs(batch))[PROGRAM]
 
     assert run.details["created"] == ["p3"]
-    assert run.details["changed"] == {"p1": {"children": [["c1", "c2"], ["c1", "p3"]]}}
+    assert run.details["changed"] == {
+        "p1": {
+            "children": [
+                [["c1", PROGRAM_COURSES, 0], ["c2", PROGRAM_COURSES, 1]],
+                [["c1", PROGRAM_COURSES, 0], ["p3", PROGRAM_PROGRAMS, 1]],
+            ]
+        }
+    }
     _load_programs(batch)
     assert _children("p1") == {"c1", "p3"}
 
 
 @pytest.mark.parametrize(
     ("course_owner", "children"),
-    [(Pipeline.WAREHOUSE, ["c1", "c3"]), (Pipeline.LEGACY, ["c1"])],
+    [
+        (Pipeline.WAREHOUSE, [["c1", PROGRAM_COURSES, 0], ["c3", PROGRAM_COURSES, 1]]),
+        (Pipeline.LEGACY, [["c1", PROGRAM_COURSES, 0]]),
+    ],
 )
 def test_run_shadow_links_the_courses_a_program_load_writes(
     catalog, course_owner, children
@@ -529,8 +545,9 @@ def test_run_shadow_links_the_courses_a_program_load_writes(
         lambda: load_programs(SOURCE, deepcopy([p1]), config=config),
     )[PROGRAM]
 
+    stored = [["c1", PROGRAM_COURSES, 0]]
     assert run.details["changed"] == (
-        {"p1": {"children": [["c1"], children]}} if children != ["c1"] else {}
+        {"p1": {"children": [stored, children]}} if children != stored else {}
     )
     # the cutover the shadow is for
     ETLSourceOwnership.objects.filter(etl_source=SOURCE, resource_type=PROGRAM).update(
@@ -538,7 +555,7 @@ def test_run_shadow_links_the_courses_a_program_load_writes(
     )
     with writing_as(Pipeline.WAREHOUSE):
         load_programs(SOURCE, deepcopy([p1]), config=config)
-    assert _children("p1") == set(children)
+    assert _children("p1") == {readable_id for readable_id, *_ in children}
 
 
 def test_run_shadow_reports_runs_and_related_values(catalog):
@@ -584,8 +601,8 @@ def test_run_shadow_reports_runs_and_related_values(catalog):
             "2026-02-01T00:00:00+00:00",
         ],
         "runs[c1+r1].instructors": [
-            ["Ada Lovelace", "Alan Turing"],
-            ["Grace Hopper"],
+            [["Ada Lovelace", 0], ["Alan Turing", 1]],
+            [["Grace Hopper", 0]],
         ],
         "runs[c1+r1].prices": [["100"], ["250"]],
         "runs[c1+r1].resource_prices": [[["100", "USD"]], [["250", "USD"]]],
@@ -594,6 +611,107 @@ def test_run_shadow_reports_runs_and_related_values(catalog):
     }
     assert run.details["field_counts"]["runs[].title"] == 1
     assert run.counts["unchanged"] == 0
+
+
+def test_run_shadow_reports_a_reorder_of_instructors(catalog):
+    """
+    load_instructors stores each instructor's position, so a reorder is a
+    change, and a name given twice keeps the position of its last occurrence.
+    """
+    _load_courses([_course("c1", runs=[_run("c1+r1")])])
+    batch = [
+        _course(
+            "c1",
+            runs=[
+                _run(
+                    "c1+r1",
+                    instructors=[
+                        {"full_name": "Ada Lovelace"},
+                        {"full_name": "Alan Turing"},
+                        {"full_name": "Ada Lovelace"},
+                    ],
+                )
+            ],
+        )
+    ]
+
+    run = _shadow([(SOURCE, COURSE)], lambda: _load_courses(batch))[COURSE]
+
+    assert run.details["changed"] == {
+        "c1": {
+            "runs[c1+r1].instructors": [
+                [["Ada Lovelace", 0], ["Alan Turing", 1]],
+                [["Alan Turing", 1], ["Ada Lovelace", 2]],
+            ]
+        }
+    }
+    _load_courses(batch)
+    rerun = _shadow([(SOURCE, COURSE)], lambda: _load_courses(batch))
+    assert rerun[COURSE].details["changed"] == {}
+
+
+def test_run_shadow_reports_a_reorder_of_a_programs_courses(catalog):
+    """load_program stores each course's position, so a reorder is a change."""
+    _load_courses([_course("c1"), _course("c2")])
+    _load_programs([_program("p1", ["c1", "c2"])])
+    batch = [_program("p1", ["c2", "c1"])]
+
+    run = _shadow([(SOURCE, PROGRAM)], lambda: _load_programs(batch))[PROGRAM]
+
+    assert run.details["changed"] == {
+        "p1": {
+            "children": [
+                [["c1", PROGRAM_COURSES, 0], ["c2", PROGRAM_COURSES, 1]],
+                [["c2", PROGRAM_COURSES, 0], ["c1", PROGRAM_COURSES, 1]],
+            ]
+        }
+    }
+
+
+@pytest.mark.parametrize(
+    ("explicit", "course_position", "child_position"),
+    [({}, 0, 1), ({"c1": 3, "p2": 1}, 3, 1)],
+)
+def test_run_shadow_reports_a_child_programs_display_mode(
+    catalog, explicit, course_position, child_position
+):
+    """
+    A child program shown as a course is linked as one of the program's
+    courses, so a change of display_mode changes its relation_type. Its
+    position is explicit, or follows every other position the program has.
+    """
+    _load_courses([_course("c1")])
+
+    def batch(display_mode):
+        p1 = _program(
+            "p1",
+            ["c1"],
+            child_programs=[{"readable_id": "p2", "display_mode": display_mode}],
+        )
+        for relation in [*p1["courses"], *p1["child_programs"]]:
+            if relation["readable_id"] in explicit:
+                relation["position"] = explicit[relation["readable_id"]]
+        return [p1, _program("p2", [])]
+
+    _load_programs(batch("program"))
+
+    run = _shadow([(SOURCE, PROGRAM)], lambda: _load_programs(batch("course")))[PROGRAM]
+
+    def ordered(*relations):
+        return sorted(relations, key=lambda relation: relation[-1])
+
+    course = ["c1", PROGRAM_COURSES, course_position]
+    assert run.details["changed"] == {
+        "p1": {
+            "children": [
+                ordered(course, ["p2", PROGRAM_PROGRAMS, child_position]),
+                ordered(course, ["p2", PROGRAM_COURSES, child_position]),
+            ]
+        }
+    }
+    _load_programs(batch("course"))
+    rerun = _shadow([(SOURCE, PROGRAM)], lambda: _load_programs(batch("course")))
+    assert rerun[PROGRAM].details["changed"] == {}
 
 
 def test_run_shadow_reports_publish_changes_with_their_field_changes(catalog):

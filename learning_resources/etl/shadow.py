@@ -56,6 +56,7 @@ from django.utils import timezone
 
 from learning_resources.constants import (
     LearningResourceDelivery,
+    LearningResourceRelationTypes,
     LearningResourceType,
     PlatformType,
     RunStatus,
@@ -272,16 +273,25 @@ def _platform_codes() -> frozenset[str]:
     return frozenset(LearningResourcePlatform.objects.values_list("code", flat=True))
 
 
-def _instructor_names(instructors_data: Iterable[dict]) -> list[str]:
-    names = [
-        (
+def _instructor_positions(instructors_data: Iterable[dict]) -> list[list]:
+    """
+    Return the [full_name, position] load_instructors would store, in order.
+    A name it is given twice keeps the position of its last occurrence.
+    """
+    positions = {}
+    for idx, instructor in enumerate(instructors_data):
+        name = (
             instructor.get("full_name", "")
             or f"{instructor.get('first_name') or ''} "
             f"{instructor.get('last_name') or ''}"
         ).strip()
-        for instructor in instructors_data
-    ]
-    return sorted({name for name in names if name})
+        if name:
+            positions[name] = idx
+    return sorted(([name, idx] for name, idx in positions.items()), key=_by_position)
+
+
+def _by_position(relation: list) -> tuple:
+    return relation[-1], relation[0]
 
 
 def _note_runs(
@@ -311,10 +321,13 @@ def _note_runs(
                 changes,
                 f"{prefix}instructors",
                 sorted(
-                    relation.instructor.full_name
-                    for relation in run.instructor_relationships.all()
+                    (
+                        [relation.instructor.full_name, relation.position]
+                        for relation in run.instructor_relationships.all()
+                    ),
+                    key=_by_position,
                 ),
-                _instructor_names(instructors),
+                _instructor_positions(instructors),
             )
         prices = data.get("prices", [])
         if prices is not None:
@@ -420,26 +433,81 @@ def _resource_changes(
     if has_runs:
         _note_runs(changes, resource, data, prune=prune)
     if resource_type == PROGRAM:
-        # load_program links a course on its own platform and
-        # _create_child_program_relationships a program on the parent's
-        refs = [
-            (COURSE, course["platform"], course["readable_id"])
-            for course in data.get("courses") or []
-            if course.get("readable_id")
-        ] + [
-            (PROGRAM, item["platform"], child["readable_id"])
-            for child in data.get("child_programs") or []
-            if child.get("readable_id")
-        ]
         _note(
             changes,
             "children",
             sorted(
-                {relation.child.readable_id for relation in resource.children.all()}
+                (
+                    [
+                        relation.child.readable_id,
+                        relation.relation_type,
+                        relation.position,
+                    ]
+                    for relation in resource.children.all()
+                ),
+                key=_by_position,
             ),
-            sorted({readable_id for *_, readable_id in set(refs) & children}),
+            _program_children(data, children),
         )
     return changes
+
+
+def _program_children(
+    data: dict, children: frozenset[tuple[str, str, str]]
+) -> list[list]:
+    """
+    Return the [readable_id, relation_type, position] of the children a load of
+    the program would link it to, in order: load_program's courses, then
+    _create_child_program_relationships's programs, on the parent's platform.
+    """
+    courses = [
+        course
+        for course in data.get("courses") or []
+        if course.get("readable_id")
+        and (COURSE, course["platform"], course["readable_id"]) in children
+    ]
+    relations = [
+        [
+            course["readable_id"],
+            LearningResourceRelationTypes.PROGRAM_COURSES.value,
+            idx if course.get("position") is None else course["position"],
+        ]
+        for idx, course in enumerate(courses)
+    ]
+    child_programs = data.get("child_programs") or []
+    next_position = (
+        max(
+            (
+                position
+                for position in [
+                    *(relation[-1] for relation in relations),
+                    *(child.get("position") for child in child_programs),
+                ]
+                if position is not None
+            ),
+            default=-1,
+        )
+        + 1
+    )
+    programs = {}
+    for child in child_programs:
+        readable_id = child.get("readable_id")
+        if not readable_id or (PROGRAM, data["platform"], readable_id) not in children:
+            continue
+        position = child.get("position")
+        if position is None:
+            position = next_position
+            next_position += 1
+        programs[readable_id] = [
+            readable_id,
+            (
+                LearningResourceRelationTypes.PROGRAM_COURSES.value
+                if child.get("display_mode") == "course"
+                else LearningResourceRelationTypes.PROGRAM_PROGRAMS.value
+            ),
+            position,
+        ]
+    return sorted([*relations, *programs.values()], key=_by_position)
 
 
 def _stored(resource_type: str, readable_ids: list[str]) -> dict:
