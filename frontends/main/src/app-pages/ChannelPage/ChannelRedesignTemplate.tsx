@@ -22,13 +22,8 @@ import TopicFeaturedCarousel, {
   useTopicFeaturedIsEmpty,
 } from "./TopicFeaturedCarousel"
 import { backgroundSrcSetCSS } from "ol-utilities"
-import type { StaticImageData } from "next/image"
-import architectureBanner from "@/public/images/backgrounds/architecture.jpg"
-import mediaArtsAndSciencesBanner from "@/public/images/backgrounds/media-arts-and-sciences.jpg"
-import urbanStudiesAndPlanningBanner from "@/public/images/backgrounds/urban-studies-and-planning.jpg"
-import aeronauticsAndAstronauticsBanner from "@/public/images/backgrounds/aeronautics-and-astronautics.jpg"
-import biologicalEngineeringBanner from "@/public/images/backgrounds/biological-engineering.jpg"
-import chemicalEngineeringBanner from "@/public/images/backgrounds/chemical-engineering.jpg"
+import { DEPARTMENT_BANNERS } from "./departmentBanners"
+import type { BannerPlacement } from "./departmentBanners"
 
 const BannerSkeleton = styled(Skeleton)(({ theme }) => ({
   backgroundColor: theme.custom.colors.lightGray2,
@@ -82,50 +77,6 @@ const HERO_PHOTO_LEFT = "28.88%"
  * behind it and at whatever width.
  */
 const HERO_PHOTO_EDGE_FADE = "linear-gradient(90deg, transparent 0%, #000 22%)"
-
-/**
- * Where a department's own artwork sits, where the design states it
- * differently from the values above.
- *
- * Those values are one photograph's: the design wrote them around a 4:3
- * picture, and they only hold for another of the same shape. A department
- * whose artwork is a different shape states its own frame, and gives the
- * three that say where the picture goes; the rest of the hero is unchanged.
- */
-type BannerPlacement = {
-  /** The left edge of the band the picture is drawn in. */
-  left?: string
-  /** `background-size` and `background-position` within it. */
-  size?: string
-  position?: string
-  /**
-   * Given together where the design states the picture's own box instead: how
-   * far it is lifted above the hero, how wide it is drawn, and the shape it
-   * keeps while being drawn that wide.
-   */
-  top?: string
-  width?: string
-  aspectRatio?: string
-  /**
-   * How far the box has to reach whatever its shape works out to, so that a
-   * hero taller than the one the design was drawn on is still covered rather
-   * than left with a strip of white under the picture.
-   */
-  minHeight?: string
-  /**
-   * The white wash, where the design angles it differently for this
-   * photograph.
-   *
-   * It is drawn per department rather than once, because how far the white
-   * may sweep across depends on where the picture starts: a wash written for
-   * one that begins a third of the way across closes over one that begins
-   * further right. Only the hero that carries a Featured row takes it -- the
-   * short one is held back by a rule of its own, which no design states.
-   */
-  scrim?: string
-}
-
-type DepartmentBanner = BannerPlacement & { image: StaticImageData }
 
 /**
  * The hero, per the topic page design.
@@ -608,138 +559,6 @@ const ChannelHeroPhoto: React.FC<{
 )
 
 /**
- * The artwork behind a department's title, by department.
- *
- * Keyed on the channel's `name` -- the slug the route carries and the API
- * returns -- rather than the title, which is prose and punctuated. Nothing is
- * configured on these channels to read instead: every department's
- * `banner_background` is empty, so this is the only thing that decides.
- *
- * A department with no entry here draws no photograph and stands on the plain
- * white the topic pages do, so this fills in one department at a time.
- */
-const DEPARTMENT_BANNERS: Partial<Record<string, DepartmentBanner>> = {
-  architecture: { image: architectureBanner },
-  /**
-   * Media Arts states its own box, and has to: the design gives this one the
-   * hero's full width from 22.21% across, lifted 13.96% above the top, at
-   * 1676x756 -- the 2.215 this photograph is, not the 4:3 the values above
-   * were written around. Left on those it is drawn half as wide again as the
-   * hero and hangs off the right.
-   *
-   * The shape is the photograph's, so the width settles the height; the floor
-   * is the design's 113.93%, which is the same 756 on the hero it was drawn
-   * on and keeps a taller one covered. `cover` is what takes up the
-   * difference, by cropping the sides rather than stretching.
-   */
-  "media-arts-and-sciences": {
-    image: mediaArtsAndSciencesBanner,
-    left: "12.21%",
-    top: "-13.96%",
-    width: "100%",
-    aspectRatio: "1440 / 650",
-    minHeight: "113.93%",
-    size: "cover",
-    /* From the picture's own left edge, which is where the design starts it.
-       Left to the default it would be pinned to the right instead, and what
-       `cover` trimmed to fill a taller box would come off the front of the
-       picture rather than the back. */
-    position: "0% 50%",
-  },
-  /**
-   * Urban Studies states a box again, and a third shape: 72.9% of the hero
-   * wide and 122.68% of it tall, from 29.42% across and 25.63% above the top,
-   * which is the 3:2 this photograph is.
-   *
-   * Its floor is the stated height rather than the hero's, because the design
-   * does not take this one to the bottom: 122.68 less the 25.63 it is lifted
-   * leaves the picture ending at 97.05%, and the wash is white down there in
-   * any case.
-   */
-  "urban-studies-and-planning": {
-    image: urbanStudiesAndPlanningBanner,
-    left: "25.42%",
-    top: "-25.63%",
-    width: "75.9%",
-    aspectRatio: "900 / 600",
-    minHeight: "122.68%",
-    size: "cover",
-    position: "0% 50%",
-  },
-  /**
-   * Aeronautics is drawn in a box 70.22% of the hero wide and lifted 5.47%
-   * above it, at the 1.84 this photograph is. It starts further across than
-   * the rest, and further left than the design's own 38.13%, which clipped an
-   * eighth of the picture off the hero's right edge.
-   *
-   * Which is why it is also the one that states its own wash: the shared one
-   * is angled for a picture beginning a third of the way across and reaches
-   * white around 46% of the way over this building's top, where the design's
-   * own angle leaves it near a quarter. The building is what the hero is for,
-   * so the design's wash comes with the design's placement.
-   *
-   * The photograph is a cut-out -- the sky was transparent -- flattened onto
-   * the white it is drawn against, which is what the hero is behind it.
-   */
-  "aeronautics-and-astronautics": {
-    image: aeronauticsAndAstronauticsBanner,
-    left: "30.13%",
-    top: "-5.47%",
-    width: "70.22%",
-    aspectRatio: "1291 / 703",
-    minHeight: "96.51%",
-    size: "cover",
-    position: "0% 50%",
-    scrim:
-      "linear-gradient(193.64deg, rgba(255, 255, 255, 0) 1.8914%, rgb(255, 255, 255) 50.795%)",
-  },
-  /**
-   * Biological Engineering is the one the design does not lift at all -- the
-   * top is a rounding error from zero, so the picture sits on the hero's own
-   * top edge and runs off the bottom instead, at the 1.65 this photograph is.
-   *
-   * Its wash is the design's too, shallower again than Aeronautics' and
-   * reaching white later, which is what keeps the building standing where
-   * this one begins.
-   */
-  "biological-engineering": {
-    image: biologicalEngineeringBanner,
-    left: "41.51%",
-    top: "0.02%",
-    width: "60.02%",
-    aspectRatio: "1840 / 1118",
-    minHeight: "82.32%",
-    size: "cover",
-    position: "0% 50%",
-    scrim:
-      "linear-gradient(199.205deg, rgba(255, 255, 255, 0) 0%, rgb(255, 255, 255) 53.919%)",
-  },
-  /**
-   * Chemical Engineering is drawn in the frame Architecture's numbers came
-   * from -- the same box, the same lift, the shared wash -- and so would need
-   * nothing stated here at all, but for the photograph.
-   *
-   * It is a 3:2, and that box is 4:3. The design resolves the two by pulling
-   * the picture to fit, which leaves the building an eighth taller than it
-   * stands; `100% 100%` is that, and is why this is the one entry that does
-   * not keep its photograph's own shape.
-   *
-   * The alternative is `size: "cover"`, which holds the shape and takes the
-   * difference off the sides instead -- at the cost of the framing, since it
-   * crops in far enough to move the skyline across.
-   */
-  "chemical-engineering": {
-    image: chemicalEngineeringBanner,
-    left: "28.88%",
-    top: "-28.85%",
-    width: "71.1%",
-    aspectRatio: "4 / 3",
-    minHeight: "134.59%",
-    size: "100% 100%",
-  },
-}
-
-/**
  * The department hero, which draws the department's own artwork where there
  * is any and stands on plain white where there is not.
  *
@@ -918,4 +737,4 @@ const ChannelRedesignHero: React.FC<ChannelRedesignHeroProps> = ({
 }
 
 export default TopicChannelTemplate
-export { DepartmentChannelTemplate, ChannelHeroPhoto, DEPARTMENT_BANNERS }
+export { DepartmentChannelTemplate, ChannelHeroPhoto }
