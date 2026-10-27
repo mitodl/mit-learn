@@ -764,16 +764,16 @@ def _save(
             resource_type,
             pair_error or counts,
         )
-        kept = (
+        # Delete the expired ids rather than everything outside the kept ones,
+        # so that a report another run saves meanwhile is not deleted with them
+        expired = (
             ETLShadowRun.objects.filter(
                 etl_source=etl_source, resource_type=resource_type, pipeline=pipeline
             )
             .order_by("-created_on", "-id")
-            .values_list("id", flat=True)[:SHADOW_RUNS_KEPT]
+            .values_list("id", flat=True)[SHADOW_RUNS_KEPT:]
         )
-        ETLShadowRun.objects.filter(
-            etl_source=etl_source, resource_type=resource_type, pipeline=pipeline
-        ).exclude(id__in=list(kept)).delete()
+        ETLShadowRun.objects.filter(id__in=list(expired)).delete()
     return runs
 
 
