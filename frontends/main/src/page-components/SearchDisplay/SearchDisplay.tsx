@@ -518,25 +518,32 @@ const CardGrid = styled(PlainList)(({ theme }) => ({
  * below a rule the filters currently applied.
  *
  * Plain white under a low shadow -- the card is marked out by the shadow
- * alone, with no coloured edge anywhere on it. Less padding at the foot than
- * at the head, as the design has it: the applied filters already carry 16px
- * above themselves, and the row they sit in is shorter than the search row.
+ * alone, with no coloured edge anywhere on it.
+ *
+ * Less padding at the foot than at the head while anything is filtering, as
+ * the design has it: the applied filters already carry 16px above themselves,
+ * and the row they sit in is shorter than the search row. With nothing
+ * filtering that row is not drawn at all, and the shortfall would be read as
+ * the card sitting low on its own contents, so the foot goes back to the 24px
+ * the other three sides have.
  *
  * Not drawn on a narrow screen: both of the things in it have somewhere else
  * to be there, the search box and the facets alike in the filter drawer.
  */
-const TopicSearchCard = styled.div(({ theme }) => ({
-  display: "flex",
-  flexDirection: "column",
-  gap: "16px",
-  padding: "24px 24px 16px",
-  borderRadius: "8px",
-  backgroundColor: theme.custom.colors.white,
-  boxShadow: "0 3px 2.5px 0 rgba(120, 147, 172, 0.1)",
-  [theme.breakpoints.down("md")]: {
-    display: "none",
-  },
-}))
+const TopicSearchCard = styled.div<{ filtered: boolean }>(
+  ({ theme, filtered }) => ({
+    display: "flex",
+    flexDirection: "column",
+    gap: "16px",
+    padding: filtered ? "24px 24px 16px" : "24px",
+    borderRadius: "8px",
+    backgroundColor: theme.custom.colors.white,
+    boxShadow: "0 3px 2.5px 0 rgba(120, 147, 172, 0.1)",
+    [theme.breakpoints.down("md")]: {
+      display: "none",
+    },
+  }),
+)
 
 /**
  * The tabs, with sorting pushed to the far end of the same row.
@@ -1395,7 +1402,7 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
             <UniversalAIBanner searchParams={searchParams} />
             {resultsLayout === "cards" ? (
               <>
-                <TopicSearchCard>
+                <TopicSearchCard filtered={appliedFilters.length > 0}>
                   {filterBarSlot?.(
                     displayData ? withAvailableValues(aggregations) : undefined,
                   )}
