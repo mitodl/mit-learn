@@ -337,6 +337,26 @@ def test_legacy_user_linked_by_concurrent_request(
 
 
 @pytest.mark.django_db(transaction=True)
+@pytest.mark.parametrize("userinfo_create", [True, False])
+def test_missing_email_does_not_link_blank_email_legacy_user(
+    mocker, mock_login, settings, userinfo_create
+):
+    """Headers without an email don't claim a legacy user with a blank email."""
+    close_old_connections()
+    settings.MITOL_APIGATEWAY_USERINFO_CREATE = userinfo_create
+    legacy_user = UserFactory.create(email="", global_id=None)
+    user_info = {"sub": uuid4().hex, "preferred_username": "someoneelse"}
+    request = mocker.Mock(
+        META={"HTTP_X_USERINFO": b64encode(json.dumps(user_info).encode())},
+        user=AnonymousUser(),
+    )
+    ApisixUserMiddleware(mocker.Mock()).process_request(request)
+    legacy_user.refresh_from_db()
+    assert legacy_user.global_id is None
+    assert request.user != legacy_user
+
+
+@pytest.mark.django_db(transaction=True)
 @pytest.mark.parametrize("same_user", [False, True])
 def test_get_request_different_user_logout(mocker, client, same_user):
     """Test that a request with mismatched users logs user out"""

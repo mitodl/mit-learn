@@ -135,9 +135,15 @@ def resolve_apisix_user(
     ):
         return request.user, False
 
-    candidates = User.objects.filter(
-        Q(global_id=global_id) | Q(global_id__isnull=True, email=email)
-    ).select_related("profile")
+    def match(**email_lookup):
+        # Without an email the lookup would claim any legacy user whose email
+        # is blank, so only the global_id can match.
+        query = Q(global_id=global_id)
+        if email:
+            query |= Q(global_id__isnull=True, **email_lookup)
+        return User.objects.filter(query).select_related("profile")
+
+    candidates = match(email=email)
 
     try:
         try:
@@ -148,9 +154,7 @@ def resolve_apisix_user(
             # doesn't make an already-linked user ambiguous. The global_id match
             # stays in so a row a concurrent request just linked or created is
             # found, including on get_or_create's retry after an IntegrityError.
-            candidates = User.objects.filter(
-                Q(global_id=global_id) | Q(global_id__isnull=True, email__iexact=email)
-            ).select_related("profile")
+            candidates = match(email__iexact=email)
             if settings.MITOL_APIGATEWAY_USERINFO_CREATE:
                 user, created = candidates.get_or_create(defaults=user_fields)
             else:
