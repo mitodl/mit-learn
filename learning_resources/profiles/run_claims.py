@@ -165,7 +165,7 @@ def generate_run_claims(run: LearningResourceRun, *, overwrite: bool = False) ->
     for unit in units:
         try:
             extraction = generate_unit_claims(
-                unit, stage, context, overwrite=overwrite, stats=stats
+                unit, context, stage, overwrite=overwrite, stats=stats
             )
         except Exception:
             logger.exception(

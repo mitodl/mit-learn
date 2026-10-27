@@ -381,8 +381,8 @@ def stored_or_call(  # noqa: PLR0913
 
 def generate_unit_claims(
     unit: Unit,
+    context: CourseContext,
     stage: PromptStage | None = None,
-    context: CourseContext | None = None,
     *,
     overwrite: bool = False,
     stats: Counter | None = None,
@@ -392,10 +392,10 @@ def generate_unit_claims(
 
     Args:
         unit (Unit): the unit or bin
+        context (CourseContext): what the prompt says about the course, from
+            generate_context_claims, or title_context for no context
         stage (PromptStage): the unit stage, loaded from its configuration
             when not given
-        context (CourseContext): what the prompt says about the course; the
-            course title alone when not given
         overwrite (bool): call the model even when an extraction with the
             same key is stored, and replace it. The key covers only the
             files' text and the context, so this is how a prompt, model or
@@ -411,7 +411,6 @@ def generate_unit_claims(
         ClaimExtractionError: when the model gives no valid response
     """
     stage = stage or load_unit_stage()
-    context = context or title_context(unit.run)
     config = stage.config
     sources = unit_sources(unit, config.max_file_tokens)
     if not sources:

@@ -21,9 +21,11 @@ from learning_resources.profiles import unit_claims
 from learning_resources.profiles.schemas import UnitExtraction
 from learning_resources.profiles.unit_claims import (
     ClaimExtractionError,
+    CourseContext,
     call_llm,
     generate_unit_claims,
     load_unit_stage,
+    title_context,
 )
 from main.utils import now_in_utc
 
@@ -122,6 +124,11 @@ def _build_unit(run=None, **kwargs):
     return unit
 
 
+def _generate(unit, **kwargs):
+    """Generate a unit's claims with the course title as its context"""
+    return generate_unit_claims(unit, title_context(unit.run), **kwargs)
+
+
 def _prompt(fake_llm, call=0):
     return fake_llm.call_args_list[call].args[1]
 
@@ -130,7 +137,7 @@ def test_generate_unit_claims(fake_llm):
     """A unit's files are sent in one call, and the verified output is stored"""
     unit = _build_unit()
 
-    extraction = generate_unit_claims(unit)
+    extraction = _generate(unit)
 
     prompt = _prompt(fake_llm)
     assert f"Title: {unit.run.learning_resource.title}" in prompt
@@ -151,9 +158,20 @@ def test_generate_unit_claims(fake_llm):
     assert output["skills"][0]["evidence"][0]["verified"] == "unverified"
 
 
+def test_context_in_prompt_and_key(fake_llm):
+    """The context's digest is in the prompt, and its key in the cache key"""
+    unit = _build_unit()
+    first = generate_unit_claims(unit, CourseContext("a" * 64, "Outline: Week 0"))
+
+    assert "Outline: Week 0" in _prompt(fake_llm)
+    assert generate_unit_claims(unit, CourseContext("a" * 64, "Outline")) == first
+    assert generate_unit_claims(unit, CourseContext("b" * 64, "Outline")) != first
+    assert fake_llm.call_count == 2
+
+
 def test_bin_prompt(fake_llm):
     """A bin's prompt says its files have no order"""
-    generate_unit_claims(_build_unit(kind=Unit.Kind.BIN, position=None))
+    _generate(_build_unit(kind=Unit.Kind.BIN, position=None))
 
     assert "not part of a course unit" in _prompt(fake_llm)
 
@@ -161,19 +179,19 @@ def test_bin_prompt(fake_llm):
 def test_generate_unit_claims_cached(fake_llm):
     """A unit whose inputs haven't changed makes no call"""
     unit = _build_unit()
-    extraction = generate_unit_claims(unit)
+    extraction = _generate(unit)
 
-    assert generate_unit_claims(unit) == extraction
+    assert _generate(unit) == extraction
     assert fake_llm.call_count == 1
 
 
 def test_overwrite_reruns_unit(fake_llm):
     """Overwrite makes a new call and replaces the stored extraction"""
     unit = _build_unit()
-    first = generate_unit_claims(unit)
+    first = _generate(unit)
     ClaimExtraction.objects.filter(pk=first.pk).update(output={"stale": True})
 
-    extraction = generate_unit_claims(unit, overwrite=True)
+    extraction = _generate(unit, overwrite=True)
 
     assert extraction.pk == first.pk
     assert extraction.output["summary"] == "The unit teaches forces."
@@ -184,22 +202,22 @@ def test_overwrite_reruns_unit(fake_llm):
 def test_identical_unit_in_other_run_reuses_extraction(fake_llm):
     """Another run's unit with the same files reuses the extraction"""
     unit = _build_unit()
-    extraction = generate_unit_claims(unit)
+    extraction = _generate(unit)
     other_run = LearningResourceRunFactory.create(
         learning_resource=unit.run.learning_resource
     )
 
-    assert generate_unit_claims(_build_unit(other_run)) == extraction
+    assert _generate(_build_unit(other_run)) == extraction
     assert fake_llm.call_count == 1
 
 
 def test_changed_file_reruns_unit(fake_llm):
     """A changed file makes a new call"""
     unit = _build_unit()
-    first = generate_unit_claims(unit)
+    first = _generate(unit)
     _add_file(unit, "An added worked example.", position=2)
 
-    assert generate_unit_claims(unit) != first
+    assert _generate(unit) != first
     assert fake_llm.call_count == 2
 
 
@@ -209,23 +227,23 @@ def test_changed_file_reruns_unit(fake_llm):
 def test_configuration_change_keeps_claims(fake_llm, change):
     """Editing the unit configuration reuses the stored claims"""
     unit = _build_unit()
-    first = generate_unit_claims(unit)
+    first = _generate(unit)
     ResourceProfileConfiguration.objects.update(**change)
 
-    assert generate_unit_claims(unit) == first
+    assert _generate(unit) == first
     assert fake_llm.call_count == 1
 
 
 def test_prompt_change_applied_with_overwrite(fake_llm):
     """A prompt change reaches stored claims when they are overwritten"""
     unit = _build_unit()
-    first = generate_unit_claims(unit)
+    first = _generate(unit)
     # update() skips auto_now, so move updated_on past the first version
     ResourceProfileConfiguration.objects.update(
         prompt="new prompt", updated_on=now_in_utc() + timedelta(minutes=1)
     )
 
-    extraction = generate_unit_claims(unit, overwrite=True)
+    extraction = _generate(unit, overwrite=True)
 
     assert extraction.pk == first.pk
     assert extraction.extractor_version != first.extractor_version
@@ -238,7 +256,7 @@ def test_truncated_files_noted(fake_llm):
     unit = UnitFactory.create()
     _add_file(unit, "A long transcript. " * 20)
 
-    output = generate_unit_claims(unit).output
+    output = _generate(unit).output
 
     assert output["sources"][0]["truncated"] is True
     assert output["extraction_notes"] == [
@@ -250,7 +268,7 @@ def test_unit_over_budget_skipped(fake_llm):
     """A unit whose files are over the input budget makes no call"""
     ResourceProfileConfiguration.objects.update(input_token_budget=30)
 
-    assert generate_unit_claims(_build_unit()) is None
+    assert _generate(_build_unit()) is None
     fake_llm.assert_not_called()
 
 
@@ -259,7 +277,7 @@ def test_unit_without_text_skipped(fake_llm):
     unit = UnitFactory.create()
     _add_file(unit, "   ")
 
-    assert generate_unit_claims(unit) is None
+    assert _generate(unit) is None
     fake_llm.assert_not_called()
 
 
@@ -270,7 +288,7 @@ def test_failed_call_stores_nothing(mocker):
     )
 
     with pytest.raises(ClaimExtractionError):
-        generate_unit_claims(_build_unit())
+        _generate(_build_unit())
     assert not ClaimExtraction.objects.exists()
 
 
