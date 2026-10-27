@@ -38,6 +38,10 @@ const getMetadata = (resource: LearningResource): MetadataItem[] => {
   return items
 }
 
+/** Only for resources with `certification`: others may have no type. */
+const certificateType = (resource: LearningResource) =>
+  resource.certification_type.name || "Certificate"
+
 const getPrice = (resource: LearningResource): PricePanel => {
   const prices = getLearningResourcePrices(resource)
   if (!resource.free) {
@@ -46,13 +50,17 @@ const getPrice = (resource: LearningResource): PricePanel => {
       // A range, a single amount, or "Paid" when no price is nonzero.
       primary: prices.course.display ?? undefined,
       certificate: resource.certification
-        ? resource.certification_type.name || "Certificate"
+        ? certificateType(resource)
         : undefined,
     }
   }
   const license = resource.license_cc ? "Open license" : undefined
   if (resource.certification) {
-    return freeToAuditPanel(prices.certificate.display, license)
+    return freeToAuditPanel(
+      certificateType(resource),
+      prices.certificate.display,
+      license,
+    )
   }
   return { tone: "light", primary: "Free", license }
 }

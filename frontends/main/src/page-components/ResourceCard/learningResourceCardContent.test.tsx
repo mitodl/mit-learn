@@ -135,7 +135,7 @@ describe("learningResourceCardContent", () => {
       )
     })
 
-    test("Free with a priced certificate is free to audit", () => {
+    test("Free with a priced certificate is free to audit, naming the certificate type", () => {
       const resource = course({
         free: true,
         certification: true,
@@ -148,7 +148,7 @@ describe("learningResourceCardContent", () => {
       expect(learningResourceCardContent(resource).price).toEqual({
         tone: "light",
         primary: "Free to audit",
-        certificate: "Certificate: $50",
+        certificate: `${resource.certification_type.name}: $50`,
       })
     })
 
@@ -162,7 +162,7 @@ describe("learningResourceCardContent", () => {
       expect(learningResourceCardContent(resource).price).toEqual({
         tone: "light",
         primary: "Free to audit",
-        certificate: "Certificate",
+        certificate: resource.certification_type.name,
       })
     })
 

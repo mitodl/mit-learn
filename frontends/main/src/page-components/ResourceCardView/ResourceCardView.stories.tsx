@@ -56,7 +56,7 @@ const PRICES: Record<string, PricePanel> = {
   "Free to audit": {
     tone: "light",
     primary: "Free to audit",
-    certificate: "Certificate: $50",
+    certificate: "Professional Certificate: $50",
   },
   "Free, open license": {
     tone: "light",
@@ -76,7 +76,7 @@ const LONG_RANGES: Record<string, PricePanel> = {
   "Free to audit, certificate range": {
     tone: "light",
     primary: "Free to audit",
-    certificate: "Certificate: $1,250 – $3,500",
+    certificate: "Professional Certificate: $1,250 – $3,500",
   },
 }
 

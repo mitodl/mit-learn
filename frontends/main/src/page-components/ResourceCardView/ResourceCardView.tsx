@@ -42,14 +42,15 @@ const startsMetadata = (
 }
 
 const freeToAuditPanel = (
+  certificateType: string,
   certificatePrice: string | null | undefined,
   license?: string,
 ): PricePanel => ({
   tone: "light",
   primary: "Free to audit",
   certificate: certificatePrice
-    ? `Certificate: ${certificatePrice}`
-    : "Certificate",
+    ? `${certificateType}: ${certificatePrice}`
+    : certificateType,
   license,
 })
 

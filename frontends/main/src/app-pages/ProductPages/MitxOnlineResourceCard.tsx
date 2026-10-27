@@ -165,8 +165,9 @@ const getPricePanel = (
 ): PricePanel => {
   const price = formatResourcePrice(resource, productPrice)
   // `||`, not `??`: an empty `certificate_type` also falls back.
+  const certificateType = resource.certificate_type || "Certificate"
   const certificate = resource.certificate_available
-    ? resource.certificate_type || "Certificate"
+    ? certificateType
     : undefined
   switch (getEnrollmentType(enrollmentModes)) {
     case "free":
@@ -174,7 +175,7 @@ const getPricePanel = (
     case "paid":
       return { tone: "dark", primary: price ?? "Paid", certificate }
     case "both":
-      return freeToAuditPanel(price)
+      return freeToAuditPanel(certificateType, price)
     default:
       return { tone: "neutral", certificate }
   }
