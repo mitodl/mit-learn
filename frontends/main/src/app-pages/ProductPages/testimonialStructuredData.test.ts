@@ -17,8 +17,9 @@ test("returns null without a reviewed item name", () => {
   ).toBeNull()
 })
 
-test("nests every review under a single Course node", () => {
+test("marks up only the first testimonial", () => {
   const testimonials = [makeTestimonial(), makeTestimonial()]
+  const [first] = testimonials
 
   expect(
     buildTestimonialStructuredData(
@@ -31,12 +32,14 @@ test("nests every review under a single Course node", () => {
     "@type": "Course",
     name: "Intro to Rocketry",
     description: DESCRIPTION,
-    review: testimonials.map((testimonial) => ({
-      "@type": "Review",
-      author: { "@type": "Person", name: testimonial.name },
-      datePublished: testimonial.date_published,
-      reviewBody: testimonial.quote,
-    })),
+    review: [
+      {
+        "@type": "Review",
+        author: { "@type": "Person", name: first.name },
+        datePublished: first.date_published,
+        reviewBody: first.quote,
+      },
+    ],
   })
 })
 
@@ -91,70 +94,30 @@ test("trims padding off the author name it emits", () => {
   ])
 })
 
-test("omits testimonials whose author name is only whitespace", () => {
-  const blank = makeTestimonial({ name: "   " })
-  const attributed = makeTestimonial()
-
-  const result = buildTestimonialStructuredData(
-    [blank, attributed],
-    "Intro to Rocketry",
-    DESCRIPTION,
-  )
-
-  expect(result?.review).toEqual([
-    {
-      "@type": "Review",
-      author: { "@type": "Person", name: attributed.name },
-      datePublished: attributed.date_published,
-      reviewBody: attributed.quote,
-    },
-  ])
-})
-
-test("omits testimonials without an author name", () => {
-  const anonymous = makeTestimonial({ name: "" })
-  const attributed = makeTestimonial()
-
-  const result = buildTestimonialStructuredData(
-    [anonymous, attributed],
-    "Intro to Rocketry",
-    DESCRIPTION,
-  )
-
-  expect(result?.review).toEqual([
-    {
-      "@type": "Review",
-      author: { "@type": "Person", name: attributed.name },
-      datePublished: attributed.date_published,
-      reviewBody: attributed.quote,
-    },
-  ])
-})
-
-test("omits testimonials without a publication date", () => {
-  const undated = makeTestimonial({ date_published: "" })
-  const dated = makeTestimonial()
-
-  const result = buildTestimonialStructuredData(
-    [undated, dated],
-    "Intro to Rocketry",
-    DESCRIPTION,
-  )
-
-  expect(result?.review).toEqual([
-    {
-      "@type": "Review",
-      author: { "@type": "Person", name: dated.name },
-      datePublished: dated.date_published,
-      reviewBody: dated.quote,
-    },
-  ])
-})
-
-test("returns null when no testimonial can be attributed and dated", () => {
+test("returns null when the first testimonial's name is only whitespace", () => {
   expect(
     buildTestimonialStructuredData(
-      [makeTestimonial({ name: "" }), makeTestimonial({ date_published: "" })],
+      [makeTestimonial({ name: "   " }), makeTestimonial()],
+      "Intro to Rocketry",
+      DESCRIPTION,
+    ),
+  ).toBeNull()
+})
+
+test("returns null when the first testimonial has no author name", () => {
+  expect(
+    buildTestimonialStructuredData(
+      [makeTestimonial({ name: "" }), makeTestimonial()],
+      "Intro to Rocketry",
+      DESCRIPTION,
+    ),
+  ).toBeNull()
+})
+
+test("returns null when the first testimonial has no publication date", () => {
+  expect(
+    buildTestimonialStructuredData(
+      [makeTestimonial({ date_published: "" }), makeTestimonial()],
       "Intro to Rocketry",
       DESCRIPTION,
     ),

@@ -29,10 +29,12 @@ test("Renders a labelled region with the first testimonial's quote, name and tit
     name: "What learners are saying",
   })
 
-  expect(within(section).getByText(testimonials[0].quote)).toBeVisible()
-  expect(within(section).getByText(testimonials[0].name)).toBeVisible()
-  expect(within(section).getByText(testimonials[0].title)).toBeVisible()
-  expect(within(section).getByText(testimonials[1].quote)).not.toBeVisible()
+  within(section).getByText(testimonials[0].quote)
+  within(section).getByText(testimonials[0].name)
+  within(section).getByText(testimonials[0].title)
+  expect(
+    within(section).queryByText(testimonials[1].quote),
+  ).not.toBeInTheDocument()
 })
 
 test("Shows navigation arrows only when there is more than one testimonial", () => {
@@ -82,19 +84,19 @@ test("Cycles through testimonials with next and previous, showing one quote at a
 
   expect(prev).toBeDisabled()
   expect(next).toBeEnabled()
-  expect(screen.getByText(testimonials[0].quote)).toBeVisible()
+  screen.getByText(testimonials[0].quote)
 
   await user.click(next)
-  expect(screen.getByText(testimonials[0].quote)).not.toBeVisible()
-  expect(screen.getByText(testimonials[1].quote)).toBeVisible()
+  expect(screen.queryByText(testimonials[0].quote)).not.toBeInTheDocument()
+  screen.getByText(testimonials[1].quote)
   expect(prev).toBeEnabled()
 
   await user.click(next)
-  expect(screen.getByText(testimonials[2].quote)).toBeVisible()
+  screen.getByText(testimonials[2].quote)
   expect(next).toBeDisabled()
 
   await user.click(prev)
-  expect(screen.getByText(testimonials[1].quote)).toBeVisible()
+  screen.getByText(testimonials[1].quote)
   expect(next).toBeEnabled()
 })
 
@@ -174,10 +176,11 @@ test("Omits the title when a testimonial has none", async () => {
   within(section).getByText(testimonial.quote)
 })
 
-test("Emits Review structured data for every testimonial", async () => {
+test("Emits Review structured data for the first testimonial only", async () => {
   const testimonials = Array.from({ length: 2 }, (_, i) =>
     makeTestimonial({ quote: `Quote number ${i}` }),
   )
+  const [first] = testimonials
   renderWithProviders(
     <TestimonialsSection
       testimonials={testimonials}
@@ -196,12 +199,14 @@ test("Emits Review structured data for every testimonial", async () => {
     "@type": "Course",
     name: "Intro to Rocketry",
     description: "Build a rocket.",
-    review: testimonials.map((testimonial) => ({
-      "@type": "Review",
-      author: { "@type": "Person", name: testimonial.name },
-      datePublished: testimonial.date_published,
-      reviewBody: testimonial.quote,
-    })),
+    review: [
+      {
+        "@type": "Review",
+        author: { "@type": "Person", name: first.name },
+        datePublished: first.date_published,
+        reviewBody: first.quote,
+      },
+    ],
   })
 })
 
@@ -247,24 +252,4 @@ test("Escapes characters that could break out of the JSON-LD script tag", async 
   expect(JSON.parse(raw)).toMatchObject({
     review: [{ reviewBody: "</script><script>alert(1)</script>" }],
   })
-})
-
-// jest-dom's toBeVisible() returns false for the `hidden` attribute alone, so
-// it would still pass if the CSS that overrides display:flex were removed.
-test("Collapses inactive slides with CSS, not just the hidden attribute", async () => {
-  const testimonials = Array.from({ length: 2 }, (_, i) =>
-    makeTestimonial({ quote: `Quote number ${i}` }),
-  )
-  renderWithProviders(
-    <TestimonialsSection
-      testimonials={testimonials}
-      itemReviewedName="Intro to Rocketry"
-    />,
-  )
-
-  const inactive = screen
-    .getByText(testimonials[1].quote)
-    .closest("[hidden]") as HTMLElement
-
-  expect(getComputedStyle(inactive).display).toBe("none")
 })

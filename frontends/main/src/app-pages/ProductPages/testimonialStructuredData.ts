@@ -16,24 +16,29 @@ export function buildTestimonialStructuredData(
     : ""
   if (!description) return null
 
+  // Google demands an aggregate rating once a page carries more than one
+  // review, and testimonials carry no rating to aggregate, so only the first is
+  // marked up. It is also the one the carousel renders on first paint.
+  const [testimonial] = testimonials
+  if (!testimonial) return null
+
   // Google drops a Review with no author, and only allows reviewRating to be
   // omitted when datePublished is present.
-  const reviews = testimonials
-    .map((testimonial) => ({
-      "@type": "Review",
-      author: { "@type": "Person", name: testimonial.name.trim() },
-      datePublished: testimonial.date_published,
-      reviewBody: testimonial.quote,
-    }))
-    .filter((review) => review.author.name && review.datePublished)
-
-  if (!reviews.length) return null
+  const authorName = testimonial.name.trim()
+  if (!authorName || !testimonial.date_published) return null
 
   return {
     "@context": "https://schema.org",
     "@type": "Course",
     name,
     description,
-    review: reviews,
+    review: [
+      {
+        "@type": "Review",
+        author: { "@type": "Person", name: authorName },
+        datePublished: testimonial.date_published,
+        reviewBody: testimonial.quote,
+      },
+    ],
   }
 }

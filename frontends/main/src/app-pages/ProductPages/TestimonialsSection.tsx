@@ -67,15 +67,10 @@ const BodyViewport = styled.div({
   overflow: "hidden",
 })
 
-// Every testimonial stays in the DOM so the Review structured data below only
-// describes content the page actually carries; the inactive ones are hidden.
-const Slide = styled.div({
+const BodyInner = styled.div({
   display: "flex",
   flexDirection: "column",
   gap: "24px",
-  "&[hidden]": {
-    display: "none",
-  },
 })
 
 const Quote = styled.blockquote(({ theme }) => ({
@@ -282,27 +277,23 @@ const TestimonialsSection: React.FC<{
           ) : null}
         </HeaderRow>
         <BodyViewport ref={viewportRef}>
-          <div ref={innerRef} aria-live="polite">
-            {testimonials.map((item, position) => (
-              <Slide key={item.id} hidden={position !== safeIndex}>
-                <Quote>{item.quote}</Quote>
-                <Attribution>
-                  {item.image_src ? (
-                    <Avatar
-                      src={item.image_src}
-                      alt=""
-                      width={48}
-                      height={48}
-                    />
-                  ) : null}
-                  <NameGroup>
-                    <Name>{item.name}</Name>
-                    {item.title ? <Title>{item.title}</Title> : null}
-                  </NameGroup>
-                </Attribution>
-              </Slide>
-            ))}
-          </div>
+          <BodyInner ref={innerRef} aria-live="polite">
+            <Quote>{testimonial.quote}</Quote>
+            <Attribution>
+              {testimonial.image_src ? (
+                <Avatar
+                  src={testimonial.image_src}
+                  alt=""
+                  width={48}
+                  height={48}
+                />
+              ) : null}
+              <NameGroup>
+                <Name>{testimonial.name}</Name>
+                {testimonial.title ? <Title>{testimonial.title}</Title> : null}
+              </NameGroup>
+            </Attribution>
+          </BodyInner>
         </BodyViewport>
       </Card>
       {structuredData ? (
