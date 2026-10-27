@@ -535,6 +535,9 @@ class LearningResource(TimestampedModel):
         "self", through="LearningResourceRelationship", symmetrical=False, blank=True
     )
     etl_source = models.CharField(max_length=12, default="")
+    # Hash of the transformed source data last loaded by a warehouse sync that
+    # skips unchanged rows. Any other load clears it.
+    etl_checksum = models.CharField(max_length=32, null=True, blank=True)  # noqa: DJ001
     professional = models.BooleanField(default=False)
     next_start_date = models.DateTimeField(null=True, blank=True, db_index=True)
     prices = ArrayField(

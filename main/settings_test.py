@@ -420,6 +420,9 @@ class TestSettings(TestCase):
             "warehouse-sync-mitxonline-programs-every-1-days": (
                 "learning_resources.tasks.SyncMITxOnlineProgramsTask"
             ),
+            "warehouse-sync-ocw-courses-every-1-days": (
+                "learning_resources.tasks.SyncOCWCoursesTask"
+            ),
         }
         with mock.patch.dict("os.environ", REQUIRED_SETTINGS, clear=True):
             settings_vars = self.reload_settings(module="main.settings_celery")

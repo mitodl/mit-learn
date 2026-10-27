@@ -1581,6 +1581,38 @@ def test_load_courses_empty(mock_blocklist, prune_empty):
     assert test_mode_course.learning_resource.published is True
 
 
+@pytest.mark.parametrize("resource_type", ["course", "program"])
+def test_prune_leaves_unpublished_resources_alone(
+    mocker, mock_blocklist, resource_type
+):
+    """A prune doesn't save or requeue search removal for one already unpublished"""
+    factory = CourseFactory if resource_type == "course" else ProgramFactory
+    published = factory.create(learning_resource__etl_source=ETLSource.mitpe.name)
+    unpublished = factory.create(
+        learning_resource__etl_source=ETLSource.mitpe.name,
+        learning_resource__published=False,
+    )
+    updated_on = unpublished.learning_resource.updated_on
+    mock_unpublished_actions = mocker.patch(
+        "learning_resources.etl.loaders.resource_unpublished_actions"
+    )
+
+    if resource_type == "course":
+        load_courses(
+            ETLSource.mitpe.name, [], config=CourseLoaderConfig(prune_empty=True)
+        )
+    else:
+        load_programs(
+            ETLSource.mitpe.name, [], config=ProgramLoaderConfig(prune_empty=True)
+        )
+
+    published.learning_resource.refresh_from_db()
+    unpublished.learning_resource.refresh_from_db()
+    assert published.learning_resource.published is False
+    assert unpublished.learning_resource.updated_on == updated_on
+    mock_unpublished_actions.assert_called_once_with(published.learning_resource)
+
+
 def test_load_courses_skips_write_when_not_owned(mocker):
     """load_courses should no-op (no writes, no prune) for a pair legacy does not own"""
     ETLSourceOwnershipFactory.create(

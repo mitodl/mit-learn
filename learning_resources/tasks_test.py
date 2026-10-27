@@ -2594,6 +2594,7 @@ XPRO_OWNED = pytest.param((ETLSource.xpro.name, ["course", "program"]), id="xpro
 MITXONLINE_OWNED = pytest.param(
     (ETLSource.mitxonline.name, ["course", "program"]), id="mitxonline"
 )
+OCW_OWNED = pytest.param((ETLSource.ocw.name, ["course"]), id="ocw")
 
 
 @pytest.mark.parametrize("warehouse_owns", [YOUTUBE_OWNED], indirect=True)
@@ -3232,3 +3233,50 @@ def test_sync_canvas_courses_skips_when_legacy_does_not_own_content_files(mocker
 
     mock_get_bucket.assert_not_called()
     mock_ingest_course.delay.assert_not_called()
+
+
+@pytest.mark.parametrize("warehouse_owns", [OCW_OWNED], indirect=True)
+@pytest.mark.parametrize("allow", [True, False])
+@pytest.mark.parametrize("call", ["run", "apply"])
+def test_ocw_sync_task_reads_its_view(mocker, settings, warehouse_owns, allow, call):
+    """
+    SyncOCWCoursesTask reads the OCW course view in full and passes on the
+    unpublish override, whether queued or run directly
+    """
+    settings.WAREHOUSE_CATALOG = "ol_data_lake_production"
+    settings.WAREHOUSE_SCHEMA = "ol_warehouse_production_integrations"
+    mocker.patch("learning_resources.lib.warehouse.connect_to_warehouse")
+    rows = [{"url": "https://ocw.mit.edu/courses/a/"}]
+    mock_iter_rows = mocker.patch(
+        "learning_resources.tasks.iter_rows", return_value=iter(rows)
+    )
+    mock_sync = mocker.patch(
+        "learning_resources.tasks.warehouse_ocw.sync_courses", return_value=1
+    )
+
+    kwargs = {"allow_mass_unpublish": True} if allow else {}
+    count = (
+        tasks.SyncOCWCoursesTask.run(**kwargs)
+        if call == "run"
+        else tasks.SyncOCWCoursesTask.apply(kwargs=kwargs).get()
+    )
+
+    assert count == 1
+    mock_iter_rows.assert_called_once_with(
+        mocker.ANY,
+        "ol_data_lake_production.ol_warehouse_production_integrations."
+        "integrations__learn__ocw_courses",
+    )
+    mock_sync.assert_called_once_with(rows, allow_mass_unpublish=allow)
+
+
+def test_ocw_sync_task_reads_nothing_it_does_not_own(mocker):
+    """Until the ownership row is flipped a run neither connects to the warehouse nor writes"""
+    mock_connect = mocker.patch("learning_resources.lib.warehouse.connect_to_warehouse")
+    mock_iter_rows = mocker.patch("learning_resources.tasks.iter_rows")
+
+    assert tasks.SyncOCWCoursesTask.run() == 0
+
+    mock_connect.assert_not_called()
+    mock_iter_rows.assert_not_called()
+    assert not LearningResource.objects.exists()
