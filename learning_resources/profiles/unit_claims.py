@@ -46,6 +46,9 @@ CLAIM_PREFIXES = {
     "assessment_expectations": "t",
 }
 
+# the field a stage's output schema keeps its notes in, by schema
+NOTES_FIELDS = ("extraction_notes", "notes")
+
 
 class ClaimExtractionError(Exception):
     """A stage could not produce a valid output"""
@@ -195,8 +198,12 @@ def _salvage(stage: PromptStage, message: BaseMessage) -> BaseModel:
     parsed, notes = validate_dropping_invalid_claims(stage.schema, calls[0]["args"])
     if notes:
         logger.warning("%s: %s", stage.name, "; ".join(notes))
-        if "extraction_notes" in stage.schema.model_fields:
-            parsed.extraction_notes += notes
+        notes_field = next(
+            (name for name in NOTES_FIELDS if name in stage.schema.model_fields),
+            None,
+        )
+        if notes_field:
+            getattr(parsed, notes_field).extend(notes)
     return parsed
 
 

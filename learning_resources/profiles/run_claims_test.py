@@ -3,6 +3,7 @@
 import re
 
 import pytest
+from langchain_core.messages import AIMessage
 
 from learning_resources.factories import (
     ContentFileFactory,
@@ -21,7 +22,7 @@ from learning_resources.profiles.run_claims import (
     load_context_stage,
 )
 from learning_resources.profiles.schemas import CourseContextOut, UnitExtraction
-from learning_resources.profiles.unit_claims import ClaimExtractionError
+from learning_resources.profiles.unit_claims import ClaimExtractionError, call_llm
 
 pytestmark = pytest.mark.django_db
 
@@ -249,6 +250,16 @@ def test_identical_run_reuses_extractions(fake_llm):
     assert generate_run_claims(other_run) == {"cached": 4, "extracted": 3}
 
 
+def test_other_course_with_same_files_reruns(fake_llm):
+    """Another course with the same files gets its own context, with its title"""
+    run = _build_run()
+    generate_run_claims(run)
+    other_run = _build_run()
+
+    assert generate_run_claims(other_run) == {"generated": 4, "extracted": 3}
+    assert other_run.learning_resource.title in fake_llm.calls[4][1]
+
+
 def test_changed_file_reruns_its_unit(fake_llm):
     """A changed file reruns only the unit it is in"""
     run = _build_run()
@@ -349,3 +360,28 @@ def test_missing_configuration():
     ResourceProfileConfiguration.objects.filter(stage="context").delete()
     with pytest.raises(ClaimExtractionError, match="context"):
         load_context_stage()
+
+
+def test_call_llm_notes_dropped_context_claims(mocker):
+    """Claims dropped from a context output are listed in its notes"""
+    args = _context_out("=== SOURCE S01 | x ===\nsome source text here").model_dump()
+    args["prerequisites"][0]["kind"] = "principle"
+    structured = mocker.Mock()
+    structured.invoke.return_value = {
+        "raw": AIMessage(
+            content="",
+            tool_calls=[{"name": "CourseContextOut", "args": args, "id": "call1"}],
+        ),
+        "parsed": None,
+        "parsing_error": ValueError("bad"),
+    }
+    chat = mocker.patch.object(unit_claims, "ChatLiteLLM")
+    chat.return_value.with_structured_output.return_value = structured
+
+    parsed, _ = call_llm(load_context_stage(), "combined prompt")
+
+    assert parsed.prerequisites == []
+    assert len(parsed.notes) == 1
+    assert parsed.notes[0].startswith(
+        "Dropped prerequisites item 1 ('Calculus'), which did not validate: kind:"
+    )

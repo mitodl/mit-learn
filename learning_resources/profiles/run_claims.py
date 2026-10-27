@@ -122,11 +122,13 @@ def generate_context_claims(
     sources = unit_sources(unit, config.max_file_tokens) if unit else []
     if not sources or over_budget(unit, sources, config.input_token_budget, stats):
         return title_context(run)
+    title = run.learning_resource.title
     extraction = stored_or_call(
         stage,
-        stage.key([source.cache_input() for source in sources]),
+        # the title is in the prompt, and the output repeats it
+        stage.key(title, [source.cache_input() for source in sources]),
         prompts.context_unit_combined_prompt(
-            run.learning_resource.title,
+            title,
             "\n".join(source.block for source in sources),
         ),
         partial(_context_output, sources=sources),
