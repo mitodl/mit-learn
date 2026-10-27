@@ -3,7 +3,6 @@ import { faker } from "@faker-js/faker/locale/en"
 import {
   SortableList,
   SortableItem,
-  LearningResourceListCard,
   LearningResourceListCardCondensed,
 } from "ol-components"
 import { factories, urls, makeRequest } from "api/test-utils"
@@ -31,14 +30,12 @@ jest.mock("ol-components", () => {
     ...actual,
     SortableList: jest.fn(actual.SortableList),
     SortableItem: jest.fn(actual.SortableItem),
-    LearningResourceListCard: jest.fn(actual.LearningResourceListCard),
     LearningResourceListCardCondensed: jest.fn(
       actual.LearningResourceListCardCondensed,
     ),
   }
 })
 
-const spyLearningResourceListCard = jest.mocked(LearningResourceListCard)
 const spyLearningResourceListCardCondensed = jest.mocked(
   LearningResourceListCardCondensed,
 )
@@ -127,39 +124,15 @@ describe("ItemsListing", () => {
   )
 
   test.each([
-    {
-      listType: ListType.LearningPath,
-      sortable: false,
-      condensed: false,
-      cardProps: {},
-    },
-    {
-      listType: ListType.LearningPath,
-      sortable: true,
-      condensed: false,
-      cardProps: { draggable: true },
-    },
-    {
-      listType: ListType.UserList,
-      sortable: false,
-      condensed: false,
-      cardProps: {},
-    },
+    { listType: ListType.LearningPath, sortable: false, cardProps: {} },
     {
       listType: ListType.UserList,
       sortable: true,
-      condensed: false,
-      cardProps: { draggable: true },
-    },
-    {
-      listType: ListType.LearningPath,
-      sortable: true,
-      condensed: true,
       cardProps: { draggable: true },
     },
   ])(
-    "Shows a list of $listType LearningResourceCards with sortable=$sortable and condensed=$condensed",
-    ({ listType, sortable, condensed, cardProps }) => {
+    "Shows a list of $listType condensed cards with sortable=$sortable",
+    ({ listType, sortable, cardProps }) => {
       const emptyMessage = faker.lorem.sentence()
       const paginatedRelationships = getPaginatedRelationships(
         listType,
@@ -177,7 +150,6 @@ describe("ItemsListing", () => {
           emptyMessage={emptyMessage}
           items={items}
           sortable={sortable}
-          condensed={condensed}
         />,
       )
 
@@ -189,18 +161,12 @@ describe("ItemsListing", () => {
       })
       expect(cards.length).toBe(titles.length)
 
-      if (sortable) {
-        items.forEach(({ resource }) => {
-          if (condensed) {
-            expectProps(spyLearningResourceListCardCondensed, {
-              resource,
-              ...cardProps,
-            })
-          } else {
-            expectProps(spyLearningResourceListCard, { resource, ...cardProps })
-          }
+      items.forEach(({ resource }) => {
+        expectProps(spyLearningResourceListCardCondensed, {
+          resource,
+          ...cardProps,
         })
-      }
+      })
     },
   )
 })

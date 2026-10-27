@@ -28,7 +28,6 @@ jest.mock("ol-components", () => {
     __esModule: true,
     ...actual,
     LearningResourceCard: jest.fn(actual.LearningResourceCard),
-    LearningResourceListCard: jest.fn(actual.LearningResourceListCard),
   }
 })
 
@@ -54,7 +53,6 @@ type SetupOptions = {
   learningPathMemberships?: MicroUserListRelationship[]
   url?: string
   isList?: boolean
-  condensed?: boolean
 }
 const setupCard = ({
   user,
@@ -65,7 +63,6 @@ const setupCard = ({
   // so passing url: undefined clobbers its own "/" default and throws.
   url = "/",
   isList = false,
-  condensed = false,
 }: SetupOptions = {}) => {
   const { resource = makeResource() } = props
   if (user?.is_authenticated) {
@@ -79,12 +76,7 @@ const setupCard = ({
     setMockResponse.get(urls.userMe.get(), { is_authenticated: false })
   }
   const { view, location, queryClient } = renderWithProviders(
-    <ResourceCard
-      {...props}
-      resource={resource}
-      list={isList}
-      condensed={condensed}
-    />,
+    <ResourceCard {...props} resource={resource} list={isList} />,
     { url },
   )
   return { resource, view, location, queryClient }
@@ -106,25 +98,15 @@ const HOST_URL = "/c/topic/data-science?sortby=new"
 const HOST_PATHNAME = "/c/[channelType]/[name]"
 
 /**
- * The condensed variant is live (ItemsListing renders <ResourceCard condensed
- * list>, reached from a user list detail page) and it's the one whose failure
- * is silent: miss the pushUrl forwarding at ListCardCondensed.Title and every
- * condensed card navigates away instead of opening the drawer, with no error
- * and no type error.
- *
  * Cases that assert on props handed to the (mocked) card, rather than on
  * rendered output or click behaviour, cannot vary by variant and live below
  * this block instead.
  */
-describe.each([
-  { isList: false, condensed: false },
-  { isList: true, condensed: false },
-  { isList: true, condensed: true },
-])(
-  "ResourceCard (isList=$isList condensed=$condensed)",
-  ({ isList, condensed }) => {
+describe.each([{ isList: false }, { isList: true }])(
+  "ResourceCard (isList=$isList)",
+  ({ isList }) => {
     const setup = (options: SetupOptions = {}) =>
-      setupCard({ ...options, isList, condensed })
+      setupCard({ ...options, isList })
 
     test("Applies className to the resource card", () => {
       const { view } = setup({ user: {}, props: { className: "test-class" } })
@@ -241,8 +223,6 @@ describe.each([
         url: HOST_URL,
       })
       invariant(resource)
-      // ListCardCondensed sets no root class, so a class selector would match
-      // nothing on exactly the variant this row was added to protect.
       const card = view.container.firstElementChild
       invariant(card instanceof HTMLElement)
 
