@@ -55,9 +55,7 @@ def _context_out(prompt):
                 }
             ],
             "required_materials": [],
-            "instructional_outline": [
-                {"unit_label": "Week 1", "title": "Kinematics", "lesson_titles": []}
-            ],
+            "instructional_outline": [{"unit_label": "Week 1", "title": "Kinematics"}],
             "conflicts": [],
             "notes": [],
         }

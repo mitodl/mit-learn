@@ -137,7 +137,6 @@ class PrereqStatement(Strict):
 class OutlineEntry(Strict):
     unit_label: str
     title: str
-    lesson_titles: list[str]
 
 
 class Conflict(Strict):
