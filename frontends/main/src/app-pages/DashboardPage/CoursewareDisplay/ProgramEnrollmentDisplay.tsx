@@ -29,6 +29,10 @@ const SectionCount = styled(Typography)({
   marginLeft: "auto",
 })
 
+const SectionDescription = styled(Typography)({
+  flexBasis: "100%",
+})
+
 const SUPPORT_EMAIL = env("NEXT_PUBLIC_MITOL_SUPPORT_EMAIL") || ""
 
 export const ProgramCertificateButton = styled(ButtonLink)(({ theme }) => ({
@@ -166,6 +170,14 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
                 >
                   Completed {section.completed} of {section.total}
                 </SectionCount>
+              ) : null}
+              {section.node.data.description ? (
+                <SectionDescription
+                  variant="body2"
+                  color={theme.custom.colors.silverGrayDark}
+                >
+                  {section.node.data.description}
+                </SectionDescription>
               ) : null}
             </Stack>
             {section.trackAction === "choose" && data.trackState ? (
