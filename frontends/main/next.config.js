@@ -24,9 +24,8 @@ const nextConfig = {
   productionBrowserSourceMaps: true,
   allowedDevOrigins,
   /**
-   * Suppress the `X-Powered-By: Next.js` header, which advertises the
-   * framework to anyone enumerating the site. Flagged as "HTTP Header Version
-   * Disclosure" by the 2026-10 application assessment (mitodl/hq#14080).
+   * Drops `X-Powered-By: Next.js`, which advertises the framework. Flagged as
+   * "HTTP Header Version Disclosure" by the 2026-10 assessment (mitodl/hq#14080).
    */
   poweredByHeader: false,
   /**
@@ -97,33 +96,19 @@ const nextConfig = {
        * build time. The rules below are genuinely static and immutable.
        */
 
-      /* Static security headers, on every route including static assets --
-       * nosniff matters most on the asset responses, which is where a wrong
-       * Content-Type gets acted on.
+      /* Static security headers (mitodl/hq#14080). Applied to static assets
+       * too: nosniff matters most there, where a wrong Content-Type gets
+       * acted on.
        *
-       * These two, plus poweredByHeader above, are the only parts of
-       * mitodl/hq#14080 that belong here. They have one value in every
-       * environment, so a build-time config can express them. The
-       * Content-Security-Policy cannot: it has to allowlist a host read from
-       * NEXT_PUBLIC_APPZI_URL, which differs per environment and is unreadable
-       * at build time. It is set in src/proxy.ts instead. See docs/rfcs/
-       * 0007-security-headers.md, D2.
+       * The CSP is not here -- it allowlists a host from NEXT_PUBLIC_APPZI_URL,
+       * which is unreadable at build time, so it lives in src/proxy.ts.
+       * See docs/rfcs/0007-security-headers.md D2.
        *
-       * Referrer-Policy is deliberately strict-origin-when-cross-origin.
-       *
-       * This header governs the Referer on requests this site SENDS -- outbound
-       * navigations and subresource loads. It has no effect on the referrer
-       * arriving on an inbound navigation: when another site links here, that
-       * site's policy decides what we receive. An earlier version of this
-       * comment had it backwards and justified the value by OCW's inbound
-       * search traffic (mitodl/hq#13617, #13767); tightening this header would
-       * not have touched those visits. See docs/rfcs/0007-security-headers.md.
-       *
-       * The real case is outbound disclosure: full URL same-origin, origin only
-       * cross-origin. On a search-driven site that keeps page paths and query
-       * strings out of the Referer sent to GTM's tags, HubSpot, Appzi and
-       * embedded players. no-referrer would cost same-origin diagnostics for no
-       * third-party gain; same-origin buys nothing over origin-only.
+       * Referrer-Policy governs the Referer this site SENDS, not what it
+       * receives on an inbound link -- the referring site decides that. So the
+       * case for strict-origin-when-cross-origin is outbound disclosure: full
+       * URL same-origin, origin only cross-origin, keeping paths and query
+       * strings out of what GTM, HubSpot, Appzi and embedded players see.
        */
       {
         source: "/:path*",

@@ -60,20 +60,13 @@ type HeaderRule = {
 }
 
 /**
- * Collapses every headers() rule matching `pathname` into one key/value map,
- * so a test asserts on what a response actually carries rather than on which
- * rule happened to supply it.
+ * Collapses every matching headers() rule into one map, so tests assert on
+ * what a response carries rather than on which rule supplied it. Last-wins
+ * mirrors the router, where header rules are non-terminal.
  *
- * Compiles each rule with Next's own `buildCustomRoute` rather than a bare
- * `getPathMatch(source)`. The two are not equivalent: Next compiles header
- * rules with `strict: true` plus a `regexModifier`, and a bare matcher is
- * loose. They agree on the sources used here, but a future source where
- * strict and loose diverge would be asserted against the loose matcher and
- * shipped with the strict one.
- *
- * Last-wins on a duplicate key mirrors the router, which assigns
- * `resHeaders[key] = value` per matching rule, in array order, for every rule
- * that matches (header rules are non-terminal).
+ * Uses Next's own `buildCustomRoute` rather than a bare `getPathMatch`: Next
+ * compiles header rules with `strict: true` plus a `regexModifier`, so a bare
+ * matcher is looser than what actually ships.
  */
 const headersFor = (rules: HeaderRule[], pathname: string) =>
   Object.fromEntries(
@@ -102,16 +95,10 @@ describe("next.config.js headers", () => {
   }
 
   /**
-   * The root and a nested page confirm the `/:path*` pattern spans both.
-   * Not via the `*` modifier making the segment optional -- Next compiles
-   * header rules with `strict: true`, which disables exactly that, and
-   * `getPathMatch("/:path*", { strict: true })("/")` is false. It matches
-   * because `buildCustomRoute` passes a `regexModifier` that rewrites the
-   * trailing `$` to `(?:\/)?$`. Hence compiling through `buildCustomRoute`
-   * above rather than asserting against a bare matcher.
-   *
-   * The asset paths are the reason the rule is not scoped to page routes:
-   * nosniff matters most where a wrong Content-Type gets acted on.
+   * `/` and a nested page confirm `/:path*` spans both -- not because `*`
+   * makes the segment optional (`strict: true` disables that), but because
+   * `buildCustomRoute`'s `regexModifier` rewrites the trailing `$` to
+   * `(?:\/)?$`. The asset paths are why the rule isn't scoped to pages.
    */
   test.each([
     "/",
@@ -127,16 +114,9 @@ describe("next.config.js headers", () => {
   })
 
   /**
-   * Config-wide, where the test above samples paths. That one asserts the
-   * value on six specific paths, so it already fails if the value is tightened;
-   * this one additionally fails if a SECOND Referrer-Policy rule appears
-   * anywhere in headers(), or if a rule matching some unsampled path carries a
-   * different value. A per-path sample cannot see either.
-   *
-   * (An earlier version of this comment claimed the sampled test would still
-   * pass if the value were tightened, and justified the value by inbound OCW
-   * traffic. Both were wrong -- the sampled test asserts the exact string, and
-   * this header governs outbound requests only. See next.config.js.)
+   * Config-wide, where the test above samples paths. Catches what a sample
+   * cannot: a SECOND Referrer-Policy rule anywhere in headers(), or a rule
+   * matching some unsampled path with a different value.
    */
   test("exactly one Referrer-Policy rule exists, with the intended value", async () => {
     const rules = await getRules()
