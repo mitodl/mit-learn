@@ -238,6 +238,10 @@ def test_custom_login_view_anonymous_user(mocker):
     ("query", "expected_redirect"),
     [
         ("?next=/some-url", "/login?next=%2Fsome-url"),
+        (
+            "?next=/a&signup_next=/b&skip_onboarding=1",
+            "/login?next=%2Fa&signup_next=%2Fb&skip_onboarding=1",
+        ),
         ("", "/login"),
     ],
 )
