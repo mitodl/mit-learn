@@ -15,7 +15,7 @@ nav_order: 7
 - Table of Contents
   {:toc}
 
-Status: **spec** — D1–D4 and D7–D9 and D11 decided, D5, D6 and D10 open. Nothing here is implemented yet.
+Status: **spec** — D1–D5, D7–D9 and D11 decided, D6 and D10 open. Nothing here is implemented yet.
 Project: `wp-worknest-assessment-remediation-security-headers-ef7183`
 Basis: [mitodl/hq#14080](https://github.com/mitodl/hq/issues/14080), its [scoping comment](https://github.com/mitodl/hq/issues/14080#issuecomment-6372991750) and [plan comment](https://github.com/mitodl/hq/issues/14080#issuecomment-6373957431)
 
@@ -113,20 +113,42 @@ This is not ceremony. The policy touches embedded video, web fonts, a CDN, two a
 
 Next reads a nonce from the report-only header as readily as the enforcing one, so nothing about the soak forecloses D3 being revisited later.
 
-#### D5. Mechanism for `Cache-Control` on user-specific API responses (open)
+#### D5. Mechanism for `Cache-Control` on user-specific API responses (decided)
 
 Authenticated and user-specific responses from api.learn.mit.edu must carry `Cache-Control: no-store`. Public, anonymously cacheable responses must not.
 
-There is no existing `Cache-Control` logic in the Python codebase, so there is no in-repo pattern to follow. Candidates: Django middleware keyed on `request.user.is_authenticated`; a DRF mixin applied to the user-specific viewsets; a per-view decorator.
+**Decision: a response-phase middleware that fails closed, with an explicit opt-out**, plus a small classification layer separating _which responses are private_ from _what header each class gets_. `main/cache_policy.py` holds the classification and the policy map; `main/middleware/cache_policy.py` applies it.
 
-Two constraints hold whichever wins:
+The rule, in order of precedence:
 
-- **It is implemented in Django, not at APISIX.** A route-level `response-rewrite` would delete the shared `Referrer-Policy` from that route (see the header-provenance note above).
-- **Public search endpoints must keep their cacheability.** ocw.mit.edu and draft.ocw.mit.edu are in Learn's production CORS allowlist, and `ocw-hugo-themes` builds with `FEATURE_ENABLE_LEARN_INTEGRATION` true plus `MIT_LEARN_API_BASE_URL`, so OCW calls these endpoints from the browser today — and the OCW search switchover ([mitodl/hq#12184](https://github.com/mitodl/hq/issues/12184)) is about to increase that volume substantially. A blanket `no-store` middleware is a regression, not a fix.
+1. An existing `Cache-Control` wins outright — a view that set one meant it. `podcast_rss_feed` uses Django's `cache_page` and must keep its `max-age=900`.
+2. An explicit stamp wins next. The Redis view-cache decorators in `main/utils.py` mark a response `SHARED` when they actually serve one shared across users.
+3. Otherwise private if the request is authenticated **or the response sets a cookie**.
 
-**Who decides:** whoever picks up `tk-chunk-2-cache-control-no-store-on-user-specific--c0a90d`. Settle it in a PR comment on this RFC before writing the code.
+**Why middleware rather than a DRF mixin or a decorator.** Those are opt-in: a new user-specific endpoint ships uncovered unless someone remembers, and nothing fails when they don't — which is precisely how the original finding arose. Middleware inverts the failure mode. Forgetting now costs cache efficiency, which is visible, rather than confidentiality, which is not.
 
-**Verify first.** Before any of this, `curl -sI https://api.learn.mit.edu/api/v0/users/me/` with a session. Django's defaults may already supply headers the issue lists as missing; the work should start from observed production responses rather than the issue body.
+**The cookie clause is not redundant with the authentication clause.** `/api/v0/users/me/` permits anonymous access — `CurrentUserRetrieveViewSet` returns `request.user` either way — and carries `ensure_csrf_cookie`, so an anonymous request there produces a cookie-bearing response that the authentication clause alone leaves cacheable.
+
+**Two constraints, both held:**
+
+- **Implemented in Django, not at APISIX.** A route-level `response-rewrite` would delete the shared `Referrer-Policy` from that route (see the header-provenance note above).
+- **Public endpoints keep their cacheability.** Anonymous requests are untouched, which is what protects OCW: their browser calls carry no session, so they never reach the rule. ocw.mit.edu and draft.ocw.mit.edu are in Learn's production CORS allowlist and `ocw-hugo-themes` builds with `FEATURE_ENABLE_LEARN_INTEGRATION`, and the search switchover ([mitodl/hq#12184](https://github.com/mitodl/hq/issues/12184)) raises that volume. Asserted by a test, not argued.
+
+**Position in `MIDDLEWARE` is load-bearing and fails silently if wrong.** Django runs response phases bottom-up, so an entry listed _earlier_ runs _later_ on the way out. `SessionMiddleware` and `CsrfViewMiddleware` set their cookies during their own response phase, so this middleware must be listed **before** them to observe those cookies — it sits directly after `SecurityMiddleware`. Listed last instead, it would run first on the way out, see no cookies, and quietly stop protecting the one case the cookie clause exists for, with every unit test still green. A test asserts the relative ordering.
+
+**A correction to this section's earlier text.** It claimed "there is no existing `Cache-Control` logic in the Python codebase, so there is no in-repo pattern to follow." That is true of response _headers_ and false of caching generally: `main/utils.py` already has `cache_page_for_all_users` / `cache_page_for_anonymous_users` over ~25 view call sites. They emit no headers, but they are an explicit, maintained declaration of which responses are safe to share between users — exactly the classification this needed. Building a second, parallel list would have been the mistake.
+
+Only `cache_page_for_all_users` earns the `SHARED` stamp. `cache_page_for_anonymous_users` _bypasses_ its cache for authenticated users, so those responses are computed per request and may carry user-specific fields; a request taken by the `bypass` predicate is likewise uncached. Both stay private.
+
+**Header value:** `no-store` with `private`, written through Django's `patch_cache_control`, which merges rather than replaces. `no-store` is the requirement; `private` is free and still directs a shared cache correctly if it predates or mishandles `no-store`. No third-party package does this job — the dedicated ones (`django-smartcc` 2015, `django-cache-headers` 2018, `django-http-cache-control-view` 2020) are all abandoned, and `drf-extensions` solves server-side caching rather than headers. Django's own `django.utils.cache` supplies the mechanism, which is likely why nobody maintains one.
+
+**`CACHE_POLICY_ENABLED`** is a kill switch, defaulting true, matching the pattern already in `main/settings.py`. If this regresses a consumer it can be turned off without a deploy.
+
+**Extensibility.** The policy map is the seam: public endpoints currently send no `Cache-Control` either, so a later change wanting `public, s-maxage=N` on shared responses edits one mapping rather than every call site. Deliberately not done here — that has real CDN consequences and deserves its own soak.
+
+**Decided by:** @rhysyngsun, implementing `tk-chunk-2-cache-control-no-store-on-user-specific--c0a90d`.
+
+**Still unverified.** `curl -sI https://api.learn.mit.edu/api/v0/users/me/` **with a session** has not been run, so what authenticated responses carry today — in particular whether `Vary: Cookie` is already present, which would limit though not eliminate the current exposure — is still unmeasured. The implementation does not depend on the answer; the baseline for the write-up does. Anonymous responses were checked: the API already sends `nosniff`, `X-Frame-Options: DENY` and `Referrer-Policy: origin`, so the issue overstates what is missing there. `Cache-Control` is genuinely absent.
 
 #### D6. Where CSP violation reports are collected (open)
 
@@ -369,7 +391,7 @@ The original four-chunk plan had the per-route-group branch arriving at the enfo
 1. **Static headers** — `tk-chunk-1-static-security-headers-on-learn-mit-edu-9062b4`, ~40 lines estimated / 171 actual, touches `frontends/main/next.config.js` and `frontends/main/src/nextConfig.test.ts`.
    Done when `curl -sI https://learn.mit.edu/` shows `X-Content-Type-Options: nosniff` and `Referrer-Policy: strict-origin-when-cross-origin`, and no `X-Powered-By`. Built and open for review, stacked on this RFC's pull request so it merges after this document does.
 
-2. **API cache scoping** — `tk-chunk-2-cache-control-no-store-on-user-specific--c0a90d`, ~80 lines, touches `main/settings.py`, middleware or a DRF mixin, and tests. Requires D5.
+2. **API cache scoping** — `tk-chunk-2-cache-control-no-store-on-user-specific--c0a90d`, ~80 lines estimated / ~430 actual, touches new `main/cache_policy.py` and `main/middleware/cache_policy.py` plus their tests, `main/utils.py` (the SHARED stamp), `main/utils_test.py` and `main/settings.py`. D5 decided; no open dependency.
    Done when an authenticated response carries `Cache-Control: no-store` and an anonymous search response still carries its existing caching headers, both asserted in tests rather than checked by hand.
 
 3. **CSP report-only, per route group** — `tk-chunk-3-csp-report-only-on-learn-mit-edu-emitted-f8001f`, ~200 lines, touches a new `frontends/main/src/common/csp.ts` and its test, plus `frontends/main/src/proxy.ts`, `frontends/main/src/proxy.test.ts` and `frontends/main/src/nextConfig.test.ts`. Requires D6 and D10.
@@ -431,11 +453,12 @@ One asymmetry to plan for: a 4a regression surfaces on **other people's sites**,
 
 ### Open questions
 
-|     | Question                                                                                                      | Who answers                                        |
-| --- | ------------------------------------------------------------------------------------------------------------- | -------------------------------------------------- |
-| D5  | Which mechanism scopes `Cache-Control: no-store` to user-specific responses without catching public endpoints | Implementer of chunk 2, in review on this RFC      |
-| D6  | Which reporting mechanism and ingest path collects CSP violations, and how the volume is sampled              | Implementer of chunk 3, in review on this RFC      |
-| D10 | Whether D10's directive values survive production, and which reCAPTCHA hosts the policy actually needs        | Chunk 3's soak, read by the implementer of chunk 3 |
+|     | Question                                                                                               | Who answers                                        |
+| --- | ------------------------------------------------------------------------------------------------------ | -------------------------------------------------- |
+| D6  | Which reporting mechanism and ingest path collects CSP violations, and how the volume is sampled       | Implementer of chunk 3, in review on this RFC      |
+| D10 | Whether D10's directive values survive production, and which reCAPTCHA hosts the policy actually needs | Chunk 3's soak, read by the implementer of chunk 3 |
+
+D5 is closed. It was "which mechanism scopes `no-store` to user-specific responses", and it was answered by building it: a fail-closed response middleware over a classification layer that reuses the view-cache decorators already in `main/utils.py`. The one thing it still owes is a production baseline — an authenticated `curl` against `/api/v0/users/me/`, which needs a session nobody has run yet. See D5.
 
 D11 is closed. It was "may `script-src` keep a host allowlist", asked of the GTM container's owners [here](https://github.com/mitodl/hq/issues/14080#issuecomment-6426627862). They answered that the container holds Google Analytics, Google Ads and a Meta pixel; that answer was then verified against the production container directly, which turned the question from a negotiation into a measurement. Six script sources, all enumerable. Two follow-ups stay with that team and gate nothing here: how often a genuinely new vendor is added, and whether the GTM environments are usable as a staging path. See D11.
 
