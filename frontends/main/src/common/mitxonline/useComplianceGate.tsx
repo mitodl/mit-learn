@@ -151,9 +151,9 @@ const useComplianceGate = () => {
    * While the dialog handles a rejection the mutation is reset, so an inline
    * error alert driven by it doesn't show behind the dialog, and `options`'
    * `onError` doesn't run. The global error toast skips these rejections too
-   * (see `handleMutationError`), so a dismissed dialog is silent, like any
-   * other cancelled gate; `onSettled` still runs then, since callers use it
-   * for what happens whatever the outcome.
+   * (see `handleMutationError`), so a dismissed dialog shows no error.
+   * Unlike a cancel before the request, it still runs `onSettled`, since
+   * callers use it for what happens whatever the outcome.
    *
    * Attempts settle on `mutateAsync`'s promise rather than on `options`'
    * callbacks, which TanStack Query skips once the calling component

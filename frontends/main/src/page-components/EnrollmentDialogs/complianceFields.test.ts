@@ -334,6 +334,7 @@ describe("rejectedComplianceFields", () => {
   test("returns the rejected fields the dialog collects", () => {
     const error = apiError(400, {
       detail: "Unable to complete enrollment. Error code: CS_701.",
+      reason_code: "CS_701",
       missing_fields: ["email", "last_name", "postal_code"],
     })
     expect(rejectedComplianceFields(error)).toEqual([
@@ -347,6 +348,7 @@ describe("rejectedComplianceFields", () => {
       desc: "a rejection naming only fields the dialog can't fix",
       error: apiError(400, {
         detail: "Unable to complete enrollment. Error code: CS_701.",
+        reason_code: "CS_701",
         missing_fields: ["email"],
       }),
     },
@@ -354,6 +356,13 @@ describe("rejectedComplianceFields", () => {
       desc: "a 400 with missing_fields but without the CS_701 code",
       error: apiError(400, {
         detail: "Unable to complete enrollment.",
+        missing_fields: ["last_name"],
+      }),
+    },
+    {
+      desc: "a 400 naming CS_701 only in its detail text",
+      error: apiError(400, {
+        detail: "Unable to complete enrollment. Error code: CS_701.",
         missing_fields: ["last_name"],
       }),
     },

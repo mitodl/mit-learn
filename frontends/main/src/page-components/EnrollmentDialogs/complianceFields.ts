@@ -1,5 +1,8 @@
 import * as Yup from "yup"
-import { badRequestDetail, badRequestMissingFields } from "api/mutation-errors"
+import {
+  badRequestMissingFields,
+  badRequestReasonCode,
+} from "api/mutation-errors"
 import type {
   Country,
   LegalAddressRequest,
@@ -91,9 +94,9 @@ const requiresSubdivision = (country: string | null | undefined): boolean =>
 /**
  * The postal-code field's label follows local terminology: US calls it a
  * "Zip Code", everywhere else (including Canada) calls it a "Postal Code".
- * The field itself is only shown for {@link SUBDIVISION_COUNTRIES}, so the
- * fallback here never actually renders — it exists so a label is always
- * defined rather than undefined mid-render while the country is unset.
+ * The field is normally only shown for {@link SUBDIVISION_COUNTRIES}, but a
+ * postal code CyberSource rejected is shown for any country, so the "Postal
+ * Code" fallback does render then.
  */
 const postalCodeLabel = (country: string | null | undefined): string =>
   (country ?? "").trim().toUpperCase() === "US" ? "Zip Code" : "Postal Code"
@@ -167,14 +170,14 @@ const needsComplianceInfo = (user: User | undefined): boolean => {
  * The fields this dialog can fix, from an enrollment MITx Online rejected
  * because the export compliance check couldn't use the profile data - e.g. a
  * last name CyberSource refuses. Those come back as `missing_fields` on a 400
- * whose `detail` carries the support code `CS_701`, and are invisible to
+ * whose `reason_code` is `CS_701`, and are invisible to
  * `compliance_missing_fields`, which only flags empty fields.
  *
  * Empty for any other failure, and for a rejection naming only fields the
  * dialog doesn't collect (e.g. `email`): reopening the dialog can't help there.
  */
 const rejectedComplianceFields = (error: unknown): JitField[] => {
-  if (!badRequestDetail(error)?.includes("CS_701")) return []
+  if (badRequestReasonCode(error) !== "CS_701") return []
   return editableJitFields(badRequestMissingFields(error))
 }
 
@@ -307,7 +310,9 @@ const jitPatchPayload = (
     city: values.city.trim(),
     // A US state, or a postal code entered while the field was visible, is
     // meaningless under a country that has no subdivisions, so a
-    // previously-stored value is dropped rather than carried over.
+    // previously-stored value is dropped rather than carried over - except a
+    // postal code CyberSource rejected, which the dialog shows for any
+    // country (`keepPostalCode`), so the learner's correction is saved.
     state: requiresSubdivision(values.country) ? values.state : "",
     postal_code:
       requiresSubdivision(values.country) || keepPostalCode

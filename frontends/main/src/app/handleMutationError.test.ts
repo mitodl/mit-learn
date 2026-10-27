@@ -103,6 +103,7 @@ describe("compliance rejections", () => {
       status: 400,
       data: {
         detail: "Unable to complete enrollment. Error code: CS_701.",
+        reason_code: "CS_701",
         missing_fields: missingFields,
       },
     },

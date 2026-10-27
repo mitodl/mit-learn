@@ -65,4 +65,20 @@ const badRequestDetailOr =
   (error: unknown): string =>
     badRequestDetail(error) ?? fallback
 
-export { badRequestDetail, badRequestDetailOr, badRequestMissingFields }
+/**
+ * The `reason_code` a 400 carries (e.g. `CS_701`), or `undefined`.
+ *
+ * MITx Online returns its support code here as well as inside `detail`, so
+ * callers can match it exactly instead of parsing the message.
+ */
+const badRequestReasonCode = (error: unknown): string | undefined => {
+  const code = badRequestBody(error)?.reason_code
+  return nonEmpty(code) ? code : undefined
+}
+
+export {
+  badRequestDetail,
+  badRequestDetailOr,
+  badRequestMissingFields,
+  badRequestReasonCode,
+}

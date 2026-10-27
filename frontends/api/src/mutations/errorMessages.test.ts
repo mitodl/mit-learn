@@ -4,6 +4,7 @@ import {
   badRequestDetail,
   badRequestDetailOr,
   badRequestMissingFields,
+  badRequestReasonCode,
 } from "./errorMessages"
 
 /** Shaped like the errors `setMockResponse` throws. */
@@ -112,10 +113,27 @@ describe("badRequestDetailOr", () => {
   })
 })
 
+describe("badRequestReasonCode", () => {
+  test("returns a 400's reason_code", () => {
+    expect(badRequestReasonCode(apiError(400, { reason_code: "CS_701" }))).toBe(
+      "CS_701",
+    )
+  })
+
+  test.each([
+    { desc: "a 400 without one", error: apiError(400, { detail: "No." }) },
+    { desc: "a blank one", error: apiError(400, { reason_code: "" }) },
+    { desc: "a 500", error: apiError(500, { reason_code: "CS_701" }) },
+  ])("is undefined for $desc", ({ error }) => {
+    expect(badRequestReasonCode(error)).toBeUndefined()
+  })
+})
+
 describe("badRequestMissingFields", () => {
   test("returns the fields a 400 names", () => {
     const error = apiError(400, {
       detail: "Unable to complete enrollment. Error code: CS_701.",
+      reason_code: "CS_701",
       missing_fields: ["last_name", "postal_code"],
     })
     expect(badRequestMissingFields(error)).toEqual(["last_name", "postal_code"])
