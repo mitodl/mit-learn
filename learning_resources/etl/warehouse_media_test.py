@@ -25,6 +25,7 @@ from learning_resources.factories import (
     VideoPlaylistFactory,
 )
 from learning_resources.models import (
+    ContentFile,
     ETLSourceOwnership,
     LearningResource,
     VideoChannel,
@@ -524,12 +525,17 @@ def test_sync_youtube_as_a_shadow_lists_a_repeated_video_once(
         assert report.counts["unchanged"] == report.counts["before"]
 
 
+@pytest.mark.parametrize(
+    "hidden",
+    [{"published": False}, {"release_date": datetime(2999, 1, 1, tzinfo=UTC)}],
+)
 def test_sync_youtube_as_a_shadow_compares_content_file_playlists(
-    warehouse_owns_youtube,
+    warehouse_owns_youtube, hidden
 ):
     """
     A create_videos=False playlist's videos are compared as the content files
-    make them, and one with too few matches left is reported unpublished
+    make them, and one with too few matches left is reported unpublished. A
+    content file that is unpublished or not yet released does not match.
     """
     run = LearningResourceRunFactory.create(published=True)
     content_files = {
@@ -554,8 +560,7 @@ def test_sync_youtube_as_a_shadow_compares_content_file_playlists(
         LearningResource.objects.get(readable_id="vid-a").title
         == content_files["vid-a"].title
     )
-    content_files["vid-c"].published = False
-    content_files["vid-c"].save()
+    ContentFile.objects.filter(id=content_files["vid-c"].id).update(**hidden)
     before = stored_youtube()
 
     reports = shadow_youtube(*views)

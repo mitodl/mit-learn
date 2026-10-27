@@ -822,13 +822,12 @@ def observe_podcasts(podcasts_data: Iterable[dict], tracked_ids: Sequence[str]) 
 def _matched_content_files(youtube_ids: set[str]) -> dict[str, ContentFile]:
     """
     Return the content file load_videos_from_content_files would match to each
-    youtube id: a published one on a published run, the lowest id if several.
+    youtube id: a visible one on a published run, the lowest id if several.
     """
     content_files = {}
     for content_file in (
-        ContentFile.objects.filter(
-            youtube_id__in=youtube_ids, published=True, run__published=True
-        )
+        ContentFile.objects.filter(youtube_id__in=youtube_ids, run__published=True)
+        .visible()
         .select_related(
             "run__learning_resource__platform", "run__learning_resource__offered_by"
         )
