@@ -2,6 +2,7 @@
 
 # pylint: disable=redefined-outer-name, unused-argument, too-many-arguments
 import json
+from operator import itemgetter
 
 import pytest
 from django.conf import settings
@@ -694,11 +695,12 @@ def test_list_user_program_certificates(mocker, client, user, is_anonymous):
         }
         for cert in certs:
             cert.user_letter = letters[cert.pk]
-        assert (
-            resp.json()
-            == ProgramCertificateSerializer(
+        # The list query has no ordering, so compare without it.
+        assert sorted(resp.json(), key=itemgetter("record_hash")) == sorted(
+            ProgramCertificateSerializer(
                 certs, many=True, context={"request": request}
-            ).data
+            ).data,
+            key=itemgetter("record_hash"),
         )
         share_urls = [cert["program_letter_share_url"] for cert in resp.json()]
         assert all(share_urls), share_urls
