@@ -486,6 +486,40 @@ def test_letter_intercept_view_generates_program_letter(
         assert response.status_code == 302
 
 
+def test_letter_intercept_view_refuses_revoked_certificate(client, user, settings):
+    """A revoked certificate 404s like a missing one and gets no letter."""
+    settings.DATABASE_ROUTERS = []
+    client.force_login(user)
+    ProgramCertificateFactory(
+        user_email=user.email, micromasters_program_id=1, is_revoked=True
+    )
+
+    response = client.get(
+        reverse("profile:program-letter-intercept", kwargs={"program_id": 1})
+    )
+
+    assert response.status_code == 404
+    assert not ProgramLetter.objects.filter(user=user).exists()
+
+
+def test_letter_intercept_view_skips_revoked_certificate(client, user, settings):
+    """A revoked certificate for the program does not stand in for a valid one."""
+    settings.DATABASE_ROUTERS = []
+    client.force_login(user)
+    ProgramCertificateFactory(
+        user_email=user.email, micromasters_program_id=1, is_revoked=True
+    )
+    cert = ProgramCertificateFactory(user_email=user.email, micromasters_program_id=1)
+
+    response = client.get(
+        reverse("profile:program-letter-intercept", kwargs={"program_id": 1})
+    )
+
+    letter = ProgramLetter.objects.get(user=user)
+    assert letter.certificate == cert
+    assert response.url == frontend_absolute_url(f"/program_letter/{letter.id}/view")
+
+
 @pytest.mark.parametrize("is_anonymous", [True, False])
 def test_program_letter_api_view(mocker, client, rf, user, is_anonymous, settings):  # noqa: PLR0913
     """
@@ -595,6 +629,23 @@ def test_program_letter_api_view_without_certificate(
     assert response.status_code == 404
 
 
+def test_program_letter_api_view_revoked_certificate(client, settings, user):
+    """
+    A letter issued before its certificate was revoked 404s. Nothing is mocked,
+    so the view has to stop before the template fetch.
+    """
+    settings.DATABASE_ROUTERS = []
+    settings.MICROMASTERS_CMS_API_URL = "https://micromasters.example.com/api/v0/"
+    cert = ProgramCertificateFactory(user_email=user.email, is_revoked=True)
+    letter = ProgramLetterFactory(user=user, certificate=cert)
+
+    response = client.get(
+        reverse("profile:v1:program_letters_api-detail", args=[letter.id])
+    )
+
+    assert response.status_code == 404
+
+
 @pytest.mark.parametrize("is_anonymous", [True, False])
 def test_program_letter_api_view_returns_404_for_invalid_id(
     mocker, client, user, is_anonymous
@@ -653,3 +704,17 @@ def test_list_user_program_certificates(mocker, client, user, is_anonymous):
         assert all(share_urls), share_urls
     else:
         assert resp.status_code == 403
+
+
+def test_list_user_program_certificates_omits_revoked(client, user):
+    """Revoked certificates are left out of the list and get no letter."""
+    client.force_login(user)
+    cert = ProgramCertificateFactory(user_email=user.email)
+    revoked = ProgramCertificateFactory(user_email=user.email, is_revoked=True)
+
+    resp = client.get(reverse("profile:v0:user_program_certificates_api-list"))
+
+    assert resp.status_code == 200
+    assert [item["record_hash"] for item in resp.json()] == [cert.record_hash]
+    assert "is_revoked" not in resp.json()[0]
+    assert not ProgramLetter.objects.filter(certificate=revoked).exists()

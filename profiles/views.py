@@ -109,7 +109,7 @@ class ProgramLetterViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
 
     def get_object(self) -> ProgramLetter:
         """
-        Return the letter, 404ing if its certificate is gone.
+        Return the letter, 404ing if its certificate is gone or revoked.
 
         certificate is nullable and its column has no FK constraint, since
         ProgramCertificate is unmanaged, so the id can outlive the row. Every
@@ -121,7 +121,7 @@ class ProgramLetterViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
             certificate = letter.certificate
         except ProgramCertificate.DoesNotExist as exc:
             raise Http404 from exc
-        if certificate is None:
+        if certificate is None or certificate.is_revoked:
             raise Http404
         return letter
 
@@ -140,7 +140,9 @@ class UserProgramCertificateViewSet(viewsets.ViewSet):
     queryset = ProgramCertificate.objects.none()
 
     def list(self, request):
-        queryset = ProgramCertificate.objects.filter(user_email=request.user.email)
+        queryset = ProgramCertificate.objects.filter(
+            user_email=request.user.email, is_revoked=False
+        )
         certificates = list(self.filter_queryset(queryset))
         letters = self.user_letters(request.user, certificates)
         for cert in certificates:
@@ -212,6 +214,7 @@ class ProgramLetterInterceptView(View):
             ProgramCertificate,
             user_email=request.user.email,
             micromasters_program_id=program_id,
+            is_revoked=False,
         )
         letter, _created = ProgramLetter.objects.get_or_create(
             user=request.user, certificate=certificate
