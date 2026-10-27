@@ -3280,3 +3280,58 @@ def test_ocw_sync_task_reads_nothing_it_does_not_own(mocker):
     mock_connect.assert_not_called()
     mock_iter_rows.assert_not_called()
     assert not LearningResource.objects.exists()
+
+
+def test_unit_claims_resource_ids():
+    """Only published courses with units on some run are swept"""
+    with_units = factories.UnitFactory.create().run.learning_resource
+    with_units.resource_type = LearningResourceType.course.name
+    with_units.published = True
+    with_units.save()
+    unpublished = factories.UnitFactory.create().run.learning_resource
+    unpublished.resource_type = LearningResourceType.course.name
+    unpublished.published = False
+    unpublished.save()
+    factories.LearningResourceRunFactory.create()
+
+    assert tasks.unit_claims_resource_ids() == [with_units.id]
+
+
+@pytest.mark.parametrize("has_units", [True, False])
+@pytest.mark.parametrize("overwrite", [True, False])
+def test_generate_unit_claims_for_resource(mocker, has_units, overwrite):
+    """Claims are generated for the best run, when it has units"""
+    run = factories.LearningResourceRunFactory.create()
+    if has_units:
+        factories.UnitFactory.create(run=run)
+    mocker.patch.object(
+        LearningResource, "best_run", new_callable=mocker.PropertyMock, return_value=run
+    )
+    generate = mocker.patch(
+        "learning_resources.profiles.run_claims.generate_run_claims",
+        return_value={"generated": 1},
+    )
+
+    result = tasks.generate_unit_claims_for_resource(
+        run.learning_resource.id, overwrite=overwrite
+    )
+
+    if has_units:
+        assert result == {"generated": 1}
+        generate.assert_called_once_with(run, overwrite=overwrite)
+    else:
+        assert result is None
+        generate.assert_not_called()
+
+
+def test_generate_all_unit_claims(mocker):
+    """One task is queued per course"""
+    group = mocker.patch("learning_resources.tasks.celery.group")
+    task = mocker.patch("learning_resources.tasks.generate_unit_claims_for_resource")
+
+    assert tasks.generate_all_unit_claims([1, 2], overwrite=True) == 2
+    assert task.si.call_args_list == [
+        mocker.call(1, overwrite=True),
+        mocker.call(2, overwrite=True),
+    ]
+    group.return_value.apply_async.assert_called_once()

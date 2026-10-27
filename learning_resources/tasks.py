@@ -1492,6 +1492,74 @@ def generate_all_credential_metadata(
     return len(generation_tasks)
 
 
+def unit_claims_resource_ids() -> list[int]:
+    """
+    Return the published courses that have units on any run.
+
+    The task resolves each course's best run, which isn't queryable, and skips
+    a course whose best run has no units.
+    """
+    return list(
+        LearningResource.objects.filter(
+            published=True,
+            resource_type=LearningResourceType.course.name,
+            runs__units__isnull=False,
+        )
+        .distinct()
+        .values_list("id", flat=True)
+    )
+
+
+@app.task(acks_late=True)
+def generate_unit_claims_for_resource(
+    resource_id: int, *, overwrite: bool = False
+) -> dict | None:
+    """
+    Generate step 1 resource profile claims for a course's best run.
+
+    Args:
+        resource_id (int): the LearningResource id
+        overwrite (bool): regenerate claims that are already stored
+
+    Returns:
+        dict | None: the generation counts, or None when the best run has no
+            units
+    """
+    from learning_resources.profiles.run_claims import generate_run_claims
+
+    resource = LearningResource.objects.get(id=resource_id)
+    run = resource.best_run
+    if not run or not run.units.exists():
+        log.info("No units to generate claims for in %s", resource.readable_id)
+        return None
+    stats = generate_run_claims(run, overwrite=overwrite)
+    log.info("Generated unit claims for %s: %s", resource.readable_id, stats)
+    return stats
+
+
+@app.task(acks_late=True)
+def generate_all_unit_claims(
+    resource_ids: list[int], *, overwrite: bool = False
+) -> int:
+    """
+    Queue step 1 resource profile claims for each course.
+
+    Args:
+        resource_ids (list of int): the LearningResource ids
+        overwrite (bool): regenerate claims that are already stored
+
+    Returns:
+        int: how many courses were queued
+    """
+    celery.group(
+        [
+            generate_unit_claims_for_resource.si(resource_id, overwrite=overwrite)
+            for resource_id in resource_ids
+        ]
+    ).apply_async()
+    return len(resource_ids)
+
+
 # Names the SyncYouTubeTask run whose playlist loads are current. Kept where
 # the warehouse watermarks are, so it outlives a cache flush.
 YOUTUBE_SYNC_GENERATION_KEY = "warehouse_etl:youtube_sync_generation"

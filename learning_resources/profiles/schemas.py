@@ -116,3 +116,50 @@ class UnitExtraction(Strict):
     extraction_notes: list[str] = Field(
         description="Gaps, ambiguities, material you could not use"
     )
+
+
+# --------------------------------------------------------------------------- context
+class Statement(Strict):
+    text: str
+    evidence: list[Evidence] = Field(min_length=1)
+
+
+class PrereqStatement(Strict):
+    label: str
+    statement: str = Field(description="What the source says, closely paraphrased")
+    kind: Literal["prerequisite", "corequisite", "recommended", "explicitly_none"]
+    course_ref: str | None = Field(
+        None, description="Referenced course number, e.g. 18.01SC"
+    )
+    evidence: list[Evidence] = Field(min_length=1)
+
+
+class OutlineEntry(Strict):
+    unit_label: str
+    title: str
+    lesson_titles: list[str]
+
+
+class Conflict(Strict):
+    topic: str
+    statements: list[Statement] = Field(min_length=2)
+    assessment: str = Field(
+        description=(
+            "How the statements disagree and which is likely authoritative, if any"
+        )
+    )
+
+
+class CourseContextOut(Strict):
+    title: str
+    stated_audience: list[Statement]
+    description: Statement
+    objectives: list[Statement]
+    prerequisites_status: Literal["stated", "explicitly_none", "not_found"]
+    prerequisites: list[PrereqStatement]
+    required_materials: list[Statement] = Field(
+        description="What is graded or required vs. optional, as stated"
+    )
+    instructional_outline: list[OutlineEntry]
+    conflicts: list[Conflict]
+    notes: list[str]

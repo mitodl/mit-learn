@@ -139,7 +139,7 @@ def test_generate_unit_claims(fake_llm):
     assert extraction.unit == unit
     assert extraction.level == ClaimExtraction.Level.UNIT
     assert extraction.model == "test-model"
-    config = ResourceProfileConfiguration.objects.get()
+    config = ResourceProfileConfiguration.objects.get(stage="unit")
     assert extraction.extractor_version == (f"unit-{config.updated_on:%Y%m%dT%H%M%S}")
     assert extraction.raw_response == "unit raw"
     output = extraction.output
