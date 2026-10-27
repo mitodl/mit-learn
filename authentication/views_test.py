@@ -375,8 +375,13 @@ def account_action_settings(settings):
     ],
 )
 @pytest.mark.usefixtures("mock_is_sso_user")
-def test_account_action_start(settings, client, action, kc_action):
+def test_account_action_start(mocker, settings, client, action, kc_action):
     """The start view should send the user to Keycloak with the right kc_action"""
+    # The verifier/challenge pair from RFC 7636 Appendix B
+    mocker.patch(
+        "authentication.views.secrets.token_urlsafe",
+        return_value="dBjftJeZ4CVP-mB92K27uhbUJU1p1r_wW1gFWFOEjXk",
+    )
     next_url = urljoin(settings.APP_BASE_URL, "/dashboard/settings")
     resp = client.get(
         f"{reverse('account-action-start', kwargs={'action': action})}"
@@ -403,7 +408,20 @@ def test_account_action_start(settings, client, action, kc_action):
         "response_type": ["code"],
         "client_id": [settings.KEYCLOAK_CLIENT_ID],
         "redirect_uri": [expected_callback],
+        "code_challenge": ["E9Melhoa2OwvFrEMTJguCHaoeK1t8URWbuGJSstw-cM"],
+        "code_challenge_method": ["S256"],
     }
+
+
+@pytest.mark.usefixtures("mock_is_sso_user")
+def test_account_action_start_fresh_code_challenge(client):
+    """Each authorization request should carry its own code challenge"""
+    url = reverse("account-action-start", kwargs={"action": "update-email"})
+    first, second = (
+        parse_qs(urlparse(client.get(url).headers["Location"]).query) for _ in range(2)
+    )
+
+    assert first["code_challenge"] != second["code_challenge"]
 
 
 @pytest.mark.usefixtures("mock_is_sso_user")
