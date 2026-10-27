@@ -15,7 +15,7 @@ nav_order: 7
 - Table of Contents
   {:toc}
 
-Status: **spec** — D1–D4 and D7–D9 decided, D5, D6, D10 and D11 open. Nothing here is implemented yet.
+Status: **spec** — D1–D4 and D7–D9 and D11 decided, D5, D6 and D10 open. Nothing here is implemented yet.
 Project: `wp-worknest-assessment-remediation-security-headers-ef7183`
 Basis: [mitodl/hq#14080](https://github.com/mitodl/hq/issues/14080), its [scoping comment](https://github.com/mitodl/hq/issues/14080#issuecomment-6372991750) and [plan comment](https://github.com/mitodl/hq/issues/14080#issuecomment-6373957431)
 
@@ -41,6 +41,8 @@ Gateway TLS and HSTS are a separate issue and out of scope here.
 - `frontends/main/src/app/(site)/layout.tsx` renders an inline `<Script>` bootstrapping GTM whose body interpolates `GTM_AUTH` and `GTM_PREVIEW`, a `<noscript>` iframe pointing at `googletagmanager.com/ns.html`, and external scripts for Appzi (`NEXT_PUBLIC_APPZI_URL`) and HubSpot.
 - Emotion and MUI v6 inject `<style>` elements at runtime.
 - Third-party hosts referenced from the frontend: `www.googletagmanager.com`, `js.hs-scripts.com`, `use.typekit.net`, `p.typekit.net`, `fonts.googleapis.com`, `cdn.jsdelivr.net`, `player.vimeo.com`, `www.youtube.com`, `video.odl.mit.edu`. The last is resolved by `convertToEmbedUrl()` in `frontends/main/src/common/utils.ts` alongside the YouTube and Vimeo players; an earlier draft of this list omitted it. **This list is hosts that appear as literals in the frontend, and it is therefore not the policy's host list.** reCAPTCHA's hosts appear nowhere here because `react-google-recaptcha` injects them at runtime (see D10), and GTM loads whatever its container is configured to load. Reading source bounds this inventory from below, never from above.
+- Hosts that reach the browser only as **runtime environment values**, read from the live `x-public-env` payload on 2026-10-27 and absent from the list above for the same reason: `https://w.appzi.io` (`NEXT_PUBLIC_APPZI_URL`, the concrete value behind D2's argument that this host cannot be known at build time), `https://ph.ol.mit.edu` (`NEXT_PUBLIC_POSTHOG_API_HOST` — PostHog, proxied at an MIT host rather than called at `posthog.com`) and `https://analytics.learn.mit.edu` (`NEXT_PUBLIC_ANALYTICS_API_BASE_URL`). All three are `connect-src` concerns that D10's `'self' https:` already covers; they are listed so a future tightening knows they exist.
+- The GTM container's own contents are **measured, not inferred** — see "Measuring the GTM container" under D11. That is where `cdn.jsdelivr.net` and `unpkg.com` come from, and neither could have been found by reading this repo.
 - Media sources are **not** enumerable from this repo. `learning_resources/etl/ovs.py` sets a video's `streaming_url` to whatever the OVS API returns (a CloudFront host), and podcast audio URLs come from third-party RSS feeds. See D10.
 - Django 5.2.17. `SecurityMiddleware` is first in `MIDDLEWARE` (`main/settings.py`). Only `SECURE_CROSS_ORIGIN_OPENER_POLICY` is set explicitly; `SECURE_CONTENT_TYPE_NOSNIFF` and `SECURE_REFERRER_POLICY` are unset, so Django's defaults (`True` and `same-origin`) apply and the API probably already sends both. There is no `django-csp` dependency and no `Cache-Control` logic anywhere in the Python code.
 
@@ -93,9 +95,11 @@ Three facts force this, and they compound:
 2. **A nonce cannot survive the page cache.** Next does support nonces — it reads one from the `Content-Security-Policy` or `Content-Security-Policy-Report-Only` request header (`next/dist/server/app-render/app-render.js`) and propagates it to its own scripts and to `next/script` tags. But learn.mit.edu HTML is cached at Fastly with `s-maxage` and served from one body to every viewer, and Fastly strips the request cookie before caching. A nonce in a shared cached body is known to anyone who can fetch the page, which is everyone.
 3. **A strict host allowlist fights GTM's purpose.** `docs/architecture/gtm.md` states that tag configuration is "owned in the GTM UI, not in this repo", so marketing can add third-party tags "without needing a code deploy". A `script-src` that enumerates permitted script hosts breaks that: every new tag is blocked until engineering ships a CSP change. `'strict-dynamic'` is the directive designed for this, but it only propagates trust from a nonce or hash — which is what (1) and (2) rule out.
 
-**Point 3 is not resolved by this decision, and an earlier draft of this section wrongly implied it was.** `'unsafe-inline'` governs inline `<script>` blocks and inline handlers. It does nothing for _external_ scripts: a `<script src>` pointing at a host outside the allowlist is still blocked, and the browser enforces that whether the tag was in the markup or injected by already-running JavaScript ([MDN `script-src`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Content-Security-Policy/script-src)). So `'unsafe-inline'` plus a host allowlist **does not** preserve GTM's deploy-free tag workflow — a new vendor tag loading from a host nobody has allowlisted is blocked at enforce, exactly as point 3 describes. The two halves of this decision contradicted each other; this records the contradiction rather than papering over it. Resolving it is D11.
+**Point 3 is not resolved by this decision, and an earlier draft of this section wrongly implied it was.** `'unsafe-inline'` governs inline `<script>` blocks and inline handlers. It does nothing for _external_ scripts: a `<script src>` pointing at a host outside the allowlist is still blocked, and the browser enforces that whether the tag was in the markup or injected by already-running JavaScript ([MDN `script-src`](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Content-Security-Policy/script-src)). So `'unsafe-inline'` plus a host allowlist **does not** preserve GTM's deploy-free tag workflow — a new vendor tag loading from a host nobody has allowlisted is blocked at enforce, exactly as point 3 describes. The two halves of this decision contradicted each other; this records the contradiction rather than papering over it. D11 resolved it in favour of the allowlist, so point 3 is now a cost this RFC accepts deliberately rather than a claim it makes.
 
-**The accepted tradeoff.** Giving up: a `script-src` that blocks injected inline script, so HTML injection still yields script execution. To get: an enforced CSP that ships without changing the caching strategy. Revisit when: HTML page caching is dropped for an unrelated reason, or the GTM tag inventory stabilises enough to allowlist, or an assessment flags `script-src` specifically. Decided by: @rhysyngsun. Tracked at [mitodl/hq#14083](https://github.com/mitodl/hq/issues/14083) (`tk-strict-script-src-for-learn-mit-edu-close-the-cs-c77d86`), which also records the measurement that work needs first.
+**The accepted tradeoff.** Giving up: a `script-src` that blocks injected inline script, so HTML injection still yields script execution. To get: an enforced CSP that ships without changing the caching strategy. Revisit when: HTML page caching is dropped for an unrelated reason, or an assessment flags `script-src` specifically. Decided by: @rhysyngsun.
+
+The third revisit condition used to read "or the GTM tag inventory stabilises enough to allowlist". That has now happened — D11 measured the container and adopted a host allowlist — and it changed less than this wording implied. The allowlist bounds _which hosts_ may serve script; `'unsafe-inline'` still permits inline execution, which is the part that makes HTML injection dangerous. The two are independent, and only the second is what [mitodl/hq#14083](https://github.com/mitodl/hq/issues/14083) exists to fix. Tracked at [mitodl/hq#14083](https://github.com/mitodl/hq/issues/14083) (`tk-strict-script-src-for-learn-mit-edu-close-the-cs-c77d86`).
 
 **Would have won if** learn.mit.edu HTML were not CDN-cached, or if measured origin headroom showed the Next.js pods absorb uncached HTML without losing the `stale-if-error=86400` shield that currently serves stale pages for 24 hours during an origin incident. Neither has been measured. That measurement is the first step of hq#14083, not of this work.
 
@@ -223,7 +227,11 @@ Having set it, these have to be named or they break. Starting point for chunk 3,
 
 **A cross-engine subtlety that will bite at enforce.** Chrome fetches HLS manifests and segments by XHR through MSE, so they fall under `connect-src`. Safari uses native HLS, where the media element fetches them, so they fall under `media-src`. Both must be permissive, and testing in one browser proves nothing about the other. This belongs in chunk 4a's pre-flight, not in a post-mortem.
 
-**`cdn.jsdelivr.net` does not belong in any policy.** It is in the inventory above, but its only use is `FONTSOURCE_CDN` in the certificate PDF route handler, which fetches in Node where CSP does not apply.
+**`cdn.jsdelivr.net` does belong in `script-src`, for a reason no amount of reading this repo would have found.** An earlier draft of this section said the opposite: that its only use is `FONTSOURCE_CDN` in the certificate PDF route handler, which fetches in Node where CSP does not apply, and that it therefore belonged in no policy. That reasoning is still correct **about this repo** and still wrong **about the page** — the GTM container's Meta Pixel template injects a script from `cdn.jsdelivr.net`, falling back to `unpkg.com` (D11). A policy assembled from this repo's sources would have broken the Meta pixel at enforce, silently, on a surface nobody here watches.
+
+Both are path-scoped to the one package in D11's table. `unpkg.com` had appeared nowhere in this document at all, from the same cause.
+
+This is the clearest available instance of the warning in the measured starting point — reading source bounds the inventory from below, never from above — and it is why D11's container-inventory command exists rather than an inference from code.
 
 **reCAPTCHA: use Google's published values, not inferred hosts.** `react-google-recaptcha` (via `ol-components` `ReCaptcha.tsx`) wraps a HubSpot form in two `(site)` places — `OrgLeadForm` on `/organizational-learning`, and `StayUpdatedModal` on the `/courses/<id>`, `/courses/p/<id>` and `/programs/<id>` product pages. None of its hosts appear as literals in this repo; the library injects them. Google documents the policy directly ([reCAPTCHA FAQ](https://developers.google.com/recaptcha/docs/faq), and the same list in the [Cloud/Enterprise FAQ](https://docs.cloud.google.com/recaptcha/docs/faq)), so take them from the vendor rather than from a scanner or a guess. **Add to the `(site)` policy only:**
 
@@ -251,19 +259,71 @@ Google's preferred integration is a nonce, and reCAPTCHA also supports `'strict-
 
 **Who decides:** whoever picks up `tk-chunk-3-csp-report-only-on-learn-mit-edu-emitted-f8001f`, in review on this RFC, alongside D6.
 
-#### D11. Whether the site `script-src` permits arbitrary HTTPS hosts, or GTM loses its deploy-free workflow (open)
+#### D11. Whether the site `script-src` permits arbitrary HTTPS hosts, or GTM loses its deploy-free workflow (decided)
 
 D3 asserts two things that cannot both be true: that `script-src` keeps a host allowlist, and that GTM can still add third-party tags without a code deploy. `'unsafe-inline'` does not bridge them — it covers inline code only, and an external `<script src>` from a non-allowlisted host is blocked however it was injected. One of the two has to give.
 
-**Option A — `script-src ... https:`.** Any HTTPS host may serve script. GTM's workflow is genuinely preserved and no marketing change can be broken by this policy. The `script-src` then constrains almost nothing beyond blocking `http:` and `data:` sources; given `'unsafe-inline'` is already present, that is a smaller loss than it sounds, but it should be stated rather than slipped in.
+**Decision: option C — keep the host allowlist, seeded by the measured container inventory below rather than by waiting for the soak.** The report-only soak stays, demoted from source of truth to confirmation.
 
-**Option B — keep the host allowlist.** Materially stronger: an injected `<script src>` pointing at attacker infrastructure is blocked, which is the one XSS escalation path `'unsafe-inline'` leaves open. The cost is real and falls on another team — every new GTM tag from a new host needs an engineering deploy, and until then it fails silently in a marketing workflow that has never needed one. That cost belongs to whoever owns the GTM container, so it is not ours to accept unilaterally.
+The three options were:
 
-**Option C — allowlist, and treat the soak as the inventory.** Run chunk 3 report-only, let the violation stream enumerate what GTM actually loads today, allowlist that, and accept the deploy cost only for genuinely new vendors. Best information, but it does not remove B's cost — it only sizes it, and a tag that fires for a small audience may not appear in the sample.
+- **Option A — `script-src ... https:`.** Any HTTPS host may serve script. GTM's workflow is genuinely preserved and no marketing change can be broken by this policy. The `script-src` then constrains almost nothing beyond blocking `http:` and `data:` sources.
+- **Option B — keep the host allowlist.** Materially stronger: an injected `<script src>` pointing at attacker infrastructure is blocked, which is the one XSS escalation path `'unsafe-inline'` leaves open. The cost falls on another team — a new GTM tag from a new host needs an engineering deploy, and until then it fails silently in a marketing workflow that has never needed one.
+- **Option C — allowlist, with the soak as the inventory.** As B, but sized by evidence rather than guesswork.
 
-Whichever wins, D3's "accepted tradeoff" and the trust-boundary note in Security Considerations both have to be restated to match. B and C also make "GTM container write access is part of the trust boundary" less true than the Risks section currently claims, since a compromised container could no longer load from an arbitrary host.
+**What settled it.** The container's owners were asked what it contains ([hq#14080](https://github.com/mitodl/hq/issues/14080#issuecomment-6426627862)) and answered: Google Analytics, Google Ads, and a Meta tracking pixel. That answer was then **verified directly against the production container**, which is public — see "Measuring the GTM container" below. The script surface is six sources, all stable vendor endpoints. B's cost is real but small and now quantified, which is what makes it acceptable to impose.
 
-**Who decides:** not settleable inside this repo. Options B and C impose a workflow cost on the GTM container's owners, so they have to agree to it. Raise it alongside D6 in review on this RFC, and bring in whoever owns the container before choosing B or C.
+**The finding that rules out option A.** The Meta Pixel template loads its CAPI parameter builder from `cdn.jsdelivr.net`, falling back to `unpkg.com`. Both serve the _entire_ npm registry. Under option A they would be permitted wide open, as would every other npm package, and nothing would ever report it. Under C they are **path-scoped** to the one package, which keeps most of the allowlist's value at no cost.
+
+**The ongoing cost this accepts.** The container changes without a deploy here, so a new script host can appear at any time and will be blocked once chunk 4b enforces. Two mitigations, both in chunk 3: the report-only soak reports a `script-src` violation before anything enforces, and the container-inventory command below is cheap enough to run on a schedule, which gives warning _before_ the violation rather than after.
+
+**Still open with the container's owners, and not answered by the payload:** how often a genuinely new vendor is added, and whether the GTM environments are used as a staging path. Neither changes the host list; both set the expectation for how disruptive the deploy cost is. Track with the issue thread, not with this RFC.
+
+**Consequences elsewhere in this document.** D3's accepted tradeoff no longer needs to claim GTM keeps a deploy-free workflow for _new hosts_ — it does not, deliberately. And the Risks section's "GTM container write access is part of the trust boundary" is now weaker than it reads: a compromised container can still fire arbitrary _requests_ to allowlisted hosts and exfiltrate through them, but it can no longer load executable script from an attacker-controlled origin.
+
+#### Measuring the GTM container
+
+The container is served as public JavaScript, so its contents are evidence rather than something to be taken on trust. This is the procedure that produced the list above; re-run it whenever the allowlist is in doubt.
+
+```sh
+# 1. container id, auth and environment, straight out of production
+curl -s https://learn.mit.edu/ | grep -oE 'googletagmanager\.com/gtm\.js\?[^"]*'
+
+# 2. fetch the container (~556 KB of JavaScript)
+curl -s "https://www.googletagmanager.com/gtm.js?id=GTM-NMJ2CT6T&gtm_auth=TVdLeYWP6BLCRsILCebafA&gtm_preview=env-1" -o gtm.js
+
+# 3. every host it references, anywhere
+grep -oE 'https?://[a-zA-Z0-9._-]+\.[a-z]{2,}' gtm.js | sed -E 's|https?://||' | sort -u
+
+# 4. what it may inject as SCRIPT — the authoritative list
+grep -oE '"inject_script":\{"urls":\[[^]]*\]' gtm.js | sed 's/\\\//\//g'
+
+# 5. tag inventory by type
+grep -oE '"function":"__[a-z0-9_]+"' gtm.js | sort | uniq -c | sort -rn
+```
+
+**Tag inventory, measured 2026-10-27.** `__gaawe` ×17 (GA4 events), `__googtag` ×2 (GA4/Ads base), `__awct`, `__awec`, `__gclidw` ×1 each (Ads conversion, enhanced conversions, conversion linker), `__cvt_250259136_30` ×1 (the Meta Pixel custom template), `__html` ×1, `__paused` ×57. The remainder are variables and triggers, not tags.
+
+Three properties of that inventory are what make the allowlist tractable, and each should be re-checked rather than assumed on a later reading:
+
+- **Exactly one Custom HTML tag**, and it loads `https://www.googletagmanager.com/gtag/js?id=AW-18124108938` — a host already on the list. Custom HTML is the unbounded tag type, so its being singular and pointed at an allowlisted host is the strongest single fact here.
+- **The 57 paused tags introduce no new hosts.** Every hostname anywhere in the payload is accounted for below, so unpausing one cannot break the policy.
+- **Step 4 is authoritative for script.** GTM custom templates must declare script injection in an `inject_script` permission block. Built-in tags (GA4, Ads) declare nothing because they are compiled into the runtime, which is why Google's published guidance is needed alongside it.
+
+**`script-src` sources, and why each is there.**
+
+| source                                                           | why                                     | evidence                                                                                         |
+| ---------------------------------------------------------------- | --------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| `https://www.googletagmanager.com`                               | GTM core; `gtag/js` for GA4 and Ads     | [Google's CSP guide](https://developers.google.com/tag-platform/security/guides/csp) + container |
+| `https://www.googleadservices.com`                               | Google Ads conversion                   | Google's CSP guide                                                                               |
+| `https://www.google.com`                                         | Google Ads conversion                   | Google's CSP guide                                                                               |
+| `https://connect.facebook.net`                                   | Meta Pixel `fbevents.js`                | container `inject_script`                                                                        |
+| `https://cdn.jsdelivr.net/npm/meta-capi-param-builder-clientjs/` | Meta CAPI param builder, primary source | container `inject_script`                                                                        |
+| `https://unpkg.com/meta-capi-param-builder-clientjs/`            | the same bundle, fallback source        | container `inject_script`                                                                        |
+
+The two CDN entries are **path-scoped deliberately**; CSP source expressions match a path prefix when it ends in `/`. One caveat to carry: the path component is **not** re-checked after a redirect, so path scoping constrains the initial fetch only.
+
+**The non-script directives need no additions.** Google documents `*.google-analytics.com`, `*.google.com`, `*.g.doubleclick.net`, `pagead2.googlesyndication.com`, `ad.doubleclick.net` and `googleads.g.doubleclick.net` across `img-src` and `connect-src`, plus a `*.google.<TLD>` placeholder standing for every Google country domain; Meta adds `www.facebook.com`. GA4's collection host is assembled at runtime as `<region>.google-analytics.com`, so it is not a fixed hostname at all. D10's `connect-src 'self' https:` and `img-src 'self' data: blob: https:` subsume all of it — including the `<TLD>` placeholder, which could not be enumerated. **This is the concrete thing a future tightening of either directive would have to enumerate first**, and the reason neither is tightened here.
 
 ### Security Considerations
 
@@ -271,7 +331,14 @@ Whichever wins, D3's "accepted tradeoff" and the trust-boundary note in Security
 
 **What this does not close, and will not.** Cross-site scripting. With `'unsafe-inline'` in `script-src`, an attacker who achieves HTML injection executes script. The CSP constrains where script may be _loaded from_; it does not constrain inline execution. Anyone reading "learn.mit.edu now has a CSP" and inferring XSS protection has inferred wrongly, and a subsequent assessment could reasonably raise the same finding. This is the single most important caveat in this document and the reason hq#14083 exists.
 
-**Residual risk from the permissive `script-src`.** The host allowlist still has value — it blocks loading script from an arbitrary attacker-controlled origin, and `object-src 'none'` plus `base-uri 'self'` remove two common escalation paths — but the allowlist includes GTM, which can load arbitrary third-party script by design. In practice the trust boundary includes everyone with write access to the GTM container.
+**Residual risk from the permissive `script-src`.** The host allowlist still has value — it blocks loading script from an arbitrary attacker-controlled origin, and `object-src 'none'` plus `base-uri 'self'` remove two common escalation paths.
+
+An earlier version of this paragraph went on to say that the allowlist "includes GTM, which can load arbitrary third-party script by design", and so "in practice the trust boundary includes everyone with write access to the GTM container." D11 narrows that, and the narrowed version is worth stating precisely rather than dropping:
+
+- **What a compromised container can no longer do:** load executable script from an attacker-controlled origin. Adding a tag pointing at a new host produces a blocked request and a violation report, not execution.
+- **What it can still do:** anything expressible through the already-allowlisted hosts and the rest of the policy — including firing arbitrary requests at Google's and Meta's endpoints with attacker-chosen payloads, which is an exfiltration channel. `'unsafe-inline'` also means a container-injected _inline_ script still runs.
+
+So GTM write access remains inside the trust boundary; it is no longer unbounded. The two npm CDNs needed by the Meta template are the weakest link and are path-scoped for exactly that reason (D11).
 
 **`Referrer-Policy` governs what Learn sends, not what Learn receives.** The value stays `strict-origin-when-cross-origin`, but every previous draft of this RFC justified it backwards and the reasoning has to be replaced rather than softened.
 
@@ -358,12 +425,13 @@ One asymmetry to plan for: a 4a regression surfaces on **other people's sites**,
 
 ### Open questions
 
-|     | Question                                                                                                      | Who answers                                                                                  |
-| --- | ------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
-| D5  | Which mechanism scopes `Cache-Control: no-store` to user-specific responses without catching public endpoints | Implementer of chunk 2, in review on this RFC                                                |
-| D6  | Which reporting mechanism and ingest path collects CSP violations, and how the volume is sampled              | Implementer of chunk 3, in review on this RFC                                                |
-| D10 | Whether D10's directive values survive production, and which reCAPTCHA hosts the policy actually needs        | Chunk 3's soak, read by the implementer of chunk 3                                           |
-| D11 | Whether the site `script-src` permits arbitrary HTTPS hosts, or GTM gives up its deploy-free tag workflow     | Not settleable in this repo — needs the GTM container's owners, raised in review on this RFC |
+|     | Question                                                                                                      | Who answers                                        |
+| --- | ------------------------------------------------------------------------------------------------------------- | -------------------------------------------------- |
+| D5  | Which mechanism scopes `Cache-Control: no-store` to user-specific responses without catching public endpoints | Implementer of chunk 2, in review on this RFC      |
+| D6  | Which reporting mechanism and ingest path collects CSP violations, and how the volume is sampled              | Implementer of chunk 3, in review on this RFC      |
+| D10 | Whether D10's directive values survive production, and which reCAPTCHA hosts the policy actually needs        | Chunk 3's soak, read by the implementer of chunk 3 |
+
+D11 is closed. It was "may `script-src` keep a host allowlist", asked of the GTM container's owners [here](https://github.com/mitodl/hq/issues/14080#issuecomment-6426627862). They answered that the container holds Google Analytics, Google Ads and a Meta pixel; that answer was then verified against the production container directly, which turned the question from a negotiation into a measurement. Six script sources, all enumerable. Two follow-ups stay with that team and gate nothing here: how often a genuinely new vendor is added, and whether the GTM environments are usable as a staging path. See D11.
 
 D7 is closed. It was "which origins legitimately embed learn.mit.edu", asked of the OCW and MITx Online teams [here](https://github.com/mitodl/hq/issues/14080#issuecomment-6373425561). OCW answered no; MITx Online never answered, and rather than waiting, chunk 3 ships `frame-ancestors` report-only and chunk 3b probes from the client. Both must be read before chunk 4b enforces. See D7.
 
@@ -381,4 +449,8 @@ D7 is closed. It was "which origins legitimately embed learn.mit.edu", asked of 
 
 **Line numbers in this document rot.** Anchored to `0deaee154` and `a3a258ee4` as noted in the header. If an anchor does not match, the code moved; re-derive from the symbol name rather than assuming this RFC is describing something that no longer exists.
 
-**GTM container write access is part of the trust boundary — how much depends on D11.** D3 as written leaves `script-src` permissive enough that GTM can load arbitrary third-party script, which is the status quo rather than a regression but is worth stating explicitly: anyone reasoning about the site's script trust boundary should start from the GTM container's access list. D11 option A keeps that exactly as it is. Options B and C narrow it, since a compromised container could then only load from already-allowlisted hosts — at the cost of blocking legitimate new tags too. This risk and that decision have to be resolved together.
+**GTM container write access is part of the trust boundary, now bounded rather than unbounded.** Anyone reasoning about the site's script trust boundary should still start from the GTM container's access list. D11 chose the allowlist, so a compromised container can only load script from already-allowlisted hosts — see Security Considerations for what that does and does not rule out. The cost accepted in exchange is that a legitimate new tag from a new host is blocked until the allowlist is updated and deployed.
+
+**The container can change without a deploy in this repo, and the allowlist cannot.** This is the live risk D11 creates rather than removes. A new script host appears the moment someone saves the container; the policy only learns about it from a violation report, after the fact. Chunk 3's soak catches it while nothing is enforced, and D11's inventory command catches it earlier still if run on a schedule — but between chunk 4b and whenever someone looks, a new tag fails silently. **Who holds that responsibility is not yet assigned**, and assigning it is part of the handover this RFC owes whoever runs the container.
+
+**The allowlist was measured once, on 2026-10-27.** Every claim in D11 about what the container contains is a point-in-time observation of `GTM-NMJ2CT6T` / `env-1`. Re-run the inventory before trusting it; a reader two quarters from now should assume it has drifted.
