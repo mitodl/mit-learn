@@ -167,6 +167,31 @@ def test_sync_program_certificates_task_does_not_prune(mocker):
 
 
 @pytest.mark.django_db
+@pytest.mark.parametrize(
+    ("row_overrides", "expected_is_revoked"),
+    [({}, False), ({"is_revoked": False}, False), ({"is_revoked": True}, True)],
+    ids=["column-missing", "not-revoked", "revoked"],
+)
+def test_sync_program_certificates_task_is_revoked(
+    mocker, row_overrides, expected_is_revoked
+):
+    """The sync works against the view with and without its is_revoked
+    column, and treats a row without it as not revoked.
+    """
+    ProgramCertificate.objects.create(record_hash="abc123", user_email="")
+    mocker.patch(
+        "profiles.tasks.iter_rows",
+        return_value=iter([{"record_hash": "abc123", **row_overrides}]),
+    )
+
+    assert SyncProgramCertificatesTask.fetch_and_upsert(conn=mocker.Mock()) == 1
+    assert (
+        ProgramCertificate.objects.get(record_hash="abc123").is_revoked
+        is expected_is_revoked
+    )
+
+
+@pytest.mark.django_db
 def test_sync_program_certificates_task_skips_rows_that_fail_to_upsert(mocker):
     """One bad row is logged and skipped rather than aborting the batch, so
     the remaining certificates still sync.

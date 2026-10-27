@@ -220,6 +220,8 @@ class ProgramCertificate(models.Model):
 
     user_email = models.CharField(max_length=256, blank=False)
 
+    is_revoked = models.BooleanField(default=False, db_default=False)
+
     # NULLABLE FIELDS
 
     user_edxorg_id = models.IntegerField(null=True, blank=True)
