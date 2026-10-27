@@ -2,18 +2,21 @@
 Step 1 of resource profile generation: claims for one unit.
 
 A unit's files are sent to the model in one call, and its validated output is
-stored in ClaimExtraction under a key built from the text of its files. A
-call whose key is already stored is skipped, so a unit whose files haven't
-changed is never sent twice, even from another run of the course. The prompt
-and model are left out of the key: after changing them, stored claims are
-regenerated only with overwrite.
+stored in ClaimExtraction under a key built from the text of its files and
+the key of its run's context unit. A call whose key is already stored is
+skipped, so a unit whose files and course context haven't changed is never
+sent twice, even from another run of the course. The prompt and model are
+left out of the key: after changing them, stored claims are regenerated only
+with overwrite.
 """
 
 import hashlib
 import json
 import logging
+from collections import Counter
+from collections.abc import Callable
 from dataclasses import dataclass
-from functools import cached_property
+from functools import cached_property, partial
 from typing import get_args, get_origin
 
 from django.conf import settings
@@ -23,6 +26,7 @@ from pydantic import BaseModel, ValidationError
 
 from learning_resources.models import (
     ClaimExtraction,
+    LearningResourceRun,
     ResourceProfileConfiguration,
     Unit,
 )
@@ -41,6 +45,9 @@ CLAIM_PREFIXES = {
     "assumed_knowledge": "a",
     "assessment_expectations": "t",
 }
+
+# the field a stage's output schema keeps its notes in, by schema
+NOTES_FIELDS = ("extraction_notes", "notes")
 
 
 class ClaimExtractionError(Exception):
@@ -73,22 +80,27 @@ class PromptStage:
         return cache_key(self.level, *inputs)
 
 
-def load_unit_stage() -> PromptStage:
+def load_stage(stage: str, schema: type[BaseModel]) -> PromptStage:
     """
-    Build the unit stage from its ResourceProfileConfiguration.
+    Build a stage from its ResourceProfileConfiguration.
+
+    Args:
+        stage (str): a ResourceProfileConfiguration.Stage
+        schema (type of BaseModel): the stage's output schema
 
     Raises:
-        ClaimExtractionError: when the unit stage has no configuration
+        ClaimExtractionError: when the stage has no configuration
     """
-    config = ResourceProfileConfiguration.objects.filter(
-        stage=ResourceProfileConfiguration.Stage.UNIT
-    ).first()
+    config = ResourceProfileConfiguration.objects.filter(stage=stage).first()
     if not config:
-        msg = "No ResourceProfileConfiguration for stage unit"
+        msg = f"No ResourceProfileConfiguration for stage {stage}"
         raise ClaimExtractionError(msg)
-    return PromptStage(
-        "unit", ClaimExtraction.Level.UNIT, config.prompt, UnitExtraction, config
-    )
+    return PromptStage(stage, ClaimExtraction.Level.UNIT, config.prompt, schema, config)
+
+
+def load_unit_stage() -> PromptStage:
+    """Build the unit stage from its ResourceProfileConfiguration"""
+    return load_stage(ResourceProfileConfiguration.Stage.UNIT, UnitExtraction)
 
 
 # --------------------------------------------------------------------------- llm
@@ -186,8 +198,12 @@ def _salvage(stage: PromptStage, message: BaseMessage) -> BaseModel:
     parsed, notes = validate_dropping_invalid_claims(stage.schema, calls[0]["args"])
     if notes:
         logger.warning("%s: %s", stage.name, "; ".join(notes))
-        if "extraction_notes" in stage.schema.model_fields:
-            parsed.extraction_notes += notes
+        notes_field = next(
+            (name for name in NOTES_FIELDS if name in stage.schema.model_fields),
+            None,
+        )
+        if notes_field:
+            getattr(parsed, notes_field).extend(notes)
     return parsed
 
 
@@ -283,26 +299,118 @@ def _unit_header(unit: Unit) -> str:
     return "\n".join(lines)
 
 
-def _course_digest(unit: Unit) -> str:
-    """Describe the course to the unit prompt"""
-    return f"Title: {unit.run.learning_resource.title}"
+@dataclass(frozen=True)
+class CourseContext:
+    """What a unit prompt is given about the course"""
+
+    # the context unit's extraction key, or a key of the digest when there is
+    # no context, so a unit's key always reflects what its prompt says
+    key: str
+    digest: str
+
+
+def title_context(run: LearningResourceRun) -> CourseContext:
+    """Return a context with only the course title, for runs with no context"""
+    title = run.learning_resource.title
+    digest = f"Title: {title}\nNo course context is available."
+    return CourseContext(cache_key(digest), digest)
 
 
 # --------------------------------------------------------------------------- extraction
+def over_budget(
+    unit: Unit, sources: list[Source], budget: int, stats: Counter | None = None
+) -> bool:
+    """Log and count a unit whose files are over the input budget"""
+    tokens = sum(source.tokens for source in sources)
+    if tokens <= budget:
+        return False
+    logger.warning(
+        "Skipping %s %s of run %s: %d files, about %d tokens, over the"
+        " input budget of %d",
+        unit.kind,
+        unit.external_id,
+        unit.run.run_id,
+        len(sources),
+        tokens,
+        budget,
+    )
+    if stats is not None:
+        stats["over_budget"] += 1
+    return True
+
+
+def stored_or_call(  # noqa: PLR0913
+    stage: PromptStage,
+    key: str,
+    combined_prompt: str,
+    finish: Callable[[dict], dict],
+    *,
+    unit: Unit,
+    overwrite: bool = False,
+    stats: Counter | None = None,
+) -> ClaimExtraction:
+    """
+    Return the stored extraction for a key, calling the model if there is none.
+
+    Args:
+        stage (PromptStage): the stage to call
+        key (str): the call's cache key
+        combined_prompt (str): the course material for the call
+        finish (callable): turns the model's validated output, as plain data,
+            into what is stored
+        unit (Unit): the unit the call is for
+        overwrite (bool): call the model even when the key is stored, and
+            replace the stored extraction
+        stats (Counter): counts cache hits and calls made, when given
+
+    Raises:
+        ClaimExtractionError: when the model gives no valid response
+    """
+    stats = Counter() if stats is None else stats
+    if not overwrite:
+        extraction = ClaimExtraction.objects.filter(key=key).first()
+        if extraction:
+            stats["cached"] += 1
+            return extraction
+    parsed, raw = call_llm(stage, combined_prompt)
+    stats["generated"] += 1
+    extraction, _ = ClaimExtraction.objects.update_or_create(
+        key=key,
+        defaults={
+            "level": stage.level,
+            "extractor_version": stage.version,
+            "model": stage.config.llm_model,
+            "output": _sanitize(finish(parsed.model_dump())),
+            "raw_response": sanitize_llm_text(raw),
+            "unit": unit,
+        },
+    )
+    return extraction
+
+
 def generate_unit_claims(
-    unit: Unit, stage: PromptStage | None = None, *, overwrite: bool = False
+    unit: Unit,
+    context: CourseContext,
+    stage: PromptStage | None = None,
+    *,
+    overwrite: bool = False,
+    stats: Counter | None = None,
 ) -> ClaimExtraction | None:
     """
     Generate the claims for one unit or bin, or return the stored ones.
 
     Args:
         unit (Unit): the unit or bin
+        context (CourseContext): what the prompt says about the course, from
+            generate_context_claims, or title_context for no context
         stage (PromptStage): the unit stage, loaded from its configuration
             when not given
         overwrite (bool): call the model even when an extraction with the
             same key is stored, and replace it. The key covers only the
-            files' text, so this is how a prompt, model or code change is
-            applied to stored claims.
+            files' text and the context, so this is how a prompt, model or
+            code change is applied to stored claims.
+        stats (Counter): counts skipped and over-budget units, cache hits and
+            calls made, when given
 
     Returns:
         ClaimExtraction | None: the unit's extraction, or None when the unit
@@ -315,42 +423,21 @@ def generate_unit_claims(
     config = stage.config
     sources = unit_sources(unit, config.max_file_tokens)
     if not sources:
+        if stats is not None:
+            stats["skipped"] += 1
         return None
-    tokens = sum(source.tokens for source in sources)
-    if tokens > config.input_token_budget:
-        logger.warning(
-            "Skipping %s %s of run %s: %d files, about %d tokens, over the"
-            " input budget of %d",
-            unit.kind,
-            unit.external_id,
-            unit.run.run_id,
-            len(sources),
-            tokens,
-            config.input_token_budget,
-        )
+    if over_budget(unit, sources, config.input_token_budget, stats):
         return None
-    key = stage.key([source.cache_input() for source in sources])
-    if not overwrite:
-        extraction = ClaimExtraction.objects.filter(key=key).first()
-        if extraction:
-            return extraction
-    parsed, raw = call_llm(
+    return stored_or_call(
         stage,
+        stage.key([source.cache_input() for source in sources], context.key),
         prompts.unit_combined_prompt(
-            _course_digest(unit),
+            context.digest,
             _unit_header(unit),
             "\n".join(source.block for source in sources),
         ),
+        partial(_unit_output, sources=sources),
+        unit=unit,
+        overwrite=overwrite,
+        stats=stats,
     )
-    extraction, _ = ClaimExtraction.objects.update_or_create(
-        key=key,
-        defaults={
-            "level": stage.level,
-            "extractor_version": stage.version,
-            "model": config.llm_model,
-            "output": _sanitize(_unit_output(parsed.model_dump(), sources)),
-            "raw_response": sanitize_llm_text(raw),
-            "unit": unit,
-        },
-    )
-    return extraction

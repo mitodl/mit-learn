@@ -1,3 +1,14 @@
+def context_unit_combined_prompt(course_title: str, sources_block: str) -> str:
+    """Return the combined prompt for the context unit"""
+    return f"""Course: {course_title}
+
+Extract the course context from the following sources.
+
+{sources_block}
+
+Call the tool with the complete CourseContextOut."""
+
+
 def unit_combined_prompt(
     context_digest: str, unit_header: str, sources_block: str
 ) -> str:
