@@ -23,6 +23,7 @@ from learning_resources.profiles.sources import Source, unit_sources
 from learning_resources.profiles.unit_claims import (
     CourseContext,
     PromptStage,
+    _truncation_notes,
     generate_unit_claims,
     load_stage,
     load_unit_stage,
@@ -45,12 +46,7 @@ def _context_output(parsed: dict, sources: list[Source]) -> dict:
     output = verify_all_evidence(
         parsed, {source.source_id: source.text for source in sources}
     )
-    output["notes"] += [
-        f"{source.source_id} was truncated: {source.included_chars:,} of"
-        f" {source.total_chars:,} characters were read"
-        for source in sources
-        if source.truncated
-    ]
+    output["notes"] += _truncation_notes(sources)
     output["sources"] = [source.summary() for source in sources]
     return output
 

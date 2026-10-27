@@ -303,7 +303,8 @@ def _unit_header(unit: Unit) -> str:
 class CourseContext:
     """What a unit prompt is given about the course"""
 
-    # the context unit's extraction key, empty when there is no context
+    # the context unit's extraction key, or a key of the digest when there is
+    # no context, so a unit's key always reflects what its prompt says
     key: str
     digest: str
 
@@ -311,7 +312,8 @@ class CourseContext:
 def title_context(run: LearningResourceRun) -> CourseContext:
     """Return a context with only the course title, for runs with no context"""
     title = run.learning_resource.title
-    return CourseContext("", f"Title: {title}\nNo course context is available.")
+    digest = f"Title: {title}\nNo course context is available."
+    return CourseContext(cache_key(digest), digest)
 
 
 # --------------------------------------------------------------------------- extraction

@@ -169,6 +169,16 @@ def test_context_in_prompt_and_key(fake_llm):
     assert fake_llm.call_count == 2
 
 
+def test_title_context_in_key(fake_llm):
+    """Units with no context are keyed by their course title"""
+    unit = _build_unit()
+    other = _build_unit()
+
+    first = _generate(unit)
+    assert _generate(other) != first
+    assert fake_llm.call_count == 2
+
+
 def test_bin_prompt(fake_llm):
     """A bin's prompt says its files have no order"""
     _generate(_build_unit(kind=Unit.Kind.BIN, position=None))
