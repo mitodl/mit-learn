@@ -18,73 +18,21 @@ import { ChannelTypeEnum, TopicChannel, DepartmentChannel } from "api/v0"
 import { useLearningResourceTopic } from "api/hooks/learningResources"
 import invariant from "tiny-invariant"
 import type { FeaturedChannelType } from "./topicFeatured"
-import TopicFeaturedCarousel, {
-  useTopicFeaturedIsEmpty,
-} from "./TopicFeaturedCarousel"
+import TopicFeaturedCarousel from "./TopicFeaturedCarousel"
 import { backgroundSrcSetCSS } from "ol-utilities"
 import { DEPARTMENT_BANNERS } from "./departmentBanners"
-import type { BannerPlacement } from "./departmentBanners"
 
 const BannerSkeleton = styled(Skeleton)(({ theme }) => ({
   backgroundColor: theme.custom.colors.lightGray2,
 }))
 
 /**
- * Where the photograph sits, as the department design states it.
+ * The hero, per the department design.
  *
- * The design lays the image out rather than cropping it to fill: 71.1% of the
- * hero wide, 134.59% of it tall, 28.88% from its left and lifted 28.85% above
- * its top. Those proportions are the artwork's own -- 1192x894 is 4:3, which
- * is what `architecture.jpg` is -- so what the numbers describe is a picture
- * placed at its natural shape and allowed to run off the top and bottom.
- *
- * Only two of those four can be kept once the hero is not the shape the frame
- * was: a picture holding its own proportions cannot be both 71.1% of a width
- * and 134.59% of a height unless the two stand in the same ratio as the
- * design's 1676x664. A hero is not that shape for long -- its width follows
- * the viewport while its height follows the content -- so this keeps the
- * height, and lets the width fall where it may.
- *
- * Keeping the height is what keeps the picture: the 34.59% it stands proud of
- * the hero is the crop, and the crop is the framing -- the sky off the top,
- * the road along the bottom. Keeping the width instead holds the picture's
- * edge where the design puts it and surrenders the crop, which at anything
- * narrower than 1676 zooms out until the building is a detail in a sky. The
- * width it gives up is covered by the wash, which is white across the left
- * where the words are; the crop has nothing covering it.
- *
- * `background-position` then says where the oversized image sits, as a share
- * of the overflow rather than a distance: -28.85 / (100 - 134.59) = 83.41%
- * down, and flush right, which is the design's 28.88% from the left once the
- * picture is as wide as this makes it.
- */
-const HERO_PHOTO_SIZE = "auto 134.59%"
-const HERO_PHOTO_POSITION = "100% 83.41%"
-
-/**
- * Where the picture starts, which is the one thing the design does fix: the
- * left edge of the photograph, 28.88% across.
- */
-const HERO_PHOTO_LEFT = "28.88%"
-
-/**
- * Softens the band's own left edge.
- *
- * The wash comes in at an angle, so the depth at which it reaches white is
- * not a single column: at the top of the hero it is still short of where the
- * band begins, which leaves the picture ending in a ruled vertical line. The
- * band fades itself out instead, which holds whatever the wash is doing
- * behind it and at whatever width.
- */
-const HERO_PHOTO_EDGE_FADE = "linear-gradient(90deg, transparent 0%, #000 22%)"
-
-/**
- * The hero, per the topic page design.
- *
- * The image stays data-driven: the channel's own configured banner, falling
- * back to the design's artwork when a channel has none. Either way it is a
- * photograph: see `HeroPhoto` for how it is placed and `HeroScrim` for the
- * white wash that makes it a backdrop.
+ * White, with the department's photograph laid over its top right -- see
+ * `HeroPhoto`. There is no wash over the picture any more: the artwork now
+ * arrives cut to the diagonal the design draws, so the edge is the image's
+ * own and the hero has nothing to fade.
  */
 const TopicHero = styled.section(({ theme }) => ({
   position: "relative",
@@ -92,20 +40,11 @@ const TopicHero = styled.section(({ theme }) => ({
 }))
 
 /**
- * The photograph behind a department's title.
- *
- * Covers the hero and is clipped by it, with the placement stated above: the
- * design runs the image off the top and the bottom rather than fitting it,
- * and anchors it right so the hero's left is left for the words.
- */
-/**
  * What clips the photograph to the hero.
  *
- * The design builds it this way -- a box the size of the hero with the
- * picture laid absolutely inside it -- and it is what lets the picture be
- * placed by its own edges rather than by how far it happens to overhang.
- * `background-position` can only say "this share of the overflow", which is a
- * different distance on every hero; a top stated here is the design's.
+ * The picture is taller than the shorter hero a channel with nothing to
+ * feature leaves, and is let run off the bottom of it rather than shrink to
+ * fit, so something has to cut it off at the hero's edge.
  */
 const HeroPhotoClip = styled.div({
   position: "absolute",
@@ -114,105 +53,40 @@ const HeroPhotoClip = styled.div({
   pointerEvents: "none",
 })
 
-const HeroPhoto = styled.div<{
-  backgroundUrl: string
-  shortHero: boolean
-  placement: BannerPlacement
-}>(({ backgroundUrl, shortHero, placement }) => ({
-  position: "absolute",
-  inset: 0,
-  left: placement.left ?? 0,
-  /* Where the design states the picture's own box rather than a slice of the
-     hero: the width is the hero's, the height follows the photograph's shape
-     so nothing is stretched, and the top is the design's lift. */
-  ...(placement.top
-    ? {
-        top: placement.top,
-        bottom: "auto",
-        width: placement.width,
-        aspectRatio: placement.aspectRatio,
-        minHeight: placement.minHeight,
-      }
-    : {}),
-  pointerEvents: "none",
-  backgroundImage: backgroundUrl,
-  backgroundRepeat: "no-repeat",
-  backgroundSize: placement.size ?? HERO_PHOTO_SIZE,
-  backgroundPosition: placement.position ?? HERO_PHOTO_POSITION,
-  /**
-   * A hero with nothing to feature, which the design does not draw.
-   *
-   * Sizing by height is what keeps the crop on the hero that has a Featured
-   * row, but on the short one it works the other way: a third again of
-   * 300px is 400, and 400px of a 4:3 picture is 530 wide on a page three
-   * times that -- the building shrinks to a stamp in the corner rather than
-   * standing behind the title.
-   *
-   * So the picture is given the band the design starts it at -- everything
-   * right of 28.88% -- and told to fill it.
-   *
-   * Which slice of it that leaves is then the only question, and the answer
-   * is above the middle: centred, a band this shallow lands on the road and
-   * the parked cars, with the building cut off at the sill. Taking it from
-   * 30% puts the glass, the brickwork and the lettering across it and keeps
-   * the tarmac out.
-   */
-  ...(shortHero
-    ? {
-        left: placement.left ?? HERO_PHOTO_LEFT,
-        /* Back to a slice of the hero: there is no room on this one to hang a
-           picture off, so whatever box the design states is set aside -- its
-           floor included, which otherwise outlives the box it was a floor for
-           and leaves the picture hanging past the bottom of a hero a third its
-           height, cropping from a frame that is not the one on show. */
-        top: 0,
-        bottom: 0,
-        width: "auto",
-        aspectRatio: "auto",
-        minHeight: "unset",
-        backgroundSize: "cover",
-        backgroundPosition: "center 30%",
-        maskImage: HERO_PHOTO_EDGE_FADE,
-        WebkitMaskImage: HERO_PHOTO_EDGE_FADE,
-      }
-    : {}),
-}))
+/**
+ * How wide the photograph is drawn, as a share of the hero.
+ *
+ * The design draws it 922 of the hero's 1676 and takes it to the right edge.
+ * A share rather than the artwork's own 920 pixels, so it holds that much of
+ * the page at every width instead of shrinking to a stamp in the corner of a
+ * wide one.
+ */
+const HERO_PHOTO_WIDTH = "55%"
 
 /**
- * The white wash over the photograph.
+ * The photograph behind a department's title.
  *
- * One diagonal gradient, which is how the design builds it: transparent at
- * the top right where the picture is wanted, white by the time it reaches the
- * breadcrumb and the title at the left. Its own layer rather than another
- * value on the hero's `background-image`, so that stays the single `url()`
- * the page's tests look for.
+ * One placement for every department, which is what the artwork being cut to
+ * a single size buys: there is nothing left for a department to state. It is
+ * anchored to the hero's top right corner at its own proportions -- the
+ * diagonal down its left side is part of the image, so stretching it would
+ * bend the one edge the design is precise about.
  */
-const HERO_SCRIM =
-  "linear-gradient(210.596deg, rgba(255, 255, 255, 0) 6.9194%, rgb(255, 255, 255) 44.431%)"
-
-/**
- * The same wash, held back, for the hero with nothing to feature.
- *
- * The design's stops are measured against a hero that carries a Featured row,
- * where the white has the depth of the cards to arrive over. On the short one
- * the same proportions arrive in a couple of hundred pixels, which closes the
- * white over the picture almost as soon as it starts -- and there is less
- * picture to lose, since it only begins at 28.88%.
- *
- * Starting the fade later and finishing it later leaves the photograph the
- * right-hand half of its own band and still reaches white before the title,
- * which sits left of where the band begins and never had the photograph
- * behind it to be lifted off.
- */
-const HERO_SCRIM_SHORT =
-  "linear-gradient(210.596deg, rgba(255, 255, 255, 0) 22%, rgb(255, 255, 255) 72%)"
-
-const HeroScrim = styled.div<{ shortHero: boolean; scrim?: string }>(
-  ({ shortHero, scrim }) => ({
+const HeroPhoto = styled.div<{ backgroundUrl: string }>(
+  ({ backgroundUrl }) => ({
     position: "absolute",
-    inset: 0,
+    top: 0,
+    right: 0,
+    width: HERO_PHOTO_WIDTH,
+    aspectRatio: "920 / 494",
     pointerEvents: "none",
-    backgroundImage: shortHero ? HERO_SCRIM_SHORT : (scrim ?? HERO_SCRIM),
+    backgroundImage: backgroundUrl,
+    backgroundRepeat: "no-repeat",
+    /* Artwork cut to the box's own shape fills it either way; `cover` is for
+       the departments not recut yet, which it crops rather than ruling white
+       bands down the sides of. */
+    backgroundSize: "cover",
+    backgroundPosition: "top right",
   }),
 )
 
@@ -533,48 +407,27 @@ const TopicChannelHero: React.FC<{
  */
 const ChannelHeroPhoto: React.FC<{
   configuredBanner: string
-  /** Frames the shorter hero a channel with nothing to feature leaves. */
-  featuredIsEmpty: boolean
-  /** Empty for artwork the design's own values fit. */
-  placement?: BannerPlacement
-}> = ({ configuredBanner, featuredIsEmpty, placement = {} }) => (
-  <>
-    <HeroPhotoClip aria-hidden>
-      <HeroPhoto
-        data-testid="channel-hero-photo"
-        shortHero={featuredIsEmpty}
-        placement={placement}
-        /* Through the same standardizer the other channel banners use: the
-           field holds either a bare src or a value already written as
-           `url(...)`, and wrapping the second kind again drops it. */
-        backgroundUrl={standardizeBackgroundUrl(configuredBanner)}
-      />
-    </HeroPhotoClip>
-    <HeroScrim
-      aria-hidden
-      shortHero={featuredIsEmpty}
-      scrim={placement.scrim}
+}> = ({ configuredBanner }) => (
+  <HeroPhotoClip aria-hidden>
+    <HeroPhoto
+      data-testid="channel-hero-photo"
+      /* Through the same standardizer the other channel banners use: the
+         field holds either a bare src or a value already written as
+         `url(...)`, and wrapping the second kind again drops it. */
+      backgroundUrl={standardizeBackgroundUrl(configuredBanner)}
     />
-  </>
+  </HeroPhotoClip>
 )
 
 /**
  * The department hero, which draws the department's own artwork where there
  * is any and stands on plain white where there is not.
- *
- * Its own component to hold the hook: how the photograph is framed turns on
- * whether the channel features anything, which the shared hero cannot ask on
- * a department's behalf.
  */
 const DepartmentChannelHero: React.FC<{
   channel: DepartmentChannel
   children: React.ReactNode
 }> = ({ channel, children }) => {
   const banner = DEPARTMENT_BANNERS[channel.name]
-  const featuredIsEmpty = useTopicFeaturedIsEmpty(
-    ChannelTypeEnum.Department,
-    channel.name,
-  )
 
   return (
     <ChannelRedesignHero
@@ -586,11 +439,7 @@ const DepartmentChannelHero: React.FC<{
       overPhoto={!!banner}
       background={
         banner ? (
-          <ChannelHeroPhoto
-            configuredBanner={backgroundSrcSetCSS(banner.image)}
-            featuredIsEmpty={featuredIsEmpty}
-            placement={banner}
-          />
+          <ChannelHeroPhoto configuredBanner={backgroundSrcSetCSS(banner)} />
         ) : undefined
       }
     >
