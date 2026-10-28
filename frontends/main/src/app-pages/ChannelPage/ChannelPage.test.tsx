@@ -389,6 +389,15 @@ describe.each(NON_UNIT_CHANNEL_TYPES)(
  * still lives on the topics listing page, which has its own tests.
  */
 describe("while the feature flags are still loading", () => {
+  const posthogKey = process.env.NEXT_PUBLIC_POSTHOG_API_KEY
+  afterEach(() => {
+    if (posthogKey === undefined) {
+      delete process.env.NEXT_PUBLIC_POSTHOG_API_KEY
+    } else {
+      process.env.NEXT_PUBLIC_POSTHOG_API_KEY = posthogKey
+    }
+  })
+
   /**
    * The page is behind a flag, and a flag that has not loaded reads `false`
    * from the bootstrapped value -- which is the same thing it reads when the
@@ -396,6 +405,7 @@ describe("while the feature flags are still loading", () => {
    * the page being shown the one for someone who is not.
    */
   test("holds a spinner rather than deciding on a bootstrapped flag", async () => {
+    process.env.NEXT_PUBLIC_POSTHOG_API_KEY = "ph-test-key"
     jest.mocked(useFeatureFlagsLoaded).mockReturnValue(false)
     const { channel } = setupApis({
       search_filter: "topic=Physics",
@@ -409,6 +419,29 @@ describe("while the feature flags are still loading", () => {
     expect(
       screen.queryByRole("heading", { level: 1, name: channel.title }),
     ).toBe(null)
+  })
+
+  /**
+   * With no PostHog configured there is nothing to wait for: the provider
+   * neither initialises nor mounts, so the flags never report themselves in
+   * and waiting on them would hold the page on a spinner for good. Every
+   * flag is off in that case, which is the page this one falls back to.
+   */
+  test("draws the page rather than waiting when PostHog is not configured", async () => {
+    delete process.env.NEXT_PUBLIC_POSTHOG_API_KEY
+    jest.mocked(useFeatureFlagsLoaded).mockReturnValue(false)
+    /* A unit channel, which is none of the flags' business: the gate held
+       every channel page, not only the ones the redesign touches. */
+    const { channel } = setupApis({
+      search_filter: "department=mechanical",
+      channel_type: ChannelTypeEnum.Unit,
+    })
+    renderWithProviders(<ChannelPage />, {
+      url: `/c/${channel.channel_type}/${channel.name}`,
+    })
+
+    await screen.findByRole("heading", { level: 1, name: channel.title })
+    expect(screen.queryByRole("progressbar")).toBe(null)
   })
 })
 

@@ -11,6 +11,7 @@ import { getConstantSearchParams } from "./searchRequests"
 import useChannelPageRedesign from "./useChannelPageRedesign"
 import dynamic from "next/dynamic"
 import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
+import { env } from "@/env"
 
 const LearningResourceDrawer = dynamic(
   () =>
@@ -49,9 +50,20 @@ const ChannelPage: React.FC = () => {
   const channelRedesign = useChannelPageRedesign(String(channelType))
   const flagsLoaded = useFeatureFlagsLoaded()
 
-  // The whole page is behind the flag, so wait for the real value rather than
-  // 403-ing on a bootstrapped `false` — same reasoning as ContractAdminPage.
-  if (!flagsLoaded) {
+  /**
+   * The whole page is behind the flag, so wait for the real value rather than
+   * deciding on a bootstrapped `false` — which reads the same as the page
+   * being switched off. Same reasoning as ContractAdminPage.
+   *
+   * Only where there is something to wait for. With no PostHog key the
+   * provider neither initialises nor mounts, so nothing ever reports the
+   * flags in and this would hold every channel page on a spinner that never
+   * resolves. PostHog being absent is not the same as its answer being
+   * pending: every flag is simply off, which is the page this one falls back
+   * to, so it renders instead of waiting.
+   */
+  const awaitingFlags = !!env("NEXT_PUBLIC_POSTHOG_API_KEY") && !flagsLoaded
+  if (awaitingFlags) {
     return <PageLoadingSpinner loading />
   }
 
