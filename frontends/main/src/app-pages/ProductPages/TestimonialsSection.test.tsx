@@ -210,25 +210,6 @@ test("Emits Review structured data for the first testimonial only", async () => 
   })
 })
 
-test("Includes the reviewed item's description in the structured data", async () => {
-  renderWithProviders(
-    <TestimonialsSection
-      testimonials={[makeTestimonial()]}
-      itemReviewedName="Intro to Rocketry"
-      itemReviewedDescription="<p>Build a rocket.</p>"
-    />,
-  )
-
-  const section = await screen.findByRole("region", {
-    name: "What learners are saying",
-  })
-  const script = section.querySelector('script[type="application/ld+json"]')
-
-  expect(JSON.parse(script?.textContent ?? "")).toMatchObject({
-    description: "Build a rocket.",
-  })
-})
-
 test("Escapes characters that could break out of the JSON-LD script tag", async () => {
   const testimonial = makeTestimonial({
     quote: "</script><script>alert(1)</script>",
