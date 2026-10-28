@@ -4,6 +4,8 @@ import React from "react"
 import { styled } from "ol-components"
 import { useProgramLettersDetail } from "api/hooks/programLetters"
 import { useParams } from "next/navigation"
+import type { AxiosError } from "axios"
+import NotFoundPage from "@/app-pages/ErrorPage/NotFoundPage"
 
 type RouteParams = {
   id: string
@@ -126,6 +128,13 @@ const ProgramLetterPage: React.FC = () => {
   const programLetter = useProgramLettersDetail(id)
   const templateFields = programLetter.data?.template_fields
   const certificateInfo = programLetter.data?.certificate
+
+  // The route 404s on the server; this covers a client-side fetch, so a
+  // missing or revoked letter never renders as an empty "Dear ," letter.
+  if ((programLetter.error as AxiosError | null)?.response?.status === 404) {
+    return <NotFoundPage />
+  }
+
   return (
     <ProgramLetterPageContainer className="letter">
       <ProgramLetterHeader>
