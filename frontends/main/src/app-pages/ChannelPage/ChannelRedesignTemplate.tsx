@@ -91,6 +91,52 @@ const HeroPhoto = styled.div<{ backgroundUrl: string }>(
 )
 
 /**
+ * The hairline the design runs outside the photograph's cut edge.
+ *
+ * It follows the same diagonal the artwork is cut on, set about 27px out from
+ * it, and turns along the bottom to leave the hero at the right -- an outline
+ * the picture sits inside rather than a border on it.
+ *
+ * Drawn as a vector rather than built from rotated edges because the line has
+ * to stay one pixel at any width while the shape it traces stretches with the
+ * hero. `preserveAspectRatio="none"` lets the shape stretch; the stroke is
+ * held back from stretching with it.
+ *
+ * Under the photograph, as the design stacks it: the top of the outline runs
+ * behind the picture, which is what leaves the diagonal and the foot of it
+ * showing and nothing else.
+ */
+const HERO_PHOTO_BORDER_BOX = { width: 980, height: 521, diagonal: 256.3 }
+
+/**
+ * The outline against the photograph, as shares of the hero's width.
+ *
+ * The design sets it 30px outside a picture 920 wide, so both are scaled off
+ * the width the picture is actually drawn at rather than pinned to pixels,
+ * and the gap holds its proportion as the hero widens.
+ */
+const borderShare = (n: number) =>
+  `${(parseFloat(HERO_PHOTO_WIDTH) * n) / 920}%`
+
+const HeroPhotoBorder = styled.svg({
+  position: "absolute",
+  top: 0,
+  right: `-${borderShare(30)}`,
+  width: borderShare(HERO_PHOTO_BORDER_BOX.width),
+  aspectRatio: `${HERO_PHOTO_BORDER_BOX.width} / ${HERO_PHOTO_BORDER_BOX.height}`,
+  pointerEvents: "none",
+  overflow: "visible",
+})
+
+const HeroPhotoBorderPath = styled.path(({ theme }) => ({
+  fill: "none",
+  stroke: theme.custom.colors.silverGrayLight,
+  strokeWidth: 1,
+  /* Held to a pixel while the box around it stretches. */
+  vectorEffect: "non-scaling-stroke",
+}))
+
+/**
  * The Follow control as the design draws it: a grey pill, not the primary red
  * button the shared `SearchSubscriptionToggle` renders elsewhere.
  *
@@ -409,6 +455,18 @@ const ChannelHeroPhoto: React.FC<{
   configuredBanner: string
 }> = ({ configuredBanner }) => (
   <HeroPhotoClip aria-hidden>
+    <HeroPhotoBorder
+      data-testid="channel-hero-photo-border"
+      viewBox={`0 0 ${HERO_PHOTO_BORDER_BOX.width} ${HERO_PHOTO_BORDER_BOX.height}`}
+      preserveAspectRatio="none"
+    >
+      {/* Down the diagonal and along the foot. The top and the far side of
+          the design's outline are behind the picture and past the hero's
+          right edge, so there is nothing to draw of them. */}
+      <HeroPhotoBorderPath
+        d={`M0 0 L${HERO_PHOTO_BORDER_BOX.diagonal} ${HERO_PHOTO_BORDER_BOX.height} H${HERO_PHOTO_BORDER_BOX.width}`}
+      />
+    </HeroPhotoBorder>
     <HeroPhoto
       data-testid="channel-hero-photo"
       /* Through the same standardizer the other channel banners use: the
