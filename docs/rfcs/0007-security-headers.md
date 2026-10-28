@@ -15,7 +15,7 @@ nav_order: 7
 - Table of Contents
   {:toc}
 
-Status: **spec** — D1–D5, D7–D9 and D11 decided, D6 and D10 open. Nothing here is implemented yet.
+Status: **spec** — D1–D9 and D11 decided, D10 open. Nothing here is implemented yet.
 Project: `wp-worknest-assessment-remediation-security-headers-ef7183`
 Basis: [mitodl/hq#14080](https://github.com/mitodl/hq/issues/14080), its [scoping comment](https://github.com/mitodl/hq/issues/14080#issuecomment-6372991750) and [plan comment](https://github.com/mitodl/hq/issues/14080#issuecomment-6373957431)
 
@@ -150,13 +150,50 @@ Only `cache_page_for_all_users` earns the `SHARED` stamp. `cache_page_for_anonym
 
 **Still unverified.** `curl -sI https://api.learn.mit.edu/api/v0/users/me/` **with a session** has not been run, so what authenticated responses carry today — in particular whether `Vary: Cookie` is already present, which would limit though not eliminate the current exposure — is still unmeasured. The implementation does not depend on the answer; the baseline for the write-up does. Anonymous responses were checked: the API already sends `nosniff`, `X-Frame-Options: DENY` and `Referrer-Policy: origin`, so the issue overstates what is missing there. `Cache-Control` is genuinely absent.
 
-#### D6. Where CSP violation reports are collected (open)
+#### D6. Where CSP violation reports are collected (decided)
 
-`@sentry/nextjs` is already a dependency and is the obvious destination. What is unsettled is the mechanism: the deprecated-but-universally-supported `report-uri`, the newer `report-to` with a `Reporting-Endpoints` header, or both; and which Sentry ingest path receives them.
+`@sentry/nextjs` is already a dependency and is the destination. Three things were unsettled: the mechanism, the ingest path, and the volume story.
 
-Volume matters here. A report-only CSP on a high-traffic public site generates a report per violation per page view, and browser extensions inject scripts that will trip it constantly. Whatever is chosen needs a sampling or rate-limiting story, or the soak will be expensive and the signal buried.
+**Decision: `report-uri` only, pointed at the existing `open-next` Sentry project, with noise handled by Sentry's CSP inbound filters rather than by code.**
 
-**Who decides:** whoever picks up `tk-chunk-3-csp-report-only-on-learn-mit-edu-emitted-f8001f`.
+##### `report-to` is deliberately not set, and that is the whole decision
+
+Sentry's own setup guide says to configure `report-uri` **and** `report-to` with a `Reporting-Endpoints` header, all pointing at the same Sentry URL. **Following that advice would silently lose most of our reports.**
+
+- Browsers that support `report-to` **ignore** `report-uri` ([MDN](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Content-Security-Policy/report-to)). The two are not additive; the newer one wins where it is understood.
+- The Reporting API delivers `POST`s with `Content-Type: application/reports+json` and a different body shape from the legacy `{"csp-report": {…}}`.
+- **Sentry cannot ingest that format.** [getsentry/sentry#38940](https://github.com/getsentry/sentry/issues/38940) has been open since 2022-09-15; a Sentry employee confirmed on 2025-11-03 that the work "remains paused as we invest in other higher priority areas". Still open at the time of writing.
+- `report-to` reached [Baseline "newly available" in March 2026](https://developer.mozilla.org/en-US/docs/Web/HTTP/Reference/Headers/Content-Security-Policy/report-to), so this is a live problem rather than a future one.
+
+Compose those and the failure is exact: a Chromium browser sees `report-to`, ignores `report-uri`, posts `application/reports+json` to Sentry's security endpoint, Sentry cannot parse it, and the report is gone. No console error, no Sentry error, an empty violation stream from the majority of traffic — and an empty stream is precisely what this soak is trying to interpret.
+
+This is the same failure shape as the two browser-behaviour errors recorded elsewhere in this document: a vendor instruction taken as settled fact without checking what the browser actually does. **The directive is omitted on purpose, and chunk 3 carries a comment saying so**, because the obvious future maintenance action — "add `report-to`, `report-uri` is deprecated" — is the thing that breaks it.
+
+##### The endpoint is derived, not pasted
+
+Sentry's security endpoint is `https://<host>/api/<projectId>/security/?sentry_key=<publicKey>`, and all three components are already present in `NEXT_PUBLIC_SENTRY_DSN` (`https://<publicKey>@<host>/<projectId>`). Build it from the DSN at runtime in `csp.ts` rather than hardcoding a second copy that can drift from the one Sentry's SDK already uses. Append `sentry_environment` from `NEXT_PUBLIC_SENTRY_ENV`, so RC and production violations are separable.
+
+A policy with no DSN configured must omit `report-uri` entirely rather than emit a malformed one — local development has no DSN, and `report-uri` pointing at `undefined` would make every page load post to a bogus URL.
+
+##### Volume: Sentry's CSP inbound filters, not sampling in our code
+
+The original concern was that a report-only CSP on a high-traffic public site emits a report per violation per page view, with browser extensions tripping it constantly. That needs no code.
+
+Sentry has CSP-specific inbound filters at **Settings → Projects → open-next → Security Headers → CSP**: an "Additional ignored sources" list matched against `blocked_uri`, `source_file` and `document_uri`, plus an optional built-in default list of known-noisy sources. **Filtered reports are dropped at ingest and do not count against quota** — they appear in Stats as "Filtered". Add `chrome-extension` and `moz-extension` and enable the default list before the soak starts, not after.
+
+##### The shared project is a known cost, accepted
+
+Reports go to `open-next`, the project that already receives frontend errors, because its DSN is already plumbed through production env and a second project would need a second variable in every environment. The cost is real and belongs in the pre-flight rather than discovered mid-soak: CSP violations share quota and alerting with genuine frontend errors, during the one period they are expected to be noisy. **Before chunk 3 deploys, check what alerting is attached to `open-next` and confirm a soak's worth of violations will not page anybody.** If it does, that is the trigger to split the project after all.
+
+##### Not built: a first-party collector
+
+The alternative is a route handler — the repo already has four, e.g. `frontends/main/src/app/public-env.json/route.ts` — that accepts both report formats, filters and samples in our own code, and forwards via the Sentry SDK. That is the workaround the commenters on getsentry/sentry#38940 settled on, and it is the documented upgrade path if `report-uri` support actually erodes or if the Reporting API becomes the only way to collect something we need.
+
+It is not built now because it adds a public unauthenticated POST endpoint to the critical path of a soak, plus code to a chunk already estimated at ~200 lines, to solve a volume problem that Sentry's inbound filters solve for free.
+
+**A note on `connect-src`.** Sentry's documentation warns that its ingest domain must be in `default-src` or `connect-src` or "browsers will block requests that submit policy violations". Per spec a violation report is sent by the user agent and is not itself subject to the policy, so this should not be true — but D10's `connect-src 'self' https:` covers the ingest host either way, so the question is moot here and is recorded only so a future tightening of `connect-src` knows to check it rather than assume.
+
+**Decided by:** @rhysyngsun. **Confirmed during the soak, not before:** that reports actually arrive. An empty stream must be distinguishable from a broken pipeline — see chunk 3's done-condition, which already requires the same proof for `frame-ancestors`.
 
 #### D7. `frame-ancestors` is two values, not one list (decided)
 
@@ -279,7 +316,7 @@ Google's preferred integration is a nonce, and reCAPTCHA also supports `'strict-
 
 **What is still open:** whether the values above survive contact with production. That is chunk 3's soak to answer.
 
-**Who decides:** whoever picks up `tk-chunk-3-csp-report-only-on-learn-mit-edu-emitted-f8001f`, in review on this RFC, alongside D6.
+**Who decides:** whoever picks up `tk-chunk-3-csp-report-only-on-learn-mit-edu-emitted-f8001f`, in review on this RFC. D6, which this previously sat alongside, is now decided.
 
 #### D11. Whether the site `script-src` permits arbitrary HTTPS hosts, or GTM loses its deploy-free workflow (decided)
 
@@ -394,7 +431,7 @@ The original four-chunk plan had the per-route-group branch arriving at the enfo
 2. **API cache scoping** — `tk-chunk-2-cache-control-no-store-on-user-specific--c0a90d`, ~80 lines estimated / ~430 actual, touches new `main/cache_policy.py` and `main/middleware/cache_policy.py` plus their tests, `main/utils.py` (the SHARED stamp), `main/utils_test.py` and `main/settings.py`. D5 decided; no open dependency.
    Done when an authenticated response carries `Cache-Control: no-store` and an anonymous search response still carries its existing caching headers, both asserted in tests rather than checked by hand.
 
-3. **CSP report-only, per route group** — `tk-chunk-3-csp-report-only-on-learn-mit-edu-emitted-f8001f`, ~200 lines, touches a new `frontends/main/src/common/csp.ts` and its test, plus `frontends/main/src/proxy.ts`, `frontends/main/src/proxy.test.ts` and `frontends/main/src/nextConfig.test.ts`. Requires D6 and D10.
+3. **CSP report-only, per route group** — `tk-chunk-3-csp-report-only-on-learn-mit-edu-emitted-f8001f`, ~200 lines, touches a new `frontends/main/src/common/csp.ts` and its test, plus `frontends/main/src/proxy.ts`, `frontends/main/src/proxy.test.ts` and `frontends/main/src/nextConfig.test.ts`. Requires D10 only; D6 is decided.
    Ships **both** policies as `Content-Security-Policy-Report-Only`, **including `frame-ancestors`** — report-only reports it without blocking (see D7), which is the pre-enforcement signal on who actually frames the site. Ship the intended values: `'self'` for `(site)`, `*` for `(embed)`.
    Done when both headers are live, violations are arriving at the chosen collector, a violation sample has been gathered **per route group** over a stated soak window, and `frame-ancestors` reporting has been confirmed to actually fire — load a framed page from an off-origin test page and check a report lands, so that later silence can be read as absence rather than as a broken pipeline.
 
@@ -437,7 +474,7 @@ Assert per directive against a parsed policy, not against the whole header strin
 
 #### Rollback
 
-Chunks 1, 2, 4a and 4b revert cleanly — headers appear and disappear with the deploy, and no data or external contract moves. Chunk 3 is report-only and carries no user-visible behaviour to roll back, though a misconfigured collector can generate significant report volume; that is a reason to settle D6's sampling story before shipping, not a reason to skip the soak. Chunk 3b writes only telemetry.
+Chunks 1, 2, 4a and 4b revert cleanly — headers appear and disappear with the deploy, and no data or external contract moves. Chunk 3 is report-only and carries no user-visible behaviour to roll back, though a misconfigured collector can generate significant report volume; D6 settles that with Sentry's CSP inbound filters, which drop noise at ingest without consuming quota. Chunk 3b writes only telemetry.
 
 One asymmetry to plan for: a 4a regression surfaces on **other people's sites**, not ours. Nobody here is watching an embedded player on a third-party page, and an enforced-CSP breakage there looks like a blank frame to that site's visitors. Reverting is trivial; noticing is the hard part, which is why 4a's done-condition is an explicit manual check rather than an absence of alerts.
 
@@ -455,8 +492,9 @@ One asymmetry to plan for: a 4a regression surfaces on **other people's sites**,
 
 |     | Question                                                                                               | Who answers                                        |
 | --- | ------------------------------------------------------------------------------------------------------ | -------------------------------------------------- |
-| D6  | Which reporting mechanism and ingest path collects CSP violations, and how the volume is sampled       | Implementer of chunk 3, in review on this RFC      |
 | D10 | Whether D10's directive values survive production, and which reCAPTCHA hosts the policy actually needs | Chunk 3's soak, read by the implementer of chunk 3 |
+
+D6 is closed. It was "where CSP violation reports are collected", and the answer is narrower than it looks: `report-uri` to the existing `open-next` Sentry project, with `report-to` **deliberately omitted** because Sentry cannot ingest the Reporting API format and browsers that understand `report-to` ignore `report-uri` — so following Sentry's own setup guide would have produced an empty violation stream from most traffic, silently. Volume is handled by Sentry's CSP inbound filters rather than by code. See D6.
 
 D5 is closed. It was "which mechanism scopes `no-store` to user-specific responses", and it was answered by building it: a fail-closed response middleware over a classification layer that reuses the view-cache decorators already in `main/utils.py`. The one thing it still owes is a production baseline — an authenticated `curl` against `/api/v0/users/me/`, which needs a session nobody has run yet. See D5.
 
