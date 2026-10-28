@@ -634,6 +634,7 @@ describe("ProgramAsCourseCard", () => {
     setMockResponse.delete(clearUrl, undefined)
     const basketUrl = mitxonline.urls.baskets.createFromProduct(product.id)
     setMockResponse.post(basketUrl, { id: 1, items: [] })
+    mitxonline.mockEnrollmentEligible()
 
     renderWithProviders(
       <ProgramAsCourseCard

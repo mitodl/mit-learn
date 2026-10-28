@@ -13,6 +13,7 @@ import { notFound } from "next/navigation"
 import { bootstrapApiClients } from "@/bootstrap/api"
 import { getCacheSMaxageSeconds } from "@/common/config"
 import { showErrorToast } from "@/page-components/Toaster/toastStore"
+import { rejectedComplianceFields } from "@/page-components/EnrollmentDialogs/complianceFields"
 // Type-only: augments `mutation.meta` (see api/src/mutations/mutationMeta.ts).
 import "api/mutation-meta"
 import type { MutationErrorMeta } from "api/mutation-meta"
@@ -71,6 +72,9 @@ const resolveErrorMessage = (
  * toast unless the mutation opts out via `meta.showErrorToast === false`. This
  * guarantees a mutation failure is never silent.
  *
+ * The one exception is an enrollment rejected on profile fields the compliance
+ * dialog can fix: `useComplianceGate` reopens the dialog for those instead.
+ *
  * Exported for unit testing; wired into the browser client's `MutationCache`.
  */
 export const handleMutationError = (
@@ -81,6 +85,7 @@ export const handleMutationError = (
 ): void => {
   const meta = mutation.meta
   if (meta?.showErrorToast === false) return
+  if (rejectedComplianceFields(error).length > 0) return
   showErrorToast(resolveErrorMessage(meta, error, variables), {
     contactSupport: meta?.contactSupport === true,
   })

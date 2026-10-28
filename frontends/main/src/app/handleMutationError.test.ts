@@ -96,3 +96,28 @@ test("passes meta.contactSupport through to the toast", () => {
     contactSupport: true,
   })
 })
+
+describe("compliance rejections", () => {
+  const rejection = (missingFields: string[]) => ({
+    response: {
+      status: 400,
+      data: {
+        detail: "Unable to complete enrollment. Error code: CS_701.",
+        reason_code: "CS_701",
+        missing_fields: missingFields,
+      },
+    },
+  })
+
+  test("are left to the compliance dialog when it can fix them", () => {
+    fireError({ contactSupport: true }, rejection(["last_name"]))
+    expect(mockShowErrorToast).not.toHaveBeenCalled()
+  })
+
+  test("still toast when they name only fields the dialog can't fix", () => {
+    fireError({ contactSupport: true }, rejection(["email"]))
+    expect(mockShowErrorToast).toHaveBeenCalledWith(GENERIC_ERROR_MESSAGE, {
+      contactSupport: true,
+    })
+  })
+})

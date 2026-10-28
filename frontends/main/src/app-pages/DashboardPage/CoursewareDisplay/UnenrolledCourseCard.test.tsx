@@ -18,6 +18,11 @@ import { cartesianProduct } from "ol-test-utilities"
 import { UnenrolledCourseCard } from "./UnenrolledCourseCard"
 import { trackCourseEnrolled, trackBeginCheckout } from "@/common/analytics/gtm"
 
+// The paid path checks enrollment eligibility before the cart.
+beforeEach(() => {
+  mitxonline.mockEnrollmentEligible()
+})
+
 jest.mock("@/common/analytics/gtm", () => ({
   ...jest.requireActual("@/common/analytics/gtm"),
   trackCourseEnrolled: jest.fn(),
