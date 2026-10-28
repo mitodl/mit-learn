@@ -5469,6 +5469,7 @@ components:
           readOnly: true
         program_letter_generate_url:
           type: string
+          nullable: true
           readOnly: true
         program_letter_share_url:
           type: string

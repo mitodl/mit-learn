@@ -612,6 +612,26 @@ def test_program_letter_api_view_returns_404_for_invalid_id(
     assert response.status_code == 404
 
 
+def test_list_user_program_certificates_without_micromasters_program_id(client, user):
+    """
+    A certificate for a program with no MicroMasters id (e.g. DEDP Public
+    Policy, which only ran on MITx Online) lists with a null generate URL
+    instead of failing the whole request.
+    """
+    client.force_login(user)
+    cert = ProgramCertificateFactory(
+        user_email=user.email, micromasters_program_id=None
+    )
+
+    resp = client.get(reverse("profile:v0:user_program_certificates_api-list"))
+
+    assert resp.status_code == 200
+    [item] = resp.json()
+    assert item["record_hash"] == cert.record_hash
+    assert item["program_letter_generate_url"] is None
+    assert item["program_letter_share_url"]
+
+
 @pytest.mark.parametrize("is_anonymous", [True, False])
 def test_list_user_program_certificates(mocker, client, user, is_anonymous):
     """
