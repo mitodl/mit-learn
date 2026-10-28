@@ -1,7 +1,8 @@
 import React from "react"
-import { render, waitFor } from "@testing-library/react"
+import { waitFor } from "@testing-library/react"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import ConfiguredPostHogProvider from "@/page-components/ConfiguredPostHogProvider/ConfiguredPostHogProvider"
+import { renderWithProviders } from "@/test-utils"
 import { FeatureFlags } from "./feature_flags"
 import { useFeatureFlagsLoaded } from "./useFeatureFlagsLoaded"
 
@@ -23,7 +24,7 @@ const setupFlagStates = (env: Record<string, string>) => {
     })
     return null
   }
-  render(
+  renderWithProviders(
     <ConfiguredPostHogProvider>
       <Probe />
     </ConfiguredPostHogProvider>,
