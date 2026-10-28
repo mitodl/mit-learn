@@ -8,7 +8,7 @@ import { receiptView } from "@/common/urls"
 import { DisplayModeEnum } from "@mitodl/mitxonline-api-axios/v2"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import { ProgramEnrollmentCard } from "./ProgramEnrollmentCard"
-import { setupOrderHistory } from "./test-utils"
+import { PAID_PROGRAM_ENROLLMENT_MODES, setupOrderHistory } from "./test-utils"
 
 jest.mock("posthog-js/react")
 
@@ -103,36 +103,42 @@ describe.each([
     ).not.toBeInTheDocument()
   })
 
-  test("shows 'Certificate track' for verified enrollment without a certificate", () => {
-    const programEnrollment =
-      mitxonline.factories.enrollment.programEnrollmentV3({
-        enrollment_mode: "verified",
-        certificate: null,
-      })
-    renderWithProviders(
-      <ProgramEnrollmentCard programEnrollment={programEnrollment} />,
-    )
-    expect(within(getCard()).getByTestId("upgraded-banner")).toHaveTextContent(
-      "Certificate track",
-    )
-  })
+  test.each(PAID_PROGRAM_ENROLLMENT_MODES)(
+    "shows 'Certificate track' for %s enrollment without a certificate",
+    (enrollmentMode) => {
+      const programEnrollment =
+        mitxonline.factories.enrollment.programEnrollmentV3({
+          enrollment_mode: enrollmentMode,
+          certificate: null,
+        })
+      renderWithProviders(
+        <ProgramEnrollmentCard programEnrollment={programEnrollment} />,
+      )
+      expect(
+        within(getCard()).getByTestId("upgraded-banner"),
+      ).toHaveTextContent("Certificate track")
+    },
+  )
 
-  test("shows 'View Certificate' in place of 'Certificate track' when verified enrollment has a certificate", () => {
-    const programEnrollment =
-      mitxonline.factories.enrollment.programEnrollmentV3({
-        enrollment_mode: "verified",
-        certificate: { uuid: "abc", link: "https://example.com/cert/" },
-      })
-    renderWithProviders(
-      <ProgramEnrollmentCard programEnrollment={programEnrollment} />,
-    )
-    expect(
-      within(getCard()).queryByTestId("upgraded-banner"),
-    ).not.toBeInTheDocument()
-    expect(
-      within(getCard()).getAllByRole("link", { name: /View Certificate/ }),
-    ).toHaveLength(1)
-  })
+  test.each(PAID_PROGRAM_ENROLLMENT_MODES)(
+    "shows 'View Certificate' in place of 'Certificate track' when %s enrollment has a certificate",
+    (enrollmentMode) => {
+      const programEnrollment =
+        mitxonline.factories.enrollment.programEnrollmentV3({
+          enrollment_mode: enrollmentMode,
+          certificate: { uuid: "abc", link: "https://example.com/cert/" },
+        })
+      renderWithProviders(
+        <ProgramEnrollmentCard programEnrollment={programEnrollment} />,
+      )
+      expect(
+        within(getCard()).queryByTestId("upgraded-banner"),
+      ).not.toBeInTheDocument()
+      expect(
+        within(getCard()).getAllByRole("link", { name: /View Certificate/ }),
+      ).toHaveLength(1)
+    },
+  )
 
   test("does not show 'Certificate track' for audit enrollment", () => {
     const programEnrollment =
@@ -218,25 +224,28 @@ describe.each([
     ).not.toBeInTheDocument()
   })
 
-  test("context menu hides Unenroll for verified enrollment", async () => {
-    const program = mitxonline.factories.programs.simpleProgram({
-      display_mode: null,
-    })
-    const programEnrollment =
-      mitxonline.factories.enrollment.programEnrollmentV3({
-        program,
-        enrollment_mode: "verified",
+  test.each(PAID_PROGRAM_ENROLLMENT_MODES)(
+    "context menu hides Unenroll for %s enrollment",
+    async (enrollmentMode) => {
+      const program = mitxonline.factories.programs.simpleProgram({
+        display_mode: null,
       })
-    renderWithProviders(
-      <ProgramEnrollmentCard programEnrollment={programEnrollment} />,
-    )
-    await user.click(
-      within(getCard()).getByRole("button", { name: "More options" }),
-    )
-    expect(
-      screen.queryByRole("menuitem", { name: "Unenroll" }),
-    ).not.toBeInTheDocument()
-  })
+      const programEnrollment =
+        mitxonline.factories.enrollment.programEnrollmentV3({
+          program,
+          enrollment_mode: enrollmentMode,
+        })
+      renderWithProviders(
+        <ProgramEnrollmentCard programEnrollment={programEnrollment} />,
+      )
+      await user.click(
+        within(getCard()).getByRole("button", { name: "More options" }),
+      )
+      expect(
+        screen.queryByRole("menuitem", { name: "Unenroll" }),
+      ).not.toBeInTheDocument()
+    },
+  )
 
   test("Receipt appears for verified program enrollment", async () => {
     const programEnrollment =

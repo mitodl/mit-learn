@@ -29,7 +29,10 @@ import {
   getCourseDateText,
   hasCourseStaffRole,
 } from "./courseDateUtils"
-import { isVerifiedEnrollmentMode } from "@/common/mitxonline"
+import {
+  isPaidProgramEnrollmentMode,
+  isVerifiedEnrollmentMode,
+} from "@/common/mitxonline"
 import { RiArrowUpCircleLine, RiAwardLine, RiMore2Line } from "@remixicon/react"
 import { useReplaceBasketItem } from "@/common/mitxonline/useReplaceBasketItem"
 import { useComplianceGate } from "@/common/mitxonline/useComplianceGate"
@@ -334,7 +337,7 @@ export const EnrolledCourseCard = ({
     !(run?.upgrade_deadline && isInPast(run.upgrade_deadline))
   const isVerifiedProgramEnrollment =
     Boolean(ancestorContext?.useVerifiedEnrollment) ||
-    isVerifiedEnrollmentMode(
+    isPaidProgramEnrollmentMode(
       ancestorContext?.programEnrollment?.enrollment_mode,
     )
   const enrollmentStatus = getDashboardEnrollmentStatus({

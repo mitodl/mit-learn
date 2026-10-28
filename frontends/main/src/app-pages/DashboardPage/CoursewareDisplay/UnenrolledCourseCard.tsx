@@ -17,7 +17,7 @@ import {
 } from "./CardShared"
 import { getCourseDateText } from "./courseDateUtils"
 import { EnrollmentStatus, getBestRun } from "./helpers"
-import { isVerifiedEnrollmentMode } from "@/common/mitxonline"
+import { isPaidProgramEnrollmentMode } from "@/common/mitxonline"
 import { useEnrollmentHandler } from "./hooks/useEnrollmentHandler"
 import { EnrollmentStatusIcon } from "./EnrollmentStatus"
 import { ProgressBadge } from "./ProgressBadge"
@@ -71,7 +71,7 @@ export const UnenrolledCourseCard = ({
   const handleEnrollmentClick = React.useCallback(() => {
     const isVerifiedProgramEnrollment =
       Boolean(ancestorContext?.useVerifiedEnrollment) ||
-      isVerifiedEnrollmentMode(
+      isPaidProgramEnrollmentMode(
         ancestorContext?.programEnrollment?.enrollment_mode,
       )
 
