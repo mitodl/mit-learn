@@ -2026,6 +2026,82 @@ describe("dashboardViewModel", () => {
         ),
       ).toEqual([900])
     })
+
+    test("leaves out other-track courses the learner is only enrolled in through a contract", () => {
+      const { reqTree, programCourses, methods } = setup()
+      const { otherTrackItems } = buildRequirementSections({
+        reqTree,
+        programCourses,
+        enrollmentsByCourseId: {
+          202: [
+            factories.enrollment.courseEnrollment({
+              run: { course: { id: 202 } },
+              b2b_contract_id: 5,
+            }),
+          ],
+        },
+        programEnrollmentsById: {},
+        requiredPrograms: [],
+        requiredProgramModuleCoursesByProgramId: {},
+        ancestorProgramEnrollment: factories.enrollment.programEnrollmentV3({
+          track: { id: methods.id, title: "Methods" },
+        }),
+      })
+      expect(otherTrackItems).toEqual([])
+    })
+
+    /**
+     * Policy (chosen) holds `policyItem`; Development holds `devItem`.
+     * Program 900 is a program-as-course whose only module is course 11.
+     */
+    const buildWithNestedProgram = (
+      policyItem: "program" | "course",
+      devItem: "program" | "course",
+    ) => {
+      const root = new RequirementTreeBuilder()
+      const container = root.addOperator({
+        operator: "min_number_of",
+        operator_value: "1",
+      })
+      const add = (track: RequirementTreeBuilder, item: string) => {
+        const op = track.addOperator({ operator: "all_of" })
+        if (item === "program") op.addProgram({ program: 900 })
+        else op.addCourse({ course: 11 })
+      }
+      const policy = container.addTrack({ title: "Policy" })
+      add(policy, policyItem)
+      add(container.addTrack({ title: "Development" }), devItem)
+      const moduleCourse = factories.courses.course({ id: 11 })
+      return buildRequirementSections({
+        reqTree: root.serialize(),
+        programCourses: [moduleCourse],
+        enrollmentsByCourseId: { 11: passed(11) },
+        programEnrollmentsById: {},
+        requiredPrograms: [
+          factories.programs.program({
+            id: 900,
+            display_mode: DisplayModeEnum.Course,
+            courses: [11],
+          }),
+        ],
+        requiredProgramModuleCoursesByProgramId: { 900: [moduleCourse] },
+        ancestorProgramEnrollment: factories.enrollment.programEnrollmentV3({
+          track: { id: policy.id, title: "Policy" },
+        }),
+      })
+    }
+
+    test("does not repeat a course already shown inside a nested program's card", () => {
+      expect(
+        buildWithNestedProgram("program", "course").otherTrackItems,
+      ).toEqual([])
+    })
+
+    test("does not list another track's program just for a course already shown", () => {
+      expect(
+        buildWithNestedProgram("course", "program").otherTrackItems,
+      ).toEqual([])
+    })
   })
 
   describe("resolveDisplayedRunAndEnrollment", () => {

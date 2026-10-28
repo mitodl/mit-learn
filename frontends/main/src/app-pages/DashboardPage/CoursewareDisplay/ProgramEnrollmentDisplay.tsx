@@ -269,7 +269,7 @@ const ProgramEnrollmentDisplay: React.FC<ProgramEnrollmentDisplayProps> = ({
               variant="subtitle2"
               color={theme.custom.colors.red}
             >
-              Other courses in this program
+              Other courses in this program you have started
             </Typography>
             <Typography
               variant="body2"

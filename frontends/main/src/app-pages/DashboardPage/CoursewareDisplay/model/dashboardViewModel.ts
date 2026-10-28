@@ -1139,54 +1139,53 @@ const buildRequirementSections = ({
   const trackState = { tracks, currentTrack }
 
   // Courses the learner is enrolled in that sit only in tracks other than the
-  // chosen one (or in any track, before one is chosen) would otherwise be
-  // hidden, and My Learning skips courses in the learner's programs too.
-  const getOtherTrackItems = (shown: RequirementSection[]) => {
-    const resourceKey = (resource: {
-      type: "course" | "program"
-      id: number
-    }) => `${resource.type}-${resource.id}`
-    const seen = new Set(
-      shown.flatMap((section) =>
-        section.items.map((item) =>
-          item.kind === "course"
-            ? resourceKey({ type: "course", id: item.entry.course.id })
-            : resourceKey({
-                type: "program",
-                id:
-                  item.kind === "program"
-                    ? item.program.id
-                    : item.courseProgram.id,
-              }),
-        ),
-      ),
-    )
-    const isEnrolled = (resource: {
-      type: "course" | "program"
-      id: number
-    }) => {
-      if (resource.type === "course") {
-        return (enrollmentsByCourseId[resource.id] ?? []).length > 0
-      }
-      return (
-        Boolean(programEnrollmentsById[resource.id]) ||
-        (requiredProgramModuleCoursesByProgramId[resource.id] ?? []).some(
-          (course) => (enrollmentsByCourseId[course.id] ?? []).length > 0,
+  // chosen one would otherwise be hidden, and My Learning skips courses in the
+  // learner's programs too. Contract enrollments are left out, as everywhere
+  // else on this dashboard.
+  type Resource = { type: "course" | "program"; id: number }
+  const resourceKey = (resource: Resource) => `${resource.type}-${resource.id}`
+  const moduleCourseKeys = (resource: Resource) =>
+    resource.type === "program"
+      ? (requiredProgramModuleCoursesByProgramId[resource.id] ?? []).map(
+          (course) => resourceKey({ type: "course", id: course.id }),
         )
-      )
-    }
-    return tracked.tracks
-      .filter((_track, index) => index !== currentIndex)
-      .flatMap((track) => track.sections.flatMap((section) => section.items))
-      .filter((resource) => {
-        const key = resourceKey(resource)
-        if (seen.has(key) || !isEnrolled(resource)) return false
-        seen.add(key)
-        return true
-      })
-      .map((resource) => resolveRequirementItem(resource, resolveContext))
-      .filter((item): item is RequirementSectionItem => item !== null)
-  }
+      : []
+  // A nested program's card also shows its courses, so they count as shown.
+  const seen = new Set(
+    [
+      ...tracked.sectionsBeforeTracks,
+      ...(tracked.tracks[currentIndex]?.sections ?? []),
+      ...tracked.sectionsAfterTracks,
+    ].flatMap((section) =>
+      section.items.flatMap((resource) => [
+        resourceKey(resource),
+        ...moduleCourseKeys(resource),
+      ]),
+    ),
+  )
+  const hasEnrollment = (courseId: number) =>
+    (enrollmentsByCourseId[courseId] ?? []).some(isNonContractEnrollment)
+  const isEnrolled = (resource: Resource) =>
+    resource.type === "course"
+      ? hasEnrollment(resource.id)
+      : Boolean(programEnrollmentsById[resource.id]) ||
+        (requiredProgramModuleCoursesByProgramId[resource.id] ?? []).some(
+          (course) =>
+            !seen.has(resourceKey({ type: "course", id: course.id })) &&
+            hasEnrollment(course.id),
+        )
+  const otherTrackItems = tracked.tracks
+    .flatMap((track) => track.sections.flatMap((section) => section.items))
+    .filter((resource) => {
+      if (seen.has(resourceKey(resource)) || !isEnrolled(resource)) {
+        return false
+      }
+      seen.add(resourceKey(resource))
+      moduleCourseKeys(resource).forEach((key) => seen.add(key))
+      return true
+    })
+    .map((resource) => resolveRequirementItem(resource, resolveContext))
+    .filter((item): item is RequirementSectionItem => item !== null)
 
   if (currentTrackSections.length > 0) {
     const [first, ...rest] = currentTrackSections
@@ -1200,7 +1199,7 @@ const buildRequirementSections = ({
       sections,
       ...overall(sections),
       trackState,
-      otherTrackItems: getOtherTrackItems(sections),
+      otherTrackItems,
     }
   }
 
@@ -1218,7 +1217,7 @@ const buildRequirementSections = ({
     sections: [...before, placeholder, ...after],
     ...overall([...before, ...after]),
     trackState,
-    otherTrackItems: getOtherTrackItems([...before, ...after]),
+    otherTrackItems,
   }
 }
 

@@ -2536,7 +2536,7 @@ describe("ProgramEnrollmentDisplay with program tracks", () => {
       "Core Courses",
       "General Track courses",
       "Capstone",
-      "Other courses in this program",
+      "Other courses in this program you have started",
     ])
     expect(screen.getByText("across all tracks")).toBeInTheDocument()
     const other = screen.getByTestId("other-track-courses")
