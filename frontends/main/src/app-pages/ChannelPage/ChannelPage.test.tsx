@@ -390,6 +390,10 @@ describe.each(NON_UNIT_CHANNEL_TYPES)(
  */
 describe("while the feature flags are still loading", () => {
   const posthogKey = process.env.NEXT_PUBLIC_POSTHOG_API_KEY
+  beforeEach(() => {
+    process.env.NEXT_PUBLIC_POSTHOG_API_KEY = "ph-test-key"
+    jest.mocked(useFeatureFlagsLoaded).mockReturnValue(false)
+  })
   afterEach(() => {
     if (posthogKey === undefined) {
       delete process.env.NEXT_PUBLIC_POSTHOG_API_KEY
@@ -404,9 +408,7 @@ describe("while the feature flags are still loading", () => {
    * page is genuinely off. Waiting is what stops a user who is entitled to
    * the page being shown the one for someone who is not.
    */
-  test("holds a spinner rather than deciding on a bootstrapped flag", async () => {
-    process.env.NEXT_PUBLIC_POSTHOG_API_KEY = "ph-test-key"
-    jest.mocked(useFeatureFlagsLoaded).mockReturnValue(false)
+  test("holds a spinner on a page a flag decides", async () => {
     const { channel } = setupApis({
       search_filter: "topic=Physics",
       channel_type: ChannelTypeEnum.Topic,
@@ -422,19 +424,35 @@ describe("while the feature flags are still loading", () => {
   })
 
   /**
-   * With no PostHog configured there is nothing to wait for: the provider
-   * neither initialises nor mounts, so the flags never report themselves in
-   * and waiting on them would hold the page on a spinner for good. Every
-   * flag is off in that case, which is the page this one falls back to.
+   * Only topics and departments are redesigned. Every other channel draws the
+   * same page whatever the flags come back saying, so waiting on them buys
+   * nothing and costs the reader a spinner.
    */
-  test("draws the page rather than waiting when PostHog is not configured", async () => {
-    delete process.env.NEXT_PUBLIC_POSTHOG_API_KEY
-    jest.mocked(useFeatureFlagsLoaded).mockReturnValue(false)
-    /* A unit channel, which is none of the flags' business: the gate held
-       every channel page, not only the ones the redesign touches. */
+  test("draws a page no flag decides rather than waiting on one", async () => {
     const { channel } = setupApis({
       search_filter: "department=mechanical",
       channel_type: ChannelTypeEnum.Unit,
+    })
+    renderWithProviders(<ChannelPage />, {
+      url: `/c/${channel.channel_type}/${channel.name}`,
+    })
+
+    await screen.findByRole("heading", { level: 1, name: channel.title })
+    expect(screen.queryByRole("progressbar")).toBe(null)
+  })
+
+  /**
+   * With no PostHog configured there is nothing to wait for either: the
+   * provider neither initialises nor mounts, so the flags never report
+   * themselves in and waiting would hold the page on a spinner for good.
+   * Every flag is off in that case, which is the page this one falls back to.
+   */
+  test("draws the page when PostHog is not configured", async () => {
+    delete process.env.NEXT_PUBLIC_POSTHOG_API_KEY
+    jest.mocked(useFeatureFlagEnabled).mockReturnValue(false)
+    const { channel } = setupApis({
+      search_filter: "topic=Physics",
+      channel_type: ChannelTypeEnum.Topic,
     })
     renderWithProviders(<ChannelPage />, {
       url: `/c/${channel.channel_type}/${channel.name}`,

@@ -6,9 +6,17 @@ import { ChannelPageTemplate } from "./ChannelPageTemplate"
 import { useChannelDetail } from "api/hooks/channels"
 import ChannelSearch from "./ChannelSearch"
 import { ChannelTypeEnum } from "api/v0"
-import { LoadingSpinner, styled, Typography } from "ol-components"
+import {
+  HEADER_HEIGHT,
+  HEADER_HEIGHT_MD,
+  LoadingSpinner,
+  styled,
+  Typography,
+} from "ol-components"
 import { getConstantSearchParams } from "./searchRequests"
-import useChannelPageRedesign from "./useChannelPageRedesign"
+import useChannelPageRedesign, {
+  channelTypeUsesRedesignFlag,
+} from "./useChannelPageRedesign"
 import dynamic from "next/dynamic"
 import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
 import { env } from "@/env"
@@ -26,18 +34,26 @@ type RouteParams = {
 /**
  * The spinner while the flag loads, which stands in for the whole page.
  *
- * `LoadingSpinner` centres what is in it but is only as tall as the spinner,
- * so left alone it sits against the header with the rest of the page blank
- * below it. Filling the main element puts it in the middle of what the page
- * would have been -- the element is already sized to the viewport less the
- * header and the footer, so there is nothing here to keep in step with them.
+ * `LoadingSpinner` centres what it holds but is only as tall as the spinner,
+ * so it needs to be given something to centre within. It is pinned to the
+ * page below the header instead of being centred by halves: `absolute` has
+ * nothing to resolve against here -- neither wrapper around `main` is
+ * positioned -- so it would answer to the initial containing block, and land
+ * wherever that happens to put it rather than anywhere meant.
+ *
+ * Out of flow costs nothing: `main` is a flex child set to fill, so it keeps
+ * its height with the spinner lifted off it and the footer stays put.
  */
-const PageLoadingSpinner = styled(LoadingSpinner)({
-  position: "absolute",
-  left: "50%",
-  top: "50%",
-  transform: "translate(-50%, -50%)",
-})
+const PageLoadingSpinner = styled(LoadingSpinner)(({ theme }) => ({
+  position: "fixed",
+  left: 0,
+  right: 0,
+  top: HEADER_HEIGHT,
+  bottom: 0,
+  [theme.breakpoints.down("md")]: {
+    top: HEADER_HEIGHT_MD,
+  },
+}))
 
 const ChannelPage: React.FC = () => {
   const { channelType, name } = useParams<RouteParams>()
@@ -55,14 +71,22 @@ const ChannelPage: React.FC = () => {
    * deciding on a bootstrapped `false` — which reads the same as the page
    * being switched off. Same reasoning as ContractAdminPage.
    *
-   * Only where there is something to wait for. With no PostHog key the
+   * Only where there is something to wait for, which is twice worth asking.
+   *
+   * Only these two channel types are redesigned. Every other one draws the
+   * page it has always drawn whatever the flags come back saying, so waiting
+   * on them buys a unit or pathway page nothing but the spinner.
+   *
+   * And only where there is a PostHog at all: with no key configured the
    * provider neither initialises nor mounts, so nothing ever reports the
-   * flags in and this would hold every channel page on a spinner that never
-   * resolves. PostHog being absent is not the same as its answer being
-   * pending: every flag is simply off, which is the page this one falls back
-   * to, so it renders instead of waiting.
+   * flags in and this would hold the page on a spinner for good. PostHog
+   * being absent is not the same as its answer being pending -- absent means
+   * every flag is off, which is the page this one falls back to.
    */
-  const awaitingFlags = !!env("NEXT_PUBLIC_POSTHOG_API_KEY") && !flagsLoaded
+  const awaitingFlags =
+    channelTypeUsesRedesignFlag(String(channelType)) &&
+    !!env("NEXT_PUBLIC_POSTHOG_API_KEY") &&
+    !flagsLoaded
   if (awaitingFlags) {
     return <PageLoadingSpinner loading />
   }

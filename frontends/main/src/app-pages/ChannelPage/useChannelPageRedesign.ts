@@ -34,4 +34,19 @@ const useChannelPageRedesign = (channelType: string): boolean => {
   return false
 }
 
+/**
+ * Whether a flag decides anything for this channel type.
+ *
+ * Only the two above are redesigned; every other channel draws the one page
+ * it has always drawn, whatever the flags say. Worth asking before waiting on
+ * the flags to arrive -- there is nothing for them to change.
+ *
+ * Lives here rather than at the caller so the list cannot fall out of step
+ * with the one the hook branches on.
+ */
+const channelTypeUsesRedesignFlag = (channelType: string): boolean =>
+  channelType === ChannelTypeEnum.Topic ||
+  channelType === ChannelTypeEnum.Department
+
 export default useChannelPageRedesign
+export { channelTypeUsesRedesignFlag }
