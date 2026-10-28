@@ -346,10 +346,7 @@ class ProgramCertificateSerializer(BaseSerializer):
     program_letter_share_url = serializers.SerializerMethodField()
 
     def get_program_letter_generate_url(self, instance) -> str | None:
-        # The intercept URL is keyed on the MicroMasters program id. Programs
-        # that only ever ran on MITx Online (e.g. the DEDP Public Policy track)
-        # have none, so their certificates get no generate URL.
-        if instance.micromasters_program_id is None:
+        if not instance.has_program_letter:
             return None
         request = self.context.get("request")
         letter_url = reverse(
@@ -360,7 +357,9 @@ class ProgramCertificateSerializer(BaseSerializer):
             return request.build_absolute_uri(letter_url)
         return letter_url
 
-    def get_program_letter_share_url(self, instance) -> str:
+    def get_program_letter_share_url(self, instance) -> str | None:
+        if not instance.has_program_letter:
+            return None
         # Callers attach user_letter, creating the letter if needed, so this is
         # always a real URL -- same contract as when the get_or_create lived here.
         letter_url = instance.user_letter.get_absolute_url()

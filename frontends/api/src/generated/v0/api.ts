@@ -1934,7 +1934,7 @@ export interface Program {
 export interface ProgramCertificate {
   record_hash: string
   program_letter_generate_url: string | null
-  program_letter_share_url: string
+  program_letter_share_url: string | null
   program_title: string
   user_full_name?: string
   user_email: string

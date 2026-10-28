@@ -615,21 +615,51 @@ def test_program_letter_api_view_returns_404_for_invalid_id(
 def test_list_user_program_certificates_without_micromasters_program_id(client, user):
     """
     A certificate for a program with no MicroMasters id (e.g. DEDP Public
-    Policy, which only ran on MITx Online) lists with a null generate URL
-    instead of failing the whole request.
+    Policy, which only ran on MITx Online) lists with no letter URLs instead
+    of failing the whole request, and no letter is created for it. A
+    certificate with an id alongside it still gets its letter.
     """
     client.force_login(user)
     cert = ProgramCertificateFactory(
         user_email=user.email, micromasters_program_id=None
     )
+    other_cert = ProgramCertificateFactory(
+        user_email=user.email, micromasters_program_id=1
+    )
 
     resp = client.get(reverse("profile:v0:user_program_certificates_api-list"))
 
     assert resp.status_code == 200
-    [item] = resp.json()
-    assert item["record_hash"] == cert.record_hash
-    assert item["program_letter_generate_url"] is None
-    assert item["program_letter_share_url"]
+    items = {item["record_hash"]: item for item in resp.json()}
+    assert items[cert.record_hash]["program_letter_generate_url"] is None
+    assert items[cert.record_hash]["program_letter_share_url"] is None
+    assert not ProgramLetter.objects.filter(certificate=cert).exists()
+    letter = ProgramLetter.objects.get(user=user, certificate=other_cert)
+    assert items[other_cert.record_hash][
+        "program_letter_share_url"
+    ] == frontend_absolute_url(f"/program_letter/{letter.id}/view")
+
+
+def test_program_letter_api_view_without_micromasters_program_id(
+    client, settings, user
+):
+    """
+    A letter issued before certificates without a MicroMasters program id
+    stopped getting one 404s, rather than rendering whichever program's letter
+    the CMS returns first. Nothing is mocked, so the view has to stop before
+    the template fetch.
+    """
+    settings.MICROMASTERS_CMS_API_URL = "https://micromasters.example.com/api/v0/"
+    cert = ProgramCertificateFactory(
+        user_email=user.email, micromasters_program_id=None
+    )
+    letter = ProgramLetterFactory(user=user, certificate=cert)
+
+    response = client.get(
+        reverse("profile:v1:program_letters_api-detail", args=[letter.id])
+    )
+
+    assert response.status_code == 404
 
 
 @pytest.mark.parametrize("is_anonymous", [True, False])

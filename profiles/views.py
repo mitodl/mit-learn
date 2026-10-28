@@ -105,7 +105,12 @@ class ProgramLetterViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
     authentication_classes = []
     permission_classes = []
     serializer_class = ProgramLetterSerializer
-    queryset = ProgramLetter.objects.all()
+    # A letter for a certificate without a MicroMasters program id would render
+    # another program's letter (see ProgramCertificate.has_program_letter), so
+    # those 404 like a letter whose certificate is gone.
+    queryset = ProgramLetter.objects.filter(
+        certificate__micromasters_program_id__isnull=False
+    )
 
     def get_object(self) -> ProgramLetter:
         """
@@ -144,7 +149,7 @@ class UserProgramCertificateViewSet(viewsets.ViewSet):
         certificates = list(self.filter_queryset(queryset))
         letters = self.user_letters(request.user, certificates)
         for cert in certificates:
-            cert.user_letter = letters[cert.pk]
+            cert.user_letter = letters.get(cert.pk)
         serializer = ProgramCertificateSerializer(
             certificates, many=True, context={"request": request}
         )
@@ -154,11 +159,12 @@ class UserProgramCertificateViewSet(viewsets.ViewSet):
     def user_letters(user, certificates) -> dict:
         """
         Map certificate id to the user's ProgramLetter, creating any that don't
-        exist yet.
+        exist yet. Certificates without a program letter are left out.
 
         Serializing a certificate has always created its letter on demand; doing
         it here in bulk keeps that behaviour without a query per certificate.
         """
+        certificates = [cert for cert in certificates if cert.has_program_letter]
         letters = {
             letter.certificate_id: letter
             for letter in ProgramLetter.objects.filter(
