@@ -360,8 +360,9 @@ class ProgramCertificateSerializer(BaseSerializer):
     def get_program_letter_share_url(self, instance) -> str | None:
         if not instance.has_program_letter:
             return None
-        # Callers attach user_letter, creating the letter if needed, so this is
-        # always a real URL -- same contract as when the get_or_create lived here.
+        # Callers attach user_letter to every certificate with a letter,
+        # creating it if needed -- same contract as when the get_or_create
+        # lived here.
         letter_url = instance.user_letter.get_absolute_url()
         request = self.context.get("request")
         if request:
