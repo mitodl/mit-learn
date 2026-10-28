@@ -8,14 +8,11 @@ import { env, fullEnv } from "@/env"
 
 type FlagValue = boolean | string
 
-const keyedFlagValue = (value: string): FlagValue =>
-  value === "True" ? true : JSON.stringify(value)
-
 /**
- * Without an api key these values are final, so "false" must read false:
- * keyedFlagValue would make it the string '"false"', which hooks read as on.
+ * posthog-js/react reads a bootstrapped flag as enabled when it is truthy, so
+ * "false" has to become `false`: left as a string it would read as on.
  */
-const envFlagValue = (value: string): FlagValue => {
+const parseFlagValue = (value: string): FlagValue => {
   const lowered = value.toLowerCase()
   if (lowered === "true") return true
   if (lowered === "false") return false
@@ -27,9 +24,7 @@ const envFlagValue = (value: string): FlagValue => {
  * Previously computed at build time from process.env in next.config.js, which
  * bakes empty values when the image is built in CI without per-env values.
  */
-const getBootstrapFeatureFlags = (
-  parseValue: (value: string) => FlagValue = keyedFlagValue,
-): Record<string, FlagValue> | null => {
+const getBootstrapFeatureFlags = (): Record<string, FlagValue> | null => {
   if (typeof window === "undefined") return null
   const prefix = env("NEXT_PUBLIC_POSTHOG_FEATURE_PREFIX") ?? "FEATURE_"
   const envSource = fullEnv()
@@ -39,7 +34,7 @@ const getBootstrapFeatureFlags = (
   for (const [key, value] of Object.entries(envSource)) {
     if (value !== undefined && key.startsWith(fullPrefix)) {
       const flagName = key.replace(fullPrefix, "").replaceAll("_", "-")
-      flags[flagName] = parseValue(value)
+      flags[flagName] = parseFlagValue(value)
     }
   }
 
@@ -93,7 +88,7 @@ const EnvFlagsProvider: React.FC<{ children: React.ReactNode }> = ({
 }) => {
   const [bootstrap, setBootstrap] = useState<BootstrapConfig>()
   useEffect(() => {
-    setBootstrap({ featureFlags: getBootstrapFeatureFlags(envFlagValue) ?? {} })
+    setBootstrap({ featureFlags: getBootstrapFeatureFlags() ?? {} })
   }, [])
   return (
     <PostHogContext.Provider value={{ client: posthog, bootstrap }}>
