@@ -320,15 +320,17 @@ describe("ProgramEnrollmentCard program letter", () => {
   const setup = ({
     flagEnabled,
     mitxonlineProgramId,
+    shareUrl = SHARE_URL,
   }: {
     flagEnabled: boolean
     mitxonlineProgramId: number | null
+    shareUrl?: string | null
   }) => {
     mockedUseFeatureFlagEnabled.mockReturnValue(flagEnabled)
     setMockResponse.get(urls.programCertificates.list(), [
       programCertificateFactory.programCertificate({
         mitxonline_program_id: mitxonlineProgramId,
-        program_letter_share_url: SHARE_URL,
+        program_letter_share_url: shareUrl,
       }),
     ])
     const programEnrollment =
@@ -367,6 +369,21 @@ describe("ProgramEnrollmentCard program letter", () => {
 
   test("is hidden when no certificate matches this program", async () => {
     setup({ flagEnabled: true, mitxonlineProgramId: PROGRAM_ID + 1 })
+    await openMenu()
+
+    expect(
+      screen.queryByRole("menuitem", { name: "Program Letter" }),
+    ).not.toBeInTheDocument()
+  })
+
+  test("is hidden when the matching certificate has no letter", async () => {
+    // A certificate for a program with no MicroMasters id (e.g. DEDP Public
+    // Policy) has a null share url: there is no letter content for it.
+    setup({
+      flagEnabled: true,
+      mitxonlineProgramId: PROGRAM_ID,
+      shareUrl: null,
+    })
     await openMenu()
 
     expect(
