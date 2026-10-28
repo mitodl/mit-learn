@@ -330,8 +330,9 @@ def test_ocw_courses_etl(
 @pytest.mark.django_db
 @pytest.mark.parametrize("content_file_ids", [None, []])
 def test_ocw_courses_etl_no_content_files_ingested(settings, mocker, content_file_ids):
-    """Learning materials should be left alone if no content files were ingested"""
+    """Learning materials and units are left alone if no content files were ingested"""
     setup_s3_ocw(settings)
+    settings.OCW_DERIVE_UNITS = True
 
     mocker.patch("learning_resources.etl.pipelines.loaders.resource_upserted_actions")
     mock_load_content_files = mocker.patch(
@@ -340,6 +341,9 @@ def test_ocw_courses_etl_no_content_files_ingested(settings, mocker, content_fil
     )
     mock_load_learning_materials = mocker.patch(
         "learning_resources.etl.pipelines.loaders.load_learning_materials"
+    )
+    mock_load_course_units = mocker.patch(
+        "learning_resources.etl.pipelines.loaders.load_course_units"
     )
 
     pipelines.ocw_courses_etl(
@@ -351,6 +355,45 @@ def test_ocw_courses_etl_no_content_files_ingested(settings, mocker, content_fil
 
     mock_load_content_files.assert_called_once()
     mock_load_learning_materials.assert_not_called()
+    mock_load_course_units.assert_not_called()
+
+
+@mock_aws
+@pytest.mark.django_db
+@pytest.mark.parametrize("derive_units", [True, False])
+def test_ocw_courses_etl_units(settings, mocker, derive_units):
+    """Units are derived after the content files load, only with OCW_DERIVE_UNITS"""
+    setup_s3_ocw(settings)
+    settings.OCW_DERIVE_UNITS = derive_units
+
+    mocker.patch("learning_resources.etl.pipelines.loaders.resource_upserted_actions")
+    mocker.patch(
+        "learning_resources.etl.pipelines.loaders.load_content_files",
+        return_value=[1],
+    )
+    mocker.patch("learning_resources.etl.pipelines.loaders.load_learning_materials")
+    units = [{"external_id": "context"}]
+    mock_derive_units = mocker.patch(
+        "learning_resources.etl.pipelines.ocw.derive_units", return_value=units
+    )
+    mock_load_course_units = mocker.patch(
+        "learning_resources.etl.pipelines.loaders.load_course_units"
+    )
+
+    pipelines.ocw_courses_etl(
+        url_paths=[OCW_TEST_PREFIX],
+        force_overwrite=True,
+        start_timestamp=datetime(2020, 12, 15, tzinfo=UTC),
+        skip_content_files=False,
+    )
+
+    run = LearningResource.objects.get(readable_id="16.01+fall_2005").runs.first()
+    if derive_units:
+        mock_derive_units.assert_called_once_with(run)
+        mock_load_course_units.assert_called_once_with(run, units)
+    else:
+        mock_derive_units.assert_not_called()
+        mock_load_course_units.assert_not_called()
 
 
 @mock_aws
