@@ -555,7 +555,7 @@ def derive_units(run: LearningResourceRun) -> list[dict]:
         list of dict: unit data for load_course_units
     """
     return build_units_from_content_files(
-        run.content_files.filter(published=True).prefetch_related("content_tags")
+        run.content_files.visible().prefetch_related("content_tags")
     )
 
 
