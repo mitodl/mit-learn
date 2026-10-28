@@ -1,6 +1,7 @@
-import React, { useEffect } from "react"
+import React, { useEffect, useState } from "react"
 import posthog from "posthog-js"
-import { PostHogProvider, usePostHog } from "posthog-js/react"
+import type { BootstrapConfig } from "posthog-js"
+import { PostHogContext, PostHogProvider, usePostHog } from "posthog-js/react"
 import { useUserMe } from "api/hooks/user"
 import { INTERNAL_BOOTSTRAPPING_FLAG } from "@/common/feature_flags"
 import { env, fullEnv } from "@/env"
@@ -65,6 +66,27 @@ const PosthogIdentifier = () => {
   return null
 }
 
+/**
+ * Without an api key nothing ever loads flags from a PostHog server, so the
+ * env flags are the final values rather than placeholders. They go into the
+ * context's bootstrap slot, which posthog-js/react's hooks read while the
+ * client has loaded no flags. Set after mount, as the keyed path's init is, so
+ * the server render and hydration agree.
+ */
+const EnvFlagsProvider: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
+  const [bootstrap, setBootstrap] = useState<BootstrapConfig>()
+  useEffect(() => {
+    setBootstrap({ featureFlags: getBootstrapFeatureFlags() ?? {} })
+  }, [])
+  return (
+    <PostHogContext.Provider value={{ client: posthog, bootstrap }}>
+      {children}
+    </PostHogContext.Provider>
+  )
+}
+
 const ConfiguredPostHogProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
@@ -103,7 +125,7 @@ const ConfiguredPostHogProvider: React.FC<{ children: React.ReactNode }> = ({
   }, [])
 
   if (!env("NEXT_PUBLIC_POSTHOG_API_KEY")) {
-    return children
+    return <EnvFlagsProvider>{children}</EnvFlagsProvider>
   }
 
   return (

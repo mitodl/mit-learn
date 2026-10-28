@@ -21,6 +21,7 @@ jest.mock("posthog-js", () => ({
 jest.mock("posthog-js/react", () => {
   return {
     __esModule: true,
+    PostHogContext: jest.requireActual("posthog-js/react").PostHogContext,
     usePostHog: jest.fn(),
     PostHogProvider: ({ children }: { children: React.ReactNode }) => children,
   }
