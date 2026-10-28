@@ -105,7 +105,7 @@ class ProgramLetterViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
     authentication_classes = []
     permission_classes = []
     serializer_class = ProgramLetterSerializer
-    queryset = ProgramLetter.objects.filter(certificate__revoked=False)
+    queryset = ProgramLetter.objects.filter(certificate__is_revoked=False)
 
     def get_object(self) -> ProgramLetter:
         """

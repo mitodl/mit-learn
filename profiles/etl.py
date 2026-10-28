@@ -36,12 +36,12 @@ def transform_program_certificate(row: dict) -> dict:
         "user_street_address": row.get("user_street_address"),
         "program_completion_timestamp": row.get("program_completion_timestamp"),
     }
-    # Only sync revoked when the view exposes it. Until it does, leaving it out
+    # Only sync is_revoked when the view exposes it. Until it does, leaving it out
     # of the update keeps a revocation made in Learn from being reset by the
     # daily full refresh; new rows fall back to the model default. A NULL in
     # the column reads as not revoked.
-    if "revoked" in row:
-        fields["revoked"] = bool(row["revoked"])
+    if "is_revoked" in row:
+        fields["is_revoked"] = bool(row["is_revoked"])
     return fields
 
 

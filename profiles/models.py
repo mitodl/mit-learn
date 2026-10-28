@@ -208,7 +208,7 @@ class ProgramCertificateQuerySet(models.QuerySet):
         see revoked rows, and FK access (letter.certificate) goes through the
         base manager regardless, so callers filter explicitly.
         """
-        return self.filter(revoked=False)
+        return self.filter(is_revoked=False)
 
 
 class ProgramCertificate(models.Model):
@@ -272,7 +272,7 @@ class ProgramCertificate(models.Model):
 
     # Revoked certificates are kept rather than deleted, so a reversed
     # revocation restores the learner's existing letter link.
-    revoked = models.BooleanField(default=False)
+    is_revoked = models.BooleanField(default=False)
 
     objects = ProgramCertificateQuerySet.as_manager()
 

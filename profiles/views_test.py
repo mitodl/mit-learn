@@ -659,7 +659,7 @@ def test_list_user_program_certificates_excludes_revoked(client, user):
     """Revoked certificates aren't listed, and no letter is created for them"""
     client.force_login(user)
     valid = ProgramCertificateFactory(user_email=user.email)
-    revoked = ProgramCertificateFactory(user_email=user.email, revoked=True)
+    revoked = ProgramCertificateFactory(user_email=user.email, is_revoked=True)
 
     resp = client.get(reverse("profile:v0:user_program_certificates_api-list"))
 
@@ -673,7 +673,7 @@ def test_letter_intercept_view_404s_for_revoked_certificate(client, user, settin
     settings.DATABASE_ROUTERS = []
     client.force_login(user)
     ProgramCertificateFactory(
-        user_email=user.email, micromasters_program_id=1, revoked=True
+        user_email=user.email, micromasters_program_id=1, is_revoked=True
     )
 
     response = client.get(
@@ -705,13 +705,13 @@ def test_program_letter_api_view_revoked_certificate(mocker, client, user, setti
             "program_letter_signatories": [],
         },
     )
-    cert = ProgramCertificateFactory(user_email=user.email, revoked=True)
+    cert = ProgramCertificateFactory(user_email=user.email, is_revoked=True)
     letter = ProgramLetterFactory(user=user, certificate=cert)
     letter_url = reverse("profile:v1:program_letters_api-detail", args=[letter.id])
 
     assert client.get(letter_url).status_code == 404
 
-    cert.revoked = False
+    cert.is_revoked = False
     cert.save()
 
     assert client.get(letter_url).status_code == 200

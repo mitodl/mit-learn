@@ -32,7 +32,7 @@ def _row(**overrides):
         "user_address_postal_code": "NW1 2DB",
         "user_street_address": "12 Marylebone Road",
         "program_completion_timestamp": datetime(2026, 1, 1, tzinfo=UTC),
-        "revoked": False,
+        "is_revoked": False,
     }
     row.update(overrides)
     return row
@@ -62,7 +62,7 @@ def test_transform_program_certificate_maps_all_fields():
     assert fields["user_address_postal_code"] == "NW1 2DB"
     assert fields["user_street_address"] == "12 Marylebone Road"
     assert fields["program_completion_timestamp"] == datetime(2026, 1, 1, tzinfo=UTC)
-    assert fields["revoked"] is False
+    assert fields["is_revoked"] is False
     assert "record_hash" not in fields
 
 
@@ -85,7 +85,10 @@ def test_transform_program_certificate_defaults_missing_name_fields_to_empty_str
 )
 def test_transform_program_certificate_revoked(revoked, expected):
     """Coerce revoked to a bool, so a NULL reads as not revoked"""
-    assert transform_program_certificate(_row(revoked=revoked))["revoked"] is expected
+    assert (
+        transform_program_certificate(_row(is_revoked=revoked))["is_revoked"]
+        is expected
+    )
 
 
 def test_transform_program_certificate_revoked_column_missing():
@@ -93,7 +96,7 @@ def test_transform_program_certificate_revoked_column_missing():
     the upsert doesn't overwrite it.
     """
     row = _row()
-    del row["revoked"]
+    del row["is_revoked"]
     assert "revoked" not in transform_program_certificate(row)
 
 
@@ -101,23 +104,23 @@ def test_upsert_program_certificate_without_revoked_column_keeps_revocation():
     """A sync from a view without the revoked column doesn't reset a
     certificate already revoked in Learn.
     """
-    ProgramCertificateFactory(record_hash="abc123", revoked=True)
+    ProgramCertificateFactory(record_hash="abc123", is_revoked=True)
     row = _row()
-    del row["revoked"]
+    del row["is_revoked"]
 
     upsert_program_certificate(row)
 
-    assert ProgramCertificate.objects.get(record_hash="abc123").revoked is True
+    assert ProgramCertificate.objects.get(record_hash="abc123").is_revoked is True
 
 
 def test_upsert_program_certificate_without_revoked_column_creates_unrevoked():
     """A new certificate from a view without the revoked column isn't revoked"""
     row = _row()
-    del row["revoked"]
+    del row["is_revoked"]
 
     upsert_program_certificate(row)
 
-    assert ProgramCertificate.objects.get(record_hash="abc123").revoked is False
+    assert ProgramCertificate.objects.get(record_hash="abc123").is_revoked is False
 
 
 def test_upsert_program_certificate_creates_new_row():
@@ -163,8 +166,8 @@ def test_upsert_program_certificate_revokes_in_place(user):
     """
     letter = ProgramLetterFactory(user=user, certificate__record_hash="abc123")
 
-    upsert_program_certificate(_row(revoked=True))
+    upsert_program_certificate(_row(is_revoked=True))
 
     certificate = ProgramCertificate.objects.get(record_hash="abc123")
-    assert certificate.revoked is True
+    assert certificate.is_revoked is True
     assert ProgramLetter.objects.filter(pk=letter.pk).exists()

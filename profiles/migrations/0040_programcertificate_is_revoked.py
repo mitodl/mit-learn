@@ -9,7 +9,7 @@ class Migration(migrations.Migration):
     operations = [
         migrations.AddField(
             model_name="programcertificate",
-            name="revoked",
+            name="is_revoked",
             field=models.BooleanField(default=False),
         ),
     ]
