@@ -46,6 +46,9 @@ const ComplianceGateProvider: React.FC<{ children: React.ReactNode }> = ({
   )
 }
 
+/** `exclusive`'s result when another action's recovery dialog is open. */
+const DIALOG_BUSY = Symbol("dialog busy")
+
 /**
  * Gate for actions MITx Online rejects without a complete profile — enrolling
  * and adding a product to the basket both require the export-compliance (OFAC)
@@ -57,11 +60,7 @@ const ComplianceGateProvider: React.FC<{ children: React.ReactNode }> = ({
  * should abandon the action **silently** — a cancel is not an error, so callers
  * must not surface a failure message for it.
  *
- * Paid and checkout paths are gated centrally inside `useReplaceBasketItem`;
- * free and verified-program enrollments call this directly, because the
- * `useMutation` contract has no way to express "cancelled" that does not either
- * reject (which reads as a failure to the caller) or resolve as if the
- * enrollment had happened.
+ * Paid and checkout paths are gated centrally inside `useReplaceBasketItem`.
  *
  * The profile can also be complete yet still unusable: CyberSource refuses
  * some values (e.g. a last name of "."), and MITx Online then rejects the
@@ -69,9 +68,6 @@ const ComplianceGateProvider: React.FC<{ children: React.ReactNode }> = ({
  * `mutateWithCompliance`, which gates them and recovers from that rejection by
  * opening the dialog on those fields and retrying from it as they correct them.
  */
-/** `exclusive`'s result when another action's recovery dialog is open. */
-const DIALOG_BUSY = Symbol("dialog busy")
-
 const useComplianceGate = () => {
   const queryClient = useQueryClient()
   // Collapses concurrent callers (e.g. two dashboard cards clicked before the
