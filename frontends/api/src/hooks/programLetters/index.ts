@@ -11,4 +11,4 @@ const useProgramLettersDetail = (id: string | undefined) => {
   })
 }
 
-export { useProgramLettersDetail }
+export { useProgramLettersDetail, programLetterQueries }

@@ -16,7 +16,7 @@ def transform_program_certificate(row: dict) -> dict:
     ProgramCertificate field kwargs (everything but record_hash, which the
     caller uses as the upsert key).
     """
-    return {
+    fields = {
         "program_title": row.get("program_title") or "",
         "user_full_name": row.get("user_full_name") or "",
         "user_email": row.get("user_email") or "",
@@ -35,10 +35,14 @@ def transform_program_certificate(row: dict) -> dict:
         "user_address_postal_code": row.get("user_address_postal_code"),
         "user_street_address": row.get("user_street_address"),
         "program_completion_timestamp": row.get("program_completion_timestamp"),
-        # bool() so a view that doesn't expose the column yet, or a NULL in
-        # it, reads as not revoked rather than failing the non-null field.
-        "revoked": bool(row.get("revoked")),
     }
+    # Only sync revoked when the view exposes it. Until it does, leaving it out
+    # of the update keeps a revocation made in Learn from being reset by the
+    # daily full refresh; new rows fall back to the model default. A NULL in
+    # the column reads as not revoked.
+    if "revoked" in row:
+        fields["revoked"] = bool(row["revoked"])
+    return fields
 
 
 def upsert_program_certificate(row: dict) -> ProgramCertificate:

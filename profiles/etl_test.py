@@ -89,10 +89,35 @@ def test_transform_program_certificate_revoked(revoked, expected):
 
 
 def test_transform_program_certificate_revoked_column_missing():
-    """A row from a view that doesn't expose revoked yet reads as not revoked"""
+    """A row from a view that doesn't expose revoked yet leaves it unset, so
+    the upsert doesn't overwrite it.
+    """
     row = _row()
     del row["revoked"]
-    assert transform_program_certificate(row)["revoked"] is False
+    assert "revoked" not in transform_program_certificate(row)
+
+
+def test_upsert_program_certificate_without_revoked_column_keeps_revocation():
+    """A sync from a view without the revoked column doesn't reset a
+    certificate already revoked in Learn.
+    """
+    ProgramCertificateFactory(record_hash="abc123", revoked=True)
+    row = _row()
+    del row["revoked"]
+
+    upsert_program_certificate(row)
+
+    assert ProgramCertificate.objects.get(record_hash="abc123").revoked is True
+
+
+def test_upsert_program_certificate_without_revoked_column_creates_unrevoked():
+    """A new certificate from a view without the revoked column isn't revoked"""
+    row = _row()
+    del row["revoked"]
+
+    upsert_program_certificate(row)
+
+    assert ProgramCertificate.objects.get(record_hash="abc123").revoked is False
 
 
 def test_upsert_program_certificate_creates_new_row():
