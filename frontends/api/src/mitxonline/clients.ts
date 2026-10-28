@@ -17,9 +17,11 @@ import {
   VerifiedProgramEnrollmentsApi,
 } from "@mitodl/mitxonline-api-axios/v2"
 import {
+  CourseRunsApi as CourseRunsApiV3,
   CoursesApi as CoursesApiV3,
   EnrollmentsApi as EnrollmentsApiV3,
   ProgramEnrollmentsApi,
+  ProgramsApi as ProgramsApiV3,
 } from "@mitodl/mitxonline-api-axios/v3"
 import axiosInstance from "./axios"
 
@@ -81,6 +83,10 @@ const verifiedProgramEnrollmentsApi = new VerifiedProgramEnrollmentsApi(
 
 const ordersApi = new OrdersApi(undefined, BASE_PATH, axiosInstance)
 
+const courseRunsV3Api = new CourseRunsApiV3(undefined, BASE_PATH, axiosInstance)
+
+const programsV3Api = new ProgramsApiV3(undefined, BASE_PATH, axiosInstance)
+
 export {
   usersApi,
   countriesApi,
@@ -100,4 +106,6 @@ export {
   productsApi,
   verifiedProgramEnrollmentsApi,
   ordersApi,
+  courseRunsV3Api,
+  programsV3Api,
 }
