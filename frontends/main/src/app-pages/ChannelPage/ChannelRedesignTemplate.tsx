@@ -106,7 +106,22 @@ const HeroPhoto = styled.div<{ backgroundUrl: string }>(
  * the top of the outline runs along the picture's own top edge, and behind it
  * there would be nothing of that line to see.
  */
-const HERO_PHOTO_BORDER_BOX = { width: 980, height: 546, diagonal: 256.3 }
+const HERO_PHOTO_BORDER_BOX = { width: 980, height: 546 }
+
+/**
+ * The slope the artwork is cut on, as sideways travel per pixel down.
+ *
+ * The outline has to run at exactly this. It is the one number here that is
+ * not free: a line even slightly off it converges on the picture's edge or
+ * opens away from it over the drop, and what should read as an even margin
+ * reads as a wedge. The outline's own depth has nothing to do with it -- the
+ * run is taken from the drop so that moving the foot of the outline up or
+ * down leaves the two edges parallel.
+ */
+const HERO_PHOTO_CUT_SLOPE = 0.4917
+
+/** How far the outline travels sideways over its own drop. */
+const heroPhotoBorderRun = (depth: number) => depth * HERO_PHOTO_CUT_SLOPE
 
 /**
  * Half the stroke, so the line sits inside the box it traces rather than
@@ -479,7 +494,7 @@ const ChannelHeroPhoto: React.FC<{
           inside the hero and draw a line across the picture that the design
           does not have -- there it runs off the edge and is never seen. */}
       <HeroPhotoBorderPath
-        d={`M${HERO_PHOTO_BORDER_BOX.width} ${HERO_PHOTO_BORDER_INSET} H${HERO_PHOTO_BORDER_INSET} L${HERO_PHOTO_BORDER_BOX.diagonal} ${HERO_PHOTO_BORDER_BOX.height - HERO_PHOTO_BORDER_INSET} H${HERO_PHOTO_BORDER_BOX.width}`}
+        d={`M${HERO_PHOTO_BORDER_BOX.width} ${HERO_PHOTO_BORDER_INSET} H${HERO_PHOTO_BORDER_INSET} L${heroPhotoBorderRun(HERO_PHOTO_BORDER_BOX.height)} ${HERO_PHOTO_BORDER_BOX.height - HERO_PHOTO_BORDER_INSET} H${HERO_PHOTO_BORDER_BOX.width}`}
       />
     </HeroPhotoBorder>
   </HeroPhotoClip>
