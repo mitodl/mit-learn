@@ -35,6 +35,9 @@ def transform_program_certificate(row: dict) -> dict:
         "user_address_postal_code": row.get("user_address_postal_code"),
         "user_street_address": row.get("user_street_address"),
         "program_completion_timestamp": row.get("program_completion_timestamp"),
+        # bool() so a view that doesn't expose the column yet, or a NULL in
+        # it, reads as not revoked rather than failing the non-null field.
+        "revoked": bool(row.get("revoked")),
     }
 
 

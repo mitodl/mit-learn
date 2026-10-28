@@ -5,8 +5,8 @@ from datetime import UTC, datetime
 import pytest
 
 from profiles.etl import transform_program_certificate, upsert_program_certificate
-from profiles.factories import ProgramCertificateFactory
-from profiles.models import ProgramCertificate
+from profiles.factories import ProgramCertificateFactory, ProgramLetterFactory
+from profiles.models import ProgramCertificate, ProgramLetter
 
 pytestmark = pytest.mark.django_db
 
@@ -32,6 +32,7 @@ def _row(**overrides):
         "user_address_postal_code": "NW1 2DB",
         "user_street_address": "12 Marylebone Road",
         "program_completion_timestamp": datetime(2026, 1, 1, tzinfo=UTC),
+        "revoked": False,
     }
     row.update(overrides)
     return row
@@ -61,6 +62,7 @@ def test_transform_program_certificate_maps_all_fields():
     assert fields["user_address_postal_code"] == "NW1 2DB"
     assert fields["user_street_address"] == "12 Marylebone Road"
     assert fields["program_completion_timestamp"] == datetime(2026, 1, 1, tzinfo=UTC)
+    assert fields["revoked"] is False
     assert "record_hash" not in fields
 
 
@@ -75,6 +77,22 @@ def test_transform_program_certificate_defaults_missing_name_fields_to_empty_str
     assert fields["program_title"] == ""
     assert fields["user_full_name"] == ""
     assert fields["user_email"] == ""
+
+
+@pytest.mark.parametrize(
+    ("revoked", "expected"),
+    [(True, True), (False, False), (None, False)],
+)
+def test_transform_program_certificate_revoked(revoked, expected):
+    """Coerce revoked to a bool, so a NULL reads as not revoked"""
+    assert transform_program_certificate(_row(revoked=revoked))["revoked"] is expected
+
+
+def test_transform_program_certificate_revoked_column_missing():
+    """A row from a view that doesn't expose revoked yet reads as not revoked"""
+    row = _row()
+    del row["revoked"]
+    assert transform_program_certificate(row)["revoked"] is False
 
 
 def test_upsert_program_certificate_creates_new_row():
@@ -112,3 +130,16 @@ def test_upsert_program_certificate_never_deletes():
 
     assert ProgramCertificate.objects.filter(record_hash="untouched").exists()
     assert ProgramCertificate.objects.count() == 2
+
+
+def test_upsert_program_certificate_revokes_in_place(user):
+    """A revocation updates the existing row and keeps its letter, so
+    reversing it later restores the same letter link.
+    """
+    letter = ProgramLetterFactory(user=user, certificate__record_hash="abc123")
+
+    upsert_program_certificate(_row(revoked=True))
+
+    certificate = ProgramCertificate.objects.get(record_hash="abc123")
+    assert certificate.revoked is True
+    assert ProgramLetter.objects.filter(pk=letter.pk).exists()

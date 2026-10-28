@@ -197,6 +197,20 @@ class Profile(models.Model):
         return list(self.topic_interests.for_serialization())
 
 
+class ProgramCertificateQuerySet(models.QuerySet):
+    """QuerySet for ProgramCertificate"""
+
+    def valid(self):
+        """
+        Exclude revoked certificates.
+
+        This is deliberately not the default manager: the admin should still
+        see revoked rows, and FK access (letter.certificate) goes through the
+        base manager regardless, so callers filter explicitly.
+        """
+        return self.filter(revoked=False)
+
+
 class ProgramCertificate(models.Model):
     """An external model that syncs with data from our data platform"""
 
@@ -255,6 +269,12 @@ class ProgramCertificate(models.Model):
     user_mitxonline_username = models.CharField(null=True, max_length=256, blank=True)  # noqa: DJ001
 
     program_completion_timestamp = models.DateTimeField(null=True, blank=True)
+
+    # Revoked certificates are kept rather than deleted, so a reversed
+    # revocation restores the learner's existing letter link.
+    revoked = models.BooleanField(default=False)
+
+    objects = ProgramCertificateQuerySet.as_manager()
 
     class Meta:
         # Managed as of the warehouse-pull cutover (mitodl/hq#12954): Django

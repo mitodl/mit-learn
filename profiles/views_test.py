@@ -653,3 +653,65 @@ def test_list_user_program_certificates(mocker, client, user, is_anonymous):
         assert all(share_urls), share_urls
     else:
         assert resp.status_code == 403
+
+
+def test_list_user_program_certificates_excludes_revoked(client, user):
+    """Revoked certificates aren't listed, and no letter is created for them"""
+    client.force_login(user)
+    valid = ProgramCertificateFactory(user_email=user.email)
+    revoked = ProgramCertificateFactory(user_email=user.email, revoked=True)
+
+    resp = client.get(reverse("profile:v0:user_program_certificates_api-list"))
+
+    assert resp.status_code == 200
+    assert [cert["record_hash"] for cert in resp.json()] == [valid.record_hash]
+    assert not ProgramLetter.objects.filter(certificate=revoked).exists()
+
+
+def test_letter_intercept_view_404s_for_revoked_certificate(client, user, settings):
+    """The intercept view 404s for a revoked certificate without creating a letter"""
+    settings.DATABASE_ROUTERS = []
+    client.force_login(user)
+    ProgramCertificateFactory(
+        user_email=user.email, micromasters_program_id=1, revoked=True
+    )
+
+    response = client.get(
+        reverse("profile:program-letter-intercept", kwargs={"program_id": 1})
+    )
+
+    assert response.status_code == 404
+    assert not ProgramLetter.objects.filter(user=user).exists()
+
+
+def test_program_letter_api_view_revoked_certificate(mocker, client, user, settings):
+    """
+    A letter 404s while its certificate is revoked, and the same letter id
+    resolves again once the revocation is reversed.
+    """
+    settings.DATABASE_ROUTERS = []
+    mocker.patch(
+        "profiles.serializers.fetch_program_letter_template_data",
+        return_value={
+            "id": 4,
+            "meta": {},
+            "program_letter_footer": "",
+            "program_letter_logo": {},
+            "title": "Supply Chain Management",
+            "program_id": 1,
+            "program_letter_footer_text": "",
+            "program_letter_header_text": "",
+            "program_letter_text": "<p>Congratulations</p>",
+            "program_letter_signatories": [],
+        },
+    )
+    cert = ProgramCertificateFactory(user_email=user.email, revoked=True)
+    letter = ProgramLetterFactory(user=user, certificate=cert)
+    letter_url = reverse("profile:v1:program_letters_api-detail", args=[letter.id])
+
+    assert client.get(letter_url).status_code == 404
+
+    cert.revoked = False
+    cert.save()
+
+    assert client.get(letter_url).status_code == 200

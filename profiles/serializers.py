@@ -366,7 +366,9 @@ class ProgramCertificateSerializer(BaseSerializer):
 
     class Meta:
         model = ProgramCertificate
-        fields = "__all__"
+        # Revoked certificates are never listed, so the flag would always be
+        # false here.
+        exclude = ["revoked"]
 
 
 # The letter body is authored in MicroMasters' Wagtail CMS and rendered here
