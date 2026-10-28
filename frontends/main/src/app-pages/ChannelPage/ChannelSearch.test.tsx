@@ -16,6 +16,7 @@ import type { Channel } from "api/v0"
 import { ChannelTypeEnum } from "api/v0"
 import ChannelPage from "./ChannelPage"
 import { useFeatureFlagEnabled, usePostHog } from "posthog-js/react"
+import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
 import { FeatureFlags } from "@/common/feature_flags"
 import { PostHogEvents } from "@/common/constants"
 
@@ -24,6 +25,7 @@ jest.mock("posthog-js/react", () => ({
   useFeatureFlagEnabled: jest.fn(),
   usePostHog: jest.fn(),
 }))
+jest.mock("@/common/useFeatureFlagsLoaded")
 
 const mockedUseFeatureFlagEnabled = jest.mocked(useFeatureFlagEnabled)
 
@@ -49,6 +51,9 @@ const mockFeatureFlags = (flags: Partial<Record<FeatureFlags, boolean>>) => {
 // for itself.
 beforeEach(() => {
   mockFeatureFlags({ [FeatureFlags.TopicPageRedesign]: true })
+  /* The page holds a spinner until the flags are in rather than render on a
+     bootstrapped value, so without this every case here waits on one. */
+  jest.mocked(useFeatureFlagsLoaded).mockReturnValue(true)
 })
 
 const setMockApiResponses = ({
