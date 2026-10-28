@@ -3,14 +3,12 @@
 import { env } from "@/env"
 import React from "react"
 import { useQuery } from "@tanstack/react-query"
-import { usePostHog } from "posthog-js/react"
 import { Alert } from "@mitodl/smoot-design"
 import { Link, Skeleton, styled } from "ol-components"
 import { orderQueries } from "api/mitxonline-hooks/orders"
 import { mitxUserQueries } from "api/mitxonline-hooks/user"
 import { DASHBOARD_MY_LEARNING } from "@/common/urls"
-import { trackCheckoutCompleted } from "@/common/analytics/gtm"
-import { PostHogEvents } from "@/common/constants"
+import { analytics } from "@/common/analytics"
 import {
   ENROLLMENT_STATUS_PARAM,
   ENROLLMENT_ERROR_TYPE_PARAM,
@@ -176,7 +174,6 @@ const parseAlertRequest = (
 const EnrollmentRedirectAlert: React.FC = () => {
   const request = useConsumeSearchParamsOnce(parseAlertRequest)
   const supportEmail = env("NEXT_PUBLIC_MITOL_SUPPORT_EMAIL") || ""
-  const posthog = usePostHog()
 
   const mitxOnlineUserQuery = useQuery({
     ...mitxUserQueries.me(),
@@ -201,22 +198,15 @@ const EnrollmentRedirectAlert: React.FC = () => {
     const courseName = paidReceipt.data?.lines[0]?.content_title
     const value = Number.isNaN(parsedValue) ? null : parsedValue
 
-    trackCheckoutCompleted({
+    const line = paidReceipt.data?.lines[0]
+    analytics.checkoutCompleted({
       orderId: request.orderId,
       courseName,
       value,
+      readableId: line?.readable_id,
+      contentType: line?.content_type,
     })
-    if (env("NEXT_PUBLIC_POSTHOG_API_KEY")) {
-      const line = paidReceipt.data?.lines[0]
-      posthog.capture(PostHogEvents.CheckoutCompleted, {
-        orderId: request.orderId,
-        courseName,
-        value,
-        readableId: line?.readable_id,
-        contentType: line?.content_type,
-      })
-    }
-  }, [request, paidReceipt.isPending, paidReceipt.data, posthog])
+  }, [request, paidReceipt.isPending, paidReceipt.data])
 
   if (request?.kind === "error") {
     const errorMessage =

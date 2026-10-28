@@ -15,23 +15,24 @@ import invariant from "tiny-invariant"
 import type { Channel } from "api/v0"
 import { ChannelTypeEnum } from "api/v0"
 import ChannelPage from "./ChannelPage"
-import { useFeatureFlagEnabled, usePostHog } from "posthog-js/react"
+import { useFeatureFlagEnabled } from "posthog-js/react"
 import { FeatureFlags } from "@/common/feature_flags"
 import { PostHogEvents } from "@/common/constants"
+import { capturePostHog } from "@/common/analytics/posthog"
 
 jest.mock("posthog-js/react", () => ({
   ...jest.requireActual("posthog-js/react"),
   useFeatureFlagEnabled: jest.fn(),
-  usePostHog: jest.fn(),
+}))
+
+jest.mock("@/common/analytics/posthog", () => ({
+  capturePostHog: jest.fn(),
+  initPostHog: jest.fn(),
 }))
 
 const mockedUseFeatureFlagEnabled = jest.mocked(useFeatureFlagEnabled)
 
-const mockCapture = jest.fn()
-jest.mocked(usePostHog).mockReturnValue(
-  // @ts-expect-error Not mocking all of posthog
-  { capture: mockCapture },
-)
+const mockCapture = jest.mocked(capturePostHog)
 
 /**
  * Mock the named flags, leaving every other flag `undefined`—PostHog's value

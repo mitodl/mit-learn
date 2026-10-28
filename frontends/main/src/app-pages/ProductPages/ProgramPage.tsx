@@ -40,7 +40,7 @@ import {
 import ProgramTracksSection from "./ProgramTracksSection"
 import ProgramTrackCompareSection from "./ProgramTrackCompareSection"
 import ProgramHeaderEnrollButton from "./ProgramHeaderEnrollButton"
-import { trackCourseProgramView } from "@/common/analytics/gtm"
+import { analytics } from "@/common/analytics"
 import { keyBy } from "lodash"
 import { parseTrackedProgramRequirements } from "@/common/mitxonline"
 
@@ -236,7 +236,10 @@ const ProgramPage: React.FC<ProgramPageProps> = ({ readableId }) => {
 
   useEffect(() => {
     if (!program) return
-    trackCourseProgramView({ name: program.title, id: program.readable_id })
+    analytics.courseProgramViewed({
+      name: program.title,
+      id: program.readable_id,
+    })
   }, [program])
 
   const isLoading = pages.isLoading || programs.isLoading

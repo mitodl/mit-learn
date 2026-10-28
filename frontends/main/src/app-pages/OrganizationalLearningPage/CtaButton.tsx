@@ -2,10 +2,8 @@
 
 import React from "react"
 import { Button, type ButtonProps } from "@mitodl/smoot-design"
-import { usePostHog } from "posthog-js/react"
 import { scrollToElement } from "ol-utilities"
-import { env } from "@/env"
-import { PostHogEvents } from "@/common/constants"
+import { analytics } from "@/common/analytics"
 import { ORGANIZATIONAL_LEARNING_FORM_ID } from "@/common/urls"
 
 export type CtaPlacement =
@@ -23,12 +21,8 @@ const CtaButton: React.FC<CtaButtonProps> = ({
   children,
   ...others
 }) => {
-  const posthog = usePostHog()
-
   const handleClick = () => {
-    if (env("NEXT_PUBLIC_POSTHOG_API_KEY")) {
-      posthog.capture(PostHogEvents.OrgLearningCtaClicked, { placement })
-    }
+    analytics.orgLearningCtaClicked({ placement })
     scrollToElement(ORGANIZATIONAL_LEARNING_FORM_ID)
   }
 

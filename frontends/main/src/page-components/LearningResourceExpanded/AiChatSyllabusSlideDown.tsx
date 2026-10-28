@@ -1,12 +1,10 @@
-import { env } from "@/env"
 import React, { useRef, useEffect } from "react"
 import { Typography, styled } from "ol-components"
 import { Button } from "@mitodl/smoot-design"
 import { RiSparkling2Line, RiArrowDownSLine } from "@remixicon/react"
 import { LearningResource } from "api"
 import { AiChat } from "@mitodl/smoot-design/ai"
-import { usePostHog } from "posthog-js/react"
-import { PostHogEvents } from "@/common/constants"
+import { analytics } from "@/common/analytics"
 import { getSyllabusChatProps } from "@/page-components/AiChat/syllabusChatConfig"
 
 export enum ChatTransitionState {
@@ -123,8 +121,6 @@ export const AiChatSyllabusOpener = ({
   onToggleOpen: (open: boolean) => void
   resource: LearningResource
 }) => {
-  const posthog = usePostHog()
-
   return (
     <Opener className={className}>
       <StyledButton
@@ -133,15 +129,13 @@ export const AiChatSyllabusOpener = ({
         aria-pressed={open}
         open={open}
         onClick={() => {
-          if (env("NEXT_PUBLIC_POSTHOG_API_KEY")) {
-            posthog.capture(PostHogEvents.AskTimClicked, {
-              type: "syllabus_bot",
-              resourceId: resource.id,
-              readableId: resource.readable_id,
-              resourceType: resource.resource_type,
-              platformCode: resource.platform?.code,
-            })
-          }
+          analytics.askTimClicked({
+            type: "syllabus_bot",
+            resourceId: resource.id,
+            readableId: resource.readable_id,
+            resourceType: resource.resource_type,
+            platformCode: resource.platform?.code,
+          })
           onToggleOpen(!open)
         }}
       >
