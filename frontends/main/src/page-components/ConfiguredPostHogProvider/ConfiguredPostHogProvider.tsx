@@ -6,25 +6,40 @@ import { useUserMe } from "api/hooks/user"
 import { INTERNAL_BOOTSTRAPPING_FLAG } from "@/common/feature_flags"
 import { env, fullEnv } from "@/env"
 
+type FlagValue = boolean | string
+
+const keyedFlagValue = (value: string): FlagValue =>
+  value === "True" ? true : JSON.stringify(value)
+
+/**
+ * Without an api key these values are final, so "false" must read false:
+ * keyedFlagValue would make it the string '"false"', which hooks read as on.
+ */
+const envFlagValue = (value: string): FlagValue => {
+  const lowered = value.toLowerCase()
+  if (lowered === "true") return true
+  if (lowered === "false") return false
+  return value
+}
+
 /**
  * Compute PostHog bootstrap feature flags from the runtime env (fullEnv()).
  * Previously computed at build time from process.env in next.config.js, which
  * bakes empty values when the image is built in CI without per-env values.
  */
-const getBootstrapFeatureFlags = (): Record<
-  string,
-  boolean | string
-> | null => {
+const getBootstrapFeatureFlags = (
+  parseValue: (value: string) => FlagValue = keyedFlagValue,
+): Record<string, FlagValue> | null => {
   if (typeof window === "undefined") return null
   const prefix = env("NEXT_PUBLIC_POSTHOG_FEATURE_PREFIX") ?? "FEATURE_"
   const envSource = fullEnv()
   const fullPrefix = `NEXT_PUBLIC_${prefix}`
-  const flags: Record<string, boolean | string> = {}
+  const flags: Record<string, FlagValue> = {}
 
   for (const [key, value] of Object.entries(envSource)) {
     if (value !== undefined && key.startsWith(fullPrefix)) {
       const flagName = key.replace(fullPrefix, "").replaceAll("_", "-")
-      flags[flagName] = value === "True" ? true : JSON.stringify(value)
+      flags[flagName] = parseValue(value)
     }
   }
 
@@ -78,7 +93,7 @@ const EnvFlagsProvider: React.FC<{ children: React.ReactNode }> = ({
 }) => {
   const [bootstrap, setBootstrap] = useState<BootstrapConfig>()
   useEffect(() => {
-    setBootstrap({ featureFlags: getBootstrapFeatureFlags() ?? {} })
+    setBootstrap({ featureFlags: getBootstrapFeatureFlags(envFlagValue) ?? {} })
   }, [])
   return (
     <PostHogContext.Provider value={{ client: posthog, bootstrap }}>

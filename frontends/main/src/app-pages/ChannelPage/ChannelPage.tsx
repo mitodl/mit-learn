@@ -70,9 +70,8 @@ const ChannelPage: React.FC = () => {
    * deciding on a bootstrapped `false` — which reads the same as the page
    * being switched off. Same reasoning as ContractAdminPage.
    *
-   * Only where there is something to wait for, which is twice worth asking.
-   *
-   * Only the department page is still behind a flag. Every other one draws the
+   * Only where there is something to wait for: only the department page is
+   * still behind a flag. Every other one draws the
    * page it has always drawn whatever the flags come back saying, so waiting
    * on them buys a topic, unit or pathway page nothing but the spinner.
    */
