@@ -102,11 +102,17 @@ const HeroPhoto = styled.div<{ backgroundUrl: string }>(
  * hero. `preserveAspectRatio="none"` lets the shape stretch; the stroke is
  * held back from stretching with it.
  *
- * Under the photograph, as the design stacks it: the top of the outline runs
- * behind the picture, which is what leaves the diagonal and the foot of it
- * showing and nothing else.
+ * Over the photograph rather than under it, which is where the design has it:
+ * the top of the outline runs along the picture's own top edge, and behind it
+ * there would be nothing of that line to see.
  */
-const HERO_PHOTO_BORDER_BOX = { width: 980, height: 521, diagonal: 256.3 }
+const HERO_PHOTO_BORDER_BOX = { width: 980, height: 546, diagonal: 256.3 }
+
+/**
+ * Half the stroke, so the line sits inside the box it traces rather than
+ * straddling its edge and losing the outer half to the hero's clip.
+ */
+const HERO_PHOTO_BORDER_INSET = 0.5
 
 /**
  * The outline against the photograph, as shares of the hero's width.
@@ -455,18 +461,6 @@ const ChannelHeroPhoto: React.FC<{
   configuredBanner: string
 }> = ({ configuredBanner }) => (
   <HeroPhotoClip aria-hidden>
-    <HeroPhotoBorder
-      data-testid="channel-hero-photo-border"
-      viewBox={`0 0 ${HERO_PHOTO_BORDER_BOX.width} ${HERO_PHOTO_BORDER_BOX.height}`}
-      preserveAspectRatio="none"
-    >
-      {/* Down the diagonal and along the foot. The top and the far side of
-          the design's outline are behind the picture and past the hero's
-          right edge, so there is nothing to draw of them. */}
-      <HeroPhotoBorderPath
-        d={`M0 0 L${HERO_PHOTO_BORDER_BOX.diagonal} ${HERO_PHOTO_BORDER_BOX.height} H${HERO_PHOTO_BORDER_BOX.width}`}
-      />
-    </HeroPhotoBorder>
     <HeroPhoto
       data-testid="channel-hero-photo"
       /* Through the same standardizer the other channel banners use: the
@@ -474,6 +468,20 @@ const ChannelHeroPhoto: React.FC<{
          `url(...)`, and wrapping the second kind again drops it. */
       backgroundUrl={standardizeBackgroundUrl(configuredBanner)}
     />
+    <HeroPhotoBorder
+      data-testid="channel-hero-photo-border"
+      viewBox={`0 0 ${HERO_PHOTO_BORDER_BOX.width} ${HERO_PHOTO_BORDER_BOX.height}`}
+      preserveAspectRatio="none"
+    >
+      {/* Leftwards along the top of the picture, down the diagonal, then back
+          along the foot. Three sides rather than four: the design closes the
+          shape up its right-hand side, which on artwork this width would fall
+          inside the hero and draw a line across the picture that the design
+          does not have -- there it runs off the edge and is never seen. */}
+      <HeroPhotoBorderPath
+        d={`M${HERO_PHOTO_BORDER_BOX.width} ${HERO_PHOTO_BORDER_INSET} H${HERO_PHOTO_BORDER_INSET} L${HERO_PHOTO_BORDER_BOX.diagonal} ${HERO_PHOTO_BORDER_BOX.height - HERO_PHOTO_BORDER_INSET} H${HERO_PHOTO_BORDER_BOX.width}`}
+      />
+    </HeroPhotoBorder>
   </HeroPhotoClip>
 )
 
