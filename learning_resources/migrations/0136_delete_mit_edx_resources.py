@@ -24,6 +24,7 @@ def remove_edx_platform_from_indexes():
         HYBRID_COMBINED_INDEX,
         PROGRAM_TYPE,
     )
+    from main.utils import clear_views_cache
     from vector_search.constants import (
         CONTENT_FILES_COLLECTION_NAME,
         RESOURCES_COLLECTION_NAME,
@@ -45,10 +46,13 @@ def remove_edx_platform_from_indexes():
         for alias in get_active_aliases(
             conn, object_types=[COURSE_TYPE, PROGRAM_TYPE, HYBRID_COMBINED_INDEX]
         ):
-            conn.delete_by_query(index=alias, body=query, conflicts="proceed")
+            conn.delete_by_query(
+                index=alias, body=query, conflicts="proceed", refresh=True
+            )
     except Exception:
         log.exception("Could not remove edx documents from OpenSearch")
-    if settings.QDRANT_ENABLE_INDEXING_PLUGIN_HOOKS:
+    # embeddings can exist with the indexing hooks off, so check the connection
+    if settings.QDRANT_HOST and settings.QDRANT_BASE_COLLECTION_NAME:
         try:
             for collection in (
                 RESOURCES_COLLECTION_NAME,
@@ -59,6 +63,11 @@ def remove_edx_platform_from_indexes():
                 )
         except Exception:
             log.exception("Could not remove edx points from Qdrant")
+    # cached search and resource responses would still list the deleted resources
+    try:
+        clear_views_cache()
+    except Exception:
+        log.exception("Could not clear the views cache")
 
 
 def delete_mit_edx_resources(apps, schema_editor):
