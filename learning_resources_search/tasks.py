@@ -29,7 +29,6 @@ from learning_resources.models import (
     LearningResourceDepartment,
     LearningResourceOfferor,
 )
-from learning_resources.utils import load_course_blocklist
 from learning_resources.views import FeaturedViewSet
 from learning_resources_search import indexing_api as api
 from learning_resources_search.api import (
@@ -680,7 +679,7 @@ def wrap_retry_exception(*exception_classes):
         raise
 
 
-def _build_reindex_batches(job):  # noqa: C901, PLR0912
+def _build_reindex_batches(job):  # noqa: C901
     """
     Build the TaskBatch rows for a reindex job using fast id-only queries.
 
@@ -710,14 +709,10 @@ def _build_reindex_batches(job):  # noqa: C901, PLR0912
         ):
             add_batch(ReindexBatchKind.percolate, f"percolate:{chunk}", {"ids": ids})
 
-    if COURSE_TYPE in indexes or HYBRID_COMBINED_INDEX in indexes:
-        blocklisted_ids = load_course_blocklist()
-
     if COURSE_TYPE in indexes:
         for chunk, ids in enumerate(
             chunks(
                 Course.objects.filter(learning_resource__published=True)
-                .exclude(learning_resource__readable_id__in=blocklisted_ids)
                 .order_by("learning_resource_id")
                 .values_list("learning_resource_id", flat=True),
                 chunk_size=settings.OPENSEARCH_INDEXING_CHUNK_SIZE,
@@ -738,7 +733,6 @@ def _build_reindex_batches(job):  # noqa: C901, PLR0912
                 .filter(
                     learning_resource__etl_source__in=REINDEX_CONTENT_FILE_ETL_SOURCES
                 )
-                .exclude(learning_resource__readable_id__in=blocklisted_ids)
                 .order_by("learning_resource_id")
                 .values_list("learning_resource_id", flat=True),
                 chunk_size=settings.OPENSEARCH_REINDEX_DISPATCH_CHUNK_SIZE,
@@ -757,7 +751,6 @@ def _build_reindex_batches(job):  # noqa: C901, PLR0912
         for chunk, ids in enumerate(
             chunks(
                 LearningResource.objects.filter(published=True)
-                .exclude(readable_id__in=blocklisted_ids)
                 .order_by("id")
                 .values_list("id", flat=True),
                 chunk_size=settings.OPENSEARCH_INDEXING_CHUNK_SIZE,
@@ -1099,18 +1092,11 @@ def start_update_index(self, indexes, etl_source):
 
         index_tasks = []
 
-        if COURSE_TYPE in indexes or CONTENT_FILE_TYPE in indexes:
-            blocklisted_ids = load_course_blocklist()
-
         if COURSE_TYPE in indexes:
-            index_tasks = index_tasks + get_update_courses_tasks(
-                blocklisted_ids, etl_source
-            )
+            index_tasks = index_tasks + get_update_courses_tasks(etl_source)
 
         if CONTENT_FILE_TYPE in indexes:
-            index_tasks = index_tasks + get_update_resource_files_tasks(
-                blocklisted_ids, etl_source
-            )
+            index_tasks = index_tasks + get_update_resource_files_tasks(etl_source)
 
         if PROGRAM_TYPE in indexes or CONTENT_FILE_TYPE in indexes:
             index_tasks = index_tasks + get_update_program_files_tasks(etl_source)
@@ -1172,14 +1158,13 @@ def _update_content_files_tasks(learning_resource, resource_type):
     )
 
 
-def get_update_resource_files_tasks(blocklisted_ids, etl_source):
+def get_update_resource_files_tasks(etl_source):
     """
     Get list of tasks to update course files.
     This task upserts content files for courses that are published and delists content
     files that are not published but are part of a published course.
 
     Args:
-        blocklisted_ids(list of int): List of course id's to exclude
         etl_source(str): ETL source filter for the task
     """
 
@@ -1187,7 +1172,6 @@ def get_update_resource_files_tasks(blocklisted_ids, etl_source):
         course_update_query = (
             LearningResource.objects.filter(resource_type=COURSE_TYPE)
             .filter(Q(published=True) | Q(test_mode=True))
-            .exclude(readable_id__in=blocklisted_ids)
             .order_by("id")
         )
 
@@ -1237,23 +1221,20 @@ def get_update_program_files_tasks(etl_source):
     ]
 
 
-def get_update_courses_tasks(blocklisted_ids, etl_source):
+def get_update_courses_tasks(etl_source):
     """
     Get list of tasks to update courses
     Args:
-        blocklisted_ids(list of int): List of course id's to exclude
         etl_source(str): Etl source filter for the task
     """
 
-    course_update_query = (
-        LearningResource.objects.filter(published=True, resource_type=COURSE_TYPE)
-        .exclude(readable_id__in=blocklisted_ids)
-        .order_by("id")
-    )
+    course_update_query = LearningResource.objects.filter(
+        published=True, resource_type=COURSE_TYPE
+    ).order_by("id")
 
     course_deletion_query = (
         LearningResource.objects.filter(resource_type=COURSE_TYPE)
-        .filter(Q(published=False) | Q(readable_id__in=blocklisted_ids))
+        .filter(published=False)
         .order_by("id")
     )
 

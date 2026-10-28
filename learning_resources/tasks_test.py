@@ -72,23 +72,6 @@ def mock_logger(mocker):
     return mocker.patch("learning_resources.api.log.exception")
 
 
-@pytest.fixture
-def mock_blocklist(mocker):
-    """Mock the load_course_blocklist function"""
-    return mocker.patch(
-        "learning_resources.tasks.load_course_blocklist", return_value=[]
-    )
-
-
-def test_get_mit_edx_data_valid(mocker):
-    """Verify that the get_mit_edx_data invokes the MIT edX ETL pipelines"""
-    mock_pipelines = mocker.patch("learning_resources.tasks.pipelines")
-
-    tasks.get_mit_edx_data.delay()
-    mock_pipelines.mit_edx_courses_etl.assert_called_once_with(None)
-    mock_pipelines.mit_edx_programs_etl.assert_called_once_with(None)
-
-
 def test_get_mitxonline_data(mocker):
     """Verify that the get_mitxonline_data invokes the MITx Online ETL pipeline"""
     mock_pipelines = mocker.patch("learning_resources.tasks.pipelines")
@@ -125,27 +108,7 @@ def test_get_xpro_data(mocker):
 
 
 @mock_aws
-def test_import_all_mit_edx_files(settings, mocker, mocked_celery, mock_blocklist):
-    """import_all_mit_edx_files should start chunked tasks with correct bucket, platform"""
-    setup_s3(settings)
-    get_content_tasks_mock = mocker.patch(
-        "learning_resources.tasks.get_content_tasks", autospec=True
-    )
-    with pytest.raises(mocked_celery.replace_exception_class):
-        tasks.import_all_mit_edx_files.delay(
-            chunk_size=4, overwrite=False, learning_resource_ids=[1]
-        )
-    get_content_tasks_mock.assert_called_once_with(
-        ETLSource.mit_edx.name,
-        chunk_size=4,
-        overwrite=False,
-        overwrite_units=False,
-        learning_resource_ids=[1],
-    )
-
-
-@mock_aws
-def test_import_all_mitxonline_files(settings, mocker, mocked_celery, mock_blocklist):
+def test_import_all_mitxonline_files(settings, mocker, mocked_celery):
     """import_all_mitxonline_files should be replaced with get_content_tasks"""
     setup_s3(settings)
     get_content_tasks_mock = mocker.patch(
@@ -166,7 +129,7 @@ def test_import_all_mitxonline_files(settings, mocker, mocked_celery, mock_block
 
 
 @mock_aws
-def test_import_all_xpro_files(settings, mocker, mocked_celery, mock_blocklist):
+def test_import_all_xpro_files(settings, mocker, mocked_celery):
     """import_all_xpro_files should start chunked tasks with correct bucket, platform"""
     setup_s3(settings)
     get_content_tasks_mock = mocker.patch(
@@ -184,7 +147,7 @@ def test_import_all_xpro_files(settings, mocker, mocked_celery, mock_blocklist):
 
 
 @mock_aws
-def test_import_all_oll_files(settings, mocker, mocked_celery, mock_blocklist):
+def test_import_all_oll_files(settings, mocker, mocked_celery):
     """import_all_oll_files should start chunked tasks with correct bucket, platform"""
     setup_s3(settings)
     get_content_tasks_mock = mocker.patch(
@@ -202,7 +165,7 @@ def test_import_all_oll_files(settings, mocker, mocked_celery, mock_blocklist):
 
 
 @mock_aws
-def test_import_content_files(settings, mocker, mocked_celery, mock_blocklist):
+def test_import_content_files(settings, mocker, mocked_celery):
     """import_content_files should be replaced with get_content_tasks for any source"""
     setup_s3(settings)
     get_content_tasks_mock = mocker.patch(
@@ -238,7 +201,6 @@ def test_get_content_tasks(
     mock_get_content_files = mocker.patch(
         "learning_resources.tasks.get_content_files.si"
     )
-    mocker.patch("learning_resources.tasks.load_course_blocklist", return_value=[])
     mocker.patch(
         "learning_resources.tasks.get_most_recent_course_archives",
         return_value=["foo.tar.gz"],
@@ -302,8 +264,6 @@ def test_get_content_tasks_test_mode(
         "learning_resources.tasks.get_content_files.si"
     )
 
-    mocker.patch("learning_resources.tasks.load_course_blocklist", return_value=[])
-
     mocker.patch(
         "learning_resources.tasks.get_most_recent_course_archives",
         return_value=["foo.tar.gz"],
@@ -349,10 +309,10 @@ def test_get_content_files(mocker, mock_course_archive_bucket):
         return_value=mock_course_archive_bucket.bucket,
     )
     tasks.get_content_files(
-        [1, 2], ETLSource.mit_edx.value, ["foo.tar.gz"], overwrite_units=True
+        [1, 2], ETLSource.xpro.value, ["foo.tar.gz"], overwrite_units=True
     )
     mock_sync_edx_course_files.assert_called_once_with(
-        ETLSource.mit_edx.value,
+        ETLSource.xpro.value,
         [1, 2],
         ["foo.tar.gz"],
         overwrite=False,
@@ -367,7 +327,7 @@ def test_get_content_files_missing_settings(mocker, settings):
     )
     mock_log = mocker.patch("learning_resources.tasks.log.warning")
     settings.COURSE_ARCHIVE_BUCKET_NAME = None
-    source = ETLSource.mit_edx.value
+    source = ETLSource.xpro.value
     tasks.get_content_files([1, 2], source, ["foo.tar.gz"])
     mock_sync_edx_course_files.assert_not_called()
     mock_log.assert_called_once_with("Required settings missing for %s files", source)
@@ -1398,8 +1358,8 @@ def test_unpublish_removed_canvas_courses(mocker):
         for readable_id in ("1-COURSE1", "12-COURSE12", "3-COURSE3")
     )
     other_source = LearningResourceFactory.create(
-        readable_id="3-COURSE3-edx",
-        etl_source=ETLSource.mit_edx.name,
+        readable_id="3-COURSE3-xpro",
+        etl_source=ETLSource.xpro.name,
         published=True,
         resource_type="course",
     )
@@ -1507,11 +1467,6 @@ def test_sync_canvas_courses_skips_entirely_when_not_owned(settings, mocker):
             ETLSource.xpro.name,
             "xpro/courses/course-v1:xPRO+Test+R1/qrstuvwxyz.tar.gz",
             True,
-        ),
-        (
-            ETLSource.mit_edx.name,
-            "edxorg-raw-data/courses/MITx-1.00x-1T2022/abcdefghijklmnop.tar.gz",
-            False,
         ),
         (
             ETLSource.oll.name,
@@ -1708,7 +1663,6 @@ def test_unpublish_all_excluded_files(
 ):
     """Only courses whose runs have content files are fanned out"""
     mock_task = mocker.patch("learning_resources.tasks.unpublish_excluded_files.si")
-    mocker.patch("learning_resources.tasks.load_course_blocklist", return_value=[])
     mocker.patch(
         "learning_resources.tasks.get_most_recent_course_archives",
         return_value=["foo.tar.gz"],
@@ -2012,7 +1966,7 @@ def mock_generate_and_save(mocker):
 
 
 def test_generate_credential_metadata_for_resource(
-    credential_configurations, mock_blocklist, mock_generate_and_save
+    credential_configurations, mock_generate_and_save
 ):
     """The resource is generated for, and the store reports it stored something"""
     resource = credential_metadata_resource()
@@ -2022,7 +1976,7 @@ def test_generate_credential_metadata_for_resource(
 
 
 def test_generate_credential_metadata_for_resource_raises(
-    credential_configurations, mock_blocklist, mock_generate_and_save
+    credential_configurations, mock_generate_and_save
 ):
     """
     A failing resource fails its own task rather than being swallowed.
@@ -2039,7 +1993,7 @@ def test_generate_credential_metadata_for_resource_raises(
 
 
 def test_generate_credential_metadata_for_resource_reports_nothing_stored(
-    credential_configurations, mock_blocklist, mock_generate_and_save
+    credential_configurations, mock_generate_and_save
 ):
     """A generation that produced nothing reports False"""
     resource = credential_metadata_resource()
@@ -2051,7 +2005,7 @@ def test_generate_credential_metadata_for_resource_reports_nothing_stored(
 
 
 def test_generate_credential_metadata_for_a_vanished_resource(
-    credential_configurations, mock_blocklist, mock_generate_and_save
+    credential_configurations, mock_generate_and_save
 ):
     """
     A resource deleted between the sweep and its task is skipped, not a crash.
@@ -2064,7 +2018,7 @@ def test_generate_credential_metadata_for_a_vanished_resource(
 
 
 def test_generate_credential_metadata_rechecks_an_unpublished_resource(
-    credential_configurations, mock_blocklist, mock_generate_and_save
+    credential_configurations, mock_generate_and_save
 ):
     """
     A resource unpublished after the fan-out is not generated for.
@@ -2080,22 +2034,8 @@ def test_generate_credential_metadata_rechecks_an_unpublished_resource(
     mock_generate_and_save.assert_not_called()
 
 
-def test_generate_credential_metadata_rechecks_a_blocklisted_resource(
-    credential_configurations, mocker, mock_generate_and_save
-):
-    """A resource blocklisted after the fan-out is not generated for"""
-    resource = credential_metadata_resource()
-    mocker.patch(
-        "learning_resources.tasks.load_course_blocklist",
-        return_value=[resource.readable_id],
-    )
-
-    assert tasks.generate_credential_metadata_for_resource(resource.id) is False
-    mock_generate_and_save.assert_not_called()
-
-
 def test_generate_credential_metadata_skips_a_duplicate_task(
-    credential_configurations, mock_blocklist, mock_generate_and_save
+    credential_configurations, mock_generate_and_save
 ):
     """
     A redelivered or duplicated task does not pay for the same resource twice.
@@ -2114,7 +2054,7 @@ def test_generate_credential_metadata_skips_a_duplicate_task(
 
 
 def test_generate_credential_metadata_retries_a_partial_row(
-    credential_configurations, mock_blocklist, mock_generate_and_save
+    credential_configurations, mock_generate_and_save
 ):
     """
     A half-generated resource is generated for again, but only for what it lacks.
@@ -2130,7 +2070,7 @@ def test_generate_credential_metadata_retries_a_partial_row(
 
 
 def test_generate_credential_metadata_for_an_empty_row(
-    credential_configurations, mock_blocklist, mock_generate_and_save
+    credential_configurations, mock_generate_and_save
 ):
     """A resource with nothing stored is generated for in full"""
     resource = credential_metadata_resource()
@@ -2143,12 +2083,12 @@ def test_generate_credential_metadata_for_an_empty_row(
 
 
 def test_generate_credential_metadata_overwrite_ignores_a_complete_row(
-    credential_configurations, mock_blocklist, mock_generate_and_save
+    credential_configurations, mock_generate_and_save
 ):
     """
     overwrite=True regenerates a resource that already has complete metadata.
 
-    The recheck still applies -- an unpublished or blocklisted resource is
+    The recheck still applies -- an unpublished resource is
     skipped either way -- but a complete row stops being a reason to skip.
     """
     resource = credential_metadata_resource()
@@ -2172,7 +2112,7 @@ def deactivate_credential_configuration(field):
 
 
 def test_credential_metadata_scope_follows_the_active_configurations(
-    credential_configurations, mock_blocklist
+    credential_configurations,
 ):
     """
     A field with no active configuration is not a reason to regenerate.
@@ -2195,7 +2135,7 @@ def test_credential_metadata_scope_follows_the_active_configurations(
 
 
 def test_credential_metadata_scope_with_no_active_configurations(
-    credential_configurations, mock_blocklist
+    credential_configurations,
 ):
     """
     Nothing needs generating when nothing is configured to generate.
@@ -2211,7 +2151,7 @@ def test_credential_metadata_scope_with_no_active_configurations(
 
 
 def test_generate_all_credential_metadata_with_no_active_configurations(
-    credential_configurations, mocked_celery, mock_blocklist
+    credential_configurations, mocked_celery
 ):
     """The sweep queues nothing when no configuration is active"""
     credential_metadata_resource()
@@ -2222,7 +2162,7 @@ def test_generate_all_credential_metadata_with_no_active_configurations(
 
 
 def test_generate_credential_metadata_rechecks_the_active_configurations(
-    credential_configurations, mock_blocklist, mock_generate_and_save
+    credential_configurations, mock_generate_and_save
 ):
     """
     A resource complete for the active fields is skipped, not regenerated.
@@ -2241,7 +2181,7 @@ def test_generate_credential_metadata_rechecks_the_active_configurations(
 
 
 def test_credential_metadata_resource_ids_skips_complete_rows(
-    credential_configurations, mock_blocklist
+    credential_configurations,
 ):
     """A resource with both fields stored is not regenerated"""
     complete = credential_metadata_resource()
@@ -2258,7 +2198,7 @@ def test_credential_metadata_resource_ids_skips_complete_rows(
     [("A course", []), ("", ["Did a thing"]), ("", [])],
 )
 def test_credential_metadata_resource_ids_retries_partial_rows(
-    credential_configurations, mock_blocklist, description, criteria
+    credential_configurations, description, criteria
 ):
     """
     A half-generated resource is retried.
@@ -2274,9 +2214,7 @@ def test_credential_metadata_resource_ids_retries_partial_rows(
     assert list(tasks.credential_metadata_resource_ids()) == [resource.id]
 
 
-def test_credential_metadata_resource_ids_overwrite(
-    credential_configurations, mock_blocklist
-):
+def test_credential_metadata_resource_ids_overwrite(credential_configurations):
     """Overwrite includes resources that already have complete metadata"""
     complete = credential_metadata_resource()
     CredentialMetadataFactory.create(
@@ -2287,7 +2225,7 @@ def test_credential_metadata_resource_ids_overwrite(
 
 
 def test_credential_metadata_resource_ids_excludes_other_resources(
-    credential_configurations, mock_blocklist
+    credential_configurations,
 ):
     """
     Only published MITx Online resources of a swept type are selected.
@@ -2298,7 +2236,7 @@ def test_credential_metadata_resource_ids_excludes_other_resources(
     """
     wanted = credential_metadata_resource()
     LearningResourceFactory.create(
-        is_course=True, published=True, etl_source=ETLSource.mit_edx.name
+        is_course=True, published=True, etl_source=ETLSource.xpro.name
     )
     credential_metadata_resource(published=False)
     # A type the sweep does not cover at all, unlike a program, which it does
@@ -2308,22 +2246,8 @@ def test_credential_metadata_resource_ids_excludes_other_resources(
     assert list(tasks.credential_metadata_resource_ids()) == [wanted.id]
 
 
-def test_credential_metadata_resource_ids_respects_the_blocklist(
-    credential_configurations, mocker
-):
-    """A blocklisted course is not generated for"""
-    blocked = credential_metadata_resource()
-    wanted = credential_metadata_resource()
-    mocker.patch(
-        "learning_resources.tasks.load_course_blocklist",
-        return_value=[blocked.readable_id],
-    )
-
-    assert list(tasks.credential_metadata_resource_ids()) == [wanted.id]
-
-
 def test_credential_metadata_resource_ids_includes_programs(
-    program_credential_configurations, mock_blocklist
+    program_credential_configurations,
 ):
     """
     Programs are swept alongside courses, newest first across both.
@@ -2340,7 +2264,7 @@ def test_credential_metadata_resource_ids_includes_programs(
 
 
 def test_credential_metadata_resource_ids_skips_a_type_with_no_prompts(
-    credential_configurations, mock_blocklist
+    credential_configurations,
 ):
     """
     A program is not swept until it has prompts of its own.
@@ -2356,7 +2280,7 @@ def test_credential_metadata_resource_ids_skips_a_type_with_no_prompts(
 
 
 def test_credential_metadata_resource_ids_per_type_completeness(
-    program_credential_configurations, mock_blocklist
+    program_credential_configurations,
 ):
     """
     Completeness is judged against the resource's own type.
@@ -2378,7 +2302,7 @@ def test_credential_metadata_resource_ids_per_type_completeness(
 
 
 def test_generate_credential_metadata_for_a_program(
-    program_credential_configurations, mock_blocklist, mock_generate_and_save
+    program_credential_configurations, mock_generate_and_save
 ):
     """The leaf generates for a program, asking for the fields it lacks"""
     program = credential_metadata_program()
@@ -2391,7 +2315,7 @@ def test_generate_credential_metadata_for_a_program(
 
 
 def test_generate_credential_metadata_for_an_unswept_type(
-    program_credential_configurations, mock_blocklist, mock_generate_and_save
+    program_credential_configurations, mock_generate_and_save
 ):
     """
     A resource of a type the sweep does not cover is skipped, not generated.
@@ -2411,7 +2335,7 @@ def test_generate_credential_metadata_for_an_unswept_type(
     [LearningResourceType.course.name, LearningResourceType.program.name],
 )
 def test_credential_metadata_resource_ids_for_one_type(
-    program_credential_configurations, mock_blocklist, resource_type
+    program_credential_configurations, resource_type
 ):
     """`resource_types` selects one type without touching the other"""
     by_type = {
@@ -2425,7 +2349,7 @@ def test_credential_metadata_resource_ids_for_one_type(
 
 
 def test_generate_all_credential_metadata_for_one_type(
-    program_credential_configurations, mock_blocklist, mocker
+    program_credential_configurations, mocker
 ):
     """The task queues only the named type's resources"""
     credential_metadata_resource()
@@ -2443,7 +2367,7 @@ def test_generate_all_credential_metadata_for_one_type(
 
 
 def test_generate_all_credential_metadata_covers_both_types(
-    program_credential_configurations, mock_blocklist, mocker
+    program_credential_configurations, mocker
 ):
     """One task per resource, whatever its type"""
     course = credential_metadata_resource()
@@ -2456,9 +2380,7 @@ def test_generate_all_credential_metadata_covers_both_types(
     assert queued == {course.id, program.id}
 
 
-def test_generate_all_credential_metadata(
-    credential_configurations, mocked_celery, mock_blocklist
-):
+def test_generate_all_credential_metadata(credential_configurations, mocked_celery):
     """The sweep queues one task per resource and returns the count"""
     resources = [credential_metadata_resource() for _ in range(3)]
     expected_ids = sorted((resource.id for resource in resources), reverse=True)
@@ -2474,7 +2396,7 @@ def test_generate_all_credential_metadata(
 
 @pytest.mark.parametrize("overwrite", [True, False])
 def test_generate_all_credential_metadata_passes_overwrite(
-    credential_configurations, mocked_celery, mock_blocklist, overwrite
+    credential_configurations, mocked_celery, overwrite
 ):
     """Each per-resource task is told which mode the sweep ran in"""
     resource = credential_metadata_resource()
@@ -2493,7 +2415,7 @@ def test_generate_all_credential_metadata_passes_overwrite(
 
 
 def test_generate_all_credential_metadata_does_not_wait(
-    credential_configurations, mocked_celery, mock_blocklist
+    credential_configurations, mocked_celery
 ):
     """
     The sweep publishes the group and returns rather than becoming it.
@@ -2512,7 +2434,7 @@ def test_generate_all_credential_metadata_does_not_wait(
 
 
 def test_generate_all_credential_metadata_with_nothing_to_do(
-    credential_configurations, mocked_celery, mock_blocklist
+    credential_configurations, mocked_celery
 ):
     """
     An empty sweep queues nothing.
@@ -3075,7 +2997,6 @@ def _owned_by(owner, etl_source, resource_type):
 @pytest.mark.parametrize(
     ("task", "etl_source"),
     [
-        ("import_all_mit_edx_files", ETLSource.mit_edx.name),
         ("import_all_oll_files", ETLSource.oll.name),
         ("import_all_mitxonline_files", ETLSource.mitxonline.name),
         ("import_all_xpro_files", ETLSource.xpro.name),
@@ -3120,7 +3041,7 @@ def test_get_content_files_runs_only_while_legacy_owns_content_files(
 
 @ALL_OWNERS
 def test_unpublish_excluded_files_run_only_while_legacy_owns_content_files(
-    mocker, mocked_celery, mock_blocklist, owner
+    mocker, mocked_celery, owner
 ):
     """Neither the fan-out nor a queued chunk touches a source cut over elsewhere"""
     etl_source = ETLSource.mitxonline.name

@@ -223,8 +223,8 @@ def test_run_for_canvas_archive_unpublishes_course_code_orphans(tmp_path, mocker
         resource_type=LearningResourceType.course.name,
     )
     other_source = LearningResourceFactory.create(
-        readable_id="123-EDX",
-        etl_source=ETLSource.mit_edx.name,
+        readable_id="123-XPRO",
+        etl_source=ETLSource.xpro.name,
         resource_type=LearningResourceType.course.name,
     )
 

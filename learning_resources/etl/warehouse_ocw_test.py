@@ -68,11 +68,8 @@ def topics():
 
 @pytest.fixture(autouse=True)
 def mock_search(mocker):
-    """Mock out the search index tasks, the topic lookup and the blocklist"""
+    """Mock out the search index tasks and the topic lookup"""
     mocker.patch("learning_resources_search.plugins.get_similar_topics_qdrant")
-    mocker.patch(
-        "learning_resources.etl.warehouse_ocw.load_course_blocklist", return_value=[]
-    )
     return SimpleNamespace(
         upsert=mocker.patch("learning_resources_search.tasks.upsert_learning_resource"),
         deindex=mocker.patch("learning_resources_search.tasks.deindex_document"),
@@ -411,7 +408,7 @@ def test_sync_courses_reloads_a_course_changed_since_its_hash(
     if change == "unpublished":
         LearningResource.objects.filter(pk=resource.pk).update(published=False)
     else:
-        loaders.load_course(warehouse_ocw.transform_course(row), [])
+        loaders.load_course(warehouse_ocw.transform_course(row))
         resource.refresh_from_db()
         assert resource.etl_checksum is None
 
@@ -423,27 +420,6 @@ def test_sync_courses_reloads_a_course_changed_since_its_hash(
     assert resource.etl_checksum == warehouse_ocw.course_checksum(
         warehouse_ocw.transform_course(row)
     )
-
-
-def test_sync_courses_unpublishes_a_newly_blocklisted_course(
-    mocker, warehouse_owns_ocw, data_json
-):
-    """An unchanged course added to the blocklist is loaded, and so unpublished"""
-    row = view_row(data_json)
-    with writing_as(Pipeline.WAREHOUSE):
-        warehouse_ocw.sync_courses([row], allow_mass_unpublish=True)
-    resource = LearningResource.objects.get(url=row["url"])
-    assert resource.published is True
-
-    mocker.patch(
-        "learning_resources.etl.warehouse_ocw.load_course_blocklist",
-        return_value=[resource.readable_id],
-    )
-    with writing_as(Pipeline.WAREHOUSE):
-        warehouse_ocw.sync_courses([row], allow_mass_unpublish=True)
-
-    resource.refresh_from_db()
-    assert resource.published is False
 
 
 def test_sync_courses_reloads_a_course_whose_indexing_failed(

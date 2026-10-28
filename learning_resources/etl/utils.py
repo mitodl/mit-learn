@@ -900,7 +900,6 @@ def get_s3_prefix_for_source(etl_source: str) -> str:
         str: The S3 prefix
     """
     prefix_mapping = {
-        ETLSource.mit_edx.name: settings.EDX_COURSE_BUCKET_PREFIX,
         ETLSource.xpro.name: settings.XPRO_COURSE_BUCKET_PREFIX,
         ETLSource.mitxonline.name: settings.MITX_ONLINE_COURSE_BUCKET_PREFIX,
         ETLSource.oll.name: settings.OLL_COURSE_BUCKET_PREFIX,

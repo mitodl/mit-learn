@@ -44,7 +44,7 @@ from learning_resources.etl.warehouse_guards import (
     warehouse_list,
 )
 from learning_resources.models import LearningResource
-from learning_resources.utils import load_course_blocklist, parse_instructors
+from learning_resources.utils import parse_instructors
 from main.utils import checksum_for_content, clean_data
 
 log = logging.getLogger(__name__)
@@ -186,22 +186,15 @@ def sync_courses(courses: list[dict], *, allow_mass_unpublish: bool = False) -> 
     stored_checksums = dict(
         ocw_courses.filter(published=True).values_list(UNIQUE_FIELD, "etl_checksum")
     )
-    blocklist = load_course_blocklist()
     loaded = 0
     failed = []
     for row in courses:
         try:
             course = transform_course(row)
             course["etl_checksum"] = course_checksum(course)
-            # A newly blocklisted course hashes the same, but must load to unpublish
-            if (
-                course["readable_id"] not in blocklist
-                and stored_checksums.get(row[UNIQUE_FIELD]) == course["etl_checksum"]
-            ):
+            if stored_checksums.get(row[UNIQUE_FIELD]) == course["etl_checksum"]:
                 continue
-            if loaders.load_course(
-                course, blocklist, config=CourseLoaderConfig(prune=True)
-            ):
+            if loaders.load_course(course, config=CourseLoaderConfig(prune=True)):
                 loaded += 1
         except Exception:
             log.exception("Error loading OCW course %s", row[UNIQUE_FIELD])

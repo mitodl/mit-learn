@@ -75,11 +75,8 @@ def _setup(mocker, settings):
 
 @pytest.fixture(autouse=True)
 def mock_search(mocker):
-    """Mock out the search index tasks, the topic lookup and the blocklist"""
+    """Mock out the search index tasks and the topic lookup"""
     mocker.patch("learning_resources_search.plugins.get_similar_topics_qdrant")
-    mocker.patch(
-        "learning_resources.etl.loaders.load_course_blocklist", return_value=[]
-    )
     return SimpleNamespace(
         upsert=mocker.patch("learning_resources_search.tasks.upsert_learning_resource"),
         deindex=mocker.patch("learning_resources_search.tasks.deindex_document"),

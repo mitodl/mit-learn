@@ -328,7 +328,6 @@ def test_documents_from_olx():
 @pytest.mark.parametrize(
     ("etl_source", "expected_setting"),
     [
-        (ETLSource.mit_edx.name, "EDX_COURSE_BUCKET_PREFIX"),
         (ETLSource.xpro.name, "XPRO_COURSE_BUCKET_PREFIX"),
         (ETLSource.mitxonline.name, "MITX_ONLINE_COURSE_BUCKET_PREFIX"),
         (ETLSource.oll.name, "OLL_COURSE_BUCKET_PREFIX"),
@@ -725,35 +724,35 @@ def test_is_valid_uuid(uuid_string, expected):
     [
         # Asset URLs
         (
-            "mit_edx",
+            "mitxonline",
             "asset-v1:test+type@asset+block@image.png",
             False,
-            "https://edx.org/asset-v1:test+type@asset+block@image.png",
+            "https://mitxonline.org/asset-v1:test+type@asset+block@image.png",
         ),
         (
-            "mit_edx",
+            "mitxonline",
             "asset-v1:test+type@asset+block@video.mp4",
             False,
-            "https://edx.org/asset-v1:test+type@asset+block@video.mp4",
+            "https://mitxonline.org/asset-v1:test+type@asset+block@video.mp4",
         ),
         (
-            "mit_edx",
+            "mitxonline",
             "asset-v1:test+type@asset+block@transcript.srt",
             True,
-            "https://edx.org/courses/course-v1:test_run/jump_to_id/test_video",
+            "https://mitxonline.org/courses/course-v1:test_run/jump_to_id/test_video",
         ),
         (
-            "mit_edx",
+            "mitxonline",
             "asset-v1:test+type@asset+block@transcript.srt",
             False,
-            "https://edx.org/asset-v1:test+type@asset+block@transcript.srt",
+            "https://mitxonline.org/asset-v1:test+type@asset+block@transcript.srt",
         ),  # SRT without video meta returns asset URL
         # Block URLs with valid UUID
         (
-            "mit_edx",
+            "mitxonline",
             "block-v1:test+type@html+block@550e8400-e29b-41d4-a716-446655440000",
             False,
-            "https://edx.org/courses/course-v1:test_run/jump_to_id/550e8400-e29b-41d4-a716-446655440000",
+            "https://mitxonline.org/courses/course-v1:test_run/jump_to_id/550e8400-e29b-41d4-a716-446655440000",
         ),
         # OLL source with run_id modification
         (
@@ -770,12 +769,12 @@ def test_is_valid_uuid(uuid_string, expected):
             "None/asset-v1:test+type@asset+block@file.txt",
         ),  # Empty etl_source returns None as root_url
         (
-            "mit_edx",
+            "mitxonline",
             "block-v1:test+type@html+block@invalid-uuid",
             False,
             None,
         ),  # Invalid UUID
-        ("mit_edx", "unknown-format", False, None),  # Unknown format
+        ("mitxonline", "unknown-format", False, None),  # Unknown format
     ],
 )
 def test_get_url_from_module_id(
@@ -787,7 +786,7 @@ def test_get_url_from_module_id(
 ):
     """Test that get_url_from_module_id generates correct URLs for different module types"""
     # Setup settings
-    settings.CONTENT_BASE_URL_EDX = "https://edx.org"
+    settings.CONTENT_BASE_URL_MITXONLINE = "https://mitxonline.org"
     settings.CONTENT_BASE_URL_OLL = "https://oll.org"
 
     run = LearningResourceRunFactory.create(

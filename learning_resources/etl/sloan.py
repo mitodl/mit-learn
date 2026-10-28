@@ -37,10 +37,7 @@ OFFERED_BY_CODE = OfferedBy.see.name
 
 def _get_access_token():
     """
-    Get an access token for edx
-
-    Args:
-        config (OpenEdxConfiguration): configuration for the openedx backend
+    Get an access token for the Sloan API
 
     Returns:
         str: the access token

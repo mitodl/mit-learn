@@ -88,7 +88,6 @@ from learning_resources.utils import (
     build_program_children_content_bulk,
     content_files_loaded_actions,
     html_to_markdown,
-    load_course_blocklist,
     programs_needing_children_heal,
     resource_unpublished_actions,
     resource_upserted_actions,
@@ -155,34 +154,6 @@ def reindex_released_content_files() -> int:
         content_files_loaded_actions(run)
     sweep_cache.set(RELEASED_CONTENT_FILES_WATERMARK_KEY, now, timeout=None)
     return len(runs)
-
-
-@app.task(acks_late=True, reject_on_worker_lost=True)
-@cooldown_task(
-    wait_time=3600,
-    key_func=lambda *, api_course_datafile=None, api_program_datafile=None: (
-        f"course={api_course_datafile}:program={api_program_datafile}"
-    ),
-)
-def get_mit_edx_data(
-    api_course_datafile: str | None = None,
-    api_program_datafile: str | None = None,
-) -> int | None:
-    """Task to sync MIT edX data with the database
-
-    Args:
-        api_course_datafile (str): If provided, use file as source of course API data
-            Otherwise, the API is queried directly.
-        api_program_datafile (str): If provided, use file as source of program API data.
-            Otherwise, the API is queried directly.
-
-    Returns:
-        int | None: The number of results fetched, or None if the call was
-            skipped due to rate limiting.
-    """
-    courses = pipelines.mit_edx_courses_etl(api_course_datafile)
-    programs = pipelines.mit_edx_programs_etl(api_program_datafile)
-    return len(courses) + len(programs)
 
 
 @app.task(acks_late=True, reject_on_worker_lost=True)
@@ -316,7 +287,6 @@ def _content_file_resource_ids(etl_source: str, learning_resource_ids):
     return (
         LearningResource.objects.filter(Q(published=True) | Q(test_mode=True))
         .filter(course__isnull=False, etl_source=etl_source)
-        .exclude(readable_id__in=load_course_blocklist())
         .order_by("-id")
         .values_list("id", flat=True)
     )
@@ -374,26 +344,6 @@ def _replace_with_content_tasks(task, etl_source: str, **kwargs):
     if not may_write(etl_source, CONTENT_FILE):
         return None
     return task.replace(get_content_tasks(etl_source, **kwargs))
-
-
-@app.task(bind=True)
-def import_all_mit_edx_files(
-    self,
-    *,
-    chunk_size=None,
-    overwrite=False,
-    overwrite_units=False,
-    learning_resource_ids=None,
-):
-    """Ingest MIT edX files from an S3 bucket"""
-    return _replace_with_content_tasks(
-        self,
-        ETLSource.mit_edx.name,
-        chunk_size=chunk_size,
-        overwrite=overwrite,
-        overwrite_units=overwrite_units,
-        learning_resource_ids=learning_resource_ids,
-    )
 
 
 @app.task(bind=True)
@@ -1345,14 +1295,12 @@ def credential_metadata_resources(resource_type: str, *, overwrite: bool = False
         )
         return LearningResource.objects.none()
 
-    resources = (
-        LearningResource.objects.filter(Q(published=True) | Q(test_mode=True))
-        .filter(
-            resource_type=resource_type,
-            etl_source=ETLSource.mitxonline.name,
-            platform=PlatformType.mitxonline.name,
-        )
-        .exclude(readable_id__in=load_course_blocklist())
+    resources = LearningResource.objects.filter(
+        Q(published=True) | Q(test_mode=True)
+    ).filter(
+        resource_type=resource_type,
+        etl_source=ETLSource.mitxonline.name,
+        platform=PlatformType.mitxonline.name,
     )
     if not overwrite:
         resources = resources.filter(

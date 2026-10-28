@@ -172,7 +172,7 @@ The TypeScript API client in `frontends/api/src/generated/` is auto-generated fr
 
 ETL pipelines in `learning_resources/etl/` follow a common pattern:
 
-- Each source has its own module (e.g., `ocw.py`, `mit_edx.py`, `xpro.py`)
+- Each source has its own module (e.g., `ocw.py`, `mitxonline.py`, `xpro.py`)
 - Management commands in `learning_resources/management/commands/` trigger pipelines
 - Pipelines are scheduled via Celery Beat (configured in `main/settings_celery.py`)
 - After loading data, run `python manage.py recreate_index --all` to index in OpenSearch
@@ -183,7 +183,7 @@ Example ETL commands:
 ```bash
 docker compose run --rm web python manage.py backpopulate_ocw_data
 docker compose run --rm web python manage.py backpopulate_xpro_data
-docker compose run --rm web python manage.py backpopulate_mit_edx_data
+docker compose run --rm web python manage.py backpopulate_mitxonline_data
 ```
 
 ### Search Architecture
