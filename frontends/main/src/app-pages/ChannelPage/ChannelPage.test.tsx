@@ -14,6 +14,7 @@ import { assertHeadings, getByImageSrc } from "ol-test-utilities"
 import invariant from "tiny-invariant"
 import ChannelPage from "./ChannelPage"
 import { useFeatureFlagEnabled } from "posthog-js/react"
+import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
 import { FeatureFlags } from "@/common/feature_flags"
 import { DEPARTMENTS_LABEL, TOPICS_LABEL } from "./ChannelPageTemplate"
 
@@ -21,12 +22,17 @@ jest.mock("posthog-js/react", () => ({
   ...jest.requireActual("posthog-js/react"),
   useFeatureFlagEnabled: jest.fn(),
 }))
+jest.mock("@/common/useFeatureFlagsLoaded")
 
 /* The topic cases below are the redesigned page, which is behind this flag. */
 beforeEach(() => {
   jest
     .mocked(useFeatureFlagEnabled)
     .mockImplementation((flag) => flag === FeatureFlags.TopicPageRedesign)
+  /* The page holds a spinner until the flags are in rather than render on a
+     bootstrapped value, so without this every case here waits on one. Loaded
+     is the state these tests are about; the waiting is its own case below. */
+  jest.mocked(useFeatureFlagsLoaded).mockReturnValue(true)
 })
 
 jest.mock("./ChannelSearch", () => {
@@ -382,6 +388,81 @@ describe.each(NON_UNIT_CHANNEL_TYPES)(
  * row. The chips those tests covered are gone with it; subtopic navigation
  * still lives on the topics listing page, which has its own tests.
  */
+describe("while the feature flags are still loading", () => {
+  const posthogKey = process.env.NEXT_PUBLIC_POSTHOG_API_KEY
+  beforeEach(() => {
+    process.env.NEXT_PUBLIC_POSTHOG_API_KEY = "ph-test-key"
+    jest.mocked(useFeatureFlagsLoaded).mockReturnValue(false)
+  })
+  afterEach(() => {
+    if (posthogKey === undefined) {
+      delete process.env.NEXT_PUBLIC_POSTHOG_API_KEY
+    } else {
+      process.env.NEXT_PUBLIC_POSTHOG_API_KEY = posthogKey
+    }
+  })
+
+  /**
+   * The page is behind a flag, and a flag that has not loaded reads `false`
+   * from the bootstrapped value -- which is the same thing it reads when the
+   * page is genuinely off. Waiting is what stops a user who is entitled to
+   * the page being shown the one for someone who is not.
+   */
+  test("holds a spinner on a page a flag decides", async () => {
+    const { channel } = setupApis({
+      search_filter: "topic=Physics",
+      channel_type: ChannelTypeEnum.Topic,
+    })
+    renderWithProviders(<ChannelPage />, {
+      url: `/c/${channel.channel_type}/${channel.name}`,
+    })
+
+    await screen.findByRole("progressbar")
+    expect(
+      screen.queryByRole("heading", { level: 1, name: channel.title }),
+    ).toBe(null)
+  })
+
+  /**
+   * Only topics and departments are redesigned. Every other channel draws the
+   * same page whatever the flags come back saying, so waiting on them buys
+   * nothing and costs the reader a spinner.
+   */
+  test("draws a page no flag decides rather than waiting on one", async () => {
+    const { channel } = setupApis({
+      search_filter: "department=mechanical",
+      channel_type: ChannelTypeEnum.Unit,
+    })
+    renderWithProviders(<ChannelPage />, {
+      url: `/c/${channel.channel_type}/${channel.name}`,
+    })
+
+    await screen.findByRole("heading", { level: 1, name: channel.title })
+    expect(screen.queryByRole("progressbar")).toBe(null)
+  })
+
+  /**
+   * With no PostHog configured there is nothing to wait for either: the
+   * provider neither initialises nor mounts, so the flags never report
+   * themselves in and waiting would hold the page on a spinner for good.
+   * Every flag is off in that case, which is the page this one falls back to.
+   */
+  test("draws the page when PostHog is not configured", async () => {
+    delete process.env.NEXT_PUBLIC_POSTHOG_API_KEY
+    jest.mocked(useFeatureFlagEnabled).mockReturnValue(false)
+    const { channel } = setupApis({
+      search_filter: "topic=Physics",
+      channel_type: ChannelTypeEnum.Topic,
+    })
+    renderWithProviders(<ChannelPage />, {
+      url: `/c/${channel.channel_type}/${channel.name}`,
+    })
+
+    await screen.findByRole("heading", { level: 1, name: channel.title })
+    expect(screen.queryByRole("progressbar")).toBe(null)
+  })
+})
+
 describe("Channel Pages, Topic only", () => {
   test("shows only what the design's hero carries", async () => {
     const { channel } = setupApis({
