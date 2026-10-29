@@ -104,6 +104,8 @@ const monthlyEngagementTrend = (
   new_enrollments: 12,
   enrolling_learners: 9,
   certificates_earned: 5,
+  newly_certified_learners: 5,
+  // Deprecated alias the API still sends, always equal to newly_certified_learners.
   certified_learners: 5,
   total_videos_watched: 900,
   video_watchers: 22,
