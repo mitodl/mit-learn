@@ -1,14 +1,65 @@
 import { queryOptions } from "@tanstack/react-query"
-import { analyticsContractsApi, analyticsOrganizationsApi } from "../../clients"
 import type {
-  AnalyticsPageParams,
-  LearnerProgressParams,
-  LearnersParams,
-} from "../../types"
+  LearnersApiLearnersListRequest,
+  LearnersApiLearnersProgressRetrieveRequest,
+  OrganizationsApiOrganizationsContractUtilizationRetrieveRequest,
+  OrgAnalyticsResponseContractUtilization,
+} from "@mitodl/ol-analytics-dashboard-api-axios"
+import {
+  contractsApi,
+  learnersApi,
+  needsAttentionApi,
+  organizationsApi,
+} from "../../clients"
 
 /**
- * `orgId` in every key is the Keycloak organization UUID — see
- * `analyticsOrganizationsApi`. Keys are namespaced under "analytics" so the
+ * LIMIT/OFFSET paging, shared by every multi-row endpoint. The API caps `limit`
+ * at its own `max_page_size` and rejects anything larger with a 422.
+ */
+type AnalyticsPageParams = Omit<
+  OrganizationsApiOrganizationsContractUtilizationRetrieveRequest,
+  "organization_id"
+>
+
+/**
+ * The org-scope envelope, generic over its row type. The generated client
+ * declares one envelope per row type (`OrgAnalyticsResponseContractUtilization`,
+ * ...), all with the same fields; this is that shape with `data` widened, so a
+ * component can take any section's response.
+ *
+ * `as_of` is the last refresh time of the single materialized view backing
+ * the endpoint, so it is per-section rather than per-page, and `null` until
+ * that view has refreshed for the first time. `total_count` is the row count
+ * across every page, already net of the anonymity floor; `data.length` alone
+ * cannot distinguish a complete result from one truncated at the page cap.
+ */
+type OrgAnalyticsResponse<RowT> = Omit<
+  OrgAnalyticsResponseContractUtilization,
+  "data"
+> & { data: RowT[] }
+
+type ContractRequestIds = "organization_id" | "contract_id"
+
+/**
+ * `completion_status` additionally takes `unknown` to select rows whose
+ * outcomes are withheld. Those rows match NEITHER value of `needs_attention`,
+ * mirroring the consent gating on the row field, so a request that sets it
+ * never returns them.
+ */
+type LearnerProgressParams = Omit<
+  LearnersApiLearnersProgressRetrieveRequest,
+  ContractRequestIds
+>
+
+/** `limit` and `offset` count learners, not enrollments; the API caps `limit` at 25. */
+type LearnersParams = Omit<LearnersApiLearnersListRequest, ContractRequestIds>
+
+/**
+ * `orgId` in every key is the Keycloak organization UUID
+ * (`sso_organization_id`), not the org slug and not MITx Online's numeric org
+ * id. It is the only identifier that is stable across the JWT, MITx Online and
+ * StarRocks, so the analytics API keys every org endpoint on it (see
+ * mitodl/ol-analytics-api#13). Keys are namespaced under "analytics" so the
  * whole dashboard can be invalidated without touching mitxonline or learn
  * queries.
  */
@@ -41,8 +92,11 @@ const analyticsOrganizationQueries = {
       ),
       staleTime: ANALYTICS_STALE_TIME,
       queryFn: async ({ signal }) =>
-        analyticsOrganizationsApi
-          .contractUtilization(orgId, page, signal)
+        organizationsApi
+          .organizationsContractUtilizationRetrieve(
+            { organization_id: orgId, ...page },
+            { signal },
+          )
           .then((res) => res.data),
     }),
 
@@ -55,8 +109,11 @@ const analyticsOrganizationQueries = {
       ),
       staleTime: ANALYTICS_STALE_TIME,
       queryFn: async ({ signal }) =>
-        analyticsOrganizationsApi
-          .enrollmentFunnel(orgId, page, signal)
+        organizationsApi
+          .organizationsEnrollmentFunnelRetrieve(
+            { organization_id: orgId, ...page },
+            { signal },
+          )
           .then((res) => res.data),
     }),
 
@@ -69,8 +126,11 @@ const analyticsOrganizationQueries = {
       ),
       staleTime: ANALYTICS_STALE_TIME,
       queryFn: async ({ signal }) =>
-        analyticsOrganizationsApi
-          .engagementTrend(orgId, page, signal)
+        organizationsApi
+          .organizationsEngagementTrendRetrieve(
+            { organization_id: orgId, ...page },
+            { signal },
+          )
           .then((res) => res.data),
     }),
 
@@ -83,8 +143,11 @@ const analyticsOrganizationQueries = {
       ),
       staleTime: ANALYTICS_STALE_TIME,
       queryFn: async ({ signal }) =>
-        analyticsOrganizationsApi
-          .contentEngagement(orgId, page, signal)
+        organizationsApi
+          .organizationsContentEngagementRetrieve(
+            { organization_id: orgId, ...page },
+            { signal },
+          )
           .then((res) => res.data),
     }),
 }
@@ -94,10 +157,16 @@ const analyticsOrganizationQueries = {
  * drops its contracts' cached sections too — they are views of the same
  * underlying data and can never be stale independently.
  *
- * `contractId` is MITx Online's contract id, not the route's slug.
+ * `contractId` is MITx Online's `ContractPage.page_ptr_id`, the same value the
+ * manager dashboard puts in its own URLs and what the analytics API filters
+ * on. NOT the contract slug the MIT Learn route carries, and NOT the
+ * warehouse's `contract_pk` surrogate; resolve the slug to an id from the
+ * org's `contracts` list first. The org stays in the path even though a
+ * contract id is unique on its own: the API filters on both, so a manager of
+ * one org cannot read another's contract by naming it.
  */
 const analyticsContractKeys = {
-  contract: (orgId: string, contractId: string) =>
+  contract: (orgId: string, contractId: number) =>
     [
       ...analyticsOrganizationKeys.organization(orgId),
       "contracts",
@@ -105,7 +174,7 @@ const analyticsContractKeys = {
     ] as const,
   resource: (
     orgId: string,
-    contractId: string,
+    contractId: number,
     resource: string,
     page?: AnalyticsPageParams,
   ) =>
@@ -120,7 +189,7 @@ const analyticsContractKeys = {
    */
   learnerProgress: (
     orgId: string,
-    contractId: string,
+    contractId: number,
     params?: LearnerProgressParams,
   ) =>
     [
@@ -133,7 +202,7 @@ const analyticsContractKeys = {
 const analyticsContractQueries = {
   contractUtilization: (
     orgId: string,
-    contractId: string,
+    contractId: number,
     page?: AnalyticsPageParams,
   ) =>
     queryOptions({
@@ -145,14 +214,17 @@ const analyticsContractQueries = {
       ),
       staleTime: ANALYTICS_STALE_TIME,
       queryFn: async ({ signal }) =>
-        analyticsContractsApi
-          .contractUtilization(orgId, contractId, page, signal)
+        contractsApi
+          .contractsContractUtilizationRetrieve(
+            { organization_id: orgId, contract_id: contractId, ...page },
+            { signal },
+          )
           .then((res) => res.data),
     }),
 
   enrollmentFunnel: (
     orgId: string,
-    contractId: string,
+    contractId: number,
     page?: AnalyticsPageParams,
   ) =>
     queryOptions({
@@ -164,14 +236,17 @@ const analyticsContractQueries = {
       ),
       staleTime: ANALYTICS_STALE_TIME,
       queryFn: async ({ signal }) =>
-        analyticsContractsApi
-          .enrollmentFunnel(orgId, contractId, page, signal)
+        contractsApi
+          .contractsEnrollmentFunnelRetrieve(
+            { organization_id: orgId, contract_id: contractId, ...page },
+            { signal },
+          )
           .then((res) => res.data),
     }),
 
   engagementTrend: (
     orgId: string,
-    contractId: string,
+    contractId: number,
     page?: AnalyticsPageParams,
   ) =>
     queryOptions({
@@ -183,14 +258,17 @@ const analyticsContractQueries = {
       ),
       staleTime: ANALYTICS_STALE_TIME,
       queryFn: async ({ signal }) =>
-        analyticsContractsApi
-          .engagementTrend(orgId, contractId, page, signal)
+        contractsApi
+          .contractsEngagementTrendRetrieve(
+            { organization_id: orgId, contract_id: contractId, ...page },
+            { signal },
+          )
           .then((res) => res.data),
     }),
 
   contentEngagement: (
     orgId: string,
-    contractId: string,
+    contractId: number,
     page?: AnalyticsPageParams,
   ) =>
     queryOptions({
@@ -202,8 +280,11 @@ const analyticsContractQueries = {
       ),
       staleTime: ANALYTICS_STALE_TIME,
       queryFn: async ({ signal }) =>
-        analyticsContractsApi
-          .contentEngagement(orgId, contractId, page, signal)
+        contractsApi
+          .contractsContentEngagementRetrieve(
+            { organization_id: orgId, contract_id: contractId, ...page },
+            { signal },
+          )
           .then((res) => res.data),
     }),
 
@@ -214,7 +295,7 @@ const analyticsContractQueries = {
    */
   learnerProgress: (
     orgId: string,
-    contractId: string,
+    contractId: number,
     params?: LearnerProgressParams,
   ) =>
     queryOptions({
@@ -225,8 +306,11 @@ const analyticsContractQueries = {
       ),
       staleTime: LEARNER_PROGRESS_STALE_TIME,
       queryFn: async ({ signal }) =>
-        analyticsContractsApi
-          .learnerProgress(orgId, contractId, params, signal)
+        learnersApi
+          .learnersProgressRetrieve(
+            { organization_id: orgId, contract_id: contractId, ...params },
+            { signal },
+          )
           .then((res) => res.data),
     }),
 
@@ -234,7 +318,7 @@ const analyticsContractQueries = {
    * One page of learners, each with all of their enrollments. `params.limit`
    * and `params.offset` count learners.
    */
-  learners: (orgId: string, contractId: string, params?: LearnersParams) =>
+  learners: (orgId: string, contractId: number, params?: LearnersParams) =>
     queryOptions({
       queryKey: [
         ...analyticsContractKeys.contract(orgId, contractId),
@@ -243,8 +327,11 @@ const analyticsContractQueries = {
       ] as const,
       staleTime: LEARNER_PROGRESS_STALE_TIME,
       queryFn: async ({ signal }) =>
-        analyticsContractsApi
-          .learners(orgId, contractId, params, signal)
+        learnersApi
+          .learnersList(
+            { organization_id: orgId, contract_id: contractId, ...params },
+            { signal },
+          )
           .then((res) => res.data),
     }),
 
@@ -255,7 +342,7 @@ const analyticsContractQueries = {
    * learners move through it. Five minutes is still short enough that a
    * consumer has to expect a mid-session refetch.
    */
-  courseRuns: (orgId: string, contractId: string, page?: AnalyticsPageParams) =>
+  courseRuns: (orgId: string, contractId: number, page?: AnalyticsPageParams) =>
     queryOptions({
       queryKey: analyticsContractKeys.resource(
         orgId,
@@ -265,8 +352,11 @@ const analyticsContractQueries = {
       ),
       staleTime: ANALYTICS_STALE_TIME,
       queryFn: async ({ signal }) =>
-        analyticsContractsApi
-          .courseRuns(orgId, contractId, page, signal)
+        learnersApi
+          .learnersCourseRunsRetrieve(
+            { organization_id: orgId, contract_id: contractId, ...page },
+            { signal },
+          )
           .then((res) => res.data),
     }),
 
@@ -275,7 +365,7 @@ const analyticsContractQueries = {
    * the same rows at query time, and the count should not lag the directory a
    * manager clicks through to.
    */
-  needsAttention: (orgId: string, contractId: string) =>
+  needsAttention: (orgId: string, contractId: number) =>
     queryOptions({
       queryKey: analyticsContractKeys.resource(
         orgId,
@@ -284,12 +374,21 @@ const analyticsContractQueries = {
       ),
       staleTime: LEARNER_PROGRESS_STALE_TIME,
       queryFn: async ({ signal }) =>
-        analyticsContractsApi
-          .needsAttention(orgId, contractId, undefined, signal)
+        needsAttentionApi
+          .contractsNeedsAttentionRetrieve(
+            { organization_id: orgId, contract_id: contractId },
+            { signal },
+          )
           .then((res) => res.data),
     }),
 }
 
+export type {
+  AnalyticsPageParams,
+  LearnerProgressParams,
+  LearnersParams,
+  OrgAnalyticsResponse,
+}
 export {
   analyticsOrganizationQueries,
   analyticsOrganizationKeys,

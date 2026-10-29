@@ -322,7 +322,7 @@ const AnalyticsContentInternal: React.FC<AnalyticsContentInternalProps> = ({
   const contract = contractSlug
     ? org?.contracts.find((c) => c.slug === contractSlug)
     : undefined
-  const contractId = contract ? String(contract.id) : null
+  const contractId = contract?.id ?? null
   // A contract route whose slug matches nothing in this org is as unavailable
   // as a missing org UUID: better an empty state than a request with
   // `undefined` in the path, which the API would answer with a 403 for a
@@ -424,9 +424,9 @@ const AnalyticsContentInternal: React.FC<AnalyticsContentInternalProps> = ({
   })
 
   /**
-   * `learnerProgress` has no org-wide equivalent (see `analytics/types.ts`'s
-   * header comment and `ContractLearnersPage.tsx`'s), so this section only
-   * renders when a contract is in view — the same reason the contract nav's
+   * `learnerProgress` has no org-wide equivalent (it returns individual
+   * learners under one contract; see `ContractLearnersPage.tsx`), so this
+   * section only renders when a contract is in view — the same reason the contract nav's
    * Learners link is absent from the org-wide aggregate page. It is gated on
    * `B2BLearnerAnalytics` for the same reason that link is: every tile links
    * to the Learners page, which throws `ForbiddenError` without the flag.
@@ -441,7 +441,7 @@ const AnalyticsContentInternal: React.FC<AnalyticsContentInternalProps> = ({
   const learnerProgress = useQuery({
     ...analyticsContractQueries.learnerProgress(
       orgUuid ?? "",
-      contractId ?? "",
+      contractId ?? 0,
       { limit: 1 },
     ),
     enabled: analyticsAvailable && !!contractId && !!learnerAnalyticsFlag,
@@ -457,7 +457,7 @@ const AnalyticsContentInternal: React.FC<AnalyticsContentInternalProps> = ({
     !!learnerProgress.data.total_count &&
     !!learnerProgress.data.completion_status_counts
   const needsAttention = useQuery({
-    ...analyticsContractQueries.needsAttention(orgUuid ?? "", contractId ?? ""),
+    ...analyticsContractQueries.needsAttention(orgUuid ?? "", contractId ?? 0),
     enabled: showsNeedsAttention,
   })
 

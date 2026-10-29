@@ -234,7 +234,7 @@ const Muted = styled.span(({ theme }) => ({
 
 type ProgressGridProps = {
   orgUuid: string
-  contractId: string
+  contractId: number
   search: string
   completionStatus: CompletionStatusFilter[] | undefined
   needsAttentionOnly: boolean
