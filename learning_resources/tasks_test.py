@@ -34,7 +34,12 @@ from learning_resources.factories import (
     LearningResourcePlatformFactory,
     LearningResourceRunFactory,
 )
-from learning_resources.models import ContentFile, ETLSourceOwnership, LearningResource
+from learning_resources.models import (
+    ContentFile,
+    ETLSourceOwnership,
+    LearningResource,
+    Unit,
+)
 from learning_resources.tasks import (
     cleanup_deleted_content_files,
     get_ocw_data,
@@ -3280,3 +3285,131 @@ def test_ocw_sync_task_reads_nothing_it_does_not_own(mocker):
     mock_connect.assert_not_called()
     mock_iter_rows.assert_not_called()
     assert not LearningResource.objects.exists()
+
+
+def test_unit_claims_resource_ids():
+    """Only published courses with units on some run are swept"""
+    with_units = factories.UnitFactory.create().run.learning_resource
+    with_units.resource_type = LearningResourceType.course.name
+    with_units.published = True
+    with_units.save()
+    unpublished = factories.UnitFactory.create().run.learning_resource
+    unpublished.resource_type = LearningResourceType.course.name
+    unpublished.published = False
+    unpublished.save()
+    factories.LearningResourceRunFactory.create()
+
+    assert tasks.unit_claims_resource_ids() == [with_units.id]
+
+
+@pytest.mark.parametrize("overwrite", [True, False])
+def test_generate_unit_claims_for_resource(mocker, overwrite):
+    """The best run's context unit and each of its units and bins are extracted"""
+    run = factories.LearningResourceRunFactory.create()
+    factories.UnitFactory.create(run=run, kind=Unit.Kind.CONTEXT, position=None)
+    bin_unit = factories.UnitFactory.create(run=run, kind=Unit.Kind.BIN, position=None)
+    second = factories.UnitFactory.create(run=run, position=2)
+    first = factories.UnitFactory.create(run=run, position=1)
+    mocker.patch.object(
+        LearningResource, "best_run", new_callable=mocker.PropertyMock, return_value=run
+    )
+    generate_context = mocker.patch(
+        "learning_resources.profiles.context_claims.generate_context_claims",
+        return_value=mocker.Mock(),
+    )
+    generate_unit = mocker.patch(
+        "learning_resources.profiles.unit_claims.generate_unit_claims",
+        return_value=mocker.Mock(),
+    )
+
+    result = tasks.generate_unit_claims_for_resource(
+        run.learning_resource.id, overwrite=overwrite
+    )
+
+    assert result == {"context_extracted": 1, "unit_extracted": 3}
+    generate_context.assert_called_once_with(run, overwrite=overwrite)
+    assert generate_unit.call_args_list == [
+        mocker.call(unit, overwrite=overwrite) for unit in [first, second, bin_unit]
+    ]
+
+
+def test_generate_unit_claims_for_resource_failures(mocker):
+    """A unit that fails or is skipped doesn't stop the rest of the run"""
+    run = factories.LearningResourceRunFactory.create()
+    factories.UnitFactory.create(run=run, kind=Unit.Kind.CONTEXT, position=None)
+    failing, skipped, extracted = factories.UnitFactory.create_batch(3, run=run)
+    mocker.patch.object(
+        LearningResource, "best_run", new_callable=mocker.PropertyMock, return_value=run
+    )
+    mocker.patch(
+        "learning_resources.profiles.context_claims.generate_context_claims",
+        side_effect=ValueError("bad response"),
+    )
+    generate_unit = mocker.patch(
+        "learning_resources.profiles.unit_claims.generate_unit_claims",
+        side_effect=[ValueError("bad response"), None, mocker.Mock()],
+    )
+
+    result = tasks.generate_unit_claims_for_resource(run.learning_resource.id)
+
+    assert result == {
+        "context_failed": 1,
+        "unit_failed": 1,
+        "unit_skipped": 1,
+        "unit_extracted": 1,
+    }
+    assert [call.args[0] for call in generate_unit.call_args_list] == [
+        failing,
+        skipped,
+        extracted,
+    ]
+
+
+def test_generate_unit_claims_for_resource_no_context(mocker):
+    """A run without a context unit only extracts its units"""
+    unit = factories.UnitFactory.create()
+    mocker.patch.object(
+        LearningResource,
+        "best_run",
+        new_callable=mocker.PropertyMock,
+        return_value=unit.run,
+    )
+    generate_context = mocker.patch(
+        "learning_resources.profiles.context_claims.generate_context_claims"
+    )
+    mocker.patch(
+        "learning_resources.profiles.unit_claims.generate_unit_claims",
+        return_value=None,
+    )
+
+    result = tasks.generate_unit_claims_for_resource(unit.run.learning_resource.id)
+
+    assert result == {"unit_skipped": 1}
+    generate_context.assert_not_called()
+
+
+def test_generate_unit_claims_for_resource_no_units(mocker):
+    """Nothing is generated when the best run has no units"""
+    run = factories.LearningResourceRunFactory.create()
+    mocker.patch.object(
+        LearningResource, "best_run", new_callable=mocker.PropertyMock, return_value=run
+    )
+    generate_unit = mocker.patch(
+        "learning_resources.profiles.unit_claims.generate_unit_claims"
+    )
+
+    assert tasks.generate_unit_claims_for_resource(run.learning_resource.id) is None
+    generate_unit.assert_not_called()
+
+
+def test_generate_all_unit_claims(mocker):
+    """One task is queued per course"""
+    group = mocker.patch("learning_resources.tasks.celery.group")
+    task = mocker.patch("learning_resources.tasks.generate_unit_claims_for_resource")
+
+    assert tasks.generate_all_unit_claims([1, 2], overwrite=True) == 2
+    assert task.si.call_args_list == [
+        mocker.call(1, overwrite=True),
+        mocker.call(2, overwrite=True),
+    ]
+    group.return_value.apply_async.assert_called_once()
