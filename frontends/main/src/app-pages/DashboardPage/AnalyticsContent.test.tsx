@@ -332,6 +332,7 @@ describe("AnalyticsContent", () => {
             seats_consumed: 62,
             seat_limit: 100,
             active_learners: 48,
+            certified_learners: 17,
             seat_utilization_pct: 62,
             completion_rate_pct: 32.3,
           }),
@@ -347,6 +348,7 @@ describe("AnalyticsContent", () => {
       expect(screen.getByText("48")).toBeInTheDocument()
       expect(screen.getByText("32.3%")).toBeInTheDocument()
       expect(screen.getByText("62 of 100 seats")).toBeInTheDocument()
+      expect(screen.getByText("17 certified")).toBeInTheDocument()
     })
 
     test("renders course rows and marks suppressed values as withheld", async () => {
