@@ -14,14 +14,11 @@ import { useChannelDetail } from "api/hooks/channels"
 import { SourceTypeEnum } from "api"
 import { HOME as HOME_URL } from "../../common/urls"
 import { CHANNEL_TYPE_BREADCRUMB_TARGETS } from "./ChannelPageTemplate"
-import { ChannelTypeEnum, TopicChannel } from "api/v0"
+import { ChannelTypeEnum, TopicChannel, DepartmentChannel } from "api/v0"
 import { useLearningResourceTopic } from "api/hooks/learningResources"
-import { backgroundSrcSetCSS } from "ol-utilities"
 import invariant from "tiny-invariant"
-import topicBannerDefault from "@/public/images/backgrounds/bg-default-topics.jpg"
-import TopicFeaturedCarousel, {
-  useTopicFeaturedIsEmpty,
-} from "./TopicFeaturedCarousel"
+import type { FeaturedChannelType } from "./topicFeatured"
+import TopicFeaturedCarousel from "./TopicFeaturedCarousel"
 
 const BannerSkeleton = styled(Skeleton)(({ theme }) => ({
   backgroundColor: theme.custom.colors.lightGray2,
@@ -322,15 +319,18 @@ const HeroContent = styled.div({
   position: "relative",
 })
 
-/* 48 above, 64 below, and 64 between the title block and the featured row. */
-const HeroInner = styled.div(({ theme }) => ({
+/* 48 above, 64 below, and 64 or 40 between the title block and the featured
+   row -- see `updatedSpacing` on the hero's props. */
+const HeroInner = styled("div", {
+  shouldForwardProp: (prop) => prop !== "updatedSpacing",
+})<{ updatedSpacing: boolean }>(({ theme, updatedSpacing }) => ({
   display: "flex",
   flexDirection: "column",
-  gap: "64px",
+  gap: updatedSpacing ? "40px" : "64px",
   paddingTop: "48px",
   paddingBottom: "64px",
   [theme.breakpoints.down("sm")]: {
-    gap: "32px",
+    gap: "16px",
     paddingTop: "24px",
     paddingBottom: "32px",
   },
@@ -343,6 +343,9 @@ const HeroInner = styled.div(({ theme }) => ({
  * width, straight across it -- so the design gives each of them a pane of its
  * own to be read against: white at three quarters, which lifts the words off
  * the photograph while leaving it visible underneath.
+ *
+ * Only where there is a photograph. A hero that is plain white already reads,
+ * and a white pane on white draws a box around the words for nothing.
  */
 const HERO_TEXT_PANEL = {
   backgroundColor: "rgba(255, 255, 255, 0.75)",
@@ -354,44 +357,56 @@ const HERO_TEXT_PANEL = {
  * Held to 736px, as the design has it: the description is a paragraph to read,
  * and the full container width would run it to an uncomfortable measure.
  */
-const BannerArea = styled.div(({ theme }) => ({
-  display: "flex",
-  flexDirection: "column",
-  /* The design draws this at 16px where a Featured row follows and 32px where
-     none does; we hold it at 32px throughout, so the trail sits the same
-     distance from the title whether or not the channel features anything. */
-  gap: "32px",
-  maxWidth: "736px",
-  /* The shared Breadcrumbs carries its own 16px bottom padding, which would
+const BannerArea = styled("div", {
+  shouldForwardProp: (prop) =>
+    prop !== "overPhoto" && prop !== "updatedSpacing",
+})<{ overPhoto: boolean; updatedSpacing: boolean }>(
+  ({ theme, overPhoto, updatedSpacing }) => ({
+    display: "flex",
+    flexDirection: "column",
+    /* The older design draws this at 16px where a Featured row follows and
+     32px where none does; we hold it at 32px throughout, so the trail sits the
+     same distance from the title whether or not the channel features anything.
+     The updated one settles it at 24px either way. */
+    gap: updatedSpacing ? "24px" : "32px",
+    maxWidth: "736px",
+    /* The shared Breadcrumbs carries its own 16px bottom padding, which would
      stack with that gap and push the title further from the trail than any
      of the design's spacings. */
-  "> span": {
-    paddingBottom: 0,
-  },
-  /**
-   * The design greys the last step of the trail and sets it in the regular
-   * weight. Breadcrumbs does that only for a step with nowhere to go; this
-   * one leads to the parent topic, and the link is worth keeping, so it is
-   * styled to match rather than flattened into plain text.
-   */
-  "> span > span:last-of-type": {
-    "&, a, a:hover": {
-      ...theme.typography.body3,
-      color: theme.custom.colors.silverGrayDark,
+    "> span": {
+      paddingBottom: 0,
     },
-  },
-  /* The 8px here replaces the zeroed bottom padding above, which is why this
+    /**
+     * The design greys the last step of the trail and sets it in the regular
+     * weight. Breadcrumbs does that only for a step with nowhere to go; this
+     * one leads to the parent topic, and the link is worth keeping, so it is
+     * styled to match rather than flattened into plain text.
+     */
+    "> span > span:last-of-type": {
+      "&, a, a:hover": {
+        ...theme.typography.body3,
+        color: theme.custom.colors.silverGrayDark,
+      },
+    },
+    [theme.breakpoints.down("sm")]: {
+      gap: "16px",
+    },
+    /* The 8px here replaces the zeroed bottom padding above, which is why this
      follows it rather than sitting with the other narrow-screen rules. */
-  [theme.breakpoints.down("sm")]: {
-    "> span": HERO_TEXT_PANEL,
-  },
-}))
+    ...(overPhoto
+      ? { [theme.breakpoints.down("sm")]: { "> span": HERO_TEXT_PANEL } }
+      : {}),
+  }),
+)
 
-const TitleBlock = styled.div({
+const TitleBlock = styled.div(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
   gap: "32px",
-})
+  [theme.breakpoints.down("sm")]: {
+    gap: "16px",
+  },
+}))
 
 /* Wraps rather than squeezing the title: the Follow control has a fixed size
    and a long topic name would otherwise crush it.
@@ -403,7 +418,7 @@ const TitleRow = styled.div({
   gap: "20px",
   /* Bottom-aligned, as the design has it -- the pill sits on the title's
      baseline rather than centred against its 60px cap height. */
-  alignItems: "center",
+  alignItems: "flex-end",
   flexWrap: "wrap",
 })
 
@@ -417,6 +432,9 @@ const TopicTitle = styled.h1(({ theme }) => ({
   ...theme.typography.h1,
   color: theme.custom.colors.lightRed,
   margin: 0,
+  [theme.breakpoints.down("sm")]: {
+    ...theme.typography.h3,
+  },
 }))
 
 /**
@@ -424,13 +442,17 @@ const TopicTitle = styled.h1(({ theme }) => ({
  * the design file and the design system have drifted apart on this token. The
  * line height is set here to the design's, so the paragraph reads as drawn.
  */
-const TopicDescription = styled(Typography)(({ theme }) => ({
+const TopicDescription = styled(Typography, {
+  shouldForwardProp: (prop) => prop !== "overPhoto",
+})<{ overPhoto: boolean }>(({ theme, overPhoto }) => ({
   color: theme.custom.colors.darkGray2,
   lineHeight: "26px",
   width: "90%",
   [theme.breakpoints.down("sm")]: {
     width: "100%",
-    ...HERO_TEXT_PANEL,
+    ...theme.typography.body2,
+    lineHeight: "22px",
+    ...(overPhoto ? HERO_TEXT_PANEL : {}),
   },
 }))
 
@@ -444,20 +466,23 @@ const SearchArea = styled.div(({ theme }) => ({
 }))
 
 const BreadcrumbsInternal: React.FC<
-  Pick<BreadcrumbsProps, "current" | "currentHref">
-> = (props) => {
+  Pick<BreadcrumbsProps, "current" | "currentHref"> & {
+    channelType: FeaturedChannelType
+  }
+> = ({ channelType, ...props }) => {
   return (
-    /* "light" is the variant for a light ground: black links over the topic's
-       own silverGrayDark current page, which is what the design draws. "dark"
-       renders them white, which the hero's pale wash would swallow. */
+    /* "light" is the variant for a light ground: black links over the
+       channel's own silverGrayDark current page, which is what the design
+       draws. "dark" renders them white, which the hero's pale wash would
+       swallow. */
     <Breadcrumbs
       variant="light"
       separatorStyle={{ margin: "0 0 0 0" }}
       ancestors={[
         { href: HOME_URL, label: "Home" },
         {
-          href: CHANNEL_TYPE_BREADCRUMB_TARGETS[ChannelTypeEnum.Topic].href,
-          label: CHANNEL_TYPE_BREADCRUMB_TARGETS[ChannelTypeEnum.Topic].label,
+          href: CHANNEL_TYPE_BREADCRUMB_TARGETS[channelType].href,
+          label: CHANNEL_TYPE_BREADCRUMB_TARGETS[channelType].label,
         },
       ]}
       current={props.current}
@@ -483,58 +508,161 @@ const TopicChannelTemplate: React.FC<TopicChannelTemplateProps> = ({
   const channel = useChannelDetail(String(ChannelTypeEnum.Topic), String(name))
   if (channel.data?.channel_type === ChannelTypeEnum.Topic) {
     return (
-      <TopicChannelTemplateInternal channel={channel.data}>
-        {children}
-      </TopicChannelTemplateInternal>
+      <TopicChannelHero channel={channel.data}>{children}</TopicChannelHero>
     )
   } else return null
 }
 
-type TopicChannelTemplateInternalProps = {
+/**
+ * The topic hero, which the updated design draws on plain white.
+ *
+ * It used to carry a photograph; the design no longer does, so nothing is
+ * passed behind the words and the section's own white is the ground. The
+ * machinery for one is still here for the department page, which is to have a
+ * banner image of its own -- see `ChannelHeroPhoto`.
+ *
+ * Its own component only to hold the topic query, which decides whether the
+ * trail is drawn or stood in for: a hook, so it cannot be called from the
+ * shared hero, which a department renders without it.
+ */
+const TopicChannelHero: React.FC<{
   channel: TopicChannel
   children: React.ReactNode
-}
-
-const TopicChannelTemplateInternal: React.FC<
-  TopicChannelTemplateInternalProps
-> = ({ channel, children }) => {
+}> = ({ channel, children }) => {
   invariant(channel.topic_detail.topic, "Topic channel must have a topic")
   const topicQuery = useLearningResourceTopic(channel.topic_detail.topic)
-  const topicQueryLoading = topicQuery.isLoading
 
+  return (
+    <ChannelRedesignHero
+      channel={channel}
+      channelType={ChannelTypeEnum.Topic}
+      updatedSpacing
+      trailLoading={topicQuery.isLoading}
+    >
+      {children}
+    </ChannelRedesignHero>
+  )
+}
+
+/**
+ * A channel's configured banner image, with the wash that takes it off the
+ * rest of the hero.
+ *
+ * Nothing renders this yet. The topic page did until the design dropped the
+ * photograph, and the department page is to have one, so it is kept whole
+ * rather than rebuilt from scratch later -- and kept reachable, so it goes on
+ * compiling and is not quietly broken by the time it is wanted.
+ *
+ * Takes the banner as configured on the channel and nothing else: the default
+ * artwork that stood in for an unconfigured topic was the topic design's, and
+ * a channel with no banner now draws none.
+ */
+const ChannelHeroPhoto: React.FC<{
+  configuredBanner: string
+  /** Frames the shorter hero a channel with nothing to feature leaves. */
+  featuredIsEmpty: boolean
+}> = ({ configuredBanner, featuredIsEmpty }) => (
+  <>
+    <HeroPhoto
+      data-testid="channel-hero-photo"
+      aria-hidden
+      wholeWidth={featuredIsEmpty}
+      /* Through the same standardizer the other channel banners use: the field
+         holds either a bare src or a value already written as `url(...)`, and
+         wrapping the second kind again drops the declaration. */
+      backgroundUrl={standardizeBackgroundUrl(configuredBanner)}
+    />
+    <HeroScrim aria-hidden unfeatured={featuredIsEmpty} />
+  </>
+)
+
+/**
+ * The same page for an academic department.
+ *
+ * The design is the topic page's but for the hero's ground: a department has
+ * no photograph behind its title, so the hero is the plain white the section
+ * already paints and the words need no pane to be read against.
+ */
+const DepartmentChannelTemplate: React.FC<TopicChannelTemplateProps> = ({
+  children,
+  name,
+}) => {
+  const channel = useChannelDetail(
+    String(ChannelTypeEnum.Department),
+    String(name),
+  )
+  if (channel.data?.channel_type === ChannelTypeEnum.Department) {
+    return (
+      <ChannelRedesignHero
+        channel={channel.data}
+        channelType={ChannelTypeEnum.Department}
+      >
+        {children}
+      </ChannelRedesignHero>
+    )
+  } else return null
+}
+
+type ChannelRedesignHeroProps = {
+  channel: TopicChannel | DepartmentChannel
+  channelType: FeaturedChannelType
+  children: React.ReactNode
+  /**
+   * The layers behind the words, where there are any. A topic hero puts its
+   * photograph and the wash over it here; a department has neither, and the
+   * section's own white is the ground.
+   */
+  background?: React.ReactNode
+  /** Whether that background is a photograph the words need lifting off. */
+  overPhoto?: boolean
+  /** Shown in the trail's place until the channel's own detail is in hand. */
+  trailLoading?: boolean
+  /**
+   * The updated design's spacings: 24px under the trail and 40px above the
+   * Featured row, where the original has 32px and 64px.
+   *
+   * A prop rather than the one answer because only the topic design has been
+   * revised -- Figma 47770-73639 against the department's 46398-102688 -- and
+   * the department page is to keep what it has, banner image included, until
+   * its own design catches up.
+   */
+  updatedSpacing?: boolean
+}
+
+/**
+ * The hero and the catalogue beneath it, which the redesigned topic and
+ * department pages share.
+ *
+ * Everything but the ground is the same page: the trail, the red title, the
+ * Follow pill beside it, an optional description, the curated Featured row,
+ * and the search area below the rule.
+ */
+const ChannelRedesignHero: React.FC<ChannelRedesignHeroProps> = ({
+  channel,
+  channelType,
+  children,
+  background,
+  overPhoto = false,
+  trailLoading = false,
+  updatedSpacing = false,
+}) => {
   const urlParams = new URLSearchParams(channel.search_filter)
-  const displayConfiguration = channel.configuration
-  const configuredBanner = displayConfiguration?.banner_background
-  const navText = <BreadcrumbsInternal current={channel.title} />
-  /* The design frames the photograph for the shorter hero a channel with
-     nothing to feature leaves -- see `HeroPhoto`. */
-  const featuredIsEmpty = useTopicFeaturedIsEmpty(channel.name)
 
   return (
     <>
       <TopicHero>
-        <HeroPhoto
-          aria-hidden
-          wholeWidth={featuredIsEmpty}
-          backgroundUrl={
-            configuredBanner
-              ? /* Through the same standardizer the other channel banners use:
-                   the field holds either a bare src or a value already written
-                   as `url(...)`, and wrapping the second kind again drops the
-                   declaration. */
-                standardizeBackgroundUrl(configuredBanner)
-              : backgroundSrcSetCSS(topicBannerDefault)
-          }
-        />
-        <HeroScrim aria-hidden unfeatured={featuredIsEmpty} />
+        {background}
         <HeroContent>
           <Container>
-            <HeroInner>
-              <BannerArea>
-                {topicQueryLoading ? (
+            <HeroInner updatedSpacing={updatedSpacing}>
+              <BannerArea overPhoto={overPhoto} updatedSpacing={updatedSpacing}>
+                {trailLoading ? (
                   <BannerSkeleton variant="text" width="33%" />
                 ) : (
-                  navText
+                  <BreadcrumbsInternal
+                    channelType={channelType}
+                    current={channel.title}
+                  />
                 )}
                 <TitleBlock>
                   <TitleRow>
@@ -552,13 +680,16 @@ const TopicChannelTemplateInternal: React.FC<
                     ) : null}
                   </TitleRow>
                   {channel.public_description ? (
-                    <TopicDescription variant="body1">
+                    <TopicDescription variant="body1" overPhoto={overPhoto}>
                       {channel.public_description}
                     </TopicDescription>
                   ) : null}
                 </TitleBlock>
               </BannerArea>
-              <TopicFeaturedCarousel name={channel.name} />
+              <TopicFeaturedCarousel
+                name={channel.name}
+                channelType={channelType}
+              />
             </HeroInner>
           </Container>
         </HeroContent>
@@ -571,3 +702,6 @@ const TopicChannelTemplateInternal: React.FC<
 }
 
 export default TopicChannelTemplate
+/* `ChannelHeroPhoto` is exported for the department banner it is being kept
+   for, and so that nothing in it is dead to the compiler in the meantime. */
+export { DepartmentChannelTemplate, ChannelHeroPhoto }

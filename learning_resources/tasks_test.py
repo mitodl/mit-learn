@@ -24,6 +24,7 @@ from learning_resources.constants import (
 from learning_resources.credentials import CredentialMetadata
 from learning_resources.etl.constants import MARKETING_PAGE_FILE_TYPE, ETLSource
 from learning_resources.etl.exceptions import ExtractException
+from learning_resources.etl.ownership import CONTENT_FILE, TRANSCRIPT
 from learning_resources.factories import (
     ContentFileFactory,
     CredentialMetadataConfigurationFactory,
@@ -138,6 +139,7 @@ def test_import_all_mit_edx_files(settings, mocker, mocked_celery, mock_blocklis
         ETLSource.mit_edx.name,
         chunk_size=4,
         overwrite=False,
+        overwrite_units=False,
         learning_resource_ids=[1],
     )
 
@@ -158,6 +160,7 @@ def test_import_all_mitxonline_files(settings, mocker, mocked_celery, mock_block
         PlatformType.mitxonline.name,
         chunk_size=3,
         overwrite=True,
+        overwrite_units=False,
         learning_resource_ids=None,
     )
 
@@ -172,7 +175,11 @@ def test_import_all_xpro_files(settings, mocker, mocked_celery, mock_blocklist):
     with pytest.raises(mocked_celery.replace_exception_class):
         tasks.import_all_xpro_files.delay(chunk_size=3, learning_resource_ids=[1])
     get_content_tasks_mock.assert_called_once_with(
-        PlatformType.xpro.name, chunk_size=3, overwrite=False, learning_resource_ids=[1]
+        PlatformType.xpro.name,
+        chunk_size=3,
+        overwrite=False,
+        overwrite_units=False,
+        learning_resource_ids=[1],
     )
 
 
@@ -189,6 +196,7 @@ def test_import_all_oll_files(settings, mocker, mocked_celery, mock_blocklist):
         ETLSource.oll.name,
         chunk_size=4,
         overwrite=False,
+        overwrite_units=False,
         learning_resource_ids=None,
     )
 
@@ -205,12 +213,14 @@ def test_import_content_files(settings, mocker, mocked_celery, mock_blocklist):
             ETLSource.mitxonline.name,
             chunk_size=5,
             overwrite=True,
+            overwrite_units=True,
             learning_resource_ids=[42],
         )
     get_content_tasks_mock.assert_called_once_with(
         ETLSource.mitxonline.name,
         chunk_size=5,
         overwrite=True,
+        overwrite_units=True,
         learning_resource_ids=[42],
     )
 
@@ -273,11 +283,12 @@ def test_get_content_tasks(
             etl_source,
             ["foo.tar.gz"],
             overwrite=True,
+            overwrite_units=False,
         )
     else:
         assert mock_get_content_files.call_count == 2
         mock_get_content_files.assert_any_call(
-            ANY, etl_source, ["foo.tar.gz"], overwrite=True
+            ANY, etl_source, ["foo.tar.gz"], overwrite=True, overwrite_units=False
         )
 
 
@@ -337,9 +348,15 @@ def test_get_content_files(mocker, mock_course_archive_bucket):
         "learning_resources.tasks.get_bucket_by_name",
         return_value=mock_course_archive_bucket.bucket,
     )
-    tasks.get_content_files([1, 2], ETLSource.mit_edx.value, ["foo.tar.gz"])
+    tasks.get_content_files(
+        [1, 2], ETLSource.mit_edx.value, ["foo.tar.gz"], overwrite_units=True
+    )
     mock_sync_edx_course_files.assert_called_once_with(
-        ETLSource.mit_edx.value, [1, 2], ["foo.tar.gz"], overwrite=False
+        ETLSource.mit_edx.value,
+        [1, 2],
+        ["foo.tar.gz"],
+        overwrite=False,
+        overwrite_units=True,
     )
 
 
@@ -1573,8 +1590,9 @@ def test_cleanup_deleted_content_files_respects_retention_window(settings):
     recent_unpublished = ContentFileFactory.create_batch(
         1, run=eligible_run, published=False
     )
+    # old and dated, but published: never cleaned up
     still_published = ContentFileFactory.create_batch(
-        1, run=eligible_run, published=True
+        1, run=eligible_run, published=True, release_date=recent_cutoff
     )
     ineligible_old_unpublished = ContentFileFactory.create_batch(
         2, run=ineligible_run, published=False
@@ -1582,7 +1600,9 @@ def test_cleanup_deleted_content_files_respects_retention_window(settings):
 
     # Force updated_on values so this test is deterministic around the threshold.
     ContentFile.objects.filter(
-        id__in=[f.id for f in old_unpublished + ineligible_old_unpublished]
+        id__in=[
+            f.id for f in old_unpublished + ineligible_old_unpublished + still_published
+        ]
     ).update(updated_on=old_cutoff)
     ContentFile.objects.filter(id__in=[f.id for f in recent_unpublished]).update(
         updated_on=recent_cutoff
@@ -1716,18 +1736,6 @@ def test_unpublish_all_excluded_files(
     )
     assert called_ids == sorted(c.learning_resource_id for c in with_files)
     mock_task.assert_any_call(ANY, etl_source, ["foo.tar.gz"], dry_run=False)
-
-
-def test_unpublish_excluded_files_task(mocker):
-    """unpublish_excluded_files task delegates to edx_shared"""
-    mock_fn = mocker.patch(
-        "learning_resources.tasks.unpublish_excluded_content_files",
-        return_value=[{"run_id": "r", "excluded": 3, "unpublished": 3, "total": 9}],
-    )
-    assert tasks.unpublish_excluded_files([1, 2], "mitxonline", ["k"]) == [
-        {"run_id": "r", "excluded": 3, "unpublished": 3, "total": 9}
-    ]
-    mock_fn.assert_called_once_with("mitxonline", [1, 2], ["k"], dry_run=False)
 
 
 @pytest.mark.parametrize(
@@ -2583,6 +2591,10 @@ PODCAST_OWNED = pytest.param(
     (ETLSource.podcast.name, ["podcast", "podcast_episode"]), id="podcast"
 )
 XPRO_OWNED = pytest.param((ETLSource.xpro.name, ["course", "program"]), id="xpro")
+MITXONLINE_OWNED = pytest.param(
+    (ETLSource.mitxonline.name, ["course", "program"]), id="mitxonline"
+)
+OCW_OWNED = pytest.param((ETLSource.ocw.name, ["course"]), id="ocw")
 
 
 @pytest.mark.parametrize("warehouse_owns", [YOUTUBE_OWNED], indirect=True)
@@ -2822,30 +2834,55 @@ def test_media_sync_tasks_pass_on_allow_mass_unpublish(  # noqa: PLR0913
     assert mock_sync.call_args.kwargs == {"allow_mass_unpublish": allow}
 
 
-@pytest.mark.parametrize("warehouse_owns", [XPRO_OWNED], indirect=True)
 @pytest.mark.parametrize(
-    ("task", "sync", "views"),
+    ("warehouse_owns", "task", "sync", "views"),
     [
-        (
+        pytest.param(
+            XPRO_OWNED.values[0],
             "SyncXproCoursesTask",
-            "sync_courses",
+            "warehouse_xpro.sync_courses",
             ["integrations__learn__xpro_courses", "integrations__learn__xpro_runs"],
+            id="xpro-courses",
         ),
-        (
+        pytest.param(
+            XPRO_OWNED.values[0],
             "SyncXproProgramsTask",
-            "sync_programs",
+            "warehouse_xpro.sync_programs",
             ["integrations__learn__xpro_programs"],
+            id="xpro-programs",
+        ),
+        pytest.param(
+            MITXONLINE_OWNED.values[0],
+            "SyncMITxOnlineCoursesTask",
+            "warehouse_mitxonline.sync_courses",
+            [
+                "integrations__learn__mitxonline_courses",
+                "integrations__learn__mitxonline_runs",
+            ],
+            id="mitxonline-courses",
+        ),
+        pytest.param(
+            MITXONLINE_OWNED.values[0],
+            "SyncMITxOnlineProgramsTask",
+            "warehouse_mitxonline.sync_programs",
+            [
+                "integrations__learn__mitxonline_programs",
+                "integrations__learn__mitxonline_program_children",
+                "integrations__learn__mitxonline_courses",
+            ],
+            id="mitxonline-programs",
         ),
     ],
+    indirect=["warehouse_owns"],
 )
 @pytest.mark.parametrize("allow", [True, False])
 @pytest.mark.parametrize("call", ["run", "apply"])
-def test_xpro_sync_tasks_read_their_views(  # noqa: PLR0913
+def test_catalog_sync_tasks_read_their_views(  # noqa: PLR0913
     mocker, warehouse_owns, task, sync, views, allow, call
 ):
     """
-    Each xPRO sync task reads its views in full and passes on the unpublish
-    override, whether queued or run directly
+    Each xPRO and MITx Online sync task reads its views in full and passes on
+    the unpublish override, whether queued or run directly
     """
     mocker.patch("learning_resources.lib.warehouse.connect_to_warehouse")
     rows = {view: [{"readable_id": view}] for view in views}
@@ -2853,9 +2890,7 @@ def test_xpro_sync_tasks_read_their_views(  # noqa: PLR0913
         "learning_resources.tasks.iter_rows",
         side_effect=lambda _conn, view: iter(rows[view.rsplit(".", 1)[1]]),
     )
-    mock_sync = mocker.patch(
-        f"learning_resources.tasks.warehouse_xpro.{sync}", return_value=1
-    )
+    mock_sync = mocker.patch(f"learning_resources.tasks.{sync}", return_value=1)
 
     kwargs = {"allow_mass_unpublish": True} if allow else {}
     count = (
@@ -2872,13 +2907,375 @@ def test_xpro_sync_tasks_read_their_views(  # noqa: PLR0913
     )
 
 
-@pytest.mark.parametrize("task", ["SyncXproCoursesTask", "SyncXproProgramsTask"])
-def test_xpro_sync_tasks_read_nothing_they_do_not_own(mocker, task):
+@pytest.mark.parametrize(
+    "task",
+    [
+        "SyncXproCoursesTask",
+        "SyncXproProgramsTask",
+        "SyncMITxOnlineCoursesTask",
+        "SyncMITxOnlineProgramsTask",
+    ],
+)
+def test_catalog_sync_tasks_read_nothing_they_do_not_own(mocker, task):
     """Until the ownership row is flipped a run neither connects to the warehouse nor writes"""
     mock_connect = mocker.patch("learning_resources.lib.warehouse.connect_to_warehouse")
     mock_iter_rows = mocker.patch("learning_resources.tasks.iter_rows")
 
     assert getattr(tasks, task).run() == 0
+
+    mock_connect.assert_not_called()
+    mock_iter_rows.assert_not_called()
+    assert not LearningResource.objects.exists()
+
+
+HOUR = timedelta(hours=1)
+WATERMARK_KEY = tasks.RELEASED_CONTENT_FILES_WATERMARK_KEY
+
+
+@pytest.fixture
+def mock_loaded_actions(mocker):
+    """Mock the hook dispatched by the reindex sweep"""
+    return mocker.patch("learning_resources.tasks.content_files_loaded_actions")
+
+
+@pytest.fixture
+def sweep_cache():
+    """Return the DB-backed cache holding the sweep watermark, cleared first"""
+    cache = caches["release_sweep"]
+    cache.delete(WATERMARK_KEY)
+    return cache
+
+
+def test_reindex_released_content_files_without_watermark_uses_lookback(
+    settings, mock_loaded_actions, sweep_cache
+):
+    """With no watermark, one reindex per run released inside the fallback window"""
+    settings.RELEASED_CONTENT_FILES_LOOKBACK = HOUR
+    now = now_in_utc()
+
+    before_window = LearningResourceRunFactory.create()
+    in_window = LearningResourceRunFactory.create()
+    future = LearningResourceRunFactory.create()
+    undated = LearningResourceRunFactory.create()
+    unpublished = LearningResourceRunFactory.create()
+
+    ContentFileFactory.create(run=before_window, release_date=now - HOUR - HOUR)
+    # two files on the same run still reindex it once
+    ContentFileFactory.create(run=in_window, release_date=now - (HOUR / 2))
+    ContentFileFactory.create(run=in_window, release_date=now - (HOUR / 4))
+    ContentFileFactory.create(run=future, release_date=now + HOUR)
+    ContentFileFactory.create(run=undated, release_date=None)
+    # an unpublished file has nothing to index
+    ContentFileFactory.create(
+        run=unpublished, published=False, release_date=now - (HOUR / 2)
+    )
+
+    assert tasks.reindex_released_content_files() == 1
+    mock_loaded_actions.assert_called_once_with(in_window)
+
+
+def test_reindex_released_content_files_catches_up_from_watermark(
+    settings, mock_loaded_actions, sweep_cache
+):
+    """A stale watermark widens the window past the fallback lookback"""
+    settings.RELEASED_CONTENT_FILES_LOOKBACK = HOUR
+    settings.RELEASED_CONTENT_FILES_SWEEP_OVERLAP = HOUR
+    now = now_in_utc()
+    sweep_cache.set(WATERMARK_KEY, now - timedelta(days=3), timeout=None)
+
+    during_outage = LearningResourceRunFactory.create()
+    in_overlap = LearningResourceRunFactory.create()
+    before_overlap = LearningResourceRunFactory.create()
+    ContentFileFactory.create(run=during_outage, release_date=now - timedelta(days=2))
+    ContentFileFactory.create(
+        run=in_overlap, release_date=now - timedelta(days=3) - (HOUR / 2)
+    )
+    ContentFileFactory.create(
+        run=before_overlap, release_date=now - timedelta(days=3) - HOUR - HOUR
+    )
+
+    assert tasks.reindex_released_content_files() == 2
+    assert {call.args[0] for call in mock_loaded_actions.call_args_list} == {
+        during_outage,
+        in_overlap,
+    }
+
+
+def test_reindex_released_content_files_retries_a_release_once(
+    settings, mocker, mock_loaded_actions, sweep_cache
+):
+    """A release is swept on the next sweep too (overlap), then no more"""
+    settings.RELEASED_CONTENT_FILES_LOOKBACK = timedelta(days=1)
+    settings.RELEASED_CONTENT_FILES_SWEEP_OVERLAP = HOUR
+    start = now_in_utc()
+    clock = mocker.patch("learning_resources.tasks.now_in_utc", return_value=start)
+    ContentFileFactory.create(published=True, release_date=start - (HOUR / 2))
+
+    assert tasks.reindex_released_content_files() == 1
+    clock.return_value = start + HOUR
+    assert tasks.reindex_released_content_files() == 1
+    clock.return_value = start + HOUR + HOUR
+    assert tasks.reindex_released_content_files() == 0
+
+    assert mock_loaded_actions.call_count == 2
+
+
+def test_reindex_released_content_files_advances_watermark_to_sweep_start(
+    mocker, mock_loaded_actions, sweep_cache
+):
+    """The stored watermark is the time sampled before the query, not after"""
+    sweep_start = now_in_utc()
+    mocker.patch("learning_resources.tasks.now_in_utc", return_value=sweep_start)
+
+    tasks.reindex_released_content_files()
+
+    assert sweep_cache.get(WATERMARK_KEY) == sweep_start
+
+
+def test_reindex_released_content_files_watermark_survives_durable_culling(
+    mock_loaded_actions, sweep_cache
+):
+    """Culling the shared "durable" cache, which ignores timeouts, can't drop it"""
+    tasks.reindex_released_content_files()
+    durable = caches["durable"]
+    # keys that sort after the watermark's, so a shared table would cull it
+    for i in range(durable._max_entries + 100):  # noqa: SLF001
+        durable.set(f"zz_{i:04d}", "x", timeout=None)
+
+    assert sweep_cache.get(WATERMARK_KEY) is not None
+
+
+def test_reindex_released_content_files_keeps_watermark_on_failure(
+    mock_loaded_actions, sweep_cache
+):
+    """A sweep that fails mid-dispatch leaves its window for the retry"""
+    previous = now_in_utc() - HOUR
+    sweep_cache.set(WATERMARK_KEY, previous, timeout=None)
+    run = LearningResourceRunFactory.create()
+    ContentFileFactory.create(run=run, release_date=now_in_utc() - (HOUR / 2))
+    mock_loaded_actions.side_effect = ConnectionError
+
+    with pytest.raises(ConnectionError):
+        tasks.reindex_released_content_files()
+
+    assert sweep_cache.get(WATERMARK_KEY) == previous
+
+
+ALL_OWNERS = pytest.mark.parametrize("owner", list(ETLSourceOwnership.Pipeline))
+
+
+def _owned_by(owner, etl_source, resource_type):
+    """Record which pipeline owns a pair"""
+    ETLSourceOwnershipFactory.create(
+        etl_source=etl_source, resource_type=resource_type, owner=owner
+    )
+
+
+@ALL_OWNERS
+@pytest.mark.parametrize(
+    ("task", "etl_source"),
+    [
+        ("import_all_mit_edx_files", ETLSource.mit_edx.name),
+        ("import_all_oll_files", ETLSource.oll.name),
+        ("import_all_mitxonline_files", ETLSource.mitxonline.name),
+        ("import_all_xpro_files", ETLSource.xpro.name),
+        ("import_content_files", ETLSource.xpro.name),
+    ],
+)
+def test_import_files_tasks_run_only_while_legacy_owns_content_files(
+    mocker, mocked_celery, owner, task, etl_source
+):
+    """The content-file fan-out lists no archives for a source cut over elsewhere"""
+    _owned_by(owner, etl_source, CONTENT_FILE)
+    mock_get_content_tasks = mocker.patch(
+        "learning_resources.tasks.get_content_tasks", autospec=True
+    )
+    args = [etl_source] if task == "import_content_files" else []
+
+    if owner == ETLSourceOwnership.Pipeline.LEGACY:
+        with pytest.raises(mocked_celery.replace_exception_class):
+            getattr(tasks, task).delay(*args)
+        mock_get_content_tasks.assert_called_once()
+    else:
+        assert getattr(tasks, task).delay(*args).get() is None
+        mock_get_content_tasks.assert_not_called()
+        mocked_celery.replace.assert_not_called()
+
+
+@ALL_OWNERS
+def test_get_content_files_runs_only_while_legacy_owns_content_files(
+    mocker, settings, owner
+):
+    """A chunk queued before the cutover reads no archive after it"""
+    settings.AWS_ACCESS_KEY_ID = "key"
+    settings.AWS_SECRET_ACCESS_KEY = "secret"  # noqa: S105
+    settings.COURSE_ARCHIVE_BUCKET_NAME = "bucket"
+    _owned_by(owner, ETLSource.mitxonline.name, CONTENT_FILE)
+    mock_sync = mocker.patch("learning_resources.tasks.sync_edx_course_files")
+
+    tasks.get_content_files([1], ETLSource.mitxonline.name, ["foo.tar.gz"])
+
+    assert mock_sync.called is (owner == ETLSourceOwnership.Pipeline.LEGACY)
+
+
+@ALL_OWNERS
+def test_unpublish_excluded_files_run_only_while_legacy_owns_content_files(
+    mocker, mocked_celery, mock_blocklist, owner
+):
+    """Neither the fan-out nor a queued chunk touches a source cut over elsewhere"""
+    etl_source = ETLSource.mitxonline.name
+    _owned_by(owner, etl_source, CONTENT_FILE)
+    mock_archives = mocker.patch(
+        "learning_resources.tasks.get_most_recent_course_archives", return_value=[]
+    )
+    mock_unpublish = mocker.patch(
+        "learning_resources.tasks.unpublish_excluded_content_files", return_value=[]
+    )
+
+    if owner == ETLSourceOwnership.Pipeline.LEGACY:
+        with pytest.raises(mocked_celery.replace_exception_class):
+            tasks.unpublish_all_excluded_files.delay(etl_source=etl_source)
+        tasks.unpublish_excluded_files([1], etl_source, ["k"])
+        mock_archives.assert_called_once()
+        mock_unpublish.assert_called_once()
+    else:
+        assert (
+            tasks.unpublish_all_excluded_files.delay(etl_source=etl_source).get()
+            is None
+        )
+        assert tasks.unpublish_excluded_files([1], etl_source, ["k"]) == []
+        mock_archives.assert_not_called()
+        mock_unpublish.assert_not_called()
+
+
+@ALL_OWNERS
+@pytest.mark.parametrize(
+    ("task", "module", "etl_source", "job", "fetch"),
+    [
+        (
+            "get_youtube_transcripts",
+            "youtube",
+            ETLSource.youtube.name,
+            "get_youtube_videos_for_transcripts_job",
+            "get_youtube_transcripts",
+        ),
+        (
+            "get_ovs_transcripts",
+            "ovs",
+            ETLSource.ovs.name,
+            "get_ovs_videos_for_transcripts_job",
+            "get_ovs_transcripts",
+        ),
+        (
+            "get_podcast_transcripts",
+            "podcast",
+            ETLSource.podcast.name,
+            "get_podcast_episodes_for_transcripts_job",
+            "get_podcast_transcripts",
+        ),
+    ],
+)
+def test_transcript_tasks_run_only_while_legacy_owns_transcripts(  # noqa: PLR0913
+    mocker, owner, task, module, etl_source, job, fetch
+):
+    """A transcript job fetches nothing for a source whose transcripts moved"""
+    _owned_by(owner, etl_source, TRANSCRIPT)
+    mock_module = mocker.patch(f"learning_resources.tasks.{module}")
+
+    getattr(tasks, task).delay()
+
+    legacy = owner == ETLSourceOwnership.Pipeline.LEGACY
+    assert getattr(mock_module, job).called is legacy
+    assert getattr(mock_module, fetch).called is legacy
+
+
+@pytest.mark.parametrize(
+    "resource_type", [LearningResourceType.course.name, CONTENT_FILE]
+)
+@ALL_OWNERS
+def test_ingest_canvas_course_runs_only_while_legacy_owns_canvas(
+    mocker, owner, resource_type
+):
+    """A canvas archive loads nothing once its course or content files moved"""
+    _owned_by(owner, ETLSource.canvas.name, resource_type)
+    mock_bucket = mocker.patch("learning_resources.tasks.get_bucket_by_name")
+    mock_sync = mocker.patch("learning_resources.tasks.sync_canvas_archive")
+
+    tasks.ingest_canvas_course.delay("canvas/course/archive.imscc", False)  # noqa: FBT003
+
+    legacy = owner == ETLSourceOwnership.Pipeline.LEGACY
+    assert mock_bucket.called is legacy
+    assert mock_sync.called is legacy
+
+
+@ALL_OWNERS
+def test_ingest_edx_run_archive_runs_only_while_legacy_owns_content_files(
+    mocker, owner
+):
+    """The content_files webhook's edX task reads no archive for a source cut over"""
+    _owned_by(owner, ETLSource.xpro.name, CONTENT_FILE)
+    mock_sync = mocker.patch("learning_resources.tasks.sync_edx_archive")
+
+    tasks.ingest_edx_run_archive.delay(ETLSource.xpro.name, "xpro/a.tar.gz")
+
+    assert mock_sync.called is (owner == ETLSourceOwnership.Pipeline.LEGACY)
+
+
+def test_sync_canvas_courses_skips_when_legacy_does_not_own_content_files(mocker):
+    """Every archive it would queue needs canvas content files too"""
+    _owned_by(
+        ETLSourceOwnership.Pipeline.WAREHOUSE, ETLSource.canvas.name, CONTENT_FILE
+    )
+    mock_get_bucket = mocker.patch("learning_resources.tasks.get_bucket_by_name")
+    mock_ingest_course = mocker.patch("learning_resources.tasks.ingest_canvas_course")
+
+    assert sync_canvas_courses(canvas_course_ids=None, overwrite=False) is None
+
+    mock_get_bucket.assert_not_called()
+    mock_ingest_course.delay.assert_not_called()
+
+
+@pytest.mark.parametrize("warehouse_owns", [OCW_OWNED], indirect=True)
+@pytest.mark.parametrize("allow", [True, False])
+@pytest.mark.parametrize("call", ["run", "apply"])
+def test_ocw_sync_task_reads_its_view(mocker, settings, warehouse_owns, allow, call):
+    """
+    SyncOCWCoursesTask reads the OCW course view in full and passes on the
+    unpublish override, whether queued or run directly
+    """
+    settings.WAREHOUSE_CATALOG = "ol_data_lake_production"
+    settings.WAREHOUSE_SCHEMA = "ol_warehouse_production_integrations"
+    mocker.patch("learning_resources.lib.warehouse.connect_to_warehouse")
+    rows = [{"url": "https://ocw.mit.edu/courses/a/"}]
+    mock_iter_rows = mocker.patch(
+        "learning_resources.tasks.iter_rows", return_value=iter(rows)
+    )
+    mock_sync = mocker.patch(
+        "learning_resources.tasks.warehouse_ocw.sync_courses", return_value=1
+    )
+
+    kwargs = {"allow_mass_unpublish": True} if allow else {}
+    count = (
+        tasks.SyncOCWCoursesTask.run(**kwargs)
+        if call == "run"
+        else tasks.SyncOCWCoursesTask.apply(kwargs=kwargs).get()
+    )
+
+    assert count == 1
+    mock_iter_rows.assert_called_once_with(
+        mocker.ANY,
+        "ol_data_lake_production.ol_warehouse_production_integrations."
+        "integrations__learn__ocw_courses",
+    )
+    mock_sync.assert_called_once_with(rows, allow_mass_unpublish=allow)
+
+
+def test_ocw_sync_task_reads_nothing_it_does_not_own(mocker):
+    """Until the ownership row is flipped a run neither connects to the warehouse nor writes"""
+    mock_connect = mocker.patch("learning_resources.lib.warehouse.connect_to_warehouse")
+    mock_iter_rows = mocker.patch("learning_resources.tasks.iter_rows")
+
+    assert tasks.SyncOCWCoursesTask.run() == 0
 
     mock_connect.assert_not_called()
     mock_iter_rows.assert_not_called()

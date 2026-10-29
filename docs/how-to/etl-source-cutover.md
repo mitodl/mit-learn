@@ -14,12 +14,15 @@ This is the procedure for moving a source from one owner to another, checking it
 - One `ETLSourceOwnership` row per `(etl_source, resource_type)`, with `owner` set to `legacy`, `warehouse` or `webhook`.
 - No row means `legacy`. Nothing is seeded, so every source stays on the legacy ETL until someone creates a row.
 - Every pipeline stays scheduled. Each run checks ownership before it extracts anything and returns if it doesn't own the pair:
-  - the legacy pipelines in `learning_resources/etl/pipelines.py` (and `get_youtube_data`, `sync_canvas_courses` and `get_ocw_data`, which have no pipeline function) log `Skipping legacy write for <source>: owned by <type>=<owner>` and make no call to the source;
+  - the legacy pipelines in `learning_resources/etl/pipelines.py` and `news_events/etl/pipelines.py` (and `get_youtube_data`, `sync_canvas_courses`, `get_ocw_data`, `ingest_canvas_course` and the content-file and transcript tasks, which have no pipeline function) log `Skipping legacy write for <source>: owned by <type>=<owner>` and make no call to the source;
   - a warehouse task declares what it writes (`writes` on its `BaseWarehouseETLTask` subclass, required), and `run` returns 0 without connecting to StarRocks when the warehouse doesn't own it;
-  - the webhook rejects the whole batch with `409` and writes nothing.
+  - the learning_resources webhook rejects the whole batch with `409` and writes nothing, and so does the OVS video webhook (`/api/v1/webhooks/ovs_videos/`) for a video until `ovs`/`video_playlist` and `ovs`/`video` are owned by `webhook`.
 - `load_courses`, `load_programs`, `load_podcasts`, `load_documents` and `load_ovs_playlists` check again as a backstop and return `[]` for a pair the caller doesn't own. Code that calls them directly (a shell session, a new pipeline) is the legacy pipeline unless it is inside `writing_as(...)`.
-- `ocw_courses_etl` is checked too. It loads a course and that course's content files together, so once `ocw`/`course` is not `legacy`, the ocw-studio webhook stops loading OCW content files as well.
-- Not checked: the OVS video webhook, Canvas content-file ingestion, the `import_all_*_files` content-file tasks, and the transcript jobs.
+- `ocw_courses_etl` is checked too. It loads a course and then that course's content files, so once `ocw`/`course` is not `legacy`, the ocw-studio webhook stops loading OCW content files as well. With `ocw`/`course` still `legacy`, it skips only the content files once `ocw`/`content_file` is not.
+- Content files and transcripts have keys of their own, because they cut over separately from their source's metadata: `content_file` (`import_all_*_files`, `import_content_files`, `get_content_files`, `unpublish_all_excluded_files`, `ingest_edx_run_archive` from the content_files webhook) and `transcript` (`get_youtube_transcripts`, `get_ovs_transcripts`, `get_podcast_transcripts`). They are not `LearningResourceType`s; type them into the admin form as written. For the edX archive sources (`mit_edx`, `oll`, `mitxonline`, `xpro`), flipping `course` leaves their content files on the legacy tasks.
+- `ingest_canvas_course` writes the Canvas course and its content files from one archive, so it and `sync_canvas_courses` need both `canvas`/`course` and `canvas`/`content_file`.
+- The content_files delete webhook deletes the course, so it does nothing once the source's `course` is not `legacy`.
+- The news feeds (`news_events.tasks.get_*`) are keyed by feed and feed type, e.g. `mitpe_news`/`news`, `ol_events`/`events`. Their etl_source is the pipeline name in `news_events/etl/pipelines.py` without `_etl`. The per-item writers for `articles_news` (`sync_website_content_to_news` and the unpublish hook) are not checked, since Learn's own articles are not expected to move.
 
 Rows are edited in Django admin at `/admin/learning_resources/etlsourceownership/`. In production that takes a staff account with the `learning_resources.change_etlsourceownership` permission. Treat a production edit like a deploy: announce it, and be ready to roll it back.
 
@@ -27,24 +30,26 @@ Rows are edited in Django admin at `/admin/learning_resources/etlsourceownership
 
 Flip every resource type the source's legacy task writes, in one sitting, unless the split is the plan. A split works at the loader (`load_programs` links a program to the courses their owner loaded and writes none when the current pipeline doesn't own the source's courses), but the two halves are then validated and rolled back separately.
 
-| Source        | Rows to flip                 | Legacy beat entry                               | New path                                                       |
-| ------------- | ---------------------------- | ----------------------------------------------- | -------------------------------------------------------------- |
-| `mitxonline`  | `course`, `program`          | `update-mitxonline-courses-every-6-hours`       | warehouse                                                      |
-| `xpro`        | `course`, `program`          | `update-xpro-courses-every-1-days`              | warehouse (`SyncXproCoursesTask`, then `SyncXproProgramsTask`) |
-| `mit_edx`     | `course`, `program`          | `update_edx-courses-every-1-days`               | undecided                                                      |
-| `ocw`         | `course`                     | none (ocw-studio webhook)                       | warehouse                                                      |
-| `mitpe`       | `course`, `program`          | `update-professional-ed-resources-every-1-days` | webhook (`mitpe_schedule`)                                     |
-| `mit_climate` | `document`                   | `update-mit-climate-articles-every-1-days`      | webhook (`mit_climate_schedule`)                               |
-| `oll`         | `course`                     | none                                            | webhook (`oll_schedule`)                                       |
-| `podcast`     | `podcast`, `podcast_episode` | `update-podcasts`                               | warehouse (`SyncPodcastsTask`)                                 |
-| `youtube`     | `video_playlist`, `video`    | `update-youtube-videos`                         | warehouse (`SyncYouTubeTask`)                                  |
-| `ovs`         | `video_playlist`, `video`    | `update-ovs-videos`                             | webhook (already pushing)                                      |
-| `see`         | `course`                     | `update_sloan_courses`                          | not built                                                      |
-| `canvas`      | `course`                     | `sync_canvas_courses-every-1-weeks`             | webhook (already pushing)                                      |
+| Source        | Rows to flip                 | Legacy beat entry                               | New path                                                                   |
+| ------------- | ---------------------------- | ----------------------------------------------- | -------------------------------------------------------------------------- |
+| `mitxonline`  | `course`, `program`          | `update-mitxonline-courses-every-6-hours`       | warehouse (`SyncMITxOnlineCoursesTask`, then `SyncMITxOnlineProgramsTask`) |
+| `xpro`        | `course`, `program`          | `update-xpro-courses-every-1-days`              | warehouse (`SyncXproCoursesTask`, then `SyncXproProgramsTask`)             |
+| `mit_edx`     | `course`, `program`          | `update_edx-courses-every-1-days`               | undecided                                                                  |
+| `ocw`         | `course`                     | none (ocw-studio webhook)                       | warehouse (`SyncOCWCoursesTask`)                                           |
+| `mitpe`       | `course`, `program`          | `update-professional-ed-resources-every-1-days` | webhook (`mitpe_schedule`)                                                 |
+| `mit_climate` | `document`                   | `update-mit-climate-articles-every-1-days`      | webhook (`mit_climate_schedule`)                                           |
+| `oll`         | `course`                     | none                                            | webhook (`oll_schedule`)                                                   |
+| `podcast`     | `podcast`, `podcast_episode` | `update-podcasts`                               | warehouse (`SyncPodcastsTask`)                                             |
+| `youtube`     | `video_playlist`, `video`    | `update-youtube-videos`                         | warehouse (`SyncYouTubeTask`)                                              |
+| `ovs`         | `video_playlist`, `video`    | `update-ovs-videos`                             | webhook (already pushing, refused with `409` until flipped)                |
+| `see`         | `course`                     | `update_sloan_courses`                          | not built                                                                  |
+| `canvas`      | `course`                     | `sync_canvas_courses-every-1-weeks`             | webhook (already pushing)                                                  |
 
 The webhook schedules live in the data platform's `delivery` code location. They are registered in production only, stopped by default.
 
-OVS and Canvas already push per record, through their own webhooks, which ownership doesn't gate. For them the flip only stops the legacy batch task (`get_ovs_data`, `sync_canvas_courses`) and its prune. Check first that the push alone keeps the full published set, because nothing will unpublish a resource the push never deletes.
+OVS already pushes per record through its own webhook, which writes only while `webhook` owns OVS. Until the flip, the OVS push is refused with `409` and `get_ovs_data` keeps OVS current; after it, the push writes and `get_ovs_data` and its prune stop. Check first that the push alone keeps the full published set, because nothing will unpublish a resource the push never deletes. `ovs`/`transcript` stays `legacy` unless the push carries transcripts.
+
+Canvas has no replacement yet. The platform's content_files webhook only triggers `ingest_canvas_course`, which is the legacy ingestion, so flipping `canvas`/`course` stops Canvas entirely.
 
 ## Before the flip
 
@@ -81,9 +86,10 @@ For a webhook source:
 For a warehouse source:
 
 1. Create the rows with `owner` set to `warehouse`.
-2. Run the source's `BaseWarehouseETLTask` in full from `./manage.py shell` rather than waiting for its beat entry: `<SyncTask>.delay(full_refresh=True)`. Only a full refresh prunes. (`SyncPodcastsTask`, `SyncYouTubeTask`, `SyncXproCoursesTask` and `SyncXproProgramsTask` are the catalog sources with a warehouse task so far. `profiles.tasks.SyncProgramCertificatesTask` writes certificates, not catalog resources, so ownership doesn't apply to it.)
+2. Run the source's `BaseWarehouseETLTask` in full from `./manage.py shell` rather than waiting for its beat entry: `<SyncTask>.delay(full_refresh=True)`. Only a full refresh prunes. (`SyncPodcastsTask`, `SyncYouTubeTask`, `SyncXproCoursesTask`, `SyncXproProgramsTask`, `SyncMITxOnlineCoursesTask`, `SyncMITxOnlineProgramsTask` and `SyncOCWCoursesTask` are the catalog sources with a warehouse task so far. `profiles.tasks.SyncProgramCertificatesTask` writes certificates, not catalog resources, so ownership doesn't apply to it.)
 3. These tasks fail before writing if the run would unpublish more than 10% of the source's published resources of a type, since that is what a partly built view looks like. If the pre-flip comparison showed a larger difference and you have explained it, pass `allow_mass_unpublish=True` to `.delay()` or `.run()`. A type with fewer than ten published resources (e.g. xPRO programs) is over the limit as soon as one is removed, so its scheduled run fails, writing nothing, until it is run that way.
-4. `update-podcast-transcripts` stays on the legacy schedule (06:30 and 23:30 UTC), paired with `update-podcasts`. `SyncPodcastsTask` loads at 10:00 UTC, so after a podcast flip a new episode's transcript lands at 23:30 UTC, not 30 minutes after the episode.
+4. For OCW, flip only once the platform's `ocw_content` load has read the whole live bucket. The view lists only the courses read so far, so a partial view would unpublish the rest. Flipping `ocw`/`course` also stops the ocw-studio webhook from loading OCW content files, since `ocw_courses_etl` loads a course and its files together, and `SyncOCWCoursesTask` loads no content files. Have the content-file path ready before the flip. `SyncOCWCoursesTask` loads only the courses whose row changed since the warehouse last loaded them (by `etl_checksum`, which any other load clears), so to reload every course, clear it first: `LearningResource.objects.filter(etl_source="ocw").update(etl_checksum=None)`.
+5. `update-podcast-transcripts` stays on the legacy schedule (06:30 and 23:30 UTC), paired with `update-podcasts`. `SyncPodcastsTask` loads at 10:00 UTC, so after a podcast flip a new episode's transcript lands at 23:30 UTC, not 30 minutes after the episode.
 
 Between the flip and the new owner's first run, the legacy task only skips. The source's data goes stale but nothing is unpublished.
 
@@ -99,6 +105,9 @@ Between the flip and the new owner's first run, the legacy task only skips. The 
 1. Delete the source's rows, or set them to `legacy`.
 2. Stop the webhook schedule, or leave the warehouse beat entry alone (it skips from now on). A webhook schedule left running fails with `409` every run.
 3. Run the legacy task by hand, e.g. `get_mitpe_data.delay()`. Legacy is a full sync: it republishes every resource in its batch, including any the new owner unpublished, and unpublishes anything the new owner created that legacy doesn't know.
+
+   OCW is the exception. Run `get_ocw_data.delay()`. Legacy OCW unpublishes nothing, so a course the warehouse unpublished stays unpublished unless its data.json is still in the bucket. Legacy skips a course whose stored `last_modified` is not older than its data.json, but it looks the course up by its primary course number, which matches the stored readable id only for a course with no term or year. `SyncOCWCoursesTask` stores the time the platform read a course as its `last_modified`, which is later than the data.json, so those few courses are skipped until they change. `force_overwrite=True` reloads them too, at the cost of extracting the text of every content file again.
+
 4. Check the published counts against the pre-flip baseline.
 
 Fields only the new owner writes (e.g. `podcast_episode.rss` from the platform) stay as they are until legacy overwrites them. That's harmless.

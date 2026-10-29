@@ -160,9 +160,21 @@ const orders = {
   refundRequests: () => `${getApiBaseUrl()}/api/v0/orders/refund-requests/`,
 }
 
+const enrollmentEligibility = {
+  courseRun: (runId: number) =>
+    `${getApiBaseUrl()}/api/v3/course_runs/${runId}/enrollment-eligible/`,
+  program: (programId: number) =>
+    `${getApiBaseUrl()}/api/v3/programs/${programId}/enrollment-eligible/`,
+}
+
 const verifiedProgramEnrollments = {
   create: (courserunId: string) =>
     `${getApiBaseUrl()}/api/v2/verified_program_enrollments/${encodeURIComponent(courserunId)}/`,
+}
+
+const notificationPreferences = {
+  get: () => `${getApiBaseUrl()}/api/notification-preferences/`,
+  put: () => `${getApiBaseUrl()}/api/notification-preferences/`,
 }
 
 export {
@@ -183,4 +195,6 @@ export {
   baskets,
   orders,
   verifiedProgramEnrollments,
+  enrollmentEligibility,
+  notificationPreferences,
 }

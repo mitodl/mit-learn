@@ -1111,5 +1111,59 @@ describe("ProgramPage", () => {
         within(mixedPanel).queryByText("Complete 1 out of 2 courses."),
       ).not.toBeInTheDocument()
     })
+
+    test("Shows a requirement group's description under its title", async () => {
+      const root = new RequirementTreeBuilder()
+      root.addOperator({ operator: "all_of", title: "Core" }).addCourse()
+      const container = root.addOperator({
+        operator: "min_number_of",
+        operator_value: "1",
+        title: "Tracks",
+      })
+      const track = container.addTrack({ title: "Policy" })
+      track.addOperator({ operator: "all_of", title: "Required" }).addCourse()
+      const electives = track.addOperator({
+        operator: "min_number_of",
+        operator_value: "1",
+        title: "Electives",
+        description: "Pick the one closest to your work.",
+      })
+      electives.addCourse()
+      electives.addCourse()
+      root
+        .addOperator({
+          operator: "all_of",
+          title: "Capstone",
+          description: "Unlocks after all required courses are complete",
+        })
+        .addCourse()
+      const program = makeProgram({ req_tree: root.serialize() })
+      const page = makePage({ program_details: program })
+      setupApis({ program, page })
+      renderWithProviders(<ProgramPage readableId={program.readable_id} />)
+
+      const section = await screen.findByRole("region", { name: "Courses" })
+      const capstoneNote = within(section).getByText(
+        "Unlocks after all required courses are complete",
+      )
+      expect(
+        within(section).getByRole("heading", { name: "Capstone" })
+          .nextElementSibling,
+      ).toBe(capstoneNote)
+
+      const panel = within(section).getByRole("tabpanel")
+      const electivesNote = within(panel).getByText(
+        "Pick the one closest to your work.",
+      )
+      expect(
+        within(panel).getByRole("heading", { name: /^Electives/ })
+          .nextElementSibling,
+      ).toBe(electivesNote)
+      // Groups without a description get no extra line.
+      expect(
+        within(section).getByRole("heading", { name: "Core" })
+          .nextElementSibling?.tagName,
+      ).not.toBe("P")
+    })
   })
 })

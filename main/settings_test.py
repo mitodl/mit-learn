@@ -3,6 +3,7 @@ Validate that our settings functions work
 """
 
 import importlib
+import os
 import re
 import sys
 import tomllib
@@ -413,6 +414,15 @@ class TestSettings(TestCase):
             "warehouse-sync-xpro-programs-every-1-days": (
                 "learning_resources.tasks.SyncXproProgramsTask"
             ),
+            "warehouse-sync-mitxonline-courses-every-1-days": (
+                "learning_resources.tasks.SyncMITxOnlineCoursesTask"
+            ),
+            "warehouse-sync-mitxonline-programs-every-1-days": (
+                "learning_resources.tasks.SyncMITxOnlineProgramsTask"
+            ),
+            "warehouse-sync-ocw-courses-every-1-days": (
+                "learning_resources.tasks.SyncOCWCoursesTask"
+            ),
         }
         with mock.patch.dict("os.environ", REQUIRED_SETTINGS, clear=True):
             settings_vars = self.reload_settings(module="main.settings_celery")
@@ -559,3 +569,22 @@ class TestSettings(TestCase):
                         custom_domain=test_case["custom_domain"],
                         s3_prefix=test_case["s3_prefix"],
                     )
+
+
+@pytest.mark.parametrize("name", ["OPIK_SENTRY_ENABLE", "OPIK_ANALYTICS_ENABLE"])
+def test_opik_reporting_disabled(name):
+    """The Opik SDK's Sentry client and Comet analytics stay off unless set"""
+    from opik.config import OpikConfig
+
+    with mock.patch.dict("os.environ", REQUIRED_SETTINGS, clear=True):
+        importlib.reload(sys.modules["main.settings"])
+        assert os.environ[name] == "false"
+        config = OpikConfig()
+        assert config.sentry_enable is False
+        assert config.analytics_enable is False
+
+    with mock.patch.dict("os.environ", {**REQUIRED_SETTINGS, name: "true"}, clear=True):
+        importlib.reload(sys.modules["main.settings"])
+        assert os.environ[name] == "true"
+
+    importlib.reload(sys.modules["main.settings"])

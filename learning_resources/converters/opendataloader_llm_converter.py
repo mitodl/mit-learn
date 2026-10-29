@@ -16,7 +16,8 @@ import logging
 import re
 import tempfile
 import uuid
-from collections import defaultdict
+from collections import OrderedDict, defaultdict
+from collections.abc import Iterator
 from dataclasses import dataclass, field
 from io import BytesIO
 from pathlib import Path
@@ -41,6 +42,10 @@ MIN_IMAGE_DIMENSION = 32
 MIN_IMAGE_RATIO = 12
 IMAGE_BATCH_SIZE = 10
 PDF_POINTS_PER_INCH = 72
+UNIQUE_COLOR_THRESHOLD = 200
+# Number of rendered pages kept in memory at once
+PAGE_CACHE_SIZE = 4
+OCR_FAILED_PLACEHOLDER = "<!-- OCR failed for this region -->"
 
 # Score > 5 triggers full page OCR.
 
@@ -53,6 +58,14 @@ BASIC_MATH_SYMBOLS = re.compile(r"[+=<>≤≥≠±\-]")
 COMPLEX_MATH_REGEX = re.compile(
     r"([∑∏∫∂∇√∞∀∃∈⊂∪→⇒⇔αβγδεθλμπστφωΩΓΛΨ]|\b(lim|sin|cos|tan|log|ln|det|mod)\b)"  # noqa: RUF001
 )
+# Private Use Area glyphs that Symbol/Wingdings fonts commonly use for list
+# bullets (e.g. U+F0B7 in Word PDFs). They're harmless, so they don't count.
+PRIVATE_USE_BULLETS = "\uf06c\uf06e\uf071\uf076\uf0a7\uf0a8\uf0b7\uf0d8\uf0e0\uf0fc"
+# Private Use Area glyphs (e.g. old equation-editor / Symbol font pieces) and the
+# replacement character carry no meaning as text, so the page needs full OCR
+UNMAPPABLE_GLYPH_REGEX = re.compile(f"(?![{PRIVATE_USE_BULLETS}])[\ue000-\uf8ff\ufffd]")
+# List item text that already starts with its own label, e.g. "1.", "(a)", "iv)"
+LIST_LABEL_REGEX = re.compile(r"^\s*\(?(\d+|[a-zA-Z]|[ivxlcdmIVXLCDM]+)[.)](\s|$)")
 
 
 # --- Content Block Types (from JsonName.java) ---
@@ -69,6 +82,15 @@ class BlockType:
     HEADING = "heading"
     TEXT_CHUNK = "text chunk"
     FULL_PAGE_OCR = "full_page_ocr"
+
+
+# Block types whose text can take a list item's marker
+LIST_MARKER_BLOCK_TYPES = {
+    BlockType.PARAGRAPH,
+    BlockType.TEXT_CHUNK,
+    BlockType.TEXT_BLOCK,
+    BlockType.LINE,
+}
 
 
 @dataclass
@@ -97,6 +119,10 @@ class ListItem:
 
     content: str | None = None
     kids: list[Any] = field(default_factory=list)
+    block_id: int = 0
+    page_number: int | None = None
+    bounding_box: list[float] = field(default_factory=list)
+    font: str | None = None
 
 
 @dataclass
@@ -117,13 +143,25 @@ class ContentBlock:
     numbering_style: str | None = None
     # Nested content (for complex structures)
     kids: list[Any] = field(default_factory=list)
+    # "1." / "-" marker of the list item this block came from. Kept apart from
+    # content so it isn't scored as math.
+    list_marker: str | None = None
+    # For full-page OCR: the page's parsed blocks, used if the OCR request fails
+    fallback_blocks: list["ContentBlock"] = field(default_factory=list)
 
 
 @dataclass
 class ImageForOCR:
     block_id: int
-    pil_image: Image.Image
+    image_uri: str
     is_full_page: bool
+
+    @classmethod
+    def from_pil_image(
+        cls, block_id: int, pil_image: Image.Image, *, is_full_page: bool
+    ) -> "ImageForOCR":
+        """Encode the image up front so the bitmap doesn't need to be kept around"""
+        return cls(block_id, _image_to_base64_uri(pil_image), is_full_page)
 
 
 def _image_to_base64_uri(pil_image: Image.Image) -> str:
@@ -163,9 +201,8 @@ def _optimize_image(pil_image: Image.Image) -> Image.Image:
     if pil_image.mode != "RGB":
         pil_image = pil_image.convert("RGB")
     np_image = np.array(pil_image)
-    UNIQUE_COLOR_THRESHOLD = 200
-    unique_colors = len(np.unique(np_image.reshape(-1, 3), axis=0))
-    if unique_colors > UNIQUE_COLOR_THRESHOLD:
+    # getcolors returns None when there are more than the given number of colors
+    if pil_image.getcolors(UNIQUE_COLOR_THRESHOLD) is None:
         processed = cv2.cvtColor(np_image, cv2.COLOR_RGB2GRAY)
         processed = cv2.GaussianBlur(processed, (3, 3), 0)
         return Image.fromarray(processed)
@@ -179,28 +216,39 @@ class PDFPageRenderer:
     def __init__(self, document_path: Path, dpi: int = 150):
         self.document_path = document_path
         self.dpi = dpi
-        self._page_cache: dict[int, Image.Image] = {}
+        self._page_cache: OrderedDict[int, Image.Image] = OrderedDict()
         self._scale = dpi / PDF_POINTS_PER_INCH
+
+    def _get_cached_page(self, page_number: int) -> Image.Image:
+        """
+        Render a page, keeping only the most recently used pages in memory
+        """
+        if page_number in self._page_cache:
+            self._page_cache.move_to_end(page_number)
+            return self._page_cache[page_number]
+        images = pdf2image.convert_from_path(
+            self.document_path,
+            dpi=self.dpi,
+            first_page=page_number,
+            last_page=page_number,
+        )
+        self._page_cache[page_number] = images[0]
+        while len(self._page_cache) > PAGE_CACHE_SIZE:
+            _, evicted = self._page_cache.popitem(last=False)
+            evicted.close()
+        return images[0]
 
     def get_page_image(self, page_number: int) -> Image.Image:
         """
         Get a specific page from the pdf as an image
         """
-        if page_number not in self._page_cache:
-            images = pdf2image.convert_from_path(
-                self.document_path,
-                dpi=self.dpi,
-                first_page=page_number,
-                last_page=page_number,
-            )
-            self._page_cache[page_number] = images[0]
-        return self._page_cache[page_number].copy()
+        return self._get_cached_page(page_number).copy()
 
     def extract_region(self, page_number: int, bbox: list[float]) -> Image.Image | None:
         """
         Clip a specific region on a page as an image
         """
-        page_image = self.get_page_image(page_number)
+        page_image = self._get_cached_page(page_number)
         page_width, page_height = page_image.size
 
         pdf_x1, pdf_y1, pdf_x2, pdf_y2 = bbox
@@ -241,9 +289,9 @@ class OCRProcessor:
     def __init__(self, batch_size: int = IMAGE_BATCH_SIZE):
         self.batch_size = batch_size
 
-    def process_images(self, images: list[ImageForOCR]) -> dict[int, str]:
+    def process_images(self, images: list[ImageForOCR]) -> dict[int, str | None]:
         """
-        Batch OCR images
+        Batch OCR images. A failed request's result is None.
         """
         if not images:
             return {}
@@ -253,26 +301,200 @@ class OCRProcessor:
         return dict(zip(block_ids, ocr_texts, strict=True))
 
     def _prepare_messages(self, images: list[ImageForOCR]) -> list[list[dict]]:
-        messages = []
-        for img in images:
-            image_uri = _image_to_base64_uri(img.pil_image)
-            img.pil_image.close()
-            messages.append(_build_ocr_message(image_uri, settings.OCR_PROMPT))
-        return messages
+        return [
+            _build_ocr_message(img.image_uri, settings.OCR_PROMPT) for img in images
+        ]
 
-    def _execute_batch_ocr(self, messages_list: list[list[dict]]) -> list[str]:
+    def _completion_kwargs(self) -> dict[str, Any]:
+        return {
+            "custom_llm_provider": settings.LITELLM_CUSTOM_PROVIDER,
+            "api_base": settings.LITELLM_API_BASE,
+            "model": settings.OCR_MODEL,
+            "timeout": settings.OCR_REQUEST_TIMEOUT,
+            "num_retries": settings.OCR_REQUEST_NUM_RETRIES,
+        }
+
+    def _execute_batch_ocr(self, messages_list: list[list[dict]]) -> list[str | None]:
         all_texts = []
         for i in range(0, len(messages_list), self.batch_size):
             batch = messages_list[i : i + self.batch_size]
-            responses = batch_completion(
-                custom_llm_provider=settings.LITELLM_CUSTOM_PROVIDER,
-                api_base=settings.LITELLM_API_BASE,
-                model=settings.OCR_MODEL,
-                messages=batch,
-            )
-            all_texts.extend([resp.choices[0].message.content for resp in responses])
+            responses = batch_completion(messages=batch, **self._completion_kwargs())
+            all_texts.extend(self._response_text(resp) for resp in responses)
             gc.collect()
         return all_texts
+
+    def _response_text(self, response: Any) -> str | None:
+        """
+        Get the text of an OCR response, or None if the request failed.
+        batch_completion returns the exception in place of a response for a
+        request that failed after num_retries, so it isn't retried again here.
+        """
+        if isinstance(response, Exception):
+            log.warning("OCR request failed: %s", response)
+            return None
+        return response.choices[0].message.content or ""
+
+
+def parse_content_block(block_data: dict[str, Any]) -> ContentBlock:
+    """
+    Parse a content block from JSON data.
+
+    Handles all content types including nested structures for tables and lists.
+    """
+    block_type = block_data.get("type", "unknown")
+
+    # Parse table rows if present
+    rows = []
+    if block_type == BlockType.TABLE and "rows" in block_data:
+        rows = _parse_table_rows(block_data["rows"])
+
+    # Parse list items if present
+    list_items = []
+    if block_type == BlockType.LIST and "list items" in block_data:
+        list_items = _parse_list_items(block_data["list items"])
+
+    return ContentBlock(
+        block_type=block_type,
+        block_id=block_data.get("id", 0),
+        page_number=block_data.get("page number", 1),
+        bounding_box=block_data.get("bounding box", [0, 0, 0, 0]),
+        content=block_data.get("content"),
+        heading_level=block_data.get("heading level"),
+        font=block_data.get("font"),
+        rows=rows,
+        number_of_rows=block_data.get("number of rows", 0),
+        number_of_columns=block_data.get("number of columns", 0),
+        list_items=list_items,
+        numbering_style=block_data.get("numbering style"),
+        kids=block_data.get("kids", []),
+    )
+
+
+def _parse_table_rows(rows_data: list[dict]) -> list[TableRow]:
+    """Parse table rows from JSON data."""
+    rows = []
+    for row_data in rows_data:
+        cells = [
+            TableCell(
+                content=cell_data.get("content"),
+                column_number=cell_data.get("column number", 0),
+                row_number=cell_data.get("row number", 0),
+                column_span=cell_data.get("column span", 1),
+                row_span=cell_data.get("row span", 1),
+                kids=cell_data.get("kids", []),
+            )
+            for cell_data in row_data.get("cells", [])
+        ]
+
+        rows.append(
+            TableRow(
+                row_number=row_data.get("row number", 0),
+                cells=cells,
+            )
+        )
+    return rows
+
+
+def _parse_list_items(items_data: list[Any]) -> list[ListItem]:
+    """Parse list items from JSON data."""
+    return [
+        ListItem(
+            content=item_data.get("content"),
+            kids=item_data.get("kids", []),
+            block_id=item_data.get("id", 0),
+            page_number=item_data.get("page number"),
+            bounding_box=item_data.get("bounding box", []),
+            font=item_data.get("font"),
+        )
+        for item_data in items_data
+        if isinstance(item_data, dict)
+    ]
+
+
+def _is_ordered_list(numbering_style: str | None) -> bool:
+    """Determine if list should be ordered based on numbering style."""
+    if not numbering_style:
+        return False
+    # Common ordered list indicators
+    ordered_indicators = ["decimal", "number", "alpha", "roman", "1", "a", "i"]
+    return any(ind in numbering_style.lower() for ind in ordered_indicators)
+
+
+def flatten_lists(blocks: list[ContentBlock]) -> list[ContentBlock]:
+    """
+    Replace each list block with its items, each followed by the blocks nested
+    under it (sub-lists, follow-on paragraphs, images), keeping their own
+    page numbers and positions.
+    """
+    flat = []
+    for block in blocks:
+        if block.block_type != BlockType.LIST:
+            flat.append(block)
+            continue
+        items = block.list_items or _parse_list_items(
+            [
+                kid
+                for kid in block.kids
+                if isinstance(kid, dict) and kid.get("type") == BlockType.LIST_ITEM
+            ]
+        )
+        is_ordered = _is_ordered_list(block.numbering_style)
+        for idx, item in enumerate(items, start=1):
+            item_blocks = []
+            if item.content and item.content.strip():
+                item_blocks.append(
+                    ContentBlock(
+                        block_type=BlockType.PARAGRAPH,
+                        block_id=item.block_id,
+                        page_number=item.page_number or block.page_number,
+                        bounding_box=item.bounding_box or block.bounding_box,
+                        content=item.content,
+                        font=item.font,
+                    )
+                )
+            item_blocks.extend(
+                flatten_lists(
+                    [parse_content_block(k) for k in item.kids if isinstance(k, dict)]
+                )
+            )
+            # The marker goes on the item's first text, which is in its kids
+            # when the item has no content of its own
+            first_text = next(
+                (b for b in item_blocks if b.content and b.content.strip()), None
+            )
+            if (
+                first_text
+                and first_text.block_type in LIST_MARKER_BLOCK_TYPES
+                and first_text.list_marker is None
+                # The item already has its own label, don't add another
+                and not LIST_LABEL_REGEX.match(first_text.content)
+            ):
+                first_text.list_marker = f"{idx}." if is_ordered else "-"
+            flat.extend(item_blocks)
+    return flat
+
+
+def _iter_nested_text(nodes: list[Any]) -> Iterator[tuple[str | None, str | None]]:
+    """Yield (font, content) for raw JSON nodes and everything nested in them"""
+    for node in nodes:
+        if not isinstance(node, dict):
+            continue
+        yield node.get("font"), node.get("content")
+        for key in ("kids", "list items", "rows", "cells"):
+            yield from _iter_nested_text(node.get(key) or [])
+
+
+def _iter_block_text(block: ContentBlock) -> Iterator[tuple[str | None, str | None]]:
+    """Yield (font, content) for a block and all text nested inside it"""
+    yield block.font, block.content
+    for item in block.list_items:
+        yield item.font, item.content
+        yield from _iter_nested_text(item.kids)
+    for row in block.rows:
+        for cell in row.cells:
+            yield None, cell.content
+            yield from _iter_nested_text(cell.kids)
+    yield from _iter_nested_text(block.kids)
 
 
 class MarkdownAssembler:
@@ -284,18 +506,37 @@ class MarkdownAssembler:
     - paragraph: Text paragraphs
     - image: Embedded images (processed via OCR)
     - table: Tables with rows and cells
-    - list: Ordered/unordered lists with items
+    - list: Flattened into its items and their nested blocks
     - text chunk / text block: Raw text content
     - line: Single lines of text
     - list item: Individual list items (when standalone)
     """
 
-    def assemble(self, blocks: list[ContentBlock], ocr_results: dict[int, str]) -> str:
+    def assemble(
+        self, blocks: list[ContentBlock], ocr_results: dict[int, str | None]
+    ) -> str:
         formatted_parts = []
-        for block in blocks:
+        for block in flatten_lists(blocks):
             # Full Page OCR overrides all individual blocks on that page
             if block.block_type == BlockType.FULL_PAGE_OCR:
-                formatted_parts.append(ocr_results.get(block.block_id, ""))
+                page_text = ocr_results.get(block.block_id, "")
+                if page_text is not None:
+                    formatted_parts.append(page_text)
+                    continue
+                # OCR failed, so use the page's parsed text instead
+                log.warning(
+                    "Page %d: full-page OCR failed, using parsed text",
+                    block.page_number,
+                )
+                formatted_parts.extend(
+                    filter(
+                        None,
+                        (
+                            self._format_block(b, ocr_results)
+                            for b in block.fallback_blocks
+                        ),
+                    )
+                )
                 continue
 
             # Standard formatting
@@ -305,7 +546,7 @@ class MarkdownAssembler:
         return "\n\n".join(formatted_parts)
 
     def _format_block(
-        self, block: ContentBlock, ocr_results: dict[int, str]
+        self, block: ContentBlock, ocr_results: dict[int, str | None]
     ) -> str | None:
         """
         Format a content block to markdown.
@@ -315,7 +556,6 @@ class MarkdownAssembler:
         - paragraph: Plain text paragraphs
         - image: OCR results or placeholder
         - table: Markdown tables with | separators
-        - list: Markdown lists with - or 1. prefixes
         - text chunk / text block / line: Plain text
         - list item: Single list item (when standalone)
         """
@@ -332,15 +572,11 @@ class MarkdownAssembler:
 
         # Image - use OCR result
         if block_type == BlockType.IMAGE:
-            block_content = ocr_results.get(block.block_id)
+            block_content = self._format_image(block, ocr_results)
 
         # Table
         if block_type == BlockType.TABLE:
             block_content = self._format_table(block)
-
-        # List
-        if block_type == BlockType.LIST:
-            block_content = self._format_list(block)
 
         # Text chunk / text block / line - plain text content
         if block_type in (BlockType.TEXT_CHUNK, BlockType.TEXT_BLOCK, BlockType.LINE):
@@ -358,7 +594,19 @@ class MarkdownAssembler:
         if block_type == BlockType.TABLE_ROW:
             block_content = self._format_table_row_standalone(block)
 
+        if block_content and block.list_marker:
+            block_content = f"{block.list_marker} {block_content}"
+
         return block_content
+
+    def _format_image(
+        self, block: ContentBlock, ocr_results: dict[int, str | None]
+    ) -> str | None:
+        """Format an image's OCR result. A result of None means OCR failed."""
+        if block.block_id not in ocr_results:
+            return None
+        text = ocr_results[block.block_id]
+        return OCR_FAILED_PLACEHOLDER if text is None else text
 
     def _format_table(self, block: ContentBlock) -> str | None:
         """
@@ -484,62 +732,6 @@ class MarkdownAssembler:
             return 0
         return max(len(row.cells) for row in rows)
 
-    def _format_list(self, block: ContentBlock) -> str | None:
-        """
-        Format a list block to markdown list syntax.
-
-        Supports ordered (numbered) and unordered (bullet) lists.
-        """
-        if not block.list_items and not block.kids:
-            return None
-
-        lines = []
-        is_ordered = self._is_ordered_list(block.numbering_style)
-
-        # Use list_items if available, otherwise parse from kids
-        items = (
-            block.list_items
-            if block.list_items
-            else self._parse_list_items_from_kids(block.kids)
-        )
-
-        for idx, item in enumerate(items, start=1):
-            item_content = self._get_list_item_content(item)
-            if item_content:
-                if is_ordered:
-                    lines.append(f"{idx}. {item_content}")
-                else:
-                    lines.append(f"- {item_content}")
-
-        return "\n".join(lines) if lines else None
-
-    def _is_ordered_list(self, numbering_style: str | None) -> bool:
-        """Determine if list should be ordered based on numbering style."""
-        if not numbering_style:
-            return False
-        # Common ordered list indicators
-        ordered_indicators = ["decimal", "number", "alpha", "roman", "1", "a", "i"]
-        return any(ind in numbering_style.lower() for ind in ordered_indicators)
-
-    def _parse_list_items_from_kids(self, kids: list[Any]) -> list[ListItem]:
-        """Parse list items from kids structure."""
-
-        return [
-            ListItem(content=kid.get("content"), kids=kid.get("kids", []))
-            for kid in kids
-            if isinstance(kid, dict) and kid.get("type") == BlockType.LIST_ITEM
-        ]
-
-    def _get_list_item_content(self, item: ListItem) -> str:
-        """Extract text content from a list item."""
-        if item.content:
-            return item.content
-
-        if item.kids:
-            return self._extract_text_from_kids(item.kids)
-
-        return ""
-
 
 class OpenDataLoaderLLMConverter:
     def __init__(
@@ -591,72 +783,7 @@ class OpenDataLoaderLLMConverter:
         )
 
     def _parse_content_block(self, block_data: dict[str, Any]) -> ContentBlock:
-        """
-        Parse a content block from JSON data.
-
-        Handles all content types including nested structures for tables and lists.
-        """
-        block_type = block_data.get("type", "unknown")
-
-        # Parse table rows if present
-        rows = []
-        if block_type == BlockType.TABLE and "rows" in block_data:
-            rows = self._parse_table_rows(block_data["rows"])
-
-        # Parse list items if present
-        list_items = []
-        if block_type == BlockType.LIST and "list items" in block_data:
-            list_items = self._parse_list_items(block_data["list items"])
-
-        return ContentBlock(
-            block_type=block_type,
-            block_id=block_data.get("id", 0),
-            page_number=block_data.get("page number", 1),
-            bounding_box=block_data.get("bounding box", [0, 0, 0, 0]),
-            content=block_data.get("content"),
-            heading_level=block_data.get("heading level"),
-            font=block_data.get("font"),
-            rows=rows,
-            number_of_rows=block_data.get("number of rows", 0),
-            number_of_columns=block_data.get("number of columns", 0),
-            list_items=list_items,
-            numbering_style=block_data.get("numbering style"),
-            kids=block_data.get("kids", []),
-        )
-
-    def _parse_table_rows(self, rows_data: list[dict]) -> list[TableRow]:
-        """Parse table rows from JSON data."""
-        rows = []
-        for row_data in rows_data:
-            cells = [
-                TableCell(
-                    content=cell_data.get("content"),
-                    column_number=cell_data.get("column number", 0),
-                    row_number=cell_data.get("row number", 0),
-                    column_span=cell_data.get("column span", 1),
-                    row_span=cell_data.get("row span", 1),
-                    kids=cell_data.get("kids", []),
-                )
-                for cell_data in row_data.get("cells", [])
-            ]
-
-            rows.append(
-                TableRow(
-                    row_number=row_data.get("row number", 0),
-                    cells=cells,
-                )
-            )
-        return rows
-
-    def _parse_list_items(self, items_data: list[dict]) -> list[ListItem]:
-        """Parse list items from JSON data."""
-        return [
-            ListItem(
-                content=item_data.get("content"),
-                kids=item_data.get("kids", []),
-            )
-            for item_data in items_data
-        ]
+        return parse_content_block(block_data)
 
     def _calculate_page_math_score(self, blocks: list[ContentBlock]) -> int:
         """
@@ -664,26 +791,39 @@ class OpenDataLoaderLLMConverter:
         """
         score = 0
         for b in blocks:
-            if b.font:
-                font_base = "".join([c for c in b.font.lower() if c.isalpha()])
-                if any(mf in font_base for mf in MATH_FONTS):
-                    score += 1
+            for font, content in _iter_block_text(b):
+                if font:
+                    font_base = "".join([c for c in font.lower() if c.isalpha()])
+                    if any(mf in font_base for mf in MATH_FONTS):
+                        score += 1
 
-            if b.content:
-                text = b.content.strip()
-                if COMPLEX_MATH_REGEX.search(text):
-                    score += 3
-                elif BASIC_MATH_SYMBOLS.search(text):
-                    score += 1
+                if content:
+                    text = content.strip()
+                    if COMPLEX_MATH_REGEX.search(text):
+                        score += 3
+                    elif BASIC_MATH_SYMBOLS.search(text):
+                        score += 1
         return score
+
+    def _has_unmappable_glyphs(self, blocks: list[ContentBlock]) -> bool:
+        """
+        Check whether a page's text layer contains glyphs that can't be decoded
+        """
+        return any(
+            content and UNMAPPABLE_GLYPH_REGEX.search(content)
+            for b in blocks
+            for _, content in _iter_block_text(b)
+        )
 
     def convert_to_markdown(self) -> str:
         try:
             # get document elements and structure as json
             json_data = self._convert_pdf_to_json()
-            raw_blocks = [
-                self._parse_content_block(k) for k in json_data.get("kids", [])
-            ]
+            # Lists are flattened first so that their nested blocks are grouped
+            # under their own pages and nested images get OCR'd
+            raw_blocks = flatten_lists(
+                [self._parse_content_block(k) for k in json_data.get("kids", [])]
+            )
 
             # Group by Page
             pages = defaultdict(list)
@@ -698,22 +838,31 @@ class OpenDataLoaderLLMConverter:
                 page_blocks = pages[page_num]
 
                 math_score = self._calculate_page_math_score(page_blocks)
-                should_full_ocr = math_score > settings.OCR_MATH_DENSITY_THRESHOLD
+                has_unmappable_glyphs = self._has_unmappable_glyphs(page_blocks)
+                should_full_ocr = (
+                    math_score > settings.OCR_MATH_DENSITY_THRESHOLD
+                    or has_unmappable_glyphs
+                )
 
                 if should_full_ocr:
                     log.info(
-                        "Page %d: High Math Score (%f).Strategy: Full Page OCR.",
+                        "Page %d: Math Score %d, unmappable glyphs: %s. "
+                        "Strategy: Full Page OCR.",
                         page_num,
                         math_score,
+                        has_unmappable_glyphs,
                     )
 
                     page_block_id = 888000 + page_num
 
                     full_page_img = self._page_renderer.get_page_image(page_num)
                     optimized_img = _optimize_image(full_page_img)
+                    full_page_img.close()
 
                     images_for_ocr.append(
-                        ImageForOCR(page_block_id, optimized_img, is_full_page=True)
+                        ImageForOCR.from_pil_image(
+                            page_block_id, optimized_img, is_full_page=True
+                        )
                     )
 
                     final_blocks.append(
@@ -722,6 +871,7 @@ class OpenDataLoaderLLMConverter:
                             block_id=page_block_id,
                             page_number=page_num,
                             bounding_box=[],
+                            fallback_blocks=page_blocks,
                         )
                     )
 
@@ -729,10 +879,11 @@ class OpenDataLoaderLLMConverter:
                         self._save_debug_image(
                             optimized_img, prefix=f"FULLPAGE_{page_num}_"
                         )
+                    optimized_img.close()
 
                 else:
                     log.info(
-                        "Page %d: Low Math Score (%f).Strategy: Standard Parse.",
+                        "Page %d: Low Math Score (%d). Strategy: Standard Parse.",
                         page_num,
                         math_score,
                     )
@@ -746,13 +897,17 @@ class OpenDataLoaderLLMConverter:
                             )
                             if img:
                                 opt = _optimize_image(img)
+                                img.close()
                                 images_for_ocr.append(
-                                    ImageForOCR(block.block_id, opt, is_full_page=False)
+                                    ImageForOCR.from_pil_image(
+                                        block.block_id, opt, is_full_page=False
+                                    )
                                 )
                                 if self.debug_mode:
                                     self._save_debug_image(
                                         opt, prefix=f"IMG_{block.block_id}_"
                                     )
+                                opt.close()
 
             # Batch OCR
             ocr_results = self._ocr_processor.process_images(images_for_ocr)

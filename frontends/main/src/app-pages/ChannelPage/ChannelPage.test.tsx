@@ -14,18 +14,24 @@ import { assertHeadings, getByImageSrc } from "ol-test-utilities"
 import invariant from "tiny-invariant"
 import ChannelPage from "./ChannelPage"
 import { useFeatureFlagEnabled } from "posthog-js/react"
+import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
 import { FeatureFlags } from "@/common/feature_flags"
+import { DEPARTMENTS_LABEL, TOPICS_LABEL } from "./ChannelPageTemplate"
 
 jest.mock("posthog-js/react", () => ({
   ...jest.requireActual("posthog-js/react"),
   useFeatureFlagEnabled: jest.fn(),
 }))
+jest.mock("@/common/useFeatureFlagsLoaded")
 
-/* The topic cases below are the redesigned page, which is behind this flag. */
+/* Every flag off. The topic cases below are the redesigned page, which is no
+   longer behind one; the department cases turn theirs on for themselves. */
 beforeEach(() => {
-  jest
-    .mocked(useFeatureFlagEnabled)
-    .mockImplementation((flag) => flag === FeatureFlags.TopicPageRedesign)
+  jest.mocked(useFeatureFlagEnabled).mockImplementation(() => false)
+  /* The page holds a spinner until the flags are in rather than render on a
+     bootstrapped value, so without this every case here waits on one. Loaded
+     is the state these tests are about; the waiting is its own case below. */
+  jest.mocked(useFeatureFlagsLoaded).mockReturnValue(true)
 })
 
 jest.mock("./ChannelSearch", () => {
@@ -326,15 +332,15 @@ describe.each(NON_UNIT_CHANNEL_TYPES)(
           .backgroundImage.includes(channel.configuration.banner_background)
       // Banner background image
       if (channelType === ChannelTypeEnum.Topic) {
-        /* A topic hero paints the photograph on a band of its own rather than
-           behind the text, so the wash over it can finish exactly where the
-           band ends -- see `HeroPhoto`. So it is somewhere in the hero rather
-           than above the title. */
+        /* The redesigned topic hero paints no photograph: the design dropped
+           it for plain white, so the channel's configured banner is drawn
+           nowhere in the hero -- not behind the title and not on a band of
+           its own. */
         const hero = title.closest("section")
         expect(hero).not.toBe(null)
         expect(
           Array.from(hero!.querySelectorAll("div")).some(paintsBanner),
-        ).toBe(true)
+        ).toBe(false)
       } else {
         expect(someAncestor(title, paintsBanner)).toBe(true)
       }
@@ -381,6 +387,97 @@ describe.each(NON_UNIT_CHANNEL_TYPES)(
  * row. The chips those tests covered are gone with it; subtopic navigation
  * still lives on the topics listing page, which has its own tests.
  */
+describe("while the feature flags are still loading", () => {
+  const posthogKey = process.env.NEXT_PUBLIC_POSTHOG_API_KEY
+  beforeEach(() => {
+    process.env.NEXT_PUBLIC_POSTHOG_API_KEY = "ph-test-key"
+    jest.mocked(useFeatureFlagsLoaded).mockReturnValue(false)
+  })
+  afterEach(() => {
+    if (posthogKey === undefined) {
+      delete process.env.NEXT_PUBLIC_POSTHOG_API_KEY
+    } else {
+      process.env.NEXT_PUBLIC_POSTHOG_API_KEY = posthogKey
+    }
+  })
+
+  /**
+   * The page is behind a flag, and a flag that has not loaded reads `false`
+   * from the bootstrapped value -- which is the same thing it reads when the
+   * page is genuinely off. Waiting is what stops a user who is entitled to
+   * the page being shown the one for someone who is not.
+   */
+  test("holds a spinner on a page a flag decides", async () => {
+    const { channel } = setupApis({
+      search_filter: "department=Theater+Arts",
+      channel_type: ChannelTypeEnum.Department,
+    })
+    renderWithProviders(<ChannelPage />, {
+      url: `/c/${channel.channel_type}/${channel.name}`,
+    })
+
+    await screen.findByRole("progressbar")
+    expect(
+      screen.queryByRole("heading", { level: 1, name: channel.title }),
+    ).toBe(null)
+  })
+
+  /**
+   * Only the department page is decided by a flag. Every other channel draws
+   * the same page whatever the flags come back saying -- the topic page among
+   * them, now that the page it had before the redesign is gone -- so waiting on
+   * them buys nothing and costs the reader a spinner.
+   */
+  test.each([
+    {
+      channelType: ChannelTypeEnum.Unit,
+      searchFilter: "department=mechanical",
+    },
+    { channelType: ChannelTypeEnum.Topic, searchFilter: "topic=Physics" },
+  ])(
+    "draws a $channelType page, which no flag decides, rather than waiting",
+    async ({ channelType, searchFilter }) => {
+      const { channel } = setupApis({
+        search_filter: searchFilter,
+        channel_type: channelType,
+      })
+      if (channelType === ChannelTypeEnum.Topic) {
+        setupTopicApis(channel)
+      }
+      renderWithProviders(<ChannelPage />, {
+        url: `/c/${channel.channel_type}/${channel.name}`,
+      })
+
+      await screen.findByRole("heading", { level: 1, name: channel.title })
+      expect(screen.queryByRole("progressbar")).toBe(null)
+    },
+  )
+
+  /**
+   * With no PostHog configured there is nothing to wait for either: the
+   * provider neither initialises nor mounts, so the flags never report
+   * themselves in and waiting would hold the page on a spinner for good.
+   * Every flag is off in that case, which is the page this one falls back to.
+   */
+  test("draws the page when PostHog is not configured", async () => {
+    delete process.env.NEXT_PUBLIC_POSTHOG_API_KEY
+    jest.mocked(useFeatureFlagEnabled).mockReturnValue(false)
+    /* A department, that being the channel type still waiting on a flag: the
+       guard this covers is the one that stops that wait going on for ever, so
+       a type that never waits would pass whether or not the guard is there. */
+    const { channel } = setupApis({
+      search_filter: "department=Theater+Arts",
+      channel_type: ChannelTypeEnum.Department,
+    })
+    renderWithProviders(<ChannelPage />, {
+      url: `/c/${channel.channel_type}/${channel.name}`,
+    })
+
+    await screen.findByRole("heading", { level: 1, name: channel.title })
+    expect(screen.queryByRole("progressbar")).toBe(null)
+  })
+})
+
 describe("Channel Pages, Topic only", () => {
   test("shows only what the design's hero carries", async () => {
     const { channel } = setupApis({
@@ -396,6 +493,131 @@ describe("Channel Pages, Topic only", () => {
     await screen.findByRole("heading", { level: 1, name: channel.title })
     expect(screen.queryByText("Subtopics")).toBe(null)
     expect(screen.queryByText("Related Topics")).toBe(null)
+  }, 10000)
+})
+
+describe("Channel Pages, Department only", () => {
+  /* The department page is the topic page's, behind a flag of its own. */
+  beforeEach(() => {
+    jest
+      .mocked(useFeatureFlagEnabled)
+      .mockImplementation(
+        (flag) => flag === FeatureFlags.DepartmentPageRedesign,
+      )
+  })
+
+  /**
+   * A department channel, and the Featured row its hero will ask for.
+   *
+   * The row is asked for whether or not a case cares about it, the hero
+   * being drawn differently by whether there is one.
+   */
+  const setupDepartment = ({ featuredCount = 2 } = {}) => {
+    const { channel } = setupApis({
+      search_filter: "department=Theater+Arts",
+      channel_type: ChannelTypeEnum.Department,
+    })
+    const featured = factories.learningResources.resources({
+      count: featuredCount,
+    })
+    setMockResponse.get(
+      `${urls.channels.featured(channel.channel_type, channel.name)}?limit=12`,
+      featured,
+    )
+    return { channel, featured }
+  }
+
+  test("draws the redesigned hero, and reads its own featured list", async () => {
+    const { channel, featured } = setupDepartment()
+
+    renderWithProviders(<ChannelPage />, {
+      url: `/c/${channel.channel_type}/${channel.name}`,
+    })
+
+    await screen.findByRole("heading", { level: 1, name: channel.title })
+    /* The department's own trail step, not the topics one -- the two labels
+       come from one map, so a page reading the wrong key is a page whose
+       trail leads somewhere else entirely. */
+    await screen.findByRole("link", { name: DEPARTMENTS_LABEL })
+    expect(screen.queryByRole("link", { name: TOPICS_LABEL })).toBe(null)
+    /* The row is the channel's own curated list, so the titles in it are the
+       ones the department's featured endpoint answered with -- the point of
+       the whole exercise. */
+    for (const resource of featured.results) {
+      await screen.findByText(resource.title)
+    }
+  }, 10000)
+
+  test("stands on plain white, with no photograph behind the title", async () => {
+    const { channel } = setupDepartment()
+
+    renderWithProviders(<ChannelPage />, {
+      url: `/c/${channel.channel_type}/${channel.name}`,
+    })
+
+    await screen.findByRole("heading", { level: 1, name: channel.title })
+    expect(screen.queryByTestId("channel-hero-photo")).toBe(null)
+  }, 10000)
+
+  test("carries Follow beside the title", async () => {
+    const { channel } = setupDepartment()
+
+    renderWithProviders(<ChannelPage />, {
+      url: `/c/${channel.channel_type}/${channel.name}`,
+    })
+
+    await screen.findByRole("button", { name: "Follow" })
+  }, 10000)
+
+  test("draws the old page with the flag off", async () => {
+    jest.mocked(useFeatureFlagEnabled).mockImplementation(() => false)
+    const { channel } = setupApis({
+      search_filter: "department=Theater+Arts",
+      channel_type: ChannelTypeEnum.Department,
+    })
+
+    renderWithProviders(<ChannelPage />, {
+      url: `/c/${channel.channel_type}/${channel.name}`,
+    })
+
+    await screen.findByRole("heading", { level: 1, name: channel.title })
+    expect(screen.queryByText("Featured")).toBe(null)
+  }, 10000)
+})
+
+describe("Channel Pages, Topic only, hero", () => {
+  test("stands on plain white, with no photograph behind the title", async () => {
+    /* The design used to run a photograph across the top of this and no longer
+       does. Asserted for the topic page specifically because the photograph
+       was only ever the topic page's: the department case below passing
+       proves nothing about whether this one still draws one. */
+    const { channel } = setupApis({
+      search_filter: "topic=Physics",
+      channel_type: ChannelTypeEnum.Topic,
+    })
+    setupTopicApis(channel)
+
+    renderWithProviders(<ChannelPage />, {
+      url: `/c/${channel.channel_type}/${channel.name}`,
+    })
+
+    await screen.findByRole("heading", { level: 1, name: channel.title })
+    expect(screen.queryByTestId("channel-hero-photo")).toBe(null)
+  }, 10000)
+
+  test("names the topics trail, not the departments one", async () => {
+    const { channel } = setupApis({
+      search_filter: "topic=Physics",
+      channel_type: ChannelTypeEnum.Topic,
+    })
+    setupTopicApis(channel)
+
+    renderWithProviders(<ChannelPage />, {
+      url: `/c/${channel.channel_type}/${channel.name}`,
+    })
+
+    await screen.findByRole("link", { name: TOPICS_LABEL })
+    expect(screen.queryByRole("link", { name: DEPARTMENTS_LABEL })).toBe(null)
   }, 10000)
 })
 

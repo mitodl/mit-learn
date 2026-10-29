@@ -22,7 +22,7 @@ from learning_resources.etl.constants import (
     ProgramLoaderConfig,
 )
 from learning_resources.etl.exceptions import ExtractException
-from learning_resources.etl.ownership import Pipeline
+from learning_resources.etl.ownership import CONTENT_FILE, Pipeline
 from learning_resources.factories import ETLSourceOwnershipFactory
 from learning_resources.models import LearningResource
 
@@ -351,6 +351,38 @@ def test_ocw_courses_etl_no_content_files_ingested(settings, mocker, content_fil
 
     mock_load_content_files.assert_called_once()
     mock_load_learning_materials.assert_not_called()
+
+
+@mock_aws
+@pytest.mark.parametrize("owner", list(Pipeline))
+def test_ocw_courses_etl_loads_content_files_only_while_legacy_owns_them(
+    settings, mocker, owner
+):
+    """OCW content files cut over on their own key, apart from the course"""
+    setup_s3_ocw(settings)
+    ETLSourceOwnershipFactory.create(
+        etl_source=ETLSource.ocw.name, resource_type=CONTENT_FILE, owner=owner
+    )
+    mocker.patch("learning_resources.etl.pipelines.loaders.resource_upserted_actions")
+    mock_transform_content_files = mocker.patch(
+        "learning_resources.etl.ocw.transform_content_files"
+    )
+    mock_load_content_files = mocker.patch(
+        "learning_resources.etl.pipelines.loaders.load_content_files",
+        return_value=[],
+    )
+
+    pipelines.ocw_courses_etl(
+        url_paths=[OCW_TEST_PREFIX],
+        force_overwrite=True,
+        start_timestamp=datetime(2020, 12, 15, tzinfo=UTC),
+        skip_content_files=False,
+    )
+
+    assert LearningResource.objects.filter(readable_id="16.01+fall_2005").exists()
+    legacy = owner == Pipeline.LEGACY
+    assert mock_transform_content_files.called is legacy
+    assert mock_load_content_files.called is legacy
 
 
 @mock_aws

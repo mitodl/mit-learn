@@ -36,6 +36,8 @@ from learning_resources.etl import (
     pipelines,
     podcast,
     warehouse_media,
+    warehouse_mitxonline,
+    warehouse_ocw,
     warehouse_xpro,
     youtube,
 )
@@ -58,7 +60,13 @@ from learning_resources.etl.loaders import (
     load_learning_materials,
     load_run_dependent_values,
 )
-from learning_resources.etl.ownership import Pipeline, may_write, writing_as
+from learning_resources.etl.ownership import (
+    CONTENT_FILE,
+    TRANSCRIPT,
+    Pipeline,
+    may_write,
+    writing_as,
+)
 from learning_resources.etl.pipelines import ocw_courses_etl
 from learning_resources.etl.utils import (
     get_bucket_by_name,
@@ -69,10 +77,16 @@ from learning_resources.lib.warehouse import (
     BaseWarehouseETLTask,
     iter_rows,
 )
-from learning_resources.models import ContentFile, LearningResource, VideoChannel
+from learning_resources.models import (
+    ContentFile,
+    LearningResource,
+    LearningResourceRun,
+    VideoChannel,
+)
 from learning_resources.site_scrapers.utils import scraper_for_site
 from learning_resources.utils import (
     build_program_children_content_bulk,
+    content_files_loaded_actions,
     html_to_markdown,
     load_course_blocklist,
     programs_needing_children_heal,
@@ -94,6 +108,10 @@ log = logging.getLogger(__name__)
 
 CLEANUP_RETRY_EXCEPTIONS = (*SEARCH_CONN_EXCEPTIONS, OperationalError)
 
+# Lives in a DB-backed cache of its own (Redis is ephemeral, "durable" is
+# culled) so a beat outage of any length is caught up by the next sweep.
+RELEASED_CONTENT_FILES_WATERMARK_KEY = "released_content_files:swept_through"
+
 
 @app.task(acks_late=True, reject_on_worker_lost=True)
 def update_next_start_date_and_prices():
@@ -106,6 +124,37 @@ def update_next_start_date_and_prices():
                 resource, percolate=False, generate_embeddings=True
             )
     return len(resources)
+
+
+@app.task(acks_late=True, reject_on_worker_lost=True)
+def reindex_released_content_files() -> int:
+    """
+    Reindex runs with content files released since the last sweep (watermark
+    minus OVERLAP, or LOOKBACK without one). The watermark only advances once
+    every hook is dispatched, and now is read first so no release falls
+    between two windows.
+    """
+    sweep_cache = caches["release_sweep"]
+    now = now_in_utc()
+    watermark = sweep_cache.get(RELEASED_CONTENT_FILES_WATERMARK_KEY)
+    since = (
+        watermark - settings.RELEASED_CONTENT_FILES_SWEEP_OVERLAP
+        if watermark
+        else now - settings.RELEASED_CONTENT_FILES_LOOKBACK
+    )
+    # visible() keeps the scan on contentfile_published_date_idx; the upper
+    # bound repeats visible()'s so the index range stops at now
+    run_ids = (
+        ContentFile.objects.visible(now)
+        .filter(release_date__gt=since, release_date__lte=now)
+        .values_list("run_id", flat=True)
+        .distinct()
+    )
+    runs = LearningResourceRun.objects.filter(id__in=run_ids)
+    for run in runs:
+        content_files_loaded_actions(run)
+    sweep_cache.set(RELEASED_CONTENT_FILES_WATERMARK_KEY, now, timeout=None)
+    return len(runs)
 
 
 @app.task(acks_late=True, reject_on_worker_lost=True)
@@ -199,6 +248,7 @@ def get_content_files(
     keys: list[str],
     *,
     overwrite: bool = False,
+    overwrite_units: bool = False,
 ):
     """
     Task to sync edX course content files with database
@@ -210,7 +260,13 @@ def get_content_files(
     ):
         log.warning("Required settings missing for %s files", etl_source)
         return
-    sync_edx_course_files(etl_source, ids, keys, overwrite=overwrite)
+    # the fan-out checked before queueing this, but the task can run after the
+    # ownership row changes (a long fan-out, a redelivered message)
+    if not may_write(etl_source, CONTENT_FILE):
+        return
+    sync_edx_course_files(
+        etl_source, ids, keys, overwrite=overwrite, overwrite_units=overwrite_units
+    )
 
 
 def get_content_tasks(
@@ -218,8 +274,8 @@ def get_content_tasks(
     *,
     chunk_size: int | None = None,
     overwrite: bool = False,
+    overwrite_units: bool = False,
     learning_resource_ids: list[int] | None = None,
-    # Updated parameter
 ) -> celery.group:
     """
     Return a list of grouped celery tasks for indexing edx content
@@ -232,7 +288,13 @@ def get_content_tasks(
 
     return celery.group(
         [
-            get_content_files.si(ids, etl_source, archive_keys, overwrite=overwrite)
+            get_content_files.si(
+                ids,
+                etl_source,
+                archive_keys,
+                overwrite=overwrite,
+                overwrite_units=overwrite_units,
+            )
             for ids in chunks(
                 learning_resources,
                 chunk_size=chunk_size,
@@ -264,7 +326,9 @@ def _content_file_resource_ids(etl_source: str, learning_resource_ids):
 def unpublish_excluded_files(
     ids: list[int], etl_source: str, keys: list[str], *, dry_run: bool = False
 ):
-    """Unpublish unused content files for a chunk of courses, a row per run"""
+    """Unpublish excluded content files and date unreleased ones for some courses"""
+    if not may_write(etl_source, CONTENT_FILE):
+        return []
     return unpublish_excluded_content_files(etl_source, ids, keys, dry_run=dry_run)
 
 
@@ -273,6 +337,8 @@ def unpublish_all_excluded_files(
     self, *, etl_source, chunk_size=None, learning_resource_ids=None, dry_run=False
 ):
     """Fan out unpublish_excluded_files over an edX source's current archives"""
+    if not may_write(etl_source, CONTENT_FILE):
+        return None
     if chunk_size is None:
         chunk_size = settings.LEARNING_COURSE_ITERATOR_CHUNK_SIZE
     archive_keys = get_most_recent_course_archives(etl_source)
@@ -298,71 +364,107 @@ def unpublish_all_excluded_files(
     )
 
 
+def _replace_with_content_tasks(task, etl_source: str, **kwargs):
+    """
+    Replace a task with the content-file fan-out for an edX source, if the legacy
+    ETL still owns that source's content files.
+
+    The check comes before get_content_tasks, which lists the archive bucket.
+    """
+    if not may_write(etl_source, CONTENT_FILE):
+        return None
+    return task.replace(get_content_tasks(etl_source, **kwargs))
+
+
 @app.task(bind=True)
 def import_all_mit_edx_files(
-    self, *, chunk_size=None, overwrite=False, learning_resource_ids=None
+    self,
+    *,
+    chunk_size=None,
+    overwrite=False,
+    overwrite_units=False,
+    learning_resource_ids=None,
 ):
     """Ingest MIT edX files from an S3 bucket"""
-    return self.replace(
-        get_content_tasks(
-            ETLSource.mit_edx.name,
-            chunk_size=chunk_size,
-            overwrite=overwrite,
-            learning_resource_ids=learning_resource_ids,
-        )
+    return _replace_with_content_tasks(
+        self,
+        ETLSource.mit_edx.name,
+        chunk_size=chunk_size,
+        overwrite=overwrite,
+        overwrite_units=overwrite_units,
+        learning_resource_ids=learning_resource_ids,
     )
 
 
 @app.task(bind=True)
 def import_all_oll_files(
-    self, *, chunk_size=None, overwrite=False, learning_resource_ids=None
+    self,
+    *,
+    chunk_size=None,
+    overwrite=False,
+    overwrite_units=False,
+    learning_resource_ids=None,
 ):
     """Ingest MIT edX files from an S3 bucket"""
-    return self.replace(
-        get_content_tasks(
-            ETLSource.oll.name,
-            chunk_size=chunk_size,
-            overwrite=overwrite,
-            learning_resource_ids=learning_resource_ids,
-        )
+    return _replace_with_content_tasks(
+        self,
+        ETLSource.oll.name,
+        chunk_size=chunk_size,
+        overwrite=overwrite,
+        overwrite_units=overwrite_units,
+        learning_resource_ids=learning_resource_ids,
     )
 
 
 @app.task(bind=True)
 def import_all_mitxonline_files(
-    self, *, chunk_size=None, overwrite=False, learning_resource_ids=None
+    self,
+    *,
+    chunk_size=None,
+    overwrite=False,
+    overwrite_units=False,
+    learning_resource_ids=None,
 ):
     """Ingest MITx Online files from an S3 bucket"""
-
-    return self.replace(
-        get_content_tasks(
-            ETLSource.mitxonline.name,
-            chunk_size=chunk_size,
-            overwrite=overwrite,
-            learning_resource_ids=learning_resource_ids,
-        )
+    return _replace_with_content_tasks(
+        self,
+        ETLSource.mitxonline.name,
+        chunk_size=chunk_size,
+        overwrite=overwrite,
+        overwrite_units=overwrite_units,
+        learning_resource_ids=learning_resource_ids,
     )
 
 
 @app.task(bind=True)
 def import_all_xpro_files(
-    self, *, chunk_size=None, overwrite=False, learning_resource_ids=None
+    self,
+    *,
+    chunk_size=None,
+    overwrite=False,
+    overwrite_units=False,
+    learning_resource_ids=None,
 ):
     """Ingest xPRO OLX files from an S3 bucket"""
-
-    return self.replace(
-        get_content_tasks(
-            ETLSource.xpro.name,
-            chunk_size=chunk_size,
-            overwrite=overwrite,
-            learning_resource_ids=learning_resource_ids,
-        )
+    return _replace_with_content_tasks(
+        self,
+        ETLSource.xpro.name,
+        chunk_size=chunk_size,
+        overwrite=overwrite,
+        overwrite_units=overwrite_units,
+        learning_resource_ids=learning_resource_ids,
     )
 
 
 @app.task(bind=True)
-def import_content_files(
-    self, etl_source, *, chunk_size=None, overwrite=False, learning_resource_ids=None
+def import_content_files(  # noqa: PLR0913
+    self,
+    etl_source,
+    *,
+    chunk_size=None,
+    overwrite=False,
+    overwrite_units=False,
+    learning_resource_ids=None,
 ):
     """Import content files for any edX-based ETL source.
 
@@ -370,13 +472,13 @@ def import_content_files(
     task-group construction happen asynchronously in a Celery worker, rather
     than blocking the calling task.
     """
-    return self.replace(
-        get_content_tasks(
-            etl_source,
-            chunk_size=chunk_size,
-            overwrite=overwrite,
-            learning_resource_ids=learning_resource_ids,
-        )
+    return _replace_with_content_tasks(
+        self,
+        etl_source,
+        chunk_size=chunk_size,
+        overwrite=overwrite,
+        overwrite_units=overwrite_units,
+        learning_resource_ids=learning_resource_ids,
     )
 
 
@@ -695,6 +797,8 @@ def get_youtube_transcripts(
         overwrite (bool):
             if true, transcripts are updated for videos that already have transcripts
     """
+    if not may_write(ETLSource.youtube.name, TRANSCRIPT):
+        return
 
     videos = youtube.get_youtube_videos_for_transcripts_job(
         created_after=created_after,
@@ -715,6 +819,8 @@ def get_ovs_transcripts(*, overwrite=False):
         overwrite (bool):
             if true, transcripts are updated for videos that already have transcripts
     """
+    if not may_write(ETLSource.ovs.name, TRANSCRIPT):
+        return
 
     videos = ovs.get_ovs_videos_for_transcripts_job(overwrite=overwrite)
 
@@ -731,6 +837,8 @@ def get_podcast_transcripts(*, overwrite=False):
         overwrite (bool):
             if true, transcripts are updated for episodes that already have one
     """
+    if not may_write(ETLSource.podcast.name, TRANSCRIPT):
+        return
 
     episodes = podcast.get_podcast_episodes_for_transcripts_job(overwrite=overwrite)
 
@@ -800,6 +908,12 @@ def summarize_unprocessed_content(
 
 @app.task(acks_late=True, reject_on_worker_lost=True)
 def ingest_canvas_course(archive_path, overwrite):
+    # reached from sync_canvas_courses and from the content_files webhook. The
+    # archive is both the course's metadata and its content files.
+    if not may_write(
+        ETLSource.canvas.name, [LearningResourceType.course.name, CONTENT_FILE]
+    ):
+        return None
     bucket = get_bucket_by_name(settings.COURSE_ARCHIVE_BUCKET_NAME)
     return sync_canvas_archive(bucket, archive_path, overwrite=overwrite)
 
@@ -812,6 +926,8 @@ def ingest_edx_run_archive(
     run_id: str | None = None,
     overwrite: bool = False,
 ):
+    if not may_write(etl_source, CONTENT_FILE):
+        return None
     return sync_edx_archive(
         etl_source, archive_path, run_id=run_id, overwrite=overwrite
     )
@@ -874,7 +990,11 @@ def sync_canvas_courses(canvas_course_ids=None, overwrite=False):  # noqa: FBT00
     Returns:
         int or None: the number of courses queued, or None if no archives were found
     """
-    if not may_write(ETLSource.canvas.name, LearningResourceType.course.name):
+    # every archive it queues is ingested by ingest_canvas_course, which needs
+    # both pairs, so with either one moved there is nothing to queue
+    if not may_write(
+        ETLSource.canvas.name, [LearningResourceType.course.name, CONTENT_FILE]
+    ):
         return None
 
     bucket = get_bucket_by_name(settings.COURSE_ARCHIVE_BUCKET_NAME)
@@ -1583,3 +1703,127 @@ class SyncXproProgramsTask(BaseWarehouseETLTask):
 
 
 SyncXproProgramsTask = app.register_task(SyncXproProgramsTask())
+
+
+class SyncMITxOnlineCoursesTask(BaseWarehouseETLTask):
+    """
+    Warehouse-pull sync of the MITx Online courses and their runs, replacing
+    get_mitxonline_data's course half once ETLSourceOwnership names the
+    warehouse for mitxonline course.
+
+    Always a full sync, whatever ``since`` is: a course is loaded with all of
+    its runs, and a run's published state and prices depend on when the view
+    was built.
+
+    A run that would unpublish more than warehouse_guards.MAX_UNPUBLISH_SHARE of
+    the published courses fails before writing. Queue it with
+    ``allow_mass_unpublish=True`` when the removal is real.
+    """
+
+    name = "learning_resources.tasks.SyncMITxOnlineCoursesTask"
+    table_name = "integrations__learn__mitxonline_courses"
+    writes = (ETLSource.mitxonline.name, [LearningResourceType.course.name])
+
+    def fetch_and_upsert(
+        self,
+        conn,
+        *,
+        since=None,  # noqa: ARG002
+        allow_mass_unpublish: bool = False,
+    ) -> int:
+        """Read the MITx Online course and run views and load them."""
+        return warehouse_mitxonline.sync_courses(
+            list(iter_rows(conn, self.view_name)),
+            list(
+                iter_rows(
+                    conn, self.qualified_name("integrations__learn__mitxonline_runs")
+                )
+            ),
+            allow_mass_unpublish=allow_mass_unpublish,
+        )
+
+
+SyncMITxOnlineCoursesTask = app.register_task(SyncMITxOnlineCoursesTask())
+
+
+class SyncMITxOnlineProgramsTask(BaseWarehouseETLTask):
+    """
+    Warehouse-pull sync of the MITx Online programs, replacing
+    get_mitxonline_data's program half once ETLSourceOwnership names the
+    warehouse for mitxonline program.
+
+    A program's courses are looked up among the MITx Online courses MIT Learn
+    has, not loaded, so run SyncMITxOnlineCoursesTask first. Always a full
+    sync, whatever ``since`` is.
+
+    A run that would unpublish more than warehouse_guards.MAX_UNPUBLISH_SHARE of
+    the published programs fails before writing. Queue it with
+    ``allow_mass_unpublish=True`` when the removal is real.
+    """
+
+    name = "learning_resources.tasks.SyncMITxOnlineProgramsTask"
+    table_name = "integrations__learn__mitxonline_programs"
+    writes = (ETLSource.mitxonline.name, [LearningResourceType.program.name])
+
+    def fetch_and_upsert(
+        self,
+        conn,
+        *,
+        since=None,  # noqa: ARG002
+        allow_mass_unpublish: bool = False,
+    ) -> int:
+        """Read the MITx Online program views and load the programs."""
+        return warehouse_mitxonline.sync_programs(
+            *(
+                list(iter_rows(conn, self.qualified_name(table)))
+                for table in (
+                    self.table_name,
+                    "integrations__learn__mitxonline_program_children",
+                    "integrations__learn__mitxonline_courses",
+                )
+            ),
+            allow_mass_unpublish=allow_mass_unpublish,
+        )
+
+
+SyncMITxOnlineProgramsTask = app.register_task(SyncMITxOnlineProgramsTask())
+
+
+class SyncOCWCoursesTask(BaseWarehouseETLTask):
+    """
+    Warehouse-pull sync of the OCW courses and their runs, replacing
+    get_ocw_data and the ocw-studio webhook's course loads once
+    ETLSourceOwnership names the warehouse for ocw course.
+
+    It loads no content files. ocw_courses_etl loads a course's content files
+    with the course, and stops for both once the warehouse owns ocw course.
+
+    Always reads the whole view, whatever ``since`` is: only a full set prunes,
+    and the view is a few thousand rows. A course whose row hashes as it did at
+    its last load is skipped (warehouse_ocw.sync_courses). A course that fails
+    to load is skipped too, and the run raises after loading the rest.
+
+    A run that would unpublish more than warehouse_guards.MAX_UNPUBLISH_SHARE of
+    the published courses fails before writing. Queue it with
+    ``allow_mass_unpublish=True`` when the removal is real.
+    """
+
+    name = "learning_resources.tasks.SyncOCWCoursesTask"
+    table_name = "integrations__learn__ocw_courses"
+    writes = (ETLSource.ocw.name, [LearningResourceType.course.name])
+
+    def fetch_and_upsert(
+        self,
+        conn,
+        *,
+        since=None,  # noqa: ARG002
+        allow_mass_unpublish: bool = False,
+    ) -> int:
+        """Read the OCW course view and load the courses."""
+        return warehouse_ocw.sync_courses(
+            list(iter_rows(conn, self.view_name)),
+            allow_mass_unpublish=allow_mass_unpublish,
+        )
+
+
+SyncOCWCoursesTask = app.register_task(SyncOCWCoursesTask())

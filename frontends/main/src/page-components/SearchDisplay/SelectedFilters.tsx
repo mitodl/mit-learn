@@ -66,56 +66,79 @@ const selectedFilters = (
     }))
   })
 
-const Row = styled.div({
+/**
+ * The row of applied filters, set off from the search row above it by a rule.
+ *
+ * The rule and the padding under it belong to this row rather than to the card
+ * because the row is what comes and goes: with nothing filtering there is
+ * nothing to separate, and a card that drew its own rule would be left with a
+ * line under its only row.
+ */
+const Row = styled.div(({ theme }) => ({
   display: "flex",
   alignItems: "center",
-  gap: "16px",
+  gap: "12px",
   width: "100%",
+  borderTop: `1px solid ${theme.custom.colors.lightGray2}`,
+  paddingTop: "16px",
   /* Narrow screens run out of room long before the filters do. */
   flexWrap: "wrap",
   rowGap: "8px",
-})
+}))
+
+/** Says what the row is, since the filters alone do not announce themselves. */
+const FilteredBy = styled.span(({ theme }) => ({
+  ...theme.typography.body3,
+  color: theme.custom.colors.darkGray1,
+  whiteSpace: "nowrap",
+}))
 
 /**
  * One filter, which removing is the only thing it does.
  *
  * A button rather than the chip component used elsewhere, because removing is
- * the whole of it: the design draws an outlined pill with the filter's name
- * and a cross, and the pill is the control.
+ * the whole of it: the design draws the filter's name and a cross in a small
+ * grey tablet, and the tablet is the control.
+ *
+ * 8px of its own on the label's side and 4px around the cross, which is what
+ * makes the design's 24px -- the cross carries its own space, so the two sides
+ * are set differently rather than padded alike.
  */
 const FilterChip = styled.button(({ theme }) => ({
-  ...theme.typography.body2,
+  ...theme.typography.subtitle3,
   display: "flex",
   alignItems: "center",
-  justifyContent: "center",
   gap: "4px",
-  height: "32px",
-  /* Less on the cross's side, which carries its own space. */
-  padding: "0 12px 0 16px",
-  borderRadius: "20px",
-  border: `1px solid ${theme.custom.colors.silverGrayLight}`,
-  background: "none",
+  height: "24px",
+  padding: "0 4px 0 8px",
+  border: "none",
+  borderRadius: "4px",
+  backgroundColor: theme.custom.colors.lightGray1,
   color: theme.custom.colors.darkGray2,
   cursor: "pointer",
   whiteSpace: "nowrap",
+  /* Its own grey rather than the label's near-black: the cross is the quieter
+     half of the tablet until it is pointed at. */
   svg: {
     flexShrink: 0,
     width: "16px",
     height: "16px",
     color: theme.custom.colors.silverGrayDark,
   },
-  ":hover": {
-    borderColor: theme.custom.colors.darkGray2,
-    svg: { color: theme.custom.colors.darkGray2 },
+  /* The tablet keeps its grey and its label: hovering reddens the cross
+     alone, which is the half of it that does anything. */
+  ":hover svg": {
+    color: theme.custom.colors.red,
   },
 }))
 
 const ClearAll = styled.button(({ theme }) => ({
   ...theme.typography.body3,
   color: theme.custom.colors.red,
-  /* Set in from the last pill rather than spaced from it, as the design has
-     it -- the gap belongs to the link, not to the row. */
-  padding: "0 16px",
+  /* 8px on top of the row's own 12px, which is the 20px the design sets it in
+     from the last filter. The gap belongs to the link, not to the row. */
+  marginLeft: "8px",
+  padding: 0,
   border: "none",
   background: "none",
   cursor: "pointer",
@@ -185,6 +208,7 @@ const SelectedFilters: React.FC<SelectedFiltersProps> = ({
   }
   return (
     <Row data-testid="selected-filters">
+      <FilteredBy>Filtered by</FilteredBy>
       {filters.map((filter, index) => {
         const key = `${filter.name}-${filter.value}`
         return (
@@ -202,14 +226,18 @@ const SelectedFilters: React.FC<SelectedFiltersProps> = ({
           </FilterChip>
         )
       })}
+      {/* Labelled in full for assistive tech: the visible words are short
+          because the row they end already says these are the filters, which a
+          control read out on its own does not. */}
       <ClearAll
         type="button"
+        aria-label="Clear all filters"
         onClick={() => {
           onEmpty()
           onClearAll()
         }}
       >
-        Clear all filters
+        Clear all
       </ClearAll>
     </Row>
   )

@@ -14,7 +14,12 @@ test("Renders a labelled region with the first testimonial's quote, name and tit
       title: `Job Title ${i}`,
     }),
   )
-  renderWithProviders(<TestimonialsSection testimonials={testimonials} />)
+  renderWithProviders(
+    <TestimonialsSection
+      testimonials={testimonials}
+      itemReviewedName="Intro to Rocketry"
+    />,
+  )
 
   const section = await screen.findByRole("region", {
     name: "What learners are saying",
@@ -34,7 +39,10 @@ test("Renders a labelled region with the first testimonial's quote, name and tit
 
 test("Shows navigation arrows only when there is more than one testimonial", () => {
   const { view } = renderWithProviders(
-    <TestimonialsSection testimonials={[makeTestimonial()]} />,
+    <TestimonialsSection
+      testimonials={[makeTestimonial()]}
+      itemReviewedName="Intro to Rocketry"
+    />,
   )
   expect(
     screen.queryByRole("button", { name: "Show next testimonial" }),
@@ -43,6 +51,7 @@ test("Shows navigation arrows only when there is more than one testimonial", () 
   view.rerender(
     <TestimonialsSection
       testimonials={Array.from({ length: 2 }, () => makeTestimonial())}
+      itemReviewedName="Intro to Rocketry"
     />,
   )
   expect(
@@ -61,7 +70,12 @@ test("Cycles through testimonials with next and previous, showing one quote at a
       title: `Job Title ${i}`,
     }),
   )
-  renderWithProviders(<TestimonialsSection testimonials={testimonials} />)
+  renderWithProviders(
+    <TestimonialsSection
+      testimonials={testimonials}
+      itemReviewedName="Intro to Rocketry"
+    />,
+  )
 
   const prev = screen.getByRole("button", {
     name: "Show previous testimonial",
@@ -90,7 +104,12 @@ test("Keeps keyboard focus on the enabled arrow when reaching a boundary", async
   const testimonials = Array.from({ length: 2 }, (_, i) =>
     makeTestimonial({ quote: `Quote number ${i}` }),
   )
-  renderWithProviders(<TestimonialsSection testimonials={testimonials} />)
+  renderWithProviders(
+    <TestimonialsSection
+      testimonials={testimonials}
+      itemReviewedName="Intro to Rocketry"
+    />,
+  )
 
   const prev = screen.getByRole("button", {
     name: "Show previous testimonial",
@@ -111,7 +130,12 @@ test("Keeps keyboard focus on the enabled arrow when reaching a boundary", async
 
 test("Renders the avatar image when a testimonial has one", async () => {
   const testimonial = makeTestimonial({ image_src: "https://x.test/face.jpg" })
-  renderWithProviders(<TestimonialsSection testimonials={[testimonial]} />)
+  renderWithProviders(
+    <TestimonialsSection
+      testimonials={[testimonial]}
+      itemReviewedName="Intro to Rocketry"
+    />,
+  )
 
   const section = await screen.findByRole("region", {
     name: "What learners are saying",
@@ -121,7 +145,12 @@ test("Renders the avatar image when a testimonial has one", async () => {
 
 test("Renders no avatar when a testimonial has no image", async () => {
   const testimonial = makeTestimonial({ image_src: null })
-  renderWithProviders(<TestimonialsSection testimonials={[testimonial]} />)
+  renderWithProviders(
+    <TestimonialsSection
+      testimonials={[testimonial]}
+      itemReviewedName="Intro to Rocketry"
+    />,
+  )
 
   const section = await screen.findByRole("region", {
     name: "What learners are saying",
@@ -133,11 +162,75 @@ test("Renders no avatar when a testimonial has no image", async () => {
 
 test("Omits the title when a testimonial has none", async () => {
   const testimonial = makeTestimonial({ title: "" })
-  renderWithProviders(<TestimonialsSection testimonials={[testimonial]} />)
+  renderWithProviders(
+    <TestimonialsSection
+      testimonials={[testimonial]}
+      itemReviewedName="Intro to Rocketry"
+    />,
+  )
 
   const section = await screen.findByRole("region", {
     name: "What learners are saying",
   })
   within(section).getByText(testimonial.name)
   within(section).getByText(testimonial.quote)
+})
+
+test("Emits Review structured data for the first testimonial only", async () => {
+  const testimonials = Array.from({ length: 2 }, (_, i) =>
+    makeTestimonial({ quote: `Quote number ${i}` }),
+  )
+  const [first] = testimonials
+  renderWithProviders(
+    <TestimonialsSection
+      testimonials={testimonials}
+      itemReviewedName="Intro to Rocketry"
+      itemReviewedDescription="<p>Build a rocket.</p>"
+    />,
+  )
+
+  const section = await screen.findByRole("region", {
+    name: "What learners are saying",
+  })
+  const script = section.querySelector('script[type="application/ld+json"]')
+
+  expect(JSON.parse(script?.textContent ?? "")).toEqual({
+    "@context": "https://schema.org",
+    "@type": "Course",
+    name: "Intro to Rocketry",
+    description: "Build a rocket.",
+    review: [
+      {
+        "@type": "Review",
+        author: { "@type": "Person", name: first.name },
+        datePublished: first.date_published,
+        reviewBody: first.quote,
+      },
+    ],
+  })
+})
+
+test("Escapes characters that could break out of the JSON-LD script tag", async () => {
+  const testimonial = makeTestimonial({
+    quote: "</script><script>alert(1)</script>",
+  })
+  renderWithProviders(
+    <TestimonialsSection
+      testimonials={[testimonial]}
+      itemReviewedName="Intro to Rocketry"
+      itemReviewedDescription="<p>Build a rocket.</p>"
+    />,
+  )
+
+  const section = await screen.findByRole("region", {
+    name: "What learners are saying",
+  })
+  const scripts = section.querySelectorAll("script")
+  expect(scripts).toHaveLength(1)
+
+  const raw = scripts[0].textContent ?? ""
+  expect(raw).not.toContain("</script>")
+  expect(JSON.parse(raw)).toMatchObject({
+    review: [{ reviewBody: "</script><script>alert(1)</script>" }],
+  })
 })

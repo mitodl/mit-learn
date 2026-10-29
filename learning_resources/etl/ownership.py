@@ -16,10 +16,17 @@ Each pipeline declares itself once, at its entry point, with ``writing_as``, and
 calls ``may_write`` there, before it extracts anything, so a pipeline that does
 not own a pair costs one query and no extract or transform. Code that never
 declares a pipeline is the legacy Celery ETL: its checks are in
-``learning_resources.etl.pipelines`` and at the top of the tasks that have no
-pipeline function (``get_youtube_data``, ``sync_canvas_courses``,
-``get_ocw_data``); a warehouse task declares ``writes`` and
-``BaseWarehouseETLTask.run`` checks it before connecting.
+``learning_resources.etl.pipelines``, ``news_events.etl.pipelines`` and at the
+top of the tasks that have no pipeline function (``get_youtube_data``,
+``sync_canvas_courses``, ``get_ocw_data``, the content-file and transcript
+tasks); a warehouse task declares ``writes`` and ``BaseWarehouseETLTask.run``
+checks it before connecting. The OVS video webhook declares the webhook
+pipeline, as the generic learning_resources webhook does.
+
+Content files and transcripts have keys of their own (``CONTENT_FILE``,
+``TRANSCRIPT``) rather than riding on their resource's type, because they cut
+over separately: a source's course metadata can move to the warehouse while its
+content files and transcripts are still extracted here.
 
 The batch loaders call ``may_write`` again as a backstop, so a caller that
 skipped the entry check (a shell session, a new pipeline) still cannot write a
@@ -36,6 +43,10 @@ from learning_resources.models import ETLSourceOwnership
 log = logging.getLogger(__name__)
 
 Pipeline = ETLSourceOwnership.Pipeline
+
+# resource_type keys that are not LearningResourceTypes. See the module docstring.
+CONTENT_FILE = "content_file"
+TRANSCRIPT = "transcript"
 
 _current_pipeline: ContextVar[str] = ContextVar(
     "etl_current_pipeline", default=Pipeline.LEGACY
@@ -108,3 +119,20 @@ def assert_owner(etl_source: str, resource_types: str | Iterable[str]) -> None:
             "Set its ETLSourceOwnership row in Django admin to cut it over."
         )
         raise OwnershipError(msg)
+
+
+def when_owned(etl_source: str, resource_types: str | Iterable[str], pipeline):
+    """
+    Wrap a pipeline so it runs only while the current pipeline owns what it writes.
+
+    The check comes before extract, so a source that was cut over to the warehouse
+    pull or the webhook costs the legacy task one query per run instead of a full
+    extract and transform.
+    """
+
+    def run(*args, **kwargs):
+        if not may_write(etl_source, resource_types):
+            return []
+        return pipeline(*args, **kwargs)
+
+    return run

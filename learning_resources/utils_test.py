@@ -765,6 +765,14 @@ def test_token_encoding_falls_back_for_unknown_models(mocker, settings):
     get_encoding.assert_called_once_with(utils.FALLBACK_ENCODING_NAME)
 
 
+@pytest.mark.parametrize("model", ["gpt-4o", "azure/gpt-4o"])
+def test_token_encoding_ignores_azure_prefix(settings, model):
+    """An azure/ model is tokenized like the OpenAI model it deploys"""
+    settings.LITELLM_TOKEN_ENCODING_NAME = "cl100k_base"  # noqa: S105
+
+    assert utils.token_encoding(model).name == "o200k_base"
+
+
 def test_count_tokens(mocker):
     """count_tokens counts what truncate_to_tokens truncates to"""
 

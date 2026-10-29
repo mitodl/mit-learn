@@ -18,6 +18,7 @@ import { useFeatureFlagEnabled, usePostHog } from "posthog-js/react"
 import { FeatureFlags } from "@/common/feature_flags"
 import { PostHogEvents } from "@/common/constants"
 import type { RegisteredSearchParams } from "@/common/searchParams"
+import type { BooleanFacets, Facets } from "@mitodl/course-search-utils"
 import {
   CloseButton,
   CloseButtonContainer,
@@ -29,7 +30,29 @@ const COLLAPSED_HEIGHT = 100
 // shift when the summary replaces the loading state.
 const HEADER_ICON_SIZE = 20
 
-const getOverviewRequestOpts = (): AiChatProps["requestOpts"] => {
+type SearchFilters = Record<string, string[]>
+
+/**
+ * Filters pinned by the page (e.g. a channel's topic), in the shape learn-ai
+ * expects. learn-ai applies them to every search it runs for the thread, so
+ * recommendations stay within the channel.
+ */
+const getSearchFilters = (
+  constantSearchParams: Facets & BooleanFacets,
+): SearchFilters | undefined => {
+  const filters: SearchFilters = {}
+  Object.entries(constantSearchParams).forEach(([key, value]) => {
+    const values = (Array.isArray(value) ? value : [value])
+      .filter((v) => v !== undefined && v !== null)
+      .map(String)
+    if (values.length) filters[key] = values
+  })
+  return Object.keys(filters).length ? filters : undefined
+}
+
+const getOverviewRequestOpts = (
+  searchFilters?: SearchFilters,
+): AiChatProps["requestOpts"] => {
   const requestOpts = getRecommendationRequestOpts()
   return {
     ...requestOpts,
@@ -46,6 +69,7 @@ const getOverviewRequestOpts = (): AiChatProps["requestOpts"] => {
         ?.content.match(/"thread_id":\s*"([^"]+)"/)?.[1]
       return {
         ...(requestOpts.transformBody?.(messages, body) as object),
+        ...(searchFilters ? { search_filters: searchFilters } : {}),
         ...(threadId ? { thread_id: threadId } : { clear_history: true }),
       }
     },
@@ -362,23 +386,37 @@ const Overview: React.FC<{ query: string; onDismissed?: () => void }> = ({
 
 interface AiSearchOverviewProps {
   searchParams: RegisteredSearchParams
+  /**
+   * Filters that always apply to this search, e.g. a channel page's topic.
+   * Recommendations are limited to resources matching them.
+   */
+  constantSearchParams?: Facets & BooleanFacets
   /** Called after the overview is dismissed, e.g. to move focus elsewhere. */
   onDismissed?: () => void
 }
 
 const AiSearchOverview: React.FC<AiSearchOverviewProps> = ({
   searchParams,
+  constantSearchParams,
   onDismissed,
 }) => {
   const query = searchParams.get("q")?.trim() || undefined
   const enabled = useFeatureFlagEnabled(FeatureFlags.SearchAiOverview)
-  const requestOpts = useMemo(() => getOverviewRequestOpts(), [])
+  // Keyed on the serialized filters: channel pages rebuild
+  // constantSearchParams on every render.
+  const filtersKey = JSON.stringify(
+    getSearchFilters(constantSearchParams ?? {}) ?? null,
+  )
+  const requestOpts = useMemo(
+    () => getOverviewRequestOpts(JSON.parse(filtersKey) ?? undefined),
+    [filtersKey],
+  )
 
   if (!enabled || !query) return null
 
   return (
-    // Keyed on query so a new search starts a fresh conversation.
-    <AiChatProvider key={query} requestOpts={requestOpts}>
+    // Keyed on query and filters so a new search starts a fresh conversation.
+    <AiChatProvider key={`${query}|${filtersKey}`} requestOpts={requestOpts}>
       <Overview query={query} onDismissed={onDismissed} />
     </AiChatProvider>
   )

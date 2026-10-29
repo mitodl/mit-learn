@@ -11,6 +11,7 @@ import { makeRequest, urls, factories } from "api/test-utils"
 import {
   factories as mitxFactories,
   urls as mitxUrls,
+  mockEnrollmentEligible,
 } from "api/mitxonline-test-utils"
 import { useCourseEnrollment } from "./useCourseEnrollment"
 import type { EnrollActionKind } from "./useCourseEnrollment"
@@ -27,6 +28,11 @@ import {
   trackStartEnrollment,
   trackBeginCheckout,
 } from "@/common/analytics/gtm"
+
+// The paid path checks enrollment eligibility before the cart.
+beforeEach(() => {
+  mockEnrollmentEligible()
+})
 
 jest.mock("@/common/analytics/gtm", () => ({
   trackCourseEnrolled: jest.fn(),

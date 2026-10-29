@@ -198,7 +198,7 @@ describe("ContractLearnersPage", () => {
     ).toThrow(ForbiddenError)
   })
 
-  test("opens with both analytics flags on, linking back to aggregate analytics", async () => {
+  test("opens with both analytics flags on, with the contract nav marking Learners current", async () => {
     mockedUseFeatureFlagEnabled.mockImplementation(
       (flag) =>
         flag === FeatureFlags.B2BAnalyticsDashboard ||
@@ -210,11 +210,14 @@ describe("ContractLearnersPage", () => {
       <ContractLearnersPage orgSlug={orgSlug} contractSlug={contract.slug} />,
     )
 
-    const back = await screen.findByRole("link", { name: /Program analytics/ })
-    expect(back).toHaveAttribute(
-      "href",
-      contractAnalyticsView(orgSlug, contract.slug),
+    const nav = await screen.findByRole("navigation", { name: "Contract" })
+    expect(within(nav).getByRole("link", { name: "Learners" })).toHaveAttribute(
+      "aria-current",
+      "page",
     )
+    expect(
+      within(nav).getByRole("link", { name: "Analytics" }),
+    ).toHaveAttribute("href", contractAnalyticsView(orgSlug, contract.slug))
   })
 
   test("denies access when the org is not one the user manages", async () => {
@@ -2196,16 +2199,46 @@ describe("ContractLearnersPage progress grid", () => {
         completion_status: "not_started",
         last_active_on: "2026-08-01",
       }),
+      analyticsFactories.learnerProgress({
+        learner_id: "c",
+        email: "carol@example.com",
+        full_name: "Carol Clark",
+        courserun_readable_id: M5,
+        completion_status: "passed",
+        last_active_on: "2026-07-15",
+      }),
+      analyticsFactories.learnerProgress({
+        learner_id: "d",
+        email: "dan@example.com",
+        full_name: "Dan Doe",
+        courserun_readable_id: M5,
+        completion_status: "passed",
+        last_active_on: null,
+      }),
     ])
 
     await user.click(await screen.findByRole("tab", { name: "Progress grid" }))
 
     const adaRow = rowOf(await screen.findByText("Ada Lovelace"))
-    expect(within(adaRow).getByText("Sep 30, 2026")).toBeInTheDocument()
-    expect(within(adaRow).getByText("No activity")).toBeInTheDocument()
+    const datedCell = within(adaRow)
+      .getByText("Sep 30, 2026")
+      .closest('[role="cell"]')
+    expect(datedCell).toHaveTextContent(
+      /In progress, .*last active Sep 30, 2026/,
+    )
+    const noActivityCell = within(adaRow)
+      .getByText("No activity")
+      .closest('[role="cell"]')
+    expect(noActivityCell).toHaveTextContent(/In progress, .*No activity/)
 
     const bobRow = rowOf(screen.getByText("Bob Barker"))
     expect(within(bobRow).queryByText("Aug 1, 2026")).not.toBeInTheDocument()
+
+    const carolRow = rowOf(screen.getByText("Carol Clark"))
+    expect(within(carolRow).getByText("Jul 15, 2026")).toBeInTheDocument()
+
+    const danRow = rowOf(screen.getByText("Dan Doe"))
+    expect(within(danRow).queryByText("No activity")).not.toBeInTheDocument()
     expect(
       within(screen.getByRole("list", { name: "Legend" })).getByText(
         "Dates show last activity",

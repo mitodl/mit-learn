@@ -24,6 +24,8 @@ type SimpleSelectProps = Pick<
    * reach, so a caller that needs to dress it says so here.
    */
   | "MenuProps"
+  | "disabled"
+  | "inputProps"
 > & {
   /**
    * The options for the dropdown
@@ -87,6 +89,7 @@ type SimpleSelectFieldProps<V = unknown> = Pick<
   | "className"
   | "renderValue"
   | "multiple"
+  | "disabled"
 > & {
   /**
    * The options for the dropdown

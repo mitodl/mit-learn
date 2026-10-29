@@ -6,23 +6,26 @@ from itertools import chain
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from defusedxml import ElementTree
+from defusedxml import DefusedXmlException, ElementTree
 from django.conf import settings
 from django.core.cache import caches
 from django.db.models import Prefetch, Q
 
-from learning_resources.constants import VALID_TEXT_FILE_TYPES
 from learning_resources.etl.constants import ETLSource
-from learning_resources.etl.loaders import load_content_files
+from learning_resources.etl.loaders import load_content_files, load_course_units
+from learning_resources.etl.olx import OlxArchive
 from learning_resources.etl.utils import (
     calc_checksum,
-    excluded_olx_paths,
+    course_units_from_archive,
     get_bucket_by_name,
-    get_edx_module_id,
     get_s3_prefix_for_source,
+    reconcile_release_dates,
     transform_content_files,
+    unpacked_course_archive,
 )
 from learning_resources.models import ContentFile, LearningResourceRun
+from learning_resources.utils import content_files_loaded_actions
+from main.utils import now_in_utc
 
 log = logging.getLogger(__name__)
 
@@ -121,7 +124,12 @@ def build_run_lookup(
 
 
 def process_course_archive(
-    bucket, key: str, run: LearningResourceRun, *, overwrite: bool = False
+    bucket,
+    key: str,
+    run: LearningResourceRun,
+    *,
+    overwrite: bool = False,
+    overwrite_units: bool = False,
 ) -> bool:
     """
     Download and process a course archive from S3, skipping the download
@@ -132,6 +140,8 @@ def process_course_archive(
         key(str): S3 object key for the course archive
         run(LearningResourceRun): The run to process
         overwrite(bool): Whether to overwrite existing content files
+        overwrite_units(bool): Whether to rebuild the run's units from an
+            unchanged archive, without reloading its content files
 
     Returns:
         bool: False if skipped via matching archive_key, True otherwise
@@ -143,8 +153,9 @@ def process_course_archive(
     stale_run = (
         bool(run.checksum) and not run.content_files.filter(published=True).exists()
     )
+    reload = overwrite or stale_run
 
-    if run.archive_key == key and not overwrite and not stale_run:
+    if run.archive_key == key and not reload and not overwrite_units:
         log.debug("Archive key unchanged for %s, skipping download", key)
         return False
     with TemporaryDirectory() as export_tempdir:
@@ -156,43 +167,111 @@ def process_course_archive(
         except tarfile.ReadError:
             log.exception("Error reading tar file %s, skipping", course_tarpath)
             return True
-        if run.checksum == checksum and not overwrite and not stale_run:
+        if run.checksum == checksum and not reload:
             # unchanged content under a new key: record it to skip future downloads
-            run.archive_key = key
-            run.save(update_fields=["archive_key"])
+            if run.archive_key != key:
+                run.archive_key = key
+                run.save(update_fields=["archive_key"])
             log.info("Checksums match for %s, skipping load", key)
+            if overwrite_units:
+                rebuild_course_units(course_tarpath, run)
             return True
-        try:
+        load_course_archive(course_tarpath, key, run, checksum, overwrite=overwrite)
+    return True
+
+
+def load_course_archive(
+    course_tarpath: Path,
+    key: str,
+    run: LearningResourceRun,
+    checksum: str,
+    *,
+    overwrite: bool,
+):
+    """
+    Load a downloaded course archive's content files and units, recording the
+    archive receipt on the run once they're loaded.
+
+    Args:
+        course_tarpath(Path): The path to the downloaded course archive
+        key(str): S3 object key for the course archive
+        run(LearningResourceRun): The run to load
+        checksum(str): The archive's checksum
+        overwrite(bool): Whether to overwrite existing content files
+    """
+    try:
+        with unpacked_course_archive(course_tarpath, run) as archive:
             failed_keys = []
             content_files_data = iter(
                 transform_content_files(
-                    course_tarpath, run, overwrite=overwrite, failed_keys=failed_keys
+                    archive, run, overwrite=overwrite, failed_keys=failed_keys
                 )
             )
             first = next(content_files_data, None)
             if first is None:
+                # a row may have just gone unreleased; deindex it
+                content_files_loaded_actions(run)
                 if failed_keys:
-                    # every file failed: retry next sync, don't mark as empty
-                    return True
+                    # every file raised: retry next sync, don't mark as empty
+                    return
                 # empty archive: stop re-downloading it. Drop any checksum
                 # from an earlier ingest so a stale run doesn't keep
                 # forcing the download.
                 run.archive_key = key
                 run.checksum = None
                 run.save(update_fields=["archive_key", "checksum"])
-                return True
+                return
             content_files_ids = load_content_files(
                 run, chain([first], content_files_data), failed_keys=failed_keys
             )
             if content_files_ids:
+                load_archive_units(archive, run, key)
                 run.checksum = checksum
                 run.archive_key = key
                 run.save(update_fields=["checksum", "archive_key"])
-            # else: files yielded but none loaded — save nothing so the next
-            # sync retries
-        except:  # noqa: E722
-            log.exception("Error ingesting OLX content data for %s", key)
-    return True
+    except:  # noqa: E722
+        log.exception("Error ingesting OLX content data for %s", key)
+
+
+def load_archive_units(archive: OlxArchive, run: LearningResourceRun, key: str):
+    """
+    Load a run's units from its unpacked archive, after its content files. A
+    failure is logged rather than raised: the same archive fails the same way
+    every time, so the receipt is still recorded and the archive isn't reloaded
+    on every sync. A new export, overwrite or overwrite_units tries again. The
+    run then keeps its units, minus links to files no longer published.
+
+    Args:
+        archive(OlxArchive): The run's unpacked course archive
+        run(LearningResourceRun): The run whose units to load
+        key(str): S3 object key for the course archive
+    """
+    units = []
+    try:
+        units = archive.units(run)
+    except Exception:
+        log.exception("Units not built for run %s from %s", run.run_id, key)
+    try:
+        load_course_units(run, units)
+    except Exception:
+        log.exception("Units not loaded for run %s from %s", run.run_id, key)
+
+
+def rebuild_course_units(course_tarpath: Path, run: LearningResourceRun):
+    """
+    Rebuild a run's units from its course archive, leaving its content files
+    as they are. The run's units are kept if the archive's can't be built.
+
+    Args:
+        course_tarpath(Path): The path to the downloaded course archive
+        run(LearningResourceRun): The run whose units to rebuild
+    """
+    try:
+        load_course_units(run, course_units_from_archive(course_tarpath, run))
+    except Exception:
+        log.exception(
+            "Units not built for run %s from %s", run.run_id, course_tarpath.name
+        )
 
 
 def get_most_recent_course_archives(etl_source: str) -> list[str]:
@@ -347,6 +426,7 @@ def sync_edx_course_files(
     keys: list[str],
     *,
     overwrite: bool = False,
+    overwrite_units: bool = False,
 ):
     """
     Sync all edx course run files for a list of course ids to database
@@ -355,6 +435,8 @@ def sync_edx_course_files(
         etl_source(str): The edx ETL source
         ids(list of int): list of course ids to process
         keys(list[str]): list of S3 archive keys to search through
+        overwrite(bool): Whether to overwrite existing content files
+        overwrite_units(bool): Whether to rebuild units from unchanged archives
     """
     bucket = get_bucket_by_name(settings.COURSE_ARCHIVE_BUCKET_NAME)
     run_lookup = build_run_lookup(etl_source, ids)
@@ -373,7 +455,9 @@ def sync_edx_course_files(
 
         # legacy unpublished runs can share an archive id with the current run
         run = max(matching_runs, key=lambda r: r.published)
-        if process_course_archive(bucket, key, run, overwrite=overwrite):
+        if process_course_archive(
+            bucket, key, run, overwrite=overwrite, overwrite_units=overwrite_units
+        ):
             processed += 1
         else:
             skipped += 1
@@ -389,35 +473,34 @@ def unpublish_excluded_content_files(
     etl_source: str, ids: list[int], keys: list[str], *, dry_run: bool = False
 ) -> list[dict]:
     """
-    Unpublish (and deindex) content files the course does not use — staff-only
-    subtrees, asset manifests and unreferenced static files — for the runs
-    matching the given archive keys, without re-extracting anything.
+    Unpublish (and deindex) content files the course does not use and set the
+    release date of the rest, for the runs matching the given archive keys,
+    without re-extracting anything. Unreleased files stay published but hidden.
 
     Args:
         etl_source(str): The edx ETL source
         ids(list of int): list of course ids to process
         keys(list[str]): list of S3 archive keys to search through
-        dry_run(bool): count the rows but leave them published and deindex nothing
+        dry_run(bool): count the rows but change nothing and deindex nothing
 
     Returns:
-        list of dict: a row per run whose archive excludes content files it has,
-            counting the excluded rows, the ones this call unpublished (or would
-            have, under dry_run) and the run's content files in total. Counts,
-            not paths, so the payload stays small enough to cross the celery
-            result backend for every run at once.
+        list of dict: a count row per run with excluded or unreleased files
+            (counts, not paths, to fit the celery result backend)
     """
     from learning_resources_search import tasks as search_tasks
     from vector_search import tasks as vector_tasks
 
     bucket = get_bucket_by_name(settings.COURSE_ARCHIVE_BUCKET_NAME)
     run_lookup = build_run_lookup(etl_source, ids)
+    now = now_in_utc()
     rows = []
     for key in keys:
         matching_runs = run_lookup.get(extract_run_id_from_key(etl_source, key))
         if not matching_runs:
             continue
         run = max(matching_runs, key=lambda r: r.published)
-        if not ContentFile.objects.filter(run=run).exists():
+        run_files = ContentFile.objects.filter(run=run)
+        if not run_files.exists():
             # a run with no content files has none to unpublish, and its archive
             # is a download and an extract to find that out
             continue
@@ -433,56 +516,44 @@ def unpublish_excluded_content_files(
             olx_path = next((p for p in Path(tempdir).iterdir() if p.is_dir()), None)
             if olx_path is None:
                 continue
+            archive = OlxArchive(olx_path, etl_source)
             try:
-                excluded_paths = excluded_olx_paths(olx_path, etl_source)
-            except ElementTree.ParseError:
+                excluded_keys = archive.excluded_keys(run)
+                key_dates = archive.key_dates(run)
+            # one unreadable archive must not stop the rest of the backfill
+            except (ElementTree.ParseError, DefusedXmlException, OSError):
                 log.exception("Malformed OLX in %s, skipping", key)
                 continue
-            ingestable = [
-                path
-                for path in olx_path.rglob("*")
-                if path.is_file()
-                and path.suffix.lower() in VALID_TEXT_FILE_TYPES
-                and not any(
-                    "draft" in part for part in path.relative_to(olx_path).parts[:-1]
-                )
-            ]
-            # get_edx_module_id writes a space as an underscore, so "foo bar.pdf"
-            # and "foo_bar.pdf" are one row; it stays if either path is ingested
-            excluded_keys = {
-                get_edx_module_id(str(path), run)
-                for path in ingestable
-                if path in excluded_paths
-            } - {
-                get_edx_module_id(str(path), run)
-                for path in ingestable
-                if path not in excluded_paths
-            }
-        if not excluded_keys:
-            continue
         # scoped to this run: keys embed the run_id, but never rely on that alone
-        excluded_files = ContentFile.objects.filter(run=run, key__in=excluded_keys)
+        excluded_files = run_files.filter(key__in=excluded_keys)
+        unreleased_keys = [
+            content_key
+            for content_key, date in key_dates.items()
+            if date and date > now
+        ]
         excluded = excluded_files.count()
-        if not excluded:
+        unreleased = run_files.filter(key__in=unreleased_keys).count()
+        if not (excluded or unreleased):
             continue
-        if dry_run:
-            unpublished = excluded_files.filter(published=True).count()
-        else:
-            unpublished = excluded_files.filter(published=True).update(published=False)
+        unpublished = excluded_files.filter(published=True).count()
+        if not dry_run:
+            excluded_files.filter(published=True).update(published=False)
+            reconcile_release_dates(run, key_dates)
             log.info(
                 "Unpublished %d excluded content files for %s", unpublished, run.run_id
             )
-            # dispatched whenever excluded rows exist, not only when this call
-            # flipped them, so a re-run after a failed deindex task cleans up
-            # the indexes
+            # dispatched whenever excluded or unreleased rows exist, not only
+            # when this call flipped them, so a re-run after a failed deindex
+            # task cleans up the indexes
             search_tasks.deindex_run_content_files.delay(run.id, unpublished_only=True)
             vector_tasks.remove_unpublished_run_content_files.delay(run.id)
         rows.append(
             {
                 "run_id": run.run_id,
                 "excluded": excluded,
+                "unreleased": unreleased,
                 "unpublished": unpublished,
-                "total": ContentFile.objects.filter(run=run).count(),
+                "total": run_files.count(),
             }
         )
     return rows

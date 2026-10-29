@@ -1,8 +1,17 @@
 import type { ResourceCarouselProps } from "@/page-components/ResourceCarousel/ResourceCarousel"
-import type { FeaturedApiFeaturedListRequest as FeaturedListParams } from "api"
+import {
+  FeaturedListOfferedByEnum,
+  type FeaturedApiFeaturedListRequest as FeaturedListParams,
+} from "api"
 
-const FEATURED_COMMON_PARAMS: FeaturedListParams = {
+// Sloan and Professional Education featured items show on their own channel pages only
+const HOME_EXCLUDED_OFFERORS: FeaturedListOfferedByEnum[] = ["see", "mitpe"]
+
+export const FEATURED_COMMON_PARAMS: FeaturedListParams = {
   limit: 12,
+  offered_by: Object.values(FeaturedListOfferedByEnum).filter(
+    (offeror) => !HOME_EXCLUDED_OFFERORS.includes(offeror),
+  ),
 }
 const FEATURED_RESOURCES_CAROUSEL: ResourceCarouselProps["config"] = [
   {

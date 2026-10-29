@@ -535,6 +535,9 @@ class LearningResource(TimestampedModel):
         "self", through="LearningResourceRelationship", symmetrical=False, blank=True
     )
     etl_source = models.CharField(max_length=12, default="")
+    # Hash of the transformed source data last loaded by a warehouse sync that
+    # skips unchanged rows. Any other load clears it.
+    etl_checksum = models.CharField(max_length=32, null=True, blank=True)  # noqa: DJ001
     professional = models.BooleanField(default=False)
     next_start_date = models.DateTimeField(null=True, blank=True, db_index=True)
     prices = ArrayField(
@@ -584,6 +587,17 @@ class LearningResource(TimestampedModel):
     require_summaries = models.BooleanField(default=False)
 
     view_count = models.PositiveBigIntegerField(null=True, default=None)
+
+    def __str__(self):
+        """Name the resource by its title, with the kind of resource it is and
+        the readable id to tell apart the ones that share a title -- a course
+        and its own archived copy, say.
+
+        Without this a resource reads as "LearningResource object (123)"
+        wherever Django renders one, which is every admin dropdown that points
+        at it: the whole point of searching for one is to recognise it.
+        """
+        return f"{self.title} ({self.get_resource_type_display()}: {self.readable_id})"
 
     @property
     def audience(self) -> str | None:
@@ -1129,6 +1143,16 @@ class LearningResourceRelationship(TimestampedModel):
 class ContentFileQuerySet(TimestampedModelQuerySet):
     """QuerySet for ContentFile"""
 
+    def visible(self, now=None):
+        """Content files a learner can see: published, and undated or released"""
+        return self.filter(published=True).filter(
+            Q(release_date__isnull=True) | Q(release_date__lte=now or now_in_utc())
+        )
+
+    def hidden(self, now=None):
+        """Content files a learner cannot currently see: the complement of visible()"""
+        return self.filter(Q(published=False) | Q(release_date__gt=now or now_in_utc()))
+
     def for_serialization(self):
         """Return a queryset ready for serialization"""
         return self.select_related(
@@ -1271,6 +1295,14 @@ class ContentFile(TimestampedModel):
     )
     content_tags = models.ManyToManyField(LearningResourceContentTag)
     published = models.BooleanField(default=True)
+    release_date = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text=(
+            "When the course releases this file to learners; null if the "
+            "course does not gate it."
+        ),
+    )
     archive_checksum = models.CharField(max_length=32, null=True, blank=True)  # noqa: DJ001
     checksum = models.CharField(max_length=32, null=True, blank=True)  # noqa: DJ001
     source_path = models.CharField(max_length=1024, null=True, blank=True)  # noqa: DJ001
@@ -1335,6 +1367,180 @@ class ContentFile(TimestampedModel):
                 name="contentfile_direct_learning_resource_key_uniq",
             ),
         ]
+        indexes = [
+            models.Index(
+                fields=["release_date"],
+                condition=models.Q(published=True),
+                name="contentfile_published_date_idx",
+            ),
+        ]
+
+
+class Unit(TimestampedModel):
+    """
+    A group of a run's content files: an ordered step from the course structure
+    (edX sequential, OCW week or lecture), the course-wide context, or an
+    unordered bin of leftover files.
+    """
+
+    class Kind(models.TextChoices):
+        # an ordered step derived from the course structure
+        UNIT = "unit", "Unit"
+        # content that belongs to the course as a whole, like the syllabus
+        CONTEXT = "context", "Context"
+        # an unordered group of files used to break up the course
+        BIN = "bin", "Bin"
+
+    run = models.ForeignKey(
+        LearningResourceRun, related_name="units", on_delete=models.CASCADE
+    )
+    # edX sequential usage key, OCW nav id/path/"session-N", "context",
+    # or "bin:" followed by a page key or resource type
+    external_id = models.CharField(max_length=1024)
+    kind = models.CharField(max_length=16, choices=Kind.choices, default=Kind.UNIT)
+    title = models.CharField(max_length=1024)
+    # order within the run; null for context and bins
+    position = models.PositiveIntegerField(null=True, blank=True)
+    url = models.URLField(max_length=2048, blank=True)  # edX jump_to_id; OCW page URL
+    content_files = models.ManyToManyField(
+        ContentFile, through="UnitContentFile", related_name="units"
+    )
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["run", "external_id"], name="unique_unit_per_run"
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.run_id}/{self.external_id}: {self.title}"
+
+
+class UnitContentFile(models.Model):
+    """Membership of a ContentFile in a Unit"""
+
+    class Relation(models.TextChoices):
+        CORE = "core", "Core"
+        ASSESSMENT = "assessment", "Assessment"
+        SUPPLEMENTARY = "supplementary", "Supplementary"
+        REFERENCE = "reference", "Reference"
+
+    unit = models.ForeignKey(Unit, on_delete=models.CASCADE)
+    content_file = models.ForeignKey(ContentFile, on_delete=models.CASCADE)
+    relation = models.CharField(
+        max_length=32, choices=Relation.choices, default=Relation.CORE
+    )
+    # content file order within the unit, approximate for static files, which sit
+    # after the first block that links them; null in units with no order, like
+    # the course context
+    position = models.PositiveIntegerField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["position"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["unit", "content_file"], name="unique_content_file_per_unit"
+            )
+        ]
+
+    def __str__(self):
+        return (
+            f"{self.unit_id}/{self.content_file_id}: {self.relation} #{self.position}"
+        )
+
+
+class ResourceProfileConfiguration(TimestampedModel):
+    """
+    Admin-editable prompt and model for one stage of resource profile generation.
+
+    One row per stage. Cache keys leave the configuration out, so editing it
+    here changes stored results only when they are regenerated with overwrite.
+    """
+
+    class Stage(models.TextChoices):
+        # claims about one unit or bin
+        UNIT = "unit", "Unit"
+
+    stage = models.CharField(max_length=16, choices=Stage.choices, unique=True)
+    llm_model = models.CharField(
+        max_length=128, verbose_name="LLM Model", help_text="Any LiteLLM model name."
+    )
+    prompt = models.TextField(help_text="The system prompt for this stage.")
+    temperature = models.FloatField(
+        null=True,
+        blank=True,
+        help_text="Leave blank to use the model's default. Reasoning models"
+        " accept only that.",
+    )
+    # Blank fields aren't sent. One that is set is sent as is, and a model that
+    # doesn't take it rejects the call.
+    max_tokens = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        help_text="Most tokens the model may return. Leave blank for no limit."
+        " Newer OpenAI models reject it: use max completion tokens.",
+    )
+    max_completion_tokens = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        help_text="Most tokens the model may return, reasoning included. Leave"
+        " blank for no limit. Older models may reject it: use max tokens.",
+    )
+    reasoning_effort = models.CharField(  # noqa: DJ001
+        max_length=16,
+        null=True,
+        blank=True,
+        help_text="none, low, medium, high, ... Leave blank for the model's"
+        " default, and for models without reasoning, which reject it.",
+    )
+    max_file_tokens = models.PositiveIntegerField(
+        default=25000, help_text="Files longer than this are truncated."
+    )
+    input_token_budget = models.PositiveIntegerField(
+        default=100000,
+        help_text="Most file text one call may read. A unit over it is skipped.",
+    )
+
+    def __str__(self):
+        return f"ResourceProfileConfiguration for {self.stage}"
+
+
+class ClaimExtraction(TimestampedModel):
+    """
+    The validated output of one resource profile LLM call, keyed by its inputs.
+
+    Rows are a cache: before a call, its key is computed from the text of the
+    files it reads, and a row with that key is used instead of calling again.
+    The prompt and model aren't in the key, so changing them leaves rows as
+    they are until they are regenerated with overwrite.
+    Units with identical files in different runs share a row, so `unit` is the
+    unit the row was first produced for.
+    """
+
+    class Level(models.TextChoices):
+        # a unit, bin or context unit
+        UNIT = "unit", "Unit"
+
+    # sha256 of the stage's inputs
+    key = models.CharField(max_length=64, unique=True)
+    level = models.CharField(max_length=16, choices=Level.choices)
+    # stage name and when its configuration was last saved
+    extractor_version = models.CharField(max_length=32)
+    model = models.CharField(max_length=128)
+    output = models.JSONField()  # validated stage output: claims + evidence + notes
+    # the model's response as returned, before validation
+    raw_response = models.TextField(blank=True)
+    unit = models.ForeignKey(
+        Unit,
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="claim_extractions",
+    )
+
+    def __str__(self):
+        return f"{self.level} {self.extractor_version} {self.key[:12]}"
 
 
 class UserList(TimestampedModel):

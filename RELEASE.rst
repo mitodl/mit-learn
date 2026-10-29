@@ -1,6 +1,77 @@
 Release Notes
 =============
 
+Version 0.85.1
+--------------
+
+- Even out the search card's foot when nothing is filtering (#4173)
+- Update dependency pypdf to v6.21.2 [SECURITY] (#4162)
+- Trace LiteLLMEncoder's embedding requests to Opik through ol-llm (#4134)
+- fix(deps): upgrade brotli to 1.2.1 for CVE-2026-111497 (#4163)
+- fix(docker): make production the default build target (#4159)
+- Channel page redesign: filter counts, the search card, the tab row, an empty state, and a white topic hero (#4133)
+- Update dependency pypdf to v6.21.1 [SECURITY] (#4153)
+- Update dependency @sentry/nextjs to v10.75.2 [SECURITY] (#4150)
+- Add certifi>=2026.10.19 constraint (eMudhra CA compromise) (#4152)
+- Update dependency pypdf to v6.21.1 [SECURITY] (#4151)
+- Update dependency djangorestframework to v3.18.2 [SECURITY] (#4149)
+- Fix flaky ArticleEditor autosave tests: bump happy-dom, wait for saves to settle (#4148)
+- Route azure/ models to Azure OpenAI with workload identity (#4020)
+- Bump smoot-design for the outlined chip fix, keeping the homepage trending chips unchanged (#4136)
+- Bump certifi to 2026.10.19 (eMudhra CA compromise) (#4147)
+- Mount the flag-gated Contact Us launcher (#4139)
+- Add Misrepresentation to Honor Code Standards of Conduct (#4143)
+- Check ETL ownership in the remaining legacy entrypoints (#4138)
+- Add warehouse-pull sync tasks for MITx Online courses and programs (#4137)
+- remove clause e (#4144)
+- fix migration (#4145)
+- Generate course profile claims for a unit (#4121)
+- Exclude Sloan and Professional Education from home page featured carousel (#4141)
+- Fix flaky ContractAdminPage CSV export test (#4131)
+- Fixes for canvas pdf processing (#4126)
+- Update opensearchproject/opensearch Docker tag to v3.3.2 (#3911)
+- build(deps): bump next from 16.2.7 to 16.4.2 (#4124)
+- Stop matching asset names that differ by a dropped separator (#4106)
+- Hide edX content files until their release date (#4093)
+- Build course units from edX OLX archives (#4095)
+
+Version 0.84.2
+--------------
+
+- Apply the topic page redesign to department channels (#4119)
+- feat(settings): add course notification preferences to dashboard settings (#3960)
+- Move the OLX exclusion helpers into an OlxArchive class (#4101)
+- Show program tracks on the program dashboard (#4100)
+- build(deps): bump handlebars from 4.7.9 to 4.7.10 in /load_testing (#4123)
+- Update dependency sharp to v0.35.5 [SECURITY] (#4053)
+- Update zizmorcore/zizmor-action action to v0.6.4 (#4086)
+- Update dependency cairosvg to v2.9.1 [SECURITY] (#4070)
+- Search for a channel's featured list instead of scrolling to it (#4113)
+- Let course staff open courseware before the start date (#4036)
+- Qdrant/search: Dedup courses that change platforms (#4112)
+- feat(b2b-learner-analytics): paginate the progress grid on the server and keep learner filters in the URL (#4099)
+- fix(b2b-analytics): type monthly_active_learners as nullable and update its tooltip (#4114)
+- chore: remove leftover Heroku artifacts (#4115)
+- feat(b2b-learner-analytics): show declined vs. not-recorded consent on the learners page (#4110)
+
+Version 0.84.0
+--------------
+
+- Topic page resdesign: Merge course and program tabs (#4094)
+- Mark program as course complete when all modules are complete (#4076)
+- Add warehouse-pull sync tasks for xPRO courses and programs (#4054)
+- Add warehouse-pull sync tasks for YouTube and podcasts (#4050)
+- feat(b2b): add a Needs attention card and keep learner directory filters in the URL (#4067)
+- Import mitxonline APIs from their partitioned client versions (#4079)
+- Show program tracks on the program product page (#4072)
+- Identify signed-in users for HubSpot (#4074)
+- build(deps): bump axios to 1.20.0 (#4098)
+- Fill full description for mitxonline courses with extended detail from wagtail api (#4089)
+- fix(docker): install runtime libcairo2 so the image runs on DHI Python (#4097)
+- Update dependency social-auth-core to v5 [SECURITY] (#3991)
+- Keep a website content item's type fixed after creation (#4083)
+- fix ocw video matching (#4063)
+
 Version 0.83.3
 --------------
 

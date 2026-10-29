@@ -33,12 +33,15 @@ import { PostHogEvents } from "@/common/constants"
  */
 const SKIP_LINK_CARD_THRESHOLD = 3
 
-const StyledCarouselV2 = styled(CarouselV2)({
+const StyledCarouselV2 = styled(CarouselV2)(({ theme }) => ({
   margin: "24px 0",
   ".MitCarousel-track": {
     paddingBottom: "4px",
   },
-})
+  [theme.breakpoints.down("sm")]: {
+    marginTop: 0,
+  },
+}))
 
 /* Leaving for reference while we determine whether to swap out for CarouselV2
 const StyledCarousel = styled(Carousel)({

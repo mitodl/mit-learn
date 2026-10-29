@@ -34,7 +34,7 @@ from learning_resources.etl.constants import (
     ResourceNextRunConfig,
 )
 from learning_resources.etl.exceptions import ExtractException
-from learning_resources.etl.ownership import may_write
+from learning_resources.etl.ownership import CONTENT_FILE, may_write
 from learning_resources.etl.utils import most_common_topics
 from learning_resources.models import (
     ContentFile,
@@ -55,6 +55,8 @@ from learning_resources.models import (
     Program,
     RunInstructorRelationship,
     TutorProblemFile,
+    Unit,
+    UnitContentFile,
     Video,
     VideoChannel,
     VideoPlaylist,
@@ -513,6 +515,9 @@ def upsert_course_or_program(  # noqa: C901, PLR0912
     unique_field_value = resource_data.get(unique_field_name)
     readable_id = resource_data.pop("readable_id")
     runs = resource_data.pop("runs", [])
+    # A load that doesn't hash its data leaves the stored hash stale, so it
+    # clears it and the next hashing sync reloads the resource.
+    resource_data.setdefault("etl_checksum", None)
 
     if readable_id in blocklist or not runs:
         resource_data["published"] = False
@@ -676,6 +681,18 @@ def load_course(
     return learning_resource
 
 
+def unpublish_resources(resources: QuerySet) -> None:
+    """
+    Unpublish the published resources of a queryset and remove them from
+    search. One already unpublished is left alone, so a prune doesn't requeue
+    its removal on every run.
+    """
+    for learning_resource in resources.filter(published=True):
+        learning_resource.published = False
+        learning_resource.save()
+        resource_unpublished_actions(learning_resource)
+
+
 def load_courses(
     etl_source: str, courses_data: list[dict], *, config=CourseLoaderConfig()
 ) -> list[LearningResource]:
@@ -710,15 +727,14 @@ def load_courses(
     ]
 
     if (courses or config.prune_empty) and config.prune:
-        for learning_resource in LearningResource.objects.filter(
-            etl_source=etl_source, resource_type=LearningResourceType.course.name
-        ).exclude(
-            Q(id__in=[learning_resource.id for learning_resource in courses])
-            | Q(test_mode=True)
-        ):
-            learning_resource.published = False
-            learning_resource.save()
-            resource_unpublished_actions(learning_resource)
+        unpublish_resources(
+            LearningResource.objects.filter(
+                etl_source=etl_source, resource_type=LearningResourceType.course.name
+            ).exclude(
+                Q(id__in=[learning_resource.id for learning_resource in courses])
+                | Q(test_mode=True)
+            )
+        )
 
     return courses
 
@@ -978,12 +994,11 @@ def load_programs(
 
     programs = [r.resource for r in results if r.resource is not None]
     if (programs or config.prune_empty) and config.prune:
-        for learning_resource in LearningResource.objects.filter(
-            etl_source=etl_source, resource_type=LearningResourceType.program.name
-        ).exclude(id__in=[lr.id for lr in programs]):
-            learning_resource.published = False
-            learning_resource.save()
-            resource_unpublished_actions(learning_resource)
+        unpublish_resources(
+            LearningResource.objects.filter(
+                etl_source=etl_source, resource_type=LearningResourceType.program.name
+            ).exclude(id__in=[lr.id for lr in programs])
+        )
     return programs
 
 
@@ -1119,6 +1134,11 @@ def load_content_files(
         list of int: Ids of the ContentFile objects that were created/updated
 
     """
+    # Backstop, as in load_courses: every caller checks before it extracts, so
+    # this only stops one that skipped that check.
+    if not may_write(course_run.learning_resource.etl_source, CONTENT_FILE):
+        return []
+
     if course_run.learning_resource.resource_type == LearningResourceType.course.name:
         content_files_ids = []
         content_tags = []
@@ -1162,6 +1182,92 @@ def load_content_files(
 
         return content_files_ids
     return None
+
+
+UNIT_EXTERNAL_ID_MAX_LENGTH = Unit._meta.get_field("external_id").max_length  # noqa: SLF001
+UNIT_TITLE_MAX_LENGTH = Unit._meta.get_field("title").max_length  # noqa: SLF001
+UNIT_URL_MAX_LENGTH = Unit._meta.get_field("url").max_length  # noqa: SLF001
+
+
+def load_course_units(run: LearningResourceRun, units_data: list[dict]) -> list[int]:
+    """
+    Replace a run's units with the ones built from its latest archive.
+
+    Args:
+        run (LearningResourceRun): the run the units belong to
+        units_data (list of dict): units as returned by OlxArchive.units. Empty
+            means the outline could not be read, and the run's units are kept,
+            minus their links to files no longer published
+
+    Returns:
+        list of int: ids of the run's units after the load
+    """
+    if not units_data:
+        UnitContentFile.objects.filter(
+            unit__run=run, content_file__published=False
+        ).delete()
+        return list(run.units.values_list("id", flat=True))
+    file_ids = dict(
+        ContentFile.objects.filter(run=run, published=True).values_list("key", "id")
+    )
+    units = []
+    unit_links = []
+    seen = set()
+    position = 0
+    for unit_data in units_data:
+        links = {
+            file_ids[key]: relation
+            for key, relation in unit_data["content_files"].items()
+            if key in file_ids
+        }
+        external_id = unit_data["external_id"]
+        # a block in two places of the outline keeps its first
+        if (
+            not links and unit_data["kind"] != Unit.Kind.CONTEXT
+        ) or external_id in seen:
+            continue
+        if len(external_id) > UNIT_EXTERNAL_ID_MAX_LENGTH:
+            # cut, it could match another unit's id
+            log.warning("Unit id too long, skipping: %s", external_id)
+            continue
+        seen.add(external_id)
+        url = unit_data.get("url") or ""
+        is_ordered = unit_data["kind"] == Unit.Kind.UNIT
+        units.append(
+            Unit(
+                run=run,
+                external_id=external_id,
+                kind=unit_data["kind"],
+                title=unit_data["title"][:UNIT_TITLE_MAX_LENGTH],
+                # a cut url would be broken
+                url=url if len(url) <= UNIT_URL_MAX_LENGTH else "",
+                position=position if is_ordered else None,
+            )
+        )
+        unit_links.append((links, is_ordered))
+        position += is_ordered
+    with transaction.atomic():
+        # an upsert on the run's external ids keeps each unit's id across loads
+        Unit.objects.bulk_create(
+            units,
+            update_conflicts=True,
+            unique_fields=["run", "external_id"],
+            update_fields=["kind", "title", "url", "position", "updated_on"],
+        )
+        unit_ids = [unit.id for unit in units]
+        run.units.exclude(id__in=unit_ids).delete()
+        UnitContentFile.objects.filter(unit__run=run).delete()
+        UnitContentFile.objects.bulk_create(
+            UnitContentFile(
+                unit=unit,
+                content_file_id=file_id,
+                relation=relation,
+                position=position_in_unit if is_ordered else None,
+            )
+            for unit, (links, is_ordered) in zip(units, unit_links, strict=True)
+            for position_in_unit, (file_id, relation) in enumerate(links.items())
+        )
+    return unit_ids
 
 
 def load_learning_materials(
@@ -1991,7 +2097,7 @@ def load_videos_from_content_files(
 
     Checks how many videos have matching ContentFile objects by youtube_id.
     If at least 60% of the videos have matches, loads those videos.
-    Otherwise returns None. Only published content files on published runs
+    Otherwise returns None. Only visible content files on published runs
     match, so a video whose content file was removed is not republished.
 
     Args:
@@ -2017,9 +2123,9 @@ def load_videos_from_content_files(
     for content_file in (
         ContentFile.objects.filter(
             youtube_id__in=youtube_ids,
-            published=True,
             run__published=True,
         )
+        .visible()
         .select_related("run__learning_resource")
         .order_by("-id")
     ):

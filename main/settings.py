@@ -36,12 +36,19 @@ from main.settings_course_etl import *  # noqa: F403
 from main.settings_pluggy import *  # noqa: F403
 from openapi.settings_spectacular import open_spectacular_settings
 
-VERSION = "0.83.3"
+VERSION = "0.85.1"
 
 log = logging.getLogger()
 
 ENVIRONMENT = get_string("MITOL_ENVIRONMENT", "dev")
 DEFAULT_AUTO_FIELD = "django.db.models.AutoField"
+
+# litellm imports the Opik SDK whenever it is installed (ol-llm brings it in). The
+# SDK then starts its own Sentry client, replacing ours, and reports usage analytics
+# to Comet. Importing ol_llm here, which disables the Sentry client on import, would
+# put opik on the boot path, and litellm imports opik before ol_llm anyway.
+os.environ.setdefault("OPIK_SENTRY_ENABLE", "false")
+os.environ.setdefault("OPIK_ANALYTICS_ENABLE", "false")
 
 # initialize Sentry before doing anything else so we capture any config errors
 SENTRY_DSN = get_string("SENTRY_DSN", "")
@@ -518,6 +525,12 @@ CACHES = {
         "BACKEND": "django.core.cache.backends.db.DatabaseCache",
         "LOCATION": "durable_cache",
     },
+    # its own table: DatabaseCache culls by key order once a table passes
+    # MAX_ENTRIES, whatever the timeout, and "durable" holds per-user flags
+    "release_sweep": {
+        "BACKEND": "django.core.cache.backends.db.DatabaseCache",
+        "LOCATION": "release_sweep_cache",
+    },
     "redis": {
         "BACKEND": "django_redis.cache.RedisCache",
         "LOCATION": REDIS_URL,  # noqa: F405
@@ -952,6 +965,12 @@ OPENAI_API_KEY = get_string(
     default=None,
 )
 
+# Azure OpenAI is used only for chat and embedding models configured with an
+# "azure/" prefix (e.g. "azure/gpt-4o", where the part after the prefix is the
+# deployment name). It authenticates with an Entra ID token, never an API key.
+AZURE_OPENAI_ENDPOINT = get_string(name="AZURE_OPENAI_ENDPOINT", default="")
+AZURE_OPENAI_API_VERSION = get_string(name="AZURE_OPENAI_API_VERSION", default="")
+
 # Hedged embedding requests: if the first request for a search query has not
 # come back within EMBEDDING_HEDGE_DELAY_SECONDS, send backup requests and use
 # whichever finishes first. The delay keeps the extra backend load proportional
@@ -975,6 +994,12 @@ EMBEDDING_HEDGE_MAX_WORKERS = get_int(name="EMBEDDING_HEDGE_MAX_WORKERS", defaul
 EMBEDDING_HEDGE_REQUEST_TIMEOUT_SECONDS = get_float(
     name="EMBEDDING_HEDGE_REQUEST_TIMEOUT_SECONDS", default=10.0
 )
+
+# Embedding requests are traced to Opik through ol-llm. OL_LLM_ENVIRONMENT goes on
+# every trace. Tracing is off unless OPIK_URL_OVERRIDE names an Opik instance, since
+# the SDK would otherwise send to Comet's hosted Opik.
+OL_LLM_ENVIRONMENT = get_string(name="OL_LLM_ENVIRONMENT", default=ENVIRONMENT)
+OPIK_URL_OVERRIDE = get_string(name="OPIK_URL_OVERRIDE", default=None)
 
 CONTENT_FILE_EMBEDDING_CHUNK_SIZE_OVERRIDE = get_int(
     name="CONTENT_FILE_EMBEDDING_CHUNK_SIZE", default=512
@@ -1042,6 +1067,10 @@ CREDENTIAL_METADATA_MIN_CHUNK_CHARS = get_int(
 CREDENTIAL_METADATA_LLM_TIMEOUT = get_int(
     name="CREDENTIAL_METADATA_LLM_TIMEOUT", default=120
 )
+
+# Resource profile LLM calls read up to ~100k tokens of course material and
+# return tens of claims with evidence, so they take minutes, not seconds.
+RESOURCE_PROFILE_LLM_TIMEOUT = get_int(name="RESOURCE_PROFILE_LLM_TIMEOUT", default=600)
 
 # OpenTelemetry configuration (consumed by mitol-django-observability).
 # Telemetry turns on when any of OTEL_EXPORTER_OTLP_TRACES_ENDPOINT,

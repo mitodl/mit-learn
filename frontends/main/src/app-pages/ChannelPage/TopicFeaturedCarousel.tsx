@@ -5,6 +5,7 @@ import { channelQueries } from "api/hooks/channels"
 import ResourceCarousel from "@/page-components/ResourceCarousel/ResourceCarousel"
 import type { TabConfig } from "@/page-components/ResourceCarousel/types"
 import { FEATURED_COUNT, featuredParams } from "./topicFeatured"
+import type { FeaturedChannelType } from "./topicFeatured"
 
 /**
  * The design's Featured section is a 32px heading row, 32px, then the cards,
@@ -18,9 +19,9 @@ import { FEATURED_COUNT, featuredParams } from "./topicFeatured"
  * channel features nothing.
  */
 const Container = styled.div(({ theme }) => ({
-  marginBottom: "-24px",
+  marginBottom: "-31px",
   ".MitCarousel-track": {
-    marginTop: "8px",
+    marginTop: 0,
   },
   /* The design's heading is darkGray2, where the shared carousel leaves its
      title to inherit black. Scoped here so other carousels are unaffected. */
@@ -41,6 +42,8 @@ const Container = styled.div(({ theme }) => ({
 type TopicFeaturedCarouselProps = {
   /** The channel's `name`, as it appears in the page's own URL. */
   name: string
+  /** Which kind of channel the name belongs to -- the path carries both. */
+  channelType: FeaturedChannelType
 }
 
 /**
@@ -72,8 +75,14 @@ type TopicFeaturedCarouselProps = {
  * Reads as "not empty" while loading, so the hero does not frame itself for a
  * short page and then reframe when the row arrives.
  */
-const useTopicFeaturedIsEmpty = (name: string): boolean => {
-  const params = React.useMemo(() => featuredParams(name), [name])
+const useTopicFeaturedIsEmpty = (
+  channelType: FeaturedChannelType,
+  name: string,
+): boolean => {
+  const params = React.useMemo(
+    () => featuredParams(channelType, name),
+    [channelType, name],
+  )
   const { data, isLoading } = useQuery({
     ...channelQueries.featured(params),
     enabled: Boolean(name),
@@ -83,8 +92,12 @@ const useTopicFeaturedIsEmpty = (name: string): boolean => {
 
 const TopicFeaturedCarousel: React.FC<TopicFeaturedCarouselProps> = ({
   name,
+  channelType,
 }) => {
-  const params = React.useMemo(() => featuredParams(name), [name])
+  const params = React.useMemo(
+    () => featuredParams(channelType, name),
+    [channelType, name],
+  )
 
   const config: TabConfig[] = React.useMemo(
     () => [{ label: "Featured", data: { type: "channel_featured", params } }],
@@ -97,7 +110,7 @@ const TopicFeaturedCarousel: React.FC<TopicFeaturedCarouselProps> = ({
    * its children 64px apart, so an empty one is 64px of blank hero. The same
    * query answers both; React Query serves one request for the two readers.
    */
-  if (useTopicFeaturedIsEmpty(name)) {
+  if (useTopicFeaturedIsEmpty(channelType, name)) {
     return null
   }
 

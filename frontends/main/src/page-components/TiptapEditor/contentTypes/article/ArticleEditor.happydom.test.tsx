@@ -23,6 +23,29 @@ const AUTOSAVE_OFF = 10 * 60 * 1000
 /** What production uses; the autosave tests wait this out deliberately. */
 const AUTOSAVE_DELAY_MS = 2000
 
+/**
+ * Waits for a save to finish, not just to be sent: the request made, the
+ * indicator reading "Saved", and Publish enabled again. All three in one
+ * `waitFor`: the `act` environment is back on as soon as a `waitFor` returns,
+ * so a state update the save causes after that is outside `act` and fails the
+ * test.
+ */
+const waitForSaveToSettle = (
+  request: Record<string, unknown>,
+  timeout = 6000,
+) =>
+  waitFor(
+    () => {
+      /* eslint-disable testing-library/no-wait-for-multiple-assertions --
+         one condition, met only when all three hold; see above */
+      expect(makeRequest).toHaveBeenCalledWith(expect.objectContaining(request))
+      expect(screen.getByText("Saved")).toBeInTheDocument()
+      expect(screen.getByRole("button", { name: "Publish" })).toBeEnabled()
+      /* eslint-enable testing-library/no-wait-for-multiple-assertions */
+    },
+    { timeout },
+  )
+
 const content: JSONContent = {
   type: "doc",
   content: [
@@ -1031,18 +1054,11 @@ describe("ArticleEditor autosave", () => {
       expect.objectContaining({ method: "patch" }),
     )
 
-    await waitFor(
-      () => {
-        expect(makeRequest).toHaveBeenCalledWith(
-          expect.objectContaining({
-            method: "patch",
-            url: urls.websiteContent.details(article.id),
-            body: expect.objectContaining({ is_published: false }),
-          }),
-        )
-      },
-      { timeout: 6000 },
-    )
+    await waitForSaveToSettle({
+      method: "patch",
+      url: urls.websiteContent.details(article.id),
+      body: expect.objectContaining({ is_published: false }),
+    })
   }, 15000)
 
   test("an article that has never been saved is created once, then updated", async () => {
@@ -1068,17 +1084,9 @@ describe("ArticleEditor autosave", () => {
       await screen.findByRole("heading", { level: 1 }),
       " first",
     )
-    await waitFor(
-      () => {
-        expect(makeRequest).toHaveBeenCalledWith(
-          expect.objectContaining({ method: "post" }),
-        )
-      },
-      { timeout: 12000 },
-    )
     // Settled first: typing while the create is still open puts a background
     // write in every synchronous gap, which updates the toolbar outside `act`.
-    await waitFor(() => expect(screen.queryByText("Saving...")).toBe(null))
+    await waitForSaveToSettle({ method: "post" }, 12000)
 
     /**
      * The editor has created the item but still holds no `contentItem` -- the
@@ -1086,16 +1094,9 @@ describe("ArticleEditor autosave", () => {
      * this second save would insert another article.
      */
     await userEvent.type(screen.getByRole("heading", { level: 1 }), " again")
-    await waitFor(
-      () => {
-        expect(makeRequest).toHaveBeenCalledWith(
-          expect.objectContaining({
-            method: "patch",
-            url: urls.websiteContent.details(created.id),
-          }),
-        )
-      },
-      { timeout: 12000 },
+    await waitForSaveToSettle(
+      { method: "patch", url: urls.websiteContent.details(created.id) },
+      12000,
     )
 
     const posts = makeRequest.mock.calls.filter(
@@ -1131,14 +1132,7 @@ describe("ArticleEditor autosave", () => {
       await screen.findByRole("heading", { level: 1 }),
       " edited",
     )
-    await waitFor(
-      () => {
-        expect(makeRequest).toHaveBeenCalledWith(
-          expect.objectContaining({ method: "patch" }),
-        )
-      },
-      { timeout: 6000 },
-    )
+    await waitForSaveToSettle({ method: "patch" })
 
     /**
      * `onSave` is how the caller learns to navigate, and a draft that already

@@ -514,7 +514,6 @@ const BaseLearningResourceCard: React.FC<BaseLearningResourceCardProps> = ({
         forwardClicksToLink
         className={className}
         onClick={onClick}
-        draggable={draggable}
       >
         {imageSrc && (
           <ListCard.Image

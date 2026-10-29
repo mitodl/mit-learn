@@ -30,6 +30,12 @@ class Command(TestResourceIdMixin, BaseCommand):
             help="Overwrite any existing records",
         )
         parser.add_argument(
+            "--overwrite-units",
+            dest="overwrite_units",
+            action="store_true",
+            help="Rebuild units from unchanged archives without reloading files",
+        )
+        parser.add_argument(
             "--resource-ids",
             dest="learning_resource_ids",
             required=False,
@@ -48,6 +54,7 @@ class Command(TestResourceIdMixin, BaseCommand):
         task = import_all_xpro_files.delay(
             chunk_size=chunk_size,
             overwrite=options["force_overwrite"],
+            overwrite_units=options["overwrite_units"],
             learning_resource_ids=resource_ids,
         )
         self.stdout.write(f"Started task {task} to get xpro course run file data")

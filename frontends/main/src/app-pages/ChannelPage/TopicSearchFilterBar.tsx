@@ -14,11 +14,8 @@ type Aggregations = LearningResourcesSearchResponse["metadata"]["aggregations"]
  * controls, rather than the facet sidebar the other channels use. A topic
  * page narrows by format, certificate and price, and the rest of the facets
  * are not offered here.
- *
- * The card around it belongs to the results header it shares with the tabs
- * and the applied filters -- see `TopicSearchCard` in `SearchDisplay`.
  */
-const Card = styled.div({
+const Row = styled.div({
   display: "flex",
   alignItems: "center",
   gap: "24px",
@@ -36,10 +33,10 @@ const Card = styled.div({
  * both a size smaller here than the field draws them elsewhere.
  */
 const StyledSearchField = styled(SearchField)(({ theme }) => ({
-  width: "626px",
+  width: "486px",
   /* The elastic one of the two: the controls beside it are a fixed set of
-     fixed-width labels, so between `md` and the ~1080px the design's width
-     needs, the room has to come from the field. `min-width` because a flex
+     fixed-width labels, so where the row is narrower than the two together
+     measure, the room has to come from the field. `min-width` because a flex
      item will not shrink past its content otherwise, and the field's content
      is a long placeholder. */
   minWidth: 0,
@@ -86,9 +83,7 @@ const Divider = styled.div(({ theme }) => ({
 const FacetSelect = styled(SimpleSelect)(({ theme }) => ({
   ...theme.typography.body2,
   color: theme.custom.colors.silverGrayDark,
-  /* The design's control is the label and a chevron, with no field chrome.
-     The background goes with the border: left white it reads as a box
-     against the card's gradient, which is the chrome by another name. */
+  /* The design's control is the label and a chevron, with no field chrome. */
   ".MuiOutlinedInput-notchedOutline": { border: "none" },
   "&&": { backgroundColor: "transparent" },
   /**
@@ -111,7 +106,79 @@ const FacetSelect = styled(SimpleSelect)(({ theme }) => ({
     fontSize: "20px",
     right: "12px",
   },
+  /**
+   * The same answer to the pointer an unselected tab gives: the label darkens
+   * to `darkGray2`, with nothing drawn behind it.
+   *
+   * The chevron is named as well as the label because it does not inherit --
+   * Select colours its own icon, so on the label alone the words would darken
+   * and the arrow beside them would sit unchanged.
+   */
+  ":hover": {
+    color: theme.custom.colors.darkGray2,
+    ".MuiSelect-icon": { color: theme.custom.colors.darkGray2 },
+  },
 }))
+
+/**
+ * What the control says: its name, and how many of its values are narrowing
+ * the results.
+ *
+ * The menu closes over what it selected, so without this the control reads
+ * exactly the same whether or not it is filtering anything. The chips above
+ * the results name the values; this says only how many, which is what there
+ * is room for beside a label.
+ */
+const FacetLabel = styled.span({
+  display: "flex",
+  alignItems: "center",
+  /* The design's 4px between the label and what follows it. */
+  gap: "4px",
+})
+
+/**
+ * The count beside a narrowed facet's name, as the design draws it: a 20px
+ * red disc with the number in white.
+ *
+ * Hidden rather than shown as a nought when the facet is not narrowing
+ * anything -- a badge reading 0 is a filter announcing that it is not
+ * filtering.
+ */
+const FacetCount = styled.span(({ theme }) => ({
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  flexShrink: 0,
+  boxSizing: "border-box",
+  width: "20px",
+  height: "20px",
+  borderRadius: "100px",
+  backgroundColor: theme.custom.colors.red,
+  color: theme.custom.colors.white,
+  fontSize: "10px",
+  lineHeight: "14px",
+  fontWeight: theme.typography.fontWeightMedium,
+}))
+
+/** A facet control's label, with the count of what it has narrowed by. */
+const facetLabel = (label: string, selected: string[]) => (
+  <FacetLabel>
+    {label}
+    {selected.length > 0 ? (
+      <FacetCount aria-hidden="true">{selected.length}</FacetCount>
+    ) : null}
+  </FacetLabel>
+)
+
+/**
+ * What the control is called to a screen reader, which has to carry the count
+ * itself: `aria-label` on a combobox replaces everything drawn inside it, so
+ * the disc is never read as part of the name. Naming the disc instead does not
+ * work either -- it is a span with no role, which `aria-label` cannot name --
+ * so it is hidden above and said here.
+ */
+const facetName = (label: string, selected: string[]) =>
+  selected.length > 0 ? `${label}, ${selected.length} selected` : label
 
 const FreeCheckbox = styled(Checkbox)(({ theme }) => ({
   margin: 0,
@@ -359,10 +426,10 @@ const TopicSearchFilterBar: React.FC<TopicSearchFilterBarProps> = ({
         key="delivery"
         size="small"
         name="delivery"
-        aria-label="Format"
+        aria-label={facetName("Format", delivery)}
         value={delivery}
         multiple
-        renderValue={() => "Format"}
+        renderValue={() => facetLabel("Format", delivery)}
         MenuProps={FACET_MENU_PROPS}
         options={deliveryOptions}
         onChange={(event) => {
@@ -376,10 +443,10 @@ const TopicSearchFilterBar: React.FC<TopicSearchFilterBarProps> = ({
         key="certification_type"
         size="small"
         name="certification_type"
-        aria-label="Certificate"
+        aria-label={facetName("Certificate", certification)}
         value={certification}
         multiple
-        renderValue={() => "Certificate"}
+        renderValue={() => facetLabel("Certificate", certification)}
         MenuProps={FACET_MENU_PROPS}
         options={certificationOptions}
         onChange={(event) => {
@@ -393,10 +460,10 @@ const TopicSearchFilterBar: React.FC<TopicSearchFilterBarProps> = ({
         key="resource_category"
         size="small"
         name="resource_category"
-        aria-label="Resource Category"
+        aria-label={facetName("Resource Category", resourceCategory)}
         value={resourceCategory}
         multiple
-        renderValue={() => "Resource Category"}
+        renderValue={() => facetLabel("Resource Category", resourceCategory)}
         MenuProps={FACET_MENU_PROPS}
         options={resourceCategoryOptions}
         onChange={(event) => {
@@ -419,7 +486,7 @@ const TopicSearchFilterBar: React.FC<TopicSearchFilterBarProps> = ({
   ].filter((control): control is React.ReactElement => control !== null)
 
   return (
-    <Card data-testid="topic-search-filter-bar">
+    <Row data-testid="topic-search-filter-bar">
       <StyledSearchField
         value={currentText}
         /* 48px, which is what makes the card the design's 96px tall. */
@@ -442,7 +509,7 @@ const TopicSearchFilterBar: React.FC<TopicSearchFilterBarProps> = ({
           </React.Fragment>
         ))}
       </Facets>
-    </Card>
+    </Row>
   )
 }
 
