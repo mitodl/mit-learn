@@ -25,6 +25,7 @@ from learning_resources.etl.constants import (
 )
 from learning_resources.etl.exceptions import ExtractException
 from learning_resources.etl.ownership import Pipeline, writing_as
+from learning_resources.etl.shadow import run_shadow
 from learning_resources.etl.utils import (
     get_department_id_by_name,
     parse_certification,
@@ -35,7 +36,7 @@ from learning_resources.factories import (
     LearningResourceFactory,
     LearningResourcePlatformFactory,
 )
-from learning_resources.models import LearningResource
+from learning_resources.models import ETLSourceOwnership, LearningResource
 from learning_resources.test_utils import set_up_topics
 
 pytestmark = pytest.mark.django_db
@@ -652,6 +653,38 @@ def test_sync_programs_writes_nothing_without_the_program_pair(
 
     assert count == 0
     mock_load.assert_not_called()
+
+
+def test_sync_as_a_shadow_compares_without_writing(
+    warehouse_owns_mitxonline, api_courses, api_programs
+):
+    """A shadow of the warehouse reaches the loaders' comparison and writes nothing"""
+    courses = [course_row(course) for course in api_courses]
+    runs = [run for course in api_courses for run in run_rows(course)]
+    programs = [program_row(program) for program in api_programs]
+    children = children_rows(api_programs, api_courses)
+    with writing_as(Pipeline.WAREHOUSE):
+        warehouse_mitxonline.sync_courses(courses, runs)
+        warehouse_mitxonline.sync_programs(programs, children, courses)
+    ETLSourceOwnership.objects.filter(etl_source=ETLSource.mitxonline.name).update(
+        owner=Pipeline.LEGACY, shadow=Pipeline.WAREHOUSE
+    )
+    before = list(LearningResource.objects.order_by("id").values())
+
+    with writing_as(Pipeline.WAREHOUSE):
+        _, [course_report] = run_shadow(
+            [(ETLSource.mitxonline.name, COURSE)],
+            lambda: warehouse_mitxonline.sync_courses(courses, runs),
+        )
+        _, [program_report] = run_shadow(
+            [(ETLSource.mitxonline.name, PROGRAM)],
+            lambda: warehouse_mitxonline.sync_programs(programs, children, courses),
+        )
+
+    for report in (course_report, program_report):
+        assert report.error == ""
+        assert report.counts["unchanged"] == report.counts["before"] > 0
+    assert list(LearningResource.objects.order_by("id").values()) == before
 
 
 def test_sync_courses_loads_and_unpublishes(warehouse_owns_mitxonline, api_courses):

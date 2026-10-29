@@ -42,7 +42,7 @@ from learning_resources.etl.mitxonline import (
     parse_departments,
     parse_full_description,
 )
-from learning_resources.etl.ownership import may_write
+from learning_resources.etl.ownership import RunMode, run_mode
 from learning_resources.etl.utils import (
     generate_course_numbers_json,
     parse_string_to_int,
@@ -331,7 +331,7 @@ def sync_courses(
     Returns:
         int: the number of courses loaded
     """
-    if not may_write(ETLSource.mitxonline.name, COURSE):
+    if run_mode(ETLSource.mitxonline.name, COURSE) == RunMode.SKIP:
         return 0
 
     refuse_empty(courses=courses, runs=runs)
@@ -378,7 +378,7 @@ def sync_programs(
     Returns:
         int: the number of programs loaded
     """
-    if not may_write(ETLSource.mitxonline.name, PROGRAM):
+    if run_mode(ETLSource.mitxonline.name, PROGRAM) == RunMode.SKIP:
         return 0
 
     refuse_empty(programs=programs, program_children=children, courses=courses)
