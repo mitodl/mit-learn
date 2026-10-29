@@ -2287,6 +2287,36 @@ describe("ContractLearnersPage progress grid", () => {
     expect(await screen.findByText("Ada Lovelace")).toBeInTheDocument()
   })
 
+  test("dates the learner's last activity from the selected modules only", async () => {
+    const { contractId } = renderGrid(
+      `/?view=grid&modules=${encodeURIComponent(M6)}`,
+    )
+    const ada = { learner_id: "a", full_name: "Ada Lovelace" }
+    mockGridPage(
+      contractId,
+      0,
+      [
+        analyticsFactories.learnerProgress({
+          ...ada,
+          courserun_readable_id: M5,
+          completion_status: "in_progress",
+          last_active_on: "2026-09-30",
+        }),
+        analyticsFactories.learnerProgress({
+          ...ada,
+          courserun_readable_id: M6,
+          completion_status: "in_progress",
+          last_active_on: "2026-08-01",
+        }),
+      ],
+      {},
+      { courserun_readable_id: [M6] },
+    )
+
+    const row = rowOf(await screen.findByText("Ada Lovelace"))
+    expect(within(row).getByText("Last active Aug 1, 2026")).toBeInTheDocument()
+  })
+
   test("shadows the pinned learner column only once the grid has scrolled", async () => {
     const { contractId } = renderGrid()
     mockGridPage(contractId, 0, [

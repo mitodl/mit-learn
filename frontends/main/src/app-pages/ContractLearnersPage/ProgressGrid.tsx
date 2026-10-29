@@ -195,18 +195,28 @@ const LastActive = styled(Typography)(({ theme }) => ({
 })) as typeof Typography
 
 /**
- * The learner's most recent activity across their shared modules. Null when
- * every module is withheld, since nothing about their activity is shared.
- * Dates are `YYYY-MM-DD`, so they compare as strings.
+ * The learner's most recent activity across their shared modules, limited to
+ * `courserunIds` when set: the API returns a matched learner's other
+ * enrollments too, and their dates would read against columns the filter hid.
+ * Null when every module is withheld, since nothing about their activity is
+ * shared. Dates are `YYYY-MM-DD`, so they compare as strings.
  */
-const lastActiveText = (learner: LearnerWithEnrollments) => {
+const lastActiveText = (
+  learner: LearnerWithEnrollments,
+  courserunIds: string[] | undefined,
+) => {
   const shared = learner.enrollments.filter(
-    (enrollment) => !isWithheldStatus(getDisplayStatus(enrollment)),
+    (enrollment) =>
+      (!courserunIds?.length ||
+        courserunIds.includes(enrollment.courserun_readable_id)) &&
+      !isWithheldStatus(getDisplayStatus(enrollment)),
   )
   if (shared.length === 0) return null
   const latest = shared.reduce<string | null>(
-    (max, { last_active_on }) =>
-      last_active_on && (!max || last_active_on > max) ? last_active_on : max,
+    (max, enrollment) =>
+      enrollment.last_active_on && (!max || enrollment.last_active_on > max)
+        ? enrollment.last_active_on
+        : max,
     null,
   )
   return latest ? `Last active ${formatDate(latest)}` : "No activity"
@@ -444,9 +454,9 @@ const ProgressGrid: React.FC<ProgressGridProps> = ({
             enrollment,
           ]),
         ),
-        lastActive: lastActiveText(learner),
+        lastActive: lastActiveText(learner, filters.courserun_readable_id),
       })),
-    [query.data],
+    [query.data, filters.courserun_readable_id],
   )
   const totalPages = Math.ceil((query.data?.total_count ?? 0) / PAGE_SIZE)
   const isStale = query.isPlaceholderData || query.isFetching
