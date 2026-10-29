@@ -88,22 +88,22 @@ const Container = styled.div<{
     fontFamily: theme.typography.fontFamily,
     color: theme.custom.colors.darkGray2,
     paddingBottom: "80px",
-    h1: {
+    "h1:not([data-style-boundary] *)": {
       ...theme.typography.h1,
     },
-    h2: {
+    "h2:not([data-style-boundary] *)": {
       ...theme.typography.h2,
     },
-    h3: {
+    "h3:not([data-style-boundary] *)": {
       ...theme.typography.h3,
     },
-    h4: {
+    "h4:not([data-style-boundary] *)": {
       ...theme.typography.h4,
     },
-    h5: {
+    "h5:not([data-style-boundary] *)": {
       ...theme.typography.h5,
     },
-    "h1, h2, h3, h4, h5, h6": {
+    ":is(h1, h2, h3, h4, h5, h6):not([data-style-boundary] *)": {
       marginTop: "40px",
       marginBottom: "40px",
     },
@@ -138,8 +138,8 @@ const Container = styled.div<{
         marginBottom: 0,
       },
     },
-    // [data-style-boundary] marks embedded third-party components (e.g. video player)
-    // that must not inherit editor typography.
+    // [data-style-boundary] marks embedded components (e.g. video player,
+    // learning resource cards) that must not inherit editor typography.
     "& [data-style-boundary] p": {
       listStyle: "revert",
       fontFamily: "revert",
@@ -169,6 +169,16 @@ const Container = styled.div<{
       p: {
         marginTop: "revert",
       },
+    },
+    // Undoes the link color and underline above, and the vendored ones
+    // (`.tiptap.ProseMirror a`, `a span`), which would otherwise reach links
+    // inside embeds.
+    "& [data-style-boundary] a": {
+      color: "inherit",
+      textDecoration: "none",
+    },
+    "& [data-style-boundary] a span": {
+      textDecoration: "none",
     },
     blockquote: {
       backgroundColor: theme.custom.colors.lightGray1,
