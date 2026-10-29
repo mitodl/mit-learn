@@ -19,6 +19,15 @@ export const HeaderButtonSlot = styled.div(({ theme }) => ({
   "& button:not(:disabled), & a": {
     color: theme.custom.colors.darkGray2,
   },
+  // A price range can outgrow one line on mobile; wrap rather than overflow.
+  [theme.breakpoints.down("sm")]: {
+    "& button": {
+      height: "auto",
+      minHeight: "48px",
+      whiteSpace: "normal",
+      textWrap: "balance",
+    },
+  },
 }))
 
 /**
@@ -36,8 +45,18 @@ const HeaderAlertSizer = styled.div(({ theme }) => ({
   },
 }))
 
+/**
+ * On mobile the banner button is the primary CTA and spans the column, so it
+ * names the price.
+ */
+const MobilePrice = styled.span(({ theme }) => ({
+  [theme.breakpoints.up("sm")]: { display: "none" },
+}))
+
 type HeaderEnrollButtonProps = {
   state: EnrollAreaState
+  /** The InfoBox's certificate price; appended to a paid action on mobile. */
+  price?: string | null
   isStatusLoading: boolean
   isPending: boolean
   /** The failed enroll action's error, or null when there was none. */
@@ -54,6 +73,7 @@ type HeaderEnrollButtonProps = {
  */
 const HeaderEnrollButton: React.FC<HeaderEnrollButtonProps> = ({
   state,
+  price,
   isStatusLoading,
   isPending,
   error,
@@ -69,16 +89,21 @@ const HeaderEnrollButton: React.FC<HeaderEnrollButtonProps> = ({
   }
 
   if (state.status === "options") {
+    const action = state.options[0]
+    const showPrice = action.kind === "paid" && !!price
     return (
       <HeaderButtonSlot>
         <Stack gap="12px" alignItems="flex-start">
           <EnrollButton
-            action={state.options[0]}
+            action={action}
             size="large"
             loading={isStatusLoading}
             pending={isPending}
             variant="bordered"
             announceStatus={false}
+            labelSuffix={
+              showPrice ? <MobilePrice> - {price}</MobilePrice> : null
+            }
           />
           {/* This hook instance's mutations are local to the header button, so
               failures must surface here — the InfoBox alert observes its own
