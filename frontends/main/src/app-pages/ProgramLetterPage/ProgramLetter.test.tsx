@@ -1,5 +1,5 @@
 import React from "react"
-import { renderWithProviders, waitFor } from "@/test-utils"
+import { renderWithProviders, screen, waitFor } from "@/test-utils"
 import type { ProgramLetter } from "api"
 import { letters as factory } from "api/test-utils/factories"
 import { setMockResponse, urls } from "api/test-utils"
@@ -37,5 +37,22 @@ describe("ProgramLetterDisplayPage", () => {
           .signature_image?.meta?.download_url,
       )
     })
+  })
+
+  // A missing letter, or one whose certificate was revoked, 404s from the API.
+  it("Renders the 404 page instead of an empty letter", async () => {
+    const id = "5de96fc0-449e-4668-be89-a119dbdcab79"
+    setMockResponse.get(urls.programLetters.details(id), "Not found", {
+      code: 404,
+    })
+    setMockResponse.get(urls.userMe.get(), { is_authenticated: true })
+    renderWithProviders(<ProgramLetterPage />, {
+      url: programLetterView(id),
+    })
+
+    expect(
+      await screen.findByText(/couldn't find what you were looking for/i),
+    ).toBeInTheDocument()
+    expect(screen.queryByText(/Dear/)).not.toBeInTheDocument()
   })
 })
