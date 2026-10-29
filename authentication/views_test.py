@@ -8,7 +8,7 @@ from urllib.parse import parse_qs, quote, urljoin, urlparse
 
 import pytest
 from django.test import RequestFactory
-from django.urls import reverse
+from django.urls import Resolver404, resolve, reverse
 from django.utils.http import urlencode
 
 from authentication.views import CustomLoginView, get_redirect_url
@@ -218,7 +218,10 @@ def test_custom_login_view_authenticated_user_who_has_logged_in_before(mocker):
 
 
 def test_custom_login_view_anonymous_user(mocker):
-    """Test redirect for anonymous user"""
+    """
+    An anonymous user on the gateway's login path is sent on to next, since
+    going back through the gateway would land them here again
+    """
     factory = RequestFactory()
     request = factory.get(
         reverse("login"), {"next": "/some-url", "signup_next": "/irrelevant"}
@@ -229,6 +232,53 @@ def test_custom_login_view_anonymous_user(mocker):
 
     assert response.status_code == 302
     assert response.url == "/some-url"
+
+
+@pytest.mark.parametrize(
+    ("query", "expected_redirect"),
+    [
+        ("?next=/some-url", "/login?next=%2Fsome-url"),
+        (
+            "?next=/a&signup_next=/b&skip_onboarding=1",
+            "/login?next=%2Fa&signup_next=%2Fb&skip_onboarding=1",
+        ),
+        ("", "/login"),
+    ],
+)
+def test_custom_login_view_anonymous_user_off_login_path(
+    client, query, expected_redirect
+):
+    """
+    An anonymous user who reached the view without going through the gateway's
+    login path is sent there instead of on to next
+    """
+    response = client.get(f"/login/{query}")
+
+    assert response.status_code == 302
+    assert response.url == expected_redirect
+
+
+@pytest.mark.parametrize(
+    ("path", "view_name"),
+    [
+        ("/login", "login"),
+        ("/login/", "login"),
+        ("/logout", "logout"),
+        ("/logout/", "logout"),
+        ("/loginfoo", None),
+        ("/login/foo", None),
+        ("/logoutfoo", None),
+        ("/logout/foo", None),
+    ],
+)
+def test_login_logout_urls_are_anchored(path, view_name):
+    """Only the exact login/logout paths, with or without a slash, resolve"""
+    try:
+        match = resolve(path)
+    except Resolver404:
+        match = None
+
+    assert (match.url_name if match else None) == view_name
 
 
 def test_custom_login_view_first_time_login_sets_has_logged_in(mocker):
