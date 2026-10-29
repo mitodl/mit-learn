@@ -35,6 +35,13 @@ export function isPageRoute(pathname: string): boolean {
   return true
 }
 
+/**
+ * Page routes the CDN must never cache. A program letter can be revoked, and
+ * nothing purges its cached HTML (which carries the learner's name in the page
+ * and its og tags), so a shared cache would keep serving it after revocation.
+ */
+const UNCACHED_PAGE_PREFIXES = ["/program_letter/"]
+
 // Matches /courses/<readable_id> — readable_ids contain colons and + but no slashes.
 const COURSE_PATTERN = /^\/courses\/([^/?]+)$/
 // Matches /courses/p/<readable_id> — despite the /courses/ prefix this is a
@@ -122,6 +129,16 @@ export function mitxonlineSurrogateKey(pathname: string): string | null {
 export function proxy(request: NextRequest) {
   if (!isPageRoute(request.nextUrl.pathname)) {
     return NextResponse.next()
+  }
+
+  if (
+    UNCACHED_PAGE_PREFIXES.some((prefix) =>
+      request.nextUrl.pathname.startsWith(prefix),
+    )
+  ) {
+    const response = NextResponse.next()
+    response.headers.set("Cache-Control", "private, no-store")
+    return response
   }
 
   const cacheControl = `s-maxage=${getCacheSMaxageSeconds()}, stale-if-error=86400, stale-while-revalidate=86400`
