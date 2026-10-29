@@ -1,6 +1,23 @@
 Release Notes
 =============
 
+Version 0.85.3
+--------------
+
+- Remove the topic channel's pre-redesign page (#4200)
+- Emit Review structured data for product page testimonials (#4084)
+- fix(auth): link email-matched legacy users to their global_id (#4019)
+- add loader that wait for Posthog api call response and then render the Topic pages (#4185)
+- Open the compliance dialog on fields CyberSource rejects (#4085)
+- Remove temporary certifi exclude-newer exemption (#4171)
+- Update dependency litellm to v1.100.4 [SECURITY] (#4179)
+- Show a requirement group's description on its program dashboard cards (#4146)
+- Render user-list and learning-path pages with the condensed card (#4168)
+- Update dependency Django to v5.2.18 (#4161)
+- feat(auth): send an S256 PKCE challenge on account action requests (#4167)
+- Add a warehouse-pull sync task for OCW courses (#4135)
+- adding initial frontend changes (#4158)
+
 Version 0.85.1
 --------------
 
