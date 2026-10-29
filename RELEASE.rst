@@ -1,6 +1,16 @@
 Release Notes
 =============
 
+Version 0.85.4
+--------------
+
+- Let the Follow pill follow the end of the channel title (#4202)
+- Program dashboard: show "Other courses in this program" across all tracks (#4169)
+- Treat env feature flags as final when PostHog has no api key (#4189)
+- feat(b2b-learner-analytics): show last activity date in progress grid cells (#4122)
+- Send the learner's name and username with the Contact us intake (#4175)
+- feat(b2b): add shared navigation across contract manager pages (#4125)
+
 Version 0.85.3
 --------------
 
