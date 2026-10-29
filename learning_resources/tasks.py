@@ -1861,12 +1861,13 @@ def _renumber(relationships):
 
 def _fix_mit_edx_parent(parent) -> bool:
     """
-    Remove a parent's mit_edx children in one transaction, renumber the rest,
-    then reindex it and purge any channel page featuring it. Returns False if
-    the reindex failed.
+    Drop a parent's mit_edx children, renumber, reindex and purge it.
+    Returns False if the reindex failed.
     """
     from channels.models import Channel
     from learning_resources.views import clear_featured_caches  # views imports us
+    from learning_resources_search.tasks import upsert_learning_resource
+    from vector_search.utils import embed_learning_resources
 
     with transaction.atomic():
         edx_items = parent.children.filter(child__etl_source=ETLSource.mit_edx.name)
@@ -1876,8 +1877,13 @@ def _fix_mit_edx_parent(parent) -> bool:
             _renumber(parent.children.filter(relation_type=relation_type))
     done = True
     if parent.published:
+        # run here rather than queued, so a failure keeps the parent pending
         try:
-            resource_upserted_actions(parent, percolate=False, generate_embeddings=True)
+            upsert_learning_resource(parent.id)
+            if settings.QDRANT_ENABLE_INDEXING_PLUGIN_HOOKS:
+                embed_learning_resources(
+                    [parent.id], parent.resource_type, overwrite=True
+                )
         except Exception:
             log.exception("Could not reindex parent %s", parent.id)
             done = False
@@ -1896,11 +1902,8 @@ MIT_EDX_PENDING_PARENTS_KEY = "delete_mit_edx_data_pending_parents"
 @app.task(acks_late=True, reject_on_worker_lost=True)
 def delete_mit_edx_data() -> dict:
     """
-    Delete every mit_edx learning resource and remove the edx platform from
-    search. Parents and user lists that hold a mit_edx resource are fixed
-    first, one per transaction. The parents still to reindex are saved before
-    anything is deleted and dropped once done, so a rerun picks up any whose
-    reindex failed or was interrupted. Raises at the end if any cleanup failed.
+    Delete every mit_edx resource and remove edx from search. Safe to rerun;
+    raises if any cleanup failed.
     """
     mit_edx = ETLSource.mit_edx.name
     failed = []

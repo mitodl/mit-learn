@@ -19,7 +19,6 @@ from learning_resources import factories, models, tasks
 from learning_resources.conftest import OCW_TEST_PREFIX, setup_s3, setup_s3_ocw
 from learning_resources.constants import (
     CredentialMetadataField,
-    LearningResourceRelationTypes,
     LearningResourceType,
     PlatformType,
 )
@@ -33,6 +32,7 @@ from learning_resources.factories import (
     CredentialMetadataFactory,
     ETLSourceOwnershipFactory,
     LearningPathFactory,
+    LearningPathRelationshipFactory,
     LearningResourceFactory,
     LearningResourcePlatformFactory,
     LearningResourceRunFactory,
@@ -3227,7 +3227,8 @@ def mit_edx_mocks(mocker):
         plugins=mocker.patch("learning_resources.utils.get_plugin_manager"),
         conn=conn,
         qdrant=mocker.patch("vector_search.utils.remove_points_matching_params"),
-        upsert=mocker.patch("learning_resources.tasks.resource_upserted_actions"),
+        upsert=mocker.patch("learning_resources_search.indexing_api.upsert_document"),
+        embed=mocker.patch("vector_search.utils.embed_learning_resources"),
         views_cache=mocker.patch("learning_resources.tasks.clear_views_cache"),
         featured=mocker.patch("learning_resources.views.clear_featured_caches"),
     )
@@ -3239,19 +3240,31 @@ def _mit_edx_path_with(items, *, published=True):
         resources=[], learning_resource__published=published
     ).learning_resource
     for position, item in enumerate(items, 1):
-        LearningResourceRelationship.objects.create(
-            parent=path,
-            child=item,
-            position=position,
-            relation_type=LearningResourceRelationTypes.LEARNING_PATH_ITEMS.value,
+        LearningPathRelationshipFactory.create(
+            parent=path, child=item, position=position
         )
     return path
+
+
+def _items(model, parent):
+    """(child id, position) pairs of a list, in order"""
+    return list(
+        model.objects.filter(parent=parent)
+        .order_by("position")
+        .values_list("child_id", "position")
+    )
+
+
+def _reindexed_ids(mit_edx_mocks):
+    """Ids of the resources written to the search index"""
+    return [call.args[0] for call in mit_edx_mocks.upsert.call_args_list]
 
 
 def test_delete_mit_edx_data(mit_edx_mocks, settings):
     """mit_edx rows go, hooks run, lists are renumbered and search is cleaned"""
     settings.QDRANT_HOST = "http://qdrant"
     settings.QDRANT_BASE_COLLECTION_NAME = "test"
+    settings.QDRANT_ENABLE_INDEXING_PLUGIN_HOOKS = True
     edx_courses = LearningResourceFactory.create_batch(
         2, is_course=True, etl_source="mit_edx"
     )
@@ -3278,16 +3291,8 @@ def test_delete_mit_edx_data(mit_edx_mocks, settings):
     assert hook.resource_before_delete.call_count == 2
 
     for parent in (path, draft_path):
-        assert list(
-            LearningResourceRelationship.objects.filter(parent=parent).values_list(
-                "child_id", "position"
-            )
-        ) == [(other.id, 1)]
-    assert list(
-        UserListRelationship.objects.filter(parent=user_list).values_list(
-            "child_id", "position"
-        )
-    ) == [(other.id, 1)]
+        assert _items(LearningResourceRelationship, parent) == [(other.id, 1)]
+    assert _items(UserListRelationship, user_list) == [(other.id, 1)]
 
     mit_edx_mocks.conn.delete_by_query.assert_called_once()
     assert mit_edx_mocks.qdrant.call_count == 2
@@ -3295,8 +3300,9 @@ def test_delete_mit_edx_data(mit_edx_mocks, settings):
         assert call.args == ({"platform": "edx"},)
         assert call.kwargs["wait"] is True
     # the draft path stays out of search
-    mit_edx_mocks.upsert.assert_called_once_with(
-        path, percolate=False, generate_embeddings=True
+    assert _reindexed_ids(mit_edx_mocks) == [path.id]
+    mit_edx_mocks.embed.assert_called_once_with(
+        [path.id], path.resource_type, overwrite=True
     )
     mit_edx_mocks.views_cache.assert_called_once_with()
     mit_edx_mocks.featured.assert_called_once_with(
@@ -3314,7 +3320,7 @@ def test_delete_mit_edx_data(mit_edx_mocks, settings):
     ],
 )
 def test_delete_mit_edx_data_backend_failure(mit_edx_mocks, side_effect, response):
-    """A failed sweep still clears caches, then exits nonzero so it gets rerun"""
+    """A failed sweep still clears caches, then raises so it gets rerun"""
     mit_edx_mocks.conn.delete_by_query.side_effect = side_effect
     mit_edx_mocks.conn.delete_by_query.return_value = response
     LearningResourceFactory.create(is_course=True, etl_source="mit_edx")
@@ -3369,15 +3375,9 @@ def test_delete_mit_edx_data_rerun_after_interruption(mit_edx_mocks, mocker):
 
     assert not LearningResource.objects.filter(etl_source="mit_edx").exists()
     for path in paths:
-        assert list(
-            LearningResourceRelationship.objects.filter(parent=path).values_list(
-                "child_id", "position"
-            )
-        ) == [(other.id, 1)]
+        assert _items(LearningResourceRelationship, path) == [(other.id, 1)]
     # each path reindexed once, the second by the rerun
-    assert sorted(
-        call.args[0].id for call in mit_edx_mocks.upsert.call_args_list
-    ) == sorted(path.id for path in paths)
+    assert sorted(_reindexed_ids(mit_edx_mocks)) == sorted(path.id for path in paths)
 
 
 def test_delete_mit_edx_data_parent_reindex_failure(mit_edx_mocks):
@@ -3392,9 +3392,7 @@ def test_delete_mit_edx_data_parent_reindex_failure(mit_edx_mocks):
 
     mit_edx_mocks.upsert.reset_mock(side_effect=True)
     tasks.delete_mit_edx_data()
-    mit_edx_mocks.upsert.assert_called_once_with(
-        path, percolate=False, generate_embeddings=True
-    )
+    assert _reindexed_ids(mit_edx_mocks) == [path.id]
 
     # done parents are dropped, so a third run reindexes nothing
     assert caches["release_sweep"].get(tasks.MIT_EDX_PENDING_PARENTS_KEY) is None
