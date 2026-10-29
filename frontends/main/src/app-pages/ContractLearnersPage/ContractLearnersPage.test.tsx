@@ -568,7 +568,7 @@ describe("ContractLearnersPage", () => {
       // Yes/No for the consented row; empty for the withheld one, whose
       // `needs_attention` is null rather than false, and empty for the row
       // from an API that does not send the field at all.
-      expect(csv).toContain("Needs attention")
+      expect(csv).toContain("Not started or inactive 30+ days")
       const [, consented, withheld, legacy] = csv.trim().split("\n")
       expect(consented).toMatch(/,No$/)
       expect(withheld).toMatch(/,$/)
@@ -1364,7 +1364,7 @@ describe("ContractLearnersPage", () => {
     )
   })
 
-  describe("the Needs attention filter", () => {
+  describe("the not started or inactive filter", () => {
     /**
      * `contractWithheldCount` lands on the unfiltered total rather than the
      * row list: that is where the page reads it from, because the filtered
@@ -1393,7 +1393,9 @@ describe("ContractLearnersPage", () => {
     }
 
     const checkbox = () =>
-      screen.findByRole("checkbox", { name: "Needs attention only" })
+      screen.findByRole("checkbox", {
+        name: "Not started or inactive 30+ days",
+      })
 
     test("flags the rows the API says need attention, and only those", async () => {
       await renderWithRows([
@@ -1410,10 +1412,10 @@ describe("ContractLearnersPage", () => {
       const stale = rowOf(await screen.findByText("Stale Learner"))
       const active = rowOf(await screen.findByText("Active Learner"))
 
-      const badge = within(stale).getByText("Needs attention")
+      const badge = within(stale).getByText("Not started or inactive 30+ days")
       expect(badge).toBeInTheDocument()
       expect(
-        within(active).queryByText("Needs attention"),
+        within(active).queryByText("Not started or inactive 30+ days"),
       ).not.toBeInTheDocument()
 
       // The badge sits inside `CellText`, a span, so a Chip left on its
@@ -1436,7 +1438,9 @@ describe("ContractLearnersPage", () => {
 
       const row = rowOf(await screen.findByText("Private Learner"))
       expect(within(row).getByText("Declined")).toBeInTheDocument()
-      expect(within(row).queryByText("Needs attention")).not.toBeInTheDocument()
+      expect(
+        within(row).queryByText("Not started or inactive 30+ days"),
+      ).not.toBeInTheDocument()
     })
 
     test("sends needs_attention=true when checked", async () => {
@@ -1756,7 +1760,9 @@ describe("ContractLearnersPage", () => {
         screen.getByRole("combobox", { name: /status/i }),
       ).toHaveTextContent("In progress")
       expect(
-        screen.getByRole("checkbox", { name: "Needs attention only" }),
+        screen.getByRole("checkbox", {
+          name: "Not started or inactive 30+ days",
+        }),
       ).toBeChecked()
     })
 
@@ -1871,7 +1877,9 @@ describe("ContractLearnersPage", () => {
         screen.getByRole("combobox", { name: /module/i }),
       ).toHaveTextContent("All modules")
       expect(
-        screen.getByRole("checkbox", { name: "Needs attention only" }),
+        screen.getByRole("checkbox", {
+          name: "Not started or inactive 30+ days",
+        }),
       ).not.toBeChecked()
     })
 
@@ -1916,7 +1924,9 @@ describe("ContractLearnersPage", () => {
       expect(location.current.search).toBe("?status=not_started")
 
       await user.click(
-        screen.getByRole("checkbox", { name: "Needs attention only" }),
+        screen.getByRole("checkbox", {
+          name: "Not started or inactive 30+ days",
+        }),
       )
       await screen.findByText("Stale")
       expect(location.current.search).toBe(
@@ -1959,7 +1969,9 @@ describe("ContractLearnersPage", () => {
 
       await screen.findByText("Stale")
       await user.click(
-        screen.getByRole("checkbox", { name: "Needs attention only" }),
+        screen.getByRole("checkbox", {
+          name: "Not started or inactive 30+ days",
+        }),
       )
       await screen.findByText("Everyone")
       expect(location.current.search).toBe("")
@@ -2136,7 +2148,7 @@ describe("ContractLearnersPage progress grid", () => {
     }
   })
 
-  test("marks the modules a learner needs attention in", async () => {
+  test("marks inactive modules and shows the learner's latest activity", async () => {
     const { contractId } = renderGrid()
     mockGridPage(contractId, 0, [
       analyticsFactories.learnerProgress({
@@ -2145,6 +2157,7 @@ describe("ContractLearnersPage progress grid", () => {
         full_name: "Ada Lovelace",
         courserun_readable_id: M5,
         completion_status: "in_progress",
+        last_active_on: "2026-09-30",
         needs_attention: true,
       }),
       analyticsFactories.learnerProgress({
@@ -2153,6 +2166,7 @@ describe("ContractLearnersPage progress grid", () => {
         full_name: "Ada Lovelace",
         courserun_readable_id: M6,
         completion_status: "not_started",
+        last_active_on: "2026-08-01",
         needs_attention: true,
       }),
     ])
@@ -2161,14 +2175,10 @@ describe("ContractLearnersPage progress grid", () => {
 
     const ada = rowOf(await screen.findByText("Ada Lovelace"))
     expect(
-      within(ada).getByText("Needs attention in 2 modules"),
+      within(ada).getByText("Last active Sep 30, 2026"),
     ).toBeInTheDocument()
-    expect(
-      within(ada).getByText(/needs attention: No activity in 30\+ days/),
-    ).toBeInTheDocument()
-    expect(
-      within(ada).getByText(/needs attention: Not started/),
-    ).toBeInTheDocument()
+    expect(within(ada).getByText(/, Inactive 30\+ days/)).toBeInTheDocument()
+    expect(within(ada).getByText(/, Not started/)).toBeInTheDocument()
   })
 
   test("shows content progress under started modules only", async () => {
@@ -2431,7 +2441,7 @@ describe("ContractLearnersPage progress grid", () => {
     ).toBeInTheDocument()
   })
 
-  test("swaps the withheld count for the hidden notice while Needs attention is on", async () => {
+  test("swaps the withheld count for the hidden notice while the not started or inactive filter is on", async () => {
     const { contractId } = renderGrid("/?view=grid", undefined, 1)
     mockTotal(contractId, 3, 1)
     mockGridPage(contractId, 0, [
@@ -2447,7 +2457,9 @@ describe("ContractLearnersPage progress grid", () => {
     await screen.findByText(/^1 of these 1 learners has not agreed/)
 
     await user.click(
-      screen.getByRole("checkbox", { name: "Needs attention only" }),
+      screen.getByRole("checkbox", {
+        name: "Not started or inactive 30+ days",
+      }),
     )
 
     await screen.findByText(/are hidden while this filter is on/)
@@ -2518,7 +2530,9 @@ describe("ContractLearnersPage progress grid", () => {
     await screen.findByText("Zed Zimmer")
 
     await user.click(
-      screen.getByRole("checkbox", { name: "Needs attention only" }),
+      screen.getByRole("checkbox", {
+        name: "Not started or inactive 30+ days",
+      }),
     )
 
     expect(await screen.findByText("Ada Lovelace")).toBeInTheDocument()

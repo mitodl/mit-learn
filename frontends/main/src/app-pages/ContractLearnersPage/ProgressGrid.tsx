@@ -21,7 +21,7 @@ import {
   Typography,
 } from "ol-components"
 import { Alert, Button, VisuallyHidden } from "@mitodl/smoot-design"
-import { initials } from "ol-utilities"
+import { formatDate, initials } from "ol-utilities"
 import {
   analyticsContractQueries,
   type CourseRun,
@@ -34,11 +34,12 @@ import {
   TableFooter,
   TableFootnote,
 } from "@/components/B2BTable/B2BTable"
-import { Avatar, ConsentNotice, NeedsAttentionBadge } from "./LearnerRow"
+import { Avatar, ConsentNotice } from "./LearnerRow"
 import {
   contentProgressPercent,
   DISPLAY_STATUS_LABEL,
   getDisplayStatus,
+  isWithheldStatus,
   type DisplayStatus,
 } from "./statusDisplay"
 import { ContentProgress } from "./ContentProgress"
@@ -88,7 +89,7 @@ const STATUS_SYMBOL: Record<
  * was 30 or more days ago; the status says which of the two it was.
  */
 const attentionReason = (status: DisplayStatus) =>
-  status === "not-started" ? "Not started" : "No activity in 30+ days"
+  status === "not-started" ? "Not started" : "Inactive 30+ days"
 
 const LEGEND_STATUSES: DisplayStatus[] = [
   "completed",
@@ -187,6 +188,30 @@ const LearnerEmail = styled(Typography)(({ theme }) => ({
   textOverflow: "ellipsis",
 })) as typeof Typography
 
+const LastActive = styled(Typography)(({ theme }) => ({
+  ...theme.typography.body3,
+  color: theme.custom.colors.silverGrayDark,
+  marginTop: "4px",
+})) as typeof Typography
+
+/**
+ * The learner's most recent activity across their shared modules. Null when
+ * every module is withheld, since nothing about their activity is shared.
+ * Dates are `YYYY-MM-DD`, so they compare as strings.
+ */
+const lastActiveText = (learner: LearnerWithEnrollments) => {
+  const shared = learner.enrollments.filter(
+    (enrollment) => !isWithheldStatus(getDisplayStatus(enrollment)),
+  )
+  if (shared.length === 0) return null
+  const latest = shared.reduce<string | null>(
+    (max, { last_active_on }) =>
+      last_active_on && (!max || last_active_on > max) ? last_active_on : max,
+    null,
+  )
+  return latest ? `Last active ${formatDate(latest)}` : "No activity"
+}
+
 const LearnerText = styled.span({
   minWidth: 0,
   overflow: "hidden",
@@ -196,7 +221,7 @@ const AttentionMark = styled.span(({ theme }) => ({
   display: "inline-flex",
   verticalAlign: "middle",
   marginLeft: "6px",
-  color: theme.custom.colors.red,
+  color: theme.custom.colors.darkGray2,
 }))
 
 const StatusMark = styled.span<{ $tone: MarkTone }>(({ $tone, theme }) => ({
@@ -290,9 +315,9 @@ type ProgressGridProps = {
 
 const GridLearnerCell: React.FC<{
   learner: LearnerWithEnrollments
-  needsAttentionCount: number
+  lastActive: string | null
   scrolled: boolean
-}> = ({ learner, needsAttentionCount, scrolled }) => (
+}> = ({ learner, lastActive, scrolled }) => (
   <LearnerCell role="rowheader" $scrolled={scrolled}>
     <Avatar aria-hidden="true">
       {learner.full_name ? (
@@ -308,14 +333,7 @@ const GridLearnerCell: React.FC<{
       {learner.email && (
         <LearnerEmail component="div">{learner.email}</LearnerEmail>
       )}
-      {needsAttentionCount > 0 ? (
-        <NeedsAttentionBadge
-          component="span"
-          label={`Needs attention in ${needsAttentionCount} ${
-            needsAttentionCount === 1 ? "module" : "modules"
-          }`}
-        />
-      ) : null}
+      {lastActive && <LastActive component="div">{lastActive}</LastActive>}
     </LearnerText>
   </LearnerCell>
 )
@@ -426,9 +444,7 @@ const ProgressGrid: React.FC<ProgressGridProps> = ({
             enrollment,
           ]),
         ),
-        needsAttentionCount: learner.enrollments.filter(
-          (enrollment) => enrollment.needs_attention,
-        ).length,
+        lastActive: lastActiveText(learner),
       })),
     [query.data],
   )
@@ -548,7 +564,7 @@ const ProgressGrid: React.FC<ProgressGridProps> = ({
             <AttentionMark style={{ margin: 0 }}>
               <RiErrorWarningLine aria-hidden="true" size={18} />
             </AttentionMark>
-            Needs attention
+            Not started or inactive 30+ days
           </li>
           <li>Percent shows content completed, not grade</li>
         </Legend>
@@ -605,65 +621,60 @@ const ProgressGrid: React.FC<ProgressGridProps> = ({
                   </EmptyTableMessage>
                 </GridRow>
               ) : (
-                learners.map(
-                  ({ learner, enrollments, needsAttentionCount }) => (
-                    <GridRow key={learner.learner_id} role="row">
-                      <GridLearnerCell
-                        learner={learner}
-                        needsAttentionCount={needsAttentionCount}
-                        scrolled={scrolled}
-                      />
-                      {columns.map((run) => {
-                        const enrollment = enrollments.get(run.courserun_id)
-                        if (!enrollment) {
-                          return (
-                            <ModuleCell key={run.courserun_id} role="cell">
-                              <StatusLine>
-                                <Muted>
-                                  N/A
-                                  <VisuallyHidden>
-                                    , not enrolled
-                                  </VisuallyHidden>
-                                </Muted>
-                              </StatusLine>
-                            </ModuleCell>
-                          )
-                        }
-                        const status = getDisplayStatus(enrollment)
-                        const progress = contentProgressPercent(
-                          enrollment,
-                          status,
-                        )
+                learners.map(({ learner, enrollments, lastActive }) => (
+                  <GridRow key={learner.learner_id} role="row">
+                    <GridLearnerCell
+                      learner={learner}
+                      lastActive={lastActive}
+                      scrolled={scrolled}
+                    />
+                    {columns.map((run) => {
+                      const enrollment = enrollments.get(run.courserun_id)
+                      if (!enrollment) {
                         return (
                           <ModuleCell key={run.courserun_id} role="cell">
-                            <CellContent>
-                              <StatusLine>
-                                <StatusSymbol status={status} />
-                                {enrollment.needs_attention ? (
-                                  <Tooltip title={attentionReason(status)}>
-                                    <AttentionMark tabIndex={0}>
-                                      <RiErrorWarningLine
-                                        aria-hidden="true"
-                                        size={16}
-                                      />
-                                      <VisuallyHidden>
-                                        , needs attention:{" "}
-                                        {attentionReason(status)}
-                                      </VisuallyHidden>
-                                    </AttentionMark>
-                                  </Tooltip>
-                                ) : null}
-                              </StatusLine>
-                              {progress === null ? null : (
-                                <CellProgress percent={progress} />
-                              )}
-                            </CellContent>
+                            <StatusLine>
+                              <Muted>
+                                N/A
+                                <VisuallyHidden>, not enrolled</VisuallyHidden>
+                              </Muted>
+                            </StatusLine>
                           </ModuleCell>
                         )
-                      })}
-                    </GridRow>
-                  ),
-                )
+                      }
+                      const status = getDisplayStatus(enrollment)
+                      const progress = contentProgressPercent(
+                        enrollment,
+                        status,
+                      )
+                      return (
+                        <ModuleCell key={run.courserun_id} role="cell">
+                          <CellContent>
+                            <StatusLine>
+                              <StatusSymbol status={status} />
+                              {enrollment.needs_attention ? (
+                                <Tooltip title={attentionReason(status)}>
+                                  <AttentionMark tabIndex={0}>
+                                    <RiErrorWarningLine
+                                      aria-hidden="true"
+                                      size={16}
+                                    />
+                                    <VisuallyHidden>
+                                      , {attentionReason(status)}
+                                    </VisuallyHidden>
+                                  </AttentionMark>
+                                </Tooltip>
+                              ) : null}
+                            </StatusLine>
+                            {progress === null ? null : (
+                              <CellProgress percent={progress} />
+                            )}
+                          </CellContent>
+                        </ModuleCell>
+                      )
+                    })}
+                  </GridRow>
+                ))
               )}
             </div>
           </Grid>

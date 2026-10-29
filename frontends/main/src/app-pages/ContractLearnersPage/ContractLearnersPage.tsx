@@ -567,7 +567,7 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
         "Progress",
         "Enrolled on",
         "Last activity",
-        "Needs attention",
+        "Not started or inactive 30+ days",
       ])
       const body = all.map((row) => {
         const status = getDisplayStatus(row)
@@ -854,7 +854,7 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
                   )}
                   <CheckboxField>
                     <Checkbox
-                      label="Needs attention only"
+                      label="Not started or inactive 30+ days"
                       checked={needsAttentionOnly}
                       onChange={(event) =>
                         setNeedsAttentionOnly(event.target.checked)
@@ -898,9 +898,9 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
               {hidesWithheldLearners ? (
                 <ConsentNotice component="p">
                   Learners who have not agreed to share their progress are
-                  hidden while this filter is on. Whether they need attention
-                  cannot be determined. Clear this filter, then adjust any other
-                  active filters or search terms as needed to see them.
+                  hidden while this filter is on, because their activity is not
+                  shared. Clear this filter, then adjust any other active
+                  filters or search terms as needed to see them.
                 </ConsentNotice>
               ) : null}
 
