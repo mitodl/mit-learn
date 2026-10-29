@@ -20,9 +20,9 @@ const parseFlagValue = (value: string): FlagValue => {
 }
 
 /**
- * Compute PostHog bootstrap feature flags from the runtime env (fullEnv()).
- * Previously computed at build time from process.env in next.config.js, which
- * bakes empty values when the image is built in CI without per-env values.
+ * Compute PostHog bootstrap feature flags from the runtime env (fullEnv()),
+ * not from process.env at build time: CI builds the image without per-env
+ * values, so build-time values would be empty.
  */
 const getBootstrapFeatureFlags = (): Record<string, FlagValue> | null => {
   if (typeof window === "undefined") return null
@@ -113,11 +113,16 @@ const ConfiguredPostHogProvider: React.FC<{ children: React.ReactNode }> = ({
          * Pins the posthog-js default set to a known date. Without it,
          * capture_pageview resolves to `true` (hard page loads only) rather
          * than "history_change", so App Router navigations produce no
-         * $pageview. At posthog-js 1.297.2 this date changes nothing else:
-         * the other two defaults it gates (rageclick, session_recording) both
-         * flip on 2025-11-30.
+         * $pageview. At posthog-js 1.442.0 this date changes nothing else:
+         * every other default it gates flips on 2025-11-30 or later.
          */
         defaults: "2025-05-24",
+        /**
+         * posthog-js otherwise reloads flags every five minutes while the tab
+         * is visible. A reload that flips a page-level flag swaps the page
+         * under the reader, so flags load once per page load.
+         */
+        remote_config_refresh_interval_ms: 0,
         // Scope the posthog cookie to this site's exact domain. Posthog
         // defaults this to true, which sets the cookie on the root domain
         // (e.g. mit.edu), sharing it with every other site there.
@@ -131,6 +136,14 @@ const ConfiguredPostHogProvider: React.FC<{ children: React.ReactNode }> = ({
             : undefined,
         },
       })
+      /**
+       * posthog-js counts bootstrapped flags as already loaded, so when init
+       * has a bootstrap it never requests /flags, and INTERNAL_BOOTSTRAPPING_FLAG
+       * stays set, leaving useFeatureFlagsLoaded false. Request them
+       * explicitly. Without a bootstrap, init's own first load sees this
+       * request pending and skips, so either way one request goes out.
+       */
+      posthog.reloadFeatureFlags()
     }
   }, [])
 

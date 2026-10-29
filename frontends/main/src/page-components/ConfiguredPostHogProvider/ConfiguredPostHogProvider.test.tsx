@@ -16,7 +16,7 @@ import type { PostHog } from "posthog-js"
 
 jest.mock("posthog-js", () => ({
   __esModule: true,
-  default: { init: jest.fn() },
+  default: { init: jest.fn(), reloadFeatureFlags: jest.fn() },
 }))
 
 jest.mock("posthog-js/react", () => {
@@ -28,6 +28,7 @@ jest.mock("posthog-js/react", () => {
   }
 })
 const mockInit = jest.mocked(posthogClient.init)
+const mockReloadFeatureFlags = jest.mocked(posthogClient.reloadFeatureFlags)
 const mockUsePostHog = jest.mocked(usePostHog)
 const posthog: Pick<PostHog, "identify" | "reset" | "get_property"> = {
   identify: jest.fn(),
@@ -91,6 +92,7 @@ describe("PosthogIdentifier", () => {
 describe("ConfiguredPostHogProvider", () => {
   beforeEach(() => {
     mockInit.mockClear()
+    mockReloadFeatureFlags.mockClear()
     process.env.NEXT_PUBLIC_POSTHOG_API_KEY = "test-key"
   })
   afterEach(() => {
@@ -113,6 +115,24 @@ describe("ConfiguredPostHogProvider", () => {
       expect(mockInit).toHaveBeenCalledExactlyOnceWith(
         "test-key",
         expect.objectContaining({ defaults: "2025-05-24" }),
+      )
+    })
+  })
+
+  /**
+   * posthog-js otherwise reloads flags every five minutes, which could swap a
+   * page-level flag's page under the reader.
+   */
+  test("Initializes posthog without periodic flag reloads", async () => {
+    setMockResponse.get(urls.userMe.get(), factories.user.user({}))
+    renderWithProviders(
+      <ConfiguredPostHogProvider>{null}</ConfiguredPostHogProvider>,
+    )
+
+    await waitFor(() => {
+      expect(mockInit).toHaveBeenCalledExactlyOnceWith(
+        "test-key",
+        expect.objectContaining({ remote_config_refresh_interval_ms: 0 }),
       )
     })
   })
@@ -147,6 +167,25 @@ describe("ConfiguredPostHogProvider", () => {
         }),
       )
     })
+  })
+
+  /**
+   * posthog-js skips the page load's /flags request when init has a
+   * bootstrap, which deployed env always gives it, so without this request
+   * pages waiting on useFeatureFlagsLoaded would never stop waiting.
+   */
+  test("Requests flags from PostHog after init", async () => {
+    setMockResponse.get(urls.userMe.get(), factories.user.user({}))
+    renderWithProviders(
+      <ConfiguredPostHogProvider>{null}</ConfiguredPostHogProvider>,
+    )
+
+    await waitFor(() => {
+      expect(mockReloadFeatureFlags).toHaveBeenCalledOnce()
+    })
+    expect(mockInit.mock.invocationCallOrder[0]).toBeLessThan(
+      mockReloadFeatureFlags.mock.invocationCallOrder[0],
+    )
   })
 
   test("Does not initialize posthog without an api key", () => {
