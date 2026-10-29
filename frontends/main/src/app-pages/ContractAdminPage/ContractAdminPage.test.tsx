@@ -188,7 +188,9 @@ describe("ContractAdminPage", () => {
     )
 
     await screen.findByRole("heading", { name: org.name })
-    expect(screen.getByText(contract.name)).toBeInTheDocument()
+    expect(
+      screen.getByText(`Manage seats · ${contract.name}`),
+    ).toBeInTheDocument()
   })
 
   test("renders seat count from contract detail", async () => {

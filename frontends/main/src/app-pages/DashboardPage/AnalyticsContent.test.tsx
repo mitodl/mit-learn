@@ -906,7 +906,7 @@ describe("AnalyticsContent, contract-scoped", () => {
     await screen.findByText("Analytics · Fall 2026 Cohort")
   })
 
-  test("'Manage seats' targets the contract being viewed, not the org's first", async () => {
+  test("the contract nav targets the contract being viewed, not the org's first", async () => {
     const [first, second] = [
       factories.contracts.contract(),
       factories.contracts.contract(),
@@ -921,38 +921,23 @@ describe("AnalyticsContent, contract-scoped", () => {
       <AnalyticsContent orgSlug={orgSlug} contractSlug={second.slug} />,
     )
 
-    // Pointing at contracts[0] here would send a manager viewing the second
-    // contract's analytics to the first contract's seat admin.
-    const link = await screen.findByRole("link", { name: "Manage seats" })
-    expect(link).toHaveAttribute(
-      "href",
-      contractAdminView(orgSlug, second.slug),
-    )
-  })
-
-  test("'Learner analytics' targets the contract being viewed", async () => {
-    const [first, second] = [
-      factories.contracts.contract(),
-      factories.contracts.contract(),
-    ]
-    const org = orgWithUuid({ contracts: [first, second] })
-    setManagerOrgs([org])
-
-    setContractAnalyticsResponses(String(second.id))
-
-    const orgSlug = org.slug.replace(/^org-/, "")
-    renderWithProviders(
-      <AnalyticsContent orgSlug={orgSlug} contractSlug={second.slug} />,
-    )
-
-    const link = await screen.findByRole("link", { name: "Learner analytics" })
-    expect(link).toHaveAttribute(
+    const nav = await screen.findByRole("navigation", { name: "Contract" })
+    expect(
+      within(nav).getByRole("link", { name: "Analytics" }),
+    ).toHaveAttribute("aria-current", "page")
+    expect(
+      within(nav).getByRole("link", { name: "Manage seats" }),
+    ).toHaveAttribute("href", contractAdminView(orgSlug, second.slug))
+    expect(within(nav).getByRole("link", { name: "Learners" })).toHaveAttribute(
       "href",
       contractLearnersView(orgSlug, second.slug),
     )
+    expect(screen.getAllByRole("link", { name: "Manage seats" })).toHaveLength(
+      1,
+    )
   })
 
-  test("hides 'Learner analytics' and the Learner progress section when the learner analytics flag is off", async () => {
+  test("hides the Learners link and the Learner progress section when the learner analytics flag is off", async () => {
     // The learner page throws ForbiddenError without its flag, so the button
     // would be a dead end -- and every Learner progress tile links there too.
     mockedUseFeatureFlagEnabled.mockImplementation(
@@ -971,7 +956,7 @@ describe("AnalyticsContent, contract-scoped", () => {
 
     await screen.findByText(`Analytics · ${contract.name}`)
     expect(
-      screen.queryByRole("link", { name: "Learner analytics" }),
+      screen.queryByRole("link", { name: "Learners" }),
     ).not.toBeInTheDocument()
     expect(
       screen.queryByRole("heading", { name: "Learner progress" }),
