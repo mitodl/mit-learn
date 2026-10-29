@@ -2,6 +2,7 @@ import React from "react"
 import type { V2ProgramDetail } from "@mitodl/mitxonline-api-axios/v2"
 import { useProgramEnrollment } from "./useProgramEnrollment"
 import HeaderEnrollButton from "./HeaderEnrollButton"
+import { useProgramCertificatePrice } from "./useProgramCertificatePrice"
 
 export type ProgramHeaderEnrollButtonProps = {
   program: V2ProgramDetail
@@ -23,10 +24,12 @@ const ProgramHeaderEnrollButton: React.FC<ProgramHeaderEnrollButtonProps> = ({
       onRequireSignup: setAnchor,
     },
   )
+  const { price } = useProgramCertificatePrice(program)
 
   return (
     <HeaderEnrollButton
       state={state}
+      price={price}
       isStatusLoading={isStatusLoading}
       isPending={isPending}
       error={error}

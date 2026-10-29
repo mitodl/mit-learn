@@ -417,6 +417,31 @@ describe("CoursePage", () => {
       }
     })
 
+    test("paid header button names the InfoBox price", async () => {
+      const run = mitxFactories.courses.courseRun({
+        is_enrollable: true,
+        is_upgradable: true,
+        is_archived: false,
+        enrollment_modes: [paidMode],
+        products: [mitxFactories.courses.product({ price: "899.00" })],
+      })
+      const course = makeCourse({
+        next_run_id: run.id,
+        courseruns: [run],
+        min_price: 899,
+        max_price: 899,
+      })
+      const page = makePage({ course_details: course })
+      setupApis({ course, page })
+      renderWithProviders(<CoursePage readableId={course.readable_id} />)
+      await waitForCoursePageToSettle(page.title)
+
+      // The suffix is mobile-only by media query, which jsdom does not apply.
+      expect(
+        await screen.findByRole("button", { name: "Enroll - $899" }),
+      ).toBeInTheDocument()
+    })
+
     test("enrolled scenario: header shows Enrolled link", async () => {
       const run = mitxFactories.courses.courseRun({
         is_enrollable: true,
