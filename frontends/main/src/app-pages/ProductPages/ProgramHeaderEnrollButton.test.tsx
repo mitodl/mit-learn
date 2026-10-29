@@ -7,6 +7,7 @@ import {
 } from "api/mitxonline-test-utils"
 import { programView } from "@/common/urls"
 import ProgramHeaderEnrollButton from "./ProgramHeaderEnrollButton"
+import { makeProgram } from "./test-utils/userPricing"
 
 jest.mock("next-nprogress-bar", () => ({
   useRouter: () => ({ push: jest.fn() }),
@@ -21,11 +22,14 @@ jest.mock("@/common/analytics/gtm", () => ({
   trackProgramEnrolled: jest.fn(),
 }))
 
-const makeProgram = mitxFactories.programs.program
 const makeMode = mitxFactories.courses.enrollmentMode
 const makeProduct = mitxFactories.courses.product
 const makeProgramEnrollment = mitxFactories.enrollment.programEnrollmentV3
 const makeUser = factories.user.user
+
+// The price suffix is mobile-only through a CSS media query, which jsdom does
+// not apply, so it is part of the accessible name at every width here.
+const pinnedPrice = { min_price: 899, max_price: 899 }
 
 function setupAuth() {
   setMockResponse.get(urls.userMe.get(), makeUser({ is_authenticated: true }))
@@ -43,35 +47,56 @@ describe("ProgramHeaderEnrollButton", () => {
         makeMode({ requires_payment: true }),
         makeMode({ requires_payment: false }),
       ],
-      products: [makeProduct()],
+      products: [makeProduct({ price: "899.00" })],
+      ...pinnedPrice,
     })
 
     renderWithProviders(<ProgramHeaderEnrollButton program={program} />)
 
     expect(
-      await screen.findByRole("button", { name: "Earn Certificate" }),
+      await screen.findByRole("button", { name: "Earn Certificate - $899" }),
     ).toBeInTheDocument()
   })
 
-  test("(b) paid-only program: header shows 'Enroll in Program'", async () => {
+  test("(b) paid-only program: header shows 'Enroll in Program' and the price", async () => {
     setupAuth()
     const program = makeProgram({
       enrollment_modes: [makeMode({ requires_payment: true })],
-      products: [makeProduct()],
+      products: [makeProduct({ price: "899.00" })],
+      ...pinnedPrice,
     })
 
     renderWithProviders(<ProgramHeaderEnrollButton program={program} />)
 
     expect(
-      await screen.findByRole("button", { name: "Enroll in Program" }),
+      await screen.findByRole("button", { name: "Enroll in Program - $899" }),
     ).toBeInTheDocument()
   })
 
-  test("(c) paid-only displayAsCourse: header shows 'Enroll'", async () => {
+  test("(b2) advertised price range: header shows the range, as the InfoBox does", async () => {
     setupAuth()
     const program = makeProgram({
       enrollment_modes: [makeMode({ requires_payment: true })],
-      products: [makeProduct()],
+      products: [makeProduct({ price: "1000.00" })],
+      min_price: 250,
+      max_price: 1000,
+    })
+
+    renderWithProviders(<ProgramHeaderEnrollButton program={program} />)
+
+    expect(
+      await screen.findByRole("button", {
+        name: "Enroll in Program - $250 – $1,000",
+      }),
+    ).toBeInTheDocument()
+  })
+
+  test("(c) paid-only displayAsCourse: header shows 'Enroll' and the price", async () => {
+    setupAuth()
+    const program = makeProgram({
+      enrollment_modes: [makeMode({ requires_payment: true })],
+      products: [makeProduct({ price: "899.00" })],
+      ...pinnedPrice,
     })
 
     renderWithProviders(
@@ -79,14 +104,15 @@ describe("ProgramHeaderEnrollButton", () => {
     )
 
     expect(
-      await screen.findByRole("button", { name: "Enroll" }),
+      await screen.findByRole("button", { name: "Enroll - $899" }),
     ).toBeInTheDocument()
   })
 
-  test("(d) free-only: header shows 'Start Learning'", async () => {
+  test("(d) free-only: header shows 'Start Learning' without a price", async () => {
     setupAuth()
     const program = makeProgram({
       enrollment_modes: [makeMode({ requires_payment: false })],
+      ...pinnedPrice,
     })
 
     renderWithProviders(<ProgramHeaderEnrollButton program={program} />)
