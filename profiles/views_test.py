@@ -2,6 +2,7 @@
 
 # pylint: disable=redefined-outer-name, unused-argument, too-many-arguments
 import json
+from operator import itemgetter
 
 import pytest
 from django.conf import settings
@@ -26,6 +27,19 @@ from profiles.utils import DEFAULT_PROFILE_IMAGE, IMAGE_MEDIUM, IMAGE_SMALL, ima
 pytestmark = [pytest.mark.django_db]
 
 User = get_user_model()
+
+PROGRAM_LETTER_TEMPLATE_DATA = {
+    "id": 4,
+    "meta": {},
+    "program_letter_footer": "",
+    "program_letter_logo": {},
+    "title": "Supply Chain Management",
+    "program_id": 1,
+    "program_letter_footer_text": "",
+    "program_letter_header_text": "",
+    "program_letter_text": "<p>Congratulations</p>",
+    "program_letter_signatories": [],
+}
 
 
 def test_list_users(staff_client, staff_user):
@@ -486,6 +500,40 @@ def test_letter_intercept_view_generates_program_letter(
         assert response.status_code == 302
 
 
+def test_letter_intercept_view_refuses_revoked_certificate(client, user, settings):
+    """A revoked certificate 404s like a missing one and gets no letter."""
+    settings.DATABASE_ROUTERS = []
+    client.force_login(user)
+    ProgramCertificateFactory(
+        user_email=user.email, micromasters_program_id=1, is_revoked=True
+    )
+
+    response = client.get(
+        reverse("profile:program-letter-intercept", kwargs={"program_id": 1})
+    )
+
+    assert response.status_code == 404
+    assert not ProgramLetter.objects.filter(user=user).exists()
+
+
+def test_letter_intercept_view_skips_revoked_certificate(client, user, settings):
+    """A revoked certificate for the program does not stand in for a valid one."""
+    settings.DATABASE_ROUTERS = []
+    client.force_login(user)
+    ProgramCertificateFactory(
+        user_email=user.email, micromasters_program_id=1, is_revoked=True
+    )
+    cert = ProgramCertificateFactory(user_email=user.email, micromasters_program_id=1)
+
+    response = client.get(
+        reverse("profile:program-letter-intercept", kwargs={"program_id": 1})
+    )
+
+    letter = ProgramLetter.objects.get(user=user)
+    assert letter.certificate == cert
+    assert response.url == frontend_absolute_url(f"/program_letter/{letter.id}/view")
+
+
 @pytest.mark.parametrize("is_anonymous", [True, False])
 def test_program_letter_api_view(mocker, client, rf, user, is_anonymous, settings):  # noqa: PLR0913
     """
@@ -493,21 +541,9 @@ def test_program_letter_api_view(mocker, client, rf, user, is_anonymous, setting
     all users logged in or not
     """
     settings.DATABASE_ROUTERS = []
-    mock_return_value = {
-        "id": 4,
-        "meta": {},
-        "program_letter_footer": "",
-        "program_letter_logo": {},
-        "title": "Supply Chain Management",
-        "program_id": 1,
-        "program_letter_footer_text": "",
-        "program_letter_header_text": "",
-        "program_letter_text": "<p>Congratulations</p>",
-        "program_letter_signatories": [],
-    }
     mocker.patch(
         "profiles.serializers.fetch_program_letter_template_data",
-        return_value=mock_return_value,
+        return_value=PROGRAM_LETTER_TEMPLATE_DATA,
     )
     micromasters_program_id = 1
     if not is_anonymous:
@@ -539,18 +575,7 @@ def test_program_letter_api_view_omits_certificate_pii(mocker, client, user, set
     settings.DATABASE_ROUTERS = []
     mocker.patch(
         "profiles.serializers.fetch_program_letter_template_data",
-        return_value={
-            "id": 4,
-            "meta": {},
-            "program_letter_footer": "",
-            "program_letter_logo": {},
-            "title": "Supply Chain Management",
-            "program_id": 1,
-            "program_letter_footer_text": "",
-            "program_letter_header_text": "",
-            "program_letter_text": "<p>Congratulations</p>",
-            "program_letter_signatories": [],
-        },
+        return_value=PROGRAM_LETTER_TEMPLATE_DATA,
     )
     cert = ProgramCertificateFactory(
         user_email=user.email,
@@ -575,9 +600,9 @@ def test_program_letter_api_view_without_certificate(
     """
     A letter whose certificate is gone 404s instead of erroring.
 
-    ProgramCertificate is unmanaged, so certificate_id has no FK constraint and
-    can outlive the row it points at. Every field of the response derives from
-    the certificate, so there is nothing to serve without one. Nothing is mocked
+    certificate is nullable, and a certificate_id with no matching row raises
+    DoesNotExist on access. Every field of the response derives from the
+    certificate, so there is nothing to serve without one. Nothing is mocked
     here on purpose: MICROMASTERS_CMS_API_URL is set because the template fetch
     dereferences the certificate too, and the view has to stop short of it.
     """
@@ -593,6 +618,53 @@ def test_program_letter_api_view_without_certificate(
     )
 
     assert response.status_code == 404
+
+
+def test_program_letter_api_view_revoked_certificate(client, settings, user):
+    """
+    A letter issued before its certificate was revoked 404s. Nothing is mocked,
+    so the view has to stop before the template fetch.
+    """
+    settings.DATABASE_ROUTERS = []
+    settings.MICROMASTERS_CMS_API_URL = "https://micromasters.example.com/api/v0/"
+    cert = ProgramCertificateFactory(user_email=user.email, is_revoked=True)
+    letter = ProgramLetterFactory(user=user, certificate=cert)
+
+    response = client.get(
+        reverse("profile:v1:program_letters_api-detail", args=[letter.id])
+    )
+
+    assert response.status_code == 404
+
+
+def test_program_letter_reinstated_after_unrevoke(mocker, client, settings, user):
+    """
+    Reversing a revocation brings back the same letter: its link serves again
+    and the certificate list points at it instead of issuing a new one.
+    """
+    settings.DATABASE_ROUTERS = []
+    mocker.patch(
+        "profiles.serializers.fetch_program_letter_template_data",
+        return_value=PROGRAM_LETTER_TEMPLATE_DATA,
+    )
+    client.force_login(user)
+    cert = ProgramCertificateFactory(user_email=user.email)
+    letter = ProgramLetterFactory(user=user, certificate=cert)
+    letter_url = reverse("profile:v1:program_letters_api-detail", args=[letter.id])
+    list_url = reverse("profile:v0:user_program_certificates_api-list")
+
+    cert.is_revoked = True
+    cert.save()
+    assert client.get(letter_url).status_code == 404
+    assert client.get(list_url).json() == []
+
+    cert.is_revoked = False
+    cert.save()
+    assert client.get(letter_url).status_code == 200
+    [item] = client.get(list_url).json()
+    assert item["record_hash"] == cert.record_hash
+    assert item["program_letter_share_url"] == letter.get_absolute_url()
+    assert ProgramLetter.objects.get(certificate=cert).id == letter.id
 
 
 @pytest.mark.parametrize("is_anonymous", [True, False])
@@ -643,13 +715,28 @@ def test_list_user_program_certificates(mocker, client, user, is_anonymous):
         }
         for cert in certs:
             cert.user_letter = letters[cert.pk]
-        assert (
-            resp.json()
-            == ProgramCertificateSerializer(
+        # The list query has no ordering, so compare without it.
+        assert sorted(resp.json(), key=itemgetter("record_hash")) == sorted(
+            ProgramCertificateSerializer(
                 certs, many=True, context={"request": request}
-            ).data
+            ).data,
+            key=itemgetter("record_hash"),
         )
         share_urls = [cert["program_letter_share_url"] for cert in resp.json()]
         assert all(share_urls), share_urls
     else:
         assert resp.status_code == 403
+
+
+def test_list_user_program_certificates_omits_revoked(client, user):
+    """Revoked certificates are left out of the list and get no letter."""
+    client.force_login(user)
+    cert = ProgramCertificateFactory(user_email=user.email)
+    revoked = ProgramCertificateFactory(user_email=user.email, is_revoked=True)
+
+    resp = client.get(reverse("profile:v0:user_program_certificates_api-list"))
+
+    assert resp.status_code == 200
+    assert [item["record_hash"] for item in resp.json()] == [cert.record_hash]
+    assert "is_revoked" not in resp.json()[0]
+    assert not ProgramLetter.objects.filter(certificate=revoked).exists()
