@@ -12,7 +12,7 @@ import celery
 from celery.exceptions import Ignore
 from django.conf import settings
 from django.core.cache import caches
-from django.db import OperationalError
+from django.db import OperationalError, transaction
 from django.db.models import Q
 from django.utils import timezone
 
@@ -79,8 +79,10 @@ from learning_resources.lib.warehouse import (
 )
 from learning_resources.models import (
     ContentFile,
+    ETLSourceOwnership,
     LearningResource,
     LearningResourceRun,
+    UserListRelationship,
     VideoChannel,
 )
 from learning_resources.site_scrapers.utils import scraper_for_site
@@ -89,6 +91,7 @@ from learning_resources.utils import (
     content_files_loaded_actions,
     html_to_markdown,
     programs_needing_children_heal,
+    resource_delete_actions,
     resource_unpublished_actions,
     resource_upserted_actions,
     strip_markdown_images,
@@ -101,7 +104,7 @@ from learning_resources_search.exceptions import RetryError
 from main.celery import app
 from main.constants import ISOFORMAT
 from main.decorators import cooldown_task
-from main.utils import chunks, now_in_utc, run_on_worker_loop
+from main.utils import chunks, clear_views_cache, now_in_utc, run_on_worker_loop
 
 log = logging.getLogger(__name__)
 
@@ -1775,3 +1778,192 @@ class SyncOCWCoursesTask(BaseWarehouseETLTask):
 
 
 SyncOCWCoursesTask = app.register_task(SyncOCWCoursesTask())
+
+
+def _remove_edx_platform_from_indexes() -> list[str]:
+    """
+    Remove every edx platform document from OpenSearch and point from Qdrant.
+    Only mit_edx resources are on the edx platform, so this also removes what
+    the delete hooks miss (their content file tasks look up rows that are
+    already gone). Returns the names of the backends that failed.
+    """
+    from learning_resources_search.connection import get_active_aliases, get_conn
+    from learning_resources_search.constants import (
+        COURSE_TYPE,
+        HYBRID_COMBINED_INDEX,
+        PROGRAM_TYPE,
+    )
+    from vector_search.constants import (
+        CONTENT_FILES_COLLECTION_NAME,
+        RESOURCES_COLLECTION_NAME,
+    )
+    from vector_search.utils import remove_points_matching_params
+
+    failed = []
+    query = {
+        "query": {
+            "nested": {
+                "path": "platform",
+                "query": {"term": {"platform.code": PlatformType.edx.name}},
+            }
+        }
+    }
+    try:
+        conn = get_conn()
+        # the course and program indexes hold their content files too
+        for alias in get_active_aliases(
+            conn, object_types=[COURSE_TYPE, PROGRAM_TYPE, HYBRID_COMBINED_INDEX]
+        ):
+            response = conn.delete_by_query(
+                index=alias, body=query, conflicts="proceed", refresh=True
+            )
+            # a call that returns can still leave documents behind
+            if (
+                response.get("timed_out")
+                or response.get("failures")
+                or response.get("version_conflicts")
+            ):
+                log.error("Partial edx delete from %s: %s", alias, response)
+                failed.append(f"OpenSearch ({alias})")
+    except Exception:
+        log.exception("Could not remove edx documents from OpenSearch")
+        failed.append("OpenSearch")
+    # embeddings can exist with the indexing hooks off, so check the connection
+    if settings.QDRANT_HOST and settings.QDRANT_BASE_COLLECTION_NAME:
+        try:
+            for collection in (
+                RESOURCES_COLLECTION_NAME,
+                CONTENT_FILES_COLLECTION_NAME,
+            ):
+                # wait so a failed delete is reported, not just queued
+                remove_points_matching_params(
+                    {"platform": PlatformType.edx.name},
+                    collection_name=collection,
+                    wait=True,
+                )
+        except Exception:
+            log.exception("Could not remove edx points from Qdrant")
+            failed.append("Qdrant")
+    return failed
+
+
+def _renumber(relationships):
+    """Set positions to 1..n, keeping the current order"""
+    changed = []
+    for position, relationship in enumerate(
+        relationships.order_by("position", "id"), 1
+    ):
+        if relationship.position != position:
+            relationship.position = position
+            changed.append(relationship)
+    relationships.model.objects.bulk_update(changed, ["position"])
+
+
+def _fix_mit_edx_parent(parent) -> bool:
+    """
+    Remove a parent's mit_edx children in one transaction, renumber the rest,
+    then reindex it and purge any channel page featuring it. Returns False if
+    the reindex failed.
+    """
+    from channels.models import Channel
+    from learning_resources.views import clear_featured_caches  # views imports us
+
+    with transaction.atomic():
+        edx_items = parent.children.filter(child__etl_source=ETLSource.mit_edx.name)
+        relation_types = set(edx_items.values_list("relation_type", flat=True))
+        edx_items.delete()
+        for relation_type in relation_types:
+            _renumber(parent.children.filter(relation_type=relation_type))
+    done = True
+    if parent.published:
+        try:
+            resource_upserted_actions(parent, percolate=False, generate_embeddings=True)
+        except Exception:
+            log.exception("Could not reindex parent %s", parent.id)
+            done = False
+    channels = list(
+        Channel.objects.filter(featured_list=parent).values_list("channel_type", "name")
+    )
+    if channels:
+        # best-effort per page, logs its own failures
+        clear_featured_caches(channels)
+    return done
+
+
+MIT_EDX_PENDING_PARENTS_KEY = "delete_mit_edx_data_pending_parents"
+
+
+@app.task(acks_late=True, reject_on_worker_lost=True)
+def delete_mit_edx_data() -> dict:
+    """
+    Delete every mit_edx learning resource and remove the edx platform from
+    search. Parents and user lists that hold a mit_edx resource are fixed
+    first, one per transaction. The parents still to reindex are saved before
+    anything is deleted and dropped once done, so a rerun picks up any whose
+    reindex failed or was interrupted. Raises at the end if any cleanup failed.
+    """
+    mit_edx = ETLSource.mit_edx.name
+    failed = []
+
+    # not "durable": that shared table is culled by key order once it fills up.
+    # This one holds only the release sweep watermark, so it never culls.
+    pending_cache = caches["release_sweep"]
+    pending = set(pending_cache.get(MIT_EDX_PENDING_PARENTS_KEY, [])) | set(
+        LearningResource.objects.filter(children__child__etl_source=mit_edx)
+        .exclude(etl_source=mit_edx)
+        .values_list("id", flat=True)
+    )
+    # a saved parent deleted since has nothing left to reindex
+    pending.intersection_update(
+        LearningResource.objects.filter(id__in=pending).values_list("id", flat=True)
+    )
+    pending_cache.set(MIT_EDX_PENDING_PARENTS_KEY, sorted(pending), timeout=None)
+    # DatabaseCache swallows write errors, so read it back before deleting
+    if pending and pending_cache.get(MIT_EDX_PENDING_PARENTS_KEY) != sorted(pending):
+        msg = "Could not save the parents to reindex; nothing was deleted"
+        raise RuntimeError(msg)
+    parent_count = len(pending)
+    for parent in LearningResource.objects.filter(id__in=pending):
+        if _fix_mit_edx_parent(parent):
+            pending.discard(parent.id)
+            pending_cache.set(
+                MIT_EDX_PENDING_PARENTS_KEY, sorted(pending), timeout=None
+            )
+        else:
+            failed.append(f"reindex of parent {parent.id}")
+    if not pending:
+        pending_cache.delete(MIT_EDX_PENDING_PARENTS_KEY)
+
+    user_list_ids = set(
+        UserListRelationship.objects.filter(child__etl_source=mit_edx).values_list(
+            "parent_id", flat=True
+        )
+    )
+    for user_list_id in user_list_ids:
+        with transaction.atomic():
+            items = UserListRelationship.objects.filter(parent_id=user_list_id)
+            items.filter(child__etl_source=mit_edx).delete()
+            _renumber(items)
+
+    ETLSourceOwnership.objects.filter(etl_source=mit_edx).delete()
+    resource_count = 0
+    for resource in LearningResource.objects.filter(etl_source=mit_edx):
+        # runs the channel and search hooks; each delete commits on its own
+        resource_delete_actions(resource)
+        resource_count += 1
+
+    failed.extend(_remove_edx_platform_from_indexes())
+    try:
+        clear_views_cache()
+    except Exception:
+        log.exception("Could not clear the views cache")
+        failed.append("views cache")
+
+    if failed:
+        msg = f"mit_edx cleanup incomplete: {', '.join(failed)}"
+        raise RuntimeError(msg)
+    return {
+        "resources": resource_count,
+        "parents": parent_count,
+        "user_lists": len(user_list_ids),
+    }
