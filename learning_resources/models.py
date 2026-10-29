@@ -1459,6 +1459,8 @@ class ResourceProfileConfiguration(TimestampedModel):
     """
 
     class Stage(models.TextChoices):
+        # claims about the course as a whole, from the context unit
+        CONTEXT = "context", "Context"
         # claims about one unit or bin
         UNIT = "unit", "Unit"
 
