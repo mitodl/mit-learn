@@ -387,8 +387,6 @@ export const accountAction = (action: AccountAction, next: UrlDescriptor) => {
   return url.toString()
 }
 
-export const ECOMMERCE_CART = "/cart/" as const
-
 export const B2B_ATTACH_VIEW = "/enrollmentcode/[code]"
 export const b2bAttachView = (code: string) =>
   generatePath(B2B_ATTACH_VIEW, { code: code })
