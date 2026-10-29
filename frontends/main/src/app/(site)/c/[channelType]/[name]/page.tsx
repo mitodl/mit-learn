@@ -96,14 +96,15 @@ const Page: React.FC<AppPageProps<"/c/[channelType]/[name]">> = async ({
     channelType === ChannelTypeEnum.Unit &&
       queryClient.prefetchQuery(testimonialsQueries.list({ offerors: [name] })),
     /**
-     * The topic hero is drawn differently with no Featured row to carry, so
-     * the answer has to be in hand for the first paint: without it the hero
-     * renders as though there were a row, then reframes when the row turns
-     * out not to exist.
+     * The redesigned hero is drawn differently with no Featured row to carry,
+     * so the answer has to be in hand for the first paint: without it the hero
+     * renders as though there were a row, then reframes when the row turns out
+     * not to exist.
      *
      * Not conditional on the redesign flag, which a server component cannot
-     * read. The row is the redesign's, so this is a request the old topic and
-     * department pages have no use for.
+     * read. The row is the redesign's, so a department still drawing the page
+     * it had before the redesign has no use for this request. A topic channel
+     * has no other page left to draw, so for topics it is always wanted.
      */
     redesignedChannelType &&
       queryClient.prefetchQuery(
