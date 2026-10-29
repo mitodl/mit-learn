@@ -1,29 +1,40 @@
-import React, { useEffect } from "react"
+import React, { useEffect, useState } from "react"
 import posthog from "posthog-js"
-import { PostHogProvider, usePostHog } from "posthog-js/react"
+import type { BootstrapConfig } from "posthog-js"
+import { PostHogContext, PostHogProvider, usePostHog } from "posthog-js/react"
 import { useUserMe } from "api/hooks/user"
 import { INTERNAL_BOOTSTRAPPING_FLAG } from "@/common/feature_flags"
 import { env, fullEnv } from "@/env"
+
+type FlagValue = boolean | string
+
+/**
+ * posthog-js/react reads a bootstrapped flag as enabled when it is truthy, so
+ * "false" has to become `false`: left as a string it would read as on.
+ */
+const parseFlagValue = (value: string): FlagValue => {
+  const lowered = value.toLowerCase()
+  if (lowered === "true") return true
+  if (lowered === "false") return false
+  return value
+}
 
 /**
  * Compute PostHog bootstrap feature flags from the runtime env (fullEnv()).
  * Previously computed at build time from process.env in next.config.js, which
  * bakes empty values when the image is built in CI without per-env values.
  */
-const getBootstrapFeatureFlags = (): Record<
-  string,
-  boolean | string
-> | null => {
+const getBootstrapFeatureFlags = (): Record<string, FlagValue> | null => {
   if (typeof window === "undefined") return null
   const prefix = env("NEXT_PUBLIC_POSTHOG_FEATURE_PREFIX") ?? "FEATURE_"
   const envSource = fullEnv()
   const fullPrefix = `NEXT_PUBLIC_${prefix}`
-  const flags: Record<string, boolean | string> = {}
+  const flags: Record<string, FlagValue> = {}
 
   for (const [key, value] of Object.entries(envSource)) {
     if (value !== undefined && key.startsWith(fullPrefix)) {
       const flagName = key.replace(fullPrefix, "").replaceAll("_", "-")
-      flags[flagName] = value === "True" ? true : JSON.stringify(value)
+      flags[flagName] = parseFlagValue(value)
     }
   }
 
@@ -65,6 +76,27 @@ const PosthogIdentifier = () => {
   return null
 }
 
+/**
+ * Without an api key nothing ever loads flags from a PostHog server, so the
+ * env flags are the final values rather than placeholders. They go into the
+ * context's bootstrap slot, which posthog-js/react's hooks read while the
+ * client has loaded no flags. Set after mount, as the keyed path's init is, so
+ * the server render and hydration agree.
+ */
+const EnvFlagsProvider: React.FC<{ children: React.ReactNode }> = ({
+  children,
+}) => {
+  const [bootstrap, setBootstrap] = useState<BootstrapConfig>()
+  useEffect(() => {
+    setBootstrap({ featureFlags: getBootstrapFeatureFlags() ?? {} })
+  }, [])
+  return (
+    <PostHogContext.Provider value={{ client: posthog, bootstrap }}>
+      {children}
+    </PostHogContext.Provider>
+  )
+}
+
 const ConfiguredPostHogProvider: React.FC<{ children: React.ReactNode }> = ({
   children,
 }) => {
@@ -103,7 +135,7 @@ const ConfiguredPostHogProvider: React.FC<{ children: React.ReactNode }> = ({
   }, [])
 
   if (!env("NEXT_PUBLIC_POSTHOG_API_KEY")) {
-    return children
+    return <EnvFlagsProvider>{children}</EnvFlagsProvider>
   }
 
   return (

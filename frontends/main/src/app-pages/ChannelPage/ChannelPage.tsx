@@ -19,7 +19,6 @@ import useChannelPageRedesign, {
 } from "./useChannelPageRedesign"
 import dynamic from "next/dynamic"
 import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
-import { env } from "@/env"
 
 const LearningResourceDrawer = dynamic(
   () =>
@@ -71,22 +70,13 @@ const ChannelPage: React.FC = () => {
    * deciding on a bootstrapped `false` — which reads the same as the page
    * being switched off. Same reasoning as ContractAdminPage.
    *
-   * Only where there is something to wait for, which is twice worth asking.
-   *
-   * Only the department page is still behind a flag. Every other one draws the
+   * Only where there is something to wait for: only the department page is
+   * still behind a flag. Every other one draws the
    * page it has always drawn whatever the flags come back saying, so waiting
    * on them buys a topic, unit or pathway page nothing but the spinner.
-   *
-   * And only where there is a PostHog at all: with no key configured the
-   * provider neither initialises nor mounts, so nothing ever reports the
-   * flags in and this would hold the page on a spinner for good. PostHog
-   * being absent is not the same as its answer being pending -- absent means
-   * every flag is off, which is the page this one falls back to.
    */
   const awaitingFlags =
-    channelTypeUsesRedesignFlag(String(channelType)) &&
-    !!env("NEXT_PUBLIC_POSTHOG_API_KEY") &&
-    !flagsLoaded
+    channelTypeUsesRedesignFlag(String(channelType)) && !flagsLoaded
   if (awaitingFlags) {
     return <PageLoadingSpinner loading />
   }

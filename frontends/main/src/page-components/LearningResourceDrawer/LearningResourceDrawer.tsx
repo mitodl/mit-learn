@@ -122,7 +122,7 @@ const DrawerContent: React.FC<{
         config={[
           {
             label: title,
-            cardProps: { size: "small" },
+            size: "small",
             data: {
               type: "resource_items",
               params: {
@@ -144,7 +144,7 @@ const DrawerContent: React.FC<{
       config={[
         {
           label: "Similar Learning Resources",
-          cardProps: { size: "small" },
+          size: "small",
           data: {
             type: "lr_vector_similar",
             params: { id: resourceId, limit: carouselResultsLimit },

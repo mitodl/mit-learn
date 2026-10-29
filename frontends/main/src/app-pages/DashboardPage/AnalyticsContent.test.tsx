@@ -118,12 +118,12 @@ const setAnalyticsResponses = ({
  * contract route still fails if the page falls back to org-wide numbers.
  */
 const setContractAnalyticsResponses = (
-  contractId: string,
+  contractId: number,
   page = { limit: 200 },
   learnerProgress: Partial<LearnerProgressResponse> = {},
   needsAttention: ContractNeedsAttention[] = [
     analyticsFactories.contractNeedsAttention({
-      contract_id: Number(contractId),
+      contract_id: contractId,
       learners_needing_attention: 20,
     }),
   ],
@@ -332,6 +332,7 @@ describe("AnalyticsContent", () => {
             seats_consumed: 62,
             seat_limit: 100,
             active_learners: 48,
+            certified_learners: 17,
             seat_utilization_pct: 62,
             completion_rate_pct: 32.3,
           }),
@@ -347,6 +348,7 @@ describe("AnalyticsContent", () => {
       expect(screen.getByText("48")).toBeInTheDocument()
       expect(screen.getByText("32.3%")).toBeInTheDocument()
       expect(screen.getByText("62 of 100 seats")).toBeInTheDocument()
+      expect(screen.getByText("17 certified")).toBeInTheDocument()
     })
 
     test("renders course rows and marks suppressed values as withheld", async () => {
@@ -812,7 +814,7 @@ describe("AnalyticsContent, contract-scoped", () => {
     const org = orgWithUuid({ contracts: [contract] })
     setManagerOrgs([org])
 
-    const contractId = String(contract.id)
+    const contractId = contract.id
     const page = { limit: 200 }
     // Only the contract-nested URLs are mocked. An org-scoped request would
     // find no mock and fail the render, which is the assertion: this route must
@@ -894,7 +896,7 @@ describe("AnalyticsContent, contract-scoped", () => {
     const org = orgWithUuid({ contracts: [contract] })
     setManagerOrgs([org])
 
-    setContractAnalyticsResponses(String(contract.id))
+    setContractAnalyticsResponses(contract.id)
 
     renderWithProviders(
       <AnalyticsContent
@@ -914,7 +916,7 @@ describe("AnalyticsContent, contract-scoped", () => {
     const org = orgWithUuid({ contracts: [first, second] })
     setManagerOrgs([org])
 
-    setContractAnalyticsResponses(String(second.id))
+    setContractAnalyticsResponses(second.id)
 
     const orgSlug = org.slug.replace(/^org-/, "")
     renderWithProviders(
@@ -947,7 +949,7 @@ describe("AnalyticsContent, contract-scoped", () => {
     const org = orgWithUuid({ contracts: [contract] })
     setManagerOrgs([org])
 
-    setContractAnalyticsResponses(String(contract.id))
+    setContractAnalyticsResponses(contract.id)
 
     const orgSlug = org.slug.replace(/^org-/, "")
     renderWithProviders(
@@ -987,7 +989,7 @@ describe("AnalyticsContent, contract-scoped", () => {
     const contract = factories.contracts.contract()
     const org = orgWithUuid({ contracts: [contract] })
     setManagerOrgs([org])
-    const contractId = String(contract.id)
+    const contractId = contract.id
     setContractAnalyticsResponses(contractId)
 
     renderWithProviders(
@@ -1049,7 +1051,7 @@ describe("AnalyticsContent, contract-scoped", () => {
       const contract = factories.contracts.contract()
       const org = orgWithUuid({ contracts: [contract] })
       setManagerOrgs([org])
-      const contractId = String(contract.id)
+      const contractId = contract.id
       setContractAnalyticsResponses(
         contractId,
         undefined,
@@ -1122,7 +1124,7 @@ describe("AnalyticsContent, contract-scoped", () => {
       const contract = factories.contracts.contract()
       const org = orgWithUuid({ contracts: [contract] })
       setManagerOrgs([org])
-      setContractAnalyticsResponses(String(contract.id), undefined, {
+      setContractAnalyticsResponses(contract.id, undefined, {
         needs_attention_count: undefined,
       })
 
@@ -1171,7 +1173,7 @@ describe("AnalyticsContent, contract-scoped", () => {
       const org = orgWithUuid({ contracts: [contract] })
       setManagerOrgs([org])
       allowConsoleErrors()
-      const contractId = String(contract.id)
+      const contractId = contract.id
       setContractAnalyticsResponses(contractId)
       setMockResponse.get(
         analyticsUrls.contracts.learnerProgress(ORG_UUID, contractId, {
@@ -1263,7 +1265,7 @@ describe("AnalyticsContent, contract-scoped", () => {
     const contract = factories.contracts.contract()
     const org = orgWithUuid({ contracts: [contract] })
     setManagerOrgs([org])
-    const contractId = String(contract.id)
+    const contractId = contract.id
     setContractAnalyticsResponses(contractId)
 
     renderWithProviders(
@@ -1301,7 +1303,7 @@ describe("AnalyticsContent, contract-scoped", () => {
     const contract = factories.contracts.contract()
     const org = orgWithUuid({ contracts: [contract] })
     setManagerOrgs([org])
-    const contractId = String(contract.id)
+    const contractId = contract.id
     setContractAnalyticsResponses(contractId, undefined, {
       total_count: 50,
       outcomes_withheld_count: 10,
@@ -1360,7 +1362,7 @@ describe("AnalyticsContent, contract-scoped", () => {
     const contract = factories.contracts.contract()
     const org = orgWithUuid({ contracts: [contract] })
     setManagerOrgs([org])
-    const contractId = String(contract.id)
+    const contractId = contract.id
     setContractAnalyticsResponses(contractId, undefined, {
       total_count: 10,
       outcomes_withheld_count: 10,
@@ -1401,7 +1403,7 @@ describe("AnalyticsContent, contract-scoped", () => {
     const org = orgWithUuid({ contracts: [contract] })
     setManagerOrgs([org])
 
-    setContractAnalyticsResponses(String(contract.id))
+    setContractAnalyticsResponses(contract.id)
 
     const orgSlug = org.slug.replace(/^org-/, "")
     renderWithProviders(

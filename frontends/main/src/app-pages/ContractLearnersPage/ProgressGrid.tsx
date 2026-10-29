@@ -52,7 +52,7 @@ type GridFilters = Omit<LearnersParams, "limit" | "offset">
 /** Shared with the page, which reads the same cached query for its "N of M" line. */
 const gridLearnersQuery = (
   orgUuid: string,
-  contractId: string,
+  contractId: number,
   filters: GridFilters,
   page: number,
 ) =>
@@ -308,7 +308,7 @@ const Muted = styled.span(({ theme }) => ({
 
 type ProgressGridProps = {
   orgUuid: string
-  contractId: string
+  contractId: number
   /** `courserun_readable_id` narrows columns as well as rows. */
   filters: GridFilters
   /** False until stale module ids in the URL can be dropped against `courseRuns`. */
