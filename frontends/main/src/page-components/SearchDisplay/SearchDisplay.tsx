@@ -589,7 +589,7 @@ const TopicTabsRow = styled.div(({ theme }) => ({
        that selecting one does not move the row. */
     borderBottom: "2px solid transparent",
     ":hover": {
-      backgroundColor: "transparent",
+      backgroundColor: "transparent !important",
       color: theme.custom.colors.darkGray2,
     },
   },
