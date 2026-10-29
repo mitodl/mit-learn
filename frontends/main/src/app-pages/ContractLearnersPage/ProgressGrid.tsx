@@ -21,11 +21,10 @@ import {
   Typography,
 } from "ol-components"
 import { Alert, Button, VisuallyHidden } from "@mitodl/smoot-design"
-import { formatDate, initials } from "ol-utilities"
+import { initials } from "ol-utilities"
 import {
   analyticsContractQueries,
   type CourseRun,
-  type LearnerEnrollment,
   type LearnersParams,
   type LearnerWithEnrollments,
 } from "api/analytics-hooks/organizations"
@@ -40,7 +39,6 @@ import {
   contentProgressPercent,
   DISPLAY_STATUS_LABEL,
   getDisplayStatus,
-  isStartedStatus,
   type DisplayStatus,
 } from "./statusDisplay"
 import { ContentProgress } from "./ContentProgress"
@@ -91,21 +89,6 @@ const STATUS_SYMBOL: Record<
  */
 const attentionReason = (status: DisplayStatus) =>
   status === "not-started" ? "Not started" : "No activity in 30+ days"
-
-/**
- * Only started modules show a date. `formatDate` rather than `new Date`, which
- * reads this date-only field as UTC midnight — see `LearnerRow`.
- */
-const lastActivity = (enrollment: LearnerEnrollment, status: DisplayStatus) => {
-  if (!isStartedStatus(status)) return null
-  if (enrollment.last_active_on) {
-    return {
-      prefix: ", last active ",
-      text: formatDate(enrollment.last_active_on),
-    }
-  }
-  return status === "in-progress" ? { prefix: ", ", text: "No activity" } : null
-}
 
 const LEGEND_STATUSES: DisplayStatus[] = [
   "completed",
@@ -255,23 +238,11 @@ const CellContent = styled.div({
   },
 })
 
-const ActivityDate = styled.div(({ theme }) => ({
-  ...theme.typography.body3,
-  fontSize: theme.typography.pxToRem(11),
-  color: theme.custom.colors.darkGray2,
-  marginTop: "4px",
-  [WIDE_CELL]: { marginTop: 0 },
-}))
-
 const CellProgress = styled(ContentProgress)({
   marginTop: "6px",
   maxWidth: "none",
   [WIDE_CELL]: { marginTop: 0, width: "140px", flex: "none" },
 })
-
-const InlineDate = styled.span(({ theme }) => ({
-  fontSize: theme.typography.pxToRem(11),
-}))
 
 /** Screen-reader-only in a narrow cell; the same element shows beside the icon in a wide one, so it is never read twice. */
 const StatusLabel = styled.span(({ theme }) => ({
@@ -580,7 +551,6 @@ const ProgressGrid: React.FC<ProgressGridProps> = ({
             Needs attention
           </li>
           <li>Percent shows content completed, not grade</li>
-          <li>Dates show last activity</li>
         </Legend>
         <ScrollRegion
           ref={regionRef}
@@ -660,7 +630,6 @@ const ProgressGrid: React.FC<ProgressGridProps> = ({
                           )
                         }
                         const status = getDisplayStatus(enrollment)
-                        const activity = lastActivity(enrollment, status)
                         const progress = contentProgressPercent(
                           enrollment,
                           status,
@@ -686,25 +655,8 @@ const ProgressGrid: React.FC<ProgressGridProps> = ({
                                 ) : null}
                               </StatusLine>
                               {progress === null ? null : (
-                                <CellProgress percent={progress}>
-                                  {activity ? (
-                                    <InlineDate>
-                                      <VisuallyHidden>
-                                        {activity.prefix}
-                                      </VisuallyHidden>
-                                      {activity.text}
-                                    </InlineDate>
-                                  ) : null}
-                                </CellProgress>
+                                <CellProgress percent={progress} />
                               )}
-                              {progress === null && activity ? (
-                                <ActivityDate>
-                                  <VisuallyHidden>
-                                    {activity.prefix}
-                                  </VisuallyHidden>
-                                  {activity.text}
-                                </ActivityDate>
-                              ) : null}
                             </CellContent>
                           </ModuleCell>
                         )
