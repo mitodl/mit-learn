@@ -8,17 +8,37 @@
  */
 import type { StaticImageData } from "next/image"
 import architectureBanner from "@/public/images/backgrounds/architecture.png"
-import mediaArtsAndSciencesBanner from "@/public/images/backgrounds/media-arts-and-sciences.jpg"
-import urbanStudiesAndPlanningBanner from "@/public/images/backgrounds/urban-studies-and-planning.jpg"
-import aeronauticsAndAstronauticsBanner from "@/public/images/backgrounds/aeronautics-and-astronautics.jpg"
-import biologicalEngineeringBanner from "@/public/images/backgrounds/biological-engineering.jpg"
-import chemicalEngineeringBanner from "@/public/images/backgrounds/chemical-engineering.jpg"
-import civilAndEnvironmentalEngineeringBanner from "@/public/images/backgrounds/civil-and-environmental-engineering.jpg"
-import electricalEngineeringAndComputerScienceBanner from "@/public/images/backgrounds/electrical-engineering-and-computer-science.jpg"
-import healthSciencesAndTechnologyBanner from "@/public/images/backgrounds/health-sciences-and-technology.jpg"
-import materialsScienceAndEngineeringBanner from "@/public/images/backgrounds/materials-science-and-engineering.jpg"
-import mechanicalEngineeringBanner from "@/public/images/backgrounds/mechanical-engineering.jpg"
-import nuclearScienceAndEngineeringBanner from "@/public/images/backgrounds/nuclear-science-and-engineering.jpg"
+import mediaArtsAndSciencesBanner from "@/public/images/backgrounds/media-arts-and-sciences.png"
+import urbanStudiesAndPlanningBanner from "@/public/images/backgrounds/urban-studies-and-planning.png"
+import aeronauticsAndAstronauticsBanner from "@/public/images/backgrounds/aeronautics-and-astronautics.png"
+import biologicalEngineeringBanner from "@/public/images/backgrounds/biological-engineering.png"
+import chemicalEngineeringBanner from "@/public/images/backgrounds/chemical-engineering.png"
+import civilAndEnvironmentalEngineeringBanner from "@/public/images/backgrounds/civil-and-environmental-engineering.png"
+import electricalEngineeringAndComputerScienceBanner from "@/public/images/backgrounds/electrical-engineering-and-computer-science.png"
+import healthSciencesAndTechnologyBanner from "@/public/images/backgrounds/health-sciences-and-technology.png"
+import materialsScienceAndEngineeringBanner from "@/public/images/backgrounds/materials-science-and-engineering.png"
+import mechanicalEngineeringBanner from "@/public/images/backgrounds/mechanical-engineering.png"
+import nuclearScienceAndEngineeringBanner from "@/public/images/backgrounds/nuclear-science-and-engineering.png"
+import musicBanner from "@/public/images/backgrounds/music.png"
+import politicalScienceBanner from "@/public/images/backgrounds/political-science.png"
+import historyBanner from "@/public/images/backgrounds/history.png"
+import literatureBanner from "@/public/images/backgrounds/literature.png"
+import anthropologyBanner from "@/public/images/backgrounds/anthropology.png"
+import economicsBanner from "@/public/images/backgrounds/economics.png"
+import comparativeMediaStudiesWritingBanner from "@/public/images/backgrounds/comparative-media-studieswriting.png"
+import globalStudiesAndLanguagesBanner from "@/public/images/backgrounds/global-studies-and-languages.png"
+import linguisticsAndPhilosophyBanner from "@/public/images/backgrounds/linguistics-and-philosophy.png"
+import scienceTechnologyAndSocietyBanner from "@/public/images/backgrounds/science-technology-and-society.png"
+import theaterArtsBanner from "@/public/images/backgrounds/theater-arts.png"
+import womensAndGenderStudiesBanner from "@/public/images/backgrounds/womens-and-gender-studies.png"
+import sloanSchoolOfManagementBanner from "@/public/images/backgrounds/sloan-school-of-management.png"
+import brainAndCognitiveSciencesBanner from "@/public/images/backgrounds/brain-and-cognitive-sciences.png"
+import chemistryBanner from "@/public/images/backgrounds/chemistry.png"
+import biologyBanner from "@/public/images/backgrounds/biology.png"
+import earthAtmosphericAndPlanetarySciencesBanner from "@/public/images/backgrounds/earth-atmospheric-and-planetary-sciences.png"
+import physicsBanner from "@/public/images/backgrounds/physics.png"
+import dataSystemsAndSocietyBanner from "@/public/images/backgrounds/data-systems-and-society.png"
+import mathematicsBanner from "@/public/images/backgrounds/mathematics.png"
 
 /**
  * The artwork behind a department's title, by department.
@@ -54,6 +74,28 @@ const DEPARTMENT_BANNERS: Partial<Record<string, StaticImageData>> = {
   "materials-science-and-engineering": materialsScienceAndEngineeringBanner,
   "mechanical-engineering": mechanicalEngineeringBanner,
   "nuclear-science-and-engineering": nuclearScienceAndEngineeringBanner,
+  anthropology: anthropologyBanner,
+  "comparative-media-studieswriting": comparativeMediaStudiesWritingBanner,
+  economics: economicsBanner,
+  "global-studies-and-languages": globalStudiesAndLanguagesBanner,
+  history: historyBanner,
+  "linguistics-and-philosophy": linguisticsAndPhilosophyBanner,
+  literature: literatureBanner,
+  music: musicBanner,
+  "political-science": politicalScienceBanner,
+  "science-technology-and-society": scienceTechnologyAndSocietyBanner,
+  "theater-arts": theaterArtsBanner,
+  "womens-and-gender-studies": womensAndGenderStudiesBanner,
+  "sloan-school-of-management": sloanSchoolOfManagementBanner,
+  biology: biologyBanner,
+  "brain-and-cognitive-sciences": brainAndCognitiveSciencesBanner,
+  chemistry: chemistryBanner,
+  "earth-atmospheric-and-planetary-sciences":
+    earthAtmosphericAndPlanetarySciencesBanner,
+  mathematics: mathematicsBanner,
+  physics: physicsBanner,
+  "data-systems-and-society": dataSystemsAndSocietyBanner,
+  "institute-for-data-systems-and-society": dataSystemsAndSocietyBanner,
 }
 
 export { DEPARTMENT_BANNERS }

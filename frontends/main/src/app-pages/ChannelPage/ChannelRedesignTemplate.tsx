@@ -30,9 +30,10 @@ const BannerSkeleton = styled(Skeleton)(({ theme }) => ({
  * The hero, per the department design.
  *
  * White, with the department's photograph laid over its top right -- see
- * `HeroPhoto`. There is no wash over the picture any more: the artwork now
- * arrives cut to the diagonal the design draws, so the edge is the image's
- * own and the hero has nothing to fade.
+ * `HeroPhoto`. There is no wash over the picture and no outline drawn around
+ * it any more: the artwork arrives cut to the diagonal the design draws and
+ * carries the hairline outside that cut itself, so both edges are the image's
+ * own and the hero has nothing left to draw over it.
  */
 const TopicHero = styled.section(({ theme }) => ({
   position: "relative",
@@ -64,21 +65,43 @@ const HeroPhotoClip = styled.div({
 const HERO_PHOTO_WIDTH = "55%"
 
 /**
+ * The artwork's own box, and how much of that box is the photograph.
+ *
+ * The outline the design runs outside the cut edge is part of the artwork now,
+ * which makes the file larger than the picture in it: 32px down the left for
+ * the outline and the gap it keeps from the cut, 29px below for its foot. The
+ * picture still occupies the top right 920 x 494.
+ */
+const HERO_PHOTO_ART = { width: 952, height: 523, pictureWidth: 920 }
+
+/**
+ * The artwork drawn so that the picture inside it lands on the share above.
+ *
+ * Scaling the file to that share directly would draw the picture narrower by
+ * exactly the margin, so the share is widened in the same proportion and the
+ * margin hangs off the picture's left, which is where the design has it.
+ */
+const HERO_PHOTO_ART_WIDTH = `${
+  (parseFloat(HERO_PHOTO_WIDTH) * HERO_PHOTO_ART.width) /
+  HERO_PHOTO_ART.pictureWidth
+}%`
+
+/**
  * The photograph behind a department's title.
  *
  * One placement for every department, which is what the artwork being cut to
  * a single size buys: there is nothing left for a department to state. It is
  * anchored to the hero's top right corner at its own proportions -- the
- * diagonal down its left side is part of the image, so stretching it would
- * bend the one edge the design is precise about.
+ * diagonal down its left side and the outline beyond it are part of the image,
+ * so stretching it would bend the two edges the design is precise about.
  */
 const HeroPhoto = styled.div<{ backgroundUrl: string }>(
   ({ backgroundUrl }) => ({
     position: "absolute",
-    top: 0,
+    top: "-2px",
     right: 0,
-    width: HERO_PHOTO_WIDTH,
-    aspectRatio: "920 / 494",
+    width: HERO_PHOTO_ART_WIDTH,
+    aspectRatio: `${HERO_PHOTO_ART.width} / ${HERO_PHOTO_ART.height}`,
     pointerEvents: "none",
     backgroundImage: backgroundUrl,
     backgroundRepeat: "no-repeat",
@@ -89,73 +112,6 @@ const HeroPhoto = styled.div<{ backgroundUrl: string }>(
     backgroundPosition: "top right",
   }),
 )
-
-/**
- * The hairline the design runs outside the photograph's cut edge.
- *
- * It follows the same diagonal the artwork is cut on, set about 27px out from
- * it, and turns along the bottom to leave the hero at the right -- an outline
- * the picture sits inside rather than a border on it.
- *
- * Drawn as a vector rather than built from rotated edges because the line has
- * to stay one pixel at any width while the shape it traces stretches with the
- * hero. `preserveAspectRatio="none"` lets the shape stretch; the stroke is
- * held back from stretching with it.
- *
- * Over the photograph rather than under it, which is where the design has it:
- * the top of the outline runs along the picture's own top edge, and behind it
- * there would be nothing of that line to see.
- */
-const HERO_PHOTO_BORDER_BOX = { width: 980, height: 546 }
-
-/**
- * The slope the artwork is cut on, as sideways travel per pixel down.
- *
- * The outline has to run at exactly this. It is the one number here that is
- * not free: a line even slightly off it converges on the picture's edge or
- * opens away from it over the drop, and what should read as an even margin
- * reads as a wedge. The outline's own depth has nothing to do with it -- the
- * run is taken from the drop so that moving the foot of the outline up or
- * down leaves the two edges parallel.
- */
-const HERO_PHOTO_CUT_SLOPE = 0.4917
-
-/** How far the outline travels sideways over its own drop. */
-const heroPhotoBorderRun = (depth: number) => depth * HERO_PHOTO_CUT_SLOPE
-
-/**
- * Half the stroke, so the line sits inside the box it traces rather than
- * straddling its edge and losing the outer half to the hero's clip.
- */
-const HERO_PHOTO_BORDER_INSET = 0.5
-
-/**
- * The outline against the photograph, as shares of the hero's width.
- *
- * The design sets it 30px outside a picture 920 wide, so both are scaled off
- * the width the picture is actually drawn at rather than pinned to pixels,
- * and the gap holds its proportion as the hero widens.
- */
-const borderShare = (n: number) =>
-  `${(parseFloat(HERO_PHOTO_WIDTH) * n) / 920}%`
-
-const HeroPhotoBorder = styled.svg({
-  position: "absolute",
-  top: 0,
-  right: `-${borderShare(30)}`,
-  width: borderShare(HERO_PHOTO_BORDER_BOX.width),
-  aspectRatio: `${HERO_PHOTO_BORDER_BOX.width} / ${HERO_PHOTO_BORDER_BOX.height}`,
-  pointerEvents: "none",
-  overflow: "visible",
-})
-
-const HeroPhotoBorderPath = styled.path(({ theme }) => ({
-  fill: "none",
-  stroke: theme.custom.colors.silverGrayLight,
-  strokeWidth: 1,
-  /* Held to a pixel while the box around it stretches. */
-  vectorEffect: "non-scaling-stroke",
-}))
 
 /**
  * The Follow control as the design draws it: a grey pill, not the primary red
@@ -483,20 +439,6 @@ const ChannelHeroPhoto: React.FC<{
          `url(...)`, and wrapping the second kind again drops it. */
       backgroundUrl={standardizeBackgroundUrl(configuredBanner)}
     />
-    <HeroPhotoBorder
-      data-testid="channel-hero-photo-border"
-      viewBox={`0 0 ${HERO_PHOTO_BORDER_BOX.width} ${HERO_PHOTO_BORDER_BOX.height}`}
-      preserveAspectRatio="none"
-    >
-      {/* Leftwards along the top of the picture, down the diagonal, then back
-          along the foot. Three sides rather than four: the design closes the
-          shape up its right-hand side, which on artwork this width would fall
-          inside the hero and draw a line across the picture that the design
-          does not have -- there it runs off the edge and is never seen. */}
-      <HeroPhotoBorderPath
-        d={`M${HERO_PHOTO_BORDER_BOX.width} ${HERO_PHOTO_BORDER_INSET} H${HERO_PHOTO_BORDER_INSET} L${heroPhotoBorderRun(HERO_PHOTO_BORDER_BOX.height)} ${HERO_PHOTO_BORDER_BOX.height - HERO_PHOTO_BORDER_INSET} H${HERO_PHOTO_BORDER_BOX.width}`}
-      />
-    </HeroPhotoBorder>
   </HeroPhotoClip>
 )
 
