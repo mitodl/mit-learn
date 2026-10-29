@@ -7,7 +7,7 @@ import ResourceCarousel, {
 const UPCOMING_COURSES_CAROUSEL: ResourceCarouselProps["config"] = [
   {
     label: "All",
-    cardProps: { size: "medium" },
+    size: "medium",
     data: {
       type: "resources",
       params: { resource_type: ["course"], limit: 12, sortby: "upcoming" },
@@ -15,7 +15,7 @@ const UPCOMING_COURSES_CAROUSEL: ResourceCarouselProps["config"] = [
   },
   {
     label: "Professional",
-    cardProps: { size: "medium" },
+    size: "medium",
     data: {
       type: "resources",
       params: {
