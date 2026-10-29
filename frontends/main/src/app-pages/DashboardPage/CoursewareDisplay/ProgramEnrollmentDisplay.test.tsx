@@ -33,6 +33,11 @@ import { useFeatureFlagEnabled } from "posthog-js/react"
 import { faker } from "@faker-js/faker/locale/en"
 import invariant from "tiny-invariant"
 
+// The paid path checks enrollment eligibility before the cart.
+beforeEach(() => {
+  mitxonline.mockEnrollmentEligible()
+})
+
 // Verified cards look up their order; default to none, tests override.
 beforeEach(() => {
   setupOrderHistory()
@@ -2344,6 +2349,84 @@ describe("ProgramEnrollmentDisplay", () => {
     const certButton = screen.queryByRole("link", { name: "Certificate" })
     expect(certButton).not.toBeInTheDocument()
   })
+  test("Shows a requirement group's description under its heading, not on its cards", async () => {
+    const mitxOnlineUser = mitxonline.factories.user.user()
+    setMockResponse.get(mitxonline.urls.userMe.get(), mitxOnlineUser)
+
+    const description = "Unlocks after all required courses are complete"
+    const reqTree =
+      new mitxonline.factories.requirements.RequirementTreeBuilder()
+    reqTree
+      .addOperator({ operator: "all_of", title: "Core Courses" })
+      .addCourse({ course: 1 })
+    const capstone = reqTree.addOperator({
+      operator: "all_of",
+      title: "Capstone Exam",
+      description,
+    })
+    capstone.addCourse({ course: 2 })
+    capstone.addCourse({ course: 3 })
+
+    const program = mitxonline.factories.programs.program({
+      id: 7777,
+      courses: [1, 2, 3],
+      req_tree: reqTree.serialize(),
+    })
+    const [course1, course2, course3] = [1, 2, 3].map((id) =>
+      mitxonline.factories.courses.course({
+        id,
+        courseruns: [mitxonline.factories.courses.courseRun({ id: 300 + id })],
+      }),
+    )
+    // Course 2 is enrolled and course 3 is not, so both card kinds are present.
+    const enrollment = mitxonline.factories.enrollment.courseEnrollment({
+      run: { ...course2.courseruns[0], course: course2 },
+    })
+
+    setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV3(), [
+      enrollment,
+    ])
+    setMockResponse.get(
+      mitxonline.urls.programEnrollments.enrollmentsListV3(),
+      [
+        mitxonline.factories.enrollment.programEnrollmentV3({
+          program: {
+            id: program.id,
+            title: program.title,
+            live: program.live,
+            program_type: program.program_type,
+            readable_id: program.readable_id,
+          },
+        }),
+      ],
+    )
+    setMockResponse.get(mitxonline.urls.programs.programDetail(7777), program)
+    setMockResponse.get(
+      mitxonline.urls.courses.coursesList({
+        id: program.courses,
+        page_size: program.courses.length,
+      }),
+      {
+        count: 3,
+        next: null,
+        previous: null,
+        results: [course1, course2, course3],
+      },
+    )
+
+    renderWithProviders(<ProgramEnrollmentDisplay programId={7777} />)
+    await screen.findByText("Capstone Exam")
+
+    // Once, in the Capstone Exam header rather than on either course card.
+    const [note] = screen.getAllByText(description)
+    expect(screen.getAllByText(description)).toHaveLength(1)
+    expect(
+      screen.getByRole("heading", { name: "Capstone Exam" }).parentElement,
+    ).toContainElement(note)
+    for (const card of screen.getAllByTestId("enrollment-card-desktop")) {
+      expect(card).not.toContainElement(note)
+    }
+  })
 })
 
 describe("ProgramEnrollmentDisplay with program tracks", () => {
@@ -2351,6 +2434,7 @@ describe("ProgramEnrollmentDisplay with program tracks", () => {
 
   const setupTrackedProgram = (
     chosen: "General Track" | "Methods Track" | null = null,
+    enrolledCourseIds: number[] = [],
   ) => {
     setMockResponse.get(
       mitxonline.urls.userMe.get(),
@@ -2378,8 +2462,18 @@ describe("ProgramEnrollmentDisplay with program tracks", () => {
       req_tree: root.serialize(),
     })
     const courses = [1, 2, 3, 4].map((id) =>
-      mitxonline.factories.courses.course({ id }),
+      mitxonline.factories.courses.course({
+        id,
+        courseruns: [mitxonline.factories.courses.courseRun({ id: 500 + id })],
+      }),
     )
+    const courseEnrollments = courses
+      .filter((course) => enrolledCourseIds.includes(course.id))
+      .map((course) =>
+        mitxonline.factories.enrollment.courseEnrollment({
+          run: { ...course.courseruns[0], course },
+        }),
+      )
     const trackIds = {
       "General Track": general.id,
       "Methods Track": methods.id,
@@ -2388,7 +2482,10 @@ describe("ProgramEnrollmentDisplay with program tracks", () => {
       program: mitxonline.factories.programs.simpleProgram({ id: program.id }),
       ...(chosen ? { track: { id: trackIds[chosen], title: chosen } } : {}),
     })
-    setMockResponse.get(mitxonline.urls.enrollment.enrollmentsListV3(), [])
+    setMockResponse.get(
+      mitxonline.urls.enrollment.enrollmentsListV3(),
+      courseEnrollments,
+    )
     setMockResponse.get(
       mitxonline.urls.programEnrollments.enrollmentsListV3(),
       [enrollment],
@@ -2404,7 +2501,7 @@ describe("ProgramEnrollmentDisplay with program tracks", () => {
       }),
       { count: courses.length, next: null, previous: null, results: courses },
     )
-    return { program, enrollment, methodsId: methods.id }
+    return { program, enrollment, courseEnrollments, methodsId: methods.id }
   }
 
   const expectTrackSaved = async (
@@ -2423,6 +2520,44 @@ describe("ProgramEnrollmentDisplay with program tracks", () => {
     // The button that opened the dialog is gone, so focus moves to the heading.
     await waitFor(() => expect(trackHeading).toHaveFocus())
   }
+
+  test("Shows enrolled courses from another track after the capstone", async () => {
+    // Enrolled in core (1) and in Methods' course (3) while on General.
+    const { program, courseEnrollments } = setupTrackedProgram(
+      "General Track",
+      [1, 3],
+    )
+    renderWithProviders(<ProgramEnrollmentDisplay programId={program.id} />)
+
+    await screen.findByRole("heading", { name: "General Track courses" })
+    expect(
+      screen.getAllByRole("heading", { level: 2 }).map((h) => h.textContent),
+    ).toEqual([
+      "Core Courses",
+      "General Track courses",
+      "Capstone",
+      "Other courses in this program you have started",
+    ])
+    expect(screen.getByText("across all tracks")).toBeInTheDocument()
+    const other = screen.getByTestId("other-track-courses")
+    const methodsEnrollment = courseEnrollments.find(
+      (e) => e.run.course.id === 3,
+    )
+    invariant(methodsEnrollment)
+    expect(
+      within(other).getAllByText(methodsEnrollment.run.title)[0],
+    ).toBeInTheDocument()
+    // Core is shown in its own section, not repeated here.
+    const coreEnrollment = courseEnrollments.find((e) => e.run.course.id === 1)
+    invariant(coreEnrollment)
+    expect(
+      within(other).queryByText(coreEnrollment.run.title),
+    ).not.toBeInTheDocument()
+    // Only the chosen track counts: core, General and the capstone.
+    expect(screen.getByTestId("program-completion-count")).toHaveTextContent(
+      /You have completed 0 of 3/,
+    )
+  })
 
   test("Choosing a track saves it and shows that track's courses", async () => {
     const { program, enrollment, methodsId } = setupTrackedProgram()

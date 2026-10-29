@@ -28,6 +28,19 @@ pytestmark = [pytest.mark.django_db]
 
 User = get_user_model()
 
+PROGRAM_LETTER_TEMPLATE_DATA = {
+    "id": 4,
+    "meta": {},
+    "program_letter_footer": "",
+    "program_letter_logo": {},
+    "title": "Supply Chain Management",
+    "program_id": 1,
+    "program_letter_footer_text": "",
+    "program_letter_header_text": "",
+    "program_letter_text": "<p>Congratulations</p>",
+    "program_letter_signatories": [],
+}
+
 
 def test_list_users(staff_client, staff_user):
     """
@@ -528,21 +541,9 @@ def test_program_letter_api_view(mocker, client, rf, user, is_anonymous, setting
     all users logged in or not
     """
     settings.DATABASE_ROUTERS = []
-    mock_return_value = {
-        "id": 4,
-        "meta": {},
-        "program_letter_footer": "",
-        "program_letter_logo": {},
-        "title": "Supply Chain Management",
-        "program_id": 1,
-        "program_letter_footer_text": "",
-        "program_letter_header_text": "",
-        "program_letter_text": "<p>Congratulations</p>",
-        "program_letter_signatories": [],
-    }
     mocker.patch(
         "profiles.serializers.fetch_program_letter_template_data",
-        return_value=mock_return_value,
+        return_value=PROGRAM_LETTER_TEMPLATE_DATA,
     )
     micromasters_program_id = 1
     if not is_anonymous:
@@ -574,18 +575,7 @@ def test_program_letter_api_view_omits_certificate_pii(mocker, client, user, set
     settings.DATABASE_ROUTERS = []
     mocker.patch(
         "profiles.serializers.fetch_program_letter_template_data",
-        return_value={
-            "id": 4,
-            "meta": {},
-            "program_letter_footer": "",
-            "program_letter_logo": {},
-            "title": "Supply Chain Management",
-            "program_id": 1,
-            "program_letter_footer_text": "",
-            "program_letter_header_text": "",
-            "program_letter_text": "<p>Congratulations</p>",
-            "program_letter_signatories": [],
-        },
+        return_value=PROGRAM_LETTER_TEMPLATE_DATA,
     )
     cert = ProgramCertificateFactory(
         user_email=user.email,
@@ -610,9 +600,9 @@ def test_program_letter_api_view_without_certificate(
     """
     A letter whose certificate is gone 404s instead of erroring.
 
-    ProgramCertificate is unmanaged, so certificate_id has no FK constraint and
-    can outlive the row it points at. Every field of the response derives from
-    the certificate, so there is nothing to serve without one. Nothing is mocked
+    certificate is nullable, and a certificate_id with no matching row raises
+    DoesNotExist on access. Every field of the response derives from the
+    certificate, so there is nothing to serve without one. Nothing is mocked
     here on purpose: MICROMASTERS_CMS_API_URL is set because the template fetch
     dereferences the certificate too, and the view has to stop short of it.
     """
@@ -645,6 +635,36 @@ def test_program_letter_api_view_revoked_certificate(client, settings, user):
     )
 
     assert response.status_code == 404
+
+
+def test_program_letter_reinstated_after_unrevoke(mocker, client, settings, user):
+    """
+    Reversing a revocation brings back the same letter: its link serves again
+    and the certificate list points at it instead of issuing a new one.
+    """
+    settings.DATABASE_ROUTERS = []
+    mocker.patch(
+        "profiles.serializers.fetch_program_letter_template_data",
+        return_value=PROGRAM_LETTER_TEMPLATE_DATA,
+    )
+    client.force_login(user)
+    cert = ProgramCertificateFactory(user_email=user.email)
+    letter = ProgramLetterFactory(user=user, certificate=cert)
+    letter_url = reverse("profile:v1:program_letters_api-detail", args=[letter.id])
+    list_url = reverse("profile:v0:user_program_certificates_api-list")
+
+    cert.is_revoked = True
+    cert.save()
+    assert client.get(letter_url).status_code == 404
+    assert client.get(list_url).json() == []
+
+    cert.is_revoked = False
+    cert.save()
+    assert client.get(letter_url).status_code == 200
+    [item] = client.get(list_url).json()
+    assert item["record_hash"] == cert.record_hash
+    assert item["program_letter_share_url"] == letter.get_absolute_url()
+    assert ProgramLetter.objects.get(certificate=cert).id == letter.id
 
 
 @pytest.mark.parametrize("is_anonymous", [True, False])

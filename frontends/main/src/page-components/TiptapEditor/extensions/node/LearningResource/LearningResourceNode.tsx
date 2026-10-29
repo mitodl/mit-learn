@@ -26,18 +26,12 @@ const StyledLearningResourceCard = styled(ResourceCard)(({ theme }) => ({
   position: "relative",
   marginBottom: "20px",
 
+  // Frames the card 8px out, like the media embed's selection, so it shows
+  // against the card's dark price panel too.
   ".ProseMirror-selectednode &": {
-    borderColor: theme.custom.colors.red,
+    outline: `1px solid ${theme.custom.colors.red}`,
+    outlineOffset: "8px",
     userSelect: "none",
-  },
-
-  "&& a": {
-    color: "inherit",
-    textDecoration: "none",
-  },
-
-  "&& a span": {
-    textDecoration: "none",
   },
 
   ".node-learningResource &": {
@@ -72,11 +66,13 @@ export const LearningResourceCardViewer = ({
   }
 
   return (
-    <StyledLearningResourceCard
-      resource={resource}
-      list
-      isLoading={isLoading}
-    />
+    <div data-style-boundary>
+      <StyledLearningResourceCard
+        resource={resource}
+        list
+        isLoading={isLoading}
+      />
+    </div>
   )
 }
 
@@ -113,7 +109,7 @@ export const LearningResourceListCardWrapper = ({
   }
 
   return (
-    <NodeWrapper onMouseDown={selectNode}>
+    <NodeWrapper onMouseDown={selectNode} data-style-boundary>
       {editable && (
         <RemoveButton
           variant="primary"

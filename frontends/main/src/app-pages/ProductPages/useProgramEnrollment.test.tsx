@@ -11,6 +11,7 @@ import { makeRequest, urls, factories } from "api/test-utils"
 import {
   factories as mitxFactories,
   urls as mitxUrls,
+  mockEnrollmentEligible,
 } from "api/mitxonline-test-utils"
 import { useProgramEnrollment } from "./useProgramEnrollment"
 import { programView } from "@/common/urls"
@@ -18,6 +19,11 @@ import { usePostHog } from "posthog-js/react"
 import { PostHogEvents } from "@/common/constants"
 import { trackProgramEnrolled } from "@/common/analytics/gtm"
 import { PlatformEnum } from "api"
+
+// The paid path checks enrollment eligibility before the cart.
+beforeEach(() => {
+  mockEnrollmentEligible()
+})
 
 jest.mock("@/common/analytics/gtm", () => ({
   trackProgramEnrolled: jest.fn(),

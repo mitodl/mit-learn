@@ -13,7 +13,6 @@ import {
   alpha,
   Chip,
   Container,
-  Link,
   Pagination,
   SearchInput,
   Skeleton,
@@ -54,7 +53,7 @@ import { matchOrganizationBySlug } from "@/common/utils"
 import { ForbiddenError } from "@/common/errors"
 import { FeatureFlags } from "@/common/feature_flags"
 import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
-import { contractAnalyticsView } from "@/common/urls"
+import ContractManagerNav from "@/components/ContractManagerNav/ContractManagerNav"
 import { ErrorContent } from "../ErrorPage/ErrorPageTemplate"
 import graduateLogo from "@/public/images/dashboard/graduate.png"
 
@@ -110,12 +109,6 @@ const ContractSubtitle = styled(Typography)(({ theme }) => ({
   ...theme.typography.subtitle1,
   color: theme.custom.colors.silverGrayDark,
 })) as typeof Typography
-
-const AnalyticsLink = styled(Link)(({ theme }) => ({
-  ...theme.typography.body2,
-  display: "inline-block",
-  paddingTop: "4px",
-}))
 
 const StatsSide = styled.div(({ theme }) => ({
   display: "flex",
@@ -398,9 +391,6 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
   contractSlug,
 }) => {
   const queryClient = useQueryClient()
-  const analyticsEnabled = useFeatureFlagEnabled(
-    FeatureFlags.B2BAnalyticsDashboard,
-  )
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all")
   const [searchQuery, setSearchQuery] = useState("")
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("")
@@ -684,7 +674,7 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
             <div>
               <OrgName component="h1">{org.name}</OrgName>
               <ContractSubtitle>
-                <span>{contract.name}</span>
+                <span>Manage seats · {contract.name}</span>
                 {!isLoadingContractDetail && totalPurchased !== undefined ? (
                   <>
                     {" "}
@@ -697,19 +687,6 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
                   </>
                 ) : null}
               </ContractSubtitle>
-              {/* Analytics is the reporting half of this dashboard, and is
-                  now scoped to this contract rather than the whole org, so it
-                  lives under this contract's URL. Behind its own flag: the
-                  analytics API is not deployed everywhere this page is. */}
-              {analyticsEnabled ? (
-                <AnalyticsLink
-                  color="red"
-                  size="small"
-                  href={contractAnalyticsView(orgSlug, contractSlug)}
-                >
-                  View analytics
-                </AnalyticsLink>
-              ) : null}
             </div>
           </OrgDetailsContainer>
           <StatsSide>
@@ -751,6 +728,12 @@ const ContractAdminPageInternal: React.FC<ContractAdminPageInternalProps> = ({
             </StatBlock>
           </StatsSide>
         </HeaderSection>
+
+        <ContractManagerNav
+          orgSlug={orgSlug}
+          contractSlug={contractSlug}
+          current="seats"
+        />
 
         <AssignSeatsSection
           orgId={org.id}

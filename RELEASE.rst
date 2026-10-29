@@ -1,6 +1,67 @@
 Release Notes
 =============
 
+Version 0.85.4
+--------------
+
+- Let the Follow pill follow the end of the channel title (#4202)
+- Program dashboard: show "Other courses in this program" across all tracks (#4169)
+- Treat env feature flags as final when PostHog has no api key (#4189)
+- feat(b2b-learner-analytics): show last activity date in progress grid cells (#4122)
+- Send the learner's name and username with the Contact us intake (#4175)
+- feat(b2b): add shared navigation across contract manager pages (#4125)
+
+Version 0.85.3
+--------------
+
+- Remove the topic channel's pre-redesign page (#4200)
+- Emit Review structured data for product page testimonials (#4084)
+- fix(auth): link email-matched legacy users to their global_id (#4019)
+- add loader that wait for Posthog api call response and then render the Topic pages (#4185)
+- Open the compliance dialog on fields CyberSource rejects (#4085)
+- Remove temporary certifi exclude-newer exemption (#4171)
+- Update dependency litellm to v1.100.4 [SECURITY] (#4179)
+- Show a requirement group's description on its program dashboard cards (#4146)
+- Render user-list and learning-path pages with the condensed card (#4168)
+- Update dependency Django to v5.2.18 (#4161)
+- feat(auth): send an S256 PKCE challenge on account action requests (#4167)
+- Add a warehouse-pull sync task for OCW courses (#4135)
+- adding initial frontend changes (#4158)
+
+Version 0.85.1
+--------------
+
+- Even out the search card's foot when nothing is filtering (#4173)
+- Update dependency pypdf to v6.21.2 [SECURITY] (#4162)
+- Trace LiteLLMEncoder's embedding requests to Opik through ol-llm (#4134)
+- fix(deps): upgrade brotli to 1.2.1 for CVE-2026-111497 (#4163)
+- fix(docker): make production the default build target (#4159)
+- Channel page redesign: filter counts, the search card, the tab row, an empty state, and a white topic hero (#4133)
+- Update dependency pypdf to v6.21.1 [SECURITY] (#4153)
+- Update dependency @sentry/nextjs to v10.75.2 [SECURITY] (#4150)
+- Add certifi>=2026.10.19 constraint (eMudhra CA compromise) (#4152)
+- Update dependency pypdf to v6.21.1 [SECURITY] (#4151)
+- Update dependency djangorestframework to v3.18.2 [SECURITY] (#4149)
+- Fix flaky ArticleEditor autosave tests: bump happy-dom, wait for saves to settle (#4148)
+- Route azure/ models to Azure OpenAI with workload identity (#4020)
+- Bump smoot-design for the outlined chip fix, keeping the homepage trending chips unchanged (#4136)
+- Bump certifi to 2026.10.19 (eMudhra CA compromise) (#4147)
+- Mount the flag-gated Contact Us launcher (#4139)
+- Add Misrepresentation to Honor Code Standards of Conduct (#4143)
+- Check ETL ownership in the remaining legacy entrypoints (#4138)
+- Add warehouse-pull sync tasks for MITx Online courses and programs (#4137)
+- remove clause e (#4144)
+- fix migration (#4145)
+- Generate course profile claims for a unit (#4121)
+- Exclude Sloan and Professional Education from home page featured carousel (#4141)
+- Fix flaky ContractAdminPage CSV export test (#4131)
+- Fixes for canvas pdf processing (#4126)
+- Update opensearchproject/opensearch Docker tag to v3.3.2 (#3911)
+- build(deps): bump next from 16.2.7 to 16.4.2 (#4124)
+- Stop matching asset names that differ by a dropped separator (#4106)
+- Hide edX content files until their release date (#4093)
+- Build course units from edX OLX archives (#4095)
+
 Version 0.84.2
 --------------
 

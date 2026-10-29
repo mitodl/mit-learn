@@ -2,6 +2,7 @@ import React from "react"
 import {
   urls as mitxUrls,
   factories as mitxFactories,
+  mockEnrollmentEligible,
 } from "api/mitxonline-test-utils"
 import { makeCourse } from "./test-utils/userPricing"
 import type {
@@ -522,6 +523,7 @@ describe("CoursePage", () => {
           id: 1,
           items: [],
         })
+        mockEnrollmentEligible()
 
         renderWithProviders(<CoursePage readableId={course.readable_id} />)
 

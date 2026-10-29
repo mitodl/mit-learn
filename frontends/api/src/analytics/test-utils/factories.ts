@@ -11,10 +11,10 @@ import type {
   LearnerProgress,
   LearnerProgressResponse,
   MonthlyEngagementTrend,
-  OrgAnalyticsResponse,
   LearnersResponse,
   LearnerWithEnrollments,
-} from "../types"
+} from "@mitodl/ol-analytics-dashboard-api-axios"
+import type { OrgAnalyticsResponse } from "../hooks/organizations"
 
 /**
  * Factories for the analytics API's org-scoped responses.
@@ -49,7 +49,7 @@ const contractUtilization = (
     casing: "lower",
     prefix: "",
   }),
-  contract_id: String(faker.number.int({ min: 1, max: 10000 })),
+  contract_id: faker.number.int({ min: 1, max: 10000 }),
   b2b_contract_name: `${faker.company.name()} Contract`,
   b2b_contract_is_active: true,
   b2b_contract_start_date: "2026-01-01",
@@ -58,6 +58,8 @@ const contractUtilization = (
   b2b_contract_membership_type: "fixed",
   seats_consumed: 62,
   active_learners: 48,
+  certified_learners: 20,
+  // Deprecated alias the API still sends, always equal to certified_learners.
   learners_certified: 20,
   seat_utilization_pct: 62,
   completion_rate_pct: 32.3,
@@ -74,7 +76,7 @@ const enrollmentCompletionFunnel = (
     casing: "lower",
     prefix: "",
   }),
-  contract_id: String(faker.number.int({ min: 1, max: 10000 })),
+  contract_id: faker.number.int({ min: 1, max: 10000 }),
   b2b_contract_name: `${faker.company.name()} Contract`,
   courserun_pk: faker.string.hexadecimal({
     length: 32,
@@ -102,6 +104,8 @@ const monthlyEngagementTrend = (
   new_enrollments: 12,
   enrolling_learners: 9,
   certificates_earned: 5,
+  newly_certified_learners: 5,
+  // Deprecated alias the API still sends, always equal to newly_certified_learners.
   certified_learners: 5,
   total_videos_watched: 900,
   video_watchers: 22,
@@ -144,7 +148,7 @@ const contractIdentity = () => ({
     casing: "lower",
     prefix: "",
   }),
-  contract_id: String(faker.number.int({ min: 1, max: 10000 })),
+  contract_id: faker.number.int({ min: 1, max: 10000 }),
   b2b_contract_name: `${faker.company.name()} Contract`,
 })
 
@@ -196,6 +200,7 @@ const learnerProgress = (
   is_passing: false,
   grade: 0.42,
   letter_grade: null,
+  content_progress: 0.5,
   certificate_issued_on: null,
   certificate_is_revoked: null,
   last_active_on: null,
@@ -218,6 +223,7 @@ const withheldLearnerProgress = (
     is_passing: null,
     grade: null,
     letter_grade: null,
+    content_progress: null,
     certificate_issued_on: null,
     certificate_is_revoked: null,
     last_active_on: null,
@@ -253,8 +259,8 @@ const contractNeedsAttention = (
 /**
  * Tallies `data` by `completion_status`, the same default-from-rows approach
  * `outcomes_withheld_count` above takes. A row with no status (withheld
- * consent) is not counted here either — see the type's own header comment for
- * why that's fine in every environment today.
+ * consent) is not counted here either — see `CompletionStatusCounts` in
+ * `hooks/organizations` for why the buckets need not sum to `total_count`.
  */
 const completionStatusCounts = (
   data: LearnerProgress[],

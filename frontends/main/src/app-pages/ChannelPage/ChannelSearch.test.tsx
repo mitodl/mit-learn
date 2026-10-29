@@ -16,6 +16,7 @@ import type { Channel } from "api/v0"
 import { ChannelTypeEnum } from "api/v0"
 import ChannelPage from "./ChannelPage"
 import { useFeatureFlagEnabled, usePostHog } from "posthog-js/react"
+import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
 import { FeatureFlags } from "@/common/feature_flags"
 import { PostHogEvents } from "@/common/constants"
 
@@ -24,6 +25,7 @@ jest.mock("posthog-js/react", () => ({
   useFeatureFlagEnabled: jest.fn(),
   usePostHog: jest.fn(),
 }))
+jest.mock("@/common/useFeatureFlagsLoaded")
 
 const mockedUseFeatureFlagEnabled = jest.mocked(useFeatureFlagEnabled)
 
@@ -44,11 +46,13 @@ const mockFeatureFlags = (flags: Partial<Record<FeatureFlags, boolean>>) => {
 }
 
 // jest clears calls between tests but not implementations, so reset flags
-// between tests. The redesigned topic page is on by default here: it is what
-// this suite is about, and the one test for the flag being off turns it off
-// for itself.
+// between tests. The redesigned topic page this suite is about is not behind
+// one; the cases that need a flag set it for themselves.
 beforeEach(() => {
-  mockFeatureFlags({ [FeatureFlags.TopicPageRedesign]: true })
+  mockFeatureFlags({})
+  /* The page holds a spinner until the flags are in rather than render on a
+     bootstrapped value, so without this every case here waits on one. */
+  jest.mocked(useFeatureFlagsLoaded).mockReturnValue(true)
 })
 
 const setMockApiResponses = ({
@@ -645,27 +649,6 @@ describe("ChannelSearch", () => {
       ).toBeInTheDocument()
     },
   )
-
-  /**
-   * The flag is the way back: a topic channel with it off draws the page every
-   * other channel draws, which is the page it had before the redesign.
-   */
-  test("a topic page without the flag is the page every channel had", async () => {
-    mockFeatureFlags({ [FeatureFlags.TopicPageRedesign]: false })
-    const { channel } = setMockApiResponses({
-      channelPatch: { channel_type: ChannelTypeEnum.Topic },
-    })
-
-    renderWithProviders(<ChannelPage />, {
-      url: `/c/${channel.channel_type}/${channel.name}`,
-    })
-    /* The facet sidebar is the default layout, and the topic layout drops it. */
-    await screen.findByTestId("facets-container")
-
-    expect(screen.queryByTestId("topic-search-filter-bar")).toBe(null)
-    expect(screen.queryByTestId("topic-results-grid")).toBe(null)
-    expect(screen.queryByTestId("selected-filters")).toBe(null)
-  }, 10000)
 
   /**
    * The topic layout's filter card is a row of controls with nowhere to go on

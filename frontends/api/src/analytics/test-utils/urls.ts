@@ -1,11 +1,17 @@
 import { queryify } from "ol-test-utilities"
 import analyticsAxios from "../axios"
-import { B2B_DASHBOARD_ROOT } from "../clients"
 import type {
   AnalyticsPageParams,
   LearnerProgressParams,
   LearnersParams,
-} from "../types"
+} from "../hooks/organizations"
+
+/**
+ * Where ol-analytics-api mounts the b2b_dashboard tenant. Written out here
+ * rather than read from the client, so a spec change that moves the mount
+ * fails these tests instead of moving the expectation along with it.
+ */
+const B2B_DASHBOARD_ROOT = "/api/v1/analytics"
 
 // Absolute, and read back from the configured axios instance, so the shared
 // request mock can tell analytics requests apart from Learn and MITx ones by
@@ -24,13 +30,13 @@ const orgResource = (
 
 const contractResource = (
   organizationId: string,
-  contractId: string,
+  contractId: number,
   resource: string,
   params?: AnalyticsPageParams | LearnerProgressParams,
 ) =>
   `${getApiBaseUrl()}${B2B_DASHBOARD_ROOT}/organizations/${encodeURIComponent(
     organizationId,
-  )}/contracts/${encodeURIComponent(contractId)}/${resource}${queryify(params)}`
+  )}/contracts/${contractId}/${resource}${queryify(params)}`
 
 const organizations = {
   contractUtilization: (organizationId: string, params?: AnalyticsPageParams) =>
@@ -46,7 +52,7 @@ const organizations = {
 const contracts = {
   contractUtilization: (
     organizationId: string,
-    contractId: string,
+    contractId: number,
     params?: AnalyticsPageParams,
   ) =>
     contractResource(
@@ -57,41 +63,41 @@ const contracts = {
     ),
   enrollmentFunnel: (
     organizationId: string,
-    contractId: string,
+    contractId: number,
     params?: AnalyticsPageParams,
   ) =>
     contractResource(organizationId, contractId, "enrollment-funnel", params),
   engagementTrend: (
     organizationId: string,
-    contractId: string,
+    contractId: number,
     params?: AnalyticsPageParams,
   ) => contractResource(organizationId, contractId, "engagement-trend", params),
   contentEngagement: (
     organizationId: string,
-    contractId: string,
+    contractId: number,
     params?: AnalyticsPageParams,
   ) =>
     contractResource(organizationId, contractId, "content-engagement", params),
-  // queryify explodes arrays into repeated bare keys, matching the client's
-  // `indexes: null` serializer.
+  // queryify explodes arrays into repeated bare keys, as the generated client
+  // serializes them.
   learnerProgress: (
     organizationId: string,
-    contractId: string,
+    contractId: number,
     params?: LearnerProgressParams,
   ) => contractResource(organizationId, contractId, "learner-progress", params),
   learners: (
     organizationId: string,
-    contractId: string,
+    contractId: number,
     params?: LearnersParams,
   ) => contractResource(organizationId, contractId, "learners", params),
   courseRuns: (
     organizationId: string,
-    contractId: string,
+    contractId: number,
     params?: AnalyticsPageParams,
   ) => contractResource(organizationId, contractId, "course-runs", params),
   needsAttention: (
     organizationId: string,
-    contractId: string,
+    contractId: number,
     params?: AnalyticsPageParams,
   ) => contractResource(organizationId, contractId, "needs-attention", params),
 }
