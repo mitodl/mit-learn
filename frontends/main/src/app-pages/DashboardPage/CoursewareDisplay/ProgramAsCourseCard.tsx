@@ -39,7 +39,7 @@ import {
   getProgramAsCourseModuleIds,
 } from "./model/dashboardViewModel"
 import {
-  isVerifiedEnrollmentMode,
+  isPaidProgramEnrollmentMode,
   mitxonlineLegacyUrl,
 } from "@/common/mitxonline"
 import { RiAwardFill, RiMore2Line } from "@remixicon/react"
@@ -183,7 +183,7 @@ const getContextMenuItems = (
     href: mitxonlineLegacyUrl(`/records/${resource.id}/`),
   })
 
-  if (enrollmentMode && !isVerifiedEnrollmentMode(enrollmentMode)) {
+  if (enrollmentMode && !isPaidProgramEnrollmentMode(enrollmentMode)) {
     courseMenuItems.push({
       className: "dashboard-card-menu-item",
       key: "unenroll",
@@ -357,7 +357,7 @@ const ProgramAsCourseCard: React.FC<ProgramAsCourseCardProps> = ({
   const trimmedProgramChain = [...programChain]
   while (
     trimmedProgramChain.length > 0 &&
-    !isVerifiedEnrollmentMode(trimmedProgramChain.at(-1)?.enrollmentMode)
+    !isPaidProgramEnrollmentMode(trimmedProgramChain.at(-1)?.enrollmentMode)
   ) {
     trimmedProgramChain.pop()
   }
@@ -365,7 +365,7 @@ const ProgramAsCourseCard: React.FC<ProgramAsCourseCardProps> = ({
   const useVerifiedEnrollment = [
     courseProgramEnrollment?.enrollment_mode,
     ancestorProgramEnrollment?.enrollment_mode,
-  ].some(isVerifiedEnrollmentMode)
+  ].some(isPaidProgramEnrollmentMode)
 
   const programCertificateUrl = getCertificateLink(
     courseProgramEnrollment?.certificate?.link,

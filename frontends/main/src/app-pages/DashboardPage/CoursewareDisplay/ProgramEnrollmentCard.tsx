@@ -22,7 +22,7 @@ import {
 } from "./CardShared"
 import { RiAwardLine, RiMore2Line } from "@remixicon/react"
 import {
-  isVerifiedEnrollmentMode,
+  isPaidProgramEnrollmentMode,
   mitxonlineLegacyUrl,
 } from "@/common/mitxonline"
 import { getCertificateLink } from "./model/dashboardViewModel"
@@ -58,7 +58,7 @@ export const ProgramEnrollmentCard = ({
   const enrollmentStatus = programEnrollment.certificate?.uuid
     ? EnrollmentStatus.Completed
     : EnrollmentStatus.Enrolled
-  const upgradedAndIncomplete = isVerifiedEnrollmentMode(
+  const upgradedAndIncomplete = isPaidProgramEnrollmentMode(
     programEnrollment.enrollment_mode,
   )
   /**
@@ -112,7 +112,7 @@ export const ProgramEnrollmentCard = ({
   if (programLetterMenuItem) menuItems.push(programLetterMenuItem)
   if (
     program.display_mode !== DisplayModeEnum.Course &&
-    !isVerifiedEnrollmentMode(programEnrollment.enrollment_mode)
+    !isPaidProgramEnrollmentMode(programEnrollment.enrollment_mode)
   ) {
     menuItems.push({
       className: "dashboard-card-menu-item",

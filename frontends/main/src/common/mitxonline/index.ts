@@ -7,7 +7,10 @@ import type {
   V2ProgramRequirement,
 } from "@mitodl/mitxonline-api-axios/v2"
 import { NodeTypeEnum } from "@mitodl/mitxonline-api-axios/v2"
-import { EnrollmentModeEnum } from "@mitodl/mitxonline-api-axios/v3"
+import {
+  EnrollmentModeEnum,
+  ProgramEnrollmentModeEnum,
+} from "@mitodl/mitxonline-api-axios/v3"
 
 const NEXT_PUBLIC_MITX_ONLINE_LEGACY_BASE_URL = env(
   "NEXT_PUBLIC_MITX_ONLINE_LEGACY_BASE_URL",
@@ -391,6 +394,20 @@ const isVerifiedEnrollmentMode = (mode?: string | null) => {
   return mode === EnrollmentModeEnum.Verified
 }
 
+/**
+ * Whether a program enrollment's mode means the learner paid for the program
+ * (or was granted it through a B2B contract). Program enrollments move from
+ * "verified" to the program-only "upgrade" mode (mitxonline hq#14063); both
+ * count as paid until no "verified" program enrollments remain. Course run
+ * enrollments should use `isVerifiedEnrollmentMode` instead.
+ */
+const isPaidProgramEnrollmentMode = (mode?: string | null) => {
+  return (
+    mode === ProgramEnrollmentModeEnum.Upgrade ||
+    mode === ProgramEnrollmentModeEnum.Verified
+  )
+}
+
 export {
   formatPrice,
   formatPriceRange,
@@ -405,6 +422,7 @@ export {
   parseTrackedProgramRequirements,
   getBestRun,
   isVerifiedEnrollmentMode,
+  isPaidProgramEnrollmentMode,
 }
 export type {
   PriceRange,

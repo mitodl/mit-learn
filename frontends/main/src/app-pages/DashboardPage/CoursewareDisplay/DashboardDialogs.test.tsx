@@ -10,6 +10,7 @@ import {
 import { HomeEnrollmentsDisplay } from "./HomeEnrollmentsDisplay"
 import { CoursewareCard } from "./CoursewareCard"
 import {
+  PAID_PROGRAM_ENROLLMENT_MODES,
   setupEnrollments,
   setupOrderHistory,
   setupProgramCertificates,
@@ -20,6 +21,7 @@ import { makeRequest } from "api/test-utils"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import { faker } from "@faker-js/faker/locale/en"
 import invariant from "tiny-invariant"
+import type { ProgramEnrollmentModeEnum } from "@mitodl/mitxonline-api-axios/v3"
 import {
   trackCourseUnenrolled,
   trackProgramUnenrolled,
@@ -299,7 +301,7 @@ describe("DashboardDialogs", () => {
 
 describe("UnenrollProgramDialog", () => {
   const setupProgramCard = (
-    enrollmentMode: string | null = "audit",
+    enrollmentMode: ProgramEnrollmentModeEnum | null = "audit",
     displayMode: string | null = null,
   ) => {
     const mitxOnlineUser = mitxonline.factories.user.user()
@@ -333,24 +335,28 @@ describe("UnenrollProgramDialog", () => {
     ).toBeInTheDocument()
   })
 
-  test("Does not show unenroll option for paid (verified) program enrollments", async () => {
-    const { programEnrollment } = setupProgramCard("verified", null)
+  test.each(PAID_PROGRAM_ENROLLMENT_MODES)(
+    "Does not show unenroll option for paid (%s) program enrollments",
+    async (enrollmentMode) => {
+      const { programEnrollment } = setupProgramCard(enrollmentMode, null)
 
-    renderWithProviders(
-      <CoursewareCard
-        kind="program-enrollment"
-        programEnrollment={programEnrollment}
-      />,
-    )
+      renderWithProviders(
+        <CoursewareCard
+          kind="program-enrollment"
+          programEnrollment={programEnrollment}
+        />,
+      )
 
-    const desktopCard = await screen.findByTestId("enrollment-card-desktop")
-    const contextMenuButton = within(desktopCard).getByLabelText("More options")
-    await user.click(contextMenuButton)
+      const desktopCard = await screen.findByTestId("enrollment-card-desktop")
+      const contextMenuButton =
+        within(desktopCard).getByLabelText("More options")
+      await user.click(contextMenuButton)
 
-    expect(
-      screen.queryByRole("menuitem", { name: "Unenroll" }),
-    ).not.toBeInTheDocument()
-  })
+      expect(
+        screen.queryByRole("menuitem", { name: "Unenroll" }),
+      ).not.toBeInTheDocument()
+    },
+  )
 
   test("Does not show unenroll option for program-as-course display_mode programs", async () => {
     const { programEnrollment } = setupProgramCard("audit", "course")

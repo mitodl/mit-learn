@@ -10,7 +10,7 @@ const past = moment().subtract(30, "days").toISOString()
  * than cast from a bare object, so a required field going missing is a type
  * error here rather than something these tests quietly tolerate.
  */
-const enrollmentWith = (flag?: boolean) => ({
+const enrollmentWith = (flag: boolean) => ({
   ...mitxonline.factories.enrollment.courseEnrollment(),
   has_course_staff_role: flag,
 })
@@ -19,13 +19,6 @@ describe("hasCourseStaffRole", () => {
   test.each([
     { label: "true", enrollment: enrollmentWith(true), expected: true },
     { label: "false", enrollment: enrollmentWith(false), expected: false },
-    // mitxonline declares the field required and non-nullable, so while the
-    // generated client lags it is absent rather than null.
-    {
-      label: "missing",
-      enrollment: enrollmentWith(undefined),
-      expected: false,
-    },
   ])("reads $label as $expected", ({ enrollment, expected }) => {
     expect(hasCourseStaffRole(enrollment)).toBe(expected)
   })
