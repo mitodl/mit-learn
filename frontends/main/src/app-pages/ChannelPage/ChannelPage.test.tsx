@@ -24,11 +24,10 @@ jest.mock("posthog-js/react", () => ({
 }))
 jest.mock("@/common/useFeatureFlagsLoaded")
 
-/* The topic cases below are the redesigned page, which is behind this flag. */
+/* Every flag off. The topic cases below are the redesigned page, which is no
+   longer behind one; the department cases turn theirs on for themselves. */
 beforeEach(() => {
-  jest
-    .mocked(useFeatureFlagEnabled)
-    .mockImplementation((flag) => flag === FeatureFlags.TopicPageRedesign)
+  jest.mocked(useFeatureFlagEnabled).mockImplementation(() => false)
   /* The page holds a spinner until the flags are in rather than render on a
      bootstrapped value, so without this every case here waits on one. Loaded
      is the state these tests are about; the waiting is its own case below. */
@@ -410,8 +409,8 @@ describe("while the feature flags are still loading", () => {
    */
   test("holds a spinner on a page a flag decides", async () => {
     const { channel } = setupApis({
-      search_filter: "topic=Physics",
-      channel_type: ChannelTypeEnum.Topic,
+      search_filter: "department=Theater+Arts",
+      channel_type: ChannelTypeEnum.Department,
     })
     renderWithProviders(<ChannelPage />, {
       url: `/c/${channel.channel_type}/${channel.name}`,
@@ -424,22 +423,35 @@ describe("while the feature flags are still loading", () => {
   })
 
   /**
-   * Only topics and departments are redesigned. Every other channel draws the
-   * same page whatever the flags come back saying, so waiting on them buys
-   * nothing and costs the reader a spinner.
+   * Only the department page is decided by a flag. Every other channel draws
+   * the same page whatever the flags come back saying -- the topic page among
+   * them, now that the page it had before the redesign is gone -- so waiting on
+   * them buys nothing and costs the reader a spinner.
    */
-  test("draws a page no flag decides rather than waiting on one", async () => {
-    const { channel } = setupApis({
-      search_filter: "department=mechanical",
-      channel_type: ChannelTypeEnum.Unit,
-    })
-    renderWithProviders(<ChannelPage />, {
-      url: `/c/${channel.channel_type}/${channel.name}`,
-    })
+  test.each([
+    {
+      channelType: ChannelTypeEnum.Unit,
+      searchFilter: "department=mechanical",
+    },
+    { channelType: ChannelTypeEnum.Topic, searchFilter: "topic=Physics" },
+  ])(
+    "draws a $channelType page, which no flag decides, rather than waiting",
+    async ({ channelType, searchFilter }) => {
+      const { channel } = setupApis({
+        search_filter: searchFilter,
+        channel_type: channelType,
+      })
+      if (channelType === ChannelTypeEnum.Topic) {
+        setupTopicApis(channel)
+      }
+      renderWithProviders(<ChannelPage />, {
+        url: `/c/${channel.channel_type}/${channel.name}`,
+      })
 
-    await screen.findByRole("heading", { level: 1, name: channel.title })
-    expect(screen.queryByRole("progressbar")).toBe(null)
-  })
+      await screen.findByRole("heading", { level: 1, name: channel.title })
+      expect(screen.queryByRole("progressbar")).toBe(null)
+    },
+  )
 
   /**
    * With no PostHog configured there is nothing to wait for either: the
@@ -450,9 +462,12 @@ describe("while the feature flags are still loading", () => {
   test("draws the page when PostHog is not configured", async () => {
     delete process.env.NEXT_PUBLIC_POSTHOG_API_KEY
     jest.mocked(useFeatureFlagEnabled).mockReturnValue(false)
+    /* A department, that being the channel type still waiting on a flag: the
+       guard this covers is the one that stops that wait going on for ever, so
+       a type that never waits would pass whether or not the guard is there. */
     const { channel } = setupApis({
-      search_filter: "topic=Physics",
-      channel_type: ChannelTypeEnum.Topic,
+      search_filter: "department=Theater+Arts",
+      channel_type: ChannelTypeEnum.Department,
     })
     renderWithProviders(<ChannelPage />, {
       url: `/c/${channel.channel_type}/${channel.name}`,
@@ -571,12 +586,6 @@ describe("Channel Pages, Department only", () => {
 })
 
 describe("Channel Pages, Topic only, hero", () => {
-  beforeEach(() => {
-    jest
-      .mocked(useFeatureFlagEnabled)
-      .mockImplementation((flag) => flag === FeatureFlags.TopicPageRedesign)
-  })
-
   test("stands on plain white, with no photograph behind the title", async () => {
     /* The design used to run a photograph across the top of this and no longer
        does. Asserted for the topic page specifically because the photograph

@@ -73,9 +73,9 @@ const ChannelPage: React.FC = () => {
    *
    * Only where there is something to wait for, which is twice worth asking.
    *
-   * Only these two channel types are redesigned. Every other one draws the
+   * Only the department page is still behind a flag. Every other one draws the
    * page it has always drawn whatever the flags come back saying, so waiting
-   * on them buys a unit or pathway page nothing but the spinner.
+   * on them buys a topic, unit or pathway page nothing but the spinner.
    *
    * And only where there is a PostHog at all: with no key configured the
    * provider neither initialises nor mounts, so nothing ever reports the
