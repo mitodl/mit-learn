@@ -574,7 +574,11 @@ def clear_featured_caches(channels):
     Takes `(channel_type, name)` pairs: a channel's page lives under its own
     type, and every type has a featured row to go stale.
     """
-    clear_views_cache(key_prefix="featured_resources")
+    try:
+        clear_views_cache(key_prefix="featured_resources")
+    except Exception:
+        # a Redis outage must not skip the Fastly purges
+        log.exception("Featured cache Redis clear failed")
     purges = [
         (f"/c/{channel_type}/{name}", False) for channel_type, name in channels
     ] + [("/", True)]

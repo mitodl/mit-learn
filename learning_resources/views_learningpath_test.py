@@ -814,3 +814,16 @@ def test_clear_featured_caches_continues_after_purge_failure(mocker):
     views.clear_featured_caches([("unit", "mitx"), ("unit", "ocw")])
 
     assert mock_purge.call_count == 3
+
+
+def test_clear_featured_caches_purges_after_redis_failure(mocker):
+    """A failed Redis clear must not skip the Fastly purges"""
+    mocker.patch(
+        "learning_resources.views.clear_views_cache",
+        side_effect=ConnectionError("redis down"),
+    )
+    mock_purge = mocker.patch("learning_resources.views.call_fastly_purge_api")
+
+    views.clear_featured_caches([("unit", "mitx")])
+
+    assert mock_purge.call_count == 2
