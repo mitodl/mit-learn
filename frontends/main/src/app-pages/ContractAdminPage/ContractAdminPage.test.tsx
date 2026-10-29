@@ -1,5 +1,6 @@
 import React from "react"
 import { renderWithProviders, screen, user, within } from "@/test-utils"
+import type { UseFeatureFlagEnabled } from "@/test-utils"
 import { act, waitFor } from "@testing-library/react"
 import { setMockResponse } from "api/test-utils"
 import { factories, urls } from "api/mitxonline-test-utils"
@@ -23,7 +24,9 @@ jest.mock("posthog-js/react", () => ({
 }))
 jest.mock("@/common/useFeatureFlagsLoaded")
 const mockedUseFeatureFlagsLoaded = jest.mocked(useFeatureFlagsLoaded)
-const mockedUseFeatureFlagEnabled = jest.mocked(useFeatureFlagEnabled)
+const mockedUseFeatureFlagEnabled = jest.mocked<UseFeatureFlagEnabled>(
+  useFeatureFlagEnabled,
+)
 
 const managerOrgsUrl = urls.organization.managerOrganizationsList()
 const managerContractDetailUrl = urls.contracts.managerContractDetail

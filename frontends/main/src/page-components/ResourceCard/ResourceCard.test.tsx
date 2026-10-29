@@ -8,6 +8,7 @@ import {
   waitFor,
   expectWindowNavigation,
 } from "@/test-utils"
+import type { UseFeatureFlagEnabled } from "@/test-utils"
 import type { User } from "api/hooks/user"
 import { ResourceCard } from "./ResourceCard"
 import { MicroUserListRelationship } from "api"
@@ -112,7 +113,7 @@ const setupCard = ({
  */
 const setRedesignFlag = (enabled: boolean) => {
   jest
-    .mocked(useFeatureFlagEnabled)
+    .mocked<UseFeatureFlagEnabled>(useFeatureFlagEnabled)
     .mockImplementation((flag) =>
       enabled && flag === FeatureFlags.ResourceCardRedesign ? true : undefined,
     )

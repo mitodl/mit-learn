@@ -12,6 +12,7 @@ import {
   renderWithProviders,
   user,
 } from "@/test-utils"
+import type { UseFeatureFlagEnabled } from "@/test-utils"
 import { FeatureFlags } from "@/common/feature_flags"
 import { PostHogEvents } from "@/common/constants"
 import {
@@ -57,7 +58,7 @@ const paidMode = factories.courses.enrollmentMode({ requires_payment: true })
  */
 const setRedesignFlag = (enabled: boolean) => {
   jest
-    .mocked(useFeatureFlagEnabled)
+    .mocked<UseFeatureFlagEnabled>(useFeatureFlagEnabled)
     .mockImplementation((flag) =>
       enabled && flag === FeatureFlags.ResourceCardRedesign ? true : undefined,
     )

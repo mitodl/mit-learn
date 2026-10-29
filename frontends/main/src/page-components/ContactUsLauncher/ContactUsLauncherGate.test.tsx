@@ -1,6 +1,7 @@
 import React from "react"
 import { factories } from "api/test-utils"
 import { renderWithProviders, screen } from "@/test-utils"
+import type { UseFeatureFlagEnabled } from "@/test-utils"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
 import { ContactUsLauncher } from "@mitodl/smoot-design/contact-us"
@@ -14,7 +15,7 @@ jest.mock("@mitodl/smoot-design/contact-us", () => ({
   ContactUsLauncher: jest.fn(() => <div data-testid="launcher" />),
 }))
 
-const mockEnabled = jest.mocked(useFeatureFlagEnabled)
+const mockEnabled = jest.mocked<UseFeatureFlagEnabled>(useFeatureFlagEnabled)
 const mockLoaded = jest.mocked(useFeatureFlagsLoaded)
 const mockLauncher = jest.mocked(ContactUsLauncher)
 

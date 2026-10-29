@@ -6,6 +6,7 @@ import {
   user,
   waitFor,
 } from "@/test-utils"
+import type { UseFeatureFlagEnabled } from "@/test-utils"
 import SearchPage from "./SearchPage"
 import { setMockResponse, urls, factories, makeRequest } from "api/test-utils"
 import type {
@@ -31,7 +32,9 @@ jest.mock("posthog-js/react", () => ({
   usePostHog: jest.fn(),
 }))
 
-const mockedUseFeatureFlagEnabled = jest.mocked(useFeatureFlagEnabled)
+const mockedUseFeatureFlagEnabled = jest.mocked<UseFeatureFlagEnabled>(
+  useFeatureFlagEnabled,
+)
 
 /**
  * Mock the named flags, leaving every other flag `undefined`—PostHog's value
