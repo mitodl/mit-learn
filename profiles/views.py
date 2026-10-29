@@ -111,10 +111,9 @@ class ProgramLetterViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
         """
         Return the letter, 404ing if its certificate is gone or revoked.
 
-        certificate is nullable and its column has no FK constraint, since
-        ProgramCertificate is unmanaged, so the id can outlive the row. Every
-        field of the response derives from the certificate, so there is nothing
-        to render without it.
+        certificate is nullable, and a certificate_id with no matching row
+        raises DoesNotExist on access. Every field of the response derives from
+        the certificate, so there is nothing to render without it.
         """
         letter = super().get_object()
         try:

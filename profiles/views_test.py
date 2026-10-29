@@ -610,9 +610,9 @@ def test_program_letter_api_view_without_certificate(
     """
     A letter whose certificate is gone 404s instead of erroring.
 
-    ProgramCertificate is unmanaged, so certificate_id has no FK constraint and
-    can outlive the row it points at. Every field of the response derives from
-    the certificate, so there is nothing to serve without one. Nothing is mocked
+    certificate is nullable, and a certificate_id with no matching row raises
+    DoesNotExist on access. Every field of the response derives from the
+    certificate, so there is nothing to serve without one. Nothing is mocked
     here on purpose: MICROMASTERS_CMS_API_URL is set because the template fetch
     dereferences the certificate too, and the view has to stop short of it.
     """
