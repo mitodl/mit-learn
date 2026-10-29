@@ -62,6 +62,10 @@ def username_from_email(apps, schema_editor):
 class Migration(migrations.Migration):
     """Set username to the lowercased email where that can't collide."""
 
+    # Each batch commits on its own, so a batch releases its row locks instead
+    # of holding them until every pass is done. A rerun picks up where an
+    # interrupted one stopped.
+    atomic = False
     dependencies = [
         ("users", "0012_user_is_sso_user"),
     ]
