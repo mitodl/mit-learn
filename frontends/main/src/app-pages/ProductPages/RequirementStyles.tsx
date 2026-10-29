@@ -18,4 +18,10 @@ const ReqTitleNote = styled("span")(({ theme }) => ({
   color: theme.custom.colors.silverGrayDark,
 }))
 
-export { RequirementsListing, ReqSubsectionTitle, ReqTitleNote }
+const ReqDescription = styled("p")(({ theme }) => ({
+  ...theme.typography.body1,
+  color: theme.custom.colors.silverGrayDark,
+  margin: "4px 0 0",
+}))
+
+export { RequirementsListing, ReqSubsectionTitle, ReqTitleNote, ReqDescription }

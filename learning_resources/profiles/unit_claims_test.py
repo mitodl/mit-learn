@@ -17,15 +17,15 @@ from learning_resources.models import (
     ResourceProfileConfiguration,
     Unit,
 )
-from learning_resources.profiles import unit_claims
+from learning_resources.profiles import claims
+from learning_resources.profiles.claims import (
+    ClaimExtractionError,
+    call_llm,
+)
 from learning_resources.profiles.schemas import UnitExtraction
 from learning_resources.profiles.unit_claims import (
-    ClaimExtractionError,
-    CourseContext,
-    call_llm,
     generate_unit_claims,
-    load_unit_stage,
-    title_context,
+    load_unit_extractor,
 )
 from main.utils import now_in_utc
 
@@ -75,9 +75,9 @@ def _unit_out(prompt):
 def fake_llm(mocker):
     """Replace the model with one that answers from the prompt"""
     return mocker.patch.object(
-        unit_claims,
+        claims,
         "call_llm",
-        side_effect=lambda _stage, prompt: (_unit_out(prompt), "unit raw"),
+        side_effect=lambda _extractor, prompt: (_unit_out(prompt), "unit raw"),
     )
 
 
@@ -125,8 +125,7 @@ def _build_unit(run=None, **kwargs):
 
 
 def _generate(unit, **kwargs):
-    """Generate a unit's claims with the course title as its context"""
-    return generate_unit_claims(unit, title_context(unit.run), **kwargs)
+    return generate_unit_claims(unit, **kwargs)
 
 
 def _prompt(fake_llm, call=0):
@@ -158,19 +157,46 @@ def test_generate_unit_claims(fake_llm):
     assert output["skills"][0]["evidence"][0]["verified"] == "unverified"
 
 
-def test_context_in_prompt_and_key(fake_llm):
-    """The context's digest is in the prompt, and its key in the cache key"""
-    unit = _build_unit()
-    first = generate_unit_claims(unit, CourseContext("a" * 64, "Outline: Week 0"))
+def test_outline_in_prompt_and_key(fake_llm):
+    """The run's units, in order, are in the prompt and its key"""
+    unit = _build_unit(position=1)
+    UnitFactory.create(run=unit.run, external_id="seq1", title="Week 1", position=0)
+    UnitFactory.create(
+        run=unit.run, kind=Unit.Kind.BIN, external_id="bin:pdf", position=None
+    )
+    first = _generate(unit)
 
-    assert "Outline: Week 0" in _prompt(fake_llm)
-    assert generate_unit_claims(unit, CourseContext("a" * 64, "Outline")) == first
-    assert generate_unit_claims(unit, CourseContext("b" * 64, "Outline")) != first
+    prompt = _prompt(fake_llm)
+    assert "Units (course order): 1. Week 1; 2. Week 0" in prompt
+    assert "title='Week 0' | kind=unit | unit 2 of 2" in prompt
+    assert _generate(unit) == first
+    UnitFactory.create(run=unit.run, external_id="seq2", title="Week 2", position=2)
+    assert _generate(unit) != first
     assert fake_llm.call_count == 2
 
 
-def test_title_context_in_key(fake_llm):
-    """Units with no context are keyed by their course title"""
+def test_context_extraction_not_needed(fake_llm):
+    """A unit is extracted without its run's context unit being extracted"""
+    UnitFactory.create(
+        run=_build_unit().run, kind=Unit.Kind.CONTEXT, external_id="context"
+    )
+    ResourceProfileConfiguration.objects.filter(stage="context").delete()
+
+    assert _generate(Unit.objects.get(external_id="seq0")) is not None
+    assert fake_llm.call_count == 1
+
+
+def test_context_unit_rejected(fake_llm):
+    """The context unit isn't extracted with the unit prompt"""
+    unit = _build_unit(kind=Unit.Kind.CONTEXT, position=None)
+
+    with pytest.raises(ValueError, match="generate_context_claims"):
+        _generate(unit)
+    assert fake_llm.call_count == 0
+
+
+def test_title_in_key(fake_llm):
+    """Units are keyed by their course title"""
     unit = _build_unit()
     other = _build_unit()
 
@@ -294,7 +320,7 @@ def test_unit_without_text_skipped(fake_llm):
 def test_failed_call_stores_nothing(mocker):
     """A call that fails raises and stores nothing"""
     mocker.patch.object(
-        unit_claims, "call_llm", side_effect=ClaimExtractionError("bad response")
+        claims, "call_llm", side_effect=ClaimExtractionError("bad response")
     )
 
     with pytest.raises(ClaimExtractionError):
@@ -306,12 +332,12 @@ def test_missing_configuration():
     """Generation needs the unit stage configured"""
     ResourceProfileConfiguration.objects.all().delete()
     with pytest.raises(ClaimExtractionError, match="unit"):
-        load_unit_stage()
+        load_unit_extractor()
 
 
 def test_call_llm(mocker, settings):
     """call_llm returns the parsed output and the raw tool call arguments"""
-    stage = load_unit_stage()
+    extractor = load_unit_extractor()
     output = _unit_out("=== SOURCE S01 | x ===\nsome source text here")
     raw = AIMessage(
         content="",
@@ -325,10 +351,10 @@ def test_call_llm(mocker, settings):
         "parsed": output,
         "parsing_error": None,
     }
-    chat = mocker.patch.object(unit_claims, "ChatLiteLLM")
+    chat = mocker.patch.object(claims, "ChatLiteLLM")
     chat.return_value.with_structured_output.return_value = structured
 
-    assert call_llm(stage, "combined prompt") == (output, '{"summary": 1}')
+    assert call_llm(extractor, "combined prompt") == (output, '{"summary": 1}')
     chat.assert_called_once_with(
         model="test-model",
         temperature=None,
@@ -357,10 +383,10 @@ def test_call_llm_with_parameters(mocker):
         "parsed": _unit_out("=== SOURCE S01 | x ===\nsome source text here"),
         "parsing_error": None,
     }
-    chat = mocker.patch.object(unit_claims, "ChatLiteLLM")
+    chat = mocker.patch.object(claims, "ChatLiteLLM")
     chat.return_value.with_structured_output.return_value = structured
 
-    call_llm(load_unit_stage(), "combined prompt")
+    call_llm(load_unit_extractor(), "combined prompt")
 
     kwargs = chat.call_args.kwargs
     assert kwargs["temperature"] == 0.2
@@ -380,11 +406,11 @@ def test_call_llm_invalid_response(mocker):
         "parsed": None,
         "parsing_error": ValueError("bad"),
     }
-    chat = mocker.patch.object(unit_claims, "ChatLiteLLM")
+    chat = mocker.patch.object(claims, "ChatLiteLLM")
     chat.return_value.with_structured_output.return_value = structured
 
     with pytest.raises(ClaimExtractionError, match="no valid UnitExtraction"):
-        call_llm(load_unit_stage(), "combined prompt")
+        call_llm(load_unit_extractor(), "combined prompt")
     assert structured.invoke.call_count == 1
 
 
@@ -407,10 +433,10 @@ def test_call_llm_drops_invalid_claims(mocker):
         "parsed": None,
         "parsing_error": ValueError("bad"),
     }
-    chat = mocker.patch.object(unit_claims, "ChatLiteLLM")
+    chat = mocker.patch.object(claims, "ChatLiteLLM")
     chat.return_value.with_structured_output.return_value = structured
 
-    parsed, _ = call_llm(load_unit_stage(), "combined prompt")
+    parsed, _ = call_llm(load_unit_extractor(), "combined prompt")
 
     assert structured.invoke.call_count == 1
     assert [concept.label for concept in parsed.concepts] == ["Newton's second law"]
@@ -435,9 +461,9 @@ def test_call_llm_fails_when_only_claims_are_valid(mocker):
         "parsed": None,
         "parsing_error": ValueError("bad"),
     }
-    chat = mocker.patch.object(unit_claims, "ChatLiteLLM")
+    chat = mocker.patch.object(claims, "ChatLiteLLM")
     chat.return_value.with_structured_output.return_value = structured
 
     with pytest.raises(ClaimExtractionError, match="summary"):
-        call_llm(load_unit_stage(), "combined prompt")
+        call_llm(load_unit_extractor(), "combined prompt")
     assert structured.invoke.call_count == 1

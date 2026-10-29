@@ -35,6 +35,11 @@ def transform_program_certificate(row: dict) -> dict:
         "user_address_postal_code": row.get("user_address_postal_code"),
         "user_street_address": row.get("user_street_address"),
         "program_completion_timestamp": row.get("program_completion_timestamp"),
+        # The warehouse view gains is_revoked (boolean, never null) only after
+        # this code ships. Until then it leaves revoked certificates out, so a
+        # row without the column is not revoked. A null value is not defaulted
+        # and fails the upsert.
+        "is_revoked": row.get("is_revoked", False),
     }
 
 

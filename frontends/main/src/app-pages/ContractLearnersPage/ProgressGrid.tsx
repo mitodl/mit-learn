@@ -21,11 +21,12 @@ import {
   Typography,
 } from "ol-components"
 import { Alert, Button, VisuallyHidden } from "@mitodl/smoot-design"
-import { initials } from "ol-utilities"
+import { formatDate, initials } from "ol-utilities"
 import {
   analyticsContractQueries,
   type CompletionStatusFilter,
   type CourseRun,
+  type LearnerEnrollment,
   type LearnerWithEnrollments,
 } from "api/analytics-hooks/organizations"
 import {
@@ -69,6 +70,27 @@ const STATUS_SYMBOL: Record<
 const attentionReason = (status: DisplayStatus) =>
   status === "not-started" ? "Not started" : "No activity in 30+ days"
 
+/**
+ * Only started modules show a date. `formatDate` rather than `new Date`, which
+ * reads this date-only field as UTC midnight — see `LearnerRow`.
+ */
+const lastActivity = (enrollment: LearnerEnrollment, status: DisplayStatus) => {
+  if (
+    status !== "in-progress" &&
+    status !== "completed" &&
+    status !== "certificate"
+  ) {
+    return null
+  }
+  if (enrollment.last_active_on) {
+    return {
+      prefix: ", last active ",
+      text: formatDate(enrollment.last_active_on),
+    }
+  }
+  return status === "in-progress" ? { prefix: ", ", text: "No activity" } : null
+}
+
 const LEGEND_STATUSES: DisplayStatus[] = [
   "completed",
   "certificate",
@@ -91,7 +113,7 @@ const Grid = styled.div({
 
 const GridRow = styled.div(({ theme }) => ({
   display: "flex",
-  alignItems: "center",
+  alignItems: "stretch",
   borderBottom: `1px solid ${theme.custom.colors.silverGrayLight}`,
   "&:last-child": { borderBottom: "none" },
 }))
@@ -199,13 +221,20 @@ const Legend = styled.ul(({ theme }) => ({
   "& li": { display: "inline-flex", alignItems: "center", gap: "6px" },
 }))
 
+const ActivityDate = styled.div(({ theme }) => ({
+  ...theme.typography.body3,
+  fontSize: theme.typography.pxToRem(11),
+  color: theme.custom.colors.darkGray2,
+  marginTop: "4px",
+}))
+
 const Muted = styled.span(({ theme }) => ({
   color: theme.custom.colors.silverGrayDark,
 }))
 
 type ProgressGridProps = {
   orgUuid: string
-  contractId: string
+  contractId: number
   search: string
   completionStatus: CompletionStatusFilter[] | undefined
   needsAttentionOnly: boolean
@@ -443,6 +472,7 @@ const ProgressGrid: React.FC<ProgressGridProps> = ({
             </AttentionMark>
             Needs attention
           </li>
+          <li>Dates show last activity</li>
         </Legend>
         <ScrollRegion
           ref={regionRef}
@@ -518,6 +548,7 @@ const ProgressGrid: React.FC<ProgressGridProps> = ({
                           )
                         }
                         const status = getDisplayStatus(enrollment)
+                        const activity = lastActivity(enrollment, status)
                         return (
                           <ModuleCell key={run.courserun_id} role="cell">
                             <StatusSymbol status={status} />
@@ -533,6 +564,14 @@ const ProgressGrid: React.FC<ProgressGridProps> = ({
                                   </VisuallyHidden>
                                 </AttentionMark>
                               </Tooltip>
+                            ) : null}
+                            {activity ? (
+                              <ActivityDate>
+                                <VisuallyHidden>
+                                  {activity.prefix}
+                                </VisuallyHidden>
+                                {activity.text}
+                              </ActivityDate>
                             ) : null}
                           </ModuleCell>
                         )

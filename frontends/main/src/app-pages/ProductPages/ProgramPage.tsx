@@ -33,6 +33,7 @@ import ProgramInfoBox from "./InfoBoxProgram"
 import RequirementItemCard from "./RequirementItemCard"
 import {
   RequirementsListing,
+  ReqDescription,
   ReqSubsectionTitle,
   ReqTitleNote,
 } from "./RequirementStyles"
@@ -139,6 +140,9 @@ const RequirementsSection: React.FC<RequirementsSectionProps> = ({
           {note ? ": " : ""}
           {note ? <ReqTitleNote>{note}</ReqTitleNote> : null}
         </ReqSubsectionTitle>
+        {req.description ? (
+          <ReqDescription>{req.description}</ReqDescription>
+        ) : null}
         <RequirementsListing>
           {req.items.map((item) => (
             <RequirementItemCard
@@ -307,7 +311,11 @@ const ProgramPage: React.FC<ProgramPageProps> = ({ readableId }) => {
       ) : null}
       {page.faqs.length ? <FaqsSection faqs={page.faqs} /> : null}
       {page.testimonials.length ? (
-        <TestimonialsSection testimonials={page.testimonials} />
+        <TestimonialsSection
+          testimonials={page.testimonials}
+          itemReviewedName={page.title}
+          itemReviewedDescription={page.program_details.page?.description}
+        />
       ) : null}
     </ProductPageTemplate>
   )

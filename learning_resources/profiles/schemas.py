@@ -152,7 +152,7 @@ class Conflict(Strict):
 class CourseContextOut(Strict):
     title: str
     stated_audience: list[Statement]
-    description: Statement
+    description: Statement | None = None
     objectives: list[Statement]
     prerequisites_status: Literal["stated", "explicitly_none", "not_found"]
     prerequisites: list[PrereqStatement]
@@ -161,4 +161,6 @@ class CourseContextOut(Strict):
     )
     instructional_outline: list[OutlineEntry]
     conflicts: list[Conflict]
-    notes: list[str]
+    extraction_notes: list[str] = Field(
+        description="Gaps, ambiguities, material you could not use"
+    )

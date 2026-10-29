@@ -11,7 +11,10 @@ from learning_resources.tasks import (
 class Command(BaseCommand):
     """Generate resource profile claims for the units of courses' best runs"""
 
-    help = "Generate resource profile claims for the units of courses' best runs"
+    help = (
+        "Generate resource profile claims for the context unit, units and bins"
+        " of courses' best runs"
+    )
 
     def add_arguments(self, parser):
         parser.add_argument(

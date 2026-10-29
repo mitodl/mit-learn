@@ -5,6 +5,7 @@ learning_resources tasks
 import datetime as datetime_module
 import logging
 import uuid
+from collections import Counter
 from datetime import UTC, datetime
 
 import boto3
@@ -13,7 +14,7 @@ from celery.exceptions import Ignore
 from django.conf import settings
 from django.core.cache import caches
 from django.db import OperationalError
-from django.db.models import Q
+from django.db.models import F, Q
 from django.utils import timezone
 
 from learning_resources.api import (
@@ -1515,26 +1516,65 @@ def generate_unit_claims_for_resource(
     resource_id: int, *, overwrite: bool = False
 ) -> dict | None:
     """
-    Generate step 1 resource profile claims for a course's best run.
+    Generate step 1 resource profile claims for a course's best run: its
+    context unit, then each of its units and bins.
+
+    The context and the units don't depend on each other, so one that fails is
+    logged and skipped without costing the rest; running again retries only
+    what failed, since stored extractions are reused.
 
     Args:
         resource_id (int): the LearningResource id
         overwrite (bool): regenerate claims that are already stored
 
     Returns:
-        dict | None: the generation counts, or None when the best run has no
-            units
+        dict | None: counts of context and unit extractions that were
+            extracted, skipped (no text, or over the input budget) and failed,
+            or None when the best run has no units
     """
-    from learning_resources.profiles.run_claims import generate_run_claims
+    from learning_resources.models import Unit
+    from learning_resources.profiles.context_claims import generate_context_claims
+    from learning_resources.profiles.unit_claims import generate_unit_claims
 
     resource = LearningResource.objects.get(id=resource_id)
     run = resource.best_run
     if not run or not run.units.exists():
         log.info("No units to generate claims for in %s", resource.readable_id)
         return None
-    stats = generate_run_claims(run, overwrite=overwrite)
-    log.info("Generated unit claims for %s: %s", resource.readable_id, stats)
-    return stats
+
+    stats = Counter()
+
+    def _extract(kind, external_id, generate):
+        try:
+            extraction = generate()
+        except Exception:
+            log.exception(
+                "Claim extraction failed for %s %s of run %s",
+                kind,
+                external_id,
+                run.run_id,
+            )
+            stats[f"{kind}_failed"] += 1
+            return
+        stats[f"{kind}_extracted" if extraction else f"{kind}_skipped"] += 1
+
+    if run.units.filter(kind=Unit.Kind.CONTEXT).exists():
+        _extract(
+            Unit.Kind.CONTEXT,
+            "context",
+            lambda: generate_context_claims(run, overwrite=overwrite),
+        )
+    units = run.units.exclude(kind=Unit.Kind.CONTEXT).order_by(
+        F("position").asc(nulls_last=True), "external_id"
+    )
+    for unit in units:
+        _extract(
+            Unit.Kind.UNIT,
+            unit.external_id,
+            lambda unit=unit: generate_unit_claims(unit, overwrite=overwrite),
+        )
+    log.info("Generated unit claims for %s: %s", resource.readable_id, dict(stats))
+    return dict(stats)
 
 
 @app.task(acks_late=True)

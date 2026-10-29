@@ -70,7 +70,7 @@ export const useCourseEnrollment = (
   const posthog = usePostHog()
   // Paid enrollments are gated inside useReplaceBasketItem; the free track
   // calls the enrollment endpoint directly and so gates here.
-  const { ensureCompliance } = useComplianceGate()
+  const { mutateWithCompliance } = useComplianceGate()
 
   const isEnrolledInSelected =
     selectedRun !== undefined && enrolledRunIds.includes(selectedRun.id)
@@ -105,18 +105,21 @@ export const useCourseEnrollment = (
       trackStartEnrollment(course.title)
       if (kind === "paid") {
         const product = selectedRun?.products?.[0]
-        if (product) {
+        if (selectedRun && product) {
           trackBeginCheckout({
             courseName: course.title,
             courseId: course.readable_id,
             value: product.price ? parseFloat(product.price) : 0,
           })
-          replaceBasketItem.mutate(product.id)
+          replaceBasketItem.mutate(product.id, {
+            type: "course_run",
+            id: selectedRun.id,
+          })
         }
       } else if (kind === "free") {
         if (selectedRun) {
-          if (!(await ensureCompliance())) return
-          createEnrollment.mutate(
+          await mutateWithCompliance(
+            createEnrollment,
             { run_id: selectedRun.id },
             {
               onSuccess: () => {

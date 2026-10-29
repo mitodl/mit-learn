@@ -271,7 +271,26 @@ const FollowingIcon = styled(RiCheckboxCircleFill)({
   },
 })
 
-const FollowPill = styled.div(({ theme }) => ({
+const FollowPill = styled.span(({ theme }) => ({
+  /* Part of the title's inline flow rather than a box set beside it, so that
+     the pill follows the title's last word -- see `TitleRow`.
+
+     Bottom-aligned, as the design has it: the pill sits on the title's
+     baseline rather than centred against its 60px cap height. `bottom` is the
+     line box's bottom, which is where the flex row's `flex-end` put it, so a
+     title short enough to share its line is drawn exactly as before. */
+  display: "inline-block",
+  verticalAlign: "center",
+  marginLeft: "20px",
+  /* Holds the pill clear of the title's descenders on the widths where even
+     the last line leaves no room beside it. The title's 60px line box has room
+     for the pill and this margin both, so it costs nothing -- moves nothing --
+     on a line the pill does share. */
+  marginTop: "20px",
+  [theme.breakpoints.down("sm")]: {
+    /* The narrow layout spaces these itself -- see `TitleRow`. */
+    margin: 0,
+  },
   "button, a": {
     backgroundColor: theme.custom.colors.lightGray1,
     color: theme.custom.colors.silverGrayDark,
@@ -369,7 +388,7 @@ const BannerArea = styled("div", {
      same distance from the title whether or not the channel features anything.
      The updated one settles it at 24px either way. */
     gap: updatedSpacing ? "24px" : "32px",
-    maxWidth: "736px",
+    maxWidth: "100%",
     /* The shared Breadcrumbs carries its own 16px bottom padding, which would
      stack with that gap and push the title further from the trail than any
      of the design's spacings. */
@@ -390,6 +409,7 @@ const BannerArea = styled("div", {
     },
     [theme.breakpoints.down("sm")]: {
       gap: "16px",
+      maxWidth: "100%",
     },
     /* The 8px here replaces the zeroed bottom padding above, which is why this
      follows it rather than sitting with the other narrow-screen rules. */
@@ -408,19 +428,42 @@ const TitleBlock = styled.div(({ theme }) => ({
   },
 }))
 
-/* Wraps rather than squeezing the title: the Follow control has a fixed size
-   and a long topic name would otherwise crush it.
-
-   Bottom-aligned, as the design has it -- the pill sits on the title's
-   baseline rather than centred against a 60px cap height. */
-const TitleRow = styled.div({
-  display: "flex",
-  gap: "20px",
-  /* Bottom-aligned, as the design has it -- the pill sits on the title's
-     baseline rather than centred against its 60px cap height. */
-  alignItems: "flex-end",
-  flexWrap: "wrap",
-})
+/**
+ * One inline flow holding the title and the Follow pill, so that the pill
+ * follows the end of the title's text rather than the edge of its box.
+ *
+ * A flex row cannot do that. It wraps on an item's max-content width, and a
+ * title long enough to wrap is by definition wider than the row it is in, so
+ * the pill was pushed onto a flex line of its own and came to rest under the
+ * title's first letter -- a whole line below where the design has it, with the
+ * end of the title left bare. Shrinking the title instead to hold the pill
+ * beside it only moves the problem: the title then breaks earlier than it
+ * needs to, and the pill stands off the edge of a box the shortened last line
+ * no longer reaches.
+ *
+ * Nothing here draws, so the rules are on the two children: the title is
+ * `display: inline` to put its text in this flow, and the pill is an
+ * inline-block that follows it. They stay siblings rather than the pill
+ * becoming the title's child, which would fold "Follow" into the heading's
+ * accessible name.
+ *
+ * The narrow layout keeps the flex row, which blockifies both children again.
+ * There the title drops to the h3 scale, whose 36px line box stands only 4px
+ * taller than the pill: a pill that had to leave the line would come to rest
+ * on the title's descenders, and the margin that would hold it clear is paid
+ * for in space above the title instead, the line box having no room to absorb
+ * it. A flex row's `row-gap` costs nothing, and a title that long on a phone
+ * fills the width anyway, so there is rarely a last line to follow.
+ */
+const TitleRow = styled.div(({ theme }) => ({
+  textWrap: "pretty",
+  [theme.breakpoints.down("sm")]: {
+    display: "flex",
+    gap: "20px",
+    alignItems: "flex-end",
+    flexWrap: "wrap",
+  },
+}))
 
 /**
  * An `h1` element, not a styled `Typography`: `styled()` drops MUI's
@@ -432,6 +475,10 @@ const TopicTitle = styled.h1(({ theme }) => ({
   ...theme.typography.h1,
   color: theme.custom.colors.lightRed,
   margin: 0,
+  /* So the Follow pill can follow the last word -- see `TitleRow`. The heading
+     is still a heading: display says how it is drawn, not what it is, and the
+     narrow layout's flex row makes a block of it again. */
+  display: "inline",
   [theme.breakpoints.down("sm")]: {
     ...theme.typography.h3,
   },

@@ -93,7 +93,7 @@ const UnitChannelTemplate: React.FC<UnitChannelTemplateProps> = ({
 
   const FEATURED_RESOURCES_CAROUSEL: ResourceCarouselProps["config"] = [
     {
-      cardProps: { size: "medium" },
+      size: "medium",
       data: {
         type: "lr_featured",
         params: { limit: 12, ...urlParamMap },
