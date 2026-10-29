@@ -19,6 +19,7 @@ from learning_resources.etl import loaders, ocw, warehouse_ocw
 from learning_resources.etl.constants import ETLSource
 from learning_resources.etl.exceptions import ExtractException
 from learning_resources.etl.ownership import Pipeline, writing_as
+from learning_resources.etl.shadow import run_shadow
 from learning_resources.factories import (
     ETLSourceOwnershipFactory,
     LearningResourceDepartmentFactory,
@@ -27,7 +28,7 @@ from learning_resources.factories import (
     LearningResourcePlatformFactory,
     LearningResourceTopicFactory,
 )
-from learning_resources.models import LearningResource
+from learning_resources.models import ETLSourceOwnership, LearningResource
 
 pytestmark = pytest.mark.django_db
 
@@ -487,6 +488,64 @@ def test_sync_courses_loads_the_other_rows_when_one_fails(
     assert LearningResource.objects.get(url=good["url"]).published is True
     existing.refresh_from_db()
     assert existing.published is True
+
+
+def _shadow_sync(rows):
+    """Shadow the warehouse's OCW course sync and return its report"""
+    ETLSourceOwnership.objects.filter(etl_source=ETLSource.ocw.name).update(
+        owner=Pipeline.LEGACY, shadow=Pipeline.WAREHOUSE
+    )
+    with writing_as(Pipeline.WAREHOUSE):
+        _, [report] = run_shadow(
+            [(ETLSource.ocw.name, COURSE)],
+            lambda: warehouse_ocw.sync_courses(rows, allow_mass_unpublish=True),
+        )
+    return report
+
+
+def test_sync_as_a_shadow_compares_without_writing(warehouse_owns_ocw, data_json):
+    """
+    A shadow compares every listed course, whatever its stored hash, reports
+    the unlisted ones it would unpublish, and writes nothing
+    """
+    other = {**data_json, "legacy_uid": "a-b-c", "primary_course_number": "18.06"}
+    rows = [view_row(data_json), view_row(other, slug="18-06-linear-algebra")]
+    with writing_as(Pipeline.WAREHOUSE):
+        warehouse_ocw.sync_courses(rows, allow_mass_unpublish=True)
+    # the legacy load stores no hash
+    LearningResource.objects.update(etl_checksum=None)
+    gone = LearningResourceFactory.create(
+        etl_source=ETLSource.ocw.name,
+        resource_type=COURSE,
+        published=True,
+        platform__code=PlatformType.ocw.name,
+    )
+    before = list(LearningResource.objects.order_by("id").values())
+
+    report = _shadow_sync(rows)
+
+    assert report.error == ""
+    assert report.counts["items"] == len(rows)
+    assert report.counts["unchanged"] == len(rows)
+    assert report.details["field_counts"] == {}
+    assert report.details["unpublished"] == [gone.readable_id]
+    assert list(LearningResource.objects.order_by("id").values()) == before
+
+
+def test_sync_as_a_shadow_reports_a_changed_course(warehouse_owns_ocw, data_json):
+    """A course whose row changed is reported updated, and stays as stored"""
+    row = view_row(data_json)
+    with writing_as(Pipeline.WAREHOUSE):
+        warehouse_ocw.sync_courses([row])
+    stored_title = LearningResource.objects.get(url=row["url"]).title
+
+    report = _shadow_sync([{**row, "title": "A new title"}])
+
+    assert report.error == ""
+    assert report.details["updated"] == [row["readable_id"]]
+    # the run takes its title from the course
+    assert report.details["field_counts"] == {"title": 1, "runs[].title": 1}
+    assert LearningResource.objects.get(url=row["url"]).title == stored_title
 
 
 def test_sync_courses_refuses_an_empty_view(warehouse_owns_ocw):

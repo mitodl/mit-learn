@@ -65,6 +65,8 @@ A shadow run is the new pipeline's extract and transform, with the owner unchang
 
 The comparison is a second copy of the loaders' rules (`learning_resources/etl/shadow.py`), not the loaders themselves. It tells you whether the new pipeline's data matches what is stored. It does not prove the load runs, so the first write after a flip is still the first time the loaders see that batch.
 
+`SyncOCWCoursesTask` loads one course at a time, so its shadow calls the comparison itself. It compares every course in the view whatever its `etl_checksum`, leaves the hash out (the legacy load stores none), and keeps the courses the view lists by url out of the prune, as the load does. It still matches a course on `readable_id`, so a course whose term or year changed reads as `created`, where the load updates the stored course with the same url.
+
 1. In Django admin, create or edit the row for each resource type from the table above, leave `owner` as it is and set `shadow` to the new pipeline. All of a source's rows that one load writes together (e.g. `podcast` and `podcast_episode`) need it. Admin refuses a shadow on a `video_playlist` or `video` row, because nothing compares playlists and videos yet, so `youtube` and `ovs` can't be shadowed.
 2. Run the new pipeline as you would for the flip, or wait for its schedule:
    - warehouse: `<SyncTask>.delay()`. A shadow run is always a full refresh and leaves the incremental watermark alone. The task logs how many items the loaders compared, since they load none.

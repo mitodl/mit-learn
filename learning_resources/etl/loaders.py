@@ -37,6 +37,7 @@ from learning_resources.etl.constants import (
 from learning_resources.etl.exceptions import ExtractException
 from learning_resources.etl.ownership import (
     CONTENT_FILE,
+    OwnershipError,
     RunMode,
     is_shadow_run,
     may_write,
@@ -611,6 +612,11 @@ def load_course(
         Course:
             the created/updated course
     """
+    # Backstop for a sync that calls this per course: a shadow run's batch
+    # loaders compare instead of loading, and this has nothing to compare with.
+    if is_shadow_run():
+        msg = f"A shadow run cannot load course {resource_data.get('readable_id')}"
+        raise OwnershipError(msg)
 
     topics_data = resource_data.pop("topics", None)
     offered_bys_data = resource_data.pop("offered_by", None)
@@ -679,6 +685,9 @@ def unpublish_resources(resources: QuerySet) -> None:
     search. One already unpublished is left alone, so a prune doesn't requeue
     its removal on every run.
     """
+    if is_shadow_run():
+        msg = "A shadow run cannot unpublish resources"
+        raise OwnershipError(msg)
     for learning_resource in resources.filter(published=True):
         learning_resource.published = False
         learning_resource.save()
