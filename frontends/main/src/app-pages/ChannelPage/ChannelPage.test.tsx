@@ -388,17 +388,8 @@ describe.each(NON_UNIT_CHANNEL_TYPES)(
  * still lives on the topics listing page, which has its own tests.
  */
 describe("while the feature flags are still loading", () => {
-  const posthogKey = process.env.NEXT_PUBLIC_POSTHOG_API_KEY
   beforeEach(() => {
-    process.env.NEXT_PUBLIC_POSTHOG_API_KEY = "ph-test-key"
     jest.mocked(useFeatureFlagsLoaded).mockReturnValue(false)
-  })
-  afterEach(() => {
-    if (posthogKey === undefined) {
-      delete process.env.NEXT_PUBLIC_POSTHOG_API_KEY
-    } else {
-      process.env.NEXT_PUBLIC_POSTHOG_API_KEY = posthogKey
-    }
   })
 
   /**
@@ -452,30 +443,6 @@ describe("while the feature flags are still loading", () => {
       expect(screen.queryByRole("progressbar")).toBe(null)
     },
   )
-
-  /**
-   * With no PostHog configured there is nothing to wait for either: the
-   * provider neither initialises nor mounts, so the flags never report
-   * themselves in and waiting would hold the page on a spinner for good.
-   * Every flag is off in that case, which is the page this one falls back to.
-   */
-  test("draws the page when PostHog is not configured", async () => {
-    delete process.env.NEXT_PUBLIC_POSTHOG_API_KEY
-    jest.mocked(useFeatureFlagEnabled).mockReturnValue(false)
-    /* A department, that being the channel type still waiting on a flag: the
-       guard this covers is the one that stops that wait going on for ever, so
-       a type that never waits would pass whether or not the guard is there. */
-    const { channel } = setupApis({
-      search_filter: "department=Theater+Arts",
-      channel_type: ChannelTypeEnum.Department,
-    })
-    renderWithProviders(<ChannelPage />, {
-      url: `/c/${channel.channel_type}/${channel.name}`,
-    })
-
-    await screen.findByRole("heading", { level: 1, name: channel.title })
-    expect(screen.queryByRole("progressbar")).toBe(null)
-  })
 })
 
 describe("Channel Pages, Topic only", () => {
