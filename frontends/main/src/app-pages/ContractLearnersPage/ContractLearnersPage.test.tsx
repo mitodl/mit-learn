@@ -2053,6 +2053,79 @@ describe("ContractLearnersPage progress grid", () => {
     ).toBeInTheDocument()
   })
 
+  test("shows the last activity date under started modules only", async () => {
+    const { contractId } = renderGrid()
+    const ada = {
+      learner_id: "a",
+      email: "ada@example.com",
+      full_name: "Ada Lovelace",
+    }
+    mockGridPage(contractId, 0, [
+      analyticsFactories.learnerProgress({
+        ...ada,
+        courserun_readable_id: M5,
+        completion_status: "in_progress",
+        last_active_on: "2026-09-30",
+      }),
+      analyticsFactories.learnerProgress({
+        ...ada,
+        courserun_readable_id: M6,
+        completion_status: "in_progress",
+        last_active_on: null,
+      }),
+      analyticsFactories.learnerProgress({
+        learner_id: "b",
+        email: "bob@example.com",
+        full_name: "Bob Barker",
+        courserun_readable_id: M5,
+        completion_status: "not_started",
+        last_active_on: "2026-08-01",
+      }),
+      analyticsFactories.learnerProgress({
+        learner_id: "c",
+        email: "carol@example.com",
+        full_name: "Carol Clark",
+        courserun_readable_id: M5,
+        completion_status: "passed",
+        last_active_on: "2026-07-15",
+      }),
+      analyticsFactories.learnerProgress({
+        learner_id: "d",
+        email: "dan@example.com",
+        full_name: "Dan Doe",
+        courserun_readable_id: M5,
+        completion_status: "passed",
+        last_active_on: null,
+      }),
+    ])
+
+    await user.click(await screen.findByRole("tab", { name: "Progress grid" }))
+
+    const adaRow = rowOf(await screen.findByText("Ada Lovelace"))
+    const datedCell = within(adaRow)
+      .getByText("Sep 30, 2026")
+      .closest('[role="cell"]')
+    expect(datedCell).toHaveTextContent("In progress, last active Sep 30, 2026")
+    const noActivityCell = within(adaRow)
+      .getByText("No activity")
+      .closest('[role="cell"]')
+    expect(noActivityCell).toHaveTextContent("In progress, No activity")
+
+    const bobRow = rowOf(screen.getByText("Bob Barker"))
+    expect(within(bobRow).queryByText("Aug 1, 2026")).not.toBeInTheDocument()
+
+    const carolRow = rowOf(screen.getByText("Carol Clark"))
+    expect(within(carolRow).getByText("Jul 15, 2026")).toBeInTheDocument()
+
+    const danRow = rowOf(screen.getByText("Dan Doe"))
+    expect(within(danRow).queryByText("No activity")).not.toBeInTheDocument()
+    expect(
+      within(screen.getByRole("list", { name: "Legend" })).getByText(
+        "Dates show last activity",
+      ),
+    ).toBeInTheDocument()
+  })
+
   test("shadows the pinned learner column only once the grid has scrolled", async () => {
     const { contractId } = renderGrid()
     mockGridPage(contractId, 0, [
