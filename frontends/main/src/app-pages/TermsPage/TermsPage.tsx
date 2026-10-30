@@ -11,6 +11,9 @@ import {
 } from "ol-components"
 import * as urls from "@/common/urls"
 
+export const OPEN_LICENSE_ID = "open-license"
+const CC_BY_NC_SA_URL = "https://creativecommons.org/licenses/by-nc-sa/4.0/"
+
 const PageContainer = styled.div(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
@@ -285,6 +288,93 @@ const TermsPage: React.FC = () => {
             you obtain from the Site or in any Offering. All rights in the Site
             and its content, if not expressly granted, are reserved.
           </BodyText>
+          <BodyText variant="body1">
+            Content on the Site that is offered under an open license may be
+            used as described in{" "}
+            <Link href={`#${OPEN_LICENSE_ID}`} color="red" size="large">
+              Openly Licensed Content
+            </Link>{" "}
+            below.
+          </BodyText>
+
+          <Header component="h1" variant="h3" id={OPEN_LICENSE_ID}>
+            Openly Licensed Content
+          </Header>
+          <BodyText variant="body1">
+            In addition, the following terms apply to content on the Site that
+            is offered under an open license ("Openly Licensed Content").
+          </BodyText>
+          <BodyText variant="body1" style={{ fontWeight: "bold" }}>
+            Creative Commons License
+          </BodyText>
+          <BodyText variant="body1">
+            Unless a different license is specified, Openly Licensed Content is
+            covered by the{" "}
+            <Link href={CC_BY_NC_SA_URL} color="red" size="large">
+              Attribution-NonCommercial-ShareAlike 4.0 International (CC
+              BY-NC-SA 4.0)
+            </Link>{" "}
+            license. This is a human-readable summary of (and not a substitute
+            for) the license. Under the following terms:
+          </BodyText>
+          <UnorderedList>
+            <li>
+              Attribution — You must give appropriate credit, provide a link to
+              the license, and indicate if changes were made. You may do so in
+              any reasonable manner, but not in any way that suggests the
+              licensor endorses you or your use.
+            </li>
+            <li>
+              Noncommercial — You may not use the material for commercial
+              purposes. Non-commercial use means that users may not sell, profit
+              from, or commercialize Openly Licensed Content or works derived
+              from it. If you have questions about acceptable use of Openly
+              Licensed Content, please{" "}
+              <Link href={urls.SUPPORT_REQUEST} color="red" size="large">
+                contact us
+              </Link>
+              .
+            </li>
+            <li>
+              Share Alike — If you remix, transform, or build upon the material,
+              you must distribute your contributions under the same license as
+              the original.
+            </li>
+          </UnorderedList>
+          <BodyText variant="body1" style={{ fontWeight: "bold" }}>
+            Permitted Use for AI Training
+          </BodyText>
+          <BodyText variant="body1">
+            Unless otherwise specified, Openly Licensed Content may be used to
+            train, develop, and improve artificial intelligence and machine
+            learning models, provided that such use complies fully with the
+            restrictions set forth below and is consistent with the applicable
+            Creative Commons License. Any use of Openly Licensed Content for AI
+            training purposes shall be subject to the following restrictions:
+          </BodyText>
+          <UnorderedList>
+            <li>
+              Attribution. Openly Licensed Content used in AI training must
+              include proper attribution to the original creator, maintained in
+              all training documentation and any derivative works. Attribution
+              shall be provided in a manner that does not suggest that MIT
+              endorses the AI system or its outputs.
+            </li>
+            <li>
+              Non-Commercial Use Only. AI models trained on Openly Licensed
+              Content shall be used for non-commercial purposes. Non-commercial
+              means not primarily intended for or directed towards commercial
+              advantage or monetary compensation. Any commercial application of
+              Openly Licensed Content through AI training is strictly
+              prohibited.
+            </li>
+            <li>
+              ShareAlike Obligations. Any derivative models, or AI systems that
+              incorporate Openly Licensed Content through training, shall be
+              distributed under the same CC BY-NC-SA 4.0 license terms, or a
+              compatible CC license as defined by Creative Commons.
+            </li>
+          </UnorderedList>
 
           <Header component="h1" variant="h3">
             User Postings
@@ -564,10 +654,13 @@ const TermsPage: React.FC = () => {
           <BodyText variant="body1">
             The MIT Learn names, logos and seals are trademarks ("Trademarks")
             of MIT. Except for purposes of attribution as may be required by any
-            applicable Creative Commons License (see Offering for more
-            information), you may not use any of these Trademarks, or any
-            variations thereof, without MIT's prior written consent. You may not
-            use any of these Trademarks, or any variations thereof, for
+            applicable Creative Commons License (see{" "}
+            <Link href={`#${OPEN_LICENSE_ID}`} color="red" size="large">
+              Openly Licensed Content
+            </Link>{" "}
+            for more information), you may not use any of these Trademarks, or
+            any variations thereof, without MIT's prior written consent. You may
+            not use any of these Trademarks, or any variations thereof, for
             promotional purposes, or in any way that deliberately or
             inadvertently claims, suggests or, in MIT's sole judgment, gives the
             appearance or impression of a relationship with or endorsement by
