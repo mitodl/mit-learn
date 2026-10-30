@@ -19,50 +19,21 @@ import { useLearningResourceTopic } from "api/hooks/learningResources"
 import invariant from "tiny-invariant"
 import type { FeaturedChannelType } from "./topicFeatured"
 import TopicFeaturedCarousel from "./TopicFeaturedCarousel"
+import { backgroundSrcSetCSS } from "ol-utilities"
+import { DEPARTMENT_BANNERS } from "./departmentBanners"
 
 const BannerSkeleton = styled(Skeleton)(({ theme }) => ({
   backgroundColor: theme.custom.colors.lightGray2,
 }))
 
 /**
- * How deep the photograph runs before the hero is white.
+ * The hero, per the department design.
  *
- * The design states this twice, as a share of two different heroes: 52.617%
- * of the 768px hero that carries a Featured row, and 100% of the 304px hero
- * that has nothing to feature. Those are 404px and 304px -- so it is a
- * distance, and the shorter hero only reads as "100%" because it ends before
- * that distance is up.
- *
- * Taking whichever comes first reproduces both exactly, and holds for the
- * heights in between as a channel's description and Featured row come and go.
- * A percentage alone would stretch the fade across the cards on a tall hero;
- * a length alone would still be mid-fade where a short one meets the search
- * area below it.
- *
- * The `vw` term is the narrow screen's, which the design draws separately and
- * does not scale down from the wide one: there the photograph runs 340 of the
- * 375 the frame is wide, where scaling the wide design's band down by width
- * would leave it 90. A phone's hero is the taller of the two -- the same
- * title, description and Featured row over a quarter of the width -- so the
- * band that reads as a backdrop on a monitor reads as a stripe on a phone.
- *
- * 340/375 is 90.7vw, which gives the narrow design its depth, reaches the
- * wide design's 404 at 445px, and is held there by the `min` for every width
- * above that -- so both designs are drawn as drawn and the widths between
- * them move from one to the other.
- */
-const HERO_FADE_END = "min(404px, 90.7vw, 100%)"
-
-/** Softens the photograph band's own left edge -- see `HeroPhoto`. */
-const HERO_PHOTO_EDGE_FADE = "linear-gradient(90deg, transparent 0%, #000 18%)"
-
-/**
- * The hero, per the topic page design.
- *
- * The image stays data-driven: the channel's own configured banner, falling
- * back to the design's artwork when a channel has none. Either way it is a
- * photograph: see `HeroPhoto` for how it is placed and `HeroScrim` for the
- * white wash that makes it a backdrop.
+ * White, with the department's photograph laid over its top right -- see
+ * `HeroPhoto`. There is no wash over the picture and no outline drawn around
+ * it any more: the artwork arrives cut to the diagonal the design draws and
+ * carries the hairline outside that cut itself, so both edges are the image's
+ * own and the hero has nothing left to draw over it.
  */
 const TopicHero = styled.section(({ theme }) => ({
   position: "relative",
@@ -70,173 +41,75 @@ const TopicHero = styled.section(({ theme }) => ({
 }))
 
 /**
- * The photograph, on a band of its own as deep as the wash below it.
+ * What clips the photograph to the hero.
  *
- * The design's framing puts the lower part of the frame -- the floor, and the
- * figure walking at its right edge -- across the top of the hero. A
- * photograph covering the whole hero cannot be pushed up that far: it is only
- * as much taller than the hero as the crop allows, and on a hero carrying a
- * Featured row that is not nearly enough, which leaves the walking figure
- * below the wash and washed out of the picture.
- *
- * Giving the photograph its own band as deep as the wash is what frees the
- * crop, and it is also what keeps the scrim fading rather than concealing:
- * covering a band has no edges inside it at any viewport, and the edge along
- * its bottom is at the exact depth the wash finishes.
- *
- * The band stops short of the left edge, which is what sets the scale: the
- * design draws the photograph three quarters of the hero wide, and covering
- * the full width instead renders it a third larger than that.
- *
- * That leaves one edge the wash cannot be relied on to cover. The wash comes
- * in at a slight angle, so the depth at which it reaches white is not a
- * single column: across the band it ranges over about five percent of the
- * width, and at the top it falls short of the band's edge. Rather than give
- * up the scale to chase it, the band fades its own left edge out, which holds
- * whatever the wash is doing behind it.
+ * The picture is taller than the shorter hero a channel with nothing to
+ * feature leaves, and is let run off the bottom of it rather than shrink to
+ * fit, so something has to cut it off at the hero's edge.
  */
-const HeroPhoto = styled.div<{ backgroundUrl: string; wholeWidth: boolean }>(
-  ({ theme, backgroundUrl, wholeWidth }) => ({
+const HeroPhotoClip = styled.div({
+  position: "absolute",
+  inset: 0,
+  overflow: "hidden",
+  pointerEvents: "none",
+})
+
+/**
+ * How wide the photograph is drawn, as a share of the hero.
+ *
+ * The design draws it 922 of the hero's 1676 and takes it to the right edge.
+ * A share rather than the artwork's own 920 pixels, so it holds that much of
+ * the page at every width instead of shrinking to a stamp in the corner of a
+ * wide one.
+ */
+const HERO_PHOTO_WIDTH = "55%"
+
+/**
+ * The artwork's own box, and how much of that box is the photograph.
+ *
+ * The outline the design runs outside the cut edge is part of the artwork now,
+ * which makes the file larger than the picture in it: 32px down the left for
+ * the outline and the gap it keeps from the cut, 29px below for its foot. The
+ * picture still occupies the top right 920 x 494.
+ */
+const HERO_PHOTO_ART = { width: 952, height: 523, pictureWidth: 920 }
+
+/**
+ * The artwork drawn so that the picture inside it lands on the share above.
+ *
+ * Scaling the file to that share directly would draw the picture narrower by
+ * exactly the margin, so the share is widened in the same proportion and the
+ * margin hangs off the picture's left, which is where the design has it.
+ */
+const HERO_PHOTO_ART_WIDTH = `${
+  (parseFloat(HERO_PHOTO_WIDTH) * HERO_PHOTO_ART.width) /
+  HERO_PHOTO_ART.pictureWidth
+}%`
+
+/**
+ * The photograph behind a department's title.
+ *
+ * One placement for every department, which is what the artwork being cut to
+ * a single size buys: there is nothing left for a department to state. It is
+ * anchored to the hero's top right corner at its own proportions -- the
+ * diagonal down its left side and the outline beyond it are part of the image,
+ * so stretching it would bend the two edges the design is precise about.
+ */
+const HeroPhoto = styled.div<{ backgroundUrl: string }>(
+  ({ backgroundUrl }) => ({
     position: "absolute",
-    top: 0,
-    left: "22%",
+    top: "-2px",
     right: 0,
-    height: HERO_FADE_END,
+    width: HERO_PHOTO_ART_WIDTH,
+    aspectRatio: `${HERO_PHOTO_ART.width} / ${HERO_PHOTO_ART.height}`,
     pointerEvents: "none",
     backgroundImage: backgroundUrl,
-    backgroundSize: "cover",
-    /* Anchored right so the walking figure stays at the edge of the page, and
-     low, which is the part of the frame the design uses. */
-    backgroundPosition: "right 97%",
-    maskImage: HERO_PHOTO_EDGE_FADE,
-    WebkitMaskImage: HERO_PHOTO_EDGE_FADE,
     backgroundRepeat: "no-repeat",
-    /**
-     * With no Featured row, the design draws a different photograph: one
-     * across the whole hero rather than a band three quarters of it wide, and
-     * framed by width rather than cropped to fill.
-     *
-     * It states the image at the hero's own width and 509.15% of its height,
-     * lifted 294.19% of that height above the top. The artwork is 1800x1203,
-     * and 1676/1.4963 is exactly the 1120px that 509.15% of the design's 220px
-     * hero comes to -- so the image is simply laid across the width at its own
-     * proportions, and what the numbers describe is which slice of it that
-     * leaves showing. Putting the lift over the overflow,
-     * -294.19 / (1 - 509.15), gives the 71.9% below, and stating it that way
-     * holds the same framing at every width rather than only at 1676.
-     *
-     * No mask: the band needed one because it had a left edge inside the hero
-     * to soften, and a photograph across the whole width has none. The wash
-     * is then the only thing taking it off, which is how the design builds it.
-     *
-     * Above `sm` only, so the narrow design -- drawn separately, and framed by
-     * height rather than width -- keeps its own crop whether or not the
-     * channel features anything.
-     */
-    ...(wholeWidth
-      ? {
-          [theme.breakpoints.up("sm")]: {
-            left: 0,
-            height: "100%",
-            backgroundSize: "100% auto",
-            backgroundPosition: "50% 71.903%",
-            maskImage: "none",
-            WebkitMaskImage: "none",
-          },
-        }
-      : {}),
-    /**
-     * A phone's band is taller than it is wide, and `cover` fills whichever
-     * axis needs the most magnifying -- so there it fills the height and fits
-     * the photograph's full height into the band. That is the whole hall at a
-     * quarter of the width: the banner, the columns and the walking figure all
-     * shrink to nothing rather than the design's framing of them.
-     *
-     * Sizing by height instead keeps the subject at a legible scale. 147% of
-     * the band is 480px at the 375 the design is drawn at, which is where the
-     * banner and the walking figure land as drawn. Measured against the band
-     * rather than the viewport so that the crop is the same picture at every
-     * phone width, and so that a hero shortened by a missing Featured row
-     * zooms out with it instead of filling with one magnified corner.
-     */
-    [theme.breakpoints.down("sm")]: {
-      backgroundSize: "auto 147%",
-      /* Short of the right edge, where the design's frame ends. */
-      backgroundPosition: "87% bottom",
-    },
-  }),
-)
-
-/** Clears a column for the text beside the photograph. */
-const HERO_SCRIM_FROM_LEFT =
-  "linear-gradient(259.54deg, rgba(255, 255, 255, 0) 33.745%, rgb(255, 255, 255) 74.054%)"
-
-/** Carries the photograph off above the rest of the page. */
-const HERO_SCRIM_FROM_TOP = `linear-gradient(180deg, rgba(255, 255, 255, 0) calc(${HERO_FADE_END} * 0.0489), rgb(255, 255, 255) ${HERO_FADE_END})`
-
-/**
- * The same two, as the design states them for the hero with no Featured row.
- *
- * Both are shares of that hero rather than distances, which is why they are
- * separate values: the wash from the top is not finished when the hero ends
- * -- white is 119.12% of the way down -- so the photograph is still faintly
- * there along the bottom edge, which is what the design draws and what
- * finishing the wash at the hero's own height washes away.
- *
- * The angles are the design's too. Figma states a gradient by where its
- * handles fall, so an angle belongs to the frame it was measured in: 255.69
- * is this hero's, where 259.54 above is the taller one's.
- */
-const HERO_SCRIM_UNFEATURED_FROM_LEFT =
-  "linear-gradient(255.69deg, rgba(255, 255, 255, 0) 33.745%, rgb(255, 255, 255) 74.054%)"
-const HERO_SCRIM_UNFEATURED_FROM_TOP =
-  "linear-gradient(179.22deg, rgba(255, 255, 255, 0) 12.703%, rgb(255, 255, 255) 119.12%)"
-
-/**
- * The white wash over the photo, as its own layer rather than extra values on
- * the hero's `background-image`.
- *
- * That is how the design builds it -- a photograph with two gradients over it
- * -- and it keeps the hero's own `background-image` to the single `url()` the
- * channel configured, which is what the page's tests look for.
- *
- * Both gradients start fully transparent, so the photograph reads at full
- * strength where they have not yet closed over it: the first draws white in
- * from the left, behind the text, and the second draws it down from the top
- * over `HERO_FADE_END`, finishing exactly where the photograph's band ends.
- */
-const HeroScrim = styled.div<{ unfeatured: boolean }>(
-  ({ theme, unfeatured }) => ({
-    position: "absolute",
-    inset: 0,
-    pointerEvents: "none",
-    backgroundImage: [HERO_SCRIM_FROM_LEFT, HERO_SCRIM_FROM_TOP].join(", "),
-    /* The hero with nothing to feature, which the design states on its own --
-       see the values above. Above `sm`, with the photograph it belongs to. */
-    ...(unfeatured
-      ? {
-          [theme.breakpoints.up("sm")]: {
-            backgroundImage: [
-              HERO_SCRIM_UNFEATURED_FROM_LEFT,
-              HERO_SCRIM_UNFEATURED_FROM_TOP,
-            ].join(", "),
-          },
-        }
-      : {}),
-    /**
-     * Only the wash from the top on a narrow screen.
-     *
-     * The other one clears a column for text to sit *beside* the photograph,
-     * and a phone has no beside: the text runs the full width, so that gradient
-     * closes over the photograph behind the breadcrumb and the description and
-     * leaves both on flat white. The design draws them with the photograph
-     * showing through, which is what is left once this one goes -- the wash
-     * from the top still carries it off before the rest of the page, and the
-     * photograph's own left edge still fades under the start of each line.
-     */
-    [theme.breakpoints.down("sm")]: {
-      backgroundImage: HERO_SCRIM_FROM_TOP,
-    },
+    /* Artwork cut to the box's own shape fills it either way; `cover` is for
+       the departments not recut yet, which it crops rather than ruling white
+       bands down the sides of. */
+    backgroundSize: "cover",
+    backgroundPosition: "top right",
   }),
 )
 
@@ -471,8 +344,8 @@ const TitleRow = styled.div(({ theme }) => ({
  * element to be -- and the page's heading outline depends on this being the
  * level-1 heading. The type scale comes from the theme instead.
  */
-const TopicTitle = styled.h1(({ theme }) => ({
-  ...theme.typography.h1,
+const TopicTitle = styled.h1<{ compact: boolean }>(({ theme, compact }) => ({
+  ...(compact ? theme.typography.h2 : theme.typography.h1),
   color: theme.custom.colors.lightRed,
   margin: 0,
   /* So the Follow pill can follow the last word -- see `TitleRow`. The heading
@@ -565,8 +438,7 @@ const TopicChannelTemplate: React.FC<TopicChannelTemplateProps> = ({
  *
  * It used to carry a photograph; the design no longer does, so nothing is
  * passed behind the words and the section's own white is the ground. The
- * machinery for one is still here for the department page, which is to have a
- * banner image of its own -- see `ChannelHeroPhoto`.
+ * department hero still draws one -- see `DepartmentChannelHero`.
  *
  * Its own component only to hold the topic query, which decides whether the
  * trail is drawn or stood in for: a hook, so it cannot be called from the
@@ -595,40 +467,63 @@ const TopicChannelHero: React.FC<{
  * A channel's configured banner image, with the wash that takes it off the
  * rest of the hero.
  *
- * Nothing renders this yet. The topic page did until the design dropped the
- * photograph, and the department page is to have one, so it is kept whole
- * rather than rebuilt from scratch later -- and kept reachable, so it goes on
- * compiling and is not quietly broken by the time it is wanted.
+ * The topic page drew one until the design dropped the photograph; what is
+ * left renders it for the departments that have artwork of their own -- see
+ * `DEPARTMENT_BANNERS`.
  *
- * Takes the banner as configured on the channel and nothing else: the default
- * artwork that stood in for an unconfigured topic was the topic design's, and
- * a channel with no banner now draws none.
+ * Takes the banner it is given and nothing else: the default artwork that
+ * stood in for an unconfigured topic was the topic design's, and a channel
+ * with nothing of its own now draws none.
  */
 const ChannelHeroPhoto: React.FC<{
   configuredBanner: string
-  /** Frames the shorter hero a channel with nothing to feature leaves. */
-  featuredIsEmpty: boolean
-}> = ({ configuredBanner, featuredIsEmpty }) => (
-  <>
+}> = ({ configuredBanner }) => (
+  <HeroPhotoClip aria-hidden>
     <HeroPhoto
       data-testid="channel-hero-photo"
-      aria-hidden
-      wholeWidth={featuredIsEmpty}
-      /* Through the same standardizer the other channel banners use: the field
-         holds either a bare src or a value already written as `url(...)`, and
-         wrapping the second kind again drops the declaration. */
+      /* Through the same standardizer the other channel banners use: the
+         field holds either a bare src or a value already written as
+         `url(...)`, and wrapping the second kind again drops it. */
       backgroundUrl={standardizeBackgroundUrl(configuredBanner)}
     />
-    <HeroScrim aria-hidden unfeatured={featuredIsEmpty} />
-  </>
+  </HeroPhotoClip>
 )
+
+/**
+ * The department hero, which draws the department's own artwork where there
+ * is any and stands on plain white where there is not.
+ */
+const DepartmentChannelHero: React.FC<{
+  channel: DepartmentChannel
+  children: React.ReactNode
+}> = ({ channel, children }) => {
+  const banner = DEPARTMENT_BANNERS[channel.name]
+
+  return (
+    <ChannelRedesignHero
+      channel={channel}
+      channelType={ChannelTypeEnum.Department}
+      compactTitle
+      /* Both of these go with the photograph: without one there is nothing
+         for the words to be lifted off, and the hero is white. */
+      overPhoto={!!banner}
+      background={
+        banner ? (
+          <ChannelHeroPhoto configuredBanner={backgroundSrcSetCSS(banner)} />
+        ) : undefined
+      }
+    >
+      {children}
+    </ChannelRedesignHero>
+  )
+}
 
 /**
  * The same page for an academic department.
  *
- * The design is the topic page's but for the hero's ground: a department has
- * no photograph behind its title, so the hero is the plain white the section
- * already paints and the words need no pane to be read against.
+ * The design is the topic page's but for the hero's ground: a department that
+ * has artwork in `DEPARTMENT_BANNERS` draws it behind the title, where the
+ * revised topic design has none at all.
  */
 const DepartmentChannelTemplate: React.FC<TopicChannelTemplateProps> = ({
   children,
@@ -640,12 +535,9 @@ const DepartmentChannelTemplate: React.FC<TopicChannelTemplateProps> = ({
   )
   if (channel.data?.channel_type === ChannelTypeEnum.Department) {
     return (
-      <ChannelRedesignHero
-        channel={channel.data}
-        channelType={ChannelTypeEnum.Department}
-      >
+      <DepartmentChannelHero channel={channel.data}>
         {children}
-      </ChannelRedesignHero>
+      </DepartmentChannelHero>
     )
   } else return null
 }
@@ -674,6 +566,18 @@ type ChannelRedesignHeroProps = {
    * its own design catches up.
    */
   updatedSpacing?: boolean
+  /**
+   * The title at the department design's Headline/H2 -- 34/40 -- rather than
+   * the H1 the topic design draws it at.
+   *
+   * A prop for the same reason the spacings are: the two designs differ on it
+   * and only the department's has been read for this. It is not a detail: at
+   * 52px a name like "Urban Studies and Planning" is 695px of a 736px row,
+   * which puts the Follow pill on a line of its own and makes the hero 72px
+   * deeper than the design draws it -- which in turn is what the banner
+   * placements are measured against.
+   */
+  compactTitle?: boolean
 }
 
 /**
@@ -692,6 +596,7 @@ const ChannelRedesignHero: React.FC<ChannelRedesignHeroProps> = ({
   overPhoto = false,
   trailLoading = false,
   updatedSpacing = false,
+  compactTitle = false,
 }) => {
   const urlParams = new URLSearchParams(channel.search_filter)
 
@@ -713,7 +618,9 @@ const ChannelRedesignHero: React.FC<ChannelRedesignHeroProps> = ({
                 )}
                 <TitleBlock>
                   <TitleRow>
-                    <TopicTitle>{channel.title}</TopicTitle>
+                    <TopicTitle compact={compactTitle}>
+                      {channel.title}
+                    </TopicTitle>
                     {channel.search_filter ? (
                       <FollowPill>
                         <SearchSubscriptionToggle
@@ -749,6 +656,4 @@ const ChannelRedesignHero: React.FC<ChannelRedesignHeroProps> = ({
 }
 
 export default TopicChannelTemplate
-/* `ChannelHeroPhoto` is exported for the department banner it is being kept
-   for, and so that nothing in it is dead to the compiler in the meantime. */
 export { DepartmentChannelTemplate, ChannelHeroPhoto }
