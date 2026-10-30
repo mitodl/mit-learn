@@ -206,6 +206,23 @@ describe("proxy", () => {
       )
     })
 
+    /**
+     * /program_letter/ returns early from proxy() to send `private, no-store`,
+     * and before the CSP was hoisted above that branch it returned without a
+     * policy at all. The failure is invisible in both directions: a page that
+     * sends no policy reports no violations during the soak, and at enforce it
+     * is the one page carrying a learner's name with no frame-ancestors.
+     */
+    test("uncached page routes still get a policy", () => {
+      const response = proxy(makeRequest("/program_letter/abc123"))
+      expect(response.headers.get(CSP_HEADER)).toBe(
+        contentSecurityPolicy("site"),
+      )
+      // ...without disturbing the no-store that branch exists to send.
+      expect(response.headers.get("Cache-Control")).toBe("private, no-store")
+      expect(response.headers.get("Surrogate-Key")).toBeNull()
+    })
+
     test("leaves non-page routes alone — CSP only governs documents", () => {
       for (const pathname of ["/healthcheck", "/images/hero/hero-1.png"]) {
         expect(proxy(makeRequest(pathname)).headers.get(CSP_HEADER)).toBeNull()
