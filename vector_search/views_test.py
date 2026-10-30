@@ -1,5 +1,6 @@
 import asyncio
 from datetime import timedelta
+from types import SimpleNamespace
 
 import pytest
 from django.contrib.auth.models import Group
@@ -17,6 +18,7 @@ from learning_resources.factories import (
 from learning_resources_search.serializers import serialize_bulk_learning_resources
 from vector_search.constants import (
     COMPLETENESS_PAYLOAD_KEY,
+    CONTENT_FILES_COLLECTION_NAME,
     CONTENT_FILES_RETRIEVE_PAYLOAD,
     RESOURCE_AGE_DATE_PAYLOAD_KEY,
     RESOURCES_COLLECTION_NAME,
@@ -26,7 +28,11 @@ from vector_search.constants import (
 )
 from vector_search.encoders.utils import dense_encoder, sparse_encoder
 from vector_search.utils import custom_score_formula, score_formula_query
-from vector_search.views import QdrantView, _relative_score_floor
+from vector_search.views import (
+    QdrantView,
+    _relative_score_floor,
+    _retrieve_payloads,
+)
 
 
 @pytest.fixture
@@ -58,6 +64,24 @@ def mock_qdrant(mocker):
     mocker.patch("vector_search.views.async_qdrant_client", return_value=qdrant)
     mocker.patch("vector_search.utils.async_qdrant_client", return_value=qdrant)
     return qdrant
+
+
+def _retrieve_from(points, collection_name=RESOURCES_COLLECTION_NAME):
+    """
+    Build a Qdrant ``retrieve`` side effect returning the payloads of ``points``,
+    for a search of ``collection_name``.
+    """
+    payloads = {point.id: point.payload for point in points}
+
+    async def retrieve(*, ids, **kwargs):
+        assert kwargs["collection_name"] == collection_name
+        return [
+            SimpleNamespace(id=point_id, payload=payloads[point_id])
+            for point_id in ids
+            if point_id in payloads
+        ]
+
+    return retrieve
 
 
 def test_vector_search_filters(mocker, client):
@@ -593,23 +617,19 @@ def _scroll_page_mock(mocker, dated, undated):
     mock_qdrant = mocker.patch(
         "qdrant_client.AsyncQdrantClient", return_value=mocker.AsyncMock()
     )()
+    dated_points = [
+        mocker.MagicMock(payload={"readable_id": f"dated-{index}"})
+        for index in range(dated)
+    ]
+    undated_points = [
+        mocker.MagicMock(payload={"readable_id": f"undated-{index}"})
+        for index in range(undated)
+    ]
     mock_qdrant.scroll = mocker.AsyncMock(
-        side_effect=[
-            (
-                [
-                    mocker.MagicMock(payload={"readable_id": f"dated-{index}"})
-                    for index in range(dated)
-                ],
-                None,
-            ),
-            (
-                [
-                    mocker.MagicMock(payload={"readable_id": f"undated-{index}"})
-                    for index in range(undated)
-                ],
-                None,
-            ),
-        ]
+        side_effect=[(dated_points, None), (undated_points, None)]
+    )
+    mock_qdrant.retrieve = mocker.AsyncMock(
+        side_effect=_retrieve_from(dated_points + undated_points)
     )
     mock_qdrant.count = mocker.AsyncMock(return_value=CountResult(count=10))
     mocker.patch(
@@ -757,7 +777,7 @@ def test_vector_search_nullable_sortby_scroll_pages(
     mocker, client, offset, limit, expected
 ):
     """The topped-up scroll is sliced as one ordered set, tail included"""
-    _scroll_page_mock(mocker, dated=3, undated=3)
+    mock_qdrant = _scroll_page_mock(mocker, dated=3, undated=3)
 
     view = QdrantView()
     results = asyncio.run(
@@ -771,6 +791,9 @@ def test_vector_search_nullable_sortby_scroll_pages(
     )
 
     assert [hit["readable_id"] for hit in results["hits"]] == expected
+    # payloads are fetched for the page only, not the whole scrolled window
+    mock_qdrant.retrieve.assert_awaited_once()
+    assert len(mock_qdrant.retrieve.await_args.kwargs["ids"]) == len(expected)
 
 
 def test_vector_search_sortby_pagination(mocker, client):
@@ -1020,6 +1043,9 @@ def test_vector_search_sortby_with_score_cutoff_manually_sorted(mocker, client):
 
     mock_result.points = [mock_point_1, mock_point_2, mock_point_3]
     mock_qdrant.query_points = mocker.AsyncMock(return_value=mock_result)
+    mock_qdrant.retrieve = mocker.AsyncMock(
+        side_effect=_retrieve_from(mock_result.points)
+    )
     mock_qdrant.scroll = mocker.AsyncMock(return_value=([], None))
     mocker.patch(
         "vector_search.views.async_qdrant_client",
@@ -1265,6 +1291,30 @@ def _scored(*scores):
     return [models.ScoredPoint(id=i, version=0, score=s) for i, s in enumerate(scores)]
 
 
+def test_retrieve_payloads_keeps_rank_order_and_drops_missing_points(mocker):
+    """Records are matched to points by id, not by position."""
+    points = _scored(1.0, 0.9, 0.5, 0.2)
+    client = mocker.AsyncMock()
+    client.retrieve.return_value = [
+        SimpleNamespace(id=point_id, payload={"readable_id": f"r{point_id}"})
+        for point_id in (3, 1, 0)
+    ]
+
+    hits = asyncio.run(_retrieve_payloads(client, "resources", points, ["readable_id"]))
+
+    assert [hit.payload for hit in hits] == [
+        {"readable_id": "r0"},
+        {"readable_id": "r1"},
+        {"readable_id": "r3"},
+    ]
+    assert client.retrieve.await_args.kwargs == {
+        "collection_name": "resources",
+        "ids": [0, 1, 2, 3],
+        "with_payload": ["readable_id"],
+        "with_vectors": False,
+    }
+
+
 @pytest.fixture
 def _no_min_candidates(settings):
     """Turn off the minimum-candidates exemption, to test the ratio alone."""
@@ -1414,6 +1464,7 @@ def test_async_vector_search_relative_score_floor_scoping(mocker, settings):
     mock_result = mocker.MagicMock()
     mock_result.points = points
     mock_qdrant.query_points = mocker.AsyncMock(return_value=mock_result)
+    mock_qdrant.retrieve = mocker.AsyncMock(side_effect=_retrieve_from(points))
     mock_qdrant.count = mocker.AsyncMock(
         return_value=mocker.MagicMock(count=len(points))
     )
@@ -1433,6 +1484,9 @@ def test_async_vector_search_relative_score_floor_scoping(mocker, settings):
         )
     )
     assert [p.score for p in res_resource["hits"]] == [1.0, 0.9]
+    # only the hits that pass the floor have their payloads fetched
+    mock_qdrant.retrieve.assert_awaited_once()
+    assert mock_qdrant.retrieve.await_args.kwargs["ids"] == [0, 1]
 
     res_paginated = asyncio.run(
         view.async_vector_search(
@@ -1947,6 +2001,9 @@ def test_content_file_vector_search_skips_probe_when_results_present(
     non_empty_result = mocker.MagicMock()
     non_empty_result.points = [mock_point]
     mock_qdrant.query_points = mocker.AsyncMock(return_value=non_empty_result)
+    mock_qdrant.retrieve = mocker.AsyncMock(
+        side_effect=_retrieve_from([mock_point], CONTENT_FILES_COLLECTION_NAME)
+    )
     mock_qdrant.count = mocker.AsyncMock(return_value=CountResult(count=1))
 
     mock_probe = mocker.patch(
@@ -2064,16 +2121,18 @@ def test_content_file_vector_search_count_is_approximate(
 @pytest.mark.parametrize("from_payload", [True, False])
 def test_vector_search_payload_selector(mocker, client, settings, from_payload):
     """
-    Resource searches request the trimmed full payload when payload hits are
-    enabled, and only the two hydration lookup fields when they are not.
+    Resource searches query without payloads, then retrieve the trimmed full
+    payload of the hits when payload hits are enabled, and only the two
+    hydration lookup fields when they are not.
     """
     settings.VECTOR_SEARCH_RESOURCES_FROM_PAYLOAD = from_payload
     mock_qdrant = mocker.patch(
         "qdrant_client.AsyncQdrantClient", return_value=mocker.AsyncMock()
     )()
-    empty = mocker.MagicMock()
-    empty.points = []
-    mock_qdrant.query_points = mocker.AsyncMock(return_value=empty)
+    result = mocker.MagicMock()
+    result.points = [mocker.MagicMock(score=0.6)]
+    mock_qdrant.query_points = mocker.AsyncMock(return_value=result)
+    mock_qdrant.retrieve = mocker.AsyncMock(return_value=[])
     mock_qdrant.scroll = mocker.AsyncMock(return_value=([], None))
     mock_qdrant.count = mocker.AsyncMock(return_value=CountResult(count=0))
     mocker.patch("vector_search.views.async_qdrant_client", return_value=mock_qdrant)
@@ -2083,7 +2142,8 @@ def test_vector_search_payload_selector(mocker, client, settings, from_payload):
         data={"q": "test"},
     )
 
-    with_payload = mock_qdrant.query_points.mock_calls[0].kwargs["with_payload"]
+    assert mock_qdrant.query_points.mock_calls[0].kwargs["with_payload"] is False
+    with_payload = mock_qdrant.retrieve.mock_calls[0].kwargs["with_payload"]
     if from_payload:
         assert with_payload == models.PayloadSelectorExclude(
             exclude=RESOURCES_PAYLOAD_EXCLUDE
@@ -2095,14 +2155,15 @@ def test_vector_search_payload_selector(mocker, client, settings, from_payload):
 @pytest.mark.parametrize("from_payload", [True, False])
 def test_vector_search_scroll_payload_selector(mocker, client, settings, from_payload):
     """
-    The scroll path (no query string) must use the same selector; it otherwise
-    defaults to the entire payload, transcripts included.
+    The scroll path (no query string) scrolls without payloads, then retrieves
+    the page's payloads with the same selector as the query path.
     """
     settings.VECTOR_SEARCH_RESOURCES_FROM_PAYLOAD = from_payload
     mock_qdrant = mocker.patch(
         "qdrant_client.AsyncQdrantClient", return_value=mocker.AsyncMock()
     )()
-    mock_qdrant.scroll = mocker.AsyncMock(return_value=([], None))
+    mock_qdrant.scroll = mocker.AsyncMock(return_value=([mocker.MagicMock()], None))
+    mock_qdrant.retrieve = mocker.AsyncMock(return_value=[])
     mock_qdrant.count = mocker.AsyncMock(return_value=CountResult(count=0))
     mocker.patch("vector_search.views.async_qdrant_client", return_value=mock_qdrant)
 
@@ -2111,7 +2172,8 @@ def test_vector_search_scroll_payload_selector(mocker, client, settings, from_pa
         data={"q": ""},
     )
 
-    with_payload = mock_qdrant.scroll.mock_calls[0].kwargs["with_payload"]
+    assert mock_qdrant.scroll.mock_calls[0].kwargs["with_payload"] is False
+    with_payload = mock_qdrant.retrieve.mock_calls[0].kwargs["with_payload"]
     if from_payload:
         assert with_payload == models.PayloadSelectorExclude(
             exclude=RESOURCES_PAYLOAD_EXCLUDE
@@ -2121,21 +2183,26 @@ def test_vector_search_scroll_payload_selector(mocker, client, settings, from_pa
 
 
 @pytest.mark.django_db(transaction=True)
-def test_content_file_vector_search_scroll_keeps_full_payload(
+def test_content_file_vector_search_scroll_retrieves_full_payload(
     mocker, client, content_file_viewer
 ):
-    """Content file search is unaffected: it still scrolls the whole payload"""
+    """Content file search retrieves the whole payload of its scrolled page"""
     mock_qdrant = mocker.patch(
         "qdrant_client.AsyncQdrantClient", return_value=mocker.AsyncMock()
     )()
-    mock_qdrant.scroll = mocker.AsyncMock(return_value=([], None))
+    mock_qdrant.scroll = mocker.AsyncMock(return_value=([mocker.MagicMock()], None))
+    mock_qdrant.retrieve = mocker.AsyncMock(return_value=[])
     mock_qdrant.count = mocker.AsyncMock(return_value=CountResult(count=0))
     mocker.patch("vector_search.views.async_qdrant_client", return_value=mock_qdrant)
 
     client.get(reverse("vector_search:v0:vector_content_files_search"), data={"q": ""})
 
+    assert mock_qdrant.scroll.mock_calls[0].kwargs["with_payload"] is False
+    assert mock_qdrant.retrieve.mock_calls[0].kwargs["collection_name"] == (
+        CONTENT_FILES_COLLECTION_NAME
+    )
     assert (
-        mock_qdrant.scroll.mock_calls[0].kwargs["with_payload"]
+        mock_qdrant.retrieve.mock_calls[0].kwargs["with_payload"]
         == CONTENT_FILES_RETRIEVE_PAYLOAD
     )
 
@@ -2157,6 +2224,7 @@ def test_vector_search_returns_payload_is_not_hydrated(mocker, client):
     point.payload = payload
     mock_result.points = [point]
     mock_qdrant.query_points = mocker.AsyncMock(return_value=mock_result)
+    mock_qdrant.retrieve = mocker.AsyncMock(side_effect=_retrieve_from([point]))
     mock_qdrant.scroll = mocker.AsyncMock(return_value=([], None))
     mock_qdrant.count = mocker.AsyncMock(return_value=CountResult(count=1))
     mocker.patch("vector_search.views.async_qdrant_client", return_value=mock_qdrant)
@@ -2191,6 +2259,7 @@ def test_vector_search_kill_switch_hydrates_from_database(mocker, client, settin
     }
     mock_result.points = [point]
     mock_qdrant.query_points = mocker.AsyncMock(return_value=mock_result)
+    mock_qdrant.retrieve = mocker.AsyncMock(side_effect=_retrieve_from([point]))
     mock_qdrant.scroll = mocker.AsyncMock(return_value=([], None))
     mock_qdrant.count = mocker.AsyncMock(return_value=CountResult(count=1))
     mocker.patch("vector_search.views.async_qdrant_client", return_value=mock_qdrant)
