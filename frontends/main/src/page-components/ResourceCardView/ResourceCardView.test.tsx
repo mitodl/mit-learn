@@ -124,10 +124,27 @@ describe("ResourceCardView", () => {
       renderWithTheme(
         <ResourceCardView {...props} price={{ ...props.price, tone }} />,
       )
-      const line = screen.getByText(props.price.certificate!)
+      // The icon is a sibling of the text's wrapper, inside the line.
+      const line = screen.getByText(props.price.certificate!).parentElement!
       expect(line.querySelector("svg") !== null).toBe(hasIcon)
     },
   )
+
+  test("The certificate price follows the type and moves to the next line whole", () => {
+    const props = makeProps()
+    const certificatePrice = "$750 – $1500"
+    renderWithTheme(
+      <ResourceCardView
+        {...props}
+        price={{ ...props.price, certificatePrice }}
+      />,
+    )
+    const price = screen.getByText(certificatePrice)
+    expect(price.parentElement).toHaveTextContent(
+      `${props.price.certificate}: ${certificatePrice}`,
+    )
+    expect(price).toHaveStyle({ display: "inline-block" })
+  })
 
   test("Without a parent course, no 'From' line renders", () => {
     const { parentCourseName: _, ...props } = makeProps()

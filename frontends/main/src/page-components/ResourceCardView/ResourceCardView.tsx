@@ -26,6 +26,11 @@ type PricePanel = {
   tone: "dark" | "light" | "neutral"
   primary?: string
   certificate?: string
+  /**
+   * Follows `certificate` as "Type: price", and moves to the next line whole
+   * rather than breaking.
+   */
+  certificatePrice?: string
   license?: string
 }
 
@@ -48,9 +53,8 @@ const freeToAuditPanel = (
 ): PricePanel => ({
   tone: "light",
   primary: "Free to audit",
-  certificate: certificatePrice
-    ? `${certificateType}: ${certificatePrice}`
-    : certificateType,
+  certificate: certificateType,
+  certificatePrice: certificatePrice ?? undefined,
   license,
 })
 
@@ -432,6 +436,13 @@ const PriceLine = styled("span", {
   }
 })
 
+// A price range must not break after its dash and strand the second amount on
+// the next line. Non-breaking spaces around the dash do not stop that: Chrome
+// still breaks after an en dash. An inline-block moves to the next line whole,
+// and breaks inside only when it is wider than a line, where `nowrap` would
+// spill past the panel ("$12,500.00 – $25,000.00").
+const KeepTogether = styled.span({ display: "inline-block" })
+
 const CertificateIcon = styled(RiAwardLine)({
   width: "16px",
   height: "16px",
@@ -615,7 +626,16 @@ const ResourceCardView: React.FC<ResourceCardViewProps> = ({
             {price.certificate && (
               <PriceLine tone={price.tone}>
                 {price.tone === "dark" && <CertificateIcon aria-hidden />}
-                {price.certificate}
+                {/* One flex item, so the text and its price wrap as prose. */}
+                <span>
+                  {price.certificate}
+                  {price.certificatePrice && (
+                    <>
+                      {": "}
+                      <KeepTogether>{price.certificatePrice}</KeepTogether>
+                    </>
+                  )}
+                </span>
               </PriceLine>
             )}
             {price.license && (

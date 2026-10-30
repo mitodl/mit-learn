@@ -148,7 +148,8 @@ describe("learningResourceCardContent", () => {
       expect(learningResourceCardContent(resource).price).toEqual({
         tone: "light",
         primary: "Free to audit",
-        certificate: `${resource.certification_type.name}: $50`,
+        certificate: resource.certification_type.name,
+        certificatePrice: "$50",
       })
     })
 

@@ -565,7 +565,8 @@ describe("mitxOnlineCardContent", () => {
       ).toEqual({
         tone: "light",
         primary: "Free to audit",
-        certificate: `${resource.certificate_type}: $100 – $500`,
+        certificate: resource.certificate_type,
+        certificatePrice: "$100 – $500",
       })
     })
 
