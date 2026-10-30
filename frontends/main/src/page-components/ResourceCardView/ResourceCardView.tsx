@@ -79,7 +79,11 @@ type ResourceCardViewProps = ResourceCardContent &
     href: string
     pushUrl?: PushUrl
     onLinkClick?: React.MouseEventHandler<HTMLAnchorElement>
-    actions: CardAction[]
+    /**
+     * The card's one action (a bookmark): the horizontal price panel fits one
+     * button beside its first line.
+     */
+    action?: CardAction
     headingLevel: HeadingLevel
     className?: string
   }
@@ -112,12 +116,12 @@ const NARROW = "@container (max-width: 240px)"
  */
 const IMAGE_SIZES = "(max-width: 600px) 100vw, 600px"
 
-/** Distance from the action buttons to the edges of the cell they share. */
+/** Distance from the action button to the edges of its cell. */
 const ACTION_INSET = 12
 const ACTION_SIZE = 32
-/** The band an action button occupies, measured in from the edges of its cell. */
+/** The band the action occupies, measured in from the edges of its cell. */
 const ACTION_BAND = ACTION_INSET + ACTION_SIZE
-/** Between a price line and an action button beside it. */
+/** Between a price line and the action button beside it. */
 const ACTION_GAP = 8
 const PRICE_PADDING_BLOCK = 12
 const PRICE_PADDING_INLINE = 16
@@ -332,14 +336,14 @@ type PriceProps = {
   tone: PricePanel["tone"]
   /** The panel has no price lines. */
   empty: boolean
-  /** Horizontal: the actions share this cell. */
-  reserveActions: boolean
+  /** Horizontal: the action button shares this cell. */
+  reserveAction: boolean
 }
 
 const Price = styled("div", {
   shouldForwardProp: (prop) =>
-    prop !== "tone" && prop !== "empty" && prop !== "reserveActions",
-})<PriceProps>(({ theme, tone, empty, reserveActions }) => {
+    prop !== "tone" && prop !== "empty" && prop !== "reserveAction",
+})<PriceProps>(({ theme, tone, empty, reserveAction }) => {
   const { colors } = theme.custom
   const border = `1px solid ${colors.lightGray2}`
   const dark = tone === "dark"
@@ -347,12 +351,12 @@ const Price = styled("div", {
   // is set off by its color, the white (no price) one is meant to read as part
   // of the card, and a horizontal panel is inset.
   const divided = tone === "light"
-  // Horizontal: the band the actions occupy is at the panel's top right, and
+  // Horizontal: the band the action occupies is at the panel's top right, and
   // the lines are centred, so the first line can run through the band. It
-  // reserves the actions' width, and the top row's floor keeps it low enough
+  // reserves the button's width, and the top row's floor keeps it low enough
   // that the second line starts below the band, whatever the panel's height.
   // That is what a float at the top right would do, but a float moves with
-  // the centred lines and the actions must not. The floor is sized against
+  // the centred lines and the button must not. The floor is sized against
   // the primary line; the one panel without one (neutral, certificate only)
   // has a single line.
   const firstLineFloor = `calc(${ACTION_BAND - PRICE_PADDING_BLOCK}px - ${PRIMARY_LEADING} * ${theme.typography.subtitle1.fontSize})`
@@ -371,12 +375,12 @@ const Price = styled("div", {
       padding: "8px 12px",
     },
     [HORIZONTAL]: {
-      display: empty && !reserveActions ? "none" : "grid",
+      display: empty && !reserveAction ? "none" : "grid",
       // Slack, the lines, slack: equal slack centres the lines. The column
       // must not grow to a long word's min-content, or the lines leave the
       // panel instead of wrapping.
       gridTemplateColumns: "minmax(0, 1fr)",
-      gridTemplateRows: `minmax(${reserveActions ? firstLineFloor : 0}, 1fr) auto minmax(0, 1fr)`,
+      gridTemplateRows: `minmax(${reserveAction ? firstLineFloor : 0}, 1fr) auto minmax(0, 1fr)`,
       borderTop: "none",
       borderRadius: "4px",
     },
@@ -384,19 +388,19 @@ const Price = styled("div", {
 })
 
 const Lines = styled("div", {
-  shouldForwardProp: (prop) => prop !== "reserveActions",
-})<Pick<PriceProps, "reserveActions">>(({ reserveActions }) => ({
+  shouldForwardProp: (prop) => prop !== "reserveAction",
+})<Pick<PriceProps, "reserveAction">>(({ reserveAction }) => ({
   display: "flex",
   flexDirection: "column",
   gap: "4px",
   [HORIZONTAL]: {
     gridRow: 2,
-    "> :first-child": reserveActions
+    "> :first-child": reserveAction
       ? {
           paddingInlineEnd: ACTION_BAND - PRICE_PADDING_INLINE + ACTION_GAP,
           // A price line is a flex box with its text as an anonymous item,
-          // whose min-content is its longest word; beside the actions that
-          // word may not fit, so let it break rather than reach them.
+          // whose min-content is its longest word; beside the button that
+          // word may not fit, so let it break rather than reach it.
           overflowWrap: "anywhere",
         }
       : undefined,
@@ -442,25 +446,12 @@ const CertificateIcon = styled(RiAwardLine)({
   },
 })
 
-/** Vertical: top-right of the image. Horizontal: top-right of the price panel. */
-const Actions = styled.div({
-  gridArea: "image",
-  alignSelf: "start",
-  justifySelf: "end",
-  zIndex: 1,
-  display: "flex",
-  gap: "8px",
-  margin: ACTION_INSET,
-  [HORIZONTAL]: {
-    gridArea: "price",
-  },
-})
-
 type ActionButtonProps = {
   filled: boolean
   tone: PricePanel["tone"]
 }
 
+/** Vertical: top-right of the image. Horizontal: top-right of the price panel. */
 const ActionButton = styled("button", {
   shouldForwardProp: (prop) => prop !== "filled" && prop !== "tone",
 })<ActionButtonProps>(({ theme, filled, tone }) => {
@@ -475,7 +466,18 @@ const ActionButton = styled("button", {
       color: hover,
     },
   })
+  // One [HORIZONTAL] key: a second one in a spread would replace it.
+  const horizontal = filled
+    ? {}
+    : tone === "dark"
+      ? outlined(colors.darkGray1, colors.silverGrayLight, colors.white)
+      : outlined(colors.lightGray2, colors.silverGrayDark, colors.darkGray1)
   return {
+    gridArea: "image",
+    alignSelf: "start",
+    justifySelf: "end",
+    zIndex: 1,
+    margin: ACTION_INSET,
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
@@ -500,15 +502,8 @@ const ActionButton = styled("button", {
             backgroundColor: colors.lightGray2,
             color: colors.darkGray2,
           },
-          [HORIZONTAL]:
-            tone === "dark"
-              ? outlined(colors.darkGray1, colors.silverGrayLight, colors.white)
-              : outlined(
-                  colors.lightGray2,
-                  colors.silverGrayDark,
-                  colors.darkGray1,
-                ),
         }),
+    [HORIZONTAL]: { gridArea: "price", ...horizontal },
   }
 })
 
@@ -539,7 +534,7 @@ const ResourceCardView: React.FC<ResourceCardViewProps> = ({
   href,
   pushUrl,
   onLinkClick,
-  actions,
+  action,
   headingLevel,
   className,
 }) => {
@@ -565,7 +560,7 @@ const ResourceCardView: React.FC<ResourceCardViewProps> = ({
       layout={layout}
       size={size}
     >
-      <Grid priceColumn={!priceEmpty || actions.length > 0}>
+      <Grid priceColumn={!priceEmpty || !!action}>
         <ImageFrame>
           {!imageSrc && placeholderIcon ? (
             <PlaceholderIcon aria-hidden>{placeholderIcon}</PlaceholderIcon>
@@ -613,9 +608,9 @@ const ResourceCardView: React.FC<ResourceCardViewProps> = ({
           id={priceId}
           tone={price.tone}
           empty={priceEmpty}
-          reserveActions={actions.length > 0}
+          reserveAction={!!action}
         >
-          <Lines reserveActions={actions.length > 0}>
+          <Lines reserveAction={!!action}>
             {price.primary && <PrimaryLine>{price.primary}</PrimaryLine>}
             {price.certificate && (
               <PriceLine tone={price.tone}>
@@ -628,26 +623,18 @@ const ResourceCardView: React.FC<ResourceCardViewProps> = ({
             )}
           </Lines>
         </Price>
-        {/* Last in the DOM, so Tab reaches the card link before the actions. */}
-        {actions.length > 0 && (
-          <Actions>
-            {actions.map(({ label, filled, icon, onClick }, index) => (
-              <ActionButton
-                // Not the label: it changes with state ("Bookmark" /
-                // "Bookmarked"), which would remount the button and drop
-                // focus when its dialog closes.
-                key={index}
-                type="button"
-                aria-label={label}
-                aria-haspopup="dialog"
-                filled={filled}
-                tone={price.tone}
-                onClick={onClick}
-              >
-                {icon}
-              </ActionButton>
-            ))}
-          </Actions>
+        {/* Last in the DOM, so Tab reaches the card link before the action. */}
+        {action && (
+          <ActionButton
+            type="button"
+            aria-label={action.label}
+            aria-haspopup="dialog"
+            filled={action.filled}
+            tone={price.tone}
+            onClick={action.onClick}
+          >
+            {action.icon}
+          </ActionButton>
         )}
       </Grid>
     </Root>
@@ -676,8 +663,8 @@ const ResourceCardSkeleton: React.FC<
           </TitleBlock>
           <Skeleton variant="text" width="60%" />
         </Content>
-        <Price tone="neutral" empty={false} reserveActions={false}>
-          <Lines reserveActions={false}>
+        <Price tone="neutral" empty={false} reserveAction={false}>
+          <Lines reserveAction={false}>
             <Skeleton variant="text" width="50%" />
             <Skeleton variant="text" width="80%" />
           </Lines>

@@ -275,7 +275,6 @@ const MitxOnlineResourceCard: React.FC<MitxOnlineResourceCardProps> = (
         layout="responsive"
         href={href}
         onLinkClick={captureClick}
-        actions={[]}
         headingLevel={headingLevel}
         className={className}
       />

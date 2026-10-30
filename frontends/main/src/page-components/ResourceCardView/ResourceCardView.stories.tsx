@@ -4,8 +4,6 @@ import {
   RiBookmarkFill,
   RiBookmarkLine,
   RiFileCopy2Line,
-  RiListCheck3,
-  RiMenuAddLine,
 } from "@remixicon/react"
 import { styled } from "ol-components"
 import { ResourceCardSkeleton, ResourceCardView } from "./ResourceCardView"
@@ -19,33 +17,19 @@ const title = "Introduction to Computer Science and Programming in Python"
 const longTitle =
   "Supply Chain Analytics, Design, and Dynamics: Fundamentals of Modeling, Optimization, and Planning Under Uncertainty"
 
-const makeActions = (
+const makeAction = (
   cardTitle: string,
-  { bookmarked = false, inLearningPath = false } = {},
-): CardAction[] => [
-  {
-    label: inLearningPath
-      ? `In Learning Path: ${cardTitle}`
-      : `Add to Learning Path: ${cardTitle}`,
-    filled: inLearningPath,
-    icon: inLearningPath ? (
-      <RiListCheck3 aria-hidden />
-    ) : (
-      <RiMenuAddLine aria-hidden />
-    ),
-    onClick: () => {},
-  },
-  {
-    label: bookmarked ? `Bookmarked: ${cardTitle}` : `Bookmark: ${cardTitle}`,
-    filled: bookmarked,
-    icon: bookmarked ? (
-      <RiBookmarkFill aria-hidden />
-    ) : (
-      <RiBookmarkLine aria-hidden />
-    ),
-    onClick: () => {},
-  },
-]
+  { bookmarked = false } = {},
+): CardAction => ({
+  label: bookmarked ? `Bookmarked: ${cardTitle}` : `Bookmark: ${cardTitle}`,
+  filled: bookmarked,
+  icon: bookmarked ? (
+    <RiBookmarkFill aria-hidden />
+  ) : (
+    <RiBookmarkLine aria-hidden />
+  ),
+  onClick: () => {},
+})
 
 const PRICES: Record<string, PricePanel> = {
   Paid: {
@@ -100,7 +84,7 @@ const meta: Meta<ResourceCardViewProps> = {
     layout: "vertical",
     size: "medium",
     href: "#",
-    actions: makeActions(title),
+    action: makeAction(title),
     headingLevel: 3,
   },
 }
@@ -155,7 +139,7 @@ const variants = (
   }))
 
 const edgeCases = (args: ResourceCardViewProps): ResourceCardViewProps[] => [
-  { ...args, title: longTitle, actions: makeActions(longTitle) },
+  { ...args, title: longTitle, action: makeAction(longTitle) },
   ...variants(args, LONG_RANGES),
   { ...args, title: `No image: ${args.title}`, imageSrc: null },
   {
@@ -166,20 +150,11 @@ const edgeCases = (args: ResourceCardViewProps): ResourceCardViewProps[] => [
     placeholderIcon: <RiFileCopy2Line />,
     price: PRICES.Free,
   },
+  { ...args, title: `No action: ${args.title}`, action: undefined },
   {
     ...args,
-    title: `One action: ${args.title}`,
-    price: PRICES.Paid,
-    actions: makeActions(args.title).slice(1),
-  },
-  { ...args, title: `No actions: ${args.title}`, actions: [] },
-  {
-    ...args,
-    title: `Bookmarked, in learning path: ${args.title}`,
-    actions: makeActions(args.title, {
-      bookmarked: true,
-      inLearningPath: true,
-    }),
+    title: `Bookmarked: ${args.title}`,
+    action: makeAction(args.title, { bookmarked: true }),
   },
   {
     ...args,
@@ -192,8 +167,8 @@ const edgeCases = (args: ResourceCardViewProps): ResourceCardViewProps[] => [
 
 /**
  * Every price state in each layout and size, then edge cases: a long title,
- * long price ranges, no image (with and without a placeholder icon), one or no
- * actions, filled actions, and no metadata.
+ * long price ranges, no image (with and without a placeholder icon), no action,
+ * a bookmarked action, and no metadata.
  */
 export const Omnibus: Story = {
   parameters: { layout: "padded" },

@@ -33,20 +33,12 @@ const makeProps = (): ResourceCardViewProps => {
     href: `/${faker.lorem.slug()}`,
     pushUrl: `?resource=${faker.number.int()}`,
     onLinkClick: jest.fn(),
-    actions: [
-      {
-        label: faker.lorem.sentence(),
-        filled: false,
-        icon: <span aria-hidden />,
-        onClick: jest.fn(),
-      },
-      {
-        label: faker.lorem.sentence(),
-        filled: true,
-        icon: <span aria-hidden />,
-        onClick: jest.fn(),
-      },
-    ],
+    action: {
+      label: faker.lorem.sentence(),
+      filled: faker.datatype.boolean(),
+      icon: <span aria-hidden />,
+      onClick: jest.fn(),
+    },
     headingLevel: faker.helpers.arrayElement([2, 3, 4, 5, 6] as const),
     className: faker.lorem.word(),
   }
@@ -67,7 +59,7 @@ describe("ResourceCardView", () => {
     expect(props.onLinkClick).toHaveBeenCalledTimes(1)
   })
 
-  test("The link is described by the type, parent, metadata, and price, but not the actions", () => {
+  test("The link is described by the type, parent, metadata, and price, but not the action", () => {
     const props = makeProps()
     renderWithTheme(<ResourceCardView {...props} />)
     const link = screen.getByRole("link", { name: props.title })
@@ -82,11 +74,9 @@ describe("ResourceCardView", () => {
       .map((text) => escapeRegExp(text))
       .join(".*")
     expect(link).toHaveAccessibleDescription(new RegExp(inOrder))
-    props.actions.forEach(({ label }) => {
-      expect(link).not.toHaveAccessibleDescription(
-        new RegExp(escapeRegExp(label)),
-      )
-    })
+    expect(link).not.toHaveAccessibleDescription(
+      new RegExp(escapeRegExp(props.action!.label)),
+    )
   })
 
   test("Metadata is a description list of div-wrapped term/definition pairs", () => {
@@ -105,27 +95,22 @@ describe("ResourceCardView", () => {
     })
   })
 
-  test("Actions are dialog-opening buttons, in order, after the price panel", async () => {
+  test("The action is a dialog-opening button after the price panel", async () => {
     const props = makeProps()
     renderWithTheme(<ResourceCardView {...props} />)
-    const buttons = props.actions.map(({ label }) =>
-      screen.getByRole("button", { name: label }),
-    )
-    expect(screen.getAllByRole("button")).toEqual(buttons)
+    const button = screen.getByRole("button", { name: props.action!.label })
+    expect(screen.getAllByRole("button")).toEqual([button])
     const link = screen.getByRole("link", { name: props.title })
     const panelId = link.getAttribute("aria-describedby")!.split(" ").at(-1)!
     const panel = document.getElementById(panelId)!
     expect(panel).toHaveTextContent(props.price.primary!)
     expect(within(panel).queryAllByRole("button")).toEqual([])
-    for (const [i, button] of buttons.entries()) {
-      expect(button).toHaveAttribute("aria-haspopup", "dialog")
-      expect(
-        panel.compareDocumentPosition(button) &
-          Node.DOCUMENT_POSITION_FOLLOWING,
-      ).toBeTruthy()
-      await user.click(button)
-      expect(props.actions[i].onClick).toHaveBeenCalledTimes(1)
-    }
+    expect(button).toHaveAttribute("aria-haspopup", "dialog")
+    expect(
+      panel.compareDocumentPosition(button) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy()
+    await user.click(button)
+    expect(props.action!.onClick).toHaveBeenCalledTimes(1)
     expect(props.onLinkClick).not.toHaveBeenCalled()
   })
 
