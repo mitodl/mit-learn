@@ -69,7 +69,11 @@ from learning_resources.etl.loaders import (
     unpublish_removed_youtube_channels,
 )
 from learning_resources.etl.mitxonline import transform_programs
-from learning_resources.etl.ownership import CONTENT_FILE
+from learning_resources.etl.ownership import (
+    CONTENT_FILE,
+    OwnershipError,
+    shadowing,
+)
 from learning_resources.etl.utils import get_s3_prefix_for_source
 from learning_resources.etl.xpro import _parse_datetime
 from learning_resources.factories import (
@@ -4515,3 +4519,17 @@ def test_load_course_units_keeps_empty_context():
     unit = run.units.get()
     assert (unit.external_id, unit.kind, unit.position) == ("context", "context", None)
     assert not unit.content_files.exists()
+
+
+def test_load_course_and_unpublish_resources_refuse_a_shadow_run():
+    """The loaders a sync calls per course write nothing inside a shadow run"""
+    course = LearningResourceFactory.create(is_course=True, published=True)
+
+    with shadowing():
+        with pytest.raises(OwnershipError):
+            loaders.load_course({"readable_id": course.readable_id})
+        with pytest.raises(OwnershipError):
+            loaders.unpublish_resources(LearningResource.objects.filter(id=course.id))
+
+    course.refresh_from_db()
+    assert course.published is True

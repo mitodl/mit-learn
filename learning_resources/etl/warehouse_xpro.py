@@ -29,7 +29,7 @@ from learning_resources.etl.constants import (
     ETLSource,
     ProgramLoaderConfig,
 )
-from learning_resources.etl.ownership import may_write
+from learning_resources.etl.ownership import RunMode, run_mode
 from learning_resources.etl.utils import (
     generate_course_numbers_json,
     transform_delivery,
@@ -230,7 +230,7 @@ def sync_courses(
     Returns:
         int: the number of courses loaded
     """
-    if not may_write(ETLSource.xpro.name, COURSE):
+    if run_mode(ETLSource.xpro.name, COURSE) == RunMode.SKIP:
         return 0
 
     refuse_empty(courses=courses, runs=runs)
@@ -265,7 +265,7 @@ def sync_programs(programs: list[dict], *, allow_mass_unpublish: bool = False) -
     Returns:
         int: the number of programs loaded
     """
-    if not may_write(ETLSource.xpro.name, PROGRAM):
+    if run_mode(ETLSource.xpro.name, PROGRAM) == RunMode.SKIP:
         return 0
 
     refuse_empty(programs=programs)

@@ -27,11 +27,16 @@ from learning_resources.constants import (
     PlatformType,
     RunStatus,
 )
-from learning_resources.etl import loaders
+from learning_resources.etl import loaders, shadow
 from learning_resources.etl.constants import CourseLoaderConfig, ETLSource
 from learning_resources.etl.exceptions import ExtractException
 from learning_resources.etl.ocw import OFFERED_BY, UNIQUE_FIELD, parse_delivery
-from learning_resources.etl.ownership import may_write
+from learning_resources.etl.ownership import (
+    RunMode,
+    is_shadow_run,
+    may_write,
+    run_mode,
+)
 from learning_resources.etl.utils import (
     generate_course_numbers_json,
     transform_levels,
@@ -155,6 +160,46 @@ def course_checksum(course: dict) -> str:
     return checksum_for_content(json.dumps(course, sort_keys=True, default=str))
 
 
+def observe_courses(courses: list[dict], view_urls: set[str]) -> int:
+    """
+    Compare every course of the view with the stored one, for the shadow run in
+    progress, and write nothing.
+
+    A shadow compares the whole view, so no course is skipped for an unchanged
+    ``etl_checksum``, and the hash is left out of the comparison: the legacy
+    load stores none, so comparing it would mark every course updated. The
+    prune keeps the courses the view lists by url, as the load's does. A row
+    that fails to transform is logged and left out, and the sync raises once
+    the rest are compared, as the load does.
+
+    Args:
+        courses (list of dict): rows of integrations__learn__ocw_courses
+        view_urls (set of str): the urls the view lists
+
+    Returns:
+        int: the number of courses compared
+    """
+    courses_data = []
+    failed = []
+    for row in courses:
+        try:
+            courses_data.append(transform_course(row))
+        except Exception:
+            log.exception("Error transforming OCW course %s", row[UNIQUE_FIELD])
+            failed.append(row[UNIQUE_FIELD])
+    shadow.observe(
+        ETLSource.ocw.name,
+        COURSE,
+        courses_data,
+        prune=True,
+        keep=Q(url__in=view_urls),
+    )
+    if failed:
+        msg = f"{len(failed)} OCW courses failed to transform: {', '.join(failed)}"
+        raise ExtractException(msg)
+    return len(courses_data)
+
+
 def sync_courses(courses: list[dict], *, allow_mass_unpublish: bool = False) -> int:
     """
     Load the courses of the warehouse view that changed since they were last
@@ -171,13 +216,18 @@ def sync_courses(courses: list[dict], *, allow_mass_unpublish: bool = False) -> 
     Returns:
         int: the number of courses loaded
     """
-    if not may_write(ETLSource.ocw.name, COURSE):
+    if run_mode(ETLSource.ocw.name, COURSE) == RunMode.SKIP:
         return 0
 
     refuse_empty(courses=courses)
     view_urls = {course[UNIQUE_FIELD] for course in courses}
     if not allow_mass_unpublish:
         refuse_mass_unpublish(ETLSource.ocw.name, COURSE, view_urls, field=UNIQUE_FIELD)
+    if is_shadow_run():
+        return observe_courses(courses, view_urls)
+    # load_course and unpublish_resources write whoever calls them
+    if not may_write(ETLSource.ocw.name, COURSE):
+        return 0
 
     ocw_courses = LearningResource.objects.filter(
         etl_source=ETLSource.ocw.name, resource_type=COURSE
