@@ -1,5 +1,6 @@
 import { NextRequest } from "next/server"
 import { isPageRoute, mitxonlineSurrogateKey, proxy } from "./proxy"
+import { CSP_HEADER, contentSecurityPolicy } from "@/common/csp"
 
 describe("isPageRoute", () => {
   test.each([
@@ -189,6 +190,56 @@ describe("proxy", () => {
     ).not.toThrow()
     const response = proxy(makeRequest("/courses/foo%0D%0AX-Injected%3A+yes"))
     expect(response.headers.get("Surrogate-Key")).toBe("html-pages")
+  })
+
+  describe("Content-Security-Policy", () => {
+    test.each([
+      ["/", "site"],
+      ["/search", "site"],
+      ["/video/123", "site"],
+      ["/video/embed/123", "embed"],
+      ["/podcast/embed/137277", "embed"],
+    ] as const)("serves the %s policy on %s", (pathname, group) => {
+      const response = proxy(makeRequest(pathname))
+      expect(response.headers.get(CSP_HEADER)).toBe(
+        contentSecurityPolicy(group),
+      )
+    })
+
+    test("leaves non-page routes alone — CSP only governs documents", () => {
+      for (const pathname of ["/healthcheck", "/images/hero/hero-1.png"]) {
+        expect(proxy(makeRequest(pathname)).headers.get(CSP_HEADER)).toBeNull()
+      }
+    })
+
+    test("does not disturb Cache-Control or Surrogate-Key on embed routes", () => {
+      const response = proxy(makeRequest("/video/embed/123"))
+      expect(response.headers.get("Surrogate-Key")).toBe("html-pages")
+      expect(response.headers.get("Cache-Control")).toBe(
+        `s-maxage=${S_MAXAGE_SECONDS}, stale-if-error=86400, stale-while-revalidate=86400`,
+      )
+    })
+
+    /**
+     * Cache safety, asserted rather than watched on a metric afterwards.
+     * learn.mit.edu HTML is cached per-URL at Fastly, so a policy that varied
+     * by request header would need a Vary and would wreck the hit ratio the
+     * whole design exists to protect. The branch keys on pathname only.
+     */
+    test("is byte-identical for the same path regardless of request headers", () => {
+      const withHeaders = (headers: Record<string, string>) =>
+        proxy(
+          new NextRequest(new URL("/search", "https://learn.mit.edu"), {
+            headers,
+          }),
+        ).headers.get(CSP_HEADER)
+
+      const baseline = withHeaders({})
+      expect(baseline).not.toBeNull()
+      expect(withHeaders({ Referer: "https://example.com/" })).toBe(baseline)
+      expect(withHeaders({ Cookie: "sessionid=abc123" })).toBe(baseline)
+      expect(withHeaders({ "Sec-Fetch-Dest": "iframe" })).toBe(baseline)
+    })
   })
 
   /**

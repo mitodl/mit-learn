@@ -141,6 +141,28 @@ describe("next.config.js headers", () => {
   })
 
   /**
+   * Framing is decided per route group in src/common/csp.ts, because the
+   * (embed) routes must stay framable by any origin — ShareDialog hands those
+   * URLs to arbitrary third parties.
+   *
+   * The existing /:path* rule here already carries nosniff and Referrer-Policy,
+   * so it is the obvious place to add X-Frame-Options, and doing so would send
+   * SAMEORIGIN to the embed routes too and blank every third-party embed.
+   * X-Frame-Options has no reporting channel and no portable "any origin"
+   * value, so nothing would catch it: no violation report, no console error,
+   * and the breakage happens on someone else's page. See RFC 0007 D9.
+   */
+  test("no framing header is emitted for any source", async () => {
+    const framing = (await getRules())
+      .flatMap(({ headers }) => headers)
+      .filter(({ key }) =>
+        /^(x-frame-options|content-security-policy)/i.test(key),
+      )
+
+    expect(framing).toEqual([])
+  })
+
+  /**
    * Per-request Cache-Control belongs to src/proxy.ts, which reads the TTL
    * from the environment at request time. A second source here would diverge
    * from it silently.
