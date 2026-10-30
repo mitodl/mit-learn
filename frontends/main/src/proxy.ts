@@ -161,6 +161,12 @@ export function proxy(request: NextRequest) {
   //
   // The (site) and (embed) route groups get independently tuned policies — see
   // common/csp.ts and RFC 0007 D8.
+  //
+  // routeGroup() normalises the /static rewrite prefix; the two calls above do
+  // not, so /static/courses/<id> gets html-pages without its per-item
+  // mitxonline tag and is not individually purgeable. That predates this and is
+  // left alone deliberately: normalising here would change which Surrogate-Key
+  // Fastly sees, which is a caching change wearing a CSP change's clothes.
   const group = routeGroup(request.nextUrl.pathname)
   response.headers.set(CSP_HEADER, contentSecurityPolicy(group))
 
