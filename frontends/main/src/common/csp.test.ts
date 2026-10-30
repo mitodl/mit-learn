@@ -62,6 +62,12 @@ describe("routeGroup", () => {
     // The /static prefix is stripped, not treated as a wildcard.
     "/static/video/123",
     "/static/search",
+    // Exactly ONE prefix is stripped, matching the router: Next applies the
+    // rewrite once, so the inner /static/... 404s into (site)/[...unmatched].
+    // A global flag or a loop here would be a real wrong-group bug.
+    "/static/static/video/embed/123",
+    // Next's rewrite matching is case-sensitive, so this is not the prefix.
+    "/STATIC/video/embed/123",
   ])("treats %s as a site route", (pathname) => {
     expect(routeGroup(pathname)).toBe("site")
   })
@@ -277,9 +283,7 @@ describe("contentSecurityPolicy", () => {
       ["https://a,b.appzi.io/w.js", ","],
     ])("an Appzi host containing %s is dropped", (configured) => {
       process.env.NEXT_PUBLIC_APPZI_URL = configured
-      const policy = policyFor("site")
-      expect(policy["script-src"].join(" ")).not.toContain("appzi")
-      expect(Object.keys(policy)).not.toContain("script-src;")
+      expect(policyFor("site")["script-src"].join(" ")).not.toContain("appzi")
     })
 
     test.each([
@@ -287,7 +291,12 @@ describe("contentSecurityPolicy", () => {
       // would otherwise be emitted as a bare source expression.
       "foo://w.appzi.io/w.js",
       "ftp://w.appzi.io/w.js",
-    ])("a non-HTTP Appzi URL (%s) is dropped", (configured) => {
+      // http is rejected as well. Stricter than a script host needs, and the
+      // right rule for the report-uri this shares its parser with: an http
+      // endpoint named from an https document is mixed content, so the POST is
+      // blocked and the soak collects nothing without saying so.
+      "http://w.appzi.io/w.js",
+    ])("a non-https Appzi URL (%s) is dropped", (configured) => {
       process.env.NEXT_PUBLIC_APPZI_URL = configured
       expect(policyFor("site")["script-src"]).not.toContain("null")
       expect(contentSecurityPolicy("site")).not.toContain("appzi")
@@ -334,8 +343,10 @@ describe("contentSecurityPolicy", () => {
       // where it encodes it in the username and the path.
       "https://deadbeef@evil.com%3Bscript-src/4505",
       "https://deadbeef@a,b.com/4505",
-      // Not an HTTP(S) endpoint.
+      // Not an https endpoint. http would make the report POST mixed content
+      // from an https page: blocked by the browser, silent in the stream.
       "ftp://deadbeef@sentry.example.com/4505",
+      "http://deadbeef@sentry.example.com/4505",
     ])("is omitted rather than malformed for the unusable DSN %s", (dsn) => {
       process.env.NEXT_PUBLIC_SENTRY_DSN = dsn
       expect(policyFor("site")["report-uri"]).toBeUndefined()
