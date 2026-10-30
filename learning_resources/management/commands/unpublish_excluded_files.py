@@ -13,7 +13,6 @@ from main.utils import now_in_utc
 
 EDX_SOURCES = [
     ETLSource.mitxonline.name,
-    ETLSource.mit_edx.name,
     ETLSource.xpro.name,
     ETLSource.oll.name,
 ]

@@ -98,6 +98,9 @@ ProgramLoaderConfig = namedtuple(  # noqa: PYI024
 class ETLSource(ExtendedEnum):
     """Enum of ETL sources"""
 
+    # retired: nothing ingests it, but ol-data-platform still sends mit_edx
+    # content file webhooks, which this keeps a no-op instead of a 400. Remove
+    # once they stop.
     mit_edx = "mit_edx"
     mitpe = "mitpe"
     mitxonline = "mitxonline"
@@ -113,7 +116,6 @@ class ETLSource(ExtendedEnum):
 
 
 QDRANT_RETAINED_SOURCES = (
-    ETLSource.mit_edx.value,
     ETLSource.mitxonline.value,
     ETLSource.xpro.value,
     ETLSource.oll.value,
@@ -123,7 +125,6 @@ QDRANT_RETAINED_SOURCES = (
 # Sources whose course run_id is an edX course run key, which the source lets
 # belong to only one course at a time
 EDX_RUN_ID_SOURCES = (
-    ETLSource.mit_edx.value,
     ETLSource.mitxonline.value,
     ETLSource.xpro.value,
     ETLSource.oll.value,
@@ -138,7 +139,6 @@ class CourseNumberType(Enum):
 
 
 RESOURCE_FILE_ETL_SOURCES = [
-    ETLSource.mit_edx.value,
     ETLSource.ocw.value,
     ETLSource.mitxonline.value,
     ETLSource.xpro.value,

@@ -4,16 +4,6 @@ Django settings specific to learning_resources ingestion
 
 from main.envs import get_bool, get_int, get_list_of_str, get_string
 
-# EDX API Credentials
-EDX_API_URL = get_string("EDX_API_URL", None)
-EDX_PROGRAMS_API_URL = get_string("EDX_PROGRAMS_API_URL", None)
-EDX_API_ACCESS_TOKEN_URL = get_string("EDX_API_ACCESS_TOKEN_URL", None)
-EDX_API_CLIENT_ID = get_string("EDX_API_CLIENT_ID", None)
-EDX_API_CLIENT_SECRET = get_string("EDX_API_CLIENT_SECRET", None)
-EDX_COURSE_BUCKET_PREFIX = get_string(
-    "EDX_COURSE_BUCKET_PREFIX", "edxorg-raw-data/edxorg/raw_data/course_xml/"
-)
-
 # OCW settings
 OCW_LIVE_BUCKET = get_string("OCW_LIVE_BUCKET", None)
 OCW_ITERATOR_CHUNK_SIZE = get_int("OCW_ITERATOR_CHUNK_SIZE", 1000)
@@ -25,12 +15,6 @@ MAX_S3_GET_ITERATIONS = get_int("MAX_S3_GET_ITERATIONS", 3)
 
 # Base URL's for courses
 OCW_BASE_URL = get_string("OCW_BASE_URL", "http://ocw.mit.edu/")
-EDX_BASE_URL = get_string("EDX_BASE_URL", "https://www.edx.org/")
-EDX_ALT_URL = get_string("EDX_ALT_URL", "https://courses.edx.org/")
-BLOCKLISTED_COURSES_URL = get_string(
-    "BLOCKLISTED_COURSES_URL",
-    "https://raw.githubusercontent.com/mitodl/open-resource-blocklists/master/courses.txt",
-)
 
 
 # Iterator chunk size for MITx and xPRO courses
@@ -155,7 +139,6 @@ CONTENT_BASE_URL_XPRO = get_string(
 CONTENT_BASE_URL_OLL = get_string(
     "CONTENT_BASE_URL_OLL", "https://openlearninglibrary.mit.edu"
 )
-CONTENT_BASE_URL_EDX = get_string("CONTENT_BASE_URL_EDX", "https://courses.edx.org")
 
 # Warehouse-pull settings for Cohort 1 catalog ETL, used to query the
 # integrations schema views exposed by the OL Data Platform. WAREHOUSE_BACKEND

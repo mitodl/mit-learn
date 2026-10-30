@@ -65,7 +65,6 @@ from learning_resources.utils import (
     add_parent_topics_to_learning_resource,
     bulk_resources_unpublished_actions,
     content_files_loaded_actions,
-    load_course_blocklist,
     resource_delete_actions,
     resource_run_delete_actions,
     resource_run_unpublished_actions,
@@ -446,7 +445,6 @@ def load_run(
             if (
                 learning_resource.etl_source
                 in (
-                    ETLSource.mit_edx.value,
                     ETLSource.mitxonline.value,
                     ETLSource.xpro.value,
                 )
@@ -485,9 +483,8 @@ def load_run(
     return learning_resource_run
 
 
-def upsert_course_or_program(  # noqa: C901, PLR0912
+def upsert_course_or_program(  # noqa: C901
     resource_data: dict,
-    blocklist: list[str],
     resource_type: str,
     *,
     config: CourseLoaderConfig = None,
@@ -498,8 +495,6 @@ def upsert_course_or_program(  # noqa: C901, PLR0912
     Args:
         resource_data (dict):
             a dict of course/program data values
-        blocklist (list of str):
-            list of course/program ids not to load
         resource_type (str):
             the type of resource to load (course or program)
         config (CourseLoaderConfig):
@@ -519,11 +514,8 @@ def upsert_course_or_program(  # noqa: C901, PLR0912
     # clears it and the next hashing sync reloads the resource.
     resource_data.setdefault("etl_checksum", None)
 
-    if readable_id in blocklist or not runs:
+    if not runs:
         resource_data["published"] = False
-    if readable_id in blocklist:
-        # blocklisting overrides test_mode, which would keep the content indexed
-        resource_data["test_mode"] = False
 
     if not resource_data.get("resource_category"):
         if resource_type == LearningResourceType.course.name:
@@ -596,7 +588,6 @@ def upsert_course_or_program(  # noqa: C901, PLR0912
 
 def load_course(
     resource_data: dict,
-    blocklist: list[str],
     *,
     config=CourseLoaderConfig(),
 ) -> LearningResource:
@@ -606,8 +597,6 @@ def load_course(
     Args:
         resource_data (dict):
             a dict of course data values
-        blocklist (list of str):
-            list of course ids not to load
         config (CourseLoaderConfig):
             configuration on how to load this program
 
@@ -629,7 +618,6 @@ def load_course(
     with transaction.atomic():
         learning_resource, created = upsert_course_or_program(
             resource_data,
-            blocklist,
             LearningResourceType.course.name,
             config=config,
         )
@@ -647,10 +635,7 @@ def load_course(
             we set the course to "test_mode" in learn
             """
             learning_resource.require_summaries = True
-            if (
-                learning_resource.published is False
-                and learning_resource.readable_id not in blocklist
-            ):
+            if learning_resource.published is False:
                 learning_resource.test_mode = True
             learning_resource.save()
         for course_run_data in runs_data:
@@ -714,15 +699,11 @@ def load_courses(
     if not may_write(etl_source, LearningResourceType.course.name):
         return []
 
-    blocklist = load_course_blocklist()
-
     courses_list = list(courses_data or [])
 
     courses = [
         course
-        for course in [
-            load_course(course, blocklist, config=config) for course in courses_list
-        ]
+        for course in [load_course(course, config=config) for course in courses_list]
         if course is not None
     ]
 
@@ -758,7 +739,6 @@ class LoadedProgramCourse(NamedTuple):
 
 def load_program(
     program_data: dict,
-    blocklist: list[str],
     *,
     config=ProgramLoaderConfig(),
 ) -> ProgramLoadResult:
@@ -768,8 +748,6 @@ def load_program(
     Args:
         program_data (dict):
             a dict of program data values
-        blocklist (list of str):
-            list of course ids not to load
         config (ProgramLoaderConfig):
             configuration on how to load this program
 
@@ -793,7 +771,7 @@ def load_program(
 
     with transaction.atomic():
         learning_resource, created = upsert_course_or_program(
-            program_data, [], LearningResourceType.program.name
+            program_data, LearningResourceType.program.name
         )
         if not learning_resource:
             return ProgramLoadResult(
@@ -830,7 +808,7 @@ def load_program(
                 continue
 
             explicit_position = course_data.pop("position", None)
-            course_resource = load_course(course_data, blocklist, config=config.courses)
+            course_resource = load_course(course_data, config=config.courses)
             if course_resource:
                 loaded_courses.append(
                     LoadedProgramCourse(
@@ -971,13 +949,11 @@ def load_programs(
         # to the courses that pipeline loaded instead of writing them here.
         config = config._replace(courses=config.courses._replace(fetch_only=True))
 
-    blocklist = load_course_blocklist()
-
     # Pass 1: load all programs and their course children
     results: list[ProgramLoadResult] = []
     deferred_child_programs = []
     for program_data in programs_data:
-        result = load_program(program_data, blocklist, config=config)
+        result = load_program(program_data, config=config)
         results.append(result)
         if result.resource and result.child_programs_data:
             deferred_child_programs.append(
