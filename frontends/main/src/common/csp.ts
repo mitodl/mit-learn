@@ -142,8 +142,8 @@ const SITE_FRAME_SOURCES = [
 const SAFE_HOST = /^[a-zA-Z0-9.-]+(?::\d+)?$/
 
 /**
- * Reduces a configured URL to an origin safe to name in a response header, or
- * null if it is anything else.
+ * Parses a configured URL, or returns null unless it is an https URL whose host
+ * is safe to name in a response header.
  *
  * The host is the component that needs checking, which is easy to get wrong:
  * new URL() percent-encodes ";" and "," in the username and the path, but in
@@ -151,10 +151,13 @@ const SAFE_HOST = /^[a-zA-Z0-9.-]+(?::\d+)?$/
  * a new directive and "," starts a whole second policy, so an unchecked host
  * turns a mangled env var into a different policy that still looks fine.
  *
- * Non-https schemes are rejected too. A non-special scheme makes URL.origin the
- * literal string "null", which would otherwise be emitted as a bare source.
+ * https ONLY, which is stricter than it needs to be for a script host and
+ * exactly right for the report-uri: an http: endpoint named from an https
+ * document is mixed content, so the browser blocks the POST and the soak
+ * collects nothing, silently. Rejecting non-special schemes also keeps
+ * URL.origin's literal string "null" from being emitted as a bare source.
  */
-const safeOrigin = (configured: string | undefined): string | null => {
+const safeUrl = (configured: string | undefined): URL | null => {
   const trimmed = configured?.trim()
   if (!trimmed) return null
   let parsed: URL
@@ -163,10 +166,13 @@ const safeOrigin = (configured: string | undefined): string | null => {
   } catch {
     return null
   }
-  if (parsed.protocol !== "https:" && parsed.protocol !== "http:") return null
+  if (parsed.protocol !== "https:") return null
   if (!SAFE_HOST.test(parsed.host)) return null
-  return parsed.origin
+  return parsed
 }
+
+const safeOrigin = (configured: string | undefined): string | null =>
+  safeUrl(configured)?.origin ?? null
 
 /**
  * The Appzi feedback widget's origin, from NEXT_PUBLIC_APPZI_URL (site only).
@@ -183,13 +189,24 @@ const appziSource = (): string[] => {
  * PostHog's host, from NEXT_PUBLIC_POSTHOG_API_HOST (site only — the provider
  * is mounted from (site)/SiteProviders.tsx and nowhere else).
  *
- * This is a SCRIPT host, not only a connect-src one. posthog-js fetches its
- * optional bundles — surveys, the session recorder, the toolbar — as <script>
- * from the configured host at runtime, so a policy that named it under
- * connect-src alone would block them at enforce. It appears nowhere in this
- * repo as a literal, which is why it was missed: the value is an environment
- * variable (production proxies PostHog at an MIT host) and the loads happen
- * inside the library.
+ * This is a SCRIPT host, not only a connect-src one, and the mechanism rather
+ * than any one feature is the reason: every external dependency posthog-js
+ * loads goes through RequestRouter.endpointFor("assets", …), which returns
+ * api_host verbatim whenever the region is CUSTOM — which ours is, since
+ * ph.ol.mit.edu matches neither the US nor the EU host pattern.
+ *
+ * Do not re-derive this from a feature list. The unconditional one is the
+ * remote config posthog-js fetches at init (/array/<token>/config.js); session
+ * recording is pinned OFF by the `defaults` date in ConfiguredPostHogProvider,
+ * and the toolbar loads only for a signed-in PostHog editor. An audit that
+ * reasoned from those two would drop a host that is loaded on every page view.
+ *
+ * It appears nowhere in this repo as a literal, which is why it was missed:
+ * the value is an environment variable pointed at infrastructure we run, and
+ * the loads happen inside the library. Unset, posthog-js falls back to its own
+ * us.i.posthog.com and the policy would name nothing — ol-infrastructure sets
+ * it in CI, QA and Production, so that is theoretical, and silent if it ever
+ * stops being.
  */
 const posthogSource = (): string[] => {
   const origin = safeOrigin(env("NEXT_PUBLIC_POSTHOG_API_HOST"))
@@ -208,8 +225,9 @@ const posthogSource = (): string[] => {
  * URL. The policy omits the directive entirely in that case.
  *
  * Every component is operator-supplied and lands verbatim in a response header,
- * so every component is checked: the host by safeOrigin() above, the key and
- * project id as alphanumeric here, and any path prefix a segment at a time.
+ * so every component is checked: the scheme and host by safeUrl() above, the
+ * key and project id as alphanumeric here, and any path prefix a segment at a
+ * time.
  *
  * The prefix is PRESERVED rather than discarded. A self-hosted Sentry can live
  * under one (https://key@host/sentry/4505), and rebuilding the endpoint from
@@ -217,18 +235,8 @@ const posthogSource = (): string[] => {
  * that resolves, 404s, and reports nothing, which is worse than refusing.
  */
 const sentryReportUri = (): string | null => {
-  const dsn = env("NEXT_PUBLIC_SENTRY_DSN")?.trim()
-  if (!dsn) return null
-
-  const origin = safeOrigin(dsn)
-  if (!origin) return null
-
-  let parsed: URL
-  try {
-    parsed = new URL(dsn)
-  } catch {
-    return null
-  }
+  const parsed = safeUrl(env("NEXT_PUBLIC_SENTRY_DSN"))
+  if (!parsed) return null
 
   const publicKey = parsed.username
   const segments = parsed.pathname.split("/").filter(Boolean)
@@ -241,7 +249,10 @@ const sentryReportUri = (): string | null => {
   }
 
   const prefix = segments.length > 0 ? `/${segments.join("/")}` : ""
-  const endpoint = new URL(`${prefix}/api/${projectId}/security/`, origin)
+  const endpoint = new URL(
+    `${prefix}/api/${projectId}/security/`,
+    parsed.origin,
+  )
   endpoint.searchParams.set("sentry_key", publicKey)
 
   // Separates RC from production in one shared project.
