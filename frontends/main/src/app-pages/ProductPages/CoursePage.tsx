@@ -81,9 +81,10 @@ const CoursePage: React.FC<CoursePageProps> = ({ readableId }) => {
   const effectiveOutlineCoursewareId = course
     ? getOutlineCoursewareId(course)
     : undefined
-  const showCourseOutline = useFeatureFlagEnabled(
+  const outlineFlagEnabled = useFeatureFlagEnabled(
     FeatureFlags.CourseOutlineSection,
   )
+  const showCourseOutline = outlineFlagEnabled && page?.show_course_outline
   const outline = useQuery({
     ...coursesQueries.courseOutline(effectiveOutlineCoursewareId ?? ""),
     enabled: Boolean(showCourseOutline && effectiveOutlineCoursewareId),
