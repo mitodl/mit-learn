@@ -209,6 +209,10 @@ def ocw_courses_etl(
 
                     if content_file_ids:
                         loaders.load_learning_materials(course_run, content_file_ids)
+                        if settings.OCW_DERIVE_UNITS:
+                            loaders.load_course_units(
+                                course_run, ocw.derive_units(course_run)
+                            )
             else:
                 log.info("No course data found for %s", url_path)
         except:  # noqa: E722
