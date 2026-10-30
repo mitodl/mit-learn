@@ -19,7 +19,7 @@ import {
   getCollectionFirstCoursesInDisplayOrder,
   getModuleCourseIdsFromPrograms,
   getNonContractProgramEnrollments,
-  getProgramCoursesInContractOrder,
+  getContractProgramCourseware,
   getRenderableContractCollections,
   getSortedStandaloneContractPrograms,
   getTopLevelProgramEnrollments,
@@ -1021,17 +1021,101 @@ describe("dashboardViewModel", () => {
       ).toEqual([2])
     })
 
-    test("getProgramCoursesInContractOrder preserves program course id order and skips missing", () => {
+    test("getContractProgramCourseware without a req_tree follows program course order and skips missing", () => {
       const program = factories.programs.program({ courses: [3, 1, 2] })
       const course1 = factories.courses.course({ id: 1 })
       const course2 = factories.courses.course({ id: 2 })
 
-      const courses = getProgramCoursesInContractOrder(program, [
-        course2,
-        course1,
-      ])
+      const courseware = getContractProgramCourseware(
+        program,
+        [program],
+        [course2, course1],
+      )
 
-      expect(courses.map((course) => course.id)).toEqual([1, 2])
+      expect(courseware).toEqual([
+        { kind: "course", course: course1 },
+        { kind: "course", course: course2 },
+      ])
+    })
+
+    test("getContractProgramCourseware follows req_tree order with nested programs and their contract module courses", () => {
+      const moduleTree = new RequirementTreeBuilder()
+      const modules = moduleTree.addOperator({ operator: "all_of" })
+      modules.addCourse({ course: 21 })
+      modules.addCourse({ course: 22 })
+      modules.addCourse({ course: 23 })
+      const nested = factories.programs.program({
+        id: 2,
+        courses: [21, 22, 23],
+        req_tree: moduleTree.serialize(),
+      })
+      const notInContract = factories.programs.program({
+        id: 3,
+        courses: [31],
+      })
+
+      const tree = new RequirementTreeBuilder()
+      const required = tree.addOperator({ operator: "all_of" })
+      required.addCourse({ course: 11 })
+      required.addProgram({ program: nested.id })
+      required.addProgram({ program: notInContract.id })
+      const electives = tree.addOperator({
+        operator: "min_number_of",
+        operator_value: "1",
+      })
+      electives.addCourse({ course: 12 })
+      electives.addCourse({ course: 11 })
+      const program = factories.programs.program({
+        id: 1,
+        courses: [11, 12],
+        req_tree: tree.serialize(),
+      })
+      const [course11, course12, course21, course23] = [11, 12, 21, 23].map(
+        (id) => factories.courses.course({ id }),
+      )
+
+      const courseware = getContractProgramCourseware(
+        program,
+        [program, nested, notInContract],
+        [course23, course12, course21, course11],
+      )
+
+      expect(courseware).toEqual([
+        { kind: "course", course: course11 },
+        {
+          kind: "program",
+          program: nested,
+          moduleCourses: [course21, course23],
+        },
+        { kind: "course", course: course12 },
+      ])
+    })
+
+    test("getSortedStandaloneContractPrograms keeps a program whose only contract courseware is a nested program", () => {
+      const moduleTree = new RequirementTreeBuilder()
+      moduleTree.addOperator({ operator: "all_of" }).addCourse({ course: 21 })
+      const nested = factories.programs.program({
+        id: 2,
+        courses: [21],
+        req_tree: moduleTree.serialize(),
+      })
+      const tree = new RequirementTreeBuilder()
+      tree.addOperator({ operator: "all_of" }).addProgram({ program: 2 })
+      const parent = factories.programs.program({
+        id: 1,
+        courses: [],
+        req_tree: tree.serialize(),
+      })
+      const contract = factories.contracts.contract({ programs: [1] })
+
+      const programs = getSortedStandaloneContractPrograms(
+        [parent, nested],
+        [],
+        contract,
+        [factories.courses.course({ id: 21 })],
+      )
+
+      expect(programs.map((p) => p.id)).toEqual([1])
     })
 
     test("getCollectionFirstCoursesInDisplayOrder follows collection order and selects first available contract course", () => {

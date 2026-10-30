@@ -219,7 +219,7 @@ describe("ContractContent", () => {
       urls.programs.programsList({
         org_id: orgX.id,
         contract_id: contract.id,
-        page_size: 30,
+        page_size: 100,
       }),
       {
         results: [programA, programB],
@@ -728,7 +728,7 @@ describe("ContractContent", () => {
       urls.programs.programsList({
         org_id: orgX.id,
         contract_id: orgX.contracts[0].id,
-        page_size: 30,
+        page_size: 100,
       }),
       { results: [programA, programB, programC] },
     )
@@ -751,6 +751,66 @@ describe("ContractContent", () => {
     expect(
       screen.queryByRole("heading", { name: programC.title }),
     ).not.toBeInTheDocument()
+  })
+
+  test("renders a program nested in a contract program as a card inside it", async () => {
+    const { orgX, programA, programB } = setupProgramsAndCourses()
+    const contract = orgX.contracts[0]
+    const [moduleCourseOne, moduleCourseTwo] = programB.courses
+
+    const moduleTree = new factories.requirements.RequirementTreeBuilder()
+    const modules = moduleTree.addOperator({ operator: "all_of" })
+    modules.addCourse({ course: moduleCourseOne })
+    modules.addCourse({ course: moduleCourseTwo })
+    const nestedProgram = factories.programs.program({
+      title: "Nested Module",
+      display_mode: "course",
+      courses: [moduleCourseOne, moduleCourseTwo],
+      req_tree: moduleTree.serialize(),
+    })
+    // The parent has no courses of its own, only the nested program.
+    const parentTree = new factories.requirements.RequirementTreeBuilder()
+    parentTree
+      .addOperator({ operator: "all_of" })
+      .addProgram({ program: nestedProgram.id })
+    const parentProgram = factories.programs.program({
+      title: "Programs Only Parent",
+      courses: [],
+      req_tree: parentTree.serialize(),
+    })
+    contract.programs = [programA.id, parentProgram.id]
+    setMockResponse.get(
+      urls.programs.programsList({
+        org_id: orgX.id,
+        contract_id: contract.id,
+        page_size: 100,
+      }),
+      { results: [programA, parentProgram, nestedProgram] },
+    )
+    setMockResponse.get(urls.programCollections.programCollectionsList(), {
+      results: [],
+    })
+
+    renderWithProviders(
+      <ContractContent orgSlug={orgX.slug} contractSlug={contract.slug} />,
+    )
+
+    const parentHeading = await screen.findByRole("heading", {
+      name: parentProgram.title,
+    })
+    // The nested program is shown inside its parent, not as a block of its own.
+    expect(await screen.findAllByTestId("org-program-root")).toHaveLength(2)
+    const parentRoot = parentHeading.closest("[data-testid='org-program-root']")
+    invariant(parentRoot instanceof HTMLElement)
+    const moduleCard = within(parentRoot).getByTestId("program-as-course-card")
+    within(moduleCard).getAllByRole("heading", { name: nestedProgram.title })
+    // Each module row renders a desktop and a mobile header.
+    const moduleTitles = new Set(
+      within(moduleCard)
+        .getAllByRole("heading", { level: 4 })
+        .map((heading) => heading.textContent),
+    )
+    expect(moduleTitles.size).toBe(2)
   })
 
   test("Does not render program collection if all programs have no courses", async () => {
@@ -833,7 +893,7 @@ describe("ContractContent", () => {
       urls.programs.programsList({
         org_id: orgX.id,
         contract_id: orgX.contracts[0].id,
-        page_size: 30,
+        page_size: 100,
       }),
       { results: [programANoCourses, programB] },
     )
@@ -907,7 +967,7 @@ describe("ContractContent", () => {
       urls.programs.programsList({
         org_id: orgX.id,
         contract_id: orgX.contracts[0].id,
-        page_size: 30,
+        page_size: 100,
       }),
       {
         results: [programWithCertificate],
@@ -2463,7 +2523,7 @@ describe("ContractContent", () => {
       urls.programs.programsList({
         org_id: orgX.id,
         contract_id: contract.id,
-        page_size: 30,
+        page_size: 100,
       }),
       {
         results: [
