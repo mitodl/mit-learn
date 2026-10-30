@@ -301,9 +301,8 @@ const TermsPage: React.FC = () => {
             Openly Licensed Content
           </Header>
           <BodyText variant="body1">
-            In addition to these TOS, the following terms apply to content on
-            the Site that is offered under an open license ("Openly Licensed
-            Content").
+            In addition, the following terms apply to content on the Site that
+            is offered under an open license ("Openly Licensed Content").
           </BodyText>
           <BodyText variant="body1" style={{ fontWeight: "bold" }}>
             Creative Commons License
