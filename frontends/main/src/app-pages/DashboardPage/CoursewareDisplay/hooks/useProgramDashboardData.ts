@@ -41,8 +41,7 @@ export type ProgramDashboardData = {
    * `ProgramAsCourseCard`. Identical across all program-as-course items
    * in this dashboard (one top-level program per view). */
   ancestorProgramEnrollment:
-    | { readable_id: string; enrollment_mode?: string | null }
-    | undefined
+    { readable_id: string; enrollment_mode?: string | null } | undefined
 }
 
 /**

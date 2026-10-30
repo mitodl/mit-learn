@@ -22,8 +22,7 @@ enum HeadingIds {
 }
 
 type RequirementItem =
-  | { type: "course"; id: number }
-  | { type: "program"; id: number }
+  { type: "course"; id: number } | { type: "program"; id: number }
 
 type RequirementData = {
   id?: number | null // In practice this should always be defined. TODO: Why doesn't OpenAPI know this?

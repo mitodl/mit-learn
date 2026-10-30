@@ -202,12 +202,7 @@ const ControlsLeft = styled.div(({ theme }) => ({
 }))
 
 type DisplayStatus =
-  | "redeemed"
-  | "pending"
-  | "delivered"
-  | "opened"
-  | "clicked"
-  | "failed"
+  "redeemed" | "pending" | "delivered" | "opened" | "clicked" | "failed"
 
 const StatusBadge = styled(Chip, {
   shouldForwardProp: (prop) => prop !== "$status",

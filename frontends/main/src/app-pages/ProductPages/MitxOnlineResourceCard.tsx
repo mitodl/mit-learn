@@ -54,8 +54,7 @@ type MitxOnlineProgramCardProps = CommonCardProps & {
 }
 
 type MitxOnlineResourceCardProps =
-  | MitxOnlineCourseCardProps
-  | MitxOnlineProgramCardProps
+  MitxOnlineCourseCardProps | MitxOnlineProgramCardProps
 
 type CardData = {
   title: string

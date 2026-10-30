@@ -35,8 +35,10 @@ const Footer = styled.div({
   gap: "16px",
 })
 
-interface FollowPopoverProps
-  extends Pick<PopoverProps, "anchorEl" | "onClose" | "placement"> {
+interface FollowPopoverProps extends Pick<
+  PopoverProps,
+  "anchorEl" | "onClose" | "placement"
+> {
   itemName?: string
   searchParams: URLSearchParams
   sourceType: SourceTypeEnum
