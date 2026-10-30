@@ -38,10 +38,6 @@ from main.utils import now_in_utc
 
 pytestmark = pytest.mark.django_db
 
-ARCHIVE_SOURCES = pytest.mark.parametrize(
-    "source", [ETLSource.mitxonline.value, ETLSource.xpro.value]
-)
-
 
 @pytest.fixture
 def mock_archive(mocker):
@@ -278,7 +274,7 @@ def test_sync_edx_course_files_published_tie_picks_lowest_id(mocker):
     assert mock_process.call_args[0][2] == first
 
 
-@ARCHIVE_SOURCES
+@pytest.mark.parametrize("source", [ETLSource.mitxonline.value, ETLSource.xpro.value])
 def test_sync_edx_course_files_invalid_tarfile(
     mock_course_archive_bucket, mocker, source
 ):
@@ -307,7 +303,7 @@ def test_sync_edx_course_files_invalid_tarfile(
     assert mock_log.call_args[0][0].startswith("Error reading tar file") is True
 
 
-@ARCHIVE_SOURCES
+@pytest.mark.parametrize("source", [ETLSource.mitxonline.value, ETLSource.xpro.value])
 def test_sync_edx_course_files_empty_bucket(mock_course_archive_bucket, mocker, source):
     """If the mitxonline bucket has no tarballs matching a filename, it should be skipped"""
     run = LearningResourceRunFactory.create(
@@ -336,7 +332,7 @@ def test_sync_edx_course_files_empty_bucket(mock_course_archive_bucket, mocker, 
     mock_load_content_files.assert_not_called()
 
 
-@ARCHIVE_SOURCES
+@pytest.mark.parametrize("source", [ETLSource.mitxonline.value, ETLSource.xpro.value])
 def test_sync_edx_course_files_error(mock_course_archive_bucket, mocker, source):
     """Exceptions raised during sync_mitxonline_course_files should be logged"""
     course = LearningResourceFactory.create(
@@ -380,7 +376,7 @@ def test_sync_edx_course_files_error(mock_course_archive_bucket, mocker, source)
     assert mock_log.call_args[0][0].startswith("Error ingesting OLX content data for ")
 
 
-@ARCHIVE_SOURCES
+@pytest.mark.parametrize("source", [ETLSource.mitxonline.value, ETLSource.xpro.value])
 def test_sync_edx_course_files_no_matching_run(
     mock_course_archive_bucket, mocker, source
 ):
@@ -417,7 +413,7 @@ def test_sync_edx_course_files_no_matching_run(
     mock_load_content_files.assert_not_called()
 
 
-@ARCHIVE_SOURCES
+@pytest.mark.parametrize("source", [ETLSource.mitxonline.value, ETLSource.xpro.value])
 def test_sync_edx_course_files_test_mode_all_runs_processed(
     mock_course_archive_bucket, mocker, source
 ):
@@ -486,7 +482,7 @@ def test_sync_edx_course_files_test_mode_all_runs_processed(
     assert called_data == [list(fake_data)] * 3
 
 
-@ARCHIVE_SOURCES
+@pytest.mark.parametrize("source", [ETLSource.mitxonline.value, ETLSource.xpro.value])
 def test_get_most_recent_course_archives(mocker, mock_course_archive_bucket, source):
     """get_most_recent_course_archives should return expected keys"""
     from types import SimpleNamespace
@@ -520,7 +516,7 @@ def test_get_most_recent_course_archives(mocker, mock_course_archive_bucket, sou
     mock_get_bucket.assert_called_once_with(mocker.ANY)
 
 
-@ARCHIVE_SOURCES
+@pytest.mark.parametrize("source", [ETLSource.mitxonline.value, ETLSource.xpro.value])
 def test_get_most_recent_course_archives_cache_hit(mocker, source):
     """Cached results should be returned without querying S3"""
     cached_keys = [f"some-prefix/{source}/cached-course/2023.tar.gz"]
@@ -540,7 +536,7 @@ def test_get_most_recent_course_archives_cache_hit(mocker, source):
     mock_log.assert_called_once_with("Using cached archive keys for %s", source)
 
 
-@ARCHIVE_SOURCES
+@pytest.mark.parametrize("source", [ETLSource.mitxonline.value, ETLSource.xpro.value])
 def test_get_most_recent_course_archives_sets_cache(mocker, source):
     """Results should be cached with the correct timeout after fetching from S3"""
     from types import SimpleNamespace
@@ -575,7 +571,7 @@ def test_get_most_recent_course_archives_sets_cache(mocker, source):
     )
 
 
-@ARCHIVE_SOURCES
+@pytest.mark.parametrize("source", [ETLSource.mitxonline.value, ETLSource.xpro.value])
 def test_get_most_recent_course_archives_empty(
     settings, mocker, mock_course_archive_bucket, source
 ):
@@ -600,7 +596,7 @@ def test_get_most_recent_course_archives_empty(
     mock_get_bucket.assert_called_once_with(settings.COURSE_ARCHIVE_BUCKET_NAME)
 
 
-@ARCHIVE_SOURCES
+@pytest.mark.parametrize("source", [ETLSource.mitxonline.value, ETLSource.xpro.value])
 def test_get_most_recent_course_archives_no_bucket(settings, mocker, source):
     """Empty list should be returned and a warning logged if no bucket is found"""
     # Mock cache so stale cached data from other tests is not returned
