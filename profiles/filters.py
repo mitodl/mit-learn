@@ -12,10 +12,7 @@ class UserFilter(django_filters.FilterSet):
     email__endswith = django_filters.CharFilter(
         field_name="email", lookup_expr="iendswith"
     )
-    social_auth_provider = django_filters.Filter(
-        field_name="social_auth", lookup_expr="provider__in"
-    )
 
     class Meta:
         model = User
-        fields = ("email__endswith", "social_auth_provider")
+        fields = ("email__endswith",)

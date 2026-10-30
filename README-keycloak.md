@@ -131,5 +131,6 @@ Here is an example of what the `hosts` entries might look like, assuming a local
 
 In your MITx Online application, you will also need to set all the `KEYCLOAK_` prefixed env vars
 to be the same as they are here in MIT Learn. You will also need to set `CORS_ALLOWED_ORIGINS`,
-`CSRF_TRUSTED_ORIGINS`, `ALLOWED_REDIRECT_HOSTS` and `SOCIAL_AUTH_ALLOWED_REDIRECT_HOSTS` in both
-apps to allow them to communicate with one another.
+`CSRF_TRUSTED_ORIGINS` and `ALLOWED_REDIRECT_HOSTS` in both apps to allow them to communicate
+with one another. MITx Online additionally uses `SOCIAL_AUTH_ALLOWED_REDIRECT_HOSTS`; MIT Learn
+does not, since it no longer uses python-social-auth.

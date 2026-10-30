@@ -34,7 +34,4 @@ class Command(BaseCommand):
         user.set_unusable_password()
         user.save()
 
-        self.stdout.write(f"Deleting {user.social_auth.count()} social auths")
-        user.social_auth.all().delete()
-
         self.stdout.write(f"Retired user: {user}")

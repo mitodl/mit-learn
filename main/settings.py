@@ -119,7 +119,6 @@ INSTALLED_APPS = (
     "django.contrib.sites",
     "django_removals",
     "django_scim",
-    "social_django",
     "rest_framework",
     "corsheaders",
     "anymail",
@@ -272,8 +271,6 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
-                "social_django.context_processors.backends",
-                "social_django.context_processors.login_redirect",
             ]
         },
     }
@@ -333,22 +330,6 @@ AUTHENTICATION_BACKENDS = (
     "guardian.backends.ObjectPermissionBackend",
 )
 
-
-USERINFO_URL = get_string(
-    name="USERINFO_URL",
-    default=None,
-)
-
-ACCESS_TOKEN_URL = get_string(
-    name="ACCESS_TOKEN_URL",
-    default=None,
-)
-
-AUTHORIZATION_URL = get_string(
-    name="AUTHORIZATION_URL",
-    default=None,
-)
-
 APISIX_USERDATA_MAP = {
     "users.User": {
         "email": "email",
@@ -384,8 +365,6 @@ MITOL_APIGATEWAY_USERINFO_UPDATE = get_bool(
     name="MITOL_APIGATEWAY_USERINFO_UPDATE",
     default=False,
 )
-
-# Social Auth configurations - [END]
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/1.8/howto/static-files/
