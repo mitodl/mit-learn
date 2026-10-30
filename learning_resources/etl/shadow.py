@@ -6,9 +6,11 @@ without loading it.
 reaches (``load_courses``, ``load_programs``, ``load_documents`` and
 ``load_podcasts``) load nothing inside it. They hand their batch to
 ``observe``, which compares each item with the stored resource it would be
-loaded into. The differences are saved as one ETLShadowRun per
-(etl_source, resource_type), so a cutover can be checked against the live
-catalog before the ETLSourceOwnership row is flipped.
+loaded into. SyncYouTubeTask, whose playlists load in tasks of their own,
+hands them to ``observe_youtube`` instead of queueing them. The differences
+are saved as one ETLShadowRun per (etl_source, resource_type), so a cutover
+can be checked against the live catalog before the ETLSourceOwnership row is
+flipped.
 
 Nothing is written but the reports, and no row is locked: the comparison is a
 few reads per ``OBSERVE_CHUNK_SIZE`` items, outside any transaction.
@@ -31,11 +33,14 @@ second copy of those rules and can drift from them. It covers:
   published runs a pruning load would unpublish;
 - a program's child courses and programs, by readable_id, as its load would
   find them;
+- a playlist's channel and its videos in order, a video's detail row, and
+  the course platform a content file moves a video to;
 - the published resources a pruning load would unpublish.
 
 It does not cover what only the loaders decide: topics found by similarity for
-a document with none, deduplication by ``unique_field``, runs that moved
-between courses, the courses a program load writes, content files, and the
+a document or video with none, a playlist's topics (the most common of its
+videos'), deduplication by ``unique_field``, runs that moved between courses,
+the courses a program load writes, video channels, content files, and the
 search index.
 """
 
@@ -55,6 +60,9 @@ from django.db.models import Model, Prefetch, Q
 from django.utils import timezone
 
 from learning_resources.constants import (
+    OCW_CONTENT_CATEGORY_LECTURE_VIDEOS,
+    OCW_INSTRUCTOR_INSIGHTS_TAG,
+    OCW_PLAYLIST_VIDEO_THRESHOLD,
     LearningResourceDelivery,
     LearningResourceRelationTypes,
     LearningResourceType,
@@ -64,16 +72,19 @@ from learning_resources.constants import (
 from learning_resources.etl.constants import ETLSource
 from learning_resources.etl.ownership import current_pipeline, shadowing
 from learning_resources.models import (
+    ContentFile,
     Course,
     ETLShadowRun,
     LearningResource,
     LearningResourceOfferor,
     LearningResourcePlatform,
+    LearningResourceRelationship,
     LearningResourceRun,
     LearningResourceTopic,
     Podcast,
     PodcastEpisode,
     RunInstructorRelationship,
+    Video,
 )
 
 log = logging.getLogger(__name__)
@@ -83,6 +94,8 @@ PROGRAM = LearningResourceType.program.name
 DOCUMENT = LearningResourceType.document.name
 PODCAST = LearningResourceType.podcast.name
 PODCAST_EPISODE = LearningResourceType.podcast_episode.name
+VIDEO = LearningResourceType.video.name
+VIDEO_PLAYLIST = LearningResourceType.video_playlist.name
 
 # Resources whose field differences a report lists in full; counts cover all.
 MAX_CHANGED_DETAILS = 200
@@ -143,13 +156,20 @@ _LOADER_DEFAULTS = {
         "image": None,
         "departments": [],
     },
+    VIDEO: {"offered_by": None, "image": None},
+    VIDEO_PLAYLIST: {"offered_by": None},
+}
+_DETAIL_MODELS = {
+    COURSE: Course,
+    PODCAST: Podcast,
+    PODCAST_EPISODE: PodcastEpisode,
+    VIDEO: Video,
 }
 # What a loader sets whatever its item says.
 _LOADER_OVERRIDES = {
     PODCAST: {"resource_category": LearningResourceType.podcast.value},
     PODCAST_EPISODE: {"resource_category": LearningResourceType.podcast_episode.value},
 }
-_DETAIL_MODELS = {COURSE: Course, PODCAST: Podcast, PODCAST_EPISODE: PodcastEpisode}
 
 
 @dataclass
@@ -358,6 +378,46 @@ def _note_runs(
                 changes[f"runs[{run_id}].published"] = [True, False]
 
 
+def _note_youtube(
+    changes: dict, resource: LearningResource, data: dict, resource_type: str
+) -> None:
+    """Note what the youtube loads change outside the resource's columns."""
+    if resource_type == VIDEO_PLAYLIST:
+        playlist = getattr(resource, "video_playlist", None)
+        _note(
+            changes,
+            "channel",
+            playlist.channel_id if playlist else None,
+            data["channel"],
+        )
+        _note(
+            changes,
+            "videos",
+            [
+                relation.child.readable_id
+                for relation in sorted(
+                    resource.children.all(), key=lambda relation: relation.position
+                )
+                if relation.relation_type
+                == LearningResourceRelationTypes.PLAYLIST_VIDEOS.value
+            ],
+            data["videos"],
+        )
+    if "content_file_platform" in data:
+        _note(
+            changes,
+            "platform",
+            resource.platform.code if resource.platform else None,
+            data["content_file_platform"],
+        )
+        _note(
+            changes,
+            "topics",
+            sorted(topic.name for topic in resource.topics.all()),
+            data["content_file_topics"],
+        )
+
+
 def _resource_changes(
     resource: LearningResource,
     item: dict,
@@ -406,7 +466,8 @@ def _resource_changes(
         if offered_by is None
         else _offeror_code(tuple(sorted(offered_by.items()))),
     )
-    _note(changes, "image", _image(resource.image), _image(data.get("image")))
+    if "image" in data:
+        _note(changes, "image", _image(resource.image), _image(data["image"]))
     if "departments" in data:
         _note(
             changes,
@@ -432,6 +493,7 @@ def _resource_changes(
         )
     if has_runs:
         _note_runs(changes, resource, data, prune=prune)
+    _note_youtube(changes, resource, data, resource_type)
     if resource_type == PROGRAM:
         _note(
             changes,
@@ -517,7 +579,9 @@ def _stored(resource_type: str, readable_ids: list[str]) -> dict:
         LearningResource.objects.filter(
             resource_type=resource_type, readable_id__in=readable_ids
         )
-        .select_related("platform", "offered_by", "image", *_DETAIL_MODELS)
+        .select_related(
+            "platform", "offered_by", "image", "video_playlist", *_DETAIL_MODELS
+        )
         .prefetch_related(
             "topics",
             "departments",
@@ -752,6 +816,173 @@ def observe_podcasts(podcasts_data: Iterable[dict], tracked_ids: Sequence[str]) 
         episodes,
         prune=True,
         keep=Q(parents__parent__readable_id__in=set(tracked_ids) - published - empty),
+    )
+
+
+def _matched_content_files(youtube_ids: set[str]) -> dict[str, ContentFile]:
+    """
+    Return the content file load_videos_from_content_files would match to each
+    youtube id: a visible one on a published run, the lowest id if several.
+    """
+    content_files = {}
+    for content_file in (
+        ContentFile.objects.filter(youtube_id__in=youtube_ids, run__published=True)
+        .visible()
+        .select_related(
+            "run__learning_resource__platform", "run__learning_resource__offered_by"
+        )
+        .prefetch_related("content_tags", "run__learning_resource__topics")
+        .order_by("-id")
+    ):
+        content_files[content_file.youtube_id] = content_file
+    return content_files
+
+
+def _youtube_video(video: dict) -> dict:
+    """Return a video as load_video would load it."""
+    return {
+        **{key: value for key, value in video.items() if key != "youtube_id"},
+        "resource_category": video.get(
+            "resource_category", LearningResourceType.video.value
+        ),
+    }
+
+
+def _content_file_video(
+    video: dict, content_file: ContentFile, stored_platform: str | None
+) -> dict:
+    """
+    Return a video as load_video_with_content_file would load it.
+
+    That loader finds the video by readable_id and etl_source, not platform,
+    and moves it to its course's platform. ``platform`` is the stored video's,
+    so that the comparison finds the resource the loader updates, and
+    ``content_file_platform`` is the course's. The course's topics are copied
+    as they are, without their parents.
+    """
+    course = content_file.run.learning_resource
+    course_platform = course.platform.code if course.platform else None
+    tags = {tag.name for tag in content_file.content_tags.all()}
+    return {
+        **_youtube_video(video),
+        "url": content_file.url,
+        "title": content_file.title,
+        "description": content_file.description,
+        "resource_category": LearningResourceType.video.value
+        if OCW_INSTRUCTOR_INSIGHTS_TAG in tags
+        else OCW_CONTENT_CATEGORY_LECTURE_VIDEOS,
+        "platform": stored_platform or course_platform,
+        "content_file_platform": course_platform,
+        "offered_by": {"code": course.offered_by.code} if course.offered_by else None,
+        # not "topics": that comparison adds each topic's parents, as
+        # load_topics does, and this loader copies the course's as they are
+        "content_file_topics": sorted(topic.name for topic in course.topics.all()),
+    }
+
+
+def observe_youtube(to_load: Iterable[tuple[str, dict]]) -> None:
+    """
+    Compare the playlists and videos as SyncYouTubeTask's playlist loads would
+    load them, for the shadow run in progress.
+
+    The owner's run unpublishes the playlists the views no longer list, by
+    channel, and loads each listed playlist with load_playlist. A
+    ``create_videos`` playlist loads its videos with load_video. Any other
+    loads only the videos with a matching published OCW content file, taking
+    the title, url and description of the content file and the platform,
+    offered_by and topics of its course, or is unpublished when fewer than
+    OCW_PLAYLIST_VIDEO_THRESHOLD of its videos match. A video that was in a
+    playlist and that no kept playlist lists is counted as unpublished. The
+    owner's run unpublishes it in the same run, except the videos of a
+    playlist with too few matches, which wait for its next run.
+
+    Args:
+        to_load: the (channel id, load_playlist data) of each playlist, as
+            warehouse_media.playlists_to_load returns them
+    """
+    etl_source = ETLSource.youtube.name
+    to_load = list(to_load)
+    content_files = _matched_content_files(
+        {
+            video["youtube_id"]
+            for _, playlist in to_load
+            if not playlist["create_videos"]
+            for video in playlist["videos"]
+            if video.get("youtube_id")
+        }
+    )
+    stored_platforms = dict(
+        LearningResource.objects.filter(
+            resource_type=VIDEO,
+            etl_source=etl_source,
+            readable_id__in={
+                video["readable_id"]
+                for _, playlist in to_load
+                if not playlist["create_videos"]
+                for video in playlist["videos"]
+                if video.get("youtube_id") in content_files
+            },
+        ).values_list("readable_id", "platform__code")
+    )
+    playlists, videos = [], {}
+    for channel_id, playlist in to_load:
+        if playlist["create_videos"]:
+            playlist_videos = [_youtube_video(video) for video in playlist["videos"]]
+        else:
+            playlist_videos = [
+                _content_file_video(
+                    video,
+                    content_files[video["youtube_id"]],
+                    stored_platforms.get(video["readable_id"]),
+                )
+                for video in playlist["videos"]
+                if video.get("youtube_id") in content_files
+            ]
+            if not playlist_videos or len(playlist_videos) < (
+                len(playlist["videos"]) * OCW_PLAYLIST_VIDEO_THRESHOLD
+            ):
+                # not loaded: the prune counts it if it is published
+                continue
+        videos.update((video["readable_id"], video) for video in playlist_videos)
+        playlists.append(
+            {
+                "readable_id": playlist["playlist_id"],
+                "platform": playlist.get("platform", PlatformType.youtube.name),
+                **{
+                    key: playlist[key]
+                    for key in (
+                        "title",
+                        "published",
+                        "etl_source",
+                        "url",
+                        "availability",
+                    )
+                    if key in playlist
+                },
+                "resource_category": LearningResourceType.video_playlist.value,
+                "offered_by": playlist.get("offered_by"),
+                **({"image": playlist["image"]} if playlist.get("image") else {}),
+                "channel": channel_id,
+                # load_playlist adds each video through the relation manager,
+                # which skips one already related, so a repeat keeps the
+                # first position
+                "videos": list(
+                    dict.fromkeys(video["readable_id"] for video in playlist_videos)
+                ),
+            }
+        )
+    observe(etl_source, VIDEO_PLAYLIST, playlists, prune=True)
+    observe(
+        etl_source,
+        VIDEO,
+        videos.values(),
+        prune=True,
+        # the owner's run only unpublishes a video that was in a playlist
+        keep=~Q(
+            id__in=LearningResourceRelationship.objects.filter(
+                relation_type=LearningResourceRelationTypes.PLAYLIST_VIDEOS.value
+            ).values("child_id")
+        ),
     )
 
 
