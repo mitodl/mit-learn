@@ -864,7 +864,9 @@ def run_shadow(
 
     Raises:
         Exception: whatever ``load`` raises, after saving it as each pair's
-            report. A load that fails as a shadow would fail as the owner.
+            error. A pair that observed rows before the failure keeps its
+            counts and details. A load that fails as a shadow would fail as
+            the owner.
     """
     pairs = [
         (etl_source, resource_type)
@@ -885,8 +887,19 @@ def run_shadow(
             for pair, report in observed.items()
         }
     except Exception as exc:
+        error = f"{type(exc).__name__}: {exc}"
         try:
-            _save(pairs, {}, error=f"{type(exc).__name__}: {exc}")
+            # Keep what the pairs compared before the load failed, so a load
+            # that raises once its rows are observed still reports them
+            _save(
+                pairs,
+                {
+                    pair: (*_finish(*pair, report), error)
+                    for pair, report in observed.items()
+                    if report.observed
+                },
+                error=error,
+            )
         except Exception:
             # the load's error is the one to raise, not the report's
             log.exception("Could not save the failed shadow run of %s", pairs)

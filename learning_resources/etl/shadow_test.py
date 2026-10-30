@@ -853,6 +853,26 @@ def test_run_shadow_saves_a_failed_load_and_raises():
     assert is_shadow_run() is False
 
 
+def test_run_shadow_keeps_what_was_compared_when_the_load_then_fails(catalog):
+    """A load that raises after observing rows still reports those comparisons."""
+
+    def load():
+        _load_courses([_course("c1")])
+        msg = "1 OCW courses failed to transform: c2"
+        raise ValueError(msg)
+
+    with writing_as(Pipeline.WAREHOUSE), pytest.raises(ValueError, match="failed"):
+        run_shadow([(SOURCE, COURSE), (SOURCE, PROGRAM)], load)
+
+    course_run = ETLShadowRun.objects.get(resource_type=COURSE)
+    assert course_run.error == "ValueError: 1 OCW courses failed to transform: c2"
+    assert course_run.details["created"] == ["c1"]
+    program_run = ETLShadowRun.objects.get(resource_type=PROGRAM)
+    assert program_run.error == course_run.error
+    assert program_run.counts == {}
+    assert not LearningResource.objects.exists()
+
+
 def test_run_shadow_raises_the_load_error_when_the_report_cannot_be_saved(mocker):
     """A report that fails to save does not replace the error that caused it."""
     mocker.patch.object(shadow, "_save", side_effect=RuntimeError("database is down"))
