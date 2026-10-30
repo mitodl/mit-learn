@@ -67,7 +67,6 @@ The comparison is a second copy of the loaders' rules (`learning_resources/etl/s
 
 `SyncOCWCoursesTask` loads one course at a time, so its shadow calls the comparison itself. It compares every course in the view whatever its `etl_checksum`, leaves the hash out (the legacy load stores none), and keeps the courses the view lists by url out of the prune, as the load does. It still matches a course on `readable_id`, so a course whose term or year changed reads as `created`, where the load updates the stored course with the same url.
 
-
 1. In Django admin, create or edit the row for each resource type from the table above, leave `owner` as it is and set `shadow` to the new pipeline. All of a source's rows that one load writes together (e.g. `podcast` and `podcast_episode`, `video_playlist` and `video`) need it. Playlists and videos are compared only for `youtube` with `shadow` set to `warehouse`, so admin refuses a shadow on any other `video_playlist` or `video` row (e.g. `ovs`).
 2. Run the new pipeline as you would for the flip, or wait for its schedule:
    - warehouse: `<SyncTask>.delay()`. A shadow run is always a full refresh and leaves the incremental watermark alone. The task logs how many items the loaders compared, since they load none. A shadow of `SyncYouTubeTask` queues no playlist loads and leaves the video channels alone.
