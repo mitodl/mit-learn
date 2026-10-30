@@ -34,11 +34,15 @@ import { FeatureFlags } from "@/common/feature_flags"
 import { DASHBOARD_HOME } from "@/common/urls"
 import ContractManagerNav from "@/components/ContractManagerNav/ContractManagerNav"
 import { ResourceType, getKey } from "./CoursewareDisplay/helpers"
-import type { DashboardCourseEntry } from "./CoursewareDisplay/model/dashboardViewModel"
+import type {
+  ContractProgramItem,
+  DashboardCourseEntry,
+} from "./CoursewareDisplay/model/dashboardViewModel"
 import { useContractDashboardData } from "./CoursewareDisplay/hooks/useContractDashboardData"
 import UnstyledRawHTML from "@/components/UnstyledRawHTML/UnstyledRawHTML"
 import { VariantPicker } from "./CoursewareDisplay/VariantPicker"
 import { CoursewareCard } from "./CoursewareDisplay/CoursewareCard"
+import { ProgramAsCourseCard } from "./CoursewareDisplay/ProgramAsCourseCard"
 import { DataConsentPrompt } from "./DataConsentPrompt"
 import { useDashboardAnnounce } from "./DashboardAnnouncer"
 
@@ -183,6 +187,16 @@ const CoursewareCardStyled = styled(CoursewareCard)({
   },
 })
 
+const ProgramAsCourseCardStyled = styled(ProgramAsCourseCard)(({ theme }) => ({
+  borderRadius: "0px",
+  borderTop: "none",
+  borderBottom: `1px solid ${theme.custom.colors.lightGray2}`,
+  boxShadow: "none",
+  "&:last-of-type": {
+    borderRadius: "0px 0px 8px 8px",
+  },
+}))
+
 const ProgramRoot = styled.div(({ theme }) => ({
   color: theme.custom.colors.darkGray2,
   boxShadow: `0px 4px 8px 0px ${alpha(theme.custom.colors.darkGray2, 0.08)}`,
@@ -298,20 +312,20 @@ const OrgProgramCollectionDisplay: React.FC<{
 
 const OrgProgramDisplay: React.FC<{
   program: V2Program
-  entries: DashboardCourseEntry[]
+  items: ContractProgramItem[]
   programEnrollment?: V3UserProgramEnrollment
   hideDescription?: boolean
   cardsDisabled?: boolean
 }> = ({
   program,
-  entries,
+  items,
   programEnrollment,
   hideDescription,
   cardsDisabled,
 }) => {
   const hasValidCertificate = !!programEnrollment?.certificate
 
-  if (entries.length === 0) {
+  if (items.length === 0) {
     return null
   }
 
@@ -340,21 +354,33 @@ const OrgProgramDisplay: React.FC<{
         )}
       </ProgramHeader>
       <PlainList>
-        {entries.map((entry) => {
-          return (
+        {items.map((item) =>
+          item.kind === "course" ? (
             <CoursewareCardStyled
               key={getKey({
                 resourceType: ResourceType.Course,
-                id: entry.course.id,
-                runId: entry.displayedRun?.id,
+                id: item.entry.course.id,
+                runId: item.entry.displayedRun?.id,
               })}
               Component="li"
               kind="course"
-              entry={entry}
+              entry={item.entry}
               disabled={cardsDisabled}
             />
-          )
-        })}
+          ) : (
+            <ProgramAsCourseCardStyled
+              key={getKey({
+                resourceType: ResourceType.Program,
+                id: item.program.id,
+              })}
+              Component="li"
+              courseProgram={item.program}
+              moduleEntries={item.moduleEntries}
+              courseProgramEnrollment={item.programEnrollment}
+              disabled={cardsDisabled}
+            />
+          ),
+        )}
       </PlainList>
     </ProgramRoot>
   )
@@ -492,14 +518,14 @@ const ContractContentInternal: React.FC<ContractContentInternalProps> = ({
         <WelcomeMessage key="welcome" contract={contract} />
       </Stack>
       <ContractRoot>
-        {programs.map(({ program, entries, programEnrollment }) => (
+        {programs.map(({ program, items, programEnrollment }) => (
           <OrgProgramDisplay
             key={getKey({
               resourceType: ResourceType.Program,
               id: program.id,
             })}
             program={program}
-            entries={entries}
+            items={items}
             programEnrollment={programEnrollment}
             hideDescription={
               selectedVariant !== null && !selectedVariant.default_variant

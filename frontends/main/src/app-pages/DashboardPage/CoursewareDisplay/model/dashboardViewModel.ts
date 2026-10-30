@@ -1252,7 +1252,6 @@ const getSortedStandaloneContractPrograms = (
 
   const contractProgramIds = new Set(contract.programs)
   const programsInCollections = getProgramsInCollections(collections)
-  const contractCourseIds = new Set(contractCourses.map((course) => course.id))
   // Precompute sort order map: O(m) once, not O(n*m) per sort
   const programOrder = new Map(
     contract.programs.map((id, index) => [id, index]),
@@ -1261,7 +1260,11 @@ const getSortedStandaloneContractPrograms = (
   return programs
     .filter((program) => !programsInCollections.has(program.id))
     .filter((program) => contractProgramIds.has(program.id))
-    .filter((program) => programHasContractRuns(program, contractCourseIds))
+    .filter(
+      (program) =>
+        getContractProgramCourseware(program, programs, contractCourses)
+          .length > 0,
+    )
     .sort((a, b) => {
       const indexA = programOrder.get(a.id) ?? Infinity
       const indexB = programOrder.get(b.id) ?? Infinity
@@ -1550,16 +1553,102 @@ const selectVariantRunForCourse = (
   )
 }
 
-const getProgramCoursesInContractOrder = (
+/**
+ * A contract program's courseware, before entries are built: one of its own
+ * courses, or a program nested in it with the module courses it shows.
+ */
+type ContractProgramCourseware =
+  | { kind: "course"; course: CourseWithCourseRunsSerializerV2 }
+  | {
+      kind: "program"
+      program: V2Program
+      moduleCourses: CourseWithCourseRunsSerializerV2[]
+    }
+
+/**
+ * An item in a contract program's block on the contract dashboard.
+ */
+type ContractProgramItem =
+  | { kind: "course"; entry: DashboardCourseEntry }
+  | {
+      kind: "program"
+      program: V2Program
+      moduleEntries: DashboardCourseEntry[]
+      programEnrollment?: V3UserProgramEnrollment
+    }
+
+/**
+ * The courseware a contract program shows, in req_tree order: its own courses
+ * that are in the contract, and the programs nested in it whose module courses
+ * (see `getProgramAsCourseModuleIds`) are in the contract. A nested program is
+ * looked up in `programs`, and one with no module courses in the contract is
+ * left out. A program with no req_tree shows its `courses`.
+ */
+const getContractProgramCourseware = (
   program: V2Program,
+  programs: V2Program[],
   contractCourses: CourseWithCourseRunsSerializerV2[],
-): CourseWithCourseRunsSerializerV2[] => {
+): ContractProgramCourseware[] => {
+  const programsById = new Map(programs.map((p) => [p.id, p]))
   const contractCoursesById = new Map(
     contractCourses.map((course) => [course.id, course]),
   )
-  return program.courses
-    .map((courseId) => contractCoursesById.get(courseId))
-    .filter((course): course is CourseWithCourseRunsSerializerV2 => !!course)
+  const ownCourseIds = new Set(program.courses)
+  const seen = new Set<string>()
+  const courseware: ContractProgramCourseware[] = []
+
+  const walk = (nodes: V2ProgramRequirement[]) => {
+    for (const node of nodes) {
+      const {
+        node_type: nodeType,
+        course,
+        required_program: requiredProgram,
+      } = node.data
+      if (nodeType === "course" && typeof course === "number") {
+        const contractCourse = contractCoursesById.get(course)
+        if (
+          contractCourse &&
+          ownCourseIds.has(course) &&
+          !seen.has(`course-${course}`)
+        ) {
+          seen.add(`course-${course}`)
+          courseware.push({ kind: "course", course: contractCourse })
+        }
+      } else if (
+        nodeType === "program" &&
+        typeof requiredProgram === "number"
+      ) {
+        const nested = programsById.get(requiredProgram)
+        const moduleCourses = nested
+          ? getProgramAsCourseModuleIds(nested)
+              .map((id) => contractCoursesById.get(id))
+              .filter(
+                (c): c is CourseWithCourseRunsSerializerV2 => c !== undefined,
+              )
+          : []
+        if (
+          nested &&
+          moduleCourses.length > 0 &&
+          !seen.has(`program-${nested.id}`)
+        ) {
+          seen.add(`program-${nested.id}`)
+          courseware.push({ kind: "program", program: nested, moduleCourses })
+        }
+      }
+      if (node.children) walk(node.children)
+    }
+  }
+  if (program.req_tree?.length) {
+    walk(program.req_tree)
+  } else {
+    for (const courseId of program.courses) {
+      const contractCourse = contractCoursesById.get(courseId)
+      if (contractCourse) {
+        courseware.push({ kind: "course", course: contractCourse })
+      }
+    }
+  }
+  return courseware
 }
 
 const getCollectionFirstCoursesInDisplayOrder = (
@@ -1676,7 +1765,7 @@ export {
   programHasContractRuns,
   getSortedStandaloneContractPrograms,
   getRenderableContractCollections,
-  getProgramCoursesInContractOrder,
+  getContractProgramCourseware,
   getCollectionFirstCoursesInDisplayOrder,
   buildVariantKey,
   buildVariantLabel,
@@ -1692,6 +1781,8 @@ export {
 export type {
   RequirementSectionItem,
   RequirementSection,
+  ContractProgramCourseware,
+  ContractProgramItem,
   ProgramTrackOption,
   ProgramTrackState,
 }
