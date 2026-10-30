@@ -52,14 +52,6 @@ PRUNE = CourseLoaderConfig(prune=True)
 
 
 @pytest.fixture(autouse=True)
-def mock_blocklist(mocker):
-    """No course is blocklisted"""
-    return mocker.patch(
-        "learning_resources.etl.loaders.load_course_blocklist", return_value=[]
-    )
-
-
-@pytest.fixture(autouse=True)
 def mock_index(mocker):
     """Keep the loaders' index and embedding tasks out of the tests"""
     mocker.patch("learning_resources_search.plugins.tasks")
@@ -449,31 +441,6 @@ def test_run_shadow_reports_a_force_ingested_course_going_into_test_mode(catalog
         True,
         True,
     )
-
-
-def test_run_shadow_reports_a_blocklisted_course_leaving_test_mode(
-    catalog, mock_blocklist
-):
-    """
-    upsert_course_or_program takes a blocklisted course out of test mode, so
-    its runs are no longer kept published and the ones it leaves out are pruned.
-    """
-    _load_courses([_course("c1", published=False, force_ingest=True)])
-    mock_blocklist.return_value = ["c1"]
-    batch = [_course("c1", runs=[_run("c1+r1")])]
-
-    run = _shadow([(SOURCE, COURSE)], lambda: _load_courses(batch))[COURSE]
-
-    assert run.details["changed"] == {
-        "c1": {"test_mode": [True, False], "runs[c1+r2].published": [True, False]}
-    }
-    _load_courses(batch)
-    stored = LearningResource.objects.get(readable_id="c1")
-    assert stored.test_mode is False
-    assert dict(stored.runs.values_list("run_id", "published")) == {
-        "c1+r1": True,
-        "c1+r2": False,
-    }
 
 
 def _children(readable_id):

@@ -4527,7 +4527,7 @@ def test_load_course_and_unpublish_resources_refuse_a_shadow_run():
 
     with shadowing():
         with pytest.raises(OwnershipError):
-            loaders.load_course({"readable_id": course.readable_id}, [])
+            loaders.load_course({"readable_id": course.readable_id})
         with pytest.raises(OwnershipError):
             loaders.unpublish_resources(LearningResource.objects.filter(id=course.id))
 

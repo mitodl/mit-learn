@@ -719,7 +719,6 @@ def load_courses(
             courses_data or [],
             prune=config.prune,
             prune_empty=config.prune_empty,
-            blocklist=load_course_blocklist(),
         )
         return []
     # Backstop: every pipeline checks before it extracts, so this only stops a

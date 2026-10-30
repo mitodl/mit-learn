@@ -21,9 +21,9 @@ second copy of those rules and can drift from them. It covers:
   columns a loader sets for an item that leaves them out (``delivery`` and
   ``resource_category``);
 - ``published``, as the loader would set it (false for a course or program
-  with no runs or on the blocklist, and for a podcast with no episodes);
+  with no runs, and for a podcast with no episodes);
 - ``test_mode`` and ``require_summaries``, as the loader sets them for a
-  blocklisted or force-ingested course;
+  force-ingested course;
 - topics (with the parents the loader adds), offered_by, image, departments,
   content tags, and the columns of the detail row (``course``, ``podcast``,
   ``podcast_episode``);
@@ -535,18 +535,13 @@ def _stored(resource_type: str, readable_ids: list[str]) -> dict:
     return resources
 
 
-def _with_test_mode(
-    item: dict, resource_type: str, *, published: bool, blocked: bool
-) -> dict:
+def _with_test_mode(item: dict, resource_type: str, *, published: bool) -> dict:
     """Return ``item`` with the test_mode and require_summaries the loader sets."""
-    if blocked:
-        # upsert_course_or_program takes a blocklisted resource out of test mode
-        item = {**item, "test_mode": False}
     if resource_type == COURSE and item.get("force_ingest"):
         # load_course marks a force-ingested course for summaries, and puts it
-        # in test mode when it does not publish it and it is not blocklisted
+        # in test mode when it does not publish it
         item = {**item, "require_summaries": True}
-        if not published and not blocked:
+        if not published:
             item["test_mode"] = True
     return item
 
@@ -609,7 +604,6 @@ def _observe_item(  # noqa: PLR0913
     resource_type: str,
     *,
     prune: bool,
-    blocklist: Sequence[str],
     children: frozenset[tuple[str, str, str]] = frozenset(),
 ) -> bool:
     """
@@ -637,10 +631,9 @@ def _observe_item(  # noqa: PLR0913
         return True
     report.seen.add(resource.id)
     published = item.get("published", resource.published)
-    blocked = resource_type in _TYPES_WITH_RUNS and key in blocklist
-    if resource_type in _TYPES_WITH_RUNS and (not item.get("runs") or blocked):
+    if resource_type in _TYPES_WITH_RUNS and not item.get("runs"):
         published = False
-    item = _with_test_mode(item, resource_type, published=published, blocked=blocked)
+    item = _with_test_mode(item, resource_type, published=published)
     fields = _resource_changes(
         resource, item, resource_type, prune=prune, children=children
     )
@@ -665,7 +658,6 @@ def observe(  # noqa: PLR0913
     *,
     prune: bool,
     prune_empty: bool = True,
-    blocklist: Sequence[str] = (),
     keep: Q | None = None,
     fetch_courses: bool = False,
 ) -> None:
@@ -680,7 +672,6 @@ def observe(  # noqa: PLR0913
         prune: whether the load unpublishes what the batch leaves out (the
             pair's published resources, and a listed resource's runs)
         prune_empty: whether an empty batch prunes too
-        blocklist: readable_ids the loader would not publish
         keep: stored resources the prune leaves alone
         fetch_courses: whether a program load looks its courses up instead
             of loading them
@@ -716,7 +707,6 @@ def observe(  # noqa: PLR0913
                 item,
                 resource_type,
                 prune=prune,
-                blocklist=blocklist,
                 children=children,
             )
     report.items += count

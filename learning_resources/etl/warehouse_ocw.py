@@ -192,7 +192,6 @@ def observe_courses(courses: list[dict], view_urls: set[str]) -> int:
         COURSE,
         courses_data,
         prune=True,
-        blocklist=load_course_blocklist(),
         keep=Q(url__in=view_urls),
     )
     if failed:
