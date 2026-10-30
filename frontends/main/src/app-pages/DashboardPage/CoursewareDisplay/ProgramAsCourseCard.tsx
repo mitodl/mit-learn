@@ -37,6 +37,7 @@ import {
   buildCourseEntry,
   courseIsCompleted,
   getProgramAsCourseModuleIds,
+  type DashboardCourseEntry,
 } from "./model/dashboardViewModel"
 import {
   isVerifiedEnrollmentMode,
@@ -229,40 +230,57 @@ interface ProgramAsCourse {
   display_mode?: V2ProgramDisplayModeEnum | null
 }
 
-interface ProgramAsCourseCardProps {
+/**
+ * The card builds its module rows from `moduleCourses`, or takes rows the
+ * caller has already built as `moduleEntries` (the contract dashboard, whose
+ * rows carry contract and variant context).
+ */
+type ModuleSource =
+  | {
+      /**
+       * child courses of the program. These correspond to nodes in the req_tree.
+       */
+      moduleCourses: CourseWithCourseRunsSerializerV2[]
+      /**
+       * Enrollments in the child courses. These may or may not exist, depending on
+       * whether the user has started that course.
+       */
+      moduleEnrollmentsByCourseId: Record<number, CourseRunEnrollmentV3[]>
+      /**
+       * Additional ancestor program enrollments.
+       *
+       * This facilitates verified enrollments. For example:
+       * - Ancestor Program P1
+       *  - Courselike Program P1a
+       *    - Child Course C1, etc...
+       *
+       * Initially, a user will have a verified enrollment in P1 but NOT P1a.
+       * We pass P1's enrollment as an ancestorProgramEnrollment. This allows us to
+       * request a verified enrollment in both C1 and P1a.
+       */
+      ancestorProgramEnrollment?: {
+        readable_id: string
+        enrollment_mode?: string | null
+      }
+      moduleEntries?: never
+    }
+  | {
+      moduleEntries: DashboardCourseEntry[]
+      moduleCourses?: never
+      moduleEnrollmentsByCourseId?: never
+      ancestorProgramEnrollment?: never
+    }
+
+type ProgramAsCourseCardProps = ModuleSource & {
   /**
    * The courselike program to display.
    */
   courseProgram: ProgramAsCourse
   /**
-   * child courses of the program. These correspond to nodes in the req_tree.
-   */
-  moduleCourses: CourseWithCourseRunsSerializerV2[]
-  /**
-   * Enrollments in the child courses. These may or may not exist, depending on
-   * whether the user has started that course.
-   */
-  moduleEnrollmentsByCourseId: Record<number, CourseRunEnrollmentV3[]>
-  /**
    * Enrollment in the courselike program, if user has an enrollment in it.
    */
   courseProgramEnrollment?: V3UserProgramEnrollment
-  /**
-   * Additional ancestor program enrollments.
-   *
-   * This facilitates verified enrollments. For example:
-   * - Ancestor Program P1
-   *  - Courselike Program P1a
-   *    - Child Course C1, etc...
-   *
-   * Initially, a user will have a verified enrollment in P1 but NOT P1a.
-   * We pass P1's enrollment as an ancestorProgramEnrollment. This allows us to
-   * request a verified enrollment in both C1 and P1a.
-   */
-  ancestorProgramEnrollment?: {
-    readable_id: string
-    enrollment_mode?: string | null
-  }
+  disabled?: boolean
   Component?: React.ElementType
   contextMenuItems?: SimpleMenuItem[]
   className?: string
@@ -285,10 +303,12 @@ interface ProgramAsCourseCardProps {
  */
 const ProgramAsCourseCard: React.FC<ProgramAsCourseCardProps> = ({
   courseProgram,
-  moduleCourses,
-  moduleEnrollmentsByCourseId,
+  moduleCourses = [],
+  moduleEnrollmentsByCourseId: moduleEnrollmentsByCourseIdProp,
+  moduleEntries,
   courseProgramEnrollment,
   ancestorProgramEnrollment,
+  disabled,
   Component,
   contextMenuItems = [],
   className,
@@ -299,11 +319,19 @@ const ProgramAsCourseCard: React.FC<ProgramAsCourseCardProps> = ({
   const moduleCoursesById = new Map(
     moduleCourses.map((course) => [course.id, course]),
   )
-  const displayedModuleCourses = moduleIds
-    .map((moduleId) => moduleCoursesById.get(moduleId))
-    .filter((course): course is CourseWithCourseRunsSerializerV2 =>
-      Boolean(course),
-    )
+  const displayedModuleCourses = moduleEntries
+    ? moduleEntries.map((entry) => entry.course)
+    : moduleIds
+        .map((moduleId) => moduleCoursesById.get(moduleId))
+        .filter((course): course is CourseWithCourseRunsSerializerV2 =>
+          Boolean(course),
+        )
+  const moduleEnrollmentsByCourseId: Record<number, CourseRunEnrollmentV3[]> =
+    moduleEntries
+      ? Object.fromEntries(
+          moduleEntries.map((entry) => [entry.course.id, entry.enrollments]),
+        )
+      : (moduleEnrollmentsByCourseIdProp ?? {})
 
   // Counted across all of a course's enrollments rather than the one a card
   // would display: the displayed run is the one underway, so a learner who
@@ -485,24 +513,28 @@ const ProgramAsCourseCard: React.FC<ProgramAsCourseCardProps> = ({
           </ProgramCardSubHeaderText>
         </ProgramCardSubHeader>
         <ProgramCardBody>
-          {displayedModuleCourses.map((course) => {
-            const entry = buildCourseEntry(
-              course,
-              moduleEnrollmentsByCourseId[course.id] || [],
-              {
-                ancestorContext: {
-                  useVerifiedEnrollment,
-                  parentProgramReadableIds: parentProgramIds,
+          {(
+            moduleEntries ??
+            displayedModuleCourses.map((course) =>
+              buildCourseEntry(
+                course,
+                moduleEnrollmentsByCourseId[course.id] || [],
+                {
+                  ancestorContext: {
+                    useVerifiedEnrollment,
+                    parentProgramReadableIds: parentProgramIds,
+                  },
                 },
-              },
+              ),
             )
+          ).map((entry) => {
             if (!entry) return null
 
             return (
               <CoursewareCard
                 key={getKey({
                   resourceType: ResourceType.Course,
-                  id: course.id,
+                  id: entry.course.id,
                   runId: entry.displayedEnrollment?.run.id,
                 })}
                 kind="course"
@@ -510,6 +542,7 @@ const ProgramAsCourseCard: React.FC<ProgramAsCourseCardProps> = ({
                 layout="compact"
                 headingLevel="h4"
                 isModule
+                disabled={disabled}
                 onUpgradeError={onUpgradeError}
               />
             )

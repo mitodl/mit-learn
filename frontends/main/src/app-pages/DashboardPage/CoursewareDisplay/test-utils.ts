@@ -285,7 +285,7 @@ const setupProgramsAndCourses = () => {
     urls.programs.programsList({
       org_id: orgX.id,
       contract_id: contract.id,
-      page_size: 30,
+      page_size: 100,
     }),
     {
       results: [programA, programB],
@@ -429,7 +429,7 @@ function setupOrgDashboardMocks(
       mitxonline.urls.programs.programsList({
         org_id: org.id,
         contract_id: contracts[0].id,
-        page_size: 30,
+        page_size: 100,
       }),
       { results: programs },
     )
