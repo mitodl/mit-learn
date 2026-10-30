@@ -115,11 +115,14 @@ const IMAGE_SIZES = "(max-width: 600px) 100vw, 600px"
 /** Distance from the action buttons to the edges of the cell they share. */
 const ACTION_INSET = 12
 const ACTION_SIZE = 32
-/**
- * Room the horizontal price panel leaves above its lines for the actions. No
- * extra gap: the first line's leading already keeps its text clear of them.
- */
-const ACTIONS_RESERVE = ACTION_INSET + ACTION_SIZE
+/** The band an action button occupies, measured in from the edges of its cell. */
+const ACTION_BAND = ACTION_INSET + ACTION_SIZE
+/** Between a price line and an action button beside it. */
+const ACTION_GAP = 8
+const PRICE_PADDING_BLOCK = 12
+const PRICE_PADDING_INLINE = 16
+/** The primary price line's leading, as a multiple of its font size. */
+const PRIMARY_LEADING = 1.5
 
 type RootProps = {
   layout: CardLayoutProps["layout"]
@@ -344,12 +347,19 @@ const Price = styled("div", {
   // is set off by its color, the white (no price) one is meant to read as part
   // of the card, and a horizontal panel is inset.
   const divided = tone === "light"
+  // Horizontal: the band the actions occupy is at the panel's top right, and
+  // the lines are centred, so the first line can run through the band. It
+  // reserves the actions' width, and the top row's floor keeps it low enough
+  // that the second line starts below the band, whatever the panel's height.
+  // That is what a float at the top right would do, but a float moves with
+  // the centred lines and the actions must not. The floor is sized against
+  // the primary line; the one panel without one (neutral, certificate only)
+  // has a single line.
+  const firstLineFloor = `calc(${ACTION_BAND - PRICE_PADDING_BLOCK}px - ${PRIMARY_LEADING} * ${theme.typography.subtitle1.fontSize})`
   return {
     gridArea: "price",
-    display: empty ? "none" : "flex",
-    flexDirection: "column",
-    gap: "4px",
-    padding: "12px 16px",
+    display: empty ? "none" : "block",
+    padding: `${PRICE_PADDING_BLOCK}px ${PRICE_PADDING_INLINE}px`,
     backgroundColor: {
       dark: colors.darkGray2,
       light: colors.lightGray0,
@@ -361,18 +371,41 @@ const Price = styled("div", {
       padding: "8px 12px",
     },
     [HORIZONTAL]: {
-      display: empty && !reserveActions ? "none" : "flex",
-      paddingTop: reserveActions ? ACTIONS_RESERVE : undefined,
-      justifyContent: reserveActions ? "flex-start" : "center",
+      display: empty && !reserveActions ? "none" : "grid",
+      // Slack, the lines, slack: equal slack centres the lines. The column
+      // must not grow to a long word's min-content, or the lines leave the
+      // panel instead of wrapping.
+      gridTemplateColumns: "minmax(0, 1fr)",
+      gridTemplateRows: `minmax(${reserveActions ? firstLineFloor : 0}, 1fr) auto minmax(0, 1fr)`,
       borderTop: "none",
       borderRadius: "4px",
     },
   }
 })
 
+const Lines = styled("div", {
+  shouldForwardProp: (prop) => prop !== "reserveActions",
+})<Pick<PriceProps, "reserveActions">>(({ reserveActions }) => ({
+  display: "flex",
+  flexDirection: "column",
+  gap: "4px",
+  [HORIZONTAL]: {
+    gridRow: 2,
+    "> :first-child": reserveActions
+      ? {
+          paddingInlineEnd: ACTION_BAND - PRICE_PADDING_INLINE + ACTION_GAP,
+          // A price line is a flex box with its text as an anonymous item,
+          // whose min-content is its longest word; beside the actions that
+          // word may not fit, so let it break rather than reach them.
+          overflowWrap: "anywhere",
+        }
+      : undefined,
+  },
+}))
+
 const PrimaryLine = styled.span(({ theme }) => ({
   ...theme.typography.subtitle1,
-  lineHeight: 1.5,
+  lineHeight: PRIMARY_LEADING,
   [NARROW]: { ...theme.typography.subtitle2 },
 }))
 
@@ -582,16 +615,18 @@ const ResourceCardView: React.FC<ResourceCardViewProps> = ({
           empty={priceEmpty}
           reserveActions={actions.length > 0}
         >
-          {price.primary && <PrimaryLine>{price.primary}</PrimaryLine>}
-          {price.certificate && (
-            <PriceLine tone={price.tone}>
-              {price.tone === "dark" && <CertificateIcon aria-hidden />}
-              {price.certificate}
-            </PriceLine>
-          )}
-          {price.license && (
-            <PriceLine tone={price.tone}>{price.license}</PriceLine>
-          )}
+          <Lines reserveActions={actions.length > 0}>
+            {price.primary && <PrimaryLine>{price.primary}</PrimaryLine>}
+            {price.certificate && (
+              <PriceLine tone={price.tone}>
+                {price.tone === "dark" && <CertificateIcon aria-hidden />}
+                {price.certificate}
+              </PriceLine>
+            )}
+            {price.license && (
+              <PriceLine tone={price.tone}>{price.license}</PriceLine>
+            )}
+          </Lines>
         </Price>
         {/* Last in the DOM, so Tab reaches the card link before the actions. */}
         {actions.length > 0 && (
@@ -642,8 +677,10 @@ const ResourceCardSkeleton: React.FC<
           <Skeleton variant="text" width="60%" />
         </Content>
         <Price tone="neutral" empty={false} reserveActions={false}>
-          <Skeleton variant="text" width="50%" />
-          <Skeleton variant="text" width="80%" />
+          <Lines reserveActions={false}>
+            <Skeleton variant="text" width="50%" />
+            <Skeleton variant="text" width="80%" />
+          </Lines>
         </Price>
       </Grid>
     </Root>
