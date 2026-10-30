@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { getCacheSMaxageSeconds } from "@/common/config"
+import { CSP_HEADER, contentSecurityPolicy, routeGroup } from "@/common/csp"
 
 /**
  * Matches paths ending in a known static-asset extension (e.g. .js, .css,
@@ -112,8 +113,8 @@ export function mitxonlineSurrogateKey(pathname: string): string | null {
 }
 
 /**
- * Next.js proxy (formerly "middleware"): sets the Cache-Control header at
- * request time so the CDN TTL is read from the Kubernetes environment rather
+ * Next.js proxy (formerly "middleware"): sets the Cache-Control header and the
+ * CSP at request time so both are read from the Kubernetes environment rather
  * than baked into the Docker image at build time.
  *
  * next.config.js `headers()` runs at build time and cannot read env vars that
@@ -152,6 +153,12 @@ export function proxy(request: NextRequest) {
   const itemKey = mitxonlineSurrogateKey(request.nextUrl.pathname)
   const surrogateKey = itemKey ? `html-pages ${itemKey}` : "html-pages"
   response.headers.set("Surrogate-Key", surrogateKey)
+
+  // Gated on the same isPageRoute() test as the headers above, because CSP only
+  // governs documents. The (site) and (embed) route groups get independently
+  // tuned policies — see common/csp.ts and RFC 0007 D8.
+  const group = routeGroup(request.nextUrl.pathname)
+  response.headers.set(CSP_HEADER, contentSecurityPolicy(group))
 
   return response
 }
