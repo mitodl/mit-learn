@@ -331,7 +331,7 @@ const TermsPage: React.FC = () => {
               from, or commercialize Openly Licensed Content or works derived
               from it. If you have questions about acceptable use of Openly
               Licensed Content, please{" "}
-              <Link href={urls.CONTACT} color="red" size="large">
+              <Link href={urls.SUPPORT_REQUEST} color="red" size="large">
                 contact us
               </Link>
               .
