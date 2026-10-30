@@ -273,6 +273,18 @@ class ProgramCertificate(models.Model):
     def __str__(self):
         return f"program certificate: {self.user_full_name} - {self.program_title}"
 
+    @property
+    def has_program_letter(self) -> bool:
+        """
+        Whether this certificate gets a program letter.
+
+        The letter's content comes from the MicroMasters CMS page for the
+        program, looked up by micromasters_program_id. Programs that only ran on
+        MITx Online (e.g. the DEDP Public Policy track) have no such page, and
+        looking one up without an id returns another program's letter.
+        """
+        return self.micromasters_program_id is not None
+
 
 class ProgramLetter(models.Model):
     """
