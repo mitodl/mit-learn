@@ -24,9 +24,8 @@ import { Alert, Button, VisuallyHidden } from "@mitodl/smoot-design"
 import { formatDate, initials } from "ol-utilities"
 import {
   analyticsContractQueries,
-  type CompletionStatusFilter,
   type CourseRun,
-  type LearnerEnrollment,
+  type LearnersParams,
   type LearnerWithEnrollments,
 } from "api/analytics-hooks/organizations"
 import {
@@ -35,18 +34,40 @@ import {
   TableFooter,
   TableFootnote,
 } from "@/components/B2BTable/B2BTable"
-import { Avatar, NeedsAttentionBadge } from "./LearnerRow"
+import { Avatar, ConsentNotice } from "./LearnerRow"
 import {
+  contentProgressPercent,
   DISPLAY_STATUS_LABEL,
   getDisplayStatus,
+  isWithheldStatus,
   type DisplayStatus,
 } from "./statusDisplay"
+import { ContentProgress } from "./ContentProgress"
 
 /** The `/learners` endpoint's maximum page size, in learners. */
 const PAGE_SIZE = 25
 
+type GridFilters = Omit<LearnersParams, "limit" | "offset">
+
+/** Shared with the page, which reads the same cached query for its "N of M" line. */
+const gridLearnersQuery = (
+  orgUuid: string,
+  contractId: number,
+  filters: GridFilters,
+  page: number,
+) =>
+  analyticsContractQueries.learners(orgUuid, contractId, {
+    ...filters,
+    limit: PAGE_SIZE,
+    offset: (page - 1) * PAGE_SIZE,
+  })
+
 const LEARNER_COLUMN_WIDTH = 280
 const MODULE_COLUMN_WIDTH = 160
+/** Columns grow into spare width up to this, so a contract with few modules doesn't leave the card mostly empty. */
+const MODULE_COLUMN_MAX_WIDTH = 360
+/** From this cell width, a cell lays out in one line and shows its status label. */
+const WIDE_CELL = "@container (min-width: 300px)"
 
 type MarkTone = "green" | "blue" | "gray"
 
@@ -68,28 +89,7 @@ const STATUS_SYMBOL: Record<
  * was 30 or more days ago; the status says which of the two it was.
  */
 const attentionReason = (status: DisplayStatus) =>
-  status === "not-started" ? "Not started" : "No activity in 30+ days"
-
-/**
- * Only started modules show a date. `formatDate` rather than `new Date`, which
- * reads this date-only field as UTC midnight — see `LearnerRow`.
- */
-const lastActivity = (enrollment: LearnerEnrollment, status: DisplayStatus) => {
-  if (
-    status !== "in-progress" &&
-    status !== "completed" &&
-    status !== "certificate"
-  ) {
-    return null
-  }
-  if (enrollment.last_active_on) {
-    return {
-      prefix: ", last active ",
-      text: formatDate(enrollment.last_active_on),
-    }
-  }
-  return status === "in-progress" ? { prefix: ", ", text: "No activity" } : null
-}
+  status === "not-started" ? "Not started" : "Inactive 30+ days"
 
 const LEGEND_STATUSES: DisplayStatus[] = [
   "completed",
@@ -150,7 +150,9 @@ const LearnerCell = styled("div", {
 const ModuleCell = styled.div(({ theme }) => ({
   ...cellStyles,
   paddingLeft: "20px",
-  width: `${MODULE_COLUMN_WIDTH}px`,
+  flex: `1 0 ${MODULE_COLUMN_WIDTH}px`,
+  maxWidth: `${MODULE_COLUMN_MAX_WIDTH}px`,
+  containerType: "inline-size",
   ...theme.typography.body2,
   color: theme.custom.colors.black,
 }))
@@ -186,6 +188,40 @@ const LearnerEmail = styled(Typography)(({ theme }) => ({
   textOverflow: "ellipsis",
 })) as typeof Typography
 
+const LastActive = styled(Typography)(({ theme }) => ({
+  ...theme.typography.body3,
+  color: theme.custom.colors.silverGrayDark,
+  marginTop: "4px",
+})) as typeof Typography
+
+/**
+ * The learner's most recent activity across their shared modules, limited to
+ * `courserunIds` when set: the API returns a matched learner's other
+ * enrollments too, and their dates would read against columns the filter hid.
+ * Null when every module is withheld, since nothing about their activity is
+ * shared. Dates are `YYYY-MM-DD`, so they compare as strings.
+ */
+const lastActiveText = (
+  learner: LearnerWithEnrollments,
+  courserunIds: string[] | undefined,
+) => {
+  const shared = learner.enrollments.filter(
+    (enrollment) =>
+      (!courserunIds?.length ||
+        courserunIds.includes(enrollment.courserun_readable_id)) &&
+      !isWithheldStatus(getDisplayStatus(enrollment)),
+  )
+  if (shared.length === 0) return null
+  const latest = shared.reduce<string | null>(
+    (max, enrollment) =>
+      enrollment.last_active_on && (!max || enrollment.last_active_on > max)
+        ? enrollment.last_active_on
+        : max,
+    null,
+  )
+  return latest ? `Last active ${formatDate(latest)}` : "No activity"
+}
+
 const LearnerText = styled.span({
   minWidth: 0,
   overflow: "hidden",
@@ -195,7 +231,7 @@ const AttentionMark = styled.span(({ theme }) => ({
   display: "inline-flex",
   verticalAlign: "middle",
   marginLeft: "6px",
-  color: theme.custom.colors.red,
+  color: theme.custom.colors.darkGray2,
 }))
 
 const StatusMark = styled.span<{ $tone: MarkTone }>(({ $tone, theme }) => ({
@@ -221,11 +257,49 @@ const Legend = styled.ul(({ theme }) => ({
   "& li": { display: "inline-flex", alignItems: "center", gap: "6px" },
 }))
 
-const ActivityDate = styled.div(({ theme }) => ({
-  ...theme.typography.body3,
-  fontSize: theme.typography.pxToRem(11),
-  color: theme.custom.colors.darkGray2,
-  marginTop: "4px",
+/** The icon's height, so N/A, the not-started dash and every icon share a centerline across a row. */
+const StatusLine = styled.div({
+  display: "flex",
+  alignItems: "center",
+  minHeight: "20px",
+})
+
+const CellContent = styled.div({
+  [WIDE_CELL]: {
+    display: "flex",
+    alignItems: "center",
+    flexWrap: "wrap",
+    gap: "4px 16px",
+  },
+})
+
+const CellProgress = styled(ContentProgress)({
+  marginTop: "6px",
+  maxWidth: "none",
+  [WIDE_CELL]: { marginTop: 0, width: "140px", flex: "none" },
+})
+
+/** Screen-reader-only in a narrow cell; the same element shows beside the icon in a wide one, so it is never read twice. */
+const StatusLabel = styled.span(({ theme }) => ({
+  position: "absolute",
+  width: "1px",
+  height: "1px",
+  margin: "-1px",
+  padding: 0,
+  overflow: "hidden",
+  clip: "rect(0 0 0 0)",
+  whiteSpace: "nowrap",
+  border: 0,
+  [WIDE_CELL]: {
+    position: "static",
+    width: "auto",
+    height: "auto",
+    margin: "0 0 0 6px",
+    overflow: "visible",
+    clip: "auto",
+    ...theme.typography.body2,
+    color: theme.custom.colors.black,
+  },
 }))
 
 const Muted = styled.span(({ theme }) => ({
@@ -235,9 +309,10 @@ const Muted = styled.span(({ theme }) => ({
 type ProgressGridProps = {
   orgUuid: string
   contractId: number
-  search: string
-  completionStatus: CompletionStatusFilter[] | undefined
-  needsAttentionOnly: boolean
+  /** `courserun_readable_id` narrows columns as well as rows. */
+  filters: GridFilters
+  /** False until stale module ids in the URL can be dropped against `courseRuns`. */
+  enabled: boolean
   /** From the page's own course-runs query: one grid column per run. */
   courseRuns: CourseRun[] | undefined
   courseRunsFailed: boolean
@@ -250,9 +325,9 @@ type ProgressGridProps = {
 
 const GridLearnerCell: React.FC<{
   learner: LearnerWithEnrollments
-  needsAttentionCount: number
+  lastActive: string | null
   scrolled: boolean
-}> = ({ learner, needsAttentionCount, scrolled }) => (
+}> = ({ learner, lastActive, scrolled }) => (
   <LearnerCell role="rowheader" $scrolled={scrolled}>
     <Avatar aria-hidden="true">
       {learner.full_name ? (
@@ -268,14 +343,7 @@ const GridLearnerCell: React.FC<{
       {learner.email && (
         <LearnerEmail component="div">{learner.email}</LearnerEmail>
       )}
-      {needsAttentionCount > 0 ? (
-        <NeedsAttentionBadge
-          component="span"
-          label={`Needs attention in ${needsAttentionCount} ${
-            needsAttentionCount === 1 ? "module" : "modules"
-          }`}
-        />
-      ) : null}
+      {lastActive && <LastActive component="div">{lastActive}</LastActive>}
     </LearnerText>
   </LearnerCell>
 )
@@ -288,7 +356,7 @@ const StatusSymbol: React.FC<{ status: DisplayStatus }> = ({ status }) => {
     <Tooltip title={label}>
       <StatusMark $tone={tone}>
         <Icon aria-hidden="true" size={20} />
-        <VisuallyHidden>{label}</VisuallyHidden>
+        <StatusLabel>{label}</StatusLabel>
       </StatusMark>
     </Tooltip>
   )
@@ -300,7 +368,12 @@ const ModuleHeader: React.FC<{ title: string }> = ({ title }) => {
   const [truncated, setTruncated] = useState(false)
   useEffect(() => {
     const el = ref.current
-    if (el) setTruncated(el.scrollHeight > el.clientHeight)
+    if (!el) return
+    const measure = () => setTruncated(el.scrollHeight > el.clientHeight)
+    measure()
+    const observer = new ResizeObserver(measure)
+    observer.observe(el)
+    return () => observer.disconnect()
   }, [title])
   return (
     <Tooltip title={truncated ? title : ""}>
@@ -318,9 +391,8 @@ const ModuleHeader: React.FC<{ title: string }> = ({ title }) => {
 const ProgressGrid: React.FC<ProgressGridProps> = ({
   orgUuid,
   contractId,
-  search,
-  completionStatus,
-  needsAttentionOnly,
+  filters,
+  enabled,
   courseRuns,
   courseRunsFailed,
   courseRunsFetching,
@@ -329,23 +401,45 @@ const ProgressGrid: React.FC<ProgressGridProps> = ({
   onPageChange,
   emptyMessage,
 }) => {
-  const filters = useMemo(
-    () => ({
-      ...(search ? { search } : {}),
-      ...(completionStatus ? { completion_status: completionStatus } : {}),
-      ...(needsAttentionOnly ? { needs_attention: true } : {}),
-    }),
-    [search, completionStatus, needsAttentionOnly],
-  )
+  const {
+    completion_status: completionStatus,
+    needs_attention: needsAttentionOnly,
+  } = filters
+  const courserunIds = filters.courserun_readable_id ?? []
 
   const query = useQuery({
-    ...analyticsContractQueries.learners(orgUuid, contractId, {
-      ...filters,
-      limit: PAGE_SIZE,
-      offset: (page - 1) * PAGE_SIZE,
-    }),
+    ...gridLearnersQuery(orgUuid, contractId, filters, page),
+    enabled,
     placeholderData: keepPreviousData,
   })
+
+  /**
+   * Consent is per learner per contract, so learners matching `unknown` are
+   * exactly the withheld learners among those matched. Known statuses and
+   * `needs_attention` match only shared rows, so they leave none to count.
+   */
+  const countsWithheld =
+    !needsAttentionOnly &&
+    (!completionStatus || completionStatus.includes("unknown"))
+  const withheldOnly =
+    completionStatus?.length === 1 && completionStatus[0] === "unknown"
+  const withheldQuery = useQuery({
+    ...analyticsContractQueries.learners(orgUuid, contractId, {
+      ...filters,
+      completion_status: ["unknown"],
+      limit: 1,
+      offset: 0,
+    }),
+    enabled: enabled && countsWithheld && !withheldOnly,
+  })
+  const learnerCount = query.data?.total_count ?? 0
+  /** Zero while the learner page is stale, so a fresh withheld count never meets an old learner count. */
+  const withheldCount =
+    !countsWithheld || !query.data || query.isPlaceholderData
+      ? 0
+      : withheldOnly
+        ? learnerCount
+        : (withheldQuery.data?.total_count ?? 0)
 
   const learners = useMemo(
     () =>
@@ -360,11 +454,9 @@ const ProgressGrid: React.FC<ProgressGridProps> = ({
             enrollment,
           ]),
         ),
-        needsAttentionCount: learner.enrollments.filter(
-          (enrollment) => enrollment.needs_attention,
-        ).length,
+        lastActive: lastActiveText(learner, filters.courserun_readable_id),
       })),
-    [query.data],
+    [query.data, filters.courserun_readable_id],
   )
   const totalPages = Math.ceil((query.data?.total_count ?? 0) / PAGE_SIZE)
   const isStale = query.isPlaceholderData || query.isFetching
@@ -402,7 +494,7 @@ const ProgressGrid: React.FC<ProgressGridProps> = ({
     restoreFocus.current = false
     if (!hasError) regionRef.current?.focus()
   }, [hasError, isRetrying])
-  const liveMessage = query.isLoading
+  const liveMessage = query.isPending
     ? "Loading learners"
     : hasError
       ? isRetrying
@@ -442,12 +534,24 @@ const ProgressGrid: React.FC<ProgressGridProps> = ({
     )
   }
 
-  const columns = courseRuns ?? []
+  const columns = courserunIds.length
+    ? (courseRuns ?? []).filter((run) =>
+        courserunIds.includes(run.courserun_id),
+      )
+    : (courseRuns ?? [])
   const width = LEARNER_COLUMN_WIDTH + columns.length * MODULE_COLUMN_WIDTH
 
   return (
     <>
       {liveRegion}
+
+      {withheldCount > 0 ? (
+        <ConsentNotice component="p">
+          {withheldCount} of these {learnerCount} learners{" "}
+          {withheldCount === 1 ? "has" : "have"} not agreed to share their
+          progress. Their modules read “Declined” or “Consent not recorded”.
+        </ConsentNotice>
+      ) : null}
 
       <TableCard>
         <Legend aria-label="Legend">
@@ -470,9 +574,9 @@ const ProgressGrid: React.FC<ProgressGridProps> = ({
             <AttentionMark style={{ margin: 0 }}>
               <RiErrorWarningLine aria-hidden="true" size={18} />
             </AttentionMark>
-            Needs attention
+            Not started or inactive 30+ days
           </li>
-          <li>Dates show last activity</li>
+          <li>Percent shows content completed, not grade</li>
         </Legend>
         <ScrollRegion
           ref={regionRef}
@@ -507,7 +611,7 @@ const ProgressGrid: React.FC<ProgressGridProps> = ({
                 transition: isStale ? "opacity 150ms ease 150ms" : "none",
               }}
             >
-              {query.isLoading || !courseRuns ? (
+              {query.isPending || !courseRuns ? (
                 [1, 2, 3].map((key) => (
                   <GridRow key={key} role="row">
                     <div role="cell" style={{ width: "100%" }}>
@@ -527,58 +631,60 @@ const ProgressGrid: React.FC<ProgressGridProps> = ({
                   </EmptyTableMessage>
                 </GridRow>
               ) : (
-                learners.map(
-                  ({ learner, enrollments, needsAttentionCount }) => (
-                    <GridRow key={learner.learner_id} role="row">
-                      <GridLearnerCell
-                        learner={learner}
-                        needsAttentionCount={needsAttentionCount}
-                        scrolled={scrolled}
-                      />
-                      {columns.map((run) => {
-                        const enrollment = enrollments.get(run.courserun_id)
-                        if (!enrollment) {
-                          return (
-                            <ModuleCell key={run.courserun_id} role="cell">
+                learners.map(({ learner, enrollments, lastActive }) => (
+                  <GridRow key={learner.learner_id} role="row">
+                    <GridLearnerCell
+                      learner={learner}
+                      lastActive={lastActive}
+                      scrolled={scrolled}
+                    />
+                    {columns.map((run) => {
+                      const enrollment = enrollments.get(run.courserun_id)
+                      if (!enrollment) {
+                        return (
+                          <ModuleCell key={run.courserun_id} role="cell">
+                            <StatusLine>
                               <Muted>
                                 N/A
                                 <VisuallyHidden>, not enrolled</VisuallyHidden>
                               </Muted>
-                            </ModuleCell>
-                          )
-                        }
-                        const status = getDisplayStatus(enrollment)
-                        const activity = lastActivity(enrollment, status)
-                        return (
-                          <ModuleCell key={run.courserun_id} role="cell">
-                            <StatusSymbol status={status} />
-                            {enrollment.needs_attention ? (
-                              <Tooltip title={attentionReason(status)}>
-                                <AttentionMark tabIndex={0}>
-                                  <RiErrorWarningLine
-                                    aria-hidden="true"
-                                    size={16}
-                                  />
-                                  <VisuallyHidden>
-                                    , needs attention: {attentionReason(status)}
-                                  </VisuallyHidden>
-                                </AttentionMark>
-                              </Tooltip>
-                            ) : null}
-                            {activity ? (
-                              <ActivityDate>
-                                <VisuallyHidden>
-                                  {activity.prefix}
-                                </VisuallyHidden>
-                                {activity.text}
-                              </ActivityDate>
-                            ) : null}
+                            </StatusLine>
                           </ModuleCell>
                         )
-                      })}
-                    </GridRow>
-                  ),
-                )
+                      }
+                      const status = getDisplayStatus(enrollment)
+                      const progress = contentProgressPercent(
+                        enrollment,
+                        status,
+                      )
+                      return (
+                        <ModuleCell key={run.courserun_id} role="cell">
+                          <CellContent>
+                            <StatusLine>
+                              <StatusSymbol status={status} />
+                              {enrollment.needs_attention ? (
+                                <Tooltip title={attentionReason(status)}>
+                                  <AttentionMark tabIndex={0}>
+                                    <RiErrorWarningLine
+                                      aria-hidden="true"
+                                      size={16}
+                                    />
+                                    <VisuallyHidden>
+                                      , {attentionReason(status)}
+                                    </VisuallyHidden>
+                                  </AttentionMark>
+                                </Tooltip>
+                              ) : null}
+                            </StatusLine>
+                            {progress === null ? null : (
+                              <CellProgress percent={progress} />
+                            )}
+                          </CellContent>
+                        </ModuleCell>
+                      )
+                    })}
+                  </GridRow>
+                ))
               )}
             </div>
           </Grid>
@@ -604,4 +710,5 @@ const ProgressGrid: React.FC<ProgressGridProps> = ({
   )
 }
 
-export { ProgressGrid }
+export { gridLearnersQuery, ProgressGrid }
+export type { GridFilters }

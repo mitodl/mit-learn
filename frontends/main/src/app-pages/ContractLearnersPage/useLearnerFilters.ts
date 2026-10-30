@@ -12,6 +12,8 @@ const SEARCH_DEBOUNCE_MS = 300
 const MAX_PAGE = 10_000
 /** Matches the API's cap on `search`; truncated rather than sent as-is, since a long paste would otherwise 422 and read as "Something went wrong loading learner data" — 422 isn't in the error-boundary set. */
 const SEARCH_MAX_LENGTH = 254
+/** The `/learners` endpoint rejects more `courserun_readable_id` values than this. */
+const MAX_GRID_MODULES = 50
 const VIEWS = { enrollments: "enrollments", grid: "grid" } as const
 type View = (typeof VIEWS)[keyof typeof VIEWS]
 
@@ -40,7 +42,9 @@ const isStatus = (value: string | null): value is ContractLearnersStatus =>
  * The learner directory's state: the filters both views share, the active
  * view, and the page. View, page, status, module and needs-attention live in
  * the URL; the search text deliberately does not, because it is a learner's
- * name or email and the URL is recorded by PostHog and Sentry. Every URL
+ * name or email and the URL is recorded by PostHog and Sentry. The grid's
+ * module filter is multi-select, so it is a repeated `modules` param, apart
+ * from the enrollments view's single `module`. Every URL
  * change is one `history.replaceState`, which Next feeds into
  * `useSearchParams` without a server round trip (the app is `force-dynamic`,
  * so `router.replace` would re-render the route on every filter change). A
@@ -49,24 +53,37 @@ const isStatus = (value: string | null): value is ContractLearnersStatus =>
 const useLearnerFilters = () => {
   const params = useAppSearchParams()
 
-  const update = useCallback((updates: Record<string, string | null>) => {
-    const next = new URLSearchParams(window.location.search)
-    for (const [key, value] of Object.entries(updates)) {
-      if (value) next.set(key, value)
-      else next.delete(key)
-    }
-    const query = next.toString()
-    window.history.replaceState(
-      null,
-      "",
-      `${window.location.pathname}${query ? `?${query}` : ""}${window.location.hash}`,
-    )
-  }, [])
+  const update = useCallback(
+    (updates: Record<string, string | string[] | null>) => {
+      const next = new URLSearchParams(window.location.search)
+      for (const [key, value] of Object.entries(updates)) {
+        next.delete(key)
+        for (const item of [value ?? []].flat()) {
+          if (item) next.append(key, item)
+        }
+      }
+      const query = next.toString()
+      window.history.replaceState(
+        null,
+        "",
+        `${window.location.pathname}${query ? `?${query}` : ""}${window.location.hash}`,
+      )
+    },
+    [],
+  )
 
   const statusParam = params.get("status")
   const statusFilter = isStatus(statusParam) ? statusParam : ALL
   const needsAttentionOnly = params.get("needs_attention") === "true"
   const moduleFilter = params.get("module") ?? ALL
+  const gridModulesKey = [...new Set(params.getAll("modules"))].join("\n")
+  const gridModules = useMemo(
+    () =>
+      gridModulesKey
+        ? gridModulesKey.split("\n").slice(0, MAX_GRID_MODULES)
+        : [],
+    [gridModulesKey],
+  )
   const view: View =
     params.get("view") === VIEWS.grid ? VIEWS.grid : VIEWS.enrollments
   const parsedPage = parseInt(params.get("page") ?? "", 10)
@@ -119,12 +136,16 @@ const useLearnerFilters = () => {
     moduleFilter,
     setModuleFilter: (value: string) =>
       update({ module: value === ALL ? null : value, page: null }),
+    gridModules,
+    setGridModules: (values: string[]) =>
+      update({ modules: values.slice(0, MAX_GRID_MODULES), page: null }),
     clearAll: () => {
       setSearchQuery("")
       setDebouncedSearch("")
       update({
         status: null,
         module: null,
+        modules: null,
         needs_attention: null,
         page: null,
       })

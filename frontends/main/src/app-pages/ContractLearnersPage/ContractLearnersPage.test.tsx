@@ -523,6 +523,7 @@ describe("ContractLearnersPage", () => {
           analyticsFactories.learnerProgress({
             full_name: "Certified Learner",
             completion_status: "certified",
+            content_progress: 0.9,
             last_active_on: "2026-09-30",
           }),
           analyticsFactories.withheldLearnerProgress({
@@ -556,6 +557,9 @@ describe("ContractLearnersPage", () => {
       expect(csv).toContain("Certificate")
       expect(csv).not.toMatch(/,certified,/)
       expect(csv).toContain("Declined")
+      expect(csv).toContain("Status,Progress,")
+      expect(csv).toContain(",Certificate,90%,")
+      expect(csv).toContain(",Declined,,")
       // Raw, not the screen's "Sep 30, 2026", so a spreadsheet reads it as a
       // date; the withheld row exports empty rather than a fabricated stub.
       expect(csv).toContain("Last activity")
@@ -564,7 +568,7 @@ describe("ContractLearnersPage", () => {
       // Yes/No for the consented row; empty for the withheld one, whose
       // `needs_attention` is null rather than false, and empty for the row
       // from an API that does not send the field at all.
-      expect(csv).toContain("Needs attention")
+      expect(csv).toContain("Not started or inactive 30+ days")
       const [, consented, withheld, legacy] = csv.trim().split("\n")
       expect(consented).toMatch(/,No$/)
       expect(withheld).toMatch(/,$/)
@@ -858,6 +862,10 @@ describe("ContractLearnersPage", () => {
         courserun_id: "course-v1:MITx+M5+2026",
         courserun_title: "Module 5",
       }),
+      analyticsFactories.courseRun({
+        courserun_id: "course-v1:MITx+M7+2026",
+        courserun_title: "Module 7",
+      }),
     ])
     await act(async () => {
       await queryClient.refetchQueries()
@@ -995,9 +1003,59 @@ describe("ContractLearnersPage", () => {
       )
 
       const row = rowOf(await screen.findByText("Priya Raman"))
-      expect(within(row).getByText("—")).toBeInTheDocument()
+      /** One stub each for Progress and Last activity. */
+      expect(within(row).getAllByText("—")).toHaveLength(2)
       expect(within(row).queryByText("No activity")).not.toBeInTheDocument()
     })
+  })
+
+  describe("the Progress column", () => {
+    const rowFor = async (
+      overrides: Parameters<typeof analyticsFactories.learnerProgress>[0],
+    ) => {
+      const { org, contract, orgSlug } = setup()
+      const contractId = contract.id
+      setMockResponse.get(
+        mitxUrls.organization.managerOrganizationsList(),
+        paginate([org]),
+      )
+      mockTotal(contractId, 1)
+      mockCourseRuns(contractId)
+      mockList(contractId, [
+        analyticsFactories.learnerProgress({
+          full_name: "Anton Petrov",
+          last_active_on: "2026-09-30",
+          ...overrides,
+        }),
+      ])
+      renderWithProviders(
+        <ContractLearnersPage orgSlug={orgSlug} contractSlug={contract.slug} />,
+      )
+      return rowOf(await screen.findByText("Anton Petrov"))
+    }
+
+    test.each([
+      { completion_status: "in_progress" as const, content_progress: 0.454 },
+      { completion_status: "passed" as const, content_progress: 0.454 },
+    ])(
+      "shows the rounded percent for a $completion_status enrollment",
+      async (overrides) => {
+        const row = await rowFor(overrides)
+        expect(within(row).getByText(/^45%/)).toHaveTextContent("45% complete")
+      },
+    )
+
+    test.each([
+      { completion_status: "not_started" as const, content_progress: 0 },
+      { completion_status: "in_progress" as const, content_progress: null },
+    ])(
+      "shows a stub for $completion_status with progress $content_progress",
+      async (overrides) => {
+        const row = await rowFor(overrides)
+        expect(within(row).getByText("—")).toBeInTheDocument()
+        expect(within(row).queryByText(/%/)).not.toBeInTheDocument()
+      },
+    )
   })
 
   test("the status filter sends completion_status", async () => {
@@ -1306,7 +1364,7 @@ describe("ContractLearnersPage", () => {
     )
   })
 
-  describe("the Needs attention filter", () => {
+  describe("the not started or inactive filter", () => {
     /**
      * `contractWithheldCount` lands on the unfiltered total rather than the
      * row list: that is where the page reads it from, because the filtered
@@ -1335,7 +1393,9 @@ describe("ContractLearnersPage", () => {
     }
 
     const checkbox = () =>
-      screen.findByRole("checkbox", { name: "Needs attention only" })
+      screen.findByRole("checkbox", {
+        name: "Not started or inactive 30+ days",
+      })
 
     test("flags the rows the API says need attention, and only those", async () => {
       await renderWithRows([
@@ -1352,10 +1412,10 @@ describe("ContractLearnersPage", () => {
       const stale = rowOf(await screen.findByText("Stale Learner"))
       const active = rowOf(await screen.findByText("Active Learner"))
 
-      const badge = within(stale).getByText("Needs attention")
+      const badge = within(stale).getByText("Not started or inactive 30+ days")
       expect(badge).toBeInTheDocument()
       expect(
-        within(active).queryByText("Needs attention"),
+        within(active).queryByText("Not started or inactive 30+ days"),
       ).not.toBeInTheDocument()
 
       // The badge sits inside `CellText`, a span, so a Chip left on its
@@ -1378,7 +1438,9 @@ describe("ContractLearnersPage", () => {
 
       const row = rowOf(await screen.findByText("Private Learner"))
       expect(within(row).getByText("Declined")).toBeInTheDocument()
-      expect(within(row).queryByText("Needs attention")).not.toBeInTheDocument()
+      expect(
+        within(row).queryByText("Not started or inactive 30+ days"),
+      ).not.toBeInTheDocument()
     })
 
     test("sends needs_attention=true when checked", async () => {
@@ -1698,7 +1760,9 @@ describe("ContractLearnersPage", () => {
         screen.getByRole("combobox", { name: /status/i }),
       ).toHaveTextContent("In progress")
       expect(
-        screen.getByRole("checkbox", { name: "Needs attention only" }),
+        screen.getByRole("checkbox", {
+          name: "Not started or inactive 30+ days",
+        }),
       ).toBeChecked()
     })
 
@@ -1757,6 +1821,10 @@ describe("ContractLearnersPage", () => {
         runs.resolve(
           analyticsFactories.envelope([
             analyticsFactories.courseRun({
+              courserun_id: "course-v1:MITx+M5+2026",
+              courserun_title: "Module 5",
+            }),
+            analyticsFactories.courseRun({
               courserun_id: "course-v1:MITx+M6+2026",
               courserun_title: "Module 6",
             }),
@@ -1809,7 +1877,9 @@ describe("ContractLearnersPage", () => {
         screen.getByRole("combobox", { name: /module/i }),
       ).toHaveTextContent("All modules")
       expect(
-        screen.getByRole("checkbox", { name: "Needs attention only" }),
+        screen.getByRole("checkbox", {
+          name: "Not started or inactive 30+ days",
+        }),
       ).not.toBeChecked()
     })
 
@@ -1854,7 +1924,9 @@ describe("ContractLearnersPage", () => {
       expect(location.current.search).toBe("?status=not_started")
 
       await user.click(
-        screen.getByRole("checkbox", { name: "Needs attention only" }),
+        screen.getByRole("checkbox", {
+          name: "Not started or inactive 30+ days",
+        }),
       )
       await screen.findByText("Stale")
       expect(location.current.search).toBe(
@@ -1897,7 +1969,9 @@ describe("ContractLearnersPage", () => {
 
       await screen.findByText("Stale")
       await user.click(
-        screen.getByRole("checkbox", { name: "Needs attention only" }),
+        screen.getByRole("checkbox", {
+          name: "Not started or inactive 30+ days",
+        }),
       )
       await screen.findByText("Everyone")
       expect(location.current.search).toBe("")
@@ -1943,7 +2017,21 @@ describe("ContractLearnersPage progress grid", () => {
     )
   }
 
-  const renderGrid = (url = "/") => {
+  /** Answers the grid's withheld-learner count, whatever its other filters. */
+  const mockWithheldCount = (withheld: number) => {
+    setMockResponse.get(
+      expect.stringMatching(
+        /\/learners\/?\?(?=.*completion_status=unknown)(?=.*\blimit=1(&|$))/,
+      ),
+      analyticsFactories.learnersEnvelope([], { total_count: withheld }),
+    )
+  }
+
+  const renderGrid = (
+    url = "/",
+    runs?: Parameters<typeof mockCourseRuns>[1],
+    withheld = 0,
+  ) => {
     const { org, contract, orgSlug } = setup()
     const contractId = contract.id
     setMockResponse.get(
@@ -1951,7 +2039,15 @@ describe("ContractLearnersPage progress grid", () => {
       paginate([org]),
     )
     mockTotal(contractId, 3)
-    mockCourseRuns(contractId)
+    mockCourseRuns(contractId, runs)
+    mockWithheldCount(withheld)
+    setMockResponse.get(
+      analyticsUrls.contracts.learners(ORG_UUID, contractId, {
+        limit: 1,
+        offset: 0,
+      }),
+      analyticsFactories.learnersEnvelope([], { total_count: 28 }),
+    )
     mockList(contractId, [])
     const { location } = renderWithProviders(
       <ContractLearnersPage orgSlug={orgSlug} contractSlug={contract.slug} />,
@@ -2018,7 +2114,41 @@ describe("ContractLearnersPage progress grid", () => {
     expect(within(table).getAllByRole("row")).toHaveLength(3)
   })
 
-  test("marks the modules a learner needs attention in", async () => {
+  test("makes a module header focusable once a resize clamps its title", async () => {
+    const resizeCallbacks = new Map<Element, () => void>()
+    const OriginalResizeObserver = window.ResizeObserver
+    window.ResizeObserver = class {
+      constructor(private callback: () => void) {}
+      observe(el: Element) {
+        resizeCallbacks.set(el, this.callback)
+      }
+      unobserve() {}
+      disconnect() {}
+    } as unknown as typeof ResizeObserver
+    try {
+      const { contractId } = renderGrid()
+      mockGridPage(contractId, 0, [
+        analyticsFactories.learnerProgress({ courserun_readable_id: M5 }),
+      ])
+      await user.click(
+        await screen.findByRole("tab", { name: "Progress grid" }),
+      )
+      const header = await screen.findByRole("columnheader", {
+        name: "Module 5",
+      })
+      expect(header).not.toHaveAttribute("tabindex")
+
+      Object.defineProperty(header, "scrollHeight", { value: 90 })
+      Object.defineProperty(header, "clientHeight", { value: 60 })
+      act(() => resizeCallbacks.get(header)?.())
+
+      expect(header).toHaveAttribute("tabindex", "0")
+    } finally {
+      window.ResizeObserver = OriginalResizeObserver
+    }
+  })
+
+  test("marks inactive modules and shows the learner's latest activity", async () => {
     const { contractId } = renderGrid()
     mockGridPage(contractId, 0, [
       analyticsFactories.learnerProgress({
@@ -2027,6 +2157,7 @@ describe("ContractLearnersPage progress grid", () => {
         full_name: "Ada Lovelace",
         courserun_readable_id: M5,
         completion_status: "in_progress",
+        last_active_on: "2026-09-30",
         needs_attention: true,
       }),
       analyticsFactories.learnerProgress({
@@ -2035,6 +2166,7 @@ describe("ContractLearnersPage progress grid", () => {
         full_name: "Ada Lovelace",
         courserun_readable_id: M6,
         completion_status: "not_started",
+        last_active_on: "2026-08-01",
         needs_attention: true,
       }),
     ])
@@ -2043,17 +2175,13 @@ describe("ContractLearnersPage progress grid", () => {
 
     const ada = rowOf(await screen.findByText("Ada Lovelace"))
     expect(
-      within(ada).getByText("Needs attention in 2 modules"),
+      within(ada).getByText("Last active Sep 30, 2026"),
     ).toBeInTheDocument()
-    expect(
-      within(ada).getByText(/needs attention: No activity in 30\+ days/),
-    ).toBeInTheDocument()
-    expect(
-      within(ada).getByText(/needs attention: Not started/),
-    ).toBeInTheDocument()
+    expect(within(ada).getByText(/, Inactive 30\+ days/)).toBeInTheDocument()
+    expect(within(ada).getByText(/, Not started/)).toBeInTheDocument()
   })
 
-  test("shows the last activity date under started modules only", async () => {
+  test("shows content progress under started modules only", async () => {
     const { contractId } = renderGrid()
     const ada = {
       learner_id: "a",
@@ -2065,65 +2193,128 @@ describe("ContractLearnersPage progress grid", () => {
         ...ada,
         courserun_readable_id: M5,
         completion_status: "in_progress",
-        last_active_on: "2026-09-30",
+        content_progress: 0.45,
       }),
       analyticsFactories.learnerProgress({
         ...ada,
         courserun_readable_id: M6,
-        completion_status: "in_progress",
-        last_active_on: null,
-      }),
-      analyticsFactories.learnerProgress({
-        learner_id: "b",
-        email: "bob@example.com",
-        full_name: "Bob Barker",
-        courserun_readable_id: M5,
         completion_status: "not_started",
-        last_active_on: "2026-08-01",
-      }),
-      analyticsFactories.learnerProgress({
-        learner_id: "c",
-        email: "carol@example.com",
-        full_name: "Carol Clark",
-        courserun_readable_id: M5,
-        completion_status: "passed",
-        last_active_on: "2026-07-15",
-      }),
-      analyticsFactories.learnerProgress({
-        learner_id: "d",
-        email: "dan@example.com",
-        full_name: "Dan Doe",
-        courserun_readable_id: M5,
-        completion_status: "passed",
-        last_active_on: null,
+        content_progress: 0.1,
       }),
     ])
 
     await user.click(await screen.findByRole("tab", { name: "Progress grid" }))
 
-    const adaRow = rowOf(await screen.findByText("Ada Lovelace"))
-    const datedCell = within(adaRow)
-      .getByText("Sep 30, 2026")
-      .closest('[role="cell"]')
-    expect(datedCell).toHaveTextContent("In progress, last active Sep 30, 2026")
-    const noActivityCell = within(adaRow)
-      .getByText("No activity")
-      .closest('[role="cell"]')
-    expect(noActivityCell).toHaveTextContent("In progress, No activity")
-
-    const bobRow = rowOf(screen.getByText("Bob Barker"))
-    expect(within(bobRow).queryByText("Aug 1, 2026")).not.toBeInTheDocument()
-
-    const carolRow = rowOf(screen.getByText("Carol Clark"))
-    expect(within(carolRow).getByText("Jul 15, 2026")).toBeInTheDocument()
-
-    const danRow = rowOf(screen.getByText("Dan Doe"))
-    expect(within(danRow).queryByText("No activity")).not.toBeInTheDocument()
+    const row = rowOf(await screen.findByText("Ada Lovelace"))
+    expect(within(row).getByText(/^45%/)).toHaveTextContent("45% complete")
+    expect(within(row).queryByText(/^10%/)).not.toBeInTheDocument()
     expect(
       within(screen.getByRole("list", { name: "Legend" })).getByText(
-        "Dates show last activity",
+        "Percent shows content completed, not grade",
       ),
     ).toBeInTheDocument()
+  })
+
+  test("the Modules filter narrows learners and columns to the selected modules", async () => {
+    const { contractId, location } = renderGrid()
+    mockGridPage(contractId, 0, [
+      analyticsFactories.learnerProgress({
+        learner_id: "a",
+        full_name: "Ada Lovelace",
+        courserun_readable_id: M5,
+      }),
+    ])
+    mockGridPage(
+      contractId,
+      0,
+      [
+        analyticsFactories.learnerProgress({
+          learner_id: "b",
+          full_name: "Bob Barker",
+          courserun_readable_id: M6,
+        }),
+      ],
+      {},
+      { courserun_readable_id: [M6] },
+    )
+
+    await user.click(await screen.findByRole("tab", { name: "Progress grid" }))
+    await screen.findByText("Ada Lovelace")
+
+    await user.click(screen.getByRole("combobox", { name: /modules/i }))
+    const option = within(await screen.findByRole("listbox")).getByRole(
+      "option",
+      { name: "Module 6" },
+    )
+    await user.click(option)
+    expect(option).toHaveAttribute("aria-selected", "true")
+    await user.keyboard("{Escape}")
+
+    expect(await screen.findByText("Bob Barker")).toBeInTheDocument()
+    expect(location.current.searchParams.getAll("modules")).toEqual([M6])
+    const table = screen.getByRole("table", {
+      name: "Learner progress by module",
+    })
+    expect(
+      within(table).getByRole("columnheader", { name: "Module 6" }),
+    ).toBeInTheDocument()
+    expect(
+      within(table).queryByRole("columnheader", { name: "Module 5" }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.getByRole("combobox", { name: /modules/i }),
+    ).toHaveTextContent("Module 6")
+  })
+
+  test("drops module ids in the URL that aren't on the contract", async () => {
+    const { contractId } = renderGrid(
+      `/?view=grid&modules=${encodeURIComponent(M5)}&modules=gone`,
+    )
+    mockGridPage(
+      contractId,
+      0,
+      [
+        analyticsFactories.learnerProgress({
+          learner_id: "a",
+          full_name: "Ada Lovelace",
+          courserun_readable_id: M5,
+        }),
+      ],
+      {},
+      { courserun_readable_id: [M5] },
+    )
+
+    expect(await screen.findByText("Ada Lovelace")).toBeInTheDocument()
+  })
+
+  test("dates the learner's last activity from the selected modules only", async () => {
+    const { contractId } = renderGrid(
+      `/?view=grid&modules=${encodeURIComponent(M6)}`,
+    )
+    const ada = { learner_id: "a", full_name: "Ada Lovelace" }
+    mockGridPage(
+      contractId,
+      0,
+      [
+        analyticsFactories.learnerProgress({
+          ...ada,
+          courserun_readable_id: M5,
+          completion_status: "in_progress",
+          last_active_on: "2026-09-30",
+        }),
+        analyticsFactories.learnerProgress({
+          ...ada,
+          courserun_readable_id: M6,
+          completion_status: "in_progress",
+          last_active_on: "2026-08-01",
+        }),
+      ],
+      {},
+      { courserun_readable_id: [M6] },
+    )
+
+    const row = rowOf(await screen.findByText("Ada Lovelace"))
+    expect(within(row).getByText("Last active Aug 1, 2026")).toBeInTheDocument()
   })
 
   test("shadows the pinned learner column only once the grid has scrolled", async () => {
@@ -2202,6 +2393,111 @@ describe("ContractLearnersPage progress grid", () => {
     expect(screen.queryByLabelText("Module")).not.toBeInTheDocument()
   })
 
+  test("hides the module filters and ignores modules in the URL when the contract has one module", async () => {
+    const { contractId } = renderGrid(
+      `/?view=grid&modules=${encodeURIComponent(M5)}`,
+      [
+        analyticsFactories.courseRun({
+          courserun_id: M5,
+          courserun_title: "Module 5",
+        }),
+      ],
+    )
+    mockGridPage(contractId, 0, [
+      analyticsFactories.learnerProgress({
+        full_name: "Ada Lovelace",
+        courserun_readable_id: M5,
+      }),
+    ])
+
+    await screen.findByText("Ada Lovelace")
+    expect(
+      screen.queryByRole("combobox", { name: /modules/i }),
+    ).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole("tab", { name: "By enrollment" }))
+    await screen.findByRole("combobox", { name: /status/i })
+    expect(
+      screen.queryByRole("combobox", { name: /module/i }),
+    ).not.toBeInTheDocument()
+  })
+
+  test("says how many of the contract's enrolled learners match", async () => {
+    const { contractId } = renderGrid("/?view=grid")
+    mockGridPage(contractId, 0, [
+      analyticsFactories.learnerProgress({ learner_id: "a", full_name: "Ada" }),
+      analyticsFactories.learnerProgress({ learner_id: "b", full_name: "Bob" }),
+    ])
+
+    expect(
+      await screen.findByText("2 of 28 enrolled learners"),
+    ).toBeInTheDocument()
+  })
+
+  test("drops the learner count, rather than loading forever, when the grid fails", async () => {
+    const { contractId } = renderGrid("/?view=grid")
+    setMockResponse.get(
+      analyticsUrls.contracts.learners(ORG_UUID, contractId, {
+        limit: GRID_PAGE_SIZE,
+        offset: 0,
+      }),
+      "Internal Server Error",
+      { code: 500 },
+    )
+
+    await screen.findByText("Something went wrong loading learner data.")
+    expect(screen.queryByText("Loading…")).not.toBeInTheDocument()
+    expect(screen.queryByText(/enrolled learners/)).not.toBeInTheDocument()
+  })
+
+  test("counts the learners who have not agreed to share their progress", async () => {
+    const { contractId } = renderGrid("/?view=grid", undefined, 2)
+    mockGridPage(contractId, 0, [
+      analyticsFactories.learnerProgress({ learner_id: "a", full_name: "Ada" }),
+      analyticsFactories.withheldLearnerProgress({
+        learner_id: "b",
+        full_name: "Bob",
+      }),
+      analyticsFactories.withheldLearnerProgress({
+        learner_id: "c",
+        full_name: "Cy",
+      }),
+    ])
+
+    expect(
+      await screen.findByText(
+        /^2 of these 3 learners have not agreed to share their progress\./,
+      ),
+    ).toBeInTheDocument()
+  })
+
+  test("swaps the withheld count for the hidden notice while the not started or inactive filter is on", async () => {
+    const { contractId } = renderGrid("/?view=grid", undefined, 1)
+    mockTotal(contractId, 3, 1)
+    mockGridPage(contractId, 0, [
+      analyticsFactories.withheldLearnerProgress({ full_name: "Bob" }),
+    ])
+    mockGridPage(
+      contractId,
+      0,
+      [analyticsFactories.learnerProgress({ full_name: "Ada" })],
+      {},
+      { needs_attention: true },
+    )
+    await screen.findByText(/^1 of these 1 learners has not agreed/)
+
+    await user.click(
+      screen.getByRole("checkbox", {
+        name: "Not started or inactive 30+ days",
+      }),
+    )
+
+    await screen.findByText(/are hidden while this filter is on/)
+    expect(
+      screen.queryByText(/of these \d+ learners? ha/),
+    ).not.toBeInTheDocument()
+  })
+
   test("requests the next page of learners by offset", async () => {
     const { contractId } = renderGrid()
     const learner = (name: string) =>
@@ -2264,7 +2560,9 @@ describe("ContractLearnersPage progress grid", () => {
     await screen.findByText("Zed Zimmer")
 
     await user.click(
-      screen.getByRole("checkbox", { name: "Needs attention only" }),
+      screen.getByRole("checkbox", {
+        name: "Not started or inactive 30+ days",
+      }),
     )
 
     expect(await screen.findByText("Ada Lovelace")).toBeInTheDocument()
