@@ -37,6 +37,12 @@ describe("routeGroup", () => {
     // embed group. Under a digits-only matcher a third-party embed of a deleted
     // video would get the site policy and render as a blank frame.
     "/video/embed/abc",
+    // next.config.js rewrites /static/:path* to /:path*, and the proxy runs
+    // before that rewrite, so an embed page reached this way arrives with the
+    // prefix still attached. It renders from (embed) and must be policed as
+    // such, or 4b's frame-ancestors 'self' blanks it inside its embedder.
+    "/static/video/embed/123",
+    "/static/podcast/embed/137277",
   ])("treats %s as an embed route", (pathname) => {
     expect(routeGroup(pathname)).toBe("embed")
   })
@@ -53,6 +59,9 @@ describe("routeGroup", () => {
     "/",
     "/search",
     "/courses/course-v1:MITxT+5.601x",
+    // The /static prefix is stripped, not treated as a wildcard.
+    "/static/video/123",
+    "/static/search",
   ])("treats %s as a site route", (pathname) => {
     expect(routeGroup(pathname)).toBe("site")
   })
@@ -65,6 +74,7 @@ describe("contentSecurityPolicy", () => {
     process.env = {
       ...originalEnv,
       NEXT_PUBLIC_APPZI_URL: "https://w.appzi.io/w.js?token=abc123",
+      NEXT_PUBLIC_POSTHOG_API_HOST: "https://ph.ol.mit.edu",
       NEXT_PUBLIC_SENTRY_DSN: "https://deadbeef@sentry.example.com/4505",
       NEXT_PUBLIC_SENTRY_ENV: "production",
     }
@@ -88,7 +98,10 @@ describe("contentSecurityPolicy", () => {
     "%s policy leaves no fetch directive to chance",
     (group) => {
       const policy = policyFor(group)
-      if (policy["default-src"]) return
+      // Both halves assert unconditionally. An earlier version returned early
+      // when default-src was present -- which it always is -- so the loop was
+      // unreachable and this passed having asserted nothing at all.
+      expect(policy["default-src"]).toEqual(["'self'"])
       for (const directive of [
         "media-src",
         "font-src",
@@ -103,6 +116,19 @@ describe("contentSecurityPolicy", () => {
       }
     },
   )
+
+  /**
+   * default-src 'self' absorbs a missing font-src or style-src, so the gap
+   * guard above cannot notice one disappearing. Named here because the ROOT
+   * app/layout.tsx loads the typekit stylesheet, which puts these on both
+   * groups rather than only on (site).
+   */
+  test.each(GROUPS)("%s policy keeps the typekit hosts", (group) => {
+    const policy = policyFor(group)
+    expect(policy["font-src"]).toContain("https://use.typekit.net")
+    expect(policy["style-src"]).toContain("https://use.typekit.net")
+    expect(policy["style-src"]).toContain("https://p.typekit.net")
+  })
 
   /**
    * The HLS guard. video.js/VHS plays HLS through MSE via
@@ -223,6 +249,49 @@ describe("contentSecurityPolicy", () => {
       process.env.NEXT_PUBLIC_APPZI_URL = "not a url"
       expect(contentSecurityPolicy("site")).not.toContain("not a url")
     })
+
+    /**
+     * posthog-js fetches its optional bundles (surveys, session recorder,
+     * toolbar) as <script> from the configured host, so this is a script host
+     * and not only a connect-src one. It appears nowhere in this repo as a
+     * literal — the value is an env var and the loads happen inside the
+     * library — which is exactly why it was missed the first time.
+     */
+    test("site script-src carries the PostHog host, and embed does not", () => {
+      expect(policyFor("site")["script-src"]).toContain("https://ph.ol.mit.edu")
+      expect(policyFor("embed")["script-src"]).not.toContain(
+        "https://ph.ol.mit.edu",
+      )
+    })
+
+    /**
+     * The host is the component that needs checking, and the one an earlier
+     * version of csp.ts did not check. new URL() percent-encodes ";" and ","
+     * in the username and the path, but DECODES "%3B" into a literal ";" in
+     * the host. In a CSP header ";" opens a new directive and "," opens a
+     * whole second policy, so a mangled env var would have produced a
+     * different policy that still parsed cleanly.
+     */
+    test.each([
+      ["https://w.appzi.io%3Bscript-src/w.js", ";"],
+      ["https://a,b.appzi.io/w.js", ","],
+    ])("an Appzi host containing %s is dropped", (configured) => {
+      process.env.NEXT_PUBLIC_APPZI_URL = configured
+      const policy = policyFor("site")
+      expect(policy["script-src"].join(" ")).not.toContain("appzi")
+      expect(Object.keys(policy)).not.toContain("script-src;")
+    })
+
+    test.each([
+      // Non-special scheme: URL.origin is the literal string "null", which
+      // would otherwise be emitted as a bare source expression.
+      "foo://w.appzi.io/w.js",
+      "ftp://w.appzi.io/w.js",
+    ])("a non-HTTP Appzi URL (%s) is dropped", (configured) => {
+      process.env.NEXT_PUBLIC_APPZI_URL = configured
+      expect(policyFor("site")["script-src"]).not.toContain("null")
+      expect(contentSecurityPolicy("site")).not.toContain("appzi")
+    })
   })
 
   describe("report-uri", () => {
@@ -256,13 +325,35 @@ describe("contentSecurityPolicy", () => {
       expect(header).not.toContain("undefined")
     })
 
-    test.each(["https://sentry.example.com/4505", "nonsense", "https://a@b/"])(
-      "is omitted rather than malformed for the unusable DSN %s",
-      (dsn) => {
-        process.env.NEXT_PUBLIC_SENTRY_DSN = dsn
-        expect(policyFor("site")["report-uri"]).toBeUndefined()
-      },
-    )
+    test.each([
+      "https://sentry.example.com/4505",
+      "nonsense",
+      "https://a@b/",
+      // Host-borne header injection: ";" opens a new directive and "," opens a
+      // second policy. new URL() decodes "%3B" back into a literal ";" here,
+      // where it encodes it in the username and the path.
+      "https://deadbeef@evil.com%3Bscript-src/4505",
+      "https://deadbeef@a,b.com/4505",
+      // Not an HTTP(S) endpoint.
+      "ftp://deadbeef@sentry.example.com/4505",
+    ])("is omitted rather than malformed for the unusable DSN %s", (dsn) => {
+      process.env.NEXT_PUBLIC_SENTRY_DSN = dsn
+      expect(policyFor("site")["report-uri"]).toBeUndefined()
+    })
+
+    /**
+     * A self-hosted Sentry can sit under a path prefix. Rebuilding the
+     * endpoint from the project id alone would post to
+     * https://host/api/4505/security/ — a URL that resolves, 404s, and
+     * reports nothing, which is a worse outcome than refusing the DSN.
+     */
+    test("preserves a path prefix rather than dropping or ignoring it", () => {
+      process.env.NEXT_PUBLIC_SENTRY_DSN =
+        "https://deadbeef@sentry.example.com/sentry/4505"
+      expect(policyFor("site")["report-uri"]).toEqual([
+        "https://sentry.example.com/sentry/api/4505/security/?sentry_key=deadbeef&sentry_environment=production",
+      ])
+    })
 
     /**
      * `report-to` is omitted deliberately and this is the guard against it

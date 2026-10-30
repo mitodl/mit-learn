@@ -236,9 +236,22 @@ describe("proxy", () => {
 
       const baseline = withHeaders({})
       expect(baseline).not.toBeNull()
-      expect(withHeaders({ Referer: "https://example.com/" })).toBe(baseline)
-      expect(withHeaders({ Cookie: "sessionid=abc123" })).toBe(baseline)
-      expect(withHeaders({ "Sec-Fetch-Dest": "iframe" })).toBe(baseline)
+      const variants: Record<string, string>[] = [
+        { Referer: "https://example.com/" },
+        { Cookie: "sessionid=abc123" },
+        { "Sec-Fetch-Dest": "iframe" },
+        // The three above are the obvious ones. These are the headers a CDN
+        // is most likely to be keyed on, so they are the ones whose influence
+        // would actually cost a hit ratio.
+        { Host: "qa.learn.mit.edu" },
+        { "X-Forwarded-Host": "qa.learn.mit.edu" },
+        { "X-Forwarded-Proto": "http" },
+        { "User-Agent": "Mozilla/5.0 (compatible; Googlebot/2.1)" },
+        { "Accept-Language": "fr-FR" },
+      ]
+      for (const headers of variants) {
+        expect(withHeaders(headers)).toBe(baseline)
+      }
     })
   })
 

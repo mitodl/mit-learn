@@ -154,9 +154,13 @@ export function proxy(request: NextRequest) {
   const surrogateKey = itemKey ? `html-pages ${itemKey}` : "html-pages"
   response.headers.set("Surrogate-Key", surrogateKey)
 
-  // Gated on the same isPageRoute() test as the headers above, because CSP only
-  // governs documents. The (site) and (embed) route groups get independently
-  // tuned policies — see common/csp.ts and RFC 0007 D8.
+  // Gated on the same isPageRoute() test as the headers above, so static
+  // assets and /healthcheck are untouched. That test also admits /sitemaps/*,
+  // which gets a policy it has no use for: harmless, and preferable to a second
+  // classifier that could drift from the caching one.
+  //
+  // The (site) and (embed) route groups get independently tuned policies — see
+  // common/csp.ts and RFC 0007 D8.
   const group = routeGroup(request.nextUrl.pathname)
   response.headers.set(CSP_HEADER, contentSecurityPolicy(group))
 

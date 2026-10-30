@@ -38,8 +38,19 @@ export type RouteGroup = "site" | "embed"
  */
 const EMBED_ROUTE = /^\/(?:video|podcast)\/embed\/[^/]+\/?$/
 
+/**
+ * next.config.js rewrites /static/:path* to /:path*, and the proxy runs BEFORE
+ * that rewrite, so an embed page reached through the legacy /static prefix
+ * arrives here as /static/video/embed/<id>. Matching the raw pathname would
+ * hand that page the SITE policy — and once 4b enforces, frame-ancestors
+ * 'self', blanking it inside whatever third-party page framed it.
+ */
+const STATIC_REWRITE_PREFIX = /^\/static(?=\/)/
+
 export const routeGroup = (pathname: string): RouteGroup =>
-  EMBED_ROUTE.test(pathname) ? "embed" : "site"
+  EMBED_ROUTE.test(pathname.replace(STATIC_REWRITE_PREFIX, ""))
+    ? "embed"
+    : "site"
 
 /** Report-only for now; chunks 4a and 4b flip the groups to enforcing. */
 export const CSP_HEADER = "Content-Security-Policy-Report-Only"
@@ -125,19 +136,64 @@ const SITE_FRAME_SOURCES = [
 ]
 
 /**
+ * Hostname, optionally with a port. Deliberately narrower than the URL spec —
+ * it rejects IPv6 literals, which no configured value here is.
+ */
+const SAFE_HOST = /^[a-zA-Z0-9.-]+(?::\d+)?$/
+
+/**
+ * Reduces a configured URL to an origin safe to name in a response header, or
+ * null if it is anything else.
+ *
+ * The host is the component that needs checking, which is easy to get wrong:
+ * new URL() percent-encodes ";" and "," in the username and the path, but in
+ * the HOST it DECODES "%3B" back into a literal ";". In a CSP header ";" starts
+ * a new directive and "," starts a whole second policy, so an unchecked host
+ * turns a mangled env var into a different policy that still looks fine.
+ *
+ * Non-https schemes are rejected too. A non-special scheme makes URL.origin the
+ * literal string "null", which would otherwise be emitted as a bare source.
+ */
+const safeOrigin = (configured: string | undefined): string | null => {
+  const trimmed = configured?.trim()
+  if (!trimmed) return null
+  let parsed: URL
+  try {
+    parsed = new URL(trimmed)
+  } catch {
+    return null
+  }
+  if (parsed.protocol !== "https:" && parsed.protocol !== "http:") return null
+  if (!SAFE_HOST.test(parsed.host)) return null
+  return parsed.origin
+}
+
+/**
  * The Appzi feedback widget's origin, from NEXT_PUBLIC_APPZI_URL (site only).
  * Reduced to an origin because the env var is a full script URL; the query
  * string it carries is not a CSP source expression. This is the per-environment
  * host that keeps the policy out of next.config.js (D2).
  */
 const appziSource = (): string[] => {
-  const configured = env("NEXT_PUBLIC_APPZI_URL")?.trim()
-  if (!configured) return []
-  try {
-    return [new URL(configured).origin]
-  } catch {
-    return []
-  }
+  const origin = safeOrigin(env("NEXT_PUBLIC_APPZI_URL"))
+  return origin ? [origin] : []
+}
+
+/**
+ * PostHog's host, from NEXT_PUBLIC_POSTHOG_API_HOST (site only — the provider
+ * is mounted from (site)/SiteProviders.tsx and nowhere else).
+ *
+ * This is a SCRIPT host, not only a connect-src one. posthog-js fetches its
+ * optional bundles — surveys, the session recorder, the toolbar — as <script>
+ * from the configured host at runtime, so a policy that named it under
+ * connect-src alone would block them at enforce. It appears nowhere in this
+ * repo as a literal, which is why it was missed: the value is an environment
+ * variable (production proxies PostHog at an MIT host) and the loads happen
+ * inside the library.
+ */
+const posthogSource = (): string[] => {
+  const origin = safeOrigin(env("NEXT_PUBLIC_POSTHOG_API_HOST"))
+  return origin ? [origin] : []
 }
 
 /**
@@ -151,13 +207,21 @@ const appziSource = (): string[] => {
  * report-uri containing "undefined" would make every page load POST to a bogus
  * URL. The policy omits the directive entirely in that case.
  *
- * The key and project id are matched strictly before use: they are
- * operator-supplied and end up verbatim in a response header, where a stray
- * ";" or "," would silently split the policy into something else.
+ * Every component is operator-supplied and lands verbatim in a response header,
+ * so every component is checked: the host by safeOrigin() above, the key and
+ * project id as alphanumeric here, and any path prefix a segment at a time.
+ *
+ * The prefix is PRESERVED rather than discarded. A self-hosted Sentry can live
+ * under one (https://key@host/sentry/4505), and rebuilding the endpoint from
+ * the project id alone would post to https://host/api/4505/security/ — a URL
+ * that resolves, 404s, and reports nothing, which is worse than refusing.
  */
 const sentryReportUri = (): string | null => {
   const dsn = env("NEXT_PUBLIC_SENTRY_DSN")?.trim()
   if (!dsn) return null
+
+  const origin = safeOrigin(dsn)
+  if (!origin) return null
 
   let parsed: URL
   try {
@@ -167,15 +231,17 @@ const sentryReportUri = (): string | null => {
   }
 
   const publicKey = parsed.username
-  const projectId = parsed.pathname.replace(/^\//, "")
+  const segments = parsed.pathname.split("/").filter(Boolean)
+  const projectId = segments.pop() ?? ""
   if (!/^[a-zA-Z0-9]+$/.test(publicKey) || !/^[a-zA-Z0-9]+$/.test(projectId)) {
     return null
   }
+  if (!segments.every((segment) => /^[a-zA-Z0-9._-]+$/.test(segment))) {
+    return null
+  }
 
-  const endpoint = new URL(
-    `/api/${projectId}/security/`,
-    `${parsed.protocol}//${parsed.host}`,
-  )
+  const prefix = segments.length > 0 ? `/${segments.join("/")}` : ""
+  const endpoint = new URL(`${prefix}/api/${projectId}/security/`, origin)
   endpoint.searchParams.set("sentry_key", publicKey)
 
   // Separates RC from production in one shared project.
@@ -247,6 +313,7 @@ const directives = (group: RouteGroup): Record<string, string[]> => {
           ...RECAPTCHA_SCRIPT,
           HUBSPOT_SCRIPT,
           ...appziSource(),
+          ...posthogSource(),
         ]
       : [SELF, UNSAFE_INLINE, YOUTUBE],
     // Emotion and MUI inject <style> and inline style=; MITLearnGlobalStyles is
