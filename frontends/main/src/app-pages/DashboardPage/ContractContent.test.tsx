@@ -6,6 +6,7 @@ import {
   waitFor,
   user,
 } from "@/test-utils"
+import type { UseFeatureFlagEnabled } from "@/test-utils"
 import ContractContent from "./ContractContent"
 import { makeRequest, setMockResponse } from "api/test-utils"
 import { urls, factories } from "api/mitxonline-test-utils"
@@ -35,7 +36,9 @@ jest.mock("posthog-js/react", () => ({
   ...jest.requireActual("posthog-js/react"),
   useFeatureFlagEnabled: jest.fn(),
 }))
-const mockedUseFeatureFlagEnabled = jest.mocked(useFeatureFlagEnabled)
+const mockedUseFeatureFlagEnabled = jest.mocked<UseFeatureFlagEnabled>(
+  useFeatureFlagEnabled,
+)
 
 const mockB2bEnrollMutate = jest.fn()
 jest.mock("api/mitxonline-hooks/enrollment", () => ({

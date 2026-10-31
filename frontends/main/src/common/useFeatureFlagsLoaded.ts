@@ -29,6 +29,12 @@ import { useContext, useEffect, useState } from "react"
  * This approach relies on the fact that bootstrapped flags are completely
  * discarded after flags are loaded from server, so `useFlagEnabled` will
  * return `undefined` for any flag that was only bootstrapped locally.
+ * posthog-js skips that load when init has a bootstrap, so
+ * ConfiguredPostHogProvider requests it explicitly; without that request this
+ * hook never reports loaded. If the request fails, posthog-js falls back to
+ * flags persisted by an earlier load when there are any, which also discards
+ * the bootstrapped flags: a returning visitor then counts as loaded, with
+ * their last-known values.
  *
  * Without a PostHog api key nothing loads from a server, and
  * ConfiguredPostHogProvider puts the env flags in the context's bootstrap as

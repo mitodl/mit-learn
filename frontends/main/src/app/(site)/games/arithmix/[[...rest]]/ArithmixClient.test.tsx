@@ -1,5 +1,6 @@
 import React from "react"
 import { renderWithProviders, screen } from "@/test-utils"
+import type { UseFeatureFlagEnabled } from "@/test-utils"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import { notFound } from "next/navigation"
 import { allowConsoleErrors } from "ol-test-utilities"
@@ -17,7 +18,9 @@ jest.mock("@/common/useFeatureFlagsLoaded", () => ({
 
 jest.mock("posthog-js/react")
 
-const mockUseFeatureFlagEnabled = jest.mocked(useFeatureFlagEnabled)
+const mockUseFeatureFlagEnabled = jest.mocked<UseFeatureFlagEnabled>(
+  useFeatureFlagEnabled,
+)
 const mockUseFeatureFlagsLoaded = jest.mocked(useFeatureFlagsLoaded)
 const mockNotFound = jest.mocked(notFound)
 

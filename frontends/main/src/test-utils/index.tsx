@@ -357,4 +357,13 @@ export {
 } from "@testing-library/react"
 export { default as user } from "@testing-library/user-event"
 
-export type { TestAppOptions, CurrentUser, User }
+/**
+ * The one-argument form of posthog-js/react's `useFeatureFlagEnabled`, which
+ * our code calls. `jest.mocked(useFeatureFlagEnabled)` types the mock from the
+ * hook's last overload instead, the `defaultValue` form that never returns
+ * `undefined`, so a mock that returns `undefined` needs
+ * `jest.mocked<UseFeatureFlagEnabled>(...)`.
+ */
+type UseFeatureFlagEnabled = (flag: string) => boolean | undefined
+
+export type { TestAppOptions, CurrentUser, User, UseFeatureFlagEnabled }

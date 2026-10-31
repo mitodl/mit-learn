@@ -1,5 +1,6 @@
 import React from "react"
 import { renderWithProviders, screen, TestingErrorBoundary } from "@/test-utils"
+import type { UseFeatureFlagEnabled } from "@/test-utils"
 import { setMockResponse, makeRequest } from "api/test-utils"
 import { factories, urls } from "api/mitxonline-test-utils"
 import {
@@ -54,7 +55,9 @@ jest.mock("posthog-js/react", () => ({
 }))
 jest.mock("@/common/useFeatureFlagsLoaded")
 const mockedUseFeatureFlagsLoaded = jest.mocked(useFeatureFlagsLoaded)
-const mockedUseFeatureFlagEnabled = jest.mocked(useFeatureFlagEnabled)
+const mockedUseFeatureFlagEnabled = jest.mocked<UseFeatureFlagEnabled>(
+  useFeatureFlagEnabled,
+)
 
 const managerOrgsUrl = urls.organization.managerOrganizationsList()
 

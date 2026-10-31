@@ -6,6 +6,7 @@ import {
   renderWithProviders,
   user,
 } from "@/test-utils"
+import type { UseFeatureFlagEnabled } from "@/test-utils"
 import { setMockResponse, urls, factories, makeRequest } from "api/test-utils"
 import type {
   LearningResourcesSearchResponse,
@@ -27,7 +28,9 @@ jest.mock("posthog-js/react", () => ({
 }))
 jest.mock("@/common/useFeatureFlagsLoaded")
 
-const mockedUseFeatureFlagEnabled = jest.mocked(useFeatureFlagEnabled)
+const mockedUseFeatureFlagEnabled = jest.mocked<UseFeatureFlagEnabled>(
+  useFeatureFlagEnabled,
+)
 
 const mockCapture = jest.fn()
 jest.mocked(usePostHog).mockReturnValue(
