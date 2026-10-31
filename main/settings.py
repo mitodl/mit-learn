@@ -166,6 +166,8 @@ SCIM_SERVICE_PROVIDER["USER_ADAPTER"] = "users.adapters.LearnUserAdapter"  # noq
 
 # OAuth2TokenMiddleware must be before SCIMAuthCheckMiddleware
 # in order to insert request.user into the request.
+# OAuth2ExtraTokenMiddleware exposes request.access_token, which
+# SCIMScopeCheckMiddleware uses to require the "scim" scope.
 MIDDLEWARE = (
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
@@ -178,8 +180,20 @@ MIDDLEWARE = (
     "corsheaders.middleware.CorsMiddleware",
     "authentication.middleware.BlockedIPMiddleware",
     "oauth2_provider.middleware.OAuth2TokenMiddleware",
+    "oauth2_provider.middleware.OAuth2ExtraTokenMiddleware",
+    "main.middleware.scim_scope.SCIMScopeCheckMiddleware",
     "django_scim.middleware.SCIMAuthCheckMiddleware",
 )
+
+OAUTH2_PROVIDER = {
+    "SCOPES": {
+        "read": "Read access",
+        "write": "Write access",
+        "scim": "SCIM user provisioning",
+    },
+    # The default is every scope; "scim" must be requested explicitly.
+    "DEFAULT_SCOPES": ["read", "write"],
+}
 
 ZEAL_ENABLE = get_bool("ZEAL_ENABLE", False)  # noqa: FBT003
 
