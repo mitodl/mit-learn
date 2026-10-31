@@ -18,6 +18,7 @@ import { formatDate, LocalDate } from "ol-utilities"
 import { RiCheckLine, RiArrowRightLine, RiAwardFill } from "@remixicon/react"
 import { Alert, Button, ButtonProps } from "@mitodl/smoot-design"
 import {
+  ENROLL_FAILURE_MESSAGE,
   canPurchaseRun,
   enrollmentAlertSuccessUrl,
   formatPrice,
@@ -28,7 +29,6 @@ import { useCreateEnrollment } from "api/mitxonline-hooks/enrollment"
 import { SILENCE_ERROR_TOAST } from "api/mutation-meta"
 import { badRequestDetail } from "api/mutation-errors"
 import ErrorMessageWithSupport from "@/components/ErrorMessageWithSupport/ErrorMessageWithSupport"
-import { ENROLL_FAILURE_MESSAGE } from "@/app-pages/ProductPages/enrollTypes"
 import { useReplaceBasketItem } from "@/common/mitxonline/useReplaceBasketItem"
 import { useComplianceGate } from "@/common/mitxonline/useComplianceGate"
 import { useRouter } from "next-nprogress-bar"

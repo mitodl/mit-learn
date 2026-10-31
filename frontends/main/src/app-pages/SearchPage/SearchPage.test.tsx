@@ -31,7 +31,9 @@ jest.mock("posthog-js/react", () => ({
   usePostHog: jest.fn(),
 }))
 
-const mockedUseFeatureFlagEnabled = jest.mocked(useFeatureFlagEnabled)
+const mockedUseFeatureFlagEnabled = jest.mocked(
+  useFeatureFlagEnabled as (flag: string) => boolean | undefined,
+)
 
 /**
  * Mock the named flags, leaving every other flag `undefined`—PostHog's value

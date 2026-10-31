@@ -14,7 +14,9 @@ jest.mock("@mitodl/smoot-design/contact-us", () => ({
   ContactUsLauncher: jest.fn(() => <div data-testid="launcher" />),
 }))
 
-const mockEnabled = jest.mocked(useFeatureFlagEnabled)
+const mockEnabled = jest.mocked(
+  useFeatureFlagEnabled as (flag: string) => boolean | undefined,
+)
 const mockLoaded = jest.mocked(useFeatureFlagsLoaded)
 const mockLauncher = jest.mocked(ContactUsLauncher)
 

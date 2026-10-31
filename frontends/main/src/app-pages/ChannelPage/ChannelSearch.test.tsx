@@ -27,7 +27,9 @@ jest.mock("posthog-js/react", () => ({
 }))
 jest.mock("@/common/useFeatureFlagsLoaded")
 
-const mockedUseFeatureFlagEnabled = jest.mocked(useFeatureFlagEnabled)
+const mockedUseFeatureFlagEnabled = jest.mocked(
+  useFeatureFlagEnabled as (flag: string) => boolean | undefined,
+)
 
 const mockCapture = jest.fn()
 jest.mocked(usePostHog).mockReturnValue(

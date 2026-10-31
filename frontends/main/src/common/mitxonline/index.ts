@@ -391,7 +391,12 @@ const isVerifiedEnrollmentMode = (mode?: string | null) => {
   return mode === EnrollmentModeEnum.Verified
 }
 
+/** Fallback enrollment-failure copy, shared by the enroll areas and dialogs. */
+const ENROLL_FAILURE_MESSAGE =
+  "There was a problem processing your enrollment. Please try again."
+
 export {
+  ENROLL_FAILURE_MESSAGE,
   formatPrice,
   formatPriceRange,
   formatResourcePrice,
