@@ -1,5 +1,6 @@
 import { type NextRequest, NextResponse } from "next/server"
 import { getCacheSMaxageSeconds } from "@/common/config"
+import { CSP_HEADER, contentSecurityPolicy, routeGroup } from "@/common/csp"
 
 /**
  * Matches paths ending in a known static-asset extension (e.g. .js, .css,
@@ -112,8 +113,8 @@ export function mitxonlineSurrogateKey(pathname: string): string | null {
 }
 
 /**
- * Next.js proxy (formerly "middleware"): sets the Cache-Control header at
- * request time so the CDN TTL is read from the Kubernetes environment rather
+ * Next.js proxy (formerly "middleware"): sets the Cache-Control header and the
+ * CSP at request time so both are read from the Kubernetes environment rather
  * than baked into the Docker image at build time.
  *
  * next.config.js `headers()` runs at build time and cannot read env vars that
@@ -131,19 +132,43 @@ export function proxy(request: NextRequest) {
     return NextResponse.next()
   }
 
+  const response = NextResponse.next()
+
+  // Set BEFORE the uncached-page branch below, because that branch returns
+  // early and a CSP belongs on every page document regardless of how it is
+  // cached. /program_letter/ is the case in point: it carries the learner's
+  // name, so it is exactly the page that should not be missing frame-ancestors
+  // once chunk 4b enforces -- and an omission here would be invisible, since a
+  // page that sends no policy reports no violations.
+  //
+  // Gated on the same isPageRoute() test as the cache headers, so static assets
+  // and /healthcheck are untouched. That test also admits /sitemaps/*, which
+  // gets a policy it has no use for: harmless, and preferable to a second
+  // classifier that could drift from the caching one.
+  //
+  // The (site) and (embed) route groups get independently tuned policies — see
+  // common/csp.ts and RFC 0007 D8.
+  //
+  // routeGroup() normalises the /static rewrite prefix; the Surrogate-Key call
+  // below does not, so /static/courses/<id> gets html-pages without its
+  // per-item mitxonline tag and is not individually purgeable. That predates
+  // this and is left alone deliberately: normalising here would change which
+  // Surrogate-Key Fastly sees, which is a caching change wearing a CSP
+  // change's clothes.
+  const group = routeGroup(request.nextUrl.pathname)
+  response.headers.set(CSP_HEADER, contentSecurityPolicy(group))
+
   if (
     UNCACHED_PAGE_PREFIXES.some((prefix) =>
       request.nextUrl.pathname.startsWith(prefix),
     )
   ) {
-    const response = NextResponse.next()
     response.headers.set("Cache-Control", "private, no-store")
     return response
   }
 
   const cacheControl = `s-maxage=${getCacheSMaxageSeconds()}, stale-if-error=86400, stale-while-revalidate=86400`
 
-  const response = NextResponse.next()
   response.headers.set("Cache-Control", cacheControl)
 
   // All page routes share the html-pages tag so Fastly can purge them on
