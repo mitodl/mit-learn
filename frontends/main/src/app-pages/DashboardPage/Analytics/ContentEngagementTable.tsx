@@ -248,6 +248,7 @@ const ContentEngagementTable: React.FC<{
       <TableScroll
         role="region"
         aria-label="Content engagement, scrollable table"
+        // eslint-disable-next-line styled-components-a11y/no-noninteractive-tabindex
         tabIndex={0}
       >
         <TableGrid role="table" aria-label="Content engagement">

@@ -185,8 +185,7 @@ const HybridSearchDisplay: React.FC<SearchDisplayProps> = ({
         params: ReturnType<typeof getSearchParams>,
       ) => {
         const vectorData = data as
-          | LearningResourcesVectorSearchResponse
-          | undefined
+          LearningResourcesVectorSearchResponse | undefined
         const isVectorQuerySearch =
           typeof params.q === "string" && params.q.trim() !== ""
         if (!isVectorQuerySearch || !vectorData) {

@@ -14,8 +14,7 @@ import { Badge } from "../../tiptap-ui-primitive/badge"
 import { useTiptapEditor } from "../../../hooks/use-tiptap-editor"
 
 export interface HeadingButtonProps
-  extends Omit<ButtonProps, "type">,
-    UseHeadingConfig {
+  extends Omit<ButtonProps, "type">, UseHeadingConfig {
   /**
    * Optional text to display alongside the icon.
    */

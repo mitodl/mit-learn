@@ -16,8 +16,7 @@ import type { ListType, UseListConfig } from "./"
 import { LIST_SHORTCUT_KEYS, useList } from "./"
 
 export interface ListButtonProps
-  extends Omit<ButtonProps, "type">,
-    UseListConfig {
+  extends Omit<ButtonProps, "type">, UseListConfig {
   /**
    * Optional text to display alongside the icon.
    */

@@ -75,14 +75,12 @@ describe("ArithmixClient", () => {
       // Import `@testing-library/react` directly rather than `@/test-utils`,
       // which also pulls in `user-event` and registers an `afterAll` hook.
       process.env.RTL_SKIP_AUTO_CLEANUP = "true"
-      const { render, act: isolatedAct } = await import(
-        "@testing-library/react"
-      )
+      const { render, act: isolatedAct } =
+        await import("@testing-library/react")
       delete process.env.RTL_SKIP_AUTO_CLEANUP
 
-      const { default: ArithmixClientWithFailedImport } = await import(
-        "./ArithmixClient"
-      )
+      const { default: ArithmixClientWithFailedImport } =
+        await import("./ArithmixClient")
 
       await expect(
         isolatedAct(async () => {
