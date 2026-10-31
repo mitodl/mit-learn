@@ -565,7 +565,8 @@ describe("mitxOnlineCardContent", () => {
       ).toEqual({
         tone: "light",
         primary: "Free to audit",
-        certificate: `${resource.certificate_type}: $100 – $500`,
+        certificate: resource.certificate_type,
+        certificatePrice: "$100 – $500",
       })
     })
 
@@ -629,17 +630,26 @@ describe("mitxOnlineCardContent", () => {
       },
     )
 
-    test("An available certificate with no type reads 'Certificate'", () => {
-      const resource = program({
-        enrollment_modes: [paidMode],
-        certificate_available: true,
-        certificate_type: "",
-      })
+    test.each([
+      { type: "no type", certificateType: "" },
+      {
+        type: "a certificate of completion",
+        certificateType: "Certificate of Completion",
+      },
+    ])(
+      "An available certificate with $type reads 'Certificate'",
+      ({ certificateType }) => {
+        const resource = program({
+          enrollment_modes: [paidMode],
+          certificate_available: true,
+          certificate_type: certificateType,
+        })
 
-      expect(
-        mitxOnlineCardContent({ resource, resourceType: "program" })?.price
-          .certificate,
-      ).toBe("Certificate")
-    })
+        expect(
+          mitxOnlineCardContent({ resource, resourceType: "program" })?.price
+            .certificate,
+        ).toBe("Certificate")
+      },
+    )
   })
 })

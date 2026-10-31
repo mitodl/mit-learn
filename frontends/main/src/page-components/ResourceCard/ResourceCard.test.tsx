@@ -138,14 +138,12 @@ const LEGACY = {
   flag: false,
   bookmarkName: (resource: LearningResource) =>
     `Bookmark ${resource.resource_category}`,
-  learningPathName: () => "Add to Learning Path",
+  learningPathName: "Add to Learning Path",
 }
 const REDESIGNED = {
   card: "redesigned",
   flag: true,
   bookmarkName: (resource: LearningResource) => `Bookmark: ${resource.title}`,
-  learningPathName: (resource: LearningResource) =>
-    `Add to Learning Path: ${resource.title}`,
 }
 
 /**
@@ -157,151 +155,106 @@ describe.each([
   { ...LEGACY, isList: false },
   { ...LEGACY, isList: true },
   { ...REDESIGNED, isList: false },
-])(
-  "ResourceCard ($card, isList=$isList)",
-  ({ flag, isList, bookmarkName, learningPathName }) => {
-    beforeEach(() => {
-      setRedesignFlag(flag)
+])("ResourceCard ($card, isList=$isList)", ({ flag, isList, bookmarkName }) => {
+  beforeEach(() => {
+    setRedesignFlag(flag)
+  })
+
+  const setup = (options: SetupOptions = {}) =>
+    setupCard({ ...options, isList })
+
+  test("Applies className to the resource card", () => {
+    const { view } = setup({ props: { className: "test-class" } })
+    expect(view.container.firstChild).toHaveClass("test-class")
+  })
+
+  test("Clicking the bookmark opens AddToUserListDialog when authenticated", async () => {
+    const showModal = jest.mocked(NiceModal.show)
+
+    const { resource } = setup({ user: { is_authenticated: true } })
+    const addToUserListButton = await screen.findByRole("button", {
+      name: bookmarkName(resource),
     })
 
-    const setup = (options: SetupOptions = {}) =>
-      setupCard({ ...options, isList })
+    expect(showModal).not.toHaveBeenCalled()
+    await user.click(addToUserListButton)
+    expect(showModal).toHaveBeenLastCalledWith(AddToUserListDialog, {
+      resourceId: resource.id,
+    })
+  })
 
-    test("Applies className to the resource card", () => {
-      const { view } = setup({ user: {}, props: { className: "test-class" } })
-      expect(view.container.firstChild).toHaveClass("test-class")
+  test("Clicking 'Add to User List' opens signup popover if not authenticated", async () => {
+    const { resource } = setup({
+      user: { is_authenticated: false },
+    })
+    const addToUserListButton = await screen.findByRole("button", {
+      name: bookmarkName(resource),
+    })
+    await user.click(addToUserListButton)
+    const dialog = screen.getByRole("dialog")
+    expect(dialog).toBeVisible()
+    expect(dialog).toHaveTextContent("Sign Up")
+  })
+
+  test("Card links to the resource's learn_url regardless of host page", () => {
+    const { resource } = setup({ url: HOST_URL })
+
+    const link = screen.getByRole("link", {
+      name: new RegExp(resource.title),
     })
 
-    test.each([
-      {
-        user: { is_authenticated: true, is_learning_path_editor: false },
-        expectAddToLearningPathButton: false,
-      },
-      {
-        user: { is_authenticated: true, is_learning_path_editor: true },
-        expectAddToLearningPathButton: true,
-      },
-      {
-        user: { is_authenticated: false },
-        expectAddToLearningPathButton: false,
-      },
-    ])(
-      "Always shows 'Add to User List' button, but only shows 'Add to Learning Path' button if user is a learning path editor",
-      async ({ user, expectAddToLearningPathButton }) => {
-        const { resource } = setup({ user })
-        await screen.findByRole("button", { name: bookmarkName(resource) })
+    // What crawlers follow: the resource's own page where it has one, else
+    // its drawer. The backend decides, so the card does no URL building.
+    expect(link).toHaveAttribute("href", resource.learn_url)
+  })
 
-        const addToLearningPathButton = screen.queryByRole("button", {
-          name: learningPathName(resource),
-        })
-        expect(!!addToLearningPathButton).toBe(expectAddToLearningPathButton)
-      },
+  test("Clicking the title opens the drawer in place and caches the resource", async () => {
+    const onCardClick = jest.fn()
+    const { resource, location, queryClient } = setup({
+      url: HOST_URL,
+      props: { onCardClick },
+    })
+
+    await user.click(
+      screen.getByRole("link", { name: new RegExp(resource.title) }),
     )
 
-    test("Clicking add to list button opens AddToListDialog when authenticated", async () => {
-      const showModal = jest.mocked(NiceModal.show)
+    expect(location.current.pathname).toBe(HOST_PATHNAME)
+    const params = location.current.searchParams
+    expect(params.get("sortby")).toBe("new")
+    expect(params.get(RESOURCE_DRAWER_PARAMS.resource)).toBe(
+      String(resource.id),
+    )
+    expect(params.get(RESOURCE_DRAWER_PARAMS.resource_title)).toBe(
+      slugify(resource.title),
+    )
+    expect(
+      queryClient.getQueryData(
+        learningResourceQueries.detail(resource.id).queryKey,
+      ),
+    ).toEqual(resource)
+    expect(onCardClick).toHaveBeenCalledTimes(1)
+  })
 
-      const { resource } = setup({
-        user: { is_learning_path_editor: true, is_authenticated: true },
-      })
-      const addToUserListButton = await screen.findByRole("button", {
-        name: bookmarkName(resource),
-      })
-      const addToLearningPathButton = await screen.findByRole("button", {
-        name: learningPathName(resource),
-      })
+  /**
+   * The modifier list itself is pinned per-key in LinkAdapter.test.tsx;
+   * this checks only that the chain from the card's title link down to
+   * LinkAdapter still delivers the modifier state, so one key is enough.
+   */
+  test("Meta-click on the title is left to the browser, so no URL is pushed", async () => {
+    const { resource, location } = setup({ url: HOST_URL })
+    const u = user.setup()
+    await u.keyboard("{Meta>}")
 
-      expect(showModal).not.toHaveBeenCalled()
-      await user.click(addToLearningPathButton)
-      expect(showModal).toHaveBeenLastCalledWith(AddToLearningPathDialog, {
-        resourceId: resource.id,
-      })
-      await user.click(addToUserListButton)
-      expect(showModal).toHaveBeenLastCalledWith(AddToUserListDialog, {
-        resourceId: resource.id,
-      })
-    })
+    await expectWindowNavigation(() =>
+      u.click(screen.getByRole("link", { name: new RegExp(resource.title) })),
+    )
 
-    test("Clicking 'Add to User List' opens signup popover if not authenticated", async () => {
-      const { resource } = setup({
-        user: { is_authenticated: false },
-      })
-      const addToUserListButton = await screen.findByRole("button", {
-        name: bookmarkName(resource),
-      })
-      await user.click(addToUserListButton)
-      const dialog = screen.getByRole("dialog")
-      expect(dialog).toBeVisible()
-      expect(dialog).toHaveTextContent("Sign Up")
-    })
-
-    test("Card links to the resource's learn_url regardless of host page", () => {
-      const { resource } = setup({
-        user: { is_learning_path_editor: true },
-        url: HOST_URL,
-      })
-
-      const link = screen.getByRole("link", {
-        name: new RegExp(resource.title),
-      })
-
-      // What crawlers follow: the resource's own page where it has one, else
-      // its drawer. The backend decides, so the card does no URL building.
-      expect(link).toHaveAttribute("href", resource.learn_url)
-    })
-
-    test("Clicking the title opens the drawer in place and caches the resource", async () => {
-      const onCardClick = jest.fn()
-      const { resource, location, queryClient } = setup({
-        user: { is_learning_path_editor: true },
-        url: HOST_URL,
-        props: { onCardClick },
-      })
-
-      await user.click(
-        screen.getByRole("link", { name: new RegExp(resource.title) }),
-      )
-
-      expect(location.current.pathname).toBe(HOST_PATHNAME)
-      const params = location.current.searchParams
-      expect(params.get("sortby")).toBe("new")
-      expect(params.get(RESOURCE_DRAWER_PARAMS.resource)).toBe(
-        String(resource.id),
-      )
-      expect(params.get(RESOURCE_DRAWER_PARAMS.resource_title)).toBe(
-        slugify(resource.title),
-      )
-      expect(
-        queryClient.getQueryData(
-          learningResourceQueries.detail(resource.id).queryKey,
-        ),
-      ).toEqual(resource)
-      expect(onCardClick).toHaveBeenCalledTimes(1)
-    })
-
-    /**
-     * The modifier list itself is pinned per-key in LinkAdapter.test.tsx;
-     * this checks only that the chain from the card's title link down to
-     * LinkAdapter still delivers the modifier state, so one key is enough.
-     */
-    test("Meta-click on the title is left to the browser, so no URL is pushed", async () => {
-      const { resource, location } = setup({
-        user: { is_learning_path_editor: true },
-        url: HOST_URL,
-      })
-      const u = user.setup()
-      await u.keyboard("{Meta>}")
-
-      await expectWindowNavigation(() =>
-        u.click(screen.getByRole("link", { name: new RegExp(resource.title) })),
-      )
-
-      expect(
-        location.current.searchParams.has(RESOURCE_DRAWER_PARAMS.resource),
-      ).toBe(false)
-    })
-  },
-)
+    expect(
+      location.current.searchParams.has(RESOURCE_DRAWER_PARAMS.resource),
+    ).toBe(false)
+  })
+})
 
 /**
  * Cases that depend on the legacy card's props or its body click handler. The
@@ -313,11 +266,58 @@ describe("ResourceCard (legacy only)", () => {
     setRedesignFlag(false)
   })
 
+  describe.each([{ isList: false }, { isList: true }])(
+    "isList=$isList",
+    ({ isList }) => {
+      test.each([
+        {
+          user: { is_authenticated: true, is_learning_path_editor: false },
+          expectAddToLearningPathButton: false,
+        },
+        {
+          user: { is_authenticated: true, is_learning_path_editor: true },
+          expectAddToLearningPathButton: true,
+        },
+        {
+          user: { is_authenticated: false },
+          expectAddToLearningPathButton: false,
+        },
+      ])(
+        "Shows 'Add to Learning Path' only to a learning path editor",
+        async ({ user, expectAddToLearningPathButton }) => {
+          const { resource } = setupCard({ user, isList })
+          await screen.findByRole("button", {
+            name: LEGACY.bookmarkName(resource),
+          })
+
+          const addToLearningPathButton = screen.queryByRole("button", {
+            name: LEGACY.learningPathName,
+          })
+          expect(!!addToLearningPathButton).toBe(expectAddToLearningPathButton)
+        },
+      )
+
+      test("Clicking 'Add to Learning Path' opens AddToLearningPathDialog", async () => {
+        const showModal = jest.mocked(NiceModal.show)
+        const { resource } = setupCard({
+          user: { is_learning_path_editor: true, is_authenticated: true },
+          isList,
+        })
+
+        await user.click(
+          await screen.findByRole("button", { name: LEGACY.learningPathName }),
+        )
+        expect(showModal).toHaveBeenLastCalledWith(AddToLearningPathDialog, {
+          resourceId: resource.id,
+        })
+      })
+    },
+  )
+
   test.each([{ isList: false }, { isList: true }])(
     "Clicking the card body pushes the same URL as the title (isList=$isList)",
     async ({ isList }) => {
       const { resource, location, view } = setupCard({
-        user: { is_learning_path_editor: true },
         url: HOST_URL,
         isList,
       })
@@ -421,12 +421,9 @@ describe("ResourceCard (redesigned only)", () => {
     expect(onCardClick).not.toHaveBeenCalled()
   })
 
-  test.each([
-    { inUserList: true, inLearningPath: false },
-    { inUserList: false, inLearningPath: true },
-  ])(
-    "Action labels follow membership (inUserList=$inUserList, inLearningPath=$inLearningPath)",
-    async ({ inUserList, inLearningPath }) => {
+  test.each([{ inUserList: true }, { inUserList: false }])(
+    "The bookmark is the only action, even for an editor, and its label follows membership (inUserList=$inUserList)",
+    async ({ inUserList }) => {
       const resource = makeResource()
       setupCard({
         user: { is_authenticated: true, is_learning_path_editor: true },
@@ -434,25 +431,18 @@ describe("ResourceCard (redesigned only)", () => {
         userListMemberships: inUserList
           ? [{ id: 1, parent: 123, child: resource.id }]
           : [],
-        learningPathMemberships: inLearningPath
-          ? [{ id: 2, parent: 456, child: resource.id }]
-          : [],
       })
 
-      const learningPathLabel = inLearningPath
-        ? `In Learning Path: ${resource.title}`
-        : `Add to Learning Path: ${resource.title}`
       const bookmarkLabel = inUserList
         ? `Bookmarked: ${resource.title}`
         : `Bookmark: ${resource.title}`
 
-      await screen.findByRole("button", { name: learningPathLabel })
       await screen.findByRole("button", { name: bookmarkLabel })
       expect(
         screen
           .getAllByRole("button")
           .map((button) => button.getAttribute("aria-label")),
-      ).toEqual([learningPathLabel, bookmarkLabel])
+      ).toEqual([bookmarkLabel])
     },
   )
 

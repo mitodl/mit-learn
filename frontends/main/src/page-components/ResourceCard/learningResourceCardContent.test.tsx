@@ -1,7 +1,11 @@
 import React from "react"
 import { faker } from "@faker-js/faker/locale/en"
 import { factories } from "api/test-utils"
-import { CourseResourceDeliveryInnerCodeEnum, ResourceTypeEnum } from "api"
+import {
+  CourseResourceCertificationTypeCodeEnum,
+  CourseResourceDeliveryInnerCodeEnum,
+  ResourceTypeEnum,
+} from "api"
 import { RiFileCopy2Line } from "@remixicon/react"
 import { LocalDate } from "ol-utilities"
 import { learningResourceCardContent } from "./learningResourceCardContent"
@@ -14,6 +18,12 @@ const {
   run: makeRun,
   contentFile,
 } = factories.learningResources
+
+/** A type that keeps its name: the factories pick one at random. */
+const professional = {
+  code: CourseResourceCertificationTypeCodeEnum.Professional,
+  name: "Professional Certificate",
+}
 
 describe("learningResourceCardContent", () => {
   test("Maps the title, type label, and language", () => {
@@ -105,6 +115,7 @@ describe("learningResourceCardContent", () => {
       const resource = course({
         free: false,
         certification: true,
+        certification_type: professional,
         resource_prices: [{ amount: "250", currency: "USD" }],
       })
 
@@ -124,7 +135,11 @@ describe("learningResourceCardContent", () => {
     })
 
     test("Paid with an unnamed certificate type reads 'Certificate'", () => {
-      const paid = course({ free: false, certification: true })
+      const paid = course({
+        free: false,
+        certification: true,
+        certification_type: professional,
+      })
       const resource = {
         ...paid,
         certification_type: { ...paid.certification_type, name: "" },
@@ -139,6 +154,7 @@ describe("learningResourceCardContent", () => {
       const resource = course({
         free: true,
         certification: true,
+        certification_type: professional,
         resource_prices: [
           { amount: "0", currency: "USD" },
           { amount: "50", currency: "USD" },
@@ -148,7 +164,8 @@ describe("learningResourceCardContent", () => {
       expect(learningResourceCardContent(resource).price).toEqual({
         tone: "light",
         primary: "Free to audit",
-        certificate: `${resource.certification_type.name}: $50`,
+        certificate: resource.certification_type.name,
+        certificatePrice: "$50",
       })
     })
 
@@ -156,6 +173,7 @@ describe("learningResourceCardContent", () => {
       const resource = course({
         free: true,
         certification: true,
+        certification_type: professional,
         resource_prices: [{ amount: "0", currency: "USD" }],
       })
 
@@ -165,6 +183,42 @@ describe("learningResourceCardContent", () => {
         certificate: resource.certification_type.name,
       })
     })
+
+    test.each([
+      {
+        free: false,
+        amounts: ["250"],
+        price: { tone: "dark", primary: "$250", certificate: "Certificate" },
+      },
+      {
+        free: true,
+        amounts: ["0", "50"],
+        price: {
+          tone: "light",
+          primary: "Free to audit",
+          certificate: "Certificate",
+          certificatePrice: "$50",
+        },
+      },
+    ])(
+      "A certificate of completion reads 'Certificate' (free: $free)",
+      ({ free, amounts, price }) => {
+        const resource = course({
+          free,
+          certification: true,
+          certification_type: {
+            code: CourseResourceCertificationTypeCodeEnum.Completion,
+            name: "Certificate of Completion",
+          },
+          resource_prices: amounts.map((amount) => ({
+            amount,
+            currency: "USD",
+          })),
+        })
+
+        expect(learningResourceCardContent(resource).price).toEqual(price)
+      },
+    )
 
     test("Free with an open license says so", () => {
       const resource = course({
