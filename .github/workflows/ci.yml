@@ -34,7 +34,7 @@ jobs:
       starrocks:
         # All-in-one FE+BE image, for CI/local dev only — see
         # learning_resources.lib.warehouse for what this backs.
-        image: starrocks/allin1-ubuntu:4.1.4
+        image: starrocks/allin1-ubuntu:4.1.4@sha256:faf7ce9c24d9c29c9431b4e8cbd4bb7a74cd169907c63f0c5ebaacc7f9df276b
         options: >-
           --health-cmd "bash -c 'echo > /dev/tcp/127.0.0.1/9030'"
           --health-interval 10s
