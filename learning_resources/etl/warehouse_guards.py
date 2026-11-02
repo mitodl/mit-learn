@@ -50,6 +50,26 @@ def warehouse_list(value) -> list:
 MAX_UNPUBLISH_SHARE = 0.1
 
 
+def refuse_unpublish_share(what: str, published: int, missing: int) -> None:
+    """
+    Raise if ``missing`` is more than MAX_UNPUBLISH_SHARE of ``published``. Inside
+    a shadow run, log it instead.
+    """
+    if missing > published * MAX_UNPUBLISH_SHARE:
+        msg = (
+            f"Refusing to sync: {missing} of {published} published "
+            f"{what} would be unpublished, "
+            f"over the {MAX_UNPUBLISH_SHARE:.0%} limit. If they were removed "
+            "at the source, rerun with allow_mass_unpublish=True."
+        )
+        # A shadow writes nothing, and its report is where to see which ones
+        # the owner's run would unpublish, so it carries on to the comparison.
+        if is_shadow_run():
+            log.warning("Shadow run continues past the limit: %s", msg)
+            return
+        raise ExtractException(msg)
+
+
 def refuse_mass_unpublish(
     etl_source: str,
     resource_type: str,
@@ -69,20 +89,11 @@ def refuse_mass_unpublish(
             etl_source=etl_source, resource_type=resource_type, published=True
         ).values_list(field, flat=True)
     )
-    missing = published_ids - kept_ids
-    if len(missing) > len(published_ids) * MAX_UNPUBLISH_SHARE:
-        msg = (
-            f"Refusing to sync: {len(missing)} of {len(published_ids)} published "
-            f"{etl_source} {resource_type} resources would be unpublished, "
-            f"over the {MAX_UNPUBLISH_SHARE:.0%} limit. If they were removed "
-            "at the source, rerun with allow_mass_unpublish=True."
-        )
-        # A shadow writes nothing, and its report is where to see which ones
-        # the owner's run would unpublish, so it carries on to the comparison.
-        if is_shadow_run():
-            log.warning("Shadow run continues past the limit: %s", msg)
-            return
-        raise ExtractException(msg)
+    refuse_unpublish_share(
+        f"{etl_source} {resource_type} resources",
+        len(published_ids),
+        len(published_ids - kept_ids),
+    )
 
 
 def kept_course_ids(courses: list[dict]) -> set[str]:

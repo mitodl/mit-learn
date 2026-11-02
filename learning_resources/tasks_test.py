@@ -3,9 +3,11 @@ Test tasks
 """
 
 from datetime import timedelta
+from types import SimpleNamespace
 from unittest.mock import ANY
 
 import pytest
+from celery.exceptions import MaxRetriesExceededError, Retry
 from decorator import contextmanager
 from django.core.cache import caches
 from django.db import DatabaseError
@@ -22,6 +24,7 @@ from learning_resources.constants import (
     PlatformType,
 )
 from learning_resources.credentials import CredentialMetadata
+from learning_resources.etl import warehouse_content_files
 from learning_resources.etl.constants import MARKETING_PAGE_FILE_TYPE, ETLSource
 from learning_resources.etl.exceptions import ExtractException
 from learning_resources.etl.ownership import CONTENT_FILE, TRANSCRIPT
@@ -43,6 +46,7 @@ from learning_resources.tasks import (
     get_youtube_data,
     get_youtube_playlist_data,
     get_youtube_transcripts,
+    load_warehouse_content_files,
     marketing_page_for_resources,
     scrape_marketing_pages,
     sync_canvas_courses,
@@ -2518,6 +2522,13 @@ MITXONLINE_OWNED = pytest.param(
     (ETLSource.mitxonline.name, ["course", "program"]), id="mitxonline"
 )
 OCW_OWNED = pytest.param((ETLSource.ocw.name, ["course"]), id="ocw")
+CONTENT_FILE_TASKS = [
+    pytest.param("SyncOCWContentFilesTask", ETLSource.ocw.name, id="ocw"),
+    pytest.param(
+        "SyncMITxOnlineContentFilesTask", ETLSource.mitxonline.name, id="mitxonline"
+    ),
+    pytest.param("SyncXproContentFilesTask", ETLSource.xpro.name, id="xpro"),
+]
 
 
 @pytest.mark.parametrize("warehouse_owns", [YOUTUBE_OWNED], indirect=True)
@@ -3234,3 +3245,235 @@ def test_unpublish_mit_edx_resources(mocker):
     # the draft path stays out of search
     upsert.assert_called_once_with(path, percolate=False, generate_embeddings=True)
     views_cache.assert_called_once_with()
+
+
+def _warehouse_owns_content_files(etl_source):
+    factories.ETLSourceOwnershipFactory.create(
+        etl_source=etl_source,
+        resource_type=CONTENT_FILE,
+        owner=ETLSourceOwnership.Pipeline.WAREHOUSE,
+    )
+
+
+@pytest.mark.parametrize(("task_name", "etl_source"), CONTENT_FILE_TASKS)
+@pytest.mark.parametrize("allow", [True, False])
+def test_content_file_sync_queues_a_load_per_changed_run(
+    mocker, settings, task_name, etl_source, allow
+):
+    """A sync reads aggregates only, for its own source, and queues what changed"""
+    settings.WAREHOUSE_CATALOG = "catalog"
+    settings.WAREHOUSE_SCHEMA = "schema"
+    _warehouse_owns_content_files(etl_source)
+    conn = mocker.patch("learning_resources.lib.warehouse.connect_to_warehouse")
+    stats = [{"run_readable_id": "run-1", "row_count": 2}]
+    mock_stats = mocker.patch(
+        "learning_resources.tasks.iter_group_stats", return_value=iter(stats)
+    )
+    mock_iter_rows = mocker.patch("learning_resources.tasks.iter_rows")
+    mock_runs = mocker.patch(
+        "learning_resources.tasks.warehouse_content_files.runs_to_load",
+        return_value=[("run-1", 2), ("run-2", 5)],
+    )
+    mock_load = mocker.patch("learning_resources.tasks.load_warehouse_content_files")
+    task = getattr(tasks, task_name)
+
+    assert task.run(allow_mass_unpublish=allow) == 2
+
+    mock_iter_rows.assert_not_called()
+    mock_stats.assert_called_once_with(
+        conn.return_value,
+        f"catalog.schema.{warehouse_content_files.VIEWS[etl_source]}",
+        "run_readable_id",
+        columns=warehouse_content_files.FINGERPRINT_COLUMNS[etl_source],
+        where={"etl_source": etl_source},
+    )
+    mock_runs.assert_called_once_with(etl_source, stats, allow_mass_unpublish=allow)
+    assert mock_load.delay.call_args_list == [
+        mocker.call(etl_source, "run-1", 2),
+        mocker.call(etl_source, "run-2", 5),
+    ]
+
+
+@pytest.mark.parametrize(("task_name", "etl_source"), CONTENT_FILE_TASKS)
+@pytest.mark.parametrize(
+    "ownership",
+    [
+        {},
+        {"owner": ETLSourceOwnership.Pipeline.LEGACY},
+        {
+            "owner": ETLSourceOwnership.Pipeline.LEGACY,
+            "shadow": ETLSourceOwnership.Pipeline.WAREHOUSE,
+        },
+        {"owner": ETLSourceOwnership.Pipeline.WEBHOOK},
+    ],
+)
+def test_content_file_sync_is_a_no_op_unless_the_warehouse_owns_it(
+    mocker, task_name, etl_source, ownership
+):
+    """
+    Under legacy, or a shadow, which content files can't have, a sync connects
+    to nothing and queues nothing
+    """
+    if ownership:
+        factories.ETLSourceOwnershipFactory.create(
+            etl_source=etl_source, resource_type=CONTENT_FILE, **ownership
+        )
+    mock_connect = mocker.patch("learning_resources.lib.warehouse.connect_to_warehouse")
+    mock_load = mocker.patch("learning_resources.tasks.load_warehouse_content_files")
+
+    assert getattr(tasks, task_name).run() == 0
+
+    mock_connect.assert_not_called()
+    mock_load.delay.assert_not_called()
+
+
+def test_content_file_sync_owner_of_one_source_leaves_the_other_alone(mocker):
+    """Ownership is per source, so xPRO's flip doesn't start MITx Online's sync"""
+    _warehouse_owns_content_files(ETLSource.xpro.name)
+    mock_connect = mocker.patch("learning_resources.lib.warehouse.connect_to_warehouse")
+
+    assert tasks.SyncMITxOnlineContentFilesTask.run() == 0
+
+    mock_connect.assert_not_called()
+
+
+@pytest.fixture
+def content_file_run(mocker, settings):
+    """Set up a run the warehouse owns the content files of, with its lock free"""
+    settings.WAREHOUSE_CATALOG = "catalog"
+    settings.WAREHOUSE_SCHEMA = "schema"
+    _warehouse_owns_content_files(ETLSource.mitxonline.name)
+    run = factories.LearningResourceRunFactory.create(
+        learning_resource=factories.LearningResourceFactory.create(
+            is_course=True, etl_source=ETLSource.mitxonline.name, create_runs=False
+        ),
+        published=True,
+    )
+    mock_caches = mocker.patch("learning_resources.tasks.caches")
+    mock_caches.__getitem__.return_value.add.return_value = True
+    return SimpleNamespace(run=run, lock=mock_caches.__getitem__.return_value)
+
+
+def test_load_warehouse_content_files_reads_one_run(mocker, content_file_run):
+    """A load reads only its run, closes the connection, then writes under its lock"""
+    run = content_file_run.run
+    rows = [{"key": "a"}]
+    mock_connect = mocker.patch("learning_resources.tasks.connect_to_warehouse")
+    mock_iter_rows = mocker.patch(
+        "learning_resources.tasks.iter_rows", return_value=iter(rows)
+    )
+    mock_load = mocker.patch(
+        "learning_resources.tasks.warehouse_content_files.load_run", return_value=1
+    )
+
+    assert load_warehouse_content_files(ETLSource.mitxonline.name, run.run_id, 7) == 1
+
+    mock_iter_rows.assert_called_once_with(
+        mock_connect.return_value,
+        "catalog.schema.integrations__learn__content_files",
+        where={"etl_source": ETLSource.mitxonline.name, "run_readable_id": run.run_id},
+    )
+    mock_connect.return_value.close.assert_called_once_with()
+    mock_load.assert_called_once_with(run, rows, expected_count=7)
+    key = f"warehouse_content_files:{ETLSource.mitxonline.name}:{run.run_id}"
+    content_file_run.lock.add.assert_called_once_with(
+        key, "1", timeout=tasks.CONTENT_FILE_LOAD_LOCK_SECONDS
+    )
+    content_file_run.lock.delete.assert_called_once_with(key)
+
+
+def test_load_warehouse_content_files_releases_the_lock_on_failure(
+    mocker, content_file_run
+):
+    """A failed read closes the connection and doesn't hold the run"""
+    mock_connect = mocker.patch("learning_resources.tasks.connect_to_warehouse")
+    mocker.patch(
+        "learning_resources.tasks.iter_rows", side_effect=RuntimeError("query failed")
+    )
+
+    with pytest.raises(RuntimeError):
+        load_warehouse_content_files(
+            ETLSource.mitxonline.name, content_file_run.run.run_id
+        )
+
+    mock_connect.return_value.close.assert_called_once_with()
+    content_file_run.lock.delete.assert_called_once()
+
+
+def test_load_warehouse_content_files_retries_when_the_run_is_locked(
+    mocker, content_file_run
+):
+    """A second load of a run waits outside the worker instead of blocking it"""
+    content_file_run.lock.add.return_value = False
+    mock_connect = mocker.patch("learning_resources.tasks.connect_to_warehouse")
+    mock_retry = mocker.patch.object(
+        load_warehouse_content_files, "retry", side_effect=Retry()
+    )
+
+    with pytest.raises(Retry):
+        load_warehouse_content_files(
+            ETLSource.mitxonline.name, content_file_run.run.run_id
+        )
+
+    mock_retry.assert_called_once_with(countdown=tasks.CONTENT_FILE_LOAD_RETRY_SECONDS)
+    mock_connect.assert_not_called()
+    content_file_run.lock.delete.assert_not_called()
+
+
+def test_load_warehouse_content_files_gives_up_after_its_retries(
+    mocker, content_file_run
+):
+    """Past the retry cap the run is left to the daily sync"""
+    content_file_run.lock.add.return_value = False
+    mocker.patch.object(
+        load_warehouse_content_files, "retry", side_effect=MaxRetriesExceededError()
+    )
+    mock_connect = mocker.patch("learning_resources.tasks.connect_to_warehouse")
+
+    assert (
+        load_warehouse_content_files(
+            ETLSource.mitxonline.name, content_file_run.run.run_id
+        )
+        == 0
+    )
+
+    mock_connect.assert_not_called()
+
+
+def test_load_warehouse_content_files_skips_when_ownership_moved(mocker):
+    """A load queued before content files were handed back reads and writes nothing"""
+    run = factories.LearningResourceRunFactory.create(
+        learning_resource=factories.LearningResourceFactory.create(
+            is_course=True, etl_source=ETLSource.mitxonline.name, create_runs=False
+        )
+    )
+    mock_connect = mocker.patch("learning_resources.tasks.connect_to_warehouse")
+
+    assert load_warehouse_content_files(ETLSource.mitxonline.name, run.run_id) == 0
+
+    mock_connect.assert_not_called()
+
+
+def test_load_warehouse_content_files_skips_a_run_learn_does_not_have(
+    mocker, content_file_run
+):
+    """A webhook can name a run before its course sync has created it"""
+    mock_connect = mocker.patch("learning_resources.tasks.connect_to_warehouse")
+
+    assert load_warehouse_content_files(ETLSource.mitxonline.name, "unknown") == 0
+
+    mock_connect.assert_not_called()
+
+
+def test_load_warehouse_content_files_stops_inside_its_lock():
+    """A load can't outlive the lock that keeps a second load of the run out"""
+    assert (
+        load_warehouse_content_files.time_limit < tasks.CONTENT_FILE_LOAD_LOCK_SECONDS
+    )
+
+
+def test_load_warehouse_content_files_runs_on_the_content_queue():
+    """The load shares the queue the archive ETL's content tasks run on"""
+    assert app.conf.task_routes[load_warehouse_content_files.name] == {
+        "queue": "edx_content"
+    }

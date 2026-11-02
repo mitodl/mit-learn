@@ -1123,9 +1123,36 @@ def calculate_completeness(
         )
     if ocw_resource.completeness != new_score:
         ocw_resource.completeness = new_score
-        ocw_resource.save()
+        ocw_resource.save(update_fields=["completeness"])
         update_index(ocw_resource, newly_created=False)
     return new_score
+
+
+def _unpublish_stale_content_files(
+    course_run: LearningResourceRun,
+    content_files_ids: list[int],
+    failed_keys: list,
+) -> None:
+    """Unpublish a run's files a load left out, and their direct resources"""
+    stale_published_files = ContentFile.objects.filter(
+        run=course_run, published=True
+    ).exclude(id__in=content_files_ids)
+    if failed_keys:
+        stale_published_files = stale_published_files.exclude(key__in=failed_keys)
+    stale_direct_resource_ids = list(
+        stale_published_files.filter(direct_learning_resource__isnull=False)
+        .values_list("direct_learning_resource_id", flat=True)
+        .distinct()
+    )
+    stale_published_files.update(published=False)
+    if stale_direct_resource_ids:
+        LearningResource.objects.filter(
+            id__in=stale_direct_resource_ids, published=True
+        ).update(published=False)
+        for resource in LearningResource.objects.filter(
+            id__in=stale_direct_resource_ids
+        ):
+            update_index(resource, newly_created=False)
 
 
 def load_content_files(
@@ -1134,6 +1161,7 @@ def load_content_files(
     *,
     calc_completeness: bool = False,
     failed_keys: list | None = None,
+    prune: bool = True,
 ) -> list[int]:
     """
     Sync all content files for a course run to database and S3 if not present in DB
@@ -1144,7 +1172,10 @@ def load_content_files(
         calc_completeness: bool: Whether to calculate the completeness score
         failed_keys: list: caller-owned list of ContentFile keys whose
             extraction failed, mutated in place while content_files_data is
-            consumed; those records are exempted from the stale/unpublish pass
+            consumed and extended here with any file that failed to save;
+            those records are exempted from the stale/unpublish pass
+        prune: bool: Whether to unpublish the run's files content_files_data
+            leaves out. False when it may not be the run's complete set.
 
     Returns:
         list of int: Ids of the ContentFile objects that were created/updated
@@ -1158,11 +1189,14 @@ def load_content_files(
     if course_run.learning_resource.resource_type == LearningResourceType.course.name:
         content_files_ids = []
         content_tags = []
+        failed_keys = [] if failed_keys is None else failed_keys
         for content_file in content_files_data:
             content_tags.append(content_file.get("content_tags") or [])
             file_id = load_content_file(course_run, content_file)
             if file_id is not None:
                 content_files_ids.append(file_id)
+            else:
+                failed_keys.append(content_file.get("key"))
 
         if not content_files_ids:
             log.error(
@@ -1172,25 +1206,8 @@ def load_content_files(
             )
             return content_files_ids
 
-        stale_published_files = ContentFile.objects.filter(
-            run=course_run, published=True
-        ).exclude(id__in=content_files_ids)
-        if failed_keys:
-            stale_published_files = stale_published_files.exclude(key__in=failed_keys)
-        stale_direct_resource_ids = list(
-            stale_published_files.filter(direct_learning_resource__isnull=False)
-            .values_list("direct_learning_resource_id", flat=True)
-            .distinct()
-        )
-        stale_published_files.update(published=False)
-        if stale_direct_resource_ids:
-            LearningResource.objects.filter(
-                id__in=stale_direct_resource_ids, published=True
-            ).update(published=False)
-            for resource in LearningResource.objects.filter(
-                id__in=stale_direct_resource_ids
-            ):
-                update_index(resource, newly_created=False)
+        if prune:
+            _unpublish_stale_content_files(course_run, content_files_ids, failed_keys)
 
         if calc_completeness:
             calculate_completeness(course_run, content_tags=content_tags)

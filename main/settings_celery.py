@@ -302,6 +302,22 @@ if (
                 "schedule": crontab(minute=0, hour=12),
                 "kwargs": {"full_refresh": True},
             },
+            # After their sources' courses, whose runs the files load into.
+            "warehouse-sync-xpro-content-files-every-1-days": {
+                "task": "learning_resources.tasks.SyncXproContentFilesTask",
+                "schedule": crontab(minute=30, hour=13),
+                "kwargs": {"full_refresh": True},
+            },
+            "warehouse-sync-ocw-content-files-every-1-days": {
+                "task": "learning_resources.tasks.SyncOCWContentFilesTask",
+                "schedule": crontab(minute=0, hour=14),
+                "kwargs": {"full_refresh": True},
+            },
+            "warehouse-sync-mitxonline-content-files-every-1-days": {
+                "task": "learning_resources.tasks.SyncMITxOnlineContentFilesTask",
+                "schedule": crontab(minute=30, hour=14),
+                "kwargs": {"full_refresh": True},
+            },
         }
     )
 

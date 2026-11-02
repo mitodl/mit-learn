@@ -9,7 +9,7 @@ from datetime import UTC, datetime
 
 import boto3
 import celery
-from celery.exceptions import Ignore
+from celery.exceptions import Ignore, MaxRetriesExceededError
 from django.conf import settings
 from django.core.cache import caches
 from django.db import OperationalError
@@ -35,6 +35,7 @@ from learning_resources.etl import (
     ovs,
     pipelines,
     podcast,
+    warehouse_content_files,
     warehouse_media,
     warehouse_mitxonline,
     warehouse_ocw,
@@ -75,6 +76,8 @@ from learning_resources.etl.utils import (
 from learning_resources.lib.warehouse import (
     WAREHOUSE_STATE_CACHE,
     BaseWarehouseETLTask,
+    connect_to_warehouse,
+    iter_group_stats,
     iter_rows,
 )
 from learning_resources.models import (
@@ -1775,6 +1778,171 @@ class SyncOCWCoursesTask(BaseWarehouseETLTask):
 
 
 SyncOCWCoursesTask = app.register_task(SyncOCWCoursesTask())
+
+
+# Two loads of one run at once could prune on a read that predates the other's
+# upserts. The time limit keeps a load inside the lock, and inside the hour after
+# which the broker redelivers an unacknowledged task, and it is hard because
+# load_content_file swallows a soft limit's exception. A worker killed mid-load
+# holds up the run until the lock expires. A load that finds it held tries again
+# until the same hour is up, then leaves the run to the next daily sync.
+CONTENT_FILE_LOAD_LOCK_SECONDS = 60 * 60
+CONTENT_FILE_LOAD_TIME_LIMIT_SECONDS = 55 * 60
+CONTENT_FILE_LOAD_RETRY_SECONDS = 60
+CONTENT_FILE_LOAD_MAX_RETRIES = 60
+
+
+@app.task(
+    bind=True,
+    acks_late=True,
+    reject_on_worker_lost=True,
+    max_retries=CONTENT_FILE_LOAD_MAX_RETRIES,
+    time_limit=CONTENT_FILE_LOAD_TIME_LIMIT_SECONDS,
+)
+def load_warehouse_content_files(
+    self, etl_source: str, run_id: str, expected_count: int | None = None
+) -> int:
+    """
+    Load one run's content files from the warehouse
+
+    Args:
+        etl_source (str): the run's source
+        run_id (str): the run's run_id, which is its run_readable_id in the view
+        expected_count (int | None): the number of rows the caller saw for the
+            run. Any other number skips the prune (see
+            warehouse_content_files.load_run)
+
+    Returns:
+        int: the number of files loaded
+    """
+    with writing_as(Pipeline.WAREHOUSE):
+        # ownership can change between the sync that queued this and now
+        if not may_write(etl_source, CONTENT_FILE):
+            return 0
+        run = warehouse_content_files.loadable_run(etl_source, run_id)
+        if run is None:
+            log.info("No run to load %s content files for: %s", etl_source, run_id)
+            return 0
+        lock = caches["redis"]
+        lock_key = f"warehouse_content_files:{etl_source}:{run_id}"
+        if not lock.add(lock_key, "1", timeout=CONTENT_FILE_LOAD_LOCK_SECONDS):
+            try:
+                raise self.retry(countdown=CONTENT_FILE_LOAD_RETRY_SECONDS)
+            except MaxRetriesExceededError:
+                log.warning(
+                    "Gave up waiting for a load of %s run %s", etl_source, run_id
+                )
+                return 0
+        try:
+            conn = connect_to_warehouse()
+            try:
+                rows = list(
+                    iter_rows(
+                        conn,
+                        BaseWarehouseETLTask.qualified_name(
+                            warehouse_content_files.VIEWS[etl_source]
+                        ),
+                        where={
+                            "etl_source": etl_source,
+                            warehouse_content_files.RUN_COLUMN: run_id,
+                        },
+                    )
+                )
+            finally:
+                conn.close()
+            return warehouse_content_files.load_run(
+                run, rows, expected_count=expected_count
+            )
+        finally:
+            lock.delete(lock_key)
+
+
+class SyncContentFilesTask(BaseWarehouseETLTask):
+    """
+    Warehouse-pull sync of one source's content files. Each source has its own
+    subclass, because ownership is per source and ``writes`` names one.
+
+    Always reads the view's per-run aggregates, whatever ``since`` is, and queues
+    one load_warehouse_content_files per changed run: the view is too large to
+    read whole. A shadow of content_file is refused, so a run writes or skips.
+
+    A run that would unpublish more than warehouse_guards.MAX_UNPUBLISH_SHARE of
+    the published files fails before queueing anything. Queue it with
+    ``allow_mass_unpublish=True`` when the removal is real.
+    """
+
+    abstract = True
+    writes = None
+
+    def fetch_and_upsert(
+        self,
+        conn,
+        *,
+        since=None,  # noqa: ARG002
+        allow_mass_unpublish: bool = False,
+    ) -> int:
+        """Read one row per run from the view and queue a load of each changed run."""
+        etl_source = self.writes[0]
+        to_load = warehouse_content_files.runs_to_load(
+            etl_source,
+            list(
+                iter_group_stats(
+                    conn,
+                    self.view_name,
+                    warehouse_content_files.RUN_COLUMN,
+                    columns=warehouse_content_files.FINGERPRINT_COLUMNS[etl_source],
+                    where={"etl_source": etl_source},
+                )
+            ),
+            allow_mass_unpublish=allow_mass_unpublish,
+        )
+        log.info("Queueing %d %s runs' content files", len(to_load), etl_source)
+        for run_id, row_count in to_load:
+            load_warehouse_content_files.delay(etl_source, run_id, row_count)
+        return len(to_load)
+
+
+class SyncOCWContentFilesTask(SyncContentFilesTask):
+    """
+    Replaces what ocw_courses_etl loads with a course once ETLSourceOwnership
+    names the warehouse for ocw content_file, including the course's completeness
+    and learning materials.
+    """
+
+    name = "learning_resources.tasks.SyncOCWContentFilesTask"
+    table_name = warehouse_content_files.OCW_VIEW
+    writes = (ETLSource.ocw.name, [CONTENT_FILE])
+
+
+SyncOCWContentFilesTask = app.register_task(SyncOCWContentFilesTask())
+
+
+class SyncMITxOnlineContentFilesTask(SyncContentFilesTask):
+    """
+    Replaces import_all_mitxonline_files once ETLSourceOwnership names the
+    warehouse for mitxonline content_file.
+    """
+
+    name = "learning_resources.tasks.SyncMITxOnlineContentFilesTask"
+    table_name = warehouse_content_files.OPEN_EDX_VIEW
+    writes = (ETLSource.mitxonline.name, [CONTENT_FILE])
+
+
+SyncMITxOnlineContentFilesTask = app.register_task(SyncMITxOnlineContentFilesTask())
+
+
+class SyncXproContentFilesTask(SyncContentFilesTask):
+    """
+    Replaces import_all_xpro_files once ETLSourceOwnership names the warehouse
+    for xpro content_file.
+    """
+
+    name = "learning_resources.tasks.SyncXproContentFilesTask"
+    table_name = warehouse_content_files.OPEN_EDX_VIEW
+    writes = (ETLSource.xpro.name, [CONTENT_FILE])
+
+
+SyncXproContentFilesTask = app.register_task(SyncXproContentFilesTask())
 
 
 @app.task(acks_late=True, reject_on_worker_lost=True)

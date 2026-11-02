@@ -17,7 +17,11 @@ import pytest
 from django.conf import settings
 from django.test import override_settings
 
-from learning_resources.lib.warehouse import BaseWarehouseETLTask, iter_rows
+from learning_resources.lib.warehouse import (
+    BaseWarehouseETLTask,
+    iter_group_stats,
+    iter_rows,
+)
 from learning_resources.lib.warehouse_factories import WarehouseTestRowFactory
 
 pytestmark = [
@@ -122,6 +126,54 @@ def test_iter_rows_since_filters_real_rows(starrocks_conn):
     result = list(iter_rows(starrocks_conn, _TEST_VIEW, since=now))
 
     assert [r["id"] for r in result] == [new_row["id"]]
+
+
+def test_iter_rows_where_filters_real_rows(starrocks_conn):
+    """A where clause binds its values, including ones that need escaping."""
+    rows = [
+        WarehouseTestRowFactory.create(id=1, title="course-v1:MITx+6.00'x"),
+        WarehouseTestRowFactory.create(id=2, title="other"),
+    ]
+    _insert_rows(starrocks_conn, rows)
+
+    result = list(
+        iter_rows(starrocks_conn, _TEST_VIEW, where={"title": "course-v1:MITx+6.00'x"})
+    )
+
+    assert [r["id"] for r in result] == [1]
+
+
+def test_iter_group_stats_aggregates_real_rows(starrocks_conn):
+    """iter_group_stats returns one row of aggregates per group, ignoring nulls."""
+    newest = datetime(2026, 10, 20, 10, tzinfo=UTC)
+    rows = [
+        WarehouseTestRowFactory.create(
+            id=1, title="a", last_modified=newest - timedelta(days=1)
+        ),
+        WarehouseTestRowFactory.create(id=2, title="a", last_modified=newest),
+        WarehouseTestRowFactory.create(id=3, title="a", last_modified=None),
+        WarehouseTestRowFactory.create(id=4, title="b", last_modified=newest),
+    ]
+    _insert_rows(starrocks_conn, rows)
+
+    result = list(
+        iter_group_stats(
+            starrocks_conn,
+            _TEST_VIEW,
+            "title",
+            columns=("last_modified",),
+            where={"title": "a"},
+        )
+    )
+
+    assert result == [
+        {
+            "title": "a",
+            "row_count": 3,
+            "last_modified_count": 2,
+            "last_modified_max": newest.replace(tzinfo=None),
+        }
+    ]
 
 
 def test_base_warehouse_etl_task_runs_against_real_starrocks(mocker, starrocks_conn):
