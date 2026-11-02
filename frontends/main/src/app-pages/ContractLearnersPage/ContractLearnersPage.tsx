@@ -471,6 +471,10 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
         "Enrolled on",
         "Last activity",
         "Needs attention",
+        "Days active",
+        "Videos watched",
+        "Problems attempted",
+        "Chatbot interactions",
       ])
       const body = all.map((row) =>
         buildCsvRow([
@@ -486,6 +490,10 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
               ? "Yes"
               : "No"
             : "",
+          row.days_active?.toString(),
+          row.videos_watched?.toString(),
+          row.problems_attempted?.toString(),
+          row.chatbot_interactions?.toString(),
         ]),
       )
       const csv = [header, ...body].join("\n")

@@ -36,6 +36,7 @@ import {
   TableFootnote,
 } from "@/components/B2BTable/B2BTable"
 import { Avatar, NeedsAttentionBadge } from "./LearnerRow"
+import { LearnerSummaryPanel } from "./LearnerSummaryPanel"
 import {
   DISPLAY_STATUS_LABEL,
   getDisplayStatus,
@@ -191,6 +192,23 @@ const LearnerText = styled.span({
   overflow: "hidden",
 })
 
+const LearnerButton = styled.button(({ theme }) => ({
+  display: "block",
+  maxWidth: "100%",
+  padding: 0,
+  border: "none",
+  background: "none",
+  font: "inherit",
+  textAlign: "left",
+  cursor: "pointer",
+  color: "inherit",
+  "&:hover > *:first-of-type": { textDecoration: "underline" },
+  "&:focus-visible": {
+    outline: `2px solid ${theme.custom.colors.darkGray2}`,
+    outlineOffset: "2px",
+  },
+}))
+
 const AttentionMark = styled.span(({ theme }) => ({
   display: "inline-flex",
   verticalAlign: "middle",
@@ -252,7 +270,8 @@ const GridLearnerCell: React.FC<{
   learner: LearnerWithEnrollments
   needsAttentionCount: number
   scrolled: boolean
-}> = ({ learner, needsAttentionCount, scrolled }) => (
+  onOpenSummary: () => void
+}> = ({ learner, needsAttentionCount, scrolled, onOpenSummary }) => (
   <LearnerCell role="rowheader" $scrolled={scrolled}>
     <Avatar aria-hidden="true">
       {learner.full_name ? (
@@ -262,12 +281,23 @@ const GridLearnerCell: React.FC<{
       )}
     </Avatar>
     <LearnerText>
-      {learner.full_name && (
-        <LearnerName component="div">{learner.full_name}</LearnerName>
-      )}
-      {learner.email && (
-        <LearnerEmail component="div">{learner.email}</LearnerEmail>
-      )}
+      <LearnerButton
+        type="button"
+        aria-haspopup="dialog"
+        onClick={onOpenSummary}
+      >
+        {learner.full_name && (
+          <LearnerName component="span" display="block">
+            {learner.full_name}
+          </LearnerName>
+        )}
+        {learner.email && (
+          <LearnerEmail component="span" display="block">
+            {learner.email}
+          </LearnerEmail>
+        )}
+        {!learner.full_name && !learner.email ? "View learner" : null}
+      </LearnerButton>
       {needsAttentionCount > 0 ? (
         <NeedsAttentionBadge
           component="span"
@@ -377,6 +407,9 @@ const ProgressGrid: React.FC<ProgressGridProps> = ({
   }, [isBusy, page, totalPages, onPageChange])
 
   const [scrolled, setScrolled] = useState(false)
+  const [summaryLearner, setSummaryLearner] =
+    useState<LearnerWithEnrollments | null>(null)
+  const [summaryOpen, setSummaryOpen] = useState(false)
   const [announcement, setAnnouncement] = useState("")
   const lastFilters = useRef<string | null>(null)
   useEffect(() => {
@@ -535,6 +568,10 @@ const ProgressGrid: React.FC<ProgressGridProps> = ({
                         learner={learner}
                         needsAttentionCount={needsAttentionCount}
                         scrolled={scrolled}
+                        onOpenSummary={() => {
+                          setSummaryLearner(learner)
+                          setSummaryOpen(true)
+                        }}
                       />
                       {columns.map((run) => {
                         const enrollment = enrollments.get(run.courserun_id)
@@ -604,6 +641,12 @@ const ProgressGrid: React.FC<ProgressGridProps> = ({
           ) : null}
         </TableFooter>
       </TableCard>
+      <LearnerSummaryPanel
+        learner={summaryLearner}
+        courseRuns={columns}
+        open={summaryOpen}
+        onClose={() => setSummaryOpen(false)}
+      />
     </>
   )
 }
