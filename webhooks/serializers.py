@@ -60,11 +60,12 @@ class OVSVideoWebhookRequestSerializer(serializers.Serializer):
         """
         Reject upsert payloads carrying media urls outside the OVS allowlist.
 
-        The payload is attacker-controlled input, and its media urls are fetched
-        server-side (subtitles) or served to browsers (thumbnails, streams), so
-        an unrecognized host is refused rather than silently dropped. cta_link
-        isn't media: it's never fetched, and transform_video replaces one off
-        the allowlist with the OVS url, so it doesn't cost the video its load.
+        The payload is attacker-controlled input. Its media urls are served to
+        browsers (thumbnails, streams) and their host builds the subtitle urls
+        we fetch server-side, so an unrecognized host is refused rather than
+        silently dropped. cta_link isn't media: it's never fetched, and
+        transform_video replaces one off the allowlist with the OVS url, so it
+        doesn't cost the video its load.
         """
         candidates = [
             *[("sources", src.get("src")) for src in self._nested_objects("sources")],
