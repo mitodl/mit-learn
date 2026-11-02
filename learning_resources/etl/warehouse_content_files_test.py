@@ -359,7 +359,13 @@ def test_load_run_ocw_sets_tags_completeness_and_learning_materials(
 ):
     """An OCW run gets what ocw_courses_etl does after loading its files"""
     run = _run(OCW, run_id="abc123")
-    failed = ContentFileFactory.create(run=run, key="failed", published=True)
+    # dated, as no OCW file is today, so that the ids don't come from visible()
+    failed = ContentFileFactory.create(
+        run=run,
+        key="failed",
+        published=True,
+        release_date=datetime.now(tz=UTC) + timedelta(days=30),
+    )
     mock_completeness = mocker.patch(
         "learning_resources.etl.warehouse_content_files.loaders.calculate_completeness"
     )
