@@ -10031,6 +10031,13 @@ paths:
         ``sync`` array with no resources in the batch is pruned, unpublishing all
         of it. Resource types without a loader are logged and skipped rather than
         failing the whole batch.
+
+        A batch whose load would unpublish more than 10% of the published resources
+        of any pair it prunes, a declared pair with no resources included, is
+        rejected whole with 422, the limit the warehouse syncs apply. A truncated
+        batch and a bad model build look like that from here, and only MIT Learn
+        holds the published set to compare against. ``allow_mass_unpublish`` skips
+        the check.
       tags:
       - webhooks
       requestBody:
@@ -13780,6 +13787,9 @@ components:
         unpublishing everything MIT Learn holds for it, so a source that stops
         publishing a type can say so. A batch with neither resources nor ``sync``
         is rejected: it names no pair, so the request would silently no-op.
+
+        ``allow_mass_unpublish`` skips the limit on how much of a pair a batch may
+        unpublish, for a removal the sender knows is real.
       properties:
         resources:
           type: array
@@ -13790,6 +13800,9 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/LearningResourceSyncPairRequest'
+        allow_mass_unpublish:
+          type: boolean
+          default: false
       required:
       - resources
     LearningResourcesSearchResponse:

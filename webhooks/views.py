@@ -19,6 +19,7 @@ from learning_resources.etl.constants import (
     ETLSource,
     ProgramLoaderConfig,
 )
+from learning_resources.etl.exceptions import ExtractException
 from learning_resources.etl.loaders import (
     load_courses,
     load_documents,
@@ -31,6 +32,7 @@ from learning_resources.etl.ownership import (
     may_write,
     writing_as,
 )
+from learning_resources.etl.warehouse_guards import refuse_mass_unpublish
 from learning_resources.models import LearningResource
 from learning_resources.tasks import ingest_canvas_course, ingest_edx_run_archive
 from learning_resources.utils import (
@@ -219,6 +221,13 @@ class LearningResourceWebhookView(BaseWebhookView):
     ``sync`` array with no resources in the batch is pruned, unpublishing all
     of it. Resource types without a loader are logged and skipped rather than
     failing the whole batch.
+
+    A batch whose load would unpublish more than 10% of the published resources
+    of any pair it prunes, a declared pair with no resources included, is
+    rejected whole with 422, the limit the warehouse syncs apply. A truncated
+    batch and a bad model build look like that from here, and only MIT Learn
+    holds the published set to compare against. ``allow_mass_unpublish`` skips
+    the check.
     """
 
     permission_classes = []
@@ -265,6 +274,15 @@ class LearningResourceWebhookView(BaseWebhookView):
                     {"status": "error", "message": msg},
                     status=status.HTTP_409_CONFLICT,
                 )
+            if not serializer.validated_data["allow_mass_unpublish"]:
+                try:
+                    refuse_mass_unpublish_groups(grouped)
+                except ExtractException as exc:
+                    log.warning("learning_resources webhook rejected: %s", exc)
+                    return Response(
+                        {"status": "error", "message": str(exc)},
+                        status=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                    )
             summary = load_learning_resource_groups(grouped)
         log.info("learning_resources webhook processed: %s", summary)
         clear_views_cache()
@@ -279,6 +297,8 @@ _SUPPORTED_TYPES = {
     LearningResourceType.document.name,
     LearningResourceType.video.name,
 }
+# load_videos upserts what it is given and leaves the rest of a source alone.
+_PRUNED_TYPES = _SUPPORTED_TYPES - {LearningResourceType.video.name}
 
 
 def _load_resource_group(etl_source, resource_type, resources):
@@ -340,6 +360,34 @@ def unowned_groups(grouped):
         if resource_type in _SUPPORTED_TYPES
         and not may_write(etl_source, resource_type)
     ]
+
+
+def kept_readable_ids(resource_type, resources):
+    """
+    Return the readable_ids a group's load will leave published.
+    upsert_course_or_program unpublishes a course or program with no runs, and
+    a resource with no ``published`` key keeps its stored value.
+    """
+    return {
+        resource["readable_id"]
+        for resource in resources
+        if resource.get("published", True)
+        and (
+            resource_type == LearningResourceType.document.name or resource.get("runs")
+        )
+    }
+
+
+def refuse_mass_unpublish_groups(grouped):
+    """
+    Raise ExtractException if loading a group would unpublish over the limit,
+    checking every pruned group before any of them loads.
+    """
+    for (etl_source, resource_type), resources in grouped.items():
+        if resource_type in _PRUNED_TYPES:
+            refuse_mass_unpublish(
+                etl_source, resource_type, kept_readable_ids(resource_type, resources)
+            )
 
 
 def load_learning_resource_groups(grouped):
