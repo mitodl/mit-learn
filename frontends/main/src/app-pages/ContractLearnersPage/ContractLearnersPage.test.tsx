@@ -2127,7 +2127,9 @@ describe("ContractLearnersPage progress grid", () => {
         name: "Activity across modules",
       })
       expect(
-        within(dialog).getByText(/hasn’t agreed to share their progress/),
+        within(dialog).getByText(
+          "This learner hasn’t agreed to share their progress, so their totals are hidden.",
+        ),
       ).toBeInTheDocument()
       for (const label of [
         "Videos watched",
@@ -2161,6 +2163,11 @@ describe("ContractLearnersPage progress grid", () => {
       expect(statValue(activity, "Videos watched")).toHaveTextContent(
         "Withheld",
       )
+      expect(
+        within(dialog).getByText(
+          "This learner hasn’t agreed to share their progress in some modules, so their totals are hidden.",
+        ),
+      ).toBeInTheDocument()
       const [consented, withheld] = within(
         within(dialog).getByRole("region", { name: "Modules" }),
       ).getAllByRole("listitem")

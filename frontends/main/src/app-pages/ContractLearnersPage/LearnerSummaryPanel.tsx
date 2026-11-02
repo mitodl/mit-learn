@@ -214,6 +214,7 @@ const LearnerSummaryPanel: React.FC<LearnerSummaryPanelProps> = ({
   const enrollments = learner?.enrollments ?? []
   const byRun = new Map(enrollments.map((e) => [e.courserun_readable_id, e]))
   const anyWithheld = enrollments.some((e) => !e.outcomes_shared)
+  const allWithheld = enrollments.every((e) => !e.outcomes_shared)
   const completed = enrollments.filter((e) => {
     const status = getDisplayStatus(e)
     return status === "completed" || status === "certificate"
@@ -246,8 +247,9 @@ const LearnerSummaryPanel: React.FC<LearnerSummaryPanelProps> = ({
               ) : null}
               {anyWithheld ? (
                 <Footnote component="p">
-                  This learner hasn’t agreed to share their progress, so their
-                  totals are hidden.
+                  {allWithheld
+                    ? "This learner hasn’t agreed to share their progress, so their totals are hidden."
+                    : "This learner hasn’t agreed to share their progress in some modules, so their totals are hidden."}
                 </Footnote>
               ) : null}
             </div>
