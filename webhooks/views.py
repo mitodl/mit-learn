@@ -413,18 +413,38 @@ def group_modes(grouped):
 
 def kept_readable_ids(resource_type, resources):
     """
-    Return the readable_ids a group's load will leave published.
+    Return the readable_ids a group's load will leave published. The loaders
+    upsert row by row, so a repeated readable_id ends as its last row leaves it.
     upsert_course_or_program unpublishes a course or program with no runs, and
-    a resource with no ``published`` key keeps its stored value.
+    a row with no ``published`` key keeps the value before it.
     """
-    return {
-        resource["readable_id"]
-        for resource in resources
-        if resource.get("published", True)
-        and (
-            resource_type == LearningResourceType.document.name or resource.get("runs")
+    kept = {}
+    for resource in resources:
+        readable_id = resource["readable_id"]
+        has_runs = resource_type == LearningResourceType.document.name or resource.get(
+            "runs"
         )
-    }
+        kept[readable_id] = has_runs and resource.get(
+            "published", kept.get(readable_id, True)
+        )
+    return {readable_id for readable_id, is_kept in kept.items() if is_kept}
+
+
+def omitted_test_mode_course_ids(etl_source, resources):
+    """
+    Return the source's published test_mode courses a batch leaves out, which
+    load_courses does not prune. load_programs and load_documents do prune theirs.
+    """
+    return set(
+        LearningResource.objects.filter(
+            etl_source=etl_source,
+            resource_type=LearningResourceType.course.name,
+            published=True,
+            test_mode=True,
+        )
+        .exclude(readable_id__in=[resource["readable_id"] for resource in resources])
+        .values_list("readable_id", flat=True)
+    )
 
 
 def refuse_mass_unpublish_groups(grouped):
@@ -433,10 +453,12 @@ def refuse_mass_unpublish_groups(grouped):
     checking every pruned group before any of them loads.
     """
     for (etl_source, resource_type), resources in grouped.items():
-        if resource_type in _PRUNED_TYPES:
-            refuse_mass_unpublish(
-                etl_source, resource_type, kept_readable_ids(resource_type, resources)
-            )
+        if resource_type not in _PRUNED_TYPES:
+            continue
+        kept_ids = kept_readable_ids(resource_type, resources)
+        if resource_type == LearningResourceType.course.name:
+            kept_ids |= omitted_test_mode_course_ids(etl_source, resources)
+        refuse_mass_unpublish(etl_source, resource_type, kept_ids)
 
 
 def load_learning_resource_groups(grouped):

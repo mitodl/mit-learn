@@ -516,6 +516,120 @@ def test_limit_counts_what_the_loader_will_unpublish(
 
 
 @pytest.mark.django_db
+@pytest.mark.parametrize(
+    ("first", "last", "status_code"),
+    [
+        ({"published": True}, {"published": False}, 422),
+        ({"published": True}, {"runs": []}, 422),
+        ({"published": False}, {"published": True}, 200),
+    ],
+    ids=["marked_unpublished", "no_runs", "republished"],
+)
+def test_limit_counts_the_last_row_of_a_duplicate(  # noqa: PLR0913
+    settings, client, mocker, first, last, status_code
+):
+    """
+    The loader upserts row by row, so a repeated readable_id ends in the state
+    of its last row, whatever an earlier row said.
+    """
+    mocker.patch("webhooks.views.clear_views_cache")
+    mock_load_courses = mocker.patch("webhooks.views.load_courses", return_value=[])
+    readable_ids = _published_courses(10)
+    rows = _course_rows(readable_ids[2:])
+    for row in _course_rows(readable_ids[:2]):
+        rows.extend([{**row, **first}, {**row, **last}])
+
+    response = _post(client, settings, {"resources": rows})
+
+    assert response.status_code == status_code
+    assert mock_load_courses.called is (status_code == 200)
+
+
+@pytest.mark.django_db
+def test_limit_keeps_an_earlier_rows_state_when_published_is_omitted(
+    settings, client, mocker
+):
+    """A row with no published key leaves what the row before it wrote."""
+    mock_load_courses = mocker.patch("webhooks.views.load_courses", return_value=[])
+    readable_ids = _published_courses(10)
+    rows = _course_rows(readable_ids[2:])
+    for row in _course_rows(readable_ids[:2]):
+        without_key = {key: value for key, value in row.items() if key != "published"}
+        rows.extend([{**row, "published": False}, without_key])
+
+    response = _post(client, settings, {"resources": rows})
+
+    assert response.status_code == 422
+    mock_load_courses.assert_not_called()
+
+
+@pytest.mark.django_db
+def test_limit_keeps_the_test_mode_courses_a_batch_omits(settings, client, mocker):
+    """load_courses prunes no test_mode course, so leaving one out removes nothing."""
+    mocker.patch("webhooks.views.clear_views_cache")
+    mock_load_courses = mocker.patch("webhooks.views.load_courses", return_value=[])
+    readable_ids = _published_courses(10)
+    LearningResource.objects.filter(readable_id__in=readable_ids[:2]).update(
+        test_mode=True
+    )
+
+    response = _post(client, settings, {"resources": _course_rows(readable_ids[2:])})
+
+    assert response.status_code == 200
+    mock_load_courses.assert_called_once()
+
+
+@pytest.mark.django_db
+def test_limit_counts_a_test_mode_course_a_batch_unpublishes(settings, client, mocker):
+    """A delivered test_mode course is loaded like any other, so it can be unpublished."""
+    mock_load_courses = mocker.patch("webhooks.views.load_courses", return_value=[])
+    readable_ids = _published_courses(10)
+    LearningResource.objects.filter(readable_id__in=readable_ids[:2]).update(
+        test_mode=True
+    )
+    rows = _course_rows(readable_ids)
+    for row in rows[:2]:
+        row["published"] = False
+
+    response = _post(client, settings, {"resources": rows})
+
+    assert response.status_code == 422
+    mock_load_courses.assert_not_called()
+
+
+@pytest.mark.django_db
+def test_limit_counts_a_test_mode_program_a_batch_omits(settings, client, mocker):
+    """load_programs prunes test_mode programs, unlike load_courses."""
+    mock_load_programs = mocker.patch("webhooks.views.load_programs", return_value=[])
+    programs = [
+        program.learning_resource
+        for program in ProgramFactory.create_batch(
+            2, learning_resource__etl_source=ETLSource.mitpe.name
+        )
+    ]
+    LearningResource.objects.filter(id=programs[0].id).update(test_mode=True)
+
+    response = _post(
+        client,
+        settings,
+        {
+            "resources": [
+                _resource(
+                    programs[1].readable_id,
+                    ETLSource.mitpe.name,
+                    LearningResourceType.program.name,
+                    published=True,
+                    runs=[{"run_id": "program-1"}],
+                )
+            ]
+        },
+    )
+
+    assert response.status_code == 422
+    mock_load_programs.assert_not_called()
+
+
+@pytest.mark.django_db
 def test_limit_counts_a_program_without_runs(settings, client, mocker):
     """Courses and programs share the rule that no runs means unpublished."""
     mock_load_programs = mocker.patch("webhooks.views.load_programs", return_value=[])
