@@ -647,9 +647,10 @@ const assembleHomeCardList = ({
     ...started.map(courseRunCard),
     ...notStarted.map(courseRunCard),
     ...completed.map(courseRunCard),
-    ...programEnrollments.map(
-      (data): DashboardResource => ({ type: "program-enrollment", data }),
-    ),
+    ...programEnrollments.map((data): DashboardResource => ({
+      type: "program-enrollment",
+      data,
+    })),
   ]
   const expiredCards = expired.map(courseRunCard)
 

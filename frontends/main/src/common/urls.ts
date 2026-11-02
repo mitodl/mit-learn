@@ -254,11 +254,7 @@ export const canonicalResourceDrawerUrl = (
 
 export const querifiedSearchUrl = (
   params:
-    | string
-    | string[][]
-    | URLSearchParams
-    | Record<string, string>
-    | undefined,
+    string | string[][] | URLSearchParams | Record<string, string> | undefined,
 ) => `${SEARCH}?${new URLSearchParams(params).toString()}`
 
 export const SEARCH_NEW = querifiedSearchUrl({ sortby: "new" })

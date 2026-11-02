@@ -478,6 +478,7 @@ const ProgressGrid: React.FC<ProgressGridProps> = ({
           ref={regionRef}
           role="region"
           aria-label="Learner progress by module, scrolls horizontally"
+          // eslint-disable-next-line styled-components-a11y/no-noninteractive-tabindex
           tabIndex={0}
           onScroll={(event) => setScrolled(event.currentTarget.scrollLeft > 0)}
         >
@@ -554,7 +555,10 @@ const ProgressGrid: React.FC<ProgressGridProps> = ({
                             <StatusSymbol status={status} />
                             {enrollment.needs_attention ? (
                               <Tooltip title={attentionReason(status)}>
-                                <AttentionMark tabIndex={0}>
+                                <AttentionMark
+                                  // eslint-disable-next-line styled-components-a11y/no-noninteractive-tabindex
+                                  tabIndex={0}
+                                >
                                   <RiErrorWarningLine
                                     aria-hidden="true"
                                     size={16}

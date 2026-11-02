@@ -122,10 +122,7 @@ export const CertificateDesiredEnum = {
 } as const
 
 export type Channel =
-  | TopicChannel
-  | DepartmentChannel
-  | UnitChannel
-  | PathwayChannel
+  TopicChannel | DepartmentChannel | UnitChannel | PathwayChannel
 
 /**
  * Serializer for resource counts associated with Channel

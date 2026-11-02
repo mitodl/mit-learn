@@ -29,8 +29,7 @@ export type Size = "small" | "medium"
  * rather than navigating to `href`. See LinkAdapter for the full rules.
  */
 export type LinkTargetProps =
-  | { href?: undefined; pushUrl?: never }
-  | { href: string; pushUrl?: PushUrl }
+  { href?: undefined; pushUrl?: never } | { href: string; pushUrl?: PushUrl }
 
 type LinkableProps = {
   children?: ReactNode
