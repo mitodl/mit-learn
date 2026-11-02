@@ -1,6 +1,8 @@
 """Tests for ETL loaders"""
 
 import json
+import threading
+import time
 from datetime import timedelta
 from decimal import Decimal
 from pathlib import Path
@@ -9,7 +11,7 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
-from django.db import connection
+from django.db import connection, connections
 from django.forms.models import model_to_dict
 
 from learning_resources.constants import (
@@ -48,6 +50,7 @@ from learning_resources.etl.loaders import (
     load_offered_by,
     load_ovs_playlist,
     load_ovs_playlists,
+    load_ovs_video_from_webhook,
     load_playlist,
     load_podcast,
     load_podcast_episode,
@@ -64,6 +67,7 @@ from learning_resources.etl.loaders import (
     load_video_with_content_file,
     load_videos,
     load_videos_from_content_files,
+    prune_ovs_playlists,
     unpublish_orphaned_videos,
     unpublish_removed_playlists,
     unpublish_removed_youtube_channels,
@@ -117,6 +121,8 @@ from learning_resources.test_utils import set_up_topics
 from main.utils import now_in_utc
 
 pytestmark = pytest.mark.django_db
+
+LOCK_WAIT_TIMEOUT_SECONDS = 30
 
 non_transformable_attributes = (
     "id",
@@ -3677,6 +3683,146 @@ def test_load_ovs_playlists_empty_aborts(mocker):
     # Existing playlist should NOT be unpublished
     vp.learning_resource.refresh_from_db()
     assert vp.learning_resource.published is True
+
+
+def test_prune_ovs_playlists_unpublishes_only_the_playlists_it_checked(mocker):
+    """A video removed after the check leaves that playlist to its own prune."""
+    mocker.patch("learning_resources.etl.loaders.update_index")
+    mock_unpublished = mocker.patch(
+        "learning_resources.etl.loaders.bulk_resources_unpublished_actions"
+    )
+    empty_playlist = VideoPlaylistFactory.create().learning_resource
+    playlist = VideoPlaylistFactory.create().learning_resource
+    _add_playlist_videos(playlist, [VideoFactory.create().learning_resource])
+
+    def remove_video_before_update(execute, sql, params, many, context):
+        """Stand in for a concurrent removal, which takes no playlist lock"""
+        if sql.startswith('UPDATE "learning_resources_learningresource"'):
+            playlist.children.all().delete()
+        return execute(sql, params, many, context)
+
+    with connection.execute_wrapper(remove_video_before_update):
+        prune_ovs_playlists([empty_playlist.id, playlist.id])
+
+    empty_playlist.refresh_from_db()
+    playlist.refresh_from_db()
+    assert empty_playlist.published is False
+    assert playlist.published is True
+    mock_unpublished.assert_called_once_with(
+        [empty_playlist.id], LearningResourceType.video_playlist.name
+    )
+
+    mock_unpublished.reset_mock()
+    prune_ovs_playlists([playlist.id])
+
+    playlist.refresh_from_db()
+    assert playlist.published is False
+    mock_unpublished.assert_called_once_with(
+        [playlist.id], LearningResourceType.video_playlist.name
+    )
+
+
+def _ovs_video_payload(key, collection_title="A collection"):
+    """Build a minimal OVS payload for a video in `ovs_collection`"""
+    return {
+        "key": key,
+        "title": key,
+        "status": "Complete",
+        "is_public": True,
+        "sources": [
+            {"src": f"https://du3yhovcx8dht.cloudfront.net/{key}/video__index.m3u8"}
+        ],
+        "collection": {"key": "ovs_collection", "title": collection_title},
+    }
+
+
+def _wait_for_blocked_learning_resource_query():
+    """
+    Wait until a query on learning resources is blocked on a lock in this database.
+
+    A query blocked in Postgres can't signal the test, so pg_stat_activity is how
+    the test sees it. A passing run doesn't depend on the timeout, which only
+    bounds a failure.
+    """
+    deadline = time.monotonic() + LOCK_WAIT_TIMEOUT_SECONDS
+    while time.monotonic() < deadline:
+        with connection.cursor() as cursor:
+            cursor.execute(
+                """
+                SELECT count(*) FROM pg_stat_activity
+                WHERE datname = current_database()
+                AND pid <> pg_backend_pid()
+                AND wait_event_type = 'Lock'
+                AND query LIKE '%%learning_resources_learningresource%%'
+                """
+            )
+            if cursor.fetchone()[0]:
+                return True
+        time.sleep(0.01)
+    return False
+
+
+@pytest.mark.django_db(transaction=True)
+def test_prune_ovs_playlists_waits_for_a_push_into_the_playlist(settings, mocker):
+    """A push in flight keeps its playlist published, with the title it wrote."""
+    settings.OVS_API_BASE_URL = "https://video.odl.mit.edu"
+    settings.OVS_ALLOWED_MEDIA_HOSTS = [".cloudfront.net"]
+    mocker.patch("learning_resources.etl.loaders.update_index")
+    mock_unpublished = mocker.patch(
+        "learning_resources.etl.loaders.bulk_resources_unpublished_actions"
+    )
+    mock_topics = mocker.patch(
+        "learning_resources.etl.loaders.similar_topics_action", return_value=[]
+    )
+    load_ovs_video_from_webhook(_ovs_video_payload("last_video")).delete()
+    playlist = LearningResource.objects.get(
+        readable_id="ovs_collection",
+        resource_type=LearningResourceType.video_playlist.name,
+    )
+    push_holds_playlist = threading.Event()
+    push_may_commit = threading.Event()
+
+    def hold_push_open(_resource):
+        """Stay in the push's transaction, which has written the playlist"""
+        push_holds_playlist.set()
+        assert push_may_commit.wait(LOCK_WAIT_TIMEOUT_SECONDS)
+        return []
+
+    mock_topics.side_effect = hold_push_open
+    errors = []
+
+    def start(function, *args):
+        def run():
+            try:
+                function(*args)
+            except Exception as error:  # noqa: BLE001
+                errors.append(error)
+            finally:
+                connections.close_all()
+
+        thread = threading.Thread(target=run, daemon=True)
+        thread.start()
+        return thread
+
+    push = start(
+        load_ovs_video_from_webhook, _ovs_video_payload("new_video", "A new title")
+    )
+    threads = [push]
+    try:
+        assert push_holds_playlist.wait(LOCK_WAIT_TIMEOUT_SECONDS)
+        threads.append(start(prune_ovs_playlists, [playlist.id]))
+        assert _wait_for_blocked_learning_resource_query()
+    finally:
+        push_may_commit.set()
+        for thread in threads:
+            thread.join(LOCK_WAIT_TIMEOUT_SECONDS)
+
+    assert errors == []
+    playlist.refresh_from_db()
+    assert playlist.published is True
+    assert playlist.title == "A new title"
+    assert playlist.resources.filter(readable_id="new_video").exists()
+    mock_unpublished.assert_not_called()
 
 
 def test_unpublish_removed_youtube_channels(mock_upsert_tasks):

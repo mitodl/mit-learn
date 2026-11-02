@@ -1912,7 +1912,9 @@ def prune_ovs_playlists(playlist_ids: list[int]) -> None:
         ).values("parent_id")
         empty_playlists = playlists.filter(published=True).exclude(id__in=with_videos)
         empty_playlist_ids = list(empty_playlists.values_list("id", flat=True))
-        empty_playlists.update(published=False)
+        # Not empty_playlists: removing a video doesn't take the playlist lock,
+        # so its subquery could now match a playlist the hooks below won't see.
+        playlists.filter(id__in=empty_playlist_ids).update(published=False)
     if empty_playlist_ids:
         bulk_resources_unpublished_actions(
             empty_playlist_ids, LearningResourceType.video_playlist.name
