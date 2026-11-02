@@ -1,6 +1,12 @@
 Release Notes
 =============
 
+Version 0.85.5
+--------------
+
+- Redesign learning resource cards behind the resource-card-redesign flag (#4170)
+- Generate course profile claims for a run's context unit (#4180)
+
 Version 0.85.4
 --------------
 
