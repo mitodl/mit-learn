@@ -1891,10 +1891,31 @@ def _upsert_ovs_playlist_from_collection(collection_data: dict) -> LearningResou
     return playlist
 
 
+def prune_ovs_playlists(playlist_ids: list[int]) -> None:
+    """
+    Unpublish the given OVS playlists that have no published videos left, and
+    reindex the rest.
+
+    This is the webhook's version of the prune in load_ovs_playlists, which
+    stops running once the webhook owns OVS. The webhook sees one video at a
+    time, so it only checks the playlists that video just left.
+    """
+    playlists = LearningResource.objects.filter(id__in=playlist_ids)
+    with_videos = LearningResourceRelationship.objects.filter(
+        parent__in=playlists,
+        relation_type=LearningResourceRelationTypes.PLAYLIST_VIDEOS.value,
+        child__published=True,
+    ).values("parent_id")
+    unpublish_resources(playlists.exclude(id__in=with_videos))
+    for playlist in playlists.filter(published=True):
+        update_index(playlist, newly_created=False)
+
+
 def load_ovs_video_from_webhook(video_payload: dict) -> LearningResource | None:
     """
     Upsert a single OVS video and its collection-as-playlist from a webhook payload.
 
+    A video that OVS moved to another collection leaves its old playlist.
     `video_payload` is one result dict from the OVS public videos API. Returns the
     video LearningResource, or None if the payload has no usable streaming source.
     """
@@ -1918,8 +1939,15 @@ def load_ovs_video_from_webhook(video_payload: dict) -> LearningResource | None:
                 child=video,
                 relation_type=LearningResourceRelationTypes.PLAYLIST_VIDEOS.value,
             )
+        old_relationships = LearningResourceRelationship.objects.filter(
+            child=video,
+            relation_type=LearningResourceRelationTypes.PLAYLIST_VIDEOS.value,
+        ).exclude(parent=playlist)
+        old_playlist_ids = list(old_relationships.values_list("parent_id", flat=True))
+        old_relationships.delete()
     if playlist:
         update_index(playlist, newly_created=False)
+    prune_ovs_playlists(old_playlist_ids)
     return video
 
 

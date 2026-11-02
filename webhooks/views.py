@@ -13,7 +13,10 @@ from rest_framework import generics, status
 from rest_framework.parsers import JSONParser
 from rest_framework.response import Response
 
-from learning_resources.constants import LearningResourceType
+from learning_resources.constants import (
+    LearningResourceRelationTypes,
+    LearningResourceType,
+)
 from learning_resources.etl.constants import (
     CourseLoaderConfig,
     ETLSource,
@@ -25,6 +28,7 @@ from learning_resources.etl.loaders import (
     load_ovs_video_from_webhook,
     load_programs,
     load_videos,
+    prune_ovs_playlists,
 )
 from learning_resources.etl.ownership import (
     Pipeline,
@@ -171,7 +175,13 @@ class OVSVideoWebhookView(BaseWebhookView):
                     resource_type=LearningResourceType.video.name,
                 ).first()
                 if resource:
+                    playlist_ids = list(
+                        resource.parents.filter(
+                            relation_type=LearningResourceRelationTypes.PLAYLIST_VIDEOS.value
+                        ).values_list("parent_id", flat=True)
+                    )
                     resource_delete_actions(resource)
+                    prune_ovs_playlists(playlist_ids)
                 else:
                     log.info(
                         "OVS delete webhook: no resource for video_id=%s", video_id
