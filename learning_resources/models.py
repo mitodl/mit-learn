@@ -1154,6 +1154,18 @@ class ContentFileQuerySet(TimestampedModelQuerySet):
         """Content files a learner cannot currently see: the complement of visible()"""
         return self.filter(Q(published=False) | Q(release_date__gt=now or now_in_utc()))
 
+    def matching_youtube_videos(self, youtube_ids):
+        """
+        Content files that match these youtube ids: visible ones on a published
+        run. A video on two pages of a course has two, so these sort newest
+        first and a dict built by youtube_id keeps the lowest id, a stable match.
+        """
+        return (
+            self.filter(youtube_id__in=youtube_ids, run__published=True)
+            .visible()
+            .order_by("-id")
+        )
+
     def for_serialization(self):
         """Return a queryset ready for serialization"""
         return self.select_related(

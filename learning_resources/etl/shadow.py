@@ -62,7 +62,6 @@ from django.utils import timezone
 from learning_resources.constants import (
     OCW_CONTENT_CATEGORY_LECTURE_VIDEOS,
     OCW_INSTRUCTOR_INSIGHTS_TAG,
-    OCW_PLAYLIST_VIDEO_THRESHOLD,
     LearningResourceDelivery,
     LearningResourceRelationTypes,
     LearningResourceType,
@@ -71,6 +70,7 @@ from learning_resources.constants import (
 )
 from learning_resources.etl.constants import ETLSource
 from learning_resources.etl.ownership import current_pipeline, shadowing
+from learning_resources.etl.utils import enough_youtube_matches
 from learning_resources.models import (
     ContentFile,
     Course,
@@ -824,18 +824,14 @@ def _matched_content_files(youtube_ids: set[str]) -> dict[str, ContentFile]:
     Return the content file load_videos_from_content_files would match to each
     youtube id: a visible one on a published run, the lowest id if several.
     """
-    content_files = {}
-    for content_file in (
-        ContentFile.objects.filter(youtube_id__in=youtube_ids, run__published=True)
-        .visible()
+    return {
+        content_file.youtube_id: content_file
+        for content_file in ContentFile.objects.matching_youtube_videos(youtube_ids)
         .select_related(
             "run__learning_resource__platform", "run__learning_resource__offered_by"
         )
         .prefetch_related("content_tags", "run__learning_resource__topics")
-        .order_by("-id")
-    ):
-        content_files[content_file.youtube_id] = content_file
-    return content_files
+    }
 
 
 def _youtube_video(video: dict) -> dict:
@@ -938,8 +934,8 @@ def observe_youtube(to_load: Iterable[tuple[str, dict]]) -> None:
                 for video in playlist["videos"]
                 if video.get("youtube_id") in content_files
             ]
-            if not playlist_videos or len(playlist_videos) < (
-                len(playlist["videos"]) * OCW_PLAYLIST_VIDEO_THRESHOLD
+            if not playlist_videos or not enough_youtube_matches(
+                len(playlist_videos), len(playlist["videos"])
             ):
                 # not loaded: the prune counts it if it is published
                 continue

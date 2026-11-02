@@ -22,7 +22,6 @@ from collections import defaultdict
 from dateutil.parser import ParserError, parse
 
 from learning_resources.constants import (
-    OCW_PLAYLIST_VIDEO_THRESHOLD,
     LearningResourceType,
 )
 from learning_resources.etl import loaders
@@ -34,7 +33,7 @@ from learning_resources.etl.ownership import (
     may_write,
     run_mode,
 )
-from learning_resources.etl.utils import iso8601_duration
+from learning_resources.etl.utils import enough_youtube_matches, iso8601_duration
 from learning_resources.etl.warehouse_guards import (
     refuse_empty,
     refuse_mass_unpublish,
@@ -166,17 +165,14 @@ def _kept_playlists(playlists: list[dict]) -> list[dict]:
     file on a published run, as load_videos_from_content_files matches them.
     """
     matched_youtube_ids = set(
-        ContentFile.objects.filter(
-            youtube_id__in={
+        ContentFile.objects.matching_youtube_videos(
+            {
                 video["youtube_id"]
                 for playlist in playlists
                 if not playlist["create_videos"]
                 for video in playlist["videos"]
-            },
-            run__published=True,
-        )
-        .visible()
-        .values_list("youtube_id", flat=True)
+            }
+        ).values_list("youtube_id", flat=True)
     )
 
     def is_kept(playlist: dict) -> bool:
@@ -186,9 +182,7 @@ def _kept_playlists(playlists: list[dict]) -> list[dict]:
         matched = [
             video for video in videos if video["youtube_id"] in matched_youtube_ids
         ]
-        return bool(matched) and len(matched) >= (
-            len(videos) * OCW_PLAYLIST_VIDEO_THRESHOLD
-        )
+        return bool(matched) and enough_youtube_matches(len(matched), len(videos))
 
     return [playlist for playlist in playlists if is_kept(playlist)]
 
