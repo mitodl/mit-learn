@@ -3195,13 +3195,18 @@ def test_execute_learn_search_with_script_score(
     )
 
 
-def test_execute_learn_search_with_hybrid_search(mocker, settings, opensearch):
+@pytest.mark.parametrize(
+    "dense_model", ["text-embedding-3-small", "azure/text-embedding-3-small"]
+)
+def test_execute_learn_search_with_hybrid_search(
+    mocker, settings, opensearch, dense_model
+):
     opensearch.conn.search.return_value = {
         "hits": {"total": {"value": 10, "relation": "eq"}}
     }
 
     settings.DEFAULT_SEARCH_MODE = "best_fields"
-    settings.QDRANT_DENSE_MODEL = "text-embedding-3-small"
+    settings.QDRANT_DENSE_MODEL = dense_model
 
     mocker.patch(
         "learning_resources_search.api.get_vector_model_id",

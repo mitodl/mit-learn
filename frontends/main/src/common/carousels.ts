@@ -26,7 +26,7 @@ const TopPicksCarouselConfig: TopPicksCarouselConfigProps = (
   return [
     {
       label: "All",
-      cardProps: { size: "small" },
+      size: "small",
       data: {
         type: "lr_search",
         params: {
@@ -54,7 +54,7 @@ const TopicCarouselConfig: TopicCarouselConfigProps = (
   const config: TabConfig[] = [
     {
       label: "All",
-      cardProps: { size: "small" },
+      size: "small",
       data: {
         type: "lr_search",
         params: {
@@ -72,7 +72,7 @@ const TopicCarouselConfig: TopicCarouselConfigProps = (
 const CERTIFICATE_COURSES_CAROUSEL: ResourceCarouselProps["config"] = [
   {
     label: "All",
-    cardProps: { size: "small" },
+    size: "small",
     data: {
       type: "lr_search",
       params: {
@@ -88,7 +88,7 @@ const CERTIFICATE_COURSES_CAROUSEL: ResourceCarouselProps["config"] = [
 const FREE_COURSES_CAROUSEL: ResourceCarouselProps["config"] = [
   {
     label: "All",
-    cardProps: { size: "small" },
+    size: "small",
     data: {
       type: "lr_search",
       params: {
@@ -104,7 +104,7 @@ const FREE_COURSES_CAROUSEL: ResourceCarouselProps["config"] = [
 const NEW_LEARNING_RESOURCES_CAROUSEL: ResourceCarouselProps["config"] = [
   {
     label: "All",
-    cardProps: { size: "small" },
+    size: "small",
     data: {
       type: "lr_search",
       params: { limit: 12, sortby: "new" },
@@ -115,7 +115,7 @@ const NEW_LEARNING_RESOURCES_CAROUSEL: ResourceCarouselProps["config"] = [
 const POPULAR_LEARNING_RESOURCES_CAROUSEL: ResourceCarouselProps["config"] = [
   {
     label: "All",
-    cardProps: { size: "small" },
+    size: "small",
     data: {
       type: "lr_search",
       params: { limit: 12, sortby: "-views" },

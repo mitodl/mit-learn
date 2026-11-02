@@ -24,6 +24,7 @@ class ChannelAdmin(admin.ModelAdmin):
     model = Channel
     exclude = ("widget_list",)
     search_fields = ("name", "title")
+    autocomplete_fields = ("featured_list",)
     list_display = ("title", "name", "channel_type")
     list_filter = ("channel_type",)
     readonly_fields = (

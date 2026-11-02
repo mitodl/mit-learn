@@ -18,8 +18,7 @@ import { Button } from "../../tiptap-ui-primitive/button"
 import { Badge } from "../../tiptap-ui-primitive/badge"
 
 export interface UndoRedoButtonProps
-  extends Omit<ButtonProps, "type">,
-    UseUndoRedoConfig {
+  extends Omit<ButtonProps, "type">, UseUndoRedoConfig {
   /**
    * Optional text to display alongside the icon.
    */

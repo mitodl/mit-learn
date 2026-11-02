@@ -467,9 +467,7 @@ def index_run_content_files(run_id, index_types):
     """
     run = LearningResourceRun.objects.select_related("learning_resource").get(pk=run_id)
     resource_type = run.learning_resource.resource_type
-    content_file_ids = run.content_files.filter(published=True).values_list(
-        "id", flat=True
-    )
+    content_file_ids = run.content_files.visible().values_list("id", flat=True)
 
     for ids_chunk in chunks(
         content_file_ids, chunk_size=settings.OPENSEARCH_DOCUMENT_INDEXING_CHUNK_SIZE
@@ -542,7 +540,7 @@ def deindex_run_content_files(run_id, unpublished_only, *, keep_published=False)
 
     Args:
         run_id(int): Run id
-        unpublished_only(bool): if true only deindex files with published=False
+        unpublished_only(bool): if true only deindex hidden files
         keep_published(bool): if true, deindex all of the run's current content
             files from OpenSearch without flipping ContentFile.published. Used to
             remove a run from OpenSearch while keeping it in Qdrant / the REST API.
@@ -550,7 +548,7 @@ def deindex_run_content_files(run_id, unpublished_only, *, keep_published=False)
     run = LearningResourceRun.objects.select_related("learning_resource").get(id=run_id)
     resource_type = run.learning_resource.resource_type
     if unpublished_only:
-        content_files = run.content_files.filter(published=False).all()
+        content_files = run.content_files.hidden()
     else:
         if not keep_published:
             run.content_files.filter(published=True).update(published=False)

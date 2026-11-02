@@ -220,6 +220,11 @@ class ProgramCertificate(models.Model):
 
     user_email = models.CharField(max_length=256, blank=False)
 
+    # Revoked rows are kept so their letters come back if the revocation is
+    # reversed. Any read that exposes a certificate or its letter has to filter
+    # on this itself; the default manager returns revoked rows.
+    is_revoked = models.BooleanField(default=False, db_default=False)
+
     # NULLABLE FIELDS
 
     user_edxorg_id = models.IntegerField(null=True, blank=True)

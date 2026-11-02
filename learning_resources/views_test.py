@@ -66,7 +66,7 @@ from learning_resources.views import LearningResourceViewSet
 from learning_resources_search.api import Search
 from learning_resources_search.serializers import serialize_learning_resource_for_update
 from main.test_utils import assert_json_equal
-from main.utils import frontend_absolute_url
+from main.utils import frontend_absolute_url, now_in_utc
 
 pytestmark = [pytest.mark.django_db]
 
@@ -138,6 +138,11 @@ def test_get_course_content_files_endpoint(client, url):
     )
     ContentFileFactory.create(
         run=course.learning_resource.runs.first(), published=False
+    )
+    ContentFileFactory.create(
+        run=course.learning_resource.runs.first(),
+        published=True,
+        release_date=now_in_utc() + timedelta(days=1),
     )
 
     resp = client.get(reverse(url, args=[course.learning_resource.id]))
@@ -293,6 +298,11 @@ def test_list_content_files_list_endpoint(client, user_role, django_user_model):
     ]
     # this should be filtered out
     ContentFileFactory.create_batch(5, published=False, content="some content")
+    # unreleased but published should also be filtered out
+    ContentFileFactory.create(
+        content="some content",
+        release_date=now_in_utc() + timedelta(days=1),
+    )
     if user_role == "admin":
         admin_user = django_user_model.objects.create_superuser(
             "admin", "admin@example.com", "pass"

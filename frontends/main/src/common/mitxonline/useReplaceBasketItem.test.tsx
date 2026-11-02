@@ -2,7 +2,7 @@ import { act, renderHook, setupLocationMock } from "@/test-utils"
 import React from "react"
 import { QueryClientProvider } from "@tanstack/react-query"
 import { makeBrowserQueryClient } from "@/app/getQueryClient"
-import { setMockResponse } from "api/test-utils"
+import { makeRequest, setMockResponse } from "api/test-utils"
 import * as mitxonline from "api/mitxonline-test-utils"
 import { mitxonlineLegacyUrl } from "@/common/mitxonline"
 import { useReplaceBasketItem } from "./useReplaceBasketItem"
@@ -152,5 +152,63 @@ describe("useReplaceBasketItem", () => {
     const { result } = renderHook(() => useReplaceBasketItem(), { wrapper })
 
     expect(result.current.error).toBeNull()
+  })
+})
+
+describe("useReplaceBasketItem with the product's target", () => {
+  setupLocationMock()
+  const target = { type: "course_run" as const, id: 5 }
+  const eligibilityUrl = mitxonline.urls.enrollmentEligibility.courseRun(5)
+
+  beforeEach(() => {
+    jest.clearAllMocks()
+    basketErrors.add = null
+    basketErrors.clear = null
+    setMockResponse.get(
+      mitxonline.urls.userMe.get(),
+      mitxonline.factories.user.user(),
+    )
+  })
+
+  test("runs the compliance check before replacing the basket", async () => {
+    setMockResponse.post(
+      eligibilityUrl,
+      { enrollable: true, reason_code: null, missing_fields: [] },
+      { code: 200 },
+    )
+    const { result } = renderHook(() => useReplaceBasketItem(), { wrapper })
+
+    await act(async () => {
+      await result.current.mutateAsync(42, target)
+    })
+
+    expect(
+      jest
+        .mocked(makeRequest)
+        .mock.calls.some(
+          ([request]) =>
+            request.method === "post" && request.url === eligibilityUrl,
+        ),
+    ).toBe(true)
+    expect(mutateAsync).toHaveBeenCalledWith(42)
+    expect(jest.mocked(window.location.assign)).toHaveBeenCalledWith(
+      mitxonlineLegacyUrl("/cart/"),
+    )
+  })
+
+  test("continues to the cart when the check can't answer, e.g. throttled", async () => {
+    setMockResponse.post(
+      eligibilityUrl,
+      { detail: "Request was throttled." },
+      { code: 429 },
+    )
+    const { result } = renderHook(() => useReplaceBasketItem(), { wrapper })
+
+    await act(async () => {
+      await result.current.mutateAsync(42, target)
+    })
+
+    expect(mutateAsync).toHaveBeenCalledWith(42)
+    expect(jest.mocked(window.location.assign)).toHaveBeenCalled()
   })
 })

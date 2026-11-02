@@ -12,6 +12,7 @@ import { factories, urls } from "api/test-utils"
 import {
   factories as mitxFactories,
   urls as mitxUrls,
+  mockEnrollmentEligible,
 } from "api/mitxonline-test-utils"
 import { makeCourse, setupRunPricing } from "./test-utils/userPricing"
 import {
@@ -21,6 +22,11 @@ import {
 import { mitxonlineLegacyUrl } from "@/common/mitxonline"
 import CourseEnrollArea from "./CourseEnrollArea"
 import { getSelectedRun } from "./courseRun"
+
+// The paid path checks enrollment eligibility before the cart.
+beforeEach(() => {
+  mockEnrollmentEligible()
+})
 
 jest.mock("next-nprogress-bar", () => ({
   useRouter: () => ({ push: jest.fn() }),

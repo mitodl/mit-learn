@@ -177,7 +177,7 @@ const TrendingChip = styled(ChipLink)(({ theme, variant }) => [
     "&:hover": {
       backgroundColor: `${theme.custom.colors.lightGray1} !important`,
       borderColor: `${theme.custom.colors.silverGrayLight} !important`,
-      color: theme.custom.colors.darkGray2,
+      color: `${theme.custom.colors.darkGray1} !important`,
     },
   },
   variant === "outlined" && {
@@ -187,6 +187,7 @@ const TrendingChip = styled(ChipLink)(({ theme, variant }) => [
     "&:hover": {
       backgroundColor: `${theme.custom.colors.lightGray2} !important`,
       borderColor: theme.custom.colors.silverGray,
+      color: `${theme.custom.colors.darkGray1} !important`,
     },
   },
 ])

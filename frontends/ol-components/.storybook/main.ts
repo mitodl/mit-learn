@@ -17,9 +17,10 @@ const config: StorybookConfig = {
     "../src/**/*.stories.tsx",
     "../../ol-components/src/**/*.mdx",
     "../../ol-components/src/**/*.stories.@(tsx|ts)",
+    "../../main/src/**/*.stories.tsx",
   ],
 
-  staticDirs: ["./public"],
+  staticDirs: ["./public", "../../main/public"],
 
   addons: ["@storybook/addon-links", "@storybook/addon-docs"],
 

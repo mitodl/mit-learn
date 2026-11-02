@@ -2,6 +2,7 @@ import type { AppPageProps } from "@/common/searchParams"
 import React from "react"
 import type { Metadata } from "next"
 import HomePage from "@/app-pages/HomePage/HomePage"
+import { FEATURED_COMMON_PARAMS } from "@/app-pages/HomePage/carousels"
 import { getMetadataAsync, safeGenerateMetadata } from "@/common/metadata"
 import { HydrationBoundary, dehydrate } from "@tanstack/react-query"
 import {
@@ -33,20 +34,20 @@ const Page: React.FC<AppPageProps<"/">> = async () => {
     // Featured Courses carousel "All"
     queryClient.prefetchQuery(
       learningResourceQueries.featured({
-        limit: 12,
+        ...FEATURED_COMMON_PARAMS,
       }),
     ),
     // Featured Courses carousel "Free"
     queryClient.prefetchQuery(
       learningResourceQueries.featured({
-        limit: 12,
+        ...FEATURED_COMMON_PARAMS,
         free: true,
       }),
     ),
     // Featured Courses carousel "With Certificate"
     queryClient.prefetchQuery(
       learningResourceQueries.featured({
-        limit: 12,
+        ...FEATURED_COMMON_PARAMS,
         certification: true,
         professional: false,
       }),
@@ -54,7 +55,7 @@ const Page: React.FC<AppPageProps<"/">> = async () => {
     // Featured Courses carousel "Professional & Executive Learning"
     queryClient.prefetchQuery(
       learningResourceQueries.featured({
-        limit: 12,
+        ...FEATURED_COMMON_PARAMS,
         professional: true,
       }),
     ),

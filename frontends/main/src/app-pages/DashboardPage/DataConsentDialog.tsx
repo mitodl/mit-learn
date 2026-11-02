@@ -110,8 +110,7 @@ const DataConsentDialog: React.FC<DataConsentDialogProps> = ({
           following information about my participation and progress in the
           Program with my organization: (a) Program completion status; (b)
           module progress and completion dates; (c) assessment scores and
-          performance metrics; (d) certificates earned; and (e) any other
-          progression or assessment data maintained by MIT.
+          performance metrics; and (d) certificates earned.
         </Paragraph>
         <Paragraph>
           I understand that the data will be used solely to evaluate program

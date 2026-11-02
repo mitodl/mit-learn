@@ -7,10 +7,7 @@ import { analytics } from "@/common/analytics"
 import { ORGANIZATIONAL_LEARNING_FORM_ID } from "@/common/urls"
 
 export type CtaPlacement =
-  | "hero"
-  | "featuredProgram"
-  | "offerings"
-  | "deliveryFormats"
+  "hero" | "featuredProgram" | "offerings" | "deliveryFormats"
 
 type CtaButtonProps = Omit<ButtonProps, "onClick"> & {
   placement: CtaPlacement

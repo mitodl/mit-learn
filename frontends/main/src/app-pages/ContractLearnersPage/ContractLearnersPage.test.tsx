@@ -81,7 +81,7 @@ const setupUnqueryable = () => {
  * for the "X of Y enrollments" summary text. Mocking by exact URL keeps the
  * assertion pinned to the request it is about.
  */
-const mockTotal = (contractId: string, total: number, withheld = 0) => {
+const mockTotal = (contractId: number, total: number, withheld = 0) => {
   setMockResponse.get(
     analyticsUrls.contracts.learnerProgress(ORG_UUID, contractId, {
       limit: 1,
@@ -94,7 +94,7 @@ const mockTotal = (contractId: string, total: number, withheld = 0) => {
 }
 
 const mockList = (
-  contractId: string,
+  contractId: number,
   rows: ReturnType<typeof analyticsFactories.learnerProgress>[],
   extraParams: Record<string, unknown> = {},
   envelopeOverrides: Record<string, unknown> = {},
@@ -116,7 +116,7 @@ const mockList = (
  * throws rather than resolving empty.
  */
 const mockCourseRuns = (
-  contractId: string,
+  contractId: number,
   runs = [
     analyticsFactories.courseRun({
       courserun_id: "course-v1:MITx+M5+2026",
@@ -139,14 +139,14 @@ const mockCourseRuns = (
  * attention filter is on. An empty envelope is a contract under the floor.
  */
 const mockNeedsAttention = (
-  contractId: string,
+  contractId: number,
   learners: number | null = 0,
 ) => {
   setMockResponse.get(
     analyticsUrls.contracts.needsAttention(ORG_UUID, contractId),
     analyticsFactories.envelope([
       analyticsFactories.contractNeedsAttention({
-        contract_id: Number(contractId),
+        contract_id: contractId,
         learners_needing_attention: learners,
       }),
     ]),
@@ -204,7 +204,7 @@ describe("ContractLearnersPage", () => {
     ).toThrow(ForbiddenError)
   })
 
-  test("opens with both analytics flags on, linking back to aggregate analytics", async () => {
+  test("opens with both analytics flags on, with the contract nav marking Learners current", async () => {
     mockedUseFeatureFlagEnabled.mockImplementation(
       (flag) =>
         flag === FeatureFlags.B2BAnalyticsDashboard ||
@@ -216,11 +216,14 @@ describe("ContractLearnersPage", () => {
       <ContractLearnersPage orgSlug={orgSlug} contractSlug={contract.slug} />,
     )
 
-    const back = await screen.findByRole("link", { name: /Program analytics/ })
-    expect(back).toHaveAttribute(
-      "href",
-      contractAnalyticsView(orgSlug, contract.slug),
+    const nav = await screen.findByRole("navigation", { name: "Contract" })
+    expect(within(nav).getByRole("link", { name: "Learners" })).toHaveAttribute(
+      "aria-current",
+      "page",
     )
+    expect(
+      within(nav).getByRole("link", { name: "Analytics" }),
+    ).toHaveAttribute("href", contractAnalyticsView(orgSlug, contract.slug))
   })
 
   test("denies access when the org is not one the user manages", async () => {
@@ -292,7 +295,7 @@ describe("ContractLearnersPage", () => {
 
   test("renders a learner row with its real status", async () => {
     const { org, contract, orgSlug } = setup()
-    const contractId = String(contract.id)
+    const contractId = contract.id
     setMockResponse.get(
       mitxUrls.organization.managerOrganizationsList(),
       paginate([org]),
@@ -320,7 +323,7 @@ describe("ContractLearnersPage", () => {
 
   test("a learner row shows the email alongside the name", async () => {
     const { org, contract, orgSlug } = setup()
-    const contractId = String(contract.id)
+    const contractId = contract.id
     setMockResponse.get(
       mitxUrls.organization.managerOrganizationsList(),
       paginate([org]),
@@ -353,7 +356,7 @@ describe("ContractLearnersPage", () => {
     "a learner with a $label name shows only the email and an icon avatar",
     async ({ fullName }) => {
       const { org, contract, orgSlug } = setup()
-      const contractId = String(contract.id)
+      const contractId = contract.id
       setMockResponse.get(
         mitxUrls.organization.managerOrganizationsList(),
         paginate([org]),
@@ -383,7 +386,7 @@ describe("ContractLearnersPage", () => {
 
   test("a learner who declined shows Declined", async () => {
     const { org, contract, orgSlug } = setup()
-    const contractId = String(contract.id)
+    const contractId = contract.id
     setMockResponse.get(
       mitxUrls.organization.managerOrganizationsList(),
       paginate([org]),
@@ -412,7 +415,7 @@ describe("ContractLearnersPage", () => {
 
   test("a learner with no recorded decision shows Consent not recorded", async () => {
     const { org, contract, orgSlug } = setup()
-    const contractId = String(contract.id)
+    const contractId = contract.id
     setMockResponse.get(
       mitxUrls.organization.managerOrganizationsList(),
       paginate([org]),
@@ -441,7 +444,7 @@ describe("ContractLearnersPage", () => {
 
   test("the consent banner counts withheld rows", async () => {
     const { org, contract, orgSlug } = setup()
-    const contractId = String(contract.id)
+    const contractId = contract.id
     setMockResponse.get(
       mitxUrls.organization.managerOrganizationsList(),
       paginate([org]),
@@ -499,7 +502,7 @@ describe("ContractLearnersPage", () => {
       delete (legacyRow as Partial<typeof legacyRow>).needs_attention
 
       const { org, contract, orgSlug } = setup()
-      const contractId = String(contract.id)
+      const contractId = contract.id
       setMockResponse.get(
         mitxUrls.organization.managerOrganizationsList(),
         paginate([org]),
@@ -576,7 +579,7 @@ describe("ContractLearnersPage", () => {
 
     test("carries the active status filter, not just pagination", async () => {
       const { org, contract, orgSlug } = setup()
-      const contractId = String(contract.id)
+      const contractId = contract.id
       setMockResponse.get(
         mitxUrls.organization.managerOrganizationsList(),
         paginate([org]),
@@ -641,7 +644,7 @@ describe("ContractLearnersPage", () => {
 
   test("shows an error state instead of a false empty result when a query fails", async () => {
     const { org, contract, orgSlug } = setup()
-    const contractId = String(contract.id)
+    const contractId = contract.id
     setMockResponse.get(
       mitxUrls.organization.managerOrganizationsList(),
       paginate([org]),
@@ -677,7 +680,7 @@ describe("ContractLearnersPage", () => {
 
   test("the module dropdown lists every course run on the contract", async () => {
     const { org, contract, orgSlug } = setup()
-    const contractId = String(contract.id)
+    const contractId = contract.id
     setMockResponse.get(
       mitxUrls.organization.managerOrganizationsList(),
       paginate([org]),
@@ -705,7 +708,7 @@ describe("ContractLearnersPage", () => {
 
   test("selecting a module sends courserun_readable_id", async () => {
     const { org, contract, orgSlug } = setup()
-    const contractId = String(contract.id)
+    const contractId = contract.id
     setMockResponse.get(
       mitxUrls.organization.managerOrganizationsList(),
       paginate([org]),
@@ -746,7 +749,7 @@ describe("ContractLearnersPage", () => {
    */
   test("announces the result count when the module filter changes", async () => {
     const { org, contract, orgSlug } = setup()
-    const contractId = String(contract.id)
+    const contractId = contract.id
     setMockResponse.get(
       mitxUrls.organization.managerOrganizationsList(),
       paginate([org]),
@@ -785,7 +788,7 @@ describe("ContractLearnersPage", () => {
    */
   test("keeps the module options and stays quiet when a refetch fails", async () => {
     const { org, contract, orgSlug } = setup()
-    const contractId = String(contract.id)
+    const contractId = contract.id
     setMockResponse.get(
       mitxUrls.organization.managerOrganizationsList(),
       paginate([org]),
@@ -829,7 +832,7 @@ describe("ContractLearnersPage", () => {
 
   test("falls back to All modules when the selected run leaves the contract", async () => {
     const { org, contract, orgSlug } = setup()
-    const contractId = String(contract.id)
+    const contractId = contract.id
     setMockResponse.get(
       mitxUrls.organization.managerOrganizationsList(),
       paginate([org]),
@@ -874,7 +877,7 @@ describe("ContractLearnersPage", () => {
 
   test("marks the module filter when its options fail to load", async () => {
     const { org, contract, orgSlug } = setup()
-    const contractId = String(contract.id)
+    const contractId = contract.id
     setMockResponse.get(
       mitxUrls.organization.managerOrganizationsList(),
       paginate([org]),
@@ -913,7 +916,7 @@ describe("ContractLearnersPage", () => {
       overrides: Parameters<typeof analyticsFactories.learnerProgress>[0],
     ) => {
       const { org, contract, orgSlug } = setup()
-      const contractId = String(contract.id)
+      const contractId = contract.id
       setMockResponse.get(
         mitxUrls.organization.managerOrganizationsList(),
         paginate([org]),
@@ -980,7 +983,7 @@ describe("ContractLearnersPage", () => {
      */
     test("shows a stub, not 'No activity', for a withheld learner", async () => {
       const { org, contract, orgSlug } = setup()
-      const contractId = String(contract.id)
+      const contractId = contract.id
       setMockResponse.get(
         mitxUrls.organization.managerOrganizationsList(),
         paginate([org]),
@@ -1005,7 +1008,7 @@ describe("ContractLearnersPage", () => {
 
   test("the status filter sends completion_status", async () => {
     const { org, contract, orgSlug } = setup()
-    const contractId = String(contract.id)
+    const contractId = contract.id
     setMockResponse.get(
       mitxUrls.organization.managerOrganizationsList(),
       paginate([org]),
@@ -1037,7 +1040,7 @@ describe("ContractLearnersPage", () => {
 
   test("seeds the status filter from the URL and ignores an unknown status", async () => {
     const { org, contract, orgSlug } = setup()
-    const contractId = String(contract.id)
+    const contractId = contract.id
     setMockResponse.get(
       mitxUrls.organization.managerOrganizationsList(),
       paginate([org]),
@@ -1060,7 +1063,7 @@ describe("ContractLearnersPage", () => {
 
   test("writes the active filters back to the URL", async () => {
     const { org, contract, orgSlug } = setup()
-    const contractId = String(contract.id)
+    const contractId = contract.id
     setMockResponse.get(
       mitxUrls.organization.managerOrganizationsList(),
       paginate([org]),
@@ -1093,7 +1096,7 @@ describe("ContractLearnersPage", () => {
 
   test("ignores a status that is only an inherited object key", async () => {
     const { org, contract, orgSlug } = setup()
-    const contractId = String(contract.id)
+    const contractId = contract.id
     setMockResponse.get(
       mitxUrls.organization.managerOrganizationsList(),
       paginate([org]),
@@ -1117,7 +1120,7 @@ describe("ContractLearnersPage", () => {
 
   test("moves a page past the end back to the last page", async () => {
     const { org, contract, orgSlug } = setup()
-    const contractId = String(contract.id)
+    const contractId = contract.id
     setMockResponse.get(
       mitxUrls.organization.managerOrganizationsList(),
       paginate([org]),
@@ -1143,7 +1146,7 @@ describe("ContractLearnersPage", () => {
 
   test("changing a filter sends the page back to page 1", async () => {
     const { org, contract, orgSlug } = setup()
-    const contractId = String(contract.id)
+    const contractId = contract.id
     setMockResponse.get(
       mitxUrls.organization.managerOrganizationsList(),
       paginate([org]),
@@ -1180,7 +1183,7 @@ describe("ContractLearnersPage", () => {
 
   test("treats an out-of-range page in the URL as page 1", async () => {
     const { org, contract, orgSlug } = setup()
-    const contractId = String(contract.id)
+    const contractId = contract.id
     setMockResponse.get(
       mitxUrls.organization.managerOrganizationsList(),
       paginate([org]),
@@ -1201,7 +1204,7 @@ describe("ContractLearnersPage", () => {
 
   test("Clear filters resets every filter and only shows while one is active", async () => {
     const { org, contract, orgSlug } = setup()
-    const contractId = String(contract.id)
+    const contractId = contract.id
     setMockResponse.get(
       mitxUrls.organization.managerOrganizationsList(),
       paginate([org]),
@@ -1235,7 +1238,7 @@ describe("ContractLearnersPage", () => {
 
   test("the Completed filter matches passed and certified, with no separate Certificate option", async () => {
     const { org, contract, orgSlug } = setup()
-    const contractId = String(contract.id)
+    const contractId = contract.id
     setMockResponse.get(
       mitxUrls.organization.managerOrganizationsList(),
       paginate([org]),
@@ -1277,7 +1280,7 @@ describe("ContractLearnersPage", () => {
 
   test("a status filter with no matches reads as a filter, not an empty contract", async () => {
     const { org, contract, orgSlug } = setup()
-    const contractId = String(contract.id)
+    const contractId = contract.id
     setMockResponse.get(
       mitxUrls.organization.managerOrganizationsList(),
       paginate([org]),
@@ -1317,11 +1320,11 @@ describe("ContractLearnersPage", () => {
      */
     const renderWithRows = async (
       rows: ReturnType<typeof analyticsFactories.learnerProgress>[],
-      extra?: (contractId: string) => void,
+      extra?: (contractId: number) => void,
       contractWithheldCount = 0,
     ) => {
       const { org, contract, orgSlug } = setup()
-      const contractId = String(contract.id)
+      const contractId = contract.id
       setMockResponse.get(
         mitxUrls.organization.managerOrganizationsList(),
         paginate([org]),
@@ -1647,10 +1650,10 @@ describe("ContractLearnersPage", () => {
   describe("URL state", () => {
     const renderAt = (
       filters: Parameters<typeof contractLearnersView>[2],
-      mock: (contractId: string) => void,
+      mock: (contractId: number) => void,
     ) => {
       const { org, contract, orgSlug } = setup()
-      const contractId = String(contract.id)
+      const contractId = contract.id
       setMockResponse.get(
         mitxUrls.organization.managerOrganizationsList(),
         paginate([org]),
@@ -1786,7 +1789,7 @@ describe("ContractLearnersPage", () => {
 
     test("ignores filter values it does not recognize", async () => {
       const { org, contract, orgSlug } = setup()
-      const contractId = String(contract.id)
+      const contractId = contract.id
       setMockResponse.get(
         mitxUrls.organization.managerOrganizationsList(),
         paginate([org]),
@@ -1927,7 +1930,7 @@ describe("ContractLearnersPage progress grid", () => {
   const M6 = "course-v1:MITx+M6+2026"
 
   const mockGridPage = (
-    contractId: string,
+    contractId: number,
     offset: number,
     rows: ReturnType<typeof analyticsFactories.learnerProgress>[],
     envelopeOverrides: Record<string, unknown> = {},
@@ -1948,7 +1951,7 @@ describe("ContractLearnersPage progress grid", () => {
 
   const renderGrid = (url = "/") => {
     const { org, contract, orgSlug } = setup()
-    const contractId = String(contract.id)
+    const contractId = contract.id
     setMockResponse.get(
       mitxUrls.organization.managerOrganizationsList(),
       paginate([org]),
@@ -2053,6 +2056,79 @@ describe("ContractLearnersPage progress grid", () => {
     ).toBeInTheDocument()
     expect(
       within(ada).getByText(/needs attention: Not started/),
+    ).toBeInTheDocument()
+  })
+
+  test("shows the last activity date under started modules only", async () => {
+    const { contractId } = renderGrid()
+    const ada = {
+      learner_id: "a",
+      email: "ada@example.com",
+      full_name: "Ada Lovelace",
+    }
+    mockGridPage(contractId, 0, [
+      analyticsFactories.learnerProgress({
+        ...ada,
+        courserun_readable_id: M5,
+        completion_status: "in_progress",
+        last_active_on: "2026-09-30",
+      }),
+      analyticsFactories.learnerProgress({
+        ...ada,
+        courserun_readable_id: M6,
+        completion_status: "in_progress",
+        last_active_on: null,
+      }),
+      analyticsFactories.learnerProgress({
+        learner_id: "b",
+        email: "bob@example.com",
+        full_name: "Bob Barker",
+        courserun_readable_id: M5,
+        completion_status: "not_started",
+        last_active_on: "2026-08-01",
+      }),
+      analyticsFactories.learnerProgress({
+        learner_id: "c",
+        email: "carol@example.com",
+        full_name: "Carol Clark",
+        courserun_readable_id: M5,
+        completion_status: "passed",
+        last_active_on: "2026-07-15",
+      }),
+      analyticsFactories.learnerProgress({
+        learner_id: "d",
+        email: "dan@example.com",
+        full_name: "Dan Doe",
+        courserun_readable_id: M5,
+        completion_status: "passed",
+        last_active_on: null,
+      }),
+    ])
+
+    await user.click(await screen.findByRole("tab", { name: "Progress grid" }))
+
+    const adaRow = rowOf(await screen.findByText("Ada Lovelace"))
+    const datedCell = within(adaRow)
+      .getByText("Sep 30, 2026")
+      .closest('[role="cell"]')
+    expect(datedCell).toHaveTextContent("In progress, last active Sep 30, 2026")
+    const noActivityCell = within(adaRow)
+      .getByText("No activity")
+      .closest('[role="cell"]')
+    expect(noActivityCell).toHaveTextContent("In progress, No activity")
+
+    const bobRow = rowOf(screen.getByText("Bob Barker"))
+    expect(within(bobRow).queryByText("Aug 1, 2026")).not.toBeInTheDocument()
+
+    const carolRow = rowOf(screen.getByText("Carol Clark"))
+    expect(within(carolRow).getByText("Jul 15, 2026")).toBeInTheDocument()
+
+    const danRow = rowOf(screen.getByText("Dan Doe"))
+    expect(within(danRow).queryByText("No activity")).not.toBeInTheDocument()
+    expect(
+      within(screen.getByRole("list", { name: "Legend" })).getByText(
+        "Dates show last activity",
+      ),
     ).toBeInTheDocument()
   })
 

@@ -13,10 +13,12 @@ from learning_resources.constants import (
 )
 from learning_resources.etl.constants import ETLSource
 from learning_resources.factories import (
+    ETLSourceOwnershipFactory,
     LearningResourceFactory,
     LearningResourcePlatformFactory,
 )
 from learning_resources.models import (
+    ETLSourceOwnership,
     LearningResource,
     LearningResourceRelationship,
 )
@@ -102,7 +104,6 @@ def test_content_file_delete_webhook_view_canvas_resource_not_found(
             "course-v1:Test+Course+R1",
         ),
         (ETLSource.xpro.name, "course-v1:xPRO+Test+R1", "course-v1:xPRO+Test+R1"),
-        (ETLSource.mit_edx.name, "MITx-1.00x-1T2022", "MITx-1.00x-1T2022"),
         (ETLSource.oll.name, "course-v1:OLL+Test+R1", "course-v1:OLL+Test+R1"),
     ],
 )
@@ -136,6 +137,7 @@ def test_content_file_delete_webhook_view_edx_success(  # noqa: PLR0913
 @pytest.mark.django_db
 @pytest.mark.parametrize(
     "etl_source",
+    # mit_edx is retired, but its webhooks must still get a 200 (see ETLSource)
     [ETLSource.mitxonline.name, ETLSource.xpro.name, ETLSource.mit_edx.name],
 )
 def test_content_file_delete_webhook_view_edx_resource_not_found(
@@ -230,11 +232,6 @@ def test_content_file_webhook_view_canvas_null_id(
             None,
         ),
         (
-            ETLSource.mit_edx.name,
-            "edxorg-raw-data/courses/xml/MITx-1.00x-1T2022/tuvxyz.tar.gz",
-            "MITx-1.00x",
-        ),
-        (
             ETLSource.oll.name,
             "open-learning-library/courses/course-v1:OLL+Test+R1_OLL.tar.gz",
             "course-v1:OLL+Test",
@@ -293,6 +290,20 @@ def ovs_platform(settings):
     return LearningResourcePlatformFactory.create(code=PlatformType.ovs.name)
 
 
+@pytest.fixture
+def webhook_owns_ovs():
+    """Cut OVS over to the webhook, which is what lets the OVS push write"""
+    for resource_type in (
+        LearningResourceType.video_playlist.name,
+        LearningResourceType.video.name,
+    ):
+        ETLSourceOwnershipFactory.create(
+            etl_source=ETLSource.ovs.name,
+            resource_type=resource_type,
+            owner=ETLSourceOwnership.Pipeline.WEBHOOK,
+        )
+
+
 def _ovs_payload(*, key="vid_abc123", for_shorts=False, collection_key="col_abc"):
     return {
         "key": key,
@@ -341,7 +352,7 @@ def _ovs_payload(*, key="vid_abc123", for_shorts=False, collection_key="col_abc"
 
 @pytest.mark.django_db
 def test_ovs_video_webhook_creates_short_and_playlist(
-    settings, client, mocker, ovs_platform
+    settings, client, mocker, ovs_platform, webhook_owns_ovs
 ):
     """Webhook creates a Video LearningResource (Video Short category) and playlist."""
     mocker.patch("webhooks.views.clear_views_cache")
@@ -383,7 +394,7 @@ def test_ovs_video_webhook_creates_short_and_playlist(
 
 @pytest.mark.django_db
 def test_ovs_video_webhook_creates_regular_video(
-    settings, client, mocker, ovs_platform
+    settings, client, mocker, ovs_platform, webhook_owns_ovs
 ):
     """Webhook with for_shorts=False sets resource_category to "Video"."""
     mocker.patch("webhooks.views.clear_views_cache")
@@ -408,7 +419,7 @@ def test_ovs_video_webhook_creates_regular_video(
 
 @pytest.mark.django_db
 def test_ovs_video_webhook_idempotent_no_dup_relationship(
-    settings, client, mocker, ovs_platform
+    settings, client, mocker, ovs_platform, webhook_owns_ovs
 ):
     """Re-sending the same webhook does not create duplicate relationships."""
     mocker.patch("webhooks.views.clear_views_cache")
@@ -444,6 +455,7 @@ def test_ovs_video_webhook_skips_when_no_m3u8_source(
     client,
     mocker,
     ovs_platform,
+    webhook_owns_ovs,
 ):
     """Payload with no m3u8 source returns 200 but creates no resources."""
     mocker.patch("webhooks.views.clear_views_cache")
@@ -462,7 +474,9 @@ def test_ovs_video_webhook_skips_when_no_m3u8_source(
 
 
 @pytest.mark.django_db
-def test_ovs_video_webhook_deletes_existing(settings, client, mocker, ovs_platform):
+def test_ovs_video_webhook_deletes_existing(
+    settings, client, mocker, ovs_platform, webhook_owns_ovs
+):
     """Webhook delete payload removes the matching OVS video resource."""
     mocker.patch("webhooks.views.clear_views_cache")
     LearningResourceFactory.create(
@@ -487,7 +501,7 @@ def test_ovs_video_webhook_deletes_existing(settings, client, mocker, ovs_platfo
 
 
 @pytest.mark.django_db
-def test_ovs_video_webhook_delete_missing(settings, client, mocker):
+def test_ovs_video_webhook_delete_missing(settings, client, mocker, webhook_owns_ovs):
     """Delete for a nonexistent OVS video returns 200 without error."""
     mocker.patch("webhooks.views.clear_views_cache")
     mock_delete = mocker.patch("webhooks.views.resource_delete_actions")
@@ -502,6 +516,53 @@ def test_ovs_video_webhook_delete_missing(settings, client, mocker):
     )
     assert response.status_code == 200
     assert not mock_delete.called
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    "owner",
+    [None, ETLSourceOwnership.Pipeline.LEGACY, ETLSourceOwnership.Pipeline.WAREHOUSE],
+)
+@pytest.mark.parametrize("delete", [True, False])
+def test_ovs_video_webhook_refuses_until_ovs_is_cut_over(  # noqa: PLR0913
+    settings, client, mocker, ovs_platform, owner, delete
+):
+    """The OVS push writes nothing while legacy or the warehouse owns OVS"""
+    if owner:
+        ETLSourceOwnershipFactory.create(
+            etl_source=ETLSource.ovs.name,
+            resource_type=LearningResourceType.video.name,
+            owner=owner,
+        )
+    # owning only one of the two types is not enough
+    ETLSourceOwnershipFactory.create(
+        etl_source=ETLSource.ovs.name,
+        resource_type=LearningResourceType.video_playlist.name,
+        owner=ETLSourceOwnership.Pipeline.WEBHOOK,
+    )
+    LearningResourceFactory.create(
+        readable_id="vid1",
+        platform=ovs_platform,
+        etl_source=ETLSource.ovs.name,
+        resource_type=LearningResourceType.video.name,
+    )
+    mock_load = mocker.patch("webhooks.views.load_ovs_video_from_webhook")
+    mock_delete = mocker.patch("webhooks.views.resource_delete_actions")
+
+    payload = (
+        {"video_id": "vid1", "delete": True} if delete else _ovs_payload(key="vid1")
+    )
+    response = client.post(
+        reverse("webhooks:v1:ovs_video_webhook"),
+        data=json.dumps(payload),
+        content_type="application/json",
+        headers={"X-MITLearn-Signature": get_secret(payload, settings)},
+    )
+
+    assert response.status_code == 409
+    assert "does not own ovs" in response.json()["message"]
+    mock_load.assert_not_called()
+    mock_delete.assert_not_called()
 
 
 @pytest.mark.django_db
@@ -699,3 +760,35 @@ def test_ovs_video_webhook_malformed_payload(settings, client, mocker, payload):
     )
     assert response.status_code == 400
     mock_load.assert_not_called()
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    "owner",
+    [ETLSourceOwnership.Pipeline.WAREHOUSE, ETLSourceOwnership.Pipeline.WEBHOOK],
+)
+def test_content_file_delete_webhook_skips_courses_legacy_does_not_own(
+    settings, client, mocker, owner
+):
+    """The archive delete webhook leaves a course another pipeline owns alone"""
+    ETLSourceOwnershipFactory.create(
+        etl_source=ETLSource.mitxonline.name,
+        resource_type=LearningResourceType.course.name,
+        owner=owner,
+    )
+    LearningResourceFactory.create(
+        etl_source=ETLSource.mitxonline.name,
+        readable_id="course-v1:Test+Course",
+    )
+    mock_delete = mocker.patch("webhooks.views.resource_delete_actions")
+
+    data = {"source": ETLSource.mitxonline.name, "course_id": "course-v1:Test+Course"}
+    response = client.post(
+        reverse("webhooks:v1:content_file_delete_webhook"),
+        data=json.dumps(data),
+        content_type="application/json",
+        headers={"X-MITLearn-Signature": get_secret(data, settings)},
+    )
+
+    assert response.status_code == 200
+    mock_delete.assert_not_called()

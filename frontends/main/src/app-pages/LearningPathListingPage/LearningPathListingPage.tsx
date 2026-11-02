@@ -10,8 +10,8 @@ import {
   styled,
   Typography,
   PlainList,
-  LearningResourceListCard,
-  ListCardActionButton,
+  LearningResourceListCardCondensed,
+  ListCardCondensed,
 } from "ol-components"
 import { Button } from "@mitodl/smoot-design"
 import type { SimpleMenuItem } from "ol-components"
@@ -52,7 +52,7 @@ const EditListMenu: React.FC<{ resource: LearningPathResource }> = ({
   return (
     <SimpleMenu
       trigger={
-        <ListCardActionButton
+        <ListCardCondensed.Action
           variant="secondary"
           edge="circular"
           color="secondary"
@@ -60,7 +60,7 @@ const EditListMenu: React.FC<{ resource: LearningPathResource }> = ({
           aria-label={`Edit list ${resource.title}`}
         >
           <RiMore2Line fontSize="inherit" />
-        </ListCardActionButton>
+        </ListCardCondensed.Action>
       }
       items={items}
     />
@@ -104,7 +104,7 @@ const LearningPathListingPage: React.FC = () => {
               {listingQuery.data.results?.map((resource) => {
                 return (
                   <li key={resource.id}>
-                    <LearningResourceListCard
+                    <LearningResourceListCardCondensed
                       resource={resource}
                       href={urls.learningPathsView(resource.id)}
                       editMenu={

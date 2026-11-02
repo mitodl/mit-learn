@@ -499,8 +499,8 @@ def test_credential_metadata_get_non_mitxonline(client, django_user_model):
     """A non-MITx Online resource is rejected on read as it is on generate"""
     other = LearningResourceFactory.create(
         is_course=True,
-        etl_source=ETLSource.mit_edx.name,
-        platform=LearningResourcePlatformFactory.create(code=PlatformType.edx.name),
+        etl_source=ETLSource.xpro.name,
+        platform=LearningResourcePlatformFactory.create(code=PlatformType.xpro.name),
     )
     client.force_login(django_user_model.objects.create(is_staff=True))
 
@@ -556,8 +556,8 @@ def test_credential_metadata_get_resolves_the_mitxonline_course(
     edx_course = LearningResourceFactory.create(
         is_course=True,
         readable_id=readable_id,
-        etl_source=ETLSource.mit_edx.name,
-        platform=LearningResourcePlatformFactory.create(code=PlatformType.edx.name),
+        etl_source=ETLSource.xpro.name,
+        platform=LearningResourcePlatformFactory.create(code=PlatformType.xpro.name),
     )
     CredentialMetadataFactory.create(
         learning_resource=edx_course, description="The edX one."
@@ -615,8 +615,8 @@ def test_credential_metadata_resolves_the_mitxonline_course(
     LearningResourceFactory.create(
         is_course=True,
         readable_id=readable_id,
-        etl_source=ETLSource.mit_edx.name,
-        platform=LearningResourcePlatformFactory.create(code=PlatformType.edx.name),
+        etl_source=ETLSource.xpro.name,
+        platform=LearningResourcePlatformFactory.create(code=PlatformType.xpro.name),
     )
     expected = mitxonline_course(readable_id)
     client.force_login(django_user_model.objects.create(is_staff=True))

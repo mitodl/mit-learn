@@ -34,14 +34,18 @@ type SignupPopoverProps = Pick<
 >
 const SignupPopover: React.FC<SignupPopoverProps> = (props) => {
   const loginUrl = useAuthToCurrent()
+  const headerId = React.useId()
 
   return (
     <StyledPopover
       {...props}
       open={!!props.anchorEl}
       data-testid="signup-popover"
+      aria-labelledby={headerId}
     >
-      <HeaderText variant="subtitle2">Join {SITE_NAME} for free.</HeaderText>
+      <HeaderText id={headerId} variant="subtitle2">
+        Join {SITE_NAME} for free.
+      </HeaderText>
       <BodyText variant="body2">
         As a member, get personalized recommendations, curate learning lists,
         and follow your areas of interest.

@@ -78,9 +78,10 @@ const CoursePage: React.FC<CoursePageProps> = ({ readableId }) => {
   const effectiveOutlineCoursewareId = course
     ? getOutlineCoursewareId(course)
     : undefined
-  const showCourseOutline = useFeatureFlagEnabled(
+  const outlineFlagEnabled = useFeatureFlagEnabled(
     FeatureFlags.CourseOutlineSection,
   )
+  const showCourseOutline = outlineFlagEnabled && page?.show_course_outline
   const outline = useQuery({
     ...coursesQueries.courseOutline(effectiveOutlineCoursewareId ?? ""),
     enabled: Boolean(showCourseOutline && effectiveOutlineCoursewareId),
@@ -158,7 +159,11 @@ const CoursePage: React.FC<CoursePageProps> = ({ readableId }) => {
       ) : null}
       {page.faqs.length ? <FaqsSection faqs={page.faqs} /> : null}
       {page.testimonials.length ? (
-        <TestimonialsSection testimonials={page.testimonials} />
+        <TestimonialsSection
+          testimonials={page.testimonials}
+          itemReviewedName={page.title}
+          itemReviewedDescription={page.course_details.page?.description}
+        />
       ) : null}
     </ProductPageTemplate>
   )

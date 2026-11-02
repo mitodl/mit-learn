@@ -40,7 +40,7 @@ WORKDIR /src
 RUN --mount=type=cache,target=/opt/uv-cache,uid=1000,gid=1000 \
     uv sync --frozen --no-install-project --no-dev
 
-FROM deps AS final
+FROM deps AS runtime
 
 USER root
 COPY . /src
@@ -54,7 +54,7 @@ ENV PORT=8061
 CMD ["sh", "-c", "exec granian --interface asginl --reload --host 0.0.0.0 --port ${PORT:-8061} --workers ${GRANIAN_WORKERS:-3} --blocking-threads 1 main.asgi:application"]
 
 # ─── Development target (docker compose) ─────────────────────────────────────
-FROM final AS development
+FROM runtime AS development
 
 RUN --mount=type=cache,target=/opt/uv-cache,uid=1000,gid=1000 \
     uv sync --frozen --no-install-project
@@ -66,3 +66,9 @@ FROM development AS local-dev
 USER root
 RUN chown -R mitodl:mitodl /src
 USER mitodl
+
+# ─── Production target ───────────────────────────────────────────────────────
+# MUST BE THE LAST STAGE. A build without --target produces the last stage, and
+# that has to be the production image, not one of the dev targets above. Add
+# new stages above this one.
+FROM runtime AS production

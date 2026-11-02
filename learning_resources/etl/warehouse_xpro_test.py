@@ -12,6 +12,7 @@ from learning_resources.etl import warehouse_xpro, xpro
 from learning_resources.etl.constants import ETLSource
 from learning_resources.etl.exceptions import ExtractException
 from learning_resources.etl.ownership import Pipeline, writing_as
+from learning_resources.etl.shadow import run_shadow
 from learning_resources.factories import (
     ETLSourceOwnershipFactory,
     LearningResourceFactory,
@@ -19,7 +20,7 @@ from learning_resources.factories import (
     LearningResourcePlatformFactory,
     LearningResourceTopicFactory,
 )
-from learning_resources.models import LearningResource
+from learning_resources.models import ETLSourceOwnership, LearningResource
 
 pytestmark = pytest.mark.django_db
 
@@ -53,11 +54,8 @@ def topics():
 
 @pytest.fixture(autouse=True)
 def mock_search(mocker):
-    """Mock out the search index tasks, the topic lookup and the blocklist"""
+    """Mock out the search index tasks and the topic lookup"""
     mocker.patch("learning_resources_search.plugins.get_similar_topics_qdrant")
-    mocker.patch(
-        "learning_resources.etl.loaders.load_course_blocklist", return_value=[]
-    )
     return SimpleNamespace(
         upsert=mocker.patch("learning_resources_search.tasks.upsert_learning_resource"),
         deindex=mocker.patch("learning_resources_search.tasks.deindex_document"),
@@ -405,6 +403,72 @@ def test_sync_programs_loads_and_links_courses(warehouse_owns_xpro, api_programs
         ) == sorted(course["readable_id"] for course in program["courses"])
 
 
+def test_sync_as_a_shadow_compares_without_writing(
+    warehouse_owns_xpro, api_courses, api_programs
+):
+    """A shadow of the warehouse reaches the loaders' comparison and writes nothing"""
+    courses = [course_row(course) for course in api_courses]
+    runs = [run for course in api_courses for run in run_rows(course)]
+    programs = [program_row(program) for program in api_programs]
+    with writing_as(Pipeline.WAREHOUSE):
+        warehouse_xpro.sync_courses(courses, runs)
+        warehouse_xpro.sync_programs(programs)
+    ETLSourceOwnership.objects.filter(etl_source=ETLSource.xpro.name).update(
+        owner=Pipeline.LEGACY, shadow=Pipeline.WAREHOUSE
+    )
+    before = list(LearningResource.objects.order_by("id").values())
+
+    with writing_as(Pipeline.WAREHOUSE):
+        _, [course_report] = run_shadow(
+            [(ETLSource.xpro.name, COURSE)],
+            lambda: warehouse_xpro.sync_courses(courses, runs),
+        )
+        _, [program_report] = run_shadow(
+            [(ETLSource.xpro.name, PROGRAM)],
+            lambda: warehouse_xpro.sync_programs(programs),
+        )
+
+    for report in (course_report, program_report):
+        assert report.error == ""
+        assert report.counts["unchanged"] == report.counts["before"] > 0
+    assert list(LearningResource.objects.order_by("id").values()) == before
+
+
+def test_sync_courses_past_the_unpublish_limit(warehouse_owns_xpro, api_courses):
+    """
+    The owner refuses to unpublish over MAX_UNPUBLISH_SHARE of the courses, and
+    a shadow carries on and reports which ones it would unpublish
+    """
+    courses = [course_row(course) for course in api_courses]
+    runs = [run for course in api_courses for run in run_rows(course)]
+    with writing_as(Pipeline.WAREHOUSE):
+        warehouse_xpro.sync_courses(courses, runs)
+    dropped = (
+        LearningResource.objects.filter(resource_type=COURSE, published=True)
+        .values_list("readable_id", flat=True)
+        .first()
+    )
+    kept = [course for course in courses if course["readable_id"] != dropped]
+
+    with (
+        writing_as(Pipeline.WAREHOUSE),
+        pytest.raises(ExtractException, match="Refusing to sync"),
+    ):
+        warehouse_xpro.sync_courses(kept, runs)
+    ETLSourceOwnership.objects.filter(etl_source=ETLSource.xpro.name).update(
+        owner=Pipeline.LEGACY, shadow=Pipeline.WAREHOUSE
+    )
+    with writing_as(Pipeline.WAREHOUSE):
+        _, [report] = run_shadow(
+            [(ETLSource.xpro.name, COURSE)],
+            lambda: warehouse_xpro.sync_courses(kept, runs),
+        )
+
+    assert report.error == ""
+    assert report.details["unpublished"] == [dropped]
+    assert LearningResource.objects.get(readable_id=dropped).published is True
+
+
 def test_sync_programs_links_the_published_course_over_an_unpublished_copy(
     warehouse_owns_xpro, api_programs
 ):
@@ -501,6 +565,35 @@ def test_sync_courses_counts_only_published_courses_as_pulled(
     assert LearningResource.objects.filter(
         etl_source=ETLSource.xpro.name, published=True
     ).count() == len(api_courses)
+
+
+def test_sync_courses_counts_a_published_course_without_runs_as_unpublished(
+    warehouse_owns_xpro, api_courses
+):
+    """
+    A course whose runs are missing from the runs view is loaded unpublished,
+    so it counts toward the limit
+    """
+    published = [
+        LearningResourceFactory.create(
+            etl_source=ETLSource.xpro.name,
+            resource_type=COURSE,
+            readable_id=course["readable_id"],
+            published=True,
+            platform__code=xpro.XPRO_PLATFORM_TRANSFORM[course["platform"]],
+        )
+        for course in api_courses
+    ]
+
+    with writing_as(Pipeline.WAREHOUSE), pytest.raises(ExtractException):
+        warehouse_xpro.sync_courses(
+            [course_row(course) for course in api_courses],
+            run_rows(api_courses[0]),
+        )
+
+    for resource in published:
+        resource.refresh_from_db()
+        assert resource.published is True
 
 
 def test_sync_programs_refuses_an_empty_view(warehouse_owns_xpro):

@@ -113,7 +113,7 @@ describe("analyticsOrganizationQueries", () => {
   })
 })
 
-const CONTRACT_ID = "101"
+const CONTRACT_ID = 101
 
 describe("analyticsContractQueries", () => {
   test.each([
@@ -191,17 +191,11 @@ describe("analyticsContractQueries", () => {
     expect(key.slice(0, 3)).toEqual(["analytics", "organizations", ORG_UUID])
     expect(key).toContain(CONTRACT_ID)
     expect(
-      analyticsContractQueries.contractUtilization(ORG_UUID, "202").queryKey,
+      analyticsContractQueries.contractUtilization(ORG_UUID, 202).queryKey,
     ).not.toEqual(key)
     // And a contract-scoped result never satisfies an org-scoped read.
     expect(key).not.toEqual(
       analyticsOrganizationQueries.contractUtilization(ORG_UUID).queryKey,
-    )
-  })
-
-  test("the contract id is url-encoded rather than spliced into the path raw", () => {
-    expect(urls.contracts.contractUtilization(ORG_UUID, "a/b")).toContain(
-      "a%2Fb",
     )
   })
 })

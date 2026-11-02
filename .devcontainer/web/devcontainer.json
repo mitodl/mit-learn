@@ -6,7 +6,8 @@
   "name": "Existing Dockerfile",
   "build": {
     "context": "../..",
-    "dockerfile": "../../Dockerfile"
+    "dockerfile": "../../Dockerfile",
+    "target": "development"
   },
   "customizations": {
     "vscode": {

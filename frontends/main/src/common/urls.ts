@@ -254,11 +254,7 @@ export const canonicalResourceDrawerUrl = (
 
 export const querifiedSearchUrl = (
   params:
-    | string
-    | string[][]
-    | URLSearchParams
-    | Record<string, string>
-    | undefined,
+    string | string[][] | URLSearchParams | Record<string, string> | undefined,
 ) => `${SEARCH}?${new URLSearchParams(params).toString()}`
 
 export const SEARCH_NEW = querifiedSearchUrl({ sortby: "new" })
@@ -386,8 +382,6 @@ export const accountAction = (action: AccountAction, next: UrlDescriptor) => {
   url.searchParams.set("next", stringifyUrlDescriptor(next))
   return url.toString()
 }
-
-export const ECOMMERCE_CART = "/cart/" as const
 
 export const B2B_ATTACH_VIEW = "/enrollmentcode/[code]"
 export const b2bAttachView = (code: string) =>

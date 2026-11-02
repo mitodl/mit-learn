@@ -16,7 +16,6 @@ import type { PushUrl } from "../LinkAdapter/LinkAdapter"
 import { BaseLearningResourceCard } from "../BaseLearningResourceCard/BaseLearningResourceCard"
 import type { ActionButtonInfo } from "../BaseLearningResourceCard/BaseLearningResourceCard"
 import { LearningResourceListCard } from "./LearningResourceListCard"
-import { LearningResourceListCardCondensed } from "./LearningResourceListCardCondensed"
 
 type ResourceIdCallback = (
   event: React.MouseEvent<HTMLButtonElement>,
@@ -28,7 +27,6 @@ interface LearningResourceCardProps {
   resource?: LearningResource | null
   className?: string
   size?: Size
-  isMedia?: boolean
   href?: string
   /**
    * If set, a plain click pushes this URL with window.history.pushState
@@ -42,7 +40,6 @@ interface LearningResourceCardProps {
   onClick?: React.MouseEventHandler
   headingLevel?: number
   list?: boolean
-  condensed?: boolean
 }
 
 const LearningResourceCard: React.FC<LearningResourceCardProps> = ({
@@ -50,7 +47,6 @@ const LearningResourceCard: React.FC<LearningResourceCardProps> = ({
   resource,
   className,
   size = "medium",
-  isMedia = false,
   href,
   pushUrl,
   onAddToLearningPathClick,
@@ -60,7 +56,6 @@ const LearningResourceCard: React.FC<LearningResourceCardProps> = ({
   onClick,
   headingLevel = 6,
   list = false,
-  condensed = false,
 }) => {
   const {
     src: imageSrc,
@@ -74,25 +69,7 @@ const LearningResourceCard: React.FC<LearningResourceCardProps> = ({
     DEFAULT_RESOURCE_IMG,
   )
 
-  // Use list card variants if list prop is true
   if (list) {
-    if (condensed) {
-      return (
-        <LearningResourceListCardCondensed
-          isLoading={isLoading}
-          resource={resource}
-          className={className}
-          href={href}
-          pushUrl={pushUrl}
-          onAddToLearningPathClick={onAddToLearningPathClick}
-          onAddToUserListClick={onAddToUserListClick}
-          inUserList={inUserList}
-          inLearningPath={inLearningPath}
-          onClick={onClick}
-          headingLevel={headingLevel}
-        />
-      )
-    }
     return (
       <LearningResourceListCard
         isLoading={isLoading}
@@ -116,7 +93,6 @@ const LearningResourceCard: React.FC<LearningResourceCardProps> = ({
         isLoading
         className={className}
         size={size}
-        isMedia={isMedia}
         headingLevel={headingLevel}
       />
     )
@@ -165,7 +141,6 @@ const LearningResourceCard: React.FC<LearningResourceCardProps> = ({
     <BaseLearningResourceCard
       className={className}
       size={size}
-      isMedia={isMedia}
       href={href}
       pushUrl={pushUrl}
       onClick={onClick}

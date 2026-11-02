@@ -21,8 +21,7 @@ const TEST_PRODUCT_TITLE = "Sample Program"
 const TEST_PRODUCT_READABLE_ID = "sample-program"
 
 type HubspotFormOverride =
-  | Parameters<typeof factories.hubspot.form>[0]
-  | HubspotFormInput
+  Parameters<typeof factories.hubspot.form>[0] | HubspotFormInput
 
 const setupApis = (formOverrides: HubspotFormOverride = {}) => {
   const form = factories.hubspot.form({

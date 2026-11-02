@@ -6,6 +6,7 @@ import Footer from "@/page-components/Footer/Footer"
 import { PageWrapper, PageWrapperInner } from "@/app/styled"
 import { MITLearnGlobalStyles } from "ol-components"
 import SiteProviders from "./SiteProviders"
+import ContactUsLauncherGate from "@/page-components/ContactUsLauncher/ContactUsLauncherGate"
 
 const getGtmConfig = () => {
   const trackingId = process.env.GTM_TRACKING_ID?.trim()
@@ -86,6 +87,7 @@ j=d.createElement(s),dl=l!=='dataLayer'?'&l='+l:'';j.async=true;j.src=
           <PageWrapperInner>{children}</PageWrapperInner>
           <Footer />
         </PageWrapper>
+        <ContactUsLauncherGate />
       </SiteProviders>
       {env("NEXT_PUBLIC_APPZI_URL") ? (
         <Script async src={env("NEXT_PUBLIC_APPZI_URL")} />

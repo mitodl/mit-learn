@@ -26,7 +26,7 @@ function getNonEmptyEnvValue(value: string | undefined): string | undefined {
 export function hasOtlpEndpointConfig(env: OtelEnvSubset): boolean {
   return Boolean(
     getNonEmptyEnvValue(env.OTEL_EXPORTER_OTLP_ENDPOINT) ||
-      getNonEmptyEnvValue(env.OTEL_EXPORTER_OTLP_TRACES_ENDPOINT),
+    getNonEmptyEnvValue(env.OTEL_EXPORTER_OTLP_TRACES_ENDPOINT),
   )
 }
 

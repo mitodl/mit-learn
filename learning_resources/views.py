@@ -1078,14 +1078,14 @@ class ContentFileViewSet(viewsets.ReadOnlyModelViewSet):
 
     serializer_class = ContentFileSerializer
     permission_classes = (AnonymousAccessReadonlyPermission,)
-    queryset = (
-        ContentFile.objects.for_serialization()
-        .filter(published=True)
-        .order_by("-created_on")
-    )
+    queryset = ContentFile.objects.for_serialization().order_by("-created_on")
     filter_backends = [MultipleOptionsFilterBackend]
     filterset_class = ContentFileFilter
     private_fields = ["content"]
+
+    def get_queryset(self):
+        """Return visible content files, ready for serialization"""
+        return super().get_queryset().visible()
 
     def get_serializer(self, *args, **kwargs):
         """

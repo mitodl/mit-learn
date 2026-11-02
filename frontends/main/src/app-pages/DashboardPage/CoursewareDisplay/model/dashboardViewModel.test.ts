@@ -35,6 +35,10 @@ import {
   selectVariantRunForCourse,
   sortVariants,
 } from "./dashboardViewModel"
+import type {
+  RequirementSection,
+  RequirementSectionItem,
+} from "./dashboardViewModel"
 
 const daysFromNow = (days: number) =>
   new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString()
@@ -1742,6 +1746,362 @@ describe("dashboardViewModel", () => {
       })
 
       expect(sections[0].key).toBe(opNode.id)
+    })
+  })
+
+  describe("buildRequirementSections with program tracks", () => {
+    const withCourses = (
+      operator: RequirementTreeBuilder,
+      courseIds: number[],
+    ) => {
+      courseIds.forEach((course) => operator.addCourse({ course }))
+      return operator
+    }
+
+    /**
+     * Core (all_of 101, 102), a tracks container with "General" (all_of 201,
+     * 202) and "Methods" (all_of 201, 203), then a capstone (all_of 301).
+     */
+    const setup = () => {
+      const root = new RequirementTreeBuilder()
+      withCourses(
+        root.addOperator({ operator: "all_of", title: "Core Courses" }),
+        [101, 102],
+      )
+      const container = root.addOperator({
+        operator: "min_number_of",
+        operator_value: "1",
+        title: "Tracks",
+      })
+      const general = container.addTrack({ title: "General" })
+      withCourses(general.addOperator({ operator: "all_of" }), [201, 202])
+      const methods = container.addTrack({ title: "Methods" })
+      withCourses(methods.addOperator({ operator: "all_of" }), [201, 203])
+      withCourses(
+        root.addOperator({ operator: "all_of", title: "Capstone" }),
+        [301],
+      )
+      const programCourses = [101, 102, 201, 202, 203, 301].map((id) =>
+        factories.courses.course({ id }),
+      )
+      return { reqTree: root.serialize(), programCourses, general, methods }
+    }
+
+    const passed = (courseId: number) => [
+      factories.enrollment.courseEnrollment({
+        run: { course: { id: courseId } },
+        grades: [factories.enrollment.grade({ passed: true })],
+      }),
+    ]
+
+    const build = (
+      opts: {
+        track?: "General" | "Methods" | "missing"
+        passedCourseIds?: number[]
+      } = {},
+    ) => {
+      const { reqTree, programCourses, general, methods } = setup()
+      const trackId = {
+        General: general.id,
+        Methods: methods.id,
+        missing: 999999,
+      }[opts.track ?? "missing"]
+      const enrollmentsByCourseId = Object.fromEntries(
+        (opts.passedCourseIds ?? []).map((id) => [id, passed(id)]),
+      )
+      const result = buildRequirementSections({
+        reqTree,
+        programCourses,
+        enrollmentsByCourseId,
+        programEnrollmentsById: {},
+        requiredPrograms: [],
+        requiredProgramModuleCoursesByProgramId: {},
+        ancestorProgramEnrollment: factories.enrollment.programEnrollmentV3({
+          track: opts.track ? { id: trackId, title: opts.track } : null,
+        }),
+      })
+      return { ...result, programCourses, general, methods }
+    }
+
+    const sectionCourseIds = (sections: RequirementSection[]) =>
+      sections.map((section) =>
+        section.items.map((item) =>
+          item.kind === "course" ? item.entry.course.id : null,
+        ),
+      )
+
+    test("shows a track placeholder between the core and the capstone until a track is chosen", () => {
+      const { sections, completedCount, totalCount, trackState } = build({
+        passedCourseIds: [101],
+      })
+      expect(
+        sections.map((s) => [s.title, s.trackAction, s.items.length]),
+      ).toEqual([
+        ["Core Courses", undefined, 2],
+        ["Track courses", "choose", 0],
+        ["Capstone", undefined, 1],
+      ])
+      // The total of 0 hides the placeholder's count.
+      expect([sections[1].completed, sections[1].total]).toEqual([0, 0])
+      // Core (1 of 2) + Capstone (0 of 1); no track counts until one is chosen.
+      expect([completedCount, totalCount]).toEqual([1, 3])
+      expect(trackState?.currentTrack).toBeNull()
+    })
+
+    test("shows no placeholder count even when track courses are passed", () => {
+      const { sections } = build({ passedCourseIds: [203] })
+      const placeholder = sections.find((s) => s.trackAction === "choose")
+      expect([placeholder?.completed, placeholder?.total]).toEqual([0, 0])
+    })
+
+    test("lists every track with its courses", () => {
+      const { trackState, programCourses, general, methods } = build()
+      const course = (id: number) => ({
+        type: "course",
+        id,
+        title: programCourses.find((c) => c.id === id)?.title,
+      })
+      expect(trackState?.tracks).toEqual([
+        {
+          id: general.id,
+          title: "General",
+          description: general.data.description,
+          items: [course(201), course(202)],
+        },
+        {
+          id: methods.id,
+          title: "Methods",
+          description: methods.data.description,
+          items: [course(201), course(203)],
+        },
+      ])
+    })
+
+    test("shows the chosen track between the core and the capstone", () => {
+      const { sections, completedCount, totalCount, trackState } = build({
+        track: "Methods",
+        passedCourseIds: [101, 102, 203, 202],
+      })
+      expect(sections.map((s) => s.title)).toEqual([
+        "Core Courses",
+        "Methods courses",
+        "Capstone",
+      ])
+      expect(sectionCourseIds(sections)).toEqual([
+        [101, 102],
+        [201, 203],
+        [301],
+      ])
+      expect(sections.map((s) => s.trackAction)).toEqual([
+        undefined,
+        "change",
+        undefined,
+      ])
+      // 202 belongs to the other track, so it does not count.
+      expect([completedCount, totalCount]).toEqual([3, 5])
+      expect(trackState?.currentTrack?.title).toBe("Methods")
+    })
+
+    test("treats a track id that is not in the tree as no track", () => {
+      const { sections, trackState } = build({ track: "missing" })
+      expect(sections.map((s) => s.title)).toEqual([
+        "Core Courses",
+        "Track courses",
+        "Capstone",
+      ])
+      expect(trackState?.currentTrack).toBeNull()
+    })
+
+    test("titles each group when a track has more than one", () => {
+      const root = new RequirementTreeBuilder()
+      const track = root
+        .addOperator({ operator: "min_number_of", operator_value: "1" })
+        .addTrack({ title: "Policy" })
+      withCourses(
+        track.addOperator({ operator: "all_of", title: "Required" }),
+        [1],
+      )
+      withCourses(
+        track.addOperator({
+          operator: "min_number_of",
+          operator_value: "1",
+          title: "Electives",
+        }),
+        [2, 3],
+      )
+      const { sections } = buildRequirementSections({
+        reqTree: root.serialize(),
+        programCourses: [1, 2, 3].map((id) => factories.courses.course({ id })),
+        enrollmentsByCourseId: {},
+        programEnrollmentsById: {},
+        requiredPrograms: [],
+        requiredProgramModuleCoursesByProgramId: {},
+        ancestorProgramEnrollment: factories.enrollment.programEnrollmentV3({
+          track: { id: track.id, title: "Policy" },
+        }),
+      })
+      expect(sections.map((s) => [s.title, s.total, s.trackAction])).toEqual([
+        ["Policy: Required", 1, "change"],
+        ["Policy: Electives", 1, undefined],
+      ])
+    })
+
+    test("returns no track state for an untracked program", () => {
+      const root = new RequirementTreeBuilder()
+      root.addOperator({ operator: "all_of" }).addCourse({ course: 1 })
+      const { trackState, otherTrackItems } = buildRequirementSections({
+        reqTree: root.serialize(),
+        programCourses: [factories.courses.course({ id: 1 })],
+        enrollmentsByCourseId: {},
+        programEnrollmentsById: {},
+        requiredPrograms: [],
+        requiredProgramModuleCoursesByProgramId: {},
+      })
+      expect(trackState).toBeNull()
+      expect(otherTrackItems).toEqual([])
+    })
+
+    const itemCourseIds = (items: RequirementSectionItem[]) =>
+      items.map((item) =>
+        item.kind === "course" ? item.entry.course.id : null,
+      )
+
+    test("lists enrolled courses that only another track holds", () => {
+      // 201 is in both tracks, so Methods already shows it; 202 is General's.
+      const { otherTrackItems } = build({
+        track: "Methods",
+        passedCourseIds: [101, 201, 202],
+      })
+      expect(itemCourseIds(otherTrackItems)).toEqual([202])
+    })
+
+    test("lists no other-track courses the learner isn't enrolled in", () => {
+      const { otherTrackItems } = build({
+        track: "Methods",
+        passedCourseIds: [101, 203],
+      })
+      expect(otherTrackItems).toEqual([])
+    })
+
+    test("lists enrolled track courses once each, in tree order, before a track is chosen", () => {
+      const { otherTrackItems } = build({
+        passedCourseIds: [203, 201, 202, 101, 301],
+      })
+      // 101 and 301 are in core and the capstone, which are shown anyway.
+      expect(itemCourseIds(otherTrackItems)).toEqual([201, 202, 203])
+    })
+
+    test("lists a program in another track when the learner is enrolled in one of its courses", () => {
+      const root = new RequirementTreeBuilder()
+      const container = root.addOperator({
+        operator: "min_number_of",
+        operator_value: "1",
+      })
+      const policy = container.addTrack({ title: "Policy" })
+      withCourses(policy.addOperator({ operator: "all_of" }), [1])
+      container
+        .addTrack({ title: "Development" })
+        .addOperator({ operator: "all_of" })
+        .addProgram({ program: 900 })
+      const program = factories.programs.program({
+        id: 900,
+        display_mode: DisplayModeEnum.Course,
+        courses: [11],
+      })
+      const { otherTrackItems } = buildRequirementSections({
+        reqTree: root.serialize(),
+        programCourses: [factories.courses.course({ id: 1 })],
+        enrollmentsByCourseId: { 11: passed(11) },
+        programEnrollmentsById: {},
+        requiredPrograms: [program],
+        requiredProgramModuleCoursesByProgramId: {
+          900: [factories.courses.course({ id: 11 })],
+        },
+        ancestorProgramEnrollment: factories.enrollment.programEnrollmentV3({
+          track: { id: policy.id, title: "Policy" },
+        }),
+      })
+      expect(
+        otherTrackItems.map((item) =>
+          item.kind === "program-as-course" ? item.courseProgram.id : null,
+        ),
+      ).toEqual([900])
+    })
+
+    test("leaves out other-track courses the learner is only enrolled in through a contract", () => {
+      const { reqTree, programCourses, methods } = setup()
+      const { otherTrackItems } = buildRequirementSections({
+        reqTree,
+        programCourses,
+        enrollmentsByCourseId: {
+          202: [
+            factories.enrollment.courseEnrollment({
+              run: { course: { id: 202 } },
+              b2b_contract_id: 5,
+            }),
+          ],
+        },
+        programEnrollmentsById: {},
+        requiredPrograms: [],
+        requiredProgramModuleCoursesByProgramId: {},
+        ancestorProgramEnrollment: factories.enrollment.programEnrollmentV3({
+          track: { id: methods.id, title: "Methods" },
+        }),
+      })
+      expect(otherTrackItems).toEqual([])
+    })
+
+    /**
+     * Policy (chosen) holds `policyItem`; Development holds `devItem`.
+     * Program 900 is a program-as-course whose only module is course 11.
+     */
+    const buildWithNestedProgram = (
+      policyItem: "program" | "course",
+      devItem: "program" | "course",
+    ) => {
+      const root = new RequirementTreeBuilder()
+      const container = root.addOperator({
+        operator: "min_number_of",
+        operator_value: "1",
+      })
+      const add = (track: RequirementTreeBuilder, item: string) => {
+        const op = track.addOperator({ operator: "all_of" })
+        if (item === "program") op.addProgram({ program: 900 })
+        else op.addCourse({ course: 11 })
+      }
+      const policy = container.addTrack({ title: "Policy" })
+      add(policy, policyItem)
+      add(container.addTrack({ title: "Development" }), devItem)
+      const moduleCourse = factories.courses.course({ id: 11 })
+      return buildRequirementSections({
+        reqTree: root.serialize(),
+        programCourses: [moduleCourse],
+        enrollmentsByCourseId: { 11: passed(11) },
+        programEnrollmentsById: {},
+        requiredPrograms: [
+          factories.programs.program({
+            id: 900,
+            display_mode: DisplayModeEnum.Course,
+            courses: [11],
+          }),
+        ],
+        requiredProgramModuleCoursesByProgramId: { 900: [moduleCourse] },
+        ancestorProgramEnrollment: factories.enrollment.programEnrollmentV3({
+          track: { id: policy.id, title: "Policy" },
+        }),
+      })
+    }
+
+    test("does not repeat a course already shown inside a nested program's card", () => {
+      expect(
+        buildWithNestedProgram("program", "course").otherTrackItems,
+      ).toEqual([])
+    })
+
+    test("does not list another track's program just for a course already shown", () => {
+      expect(
+        buildWithNestedProgram("course", "program").otherTrackItems,
+      ).toEqual([])
     })
   })
 

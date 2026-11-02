@@ -13,7 +13,11 @@ import {
   buildRequirementSections,
   getCertificateLink,
 } from "../model/dashboardViewModel"
-import type { RequirementSection } from "../model/dashboardViewModel"
+import type {
+  ProgramTrackState,
+  RequirementSection,
+  RequirementSectionItem,
+} from "../model/dashboardViewModel"
 
 export type ProgramDashboardData = {
   sections: RequirementSection[]
@@ -23,6 +27,10 @@ export type ProgramDashboardData = {
   programCertificateUrl: string | null
   completedCount: number
   totalCount: number
+  /** Present for a tracked program. */
+  trackState: ProgramTrackState | null
+  /** Enrolled items outside the chosen track; empty for an untracked program. */
+  otherTrackItems: RequirementSectionItem[]
   enrolledInProgram: boolean
   isLoading: boolean
   /** Shared aux: course-run enrollments keyed by course id. Used by
@@ -33,8 +41,7 @@ export type ProgramDashboardData = {
    * `ProgramAsCourseCard`. Identical across all program-as-course items
    * in this dashboard (one top-level program per view). */
   ancestorProgramEnrollment:
-    | { readable_id: string; enrollment_mode?: string | null }
-    | undefined
+    { readable_id: string; enrollment_mode?: string | null } | undefined
 }
 
 /**
@@ -147,15 +154,16 @@ const useProgramDashboardData = (programId: number): ProgramDashboardData => {
     requiredProgramCourses?.results ?? [],
   )
 
-  const { sections, completedCount, totalCount } = buildRequirementSections({
-    reqTree: program?.req_tree ?? [],
-    programCourses: allProgramCourses,
-    enrollmentsByCourseId,
-    programEnrollmentsById,
-    requiredPrograms: requiredProgramList,
-    requiredProgramModuleCoursesByProgramId,
-    ancestorProgramEnrollment: programEnrollment,
-  })
+  const { sections, completedCount, totalCount, trackState, otherTrackItems } =
+    buildRequirementSections({
+      reqTree: program?.req_tree ?? [],
+      programCourses: allProgramCourses,
+      enrollmentsByCourseId,
+      programEnrollmentsById,
+      requiredPrograms: requiredProgramList,
+      requiredProgramModuleCoursesByProgramId,
+      ancestorProgramEnrollment: programEnrollment,
+    })
 
   // --- shared aux for non-course arms ---
 
@@ -180,6 +188,8 @@ const useProgramDashboardData = (programId: number): ProgramDashboardData => {
     programCertificateUrl,
     completedCount,
     totalCount,
+    trackState,
+    otherTrackItems,
     enrolledInProgram: Boolean(enrolledInProgram),
     isLoading,
     enrollmentsByCourseId,

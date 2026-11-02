@@ -169,49 +169,6 @@ def program_with_visibility_children():
     return program_lr
 
 
-@pytest.mark.parametrize("url", [None, "http://test.me"])
-def test_load_blocklist(url, settings, mocker):
-    """Test that a list of course ids is fetched, returned, and cached on a cache miss"""
-    settings.BLOCKLISTED_COURSES_URL = url
-    file_content = [b"MITX_Test1_FAKE", b"MITX_Test2_Fake", b"OCW_Test_Fake"]
-    mock_caches = mocker.patch("learning_resources.utils.caches")
-    mock_cache = mock_caches.__getitem__.return_value
-    mock_cache.get.return_value = None
-    mock_request = mocker.patch(
-        "requests.get",
-        autospec=True,
-        return_value=mocker.Mock(iter_lines=mocker.Mock(return_value=file_content)),
-    )
-    blocklist = utils.load_course_blocklist()
-    if url is None:
-        mock_request.assert_not_called()
-        mock_caches.__getitem__.assert_not_called()
-        assert blocklist == []
-    else:
-        mock_caches.__getitem__.assert_called_with("redis")
-        mock_cache.get.assert_called_once_with("course_blocklist")
-        mock_request.assert_called_once_with(url, timeout=settings.REQUESTS_TIMEOUT)
-        assert blocklist == [str(id, "utf-8") for id in file_content]  # noqa: A001
-        mock_cache.set.assert_called_once_with(
-            "course_blocklist", blocklist, timeout=utils.BLOCKLIST_CACHE_TIMEOUT
-        )
-
-
-@pytest.mark.parametrize("cached_ids", [[], ["MITX_Test1_FAKE"]])
-def test_load_blocklist_cached(cached_ids, settings, mocker):
-    """A cached blocklist (even an empty one) is returned without fetching from GitHub"""
-    settings.BLOCKLISTED_COURSES_URL = "http://test.me"
-    mock_caches = mocker.patch("learning_resources.utils.caches")
-    mock_cache = mock_caches.__getitem__.return_value
-    mock_cache.get.return_value = cached_ids
-    mock_request = mocker.patch("requests.get", autospec=True)
-    assert utils.load_course_blocklist() == cached_ids
-    mock_caches.__getitem__.assert_called_with("redis")
-    mock_cache.get.assert_called_once_with("course_blocklist")
-    mock_request.assert_not_called()
-    mock_cache.set.assert_not_called()
-
-
 def test_safe_load_bad_json(mocker):
     """Test that safe_load_json returns an empty dict for invalid JSON"""
     mock_logger = mocker.patch("learning_resources.utils.log.exception")
@@ -763,6 +720,14 @@ def test_token_encoding_falls_back_for_unknown_models(mocker, settings):
 
     assert utils.token_encoding("some-frontier-model") == get_encoding.return_value
     get_encoding.assert_called_once_with(utils.FALLBACK_ENCODING_NAME)
+
+
+@pytest.mark.parametrize("model", ["gpt-4o", "azure/gpt-4o"])
+def test_token_encoding_ignores_azure_prefix(settings, model):
+    """An azure/ model is tokenized like the OpenAI model it deploys"""
+    settings.LITELLM_TOKEN_ENCODING_NAME = "cl100k_base"  # noqa: S105
+
+    assert utils.token_encoding(model).name == "o200k_base"
 
 
 def test_count_tokens(mocker):

@@ -276,7 +276,11 @@ const ProgramAsCoursePage: React.FC<ProgramAsCoursePageProps> = ({
       ) : null}
       {page.faqs.length ? <FaqsSection faqs={page.faqs} /> : null}
       {page.testimonials.length ? (
-        <TestimonialsSection testimonials={page.testimonials} />
+        <TestimonialsSection
+          testimonials={page.testimonials}
+          itemReviewedName={page.title}
+          itemReviewedDescription={page.program_details.page?.description}
+        />
       ) : null}
     </ProductPageTemplate>
   )

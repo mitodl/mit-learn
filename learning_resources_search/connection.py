@@ -14,6 +14,7 @@ from learning_resources_search.constants import (
     ALL_INDEX_TYPES,
     IndexestoUpdate,
 )
+from main.azure_openai import strip_azure_prefix
 
 
 def configure_connections():
@@ -160,7 +161,9 @@ def create_openai_embedding_connector_and_model(
         "version": "0.1",
         "protocol": "http",
         "parameters": {
-            "model": openai_model,
+            # the connector calls OpenAI directly, even when the app embeds
+            # through Azure
+            "model": strip_azure_prefix(openai_model),
         },
         "credential": {"openAI_key": settings.OPENAI_API_KEY},
         "actions": [

@@ -103,6 +103,39 @@ def _relative_score_floor(points, hybrid_search_enabled, ratio_override=None):
     ]
 
 
+def _payload_selector(collection_name):
+    """Return the payload fields a search of `collection_name` hands back."""
+    if collection_name == RESOURCES_COLLECTION_NAME:
+        return resources_payload_selector()
+    return CONTENT_FILES_RETRIEVE_PAYLOAD
+
+
+async def _retrieve_payloads(client, collection_name, points, with_payload):
+    """
+    Attach payloads to the points of a query or scroll run with
+    `with_payload=False`.
+
+    Records are matched to points by id, so the points keep their scores and
+    order. A point deleted since the query has no record and drops out, as it
+    does when Qdrant fills payloads itself.
+    """
+    if not points:
+        return points
+    records = await client.retrieve(
+        collection_name=collection_name,
+        ids=[point.id for point in points],
+        with_payload=with_payload,
+        with_vectors=False,
+    )
+    payloads = {record.id: record.payload for record in records}
+    hits = []
+    for point in points:
+        if point.id in payloads:
+            point.payload = payloads[point.id]
+            hits.append(point)
+    return hits
+
+
 def _sort_key(x, field):
     descending = isinstance(field, str) and field.startswith("-")
     field_name = field[1:] if descending else field
@@ -156,9 +189,14 @@ class QdrantView(AsyncAPIView):
             "collection_name": search_collection,
             "query_filter": search_filter,
             "with_vectors": False,
-            "with_payload": resources_payload_selector()
-            if search_collection == RESOURCES_COLLECTION_NAME
-            else CONTENT_FILES_RETRIEVE_PAYLOAD,
+            # A root fusion query (hybrid search) is merged on the node that
+            # combines the shards, so every shard sends it each prefetch's
+            # candidates, with payloads if asked. Qdrant's own deferral guard
+            # counts only limit + offset, so it doesn't fire at offset 0
+            # (https://github.com/qdrant/qdrant/blob/v1.20.0/lib/collection/src/collection/query.rs#L217-L242).
+            # _async_vector_hits retrieves the final page's payloads; grouped
+            # searches set their own (_execute_group_search).
+            "with_payload": False,
             "search_params": models.SearchParams(
                 quantization=models.QuantizationSearchParams(
                     ignore=False,
@@ -337,11 +375,10 @@ class QdrantView(AsyncAPIView):
             "collection_name": search_collection,
             "scroll_filter": search_filter,
             "with_vectors": False,
-            # Scroll otherwise defaults to the entire payload, transcripts and
-            # all -- ask for the same fields the query path does.
-            "with_payload": resources_payload_selector()
-            if search_collection == RESOURCES_COLLECTION_NAME
-            else CONTENT_FILES_RETRIEVE_PAYLOAD,
+            # Payloads are retrieved for the page afterwards (_async_vector_hits);
+            # with payloads here, each shard would send them for the whole window
+            # (offset + limit), skipped points included.
+            "with_payload": False,
         }
 
         if order_by:
@@ -419,6 +456,7 @@ class QdrantView(AsyncAPIView):
         search_filter = qdrant_query_conditions(
             params, collection_name=search_collection
         )
+        grouped = bool(query_string) and "group_by" in params
 
         if query_string:
             prefetch_multiplier = getattr(
@@ -446,27 +484,30 @@ class QdrantView(AsyncAPIView):
                 score_formula_overrides(params),
             )
 
-            if "group_by" in params:
+            if grouped:
+                # Qdrant's group_by fetches candidates with only the group_by
+                # field and fills payloads for the final groups only.
                 search_result = await self._execute_group_search(
                     client, search_params, params
                 )
-            elif order_by:
-                # Qdrant's query_points does not support offset with
-                # OrderByQuery.  Fetch offset+limit results and slice
-                # manually on the client side.
-                search_params["limit"] = offset + limit
-                result_obj = await client.query_points(**search_params)
-                search_result = result_obj.points[offset : offset + limit]
             else:
-                search_params["offset"] = offset
-                result_obj = await client.query_points(**search_params)
-                search_result = result_obj.points
-            if "group_by" not in params and score_cutoff is not None:
-                search_result = _relative_score_floor(
-                    search_result,
-                    hybrid_search,
-                    ratio_override=params.get("score_cutoff_ratio"),
-                )
+                if order_by:
+                    # Qdrant's query_points does not support offset with
+                    # OrderByQuery.  Fetch offset+limit results and slice
+                    # manually on the client side.
+                    search_params["limit"] = offset + limit
+                    result_obj = await client.query_points(**search_params)
+                    search_result = result_obj.points[offset : offset + limit]
+                else:
+                    search_params["offset"] = offset
+                    result_obj = await client.query_points(**search_params)
+                    search_result = result_obj.points
+                if score_cutoff is not None:
+                    search_result = _relative_score_floor(
+                        search_result,
+                        hybrid_search,
+                        ratio_override=params.get("score_cutoff_ratio"),
+                    )
         else:
             # No query string — use scroll API
             search_result = await self._execute_scroll_search(
@@ -476,6 +517,16 @@ class QdrantView(AsyncAPIView):
                 limit,
                 offset,
                 order_by,
+            )
+
+        if not grouped:
+            # Queries and scrolls run without payloads (_build_search_params,
+            # _execute_scroll_search), so nothing above may read them.
+            search_result = await _retrieve_payloads(
+                client,
+                search_collection,
+                search_result,
+                _payload_selector(search_collection),
             )
 
         if search_collection == RESOURCES_COLLECTION_NAME:

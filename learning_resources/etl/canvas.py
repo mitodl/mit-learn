@@ -23,10 +23,8 @@ from learning_resources.etl.canvas_utils import (
     parse_canvas_settings,
 )
 from learning_resources.etl.constants import ETLSource
-from learning_resources.etl.utils import (
-    get_edx_module_id,
-    process_olx_path,
-)
+from learning_resources.etl.olx import get_edx_module_id
+from learning_resources.etl.utils import process_olx_path
 from learning_resources.models import (
     LearningResource,
     LearningResourcePlatform,

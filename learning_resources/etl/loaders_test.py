@@ -41,6 +41,7 @@ from learning_resources.etl.loaders import (
     load_content_file,
     load_content_files,
     load_course,
+    load_course_units,
     load_courses,
     load_image,
     load_instructors,
@@ -68,6 +69,11 @@ from learning_resources.etl.loaders import (
     unpublish_removed_youtube_channels,
 )
 from learning_resources.etl.mitxonline import transform_programs
+from learning_resources.etl.ownership import (
+    CONTENT_FILE,
+    OwnershipError,
+    shadowing,
+)
 from learning_resources.etl.utils import get_s3_prefix_for_source
 from learning_resources.etl.xpro import _parse_datetime
 from learning_resources.factories import (
@@ -104,6 +110,7 @@ from learning_resources.models import (
     PodcastEpisode,
     Program,
     TutorProblemFile,
+    Unit,
     Video,
 )
 from learning_resources.test_utils import set_up_topics
@@ -139,14 +146,6 @@ def climate_platform():
 def ovs_platform():
     """Fixture for an OVS video platform"""
     return LearningResourcePlatformFactory.create(code=PlatformType.ovs.name)
-
-
-@pytest.fixture(autouse=True)
-def mock_blocklist(mocker):
-    """Mock the load_course_blocklist function"""
-    return mocker.patch(
-        "learning_resources.etl.loaders.load_course_blocklist", return_value=[]
-    )
 
 
 @pytest.fixture
@@ -291,7 +290,6 @@ def test_load_program(  # noqa: PLR0913
             ],
             **delivery_data,
         },
-        [],
     )
 
     assert Program.objects.count() == 1
@@ -359,7 +357,6 @@ def test_load_program_preserves_preset_resource_category(mock_upsert_tasks):
             "courses": [],
             "resource_category": LearningResourceType.course.value,
         },
-        [],
     )
 
     assert result.resource_category == LearningResourceType.course.value
@@ -393,7 +390,6 @@ def test_load_program_defaults_resource_category(mock_upsert_tasks):
             "runs": [run_data],
             "courses": [],
         },
-        [],
     )
 
     assert result.resource_category == LearningResourceType.program.value
@@ -479,7 +475,7 @@ def test_load_program_bad_platform(mocker):
         "published": True,
         "courses": [],
     }
-    result, _, _ = load_program(props, [], config=ProgramLoaderConfig(prune=True))
+    result, _, _ = load_program(props, config=ProgramLoaderConfig(prune=True))
     assert result is None
     mock_log.assert_called_once_with(
         "Platform %s is null or not in database: %s", bad_platform, "abc123"
@@ -489,7 +485,6 @@ def test_load_program_bad_platform(mocker):
 @pytest.mark.parametrize("course_exists", [True, False])
 @pytest.mark.parametrize("is_published", [True, False])
 @pytest.mark.parametrize("is_run_published", [True, False])
-@pytest.mark.parametrize("blocklisted", [False, True])
 @pytest.mark.parametrize("delivery", [LearningResourceDelivery.hybrid.name, None])
 @pytest.mark.parametrize("has_upcoming_run", [True, False])
 @pytest.mark.parametrize("has_departments", [True, False])
@@ -498,7 +493,6 @@ def test_load_course(  # noqa: PLR0913, PLR0912, PLR0915
     course_exists,
     is_published,
     is_run_published,
-    blocklisted,
     delivery,
     has_upcoming_run,
     has_departments,
@@ -603,12 +597,10 @@ def test_load_course(  # noqa: PLR0913, PLR0912, PLR0915
     else:
         props["runs"] = []
 
-    blocklist = [learning_resource.readable_id] if blocklisted else []
-
-    result = load_course(props, blocklist, config=CourseLoaderConfig(prune=True))
+    result = load_course(props, config=CourseLoaderConfig(prune=True))
     assert result.professional is True
 
-    if is_published and is_run_published and not blocklisted and has_upcoming_run:
+    if is_published and is_run_published and has_upcoming_run:
         assert result.next_start_date == start_date
     else:
         assert result.next_start_date is None
@@ -623,11 +615,11 @@ def test_load_course(  # noqa: PLR0913, PLR0912, PLR0915
         else []
     )
 
-    if course_exists and ((not is_published or not is_run_published) or blocklisted):
+    if course_exists and (not is_published or not is_run_published):
         mock_upsert_tasks.deindex_learning_resource_immutable_signature.assert_called_with(
             result.id, result.resource_type
         )
-    elif is_published and is_run_published and not blocklisted:
+    elif is_published and is_run_published:
         mock_upsert_tasks.upsert_learning_resource_immutable_signature.assert_called_with(
             result.id
         )
@@ -635,7 +627,7 @@ def test_load_course(  # noqa: PLR0913, PLR0912, PLR0915
         mock_upsert_tasks.deindex_learning_resource_immutable_signature.assert_not_called()
         mock_upsert_tasks.upsert_learning_resource_immutable_signature.assert_not_called()
 
-    if course_exists and is_published and not blocklisted:
+    if course_exists and is_published:
         course.refresh_from_db()
         assert course.learning_resource.runs.last().published is is_run_published
         assert course.learning_resource.published == (is_published and is_run_published)
@@ -700,7 +692,7 @@ def test_load_course_updates_course_numbers(mock_upsert_tasks):
         "course": {"course_numbers": new_course_numbers},
     }
 
-    load_course(props, [], config=CourseLoaderConfig(prune=True))
+    load_course(props, config=CourseLoaderConfig(prune=True))
 
     assert Course.objects.count() == 1
     course.refresh_from_db()
@@ -729,7 +721,7 @@ def test_load_course_bad_platform(mocker):
             }
         ],
     }
-    result = load_course(props, [], config=CourseLoaderConfig(prune=True))
+    result = load_course(props, config=CourseLoaderConfig(prune=True))
     assert result is None
     mock_log.assert_called_once_with(
         "Platform %s is null or not in database: %s", bad_platform, "abc123"
@@ -780,7 +772,7 @@ def test_load_course_prune_preserves_checksum_on_unpublished_runs():
         ],
     }
 
-    load_course(props, [], config=CourseLoaderConfig(prune=True))
+    load_course(props, config=CourseLoaderConfig(prune=True))
 
     retained_run.refresh_from_db()
     pruned_run.refresh_from_db()
@@ -834,7 +826,6 @@ def test_load_program_prune_preserves_checksum_on_unpublished_runs():
             ],
             "courses": [],
         },
-        [],
     )
 
     retained_run.refresh_from_db()
@@ -878,7 +869,7 @@ def test_load_course_unique_urls(unique_url):
             }
         ],
     }
-    result = load_course(props, [])
+    result = load_course(props)
     assert result.readable_id == readable_id
     assert result.url == unique_url
     assert result.published is True
@@ -921,7 +912,7 @@ def test_load_course_old_id_new_url():
             }
         ],
     }
-    result = load_course(props, [])
+    result = load_course(props)
     assert result.readable_id == readable_id
     assert result.url == unique_url
     assert result.published is True
@@ -948,7 +939,7 @@ def test_load_course_fetch_only(mocker, course_exists):
         "platform": platform.code,
         "offered_by": {"code": OfferedBy.ocw.name},
     }
-    result = load_course(props, [], config=CourseLoaderConfig(fetch_only=True))
+    result = load_course(props, config=CourseLoaderConfig(fetch_only=True))
     if course_exists:
         assert result == resource
         mock_warn.assert_not_called()
@@ -1071,7 +1062,7 @@ def test_load_run_none_instructors_and_prices_leave_existing_values_alone(mocker
 
 @pytest.mark.parametrize(
     "etl_source",
-    [ETLSource.mit_edx.value, ETLSource.mitxonline.value, ETLSource.xpro.value],
+    [ETLSource.mitxonline.value, ETLSource.xpro.value],
 )
 @pytest.mark.django_db(transaction=True)
 def test_load_run_calls_import_content_files_for_best_run(mocker, etl_source):
@@ -1117,7 +1108,7 @@ def test_load_run_calls_import_content_files_for_best_run(mocker, etl_source):
 
 @pytest.mark.parametrize(
     "etl_source",
-    [ETLSource.mit_edx.value, ETLSource.mitxonline.value, ETLSource.xpro.value],
+    [ETLSource.mitxonline.value, ETLSource.xpro.value],
 )
 @pytest.mark.parametrize("run_exists", [True, False])
 @pytest.mark.django_db(transaction=True)
@@ -1181,7 +1172,7 @@ def test_load_run_calls_import_content_files_for_test_mode(
 
 @pytest.mark.parametrize(
     "etl_source",
-    [ETLSource.mit_edx.value, ETLSource.mitxonline.value, ETLSource.xpro.value],
+    [ETLSource.mitxonline.value, ETLSource.xpro.value],
 )
 def test_load_run_skips_import_content_files_for_non_best_run_published_course(
     mocker, etl_source
@@ -1265,7 +1256,7 @@ def test_load_run_skips_import_content_files_for_unsupported_sources(
 
 @pytest.mark.parametrize(
     "etl_source",
-    [ETLSource.mit_edx.value, ETLSource.mitxonline.value, ETLSource.xpro.value],
+    [ETLSource.mitxonline.value, ETLSource.xpro.value],
 )
 @pytest.mark.django_db(transaction=True)
 def test_load_run_skips_import_content_files_when_content_files_exist(
@@ -1340,7 +1331,6 @@ def test_load_run_content_files_loaded_actions_only_on_republish(mocker, new_pub
     [
         ETLSource.mitxonline.value,
         ETLSource.xpro.value,
-        ETLSource.mit_edx.value,
         ETLSource.oll.value,
     ],
 )
@@ -1528,7 +1518,7 @@ def test_load_offered_bys(
 
 
 @pytest.mark.parametrize("prune", [True, False])
-def test_load_courses(mocker, mock_blocklist, prune):
+def test_load_courses(mocker, prune):
     """Test that load_courses calls the expected functions"""
 
     course_to_unpublish = CourseFactory.create(etl_source=ETLSource.xpro.name)
@@ -1547,18 +1537,13 @@ def test_load_courses(mocker, mock_blocklist, prune):
     load_courses(ETLSource.xpro.name, courses_data, config=config)
     assert mock_load_course.call_count == len(courses)
     for course_data in courses_data:
-        mock_load_course.assert_any_call(
-            course_data,
-            mock_blocklist.return_value,
-            config=config,
-        )
-    mock_blocklist.assert_called_once_with()
+        mock_load_course.assert_any_call(course_data, config=config)
     course_to_unpublish.refresh_from_db()
     assert course_to_unpublish.learning_resource.published is not prune
 
 
 @pytest.mark.parametrize("prune_empty", [True, False])
-def test_load_courses_empty(mock_blocklist, prune_empty):
+def test_load_courses_empty(prune_empty):
     """An empty course set prunes the source only when prune_empty is set"""
     course = CourseFactory.create(etl_source=ETLSource.xpro.name)
     test_mode_course = CourseFactory.create(
@@ -1576,6 +1561,36 @@ def test_load_courses_empty(mock_blocklist, prune_empty):
     test_mode_course.refresh_from_db()
     assert course.learning_resource.published is not prune_empty
     assert test_mode_course.learning_resource.published is True
+
+
+@pytest.mark.parametrize("resource_type", ["course", "program"])
+def test_prune_leaves_unpublished_resources_alone(mocker, resource_type):
+    """A prune doesn't save or requeue search removal for one already unpublished"""
+    factory = CourseFactory if resource_type == "course" else ProgramFactory
+    published = factory.create(learning_resource__etl_source=ETLSource.mitpe.name)
+    unpublished = factory.create(
+        learning_resource__etl_source=ETLSource.mitpe.name,
+        learning_resource__published=False,
+    )
+    updated_on = unpublished.learning_resource.updated_on
+    mock_unpublished_actions = mocker.patch(
+        "learning_resources.etl.loaders.resource_unpublished_actions"
+    )
+
+    if resource_type == "course":
+        load_courses(
+            ETLSource.mitpe.name, [], config=CourseLoaderConfig(prune_empty=True)
+        )
+    else:
+        load_programs(
+            ETLSource.mitpe.name, [], config=ProgramLoaderConfig(prune_empty=True)
+        )
+
+    published.learning_resource.refresh_from_db()
+    unpublished.learning_resource.refresh_from_db()
+    assert published.learning_resource.published is False
+    assert unpublished.learning_resource.updated_on == updated_on
+    mock_unpublished_actions.assert_called_once_with(published.learning_resource)
 
 
 def test_load_courses_skips_write_when_not_owned(mocker):
@@ -1603,7 +1618,7 @@ def test_load_courses_skips_write_when_not_owned(mocker):
     assert course_to_unpublish.learning_resource.published is True
 
 
-def test_load_programs(mocker, mock_blocklist):
+def test_load_programs(mocker):
     """Test that load_programs calls the expected functions"""
     program_data = [{"courses": [{"platform": "a"}, {}], "id": 5}]
 
@@ -1618,11 +1633,10 @@ def test_load_programs(mocker, mock_blocklist):
     )
     load_programs("mitx", program_data, config=ProgramLoaderConfig(prune=True))
     assert mock_load_program.call_count == len(program_data)
-    mock_blocklist.assert_called_once()
 
 
 @pytest.mark.parametrize("prune_empty", [True, False])
-def test_load_programs_empty(mock_blocklist, prune_empty):
+def test_load_programs_empty(prune_empty):
     """An empty program set prunes the source only when prune_empty is set"""
     program = ProgramFactory.create(learning_resource__etl_source=ETLSource.mitpe.name)
 
@@ -1844,7 +1858,6 @@ def test_load_program_honors_explicit_course_position(mock_upsert_tasks):
             "availability": program.learning_resource.availability,
             "courses": program_courses,
         },
-        [],
     )
 
     positions_by_readable = {
@@ -2149,20 +2162,27 @@ def test_load_content_files_does_not_update_already_unpublished_stale_files(mock
     assert stale_unpublished_file.updated_on == old_timestamp
 
 
-def test_load_content_files_failed_keys_stay_published(mocker):
-    """Contentfiles whose extraction failed are not unpublished as stale"""
+@pytest.mark.parametrize("has_release_date", [False, True])
+def test_load_content_files_failed_keys_untouched(mocker, has_release_date):
+    """
+    Only files missing from this load are unpublished: failed ones, and a loaded
+    one's direct resource, are left alone. release_date is never cleared.
+    """
     course = LearningResourceFactory.create(is_course=True, create_runs=False)
     course_run = LearningResourceRunFactory.create(
         published=True, learning_resource=course
     )
-    loaded_cf = ContentFileFactory.create(
-        run=course_run, published=True, key="loaded-key"
-    )
-    failed_cf = ContentFileFactory.create(
-        run=course_run, published=True, key="failed-key"
-    )
-    stale_cf = ContentFileFactory.create(
-        run=course_run, published=True, key="stale-key"
+    release_date = now_in_utc() + timedelta(days=5) if has_release_date else None
+    direct_resource = LearningResourceFactory.create(published=True)
+    loaded_cf, failed_cf, stale_cf = (
+        ContentFileFactory.create(
+            run=course_run,
+            published=True,
+            key=key,
+            release_date=release_date,
+            direct_learning_resource=direct_resource if key == "loaded-key" else None,
+        )
+        for key in ("loaded-key", "failed-key", "stale-key")
     )
 
     mocker.patch(
@@ -2183,10 +2203,52 @@ def test_load_content_files_failed_keys_stay_published(mocker):
 
     assert result == [loaded_cf.id]
 
-    failed_cf.refresh_from_db()
+    for obj in (loaded_cf, failed_cf, stale_cf, direct_resource):
+        obj.refresh_from_db()
+    assert (loaded_cf.published, loaded_cf.release_date) == (True, release_date)
+    assert direct_resource.published is True
+    assert (failed_cf.published, failed_cf.release_date) == (True, release_date)
+    assert (stale_cf.published, stale_cf.release_date) == (False, release_date)
+
+
+@pytest.mark.parametrize(
+    ("owner", "writes"),
+    [
+        (ETLSourceOwnership.Pipeline.LEGACY, True),
+        (ETLSourceOwnership.Pipeline.WAREHOUSE, False),
+    ],
+)
+def test_load_content_files_skips_write_when_not_owned(mocker, owner, writes):
+    """load_content_files writes and prunes only when legacy owns the source's content files"""
+    course = LearningResourceFactory.create(
+        is_course=True, create_runs=False, etl_source=ETLSource.xpro.name
+    )
+    course_run = LearningResourceRunFactory.create(
+        published=True, learning_resource=course
+    )
+    ETLSourceOwnershipFactory.create(
+        etl_source=ETLSource.xpro.name, resource_type=CONTENT_FILE, owner=owner
+    )
+    kept_cf = ContentFileFactory.create(run=course_run, published=True)
+    stale_cf = ContentFileFactory.create(run=course_run, published=True)
+
+    mock_load_content_file = mocker.patch(
+        "learning_resources.etl.loaders.load_content_file",
+        return_value=kept_cf.id,
+        autospec=True,
+    )
+    mock_loaded_actions = mocker.patch(
+        "learning_resources.etl.loaders.content_files_loaded_actions",
+        autospec=True,
+    )
+
+    result = load_content_files(course_run, [{"key": kept_cf.key}])
+
+    assert result == ([kept_cf.id] if writes else [])
+    assert mock_load_content_file.called is writes
+    assert mock_loaded_actions.called is writes
     stale_cf.refresh_from_db()
-    assert failed_cf.published is True
-    assert stale_cf.published is False
+    assert stale_cf.published is not writes
 
 
 @pytest.mark.parametrize("test_mode", [True, False])
@@ -2200,7 +2262,7 @@ def test_load_test_mode_resource_content_files(
         create_runs=False,
         test_mode=test_mode,
         published=False,
-        etl_source=ETLSource.mit_edx.name,
+        etl_source=ETLSource.xpro.name,
     )
     course_run = LearningResourceRunFactory.create(
         published=True, learning_resource=course, checksum="testing124"
@@ -3240,13 +3302,17 @@ def test_load_videos_from_content_files(mocker, match_ratio, expected_result):
 
 
 @pytest.mark.parametrize(
-    ("content_file_published", "run_published"),
-    [(False, True), (True, False)],
+    ("content_file_published", "run_published", "release_date"),
+    [
+        pytest.param(False, True, None, id="unpublished-file"),
+        pytest.param(True, False, None, id="unpublished-run"),
+        pytest.param(True, True, now_in_utc() + timedelta(days=1), id="future-release"),
+    ],
 )
-def test_load_videos_from_content_files_skips_unpublished(
-    mocker, content_file_published, run_published
+def test_load_videos_from_content_files_skips_hidden(
+    mocker, content_file_published, run_published, release_date
 ):
-    """An unpublished content file, or one on an unpublished run, is not matched"""
+    """Unpublished, unreleased or unpublished-run content files are not matched"""
     mock_load = mocker.patch(
         "learning_resources.etl.loaders.load_video_with_content_file",
     )
@@ -3254,6 +3320,7 @@ def test_load_videos_from_content_files_skips_unpublished(
         run=LearningResourceRunFactory.create(published=run_published),
         youtube_id="yt_id",
         published=content_file_published,
+        release_date=release_date,
     )
 
     assert load_videos_from_content_files(iter([{"youtube_id": "yt_id"}])) is None
@@ -3649,7 +3716,6 @@ def test_load_course_percolation(
     course_exists,
 ):
     """Test loading a new course triggers percolation"""
-    blocklisted = False
     is_published = True
     is_run_published = True
     """Test that load_course loads the course"""
@@ -3694,8 +3760,7 @@ def test_load_course_percolation(
     else:
         props["runs"] = []
 
-    blocklist = [learning_resource.readable_id] if blocklisted else []
-    result = load_course(props, blocklist, config=CourseLoaderConfig(prune=True))
+    result = load_course(props, config=CourseLoaderConfig(prune=True))
     mock_upsert_tasks.upsert_learning_resource_immutable_signature.assert_called_with(
         result.id
     )
@@ -3994,28 +4059,9 @@ def test_course_with_unpublished_force_ingest_is_test_mode():
             }
         ],
     }
-    course = load_course(course_data, [])
+    course = load_course(course_data)
     assert course.require_summaries is True
     assert course.test_mode is True
-    assert course.published is False
-
-
-@pytest.mark.parametrize("force_ingest", [True, False])
-def test_load_course_blocklist_clears_test_mode(force_ingest):
-    """A blocklisted course leaves test_mode, even when force ingested"""
-    course = LearningResourceFactory.create(
-        is_course=True, published=False, test_mode=True
-    )
-    course_data = {
-        "readable_id": course.readable_id,
-        "platform": course.platform.code,
-        "title": "test",
-        "url": "http://test.com",
-        "force_ingest": force_ingest,
-        "runs": [{"run_id": "test-run"}],
-    }
-    course = load_course(course_data, [course.readable_id])
-    assert course.test_mode is False
     assert course.published is False
 
 
@@ -4331,3 +4377,159 @@ def test_load_learning_material(mocker, learning_material_exists):
     assert learning_material.url == content_file.url
 
     assert content_file.direct_learning_resource_id == learning_material.id
+
+
+def _unit_data(external_id, kind, files):
+    return {
+        "external_id": external_id,
+        "kind": kind,
+        "title": f"Title {external_id}",
+        "url": f"https://example.com/{external_id}",
+        "content_files": files,
+    }
+
+
+def test_load_course_units():
+    """Units are upserted in order, link only published files and drop when empty"""
+    run = LearningResourceRunFactory.create()
+    lecture, notes, problem = ContentFileFactory.create_batch(3, run=run)
+    unpublished = ContentFileFactory.create(run=run, published=False)
+    other_run_file = ContentFileFactory.create()
+
+    units_data = [
+        _unit_data("seq1", "unit", {lecture.key: "core", notes.key: "supplementary"}),
+        # links nothing published on this run, so it is dropped
+        _unit_data("seq_empty", "unit", {unpublished.key: "core", "gone": "core"}),
+        _unit_data("seq2", "unit", {problem.key: "assessment", notes.key: "core"}),
+        _unit_data(
+            "context", "context", {other_run_file.key: "core", lecture.key: "core"}
+        ),
+    ]
+    load_course_units(run, units_data)
+
+    units = list(run.units.order_by("id"))
+    assert [(u.external_id, u.kind, u.position) for u in units] == [
+        ("seq1", "unit", 0),
+        ("seq2", "unit", 1),
+        ("context", "context", None),
+    ]
+    assert [
+        (link.content_file_id, link.relation, link.position)
+        for link in units[0].unitcontentfile_set.all()
+    ] == [(lecture.id, "core", 0), (notes.id, "supplementary", 1)]
+    assert [link.position for link in units[1].unitcontentfile_set.all()] == [0, 1]
+    # the context has no order
+    assert [link.position for link in units[2].unitcontentfile_set.all()] == [None]
+    assert set(notes.units.all()) == {units[0], units[1]}
+    assert list(units[2].content_files.all()) == [lecture]
+
+    # a reload keeps the ids of surviving units and replaces their links
+    unit_ids = load_course_units(
+        run, [_unit_data("seq2", "unit", {lecture.key: "core"})]
+    )
+    assert unit_ids == [units[1].id]
+    assert list(run.units.all()) == [units[1]]
+    assert list(units[1].content_files.all()) == [lecture]
+    assert Unit.objects.get(id=units[1].id).position == 0
+
+
+def test_load_course_units_queries_per_run():
+    """The query count doesn't grow with the number of units or links"""
+    from django.test.utils import CaptureQueriesContext
+
+    def queries_for(count):
+        run = LearningResourceRunFactory.create()
+        files = ContentFileFactory.create_batch(count, run=run)
+        units_data = [
+            _unit_data(f"seq{n}", "unit", {file.key: "core" for file in files})
+            for n in range(count)
+        ]
+        load_course_units(run, units_data)
+        with CaptureQueriesContext(connection) as context:
+            load_course_units(run, units_data[1:])
+        return len(context.captured_queries)
+
+    assert queries_for(2) == queries_for(8)
+
+
+def test_load_course_units_duplicate_external_id():
+    """A sequential the outline lists twice keeps its first place"""
+    run = LearningResourceRunFactory.create()
+    first, second = ContentFileFactory.create_batch(2, run=run)
+    load_course_units(
+        run,
+        [
+            _unit_data("seq1", "unit", {first.key: "core"}),
+            _unit_data("seq2", "unit", {second.key: "core"}),
+            _unit_data("seq1", "unit", {second.key: "core"}),
+        ],
+    )
+    units = run.units.order_by("position")
+    assert [(u.external_id, u.position) for u in units] == [("seq1", 0), ("seq2", 1)]
+    assert list(units[0].content_files.all()) == [first]
+
+
+def test_load_course_units_keeps_units_without_data():
+    """
+    An outline that could not be read keeps the run's units, minus their links
+    to files no longer published
+    """
+    run = LearningResourceRunFactory.create()
+    kept, dropped = ContentFileFactory.create_batch(2, run=run)
+    load_course_units(
+        run, [_unit_data("seq1", "unit", {kept.key: "core", dropped.key: "core"})]
+    )
+    dropped.published = False
+    dropped.save()
+
+    assert load_course_units(run, []) == list(run.units.values_list("id", flat=True))
+    assert list(run.units.get().content_files.all()) == [kept]
+
+
+def test_load_course_units_column_limits():
+    """
+    A long title is cut, a long url is dropped and a unit whose id is too long
+    is skipped, so neither fails the load
+    """
+    run = LearningResourceRunFactory.create()
+    file = ContentFileFactory.create(run=run)
+    long_title = _unit_data("seq1", "unit", {file.key: "core"})
+    long_title["title"] = "t" * 2000
+    long_title["url"] = "https://example.com/" + "u" * 2048
+    load_course_units(
+        run, [long_title, _unit_data("s" * 1025, "unit", {file.key: "core"})]
+    )
+
+    unit = run.units.get()
+    assert unit.external_id == "seq1"
+    assert unit.title == "t" * 1024
+    assert unit.url == ""
+
+
+def test_load_course_units_keeps_empty_context():
+    """The context unit is kept with no files, unlike an empty sequential"""
+    run = LearningResourceRunFactory.create()
+    load_course_units(
+        run,
+        [
+            _unit_data("seq1", "unit", {"gone": "core"}),
+            _unit_data("context", "context", {}),
+        ],
+    )
+    unit = run.units.get()
+    assert (unit.external_id, unit.kind, unit.position) == ("context", "context", None)
+    assert not unit.content_files.exists()
+
+
+def test_load_course_and_unpublish_resources_refuse_a_shadow_run():
+    """The loaders a sync calls per course write nothing inside a shadow run"""
+    course = LearningResourceFactory.create(is_course=True, published=True)
+
+    with shadowing():
+        with pytest.raises(OwnershipError):
+            loaders.load_course({"readable_id": course.readable_id})
+        with pytest.raises(OwnershipError):
+            loaders.unpublish_resources(LearningResource.objects.filter(id=course.id))
+
+    course.refresh_from_db()
+    assert course.published is True

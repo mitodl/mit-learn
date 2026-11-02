@@ -1360,13 +1360,13 @@ def _stale_resource_points_filter(current_point_ids):
 
 def qdrant_content_files(resources):
     """
-    Select the published content files of every run of, or attached directly
+    Select the visible content files of every run of, or attached directly
     to, the published or test_mode resources in the `resources` queryset.
     Unlike OpenSearch (see learning_resources_search.utils.opensearch_runs),
     Qdrant carries every run, not just the best one.
     """
     eligible = resources.filter(Q(published=True) | Q(test_mode=True))
-    return ContentFile.objects.filter(published=True).filter(
+    return ContentFile.objects.visible().filter(
         Q(run__learning_resource__in=eligible) | Q(learning_resource__in=eligible)
     )
 

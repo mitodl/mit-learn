@@ -10,6 +10,7 @@ import type { ProgramTrack } from "@/common/mitxonline"
 import RequirementItemCard from "./RequirementItemCard"
 import {
   RequirementsListing,
+  ReqDescription,
   ReqSubsectionTitle,
   ReqTitleNote,
 } from "./RequirementStyles"
@@ -163,6 +164,11 @@ const ProgramTracksSection: React.FC<ProgramTracksSectionProps> = ({
                         {note ? <ReqTitleNote>{note}</ReqTitleNote> : null}
                       </TrackGroupTitle>
                     )}
+                    {section.node.data.description ? (
+                      <ReqDescription>
+                        {section.node.data.description}
+                      </ReqDescription>
+                    ) : null}
                     <RequirementsListing>
                       {section.items.map((item) => (
                         <RequirementItemCard

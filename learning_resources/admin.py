@@ -1,12 +1,16 @@
 """admin for learning_resources"""
 
+import json
+
 from django.contrib import admin
 from django.contrib.admin import TabularInline
 from django.contrib.admin.widgets import AdminTextareaWidget
 from django.contrib.postgres.fields import ArrayField
 from django.contrib.postgres.forms import SimpleArrayField
+from django.utils.html import format_html
 
 from learning_resources import models
+from learning_resources.profiles import admin as profiles_admin  # noqa: F401
 
 
 class LineSeparatedArrayField(SimpleArrayField):
@@ -78,6 +82,15 @@ class ContentFileAdmin(admin.ModelAdmin):
     """Platform Admin"""
 
     model = models.ContentFile
+    list_display = ("key", "run__run_id", "published", "release_date", "updated_on")
+    list_filter = ("published",)
+    list_select_related = ("run",)
+    search_fields = ("key", "run__run_id")
+    show_full_result_count = False
+
+    def get_queryset(self, request):
+        # content can run to megabytes a row and the list page never shows it
+        return super().get_queryset(request).defer("content")
 
 
 class TutorProblemFileAdmin(admin.ModelAdmin):
@@ -283,6 +296,29 @@ class LearningResourceAdmin(admin.ModelAdmin):
         qs = super().get_queryset(request)
         return qs.for_serialization()
 
+    def get_search_results(self, request, queryset, search_term):
+        """Match a bare primary key as well as the `search_fields`.
+
+        A resource is identified by its id in plenty of places -- an admin URL,
+        a log line, a bug report -- and pasting one of those in is the quickest
+        way to find it. Naming `=id` in `search_fields` would find it too, but
+        by comparing `id::text` against every row, which is the comparison
+        Django's own documentation gives this override to avoid.
+
+        Anything `int` will not read -- a word, a superscript, a digit in a
+        circle -- falls through to the `search_fields` match alone.
+        """
+        results, may_have_duplicates = super().get_search_results(
+            request, queryset, search_term
+        )
+        try:
+            pk = int(search_term)
+        except ValueError:
+            pass
+        else:
+            results |= queryset.filter(pk=pk)
+        return results, may_have_duplicates
+
 
 class UserListAdmin(admin.ModelAdmin):
     """UserList Admin"""
@@ -391,9 +427,85 @@ class ETLSourceOwnershipAdmin(admin.ModelAdmin):
     """ETLSourceOwnership Admin"""
 
     model = models.ETLSourceOwnership
-    list_display = ("etl_source", "resource_type", "owner", "updated_on")
-    list_filter = ("etl_source", "owner")
+    list_display = ("etl_source", "resource_type", "owner", "shadow", "updated_on")
+    list_filter = ("etl_source", "owner", "shadow")
     search_fields = ("etl_source", "resource_type")
+
+
+class ETLShadowRunAdmin(admin.ModelAdmin):
+    """Read-only admin for the reports shadow runs save"""
+
+    model = models.ETLShadowRun
+    list_display = (
+        "created_on",
+        "etl_source",
+        "resource_type",
+        "pipeline",
+        "created",
+        "unpublished",
+        "updated",
+        "unchanged",
+        "failed",
+    )
+    list_filter = ("etl_source", "resource_type", "pipeline")
+    fields = (
+        "created_on",
+        "etl_source",
+        "resource_type",
+        "pipeline",
+        "error",
+        "counts_json",
+        "details_json",
+    )
+    readonly_fields = fields
+
+    def get_queryset(self, request):
+        """Leave the report bodies out of the list, which shows only counts"""
+        queryset = super().get_queryset(request)
+        if request.resolver_match.url_name.endswith("_changelist"):
+            return queryset.defer("details")
+        return queryset
+
+    def has_add_permission(self, request):  # noqa: ARG002
+        return False
+
+    def has_change_permission(self, request, obj=None):  # noqa: ARG002
+        return False
+
+    def has_delete_permission(self, request, obj=None):  # noqa: ARG002
+        return False
+
+    @admin.display(description="Created")
+    def created(self, obj):
+        return obj.counts.get("created")
+
+    @admin.display(description="Unpublished")
+    def unpublished(self, obj):
+        return obj.counts.get("unpublished")
+
+    @admin.display(description="Updated")
+    def updated(self, obj):
+        return obj.counts.get("updated")
+
+    @admin.display(description="Unchanged")
+    def unchanged(self, obj):
+        return obj.counts.get("unchanged")
+
+    @admin.display(boolean=True, description="Load failed")
+    def failed(self, obj):
+        return bool(obj.error)
+
+    @admin.display(description="Counts")
+    def counts_json(self, obj):
+        return _pretty_json(obj.counts)
+
+    @admin.display(description="Details")
+    def details_json(self, obj):
+        return _pretty_json(obj.details)
+
+
+def _pretty_json(value):
+    return format_html("<pre>{}</pre>", json.dumps(value, indent=2, sort_keys=True))
 
 
 admin.site.register(models.LearningResourceTopic, LearningResourceTopicAdmin)
@@ -422,3 +534,4 @@ admin.site.register(models.CredentialMetadata, CredentialMetadataAdmin)
 
 
 admin.site.register(models.ETLSourceOwnership, ETLSourceOwnershipAdmin)
+admin.site.register(models.ETLShadowRun, ETLShadowRunAdmin)

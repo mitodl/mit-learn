@@ -5,6 +5,7 @@ import ConfiguredPostHogProvider, {
   PosthogIdentifier,
 } from "./ConfiguredPostHogProvider"
 import { renderWithProviders } from "@/test-utils"
+import { INTERNAL_BOOTSTRAPPING_FLAG } from "@/common/feature_flags"
 
 // mock stuff
 import { setMockResponse, urls, factories } from "api/test-utils"
@@ -21,6 +22,7 @@ jest.mock("posthog-js", () => ({
 jest.mock("posthog-js/react", () => {
   return {
     __esModule: true,
+    PostHogContext: jest.requireActual("posthog-js/react").PostHogContext,
     usePostHog: jest.fn(),
     PostHogProvider: ({ children }: { children: React.ReactNode }) => children,
   }
@@ -93,6 +95,7 @@ describe("ConfiguredPostHogProvider", () => {
   })
   afterEach(() => {
     delete process.env.NEXT_PUBLIC_POSTHOG_API_KEY
+    delete window.__ENV
   })
 
   /**
@@ -110,6 +113,38 @@ describe("ConfiguredPostHogProvider", () => {
       expect(mockInit).toHaveBeenCalledExactlyOnceWith(
         "test-key",
         expect.objectContaining({ defaults: "2025-05-24" }),
+      )
+    })
+  })
+
+  /**
+   * posthog-js/react reads a bootstrapped flag as on when it is truthy, so a
+   * "false" left as a string would turn the flag on until PostHog answers.
+   */
+  test("Bootstraps env flags with true and false as booleans", async () => {
+    window.__ENV = {
+      NEXT_PUBLIC_FEATURE_on_flag: "true",
+      NEXT_PUBLIC_FEATURE_off_flag: "false",
+      NEXT_PUBLIC_FEATURE_variant_flag: "control",
+    }
+    setMockResponse.get(urls.userMe.get(), factories.user.user({}))
+    renderWithProviders(
+      <ConfiguredPostHogProvider>{null}</ConfiguredPostHogProvider>,
+    )
+
+    await waitFor(() => {
+      expect(mockInit).toHaveBeenCalledExactlyOnceWith(
+        "test-key",
+        expect.objectContaining({
+          bootstrap: {
+            featureFlags: {
+              "on-flag": true,
+              "off-flag": false,
+              "variant-flag": "control",
+              [INTERNAL_BOOTSTRAPPING_FLAG]: true,
+            },
+          },
+        }),
       )
     })
   })

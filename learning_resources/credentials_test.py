@@ -670,6 +670,47 @@ def test_get_llm_bounds_the_request(settings):
     assert _get_llm(configuration).request_timeout == 90
 
 
+def test_get_llm_azure_model(settings, mocker):
+    """An azure/ model is routed to Azure OpenAI with an Entra token provider"""
+    settings.AZURE_OPENAI_ENDPOINT = "https://ol-openai-test.openai.azure.com/"
+    settings.AZURE_OPENAI_API_VERSION = "2024-10-21"
+    settings.CREDENTIAL_METADATA_LLM_TIMEOUT = 90
+    token_provider = mocker.Mock()
+    mocker.patch(
+        "main.azure_openai.azure_ad_token_provider", return_value=token_provider
+    )
+    configuration = CredentialMetadataConfigurationFactory.build(
+        field=CredentialMetadataField.description.name, llm_model="azure/gpt-4o"
+    )
+
+    llm = _get_llm(configuration)
+
+    assert llm.model == "azure/gpt-4o"
+    assert llm.request_timeout == 90
+    assert llm.custom_llm_provider == "azure"
+    assert llm.api_base is None
+    assert llm.model_kwargs == {
+        "base_url": "https://ol-openai-test.openai.azure.com/",
+        "api_version": "2024-10-21",
+        "azure_ad_token_provider": token_provider,
+    }
+
+
+def test_get_llm_openai_model_unchanged(settings):
+    """Models without the azure/ prefix keep using the LiteLLM API base"""
+    settings.LITELLM_API_BASE = "https://litellm.test/api/"
+    settings.AZURE_OPENAI_ENDPOINT = "https://ol-openai-test.openai.azure.com/"
+    configuration = CredentialMetadataConfigurationFactory.build(
+        field=CredentialMetadataField.description.name, llm_model="gpt-4o"
+    )
+
+    llm = _get_llm(configuration)
+
+    assert llm.api_base == "https://litellm.test/api/"
+    assert llm.custom_llm_provider is None
+    assert llm.model_kwargs == {}
+
+
 @pytest.mark.django_db(transaction=True)
 def test_generate_credential_metadata_truncates_a_long_error(
     resource, no_configurations, mocker, mock_retrieval

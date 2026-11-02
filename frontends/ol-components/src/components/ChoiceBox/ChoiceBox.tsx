@@ -43,7 +43,7 @@ const Label = styled.span(({ theme }) => ({
   color: theme.custom.colors.darkGray2,
 }))
 
-const Description = styled.span(({ theme }) => ({
+const Description = styled.div(({ theme }) => ({
   ...theme.typography.body3,
   color: theme.custom.colors.silverGrayDark,
   paddingRight: "26px",
@@ -58,9 +58,9 @@ const InputContainer = styled.div({
 })
 
 type ChoiceBoxProps = {
-  label: string
+  label: React.ReactNode
   name?: string
-  description?: string
+  description?: React.ReactNode
   value: string
   type: "radio" | "checkbox"
   checked: boolean
@@ -76,11 +76,16 @@ const ChoiceBox = ({
   type,
   onChange,
 }: ChoiceBoxProps) => {
+  const id = React.useId()
+  const labelId = `${id}-label`
+  const descriptionId = `${id}-description`
   return (
     <Container className={checked ? "checked" : ""}>
       <Text centered={!description}>
-        <Label>{label}</Label>
-        {description ? <Description>{description}</Description> : null}
+        <Label id={labelId}>{label}</Label>
+        {description ? (
+          <Description id={descriptionId}>{description}</Description>
+        ) : null}
       </Text>
       <InputContainer>
         {type === "checkbox" ? (
@@ -97,6 +102,8 @@ const ChoiceBox = ({
             value={value}
             checked={checked}
             onChange={onChange}
+            aria-labelledby={labelId}
+            aria-describedby={description ? descriptionId : undefined}
           />
         ) : null}
       </InputContainer>

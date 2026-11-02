@@ -1,6 +1,9 @@
 """Authentication views"""
 
+import hashlib
 import logging
+import secrets
+from base64 import urlsafe_b64encode
 from urllib.parse import urlparse, urlunparse
 
 from django.conf import settings
@@ -150,9 +153,8 @@ def build_account_action_callback_url(request, *, next_url, action):
     """
     Build the callback URL Keycloak returns the user to.
 
-    Both legs of the flow must produce a byte-identical string: it is sent as
-    `redirect_uri` in the authorization request, and again when exchanging the
-    authorization code, where Keycloak requires an exact match.
+    It is sent as `redirect_uri` in the authorization request, and Keycloak
+    checks it against the client's registered redirect URIs.
 
     Keycloak returns the user to the API domain, which is where APISIX (and so
     the OIDC client's registered redirect URIs) lives.
@@ -223,16 +225,24 @@ class AccountActionStartView(RedirectView):
             self.request, next_url=next_url, action=action
         )
 
+        # Keycloak's pkce-enforcer client policy rejects an authorization
+        # request without an S256 challenge. The callback never redeems the
+        # code (it only reads kc_action_status), so the verifier isn't kept.
+        code_verifier = secrets.token_urlsafe(64)
+        code_challenge = (
+            urlsafe_b64encode(hashlib.sha256(code_verifier.encode()).digest())
+            .decode()
+            .rstrip("=")
+        )
+
         qs = {
             "client_id": settings.KEYCLOAK_CLIENT_ID,
             "response_type": "code",
             "redirect_uri": callback_url,
-            # `email` is requested explicitly so the code we exchange on the
-            # callback can read the updated address. It is one of Keycloak's
-            # default client scopes, but relying on that being true of every
-            # environment's client would fail silently and confusingly.
             "scope": "openid email",
             "kc_action": KEYCLOAK_ACTIONS[action],
+            "code_challenge": code_challenge,
+            "code_challenge_method": "S256",
         }
 
         return "".join(

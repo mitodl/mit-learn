@@ -165,6 +165,13 @@ const HonorCodePage: React.FC = () => {
               substantially the same work for multiple courses without prior
               instructor permission.
             </li>
+            <li>
+              <strong>Misrepresentation:</strong> Modifying, altering, editing,
+              or tampering with any aspect of a certificate, including but not
+              limited to: text, graphics, metadata, digital signatures, security
+              features, dates, or completion status; or misrepresenting courses
+              taken or certificates earned in any media.
+            </li>
           </UnorderedList>
           <BodyText component="h2" variant="h4">
             Consequences of Violations

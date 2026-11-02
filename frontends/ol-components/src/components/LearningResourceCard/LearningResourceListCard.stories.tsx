@@ -145,13 +145,6 @@ export const Loading: Story = {
   },
 }
 
-export const Draggable: Story = {
-  args: {
-    resource: resources.course,
-    draggable: true,
-  },
-}
-
 export const StartAnytime: Story = {
   args: {
     resource: courses.start.anytime,

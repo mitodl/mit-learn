@@ -1,5 +1,6 @@
 import { useAddToBasket, useClearBasket } from "api/mitxonline-hooks/baskets"
 import type { MutationHookOptions } from "api/mutation-meta"
+import type { EnrollmentTarget } from "api/mitxonline-hooks/enrollment"
 import { mitxonlineLegacyUrl } from "@/common/mitxonline"
 import { useComplianceGate } from "./useComplianceGate"
 
@@ -13,18 +14,24 @@ const cartUrl = () => mitxonlineLegacyUrl("/cart/")
  * lives here: a new checkout entry point cannot skip it. If the user dismisses
  * the gate, nothing is added and no redirect happens — callers see a resolved
  * promise with no navigation, so a cancel never reads as a failure.
+ *
+ * Given the `target` the product is for, the gate also runs the real export
+ * compliance check (`ensureEligibility`), so profile data CyberSource rejects
+ * is fixed here rather than discovered at checkout.
  */
 const useReplaceBasketItem = (opts: MutationHookOptions = {}) => {
   const addToBasket = useAddToBasket(opts)
   const clearBasket = useClearBasket(opts)
-  const { ensureCompliance } = useComplianceGate()
+  const { ensureCompliance, ensureEligibility } = useComplianceGate()
+  const gate = (target?: EnrollmentTarget) =>
+    target ? ensureEligibility(target) : ensureCompliance()
 
   const redirect = () => window.location.assign(cartUrl())
 
   // Returns void, like the `useMutation` mutate it stands in for, so call sites
   // stay fire-and-forget and don't acquire a promise to handle.
-  const mutate = (productId: number) => {
-    void ensureCompliance().then((allowed) => {
+  const mutate = (productId: number, target?: EnrollmentTarget) => {
+    void gate(target).then((allowed) => {
       if (!allowed) return
       addToBasket.reset()
       clearBasket.mutate(undefined, {
@@ -36,8 +43,8 @@ const useReplaceBasketItem = (opts: MutationHookOptions = {}) => {
     })
   }
 
-  const mutateAsync = async (productId: number) => {
-    if (!(await ensureCompliance())) return
+  const mutateAsync = async (productId: number, target?: EnrollmentTarget) => {
+    if (!(await gate(target))) return
     addToBasket.reset()
     await clearBasket.mutateAsync()
     await addToBasket.mutateAsync(productId)

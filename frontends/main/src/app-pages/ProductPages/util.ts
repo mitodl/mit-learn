@@ -22,13 +22,14 @@ enum HeadingIds {
 }
 
 type RequirementItem =
-  | { type: "course"; id: number }
-  | { type: "program"; id: number }
+  { type: "course"; id: number } | { type: "program"; id: number }
 
 type RequirementData = {
   id?: number | null // In practice this should always be defined. TODO: Why doesn't OpenAPI know this?
   elective: boolean
   title: string
+  /** Author-entered text for the group, e.g. when a capstone unlocks. */
+  description: string
   items: RequirementItem[]
   requiredCount: number
 }
@@ -73,6 +74,7 @@ const parseReqTree = (reqTree: V2Program["req_tree"]): RequirementData[] => {
         id: node.id,
         elective,
         title,
+        description: node.data.description ?? "",
         items,
         requiredCount,
       }

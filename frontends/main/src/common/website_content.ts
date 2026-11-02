@@ -85,8 +85,7 @@ export const extractImageMetadata = (
   )
 
   const attrs = imageWithCaption?.attrs as
-    | { src?: string; alt?: string; caption?: string }
-    | undefined
+    { src?: string; alt?: string; caption?: string } | undefined
 
   if (!attrs?.src) {
     return null

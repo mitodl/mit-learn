@@ -22,7 +22,7 @@ from learning_resources.etl.constants import (
     ProgramLoaderConfig,
 )
 from learning_resources.etl.exceptions import ExtractException
-from learning_resources.etl.ownership import Pipeline
+from learning_resources.etl.ownership import CONTENT_FILE, Pipeline
 from learning_resources.factories import ETLSourceOwnershipFactory
 from learning_resources.models import LearningResource
 
@@ -43,58 +43,6 @@ def reload_mocked_pipeline(*patchers):
         patcher.stop()
 
     reload(pipelines)
-
-
-def test_mit_edx_courses_etl():
-    """Verify that mit edx courses etl pipeline executes correctly"""
-    with reload_mocked_pipeline(
-        patch("learning_resources.etl.mit_edx.extract", autospec=True),
-        patch("learning_resources.etl.mit_edx.transform", autospec=False),
-        patch("learning_resources.etl.loaders.load_courses", autospec=True),
-    ) as patches:
-        mock_extract, mock_transform, mock_load_courses = patches
-        result = pipelines.mit_edx_courses_etl()
-
-    mock_extract.assert_called_once_with()
-
-    # each of these should be called with the return value of the extract
-    mock_transform.assert_called_once_with(mock_extract.return_value)
-
-    # load_courses should be called *only* with the return value of transform
-    mock_load_courses.assert_called_once_with(
-        ETLSource.mit_edx.name,
-        mock_transform.return_value,
-        config=CourseLoaderConfig(prune=True),
-    )
-
-    assert result == mock_load_courses.return_value
-
-
-def test_mit_edx_programs_etl():
-    """Verify that mit edx programs etl pipeline executes correctly"""
-    with reload_mocked_pipeline(
-        patch("learning_resources.etl.mit_edx_programs.extract", autospec=True),
-        patch("learning_resources.etl.mit_edx_programs.transform", autospec=False),
-        patch("learning_resources.etl.loaders.load_programs", autospec=True),
-    ) as patches:
-        mock_extract, mock_transform, mock_load_programs = patches
-        result = pipelines.mit_edx_programs_etl()
-
-    mock_extract.assert_called_once_with()
-
-    # each of these should be called with the return value of the extract
-    mock_transform.assert_called_once_with(mock_extract.return_value)
-
-    # load_courses should be called *only* with the return value of transform
-    mock_load_programs.assert_called_once_with(
-        ETLSource.mit_edx.name,
-        mock_transform.return_value,
-        config=ProgramLoaderConfig(
-            courses=CourseLoaderConfig(fetch_only=True), prune=True
-        ),
-    )
-
-    assert result == mock_load_programs.return_value
 
 
 def test_mitxonline_programs_etl():
@@ -354,6 +302,38 @@ def test_ocw_courses_etl_no_content_files_ingested(settings, mocker, content_fil
 
 
 @mock_aws
+@pytest.mark.parametrize("owner", list(Pipeline))
+def test_ocw_courses_etl_loads_content_files_only_while_legacy_owns_them(
+    settings, mocker, owner
+):
+    """OCW content files cut over on their own key, apart from the course"""
+    setup_s3_ocw(settings)
+    ETLSourceOwnershipFactory.create(
+        etl_source=ETLSource.ocw.name, resource_type=CONTENT_FILE, owner=owner
+    )
+    mocker.patch("learning_resources.etl.pipelines.loaders.resource_upserted_actions")
+    mock_transform_content_files = mocker.patch(
+        "learning_resources.etl.ocw.transform_content_files"
+    )
+    mock_load_content_files = mocker.patch(
+        "learning_resources.etl.pipelines.loaders.load_content_files",
+        return_value=[],
+    )
+
+    pipelines.ocw_courses_etl(
+        url_paths=[OCW_TEST_PREFIX],
+        force_overwrite=True,
+        start_timestamp=datetime(2020, 12, 15, tzinfo=UTC),
+        skip_content_files=False,
+    )
+
+    assert LearningResource.objects.filter(readable_id="16.01+fall_2005").exists()
+    legacy = owner == Pipeline.LEGACY
+    assert mock_transform_content_files.called is legacy
+    assert mock_load_content_files.called is legacy
+
+
+@mock_aws
 @pytest.mark.django_db
 def test_ocw_courses_etl_no_data(settings, mocker):
     """Test ocw_courses_etl when no S3 data is present"""
@@ -469,8 +449,6 @@ def test_posthog_etl():
 COURSE = LearningResourceType.course.name
 PROGRAM = LearningResourceType.program.name
 OWNED_PIPELINES = [
-    ("mit_edx_courses_etl", "mit_edx.extract", ETLSource.mit_edx, [COURSE]),
-    ("mit_edx_programs_etl", "mit_edx_programs.extract", ETLSource.mit_edx, [PROGRAM]),
     (
         "mitxonline_courses_etl",
         "mitxonline.extract_courses",

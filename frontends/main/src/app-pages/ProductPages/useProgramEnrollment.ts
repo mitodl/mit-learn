@@ -64,7 +64,7 @@ export const useProgramEnrollment = (
   const router = useRouter()
   // Paid enrollments are gated inside useReplaceBasketItem; the free track
   // calls the enrollment endpoint directly and so gates here.
-  const { ensureCompliance } = useComplianceGate()
+  const { mutateWithCompliance } = useComplianceGate()
 
   const offering = getProgramOffering(program)
 
@@ -95,11 +95,14 @@ export const useProgramEnrollment = (
       if (kind === "paid") {
         const product = program.products[0]
         if (product) {
-          replaceBasketItem.mutate(product.id)
+          replaceBasketItem.mutate(product.id, {
+            type: "program",
+            id: program.id,
+          })
         }
       } else if (kind === "free") {
-        if (!(await ensureCompliance())) return
-        createProgramEnrollment.mutate(
+        await mutateWithCompliance(
+          createProgramEnrollment,
           { V3ProgramEnrollmentRequestRequest: { program_id: program.id } },
           {
             onSuccess: () => {

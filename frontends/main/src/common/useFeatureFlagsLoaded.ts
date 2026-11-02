@@ -1,6 +1,11 @@
 import { INTERNAL_BOOTSTRAPPING_FLAG } from "@/common/feature_flags"
-import { useFeatureFlagEnabled, usePostHog } from "posthog-js/react"
-import { useEffect, useState } from "react"
+import { env } from "@/env"
+import {
+  PostHogContext,
+  useFeatureFlagEnabled,
+  usePostHog,
+} from "posthog-js/react"
+import { useContext, useEffect, useState } from "react"
 
 /**
  * Returns `true` if feature flags have been loaded via posthog API, else `false`.
@@ -24,6 +29,10 @@ import { useEffect, useState } from "react"
  * This approach relies on the fact that bootstrapped flags are completely
  * discarded after flags are loaded from server, so `useFlagEnabled` will
  * return `undefined` for any flag that was only bootstrapped locally.
+ *
+ * Without a PostHog api key nothing loads from a server, and
+ * ConfiguredPostHogProvider puts the env flags in the context's bootstrap as
+ * final values, so the flags count as loaded once that bootstrap is set.
  */
 const useFeatureFlagsLoaded = () => {
   const posthog = usePostHog()
@@ -42,6 +51,10 @@ const useFeatureFlagsLoaded = () => {
     })
   }, [posthog])
   const bootstrapFlag = useFeatureFlagEnabled(INTERNAL_BOOTSTRAPPING_FLAG)
+  const { bootstrap } = useContext(PostHogContext)
+  if (!env("NEXT_PUBLIC_POSTHOG_API_KEY")) {
+    return bootstrap !== undefined
+  }
   /**
    * bootstrapFlag will be undefined:
    *  1. BEFORE posthog has initialized (nothing bootstrapped yet)

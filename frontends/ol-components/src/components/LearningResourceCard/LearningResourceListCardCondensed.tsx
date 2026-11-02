@@ -17,8 +17,12 @@ import type { LearningResourceListCardProps } from "./LearningResourceListCard"
 import { BaseLearningResourceCard } from "../BaseLearningResourceCard/BaseLearningResourceCard"
 import type { ActionButtonInfo } from "../BaseLearningResourceCard/BaseLearningResourceCard"
 
+type LearningResourceListCardCondensedProps = LearningResourceListCardProps & {
+  draggable?: boolean
+}
+
 const LearningResourceListCardCondensed: React.FC<
-  LearningResourceListCardProps
+  LearningResourceListCardCondensedProps
 > = ({
   isLoading,
   resource,
@@ -116,4 +120,4 @@ const LearningResourceListCardCondensed: React.FC<
 }
 
 export { LearningResourceListCardCondensed }
-export type { LearningResourceListCardProps as LearningResourceListCardCondensedProps }
+export type { LearningResourceListCardCondensedProps }

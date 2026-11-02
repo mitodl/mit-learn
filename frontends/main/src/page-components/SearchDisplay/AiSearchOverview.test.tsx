@@ -150,6 +150,52 @@ describe("AiSearchOverview", () => {
     })
   })
 
+  test("limits recommendations to the constant search params", () => {
+    setupChat()
+    renderWithProviders(
+      <AiSearchOverview
+        searchParams={params("japan")}
+        constantSearchParams={{ topic: ["Biology", "Genetics"], free: true }}
+      />,
+    )
+    const { requestOpts } = mockAiChatProvider.mock.calls[0][0]
+    const first = { id: "1", role: "user" as const, content: "japan" }
+    const reply = {
+      id: "2",
+      role: "assistant" as const,
+      content: 'reply <!-- {"thread_id": "thread-1"} -->',
+    }
+    const followUp = { id: "3", role: "user" as const, content: "follow-up" }
+
+    const searchFilters = { topic: ["Biology", "Genetics"], free: ["true"] }
+    expect(requestOpts.transformBody([first])).toEqual({
+      message: "japan",
+      search_filters: searchFilters,
+      clear_history: true,
+    })
+    // Follow-ups in the drawer stay within the same filters.
+    expect(requestOpts.transformBody([first, reply, followUp])).toEqual({
+      message: "follow-up",
+      search_filters: searchFilters,
+      thread_id: "thread-1",
+    })
+  })
+
+  test("sends no search filters without constant params", () => {
+    setupChat()
+    renderWithProviders(
+      <AiSearchOverview
+        searchParams={params("ml")}
+        constantSearchParams={{}}
+      />,
+    )
+    const { requestOpts } = mockAiChatProvider.mock.calls[0][0]
+    const first = { id: "1", role: "user" as const, content: "ml" }
+    expect(requestOpts.transformBody([first])).not.toHaveProperty(
+      "search_filters",
+    )
+  })
+
   test("shows the response and opens the drawer on Show more", async () => {
     setupChat({
       status: "ready",

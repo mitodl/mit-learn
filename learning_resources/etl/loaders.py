@@ -23,6 +23,7 @@ from learning_resources.constants import (
     PlatformType,
     RunStatus,
 )
+from learning_resources.etl import shadow
 from learning_resources.etl.constants import (
     CONTENT_TAG_CATEGORIES,
     EDX_RUN_ID_SOURCES,
@@ -34,7 +35,14 @@ from learning_resources.etl.constants import (
     ResourceNextRunConfig,
 )
 from learning_resources.etl.exceptions import ExtractException
-from learning_resources.etl.ownership import may_write
+from learning_resources.etl.ownership import (
+    CONTENT_FILE,
+    OwnershipError,
+    RunMode,
+    is_shadow_run,
+    may_write,
+    run_mode,
+)
 from learning_resources.etl.utils import most_common_topics
 from learning_resources.models import (
     ContentFile,
@@ -55,6 +63,8 @@ from learning_resources.models import (
     Program,
     RunInstructorRelationship,
     TutorProblemFile,
+    Unit,
+    UnitContentFile,
     Video,
     VideoChannel,
     VideoPlaylist,
@@ -63,7 +73,6 @@ from learning_resources.utils import (
     add_parent_topics_to_learning_resource,
     bulk_resources_unpublished_actions,
     content_files_loaded_actions,
-    load_course_blocklist,
     resource_delete_actions,
     resource_run_delete_actions,
     resource_run_unpublished_actions,
@@ -444,7 +453,6 @@ def load_run(
             if (
                 learning_resource.etl_source
                 in (
-                    ETLSource.mit_edx.value,
                     ETLSource.mitxonline.value,
                     ETLSource.xpro.value,
                 )
@@ -483,9 +491,8 @@ def load_run(
     return learning_resource_run
 
 
-def upsert_course_or_program(  # noqa: C901, PLR0912
+def upsert_course_or_program(  # noqa: C901
     resource_data: dict,
-    blocklist: list[str],
     resource_type: str,
     *,
     config: CourseLoaderConfig = None,
@@ -496,8 +503,6 @@ def upsert_course_or_program(  # noqa: C901, PLR0912
     Args:
         resource_data (dict):
             a dict of course/program data values
-        blocklist (list of str):
-            list of course/program ids not to load
         resource_type (str):
             the type of resource to load (course or program)
         config (CourseLoaderConfig):
@@ -513,12 +518,12 @@ def upsert_course_or_program(  # noqa: C901, PLR0912
     unique_field_value = resource_data.get(unique_field_name)
     readable_id = resource_data.pop("readable_id")
     runs = resource_data.pop("runs", [])
+    # A load that doesn't hash its data leaves the stored hash stale, so it
+    # clears it and the next hashing sync reloads the resource.
+    resource_data.setdefault("etl_checksum", None)
 
-    if readable_id in blocklist or not runs:
+    if not runs:
         resource_data["published"] = False
-    if readable_id in blocklist:
-        # blocklisting overrides test_mode, which would keep the content indexed
-        resource_data["test_mode"] = False
 
     if not resource_data.get("resource_category"):
         if resource_type == LearningResourceType.course.name:
@@ -591,7 +596,6 @@ def upsert_course_or_program(  # noqa: C901, PLR0912
 
 def load_course(
     resource_data: dict,
-    blocklist: list[str],
     *,
     config=CourseLoaderConfig(),
 ) -> LearningResource:
@@ -601,8 +605,6 @@ def load_course(
     Args:
         resource_data (dict):
             a dict of course data values
-        blocklist (list of str):
-            list of course ids not to load
         config (CourseLoaderConfig):
             configuration on how to load this program
 
@@ -610,6 +612,11 @@ def load_course(
         Course:
             the created/updated course
     """
+    # Backstop for a sync that calls this per course: a shadow run's batch
+    # loaders compare instead of loading, and this has nothing to compare with.
+    if is_shadow_run():
+        msg = f"A shadow run cannot load course {resource_data.get('readable_id')}"
+        raise OwnershipError(msg)
 
     topics_data = resource_data.pop("topics", None)
     offered_bys_data = resource_data.pop("offered_by", None)
@@ -624,7 +631,6 @@ def load_course(
     with transaction.atomic():
         learning_resource, created = upsert_course_or_program(
             resource_data,
-            blocklist,
             LearningResourceType.course.name,
             config=config,
         )
@@ -642,10 +648,7 @@ def load_course(
             we set the course to "test_mode" in learn
             """
             learning_resource.require_summaries = True
-            if (
-                learning_resource.published is False
-                and learning_resource.readable_id not in blocklist
-            ):
+            if learning_resource.published is False:
                 learning_resource.test_mode = True
             learning_resource.save()
         for course_run_data in runs_data:
@@ -676,6 +679,21 @@ def load_course(
     return learning_resource
 
 
+def unpublish_resources(resources: QuerySet) -> None:
+    """
+    Unpublish the published resources of a queryset and remove them from
+    search. One already unpublished is left alone, so a prune doesn't requeue
+    its removal on every run.
+    """
+    if is_shadow_run():
+        msg = "A shadow run cannot unpublish resources"
+        raise OwnershipError(msg)
+    for learning_resource in resources.filter(published=True):
+        learning_resource.published = False
+        learning_resource.save()
+        resource_unpublished_actions(learning_resource)
+
+
 def load_courses(
     etl_source: str, courses_data: list[dict], *, config=CourseLoaderConfig()
 ) -> list[LearningResource]:
@@ -692,33 +710,39 @@ def load_courses(
     Returns:
         A list of course LearningResources
     """
+    # A shadow run compares the batch with what is stored and loads nothing.
+    # The other batch loaders a shadow can reach do the same.
+    if is_shadow_run():
+        shadow.observe(
+            etl_source,
+            LearningResourceType.course.name,
+            courses_data or [],
+            prune=config.prune,
+            prune_empty=config.prune_empty,
+        )
+        return []
     # Backstop: every pipeline checks before it extracts, so this only stops a
     # caller that skipped that check. The other batch loaders do the same.
     if not may_write(etl_source, LearningResourceType.course.name):
         return []
 
-    blocklist = load_course_blocklist()
-
     courses_list = list(courses_data or [])
 
     courses = [
         course
-        for course in [
-            load_course(course, blocklist, config=config) for course in courses_list
-        ]
+        for course in [load_course(course, config=config) for course in courses_list]
         if course is not None
     ]
 
     if (courses or config.prune_empty) and config.prune:
-        for learning_resource in LearningResource.objects.filter(
-            etl_source=etl_source, resource_type=LearningResourceType.course.name
-        ).exclude(
-            Q(id__in=[learning_resource.id for learning_resource in courses])
-            | Q(test_mode=True)
-        ):
-            learning_resource.published = False
-            learning_resource.save()
-            resource_unpublished_actions(learning_resource)
+        unpublish_resources(
+            LearningResource.objects.filter(
+                etl_source=etl_source, resource_type=LearningResourceType.course.name
+            ).exclude(
+                Q(id__in=[learning_resource.id for learning_resource in courses])
+                | Q(test_mode=True)
+            )
+        )
 
     return courses
 
@@ -742,7 +766,6 @@ class LoadedProgramCourse(NamedTuple):
 
 def load_program(
     program_data: dict,
-    blocklist: list[str],
     *,
     config=ProgramLoaderConfig(),
 ) -> ProgramLoadResult:
@@ -752,8 +775,6 @@ def load_program(
     Args:
         program_data (dict):
             a dict of program data values
-        blocklist (list of str):
-            list of course ids not to load
         config (ProgramLoaderConfig):
             configuration on how to load this program
 
@@ -777,7 +798,7 @@ def load_program(
 
     with transaction.atomic():
         learning_resource, created = upsert_course_or_program(
-            program_data, [], LearningResourceType.program.name
+            program_data, LearningResourceType.program.name
         )
         if not learning_resource:
             return ProgramLoadResult(
@@ -814,7 +835,7 @@ def load_program(
                 continue
 
             explicit_position = course_data.pop("position", None)
-            course_resource = load_course(course_data, blocklist, config=config.courses)
+            course_resource = load_course(course_data, config=config.courses)
             if course_resource:
                 loaded_courses.append(
                     LoadedProgramCourse(
@@ -945,6 +966,19 @@ def load_programs(
     For MITx Online data, each deferred child program may map to either
     PROGRAM_PROGRAMS or PROGRAM_COURSES based on child `display_mode`.
     """
+    if is_shadow_run():
+        shadow.observe(
+            etl_source,
+            LearningResourceType.program.name,
+            programs_data,
+            prune=config.prune,
+            prune_empty=config.prune_empty,
+            # as below, where the source's courses are looked up unless this
+            # pipeline owns them
+            fetch_courses=config.courses.fetch_only
+            or run_mode(etl_source, LearningResourceType.course.name) != RunMode.WRITE,
+        )
+        return []
     if not may_write(etl_source, LearningResourceType.program.name):
         return []
 
@@ -955,13 +989,11 @@ def load_programs(
         # to the courses that pipeline loaded instead of writing them here.
         config = config._replace(courses=config.courses._replace(fetch_only=True))
 
-    blocklist = load_course_blocklist()
-
     # Pass 1: load all programs and their course children
     results: list[ProgramLoadResult] = []
     deferred_child_programs = []
     for program_data in programs_data:
-        result = load_program(program_data, blocklist, config=config)
+        result = load_program(program_data, config=config)
         results.append(result)
         if result.resource and result.child_programs_data:
             deferred_child_programs.append(
@@ -978,12 +1010,11 @@ def load_programs(
 
     programs = [r.resource for r in results if r.resource is not None]
     if (programs or config.prune_empty) and config.prune:
-        for learning_resource in LearningResource.objects.filter(
-            etl_source=etl_source, resource_type=LearningResourceType.program.name
-        ).exclude(id__in=[lr.id for lr in programs]):
-            learning_resource.published = False
-            learning_resource.save()
-            resource_unpublished_actions(learning_resource)
+        unpublish_resources(
+            LearningResource.objects.filter(
+                etl_source=etl_source, resource_type=LearningResourceType.program.name
+            ).exclude(id__in=[lr.id for lr in programs])
+        )
     return programs
 
 
@@ -1119,6 +1150,11 @@ def load_content_files(
         list of int: Ids of the ContentFile objects that were created/updated
 
     """
+    # Backstop, as in load_courses: every caller checks before it extracts, so
+    # this only stops one that skipped that check.
+    if not may_write(course_run.learning_resource.etl_source, CONTENT_FILE):
+        return []
+
     if course_run.learning_resource.resource_type == LearningResourceType.course.name:
         content_files_ids = []
         content_tags = []
@@ -1162,6 +1198,92 @@ def load_content_files(
 
         return content_files_ids
     return None
+
+
+UNIT_EXTERNAL_ID_MAX_LENGTH = Unit._meta.get_field("external_id").max_length  # noqa: SLF001
+UNIT_TITLE_MAX_LENGTH = Unit._meta.get_field("title").max_length  # noqa: SLF001
+UNIT_URL_MAX_LENGTH = Unit._meta.get_field("url").max_length  # noqa: SLF001
+
+
+def load_course_units(run: LearningResourceRun, units_data: list[dict]) -> list[int]:
+    """
+    Replace a run's units with the ones built from its latest archive.
+
+    Args:
+        run (LearningResourceRun): the run the units belong to
+        units_data (list of dict): units as returned by OlxArchive.units. Empty
+            means the outline could not be read, and the run's units are kept,
+            minus their links to files no longer published
+
+    Returns:
+        list of int: ids of the run's units after the load
+    """
+    if not units_data:
+        UnitContentFile.objects.filter(
+            unit__run=run, content_file__published=False
+        ).delete()
+        return list(run.units.values_list("id", flat=True))
+    file_ids = dict(
+        ContentFile.objects.filter(run=run, published=True).values_list("key", "id")
+    )
+    units = []
+    unit_links = []
+    seen = set()
+    position = 0
+    for unit_data in units_data:
+        links = {
+            file_ids[key]: relation
+            for key, relation in unit_data["content_files"].items()
+            if key in file_ids
+        }
+        external_id = unit_data["external_id"]
+        # a block in two places of the outline keeps its first
+        if (
+            not links and unit_data["kind"] != Unit.Kind.CONTEXT
+        ) or external_id in seen:
+            continue
+        if len(external_id) > UNIT_EXTERNAL_ID_MAX_LENGTH:
+            # cut, it could match another unit's id
+            log.warning("Unit id too long, skipping: %s", external_id)
+            continue
+        seen.add(external_id)
+        url = unit_data.get("url") or ""
+        is_ordered = unit_data["kind"] == Unit.Kind.UNIT
+        units.append(
+            Unit(
+                run=run,
+                external_id=external_id,
+                kind=unit_data["kind"],
+                title=unit_data["title"][:UNIT_TITLE_MAX_LENGTH],
+                # a cut url would be broken
+                url=url if len(url) <= UNIT_URL_MAX_LENGTH else "",
+                position=position if is_ordered else None,
+            )
+        )
+        unit_links.append((links, is_ordered))
+        position += is_ordered
+    with transaction.atomic():
+        # an upsert on the run's external ids keeps each unit's id across loads
+        Unit.objects.bulk_create(
+            units,
+            update_conflicts=True,
+            unique_fields=["run", "external_id"],
+            update_fields=["kind", "title", "url", "position", "updated_on"],
+        )
+        unit_ids = [unit.id for unit in units]
+        run.units.exclude(id__in=unit_ids).delete()
+        UnitContentFile.objects.filter(unit__run=run).delete()
+        UnitContentFile.objects.bulk_create(
+            UnitContentFile(
+                unit=unit,
+                content_file_id=file_id,
+                relation=relation,
+                position=position_in_unit if is_ordered else None,
+            )
+            for unit, (links, is_ordered) in zip(units, unit_links, strict=True)
+            for position_in_unit, (file_id, relation) in enumerate(links.items())
+        )
+    return unit_ids
 
 
 def load_learning_materials(
@@ -1475,6 +1597,13 @@ def load_podcasts(
         list of LearningResources:
             list of the loaded podcast resources
     """
+    if is_shadow_run():
+        # fail the shadow where the owner's load would fail
+        if not tracked_ids:
+            msg = "No podcasts to track, the load would unpublish every podcast"
+            raise ExtractException(msg)
+        shadow.observe_podcasts(podcasts_data, tracked_ids)
+        return []
     if not may_write(
         ETLSource.podcast.name,
         [LearningResourceType.podcast.name, LearningResourceType.podcast_episode.name],
@@ -1695,6 +1824,11 @@ def load_documents(
         list of LearningResource:
             the list of loaded documents
     """
+    if is_shadow_run():
+        shadow.observe(
+            etl_source, LearningResourceType.document.name, documents_data, prune=True
+        )
+        return []
     if not may_write(etl_source, LearningResourceType.document.name):
         return []
 
@@ -1991,7 +2125,7 @@ def load_videos_from_content_files(
 
     Checks how many videos have matching ContentFile objects by youtube_id.
     If at least 60% of the videos have matches, loads those videos.
-    Otherwise returns None. Only published content files on published runs
+    Otherwise returns None. Only visible content files on published runs
     match, so a video whose content file was removed is not republished.
 
     Args:
@@ -2017,9 +2151,9 @@ def load_videos_from_content_files(
     for content_file in (
         ContentFile.objects.filter(
             youtube_id__in=youtube_ids,
-            published=True,
             run__published=True,
         )
+        .visible()
         .select_related("run__learning_resource")
         .order_by("-id")
     ):

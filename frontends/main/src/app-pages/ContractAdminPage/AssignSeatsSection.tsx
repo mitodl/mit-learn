@@ -290,9 +290,10 @@ const AssignSeatsSection: React.FC<AssignSeatsSectionProps> = ({
 
   // Debounce the live-region text so screen readers aren't spammed on every keystroke.
   useEffect(() => {
+    if (announcement === debouncedAnnouncement) return
     const id = setTimeout(() => setDebouncedAnnouncement(announcement), 600)
     return () => clearTimeout(id)
-  }, [announcement])
+  }, [announcement, debouncedAnnouncement])
 
   // Severity and headline message for the bulk-assign outcome, derived from the
   // result shape (and surfaced via an inline Alert).
