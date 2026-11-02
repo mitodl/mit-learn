@@ -29,7 +29,7 @@ from django.db.models import Count, Q
 from learning_resources.constants import CONTENT_TYPE_PAGE, LearningResourceType
 from learning_resources.etl import loaders
 from learning_resources.etl.constants import ETLSource
-from learning_resources.etl.utils import reconcile_release_dates
+from learning_resources.etl.utils import hide_unreleased_files
 from learning_resources.etl.warehouse_guards import (
     refuse_empty,
     refuse_unpublish_share,
@@ -37,7 +37,6 @@ from learning_resources.etl.warehouse_guards import (
     warehouse_list,
 )
 from learning_resources.models import LearningResourceRun
-from learning_resources.utils import content_files_loaded_actions
 from main.utils import checksum_for_content, clean_data
 
 log = logging.getLogger(__name__)
@@ -217,8 +216,11 @@ def load_run(
     """
     Load one run's rows as its content files.
 
-    The stored fingerprint moves only when the whole run landed, so a sync
-    reloads a run that was read short or had a file fail to save. Units are not
+    The stored fingerprint is cleared first and set only when the whole run
+    landed, so a sync reloads a run that was read short, had a file fail to save
+    or stopped partway. A run reloaded for having no published files already has
+    the view's fingerprint, so leaving it in place would strand the repair. Units
+    are not
     in the views. The run keeps the ones the archive ETL built, less their links
     to files this unpublishes.
 
@@ -242,17 +244,19 @@ def load_run(
             etl_source,
             run.run_id,
         )
-    failed_rows = [row for row in rows if row["extraction_status"] == EXTRACTION_FAILED]
-    failed_keys = [row["key"] for row in failed_rows]
+    if run.checksum:
+        run.checksum = None
+        run.save(update_fields=["checksum"])
+    failed_keys = [
+        row["key"] for row in rows if row["extraction_status"] == EXTRACTION_FAILED
+    ]
     extraction_failures = len(failed_keys)
     if not is_ocw:
-        # their text stays, but a date that moved has to hide or show it
-        reconcile_release_dates(
+        # every row, because a file that doesn't load keeps its old text, and a
+        # date that moved has to hide or show that text
+        hide_unreleased_files(
             run,
-            {
-                row["key"]: utc_timestamp_or_none(row["release_date"])
-                for row in failed_rows
-            },
+            {row["key"]: utc_timestamp_or_none(row["release_date"]) for row in rows},
         )
     transform = transform_ocw_row if is_ocw else transform_open_edx_row
     file_ids = loaders.load_content_files(
@@ -266,8 +270,6 @@ def load_run(
         prune=complete,
     )
     if not file_ids:
-        if failed_rows:
-            content_files_loaded_actions(run)
         return 0
     if is_ocw:
         # from every row, as a failed file still counts toward the score

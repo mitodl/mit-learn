@@ -1,6 +1,7 @@
 """Tests for the warehouse-pull loading of content files"""
 
 from datetime import UTC, datetime, timedelta
+from types import SimpleNamespace
 
 import pytest
 from django.db import DataError
@@ -30,8 +31,33 @@ def _no_search_hooks(mocker):
     """Stop the loaders' plugin hooks, which reach the search index"""
     mocker.patch("learning_resources.etl.loaders.content_files_loaded_actions")
     mocker.patch("learning_resources.etl.loaders.update_index")
+
+
+@pytest.fixture(autouse=True)
+def mock_deindex(mocker):
+    """Stop the tasks that drop newly hidden files from the indexes"""
+    return SimpleNamespace(
+        search=mocker.patch(
+            "learning_resources_search.tasks.deindex_run_content_files.delay"
+        ),
+        vector=mocker.patch(
+            "vector_search.tasks.remove_unpublished_run_content_files.delay"
+        ),
+    )
+
+
+def _refuse_saving(mocker, *keys):
+    """Make the database refuse the rows with these keys"""
+    real_update_or_create = ContentFile.objects.update_or_create
+
+    def update_or_create(*args, **kwargs):
+        if kwargs["key"] in keys:
+            raise DataError
+        return real_update_or_create(*args, **kwargs)
+
     mocker.patch(
-        "learning_resources.etl.warehouse_content_files.content_files_loaded_actions"
+        "learning_resources.etl.loaders.ContentFile.objects.update_or_create",
+        side_effect=update_or_create,
     )
 
 
@@ -297,20 +323,50 @@ def test_load_run_failed_extraction_takes_its_new_release_date(
     assert kept.published is True
 
 
-def test_load_run_with_only_failed_files_still_reindexes(
-    warehouse_owns_content_files,
+def test_load_run_file_that_fails_to_save_still_takes_its_release_date(
+    mocker, warehouse_owns_content_files, mock_deindex
 ):
-    """A row just hidden by its date has to leave the indexes with nothing loaded"""
+    """Its old text stays, so a date that moved has to hide that text"""
     run = _run()
-    ContentFileFactory.create(run=run, key="failed", published=True)
-    mock_actions = warehouse_content_files.content_files_loaded_actions
+    kept = ContentFileFactory.create(
+        run=run, key="bad", published=True, release_date=None
+    )
+    release = datetime.now(tz=UTC) + timedelta(days=30)
+    _refuse_saving(mocker, "bad")
 
-    loaded = warehouse_content_files.load_run(
-        run, [_open_edx_row("failed", content=None, extraction_status="failed")]
+    warehouse_content_files.load_run(
+        run,
+        [_open_edx_row("a"), _open_edx_row("bad", release_date=release.isoformat())],
+        expected_count=2,
     )
 
-    assert loaded == 0
-    mock_actions.assert_called_once_with(run)
+    kept.refresh_from_db()
+    assert kept.published is True
+    assert kept.release_date == release
+    mock_deindex.search.assert_called_once_with(run.id, unpublished_only=True)
+    mock_deindex.vector.assert_called_once_with(run.id)
+
+
+@pytest.mark.parametrize("failure", ["extraction", "save"])
+def test_load_run_with_nothing_loaded_still_deindexes_a_hidden_file(
+    mocker, warehouse_owns_content_files, mock_deindex, failure
+):
+    """A file just hidden by its date leaves the indexes though no file loaded"""
+    run = _run()
+    ContentFileFactory.create(run=run, key="bad", published=True, release_date=None)
+    release = (datetime.now(tz=UTC) + timedelta(days=30)).isoformat()
+    if failure == "extraction":
+        row = _open_edx_row(
+            "bad", content=None, extraction_status="failed", release_date=release
+        )
+    else:
+        _refuse_saving(mocker, "bad")
+        row = _open_edx_row("bad", release_date=release)
+
+    assert warehouse_content_files.load_run(run, [row], expected_count=1) == 0
+
+    mock_deindex.search.assert_called_once_with(run.id, unpublished_only=True)
+    mock_deindex.vector.assert_called_once_with(run.id)
 
 
 def test_load_run_file_that_fails_to_save_keeps_the_stored_file(
@@ -319,17 +375,7 @@ def test_load_run_file_that_fails_to_save_keeps_the_stored_file(
     """A row the database refuses isn't unpublished, and the run loads again"""
     run = _run()
     kept = ContentFileFactory.create(run=run, key="bad", published=True)
-    real_update_or_create = ContentFile.objects.update_or_create
-
-    def update_or_create(*args, **kwargs):
-        if kwargs["key"] == "bad":
-            raise DataError
-        return real_update_or_create(*args, **kwargs)
-
-    mocker.patch(
-        "learning_resources.etl.loaders.ContentFile.objects.update_or_create",
-        side_effect=update_or_create,
-    )
+    _refuse_saving(mocker, "bad")
 
     warehouse_content_files.load_run(
         run, [_open_edx_row("a"), _open_edx_row("bad")], expected_count=2
@@ -467,6 +513,35 @@ def test_runs_to_load_reloads_a_run_with_no_published_files(
     warehouse_content_files.load_run(run, [_open_edx_row("a"), _open_edx_row("b")])
     run.content_files.update(published=False)
 
+    assert warehouse_content_files.runs_to_load(
+        MITXONLINE, [_run_stats()], allow_mass_unpublish=True
+    ) == [(run.run_id, 2)]
+
+
+@pytest.mark.parametrize("failure", ["short read", "failed save", "raises"])
+def test_unfinished_repair_of_a_run_is_queued_again(
+    mocker, warehouse_owns_content_files, failure
+):
+    """
+    A run queued only because its files were unpublished has a matching
+    fingerprint, so a load that doesn't land mustn't leave that fingerprint behind
+    """
+    run = _run()
+    rows = [_open_edx_row("a"), _open_edx_row("b")]
+    warehouse_content_files.load_run(run, rows, expected_count=2)
+    run.content_files.update(published=False)
+    if failure == "short read":
+        warehouse_content_files.load_run(run, rows[:1], expected_count=2)
+    elif failure == "failed save":
+        _refuse_saving(mocker, "b")
+        warehouse_content_files.load_run(run, rows, expected_count=2)
+    else:
+        with pytest.raises(ValueError, match="a bad date"):
+            warehouse_content_files.load_run(
+                run, [rows[0], {**rows[1], "release_date": "a bad date"}]
+            )
+
+    assert run.content_files.filter(published=True).exists() or failure == "raises"
     assert warehouse_content_files.runs_to_load(
         MITXONLINE, [_run_stats()], allow_mass_unpublish=True
     ) == [(run.run_id, 2)]
