@@ -57,6 +57,18 @@ def test_external_schema_exists():
         assert cursor.fetchone()[0] == "external"
 
 
+@pytest.mark.parametrize(
+    ("micromasters_program_id", "is_revoked", "expected"),
+    [(1, False, True), (1, True, False), (None, False, False), (None, True, False)],
+)
+def test_has_program_letter(micromasters_program_id, is_revoked, expected):
+    """A letter needs a MicroMasters program id and an unrevoked certificate."""
+    cert = ProgramCertificateFactory.build(
+        micromasters_program_id=micromasters_program_id, is_revoked=is_revoked
+    )
+    assert cert.has_program_letter is expected
+
+
 @pytest.mark.django_db
 def test_program_letter_model_strings(user, settings):
     """

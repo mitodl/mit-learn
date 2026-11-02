@@ -221,8 +221,8 @@ class ProgramCertificate(models.Model):
     user_email = models.CharField(max_length=256, blank=False)
 
     # Revoked rows are kept so their letters come back if the revocation is
-    # reversed. Any read that exposes a certificate or its letter has to filter
-    # on this itself; the default manager returns revoked rows.
+    # reversed. Any read that exposes a certificate has to filter on this
+    # itself, since the default manager returns revoked rows.
     is_revoked = models.BooleanField(default=False, db_default=False)
 
     # NULLABLE FIELDS
@@ -278,12 +278,13 @@ class ProgramCertificate(models.Model):
         """
         Whether this certificate gets a program letter.
 
-        The letter's content comes from the MicroMasters CMS page for the
-        program, looked up by micromasters_program_id. Programs that only ran on
-        MITx Online (e.g. the DEDP Public Policy track) have no such page, and
-        looking one up without an id returns another program's letter.
+        A revoked certificate gets none. The letter's content comes from the
+        MicroMasters CMS page for the program, looked up by
+        micromasters_program_id. Programs that only ran on MITx Online (e.g. the
+        DEDP Public Policy track) have no such page, and looking one up without
+        an id returns another program's letter.
         """
-        return self.micromasters_program_id is not None
+        return self.micromasters_program_id is not None and not self.is_revoked
 
 
 class ProgramLetter(models.Model):

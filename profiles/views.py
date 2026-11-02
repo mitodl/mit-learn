@@ -105,27 +105,24 @@ class ProgramLetterViewSet(mixins.RetrieveModelMixin, viewsets.GenericViewSet):
     authentication_classes = []
     permission_classes = []
     serializer_class = ProgramLetterSerializer
-    # A letter for a certificate without a MicroMasters program id would render
-    # another program's letter (see ProgramCertificate.has_program_letter), so
-    # those 404 like a letter whose certificate is gone.
-    queryset = ProgramLetter.objects.filter(
-        certificate__micromasters_program_id__isnull=False
-    )
+    queryset = ProgramLetter.objects.all()
 
     def get_object(self) -> ProgramLetter:
         """
-        Return the letter, 404ing if its certificate is gone or revoked.
+        Return the letter, 404ing if its certificate is gone or gets no letter.
 
         certificate is nullable, and a certificate_id with no matching row
         raises DoesNotExist on access. Every field of the response derives from
-        the certificate, so there is nothing to render without it.
+        the certificate, so there is nothing to render without it. A certificate
+        that fails has_program_letter would render a withdrawn letter or another
+        program's.
         """
         letter = super().get_object()
         try:
             certificate = letter.certificate
         except ProgramCertificate.DoesNotExist as exc:
             raise Http404 from exc
-        if certificate is None or certificate.is_revoked:
+        if certificate is None or not certificate.has_program_letter:
             raise Http404
         return letter
 
