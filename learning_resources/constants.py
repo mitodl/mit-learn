@@ -40,8 +40,7 @@ class LearningResourceType(ExtendedEnum):
 
 
 # The resource types a shadow run compares (learning_resources.etl.shadow):
-# what load_courses, load_programs, load_documents and load_podcasts write. A
-# pair of any other type cannot be shadowed, since nothing would report on it.
+# what load_courses, load_programs, load_documents and load_podcasts write.
 SHADOW_COMPARED_TYPES = frozenset(
     {
         LearningResourceType.course.name,
@@ -51,6 +50,23 @@ SHADOW_COMPARED_TYPES = frozenset(
         LearningResourceType.podcast_episode.name,
     }
 )
+# The (etl_source, resource_type) pairs of other types that one pipeline's
+# shadow run compares, by that pipeline: SyncYouTubeTask's playlists and
+# videos (shadow.observe_youtube). Any other pair cannot be shadowed, since
+# nothing would report on it.
+SHADOW_COMPARED_PAIRS = {
+    ("youtube", LearningResourceType.video_playlist.name): "warehouse",
+    ("youtube", LearningResourceType.video.name): "warehouse",
+}
+
+
+def shadow_compares(etl_source: str, resource_type: str, pipeline: str) -> bool:
+    """Whether a shadow run of ``pipeline`` compares a pair, so it can shadow it"""
+    return (
+        resource_type in SHADOW_COMPARED_TYPES
+        or SHADOW_COMPARED_PAIRS.get((etl_source, resource_type)) == pipeline
+    )
+
 
 # `resource_category` for editorial articles. They are `document` resources --
 # 0105 folded the `article` resource type into `document` -- distinguished by

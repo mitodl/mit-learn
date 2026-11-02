@@ -23,7 +23,6 @@ from django.utils import timezone
 
 from learning_resources import constants
 from learning_resources.constants import (
-    SHADOW_COMPARED_TYPES,
     WEBSITE_CONTENT_READABLE_ID_PREFIX,
     Availability,
     CertificationType,
@@ -1155,6 +1154,18 @@ class ContentFileQuerySet(TimestampedModelQuerySet):
         """Content files a learner cannot currently see: the complement of visible()"""
         return self.filter(Q(published=False) | Q(release_date__gt=now or now_in_utc()))
 
+    def matching_youtube_videos(self, youtube_ids):
+        """
+        Content files that match these youtube ids: visible ones on a published
+        run. A video on two pages of a course has two, so these sort newest
+        first and a dict built by youtube_id keeps the lowest id, a stable match.
+        """
+        return (
+            self.filter(youtube_id__in=youtube_ids, run__published=True)
+            .visible()
+            .order_by("-id")
+        )
+
     def for_serialization(self):
         """Return a queryset ready for serialization"""
         return self.select_related(
@@ -2091,19 +2102,22 @@ class ETLSourceOwnership(TimestampedModel):
     def clean(self):
         """
         Reject a shadow that is also the owner, which would write, not shadow,
-        and a shadow of a type no shadow run compares, which would report nothing.
+        and a shadow of a pair that pipeline's shadow run does not compare,
+        which would report nothing.
         """
         super().clean()
         if self.shadow and self.shadow == self.owner:
             raise ValidationError(
                 {"shadow": "The shadow pipeline must differ from the owner."}
             )
-        if self.shadow and self.resource_type not in SHADOW_COMPARED_TYPES:
+        if self.shadow and not constants.shadow_compares(
+            self.etl_source, self.resource_type, self.shadow
+        ):
             raise ValidationError(
                 {
                     "shadow": (
-                        f"A shadow run does not compare {self.resource_type} "
-                        "resources yet."
+                        f"A {self.shadow} shadow run does not compare "
+                        f"{self.etl_source} {self.resource_type} resources yet."
                     )
                 }
             )

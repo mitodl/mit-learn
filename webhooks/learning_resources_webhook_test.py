@@ -11,9 +11,19 @@ from learning_resources.etl.constants import (
     ETLSource,
     ProgramLoaderConfig,
 )
-from learning_resources.etl.ownership import current_pipeline
-from learning_resources.factories import ETLSourceOwnershipFactory, ProgramFactory
-from learning_resources.models import ETLSourceOwnership, LearningResource
+from learning_resources.etl.ownership import current_pipeline, is_shadow_run
+from learning_resources.etl.shadow import NOT_OBSERVED
+from learning_resources.factories import (
+    ETLSourceOwnershipFactory,
+    LearningResourcePlatformFactory,
+    LearningResourceTopicFactory,
+    ProgramFactory,
+)
+from learning_resources.models import (
+    ETLShadowRun,
+    ETLSourceOwnership,
+    LearningResource,
+)
 
 WEBHOOK_URL_NAME = "webhooks:v1:learning_resources_webhook"
 
@@ -536,3 +546,214 @@ def test_absent_or_empty_description_is_not_rewritten(
     with_description, without = mock_load_courses.call_args.args[1]
     assert with_description["description"] == description
     assert "description" not in without
+
+
+@pytest.mark.django_db
+def test_batch_with_a_shadowed_group_is_a_shadow_run(settings, client, mocker):
+    """
+    A group the webhook shadows makes the whole batch a shadow run: the loaders
+    run inside it, the response reports each group and no cache is cleared.
+    """
+    etl_source = ETLSource.mitpe.name
+    course, program = (
+        LearningResourceType.course.name,
+        LearningResourceType.program.name,
+    )
+    ETLSourceOwnership.objects.filter(
+        etl_source=etl_source, resource_type=program
+    ).update(
+        owner=ETLSourceOwnership.Pipeline.LEGACY,
+        shadow=ETLSourceOwnership.Pipeline.WEBHOOK,
+    )
+    seen = []
+    mock_clear = mocker.patch("webhooks.views.clear_views_cache")
+    mock_load_courses = mocker.patch(
+        "webhooks.views.load_courses",
+        side_effect=lambda *_, **__: seen.append(is_shadow_run()) or [],
+    )
+    mock_load_programs = mocker.patch(
+        "webhooks.views.load_programs",
+        side_effect=lambda *_, **__: seen.append(is_shadow_run()) or [],
+    )
+
+    response = _post(
+        client,
+        settings,
+        {
+            "resources": [
+                _resource("course-1", etl_source, course),
+                _resource("program-1", etl_source, program),
+            ]
+        },
+    )
+
+    assert response.status_code == 200
+    mock_load_courses.assert_called_once()
+    mock_load_programs.assert_called_once()
+    assert seen == [True, True]
+    mock_clear.assert_not_called()
+    body = response.json()
+    assert body["status"] == "success"
+    assert "nothing was written" in body["message"]
+    assert [(run["etl_source"], run["resource_type"]) for run in body["shadow"]] == [
+        (etl_source, course),
+        (etl_source, program),
+    ]
+    # the mocked loaders report nothing to the shadow run
+    assert [run["error"] for run in body["shadow"]] == [NOT_OBSERVED, NOT_OBSERVED]
+    assert (
+        ETLShadowRun.objects.filter(
+            etl_source=etl_source, pipeline=ETLSourceOwnership.Pipeline.WEBHOOK
+        ).count()
+        == 2
+    )
+
+
+@pytest.mark.django_db
+def test_shadowed_batch_writes_nothing(settings, client, mocker):
+    """The real loaders compare a shadowed group with what is stored and write nothing."""
+    etl_source = ETLSource.mit_climate.name
+    document = LearningResourceType.document.name
+    ETLSourceOwnership.objects.filter(
+        etl_source=etl_source, resource_type=document
+    ).update(
+        owner=ETLSourceOwnership.Pipeline.LEGACY,
+        shadow=ETLSourceOwnership.Pipeline.WEBHOOK,
+    )
+    mocker.patch("learning_resources_search.plugins.tasks")
+    mock_chain = mocker.patch("learning_resources_search.plugins.chain")
+    platform = LearningResourcePlatformFactory.create()
+    topic = LearningResourceTopicFactory.create()
+
+    response = _post(
+        client,
+        settings,
+        {
+            "resources": [
+                _resource(
+                    "doc-1",
+                    etl_source,
+                    document,
+                    url="https://a.example/1",
+                    platform=platform.code,
+                    image=None,
+                    topics=[{"name": topic.name}],
+                )
+            ]
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json()["shadow"] == [
+        {
+            "etl_source": etl_source,
+            "resource_type": document,
+            "counts": mocker.ANY,
+        }
+    ]
+    assert response.json()["shadow"][0]["counts"]["created"] == 1
+    assert not LearningResource.objects.filter(etl_source=etl_source).exists()
+    mock_chain.return_value.assert_not_called()
+
+
+@pytest.mark.django_db
+def test_owned_video_group_is_not_loaded_in_a_shadow_run(settings, client, mocker):
+    """
+    load_videos does not report to a shadow run and would write, so a video
+    group the webhook owns is left alone when another group makes the batch a
+    shadow run, and reported as not compared.
+    """
+    ETLSourceOwnership.objects.filter(
+        etl_source=ETLSource.mitpe.name,
+        resource_type=LearningResourceType.course.name,
+    ).update(
+        owner=ETLSourceOwnership.Pipeline.LEGACY,
+        shadow=ETLSourceOwnership.Pipeline.WEBHOOK,
+    )
+    mocker.patch("webhooks.views.load_courses", return_value=[])
+    mock_load_videos = mocker.patch("webhooks.views.load_videos")
+
+    response = _post(
+        client,
+        settings,
+        {
+            "resources": [
+                _resource(
+                    "course-1", ETLSource.mitpe.name, LearningResourceType.course.name
+                ),
+                _resource(
+                    "video-1", ETLSource.youtube.name, LearningResourceType.video.name
+                ),
+            ]
+        },
+    )
+
+    assert response.status_code == 200
+    assert {
+        "etl_source": ETLSource.youtube.name,
+        "resource_type": LearningResourceType.video.name,
+        "error": NOT_OBSERVED,
+    } in response.json()["shadow"]
+    mock_load_videos.assert_not_called()
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    ("etl_source", "resource_type", "shadow"),
+    [
+        # another pipeline's shadow
+        (
+            ETLSource.mitpe.name,
+            LearningResourceType.course.name,
+            ETLSourceOwnership.Pipeline.WAREHOUSE,
+        ),
+        # a type no shadow run compares, saved without ETLSourceOwnership.clean
+        (
+            ETLSource.youtube.name,
+            LearningResourceType.video.name,
+            ETLSourceOwnership.Pipeline.WEBHOOK,
+        ),
+    ],
+)
+def test_batch_rejected_when_webhook_does_not_shadow_a_group(  # noqa: PLR0913
+    settings, client, mocker, etl_source, resource_type, shadow
+):
+    """
+    A group the webhook neither owns nor shadows rejects the batch with 409,
+    with nothing loaded or reported, even when another group is shadowed.
+    """
+    ETLSourceOwnership.objects.filter(
+        etl_source=ETLSource.mit_climate.name,
+        resource_type=LearningResourceType.document.name,
+    ).update(
+        owner=ETLSourceOwnership.Pipeline.LEGACY,
+        shadow=ETLSourceOwnership.Pipeline.WEBHOOK,
+    )
+    ETLSourceOwnership.objects.filter(
+        etl_source=etl_source, resource_type=resource_type
+    ).update(owner=ETLSourceOwnership.Pipeline.LEGACY, shadow=shadow)
+    mock_loaders = [
+        mocker.patch(f"webhooks.views.{loader}", return_value=[])
+        for loader in ("load_courses", "load_documents", "load_videos")
+    ]
+
+    response = _post(
+        client,
+        settings,
+        {
+            "resources": [
+                _resource(
+                    "doc-1",
+                    ETLSource.mit_climate.name,
+                    LearningResourceType.document.name,
+                ),
+                _resource("item-1", etl_source, resource_type),
+            ]
+        },
+    )
+
+    assert response.status_code == 409
+    assert f"{etl_source}/{resource_type}" in response.json()["message"]
+    for mock_loader in mock_loaders:
+        mock_loader.assert_not_called()
+    assert not ETLShadowRun.objects.exists()

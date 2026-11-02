@@ -38,6 +38,7 @@ from learning_resources.constants import (
     CONTENT_TYPE_VIDEO,
     CURRENCY_USD,
     DEPARTMENTS,
+    OCW_PLAYLIST_VIDEO_THRESHOLD,
     VALID_TEXT_FILE_TYPES,
     LearningResourceDelivery,
     LevelType,
@@ -1082,6 +1083,21 @@ def update_course_numbers_json(course: Course):
         is_ocw=is_ocw,
     )
     course.save()
+
+
+def enough_youtube_matches(matched: int, total: int) -> bool:
+    """
+    Return whether enough of a create_videos=False playlist's videos matched an
+    OCW content file for its load to go ahead.
+
+    Args:
+        matched (int): how many of the playlist's videos matched
+        total (int): how many videos the playlist has
+
+    Returns:
+        bool: whether at least OCW_PLAYLIST_VIDEO_THRESHOLD of them matched
+    """
+    return matched >= total * OCW_PLAYLIST_VIDEO_THRESHOLD
 
 
 def most_common_topics(
