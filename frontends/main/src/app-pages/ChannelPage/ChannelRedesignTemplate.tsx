@@ -462,7 +462,13 @@ const DepartmentChannelHero: React.FC<{
       overPhoto={!!banner}
       background={
         banner ? (
-          <ChannelHeroPhoto configuredBanner={backgroundSrcSetCSS(banner)} />
+          <ChannelHeroPhoto
+            /* 75, the next/image default, rather than the 100 this helper
+               asks for elsewhere: the artwork is a photograph above the fold
+               on every department page, and at 100 the optimizer returns
+               about four times the bytes for it. */
+            configuredBanner={backgroundSrcSetCSS(banner, 75)}
+          />
         ) : undefined
       }
     >

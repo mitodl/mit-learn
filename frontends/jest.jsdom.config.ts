@@ -13,7 +13,7 @@ const config: Config.InitialOptions &
     "^.+\\.(t|j)sx?$": "@swc/jest",
   },
   moduleNameMapper: {
-    "\\.(svg|jpg|jpeg|png)$": "ol-test-utilities/filemocks/imagemock.js",
+    "\\.(svg|jpg|jpeg|png|webp)$": "ol-test-utilities/filemocks/imagemock.js",
     "\\.(css|scss)$": "ol-test-utilities/filemocks/filemock.js",
   },
   rootDir: "./src",

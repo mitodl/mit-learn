@@ -416,8 +416,14 @@ describe("Channel Pages, Department only", () => {
    * The row is asked for whether or not a case cares about it, the hero
    * being drawn differently by whether there is one.
    */
-  const setupDepartment = ({ featuredCount = 2 } = {}) => {
+  const setupDepartment = ({
+    featuredCount = 2,
+    name,
+  }: { featuredCount?: number; name?: string } = {}) => {
     const { channel } = setupApis({
+      /* Only where a case turns on it: the artwork is keyed on the slug, so
+         those cases name a department and the rest take the factory's. */
+      ...(name ? { name } : {}),
       search_filter: "department=Theater+Arts",
       channel_type: ChannelTypeEnum.Department,
     })
@@ -452,8 +458,29 @@ describe("Channel Pages, Department only", () => {
     }
   }, 10000)
 
+  /**
+   * The two halves of the lookup in `DEPARTMENT_BANNERS`, both named rather
+   * than left to the factory's random slug.
+   *
+   * The map is keyed on the channel's own slug, and an entry filed under a
+   * name no department has draws nothing and reports nothing: the page is
+   * simply the white one. Only a case that names a department with artwork
+   * reaches the slug, the image and `backgroundSrcSetCSS` at all.
+   */
+  test("draws the department's own artwork where there is some", async () => {
+    const { channel } = setupDepartment({ name: "theater-arts" })
+
+    renderWithProviders(<ChannelPage />, {
+      url: `/c/${channel.channel_type}/${channel.name}`,
+    })
+
+    await screen.findByRole("heading", { level: 1, name: channel.title })
+    await screen.findByTestId("channel-hero-photo")
+  }, 10000)
+
   test("stands on plain white, with no photograph behind the title", async () => {
-    const { channel } = setupDepartment()
+    /* Concourse is a real department the design has no artwork for. */
+    const { channel } = setupDepartment({ name: "concourse" })
 
     renderWithProviders(<ChannelPage />, {
       url: `/c/${channel.channel_type}/${channel.name}`,
