@@ -528,7 +528,7 @@ def ovs_loader_mocks(mocker):
     return mocker.Mock(
         update_index=mocker.patch("learning_resources.etl.loaders.update_index"),
         unpublished=mocker.patch(
-            "learning_resources.etl.loaders.resource_unpublished_actions"
+            "learning_resources.etl.loaders.bulk_resources_unpublished_actions"
         ),
     )
 
@@ -557,6 +557,12 @@ def test_ovs_video_webhook_move_unpublishes_emptied_playlist(
     _post_ovs_webhook(
         client, settings, _ovs_payload(key="moved", collection_key="col_old")
     )
+    learning_path_item = LearningResourceRelationship.objects.create(
+        parent=LearningResourceFactory.create(),
+        child=LearningResource.objects.get(readable_id="moved"),
+        relation_type=LearningResourceRelationTypes.LEARNING_PATH_ITEMS.value,
+    )
+
     _post_ovs_webhook(
         client, settings, _ovs_payload(key="moved", collection_key="col_new")
     )
@@ -571,7 +577,12 @@ def test_ovs_video_webhook_move_unpublishes_emptied_playlist(
             relation_type=LearningResourceRelationTypes.PLAYLIST_VIDEOS.value,
         ).values_list("parent_id", flat=True)
     ) == [new_playlist.id]
-    ovs_loader_mocks.unpublished.assert_called_once_with(old_playlist)
+    assert LearningResourceRelationship.objects.filter(
+        id=learning_path_item.id
+    ).exists()
+    ovs_loader_mocks.unpublished.assert_called_once_with(
+        [old_playlist.id], LearningResourceType.video_playlist.name
+    )
 
 
 @pytest.mark.django_db

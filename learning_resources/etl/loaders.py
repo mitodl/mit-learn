@@ -1901,12 +1901,22 @@ def prune_ovs_playlists(playlist_ids: list[int]) -> None:
     time, so it only checks the playlists that video just left.
     """
     playlists = LearningResource.objects.filter(id__in=playlist_ids)
-    with_videos = LearningResourceRelationship.objects.filter(
-        parent__in=playlists,
-        relation_type=LearningResourceRelationTypes.PLAYLIST_VIDEOS.value,
-        child__published=True,
-    ).values("parent_id")
-    unpublish_resources(playlists.exclude(id__in=with_videos))
+    with transaction.atomic():
+        # A push holds its playlist's row until it commits, so waiting for the
+        # lock here means a video that push adds counts in the check below.
+        list(playlists.select_for_update().order_by("id").values_list("id"))
+        with_videos = LearningResourceRelationship.objects.filter(
+            parent_id__in=playlist_ids,
+            relation_type=LearningResourceRelationTypes.PLAYLIST_VIDEOS.value,
+            child__published=True,
+        ).values("parent_id")
+        empty_playlists = playlists.filter(published=True).exclude(id__in=with_videos)
+        empty_playlist_ids = list(empty_playlists.values_list("id", flat=True))
+        empty_playlists.update(published=False)
+    if empty_playlist_ids:
+        bulk_resources_unpublished_actions(
+            empty_playlist_ids, LearningResourceType.video_playlist.name
+        )
     for playlist in playlists.filter(published=True):
         update_index(playlist, newly_created=False)
 

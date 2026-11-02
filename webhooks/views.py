@@ -14,7 +14,6 @@ from rest_framework.parsers import JSONParser
 from rest_framework.response import Response
 
 from learning_resources.constants import (
-    LearningResourceRelationTypes,
     LearningResourceType,
 )
 from learning_resources.etl.constants import (
@@ -176,9 +175,7 @@ class OVSVideoWebhookView(BaseWebhookView):
                 ).first()
                 if resource:
                     playlist_ids = list(
-                        resource.parents.filter(
-                            relation_type=LearningResourceRelationTypes.PLAYLIST_VIDEOS.value
-                        ).values_list("parent_id", flat=True)
+                        resource.playlists.values_list("parent_id", flat=True)
                     )
                     resource_delete_actions(resource)
                     prune_ovs_playlists(playlist_ids)
