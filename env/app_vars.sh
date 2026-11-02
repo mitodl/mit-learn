@@ -10,7 +10,6 @@ echo "OCW_WEBHOOK_KEY=${OCW_WEBHOOK_KEY}" >>.env
 echo "OLL_API_CLIENT_ID=${OLL_API_CLIENT_ID}" >>.env
 echo "OPENSEARCH_HTTP_AUTH=${OPENSEARCH_HTTP_AUTH}" >>.env
 echo "SENTRY_DSN=${SENTRY_DSN}" >>.env
-echo "SOCIAL_AUTH_OL_OIDC_SECRET=${SOCIAL_AUTH_OL_OIDC_SECRET}" >>.env
 echo "STATUS_TOKEN=${STATUS_TOKEN}" >>.env
 echo "TIKA_ACCESS_TOKEN=${TIKA_ACCESS_TOKEN}" >>.env
 echo "YOUTUBE_DEVELOPER_KEY=${YOUTUBE_DEVELOPER_KEY}" >>.env
@@ -62,7 +61,6 @@ echo "SEE_API_ACCESS_TOKEN_URL=https://mit-unified-portal-prod-78eeds.43d8q2.usa
 echo "SECURE_CROSS_ORIGIN_OPENER_POLICY=None" >>.env
 echo "SEE_BASE_URL=https://executive.mit.edu/" >>.env
 echo "SENTRY_ENV=dev" >>.env
-echo "SOCIAL_AUTH_OL_OIDC_KEY=ol-mitlearn-client" >>.env
 echo "XPRO_CATALOG_API_URL=https://xpro.mit.edu/api/programs/" >>.env
 echo "XPRO_COURSES_API_URL=https://xpro.mit.edu/api/courses/" >>.env
 echo "YOUTUBE_FETCH_TRANSCRIPT_SCHEDULE_SECONDS=21600" >>.env
@@ -74,19 +72,13 @@ echo "POSTHOG_UI_HOST=https://us.posthog.com" >>.env
 echo "POSTHOG_PROJECT_ID=63497" >>.env
 echo >>.env
 echo "# Interpolated Vars" >>.env
-echo "ACCESS_TOKEN_URL=https://sso-qa.ol.mit.edu/realms/olapps/protocol/openid-connect/token" >>.env
-echo "AUTHORIZATION_URL=https://sso-qa.ol.mit.edu/realms/olapps/protocol/openid-connect/auth" >>.env
 echo 'CORS_ALLOWED_ORIGINS=["https://mitopen-rc.odl.mit.edu", "https://ocw-next.netlify.app", "https://ol-devops-ci.odl.mit.edu", "https://draft-qa.ocw.mit.edu", "https://live-qa.ocw.mit.edu"]' >>.env
 echo 'CSRF_TRUSTED_ORIGINS=["https://api.mitopen-rc.odl.mit.edu", "https://mitopen-rc.odl.mit.edu"]' >>.env
 echo "KEYCLOAK_BASE_URL=https://sso-qa.ol.mit.edu/" >>.env
 echo "MAILGUN_FROM_EMAIL=MIT Open <no-reply@discussions-mail.odl.mit.edu" >>.env
 echo "MAILGUN_SENDER_DOMAIN=discussions-mail.odl.mit.edu" >>.env
 echo "MAILGUN_URL=https://api.mailgun.net/v3/discussions-mail.odl.mit.edu" >>.env
-echo "OIDC_ENDPOINT=https://sso-qa.ol.mit.edu/realms/olapps" >>.env
 echo "SESSION_COOKIE_DOMAIN=.odl.local" >>.env
-echo 'SOCIAL_AUTH_ALLOWED_REDIRECT_HOSTS=["live-qa.ocw.mit.edu", "mitopen-rc.odl.mit.edu"]' >>.env
-echo "SOCIAL_AUTH_OL_OIDC_OIDC_ENDPOINT=https://sso-qa.ol.mit.edu/realms/olapps" >>.env
-echo "USERINFO_URL=https://sso-qa.ol.mit.edu/realms/olapps/protocol/openid-connect/userinfo" >>.env
 echo >>.env
 echo "# App Vars" >>.env
 echo "COMPOSE_PROFILES=backend,frontend" >>.env
