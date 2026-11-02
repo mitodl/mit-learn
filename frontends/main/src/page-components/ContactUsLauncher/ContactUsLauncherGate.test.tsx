@@ -1,4 +1,5 @@
 import React from "react"
+import { factories } from "api/test-utils"
 import { renderWithProviders, screen } from "@/test-utils"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
@@ -34,13 +35,36 @@ describe("ContactUsLauncherGate", () => {
     }
   })
 
-  test("renders the launcher and forwards the signed-in email", () => {
+  test("renders the launcher and forwards the signed-in email, name and username", () => {
     mockLoaded.mockReturnValue(true)
     mockEnabled.mockReturnValue(true)
     renderWithProviders(<ContactUsLauncherGate />, {
-      user: { is_authenticated: true, email: "learner@example.com" },
+      user: factories.user.user({
+        is_authenticated: true,
+        email: "learner@example.com",
+        username: "ada",
+        profile: { name: "Ada Lovelace" },
+      }),
     })
     expect(screen.getByTestId("launcher")).toBeInTheDocument()
+    expect(mockLauncher.mock.calls[0][0].settings.chat?.requestBody).toEqual({
+      user_email: "learner@example.com",
+      user_name: "Ada Lovelace",
+      user_username: "ada",
+    })
+  })
+
+  test("omits the name and username when the learner has neither", () => {
+    mockLoaded.mockReturnValue(true)
+    mockEnabled.mockReturnValue(true)
+    renderWithProviders(<ContactUsLauncherGate />, {
+      user: factories.user.user({
+        is_authenticated: true,
+        email: "learner@example.com",
+        username: "",
+        profile: { name: "" },
+      }),
+    })
     expect(mockLauncher.mock.calls[0][0].settings.chat?.requestBody).toEqual({
       user_email: "learner@example.com",
     })

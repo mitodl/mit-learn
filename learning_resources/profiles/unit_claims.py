@@ -2,37 +2,29 @@
 Step 1 of resource profile generation: claims for one unit.
 
 A unit's files are sent to the model in one call, and its validated output is
-stored in ClaimExtraction under a key built from the text of its files. A
-call whose key is already stored is skipped, so a unit whose files haven't
-changed is never sent twice, even from another run of the course. The prompt
-and model are left out of the key: after changing them, stored claims are
-regenerated only with overwrite.
+stored in ClaimExtraction under a key built from the text of its files and
+the course outline its prompt is given. A call whose key is already stored is
+skipped, so a unit whose files and course outline haven't changed is never
+sent twice, even from another run of the course. The prompt and model are
+left out of the key: after changing them, stored claims are regenerated only
+with overwrite.
 """
-
-import hashlib
-import json
-import logging
-from dataclasses import dataclass
-from functools import cached_property
-from typing import get_args, get_origin
-
-from django.conf import settings
-from langchain_core.messages import BaseMessage, HumanMessage, SystemMessage
-from langchain_litellm import ChatLiteLLM
-from pydantic import BaseModel, ValidationError
 
 from learning_resources.models import (
     ClaimExtraction,
+    LearningResourceRun,
     ResourceProfileConfiguration,
     Unit,
 )
 from learning_resources.profiles import prompts
+from learning_resources.profiles.claims import (
+    ClaimExtractor,
+    get_or_create_extraction,
+    load_extractor,
+    over_budget,
+)
 from learning_resources.profiles.schemas import UnitExtraction
-from learning_resources.profiles.sources import Source, unit_sources
-from learning_resources.profiles.verification import verify_all_evidence
-from learning_resources.utils import sanitize_llm_text
-
-logger = logging.getLogger(__name__)
+from learning_resources.profiles.sources import unit_sources
 
 # claim lists in a unit output, and the prefix of their claim ids
 CLAIM_PREFIXES = {
@@ -43,202 +35,9 @@ CLAIM_PREFIXES = {
 }
 
 
-class ClaimExtractionError(Exception):
-    """A stage could not produce a valid output"""
-
-
-def cache_key(*inputs) -> str:
-    """Return the sha256 of a call's inputs"""
-    blob = json.dumps(inputs, ensure_ascii=False, separators=(",", ":"))
-    return hashlib.sha256(blob.encode()).hexdigest()
-
-
-@dataclass(frozen=True)
-class PromptStage:
-    """One kind of LLM call: its prompt, output schema and configuration"""
-
-    name: str
-    level: str
-    system: str
-    schema: type[BaseModel]
-    config: ResourceProfileConfiguration
-
-    @cached_property
-    def version(self) -> str:
-        """The stage name and when its configuration was last saved"""
-        return f"{self.name}-{self.config.updated_on:%Y%m%dT%H%M%S}"
-
-    def key(self, *inputs) -> str:
-        """Return the cache key for a call of this stage with these inputs"""
-        return cache_key(self.level, *inputs)
-
-
-def load_unit_stage() -> PromptStage:
-    """
-    Build the unit stage from its ResourceProfileConfiguration.
-
-    Raises:
-        ClaimExtractionError: when the unit stage has no configuration
-    """
-    config = ResourceProfileConfiguration.objects.filter(
-        stage=ResourceProfileConfiguration.Stage.UNIT
-    ).first()
-    if not config:
-        msg = "No ResourceProfileConfiguration for stage unit"
-        raise ClaimExtractionError(msg)
-    return PromptStage(
-        "unit", ClaimExtraction.Level.UNIT, config.prompt, UnitExtraction, config
-    )
-
-
-# --------------------------------------------------------------------------- llm
-def _sanitize(value):
-    """Strip characters Postgres can't store, at any depth of the output"""
-    if isinstance(value, str):
-        return sanitize_llm_text(value)
-    if isinstance(value, list):
-        return [_sanitize(item) for item in value]
-    if isinstance(value, dict):
-        return {key: _sanitize(item) for key, item in value.items()}
-    return value
-
-
-def _raw_response(message: BaseMessage) -> str:
-    """Return the model's response as it was sent: its tool call arguments"""
-    calls = message.additional_kwargs.get("tool_calls") or []
-    arguments = [(call.get("function") or {}).get("arguments") or "" for call in calls]
-    if any(arguments):
-        return "\n".join(arguments)
-    if message.content:
-        return str(message.content)
-    return json.dumps(getattr(message, "tool_calls", []), ensure_ascii=False)
-
-
-def _item_schema(annotation) -> type[BaseModel] | None:
-    """Return the model of a list[Model] field annotation, or None"""
-    args = get_args(annotation)
-    if get_origin(annotation) is list and args and isinstance(args[0], type):
-        return args[0] if issubclass(args[0], BaseModel) else None
-    return None
-
-
-def _drop_note(field: str, index: int, item, error: ValidationError) -> str:
-    label = item.get("label") if isinstance(item, dict) else None
-    first = error.errors()[0]
-    location = ".".join(str(part) for part in first["loc"]) or "item"
-    return (
-        f"Dropped {field} item {index}"
-        + (f" ({label!r})" if label else "")
-        + f", which did not validate: {location}: {first['msg']}"
-    )
-
-
-def validate_dropping_invalid_claims(
-    schema: type[BaseModel], data: dict
-) -> tuple[BaseModel, list[str]]:
-    """
-    Validate a model's output, dropping the claims that don't validate.
-
-    One malformed claim, like an over-long passage or an unknown kind, would
-    otherwise fail the whole output. Each item of every list-of-models field
-    is validated on its own and left out if it fails.
-
-    Args:
-        schema (type of BaseModel): the stage's output schema
-        data (dict): the tool call arguments the model returned
-
-    Returns:
-        tuple of (BaseModel, list of str): the validated output, and a note
-            for each claim that was dropped
-
-    Raises:
-        ValidationError: when the output is invalid apart from its claims
-    """
-    data = dict(data)
-    notes = []
-    for name, field in schema.model_fields.items():
-        item_schema = _item_schema(field.annotation)
-        items = data.get(name)
-        if item_schema is None or not isinstance(items, list):
-            continue
-        kept = []
-        for index, item in enumerate(items, 1):
-            try:
-                kept.append(item_schema.model_validate(item))
-            except ValidationError as error:
-                notes.append(_drop_note(name, index, item, error))
-        data[name] = kept
-    return schema.model_validate(data), notes
-
-
-def _salvage(stage: PromptStage, message: BaseMessage) -> BaseModel:
-    """
-    Recover an output that failed validation by dropping its invalid claims.
-
-    Raises:
-        ValidationError: when the output is invalid apart from its claims
-        ValueError: when the response has no tool call to recover
-    """
-    calls = getattr(message, "tool_calls", None) or []
-    if not calls:
-        msg = "the response has no tool call"
-        raise ValueError(msg)
-    parsed, notes = validate_dropping_invalid_claims(stage.schema, calls[0]["args"])
-    if notes:
-        logger.warning("%s: %s", stage.name, "; ".join(notes))
-        if "extraction_notes" in stage.schema.model_fields:
-            parsed.extraction_notes += notes
-    return parsed
-
-
-def call_llm(stage: PromptStage, combined_prompt: str) -> tuple[BaseModel, str]:
-    """
-    Ask the model for a stage's structured output.
-
-    Claims that don't validate are dropped, with a note, rather than failing
-    the response. A response that still doesn't validate isn't requested
-    again: with the same input, the model mostly fails the same way.
-
-    Returns:
-        tuple of (BaseModel, str): the validated output, and the response
-            as the model returned it
-
-    Raises:
-        ClaimExtractionError: when the response doesn't validate
-    """
-    config = stage.config
-    # unset parameters are left out, for models that reject them
-    model_kwargs = {}
-    if config.max_completion_tokens is not None:
-        model_kwargs["max_completion_tokens"] = config.max_completion_tokens
-    if config.reasoning_effort is not None:
-        model_kwargs["reasoning_effort"] = config.reasoning_effort
-        # litellm refuses it for models missing from its model map, like newer
-        # ones, even when the provider takes it
-        model_kwargs["allowed_openai_params"] = ["reasoning_effort"]
-    llm = ChatLiteLLM(
-        model=config.llm_model,
-        temperature=config.temperature,
-        max_tokens=config.max_tokens,
-        model_kwargs=model_kwargs,
-        api_base=settings.LITELLM_API_BASE,
-        request_timeout=settings.RESOURCE_PROFILE_LLM_TIMEOUT,
-        # Tool calling, not the default json_schema: OpenAI's strict json_schema
-        # mode rejects optional fields, and pydantic validates the response anyway.
-    ).with_structured_output(stage.schema, method="function_calling", include_raw=True)
-    messages = [
-        SystemMessage(content=stage.system),
-        HumanMessage(content=combined_prompt),
-    ]
-    result = llm.invoke(messages)
-    raw = _raw_response(result["raw"])
-    if result["parsed"] is not None:
-        return result["parsed"], raw
-    try:
-        return _salvage(stage, result["raw"]), raw
-    except (ValidationError, ValueError) as error:
-        msg = f"{stage.name}: no valid {stage.schema.__name__}: {error}"
-        raise ClaimExtractionError(msg) from error
+def load_unit_extractor() -> ClaimExtractor:
+    """Build the unit extractor from its ResourceProfileConfiguration"""
+    return load_extractor(ResourceProfileConfiguration.Stage.UNIT, UnitExtraction)
 
 
 # --------------------------------------------------------------------------- outputs
@@ -252,29 +51,35 @@ def _number_claims(output: dict) -> dict:
     return output
 
 
-def _truncation_notes(sources: list[Source]) -> list[str]:
-    return [
-        f"{source.source_id} was truncated: {source.included_chars:,} of"
-        f" {source.total_chars:,} characters were read"
-        for source in sources
-        if source.truncated
-    ]
+def _course_outline(run: LearningResourceRun) -> tuple[str, list[int]]:
+    """
+    Return the course title and its units in order, for orientation, and the
+    ids of those units.
 
-
-def _unit_output(parsed: dict, sources: list[Source]) -> dict:
-    """Verify a unit output's evidence against its sources and note truncation"""
-    output = _number_claims(
-        verify_all_evidence(
-            parsed, {source.source_id: source.text for source in sources}
-        )
+    The outline is built from the run's units rather than from the context
+    unit's claims, so a unit's prompt doesn't depend on another extraction.
+    """
+    units = list(
+        run.units.filter(kind=Unit.Kind.UNIT)
+        .order_by("position", "id")
+        .values_list("id", "title")
     )
-    output["extraction_notes"] += _truncation_notes(sources)
-    output["sources"] = [source.summary() for source in sources]
-    return output
+    lines = [f"Title: {run.learning_resource.title}"]
+    if units:
+        lines.append(
+            "Units (course order): "
+            + "; ".join(
+                f"{index}. {title}" for index, (_, title) in enumerate(units, 1)
+            )
+        )
+    return "\n".join(lines), [unit_id for unit_id, _ in units]
 
 
-def _unit_header(unit: Unit) -> str:
-    lines = [f"title={unit.title!r} | kind={unit.kind}"]
+def _unit_header(unit: Unit, unit_ids: list[int]) -> str:
+    line = f"title={unit.title!r} | kind={unit.kind}"
+    if unit.id in unit_ids:
+        line += f" | unit {unit_ids.index(unit.id) + 1} of {len(unit_ids)}"
+    lines = [line]
     if unit.kind == Unit.Kind.BIN:
         lines.append(
             "These files are not part of a course unit. They are grouped by where"
@@ -283,26 +88,24 @@ def _unit_header(unit: Unit) -> str:
     return "\n".join(lines)
 
 
-def _course_digest(unit: Unit) -> str:
-    """Describe the course to the unit prompt"""
-    return f"Title: {unit.run.learning_resource.title}"
-
-
 # --------------------------------------------------------------------------- extraction
 def generate_unit_claims(
-    unit: Unit, stage: PromptStage | None = None, *, overwrite: bool = False
+    unit: Unit,
+    *,
+    overwrite: bool = False,
 ) -> ClaimExtraction | None:
     """
     Generate the claims for one unit or bin, or return the stored ones.
 
+    The prompt is given the course title and the run's units in order, along
+    with the unit's own files.
+
     Args:
         unit (Unit): the unit or bin
-        stage (PromptStage): the unit stage, loaded from its configuration
-            when not given
         overwrite (bool): call the model even when an extraction with the
             same key is stored, and replace it. The key covers only the
-            files' text, so this is how a prompt, model or code change is
-            applied to stored claims.
+            files' text and the prompt's outline and header, so this is how a
+            prompt, model or code change is applied to stored claims.
 
     Returns:
         ClaimExtraction | None: the unit's extraction, or None when the unit
@@ -310,47 +113,30 @@ def generate_unit_claims(
 
     Raises:
         ClaimExtractionError: when the model gives no valid response
+        ValueError: for the context unit, which generate_context_claims extracts
     """
-    stage = stage or load_unit_stage()
-    config = stage.config
+    if unit.kind == Unit.Kind.CONTEXT:
+        msg = "The context unit is extracted with generate_context_claims"
+        raise ValueError(msg)
+    extractor = load_unit_extractor()
+    config = extractor.config
     sources = unit_sources(unit, config.max_file_tokens)
     if not sources:
         return None
-    tokens = sum(source.tokens for source in sources)
-    if tokens > config.input_token_budget:
-        logger.warning(
-            "Skipping %s %s of run %s: %d files, about %d tokens, over the"
-            " input budget of %d",
-            unit.kind,
-            unit.external_id,
-            unit.run.run_id,
-            len(sources),
-            tokens,
-            config.input_token_budget,
-        )
+    if over_budget(unit, sources, config.input_token_budget):
         return None
-    key = stage.key([source.cache_input() for source in sources])
-    if not overwrite:
-        extraction = ClaimExtraction.objects.filter(key=key).first()
-        if extraction:
-            return extraction
-    parsed, raw = call_llm(
-        stage,
-        prompts.unit_combined_prompt(
-            _course_digest(unit),
-            _unit_header(unit),
+    outline, unit_ids = _course_outline(unit.run)
+    header = _unit_header(unit, unit_ids)
+    return get_or_create_extraction(
+        extractor,
+        extractor.key([source.cache_input() for source in sources], outline, header),
+        lambda: prompts.unit_combined_prompt(
+            outline,
+            header,
             "\n".join(source.block for source in sources),
         ),
+        sources,
+        unit=unit,
+        finish=_number_claims,
+        overwrite=overwrite,
     )
-    extraction, _ = ClaimExtraction.objects.update_or_create(
-        key=key,
-        defaults={
-            "level": stage.level,
-            "extractor_version": stage.version,
-            "model": config.llm_model,
-            "output": _sanitize(_unit_output(parsed.model_dump(), sources)),
-            "raw_response": sanitize_llm_text(raw),
-            "unit": unit,
-        },
-    )
-    return extraction

@@ -345,7 +345,7 @@ const ResourceCarousel: React.FC<ResourceCarouselProps> = ({
                           key={index}
                           resource={null}
                           parentHeadingEl={titleComponent}
-                          {...tabConfig.cardProps}
+                          size={tabConfig.size}
                         />
                       ))
                     : resources
@@ -355,7 +355,7 @@ const ResourceCarousel: React.FC<ResourceCarouselProps> = ({
                             key={resource.id}
                             resource={resource}
                             parentHeadingEl={titleComponent}
-                            {...tabConfig.cardProps}
+                            size={tabConfig.size}
                             onCardClick={() => {
                               if (env("NEXT_PUBLIC_POSTHOG_API_KEY")) {
                                 posthog.capture(

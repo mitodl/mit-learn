@@ -83,8 +83,6 @@ def test_start_embed_resources(mocker, mocked_celery, index):
     start_embed_resources should generate embeddings for each resource type
     """
 
-    mocker.patch("vector_search.tasks.load_course_blocklist", return_value=[])
-
     if index == COURSE_TYPE:
         ocw_courses = sorted(
             CourseFactory.create_batch(4, etl_source=ETLSource.ocw.value),
@@ -136,7 +134,6 @@ def test_start_embed_resources_without_settings(mocker, mocked_celery, index):
     """
     settings.QDRANT_HOST = ""
     settings.QDRANT_BASE_COLLECTION_NAME = ""
-    mocker.patch("vector_search.tasks.load_course_blocklist", return_value=[])
 
     if index == COURSE_TYPE:
         ocw_courses = sorted(
@@ -159,57 +156,12 @@ def test_start_embed_resources_without_settings(mocker, mocked_celery, index):
     generate_embeddings_mock.si.assert_not_called()
 
 
-def test_start_embed_resources_excludes_blocklisted_courses(mocker, mocked_celery):
-    """start_embed_resources should not embed courses whose readable_id is blocklisted"""
-    courses = CourseFactory.create_batch(3, etl_source=ETLSource.ocw.value)
-    blocked = courses[0]
-    for course in courses:
-        ContentFileFactory.create_batch(2, run=course.learning_resource.runs.first())
-    mocker.patch(
-        "vector_search.tasks.load_course_blocklist",
-        return_value=[blocked.learning_resource.readable_id],
-    )
-    generate_embeddings_mock = mocker.patch(
-        "vector_search.tasks.generate_embeddings", autospec=True
-    )
-
-    with pytest.raises(mocked_celery.replace_exception_class):
-        start_embed_resources.delay(
-            [COURSE_TYPE], skip_content_files=False, overwrite=True
-        )
-
-    embedded_resource_ids = {
-        resource_id
-        for call in generate_embeddings_mock.si.call_args_list
-        if call.args[1] == COURSE_TYPE
-        for resource_id in call.args[0]
-    }
-    assert embedded_resource_ids == {
-        course.learning_resource_id for course in courses[1:]
-    }
-
-    blocked_file_ids = set(
-        ContentFile.objects.filter(
-            run__learning_resource=blocked.learning_resource
-        ).values_list("id", flat=True)
-    )
-    embedded_file_ids = {
-        file_id
-        for call in generate_embeddings_mock.si.call_args_list
-        if call.args[1] == CONTENT_FILE_TYPE
-        for file_id in call.args[0]
-    }
-    assert embedded_file_ids
-    assert not embedded_file_ids & blocked_file_ids
-
-
 def test_embed_new_learning_resources(mocker, mocked_celery):
     """
     embed_new_learning_resources should generate embeddings for new resources
     based on the period
     """
     settings.QDRANT_EMBEDDINGS_TASK_LOOKBACK_WINDOW = 60 * 2
-    mocker.patch("vector_search.tasks.load_course_blocklist", return_value=[])
 
     new_resources = LearningResourceFactory.create_batch(
         4, resource_type=COURSE_TYPE, published=True
@@ -260,7 +212,6 @@ def test_embed_new_content_files(mocker, mocked_celery):
     created within the last QDRANT_EMBEDDINGS_TASK_LOOKBACK_WINDOW minutes
     """
     settings.QDRANT_EMBEDDINGS_TASK_LOOKBACK_WINDOW = 60 * 2
-    mocker.patch("vector_search.tasks.load_course_blocklist", return_value=[])
 
     new_contents = ContentFileFactory.create_batch(4, published=True)
     for cf in new_contents:
@@ -397,7 +348,6 @@ def test_embed_learning_resources_by_id(mocker, mocked_celery):
     embed_learning_resources_by_id should generate embeddings for resources
     based the ids passed as well as associated contentfiles
     """
-    mocker.patch("vector_search.tasks.load_course_blocklist", return_value=[])
 
     resources = LearningResourceFactory.create_batch(
         4,
@@ -444,8 +394,6 @@ def test_embedded_content_from_all_runs(mocker, mocked_celery):
     Content files from every run of a course should be embedded, not just best_run
     """
 
-    mocker.patch("vector_search.tasks.load_course_blocklist", return_value=[])
-
     course = CourseFactory.create(etl_source=ETLSource.ocw.value)
     course.runs.all().delete()
     older_run = LearningResourceRunFactory.create(
@@ -479,8 +427,6 @@ def test_embed_by_id_all_runs_excludes_unpublished(mocker, mocked_celery):
     embed_learning_resources_by_id embeds published content files from all runs and
     excludes unpublished ones
     """
-
-    mocker.patch("vector_search.tasks.load_course_blocklist", return_value=[])
 
     course = CourseFactory.create(etl_source=ETLSource.ocw.value)
     course.runs.all().delete()
@@ -524,8 +470,6 @@ def test_embedded_content_file_without_runs(mocker, mocked_celery):
     Ensure that contentfiles without runs are also embedded for a resource
     """
 
-    mocker.patch("vector_search.tasks.load_course_blocklist", return_value=[])
-
     course = CourseFactory.create(etl_source=ETLSource.ocw.value)
     course.runs.all().delete()
     latest_run = LearningResourceRunFactory.create(
@@ -558,7 +502,6 @@ def test_start_embed_resources_program_content_files(mocker, mocked_celery):
     """
     start_embed_resources should embed content files for programs
     """
-    mocker.patch("vector_search.tasks.load_course_blocklist", return_value=[])
 
     programs = ProgramFactory.create_batch(2)
     content_ids = []
@@ -593,7 +536,6 @@ def test_embed_learning_resources_by_id_program_content_files(mocker, mocked_cel
     """
     embed_learning_resources_by_id should embed content files for programs
     """
-    mocker.patch("vector_search.tasks.load_course_blocklist", return_value=[])
 
     programs = ProgramFactory.create_batch(2)
     resource_ids = [p.learning_resource.id for p in programs]
@@ -629,7 +571,6 @@ def test_program_embedding_includes_test_mode_unpublished_programs(
     mocker, mocked_celery
 ):
     """Program embedding should include test-mode unpublished resources in both flows."""
-    mocker.patch("vector_search.tasks.load_course_blocklist", return_value=[])
 
     program = ProgramFactory.create(
         learning_resource__published=False,
@@ -689,7 +630,6 @@ def test_embed_new_content_files_without_runs(mocker, mocked_celery):
     embed_new_content_files should generate embeddings for new content files
     created within the last QDRANT_EMBEDDINGS_TASK_LOOKBACK_WINDOW minutes
     """
-    mocker.patch("vector_search.tasks.load_course_blocklist", return_value=[])
     course = CourseFactory.create(etl_source=ETLSource.ocw.value)
     daily_since = now_in_utc() - datetime.timedelta(minutes=5)
     ContentFileFactory.create_batch(4, created_on=daily_since, published=True)
@@ -1854,7 +1794,6 @@ def test_embed_new_content_files_includes_unpublished_runs(mocker, mocked_celery
     New files on an unpublished run of a published course are embedded, matching
     the post-ingest hook: Qdrant carries every run.
     """
-    mocker.patch("vector_search.tasks.load_course_blocklist", return_value=[])
     course = LearningResourceFactory.create(
         is_course=True, create_runs=False, published=True
     )

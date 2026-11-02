@@ -17,13 +17,15 @@ from learning_resources.models import (
     ResourceProfileConfiguration,
     Unit,
 )
-from learning_resources.profiles import unit_claims
-from learning_resources.profiles.schemas import UnitExtraction
-from learning_resources.profiles.unit_claims import (
+from learning_resources.profiles import claims
+from learning_resources.profiles.claims import (
     ClaimExtractionError,
     call_llm,
+)
+from learning_resources.profiles.schemas import UnitExtraction
+from learning_resources.profiles.unit_claims import (
     generate_unit_claims,
-    load_unit_stage,
+    load_unit_extractor,
 )
 from main.utils import now_in_utc
 
@@ -73,9 +75,9 @@ def _unit_out(prompt):
 def fake_llm(mocker):
     """Replace the model with one that answers from the prompt"""
     return mocker.patch.object(
-        unit_claims,
+        claims,
         "call_llm",
-        side_effect=lambda _stage, prompt: (_unit_out(prompt), "unit raw"),
+        side_effect=lambda _extractor, prompt: (_unit_out(prompt), "unit raw"),
     )
 
 
@@ -122,6 +124,10 @@ def _build_unit(run=None, **kwargs):
     return unit
 
 
+def _generate(unit, **kwargs):
+    return generate_unit_claims(unit, **kwargs)
+
+
 def _prompt(fake_llm, call=0):
     return fake_llm.call_args_list[call].args[1]
 
@@ -130,7 +136,7 @@ def test_generate_unit_claims(fake_llm):
     """A unit's files are sent in one call, and the verified output is stored"""
     unit = _build_unit()
 
-    extraction = generate_unit_claims(unit)
+    extraction = _generate(unit)
 
     prompt = _prompt(fake_llm)
     assert f"Title: {unit.run.learning_resource.title}" in prompt
@@ -139,7 +145,7 @@ def test_generate_unit_claims(fake_llm):
     assert extraction.unit == unit
     assert extraction.level == ClaimExtraction.Level.UNIT
     assert extraction.model == "test-model"
-    config = ResourceProfileConfiguration.objects.get()
+    config = ResourceProfileConfiguration.objects.get(stage="unit")
     assert extraction.extractor_version == (f"unit-{config.updated_on:%Y%m%dT%H%M%S}")
     assert extraction.raw_response == "unit raw"
     output = extraction.output
@@ -151,9 +157,57 @@ def test_generate_unit_claims(fake_llm):
     assert output["skills"][0]["evidence"][0]["verified"] == "unverified"
 
 
+def test_outline_in_prompt_and_key(fake_llm):
+    """The run's units, in order, are in the prompt and its key"""
+    unit = _build_unit(position=1)
+    UnitFactory.create(run=unit.run, external_id="seq1", title="Week 1", position=0)
+    UnitFactory.create(
+        run=unit.run, kind=Unit.Kind.BIN, external_id="bin:pdf", position=None
+    )
+    first = _generate(unit)
+
+    prompt = _prompt(fake_llm)
+    assert "Units (course order): 1. Week 1; 2. Week 0" in prompt
+    assert "title='Week 0' | kind=unit | unit 2 of 2" in prompt
+    assert _generate(unit) == first
+    UnitFactory.create(run=unit.run, external_id="seq2", title="Week 2", position=2)
+    assert _generate(unit) != first
+    assert fake_llm.call_count == 2
+
+
+def test_context_extraction_not_needed(fake_llm):
+    """A unit is extracted without its run's context unit being extracted"""
+    UnitFactory.create(
+        run=_build_unit().run, kind=Unit.Kind.CONTEXT, external_id="context"
+    )
+    ResourceProfileConfiguration.objects.filter(stage="context").delete()
+
+    assert _generate(Unit.objects.get(external_id="seq0")) is not None
+    assert fake_llm.call_count == 1
+
+
+def test_context_unit_rejected(fake_llm):
+    """The context unit isn't extracted with the unit prompt"""
+    unit = _build_unit(kind=Unit.Kind.CONTEXT, position=None)
+
+    with pytest.raises(ValueError, match="generate_context_claims"):
+        _generate(unit)
+    assert fake_llm.call_count == 0
+
+
+def test_title_in_key(fake_llm):
+    """Units are keyed by their course title"""
+    unit = _build_unit()
+    other = _build_unit()
+
+    first = _generate(unit)
+    assert _generate(other) != first
+    assert fake_llm.call_count == 2
+
+
 def test_bin_prompt(fake_llm):
     """A bin's prompt says its files have no order"""
-    generate_unit_claims(_build_unit(kind=Unit.Kind.BIN, position=None))
+    _generate(_build_unit(kind=Unit.Kind.BIN, position=None))
 
     assert "not part of a course unit" in _prompt(fake_llm)
 
@@ -161,19 +215,19 @@ def test_bin_prompt(fake_llm):
 def test_generate_unit_claims_cached(fake_llm):
     """A unit whose inputs haven't changed makes no call"""
     unit = _build_unit()
-    extraction = generate_unit_claims(unit)
+    extraction = _generate(unit)
 
-    assert generate_unit_claims(unit) == extraction
+    assert _generate(unit) == extraction
     assert fake_llm.call_count == 1
 
 
 def test_overwrite_reruns_unit(fake_llm):
     """Overwrite makes a new call and replaces the stored extraction"""
     unit = _build_unit()
-    first = generate_unit_claims(unit)
+    first = _generate(unit)
     ClaimExtraction.objects.filter(pk=first.pk).update(output={"stale": True})
 
-    extraction = generate_unit_claims(unit, overwrite=True)
+    extraction = _generate(unit, overwrite=True)
 
     assert extraction.pk == first.pk
     assert extraction.output["summary"] == "The unit teaches forces."
@@ -184,22 +238,22 @@ def test_overwrite_reruns_unit(fake_llm):
 def test_identical_unit_in_other_run_reuses_extraction(fake_llm):
     """Another run's unit with the same files reuses the extraction"""
     unit = _build_unit()
-    extraction = generate_unit_claims(unit)
+    extraction = _generate(unit)
     other_run = LearningResourceRunFactory.create(
         learning_resource=unit.run.learning_resource
     )
 
-    assert generate_unit_claims(_build_unit(other_run)) == extraction
+    assert _generate(_build_unit(other_run)) == extraction
     assert fake_llm.call_count == 1
 
 
 def test_changed_file_reruns_unit(fake_llm):
     """A changed file makes a new call"""
     unit = _build_unit()
-    first = generate_unit_claims(unit)
+    first = _generate(unit)
     _add_file(unit, "An added worked example.", position=2)
 
-    assert generate_unit_claims(unit) != first
+    assert _generate(unit) != first
     assert fake_llm.call_count == 2
 
 
@@ -209,23 +263,23 @@ def test_changed_file_reruns_unit(fake_llm):
 def test_configuration_change_keeps_claims(fake_llm, change):
     """Editing the unit configuration reuses the stored claims"""
     unit = _build_unit()
-    first = generate_unit_claims(unit)
+    first = _generate(unit)
     ResourceProfileConfiguration.objects.update(**change)
 
-    assert generate_unit_claims(unit) == first
+    assert _generate(unit) == first
     assert fake_llm.call_count == 1
 
 
 def test_prompt_change_applied_with_overwrite(fake_llm):
     """A prompt change reaches stored claims when they are overwritten"""
     unit = _build_unit()
-    first = generate_unit_claims(unit)
+    first = _generate(unit)
     # update() skips auto_now, so move updated_on past the first version
     ResourceProfileConfiguration.objects.update(
         prompt="new prompt", updated_on=now_in_utc() + timedelta(minutes=1)
     )
 
-    extraction = generate_unit_claims(unit, overwrite=True)
+    extraction = _generate(unit, overwrite=True)
 
     assert extraction.pk == first.pk
     assert extraction.extractor_version != first.extractor_version
@@ -238,7 +292,7 @@ def test_truncated_files_noted(fake_llm):
     unit = UnitFactory.create()
     _add_file(unit, "A long transcript. " * 20)
 
-    output = generate_unit_claims(unit).output
+    output = _generate(unit).output
 
     assert output["sources"][0]["truncated"] is True
     assert output["extraction_notes"] == [
@@ -250,7 +304,7 @@ def test_unit_over_budget_skipped(fake_llm):
     """A unit whose files are over the input budget makes no call"""
     ResourceProfileConfiguration.objects.update(input_token_budget=30)
 
-    assert generate_unit_claims(_build_unit()) is None
+    assert _generate(_build_unit()) is None
     fake_llm.assert_not_called()
 
 
@@ -259,18 +313,18 @@ def test_unit_without_text_skipped(fake_llm):
     unit = UnitFactory.create()
     _add_file(unit, "   ")
 
-    assert generate_unit_claims(unit) is None
+    assert _generate(unit) is None
     fake_llm.assert_not_called()
 
 
 def test_failed_call_stores_nothing(mocker):
     """A call that fails raises and stores nothing"""
     mocker.patch.object(
-        unit_claims, "call_llm", side_effect=ClaimExtractionError("bad response")
+        claims, "call_llm", side_effect=ClaimExtractionError("bad response")
     )
 
     with pytest.raises(ClaimExtractionError):
-        generate_unit_claims(_build_unit())
+        _generate(_build_unit())
     assert not ClaimExtraction.objects.exists()
 
 
@@ -278,12 +332,12 @@ def test_missing_configuration():
     """Generation needs the unit stage configured"""
     ResourceProfileConfiguration.objects.all().delete()
     with pytest.raises(ClaimExtractionError, match="unit"):
-        load_unit_stage()
+        load_unit_extractor()
 
 
 def test_call_llm(mocker, settings):
     """call_llm returns the parsed output and the raw tool call arguments"""
-    stage = load_unit_stage()
+    extractor = load_unit_extractor()
     output = _unit_out("=== SOURCE S01 | x ===\nsome source text here")
     raw = AIMessage(
         content="",
@@ -297,10 +351,10 @@ def test_call_llm(mocker, settings):
         "parsed": output,
         "parsing_error": None,
     }
-    chat = mocker.patch.object(unit_claims, "ChatLiteLLM")
+    chat = mocker.patch.object(claims, "ChatLiteLLM")
     chat.return_value.with_structured_output.return_value = structured
 
-    assert call_llm(stage, "combined prompt") == (output, '{"summary": 1}')
+    assert call_llm(extractor, "combined prompt") == (output, '{"summary": 1}')
     chat.assert_called_once_with(
         model="test-model",
         temperature=None,
@@ -329,10 +383,10 @@ def test_call_llm_with_parameters(mocker):
         "parsed": _unit_out("=== SOURCE S01 | x ===\nsome source text here"),
         "parsing_error": None,
     }
-    chat = mocker.patch.object(unit_claims, "ChatLiteLLM")
+    chat = mocker.patch.object(claims, "ChatLiteLLM")
     chat.return_value.with_structured_output.return_value = structured
 
-    call_llm(load_unit_stage(), "combined prompt")
+    call_llm(load_unit_extractor(), "combined prompt")
 
     kwargs = chat.call_args.kwargs
     assert kwargs["temperature"] == 0.2
@@ -352,11 +406,11 @@ def test_call_llm_invalid_response(mocker):
         "parsed": None,
         "parsing_error": ValueError("bad"),
     }
-    chat = mocker.patch.object(unit_claims, "ChatLiteLLM")
+    chat = mocker.patch.object(claims, "ChatLiteLLM")
     chat.return_value.with_structured_output.return_value = structured
 
     with pytest.raises(ClaimExtractionError, match="no valid UnitExtraction"):
-        call_llm(load_unit_stage(), "combined prompt")
+        call_llm(load_unit_extractor(), "combined prompt")
     assert structured.invoke.call_count == 1
 
 
@@ -379,10 +433,10 @@ def test_call_llm_drops_invalid_claims(mocker):
         "parsed": None,
         "parsing_error": ValueError("bad"),
     }
-    chat = mocker.patch.object(unit_claims, "ChatLiteLLM")
+    chat = mocker.patch.object(claims, "ChatLiteLLM")
     chat.return_value.with_structured_output.return_value = structured
 
-    parsed, _ = call_llm(load_unit_stage(), "combined prompt")
+    parsed, _ = call_llm(load_unit_extractor(), "combined prompt")
 
     assert structured.invoke.call_count == 1
     assert [concept.label for concept in parsed.concepts] == ["Newton's second law"]
@@ -407,9 +461,9 @@ def test_call_llm_fails_when_only_claims_are_valid(mocker):
         "parsed": None,
         "parsing_error": ValueError("bad"),
     }
-    chat = mocker.patch.object(unit_claims, "ChatLiteLLM")
+    chat = mocker.patch.object(claims, "ChatLiteLLM")
     chat.return_value.with_structured_output.return_value = structured
 
     with pytest.raises(ClaimExtractionError, match="summary"):
-        call_llm(load_unit_stage(), "combined prompt")
+        call_llm(load_unit_extractor(), "combined prompt")
     assert structured.invoke.call_count == 1

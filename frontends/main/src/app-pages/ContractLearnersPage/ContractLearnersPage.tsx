@@ -1,14 +1,13 @@
 "use client"
 
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import NextLink from "next/link"
 import {
   keepPreviousData,
   useQuery,
   useQueryClient,
 } from "@tanstack/react-query"
+import Image from "next/image"
 import { useFeatureFlagEnabled, usePostHog } from "posthog-js/react"
-import { RiArrowLeftLine } from "@remixicon/react"
 import {
   Container,
   Pagination,
@@ -52,7 +51,8 @@ import { ForbiddenError, isForbiddenResponse } from "@/common/errors"
 import { FeatureFlags } from "@/common/feature_flags"
 import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
 import { PostHogEvents } from "@/common/constants"
-import { contractAnalyticsView } from "@/common/urls"
+import graduateLogo from "@/public/images/dashboard/graduate.png"
+import ContractManagerNav from "@/components/ContractManagerNav/ContractManagerNav"
 import SectionHeader, {
   SectionFreshness,
 } from "../DashboardPage/Analytics/SectionHeader"
@@ -85,43 +85,48 @@ const Page = styled(Container)(({ theme }) => ({
   },
 }))
 
-const BackLink = styled(NextLink)(({ theme }) => ({
-  ...theme.typography.subtitle3,
-  display: "inline-flex",
-  alignItems: "center",
-  gap: "8px",
-  color: theme.custom.colors.mitRed,
-  textDecoration: "none",
-  ":hover": { textDecoration: "underline" },
-}))
-
 const HeaderSection = styled.div(({ theme }) => ({
   display: "flex",
-  alignItems: "flex-end",
+  alignItems: "center",
   justifyContent: "space-between",
   gap: "24px",
-  paddingBottom: "16px",
-  borderBottom: `2px solid ${theme.custom.colors.black}`,
   [theme.breakpoints.down("md")]: {
     flexDirection: "column",
     alignItems: "stretch",
   },
 }))
 
-const Eyebrow = styled(Typography)(({ theme }) => ({
-  ...theme.typography.subtitle4,
-  color: theme.custom.colors.mitRed,
-  textTransform: "uppercase",
-  letterSpacing: "0.06em",
-})) as typeof Typography
+const OrgDetailsContainer = styled.div({
+  display: "flex",
+  alignItems: "center",
+  gap: "24px",
+})
 
-const PageTitle = styled(Typography)(({ theme }) => ({
-  ...theme.typography.h2,
-  color: theme.custom.colors.black,
+const ImageContainer = styled.div(({ theme }) => ({
+  display: "flex",
+  width: "60px",
+  height: "60px",
+  padding: "8px",
+  alignItems: "center",
+  justifyContent: "center",
+  flexShrink: 0,
+  borderRadius: "8px",
+  backgroundColor: theme.custom.colors.white,
+  border: `1px solid ${theme.custom.colors.lightGray2}`,
+  overflow: "hidden",
+  "> img": {
+    width: "100%",
+    height: "auto",
+  },
+}))
+
+const OrgName = styled(Typography)(({ theme }) => ({
+  ...theme.typography.h3,
+  color: theme.custom.colors.darkGray2,
 })) as typeof Typography
 
 const PageSubtitle = styled(Typography)(({ theme }) => ({
-  ...theme.typography.body1,
+  ...theme.typography.subtitle1,
   color: theme.custom.colors.silverGrayDark,
 })) as typeof Typography
 
@@ -319,11 +324,11 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
   const org = managerOrgs?.find(matchOrganizationBySlug(orgSlug))
   const contract = org?.contracts.find((item) => item.slug === contractSlug)
   const orgUuid = org?.sso_organization_id ?? null
-  const contractId = contract ? String(contract.id) : null
+  const contractId = contract?.id ?? null
   const canQuery = isAnalyticsConfigured() && !!orgUuid && !!contractId
 
   const courseRunsQuery = useQuery({
-    ...analyticsContractQueries.courseRuns(orgUuid ?? "", contractId ?? "", {
+    ...analyticsContractQueries.courseRuns(orgUuid ?? "", contractId ?? 0, {
       limit: 1000,
     }),
     enabled: canQuery,
@@ -372,7 +377,7 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
   const rowsQuery = useQuery({
     ...analyticsContractQueries.learnerProgress(
       orgUuid ?? "",
-      contractId ?? "",
+      contractId ?? 0,
       listParams,
     ),
     enabled: canQuery && moduleResolved && view === VIEWS.enrollments,
@@ -382,7 +387,7 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
   const totalQuery = useQuery({
     ...analyticsContractQueries.learnerProgress(
       orgUuid ?? "",
-      contractId ?? "",
+      contractId ?? 0,
       { limit: 1 },
     ),
     enabled: canQuery,
@@ -395,7 +400,7 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
     statusFilter === ALL &&
     activeModule === ALL
   const needsAttentionQuery = useQuery({
-    ...analyticsContractQueries.needsAttention(orgUuid ?? "", contractId ?? ""),
+    ...analyticsContractQueries.needsAttention(orgUuid ?? "", contractId ?? 0),
     enabled: canQuery && showsLearnerCount,
   })
   const learnersNeedingAttention = showsLearnerCount
@@ -605,19 +610,23 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
   return (
     <Page>
       <Stack gap="24px">
-        <div>
-          <BackLink href={contractAnalyticsView(orgSlug, contractSlug)}>
-            <RiArrowLeftLine size={16} aria-hidden="true" />
-            Program analytics
-          </BackLink>
-        </div>
-
         <HeaderSection>
-          <div>
-            <Eyebrow component="p">Learner Directory</Eyebrow>
-            <PageTitle component="h1">Learners</PageTitle>
-            <PageSubtitle component="p">{contract.name}</PageSubtitle>
-          </div>
+          <OrgDetailsContainer>
+            <ImageContainer>
+              <Image
+                width={60}
+                height={60}
+                src={org.logo ?? graduateLogo}
+                alt=""
+              />
+            </ImageContainer>
+            <div>
+              <OrgName component="h1">{org.name}</OrgName>
+              <PageSubtitle component="p">
+                Learners · {contract.name}
+              </PageSubtitle>
+            </div>
+          </OrgDetailsContainer>
           {view === VIEWS.enrollments ? (
             <ExportWrapper>
               <Button
@@ -632,6 +641,12 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
             </ExportWrapper>
           ) : null}
         </HeaderSection>
+
+        <ContractManagerNav
+          orgSlug={orgSlug}
+          contractSlug={contractSlug}
+          current="learners"
+        />
 
         {!canQuery ? (
           <Typography id={UNAVAILABLE_MESSAGE_ID} variant="body1">

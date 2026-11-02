@@ -1,6 +1,33 @@
 Release Notes
 =============
 
+Version 0.85.4
+--------------
+
+- Let the Follow pill follow the end of the channel title (#4202)
+- Program dashboard: show "Other courses in this program" across all tracks (#4169)
+- Treat env feature flags as final when PostHog has no api key (#4189)
+- feat(b2b-learner-analytics): show last activity date in progress grid cells (#4122)
+- Send the learner's name and username with the Contact us intake (#4175)
+- feat(b2b): add shared navigation across contract manager pages (#4125)
+
+Version 0.85.3
+--------------
+
+- Remove the topic channel's pre-redesign page (#4200)
+- Emit Review structured data for product page testimonials (#4084)
+- fix(auth): link email-matched legacy users to their global_id (#4019)
+- add loader that wait for Posthog api call response and then render the Topic pages (#4185)
+- Open the compliance dialog on fields CyberSource rejects (#4085)
+- Remove temporary certifi exclude-newer exemption (#4171)
+- Update dependency litellm to v1.100.4 [SECURITY] (#4179)
+- Show a requirement group's description on its program dashboard cards (#4146)
+- Render user-list and learning-path pages with the condensed card (#4168)
+- Update dependency Django to v5.2.18 (#4161)
+- feat(auth): send an S256 PKCE challenge on account action requests (#4167)
+- Add a warehouse-pull sync task for OCW courses (#4135)
+- adding initial frontend changes (#4158)
+
 Version 0.85.1
 --------------
 

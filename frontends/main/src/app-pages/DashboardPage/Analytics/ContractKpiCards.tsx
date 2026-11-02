@@ -185,9 +185,11 @@ const ContractKpiCards: React.FC<{
               <Stat
                 label="Completion rate"
                 subLabel={
-                  row.learners_certified === null
+                  // undefined from an API older than certified_learners.
+                  row.certified_learners === null ||
+                  row.certified_learners === undefined
                     ? undefined
-                    : `${formatCount(row.learners_certified)} certified`
+                    : `${formatCount(row.certified_learners)} certified`
                 }
                 value={row.completion_rate_pct}
                 format={formatPercent}

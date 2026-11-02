@@ -34,12 +34,9 @@ const Value = styled.span<{ size?: Size }>(({ theme, size }) => [
   },
 ])
 
-const getImageDimensions = (size: Size, isMedia: boolean) => {
-  const dimensions = {
-    small: { width: 190, height: isMedia ? 190 : 120 },
-    medium: { width: 298, height: isMedia ? 298 : 170 },
-  }
-  return dimensions[size]
+const IMAGE_DIMENSIONS: Record<Size, { width: number; height: number }> = {
+  small: { width: 190, height: 120 },
+  medium: { width: 298, height: 170 },
 }
 
 const PriceContainer = styled.div<{ size: Size }>(({ size }) => ({
@@ -85,7 +82,6 @@ interface BaseLearningResourceCardProps {
   isLoading?: boolean
   className?: string
   size?: Size
-  isMedia?: boolean
   href?: string
   /**
    * If set, a plain click on the card's title link pushes this URL instead of
@@ -299,7 +295,6 @@ const BaseLearningResourceCard: React.FC<BaseLearningResourceCardProps> = ({
   isLoading,
   className,
   size = "medium",
-  isMedia = false,
   href,
   pushUrl,
   onClick,
@@ -401,7 +396,7 @@ const BaseLearningResourceCard: React.FC<BaseLearningResourceCardProps> = ({
       )
     }
     const { width, height } = imgConfigs["column"]
-    const aspect = isMedia ? 1 : width / height
+    const aspect = width / height
     return (
       <StyledCard className={className} size={size}>
         <Card.Content>
@@ -611,7 +606,7 @@ const BaseLearningResourceCard: React.FC<BaseLearningResourceCardProps> = ({
           alt={imageAlt}
           onError={onImageError}
           unoptimized={imageUnoptimized}
-          {...getImageDimensions(size, isMedia)}
+          {...IMAGE_DIMENSIONS[size]}
         />
       )}
       <Card.Info>

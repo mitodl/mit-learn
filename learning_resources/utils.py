@@ -11,12 +11,10 @@ from urllib.parse import quote, urlencode
 
 import html2text
 import rapidjson
-import requests
 import yaml
 from botocore.exceptions import ClientError
 from django.conf import settings
 from django.contrib.auth.models import Group
-from django.core.cache import caches
 from django.db import transaction
 from django.db.models import Prefetch, Q
 from retry import retry
@@ -47,8 +45,6 @@ from main.azure_openai import strip_azure_prefix
 from main.utils import frontend_absolute_url, generate_filepath
 
 log = logging.getLogger()
-
-BLOCKLIST_CACHE_TIMEOUT = 60 * 60 * 24
 
 
 # edX block types that never have content
@@ -207,28 +203,6 @@ def get_year_and_semester(course_run):
             semester = None
             year = course_run.get("start")[:4] if course_run.get("start") else None
     return year, semester
-
-
-def load_course_blocklist():
-    """
-    Get a list of blocklisted course ids
-
-    Returns:
-        list of str: list of course ids
-
-    """
-    blocklist_url = settings.BLOCKLISTED_COURSES_URL
-    if blocklist_url is None:
-        return []
-    redis_cache = caches["redis"]
-    blocklist = redis_cache.get("course_blocklist")
-    if blocklist is not None:
-        return blocklist
-    response = requests.get(blocklist_url, timeout=settings.REQUESTS_TIMEOUT)
-    response.raise_for_status()
-    blocklist = [str(line, "utf-8") for line in response.iter_lines()]
-    redis_cache.set("course_blocklist", blocklist, timeout=BLOCKLIST_CACHE_TIMEOUT)
-    return blocklist
 
 
 @retry(

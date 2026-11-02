@@ -503,13 +503,15 @@ const CardGrid = styled(PlainList)(({ theme }) => ({
    * where the column is the full 343, that gap was the widest of all.
    *
    * The column is the width in a grid, so the cards give that measurement up
-   * here. Only the width: the size still decides the type, the date format
-   * and whether a start label is drawn at all.
+   * here; the size still decides the legacy card's type, date format and
+   * start label. The height stretches each card to its row, so cards in a row
+   * end level.
    */
   "> li > *": {
     minWidth: 0,
     maxWidth: "none",
     width: "100%",
+    height: "100%",
   },
 }))
 
@@ -589,7 +591,7 @@ const TopicTabsRow = styled.div(({ theme }) => ({
        that selecting one does not move the row. */
     borderBottom: "2px solid transparent",
     ":hover": {
-      backgroundColor: "transparent",
+      backgroundColor: "transparent !important",
       color: theme.custom.colors.darkGray2,
     },
   },
@@ -609,6 +611,9 @@ const TopicTabsRow = styled.div(({ theme }) => ({
 const MobileFilter = styled("div", {
   shouldForwardProp: (prop) => prop !== "cards",
 })<{ cards: boolean }>(({ theme, cards }) => ({
+  // Contains the floated Sort, which wraps below Filter on very narrow
+  // screens and would otherwise squeeze the first result beside it.
+  display: "flow-root",
   [theme.breakpoints.up("md")]: {
     display: "none",
   },

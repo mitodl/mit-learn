@@ -44,10 +44,7 @@ def normalize_run_id(etl_source: str, run_id: str) -> str:
     Returns:
         str: The normalized run_id
     """
-    if etl_source == ETLSource.mit_edx.name:
-        normalized = run_id.replace("-", ".").replace("+", ".").lower()
-        return normalized.removeprefix("course.v1:")
-    elif etl_source == ETLSource.oll.name:
+    if etl_source == ETLSource.oll.name:
         normalized = (
             run_id.replace("-", ".").replace("_", ".").replace("+", ".").lower()
         )
@@ -340,9 +337,7 @@ def trigger_resource_etl(etl_source):
         log.info("ETL already triggered recently for %s, skipping", etl_source)
         return
     try:
-        if etl_source == ETLSource.mit_edx.name:
-            tasks.get_mit_edx_data.apply_async()
-        elif etl_source == ETLSource.mitxonline.name:
+        if etl_source == ETLSource.mitxonline.name:
             tasks.get_mitxonline_data.apply_async()
         elif etl_source == ETLSource.xpro.name:
             tasks.get_xpro_data.apply_async()
@@ -410,7 +405,7 @@ def run_for_edx_archive(etl_source: str, archive_filename: str):
     ).filter(
         Q(learning_resource__published=True) | Q(learning_resource__test_mode=True)
     )
-    if etl_source in (ETLSource.mit_edx.name, ETLSource.oll.name):
+    if etl_source == ETLSource.oll.name:
         runs = runs.filter(run_id__iregex=normalized_run_id)
     else:
         runs = runs.filter(run_id=normalized_run_id)

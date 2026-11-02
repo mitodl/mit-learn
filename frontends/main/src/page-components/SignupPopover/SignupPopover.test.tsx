@@ -11,7 +11,7 @@ test("SignupPopover shows link to sign up", async () => {
       url: "/some-path?dog=woof",
     },
   )
-  const dialog = screen.getByRole("dialog")
+  const dialog = screen.getByRole("dialog", { name: /Join .*for free/ })
   const link = within(dialog).getByRole("link")
   invariant(link instanceof HTMLAnchorElement)
   expect(link.href).toMatch(

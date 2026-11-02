@@ -12,10 +12,13 @@ const ContactUsLauncherGate: React.FC = () => {
   const enabled = useFeatureFlagEnabled(FeatureFlags.ContactUs)
   const flagsLoaded = useFeatureFlagsLoaded()
   const { data: user } = useUserMe()
-  const userEmail = user?.is_authenticated ? user.email : undefined
+  const authed = user?.is_authenticated ? user : undefined
+  const email = authed?.email
+  const name = authed?.profile?.name
+  const username = authed?.username
   const settings = React.useMemo(
-    () => getContactUsSettings(userEmail),
-    [userEmail],
+    () => getContactUsSettings({ email, name, username }),
+    [email, name, username],
   )
 
   if (!flagsLoaded || !enabled || !isContactUsEnabled()) {

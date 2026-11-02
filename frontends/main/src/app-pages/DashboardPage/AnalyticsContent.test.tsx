@@ -118,12 +118,12 @@ const setAnalyticsResponses = ({
  * contract route still fails if the page falls back to org-wide numbers.
  */
 const setContractAnalyticsResponses = (
-  contractId: string,
+  contractId: number,
   page = { limit: 200 },
   learnerProgress: Partial<LearnerProgressResponse> = {},
   needsAttention: ContractNeedsAttention[] = [
     analyticsFactories.contractNeedsAttention({
-      contract_id: Number(contractId),
+      contract_id: contractId,
       learners_needing_attention: 20,
     }),
   ],
@@ -332,6 +332,7 @@ describe("AnalyticsContent", () => {
             seats_consumed: 62,
             seat_limit: 100,
             active_learners: 48,
+            certified_learners: 17,
             seat_utilization_pct: 62,
             completion_rate_pct: 32.3,
           }),
@@ -347,6 +348,7 @@ describe("AnalyticsContent", () => {
       expect(screen.getByText("48")).toBeInTheDocument()
       expect(screen.getByText("32.3%")).toBeInTheDocument()
       expect(screen.getByText("62 of 100 seats")).toBeInTheDocument()
+      expect(screen.getByText("17 certified")).toBeInTheDocument()
     })
 
     test("renders course rows and marks suppressed values as withheld", async () => {
@@ -812,7 +814,7 @@ describe("AnalyticsContent, contract-scoped", () => {
     const org = orgWithUuid({ contracts: [contract] })
     setManagerOrgs([org])
 
-    const contractId = String(contract.id)
+    const contractId = contract.id
     const page = { limit: 200 }
     // Only the contract-nested URLs are mocked. An org-scoped request would
     // find no mock and fail the render, which is the assertion: this route must
@@ -894,7 +896,7 @@ describe("AnalyticsContent, contract-scoped", () => {
     const org = orgWithUuid({ contracts: [contract] })
     setManagerOrgs([org])
 
-    setContractAnalyticsResponses(String(contract.id))
+    setContractAnalyticsResponses(contract.id)
 
     renderWithProviders(
       <AnalyticsContent
@@ -906,7 +908,7 @@ describe("AnalyticsContent, contract-scoped", () => {
     await screen.findByText("Analytics · Fall 2026 Cohort")
   })
 
-  test("'Manage seats' targets the contract being viewed, not the org's first", async () => {
+  test("the contract nav targets the contract being viewed, not the org's first", async () => {
     const [first, second] = [
       factories.contracts.contract(),
       factories.contracts.contract(),
@@ -914,45 +916,30 @@ describe("AnalyticsContent, contract-scoped", () => {
     const org = orgWithUuid({ contracts: [first, second] })
     setManagerOrgs([org])
 
-    setContractAnalyticsResponses(String(second.id))
+    setContractAnalyticsResponses(second.id)
 
     const orgSlug = org.slug.replace(/^org-/, "")
     renderWithProviders(
       <AnalyticsContent orgSlug={orgSlug} contractSlug={second.slug} />,
     )
 
-    // Pointing at contracts[0] here would send a manager viewing the second
-    // contract's analytics to the first contract's seat admin.
-    const link = await screen.findByRole("link", { name: "Manage seats" })
-    expect(link).toHaveAttribute(
-      "href",
-      contractAdminView(orgSlug, second.slug),
-    )
-  })
-
-  test("'Learner analytics' targets the contract being viewed", async () => {
-    const [first, second] = [
-      factories.contracts.contract(),
-      factories.contracts.contract(),
-    ]
-    const org = orgWithUuid({ contracts: [first, second] })
-    setManagerOrgs([org])
-
-    setContractAnalyticsResponses(String(second.id))
-
-    const orgSlug = org.slug.replace(/^org-/, "")
-    renderWithProviders(
-      <AnalyticsContent orgSlug={orgSlug} contractSlug={second.slug} />,
-    )
-
-    const link = await screen.findByRole("link", { name: "Learner analytics" })
-    expect(link).toHaveAttribute(
+    const nav = await screen.findByRole("navigation", { name: "Contract" })
+    expect(
+      within(nav).getByRole("link", { name: "Analytics" }),
+    ).toHaveAttribute("aria-current", "page")
+    expect(
+      within(nav).getByRole("link", { name: "Manage seats" }),
+    ).toHaveAttribute("href", contractAdminView(orgSlug, second.slug))
+    expect(within(nav).getByRole("link", { name: "Learners" })).toHaveAttribute(
       "href",
       contractLearnersView(orgSlug, second.slug),
     )
+    expect(screen.getAllByRole("link", { name: "Manage seats" })).toHaveLength(
+      1,
+    )
   })
 
-  test("hides 'Learner analytics' and the Learner progress section when the learner analytics flag is off", async () => {
+  test("hides the Learners link and the Learner progress section when the learner analytics flag is off", async () => {
     // The learner page throws ForbiddenError without its flag, so the button
     // would be a dead end -- and every Learner progress tile links there too.
     mockedUseFeatureFlagEnabled.mockImplementation(
@@ -962,7 +949,7 @@ describe("AnalyticsContent, contract-scoped", () => {
     const org = orgWithUuid({ contracts: [contract] })
     setManagerOrgs([org])
 
-    setContractAnalyticsResponses(String(contract.id))
+    setContractAnalyticsResponses(contract.id)
 
     const orgSlug = org.slug.replace(/^org-/, "")
     renderWithProviders(
@@ -971,7 +958,7 @@ describe("AnalyticsContent, contract-scoped", () => {
 
     await screen.findByText(`Analytics · ${contract.name}`)
     expect(
-      screen.queryByRole("link", { name: "Learner analytics" }),
+      screen.queryByRole("link", { name: "Learners" }),
     ).not.toBeInTheDocument()
     expect(
       screen.queryByRole("heading", { name: "Learner progress" }),
@@ -1002,7 +989,7 @@ describe("AnalyticsContent, contract-scoped", () => {
     const contract = factories.contracts.contract()
     const org = orgWithUuid({ contracts: [contract] })
     setManagerOrgs([org])
-    const contractId = String(contract.id)
+    const contractId = contract.id
     setContractAnalyticsResponses(contractId)
 
     renderWithProviders(
@@ -1064,7 +1051,7 @@ describe("AnalyticsContent, contract-scoped", () => {
       const contract = factories.contracts.contract()
       const org = orgWithUuid({ contracts: [contract] })
       setManagerOrgs([org])
-      const contractId = String(contract.id)
+      const contractId = contract.id
       setContractAnalyticsResponses(
         contractId,
         undefined,
@@ -1137,7 +1124,7 @@ describe("AnalyticsContent, contract-scoped", () => {
       const contract = factories.contracts.contract()
       const org = orgWithUuid({ contracts: [contract] })
       setManagerOrgs([org])
-      setContractAnalyticsResponses(String(contract.id), undefined, {
+      setContractAnalyticsResponses(contract.id, undefined, {
         needs_attention_count: undefined,
       })
 
@@ -1186,7 +1173,7 @@ describe("AnalyticsContent, contract-scoped", () => {
       const org = orgWithUuid({ contracts: [contract] })
       setManagerOrgs([org])
       allowConsoleErrors()
-      const contractId = String(contract.id)
+      const contractId = contract.id
       setContractAnalyticsResponses(contractId)
       setMockResponse.get(
         analyticsUrls.contracts.learnerProgress(ORG_UUID, contractId, {
@@ -1278,7 +1265,7 @@ describe("AnalyticsContent, contract-scoped", () => {
     const contract = factories.contracts.contract()
     const org = orgWithUuid({ contracts: [contract] })
     setManagerOrgs([org])
-    const contractId = String(contract.id)
+    const contractId = contract.id
     setContractAnalyticsResponses(contractId)
 
     renderWithProviders(
@@ -1316,7 +1303,7 @@ describe("AnalyticsContent, contract-scoped", () => {
     const contract = factories.contracts.contract()
     const org = orgWithUuid({ contracts: [contract] })
     setManagerOrgs([org])
-    const contractId = String(contract.id)
+    const contractId = contract.id
     setContractAnalyticsResponses(contractId, undefined, {
       total_count: 50,
       outcomes_withheld_count: 10,
@@ -1375,7 +1362,7 @@ describe("AnalyticsContent, contract-scoped", () => {
     const contract = factories.contracts.contract()
     const org = orgWithUuid({ contracts: [contract] })
     setManagerOrgs([org])
-    const contractId = String(contract.id)
+    const contractId = contract.id
     setContractAnalyticsResponses(contractId, undefined, {
       total_count: 10,
       outcomes_withheld_count: 10,
@@ -1416,7 +1403,7 @@ describe("AnalyticsContent, contract-scoped", () => {
     const org = orgWithUuid({ contracts: [contract] })
     setManagerOrgs([org])
 
-    setContractAnalyticsResponses(String(contract.id))
+    setContractAnalyticsResponses(contract.id)
 
     const orgSlug = org.slug.replace(/^org-/, "")
     renderWithProviders(

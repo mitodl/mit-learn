@@ -2,7 +2,6 @@
 // in PostHog.
 
 export enum FeatureFlags {
-  EnableEcommerce = "enable-ecommerce",
   LrDrawerChatbot = "lr-drawer-chatbot",
   PrDrawerChatbot = "pr-drawer-chatbot",
   RecommendationBot = "recommendation-bot",
@@ -24,9 +23,9 @@ export enum FeatureFlags {
   MultipleRunContextMenus = "multiple-run-context-menus",
   ProgramLetters = "program-letters",
   B2BDataConsent = "b2b-data-consent",
-  TopicPageRedesign = "topic-page-redesign",
   DepartmentPageRedesign = "department-page-redesign",
   ContactUs = "contact-us",
+  ResourceCardRedesign = "resource-card-redesign",
 }
 
 /**

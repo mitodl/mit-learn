@@ -104,7 +104,6 @@ def test_content_file_delete_webhook_view_canvas_resource_not_found(
             "course-v1:Test+Course+R1",
         ),
         (ETLSource.xpro.name, "course-v1:xPRO+Test+R1", "course-v1:xPRO+Test+R1"),
-        (ETLSource.mit_edx.name, "MITx-1.00x-1T2022", "MITx-1.00x-1T2022"),
         (ETLSource.oll.name, "course-v1:OLL+Test+R1", "course-v1:OLL+Test+R1"),
     ],
 )
@@ -138,6 +137,7 @@ def test_content_file_delete_webhook_view_edx_success(  # noqa: PLR0913
 @pytest.mark.django_db
 @pytest.mark.parametrize(
     "etl_source",
+    # mit_edx is retired, but its webhooks must still get a 200 (see ETLSource)
     [ETLSource.mitxonline.name, ETLSource.xpro.name, ETLSource.mit_edx.name],
 )
 def test_content_file_delete_webhook_view_edx_resource_not_found(
@@ -230,11 +230,6 @@ def test_content_file_webhook_view_canvas_null_id(
             ETLSource.xpro.name,
             "xpro/courses/course-v1:xPRO+Test+R1/abcdef.tar.gz",
             None,
-        ),
-        (
-            ETLSource.mit_edx.name,
-            "edxorg-raw-data/courses/xml/MITx-1.00x-1T2022/tuvxyz.tar.gz",
-            "MITx-1.00x",
         ),
         (
             ETLSource.oll.name,

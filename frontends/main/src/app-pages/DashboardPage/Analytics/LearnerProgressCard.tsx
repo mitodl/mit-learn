@@ -17,8 +17,8 @@ import SectionError from "./SectionError"
  * `AnalyticsContent` renders this section only when a contract is in view.
  *
  * `total_count` and `completion_status_counts` aren't k-anonymity-floored
- * like every other section on this page (waived for this endpoint — see
- * `analytics/types.ts`), so nothing here uses `SuppressibleValue`.
+ * like every other section on this page (waived for this endpoint per
+ * mitodl/ol-analytics-api#58), so nothing here uses `SuppressibleValue`.
  *
  * A consent-withheld learner has no `completion_status` and so lands in none
  * of the three buckets. The distribution therefore divides by `total_count`

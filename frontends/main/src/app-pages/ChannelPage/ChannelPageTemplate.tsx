@@ -81,7 +81,7 @@ const ChannelPageTemplate: React.FC<ChannelSkeletonProps> = ({
       case ChannelTypeEnum.Unit:
         return UnitChannelTemplate
       case ChannelTypeEnum.Topic:
-        return channelRedesign ? TopicChannelTemplate : DefaultChannelTemplate
+        return TopicChannelTemplate
       case ChannelTypeEnum.Department:
         return channelRedesign
           ? DepartmentChannelTemplate

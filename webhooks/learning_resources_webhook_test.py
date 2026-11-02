@@ -101,9 +101,7 @@ def test_groups_by_source_and_type(settings, client, mocker):
                 "c-mitpe", ETLSource.mitpe.name, LearningResourceType.course.name
             ),
             _resource("c-oll", ETLSource.oll.name, LearningResourceType.course.name),
-            _resource(
-                "p-edx", ETLSource.mit_edx.name, LearningResourceType.program.name
-            ),
+            _resource("p-xpro", ETLSource.xpro.name, LearningResourceType.program.name),
         ]
     }
     response = _post(client, settings, payload)
@@ -114,7 +112,7 @@ def test_groups_by_source_and_type(settings, client, mocker):
     called_sources = {call.args[0] for call in mock_load_courses.call_args_list}
     assert called_sources == {ETLSource.mitpe.name, ETLSource.oll.name}
     mock_load_programs.assert_called_once()
-    assert mock_load_programs.call_args.args[0] == ETLSource.mit_edx.name
+    assert mock_load_programs.call_args.args[0] == ETLSource.xpro.name
 
 
 @pytest.mark.django_db
@@ -129,8 +127,8 @@ def test_programs_fetch_existing_child_courses(settings, client, mocker):
     payload = {
         "resources": [
             _resource(
-                "p-edx",
-                ETLSource.mit_edx.name,
+                "p-xpro",
+                ETLSource.xpro.name,
                 LearningResourceType.program.name,
                 courses=[{"readable_id": "MITx+6.00.1x"}],
             ),
@@ -293,9 +291,6 @@ def test_sync_pair_without_resources_prunes(settings, client, mocker):
 def test_sync_only_batch_unpublishes_the_pair(settings, client, mocker):
     """A batch that only declares a pair unpublishes everything held for it."""
     mocker.patch("webhooks.views.clear_views_cache")
-    mocker.patch(
-        "learning_resources.etl.loaders.load_course_blocklist", return_value=[]
-    )
     mocker.patch("learning_resources_search.tasks.deindex_document")
     program = ProgramFactory.create(learning_resource__etl_source=ETLSource.mitpe.name)
     other_program = ProgramFactory.create(

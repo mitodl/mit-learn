@@ -56,7 +56,6 @@ def mock_archive(mocker):
     [
         (ETLSource.mitxonline.name, PlatformType.mitxonline.name),
         (ETLSource.xpro.name, PlatformType.xpro.name),
-        (ETLSource.mit_edx.name, PlatformType.edx.name),
         (ETLSource.oll.name, PlatformType.edx.name),
     ],
 )
@@ -483,7 +482,7 @@ def test_sync_edx_course_files_test_mode_all_runs_processed(
     assert called_data == [list(fake_data)] * 3
 
 
-@pytest.mark.parametrize("source", [ETLSource.mit_edx.value, ETLSource.xpro.value])
+@pytest.mark.parametrize("source", [ETLSource.mitxonline.value, ETLSource.xpro.value])
 def test_get_most_recent_course_archives(mocker, mock_course_archive_bucket, source):
     """get_most_recent_course_archives should return expected keys"""
     from types import SimpleNamespace
@@ -517,7 +516,7 @@ def test_get_most_recent_course_archives(mocker, mock_course_archive_bucket, sou
     mock_get_bucket.assert_called_once_with(mocker.ANY)
 
 
-@pytest.mark.parametrize("source", [ETLSource.mit_edx.value, ETLSource.xpro.value])
+@pytest.mark.parametrize("source", [ETLSource.mitxonline.value, ETLSource.xpro.value])
 def test_get_most_recent_course_archives_cache_hit(mocker, source):
     """Cached results should be returned without querying S3"""
     cached_keys = [f"some-prefix/{source}/cached-course/2023.tar.gz"]
@@ -537,7 +536,7 @@ def test_get_most_recent_course_archives_cache_hit(mocker, source):
     mock_log.assert_called_once_with("Using cached archive keys for %s", source)
 
 
-@pytest.mark.parametrize("source", [ETLSource.mit_edx.value, ETLSource.xpro.value])
+@pytest.mark.parametrize("source", [ETLSource.mitxonline.value, ETLSource.xpro.value])
 def test_get_most_recent_course_archives_sets_cache(mocker, source):
     """Results should be cached with the correct timeout after fetching from S3"""
     from types import SimpleNamespace
@@ -572,7 +571,7 @@ def test_get_most_recent_course_archives_sets_cache(mocker, source):
     )
 
 
-@pytest.mark.parametrize("source", [ETLSource.mit_edx.value, ETLSource.xpro.value])
+@pytest.mark.parametrize("source", [ETLSource.mitxonline.value, ETLSource.xpro.value])
 def test_get_most_recent_course_archives_empty(
     settings, mocker, mock_course_archive_bucket, source
 ):
@@ -597,7 +596,7 @@ def test_get_most_recent_course_archives_empty(
     mock_get_bucket.assert_called_once_with(settings.COURSE_ARCHIVE_BUCKET_NAME)
 
 
-@pytest.mark.parametrize("source", [ETLSource.mit_edx.value, ETLSource.xpro.value])
+@pytest.mark.parametrize("source", [ETLSource.mitxonline.value, ETLSource.xpro.value])
 def test_get_most_recent_course_archives_no_bucket(settings, mocker, source):
     """Empty list should be returned and a warning logged if no bucket is found"""
     # Mock cache so stale cached data from other tests is not returned
@@ -628,12 +627,6 @@ def test_get_most_recent_course_archives_no_bucket(settings, mocker, source):
             PlatformType.xpro.name,
             "/xpro/courses/course-v1:xPRO+SysEngxB1+R12/abcdefghijklmnop.tar.gz",
             "course-v1:xPRO+SysEngxB1+R12",
-        ),
-        (
-            ETLSource.mit_edx.name,
-            PlatformType.edx.name,
-            "/edx/courses/MITx-12.345x-3T2022/abcdefghijklmnop.tar.gz",
-            "MITx-12.345x-3T2022",
         ),
         (
             ETLSource.oll.name,
@@ -686,7 +679,7 @@ def test_run_for_edx_archive_prefers_published_run():
 
 @pytest.mark.parametrize(
     "etl_source",
-    [ETLSource.mitxonline.name, ETLSource.xpro.name, ETLSource.mit_edx.name],
+    [ETLSource.mitxonline.name, ETLSource.xpro.name],
 )
 def test_run_for_edx_archive_no_match(etl_source):
     """Test run_for_edx_archive returns None when no matching run is found"""
@@ -774,7 +767,6 @@ def test_run_for_edx_archive_test_mode(etl_source):
     [
         (ETLSource.mitxonline.name, PlatformType.mitxonline.name),
         (ETLSource.xpro.name, PlatformType.xpro.name),
-        (ETLSource.mit_edx.name, PlatformType.edx.name),
     ],
 )
 def test_sync_edx_archive_success(
@@ -1076,7 +1068,6 @@ def test_sync_edx_archive_with_overwrite(
 @pytest.mark.parametrize(
     ("etl_source", "task_attr"),
     [
-        (ETLSource.mit_edx.name, "get_mit_edx_data"),
         (ETLSource.mitxonline.name, "get_mitxonline_data"),
         (ETLSource.xpro.name, "get_xpro_data"),
     ],
@@ -1102,14 +1093,14 @@ def test_trigger_resource_etl_cache_dedup(mocker):
     mock_caches = mocker.patch("learning_resources.etl.edx_shared.caches")
     mock_cache = mock_caches.__getitem__.return_value
     mock_cache.add.return_value = False  # Key already exists, add returns False
-    mock_task = mocker.patch("learning_resources.tasks.get_mit_edx_data")
+    mock_task = mocker.patch("learning_resources.tasks.get_mitxonline_data")
     mock_log = mocker.patch("learning_resources.etl.edx_shared.log.info")
 
-    trigger_resource_etl(ETLSource.mit_edx.name)
+    trigger_resource_etl(ETLSource.mitxonline.name)
 
     mock_task.apply_async.assert_not_called()
     mock_log.assert_called_once_with(
-        "ETL already triggered recently for %s, skipping", ETLSource.mit_edx.name
+        "ETL already triggered recently for %s, skipping", ETLSource.mitxonline.name
     )
 
 
@@ -1123,12 +1114,12 @@ def test_trigger_resource_etl_sets_cache(mocker):
     mock_caches = mocker.patch("learning_resources.etl.edx_shared.caches")
     mock_cache = mock_caches.__getitem__.return_value
     mock_cache.add.return_value = True  # Key was set (didn't exist before)
-    mocker.patch("learning_resources.tasks.get_mit_edx_data")
+    mocker.patch("learning_resources.tasks.get_mitxonline_data")
 
-    trigger_resource_etl(ETLSource.mit_edx.name)
+    trigger_resource_etl(ETLSource.mitxonline.name)
 
     mock_cache.add.assert_called_once_with(
-        f"etl_triggered_{ETLSource.mit_edx.name}",
+        f"etl_triggered_{ETLSource.mitxonline.name}",
         True,  # noqa: FBT003
         timeout=ETL_CACHE_TIMEOUT,
     )
@@ -1159,15 +1150,17 @@ def test_trigger_resource_etl_deletes_cache_on_exception(mocker):
     mock_caches = mocker.patch("learning_resources.etl.edx_shared.caches")
     mock_cache = mock_caches.__getitem__.return_value
     mock_cache.add.return_value = True
-    mock_task = mocker.patch("learning_resources.tasks.get_mit_edx_data")
+    mock_task = mocker.patch("learning_resources.tasks.get_mitxonline_data")
     mock_task.apply_async.side_effect = Exception("connection error")
     mock_log = mocker.patch("learning_resources.etl.edx_shared.log.exception")
 
-    trigger_resource_etl(ETLSource.mit_edx.name)
+    trigger_resource_etl(ETLSource.mitxonline.name)
 
-    mock_cache.delete.assert_called_once_with(f"etl_triggered_{ETLSource.mit_edx.name}")
+    mock_cache.delete.assert_called_once_with(
+        f"etl_triggered_{ETLSource.mitxonline.name}"
+    )
     mock_log.assert_called_once_with(
-        "Failed to trigger ETL for %s", ETLSource.mit_edx.name
+        "Failed to trigger ETL for %s", ETLSource.mitxonline.name
     )
 
 
@@ -1183,16 +1176,6 @@ def test_trigger_resource_etl_deletes_cache_on_exception(mocker):
             ETLSource.xpro.name,
             "course-v1:xPRO+SysEngxB1+R12",
             "course-v1:xPRO+SysEngxB1+R12",
-        ),
-        (
-            ETLSource.mit_edx.name,
-            "MITx-12.345x-3T2022",
-            "mitx.12.345x.3t2022",
-        ),
-        (
-            ETLSource.mit_edx.name,
-            "course-v1:MITx+12.345x+3T2022",
-            "mitx.12.345x.3t2022",
         ),
         (
             ETLSource.oll.name,
@@ -1220,11 +1203,6 @@ def test_normalize_run_id(etl_source, run_id, expected):
             "course-v1:xPRO+SysEngxB1+R12",
         ),
         (
-            ETLSource.mit_edx.name,
-            "/edx/courses/MITx-12.345x-3T2022/abc.tar.gz",
-            "mitx.12.345x.3t2022",
-        ),
-        (
             ETLSource.oll.name,
             "/oll/courses/course-v1:OLL+ABC123+R1_OLL.tar.gz",
             "oll.abc123.r1",
@@ -1241,7 +1219,6 @@ def test_extract_run_id_from_key(etl_source, key, expected):
     [
         (ETLSource.mitxonline.name, PlatformType.mitxonline.name),
         (ETLSource.xpro.name, PlatformType.xpro.name),
-        (ETLSource.mit_edx.name, PlatformType.edx.name),
         (ETLSource.oll.name, PlatformType.edx.name),
     ],
 )
@@ -1362,27 +1339,6 @@ def test_build_run_lookup_includes_test_mode():
 @pytest.mark.parametrize(
     ("etl_source", "run_id_in_db", "run_id_in_key", "should_match"),
     [
-        # mit_edx: same structure, different separators (- vs +) → match
-        (
-            ETLSource.mit_edx.name,
-            "MITx-12.345x-3T2022",
-            "MITx+12.345x+3T2022",
-            True,
-        ),
-        # mit_edx: same structure, different case → match
-        (
-            ETLSource.mit_edx.name,
-            "MITx-12.345x-3T2022",
-            "mitx-12.345x-3t2022",
-            True,
-        ),
-        # mit_edx: course-v1: prefix in DB but not in key → match (prefix stripped)
-        (
-            ETLSource.mit_edx.name,
-            "course-v1:MITx+12.345x+3T2022",
-            "MITx-12.345x-3T2022",
-            True,
-        ),
         # oll: same structure, different separators (- vs +) → match
         (
             ETLSource.oll.name,
@@ -1419,13 +1375,6 @@ def test_normalize_run_id_cross_format_parity(
 @pytest.mark.parametrize(
     ("etl_source", "platform", "db_run_id", "key_run_id"),
     [
-        # mit_edx: DB uses dashes, S3 key uses plusses → separators differ but match
-        (
-            ETLSource.mit_edx.name,
-            PlatformType.edx.name,
-            "MITx-12.345x-3T2022",
-            "MITx+12.345x+3T2022",
-        ),
         # oll: DB uses plusses, S3 key uses dashes → separators differ but match
         (
             ETLSource.oll.name,
@@ -1453,28 +1402,6 @@ def test_build_run_lookup_cross_format_match(
     lookup = build_run_lookup(etl_source, [course.id])
     # Look up using the S3 key's run_id format (different separators)
     normalized_key = normalize_run_id(etl_source, key_run_id)
-    assert normalized_key in lookup
-    assert lookup[normalized_key][0].id == run.id
-
-
-def test_build_run_lookup_cross_format_prefix_match():
-    """build_run_lookup matches when DB run_id has a course-v1: prefix
-    but the S3 key directory does not (or vice versa).
-    """
-    course = LearningResourceFactory.create(
-        platform=LearningResourcePlatformFactory.create(code=PlatformType.edx.name),
-        etl_source=ETLSource.mit_edx.name,
-        published=True,
-        create_runs=False,
-    )
-    run = LearningResourceRunFactory.create(
-        learning_resource=course,
-        published=True,
-        run_id="course-v1:MITx+12.345x+3T2022",
-    )
-    lookup = build_run_lookup(ETLSource.mit_edx.name, [course.id])
-    # S3 key dir uses short format without course-v1: prefix
-    normalized_key = normalize_run_id(ETLSource.mit_edx.name, "MITx-12.345x-3T2022")
     assert normalized_key in lookup
     assert lookup[normalized_key][0].id == run.id
 

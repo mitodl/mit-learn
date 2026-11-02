@@ -39,6 +39,19 @@ class LearningResourceType(ExtendedEnum):
     document = "Document"
 
 
+# The resource types a shadow run compares (learning_resources.etl.shadow):
+# what load_courses, load_programs, load_documents and load_podcasts write. A
+# pair of any other type cannot be shadowed, since nothing would report on it.
+SHADOW_COMPARED_TYPES = frozenset(
+    {
+        LearningResourceType.course.name,
+        LearningResourceType.program.name,
+        LearningResourceType.document.name,
+        LearningResourceType.podcast.name,
+        LearningResourceType.podcast_episode.name,
+    }
+)
+
 # `resource_category` for editorial articles. They are `document` resources --
 # 0105 folded the `article` resource type into `document` -- distinguished by
 # this category, the same way the MIT Climate ETL models its own articles and

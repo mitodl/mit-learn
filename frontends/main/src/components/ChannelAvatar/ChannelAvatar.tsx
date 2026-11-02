@@ -10,9 +10,7 @@ export const AVATAR_LARGE = "large" as const
 type ImageVariant = "normal" | "inverted"
 
 type ImageSize =
-  | typeof AVATAR_SMALL
-  | typeof AVATAR_MEDIUM
-  | typeof AVATAR_LARGE
+  typeof AVATAR_SMALL | typeof AVATAR_MEDIUM | typeof AVATAR_LARGE
 
 type AvatarProps = {
   imageSize?: ImageSize

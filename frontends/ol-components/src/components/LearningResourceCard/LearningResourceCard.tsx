@@ -27,7 +27,6 @@ interface LearningResourceCardProps {
   resource?: LearningResource | null
   className?: string
   size?: Size
-  isMedia?: boolean
   href?: string
   /**
    * If set, a plain click pushes this URL with window.history.pushState
@@ -48,7 +47,6 @@ const LearningResourceCard: React.FC<LearningResourceCardProps> = ({
   resource,
   className,
   size = "medium",
-  isMedia = false,
   href,
   pushUrl,
   onAddToLearningPathClick,
@@ -95,7 +93,6 @@ const LearningResourceCard: React.FC<LearningResourceCardProps> = ({
         isLoading
         className={className}
         size={size}
-        isMedia={isMedia}
         headingLevel={headingLevel}
       />
     )
@@ -144,7 +141,6 @@ const LearningResourceCard: React.FC<LearningResourceCardProps> = ({
     <BaseLearningResourceCard
       className={className}
       size={size}
-      isMedia={isMedia}
       href={href}
       pushUrl={pushUrl}
       onClick={onClick}

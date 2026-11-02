@@ -26,8 +26,7 @@ const FEATURED_COUNT = 12
  * in.
  */
 type FeaturedChannelType =
-  | typeof ChannelTypeEnum.Topic
-  | typeof ChannelTypeEnum.Department
+  typeof ChannelTypeEnum.Topic | typeof ChannelTypeEnum.Department
 
 const featuredParams = (channelType: FeaturedChannelType, name: string) => ({
   channel_type: channelType,
