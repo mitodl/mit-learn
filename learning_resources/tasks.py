@@ -582,14 +582,6 @@ def get_ocw_data(  # noqa: PLR0913
     return self.replace(ocw_tasks)
 
 
-def _legacy_owns_youtube() -> bool:
-    """Whether the legacy ETL may write YouTube playlists and videos"""
-    return may_write(
-        ETLSource.youtube.name,
-        [LearningResourceType.video_playlist.name, LearningResourceType.video.name],
-    )
-
-
 @app.task(acks_late=True, reject_on_worker_lost=True)
 def get_youtube_playlist_data(
     channel_id, playlist_data, offered_by_code, *, create_videos
@@ -606,7 +598,7 @@ def get_youtube_playlist_data(
     """
     # get_youtube_data checked before queueing this, but the task can run after
     # the ownership row changes (a long fan-out, a redelivered message)
-    if not _legacy_owns_youtube():
+    if not warehouse_media.may_write_youtube():
         return
 
     video_channel = VideoChannel.objects.filter(channel_id=channel_id).first()
@@ -642,7 +634,7 @@ def get_youtube_channel_data(channel_config):
     Args:
         channel_config (dict): the channel's configuration
     """
-    if not _legacy_owns_youtube():
+    if not warehouse_media.may_write_youtube():
         return
 
     channel_id = channel_config["channel_id"]
@@ -699,7 +691,7 @@ def get_youtube_data(*, channel_ids=None):
     Returns:
         int: the number of channels queued
     """
-    if not _legacy_owns_youtube():
+    if not warehouse_media.may_write_youtube():
         return 0
 
     missing = [
