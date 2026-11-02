@@ -399,7 +399,12 @@ def test_batch_over_the_limit_is_rejected_unwritten(settings, client, mocker):
 
     assert response.status_code == 422
     assert response.json()["status"] == "error"
-    assert "44 of 58 published oll course" in response.json()["message"]
+    # The data platform shows this text in the failed Dagster run.
+    assert response.json()["message"] == (
+        "Refusing to sync: 44 of 58 published oll course resources would be "
+        "unpublished, over the 10% limit. If they were removed at the source, "
+        "rerun with allow_mass_unpublish=True."
+    )
     assert (
         LearningResource.objects.filter(
             etl_source=ETLSource.oll.name, published=True

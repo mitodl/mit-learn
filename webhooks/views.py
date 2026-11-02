@@ -19,7 +19,6 @@ from learning_resources.etl.constants import (
     ETLSource,
     ProgramLoaderConfig,
 )
-from learning_resources.etl.exceptions import ExtractException
 from learning_resources.etl.loaders import (
     load_courses,
     load_documents,
@@ -36,7 +35,7 @@ from learning_resources.etl.ownership import (
     writing_as,
 )
 from learning_resources.etl.shadow import run_shadow
-from learning_resources.etl.warehouse_guards import refuse_mass_unpublish
+from learning_resources.etl.warehouse_guards import mass_unpublish_refusal
 from learning_resources.models import LearningResource
 from learning_resources.tasks import ingest_canvas_course, ingest_edx_run_archive
 from learning_resources.utils import (
@@ -321,15 +320,17 @@ class LearningResourceWebhookView(BaseWebhookView):
                 )
             # After the shadow branch: a shadow writes nothing, and its report
             # is where to see what the load would unpublish.
-            if not serializer.validated_data["allow_mass_unpublish"]:
-                try:
-                    refuse_mass_unpublish_groups(grouped)
-                except ExtractException as exc:
-                    log.warning("learning_resources webhook rejected: %s", exc)
-                    return Response(
-                        {"status": "error", "message": str(exc)},
-                        status=status.HTTP_422_UNPROCESSABLE_ENTITY,
-                    )
+            refusal = (
+                None
+                if serializer.validated_data["allow_mass_unpublish"]
+                else first_mass_unpublish_refusal(grouped)
+            )
+            if refusal:
+                log.warning("learning_resources webhook rejected: %s", refusal)
+                return Response(
+                    {"status": "error", "message": refusal},
+                    status=status.HTTP_422_UNPROCESSABLE_ENTITY,
+                )
             summary = load_learning_resource_groups(grouped)
         log.info("learning_resources webhook processed: %s", summary)
         clear_views_cache()
@@ -447,10 +448,10 @@ def omitted_test_mode_course_ids(etl_source, resources):
     )
 
 
-def refuse_mass_unpublish_groups(grouped):
+def first_mass_unpublish_refusal(grouped):
     """
-    Raise ExtractException if loading a group would unpublish over the limit,
-    checking every pruned group before any of them loads.
+    Return why the first group over the unpublish limit is refused, or None if
+    none is, checking every pruned group before any of them loads.
     """
     for (etl_source, resource_type), resources in grouped.items():
         if resource_type not in _PRUNED_TYPES:
@@ -458,7 +459,10 @@ def refuse_mass_unpublish_groups(grouped):
         kept_ids = kept_readable_ids(resource_type, resources)
         if resource_type == LearningResourceType.course.name:
             kept_ids |= omitted_test_mode_course_ids(etl_source, resources)
-        refuse_mass_unpublish(etl_source, resource_type, kept_ids)
+        refusal = mass_unpublish_refusal(etl_source, resource_type, kept_ids)
+        if refusal:
+            return refusal
+    return None
 
 
 def load_learning_resource_groups(grouped):

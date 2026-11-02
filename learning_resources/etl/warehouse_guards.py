@@ -50,6 +50,37 @@ def warehouse_list(value) -> list:
 MAX_UNPUBLISH_SHARE = 0.1
 
 
+def mass_unpublish_refusal(
+    etl_source: str,
+    resource_type: str,
+    kept_ids: set[str],
+    *,
+    field: str = "readable_id",
+) -> str | None:
+    """
+    Return why a load must be refused if it would unpublish more than
+    MAX_UNPUBLISH_SHARE of the source's published resources of a type, i.e. if
+    that share of them is missing from the ids the load will keep published,
+    or None if it is within the limit. ``field`` is the LearningResource field
+    the loader matches the source's resources on, and the one ``kept_ids``
+    holds.
+    """
+    published_ids = set(
+        LearningResource.objects.filter(
+            etl_source=etl_source, resource_type=resource_type, published=True
+        ).values_list(field, flat=True)
+    )
+    missing = published_ids - kept_ids
+    if len(missing) <= len(published_ids) * MAX_UNPUBLISH_SHARE:
+        return None
+    return (
+        f"Refusing to sync: {len(missing)} of {len(published_ids)} published "
+        f"{etl_source} {resource_type} resources would be unpublished, "
+        f"over the {MAX_UNPUBLISH_SHARE:.0%} limit. If they were removed "
+        "at the source, rerun with allow_mass_unpublish=True."
+    )
+
+
 def refuse_mass_unpublish(
     etl_source: str,
     resource_type: str,
@@ -58,31 +89,18 @@ def refuse_mass_unpublish(
     field: str = "readable_id",
 ) -> None:
     """
-    Raise if loading would unpublish more than MAX_UNPUBLISH_SHARE of the
-    source's published resources of a type, i.e. if that share of them is
-    missing from the ids the load will keep published. ``field`` is the
-    LearningResource field the loader matches the source's resources on, and
-    the one ``kept_ids`` holds. Inside a shadow run, log it instead.
+    Raise if mass_unpublish_refusal refuses the load. Inside a shadow run, log
+    it instead.
     """
-    published_ids = set(
-        LearningResource.objects.filter(
-            etl_source=etl_source, resource_type=resource_type, published=True
-        ).values_list(field, flat=True)
-    )
-    missing = published_ids - kept_ids
-    if len(missing) > len(published_ids) * MAX_UNPUBLISH_SHARE:
-        msg = (
-            f"Refusing to sync: {len(missing)} of {len(published_ids)} published "
-            f"{etl_source} {resource_type} resources would be unpublished, "
-            f"over the {MAX_UNPUBLISH_SHARE:.0%} limit. If they were removed "
-            "at the source, rerun with allow_mass_unpublish=True."
-        )
-        # A shadow writes nothing, and its report is where to see which ones
-        # the owner's run would unpublish, so it carries on to the comparison.
-        if is_shadow_run():
-            log.warning("Shadow run continues past the limit: %s", msg)
-            return
-        raise ExtractException(msg)
+    msg = mass_unpublish_refusal(etl_source, resource_type, kept_ids, field=field)
+    if msg is None:
+        return
+    # A shadow writes nothing, and its report is where to see which ones the
+    # owner's run would unpublish, so it carries on to the comparison.
+    if is_shadow_run():
+        log.warning("Shadow run continues past the limit: %s", msg)
+        return
+    raise ExtractException(msg)
 
 
 def kept_course_ids(courses: list[dict]) -> set[str]:
