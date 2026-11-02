@@ -205,6 +205,10 @@ const learnerProgress = (
   certificate_is_revoked: null,
   last_active_on: null,
   needs_attention: false,
+  days_active: faker.number.int({ min: 0, max: 30 }),
+  videos_watched: faker.number.int({ min: 0, max: 60 }),
+  problems_attempted: faker.number.int({ min: 0, max: 40 }),
+  chatbot_interactions: faker.number.int({ min: 0, max: 20 }),
   ...overrides,
 })
 
@@ -228,6 +232,10 @@ const withheldLearnerProgress = (
     certificate_is_revoked: null,
     last_active_on: null,
     needs_attention: null,
+    days_active: null,
+    videos_watched: null,
+    problems_attempted: null,
+    chatbot_interactions: null,
     ...overrides,
   })
 
