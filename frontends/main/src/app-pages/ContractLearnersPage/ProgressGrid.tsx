@@ -205,7 +205,7 @@ const LearnerButton = styled.button(({ theme }) => ({
   "&:hover > *:first-of-type": { textDecoration: "underline" },
   "&:focus-visible": {
     outline: `2px solid ${theme.custom.colors.darkGray2}`,
-    outlineOffset: "2px",
+    outlineOffset: "-2px",
   },
 }))
 
