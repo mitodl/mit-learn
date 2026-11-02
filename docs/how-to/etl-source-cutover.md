@@ -119,6 +119,8 @@ For a warehouse source:
 | `ocw`        | `content_file` | `ocw_courses_etl`                                                | `SyncOCWContentFilesTask`        | 14:00      |
 | `mitxonline` | `content_file` | `update-mitxonline-files-every-1-day`, the content_files webhook | `SyncMITxOnlineContentFilesTask` | 14:30      |
 
+The data platform's senders can trigger the same load for one run with a signed `POST /api/v1/webhooks/extracted_content_files/`. It answers `200` whoever owns the source, and the load does nothing until the warehouse does, so move a source's sender with its flip: until then, the run waits for the legacy task's next sweep, because `content_files/` no longer fires for it. The response counts the entries it skipped because the source has no pull. Only `mitxonline`, `xpro` and `ocw` have one.
+
 The views are too large to read in one query, so a sync never does. It reads one row of aggregates per run (row count, and the count and latest value of `last_modified`, and of `release_date` for Open edX) and queues one `load_warehouse_content_files` per run whose aggregates differ from the fingerprint in `LearningResourceRun.checksum`, on the `edx_content` queue. A load reads that run's rows and calls `load_content_files`. A run reads as changed if it has no published files, whatever the fingerprint says.
 
 - Content files can't be shadowed: admin refuses `shadow` on the row. Compare with `/api/v1/contentfiles/` by hand before the flip.

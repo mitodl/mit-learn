@@ -25,6 +25,37 @@ class ContentFileWebHookRequestSerializer(serializers.Serializer):
     )
 
 
+class ExtractedContentFilesCourseSerializer(serializers.Serializer):
+    """
+    One course run in an extracted_content_files message.
+
+    ``source`` is not a choice field: a source with no pull is logged and
+    skipped, rather than rejecting the batch it came in. Keys not listed here,
+    e.g. the sender's ``extracted_at``, are ignored.
+    """
+
+    source = serializers.CharField()
+    readable_id = serializers.CharField(
+        help_text="The run's run_id, not its course's readable_id"
+    )
+    content_file_count = serializers.IntegerField(
+        min_value=0,
+        help_text=(
+            "How many rows the sender published for the run. A pull that reads "
+            "any other number loads what it read and unpublishes nothing."
+        ),
+    )
+
+
+class ExtractedContentFilesWebhookRequestSerializer(serializers.Serializer):
+    """
+    Serializer for the ``/api/v1/webhooks/extracted_content_files/`` endpoint.
+    A list even for one run, so that a sender can batch without a second shape.
+    """
+
+    courses = ExtractedContentFilesCourseSerializer(many=True, allow_empty=False)
+
+
 class OVSVideoWebhookRequestSerializer(serializers.Serializer):
     """
     Serializer for OVS video webhook requests.

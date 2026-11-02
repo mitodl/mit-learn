@@ -10013,6 +10013,35 @@ paths:
               schema:
                 $ref: '#/components/schemas/ContentFileWebHookRequest'
           description: ''
+  /api/v1/webhooks/extracted_content_files/:
+    post:
+      operationId: webhooks_extracted_content_files_create
+      description: |-
+        Webhook handler for the OL Data Platform's "extraction is done, come get it"
+        message, one entry per course run. Unlike content_files/, which says a new
+        archive is ready for MIT Learn to extract, this means the run's files are in
+        the warehouse.
+
+        Each entry queues a pull of its run and the request returns: a 200 says the
+        message arrived, not that anything was loaded. The pull checks ownership, and
+        does nothing until the warehouse owns the source's content files. An entry
+        for a source with no pull is skipped and counted in the response, so that
+        one bad source can't reject the rest of a batch.
+      tags:
+      - webhooks
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ExtractedContentFilesWebhookRequestRequest'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/WebhookResponse'
+          description: ''
   /api/v1/webhooks/learning_resources/:
     post:
       operationId: webhooks_learning_resources_create
@@ -11565,6 +11594,43 @@ components:
       type: string
       enum:
       - document
+    ExtractedContentFilesCourseRequest:
+      type: object
+      description: |-
+        One course run in an extracted_content_files message.
+
+        ``source`` is not a choice field: a source with no pull is logged and
+        skipped, rather than rejecting the batch it came in. Keys not listed here,
+        e.g. the sender's ``extracted_at``, are ignored.
+      properties:
+        source:
+          type: string
+          minLength: 1
+        readable_id:
+          type: string
+          minLength: 1
+          description: The run's run_id, not its course's readable_id
+        content_file_count:
+          type: integer
+          minimum: 0
+          description: How many rows the sender published for the run. A pull that
+            reads any other number loads what it read and unpublishes nothing.
+      required:
+      - content_file_count
+      - readable_id
+      - source
+    ExtractedContentFilesWebhookRequestRequest:
+      type: object
+      description: |-
+        Serializer for the ``/api/v1/webhooks/extracted_content_files/`` endpoint.
+        A list even for one run, so that a sender can batch without a second shape.
+      properties:
+        courses:
+          type: array
+          items:
+            $ref: '#/components/schemas/ExtractedContentFilesCourseRequest'
+      required:
+      - courses
     HubspotCollectionResponseFormDefinitionBaseForwardPaging:
       type: object
       properties:
