@@ -6,7 +6,7 @@ import { EnrollButton } from "./EnrollAreaParts"
 import EnrolledLink from "./EnrolledLink"
 import { badRequestDetail } from "api/mutation-errors"
 import ErrorMessageWithSupport from "@/components/ErrorMessageWithSupport/ErrorMessageWithSupport"
-import { ENROLL_FAILURE_MESSAGE } from "./enrollTypes"
+import { ENROLL_FAILURE_MESSAGE } from "@/common/mitxonline"
 import type { EnrollAreaState } from "./enrollTypes"
 
 /**
