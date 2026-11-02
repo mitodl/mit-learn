@@ -163,8 +163,13 @@ const getPricePanel = (
   enrollmentModes: Parameters<typeof getEnrollmentType>[0],
 ): PricePanel => {
   const price = formatResourcePrice(resource, productPrice)
-  // `||`, not `??`: an empty `certificate_type` also falls back.
-  const certificateType = resource.certificate_type || "Certificate"
+  // A certificate of completion reads plainly "Certificate", like an empty
+  // type. MITx Online sends the type as display text, not a code.
+  const certificateType =
+    !resource.certificate_type ||
+    resource.certificate_type === "Certificate of Completion"
+      ? "Certificate"
+      : resource.certificate_type
   const certificate = resource.certificate_available
     ? certificateType
     : undefined
@@ -274,7 +279,6 @@ const MitxOnlineResourceCard: React.FC<MitxOnlineResourceCardProps> = (
         layout="responsive"
         href={href}
         onLinkClick={captureClick}
-        actions={[]}
         headingLevel={headingLevel}
         className={className}
       />

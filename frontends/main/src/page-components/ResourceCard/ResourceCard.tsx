@@ -3,12 +3,7 @@ import { LearningResourceCard } from "ol-components"
 import NiceModal from "@ebay/nice-modal-react"
 import type { LearningResourceCardProps } from "ol-components"
 import { useFeatureFlagEnabled } from "posthog-js/react"
-import {
-  RiBookmarkFill,
-  RiBookmarkLine,
-  RiListCheck3,
-  RiMenuAddLine,
-} from "@remixicon/react"
+import { RiBookmarkFill, RiBookmarkLine } from "@remixicon/react"
 import { FeatureFlags } from "@/common/feature_flags"
 import {
   ResourceCardSkeleton,
@@ -105,10 +100,8 @@ type ResourceCardV2Props = {
   className?: string
   headingLevel: HeadingLevel
   onLinkClick?: () => void
-  onAddToLearningPathClick: ResourceIdCallback | null
   onAddToUserListClick: ResourceIdCallback | null
   inUserList?: boolean
-  inLearningPath?: boolean
 }
 
 const ResourceCardV2: React.FC<ResourceCardV2Props> = ({
@@ -119,10 +112,8 @@ const ResourceCardV2: React.FC<ResourceCardV2Props> = ({
   className,
   headingLevel,
   onLinkClick,
-  onAddToLearningPathClick,
   onAddToUserListClick,
   inUserList,
-  inLearningPath,
 }) => {
   const layout: CardLayoutProps = list
     ? { layout: "responsive" }
@@ -135,35 +126,22 @@ const ResourceCardV2: React.FC<ResourceCardV2Props> = ({
     return null
   }
 
-  const actions: CardAction[] = []
-  if (onAddToLearningPathClick) {
-    actions.push({
-      label: inLearningPath
-        ? `In Learning Path: ${resource.title}`
-        : `Add to Learning Path: ${resource.title}`,
-      filled: !!inLearningPath,
-      icon: inLearningPath ? (
-        <RiListCheck3 aria-hidden />
-      ) : (
-        <RiMenuAddLine aria-hidden />
-      ),
-      onClick: (event) => onAddToLearningPathClick(event, resource.id),
-    })
-  }
-  if (onAddToUserListClick) {
-    actions.push({
-      label: inUserList
-        ? `Bookmarked: ${resource.title}`
-        : `Bookmark: ${resource.title}`,
-      filled: !!inUserList,
-      icon: inUserList ? (
-        <RiBookmarkFill aria-hidden />
-      ) : (
-        <RiBookmarkLine aria-hidden />
-      ),
-      onClick: (event) => onAddToUserListClick(event, resource.id),
-    })
-  }
+  // The bookmark is the card's only action; editors add to a learning path
+  // from the drawer.
+  const action: CardAction | undefined = onAddToUserListClick
+    ? {
+        label: inUserList
+          ? `Bookmarked: ${resource.title}`
+          : `Bookmark: ${resource.title}`,
+        filled: !!inUserList,
+        icon: inUserList ? (
+          <RiBookmarkFill aria-hidden />
+        ) : (
+          <RiBookmarkLine aria-hidden />
+        ),
+        onClick: (event) => onAddToUserListClick(event, resource.id),
+      }
+    : undefined
 
   return (
     <ResourceCardView
@@ -172,7 +150,7 @@ const ResourceCardV2: React.FC<ResourceCardV2Props> = ({
       href={resource.learn_url}
       pushUrl={() => resourceDrawerPushUrl(resource)}
       onLinkClick={onLinkClick}
-      actions={actions}
+      action={action}
       headingLevel={headingLevel}
       className={className}
     />
@@ -201,7 +179,8 @@ type ResourceCardProps = Omit<
  *  - click opens the Resource Drawer
  *  - onAddToListClick opens the Add to List modal
  *    - for unauthenticated users, a popover prompts signup instead.
- *  - onAddToLearningPathClick opens the Add to Learning Path modal
+ *  - onAddToLearningPathClick opens the Add to Learning Path modal (legacy
+ *    card only; the redesigned card leaves that to the drawer)
  */
 const ResourceCard: React.FC<ResourceCardProps> = ({
   resource,
@@ -241,10 +220,8 @@ const ResourceCard: React.FC<ResourceCardProps> = ({
           className={others.className}
           headingLevel={others.headingLevel ?? headingLevel}
           onLinkClick={composedOnClick}
-          onAddToLearningPathClick={handleAddToLearningPathClick}
           onAddToUserListClick={handleAddToUserListClick}
           inUserList={inUserList}
-          inLearningPath={inLearningPath}
         />
         <SignupPopover anchorEl={anchorEl} onClose={handleClosePopover} />
       </>
