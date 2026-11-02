@@ -410,6 +410,30 @@ const ProgressGrid: React.FC<ProgressGridProps> = ({
   const [summaryLearner, setSummaryLearner] =
     useState<LearnerWithEnrollments | null>(null)
   const [summaryOpen, setSummaryOpen] = useState(false)
+  useEffect(() => {
+    if (
+      !summaryOpen ||
+      !summaryLearner ||
+      query.isPlaceholderData ||
+      !query.data
+    ) {
+      return
+    }
+    const currentLearner = learners.find(
+      ({ learner }) => learner.learner_id === summaryLearner.learner_id,
+    )?.learner
+    if (!currentLearner) {
+      setSummaryOpen(false)
+    } else if (currentLearner !== summaryLearner) {
+      setSummaryLearner(currentLearner)
+    }
+  }, [
+    learners,
+    query.data,
+    query.isPlaceholderData,
+    summaryLearner,
+    summaryOpen,
+  ])
   const [announcement, setAnnouncement] = useState("")
   const lastFilters = useRef<string | null>(null)
   useEffect(() => {
