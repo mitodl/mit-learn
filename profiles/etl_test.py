@@ -3,6 +3,7 @@
 from datetime import UTC, datetime
 
 import pytest
+from django.db import IntegrityError
 
 from profiles.etl import transform_program_certificate, upsert_program_certificate
 from profiles.factories import ProgramCertificateFactory
@@ -32,6 +33,7 @@ def _row(**overrides):
         "user_address_postal_code": "NW1 2DB",
         "user_street_address": "12 Marylebone Road",
         "program_completion_timestamp": datetime(2026, 1, 1, tzinfo=UTC),
+        "is_revoked": False,
     }
     row.update(overrides)
     return row
@@ -61,7 +63,24 @@ def test_transform_program_certificate_maps_all_fields():
     assert fields["user_address_postal_code"] == "NW1 2DB"
     assert fields["user_street_address"] == "12 Marylebone Road"
     assert fields["program_completion_timestamp"] == datetime(2026, 1, 1, tzinfo=UTC)
+    assert fields["is_revoked"] is False
     assert "record_hash" not in fields
+
+
+@pytest.mark.parametrize("is_revoked", [True, False])
+def test_transform_program_certificate_maps_is_revoked(is_revoked):
+    """is_revoked is copied from the warehouse row when the column is present."""
+    assert transform_program_certificate(_row(is_revoked=is_revoked))["is_revoked"] is (
+        is_revoked
+    )
+
+
+def test_transform_program_certificate_without_is_revoked_column():
+    """A row from the view before it has the is_revoked column is not revoked."""
+    row = _row()
+    del row["is_revoked"]
+
+    assert transform_program_certificate(row)["is_revoked"] is False
 
 
 def test_transform_program_certificate_defaults_missing_name_fields_to_empty_string():
@@ -112,3 +131,22 @@ def test_upsert_program_certificate_never_deletes():
 
     assert ProgramCertificate.objects.filter(record_hash="untouched").exists()
     assert ProgramCertificate.objects.count() == 2
+
+
+def test_upsert_program_certificate_revokes_existing_row():
+    """A certificate revoked after Learn pulled it is flagged on the next pull,
+    not deleted.
+    """
+    ProgramCertificateFactory(record_hash="abc123", is_revoked=False)
+
+    upsert_program_certificate(_row(is_revoked=True))
+
+    assert ProgramCertificate.objects.get(record_hash="abc123").is_revoked is True
+
+
+def test_upsert_program_certificate_rejects_null_is_revoked():
+    """is_revoked is never null in the view, so a null is an error, not a
+    certificate that defaults to valid.
+    """
+    with pytest.raises(IntegrityError):
+        upsert_program_certificate(_row(is_revoked=None))

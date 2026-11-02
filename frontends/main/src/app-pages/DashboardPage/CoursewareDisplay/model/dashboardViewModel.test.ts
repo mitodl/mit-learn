@@ -1777,9 +1777,10 @@ describe("dashboardViewModel", () => {
       withCourses(general.addOperator({ operator: "all_of" }), [201, 202])
       const methods = container.addTrack({ title: "Methods" })
       withCourses(methods.addOperator({ operator: "all_of" }), [201, 203])
-      withCourses(root.addOperator({ operator: "all_of", title: "Capstone" }), [
-        301,
-      ])
+      withCourses(
+        root.addOperator({ operator: "all_of", title: "Capstone" }),
+        [301],
+      )
       const programCourses = [101, 102, 201, 202, 203, 301].map((id) =>
         factories.courses.course({ id }),
       )

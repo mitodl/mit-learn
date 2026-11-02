@@ -10,8 +10,7 @@ import "./button-colors.scss"
 import "./button-group.scss"
 import "./button.scss"
 
-export interface ButtonProps
-  extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   className?: string
   showTooltip?: boolean
   tooltip?: React.ReactNode

@@ -5,13 +5,17 @@ they no longer list, so a view that is empty or partly built must not be loaded.
 """
 
 import json
+import logging
 from datetime import UTC, datetime
 from decimal import Decimal
 
 from dateutil.parser import parse
 
 from learning_resources.etl.exceptions import ExtractException
+from learning_resources.etl.ownership import is_shadow_run
 from learning_resources.models import LearningResource
+
+log = logging.getLogger(__name__)
 
 
 def utc_timestamp(value: str | datetime) -> datetime:
@@ -58,7 +62,7 @@ def refuse_mass_unpublish(
     source's published resources of a type, i.e. if that share of them is
     missing from the ids the load will keep published. ``field`` is the
     LearningResource field the loader matches the source's resources on, and
-    the one ``kept_ids`` holds.
+    the one ``kept_ids`` holds. Inside a shadow run, log it instead.
     """
     published_ids = set(
         LearningResource.objects.filter(
@@ -73,6 +77,11 @@ def refuse_mass_unpublish(
             f"over the {MAX_UNPUBLISH_SHARE:.0%} limit. If they were removed "
             "at the source, rerun with allow_mass_unpublish=True."
         )
+        # A shadow writes nothing, and its report is where to see which ones
+        # the owner's run would unpublish, so it carries on to the comparison.
+        if is_shadow_run():
+            log.warning("Shadow run continues past the limit: %s", msg)
+            return
         raise ExtractException(msg)
 
 

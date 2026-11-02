@@ -8,6 +8,7 @@ from typing import TYPE_CHECKING, Optional
 from django.conf import settings
 from django.contrib.postgres.expressions import ArraySubquery
 from django.contrib.postgres.fields import ArrayField
+from django.core.exceptions import ValidationError
 from django.db import models
 from django.db.models import (
     CharField,
@@ -22,6 +23,7 @@ from django.utils import timezone
 
 from learning_resources import constants
 from learning_resources.constants import (
+    SHADOW_COMPARED_TYPES,
     WEBSITE_CONTENT_READABLE_ID_PREFIX,
     Availability,
     CertificationType,
@@ -2069,6 +2071,14 @@ class ETLSourceOwnership(TimestampedModel):
     owner = models.CharField(
         max_length=16, choices=Pipeline.choices, default=Pipeline.LEGACY
     )
+    shadow = models.CharField(
+        max_length=16,
+        # every pipeline but legacy, which has no single entry point to wrap
+        choices=Pipeline.choices[1:],
+        blank=True,
+        default="",
+        help_text="Pipeline that runs for this pair as a reported dry run",
+    )
 
     class Meta:
         unique_together = ("etl_source", "resource_type")
@@ -2077,3 +2087,50 @@ class ETLSourceOwnership(TimestampedModel):
 
     def __str__(self):
         return f"{self.etl_source}/{self.resource_type}: {self.owner}"
+
+    def clean(self):
+        """
+        Reject a shadow that is also the owner, which would write, not shadow,
+        and a shadow of a type no shadow run compares, which would report nothing.
+        """
+        super().clean()
+        if self.shadow and self.shadow == self.owner:
+            raise ValidationError(
+                {"shadow": "The shadow pipeline must differ from the owner."}
+            )
+        if self.shadow and self.resource_type not in SHADOW_COMPARED_TYPES:
+            raise ValidationError(
+                {
+                    "shadow": (
+                        f"A shadow run does not compare {self.resource_type} "
+                        "resources yet."
+                    )
+                }
+            )
+
+
+class ETLShadowRun(TimestampedModel):
+    """
+    What one shadow run of a pipeline would have changed for an
+    (etl_source, resource_type) pair. See learning_resources/etl/shadow.py.
+    """
+
+    etl_source = models.CharField(max_length=32)
+    resource_type = models.CharField(max_length=32)
+    pipeline = models.CharField(
+        max_length=16, choices=ETLSourceOwnership.Pipeline.choices
+    )
+    counts = models.JSONField(default=dict)
+    details = models.JSONField(default=dict)
+    error = models.TextField(blank=True, default="")
+
+    class Meta:
+        ordering = ["-created_on"]
+        indexes = [models.Index(fields=["etl_source", "resource_type", "pipeline"])]
+        verbose_name = "ETL shadow run"
+
+    def __str__(self):
+        return (
+            f"{self.pipeline} shadow of {self.etl_source}/{self.resource_type} "
+            f"at {self.created_on:%Y-%m-%d %H:%M}"
+        )

@@ -179,10 +179,6 @@ def test_start_recreate_index(mocker, indexes):  # noqa: C901, PLR0912, PLR0915
     settings.OPENSEARCH_DOCUMENT_INDEXING_CHUNK_SIZE = 2
     settings.OPENSEARCH_REINDEX_DISPATCH_CHUNK_SIZE = 2
 
-    mock_blocklist = mocker.patch(
-        "learning_resources_search.tasks.load_course_blocklist", return_value=[]
-    )
-
     ocw_courses = sorted(
         CourseFactory.create_batch(4, etl_source=ETLSource.ocw.value),
         key=lambda course: course.learning_resource_id,
@@ -267,7 +263,6 @@ def test_start_recreate_index(mocker, indexes):  # noqa: C901, PLR0912, PLR0915
         assert batch.params["index_name"] == indexes[0]
 
     if COURSE_TYPE in indexes or HYBRID_COMBINED_INDEX in indexes:
-        mock_blocklist.assert_called_once()
         for chunk in (
             [courses[0].learning_resource_id, courses[1].learning_resource_id],
             [courses[2].learning_resource_id, courses[3].learning_resource_id],
@@ -312,64 +307,6 @@ def test_start_recreate_index(mocker, indexes):  # noqa: C901, PLR0912, PLR0915
         call.args[0] for call in run_reindex_batch_mock.delay.call_args_list
     }
     assert enqueued_ids == set(job.batches.values_list("id", flat=True))
-
-
-@pytest.mark.parametrize("indexes", [["course"], ["combined_hybrid"]])
-def test_start_recreate_index_excludes_blocklisted_courses(mocker, indexes):
-    """start_recreate_index should not index courses whose readable_id is blocklisted"""
-    courses = CourseFactory.create_batch(3, etl_source=ETLSource.ocw.value)
-    blocked = courses[0]
-    for course in courses:
-        ContentFileFactory.create_batch(2, run=course.learning_resource.runs.first())
-    mocker.patch(
-        "learning_resources_search.tasks.load_course_blocklist",
-        return_value=[blocked.learning_resource.readable_id],
-    )
-    mocker.patch("learning_resources_search.tasks.run_reindex_batch", autospec=True)
-    mocker.patch(
-        "learning_resources_search.indexing_api.get_existing_reindexing_indexes",
-        autospec=True,
-        return_value=[],
-    )
-    # ponytail: no assertions on these; they just keep the task off OpenSearch
-    # (create_backing_index must return a string so it can be stored in the
-    # job's JSON params)
-    mocker.patch(
-        "learning_resources_search.indexing_api.create_backing_index",
-        autospec=True,
-        return_value="backing",
-    )
-    mocker.patch(
-        "learning_resources_search.indexing_api.delete_orphaned_indexes",
-        autospec=True,
-    )
-
-    job = TaskJobFactory.create(
-        task_name=REINDEX_TASK_NAME, params={"indexes": indexes}
-    )
-    start_recreate_index.delay(job.id)
-
-    job.refresh_from_db()
-    assert job.status == TaskJob.Status.RUNNING
-
-    indexed_resource_ids = {
-        resource_id
-        for batch in job.batches.filter(kind=ReindexBatchKind.learning_resources.value)
-        for resource_id in batch.params["ids"]
-    }
-    assert indexed_resource_ids == {
-        course.learning_resource_id for course in courses[1:]
-    }
-
-    if COURSE_TYPE in indexes:
-        dispatched_ids = {
-            resource_id
-            for batch in job.batches.filter(
-                kind=ReindexBatchKind.dispatch_content_files.value
-            )
-            for resource_id in batch.params["learning_resource_ids"]
-        }
-        assert dispatched_ids == {course.learning_resource_id for course in courses[1:]}
 
 
 def test_start_recreate_index_percolate(mocker):
@@ -1086,13 +1023,9 @@ def test_start_update_index(mocker, mocked_celery, indexes, etl_source, settings
     settings.OPENSEARCH_INDEXING_CHUNK_SIZE = 2
     settings.OPENSEARCH_DOCUMENT_INDEXING_CHUNK_SIZE = 2
 
-    mock_blocklist = mocker.patch(
-        "learning_resources_search.tasks.load_course_blocklist", return_value=[]
-    )
-
     etl_sources = [
         ETLSource.ocw,
-        ETLSource.mit_edx,
+        ETLSource.oll,
         ETLSource.xpro,
         ETLSource.mitxonline,
     ]
@@ -1168,8 +1101,6 @@ def test_start_update_index(mocker, mocked_celery, indexes, etl_source, settings
     list(mocked_celery.group.call_args[0][0])
 
     if COURSE_TYPE in indexes:
-        mock_blocklist.assert_called_once()
-
         if etl_source:
             assert index_learning_resources_mock.si.call_count == 1
             course = next(
@@ -1283,9 +1214,6 @@ def test_start_update_index(mocker, mocked_celery, indexes, etl_source, settings
 
 def test_oll_content_files_reindexed(mocker):
     """update_index and recreate_index cover OLL content files, as ingest does"""
-    mocker.patch(
-        "learning_resources_search.tasks.load_course_blocklist", return_value=[]
-    )
     course = CourseFactory.create(etl_source=ETLSource.oll.value)
     # rebuilds index only the best run's content files
     content_file = ContentFileFactory.create(run=course.learning_resource.best_run)
@@ -1300,7 +1228,7 @@ def test_oll_content_files_reindexed(mocker):
 
     indexed_ids = [
         task.args[0]
-        for task in get_update_resource_files_tasks([], ETLSource.oll.value)
+        for task in get_update_resource_files_tasks(ETLSource.oll.value)
         if task.task == index_content_files.name
     ]
     assert indexed_ids == [[content_file.id]]
@@ -1952,9 +1880,6 @@ def test_cache_is_cleared_after_update_index(mocker, settings):
     mocked_clear_views_cache = mocker.patch(
         "learning_resources_search.tasks.clear_views_cache"
     )
-    mocker.patch(
-        "learning_resources_search.tasks.load_course_blocklist", return_value=[]
-    )
     sorted(
         CourseFactory.create_batch(4, etl_source=ETLSource.ocw.value),
         key=lambda course: course.learning_resource_id,
@@ -2025,7 +1950,7 @@ def test_get_update_resource_files_tasks_indexes_best_run_only(mocker):
         autospec=True,
     )
 
-    get_update_resource_files_tasks([], ETLSource.mitxonline.value)
+    get_update_resource_files_tasks(ETLSource.mitxonline.value)
 
     indexed = {
         cf_id for call in index_content_mock.si.call_args_list for cf_id in call.args[0]
@@ -2115,9 +2040,6 @@ def test_start_recreate_index_dispatches_test_mode_course_content_files(
         test_mode=True,
     )
     ContentFileFactory.create(run=course.runs.first())
-    mocker.patch(
-        "learning_resources_search.tasks.load_course_blocklist", return_value=[]
-    )
     mocker.patch("learning_resources_search.tasks.run_reindex_batch", autospec=True)
     mocked_api.get_existing_reindexing_indexes.return_value = []
     mocked_api.create_backing_index.return_value = "backing"
@@ -2158,7 +2080,7 @@ def test_get_update_resource_files_tasks_includes_test_mode_courses(mocker):
     )
     mocker.patch("learning_resources_search.tasks.deindex_content_files", autospec=True)
 
-    get_update_resource_files_tasks([], ETLSource.mitxonline.value)
+    get_update_resource_files_tasks(ETLSource.mitxonline.value)
 
     indexed = {
         cf_id for call in index_content_mock.si.call_args_list for cf_id in call.args[0]
@@ -2187,7 +2109,7 @@ def test_get_update_resource_files_tasks_deindexes_hidden_files(mocker):
         "learning_resources_search.tasks.deindex_content_files", autospec=True
     )
 
-    get_update_resource_files_tasks([], ETLSource.mitxonline.value)
+    get_update_resource_files_tasks(ETLSource.mitxonline.value)
 
     deindexed = {
         cf_id for call in deindex_mock.si.call_args_list for cf_id in call.args[0]

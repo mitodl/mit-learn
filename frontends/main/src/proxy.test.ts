@@ -165,6 +165,16 @@ describe("proxy", () => {
     )
   })
 
+  test("keeps program letters out of the shared cache", () => {
+    // A revoked letter must stop being served right away, and nothing purges
+    // a letter's cached HTML.
+    const response = proxy(
+      makeRequest("/program_letter/5de96fc0-449e-4668-be89-a119dbdcab79/view"),
+    )
+    expect(response.headers.get("Cache-Control")).toBe("private, no-store")
+    expect(response.headers.get("Surrogate-Key")).toBeNull()
+  })
+
   test("leaves non-page routes untagged", () => {
     const response = proxy(makeRequest("/healthcheck"))
     expect(response.headers.get("Surrogate-Key")).toBeNull()

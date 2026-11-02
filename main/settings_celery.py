@@ -56,14 +56,6 @@ CELERY_BEAT_SCHEDULE = (
             "task": "learning_resources.tasks.reindex_released_content_files",
             "schedule": crontab(minute=15),
         },
-        "update_edx-courses-every-1-days": {
-            "task": "learning_resources.tasks.get_mit_edx_data",
-            "schedule": crontab(minute=0, hour=5),
-        },
-        "update-edx-files-every-1-day": {
-            "task": "learning_resources.tasks.import_all_mit_edx_files",
-            "schedule": crontab(minute=0, hour=6),
-        },
         "update-mit-climate-articles-every-1-days": {
             "task": "learning_resources.tasks.get_mit_climate_data",
             "schedule": crontab(minute=30, hour=5),  # 1:30am EST

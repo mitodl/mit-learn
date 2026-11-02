@@ -20,7 +20,6 @@ from learning_resources.models import (
 from learning_resources.serializers import (
     ContentFileSerializer,
 )
-from learning_resources.utils import load_course_blocklist
 from learning_resources_search.constants import (
     CONTENT_FILE_TYPE,
     COURSE_TYPE,
@@ -263,13 +262,10 @@ def start_embed_resources(self, indexes, skip_content_files, overwrite):  # noqa
         return None
     try:
         if COURSE_TYPE in indexes:
-            blocklisted_ids = load_course_blocklist()
-
             index_tasks = [
                 generate_embeddings.si(ids, COURSE_TYPE, overwrite)
                 for ids in chunks(
                     Course.objects.filter(learning_resource__published=True)
-                    .exclude(learning_resource__readable_id__in=blocklisted_ids)
                     .order_by("learning_resource_id")
                     .values_list("learning_resource_id", flat=True),
                     chunk_size=settings.QDRANT_CHUNK_SIZE,
@@ -282,7 +278,6 @@ def start_embed_resources(self, indexes, skip_content_files, overwrite):  # noqa
                         resource_type=COURSE_TYPE,
                     )
                     .filter(Q(published=True) | Q(test_mode=True))
-                    .exclude(readable_id__in=blocklisted_ids)
                     .order_by("id")
                 ):
                     # Embed visible content files across all runs of the course

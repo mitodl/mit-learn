@@ -4,8 +4,8 @@ Unlike learning_resources.factories (Django ORM models), these produce plain
 dicts shaped like rows from an integrations__learn__* warehouse view — used
 to seed a local StarRocks table so BaseWarehouseETLTask/iter_rows can be
 exercised against real SQL instead of a mocked cursor (see
-warehouse_integration_test.py). Each per-source PR (mitxonline, xpro,
-mit_edx, ocw, program_certificates) should add its own factory here matching
+warehouse_integration_test.py). Each per-source PR (mitxonline, xpro, ocw,
+program_certificates) should add its own factory here matching
 that source's actual view schema, alongside its transform function.
 """
 

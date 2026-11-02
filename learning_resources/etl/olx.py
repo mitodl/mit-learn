@@ -125,7 +125,6 @@ def get_root_url_for_source(etl_source: str) -> tuple[str, str]:
         ETLSource.mitxonline.value: settings.CONTENT_BASE_URL_MITXONLINE,
         ETLSource.xpro.value: settings.CONTENT_BASE_URL_XPRO,
         ETLSource.oll.value: settings.CONTENT_BASE_URL_OLL,
-        ETLSource.mit_edx.value: settings.CONTENT_BASE_URL_EDX,
     }
     return mapping.get(etl_source)
 

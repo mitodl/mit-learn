@@ -258,9 +258,9 @@ const EngagementTrendChart: React.FC<{
         <MobileColumnHelp>
           {SERIES.filter((series) => series.description).map((series) => (
             <Tooltip key={series.key} title={series.description}>
-              {/* eslint-disable-next-line styled-components-a11y/no-noninteractive-tabindex */}
               <InfoTrigger
                 aria-label={`${series.label}: ${series.description}`}
+                // eslint-disable-next-line styled-components-a11y/no-noninteractive-tabindex
                 tabIndex={0}
               >
                 {series.label}
