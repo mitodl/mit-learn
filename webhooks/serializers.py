@@ -58,14 +58,15 @@ class OVSVideoWebhookRequestSerializer(serializers.Serializer):
 
     def _validate_media_urls(self):
         """
-        Reject upsert payloads carrying urls outside the OVS media allowlist.
+        Reject upsert payloads carrying media urls outside the OVS allowlist.
 
-        The payload is attacker-controlled input, and its urls are fetched
+        The payload is attacker-controlled input, and its media urls are fetched
         server-side (subtitles) or served to browsers (thumbnails, streams), so
-        an unrecognized host is refused rather than silently dropped.
+        an unrecognized host is refused rather than silently dropped. cta_link
+        isn't media: it's never fetched, and transform_video replaces one off
+        the allowlist with the OVS url, so it doesn't cost the video its load.
         """
         candidates = [
-            ("cta_link", self.initial_data.get("cta_link")),
             *[("sources", src.get("src")) for src in self._nested_objects("sources")],
             *[
                 ("videothumbnail_set", thumbnail.get("cloudfront_url"))

@@ -628,11 +628,6 @@ def test_ovs_video_webhook_missing_key(settings, client):
             ),
             id="thumbnail",
         ),
-        pytest.param(
-            "cta_link",
-            lambda payload: payload.update({"cta_link": "https://evil.io/watch"}),
-            id="cta_link",
-        ),
     ],
 )
 def test_ovs_video_webhook_rejects_disallowed_urls(
@@ -678,7 +673,7 @@ def test_ovs_video_webhook_rejects_hostile_urls(settings, client, mocker, hostil
     mock_load = mocker.patch("webhooks.views.load_ovs_video_from_webhook")
     settings.OVS_ALLOWED_MEDIA_HOSTS = [".cloudfront.net"]
     payload = _ovs_payload(key="hostile")
-    payload["cta_link"] = hostile_url
+    payload["videothumbnail_set"][0]["cloudfront_url"] = hostile_url
 
     url = reverse("webhooks:v1:ovs_video_webhook")
     response = client.post(
@@ -688,8 +683,50 @@ def test_ovs_video_webhook_rejects_hostile_urls(settings, client, mocker, hostil
         headers={"X-MITLearn-Signature": get_secret(payload, settings)},
     )
     assert response.status_code == 400
-    assert "cta_link" in response.json()
+    assert "videothumbnail_set" in response.json()
     mock_load.assert_not_called()
+
+
+@pytest.mark.django_db
+@pytest.mark.parametrize(
+    "cta_link",
+    [
+        pytest.param(
+            "https://why-this-matters.captivate.fm/listen", id="off_allowlist"
+        ),
+        pytest.param("javascript:alert(1)", id="javascript"),
+        pytest.param(
+            "https://evil.io\\@du3yhovcx8dht.cloudfront.net/x.jpg", id="backslash"
+        ),
+        pytest.param("https://[", id="unparseable"),
+        pytest.param(5, id="not_a_string"),
+        pytest.param(
+            {"src": "https://du3yhovcx8dht.cloudfront.net/x.jpg"}, id="object"
+        ),
+    ],
+)
+def test_ovs_video_webhook_drops_disallowed_cta_link(  # noqa: PLR0913
+    settings, client, mocker, ovs_platform, webhook_owns_ovs, cta_link
+):
+    """A disallowed cta_link falls back to the OVS url and doesn't fail the video."""
+    mocker.patch("webhooks.views.clear_views_cache")
+    mocker.patch("learning_resources.etl.loaders.update_index")
+    mocker.patch(
+        "learning_resources.etl.loaders.similar_topics_action", return_value=[]
+    )
+    payload = _ovs_payload(key="cta1")
+    payload["cta_link"] = cta_link
+
+    url = reverse("webhooks:v1:ovs_video_webhook")
+    response = client.post(
+        url,
+        data=json.dumps(payload),
+        content_type="application/json",
+        headers={"X-MITLearn-Signature": get_secret(payload, settings)},
+    )
+    assert response.status_code == 200
+    video = LearningResource.objects.get(readable_id="cta1")
+    assert video.url == "https://video.odl.mit.edu/videos/cta1"
 
 
 @pytest.mark.django_db
