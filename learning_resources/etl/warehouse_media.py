@@ -22,14 +22,18 @@ from collections import defaultdict
 from dateutil.parser import ParserError, parse
 
 from learning_resources.constants import (
-    OCW_PLAYLIST_VIDEO_THRESHOLD,
     LearningResourceType,
 )
 from learning_resources.etl import loaders
 from learning_resources.etl.constants import ETLSource
 from learning_resources.etl.exceptions import ExtractException
-from learning_resources.etl.ownership import RunMode, may_write, run_mode
-from learning_resources.etl.utils import iso8601_duration
+from learning_resources.etl.ownership import (
+    RunMode,
+    is_shadow_run,
+    may_write,
+    run_mode,
+)
+from learning_resources.etl.utils import enough_youtube_matches, iso8601_duration
 from learning_resources.etl.warehouse_guards import (
     refuse_empty,
     refuse_mass_unpublish,
@@ -161,17 +165,14 @@ def _kept_playlists(playlists: list[dict]) -> list[dict]:
     file on a published run, as load_videos_from_content_files matches them.
     """
     matched_youtube_ids = set(
-        ContentFile.objects.filter(
-            youtube_id__in={
+        ContentFile.objects.matching_youtube_videos(
+            {
                 video["youtube_id"]
                 for playlist in playlists
                 if not playlist["create_videos"]
                 for video in playlist["videos"]
-            },
-            run__published=True,
-        )
-        .visible()
-        .values_list("youtube_id", flat=True)
+            }
+        ).values_list("youtube_id", flat=True)
     )
 
     def is_kept(playlist: dict) -> bool:
@@ -181,9 +182,7 @@ def _kept_playlists(playlists: list[dict]) -> list[dict]:
         matched = [
             video for video in videos if video["youtube_id"] in matched_youtube_ids
         ]
-        return bool(matched) and len(matched) >= (
-            len(videos) * OCW_PLAYLIST_VIDEO_THRESHOLD
-        )
+        return bool(matched) and enough_youtube_matches(len(matched), len(videos))
 
     return [playlist for playlist in playlists if is_kept(playlist)]
 
@@ -211,13 +210,21 @@ def prepare_youtube_sync(
 
     Returns:
         dict: the load_playlist data of each channel's playlists by channel id,
-            or None if this pipeline does not own youtube
+            or None if this pipeline neither owns nor shadows youtube, or if it
+            only shadows youtube and this is not a shadow run
 
     Raises:
         ExtractException: if a view is empty, a row is bad, or the sync would
             unpublish over MAX_UNPUBLISH_SHARE of the playlists or videos
     """
-    if not may_write_youtube():
+    # Checked here and not only where the run started: ownership can change
+    # while the views are read, and the channel sync that follows does not
+    # check it again. A run that became the shadow must not write.
+    if (
+        run_mode(ETLSource.youtube.name, YOUTUBE_TYPES) == RunMode.SKIP
+        if is_shadow_run()
+        else not may_write_youtube()
+    ):
         return None
 
     refuse_empty(
@@ -243,8 +250,7 @@ def prepare_youtube_sync(
         kept_playlists = _kept_playlists(
             [
                 playlist
-                for channel in channels
-                for playlist in playlists_by_channel[channel["channel_id"]]
+                for _, playlist in playlists_to_load(channels, playlists_by_channel)
             ]
         )
         for resource_type, kept_ids in (
@@ -264,6 +270,20 @@ def prepare_youtube_sync(
             refuse_mass_unpublish(ETLSource.youtube.name, resource_type, kept_ids)
 
     return playlists_by_channel
+
+
+def playlists_to_load(
+    channels: list[dict], playlists_by_channel: dict[str, list[dict]]
+) -> list[tuple[str, dict]]:
+    """
+    Return the channel id and load_playlist data of every playlist of the
+    listed channels, which are the playlists a sync loads.
+    """
+    return [
+        (channel["channel_id"], playlist)
+        for channel in channels
+        for playlist in playlists_by_channel.get(channel["channel_id"], [])
+    ]
 
 
 def sync_youtube_channels(
@@ -289,18 +309,19 @@ def sync_youtube_channels(
         [channel["channel_id"] for channel in channels]
     )
 
-    to_load = []
     for channel in channels:
         channel_id = channel["channel_id"]
         video_channel = loaders.upsert_video_channel(
             {"channel_id": channel_id, "title": channel["title"], "published": True}
         )
-        channel_playlists = playlists_by_channel.get(channel_id, [])
         loaders.unpublish_removed_playlists(
-            video_channel, [playlist["playlist_id"] for playlist in channel_playlists]
+            video_channel,
+            [
+                playlist["playlist_id"]
+                for playlist in playlists_by_channel.get(channel_id, [])
+            ],
         )
-        to_load.extend((channel_id, playlist) for playlist in channel_playlists)
-    return to_load
+    return playlists_to_load(channels, playlists_by_channel)
 
 
 def _podcast_topics(raw: str | None) -> list[dict]:

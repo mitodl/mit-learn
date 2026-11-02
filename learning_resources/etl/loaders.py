@@ -15,7 +15,6 @@ from learning_resources.constants import (
     OCW_CONTENT_CATEGORY_LECTURE_VIDEOS,
     OCW_COURSE_CONTENT_CATEGORY_MAPPING,
     OCW_INSTRUCTOR_INSIGHTS_TAG,
-    OCW_PLAYLIST_VIDEO_THRESHOLD,
     OCW_VISIBLE_TAGS,
     LearningResourceDelivery,
     LearningResourceRelationTypes,
@@ -43,7 +42,7 @@ from learning_resources.etl.ownership import (
     may_write,
     run_mode,
 )
-from learning_resources.etl.utils import most_common_topics
+from learning_resources.etl.utils import enough_youtube_matches, most_common_topics
 from learning_resources.models import (
     ContentFile,
     Course,
@@ -2143,21 +2142,12 @@ def load_videos_from_content_files(
         for video_data in youtube_videos_data
         if video_data.get("youtube_id")
     }
-    # Rarely, more than one content files can share a youtube_id
-    # (e.g. the same video on two pages of a course);
-    # keep the lowest id so the match is stable.
-
-    content_files_by_youtube_id = {}
-    for content_file in (
-        ContentFile.objects.filter(
-            youtube_id__in=youtube_ids,
-            run__published=True,
-        )
-        .visible()
-        .select_related("run__learning_resource")
-        .order_by("-id")
-    ):
-        content_files_by_youtube_id[content_file.youtube_id] = content_file
+    content_files_by_youtube_id = {
+        content_file.youtube_id: content_file
+        for content_file in ContentFile.objects.matching_youtube_videos(
+            youtube_ids
+        ).select_related("run__learning_resource")
+    }
 
     matched = [
         (video_data, content_files_by_youtube_id[video_data["youtube_id"]])
@@ -2165,8 +2155,7 @@ def load_videos_from_content_files(
         if video_data.get("youtube_id") in content_files_by_youtube_id
     ]
 
-    threshold = len(youtube_videos_data) * OCW_PLAYLIST_VIDEO_THRESHOLD
-    if len(matched) < threshold:
+    if not enough_youtube_matches(len(matched), len(youtube_videos_data)):
         return None
 
     videos = []
