@@ -16,32 +16,8 @@ Nothing is written but the reports, and no row is locked: the comparison is a
 few reads per ``OBSERVE_CHUNK_SIZE`` items, outside any transaction.
 
 The comparison follows the loaders' rules instead of running them, so it is a
-second copy of those rules and can drift from them. It covers:
-
-- every key of an item that is a column of LearningResource, apart from the
-  ones the loaders derive from the best run (``_RUN_DERIVED``), and the
-  columns a loader sets for an item that leaves them out (``delivery`` and
-  ``resource_category``);
-- ``published``, as the loader would set it (false for a course or program
-  with no runs, and for a podcast with no episodes);
-- ``test_mode`` and ``require_summaries``, as the loader sets them for a
-  force-ingested course;
-- topics (with the parents the loader adds), offered_by, image, departments,
-  content tags, and the columns of the detail row (``course``, ``podcast``,
-  ``podcast_episode``);
-- each run by ``run_id``: its columns, prices, instructors and image, and the
-  published runs a pruning load would unpublish;
-- a program's child courses and programs, by readable_id, as its load would
-  find them;
-- a playlist's channel and its videos in order, a video's detail row, and
-  the course platform a content file moves a video to;
-- the published resources a pruning load would unpublish.
-
-It does not cover what only the loaders decide: topics found by similarity for
-a document or video with none, a playlist's topics (the most common of its
-videos'), deduplication by ``unique_field``, runs that moved between courses,
-the courses a program load writes, video channels, content files, and the
-search index.
+second copy of those rules and can drift from them. "What is compared" and
+"What is not" in docs/how-to/etl-source-cutover.md say what it covers.
 """
 
 import logging
@@ -881,16 +857,17 @@ def observe_youtube(to_load: Iterable[tuple[str, dict]]) -> None:
     Compare the playlists and videos as SyncYouTubeTask's playlist loads would
     load them, for the shadow run in progress.
 
-    The owner's run unpublishes the playlists the views no longer list, by
-    channel, and loads each listed playlist with load_playlist. A
-    ``create_videos`` playlist loads its videos with load_video. Any other
-    loads only the videos with a matching published OCW content file, taking
-    the title, url and description of the content file and the platform,
-    offered_by and topics of its course, or is unpublished when fewer than
-    OCW_PLAYLIST_VIDEO_THRESHOLD of its videos match. A video that was in a
-    playlist and that no kept playlist lists is counted as unpublished. The
-    owner's run unpublishes it in the same run, except the videos of a
-    playlist with too few matches, which wait for its next run.
+    What the owner's run does, and this compares:
+
+    - It unpublishes the playlists the views no longer list, by channel, and
+      loads each listed playlist with load_playlist.
+    - A ``create_videos`` playlist loads its videos with load_video.
+    - Any other playlist loads only the videos with a matching OCW content
+      file (``_content_file_video``). It is unpublished when fewer than
+      OCW_PLAYLIST_VIDEO_THRESHOLD of its videos match.
+    - It unpublishes a video that was in a playlist and that no kept playlist
+      lists. The videos of a playlist with too few matches wait for its next
+      run, but this counts them as unpublished now.
 
     Args:
         to_load: the (channel id, load_playlist data) of each playlist, as
