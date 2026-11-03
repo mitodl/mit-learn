@@ -262,8 +262,11 @@ export const getCertificateLinkedInUrl = (
 ): string => {
   let credentialName: string
   if (certificateType === CertificateType.Course) {
-    credentialName = (certificateData as V2CourseRunCertificate).course_run
-      .course.title
+    const courseCert = certificateData as V2CourseRunCertificate
+    credentialName = getCertificateTitle(
+      courseCert.certificate_page?.product_name,
+      courseCert.course_run.course.title,
+    )
   } else {
     const programCert = certificateData as V2ProgramCertificate
     credentialName = getCertificateTitle(

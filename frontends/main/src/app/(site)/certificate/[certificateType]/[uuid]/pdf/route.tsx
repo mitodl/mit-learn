@@ -25,7 +25,7 @@ import {
   pdf,
 } from "@react-pdf/renderer"
 import { redirect } from "next/navigation"
-import { pxToPt, getNameStyles } from "./utils"
+import { pxToPt } from "./utils"
 import {
   getCertificateBadgeLines,
   getCertificateBadgeTypography,
@@ -117,40 +117,31 @@ const colors = {
   red: "#A31F34",
   silverGray: "#8B959E",
   silverGrayDark: "#626A73",
-  silverGrayLight: "#B8C2CC",
+  lightGray2: "#DDE1E6",
   white: "#FFFFFF",
 }
 
-/* We're borrowing from the Smoot Design theme - there's not much point importing due to differences:
+/* Type styles from the Figma certificate, in Figma pixels.
  * - Font weights are not respected as the supported font formats are only available in one file per font weight (registered above)
- * - The PDF generator interprets line heights very different. Point conversion from the theme's result in huge spaces between lines.
+ * - react-pdf treats a unitless lineHeight as a multiple of fontSize, so line heights are given as ratios.
  */
+const textStyle = (
+  fontFamily: string[],
+  fontSizePx: number,
+  lineHeightPx: number,
+) => ({
+  fontFamily,
+  fontSize: pxToPt(fontSizePx),
+  lineHeight: lineHeightPx / fontSizePx,
+})
+
 const typography = {
-  h1: {
-    fontFamily: FONT_STACK_700,
-    fontSize: pxToPt(52),
-    lineHeight: pxToPt(60),
-  },
-  h2: {
-    fontFamily: FONT_STACK_700,
-    fontSize: pxToPt(34),
-    lineHeight: pxToPt(40),
-  },
-  h3: {
-    fontFamily: FONT_STACK_700,
-    fontSize: pxToPt(28),
-    lineHeight: pxToPt(2.4),
-  },
-  h4: {
-    fontFamily: FONT_STACK_700,
-    fontSize: pxToPt(24),
-    lineHeight: pxToPt(2),
-  },
-  body1: {
-    fontFamily: FONT_STACK_400,
-    fontSize: pxToPt(16),
-    lineHeight: pxToPt(2),
-  },
+  name: textStyle(FONT_STACK_700, 48, 60),
+  h3: textStyle(FONT_STACK_700, 28, 36),
+  h4: textStyle(FONT_STACK_700, 24, 30),
+  h5: textStyle(FONT_STACK_700, 18, 26),
+  body18: textStyle(FONT_STACK_400, 18, 26),
+  body2: textStyle(FONT_STACK_400, 14, 18),
 }
 
 /* SVGs can not be used a Image source (there are workarounds, though they would render rasterized).
@@ -163,9 +154,6 @@ const OpenLearningLogo = () => (
     style={{
       width: pxToPt(260),
       height: pxToPt(67),
-      position: "absolute",
-      top: pxToPt(46),
-      left: pxToPt(46),
     }}
   >
     <G clip-path="url(#clip0_22738_68399)">
@@ -229,11 +217,7 @@ const Badge = ({ programType }: { programType?: string | null }) => {
   const lines = getCertificateBadgeLines(programType)
   const { fontSizePx, lineHeightPx, registeredMarkScale } =
     getCertificateBadgeTypography(programType)
-  const badgeStyle = {
-    fontFamily: FONT_STACK_700,
-    fontSize: pxToPt(fontSizePx),
-    lineHeight: pxToPt(lineHeightPx),
-  }
+  const badgeStyle = textStyle(FONT_STACK_700, fontSizePx, lineHeightPx)
   const badgeMarkStyle = {
     fontSize: pxToPt(fontSizePx * registeredMarkScale),
   }
@@ -242,52 +226,64 @@ const Badge = ({ programType }: { programType?: string | null }) => {
     <View
       style={{
         position: "absolute",
-        top: pxToPt(0),
-        right: pxToPt(67),
+        // Offsets are measured from the outer edge of the content border
+        top: pxToPt(-2),
+        right: pxToPt(46),
       }}
     >
+      {/* Matches public/images/certificate-badge-desktop.svg */}
       <Svg
-        viewBox="0 0 230 391"
+        viewBox="0 0 230 360"
         fill="none"
         style={{
           width: pxToPt(230),
-          height: pxToPt(391),
+          height: pxToPt(360),
         }}
       >
-        <Path
-          d="M183.001 391L114.501 349.587L46.0015 391V0H183.001V391Z"
-          fill="#DDE1E6"
-        />
-        <Path
-          d="M230.001 198.963C230.001 211.203 221.176 221.735 217.476 232.552C214.06 243.938 214.914 257.886 208.082 267.28C201.251 276.673 188.156 280.089 178.763 286.921C169.369 293.752 162.253 305.708 151.152 309.408C140.335 313.109 127.525 307.701 115.855 307.701C103.899 307.701 91.0897 313.109 80.5575 309.408C69.1714 305.708 62.055 293.752 52.9461 286.921C43.5525 280.089 30.1739 276.673 23.3422 267.28C16.5105 257.886 17.6491 243.938 13.9486 232.552C10.5328 221.735 1.42383 211.203 1.42383 198.963C1.42383 186.723 10.5328 176.191 13.9486 165.374C17.6491 153.988 16.5105 140.04 23.3422 130.646C30.1739 121.253 43.5525 117.837 52.9461 111.005C62.055 104.173 69.1714 92.2178 80.5575 88.5173C91.0897 84.8168 103.899 90.2253 115.855 90.2253C127.525 90.2253 140.335 84.8168 151.152 88.5173C162.253 92.2178 169.369 104.173 178.763 111.005C188.156 117.837 201.251 121.253 208.082 130.646C214.914 140.04 214.06 153.988 217.476 165.374C221.176 176.191 230.001 186.723 230.001 198.963Z"
-          fill="#750014"
-        />
-        <Path
-          d="M228.578 200.102C228.578 212.057 219.753 222.589 216.053 233.406C212.352 244.507 213.491 258.171 206.659 267.28C199.828 276.673 186.449 280.089 177.34 286.921C167.947 293.468 160.83 305.139 149.729 308.839C138.912 312.255 126.102 307.131 114.147 307.131C102.476 307.131 89.6668 312.255 78.85 308.839C67.7485 305.139 60.6321 293.468 51.2386 286.921C41.845 280.089 28.751 276.673 21.9193 267.28C15.0876 258.171 15.9416 244.507 12.5258 233.406C8.8253 222.589 0.000976562 212.057 0.000976562 200.102C0.000976562 188.146 8.8253 177.899 12.5258 167.082C15.9416 155.98 15.0876 142.317 21.9193 132.923C28.751 123.814 41.845 120.399 51.2386 113.567C60.6321 106.735 67.7485 95.0644 78.85 91.6486C89.6668 87.9481 102.476 93.0718 114.147 93.0718C126.102 93.0718 138.912 87.9481 149.729 91.6486C160.83 95.0644 167.947 106.735 177.34 113.567C186.449 120.399 199.828 123.814 206.659 132.923C213.491 142.317 212.352 155.98 216.053 167.082C219.753 177.899 228.578 188.146 228.578 200.102Z"
-          fill="#750014"
-        />
-        <Path
-          d="M200.967 197.255C200.967 246.785 160.547 287.206 111.017 287.206C61.4871 287.206 21.0664 246.785 21.0664 197.255C21.0664 147.725 61.4871 107.305 111.017 107.305C160.547 107.305 200.967 147.725 200.967 197.255Z"
-          fill="#212326"
-          fillOpacity="0.2"
-        />
-        <Path
-          d="M205.806 203.233C205.806 252.763 165.67 292.899 116.14 292.899C66.3256 292.899 26.1895 252.763 26.1895 203.233C26.1895 153.419 66.3256 113.283 116.14 113.283C165.67 113.283 205.806 153.419 205.806 203.233Z"
-          fill="#212326"
-          fillOpacity="0.2"
-        />
-        <Path
-          d="M204.098 200.387C204.098 250.201 163.962 290.337 114.147 290.337C64.6176 290.337 24.4814 250.201 24.4814 200.387C24.4814 150.857 64.6176 110.721 114.147 110.721C163.962 110.721 204.098 150.857 204.098 200.387Z"
-          fill="#83192A"
-        />
+        <G transform="translate(46 0)">
+          <Path d="M137 360L68.4992 321.87L0 360V0H137V360Z" fill="#DDE1E6" />
+        </G>
+        <G transform="translate(0 64)">
+          <Path
+            d="M230.001 111.74C230.001 123.98 221.176 134.512 217.476 145.329C214.06 156.715 214.914 170.663 208.082 180.057C201.251 189.451 188.156 192.866 178.763 199.698C169.369 206.53 162.253 218.485 151.152 222.186C140.335 225.886 127.525 220.478 115.855 220.478C103.899 220.478 91.0897 225.886 80.5575 222.186C69.1714 218.485 62.055 206.53 52.9461 199.698C43.5525 192.866 30.1739 189.451 23.3422 180.057C16.5105 170.663 17.6491 156.715 13.9486 145.329C10.5328 134.512 1.42383 123.98 1.42383 111.74C1.42383 99.5001 10.5328 88.9679 13.9486 78.1511C17.6491 66.765 16.5105 52.817 23.3422 43.4234C30.1739 34.0299 43.5525 30.614 52.9461 23.7823C62.055 16.9506 69.1714 4.99517 80.5575 1.29467C91.0897 -2.40582 103.899 3.00261 115.855 3.00261C127.525 3.00261 140.335 -2.40582 151.152 1.29467C162.253 4.99517 169.369 16.9506 178.763 23.7823C188.156 30.614 201.251 34.0299 208.082 43.4234C214.914 52.817 214.06 66.765 217.476 78.1511C221.176 88.9679 230.001 99.5001 230.001 111.74Z"
+            fill="#750014"
+          />
+          <Path
+            d="M228.577 112.878C228.577 124.834 219.752 135.366 216.052 146.183C212.351 157.284 213.49 170.948 206.658 180.057C199.827 189.45 186.448 192.866 177.339 199.698C167.946 206.245 160.829 217.915 149.728 221.616C138.911 225.032 126.101 219.908 114.146 219.908C102.475 219.908 89.6658 225.032 78.849 221.616C67.7475 217.915 60.6312 206.245 51.2376 199.698C41.844 192.866 28.75 189.45 21.9183 180.057C15.0867 170.948 15.9407 157.284 12.5248 146.183C8.82432 135.366 0 124.834 0 112.878C0 100.923 8.82432 90.6754 12.5248 79.8586C15.9407 68.7571 15.0867 55.0937 21.9183 45.7002C28.75 36.5913 41.844 33.1754 51.2376 26.3438C60.6312 19.5121 67.7475 7.84126 78.849 4.42542C89.6658 0.724925 102.475 5.84869 114.146 5.84869C126.101 5.84869 138.911 0.724925 149.728 4.42542C160.829 7.84126 167.946 19.5121 177.339 26.3438C186.448 33.1754 199.827 36.5913 206.658 45.7002C213.49 55.0937 212.351 68.7571 216.052 79.8586C219.752 90.6754 228.577 100.923 228.577 112.878Z"
+            fill="#750014"
+          />
+        </G>
+        <G transform="translate(21.0644 84.082)">
+          <Path
+            d="M179.901 89.9505C179.901 139.48 139.48 179.901 89.9504 179.901C40.4207 179.901 0 139.48 0 89.9505C0 40.4208 40.4207 0 89.9504 0C139.48 0 179.901 40.4208 179.901 89.9505Z"
+            fill="#212326"
+            fillOpacity="0.2"
+          />
+        </G>
+        <G transform="translate(26.1875 90.0605)">
+          <Path
+            d="M179.616 89.9505C179.616 139.48 139.48 179.616 89.9505 179.616C40.1362 179.616 0 139.48 0 89.9505C0 40.1362 40.1362 0 89.9505 0C139.48 0 179.616 40.1362 179.616 89.9505Z"
+            fill="#212326"
+            fillOpacity="0.2"
+          />
+        </G>
+        <G transform="translate(24.4805 87.498)">
+          <Path
+            d="M179.616 89.6658C179.616 139.48 139.48 179.616 89.6658 179.616C40.1361 179.616 0 139.48 0 89.6658C0 40.1361 40.1361 0 89.6658 0C139.48 0 179.616 40.1361 179.616 89.6658Z"
+            fill="#83192A"
+          />
+        </G>
       </Svg>
+      {/* Spans twice the seal's center height so the label centers on the seal */}
       <View
         style={{
           position: "absolute",
-          top: pxToPt(177),
-          left: pxToPt(0),
+          top: 0,
+          left: 0,
           width: pxToPt(230),
+          height: pxToPt(177 * 2),
           alignItems: "center",
+          justifyContent: "center",
         }}
       >
         <Text
@@ -344,135 +340,106 @@ const CertificateDoc = ({
       author="MIT Open Learning"
       pageLayout="singlePage"
     >
+      {/* The page is the Figma frame: 1414 x 1093px maps onto Letter landscape */}
       <Page
         size="LETTER"
         orientation="landscape"
         dpi={72}
         style={{
           flexDirection: "column",
-          backgroundColor: "#fff",
-          padding: "16pt",
+          backgroundColor: colors.white,
+          padding: pxToPt(32),
         }}
       >
         <View
           style={{
-            width: "100%",
-            height: "100%",
-            border: `${pxToPt(4)} solid ${colors.silverGray}`,
-            padding: pxToPt(24),
-            backgroundColor: colors.white,
+            flexGrow: 1,
+            flexDirection: "column",
+            position: "relative",
+            borderWidth: pxToPt(2),
+            borderStyle: "solid",
+            borderColor: colors.silverGray,
+            // Figma draws the stroke inside the frame, so content sits 64px from the outer edge
+            padding: pxToPt(62),
+            gap: pxToPt(64),
             fontFamily: FONT_STACK_400,
           }}
         >
+          <OpenLearningLogo />
+          <Badge programType={badgeProgramType} />
+
           <View
             style={{
-              border: `1px solid ${colors.silverGrayLight}`,
-              display: "flex",
               flexDirection: "column",
-              position: "relative",
-              height: "100%",
-              gap: "52px",
-              padding: "46px",
+              gap: pxToPt(12),
+              // Keeps the name clear of the stamp; long names wrap
+              paddingRight: pxToPt(230),
             }}
           >
-            <OpenLearningLogo />
-            <Badge programType={badgeProgramType} />
-
-            <Text
-              style={{
-                color: colors.silverGrayDark,
-                position: "absolute",
-                top: pxToPt(164),
-                left: pxToPt(46),
-                ...typography.h4,
-                fontFamily: FONT_STACK_400,
-              }}
-            >
+            <Text style={{ ...typography.h4, color: colors.silverGrayDark }}>
               This is to certify that
             </Text>
-            <Text
-              style={{
-                color: colors.red,
-                ...typography.h1,
-                fontSize: getNameStyles(userName).fontSize,
-                position: "absolute",
-                top: getNameStyles(userName).top,
-                left: pxToPt(46),
-              }}
-            >
+            <Text style={{ ...typography.name, color: colors.red }}>
               {userName}
             </Text>
+          </View>
+
+          <View
+            style={{
+              flexGrow: 1,
+              flexDirection: "column",
+              gap: pxToPt(12),
+            }}
+          >
             <Text
-              style={{
-                position: "absolute",
-                top: pxToPt(286),
-                left: pxToPt(46),
-                color: colors.silverGrayDark,
-                ...typography.h4,
-                fontSize: pxToPt(20),
-                fontFamily: FONT_STACK_400,
-              }}
+              style={{ ...typography.body18, color: colors.silverGrayDark }}
             >
-              has successfully completed all requirements of{" "}
+              has successfully completed all requirements of:
             </Text>
-            <Text
-              style={{
-                position: "absolute",
-                top: pxToPt(396),
-                left: pxToPt(46),
-                ...typography.h2,
-                fontFamily: FONT_STACK_700,
-                color: colors.black,
-                width: pxToPt(1150),
-              }}
-            >
+            <Text style={{ ...typography.h3, color: colors.black }}>
               {title}
             </Text>
-            {issueDate && (
-              <Text
-                style={{
-                  position: "absolute",
-                  top: pxToPt(456),
-                  left: pxToPt(46),
-                  color: colors.silverGrayDark,
-                  ...typography.h4,
-                  fontFamily: FONT_STACK_400,
-                }}
-              >
-                {moment(issueDate).format("MMM D, YYYY")}
-              </Text>
-            )}
             {ceus ? (
               <Text
-                style={{
-                  position: "absolute",
-                  top: pxToPt(506),
-                  left: pxToPt(46),
-                  ...typography.h4,
-                  color: colors.silverGrayDark,
-                  fontFamily: FONT_STACK_400,
-                }}
+                style={{ ...typography.body18, color: colors.silverGrayDark }}
               >
                 Awarded {ceus} Continuing Education Units (CEUs)
               </Text>
             ) : null}
+            {issueDate && (
+              <Text
+                style={{ ...typography.body18, color: colors.silverGrayDark }}
+              >
+                Awarded on {moment(issueDate).format("MMMM D, YYYY")}
+              </Text>
+            )}
+          </View>
+
+          <View
+            style={{
+              flexDirection: "column",
+              gap: pxToPt(16),
+              paddingTop: pxToPt(24),
+              borderTopWidth: pxToPt(1),
+              borderTopStyle: "solid",
+              borderTopColor: colors.lightGray2,
+            }}
+          >
             <View
               style={{
-                display: "flex",
                 flexDirection: "row",
-                gap: "16px",
-                position: "absolute",
-                left: pxToPt(46),
-                top: pxToPt(580),
-                right: pxToPt(46),
+                flexWrap: "wrap",
+                rowGap: pxToPt(16),
+                columnGap: pxToPt(12),
               }}
             >
               {signatories?.map((signatory, index) => (
                 <View
                   key={index}
                   style={{
-                    flex: "1 1 0",
-                    minWidth: 0,
+                    flexDirection: "column",
+                    gap: pxToPt(4),
+                    width: pxToPt(296),
                   }}
                 >
                   <Image
@@ -482,73 +449,41 @@ const CertificateDoc = ({
                         : `${env("NEXT_PUBLIC_MITX_ONLINE_BASE_URL")}${signatory.signature_image}`
                     }
                     style={{
-                      width: "100px",
-                      height: "40px",
+                      alignSelf: "flex-start",
+                      height: pxToPt(40),
+                      maxWidth: pxToPt(296),
+                      objectFit: "contain",
                     }}
                   />
-                  <Text
-                    style={{
-                      ...typography.h3,
-                      color: colors.black,
-                    }}
-                  >
-                    {signatory.name}
-                  </Text>{" "}
-                  {signatory.title_1 && (
-                    <Text
-                      style={{
-                        ...typography.body1,
-                        color: colors.silverGrayDark,
-                      }}
-                    >
-                      {signatory.title_1}
+                  <View style={{ flexDirection: "column", gap: pxToPt(4) }}>
+                    <Text style={{ ...typography.h5, color: colors.black }}>
+                      {signatory.name}
                     </Text>
-                  )}
-                  {signatory.title_2 && (
-                    <Text
-                      style={{
-                        ...typography.body1,
-                        color: colors.silverGrayDark,
-                      }}
-                    >
-                      {signatory.title_2}
-                    </Text>
-                  )}
-                  {signatory.title_3 && (
-                    <Text
-                      style={{
-                        ...typography.body1,
-                        color: colors.silverGrayDark,
-                      }}
-                    >
-                      {signatory.title_3}
-                    </Text>
-                  )}
-                  {signatory.organization && (
-                    <Text
-                      style={{
-                        ...typography.body1,
-                        color: colors.silverGrayDark,
-                        paddingTop: pxToPt(8),
-                      }}
-                    >
-                      {signatory.organization}
-                    </Text>
-                  )}
+                    {[
+                      signatory.title_1,
+                      signatory.title_2,
+                      signatory.title_3,
+                      signatory.organization,
+                    ]
+                      .filter(Boolean)
+                      .map((line, lineIndex) => (
+                        <Text
+                          key={lineIndex}
+                          style={{
+                            ...typography.body2,
+                            color: colors.silverGrayDark,
+                          }}
+                        >
+                          {line}
+                        </Text>
+                      ))}
+                  </View>
                 </View>
               ))}
             </View>
-            <Text
-              style={{
-                ...typography.body1,
-                color: colors.silverGrayDark,
-                position: "absolute",
-                bottom: pxToPt(30),
-                left: pxToPt(46),
-              }}
-            >
-              <Text style={{ color: colors.black }}>Valid Certificate ID:</Text>{" "}
-              {uuid}
+            <Text style={{ ...typography.body2, color: colors.black }}>
+              Valid Credential ID:{" "}
+              <Text style={{ color: colors.silverGrayDark }}>{uuid}</Text>
             </Text>
           </View>
         </View>
@@ -562,11 +497,14 @@ const CourseCertificate = ({
 }: {
   certificate: V2CourseRunCertificate
 }) => {
-  const title = certificate?.course_run?.course?.title
+  const title = getCertificateTitle(
+    certificate?.certificate_page?.product_name,
+    certificate?.course_run?.course?.title ?? "",
+  )
 
   const userName = certificate?.user?.name
 
-  const ceus = null
+  const ceus = certificate?.certificate_page?.CEUs
 
   const signatories = certificate?.certificate_page?.signatory_items
 

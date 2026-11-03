@@ -84,24 +84,27 @@ const Buttons = styled.div(({ theme }) => ({
   },
 }))
 
+/* The desktop certificate mirrors the Figma frame: 1414 x 1093px, which is
+ * US Letter landscape, so the web view and the PDF share the same proportions.
+ */
 const Outer = styled.div(({ theme }) => ({
-  maxWidth: "1306px",
+  display: "flex",
+  flexDirection: "column",
+  maxWidth: "1414px",
   minWidth: "1200px",
-  border: `4px solid ${theme.custom.colors.silverGray}`,
-  padding: "24px",
+  aspectRatio: "1414 / 1093",
+  padding: "32px",
   backgroundColor: theme.custom.colors.white,
-  marginTop: "50px",
   margin: "0 auto",
   "@media screen": {
     [theme.breakpoints.down("lg")]: {
       padding: 0,
-      border: "none",
       maxWidth: "unset",
       minWidth: "unset",
+      aspectRatio: "unset",
     },
     [theme.breakpoints.down("md")]: {
       padding: 0,
-      border: "none",
       maxWidth: "460px",
       minWidth: "unset",
     },
@@ -114,8 +117,10 @@ const Outer = styled.div(({ theme }) => ({
 }))
 
 const Inner = styled.div(({ theme }) => ({
-  border: `1px solid ${theme.custom.colors.silverGrayLight}`,
-  padding: "64px",
+  flex: 1,
+  border: `2px solid ${theme.custom.colors.silverGray}`,
+  // Figma draws the stroke inside the frame, so content sits 64px from the outer edge
+  padding: "62px",
   display: "flex",
   flexDirection: "column",
   gap: "64px",
@@ -169,12 +174,12 @@ const PrintLogo = styled.img({
 const Badge = styled.div(({ theme }) => ({
   backgroundImage: `url(${CertificateBadgeDesktop.src})`,
   position: "absolute",
-  top: 0,
-  right: "67px",
+  // Offsets are measured from the outer edge of Inner's 2px border
+  top: "-2px",
+  right: "46px",
   width: "230px",
-  height: "391px",
+  height: "360px",
   textAlign: "center",
-  padding: "81px 34px",
   backgroundRepeat: "no-repeat",
   "@media screen": {
     [theme.breakpoints.down("lg")]: {
@@ -201,7 +206,8 @@ const BadgeLabelRoot = styled.div<{
   color: theme.custom.colors.white,
   position: "absolute",
   left: "50%",
-  top: "203px",
+  // Center of the seal's inner disc
+  top: "177px",
   transform: "translate(-50%, -50%)",
   width: "175px",
   textAlign: "center",
@@ -257,19 +263,22 @@ const CertificateBadgeLabel = ({
 const Certification = styled.div(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
-  gap: "16px",
-  maxWidth: "850px",
+  gap: "12px",
+  // Keeps the name clear of the stamp; the name wraps instead of shrinking
+  paddingRight: "230px",
   ".MuiTypography-h4": {
-    fontWeight: theme.typography.fontWeightLight,
     color: theme.custom.colors.silverGrayDark,
   },
   "@media screen": {
     [theme.breakpoints.down("lg")]: {
+      paddingRight: "180px",
       ".MuiTypography-h4": {
         fontSize: theme.typography.pxToRem(16),
+        lineHeight: theme.typography.pxToRem(20),
       },
     },
     [theme.breakpoints.down("md")]: {
+      paddingRight: 0,
       gap: 0,
       ".MuiTypography-h4": {
         fontSize: theme.typography.pxToRem(16),
@@ -284,6 +293,8 @@ const Certification = styled.div(({ theme }) => ({
 const NameText = styled(Typography)(({ theme }) => ({
   color: theme.custom.colors.red,
   display: "block",
+  fontSize: theme.typography.pxToRem(48),
+  lineHeight: theme.typography.pxToRem(60),
   "@media screen": {
     [theme.breakpoints.down("lg")]: {
       fontSize: theme.typography.pxToRem(34),
@@ -297,14 +308,12 @@ const NameText = styled(Typography)(({ theme }) => ({
   },
 }))
 
-const AchievementText = styled(Typography)(({ theme }) => ({
-  fontWeight: theme.typography.fontWeightLight,
-  fontSize: theme.typography.pxToRem(20),
+/* Course info lines that sit around the title: 18/26 regular */
+const CourseInfoText = styled(Typography)(({ theme }) => ({
+  fontWeight: theme.typography.fontWeightRegular,
+  fontSize: theme.typography.pxToRem(18),
   lineHeight: theme.typography.pxToRem(26),
   color: theme.custom.colors.silverGrayDark,
-  strong: {
-    fontWeight: theme.typography.fontWeightBold,
-  },
   "@media screen": {
     [theme.breakpoints.down("lg")]: {
       fontSize: theme.typography.pxToRem(16),
@@ -313,63 +322,52 @@ const AchievementText = styled(Typography)(({ theme }) => ({
     [theme.breakpoints.down("md")]: {
       fontSize: theme.typography.pxToRem(14),
       lineHeight: theme.typography.pxToRem(18),
-      marginTop: "16px",
     },
   },
 }))
 
-const PrintBreak = styled.br({
-  display: "none",
-  "@media print": {
-    display: "block",
+const CourseTitle = styled(Typography)(({ theme }) => ({
+  color: theme.custom.colors.black,
+  "@media screen": {
+    [theme.breakpoints.down("md")]: {
+      fontSize: theme.typography.pxToRem(18),
+      lineHeight: theme.typography.pxToRem(26),
+    },
   },
-})
+}))
 
 const CourseInfo = styled.div(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
-  gap: "16px",
-  ".MuiTypography-h4": {
-    fontWeight: theme.typography.fontWeightLight,
-    color: theme.custom.colors.silverGrayDark,
-  },
+  gap: "12px",
+  // Fills the remaining height so the signatures sit at the bottom
+  flexGrow: 1,
   "@media screen": {
-    [theme.breakpoints.down("lg")]: {
-      ".MuiTypography-h2": {
-        fontSize: theme.typography.pxToRem(28),
-        lineHeight: theme.typography.pxToRem(36),
-      },
-      ".MuiTypography-h4": {
-        fontSize: theme.typography.pxToRem(16),
-        lineHeight: theme.typography.pxToRem(20),
-      },
-    },
     [theme.breakpoints.down("md")]: {
-      ".MuiTypography-h2": {
-        fontSize: theme.typography.pxToRem(18),
-        lineHeight: theme.typography.pxToRem(26),
-        fontWeight: theme.typography.fontWeightMedium,
-      },
-      ".MuiTypography-h4": {
-        fontSize: theme.typography.pxToRem(14),
-        lineHeight: theme.typography.pxToRem(18),
-        color: theme.custom.colors.darkGray1,
-      },
+      gap: "8px",
     },
   },
 }))
 
-const Spacer = styled.div(({ theme }) => ({
-  height: "30px",
-  [theme.breakpoints.down("lg")]: {
-    display: "none",
+const SignatureFooter = styled.div(({ theme }) => ({
+  display: "flex",
+  flexDirection: "column",
+  gap: "16px",
+  paddingTop: "24px",
+  borderTop: `1px solid ${theme.custom.colors.lightGray2}`,
+  "@media screen": {
+    [theme.breakpoints.down("md")]: {
+      borderTop: "none",
+      paddingTop: 0,
+      gap: "24px",
+    },
   },
 }))
 
 const Signatories = styled.div(({ theme }) => ({
   display: "flex",
-  flexDirection: "row",
-  gap: "40px",
+  flexWrap: "wrap",
+  gap: "16px 12px",
   width: "100%",
   "@media screen": {
     [theme.breakpoints.down("md")]: {
@@ -377,97 +375,80 @@ const Signatories = styled.div(({ theme }) => ({
       gap: "24px",
     },
   },
-  "@media print": {
-    position: "absolute",
-    left: "46px",
-    bottom: "100px",
-  },
 }))
 
 const Signatory = styled.div(({ theme }) => ({
-  flex: "1 1 0",
-  minWidth: 0,
-  span: {
-    display: "block",
+  display: "flex",
+  flexDirection: "column",
+  gap: "4px",
+  width: "296px",
+  "@media screen": {
+    [theme.breakpoints.down("lg")]: {
+      width: "calc((100% - 36px) / 4)",
+      minWidth: "200px",
+    },
+    [theme.breakpoints.down("md")]: {
+      width: "100%",
+      minWidth: 0,
+      borderBottom: `1px solid ${theme.custom.colors.lightGray2}`,
+      paddingBottom: "24px",
+    },
   },
-  ".MuiTypography-body1": {
+}))
+
+const SignatoryText = styled.div(({ theme }) => ({
+  display: "flex",
+  flexDirection: "column",
+  gap: "4px",
+  ".MuiTypography-body2": {
     color: theme.custom.colors.silverGrayDark,
   },
   "@media screen": {
-    [theme.breakpoints.down("lg")]: {
-      ".MuiTypography-body1": {
-        fontSize: theme.typography.pxToRem(12),
-        lineHeight: theme.typography.pxToRem(16),
-      },
-      ".MuiTypography-body1:last-child": {
-        marginTop: "8px",
-      },
-    },
     [theme.breakpoints.down("md")]: {
-      ".MuiTypography-body1": {
+      ".MuiTypography-body2": {
         color: theme.custom.colors.darkGray1,
-        fontSize: theme.typography.pxToRem(14),
-        lineHeight: theme.typography.pxToRem(18),
-      },
-      borderBottom: `1px solid ${theme.custom.colors.lightGray2}`,
-      paddingBottom: "24px",
-      p: {
-        marginTop: "8px",
       },
     },
   },
 }))
 
 const Signature = styled.img(({ theme }) => ({
+  display: "block",
   width: "auto",
-  height: "60px",
+  maxWidth: "100%",
+  height: "40px",
+  objectFit: "contain",
+  objectPosition: "left",
   "@media screen": {
-    [theme.breakpoints.down("lg")]: {
-      height: "54px",
-    },
     [theme.breakpoints.down("md")]: {
-      height: "40px",
+      margin: "0 auto",
+      objectPosition: "center",
     },
   },
 }))
 
 const SignatoryName = styled(Typography)(({ theme }) => ({
-  marginBottom: "8px",
+  color: theme.custom.colors.black,
   "@media screen": {
-    [theme.breakpoints.down("lg")]: {
-      fontSize: theme.typography.pxToRem(18),
-      lineHeight: theme.typography.pxToRem(26),
-      fontWeight: theme.typography.fontWeightMedium,
-    },
     [theme.breakpoints.down("md")]: {
       fontSize: theme.typography.pxToRem(16),
       lineHeight: "150%",
-      marginTop: "16px",
+      marginTop: "12px",
     },
   },
 }))
 
 const CertificateId = styled(Typography)(({ theme }) => ({
+  color: theme.custom.colors.black,
   span: {
     color: theme.custom.colors.silverGrayDark,
   },
   "@media screen": {
-    [theme.breakpoints.down("lg")]: {
-      fontSize: theme.typography.pxToRem(12),
-      lineHeight: theme.typography.pxToRem(16),
-    },
     [theme.breakpoints.down("md")]: {
-      fontSize: theme.typography.pxToRem(14),
-      lineHeight: theme.typography.pxToRem(20),
       span: {
         display: "block",
       },
     },
-  },
-  "@media print": {
-    position: "absolute",
-    left: "46px",
-    bottom: "30px",
   },
 }))
 
@@ -569,57 +550,60 @@ const Certificate = ({
         <Certification>
           <Typography variant="h4">This is to certify that</Typography>
           <NameText variant="h1">{userName}</NameText>
-          <AchievementText>
-            has successfully completed all requirements of <PrintBreak />
-          </AchievementText>
         </Certification>
         <CourseInfo>
-          <Typography variant="h2">{title}</Typography>
+          <CourseInfoText>
+            has successfully completed all requirements of:
+          </CourseInfoText>
+          <CourseTitle variant="h3">{title}</CourseTitle>
           {ceus ? (
-            <Typography variant="h4">
+            <CourseInfoText>
               Awarded {ceus} Continuing Education Units (CEUs)
-            </Typography>
+            </CourseInfoText>
           ) : null}
           {issueDate && (
-            <Typography variant="h4">
-              <NoSSR>{formatDate(issueDate)}</NoSSR>
-            </Typography>
+            <CourseInfoText>
+              Awarded on <NoSSR>{formatDate(issueDate, "MMMM D, YYYY")}</NoSSR>
+            </CourseInfoText>
           )}
-          {ceus ? null : <Spacer />}
         </CourseInfo>
-        <Signatories>
-          {signatories?.map((signatory, index) => (
-            <Signatory key={index}>
-              <Signature
-                src={
-                  signatory.signature_image.startsWith("http")
-                    ? signatory.signature_image
-                    : `${env("NEXT_PUBLIC_MITX_ONLINE_BASE_URL")}${signatory.signature_image}`
-                }
-                alt={signatory.name}
-                crossOrigin="anonymous"
-              />
-              <SignatoryName variant="h3">{signatory.name}</SignatoryName>
-              {signatory.title_1 && (
-                <Typography variant="body1">{signatory.title_1}</Typography>
-              )}
-              {signatory.title_2 && (
-                <Typography variant="body1">{signatory.title_2}</Typography>
-              )}
-              {signatory.title_3 && (
-                <Typography variant="body1">{signatory.title_3}</Typography>
-              )}
-              {signatory.organization && (
-                <Typography variant="body1">
-                  {signatory.organization}
-                </Typography>
-              )}
-            </Signatory>
-          ))}
-        </Signatories>
-        <CertificateId variant="body1">
-          Valid Certificate ID: <span>{uuid}</span>
-        </CertificateId>
+        <SignatureFooter>
+          <Signatories>
+            {signatories?.map((signatory, index) => (
+              <Signatory key={index}>
+                <Signature
+                  src={
+                    signatory.signature_image.startsWith("http")
+                      ? signatory.signature_image
+                      : `${env("NEXT_PUBLIC_MITX_ONLINE_BASE_URL")}${signatory.signature_image}`
+                  }
+                  alt={signatory.name}
+                  crossOrigin="anonymous"
+                />
+                <SignatoryText>
+                  <SignatoryName variant="h5">{signatory.name}</SignatoryName>
+                  {signatory.title_1 && (
+                    <Typography variant="body2">{signatory.title_1}</Typography>
+                  )}
+                  {signatory.title_2 && (
+                    <Typography variant="body2">{signatory.title_2}</Typography>
+                  )}
+                  {signatory.title_3 && (
+                    <Typography variant="body2">{signatory.title_3}</Typography>
+                  )}
+                  {signatory.organization && (
+                    <Typography variant="body2">
+                      {signatory.organization}
+                    </Typography>
+                  )}
+                </SignatoryText>
+              </Signatory>
+            ))}
+          </Signatories>
+          <CertificateId variant="body2">
+            Valid Credential ID: <span>{uuid}</span>
+          </CertificateId>
+        </SignatureFooter>
       </Inner>
     </Outer>
   )
@@ -634,6 +618,8 @@ const CourseCertificate = ({
 }) => {
   const userName = certificate.user.name
 
+  const ceus = certificate.certificate_page.CEUs
+
   const signatories = certificate.certificate_page.signatory_items
   const issueDate = certificate?.issue_date
 
@@ -641,6 +627,7 @@ const CourseCertificate = ({
     <Certificate
       title={title}
       userName={userName}
+      ceus={ceus}
       signatories={signatories}
       issueDate={issueDate}
       uuid={certificate.uuid}
@@ -753,7 +740,10 @@ const CertificatePage: React.FC<{
 
   let title = ""
   if (certificateType === CertificateType.Course) {
-    title = courseCertificateData?.course_run.course.title ?? ""
+    title = getCertificateTitle(
+      courseCertificateData?.certificate_page?.product_name,
+      courseCertificateData?.course_run.course.title ?? "",
+    )
   } else {
     title = getCertificateTitle(
       programCertificateData?.certificate_page?.product_name,
