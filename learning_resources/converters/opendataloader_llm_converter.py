@@ -1170,7 +1170,7 @@ LIST_LABEL_REGEX = re.compile(
     r"^\s*[(（]?(\d+|[a-zA-Z]|[ivxlcdmIVXLCDM]+)([.)](\s|$)|[．）])"  # noqa: RUF001
 )
 # A bullet the item's text starts with, replaced by the list's own marker
-LEADING_BULLET_REGEX = re.compile(r"^\s*[•◦▪‣∙·*-]\s*")
+LEADING_BULLET_REGEX = re.compile(r"^\s*(?:[•◦▪‣∙·]\s*|[*-]\s+)")
 # Pieces of tall brackets and braces (\u23a1 \u23a2 \u23a3 \u23a7 \u23a8 \u23a9 ...):
 # equation editors build a matrix or a cases block from them, and the parser reads it as
 # a column of pieces with its entries loose after it. A page with this many is math.
