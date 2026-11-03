@@ -25,8 +25,6 @@ import NextLink from "next/link"
 import { CourseRunEnrollmentV3 } from "@mitodl/mitxonline-api-axios/v3"
 import { useOrderIdForRun } from "@/common/mitxonline/useOrderIdForResource"
 import { getRunMenuItems } from "./runMenuItems"
-import { FeatureFlags } from "@/common/feature_flags"
-import { useFeatureFlag } from "@/common/useFeatureFlag"
 import { useQuery } from "@tanstack/react-query"
 import { mitxUserQueries } from "api/mitxonline-hooks/user"
 
@@ -215,9 +213,6 @@ const RunListRow: React.FC<RunListRowProps> = ({
    * single request and the per-row work is a client-side lookup.
    */
   const receiptResolution = useOrderIdForRun(enrollment.run.id)
-  const perRunMenusEnabled = useFeatureFlag(
-    FeatureFlags.MultipleRunContextMenus,
-  )
   const menuItems = getRunMenuItems({
     enrollment,
     title: enrollment.run.course.title,
@@ -266,34 +261,33 @@ const RunListRow: React.FC<RunListRowProps> = ({
             <ViewContentArrow aria-hidden="true" />
           </>
         )}
-        {perRunMenusEnabled &&
-          (disabled ? (
-            <ActionButton
-              size="small"
-              variant="text"
-              aria-label={`More options for ${runLabel}`}
-              disabled
-            >
-              <RiMore2Line aria-hidden="true" />
-            </ActionButton>
-          ) : (
-            <SimpleMenu
-              items={menuItems}
-              // Every row's menu is otherwise just "menu" to a screen reader.
-              menuOverrideProps={{
-                MenuListProps: { "aria-label": `Options for ${runLabel}` },
-              }}
-              trigger={
-                <ActionButton
-                  size="small"
-                  variant="text"
-                  aria-label={`More options for ${runLabel}`}
-                >
-                  <RiMore2Line aria-hidden="true" />
-                </ActionButton>
-              }
-            />
-          ))}
+        {disabled ? (
+          <ActionButton
+            size="small"
+            variant="text"
+            aria-label={`More options for ${runLabel}`}
+            disabled
+          >
+            <RiMore2Line aria-hidden="true" />
+          </ActionButton>
+        ) : (
+          <SimpleMenu
+            items={menuItems}
+            // Every row's menu is otherwise just "menu" to a screen reader.
+            menuOverrideProps={{
+              MenuListProps: { "aria-label": `Options for ${runLabel}` },
+            }}
+            trigger={
+              <ActionButton
+                size="small"
+                variant="text"
+                aria-label={`More options for ${runLabel}`}
+              >
+                <RiMore2Line aria-hidden="true" />
+              </ActionButton>
+            }
+          />
+        )}
       </Stack>
     </RunRow>
   )

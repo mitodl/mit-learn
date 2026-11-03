@@ -16,23 +16,6 @@ import { faker } from "@faker-js/faker/locale/en"
 import moment from "moment"
 import { EnrolledCourseCard } from "./EnrolledCourseCard"
 import { setupOrderHistory } from "./test-utils"
-import { useFeatureFlagEnabled } from "posthog-js/react"
-import { FeatureFlags } from "@/common/feature_flags"
-
-jest.mock("posthog-js/react")
-
-const setPerRunMenus = (enabled: boolean) => {
-  jest
-    .mocked(useFeatureFlagEnabled)
-    .mockImplementation((flag) =>
-      flag === FeatureFlags.MultipleRunContextMenus ? enabled : false,
-    )
-}
-
-// clearAllMocks keeps implementations, so reset the flag before every test.
-beforeEach(() => {
-  setPerRunMenus(false)
-})
 
 // The paid path checks enrollment eligibility before the cart.
 beforeEach(() => {
@@ -1281,8 +1264,7 @@ describe("EnrolledCourseCard — multiple enrollment runs", () => {
       )
     }
 
-    test("omits run-scoped items when per-run menus are enabled", async () => {
-      setPerRunMenus(true)
+    test("omits run-scoped items from a multi-run card", async () => {
       setupUserApis()
       const enrollment = mitxonline.factories.enrollment.courseEnrollment({
         enrollment_mode: EnrollmentMode.Verified,
@@ -1316,30 +1298,7 @@ describe("EnrolledCourseCard — multiple enrollment runs", () => {
       }
     })
 
-    test("keeps run-scoped items when per-run menus are disabled", async () => {
-      setPerRunMenus(false)
-      setupUserApis()
-      const enrollment = mitxonline.factories.enrollment.courseEnrollment()
-      renderWithProviders(
-        <EnrolledCourseCard
-          enrollment={enrollment}
-          siblingEnrollments={[
-            mitxonline.factories.enrollment.courseEnrollment(),
-          ]}
-        />,
-      )
-      await openDesktopCardMenu()
-
-      expect(
-        screen.getByRole("menuitem", { name: "Email Settings" }),
-      ).toBeInTheDocument()
-      expect(
-        screen.getByRole("menuitem", { name: "Unenroll" }),
-      ).toBeInTheDocument()
-    })
-
-    test("keeps run-scoped items on a single-run card when per-run menus are enabled", async () => {
-      setPerRunMenus(true)
+    test("keeps run-scoped items on a single-run card", async () => {
       setupUserApis()
       const enrollment = mitxonline.factories.enrollment.courseEnrollment()
       renderWithProviders(<EnrolledCourseCard enrollment={enrollment} />)
@@ -1354,7 +1313,6 @@ describe("EnrolledCourseCard — multiple enrollment runs", () => {
     })
 
     test("hides the card menu when no course-level items remain", async () => {
-      setPerRunMenus(true)
       setupUserApis()
       const enrollment = mitxonline.factories.enrollment.courseEnrollment({
         b2b_contract_id: faker.number.int(),
