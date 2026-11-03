@@ -1,15 +1,14 @@
 import React from "react"
 import { setMockResponse, urls, factories } from "api/test-utils"
 import { renderWithProviders, screen, user } from "@/test-utils"
-import { usePostHog } from "posthog-js/react"
-import type { PostHog } from "posthog-js"
+import { capturePostHog } from "@/common/analytics/posthog"
 import VideoShortsSection from "./VideoShortsSection"
 
-jest.mock("posthog-js/react")
-const mockedPostHogCapture = jest.fn()
-jest.mocked(usePostHog).mockReturnValue({
-  capture: mockedPostHogCapture,
-} as unknown as PostHog)
+jest.mock("@/common/analytics/posthog", () => ({
+  capturePostHog: jest.fn(),
+  initPostHog: jest.fn(),
+}))
+const mockedPostHogCapture = jest.mocked(capturePostHog)
 
 // Stub VideoShortsModal to avoid rendering the full player stack
 jest.mock("./VideoShortsModal", () => ({

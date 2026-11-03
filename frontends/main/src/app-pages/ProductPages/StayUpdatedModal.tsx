@@ -21,7 +21,7 @@ import {
   type HubspotSubmitField,
 } from "api/hooks/hubspot"
 import { SILENCE_ERROR_TOAST } from "api/mutation-meta"
-import { trackSignUpForUpdates } from "@/common/analytics/gtm"
+import { analytics } from "@/common/analytics"
 
 const StayUpdatedDialogContainer = styled.div(({ theme }) => ({
   minWidth: "516px",
@@ -191,7 +191,7 @@ const StayUpdatedDialogInner: React.FC<StayUpdatedDialogProps> = ({
                   fields,
                   recaptchaToken,
                 },
-                { onSuccess: () => trackSignUpForUpdates() },
+                { onSuccess: () => analytics.signedUpForUpdates() },
               )
             }}
           />

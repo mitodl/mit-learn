@@ -18,13 +18,19 @@ import { PostHogEvents } from "@/common/constants"
 import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
 import { contractAnalyticsView, contractLearnersView } from "@/common/urls"
 import ContractLearnersPage from "./ContractLearnersPage"
+import { capturePostHog } from "@/common/analytics/posthog"
 
-const mockCapture = jest.fn()
 jest.mock("posthog-js/react", () => ({
   ...jest.requireActual("posthog-js/react"),
   useFeatureFlagEnabled: jest.fn(),
-  usePostHog: () => ({ capture: mockCapture }),
 }))
+
+jest.mock("@/common/analytics/posthog", () => ({
+  capturePostHog: jest.fn(),
+  initPostHog: jest.fn(),
+}))
+
+const mockCapture = jest.mocked(capturePostHog)
 jest.mock("@/common/useFeatureFlagsLoaded")
 const mockedUseFeatureFlagsLoaded = jest.mocked(useFeatureFlagsLoaded)
 const mockedUseFeatureFlagEnabled = jest.mocked(useFeatureFlagEnabled)
