@@ -29,6 +29,11 @@
       "matchPackageNames": ["qdrant/qdrant"]
     },
     {
+      "description": "posthog-js 1.350.0+ skips the page-load /flags request when init bootstraps flags, which deployed envs always do; mitodl/mit-learn#4206 is the upgrade that handles it.",
+      "allowedVersions": "<1.350.0",
+      "matchPackageNames": ["posthog-js"]
+    },
+    {
       "description": "Digest pins on local dev compose images are churn without a supply-chain benefit; Dockerfiles and Actions keep them.",
       "matchManagers": ["docker-compose"],
       "pinDigests": false
