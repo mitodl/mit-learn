@@ -14,6 +14,62 @@ const COMPONENT_HIERARCHY_ZONES = [
   },
 ]
 
+/**
+ * Shared paths/patterns for @typescript-eslint/no-restricted-imports.
+ * Extracted so that overrides can spread these alongside their own entries
+ * rather than replacing them — ESLint 8 legacy overrides swap rule options
+ * wholesale, so any override using restrictedImports() must re-supply the
+ * base entries or they silently disappear for those files.
+ */
+const BASE_RESTRICTED_PATHS = [
+  {
+    name: "lodash",
+    importNames: ["default"],
+    message:
+      "Default import from 'lodash' is not allowed. Use named imports instead.",
+  },
+  {
+    name: "ol-components",
+    importNames: ["Button", "ButtonLink", "ActionButton", "ActionButtonLink"],
+    message: "Please import from @mitodl/smoot-design instead.",
+  },
+  {
+    name: "next/navigation",
+    importNames: ["useSearchParams"],
+    message:
+      "Use useAppSearchParams from @/common/useAppSearchParams — query param reads go through the registry in @/common/searchParams (hq#12925).",
+  },
+  {
+    name: "@mitodl/course-search-utils/next",
+    importNames: ["useSearchParams"],
+    message:
+      "Use useAppSearchParams from @/common/useAppSearchParams (reads) plus useSetSearchParams from @mitodl/course-search-utils/next (writes). See @/common/searchParams (hq#12925).",
+  },
+]
+
+const BASE_RESTRICTED_PATTERNS = [
+  {
+    group: ["next/navigation"],
+    importNames: ["useRouter"],
+    message: "Please use `useRouter` from `next-nprogress-bar` instead.",
+  },
+  {
+    group: ["@mui/material*", "@mui/lab/*"],
+    message:
+      "Please use 'ol-components' isInterfaceDeclaration; Direct use of @mui/material is limited to ol-components.",
+  },
+  {
+    group: ["**/LearningResourceDrawer/LearningResourceDrawer"],
+    message:
+      "The LearningResourceDrawer should be lazy loaded with dynamic import.",
+  },
+  {
+    group: ["api/clients"],
+    message:
+      "Direct import from 'api/clients' is not allowed. Use React Query hooks from 'api/hooks/*' instead for caching and error handling. In server components, use getServerQueryClient().fetchQuery(), passing the queryOptions.",
+  },
+]
+
 module.exports = {
   extends: [
     "eslint-config-mitodl",
@@ -55,58 +111,8 @@ module.exports = {
   },
   rules: {
     ...restrictedImports({
-      paths: [
-        {
-          name: "lodash",
-          importNames: ["default"],
-          message:
-            "Default import from 'lodash' is not allowed. Use named imports instead.",
-        },
-        {
-          name: "ol-components",
-          importNames: [
-            "Button",
-            "ButtonLink",
-            "ActionButton",
-            "ActionButtonLink",
-          ],
-          message: "Please import from @mitodl/smoot-design instead.",
-        },
-        {
-          name: "next/navigation",
-          importNames: ["useSearchParams"],
-          message:
-            "Use useAppSearchParams from @/common/useAppSearchParams — query param reads go through the registry in @/common/searchParams (hq#12925).",
-        },
-        {
-          name: "@mitodl/course-search-utils/next",
-          importNames: ["useSearchParams"],
-          message:
-            "Use useAppSearchParams from @/common/useAppSearchParams (reads) plus useSetSearchParams from @mitodl/course-search-utils/next (writes). See @/common/searchParams (hq#12925).",
-        },
-      ],
-      patterns: [
-        {
-          group: ["next/navigation"],
-          importNames: ["useRouter"],
-          message: "Please use `useRouter` from `next-nprogress-bar` instead.",
-        },
-        {
-          group: ["@mui/material*", "@mui/lab/*"],
-          message:
-            "Please use 'ol-components' isInterfaceDeclaration; Direct use of @mui/material is limited to ol-components.",
-        },
-        {
-          group: ["**/LearningResourceDrawer/LearningResourceDrawer"],
-          message:
-            "The LearningResourceDrawer should be lazy loaded with dynamic import.",
-        },
-        {
-          group: ["api/clients"],
-          message:
-            "Direct import from 'api/clients' is not allowed. Use React Query hooks from 'api/hooks/*' instead for caching and error handling. In server components, use getServerQueryClient().fetchQuery(), passing the queryOptions.",
-        },
-      ],
+      paths: BASE_RESTRICTED_PATHS,
+      patterns: BASE_RESTRICTED_PATTERNS,
     }),
     // This rule is disabled in the default a11y config, but unclear why.
     // It does catch useful errors, e.g., buttons with no text or label.
@@ -245,6 +251,7 @@ module.exports = {
       rules: {
         ...restrictedImports({
           paths: [
+            ...BASE_RESTRICTED_PATHS,
             {
               name: "posthog-js/react",
               importNames: ["usePostHog"],
@@ -252,6 +259,7 @@ module.exports = {
                 "Call analytics methods from '@/common/analytics' instead of using usePostHog() directly.",
             },
           ],
+          patterns: BASE_RESTRICTED_PATTERNS,
         }),
       },
     },
