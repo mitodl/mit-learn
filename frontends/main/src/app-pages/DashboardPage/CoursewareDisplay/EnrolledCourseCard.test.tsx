@@ -1279,20 +1279,27 @@ describe("EnrolledCourseCard — multiple enrollment runs", () => {
           ]}
         />,
       )
-      await openDesktopCardMenu()
+      const desktopCard = screen.getByTestId("enrollment-card-desktop")
+      // The current-run row shares the card's order lookup, so its Receipt
+      // item appearing means the lookup has resolved for the card too.
+      await user.click(
+        within(desktopCard).getByRole("button", { name: /Course runs/ }),
+      )
+      await user.click(
+        within(desktopCard).getByRole("button", {
+          name: /^More options for Current run/,
+        }),
+      )
+      await screen.findByRole("menuitem", { name: "Receipt" })
+      await user.keyboard("{Escape}")
+      await waitFor(() => {
+        expect(screen.queryByRole("menu")).not.toBeInTheDocument()
+      })
 
+      await openDesktopCardMenu()
       expect(
         screen.getByRole("menuitem", { name: "View Course Details" }),
       ).toBeInTheDocument()
-      // Let the order lookup settle so a Receipt item would have appeared.
-      await waitFor(() => {
-        expect(makeRequest).toHaveBeenCalledWith(
-          expect.objectContaining({
-            method: "get",
-            url: mitxonline.urls.orders.historyList({ limit: 100 }),
-          }),
-        )
-      })
       for (const name of ["Email Settings", "Unenroll", "Receipt"]) {
         expect(screen.queryByRole("menuitem", { name })).not.toBeInTheDocument()
       }
