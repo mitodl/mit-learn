@@ -585,6 +585,35 @@ def test_figure_ocr_failure_keeps_a_graphic(figure_page):
     assert results[image.block_id] == figure.placeholder()
 
 
+def test_figure_ocr_failure_keeps_parsed_text(figure_page):
+    """The parsed text a failed candidate replaced is written after it"""
+    converter, figure, _ = figure_page
+    inside = _block("paragraph", "Text inside the figure.", box=(120, 450, 280, 470))
+    outside = _block("paragraph", "Text below.", box=(100, 300, 300, 320))
+    blocks = converter._with_figure_blocks(1, [inside, outside])  # noqa: SLF001
+    [image] = [b for b in blocks if b.block_type == "image"]
+    assert inside not in blocks
+    assert image.fallback_blocks == [inside]
+    results = {image.block_id: None}
+    converter._resolve_figures(blocks, results)  # noqa: SLF001
+    markdown = MarkdownAssembler().assemble(blocks, results)
+    assert figure.placeholder() in markdown
+    assert markdown.index(figure.placeholder()) < markdown.index("Text inside")
+
+
+def test_figure_ocr_replaces_parsed_text(figure_page):
+    """A candidate whose OCR returned stands for the parsed text inside it"""
+    converter, _, _ = figure_page
+    inside = _block("paragraph", "Text inside the figure.", box=(120, 450, 280, 470))
+    blocks = converter._with_figure_blocks(1, [inside])  # noqa: SLF001
+    [image] = blocks
+    results = {image.block_id: "Transcribed text."}
+    converter._resolve_figures(blocks, results)  # noqa: SLF001
+    markdown = MarkdownAssembler().assemble(blocks, results)
+    assert "Transcribed text." in markdown
+    assert "Text inside" not in markdown
+
+
 def test_figure_region_keeps_its_transcription(figure_page):
     """A layout-heavy region is shown with its transcription beside it"""
     converter, figure, image = figure_page
@@ -899,6 +928,36 @@ def test_structure_export_keeps_source_order():
     assert exported.index("Question.") < exported.index("Answer.")
     assert exported.index("Answer.") < exported.index("Continuation.")
     assert len(result["problems"]) == 1
+
+
+def test_structure_export_keeps_source_between_spans():
+    """Region wrappers and page markers stay; an OCW citation cover page goes"""
+    text = (
+        "<!-- page: 1 -->\n\n## Problem 1\n\n<!-- region p1_1 -->\n"
+        "![a flowchart](p1_1.png)\n\n<details><summary>Transcription</summary>\n\n"
+        "Start then stop.\n\n</details>\n<!-- /region -->\n\n<!-- page: 2 -->\n\n"
+        "MIT OpenCourseWare\nhttp://ocw.mit.edu\n"
+        "For information about citing these materials or our Terms of Use, "
+        "visit: http://ocw.mit.edu/terms.\n"
+    )
+    plan, _ = prepare_structure(text)
+    result = assemble_structure(
+        text,
+        plan,
+        [
+            _answer(
+                [_segment(plan, "## Problem", "problem", through="Start", problem="1")]
+            )
+        ],
+    )
+    assert result["status"] == "validated", result["check"]
+    exported = export_structure_markdown(text, result)
+    assert "<details><summary>Transcription</summary>" in exported
+    assert exported.index("Start then stop.") < exported.index("</details>")
+    assert "<!-- page: 1 -->" in exported
+    # the cover page goes whole, its page marker included
+    assert "<!-- page: 2 -->" not in exported
+    assert "For information about citing" not in exported
 
 
 def test_structure_is_repaired_once(mocker, settings):

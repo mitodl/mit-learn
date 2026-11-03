@@ -1807,6 +1807,17 @@ class MarkdownAssembler:
             text = self._format_block(block, ocr_results)
             if text:
                 formatted_parts.append(text)
+            # a figure candidate whose OCR failed: the parsed text inside it
+            if block.block_type == BlockType.IMAGE:
+                formatted_parts.extend(
+                    filter(
+                        None,
+                        (
+                            self._format_block(b, ocr_results)
+                            for b in block.fallback_blocks
+                        ),
+                    )
+                )
         flush()
         return "\n\n".join(formatted_parts)
 
@@ -2192,12 +2203,20 @@ class OpenDataLoaderLLMConverter:
             )
 
         kept = [b for b in blocks if not any(inside(b, f) for f in figures)]
-        for figure in figures:
+        for i, figure in enumerate(figures):
             figure_block = ContentBlock(
                 block_type=BlockType.IMAGE,
                 block_id=self._figure_block_id(figure),
                 page_number=page_num,
                 bounding_box=figure.bounding_box,
+                # the parsed text it replaces, written after it if its OCR fails
+                fallback_blocks=[
+                    b
+                    for b in blocks
+                    if b.block_type != BlockType.IMAGE
+                    and inside(b, figure)
+                    and not any(inside(b, f) for f in figures[:i])
+                ],
             )
             # before the first block that starts below the figure's top
             top = figure.bounding_box[3]
@@ -2455,6 +2474,8 @@ class OpenDataLoaderLLMConverter:
                     figure.kind = GRAPHIC
                     ocr_results[block.block_id] = self._figure_text(figure)
                     continue
+                # its OCR stands for the parsed text inside it
+                block.fallback_blocks = []
                 kind, content = parse_region_ocr(ocr_results.get(block.block_id))
                 content = self._without_parsed_lines(figure, content, blocks)
                 figure.kind = TRANSCRIBED if kind == MIXED else kind
@@ -2782,6 +2803,8 @@ OCW_SITE_MENTION = re.compile(r"\bocw\.mit\.edu\b", re.IGNORECASE)
 MAX_GROUP_HEADING_WORDS = 8
 # boilerplate with more words than this is suspect
 MAX_BOILERPLATE_WORDS = 150
+# elements no node owns: layout between the content the model labels
+UNOWNED_ELEMENT_KINDS = frozenset({"spacing", "page_marker", "wrapper"})
 PAGE_MARK = re.compile(r"^<!-- page: (\d+) -->\s*$")
 ELEMENT_START = re.compile(
     r"^\s*(?:#{1,6}\s|[-*+]\s|\*{0,2}(?:problem|question|exercise|solution|answer|part)\b"
@@ -3014,8 +3037,7 @@ def prepare_structure(
     content = [
         e
         for e in elements
-        if e["kind"] not in {"spacing", "page_marker", "wrapper"}
-        and e["id"] not in furniture
+        if e["kind"] not in UNOWNED_ELEMENT_KINDS and e["id"] not in furniture
     ]
     outline = [
         {"id": e["id"], "page": e["page"], "heading": e["text"].strip()}
@@ -3434,11 +3456,7 @@ def assemble_structure(markdown: str, plan: dict, answers: list[dict]) -> dict: 
             )
     for e in elements:
         owners = owners_by_element[e["id"]]
-        excluded = e["id"] in plan["furniture"] or e["kind"] in {
-            "spacing",
-            "wrapper",
-            "page_marker",
-        }
+        excluded = e["id"] in plan["furniture"] or e["kind"] in UNOWNED_ELEMENT_KINDS
         ledger.append(
             {
                 **e,
@@ -3758,6 +3776,34 @@ def export_structure_markdown(markdown: str, result: dict) -> str:
         ),
         key=lambda item: (item[0], item[1], item[2]["id"]),
     )
+    # boilerplate and excluded content (such as an OCW citation cover) leave the
+    # export; the source between spans (spacing, page markers, region wrappers)
+    # stays
+    removed = sorted(
+        [
+            (s["start"], s["end"])
+            for n in result["nodes"]
+            if n["role"] == "boilerplate"
+            for s in n["source_spans"]
+        ]
+        + [
+            (e["start"], e["end"])
+            for e in result.get("source_elements", [])
+            if e.get("exclusion_reason")
+            and e["exclusion_reason"] not in UNOWNED_ELEMENT_KINDS
+        ]
+    )
+
+    def between(start: int, end: int) -> str:
+        kept, position = [], start
+        for a, b in removed:
+            if b <= position or a >= end:
+                continue
+            kept.append(markdown[position:a])
+            position = max(position, b)
+        kept.append(markdown[position:end])
+        return "".join(kept)
+
     output = [
         (
             f"<!-- structure: {STRUCTURE_PIPELINE_VERSION} status={result['status']} "
@@ -3766,6 +3812,7 @@ def export_structure_markdown(markdown: str, result: dict) -> str:
     ]
     previous_id, previous_end = None, 0
     for start, end, n in spans:
+        output.append(between(previous_end, start))
         if n["id"] != previous_id:
             metadata = json.dumps(
                 {
@@ -3780,9 +3827,7 @@ def export_structure_markdown(markdown: str, result: dict) -> str:
                 ensure_ascii=False,
             ).replace("--", "\\u002d\\u002d")
             output.append(f"\n<!-- node: {metadata} -->\n\n")
-        elif start > previous_end:
-            gap = markdown[previous_end:start]
-            output.append(gap if not gap.strip() else "\n\n")
-        output.append(markdown[start:end])
-        previous_id, previous_end = n["id"], end
+        output.append(markdown[max(start, previous_end) : end])
+        previous_id, previous_end = n["id"], max(end, previous_end)
+    output.append(between(previous_end, len(markdown)))
     return "".join(output).rstrip() + "\n"
