@@ -1657,6 +1657,19 @@ def load_video(video_data: dict) -> LearningResource:
         LearningResource: the created or updated video resource
 
     """
+    learning_resource, created = _write_video(video_data)
+    update_index(learning_resource, created)
+    return learning_resource
+
+
+def _write_video(video_data: dict) -> tuple[LearningResource, bool]:
+    """
+    Write a video to the database without updating the search index, for a
+    caller that has more to write before the video's index document is right.
+
+    Returns:
+        tuple: the video resource and whether it was created
+    """
     readable_id = video_data.pop("readable_id")
     platform = video_data.pop("platform")
     topics_data = video_data.pop("topics", None)
@@ -1685,9 +1698,7 @@ def load_video(video_data: dict) -> LearningResource:
         load_topics(learning_resource, topics_data)
         load_offered_by(learning_resource, offered_by_data)
 
-    update_index(learning_resource, created)
-
-    return learning_resource
+    return learning_resource, created
 
 
 def load_video_with_content_file(
@@ -1927,7 +1938,10 @@ def load_ovs_video_from_webhook(video_payload: dict) -> LearningResource | None:
     """
     Upsert a single OVS video and its collection-as-playlist from a webhook payload.
 
-    A video that OVS moved to another collection leaves its old playlist.
+    A video that OVS moved to another collection leaves its old playlist. The
+    video is indexed last, after its relationships commit and its old playlists
+    are pruned, so its document has the new playlist, and an index failure
+    leaves only the reindex for the sender's retry.
     `video_payload` is one result dict from the OVS public videos API. Returns the
     video LearningResource, or None if the payload has no usable streaming source.
     """
@@ -1944,7 +1958,7 @@ def load_ovs_video_from_webhook(video_payload: dict) -> LearningResource | None:
             if collection.get("key")
             else None
         )
-        video = load_video(video_data)
+        video, created = _write_video(video_data)
         if playlist:
             LearningResourceRelationship.objects.update_or_create(
                 parent=playlist,
@@ -1957,9 +1971,10 @@ def load_ovs_video_from_webhook(video_payload: dict) -> LearningResource | None:
         ).exclude(parent=playlist)
         old_playlist_ids = list(old_relationships.values_list("parent_id", flat=True))
         old_relationships.delete()
+    prune_ovs_playlists(old_playlist_ids)
     if playlist:
         update_index(playlist, newly_created=False)
-    prune_ovs_playlists(old_playlist_ids)
+    update_index(video, newly_created=created)
     return video
 
 

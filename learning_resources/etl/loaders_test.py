@@ -3722,8 +3722,18 @@ def test_prune_ovs_playlists_unpublishes_only_the_playlists_it_checked(mocker):
     )
 
 
-def _ovs_video_payload(key, collection_title="A collection"):
-    """Build a minimal OVS payload for a video in `ovs_collection`"""
+@pytest.fixture
+def ovs_media_settings(settings):
+    """Allow the media host _ovs_video_payload uses"""
+    settings.OVS_API_BASE_URL = "https://video.odl.mit.edu"
+    settings.OVS_ALLOWED_MEDIA_HOSTS = [".cloudfront.net"]
+    return settings
+
+
+def _ovs_video_payload(
+    key, collection_title="A collection", collection_key="ovs_collection"
+):
+    """Build a minimal OVS payload for a video in one collection"""
     return {
         "key": key,
         "title": key,
@@ -3732,8 +3742,96 @@ def _ovs_video_payload(key, collection_title="A collection"):
         "sources": [
             {"src": f"https://du3yhovcx8dht.cloudfront.net/{key}/video__index.m3u8"}
         ],
-        "collection": {"key": "ovs_collection", "title": collection_title},
+        "collection": {"key": collection_key, "title": collection_title},
     }
+
+
+def _ovs_playlist(readable_id):
+    return LearningResource.objects.get(
+        readable_id=readable_id,
+        resource_type=LearningResourceType.video_playlist.name,
+    )
+
+
+def test_load_ovs_video_from_webhook_indexes_a_moved_video_after_the_move(
+    ovs_media_settings, mocker
+):
+    """The video is indexed once, after its relationships change and commit."""
+    mocker.patch(
+        "learning_resources.etl.loaders.similar_topics_action", return_value=[]
+    )
+    mocker.patch("learning_resources.etl.loaders.bulk_resources_unpublished_actions")
+    mock_update_index = mocker.patch("learning_resources.etl.loaders.update_index")
+    load_ovs_video_from_webhook(
+        _ovs_video_payload("moved", collection_key="old_collection")
+    )
+    baseline_depth = len(connection.savepoint_ids)
+    seen_by_video_index = []
+
+    def record_video_state(resource, newly_created):
+        if resource.resource_type == LearningResourceType.video.name:
+            seen_by_video_index.append(
+                (
+                    list(
+                        resource.playlists.values_list("parent__readable_id", flat=True)
+                    ),
+                    len(connection.savepoint_ids),
+                )
+            )
+
+    mock_update_index.side_effect = record_video_state
+    load_ovs_video_from_webhook(
+        _ovs_video_payload("moved", collection_key="new_collection")
+    )
+
+    assert seen_by_video_index == [(["new_collection"], baseline_depth)]
+
+
+class _IndexEnqueueError(Exception):
+    """Stand in for a search task that couldn't be queued"""
+
+
+def test_load_ovs_video_from_webhook_prunes_before_a_failed_video_index(
+    ovs_media_settings, mocker
+):
+    """A video index failure leaves the prune done, and the retry reindexes."""
+    mocker.patch(
+        "learning_resources.etl.loaders.similar_topics_action", return_value=[]
+    )
+    mock_unpublished = mocker.patch(
+        "learning_resources.etl.loaders.bulk_resources_unpublished_actions"
+    )
+    mock_update_index = mocker.patch("learning_resources.etl.loaders.update_index")
+    load_ovs_video_from_webhook(
+        _ovs_video_payload("moved", collection_key="old_collection")
+    )
+
+    def fail_for_the_video(resource, newly_created):
+        if resource.resource_type == LearningResourceType.video.name:
+            raise _IndexEnqueueError
+
+    mock_update_index.side_effect = fail_for_the_video
+    with pytest.raises(_IndexEnqueueError):
+        load_ovs_video_from_webhook(
+            _ovs_video_payload("moved", collection_key="new_collection")
+        )
+
+    old_playlist = _ovs_playlist("old_collection")
+    assert old_playlist.published is False
+    mock_unpublished.assert_called_once_with(
+        [old_playlist.id], LearningResourceType.video_playlist.name
+    )
+
+    mock_update_index.side_effect = None
+    mock_update_index.reset_mock()
+    video = load_ovs_video_from_webhook(
+        _ovs_video_payload("moved", collection_key="new_collection")
+    )
+
+    mock_update_index.assert_any_call(video, newly_created=False)
+    assert list(video.playlists.values_list("parent__readable_id", flat=True)) == [
+        "new_collection"
+    ]
 
 
 def _wait_for_blocked_learning_resource_query():
@@ -3763,10 +3861,10 @@ def _wait_for_blocked_learning_resource_query():
 
 
 @pytest.mark.django_db(transaction=True)
-def test_prune_ovs_playlists_waits_for_a_push_into_the_playlist(settings, mocker):
+def test_prune_ovs_playlists_waits_for_a_push_into_the_playlist(
+    ovs_media_settings, mocker
+):
     """A push in flight keeps its playlist published, with the title it wrote."""
-    settings.OVS_API_BASE_URL = "https://video.odl.mit.edu"
-    settings.OVS_ALLOWED_MEDIA_HOSTS = [".cloudfront.net"]
     mocker.patch("learning_resources.etl.loaders.update_index")
     mock_unpublished = mocker.patch(
         "learning_resources.etl.loaders.bulk_resources_unpublished_actions"
@@ -3775,10 +3873,7 @@ def test_prune_ovs_playlists_waits_for_a_push_into_the_playlist(settings, mocker
         "learning_resources.etl.loaders.similar_topics_action", return_value=[]
     )
     load_ovs_video_from_webhook(_ovs_video_payload("last_video")).delete()
-    playlist = LearningResource.objects.get(
-        readable_id="ovs_collection",
-        resource_type=LearningResourceType.video_playlist.name,
-    )
+    playlist = _ovs_playlist("ovs_collection")
     push_holds_playlist = threading.Event()
     push_may_commit = threading.Event()
 
