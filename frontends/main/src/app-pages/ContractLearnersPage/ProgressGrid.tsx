@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useEffect, useMemo, useRef, useState } from "react"
-import { keepPreviousData, useQuery } from "@tanstack/react-query"
+import { useQuery, type UseQueryResult } from "@tanstack/react-query"
 import {
   RiAwardLine,
   RiCheckLine,
@@ -26,6 +26,7 @@ import {
   analyticsContractQueries,
   type CourseRun,
   type LearnersParams,
+  type LearnersResponse,
   type LearnerWithEnrollments,
 } from "api/analytics-hooks/organizations"
 import {
@@ -49,7 +50,7 @@ const PAGE_SIZE = 25
 
 type GridFilters = Omit<LearnersParams, "limit" | "offset">
 
-/** Shared with the page, which reads the same cached query for its "N of M" line. */
+/** The page owns this query and passes its result in as `query`. */
 const gridLearnersQuery = (
   orgUuid: string,
   contractId: number,
@@ -203,11 +204,11 @@ const LastActive = styled(Typography)(({ theme }) => ({
  */
 const lastActiveText = (
   learner: LearnerWithEnrollments,
-  courserunIds: string[] | undefined,
+  courserunIds: string[],
 ) => {
   const shared = learner.enrollments.filter(
     (enrollment) =>
-      (!courserunIds?.length ||
+      (!courserunIds.length ||
         courserunIds.includes(enrollment.courserun_readable_id)) &&
       !isWithheldStatus(getDisplayStatus(enrollment)),
   )
@@ -311,8 +312,8 @@ type ProgressGridProps = {
   contractId: number
   /** `courserun_readable_id` narrows columns as well as rows. */
   filters: GridFilters
-  /** False until stale module ids in the URL can be dropped against `courseRuns`. */
-  enabled: boolean
+  /** The page's `gridLearnersQuery`, which it also reads for its "N of M" line. */
+  query: UseQueryResult<LearnersResponse>
   /** From the page's own course-runs query: one grid column per run. */
   courseRuns: CourseRun[] | undefined
   courseRunsFailed: boolean
@@ -392,7 +393,7 @@ const ProgressGrid: React.FC<ProgressGridProps> = ({
   orgUuid,
   contractId,
   filters,
-  enabled,
+  query,
   courseRuns,
   courseRunsFailed,
   courseRunsFetching,
@@ -405,13 +406,10 @@ const ProgressGrid: React.FC<ProgressGridProps> = ({
     completion_status: completionStatus,
     needs_attention: needsAttentionOnly,
   } = filters
-  const courserunIds = filters.courserun_readable_id ?? []
-
-  const query = useQuery({
-    ...gridLearnersQuery(orgUuid, contractId, filters, page),
-    enabled,
-    placeholderData: keepPreviousData,
-  })
+  const courserunIds = useMemo(
+    () => filters.courserun_readable_id ?? [],
+    [filters.courserun_readable_id],
+  )
 
   /**
    * Consent is per learner per contract, so learners matching `unknown` are
@@ -430,7 +428,7 @@ const ProgressGrid: React.FC<ProgressGridProps> = ({
       limit: 1,
       offset: 0,
     }),
-    enabled: enabled && countsWithheld && !withheldOnly,
+    enabled: query.isSuccess && countsWithheld && !withheldOnly,
   })
   const learnerCount = query.data?.total_count ?? 0
   /** Zero while the learner page is stale, so a fresh withheld count never meets an old learner count. */
@@ -454,9 +452,9 @@ const ProgressGrid: React.FC<ProgressGridProps> = ({
             enrollment,
           ]),
         ),
-        lastActive: lastActiveText(learner, filters.courserun_readable_id),
+        lastActive: lastActiveText(learner, courserunIds),
       })),
-    [query.data, filters.courserun_readable_id],
+    [query.data, courserunIds],
   )
   const totalPages = Math.ceil((query.data?.total_count ?? 0) / PAGE_SIZE)
   const isStale = query.isPlaceholderData || query.isFetching
@@ -715,4 +713,3 @@ const ProgressGrid: React.FC<ProgressGridProps> = ({
 }
 
 export { gridLearnersQuery, ProgressGrid }
-export type { GridFilters }

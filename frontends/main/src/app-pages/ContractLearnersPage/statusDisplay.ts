@@ -79,7 +79,6 @@ const contentProgressPercent = (
 export {
   contentProgressPercent,
   getDisplayStatus,
-  isStartedStatus,
   isWithheldStatus,
   DISPLAY_STATUS_LABEL,
 }

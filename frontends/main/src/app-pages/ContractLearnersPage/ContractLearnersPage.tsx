@@ -406,9 +406,9 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
   const activeGridModules = useMemo(
     () =>
       showModuleFilter
-        ? gridModules.filter((id) =>
-            courseRunOptions.some((option) => option.value === id),
-          )
+        ? courseRunOptions
+            .filter((option) => gridModules.includes(option.value))
+            .map((option) => option.value)
         : [],
     [showModuleFilter, gridModules, courseRunOptions],
   )
@@ -426,14 +426,10 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
   const moduleResolved = moduleFilter === ALL || courseRunsSettled
   const gridModulesResolved = gridModules.length === 0 || courseRunsSettled
 
-  const listParams = useMemo(
+  const sharedFilters = useMemo(
     () => ({
-      limit: PAGE_SIZE,
-      offset: (page - 1) * PAGE_SIZE,
-      sort: "full_name" as const,
       ...(debouncedSearch ? { search: debouncedSearch } : {}),
       ...(completionStatus ? { completion_status: completionStatus } : {}),
-      ...(activeModule === ALL ? {} : { courserun_readable_id: activeModule }),
       /**
        * Only ever sent as `true`. The param also takes `false` — "only the
        * learners who are fine" — but that is a question no control here asks,
@@ -442,7 +438,18 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
        */
       ...(needsAttentionOnly ? { needs_attention: true } : {}),
     }),
-    [page, debouncedSearch, completionStatus, activeModule, needsAttentionOnly],
+    [debouncedSearch, completionStatus, needsAttentionOnly],
+  )
+
+  const listParams = useMemo(
+    () => ({
+      limit: PAGE_SIZE,
+      offset: (page - 1) * PAGE_SIZE,
+      sort: "full_name" as const,
+      ...sharedFilters,
+      ...(activeModule === ALL ? {} : { courserun_readable_id: activeModule }),
+    }),
+    [page, sharedFilters, activeModule],
   )
 
   const rowsQuery = useQuery({
@@ -466,14 +473,12 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
 
   const gridFilters = useMemo(
     () => ({
-      ...(debouncedSearch ? { search: debouncedSearch } : {}),
-      ...(completionStatus ? { completion_status: completionStatus } : {}),
-      ...(needsAttentionOnly ? { needs_attention: true } : {}),
+      ...sharedFilters,
       ...(activeGridModules.length
         ? { courserun_readable_id: activeGridModules }
         : {}),
     }),
-    [debouncedSearch, completionStatus, needsAttentionOnly, activeGridModules],
+    [sharedFilters, activeGridModules],
   )
   const gridQuery = useQuery({
     ...gridLearnersQuery(orgUuid ?? "", contractId ?? 0, gridFilters, page),
@@ -1007,7 +1012,7 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
                     orgUuid={orgUuid}
                     contractId={contractId}
                     filters={gridFilters}
-                    enabled={gridModulesResolved}
+                    query={gridQuery}
                     courseRuns={courseRunsQuery.data?.data}
                     courseRunsFailed={
                       courseRunsQuery.isError && !courseRunsQuery.data

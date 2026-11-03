@@ -1,7 +1,7 @@
 import React from "react"
 import { renderWithProviders, screen, user, within } from "@/test-utils"
 import { act, fireEvent, waitFor } from "@testing-library/react"
-import { setMockResponse } from "api/test-utils"
+import { makeRequest, setMockResponse } from "api/test-utils"
 import {
   factories as mitxFactories,
   urls as mitxUrls,
@@ -2445,7 +2445,9 @@ describe("ContractLearnersPage progress grid", () => {
       { code: 500 },
     )
 
-    await screen.findByText("Something went wrong loading learner data.")
+    expect(await screen.findByRole("alert")).toHaveTextContent(
+      "Something went wrong loading learner data.",
+    )
     expect(screen.queryByText("Loading…")).not.toBeInTheDocument()
     expect(screen.queryByText(/enrolled learners/)).not.toBeInTheDocument()
   })
@@ -2495,6 +2497,84 @@ describe("ContractLearnersPage progress grid", () => {
     await screen.findByText(/are hidden while this filter is on/)
     expect(
       screen.queryByText(/of these \d+ learners? ha/),
+    ).not.toBeInTheDocument()
+  })
+
+  const withheldCountRequests = () =>
+    makeRequest.mock.calls.filter(
+      ([{ url }]) =>
+        /completion_status=unknown/.test(url) && /\blimit=1(&|$)/.test(url),
+    )
+
+  test("skips the withheld count under a known status, which can't match withheld learners", async () => {
+    const { contractId } = renderGrid(
+      "/?view=grid&status=in_progress",
+      undefined,
+      2,
+    )
+    mockGridPage(
+      contractId,
+      0,
+      [analyticsFactories.learnerProgress({ full_name: "Ada" })],
+      {},
+      { completion_status: ["in_progress"] },
+    )
+
+    await screen.findByText("Ada")
+    expect(withheldCountRequests()).toHaveLength(0)
+    expect(
+      screen.queryByText(/of these \d+ learners? ha/),
+    ).not.toBeInTheDocument()
+  })
+
+  test("counts withheld learners from the grid itself under the withheld status", async () => {
+    const { contractId } = renderGrid(
+      "/?view=grid&status=unknown",
+      undefined,
+      9,
+    )
+    mockGridPage(
+      contractId,
+      0,
+      [
+        analyticsFactories.withheldLearnerProgress({ full_name: "Bob" }),
+        analyticsFactories.withheldLearnerProgress({ full_name: "Cy" }),
+      ],
+      {},
+      { completion_status: ["unknown"] },
+    )
+
+    expect(
+      await screen.findByText(
+        /^2 of these 2 learners have not agreed to share their progress\./,
+      ),
+    ).toBeInTheDocument()
+    expect(withheldCountRequests()).toHaveLength(0)
+  })
+
+  test("Clear filters resets the selected modules", async () => {
+    const { contractId, location } = renderGrid(
+      `/?view=grid&modules=${encodeURIComponent(M6)}`,
+    )
+    mockGridPage(contractId, 0, [
+      analyticsFactories.learnerProgress({ full_name: "Everyone" }),
+    ])
+    mockGridPage(
+      contractId,
+      0,
+      [analyticsFactories.learnerProgress({ full_name: "Only Module 6" })],
+      {},
+      { courserun_readable_id: [M6] },
+    )
+    await screen.findByText("Only Module 6")
+
+    await user.click(screen.getByRole("button", { name: "Clear filters" }))
+
+    await screen.findByText("Everyone")
+    expect(location.current.searchParams.getAll("modules")).toEqual([])
+    expect(location.current.searchParams.get("view")).toBe("grid")
+    expect(
+      screen.queryByRole("button", { name: "Clear filters" }),
     ).not.toBeInTheDocument()
   })
 
