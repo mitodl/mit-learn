@@ -119,7 +119,6 @@ INSTALLED_APPS = (
     "django.contrib.sites",
     "django_removals",
     "django_scim",
-    "social_django",
     "rest_framework",
     "corsheaders",
     "anymail",
@@ -166,6 +165,8 @@ SCIM_SERVICE_PROVIDER["USER_ADAPTER"] = "users.adapters.LearnUserAdapter"  # noq
 
 # OAuth2TokenMiddleware must be before SCIMAuthCheckMiddleware
 # in order to insert request.user into the request.
+# OAuth2ExtraTokenMiddleware exposes request.access_token, which
+# SCIMScopeCheckMiddleware uses to require the "scim" scope.
 MIDDLEWARE = (
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
@@ -178,8 +179,20 @@ MIDDLEWARE = (
     "corsheaders.middleware.CorsMiddleware",
     "authentication.middleware.BlockedIPMiddleware",
     "oauth2_provider.middleware.OAuth2TokenMiddleware",
+    "oauth2_provider.middleware.OAuth2ExtraTokenMiddleware",
+    "main.middleware.scim_scope.SCIMScopeCheckMiddleware",
     "django_scim.middleware.SCIMAuthCheckMiddleware",
 )
+
+OAUTH2_PROVIDER = {
+    "SCOPES": {
+        "read": "Read access",
+        "write": "Write access",
+        "scim": "SCIM user provisioning",
+    },
+    # The default is every scope; "scim" must be requested explicitly.
+    "DEFAULT_SCOPES": ["read", "write"],
+}
 
 ZEAL_ENABLE = get_bool("ZEAL_ENABLE", False)  # noqa: FBT003
 
@@ -272,8 +285,6 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
-                "social_django.context_processors.backends",
-                "social_django.context_processors.login_redirect",
             ]
         },
     }
@@ -333,22 +344,6 @@ AUTHENTICATION_BACKENDS = (
     "guardian.backends.ObjectPermissionBackend",
 )
 
-
-USERINFO_URL = get_string(
-    name="USERINFO_URL",
-    default=None,
-)
-
-ACCESS_TOKEN_URL = get_string(
-    name="ACCESS_TOKEN_URL",
-    default=None,
-)
-
-AUTHORIZATION_URL = get_string(
-    name="AUTHORIZATION_URL",
-    default=None,
-)
-
 APISIX_USERDATA_MAP = {
     "users.User": {
         "email": "email",
@@ -384,8 +379,6 @@ MITOL_APIGATEWAY_USERINFO_UPDATE = get_bool(
     name="MITOL_APIGATEWAY_USERINFO_UPDATE",
     default=False,
 )
-
-# Social Auth configurations - [END]
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/1.8/howto/static-files/

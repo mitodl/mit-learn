@@ -9,13 +9,21 @@ import type { ImageProps } from "next/image"
  * getImageProps returns no `srcSet`, so we fall back to a plain `url(...)`.
  * That single check is sufficient — there is no separate env flag to consult.
  *
+ * `quality` is what the optimizer re-encodes at, and 100 is a lot to ask of a
+ * photograph: a caller drawing one above the fold should pass a lower figure.
+ * It has to be one of next.config's `images.qualities`, since the optimizer
+ * refuses any other.
+ *
  * https://nextjs.org/docs/app/api-reference/components/image#background-css
  */
 
-export const backgroundSrcSetCSS = (image: ImageProps["src"]) => {
+export const backgroundSrcSetCSS = (
+  image: ImageProps["src"],
+  quality = 100,
+) => {
   const { props } = getImageProps({
     alt: "",
-    quality: 100,
+    quality,
     src: image,
   })
 

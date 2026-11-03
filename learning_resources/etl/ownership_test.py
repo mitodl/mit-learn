@@ -169,21 +169,47 @@ def test_shadow_must_differ_from_owner():
     assert "shadow" in error.value.message_dict
 
 
-@pytest.mark.parametrize("resource_type", [PLAYLIST, VIDEO])
-def test_a_type_no_shadow_run_compares_cannot_be_shadowed(resource_type):
+def test_warehouse_can_shadow_youtube_playlists_and_videos():
+    """SyncYouTubeTask's shadow compares playlists and videos, so admin allows it"""
+    for resource_type in (PLAYLIST, VIDEO):
+        ETLSourceOwnershipFactory.build(
+            etl_source=ETLSource.youtube.name,
+            resource_type=resource_type,
+            shadow=Pipeline.WAREHOUSE,
+        ).full_clean()
+        ETLSourceOwnershipFactory.create(
+            etl_source=ETLSource.youtube.name,
+            resource_type=resource_type,
+            shadow=Pipeline.WAREHOUSE,
+        )
+
+    with writing_as(Pipeline.WAREHOUSE):
+        assert run_mode(ETLSource.youtube.name, [PLAYLIST, VIDEO]) == RunMode.SHADOW
+
+
+@pytest.mark.parametrize(
+    ("etl_source", "resource_type", "shadow"),
+    [
+        (ETLSource.youtube.name, PLAYLIST, Pipeline.WEBHOOK),
+        (ETLSource.youtube.name, VIDEO, Pipeline.WEBHOOK),
+        (ETLSource.ovs.name, PLAYLIST, Pipeline.WAREHOUSE),
+        (ETLSource.ovs.name, VIDEO, Pipeline.WEBHOOK),
+    ],
+)
+def test_a_pair_no_shadow_run_compares_cannot_be_shadowed(
+    etl_source, resource_type, shadow
+):
     """
-    Nothing compares playlists or videos, so admin refuses their shadow, and a
-    row saved without that check is skipped rather than shadowed
+    Nothing compares these pairs for that pipeline, so admin refuses their
+    shadow, and a row saved without that check is skipped rather than shadowed
     """
     row = ETLSourceOwnershipFactory.build(
-        etl_source=ETLSource.youtube.name,
-        resource_type=resource_type,
-        shadow=Pipeline.WAREHOUSE,
+        etl_source=etl_source, resource_type=resource_type, shadow=shadow
     )
     with pytest.raises(ValidationError) as error:
         row.full_clean()
     assert "shadow" in error.value.message_dict
 
     row.save()
-    with writing_as(Pipeline.WAREHOUSE):
-        assert run_mode(ETLSource.youtube.name, [PLAYLIST, VIDEO]) == RunMode.SKIP
+    with writing_as(shadow):
+        assert run_mode(etl_source, resource_type) == RunMode.SKIP

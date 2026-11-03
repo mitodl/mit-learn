@@ -3,7 +3,7 @@ import { factories, setMockResponse, urls } from "api/test-utils"
 import { absoluteUrl, podcastEpisodePath } from "@/common/urls"
 import { ResourceTypeEnum } from "api/v1"
 import type { LearningResource, PodcastEpisodeResource } from "api/v1"
-import { renderWithProviders, screen, user, waitFor } from "@/test-utils"
+import { act, renderWithProviders, screen, user, waitFor } from "@/test-utils"
 import { PodcastEpisodeDetailPage } from "./PodcastEpisodeDetailPage"
 
 jest.mock("./PodcastPlayer", () =>
@@ -680,7 +680,7 @@ describe("PodcastEpisodeDetailPage", () => {
       })
       const transcript = screen.getByRole("tab", { name: "Transcript" })
 
-      description.focus()
+      act(() => description.focus())
       await user.keyboard("{ArrowRight}")
       expect(transcript).toHaveFocus()
       expect(description).toHaveAttribute("aria-selected", "true")

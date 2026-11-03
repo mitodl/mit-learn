@@ -32,7 +32,9 @@ jest.mock("@/common/analytics/posthog", () => ({
 }))
 jest.mock("@/common/useFeatureFlagsLoaded")
 
-const mockedUseFeatureFlagEnabled = jest.mocked(useFeatureFlagEnabled)
+const mockedUseFeatureFlagEnabled = jest.mocked(
+  useFeatureFlagEnabled as (flag: string) => boolean | undefined,
+)
 
 const mockCapture = jest.mocked(capturePostHog)
 

@@ -2,7 +2,10 @@ import React from "react"
 import { act, renderHook, screen, user, waitFor, within } from "@/test-utils"
 import { render } from "@testing-library/react"
 import { QueryClientProvider, useMutation } from "@tanstack/react-query"
-import type { MutateOptions } from "@tanstack/react-query"
+import type {
+  MutateOptions,
+  MutationFunctionContext,
+} from "@tanstack/react-query"
 import { ThemeProvider } from "ol-components"
 import { makeBrowserQueryClient } from "@/app/getQueryClient"
 import { makeRequest, setMockResponse } from "api/test-utils"
@@ -226,6 +229,11 @@ describe("mutateWithCompliance", () => {
 
   type Options = MutateOptions<string, unknown, { id: number }, unknown>
 
+  const mutationContext: MutationFunctionContext = {
+    client: makeBrowserQueryClient(),
+    meta: undefined,
+  }
+
   /**
    * A stand-in for a `useMutation` result whose attempts settle as scripted:
    * each entry is the error that attempt fails with, or `null` to succeed.
@@ -235,12 +243,18 @@ describe("mutateWithCompliance", () => {
       async (variables: { id: number }, options?: Options) => {
         const error = outcomes[mutateAsync.mock.calls.length - 1]
         if (error) {
-          options?.onError?.(error, variables, undefined)
-          options?.onSettled?.(undefined, error, variables, undefined)
+          options?.onError?.(error, variables, undefined, mutationContext)
+          options?.onSettled?.(
+            undefined,
+            error,
+            variables,
+            undefined,
+            mutationContext,
+          )
           throw error
         }
-        options?.onSuccess?.("ok", variables, undefined)
-        options?.onSettled?.("ok", null, variables, undefined)
+        options?.onSuccess?.("ok", variables, undefined, mutationContext)
+        options?.onSettled?.("ok", null, variables, undefined, mutationContext)
         return "ok"
       },
     )
@@ -356,6 +370,7 @@ describe("mutateWithCompliance", () => {
         error,
         { id: 1 },
         undefined,
+        mutationContext,
       ),
     )
     expect(options.onError).not.toHaveBeenCalled()
@@ -392,7 +407,12 @@ describe("mutateWithCompliance", () => {
       )
     })
 
-    expect(options.onError).toHaveBeenCalledWith(error, { id: 1 }, undefined)
+    expect(options.onError).toHaveBeenCalledWith(
+      error,
+      { id: 1 },
+      undefined,
+      mutationContext,
+    )
     expect(options.onSettled).toHaveBeenCalled()
     expect(mutation.reset).not.toHaveBeenCalled()
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument()

@@ -1,6 +1,6 @@
 import React from "react"
 import { RiFileCopy2Line } from "@remixicon/react"
-import { ResourceTypeEnum } from "api"
+import { CourseResourceCertificationTypeCodeEnum, ResourceTypeEnum } from "api"
 import type { LearningResource } from "api"
 import {
   formattedParentCourseName,
@@ -38,9 +38,16 @@ const getMetadata = (resource: LearningResource): MetadataItem[] => {
   return items
 }
 
-/** Only for resources with `certification`: others may have no type. */
+/**
+ * Only for resources with `certification`: others may have no type. A
+ * certificate of completion reads plainly "Certificate"; other types keep
+ * their name ("Professional Certificate").
+ */
 const certificateType = (resource: LearningResource) =>
-  resource.certification_type.name || "Certificate"
+  resource.certification_type.code ===
+  CourseResourceCertificationTypeCodeEnum.Completion
+    ? "Certificate"
+    : resource.certification_type.name || "Certificate"
 
 const getPrice = (resource: LearningResource): PricePanel => {
   const prices = getLearningResourcePrices(resource)
