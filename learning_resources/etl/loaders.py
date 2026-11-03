@@ -1949,15 +1949,20 @@ def unpublish_empty_ovs_playlists(*, allow_mass_unpublish: bool = False) -> list
     playlists carry no etl_source, so they're matched on platform, as
     load_ovs_playlists matches them.
 
+    Up to OVS_PLAYLIST_SWEEP_UNPUBLISH_FLOOR playlists are unpublished even
+    when that is over MAX_UNPUBLISH_SHARE, because with few OVS playlists the
+    share alone would refuse one. Above the floor the share applies.
+
     Args:
-        allow_mass_unpublish (bool): skip the MAX_UNPUBLISH_SHARE check
+        allow_mass_unpublish (bool): skip the floor and share checks
 
     Returns:
         list[int]: the ids of the playlists it unpublished
 
     Raises:
-        ExtractException: if that is more than MAX_UNPUBLISH_SHARE of the
-            published OVS playlists and allow_mass_unpublish is False
+        ExtractException: if that is more than both the floor and
+            MAX_UNPUBLISH_SHARE of the published OVS playlists, and
+            allow_mass_unpublish is False
     """
     published = LearningResource.objects.filter(
         resource_type=LearningResourceType.video_playlist.name,
@@ -1976,14 +1981,15 @@ def unpublish_empty_ovs_playlists(*, allow_mass_unpublish: bool = False) -> list
     if not empty_ids:
         return []
     published_count = published.count()
-    if not allow_mass_unpublish and len(empty_ids) > (
-        published_count * MAX_UNPUBLISH_SHARE
+    floor = settings.OVS_PLAYLIST_SWEEP_UNPUBLISH_FLOOR
+    if not allow_mass_unpublish and len(empty_ids) > max(
+        floor, published_count * MAX_UNPUBLISH_SHARE
     ):
         msg = (
             f"Refusing to sweep: {len(empty_ids)} of {published_count} published "
-            f"OVS playlists have no published video, over the "
-            f"{MAX_UNPUBLISH_SHARE:.0%} limit: {empty_ids}. If they really are "
-            "empty, rerun with allow_mass_unpublish=True."
+            f"OVS playlists have no published video, over both the floor of "
+            f"{floor} and the {MAX_UNPUBLISH_SHARE:.0%} limit: {empty_ids}. If "
+            "they really are empty, rerun with allow_mass_unpublish=True."
         )
         raise ExtractException(msg)
     # prune_ovs_playlists checks again under the lock, so a playlist a push has

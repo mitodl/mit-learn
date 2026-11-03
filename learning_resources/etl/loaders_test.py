@@ -13,6 +13,7 @@ from types import SimpleNamespace
 import pytest
 from django.db import connection, connections
 from django.forms.models import model_to_dict
+from django.test import override_settings
 
 from learning_resources.constants import (
     CONTENT_TYPE_FILE,
@@ -3967,31 +3968,92 @@ def test_unpublish_empty_ovs_playlists(mocker, ovs_platform, youtube_video_platf
     assert unpublish_empty_ovs_playlists() == []
 
 
-def test_unpublish_empty_ovs_playlists_refuses_past_the_unpublish_limit(
-    mocker, ovs_platform
-):
-    """Over MAX_UNPUBLISH_SHARE it unpublishes nothing unless told to"""
+@pytest.fixture
+def mock_ovs_prune_hooks(mocker):
+    """Mock the search work prune_ovs_playlists triggers"""
     mocker.patch("learning_resources.etl.loaders.update_index")
-    mock_unpublished = mocker.patch(
+    return mocker.patch(
         "learning_resources.etl.loaders.bulk_resources_unpublished_actions"
     )
-    # production's count on 2026-11-02, where one leftover is over the limit
-    for _ in range(8):
+
+
+def _ovs_playlists_with_empty(ovs_platform, *, total, empty):
+    """Create `total` published OVS playlists, `empty` of them with no video"""
+    for _ in range(total - empty):
         _playlist_with_videos(ovs_platform)
-    empty = _playlist_with_videos(ovs_platform, published=0)
+    return [_playlist_with_videos(ovs_platform, published=0) for _ in range(empty)]
+
+
+def test_unpublish_empty_ovs_playlists_unpublishes_one_of_nine_by_default(
+    mock_ovs_prune_hooks, ovs_platform
+):
+    """
+    One leftover of 9 is over MAX_UNPUBLISH_SHARE, but within the default
+    floor. 9 is production's count on 2026-11-02.
+    """
+    [empty] = _ovs_playlists_with_empty(ovs_platform, total=9, empty=1)
+
+    assert unpublish_empty_ovs_playlists() == [empty.id]
+    empty.refresh_from_db()
+    assert empty.published is False
+
+
+def test_unpublish_empty_ovs_playlists_refuses_past_the_floor_and_share(
+    mock_ovs_prune_hooks, ovs_platform
+):
+    """Over both the floor and MAX_UNPUBLISH_SHARE it unpublishes nothing"""
+    empty = _ovs_playlists_with_empty(ovs_platform, total=9, empty=2)
+    empty_ids = sorted(playlist.id for playlist in empty)
 
     with pytest.raises(
-        ExtractException, match=rf"Refusing to sweep: 1 of 9 .*\[{empty.id}\]"
+        ExtractException,
+        match=(
+            rf"Refusing to sweep: 2 of 9 .*floor of 1 .*\[{empty_ids[0]}, "
+            rf"{empty_ids[1]}\]"
+        ),
     ):
         unpublish_empty_ovs_playlists()
 
-    empty.refresh_from_db()
-    assert empty.published is True
-    mock_unpublished.assert_not_called()
+    for playlist in empty:
+        playlist.refresh_from_db()
+        assert playlist.published is True
+    mock_ovs_prune_hooks.assert_not_called()
 
-    assert unpublish_empty_ovs_playlists(allow_mass_unpublish=True) == [empty.id]
-    empty.refresh_from_db()
-    assert empty.published is False
+
+@pytest.mark.parametrize(
+    ("floor", "empty_count", "refused"),
+    [(0, 1, True), (2, 2, False), (2, 3, True)],
+)
+def test_unpublish_empty_ovs_playlists_uses_the_floor_setting(
+    mock_ovs_prune_hooks, ovs_platform, floor, empty_count, refused
+):
+    """OVS_PLAYLIST_SWEEP_UNPUBLISH_FLOOR sets how many it may unpublish"""
+    empty = _ovs_playlists_with_empty(ovs_platform, total=9, empty=empty_count)
+
+    with override_settings(OVS_PLAYLIST_SWEEP_UNPUBLISH_FLOOR=floor):
+        if refused:
+            with pytest.raises(ExtractException, match="Refusing to sweep"):
+                unpublish_empty_ovs_playlists()
+        else:
+            assert unpublish_empty_ovs_playlists() == sorted(p.id for p in empty)
+
+    for playlist in empty:
+        playlist.refresh_from_db()
+        assert playlist.published is refused
+
+
+def test_unpublish_empty_ovs_playlists_override_skips_the_bound(
+    mock_ovs_prune_hooks, ovs_platform
+):
+    """allow_mass_unpublish unpublishes past both the floor and the share"""
+    empty = _ovs_playlists_with_empty(ovs_platform, total=9, empty=3)
+
+    assert unpublish_empty_ovs_playlists(allow_mass_unpublish=True) == sorted(
+        playlist.id for playlist in empty
+    )
+    for playlist in empty:
+        playlist.refresh_from_db()
+        assert playlist.published is False
 
 
 def test_unpublish_removed_youtube_channels(mock_upsert_tasks):

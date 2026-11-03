@@ -118,6 +118,10 @@ OVS_ALLOWED_MEDIA_HOSTS = get_list_of_str(
     "OVS_ALLOWED_MEDIA_HOSTS",
     [],
 )
+# How many empty OVS playlists the daily sweep may unpublish without
+# allow_mass_unpublish, even when that is over MAX_UNPUBLISH_SHARE of them.
+# There are few OVS playlists, so the share alone would refuse a single one.
+OVS_PLAYLIST_SWEEP_UNPUBLISH_FLOOR = get_int("OVS_PLAYLIST_SWEEP_UNPUBLISH_FLOOR", 1)
 
 # course catalog podcast etl settings
 OPEN_PODCAST_DATA_BRANCH = get_string("OPEN_PODCAST_DATA_BRANCH", "master")
