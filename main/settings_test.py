@@ -350,7 +350,7 @@ class TestSettings(TestCase):
             assert settings_vars["CELERY_RESULT_EXPIRES"] == 120
 
     def test_sweep_empty_ovs_playlists_beat_entry(self):
-        """The OVS playlist sweep runs daily, with or without StarRocks"""
+        """The OVS playlist sweep runs daily"""
         with mock.patch.dict("os.environ", REQUIRED_SETTINGS, clear=True):
             settings_vars = self.reload_settings(module="main.settings_celery")
             entry = settings_vars["CELERY_BEAT_SCHEDULE"][
@@ -358,6 +358,19 @@ class TestSettings(TestCase):
             ]
             assert entry["task"] == "learning_resources.tasks.sweep_empty_ovs_playlists"
             assert entry["schedule"] == crontab(minute=45, hour=9)
+
+    def test_ovs_playlist_sweep_unpublish_floor(self):
+        """The sweep's floor defaults to 1 and is read from the environment"""
+        with mock.patch.dict("os.environ", REQUIRED_SETTINGS, clear=True):
+            settings_vars = self.reload_settings(module="main.settings_course_etl")
+            assert settings_vars["OVS_PLAYLIST_SWEEP_UNPUBLISH_FLOOR"] == 1
+        with mock.patch.dict(
+            "os.environ",
+            {**REQUIRED_SETTINGS, "OVS_PLAYLIST_SWEEP_UNPUBLISH_FLOOR": "3"},
+            clear=True,
+        ):
+            settings_vars = self.reload_settings(module="main.settings_course_etl")
+            assert settings_vars["OVS_PLAYLIST_SWEEP_UNPUBLISH_FLOOR"] == 3
 
     def test_program_certificates_beat_entry_absent_without_starrocks_host(self):
         """The certificate-sync beat entry isn't registered when StarRocks
