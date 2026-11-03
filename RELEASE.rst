@@ -1,6 +1,30 @@
 Release Notes
 =============
 
+Version 0.86.1
+--------------
+
+- feat: placement of department's images in hero banners (#4172)
+- Open one letter per program from the letter link (#4218)
+- fix(scim): require the scim OAuth2 scope on SCIM requests (#4191)
+- Remove python-social-auth, unused since the APISIX cutover (#4215)
+- Lock file maintenance (#4213)
+- Load YouTube playlists inline in a shadow run (#4058)
+- Resource card redesign: centre price lines beside the bookmark, "Certificate of Completion" reads "Certificate" (#4211)
+- Run a webhook batch as a shadow when the webhook shadows its pairs (#4057)
+- chore(deps): update prettier to 3.9 and eslint-plugin-styled-components-a11y to 2.2 (#4214)
+- fix(vector_search): retrieve payloads for the final hits only (#4208)
+- Add a shadow run for an ETL source's new pipeline (#4056)
+- chore(load_testing): refresh lockfile (#4209)
+- Remove mit_edx ingestion and the course blocklist (#4193)
+- Gate the course outline section on the CMS show_course_outline toggle (#4043)
+- Show the 404 page for missing or revoked program letters (#4196)
+- Refuse program letters for revoked certificates (#4182)
+- Update dependency pypdf to v6.21.2 [SECURITY] (#4192)
+- Use the generated ol-analytics-api client for the B2B dashboard (#4127)
+- refactor(b2b): read certified_learners from contract utilization (#4116)
+- Remove the Unified Ecommerce cart page and EcommerceFeature (#4205)
+
 Version 0.85.5
 --------------
 
