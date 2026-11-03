@@ -1,13 +1,11 @@
 "use client"
 
-import { env } from "@/env"
 import React from "react"
 import { Typography, styled, LinkAdapter } from "ol-components"
 import { RiSparkling2Line } from "@remixicon/react"
-import { usePostHog } from "posthog-js/react"
 import AiRecommendationBotDrawer from "./AiRecommendationBotDrawer"
 import { RECOMMENDER_QUERY_PARAM } from "@/common/urls"
-import { PostHogEvents } from "@/common/constants"
+import { analytics } from "@/common/analytics"
 
 const StyledButton = styled(LinkAdapter)(({ theme }) => ({
   display: "flex",
@@ -26,7 +24,6 @@ const StyledButton = styled(LinkAdapter)(({ theme }) => ({
 }))
 
 const AskTIMButton = () => {
-  const posthog = usePostHog()
   const href = `?${RECOMMENDER_QUERY_PARAM}`
 
   return (
@@ -34,13 +31,7 @@ const AskTIMButton = () => {
       <StyledButton
         href={href}
         pushUrl={href}
-        onClick={() => {
-          if (env("NEXT_PUBLIC_POSTHOG_API_KEY")) {
-            posthog.capture(PostHogEvents.AskTimClicked, {
-              type: "recommendation_bot",
-            })
-          }
-        }}
+        onClick={() => analytics.askTimClicked({ type: "recommendation_bot" })}
       >
         <RiSparkling2Line />
         <Typography variant="body1">

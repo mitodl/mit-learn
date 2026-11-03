@@ -16,15 +16,13 @@ import {
   type RadioChoiceFieldProps,
 } from "@mitodl/smoot-design"
 import { RiArrowRightLine, RiUserLine } from "@remixicon/react"
-import { usePostHog } from "posthog-js/react"
 import {
   useHubspotFormDetail,
   useHubspotFormSubmit,
   type HubspotSubmitField,
 } from "api/hooks/hubspot"
 import { SILENCE_ERROR_TOAST } from "api/mutation-meta"
-import { env } from "@/env"
-import { PostHogEvents } from "@/common/constants"
+import { analytics } from "@/common/analytics"
 import { SEARCH } from "@/common/urls"
 import {
   getOrgLearningHubspotFormId,
@@ -205,7 +203,6 @@ const mapValuesToFields = (
     .map(([name, value]) => ({ name, value }))
 
 const OrgLeadForm: React.FC<{ className?: string }> = ({ className }) => {
-  const posthog = usePostHog()
   const [audience, setAudience] = React.useState<Audience>("organization")
   const confirmation = React.useRef<HTMLDivElement>(null)
 
@@ -233,19 +230,13 @@ const OrgLeadForm: React.FC<{ className?: string }> = ({ className }) => {
     }
   }, [isConfirmed])
 
-  const capture = (event: string, properties?: Record<string, unknown>) => {
-    if (env("NEXT_PUBLIC_POSTHOG_API_KEY")) {
-      posthog.capture(event, properties)
-    }
-  }
-
   const handleAudienceChange = (
     _event: React.ChangeEvent<HTMLInputElement>,
     value: string,
   ) => {
     const next = value as Audience
     setAudience(next)
-    capture(PostHogEvents.OrgLearningAudienceSelected, { audience: next })
+    analytics.orgLearningAudienceSelected({ audience: next })
   }
 
   const choices: RadioChoiceFieldProps["choices"] = [
@@ -377,7 +368,7 @@ const OrgLeadForm: React.FC<{ className?: string }> = ({ className }) => {
               },
               {
                 onSuccess: () =>
-                  capture(PostHogEvents.OrgLearningFormSubmitted, { audience }),
+                  analytics.orgLearningFormSubmitted({ audience }),
               },
             )
           }}

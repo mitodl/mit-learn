@@ -1,19 +1,18 @@
 "use client"
 
-import { env } from "@/env"
 import React, { useCallback, useMemo } from "react"
 import { useAppSearchParams } from "@/common/useAppSearchParams"
 import { LinkAdapter, styled } from "ol-components"
 import { styled as smootStyled } from "@mitodl/smoot-design"
 import { RiSparkling2Line } from "@remixicon/react"
-import { useFeatureFlagEnabled, usePostHog } from "posthog-js/react"
+import { useFeatureFlagEnabled } from "posthog-js/react"
 import { LearningResource, ResourceTypeEnum } from "api"
 import {
   useLearningResourceByReadableId,
   useLearningResourceDetailSetCache,
 } from "api/hooks/learningResources"
 import { FeatureFlags } from "@/common/feature_flags"
-import { PostHogEvents } from "@/common/constants"
+import { analytics } from "@/common/analytics"
 import { RESOURCE_DRAWER_PARAMS, setResourceParams } from "@/common/urls"
 import { isSyllabusChatEnabled } from "@/page-components/AiChat/syllabusChatConfig"
 
@@ -77,7 +76,6 @@ type ProductPageAskTimButtonProps = {
 export const ProductPageAskTimButton: React.FC<
   ProductPageAskTimButtonProps
 > = ({ resource }) => {
-  const posthog = usePostHog()
   const searchParams = useAppSearchParams()
   const seedDetailCache = useLearningResourceDetailSetCache(resource)
   const categoryLabel = resource.resource_category.toLowerCase()
@@ -93,16 +91,14 @@ export const ProductPageAskTimButton: React.FC<
 
   const onClick = useCallback(() => {
     seedDetailCache()
-    if (env("NEXT_PUBLIC_POSTHOG_API_KEY")) {
-      posthog.capture(PostHogEvents.AskTimClicked, {
-        type: "syllabus_bot",
-        resourceId: resource.id,
-        readableId: resource.readable_id,
-        resourceType: resource.resource_type,
-        platformCode: resource.platform?.code,
-      })
-    }
-  }, [posthog, resource, seedDetailCache])
+    analytics.askTimClicked({
+      type: "syllabus_bot",
+      resourceId: resource.id,
+      readableId: resource.readable_id,
+      resourceType: resource.resource_type,
+      platformCode: resource.platform?.code,
+    })
+  }, [resource, seedDetailCache])
 
   return (
     <AskTimCard>

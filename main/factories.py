@@ -17,7 +17,6 @@ from factory import (
 )
 from factory.django import DjangoModelFactory
 from factory.fuzzy import FuzzyText
-from social_django.models import UserSocialAuth
 
 from main.models import TaskBatch, TaskJob
 
@@ -54,17 +53,6 @@ class GroupFactory(DjangoModelFactory):
 
     class Meta:
         model = "auth.Group"
-
-
-class UserSocialAuthFactory(DjangoModelFactory):
-    """Factory for UserSocialAuth"""
-
-    provider = FuzzyText()
-    user = SubFactory(UserFactory)
-    uid = FuzzyText()
-
-    class Meta:
-        model = UserSocialAuth
 
 
 class TaskJobFactory(DjangoModelFactory):

@@ -1,6 +1,7 @@
 import React from "react"
 import { screen, fireEvent } from "@testing-library/react"
-import { useFeatureFlagEnabled, usePostHog } from "posthog-js/react"
+import { useFeatureFlagEnabled } from "posthog-js/react"
+import { capturePostHog } from "@/common/analytics/posthog"
 import MitxOnlineResourceCard, {
   mitxOnlineCardContent,
 } from "./MitxOnlineResourceCard"
@@ -25,13 +26,13 @@ import type { MitxOnlineResourceCardProps } from "./MitxOnlineResourceCard"
 jest.mock("posthog-js/react", () => ({
   ...jest.requireActual("posthog-js/react"),
   useFeatureFlagEnabled: jest.fn(),
-  usePostHog: jest.fn(),
 }))
-const mockCapture = jest.fn()
-jest.mocked(usePostHog).mockReturnValue(
-  // @ts-expect-error Not mocking all of posthog
-  { capture: mockCapture },
-)
+
+jest.mock("@/common/analytics/posthog", () => ({
+  capturePostHog: jest.fn(),
+  initPostHog: jest.fn(),
+}))
+const mockCapture = jest.mocked(capturePostHog)
 
 jest.mock("@/page-components/ResourceCardView/ResourceCardView", () => {
   const actual = jest.requireActual(

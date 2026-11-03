@@ -1,4 +1,3 @@
-import { env } from "@/env"
 import React, { Suspense, useEffect, useId, useMemo } from "react"
 import { RoutedDrawer, imgConfigs } from "ol-components"
 import { LearningResourceExpanded } from "../LearningResourceExpanded/LearningResourceExpanded"
@@ -18,13 +17,12 @@ import {
   AddToUserListDialog,
 } from "../Dialogs/AddToListDialog"
 import { SignupPopover } from "../SignupPopover/SignupPopover"
-import { usePostHog } from "posthog-js/react"
 import ResourceCarousel from "../ResourceCarousel/ResourceCarousel"
 import { useIsLearningPathMember } from "api/hooks/learningPaths"
 import { useIsUserListMember } from "api/hooks/userLists"
 import { TopicCarouselConfig } from "@/common/carousels"
 import { ResourceTypeEnum } from "api"
-import { PostHogEvents } from "@/common/constants"
+import { analytics } from "@/common/analytics"
 
 const REQUIRED_PARAMS = [RESOURCE_DRAWER_PARAMS.resource] as const
 const ALL_PARAMS = [
@@ -36,13 +34,9 @@ const ALL_PARAMS = [
 
 const useCapturePageView = (resourceId: number) => {
   const { data, isSuccess } = useLearningResourcesDetail(Number(resourceId))
-  const posthog = usePostHog()
-  const apiKey = env("NEXT_PUBLIC_POSTHOG_API_KEY")
-
   useEffect(() => {
-    if (!apiKey || apiKey.length < 1) return
     if (!isSuccess) return
-    posthog.capture(PostHogEvents.LearningResourceDrawerView, {
+    analytics.resourceViewed({
       resourceId: data?.id,
       readableId: data?.readable_id,
       platformCode: data?.platform?.code,
@@ -50,12 +44,10 @@ const useCapturePageView = (resourceId: number) => {
     })
   }, [
     isSuccess,
-    posthog,
     data?.id,
     data?.readable_id,
     data?.platform?.code,
     data?.resource_type,
-    apiKey,
   ])
 }
 
@@ -73,16 +65,11 @@ const DrawerContent: React.FC<{
    *   The triggering component likely has the data already via some other API
    *   call.
    */
-  const posthog = usePostHog()
   const resource = useLearningResourcesDetail(Number(resourceId))
   // Once the title is known, canonicalize the cosmetic resource_title param in
   // place (never touches `resource`). No-op until known / when already canonical.
   useCanonicalizeResourceParam(resource.data?.id, resource.data?.title)
-  if (env("NEXT_PUBLIC_POSTHOG_API_KEY")) {
-    posthog.capture(PostHogEvents.LearningResourceDrawerOpen, {
-      resource: resource?.data,
-    })
-  }
+  analytics.resourceDrawerOpened({ resource: resource?.data })
   const [signupEl, setSignupEl] = React.useState<HTMLElement | null>(null)
   const { data: user } = useUserMe()
   const { data: inLearningPath } = useIsLearningPathMember(resourceId)

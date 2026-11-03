@@ -2,19 +2,15 @@ import React from "react"
 import { renderWithProviders, screen, user, waitFor } from "@/test-utils"
 import AskTIMButton from "./AskTimDrawerButton"
 import { RECOMMENDER_QUERY_PARAM } from "@/common/urls"
-import { usePostHog } from "posthog-js/react"
+import { capturePostHog } from "@/common/analytics/posthog"
 import { PostHogEvents } from "@/common/constants"
 import { allowConsoleErrors } from "ol-test-utilities"
 
-jest.mock("posthog-js/react", () => ({
-  ...jest.requireActual("posthog-js/react"),
-  usePostHog: jest.fn(),
+jest.mock("@/common/analytics/posthog", () => ({
+  capturePostHog: jest.fn(),
+  initPostHog: jest.fn(),
 }))
-const mockCapture = jest.fn()
-jest.mocked(usePostHog).mockReturnValue(
-  // @ts-expect-error Not mocking all of posthog
-  { capture: mockCapture },
-)
+const mockCapturePostHog = jest.mocked(capturePostHog)
 
 describe("AskTIMButton", () => {
   it.each([
@@ -56,12 +52,15 @@ describe("AskTIMButton", () => {
   test("clicking Ask TIM fires asktim_clicked with type recommendation_bot", async () => {
     allowConsoleErrors()
     process.env.NEXT_PUBLIC_POSTHOG_API_KEY = "test-key"
-    mockCapture.mockClear()
+    mockCapturePostHog.mockClear()
     renderWithProviders(<AskTIMButton />)
     await user.click(screen.getByRole("link", { name: /ask tim/i }))
-    expect(mockCapture).toHaveBeenCalledWith(PostHogEvents.AskTimClicked, {
-      type: "recommendation_bot",
-    })
+    expect(mockCapturePostHog).toHaveBeenCalledWith(
+      PostHogEvents.AskTimClicked,
+      {
+        type: "recommendation_bot",
+      },
+    )
     delete process.env.NEXT_PUBLIC_POSTHOG_API_KEY
   })
 })

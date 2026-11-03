@@ -1,10 +1,9 @@
 "use client"
 
-import { env } from "@/env"
 import React from "react"
-import { useFeatureFlagEnabled, usePostHog } from "posthog-js/react"
+import { useFeatureFlagEnabled } from "posthog-js/react"
 import { BaseLearningResourceCard } from "ol-components"
-import { PostHogEvents } from "@/common/constants"
+import { analytics } from "@/common/analytics"
 import { FeatureFlags } from "@/common/feature_flags"
 import type {
   CourseWithCourseRunsSerializerV2,
@@ -234,7 +233,6 @@ const mitxOnlineCardContent = (
 const MitxOnlineResourceCard: React.FC<MitxOnlineResourceCardProps> = (
   props,
 ) => {
-  const posthog = usePostHog()
   const redesign =
     useFeatureFlagEnabled(FeatureFlags.ResourceCardRedesign) === true
   const {
@@ -256,16 +254,13 @@ const MitxOnlineResourceCard: React.FC<MitxOnlineResourceCardProps> = (
     DEFAULT_RESOURCE_IMG,
   )
 
-  const captureClick = () => {
-    if (env("NEXT_PUBLIC_POSTHOG_API_KEY")) {
-      posthog.capture(PostHogEvents.CourseCardClicked, {
-        label,
-        resourceId: props.resource?.id,
-        readableId: props.resource?.readable_id,
-        resourceType: props.resourceType,
-      })
-    }
-  }
+  const captureClick = () =>
+    analytics.courseCardClicked({
+      label,
+      resourceId: props.resource?.id,
+      readableId: props.resource?.readable_id,
+      resourceType: props.resourceType,
+    })
 
   if (redesign) {
     if (isLoading) {
@@ -320,7 +315,14 @@ const MitxOnlineResourceCard: React.FC<MitxOnlineResourceCardProps> = (
       startDate={data.startDate}
       ariaLabel={`${data.displayType}: ${data.title}`}
       list={list}
-      onClick={captureClick}
+      onClick={() =>
+        analytics.courseCardClicked({
+          label,
+          resourceId: props.resource?.id,
+          readableId: props.resource?.readable_id,
+          resourceType: props.resourceType,
+        })
+      }
     />
   )
 }
