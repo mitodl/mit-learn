@@ -3196,8 +3196,8 @@ def assemble_structure(markdown: str, plan: dict, answers: list[dict]) -> dict: 
                 continue
             segment = dict(segment)  # noqa: PLW2901
             for key in ("problem", "part", "section"):
-                if segment.get(key) is not None:
-                    segment[key] = str(segment[key])
+                value = segment.get(key)
+                segment[key] = "" if value is None else str(value)
             for key in ("title", "friendly_title", "reference", "reason"):
                 if segment.get(key) is not None and not isinstance(segment[key], str):
                     errors.append(f"window {wi}: {key} must be text")
