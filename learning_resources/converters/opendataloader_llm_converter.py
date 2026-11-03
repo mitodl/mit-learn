@@ -3113,9 +3113,6 @@ def _strip_heading(text, number="", part=""):
             + rf"(?![\w.])\s*[.):]?|\({re.escape(label)}\)|{re.escape(label)}[.):])"
             + r"\**\s*"
         )
-    first, _, rest = text.strip().partition("\n")
-    if re.match(pattern, first, re.IGNORECASE) and first.lstrip().startswith("#"):
-        return rest.strip()
     return re.sub(pattern, "", text.strip(), count=1, flags=re.IGNORECASE).strip()
 
 
