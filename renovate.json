@@ -29,7 +29,7 @@
       "matchPackageNames": ["qdrant/qdrant"]
     },
     {
-      "description": "posthog-js 1.350.0+ skips the page-load /flags request when init bootstraps flags, which deployed envs always do. Frozen rather than capped at <1.350.0 so Renovate doesn't walk the pin up 105 untested versions to 1.349.0; mitodl/mit-learn#4206 is the upgrade that handles it.",
+      "description": "posthog-js 1.350.0+ skips the page-load /flags request when init bootstraps flags, which deployed envs always do. 1.297.2 is what production runs; frozen there rather than capped at <1.350.0 because the 105 releases in between are untested here. Remove this rule with mitodl/mit-learn#4206, which lands the upgrade with the handling it needs.",
       "allowedVersions": "1.297.2",
       "matchPackageNames": ["posthog-js"]
     },
