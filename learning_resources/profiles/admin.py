@@ -26,8 +26,16 @@ class ClaimExtractionAdmin(admin.ModelAdmin):
     """ClaimExtraction Admin"""
 
     model = ClaimExtraction
-    list_display = ("key", "level", "extractor_version", "model", "unit", "created_on")
-    list_filter = ("level", "model", "extractor_version")
+    list_display = (
+        "key",
+        "level",
+        "extractor_version",
+        "model",
+        "unit",
+        "published",
+        "created_on",
+    )
+    list_filter = ("published", "level", "model", "extractor_version")
     search_fields = ("key", "unit__external_id", "unit__run__run_id")
     raw_id_fields = ("unit",)
     show_full_result_count = False

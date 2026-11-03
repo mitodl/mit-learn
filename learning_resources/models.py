@@ -1524,13 +1524,6 @@ class ResourceProfileConfiguration(TimestampedModel):
 class ClaimExtraction(TimestampedModel):
     """
     The validated output of one resource profile LLM call, keyed by its inputs.
-
-    Rows are a cache: before a call, its key is computed from the text of the
-    files it reads, and a row with that key is used instead of calling again.
-    The prompt and model aren't in the key, so changing them leaves rows as
-    they are until they are regenerated with overwrite.
-    Units with identical files in different runs share a row, so `unit` is the
-    unit the row was first produced for.
     """
 
     class Level(models.TextChoices):
@@ -1553,6 +1546,7 @@ class ClaimExtraction(TimestampedModel):
         on_delete=models.SET_NULL,
         related_name="claim_extractions",
     )
+    published = models.BooleanField(default=False)
 
     def __str__(self):
         return f"{self.level} {self.extractor_version} {self.key[:12]}"
