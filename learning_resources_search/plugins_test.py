@@ -3,6 +3,7 @@
 from types import SimpleNamespace
 
 import pytest
+from django.db import transaction
 
 from learning_resources.etl.constants import ETLSource
 from learning_resources.factories import (
@@ -74,17 +75,86 @@ def mock_search_index_helpers(mocker):
 @pytest.mark.django_db
 @pytest.mark.parametrize("resource_type", [COURSE_TYPE, PROGRAM_TYPE])
 def test_search_index_plugin_resource_upserted(
-    mock_search_index_helpers, resource_type
+    mock_search_index_helpers, django_capture_on_commit_callbacks, resource_type
 ):
     """The plugin function should upsert a resource to the search index"""
     resource = LearningResourceFactory.create(resource_type=resource_type)
-    SearchIndexPlugin().resource_upserted(
-        resource, percolate=False, generate_embeddings=False
-    )
+    with django_capture_on_commit_callbacks(execute=True):
+        SearchIndexPlugin().resource_upserted(
+            resource, percolate=False, generate_embeddings=False
+        )
 
     mock_search_index_helpers.mock_upsert_learning_resource_immutable_signature.assert_called_once_with(
         resource.id
     )
+
+
+@pytest.mark.django_db
+def test_search_index_plugin_resource_upserted_waits_for_commit(
+    mocker, settings, django_capture_on_commit_callbacks
+):
+    """An upsert inside an open transaction queues nothing until it commits,
+    then queues the upsert, embeddings and percolation as one chain.
+    """
+    settings.QDRANT_ENABLE_INDEXING_PLUGIN_HOOKS = True
+    mock_try_task = mocker.patch(
+        "learning_resources_search.plugins.try_with_retry_as_task"
+    )
+    mock_chain = mocker.patch("learning_resources_search.plugins.chain")
+    mock_upsert = mocker.patch(
+        "learning_resources_search.plugins.tasks.upsert_learning_resource.si"
+    )
+    mock_embed = mocker.patch(
+        "learning_resources_search.plugins.vector_tasks.generate_embeddings.si"
+    )
+    mock_percolate = mocker.patch(
+        "learning_resources_search.plugins.tasks.percolate_learning_resource.si"
+    )
+    resource = LearningResourceFactory.create()
+
+    with django_capture_on_commit_callbacks(execute=True):
+        with transaction.atomic():
+            SearchIndexPlugin().resource_upserted(
+                resource, percolate=True, generate_embeddings=True
+            )
+        mock_try_task.assert_not_called()
+
+    mock_chain.assert_called_once_with(
+        mock_upsert.return_value, mock_embed.return_value, mock_percolate.return_value
+    )
+    mock_upsert.assert_called_once_with(resource.id)
+    mock_embed.assert_called_once_with(
+        [resource.id], resource.resource_type, overwrite=True
+    )
+    mock_percolate.assert_called_once_with(resource.id)
+    mock_try_task.assert_called_once_with(mock_chain.return_value)
+
+
+@pytest.mark.django_db
+def test_search_index_plugin_resource_upserted_rolled_back(
+    mocker, django_capture_on_commit_callbacks
+):
+    """An upsert whose transaction rolls back queues nothing."""
+    mock_try_task = mocker.patch(
+        "learning_resources_search.plugins.try_with_retry_as_task"
+    )
+    resource = LearningResourceFactory.create()
+
+    def upsert_then_fail():
+        with transaction.atomic():
+            SearchIndexPlugin().resource_upserted(
+                resource, percolate=False, generate_embeddings=False
+            )
+            raise RuntimeError
+
+    with (
+        django_capture_on_commit_callbacks(execute=True) as callbacks,
+        pytest.raises(RuntimeError),
+    ):
+        upsert_then_fail()
+
+    assert callbacks == []
+    mock_try_task.assert_not_called()
 
 
 @pytest.mark.django_db
@@ -638,22 +708,27 @@ def test_resource_similar_topics(mocker, settings):
 @pytest.mark.django_db
 @pytest.mark.parametrize("resource_type", [COURSE_TYPE, PROGRAM_TYPE])
 def test_search_index_plugin_resource_upserted_generate_embeddings(
-    mock_search_index_helpers, resource_type, settings
+    mock_search_index_helpers,
+    django_capture_on_commit_callbacks,
+    resource_type,
+    settings,
 ):
     """Test upsert plugin with generate_embeddings_flag"""
     settings.QDRANT_ENABLE_INDEXING_PLUGIN_HOOKS = True
     resource = LearningResourceFactory.create(resource_type=resource_type)
 
-    SearchIndexPlugin().resource_upserted(
-        resource, percolate=False, generate_embeddings=False
-    )
+    with django_capture_on_commit_callbacks(execute=True):
+        SearchIndexPlugin().resource_upserted(
+            resource, percolate=False, generate_embeddings=False
+        )
     mock_search_index_helpers.mock_generate_embeddings_immutable_signature.assert_not_called()
     mock_search_index_helpers.mock_upsert_learning_resource_immutable_signature.assert_called_once_with(
         resource.id
     )
-    SearchIndexPlugin().resource_upserted(
-        resource, percolate=False, generate_embeddings=True
-    )
+    with django_capture_on_commit_callbacks(execute=True):
+        SearchIndexPlugin().resource_upserted(
+            resource, percolate=False, generate_embeddings=True
+        )
     mock_search_index_helpers.mock_generate_embeddings_immutable_signature.assert_called_once_with(
         [resource.id], resource_type, overwrite=True
     )
