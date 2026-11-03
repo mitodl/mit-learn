@@ -779,6 +779,32 @@ def get_ovs_transcripts(*, overwrite=False):
 
 
 @app.task(acks_late=True)
+def sweep_empty_ovs_playlists(*, allow_mass_unpublish=False):
+    """
+    Unpublish OVS playlists the webhook left published with no published video.
+
+    Runs only while the webhook owns OVS playlists and videos, the pairs the
+    OVS webhook needs before it writes either. Under the legacy OVS ETL,
+    load_ovs_playlists prunes playlists itself.
+
+    Args:
+        allow_mass_unpublish (bool): skip the MAX_UNPUBLISH_SHARE check
+
+    Returns:
+        list[int]: the ids of the playlists it unpublished
+    """
+    with writing_as(Pipeline.WEBHOOK):
+        if not may_write(
+            ETLSource.ovs.name,
+            [LearningResourceType.video_playlist.name, LearningResourceType.video.name],
+        ):
+            return []
+        return loaders.unpublish_empty_ovs_playlists(
+            allow_mass_unpublish=allow_mass_unpublish
+        )
+
+
+@app.task(acks_late=True)
 def get_podcast_transcripts(*, overwrite=False):
     """
     Fetch transcripts for podcast episodes from their podcast:transcript urls.

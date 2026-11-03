@@ -3111,6 +3111,90 @@ def test_transcript_tasks_run_only_while_legacy_owns_transcripts(  # noqa: PLR09
     assert getattr(mock_module, fetch).called is legacy
 
 
+def _ovs_owned_by(playlist_owner, video_owner):
+    """Record which pipelines own OVS playlists and videos"""
+    _owned_by(
+        playlist_owner, ETLSource.ovs.name, LearningResourceType.video_playlist.name
+    )
+    _owned_by(video_owner, ETLSource.ovs.name, LearningResourceType.video.name)
+
+
+@ALL_OWNERS
+def test_sweep_empty_ovs_playlists_runs_only_while_the_webhook_owns_playlists(
+    mocker, owner
+):
+    """The sweep is the webhook's, so it does nothing beside another owner"""
+    _ovs_owned_by(owner, owner)
+    mock_unpublish = mocker.patch(
+        "learning_resources.tasks.loaders.unpublish_empty_ovs_playlists",
+        return_value=[7],
+    )
+
+    result = tasks.sweep_empty_ovs_playlists.delay(allow_mass_unpublish=True).get()
+
+    if owner == ETLSourceOwnership.Pipeline.WEBHOOK:
+        mock_unpublish.assert_called_once_with(allow_mass_unpublish=True)
+        assert result == [7]
+    else:
+        mock_unpublish.assert_not_called()
+        assert result == []
+
+
+@pytest.mark.parametrize(
+    ("playlist_owner", "video_owner"),
+    [
+        (ETLSourceOwnership.Pipeline.WEBHOOK, ETLSourceOwnership.Pipeline.LEGACY),
+        (ETLSourceOwnership.Pipeline.LEGACY, ETLSourceOwnership.Pipeline.WEBHOOK),
+    ],
+)
+def test_sweep_empty_ovs_playlists_needs_the_webhook_to_own_both_pairs(
+    mocker, playlist_owner, video_owner
+):
+    """Like the OVS webhook, the sweep needs both playlists and videos"""
+    _ovs_owned_by(playlist_owner, video_owner)
+    mock_unpublish = mocker.patch(
+        "learning_resources.tasks.loaders.unpublish_empty_ovs_playlists"
+    )
+
+    assert tasks.sweep_empty_ovs_playlists.delay().get() == []
+    mock_unpublish.assert_not_called()
+
+
+def test_sweep_empty_ovs_playlists_skips_with_no_ownership_row(mocker):
+    """With no row, legacy owns OVS playlists and the sweep does nothing"""
+    mock_unpublish = mocker.patch(
+        "learning_resources.tasks.loaders.unpublish_empty_ovs_playlists"
+    )
+
+    assert tasks.sweep_empty_ovs_playlists.delay().get() == []
+    mock_unpublish.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    ("owner", "expected_published"),
+    [
+        (ETLSourceOwnership.Pipeline.WEBHOOK, False),
+        (ETLSourceOwnership.Pipeline.LEGACY, True),
+    ],
+)
+def test_sweep_empty_ovs_playlists_unpublishes_a_leftover_playlist(
+    mocker, owner, expected_published
+):
+    """An empty OVS playlist the webhook left published is unpublished"""
+    _ovs_owned_by(owner, owner)
+    mocker.patch("learning_resources.etl.loaders.update_index")
+    mocker.patch("learning_resources.etl.loaders.bulk_resources_unpublished_actions")
+    ovs_platform = LearningResourcePlatformFactory.create(code=PlatformType.ovs.name)
+    playlist = factories.VideoPlaylistFactory.create(
+        learning_resource__platform=ovs_platform
+    ).learning_resource
+
+    tasks.sweep_empty_ovs_playlists.delay(allow_mass_unpublish=True).get()
+
+    playlist.refresh_from_db()
+    assert playlist.published is expected_published
+
+
 @pytest.mark.parametrize(
     "resource_type", [LearningResourceType.course.name, CONTENT_FILE]
 )

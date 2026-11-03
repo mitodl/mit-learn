@@ -44,6 +44,7 @@ from learning_resources.etl.ownership import (
     run_mode,
 )
 from learning_resources.etl.utils import most_common_topics
+from learning_resources.etl.warehouse_guards import MAX_UNPUBLISH_SHARE
 from learning_resources.models import (
     ContentFile,
     Course,
@@ -1902,7 +1903,7 @@ def _upsert_ovs_playlist_from_collection(collection_data: dict) -> LearningResou
     return playlist
 
 
-def prune_ovs_playlists(playlist_ids: list[int]) -> None:
+def prune_ovs_playlists(playlist_ids: list[int]) -> list[int]:
     """
     Unpublish the given OVS playlists that have no published videos left, and
     reindex the rest.
@@ -1910,6 +1911,9 @@ def prune_ovs_playlists(playlist_ids: list[int]) -> None:
     This is the webhook's version of the prune in load_ovs_playlists, which
     stops running once the webhook owns OVS. The webhook sees one video at a
     time, so it only checks the playlists that video just left.
+
+    Returns:
+        list[int]: the ids of the playlists it unpublished
     """
     playlists = LearningResource.objects.filter(id__in=playlist_ids)
     with transaction.atomic():
@@ -1932,6 +1936,71 @@ def prune_ovs_playlists(playlist_ids: list[int]) -> None:
         )
     for playlist in playlists.filter(published=True):
         update_index(playlist, newly_created=False)
+    return empty_playlist_ids
+
+
+def unpublish_empty_ovs_playlists(*, allow_mass_unpublish: bool = False) -> list[int]:
+    """
+    Unpublish every published OVS playlist that has no published video.
+
+    The webhook prunes a playlist after the relationship change commits, so a
+    failure between the two leaves an empty playlist published that no retry
+    finds, and the same goes for a deleted video. This catches those. OVS
+    playlists carry no etl_source, so they're matched on platform, as
+    load_ovs_playlists matches them.
+
+    Up to OVS_PLAYLIST_SWEEP_UNPUBLISH_FLOOR playlists are unpublished even
+    when that is over MAX_UNPUBLISH_SHARE, because with few OVS playlists the
+    share alone would refuse one. Above the floor the share applies.
+
+    Args:
+        allow_mass_unpublish (bool): skip the floor and share checks
+
+    Returns:
+        list[int]: the ids of the playlists it unpublished
+
+    Raises:
+        ExtractException: if that is more than both the floor and
+            MAX_UNPUBLISH_SHARE of the published OVS playlists, and
+            allow_mass_unpublish is False
+    """
+    published = LearningResource.objects.filter(
+        resource_type=LearningResourceType.video_playlist.name,
+        platform__code=PlatformType.ovs.name,
+        published=True,
+    )
+    with_videos = LearningResourceRelationship.objects.filter(
+        relation_type=LearningResourceRelationTypes.PLAYLIST_VIDEOS.value,
+        child__published=True,
+    ).values("parent_id")
+    empty_ids = list(
+        published.exclude(id__in=with_videos)
+        .order_by("id")
+        .values_list("id", flat=True)
+    )
+    if not empty_ids:
+        return []
+    published_count = published.count()
+    floor = settings.OVS_PLAYLIST_SWEEP_UNPUBLISH_FLOOR
+    if not allow_mass_unpublish and len(empty_ids) > max(
+        floor, published_count * MAX_UNPUBLISH_SHARE
+    ):
+        msg = (
+            f"Refusing to sweep: {len(empty_ids)} of {published_count} published "
+            f"OVS playlists have no published video, over both the floor of "
+            f"{floor} and the {MAX_UNPUBLISH_SHARE:.0%} limit: {empty_ids}. If "
+            "they really are empty, rerun with allow_mass_unpublish=True."
+        )
+        raise ExtractException(msg)
+    # prune_ovs_playlists checks again under the lock, so a playlist a push has
+    # just added a video to is reindexed rather than unpublished
+    unpublished_ids = prune_ovs_playlists(empty_ids)
+    log.info(
+        "Unpublished %d OVS playlists with no published video: %s",
+        len(unpublished_ids),
+        unpublished_ids,
+    )
+    return unpublished_ids
 
 
 def load_ovs_video_from_webhook(video_payload: dict) -> LearningResource | None:
