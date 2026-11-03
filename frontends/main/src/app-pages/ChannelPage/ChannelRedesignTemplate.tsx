@@ -43,9 +43,12 @@ const TopicHero = styled.section(({ theme }) => ({
 /**
  * What clips the photograph to the hero.
  *
- * The picture is taller than the shorter hero a channel with nothing to
- * feature leaves, and is let run off the bottom of it rather than shrink to
- * fit, so something has to cut it off at the hero's edge.
+ * Both edges it runs off are cut here. The artwork is wider than the design's
+ * own page -- see `HERO_PHOTO_ART` -- so on anything but a very wide screen
+ * its right end is meant to be lost, and it is taller than the shorter hero a
+ * channel with nothing to feature leaves, which it runs off the bottom of
+ * rather than shrink to fit. Without this both would simply overflow the
+ * section.
  */
 const HeroPhotoClip = styled.div({
   position: "absolute",
@@ -55,61 +58,108 @@ const HeroPhotoClip = styled.div({
 })
 
 /**
- * How wide the photograph is drawn, as a share of the hero.
+ * The artwork, and where the design puts it in the hero it is drawn against.
  *
- * The design draws it 922 of the hero's 1676 and takes it to the right edge.
- * A share rather than the artwork's own 920 pixels, so it holds that much of
- * the page at every width instead of shrinking to a stamp in the corner of a
- * wide one.
+ * The file is cut wider than the design's own page has room for: 1158 x 523,
+ * placed 724 across a 1676-wide hero, so its last 206px cross the right edge
+ * and are lost. That is deliberate -- the artwork carries more of the
+ * photograph than the design shows precisely so that a screen with room to
+ * spare has something to fill it with. Figma 48371:67751, the Image in the
+ * department frame, and 48814:69857, the same artwork in the 2400-wide one:
+ * both place it identically, and the wide frame differs only in showing the
+ * end of it.
+ *
+ * Both long sides are diagonal cuts with the hairline outline running outside
+ * them, and the export bleeds 2px around the lot, which is why the numbers
+ * here are the design's less that bleed -- 724 for its 726, and the box pulled
+ * 2px above the hero's top. Within the file the photograph itself occupies
+ * 1094 x 494 at 30px in from the left, 30 from the right and 27 above the
+ * bottom; the rest is the outline and the air it keeps from the cut.
  */
-const HERO_PHOTO_WIDTH = "55%"
+const HERO_PHOTO_ART = {
+  width: 1158,
+  height: 523,
+  left: 724,
+  /** The hero width the two numbers above are a share of. */
+  heroWidth: 1676,
+  /**
+   * Where that hero puts the column the title sits in, which the design
+   * measures the artwork from: the same 522px lie between the two in the
+   * department frame and in the 2400-wide one.
+   */
+  contentLeft: 202,
+}
 
 /**
- * The artwork's own box, and how much of that box is the photograph.
+ * How wide the column the title sits in gets.
  *
- * The outline the design runs outside the cut edge is part of the artwork now,
- * which makes the file larger than the picture in it: 32px down the left for
- * the outline and the gap it keeps from the cut, 29px below for its foot. The
- * picture still occupies the top right 920 x 494.
+ * The shared `Container`'s own 1320px less the 24px it gutters each side,
+ * which it reaches at 1320px of viewport and holds, centred, above that. The
+ * design's column is the same 1272 -- measured at 202px in from a 1676-wide
+ * page and 564 from a 2400-wide one, which is exactly where the shipped
+ * Container puts it.
  */
-const HERO_PHOTO_ART = { width: 952, height: 523, pictureWidth: 920 }
+const CONTENT_WIDTH = 1272
 
-/**
- * The artwork drawn so that the picture inside it lands on the share above.
- *
- * Scaling the file to that share directly would draw the picture narrower by
- * exactly the margin, so the share is widened in the same proportion and the
- * margin hangs off the picture's left, which is where the design has it.
- */
-const HERO_PHOTO_ART_WIDTH = `${
-  (parseFloat(HERO_PHOTO_WIDTH) * HERO_PHOTO_ART.width) /
-  HERO_PHOTO_ART.pictureWidth
-}%`
+/** A length in the design's hero, as the share of any hero it stands for. */
+const heroShare = (px: number) => `${(px / HERO_PHOTO_ART.heroWidth) * 100}%`
 
 /**
  * The photograph behind a department's title.
  *
  * One placement for every department, which is what the artwork being cut to
- * a single size buys: there is nothing left for a department to state. It is
- * anchored to the hero's top right corner at its own proportions -- the
- * diagonal down its left side and the outline beyond it are part of the image,
- * so stretching it would bend the two edges the design is precise about.
+ * a single size buys: there is nothing left for a department to state. Drawn
+ * at its own proportions -- the diagonals down both sides and the outline
+ * beyond them are part of the image, so stretching it would bend the edges the
+ * design is precise about.
  */
 const HeroPhoto = styled.div<{ backgroundUrl: string }>(
   ({ backgroundUrl }) => ({
     position: "absolute",
     top: "-2px",
-    right: 0,
-    width: HERO_PHOTO_ART_WIDTH,
+    /**
+     * Anchored by its left edge rather than its right, because the right is
+     * the end meant to run off the page.
+     *
+     * Two readings of the design, and it is drawn at whichever stands further
+     * right. Below the width the design is drawn at, the share of the hero it
+     * puts the edge at: that leaves exactly the picture the right-anchored
+     * share it replaces did -- an edge at 43.2% leaves the same 56.8% of
+     * artwork standing as anchoring 56.9% of it to the right edge does -- so
+     * every width too narrow to show the whole file is drawn as before, phones
+     * included. Above it, the 522px the design holds between the title's
+     * column and the artwork, which is the relationship the diagonal is
+     * composed on and the one both frames agree about.
+     *
+     * The two meet at the design's own 1676px, so neither takes a breakpoint
+     * to choose and the artwork never jumps: below it the hero is too narrow
+     * for the column to be centred anyway, and above it the column is capped
+     * and the second reading is the one with anything to say.
+     */
+    left: `max(${heroShare(HERO_PHOTO_ART.left)}, calc(50% - ${
+      CONTENT_WIDTH / 2 - (HERO_PHOTO_ART.left - HERO_PHOTO_ART.contentLeft)
+    }px))`,
+    /**
+     * The design's share of the hero until the file is drawn life-size, and no
+     * wider.
+     *
+     * Past 1676 the share would go on scaling it up -- blowing a 1158px file
+     * up and holding its far end off the right edge of a screen with the room
+     * to have shown the whole thing. Capped, the photograph stops growing at
+     * 1:1 and the hero's own white takes what is left of a very wide screen,
+     * which is what the 2400 frame draws.
+     */
+    width: `min(${heroShare(HERO_PHOTO_ART.width)}, ${HERO_PHOTO_ART.width}px)`,
     aspectRatio: `${HERO_PHOTO_ART.width} / ${HERO_PHOTO_ART.height}`,
     pointerEvents: "none",
     backgroundImage: backgroundUrl,
     backgroundRepeat: "no-repeat",
     /* Artwork cut to the box's own shape fills it either way; `cover` is for
-       the departments not recut yet, which it crops rather than ruling white
-       bands down the sides of. */
+       any file that is ever cut to another, which it crops rather than ruling
+       white bands down the sides of -- off the right and the bottom, the two
+       edges the hero is already free to cut. */
     backgroundSize: "cover",
-    backgroundPosition: "top right",
+    backgroundPosition: "top left",
   }),
 )
 
