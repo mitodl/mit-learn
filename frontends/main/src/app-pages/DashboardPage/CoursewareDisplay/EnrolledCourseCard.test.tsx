@@ -29,6 +29,11 @@ const setPerRunMenus = (enabled: boolean) => {
     )
 }
 
+// clearAllMocks keeps implementations, so reset the flag before every test.
+beforeEach(() => {
+  setPerRunMenus(false)
+})
+
 // The paid path checks enrollment eligibility before the cart.
 beforeEach(() => {
   mitxonline.mockEnrollmentEligible()
