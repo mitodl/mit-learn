@@ -967,4 +967,7 @@ def test_extracted_content_files_webhook_scopes_the_pull_to_the_run(
         "catalog.schema.integrations__learn__content_files",
         where={"etl_source": ETLSource.xpro.name, "run_readable_id": run.run_id},
     )
-    mock_load_run.assert_called_once_with(run, [{"key": "a"}], expected_count=1)
+    # the per-run unpublish limit applies, and nothing a sender sends lifts it
+    mock_load_run.assert_called_once_with(
+        run, [{"key": "a"}], expected_count=1, allow_mass_unpublish=False
+    )
