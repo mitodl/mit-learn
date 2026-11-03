@@ -100,6 +100,7 @@ For a webhook source:
 1. In Django admin, create a row per resource type from the table above with `owner` set to `webhook`.
 2. In Dagster, materialize the source's delivery asset by hand (e.g. `mit_learn_delivery/mitpe_webhook`). That's the first write, so it happens while you're watching.
 3. Once it checks out (below), start the schedule.
+4. The webhook refuses a batch that would unpublish more than 10% of the source's published resources of a type, the limit the warehouse tasks apply. It answers `422`, writes nothing from the batch, its other groups included, and the Dagster run fails. A `sync` pair with no resources counts as unpublishing all of it, and so does a delivered resource with `published: false`, or a delivered course or program with no runs. A `test_mode` course a batch leaves out doesn't count, because the prune skips it. If you have explained a larger difference, send `"allow_mass_unpublish": true` in the request. The delivery assets can't send it yet (tracked in the data platform). A type with fewer than ten published resources is over the limit as soon as one is removed. `mitpe` programs are like that today, and `mitpe` delivers courses and programs in one batch, so a program leaving the feed stops its courses updating too until the batch is sent that way.
 
 For a warehouse source:
 
