@@ -2479,9 +2479,8 @@ class OpenDataLoaderLLMConverter:
 
     def _save_graphics(self) -> None:
         """Crop each graphic and region, in colour, from the page render."""
-        if not self.figures_dir:
-            return
-        self.figures_dir.mkdir(parents=True, exist_ok=True)
+        if self.figures_dir:
+            self.figures_dir.mkdir(parents=True, exist_ok=True)
         for figure in self.graphics:
             x1, y1, x2, y2 = figure.bounding_box
             padded = [
@@ -2497,8 +2496,9 @@ class OpenDataLoaderLLMConverter:
                 figure.kind = BLANK
                 image.close()
                 continue
-            figure.path = self.figures_dir / self._figure_filename(figure)
-            image.convert("RGB").save(figure.path, optimize=True)
+            if self.figures_dir:
+                figure.path = self.figures_dir / self._figure_filename(figure)
+                image.convert("RGB").save(figure.path, optimize=True)
             image.close()
 
     @property
