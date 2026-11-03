@@ -213,6 +213,7 @@ def learning_resource_offeror():
 @pytest.mark.parametrize("delivery", [LearningResourceDelivery.in_person.name, None])
 def test_load_program(  # noqa: PLR0913
     mock_upsert_tasks,
+    django_capture_on_commit_callbacks,
     program_exists,
     is_published,
     courses_exist,
@@ -269,28 +270,29 @@ def test_load_program(  # noqa: PLR0913
     }
 
     delivery_data = {"delivery": [delivery]} if delivery else {}
-    result, _, _ = load_program(
-        {
-            "platform": platform.code,
-            "readable_id": program.learning_resource.readable_id,
-            "professional": False,
-            "title": program.learning_resource.title,
-            "url": program.learning_resource.url,
-            "image": {"url": program.learning_resource.image.url},
-            "published": is_published,
-            "runs": [run_data],
-            "availability": program.learning_resource.availability,
-            "courses": [
-                {
-                    "readable_id": course.learning_resource.readable_id,
-                    "platform": platform.code,
-                    "availability": course.learning_resource.availability,
-                }
-                for course in courses
-            ],
-            **delivery_data,
-        },
-    )
+    with django_capture_on_commit_callbacks(execute=True):
+        result, _, _ = load_program(
+            {
+                "platform": platform.code,
+                "readable_id": program.learning_resource.readable_id,
+                "professional": False,
+                "title": program.learning_resource.title,
+                "url": program.learning_resource.url,
+                "image": {"url": program.learning_resource.image.url},
+                "published": is_published,
+                "runs": [run_data],
+                "availability": program.learning_resource.availability,
+                "courses": [
+                    {
+                        "readable_id": course.learning_resource.readable_id,
+                        "platform": platform.code,
+                        "availability": course.learning_resource.availability,
+                    }
+                    for course in courses
+                ],
+                **delivery_data,
+            },
+        )
 
     assert Program.objects.count() == 1
     assert Course.objects.count() == after_course_count
