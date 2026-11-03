@@ -47,6 +47,8 @@ import { useQuery } from "@tanstack/react-query"
 import { coursePageView } from "@/common/urls"
 import { getRunMenuItems } from "./runMenuItems"
 import { useOrderIdForRun } from "@/common/mitxonline/useOrderIdForResource"
+import { useFeatureFlagEnabled } from "posthog-js/react"
+import { FeatureFlags } from "@/common/feature_flags"
 import type { SimpleMenuItem } from "ol-components"
 import {
   CourseRunEnrollmentV3,
@@ -522,7 +524,15 @@ export const EnrolledCourseCard = ({
     })
   }
 
-  menuItems.push(...getRunMenuItems({ enrollment, title, receiptResolution }))
+  const hasMultipleRuns = (siblingEnrollments?.length ?? 0) > 0
+  const perRunMenusEnabled = useFeatureFlagEnabled(
+    FeatureFlags.MultipleRunContextMenus,
+  )
+  // With several runs, each accordion row carries its own run's actions, so
+  // the card keeps only course-level items rather than an unlabeled duplicate.
+  if (!(hasMultipleRuns && perRunMenusEnabled)) {
+    menuItems.push(...getRunMenuItems({ enrollment, title, receiptResolution }))
+  }
 
   const menuButton = (
     <MenuButton
@@ -556,7 +566,6 @@ export const EnrolledCourseCard = ({
       </Stack>
     )
 
-  const hasMultipleRuns = (siblingEnrollments?.length ?? 0) > 0
   const showEnrollmentStatusIcon =
     !isContractPageResource && isModule && isCompact
   const runCount = (siblingEnrollments?.length ?? 0) + 1

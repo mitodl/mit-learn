@@ -16,6 +16,18 @@ import { faker } from "@faker-js/faker/locale/en"
 import moment from "moment"
 import { EnrolledCourseCard } from "./EnrolledCourseCard"
 import { setupOrderHistory } from "./test-utils"
+import { useFeatureFlagEnabled } from "posthog-js/react"
+import { FeatureFlags } from "@/common/feature_flags"
+
+jest.mock("posthog-js/react")
+
+const setPerRunMenus = (enabled: boolean) => {
+  jest
+    .mocked(useFeatureFlagEnabled)
+    .mockImplementation((flag) =>
+      flag === FeatureFlags.MultipleRunContextMenus ? enabled : false,
+    )
+}
 
 // The paid path checks enrollment eligibility before the cart.
 beforeEach(() => {
@@ -1254,6 +1266,116 @@ describe("EnrolledCourseCard — multiple enrollment runs", () => {
       />,
     )
     expect(screen.getAllByText("Course runs (5)").length).toBeGreaterThan(0)
+  })
+
+  describe("card context menu", () => {
+    const openDesktopCardMenu = async () => {
+      const desktopCard = screen.getByTestId("enrollment-card-desktop")
+      await user.click(
+        within(desktopCard).getByRole("button", { name: "More options" }),
+      )
+    }
+
+    test("omits run-scoped items when per-run menus are enabled", async () => {
+      setPerRunMenus(true)
+      setupUserApis()
+      const enrollment = mitxonline.factories.enrollment.courseEnrollment({
+        enrollment_mode: EnrollmentMode.Verified,
+        run: { course: { readable_id: "some-course-id" } },
+      })
+      setupOrderHistory({ runId: enrollment.run.id })
+      renderWithProviders(
+        <EnrolledCourseCard
+          enrollment={enrollment}
+          siblingEnrollments={[
+            mitxonline.factories.enrollment.courseEnrollment(),
+          ]}
+        />,
+      )
+      await openDesktopCardMenu()
+
+      expect(
+        screen.getByRole("menuitem", { name: "View Course Details" }),
+      ).toBeInTheDocument()
+      // Let the order lookup settle so a Receipt item would have appeared.
+      await waitFor(() => {
+        expect(makeRequest).toHaveBeenCalledWith(
+          expect.objectContaining({
+            method: "get",
+            url: mitxonline.urls.orders.historyList({ limit: 100 }),
+          }),
+        )
+      })
+      for (const name of ["Email Settings", "Unenroll", "Receipt"]) {
+        expect(screen.queryByRole("menuitem", { name })).not.toBeInTheDocument()
+      }
+    })
+
+    test("keeps run-scoped items when per-run menus are disabled", async () => {
+      setPerRunMenus(false)
+      setupUserApis()
+      const enrollment = mitxonline.factories.enrollment.courseEnrollment()
+      renderWithProviders(
+        <EnrolledCourseCard
+          enrollment={enrollment}
+          siblingEnrollments={[
+            mitxonline.factories.enrollment.courseEnrollment(),
+          ]}
+        />,
+      )
+      await openDesktopCardMenu()
+
+      expect(
+        screen.getByRole("menuitem", { name: "Email Settings" }),
+      ).toBeInTheDocument()
+      expect(
+        screen.getByRole("menuitem", { name: "Unenroll" }),
+      ).toBeInTheDocument()
+    })
+
+    test("keeps run-scoped items on a single-run card when per-run menus are enabled", async () => {
+      setPerRunMenus(true)
+      setupUserApis()
+      const enrollment = mitxonline.factories.enrollment.courseEnrollment()
+      renderWithProviders(<EnrolledCourseCard enrollment={enrollment} />)
+      await openDesktopCardMenu()
+
+      expect(
+        screen.getByRole("menuitem", { name: "Email Settings" }),
+      ).toBeInTheDocument()
+      expect(
+        screen.getByRole("menuitem", { name: "Unenroll" }),
+      ).toBeInTheDocument()
+    })
+
+    test("hides the card menu when no course-level items remain", async () => {
+      setPerRunMenus(true)
+      setupUserApis()
+      const enrollment = mitxonline.factories.enrollment.courseEnrollment({
+        b2b_contract_id: faker.number.int(),
+      })
+      renderWithProviders(
+        <EnrolledCourseCard
+          enrollment={enrollment}
+          siblingEnrollments={[
+            mitxonline.factories.enrollment.courseEnrollment(),
+          ]}
+        />,
+      )
+      const desktopCard = screen.getByTestId("enrollment-card-desktop")
+      expect(
+        within(desktopCard).queryByRole("button", { name: "More options" }),
+      ).not.toBeInTheDocument()
+      // The rows still offer the run actions.
+      await user.click(
+        within(desktopCard).getByRole("button", { name: /Course runs/ }),
+      )
+      expect(
+        within(desktopCard).getAllByRole("button", {
+          name: /^More options for /,
+        }),
+      ).toHaveLength(2)
+    })
   })
 })
 
