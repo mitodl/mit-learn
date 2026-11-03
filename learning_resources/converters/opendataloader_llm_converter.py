@@ -2772,6 +2772,8 @@ STRUCTURE_WINDOW_PAGES = 12
 MAX_ELEMENT_CHARS = 1600
 # an OCW citation cover has fewer words than this
 MAX_COVER_WORDS = 100
+# the site an OCW citation cover tells readers to visit (text, not a URL check)
+OCW_SITE_MENTION = re.compile(r"\bocw\.mit\.edu\b", re.IGNORECASE)
 # a heading of at most this many words can group a problem's parts
 MAX_GROUP_HEADING_WORDS = 8
 # boilerplate with more words than this is suspect
@@ -2973,7 +2975,7 @@ def _ocw_covers(elements):
         text = " ".join(e["text"] for e in group)
         if (
             "For information about citing these materials" in text
-            and "ocw.mit.edu" in text
+            and OCW_SITE_MENTION.search(text)
             and len(text.split()) < MAX_COVER_WORDS
             and not re.search(
                 r"(?:problem|question|exercise)\s*#?\s*\d", text, re.IGNORECASE
