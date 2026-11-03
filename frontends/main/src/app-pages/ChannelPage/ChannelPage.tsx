@@ -77,7 +77,7 @@ const ChannelPage: React.FC = () => {
    */
   const awaitingFlags =
     channelTypeUsesRedesignFlag(String(channelType)) && !flagsLoaded
-  if (awaitingFlags) {
+  if (!awaitingFlags) {
     return <PageLoadingSpinner loading />
   }
 
