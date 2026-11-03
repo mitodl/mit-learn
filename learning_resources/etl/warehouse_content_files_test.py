@@ -458,6 +458,89 @@ def test_load_run_ocw_short_read_keeps_the_stored_score(
     mock_completeness.assert_not_called()
 
 
+def _published_run(count):
+    run = _run()
+    for index in range(count):
+        ContentFileFactory.create(run=run, key=f"old-{index}", published=True)
+    return run
+
+
+def test_load_run_refuses_a_same_sized_replacement(warehouse_owns_content_files):
+    """
+    Every file renamed keeps the count, which the sync's check and the expected
+    count both miss, so the load checks keys and writes nothing
+    """
+    run = _published_run(20)
+    rows = [_open_edx_row(f"new-{index}") for index in range(20)]
+
+    with pytest.raises(ExtractException, match="20 of 20 published"):
+        warehouse_content_files.load_run(run, rows, expected_count=20)
+
+    assert set(
+        run.content_files.filter(published=True).values_list("key", flat=True)
+    ) == {f"old-{index}" for index in range(20)}
+    assert not run.content_files.filter(key__startswith="new-").exists()
+
+
+def test_load_run_refused_replacement_loads_when_allowed(warehouse_owns_content_files):
+    """The override loads the new files and unpublishes the old ones"""
+    run = _published_run(20)
+    rows = [_open_edx_row(f"new-{index}") for index in range(20)]
+
+    assert (
+        warehouse_content_files.load_run(
+            run, rows, expected_count=20, allow_mass_unpublish=True
+        )
+        == 20
+    )
+
+    assert not run.content_files.filter(key__startswith="old-", published=True).exists()
+
+
+@pytest.mark.parametrize(
+    ("published", "dropped", "refused"),
+    [(25, 10, False), (25, 11, True), (200, 20, False), (200, 21, True)],
+)
+def test_load_run_unpublish_limit_is_a_share_with_a_floor(
+    warehouse_owns_content_files, published, dropped, refused
+):
+    """
+    A run may lose RUN_UNPUBLISH_FLOOR files, or MAX_UNPUBLISH_SHARE of them if
+    that is more
+    """
+    run = _published_run(published)
+    rows = [_open_edx_row(f"old-{index}") for index in range(published - dropped)]
+
+    if refused:
+        with pytest.raises(ExtractException):
+            warehouse_content_files.load_run(run, rows, expected_count=len(rows))
+    else:
+        warehouse_content_files.load_run(run, rows, expected_count=len(rows))
+        assert run.content_files.filter(published=True).count() == published - dropped
+
+
+def test_load_run_short_read_is_not_held_to_the_limit(warehouse_owns_content_files):
+    """A read that skips the prune unpublishes nothing, so nothing is refused"""
+    run = _published_run(20)
+
+    warehouse_content_files.load_run(run, [_open_edx_row("new")], expected_count=20)
+
+    assert run.content_files.filter(published=True).count() == 21
+
+
+def test_load_run_failed_rows_count_as_kept(warehouse_owns_content_files):
+    """A row whose extraction failed keeps its file, so it isn't counted as lost"""
+    run = _published_run(20)
+    rows = [
+        _open_edx_row(f"old-{index}", content=None, extraction_status="failed")
+        for index in range(19)
+    ] + [_open_edx_row("new")]
+
+    warehouse_content_files.load_run(run, rows, expected_count=20)
+
+    assert run.content_files.filter(published=True).count() == 20
+
+
 def test_runs_to_load_round_trips_with_load_run(warehouse_owns_content_files):
     """A run stays loaded until its aggregates move"""
     run = _run()
