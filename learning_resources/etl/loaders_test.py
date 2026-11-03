@@ -68,6 +68,7 @@ from learning_resources.etl.loaders import (
     load_videos,
     load_videos_from_content_files,
     prune_ovs_playlists,
+    unpublish_empty_ovs_playlists,
     unpublish_orphaned_videos,
     unpublish_removed_playlists,
     unpublish_removed_youtube_channels,
@@ -3918,6 +3919,79 @@ def test_prune_ovs_playlists_waits_for_a_push_into_the_playlist(
     assert playlist.title == "A new title"
     assert playlist.resources.filter(readable_id="new_video").exists()
     mock_unpublished.assert_not_called()
+
+
+def _playlist_with_videos(platform, *, published=1, unpublished=0):
+    """Create a playlist on a platform holding published and unpublished videos"""
+    playlist = VideoPlaylistFactory.create(
+        learning_resource__platform=platform
+    ).learning_resource
+    _add_playlist_videos(
+        playlist,
+        [VideoFactory.create().learning_resource for _ in range(published)]
+        + [
+            VideoFactory.create(is_unpublished=True).learning_resource
+            for _ in range(unpublished)
+        ],
+    )
+    return playlist
+
+
+def test_unpublish_empty_ovs_playlists(mocker, ovs_platform, youtube_video_platform):
+    """OVS playlists with no published video are unpublished, and nothing else is"""
+    mocker.patch("learning_resources.etl.loaders.update_index")
+    mock_unpublished = mocker.patch(
+        "learning_resources.etl.loaders.bulk_resources_unpublished_actions"
+    )
+    # 2 empty of 20 published is the MAX_UNPUBLISH_SHARE limit, so it's allowed
+    kept = [_playlist_with_videos(ovs_platform) for _ in range(18)]
+    empty = _playlist_with_videos(ovs_platform, published=0)
+    unpublished_videos_only = _playlist_with_videos(
+        ovs_platform, published=0, unpublished=1
+    )
+    youtube_empty = _playlist_with_videos(youtube_video_platform, published=0)
+
+    swept = unpublish_empty_ovs_playlists()
+
+    assert swept == sorted([empty.id, unpublished_videos_only.id])
+    for playlist in (empty, unpublished_videos_only):
+        playlist.refresh_from_db()
+        assert playlist.published is False
+    for playlist in [*kept, youtube_empty]:
+        playlist.refresh_from_db()
+        assert playlist.published is True
+    mock_unpublished.assert_called_once_with(
+        swept, LearningResourceType.video_playlist.name
+    )
+
+    assert unpublish_empty_ovs_playlists() == []
+
+
+def test_unpublish_empty_ovs_playlists_refuses_past_the_unpublish_limit(
+    mocker, ovs_platform
+):
+    """Over MAX_UNPUBLISH_SHARE it unpublishes nothing unless told to"""
+    mocker.patch("learning_resources.etl.loaders.update_index")
+    mock_unpublished = mocker.patch(
+        "learning_resources.etl.loaders.bulk_resources_unpublished_actions"
+    )
+    # production's count on 2026-11-02, where one leftover is over the limit
+    for _ in range(8):
+        _playlist_with_videos(ovs_platform)
+    empty = _playlist_with_videos(ovs_platform, published=0)
+
+    with pytest.raises(
+        ExtractException, match=rf"Refusing to sweep: 1 of 9 .*\[{empty.id}\]"
+    ):
+        unpublish_empty_ovs_playlists()
+
+    empty.refresh_from_db()
+    assert empty.published is True
+    mock_unpublished.assert_not_called()
+
+    assert unpublish_empty_ovs_playlists(allow_mass_unpublish=True) == [empty.id]
+    empty.refresh_from_db()
+    assert empty.published is False
 
 
 def test_unpublish_removed_youtube_channels(mock_upsert_tasks):

@@ -10,6 +10,7 @@ import tomllib
 from unittest import mock
 
 import pytest
+from celery.schedules import crontab
 from django.conf import settings
 from django.core import mail
 from django.core.exceptions import ImproperlyConfigured
@@ -347,6 +348,16 @@ class TestSettings(TestCase):
         ):
             settings_vars = self.reload_settings(module="main.settings_celery")
             assert settings_vars["CELERY_RESULT_EXPIRES"] == 120
+
+    def test_sweep_empty_ovs_playlists_beat_entry(self):
+        """The OVS playlist sweep runs daily, with or without StarRocks"""
+        with mock.patch.dict("os.environ", REQUIRED_SETTINGS, clear=True):
+            settings_vars = self.reload_settings(module="main.settings_celery")
+            entry = settings_vars["CELERY_BEAT_SCHEDULE"][
+                "sweep-empty-ovs-playlists-every-1-days"
+            ]
+            assert entry["task"] == "learning_resources.tasks.sweep_empty_ovs_playlists"
+            assert entry["schedule"] == crontab(minute=45, hour=9)
 
     def test_program_certificates_beat_entry_absent_without_starrocks_host(self):
         """The certificate-sync beat entry isn't registered when StarRocks
