@@ -1418,9 +1418,13 @@ def _unwrap_header_footer(kids: list[dict]) -> list[dict]:
             flat.append(kid)
             continue
         text = _header_footer_text(kid)
-        if not re.search(r"[^\W\d_]", text):
+        if not re.search(r"[^\W\d_]", text) and not CREDIT.search(text):
             continue
-        if RUNNING_LABEL.match(text) or len(pages[key(kid)]) == 1:
+        if (
+            RUNNING_LABEL.match(text)
+            or CREDIT.search(text)
+            or len(pages[key(kid)]) == 1
+        ):
             flat.extend(k for k in kid.get("kids") or [] if isinstance(k, dict))
     return flat
 
