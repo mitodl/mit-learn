@@ -16,9 +16,12 @@ run back while its export is being checked, so absence does not mean deletion.
 
 A load unpublishes the run's files its rows leave out, unless the number of rows
 it read differs from the number it was told to expect
-(ol-data-platform docs/design/contentfile_scoped_pull_contract.md §4). A file
-whose extraction failed has a row with no text. Its stored row is left as it is
-and is not unpublished.
+(ol-data-platform docs/design/contentfile_scoped_pull_contract.md §4). That count
+comes from the same build as the rows, so it can't catch a build that names a
+run's files differently, and a load refuses to unpublish more of a run's files by
+key than MAX_UNPUBLISH_SHARE of them or RUN_UNPUBLISH_FLOOR, whichever is more. A
+file whose extraction failed has a row with no text. Its stored row is left as it
+is and is not unpublished.
 """
 
 import json
@@ -50,6 +53,9 @@ VIEWS = {
 }
 RUN_COLUMN = "run_readable_id"
 EXTRACTION_FAILED = "failed"
+# Files one load may unpublish whatever the run's size, so that ordinary edits
+# to a small run (where one file is over MAX_UNPUBLISH_SHARE) still load.
+RUN_UNPUBLISH_FLOOR = 10
 
 # The columns whose aggregates tell that a run changed. The OCW view's
 # last_modified moves for every file of a course when any of them changes. The
@@ -212,6 +218,7 @@ def load_run(
     rows: list[dict],
     *,
     expected_count: int | None = None,
+    allow_mass_unpublish: bool = False,
 ) -> int:
     """
     Load one run's rows as its content files.
@@ -229,9 +236,15 @@ def load_run(
         rows (list of dict): the run's rows in its source's view
         expected_count (int | None): how many rows the sender saw. Any other
             number of rows skips the prune, and None trusts ``rows``
+        allow_mass_unpublish (bool): lift the limit on how many of the run's
+            published files the prune may unpublish
 
     Returns:
         int: the number of files loaded
+
+    Raises:
+        ExtractException: the prune would unpublish more of the run's files
+            than the limit, checked before anything is written
     """
     etl_source = run.learning_resource.etl_source
     is_ocw = etl_source == ETLSource.ocw.name
@@ -247,6 +260,18 @@ def load_run(
     if run.checksum:
         run.checksum = None
         run.save(update_fields=["checksum"])
+    if complete and not allow_mass_unpublish:
+        # by key, before the upsert: a build that renames every file has the
+        # same count, and loading first would publish the renamed files
+        published = set(
+            run.content_files.filter(published=True).values_list("key", flat=True)
+        )
+        refuse_unpublish_share(
+            f"{etl_source} content files of run {run.run_id}",
+            len(published),
+            len(published - {row["key"] for row in rows}),
+            floor=RUN_UNPUBLISH_FLOOR,
+        )
     failed_keys = [
         row["key"] for row in rows if row["extraction_status"] == EXTRACTION_FAILED
     ]

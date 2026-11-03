@@ -1809,7 +1809,12 @@ CONTENT_FILE_LOAD_MAX_RETRIES = 60
     time_limit=CONTENT_FILE_LOAD_TIME_LIMIT_SECONDS,
 )
 def load_warehouse_content_files(
-    self, etl_source: str, run_id: str, expected_count: int | None = None
+    self,
+    etl_source: str,
+    run_id: str,
+    expected_count: int | None = None,
+    *,
+    allow_mass_unpublish: bool = False,
 ) -> int:
     """
     Load one run's content files from the warehouse
@@ -1820,6 +1825,8 @@ def load_warehouse_content_files(
         expected_count (int | None): the number of rows the caller saw for the
             run. Any other number skips the prune (see
             warehouse_content_files.load_run)
+        allow_mass_unpublish (bool): lift the limit on how many of the run's
+            published files the load may unpublish
 
     Returns:
         int: the number of files loaded
@@ -1860,7 +1867,10 @@ def load_warehouse_content_files(
             finally:
                 conn.close()
             return warehouse_content_files.load_run(
-                run, rows, expected_count=expected_count
+                run,
+                rows,
+                expected_count=expected_count,
+                allow_mass_unpublish=allow_mass_unpublish is True,
             )
         finally:
             lock.delete(lock_key)
@@ -1876,8 +1886,9 @@ class SyncContentFilesTask(BaseWarehouseETLTask):
     read whole. A shadow of content_file is refused, so a run writes or skips.
 
     A run that would unpublish more than warehouse_guards.MAX_UNPUBLISH_SHARE of
-    the published files fails before queueing anything. Queue it with
-    ``allow_mass_unpublish=True`` when the removal is real.
+    the published files fails before queueing anything, and each load checks its
+    own run by key (warehouse_content_files.load_run). Queue it with
+    ``allow_mass_unpublish=True`` when the removal is real, which lifts both.
     """
 
     abstract = True
@@ -1907,7 +1918,12 @@ class SyncContentFilesTask(BaseWarehouseETLTask):
         )
         log.info("Queueing %d %s runs' content files", len(to_load), etl_source)
         for run_id, row_count in to_load:
-            load_warehouse_content_files.delay(etl_source, run_id, row_count)
+            load_warehouse_content_files.delay(
+                etl_source,
+                run_id,
+                row_count,
+                allow_mass_unpublish=allow_mass_unpublish,
+            )
         return len(to_load)
 
 

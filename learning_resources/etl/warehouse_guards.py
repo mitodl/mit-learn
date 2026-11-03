@@ -50,17 +50,19 @@ def warehouse_list(value) -> list:
 MAX_UNPUBLISH_SHARE = 0.1
 
 
-def refuse_unpublish_share(what: str, published: int, missing: int) -> None:
+def refuse_unpublish_share(
+    what: str, published: int, missing: int, *, floor: int = 0
+) -> None:
     """
-    Raise if ``missing`` is more than MAX_UNPUBLISH_SHARE of ``published``. Inside
-    a shadow run, log it instead.
+    Raise if ``missing`` is more than MAX_UNPUBLISH_SHARE of ``published``, and
+    more than ``floor``. Inside a shadow run, log it instead.
     """
-    if missing > published * MAX_UNPUBLISH_SHARE:
+    if missing > max(published * MAX_UNPUBLISH_SHARE, floor):
+        limit = f"{MAX_UNPUBLISH_SHARE:.0%}" + (f" or {floor}" if floor else "")
         msg = (
             f"Refusing to sync: {missing} of {published} published "
-            f"{what} would be unpublished, "
-            f"over the {MAX_UNPUBLISH_SHARE:.0%} limit. If they were removed "
-            "at the source, rerun with allow_mass_unpublish=True."
+            f"{what} would be unpublished, over the {limit} limit. If they were "
+            "removed at the source, rerun with allow_mass_unpublish=True."
         )
         # A shadow writes nothing, and its report is where to see which ones
         # the owner's run would unpublish, so it carries on to the comparison.
