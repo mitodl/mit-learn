@@ -252,18 +252,25 @@ def test_shared_scim_external_id_narrowed_by_email(mocker, mock_login, header_em
 
 
 @pytest.mark.django_db(transaction=True)
-@pytest.mark.parametrize("shared", ["scim_external_id", "email"])
+@pytest.mark.parametrize(
+    "shared", ["scim_external_id", "scim_external_id+email", "email"]
+)
 def test_ambiguous_legacy_match_fails_closed(mocker, mock_login, caplog, shared):
     """
-    Several unlinked users matching on the SCIM external id (with no email to
-    pick between them) or on the exact email aren't linked, logged in, or
-    duplicated, even with user creation on.
+    Several unlinked users matching on the SCIM external id (whether or not
+    their emails match the headers too) or on the exact email aren't linked,
+    logged in, or duplicated, even with user creation on.
     """
     close_old_connections()
-    if shared == "scim_external_id":
+    if shared.startswith("scim_external_id"):
+        emails = (
+            [apisix_user_info["email"]] * 2
+            if shared.endswith("email")
+            else ["a@test.edu", "b@test.edu"]
+        )
         fields = [
-            {"email": "a@test.edu", "scim_external_id": apisix_user_info["sub"]},
-            {"email": "b@test.edu", "scim_external_id": apisix_user_info["sub"]},
+            {"email": email, "scim_external_id": apisix_user_info["sub"]}
+            for email in emails
         ]
     else:
         fields = [{"email": apisix_user_info["email"]}] * 2
@@ -276,7 +283,7 @@ def test_ambiguous_legacy_match_fails_closed(mocker, mock_login, caplog, shared)
         )
     )
     mock_login.assert_not_called()
-    assert f"ambiguous_apisix_identity lookup={shared}" in caplog.text
+    assert f"ambiguous_apisix_identity lookup={shared} global_id=" in caplog.text
     assert User.objects.count() == len(fields)
     assert not User.objects.filter(global_id__isnull=False).exists()
 
@@ -379,12 +386,15 @@ def test_linked_user_not_ambiguous_with_case_variant_legacy_user(mocker, mock_lo
 
 
 @pytest.mark.django_db(transaction=True)
-def test_legacy_lookup_finds_user_linked_by_concurrent_request(mocker, mock_login):
+def test_legacy_lookup_finds_user_linked_by_concurrent_request(
+    mocker, mock_login, settings
+):
     """
     A row linked after the global_id lookup missed is still found by the legacy
-    lookups instead of a second user being created.
+    lookups. User creation is off so get_or_create's own lookup can't find it.
     """
     close_old_connections()
+    settings.MITOL_APIGATEWAY_USERINFO_CREATE = False
     linked_user = UserFactory.create(
         email="old_email@test.edu", global_id=apisix_user_info["sub"]
     )
@@ -392,7 +402,7 @@ def test_legacy_lookup_finds_user_linked_by_concurrent_request(mocker, mock_logi
     calls = []
 
     def get_missing_first_call(self, *args, **kwargs):
-        """Simulate the exact lookup running before the other request committed."""
+        """Simulate the global_id lookup running before the other request committed."""
         calls.append(1)
         if len(calls) == 1:
             raise self.model.DoesNotExist
