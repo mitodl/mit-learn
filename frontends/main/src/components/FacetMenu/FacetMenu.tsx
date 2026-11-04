@@ -131,6 +131,8 @@ const FACET_MENU_PROPS = {
         {
           padding: 0,
           minHeight: "unset",
+          /** MenuItem's own `nowrap` would clip a long label at the paper's fixed width, since the paper hides its overflow. */
+          whiteSpace: "normal",
           backgroundColor: "transparent",
           color: theme.custom.colors.darkGray2,
         },

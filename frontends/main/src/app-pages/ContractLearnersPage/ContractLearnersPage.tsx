@@ -221,7 +221,7 @@ const FilterSelect: React.FC<React.ComponentProps<typeof FilterField>> = ({
 /**
  * Multi-select, unlike the enrollments view's Module filter. The count is
  * said in the field's label, which is what names the combobox, so the badge
- * drawn inside it stays hidden (see `facetName`).
+ * drawn inside it stays hidden.
  */
 const ModulesSelect: React.FC<{
   options: { value: string; label: string }[]
@@ -234,7 +234,7 @@ const ModulesSelect: React.FC<{
       <>
         Modules
         {value.length > 0 ? (
-          <VisuallyHidden>{value.length} selected</VisuallyHidden>
+          <VisuallyHidden> {value.length} selected</VisuallyHidden>
         ) : null}
       </>
     }
