@@ -9,15 +9,17 @@ import type { CardLayoutProps, ResourceCardViewProps } from "./ResourceCardView"
 
 const makeProps = (): ResourceCardViewProps => {
   const title = faker.lorem.words(3)
+  // Metadata rows are keyed by label, so the labels must differ.
+  const [label1, label2] = faker.helpers.uniqueArray(faker.lorem.word, 2)
   return {
     title,
     typeLabel: faker.lorem.word(),
     parentCourseName: faker.lorem.words(2),
     imageSrc: faker.image.url(),
     metadata: [
-      { label: faker.lorem.word(), value: faker.lorem.words(2) },
+      { label: label1, value: faker.lorem.words(2) },
       {
-        label: faker.lorem.word(),
+        label: label2,
         value: faker.lorem.words(2),
       },
     ],
