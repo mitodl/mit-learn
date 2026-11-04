@@ -200,7 +200,7 @@ const learnerProgress = (
   is_passing: false,
   grade: 0.42,
   letter_grade: null,
-  content_progress: 0.5,
+  content_progress: 0.35,
   certificate_issued_on: null,
   certificate_is_revoked: null,
   last_active_on: null,

@@ -6,7 +6,8 @@ import {
   ProductPageAskTimButton,
   ProductPageAskTimSection,
 } from "./ProductPageAskTim"
-import { useFeatureFlagEnabled, usePostHog } from "posthog-js/react"
+import { useFeatureFlagEnabled } from "posthog-js/react"
+import { capturePostHog } from "@/common/analytics/posthog"
 import { FeatureFlags } from "@/common/feature_flags"
 import { PostHogEvents } from "@/common/constants"
 import { RESOURCE_DRAWER_PARAMS } from "@/common/urls"
@@ -16,14 +17,13 @@ import { ResourceTypeEnum, type LearningResource } from "api"
 jest.mock("posthog-js/react", () => ({
   ...jest.requireActual("posthog-js/react"),
   useFeatureFlagEnabled: jest.fn(),
-  usePostHog: jest.fn(),
+}))
+jest.mock("@/common/analytics/posthog", () => ({
+  capturePostHog: jest.fn(),
+  initPostHog: jest.fn(),
 }))
 const mockedUseFeatureFlagEnabled = jest.mocked(useFeatureFlagEnabled)
-const mockCapture = jest.fn()
-jest.mocked(usePostHog).mockReturnValue(
-  // @ts-expect-error Not mocking all of posthog
-  { capture: mockCapture },
-)
+const mockCapturePostHog = jest.mocked(capturePostHog)
 
 const setupLearnResource = (
   resource: LearningResource = factories.learningResources.course({
@@ -256,7 +256,7 @@ describe("ProductPageAskTimSection", () => {
 
   test("clicking Ask TIM sets syllabus_only query param and fires PostHog", async () => {
     process.env.NEXT_PUBLIC_POSTHOG_API_KEY = "test-key"
-    mockCapture.mockClear()
+    mockCapturePostHog.mockClear()
     const { resource } = setupLearnResource()
 
     const { location } = renderWithProviders(
@@ -279,7 +279,7 @@ describe("ProductPageAskTimSection", () => {
     expect(
       location.current.searchParams.has(RESOURCE_DRAWER_PARAMS.syllabus),
     ).toBe(false)
-    expect(mockCapture).toHaveBeenCalledWith(
+    expect(mockCapturePostHog).toHaveBeenCalledWith(
       PostHogEvents.AskTimClicked,
       expect.objectContaining({
         type: "syllabus_bot",

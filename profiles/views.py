@@ -209,12 +209,20 @@ class ProgramLetterInterceptView(View):
 
     def get(self, request, **kwargs):
         program_id = kwargs.get("program_id")
-        certificate = get_object_or_404(
-            ProgramCertificate,
-            user_email=request.user.email,
-            micromasters_program_id=program_id,
-            is_revoked=False,
+        # Tracks of one program (e.g. Statistics and Data Science) share a
+        # MicroMasters id and render the same letter, so the link resolves to one
+        # certificate per program, the same one every time.
+        certificate = (
+            ProgramCertificate.objects.filter(
+                user_email=request.user.email,
+                micromasters_program_id=program_id,
+                is_revoked=False,
+            )
+            .order_by("program_completion_timestamp", "record_hash")
+            .first()
         )
+        if certificate is None:
+            raise Http404
         letter, _created = ProgramLetter.objects.get_or_create(
             user=request.user, certificate=certificate
         )

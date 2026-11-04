@@ -896,26 +896,6 @@ export const DocumentResourceResourceTypeEnum = {
 export type DocumentResourceResourceTypeEnum =
   (typeof DocumentResourceResourceTypeEnum)[keyof typeof DocumentResourceResourceTypeEnum]
 
-/**
- * One course run in an extracted_content_files message.  ``source`` is not a choice field: a source with no pull is logged and skipped, rather than rejecting the batch it came in. Keys not listed here, e.g. the sender\'s ``extracted_at``, are ignored.
- */
-export interface ExtractedContentFilesCourseRequest {
-  source: string
-  /**
-   * The run\'s run_id, not its course\'s readable_id
-   */
-  readable_id: string
-  /**
-   * How many rows the sender published for the run. A pull that reads any other number loads what it read and unpublishes nothing.
-   */
-  content_file_count: number
-}
-/**
- * Serializer for the ``/api/v1/webhooks/extracted_content_files/`` endpoint. A list even for one run, so that a sender can batch without a second shape.
- */
-export interface ExtractedContentFilesWebhookRequestRequest {
-  courses: Array<ExtractedContentFilesCourseRequest>
-}
 export interface HubspotCollectionResponseFormDefinitionBaseForwardPaging {
   paging?: HubspotCollectionResponseFormDefinitionBaseForwardPagingPaging
   results?: Array<HubspotCollectionResponseFormDefinitionBaseForwardPagingResultItem>
@@ -1857,11 +1837,12 @@ export interface LearningResourceTopic {
   channel_url: string | null
 }
 /**
- * Serializer for the generic ``/api/v1/webhooks/learning_resources/`` endpoint.  Accepts a batch of pre-computed canonical LearningResource payloads pushed from the OL Data Platform (Dagster). Each resource must carry at minimum ``readable_id``, ``etl_source`` and ``resource_type`` so the handler can route it to the correct loader; all other keys are preserved and passed through to the loaders unchanged.  ``sync`` declares (etl_source, resource_type) pairs the batch is authoritative for. A declared pair with no resources in the batch is pruned, unpublishing everything MIT Learn holds for it, so a source that stops publishing a type can say so. A batch with neither resources nor ``sync`` is rejected: it names no pair, so the request would silently no-op.
+ * Serializer for the generic ``/api/v1/webhooks/learning_resources/`` endpoint.  Accepts a batch of pre-computed canonical LearningResource payloads pushed from the OL Data Platform (Dagster). Each resource must carry at minimum ``readable_id``, ``etl_source`` and ``resource_type`` so the handler can route it to the correct loader; all other keys are preserved and passed through to the loaders unchanged.  ``sync`` declares (etl_source, resource_type) pairs the batch is authoritative for. A declared pair with no resources in the batch is pruned, unpublishing everything MIT Learn holds for it, so a source that stops publishing a type can say so. A batch with neither resources nor ``sync`` is rejected: it names no pair, so the request would silently no-op.  ``allow_mass_unpublish`` skips the limit on how much of a pair a batch may unpublish, for a removal the sender knows is real.
  */
 export interface LearningResourceWebhookRequestRequest {
   resources: Array<{ [key: string]: any }>
   sync?: Array<LearningResourceSyncPairRequest>
+  allow_mass_unpublish?: boolean
 }
 /**
  * Serializer for learning_resources webhook responses.  ``shadow`` is present when the batch was a shadow run: nothing was written, and each entry counts what loading it would have changed for one (etl_source, resource_type).
@@ -25377,61 +25358,7 @@ export const WebhooksApiAxiosParamCreator = function (
       }
     },
     /**
-     * Webhook handler for the OL Data Platform\'s \"extraction is done, come get it\" message, one entry per course run. Unlike content_files/, which says a new archive is ready for MIT Learn to extract, this means the run\'s files are in the warehouse.  Each entry queues a pull of its run and the request returns: a 200 says the message arrived, not that anything was loaded. The pull checks ownership, and does nothing until the warehouse owns the source\'s content files. An entry for a source with no pull is skipped and counted in the response, so that one bad source can\'t reject the rest of a batch.
-     * @param {ExtractedContentFilesWebhookRequestRequest} ExtractedContentFilesWebhookRequestRequest
-     * @param {*} [options] Override http request option.
-     * @throws {RequiredError}
-     */
-    webhooksExtractedContentFilesCreate: async (
-      ExtractedContentFilesWebhookRequestRequest: ExtractedContentFilesWebhookRequestRequest,
-      options: RawAxiosRequestConfig = {},
-    ): Promise<RequestArgs> => {
-      // verify required parameter 'ExtractedContentFilesWebhookRequestRequest' is not null or undefined
-      assertParamExists(
-        "webhooksExtractedContentFilesCreate",
-        "ExtractedContentFilesWebhookRequestRequest",
-        ExtractedContentFilesWebhookRequestRequest,
-      )
-      const localVarPath = `/api/v1/webhooks/extracted_content_files/`
-      // use dummy base URL string because the URL constructor only accepts absolute URLs.
-      const localVarUrlObj = new URL(localVarPath, DUMMY_BASE_URL)
-      let baseOptions
-      if (configuration) {
-        baseOptions = configuration.baseOptions
-      }
-
-      const localVarRequestOptions = {
-        method: "POST",
-        ...baseOptions,
-        ...options,
-      }
-      const localVarHeaderParameter = {} as any
-      const localVarQueryParameter = {} as any
-
-      localVarHeaderParameter["Content-Type"] = "application/json"
-      localVarHeaderParameter["Accept"] = "application/json"
-
-      setSearchParams(localVarUrlObj, localVarQueryParameter)
-      let headersFromBaseOptions =
-        baseOptions && baseOptions.headers ? baseOptions.headers : {}
-      localVarRequestOptions.headers = {
-        ...localVarHeaderParameter,
-        ...headersFromBaseOptions,
-        ...options.headers,
-      }
-      localVarRequestOptions.data = serializeDataIfNeeded(
-        ExtractedContentFilesWebhookRequestRequest,
-        localVarRequestOptions,
-        configuration,
-      )
-
-      return {
-        url: toPathString(localVarUrlObj),
-        options: localVarRequestOptions,
-      }
-    },
-    /**
-     * Generic webhook handler for pre-computed LearningResource batches delivered by the OL Data Platform (Dagster).  The request body is ``{\"resources\": [ ... ]}`` where each resource is a canonical LearningResource dict carrying at minimum ``readable_id``, ``etl_source`` and ``resource_type``. Resources are grouped by ``(etl_source, resource_type)`` and routed to the matching loader (``load_courses`` / ``load_programs`` / ``load_documents`` / ``load_videos``). Each loader performs a full sync for that source and upserts the OpenSearch index, so a batch must contain the authoritative set of resources for the (etl_source, resource_type) it represents. A pair listed in the optional ``sync`` array with no resources in the batch is pruned, unpublishing all of it. Resource types without a loader are logged and skipped rather than failing the whole batch.  A batch with a group the webhook shadows (ETLSourceOwnership.shadow) is a shadow run as a whole: each group is compared with what is stored (``learning_resources.etl.shadow``), nothing is written, and the response\'s ``shadow`` counts what each group\'s load would have changed. A video group the webhook owns is not compared in a shadow run, and its entry carries an ``error`` in place of the counts. A group the webhook neither owns nor shadows rejects the whole batch with 409.
+     * Generic webhook handler for pre-computed LearningResource batches delivered by the OL Data Platform (Dagster).  The request body is ``{\"resources\": [ ... ]}`` where each resource is a canonical LearningResource dict carrying at minimum ``readable_id``, ``etl_source`` and ``resource_type``. Resources are grouped by ``(etl_source, resource_type)`` and routed to the matching loader (``load_courses`` / ``load_programs`` / ``load_documents`` / ``load_videos``). Each loader performs a full sync for that source and upserts the OpenSearch index, so a batch must contain the authoritative set of resources for the (etl_source, resource_type) it represents. A pair listed in the optional ``sync`` array with no resources in the batch is pruned, unpublishing all of it. Resource types without a loader are logged and skipped rather than failing the whole batch.  A batch with a group the webhook shadows (ETLSourceOwnership.shadow) is a shadow run as a whole: each group is compared with what is stored (``learning_resources.etl.shadow``), nothing is written, and the response\'s ``shadow`` counts what each group\'s load would have changed. A video group the webhook owns is not compared in a shadow run, and its entry carries an ``error`` in place of the counts. A group the webhook neither owns nor shadows rejects the whole batch with 409.  A batch whose load would unpublish more than 10% of the published resources of any pair it prunes, a declared pair with no resources included, is rejected whole with 422, the limit the warehouse syncs apply. A truncated batch and a bad model build look like that from here, and only MIT Learn holds the published set to compare against. ``allow_mass_unpublish`` skips the check. A shadow run is not refused: its counts report what the load would unpublish.
      * @param {LearningResourceWebhookRequestRequest} LearningResourceWebhookRequestRequest
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
@@ -25620,40 +25547,7 @@ export const WebhooksApiFp = function (configuration?: Configuration) {
         )(axios, localVarOperationServerBasePath || basePath)
     },
     /**
-     * Webhook handler for the OL Data Platform\'s \"extraction is done, come get it\" message, one entry per course run. Unlike content_files/, which says a new archive is ready for MIT Learn to extract, this means the run\'s files are in the warehouse.  Each entry queues a pull of its run and the request returns: a 200 says the message arrived, not that anything was loaded. The pull checks ownership, and does nothing until the warehouse owns the source\'s content files. An entry for a source with no pull is skipped and counted in the response, so that one bad source can\'t reject the rest of a batch.
-     * @param {ExtractedContentFilesWebhookRequestRequest} ExtractedContentFilesWebhookRequestRequest
-     * @param {*} [options] Override http request option.
-     * @throws {RequiredError}
-     */
-    async webhooksExtractedContentFilesCreate(
-      ExtractedContentFilesWebhookRequestRequest: ExtractedContentFilesWebhookRequestRequest,
-      options?: RawAxiosRequestConfig,
-    ): Promise<
-      (
-        axios?: AxiosInstance,
-        basePath?: string,
-      ) => AxiosPromise<WebhookResponse>
-    > {
-      const localVarAxiosArgs =
-        await localVarAxiosParamCreator.webhooksExtractedContentFilesCreate(
-          ExtractedContentFilesWebhookRequestRequest,
-          options,
-        )
-      const localVarOperationServerIndex = configuration?.serverIndex ?? 0
-      const localVarOperationServerBasePath =
-        operationServerMap["WebhooksApi.webhooksExtractedContentFilesCreate"]?.[
-          localVarOperationServerIndex
-        ]?.url
-      return (axios, basePath) =>
-        createRequestFunction(
-          localVarAxiosArgs,
-          globalAxios,
-          BASE_PATH,
-          configuration,
-        )(axios, localVarOperationServerBasePath || basePath)
-    },
-    /**
-     * Generic webhook handler for pre-computed LearningResource batches delivered by the OL Data Platform (Dagster).  The request body is ``{\"resources\": [ ... ]}`` where each resource is a canonical LearningResource dict carrying at minimum ``readable_id``, ``etl_source`` and ``resource_type``. Resources are grouped by ``(etl_source, resource_type)`` and routed to the matching loader (``load_courses`` / ``load_programs`` / ``load_documents`` / ``load_videos``). Each loader performs a full sync for that source and upserts the OpenSearch index, so a batch must contain the authoritative set of resources for the (etl_source, resource_type) it represents. A pair listed in the optional ``sync`` array with no resources in the batch is pruned, unpublishing all of it. Resource types without a loader are logged and skipped rather than failing the whole batch.  A batch with a group the webhook shadows (ETLSourceOwnership.shadow) is a shadow run as a whole: each group is compared with what is stored (``learning_resources.etl.shadow``), nothing is written, and the response\'s ``shadow`` counts what each group\'s load would have changed. A video group the webhook owns is not compared in a shadow run, and its entry carries an ``error`` in place of the counts. A group the webhook neither owns nor shadows rejects the whole batch with 409.
+     * Generic webhook handler for pre-computed LearningResource batches delivered by the OL Data Platform (Dagster).  The request body is ``{\"resources\": [ ... ]}`` where each resource is a canonical LearningResource dict carrying at minimum ``readable_id``, ``etl_source`` and ``resource_type``. Resources are grouped by ``(etl_source, resource_type)`` and routed to the matching loader (``load_courses`` / ``load_programs`` / ``load_documents`` / ``load_videos``). Each loader performs a full sync for that source and upserts the OpenSearch index, so a batch must contain the authoritative set of resources for the (etl_source, resource_type) it represents. A pair listed in the optional ``sync`` array with no resources in the batch is pruned, unpublishing all of it. Resource types without a loader are logged and skipped rather than failing the whole batch.  A batch with a group the webhook shadows (ETLSourceOwnership.shadow) is a shadow run as a whole: each group is compared with what is stored (``learning_resources.etl.shadow``), nothing is written, and the response\'s ``shadow`` counts what each group\'s load would have changed. A video group the webhook owns is not compared in a shadow run, and its entry carries an ``error`` in place of the counts. A group the webhook neither owns nor shadows rejects the whole batch with 409.  A batch whose load would unpublish more than 10% of the published resources of any pair it prunes, a declared pair with no resources included, is rejected whole with 422, the limit the warehouse syncs apply. A truncated batch and a bad model build look like that from here, and only MIT Learn holds the published set to compare against. ``allow_mass_unpublish`` skips the check. A shadow run is not refused: its counts report what the load would unpublish.
      * @param {LearningResourceWebhookRequestRequest} LearningResourceWebhookRequestRequest
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
@@ -25770,24 +25664,7 @@ export const WebhooksApiFactory = function (
         .then((request) => request(axios, basePath))
     },
     /**
-     * Webhook handler for the OL Data Platform\'s \"extraction is done, come get it\" message, one entry per course run. Unlike content_files/, which says a new archive is ready for MIT Learn to extract, this means the run\'s files are in the warehouse.  Each entry queues a pull of its run and the request returns: a 200 says the message arrived, not that anything was loaded. The pull checks ownership, and does nothing until the warehouse owns the source\'s content files. An entry for a source with no pull is skipped and counted in the response, so that one bad source can\'t reject the rest of a batch.
-     * @param {WebhooksApiWebhooksExtractedContentFilesCreateRequest} requestParameters Request parameters.
-     * @param {*} [options] Override http request option.
-     * @throws {RequiredError}
-     */
-    webhooksExtractedContentFilesCreate(
-      requestParameters: WebhooksApiWebhooksExtractedContentFilesCreateRequest,
-      options?: RawAxiosRequestConfig,
-    ): AxiosPromise<WebhookResponse> {
-      return localVarFp
-        .webhooksExtractedContentFilesCreate(
-          requestParameters.ExtractedContentFilesWebhookRequestRequest,
-          options,
-        )
-        .then((request) => request(axios, basePath))
-    },
-    /**
-     * Generic webhook handler for pre-computed LearningResource batches delivered by the OL Data Platform (Dagster).  The request body is ``{\"resources\": [ ... ]}`` where each resource is a canonical LearningResource dict carrying at minimum ``readable_id``, ``etl_source`` and ``resource_type``. Resources are grouped by ``(etl_source, resource_type)`` and routed to the matching loader (``load_courses`` / ``load_programs`` / ``load_documents`` / ``load_videos``). Each loader performs a full sync for that source and upserts the OpenSearch index, so a batch must contain the authoritative set of resources for the (etl_source, resource_type) it represents. A pair listed in the optional ``sync`` array with no resources in the batch is pruned, unpublishing all of it. Resource types without a loader are logged and skipped rather than failing the whole batch.  A batch with a group the webhook shadows (ETLSourceOwnership.shadow) is a shadow run as a whole: each group is compared with what is stored (``learning_resources.etl.shadow``), nothing is written, and the response\'s ``shadow`` counts what each group\'s load would have changed. A video group the webhook owns is not compared in a shadow run, and its entry carries an ``error`` in place of the counts. A group the webhook neither owns nor shadows rejects the whole batch with 409.
+     * Generic webhook handler for pre-computed LearningResource batches delivered by the OL Data Platform (Dagster).  The request body is ``{\"resources\": [ ... ]}`` where each resource is a canonical LearningResource dict carrying at minimum ``readable_id``, ``etl_source`` and ``resource_type``. Resources are grouped by ``(etl_source, resource_type)`` and routed to the matching loader (``load_courses`` / ``load_programs`` / ``load_documents`` / ``load_videos``). Each loader performs a full sync for that source and upserts the OpenSearch index, so a batch must contain the authoritative set of resources for the (etl_source, resource_type) it represents. A pair listed in the optional ``sync`` array with no resources in the batch is pruned, unpublishing all of it. Resource types without a loader are logged and skipped rather than failing the whole batch.  A batch with a group the webhook shadows (ETLSourceOwnership.shadow) is a shadow run as a whole: each group is compared with what is stored (``learning_resources.etl.shadow``), nothing is written, and the response\'s ``shadow`` counts what each group\'s load would have changed. A video group the webhook owns is not compared in a shadow run, and its entry carries an ``error`` in place of the counts. A group the webhook neither owns nor shadows rejects the whole batch with 409.  A batch whose load would unpublish more than 10% of the published resources of any pair it prunes, a declared pair with no resources included, is rejected whole with 422, the limit the warehouse syncs apply. A truncated batch and a bad model build look like that from here, and only MIT Learn holds the published set to compare against. ``allow_mass_unpublish`` skips the check. A shadow run is not refused: its counts report what the load would unpublish.
      * @param {WebhooksApiWebhooksLearningResourcesCreateRequest} requestParameters Request parameters.
      * @param {*} [options] Override http request option.
      * @throws {RequiredError}
@@ -25849,13 +25726,6 @@ export interface WebhooksApiWebhooksContentFilesDeleteCreateRequest {
 }
 
 /**
- * Request parameters for webhooksExtractedContentFilesCreate operation in WebhooksApi.
- */
-export interface WebhooksApiWebhooksExtractedContentFilesCreateRequest {
-  readonly ExtractedContentFilesWebhookRequestRequest: ExtractedContentFilesWebhookRequestRequest
-}
-
-/**
  * Request parameters for webhooksLearningResourcesCreate operation in WebhooksApi.
  */
 export interface WebhooksApiWebhooksLearningResourcesCreateRequest {
@@ -25914,25 +25784,7 @@ export class WebhooksApi extends BaseAPI {
   }
 
   /**
-   * Webhook handler for the OL Data Platform\'s \"extraction is done, come get it\" message, one entry per course run. Unlike content_files/, which says a new archive is ready for MIT Learn to extract, this means the run\'s files are in the warehouse.  Each entry queues a pull of its run and the request returns: a 200 says the message arrived, not that anything was loaded. The pull checks ownership, and does nothing until the warehouse owns the source\'s content files. An entry for a source with no pull is skipped and counted in the response, so that one bad source can\'t reject the rest of a batch.
-   * @param {WebhooksApiWebhooksExtractedContentFilesCreateRequest} requestParameters Request parameters.
-   * @param {*} [options] Override http request option.
-   * @throws {RequiredError}
-   */
-  public webhooksExtractedContentFilesCreate(
-    requestParameters: WebhooksApiWebhooksExtractedContentFilesCreateRequest,
-    options?: RawAxiosRequestConfig,
-  ) {
-    return WebhooksApiFp(this.configuration)
-      .webhooksExtractedContentFilesCreate(
-        requestParameters.ExtractedContentFilesWebhookRequestRequest,
-        options,
-      )
-      .then((request) => request(this.axios, this.basePath))
-  }
-
-  /**
-   * Generic webhook handler for pre-computed LearningResource batches delivered by the OL Data Platform (Dagster).  The request body is ``{\"resources\": [ ... ]}`` where each resource is a canonical LearningResource dict carrying at minimum ``readable_id``, ``etl_source`` and ``resource_type``. Resources are grouped by ``(etl_source, resource_type)`` and routed to the matching loader (``load_courses`` / ``load_programs`` / ``load_documents`` / ``load_videos``). Each loader performs a full sync for that source and upserts the OpenSearch index, so a batch must contain the authoritative set of resources for the (etl_source, resource_type) it represents. A pair listed in the optional ``sync`` array with no resources in the batch is pruned, unpublishing all of it. Resource types without a loader are logged and skipped rather than failing the whole batch.  A batch with a group the webhook shadows (ETLSourceOwnership.shadow) is a shadow run as a whole: each group is compared with what is stored (``learning_resources.etl.shadow``), nothing is written, and the response\'s ``shadow`` counts what each group\'s load would have changed. A video group the webhook owns is not compared in a shadow run, and its entry carries an ``error`` in place of the counts. A group the webhook neither owns nor shadows rejects the whole batch with 409.
+   * Generic webhook handler for pre-computed LearningResource batches delivered by the OL Data Platform (Dagster).  The request body is ``{\"resources\": [ ... ]}`` where each resource is a canonical LearningResource dict carrying at minimum ``readable_id``, ``etl_source`` and ``resource_type``. Resources are grouped by ``(etl_source, resource_type)`` and routed to the matching loader (``load_courses`` / ``load_programs`` / ``load_documents`` / ``load_videos``). Each loader performs a full sync for that source and upserts the OpenSearch index, so a batch must contain the authoritative set of resources for the (etl_source, resource_type) it represents. A pair listed in the optional ``sync`` array with no resources in the batch is pruned, unpublishing all of it. Resource types without a loader are logged and skipped rather than failing the whole batch.  A batch with a group the webhook shadows (ETLSourceOwnership.shadow) is a shadow run as a whole: each group is compared with what is stored (``learning_resources.etl.shadow``), nothing is written, and the response\'s ``shadow`` counts what each group\'s load would have changed. A video group the webhook owns is not compared in a shadow run, and its entry carries an ``error`` in place of the counts. A group the webhook neither owns nor shadows rejects the whole batch with 409.  A batch whose load would unpublish more than 10% of the published resources of any pair it prunes, a declared pair with no resources included, is rejected whole with 422, the limit the warehouse syncs apply. A truncated batch and a bad model build look like that from here, and only MIT Learn holds the published set to compare against. ``allow_mass_unpublish`` skips the check. A shadow run is not refused: its counts report what the load would unpublish.
    * @param {WebhooksApiWebhooksLearningResourcesCreateRequest} requestParameters Request parameters.
    * @param {*} [options] Override http request option.
    * @throws {RequiredError}

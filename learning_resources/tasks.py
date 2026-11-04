@@ -587,14 +587,6 @@ def get_ocw_data(  # noqa: PLR0913
     return self.replace(ocw_tasks)
 
 
-def _legacy_owns_youtube() -> bool:
-    """Whether the legacy ETL may write YouTube playlists and videos"""
-    return may_write(
-        ETLSource.youtube.name,
-        [LearningResourceType.video_playlist.name, LearningResourceType.video.name],
-    )
-
-
 @app.task(acks_late=True, reject_on_worker_lost=True)
 def get_youtube_playlist_data(
     channel_id, playlist_data, offered_by_code, *, create_videos
@@ -611,7 +603,7 @@ def get_youtube_playlist_data(
     """
     # get_youtube_data checked before queueing this, but the task can run after
     # the ownership row changes (a long fan-out, a redelivered message)
-    if not _legacy_owns_youtube():
+    if not warehouse_media.may_write_youtube():
         return
 
     video_channel = VideoChannel.objects.filter(channel_id=channel_id).first()
@@ -647,7 +639,7 @@ def get_youtube_channel_data(channel_config):
     Args:
         channel_config (dict): the channel's configuration
     """
-    if not _legacy_owns_youtube():
+    if not warehouse_media.may_write_youtube():
         return
 
     channel_id = channel_config["channel_id"]
@@ -704,7 +696,7 @@ def get_youtube_data(*, channel_ids=None):
     Returns:
         int: the number of channels queued
     """
-    if not _legacy_owns_youtube():
+    if not warehouse_media.may_write_youtube():
         return 0
 
     missing = [
@@ -1808,13 +1800,14 @@ CONTENT_FILE_LOAD_MAX_RETRIES = 60
     max_retries=CONTENT_FILE_LOAD_MAX_RETRIES,
     time_limit=CONTENT_FILE_LOAD_TIME_LIMIT_SECONDS,
 )
-def load_warehouse_content_files(
+def load_warehouse_content_files(  # noqa: PLR0913
     self,
     etl_source: str,
     run_id: str,
     expected_count: int | None = None,
     *,
     allow_mass_unpublish: bool = False,
+    allow_shrink: bool = False,
 ) -> int:
     """
     Load one run's content files from the warehouse
@@ -1827,6 +1820,9 @@ def load_warehouse_content_files(
             warehouse_content_files.load_run)
         allow_mass_unpublish (bool): lift the limit on how many of the run's
             published files the load may unpublish
+        allow_shrink (bool): let the files a drop in the run's count explains
+            go past the limit, still holding changed keys to it (what a sync
+            run with allow_mass_unpublish queues)
 
     Returns:
         int: the number of files loaded
@@ -1871,6 +1867,7 @@ def load_warehouse_content_files(
                 rows,
                 expected_count=expected_count,
                 allow_mass_unpublish=allow_mass_unpublish is True,
+                allow_shrink=allow_shrink is True,
             )
         finally:
             lock.delete(lock_key)
@@ -1888,7 +1885,9 @@ class SyncContentFilesTask(BaseWarehouseETLTask):
     A run that would unpublish more than warehouse_guards.MAX_UNPUBLISH_SHARE of
     the published files fails before queueing anything, and each load checks its
     own run by key (warehouse_content_files.load_run). Queue it with
-    ``allow_mass_unpublish=True`` when the removal is real, which lifts both.
+    ``allow_mass_unpublish=True`` when the removal is real. That lifts the sync's
+    check, and each load it queues gets ``allow_shrink``, so a run's count drop
+    goes through but a run whose keys changed beyond it is still refused.
     """
 
     abstract = True
@@ -1919,10 +1918,7 @@ class SyncContentFilesTask(BaseWarehouseETLTask):
         log.info("Queueing %d %s runs' content files", len(to_load), etl_source)
         for run_id, row_count in to_load:
             load_warehouse_content_files.delay(
-                etl_source,
-                run_id,
-                row_count,
-                allow_mass_unpublish=allow_mass_unpublish,
+                etl_source, run_id, row_count, allow_shrink=allow_mass_unpublish
             )
         return len(to_load)
 

@@ -112,7 +112,7 @@ const setupCard = ({
  */
 const setRedesignFlag = (enabled: boolean) => {
   jest
-    .mocked(useFeatureFlagEnabled)
+    .mocked(useFeatureFlagEnabled as (flag: string) => boolean | undefined)
     .mockImplementation((flag) =>
       enabled && flag === FeatureFlags.ResourceCardRedesign ? true : undefined,
     )

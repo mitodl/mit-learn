@@ -1,9 +1,7 @@
 import React from "react"
+import type { EnrollActionKind } from "@/common/analytics"
 
-// "free" covers every non-paid enrollment — active audit ("Start Learning") and
-// the degraded archived/deadline-passed audit ("Access Course Materials"). They
-// hit the same free-enrollment path; only the button label differs.
-export type EnrollActionKind = "paid" | "free"
+export type { EnrollActionKind }
 
 export type EnrollAction = {
   kind: EnrollActionKind
@@ -72,7 +70,3 @@ export const offeringBoxCount = (
       return 1
   }
 }
-
-/** Fallback enrollment-failure copy, shared by the InfoBox and header areas. */
-export const ENROLL_FAILURE_MESSAGE =
-  "There was a problem processing your enrollment. Please try again."

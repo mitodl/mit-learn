@@ -1,7 +1,11 @@
 import React from "react"
 import NiceModal from "@ebay/nice-modal-react"
 import { useQueryClient } from "@tanstack/react-query"
-import type { MutateOptions, UseMutationResult } from "@tanstack/react-query"
+import type {
+  MutateOptions,
+  MutationFunctionContext,
+  UseMutationResult,
+} from "@tanstack/react-query"
 import { mitxUserQueries } from "api/mitxonline-hooks/user"
 import { checkEnrollmentEligibility } from "api/mitxonline-hooks/enrollment"
 import type { EnrollmentTarget } from "api/mitxonline-hooks/enrollment"
@@ -173,9 +177,11 @@ const useComplianceGate = () => {
 
       // Settles with the fields the attempt was rejected on, or [] for any
       // other outcome, which `options` has then handled as usual.
-      let lastRejection: { error: TError | null; context?: TContext } = {
-        error: null,
-      }
+      let lastRejection: {
+        error: TError | null
+        onMutateResult?: TContext
+        context: MutationFunctionContext
+      } = { error: null, context: { client: queryClient, meta: undefined } }
       const attempt = async (): Promise<JitField[]> => {
         try {
           await mutation.mutateAsync(variables, {
@@ -184,12 +190,12 @@ const useComplianceGate = () => {
               if (rejectedComplianceFields(error).length > 0) return
               options.onError?.(error, ...rest)
             },
-            onSettled: (data, error, vars, context) => {
+            onSettled: (data, error, vars, onMutateResult, context) => {
               if (rejectedComplianceFields(error).length > 0) {
-                lastRejection = { error, context }
+                lastRejection = { error, onMutateResult, context }
                 mutation.reset()
               } else {
-                options.onSettled?.(data, error, vars, context)
+                options.onSettled?.(data, error, vars, onMutateResult, context)
               }
             },
           })
@@ -226,10 +232,11 @@ const useComplianceGate = () => {
         undefined,
         lastRejection.error,
         variables,
+        lastRejection.onMutateResult,
         lastRejection.context,
       )
     },
-    [exclusive, ensureCompliance, inFlight],
+    [exclusive, ensureCompliance, inFlight, queryClient],
   )
 
   /**

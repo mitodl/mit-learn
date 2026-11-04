@@ -213,12 +213,36 @@ def transform_ocw_row(row: dict) -> dict:
     }
 
 
+def _refuse_unpublish_by_key(
+    run: LearningResourceRun, rows: list[dict], *, allow_shrink: bool
+) -> None:
+    """
+    Raise if the prune would unpublish more of the run's published files than
+    the limit, counted by key: a build that renames every file has the same
+    count. With ``allow_shrink``, the files the count drop explains don't count.
+    """
+    published = set(
+        run.content_files.filter(published=True).values_list("key", flat=True)
+    )
+    missing = len(published - {row["key"] for row in rows})
+    if allow_shrink:
+        # the sync was told the count drop is real; renames still count
+        missing -= max(len(published) - len(rows), 0)
+    refuse_unpublish_share(
+        f"{run.learning_resource.etl_source} content files of run {run.run_id}",
+        len(published),
+        missing,
+        floor=RUN_UNPUBLISH_FLOOR,
+    )
+
+
 def load_run(
     run: LearningResourceRun,
     rows: list[dict],
     *,
     expected_count: int | None = None,
     allow_mass_unpublish: bool = False,
+    allow_shrink: bool = False,
 ) -> int:
     """
     Load one run's rows as its content files.
@@ -238,6 +262,9 @@ def load_run(
             number of rows skips the prune, and None trusts ``rows``
         allow_mass_unpublish (bool): lift the limit on how many of the run's
             published files the prune may unpublish
+        allow_shrink (bool): don't count against the limit the files that the
+            drop from the run's published files to its rows explains. Keys
+            that changed beyond that still count, so a renamed run is refused
 
     Returns:
         int: the number of files loaded
@@ -260,18 +287,13 @@ def load_run(
     if run.checksum:
         run.checksum = None
         run.save(update_fields=["checksum"])
+    if not rows:
+        # nothing says the run emptied (the view holds a run back while its
+        # export is checked), and the cleared fingerprint lets a sync retry it
+        log.info("No rows for %s run %s; keeping its files", etl_source, run.run_id)
+        return 0
     if complete and not allow_mass_unpublish:
-        # by key, before the upsert: a build that renames every file has the
-        # same count, and loading first would publish the renamed files
-        published = set(
-            run.content_files.filter(published=True).values_list("key", flat=True)
-        )
-        refuse_unpublish_share(
-            f"{etl_source} content files of run {run.run_id}",
-            len(published),
-            len(published - {row["key"] for row in rows}),
-            floor=RUN_UNPUBLISH_FLOOR,
-        )
+        _refuse_unpublish_by_key(run, rows, allow_shrink=allow_shrink)
     failed_keys = [
         row["key"] for row in rows if row["extraction_status"] == EXTRACTION_FAILED
     ]

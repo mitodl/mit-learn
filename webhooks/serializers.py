@@ -235,10 +235,14 @@ class LearningResourceWebhookRequestSerializer(serializers.Serializer):
     unpublishing everything MIT Learn holds for it, so a source that stops
     publishing a type can say so. A batch with neither resources nor ``sync``
     is rejected: it names no pair, so the request would silently no-op.
+
+    ``allow_mass_unpublish`` skips the limit on how much of a pair a batch may
+    unpublish, for a removal the sender knows is real.
     """
 
     resources = serializers.ListField(child=serializers.DictField(), allow_empty=True)
     sync = LearningResourceSyncPairSerializer(many=True, required=False, default=list)
+    allow_mass_unpublish = serializers.BooleanField(required=False, default=False)
 
     def validate(self, attrs):
         if not attrs["resources"] and not attrs["sync"]:
