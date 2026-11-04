@@ -8,7 +8,6 @@ import {
 } from "@tanstack/react-query"
 import Image from "next/image"
 import { useFeatureFlagEnabled } from "posthog-js/react"
-import { RiCheckLine } from "@remixicon/react"
 import {
   Container,
   Pagination,
@@ -54,6 +53,13 @@ import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
 import { analytics } from "@/common/analytics"
 import graduateLogo from "@/public/images/dashboard/graduate.png"
 import ContractManagerNav from "@/components/ContractManagerNav/ContractManagerNav"
+import {
+  FACET_MENU_PROPS,
+  FacetCount,
+  FacetLabel,
+  MenuBox,
+  MenuRow,
+} from "@/components/FacetMenu/FacetMenu"
 import SectionHeader, {
   SectionFreshness,
 } from "../DashboardPage/Analytics/SectionHeader"
@@ -212,18 +218,10 @@ const FilterSelect: React.FC<React.ComponentProps<typeof FilterField>> = ({
   />
 )
 
-const OptionLabel = styled.span({
-  display: "flex",
-  alignItems: "center",
-  gap: "8px",
-})
-
-/** Hidden rather than absent on unselected options, so labels stay aligned. */
-const OptionCheck = styled(RiCheckLine)({ flexShrink: 0 })
-
 /**
- * Multi-select, unlike the enrollments view's Module filter. A check marks
- * each selected option, since MUI's selected background alone is color-only.
+ * Multi-select, unlike the enrollments view's Module filter. The count is
+ * said in the field's label, which is what names the combobox, so the badge
+ * drawn inside it stays hidden (see `facetName`).
  */
 const ModulesSelect: React.FC<{
   options: { value: string; label: string }[]
@@ -232,37 +230,38 @@ const ModulesSelect: React.FC<{
   error: boolean
 }> = ({ options, value, onChange, error }) => (
   <FilterField
-    label="Modules"
+    label={
+      <>
+        Modules
+        {value.length > 0 ? (
+          <VisuallyHidden>{value.length} selected</VisuallyHidden>
+        ) : null}
+      </>
+    }
     size="medium"
     multiple
     value={value}
     error={error}
     errorText="Couldn't load modules. Reload to try again."
+    MenuProps={FACET_MENU_PROPS}
     options={options.map((option) => ({
       value: option.value,
       label: (
-        <OptionLabel>
-          <OptionCheck
-            aria-hidden="true"
-            size={16}
-            style={{
-              visibility: value.includes(option.value) ? "visible" : "hidden",
-            }}
-          />
+        <MenuRow>
+          <MenuBox checked={value.includes(option.value)} aria-hidden />
           {option.label}
-        </OptionLabel>
+        </MenuRow>
       ),
     }))}
     renderValue={(selected) => {
       const ids = selected as string[]
-      return (
-        <SelectedValue>
-          {ids.length === 0
-            ? "All modules"
-            : ids.length === 1
-              ? options.find((option) => option.value === ids[0])?.label
-              : `${ids.length} modules`}
-        </SelectedValue>
+      return ids.length === 0 ? (
+        <SelectedValue>All modules</SelectedValue>
+      ) : (
+        <FacetLabel>
+          Selected
+          <FacetCount aria-hidden="true">{ids.length}</FacetCount>
+        </FacetLabel>
       )
     }}
     onChange={(event) => {

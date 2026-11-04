@@ -2269,7 +2269,7 @@ describe("ContractLearnersPage progress grid", () => {
     ).not.toBeInTheDocument()
     expect(
       screen.getByRole("combobox", { name: /modules/i }),
-    ).toHaveTextContent("Module 6")
+    ).toHaveAccessibleName("Modules 1 selected")
   })
 
   test("drops module ids in the URL that aren't on the contract", async () => {
