@@ -132,6 +132,7 @@ const Inner = styled.div(({ theme }) => ({
       // Content sits 32px inside the 1px stroke's outer edge
       padding: "31px",
       gap: "32px",
+      paddingBottom: "23px",
     },
     [theme.breakpoints.down("md")]: {
       padding: "23px 15px",
@@ -371,7 +372,7 @@ const SignatureFooter = styled.div(({ theme }) => ({
   borderTop: `1px solid ${theme.custom.colors.lightGray2}`,
   "@media screen": {
     [theme.breakpoints.down("lg")]: {
-      gap: "8px",
+      gap: "16px",
       paddingTop: "16px",
     },
     [theme.breakpoints.down("md")]: {

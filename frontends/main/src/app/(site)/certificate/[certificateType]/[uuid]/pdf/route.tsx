@@ -362,7 +362,7 @@ const CertificateDoc = ({
             // Figma draws the stroke inside the frame, so content sits 64px from the outer edge
             padding: pxToPt(62),
             paddingBottom: pxToPt(46),
-            gap: pxToPt(64),
+            gap: signatories?.length > 4 ? pxToPt(48) : pxToPt(64),
             fontFamily: FONT_STACK_400,
           }}
         >
@@ -423,6 +423,8 @@ const CertificateDoc = ({
               paddingTop: pxToPt(24),
               borderTopWidth: pxToPt(1),
               borderTopStyle: "solid",
+              // A second row of signatories needs room, so pull the footer up
+              marginTop: signatories?.length > 4 ? pxToPt(-80) : 0,
               borderTopColor: colors.lightGray2,
             }}
           >
