@@ -18,10 +18,8 @@ describe("CertificatePage", () => {
     setMockResponse.get(mitxonline.urls.userMe.get(), mitxUser)
   })
 
-  it("renders a course certificate with the CMS product name as the title", async () => {
+  it("renders a course certificate", async () => {
     const certificate = factories.mitxonline.courseCertificate()
-    certificate.certificate_page.product_name =
-      "Custom Course Certificate Title"
     setMockResponse.get(
       mitxonline.urls.certificates.courseCertificatesRetrieve({
         uuid: certificate.uuid,
@@ -36,7 +34,7 @@ describe("CertificatePage", () => {
       />,
     )
 
-    await screen.findAllByText("Custom Course Certificate Title")
+    await screen.findAllByText(certificate.course_run.course.title)
     await screen.findAllByText("Certificate")
     await screen.findAllByText(certificate.user.name!)
     await screen.findAllByText(
@@ -122,26 +120,6 @@ describe("CertificatePage", () => {
     )
 
     await screen.findAllByText(certificate.uuid)
-  })
-
-  it("falls back to the course title when the certificate page has no product name", async () => {
-    const certificate = factories.mitxonline.courseCertificate()
-    certificate.certificate_page.product_name = ""
-    setMockResponse.get(
-      mitxonline.urls.certificates.courseCertificatesRetrieve({
-        uuid: certificate.uuid,
-      }),
-      certificate,
-    )
-    renderWithProviders(
-      <CertificatePage
-        certificateType={CertificateType.Course}
-        uuid={certificate.uuid}
-        pageUrl={`https://${process.env.NEXT_PUBLIC_ORIGIN}/certificate/course/${certificate.uuid}`}
-      />,
-    )
-
-    await screen.findAllByText(certificate.course_run.course.title)
   })
 
   it("falls back to the program title when the certificate page has no product name", async () => {

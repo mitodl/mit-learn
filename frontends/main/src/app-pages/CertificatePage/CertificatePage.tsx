@@ -121,7 +121,7 @@ const Inner = styled.div(({ theme }) => ({
   flex: 1,
   border: `2px solid ${theme.custom.colors.silverGray}`,
   // Figma draws the stroke inside the frame, so content sits 64px from the outer edge
-  padding: "62px",
+  padding: "62px 62px 46px 62px",
   display: "flex",
   flexDirection: "column",
   gap: "64px",
@@ -366,7 +366,7 @@ const CourseInfo = styled.div(({ theme }) => ({
 const SignatureFooter = styled.div(({ theme }) => ({
   display: "flex",
   flexDirection: "column",
-  gap: "16px",
+  gap: "24px",
   paddingTop: "24px",
   borderTop: `1px solid ${theme.custom.colors.lightGray2}`,
   "@media screen": {
@@ -786,10 +786,7 @@ const CertificatePage: React.FC<{
 
   let title = ""
   if (certificateType === CertificateType.Course) {
-    title = getCertificateTitle(
-      courseCertificateData?.certificate_page?.product_name,
-      courseCertificateData?.course_run.course.title ?? "",
-    )
+    title = courseCertificateData?.course_run.course.title ?? ""
   } else {
     title = getCertificateTitle(
       programCertificateData?.certificate_page?.product_name,

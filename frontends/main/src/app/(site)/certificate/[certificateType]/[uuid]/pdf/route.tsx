@@ -361,6 +361,7 @@ const CertificateDoc = ({
             borderColor: colors.silverGray,
             // Figma draws the stroke inside the frame, so content sits 64px from the outer edge
             padding: pxToPt(62),
+            paddingBottom: pxToPt(46),
             gap: pxToPt(64),
             fontFamily: FONT_STACK_400,
           }}
@@ -481,7 +482,7 @@ const CertificateDoc = ({
                 </View>
               ))}
             </View>
-            <Text style={{ ...typography.body2, color: colors.black }}>
+            <Text style={{ ...typography.body2, color: colors.black, marginTop: pxToPt(8) }}>
               Valid Credential ID:{" "}
               <Text style={{ color: colors.silverGrayDark }}>{uuid}</Text>
             </Text>
@@ -497,10 +498,7 @@ const CourseCertificate = ({
 }: {
   certificate: V2CourseRunCertificate
 }) => {
-  const title = getCertificateTitle(
-    certificate?.certificate_page?.product_name,
-    certificate?.course_run?.course?.title ?? "",
-  )
+  const title = certificate?.course_run?.course?.title
 
   const userName = certificate?.user?.name
 

@@ -184,21 +184,8 @@ describe("getCertificateLinkedInUrl", () => {
     )
   })
 
-  it("uses the CMS product name for course certificates", () => {
+  it("uses the course title for course certificates", () => {
     const certificate = factories.mitxonline.courseCertificate()
-    certificate.certificate_page.product_name = "Python Foundations"
-    certificate.course_run.course.title = "Intro to Python"
-
-    const url = new URL(
-      getCertificateLinkedInUrl(CertificateType.Course, certificate, pageUrl),
-    )
-
-    expect(url.searchParams.get("name")).toBe("Python Foundations")
-  })
-
-  it("falls back to the course title when product name is empty", () => {
-    const certificate = factories.mitxonline.courseCertificate()
-    certificate.certificate_page.product_name = ""
     certificate.course_run.course.title = "Intro to Python"
 
     const url = new URL(
