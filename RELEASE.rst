@@ -1,6 +1,22 @@
 Release Notes
 =============
 
+Version 0.86.3
+--------------
+
+- Redesign certificate web view and PDF to the new Figma layout (#4228)
+- Add warehouse-pull sync tasks for content files (#4222)
+- Read only the content file columns a YouTube shadow compares (#4245)
+- Fix flaky ResourceCardView test with duplicate metadata labels (#4244)
+- Fix order-dependent learning path bad-data test (#4242)
+- Bump smoot-design to 6.40.0 (#4232)
+- Fold the two YouTube ownership checks into one (#4221)
+- Refuse a learning_resources webhook batch that would mass-unpublish (#4220)
+- Update dependency prek to v0.5.6 (#4217)
+- Gtm cleanup architecture refactor (#4062)
+- feat(b2b-learner-analytics): show content progress, filter the grid by module, and match the enrollment view's counts (#4129)
+- Update dependency pypdf to v6.21.4 [SECURITY] (#4231)
+
 Version 0.86.2
 --------------
 
