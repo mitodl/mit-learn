@@ -682,6 +682,53 @@ describe("ContractLearnersPage", () => {
     expect(screen.queryByText("No learners found.")).not.toBeInTheDocument()
   })
 
+  test("says the data is on its way when the warehouse has not loaded the contract", async () => {
+    const { org, contract, orgSlug } = setup()
+    const contractId = contract.id
+    setMockResponse.get(
+      mitxUrls.organization.managerOrganizationsList(),
+      paginate([org]),
+    )
+    const notLoaded = [
+      {
+        detail: {
+          code: "contract_not_loaded",
+          message: "No analytics data has been loaded for contract yet",
+        },
+      },
+      { code: 404 },
+    ] as const
+    setMockResponse.get(
+      analyticsUrls.contracts.learnerProgress(ORG_UUID, contractId, {
+        limit: 1,
+      }),
+      ...notLoaded,
+    )
+    setMockResponse.get(
+      analyticsUrls.contracts.learnerProgress(ORG_UUID, contractId, {
+        limit: PAGE_SIZE,
+        offset: 0,
+        sort: "full_name",
+      }),
+      ...notLoaded,
+    )
+    setMockResponse.get(
+      analyticsUrls.contracts.courseRuns(ORG_UUID, contractId, { limit: 1000 }),
+      ...notLoaded,
+    )
+
+    renderWithProviders(
+      <ContractLearnersPage orgSlug={orgSlug} contractSlug={contract.slug} />,
+    )
+
+    await screen.findByText(
+      `Learner data for ${contract.name} will be available once it has been loaded. Please check back later.`,
+    )
+    expect(
+      screen.queryByText("Something went wrong loading learner data."),
+    ).not.toBeInTheDocument()
+  })
+
   test("the module dropdown lists every course run on the contract", async () => {
     const { org, contract, orgSlug } = setup()
     const contractId = contract.id

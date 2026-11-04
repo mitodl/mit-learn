@@ -48,7 +48,11 @@ import {
   TableRow,
 } from "@/components/B2BTable/B2BTable"
 import { matchOrganizationBySlug } from "@/common/utils"
-import { ForbiddenError, isForbiddenResponse } from "@/common/errors"
+import {
+  ForbiddenError,
+  isAnalyticsNotLoaded,
+  isForbiddenResponse,
+} from "@/common/errors"
 import { FeatureFlags } from "@/common/feature_flags"
 import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
 import { analytics } from "@/common/analytics"
@@ -535,6 +539,13 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
    * reads as "no learners" instead of surfacing the error state below.
    */
   const hasLoadError = rowsQuery.isError || totalQuery.isError
+  /**
+   * The contract exists in MITx Online but the warehouse has not loaded it
+   * yet. Not an error a retry can fix, so it gets its own message.
+   */
+  const notLoaded = [rowsQuery, totalQuery, courseRunsQuery].some((query) =>
+    isAnalyticsNotLoaded(query.error),
+  )
 
   const retryFailedQueries = () => {
     rowsQuery.refetch()
@@ -758,6 +769,11 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
         {!canQuery ? (
           <Typography id={UNAVAILABLE_MESSAGE_ID} variant="body1">
             Learner analytics is not available in this environment.
+          </Typography>
+        ) : notLoaded ? (
+          <Typography variant="body1">
+            Learner data for {contract.name} will be available once it has been
+            loaded. Please check back later.
           </Typography>
         ) : hasLoadError ? (
           <Alert severity="error">
