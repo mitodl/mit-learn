@@ -482,7 +482,13 @@ const CertificateDoc = ({
                 </View>
               ))}
             </View>
-            <Text style={{ ...typography.body2, color: colors.black, marginTop: pxToPt(8) }}>
+            <Text
+              style={{
+                ...typography.body2,
+                color: colors.black,
+                marginTop: pxToPt(8),
+              }}
+            >
               Valid Credential ID:{" "}
               <Text style={{ color: colors.silverGrayDark }}>{uuid}</Text>
             </Text>
