@@ -82,6 +82,13 @@ OCR_REQUEST_NUM_RETRIES = get_int(name="OCR_REQUEST_NUM_RETRIES", default=2)
 # Model that splits converted markdown into problems, parts and solutions
 # (defaults to OCR_MODEL)
 STRUCTURE_MODEL = get_string(name="STRUCTURE_MODEL", default=None)
+# Save the figures cropped from OCR'd PDFs to the default storage, linked from
+# the content as public images (otherwise they are placeholder comments)
+OCR_SAVE_FIGURES = get_bool(name="OCR_SAVE_FIGURES", default=True)
+# Storage folder the figures go in, one folder per file and version
+OCR_FIGURES_STORAGE_PREFIX = get_string(
+    name="OCR_FIGURES_STORAGE_PREFIX", default="content_file_figures"
+)
 
 
 # More MIT URLs

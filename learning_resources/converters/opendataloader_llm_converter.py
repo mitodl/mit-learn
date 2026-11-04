@@ -2607,6 +2607,28 @@ class OpenDataLoaderLLMConverter:
         """
         return structure_document(markdown, self.usage, metadata=metadata)
 
+    def convert_to_structured_markdown(self, metadata: dict | None = None) -> str:
+        """
+        Convert the PDF to markdown tagged with its problems, parts and solutions
+        (export_structure_markdown). If structuring fails, the converted markdown
+        is returned untagged rather than losing the OCR.
+        """
+        markdown = self.convert_to_markdown()
+        if not markdown.strip():
+            return markdown
+        try:
+            result = self.structure(markdown, metadata=metadata)
+        except Exception:
+            log.exception("Structuring %s failed", self.document_path.name)
+            return markdown
+        if result["status"] != "validated":
+            log.warning(
+                "Structure of %s needs review: %s",
+                self.document_path.name,
+                result["check"]["errors"][:MAX_LOGGED_STRUCTURE_ERRORS],
+            )
+        return export_structure_markdown(markdown, result)
+
     @property
     def usage(self) -> Usage:
         """Tokens used by this converter's OCR and structure requests."""
@@ -2805,6 +2827,18 @@ MAX_GROUP_HEADING_WORDS = 8
 MAX_BOILERPLATE_WORDS = 150
 # elements no node owns: layout between the content the model labels
 UNOWNED_ELEMENT_KINDS = frozenset({"spacing", "page_marker", "wrapper"})
+# structure check errors logged for a result that needs review
+MAX_LOGGED_STRUCTURE_ERRORS = 5
+# a problem's fields written into its node tag in the exported markdown
+PROBLEM_TAG_FIELDS = (
+    "number",
+    "title",
+    "friendly_title",
+    "topics",
+    "points",
+    "statement_available",
+    "stem_is_shared",
+)
 PAGE_MARK = re.compile(r"^<!-- page: (\d+) -->\s*$")
 ELEMENT_START = re.compile(
     r"^\s*(?:#{1,6}\s|[-*+]\s|\*{0,2}(?:problem|question|exercise|solution|answer|part)\b"
@@ -3760,13 +3794,20 @@ def _structure_attempt(markdown, usage, metadata, errors=None):
     return assemble_structure(markdown, plan, answers)
 
 
+def _comment_json(data: dict) -> str:
+    """JSON that can sit inside an HTML comment (no "--")."""
+    return json.dumps(data, ensure_ascii=False).replace("--", "\\u002d\\u002d")
+
+
 def export_structure_markdown(markdown: str, result: dict) -> str:
     """Project the structure to source-order Markdown with identity and parent tags.
 
     Text comes from source offsets, not model output. Continuations retain the
-    same node id, and printed answers retain their solution role. The complete
-    ledger in the adjacent JSON records exclusions and geometry.
+    same node id, and printed answers retain their solution role. The header
+    names the document's kind and title; a problem's tag carries its number,
+    titles, topics and points. Exclusions and geometry stay in the JSON result.
     """
+    problems = {p["id"]: p for p in result.get("problems", [])}
     spans = sorted(
         (
             (s["start"], s["end"], n)
@@ -3804,29 +3845,56 @@ def export_structure_markdown(markdown: str, result: dict) -> str:
         kept.append(markdown[position:end])
         return "".join(kept)
 
-    output = [
-        (
-            f"<!-- structure: {STRUCTURE_PIPELINE_VERSION} status={result['status']} "
-            f"source_sha256={_digest(markdown)} -->\n"
+    header = {
+        "pipeline_version": STRUCTURE_PIPELINE_VERSION,
+        "status": result["status"],
+        "kind": result.get("kind"),
+        "title": result.get("title"),
+        "source_sha256": _digest(markdown),
+    }
+    output = [f"<!-- structure: {_comment_json(header)} -->\n"]
+
+    def tag(n: dict) -> str:
+        metadata = {
+            "id": n["id"],
+            "role": n["role"],
+            "parent_id": n["parent_id"],
+            "problem": n["metadata"].get("problem"),
+            "part": n["metadata"].get("part"),
+            "pages": n["pages"],
+            **({"depends_on": n["depends_on"]} if n.get("depends_on") else {}),
+        }
+        problem = problems.get(n["id"], {})
+        metadata.update(
+            {
+                field: problem[field]
+                for field in PROBLEM_TAG_FIELDS
+                if problem.get(field) not in (None, [], "")
+            }
         )
-    ]
+        return f"\n<!-- node: {_comment_json(metadata)} -->\n\n"
+
+    # a node without text of its own (a problem whose statement is not in the
+    # file) is tagged before its first descendant's text
+    nodes = {n["id"]: n for n in result["nodes"]}
+    tagged = set()
+
+    def untagged_ancestors(n: dict) -> list[dict]:
+        chain, parent = [], nodes.get(n["parent_id"])
+        while parent and parent["id"] not in tagged and not parent["source_spans"]:
+            chain.append(parent)
+            parent = nodes.get(parent["parent_id"])
+        return chain[::-1]
+
     previous_id, previous_end = None, 0
     for start, end, n in spans:
         output.append(between(previous_end, start))
         if n["id"] != previous_id:
-            metadata = json.dumps(
-                {
-                    "id": n["id"],
-                    "role": n["role"],
-                    "parent_id": n["parent_id"],
-                    "problem": n["metadata"].get("problem"),
-                    "part": n["metadata"].get("part"),
-                    "pages": n["pages"],
-                    **({"depends_on": n["depends_on"]} if n.get("depends_on") else {}),
-                },
-                ensure_ascii=False,
-            ).replace("--", "\\u002d\\u002d")
-            output.append(f"\n<!-- node: {metadata} -->\n\n")
+            for ancestor in untagged_ancestors(n):
+                output.append(tag(ancestor))
+                tagged.add(ancestor["id"])
+            output.append(tag(n))
+            tagged.add(n["id"])
         output.append(markdown[max(start, previous_end) : end])
         previous_id, previous_end = n["id"], max(end, previous_end)
     output.append(between(previous_end, len(markdown)))

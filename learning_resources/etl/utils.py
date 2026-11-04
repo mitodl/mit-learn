@@ -14,7 +14,7 @@ from collections.abc import Generator, Iterator
 from contextlib import contextmanager
 from datetime import UTC, datetime
 from decimal import Decimal
-from hashlib import md5
+from hashlib import md5, sha256
 from io import BytesIO
 from pathlib import Path
 from tempfile import TemporaryDirectory
@@ -25,6 +25,8 @@ import rapidjson
 import requests
 from defusedxml import ElementTree
 from django.conf import settings
+from django.core.files import File
+from django.core.files.storage import default_storage
 from django.utils.dateparse import parse_duration
 from django.utils.text import slugify
 from PIL import Image
@@ -487,8 +489,13 @@ def pdf_is_valid(pdf_path: Path) -> bool:
     return False
 
 
-def _extract_content_with_ocr(file_path: Path, is_tutor_problem) -> dict | None:
-    """Extract content from PDF using OCR. Returns None if skipped."""
+def _extract_content_with_ocr(
+    file_path: Path, is_tutor_problem, figure_folder: str | None = None
+) -> dict | None:
+    """
+    Extract content from PDF using OCR. Returns None if skipped. Figures are
+    saved to figure_folder in the default storage, if given.
+    """
 
     # a threshold of 0 means no page limit
     max_pages = settings.OCR_PDF_MAX_PAGE_THRESHOLD
@@ -499,9 +506,21 @@ def _extract_content_with_ocr(file_path: Path, is_tutor_problem) -> dict | None:
     ):
         return None
     return {
-        "content": _pdf_to_markdown(file_path),
+        "content": _pdf_to_markdown(file_path, figure_folder),
         "content_title": "",
     }
+
+
+def _figure_folder(key: str, metadata: dict) -> str | None:
+    """
+    Storage folder for the figures of a file's current version:
+    <OCR_FIGURES_STORAGE_PREFIX>/<hash of its key>/<its archive checksum>
+    """
+    if not settings.OCR_SAVE_FIGURES or not key:
+        return None
+    file_folder = sha256(key.encode()).hexdigest()[:32]
+    version = metadata.get("archive_checksum") or "latest"
+    return f"{settings.OCR_FIGURES_STORAGE_PREFIX}/{file_folder}/{version}"
 
 
 def _extract_content_with_tika(
@@ -561,7 +580,11 @@ def _extract_content(  # noqa: PLR0913
         file_extension=file_extension, file_path=file_path, use_ocr=use_ocr
     ):
         try:
-            content_dict = _extract_content_with_ocr(file_path, is_tutor_problem)
+            content_dict = _extract_content_with_ocr(
+                file_path,
+                is_tutor_problem,
+                figure_folder=_figure_folder(key, metadata),
+            )
         except Exception:  # noqa: BLE001
             log.warning("OCR extraction failed for %s, falling back to tika", file_path)
             content_dict = None
@@ -1338,16 +1361,70 @@ def parse_resource_commitment(commitment_str: str) -> CommitmentConfig:
     return CommitmentConfig(commitment=commitment_str or "")
 
 
-def _pdf_to_markdown(pdf_path):
+def _pdf_to_markdown(pdf_path, figure_folder: str | None = None):
     """
-    Convert a PDF file to markdown using an llm
+    Convert a PDF file to markdown using an llm, tagged with its problems,
+    parts and solutions. With a figure_folder, its figures are saved there in the
+    default storage and linked by url; otherwise they are placeholder comments.
     """
     from learning_resources.converters.opendataloader_llm_converter import (
         OpenDataLoaderLLMConverter,
     )
 
-    converter = OpenDataLoaderLLMConverter(pdf_path)
-    return converter.convert_to_markdown()
+    if not figure_folder:
+        return OpenDataLoaderLLMConverter(pdf_path).convert_to_structured_markdown()
+    with TemporaryDirectory() as figures_dir:
+        # figures are linked by file name until they are saved
+        converter = OpenDataLoaderLLMConverter(
+            pdf_path, figures_dir=Path(figures_dir), figure_link_prefix=""
+        )
+        markdown = _store_figures(
+            converter.convert_to_structured_markdown(), converter.figures, figure_folder
+        )
+    _delete_other_figure_versions(figure_folder)
+    return markdown
+
+
+def _store_figures(markdown: str, figures: list, folder: str) -> str:
+    """
+    Save each figure crop the converter wrote to the default storage and link it
+    from the markdown by its url. A figure that fails to save becomes a
+    placeholder comment.
+    """
+    for figure in figures:
+        if not figure.path:
+            continue
+        written = figure.image_markdown(figure.path.name)
+        try:
+            name = f"{folder}/{figure.path.name}"
+            # the same version converted again replaces its figures
+            if default_storage.exists(name):
+                default_storage.delete(name)
+            with figure.path.open("rb") as image:
+                name = default_storage.save(name, File(image))
+            stored = figure.image_markdown(default_storage.url(name))
+        except Exception:
+            log.exception("Saving figure %s failed", figure.figure_id)
+            stored = figure.placeholder()
+        markdown = markdown.replace(written, stored)
+    return markdown
+
+
+def _delete_other_figure_versions(folder: str) -> None:
+    """Delete the figures saved for a file's other (replaced) versions."""
+    file_folder, _, version = folder.rpartition("/")
+    try:
+        versions, _ = default_storage.listdir(file_folder)
+        for other in versions:
+            if other == version:
+                continue
+            _, names = default_storage.listdir(f"{file_folder}/{other}")
+            for name in names:
+                default_storage.delete(f"{file_folder}/{other}/{name}")
+    except FileNotFoundError:
+        return
+    except Exception:
+        log.exception("Deleting old figures in %s failed", file_folder)
 
 
 def pdf_to_base64_images(pdf_path, fmt="JPEG", max_size=2000, quality=85):

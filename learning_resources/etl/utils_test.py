@@ -1053,7 +1053,11 @@ def test_extract_content_ocr_fallback_to_tika(mocker, settings, tmp_path):
     mock_should_use_ocr.assert_called_once_with(
         file_extension=".pdf", file_path=file_path, use_ocr=True
     )
-    mock_extract_ocr.assert_called_once_with(file_path, False)  # noqa: FBT003
+    mock_extract_ocr.assert_called_once_with(
+        file_path,
+        False,  # noqa: FBT003
+        figure_folder=utils._figure_folder("test_key", metadata),  # noqa: SLF001
+    )
     mock_extract_tika.assert_called_once_with(
         document, "application/pdf", ".pdf", "test_key"
     )
@@ -1089,6 +1093,77 @@ def test_extract_content_with_ocr_page_limit(  # noqa: PLR0913
     assert result == (
         {"content": "markdown", "content_title": ""} if converted else None
     )
+
+
+def test_pdf_to_markdown_is_structured(mocker, tmp_path):
+    """A PDF's OCR'd content is its markdown tagged with problems and parts"""
+    converter = mocker.patch(
+        "learning_resources.converters.opendataloader_llm_converter.OpenDataLoaderLLMConverter"
+    )
+    converter.return_value.convert_to_structured_markdown.return_value = "tagged"
+    assert utils._pdf_to_markdown(tmp_path / "doc.pdf") == "tagged"  # noqa: SLF001
+    converter.assert_called_once_with(tmp_path / "doc.pdf")
+
+
+def test_figure_folder(settings):
+    """A file's figures have a folder per version, unless saving them is off"""
+    settings.OCR_SAVE_FIGURES = True
+    settings.OCR_FIGURES_STORAGE_PREFIX = "figures"
+    folder = utils._figure_folder("a/key", {"archive_checksum": "abc"})  # noqa: SLF001
+    prefix, file_folder, version = folder.split("/")
+    assert (prefix, version) == ("figures", "abc")
+    assert file_folder == utils._figure_folder("a/key", {}).split("/")[1]  # noqa: SLF001
+    assert utils._figure_folder("other/key", {}) != folder  # noqa: SLF001
+    settings.OCR_SAVE_FIGURES = False
+    assert utils._figure_folder("a/key", {"archive_checksum": "abc"}) is None  # noqa: SLF001
+
+
+def test_pdf_to_markdown_stores_figures(mocker, settings, tmp_path):
+    """Figures are saved to storage and linked by url; older versions go"""
+    from learning_resources.converters.opendataloader_llm_converter import Figure
+
+    media = tmp_path / "media"
+    settings.STORAGES = {
+        "default": {
+            "BACKEND": "django.core.files.storage.FileSystemStorage",
+            "OPTIONS": {"location": str(media), "base_url": "https://cdn.test/"},
+        },
+        "staticfiles": {
+            "BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"
+        },
+    }
+    old = media / "figures/file/old/p1_1.png"
+    old.parent.mkdir(parents=True)
+    old.write_bytes(b"old")
+    saved = Figure("p1_1", 1, [100, 400, 300, 600], "a diagram", 612, 792)
+    unsaved = Figure("p1_2", 1, [100, 100, 300, 300], "a plot", 612, 792)
+
+    def converter(pdf_path, *, figures_dir, figure_link_prefix):
+        assert figure_link_prefix == ""
+        saved.path = figures_dir / "p1_1.png"
+        saved.path.write_bytes(b"png")
+        unsaved.path = figures_dir / "missing.png"  # its crop cannot be read
+        return mocker.Mock(
+            figures=[saved, unsaved],
+            **{
+                "convert_to_structured_markdown.return_value": (
+                    f"{saved.image_markdown('p1_1.png')}\n\n"
+                    f"{unsaved.image_markdown('missing.png')}"
+                )
+            },
+        )
+
+    mocker.patch(
+        "learning_resources.converters.opendataloader_llm_converter.OpenDataLoaderLLMConverter",
+        side_effect=converter,
+    )
+    markdown = utils._pdf_to_markdown(tmp_path / "doc.pdf", "figures/file/new")  # noqa: SLF001
+    assert (
+        saved.image_markdown("https://cdn.test/figures/file/new/p1_1.png") in markdown
+    )
+    assert unsaved.placeholder() in markdown
+    assert (media / "figures/file/new/p1_1.png").read_bytes() == b"png"
+    assert not old.exists()
 
 
 def test_extract_content_ocr_failure_falls_back_to_tika(

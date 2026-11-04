@@ -960,6 +960,98 @@ def test_structure_export_keeps_source_between_spans():
     assert "For information about citing" not in exported
 
 
+def test_structure_export_tags_document_and_problems():
+    """The header names the document; a problem's tag carries its fields"""
+    text = "## Problem 1\n\nCalculate the result."
+    plan, _ = prepare_structure(text)
+    result = assemble_structure(
+        text,
+        plan,
+        [_answer([_segment(plan, "##", "problem", through="Calculate", problem="1")])],
+    )
+    exported = export_structure_markdown(text, result)
+    header, *rest = exported.split("\n")
+    header = json.loads(header.removeprefix("<!-- structure: ").removesuffix(" -->"))
+    assert header["kind"] == "problem_set"
+    assert header["title"] == "Problem Set"
+    assert header["status"] == "validated"
+    [tag] = [
+        json.loads(line.removeprefix("<!-- node: ").removesuffix(" -->"))
+        for line in rest
+        if line.startswith("<!-- node: ")
+    ]
+    assert tag["role"] == "problem"
+    assert tag["number"] == "1"
+    assert tag["statement_available"] is True
+    assert "topics" not in tag
+
+
+def test_structure_export_tags_problems_without_statements():
+    """A solution's problem is tagged before it though the file has no statement"""
+    text = "## Problem 1\n\nFirst answer.\n\n## Problem 2\n\nSecond answer."
+    plan, _ = prepare_structure(text)
+    segments = [
+        _segment(
+            plan,
+            f"## Problem {n}",
+            "solution",
+            through=f"{word} answer",
+            problem=str(n),
+            statement_available=False,
+        )
+        for n, word in ((1, "First"), (2, "Second"))
+    ]
+    result = assemble_structure(text, plan, [_answer(segments, "solutions")])
+    assert result["status"] == "validated", result["check"]
+    tags = [
+        json.loads(line.removeprefix("<!-- node: ").removesuffix(" -->"))
+        for line in export_structure_markdown(text, result).split("\n")
+        if line.startswith("<!-- node: ")
+    ]
+    assert [(t["role"], t["problem"]) for t in tags] == [
+        ("problem", "1"),
+        ("solution", "1"),
+        ("problem", "2"),
+        ("solution", "2"),
+    ]
+    assert tags[1]["parent_id"] == tags[0]["id"]
+    assert tags[0]["statement_available"] is False
+
+
+def test_convert_to_structured_markdown(mocker, caplog):
+    """The converted markdown is tagged; a failed structure leaves it untagged"""
+    converter = OpenDataLoaderLLMConverter(Path("test.pdf"))
+    text = "## Problem 1\n\nCalculate the result."
+    mocker.patch.object(converter, "convert_to_markdown", return_value=text)
+    plan, _ = prepare_structure(text)
+    validated = assemble_structure(
+        text,
+        plan,
+        [_answer([_segment(plan, "##", "problem", through="Calculate", problem="1")])],
+    )
+    structure = mocker.patch.object(converter, "structure", return_value=validated)
+    tagged = converter.convert_to_structured_markdown()
+    assert tagged == export_structure_markdown(text, validated)
+    assert '"role": "problem"' in tagged
+
+    structure.return_value = assemble_structure(text, plan, [{}])
+    tagged = converter.convert_to_structured_markdown()
+    assert '"status": "needs_review"' in tagged
+    assert "needs review" in caplog.text
+
+    structure.side_effect = RuntimeError("structure model unavailable")
+    assert converter.convert_to_structured_markdown() == text
+
+
+def test_convert_to_structured_markdown_skips_empty(mocker):
+    """An empty conversion is not sent for structuring"""
+    converter = OpenDataLoaderLLMConverter(Path("test.pdf"))
+    mocker.patch.object(converter, "convert_to_markdown", return_value="")
+    structure = mocker.patch.object(converter, "structure")
+    assert converter.convert_to_structured_markdown() == ""
+    structure.assert_not_called()
+
+
 def test_structure_is_repaired_once(mocker, settings):
     """A structure that fails its checks is retried with the failed checks"""
     settings.STRUCTURE_MODEL = "structure-model"
