@@ -135,9 +135,9 @@ describe("proxy", () => {
     process.env = originalEnv
   })
 
-  test("tags generic page routes with Cache-Control and html-pages Surrogate-Key", () => {
+  test("tags generic page routes with Cache-Control and html-pages and path Surrogate-Keys", () => {
     const response = proxy(makeRequest("/about"))
-    expect(response.headers.get("Surrogate-Key")).toBe("html-pages")
+    expect(response.headers.get("Surrogate-Key")).toBe("html-pages path:/about")
     // s-maxage is in seconds, and comes from the configured CDN TTL.
     expect(response.headers.get("Cache-Control")).toBe(
       `s-maxage=${S_MAXAGE_SECONDS}, stale-if-error=86400, stale-while-revalidate=86400`,
@@ -147,21 +147,32 @@ describe("proxy", () => {
   test("appends per-item surrogate key for MITxOnline course pages", () => {
     const response = proxy(makeRequest("/courses/course-v1:MITxT+5.601x"))
     expect(response.headers.get("Surrogate-Key")).toBe(
-      "html-pages mitxonline:course:course-v1:MITxT+5.601x",
+      "html-pages path:/courses/course-v1:MITxT+5.601x mitxonline:course:course-v1:MITxT+5.601x",
+    )
+  })
+
+  test("tags every query variant of a page with the same decoded path key", () => {
+    const plain = proxy(makeRequest("/c/unit/mit%3Axpro"))
+    const filtered = proxy(makeRequest("/c/unit/mit%3Axpro?page=2&_rsc=x"))
+    expect(plain.headers.get("Surrogate-Key")).toBe(
+      "html-pages path:/c/unit/mit:xpro",
+    )
+    expect(filtered.headers.get("Surrogate-Key")).toBe(
+      plain.headers.get("Surrogate-Key"),
     )
   })
 
   test("appends per-item surrogate key for MITxOnline program pages (/programs/)", () => {
     const response = proxy(makeRequest("/programs/program-v1:MITxT+18.01x"))
     expect(response.headers.get("Surrogate-Key")).toBe(
-      "html-pages mitxonline:program:program-v1:MITxT+18.01x",
+      "html-pages path:/programs/program-v1:MITxT+18.01x mitxonline:program:program-v1:MITxT+18.01x",
     )
   })
 
   test("appends mitxonline:program surrogate key for /courses/p/ (ProgramAsCoursePage)", () => {
     const response = proxy(makeRequest("/courses/p/program-v1:MITxT+18.01x"))
     expect(response.headers.get("Surrogate-Key")).toBe(
-      "html-pages mitxonline:program:program-v1:MITxT+18.01x",
+      "html-pages path:/courses/p/program-v1:MITxT+18.01x mitxonline:program:program-v1:MITxT+18.01x",
     )
   })
 
@@ -188,6 +199,12 @@ describe("proxy", () => {
       proxy(makeRequest("/courses/foo%0D%0AX-Injected%3A+yes")),
     ).not.toThrow()
     const response = proxy(makeRequest("/courses/foo%0D%0AX-Injected%3A+yes"))
+    expect(response.headers.get("Surrogate-Key")).toBe("html-pages")
+  })
+
+  test("does not throw on a path that decodes outside ASCII and falls back to html-pages only", () => {
+    // Headers.set() throws on characters above U+00FF, such as an en dash.
+    const response = proxy(makeRequest("/c/topic/%E2%80%93"))
     expect(response.headers.get("Surrogate-Key")).toBe("html-pages")
   })
 
