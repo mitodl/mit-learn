@@ -1459,31 +1459,34 @@ def unit_claims_resource_ids() -> list[int]:
 
 
 @app.task(acks_late=True)
-def generate_unit_claims_for_resource(
+def generate_claims_for_resource(
     resource_id: int, *, overwrite: bool = False
 ) -> dict | None:
     """
-    Generate step 1 resource profile claims for a course's best run: its
-    context unit, then each of its units and bins.
+    Generate resource profile claims for a course's best run: step 1 for its
+    context unit, then each of its units and bins, and step 2 for the run.
 
     The context and the units don't depend on each other, so one that fails is
     logged and skipped without costing the rest; running again retries only
-    what failed, since stored extractions are reused.
+    what failed, since stored extractions are reused. The run's claims are
+    generated only when none failed: claims missing a unit would misjudge
+    which knowledge the course teaches before it is needed.
 
-    The extractions the best run's units use are then the course's only
-    published ones: see publish_claim_extractions.
+    The extractions the best run uses are then the course's only published
+    ones: see publish_claim_extractions.
 
     Args:
         resource_id (int): the LearningResource id
         overwrite (bool): regenerate claims that are already stored
 
     Returns:
-        dict | None: counts of context and unit extractions that were
-            extracted, skipped (no text, or over the input budget) and failed,
-            or None when the best run has no units
+        dict | None: counts of context, unit and run extractions that were
+            extracted, skipped (no text, over the input budget, or for the run,
+            a failed unit) and failed, or None when the best run has no units
     """
     # deferred: the claim modules import the AI libraries, kept out of boot
     from learning_resources.profiles.context_claims import generate_context_claims
+    from learning_resources.profiles.run_claims import generate_run_claims
     from learning_resources.profiles.unit_claims import generate_unit_claims
 
     resource = LearningResource.objects.get(id=resource_id)
@@ -1494,10 +1497,11 @@ def generate_unit_claims_for_resource(
         return None
 
     stats = Counter()
-    # the best run's extractions
-    current = []
+    # ids of the best run's extractions
+    current_ids = []
 
     def _extract(kind, external_id, generate):
+        """Return the extraction, or None, and whether the call failed"""
         try:
             extraction = generate()
         except Exception:
@@ -1508,13 +1512,15 @@ def generate_unit_claims_for_resource(
                 run.run_id,
             )
             stats[f"{kind}_failed"] += 1
-            return
+            return None, True
         if extraction:
-            current.append(extraction.id)
+            current_ids.append(extraction.id)
         stats[f"{kind}_extracted" if extraction else f"{kind}_skipped"] += 1
+        return extraction, False
 
+    context, any_failed = None, False
     if run.units.filter(kind=Unit.Kind.CONTEXT).exists():
-        _extract(
+        context, any_failed = _extract(
             Unit.Kind.CONTEXT,
             "context",
             lambda: generate_context_claims(run, overwrite=overwrite),
@@ -1522,39 +1528,60 @@ def generate_unit_claims_for_resource(
     units = run.units.exclude(kind=Unit.Kind.CONTEXT).order_by(
         F("position").asc(nulls_last=True), "external_id"
     )
+    unit_extractions = []
     for unit in units:
-        _extract(
+        extraction, failed = _extract(
             Unit.Kind.UNIT,
             unit.external_id,
             lambda unit=unit: generate_unit_claims(unit, overwrite=overwrite),
         )
-    publish_claim_extractions(resource, current)
-    log.info("Generated unit claims for %s: %s", resource.readable_id, dict(stats))
+        any_failed = any_failed or failed
+        unit_extractions.append((unit, extraction))
+    if any_failed:
+        log.info(
+            "Not generating run claims for %s: a unit or the context failed",
+            run.run_id,
+        )
+        stats["run_skipped"] += 1
+    else:
+        _extract(
+            "run",
+            run.run_id,
+            lambda: generate_run_claims(
+                run, context, unit_extractions, overwrite=overwrite
+            ),
+        )
+    publish_claim_extractions(resource, current_ids)
+    log.info("Generated claims for %s: %s", resource.readable_id, dict(stats))
     return dict(stats)
 
 
-def publish_claim_extractions(resource: LearningResource, current: list[int]) -> None:
+def publish_claim_extractions(
+    resource: LearningResource, current_ids: list[int]
+) -> None:
     """
     Publish a course's current claim extractions and unpublish the rest.
 
     The rest are those of runs that aren't the best run, and of best-run
-    units that failed or were skipped this time, whose rows weren't brought
-    up to date. Rows whose unit was deleted, which no course sweeps, are
-    unpublished too.
+    units, or the best run itself, that failed or were skipped this time,
+    whose rows weren't brought up to date. Rows whose unit or run was deleted,
+    which no course sweeps, are unpublished too.
 
     Args:
         resource (LearningResource): the course
-        current (list of int): ids of the best run's extractions
+        current_ids (list of int): ids of the best run's extractions
     """
-    extractions = ClaimExtraction.objects.filter(unit__run__learning_resource=resource)
+    extractions = ClaimExtraction.objects.filter(
+        Q(unit__run__learning_resource=resource) | Q(run__learning_resource=resource)
+    )
     with transaction.atomic():
-        extractions.filter(id__in=current, published=False).update(published=True)
-        extractions.filter(published=True).exclude(id__in=current).update(
+        extractions.filter(id__in=current_ids, published=False).update(published=True)
+        extractions.filter(published=True).exclude(id__in=current_ids).update(
             published=False
         )
-        ClaimExtraction.objects.filter(published=True, unit__isnull=True).update(
-            published=False
-        )
+        ClaimExtraction.objects.filter(
+            published=True, unit__isnull=True, run__isnull=True
+        ).update(published=False)
 
 
 @app.task(acks_late=True)
@@ -1562,7 +1589,7 @@ def generate_all_claims(resource_ids: list[int], *, overwrite: bool = False) -> 
     """
     Queue resource profile claim generation for each resource.
 
-    Only step 1, the context and unit claims, exists so far.
+    Step 1 (context and unit claims) and step 2 (run claims) both run.
 
     Args:
         resource_ids (list of int): the LearningResource ids
@@ -1573,7 +1600,7 @@ def generate_all_claims(resource_ids: list[int], *, overwrite: bool = False) -> 
     """
     celery.group(
         [
-            generate_unit_claims_for_resource.si(resource_id, overwrite=overwrite)
+            generate_claims_for_resource.si(resource_id, overwrite=overwrite)
             for resource_id in resource_ids
         ]
     ).apply_async()
