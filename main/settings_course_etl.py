@@ -70,7 +70,7 @@ OCR_PROMPT = get_string(
     "Do not include extra commentary - "
     "ONLY include the resulting transcribed markdown.",
 )
-# Do not OCR if the PDF has exceeds this many pages
+# Do not OCR if the PDF has more than this many pages (0: no page limit)
 OCR_PDF_MAX_PAGE_THRESHOLD = get_int(name="OCR_PDF_MAX_PAGE_THRESHOLD", default=10)
 
 # OCR the entire page if the density of math formulas exceeds this threshold

@@ -1061,6 +1061,36 @@ def test_extract_content_ocr_fallback_to_tika(mocker, settings, tmp_path):
     assert result == {"content": "tika content", "content_title": "Tika Title"}
 
 
+@pytest.mark.parametrize(
+    ("max_pages", "is_tutor_problem", "converted"),
+    [
+        (10, False, False),
+        (10, True, True),
+        (20, False, True),
+        (0, False, True),
+    ],
+)
+def test_extract_content_with_ocr_page_limit(  # noqa: PLR0913
+    mocker, settings, tmp_path, max_pages, is_tutor_problem, converted
+):
+    """PDFs over the page limit are not OCR'd, unless the limit is 0"""
+    settings.OCR_PDF_MAX_PAGE_THRESHOLD = max_pages
+    mocker.patch(
+        "learning_resources.etl.utils.PdfReader",
+        return_value=mocker.Mock(pages=[None] * 15),
+    )
+    to_markdown = mocker.patch(
+        "learning_resources.etl.utils._pdf_to_markdown", return_value="markdown"
+    )
+    result = utils._extract_content_with_ocr(  # noqa: SLF001
+        tmp_path / "doc.pdf", is_tutor_problem
+    )
+    assert to_markdown.called is converted
+    assert result == (
+        {"content": "markdown", "content_title": ""} if converted else None
+    )
+
+
 def test_extract_content_ocr_failure_falls_back_to_tika(
     mocker, settings, tmp_path, caplog
 ):

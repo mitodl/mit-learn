@@ -490,8 +490,13 @@ def pdf_is_valid(pdf_path: Path) -> bool:
 def _extract_content_with_ocr(file_path: Path, is_tutor_problem) -> dict | None:
     """Extract content from PDF using OCR. Returns None if skipped."""
 
-    page_count = len(PdfReader(file_path).pages)
-    if page_count > settings.OCR_PDF_MAX_PAGE_THRESHOLD and not is_tutor_problem:
+    # a threshold of 0 means no page limit
+    max_pages = settings.OCR_PDF_MAX_PAGE_THRESHOLD
+    if (
+        max_pages
+        and not is_tutor_problem
+        and len(PdfReader(file_path).pages) > max_pages
+    ):
         return None
     return {
         "content": _pdf_to_markdown(file_path),
