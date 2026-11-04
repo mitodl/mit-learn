@@ -359,6 +359,9 @@ def documents_from_olx(archive: OlxArchive) -> Generator[tuple, None, None]:
                 "archive_checksum": archive_checksum,
                 "file_extension": extension_lower,
                 "source_path": f"{rel_dir}/{path.name}",
+                # where the file is on disk; source_path is not always
+                # relative to the root the archive was read from
+                "file_path": str(path),
             },
         )
 
@@ -447,11 +450,15 @@ def get_url_from_module_id(
         return None
 
 
-def _should_reprocess(existing_record, metadata: dict, overwrite) -> bool:
+def _should_reprocess(
+    existing_record, metadata: dict, overwrite, *, ocr_pdfs=False
+) -> bool:
     """Determine if content needs to be reprocessed."""
     if not existing_record:
         return True
     if overwrite:
+        return True
+    if ocr_pdfs and metadata.get("file_extension") == ".pdf":
         return True
     return existing_record.archive_checksum != metadata.get("archive_checksum")
 
@@ -497,6 +504,31 @@ def _extract_content_with_ocr(file_path: Path, is_tutor_problem) -> dict | None:
         "content": _pdf_to_markdown(file_path),
         "content_title": "",
     }
+
+
+def extract_pdf_bytes_with_ocr(pdf_bytes: bytes) -> dict | None:
+    """
+    Extract the text of an in-memory PDF with LLM OCR.
+
+    Returns:
+        dict: {"content": markdown}, or None if OCR is off, the PDF is invalid
+        or over OCR_PDF_MAX_PAGE_THRESHOLD pages, or OCR fails or returns nothing
+    """
+    if not settings.OCR_MODEL or not pdf_bytes:
+        return None
+    with TemporaryDirectory() as tempdir:
+        pdf_path = Path(tempdir, "document.pdf")
+        pdf_path.write_bytes(pdf_bytes)
+        if not pdf_is_valid(pdf_path):
+            return None
+        try:
+            content_dict = _extract_content_with_ocr(pdf_path, is_tutor_problem=False)
+        except Exception:
+            log.warning("OCR extraction failed for in-memory PDF", exc_info=True)
+            return None
+    if not content_dict or not (content_dict.get("content") or "").strip():
+        return None
+    return {"content": content_dict["content"]}
 
 
 def _extract_content_with_tika(
@@ -548,8 +580,17 @@ def _extract_content(  # noqa: PLR0913
 
     source_path = metadata.get("source_path")
     file_extension = metadata.get("file_extension")
-    file_path = Path(olx_path) / Path(source_path)
-    if file_extension == ".pdf" and file_path.is_file() and not pdf_is_valid(file_path):
+    file_path = (
+        Path(metadata["file_path"])
+        if metadata.get("file_path")
+        else Path(olx_path) / Path(source_path)
+    )
+    if (
+        use_ocr
+        and file_extension == ".pdf"
+        and file_path.is_file()
+        and not pdf_is_valid(file_path)
+    ):
         msg = f"Invalid PDF {file_path}"
         raise InvalidPDFError(msg)
     if _should_use_ocr(
@@ -733,6 +774,7 @@ def process_olx_path(  # noqa: PLR0913
     valid_file_types: list[str] | None = None,
     is_tutor_problem_file_import=False,
     use_ocr=False,
+    ocr_pdfs=False,
     failed_source_paths: list | None = None,
     archive: OlxArchive | None = None,
 ) -> Generator[dict, None, None]:
@@ -746,6 +788,9 @@ def process_olx_path(  # noqa: PLR0913
     failure. archive is the OlxArchive of olx_path, if the caller has one to
     share; the file types it reads are then the ones ingested, and a different
     valid_file_types raises ValueError.
+
+    ocr_pdfs re-extracts every PDF with LLM OCR, whether or not it changed;
+    other files are reprocessed only as overwrite says.
     """
     if archive is None:
         archive = OlxArchive(
@@ -775,13 +820,15 @@ def process_olx_path(  # noqa: PLR0913
                 source_path, key, run, is_tutor_problem_file_import
             )
 
-            if _should_reprocess(existing_record, metadata, overwrite):
+            if _should_reprocess(
+                existing_record, metadata, overwrite, ocr_pdfs=ocr_pdfs
+            ):
                 content_dict = _extract_content(
                     document,
                     metadata,
                     olx_path,
                     key,
-                    use_ocr=use_ocr,
+                    use_ocr=use_ocr or ocr_pdfs,
                     is_tutor_problem=is_tutor_problem_file_import,
                 )
                 if content_dict is None:
@@ -843,6 +890,7 @@ def transform_content_files(
     *,
     overwrite: bool,
     failed_keys: list | None = None,
+    ocr_pdfs: bool = False,
 ) -> Generator[dict, None, None]:
     """
     Pass content to tika, then return JSON document with transformed content inside it
@@ -853,6 +901,7 @@ def transform_content_files(
         failed_keys (list): caller-owned list extended in place with the
             ContentFile keys of files whose extraction failed; valid only once
             the generator is fully exhausted
+        ocr_pdfs (bool): re-extract every PDF with LLM OCR, even unchanged ones
 
     Yields:
         dict: content from file
@@ -862,6 +911,7 @@ def transform_content_files(
         str(archive.root),
         run,
         overwrite=overwrite,
+        ocr_pdfs=ocr_pdfs,
         failed_source_paths=failed_source_paths,
         archive=archive,
     )

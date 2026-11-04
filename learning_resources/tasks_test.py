@@ -185,6 +185,7 @@ def test_import_content_files(settings, mocker, mocked_celery):
             overwrite=True,
             overwrite_units=True,
             learning_resource_ids=[42],
+            ocr_pdfs=True,
         )
     get_content_tasks_mock.assert_called_once_with(
         ETLSource.mitxonline.name,
@@ -192,6 +193,7 @@ def test_import_content_files(settings, mocker, mocked_celery):
         overwrite=True,
         overwrite_units=True,
         learning_resource_ids=[42],
+        ocr_pdfs=True,
     )
 
 
@@ -253,11 +255,17 @@ def test_get_content_tasks(
             ["foo.tar.gz"],
             overwrite=True,
             overwrite_units=False,
+            ocr_pdfs=False,
         )
     else:
         assert mock_get_content_files.call_count == 2
         mock_get_content_files.assert_any_call(
-            ANY, etl_source, ["foo.tar.gz"], overwrite=True, overwrite_units=False
+            ANY,
+            etl_source,
+            ["foo.tar.gz"],
+            overwrite=True,
+            overwrite_units=False,
+            ocr_pdfs=False,
         )
 
 
@@ -324,6 +332,7 @@ def test_get_content_files(mocker, mock_course_archive_bucket):
         ["foo.tar.gz"],
         overwrite=False,
         overwrite_units=True,
+        ocr_pdfs=False,
     )
 
 
