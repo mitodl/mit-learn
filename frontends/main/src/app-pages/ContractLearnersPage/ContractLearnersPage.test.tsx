@@ -727,6 +727,10 @@ describe("ContractLearnersPage", () => {
     expect(
       screen.queryByText("Something went wrong loading learner data."),
     ).not.toBeInTheDocument()
+    // An export would 404 the same way and report a retryable failure.
+    expect(
+      screen.getByRole("button", { name: "Export learners" }),
+    ).toHaveAttribute("aria-disabled", "true")
   })
 
   test("the module dropdown lists every course run on the contract", async () => {

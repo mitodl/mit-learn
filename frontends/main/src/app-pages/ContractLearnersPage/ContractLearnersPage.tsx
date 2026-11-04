@@ -305,6 +305,7 @@ const PAGE_SIZE = 25
 /** Below the API's max_page_size rather than pinned to it — that setting is env-overridable, and this only costs one extra round trip on a large contract. */
 const CSV_EXPORT_PAGE_SIZE = 500
 const UNAVAILABLE_MESSAGE_ID = "learner-analytics-unavailable-message"
+const NOT_LOADED_MESSAGE_ID = "learner-analytics-not-loaded-message"
 
 const STATUS_OPTIONS: { value: string; label: string }[] = [
   { value: ALL, label: "All learners" },
@@ -553,7 +554,14 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
   }
 
   const handleExport = useCallback(async () => {
-    if (isExporting || !canQuery || !moduleResolved || !orgUuid || !contractId)
+    if (
+      isExporting ||
+      !canQuery ||
+      notLoaded ||
+      !moduleResolved ||
+      !orgUuid ||
+      !contractId
+    )
       return
     setIsExporting(true)
     try {
@@ -628,6 +636,7 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
   }, [
     isExporting,
     canQuery,
+    notLoaded,
     moduleResolved,
     orgUuid,
     contractId,
@@ -749,8 +758,16 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
             <ExportWrapper>
               <Button
                 variant="bordered"
-                aria-disabled={isExporting || !canQuery || !moduleResolved}
-                aria-describedby={canQuery ? undefined : UNAVAILABLE_MESSAGE_ID}
+                aria-disabled={
+                  isExporting || !canQuery || notLoaded || !moduleResolved
+                }
+                aria-describedby={
+                  !canQuery
+                    ? UNAVAILABLE_MESSAGE_ID
+                    : notLoaded
+                      ? NOT_LOADED_MESSAGE_ID
+                      : undefined
+                }
                 aria-busy={isExporting || (canQuery && !moduleResolved)}
                 onClick={handleExport}
               >
@@ -771,7 +788,7 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
             Learner analytics is not available in this environment.
           </Typography>
         ) : notLoaded ? (
-          <Typography variant="body1">
+          <Typography id={NOT_LOADED_MESSAGE_ID} variant="body1">
             Learner data for {contract.name} will be available once it has been
             loaded. Please check back later.
           </Typography>
