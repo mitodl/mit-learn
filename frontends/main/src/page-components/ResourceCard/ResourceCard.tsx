@@ -4,6 +4,7 @@ import NiceModal from "@ebay/nice-modal-react"
 import type { LearningResourceCardProps } from "ol-components"
 import { useFeatureFlagEnabled } from "posthog-js/react"
 import { RiBookmarkFill, RiBookmarkLine, RiMenuAddLine } from "@remixicon/react"
+import { MenuCheckIcon } from "./MenuCheckIcon"
 import { FeatureFlags } from "@/common/feature_flags"
 import {
   ResourceCardSkeleton,
@@ -137,7 +138,11 @@ const ResourceCardV2: React.FC<ResourceCardV2Props> = ({
         ? `In a learning path: ${resource.title}`
         : `Add to learning path: ${resource.title}`,
       filled: !!inLearningPath,
-      icon: <RiMenuAddLine aria-hidden />,
+      icon: inLearningPath ? (
+        <MenuCheckIcon aria-hidden />
+      ) : (
+        <RiMenuAddLine aria-hidden />
+      ),
       onClick: (event) => onAddToLearningPathClick(event, resource.id),
     })
   }

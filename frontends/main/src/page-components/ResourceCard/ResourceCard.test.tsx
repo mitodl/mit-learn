@@ -9,7 +9,9 @@ import {
   expectWindowNavigation,
 } from "@/test-utils"
 import type { User } from "api/hooks/user"
+import { RiMenuAddLine } from "@remixicon/react"
 import { ResourceCard } from "./ResourceCard"
+import { MenuCheckIcon } from "./MenuCheckIcon"
 import { MicroUserListRelationship } from "api"
 import {
   AddToLearningPathDialog,
@@ -422,7 +424,7 @@ describe("ResourceCard (redesigned only)", () => {
     { inUserList: true, inLearningPath: false },
     { inUserList: false, inLearningPath: true },
   ])(
-    "An editor gets the learning path action, then the bookmark, each labelled by its own membership (inUserList=$inUserList, inLearningPath=$inLearningPath)",
+    "An editor gets the learning path action, then the bookmark, each labelled and drawn by its own membership (inUserList=$inUserList, inLearningPath=$inLearningPath)",
     async ({ inUserList, inLearningPath }) => {
       const resource = makeResource()
       setupCard({
@@ -450,6 +452,10 @@ describe("ResourceCard (redesigned only)", () => {
           .getAllByRole("button")
           .map((button) => button.getAttribute("aria-label")),
       ).toEqual([learningPathLabel, bookmarkLabel])
+      // The learning path states differ in shape, not only in color.
+      expect(lastViewProps().actions?.[0].icon).toMatchObject({
+        type: inLearningPath ? MenuCheckIcon : RiMenuAddLine,
+      })
     },
   )
 
