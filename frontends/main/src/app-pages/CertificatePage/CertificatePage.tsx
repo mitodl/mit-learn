@@ -41,7 +41,7 @@ const Page = styled.div(({ theme }) => ({
   display: "flow-root",
   flexGrow: 1,
   height: "100%",
-  padding: "0 16px 90px",
+  padding: "0 12px 90px",
   [theme.breakpoints.down("sm")]: {
     backgroundImage: "none",
     padding: "0 40px 40px",
@@ -174,8 +174,7 @@ const PrintLogo = styled.img({
 const Badge = styled.div(({ theme }) => ({
   backgroundImage: `url(${CertificateBadgeDesktop.src})`,
   position: "absolute",
-  // Offsets are measured from the outer edge of Inner's 2px border
-  top: "-2px",
+  top: "0px",
   right: "46px",
   width: "230px",
   height: "360px",

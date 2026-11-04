@@ -227,7 +227,7 @@ const Badge = ({ programType }: { programType?: string | null }) => {
       style={{
         position: "absolute",
         // Offsets are measured from the outer edge of the content border
-        top: pxToPt(-2),
+        top: pxToPt(0),
         right: pxToPt(46),
       }}
     >
