@@ -38,23 +38,28 @@ def remove_edx_from_opensearch() -> list[str]:
     try:
         conn = get_conn()
         # the course and program indexes hold their content files too
-        for alias in get_active_aliases(
+        aliases = get_active_aliases(
             conn, object_types=[COURSE_TYPE, PROGRAM_TYPE, HYBRID_COMBINED_INDEX]
-        ):
+        )
+    except Exception as err:  # noqa: BLE001
+        return [f"OpenSearch: {err!r}"]
+    for alias in aliases:
+        try:
             # delete_by_query only sees refreshed documents
             conn.indices.refresh(index=alias)
             response = conn.delete_by_query(
                 index=alias, body=query, conflicts="proceed", refresh=True
             )
-            # a call that returns can still leave documents behind
-            if (
-                response.get("timed_out")
-                or response.get("failures")
-                or response.get("version_conflicts")
-            ):
-                failed.append(f"OpenSearch {alias}: {response}")
-    except Exception as err:  # noqa: BLE001
-        failed.append(f"OpenSearch: {err!r}")
+        except Exception as err:  # noqa: BLE001
+            failed.append(f"OpenSearch {alias}: {err!r}")
+            continue
+        # a call that returns can still leave documents behind
+        if (
+            response.get("timed_out")
+            or response.get("failures")
+            or response.get("version_conflicts")
+        ):
+            failed.append(f"OpenSearch {alias}: {response}")
     return failed
 
 
