@@ -651,7 +651,10 @@ MIDDLEWARE_FEATURE_FLAG_COOKIE_NAME = get_string(
 MIDDLEWARE_FEATURE_FLAG_COOKIE_MAX_AGE_SECONDS = get_int(
     "MIDDLEWARE_FEATURE_FLAG_COOKIE_MAX_AGE_SECONDS", 60 * 60
 )
-REDIS_VIEW_CACHE_DURATION = get_int("REDIS_VIEW_CACHE_DURATION", 60 * 60 * 24)
+# Lifetime of a cached view response in Redis: the longest an API response can
+# lag a data change that doesn't clear the view cache itself. Lengthen it for
+# more cache hits and less rendering load, shorten it for fresher responses.
+REDIS_VIEW_CACHE_DURATION = get_int("REDIS_VIEW_CACHE_DURATION", 60 * 60)
 
 
 if MIDDLEWARE_FEATURE_FLAG_QS_PREFIX:
