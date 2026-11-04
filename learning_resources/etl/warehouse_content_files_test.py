@@ -560,6 +560,95 @@ def test_load_run_failed_rows_count_as_kept(warehouse_owns_content_files):
     assert run.content_files.filter(published=True).count() == 20
 
 
+@pytest.mark.parametrize(
+    ("kept", "added", "refused"),
+    # 20 published: the count drop is 20 - (kept + added), and the rest of the
+    # keys that changed are held to RUN_UNPUBLISH_FLOOR
+    [(5, 0, False), (5, 10, False), (5, 11, True), (15, 5, False), (0, 20, True)],
+)
+def test_load_run_allow_shrink_still_counts_renames(
+    warehouse_owns_content_files, kept, added, refused
+):
+    """
+    allow_shrink lets the files a count drop explains go, and holds the keys that
+    changed beyond it to the limit
+    """
+    run = _published_run(20)
+    rows = [_open_edx_row(f"old-{index}") for index in range(kept)] + [
+        _open_edx_row(f"new-{index}") for index in range(added)
+    ]
+
+    if refused:
+        with pytest.raises(ExtractException):
+            warehouse_content_files.load_run(
+                run, rows, expected_count=len(rows), allow_shrink=True
+            )
+        assert run.content_files.filter(published=True).count() == 20
+    else:
+        warehouse_content_files.load_run(
+            run, rows, expected_count=len(rows), allow_shrink=True
+        )
+        assert run.content_files.filter(published=True).count() == kept + added
+
+
+def test_sync_allowed_to_unpublish_still_refuses_a_renamed_run(
+    mocker, settings, warehouse_owns_content_files
+):
+    """
+    A sync rerun with allow_mass_unpublish over one shrunk run and one renamed run
+    loads the shrunk one and leaves the renamed one's files published
+    """
+    from learning_resources import tasks
+
+    settings.WAREHOUSE_CATALOG = "catalog"
+    settings.WAREHOUSE_SCHEMA = "schema"
+    shrunk = _run(run_id="course-v1:MITxT+shrunk+1T2026")
+    renamed = _run(run_id="course-v1:MITxT+renamed+1T2026")
+    for run in (shrunk, renamed):
+        for index in range(20):
+            ContentFileFactory.create(run=run, key=f"old-{index}", published=True)
+    rows = {
+        shrunk.run_id: [_open_edx_row(f"old-{index}") for index in range(5)],
+        renamed.run_id: [_open_edx_row(f"new-{index}") for index in range(20)],
+    }
+    mocker.patch("learning_resources.lib.warehouse.connect_to_warehouse")
+    mocker.patch("learning_resources.tasks.connect_to_warehouse")
+    mocker.patch(
+        "learning_resources.tasks.iter_group_stats",
+        return_value=iter(
+            [
+                _run_stats(run_id, row_count=len(run_rows), last_modified_count=0)
+                for run_id, run_rows in rows.items()
+            ]
+        ),
+    )
+    mocker.patch(
+        "learning_resources.tasks.iter_rows",
+        side_effect=lambda _conn, _view, where: iter(rows[where["run_readable_id"]]),
+    )
+    mocker.patch("learning_resources.tasks.caches")
+    failures = []
+
+    def load_inline(*args, **kwargs):
+        try:
+            tasks.load_warehouse_content_files(*args, **kwargs)
+        except ExtractException as exc:
+            failures.append(str(exc))
+
+    mocker.patch.object(
+        tasks.load_warehouse_content_files, "delay", side_effect=load_inline
+    )
+
+    tasks.SyncMITxOnlineContentFilesTask.run(allow_mass_unpublish=True)
+
+    assert shrunk.content_files.filter(published=True).count() == 5
+    assert set(
+        renamed.content_files.filter(published=True).values_list("key", flat=True)
+    ) == {f"old-{index}" for index in range(20)}
+    assert len(failures) == 1
+    assert renamed.run_id in failures[0]
+
+
 def test_runs_to_load_round_trips_with_load_run(warehouse_owns_content_files):
     """A run stays loaded until its aggregates move"""
     run = _run()

@@ -3409,8 +3409,8 @@ def test_content_file_sync_queues_a_load_per_changed_run(
     )
     mock_runs.assert_called_once_with(etl_source, stats, allow_mass_unpublish=allow)
     assert mock_load.delay.call_args_list == [
-        mocker.call(etl_source, "run-1", 2, allow_mass_unpublish=allow),
-        mocker.call(etl_source, "run-2", 5, allow_mass_unpublish=allow),
+        mocker.call(etl_source, "run-1", 2, allow_shrink=allow),
+        mocker.call(etl_source, "run-2", 5, allow_shrink=allow),
     ]
 
 
@@ -3495,7 +3495,7 @@ def test_load_warehouse_content_files_reads_one_run(mocker, content_file_run):
     )
     mock_connect.return_value.close.assert_called_once_with()
     mock_load.assert_called_once_with(
-        run, rows, expected_count=7, allow_mass_unpublish=False
+        run, rows, expected_count=7, allow_mass_unpublish=False, allow_shrink=False
     )
     key = f"warehouse_content_files:{ETLSource.mitxonline.name}:{run.run_id}"
     content_file_run.lock.add.assert_called_once_with(
@@ -3504,10 +3504,11 @@ def test_load_warehouse_content_files_reads_one_run(mocker, content_file_run):
     content_file_run.lock.delete.assert_called_once_with(key)
 
 
+@pytest.mark.parametrize("override", ["allow_mass_unpublish", "allow_shrink"])
 def test_load_warehouse_content_files_passes_the_unpublish_override(
-    mocker, content_file_run
+    mocker, content_file_run, override
 ):
-    """An operator lifts the run's unpublish limit through the task"""
+    """An operator, or a sync, loosens the run's unpublish limit through the task"""
     mocker.patch("learning_resources.tasks.connect_to_warehouse")
     mocker.patch("learning_resources.tasks.iter_rows", return_value=iter([]))
     mock_load = mocker.patch(
@@ -3515,13 +3516,14 @@ def test_load_warehouse_content_files_passes_the_unpublish_override(
     )
 
     load_warehouse_content_files.delay(
-        ETLSource.mitxonline.name,
-        content_file_run.run.run_id,
-        3,
-        allow_mass_unpublish=True,
+        ETLSource.mitxonline.name, content_file_run.run.run_id, 3, **{override: True}
     )
 
-    assert mock_load.call_args.kwargs["allow_mass_unpublish"] is True
+    assert mock_load.call_args.kwargs == {
+        "expected_count": 3,
+        "allow_mass_unpublish": override == "allow_mass_unpublish",
+        "allow_shrink": override == "allow_shrink",
+    }
 
 
 def test_load_warehouse_content_files_releases_the_lock_on_failure(
