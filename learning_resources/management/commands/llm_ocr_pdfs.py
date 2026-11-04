@@ -34,10 +34,9 @@ def _ocw_url_path(resource: LearningResource) -> str | None:
 
 
 def _pdfs(resource_ids):
-    """Return the published PDF content files of the resources' runs"""
-    return ContentFile.objects.filter(
+    """Return the visible PDF content files of the resources' runs"""
+    return ContentFile.objects.visible().filter(
         run__learning_resource_id__in=resource_ids,
-        published=True,
         file_extension__iexact=".pdf",
     )
 
