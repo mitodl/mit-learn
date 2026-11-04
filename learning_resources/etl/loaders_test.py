@@ -2211,6 +2211,91 @@ def test_load_content_files_failed_keys_untouched(mocker, has_release_date):
     assert (stale_cf.published, stale_cf.release_date) == (False, release_date)
 
 
+def test_load_content_files_keeps_a_file_that_fails_to_save(mocker):
+    """A file the load couldn't save is reported and is not unpublished"""
+    course = LearningResourceFactory.create(is_course=True, create_runs=False)
+    course_run = LearningResourceRunFactory.create(
+        published=True, learning_resource=course
+    )
+    loaded_cf, failing_cf = (
+        ContentFileFactory.create(run=course_run, published=True, key=key)
+        for key in ("loaded-key", "failing-key")
+    )
+    mocker.patch(
+        "learning_resources.etl.loaders.load_content_file",
+        side_effect=[loaded_cf.id, None],
+        autospec=True,
+    )
+    mocker.patch(
+        "learning_resources.etl.loaders.content_files_loaded_actions",
+        autospec=True,
+    )
+    failed_keys = []
+
+    load_content_files(
+        course_run,
+        [{"key": "loaded-key"}, {"key": "failing-key"}],
+        failed_keys=failed_keys,
+    )
+
+    failing_cf.refresh_from_db()
+    assert failing_cf.published is True
+    assert failed_keys == ["failing-key"]
+
+
+def test_load_content_files_keeps_a_failed_save_with_no_failed_keys(mocker):
+    """The caller doesn't need to pass failed_keys for a failed save to be kept"""
+    course = LearningResourceFactory.create(is_course=True, create_runs=False)
+    course_run = LearningResourceRunFactory.create(
+        published=True, learning_resource=course
+    )
+    loaded_cf, failing_cf = (
+        ContentFileFactory.create(run=course_run, published=True, key=key)
+        for key in ("loaded-key", "failing-key")
+    )
+    mocker.patch(
+        "learning_resources.etl.loaders.load_content_file",
+        side_effect=[loaded_cf.id, None],
+        autospec=True,
+    )
+    mocker.patch(
+        "learning_resources.etl.loaders.content_files_loaded_actions",
+        autospec=True,
+    )
+
+    load_content_files(course_run, [{"key": "loaded-key"}, {"key": "failing-key"}])
+
+    failing_cf.refresh_from_db()
+    assert failing_cf.published is True
+
+
+def test_load_content_files_prune_false_leaves_missing_files_published(mocker):
+    """A load that may be partial unpublishes nothing but still runs its actions"""
+    course = LearningResourceFactory.create(is_course=True, create_runs=False)
+    course_run = LearningResourceRunFactory.create(
+        published=True, learning_resource=course
+    )
+    loaded_cf, missing_cf = (
+        ContentFileFactory.create(run=course_run, published=True, key=key)
+        for key in ("loaded-key", "missing-key")
+    )
+    mocker.patch(
+        "learning_resources.etl.loaders.load_content_file",
+        return_value=loaded_cf.id,
+        autospec=True,
+    )
+    mock_actions = mocker.patch(
+        "learning_resources.etl.loaders.content_files_loaded_actions",
+        autospec=True,
+    )
+
+    load_content_files(course_run, [{"key": "loaded-key"}], prune=False)
+
+    missing_cf.refresh_from_db()
+    assert missing_cf.published is True
+    mock_actions.assert_called_once_with(run=course_run)
+
+
 @pytest.mark.parametrize(
     ("owner", "writes"),
     [
