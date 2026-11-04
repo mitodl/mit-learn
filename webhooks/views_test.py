@@ -969,5 +969,9 @@ def test_extracted_content_files_webhook_scopes_the_pull_to_the_run(
     )
     # the per-run unpublish limit applies, and nothing a sender sends lifts it
     mock_load_run.assert_called_once_with(
-        run, [{"key": "a"}], expected_count=1, allow_mass_unpublish=False
+        run,
+        [{"key": "a"}],
+        expected_count=1,
+        allow_mass_unpublish=False,
+        allow_shrink=False,
     )
