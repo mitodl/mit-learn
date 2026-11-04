@@ -2067,11 +2067,11 @@ describe("ContractLearnersPage progress grid", () => {
       analyticsFactories.learnersEnvelope([], { total_count: 28 }),
     )
     mockList(contractId, [])
-    const { location } = renderWithProviders(
+    const { location, queryClient } = renderWithProviders(
       <ContractLearnersPage orgSlug={orgSlug} contractSlug={contract.slug} />,
       { url },
     )
-    return { contractId, orgSlug, contract, location }
+    return { contractId, orgSlug, contract, location, queryClient }
   }
 
   beforeEach(() => {
@@ -2164,6 +2164,7 @@ describe("ContractLearnersPage progress grid", () => {
         ada({
           courserun_readable_id: M5,
           completion_status: "passed",
+          content_progress: 1,
           last_active_on: "2026-09-12",
           days_active: 3,
           videos_watched: 10,
@@ -2204,12 +2205,16 @@ describe("ContractLearnersPage progress grid", () => {
       const modules = within(
         within(dialog).getByRole("region", { name: "Modules" }),
       ).getAllByRole("listitem")
+      expect(modules[0]).toHaveTextContent("Completed 100%")
       expect(modules[1]).toHaveTextContent("In progress 40%")
       expect(statValue(modules[1], "Days active")).toHaveTextContent("5")
       expect(statValue(modules[1], "Videos watched")).toHaveTextContent("7")
       expect(
         within(dialog).queryByText(/hasn’t agreed to share/),
       ).not.toBeInTheDocument()
+      expect(
+        within(dialog).getByText(/Activity is counted once per day/),
+      ).toBeInTheDocument()
     })
 
     test("withholds every total for a learner who declined, rather than showing 0", async () => {
@@ -2243,6 +2248,34 @@ describe("ContractLearnersPage progress grid", () => {
       const progress = within(dialog).getByRole("region", { name: "Progress" })
       expect(statValue(progress, "Completed")).toHaveTextContent("Withheld")
       expect(statValue(progress, "Not enrolled")).toHaveTextContent("1")
+      expect(
+        within(dialog).queryByText(/Activity is counted once per day/),
+      ).not.toBeInTheDocument()
+    })
+
+    test("shows refetched counts while the panel stays open", async () => {
+      const { contractId, queryClient } = renderGrid()
+      mockGridPage(contractId, 0, [
+        ada({ courserun_readable_id: M5, videos_watched: 4 }),
+      ])
+
+      const dialog = await openSummary()
+      const activity = within(dialog).getByRole("region", {
+        name: "Activity across modules",
+      })
+      expect(statValue(activity, "Videos watched")).toHaveTextContent("4")
+
+      mockGridPage(contractId, 0, [
+        ada({ courserun_readable_id: M5, videos_watched: 9 }),
+      ])
+      await act(async () => {
+        await queryClient.refetchQueries()
+      })
+
+      await waitFor(() => {
+        expect(statValue(activity, "Videos watched")).toHaveTextContent("9")
+      })
+      expect(screen.getByRole("dialog", { name: "Ada Lovelace" })).toBe(dialog)
     })
 
     test("withholds a total when any run is withheld, but keeps the consented run's own counts", async () => {

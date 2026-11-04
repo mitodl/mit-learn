@@ -12,6 +12,7 @@ import type {
 } from "api/analytics-hooks/organizations"
 import { STUB } from "@/components/B2BTable/B2BTable"
 import {
+  contentProgressPercent,
   DISPLAY_STATUS_LABEL,
   getDisplayStatus,
   isWithheldStatus,
@@ -185,10 +186,8 @@ const moduleStatusText = (enrollment: LearnerEnrollment) => {
   const status = getDisplayStatus(enrollment)
   const label = DISPLAY_STATUS_LABEL[status]
   if (isWithheldStatus(status)) return label
-  const progress =
-    status === "in-progress" && enrollment.content_progress !== null
-      ? ` ${Math.round(enrollment.content_progress * 100)}%`
-      : ""
+  const percent = contentProgressPercent(enrollment, status)
+  const progress = percent === null ? "" : ` ${percent}%`
   const date = enrollment.last_active_on
     ? `, last active ${formatDate(enrollment.last_active_on)}`
     : ""
@@ -348,11 +347,13 @@ const LearnerSummaryPanel: React.FC<LearnerSummaryPanelProps> = ({
             </ModuleList>
           </section>
 
-          <Footnote component="p">
-            Activity is counted once per day: a video played on two days counts
-            twice. Chatbot interactions count each conversation with the course
-            chatbot once per day, in each part of the course.
-          </Footnote>
+          {allWithheld ? null : (
+            <Footnote component="p">
+              Activity is counted once per day: a video played on two days
+              counts twice. Chatbot interactions count each conversation with
+              the course chatbot once per day, in each part of the course.
+            </Footnote>
+          )}
         </Panel>
       ) : null}
     </Drawer>
