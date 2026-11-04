@@ -716,6 +716,35 @@ def test_score_formula_query_without_penalties_or_boosts(mocker, settings):
     )
 
 
+@pytest.mark.parametrize(
+    "collection_name", [RESOURCES_COLLECTION_NAME, CONTENT_FILES_COLLECTION_NAME]
+)
+@pytest.mark.parametrize(("kwargs", "wait"), [({}, False), ({"wait": True}, True)])
+def test_remove_points_matching_params(mocker, collection_name, kwargs, wait):
+    """Points are deleted by platform in either collection, waiting if asked"""
+    client = mocker.patch("vector_search.utils.qdrant_client").return_value
+
+    vs_utils.remove_points_matching_params(
+        {"platform": PlatformType.edx.name}, collection_name=collection_name, **kwargs
+    )
+
+    call = client.delete.call_args.kwargs
+    assert call["collection_name"] == collection_name
+    assert call["wait"] is wait
+    assert call["points_selector"].filter.must == [
+        models.FieldCondition(key="platform.code", match=models.MatchValue(value="edx"))
+    ]
+
+
+def test_remove_points_matching_params_no_params(mocker):
+    """No params means no delete, rather than deleting every point"""
+    client = mocker.patch("vector_search.utils.qdrant_client").return_value
+
+    vs_utils.remove_points_matching_params({})
+
+    client.delete.assert_not_called()
+
+
 def test_qdrant_query_conditions(mocker):
     """
     Test query filter mapping to qdrant conditions

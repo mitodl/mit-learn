@@ -429,7 +429,7 @@ def test_batch_over_the_limit_is_rejected_unwritten(settings, client, mocker):
         # mitpe programs: under ten published, one removal is over the limit
         (4, 4, 200),
         (4, 3, 422),
-        # one published resource, as mit_edx programs have
+        # a single published resource
         (1, 1, 200),
     ],
 )
