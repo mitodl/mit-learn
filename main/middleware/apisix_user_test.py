@@ -164,30 +164,140 @@ def test_get_request_existing_user_with_global_id_diff_email(mocker, mock_login)
 
 
 @pytest.mark.django_db(transaction=True)
-def test_get_request_ambiguous_identity_fails_closed(mocker, mock_login):
-    """An ambiguous APISIX identity match should not silently pick a user."""
+@pytest.mark.parametrize("linked_email", ["old_email@test.edu", None])
+def test_linked_user_wins_over_legacy_email_match(mocker, mock_login, linked_email):
+    """
+    A user linked to the subject is logged in even when an unlinked user also
+    matches by email, rather than locking the learner out as ambiguous.
+    """
     close_old_connections()
     legacy_user = UserFactory.create(email=apisix_user_info["email"], global_id=None)
-    exact_user = UserFactory.create(
-        email="old_email@test.edu", global_id=apisix_user_info["sub"]
+    linked_user = UserFactory.create(
+        email=linked_email or apisix_user_info["email"],
+        global_id=apisix_user_info["sub"],
     )
-    mock_request = mocker.Mock(
-        META={
-            "HTTP_X_USERINFO": b64encode(json.dumps(apisix_user_info).encode()),
-        },
+    request = mocker.Mock(
+        META={"HTTP_X_USERINFO": b64encode(json.dumps(apisix_user_info).encode())},
         user=AnonymousUser(),
     )
-    mock_get_response = mocker.Mock(return_value="response")
-    apisix_middleware = ApisixUserMiddleware(mock_get_response)
-
-    assert apisix_middleware(mock_request) == "response"
-
-    mock_login.assert_not_called()
-    mock_get_response.assert_called_once_with(mock_request)
+    ApisixUserMiddleware(mocker.Mock()).process_request(request)
+    mock_login.assert_called_once()
+    assert request.user == linked_user
     legacy_user.refresh_from_db()
-    exact_user.refresh_from_db()
     assert legacy_user.global_id is None
-    assert exact_user.email == "old_email@test.edu"
+
+
+@pytest.mark.django_db(transaction=True)
+@pytest.mark.parametrize("userinfo_create", [True, False])
+def test_scim_provisioned_user_linked_by_external_id(
+    mocker, mock_login, settings, userinfo_create
+):
+    """
+    An unlinked user SCIM provisioned with the subject as its external id is
+    linked and logged in even though its email no longer matches, instead of a
+    second user being created. It's preferred over a legacy email match.
+    """
+    close_old_connections()
+    settings.MITOL_APIGATEWAY_USERINFO_CREATE = userinfo_create
+    settings.MITOL_APIGATEWAY_USERINFO_UPDATE = False
+    scim_user = UserFactory.create(
+        email="old_email@test.edu",
+        global_id=None,
+        scim_external_id=apisix_user_info["sub"],
+    )
+    email_user = UserFactory.create(email=apisix_user_info["email"], global_id=None)
+    request = mocker.Mock(
+        META={"HTTP_X_USERINFO": b64encode(json.dumps(apisix_user_info).encode())},
+        user=AnonymousUser(),
+    )
+    ApisixUserMiddleware(mocker.Mock()).process_request(request)
+    mock_login.assert_called_once()
+    assert request.user == scim_user
+    scim_user.refresh_from_db()
+    email_user.refresh_from_db()
+    assert scim_user.global_id == apisix_user_info["sub"]
+    assert scim_user.email == "old_email@test.edu"
+    assert email_user.global_id is None
+    assert User.objects.count() == 2
+
+
+@pytest.mark.django_db(transaction=True)
+@pytest.mark.parametrize("header_email", [str, str.upper])
+def test_shared_scim_external_id_narrowed_by_email(mocker, mock_login, header_email):
+    """
+    When several unlinked users carry the subject as their SCIM external id, the
+    one whose email matches the headers is linked.
+    """
+    close_old_connections()
+    matching_user = UserFactory.create(
+        email=apisix_user_info["email"],
+        global_id=None,
+        scim_external_id=apisix_user_info["sub"],
+    )
+    other_user = UserFactory.create(
+        email="old_email@test.edu",
+        global_id=None,
+        scim_external_id=apisix_user_info["sub"],
+    )
+    user_info = {**apisix_user_info, "email": header_email(apisix_user_info["email"])}
+    request = mocker.Mock(
+        META={"HTTP_X_USERINFO": b64encode(json.dumps(user_info).encode())},
+        user=AnonymousUser(),
+    )
+    ApisixUserMiddleware(mocker.Mock()).process_request(request)
+    mock_login.assert_called_once()
+    assert request.user == matching_user
+    other_user.refresh_from_db()
+    assert other_user.global_id is None
+
+
+@pytest.mark.django_db(transaction=True)
+@pytest.mark.parametrize("shared", ["scim_external_id", "email"])
+def test_ambiguous_legacy_match_fails_closed(mocker, mock_login, caplog, shared):
+    """
+    Several unlinked users matching on the SCIM external id (with no email to
+    pick between them) or on the exact email aren't linked, logged in, or
+    duplicated, even with user creation on.
+    """
+    close_old_connections()
+    if shared == "scim_external_id":
+        fields = [
+            {"email": "a@test.edu", "scim_external_id": apisix_user_info["sub"]},
+            {"email": "b@test.edu", "scim_external_id": apisix_user_info["sub"]},
+        ]
+    else:
+        fields = [{"email": apisix_user_info["email"]}] * 2
+    for user_fields in fields:
+        UserFactory.create(global_id=None, **user_fields)
+    ApisixUserMiddleware(mocker.Mock()).process_request(
+        mocker.Mock(
+            META={"HTTP_X_USERINFO": b64encode(json.dumps(apisix_user_info).encode())},
+            user=AnonymousUser(),
+        )
+    )
+    mock_login.assert_not_called()
+    assert f"ambiguous_apisix_identity lookup={shared}" in caplog.text
+    assert User.objects.count() == len(fields)
+    assert not User.objects.filter(global_id__isnull=False).exists()
+
+
+@pytest.mark.django_db(transaction=True)
+def test_scim_external_id_match_without_email(mocker, mock_login):
+    """Headers without an email can still link a user by its SCIM external id."""
+    close_old_connections()
+    scim_user = UserFactory.create(
+        email="", global_id=None, scim_external_id=apisix_user_info["sub"]
+    )
+    user_info = {"sub": apisix_user_info["sub"], "preferred_username": "scimuser"}
+    request = mocker.Mock(
+        META={"HTTP_X_USERINFO": b64encode(json.dumps(user_info).encode())},
+        user=AnonymousUser(),
+    )
+    ApisixUserMiddleware(mocker.Mock()).process_request(request)
+    mock_login.assert_called_once()
+    assert request.user == scim_user
+    scim_user.refresh_from_db()
+    assert scim_user.global_id == apisix_user_info["sub"]
 
 
 @pytest.mark.django_db(transaction=True)
@@ -269,15 +379,14 @@ def test_linked_user_not_ambiguous_with_case_variant_legacy_user(mocker, mock_lo
 
 
 @pytest.mark.django_db(transaction=True)
-@pytest.mark.parametrize("userinfo_create", [True, False])
-def test_fallback_finds_user_linked_by_concurrent_request(
-    mocker, mock_login, settings, userinfo_create
-):
-    """A row linked after the exact lookup missed is still found by the fallback."""
-    settings.MITOL_APIGATEWAY_USERINFO_CREATE = userinfo_create
+def test_legacy_lookup_finds_user_linked_by_concurrent_request(mocker, mock_login):
+    """
+    A row linked after the global_id lookup missed is still found by the legacy
+    lookups instead of a second user being created.
+    """
     close_old_connections()
     linked_user = UserFactory.create(
-        email=apisix_user_info["email"].upper(), global_id=apisix_user_info["sub"]
+        email="old_email@test.edu", global_id=apisix_user_info["sub"]
     )
     real_get = QuerySet.get
     calls = []
