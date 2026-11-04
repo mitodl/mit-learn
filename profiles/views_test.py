@@ -2,6 +2,7 @@
 
 # pylint: disable=redefined-outer-name, unused-argument, too-many-arguments
 import json
+from datetime import UTC, datetime, timedelta
 from operator import itemgetter
 
 import pytest
@@ -514,6 +515,37 @@ def test_letter_intercept_view_refuses_revoked_certificate(client, user, setting
 
     assert response.status_code == 404
     assert not ProgramLetter.objects.filter(user=user).exists()
+
+
+def test_letter_intercept_view_with_several_certificates(client, user, settings):
+    """
+    Statistics and Data Science tracks share a MicroMasters program id, so one
+    link can match several certificates. It opens the earliest completed, with
+    record_hash breaking a tie, so a learner always lands on the same letter.
+    """
+    settings.DATABASE_ROUTERS = []
+    client.force_login(user)
+    completed_on = datetime(2026, 1, 1, tzinfo=UTC)
+    for record_hash, timestamp in [
+        ("d", completed_on),
+        ("a", completed_on + timedelta(days=1)),
+        ("c", completed_on),
+        ("b", None),
+    ]:
+        ProgramCertificateFactory(
+            user_email=user.email,
+            micromasters_program_id=1,
+            record_hash=record_hash,
+            program_completion_timestamp=timestamp,
+        )
+
+    response = client.get(
+        reverse("profile:program-letter-intercept", kwargs={"program_id": 1})
+    )
+
+    letter = ProgramLetter.objects.get(user=user)
+    assert letter.certificate_id == "c"
+    assert response.url == frontend_absolute_url(f"/program_letter/{letter.id}/view")
 
 
 def test_letter_intercept_view_skips_revoked_certificate(client, user, settings):

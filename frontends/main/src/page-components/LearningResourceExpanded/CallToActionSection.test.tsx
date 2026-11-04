@@ -7,21 +7,20 @@ import type { LearningResource } from "api"
 import { DEFAULT_RESOURCE_IMG } from "ol-utilities"
 import { getByImageSrc, queryByImageSrc } from "ol-test-utilities"
 import { PlatformEnum, ResourceTypeEnum } from "api"
-import { useFeatureFlagEnabled, usePostHog } from "posthog-js/react"
-import type { PostHog } from "posthog-js"
+import { useFeatureFlagEnabled } from "posthog-js/react"
+import { capturePostHog } from "@/common/analytics/posthog"
 import { FeatureFlags } from "@/common/feature_flags"
 import CallToActionSection from "./CallToActionSection"
 import type { ImageConfig } from "ol-components"
 import { kebabCase } from "lodash"
 
 jest.mock("posthog-js/react")
+jest.mock("@/common/analytics/posthog", () => ({
+  capturePostHog: jest.fn(),
+  initPostHog: jest.fn(),
+}))
 
-const mockUsePostHog = jest.mocked(usePostHog)
-const mockCapture = jest.fn() as PostHog["capture"]
-const posthog = {
-  capture: mockCapture,
-} as PostHog
-mockUsePostHog.mockReturnValue(posthog)
+const mockCapturePostHog = jest.mocked(capturePostHog)
 const mockUseFeatureFlagEnabled = jest.mocked(useFeatureFlagEnabled)
 mockUseFeatureFlagEnabled.mockReturnValue(false)
 
@@ -509,7 +508,7 @@ describe("CallToActionSection", () => {
       const link = screen.getByRole("link", { name: "Learn More" })
       link.click()
 
-      expect(mockCapture).toHaveBeenCalledWith("cta_clicked", {
+      expect(mockCapturePostHog).toHaveBeenCalledWith("cta_clicked", {
         resource,
         label: "Learn More",
       })

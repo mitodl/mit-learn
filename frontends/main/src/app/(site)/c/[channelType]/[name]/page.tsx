@@ -145,7 +145,6 @@ const Page: React.FC<AppPageProps<"/c/[channelType]/[name]">> = async ({
     urlParams,
   )
 
-  // @ts-expect-error -- this will error until mitodl/mit-learn-api-axios is updated
   const requestParams: Parameters<typeof getSearchParams>[0]["requestParams"] =
     validateRequestParams(search)
   const searchRequest = getSearchParams({

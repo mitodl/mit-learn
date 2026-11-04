@@ -18,6 +18,7 @@ import { formatDate, LocalDate } from "ol-utilities"
 import { RiCheckLine, RiArrowRightLine, RiAwardFill } from "@remixicon/react"
 import { Alert, Button, ButtonProps } from "@mitodl/smoot-design"
 import {
+  ENROLL_FAILURE_MESSAGE,
   canPurchaseRun,
   enrollmentAlertSuccessUrl,
   formatPrice,
@@ -28,17 +29,12 @@ import { useCreateEnrollment } from "api/mitxonline-hooks/enrollment"
 import { SILENCE_ERROR_TOAST } from "api/mutation-meta"
 import { badRequestDetail } from "api/mutation-errors"
 import ErrorMessageWithSupport from "@/components/ErrorMessageWithSupport/ErrorMessageWithSupport"
-import { ENROLL_FAILURE_MESSAGE } from "@/app-pages/ProductPages/enrollTypes"
 import { useReplaceBasketItem } from "@/common/mitxonline/useReplaceBasketItem"
 import { useComplianceGate } from "@/common/mitxonline/useComplianceGate"
 import { useRouter } from "next-nprogress-bar"
 import { useQuery } from "@tanstack/react-query"
 import { productQueries } from "api/mitxonline-hooks/products"
-import {
-  trackCourseEnrolled,
-  trackAddToCart,
-  trackBeginCheckout,
-} from "@/common/analytics/gtm"
+import { analytics } from "@/common/analytics"
 
 interface CourseEnrollmentDialogProps {
   course: CourseWithCourseRunsSerializerV2
@@ -312,12 +308,12 @@ const CertificateUpsell: React.FC<{
           disabled={!enabled}
           onClick={() => {
             if (!product) return
-            trackAddToCart({
+            analytics.addedToCart({
               courseId: course?.readable_id ?? String(product.id),
               courseName: course?.title,
               coursePrice: product.price ? parseFloat(product.price) : 0,
             })
-            trackBeginCheckout({
+            analytics.checkoutStarted({
               courseName: course?.title,
               courseId: course?.readable_id ?? String(product.id),
               value: product.price ? parseFloat(product.price) : 0,
@@ -407,7 +403,7 @@ const CourseEnrollmentDialogInner: React.FC<CourseEnrollmentDialogProps> = ({
           },
           {
             onSuccess: () => {
-              trackCourseEnrolled(course.title)
+              analytics.courseEnrolled(course.title)
               if (onCourseEnroll) {
                 onCourseEnroll(run)
               } else {

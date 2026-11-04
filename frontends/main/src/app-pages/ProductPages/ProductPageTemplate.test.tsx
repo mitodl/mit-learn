@@ -7,22 +7,18 @@ import { StayUpdatedModal } from "./StayUpdatedModal"
 import { useHubspotFormDetail } from "api/hooks/hubspot"
 import NiceModal from "@ebay/nice-modal-react"
 import { STAY_UPDATED_FORM_ID } from "./test-utils/stayUpdated"
-import { usePostHog } from "posthog-js/react"
+import { capturePostHog } from "@/common/analytics/posthog"
 import { PostHogEvents } from "@/common/constants"
 import type { ResourceInfo } from "./ProductPageTemplate"
 import { PlatformEnum } from "api"
 import { DEFAULT_RESOURCE_IMG } from "ol-utilities"
 import { getAllByImageSrc, queryAllByImageSrc } from "ol-test-utilities"
 
-jest.mock("posthog-js/react", () => ({
-  ...jest.requireActual("posthog-js/react"),
-  usePostHog: jest.fn(),
+jest.mock("@/common/analytics/posthog", () => ({
+  capturePostHog: jest.fn(),
+  initPostHog: jest.fn(),
 }))
-const mockCapture = jest.fn()
-jest.mocked(usePostHog).mockReturnValue(
-  // @ts-expect-error Not mocking all of posthog
-  { capture: mockCapture },
-)
+const mockCapturePostHog = jest.mocked(capturePostHog)
 
 jest.mock("api/hooks/hubspot", () => ({
   ...jest.requireActual("api/hooks/hubspot"),
@@ -212,7 +208,7 @@ describe("ProductPageTemplate stay-updated trigger", () => {
 
     afterEach(() => {
       delete process.env.NEXT_PUBLIC_POSTHOG_API_KEY
-      mockCapture.mockReset()
+      mockCapturePostHog.mockReset()
     })
 
     it("fires cta_clicked with resource properties when Stay Updated is clicked", async () => {
@@ -228,7 +224,7 @@ describe("ProductPageTemplate stay-updated trigger", () => {
 
       await user.click(screen.getByRole("button", { name: "Stay Updated" }))
 
-      expect(mockCapture).toHaveBeenCalledWith(
+      expect(mockCapturePostHog).toHaveBeenCalledWith(
         PostHogEvents.CallToActionClicked,
         {
           label: "Stay Updated",
@@ -237,23 +233,6 @@ describe("ProductPageTemplate stay-updated trigger", () => {
           platform: PlatformEnum.Mitxonline,
         },
       )
-    })
-
-    it("does not fire cta_clicked when NEXT_PUBLIC_POSTHOG_API_KEY is not set", async () => {
-      delete process.env.NEXT_PUBLIC_POSTHOG_API_KEY
-      const resource = {
-        id: 42,
-        readable_id: "program-v1:test+101",
-        resource_type: "program" as const,
-      }
-      renderProductPageTemplate({
-        hubspotFormId: STAY_UPDATED_FORM_ID,
-        resource,
-      })
-
-      await user.click(screen.getByRole("button", { name: "Stay Updated" }))
-
-      expect(mockCapture).not.toHaveBeenCalled()
     })
   })
 })

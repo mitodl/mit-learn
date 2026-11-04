@@ -2,7 +2,7 @@
 
 import React from "react"
 import { RiUserLine } from "@remixicon/react"
-import { alpha, Chip, styled, Typography } from "ol-components"
+import { Chip, styled, Typography } from "ol-components"
 import { formatDate, initials } from "ol-utilities"
 import type { LearnerProgress } from "api/analytics-hooks/organizations"
 import {
@@ -13,11 +13,13 @@ import {
   TableRow,
 } from "@/components/B2BTable/B2BTable"
 import {
+  contentProgressPercent,
   DISPLAY_STATUS_LABEL,
   getDisplayStatus,
   isWithheldStatus,
 } from "./statusDisplay"
 import { COLUMN_FLEX } from "./columns"
+import { ContentProgress } from "./ContentProgress"
 
 /**
  * Initials, not a photo: the analytics API returns no avatar image. Without a
@@ -42,6 +44,11 @@ const LearnerCell = styled(TableCell)({
   alignItems: "center",
   gap: "12px",
 })
+
+const ConsentNotice = styled(Typography)(({ theme }) => ({
+  ...theme.typography.body3,
+  color: theme.custom.colors.silverGrayDark,
+})) as typeof Typography
 
 const LearnerName = styled(Typography)(({ theme }) => ({
   ...theme.typography.subtitle2,
@@ -76,9 +83,9 @@ const StatusDot = styled.span<{ $muted: boolean }>(({ $muted, theme }) => ({
 }))
 
 /**
- * The seat-status badge from `ContractAdminPage`, in its alert treatment, so
- * the two B2B tables spell a badge the same way. `alpha` because the Figma
- * spec sets opacity on the base colour rather than naming a tint.
+ * The seat-status badge from `ContractAdminPage`, in a neutral treatment
+ * rather than its red alert one, so the flag informs without reading as a
+ * fault. The label may wrap in a narrow column.
  *
  * `display: flex` makes it a block-level box, which is what puts it on its
  * own line under the status: `CellText` is a block whose other children are
@@ -97,7 +104,8 @@ const StatusDot = styled.span<{ $muted: boolean }>(({ $muted, theme }) => ({
 const NeedsAttentionBadge = styled(Chip)<{
   component?: React.ElementType
 }>(({ theme }) => ({
-  height: "20px",
+  height: "auto",
+  minHeight: "20px",
   borderRadius: "4px",
   paddingRight: "8px",
   paddingLeft: "8px",
@@ -106,8 +114,9 @@ const NeedsAttentionBadge = styled(Chip)<{
   width: "fit-content",
   ...theme.typography.body3,
   fontWeight: theme.typography.fontWeightBold as number,
-  backgroundColor: alpha(theme.custom.colors.red, 0.2),
-  color: theme.custom.colors.red,
+  backgroundColor: theme.custom.colors.lightGray2,
+  color: theme.custom.colors.darkGray2,
+  "& .MuiChip-label": { whiteSpace: "normal" },
 }))
 
 const MutedText = styled.span(({ theme }) => ({
@@ -123,6 +132,7 @@ const LearnerRow: React.FC<LearnerRowProps> = ({ row }) => {
   const statusLabel = DISPLAY_STATUS_LABEL[status]
   const isWithheld = isWithheldStatus(status)
   const name = row.full_name?.trim() || null
+  const progress = contentProgressPercent(row, status)
 
   /**
    * Withheld and never-active are different facts, so they read differently: a
@@ -164,9 +174,23 @@ const LearnerRow: React.FC<LearnerRowProps> = ({ row }) => {
           {/* Null, not false, on a withheld row — so a truthy check is also
               what keeps this off a withheld row. */}
           {row.needs_attention ? (
-            <NeedsAttentionBadge component="span" label="Needs attention" />
+            <NeedsAttentionBadge
+              component="span"
+              label="Not started or inactive 30+ days"
+            />
           ) : null}
         </CellText>
+      </TableCell>
+
+      <TableCell role="cell" $flex={COLUMN_FLEX.progress}>
+        <MobileLabel>Progress:</MobileLabel>
+        {progress === null ? (
+          <CellText>
+            <MutedText>{STUB}</MutedText>
+          </CellText>
+        ) : (
+          <ContentProgress percent={progress} />
+        )}
       </TableCell>
 
       <TableCell role="cell" $flex={COLUMN_FLEX.lastActivity}>
@@ -183,4 +207,4 @@ const LearnerRow: React.FC<LearnerRowProps> = ({ row }) => {
   )
 }
 
-export { Avatar, LearnerRow, NeedsAttentionBadge }
+export { Avatar, ConsentNotice, LearnerRow }
