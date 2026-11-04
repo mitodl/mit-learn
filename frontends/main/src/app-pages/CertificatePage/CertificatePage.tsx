@@ -97,16 +97,17 @@ const Outer = styled.div(({ theme }) => ({
   backgroundColor: theme.custom.colors.white,
   margin: "0 auto",
   "@media screen": {
+    // Tablet frame: 900 x 696px, the same proportions as desktop
     [theme.breakpoints.down("lg")]: {
-      padding: 0,
+      padding: "24px",
       maxWidth: "unset",
       minWidth: "unset",
-      aspectRatio: "unset",
     },
     [theme.breakpoints.down("md")]: {
       padding: 0,
       maxWidth: "460px",
       minWidth: "unset",
+      aspectRatio: "unset",
     },
   },
   "@media print": {
@@ -127,11 +128,13 @@ const Inner = styled.div(({ theme }) => ({
   position: "relative",
   "@media screen": {
     [theme.breakpoints.down("lg")]: {
-      padding: "40px",
+      borderWidth: "1px",
+      // Content sits 32px inside the 1px stroke's outer edge
+      padding: "31px",
+      gap: "32px",
     },
     [theme.breakpoints.down("md")]: {
-      border: `2px solid ${theme.custom.colors.lightGray2}`,
-      padding: "24px 16px",
+      padding: "23px 15px",
       gap: "24px",
       textAlign: "center",
     },
@@ -149,11 +152,12 @@ const Logo = styled(Image)(({ theme }) => ({
   height: "auto",
   "@media screen": {
     [theme.breakpoints.down("lg")]: {
-      width: "230px",
-      height: "59px",
+      width: "200px",
+      height: "51px",
     },
     [theme.breakpoints.down("md")]: {
-      width: "129px",
+      width: "156px",
+      height: "40px",
       margin: "0 auto",
     },
   },
@@ -183,14 +187,14 @@ const Badge = styled.div(({ theme }) => ({
   "@media screen": {
     [theme.breakpoints.down("lg")]: {
       backgroundImage: `url(${CertificateBadgeMobile.src})`,
-      top: "24px",
-      right: "40px",
-      width: "156px",
-      height: "191px",
+      // Figma stamp: 156.471 x 191.662px, 24px from the content's outer edge (inside the 1px stroke)
+      top: "23px",
+      right: "23px",
+      width: "156.471px",
+      height: "191.662px",
     },
     [theme.breakpoints.down("md")]: {
       position: "relative",
-      height: "191px",
       top: 0,
       right: 0,
       margin: "0 auto",
@@ -215,6 +219,8 @@ const BadgeLabelRoot = styled.div<{
   lineHeight: theme.typography.pxToRem($lineHeightPx),
   "@media screen": {
     [theme.breakpoints.down("lg")]: {
+      color: theme.custom.colors.lightGray1,
+      fontWeight: theme.typography.fontWeightMedium,
       fontSize: theme.typography.pxToRem(16),
       lineHeight: theme.typography.pxToRem(24),
       top: "77px",
@@ -270,15 +276,17 @@ const Certification = styled.div(({ theme }) => ({
   },
   "@media screen": {
     [theme.breakpoints.down("lg")]: {
-      paddingRight: "180px",
+      gap: "8px",
+      paddingRight: "184px",
       ".MuiTypography-h4": {
-        fontSize: theme.typography.pxToRem(16),
-        lineHeight: theme.typography.pxToRem(20),
+        fontSize: theme.typography.pxToRem(14),
+        fontWeight: theme.typography.fontWeightMedium,
+        lineHeight: theme.typography.pxToRem(18),
       },
     },
     [theme.breakpoints.down("md")]: {
       paddingRight: 0,
-      gap: 0,
+      gap: "4px",
       ".MuiTypography-h4": {
         fontSize: theme.typography.pxToRem(16),
         fontWeight: theme.typography.fontWeightMedium,
@@ -296,13 +304,12 @@ const NameText = styled(Typography)(({ theme }) => ({
   lineHeight: theme.typography.pxToRem(60),
   "@media screen": {
     [theme.breakpoints.down("lg")]: {
-      fontSize: theme.typography.pxToRem(34),
-      lineHeight: theme.typography.pxToRem(40),
+      fontSize: theme.typography.pxToRem(24),
+      lineHeight: theme.typography.pxToRem(30),
     },
     [theme.breakpoints.down("md")]: {
       fontSize: theme.typography.pxToRem(24),
       lineHeight: theme.typography.pxToRem(30),
-      marginTop: "4px",
     },
   },
 }))
@@ -315,8 +322,8 @@ const CourseInfoText = styled(Typography)(({ theme }) => ({
   color: theme.custom.colors.silverGrayDark,
   "@media screen": {
     [theme.breakpoints.down("lg")]: {
-      fontSize: theme.typography.pxToRem(16),
-      lineHeight: theme.typography.pxToRem(24),
+      fontSize: theme.typography.pxToRem(12),
+      lineHeight: theme.typography.pxToRem(16),
     },
     [theme.breakpoints.down("md")]: {
       fontSize: theme.typography.pxToRem(14),
@@ -328,7 +335,7 @@ const CourseInfoText = styled(Typography)(({ theme }) => ({
 const CourseTitle = styled(Typography)(({ theme }) => ({
   color: theme.custom.colors.black,
   "@media screen": {
-    [theme.breakpoints.down("md")]: {
+    [theme.breakpoints.down("lg")]: {
       fontSize: theme.typography.pxToRem(18),
       lineHeight: theme.typography.pxToRem(26),
     },
@@ -342,8 +349,16 @@ const CourseInfo = styled.div(({ theme }) => ({
   // Fills the remaining height so the signatures sit at the bottom
   flexGrow: 1,
   "@media screen": {
-    [theme.breakpoints.down("md")]: {
+    [theme.breakpoints.down("lg")]: {
       gap: "8px",
+    },
+    [theme.breakpoints.down("md")]: {
+      gap: "12px",
+      // The completion line belongs with the name on mobile: 12px below it, 24px above the title
+      marginTop: "-12px",
+      "> :first-child": {
+        marginBottom: "12px",
+      },
     },
   },
 }))
@@ -355,6 +370,10 @@ const SignatureFooter = styled.div(({ theme }) => ({
   paddingTop: "24px",
   borderTop: `1px solid ${theme.custom.colors.lightGray2}`,
   "@media screen": {
+    [theme.breakpoints.down("lg")]: {
+      gap: "8px",
+      paddingTop: "16px",
+    },
     [theme.breakpoints.down("md")]: {
       borderTop: "none",
       paddingTop: 0,
@@ -371,7 +390,10 @@ const Signatories = styled.div(({ theme }) => ({
   "@media screen": {
     [theme.breakpoints.down("md")]: {
       flexDirection: "column",
-      gap: "24px",
+      gap: 0,
+      padding: "16px 0",
+      borderTop: `1px solid ${theme.custom.colors.lightGray2}`,
+      borderBottom: `1px solid ${theme.custom.colors.lightGray2}`,
     },
   },
 }))
@@ -384,13 +406,15 @@ const Signatory = styled.div(({ theme }) => ({
   "@media screen": {
     [theme.breakpoints.down("lg")]: {
       width: "calc((100% - 36px) / 4)",
-      minWidth: "200px",
     },
     [theme.breakpoints.down("md")]: {
       width: "100%",
-      minWidth: 0,
-      borderBottom: `1px solid ${theme.custom.colors.lightGray2}`,
-      paddingBottom: "24px",
+      gap: "16px",
+      "& + &": {
+        borderTop: `1px solid ${theme.custom.colors.lightGray2}`,
+        marginTop: "20px",
+        paddingTop: "20px",
+      },
     },
   },
 }))
@@ -403,8 +427,17 @@ const SignatoryText = styled.div(({ theme }) => ({
     color: theme.custom.colors.silverGrayDark,
   },
   "@media screen": {
-    [theme.breakpoints.down("md")]: {
+    [theme.breakpoints.down("lg")]: {
       ".MuiTypography-body2": {
+        fontSize: theme.typography.pxToRem(10),
+        lineHeight: theme.typography.pxToRem(14),
+      },
+    },
+    [theme.breakpoints.down("md")]: {
+      gap: "8px",
+      ".MuiTypography-body2": {
+        fontSize: theme.typography.body2.fontSize,
+        lineHeight: theme.typography.body2.lineHeight,
         color: theme.custom.colors.darkGray1,
       },
     },
@@ -420,7 +453,8 @@ const Signature = styled.img(({ theme }) => ({
   objectPosition: "left",
   "@media screen": {
     [theme.breakpoints.down("md")]: {
-      margin: "0 auto",
+      // Figma centers the 40px signature in a 50px box
+      margin: "5px auto",
       objectPosition: "center",
     },
   },
@@ -429,10 +463,14 @@ const Signature = styled.img(({ theme }) => ({
 const SignatoryName = styled(Typography)(({ theme }) => ({
   color: theme.custom.colors.black,
   "@media screen": {
+    [theme.breakpoints.down("lg")]: {
+      fontSize: theme.typography.pxToRem(14),
+      fontWeight: theme.typography.fontWeightMedium,
+      lineHeight: theme.typography.pxToRem(18),
+    },
     [theme.breakpoints.down("md")]: {
       fontSize: theme.typography.pxToRem(16),
       lineHeight: "150%",
-      marginTop: "12px",
     },
   },
 }))
@@ -443,9 +481,18 @@ const CertificateId = styled(Typography)(({ theme }) => ({
     color: theme.custom.colors.silverGrayDark,
   },
   "@media screen": {
+    [theme.breakpoints.down("lg")]: {
+      color: theme.custom.colors.silverGrayDark,
+      fontSize: theme.typography.pxToRem(10),
+      lineHeight: theme.typography.pxToRem(14),
+    },
     [theme.breakpoints.down("md")]: {
+      color: theme.custom.colors.black,
+      fontSize: theme.typography.body2.fontSize,
+      lineHeight: theme.typography.body2.lineHeight,
       span: {
         display: "block",
+        color: theme.custom.colors.darkGray1,
       },
     },
   },
