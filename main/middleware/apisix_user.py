@@ -243,7 +243,8 @@ def find_unlinked_user(
 
     Returns:
         (user, matches) tuple. matches is None if no lookup matched anyone, and
-        user is None if the first lookup that matched found several users.
+        user is None if the first lookup that matched found several users, none
+        of them linked to global_id.
 
     """
     User = get_user_model()
@@ -258,7 +259,10 @@ def find_unlinked_user(
         except User.DoesNotExist:
             continue
         except User.MultipleObjectsReturned:
-            return None, matches
+            # A concurrent request may have linked one of the unlinked matches
+            # since the global_id lookup missed. That row wins, as it would have
+            # there; global_id is unique, so there's at most one.
+            return matches.filter(global_id=global_id).first(), matches
     return None, None
 
 

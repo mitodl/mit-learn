@@ -419,6 +419,51 @@ def test_legacy_lookup_finds_user_linked_by_concurrent_request(
 
 
 @pytest.mark.django_db(transaction=True)
+def test_concurrently_linked_user_wins_over_remaining_duplicate(
+    mocker, mock_login, settings
+):
+    """
+    When a concurrent request links one of two users sharing the SCIM external id
+    and email after the global_id lookup missed, the linked one is logged in
+    rather than the pair being reported as ambiguous.
+    """
+    close_old_connections()
+    settings.MITOL_APIGATEWAY_USERINFO_CREATE = False
+    duplicates = [
+        UserFactory.create(
+            email=apisix_user_info["email"],
+            global_id=None,
+            scim_external_id=apisix_user_info["sub"],
+        )
+        for _ in range(2)
+    ]
+    real_get = QuerySet.get
+    calls = []
+
+    def link_after_global_id_lookup(self, *args, **kwargs):
+        """Simulate another request linking a duplicate after the first lookup."""
+        calls.append(1)
+        if len(calls) == 1:
+            User.objects.filter(pk=duplicates[0].pk).update(
+                global_id=apisix_user_info["sub"]
+            )
+            raise self.model.DoesNotExist
+        return real_get(self, *args, **kwargs)
+
+    mocker.patch.object(QuerySet, "get", link_after_global_id_lookup)
+    request = mocker.Mock(
+        META={"HTTP_X_USERINFO": b64encode(json.dumps(apisix_user_info).encode())},
+        user=AnonymousUser(),
+    )
+    ApisixUserMiddleware(mocker.Mock()).process_request(request)
+    mocker.stopall()
+    mock_login.assert_called_once()
+    assert request.user == duplicates[0]
+    duplicates[1].refresh_from_db()
+    assert duplicates[1].global_id is None
+
+
+@pytest.mark.django_db(transaction=True)
 @pytest.mark.parametrize("same_subject", [True, False])
 def test_legacy_user_linked_by_concurrent_request(
     mocker, mock_login, settings, same_subject
