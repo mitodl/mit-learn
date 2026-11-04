@@ -260,6 +260,11 @@ def load_run(
     if run.checksum:
         run.checksum = None
         run.save(update_fields=["checksum"])
+    if not rows:
+        # nothing says the run emptied (the view holds a run back while its
+        # export is checked), and the cleared fingerprint lets a sync retry it
+        log.info("No rows for %s run %s; keeping its files", etl_source, run.run_id)
+        return 0
     if complete and not allow_mass_unpublish:
         # by key, before the upsert: a build that renames every file has the
         # same count, and loading first would publish the renamed files

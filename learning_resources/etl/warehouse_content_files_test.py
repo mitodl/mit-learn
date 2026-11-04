@@ -271,6 +271,25 @@ def test_load_run_no_rows_preserves_the_run(warehouse_owns_content_files):
     assert kept.published is True
 
 
+@pytest.mark.parametrize("expected_count", [0, None])
+def test_load_run_no_rows_for_a_large_run_is_not_refused(
+    warehouse_owns_content_files, expected_count
+):
+    """
+    No rows for a run over RUN_UNPUBLISH_FLOOR files keeps them all instead of
+    failing the key check, and clears the fingerprint so a later sync retries it
+    """
+    run = _published_run(20)
+    run.checksum = "stale"
+    run.save(update_fields=["checksum"])
+
+    assert warehouse_content_files.load_run(run, [], expected_count=expected_count) == 0
+
+    assert run.content_files.filter(published=True).count() == 20
+    run.refresh_from_db()
+    assert run.checksum is None
+
+
 def test_load_run_failed_extraction_keeps_the_stored_file(warehouse_owns_content_files):
     """A failed row neither wipes the stored text nor unpublishes the file"""
     run = _run()
