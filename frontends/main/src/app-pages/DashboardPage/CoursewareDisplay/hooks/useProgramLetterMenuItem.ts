@@ -12,7 +12,8 @@ import { FeatureFlags } from "@/common/feature_flags"
  * reaches Learn through the warehouse sync rather than from MITx Online, so the
  * two are joined on the certificate's `mitxonline_program_id`. A certificate
  * whose `mitxonline_program_id` is null has no card to attach to and is not
- * reachable from the dashboard.
+ * reachable from the dashboard. A certificate with no letter (one whose program
+ * has no MicroMasters id) has a null `program_letter_share_url` and gets no item.
  *
  * The certificate list is only requested once the flag has resolved to true:
  * reading it mints a shareable uuid for every letter the learner does not have
