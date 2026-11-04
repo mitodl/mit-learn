@@ -799,12 +799,24 @@ def _matched_content_files(youtube_ids: set[str]) -> dict[str, ContentFile]:
     """
     Return the content file load_videos_from_content_files would match to each
     youtube id: a visible one on a published run, the lowest id if several.
+
+    Only the columns _content_file_video reads are loaded. This reads the
+    content files of every OCW playlist at once, and their ``content``
+    (transcripts) and the courses' descriptions are far too large to hold.
     """
     return {
         content_file.youtube_id: content_file
         for content_file in ContentFile.objects.matching_youtube_videos(youtube_ids)
         .select_related(
             "run__learning_resource__platform", "run__learning_resource__offered_by"
+        )
+        .only(
+            "youtube_id",
+            "url",
+            "title",
+            "description",
+            "run__learning_resource__platform__code",
+            "run__learning_resource__offered_by__code",
         )
         .prefetch_related("content_tags", "run__learning_resource__topics")
     }
