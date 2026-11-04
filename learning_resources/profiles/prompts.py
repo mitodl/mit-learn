@@ -23,3 +23,14 @@ MATERIALS
 {sources_block}
 
 Call the tool with the complete UnitExtraction for this unit."""
+
+
+def run_combined_prompt(context_claims: str, unit_records: str) -> str:
+    """Return the combined prompt for a run"""
+    return f"""COURSE CONTEXT CLAIMS
+{context_claims}
+
+UNIT RECORDS (units in course order, then bins; claim ids in brackets)
+{unit_records}
+
+Call the tool with the complete RunExtraction."""
