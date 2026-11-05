@@ -88,10 +88,6 @@ const STATUS_SYMBOL: Record<
   unknown: { Icon: RiQuestionLine, tone: "gray" },
 }
 
-/**
- * The API flags an enrollment that was never started or whose last activity
- * was 30 or more days ago; the status says which of the two it was.
- */
 const attentionReason = (status: DisplayStatus) =>
   status === "not-started" ? "Not started" : "Inactive 30+ days"
 
@@ -103,11 +99,6 @@ const LEGEND_STATUSES: DisplayStatus[] = [
   "unknown",
 ]
 
-/**
- * Initials, not a photo: the analytics API returns no avatar image. Without a
- * name, a generic person icon — email-derived initials are wrong for addresses
- * like `jdoe@` or `x7k2m@`.
- */
 const Avatar = styled.div(({ theme }) => ({
   display: "flex",
   alignItems: "center",
@@ -230,13 +221,9 @@ const latestActivity = (
         !courserunIds.length ||
         courserunIds.includes(enrollment.courserun_readable_id),
     )
-    .reduce<string | null>(
-      (max, enrollment) =>
-        enrollment.last_active_on && (!max || enrollment.last_active_on > max)
-          ? enrollment.last_active_on
-          : max,
-      null,
-    )
+    .reduce<
+      string | null
+    >((max, enrollment) => (enrollment.last_active_on && (!max || enrollment.last_active_on > max) ? enrollment.last_active_on : max), null)
 
 const lastActiveText = (
   learner: LearnerWithEnrollments,
@@ -246,7 +233,6 @@ const lastActiveText = (
   return latest ? `Last active ${formatDate(latest)}` : "No activity"
 }
 
-/** One row per learner, a status and a progress column per module in `columns`, matching the grid. */
 const buildGridCsv = (
   learners: LearnerWithEnrollments[],
   columns: CourseRun[],
@@ -338,7 +324,6 @@ const Legend = styled.ul(({ theme }) => ({
   "& li": { display: "inline-flex", alignItems: "center", gap: "6px" },
 }))
 
-/** The icon's height, so N/A, the not-started dash and every icon share a centerline across a row. */
 const StatusLine = styled.div({
   display: "flex",
   alignItems: "center",
