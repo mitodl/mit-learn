@@ -16,6 +16,7 @@ from learning_resources.factories import (
     ETLSourceOwnershipFactory,
     LearningResourceFactory,
     LearningResourcePlatformFactory,
+    LearningResourceRunFactory,
 )
 from learning_resources.models import (
     ETLSourceOwnership,
@@ -792,3 +793,185 @@ def test_content_file_delete_webhook_skips_courses_legacy_does_not_own(
 
     assert response.status_code == 200
     mock_delete.assert_not_called()
+
+
+def _post_extracted(client, settings, payload, *, signature=None):
+    body = json.dumps(payload) if not isinstance(payload, str) else payload
+    return client.post(
+        reverse("webhooks:v1:extracted_content_files_webhook"),
+        data=body,
+        content_type="application/json",
+        headers={"X-MITLearn-Signature": signature or get_secret(body, settings)},
+    )
+
+
+def test_extracted_content_files_webhook_queues_a_pull_per_run(
+    settings, client, mocker
+):
+    """Each entry queues its run's pull, whatever the warehouse owns yet"""
+    mock_load = mocker.patch("webhooks.views.load_warehouse_content_files")
+
+    response = _post_extracted(
+        client,
+        settings,
+        {
+            "courses": [
+                {
+                    "source": ETLSource.mitxonline.name,
+                    "readable_id": "course-v1:MITxT+7.05x+2T2026",
+                    "content_file_count": 2279,
+                    "extracted_at": "2026-08-19T04:31:07+00:00",
+                },
+                {
+                    "source": ETLSource.ocw.name,
+                    "readable_id": "abc123",
+                    "content_file_count": 0,
+                },
+            ]
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json() == {
+        "status": "success",
+        "message": "Queued 2 run(s), skipped 0",
+    }
+    assert mock_load.delay.call_args_list == [
+        mocker.call(ETLSource.mitxonline.name, "course-v1:MITxT+7.05x+2T2026", 2279),
+        mocker.call(ETLSource.ocw.name, "abc123", 0),
+    ]
+
+
+def test_extracted_content_files_webhook_skips_a_source_with_no_pull(
+    settings, client, mocker
+):
+    """One bad source doesn't reject the runs around it"""
+    mock_load = mocker.patch("webhooks.views.load_warehouse_content_files")
+    mock_log = mocker.patch("webhooks.views.log.warning")
+
+    response = _post_extracted(
+        client,
+        settings,
+        {
+            "courses": [
+                {"source": "nonsense", "readable_id": "a", "content_file_count": 1},
+                {"source": "xpro", "readable_id": "b", "content_file_count": 1},
+            ]
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.json()["message"] == "Queued 1 run(s), skipped 1"
+    mock_load.delay.assert_called_once_with("xpro", "b", 1)
+    mock_log.assert_called_once()
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        {},
+        {"courses": []},
+        {"courses": "course-v1:a"},
+        {"courses": [{"source": "xpro", "content_file_count": 1}]},
+        {"courses": [{"source": "xpro", "readable_id": "a"}]},
+        {"courses": [{"source": "xpro", "readable_id": "a", "content_file_count": -1}]},
+    ],
+)
+def test_extracted_content_files_webhook_rejects_a_bad_payload(
+    settings, client, mocker, payload
+):
+    """A message without what a pull needs queues nothing"""
+    mock_load = mocker.patch("webhooks.views.load_warehouse_content_files")
+
+    assert _post_extracted(client, settings, payload).status_code == 400
+
+    mock_load.delay.assert_not_called()
+
+
+def test_extracted_content_files_webhook_rejects_invalid_json(settings, client):
+    """A body that isn't JSON is a 400"""
+    assert _post_extracted(client, settings, "not json").status_code == 400
+
+
+def test_extracted_content_files_webhook_requires_a_valid_signature(
+    settings, client, mocker
+):
+    """An unsigned or wrongly signed message queues nothing"""
+    mock_load = mocker.patch("webhooks.views.load_warehouse_content_files")
+
+    response = _post_extracted(
+        client,
+        settings,
+        {"courses": [{"source": "xpro", "readable_id": "a", "content_file_count": 1}]},
+        signature="wrong",
+    )
+
+    assert response.status_code == 403
+    mock_load.delay.assert_not_called()
+
+
+def test_extracted_content_files_webhook_requires_post(settings, client):
+    """Only POST is routed"""
+    response = client.get(reverse("webhooks:v1:extracted_content_files_webhook"))
+
+    assert response.status_code == 405
+
+
+@pytest.mark.django_db
+def test_extracted_content_files_webhook_scopes_the_pull_to_the_run(
+    settings, client, mocker
+):
+    """
+    A signed POST reaches the warehouse with its run's filter and expected count,
+    the end-to-end path a sender uses, with the task eager as in CI.
+    """
+    settings.WAREHOUSE_CATALOG = "catalog"
+    settings.WAREHOUSE_SCHEMA = "schema"
+    ETLSourceOwnershipFactory.create(
+        etl_source=ETLSource.xpro.name,
+        resource_type="content_file",
+        owner=ETLSourceOwnership.Pipeline.WAREHOUSE,
+    )
+    run = LearningResourceRunFactory.create(
+        learning_resource=LearningResourceFactory.create(
+            is_course=True, etl_source=ETLSource.xpro.name, create_runs=False
+        ),
+        published=True,
+    )
+    mocker.patch("learning_resources.tasks.caches")
+    mock_connect = mocker.patch("learning_resources.tasks.connect_to_warehouse")
+    mock_iter_rows = mocker.patch(
+        "learning_resources.tasks.iter_rows", return_value=iter([{"key": "a"}])
+    )
+    mock_load_run = mocker.patch(
+        "learning_resources.tasks.warehouse_content_files.load_run", return_value=1
+    )
+
+    response = _post_extracted(
+        client,
+        settings,
+        {
+            "courses": [
+                {
+                    "source": ETLSource.xpro.name,
+                    "readable_id": run.run_id,
+                    "content_file_count": 1,
+                }
+            ]
+        },
+    )
+
+    assert response.status_code == 200
+    mock_iter_rows.assert_called_once_with(
+        mock_connect.return_value,
+        "catalog.schema.integrations__learn__content_files",
+        where={"etl_source": ETLSource.xpro.name, "run_readable_id": run.run_id},
+    )
+    # the per-run unpublish limit applies, and nothing a sender sends lifts it
+    mock_load_run.assert_called_once_with(
+        run,
+        [{"key": "a"}],
+        expected_count=1,
+        allow_mass_unpublish=False,
+        allow_shrink=False,
+    )

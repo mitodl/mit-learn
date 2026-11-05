@@ -14,6 +14,7 @@ from rest_framework.parsers import JSONParser
 from rest_framework.response import Response
 
 from learning_resources.constants import LearningResourceType
+from learning_resources.etl import warehouse_content_files
 from learning_resources.etl.constants import (
     CourseLoaderConfig,
     ETLSource,
@@ -37,7 +38,11 @@ from learning_resources.etl.ownership import (
 from learning_resources.etl.shadow import run_shadow
 from learning_resources.etl.warehouse_guards import mass_unpublish_refusal
 from learning_resources.models import LearningResource
-from learning_resources.tasks import ingest_canvas_course, ingest_edx_run_archive
+from learning_resources.tasks import (
+    ingest_canvas_course,
+    ingest_edx_run_archive,
+    load_warehouse_content_files,
+)
 from learning_resources.utils import (
     resource_delete_actions,
 )
@@ -45,6 +50,7 @@ from main.utils import clear_views_cache
 from webhooks.decorators import require_signature
 from webhooks.serializers import (
     ContentFileWebHookRequestSerializer,
+    ExtractedContentFilesWebhookRequestSerializer,
     LearningResourceWebhookRequestSerializer,
     LearningResourceWebhookResponseSerializer,
     OVSVideoWebhookRequestSerializer,
@@ -63,6 +69,20 @@ class BaseWebhookView(generics.GenericAPIView):
     def dispatch(self, request, *args, **kwargs):
         return super().dispatch(request, *args, **kwargs)
 
+    def success(self, extra_data=None):
+        """
+        Return a success response with optional extra data
+        """
+        if not extra_data:
+            extra_data = {}
+        response = WebhookResponseSerializer(
+            data={"status": "success", "message": "Webhook received", **extra_data}
+        )
+        if response.is_valid():
+            return Response(response.data)
+        log.error("Invalid response data: %s", response.errors)
+        return HttpResponseBadRequest("Invalid response data")
+
 
 @extend_schema_view(
     post=extend_schema(
@@ -78,21 +98,6 @@ class ContentFileWebhookView(BaseWebhookView):
     permission_classes = []
     authentication_classes = []
     serializer_class = ContentFileWebHookRequestSerializer
-
-    def success(self, extra_data=None):
-        """
-        Return a success response with optional extra data
-        """
-        if not extra_data:
-            extra_data = {}
-        response = WebhookResponseSerializer(
-            data={"status": "success", "message": "Webhook received", **extra_data}
-        )
-        if response.is_valid():
-            return Response(response.data)
-        else:
-            log.error("Invalid response data: %s", response.errors)
-            return HttpResponseBadRequest("Invalid response data")
 
     def get_data(self, request):
         """
@@ -115,6 +120,45 @@ class ContentFileWebhookView(BaseWebhookView):
             return HttpResponseBadRequest("Invalid JSON format")
 
 
+@extend_schema_view(
+    post=extend_schema(
+        request=ExtractedContentFilesWebhookRequestSerializer,
+        responses=WebhookResponseSerializer(),
+    ),
+)
+class ExtractedContentFilesWebhookView(BaseWebhookView):
+    """
+    Webhook handler for the OL Data Platform's "extraction is done, come get it"
+    message, one entry per course run. Unlike content_files/, which says a new
+    archive is ready for MIT Learn to extract, this means the run's files are in
+    the warehouse.
+
+    Each entry queues a pull of its run and the request returns: a 200 says the
+    message arrived, not that anything was loaded. The pull checks ownership, and
+    does nothing until the warehouse owns the source's content files. An entry
+    for a source with no pull is skipped and counted in the response, so that
+    one bad source can't reject the rest of a batch.
+    """
+
+    permission_classes = []
+    authentication_classes = []
+    parser_classes = [JSONParser]
+    serializer_class = ExtractedContentFilesWebhookRequestSerializer
+
+    def post(self, request):
+        try:
+            payload = json.loads(request.body)
+        except json.JSONDecodeError:
+            return HttpResponseBadRequest("Invalid JSON format")
+        serializer = ExtractedContentFilesWebhookRequestSerializer(data=payload)
+        serializer.is_valid(raise_exception=True)
+        courses = serializer.validated_data["courses"]
+        queued = queue_extracted_content_files(courses)
+        return self.success(
+            {"message": f"Queued {queued} run(s), skipped {len(courses) - queued}"}
+        )
+
+
 # An upsert writes the video and its collection's playlist together.
 OVS_TYPES = [LearningResourceType.video_playlist.name, LearningResourceType.video.name]
 
@@ -134,17 +178,6 @@ class OVSVideoWebhookView(BaseWebhookView):
     authentication_classes = []
     parser_classes = [JSONParser]
     serializer_class = OVSVideoWebhookRequestSerializer
-
-    def success(self, extra_data=None):
-        if not extra_data:
-            extra_data = {}
-        response = WebhookResponseSerializer(
-            data={"status": "success", "message": "Webhook received", **extra_data}
-        )
-        if response.is_valid():
-            return Response(response.data)
-        log.error("Invalid response data: %s", response.errors)
-        return HttpResponseBadRequest("Invalid response data")
 
     def post(self, request):
         try:
@@ -499,6 +532,28 @@ def load_learning_resource_groups(grouped):
             }
         )
     return summary
+
+
+def queue_extracted_content_files(courses):
+    """
+    Queue a warehouse pull of each run in an extracted_content_files message,
+    returning how many were queued.
+    """
+    queued = 0
+    for course in courses:
+        source = course["source"]
+        if source not in warehouse_content_files.VIEWS:
+            log.warning(
+                "No warehouse pull of content files for source %s, skipping %s",
+                source,
+                course["readable_id"],
+            )
+            continue
+        load_warehouse_content_files.delay(
+            source, course["readable_id"], course["content_file_count"]
+        )
+        queued += 1
+    return queued
 
 
 def process_create_content_file_request(data):
