@@ -591,6 +591,10 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
         "Enrolled on",
         "Last activity",
         "Not started or inactive 30+ days",
+        "Days active",
+        "Videos watched",
+        "Problems attempted",
+        "Chatbot interactions",
       ])
       const body = all.map((row) => {
         const status = getDisplayStatus(row)
@@ -609,6 +613,10 @@ const ContractLearnersPageInternal: React.FC<ContractLearnersPageProps> = ({
               ? "Yes"
               : "No"
             : "",
+          row.days_active?.toString(),
+          row.videos_watched?.toString(),
+          row.problems_attempted?.toString(),
+          row.chatbot_interactions?.toString(),
         ])
       })
       const csv = [header, ...body].join("\n")
