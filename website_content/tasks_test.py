@@ -1,65 +1,36 @@
 """Tests for website_content CDN purge tasks"""
 
-from unittest.mock import MagicMock, patch
-
 import pytest
-import requests
-from requests import Response
+from requests import RequestException
 
-from main.utils import call_fastly_purge_api
-
-
-@pytest.fixture
-def mock_fastly_response():
-    """Create a mock successful Fastly response"""
-    response = MagicMock(spec=Response)
-    response.status_code = 200
-    response.json.return_value = {"status": "ok", "id": "123-456"}
-    response.text = '{"status": "ok", "id": "123-456"}'
-    return response
+from website_content.tasks import (
+    fastly_purge_relative_url,
+    fastly_purge_website_content_list,
+)
 
 
-@pytest.fixture
-def mock_fastly_error_response():
-    """Create a mock error Fastly response"""
-    response = MagicMock(spec=Response)
-    response.status_code = 403
-    response.reason = "Forbidden"
-    response.text = '{"status": "error", "msg": "Invalid API key"}'
-    response.raise_for_status.side_effect = requests.HTTPError("403 Forbidden")
-    return response
+def test_fastly_purge_website_content_list_purges_path_key(mocker):
+    """A listing page is purged by its `path:` key, covering ?page= variants"""
+    mock_purge = mocker.patch("website_content.tasks.call_fastly_purge_surrogate_keys")
+
+    fastly_purge_website_content_list("/articles")
+
+    mock_purge.assert_called_once_with(["path:/articles"])
 
 
-@pytest.mark.django_db
-class TestCallFastlyPurgeApi:
-    """Tests for call_fastly_purge_api function"""
+@pytest.mark.parametrize(
+    "task", [fastly_purge_relative_url, fastly_purge_website_content_list]
+)
+def test_queued_purge_retries_failed_request(mocker, task):
+    """A queued purge whose request fails is run again"""
+    mock_purge = mocker.patch(
+        "website_content.tasks.call_fastly_purge_surrogate_keys",
+        side_effect=[RequestException("fastly down"), {}],
+    )
 
-    @patch("main.utils.requests.request")
-    @patch("django.conf.settings.FASTLY_URL", "https://api.fastly.com")
-    @patch("django.conf.settings.APP_BASE_URL", "https://learn.mit.edu")
-    @patch("django.conf.settings.FASTLY_API_KEY", "test-token")
-    def test_call_fastly_purge_api_success(self, mock_request, mock_fastly_response):
-        """Test successful Fastly API call"""
-        mock_request.return_value = mock_fastly_response
+    # throw=False: an eager apply() otherwise raises the Retry to its caller
+    # rather than running it
+    result = task.apply(args=["/news"], throw=False)
 
-        result = call_fastly_purge_api("/api/v1/website_content/test-article/")
-
-        assert result == {"status": "ok", "id": "123-456"}
-        mock_request.assert_called_once()
-
-        call_kwargs = mock_request.call_args.kwargs
-        assert call_kwargs["headers"]["fastly-key"] == "test-token"
-        assert call_kwargs["timeout"] == 30
-
-    @patch("main.utils.requests.request")
-    @patch("django.conf.settings.FASTLY_URL", "https://api.fastly.com")
-    @patch("django.conf.settings.APP_BASE_URL", "https://learn.mit.edu")
-    @patch("django.conf.settings.FASTLY_API_KEY", "")
-    def test_call_fastly_purge_api_no_token(self, mock_request, mock_fastly_response):
-        """Test API call without auth token - skips in dev"""
-        mock_request.return_value = mock_fastly_response
-
-        result = call_fastly_purge_api("/api/v1/news/test/")
-
-        assert result == {"status": "ok", "skipped": True}
-        mock_request.assert_not_called()
+    assert result.successful()
+    assert mock_purge.call_count == 2
