@@ -2198,8 +2198,13 @@ def test_olx_archive_empty_url_name_parts(tmp_path):
         "chapter/ch.xml": (
             '<chapter><vertical url_name=":v" visible_to_staff_only="true"/>'
             '<html url_name="h::x"/><problem url_name="q"/>'
-            '<problem url_name="q:" visible_to_staff_only="true"/></chapter>'
+            '<problem url_name="q:" visible_to_staff_only="true"/>'
+            '<html url_name="a:.." visible_to_staff_only="true"/>'
+            '<html url_name="a:..:b"/></chapter>'
         ),
+        # a:.. is the file ..., a:..:b resolves to html/b.xml
+        "html/a/...xml": "<html><p>staff only</p></html>",
+        "html/a/../b.xml": "<html><p>b</p></html>",
         # q: is stored at problem/q/.xml; it mustn't take q's file
         "problem/q.xml": "<problem/>",
         "problem/q/.xml": "<problem/>",
@@ -2216,6 +2221,7 @@ def test_olx_archive_empty_url_name_parts(tmp_path):
         "chapter/ch.xml",
         "course.xml",
         "course/run.xml",
+        "html/b.xml",
         "html/h/x.xml",
         "problem/q.xml",
     ]
@@ -2225,7 +2231,36 @@ def test_olx_archive_empty_url_name_parts(tmp_path):
     assert archive.key(olx / "problem/q.xml", run) == (
         "block-v1:test_run+type@problem+block@q"
     )
+    assert archive.key(olx / "html/b.xml", run) == (
+        "block-v1:test_run+type@html+block@a:..:b"
+    )
     assert archive.excluded_keys(run) == {
         "block-v1:test_run+type@vertical+block@:v",
         "block-v1:test_run+type@problem+block@p",
+        "block-v1:test_run+type@html+block@a:..",
     }
+
+
+def test_olx_archive_html_filename_ending_in_html(tmp_path):
+    """
+    An html filename that already ends in .html names <filename>.html, and
+    only if that is missing the file as written, as in edX
+    """
+    olx = tmp_path / "course"
+    files = {
+        "course.xml": '<course url_name="run" org="MITx" course="1"/>',
+        "course/run.xml": (
+            '<course><chapter url_name="ch" visible_to_staff_only="true"/></course>'
+        ),
+        "chapter/ch.xml": (
+            '<chapter><html url_name="c:only" filename="private.html"/>'
+            '<html url_name="c:two" filename="both.html"/></chapter>'
+        ),
+        "html/c/private.html": "<p>staff only</p>",
+        # both.html.html is the body; both.html is another file
+        "html/c/both.html.html": "<p>staff only</p>",
+        "html/c/both.html": "<p>not this block's</p>",
+    }
+    for rel, text in files.items():
+        _write_olx(olx, rel, text)
+    assert _ingested(olx) == ["course.xml", "course/run.xml", "html/c/both.html"]

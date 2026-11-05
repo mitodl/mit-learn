@@ -447,13 +447,13 @@ class OlxArchive:
     def _unspelled_names(self) -> dict[Path, str]:
         """
         <tag>/<url_name><ext> of the files of named blocks whose path drops part
-        of the url_name: an empty part, as in a::b or :a, is lost when edX
-        writes a block's : as a /
+        of the url_name: when edX writes a block's : as a /, an empty, . or ..
+        part, as in a::b, :a or a:..:b, is lost from the path
         """
         return {
             path: f"{tag}/{url_name}{path.suffix}"
             for tag, url_name, _element, *_ in self._blocks
-            if ":" in url_name and "" in url_name.split(":")
+            if ":" in url_name and {"", ".", ".."} & set(url_name.split(":"))
             for path in self._files_named(tag, _pathname(url_name))
         }
 
@@ -595,11 +595,19 @@ class OlxArchive:
         if tag == "html" and element.get("filename"):
             # edX reads the body relative to the block's own folder
             folder = posixpath.dirname(_pathname(url_name or ""))
-            files.update(
-                self._files_named(
-                    "html", posixpath.join(folder, element.get("filename"))
-                )
-            )
+            body = posixpath.join(folder, element.get("filename"))
+            bodies = self._files_named("html", body)
+            # edX reads <filename>.html, and only if that is missing, a filename
+            # already ending in .html as it is
+            if body.endswith(".html") and not any(
+                path.suffix == ".html" for path in bodies
+            ):
+                bodies |= {
+                    path
+                    for path in self._files_named("html", body.removesuffix(".html"))
+                    if path.suffix == ".html"
+                }
+            files.update(bodies)
         if tag == "video":
             # a transcript the export doesn't have is skipped
             files.update(
@@ -618,23 +626,25 @@ class OlxArchive:
         counts, so notes doesn't also take notes.extra.html. A name leading
         outside the tree finds nothing.
         """
-        # a url_name ending in : is stored as <folder>/<name>/.<ext>, a file
-        # with no suffix, so never ingested; normalizing would drop the / and
-        # find <name>.<ext>, another block's files
-        path = None if name.endswith("/") else self._in_tree(f"{folder}/{name}")
-        if path is None:
+        # only the folders are resolved: the file name is matched as written,
+        # since with its extension a name like .. (from a url_name a:..) is a
+        # file, ...xml. A url_name ending in : leaves no name; its file, .xml,
+        # has no suffix, so it is never ingested anyway.
+        parent, _, stem = f"{folder}/{name}".rpartition("/")
+        directory = self._in_tree(parent)
+        if directory is None or not stem:
             return set()
-        if path.parent not in self._listings:
+        if directory not in self._listings:
             listing = defaultdict(list)
             try:
-                entries = list(os.scandir(path.parent))
+                entries = list(os.scandir(directory))
             except (FileNotFoundError, NotADirectoryError):
                 entries = []
             for entry in entries:
                 if entry.is_file() and "." in entry.name:
                     listing[Path(entry.name).stem].append(Path(entry.path))
-            self._listings[path.parent] = listing
-        return set(self._listings[path.parent].get(path.name, ()))
+            self._listings[directory] = listing
+        return set(self._listings[directory].get(stem, ()))
 
     @cached_property
     def _staff_only(self) -> set[Path]:
