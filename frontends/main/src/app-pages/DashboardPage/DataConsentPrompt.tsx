@@ -9,57 +9,51 @@ type DataConsentPromptProps = {
   open: boolean
   contract: Pick<UserContractPage, "id" | "name">
   onAccepted?: () => void
-  onDeclined: () => void
+  onCancelled: () => void
 }
 
+/**
+ * Only agreeing is sent to MITx Online. Cancelling records nothing; it just
+ * hands control back to the caller.
+ */
 const DataConsentPrompt: React.FC<DataConsentPromptProps> = ({
   open,
   contract,
   onAccepted,
-  onDeclined,
+  onCancelled,
 }) => {
   const consentMutation = useDataConsentMutation({ meta: SILENCE_ERROR_TOAST })
-  // Keeps the dialog locked between a successful decline and whatever the
-  // caller does next (a redirect or closing the modal).
-  const [declined, setDeclined] = useState(false)
+  // Keeps the dialog locked between Cancel and whatever the caller does next
+  // (a redirect or closing the modal).
+  const [cancelled, setCancelled] = useState(false)
 
-  const submit = (consented: boolean) => {
+  const accept = () => {
     consentMutation.mutate(
-      { contract_id: contract.id, DataConsentRequest: { consented } },
-      {
-        onSuccess: () => {
-          if (consented) {
-            onAccepted?.()
-          } else {
-            setDeclined(true)
-            onDeclined()
-          }
-        },
-      },
+      { contract_id: contract.id, DataConsentRequest: { consented: true } },
+      { onSuccess: () => onAccepted?.() },
     )
+  }
+
+  const cancel = () => {
+    setCancelled(true)
+    onCancelled()
   }
 
   return (
     <DataConsentDialog
       open={open}
       contractName={contract.name}
-      onAccept={() => submit(true)}
-      onCancel={() => submit(false)}
+      onAccept={accept}
+      onCancel={cancel}
       submitting={
-        declined
-          ? "cancel"
-          : consentMutation.isPending
-            ? consentMutation.variables?.DataConsentRequest.consented
-              ? "accept"
-              : "cancel"
-            : null
+        cancelled ? "cancel" : consentMutation.isPending ? "accept" : null
       }
       isError={consentMutation.isError}
     />
   )
 }
 
-/** Resolves `true` if the learner agrees and `false` if they decline. */
+/** Resolves `true` if the learner agrees and `false` if they cancel. */
 const DataConsentModal = NiceModal.create(
   ({ contract }: { contract: Pick<UserContractPage, "id" | "name"> }) => {
     const modal = useModal()
@@ -72,7 +66,7 @@ const DataConsentModal = NiceModal.create(
         open={modal.visible}
         contract={contract}
         onAccepted={() => finish(true)}
-        onDeclined={() => finish(false)}
+        onCancelled={() => finish(false)}
       />
     )
   },

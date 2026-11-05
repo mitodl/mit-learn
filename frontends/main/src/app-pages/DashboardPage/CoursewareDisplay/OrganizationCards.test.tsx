@@ -557,8 +557,8 @@ describe("OrganizationCards", () => {
       )
     })
 
-    it("stays on dashboard home after declining", async () => {
-      const { contract } = setupContract(false)
+    it("stays on dashboard home after cancelling, without recording a response", async () => {
+      setupContract(false)
       await user.click(await continueButton())
       await user.click(await screen.findByRole("button", { name: "Cancel" }))
 
@@ -566,12 +566,8 @@ describe("OrganizationCards", () => {
         expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
       )
       expect(mockRouter.asPath).toBe(DASHBOARD_HOME)
-      expect(makeRequest).toHaveBeenCalledWith(
-        expect.objectContaining({
-          method: "post",
-          url: mitxOnlineUrls.b2b.dataConsent(contract.id),
-          body: { consented: false },
-        }),
+      expect(makeRequest).not.toHaveBeenCalledWith(
+        expect.objectContaining({ method: "post" }),
       )
     })
 
