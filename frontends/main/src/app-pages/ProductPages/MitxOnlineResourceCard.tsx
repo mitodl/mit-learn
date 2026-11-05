@@ -1,7 +1,6 @@
 "use client"
 
 import React from "react"
-import { useFeatureFlagEnabled } from "posthog-js/react"
 import { BaseLearningResourceCard } from "ol-components"
 import { analytics } from "@/common/analytics"
 import { FeatureFlags } from "@/common/feature_flags"
@@ -20,6 +19,7 @@ import {
   getBestRun,
   getEnrollmentType,
 } from "@/common/mitxonline"
+import { useFeatureFlag } from "@/common/useFeatureFlag"
 import {
   ResourceCardSkeleton,
   ResourceCardView,
@@ -233,8 +233,7 @@ const mitxOnlineCardContent = (
 const MitxOnlineResourceCard: React.FC<MitxOnlineResourceCardProps> = (
   props,
 ) => {
-  const redesign =
-    useFeatureFlagEnabled(FeatureFlags.ResourceCardRedesign) === true
+  const redesign = useFeatureFlag(FeatureFlags.ResourceCardRedesign)
   const {
     href,
     size = "small",

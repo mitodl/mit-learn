@@ -13,14 +13,14 @@ import { faker } from "@faker-js/faker/locale/en"
 import moment from "moment"
 import { SiblingRunsPanel, SiblingRunsToggle } from "./SiblingRunsAccordion"
 import { setupOrderHistory } from "./test-utils"
-import { useFeatureFlagEnabled } from "posthog-js/react"
+import { useFeatureFlag } from "@/common/useFeatureFlag"
 import { FeatureFlags } from "@/common/feature_flags"
 
-jest.mock("posthog-js/react")
+jest.mock("@/common/useFeatureFlag")
 
 const setPerRunMenus = (enabled: boolean) => {
   jest
-    .mocked(useFeatureFlagEnabled)
+    .mocked(useFeatureFlag)
     .mockImplementation((flag) =>
       flag === FeatureFlags.MultipleRunContextMenus ? enabled : false,
     )

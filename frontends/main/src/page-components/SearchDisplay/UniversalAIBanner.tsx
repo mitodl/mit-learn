@@ -1,11 +1,11 @@
 import React, { useMemo } from "react"
 import Link from "next/link"
 import { styled, Typography } from "ol-components"
-import { useFeatureFlagEnabled } from "posthog-js/react"
 import { FeatureFlags } from "@/common/feature_flags"
 import { programPageView } from "@/common/urls"
 import { analytics } from "@/common/analytics"
 import type { RegisteredSearchParams } from "@/common/searchParams"
+import { useFeatureFlag } from "@/common/useFeatureFlag"
 
 const BANNER_SEARCH_TERMS = [
   "artificial intelligence",
@@ -107,7 +107,7 @@ const UniversalAIBanner: React.FC<UniversalAIBannerProps> = ({
   searchParams,
 }) => {
   const searchTerm = searchParams.get("q")
-  const featureFlagEnabled = useFeatureFlagEnabled(
+  const featureFlagEnabled = useFeatureFlag(
     FeatureFlags.UniversalAISearchBanner,
   )
   const matchesSearchTerm = useMemo(() => {

@@ -17,7 +17,7 @@ import {
 import { formatRunIdentifier } from "./courseDateUtils"
 import * as mitxonline from "api/mitxonline-test-utils"
 import { makeRequest } from "api/test-utils"
-import { useFeatureFlagEnabled } from "posthog-js/react"
+import { useFeatureFlag } from "@/common/useFeatureFlag"
 import { faker } from "@faker-js/faker/locale/en"
 import invariant from "tiny-invariant"
 import {
@@ -31,14 +31,14 @@ beforeEach(() => {
   setupProgramCertificates()
 })
 
-jest.mock("posthog-js/react")
+jest.mock("@/common/useFeatureFlag")
 jest.mock("@/common/analytics/gtm", () => ({
   trackCourseUnenrolled: jest.fn(),
   trackProgramUnenrolled: jest.fn(),
 }))
 
-const mockedUseFeatureFlagEnabled = jest
-  .mocked(useFeatureFlagEnabled)
+const mockedUseFeatureFlag = jest
+  .mocked(useFeatureFlag)
   .mockImplementation(() => false)
 
 describe("DashboardDialogs", () => {
@@ -48,7 +48,7 @@ describe("DashboardDialogs", () => {
     const { enrollments, completed, expired, started, notStarted } =
       setupEnrollments(includeExpired)
 
-    mockedUseFeatureFlagEnabled.mockReturnValue(true)
+    mockedUseFeatureFlag.mockReturnValue(true)
     setMockResponse.get(
       mitxonline.urls.enrollment.enrollmentsListV3(),
       enrollments,

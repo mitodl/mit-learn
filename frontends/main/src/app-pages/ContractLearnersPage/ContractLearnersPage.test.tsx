@@ -11,7 +11,7 @@ import {
   urls as analyticsUrls,
 } from "api/analytics-test-utils"
 import type { CompletionStatusFilter } from "api/analytics-hooks/organizations"
-import { useFeatureFlagEnabled } from "posthog-js/react"
+import { useFeatureFlag } from "@/common/useFeatureFlag"
 import { allowConsoleErrors } from "ol-test-utilities"
 import { ForbiddenError } from "@/common/errors"
 import { FeatureFlags } from "@/common/feature_flags"
@@ -19,10 +19,7 @@ import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
 import { contractAnalyticsView } from "@/common/urls"
 import ContractLearnersPage from "./ContractLearnersPage"
 
-jest.mock("posthog-js/react", () => ({
-  ...jest.requireActual("posthog-js/react"),
-  useFeatureFlagEnabled: jest.fn(),
-}))
+jest.mock("@/common/useFeatureFlag")
 
 jest.mock("@/common/analytics/posthog", () => ({
   capturePostHog: jest.fn(),
@@ -31,7 +28,7 @@ jest.mock("@/common/analytics/posthog", () => ({
 
 jest.mock("@/common/useFeatureFlagsLoaded")
 const mockedUseFeatureFlagsLoaded = jest.mocked(useFeatureFlagsLoaded)
-const mockedUseFeatureFlagEnabled = jest.mocked(useFeatureFlagEnabled)
+const mockedUseFeatureFlag = jest.mocked(useFeatureFlag)
 
 const ORG_UUID = "11111111-2222-3333-4444-555555555555"
 const GRID_PAGE_SIZE = 25
@@ -151,11 +148,11 @@ const renderGrid = (url = "/", runs?: Parameters<typeof mockCourseRuns>[1]) => {
     learnerTotalUrl(contractId),
     analyticsFactories.learnersEnvelope([], { total_count: 28 }),
   )
-  const { location } = renderWithProviders(
+  const { location, queryClient } = renderWithProviders(
     <ContractLearnersPage orgSlug={orgSlug} contractSlug={contract.slug} />,
     { url },
   )
-  return { contractId, orgSlug, contract, location }
+  return { contractId, orgSlug, contract, location, queryClient }
 }
 
 const learnerNamed = (name: string) =>
@@ -175,7 +172,7 @@ const pickStatus = async (label: string) => {
 describe("ContractLearnersPage", () => {
   beforeEach(() => {
     mockedUseFeatureFlagsLoaded.mockReturnValue(true)
-    mockedUseFeatureFlagEnabled.mockReturnValue(true)
+    mockedUseFeatureFlag.mockReturnValue(true)
     setMockResponse.get(
       mitxUrls.userMe.get(),
       mitxFactories.user.user({ email: "manager@test.com" }),
@@ -184,7 +181,7 @@ describe("ContractLearnersPage", () => {
 
   describe("access", () => {
     test("throws ForbiddenError when the learner analytics flag is off", () => {
-      mockedUseFeatureFlagEnabled.mockReturnValue(false)
+      mockedUseFeatureFlag.mockReturnValue(false)
       allowConsoleErrors()
 
       expect(() =>
@@ -199,7 +196,7 @@ describe("ContractLearnersPage", () => {
      * confer access to per-learner data.
      */
     test("the aggregate analytics flag alone does not open this page", () => {
-      mockedUseFeatureFlagEnabled.mockImplementation(
+      mockedUseFeatureFlag.mockImplementation(
         (flag) => flag === FeatureFlags.B2BAnalyticsDashboard,
       )
       allowConsoleErrors()
@@ -216,7 +213,7 @@ describe("ContractLearnersPage", () => {
      * nav assumes the aggregate page is reachable.
      */
     test("the learner flag alone does not open this page", () => {
-      mockedUseFeatureFlagEnabled.mockImplementation(
+      mockedUseFeatureFlag.mockImplementation(
         (flag) => flag === FeatureFlags.B2BLearnerAnalytics,
       )
       allowConsoleErrors()
@@ -229,7 +226,7 @@ describe("ContractLearnersPage", () => {
     })
 
     test("opens with both analytics flags on, with the contract nav marking Learners current", async () => {
-      mockedUseFeatureFlagEnabled.mockImplementation(
+      mockedUseFeatureFlag.mockImplementation(
         (flag) =>
           flag === FeatureFlags.B2BAnalyticsDashboard ||
           flag === FeatureFlags.B2BLearnerAnalytics,
@@ -617,6 +614,198 @@ describe("ContractLearnersPage", () => {
 
       expect(await screen.findByText("Zed Zimmer")).toBeInTheDocument()
       expect(screen.queryByText("Ada Lovelace")).not.toBeInTheDocument()
+    })
+  })
+
+  describe("the learner summary panel", () => {
+    const ada = (
+      overrides: Parameters<typeof analyticsFactories.learnerProgress>[0],
+    ) =>
+      analyticsFactories.learnerProgress({
+        learner_id: "a",
+        email: "ada@example.com",
+        full_name: "Ada Lovelace",
+        ...overrides,
+      })
+
+    /** A `<dt>`'s value is its `<dd>` sibling; the column-reverse layout is visual only. */
+    const statValue = (container: HTMLElement, label: string) =>
+      within(container).getByText(label, { selector: "dt" })
+        .nextElementSibling as HTMLElement
+
+    const openSummary = async () => {
+      await user.click(
+        await screen.findByRole("button", { name: /Ada Lovelace/ }),
+      )
+      return screen.findByRole("dialog", { name: "Ada Lovelace" })
+    }
+
+    test("sums a consented learner's activity and shows each module's counts", async () => {
+      const { contractId } = renderGrid()
+      mockGridPage(contractId, 0, [
+        ada({
+          courserun_readable_id: M5,
+          completion_status: "passed",
+          content_progress: 1,
+          last_active_on: "2026-09-12",
+          days_active: 3,
+          videos_watched: 10,
+          problems_attempted: 0,
+          chatbot_interactions: 2,
+        }),
+        ada({
+          courserun_readable_id: M6,
+          completion_status: "in_progress",
+          content_progress: 0.4,
+          last_active_on: "2026-09-30",
+          days_active: 5,
+          videos_watched: 7,
+          problems_attempted: 0,
+          chatbot_interactions: 1,
+        }),
+      ])
+
+      const dialog = await openSummary()
+
+      const progress = within(dialog).getByRole("region", { name: "Progress" })
+      expect(statValue(progress, "Completed")).toHaveTextContent("1 of 2")
+      expect(statValue(progress, "Not enrolled")).toHaveTextContent("0")
+      expect(statValue(progress, "Last activity")).toHaveTextContent(
+        "Sep 30, 2026",
+      )
+
+      const activity = within(dialog).getByRole("region", {
+        name: "Activity across modules",
+      })
+      expect(
+        within(activity).queryByText("Days active", { selector: "dt" }),
+      ).not.toBeInTheDocument()
+      expect(statValue(activity, "Videos watched")).toHaveTextContent("17")
+      expect(statValue(activity, "Problems attempted")).toHaveTextContent("0")
+      expect(statValue(activity, "Chatbot interactions")).toHaveTextContent("3")
+
+      const modules = within(
+        within(dialog).getByRole("region", { name: "Modules" }),
+      ).getAllByRole("listitem")
+      expect(modules[0]).toHaveTextContent("Completed 100%")
+      expect(modules[1]).toHaveTextContent("In progress 40%")
+      expect(statValue(modules[1], "Days active")).toHaveTextContent("5")
+      expect(statValue(modules[1], "Videos watched")).toHaveTextContent("7")
+      expect(
+        within(dialog).queryByText(/hasn’t agreed to share/),
+      ).not.toBeInTheDocument()
+      expect(
+        within(dialog).getByText(/Activity is counted once per day/),
+      ).toBeInTheDocument()
+    })
+
+    test("withholds every total for a learner who declined, rather than showing 0", async () => {
+      const { contractId } = renderGrid()
+      mockGridPage(contractId, 0, [
+        analyticsFactories.withheldLearnerProgress({
+          learner_id: "a",
+          email: "ada@example.com",
+          full_name: "Ada Lovelace",
+          courserun_readable_id: M5,
+        }),
+      ])
+
+      const dialog = await openSummary()
+
+      const activity = within(dialog).getByRole("region", {
+        name: "Activity across modules",
+      })
+      expect(
+        within(dialog).getByText(
+          "This learner hasn’t agreed to share their progress, so their totals are hidden.",
+        ),
+      ).toBeInTheDocument()
+      for (const label of [
+        "Videos watched",
+        "Problems attempted",
+        "Chatbot interactions",
+      ]) {
+        expect(statValue(activity, label)).toHaveTextContent("Withheld")
+      }
+      const progress = within(dialog).getByRole("region", { name: "Progress" })
+      expect(statValue(progress, "Completed")).toHaveTextContent("Withheld")
+      expect(statValue(progress, "Not enrolled")).toHaveTextContent("1")
+      expect(
+        within(dialog).queryByText(/Activity is counted once per day/),
+      ).not.toBeInTheDocument()
+    })
+
+    test("shows refetched counts while the panel stays open", async () => {
+      const { contractId, queryClient } = renderGrid()
+      mockGridPage(contractId, 0, [
+        ada({ courserun_readable_id: M5, videos_watched: 4 }),
+      ])
+
+      const dialog = await openSummary()
+      const activity = within(dialog).getByRole("region", {
+        name: "Activity across modules",
+      })
+      expect(statValue(activity, "Videos watched")).toHaveTextContent("4")
+
+      mockGridPage(contractId, 0, [
+        ada({ courserun_readable_id: M5, videos_watched: 9 }),
+      ])
+      await act(async () => {
+        await queryClient.refetchQueries()
+      })
+
+      await waitFor(() => {
+        expect(statValue(activity, "Videos watched")).toHaveTextContent("9")
+      })
+      expect(screen.getByRole("dialog", { name: "Ada Lovelace" })).toBe(dialog)
+    })
+
+    test("withholds a total when any run is withheld, but keeps the consented run's own counts", async () => {
+      const { contractId } = renderGrid()
+      mockGridPage(contractId, 0, [
+        ada({ courserun_readable_id: M5, videos_watched: 9 }),
+        analyticsFactories.withheldLearnerProgress({
+          learner_id: "a",
+          email: "ada@example.com",
+          full_name: "Ada Lovelace",
+          courserun_readable_id: M6,
+        }),
+      ])
+
+      const dialog = await openSummary()
+
+      const activity = within(dialog).getByRole("region", {
+        name: "Activity across modules",
+      })
+      expect(statValue(activity, "Videos watched")).toHaveTextContent(
+        "Withheld",
+      )
+      expect(
+        within(dialog).getByText(
+          "This learner hasn’t agreed to share their progress in some modules, so their totals are hidden.",
+        ),
+      ).toBeInTheDocument()
+      const [consented, withheld] = within(
+        within(dialog).getByRole("region", { name: "Modules" }),
+      ).getAllByRole("listitem")
+      expect(statValue(consented, "Videos watched")).toHaveTextContent("9")
+      expect(withheld).toHaveTextContent("Unknown")
+      expect(
+        within(withheld).queryByText("Videos watched", { selector: "dt" }),
+      ).not.toBeInTheDocument()
+    })
+
+    test("closes on Escape and returns focus to the learner", async () => {
+      const { contractId } = renderGrid()
+      mockGridPage(contractId, 0, [ada({ courserun_readable_id: M5 })])
+
+      await openSummary()
+      await user.keyboard("{Escape}")
+
+      await waitFor(() => {
+        expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
+      })
+      expect(screen.getByRole("button", { name: /Ada Lovelace/ })).toHaveFocus()
     })
   })
 

@@ -1,6 +1,5 @@
 "use client"
 
-import { useFeatureFlagEnabled } from "posthog-js/react"
 import { FeatureFlags } from "@/common/feature_flags"
 import { useAppSearchParams } from "@/common/useAppSearchParams"
 import {
@@ -8,6 +7,7 @@ import {
   getHybridSearchOverride,
   isHybridSearchDisabledByEnv,
 } from "@/common/hybridSearch"
+import { useFeatureFlag } from "@/common/useFeatureFlag"
 
 /**
  * Whether search should use the hybrid (vector + keyword) endpoint rather than
@@ -20,7 +20,7 @@ import {
  */
 const useHybridSearchEnabled = (): boolean => {
   const searchParams = useAppSearchParams()
-  const flagDisabled = useFeatureFlagEnabled(FeatureFlags.DisableHybridSearch)
+  const flagDisabled = useFeatureFlag(FeatureFlags.DisableHybridSearch)
   const override = getHybridSearchOverride(searchParams)
   if (override !== null) return override
   // Either half of the kill switch is enough to roll back.

@@ -23,7 +23,7 @@ import { RESOURCE_DRAWER_PARAMS } from "@/common/urls"
 import { slugify } from "@/common/slugs"
 import invariant from "tiny-invariant"
 import { LearningResourceCard } from "ol-components"
-import { useFeatureFlagEnabled } from "posthog-js/react"
+import { useFeatureFlag } from "@/common/useFeatureFlag"
 import { FeatureFlags } from "@/common/feature_flags"
 import { learningResourceQueries } from "api/hooks/learningResources"
 import type { LearningResource } from "api"
@@ -32,10 +32,7 @@ import {
   ResourceCardView,
 } from "../ResourceCardView/ResourceCardView"
 
-jest.mock("posthog-js/react", () => ({
-  ...jest.requireActual("posthog-js/react"),
-  useFeatureFlagEnabled: jest.fn(),
-}))
+jest.mock("@/common/useFeatureFlag")
 
 jest.mock("../ResourceCardView/ResourceCardView", () => {
   const actual = jest.requireActual("../ResourceCardView/ResourceCardView")
@@ -108,15 +105,11 @@ const setupCard = ({
   return { resource, view, location, queryClient }
 }
 
-/**
- * Off is the unresolved `undefined` PostHog returns before flags load, which
- * must render the legacy card just as an explicit `false` does.
- */
 const setRedesignFlag = (enabled: boolean) => {
   jest
-    .mocked(useFeatureFlagEnabled as (flag: string) => boolean | undefined)
-    .mockImplementation((flag) =>
-      enabled && flag === FeatureFlags.ResourceCardRedesign ? true : undefined,
+    .mocked(useFeatureFlag)
+    .mockImplementation(
+      (flag) => enabled && flag === FeatureFlags.ResourceCardRedesign,
     )
 }
 
