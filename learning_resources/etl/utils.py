@@ -359,6 +359,7 @@ def documents_from_olx(archive: OlxArchive) -> Generator[tuple, None, None]:
                 "archive_checksum": archive_checksum,
                 "file_extension": extension_lower,
                 "source_path": f"{rel_dir}/{path.name}",
+                "path": path,
             },
         )
 
@@ -678,7 +679,8 @@ def _build_result(  # noqa: PLR0913, PLR0917
 ) -> dict:
     """Build the final result dictionary."""
     source_path = metadata.get("source_path")
-    edx_module_id = get_edx_module_id(source_path, run)
+    # the key is the file's XBlock id
+    edx_module_id = key
     data = {
         "key": key,
         "published": True,
@@ -751,6 +753,7 @@ def process_olx_path(  # noqa: PLR0913
     use_ocr=False,
     failed_source_paths: list | None = None,
     archive: OlxArchive | None = None,
+    failed_keys: list | None = None,
 ) -> Generator[dict, None, None]:
     """
     Process OLX path and yield content dictionaries. Rows are dated from the
@@ -759,7 +762,8 @@ def process_olx_path(  # noqa: PLR0913
     failed_source_paths is a caller-owned list appended to in place with the
     source_path of each file whose processing raises; it is only complete once
     the generator is fully exhausted. A file Tika yields nothing for is not a
-    failure. archive is the OlxArchive of olx_path, if the caller has one to
+    failure. failed_keys, likewise, gets each such file's ContentFile key.
+    archive is the OlxArchive of olx_path, if the caller has one to
     share; the file types it reads are then the ones ingested, and a different
     valid_file_types raises ValueError.
     """
@@ -779,7 +783,12 @@ def process_olx_path(  # noqa: PLR0913
 
     for document, metadata in documents_from_olx(archive):
         source_path = metadata.get("source_path")
-        key = get_edx_module_id(source_path, run)
+        # only an OLX tree's paths can be keyed from where they sit in it
+        key = (
+            archive.key(metadata["path"], run)
+            if archive.is_olx
+            else get_edx_module_id(source_path, run)
+        )
         try:
             existing_record = _get_existing_record(
                 source_path, key, run, is_tutor_problem_file_import
@@ -811,6 +820,8 @@ def process_olx_path(  # noqa: PLR0913
             )
             if failed_source_paths is not None:
                 failed_source_paths.append(source_path)
+            if failed_keys is not None:
+                failed_keys.append(key)
             continue
 
         yield _build_result(
@@ -867,18 +878,13 @@ def transform_content_files(
     Yields:
         dict: content from file
     """
-    failed_source_paths = []
     yield from process_olx_path(
         str(archive.root),
         run,
         overwrite=overwrite,
-        failed_source_paths=failed_source_paths,
         archive=archive,
+        failed_keys=failed_keys,
     )
-    if failed_keys is not None:
-        failed_keys.extend(
-            get_edx_module_id(source_path, run) for source_path in failed_source_paths
-        )
 
 
 def course_units_from_archive(

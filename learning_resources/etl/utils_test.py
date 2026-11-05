@@ -25,6 +25,7 @@ from learning_resources.etl.olx_test import (
     START_FUTURE,
     START_LATER,
     START_PAST,
+    _colon_olx,
     _dated_olx,
     _reference_olx,
     _start,
@@ -1468,3 +1469,59 @@ def test_reconcile_release_dates_without_dates_clears_the_run(
     dated.refresh_from_db()
     undated.refresh_from_db()
     assert (dated.release_date, undated.release_date) == (None, None)
+
+
+@pytest.mark.django_db
+def test_transform_content_files_keys_colon_url_names(tmp_path, mocker):
+    """A colon-named block's file is keyed by its url_name, failed or not"""
+    run = LearningResourceRunFactory.create(run_id="course-v1:MITx+1+run")
+    olx = tmp_path / "course"
+    _colon_olx(olx)
+
+    def fake_extract(document, metadata, olx_path, key, **kwargs):
+        if metadata["source_path"].endswith("other.html"):
+            msg = "converter output missing"
+            raise RuntimeError(msg)
+        return {"content": "text", "content_title": ""}
+
+    mocker.patch(
+        "learning_resources.etl.utils._extract_content", side_effect=fake_extract
+    )
+    failed_keys = []
+    results = list(
+        utils.transform_content_files(
+            OlxArchive(olx), run, overwrite=True, failed_keys=failed_keys
+        )
+    )
+    block = "block-v1:MITx+1+run+type@"
+    ok = next(r for r in results if r["source_path"].endswith("h/ok.xml"))
+    assert ok["key"] == ok["edx_module_id"] == f"{block}html+block@h:ok"
+    assert failed_keys == [f"{block}html+block@h:other"]
+
+
+@pytest.mark.django_db
+def test_process_olx_path_keys_other_trees_by_source_path(tmp_path, mocker):
+    """A tree that is not OLX, like Canvas, is keyed from source_path as before"""
+    run = LearningResourceRunFactory.create()
+    # a file at the root of a shallow temp dir: its folder is not in source_path
+    path = tmp_path / "canvas123" / "page.html"
+    mocker.patch(
+        "learning_resources.etl.utils.documents_from_olx",
+        return_value=[
+            (
+                b"<p>page</p>",
+                {
+                    "content_type": CONTENT_TYPE_FILE,
+                    "file_extension": ".html",
+                    "source_path": "/page.html",
+                    "path": path,
+                },
+            )
+        ],
+    )
+    mocker.patch(
+        "learning_resources.etl.utils._extract_content",
+        return_value={"content": "text", "content_title": ""},
+    )
+    [result] = utils.process_olx_path(str(tmp_path), run, overwrite=True)
+    assert result["key"] == get_edx_module_id("/page.html", run)
