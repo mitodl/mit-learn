@@ -135,13 +135,10 @@ export const CONTRACT_LEARNERS_STATUSES = [
   "not_started",
   "in_progress",
   "passed",
-  "unknown",
 ] as const
 export type ContractLearnersStatus = (typeof CONTRACT_LEARNERS_STATUSES)[number]
 export type ContractLearnersFilters = {
   status?: ContractLearnersStatus
-  /** A course run's readable id. */
-  module?: string
   needsAttention?: boolean
   page?: number
 }
@@ -153,7 +150,6 @@ export const contractLearnersView = (
   const path = generatePath(CONTRACT_LEARNERS_VIEW, { orgSlug, contractSlug })
   const params = new URLSearchParams()
   if (filters.status) params.set("status", filters.status)
-  if (filters.module) params.set("module", filters.module)
   if (filters.needsAttention) params.set("needs_attention", "true")
   if (filters.page && filters.page > 1) params.set("page", String(filters.page))
   const search = params.toString()

@@ -15,33 +15,21 @@ import type { LearnerEnrollment } from "api/analytics-hooks/organizations"
  * mitxonline#3958 and ol-analytics-api#58.
  */
 type DisplayStatus =
-  | "not-started"
-  | "in-progress"
-  | "completed"
-  | "certificate"
-  | "declined"
-  | "not-recorded"
-  | "unknown"
+  "not-started" | "in-progress" | "completed" | "certificate" | "unknown"
 
 const DISPLAY_STATUS_LABEL: Record<DisplayStatus, string> = {
   "not-started": "Not started",
   "in-progress": "In progress",
   completed: "Completed",
   certificate: "Certificate",
-  declined: "Declined",
-  "not-recorded": "Consent not recorded",
   unknown: "Unknown",
 }
 
+/** Requests already leave out learners who haven't consented; this keeps a status from leaking if one gets through. */
 const getDisplayStatus = (row: LearnerEnrollment): DisplayStatus => {
-  // Consent is checked before the status itself: the API nulls the outcome
-  // fields when it is withheld, so a null here is ambiguous on its own.
-  if (!row.outcomes_shared) {
-    return row.outcomes_consent_status === "declined"
-      ? "declined"
-      : "not-recorded"
+  if (row.outcomes_consent_status !== "consented" || !row.outcomes_shared) {
+    return "unknown"
   }
-
   switch (row.completion_status) {
     case "certified":
       return "certificate"
@@ -52,17 +40,10 @@ const getDisplayStatus = (row: LearnerEnrollment): DisplayStatus => {
     case "not_started":
       return "not-started"
     default:
-      // A row that consented but carries a `completion_status` outside the
-      // four known values — e.g. a value the API added after this type was
-      // written. Distinct from "declined" and "not-recorded": those are
-      // consent states, this is an unrecognized one, and conflating them
-      // would misreport a consenting learner as having withheld consent.
+      /** A status outside the four known values, e.g. one the API added after this type was written. */
       return "unknown"
   }
 }
-
-const isWithheldStatus = (status: DisplayStatus) =>
-  status === "declined" || status === "not-recorded"
 
 const isStartedStatus = (status: DisplayStatus) =>
   status === "in-progress" || status === "completed" || status === "certificate"
@@ -76,10 +57,5 @@ const contentProgressPercent = (
     ? Math.round(row.content_progress * 100)
     : null
 
-export {
-  contentProgressPercent,
-  getDisplayStatus,
-  isWithheldStatus,
-  DISPLAY_STATUS_LABEL,
-}
+export { contentProgressPercent, getDisplayStatus, DISPLAY_STATUS_LABEL }
 export type { DisplayStatus }

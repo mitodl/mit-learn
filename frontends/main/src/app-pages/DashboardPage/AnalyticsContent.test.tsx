@@ -60,6 +60,14 @@ const mockedUseFeatureFlagEnabled = jest.mocked(
 
 const managerOrgsUrl = urls.organization.managerOrganizationsList()
 
+/** Every request leaves out learners who haven't consented by asking for these. */
+const SHARED_STATUSES = [
+  "not_started",
+  "in_progress",
+  "passed",
+  "certified",
+] as const
+
 const ORG_UUID = "3fa85f64-5717-4562-b3fc-2c963f66afa6"
 
 const orgWithUuid = (
@@ -164,6 +172,7 @@ const setContractAnalyticsResponses = (
   setMockResponse.get(
     analyticsUrls.contracts.learnerProgress(ORG_UUID, contractId, {
       limit: 1,
+      completion_status: [...SHARED_STATUSES],
     }),
     analyticsFactories.learnerProgressEnvelope([], {
       as_of: AS_OF,
@@ -178,6 +187,21 @@ const setContractAnalyticsResponses = (
       ...learnerProgress,
     }),
   )
+  for (const [completionStatus, total] of [
+    [SHARED_STATUSES, 30],
+    [["not_started"], 4],
+    [["in_progress"], 12],
+    [["passed", "certified"], 18],
+  ] as const) {
+    setMockResponse.get(
+      analyticsUrls.contracts.learners(ORG_UUID, contractId, {
+        limit: 1,
+        offset: 0,
+        completion_status: [...completionStatus],
+      }),
+      analyticsFactories.learnersEnvelope([], { total_count: total }),
+    )
+  }
 }
 
 describe("AnalyticsContent", () => {
@@ -362,7 +386,20 @@ describe("AnalyticsContent", () => {
         analyticsUrls.contracts.contentEngagement(ORG_UUID, contract.id, page),
         analyticsUrls.contracts.learnerProgress(ORG_UUID, contract.id, {
           limit: 1,
+          completion_status: [...SHARED_STATUSES],
         }),
+        ...[
+          [...SHARED_STATUSES],
+          ["not_started" as const],
+          ["in_progress" as const],
+          ["passed" as const, "certified" as const],
+        ].map((completionStatus) =>
+          analyticsUrls.contracts.learners(ORG_UUID, contract.id, {
+            limit: 1,
+            offset: 0,
+            completion_status: completionStatus,
+          }),
+        ),
       ]) {
         setMockResponse.get(url, ...notLoaded)
       }
@@ -1108,22 +1145,28 @@ describe("AnalyticsContent, contract-scoped", () => {
 
     await screen.findByRole("heading", { name: "Learner progress" })
 
-    const enrolled = await screen.findByRole("group", { name: "Enrolled" })
-    expect(within(enrolled).getByText("40")).toBeInTheDocument()
+    const enrolled = await screen.findByRole("group", {
+      name: "Learners enrolled",
+    })
+    expect(within(enrolled).getByText("30")).toBeInTheDocument()
 
     const notStarted = screen.getByRole("group", { name: "Not started" })
-    expect(within(notStarted).getByText("5")).toBeInTheDocument()
+    expect(within(notStarted).getByText("4")).toBeInTheDocument()
 
     const inProgress = screen.getByRole("group", { name: "In progress" })
-    expect(within(inProgress).getByText("15")).toBeInTheDocument()
+    expect(within(inProgress).getByText("12")).toBeInTheDocument()
 
-    // passed (12) + certified (8) folded into one "Completed" tile.
     const completed = screen.getByRole("group", { name: "Completed" })
-    expect(within(completed).getByText("20")).toBeInTheDocument()
+    expect(within(completed).getByText("18")).toBeInTheDocument()
+    expect(
+      screen.getByText(
+        "Counts only learners who agreed to share their progress.",
+      ),
+    ).toBeInTheDocument()
 
     const orgSlug = org.slug.replace(/^org-/, "")
     for (const [label, linkName, status] of [
-      ["Enrolled", "View all learners", undefined],
+      ["Learners enrolled", "View all learners", undefined],
       ["Not started", "View learners (Not started)", "not_started"],
       ["In progress", "View learners (In progress)", "in_progress"],
       ["Completed", "View learners (Completed)", "passed"],
@@ -1139,7 +1182,7 @@ describe("AnalyticsContent, contract-scoped", () => {
     }
 
     const list = screen.getByRole("list", {
-      name: "Learner progress distribution",
+      name: "Enrollments by status",
     })
     expect(within(list).getAllByRole("listitem")).toHaveLength(3)
     expect(within(list).getByText("Not started")).toBeInTheDocument()
@@ -1148,6 +1191,36 @@ describe("AnalyticsContent, contract-scoped", () => {
     expect(within(list).getByText("15")).toBeInTheDocument()
     expect(within(list).getByText("Completed")).toBeInTheDocument()
     expect(within(list).getByText("20")).toBeInTheDocument()
+  })
+
+  test("counts only learners who consented, by asking for the four shared statuses", async () => {
+    const contract = factories.contracts.contract()
+    const org = orgWithUuid({ contracts: [contract] })
+    setManagerOrgs([org])
+    setContractAnalyticsResponses(contract.id)
+
+    renderWithProviders(
+      <AnalyticsContent
+        orgSlug={org.slug.replace(/^org-/, "")}
+        contractSlug={contract.slug}
+      />,
+    )
+    await screen.findByRole("list", { name: "Enrollments by status" })
+
+    const statusesSent = (resource: string) =>
+      makeRequest.mock.calls
+        .map(([{ url }]) => new URL(url, "http://localhost"))
+        .filter(({ pathname }) => pathname.split("/").includes(resource))
+        .map(({ searchParams }) =>
+          searchParams.getAll("completion_status").sort(),
+        )
+    const shared = [...SHARED_STATUSES].sort()
+
+    expect(statusesSent("learner-progress")).toEqual([shared])
+    const learnerCounts = statusesSent("learners")
+    expect(learnerCounts).toContainEqual(shared)
+    expect(learnerCounts).not.toContainEqual([])
+    expect(learnerCounts.flat()).not.toContain("unknown")
   })
 
   describe("Needs attention card", () => {
@@ -1285,6 +1358,7 @@ describe("AnalyticsContent, contract-scoped", () => {
       setMockResponse.get(
         analyticsUrls.contracts.learnerProgress(ORG_UUID, contractId, {
           limit: 1,
+          completion_status: [...SHARED_STATUSES],
         }),
         "Internal Server Error",
         { code: 500 },
@@ -1331,33 +1405,6 @@ describe("AnalyticsContent, contract-scoped", () => {
         }),
       ).toBeInTheDocument()
     })
-
-    test("says learners are left out, without a number, when that count is floored", async () => {
-      const { card } = await renderCard([
-        row({
-          learners_needing_attention: 0,
-          learners_outcomes_withheld: null,
-        }),
-      ])
-
-      expect(
-        within(card).getByText(
-          "Excludes some learners who haven't shared their progress.",
-        ),
-      ).toBeInTheDocument()
-    })
-
-    test("says when learners without consent are left out", async () => {
-      const { card } = await renderCard([
-        row({ learners_needing_attention: 20, learners_outcomes_withheld: 3 }),
-      ])
-
-      expect(
-        within(card).getByText(
-          "Excludes 3 learners who haven't shared their progress.",
-        ),
-      ).toBeInTheDocument()
-    })
   })
 
   /**
@@ -1383,14 +1430,14 @@ describe("AnalyticsContent, contract-scoped", () => {
     )
 
     const list = await screen.findByRole("list", {
-      name: "Learner progress distribution",
+      name: "Enrollments by status",
     })
 
-    // Every row's visible count carries a visually-hidden "learners," and
+    // Every row's visible count carries a visually-hidden "enrollments," and
     // its percent a visually-hidden "of total" — sighted users still see
     // just the bare numbers (asserted above), but a screen reader gets the
     // units a dropped columnheader used to supply.
-    expect(within(list).getAllByText("learners,")).toHaveLength(3)
+    expect(within(list).getAllByText("enrollments,")).toHaveLength(3)
     expect(within(list).getAllByText("of total")).toHaveLength(3)
 
     // Nothing in the list should be a stray focus stop: every value here is
@@ -1398,105 +1445,6 @@ describe("AnalyticsContent, contract-scoped", () => {
     expect(within(list).queryByRole("button")).not.toBeInTheDocument()
     expect(within(list).queryByRole("link")).not.toBeInTheDocument()
     expect(within(list).queryByRole("textbox")).not.toBeInTheDocument()
-  })
-
-  /**
-   * A consent-withheld enrollment has no `completion_status`, so it is in
-   * `total_count` but in none of the three buckets. Dividing by `total_count`
-   * would make the rows add up to less than 100% for no reason a manager can
-   * see; the denominator is the learners who actually reported.
-   */
-  test("divides the distribution by consenting learners, not every enrollment", async () => {
-    const contract = factories.contracts.contract()
-    const org = orgWithUuid({ contracts: [contract] })
-    setManagerOrgs([org])
-    const contractId = contract.id
-    setContractAnalyticsResponses(contractId, undefined, {
-      total_count: 50,
-      outcomes_withheld_count: 10,
-      completion_status_counts: {
-        not_started: 5,
-        in_progress: 15,
-        passed: 12,
-        certified: 8,
-      },
-    })
-
-    renderWithProviders(
-      <AnalyticsContent
-        orgSlug={org.slug.replace(/^org-/, "")}
-        contractSlug={contract.slug}
-      />,
-    )
-
-    const list = await screen.findByRole("list", {
-      name: "Learner progress distribution",
-    })
-
-    // 5, 15 and 20 of the 40 learners who consented -- not of all 50.
-    expect(within(list).getByText("12.5%")).toBeInTheDocument()
-    expect(within(list).getByText("37.5%")).toBeInTheDocument()
-    expect(within(list).getByText("50%")).toBeInTheDocument()
-    expect(within(list).queryByText("10%")).not.toBeInTheDocument()
-
-    // The counts themselves are untouched: only the denominator changed.
-    expect(within(list).getByText("5")).toBeInTheDocument()
-    expect(within(list).getByText("15")).toBeInTheDocument()
-    expect(within(list).getByText("20")).toBeInTheDocument()
-
-    // "Enrolled" stays the true enrollment count. A learner who withholds
-    // outcomes is still enrolled, and netting them out here would disagree
-    // with the learner directory and with the seat figures above.
-    const enrolled = screen.getByRole("group", { name: "Enrolled" })
-    expect(within(enrolled).getByText("50")).toBeInTheDocument()
-
-    // Which leaves a gap between the tile and the buckets, so it is named
-    // rather than left for the reader to notice and distrust.
-    expect(
-      screen.getByText(
-        "Percentages exclude 10 learners who have not agreed to share their progress.",
-      ),
-    ).toBeInTheDocument()
-
-    // And the per-row screen-reader suffix says which denominator it is.
-    expect(within(list).getAllByText("of learners who consented")).toHaveLength(
-      3,
-    )
-    expect(within(list).queryByText("of total")).not.toBeInTheDocument()
-  })
-
-  test("shows 0%, not NaN%, when every learner has withheld consent", async () => {
-    const contract = factories.contracts.contract()
-    const org = orgWithUuid({ contracts: [contract] })
-    setManagerOrgs([org])
-    const contractId = contract.id
-    setContractAnalyticsResponses(contractId, undefined, {
-      total_count: 10,
-      outcomes_withheld_count: 10,
-      completion_status_counts: {
-        not_started: 0,
-        in_progress: 0,
-        passed: 0,
-        certified: 0,
-      },
-    })
-
-    renderWithProviders(
-      <AnalyticsContent
-        orgSlug={org.slug.replace(/^org-/, "")}
-        contractSlug={contract.slug}
-      />,
-    )
-
-    const list = await screen.findByRole("list", {
-      name: "Learner progress distribution",
-    })
-
-    expect(within(list).getAllByText("0%")).toHaveLength(3)
-    expect(within(list).queryByText(/NaN/)).not.toBeInTheDocument()
-
-    const enrolled = screen.getByRole("group", { name: "Enrolled" })
-    expect(within(enrolled).getByText("10")).toBeInTheDocument()
   })
 
   test("hides the Manage seats button when the manager-dashboard flag is off", async () => {

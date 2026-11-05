@@ -5,6 +5,7 @@ import Image from "next/image"
 import Link from "next/link"
 import {
   keepPreviousData,
+  useQueries,
   useQuery,
   type UseQueryOptions,
 } from "@tanstack/react-query"
@@ -44,7 +45,10 @@ import ContractKpiCards from "./Analytics/ContractKpiCards"
 import CoursePerformanceTable from "./Analytics/CoursePerformanceTable"
 import EngagementTrendChart from "./Analytics/EngagementTrendChart"
 import { SUPPRESSED_LEGEND } from "./Analytics/format"
-import LearnerProgressCard from "./Analytics/LearnerProgressCard"
+import LearnerProgressCard, {
+  TILE_STATUSES,
+} from "./Analytics/LearnerProgressCard"
+import { completionStatusFilter } from "../ContractLearnersPage/useLearnerFilters"
 import NeedsAttentionCard from "./Analytics/NeedsAttentionCard"
 import SectionHeader from "./Analytics/SectionHeader"
 import SectionTruncation from "./Analytics/SectionTruncation"
@@ -432,9 +436,9 @@ const AnalyticsContentInternal: React.FC<AnalyticsContentInternalProps> = ({
    * Learners link is absent from the org-wide aggregate page. It is gated on
    * `B2BLearnerAnalytics` for the same reason that link is: every tile links
    * to the Learners page, which throws `ForbiddenError` without the flag.
-   * One row is enough: only `total_count`, `outcomes_withheld_count` and
-   * `completion_status_counts` are read, the same trick
-   * `ContractLearnersPage.tsx`'s own `totalQuery` uses.
+   * One row is enough: only `total_count` and `completion_status_counts` are
+   * read. `completion_status` leaves out learners who haven't consented to
+   * share their progress, as everywhere else they would be counted.
    * `include_inactive` is deliberately left unset (server default: active
    * enrollments only) — a deactivated or refunded seat isn't "enrolled" to a
    * manager, and counting it here would disagree with every other seat/
@@ -444,10 +448,22 @@ const AnalyticsContentInternal: React.FC<AnalyticsContentInternalProps> = ({
     ...analyticsContractQueries.learnerProgress(
       orgUuid ?? "",
       contractId ?? 0,
-      { limit: 1 },
+      { limit: 1, completion_status: completionStatusFilter() },
     ),
     enabled: analyticsAvailable && !!contractId && !!learnerAnalyticsFlag,
     placeholderData: keepPreviousData,
+  })
+
+  /** The tiles' learner counts, from the same requests their links open. */
+  const learnerCounts = useQueries({
+    queries: TILE_STATUSES.map((status) => ({
+      ...analyticsContractQueries.learners(orgUuid ?? "", contractId ?? 0, {
+        limit: 1,
+        offset: 0,
+        completion_status: completionStatusFilter(status),
+      }),
+      enabled: analyticsAvailable && !!contractId && !!learnerAnalyticsFlag,
+    })),
   })
 
   /**
@@ -657,11 +673,20 @@ const AnalyticsContentInternal: React.FC<AnalyticsContentInternalProps> = ({
             isError={learnerProgress.isError}
           />
           <LearnerProgressCard
+            learnerCount={(status) =>
+              learnerCounts[TILE_STATUSES.indexOf(status)]?.data?.total_count ??
+              0
+            }
             totalCount={learnerProgress.data?.total_count}
-            withheldCount={learnerProgress.data?.outcomes_withheld_count}
             statusCounts={learnerProgress.data?.completion_status_counts}
-            isLoading={learnerProgress.isPending}
-            isError={learnerProgress.isError}
+            isLoading={
+              learnerProgress.isPending ||
+              learnerCounts.some((query) => query.isPending)
+            }
+            isError={
+              learnerProgress.isError ||
+              learnerCounts.some((query) => query.isError)
+            }
             learnersHref={(status) =>
               contractLearnersView(orgSlug, contract.slug, { status })
             }
