@@ -28,7 +28,7 @@ import type {
 } from "api/analytics-hooks/organizations"
 import { isAnalyticsConfigured } from "api/runtime"
 import { matchOrganizationBySlug } from "@/common/utils"
-import { ForbiddenError } from "@/common/errors"
+import { ForbiddenError, isAnalyticsNotLoaded } from "@/common/errors"
 import { FeatureFlags } from "@/common/feature_flags"
 import { useFeatureFlagsLoaded } from "@/common/useFeatureFlagsLoaded"
 import {
@@ -200,8 +200,10 @@ type SectionKey = "utilization" | "trend" | "courses" | "content"
  * 401 and 403, so a caller the analytics API rejects never reaches an
  * `isError` branch here at all — the error is thrown to the route's error
  * boundary, which is where every other page's access denial is handled too.
- * Only the remaining statuses (5xx, network) surface as `isError` below, and
- * those mean "could not load", not "not allowed".
+ * Only the remaining statuses surface as `isError` below. A 404 carrying a
+ * not-loaded code (`isAnalyticsNotLoaded`) means the warehouse has not picked
+ * up this org or contract yet; anything else (5xx, network) means "could not
+ * load", not "not allowed".
  */
 const isForbidden = (error: unknown) => {
   const status = (error as AxiosError | null)?.response?.status
@@ -585,6 +587,28 @@ const AnalyticsContentInternal: React.FC<AnalyticsContentInternalProps> = ({
           ) : (
             "Analytics is not available in this environment."
           )}
+        </Notice>
+      </Stack>
+    )
+  }
+
+  // Every section reads the same org (or contract), so the first to come back
+  // "not loaded" speaks for the page. Rendering four empty sections and a
+  // failure notice instead would tell a manager something broke.
+  const notLoaded = [
+    utilization,
+    trend,
+    courses,
+    content,
+    learnerProgress,
+  ].some((query) => isAnalyticsNotLoaded(query.error))
+  if (notLoaded) {
+    return (
+      <Stack gap="24px">
+        {header}
+        <Notice>
+          Analytics for {contract?.name ?? org.name} will be available once its
+          data has been loaded. Please check back later.
         </Notice>
       </Stack>
     )

@@ -294,6 +294,111 @@ describe("AnalyticsContent", () => {
         screen.queryByRole("heading", { name: "Contract utilization" }),
       ).not.toBeInTheDocument()
     })
+
+    /**
+     * MITx Online knows an org as soon as it is created; the warehouse only
+     * after its next load. The API says so with a 404 and a code, and that
+     * must read as "on its way", not as a broken page.
+     */
+    test("says the data is on its way when the warehouse has not loaded the org", async () => {
+      const org = orgWithUuid()
+      setManagerOrgs([org])
+      const page = { limit: 200 }
+      const notLoaded = [
+        {
+          detail: {
+            code: "organization_not_loaded",
+            message: "No analytics data has been loaded for organization yet",
+          },
+        },
+        { code: 404 },
+      ] as const
+      for (const url of [
+        analyticsUrls.organizations.contractUtilization(ORG_UUID, page),
+        analyticsUrls.organizations.engagementTrend(ORG_UUID, page),
+        analyticsUrls.organizations.enrollmentFunnel(ORG_UUID, page),
+        analyticsUrls.organizations.contentEngagement(ORG_UUID, page),
+      ]) {
+        setMockResponse.get(url, ...notLoaded)
+      }
+
+      renderWithProviders(
+        <AnalyticsContent orgSlug={org.slug.replace(/^org-/, "")} />,
+      )
+
+      await screen.findByText(
+        `Analytics for ${org.name} will be available once its data has been loaded. Please check back later.`,
+      )
+      expect(
+        screen.queryByText(/Some analytics could not be loaded/),
+      ).not.toBeInTheDocument()
+      expect(
+        screen.queryByRole("heading", { name: "Contract utilization" }),
+      ).not.toBeInTheDocument()
+    })
+
+    test("names the contract when the warehouse has not loaded it", async () => {
+      const contract = factories.contracts.contract()
+      const org = orgWithUuid({ contracts: [contract] })
+      setManagerOrgs([org])
+      const page = { limit: 200 }
+      const notLoaded = [
+        {
+          detail: {
+            code: "contract_not_loaded",
+            message: "No analytics data has been loaded for contract yet",
+          },
+        },
+        { code: 404 },
+      ] as const
+      for (const url of [
+        analyticsUrls.contracts.contractUtilization(
+          ORG_UUID,
+          contract.id,
+          page,
+        ),
+        analyticsUrls.contracts.engagementTrend(ORG_UUID, contract.id, page),
+        analyticsUrls.contracts.enrollmentFunnel(ORG_UUID, contract.id, page),
+        analyticsUrls.contracts.contentEngagement(ORG_UUID, contract.id, page),
+        analyticsUrls.contracts.learnerProgress(ORG_UUID, contract.id, {
+          limit: 1,
+        }),
+      ]) {
+        setMockResponse.get(url, ...notLoaded)
+      }
+
+      renderWithProviders(
+        <AnalyticsContent
+          orgSlug={org.slug.replace(/^org-/, "")}
+          contractSlug={contract.slug}
+        />,
+      )
+
+      await screen.findByText(
+        `Analytics for ${contract.name} will be available once its data has been loaded. Please check back later.`,
+      )
+    })
+
+    test("still reports an ordinary 404 as a failed section", async () => {
+      const org = orgWithUuid()
+      setManagerOrgs([org])
+      allowConsoleErrors()
+      setAnalyticsResponses()
+      setMockResponse.get(
+        analyticsUrls.organizations.enrollmentFunnel(ORG_UUID, { limit: 200 }),
+        { detail: "Not Found" },
+        { code: 404 },
+      )
+
+      renderWithProviders(
+        <AnalyticsContent orgSlug={org.slug.replace(/^org-/, "")} />,
+      )
+
+      await screen.findByText(/Some analytics could not be loaded/)
+      expect(
+        screen.queryByText(/will be available once its data has been loaded/),
+      ).not.toBeInTheDocument()
+    })
   })
 
   describe("content", () => {
