@@ -39,8 +39,8 @@ import {
   SearchModeEnumDescriptions,
 } from "api"
 import { keepPreviousData, useQuery } from "@tanstack/react-query"
-import { useFeatureFlagEnabled } from "posthog-js/react"
 import { FeatureFlags } from "@/common/feature_flags"
+import { useFeatureFlag } from "@/common/useFeatureFlag"
 import { useAdminSearchParams } from "api/hooks/adminSearchParams"
 import {
   AvailableFacets,
@@ -912,8 +912,7 @@ const SearchDisplay: React.FC<SearchDisplayProps> = ({
   const { data: adminParams, isLoading: isAdminParamsLoading } =
     useAdminSearchParams(expandAdminOptions && !hybridSearchActive)
 
-  const redesign =
-    useFeatureFlagEnabled(FeatureFlags.ResourceCardRedesign) === true
+  const redesign = useFeatureFlag(FeatureFlags.ResourceCardRedesign)
 
   const scrollHook = useRef<HTMLDivElement>(null)
   const resultsHeadingRef = useRef<HTMLHeadingElement>(null)

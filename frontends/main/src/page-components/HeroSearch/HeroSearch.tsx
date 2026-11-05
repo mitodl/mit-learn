@@ -3,7 +3,6 @@
 import React, { useState, useCallback } from "react"
 import { useRouter } from "next-nprogress-bar"
 import { FeatureFlags } from "@/common/feature_flags"
-import { useFeatureFlagEnabled } from "posthog-js/react"
 import AskTimDrawerButton from "@/page-components/AiChat/AskTimDrawerButton"
 
 import {
@@ -32,6 +31,7 @@ import {
 import Image from "next/image"
 import { SearchField } from "@/page-components/SearchField/SearchField"
 import { analytics } from "@/common/analytics"
+import { useFeatureFlag } from "@/common/useFeatureFlag"
 
 type SearchChip = {
   label: string
@@ -205,7 +205,7 @@ const HeroSearch: React.FC<{ imageIndex: number }> = ({ imageIndex }) => {
   const onSearchClear = useCallback(() => setSearchText(""), [])
   const router = useRouter()
 
-  const recommendationBotEnabled = useFeatureFlagEnabled(
+  const recommendationBotEnabled = useFeatureFlag(
     FeatureFlags.HomePageRecommendationBot,
   )
 

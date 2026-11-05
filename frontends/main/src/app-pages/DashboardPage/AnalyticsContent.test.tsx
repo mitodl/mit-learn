@@ -14,7 +14,7 @@ import type {
   ContractNeedsAttention,
   LearnerProgressResponse,
 } from "api/analytics-hooks/organizations"
-import { useFeatureFlagEnabled } from "posthog-js/react"
+import { useFeatureFlag } from "@/common/useFeatureFlag"
 import { allowConsoleErrors } from "ol-test-utilities"
 import { ForbiddenError } from "@/common/errors"
 import { FeatureFlags } from "@/common/feature_flags"
@@ -48,15 +48,10 @@ jest.mock("@mui/x-charts/LineChart", () => ({
   LineChart: () => <div data-testid="line-chart" />,
 }))
 
-jest.mock("posthog-js/react", () => ({
-  ...jest.requireActual("posthog-js/react"),
-  useFeatureFlagEnabled: jest.fn(),
-}))
+jest.mock("@/common/useFeatureFlag")
 jest.mock("@/common/useFeatureFlagsLoaded")
 const mockedUseFeatureFlagsLoaded = jest.mocked(useFeatureFlagsLoaded)
-const mockedUseFeatureFlagEnabled = jest.mocked(
-  useFeatureFlagEnabled as (flag: string) => boolean | undefined,
-)
+const mockedUseFeatureFlag = jest.mocked(useFeatureFlag)
 
 const managerOrgsUrl = urls.organization.managerOrganizationsList()
 
@@ -183,7 +178,7 @@ const setContractAnalyticsResponses = (
 describe("AnalyticsContent", () => {
   beforeEach(() => {
     mockedUseFeatureFlagsLoaded.mockReturnValue(true)
-    mockedUseFeatureFlagEnabled.mockReturnValue(true)
+    mockedUseFeatureFlag.mockReturnValue(true)
     setMockResponse.get(
       urls.userMe.get(),
       factories.user.user({ email: "manager@test.com" }),
@@ -192,7 +187,7 @@ describe("AnalyticsContent", () => {
 
   describe("access", () => {
     test("throws ForbiddenError when the feature flag is off", () => {
-      mockedUseFeatureFlagEnabled.mockReturnValue(false)
+      mockedUseFeatureFlag.mockReturnValue(false)
       allowConsoleErrors()
 
       expect(() =>
@@ -200,9 +195,9 @@ describe("AnalyticsContent", () => {
       ).toThrow(ForbiddenError)
     })
 
-    test("waits for PostHog rather than 403-ing on a bootstrapped false", () => {
+    test("waits for PostHog rather than 403-ing on the env default", () => {
       mockedUseFeatureFlagsLoaded.mockReturnValue(false)
-      mockedUseFeatureFlagEnabled.mockReturnValue(undefined)
+      mockedUseFeatureFlag.mockReturnValue(false)
 
       expect(() =>
         renderWithProviders(<AnalyticsContent orgSlug="any-org" />),
@@ -909,7 +904,7 @@ describe("AnalyticsContent", () => {
 describe("AnalyticsContent, contract-scoped", () => {
   beforeEach(() => {
     mockedUseFeatureFlagsLoaded.mockReturnValue(true)
-    mockedUseFeatureFlagEnabled.mockReturnValue(true)
+    mockedUseFeatureFlag.mockReturnValue(true)
     setMockResponse.get(
       urls.userMe.get(),
       factories.user.user({ email: "manager@test.com" }),
@@ -1049,7 +1044,7 @@ describe("AnalyticsContent, contract-scoped", () => {
   test("hides the Learners link and the Learner progress section when the learner analytics flag is off", async () => {
     // The learner page throws ForbiddenError without its flag, so the button
     // would be a dead end -- and every Learner progress tile links there too.
-    mockedUseFeatureFlagEnabled.mockImplementation(
+    mockedUseFeatureFlag.mockImplementation(
       (flag) => flag !== FeatureFlags.B2BLearnerAnalytics,
     )
     const contract = factories.contracts.contract()
@@ -1503,7 +1498,7 @@ describe("AnalyticsContent, contract-scoped", () => {
     // The button links to ContractAdminPage, which throws ForbiddenError
     // without this flag — surfacing the button here without it would send a
     // manager to a dead end.
-    mockedUseFeatureFlagEnabled.mockImplementation(
+    mockedUseFeatureFlag.mockImplementation(
       (flag) => flag === FeatureFlags.B2BAnalyticsDashboard,
     )
     const contract = factories.contracts.contract()

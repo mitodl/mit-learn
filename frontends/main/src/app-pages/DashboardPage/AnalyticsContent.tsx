@@ -9,7 +9,6 @@ import {
   type UseQueryOptions,
 } from "@tanstack/react-query"
 import type { AxiosError } from "axios"
-import { useFeatureFlagEnabled } from "posthog-js/react"
 import { Skeleton, Stack, styled, Typography } from "ol-components"
 import { ButtonLink } from "@mitodl/smoot-design"
 import { managerOrganizationQueries } from "api/mitxonline-hooks/organizations"
@@ -36,6 +35,7 @@ import {
   contractLearnersView,
   organizationAnalyticsView,
 } from "@/common/urls"
+import { useFeatureFlag } from "@/common/useFeatureFlag"
 import { ErrorContent } from "../ErrorPage/ErrorPageTemplate"
 import ContractManagerNav from "@/components/ContractManagerNav/ContractManagerNav"
 import graduateLogo from "@/public/images/dashboard/graduate.png"
@@ -298,12 +298,10 @@ const AnalyticsContentInternal: React.FC<AnalyticsContentInternalProps> = ({
   orgSlug,
   contractSlug,
 }) => {
-  const managerDashboardFlag = useFeatureFlagEnabled(
+  const managerDashboardFlag = useFeatureFlag(
     FeatureFlags.B2BContractManagerDashboard,
   )
-  const learnerAnalyticsFlag = useFeatureFlagEnabled(
-    FeatureFlags.B2BLearnerAnalytics,
-  )
+  const learnerAnalyticsFlag = useFeatureFlag(FeatureFlags.B2BLearnerAnalytics)
   const {
     data: managerOrgs,
     isLoading: isLoadingOrgs,
@@ -446,7 +444,7 @@ const AnalyticsContentInternal: React.FC<AnalyticsContentInternalProps> = ({
       contractId ?? 0,
       { limit: 1 },
     ),
-    enabled: analyticsAvailable && !!contractId && !!learnerAnalyticsFlag,
+    enabled: analyticsAvailable && !!contractId && learnerAnalyticsFlag,
     placeholderData: keepPreviousData,
   })
 
@@ -740,11 +738,12 @@ const AnalyticsContent: React.FC<AnalyticsContentProps> = ({
   orgSlug,
   contractSlug,
 }) => {
-  const flagEnabled = useFeatureFlagEnabled(FeatureFlags.B2BAnalyticsDashboard)
+  const flagEnabled = useFeatureFlag(FeatureFlags.B2BAnalyticsDashboard)
   const flagsLoaded = useFeatureFlagsLoaded()
 
-  // The whole page is behind the flag, so wait for the real value rather than
-  // 403-ing on a bootstrapped `false` — same reasoning as ContractAdminPage.
+  // The whole page is behind the flag, so wait until flags are final rather
+  // than 403-ing on what the flag reads before then: a value PostHog stored on
+  // an earlier visit, or the env default (see useFeatureFlagsLoaded's USE CASE).
   if (!flagsLoaded) {
     return <Skeleton width="100%" height="128px" />
   }

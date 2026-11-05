@@ -16,14 +16,14 @@ import {
 } from "api/mitxonline-test-utils"
 import { OrganizationCards } from "./OrganizationCards"
 import type { UserOrganizationPage } from "@mitodl/mitxonline-api-axios/v0"
-import { useFeatureFlagEnabled } from "posthog-js/react"
+import { useFeatureFlag } from "@/common/useFeatureFlag"
 
-jest.mock("posthog-js/react")
-const mockedUseFeatureFlagEnabled = jest.mocked(useFeatureFlagEnabled)
+jest.mock("@/common/useFeatureFlag")
+const mockedUseFeatureFlag = jest.mocked(useFeatureFlag)
 
 describe("OrganizationCards", () => {
   beforeEach(() => {
-    mockedUseFeatureFlagEnabled.mockReturnValue(true)
+    mockedUseFeatureFlag.mockReturnValue(true)
   })
 
   type SetupOptions = {
@@ -576,7 +576,7 @@ describe("OrganizationCards", () => {
     })
 
     it("follows the link without asking when the flag is off", async () => {
-      mockedUseFeatureFlagEnabled.mockReturnValue(false)
+      mockedUseFeatureFlag.mockReturnValue(false)
       setupContract(null)
       expect(await clickIsBlocked(await continueButton())).toBe(false)
       expect(screen.queryByRole("dialog")).not.toBeInTheDocument()

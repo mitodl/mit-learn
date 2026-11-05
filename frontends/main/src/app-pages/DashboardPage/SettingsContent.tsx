@@ -11,7 +11,6 @@ import {
   Skeleton,
 } from "ol-components"
 import { Button, ButtonLink, Checkbox } from "@mitodl/smoot-design"
-import { useFeatureFlagEnabled } from "posthog-js/react"
 import { useUserMe } from "api/hooks/user"
 import { useProfileMeMutation, useProfileMeQuery } from "api/hooks/profile"
 import {
@@ -21,6 +20,7 @@ import {
 import * as NiceModal from "@ebay/nice-modal-react"
 import { FeatureFlags } from "@/common/feature_flags"
 import { AccountAction, SETTINGS, accountAction } from "@/common/urls"
+import { useFeatureFlag } from "@/common/useFeatureFlag"
 import AccountActionAlert from "./AccountActionAlert"
 import NotificationPreferences from "./NotificationPreferences"
 import { TitleText } from "./HomeContent"
@@ -249,7 +249,7 @@ const SettingsContent: React.FC = () => {
   const { data: profile } = useProfileMeQuery()
   const { mutateAsync: updateProfile } = useProfileMeMutation()
 
-  const accountManagementEnabled = useFeatureFlagEnabled(
+  const accountManagementEnabled = useFeatureFlag(
     FeatureFlags.AccountManagement,
   )
 

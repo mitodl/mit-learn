@@ -9,14 +9,14 @@ import invariant from "tiny-invariant"
 import { PLATFORM_LOGOS } from "ol-components"
 import user from "@testing-library/user-event"
 import { renderWithProviders } from "@/test-utils"
-import { useFeatureFlagEnabled } from "posthog-js/react"
+import { useFeatureFlag } from "@/common/useFeatureFlag"
 import { kebabCase } from "lodash"
 import { faker } from "@faker-js/faker/locale/en"
 import { parentPodcastIds } from "@/common/slugs"
 
-jest.mock("posthog-js/react")
-const mockedUseFeatureFlagEnabled = jest
-  .mocked(useFeatureFlagEnabled)
+jest.mock("@/common/useFeatureFlag")
+const mockedUseFeatureFlag = jest
+  .mocked(useFeatureFlag)
   .mockImplementation(() => false)
 
 const IMG_CONFIG: LearningResourceExpandedProps["imgConfig"] = {
@@ -404,7 +404,7 @@ describe.each([true, false])(
   "LearningResourceExpanded AiChat (enabled: %s)",
   (enabled) => {
     beforeEach(() => {
-      mockedUseFeatureFlagEnabled.mockReturnValue(enabled)
+      mockedUseFeatureFlag.mockReturnValue(enabled)
     })
 
     test.each(RESOURCE_TYPES)(
@@ -506,7 +506,7 @@ describe.each([true, false])(
 
 describe("LearningResourceExpanded syllabus-only mode", () => {
   beforeEach(() => {
-    mockedUseFeatureFlagEnabled.mockReturnValue(true)
+    mockedUseFeatureFlag.mockReturnValue(true)
   })
 
   test("shows only the chat, hides resource content, and Close exits the drawer", async () => {

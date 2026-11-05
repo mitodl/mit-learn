@@ -20,8 +20,8 @@ import { SILENCE_ERROR_TOAST } from "api/mutation-meta"
 import { CourseRunEnrollmentV3 } from "@mitodl/mitxonline-api-axios/v3"
 import { analytics } from "@/common/analytics"
 import { formatRunIdentifier } from "./courseDateUtils"
-import { useFeatureFlagEnabled } from "posthog-js/react"
 import { FeatureFlags } from "@/common/feature_flags"
+import { useFeatureFlag } from "@/common/useFeatureFlag"
 
 const BoldText = styled.span(({ theme }) => ({
   ...theme.typography.subtitle1,
@@ -39,7 +39,7 @@ const BoldText = styled.span(({ theme }) => ({
  * its tag, so every run gets confirmed by something.
  */
 const useRunIdentifier = (enrollment: CourseRunEnrollmentV3): string | null => {
-  const enabled = useFeatureFlagEnabled(FeatureFlags.MultipleRunContextMenus)
+  const enabled = useFeatureFlag(FeatureFlags.MultipleRunContextMenus)
   return enabled ? formatRunIdentifier(enrollment.run) : null
 }
 

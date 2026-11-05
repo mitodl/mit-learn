@@ -3,7 +3,6 @@
 import React, { useEffect, useRef } from "react"
 import Link from "next/link"
 import { useQuery } from "@tanstack/react-query"
-import { useFeatureFlagEnabled } from "posthog-js/react"
 import { mitxUserQueries } from "api/mitxonline-hooks/user"
 import { styled } from "ol-components"
 import { FeatureFlags } from "@/common/feature_flags"
@@ -14,6 +13,7 @@ import {
   contractLearnersView,
   contractView,
 } from "@/common/urls"
+import { useFeatureFlag } from "@/common/useFeatureFlag"
 
 type ContractManagerSection = "overview" | "analytics" | "learners" | "seats"
 
@@ -89,13 +89,11 @@ const ContractManagerNav: React.FC<ContractManagerNavProps> = ({
   contractSlug,
   current,
 }) => {
-  const analyticsEnabled = useFeatureFlagEnabled(
-    FeatureFlags.B2BAnalyticsDashboard,
-  )
-  const learnerAnalyticsEnabled = useFeatureFlagEnabled(
+  const analyticsEnabled = useFeatureFlag(FeatureFlags.B2BAnalyticsDashboard)
+  const learnerAnalyticsEnabled = useFeatureFlag(
     FeatureFlags.B2BLearnerAnalytics,
   )
-  const managerDashboardEnabled = useFeatureFlagEnabled(
+  const managerDashboardEnabled = useFeatureFlag(
     FeatureFlags.B2BContractManagerDashboard,
   )
 

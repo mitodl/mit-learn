@@ -2,10 +2,10 @@ import React, { useCallback, useMemo, useState } from "react"
 import { LearningResourceCard } from "ol-components"
 import NiceModal from "@ebay/nice-modal-react"
 import type { LearningResourceCardProps } from "ol-components"
-import { useFeatureFlagEnabled } from "posthog-js/react"
 import { RiBookmarkFill, RiBookmarkLine, RiMenuAddLine } from "@remixicon/react"
 import { MenuCheckIcon } from "./MenuCheckIcon"
 import { FeatureFlags } from "@/common/feature_flags"
+import { useFeatureFlag } from "@/common/useFeatureFlag"
 import {
   ResourceCardSkeleton,
   ResourceCardView,
@@ -214,8 +214,7 @@ const ResourceCard: React.FC<ResourceCardProps> = ({
     inLearningPath,
     onClick,
   } = useResourceCard(resource)
-  const redesign =
-    useFeatureFlagEnabled(FeatureFlags.ResourceCardRedesign) === true
+  const redesign = useFeatureFlag(FeatureFlags.ResourceCardRedesign)
 
   const composedOnClick = onCardClick
     ? () => {

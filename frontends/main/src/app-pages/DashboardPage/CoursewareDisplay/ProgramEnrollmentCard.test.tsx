@@ -6,14 +6,14 @@ import { programCertificates as programCertificateFactory } from "api/test-utils
 import { mitxonlineLegacyUrl } from "@/common/mitxonline"
 import { receiptView } from "@/common/urls"
 import { DisplayModeEnum } from "@mitodl/mitxonline-api-axios/v2"
-import { useFeatureFlagEnabled } from "posthog-js/react"
+import { useFeatureFlag } from "@/common/useFeatureFlag"
 import { ProgramEnrollmentCard } from "./ProgramEnrollmentCard"
 import { setupOrderHistory } from "./test-utils"
 
-jest.mock("posthog-js/react")
+jest.mock("@/common/useFeatureFlag")
 
-const mockedUseFeatureFlagEnabled = jest
-  .mocked(useFeatureFlagEnabled)
+const mockedUseFeatureFlag = jest
+  .mocked(useFeatureFlag)
   .mockImplementation(() => false)
 
 // Verified cards look up their order; default to none, tests override.
@@ -326,7 +326,7 @@ describe("ProgramEnrollmentCard program letter", () => {
     mitxonlineProgramId: number | null
     shareUrl?: string | null
   }) => {
-    mockedUseFeatureFlagEnabled.mockReturnValue(flagEnabled)
+    mockedUseFeatureFlag.mockReturnValue(flagEnabled)
     setMockResponse.get(urls.programCertificates.list(), [
       programCertificateFactory.programCertificate({
         mitxonline_program_id: mitxonlineProgramId,
@@ -395,7 +395,7 @@ describe("ProgramEnrollmentCard program letter", () => {
     // Deliberate: a failed lookup is indistinguishable from having no
     // certificate, because the failed response is both the letter url and the
     // only signal that the learner has a letter. See useProgramLetterMenuItem.
-    mockedUseFeatureFlagEnabled.mockReturnValue(true)
+    mockedUseFeatureFlag.mockReturnValue(true)
     setMockResponse.get(urls.programCertificates.list(), null, { code: 500 })
     const programEnrollment =
       mitxonline.factories.enrollment.programEnrollmentV3({
