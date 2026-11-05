@@ -6,6 +6,8 @@ import pytest
 from django.core.management import call_command
 
 from main.factories import UserFactory
+from widgets.factories import WidgetInstanceFactory
+from widgets.serializers.people import PeopleWidgetSerializer
 
 pytestmark = pytest.mark.django_db
 
@@ -69,6 +71,33 @@ def test_migrate_usernames_follows_a_chain():
         "next@example.com",
         "last@example.com",
     ]
+
+
+def test_migrate_usernames_updates_people_widgets():
+    """People widgets list the renamed users by their new usernames"""
+    first = UserFactory.create(username="jdoe", email="next@example.com")
+    second = UserFactory.create(username="next@example.com", email="last@example.com")
+    unchanged = UserFactory.create(username="jane", email="")
+    widget = WidgetInstanceFactory.create(
+        type_people=True,
+        configuration={
+            "people": [unchanged.username, first.username, second.username],
+            "show_all_members_link": False,
+        },
+    )
+
+    _apply_and_get_usernames(first, second)
+
+    widget.refresh_from_db()
+    assert widget.configuration["people"] == [
+        "jane",
+        "next@example.com",
+        "last@example.com",
+    ]
+    assert [
+        person["username"]
+        for person in PeopleWidgetSerializer(widget).data["json"]["people"]
+    ] == ["jane", "next@example.com", "last@example.com"]
 
 
 def test_migrate_usernames_dry_run_changes_nothing():
