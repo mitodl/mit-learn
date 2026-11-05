@@ -221,9 +221,13 @@ const latestActivity = (
         !courserunIds.length ||
         courserunIds.includes(enrollment.courserun_readable_id),
     )
-    .reduce<
-      string | null
-    >((max, enrollment) => (enrollment.last_active_on && (!max || enrollment.last_active_on > max) ? enrollment.last_active_on : max), null)
+    .reduce<string | null>(
+      (max, enrollment) =>
+        enrollment.last_active_on && (!max || enrollment.last_active_on > max)
+          ? enrollment.last_active_on
+          : max,
+      null,
+    )
 
 const lastActiveText = (
   learner: LearnerWithEnrollments,
